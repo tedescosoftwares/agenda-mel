@@ -6,6 +6,7 @@ const AuthContext = createContext(null)
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null)
   const [profile, setProfile] = useState(null)
+  const [professional, setProfessional] = useState(null)
   const [loading, setLoading] = useState(isSupabaseConfigured)
 
   useEffect(() => {
@@ -22,6 +23,7 @@ export function AuthProvider({ children }) {
       setSession(session)
       if (!session) {
         setProfile(null)
+        setProfessional(null)
         setLoading(false)
       }
     })
@@ -33,17 +35,31 @@ export function AuthProvider({ children }) {
     if (!session?.user) return
     let cancelled = false
 
-    supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', session.user.id)
-      .single()
-      .then(({ data }) => {
-        if (cancelled) return
-        setProfile(data)
-        setLoading(false)
-      })
+    async function carregarPerfil() {
+      const { data: perfil } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .single()
+      if (cancelled) return
+      setProfile(perfil)
 
+      // profissional: carrega a ficha dela (agenda, serviços, link)
+      if (perfil?.role === 'profissional') {
+        const { data: ficha } = await supabase
+          .from('professionals')
+          .select('*')
+          .eq('user_id', session.user.id)
+          .maybeSingle()
+        if (cancelled) return
+        setProfessional(ficha ?? null)
+      } else {
+        setProfessional(null)
+      }
+      setLoading(false)
+    }
+
+    carregarPerfil()
     return () => {
       cancelled = true
     }
@@ -73,6 +89,7 @@ export function AuthProvider({ children }) {
     session,
     user: session?.user ?? null,
     profile,
+    professional,
     role: profile?.role ?? null,
     loading,
     signIn,

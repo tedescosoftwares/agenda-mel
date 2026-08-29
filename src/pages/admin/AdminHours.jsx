@@ -86,8 +86,11 @@ export default function AdminHours() {
     <AdminShell>
       <div className="page-head">
         <div>
-          <h2>Horários de atendimento</h2>
-          <p className="muted">Dias e horários em que você atende</p>
+          <h2>Horário padrão do salão</h2>
+          <p className="muted">
+            Serve de base para as profissionais novas. Cada uma ajusta o
+            horário dela no app dela.
+          </p>
         </div>
       </div>
 

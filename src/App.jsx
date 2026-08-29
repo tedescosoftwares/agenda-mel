@@ -2,12 +2,17 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import Login from './pages/Login'
+import PaginaProfissional from './pages/publico/PaginaProfissional'
 import ClienteHome from './pages/cliente/ClienteHome'
-import AgendarServico from './pages/cliente/AgendarServico'
 import AdminAgenda from './pages/admin/AdminAgenda'
+import AdminProfissionais from './pages/admin/AdminProfissionais'
 import AdminServices from './pages/admin/AdminServices'
 import AdminHours from './pages/admin/AdminHours'
 import AdminClientes from './pages/admin/AdminClientes'
+import ProAgenda from './pages/pro/ProAgenda'
+import ProServicos from './pages/pro/ProServicos'
+import ProHorarios from './pages/pro/ProHorarios'
+import ProLink from './pages/pro/ProLink'
 
 export default function App() {
   return (
@@ -15,6 +20,9 @@ export default function App() {
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<Login />} />
+
+          {/* link público das profissionais — não exige login */}
+          <Route path="/p/:slug" element={<PaginaProfissional />} />
 
           <Route
             path="/"
@@ -25,15 +33,41 @@ export default function App() {
             }
           />
 
+          {/* área da profissional */}
           <Route
-            path="/agendar/:serviceId"
+            path="/pro"
             element={
-              <ProtectedRoute requireRole="cliente">
-                <AgendarServico />
+              <ProtectedRoute requireRole="profissional">
+                <ProAgenda />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/pro/servicos"
+            element={
+              <ProtectedRoute requireRole="profissional">
+                <ProServicos />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/pro/horarios"
+            element={
+              <ProtectedRoute requireRole="profissional">
+                <ProHorarios />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/pro/link"
+            element={
+              <ProtectedRoute requireRole="profissional">
+                <ProLink />
               </ProtectedRoute>
             }
           />
 
+          {/* área do salão */}
           <Route
             path="/admin"
             element={
@@ -42,7 +76,14 @@ export default function App() {
               </ProtectedRoute>
             }
           />
-
+          <Route
+            path="/admin/equipe"
+            element={
+              <ProtectedRoute requireRole="admin">
+                <AdminProfissionais />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/admin/servicos"
             element={
@@ -51,7 +92,6 @@ export default function App() {
               </ProtectedRoute>
             }
           />
-
           <Route
             path="/admin/horarios"
             element={
@@ -60,7 +100,6 @@ export default function App() {
               </ProtectedRoute>
             }
           />
-
           <Route
             path="/admin/clientes"
             element={

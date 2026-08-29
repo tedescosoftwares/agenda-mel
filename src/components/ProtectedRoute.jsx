@@ -1,5 +1,6 @@
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { homeDoPapel } from '../lib/roles'
 
 export default function ProtectedRoute({ children, requireRole }) {
   const { user, role, loading } = useAuth()
@@ -17,8 +18,7 @@ export default function ProtectedRoute({ children, requireRole }) {
   }
 
   if (requireRole && role !== requireRole) {
-    // logada mas sem permissão: manda pra área correspondente ao papel dela
-    return <Navigate to={role === 'admin' ? '/admin' : '/'} replace />
+    return <Navigate to={homeDoPapel(role)} replace />
   }
 
   return children

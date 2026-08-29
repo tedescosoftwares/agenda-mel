@@ -1,16 +1,21 @@
 # Agenda Mel 🌸
 
-App de agendamento de serviços estéticos — PWA em React, com dois ambientes:
+App de agendamento de serviços estéticos — PWA em React, multi-profissional:
 
-- **Área da cliente** (`/`) — agendar e acompanhar horários
-- **Área admin** (`/admin`) — gerenciar agenda, serviços e clientes
+- **Link público da profissional** (`/p/<slug>`) — qualquer pessoa abre, vê os
+  serviços e os horários livres; o login só entra na hora de fechar
+- **Área da cliente** (`/`) — meus agendamentos e com quem agendar
+- **App da profissional** (`/pro`) — agenda dela, serviços que atende,
+  horários dela e o link para divulgar
+- **Área do salão / admin** (`/admin`) — agenda de todas, equipe, catálogo de
+  serviços, horário padrão e clientes
 
 Backend: [Supabase](https://supabase.com) (plano gratuito — autenticação + banco Postgres).
 
 ## Stack
 
 - React 19 + Vite
-- React Router (rotas protegidas por papel: `cliente` / `admin`)
+- React Router (rotas protegidas por papel: `cliente` / `profissional` / `admin`)
 - Supabase (Auth + Postgres com Row Level Security)
 - PWA via `vite-plugin-pwa` (instalável no celular, pronto pra virar app depois)
 
@@ -25,7 +30,7 @@ Backend: [Supabase](https://supabase.com) (plano gratuito — autenticação + b
 4. Repita com os demais arquivos de [`supabase/`](supabase/) **na ordem dos
    números**: `002_services.sql`, `003_business_hours.sql`,
    `004_appointments.sql`, `005_service_images_e_slots.sql`,
-   `006_combos.sql`, …
+   `006_combos.sql`, `007_profissionais.sql`, …
 
 ### 2. Configurar as variáveis de ambiente
 
@@ -63,27 +68,59 @@ Depois é só sair e entrar de novo no app — você cai direto no `/admin`.
 
 ```
 src/
-  lib/supabase.js          # cliente Supabase (lê o .env)
-  context/AuthContext.jsx  # sessão, perfil e papel do usuário logado
-  components/ProtectedRoute.jsx
-  pages/
-    Login.jsx              # login + cadastro
-    cliente/ClienteHome.jsx  # meus agendamentos + catálogo de serviços
-    cliente/AgendarServico.jsx # fluxo: dia -> horário livre -> confirmar
-    admin/AdminAgenda.jsx    # agenda do dia — tela inicial do admin (/admin)
-    admin/AdminServices.jsx  # CRUD de serviços (/admin/servicos)
-    admin/AdminHours.jsx     # horários de atendimento (/admin/horarios)
-    admin/AdminClientes.jsx  # lista de clientes (/admin/clientes)
+  lib/
+    supabase.js            # cliente Supabase (lê o .env)
+    format.js              # preço, duração (combo = tempo médio), data
+    booking.js             # grade de horários livres, slug, iniciais
+    roles.js               # para onde cada papel vai ao entrar
+  context/AuthContext.jsx  # sessão, perfil, papel e ficha da profissional
   components/
-    AdminShell.jsx           # topo + navegação por abas do admin
+    ProtectedRoute.jsx     # rota por papel (cliente | profissional | admin)
+    AdminShell.jsx         # abas do salão
+    ProShell.jsx           # abas da profissional
+    AgendaDia.jsx          # agenda de um dia (usada pelo admin e pela pro)
+    AuthModal.jsx          # login rápido dentro do link público
+  pages/
+    Login.jsx
+    publico/PaginaProfissional.jsx  # /p/<slug> — serviço, dia, horário
+    cliente/ClienteHome.jsx
+    pro/ProAgenda.jsx | ProServicos.jsx | ProHorarios.jsx | ProLink.jsx
+    admin/AdminAgenda.jsx | AdminProfissionais.jsx | AdminServices.jsx
+    admin/AdminHours.jsx | AdminClientes.jsx
 supabase/
   001_schema.sql           # perfis, trigger e políticas de segurança (RLS)
   002_services.sql         # tabela de serviços + políticas
-  003_business_hours.sql   # horários de atendimento por dia da semana
+  003_business_hours.sql   # horário padrão do salão
   004_appointments.sql     # agendamentos + admin enxerga perfis
   005_service_images_e_slots.sql # fotos dos serviços + horários ocupados
-  006_combos.sql           # combos de serviços (duração somada = tempo médio)
+  006_combos.sql           # combos de serviços (duração = tempo médio)
+  007_profissionais.sql    # equipe, agenda e link por profissional
 ```
+
+## Papéis
+
+| Papel          | Entra em  | O que faz                                            |
+| -------------- | --------- | ---------------------------------------------------- |
+| `cliente`      | `/`       | agenda, acompanha e cancela os próprios horários      |
+| `profissional` | `/pro`    | vê a agenda dela, escolhe serviços, horários e o link |
+| `admin`        | `/admin`  | equipe, catálogo de serviços, agenda de todas         |
+
+Toda conta nova nasce como `cliente`. Para promover:
+
+```sql
+-- admin
+update public.profiles set role = 'admin'
+where id = (select id from auth.users where email = 'voce@exemplo.com');
+
+-- profissional (depois de cadastrá-la em Admin → Equipe)
+update public.profiles set role = 'profissional'
+where id = (select id from auth.users where email = 'ela@exemplo.com');
+
+update public.professionals set user_id =
+  (select id from auth.users where email = 'ela@exemplo.com')
+where slug = 'slug-dela';
+```
+
 
 ## Próximos passos
 
@@ -95,6 +132,8 @@ supabase/
 - [x] Fotos dos serviços (até 3 por serviço, Supabase Storage)
 - [x] Confirmar/concluir agendamentos pelo admin
 - [x] Combos de serviços (soma das durações exibida como tempo médio)
+- [x] Equipe: profissionais com agenda, serviços e link próprios
+- [x] Link público /p/<slug> — agenda sem precisar estar logada antes
 - [ ] Publicar (Vercel/Netlify) e instalar como PWA no celular
 - [ ] Notificações (lembrete de horário)
 - [ ] Migrar depois para React Native / Expo reaproveitando o Supabase

@@ -1,12 +1,11 @@
 import { useState } from 'react'
-import { Navigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { homeDoPapel } from '../lib/roles'
-import { isSupabaseConfigured } from '../lib/supabase'
 
-export default function Login() {
-  const { user, role, loading, signIn, signUp } = useAuth()
-  const [mode, setMode] = useState('login') // 'login' | 'signup'
+// Login/cadastro rápido dentro da página pública da profissional:
+// a cliente escolhe tudo primeiro e só se identifica para fechar.
+export default function AuthModal({ resumo, onClose }) {
+  const { signIn, signUp } = useAuth()
+  const [mode, setMode] = useState('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [fullName, setFullName] = useState('')
@@ -15,33 +14,16 @@ export default function Login() {
   const [info, setInfo] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
-  if (loading) {
-    return (
-      <div className="page-center">
-        <p className="muted">Carregando…</p>
-      </div>
-    )
-  }
-
-  if (user) {
-    return <Navigate to={homeDoPapel(role)} replace />
-  }
-
   async function handleSubmit(e) {
     e.preventDefault()
     setError('')
     setInfo('')
-
-    if (!isSupabaseConfigured) {
-      setError('Supabase ainda não configurado. Veja o README para criar o .env.')
-      return
-    }
-
     setSubmitting(true)
     try {
       if (mode === 'login') {
         const { error } = await signIn(email, password)
         if (error) setError(traduzErro(error.message))
+        // sucesso: o AuthContext atualiza a sessão e a página conclui sozinha
       } else {
         if (!fullName.trim()) {
           setError('Informe seu nome completo.')
@@ -51,8 +33,9 @@ export default function Login() {
         if (error) {
           setError(traduzErro(error.message))
         } else {
-          setInfo('Conta criada! Verifique seu e-mail para confirmar o cadastro.')
-          setMode('login')
+          setInfo(
+            'Conta criada! Se pedirmos confirmação por e-mail, confirme e volte aqui para concluir o agendamento.',
+          )
         }
       }
     } finally {
@@ -61,20 +44,19 @@ export default function Login() {
   }
 
   return (
-    <div className="page-center login-bg">
-      <div className="card login-card">
-        <div className="brand">
-          <span className="brand-icon">✿</span>
-          <h1>Agenda Mel</h1>
-          <p className="muted">Agendamento de serviços estéticos</p>
-        </div>
+    <div className="modal-fundo" onClick={onClose}>
+      <div
+        className="card modal-caixa"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+      >
+        <button className="modal-fechar" onClick={onClose} aria-label="Fechar">
+          ×
+        </button>
 
-        {!isSupabaseConfigured && (
-          <div className="alert alert-warn">
-            Supabase não configurado — copie <code>.env.example</code> para{' '}
-            <code>.env</code> e preencha as chaves (veja o README).
-          </div>
-        )}
+        <h3>Falta só identificar você</h3>
+        {resumo && <p className="muted modal-resumo">{resumo}</p>}
 
         <div className="tabs">
           <button
@@ -85,7 +67,7 @@ export default function Login() {
               setError('')
             }}
           >
-            Entrar
+            Já tenho conta
           </button>
           <button
             type="button"
@@ -99,7 +81,7 @@ export default function Login() {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="form">
+        <form className="form" onSubmit={handleSubmit}>
           {mode === 'signup' && (
             <>
               <label>
@@ -118,7 +100,7 @@ export default function Login() {
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  placeholder="(11) 99999-9999"
+                  placeholder="(13) 99999-9999"
                   autoComplete="tel"
                 />
               </label>
@@ -157,7 +139,7 @@ export default function Login() {
             {submitting
               ? 'Aguarde…'
               : mode === 'login'
-                ? 'Entrar'
+                ? 'Entrar e agendar'
                 : 'Criar conta'}
           </button>
         </form>
@@ -170,11 +152,12 @@ function traduzErro(msg) {
   const mapa = {
     'Invalid login credentials': 'E-mail ou senha incorretos.',
     'Email not confirmed': 'Confirme seu e-mail antes de entrar.',
-    'User already registered': 'Este e-mail já está cadastrado.',
+    'User already registered':
+      'Este e-mail já está cadastrado — use a aba "Já tenho conta".',
     'Password should be at least 6 characters':
       'A senha precisa ter pelo menos 6 caracteres.',
     'Failed to fetch':
-      'Não foi possível conectar ao servidor. Verifique a URL e a chave no arquivo .env (e reinicie o npm run dev depois de editar), sua internet, e se o projeto no Supabase está ativo.',
+      'Não foi possível conectar ao servidor. Verifique sua internet.',
   }
   return mapa[msg] || msg
 }

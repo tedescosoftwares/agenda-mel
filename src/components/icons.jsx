@@ -64,3 +64,23 @@ export function SearchIcon(props) {
     </svg>
   )
 }
+
+export function TeamIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <circle cx="12" cy="7" r="3.2" />
+      <path d="M6 20c0-3.3 2.7-6 6-6s6 2.7 6 6" />
+      <path d="M4.5 11.5a2.2 2.2 0 1 0 0-4.4" />
+      <path d="M19.5 11.5a2.2 2.2 0 1 1 0-4.4" />
+    </svg>
+  )
+}
+
+export function LinkIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M10 13.5a3.5 3.5 0 0 0 5 0l3-3a3.5 3.5 0 0 0-5-5l-1 1" />
+      <path d="M14 10.5a3.5 3.5 0 0 0-5 0l-3 3a3.5 3.5 0 0 0 5 5l1-1" />
+    </svg>
+  )
+}

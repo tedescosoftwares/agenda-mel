@@ -1,21 +1,18 @@
 import { NavLink } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { CalendarIcon, SparkleIcon, ClockIcon, UsersIcon, TeamIcon } from './icons'
+import { CalendarIcon, SparkleIcon, ClockIcon, LinkIcon } from './icons'
+import { iniciais } from '../lib/booking'
 
 const TABS = [
-  { to: '/admin', end: true, label: 'Agenda', Icon: CalendarIcon },
-  { to: '/admin/equipe', label: 'Equipe', Icon: TeamIcon },
-  { to: '/admin/servicos', label: 'Serviços', Icon: SparkleIcon },
-  { to: '/admin/horarios', label: 'Horários', Icon: ClockIcon },
-  { to: '/admin/clientes', label: 'Clientes', Icon: UsersIcon },
+  { to: '/pro', end: true, label: 'Agenda', Icon: CalendarIcon },
+  { to: '/pro/servicos', label: 'Serviços', Icon: SparkleIcon },
+  { to: '/pro/horarios', label: 'Horários', Icon: ClockIcon },
+  { to: '/pro/link', label: 'Meu link', Icon: LinkIcon },
 ]
 
-export default function AdminShell({ children }) {
-  const { profile, user, signOut } = useAuth()
-  const inicial = (profile?.full_name || user?.email || '?')
-    .trim()
-    .charAt(0)
-    .toUpperCase()
+export default function ProShell({ children }) {
+  const { professional, profile, user, signOut } = useAuth()
+  const nome = professional?.name || profile?.full_name || user?.email
 
   function handleSair() {
     if (window.confirm('Sair da conta?')) signOut()
@@ -24,9 +21,9 @@ export default function AdminShell({ children }) {
   return (
     <div className="admin-shell">
       <header className="topbar topbar-admin">
-        <span className="brand-inline">✿ Agenda Mel</span>
+        <span className="brand-inline">✿ {nome}</span>
         <button className="avatar-btn" onClick={handleSair} title="Sair da conta">
-          {inicial}
+          {iniciais(nome)}
         </button>
       </header>
 
@@ -39,9 +36,7 @@ export default function AdminShell({ children }) {
               key={to}
               to={to}
               end={end}
-              className={({ isActive }) =>
-                isActive ? 'nav-item active' : 'nav-item'
-              }
+              className={({ isActive }) => (isActive ? 'nav-item active' : 'nav-item')}
             >
               <Icon />
               <span>{label}</span>

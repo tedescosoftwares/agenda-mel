@@ -4,7 +4,7 @@ import Topbar from '../../components/Topbar'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { SparkleIcon } from '../../components/icons'
-import { formatPreco, formatDuracao, toISODate } from '../../lib/format'
+import { formatPreco, labelDuracao, toISODate } from '../../lib/format'
 
 const STATUS_LABEL = {
   pendente: 'pendente',
@@ -141,15 +141,24 @@ export default function ClienteHome() {
                         </div>
                       )}
                       <div className="servico-card-info">
-                        <span className="servico-nome">{s.name}</span>
+                        <span className="servico-nome">
+                          {s.name}
+                          {s.is_combo && (
+                            <span className="badge badge-combo">combo</span>
+                          )}
+                        </span>
                         {s.description && (
                           <span className="muted servico-desc">
                             {s.description}
                           </span>
                         )}
+                        {s.is_combo && incluiNomes(s, services) && (
+                          <span className="muted servico-desc">
+                            Inclui: {incluiNomes(s, services)}
+                          </span>
+                        )}
                         <span className="muted servico-meta">
-                          {formatDuracao(s.duration_minutes)} ·{' '}
-                          {formatPreco(s.price)}
+                          {labelDuracao(s)} · {formatPreco(s.price)}
                         </span>
                       </div>
                       <span className="btn btn-primary btn-agendar">Agendar</span>
@@ -168,4 +177,11 @@ export default function ClienteHome() {
 function formatDataCurta(iso) {
   const [, m, d] = iso.split('-')
   return `${d}/${m}`
+}
+
+function incluiNomes(combo, services) {
+  const nomes = (combo.combo_service_ids ?? [])
+    .map((id) => services.find((s) => s.id === id)?.name)
+    .filter(Boolean)
+  return nomes.length ? nomes.join(' + ') : ''
 }

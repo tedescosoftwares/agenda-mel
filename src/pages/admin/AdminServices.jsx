@@ -2,13 +2,14 @@ import { useEffect, useState } from 'react'
 import AdminShell from '../../components/AdminShell'
 import { supabase } from '../../lib/supabase'
 import { ChevronIcon, SparkleIcon } from '../../components/icons'
-import { formatPreco, formatDuracao } from '../../lib/format'
+import { formatPreco, formatDuracao, labelDuracao } from '../../lib/format'
 
 const FORM_VAZIO = {
   name: '',
   description: '',
   duration_minutes: 60,
   price: '',
+  is_combo: false,
 }
 
 const MAX_IMAGENS = 3
@@ -22,6 +23,7 @@ export default function AdminServices() {
   const [form, setForm] = useState(FORM_VAZIO)
   // cada item: { url } (já salva) ou { file, preview } (nova)
   const [imagens, setImagens] = useState([])
+  const [comboIds, setComboIds] = useState([])
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -46,6 +48,7 @@ export default function AdminServices() {
   function startNew() {
     setForm(FORM_VAZIO)
     setImagens([])
+    setComboIds([])
     setEditing('new')
     setError('')
   }
@@ -56,8 +59,10 @@ export default function AdminServices() {
       description: service.description ?? '',
       duration_minutes: service.duration_minutes,
       price: String(service.price),
+      is_combo: Boolean(service.is_combo),
     })
     setImagens((service.images ?? []).map((url) => ({ url })))
+    setComboIds(service.combo_service_ids ?? [])
     setEditing(service.id)
     setError('')
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -68,7 +73,24 @@ export default function AdminServices() {
     setEditing(null)
     setForm(FORM_VAZIO)
     setImagens([])
+    setComboIds([])
   }
+
+  function toggleComboId(id) {
+    setComboIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    )
+  }
+
+  // serviços que podem entrar num combo: não-combos, exceto o próprio
+  const candidatosCombo = services.filter(
+    (s) => !s.is_combo && s.id !== editing,
+  )
+
+  const somaCombo = comboIds.reduce((soma, id) => {
+    const s = services.find((x) => x.id === id)
+    return soma + (s ? s.duration_minutes : 0)
+  }, 0)
 
   function handleAddImagens(e) {
     const files = Array.from(e.target.files)
@@ -143,6 +165,10 @@ export default function AdminServices() {
       setError('Preço inválido.')
       return
     }
+    if (form.is_combo && comboIds.length < 2) {
+      setError('Um combo precisa de pelo menos 2 serviços.')
+      return
+    }
 
     setSaving(true)
     try {
@@ -151,9 +177,11 @@ export default function AdminServices() {
       const payload = {
         name: form.name.trim(),
         description: form.description.trim() || null,
-        duration_minutes: Number(form.duration_minutes),
+        duration_minutes: form.is_combo ? somaCombo : Number(form.duration_minutes),
         price,
         images,
+        is_combo: form.is_combo,
+        combo_service_ids: form.is_combo ? comboIds : [],
       }
 
       const antigas =
@@ -252,20 +280,73 @@ export default function AdminServices() {
             />
           </label>
 
-          <div className="form-row">
-            <label>
-              Duração (minutos)
+          <div className="combo-toggle">
+            <label className="switch">
               <input
-                type="number"
-                min="5"
-                step="5"
-                value={form.duration_minutes}
-                onChange={(e) =>
-                  setForm({ ...form, duration_minutes: e.target.value })
-                }
-                required
+                type="checkbox"
+                checked={form.is_combo}
+                onChange={(e) => setForm({ ...form, is_combo: e.target.checked })}
               />
+              <span></span>
             </label>
+            <div className="combo-toggle-texto">
+              <span>Combo de serviços</span>
+              <span className="muted">
+                Junta serviços num pacote — a duração é a soma e aparece para
+                a cliente como tempo médio
+              </span>
+            </div>
+          </div>
+
+          {form.is_combo && (
+            <div className="combo-picker">
+              <span className="img-field-label">Serviços do combo</span>
+              {candidatosCombo.length < 2 ? (
+                <p className="muted combo-aviso">
+                  Cadastre pelo menos 2 serviços comuns antes de criar um combo.
+                </p>
+              ) : (
+                <div className="combo-lista">
+                  {candidatosCombo.map((s) => (
+                    <label key={s.id} className="combo-item">
+                      <input
+                        type="checkbox"
+                        checked={comboIds.includes(s.id)}
+                        onChange={() => toggleComboId(s.id)}
+                      />
+                      <span className="combo-item-nome">{s.name}</span>
+                      <span className="muted">
+                        {formatDuracao(s.duration_minutes)}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              )}
+              {comboIds.length > 0 && (
+                <p className="muted combo-soma">
+                  Duração somada: <strong>{formatDuracao(somaCombo)}</strong> —
+                  exibida como tempo médio ~{formatDuracao(somaCombo)}
+                </p>
+              )}
+            </div>
+          )}
+
+          <div className="form-row">
+            {!form.is_combo && (
+              <label>
+                Duração (minutos)
+                <input
+                  type="number"
+                  min="5"
+                  step="5"
+                  value={form.duration_minutes}
+                  onChange={(e) =>
+                    setForm({ ...form, duration_minutes: e.target.value })
+                  }
+                  required
+                />
+              </label>
+            )}
 
             <label>
               Preço (R$)
@@ -355,9 +436,12 @@ export default function AdminServices() {
                 </div>
               )}
               <div className="service-info">
-                <span className="service-nome">{s.name}</span>
+                <span className="service-nome">
+                  {s.name}
+                  {s.is_combo && <span className="badge badge-combo">combo</span>}
+                </span>
                 <span className="muted service-meta">
-                  {formatDuracao(s.duration_minutes)} · {formatPreco(s.price)}
+                  {labelDuracao(s)} · {formatPreco(s.price)}
                 </span>
               </div>
               <label className="switch" title={s.active ? 'Desativar' : 'Ativar'}>

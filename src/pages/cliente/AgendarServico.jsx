@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import Topbar from '../../components/Topbar'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
-import { formatPreco, formatDuracao, toISODate } from '../../lib/format'
+import { formatPreco, labelDuracao, toISODate } from '../../lib/format'
 
 const PASSO_MIN = 30 // grade de horários de 30 em 30 minutos
 
@@ -192,9 +192,14 @@ export default function AgendarServico() {
 
         <div className="card servico-resumo">
           <div className="servico-card-info">
-            <span className="servico-nome">{service.name}</span>
+            <span className="servico-nome">
+              {service.name}
+              {service.is_combo && (
+                <span className="badge badge-combo">combo</span>
+              )}
+            </span>
             <span className="muted servico-meta">
-              {formatDuracao(service.duration_minutes)} · {formatPreco(service.price)}
+              {labelDuracao(service)} · {formatPreco(service.price)}
             </span>
           </div>
         </div>

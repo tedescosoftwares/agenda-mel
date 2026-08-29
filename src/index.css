@@ -580,6 +580,131 @@ h3 {
   color: var(--rosa-escuro);
 }
 
+.badge-combo {
+  background: var(--rosa-claro);
+  color: var(--rosa-escuro);
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+/* ---------- ações da agenda (admin) ---------- */
+
+.appt-btns {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.btn-mini {
+  border: none;
+  border-radius: 8px;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.btn-mini:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-mini-ok {
+  background: var(--info-bg);
+  color: var(--info);
+}
+
+.btn-mini-ok:hover:not(:disabled) {
+  background: #d8ecdf;
+}
+
+.btn-mini-nao {
+  background: var(--erro-bg);
+  color: var(--erro);
+}
+
+.btn-mini-nao:hover:not(:disabled) {
+  background: #f5d4d3;
+}
+
+/* ---------- combos (admin) ---------- */
+
+.combo-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.combo-toggle-texto {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.88rem;
+  font-weight: 500;
+}
+
+.combo-toggle-texto .muted {
+  font-size: 0.78rem;
+  font-weight: 400;
+  line-height: 1.35;
+}
+
+.combo-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.combo-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.combo-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--rosa-claro);
+  border-radius: 10px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.combo-item:has(input:checked) {
+  border-color: var(--rosa);
+  background: var(--creme);
+}
+
+.combo-item input {
+  width: 1.05rem;
+  height: 1.05rem;
+  accent-color: var(--rosa);
+  cursor: pointer;
+}
+
+.combo-item-nome {
+  flex: 1;
+  font-weight: 500;
+}
+
+.combo-item .muted {
+  font-size: 0.8rem;
+}
+
+.combo-soma {
+  font-size: 0.82rem;
+  margin: 0;
+}
+
+.combo-aviso {
+  font-size: 0.85rem;
+  margin: 0;
+}
+
 /* ---------- serviços ---------- */
 
 .service-form {

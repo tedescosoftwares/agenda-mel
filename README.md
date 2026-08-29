@@ -24,7 +24,8 @@ Backend: [Supabase](https://supabase.com) (plano gratuito — autenticação + b
    [`supabase/001_schema.sql`](supabase/001_schema.sql) e clique em **Run**.
 4. Repita com os demais arquivos de [`supabase/`](supabase/) **na ordem dos
    números**: `002_services.sql`, `003_business_hours.sql`,
-   `004_appointments.sql`, `005_service_images_e_slots.sql`, …
+   `004_appointments.sql`, `005_service_images_e_slots.sql`,
+   `006_combos.sql`, …
 
 ### 2. Configurar as variáveis de ambiente
 
@@ -81,6 +82,7 @@ supabase/
   003_business_hours.sql   # horários de atendimento por dia da semana
   004_appointments.sql     # agendamentos + admin enxerga perfis
   005_service_images_e_slots.sql # fotos dos serviços + horários ocupados
+  006_combos.sql           # combos de serviços (duração somada = tempo médio)
 ```
 
 ## Próximos passos
@@ -91,6 +93,8 @@ supabase/
 - [x] Fluxo de agendamento — cliente
 - [x] Listagem/cancelamento de agendamentos
 - [x] Fotos dos serviços (até 3 por serviço, Supabase Storage)
-- [ ] Confirmar/concluir agendamentos pelo admin
+- [x] Confirmar/concluir agendamentos pelo admin
+- [x] Combos de serviços (soma das durações exibida como tempo médio)
+- [ ] Publicar (Vercel/Netlify) e instalar como PWA no celular
 - [ ] Notificações (lembrete de horário)
 - [ ] Migrar depois para React Native / Expo reaproveitando o Supabase

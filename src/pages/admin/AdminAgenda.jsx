@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import AdminShell from '../../components/AdminShell'
 import { supabase } from '../../lib/supabase'
 import { formatPreco, formatDuracao, toISODate } from '../../lib/format'
@@ -23,12 +23,10 @@ export default function AdminAgenda() {
   const [appointments, setAppointments] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [mudandoId, setMudandoId] = useState(null)
 
-  useEffect(() => {
-    let cancelled = false
-    setLoading(true)
-
-    supabase
+  const fetchAgenda = useCallback(async () => {
+    const { data, error } = await supabase
       .from('appointments')
       .select(
         '*, profiles (full_name, phone), services (name, price, duration_minutes)',
@@ -36,21 +34,40 @@ export default function AdminAgenda() {
       .eq('date', dataSel)
       .neq('status', 'cancelado')
       .order('start_time')
-      .then(({ data, error }) => {
-        if (cancelled) return
-        if (error) {
-          setError('Erro ao carregar a agenda: ' + error.message)
-        } else {
-          setAppointments(data)
-          setError('')
-        }
-        setLoading(false)
-      })
 
-    return () => {
-      cancelled = true
+    if (error) {
+      setError('Erro ao carregar a agenda: ' + error.message)
+    } else {
+      setAppointments(data)
+      setError('')
     }
+    setLoading(false)
   }, [dataSel])
+
+  useEffect(() => {
+    setLoading(true)
+    fetchAgenda()
+  }, [fetchAgenda])
+
+  async function mudarStatus(appt, novo) {
+    if (novo === 'cancelado') {
+      const ok = window.confirm(
+        `Recusar o agendamento de ${appt.profiles?.full_name ?? 'cliente'} às ${appt.start_time.slice(0, 5)}? O horário volta a ficar livre.`,
+      )
+      if (!ok) return
+    }
+    setMudandoId(appt.id)
+    const { error } = await supabase
+      .from('appointments')
+      .update({ status: novo })
+      .eq('id', appt.id)
+    setMudandoId(null)
+    if (error) {
+      setError('Erro ao atualizar: ' + error.message)
+    } else {
+      fetchAgenda()
+    }
+  }
 
   const previsao = appointments.reduce(
     (soma, a) => soma + Number(a.services?.price ?? 0),
@@ -129,6 +146,44 @@ export default function AdminAgenda() {
                     {a.services?.name}
                     {a.services ? ` · ${formatPreco(a.services.price)}` : ''}
                   </span>
+                  <div className="appt-btns">
+                    {a.status === 'pendente' && (
+                      <>
+                        <button
+                          className="btn-mini btn-mini-ok"
+                          disabled={mudandoId === a.id}
+                          onClick={() => mudarStatus(a, 'confirmado')}
+                        >
+                          Confirmar
+                        </button>
+                        <button
+                          className="btn-mini btn-mini-nao"
+                          disabled={mudandoId === a.id}
+                          onClick={() => mudarStatus(a, 'cancelado')}
+                        >
+                          Recusar
+                        </button>
+                      </>
+                    )}
+                    {a.status === 'confirmado' && (
+                      <>
+                        <button
+                          className="btn-mini btn-mini-ok"
+                          disabled={mudandoId === a.id}
+                          onClick={() => mudarStatus(a, 'concluido')}
+                        >
+                          Concluir
+                        </button>
+                        <button
+                          className="btn-mini btn-mini-nao"
+                          disabled={mudandoId === a.id}
+                          onClick={() => mudarStatus(a, 'cancelado')}
+                        >
+                          Cancelar
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
                 <span className={`badge badge-${a.status}`}>
                   {STATUS_LABEL[a.status] ?? a.status}

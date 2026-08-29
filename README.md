@@ -24,7 +24,7 @@ Backend: [Supabase](https://supabase.com) (plano gratuito — autenticação + b
    [`supabase/001_schema.sql`](supabase/001_schema.sql) e clique em **Run**.
 4. Repita com os demais arquivos de [`supabase/`](supabase/) **na ordem dos
    números**: `002_services.sql`, `003_business_hours.sql`,
-   `004_appointments.sql`, …
+   `004_appointments.sql`, `005_service_images_e_slots.sql`, …
 
 ### 2. Configurar as variáveis de ambiente
 
@@ -67,7 +67,8 @@ src/
   components/ProtectedRoute.jsx
   pages/
     Login.jsx              # login + cadastro
-    cliente/ClienteHome.jsx
+    cliente/ClienteHome.jsx  # meus agendamentos + catálogo de serviços
+    cliente/AgendarServico.jsx # fluxo: dia -> horário livre -> confirmar
     admin/AdminAgenda.jsx    # agenda do dia — tela inicial do admin (/admin)
     admin/AdminServices.jsx  # CRUD de serviços (/admin/servicos)
     admin/AdminHours.jsx     # horários de atendimento (/admin/horarios)
@@ -79,6 +80,7 @@ supabase/
   002_services.sql         # tabela de serviços + políticas
   003_business_hours.sql   # horários de atendimento por dia da semana
   004_appointments.sql     # agendamentos + admin enxerga perfis
+  005_service_images_e_slots.sql # fotos dos serviços + horários ocupados
 ```
 
 ## Próximos passos
@@ -86,6 +88,9 @@ supabase/
 - [x] Cadastro de serviços (nome, duração, preço) — admin
 - [x] Configuração de horários de atendimento — admin
 - [x] Painel admin mobile-first (abas: Agenda, Serviços, Horários, Clientes)
-- [ ] Fluxo de agendamento — cliente
-- [ ] Listagem/cancelamento de agendamentos
+- [x] Fluxo de agendamento — cliente
+- [x] Listagem/cancelamento de agendamentos
+- [x] Fotos dos serviços (até 3 por serviço, Supabase Storage)
+- [ ] Confirmar/concluir agendamentos pelo admin
+- [ ] Notificações (lembrete de horário)
 - [ ] Migrar depois para React Native / Expo reaproveitando o Supabase

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import AdminShell from '../../components/AdminShell'
 import { supabase } from '../../lib/supabase'
-import { ChevronIcon } from '../../components/icons'
+import { ChevronIcon, SparkleIcon } from '../../components/icons'
 import { formatPreco, formatDuracao } from '../../lib/format'
 
 const FORM_VAZIO = {
@@ -11,12 +11,17 @@ const FORM_VAZIO = {
   price: '',
 }
 
+const MAX_IMAGENS = 3
+const MAX_TAMANHO_MB = 5
+
 export default function AdminServices() {
   const [services, setServices] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [editing, setEditing] = useState(null) // null | 'new' | id do serviço
   const [form, setForm] = useState(FORM_VAZIO)
+  // cada item: { url } (já salva) ou { file, preview } (nova)
+  const [imagens, setImagens] = useState([])
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -40,6 +45,7 @@ export default function AdminServices() {
 
   function startNew() {
     setForm(FORM_VAZIO)
+    setImagens([])
     setEditing('new')
     setError('')
   }
@@ -51,14 +57,79 @@ export default function AdminServices() {
       duration_minutes: service.duration_minutes,
       price: String(service.price),
     })
+    setImagens((service.images ?? []).map((url) => ({ url })))
     setEditing(service.id)
     setError('')
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   function cancelEdit() {
+    imagens.forEach((img) => img.preview && URL.revokeObjectURL(img.preview))
     setEditing(null)
     setForm(FORM_VAZIO)
+    setImagens([])
+  }
+
+  function handleAddImagens(e) {
+    const files = Array.from(e.target.files)
+    e.target.value = ''
+    setError('')
+
+    const espaco = MAX_IMAGENS - imagens.length
+    if (files.length > espaco) {
+      setError(`Cada serviço pode ter no máximo ${MAX_IMAGENS} imagens.`)
+    }
+
+    const novas = []
+    for (const file of files.slice(0, espaco)) {
+      if (!file.type.startsWith('image/')) continue
+      if (file.size > MAX_TAMANHO_MB * 1024 * 1024) {
+        setError(`Imagem muito grande (máx. ${MAX_TAMANHO_MB} MB): ${file.name}`)
+        continue
+      }
+      novas.push({ file, preview: URL.createObjectURL(file) })
+    }
+    if (novas.length) setImagens((prev) => [...prev, ...novas])
+  }
+
+  function removeImagem(index) {
+    setImagens((prev) => {
+      const img = prev[index]
+      if (img?.preview) URL.revokeObjectURL(img.preview)
+      return prev.filter((_, i) => i !== index)
+    })
+  }
+
+  async function uploadImagens() {
+    const urls = []
+    for (const img of imagens) {
+      if (img.url) {
+        urls.push(img.url)
+        continue
+      }
+      const ext = (img.file.name.split('.').pop() || 'jpg').toLowerCase()
+      const path = `${crypto.randomUUID()}.${ext}`
+      const { error } = await supabase.storage
+        .from('service-images')
+        .upload(path, img.file, { contentType: img.file.type })
+      if (error) {
+        throw new Error('Erro ao enviar imagem: ' + error.message)
+      }
+      const { data } = supabase.storage.from('service-images').getPublicUrl(path)
+      urls.push(data.publicUrl)
+    }
+    return urls
+  }
+
+  // Remove do Storage as imagens que saíram do serviço (melhor esforço)
+  async function limparImagensRemovidas(antigas, atuais) {
+    const removidas = (antigas ?? []).filter((url) => !atuais.includes(url))
+    const paths = removidas
+      .map((url) => url.split('/service-images/')[1])
+      .filter(Boolean)
+    if (paths.length) {
+      await supabase.storage.from('service-images').remove(paths)
+    }
   }
 
   async function handleSave(e) {
@@ -73,28 +144,42 @@ export default function AdminServices() {
       return
     }
 
-    const payload = {
-      name: form.name.trim(),
-      description: form.description.trim() || null,
-      duration_minutes: Number(form.duration_minutes),
-      price,
-    }
-
     setSaving(true)
-    const query =
-      editing === 'new'
-        ? supabase.from('services').insert(payload)
-        : supabase.from('services').update(payload).eq('id', editing)
+    try {
+      const images = await uploadImagens()
 
-    const { error } = await query
-    setSaving(false)
+      const payload = {
+        name: form.name.trim(),
+        description: form.description.trim() || null,
+        duration_minutes: Number(form.duration_minutes),
+        price,
+        images,
+      }
 
-    if (error) {
-      setError('Erro ao salvar: ' + error.message)
-      return
+      const antigas =
+        editing !== 'new'
+          ? services.find((s) => s.id === editing)?.images
+          : []
+
+      const query =
+        editing === 'new'
+          ? supabase.from('services').insert(payload)
+          : supabase.from('services').update(payload).eq('id', editing)
+
+      const { error } = await query
+      if (error) {
+        setError('Erro ao salvar: ' + error.message)
+        return
+      }
+
+      await limparImagensRemovidas(antigas, images)
+      cancelEdit()
+      fetchServices()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSaving(false)
     }
-    cancelEdit()
-    fetchServices()
   }
 
   async function toggleActive(service) {
@@ -120,6 +205,7 @@ export default function AdminServices() {
     if (error) {
       setError('Erro ao excluir: ' + error.message)
     } else {
+      await limparImagensRemovidas(service.images, [])
       cancelEdit()
       fetchServices()
     }
@@ -194,6 +280,39 @@ export default function AdminServices() {
             </label>
           </div>
 
+          <div className="img-field">
+            <span className="img-field-label">
+              Fotos ({imagens.length}/{MAX_IMAGENS})
+            </span>
+            <div className="img-thumbs">
+              {imagens.map((img, i) => (
+                <div key={img.url ?? img.preview} className="img-thumb">
+                  <img src={img.url ?? img.preview} alt={`Foto ${i + 1}`} />
+                  <button
+                    type="button"
+                    className="img-remove"
+                    onClick={() => removeImagem(i)}
+                    aria-label="Remover foto"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+              {imagens.length < MAX_IMAGENS && (
+                <label className="img-add">
+                  +
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleAddImagens}
+                    hidden
+                  />
+                </label>
+              )}
+            </div>
+          </div>
+
           <div className="form-actions">
             {editing !== 'new' && (
               <button
@@ -228,6 +347,13 @@ export default function AdminServices() {
               key={s.id}
               className={s.active ? 'card service-row' : 'card service-row inactive'}
             >
+              {s.images?.[0] ? (
+                <img className="service-thumb" src={s.images[0]} alt={s.name} />
+              ) : (
+                <div className="service-thumb service-thumb-vazio">
+                  <SparkleIcon />
+                </div>
+              )}
               <div className="service-info">
                 <span className="service-nome">{s.name}</span>
                 <span className="muted service-meta">

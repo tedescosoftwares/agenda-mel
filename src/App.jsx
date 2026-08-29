@@ -3,6 +3,7 @@ import { AuthProvider } from './context/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import Login from './pages/Login'
 import ClienteHome from './pages/cliente/ClienteHome'
+import AgendarServico from './pages/cliente/AgendarServico'
 import AdminAgenda from './pages/admin/AdminAgenda'
 import AdminServices from './pages/admin/AdminServices'
 import AdminHours from './pages/admin/AdminHours'
@@ -20,6 +21,15 @@ export default function App() {
             element={
               <ProtectedRoute requireRole="cliente">
                 <ClienteHome />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/agendar/:serviceId"
+            element={
+              <ProtectedRoute requireRole="cliente">
+                <AgendarServico />
               </ProtectedRoute>
             }
           />

@@ -1,5 +1,6 @@
 import ProShell from '../../components/ProShell'
 import AgendaDia from '../../components/AgendaDia'
+import FilaEspera from '../../components/FilaEspera'
 import SemFicha from './SemFicha'
 import { useAuth } from '../../context/AuthContext'
 
@@ -21,6 +22,7 @@ export default function ProAgenda() {
           <p className="muted titulo-dia">{hoje}</p>
         </div>
       </div>
+      <FilaEspera professionalId={professional.id} />
       <AgendaDia professionalId={professional.id} />
     </ProShell>
   )

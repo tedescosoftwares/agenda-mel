@@ -8,6 +8,7 @@ import { formatPreco, toISODate } from '../../lib/format'
 import { formatDataCurta } from '../../lib/booking'
 import Avatar from '../../components/Avatar'
 import ConviteAdiantar from '../../components/ConviteAdiantar'
+import OfertaVaga from '../../components/OfertaVaga'
 
 const STATUS_LABEL = {
   pendente: 'pendente',
@@ -21,13 +22,15 @@ export default function ClienteHome() {
 
   const [profissionais, setProfissionais] = useState([])
   const [meus, setMeus] = useState([])
+  const [vagas, setVagas] = useState([])
+  const [filas, setFilas] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
   const fetchDados = useCallback(async () => {
     const hoje = toISODate(new Date())
 
-    const [profRes, apptRes] = await Promise.all([
+    const [profRes, apptRes, vagasRes, filasRes] = await Promise.all([
       supabase
         .from('professionals')
         .select('*')
@@ -42,6 +45,19 @@ export default function ClienteHome() {
         .neq('status', 'cancelado')
         .order('date')
         .order('start_time'),
+      supabase
+        .from('waitlist_offers')
+        .select(
+          '*, waitlist_entries (id, services (name), professionals (name))',
+        )
+        .eq('status', 'pendente')
+        .gt('expires_at', new Date().toISOString())
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('waitlist_entries')
+        .select('*, services (name), professionals (name)')
+        .eq('status', 'aguardando')
+        .order('created_at', { ascending: false }),
     ])
 
     if (profRes.error) {
@@ -51,6 +67,8 @@ export default function ClienteHome() {
       setError('')
     }
     if (!apptRes.error) setMeus(apptRes.data)
+    if (!vagasRes.error) setVagas(vagasRes.data)
+    if (!filasRes.error) setFilas(filasRes.data)
     setLoading(false)
   }, [])
 
@@ -71,6 +89,12 @@ export default function ClienteHome() {
     else fetchDados()
   }
 
+  async function sairDaFila(f) {
+    const { error } = await supabase.rpc('sair_lista_espera', { entrada_id: f.id })
+    if (error) setError('Erro ao sair da fila: ' + error.message)
+    else fetchDados()
+  }
+
   return (
     <div className="layout">
       <Topbar />
@@ -84,6 +108,10 @@ export default function ClienteHome() {
           <p className="muted">Carregando…</p>
         ) : (
           <>
+            {vagas.map((v) => (
+              <OfertaVaga key={v.id} oferta={v} onRespondido={fetchDados} />
+            ))}
+
             {convitesAbertos(meus).map(({ appt, oferta }) => (
               <ConviteAdiantar
                 key={oferta.id}
@@ -122,6 +150,32 @@ export default function ClienteHome() {
                           cancelar
                         </button>
                       </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {filas.length > 0 && (
+              <section className="secao">
+                <h3 className="secao-titulo">Estou esperando vaga</h3>
+                <div className="cliente-list">
+                  {filas.map((f) => (
+                    <div key={f.id} className="card fila-row">
+                      <div className="cliente-info">
+                        <span className="cliente-nome">{f.services?.name}</span>
+                        <span className="muted cliente-meta">
+                          com {f.professionals?.name} ·{' '}
+                          {f.window_start.slice(0, 5)}–{f.window_end.slice(0, 5)}{' '}
+                          · até {formatDataCurta(f.date_to)}
+                        </span>
+                      </div>
+                      <button
+                        className="btn-link-cancelar"
+                        onClick={() => sairDaFila(f)}
+                      >
+                        sair da fila
+                      </button>
                     </div>
                   ))}
                 </div>

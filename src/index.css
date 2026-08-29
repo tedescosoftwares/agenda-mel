@@ -1663,6 +1663,89 @@ button.servico-card {
   margin-top: 0.2rem;
 }
 
+
+/* ---------- lista de espera ---------- */
+
+.espera-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  border-style: dashed;
+  margin-top: 0.9rem;
+}
+
+.espera-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.btn-fila {
+  display: block;
+  margin: 0.9rem auto 0;
+  text-decoration: underline;
+}
+
+.fila-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0.85rem 1rem;
+}
+
+.fila-painel {
+  padding: 0;
+  overflow: hidden;
+  margin-bottom: 0.9rem;
+}
+
+.fila-cabecalho {
+  width: 100%;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 0.92rem;
+  color: inherit;
+  padding: 0.9rem 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  cursor: pointer;
+}
+
+.fila-cabecalho .muted {
+  font-size: 0.82rem;
+}
+
+.fila-itens {
+  border-top: 1px solid var(--rosa-claro);
+  padding: 0.6rem 1.1rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.fila-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fila-item .cliente-meta {
+  font-size: 0.8rem;
+}
+
+.fila-nota {
+  font-size: 0.78rem;
+  margin: 0.2rem 0 0;
+}
+
+.badge-faltou {
+  background: var(--erro-bg);
+  color: var(--erro);
+}
+
 /* ---------- estados vazios e alertas ---------- */
 
 .empty-state {

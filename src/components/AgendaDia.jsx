@@ -7,6 +7,7 @@ const STATUS_LABEL = {
   pendente: 'pendente',
   confirmado: 'confirmado',
   concluido: 'concluído',
+  faltou: 'não veio',
 }
 
 // Agenda de um dia — usada pelo admin (todas as profissionais ou uma
@@ -38,6 +39,7 @@ export default function AgendaDia({ professionalId = null, mostrarProfissional =
       .neq('status', 'cancelado')
       .order('start_time')
 
+
     if (professionalId) query = query.eq('professional_id', professionalId)
 
     const { data, error } = await query
@@ -56,6 +58,12 @@ export default function AgendaDia({ professionalId = null, mostrarProfissional =
   }, [fetchAgenda])
 
   async function mudarStatus(appt, novo) {
+    if (novo === 'faltou') {
+      const ok = window.confirm(
+        `Marcar que ${appt.profiles?.full_name ?? 'a cliente'} não veio? O horário volta a ficar livre e quem está na lista de espera é avisada.`,
+      )
+      if (!ok) return
+    }
     if (novo === 'cancelado') {
       const ok = window.confirm(
         `Recusar o agendamento de ${appt.profiles?.full_name ?? 'cliente'} às ${appt.start_time.slice(0, 5)}? O horário volta a ficar livre.`,
@@ -172,6 +180,15 @@ export default function AgendaDia({ professionalId = null, mostrarProfissional =
                         >
                           Concluir
                         </button>
+                        {passouDaTolerancia(a) && (
+                          <button
+                            className="btn-mini btn-mini-nao"
+                            disabled={mudandoId === a.id}
+                            onClick={() => mudarStatus(a, 'faltou')}
+                          >
+                            Não veio
+                          </button>
+                        )}
                         <button
                           className="btn-mini btn-mini-nao"
                           disabled={mudandoId === a.id}
@@ -225,6 +242,14 @@ export default function AgendaDia({ professionalId = null, mostrarProfissional =
 // só faz sentido adiantar o que ainda não começou
 function podeAdiantar(a) {
   return a.status === 'pendente' || a.status === 'confirmado'
+}
+
+// "Não veio" só aparece depois do horário marcado + tolerância
+const TOLERANCIA_MIN = 15
+
+function passouDaTolerancia(a) {
+  const marcado = new Date(`${a.date}T${a.start_time}`)
+  return Date.now() > marcado.getTime() + TOLERANCIA_MIN * 60000
 }
 
 function convitePendente(a) {

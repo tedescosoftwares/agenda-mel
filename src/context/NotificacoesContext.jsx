@@ -39,6 +39,8 @@ export function NotificacoesProvider({ children }) {
     }
     setLoading(true)
     carregar()
+    // aproveita a abertura do app para passar vagas não respondidas adiante
+    supabase.rpc('avancar_ofertas_expiradas')
 
     // avisos entram na tela sem precisar recarregar
     const canal = supabase

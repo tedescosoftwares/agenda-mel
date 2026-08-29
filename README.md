@@ -31,7 +31,8 @@ Backend: [Supabase](https://supabase.com) (plano gratuito — autenticação + b
    números**: `002_services.sql`, `003_business_hours.sql`,
    `004_appointments.sql`, `005_service_images_e_slots.sql`,
    `006_combos.sql`, `007_profissionais.sql`, `008_foto_profissional.sql`,
-   `009_notificacoes.sql`, `010_adiantar_agenda.sql`, …
+   `009_notificacoes.sql`, `010_adiantar_agenda.sql`,
+   `011_lista_espera.sql`, …
 
 ### 2. Configurar as variáveis de ambiente
 
@@ -100,6 +101,7 @@ supabase/
   008_foto_profissional.sql # bucket das fotos das profissionais
   009_notificacoes.sql     # caixa de avisos no app (base das features)
   010_adiantar_agenda.sql  # convite para a cliente vir mais cedo
+  011_lista_espera.sql     # fila de espera, vaga liberada e falta da cliente
 ```
 
 ## Papéis
@@ -142,7 +144,7 @@ where slug = 'slug-dela';
 - [x] Foto da profissional (admin e ela mesma trocam)
 - [x] Caixa de avisos no app, em tempo real
 - [x] Adiantar a agenda (convite com prazo; a cliente decide)
-- [ ] Lista de espera + falta da cliente libera a vaga
+- [x] Lista de espera + falta da cliente libera a vaga
 - [ ] Indique e ganhe (crédito só depois do atendimento concluído)
 - [ ] Publicar (Vercel/Netlify) e instalar como PWA no celular
 - [ ] Notificações (lembrete de horário)

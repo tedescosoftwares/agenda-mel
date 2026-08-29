@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import AuthModal from '../../components/AuthModal'
+import ListaEsperaForm from '../../components/ListaEsperaForm'
 import { SparkleIcon } from '../../components/icons'
 import { formatPreco, labelDuracao, toISODate } from '../../lib/format'
 import {
@@ -32,6 +33,7 @@ export default function PaginaProfissional() {
   const [loadingSlots, setLoadingSlots] = useState(false)
 
   const [mostrarLogin, setMostrarLogin] = useState(false)
+  const [mostrarFila, setMostrarFila] = useState(false)
   const [tentandoFechar, setTentandoFechar] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -339,10 +341,18 @@ export default function PaginaProfissional() {
                 {loadingSlots ? (
                   <p className="muted">Buscando horários…</p>
                 ) : slots.length === 0 ? (
-                  <div className="card empty-state">
-                    <p>Nenhum horário livre neste dia. 😔</p>
-                    <p className="muted">Tente outro dia.</p>
-                  </div>
+                  <>
+                    <div className="card empty-state">
+                      <p>Nenhum horário livre neste dia. 😔</p>
+                      <p className="muted">Tente outro dia — ou entre na fila:</p>
+                    </div>
+                    <ListaEsperaForm
+                      profissional={prof}
+                      servico={servicoSel}
+                      diaSugerido={dataSel}
+                      onPrecisaLogin={() => setMostrarLogin(true)}
+                    />
+                  </>
                 ) : (
                   <div className="slots-grid">
                     {slots.map((h) => (
@@ -356,6 +366,26 @@ export default function PaginaProfissional() {
                       </button>
                     ))}
                   </div>
+                )}
+
+                {slots.length > 0 && !horaSel && (
+                  <button
+                    className="btn btn-ghost btn-fila"
+                    onClick={() => setMostrarFila((v) => !v)}
+                  >
+                    {mostrarFila
+                      ? 'Fechar'
+                      : 'Não achei o horário que eu queria →'}
+                  </button>
+                )}
+
+                {slots.length > 0 && mostrarFila && (
+                  <ListaEsperaForm
+                    profissional={prof}
+                    servico={servicoSel}
+                    diaSugerido={dataSel}
+                    onPrecisaLogin={() => setMostrarLogin(true)}
+                  />
                 )}
               </>
             )}

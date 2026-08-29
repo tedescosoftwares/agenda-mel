@@ -7,6 +7,7 @@ import { ChevronIcon } from '../../components/icons'
 import { formatPreco, toISODate } from '../../lib/format'
 import { formatDataCurta } from '../../lib/booking'
 import Avatar from '../../components/Avatar'
+import ConviteAdiantar from '../../components/ConviteAdiantar'
 
 const STATUS_LABEL = {
   pendente: 'pendente',
@@ -34,7 +35,9 @@ export default function ClienteHome() {
         .order('name'),
       supabase
         .from('appointments')
-        .select('*, services (name, price), professionals (name)')
+        .select(
+          '*, services (name, price), professionals (name), appointment_offers (id, status, proposed_start_time, previous_start_time, expires_at)',
+        )
         .gte('date', hoje)
         .neq('status', 'cancelado')
         .order('date')
@@ -81,6 +84,16 @@ export default function ClienteHome() {
           <p className="muted">Carregando…</p>
         ) : (
           <>
+            {convitesAbertos(meus).map(({ appt, oferta }) => (
+              <ConviteAdiantar
+                key={oferta.id}
+                oferta={oferta}
+                servico={appt.services?.name}
+                profissional={appt.professionals?.name}
+                onRespondido={fetchDados}
+              />
+            ))}
+
             {meus.length > 0 && (
               <section className="secao">
                 <h3 className="secao-titulo">Meus agendamentos</h3>
@@ -142,5 +155,15 @@ export default function ClienteHome() {
         )}
       </main>
     </div>
+  )
+}
+
+// convites de adiantamento ainda válidos, achatados para a tela
+function convitesAbertos(agendamentos) {
+  const agora = new Date()
+  return agendamentos.flatMap((appt) =>
+    (appt.appointment_offers ?? [])
+      .filter((o) => o.status === 'pendente' && new Date(o.expires_at) > agora)
+      .map((oferta) => ({ appt, oferta })),
   )
 }

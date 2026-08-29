@@ -1597,6 +1597,72 @@ button.servico-card {
   font-size: 1.1rem;
 }
 
+
+/* ---------- adiantar a agenda ---------- */
+
+.btn-mini-neutro {
+  background: var(--rosa-claro);
+  color: var(--rosa-escuro);
+}
+
+.btn-mini-neutro:hover:not(:disabled) {
+  background: #ecc9c2;
+}
+
+.prazo-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.prazo-opcoes {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.convite-card {
+  border-color: var(--rosa);
+  border-left-width: 4px;
+  box-shadow: 0 6px 20px rgba(169, 106, 111, 0.18);
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.convite-selo {
+  display: inline-block;
+  align-self: flex-start;
+  background: var(--rosa-claro);
+  color: var(--rosa-escuro);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.convite-texto {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.convite-prazo {
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.convite-acoes {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  margin-top: 0.2rem;
+}
+
 /* ---------- estados vazios e alertas ---------- */
 
 .empty-state {

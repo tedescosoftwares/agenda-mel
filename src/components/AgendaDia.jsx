@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import AdiantarModal from './AdiantarModal'
 import { formatPreco, formatDuracao, toISODate } from '../lib/format'
 
 const STATUS_LABEL = {
@@ -25,12 +26,13 @@ export default function AgendaDia({ professionalId = null, mostrarProfissional =
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [mudandoId, setMudandoId] = useState(null)
+  const [adiantando, setAdiantando] = useState(null)
 
   const fetchAgenda = useCallback(async () => {
     let query = supabase
       .from('appointments')
       .select(
-        '*, profiles (full_name, phone), services (name, price, duration_minutes), professionals (name)',
+        '*, profiles (full_name, phone), services (name, price, duration_minutes), professionals (name), appointment_offers (id, status, proposed_start_time, expires_at)',
       )
       .eq('date', dataSel)
       .neq('status', 'cancelado')
@@ -67,6 +69,14 @@ export default function AgendaDia({ professionalId = null, mostrarProfissional =
       .eq('id', appt.id)
     setMudandoId(null)
     if (error) setError('Erro ao atualizar: ' + error.message)
+    else fetchAgenda()
+  }
+
+  async function cancelarConvite(oferta) {
+    const { error } = await supabase.rpc('cancelar_antecipacao', {
+      oferta_id: oferta.id,
+    })
+    if (error) setError('Erro ao desfazer: ' + error.message)
     else fetchAgenda()
   }
 
@@ -171,6 +181,22 @@ export default function AgendaDia({ professionalId = null, mostrarProfissional =
                         </button>
                       </>
                     )}
+                    {podeAdiantar(a) &&
+                      (convitePendente(a) ? (
+                        <button
+                          className="btn-mini btn-mini-neutro"
+                          onClick={() => cancelarConvite(convitePendente(a))}
+                        >
+                          Aguardando resposta · desfazer
+                        </button>
+                      ) : (
+                        <button
+                          className="btn-mini btn-mini-neutro"
+                          onClick={() => setAdiantando(a)}
+                        >
+                          Adiantar
+                        </button>
+                      ))}
                   </div>
                 </div>
                 <span className={`badge badge-${a.status}`}>
@@ -181,6 +207,28 @@ export default function AgendaDia({ professionalId = null, mostrarProfissional =
           </div>
         </>
       )}
+
+      {adiantando && (
+        <AdiantarModal
+          appt={adiantando}
+          onFechar={() => setAdiantando(null)}
+          onPronto={() => {
+            setAdiantando(null)
+            fetchAgenda()
+          }}
+        />
+      )}
     </>
+  )
+}
+
+// só faz sentido adiantar o que ainda não começou
+function podeAdiantar(a) {
+  return a.status === 'pendente' || a.status === 'confirmado'
+}
+
+function convitePendente(a) {
+  return (a.appointment_offers ?? []).find(
+    (o) => o.status === 'pendente' && new Date(o.expires_at) > new Date(),
   )
 }

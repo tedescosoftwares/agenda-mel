@@ -30,7 +30,8 @@ Backend: [Supabase](https://supabase.com) (plano gratuito — autenticação + b
 4. Repita com os demais arquivos de [`supabase/`](supabase/) **na ordem dos
    números**: `002_services.sql`, `003_business_hours.sql`,
    `004_appointments.sql`, `005_service_images_e_slots.sql`,
-   `006_combos.sql`, `007_profissionais.sql`, `008_foto_profissional.sql`, …
+   `006_combos.sql`, `007_profissionais.sql`, `008_foto_profissional.sql`,
+   `009_notificacoes.sql`, `010_adiantar_agenda.sql`, …
 
 ### 2. Configurar as variáveis de ambiente
 
@@ -97,6 +98,8 @@ supabase/
   006_combos.sql           # combos de serviços (duração = tempo médio)
   007_profissionais.sql    # equipe, agenda e link por profissional
   008_foto_profissional.sql # bucket das fotos das profissionais
+  009_notificacoes.sql     # caixa de avisos no app (base das features)
+  010_adiantar_agenda.sql  # convite para a cliente vir mais cedo
 ```
 
 ## Papéis
@@ -137,6 +140,10 @@ where slug = 'slug-dela';
 - [x] Equipe: profissionais com agenda, serviços e link próprios
 - [x] Link público /p/<slug> — agenda sem precisar estar logada antes
 - [x] Foto da profissional (admin e ela mesma trocam)
+- [x] Caixa de avisos no app, em tempo real
+- [x] Adiantar a agenda (convite com prazo; a cliente decide)
+- [ ] Lista de espera + falta da cliente libera a vaga
+- [ ] Indique e ganhe (crédito só depois do atendimento concluído)
 - [ ] Publicar (Vercel/Netlify) e instalar como PWA no celular
 - [ ] Notificações (lembrete de horário)
 - [ ] Migrar depois para React Native / Expo reaproveitando o Supabase

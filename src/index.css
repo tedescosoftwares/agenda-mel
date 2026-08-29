@@ -397,6 +397,67 @@ h3 {
   }
 }
 
+/* ---------- horários de atendimento ---------- */
+
+.hours-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.hours-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.9rem 1.2rem;
+}
+
+.hours-row.closed {
+  opacity: 0.6;
+}
+
+.hours-day {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-weight: 500;
+  cursor: pointer;
+  min-width: 160px;
+}
+
+.hours-day input[type='checkbox'] {
+  width: 1.1rem;
+  height: 1.1rem;
+  accent-color: var(--rosa);
+  cursor: pointer;
+}
+
+.hours-times {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.hours-times input[type='time'] {
+  border: 1px solid #e5cfc9;
+  border-radius: 8px;
+  padding: 0.4rem 0.55rem;
+  font-size: 0.95rem;
+  background: var(--branco);
+  color: var(--texto);
+  outline: none;
+}
+
+.hours-times input[type='time']:focus {
+  border-color: var(--rosa);
+}
+
+.hours-save {
+  margin-top: 1.2rem;
+}
+
 /* ---------- alertas ---------- */
 
 .alert {

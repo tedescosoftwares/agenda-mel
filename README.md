@@ -22,8 +22,8 @@ Backend: [Supabase](https://supabase.com) (plano gratuito — autenticação + b
 2. Crie um projeto novo (região `South America (São Paulo)` é a mais próxima).
 3. No painel do projeto, abra **SQL Editor**, cole o conteúdo de
    [`supabase/001_schema.sql`](supabase/001_schema.sql) e clique em **Run**.
-4. Repita com [`supabase/002_services.sql`](supabase/002_services.sql)
-   (tabela de serviços). Os arquivos SQL são numerados — rode sempre na ordem.
+4. Repita com os demais arquivos de [`supabase/`](supabase/) **na ordem dos
+   números**: `002_services.sql`, `003_business_hours.sql`, …
 
 ### 2. Configurar as variáveis de ambiente
 
@@ -69,15 +69,17 @@ src/
     cliente/ClienteHome.jsx
     admin/AdminHome.jsx
     admin/AdminServices.jsx  # CRUD de serviços (/admin/servicos)
+    admin/AdminHours.jsx     # horários de atendimento (/admin/horarios)
 supabase/
   001_schema.sql           # perfis, trigger e políticas de segurança (RLS)
   002_services.sql         # tabela de serviços + políticas
+  003_business_hours.sql   # horários de atendimento por dia da semana
 ```
 
 ## Próximos passos
 
 - [x] Cadastro de serviços (nome, duração, preço) — admin
-- [ ] Configuração de horários de atendimento — admin
+- [x] Configuração de horários de atendimento — admin
 - [ ] Fluxo de agendamento — cliente
 - [ ] Listagem/cancelamento de agendamentos
 - [ ] Migrar depois para React Native / Expo reaproveitando o Supabase

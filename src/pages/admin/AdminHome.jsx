@@ -24,11 +24,10 @@ export default function AdminHome() {
             <h3>💅 Serviços</h3>
             <p className="muted">Cadastrar serviços, duração e preços.</p>
           </Link>
-          <div className="card card-soon">
+          <Link to="/admin/horarios" className="card card-link">
             <h3>⏰ Horários</h3>
             <p className="muted">Definir dias e horários de atendimento.</p>
-            <span className="badge">em breve</span>
-          </div>
+          </Link>
           <div className="card card-soon">
             <h3>👥 Clientes</h3>
             <p className="muted">Ver a lista de clientes cadastradas.</p>

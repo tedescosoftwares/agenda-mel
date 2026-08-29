@@ -5,6 +5,7 @@ import Login from './pages/Login'
 import ClienteHome from './pages/cliente/ClienteHome'
 import AdminHome from './pages/admin/AdminHome'
 import AdminServices from './pages/admin/AdminServices'
+import AdminHours from './pages/admin/AdminHours'
 
 export default function App() {
   return (
@@ -36,6 +37,15 @@ export default function App() {
             element={
               <ProtectedRoute requireRole="admin">
                 <AdminServices />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/horarios"
+            element={
+              <ProtectedRoute requireRole="admin">
+                <AdminHours />
               </ProtectedRoute>
             }
           />

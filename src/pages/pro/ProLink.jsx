@@ -1,13 +1,29 @@
 import { useState } from 'react'
 import ProShell from '../../components/ProShell'
 import SemFicha from './SemFicha'
+import FotoUpload from '../../components/FotoUpload'
 import { useAuth } from '../../context/AuthContext'
+import { supabase } from '../../lib/supabase'
 
 export default function ProLink() {
-  const { professional } = useAuth()
+  const { professional, recarregarProfessional } = useAuth()
   const [copiado, setCopiado] = useState(false)
+  const [erroFoto, setErroFoto] = useState('')
 
   if (!professional) return <SemFicha />
+
+  async function salvarFoto(url) {
+    const { error } = await supabase
+      .from('professionals')
+      .update({ photo_url: url })
+      .eq('id', professional.id)
+    if (error) {
+      setErroFoto('Erro ao salvar a foto: ' + error.message)
+      return
+    }
+    setErroFoto('')
+    await recarregarProfessional()
+  }
 
   const url = `${window.location.origin}/p/${professional.slug}`
   const mensagem = `Oi! Você pode agendar comigo por aqui: ${url}`
@@ -29,6 +45,18 @@ export default function ProLink() {
           <h2>Meu link</h2>
           <p className="muted">Mande para as clientes agendarem com você</p>
         </div>
+      </div>
+
+      <div className="card foto-card">
+        <h3>Sua foto</h3>
+        <p className="muted">É ela que aparece no seu link para as clientes.</p>
+        {erroFoto && <div className="alert alert-error">{erroFoto}</div>}
+        <FotoUpload
+          nome={professional.name}
+          valor={professional.photo_url}
+          onChange={salvarFoto}
+          onErro={setErroFoto}
+        />
       </div>
 
       <div className="card link-card">

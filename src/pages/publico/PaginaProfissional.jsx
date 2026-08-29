@@ -10,8 +10,8 @@ import {
   toMin,
   minToHora,
   formatDataLonga,
-  iniciais,
 } from '../../lib/booking'
+import Avatar from '../../components/Avatar'
 
 // Página pública da profissional (/p/<slug>): qualquer pessoa vê os
 // serviços e os horários livres; o login só entra na hora de fechar.
@@ -247,7 +247,7 @@ export default function PaginaProfissional() {
   return (
     <div className="layout publico">
       <header className="prof-capa">
-        <div className="avatar-iniciais avatar-grande">{iniciais(prof.name)}</div>
+        <Avatar nome={prof.name} foto={prof.photo_url} grande />
         <h1>{prof.name}</h1>
         {prof.bio && <p className="prof-bio">{prof.bio}</p>}
       </header>

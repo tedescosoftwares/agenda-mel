@@ -113,6 +113,11 @@ h3 {
 .avatar-btn {
   width: 34px;
   height: 34px;
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 999px;
   border: none;
   background: var(--rosa);
@@ -1422,6 +1427,61 @@ button.servico-card {
   margin: 0;
   font-size: 0.88rem;
   line-height: 1.5;
+}
+
+
+/* ---------- foto da profissional ---------- */
+
+.avatar-foto {
+  object-fit: cover;
+  display: block;
+}
+
+.avatar-topo {
+  width: 34px;
+  height: 34px;
+}
+
+.foto-upload {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.foto-upload-acoes {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.foto-btn {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.foto-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  margin-bottom: 1rem;
+}
+
+.foto-card h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.foto-card p {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.prof-capa .avatar-foto {
+  border: 3px solid var(--branco);
+  box-shadow: 0 4px 14px rgba(169, 106, 111, 0.2);
 }
 
 /* ---------- estados vazios e alertas ---------- */

@@ -65,6 +65,17 @@ export function AuthProvider({ children }) {
     }
   }, [session])
 
+  // usada quando a profissional edita a própria ficha (foto, etc.)
+  async function recarregarProfessional() {
+    if (!session?.user) return
+    const { data } = await supabase
+      .from('professionals')
+      .select('*')
+      .eq('user_id', session.user.id)
+      .maybeSingle()
+    setProfessional(data ?? null)
+  }
+
   async function signIn(email, password) {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     return { error }
@@ -90,6 +101,7 @@ export function AuthProvider({ children }) {
     user: session?.user ?? null,
     profile,
     professional,
+    recarregarProfessional,
     role: profile?.role ?? null,
     loading,
     signIn,

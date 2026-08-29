@@ -5,7 +5,8 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { ChevronIcon } from '../../components/icons'
 import { formatPreco, toISODate } from '../../lib/format'
-import { formatDataCurta, iniciais } from '../../lib/booking'
+import { formatDataCurta } from '../../lib/booking'
+import Avatar from '../../components/Avatar'
 
 const STATUS_LABEL = {
   pendente: 'pendente',
@@ -124,7 +125,7 @@ export default function ClienteHome() {
                 <div className="cliente-list">
                   {profissionais.map((p) => (
                     <Link key={p.id} to={`/p/${p.slug}`} className="card prof-row">
-                      <div className="avatar-iniciais">{iniciais(p.name)}</div>
+                      <Avatar nome={p.name} foto={p.photo_url} />
                       <div className="cliente-info">
                         <span className="cliente-nome">{p.name}</span>
                         {p.bio && (

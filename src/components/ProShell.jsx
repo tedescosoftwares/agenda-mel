@@ -2,6 +2,7 @@ import { NavLink } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { CalendarIcon, SparkleIcon, ClockIcon, LinkIcon } from './icons'
 import { iniciais } from '../lib/booking'
+import Avatar from './Avatar'
 
 const TABS = [
   { to: '/pro', end: true, label: 'Agenda', Icon: CalendarIcon },
@@ -23,7 +24,11 @@ export default function ProShell({ children }) {
       <header className="topbar topbar-admin">
         <span className="brand-inline">✿ {nome}</span>
         <button className="avatar-btn" onClick={handleSair} title="Sair da conta">
-          {iniciais(nome)}
+          {professional?.photo_url ? (
+            <Avatar nome={nome} foto={professional.photo_url} className="avatar-topo" />
+          ) : (
+            iniciais(nome)
+          )}
         </button>
       </header>
 

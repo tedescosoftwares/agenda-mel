@@ -3,9 +3,11 @@ import AdminShell from '../../components/AdminShell'
 import { supabase } from '../../lib/supabase'
 import { ChevronIcon, LinkIcon } from '../../components/icons'
 import { formatDuracao, formatPreco } from '../../lib/format'
-import { gerarSlug, iniciais } from '../../lib/booking'
+import { gerarSlug } from '../../lib/booking'
+import Avatar from '../../components/Avatar'
+import FotoUpload from '../../components/FotoUpload'
 
-const FORM_VAZIO = { name: '', slug: '', phone: '', bio: '' }
+const FORM_VAZIO = { name: '', slug: '', phone: '', bio: '', photo_url: null }
 
 export default function AdminProfissionais() {
   const [profissionais, setProfissionais] = useState([])
@@ -62,6 +64,7 @@ export default function AdminProfissionais() {
       slug: p.slug,
       phone: p.phone ?? '',
       bio: p.bio ?? '',
+      photo_url: p.photo_url ?? null,
     })
     setServicosSel(vinculos[p.id] ?? [])
     setSlugEditado(true)
@@ -137,6 +140,7 @@ export default function AdminProfissionais() {
         slug,
         phone: form.phone.trim() || null,
         bio: form.bio.trim() || null,
+        photo_url: form.photo_url,
       }
 
       let professionalId = editing
@@ -226,6 +230,13 @@ export default function AdminProfissionais() {
       {editing !== null && (
         <form className="card form service-form" onSubmit={handleSave}>
           <h3>{editing === 'new' ? 'Nova profissional' : 'Editar profissional'}</h3>
+
+          <FotoUpload
+            nome={form.name}
+            valor={form.photo_url}
+            onChange={(url) => setForm((f) => ({ ...f, photo_url: url }))}
+            onErro={setError}
+          />
 
           <label>
             Nome
@@ -337,7 +348,7 @@ export default function AdminProfissionais() {
               key={p.id}
               className={p.active ? 'card prof-row' : 'card prof-row inactive'}
             >
-              <div className="avatar-iniciais">{iniciais(p.name)}</div>
+              <Avatar nome={p.name} foto={p.photo_url} />
               <div className="cliente-info">
                 <span className="cliente-nome">{p.name}</span>
                 <span className="muted cliente-meta">

@@ -30,7 +30,7 @@ Backend: [Supabase](https://supabase.com) (plano gratuito — autenticação + b
 4. Repita com os demais arquivos de [`supabase/`](supabase/) **na ordem dos
    números**: `002_services.sql`, `003_business_hours.sql`,
    `004_appointments.sql`, `005_service_images_e_slots.sql`,
-   `006_combos.sql`, `007_profissionais.sql`, …
+   `006_combos.sql`, `007_profissionais.sql`, `008_foto_profissional.sql`, …
 
 ### 2. Configurar as variáveis de ambiente
 
@@ -80,6 +80,7 @@ src/
     ProShell.jsx           # abas da profissional
     AgendaDia.jsx          # agenda de um dia (usada pelo admin e pela pro)
     AuthModal.jsx          # login rápido dentro do link público
+    Avatar.jsx | FotoUpload.jsx  # foto da profissional (cai nas iniciais)
   pages/
     Login.jsx
     publico/PaginaProfissional.jsx  # /p/<slug> — serviço, dia, horário
@@ -95,6 +96,7 @@ supabase/
   005_service_images_e_slots.sql # fotos dos serviços + horários ocupados
   006_combos.sql           # combos de serviços (duração = tempo médio)
   007_profissionais.sql    # equipe, agenda e link por profissional
+  008_foto_profissional.sql # bucket das fotos das profissionais
 ```
 
 ## Papéis
@@ -134,6 +136,7 @@ where slug = 'slug-dela';
 - [x] Combos de serviços (soma das durações exibida como tempo médio)
 - [x] Equipe: profissionais com agenda, serviços e link próprios
 - [x] Link público /p/<slug> — agenda sem precisar estar logada antes
+- [x] Foto da profissional (admin e ela mesma trocam)
 - [ ] Publicar (Vercel/Netlify) e instalar como PWA no celular
 - [ ] Notificações (lembrete de horário)
 - [ ] Migrar depois para React Native / Expo reaproveitando o Supabase

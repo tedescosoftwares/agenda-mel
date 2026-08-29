@@ -17,6 +17,11 @@ import ProHorarios from "./pages/pro/ProHorarios";
 import ProLink from "./pages/pro/ProLink";
 
 export default function App() {
+  // o convite chega como /?indique=CODIGO — guardamos antes de qualquer rota
+  useEffect(() => {
+    guardarCodigoDaURL()
+  }, [])
+
   return (
     <BrowserRouter>
       <AuthProvider>

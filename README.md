@@ -32,7 +32,7 @@ Backend: [Supabase](https://supabase.com) (plano gratuito — autenticação + b
    `004_appointments.sql`, `005_service_images_e_slots.sql`,
    `006_combos.sql`, `007_profissionais.sql`, `008_foto_profissional.sql`,
    `009_notificacoes.sql`, `010_adiantar_agenda.sql`,
-   `011_lista_espera.sql`, …
+   `011_lista_espera.sql`, `012_indique_e_ganhe.sql`, …
 
 ### 2. Configurar as variáveis de ambiente
 
@@ -102,6 +102,7 @@ supabase/
   009_notificacoes.sql     # caixa de avisos no app (base das features)
   010_adiantar_agenda.sql  # convite para a cliente vir mais cedo
   011_lista_espera.sql     # fila de espera, vaga liberada e falta da cliente
+  012_indique_e_ganhe.sql  # indicação, carteira de créditos e antifraude
 ```
 
 ## Papéis
@@ -145,7 +146,7 @@ where slug = 'slug-dela';
 - [x] Caixa de avisos no app, em tempo real
 - [x] Adiantar a agenda (convite com prazo; a cliente decide)
 - [x] Lista de espera + falta da cliente libera a vaga
-- [ ] Indique e ganhe (crédito só depois do atendimento concluído)
+- [x] Indique e ganhe (crédito só depois do atendimento concluído)
 - [ ] Publicar (Vercel/Netlify) e instalar como PWA no celular
 - [ ] Notificações (lembrete de horário)
 - [ ] Migrar depois para React Native / Expo reaproveitando o Supabase

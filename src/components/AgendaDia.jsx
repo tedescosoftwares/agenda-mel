@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import AdiantarModal from './AdiantarModal'
+import { formatarCents } from '../lib/indicacao'
 import { formatPreco, formatDuracao, toISODate } from '../lib/format'
 
 const STATUS_LABEL = {
@@ -56,6 +57,36 @@ export default function AgendaDia({ professionalId = null, mostrarProfissional =
     setLoading(true)
     fetchAgenda()
   }, [fetchAgenda])
+
+  // Ao concluir, se a cliente tem crédito de indicação, oferece o abatimento
+  async function concluir(appt) {
+    setMudandoId(appt.id)
+    const { data: saldo } = await supabase.rpc('saldo_creditos', {
+      cliente: appt.client_id,
+    })
+
+    if (saldo > 0) {
+      const precoCents = Math.round(Number(appt.services?.price ?? 0) * 100)
+      const maximo = Math.min(saldo, precoCents || saldo)
+      const usar = window.confirm(
+        `${appt.profiles?.full_name ?? 'A cliente'} tem ${formatarCents(saldo)} de crédito. Abater ${formatarCents(maximo)} neste atendimento?`,
+      )
+      if (usar) {
+        const { error } = await supabase.rpc('usar_credito', {
+          appt_id: appt.id,
+          valor_cents: maximo,
+        })
+        if (error) {
+          setError('Erro ao abater crédito: ' + error.message)
+          setMudandoId(null)
+          return
+        }
+      }
+    }
+
+    setMudandoId(null)
+    mudarStatus(appt, 'concluido')
+  }
 
   async function mudarStatus(appt, novo) {
     if (novo === 'faltou') {
@@ -176,7 +207,7 @@ export default function AgendaDia({ professionalId = null, mostrarProfissional =
                         <button
                           className="btn-mini btn-mini-ok"
                           disabled={mudandoId === a.id}
-                          onClick={() => mudarStatus(a, 'concluido')}
+                          onClick={() => concluir(a)}
                         >
                           Concluir
                         </button>

@@ -9,6 +9,7 @@ import { formatDataCurta } from '../../lib/booking'
 import Avatar from '../../components/Avatar'
 import ConviteAdiantar from '../../components/ConviteAdiantar'
 import OfertaVaga from '../../components/OfertaVaga'
+import { formatarCents } from '../../lib/indicacao'
 
 const STATUS_LABEL = {
   pendente: 'pendente',
@@ -24,6 +25,7 @@ export default function ClienteHome() {
   const [meus, setMeus] = useState([])
   const [vagas, setVagas] = useState([])
   const [filas, setFilas] = useState([])
+  const [saldo, setSaldo] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -69,6 +71,9 @@ export default function ClienteHome() {
     if (!apptRes.error) setMeus(apptRes.data)
     if (!vagasRes.error) setVagas(vagasRes.data)
     if (!filasRes.error) setFilas(filasRes.data)
+
+    const { data: saldoAtual } = await supabase.rpc('saldo_creditos')
+    setSaldo(saldoAtual ?? 0)
     setLoading(false)
   }, [])
 
@@ -181,6 +186,19 @@ export default function ClienteHome() {
                 </div>
               </section>
             )}
+
+            <Link to="/indique" className="card indique-atalho">
+              <span className="indique-atalho-icone">🎁</span>
+              <span className="cliente-info">
+                <span className="cliente-nome">Indique e ganhe</span>
+                <span className="muted cliente-meta">
+                  {saldo > 0
+                    ? `Você tem ${formatarCents(saldo)} de crédito`
+                    : 'Chame uma amiga e as duas ganham desconto'}
+                </span>
+              </span>
+              <ChevronIcon />
+            </Link>
 
             <section className="secao">
               <h3 className="secao-titulo">Agendar com</h3>

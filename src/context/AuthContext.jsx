@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
+import { lerCodigoGuardado, limparCodigoGuardado } from '../lib/indicacao'
 
 const AuthContext = createContext(null)
 
@@ -56,6 +57,17 @@ export function AuthProvider({ children }) {
       } else {
         setProfessional(null)
       }
+
+      // veio por um convite de indicação: registra uma única vez
+      const codigo = lerCodigoGuardado()
+      if (codigo && perfil?.role === 'cliente') {
+        const { data: resultado } = await supabase.rpc('registrar_indicacao', {
+          codigo,
+        })
+        // qualquer desfecho encerra a tentativa: não insistimos
+        if (resultado !== 'codigo_invalido') limparCodigoGuardado()
+      }
+
       setLoading(false)
     }
 

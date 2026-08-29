@@ -1,5 +1,5 @@
 -- =============================================================
--- Agenda Mel — schema inicial (login + perfis com papel)
+-- Agenda Mel — 001: schema inicial (login + perfis com papel)
 -- Cole este arquivo inteiro no SQL Editor do Supabase e execute.
 -- =============================================================
 
@@ -15,10 +15,12 @@ create table if not exists public.profiles (
 alter table public.profiles enable row level security;
 
 -- Cada usuária vê e edita apenas o próprio perfil
+drop policy if exists "ver o proprio perfil" on public.profiles;
 create policy "ver o proprio perfil"
   on public.profiles for select
   using (auth.uid() = id);
 
+drop policy if exists "editar o proprio perfil" on public.profiles;
 create policy "editar o proprio perfil"
   on public.profiles for update
   using (auth.uid() = id)

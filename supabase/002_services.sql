@@ -1,6 +1,6 @@
 -- =============================================================
 -- Agenda Mel — 002: cadastro de serviços
--- Rode este arquivo no SQL Editor do Supabase (depois do schema.sql).
+-- Rode este arquivo no SQL Editor do Supabase (DEPOIS do 001_schema.sql).
 -- =============================================================
 
 create table if not exists public.services (
@@ -30,21 +30,25 @@ as $$
 $$;
 
 -- Clientes logadas veem apenas serviços ativos; admin vê todos
+drop policy if exists "ver servicos" on public.services;
 create policy "ver servicos"
   on public.services for select
   to authenticated
   using (active or public.is_admin());
 
+drop policy if exists "admin cria servicos" on public.services;
 create policy "admin cria servicos"
   on public.services for insert
   to authenticated
   with check (public.is_admin());
 
+drop policy if exists "admin edita servicos" on public.services;
 create policy "admin edita servicos"
   on public.services for update
   to authenticated
   using (public.is_admin());
 
+drop policy if exists "admin exclui servicos" on public.services;
 create policy "admin exclui servicos"
   on public.services for delete
   to authenticated

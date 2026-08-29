@@ -21,7 +21,7 @@ Backend: [Supabase](https://supabase.com) (plano gratuito — autenticação + b
 1. Acesse [supabase.com](https://supabase.com) e crie uma conta (pode usar o GitHub).
 2. Crie um projeto novo (região `South America (São Paulo)` é a mais próxima).
 3. No painel do projeto, abra **SQL Editor**, cole o conteúdo de
-   [`supabase/schema.sql`](supabase/schema.sql) e clique em **Run**.
+   [`supabase/001_schema.sql`](supabase/001_schema.sql) e clique em **Run**.
 4. Repita com [`supabase/002_services.sql`](supabase/002_services.sql)
    (tabela de serviços). Os arquivos SQL são numerados — rode sempre na ordem.
 
@@ -70,7 +70,7 @@ src/
     admin/AdminHome.jsx
     admin/AdminServices.jsx  # CRUD de serviços (/admin/servicos)
 supabase/
-  schema.sql               # perfis, trigger e políticas de segurança (RLS)
+  001_schema.sql           # perfis, trigger e políticas de segurança (RLS)
   002_services.sql         # tabela de serviços + políticas
 ```
 

@@ -172,6 +172,8 @@ function traduzErro(msg) {
     'User already registered': 'Este e-mail já está cadastrado.',
     'Password should be at least 6 characters':
       'A senha precisa ter pelo menos 6 caracteres.',
+    'Failed to fetch':
+      'Não foi possível conectar ao servidor. Verifique a URL e a chave no arquivo .env (e reinicie o npm run dev depois de editar), sua internet, e se o projeto no Supabase está ativo.',
   }
   return mapa[msg] || msg
 }

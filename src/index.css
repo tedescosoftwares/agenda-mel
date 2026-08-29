@@ -1,0 +1,265 @@
+:root {
+  --rosa: #c98a8a;
+  --rosa-escuro: #a96a6f;
+  --rosa-claro: #f3dcd8;
+  --creme: #fdf6f4;
+  --texto: #4a3b3b;
+  --texto-suave: #8d7676;
+  --branco: #ffffff;
+  --erro: #b3423f;
+  --erro-bg: #fbe9e8;
+  --info-bg: #e8f4ee;
+  --info: #2e6b4f;
+  --warn-bg: #fdf3dc;
+  --warn: #8a6d1f;
+
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  color: var(--texto);
+  background-color: var(--creme);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background-color: var(--creme);
+}
+
+h1,
+h2,
+h3 {
+  margin: 0 0 0.5rem;
+  font-weight: 600;
+}
+
+.muted {
+  color: var(--texto-suave);
+}
+
+/* ---------- layout ---------- */
+
+.page-center {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.login-bg {
+  background: linear-gradient(160deg, var(--creme) 0%, var(--rosa-claro) 100%);
+}
+
+.layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.9rem 1.2rem;
+  background: var(--branco);
+  border-bottom: 1px solid var(--rosa-claro);
+}
+
+.topbar-admin {
+  background: var(--texto);
+  color: var(--branco);
+  border-bottom: none;
+}
+
+.topbar-admin .btn-ghost {
+  color: var(--branco);
+}
+
+.brand-inline {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.content {
+  flex: 1;
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 1.5rem 1.2rem 3rem;
+}
+
+.grid-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-top: 1.2rem;
+}
+
+/* ---------- cartões ---------- */
+
+.card {
+  background: var(--branco);
+  border: 1px solid var(--rosa-claro);
+  border-radius: 16px;
+  padding: 1.2rem;
+  box-shadow: 0 4px 16px rgba(169, 106, 111, 0.08);
+}
+
+.login-card {
+  width: 100%;
+  max-width: 400px;
+  padding: 2rem 1.6rem;
+}
+
+.brand {
+  text-align: center;
+  margin-bottom: 1.4rem;
+}
+
+.brand-icon {
+  font-size: 2rem;
+  color: var(--rosa);
+  display: block;
+}
+
+.brand h1 {
+  font-size: 1.6rem;
+  margin: 0.2rem 0 0.1rem;
+}
+
+.brand p {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+/* ---------- abas ---------- */
+
+.tabs {
+  display: flex;
+  background: var(--rosa-claro);
+  border-radius: 12px;
+  padding: 4px;
+  margin-bottom: 1.2rem;
+}
+
+.tab {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 0.55rem 0;
+  border-radius: 9px;
+  font-size: 0.95rem;
+  color: var(--texto-suave);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tab.active {
+  background: var(--branco);
+  color: var(--texto);
+  font-weight: 600;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+/* ---------- formulários ---------- */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.88rem;
+  font-weight: 500;
+}
+
+.form input {
+  border: 1px solid #e5cfc9;
+  border-radius: 10px;
+  padding: 0.7rem 0.85rem;
+  font-size: 1rem;
+  background: var(--branco);
+  color: var(--texto);
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.form input:focus {
+  border-color: var(--rosa);
+  box-shadow: 0 0 0 3px rgba(201, 138, 138, 0.15);
+}
+
+/* ---------- botões ---------- */
+
+.btn {
+  border: none;
+  border-radius: 10px;
+  padding: 0.75rem 1.1rem;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-primary {
+  background: var(--rosa);
+  color: var(--branco);
+  font-weight: 600;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--rosa-escuro);
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--texto-suave);
+  padding: 0.45rem 0.8rem;
+  font-size: 0.9rem;
+}
+
+.btn-ghost:hover {
+  color: var(--rosa-escuro);
+}
+
+/* ---------- alertas ---------- */
+
+.alert {
+  border-radius: 10px;
+  padding: 0.7rem 0.9rem;
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+
+.alert-error {
+  background: var(--erro-bg);
+  color: var(--erro);
+}
+
+.alert-info {
+  background: var(--info-bg);
+  color: var(--info);
+}
+
+.alert-warn {
+  background: var(--warn-bg);
+  color: var(--warn);
+  margin-bottom: 1rem;
+}
+
+.alert code {
+  background: rgba(0, 0, 0, 0.06);
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+}

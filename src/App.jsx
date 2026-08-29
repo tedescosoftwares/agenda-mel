@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { NotificacoesProvider } from "./context/NotificacoesContext";
@@ -15,6 +16,8 @@ import ProAgenda from "./pages/pro/ProAgenda";
 import ProServicos from "./pages/pro/ProServicos";
 import ProHorarios from "./pages/pro/ProHorarios";
 import ProLink from "./pages/pro/ProLink";
+import IndiqueEGanhe from "./pages/cliente/IndiqueEGanhe";
+import { guardarCodigoDaURL } from "./lib/indicacao";
 
 export default function App() {
   // o convite chega como /?indique=CODIGO — guardamos antes de qualquer rota
@@ -113,6 +116,15 @@ export default function App() {
               element={
                 <ProtectedRoute requireRole="admin">
                   <AdminClientes />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/indique"
+              element={
+                <ProtectedRoute requireRole="cliente">
+                  <IndiqueEGanhe />
                 </ProtectedRoute>
               }
             />

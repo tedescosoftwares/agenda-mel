@@ -55,7 +55,8 @@ export default function PaginaProfissional() {
     async function carregar() {
       const { data: p, error } = await supabase
         .from('professionals')
-        .select('*')
+        // colunas explícitas: o telefone da profissional não é público
+        .select('id, name, slug, bio, photo_url, active')
         .eq('slug', slug)
         .maybeSingle()
 
@@ -158,7 +159,8 @@ export default function PaginaProfissional() {
     setSaving(false)
 
     if (error) {
-      if (error.code === '23505') {
+      // 23505 = horário idêntico; 23P01 = a trava de sobreposição do banco
+      if (error.code === '23505' || error.code === '23P01') {
         setError(
           'Esse horário acabou de ser reservado por outra pessoa. Escolha outro, por favor.',
         )

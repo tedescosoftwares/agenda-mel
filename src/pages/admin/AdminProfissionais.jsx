@@ -233,6 +233,7 @@ export default function AdminProfissionais() {
 
           <FotoUpload
             nome={form.name}
+            pasta={editing === 'new' ? 'equipe' : editing}
             valor={form.photo_url}
             onChange={(url) => setForm((f) => ({ ...f, photo_url: url }))}
             onErro={setError}

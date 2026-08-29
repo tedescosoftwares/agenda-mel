@@ -7,7 +7,7 @@ const BUCKET = 'professional-photos'
 
 // Escolhe, envia e remove a foto de uma profissional.
 // Devolve a URL pública (ou null) pelo onChange.
-export default function FotoUpload({ nome, valor, onChange, onErro }) {
+export default function FotoUpload({ nome, valor, pasta, onChange, onErro }) {
   const [enviando, setEnviando] = useState(false)
 
   async function handleFile(e) {
@@ -27,7 +27,8 @@ export default function FotoUpload({ nome, valor, onChange, onErro }) {
     setEnviando(true)
     try {
       const ext = (file.name.split('.').pop() || 'jpg').toLowerCase()
-      const path = `${crypto.randomUUID()}.${ext}`
+      // a pasta é o identificador da profissional: cada uma só mexe na sua
+      const path = `${pasta || 'equipe'}/${crypto.randomUUID()}.${ext}`
       const { error } = await supabase.storage
         .from(BUCKET)
         .upload(path, file, { contentType: file.type })

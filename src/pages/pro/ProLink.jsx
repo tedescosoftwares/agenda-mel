@@ -53,6 +53,7 @@ export default function ProLink() {
         {erroFoto && <div className="alert alert-error">{erroFoto}</div>}
         <FotoUpload
           nome={professional.name}
+          pasta={professional.id}
           valor={professional.photo_url}
           onChange={salvarFoto}
           onErro={setErroFoto}

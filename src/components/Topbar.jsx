@@ -1,4 +1,5 @@
 import { useAuth } from '../context/AuthContext'
+import SinoAvisos from './SinoAvisos'
 
 export default function Topbar() {
   const { signOut } = useAuth()
@@ -6,9 +7,12 @@ export default function Topbar() {
   return (
     <header className="topbar">
       <span className="brand-inline">✿ Agenda Mel</span>
-      <button className="btn btn-ghost" onClick={signOut}>
-        Sair
-      </button>
+      <div className="topbar-acoes">
+        <SinoAvisos />
+        <button className="btn btn-ghost" onClick={signOut}>
+          Sair
+        </button>
+      </div>
     </header>
   )
 }

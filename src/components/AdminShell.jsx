@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import SinoAvisos from './SinoAvisos'
 import { CalendarIcon, SparkleIcon, ClockIcon, UsersIcon, TeamIcon } from './icons'
 
 const TABS = [
@@ -25,9 +26,12 @@ export default function AdminShell({ children }) {
     <div className="admin-shell">
       <header className="topbar topbar-admin">
         <span className="brand-inline">✿ Agenda Mel</span>
-        <button className="avatar-btn" onClick={handleSair} title="Sair da conta">
+        <div className="topbar-acoes">
+          <SinoAvisos />
+          <button className="avatar-btn" onClick={handleSair} title="Sair da conta">
           {inicial}
         </button>
+        </div>
       </header>
 
       <main className="content admin-content">{children}</main>

@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import SinoAvisos from './SinoAvisos'
 import { CalendarIcon, SparkleIcon, ClockIcon, LinkIcon } from './icons'
 import { iniciais } from '../lib/booking'
 import Avatar from './Avatar'
@@ -23,13 +24,16 @@ export default function ProShell({ children }) {
     <div className="admin-shell">
       <header className="topbar topbar-admin">
         <span className="brand-inline">✿ {nome}</span>
-        <button className="avatar-btn" onClick={handleSair} title="Sair da conta">
+        <div className="topbar-acoes">
+          <SinoAvisos />
+          <button className="avatar-btn" onClick={handleSair} title="Sair da conta">
           {professional?.photo_url ? (
             <Avatar nome={nome} foto={professional.photo_url} className="avatar-topo" />
           ) : (
             iniciais(nome)
           )}
         </button>
+        </div>
       </header>
 
       <main className="content admin-content">{children}</main>

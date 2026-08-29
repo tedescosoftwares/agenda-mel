@@ -183,6 +183,11 @@ export default function PaginaProfissional() {
     }
   }, [tentandoFechar, user, role, criarAgendamento])
 
+  // login pedido pela lista de espera: fecha o modal assim que ela entra
+  useEffect(() => {
+    if (user && mostrarLogin && !tentandoFechar) setMostrarLogin(false)
+  }, [user, mostrarLogin, tentandoFechar])
+
   function confirmar() {
     if (!user) {
       setTentandoFechar(true)

@@ -148,12 +148,14 @@ export default function ClienteHome() {
                         <span className={`badge badge-${a.status}`}>
                           {STATUS_LABEL[a.status] ?? a.status}
                         </span>
-                        <button
-                          className="btn-link-cancelar"
-                          onClick={() => cancelar(a)}
-                        >
-                          cancelar
-                        </button>
+                        {podeCancelar(a) && (
+                          <button
+                            className="btn-link-cancelar"
+                            onClick={() => cancelar(a)}
+                          >
+                            cancelar
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -238,4 +240,10 @@ function convitesAbertos(agendamentos) {
       .filter((o) => o.status === 'pendente' && new Date(o.expires_at) > agora)
       .map((oferta) => ({ appt, oferta })),
   )
+}
+
+// só dá para cancelar o que ainda não aconteceu
+function podeCancelar(a) {
+  if (a.status !== 'pendente' && a.status !== 'confirmado') return false
+  return new Date(`${a.date}T${a.start_time}`) > new Date()
 }

@@ -29,6 +29,7 @@ export default function AgendaDia({ professionalId = null, mostrarProfissional =
   const [error, setError] = useState('')
   const [mudandoId, setMudandoId] = useState(null)
   const [adiantando, setAdiantando] = useState(null)
+  const [toleranciaMin, setToleranciaMin] = useState(15)
 
   const fetchAgenda = useCallback(async () => {
     let query = supabase
@@ -57,6 +58,18 @@ export default function AgendaDia({ professionalId = null, mostrarProfissional =
     setLoading(true)
     fetchAgenda()
   }, [fetchAgenda])
+
+  // a tolerância de atraso é configurável por profissional
+  useEffect(() => {
+    if (!professionalId) return
+    supabase
+      .rpc('config_agenda_profissional', { prof: professionalId })
+      .then(({ data }) => {
+        if (data?.[0]?.no_show_tolerance_minutes != null) {
+          setToleranciaMin(data[0].no_show_tolerance_minutes)
+        }
+      })
+  }, [professionalId])
 
   // Ao concluir, se a cliente tem crédito de indicação, oferece o abatimento
   async function concluir(appt) {
@@ -112,17 +125,21 @@ export default function AgendaDia({ professionalId = null, mostrarProfissional =
   }
 
   async function cancelarConvite(oferta) {
+    const ok = window.confirm(
+      `Desfazer o convite das ${oferta.proposed_start_time.slice(0, 5)}? Se a cliente já tiver aceitado, o horário dela volta ao original.`,
+    )
+    if (!ok) return
     const { error } = await supabase.rpc('cancelar_antecipacao', {
       oferta_id: oferta.id,
     })
     if (error) setError('Erro ao desfazer: ' + error.message)
-    else fetchAgenda()
+    fetchAgenda()
   }
 
-  const previsao = appointments.reduce(
-    (soma, a) => soma + Number(a.services?.price ?? 0),
-    0,
-  )
+  // quem não veio não entra na previsão do dia
+  const previsao = appointments
+    .filter((a) => a.status !== 'faltou')
+    .reduce((soma, a) => soma + Number(a.services?.price ?? 0), 0)
 
   return (
     <>
@@ -211,7 +228,7 @@ export default function AgendaDia({ professionalId = null, mostrarProfissional =
                         >
                           Concluir
                         </button>
-                        {passouDaTolerancia(a) && (
+                        {passouDaTolerancia(a, toleranciaMin) && (
                           <button
                             className="btn-mini btn-mini-nao"
                             disabled={mudandoId === a.id}
@@ -276,11 +293,9 @@ function podeAdiantar(a) {
 }
 
 // "Não veio" só aparece depois do horário marcado + tolerância
-const TOLERANCIA_MIN = 15
-
-function passouDaTolerancia(a) {
+function passouDaTolerancia(a, toleranciaMin) {
   const marcado = new Date(`${a.date}T${a.start_time}`)
-  return Date.now() > marcado.getTime() + TOLERANCIA_MIN * 60000
+  return Date.now() > marcado.getTime() + toleranciaMin * 60000
 }
 
 function convitePendente(a) {

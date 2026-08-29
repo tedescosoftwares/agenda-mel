@@ -32,7 +32,7 @@ Backend: [Supabase](https://supabase.com) (plano gratuito — autenticação + b
    `004_appointments.sql`, `005_service_images_e_slots.sql`,
    `006_combos.sql`, `007_profissionais.sql`, `008_foto_profissional.sql`,
    `009_notificacoes.sql`, `010_adiantar_agenda.sql`,
-   `011_lista_espera.sql`, `012_indique_e_ganhe.sql`, `013_seguranca.sql`, …
+   `011_lista_espera.sql`, `012_indique_e_ganhe.sql`, `013_seguranca.sql`, `014_correcoes.sql`
 
 ### 2. Configurar as variáveis de ambiente
 
@@ -104,6 +104,7 @@ supabase/
   011_lista_espera.sql     # fila de espera, vaga liberada e falta da cliente
   012_indique_e_ganhe.sql  # indicação, carteira de créditos e antifraude
   013_seguranca.sql        # travas de permissão e de sobreposição (obrigatório)
+  014_correcoes.sql        # correções da revisão (horário no passado, fila, saldo)
 ```
 
 ## Papéis

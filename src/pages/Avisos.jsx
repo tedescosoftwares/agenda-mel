@@ -17,14 +17,14 @@ const ICONE = {
 
 export default function Avisos() {
   const { role } = useAuth()
-  const { avisos, loading, marcarTodosLidos } = useNotificacoes()
+  const { avisos, naoLidos, loading, marcarTodosLidos } = useNotificacoes()
   const navigate = useNavigate()
 
-  // abriu a caixa, leu tudo
+  // abriu a caixa, leu tudo — só depois que os avisos chegaram
   useEffect(() => {
-    marcarTodosLidos()
+    if (!loading && naoLidos > 0) marcarTodosLidos()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [loading, naoLidos])
 
   return (
     <div className="layout">

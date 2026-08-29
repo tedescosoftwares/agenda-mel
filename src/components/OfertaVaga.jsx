@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { formatDataLonga } from '../lib/booking'
 
@@ -12,10 +12,19 @@ export default function OfertaVaga({ oferta, onRespondido }) {
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState('')
 
-  const minutosRestantes = Math.max(
-    0,
-    Math.round((new Date(oferta.expires_at) - Date.now()) / 60000),
-  )
+  const [minutosRestantes, setMinutosRestantes] = useState(null)
+
+  // conta regressiva do tempo que a vaga fica guardada
+  useEffect(() => {
+    function atualizar() {
+      setMinutosRestantes(
+        Math.max(0, Math.round((new Date(oferta.expires_at) - Date.now()) / 60000)),
+      )
+    }
+    atualizar()
+    const t = setInterval(atualizar, 30000)
+    return () => clearInterval(t)
+  }, [oferta.expires_at])
 
   async function responder(aceitar) {
     setEnviando(true)
@@ -50,7 +59,9 @@ export default function OfertaVaga({ oferta, onRespondido }) {
         <strong>{oferta.start_time.slice(0, 5)}</strong>
       </p>
       <p className="muted convite-prazo">
-        {minutosRestantes > 0
+        {minutosRestantes === null
+          ? 'Guardada para você.'
+          : minutosRestantes > 0
           ? `Guardada para você por mais ${minutosRestantes} min.`
           : 'O tempo está acabando.'}{' '}
         Depois disso passa para a próxima da fila.

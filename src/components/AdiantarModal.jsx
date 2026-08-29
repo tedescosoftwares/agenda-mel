@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { formatDataLonga } from '../lib/booking'
 
 const PRAZOS = [
   { valor: 10, texto: '10 min' },
@@ -59,8 +60,8 @@ export default function AdiantarModal({ appt, onFechar, onPronto }) {
 
         <h3>Adiantar horário</h3>
         <p className="muted modal-resumo">
-          {appt.profiles?.full_name || 'Cliente'} · {appt.services?.name} · hoje
-          às {atual}
+          {appt.profiles?.full_name || 'Cliente'} · {appt.services?.name} ·{' '}
+          {formatDataLonga(appt.date)} às {atual}
         </p>
 
         {carregando ? (

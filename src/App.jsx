@@ -3,9 +3,10 @@ import { AuthProvider } from './context/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import Login from './pages/Login'
 import ClienteHome from './pages/cliente/ClienteHome'
-import AdminHome from './pages/admin/AdminHome'
+import AdminAgenda from './pages/admin/AdminAgenda'
 import AdminServices from './pages/admin/AdminServices'
 import AdminHours from './pages/admin/AdminHours'
+import AdminClientes from './pages/admin/AdminClientes'
 
 export default function App() {
   return (
@@ -27,7 +28,7 @@ export default function App() {
             path="/admin"
             element={
               <ProtectedRoute requireRole="admin">
-                <AdminHome />
+                <AdminAgenda />
               </ProtectedRoute>
             }
           />
@@ -46,6 +47,15 @@ export default function App() {
             element={
               <ProtectedRoute requireRole="admin">
                 <AdminHours />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/clientes"
+            element={
+              <ProtectedRoute requireRole="admin">
+                <AdminClientes />
               </ProtectedRoute>
             }
           />

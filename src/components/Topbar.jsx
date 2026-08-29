@@ -1,19 +1,11 @@
-import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
-export default function Topbar({ admin = false, backTo = null }) {
+export default function Topbar() {
   const { signOut } = useAuth()
 
   return (
-    <header className={admin ? 'topbar topbar-admin' : 'topbar'}>
-      <span className="brand-inline">
-        {backTo && (
-          <Link to={backTo} className="back-link" aria-label="Voltar">
-            ←
-          </Link>
-        )}
-        ✿ Agenda Mel{admin ? ' — Admin' : ''}
-      </span>
+    <header className="topbar">
+      <span className="brand-inline">✿ Agenda Mel</span>
       <button className="btn btn-ghost" onClick={signOut}>
         Sair
       </button>

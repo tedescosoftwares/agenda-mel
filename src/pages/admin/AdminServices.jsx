@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
-import Topbar from '../../components/Topbar'
+import AdminShell from '../../components/AdminShell'
 import { supabase } from '../../lib/supabase'
+import { ChevronIcon } from '../../components/icons'
+import { formatPreco, formatDuracao } from '../../lib/format'
 
 const FORM_VAZIO = {
   name: '',
@@ -51,6 +53,7 @@ export default function AdminServices() {
     })
     setEditing(service.id)
     setError('')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   function cancelEdit() {
@@ -106,7 +109,9 @@ export default function AdminServices() {
     }
   }
 
-  async function handleDelete(service) {
+  async function handleDelete() {
+    const service = services.find((s) => s.id === editing)
+    if (!service) return
     const ok = window.confirm(
       `Excluir o serviço "${service.name}"? Essa ação não pode ser desfeita.`,
     )
@@ -115,149 +120,145 @@ export default function AdminServices() {
     if (error) {
       setError('Erro ao excluir: ' + error.message)
     } else {
+      cancelEdit()
       fetchServices()
     }
   }
 
+  const ativos = services.filter((s) => s.active).length
+
   return (
-    <div className="layout">
-      <Topbar admin backTo="/admin" />
-
-      <main className="content">
-        <div className="page-head">
-          <div>
-            <h2>Serviços</h2>
-            <p className="muted">Cadastre os serviços, duração e preços.</p>
-          </div>
-          {editing === null && (
-            <button className="btn btn-primary" onClick={startNew}>
-              + Novo serviço
-            </button>
-          )}
+    <AdminShell>
+      <div className="page-head">
+        <div>
+          <h2>Serviços</h2>
+          <p className="muted">
+            {services.length} {services.length === 1 ? 'cadastrado' : 'cadastrados'}
+            {services.length > 0 ? ` · ${ativos} ${ativos === 1 ? 'ativo' : 'ativos'}` : ''}
+          </p>
         </div>
+      </div>
 
-        {error && <div className="alert alert-error">{error}</div>}
+      {error && <div className="alert alert-error">{error}</div>}
 
-        {editing !== null && (
-          <form className="card form service-form" onSubmit={handleSave}>
-            <h3>{editing === 'new' ? 'Novo serviço' : 'Editar serviço'}</h3>
+      {editing !== null && (
+        <form className="card form service-form" onSubmit={handleSave}>
+          <h3>{editing === 'new' ? 'Novo serviço' : 'Editar serviço'}</h3>
 
+          <label>
+            Nome
+            <input
+              type="text"
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              placeholder="Ex.: Limpeza de pele"
+              required
+            />
+          </label>
+
+          <label>
+            Descrição (opcional)
+            <textarea
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              placeholder="Detalhes do serviço…"
+              rows={2}
+            />
+          </label>
+
+          <div className="form-row">
             <label>
-              Nome
+              Duração (minutos)
               <input
-                type="text"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="Ex.: Limpeza de pele"
+                type="number"
+                min="5"
+                step="5"
+                value={form.duration_minutes}
+                onChange={(e) =>
+                  setForm({ ...form, duration_minutes: e.target.value })
+                }
                 required
               />
             </label>
 
             <label>
-              Descrição (opcional)
-              <textarea
-                value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                placeholder="Detalhes do serviço…"
-                rows={2}
+              Preço (R$)
+              <input
+                type="text"
+                inputMode="decimal"
+                value={form.price}
+                onChange={(e) => setForm({ ...form, price: e.target.value })}
+                placeholder="Ex.: 120,00"
+                required
               />
             </label>
-
-            <div className="form-row">
-              <label>
-                Duração (minutos)
-                <input
-                  type="number"
-                  min="5"
-                  step="5"
-                  value={form.duration_minutes}
-                  onChange={(e) =>
-                    setForm({ ...form, duration_minutes: e.target.value })
-                  }
-                  required
-                />
-              </label>
-
-              <label>
-                Preço (R$)
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  value={form.price}
-                  onChange={(e) => setForm({ ...form, price: e.target.value })}
-                  placeholder="Ex.: 120,00"
-                  required
-                />
-              </label>
-            </div>
-
-            <div className="form-actions">
-              <button type="button" className="btn btn-ghost" onClick={cancelEdit}>
-                Cancelar
-              </button>
-              <button type="submit" className="btn btn-primary" disabled={saving}>
-                {saving ? 'Salvando…' : 'Salvar'}
-              </button>
-            </div>
-          </form>
-        )}
-
-        {loading ? (
-          <p className="muted">Carregando…</p>
-        ) : services.length === 0 && editing === null ? (
-          <div className="card empty-state">
-            <p>Nenhum serviço cadastrado ainda.</p>
-            <p className="muted">
-              Clique em <strong>+ Novo serviço</strong> para começar.
-            </p>
           </div>
-        ) : (
-          <div className="service-list">
-            {services.map((s) => (
-              <div key={s.id} className={s.active ? 'card service-row' : 'card service-row inactive'}>
-                <div className="service-info">
-                  <div className="service-title">
-                    <strong>{s.name}</strong>
-                    {!s.active && <span className="badge">inativo</span>}
-                  </div>
-                  {s.description && <p className="muted">{s.description}</p>}
-                  <p className="service-meta">
-                    ⏱ {formatDuracao(s.duration_minutes)} · 💰 {formatPreco(s.price)}
-                  </p>
-                </div>
-                <div className="service-actions">
-                  <button className="btn btn-small" onClick={() => startEdit(s)}>
-                    Editar
-                  </button>
-                  <button className="btn btn-small" onClick={() => toggleActive(s)}>
-                    {s.active ? 'Desativar' : 'Ativar'}
-                  </button>
-                  <button
-                    className="btn btn-small btn-danger"
-                    onClick={() => handleDelete(s)}
-                  >
-                    Excluir
-                  </button>
-                </div>
+
+          <div className="form-actions">
+            {editing !== 'new' && (
+              <button
+                type="button"
+                className="btn btn-danger btn-excluir"
+                onClick={handleDelete}
+              >
+                Excluir
+              </button>
+            )}
+            <button type="button" className="btn btn-ghost" onClick={cancelEdit}>
+              Cancelar
+            </button>
+            <button type="submit" className="btn btn-primary" disabled={saving}>
+              {saving ? 'Salvando…' : 'Salvar'}
+            </button>
+          </div>
+        </form>
+      )}
+
+      {loading ? (
+        <p className="muted">Carregando…</p>
+      ) : services.length === 0 && editing === null ? (
+        <div className="card empty-state">
+          <p>Nenhum serviço cadastrado ainda.</p>
+          <p className="muted">Toque no botão + para começar.</p>
+        </div>
+      ) : (
+        <div className="service-list">
+          {services.map((s) => (
+            <div
+              key={s.id}
+              className={s.active ? 'card service-row' : 'card service-row inactive'}
+            >
+              <div className="service-info">
+                <span className="service-nome">{s.name}</span>
+                <span className="muted service-meta">
+                  {formatDuracao(s.duration_minutes)} · {formatPreco(s.price)}
+                </span>
               </div>
-            ))}
-          </div>
-        )}
-      </main>
-    </div>
+              <label className="switch" title={s.active ? 'Desativar' : 'Ativar'}>
+                <input
+                  type="checkbox"
+                  checked={s.active}
+                  onChange={() => toggleActive(s)}
+                />
+                <span></span>
+              </label>
+              <button
+                className="icon-btn"
+                onClick={() => startEdit(s)}
+                aria-label={`Editar ${s.name}`}
+              >
+                <ChevronIcon />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {editing === null && (
+        <button className="fab" onClick={startNew} aria-label="Novo serviço">
+          +
+        </button>
+      )}
+    </AdminShell>
   )
-}
-
-function formatPreco(valor) {
-  return Number(valor).toLocaleString('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  })
-}
-
-function formatDuracao(min) {
-  if (min < 60) return `${min} min`
-  const h = Math.floor(min / 60)
-  const m = min % 60
-  return m ? `${h}h${String(m).padStart(2, '0')}` : `${h}h`
 }

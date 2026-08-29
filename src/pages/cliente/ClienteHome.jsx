@@ -1,17 +1,13 @@
+import Topbar from '../../components/Topbar'
 import { useAuth } from '../../context/AuthContext'
 
 export default function ClienteHome() {
-  const { profile, user, signOut } = useAuth()
+  const { profile, user } = useAuth()
   const nome = profile?.full_name || user?.email
 
   return (
     <div className="layout">
-      <header className="topbar">
-        <span className="brand-inline">✿ Agenda Mel</span>
-        <button className="btn btn-ghost" onClick={signOut}>
-          Sair
-        </button>
-      </header>
+      <Topbar />
 
       <main className="content">
         <h2>Olá, {nome} 💖</h2>

@@ -4,6 +4,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import Login from './pages/Login'
 import ClienteHome from './pages/cliente/ClienteHome'
 import AdminHome from './pages/admin/AdminHome'
+import AdminServices from './pages/admin/AdminServices'
 
 export default function App() {
   return (
@@ -26,6 +27,15 @@ export default function App() {
             element={
               <ProtectedRoute requireRole="admin">
                 <AdminHome />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/servicos"
+            element={
+              <ProtectedRoute requireRole="admin">
+                <AdminServices />
               </ProtectedRoute>
             }
           />

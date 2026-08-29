@@ -22,6 +22,8 @@ Backend: [Supabase](https://supabase.com) (plano gratuito — autenticação + b
 2. Crie um projeto novo (região `South America (São Paulo)` é a mais próxima).
 3. No painel do projeto, abra **SQL Editor**, cole o conteúdo de
    [`supabase/schema.sql`](supabase/schema.sql) e clique em **Run**.
+4. Repita com [`supabase/002_services.sql`](supabase/002_services.sql)
+   (tabela de serviços). Os arquivos SQL são numerados — rode sempre na ordem.
 
 ### 2. Configurar as variáveis de ambiente
 
@@ -66,12 +68,15 @@ src/
     Login.jsx              # login + cadastro
     cliente/ClienteHome.jsx
     admin/AdminHome.jsx
-supabase/schema.sql        # tabelas, trigger e políticas de segurança (RLS)
+    admin/AdminServices.jsx  # CRUD de serviços (/admin/servicos)
+supabase/
+  schema.sql               # perfis, trigger e políticas de segurança (RLS)
+  002_services.sql         # tabela de serviços + políticas
 ```
 
 ## Próximos passos
 
-- [ ] Cadastro de serviços (nome, duração, preço) — admin
+- [x] Cadastro de serviços (nome, duração, preço) — admin
 - [ ] Configuração de horários de atendimento — admin
 - [ ] Fluxo de agendamento — cliente
 - [ ] Listagem/cancelamento de agendamentos

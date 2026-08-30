@@ -215,12 +215,13 @@ begin
   else
     alter table public.appointments
       drop constraint if exists appointments_sem_sobreposicao;
+    -- o Postgres não tem um tipo "faixa de hora" pronto, então a faixa
+    -- é montada como data + hora (tsrange), que já existe
     alter table public.appointments
       add constraint appointments_sem_sobreposicao
       exclude using gist (
         professional_id with =,
-        date with =,
-        timerange(start_time, end_time) with &&
+        tsrange(date + start_time, date + end_time) with &&
       ) where (status not in ('cancelado', 'faltou'));
   end if;
 end;

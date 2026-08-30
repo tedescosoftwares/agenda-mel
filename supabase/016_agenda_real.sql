@@ -61,6 +61,7 @@ alter table public.professionals
 alter table public.appointments alter column client_id drop not null;
 alter table public.appointments add column if not exists guest_name text;
 alter table public.appointments add column if not exists guest_phone text;
+alter table public.appointments drop constraint if exists appointments_tem_cliente;
 alter table public.appointments
   add constraint appointments_tem_cliente
   check (client_id is not null or guest_name is not null) not valid;

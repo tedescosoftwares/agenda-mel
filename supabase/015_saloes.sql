@@ -293,6 +293,7 @@ create trigger on_preenche_salao
 
 -- perfis: o admin enxerga quem agenda no salão dele, e mais ninguém
 drop policy if exists "admin ve todos os perfis" on public.profiles;
+drop policy if exists "admin ve clientes do salao" on public.profiles;
 create policy "admin ve clientes do salao"
   on public.profiles for select
   to authenticated

@@ -12,17 +12,28 @@ create table if not exists public.business_hours (
   check (end_time > start_time)
 );
 
--- Semente: cria os 7 dias (seg–sex abertos por padrão)
-insert into public.business_hours (weekday, open)
-values
-  (0, false),
-  (1, true),
-  (2, true),
-  (3, true),
-  (4, true),
-  (5, true),
-  (6, false)
-on conflict (weekday) do nothing;
+-- Semente: cria os 7 dias (seg–sex abertos por padrão).
+-- Depois do 015 os horários passam a ser por salão, e quem cuida
+-- do preenchimento é aquele arquivo — por isso a checagem aqui.
+do $$
+begin
+  if exists (select 1 from public.business_hours) then
+    return;
+  end if;
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'business_hours'
+      and column_name = 'salon_id'
+  ) then
+    return;
+  end if;
+
+  insert into public.business_hours (weekday, open)
+  values (0, false), (1, true), (2, true), (3, true),
+         (4, true), (5, true), (6, false);
+end;
+$$;
 
 alter table public.business_hours enable row level security;
 

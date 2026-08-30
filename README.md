@@ -25,18 +25,18 @@ Backend: [Supabase](https://supabase.com) (plano gratuito — autenticação + b
 
 1. Acesse [supabase.com](https://supabase.com) e crie uma conta (pode usar o GitHub).
 2. Crie um projeto novo (região `South America (São Paulo)` é a mais próxima).
-3. No painel do projeto, abra **SQL Editor**, cole o conteúdo de
-   [`supabase/001_schema.sql`](supabase/001_schema.sql) e clique em **Run**.
-4. Repita com os demais arquivos de [`supabase/`](supabase/) **na ordem dos
-   números**: `002_services.sql`, `003_business_hours.sql`,
-   `004_appointments.sql`, `005_service_images_e_slots.sql`,
-   `006_combos.sql`, `007_profissionais.sql`, `008_foto_profissional.sql`,
-   `009_notificacoes.sql`, `010_adiantar_agenda.sql`,
-   `011_lista_espera.sql`, `012_indique_e_ganhe.sql`, `013_seguranca.sql`, `014_correcoes.sql`,
-   `015_saloes.sql`, `016_agenda_real.sql`, `017_afiliados.sql`
-5. **Para testar rápido**, rode também `018_dados_teste.sql` — ele cria três
-   contas prontas (admin, profissional e cliente), um salão com serviços,
-   horários e alguns agendamentos. Senha de todas: `agendamel123`.
+3. No painel do projeto, abra **SQL Editor**, cole o conteúdo inteiro de
+   [`supabase/setup_completo.sql`](supabase/setup_completo.sql) e clique em
+   **Run**. É só isso — um arquivo, uma vez.
+
+   Ele monta o banco inteiro, pode ser rodado em banco vazio **ou** em banco
+   que já tem parte das coisas, e pode ser executado de novo quantas vezes
+   quiser sem duplicar nada. No fim, cria três contas de teste e um salão de
+   exemplo com serviços, horários e agendamentos.
+
+   > Os arquivos numerados (`001_` a `018_`) continuam na pasta como
+   > histórico — cada um é um passo da construção. Para instalar, use só o
+   > `setup_completo.sql`.
 
 ### 2. Configurar as variáveis de ambiente
 
@@ -60,7 +60,7 @@ Abra http://localhost:5173 — a tela de login aparece. Crie uma conta pela aba
 
 ### 4. Entrar
 
-Se você rodou o `018_dados_teste.sql`, já pode entrar com:
+O `setup_completo.sql` já criou estas contas:
 
 | Conta                      | Senha          | Cai em    |
 | -------------------------- | -------------- | --------- |
@@ -138,6 +138,7 @@ supabase/
   016_agenda_real.sql      # almoço/folga, arrumação, encaixe, preço congelado
   017_afiliados.sql        # cliente traz profissional e recebe parte da taxa
   018_dados_teste.sql      # três contas prontas + salão de exemplo
+  setup_completo.sql       # TODOS os arquivos acima juntos — é este que se roda
 ```
 
 ## Papéis

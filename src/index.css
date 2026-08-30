@@ -2176,6 +2176,15 @@ button.servico-card {
   font-size: 1.05rem;
 }
 
+
+.versao-marca {
+  text-align: center;
+  font-size: 0.7rem;
+  color: var(--texto-suave);
+  margin: 1.1rem 0 0;
+  opacity: 0.75;
+}
+
 /* ---------- estados vazios e alertas ---------- */
 
 .empty-state {

@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { homeDoPapel } from '../lib/roles'
 import { isSupabaseConfigured } from '../lib/supabase'
+import { VERSAO, ENTREGA } from '../lib/versao'
 
 export default function Login() {
   const { user, role, loading, signIn, signUp } = useAuth()
@@ -161,6 +162,10 @@ export default function Login() {
                 : 'Criar conta'}
           </button>
         </form>
+
+        <p className="versao-marca">
+          v{VERSAO} · {ENTREGA}
+        </p>
       </div>
     </div>
   )

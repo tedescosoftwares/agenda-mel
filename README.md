@@ -34,6 +34,9 @@ Backend: [Supabase](https://supabase.com) (plano gratuito — autenticação + b
    `009_notificacoes.sql`, `010_adiantar_agenda.sql`,
    `011_lista_espera.sql`, `012_indique_e_ganhe.sql`, `013_seguranca.sql`, `014_correcoes.sql`,
    `015_saloes.sql`, `016_agenda_real.sql`, `017_afiliados.sql`
+5. **Para testar rápido**, rode também `018_dados_teste.sql` — ele cria três
+   contas prontas (admin, profissional e cliente), um salão com serviços,
+   horários e alguns agendamentos. Senha de todas: `agendamel123`.
 
 ### 2. Configurar as variáveis de ambiente
 
@@ -55,17 +58,42 @@ npm run dev
 Abra http://localhost:5173 — a tela de login aparece. Crie uma conta pela aba
 **Criar conta** (chega um e-mail de confirmação).
 
-### 4. Criar a conta admin
+### 4. Entrar
 
-Toda conta nova nasce como `cliente`. Para promover a sua conta a admin,
-rode no **SQL Editor** do Supabase:
+Se você rodou o `018_dados_teste.sql`, já pode entrar com:
+
+| Conta                      | Senha          | Cai em    |
+| -------------------------- | -------------- | --------- |
+| `admin@exemplo.com`        | `agendamel123` | `/admin`  |
+| `profissional@exemplo.com` | `agendamel123` | `/pro`    |
+| `cliente@exemplo.com`      | `agendamel123` | `/`       |
+
+Para promover a **sua** conta a admin, rode no **SQL Editor**:
 
 ```sql
 update public.profiles set role = 'admin'
 where id = (select id from auth.users where email = 'seu-email@exemplo.com');
 ```
 
-Depois é só sair e entrar de novo no app — você cai direto no `/admin`.
+Depois é só sair e entrar de novo no app.
+
+### Não está vendo as mudanças?
+
+A tela de login mostra a versão no rodapé (`v0.9.0 · salões, agenda real e
+afiliadas`). Se aparecer versão diferente ou nenhuma, o código na sua máquina
+está velho:
+
+```bash
+git fetch origin
+git checkout claude/aesthetic-services-booking-app-b327z0
+git pull
+npm install
+# pare o servidor (Ctrl+C) e suba de novo
+npm run dev
+```
+
+Se ainda assim não mudar, é o cache do navegador/PWA: abra uma janela anônima,
+ou aperte Ctrl+Shift+R.
 
 ## Estrutura
 
@@ -109,6 +137,7 @@ supabase/
   015_saloes.sql           # camada de salão: cada negócio com catálogo e equipe
   016_agenda_real.sql      # almoço/folga, arrumação, encaixe, preço congelado
   017_afiliados.sql        # cliente traz profissional e recebe parte da taxa
+  018_dados_teste.sql      # três contas prontas + salão de exemplo
 ```
 
 ## Papéis

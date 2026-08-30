@@ -7,6 +7,7 @@ import Login from "./pages/Login";
 import Avisos from "./pages/Avisos";
 import PaginaProfissional from "./pages/publico/PaginaProfissional";
 import Convite from "./pages/publico/Convite";
+import Estilo from "./pages/Estilo";
 import ClienteHome from "./pages/cliente/ClienteHome";
 import AdminAgenda from "./pages/admin/AdminAgenda";
 import AdminProfissionais from "./pages/admin/AdminProfissionais";
@@ -38,6 +39,9 @@ export default function App() {
 
             {/* convite para uma profissional entrar no app */}
             <Route path="/convite/:codigo" element={<Convite />} />
+
+            {/* mostruário do sistema visual */}
+            <Route path="/estilo" element={<Estilo />} />
 
             <Route
               path="/"

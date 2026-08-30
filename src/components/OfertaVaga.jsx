@@ -50,7 +50,7 @@ export default function OfertaVaga({ oferta, onRespondido }) {
 
   return (
     <div className="card convite-card">
-      <span className="convite-selo">🔔 Abriu uma vaga</span>
+      <span className="convite-selo">Abriu uma vaga</span>
       <p className="convite-texto">
         <strong>{entrada?.services?.name}</strong> com{' '}
         {entrada?.professionals?.name}

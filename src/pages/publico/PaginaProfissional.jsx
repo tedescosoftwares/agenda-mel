@@ -11,6 +11,7 @@ import {
   toMin,
   minToHora,
   formatDataLonga,
+  formatDataMedia,
 } from '../../lib/booking'
 import Avatar from '../../components/Avatar'
 
@@ -233,7 +234,7 @@ export default function PaginaProfissional() {
       <div className="layout publico">
         <main className="content">
           <div className="card sucesso-card">
-            <span className="sucesso-icone">🎉</span>
+            <span className="sucesso-icone" aria-hidden="true">✓</span>
             <h2>Agendado!</h2>
             <p>
               <strong>{sucesso.servico}</strong> com {prof.name}
@@ -267,7 +268,7 @@ export default function PaginaProfissional() {
         {services.length === 0 ? (
           <div className="card empty-state">
             <p>Esta agenda ainda não tem serviços disponíveis.</p>
-            <p className="muted">Volte em breve. 💖</p>
+            <p className="muted">Volte em breve.</p>
           </div>
         ) : (
           <>
@@ -350,7 +351,7 @@ export default function PaginaProfissional() {
                 ) : slots.length === 0 ? (
                   <>
                     <div className="card empty-state">
-                      <p>Nenhum horário livre neste dia. 😔</p>
+                      <p>Nenhum horário livre neste dia</p>
                       <p className="muted">Tente outro dia — ou entre na fila:</p>
                     </div>
                     <ListaEsperaForm
@@ -400,7 +401,7 @@ export default function PaginaProfissional() {
             {horaSel && (
               <div className="confirm-bar">
                 <div className="confirm-info">
-                  <strong>{formatDataLonga(dataSel)}</strong>
+                  <strong>{formatDataMedia(dataSel)}</strong>
                   <span className="muted">
                     às {horaSel} · {formatPreco(servicoSel.price)}
                   </span>

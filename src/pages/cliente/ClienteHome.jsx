@@ -105,7 +105,7 @@ export default function ClienteHome() {
       <Topbar />
 
       <main className="content">
-        <h2>Olá, {nome} 💖</h2>
+        <h2>Olá, {nome}</h2>
 
         {error && <div className="alert alert-error">{error}</div>}
 
@@ -170,7 +170,7 @@ export default function ClienteHome() {
                   {filas.map((f) => (
                     <div key={f.id} className="card fila-row">
                       <div className="cliente-info">
-                        <span className="cliente-nome">{f.services?.name}</span>
+                        <span className="cliente-nome"><span className="nome-txt">{f.services?.name}</span></span>
                         <span className="muted cliente-meta">
                           com {f.professionals?.name} ·{' '}
                           {f.window_start.slice(0, 5)}–{f.window_end.slice(0, 5)}{' '}
@@ -190,9 +190,9 @@ export default function ClienteHome() {
             )}
 
             <Link to="/indique" className="card indique-atalho">
-              <span className="indique-atalho-icone">🎁</span>
+              <span className="indique-atalho-icone" aria-hidden="true" />
               <span className="cliente-info">
-                <span className="cliente-nome">Indique e ganhe</span>
+                <span className="cliente-nome"><span className="nome-txt">Indique e ganhe</span></span>
                 <span className="muted cliente-meta">
                   {saldo > 0
                     ? `Você tem ${formatarCents(saldo)} de crédito`
@@ -214,7 +214,7 @@ export default function ClienteHome() {
                     <Link key={p.id} to={`/p/${p.slug}`} className="card prof-row">
                       <Avatar nome={p.name} foto={p.photo_url} />
                       <div className="cliente-info">
-                        <span className="cliente-nome">{p.name}</span>
+                        <span className="cliente-nome"><span className="nome-txt">{p.name}</span></span>
                         {p.bio && (
                           <span className="muted servico-desc">{p.bio}</span>
                         )}

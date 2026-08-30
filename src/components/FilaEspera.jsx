@@ -24,7 +24,7 @@ export default function FilaEspera({ professionalId }) {
     <div className="card fila-painel">
       <button className="fila-cabecalho" onClick={() => setAberta((v) => !v)}>
         <span>
-          🔔 <strong>{fila.length}</strong>{' '}
+          <strong>{fila.length}</strong>{' '}
           {fila.length === 1 ? 'cliente esperando vaga' : 'clientes esperando vaga'}
         </span>
         <span className="muted">{aberta ? 'fechar' : 'ver'}</span>
@@ -34,7 +34,7 @@ export default function FilaEspera({ professionalId }) {
         <div className="fila-itens">
           {fila.map((f) => (
             <div key={f.id} className="fila-item">
-              <span className="cliente-nome">{f.profiles?.full_name || 'Cliente'}</span>
+              <span className="cliente-nome"><span className="nome-txt">{f.profiles?.full_name || 'Cliente'}</span></span>
               <span className="muted cliente-meta">
                 {f.services?.name} · {f.window_start.slice(0, 5)}–
                 {f.window_end.slice(0, 5)} · até {formatDataCurta(f.date_to)}

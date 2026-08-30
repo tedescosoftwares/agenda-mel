@@ -100,9 +100,11 @@ export default function BloqueiosEditor({ professionalId }) {
             <div key={b.id} className="card bloco-row">
               <div className="bloco-info">
                 <span className="bloco-quando">
-                  {b.kind === 'semanal'
-                    ? `Toda ${DIAS[b.weekday].toLowerCase()}`
-                    : formatData(b.date)}
+                  <span className="nome-txt">
+                    {b.kind === 'semanal'
+                      ? `Toda ${DIAS[b.weekday].toLowerCase()}`
+                      : formatData(b.date)}
+                  </span>
                 </span>
                 <span className="muted bloco-hora">
                   {b.all_day

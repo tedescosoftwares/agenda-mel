@@ -94,7 +94,7 @@ export default function AdminClientes() {
             <div key={c.id} className="card cliente-row">
               <div className="avatar-iniciais">{iniciais(c.full_name)}</div>
               <div className="cliente-info">
-                <span className="cliente-nome">{c.full_name || 'Sem nome'}</span>
+                <span className="cliente-nome"><span className="nome-txt">{c.full_name || 'Sem nome'}</span></span>
                 <span className="muted cliente-meta">
                   {c.phone || 'sem telefone'}
                   {' · '}

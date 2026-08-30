@@ -353,7 +353,7 @@ export default function AdminProfissionais() {
             >
               <Avatar nome={p.name} foto={p.photo_url} />
               <div className="cliente-info">
-                <span className="cliente-nome">{p.name}</span>
+                <span className="cliente-nome"><span className="nome-txt">{p.name}</span></span>
                 <span className="muted cliente-meta">
                   /p/{p.slug} · {(vinculos[p.id] ?? []).length} serviço
                   {(vinculos[p.id] ?? []).length === 1 ? '' : 's'}

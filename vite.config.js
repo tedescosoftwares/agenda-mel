@@ -8,16 +8,19 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg'],
+      includeAssets: ['favicon.svg', 'fontes/*.woff2'],
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+      },
       manifest: {
         name: 'Agenda Mel — Estética',
         short_name: 'Agenda Mel',
-        description: 'Agendamento de serviços estéticos',
+        description: 'Sua cliente marca sozinha pelo seu link',
         lang: 'pt-BR',
         start_url: '/',
         display: 'standalone',
-        background_color: '#fdf6f4',
-        theme_color: '#c98a8a',
+        background_color: '#0d0d0f',
+        theme_color: '#0d0d0f',
         icons: [
           {
             src: 'pwa-192.png',

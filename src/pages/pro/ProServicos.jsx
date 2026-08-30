@@ -102,7 +102,7 @@ export default function ProServicos() {
               )}
               <div className="service-info">
                 <span className="service-nome">
-                  {s.name}
+                  <span className="nome-txt">{s.name}</span>
                   {s.is_combo && <span className="badge badge-combo">combo</span>}
                 </span>
                 <span className="muted service-meta">

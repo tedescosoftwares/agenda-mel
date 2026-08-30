@@ -60,7 +60,7 @@ export default function ListaEsperaForm({ profissional, servico, diaSugerido, on
   if (ok) {
     return (
       <div className="card espera-card">
-        <span className="convite-selo">✅ Você está na fila</span>
+        <span className="convite-selo">Você está na fila</span>
         <p className="convite-texto">
           Assim que abrir uma vaga de <strong>{servico.name}</strong> com{' '}
           {profissional.name} nessa faixa, você recebe um aviso no app.
@@ -71,7 +71,7 @@ export default function ListaEsperaForm({ profissional, servico, diaSugerido, on
 
   return (
     <div className="card espera-card">
-      <span className="convite-selo">🔔 Avise-me</span>
+      <span className="convite-selo">Avise-me</span>
       <p className="convite-texto">
         Não achou o horário que queria? Entre na fila — quando alguém desmarcar,
         avisamos você antes de liberar para o resto.

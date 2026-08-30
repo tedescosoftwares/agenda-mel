@@ -97,7 +97,7 @@ export default function ProHorarios() {
       }
     }
     setSaving(false)
-    setInfo('Horários salvos! ✅')
+    setInfo('Horários salvos.')
   }
 
   return (

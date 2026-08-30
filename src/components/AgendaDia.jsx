@@ -210,7 +210,7 @@ export default function AgendaDia({
 
           <div className="appt-list">
             {appointments.map((a) => (
-              <div key={a.id} className="card appt-row">
+              <div key={a.id} className="card appt-row appt-row-status">
                 <div className="appt-time">
                   <span className="appt-hora">{a.start_time.slice(0, 5)}</span>
                   <span className="appt-dur">
@@ -219,7 +219,9 @@ export default function AgendaDia({
                 </div>
                 <div className="appt-info">
                   <span className="appt-cliente">
-                    {a.profiles?.full_name || a.guest_name || 'Cliente'}
+                    <span className="nome-txt">
+                      {a.profiles?.full_name || a.guest_name || 'Cliente'}
+                    </span>
                     {!a.client_id && <span className="badge badge-encaixe">encaixe</span>}
                   </span>
                   <span className="appt-servico muted">

@@ -40,6 +40,15 @@ export function formatDataLonga(iso) {
   })
 }
 
+// "seg., 15 de set." — cabe numa linha só na barra de confirmação
+export function formatDataMedia(iso) {
+  return new Date(iso + 'T12:00:00').toLocaleDateString('pt-BR', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  })
+}
+
 export function formatDataCurta(iso) {
   const [, m, d] = iso.split('-')
   return `${d}/${m}`

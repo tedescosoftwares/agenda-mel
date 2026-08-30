@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { homeDoPapel } from '../lib/roles'
 import { isSupabaseConfigured } from '../lib/supabase'
 import { VERSAO, ENTREGA } from '../lib/versao'
+import { MarcaIcon } from '../components/icons'
 
 export default function Login() {
   const { user, role, loading, signIn, signUp } = useAuth()
@@ -65,9 +66,9 @@ export default function Login() {
     <div className="page-center login-bg">
       <div className="card login-card">
         <div className="brand">
-          <span className="brand-icon">✿</span>
+          <MarcaIcon className="brand-icon" width={30} height={30} />
           <h1>Agenda Mel</h1>
-          <p className="muted">Agendamento de serviços estéticos</p>
+          <p className="muted">Sua cliente marca sozinha pelo seu link</p>
         </div>
 
         {!isSupabaseConfigured && (

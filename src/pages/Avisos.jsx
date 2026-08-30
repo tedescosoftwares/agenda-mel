@@ -4,17 +4,18 @@ import { useAuth } from '../context/AuthContext'
 import { useNotificacoes } from '../context/NotificacoesContext'
 import { homeDoPapel } from '../lib/roles'
 
-const ICONE = {
-  vaga_disponivel: '🔔',
-  agenda_adiantada: '⏩',
-  agendamento_confirmado: '✅',
-  agendamento_cancelado: '❌',
-  agendamento_recusado: '❌',
-  indicacao_creditada: '🎁',
-  novo_agendamento: '📅',
-  lembrete: '💖',
-  afiliado_novo: '💼',
-  afiliado_cashback: '💰',
+// cada tipo de aviso tem sua cor — o mesmo vocabulário de estado
+// usado na agenda, em vez de emoji
+const TOM = {
+  vaga_disponivel: 'menta',
+  agenda_adiantada: 'azul',
+  agendamento_confirmado: 'menta',
+  agendamento_cancelado: 'carmim',
+  agendamento_recusado: 'carmim',
+  indicacao_creditada: 'latao',
+  novo_agendamento: 'menta',
+  afiliado_novo: 'latao',
+  afiliado_cashback: 'latao',
 }
 
 export default function Avisos() {
@@ -57,7 +58,7 @@ export default function Avisos() {
                 className={a.read_at ? 'card aviso-row lido' : 'card aviso-row'}
                 onClick={() => a.action_url && navigate(a.action_url)}
               >
-                <span className="aviso-icone">{ICONE[a.kind] ?? '🔔'}</span>
+                <span className={`aviso-tom tom-${TOM[a.kind] ?? 'latao'}`} />
                 <span className="aviso-texto">
                   <strong>{a.title}</strong>
                   {a.body && <span className="muted">{a.body}</span>}

@@ -84,7 +84,7 @@ export default function AdminHours() {
       }
     }
     setSaving(false)
-    setInfo('Horários salvos! ✅')
+    setInfo('Horários salvos.')
   }
 
   return (

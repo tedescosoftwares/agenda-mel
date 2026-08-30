@@ -119,7 +119,7 @@ export default function IndiqueEGanhe() {
 
           <div className="link-acoes">
             <button className="btn btn-primary" onClick={copiar}>
-              {copiado ? 'Copiado! ✅' : 'Copiar meu link'}
+              {copiado ? 'Copiado' : 'Copiar meu link'}
             </button>
             <a
               className="btn btn-whats"
@@ -133,7 +133,7 @@ export default function IndiqueEGanhe() {
         </div>
 
         <div className="card indique-card destaque-afiliada">
-          <h3>Traga uma profissional 💼</h3>
+          <h3>Traga uma profissional</h3>
           <p className="muted">
             Conhece alguém que atende? Mande o convite abaixo. Quando ela
             começar a atender pelo app, você passa a receber{' '}
@@ -147,7 +147,7 @@ export default function IndiqueEGanhe() {
 
           <div className="link-acoes">
             <button className="btn btn-primary" onClick={copiarProfissional}>
-              {copiadoProf ? 'Copiado! ✅' : 'Copiar convite'}
+              {copiadoProf ? 'Copiado' : 'Copiar convite'}
             </button>
             <a
               className="btn btn-whats"
@@ -190,7 +190,7 @@ export default function IndiqueEGanhe() {
               {trazidas.map((t) => (
                 <div key={t.attribution_id} className="card cliente-row">
                   <div className="cliente-info">
-                    <span className="cliente-nome">{t.nome}</span>
+                    <span className="cliente-nome"><span className="nome-txt">{t.nome}</span></span>
                     <span className="muted cliente-meta">
                       {t.primeira_atividade
                         ? `atendendo desde ${new Date(t.primeira_atividade).toLocaleDateString('pt-BR')}`
@@ -226,7 +226,7 @@ export default function IndiqueEGanhe() {
               {extrato.map((t) => (
                 <div key={t.id} className="card extrato-row">
                   <div className="cliente-info">
-                    <span className="cliente-nome">{t.description}</span>
+                    <span className="cliente-nome"><span className="nome-txt">{t.description}</span></span>
                     <span className="muted cliente-meta">
                       {new Date(t.created_at).toLocaleDateString('pt-BR')}
                       {t.expires_at

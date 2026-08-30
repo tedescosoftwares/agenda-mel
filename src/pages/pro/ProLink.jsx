@@ -66,7 +66,7 @@ export default function ProLink() {
 
         <div className="link-acoes">
           <button className="btn btn-primary" onClick={copiar}>
-            {copiado ? 'Copiado! ✅' : 'Copiar link'}
+            {copiado ? 'Copiado' : 'Copiar link'}
           </button>
           <a
             className="btn btn-whats"

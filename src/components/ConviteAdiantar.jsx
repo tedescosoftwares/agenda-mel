@@ -35,7 +35,7 @@ export default function ConviteAdiantar({ oferta, servico, profissional, onRespo
 
   return (
     <div className="card convite-card">
-      <span className="convite-selo">⏩ Dá para adiantar</span>
+      <span className="convite-selo">Dá para adiantar</span>
       <p className="convite-texto">
         {profissional ? <strong>{profissional}</strong> : 'Sua profissional'} pode
         te atender às <strong>{oferta.proposed_start_time.slice(0, 5)}</strong> em

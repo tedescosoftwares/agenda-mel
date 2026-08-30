@@ -93,3 +93,24 @@ export function BellIcon(props) {
     </svg>
   )
 }
+
+// A marca: a lâmpada em volta do espelho do salão
+export function MarcaIcon(props) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width={17}
+      height={17}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.9}
+      strokeLinecap="round"
+      aria-hidden="true"
+      {...props}
+    >
+      <circle cx="12" cy="12" r="4.2" />
+      <path d="M12 2.4v2.4M12 19.2v2.4M2.4 12h2.4M19.2 12h2.4" />
+      <path d="M5.2 5.2l1.7 1.7M17.1 17.1l1.7 1.7M18.8 5.2l-1.7 1.7M6.9 17.1l-1.7 1.7" />
+    </svg>
+  )
+}

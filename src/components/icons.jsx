@@ -94,6 +94,26 @@ export function BellIcon(props) {
   )
 }
 
+export function GraficoIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M4 20V10" />
+      <path d="M10 20V4" />
+      <path d="M16 20v-7" />
+      <path d="M22 20H2" />
+    </svg>
+  )
+}
+
+export function VoltarIcon(props) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M3 12a9 9 0 1 0 3-6.7" />
+      <path d="M3 4v5h5" />
+    </svg>
+  )
+}
+
 // A marca: a lâmpada em volta do espelho do salão
 export function MarcaIcon(props) {
   return (

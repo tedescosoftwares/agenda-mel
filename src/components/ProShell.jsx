@@ -1,15 +1,23 @@
 import { NavLink } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import SinoAvisos from './SinoAvisos'
-import { CalendarIcon, SparkleIcon, ClockIcon, LinkIcon, MarcaIcon } from './icons'
+import {
+  CalendarIcon,
+  SparkleIcon,
+  GraficoIcon,
+  VoltarIcon,
+  ClockIcon,
+  MarcaIcon,
+} from './icons'
 import { iniciais } from '../lib/booking'
 import Avatar from './Avatar'
 
 const TABS = [
   { to: '/pro', end: true, label: 'Agenda', Icon: CalendarIcon },
+  { to: '/pro/retorno', label: 'Volta', Icon: VoltarIcon },
+  { to: '/pro/numeros', label: 'O mês', Icon: GraficoIcon },
   { to: '/pro/servicos', label: 'Serviços', Icon: SparkleIcon },
-  { to: '/pro/horarios', label: 'Horários', Icon: ClockIcon },
-  { to: '/pro/link', label: 'Meu link', Icon: LinkIcon },
+  { to: '/pro/ajustes', label: 'Ajustes', Icon: ClockIcon },
 ]
 
 export default function ProShell({ children }) {

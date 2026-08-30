@@ -10,12 +10,13 @@
 --        admin@exemplo.com         → dona do salão
 --        profissional@exemplo.com  → Ana Paula
 --        cliente@exemplo.com       → Juliana
---    e um salão de exemplo com serviços, horários e agendamentos.
+--    e um salão de exemplo com serviços, horários, agendamentos e
+--    dois meses de histórico, para as telas de números e de
+--    "quem sumiu" já nascerem com o que mostrar.
 --
 --  Se der erro, me mande a mensagem inteira: cada bloco abaixo está
 --  marcado com o nome do arquivo de origem, então dá para achar na hora.
 -- =============================================================
-
 
 
 
@@ -88,6 +89,7 @@ create trigger on_auth_user_created
 -- =============================================================
 
 
+
 -- =============================================================
 -- >>> 002_services.sql
 -- =============================================================
@@ -149,6 +151,7 @@ create policy "admin exclui servicos"
   using (public.is_admin());
 
 
+
 -- =============================================================
 -- >>> 003_business_hours.sql
 -- =============================================================
@@ -205,6 +208,7 @@ create policy "admin altera horarios"
   on public.business_hours for update
   to authenticated
   using (public.is_admin());
+
 
 
 -- =============================================================
@@ -270,6 +274,7 @@ create policy "admin ve todos os perfis"
   using (public.is_admin());
 
 
+
 -- =============================================================
 -- >>> 005_service_images_e_slots.sql
 -- =============================================================
@@ -329,6 +334,7 @@ $$;
 grant execute on function public.get_busy_slots(date) to authenticated;
 
 
+
 -- =============================================================
 -- >>> 006_combos.sql
 -- =============================================================
@@ -346,6 +352,7 @@ alter table public.services
 
 alter table public.services
   add column if not exists combo_service_ids uuid[] not null default '{}';
+
 
 
 -- =============================================================
@@ -597,6 +604,7 @@ create policy "profissional ve clientes dela"
 -- =============================================================
 
 
+
 -- =============================================================
 -- >>> 008_foto_profissional.sql
 -- =============================================================
@@ -646,6 +654,7 @@ create policy "equipe remove foto de profissional"
     bucket_id = 'professional-photos'
     and (public.is_admin() or public.my_professional_id() is not null)
   );
+
 
 
 -- =============================================================
@@ -747,6 +756,7 @@ exception
   when duplicate_object then null;
 end;
 $$;
+
 
 
 -- =============================================================
@@ -1165,6 +1175,7 @@ grant execute on function public.horario_mais_cedo_possivel(uuid) to authenticat
 grant execute on function public.propor_antecipacao(uuid, time, integer) to authenticated;
 grant execute on function public.responder_antecipacao(uuid, boolean) to authenticated;
 grant execute on function public.cancelar_antecipacao(uuid) to authenticated;
+
 
 
 -- =============================================================
@@ -1603,6 +1614,7 @@ grant execute on function public.faltas_da_cliente(uuid) to authenticated;
 -- =============================================================
 
 
+
 -- =============================================================
 -- >>> 012_indique_e_ganhe.sql
 -- =============================================================
@@ -2037,6 +2049,7 @@ grant execute on function public.usar_credito(uuid, integer) to authenticated;
 grant execute on function public.meu_resumo_indicacoes() to authenticated;
 
 
+
 -- =============================================================
 -- >>> 013_seguranca.sql
 -- =============================================================
@@ -2351,6 +2364,7 @@ create policy "equipe remove foto de profissional"
       or (storage.foldername(name))[1] = public.my_professional_id()::text
     )
   );
+
 
 
 -- =============================================================
@@ -3157,6 +3171,7 @@ $$;
 grant execute on function public.config_agenda_profissional(uuid) to authenticated;
 
 
+
 -- =============================================================
 -- >>> 015_saloes.sql
 -- =============================================================
@@ -3543,6 +3558,7 @@ end;
 $$;
 
 grant execute on function public.abrir_salao(text, text, text, text) to authenticated;
+
 
 
 -- =============================================================
@@ -3985,6 +4001,7 @@ end;
 $$;
 
 grant execute on function public.usar_credito(uuid, integer) to authenticated;
+
 
 
 -- =============================================================
@@ -4552,6 +4569,7 @@ grant execute on function public.abrir_salao(text, text, text, text, text) to au
 drop function if exists public.abrir_salao(text, text, text, text);
 
 
+
 -- =============================================================
 -- >>> 018_dados_teste.sql
 -- =============================================================
@@ -4842,3 +4860,1149 @@ order by p.role;
 -- where email in ('admin@exemplo.com', 'profissional@exemplo.com', 'cliente@exemplo.com');
 -- delete from public.salons where slug = 'espaco-mel';
 -- =============================================================
+
+
+
+-- =============================================================
+-- >>> 019_volta_sozinha.sql
+-- =============================================================
+
+-- =============================================================
+-- Agenda Mel — 019: a cliente volta sozinha
+-- Rode este arquivo no SQL Editor do Supabase (DEPOIS do 018).
+--
+-- Três lembranças que a agenda passa a dar por conta própria:
+--   1. véspera  — "amanhã às 14h com a Ana"
+--   2. depois   — "obrigada por hoje; costuma voltar em 30 dias"
+--   3. sumiço   — a lista de quem passou do tempo de voltar,
+--                 com um toque para chamar de volta
+--
+-- Duas regras atravessam tudo: a cliente pode desligar os avisos,
+-- e ninguém é chamado duas vezes dentro do intervalo de descanso.
+-- =============================================================
+
+-- 1. Em quantos dias faz sentido voltar ----------------------------------
+-- unha em 30, corte em 60, escova em 15… cada serviço tem o seu ritmo
+alter table public.services
+  add column if not exists return_days integer
+    check (return_days is null or return_days between 1 and 365);
+
+-- 2. O que cada profissional quer que a agenda faça ----------------------
+alter table public.professionals
+  -- 0 desliga o lembrete de véspera
+  add column if not exists reminder_hours_before integer not null default 24
+    check (reminder_hours_before between 0 and 168);
+
+alter table public.professionals
+  add column if not exists followup_active boolean not null default true;
+
+alter table public.professionals
+  -- descanso entre duas chamadas para a mesma cliente
+  add column if not exists winback_cooldown_days integer not null default 45
+    check (winback_cooldown_days between 7 and 365);
+
+alter table public.professionals
+  -- quando não há tempo de retorno no serviço, vale este
+  add column if not exists winback_after_days integer not null default 45
+    check (winback_after_days between 7 and 365);
+
+-- 3. A cliente manda nos próprios avisos ---------------------------------
+alter table public.profiles
+  add column if not exists accepts_reminders boolean not null default true;
+
+-- ela mesma pode desligar (a coluna entra na lista do grant restrito)
+grant update (full_name, phone, accepts_reminders) on public.profiles to authenticated;
+
+-- 4. Registro de quem já foi chamado -------------------------------------
+-- existe para uma coisa só: não encher o saco da mesma pessoa
+create table if not exists public.client_nudges (
+  id uuid primary key default gen_random_uuid(),
+  professional_id uuid not null references public.professionals (id) on delete cascade,
+  client_id uuid not null references public.profiles (id) on delete cascade,
+  kind text not null check (kind in ('lembrete', 'pos_atendimento', 'retorno')),
+  appointment_id uuid references public.appointments (id) on delete set null,
+  service_id uuid references public.services (id) on delete set null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists nudges_prof_cliente_idx
+  on public.client_nudges (professional_id, client_id, kind, created_at desc);
+
+alter table public.client_nudges enable row level security;
+
+drop policy if exists "equipe ve as chamadas" on public.client_nudges;
+create policy "equipe ve as chamadas"
+  on public.client_nudges for select
+  to authenticated
+  using (
+    public.is_professional(professional_id)
+    or public.is_admin_do_salao(
+      (select salon_id from public.professionals where id = professional_id))
+  );
+
+-- escrever é só pelas funções abaixo
+revoke insert, update, delete on public.client_nudges from authenticated, anon;
+
+-- 5. Lembrete de véspera -------------------------------------------------
+alter table public.appointments
+  add column if not exists reminder_sent_at timestamptz;
+
+-- Roda de graça e é idempotente: só manda o que ainda não foi mandado,
+-- e só para quem aceita. Qualquer sessão aberta pode chamar — o app faz
+-- isso ao abrir, e o pg_cron faz de hora em hora se estiver ligado.
+create or replace function public.enviar_lembretes()
+returns integer
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  a record;
+  agora timestamp := public.agora_local();
+  enviados integer := 0;
+begin
+  for a in
+    select ap.id, ap.client_id, ap.date, ap.start_time, ap.professional_id,
+           coalesce(ap.service_name, s.name) as servico,
+           p.name as profissional, p.slug, p.reminder_hours_before
+    from public.appointments ap
+    join public.professionals p on p.id = ap.professional_id
+    left join public.services s on s.id = ap.service_id
+    join public.profiles c on c.id = ap.client_id
+    where ap.status in ('pendente', 'confirmado')
+      and ap.reminder_sent_at is null
+      and ap.client_id is not null
+      and c.accepts_reminders
+      and p.reminder_hours_before > 0
+      and (ap.date + ap.start_time) > agora
+      and (ap.date + ap.start_time)
+          <= agora + make_interval(hours => p.reminder_hours_before)
+    limit 200
+  loop
+    perform public.notificar(
+      a.client_id,
+      'lembrete_agendamento',
+      'Amanhã tem horário marcado',
+      a.servico || ' com ' || a.profissional || ' dia '
+        || to_char(a.date, 'DD/MM') || ' às ' || to_char(a.start_time, 'HH24:MI') || '.',
+      '/',
+      jsonb_build_object('appointment_id', a.id),
+      (a.date + a.start_time) at time zone 'America/Sao_Paulo'
+    );
+
+    update public.appointments set reminder_sent_at = now() where id = a.id;
+
+    insert into public.client_nudges (professional_id, client_id, kind, appointment_id)
+    values (a.professional_id, a.client_id, 'lembrete', a.id);
+
+    enviados := enviados + 1;
+  end loop;
+
+  return enviados;
+end;
+$$;
+
+revoke execute on function public.enviar_lembretes() from public, anon;
+grant execute on function public.enviar_lembretes() to authenticated;
+
+-- 6. Depois do atendimento ----------------------------------------------
+-- agradece e já planta a próxima: "costuma voltar em 30 dias"
+create or replace function public.agradecer_e_semear()
+returns trigger
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  prof public.professionals%rowtype;
+  dias integer;
+  volta date;
+  aceita boolean;
+  nome_servico text;
+begin
+  if new.status <> 'concluido' or old.status = 'concluido' then
+    return new;
+  end if;
+
+  if new.client_id is null then
+    return new;
+  end if;
+
+  select * into prof from public.professionals where id = new.professional_id;
+  if not found or not prof.followup_active then
+    return new;
+  end if;
+
+  select p.accepts_reminders into aceita from public.profiles p where p.id = new.client_id;
+  if not coalesce(aceita, false) then
+    return new;
+  end if;
+
+  select s.return_days, coalesce(new.service_name, s.name)
+    into dias, nome_servico
+  from public.services s where s.id = new.service_id;
+
+  nome_servico := coalesce(nome_servico, new.service_name, 'seu atendimento');
+
+  if dias is null then
+    perform public.notificar(
+      new.client_id,
+      'pos_atendimento',
+      'Obrigada pela visita',
+      'Esperamos você de novo com a ' || prof.name || '.',
+      '/p/' || prof.slug,
+      jsonb_build_object('appointment_id', new.id)
+    );
+  else
+    volta := new.date + dias;
+    perform public.notificar(
+      new.client_id,
+      'pos_atendimento',
+      'Obrigada pela visita',
+      lower(nome_servico) || ' costuma pedir retoque em ' || dias
+        || ' dias — por volta de ' || to_char(volta, 'DD/MM')
+        || '. Quer já deixar marcado?',
+      '/p/' || prof.slug,
+      jsonb_build_object('appointment_id', new.id, 'volta_em', volta)
+    );
+  end if;
+
+  insert into public.client_nudges
+    (professional_id, client_id, kind, appointment_id, service_id)
+  values (new.professional_id, new.client_id, 'pos_atendimento', new.id, new.service_id);
+
+  return new;
+end;
+$$;
+
+revoke execute on function public.agradecer_e_semear() from public, anon, authenticated;
+
+drop trigger if exists ao_concluir_agradecer on public.appointments;
+create trigger ao_concluir_agradecer
+  after update on public.appointments
+  for each row execute function public.agradecer_e_semear();
+
+-- 7. Quem sumiu ----------------------------------------------------------
+-- A pergunta que a profissional não consegue responder de cabeça:
+-- quem já passou do tempo de voltar e não tem nada marcado?
+create or replace function public.clientes_para_retorno(
+  prof uuid default public.my_professional_id()
+)
+returns table (
+  client_id uuid,
+  nome text,
+  telefone text,
+  ultima_visita date,
+  dias_sem_vir integer,
+  service_id uuid,
+  servico text,
+  voltaria_em date,
+  total_visitas integer,
+  pode_chamar boolean
+)
+language plpgsql
+stable
+security definer set search_path = public
+as $$
+declare
+  p public.professionals%rowtype;
+  hoje date := public.agora_local()::date;
+begin
+  if prof is null then
+    raise exception 'Informe a profissional';
+  end if;
+
+  select * into p from public.professionals where id = prof;
+  if not found then
+    raise exception 'Profissional não encontrada';
+  end if;
+
+  if not (public.is_professional(prof) or public.is_admin_do_salao(p.salon_id)) then
+    raise exception 'Sem permissão para ver esta lista';
+  end if;
+
+  return query
+  with ultimas as (
+    select distinct on (a.client_id)
+           a.client_id, a.date, a.service_id
+    from public.appointments a
+    where a.professional_id = prof
+      and a.status = 'concluido'
+      and a.client_id is not null
+    order by a.client_id, a.date desc, a.start_time desc
+  ),
+  contagem as (
+    select a.client_id, count(*)::integer as visitas
+    from public.appointments a
+    where a.professional_id = prof and a.status = 'concluido'
+    group by a.client_id
+  )
+  select u.client_id,
+         c.full_name,
+         c.phone,
+         u.date,
+         (hoje - u.date)::integer,
+         u.service_id,
+         s.name,
+         (u.date + coalesce(s.return_days, p.winback_after_days))::date,
+         coalesce(n.visitas, 0),
+         -- pode chamar: aceita avisos e não foi chamada no descanso
+         c.accepts_reminders
+           and not exists (
+             select 1 from public.client_nudges cn
+             where cn.professional_id = prof
+               and cn.client_id = u.client_id
+               and cn.kind = 'retorno'
+               and cn.created_at
+                   > now() - make_interval(days => p.winback_cooldown_days)
+           )
+  from ultimas u
+  join public.profiles c on c.id = u.client_id
+  left join public.services s on s.id = u.service_id
+  left join contagem n on n.client_id = u.client_id
+  where hoje >= u.date + coalesce(s.return_days, p.winback_after_days)
+    -- quem já tem hora marcada não sumiu
+    and not exists (
+      select 1 from public.appointments f
+      where f.professional_id = prof
+        and f.client_id = u.client_id
+        and f.date >= hoje
+        and f.status in ('pendente', 'confirmado')
+    )
+  order by (hoje - u.date) desc;
+end;
+$$;
+
+revoke execute on function public.clientes_para_retorno(uuid) from public, anon;
+grant execute on function public.clientes_para_retorno(uuid) to authenticated;
+
+-- 8. Chamar de volta -----------------------------------------------------
+create or replace function public.chamar_de_volta(
+  cliente uuid,
+  prof uuid default public.my_professional_id(),
+  recado text default null
+)
+returns uuid
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  p public.professionals%rowtype;
+  aceita boolean;
+  ultima date;
+  texto text;
+  aviso_id uuid;
+begin
+  select * into p from public.professionals where id = prof;
+  if not found then
+    raise exception 'Profissional não encontrada';
+  end if;
+
+  if not (public.is_professional(prof) or public.is_admin_do_salao(p.salon_id)) then
+    raise exception 'Sem permissão';
+  end if;
+
+  select accepts_reminders into aceita from public.profiles where id = cliente;
+  if aceita is null then
+    raise exception 'Cliente não encontrada';
+  end if;
+  if not aceita then
+    raise exception 'Esta cliente desligou os avisos';
+  end if;
+
+  if exists (
+    select 1 from public.client_nudges cn
+    where cn.professional_id = prof
+      and cn.client_id = cliente
+      and cn.kind = 'retorno'
+      and cn.created_at > now() - make_interval(days => p.winback_cooldown_days)
+  ) then
+    raise exception 'Esta cliente já foi chamada há pouco tempo';
+  end if;
+
+  select max(a.date) into ultima
+  from public.appointments a
+  where a.professional_id = prof and a.client_id = cliente and a.status = 'concluido';
+
+  texto := coalesce(
+    nullif(btrim(recado), ''),
+    'Faz ' || (public.agora_local()::date - ultima)
+      || ' dias desde a sua última vez. A agenda da '
+      || p.name || ' está aberta — dá uma olhada nos horários.'
+  );
+
+  aviso_id := public.notificar(
+    cliente,
+    'convite_retorno',
+    'A ' || p.name || ' guardou um horário para você',
+    texto,
+    '/p/' || p.slug,
+    jsonb_build_object('professional_id', prof)
+  );
+
+  insert into public.client_nudges (professional_id, client_id, kind)
+  values (prof, cliente, 'retorno');
+
+  return aviso_id;
+end;
+$$;
+
+revoke execute on function public.chamar_de_volta(uuid, uuid, text) from public, anon;
+grant execute on function public.chamar_de_volta(uuid, uuid, text) to authenticated;
+
+-- Um toque para a lista inteira; pula quem está em descanso
+create or replace function public.chamar_todas_de_volta(
+  prof uuid default public.my_professional_id(),
+  limite integer default 30
+)
+returns integer
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  c record;
+  n integer := 0;
+begin
+  for c in
+    select client_id from public.clientes_para_retorno(prof)
+    where pode_chamar
+    limit greatest(1, least(coalesce(limite, 30), 100))
+  loop
+    begin
+      perform public.chamar_de_volta(c.client_id, prof);
+      n := n + 1;
+    exception when others then
+      -- uma cliente que não pôde ser chamada não derruba as outras
+      null;
+    end;
+  end loop;
+  return n;
+end;
+$$;
+
+revoke execute on function public.chamar_todas_de_volta(uuid, integer) from public, anon;
+grant execute on function public.chamar_todas_de_volta(uuid, integer) to authenticated;
+
+-- 9. Ajustes da profissional --------------------------------------------
+create or replace function public.config_retorno(
+  prof uuid default public.my_professional_id()
+)
+returns table (
+  reminder_hours_before integer,
+  followup_active boolean,
+  winback_after_days integer,
+  winback_cooldown_days integer
+)
+language plpgsql
+stable
+security definer set search_path = public
+as $$
+declare
+  p public.professionals%rowtype;
+begin
+  select * into p from public.professionals where id = prof;
+  if not found then
+    raise exception 'Profissional não encontrada';
+  end if;
+  if not (public.is_professional(prof) or public.is_admin_do_salao(p.salon_id)) then
+    raise exception 'Sem permissão';
+  end if;
+
+  return query select p.reminder_hours_before, p.followup_active,
+                      p.winback_after_days, p.winback_cooldown_days;
+end;
+$$;
+
+revoke execute on function public.config_retorno(uuid) from public, anon;
+grant execute on function public.config_retorno(uuid) to authenticated;
+
+
+-- 10. A profissional mexe na própria ficha, mas não no vínculo --------
+-- A política já deixava ela editar a linha dela (foto, bio, os ajustes
+-- acima). Só que "a linha dela" incluía salon_id: dava para se mudar
+-- de salão sozinha. Aqui esses dois campos só mudam por mão de admin.
+-- SECURITY INVOKER de propósito: só assim current_user é 'authenticated'
+-- num PATCH que vem da API e vira o dono da função quando a escrita
+-- nasce dentro de uma função nossa (que já validou o que precisava).
+create or replace function public.protege_vinculo_profissional()
+returns trigger
+language plpgsql
+security invoker set search_path = public
+as $$
+begin
+  -- escrita nascida dentro de uma função do servidor passa direto
+  if current_user not in ('authenticated', 'anon') then
+    return new;
+  end if;
+
+  if new.salon_id is distinct from old.salon_id
+     or new.user_id is distinct from old.user_id then
+    if not (public.is_admin_do_salao(old.salon_id)
+            and public.is_admin_do_salao(new.salon_id)) then
+      raise exception 'Só a administração do salão muda o vínculo da profissional';
+    end if;
+  end if;
+
+  return new;
+end;
+$$;
+
+revoke execute on function public.protege_vinculo_profissional()
+  from public, anon, authenticated;
+
+drop trigger if exists protege_vinculo on public.professionals;
+create trigger protege_vinculo
+  before update on public.professionals
+  for each row execute function public.protege_vinculo_profissional();
+
+
+
+-- =============================================================
+-- >>> 020_numeros.sql
+-- =============================================================
+
+-- =============================================================
+-- Agenda Mel — 020: saber se o mês fechou no azul
+-- Rode este arquivo no SQL Editor do Supabase (DEPOIS do 019).
+--
+-- Números que a profissional hoje só tem "de cabeça": quanto
+-- entrou, quanto vale um atendimento em média, quantas faltaram,
+-- quanto da agenda ficou parada e quem voltou.
+--
+-- Dinheiro sempre em centavos inteiros; percentual em pontos-base
+-- (1234 = 12,34%) — nada de float em cima de dinheiro.
+-- =============================================================
+
+-- 1. Quanto tempo a agenda tinha para vender -----------------------------
+-- Soma a janela de trabalho de cada dia do período e desconta almoço,
+-- folga e compromisso. É o denominador da taxa de ocupação.
+create or replace function public.minutos_disponiveis(
+  prof uuid,
+  de date,
+  ate date
+)
+returns integer
+language sql
+stable
+security definer set search_path = public
+as $$
+  with dias as (
+    select d::date as dia
+    from generate_series(de, ate, interval '1 day') d
+  ),
+  janelas as (
+    select dias.dia,
+           h.start_time,
+           h.end_time,
+           extract(epoch from (h.end_time - h.start_time)) / 60 as minutos
+    from dias
+    join public.professional_hours h
+      on h.professional_id = prof
+     and h.weekday = extract(dow from dias.dia)::smallint
+    where h.open
+  ),
+  descontos as (
+    select j.dia,
+           sum(
+             case
+               when b.all_day then j.minutos
+               else greatest(
+                 0,
+                 extract(epoch from (
+                   least(b.end_time, j.end_time) - greatest(b.start_time, j.start_time)
+                 )) / 60
+               )
+             end
+           ) as minutos
+    from janelas j
+    join public.professional_blocks b
+      on b.professional_id = prof
+     and (
+       (b.kind = 'semanal' and b.weekday = extract(dow from j.dia)::smallint)
+       or (b.kind = 'data' and b.date = j.dia)
+     )
+    group by j.dia
+  )
+  select greatest(
+    0,
+    coalesce(
+      (select sum(j.minutos) from janelas j)
+      - (select coalesce(sum(d.minutos), 0) from descontos d),
+      0
+    )
+  )::integer;
+$$;
+
+revoke execute on function public.minutos_disponiveis(uuid, date, date)
+  from public, anon, authenticated;
+
+-- 2. O mês em números ----------------------------------------------------
+create or replace function public.resumo_do_mes(
+  prof uuid default public.my_professional_id(),
+  mes date default null
+)
+returns table (
+  inicio date,
+  fim date,
+  atendimentos integer,
+  faturamento_cents bigint,
+  ticket_medio_cents integer,
+  descontos_cents bigint,
+  faltas integer,
+  cancelamentos integer,
+  taxa_falta_bps integer,
+  clientes integer,
+  clientes_novas integer,
+  encaixes integer,
+  minutos_ocupados integer,
+  minutos_disponiveis integer,
+  ocupacao_bps integer,
+  faturamento_mes_anterior_cents bigint
+)
+language plpgsql
+stable
+security definer set search_path = public
+as $$
+declare
+  p public.professionals%rowtype;
+  hoje date := public.agora_local()::date;
+  ini date;
+  fin date;
+  ate date;
+  ini_ant date;
+  fim_ant date;
+  concluidos integer;
+  faltou integer;
+begin
+  if prof is null then
+    raise exception 'Informe a profissional';
+  end if;
+
+  select * into p from public.professionals where id = prof;
+  if not found then
+    raise exception 'Profissional não encontrada';
+  end if;
+
+  if not (public.is_professional(prof) or public.is_admin_do_salao(p.salon_id)) then
+    raise exception 'Sem permissão para ver estes números';
+  end if;
+
+  ini := date_trunc('month', coalesce(mes, hoje))::date;
+  fin := (ini + interval '1 month - 1 day')::date;
+  -- no mês corrente a agenda ainda não aconteceu inteira
+  ate := least(fin, hoje);
+  ini_ant := (ini - interval '1 month')::date;
+  fim_ant := (ini - interval '1 day')::date;
+
+  select count(*) filter (where a.status = 'concluido'),
+         count(*) filter (where a.status = 'faltou')
+    into concluidos, faltou
+  from public.appointments a
+  where a.professional_id = prof and a.date between ini and fin;
+
+  return query
+  select
+    ini,
+    fin,
+    concluidos,
+    coalesce(sum(a.price_cents) filter (where a.status = 'concluido'), 0)::bigint,
+    case when concluidos > 0
+      then (coalesce(sum(a.price_cents) filter (where a.status = 'concluido'), 0)
+            / concluidos)::integer
+      else 0 end,
+    coalesce((
+      select -sum(ct.amount_cents)
+      from public.credit_transactions ct
+      join public.appointments ap on ap.id = ct.appointment_id
+      where ct.kind = 'uso'
+        and ap.professional_id = prof
+        and ap.date between ini and fin
+    ), 0)::bigint,
+    faltou,
+    count(*) filter (where a.status = 'cancelado')::integer,
+    case when (concluidos + faltou) > 0
+      then ((faltou::numeric * 10000) / (concluidos + faltou))::integer
+      else 0 end,
+    count(distinct a.client_id) filter (where a.status = 'concluido')::integer,
+    count(distinct a.client_id) filter (
+      where a.status = 'concluido'
+        and not exists (
+          select 1 from public.appointments ant
+          where ant.professional_id = prof
+            and ant.client_id = a.client_id
+            and ant.status = 'concluido'
+            and ant.date < ini
+        )
+    )::integer,
+    count(*) filter (where a.status = 'concluido' and a.client_id is null)::integer,
+    coalesce(sum(
+      extract(epoch from (a.end_time - a.start_time)) / 60
+    ) filter (where a.status = 'concluido'), 0)::integer,
+    public.minutos_disponiveis(prof, ini, ate),
+    case when public.minutos_disponiveis(prof, ini, ate) > 0
+      then least(10000, ((coalesce(sum(
+             extract(epoch from (a.end_time - a.start_time)) / 60
+           ) filter (where a.status = 'concluido'), 0) * 10000)
+           / public.minutos_disponiveis(prof, ini, ate))::integer)
+      else 0 end,
+    coalesce((
+      select sum(ant.price_cents)
+      from public.appointments ant
+      where ant.professional_id = prof
+        and ant.status = 'concluido'
+        and ant.date between ini_ant and fim_ant
+    ), 0)::bigint
+  from public.appointments a
+  where a.professional_id = prof and a.date between ini and fin;
+end;
+$$;
+
+revoke execute on function public.resumo_do_mes(uuid, date) from public, anon;
+grant execute on function public.resumo_do_mes(uuid, date) to authenticated;
+
+-- 3. O que mais rendeu ---------------------------------------------------
+create or replace function public.faturamento_por_servico(
+  prof uuid default public.my_professional_id(),
+  mes date default null
+)
+returns table (
+  servico text,
+  quantidade integer,
+  total_cents bigint,
+  fatia_bps integer
+)
+language plpgsql
+stable
+security definer set search_path = public
+as $$
+declare
+  p public.professionals%rowtype;
+  ini date;
+  fin date;
+  total bigint;
+begin
+  select * into p from public.professionals where id = prof;
+  if not found then
+    raise exception 'Profissional não encontrada';
+  end if;
+  if not (public.is_professional(prof) or public.is_admin_do_salao(p.salon_id)) then
+    raise exception 'Sem permissão para ver estes números';
+  end if;
+
+  ini := date_trunc('month', coalesce(mes, public.agora_local()::date))::date;
+  fin := (ini + interval '1 month - 1 day')::date;
+
+  select coalesce(sum(a.price_cents), 0) into total
+  from public.appointments a
+  where a.professional_id = prof and a.status = 'concluido'
+    and a.date between ini and fin;
+
+  return query
+  select coalesce(a.service_name, s.name, 'Sem nome'),
+         count(*)::integer,
+         coalesce(sum(a.price_cents), 0)::bigint,
+         case when total > 0
+           then ((coalesce(sum(a.price_cents), 0)::numeric * 10000) / total)::integer
+           else 0 end
+  from public.appointments a
+  left join public.services s on s.id = a.service_id
+  where a.professional_id = prof and a.status = 'concluido'
+    and a.date between ini and fin
+  group by coalesce(a.service_name, s.name, 'Sem nome')
+  order by 3 desc;
+end;
+$$;
+
+revoke execute on function public.faturamento_por_servico(uuid, date) from public, anon;
+grant execute on function public.faturamento_por_servico(uuid, date) to authenticated;
+
+-- 4. Quem mais volta -----------------------------------------------------
+create or replace function public.melhores_clientes(
+  prof uuid default public.my_professional_id(),
+  meses integer default 6,
+  limite integer default 10
+)
+returns table (
+  client_id uuid,
+  nome text,
+  visitas integer,
+  total_cents bigint,
+  ultima_visita date
+)
+language plpgsql
+stable
+security definer set search_path = public
+as $$
+declare
+  p public.professionals%rowtype;
+  desde date;
+begin
+  select * into p from public.professionals where id = prof;
+  if not found then
+    raise exception 'Profissional não encontrada';
+  end if;
+  if not (public.is_professional(prof) or public.is_admin_do_salao(p.salon_id)) then
+    raise exception 'Sem permissão para ver estes números';
+  end if;
+
+  desde := (public.agora_local()::date
+            - make_interval(months => greatest(1, least(coalesce(meses, 6), 36))))::date;
+
+  return query
+  select a.client_id,
+         coalesce(c.full_name, 'Cliente'),
+         count(*)::integer,
+         coalesce(sum(a.price_cents), 0)::bigint,
+         max(a.date)
+  from public.appointments a
+  join public.profiles c on c.id = a.client_id
+  where a.professional_id = prof and a.status = 'concluido' and a.date >= desde
+  group by a.client_id, c.full_name
+  order by 3 desc, 4 desc
+  limit greatest(1, least(coalesce(limite, 10), 50));
+end;
+$$;
+
+revoke execute on function public.melhores_clientes(uuid, integer, integer) from public, anon;
+grant execute on function public.melhores_clientes(uuid, integer, integer) to authenticated;
+
+-- 5. O salão inteiro, uma linha por profissional -------------------------
+create or replace function public.resumo_do_salao(
+  salao uuid default null,
+  mes date default null
+)
+returns table (
+  professional_id uuid,
+  nome text,
+  atendimentos integer,
+  faturamento_cents bigint,
+  faltas integer,
+  ocupacao_bps integer
+)
+language plpgsql
+stable
+security definer set search_path = public
+as $$
+declare
+  alvo uuid;
+  ini date;
+  fin date;
+  ate date;
+  hoje date := public.agora_local()::date;
+begin
+  -- meus_saloes() devolve os uuid direto, sem nome de coluna
+  alvo := coalesce(salao, (select s from public.meus_saloes() s limit 1));
+  if alvo is null then
+    raise exception 'Informe o salão';
+  end if;
+  if not public.is_admin_do_salao(alvo) then
+    raise exception 'Sem permissão para ver estes números';
+  end if;
+
+  ini := date_trunc('month', coalesce(mes, hoje))::date;
+  fin := (ini + interval '1 month - 1 day')::date;
+  ate := least(fin, hoje);
+
+  return query
+  select p.id,
+         p.name,
+         count(*) filter (where a.status = 'concluido')::integer,
+         coalesce(sum(a.price_cents) filter (where a.status = 'concluido'), 0)::bigint,
+         count(*) filter (where a.status = 'faltou')::integer,
+         case when public.minutos_disponiveis(p.id, ini, ate) > 0
+           then least(10000, ((coalesce(sum(
+                  extract(epoch from (a.end_time - a.start_time)) / 60
+                ) filter (where a.status = 'concluido'), 0) * 10000)
+                / public.minutos_disponiveis(p.id, ini, ate))::integer)
+           else 0 end
+  from public.professionals p
+  left join public.appointments a
+    on a.professional_id = p.id and a.date between ini and fin
+  where p.salon_id = alvo
+  group by p.id, p.name
+  order by 4 desc;
+end;
+$$;
+
+revoke execute on function public.resumo_do_salao(uuid, date) from public, anon;
+grant execute on function public.resumo_do_salao(uuid, date) to authenticated;
+
+
+
+-- =============================================================
+-- >>> 021_dados_teste_historico.sql
+-- =============================================================
+
+-- =============================================================
+-- Agenda Mel — 021: histórico de exemplo
+-- Rode este arquivo no SQL Editor do Supabase (DEPOIS do 020).
+--
+-- As telas novas (o mês em números e "quem sumiu") só dizem
+-- alguma coisa se houver passado. Este arquivo inventa dois
+-- meses de atendimentos concluídos, duas clientes a mais e uma
+-- cliente que faz tempo que não aparece.
+--
+-- Rodar de novo é seguro: se o histórico já existe, não repete.
+-- =============================================================
+
+set search_path = public, extensions;
+
+do $$
+declare
+  salao uuid;
+  prof uuid;
+  serv_limpeza uuid;
+  serv_sobrancelha uuid;
+  serv_massagem uuid;
+  uid_cliente uuid;
+  uid_bruna uuid;
+  uid_sofia uuid;
+  hoje date := (now() at time zone 'America/Sao_Paulo')::date;
+  d date;
+  i integer;
+  clientes uuid[];
+  servicos uuid[];
+  duracoes integer[];
+  precos integer[];
+  esc integer;
+  hora time;
+begin
+  select id into salao from public.salons where slug = 'espaco-mel';
+  select id into prof from public.professionals where slug = 'ana-paula';
+  if salao is null or prof is null then
+    raise notice 'Rode o 018 antes: o salão de exemplo ainda não existe.';
+    return;
+  end if;
+
+  -- 1. Cada serviço ganha o seu ritmo de retorno -------------------------
+  update public.services set return_days = 30
+    where salon_id = salao and name = 'Limpeza de pele' and return_days is null;
+  update public.services set return_days = 21
+    where salon_id = salao and name = 'Design de sobrancelhas' and return_days is null;
+  update public.services set return_days = 45
+    where salon_id = salao and name = 'Massagem relaxante' and return_days is null;
+  update public.services set return_days = 60
+    where salon_id = salao and name = 'Dia de cuidado' and return_days is null;
+
+  select id into serv_limpeza from public.services
+    where salon_id = salao and name = 'Limpeza de pele';
+  select id into serv_sobrancelha from public.services
+    where salon_id = salao and name = 'Design de sobrancelhas';
+  select id into serv_massagem from public.services
+    where salon_id = salao and name = 'Massagem relaxante';
+
+  select id into uid_cliente from auth.users where email = 'cliente@exemplo.com';
+
+  -- 2. Mais duas clientes, para o histórico não ser de uma pessoa só -----
+  select id into uid_bruna from auth.users where email = 'bruna@exemplo.com';
+  if uid_bruna is null then
+    uid_bruna := gen_random_uuid();
+    insert into auth.users (
+      instance_id, id, aud, role, email, encrypted_password,
+      email_confirmed_at, raw_app_meta_data, raw_user_meta_data,
+      created_at, updated_at, confirmation_token, email_change,
+      email_change_token_new, recovery_token
+    ) values (
+      '00000000-0000-0000-0000-000000000000', uid_bruna, 'authenticated',
+      'authenticated', 'bruna@exemplo.com', crypt('agendamel123', gen_salt('bf')),
+      now(), '{"provider":"email","providers":["email"]}',
+      '{"full_name":"Bruna Alves","phone":"(13) 99700-1188"}',
+      now(), now(), '', '', '', ''
+    );
+  end if;
+
+  select id into uid_sofia from auth.users where email = 'sofia@exemplo.com';
+  if uid_sofia is null then
+    uid_sofia := gen_random_uuid();
+    insert into auth.users (
+      instance_id, id, aud, role, email, encrypted_password,
+      email_confirmed_at, raw_app_meta_data, raw_user_meta_data,
+      created_at, updated_at, confirmation_token, email_change,
+      email_change_token_new, recovery_token
+    ) values (
+      '00000000-0000-0000-0000-000000000000', uid_sofia, 'authenticated',
+      'authenticated', 'sofia@exemplo.com', crypt('agendamel123', gen_salt('bf')),
+      now(), '{"provider":"email","providers":["email"]}',
+      '{"full_name":"Sofia Ramos","phone":"(13) 99700-2244"}',
+      now(), now(), '', '', '', ''
+    );
+  end if;
+
+  -- 3. Dois meses de atendimentos concluídos ----------------------------
+  -- (só entra se ainda não houver histórico; assim rodar de novo não duplica)
+  if exists (
+    select 1 from public.appointments
+    where professional_id = prof and status = 'concluido'
+  ) then
+    raise notice 'Histórico de exemplo já existe — nada a fazer.';
+    return;
+  end if;
+
+  -- Juliana é a cliente antiga; Bruna começou há pouco (conta como nova
+  -- no mês); Sofia é a que sumiu, e só aparece lá embaixo.
+  servicos := array[serv_limpeza, serv_sobrancelha, serv_massagem];
+  duracoes := array[60, 45, 60];
+  precos   := array[12000, 6000, 13000];
+
+  i := 0;
+  -- de 62 dias atrás até anteontem, pulando domingo e segunda (folga)
+  for d in select generate_series(hoje - 62, hoje - 2, interval '1 day')::date loop
+    if extract(dow from d) in (0, 1) then
+      continue;
+    end if;
+    -- dois ou três atendimentos por dia, alternando
+    for esc in 1..(2 + (i % 2)) loop
+      i := i + 1;
+      hora := (time '09:00') + make_interval(hours => (esc - 1) * 3);
+      clientes := array[
+        case when esc > 1 and d >= hoje - 25 then uid_bruna else uid_cliente end
+      ];
+      insert into public.appointments
+        (client_id, professional_id, service_id, date, start_time, end_time,
+         status, price_cents, service_name)
+      select clientes[1],
+             prof,
+             servicos[1 + (i % 3)],
+             d,
+             hora,
+             hora + make_interval(mins => duracoes[1 + (i % 3)]),
+             -- uma falta a cada quinze atendimentos, para a taxa não ser zero
+             case when i % 15 = 0 then 'faltou' else 'concluido' end,
+             precos[1 + (i % 3)],
+             s.name
+      from public.services s
+      where s.id = servicos[1 + (i % 3)]
+      on conflict do nothing;
+    end loop;
+  end loop;
+
+  -- 4. Uma cliente que sumiu --------------------------------------------
+  -- Sofia fez sobrancelha (volta em 21 dias) e não aparece há 50
+  insert into public.appointments
+    (client_id, professional_id, service_id, date, start_time, end_time,
+     status, price_cents, service_name)
+  values (uid_sofia, prof, serv_sobrancelha, hoje - 50, '16:00', '16:45',
+          'concluido', 6000, 'Design de sobrancelhas')
+  on conflict do nothing;
+
+  raise notice 'Histórico criado: % atendimentos.', i;
+end;
+$$;
+
+-- =============================================================
+-- Conferência rápida
+-- =============================================================
+select count(*) filter (where status = 'concluido') as concluidos,
+       count(*) filter (where status = 'faltou') as faltas,
+       min(date) as desde,
+       max(date) as ate
+from public.appointments a
+join public.professionals p on p.id = a.professional_id
+where p.slug = 'ana-paula';
+
+
+
+-- =============================================================
+-- >>> 022_gatilhos.sql
+-- =============================================================
+
+-- =============================================================
+-- Agenda Mel — 022: os gatilhos de verdade
+-- Rode este arquivo no SQL Editor do Supabase (DEPOIS do 021).
+--
+-- Correção de uma trava que nunca travou.
+--
+-- O 013 criou o gatilho que impede a cliente de marcar o próprio
+-- atendimento como concluído. Ele começa assim:
+--
+--     if current_user not in ('authenticated', 'anon') then
+--       return new;                      -- veio de função do servidor
+--     end if;
+--
+-- Só que a função foi criada como SECURITY DEFINER. Dentro de uma
+-- função SECURITY DEFINER, current_user é o DONO da função (postgres),
+-- nunca 'authenticated' — então a primeira linha sempre saía fora e o
+-- resto do gatilho jamais rodou. Na prática a cliente continuava
+-- podendo mandar um PATCH e escrever status = 'concluido'.
+--
+-- Isso ficou pior agora que os números do mês somam justamente os
+-- atendimentos concluídos: seria o faturamento mentindo.
+--
+-- A correção é uma palavra: SECURITY INVOKER. Aí current_user é
+-- 'authenticated' quando a escrita vem da API, e vira o dono da função
+-- quando a escrita nasce dentro de uma função nossa — que é
+-- exatamente a distinção que o código queria fazer.
+--
+-- O gatilho não precisa de poder nenhum: ele só lê NEW e OLD e chama
+-- is_admin() / is_professional(), que continuam SECURITY DEFINER.
+-- =============================================================
+
+-- Quem está falando, sem depender de o papel enxergar o schema auth.
+-- O gatilho abaixo roda como SECURITY INVOKER; este atalho é a única
+-- coisa nele que precisa de poder.
+create or replace function public.meu_id()
+returns uuid
+language sql
+stable
+security definer set search_path = public
+as $$
+  select auth.uid();
+$$;
+
+revoke execute on function public.meu_id() from public;
+grant execute on function public.meu_id() to anon, authenticated;
+
+create or replace function public.valida_status_agendamento()
+returns trigger
+language plpgsql
+security invoker set search_path = public
+as $$
+begin
+  -- escrita nascida dentro de uma função do servidor (SECURITY DEFINER)
+  -- ou vinda do service_role: já foi validada lá dentro
+  if current_user not in ('authenticated', 'anon') then
+    return new;
+  end if;
+
+  if tg_op = 'INSERT' then
+    if not (public.is_admin() or public.is_professional(new.professional_id)) then
+      if new.status <> 'pendente' then
+        raise exception 'Um agendamento novo começa como pendente';
+      end if;
+    end if;
+    return new;
+  end if;
+
+  if new.status is distinct from old.status then
+    if public.is_admin() or public.is_professional(old.professional_id) then
+      return new;
+    end if;
+
+    if old.client_id = public.meu_id() then
+      if new.status <> 'cancelado' then
+        raise exception 'Você só pode cancelar o seu agendamento';
+      end if;
+      if old.status not in ('pendente', 'confirmado') then
+        raise exception 'Este agendamento não pode mais ser cancelado';
+      end if;
+      return new;
+    end if;
+
+    raise exception 'Sem permissão para alterar este agendamento';
+  end if;
+
+  return new;
+end;
+$$;
+
+revoke execute on function public.valida_status_agendamento()
+  from public, anon, authenticated;
+
+drop trigger if exists on_valida_status on public.appointments;
+create trigger on_valida_status
+  before insert or update on public.appointments
+  for each row execute function public.valida_status_agendamento();
+
+-- A cliente também não muda data nem horário por fora: adiantar é
+-- convite, e responder ao convite passa por responder_antecipacao().
+-- (o grant de coluna já limitava a status e notes; isto é o cinto)
+revoke update on public.appointments from authenticated;
+grant update (status, notes) on public.appointments to authenticated;

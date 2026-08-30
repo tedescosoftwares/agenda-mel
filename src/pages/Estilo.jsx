@@ -3,10 +3,10 @@ import {
   CalendarIcon,
   SparkleIcon,
   ClockIcon,
-  UsersIcon,
-  TeamIcon,
   ChevronIcon,
   BellIcon,
+  GraficoIcon,
+  VoltarIcon,
   MarcaIcon,
 } from '../components/icons'
 
@@ -323,6 +323,152 @@ export default function Estilo() {
             <p className="muted">Os agendamentos das clientes vão aparecer aqui.</p>
           </div>
         </section>
+
+        <section className="secao">
+          <h3 className="secao-titulo">O mês em números</h3>
+
+          <div className="mes-nav">
+            <button className="btn-mini btn-mini-neutro">mês anterior</button>
+          </div>
+
+          <div className="card numero-heroi">
+            <span className="numero-rotulo">entrou no mês</span>
+            <strong className="numero-grande">R$ 3.850</strong>
+            <span className="delta subiu">+14% sobre julho</span>
+            <span className="numero-nota">o mês ainda está correndo</span>
+          </div>
+
+          <div className="grade-numeros">
+            <div className="card numero-cartao">
+              <span className="numero-rotulo">atendimentos</span>
+              <strong className="numero-medio">38</strong>
+              <span className="numero-nota">12 clientes</span>
+            </div>
+            <div className="card numero-cartao">
+              <span className="numero-rotulo">ticket médio</span>
+              <strong className="numero-medio">R$ 101,31</strong>
+            </div>
+            <div className="card numero-cartao">
+              <span className="numero-rotulo">agenda ocupada</span>
+              <strong className="numero-medio">61,4%</strong>
+              <span className="numero-nota">34h30 de 56h</span>
+            </div>
+            <div className="card numero-cartao alerta">
+              <span className="numero-rotulo">não vieram</span>
+              <strong className="numero-medio">4</strong>
+              <span className="numero-nota">9,5% dos horários</span>
+            </div>
+          </div>
+        </section>
+
+        <section className="secao">
+          <h3 className="secao-titulo">O que mais rendeu</h3>
+          <div className="barra-list">
+            <div className="barra-item">
+              <div className="barra-topo">
+                <span className="barra-nome">Massagem relaxante</span>
+                <span className="barra-valor">R$ 1.690,00</span>
+              </div>
+              <div className="barra-trilho">
+                <span className="barra-preenche" style={{ width: '44%' }} />
+              </div>
+              <span className="barra-nota">13× · 43,9% do mês</span>
+            </div>
+            <div className="barra-item">
+              <div className="barra-topo">
+                <span className="barra-nome">Limpeza de pele</span>
+                <span className="barra-valor">R$ 1.320,00</span>
+              </div>
+              <div className="barra-trilho">
+                <span className="barra-preenche" style={{ width: '34%' }} />
+              </div>
+              <span className="barra-nota">11× · 34,3% do mês</span>
+            </div>
+            <div className="barra-item">
+              <div className="barra-topo">
+                <span className="barra-nome">Design de sobrancelhas</span>
+                <span className="barra-valor">R$ 840,00</span>
+              </div>
+              <div className="barra-trilho">
+                <span className="barra-preenche" style={{ width: '22%' }} />
+              </div>
+              <span className="barra-nota">14× · 21,8% do mês</span>
+            </div>
+          </div>
+        </section>
+
+        <section className="secao">
+          <h3 className="secao-titulo">Volta pra cá</h3>
+          <button className="btn btn-primary btn-largo">Chamar as 3 de volta</button>
+          <div className="cliente-list retorno-list">
+            <div className="card retorno-row">
+              <div className="cliente-info">
+                <span className="cliente-nome">
+                  <span className="nome-txt">Sofia Ramos</span>
+                </span>
+                <span className="muted cliente-meta">
+                  Design de sobrancelhas · há 50 dias · 1 visita
+                </span>
+                <span className="retorno-prazo">devia ter voltado em 01/08</span>
+              </div>
+              <button className="btn-mini btn-mini-neutro">chamar</button>
+            </div>
+            <div className="card retorno-row">
+              <div className="cliente-info">
+                <span className="cliente-nome">
+                  <span className="nome-txt">Patrícia Nogueira</span>
+                </span>
+                <span className="muted cliente-meta">
+                  Limpeza de pele · há 2 meses · 7 visitas
+                </span>
+                <span className="retorno-prazo">devia ter voltado em 12/07</span>
+              </div>
+              <span className="badge badge-espera">já chamada</span>
+            </div>
+          </div>
+        </section>
+
+        <section className="secao">
+          <h3 className="secao-titulo">Ajustes</h3>
+          <div className="card form ajustes-retorno">
+            <label className="linha-ajuste">
+              <span>
+                <strong>Lembrete de véspera</strong>
+                <span className="muted">Aviso no app antes do horário. 0 desliga.</span>
+              </span>
+              <input type="number" defaultValue={24} />
+            </label>
+            <label className="linha-ajuste">
+              <span>
+                <strong>Obrigada pela visita</strong>
+                <span className="muted">
+                  Ao concluir, avisa a cliente e sugere quando voltar.
+                </span>
+              </span>
+              <span className="switch">
+                <input type="checkbox" defaultChecked readOnly />
+                <span></span>
+              </span>
+            </label>
+          </div>
+
+          <div className="cliente-list" style={{ marginTop: '1.1rem' }}>
+            <span className="card prof-row">
+              <span className="ajuste-icone">
+                <GraficoIcon />
+              </span>
+              <div className="cliente-info">
+                <span className="cliente-nome">
+                  <span className="nome-txt">Horário padrão do salão</span>
+                </span>
+                <span className="muted cliente-meta">
+                  Vale para quem entrar na equipe daqui pra frente
+                </span>
+              </div>
+              <ChevronIcon />
+            </span>
+          </div>
+        </section>
       </main>
 
       <nav className="bottom-nav">
@@ -332,8 +478,12 @@ export default function Estilo() {
             <span>Agenda</span>
           </span>
           <span className="nav-item">
-            <TeamIcon />
-            <span>Equipe</span>
+            <VoltarIcon />
+            <span>Volta</span>
+          </span>
+          <span className="nav-item">
+            <GraficoIcon />
+            <span>O mês</span>
           </span>
           <span className="nav-item">
             <SparkleIcon />
@@ -341,11 +491,7 @@ export default function Estilo() {
           </span>
           <span className="nav-item">
             <ClockIcon />
-            <span>Horários</span>
-          </span>
-          <span className="nav-item">
-            <UsersIcon />
-            <span>Clientes</span>
+            <span>Ajustes</span>
           </span>
         </div>
       </nav>

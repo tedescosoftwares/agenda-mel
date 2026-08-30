@@ -5,10 +5,10 @@ App de agendamento de serviços estéticos — PWA em React, multi-profissional:
 - **Link público da profissional** (`/p/<slug>`) — qualquer pessoa abre, vê os
   serviços e os horários livres; o login só entra na hora de fechar
 - **Área da cliente** (`/`) — meus agendamentos e com quem agendar
-- **App da profissional** (`/pro`) — agenda dela, serviços que atende,
-  horários dela e o link para divulgar
-- **Área do salão / admin** (`/admin`) — agenda de todas, equipe, catálogo de
-  serviços, horário padrão e clientes
+- **App da profissional** (`/pro`) — agenda dela, quem sumiu e precisa ser
+  chamada de volta, o mês em números, serviços que atende, horários e o link
+- **Área do salão / admin** (`/admin`) — agenda de todas, o mês do salão,
+  equipe, catálogo de serviços, horário padrão e clientes
 
 Backend: [Supabase](https://supabase.com) (plano gratuito — autenticação + banco Postgres).
 
@@ -116,9 +116,12 @@ src/
     Login.jsx
     publico/PaginaProfissional.jsx  # /p/<slug> — serviço, dia, horário
     cliente/ClienteHome.jsx
-    pro/ProAgenda.jsx | ProServicos.jsx | ProHorarios.jsx | ProLink.jsx
-    admin/AdminAgenda.jsx | AdminProfissionais.jsx | AdminServices.jsx
-    admin/AdminHours.jsx | AdminClientes.jsx
+    Estilo.jsx                      # /estilo — mostruário do sistema visual
+    pro/ProAgenda.jsx | ProRetorno.jsx | ProNumeros.jsx | ProServicos.jsx
+    pro/ProHorarios.jsx | ProLink.jsx | ProAjustes.jsx
+    admin/AdminAgenda.jsx | AdminNumeros.jsx | AdminProfissionais.jsx
+    admin/AdminServices.jsx | AdminHours.jsx | AdminClientes.jsx
+public/fontes/             # as três fontes, servidas pelo próprio app
 supabase/
   001_schema.sql           # perfis, trigger e políticas de segurança (RLS)
   002_services.sql         # tabela de serviços + políticas
@@ -138,6 +141,10 @@ supabase/
   016_agenda_real.sql      # almoço/folga, arrumação, encaixe, preço congelado
   017_afiliados.sql        # cliente traz profissional e recebe parte da taxa
   018_dados_teste.sql      # três contas prontas + salão de exemplo
+  019_volta_sozinha.sql    # lembrete de véspera, pós-atendimento e quem sumiu
+  020_numeros.sql          # faturamento, ticket, ocupação e falta do mês
+  021_dados_teste_historico.sql # dois meses de histórico, para os números terem o que mostrar
+  022_gatilhos.sql         # corrige a trava de status que nunca travava
   setup_completo.sql       # TODOS os arquivos acima juntos — é este que se roda
 ```
 
@@ -146,8 +153,8 @@ supabase/
 | Papel          | Entra em  | O que faz                                            |
 | -------------- | --------- | ---------------------------------------------------- |
 | `cliente`      | `/`       | agenda, acompanha e cancela os próprios horários      |
-| `profissional` | `/pro`    | vê a agenda dela, escolhe serviços, horários e o link |
-| `admin`        | `/admin`  | equipe, catálogo de serviços, agenda de todas         |
+| `profissional` | `/pro`    | agenda, quem sumiu, o mês em números, serviços e link |
+| `admin`        | `/admin`  | equipe, catálogo, agenda de todas e o mês do salão    |
 
 Toda conta nova nasce como `cliente`. Para promover:
 
@@ -188,6 +195,11 @@ where slug = 'slug-dela';
 - [x] Encaixe manual de cliente sem app; preço congelado no atendimento
 - [x] Perdoar falta e a semana numa tela só
 - [x] Indicação inversa: cliente traz profissional e vira afiliada dela
+- [x] Sistema visual próprio (grafite e latão), fontes servidas pelo app
+- [x] A cliente volta sozinha: lembrete de véspera, "obrigada pela visita" com
+      sugestão de retorno, e a lista de quem passou do tempo de voltar
+- [x] O mês em números: faturamento, ticket médio, ocupação da agenda, faltas,
+      clientes novas, o que mais rendeu e quem mais volta
 - [ ] Publicar (Vercel/Netlify) e instalar como PWA no celular
 - [ ] Notificações (lembrete de horário)
 - [ ] Migrar depois para React Native / Expo reaproveitando o Supabase

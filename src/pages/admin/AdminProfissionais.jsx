@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import AdminShell from '../../components/AdminShell'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
-import { ChevronIcon, LinkIcon } from '../../components/icons'
+import { ChevronIcon, LinkIcon, ClockIcon } from '../../components/icons'
 import { formatDuracao, formatPreco } from '../../lib/format'
 import { gerarSlug } from '../../lib/booking'
 import Avatar from '../../components/Avatar'
@@ -228,6 +229,22 @@ export default function AdminProfissionais() {
 
       {error && <div className="alert alert-error">{error}</div>}
       {info && <div className="alert alert-info">{info}</div>}
+
+      {/* o horário padrão do salão é da casa, não de uma profissional */}
+      <Link to="/admin/horarios" className="card prof-row atalho-horarios">
+        <span className="ajuste-icone">
+          <ClockIcon />
+        </span>
+        <div className="cliente-info">
+          <span className="cliente-nome">
+            <span className="nome-txt">Horário padrão do salão</span>
+          </span>
+          <span className="muted cliente-meta">
+            Vale para quem entrar na equipe daqui pra frente
+          </span>
+        </div>
+        <ChevronIcon />
+      </Link>
 
       {editing !== null && (
         <form className="card form service-form" onSubmit={handleSave}>

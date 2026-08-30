@@ -39,9 +39,12 @@ export function NotificacoesProvider({ children }) {
     }
     setLoading(true)
     carregar()
-    // aproveita a abertura do app para passar vagas não respondidas adiante
+    // aproveita a abertura do app para dois serviços de casa, os dois
+    // idempotentes: passar vagas não respondidas adiante e mandar os
+    // lembretes de véspera que ainda não saíram
     // (sem o .then o supabase-js não dispara a chamada)
     supabase.rpc('avancar_ofertas_expiradas').then(() => {})
+    supabase.rpc('enviar_lembretes').then(() => {})
 
     // avisos entram na tela sem precisar recarregar
     const canal = supabase

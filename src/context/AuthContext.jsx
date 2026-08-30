@@ -94,6 +94,17 @@ export function AuthProvider({ children }) {
     }
   }, [session])
 
+  // usada quando a própria pessoa muda algo no seu perfil
+  async function recarregarPerfil() {
+    if (!session?.user) return
+    const { data } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', session.user.id)
+      .maybeSingle()
+    if (data) setProfile(data)
+  }
+
   // usada quando a profissional edita a própria ficha (foto, etc.)
   async function recarregarProfessional() {
     if (!session?.user) return
@@ -131,6 +142,7 @@ export function AuthProvider({ children }) {
     profile,
     professional,
     salao,
+    recarregarPerfil,
     recarregarProfessional,
     role: profile?.role ?? null,
     loading,

@@ -14,10 +14,14 @@ import AdminProfissionais from "./pages/admin/AdminProfissionais";
 import AdminServices from "./pages/admin/AdminServices";
 import AdminHours from "./pages/admin/AdminHours";
 import AdminClientes from "./pages/admin/AdminClientes";
+import AdminNumeros from "./pages/admin/AdminNumeros";
 import ProAgenda from "./pages/pro/ProAgenda";
 import ProServicos from "./pages/pro/ProServicos";
 import ProHorarios from "./pages/pro/ProHorarios";
 import ProLink from "./pages/pro/ProLink";
+import ProNumeros from "./pages/pro/ProNumeros";
+import ProRetorno from "./pages/pro/ProRetorno";
+import ProAjustes from "./pages/pro/ProAjustes";
 import IndiqueEGanhe from "./pages/cliente/IndiqueEGanhe";
 import { guardarCodigoDaURL } from "./lib/indicacao";
 
@@ -85,6 +89,30 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/pro/numeros"
+              element={
+                <ProtectedRoute requireRole="profissional">
+                  <ProNumeros />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/pro/retorno"
+              element={
+                <ProtectedRoute requireRole="profissional">
+                  <ProRetorno />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/pro/ajustes"
+              element={
+                <ProtectedRoute requireRole="profissional">
+                  <ProAjustes />
+                </ProtectedRoute>
+              }
+            />
 
             {/* área do salão */}
             <Route
@@ -124,6 +152,14 @@ export default function App() {
               element={
                 <ProtectedRoute requireRole="admin">
                   <AdminClientes />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/numeros"
+              element={
+                <ProtectedRoute requireRole="admin">
+                  <AdminNumeros />
                 </ProtectedRoute>
               }
             />

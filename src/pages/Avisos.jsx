@@ -1,6 +1,7 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { supabase } from '../lib/supabase'
 import { useNotificacoes } from '../context/NotificacoesContext'
 import { homeDoPapel } from '../lib/roles'
 
@@ -16,12 +17,32 @@ const TOM = {
   novo_agendamento: 'menta',
   afiliado_novo: 'latao',
   afiliado_cashback: 'latao',
+  lembrete_agendamento: 'azul',
+  pos_atendimento: 'menta',
+  convite_retorno: 'latao',
 }
 
 export default function Avisos() {
-  const { role } = useAuth()
+  const { role, profile, recarregarPerfil } = useAuth()
   const { avisos, naoLidos, loading, marcarTodosLidos } = useNotificacoes()
   const navigate = useNavigate()
+  const [salvandoPref, setSalvandoPref] = useState(false)
+  const [erroPref, setErroPref] = useState('')
+
+  // a cliente manda nos próprios avisos: desligou, ninguém chama
+  async function trocarPreferencia(aceita) {
+    setSalvandoPref(true)
+    const { error } = await supabase
+      .from('profiles')
+      .update({ accepts_reminders: aceita })
+      .eq('id', profile.id)
+    setSalvandoPref(false)
+    if (error) setErroPref('Não deu para salvar: ' + error.message)
+    else {
+      setErroPref('')
+      if (recarregarPerfil) recarregarPerfil()
+    }
+  }
 
   // abriu a caixa, leu tudo — só depois que os avisos chegaram
   useEffect(() => {
@@ -68,6 +89,32 @@ export default function Avisos() {
               </button>
             ))}
           </div>
+        )}
+
+        {role === 'cliente' && profile && (
+          <section className="secao">
+            <h3 className="secao-titulo">Como você quer ser avisada</h3>
+            {erroPref && <div className="alert alert-error">{erroPref}</div>}
+            <label className="card linha-ajuste linha-ajuste-solta">
+              <span>
+                <strong>Lembretes e convites</strong>
+                <span className="muted">
+                  Lembrete de véspera, obrigada pela visita e convite para
+                  voltar. Desligando, sua profissional não consegue te chamar
+                  pelo app.
+                </span>
+              </span>
+              <span className="switch">
+                <input
+                  type="checkbox"
+                  checked={profile.accepts_reminders !== false}
+                  disabled={salvandoPref}
+                  onChange={(e) => trocarPreferencia(e.target.checked)}
+                />
+                <span></span>
+              </span>
+            </label>
+          </section>
         )}
       </main>
     </div>

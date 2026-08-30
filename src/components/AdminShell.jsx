@@ -2,13 +2,19 @@ import { NavLink } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import SinoAvisos from './SinoAvisos'
 import { MarcaIcon } from './icons'
-import { CalendarIcon, SparkleIcon, ClockIcon, UsersIcon, TeamIcon } from './icons'
+import {
+  CalendarIcon,
+  SparkleIcon,
+  GraficoIcon,
+  UsersIcon,
+  TeamIcon,
+} from './icons'
 
 const TABS = [
   { to: '/admin', end: true, label: 'Agenda', Icon: CalendarIcon },
+  { to: '/admin/numeros', label: 'O mês', Icon: GraficoIcon },
   { to: '/admin/equipe', label: 'Equipe', Icon: TeamIcon },
   { to: '/admin/servicos', label: 'Serviços', Icon: SparkleIcon },
-  { to: '/admin/horarios', label: 'Horários', Icon: ClockIcon },
   { to: '/admin/clientes', label: 'Clientes', Icon: UsersIcon },
 ]
 

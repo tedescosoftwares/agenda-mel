@@ -2085,6 +2085,97 @@ button.servico-card {
   font-size: 0.75rem;
 }
 
+
+/* ---------- afiliada / convite de profissional ---------- */
+
+.destaque-afiliada {
+  border-color: var(--rosa);
+  border-left-width: 4px;
+}
+
+.afiliada-numeros {
+  display: flex;
+  gap: 1.2rem;
+  flex-wrap: wrap;
+  padding-top: 0.9rem;
+  margin-top: 0.3rem;
+  border-top: 1px solid var(--rosa-claro);
+}
+
+.afiliada-numeros > div {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.afiliada-numeros .muted {
+  font-size: 0.76rem;
+}
+
+.afiliada-valor {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--rosa-escuro);
+}
+
+.convite-capa {
+  padding-top: 2.4rem;
+}
+
+.convite-capa h1 {
+  font-size: 1.6rem;
+  margin: 0.8rem 0 0.5rem;
+}
+
+.convite-capa .convite-selo {
+  display: inline-block;
+}
+
+.convite-beneficios {
+  margin-bottom: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.convite-beneficios h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.pronto-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.convite-lista li {
+  display: grid;
+  grid-template-columns: 1.1rem 1fr;
+  gap: 0.5rem;
+  align-items: baseline;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.convite-lista li::before {
+  content: '✓';
+  color: var(--info);
+  font-weight: 700;
+}
+
+.convite-form {
+  margin-bottom: 1.5rem;
+}
+
+.convite-form h3 {
+  margin: 0 0 0.3rem;
+  font-size: 1.05rem;
+}
+
 /* ---------- estados vazios e alertas ---------- */
 
 .empty-state {

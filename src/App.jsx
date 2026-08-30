@@ -6,6 +6,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Login from "./pages/Login";
 import Avisos from "./pages/Avisos";
 import PaginaProfissional from "./pages/publico/PaginaProfissional";
+import Convite from "./pages/publico/Convite";
 import ClienteHome from "./pages/cliente/ClienteHome";
 import AdminAgenda from "./pages/admin/AdminAgenda";
 import AdminProfissionais from "./pages/admin/AdminProfissionais";
@@ -34,6 +35,9 @@ export default function App() {
 
             {/* link público das profissionais — não exige login */}
             <Route path="/p/:slug" element={<PaginaProfissional />} />
+
+            {/* convite para uma profissional entrar no app */}
+            <Route path="/convite/:codigo" element={<Convite />} />
 
             <Route
               path="/"

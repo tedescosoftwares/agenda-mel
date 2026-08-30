@@ -13,6 +13,8 @@ const ICONE = {
   indicacao_creditada: '🎁',
   novo_agendamento: '📅',
   lembrete: '💖',
+  afiliado_novo: '💼',
+  afiliado_cashback: '💰',
 }
 
 export default function Avisos() {

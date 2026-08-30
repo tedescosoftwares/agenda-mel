@@ -5,14 +5,19 @@ import { formatarCents } from '../../lib/indicacao'
 
 export default function IndiqueEGanhe() {
   const [resumo, setResumo] = useState(null)
+  const [afiliada, setAfiliada] = useState(null)
+  const [trazidas, setTrazidas] = useState([])
   const [extrato, setExtrato] = useState([])
   const [loading, setLoading] = useState(true)
   const [copiado, setCopiado] = useState(false)
+  const [copiadoProf, setCopiadoProf] = useState(false)
   const [error, setError] = useState('')
 
   const carregar = useCallback(async () => {
-    const [resumoRes, extratoRes] = await Promise.all([
+    const [resumoRes, afiliadaRes, trazidasRes, extratoRes] = await Promise.all([
       supabase.rpc('meu_resumo_indicacoes'),
+      supabase.rpc('meu_resumo_afiliada'),
+      supabase.rpc('minhas_profissionais_indicadas'),
       supabase
         .from('credit_transactions')
         .select('*')
@@ -24,6 +29,8 @@ export default function IndiqueEGanhe() {
     } else {
       setResumo(resumoRes.data?.[0] ?? null)
     }
+    if (!afiliadaRes.error) setAfiliada(afiliadaRes.data?.[0] ?? null)
+    if (!trazidasRes.error) setTrazidas(trazidasRes.data ?? [])
     if (!extratoRes.error) setExtrato(extratoRes.data)
     setLoading(false)
   }, [])
@@ -41,9 +48,25 @@ export default function IndiqueEGanhe() {
   }
 
   const link = resumo ? `${window.location.origin}/?indique=${resumo.codigo}` : ''
+  const linkProfissional = resumo
+    ? `${window.location.origin}/convite/${resumo.codigo}`
+    : ''
+  const mensagemProfissional = resumo
+    ? `Oi! Achei um app de agenda que acho a sua cara — você monta seus horários e as clientes marcam sozinhas pelo seu link: ${linkProfissional}`
+    : ''
   const mensagem = resumo
     ? `Oi! Me acompanha no salão e você ganha ${formatarCents(resumo.premio_indicada_cents)} de desconto no seu primeiro atendimento: ${link}`
     : ''
+
+  async function copiarProfissional() {
+    try {
+      await navigator.clipboard.writeText(linkProfissional)
+      setCopiadoProf(true)
+      setTimeout(() => setCopiadoProf(false), 2500)
+    } catch {
+      setCopiadoProf(false)
+    }
+  }
 
   async function copiar() {
     try {
@@ -108,6 +131,80 @@ export default function IndiqueEGanhe() {
             </a>
           </div>
         </div>
+
+        <div className="card indique-card destaque-afiliada">
+          <h3>Traga uma profissional 💼</h3>
+          <p className="muted">
+            Conhece alguém que atende? Mande o convite abaixo. Quando ela
+            começar a atender pelo app, você passa a receber{' '}
+            <strong>
+              {afiliada ? (afiliada.share_bps / 100).toFixed(1).replace('.', ',') : '0,5'}%
+            </strong>{' '}
+            de cada atendimento dela — em cashback, enquanto ela usar.
+          </p>
+
+          <code className="link-url">{linkProfissional}</code>
+
+          <div className="link-acoes">
+            <button className="btn btn-primary" onClick={copiarProfissional}>
+              {copiadoProf ? 'Copiado! ✅' : 'Copiar convite'}
+            </button>
+            <a
+              className="btn btn-whats"
+              href={`https://wa.me/?text=${encodeURIComponent(mensagemProfissional)}`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Enviar no WhatsApp
+            </a>
+          </div>
+
+          {afiliada && (
+            <div className="afiliada-numeros">
+              <div>
+                <span className="afiliada-valor">{afiliada.profissionais_ativas}</span>
+                <span className="muted">
+                  {afiliada.profissionais_ativas === 1 ? 'profissional' : 'profissionais'}
+                </span>
+              </div>
+              <div>
+                <span className="afiliada-valor">
+                  {formatarCents(afiliada.cashback_total_cents)}
+                </span>
+                <span className="muted">cashback total</span>
+              </div>
+              <div>
+                <span className="afiliada-valor">
+                  {formatarCents(afiliada.cashback_mes_cents)}
+                </span>
+                <span className="muted">neste mês</span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {trazidas.length > 0 && (
+          <section className="secao">
+            <h3 className="secao-titulo">Profissionais que você trouxe</h3>
+            <div className="cliente-list">
+              {trazidas.map((t) => (
+                <div key={t.attribution_id} className="card cliente-row">
+                  <div className="cliente-info">
+                    <span className="cliente-nome">{t.nome}</span>
+                    <span className="muted cliente-meta">
+                      {t.primeira_atividade
+                        ? `atendendo desde ${new Date(t.primeira_atividade).toLocaleDateString('pt-BR')}`
+                        : 'ainda não começou a atender'}
+                    </span>
+                  </div>
+                  <span className="extrato-valor ganhou">
+                    {formatarCents(t.cashback_cents)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         <div className="card indique-card">
           <h3>Suas indicações</h3>

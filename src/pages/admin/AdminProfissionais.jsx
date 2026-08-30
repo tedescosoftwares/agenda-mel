@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import AdminShell from '../../components/AdminShell'
 import { supabase } from '../../lib/supabase'
+import { useAuth } from '../../context/AuthContext'
 import { ChevronIcon, LinkIcon } from '../../components/icons'
 import { formatDuracao, formatPreco } from '../../lib/format'
 import { gerarSlug } from '../../lib/booking'
@@ -10,6 +11,7 @@ import FotoUpload from '../../components/FotoUpload'
 const FORM_VAZIO = { name: '', slug: '', phone: '', bio: '', photo_url: null }
 
 export default function AdminProfissionais() {
+  const { salao } = useAuth()
   const [profissionais, setProfissionais] = useState([])
   const [services, setServices] = useState([])
   const [vinculos, setVinculos] = useState({}) // professional_id -> [service_id]
@@ -147,7 +149,7 @@ export default function AdminProfissionais() {
       if (editing === 'new') {
         const { data, error } = await supabase
           .from('professionals')
-          .insert(payload)
+          .insert({ ...payload, salon_id: salao?.id })
           .select()
           .single()
         if (error) throw new Error(traduzErro(error))

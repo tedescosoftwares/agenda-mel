@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import AdminShell from '../../components/AdminShell'
 import { supabase } from '../../lib/supabase'
+import { useAuth } from '../../context/AuthContext'
 
 const DIAS = [
   'Domingo',
@@ -13,6 +14,7 @@ const DIAS = [
 ]
 
 export default function AdminHours() {
+  const { salao } = useAuth()
   const [hours, setHours] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -20,9 +22,11 @@ export default function AdminHours() {
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
+    if (!salao?.id) return
     supabase
       .from('business_hours')
       .select('*')
+      .eq('salon_id', salao.id)
       .order('weekday')
       .then(({ data, error }) => {
         if (error) {
@@ -42,7 +46,7 @@ export default function AdminHours() {
         }
         setLoading(false)
       })
-  }, [])
+  }, [salao])
 
   function updateDay(weekday, patch) {
     setHours((prev) =>
@@ -71,6 +75,7 @@ export default function AdminHours() {
           start_time: h.start_time,
           end_time: h.end_time,
         })
+        .eq('salon_id', salao.id)
         .eq('weekday', h.weekday)
       if (error) {
         setError('Erro ao salvar: ' + error.message)

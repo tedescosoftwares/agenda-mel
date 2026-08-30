@@ -3,6 +3,7 @@ import ProShell from '../../components/ProShell'
 import SemFicha from './SemFicha'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
+import BloqueiosEditor from '../../components/BloqueiosEditor'
 
 const DIAS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
 
@@ -11,6 +12,7 @@ export default function ProHorarios() {
   const profId = professional?.id
 
   const [hours, setHours] = useState([])
+  const [buffer, setBuffer] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [info, setInfo] = useState('')
@@ -42,6 +44,10 @@ export default function ProHorarios() {
     fetchHoras()
   }, [fetchHoras])
 
+  useEffect(() => {
+    if (professional?.buffer_minutes != null) setBuffer(professional.buffer_minutes)
+  }, [professional])
+
   if (!professional) return <SemFicha />
 
   function updateDay(weekday, patch) {
@@ -63,6 +69,17 @@ export default function ProHorarios() {
     }
 
     setSaving(true)
+
+    const { error: erroBuffer } = await supabase
+      .from('professionals')
+      .update({ buffer_minutes: Number(buffer) })
+      .eq('id', professional.id)
+    if (erroBuffer) {
+      setError('Erro ao salvar o tempo de arrumação: ' + erroBuffer.message)
+      setSaving(false)
+      return
+    }
+
     for (const h of hours) {
       const { error } = await supabase
         .from('professional_hours')
@@ -141,6 +158,27 @@ export default function ProHorarios() {
             ))}
           </div>
 
+          <div className="card buffer-card">
+            <div className="buffer-texto">
+              <span className="img-field-label">Tempo de arrumação</span>
+              <span className="muted campo-dica">
+                Minutos reservados depois de cada atendimento para limpar e
+                organizar. Ninguém consegue agendar nesse intervalo.
+              </span>
+            </div>
+            <div className="buffer-campo">
+              <input
+                type="number"
+                min="0"
+                max="120"
+                step="5"
+                value={buffer}
+                onChange={(e) => setBuffer(e.target.value)}
+              />
+              <span className="muted">min</span>
+            </div>
+          </div>
+
           <div className="form-actions hours-save">
             <button
               className="btn btn-primary btn-block"
@@ -150,6 +188,8 @@ export default function ProHorarios() {
               {saving ? 'Salvando…' : 'Salvar horários'}
             </button>
           </div>
+
+          <BloqueiosEditor professionalId={professional.id} />
         </>
       )}
     </ProShell>

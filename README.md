@@ -32,7 +32,8 @@ Backend: [Supabase](https://supabase.com) (plano gratuito — autenticação + b
    `004_appointments.sql`, `005_service_images_e_slots.sql`,
    `006_combos.sql`, `007_profissionais.sql`, `008_foto_profissional.sql`,
    `009_notificacoes.sql`, `010_adiantar_agenda.sql`,
-   `011_lista_espera.sql`, `012_indique_e_ganhe.sql`, `013_seguranca.sql`, `014_correcoes.sql`
+   `011_lista_espera.sql`, `012_indique_e_ganhe.sql`, `013_seguranca.sql`, `014_correcoes.sql`,
+   `015_saloes.sql`, `016_agenda_real.sql`
 
 ### 2. Configurar as variáveis de ambiente
 
@@ -105,6 +106,8 @@ supabase/
   012_indique_e_ganhe.sql  # indicação, carteira de créditos e antifraude
   013_seguranca.sql        # travas de permissão e de sobreposição (obrigatório)
   014_correcoes.sql        # correções da revisão (horário no passado, fila, saldo)
+  015_saloes.sql           # camada de salão: cada negócio com catálogo e equipe
+  016_agenda_real.sql      # almoço/folga, arrumação, encaixe, preço congelado
 ```
 
 ## Papéis
@@ -149,6 +152,11 @@ where slug = 'slug-dela';
 - [x] Adiantar a agenda (convite com prazo; a cliente decide)
 - [x] Lista de espera + falta da cliente libera a vaga
 - [x] Indique e ganhe (crédito só depois do atendimento concluído)
+- [x] Camada de salão (o produto nasce marketplace)
+- [x] Almoço, folga e compromisso; tempo de arrumação entre atendimentos
+- [x] Encaixe manual de cliente sem app; preço congelado no atendimento
+- [x] Perdoar falta e a semana numa tela só
+- [ ] Indicação inversa: cliente traz profissional
 - [ ] Publicar (Vercel/Netlify) e instalar como PWA no celular
 - [ ] Notificações (lembrete de horário)
 - [ ] Migrar depois para React Native / Expo reaproveitando o Supabase

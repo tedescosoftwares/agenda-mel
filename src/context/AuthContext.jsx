@@ -8,6 +8,7 @@ export function AuthProvider({ children }) {
   const [session, setSession] = useState(null)
   const [profile, setProfile] = useState(null)
   const [professional, setProfessional] = useState(null)
+  const [salao, setSalao] = useState(null)
   const [loading, setLoading] = useState(isSupabaseConfigured)
 
   useEffect(() => {
@@ -25,6 +26,7 @@ export function AuthProvider({ children }) {
       if (!session) {
         setProfile(null)
         setProfessional(null)
+        setSalao(null)
         setLoading(false)
       }
     })
@@ -44,6 +46,21 @@ export function AuthProvider({ children }) {
         .single()
       if (cancelled) return
       setProfile(perfil)
+
+      // admin: carrega o salão que ela administra
+      if (perfil?.role === 'admin') {
+        const { data: vinculo } = await supabase
+          .from('salon_members')
+          .select('salon_id, salons (*)')
+          .eq('user_id', session.user.id)
+          .eq('papel', 'admin')
+          .limit(1)
+          .maybeSingle()
+        if (cancelled) return
+        setSalao(vinculo?.salons ?? null)
+      } else {
+        setSalao(null)
+      }
 
       // profissional: carrega a ficha dela (agenda, serviços, link)
       if (perfil?.role === 'profissional') {
@@ -113,6 +130,7 @@ export function AuthProvider({ children }) {
     user: session?.user ?? null,
     profile,
     professional,
+    salao,
     recarregarProfessional,
     role: profile?.role ?? null,
     loading,

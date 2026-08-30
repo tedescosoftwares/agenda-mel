@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import AdiantarModal from './AdiantarModal'
+import EncaixeModal from './EncaixeModal'
 import { formatarCents } from '../lib/indicacao'
 import { formatPreco, formatDuracao, toISODate } from '../lib/format'
 
@@ -13,23 +14,28 @@ const STATUS_LABEL = {
 
 // Agenda de um dia — usada pelo admin (todas as profissionais ou uma
 // filtrada) e pela própria profissional (só a agenda dela).
-export default function AgendaDia({ professionalId = null, mostrarProfissional = false }) {
+export default function AgendaDia({
+  professionalId = null,
+  mostrarProfissional = false,
+  diaInicial = null,
+}) {
   const dias = useMemo(() => {
-    const hoje = new Date()
+    const base = diaInicial ? new Date(diaInicial + 'T12:00:00') : new Date()
     return Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(hoje)
-      d.setDate(hoje.getDate() + i)
+      const d = new Date(base)
+      d.setDate(base.getDate() + i)
       return d
     })
-  }, [])
+  }, [diaInicial])
 
-  const [dataSel, setDataSel] = useState(() => toISODate(new Date()))
+  const [dataSel, setDataSel] = useState(() => diaInicial ?? toISODate(new Date()))
   const [appointments, setAppointments] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [mudandoId, setMudandoId] = useState(null)
   const [adiantando, setAdiantando] = useState(null)
   const [toleranciaMin, setToleranciaMin] = useState(15)
+  const [encaixando, setEncaixando] = useState(false)
 
   const fetchAgenda = useCallback(async () => {
     let query = supabase
@@ -124,6 +130,19 @@ export default function AgendaDia({ professionalId = null, mostrarProfissional =
     else fetchAgenda()
   }
 
+  async function perdoarFalta(appt) {
+    const { data, error } = await supabase.rpc('perdoar_falta', { appt_id: appt.id })
+    if (error) {
+      setError('Erro ao perdoar: ' + error.message)
+      return
+    }
+    if (data === 'ocupado') {
+      setError('O horário já foi ocupado por outra pessoa — não dá para voltar atrás.')
+      return
+    }
+    fetchAgenda()
+  }
+
   async function cancelarConvite(oferta) {
     const ok = window.confirm(
       `Desfazer o convite das ${oferta.proposed_start_time.slice(0, 5)}? Se a cliente já tiver aceitado, o horário dela volta ao original.`,
@@ -136,10 +155,19 @@ export default function AgendaDia({ professionalId = null, mostrarProfissional =
     fetchAgenda()
   }
 
-  // quem não veio não entra na previsão do dia
+  const podeEncaixar = Boolean(professionalId)
+
+  // quem não veio não entra na previsão do dia; o valor é o congelado
   const previsao = appointments
     .filter((a) => a.status !== 'faltou')
-    .reduce((soma, a) => soma + Number(a.services?.price ?? 0), 0)
+    .reduce(
+      (soma, a) =>
+        soma +
+        (a.price_cents != null
+          ? a.price_cents / 100
+          : Number(a.services?.price ?? 0)),
+      0,
+    )
 
   return (
     <>
@@ -191,11 +219,16 @@ export default function AgendaDia({ professionalId = null, mostrarProfissional =
                 </div>
                 <div className="appt-info">
                   <span className="appt-cliente">
-                    {a.profiles?.full_name || 'Cliente'}
+                    {a.profiles?.full_name || a.guest_name || 'Cliente'}
+                    {!a.client_id && <span className="badge badge-encaixe">encaixe</span>}
                   </span>
                   <span className="appt-servico muted">
-                    {a.services?.name}
-                    {a.services ? ` · ${formatPreco(a.services.price)}` : ''}
+                    {a.service_name || a.services?.name}
+                    {a.price_cents != null
+                      ? ` · ${formatPreco(a.price_cents / 100)}`
+                      : a.services
+                        ? ` · ${formatPreco(a.services.price)}`
+                        : ''}
                     {mostrarProfissional && a.professionals
                       ? ` · com ${a.professionals.name}`
                       : ''}
@@ -246,6 +279,15 @@ export default function AgendaDia({ professionalId = null, mostrarProfissional =
                         </button>
                       </>
                     )}
+                    {a.status === 'faltou' && (
+                      <button
+                        className="btn-mini btn-mini-neutro"
+                        disabled={mudandoId === a.id}
+                        onClick={() => perdoarFalta(a)}
+                      >
+                        Perdoar falta
+                      </button>
+                    )}
                     {podeAdiantar(a) &&
                       (convitePendente(a) ? (
                         <button
@@ -271,6 +313,28 @@ export default function AgendaDia({ professionalId = null, mostrarProfissional =
             ))}
           </div>
         </>
+      )}
+
+      {podeEncaixar && (
+        <button
+          className="fab"
+          onClick={() => setEncaixando(true)}
+          aria-label="Encaixar atendimento"
+        >
+          +
+        </button>
+      )}
+
+      {encaixando && (
+        <EncaixeModal
+          professionalId={professionalId}
+          data={dataSel}
+          onFechar={() => setEncaixando(false)}
+          onPronto={() => {
+            setEncaixando(false)
+            fetchAgenda()
+          }}
+        />
       )}
 
       {adiantando && (

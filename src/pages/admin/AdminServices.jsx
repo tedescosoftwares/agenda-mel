@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import AdminShell from '../../components/AdminShell'
 import { supabase } from '../../lib/supabase'
+import { useAuth } from '../../context/AuthContext'
 import { ChevronIcon, SparkleIcon } from '../../components/icons'
 import { formatPreco, formatDuracao, labelDuracao } from '../../lib/format'
 
@@ -16,6 +17,7 @@ const MAX_IMAGENS = 3
 const MAX_TAMANHO_MB = 5
 
 export default function AdminServices() {
+  const { salao } = useAuth()
   const [services, setServices] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -191,7 +193,7 @@ export default function AdminServices() {
 
       const query =
         editing === 'new'
-          ? supabase.from('services').insert(payload)
+          ? supabase.from('services').insert({ ...payload, salon_id: salao?.id })
           : supabase.from('services').update(payload).eq('id', editing)
 
       const { error } = await query

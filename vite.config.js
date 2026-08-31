@@ -4,6 +4,18 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 export default defineConfig({
+  server: {
+    // aceita conexão de fora da máquina (celular na mesma rede, túnel)
+    host: true,
+    // o Vite recusa Host desconhecido desde a v6; libera os túneis
+    allowedHosts: [
+      '.ngrok-free.dev',
+      '.ngrok-free.app',
+      '.ngrok.io',
+      '.trycloudflare.com',
+      '.loca.lt',
+    ],
+  },
   plugins: [
     react(),
     VitePWA({

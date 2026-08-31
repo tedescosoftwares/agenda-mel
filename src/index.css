@@ -3063,6 +3063,116 @@ a.prof-row:hover,
   margin-bottom: 1.2rem;
 }
 
+
+/* ============================================================
+   PRA ENVIAR
+   ------------------------------------------------------------
+   A mensagem aparece como ela vai chegar no WhatsApp da cliente —
+   texto inteiro, sem corte. Ela lê antes de mandar, e é isso que
+   dá confiança de tocar no botão sem pensar duas vezes.
+   ============================================================ */
+
+.envio-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.envio-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.9rem;
+}
+
+.envio-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+  min-width: 0;
+}
+
+.envio-cliente {
+  font-family: var(--condensada);
+  font-size: 0.98rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.badge-tipo {
+  flex-shrink: 0;
+  color: var(--texto-3);
+  border: 1px solid var(--fio-forte);
+  border-radius: var(--r-controle);
+  padding: 0.05rem 0.36rem;
+  font-size: 0.56rem;
+  letter-spacing: 0.09em;
+}
+
+.badge-tipo::before {
+  display: none;
+}
+
+/* o texto exatamente como vai sair, respeitando as quebras */
+.envio-corpo {
+  margin: 0;
+  padding: 0.75rem 0.85rem;
+  background: var(--superficie-2);
+  border: 1px solid var(--fio);
+  border-left: 2px solid var(--latao-fio);
+  border-radius: var(--r-controle);
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: var(--texto-2);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.envio-acoes {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.envio-acoes .btn {
+  flex: 1 1 auto;
+  font-size: 0.8rem;
+  letter-spacing: 0.07em;
+  padding: 0.65rem 0.85rem;
+}
+
+.envio-acoes .btn-link-cancelar {
+  flex-shrink: 0;
+}
+
+/* atalho no topo da agenda quando tem fila esperando */
+.aviso-enviar {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.8rem 0.85rem;
+  margin-bottom: 1.1rem;
+  border-color: var(--latao-fio);
+  background: linear-gradient(180deg, var(--latao-veu), transparent 70%),
+    var(--superficie);
+  color: inherit;
+  text-decoration: none;
+}
+
+.nota-canal {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.8rem 0.85rem;
+  margin-top: 1.8rem;
+  border-style: dashed;
+}
+
 /* ============================================================
    TELAS ESTREITAS
    ============================================================ */

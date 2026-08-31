@@ -469,6 +469,52 @@ export default function Estilo() {
             </span>
           </div>
         </section>
+
+        <section className="secao">
+          <h3 className="secao-titulo">Pra enviar</h3>
+
+          <div className="envio-list">
+            <div className="card envio-card">
+              <div className="envio-topo">
+                <span className="envio-cliente">Juliana Prado</span>
+                <span className="badge badge-tipo">lembrete de véspera</span>
+              </div>
+              <p className="envio-corpo">
+                {'Amanhã tem horário marcado\n\nLimpeza de pele com Ana Paula dia 31/08 às 10:00.\n\nResponda 1 para confirmar ou 2 se precisar remarcar.'}
+              </p>
+              <div className="envio-acoes">
+                <button className="btn btn-whats">Abrir no WhatsApp</button>
+                <button className="btn-link-cancelar">não enviar</button>
+              </div>
+            </div>
+
+            <div className="card envio-card">
+              <div className="envio-topo">
+                <span className="envio-cliente">Sofia Ramos</span>
+                <span className="badge badge-tipo">chamar de volta</span>
+              </div>
+              <p className="envio-corpo">
+                {'A Ana Paula guardou um horário para você\n\nFaz 50 dias desde a sua última vez. A agenda da Ana Paula está aberta — dá uma olhada nos horários.\n\nSe não quiser mais receber, responda SAIR.'}
+              </p>
+              <div className="envio-acoes">
+                <button className="btn btn-primary">Enviei</button>
+                <button className="btn btn-ghost">Abrir de novo</button>
+              </div>
+            </div>
+          </div>
+
+          <div className="card nota-canal">
+            <span className="cliente-info">
+              <span className="cliente-nome">
+                <span className="nome-txt">Enviar sozinho, sem você</span>
+              </span>
+              <span className="muted cliente-meta">
+                Dá pra ligar um número próprio e o app manda na hora certa.
+              </span>
+            </span>
+            <ChevronIcon />
+          </div>
+        </section>
       </main>
 
       <nav className="bottom-nav">

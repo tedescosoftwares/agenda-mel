@@ -6,7 +6,8 @@ App de agendamento de serviços estéticos — PWA em React, multi-profissional:
   serviços e os horários livres; o login só entra na hora de fechar
 - **Área da cliente** (`/`) — meus agendamentos e com quem agendar
 - **App da profissional** (`/pro`) — agenda dela, quem sumiu e precisa ser
-  chamada de volta, o mês em números, serviços que atende, horários e o link
+  chamada de volta, o mês em números, as mensagens prontas pra enviar no
+  WhatsApp, serviços que atende, horários e o link
 - **Área do salão / admin** (`/admin`) — agenda de todas, o mês do salão,
   equipe, catálogo de serviços, horário padrão e clientes
 
@@ -145,7 +146,10 @@ supabase/
   020_numeros.sql          # faturamento, ticket, ocupação e falta do mês
   021_dados_teste_historico.sql # dois meses de histórico, para os números terem o que mostrar
   022_gatilhos.sql         # corrige a trava de status que nunca travava
+  023_whatsapp.sql         # fila de saída, canal por salão, janela de silêncio
+  024_resposta_whatsapp.sql # 1 confirma, 2 cancela, SAIR desliga
   setup_completo.sql       # TODOS os arquivos acima juntos — é este que se roda
+  functions/               # Edge Functions: envio e webhook (veja o LEIAME de lá)
 ```
 
 ## Papéis
@@ -200,6 +204,10 @@ where slug = 'slug-dela';
       sugestão de retorno, e a lista de quem passou do tempo de voltar
 - [x] O mês em números: faturamento, ticket médio, ocupação da agenda, faltas,
       clientes novas, o que mais rendeu e quem mais volta
+- [x] WhatsApp: fila de saída com adaptador de canal — manual (um toque, de
+      graça), Evolution (chip próprio) ou Cloud API oficial
+- [x] A resposta da cliente mexe na agenda: 1 confirma, 2 cancela e libera a
+      vaga para a fila de espera, SAIR desliga os avisos
 - [ ] Publicar (Vercel/Netlify) e instalar como PWA no celular
 - [ ] Notificações (lembrete de horário)
 - [ ] Migrar depois para React Native / Expo reaproveitando o Supabase

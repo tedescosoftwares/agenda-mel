@@ -22,6 +22,7 @@ import ProLink from "./pages/pro/ProLink";
 import ProNumeros from "./pages/pro/ProNumeros";
 import ProRetorno from "./pages/pro/ProRetorno";
 import ProAjustes from "./pages/pro/ProAjustes";
+import ProEnviar from "./pages/pro/ProEnviar";
 import IndiqueEGanhe from "./pages/cliente/IndiqueEGanhe";
 import { guardarCodigoDaURL } from "./lib/indicacao";
 
@@ -110,6 +111,14 @@ export default function App() {
               element={
                 <ProtectedRoute requireRole="profissional">
                   <ProAjustes />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/pro/enviar"
+              element={
+                <ProtectedRoute requireRole="profissional">
+                  <ProEnviar />
                 </ProtectedRoute>
               }
             />

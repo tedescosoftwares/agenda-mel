@@ -115,7 +115,7 @@ begin
     raise exception 'Informe a profissional';
   end if;
 
-  select * into p from public.professionals where id = prof;
+  select * into p from public.professionals where professionals.id = prof;
   if not found then
     raise exception 'Profissional não encontrada';
   end if;
@@ -218,7 +218,7 @@ declare
   fin date;
   total bigint;
 begin
-  select * into p from public.professionals where id = prof;
+  select * into p from public.professionals where professionals.id = prof;
   if not found then
     raise exception 'Profissional não encontrada';
   end if;
@@ -274,7 +274,7 @@ declare
   p public.professionals%rowtype;
   desde date;
 begin
-  select * into p from public.professionals where id = prof;
+  select * into p from public.professionals where professionals.id = prof;
   if not found then
     raise exception 'Profissional não encontrada';
   end if;

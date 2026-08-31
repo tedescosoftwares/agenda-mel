@@ -241,7 +241,7 @@ begin
     raise exception 'Informe a profissional';
   end if;
 
-  select * into p from public.professionals where id = prof;
+  select * into p from public.professionals where professionals.id = prof;
   if not found then
     raise exception 'Profissional não encontrada';
   end if;
@@ -322,7 +322,7 @@ declare
   texto text;
   aviso_id uuid;
 begin
-  select * into p from public.professionals where id = prof;
+  select * into p from public.professionals where professionals.id = prof;
   if not found then
     raise exception 'Profissional não encontrada';
   end if;
@@ -429,7 +429,7 @@ as $$
 declare
   p public.professionals%rowtype;
 begin
-  select * into p from public.professionals where id = prof;
+  select * into p from public.professionals where professionals.id = prof;
   if not found then
     raise exception 'Profissional não encontrada';
   end if;

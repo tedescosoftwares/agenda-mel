@@ -49,6 +49,21 @@ export default function ProAjustes() {
           <ChevronIcon />
         </Link>
 
+        <Link to="/pro/enviar" className="card prof-row">
+          <span className="ajuste-icone">
+            <LinkIcon />
+          </span>
+          <div className="cliente-info">
+            <span className="cliente-nome">
+              <span className="nome-txt">Pra enviar</span>
+            </span>
+            <span className="muted cliente-meta">
+              Mensagens escritas, esperando você mandar pelo WhatsApp
+            </span>
+          </div>
+          <ChevronIcon />
+        </Link>
+
         <Link to="/pro/retorno" className="card prof-row">
           <span className="ajuste-icone">
             <ClockIcon />

@@ -1,0 +1,91 @@
+# Evolution API + Caddy (HTTPS automático) para o Agenda Mel.
+#
+# Sobe numa EC2 Ubuntu:
+#   git clone <este repo> && cd agenda-mel/evolution
+#   cp .env.exemplo .env && nano .env      # preencha os quatro valores
+#   docker compose up -d
+#
+# O Caddy pega certificado da Let's Encrypt sozinho, então o Supabase
+# fala com a Evolution por HTTPS — a chave de API não trafega em claro.
+#
+# A Evolution v2 precisa de Postgres e Redis; não roda mais sozinha.
+
+services:
+  evolution:
+    image: atendai/evolution-api:latest
+    container_name: evolution
+    restart: always
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      SERVER_URL: https://${DOMINIO}
+      AUTHENTICATION_API_KEY: ${API_KEY}
+
+      DATABASE_ENABLED: 'true'
+      DATABASE_PROVIDER: postgresql
+      DATABASE_CONNECTION_URI: postgresql://evolution:${POSTGRES_SENHA}@postgres:5432/evolution
+      DATABASE_CONNECTION_CLIENT_NAME: agendamel
+      DATABASE_SAVE_DATA_INSTANCE: 'true'
+      DATABASE_SAVE_DATA_NEW_MESSAGE: 'false'
+      DATABASE_SAVE_MESSAGE_UPDATE: 'false'
+      DATABASE_SAVE_DATA_CONTACTS: 'false'
+      DATABASE_SAVE_DATA_CHATS: 'false'
+
+      CACHE_REDIS_ENABLED: 'true'
+      CACHE_REDIS_URI: redis://redis:6379/6
+      CACHE_REDIS_PREFIX_KEY: agendamel
+      CACHE_LOCAL_ENABLED: 'false'
+
+      # não apaga a instância sozinha se a sessão cair
+      DEL_INSTANCE: 'false'
+      LOG_LEVEL: ERROR,WARN,INFO
+      LOG_COLOR: 'false'
+    volumes:
+      - evolution_instances:/evolution/instances
+    # 8080 NÃO é publicado: só o Caddy alcança, pela rede interna
+    expose:
+      - '8080'
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: evolution_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: evolution
+      POSTGRES_PASSWORD: ${POSTGRES_SENHA}
+      POSTGRES_DB: evolution
+    volumes:
+      - evolution_pg:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: evolution_redis
+    restart: always
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - evolution_redis:/data
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: evolution_caddy
+    restart: always
+    depends_on:
+      - evolution
+    ports:
+      - '80:80'
+      - '443:443'
+    environment:
+      DOMINIO: ${DOMINIO}
+      EMAIL: ${EMAIL}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  evolution_instances:
+  evolution_pg:
+  evolution_redis:
+  caddy_data:
+  caddy_config:

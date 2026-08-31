@@ -1,0 +1,23 @@
+# HTTPS automático: o Caddy pede o certificado à Let's Encrypt na
+# primeira subida e renova sozinho. Só precisa que o domínio aponte
+# para o IP desta máquina e que as portas 80 e 443 estejam abertas.
+
+{$DOMINIO} {
+	tls {$EMAIL}
+
+	# o painel da Evolution, para escanear o QR code pelo navegador
+	handle /manager* {
+		reverse_proxy evolution:8080
+	}
+
+	handle {
+		reverse_proxy evolution:8080
+	}
+
+	encode gzip
+
+	log {
+		output file /data/acesso.log
+		format json
+	}
+}

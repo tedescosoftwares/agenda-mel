@@ -31,49 +31,12 @@ A Evolution API pilota o WhatsApp Web. O número **continua no aplicativo**
 **Está fora dos termos do WhatsApp: o número pode ser banido.** Use um chip
 pré-pago dedicado, nunca o número comercial de alguém.
 
-### 1. Suba a Evolution
+O passo a passo completo — servidor, Docker, HTTPS, QR code e o teste de
+ponta a ponta — está em [`evolution/LEIAME.md`](../../evolution/LEIAME.md),
+junto com o `docker-compose.yml` pronto.
 
-Em qualquer máquina que fique ligada. Um VPS de R$ 20 serve; o *always free*
-da Oracle Cloud também.
-
-```bash
-docker run -d --name evolution -p 8080:8080 \
-  -e AUTHENTICATION_API_KEY='uma-chave-longa-que-voce-inventa' \
-  -v evolution_instances:/evolution/instances \
-  atendai/evolution-api:latest
-```
-
-### 2. Crie a instância e escaneie o QR code
-
-```bash
-curl -X POST http://SEU_IP:8080/instance/create \
-  -H 'Content-Type: application/json' \
-  -H 'apikey: uma-chave-longa-que-voce-inventa' \
-  -d '{"instanceName":"espaco-mel","qrcode":true,"integration":"WHATSAPP-BAILEYS"}'
-```
-
-O QR code volta na resposta. Escaneie pelo WhatsApp do chip dedicado, em
-**Aparelhos conectados**.
-
-### 3. Aponte o webhook para o app
-
-```bash
-curl -X POST http://SEU_IP:8080/webhook/set/espaco-mel \
-  -H 'Content-Type: application/json' \
-  -H 'apikey: uma-chave-longa-que-voce-inventa' \
-  -d '{
-    "webhook": {
-      "enabled": true,
-      "url": "https://SEU-PROJETO.supabase.co/functions/v1/whatsapp-webhook?token=SEGREDO_DA_URL",
-      "events": ["MESSAGES_UPSERT","MESSAGES_UPDATE"]
-    }
-  }'
-```
-
-O `?token=` é o que protege a URL — a Evolution não assina os eventos.
-Invente um segredo e use o mesmo em `EVOLUTION_WEBHOOK_TOKEN`.
-
-### 4. Ligue no app
+Resumo: sobe a stack no servidor, escaneia o QR pelo painel, aponta o
+webhook para cá, e troca o canal do salão:
 
 ```sql
 update public.whatsapp_channels

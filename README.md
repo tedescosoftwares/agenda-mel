@@ -150,6 +150,7 @@ supabase/
   024_resposta_whatsapp.sql # 1 confirma, 2 cancela, SAIR desliga
   setup_completo.sql       # TODOS os arquivos acima juntos — é este que se roda
   functions/               # Edge Functions: envio e webhook (veja o LEIAME de lá)
+evolution/                 # stack do WhatsApp automático: compose, Caddy e o passo a passo
 ```
 
 ## Papéis

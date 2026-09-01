@@ -26,6 +26,15 @@ if [ ! -f .env ]; then
   exit 1
 fi
 
+# um DOMINIO salvo com https:// na frente faz tudo virar
+# "https://https://..." — conserta antes de usar
+if grep -qE '^DOMINIO=[a-zA-Z]+://' .env; then
+  LIMPO=$(grep '^DOMINIO=' .env | cut -d= -f2- \
+    | sed -E 's#^[a-zA-Z]+://##; s#/.*$##; s#:[0-9]+$##')
+  sed -i "s|^DOMINIO=.*|DOMINIO=${LIMPO}|" .env
+  amarelo "Corrigi o domínio no .env: agora é ${LIMPO}"
+fi
+
 # shellcheck disable=SC1091
 set -a; . ./.env; set +a
 

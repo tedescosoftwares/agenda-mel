@@ -102,6 +102,15 @@ azul '== 4/6  Configuração =='
 
 if [ -f .env ]; then
   echo 'Já existe um .env — mantendo. (apague se quiser refazer)'
+
+  # conserta um DOMINIO salvo com esquema por uma execução antiga
+  if grep -qE '^DOMINIO=[a-zA-Z]+://' .env; then
+    LIMPO=$(grep '^DOMINIO=' .env | cut -d= -f2- \
+      | sed -E 's#^[a-zA-Z]+://##; s#/.*$##; s#:[0-9]+$##')
+    sed -i "s|^DOMINIO=.*|DOMINIO=${LIMPO}|" .env
+    amarelo "Corrigi o domínio no .env: agora é ${LIMPO}"
+  fi
+
   # shellcheck disable=SC1091
   set -a; . ./.env; set +a
 else
@@ -111,10 +120,20 @@ else
   read -rp 'Domínio que aponta para este IP (ex.: agendamel.duckdns.org): ' DOMINIO
   read -rp 'E-mail para a Let'"'"'s Encrypt avisar sobre o certificado: ' EMAIL
 
+  # Colar a URL inteira é o que qualquer um faria. Aceita e limpa:
+  # com https:// na frente, tudo que o script monta vira
+  # "https://https://..." e falha com um curl 000 que não explica nada.
+  DOMINIO=$(printf '%s' "$DOMINIO" \
+    | tr -d ' \t\r' \
+    | sed -E 's#^[a-zA-Z]+://##; s#/.*$##; s#:[0-9]+$##')
+  EMAIL=$(printf '%s' "$EMAIL" | tr -d ' \t\r')
+
   if [ -z "$DOMINIO" ] || [ -z "$EMAIL" ]; then
     vermelho 'Domínio e e-mail são obrigatórios. O HTTPS depende dos dois.'
     exit 1
   fi
+
+  echo "Domínio: ${DOMINIO}"
 
   API_KEY=$(openssl rand -hex 32)
   POSTGRES_SENHA=$(openssl rand -hex 16)

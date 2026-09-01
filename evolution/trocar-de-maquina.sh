@@ -63,12 +63,13 @@ antes)
   ARQ=$(uname -m)
   RAM_MB=$(free -m | awk '/^Mem:/{print $2}')
   DISCO_GB=$(df -BG --output=size / | tail -1 | tr -dc '0-9')
+  LIVRE_GB=$(df -BG --output=avail / | tail -1 | tr -dc '0-9')
 
   printf '  IP público .... %s\n' "${IP:-?}"
   printf '  Instância ..... %s\n' "${TIPO:-?}"
   printf '  Arquitetura ... %s\n' "$ARQ"
   printf '  RAM ........... %s MB\n' "$RAM_MB"
-  printf '  Disco ......... %s GB\n' "$DISCO_GB"
+  printf '  Disco ......... %s GB  (livres: %s GB)\n' "$DISCO_GB" "$LIVRE_GB"
   printf '  Domínio ....... %s\n' "$DOMINIO"
 
   IP_DOMINIO=$(getent hosts "$DOMINIO" | awk '{print $1}' | head -1)
@@ -103,15 +104,17 @@ antes)
   fi
 
   # ---------------------------------------------------------------
-  # o modelo pesa uns 3 GB e o Docker precisa de folga para descompactar;
-  # abaixo de 30 GB o download falha no meio
-  if [ "$DISCO_GB" -ge 30 ]; then
-    RECADO_DISCO="${DISCO_GB} GB já basta, não precisa mexer."
+  # O que decide é o espaço LIVRE, não o tamanho do volume: um disco de
+  # 100 GB cheio não serve. O modelo pesa uns 3 GB e o Docker precisa de
+  # folga para descompactar, então 10 GB livres é o piso confortável.
+  if [ "$LIVRE_GB" -ge 10 ]; then
+    RECADO_DISCO="${LIVRE_GB} GB livres de ${DISCO_GB} GB. Já basta — pule este passo."
   else
-    RECADO_DISCO="${DISCO_GB} GB é pouco. Pode aumentar com a máquina ligada:
+    RECADO_DISCO="só ${LIVRE_GB} GB livres de ${DISCO_GB} GB, e o modelo precisa
+     de uns 10. Pode aumentar com a máquina ligada:
      EC2 -> Volumes -> marque o volume -> Actions -> Modify volume ->
-     Size de ${DISCO_GB} para 30 -> Modify. Espere o State sair de
-     \"optimizing\". Depois da troca, rode ./crescer-disco.sh aqui dentro."
+     Size de ${DISCO_GB} para $((DISCO_GB + 15)) -> Modify. Espere o State
+     sair de \"optimizing\". Depois da troca, rode ./crescer-disco.sh aqui."
   fi
 
   echo

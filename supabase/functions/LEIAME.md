@@ -128,8 +128,8 @@ para "1"/"2" pela posição da opção. Cada salão escolhe em
 
 | estilo | o que sai | renderiza? |
 | --- | --- | --- |
-| `enquete` (padrão) | poll do WhatsApp | em todo aparelho — testado em 01/09/2026 |
-| `lista` | listMessage | a Evolution 2.3.7 recusa (`isZero is not a function`); cai para texto |
+| `texto` (padrão) | "Responda 1 ou 2" no fim da mensagem | em todo aparelho |
+| `enquete` | poll do WhatsApp | em todo aparelho — mas parece pesquisa; para outro uso |
 | `nativo` | nativeFlow buttons | a API aceita, o aparelho não desenha, a mensagem se perde |
 
 Para testar as três no seu celular sem passar pelo app:

@@ -20,7 +20,7 @@ const db = createClient(
   { auth: { persistSession: false } },
 )
 
-type Recebida = { telefone: string; texto: string; id: string | null }
+type Recebida = { telefone: string; texto: string; id: string | null; enquete?: string | null }
 type Status = { id: string; status: string; detalhe: string | null }
 
 function json(corpo: unknown, status = 200) {
@@ -177,15 +177,18 @@ function lerEvolution(corpo: any): { mensagens: Recebida[]; status: Status[] } {
       const jid: string = d?.key?.remoteJid ?? ''
       // grupo não interessa
       if (jid && !jid.includes('@g.us')) {
-        const texto =
-          d?.messageType === 'pollUpdateMessage'
-            ? votoDaEnquete(d)
-            : textoDaMensagem(d?.message)
+        const ehVoto = d?.messageType === 'pollUpdateMessage'
+        const texto = ehVoto ? votoDaEnquete(d) : textoDaMensagem(d?.message)
         if (texto) {
           mensagens.push({
             telefone: jid.split('@')[0],
             texto,
             id: d?.key?.id ?? null,
+            // a chave da enquete original: é ela que amarra os votos
+            // seguintes ao primeiro, para "trocar o voto" não agir
+            enquete: ehVoto
+              ? (d?.message?.pollUpdateMessage?.pollCreationMessageKey?.id ?? null)
+              : null,
           })
         }
       }
@@ -265,6 +268,7 @@ Deno.serve(async (req) => {
       tel: m.telefone,
       texto: m.texto,
       id_provedor: m.id,
+      id_enquete: m.enquete ?? null,
     })
 
     const responder = (data as any)?.responder

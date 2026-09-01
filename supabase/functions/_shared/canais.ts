@@ -6,7 +6,7 @@
 
 export type Botao = { type: 'reply'; displayText: string; id: string }
 
-export type EstiloBotao = 'enquete' | 'lista' | 'nativo'
+export type EstiloBotao = 'texto' | 'enquete' | 'lista' | 'nativo'
 
 export type Envio = {
   telefone: string // 5513998710002
@@ -66,7 +66,11 @@ export async function enviarPelaEvolution(e: Envio): Promise<Resultado> {
   try {
     const opcoes = (e.botoes ?? []).slice(0, 3)
 
-    if (opcoes.length > 0) {
+    // O banco só entrega opções quando elas vão virar algo tocável de
+    // verdade (cloud) ou quando o salão pediu enquete de propósito.
+    // 'texto' e 'nativo' na Evolution caem no sendText logo abaixo,
+    // com o "Responda 1 ou 2" que o banco já colou no corpo.
+    if (opcoes.length > 0 && e.estilo !== 'texto') {
       const estilo = e.estilo ?? 'enquete'
       let r: Response | null = null
 

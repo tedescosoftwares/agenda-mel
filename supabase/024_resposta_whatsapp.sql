@@ -152,6 +152,10 @@ revoke execute on function public.interpretar_resposta(text)
 -- Chamada pela Edge Function do webhook, como service_role. Devolve o
 -- que fazer com a resposta — a Edge Function usa isso para escrever de
 -- volta no WhatsApp.
+-- o 028 troca a assinatura; derrubar as duas antes deixa re-executável
+drop function if exists public.receber_resposta_whatsapp(text, text, text);
+drop function if exists public.receber_resposta_whatsapp(text, text, text, text);
+
 create or replace function public.receber_resposta_whatsapp(
   tel text,
   texto text,

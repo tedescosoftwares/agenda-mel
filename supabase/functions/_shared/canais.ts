@@ -84,6 +84,9 @@ export async function enviarPelaEvolution(e: Envio): Promise<Resultado> {
           delay: 1200,
         })
       } else if (estilo === 'lista') {
+        // Na 2.3.7 a própria Evolution recusa com 400 ("this.isZero is
+        // not a function", bug de protobuf). Fica aqui para versões que
+        // consertem; hoje cai para o texto logo abaixo.
         r = await bater('sendList', {
           number: e.telefone,
           title: (e.titulo ?? '').slice(0, 60) || 'Agenda',

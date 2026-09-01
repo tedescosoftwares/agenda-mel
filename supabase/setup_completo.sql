@@ -7722,10 +7722,11 @@ alter table public.whatsapp_channels
     check (estilo_botao in ('enquete', 'lista', 'nativo'));
 
 comment on column public.whatsapp_channels.estilo_botao is
-  'enquete = poll do WhatsApp (renderiza em todo aparelho); '
-  'lista = listMessage (instável fora da API oficial); '
-  'nativo = nativeFlow buttons (só renderiza na Cloud API). '
-  'Na cloud, qualquer estilo vira botão interativo de verdade.';
+  'enquete = poll do WhatsApp (renderiza em todo aparelho — testado); '
+  'lista = listMessage (a Evolution 2.3.7 RECUSA com "this.isZero is '
+  'not a function"; cai para texto); '
+  'nativo = nativeFlow buttons (a API aceita, o aparelho não desenha, '
+  'a mensagem se perde). Na cloud qualquer estilo vira botão de verdade.';
 
 -- com a enquete funcionando, botão volta a nascer ligado
 alter table public.whatsapp_channels alter column usa_botoes set default true;

@@ -65,26 +65,28 @@ if [ -z "$PROJECT_REF" ] || [ -z "$SUPABASE_ACCESS_TOKEN" ]; then
 fi
 
 # ---------------------------------------------------------------
-azul '== 2/7  Trocando as chaves =='
+azul '== 2/7  Conferindo a chave =='
 
-# Elas foram expostas numa conversa; melhor não confiar mais nelas.
-API_KEY_NOVA=$(openssl rand -hex 32)
-WEBHOOK_TOKEN_NOVO=$(openssl rand -hex 32)
+# Este script NÃO troca chave. Trocar a cada execução deixava o .env e
+# o container fora de sincronia e produzia um 401 impossível de
+# entender. Para rodar uma troca, use ./trocar-chaves.sh.
+NO_CONTAINER=$(docker compose exec -T evolution printenv AUTHENTICATION_API_KEY 2>/dev/null | tr -d '\r\n' || echo '')
 
-sed -i "s|^API_KEY=.*|API_KEY=${API_KEY_NOVA}|" .env
-sed -i "s|^WEBHOOK_TOKEN=.*|WEBHOOK_TOKEN=${WEBHOOK_TOKEN_NOVO}|" .env
+if [ -z "$NO_CONTAINER" ]; then
+  vermelho 'A Evolution não está de pé. Suba antes:  docker compose up -d'
+  exit 1
+fi
 
-docker compose up -d >/dev/null
-echo 'Esperando a Evolution voltar com a chave nova...'
-for _ in $(seq 1 24); do
-  if curl -fsS --max-time 4 "https://${DOMINIO}/" >/dev/null 2>&1; then break; fi
-  sleep 5
-done
-
-API_KEY="$API_KEY_NOVA"
-WEBHOOK_TOKEN="$WEBHOOK_TOKEN_NOVO"
-verde 'Chaves trocadas. A sessão do WhatsApp continua conectada.'
-amarelo "Para entrar no painel agora use:  grep ^API_KEY= .env"
+if [ "$NO_CONTAINER" != "$API_KEY" ]; then
+  amarelo 'A chave do .env é diferente da que o container está usando.'
+  echo 'Recriando o container para ele pegar a do arquivo...'
+  docker compose up -d --force-recreate evolution >/dev/null
+  for _ in $(seq 1 24); do
+    if curl -fsS --max-time 4 "https://${DOMINIO}/" >/dev/null 2>&1; then break; fi
+    sleep 5
+  done
+fi
+verde 'Chave conferida.'
 
 # ---------------------------------------------------------------
 azul '== 3/7  Achando a instância =='
@@ -249,3 +251,6 @@ echo
 printf '\033[1;33m%s\033[0m\n' "  ./disparar.sh"
 echo
 verde 'A mensagem chega no seu celular. Responda 1 e veja confirmar no app.'
+echo
+echo "Painel da Evolution:  https://${DOMINIO}/manager"
+echo "Chave para entrar:    ${API_KEY}"

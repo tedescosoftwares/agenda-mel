@@ -72,8 +72,29 @@ https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_C
 
   sudo usermod -aG docker "$USER"
   verde "Instalado: $(docker --version)"
-  amarelo 'Você foi adicionado ao grupo docker. Se der "permission denied"'
-  amarelo 'mais abaixo, saia e entre de novo no SSH e rode isto outra vez.'
+fi
+
+# O usermod acima só vale para sessões novas: a que está aberta agora
+# continua sem o grupo docker. Melhor parar aqui, com instrução clara,
+# do que morrer lá embaixo num "permission denied ... docker.sock".
+if ! docker info >/dev/null 2>&1; then
+  echo
+  amarelo 'O Docker está instalado, mas esta sessão de SSH ainda não'
+  amarelo 'enxerga o grupo docker — ela carrega os grupos de quando você'
+  amarelo 'entrou, e você acabou de ser adicionado.'
+  echo
+  echo 'Reconecte e rode de novo (o que já foi feito é pulado):'
+  echo
+  echo '    exit'
+  echo '    ssh -i sua-chave.pem ubuntu@'"${IP_PUBLICO}"
+  echo '    cd agenda-mel/evolution && ./bootstrap.sh'
+  echo
+  echo 'Ou, sem reconectar:'
+  echo
+  echo '    newgrp docker'
+  echo '    ./bootstrap.sh'
+  echo
+  exit 0
 fi
 
 # ---------------------------------------------------------------

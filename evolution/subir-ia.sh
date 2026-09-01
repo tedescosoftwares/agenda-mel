@@ -198,9 +198,16 @@ echo "IA_MODELO=${MODELO}" >> .env
 
 # ---------------------------------------------------------------
 azul '== 6/6  Perguntando de verdade, em português =='
+echo 'A PRIMEIRA resposta demora: o modelo precisa sair do disco e entrar na'
+echo 'RAM antes de escrever a primeira palavra. Em CPU isso leva de 30 s a 2'
+echo 'minutos. Não digite nada, só espere — as próximas são bem mais rápidas,'
+echo 'porque ele fica carregado por 10 minutos.'
+echo
 
 INICIO=$(date +%s)
-RESPOSTA=$(docker exec evolution_ollama ollama run "$MODELO" \
+# timeout para não ficar pendurado para sempre se algo travar;
+# 5 min é folgado até para a primeira carga numa máquina lenta
+RESPOSTA=$(timeout 300 docker exec evolution_ollama ollama run "$MODELO" \
   'Responda em uma frase curta, em português do Brasil: o que é um agendamento?' 2>/dev/null || true)
 FIM=$(date +%s)
 
@@ -210,7 +217,11 @@ echo "  levou:    $((FIM - INICIO)) s"
 echo
 
 if [ -z "$RESPOSTA" ]; then
-  vermelho 'Não veio resposta. Veja:  docker logs evolution_ollama'
+  vermelho 'Não veio resposta em 5 minutos.'
+  echo 'Veja o que aconteceu:'
+  echo '  docker logs --tail 50 evolution_ollama'
+  echo '  free -m          # o modelo coube na RAM?'
+  echo '  dmesg | tail     # o kernel matou alguém por falta de memória?'
   exit 1
 fi
 

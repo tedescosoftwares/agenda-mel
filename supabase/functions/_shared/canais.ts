@@ -57,10 +57,11 @@ export async function enviarPelaEvolution(e: Envio): Promise<Resultado> {
   }
 
   try {
-    // Botão só existe de verdade na API oficial. Pela Evolution o
-    // WhatsApp às vezes aceita, às vezes entrega como texto puro, às
-    // vezes recusa. Tenta, e se recusar manda o texto de sempre — a
-    // cliente digitando 1 chega no mesmo lugar que tocando no botão.
+    // O banco só entrega botoes aqui se o salão tiver ligado de
+    // propósito — nasce desligado. Motivo: a Evolution aceita, devolve
+    // 200 e o WhatsApp entrega, mas o aparelho de quem recebe mostra
+    // "Não foi possível carregar a mensagem" e o conteúdo se perde.
+    // Como a API respondeu sucesso, não há erro para detectar aqui.
     if (e.botoes && e.botoes.length > 0) {
       const r = await bater('sendButtons', {
         number: e.telefone,
@@ -69,11 +70,9 @@ export async function enviarPelaEvolution(e: Envio): Promise<Resultado> {
         buttons: e.botoes.slice(0, 3),
         delay: 1200,
       })
-
       if (r.ok) {
         return { ok: true, providerId: lerId(await r.text()) }
       }
-      // caiu para o texto: registra o motivo mas não falha o envio
       console.warn('sendButtons recusado, indo de texto:', r.status, (await r.text()).slice(0, 200))
     }
 

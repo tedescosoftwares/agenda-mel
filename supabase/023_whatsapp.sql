@@ -229,6 +229,11 @@ revoke insert, update, delete on public.message_outbox from authenticated, anon;
 -- 5. Enfileirar ----------------------------------------------------------
 -- Decide se este aviso vira mensagem, para quem, por qual canal, e
 -- quando pode sair. Chamada pelo notificar(); não é para uso direto.
+-- o 025 acrescenta um parâmetro; derrubar as duas formas antes deixa
+-- este arquivo re-executável em qualquer ordem
+drop function if exists public.enfileirar_whatsapp(uuid, uuid, text, text, uuid, uuid);
+drop function if exists public.enfileirar_whatsapp(uuid, uuid, text, text, uuid, uuid, text);
+
 create or replace function public.enfileirar_whatsapp(
   aviso_id uuid,
   destinatario uuid,

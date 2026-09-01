@@ -45,7 +45,9 @@ Deno.serve(async (req) => {
   for (const m of fila ?? []) {
     const r = await enviarPor(m.canal, {
       telefone: m.telefone,
+      titulo: m.titulo,
       corpo: m.corpo,
+      botoes: m.botoes,
       identificador: m.identificador,
     })
 

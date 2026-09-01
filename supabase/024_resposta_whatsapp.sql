@@ -360,6 +360,10 @@ revoke execute on function public.atualizar_status_envio(text, text, text)
 -- 8. O que a Edge Function chama para pegar trabalho ---------------------
 -- Marca como 'enviando' e devolve, numa tacada só, para duas chamadas
 -- ao mesmo tempo não pegarem a mesma mensagem.
+-- o 025 muda o formato de retorno desta função; derrubar antes deixa
+-- o arquivo re-executável mesmo depois dele ter passado
+drop function if exists public.puxar_da_fila(integer);
+
 create or replace function public.puxar_da_fila(quantas integer default 20)
 returns table (
   id uuid,

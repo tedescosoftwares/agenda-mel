@@ -69,12 +69,20 @@ function lerCloud(corpo: any): { mensagens: Recebida[]; status: Status[] } {
       const v = mudanca?.value ?? {}
 
       for (const m of v.messages ?? []) {
-        if (m.type !== 'text') continue
-        mensagens.push({
-          telefone: m.from,
-          texto: m.text?.body ?? '',
-          id: m.id ?? null,
-        })
+        let texto = ''
+        if (m.type === 'text') {
+          texto = m.text?.body ?? ''
+        } else if (m.type === 'interactive') {
+          // o toque no botão devolve o id que mandamos ("1"/"2")
+          texto =
+            m.interactive?.button_reply?.id ??
+            m.interactive?.list_reply?.id ??
+            ''
+        } else if (m.type === 'button') {
+          texto = m.button?.payload ?? m.button?.text ?? ''
+        }
+        if (!texto) continue
+        mensagens.push({ telefone: m.from, texto, id: m.id ?? null })
       }
 
       for (const s of v.statuses ?? []) {
@@ -98,6 +106,46 @@ function lerCloud(corpo: any): { mensagens: Recebida[]; status: Status[] } {
   return { mensagens, status }
 }
 
+// Tocar no botão não gera texto: gera uma resposta estruturada, e o
+// Baileys entrega em três formatos diferentes conforme a versão do
+// WhatsApp de quem tocou. Todos carregam o id que definimos ("1"/"2"),
+// que é exatamente o que a cliente teria digitado.
+function textoDaMensagem(m: any): string {
+  if (!m) return ''
+
+  const direto = m.conversation ?? m.extendedTextMessage?.text
+  if (direto) return String(direto)
+
+  // botão clássico
+  const classico = m.buttonsResponseMessage?.selectedButtonId
+  if (classico) return String(classico)
+
+  // botão de template
+  const template = m.templateButtonReplyMessage?.selectedId
+  if (template) return String(template)
+
+  // lista
+  const lista = m.listResponseMessage?.singleSelectReply?.selectedRowId
+  if (lista) return String(lista)
+
+  // botão novo (nativeFlow): o id vem dentro de um JSON em string
+  const params =
+    m.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson ??
+    m.viewOnceMessage?.message?.interactiveResponseMessage
+      ?.nativeFlowResponseMessage?.paramsJson
+  if (params) {
+    try {
+      const p = JSON.parse(params)
+      const id = p?.id ?? p?.selectedId ?? p?.selectedRowId
+      if (id) return String(id)
+    } catch {
+      // json torto: ignora e trata como sem texto
+    }
+  }
+
+  return ''
+}
+
 function lerEvolution(corpo: any): { mensagens: Recebida[]; status: Status[] } {
   const mensagens: Recebida[] = []
   const status: Status[] = []
@@ -110,10 +158,7 @@ function lerEvolution(corpo: any): { mensagens: Recebida[]; status: Status[] } {
       const jid: string = d?.key?.remoteJid ?? ''
       // grupo não interessa
       if (jid && !jid.includes('@g.us')) {
-        const texto =
-          d?.message?.conversation ??
-          d?.message?.extendedTextMessage?.text ??
-          ''
+        const texto = textoDaMensagem(d?.message)
         if (texto) {
           mensagens.push({
             telefone: jid.split('@')[0],

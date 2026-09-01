@@ -2,7 +2,8 @@
 #
 # Agenda Mel — bancada do modelo local.
 #
-#   ./bancada-ia.sh
+#   ./bancada-ia.sh              # usa o modelo do .env
+#   ./bancada-ia.sh qwen3:1.7b   # testa outro, baixando se precisar
 #
 # Manda dez frases que uma cliente realmente escreveria no WhatsApp,
 # com abreviação e sem acento, e confere se o modelo devolve o JSON
@@ -26,7 +27,17 @@ cd "$(dirname "$0")"
 set -a; . ./.env; set +a
 
 [ -n "${IA_TOKEN:-}" ]  || { vermelho 'IA_TOKEN vazio no .env. Rode o ./subir-ia.sh.'; exit 1; }
-[ -n "${IA_MODELO:-}" ] || { vermelho 'IA_MODELO vazio no .env. Rode o ./subir-ia.sh.'; exit 1; }
+# Um modelo passado na linha de comando ganha do .env: assim dá para
+# comparar dois modelos na mesma máquina sem editar configuração e sem
+# perder o que já estava valendo.
+MODELO="${1:-${IA_MODELO:-}}"
+[ -n "$MODELO" ] || { vermelho 'Sem modelo. Rode o ./subir-ia.sh, ou passe um: ./bancada-ia.sh qwen3:1.7b'; exit 1; }
+
+if ! docker exec evolution_ollama ollama list 2>/dev/null | awk '{print $1}' | grep -qx "$MODELO"; then
+  amarelo "O ${MODELO} ainda não está aqui. Baixando..."
+  docker exec evolution_ollama ollama pull "$MODELO" || {
+    vermelho "Não consegui baixar o ${MODELO}."; exit 1; }
+fi
 
 command -v jq >/dev/null || { amarelo 'Instalando jq...'; sudo apt-get update -qq && sudo apt-get install -y jq >/dev/null; }
 
@@ -73,7 +84,7 @@ que horario voce tem livre sabado|horarios|-|sabado
 confirmado, pode contar comigo|confirmar|-|-
 obrigada linda!!! ate mais|outro|-|-'
 
-azul "== Bancada · modelo ${IA_MODELO} · ${URL} =="
+azul "== Bancada · modelo ${MODELO} · ${URL} =="
 echo
 
 ACERTOS=0
@@ -89,7 +100,7 @@ while IFS='|' read -r FRASE ESP_INT ESP_SRV ESP_DIA; do
   # CPU de 2 núcleos isso vira minutos por mensagem, e para decidir se a
   # cliente quer marcar ou desmarcar o raciocínio não acrescenta nada.
   # Em modelo que não pensa, o campo é simplesmente ignorado.
-  CORPO=$(jq -n --arg m "$IA_MODELO" --arg s "$SISTEMA" --arg u "$FRASE" --argjson f "$ESQUEMA" '{
+  CORPO=$(jq -n --arg m "$MODELO" --arg s "$SISTEMA" --arg u "$FRASE" --argjson f "$ESQUEMA" '{
     model: $m,
     stream: false,
     think: false,
@@ -150,6 +161,11 @@ elif [ "$ACERTOS" -ge 8 ]; then
   amarelo 'Caminhos: instância com mais CPU, ou um modelo menor, ou API.'
 else
   amarelo 'Erra demais para atender cliente sozinho.'
-  amarelo 'Tente um modelo maior (IA_MODELO no .env) se a RAM permitir,'
-  amarelo 'ou compare com Gemini/Groq antes de decidir.'
+  amarelo 'Tente um modelo maior se a RAM permitir, ou compare com API.'
 fi
+
+echo
+echo "Para comparar com outro tamanho na mesma máquina:"
+echo "  ./bancada-ia.sh qwen3:1.7b"
+echo "  ./bancada-ia.sh qwen3:4b"
+echo "Gostou de um? Grave no .env:  IA_MODELO=<o que ganhou>" 

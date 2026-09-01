@@ -96,6 +96,29 @@ npm run dev
 Se ainda assim não mudar, é o cache do navegador/PWA: abra uma janela anônima,
 ou aperte Ctrl+Shift+R.
 
+## Publicar o app
+
+O app é estático: HTML, CSS e JS falando direto com o Supabase. Não tem
+backend para rodar, então não precisa de servidor — uma hospedagem
+estática serve melhor e de graça.
+
+**Vercel** ou **Cloudflare Pages**: aponte para este repositório, e é só.
+O `vercel.json` e o `public/_redirects` já estão aqui — sem eles, abrir
+`/p/ana-paula` direto no navegador daria 404, porque quem resolve essa
+rota é o React, e o servidor precisa devolver o `index.html` para
+qualquer caminho.
+
+Configure as duas variáveis no painel da hospedagem:
+
+```
+VITE_SUPABASE_URL=https://SEU_REF.supabase.co
+VITE_SUPABASE_ANON_KEY=...
+```
+
+O envio de WhatsApp **não depende disso**. Quem manda é a Edge Function
+no Supabase, então o lembrete das 19h sai mesmo com o app rodando só na
+sua máquina — ou fechado.
+
 ## Estrutura
 
 ```

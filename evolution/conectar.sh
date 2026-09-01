@@ -80,8 +80,22 @@ amarelo "Para entrar no painel agora use:  grep ^API_KEY= .env"
 # ---------------------------------------------------------------
 azul '== 3/7  Achando a instância =='
 
-RESPOSTA=$(curl -fsS --max-time 15 "https://${DOMINIO}/instance/fetchInstances" \
-  -H "apikey: ${API_KEY}" 2>/dev/null || echo '')
+# A Evolution demora um pouco a montar as rotas depois de reiniciar.
+# Tenta algumas vezes, e guarda o código HTTP para poder explicar a
+# falha em vez de dizer só "não encontrei".
+RESPOSTA=''
+CODIGO=''
+for tentativa in 1 2 3 4 5 6; do
+  CODIGO=$(curl -sS --max-time 15 -o /tmp/inst.json -w '%{http_code}' \
+    "https://${DOMINIO}/instance/fetchInstances" \
+    -H "apikey: ${API_KEY}" 2>/dev/null || echo '000')
+  if [ "$CODIGO" = '200' ]; then
+    RESPOSTA=$(cat /tmp/inst.json)
+    break
+  fi
+  echo "  tentativa ${tentativa}: HTTP ${CODIGO}, esperando..."
+  sleep 5
+done
 
 INSTANCIA=$(printf '%s' "$RESPOSTA" | python3 -c '
 import json, sys
@@ -101,13 +115,32 @@ for i in itens:
 ' 2>/dev/null || true)
 
 if [ -z "$INSTANCIA" ]; then
-  vermelho 'Nenhuma instância encontrada.'
+  vermelho "Não consegui listar as instâncias (HTTP ${CODIGO})."
   echo
-  echo "Abra https://${DOMINIO}/manager, crie uma instância e escaneie o"
-  echo 'QR code com o celular do chip. Depois rode este script de novo.'
+  case "$CODIGO" in
+    401|403)
+      echo 'A Evolution recusou a chave. Ela reiniciou com a chave nova'
+      echo 'há pouco — espere uns segundos e rode este script de novo.'
+      echo 'Se insistir, veja se o container subiu:  docker compose ps'
+      ;;
+    000|502|503|504)
+      echo 'A Evolution não respondeu. Provavelmente ainda está subindo,'
+      echo 'ou caiu. Veja:'
+      echo '    docker compose ps'
+      echo '    docker compose logs --tail=40 evolution'
+      ;;
+    200)
+      echo 'Ela respondeu, mas sem nenhuma instância na lista.'
+      echo "Abra https://${DOMINIO}/manager, crie uma instância e escaneie"
+      echo 'o QR code com o celular do chip.'
+      ;;
+    *)
+      echo 'Resposta inesperada.'
+      ;;
+  esac
   echo
-  echo 'Resposta crua da Evolution, caso ajude:'
-  printf '%s\n' "${RESPOSTA:0:500}"
+  echo 'Resposta crua:'
+  printf '%s\n' "${RESPOSTA:0:600}"
   exit 1
 fi
 verde "Instância: ${INSTANCIA}"

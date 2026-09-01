@@ -202,6 +202,40 @@ azul '== 6/7  Publicando no Supabase =='
 
 cd ..
 
+# "Not Found" do Supabase quer dizer projeto inexistente PARA ESTE
+# TOKEN — ref errado ou token de outra conta. Confere antes, e mostra
+# a lista, em vez de deixar a mensagem críptica na cara da pessoa.
+echo 'Conferindo o acesso ao projeto...'
+PROJETOS=$(supabase projects list --output json 2>/dev/null || echo '[]')
+
+if ! printf '%s' "$PROJETOS" | grep -q "$PROJECT_REF"; then
+  vermelho "O token não enxerga o projeto ${PROJECT_REF}."
+  echo
+  VISIVEIS=$(printf '%s' "$PROJETOS" | python3 -c '
+import json, sys
+try:
+    d = json.load(sys.stdin)
+except Exception:
+    d = []
+if not d:
+    print("   (nenhum)")
+for p in d:
+    if isinstance(p, dict):
+        print("   {:<24} {}".format(p.get("id", "?"), p.get("name", "")))
+' 2>/dev/null || echo '   (não consegui listar)')
+
+  echo 'Projetos que este token enxerga:'
+  printf '%s\n' "$VISIVEIS"
+  echo
+  echo 'Duas causas possíveis:'
+  echo '  1. O ref está errado — copie da URL do dashboard, o trecho'
+  echo '     depois de /project/'
+  echo '  2. O token é de outra conta — gere um novo logado na conta'
+  echo '     dona do projeto, em supabase.com/dashboard/account/tokens'
+  exit 1
+fi
+verde 'Projeto encontrado.'
+
 echo 'Segredos...'
 supabase secrets set --project-ref "$PROJECT_REF" \
   "EVOLUTION_URL=https://${DOMINIO}" \

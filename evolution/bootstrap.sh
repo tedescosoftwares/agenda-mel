@@ -147,6 +147,40 @@ fi
 # ---------------------------------------------------------------
 azul '== 5/6  Subindo a stack =='
 
+# As quatro imagens descompactadas passam de 2 GB. O volume padrão da
+# EC2 tem 8 GB, e o swap acima já come 2 — dá para acabar no meio do
+# pull, que falha com "no space left on device" depois de baixar tudo.
+LIVRE_MB=$(df -Pm / | awk 'NR==2{print $4}')
+echo "Espaço livre em /: ${LIVRE_MB} MB"
+
+if [ "$LIVRE_MB" -lt 3000 ]; then
+  echo
+  vermelho "Pouco espaço: as imagens precisam de uns 3 GB e há ${LIVRE_MB} MB."
+  echo
+  DISCO=$(lsblk -no PKNAME "$(findmnt -no SOURCE /)" 2>/dev/null | head -1)
+  PARTICAO=$(findmnt -no SOURCE / 2>/dev/null)
+  echo 'Aumente o volume — dá para fazer com a máquina ligada:'
+  echo
+  echo '  1. Console da AWS: EC2 -> Volumes -> o volume desta instância'
+  echo '     -> Actions -> Modify volume -> Size: 20 -> Modify'
+  echo '     (espere sair de "optimizing")'
+  echo
+  echo '  2. Aqui, avise o Linux que o disco cresceu:'
+  echo
+  if [ -n "$DISCO" ]; then
+    NUM=$(echo "$PARTICAO" | grep -o '[0-9]*$')
+    echo "       sudo growpart /dev/${DISCO} ${NUM}"
+    echo "       sudo resize2fs ${PARTICAO}"
+  else
+    echo '       sudo growpart /dev/nvme0n1 1'
+    echo '       sudo resize2fs /dev/nvme0n1p1'
+  fi
+  echo
+  echo '  3. Rode este script de novo.'
+  echo
+  exit 1
+fi
+
 docker compose pull -q 2>/dev/null || docker compose pull
 docker compose up -d
 

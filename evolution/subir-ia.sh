@@ -62,9 +62,10 @@ if [ -z "$SUGERIDO" ]; then
   vermelho "Com ${RAM_MB} MB de RAM não dá para rodar modelo nenhum junto com a Evolution."
   echo
   echo 'O que fazer, em ordem de preferência:'
-  echo '  a) Trocar a instância por uma com 8 GB (t3.large / t3a.large / m7g.large).'
-  echo '     Console AWS -> EC2 -> Instances -> Stop -> Actions -> Instance settings'
-  echo '     -> Change instance type -> Start. O disco e o Elastic IP continuam.'
+  echo '  a) Trocar a instância por uma com 8 GB de RAM.'
+  echo '     NÃO faça isso na mão: rode  ./trocar-de-maquina.sh antes'
+  echo '     Ele confere o que quebra na troca (IP público, arquitetura) e'
+  echo '     te dá o passo a passo certo para esta máquina.'
   echo '  b) Usar um modelo por API (Gemini e Groq têm camada gratuita).'
   echo '  c) Ficar no menu numérico, que não usa modelo nenhum.'
   echo

@@ -303,10 +303,30 @@ cd agenda-mel/evolution && git pull
 ./crescer-disco.sh
 ```
 
-**2. Trocar a instância, se precisar de RAM.** EC2 → Instances → Stop →
-Actions → Instance settings → Change instance type → Start. O disco e o
-Elastic IP continuam os mesmos; o IP público muda se você não tiver
-Elastic IP.
+**2. Trocar a instância, se precisar de RAM.** Não faça na mão. Rode antes:
+
+```bash
+./trocar-de-maquina.sh antes
+```
+
+Ele anota IP, tipo, RAM e disco, confere a arquitetura (uma máquina x86 não
+vira Graviton trocando o tipo — o disco não dá boot) e imprime o passo a passo
+já com os números desta máquina.
+
+O que mais quebra nessa troca é o IP: **parar a instância troca o IP público
+se você não tiver Elastic IP**, e o seu domínio aponta para ele. Sem domínio
+resolvendo, o certificado não renova, o webhook do Supabase para de chegar e o
+WhatsApp cai. Aloque um Elastic IP antes (é grátis enquanto associado a uma
+instância ligada).
+
+Depois que a máquina voltar:
+
+```bash
+./trocar-de-maquina.sh depois
+```
+
+Compara com o retrato, avisa se o IP mudou (com o comando do DuckDNS pronto),
+sobe os containers e roda o diagnóstico.
 
 **3. Subir o modelo.**
 

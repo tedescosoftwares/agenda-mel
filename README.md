@@ -175,6 +175,7 @@ supabase/
   026_botao_so_na_oficial.sql # botão nativo desligado: não desenha fora da API oficial
   027_estilo_do_botao.sql  # estilos de opção tocável: texto, enquete, nativo
   028_primeiro_voto_vale.sql # texto por padrão; na enquete o primeiro voto é o que vale
+  029_texto_bonito.sql     # texto do WhatsApp por tipo: emoji, negrito e link da agenda
   setup_completo.sql       # TODOS os arquivos acima juntos — é este que se roda
   functions/               # Edge Functions: envio e webhook (veja o LEIAME de lá)
 evolution/                 # stack do WhatsApp automático: compose, Caddy e o passo a passo
@@ -239,6 +240,8 @@ where slug = 'slug-dela';
 - [x] Resposta pelo WhatsApp: "Responda 1 ou 2" por padrão (funciona em todo
       aparelho); enquete e botão nativo como estilos opcionais — botão de
       verdade só a API oficial desenha
+- [x] Mensagem de WhatsApp escrita por tipo, com emoji, negrito e o link da
+      agenda da profissional (o aviso dentro do app continua seco)
 - [ ] Publicar (Vercel/Netlify) e instalar como PWA no celular
 - [ ] Notificações (lembrete de horário)
 - [ ] Migrar depois para React Native / Expo reaproveitando o Supabase

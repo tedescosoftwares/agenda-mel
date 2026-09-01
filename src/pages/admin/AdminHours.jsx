@@ -16,10 +16,16 @@ const DIAS = [
 export default function AdminHours() {
   const { salao } = useAuth()
   const [hours, setHours] = useState([])
+  const [endereco, setEndereco] = useState('')
+  const [salvandoUrl, setSalvandoUrl] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [info, setInfo] = useState('')
   const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    setEndereco(salao?.app_url ?? '')
+  }, [salao])
 
   useEffect(() => {
     if (!salao?.id) return
@@ -87,6 +93,21 @@ export default function AdminHours() {
     setInfo('Horários salvos.')
   }
 
+  async function salvarEndereco(e) {
+    e.preventDefault()
+    if (!salao?.id) return
+    setSalvandoUrl(true)
+    setError('')
+    const limpo = endereco.trim().replace(/\/+$/, '')
+    const { error: erro } = await supabase
+      .from('salons')
+      .update({ app_url: limpo || null })
+      .eq('id', salao.id)
+    setSalvandoUrl(false)
+    if (erro) setError('Não deu para salvar o endereço: ' + erro.message)
+    else setInfo(limpo ? 'Endereço salvo. As mensagens já vão com o link.' : 'Endereço apagado.')
+  }
+
   return (
     <AdminShell>
       <div className="page-head">
@@ -101,6 +122,27 @@ export default function AdminHours() {
 
       {error && <div className="alert alert-error">{error}</div>}
       {info && <div className="alert alert-info">{info}</div>}
+
+      <form className="card form endereco-app" onSubmit={salvarEndereco}>
+        <label>
+          Endereço do app na internet
+          <input
+            type="url"
+            value={endereco}
+            onChange={(e) => setEndereco(e.target.value)}
+            placeholder="https://agendamel.vercel.app"
+            inputMode="url"
+          />
+        </label>
+        <p className="muted nota-endereco">
+          É o link que vai nas mensagens de WhatsApp para a cliente abrir a
+          agenda. Enquanto estiver vazio, as mensagens saem sem link — melhor
+          do que mandar um endereço que só funciona na sua máquina.
+        </p>
+        <button className="btn btn-primary" type="submit" disabled={salvandoUrl}>
+          {salvandoUrl ? 'Salvando…' : 'Salvar endereço'}
+        </button>
+      </form>
 
       {loading ? (
         <p className="muted">Carregando…</p>

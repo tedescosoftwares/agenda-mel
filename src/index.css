@@ -3173,6 +3173,17 @@ a.prof-row:hover,
   border-style: dashed;
 }
 
+/* o endereço público do app, na tela de horários */
+.endereco-app {
+  margin-bottom: 1.6rem;
+}
+
+.nota-endereco {
+  margin: -0.2rem 0 0.2rem;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
 /* ============================================================
    TELAS ESTREITAS
    ============================================================ */

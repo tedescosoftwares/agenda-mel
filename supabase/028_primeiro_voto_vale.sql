@@ -54,6 +54,7 @@ revoke execute on function public.canal_manda_botao(uuid)
   from public, anon, authenticated;
 
 -- 2. O primeiro voto vale --------------------------------------------------
+-- (o 029 recria enfileirar_whatsapp; nada a derrubar aqui)
 
 alter table public.whatsapp_inbox
   add column if not exists enquete_id text;

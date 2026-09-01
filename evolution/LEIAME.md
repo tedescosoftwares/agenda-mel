@@ -373,6 +373,13 @@ Ele mede a máquina, recusa subir se não couber, escolhe o modelo, gera o
 profile do Compose, ou seja: `docker compose up -d` normal **não** sobe o
 modelo. Só `docker compose --profile ia up -d`.
 
+**Detalhe que muda tudo: desligue o "pensamento".** O Qwen3 é um modelo de
+raciocínio e vem com isso ligado de fábrica — antes de responder, ele escreve
+centenas de tokens de monólogo interno. Numa CPU de 2 núcleos isso transforma
+uma resposta de 5 segundos em vários minutos. Toda chamada tem que mandar
+`"think": false` no corpo do JSON. Os scripts daqui já mandam; se você escrever
+outro cliente, não esqueça. Em modelo que não pensa, o campo é ignorado.
+
 **4. Ver se ele serve.**
 
 ```bash

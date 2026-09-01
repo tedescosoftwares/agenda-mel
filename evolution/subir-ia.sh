@@ -198,18 +198,34 @@ echo "IA_MODELO=${MODELO}" >> .env
 
 # ---------------------------------------------------------------
 azul '== 6/6  Perguntando de verdade, em português =='
-echo 'A PRIMEIRA resposta demora: o modelo precisa sair do disco e entrar na'
-echo 'RAM antes de escrever a primeira palavra. Em CPU isso leva de 30 s a 2'
-echo 'minutos. Não digite nada, só espere — as próximas são bem mais rápidas,'
-echo 'porque ele fica carregado por 10 minutos.'
+echo 'Vai pelo mesmo caminho que o Supabase vai usar: HTTPS, pelo Caddy, com'
+echo 'token. Assim este teste prova a corrente inteira, não só o container.'
+echo
+echo 'A PRIMEIRA resposta demora mais: o modelo precisa sair do disco e entrar'
+echo 'na RAM antes da primeira palavra. Não digite nada, só espere.'
 echo
 
+command -v jq >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y jq >/dev/null; }
+
+# think:false é ESSENCIAL. O Qwen3 é um modelo de raciocínio e vem com o
+# "pensamento" ligado de fábrica: antes de responder ele escreve um monólogo
+# interno de centenas de tokens. A 3 tokens/s numa CPU de 2 núcleos, isso
+# transforma uma resposta de 5 s em vários minutos — e para classificar
+# "a cliente quer marcar ou desmarcar?" o raciocínio não acrescenta nada.
+CORPO=$(jq -n --arg m "$MODELO" '{
+  model: $m, stream: false, think: false,
+  options: { temperature: 0, num_predict: 80 },
+  messages: [ { role: "user",
+    content: "Responda em uma frase curta, em português do Brasil: o que é um agendamento?" } ]
+}')
+
 INICIO=$(date +%s)
-# timeout para não ficar pendurado para sempre se algo travar;
-# 5 min é folgado até para a primeira carga numa máquina lenta
-RESPOSTA=$(timeout 300 docker exec evolution_ollama ollama run "$MODELO" \
-  'Responda em uma frase curta, em português do Brasil: o que é um agendamento?' 2>/dev/null || true)
+BRUTO=$(curl -s --max-time 300 "https://${DOMINIO}/ia/api/chat" \
+          -H "Authorization: Bearer ${IA_TOKEN}" \
+          -H 'Content-Type: application/json' \
+          -d "$CORPO")
 FIM=$(date +%s)
+RESPOSTA=$(echo "$BRUTO" | jq -r '.message.content // empty' 2>/dev/null)
 
 echo
 echo "  resposta: ${RESPOSTA}"
@@ -217,11 +233,14 @@ echo "  levou:    $((FIM - INICIO)) s"
 echo
 
 if [ -z "$RESPOSTA" ]; then
-  vermelho 'Não veio resposta em 5 minutos.'
-  echo 'Veja o que aconteceu:'
+  vermelho 'Não veio resposta.'
+  echo "  o que voltou: $(echo "$BRUTO" | head -c 300)"
+  echo
+  echo 'Para investigar:'
+  echo '  docker exec evolution_ollama ollama ps   # o modelo está carregado?'
   echo '  docker logs --tail 50 evolution_ollama'
-  echo '  free -m          # o modelo coube na RAM?'
-  echo '  dmesg | tail     # o kernel matou alguém por falta de memória?'
+  echo '  free -m                                  # coube na RAM?'
+  echo '  dmesg | tail                             # o kernel matou alguém?'
   exit 1
 fi
 

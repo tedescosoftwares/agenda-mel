@@ -84,9 +84,15 @@ while IFS='|' read -r FRASE ESP_INT ESP_SRV ESP_DIA; do
   [ -z "$FRASE" ] && continue
   TOTAL=$((TOTAL + 1))
 
+  # think:false porque o Qwen3 é modelo de raciocínio e vem pensando por
+  # padrão: centenas de tokens de monólogo interno antes da resposta. Numa
+  # CPU de 2 núcleos isso vira minutos por mensagem, e para decidir se a
+  # cliente quer marcar ou desmarcar o raciocínio não acrescenta nada.
+  # Em modelo que não pensa, o campo é simplesmente ignorado.
   CORPO=$(jq -n --arg m "$IA_MODELO" --arg s "$SISTEMA" --arg u "$FRASE" --argjson f "$ESQUEMA" '{
     model: $m,
     stream: false,
+    think: false,
     format: $f,
     options: { temperature: 0, num_predict: 120 },
     messages: [ {role:"system", content:$s}, {role:"user", content:$u} ]

@@ -283,7 +283,23 @@ sobra é o que o modelo tem para trabalhar.
 | 8 GB | `qwen3:4b` | é o primeiro tamanho que atende cliente decentemente |
 | 16 GB | `qwen3:8b` | bom, mas aí a conta da AWS já passou do custo da API |
 
-Disco: uns 3 GB livres além do tamanho do modelo.
+Disco: aqui a surpresa. O arquivo do modelo é a parte pequena — a imagem do
+Ollama passa de **10 GB** descompactada, porque traz as bibliotecas de CUDA,
+ROCm e MLX para acelerar em GPU. Numa VPS sem placa de vídeo nada disso roda,
+mas vai para o disco do mesmo jeito, e não existe tag só-CPU publicada (as
+variantes são a padrão, 3,4 GB comprimidos com CUDA, e a `-rocm`, 1,4 GB para
+GPU AMD).
+
+| Item | Disco |
+|---|---|
+| Imagem do Ollama | ~12 GB |
+| Modelo `qwen3:4b` | ~3 GB |
+| Swap de 4 GB | 4 GB |
+| Folga | 2 GB |
+| **Total livre necessário** | **~20 GB** |
+
+O `subir-ia.sh` faz essa conta e recusa antes de baixar, em vez de encher o
+disco no meio do download.
 
 ### Instância burstable: o que muda na prática
 

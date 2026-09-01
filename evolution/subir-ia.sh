@@ -48,14 +48,22 @@ echo "  Disco livre ... ${DISCO_LIVRE_GB} GB"
 # ---------------------------------------------------------------
 azul '== 2/6  Isso cabe aqui? =='
 
-# O modelo é medido em RAM, não em disco. Disco só guarda o arquivo.
-# A conta é: tamanho do modelo + ~800 MB de contexto e overhead,
-# e ainda tem que sobrar o que a Evolution + Postgres + Redis usam
-# (uns 1,2 GB em regime).
-if   [ "$RAM_MB" -ge 15000 ]; then SUGERIDO='qwen3:8b';    PESO_GB=6
-elif [ "$RAM_MB" -ge 7000  ]; then SUGERIDO='qwen3:4b';    PESO_GB=4
-elif [ "$RAM_MB" -ge 3500  ]; then SUGERIDO='qwen3:1.7b';  PESO_GB=2
-else                               SUGERIDO='';            PESO_GB=0
+# RAM e disco são contas separadas.
+#
+# RAM: o modelo fica carregado inteiro enquanto responde, e ainda tem que
+# sobrar o que a Evolution + Postgres + Redis usam (uns 1,2 GB em regime).
+#
+# DISCO: o arquivo do modelo é a parte PEQUENA. A imagem do Ollama traz as
+# bibliotecas de CUDA, ROCm e MLX — aceleração de GPU que esta máquina nunca
+# vai usar — e passa de 10 GB descompactada. Não existe tag só-CPU: as únicas
+# variantes publicadas são a padrão (3,4 GB comprimidos, com CUDA) e a -rocm
+# (1,4 GB, para GPU AMD). Por isso o orçamento de disco parece absurdo para
+# um modelo de 2,6 GB: quase tudo é imagem.
+IMAGEM_GB=12
+if   [ "$RAM_MB" -ge 15000 ]; then SUGERIDO='qwen3:8b';    MODELO_GB=6
+elif [ "$RAM_MB" -ge 7000  ]; then SUGERIDO='qwen3:4b';    MODELO_GB=3
+elif [ "$RAM_MB" -ge 3500  ]; then SUGERIDO='qwen3:1.7b';  MODELO_GB=2
+else                               SUGERIDO='';            MODELO_GB=0
 fi
 
 if [ -z "$SUGERIDO" ]; then
@@ -77,9 +85,33 @@ MODELO="${IA_MODELO:-$SUGERIDO}"
 echo "  Modelo escolhido: ${MODELO}"
 [ "$MODELO" != "$SUGERIDO" ] && amarelo "  (veio do IA_MODELO no .env; pela RAM eu sugeriria ${SUGERIDO})"
 
-if [ "$DISCO_LIVRE_GB" -lt $((PESO_GB + 3)) ]; then
-  vermelho "Disco insuficiente: ${DISCO_LIVRE_GB} GB livres, preciso de uns $((PESO_GB + 3)) GB."
-  echo 'Rode o ./crescer-disco.sh (depois de aumentar o volume no console da AWS).'
+# O swapfile é criado logo abaixo e ocupa disco, então entra no orçamento
+# antes de decidir se cabe — senão a conta fecha aqui e estoura no pull.
+SWAP_A_CRIAR_GB=0
+[ "$SWAP_MB" -lt 4000 ] && SWAP_A_CRIAR_GB=$(( 4 - (SWAP_MB / 1024) ))
+[ "$SWAP_A_CRIAR_GB" -lt 0 ] && SWAP_A_CRIAR_GB=0
+
+PRECISA_GB=$((IMAGEM_GB + MODELO_GB + SWAP_A_CRIAR_GB + 2))
+
+echo "  Disco necessário: ${PRECISA_GB} GB"
+echo "    imagem do Ollama ..... ${IMAGEM_GB} GB (CUDA/ROCm que não serão usados)"
+echo "    modelo ${MODELO} ..... ${MODELO_GB} GB"
+[ "$SWAP_A_CRIAR_GB" -gt 0 ] && echo "    swap a criar ......... ${SWAP_A_CRIAR_GB} GB"
+echo "    folga ................ 2 GB"
+
+if [ "$DISCO_LIVRE_GB" -lt "$PRECISA_GB" ]; then
+  vermelho "Disco insuficiente: ${DISCO_LIVRE_GB} GB livres, preciso de ${PRECISA_GB} GB."
+  echo
+  echo 'Para resolver:'
+  echo '  1. Console AWS -> EC2 -> Volumes -> marque o volume -> Actions ->'
+  echo "     Modify volume -> aumente o Size em pelo menos $((PRECISA_GB - DISCO_LIVRE_GB + 5)) GB -> Modify."
+  echo '     Pode fazer com a máquina ligada. Espere sair de "optimizing".'
+  echo '  2. Aqui:  ./crescer-disco.sh'
+  echo '  3. E rode este script de novo.'
+  echo
+  echo 'Se sobrou lixo de uma tentativa que falhou no meio, isto devolve espaço'
+  echo '(não mexe nos volumes, então a Evolution e o WhatsApp ficam intactos):'
+  echo '  docker system prune -af'
   exit 1
 fi
 

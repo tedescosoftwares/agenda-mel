@@ -85,7 +85,9 @@ services:
   # modelo briga por memória com o Postgres da Evolution e derruba
   # o WhatsApp. O subir-ia.sh confere isso antes de deixar você subir.
   ollama:
-    image: ollama/ollama:latest
+    # versão fixada pelo mesmo motivo da Evolution: esta imagem passa de
+    # 10 GB no disco e um :latest novo pode não caber mais
+    image: ollama/ollama:0.33.2
     container_name: evolution_ollama
     restart: always
     profiles: ['ia']

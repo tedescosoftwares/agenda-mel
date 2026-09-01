@@ -146,6 +146,25 @@ function textoDaMensagem(m: any): string {
   return ''
 }
 
+// O voto na enquete chega como pollUpdateMessage. A Evolution já
+// descriptografou e pôs os NOMES das opções escolhidas em
+// vote.selectedOptions, e a lista completa em pollUpdates (na ordem em
+// que a enquete foi criada). Traduzimos para "1"/"2" pela POSIÇÃO da
+// opção, para o resto do sistema não depender do texto do botão.
+function votoDaEnquete(d: any): string {
+  const escolhidas: string[] = d?.message?.pollUpdateMessage?.vote?.selectedOptions ?? []
+  if (!escolhidas.length) return ''
+
+  const opcoes: Array<{ name?: string }> = d?.pollUpdates ?? []
+  if (opcoes.length) {
+    const idx = opcoes.findIndex((o) => o?.name && escolhidas.includes(o.name))
+    if (idx >= 0) return String(idx + 1)
+  }
+  // sem a lista ordenada, manda o texto da opção — o banco entende
+  // "confirmar" e "preciso remarcar" também
+  return String(escolhidas[0])
+}
+
 function lerEvolution(corpo: any): { mensagens: Recebida[]; status: Status[] } {
   const mensagens: Recebida[] = []
   const status: Status[] = []
@@ -158,7 +177,10 @@ function lerEvolution(corpo: any): { mensagens: Recebida[]; status: Status[] } {
       const jid: string = d?.key?.remoteJid ?? ''
       // grupo não interessa
       if (jid && !jid.includes('@g.us')) {
-        const texto = textoDaMensagem(d?.message)
+        const texto =
+          d?.messageType === 'pollUpdateMessage'
+            ? votoDaEnquete(d)
+            : textoDaMensagem(d?.message)
         if (texto) {
           mensagens.push({
             telefone: jid.split('@')[0],

@@ -172,6 +172,8 @@ supabase/
   023_whatsapp.sql         # fila de saída, canal por salão, janela de silêncio
   024_resposta_whatsapp.sql # 1 confirma, 2 cancela, SAIR desliga
   025_botoes.sql           # botão de resposta, com o texto como plano B
+  026_botao_so_na_oficial.sql # botão nativo desligado: não desenha fora da API oficial
+  027_estilo_do_botao.sql  # enquete como botão — renderiza em qualquer aparelho
   setup_completo.sql       # TODOS os arquivos acima juntos — é este que se roda
   functions/               # Edge Functions: envio e webhook (veja o LEIAME de lá)
 evolution/                 # stack do WhatsApp automático: compose, Caddy e o passo a passo
@@ -233,8 +235,8 @@ where slug = 'slug-dela';
       graça), Evolution (chip próprio) ou Cloud API oficial
 - [x] A resposta da cliente mexe na agenda: 1 confirma, 2 cancela e libera a
       vaga para a fila de espera, SAIR desliga os avisos
-- [x] Botão de "Confirmar" e "Preciso remarcar" no lugar de digitar — com
-      queda automática para texto onde o WhatsApp não aceita botão
+- [x] "Confirmar" / "Preciso remarcar" tocáveis, como enquete do WhatsApp —
+      renderiza em qualquer aparelho; botão nativo fica para a API oficial
 - [ ] Publicar (Vercel/Netlify) e instalar como PWA no celular
 - [ ] Notificações (lembrete de horário)
 - [ ] Migrar depois para React Native / Expo reaproveitando o Supabase

@@ -6,11 +6,18 @@
 
 export type Botao = { type: 'reply'; displayText: string; id: string }
 
+export type EstiloBotao = 'enquete' | 'lista' | 'nativo'
+
 export type Envio = {
   telefone: string // 5513998710002
   titulo?: string | null
   corpo: string
   botoes?: Botao[] | null
+  // como as opções tocáveis são desenhadas pela Evolution:
+  //   enquete — poll do WhatsApp, recurso de consumidor, renderiza sempre
+  //   lista   — listMessage, instável fora da API oficial
+  //   nativo  — nativeFlow buttons, só renderiza na Cloud API
+  estilo?: EstiloBotao | null
   identificador: string | null // instância (evolution) ou phone_number_id (cloud)
 }
 
@@ -57,23 +64,57 @@ export async function enviarPelaEvolution(e: Envio): Promise<Resultado> {
   }
 
   try {
-    // O banco só entrega botoes aqui se o salão tiver ligado de
-    // propósito — nasce desligado. Motivo: a Evolution aceita, devolve
-    // 200 e o WhatsApp entrega, mas o aparelho de quem recebe mostra
-    // "Não foi possível carregar a mensagem" e o conteúdo se perde.
-    // Como a API respondeu sucesso, não há erro para detectar aqui.
-    if (e.botoes && e.botoes.length > 0) {
-      const r = await bater('sendButtons', {
-        number: e.telefone,
-        title: (e.titulo ?? '').slice(0, 60) || 'Agenda',
-        description: e.corpo,
-        buttons: e.botoes.slice(0, 3),
-        delay: 1200,
-      })
+    const opcoes = (e.botoes ?? []).slice(0, 3)
+
+    if (opcoes.length > 0) {
+      const estilo = e.estilo ?? 'enquete'
+      let r: Response | null = null
+
+      if (estilo === 'enquete') {
+        // Enquete é recurso de consumidor do WhatsApp: renderiza em
+        // qualquer aparelho, sem nativeFlow, sem viewOnce. O voto volta
+        // descriptografado pela própria Evolution (pollUpdateMessage
+        // com vote.selectedOptions = nomes das opções).
+        // Limite do WhatsApp: pergunta até 255 caracteres.
+        r = await bater('sendPoll', {
+          number: e.telefone,
+          name: textoInteiro(e).slice(0, 255),
+          selectableCount: 1,
+          values: opcoes.map((b) => b.displayText.slice(0, 100)),
+          delay: 1200,
+        })
+      } else if (estilo === 'lista') {
+        r = await bater('sendList', {
+          number: e.telefone,
+          title: (e.titulo ?? '').slice(0, 60) || 'Agenda',
+          description: e.corpo,
+          buttonText: 'Responder',
+          sections: [
+            {
+              title: 'Escolha uma opção',
+              rows: opcoes.map((b) => ({ title: b.displayText, rowId: b.id, description: '' })),
+            },
+          ],
+          delay: 1200,
+        })
+      } else {
+        // nativo: a Evolution aceita e devolve 200, mas em cliente
+        // não-oficial o aparelho mostra "Não foi possível carregar a
+        // mensagem". Fica disponível para quem quiser experimentar.
+        r = await bater('sendButtons', {
+          number: e.telefone,
+          title: (e.titulo ?? '').slice(0, 60) || 'Agenda',
+          description: e.corpo,
+          buttons: opcoes,
+          delay: 1200,
+        })
+      }
+
       if (r.ok) {
         return { ok: true, providerId: lerId(await r.text()) }
       }
-      console.warn('sendButtons recusado, indo de texto:', r.status, (await r.text()).slice(0, 200))
+      // a Evolution recusou o formato: cai para o texto, sem perder a mensagem
+      console.warn(`estilo ${estilo} recusado, indo de texto:`, r.status, (await r.text()).slice(0, 200))
     }
 
     const r = await bater('sendText', {

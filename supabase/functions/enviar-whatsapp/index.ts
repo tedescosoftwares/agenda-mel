@@ -48,6 +48,7 @@ Deno.serve(async (req) => {
       titulo: m.titulo,
       corpo: m.corpo,
       botoes: m.botoes,
+      estilo: m.estilo_botao,
       identificador: m.identificador,
     })
 

@@ -105,6 +105,36 @@ curl -X POST https://SEU-PROJETO.supabase.co/functions/v1/enviar-whatsapp \
 
 ---
 
+## Opções tocáveis ("botão")
+
+Botão interativo de verdade (`nativeFlowMessage`) só renderiza na API
+oficial. Pela Evolution o WhatsApp entrega, mas o aparelho mostra "Não foi
+possível carregar a mensagem" e o conteúdo se perde — sem erro na API.
+
+O que renderiza em **qualquer** aparelho é a **enquete**, recurso de
+consumidor do WhatsApp:
+
+```
+Amanhã tem horário marcado
+Design de sobrancelhas com Ana Paula dia 02/09 às 10:30.
+
+ ○ Confirmar
+ ○ Preciso remarcar
+```
+
+O voto volta descriptografado pela própria Evolution, e o webhook traduz
+para "1"/"2" pela posição da opção. Cada salão escolhe em
+`whatsapp_channels.estilo_botao`:
+
+| estilo | o que sai | renderiza? |
+| --- | --- | --- |
+| `enquete` (padrão) | poll do WhatsApp | em todo aparelho |
+| `lista` | listMessage | instável fora da API oficial |
+| `nativo` | nativeFlow buttons | só na Cloud API |
+
+Para testar as três no seu celular sem passar pelo app:
+`evolution/bancada.sh SEU_NUMERO`.
+
 ## O que o banco garante, em qualquer canal
 
 - **Não manda para quem desligou.** `accepts_reminders` no perfil, e o

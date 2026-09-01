@@ -28,6 +28,12 @@ chave de API viaja em texto puro pela internet.
 Tem domínio? Crie um registro **A** apontando para o IP público da EC2
 (ex.: `wa.seudominio.com.br` → `18.230.x.x`).
 
+> **Aloque um Elastic IP antes.** O IP público de uma EC2 muda toda vez
+> que a instância é parada e ligada de novo — e aí o domínio aponta para
+> o vazio, o certificado quebra e o Supabase não alcança mais a
+> Evolution. Elastic IP anexado à instância é gratuito e resolve isso
+> para sempre. EC2 → Elastic IPs → Allocate → Associate.
+
 Não tem? [duckdns.org](https://duckdns.org) dá um de graça em dois
 minutos, e funciona com Let's Encrypt.
 
@@ -53,7 +59,29 @@ o Caddy, por dentro do Docker.
 
 ---
 
-## 2. Instalar o Docker
+## 2. O caminho curto: um script só
+
+Se preferir não digitar nada, o `bootstrap.sh` faz os passos 2 e 3
+inteiros — Docker, swap, chaves, stack no ar — e no fim imprime tudo
+que você precisa colar no Supabase:
+
+```bash
+git clone https://github.com/tedescosoftwares/agenda-mel.git
+cd agenda-mel/evolution
+./bootstrap.sh
+```
+
+Ele pergunta só o domínio e o e-mail; as chaves ele gera sozinho. Se
+algo falhar, ele mesmo imprime os logs e aponta os suspeitos.
+
+Pode rodar de novo à vontade: o que já está feito é pulado.
+
+O resto desta página é o mesmo caminho na mão, para quando você quiser
+entender ou consertar alguma coisa.
+
+---
+
+## 3. Instalar o Docker (na mão)
 
 Entre na máquina (`ssh -i sua-chave.pem ubuntu@SEU_IP`) e rode:
 
@@ -93,7 +121,7 @@ echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 
 ---
 
-## 3. Subir a Evolution
+## 4. Subir a Evolution
 
 ```bash
 git clone https://github.com/tedescosoftwares/agenda-mel.git
@@ -128,7 +156,7 @@ Respondeu JSON com a versão? Está no ar, com HTTPS.
 
 ---
 
-## 4. Conectar o WhatsApp
+## 5. Conectar o WhatsApp
 
 Abra **`https://SEU_DOMINIO/manager`** no navegador. Entre com a
 `API_KEY`.
@@ -142,7 +170,7 @@ ela é um aparelho vinculado a mais, como o WhatsApp Web.
 
 ---
 
-## 5. Apontar o webhook para o app
+## 6. Apontar o webhook para o app
 
 Ainda no Manager, na instância → **Webhook**. Ou por linha de comando:
 
@@ -167,7 +195,7 @@ Evolution não assina os eventos como a Meta faz.
 
 ---
 
-## 6. Ligar no Agenda Mel
+## 7. Ligar no Agenda Mel
 
 **Publique as funções** (da sua máquina, onde está o repo):
 
@@ -205,7 +233,7 @@ curl -X POST https://SEU-PROJETO.supabase.co/functions/v1/enviar-whatsapp \
 
 ---
 
-## 7. O teste que prova tudo
+## 8. O teste que prova tudo
 
 Com o seu celular pessoal como cliente:
 

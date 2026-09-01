@@ -100,11 +100,29 @@ fi
 case "$TIPO" in
   t2.*|t3.*|t3a.*|t4g.*)
     echo
-    amarelo "Atenção: ${TIPO} é instância burstable."
-    amarelo 'Gerar texto usa 100% da CPU o tempo todo. Você queima os créditos'
-    amarelo 'em pouco tempo e a AWS te limita ao baseline (uma fração de um vCPU),'
-    amarelo 'aí o modelo fica lento demais para conversar. Para uso de verdade,'
-    amarelo 'ligue Unlimited (cobra por hora extra) ou vá para m7g/c7g.'
+    amarelo "Nota sobre ${TIPO}: é instância burstable."
+    echo '  Ela usa 100% da CPU quando precisa, mas só sustenta uma média'
+    echo '  menor. Acima dessa média a AWS gasta um saldo de créditos; se o'
+    echo '  saldo zerar, ela te segura no baseline e tudo fica lento.'
+    echo
+    echo '  O que isso significa aqui: o modelo só usa CPU nos segundos em'
+    echo '  que está escrevendo a resposta. Parado, é 0% — ele nem fica'
+    echo '  carregado na memória depois de 10 minutos sem uso.'
+    case "$TIPO" in
+      *.large)
+        echo
+        echo '  A conta, para uma .large (36 créditos por hora, 2 vCPU):'
+        echo '    uma resposta de 5 s custa ~0,17 crédito'
+        echo '    dá ~200 respostas por hora sem o saldo nunca cair'
+        echo '    e ainda existe um banco de 864 créditos acumulados'
+        echo '  Um salão com 100 mensagens por DIA usa uns 2% disso.'
+        ;;
+    esac
+    echo
+    echo '  Onde morde de verdade: teste em rajada, ou várias clientes'
+    echo '  escrevendo ao mesmo tempo. T3 já vem em Unlimited de fábrica,'
+    echo '  que cobra por hora excedente em vez de te limitar. Confira em'
+    echo '  Actions -> Instance settings -> Change credit specification.'
     ;;
 esac
 

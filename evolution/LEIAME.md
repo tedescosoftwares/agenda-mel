@@ -285,12 +285,30 @@ sobra é o que o modelo tem para trabalhar.
 
 Disco: uns 3 GB livres além do tamanho do modelo.
 
-### Cuidado com instância burstable
+### Instância burstable: o que muda na prática
 
-`t2`, `t3`, `t3a` e `t4g` são burstable: elas rendem em rajada e depois a AWS
-te limita ao baseline. Gerar texto usa 100% da CPU o tempo inteiro, então os
-créditos acabam rápido e o modelo fica lento demais para conversar. Para uso
-real, ligue **Unlimited** (cobra por hora extra) ou vá para `m7g`/`c7g`.
+`t2`, `t3`, `t3a` e `t4g` são burstable. Elas usam 100% da CPU quando precisam,
+mas só sustentam uma média menor: acima dela a AWS gasta um saldo de créditos,
+e se o saldo zerar ela te segura no baseline e tudo fica lento.
+
+Isso assusta mais do que deveria. O modelo **só** usa CPU nos segundos em que
+está escrevendo a resposta; parado, é 0%, e depois de 10 minutos sem uso ele
+nem fica carregado na memória.
+
+A conta numa `t3.large` (36 créditos por hora, 2 vCPU, banco de até 864):
+
+| | |
+|---|---|
+| Uma resposta de 5 s | custa ~0,17 crédito |
+| Sustentável, sem o saldo cair | ~200 respostas por hora |
+| Um salão com 100 mensagens por dia | usa uns 2% disso |
+
+Onde morde de verdade é teste em rajada ou várias clientes escrevendo ao mesmo
+tempo. As T3 já vêm em **Unlimited** de fábrica, que cobra por hora excedente
+em vez de limitar — confira em Actions → Instance settings → Change credit
+specification. Se quiser CPU cheia sem crédito nenhum para acompanhar, o
+equivalente x86 é `m7i`/`c7i` (`m7g`/`c7g` são ARM e não servem para um disco
+x86 já instalado).
 
 ### Passo a passo
 

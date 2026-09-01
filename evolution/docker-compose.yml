@@ -12,7 +12,10 @@
 
 services:
   evolution:
-    image: atendai/evolution-api:latest
+    # o projeto mudou de namespace: era atendai/, agora é evoapicloud/.
+    # versão fixada de propósito — :latest hoje aponta para um release
+    # candidate, e um pull futuro te quebraria sem aviso
+    image: evoapicloud/evolution-api:v2.3.7
     container_name: evolution
     restart: always
     depends_on:
@@ -22,9 +25,8 @@ services:
       SERVER_URL: https://${DOMINIO}
       AUTHENTICATION_API_KEY: ${API_KEY}
 
-      DATABASE_ENABLED: 'true'
       DATABASE_PROVIDER: postgresql
-      DATABASE_CONNECTION_URI: postgresql://evolution:${POSTGRES_SENHA}@postgres:5432/evolution
+      DATABASE_CONNECTION_URI: postgresql://evolution:${POSTGRES_SENHA}@postgres:5432/evolution?schema=evolution_api
       DATABASE_CONNECTION_CLIENT_NAME: agendamel
       DATABASE_SAVE_DATA_INSTANCE: 'true'
       DATABASE_SAVE_DATA_NEW_MESSAGE: 'false'
@@ -36,6 +38,11 @@ services:
       CACHE_REDIS_URI: redis://redis:6379/6
       CACHE_REDIS_PREFIX_KEY: agendamel
       CACHE_LOCAL_ENABLED: 'false'
+
+      # é o nome que aparece em "Aparelhos conectados" no celular dela:
+      # melhor "Agenda Mel" do que "Evolution API"
+      CONFIG_SESSION_PHONE_CLIENT: Agenda Mel
+      CONFIG_SESSION_PHONE_NAME: Chrome
 
       # não apaga a instância sozinha se a sessão cair
       DEL_INSTANCE: 'false'

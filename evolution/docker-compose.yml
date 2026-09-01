@@ -73,6 +73,37 @@ services:
     volumes:
       - evolution_redis:/data
 
+  # ---------------------------------------------------------------
+  # Modelo de linguagem rodando na própria máquina (opcional).
+  #
+  # NÃO sobe junto com o resto: está atrás de um profile. Para ligar:
+  #     docker compose --profile ia up -d
+  # Para desligar e devolver a RAM:
+  #     docker compose --profile ia down
+  #
+  # Só faça isso depois de ler o LEIAME: numa instância pequena o
+  # modelo briga por memória com o Postgres da Evolution e derruba
+  # o WhatsApp. O subir-ia.sh confere isso antes de deixar você subir.
+  ollama:
+    image: ollama/ollama:latest
+    container_name: evolution_ollama
+    restart: always
+    profiles: ['ia']
+    environment:
+      # um modelo carregado por vez, e descarrega depois de 10 min
+      # parado — numa VPS a RAM é o recurso escasso, não o disco
+      OLLAMA_MAX_LOADED_MODELS: '1'
+      OLLAMA_NUM_PARALLEL: '1'
+      OLLAMA_KEEP_ALIVE: '10m'
+      OLLAMA_CONTEXT_LENGTH: '4096'
+    volumes:
+      - ollama_modelos:/root/.ollama
+    # 11434 NÃO é publicado: quem alcança é o Caddy, que exige o token.
+    # Ollama não tem autenticação nenhuma — publicar essa porta é
+    # entregar a máquina para qualquer um que varra a internet.
+    expose:
+      - '11434'
+
   caddy:
     image: caddy:2-alpine
     container_name: evolution_caddy
@@ -85,6 +116,8 @@ services:
     environment:
       DOMINIO: ${DOMINIO}
       EMAIL: ${EMAIL}
+      # usado só na rota /ia; fica vazio para quem não subiu o modelo
+      IA_TOKEN: ${IA_TOKEN:-}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
@@ -94,5 +127,6 @@ volumes:
   evolution_instances:
   evolution_pg:
   evolution_redis:
+  ollama_modelos:
   caddy_data:
   caddy_config:

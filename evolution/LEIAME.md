@@ -251,6 +251,105 @@ para quem estiver na fila de espera.
 
 ---
 
+## 9. Rodar um modelo de linguagem na própria máquina
+
+Isto é **opcional** e só faz sentido se você quiser que a cliente escreva
+solto no WhatsApp ("dá pra quinta de tarde?") em vez de responder um menu
+numérico. O menu numérico não usa modelo nenhum e não precisa de nada disto.
+
+### O que realmente limita
+
+Quase todo mundo acha que o problema é disco. Não é.
+
+| Recurso | Papel | Dá para aumentar? |
+|---|---|---|
+| **Disco** | guarda o arquivo do modelo | sim, fácil e barato — `./crescer-disco.sh` |
+| **RAM** | o modelo inteiro fica carregado nela enquanto responde | só trocando o tipo da instância |
+| **CPU** | é ela que gera o texto, token por token | só trocando o tipo da instância |
+
+Se faltar disco, o download falha. Se faltar RAM, o kernel mata a Evolution
+e o WhatsApp cai junto. Swap não substitui RAM aqui: evita o processo morrer,
+mas a resposta passa de segundos para minutos.
+
+### Quanto a máquina precisa ter
+
+A Evolution, o Postgres e o Redis já consomem uns 1,2 GB em regime. O que
+sobra é o que o modelo tem para trabalhar.
+
+| RAM total | Modelo que cabe | Como costuma se sair |
+|---|---|---|
+| 1 – 2 GB | nenhum | nem tente |
+| 4 GB | `qwen3:1.7b` | entende frase simples, erra com frequência |
+| 8 GB | `qwen3:4b` | é o primeiro tamanho que atende cliente decentemente |
+| 16 GB | `qwen3:8b` | bom, mas aí a conta da AWS já passou do custo da API |
+
+Disco: uns 3 GB livres além do tamanho do modelo.
+
+### Cuidado com instância burstable
+
+`t2`, `t3`, `t3a` e `t4g` são burstable: elas rendem em rajada e depois a AWS
+te limita ao baseline. Gerar texto usa 100% da CPU o tempo inteiro, então os
+créditos acabam rápido e o modelo fica lento demais para conversar. Para uso
+real, ligue **Unlimited** (cobra por hora extra) ou vá para `m7g`/`c7g`.
+
+### Passo a passo
+
+**1. Aumentar o disco, se precisar.** No console da AWS: EC2 → Volumes →
+marque o volume → Actions → Modify volume → troque o Size → Modify. Espere o
+State voltar de `optimizing` para `in-use`. Depois, na máquina:
+
+```bash
+cd agenda-mel/evolution && git pull
+./crescer-disco.sh
+```
+
+**2. Trocar a instância, se precisar de RAM.** EC2 → Instances → Stop →
+Actions → Instance settings → Change instance type → Start. O disco e o
+Elastic IP continuam os mesmos; o IP público muda se você não tiver
+Elastic IP.
+
+**3. Subir o modelo.**
+
+```bash
+./subir-ia.sh
+```
+
+Ele mede a máquina, recusa subir se não couber, escolhe o modelo, gera o
+`IA_TOKEN`, sobe o container e baixa o modelo. O container fica atrás de um
+profile do Compose, ou seja: `docker compose up -d` normal **não** sobe o
+modelo. Só `docker compose --profile ia up -d`.
+
+**4. Ver se ele serve.**
+
+```bash
+./bancada-ia.sh
+```
+
+Manda dez frases que uma cliente escreveria de verdade, com abreviação e sem
+acento, e mostra um placar. Este é o número que decide, não benchmark de
+internet. Abaixo de 8/10 ou acima de 6 segundos por resposta, não use.
+
+### Como o Supabase fala com ele
+
+Pela mesma porta 443 do Caddy, com token:
+
+```
+POST https://SEU-DOMINIO/ia/api/chat
+Authorization: Bearer <IA_TOKEN do .env>
+```
+
+A porta 11434 do Ollama **não** é publicada, de propósito: o Ollama não tem
+autenticação nenhuma, quem alcança a porta manda o que quiser na sua máquina.
+
+### Desligar e devolver a RAM
+
+```bash
+docker compose --profile ia down
+```
+
+O modelo baixado fica no volume `ollama_modelos`, então subir de novo é rápido.
+Para apagar de vez: `docker volume rm evolution_ollama_modelos`.
+
 ## Manutenção
 
 ```bash

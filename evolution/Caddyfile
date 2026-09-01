@@ -10,6 +10,30 @@
 		reverse_proxy evolution:8080
 	}
 
+	# o modelo local, quando estiver no ar (docker compose --profile ia up -d).
+	#
+	# O Ollama não tem autenticação nenhuma: quem chega na porta manda
+	# o que quiser. Por isso o token é conferido aqui, antes de repassar.
+	# NUNCA esvazie o IA_TOKEN com o modelo no ar: com token vazio a
+	# comparação vira "Bearer " e qualquer um passa. Para desligar,
+	# derrube o container:  docker compose --profile ia down
+	handle /ia/* {
+		@sem_token {
+			not header Authorization "Bearer {$IA_TOKEN}"
+		}
+		respond @sem_token "não autorizado" 401
+
+		# /ia/api/chat  ->  ollama:11434/api/chat
+		uri strip_prefix /ia
+		reverse_proxy ollama:11434 {
+			# geração em CPU é lenta: o padrão de 5 min do Caddy
+			# cortaria a resposta no meio numa máquina pequena
+			transport http {
+				response_header_timeout 10m
+			}
+		}
+	}
+
 	handle {
 		reverse_proxy evolution:8080
 	}

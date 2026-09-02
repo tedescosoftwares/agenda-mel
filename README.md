@@ -177,6 +177,9 @@ supabase/
   028_primeiro_voto_vale.sql # texto por padrão; na enquete o primeiro voto é o que vale
   029_texto_bonito.sql     # texto do WhatsApp por tipo: emoji, negrito e link da agenda
   setup_completo.sql       # TODOS os arquivos acima juntos — é este que se roda
+  atualizacao_020_em_diante.sql  # só da 020 em diante, para quem já tem banco
+  gerar.sh                 # regera os dois a partir das migrações
+  testar.sh                # prova que os dois caminhos chegam ao mesmo schema
   functions/               # Edge Functions: envio e webhook (veja o LEIAME de lá)
 evolution/                 # stack do WhatsApp automático: compose, Caddy e o passo a passo
 ```

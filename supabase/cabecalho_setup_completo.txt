@@ -1,0 +1,25 @@
+-- =============================================================
+--  AGENDA MEL — INSTALAÇÃO COMPLETA (arquivo único)
+--
+--  Cole ISTO INTEIRO no SQL Editor do Supabase e clique em Run.
+--  Uma vez só. Não precisa rodar mais nada.
+--
+--  • Funciona em banco vazio E em banco que já tem parte das coisas.
+--  • Pode rodar de novo quantas vezes quiser: nada é duplicado.
+--  • No fim, cria três contas de teste (senha agendamel123):
+--        admin@exemplo.com         → dona do salão
+--        profissional@exemplo.com  → Ana Paula
+--        cliente@exemplo.com       → Juliana
+--    e um salão de exemplo com serviços, horários, agendamentos e
+--    dois meses de histórico, para as telas de números e de
+--    "quem sumiu" já nascerem com o que mostrar.
+--
+--  O WhatsApp nasce no canal MANUAL: o app escreve a mensagem e a
+--  profissional envia com um toque, do WhatsApp dela. Não precisa
+--  configurar nada para isso funcionar. Ligar um número que manda
+--  sozinho é depois, e é trocar uma linha em whatsapp_channels.
+--
+--  Se der erro, me mande a mensagem inteira: cada bloco abaixo está
+--  marcado com o nome do arquivo de origem, então dá para achar na hora.
+-- =============================================================
+

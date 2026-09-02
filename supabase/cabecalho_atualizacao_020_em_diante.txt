@@ -1,0 +1,32 @@
+-- =============================================================
+--  AGENDA MEL — ATUALIZAÇÃO: da migração 020 em diante
+--
+--  Para quem JÁ tem o banco rodando e quer ficar em dia sem
+--  recomeçar. Cole ISTO INTEIRO no SQL Editor do Supabase e Run.
+--
+--  • Pode rodar de novo quantas vezes quiser: nada é duplicado.
+--  • Pode rodar mesmo que você já tenha aplicado algumas destas
+--    migrações soltas — as que já estão lá são ignoradas.
+--  • Se o seu banco é NOVO, não use este: use o setup_completo.sql,
+--    que traz tudo desde o começo.
+--
+--  O que entra aqui:
+--    020  números do salão: faturamento, ocupação, melhores clientes
+--    021  dois meses de histórico de exemplo, para as telas de
+--         números e de "quem sumiu" nascerem com o que mostrar
+--    022  conserta um furo de segurança: a trava que impedia a
+--         cliente de marcar o próprio horário como concluído estava
+--         desligada sem ninguém saber
+--    023  fila de mensagens de WhatsApp, com teto diário e horário
+--         de silêncio
+--    024  a resposta da cliente vira ação na agenda
+--    025  botões na mensagem
+--    026  botão só onde ele realmente aparece
+--    027  estilo do botão por canal
+--    028  primeiro voto vale, e enquete deixa de ser o padrão
+--    029  mensagem bonita, com emoji e link para a agenda
+--
+--  Se der erro, me mande a mensagem inteira: cada bloco abaixo está
+--  marcado com o nome do arquivo de origem, então dá para achar na hora.
+-- =============================================================
+

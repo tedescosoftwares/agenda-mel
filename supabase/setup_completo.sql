@@ -23,9 +23,6 @@
 --  marcado com o nome do arquivo de origem, então dá para achar na hora.
 -- =============================================================
 
-
-
-
 -- =============================================================
 -- >>> 001_schema.sql
 -- =============================================================
@@ -93,8 +90,6 @@ create trigger on_auth_user_created
 -- where id = (select id from auth.users where email = 'seu-email@exemplo.com');
 -- =============================================================
 
-
-
 -- =============================================================
 -- >>> 002_services.sql
 -- =============================================================
@@ -155,8 +150,6 @@ create policy "admin exclui servicos"
   to authenticated
   using (public.is_admin());
 
-
-
 -- =============================================================
 -- >>> 003_business_hours.sql
 -- =============================================================
@@ -213,8 +206,6 @@ create policy "admin altera horarios"
   on public.business_hours for update
   to authenticated
   using (public.is_admin());
-
-
 
 -- =============================================================
 -- >>> 004_appointments.sql
@@ -278,8 +269,6 @@ create policy "admin ve todos os perfis"
   to authenticated
   using (public.is_admin());
 
-
-
 -- =============================================================
 -- >>> 005_service_images_e_slots.sql
 -- =============================================================
@@ -338,8 +327,6 @@ $$;
 
 grant execute on function public.get_busy_slots(date) to authenticated;
 
-
-
 -- =============================================================
 -- >>> 006_combos.sql
 -- =============================================================
@@ -357,8 +344,6 @@ alter table public.services
 
 alter table public.services
   add column if not exists combo_service_ids uuid[] not null default '{}';
-
-
 
 -- =============================================================
 -- >>> 007_profissionais.sql
@@ -608,8 +593,6 @@ create policy "profissional ve clientes dela"
 -- where slug = 'slug-dela';
 -- =============================================================
 
-
-
 -- =============================================================
 -- >>> 008_foto_profissional.sql
 -- =============================================================
@@ -659,8 +642,6 @@ create policy "equipe remove foto de profissional"
     bucket_id = 'professional-photos'
     and (public.is_admin() or public.my_professional_id() is not null)
   );
-
-
 
 -- =============================================================
 -- >>> 009_notificacoes.sql
@@ -761,8 +742,6 @@ exception
   when duplicate_object then null;
 end;
 $$;
-
-
 
 -- =============================================================
 -- >>> 010_adiantar_agenda.sql
@@ -1180,8 +1159,6 @@ grant execute on function public.horario_mais_cedo_possivel(uuid) to authenticat
 grant execute on function public.propor_antecipacao(uuid, time, integer) to authenticated;
 grant execute on function public.responder_antecipacao(uuid, boolean) to authenticated;
 grant execute on function public.cancelar_antecipacao(uuid) to authenticated;
-
-
 
 -- =============================================================
 -- >>> 011_lista_espera.sql
@@ -1618,8 +1595,6 @@ grant execute on function public.faltas_da_cliente(uuid) to authenticated;
 -- o caso normal, só com um pouco mais de atraso.
 -- =============================================================
 
-
-
 -- =============================================================
 -- >>> 012_indique_e_ganhe.sql
 -- =============================================================
@@ -2053,8 +2028,6 @@ grant execute on function public.registrar_indicacao(text) to authenticated;
 grant execute on function public.usar_credito(uuid, integer) to authenticated;
 grant execute on function public.meu_resumo_indicacoes() to authenticated;
 
-
-
 -- =============================================================
 -- >>> 013_seguranca.sql
 -- =============================================================
@@ -2369,8 +2342,6 @@ create policy "equipe remove foto de profissional"
       or (storage.foldername(name))[1] = public.my_professional_id()::text
     )
   );
-
-
 
 -- =============================================================
 -- >>> 014_correcoes.sql
@@ -3175,8 +3146,6 @@ $$;
 
 grant execute on function public.config_agenda_profissional(uuid) to authenticated;
 
-
-
 -- =============================================================
 -- >>> 015_saloes.sql
 -- =============================================================
@@ -3563,8 +3532,6 @@ end;
 $$;
 
 grant execute on function public.abrir_salao(text, text, text, text) to authenticated;
-
-
 
 -- =============================================================
 -- >>> 016_agenda_real.sql
@@ -4006,8 +3973,6 @@ end;
 $$;
 
 grant execute on function public.usar_credito(uuid, integer) to authenticated;
-
-
 
 -- =============================================================
 -- >>> 017_afiliados.sql
@@ -4573,8 +4538,6 @@ grant execute on function public.abrir_salao(text, text, text, text, text) to au
 -- a versão antiga de abrir_salao sai de cena para não ficar ambígua
 drop function if exists public.abrir_salao(text, text, text, text);
 
-
-
 -- =============================================================
 -- >>> 018_dados_teste.sql
 -- =============================================================
@@ -4865,8 +4828,6 @@ order by p.role;
 -- where email in ('admin@exemplo.com', 'profissional@exemplo.com', 'cliente@exemplo.com');
 -- delete from public.salons where slug = 'espaco-mel';
 -- =============================================================
-
-
 
 -- =============================================================
 -- >>> 019_volta_sozinha.sql
@@ -5358,8 +5319,6 @@ create trigger protege_vinculo
   before update on public.professionals
   for each row execute function public.protege_vinculo_profissional();
 
-
-
 -- =============================================================
 -- >>> 020_numeros.sql
 -- =============================================================
@@ -5730,8 +5689,6 @@ $$;
 revoke execute on function public.resumo_do_salao(uuid, date) from public, anon;
 grant execute on function public.resumo_do_salao(uuid, date) to authenticated;
 
-
-
 -- =============================================================
 -- >>> 021_dados_teste_historico.sql
 -- =============================================================
@@ -5903,8 +5860,6 @@ from public.appointments a
 join public.professionals p on p.id = a.professional_id
 where p.slug = 'ana-paula';
 
-
-
 -- =============================================================
 -- >>> 022_gatilhos.sql
 -- =============================================================
@@ -6011,8 +5966,6 @@ create trigger on_valida_status
 -- (o grant de coluna já limitava a status e notes; isto é o cinto)
 revoke update on public.appointments from authenticated;
 grant update (status, notes) on public.appointments to authenticated;
-
-
 
 -- =============================================================
 -- >>> 023_whatsapp.sql
@@ -6588,8 +6541,6 @@ $$;
 revoke execute on function public.quantas_para_enviar(uuid) from public, anon;
 grant execute on function public.quantas_para_enviar(uuid) to authenticated;
 
-
-
 -- =============================================================
 -- >>> 024_resposta_whatsapp.sql
 -- =============================================================
@@ -7121,8 +7072,6 @@ revoke execute on function public.confirmar_envio(uuid, text)
 -- -- para conferir:   select * from cron.job;
 -- -- para desligar:   select cron.unschedule('agenda-mel-envia-whatsapp');
 
-
-
 -- =============================================================
 -- >>> 025_botoes.sql
 -- =============================================================
@@ -7442,8 +7391,6 @@ $$;
 revoke execute on function public.fila_para_enviar(uuid) from public, anon;
 grant execute on function public.fila_para_enviar(uuid) to authenticated;
 
-
-
 -- =============================================================
 -- >>> 026_botao_so_na_oficial.sql
 -- =============================================================
@@ -7692,8 +7639,6 @@ where r.kind = o.kind
   and o.status in ('enviado', 'entregue')
   and o.enviado_em > now() - interval '6 hours';
 
-
-
 -- =============================================================
 -- >>> 027_estilo_do_botao.sql
 -- =============================================================
@@ -7857,8 +7802,6 @@ where r.kind = o.kind
   and o.canal = 'evolution'
   and o.status in ('enviado', 'entregue')
   and o.enviado_em > now() - interval '6 hours';
-
-
 
 -- =============================================================
 -- >>> 028_primeiro_voto_vale.sql
@@ -8107,8 +8050,6 @@ $$;
 
 revoke execute on function public.receber_resposta_whatsapp(text, text, text, text)
   from public, anon, authenticated;
-
-
 
 -- =============================================================
 -- >>> 029_texto_bonito.sql
@@ -8597,3 +8538,4 @@ $$;
 
 revoke execute on function public.receber_resposta_whatsapp(text, text, text, text)
   from public, anon, authenticated;
+

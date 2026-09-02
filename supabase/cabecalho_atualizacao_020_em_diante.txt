@@ -61,6 +61,9 @@
 --         acabou de fazer, e quem precisa saber passa a ser avisado.
 --         A cliente finalmente fica sabendo quando a profissional
 --         cancela. Telefone de fora do Brasil deixa de ser rejeitado
+--    041  o aceite passa a valer para quem marca pelo app também, e
+--         não só pela conversa. Um lugar só decide: o gatilho do
+--         insert
 --
 --  Se der erro, me mande a mensagem inteira: cada bloco abaixo está
 --  marcado com o nome do arquivo de origem, então dá para achar na hora.

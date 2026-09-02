@@ -4,6 +4,7 @@ import ProShell from '../../components/ProShell'
 import AgendaDia from '../../components/AgendaDia'
 import AgendaSemana from '../../components/AgendaSemana'
 import FilaEspera from '../../components/FilaEspera'
+import PedidosPendentes from '../../components/PedidosPendentes'
 import SemFicha from './SemFicha'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
@@ -45,6 +46,8 @@ export default function ProAgenda() {
           <p className="muted titulo-dia">{hoje}</p>
         </div>
       </div>
+      <PedidosPendentes aoResponder={() => setDiaEscolhido((d) => (d ? d : d))} />
+
       {paraEnviar > 0 && (
         <Link to="/pro/enviar" className="card aviso-enviar">
           <span className="cliente-info">

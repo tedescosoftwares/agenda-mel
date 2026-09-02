@@ -3315,3 +3315,13 @@ a.prof-row:hover,
 .linha-switch strong, .linha-campo strong { display: block; font-size: .93rem; }
 .linha-switch .muted, .linha-campo .muted { display: block; font-size: .8rem; margin-top: .15rem; }
 .linha-campo select { flex: none; }
+
+/* Pedidos fixos no topo da agenda: o prazo corre agora, não no dia do
+   atendimento — por isso eles não moram dentro do dia. */
+.pedidos-topo { margin: 0 0 1.4rem; }
+.pedidos-titulo { display: flex; align-items: center; gap: .5rem;
+  font-size: .95rem; font-weight: 600; margin: 0 0 .7rem; }
+.pedidos-bolha { display: inline-flex; align-items: center; justify-content: center;
+  min-width: 1.45rem; height: 1.45rem; padding: 0 .35rem; border-radius: 999px;
+  background: var(--marca, #d98cab); color: #1a1118;
+  font-size: .8rem; font-weight: 700; font-variant-numeric: tabular-nums; }

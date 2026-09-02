@@ -72,6 +72,10 @@
 --         responder, o sistema exigia já ter conseguido enviar algo
 --         antes. Quem escreve pela primeira vez nunca tem isso. Passa
 --         a responder pelo número que RECEBEU a mensagem
+--    044  a janela de silêncio (21h-8h) segurava até a resposta que a
+--         cliente estava esperando: a Mel aceitava às 22h55 e a cliente
+--         só saberia às 8h. Fato que muda o dia dela sai na hora;
+--         lembrete e convite esperam amanhecer
 --
 --  Se der erro, me mande a mensagem inteira: cada bloco abaixo está
 --  marcado com o nome do arquivo de origem, então dá para achar na hora.

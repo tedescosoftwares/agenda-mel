@@ -415,6 +415,33 @@ Manda dez frases que uma cliente escreveria de verdade, com abreviação e sem
 acento, e mostra um placar. Este é o número que decide, não benchmark de
 internet. Abaixo de 8/10 ou acima de 6 segundos por resposta, não use.
 
+### Comparar com API, com a mesma prova
+
+Escolher entre máquina própria e API por intuição é como escolher por
+propaganda. A bancada roda as mesmas dez frases, o mesmo gabarito e o mesmo
+prompt nos dois:
+
+```bash
+./bancada-ia.sh                     # o modelo local
+./bancada-ia.sh groq                # a API do Groq
+```
+
+Para o segundo, pegue uma chave grátis em console.groq.com (sem cartão) e
+ponha `GROQ_API_KEY=gsk_...` no `.env`.
+
+Por que Groq e não Gemini na comparação gratuita:
+
+| | Groq | Gemini gratuito |
+|---|---|---|
+| Requisições por dia | 14.400 | ~1.000 |
+| Treina com o que você manda | não | **sim** |
+| Revisor humano pode ler | não | **sim** |
+
+O termo do Gemini gratuito diz, com essas palavras, para não enviar informação
+pessoal. Mensagem de cliente tem nome, telefone e horário — é dado pessoal, e
+com LGPD no meio isso decide a questão para produção. Para brincar com frases
+inventadas, tudo bem.
+
 ### Como o Supabase fala com ele
 
 Pela mesma porta 443 do Caddy, com token:

@@ -2,9 +2,18 @@
 #
 # Agenda Mel — bancada do modelo local.
 #
-#   ./bancada-ia.sh              # usa o modelo do .env
-#   ./bancada-ia.sh qwen3:1.7b   # testa outro, baixando se precisar
-#   IA_THREADS=2 ./bancada-ia.sh # força o nº de threads (padrão: o do Ollama)
+#   ./bancada-ia.sh                    # modelo local do .env
+#   ./bancada-ia.sh qwen3:1.7b         # outro modelo local, baixando se precisar
+#   IA_THREADS=2 ./bancada-ia.sh       # força o nº de threads no local
+#   ./bancada-ia.sh groq               # a MESMA prova, mas na API do Groq
+#   ./bancada-ia.sh groq llama-3.1-8b-instant
+#
+# O modo groq existe para a comparação ser honesta: mesmas dez frases, mesmo
+# gabarito, mesmo prompt. Sem isso a escolha entre máquina e API vira gosto.
+# Precisa de GROQ_API_KEY no .env (pegue em console.groq.com, é grátis e não
+# pede cartão). O Groq não treina com o que você manda, nem no plano grátis —
+# ao contrário do Gemini gratuito, cujo termo pede para não enviar dado
+# pessoal. Mensagem de cliente tem nome e telefone, então isso decide.
 #
 # Manda dez frases que uma cliente realmente escreveria no WhatsApp,
 # com abreviação e sem acento, e confere se o modelo devolve o JSON
@@ -27,17 +36,28 @@ cd "$(dirname "$0")"
 [ -f .env ] || { vermelho 'Não achei o .env.'; exit 1; }
 set -a; . ./.env; set +a
 
-[ -n "${IA_TOKEN:-}" ]  || { vermelho 'IA_TOKEN vazio no .env. Rode o ./subir-ia.sh.'; exit 1; }
 # Um modelo passado na linha de comando ganha do .env: assim dá para
 # comparar dois modelos na mesma máquina sem editar configuração e sem
 # perder o que já estava valendo.
-MODELO="${1:-${IA_MODELO:-}}"
-[ -n "$MODELO" ] || { vermelho 'Sem modelo. Rode o ./subir-ia.sh, ou passe um: ./bancada-ia.sh qwen3:1.7b'; exit 1; }
-
-if ! docker exec evolution_ollama ollama list 2>/dev/null | awk '{print $1}' | grep -qx "$MODELO"; then
-  amarelo "O ${MODELO} ainda não está aqui. Baixando..."
-  docker exec evolution_ollama ollama pull "$MODELO" || {
-    vermelho "Não consegui baixar o ${MODELO}."; exit 1; }
+if [ "${1:-}" = 'groq' ]; then
+  ONDE='groq'
+  MODELO="${2:-llama-3.1-8b-instant}"
+  [ -n "${GROQ_API_KEY:-}" ] || {
+    vermelho 'Falta GROQ_API_KEY no .env.'
+    echo '  1. Crie a conta em https://console.groq.com (grátis, sem cartão)'
+    echo '  2. API Keys -> Create API Key'
+    echo '  3. Acrescente ao .env:  GROQ_API_KEY=gsk_...'
+    exit 1; }
+else
+  ONDE='local'
+  [ -n "${IA_TOKEN:-}" ] || { vermelho 'IA_TOKEN vazio no .env. Rode o ./subir-ia.sh.'; exit 1; }
+  MODELO="${1:-${IA_MODELO:-}}"
+  [ -n "$MODELO" ] || { vermelho 'Sem modelo. Rode o ./subir-ia.sh, ou passe um: ./bancada-ia.sh qwen3:1.7b'; exit 1; }
+  if ! docker exec evolution_ollama ollama list 2>/dev/null | awk '{print $1}' | grep -qx "$MODELO"; then
+    amarelo "O ${MODELO} ainda não está aqui. Baixando..."
+    docker exec evolution_ollama ollama pull "$MODELO" || {
+      vermelho "Não consegui baixar o ${MODELO}."; exit 1; }
+  fi
 fi
 
 command -v jq >/dev/null || { amarelo 'Instalando jq...'; sudo apt-get update -qq && sudo apt-get install -y jq >/dev/null; }
@@ -63,7 +83,13 @@ if [ "$__d" -lt 800 ] || [ "$__d" -gt 1400 ]; then
   exit 1
 fi
 
-URL="https://${DOMINIO}/ia/api/chat"
+if [ "$ONDE" = 'groq' ]; then
+  URL='https://api.groq.com/openai/v1/chat/completions'
+  ROTULO="Groq · ${MODELO}"
+else
+  URL="https://${DOMINIO}/ia/api/chat"
+  ROTULO="local · ${MODELO}"
+fi
 
 # Por padrão o Ollama escolhe as threads sozinho: ele usa núcleos FÍSICOS,
 # não vCPU, porque as duas threads de um mesmo núcleo disputam o caminho
@@ -138,7 +164,7 @@ confere() { # $1 esperado  $2 obtido
   return 1
 }
 
-azul "== Bancada · modelo ${MODELO} · ${URL} =="
+azul "== Bancada · ${ROTULO} · ${URL} =="
 echo
 
 ACERTOS=0
@@ -154,26 +180,45 @@ while IFS='|' read -r FRASE ESP_INT ESP_SRV ESP_DIA ESP_HORA; do
   # CPU de 2 núcleos isso vira minutos por mensagem, e para decidir se a
   # cliente quer marcar ou desmarcar o raciocínio não acrescenta nada.
   # Em modelo que não pensa, o campo é simplesmente ignorado.
-  CORPO=$(jq -n --arg m "$MODELO" --arg s "$SISTEMA" --arg u "$FRASE" \
-              --argjson f "$ESQUEMA" --argjson th "$THREADS_JSON" '{
-    model: $m,
-    stream: false,
-    think: false,
-    format: $f,
-    options: ( { temperature: 0, num_predict: 120 } + $th ),
-    messages: [ {role:"system", content:$s}, {role:"user", content:$u} ]
-  }')
+  # Os dois falam JSON, mas não o mesmo dialeto: o Ollama põe o esquema em
+  # "format" e a resposta em .message.content; a API do Groq é compatível
+  # com a da OpenAI, esquema em response_format.json_schema e resposta em
+  # .choices[0].message.content.
+  if [ "$ONDE" = 'groq' ]; then
+    CORPO=$(jq -n --arg m "$MODELO" --arg s "$SISTEMA" --arg u "$FRASE" --argjson f "$ESQUEMA" '{
+      model: $m,
+      temperature: 0,
+      max_tokens: 120,
+      response_format: { type: "json_schema",
+        json_schema: { name: "intencao", strict: true, schema: $f } },
+      messages: [ {role:"system", content:$s}, {role:"user", content:$u} ]
+    }')
+    CABECALHO="Authorization: Bearer ${GROQ_API_KEY}"
+    CAMINHO='.choices[0].message.content'
+  else
+    CORPO=$(jq -n --arg m "$MODELO" --arg s "$SISTEMA" --arg u "$FRASE" \
+                --argjson f "$ESQUEMA" --argjson th "$THREADS_JSON" '{
+      model: $m,
+      stream: false,
+      think: false,
+      format: $f,
+      options: ( { temperature: 0, num_predict: 120 } + $th ),
+      messages: [ {role:"system", content:$s}, {role:"user", content:$u} ]
+    }')
+    CABECALHO="Authorization: Bearer ${IA_TOKEN}"
+    CAMINHO='.message.content'
+  fi
 
   T0=$(agora_ms)
   BRUTO=$(curl -s --max-time 600 "$URL" \
-            -H "Authorization: Bearer ${IA_TOKEN}" \
+            -H "$CABECALHO" \
             -H 'Content-Type: application/json' \
             -d "$CORPO")
   T1=$(agora_ms)
   MS=$((T1 - T0))
   SOMA_MS=$((SOMA_MS + MS))
 
-  JSON=$(echo "$BRUTO" | jq -r '.message.content // empty' 2>/dev/null)
+  JSON=$(echo "$BRUTO" | jq -r "${CAMINHO} // empty" 2>/dev/null)
   if [ -z "$JSON" ] || ! echo "$JSON" | jq -e . >/dev/null 2>&1; then
     vermelho "✗ ${FRASE}"
     echo "   não veio JSON. resposta crua: $(echo "$BRUTO" | head -c 200)"
@@ -221,9 +266,10 @@ else
 fi
 
 echo
-echo "Para comparar na mesma máquina:"
+echo "Para comparar:"
 echo "  ./bancada-ia.sh qwen3:4b-instruct # o 4b SEM a parte que raciocina"
 echo "  ./bancada-ia.sh qwen3:1.7b        # menos da metade do tamanho"
 echo "  ./bancada-ia.sh qwen2.5:3b        # não raciocina de jeito nenhum"
 echo "  IA_THREADS=2 ./bancada-ia.sh      # força as 2 threads do núcleo"
+echo "  ./bancada-ia.sh groq              # a mesma prova na API do Groq"
 echo "Gostou de um? Grave no .env:  IA_MODELO=<o que ganhou>" 

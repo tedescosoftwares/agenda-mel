@@ -25,6 +25,10 @@
 --    027  estilo do botão por canal
 --    028  primeiro voto vale, e enquete deixa de ser o padrão
 --    029  mensagem bonita, com emoji e link para a agenda
+--    030  o porteiro da IA: nada chama modelo de linguagem sem passar
+--         por sete filtros, e a IA nasce DESLIGADA em todo salão
+--    031  tira TRUNCATE de anon e authenticated — é a única forma de
+--         apagar dados que não passa por RLS
 --
 --  Se der erro, me mande a mensagem inteira: cada bloco abaixo está
 --  marcado com o nome do arquivo de origem, então dá para achar na hora.

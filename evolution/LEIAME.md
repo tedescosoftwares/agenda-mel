@@ -251,7 +251,59 @@ para quem estiver na fila de espera.
 
 ---
 
-## 9. Rodar um modelo de linguagem na própria máquina
+## 9. Onde o bot pensa: a decisão, com os números
+
+**Decidido: API do Groq, modelo `openai/gpt-oss-20b`.** O modelo local ficou
+montado e funciona, mas está desligado. Isto aqui é o registro de por quê, para
+ninguém refazer a investigação daqui a seis meses.
+
+A prova foi a mesma nos quatro: as dez frases do `bancada-ia.sh`, o mesmo
+prompt, o mesmo esquema, o mesmo gabarito.
+
+| Onde | Modelo | Acertos | Tempo por mensagem |
+|---|---|---|---|
+| VPS (t3.large, 1 núcleo físico) | `qwen3:4b-instruct` | 9/10 | ~20.000 ms |
+| VPS | `qwen3:1.7b` | 4/10 | ~10.000 ms |
+| Groq | `qwen/qwen3.6-27b` | 3/3 | ~1.400 ms |
+| **Groq** | **`openai/gpt-oss-20b`** | **10/10** | **375 ms** |
+
+Cinquenta vezes mais rápido que a melhor opção local, e de graça no volume
+deste projeto.
+
+O que o caminho ensinou, e vale para qualquer troca de modelo:
+
+- **Modelo de raciocínio é armadilha para classificar.** `qwen3:4b` e
+  `gpt-oss` pensam antes de responder e esse pensamento sai do mesmo
+  orçamento de tokens. No primeiro teste foram 168 s para não terminar uma
+  frase. Use a variante `-instruct`, ou `reasoning_effort: low`, e deixe
+  folga no `max_tokens`.
+- **Velocidade local acompanha núcleo FÍSICO, não vCPU.** A `t3.large` tem
+  2 vCPU mas 1 núcleo. Nenhum ajuste conserta isso.
+- **Modelo menor não é só mais rápido, é mais burro.** O `1.7b` ganhou
+  metade do tempo e perdeu metade dos acertos, inventando serviço e horário
+  que ninguém falou.
+- **`max_tokens` é reserva, não teto.** O Groq desconta o número inteiro da
+  cota por minuto mesmo que o modelo escreva 30 tokens.
+- **Nome de modelo no código tem prazo de validade.** O `llama-3.1-8b-instant`
+  que eu tinha fixado já não existia. A lista vem de `GET /v1/models`.
+- **Grátis não é tudo igual.** O Gemini gratuito treina com o que recebe e
+  admite revisor humano; o termo pede para não enviar dado pessoal. Mensagem
+  de cliente tem nome e telefone. O Groq não treina nem no plano grátis.
+
+### O que sobrou montado
+
+A rota `/ia` no Caddy, o container do Ollama atrás do profile e os scripts
+continuam no lugar. Trazer o modelo para dentro de novo é `docker compose
+--profile ia up -d`. Vale se um dia o requisito virar "nada sai da máquina",
+ou se a conta do Groq mudar de regra.
+
+Enquanto isso, desligue e devolva a RAM:
+
+```bash
+docker compose --profile ia down
+```
+
+## 10. Rodar um modelo de linguagem na própria máquina (opcional)
 
 Isto é **opcional** e só faz sentido se você quiser que a cliente escreva
 solto no WhatsApp ("dá pra quinta de tarde?") em vez de responder um menu

@@ -84,7 +84,10 @@ function lerCloud(corpo: any): { mensagens: Recebida[]; status: Status[] } {
           texto = m.button?.payload ?? m.button?.text ?? ''
         }
         if (!texto) continue
-        mensagens.push({ telefone: m.from, texto, id: m.id ?? null })
+        // mesma razão do lado da Evolution: o "from" da Cloud vem com o
+        // país mas sem o sinal, e é o sinal que impede um número de 11
+        // dígitos de ser confundido com celular brasileiro sem DDI
+        mensagens.push({ telefone: '+' + m.from, texto, id: m.id ?? null })
       }
 
       for (const s of v.statuses ?? []) {
@@ -183,7 +186,10 @@ function lerEvolution(corpo: any): { mensagens: Recebida[]; status: Status[] } {
         const texto = ehVoto ? votoDaEnquete(d) : textoDaMensagem(d?.message)
         if (texto) {
           mensagens.push({
-            telefone: jid.split('@')[0],
+            // com o "+" na frente: o JID sempre traz o país, e sem o
+            // sinal um número de 11 dígitos dos EUA seria lido como
+            // celular brasileiro sem DDI
+            telefone: '+' + jid.split('@')[0],
             texto,
             id: d?.key?.id ?? null,
             // qual número NOSSO recebeu: é isso que diz de que salão é a

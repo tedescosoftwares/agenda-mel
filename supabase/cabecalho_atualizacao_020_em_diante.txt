@@ -57,6 +57,10 @@
 --    039  o pedido sai na hora, não pela fila: prazo de 2h esperando
 --         alguém escoar a fila expira antes de ela ver. E confirmar
 --         pela agenda passa a fechar o pedido
+--    040  BLOCO A: quem age pela tela não recebe mensagem do que
+--         acabou de fazer, e quem precisa saber passa a ser avisado.
+--         A cliente finalmente fica sabendo quando a profissional
+--         cancela. Telefone de fora do Brasil deixa de ser rejeitado
 --
 --  Se der erro, me mande a mensagem inteira: cada bloco abaixo está
 --  marcado com o nome do arquivo de origem, então dá para achar na hora.

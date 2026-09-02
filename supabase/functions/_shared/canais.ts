@@ -213,6 +213,12 @@ export async function enviarPelaCloud(e: Envio): Promise<Resultado> {
 }
 
 export function enviarPor(canal: string, e: Envio): Promise<Resultado> {
+  // O "+" é o nosso desempate de país e não faz parte do que os
+  // provedores esperam: tanto a Evolution quanto a Cloud querem só
+  // dígitos. Tirar aqui, num lugar só, evita ter que lembrar disso em
+  // cada chamada.
+  e = { ...e, telefone: e.telefone.replace(/\D/g, '') }
+
   if (canal === 'evolution') return enviarPelaEvolution(e)
   if (canal === 'cloud') return enviarPelaCloud(e)
   return Promise.resolve({

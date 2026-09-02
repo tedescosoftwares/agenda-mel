@@ -85,17 +85,22 @@ fi
 SISTEMA='Você lê a mensagem de uma cliente de um salão de beleza no WhatsApp e devolve só o JSON.
 
 intencao, escolha uma:
-  agendar    quer marcar horário
+  agendar    quer marcar horário, INCLUSIVE quando propõe um dia ou hora ("da pra sexta 15h?")
   remarcar   quer mudar um horário que já tem
-  cancelar   quer desmarcar
+  cancelar   quer desmarcar, ou avisa que não vai poder ir
   confirmar  está confirmando que vem
   preco      pergunta quanto custa
-  horarios   pergunta que horários existem
+  horarios   pergunta o que está livre SEM propor dia nem hora ("que horários você tem?")
   outro      qualquer outra coisa
 
 servico: manicure, pedicure, sobrancelha, cilios, cabelo, depilacao, ou null
 dia: segunda, terca, quarta, quinta, sexta, sabado, domingo, hoje, amanha, ou null
-hora: HH:MM em 24h, ou null. "de tarde" sem hora é null.'
+hora: HH:MM em 24h, ou null
+
+REGRA MAIS IMPORTANTE: nunca invente. Se a mensagem não disser o serviço,
+servico é null. Se não disser o dia, dia é null. Se não disser a hora, hora
+é null. "de tarde" não é hora, é null. Nome de pessoa não é serviço.
+Errar para null é barato; inventar marca a cliente no serviço errado.'
 
 ESQUEMA='{
   "type":"object",
@@ -108,17 +113,30 @@ ESQUEMA='{
   "required":["intencao","servico","dia","hora"]
 }'
 
-# frase | intencao esperada | servico esperado (- = não confere) | dia esperado
-CASOS='oi queria marcar uma manicure pra quinta de tarde|agendar|manicure|quinta
-da pra sexta 15h com a mel?|agendar|-|sexta
-bom dia, tem horario pro cilios semana que vem?|agendar|cilios|-
-preciso desmarcar meu horario de amanha|cancelar|-|amanha
-nao vou poder ir infelizmente|cancelar|-|-
-consigo mudar pra outro dia?|remarcar|-|-
-quanto custa o design de sobrancelha|preco|sobrancelha|-
-que horario voce tem livre sabado|horarios|-|sabado
-confirmado, pode contar comigo|confirmar|-|-
-obrigada linda!!! ate mais|outro|-|-'
+# frase | intencao | servico | dia | hora
+#
+# Aqui "null" é EXIGÊNCIA, não "tanto faz": é assim que a bancada pega o
+# modelo inventando serviço e horário que ninguém falou, que foi o que a
+# primeira rodada deixou passar. Use "-" só onde a resposta é realmente
+# indiferente. Barra aceita alternativas, para o caso genuinamente ambíguo.
+CASOS='oi queria marcar uma manicure pra quinta de tarde|agendar|manicure|quinta|null
+da pra sexta 15h com a mel?|agendar|null|sexta|15:00
+bom dia, tem horario pro cilios semana que vem?|agendar/horarios|cilios|null|null
+preciso desmarcar meu horario de amanha|cancelar|null|amanha|null
+nao vou poder ir infelizmente|cancelar|null|null|null
+consigo mudar pra outro dia?|remarcar|null|null|null
+quanto custa o design de sobrancelha|preco|sobrancelha|null|null
+que horario voce tem livre sabado|horarios|null|sabado|null
+confirmado, pode contar comigo|confirmar|null|null|null
+obrigada linda!!! ate mais|outro|null|null|null'
+
+# um campo bate se for igual ao esperado, se o esperado for "-", ou se
+# estiver numa lista separada por barra
+confere() { # $1 esperado  $2 obtido
+  [ "$1" = '-' ] && return 0
+  case "/$1/" in */"$2"/*) return 0 ;; esac
+  return 1
+}
 
 azul "== Bancada · modelo ${MODELO} · ${URL} =="
 echo
@@ -127,7 +145,7 @@ ACERTOS=0
 TOTAL=0
 SOMA_MS=0
 
-while IFS='|' read -r FRASE ESP_INT ESP_SRV ESP_DIA; do
+while IFS='|' read -r FRASE ESP_INT ESP_SRV ESP_DIA ESP_HORA; do
   [ -z "$FRASE" ] && continue
   TOTAL=$((TOTAL + 1))
 
@@ -168,9 +186,10 @@ while IFS='|' read -r FRASE ESP_INT ESP_SRV ESP_DIA; do
   HORA=$(echo "$JSON" | jq -r '.hora    // "null"')
 
   ERROS=''
-  [ "$INT" != "$ESP_INT" ] && ERROS="${ERROS} intencao=${INT} (esperava ${ESP_INT});"
-  [ "$ESP_SRV" != '-' ] && [ "$SRV" != "$ESP_SRV" ] && ERROS="${ERROS} servico=${SRV} (esperava ${ESP_SRV});"
-  [ "$ESP_DIA" != '-' ] && [ "$DIA" != "$ESP_DIA" ] && ERROS="${ERROS} dia=${DIA} (esperava ${ESP_DIA});"
+  confere "$ESP_INT"  "$INT"  || ERROS="${ERROS} intencao=${INT} (esperava ${ESP_INT});"
+  confere "$ESP_SRV"  "$SRV"  || ERROS="${ERROS} servico=${SRV} (esperava ${ESP_SRV});"
+  confere "$ESP_DIA"  "$DIA"  || ERROS="${ERROS} dia=${DIA} (esperava ${ESP_DIA});"
+  confere "$ESP_HORA" "$HORA" || ERROS="${ERROS} hora=${HORA} (esperava ${ESP_HORA});"
 
   if [ -z "$ERROS" ]; then
     ACERTOS=$((ACERTOS + 1))

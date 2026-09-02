@@ -50,6 +50,10 @@
 --         mensagem antes de decidir repassar, e o caminho antigo
 --         via o próprio registro como evento repetido. Junto, o
 --         diagnóstico do bot
+--    038  o horário só vale depois que a profissional aceita: o bot
+--         cria um PEDIDO, ela responde 1 ou 2 pelo WhatsApp (ou pela
+--         tela), e cada uma configura o próprio prazo e o que
+--         acontece se ele passar
 --
 --  Se der erro, me mande a mensagem inteira: cada bloco abaixo está
 --  marcado com o nome do arquivo de origem, então dá para achar na hora.

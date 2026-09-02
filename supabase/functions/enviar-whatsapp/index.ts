@@ -31,6 +31,17 @@ Deno.serve(async (req) => {
     auth: { persistSession: false },
   })
 
+  // Pedido de horário com prazo vencido vira resolvido aqui. Enquanto o
+  // pg_cron não existe, este é o único ponto que roda de tempos em
+  // tempos — e deixar a cliente esperando resposta de um prazo que já
+  // passou é o pior dos mundos. A falha não derruba o envio.
+  try {
+    const { data: vencidos } = await db.rpc('resolver_aceites_vencidos')
+    if (vencidos) console.log(`aceites vencidos resolvidos: ${vencidos}`)
+  } catch (e) {
+    console.error('falha ao resolver aceites vencidos', e)
+  }
+
   const { data: fila, error } = await db.rpc('puxar_da_fila', { quantas: LOTE })
   if (error) {
     return new Response(JSON.stringify({ erro: error.message }), {

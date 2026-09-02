@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import ProShell from '../../components/ProShell'
 import SemFicha from './SemFicha'
 import { useAuth } from '../../context/AuthContext'
-import { ClockIcon, LinkIcon, ChevronIcon } from '../../components/icons'
+import { ClockIcon, LinkIcon, ChevronIcon, BellIcon } from '../../components/icons'
 
 // Hub das configurações da profissional. Cada item continua tendo a
 // sua própria tela — aqui é só a porta de entrada.
@@ -19,6 +19,21 @@ export default function ProAjustes() {
       </div>
 
       <div className="cliente-list">
+        <Link to="/pro/pedidos" className="card prof-row">
+          <span className="ajuste-icone">
+            <BellIcon />
+          </span>
+          <div className="cliente-info">
+            <span className="cliente-nome">
+              <span className="nome-txt">Pedidos de horário</span>
+            </span>
+            <span className="muted cliente-meta">
+              Quem pediu pelo WhatsApp e espera seu sim, e o seu prazo
+            </span>
+          </div>
+          <ChevronIcon />
+        </Link>
+
         <Link to="/pro/horarios" className="card prof-row">
           <span className="ajuste-icone">
             <ClockIcon />

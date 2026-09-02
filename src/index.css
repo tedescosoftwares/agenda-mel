@@ -3295,3 +3295,23 @@ a.prof-row:hover,
   .wa-lida-seta { display: none; }
   .wa-lida-acao { grid-column: 2; grid-row: 2; font-size: .82rem; }
 }
+
+/* Pedidos de horário esperando a profissional */
+.pedido-list { list-style: none; margin: 0; padding: 0;
+  display: flex; flex-direction: column; gap: .6rem; }
+.pedido { padding: .9rem 1rem; }
+.pedido-quem { display: flex; align-items: baseline; justify-content: space-between;
+  gap: .8rem; }
+.pedido-prazo { font-size: .75rem; color: var(--texto-fraco); white-space: nowrap;
+  font-variant-numeric: tabular-nums; }
+.pedido-prazo.urgente { color: var(--perigo, #d1495b); font-weight: 600; }
+.pedido-oque { margin: .3rem 0 .8rem; font-size: .92rem; }
+.pedido-botoes { display: flex; gap: .5rem; }
+.pedido-botoes .btn { flex: 1; }
+
+.ajuste-bloco { display: flex; flex-direction: column; gap: .9rem; padding: 1rem; }
+.linha-switch, .linha-campo { display: flex; align-items: flex-start;
+  justify-content: space-between; gap: 1rem; cursor: pointer; }
+.linha-switch strong, .linha-campo strong { display: block; font-size: .93rem; }
+.linha-switch .muted, .linha-campo .muted { display: block; font-size: .8rem; margin-top: .15rem; }
+.linha-campo select { flex: none; }

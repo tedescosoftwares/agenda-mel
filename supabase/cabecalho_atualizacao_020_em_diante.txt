@@ -64,6 +64,10 @@
 --    041  o aceite passa a valer para quem marca pelo app também, e
 --         não só pela conversa. Um lugar só decide: o gatilho do
 --         insert
+--    042  o mesmo celular escrito de duas formas deixa de ser duas
+--         pessoas: na Argentina o WhatsApp manda ora com o 9 depois
+--         do 54, ora sem. Guardar o número e comparar telefones
+--         passam a ser perguntas diferentes
 --
 --  Se der erro, me mande a mensagem inteira: cada bloco abaixo está
 --  marcado com o nome do arquivo de origem, então dá para achar na hora.

@@ -200,8 +200,8 @@ Evolution não assina os eventos como a Meta faz.
 **Publique as funções** (da sua máquina, onde está o repo):
 
 ```bash
-supabase functions deploy enviar-whatsapp
-supabase functions deploy whatsapp-webhook --no-verify-jwt
+# de dentro de ~/agenda-mel
+./supabase/publicar.sh
 
 supabase secrets set \
   EVOLUTION_URL=https://SEU_DOMINIO \

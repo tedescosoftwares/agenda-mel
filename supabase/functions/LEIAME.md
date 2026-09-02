@@ -64,13 +64,25 @@ JSON por um template. A estrutura fica igual.
 ## Publicar as funções
 
 ```bash
-supabase functions deploy enviar-whatsapp
-supabase functions deploy whatsapp-webhook --no-verify-jwt
+./supabase/publicar.sh
+```
+
+Publica as duas, com as opções certas, e confere que subiram. Pergunta o
+token na primeira vez e guarda em `evolution/.env`.
+
+Na mão é isto — e o `--no-verify-jwt` **não é opcional**:
+
+```bash
+export SUPABASE_ACCESS_TOKEN=sbp_...   # supabase.com/dashboard/account/tokens
+supabase functions deploy enviar-whatsapp  --project-ref SEU_REF
+supabase functions deploy whatsapp-webhook --project-ref SEU_REF --no-verify-jwt
 ```
 
 O `--no-verify-jwt` no webhook é necessário: quem chama é o WhatsApp, que
 não tem JWT do Supabase. A função se protege sozinha — assinatura
 `X-Hub-Signature-256` no caso da Meta, segredo na URL no caso da Evolution.
+Publicar sem ele derruba o bot com 401 em toda mensagem, e o erro aparece
+do lado da Evolution — longe de onde foi causado.
 
 ### Segredos
 

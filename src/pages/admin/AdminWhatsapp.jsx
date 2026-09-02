@@ -19,6 +19,18 @@ const CORES = {
   atenção: 'atencao',
 }
 
+const RÓTULO_ACAO = {
+  confirmado: 'confirmou',
+  cancelado: 'cancelou',
+  remarcado: 'quer remarcar',
+  quer_agendar: 'quer marcar',
+  sair: 'pediu para sair',
+  fora_de_contexto: 'fora de contexto',
+  sem_horario: 'sem horário marcado',
+  sem_cadastro: 'número desconhecido',
+  nada: 'não entendi',
+}
+
 const RÓTULO_TIPO = {
   novo_agendamento: 'marcaram com ela',
   cancelou_comigo: 'cancelaram com ela',
@@ -44,6 +56,9 @@ export default function AdminWhatsapp() {
   const { salao } = useAuth()
   const [checagens, setChecagens] = useState([])
   const [fila, setFila] = useState([])
+  const [leituras, setLeituras] = useState([])
+  const [usaIa, setUsaIa] = useState(false)
+  const [mudandoIa, setMudandoIa] = useState(false)
   const [aberta, setAberta] = useState(null)
   const [loading, setLoading] = useState(true)
   const [erro, setErro] = useState('')
@@ -53,15 +68,20 @@ export default function AdminWhatsapp() {
   const buscar = useCallback(async () => {
     if (!salaoId) return
     setLoading(true)
-    const [diag, msgs] = await Promise.all([
+    const [diag, msgs, lidas, canal] = await Promise.all([
       supabase.rpc('diagnostico_whatsapp', { salao: salaoId }),
       supabase.rpc('fila_do_salao', { salao: salaoId, quantas: 30 }),
+      supabase.rpc('leituras_recentes', { salao: salaoId, quantas: 20 }),
+      supabase.from('whatsapp_channels').select('usa_ia').eq('salon_id', salaoId).maybeSingle(),
     ])
-    if (diag.error || msgs.error) {
-      setErro('Erro ao carregar: ' + (diag.error?.message || msgs.error?.message))
+    const falhou = diag.error || msgs.error || lidas.error
+    if (falhou) {
+      setErro('Erro ao carregar: ' + falhou.message)
     } else {
       setChecagens(diag.data ?? [])
       setFila(msgs.data ?? [])
+      setLeituras(lidas.data ?? [])
+      setUsaIa(Boolean(canal.data?.usa_ia))
       setErro('')
     }
     setLoading(false)
@@ -71,7 +91,16 @@ export default function AdminWhatsapp() {
     buscar()
   }, [buscar])
 
+  async function alternarIa() {
+    setMudandoIa(true)
+    const { error } = await supabase.rpc('ligar_ia', { salao: salaoId, ligada: !usaIa })
+    if (error) setErro(error.message)
+    else await buscar()
+    setMudandoIa(false)
+  }
+
   const problemas = checagens.filter((c) => c.situacao !== 'ok').length
+  const pelaIa = leituras.filter((l) => l.via === 'ia').length
 
   return (
     <AdminShell>
@@ -106,6 +135,59 @@ export default function AdminWhatsapp() {
           </li>
         ))}
       </ul>
+
+      <div className="wa-ia">
+        <div className="wa-ia-topo">
+          <div>
+            <strong>Entender texto solto</strong>
+            <span className="wa-check-detalhe">
+              As regras exatas ("1", "sim", "cancelar") funcionam sempre e são de
+              graça. Isto liga a leitura do que elas não previram — "pode deixar
+              que eu vou", "não vou conseguir dessa vez".
+            </span>
+          </div>
+          <button
+            className={'wa-chave' + (usaIa ? ' wa-chave-on' : '')}
+            onClick={alternarIa}
+            disabled={mudandoIa}
+            aria-pressed={usaIa}
+          >
+            {usaIa ? 'ligada' : 'desligada'}
+          </button>
+        </div>
+        {usaIa && (
+          <p className="wa-check-detalhe" style={{ marginTop: '.6rem' }}>
+            A IA nunca decide sozinha: ela só traduz a mensagem para uma das
+            respostas que o sistema já conhece. Quando a regra e a IA discordam,
+            a regra ganha.
+          </p>
+        )}
+      </div>
+
+      {leituras.length > 0 && (
+        <>
+          <div className="page-head" style={{ marginTop: '2rem' }}>
+            <h3>O que chegou</h3>
+            <p className="muted">
+              {pelaIa === 0
+                ? 'Todas entendidas pelas regras, sem gastar IA.'
+                : `${pelaIa} de ${leituras.length} precisaram da IA.`}
+            </p>
+          </div>
+          <ul className="wa-fila">
+            {leituras.map((l, i) => (
+              <li key={i} className="wa-lida">
+                <span className={'wa-via wa-via-' + l.via}>{l.via}</span>
+                <span className="wa-lida-texto">{l.texto || '(sem texto)'}</span>
+                <span className="wa-lida-seta" aria-hidden="true">→</span>
+                <span className="wa-lida-acao">
+                  {RÓTULO_ACAO[l.entendeu] ?? l.entendeu}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
 
       <div className="page-head" style={{ marginTop: '2rem' }}>
         <h3>Últimas mensagens</h3>

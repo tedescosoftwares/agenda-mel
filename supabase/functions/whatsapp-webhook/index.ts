@@ -13,6 +13,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { enviarPor } from '../_shared/canais.ts'
+import { classificar } from '../_shared/ia.ts'
 
 const db = createClient(
   Deno.env.get('SUPABASE_URL') ?? '',
@@ -20,7 +21,8 @@ const db = createClient(
   { auth: { persistSession: false } },
 )
 
-type Recebida = { telefone: string; texto: string; id: string | null; enquete?: string | null }
+type Recebida = { telefone: string; texto: string; id: string | null;
+                  enquete?: string | null; instancia?: string | null }
 type Status = { id: string; status: string; detalhe: string | null }
 
 function json(corpo: unknown, status = 200) {
@@ -184,6 +186,9 @@ function lerEvolution(corpo: any): { mensagens: Recebida[]; status: Status[] } {
             telefone: jid.split('@')[0],
             texto,
             id: d?.key?.id ?? null,
+            // qual número NOSSO recebeu: é isso que diz de que salão é a
+            // conversa quando quem escreve nunca falou com a gente antes
+            instancia: corpo?.instance ?? null,
             // a chave da enquete original: é ela que amarra os votos
             // seguintes ao primeiro, para "trocar o voto" não agir
             enquete: ehVoto
@@ -264,11 +269,45 @@ Deno.serve(async (req) => {
 
   const respostas: string[] = []
   for (const m of mensagens) {
+    // A CASCATA -------------------------------------------------------
+    // O porteiro (migração 030) diz se vale gastar uma chamada de modelo.
+    // Ele resolve sozinho os casos baratos: "1", "sim", "cancelar" voltam
+    // com motivo 'resposta_simples', e aí nem se toca no modelo. Só o que
+    // ele libera — texto solto, de salão com IA ligada, dentro dos tetos —
+    // chega ao Groq.
+    let intencao: string | null = null
+    let salao: string | null = null
+
+    const { data: porteiro } = await db.rpc('ia_permitida', {
+      tel: m.telefone,
+      texto: m.texto,
+      instancia: m.instancia ?? null,
+    })
+    const p = porteiro as any
+    salao = p?.salon_id ?? null
+
+    if (p?.permitido) {
+      const leitura = await classificar(m.texto)
+      // registrar SEMPRE, inclusive o erro: é o que conta contra o teto,
+      // é o que mostra na tela do admin, e é o que responde depois
+      // "quanto isso está me custando"
+      await db.rpc('registrar_chamada_ia', {
+        salao,
+        tel: m.telefone,
+        modelo_usado: leitura.modelo,
+        duracao_ms: leitura.ms,
+        deu_erro: leitura.erro ?? null,
+      })
+      if (!leitura.erro) intencao = leitura.intencao
+    }
+
     const { data } = await db.rpc('receber_resposta_whatsapp', {
       tel: m.telefone,
       texto: m.texto,
       id_provedor: m.id,
       id_enquete: m.enquete ?? null,
+      intencao_do_modelo: intencao,
+      salao,
     })
 
     const responder = (data as any)?.responder

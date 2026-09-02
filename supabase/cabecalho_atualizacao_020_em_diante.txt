@@ -33,6 +33,10 @@
 --         WhatsApp pra ela; mais a tela Admin -> WhatsApp que diz
 --         por que uma mensagem não saiu, e a profissional Mel
 --         (mel@exemplo.com) com telefone de verdade para testar
+--    033  a IA como reserva do interpretador: as regras exatas
+--         primeiro, e o modelo só para o que elas não previram.
+--         A IA traduz, nunca executa — quando as duas discordam,
+--         a regra ganha
 --
 --  Se der erro, me mande a mensagem inteira: cada bloco abaixo está
 --  marcado com o nome do arquivo de origem, então dá para achar na hora.

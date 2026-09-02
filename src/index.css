@@ -3266,3 +3266,32 @@ a.prof-row:hover,
   .wa-msg-topo { grid-template-columns: auto 1fr auto; }
   .wa-msg-para { grid-column: 2 / -1; grid-row: 2; }
 }
+
+/* Chave da IA e o que ela entendeu */
+.wa-ia { border: 1px solid var(--linha); border-radius: 12px;
+  padding: .9rem 1rem; margin: 1.25rem 0; }
+.wa-ia-topo { display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 1rem; }
+.wa-ia-topo strong { display: block; font-size: .95rem; }
+.wa-chave { flex: none; font: inherit; font-size: .8rem; cursor: pointer;
+  padding: .35rem .8rem; border-radius: 999px;
+  border: 1px solid var(--linha); background: none; color: var(--texto-fraco); }
+.wa-chave-on { border-color: var(--ok, #3f9d6d); color: var(--ok, #3f9d6d); }
+.wa-chave:disabled { opacity: .5; cursor: wait; }
+
+.wa-lida { display: grid; grid-template-columns: auto 1fr auto auto;
+  align-items: center; gap: .6rem; padding: .55rem .9rem;
+  border: 1px solid var(--linha); border-radius: 10px; font-size: .88rem; }
+.wa-via { font-size: .62rem; letter-spacing: .06em; text-transform: uppercase;
+  padding: .12rem .35rem; border-radius: 3px; }
+.wa-via-regra { background: var(--realce, rgba(255,255,255,.06)); color: var(--texto-fraco); }
+.wa-via-ia { background: rgba(180, 67, 108, .16); color: var(--marca, #d98cab); }
+.wa-lida-texto { overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: var(--texto-fraco); }
+.wa-lida-seta { color: var(--texto-fraco); }
+.wa-lida-acao { white-space: nowrap; }
+@media (max-width: 34rem) {
+  .wa-lida { grid-template-columns: auto 1fr; }
+  .wa-lida-seta { display: none; }
+  .wa-lida-acao { grid-column: 2; grid-row: 2; font-size: .82rem; }
+}

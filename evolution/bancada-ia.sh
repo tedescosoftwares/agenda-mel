@@ -42,6 +42,27 @@ fi
 
 command -v jq >/dev/null || { amarelo 'Instalando jq...'; sudo apt-get update -qq && sudo apt-get install -y jq >/dev/null; }
 
+
+# Medir tempo em ms é surpreendentemente fácil de errar. O truque comum com
+# "%s" seguido de "%3N" só funciona no date do GNU; onde a largura de campo
+# não é honrada, sai o nanossegundo inteiro, o número fica mil vezes maior e
+# vira negativo quando o segundo passa. Foi o que aconteceu na primeira
+# rodada aqui. O bash 5 tem EPOCHREALTIME, que é confiável; onde não houver,
+# caímos para segundos inteiros — resolução pobre, mas nunca mente.
+if [ -n "${EPOCHREALTIME:-}" ]; then
+  agora_ms() { local t=${EPOCHREALTIME/,/.}; echo $(( ${t%%.*} * 1000 + 10#${t#*.} / 1000 )); }
+else
+  agora_ms() { echo $(( $(date +%s) * 1000 )); }
+fi
+
+# prova que a régua mede o que diz medir, antes de medir qualquer coisa
+__a=$(agora_ms); sleep 1; __b=$(agora_ms); __d=$((__b - __a))
+if [ "$__d" -lt 800 ] || [ "$__d" -gt 1400 ]; then
+  vermelho "A medição de tempo está errada: 1 s deu ${__d} ms."
+  vermelho 'Os tempos abaixo seriam mentira, então prefiro não medir.'
+  exit 1
+fi
+
 URL="https://${DOMINIO}/ia/api/chat"
 
 # Por padrão o Ollama escolhe as threads sozinho: ele usa núcleos FÍSICOS,
@@ -125,12 +146,12 @@ while IFS='|' read -r FRASE ESP_INT ESP_SRV ESP_DIA; do
     messages: [ {role:"system", content:$s}, {role:"user", content:$u} ]
   }')
 
-  T0=$(date +%s%3N)
+  T0=$(agora_ms)
   BRUTO=$(curl -s --max-time 600 "$URL" \
             -H "Authorization: Bearer ${IA_TOKEN}" \
             -H 'Content-Type: application/json' \
             -d "$CORPO")
-  T1=$(date +%s%3N)
+  T1=$(agora_ms)
   MS=$((T1 - T0))
   SOMA_MS=$((SOMA_MS + MS))
 
@@ -182,6 +203,8 @@ fi
 
 echo
 echo "Para comparar na mesma máquina:"
-echo "  ./bancada-ia.sh qwen3:1.7b        # modelo menor, mais rápido"
+echo "  ./bancada-ia.sh qwen3:4b-instruct # o 4b SEM a parte que raciocina"
+echo "  ./bancada-ia.sh qwen3:1.7b        # menos da metade do tamanho"
+echo "  ./bancada-ia.sh qwen2.5:3b        # não raciocina de jeito nenhum"
 echo "  IA_THREADS=2 ./bancada-ia.sh      # força as 2 threads do núcleo"
 echo "Gostou de um? Grave no .env:  IA_MODELO=<o que ganhou>" 

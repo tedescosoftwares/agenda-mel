@@ -67,10 +67,16 @@ azul '== 2/6  Isso cabe aqui? =='
 # (1,4 GB, para GPU AMD). Por isso o orçamento de disco parece absurdo para
 # um modelo de 2,6 GB: quase tudo é imagem.
 IMAGEM_GB=12
-if   [ "$RAM_MB" -ge 15000 ]; then SUGERIDO='qwen3:8b';    MODELO_GB=6
-elif [ "$RAM_MB" -ge 7000  ]; then SUGERIDO='qwen3:4b';    MODELO_GB=3
-elif [ "$RAM_MB" -ge 3500  ]; then SUGERIDO='qwen3:1.7b';  MODELO_GB=2
-else                               SUGERIDO='';            MODELO_GB=0
+
+# Escolha do modelo: NÃO usar o qwen3:4b puro. Ele é o híbrido de raciocínio
+# e vem pensando de fábrica — antes de responder escreve centenas de tokens
+# de monólogo interno, em inglês, que ninguém vai ler. Medido nesta máquina:
+# 168 s para não terminar uma frase. O think:false da API não deu conta dele.
+# O -instruct é o mesmo modelo sem a parte de raciocínio, e é o que serve
+# para o nosso caso, que é classificar em quatro campos e nada mais.
+if   [ "$RAM_MB" -ge 7000  ]; then SUGERIDO='qwen3:4b-instruct'; MODELO_GB=3
+elif [ "$RAM_MB" -ge 3500  ]; then SUGERIDO='qwen2.5:3b';        MODELO_GB=2
+else                               SUGERIDO='';                  MODELO_GB=0
 fi
 
 if [ -z "$SUGERIDO" ]; then

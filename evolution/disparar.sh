@@ -2,8 +2,15 @@
 #
 # Empurra a fila de mensagens na hora, sem esperar o cron.
 #
-#   ./disparar.sh          envia o que está na fila
-#   ./disparar.sh --trocar esquece as credenciais e pergunta de novo
+#   ./disparar.sh           envia o que está na fila, agora
+#   ./disparar.sh --cron    instala no cron: de minuto em minuto, sozinho
+#   ./disparar.sh --sem-cron  tira do cron
+#   ./disparar.sh --trocar  esquece as credenciais e pergunta de novo
+#
+# Sem o --cron, a fila SÓ anda quando alguém roda isto na mão. O
+# Supabase não tem pg_cron ligado neste projeto, então não existe nada
+# do outro lado empurrando: aviso de horário novo, pedido de aceite e
+# lembrete ficam parados em 'na_fila' até você lembrar. Instale o cron.
 #
 # Na primeira vez pergunta o ref do projeto e a chave de serviço, e
 # guarda em .supabase para as próximas.
@@ -15,7 +22,52 @@ verde()   { printf '\033[1;32m%s\033[0m\n' "$*"; }
 amarelo() { printf '\033[1;33m%s\033[0m\n' "$*"; }
 vermelho(){ printf '\033[1;31m%s\033[0m\n' "$*"; }
 
-[ "${1:-}" = '--trocar' ] && rm -f .supabase
+AQUI=$(cd "$(dirname "$0")" && pwd)
+LINHA_CRON="* * * * * $AQUI/disparar.sh >> $AQUI/disparar.log 2>&1"
+MARCA='# agenda-mel: escoa a fila de WhatsApp'
+
+case "${1:-}" in
+  --sem-cron)
+    if ! command -v crontab >/dev/null; then
+      amarelo 'Não existe crontab nesta máquina, então não há o que tirar.'
+      exit 0
+    fi
+    crontab -l 2>/dev/null | grep -vF "$MARCA" | grep -vF "$AQUI/disparar.sh" | crontab - || true
+    verde 'Tirado do cron. A fila volta a andar só na mão.'
+    exit 0
+    ;;
+  --cron)
+    if ! command -v crontab >/dev/null; then
+      vermelho 'Não achei o crontab nesta máquina.'
+      echo '   No Ubuntu:  sudo apt-get install -y cron && sudo systemctl enable --now cron'
+      exit 1
+    fi
+    # sem duplicar: tira o que já houver nosso antes de pôr de volta
+    { crontab -l 2>/dev/null | grep -vF "$MARCA" | grep -vF "$AQUI/disparar.sh"
+      echo "$MARCA"
+      echo "$LINHA_CRON"; } | crontab -
+    verde 'Instalado. De minuto em minuto, sozinho.'
+    echo "   Log:  $AQUI/disparar.log"
+    echo '   Tirar:  ./disparar.sh --sem-cron'
+    echo
+    amarelo 'Rode uma vez na mão agora para guardar as credenciais,'
+    amarelo 'senão o cron vai travar esperando você digitar:'
+    echo '     ./disparar.sh'
+    exit 0
+    ;;
+  --trocar)
+    rm -f .supabase
+    ;;
+esac
+
+# O cron roda sem terminal. Se as credenciais ainda não estão guardadas,
+# a pergunta interativa abaixo travaria para sempre — melhor sair
+# dizendo o que fazer do que ficar pendurado todo minuto.
+if [ ! -t 0 ] && [ ! -f .supabase ]; then
+  vermelho 'Sem credenciais guardadas e sem terminal para perguntar.'
+  echo 'Rode ./disparar.sh uma vez na mão.'
+  exit 1
+fi
 
 # A chave de serviço tem duas formas conhecidas. Qualquer outra coisa
 # é engano — e o erro que o Supabase devolve ("Invalid JWT") não ajuda

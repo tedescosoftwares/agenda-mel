@@ -68,6 +68,10 @@
 --         pessoas: na Argentina o WhatsApp manda ora com o 9 depois
 --         do 54, ora sem. Guardar o número e comparar telefones
 --         passam a ser perguntas diferentes
+--    043  o bot montava a resposta e ela não saía: para saber por onde
+--         responder, o sistema exigia já ter conseguido enviar algo
+--         antes. Quem escreve pela primeira vez nunca tem isso. Passa
+--         a responder pelo número que RECEBEU a mensagem
 --
 --  Se der erro, me mande a mensagem inteira: cada bloco abaixo está
 --  marcado com o nome do arquivo de origem, então dá para achar na hora.

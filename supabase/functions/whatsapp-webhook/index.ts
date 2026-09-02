@@ -327,7 +327,13 @@ Deno.serve(async (req) => {
     // Se falhar, ela continua 'na_fila' e o escoamento normal pega depois.
     const avisar = (data as any)?.avisar
     if (avisar?.telefone && avisar?.corpo) {
-      const { data: canalAviso } = await db.rpc('canal_do_telefone', { tel: avisar.telefone })
+      // pelo canal do salão, não pelo histórico de quem vai receber: a
+      // profissional pode nunca ter recebido nada por aqui
+      const { data: canalAviso } = await db.rpc('canal_para_responder', {
+        tel: avisar.telefone,
+        instancia: m.instancia ?? null,
+        salao,
+      })
       const ca = Array.isArray(canalAviso) ? canalAviso[0] : canalAviso
       if (ca?.canal && ca.canal !== 'manual') {
         try {
@@ -360,15 +366,48 @@ Deno.serve(async (req) => {
     // Ela acabou de escrever, então a janela de 24h está aberta: a
     // confirmação sai na hora, sem template e sem custo. E sem passar
     // pela fila — resposta que chega meia hora depois não é resposta.
-    const { data: canal } = await db.rpc('canal_do_telefone', { tel: m.telefone })
-    const c = Array.isArray(canal) ? canal[0] : canal
-    if (!c?.canal || c.canal === 'manual') continue
-
-    await enviarPor(c.canal, {
-      telefone: m.telefone,
-      corpo: responder,
-      identificador: c.identificador ?? null,
+    // Por qual canal responder é O NÚMERO QUE RECEBEU a mensagem —
+    // m.instancia. Antes isto vinha do histórico de envios, então quem
+    // escrevia pela primeira vez não tinha histórico, não tinha canal, e
+    // não recebia resposta nenhuma. Ovo e galinha, em silêncio.
+    const { data: canal } = await db.rpc('canal_para_responder', {
+      tel: m.telefone,
+      instancia: m.instancia ?? null,
+      salao,
     })
+    const c = Array.isArray(canal) ? canal[0] : canal
+
+    if (!c?.canal || c.canal === 'manual') {
+      // sem canal automático: a resposta espera na fila, para alguém
+      // mandar na mão pela tela do admin
+      await db.rpc('resposta_nao_saiu', {
+        tel: m.telefone, corpo: responder, salao,
+        motivo: c?.canal === 'manual' ? 'canal manual' : 'nenhum canal para este número',
+      })
+      continue
+    }
+
+    // Falha de envio não pode virar silêncio: se não saiu agora, vira
+    // linha na fila e o escoamento tenta de novo. Resposta atrasada é
+    // ruim; resposta que nunca existiu é pior.
+    try {
+      const env = await enviarPor(c.canal, {
+        telefone: m.telefone,
+        corpo: responder,
+        identificador: c.identificador ?? null,
+      })
+      if (!env.ok) {
+        console.error('resposta não saiu; vai para a fila:', env.erro)
+        await db.rpc('resposta_nao_saiu', {
+          tel: m.telefone, corpo: responder, salao, motivo: env.erro ?? 'envio falhou',
+        })
+      }
+    } catch (e) {
+      console.error('resposta não saiu; vai para a fila', e)
+      await db.rpc('resposta_nao_saiu', {
+        tel: m.telefone, corpo: responder, salao, motivo: String(e).slice(0, 200),
+      })
+    }
   }
 
   // O WhatsApp reenvia o evento se a gente demorar ou devolver erro:

@@ -40,6 +40,10 @@
 --    034  pedido de horário deixa de cair no vazio: avisa a
 --         profissional e a dona, e a resposta muda quando o salão
 --         ainda não gravou o endereço público
+--    035  o bot que marca sozinho: pergunta serviço, profissional,
+--         dia e hora pela conversa e deixa o horário marcado. Junto,
+--         horarios_livres() em SQL — a mesma conta que estava só no
+--         navegador, agora numa implementação só
 --
 --  Se der erro, me mande a mensagem inteira: cada bloco abaixo está
 --  marcado com o nome do arquivo de origem, então dá para achar na hora.

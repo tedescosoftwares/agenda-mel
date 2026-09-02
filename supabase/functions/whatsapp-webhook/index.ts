@@ -301,7 +301,11 @@ Deno.serve(async (req) => {
       if (!leitura.erro) intencao = leitura.intencao
     }
 
-    const { data } = await db.rpc('receber_resposta_whatsapp', {
+    // receber_mensagem é a porta única: ela decide entre o bot (conversa
+    // em andamento, ou intenção de marcar com o bot ligado) e o caminho
+    // de sempre. A ordem importa — no meio de um menu, "2" é a segunda
+    // opção, nunca "cancele meu horário".
+    const { data } = await db.rpc('receber_mensagem', {
       tel: m.telefone,
       texto: m.texto,
       id_provedor: m.id,

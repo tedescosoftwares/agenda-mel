@@ -58,7 +58,8 @@ export default function AdminWhatsapp() {
   const [fila, setFila] = useState([])
   const [leituras, setLeituras] = useState([])
   const [usaIa, setUsaIa] = useState(false)
-  const [mudandoIa, setMudandoIa] = useState(false)
+  const [usaBot, setUsaBot] = useState(false)
+  const [mudando, setMudando] = useState('')
   const [aberta, setAberta] = useState(null)
   const [loading, setLoading] = useState(true)
   const [erro, setErro] = useState('')
@@ -72,7 +73,7 @@ export default function AdminWhatsapp() {
       supabase.rpc('diagnostico_whatsapp', { salao: salaoId }),
       supabase.rpc('fila_do_salao', { salao: salaoId, quantas: 30 }),
       supabase.rpc('leituras_recentes', { salao: salaoId, quantas: 20 }),
-      supabase.from('whatsapp_channels').select('usa_ia').eq('salon_id', salaoId).maybeSingle(),
+      supabase.from('whatsapp_channels').select('usa_ia, usa_bot').eq('salon_id', salaoId).maybeSingle(),
     ])
     const falhou = diag.error || msgs.error || lidas.error
     if (falhou) {
@@ -82,6 +83,7 @@ export default function AdminWhatsapp() {
       setFila(msgs.data ?? [])
       setLeituras(lidas.data ?? [])
       setUsaIa(Boolean(canal.data?.usa_ia))
+      setUsaBot(Boolean(canal.data?.usa_bot))
       setErro('')
     }
     setLoading(false)
@@ -91,12 +93,15 @@ export default function AdminWhatsapp() {
     buscar()
   }, [buscar])
 
-  async function alternarIa() {
-    setMudandoIa(true)
-    const { error } = await supabase.rpc('ligar_ia', { salao: salaoId, ligada: !usaIa })
+  async function alternar(qual) {
+    setMudando(qual)
+    const { error } =
+      qual === 'ia'
+        ? await supabase.rpc('ligar_ia', { salao: salaoId, ligada: !usaIa })
+        : await supabase.rpc('ligar_bot', { salao: salaoId, ligado: !usaBot })
     if (error) setErro(error.message)
     else await buscar()
-    setMudandoIa(false)
+    setMudando('')
   }
 
   const problemas = checagens.filter((c) => c.situacao !== 'ok').length
@@ -148,8 +153,8 @@ export default function AdminWhatsapp() {
           </div>
           <button
             className={'wa-chave' + (usaIa ? ' wa-chave-on' : '')}
-            onClick={alternarIa}
-            disabled={mudandoIa}
+            onClick={() => alternar('ia')}
+            disabled={mudando === 'ia'}
             aria-pressed={usaIa}
           >
             {usaIa ? 'ligada' : 'desligada'}
@@ -160,6 +165,33 @@ export default function AdminWhatsapp() {
             A IA nunca decide sozinha: ela só traduz a mensagem para uma das
             respostas que o sistema já conhece. Quando a regra e a IA discordam,
             a regra ganha.
+          </p>
+        )}
+      </div>
+
+      <div className="wa-ia">
+        <div className="wa-ia-topo">
+          <div>
+            <strong>Marcar pela conversa</strong>
+            <span className="wa-check-detalhe">
+              Quando a cliente pede horário, o bot pergunta serviço, profissional,
+              dia e hora — uma coisa de cada vez, sempre com opções numeradas — e
+              deixa marcado. Só para quem já é cliente; quem não é recebe o link.
+            </span>
+          </div>
+          <button
+            className={'wa-chave' + (usaBot ? ' wa-chave-on' : '')}
+            onClick={() => alternar('bot')}
+            disabled={mudando === 'bot' || !usaIa}
+            aria-pressed={usaBot}
+          >
+            {usaBot ? 'ligado' : 'desligado'}
+          </button>
+        </div>
+        {!usaIa && (
+          <p className="wa-check-detalhe" style={{ marginTop: '.6rem' }}>
+            Ligue primeiro "Entender texto solto" — é ela que reconhece que a
+            cliente quer marcar.
           </p>
         )}
       </div>

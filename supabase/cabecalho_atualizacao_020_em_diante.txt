@@ -46,6 +46,10 @@
 --         navegador, agora numa implementação só
 --    036  telefone repetido em dois cadastros deixa de ser sorteio:
 --         quem responde no WhatsApp é a cliente, sempre
+--    037  quem não tem cadastro deixa de sumir: o bot gravava a
+--         mensagem antes de decidir repassar, e o caminho antigo
+--         via o próprio registro como evento repetido. Junto, o
+--         diagnóstico do bot
 --
 --  Se der erro, me mande a mensagem inteira: cada bloco abaixo está
 --  marcado com o nome do arquivo de origem, então dá para achar na hora.

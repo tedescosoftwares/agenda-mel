@@ -237,10 +237,25 @@ fi
 verde 'Projeto encontrado.'
 
 echo 'Segredos...'
-supabase secrets set --project-ref "$PROJECT_REF" \
-  "EVOLUTION_URL=https://${DOMINIO}" \
-  "EVOLUTION_API_KEY=${API_KEY}" \
-  "EVOLUTION_WEBHOOK_TOKEN=${WEBHOOK_TOKEN}" >/dev/null
+SEGREDOS=(
+  "EVOLUTION_URL=https://${DOMINIO}"
+  "EVOLUTION_API_KEY=${API_KEY}"
+  "EVOLUTION_WEBHOOK_TOKEN=${WEBHOOK_TOKEN}"
+)
+
+# A chave do Groq é o que faz a IA ler o texto solto. Sem ela o webhook
+# não quebra — a leitura vira 'outro', que não faz nada, e só as regras
+# exatas continuam valendo. Por isso é opcional, mas avisada.
+if [ -n "${GROQ_API_KEY:-}" ]; then
+  SEGREDOS+=("GROQ_API_KEY=${GROQ_API_KEY}")
+  echo '  incluindo a GROQ_API_KEY (a IA vai poder ler texto solto)'
+else
+  amarelo '  sem GROQ_API_KEY no .env: a IA fica sem chave e só as regras'
+  amarelo '  exatas ("1", "sim", "cancelar") vão funcionar. Para ligar,'
+  amarelo '  pegue uma em console.groq.com e ponha no .env.'
+fi
+
+supabase secrets set --project-ref "$PROJECT_REF" "${SEGREDOS[@]}" >/dev/null
 verde 'Segredos publicados.'
 
 echo 'Função de envio...'

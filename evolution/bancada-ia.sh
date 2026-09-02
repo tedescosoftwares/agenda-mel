@@ -4,6 +4,7 @@
 #
 #   ./bancada-ia.sh              # usa o modelo do .env
 #   ./bancada-ia.sh qwen3:1.7b   # testa outro, baixando se precisar
+#   IA_THREADS=2 ./bancada-ia.sh # força o nº de threads (padrão: o do Ollama)
 #
 # Manda dez frases que uma cliente realmente escreveria no WhatsApp,
 # com abreviação e sem acento, e confere se o modelo devolve o JSON
@@ -42,6 +43,20 @@ fi
 command -v jq >/dev/null || { amarelo 'Instalando jq...'; sudo apt-get update -qq && sudo apt-get install -y jq >/dev/null; }
 
 URL="https://${DOMINIO}/ia/api/chat"
+
+# Por padrão o Ollama escolhe as threads sozinho: ele usa núcleos FÍSICOS,
+# não vCPU, porque as duas threads de um mesmo núcleo disputam o caminho
+# até a RAM e a geração é limitada por memória. Numa t3.large (1 núcleo,
+# 2 threads) isso dá CPU% em ~100, e parece que metade da máquina está
+# parada. Talvez esteja mesmo — mas isso se mede, não se acredita:
+#   ./bancada-ia.sh              (deixa o Ollama decidir)
+#   IA_THREADS=2 ./bancada-ia.sh (força as duas)
+# e compara o tempo médio das duas rodadas.
+THREADS_JSON='{}'
+if [ -n "${IA_THREADS:-}" ]; then
+  THREADS_JSON=$(jq -n --argjson n "$IA_THREADS" '{num_thread: $n}')
+  echo "  (forçando num_thread=${IA_THREADS})"
+fi
 
 # O prompt de sistema é o mesmo que o bot vai usar. Curto de propósito:
 # cada token aqui é somado em toda mensagem, e num modelo pequeno
@@ -100,12 +115,13 @@ while IFS='|' read -r FRASE ESP_INT ESP_SRV ESP_DIA; do
   # CPU de 2 núcleos isso vira minutos por mensagem, e para decidir se a
   # cliente quer marcar ou desmarcar o raciocínio não acrescenta nada.
   # Em modelo que não pensa, o campo é simplesmente ignorado.
-  CORPO=$(jq -n --arg m "$MODELO" --arg s "$SISTEMA" --arg u "$FRASE" --argjson f "$ESQUEMA" '{
+  CORPO=$(jq -n --arg m "$MODELO" --arg s "$SISTEMA" --arg u "$FRASE" \
+              --argjson f "$ESQUEMA" --argjson th "$THREADS_JSON" '{
     model: $m,
     stream: false,
     think: false,
     format: $f,
-    options: { temperature: 0, num_predict: 120 },
+    options: ( { temperature: 0, num_predict: 120 } + $th ),
     messages: [ {role:"system", content:$s}, {role:"user", content:$u} ]
   }')
 
@@ -165,7 +181,7 @@ else
 fi
 
 echo
-echo "Para comparar com outro tamanho na mesma máquina:"
-echo "  ./bancada-ia.sh qwen3:1.7b"
-echo "  ./bancada-ia.sh qwen3:4b"
+echo "Para comparar na mesma máquina:"
+echo "  ./bancada-ia.sh qwen3:1.7b        # modelo menor, mais rápido"
+echo "  IA_THREADS=2 ./bancada-ia.sh      # força as 2 threads do núcleo"
 echo "Gostou de um? Grave no .env:  IA_MODELO=<o que ganhou>" 

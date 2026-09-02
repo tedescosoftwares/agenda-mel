@@ -301,6 +301,31 @@ GPU AMD).
 O `subir-ia.sh` faz essa conta e recusa antes de baixar, em vez de encher o
 disco no meio do download.
 
+### O que decide a velocidade: núcleo físico, não vCPU
+
+Gerar texto é sequencial — cada palavra depende da anterior — então a
+velocidade acompanha os núcleos **físicos** e a banda de memória, não a
+contagem de vCPU.
+
+Uma `t3.large` mostra 2 vCPU, mas é **1 núcleo físico com 2 threads**. O
+llama.cpp, que roda por baixo do Ollama, usa uma thread por núcleo físico de
+propósito: as duas threads do mesmo núcleo disputam o mesmo caminho até a RAM
+e quase não somam. Por isso o `docker stats` mostra ~104% de CPU e parece que
+metade da máquina está de férias.
+
+| Instância | vCPU | Núcleos físicos | Velocidade relativa |
+|---|---|---|---|
+| `t3.large` | 2 | 1 | referência |
+| `c7i.xlarge` | 4 | 2 | ~2x |
+| `c7i.2xlarge` | 8 | 4 | ~4x |
+
+Antes de gastar com máquina maior, meça as duas coisas de graça:
+
+```bash
+./bancada-ia.sh qwen3:1.7b     # modelo menor, ~2x mais rápido
+IA_THREADS=2 ./bancada-ia.sh   # força as 2 threads e compara o tempo médio
+```
+
 ### Instância burstable: o que muda na prática
 
 `t2`, `t3`, `t3a` e `t4g` são burstable. Elas usam 100% da CPU quando precisam,

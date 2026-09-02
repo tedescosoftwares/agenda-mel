@@ -35,13 +35,20 @@ RAM_MB=$(free -m | awk '/^Mem:/{print $2}')
 RAM_LIVRE_MB=$(free -m | awk '/^Mem:/{print $7}')   # "available", não "free"
 SWAP_MB=$(free -m | awk '/^Swap:/{print $2}')
 NUCLEOS=$(nproc)
+# O que decide a velocidade de geração é núcleo FÍSICO, não vCPU. Uma
+# t3.large mostra 2 vCPU, mas são 2 threads do mesmo núcleo: o llama.cpp
+# (que roda por baixo do Ollama) usa 1 thread e o CPU% fica em ~100, não 200.
+# Hyperthread não dobra aqui porque a geração é limitada por memória, e as
+# duas threads do mesmo núcleo disputam o mesmo caminho até a RAM.
+FISICOS=$(lscpu 2>/dev/null | awk -F: '/^Core\(s\) per socket/{c=$2} /^Socket\(s\)/{s=$2} END{print (c*s)+0}')
+[ "${FISICOS:-0}" -lt 1 ] && FISICOS=$NUCLEOS
 DISCO_LIVRE_GB=$(df -BG --output=avail / | tail -1 | tr -dc '0-9')
 TIPO=$(curl -s --max-time 3 -H "X-aws-ec2-metadata-token: $(curl -s --max-time 3 -X PUT http://169.254.169.254/latest/api/token -H 'X-aws-ec2-metadata-token-ttl-seconds: 60' || true)" \
         http://169.254.169.254/latest/meta-data/instance-type 2>/dev/null || echo '')
 
 echo "  RAM total ..... ${RAM_MB} MB   (livre agora: ${RAM_LIVRE_MB} MB)"
 echo "  Swap .......... ${SWAP_MB} MB"
-echo "  Núcleos ....... ${NUCLEOS}"
+echo "  Núcleos ....... ${NUCLEOS} vCPU / ${FISICOS} físico(s)  <- o que conta é o físico"
 echo "  Disco livre ... ${DISCO_LIVRE_GB} GB"
 [ -n "$TIPO" ] && echo "  Instância ..... ${TIPO}"
 
@@ -79,6 +86,19 @@ if [ -z "$SUGERIDO" ]; then
   echo
   vermelho 'Aumentar o DISCO não resolve isto. O que falta é memória.'
   exit 1
+fi
+
+if [ "$FISICOS" -le 1 ]; then
+  echo
+  amarelo 'Esta máquina tem 1 núcleo físico só.'
+  amarelo 'Gerar texto é sequencial: cada palavra depende da anterior, então a'
+  amarelo 'velocidade é quase proporcional a núcleos físicos. Com 1, espere algo'
+  amarelo 'como 3 a 5 palavras por segundo num modelo de 4b.'
+  amarelo 'Se a bancada acusar lentidão, as saídas são, em ordem de custo:'
+  amarelo '  1. modelo menor (qwen3:1.7b) — de graça, testa com ./bancada-ia.sh qwen3:1.7b'
+  amarelo '  2. c7i.xlarge (4 vCPU = 2 núcleos físicos, mesma RAM)'
+  amarelo '  3. API'
+  echo
 fi
 
 MODELO="${IA_MODELO:-$SUGERIDO}"

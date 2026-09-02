@@ -237,14 +237,23 @@ while IFS='|' read -r FRASE ESP_INT ESP_SRV ESP_DIA ESP_HORA; do
   # com a da OpenAI, esquema em response_format.json_schema e resposta em
   # .choices[0].message.content.
   if [ "$ONDE" = 'groq' ]; then
-    CORPO=$(jq -n --arg m "$MODELO" --arg s "$SISTEMA" --arg u "$FRASE" --argjson f "$ESQUEMA" '{
+    # O gpt-oss também raciocina antes de responder, e esse raciocínio gasta
+    # do mesmo orçamento de tokens: com max_tokens curto o JSON é cortado no
+    # meio e a API recusa. Aqui a folga é grande de propósito — o que importa
+    # é o que ele ESCREVE de resposta, e isso continua sendo ~30 tokens.
+    # reasoning_effort só existe nos gpt-oss; mandar para outro modelo dá erro.
+    EXTRA='{}'
+    case "$MODELO" in *gpt-oss*) EXTRA='{"reasoning_effort":"low"}' ;; esac
+
+    CORPO=$(jq -n --arg m "$MODELO" --arg s "$SISTEMA" --arg u "$FRASE" \
+                --argjson f "$ESQUEMA" --argjson x "$EXTRA" '{
       model: $m,
       temperature: 0,
-      max_tokens: 120,
+      max_tokens: 1024,
       response_format: { type: "json_schema",
         json_schema: { name: "intencao", strict: true, schema: $f } },
       messages: [ {role:"system", content:$s}, {role:"user", content:$u} ]
-    }')
+    } + $x')
     CABECALHO="Authorization: Bearer ${GROQ_API_KEY}"
     CAMINHO='.choices[0].message.content'
   else
@@ -279,7 +288,14 @@ while IFS='|' read -r FRASE ESP_INT ESP_SRV ESP_DIA ESP_HORA; do
   if [ -n "$ERRO_API" ]; then
     echo
     vermelho "A API recusou: ${ERRO_API}"
-    [ "$ONDE" = 'groq' ] && { echo 'Modelos disponíveis para esta chave:'; groq_modelos | sed 's/^/  /'; }
+    # quando a recusa é "o JSON não bateu com o esquema", a resposta traz o
+    # que o modelo realmente produziu. É a única forma de saber se ele
+    # errou o formato, foi cortado no meio, ou respondeu fora do enum.
+    FALHOU=$(echo "$BRUTO" | jq -r '.error.failed_generation // empty' 2>/dev/null)
+    [ -n "$FALHOU" ] && { echo '  o modelo produziu:'; echo "$FALHOU" | head -c 600 | sed 's/^/    /'; echo; }
+    if [ "$ONDE" = 'groq' ] && echo "$ERRO_API" | grep -qi 'model'; then
+      echo 'Modelos disponíveis para esta chave:'; groq_modelos | sed 's/^/  /'
+    fi
     exit 1
   fi
 

@@ -7,6 +7,7 @@
 #   IA_THREADS=2 ./bancada-ia.sh       # força o nº de threads no local
 #   ./bancada-ia.sh groq               # a MESMA prova, mas na API do Groq
 #   ./bancada-ia.sh groq --modelos     # lista o que a sua chave alcança
+#   ./bancada-ia.sh groq --limites     # cota real desta chave, dos cabeçalhos
 #   ./bancada-ia.sh groq llama-3.1-8b-instant
 #
 # O modo groq existe para a comparação ser honesta: mesmas dez frases, mesmo
@@ -67,6 +68,30 @@ if [ "${1:-}" = 'groq' ]; then
     echo "  resposta: $(curl -s --max-time 20 https://api.groq.com/openai/v1/models \
                         -H "Authorization: Bearer ${GROQ_API_KEY}" | head -c 300)"
     exit 1; }
+
+  if [ "${2:-}" = '--limites' ]; then
+    # Os limites de verdade não estão em nenhuma tabela de blog: vêm nos
+    # cabeçalhos de cada resposta, valem para ESTA chave e mudam com o
+    # plano. Uma requisição mínima basta para lê-los.
+    ALVO=$(echo "$DISPONIVEIS" | grep -iE '(^|[^0-9])20b' | head -1)
+    ALVO=${ALVO:-$(echo "$DISPONIVEIS" | head -1)}
+    azul "== Limites da sua chave · ${ALVO} =="
+    curl -s -D - -o /dev/null --max-time 30 https://api.groq.com/openai/v1/chat/completions \
+      -H "Authorization: Bearer ${GROQ_API_KEY}" -H 'Content-Type: application/json' \
+      -d "$(jq -n --arg m "$ALVO" '{model:$m,max_tokens:1,messages:[{role:"user",content:"oi"}]}')" \
+    | grep -i '^x-ratelimit' | tr -d '\r' \
+    | sed -e 's/^x-ratelimit-limit-requests:/  requisições por dia .......:/' \
+          -e 's/^x-ratelimit-limit-tokens:/  tokens por minuto .........:/' \
+          -e 's/^x-ratelimit-remaining-requests:/  requisições restantes hoje :/' \
+          -e 's/^x-ratelimit-remaining-tokens:/  tokens restantes no minuto :/' \
+          -e 's/^x-ratelimit-reset-requests:/  zera as requisições em ....:/' \
+          -e 's/^x-ratelimit-reset-tokens:/  zera os tokens em .........:/'
+    echo
+    echo '  Cada mensagem do bot custa ~500 tokens de prompt + o teto de'
+    echo '  resposta reservado (320). Divida os tokens por minuto por ~820'
+    echo '  para saber quantas clientes o bot atende por minuto.'
+    exit 0
+  fi
 
   if [ "${2:-}" = '--modelos' ]; then
     azul '== Modelos de texto disponíveis para esta chave =='
@@ -237,10 +262,11 @@ while IFS='|' read -r FRASE ESP_INT ESP_SRV ESP_DIA ESP_HORA; do
   # com a da OpenAI, esquema em response_format.json_schema e resposta em
   # .choices[0].message.content.
   if [ "$ONDE" = 'groq' ]; then
-    # O gpt-oss também raciocina antes de responder, e esse raciocínio gasta
-    # do mesmo orçamento de tokens: com max_tokens curto o JSON é cortado no
-    # meio e a API recusa. Aqui a folga é grande de propósito — o que importa
-    # é o que ele ESCREVE de resposta, e isso continua sendo ~30 tokens.
+    # max_tokens não é só um teto: o Groq RESERVA esse número inteiro contra
+    # a cota por minuto, mesmo que o modelo escreva 30 tokens. Com 1024 de
+    # folga, cada mensagem reservava 1527 de um teto de 8000 TPM e a prova
+    # morria na sexta frase. 320 dá espaço para o raciocínio curto do gpt-oss
+    # e para o JSON, sem torrar a cota.
     # reasoning_effort só existe nos gpt-oss; mandar para outro modelo dá erro.
     EXTRA='{}'
     case "$MODELO" in *gpt-oss*) EXTRA='{"reasoning_effort":"low"}' ;; esac
@@ -249,7 +275,7 @@ while IFS='|' read -r FRASE ESP_INT ESP_SRV ESP_DIA ESP_HORA; do
                 --argjson f "$ESQUEMA" --argjson x "$EXTRA" '{
       model: $m,
       temperature: 0,
-      max_tokens: 1024,
+      max_tokens: 320,
       response_format: { type: "json_schema",
         json_schema: { name: "intencao", strict: true, schema: $f } },
       messages: [ {role:"system", content:$s}, {role:"user", content:$u} ]
@@ -270,12 +296,33 @@ while IFS='|' read -r FRASE ESP_INT ESP_SRV ESP_DIA ESP_HORA; do
     CAMINHO='.message.content'
   fi
 
-  T0=$(agora_ms)
-  BRUTO=$(curl -s --max-time 600 "$URL" \
-            -H "$CABECALHO" \
-            -H 'Content-Type: application/json' \
-            -d "$CORPO")
-  T1=$(agora_ms)
+  # Estouro de cota por minuto não é defeito nem do modelo nem do prompt: é
+  # a prova indo rápido demais. A resposta diz quantos segundos esperar, e
+  # obedecer é mais honesto do que abortar e culpar o modelo. O tempo da
+  # espera não entra na medição — ela mede o modelo, não a minha pressa.
+  TENTATIVA=0
+  while :; do
+    T0=$(agora_ms)
+    BRUTO=$(curl -s --max-time 600 "$URL" \
+              -H "$CABECALHO" \
+              -H 'Content-Type: application/json' \
+              -d "$CORPO")
+    T1=$(agora_ms)
+
+    MSG=$(echo "$BRUTO" | jq -r '.error.message // empty' 2>/dev/null)
+    case "$MSG" in
+      *'Rate limit'*|*'rate_limit'*)
+        TENTATIVA=$((TENTATIVA + 1))
+        [ "$TENTATIVA" -gt 3 ] && break
+        ESPERA=$(echo "$MSG" | grep -oE 'try again in [0-9.]+' | grep -oE '[0-9.]+' | head -1)
+        ESPERA=${ESPERA%%.*}; ESPERA=$((${ESPERA:-5} + 2))
+        amarelo "   cota por minuto cheia, esperando ${ESPERA}s (tentativa ${TENTATIVA}/3)"
+        sleep "$ESPERA"
+        continue ;;
+    esac
+    break
+  done
+
   MS=$((T1 - T0))
   SOMA_MS=$((SOMA_MS + MS))
 

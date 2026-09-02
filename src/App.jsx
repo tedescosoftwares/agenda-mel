@@ -15,6 +15,7 @@ import AdminServices from "./pages/admin/AdminServices";
 import AdminHours from "./pages/admin/AdminHours";
 import AdminClientes from "./pages/admin/AdminClientes";
 import AdminNumeros from "./pages/admin/AdminNumeros";
+import AdminWhatsapp from "./pages/admin/AdminWhatsapp";
 import ProAgenda from "./pages/pro/ProAgenda";
 import ProServicos from "./pages/pro/ProServicos";
 import ProHorarios from "./pages/pro/ProHorarios";
@@ -169,6 +170,14 @@ export default function App() {
               element={
                 <ProtectedRoute requireRole="admin">
                   <AdminNumeros />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/whatsapp"
+              element={
+                <ProtectedRoute requireRole="admin">
+                  <AdminWhatsapp />
                 </ProtectedRoute>
               }
             />

@@ -8,6 +8,7 @@ import {
   GraficoIcon,
   UsersIcon,
   TeamIcon,
+  BellIcon,
 } from './icons'
 
 const TABS = [
@@ -16,6 +17,7 @@ const TABS = [
   { to: '/admin/equipe', label: 'Equipe', Icon: TeamIcon },
   { to: '/admin/servicos', label: 'Serviços', Icon: SparkleIcon },
   { to: '/admin/clientes', label: 'Clientes', Icon: UsersIcon },
+  { to: '/admin/whatsapp', label: 'WhatsApp', Icon: BellIcon },
 ]
 
 export default function AdminShell({ children }) {

@@ -3210,3 +3210,59 @@ a.prof-row:hover,
     font-size: 1.35rem;
   }
 }
+
+/* ---------------------------------------------------------------
+   Admin → WhatsApp: o diagnóstico e a fila
+   Cada checagem é uma linha, não um cartão: são seis itens de uma
+   lista de conferência, e seis cartões empilhados leriam como seis
+   assuntos diferentes.
+   --------------------------------------------------------------- */
+.wa-acoes { display: flex; gap: .5rem; margin-bottom: 1rem; }
+
+.wa-check { list-style: none; margin: 0 0 1rem; padding: 0;
+  border: 1px solid var(--linha); border-radius: 12px; overflow: hidden; }
+.wa-check-item { display: grid; grid-template-columns: auto 1fr auto;
+  align-items: center; gap: .75rem; padding: .8rem 1rem;
+  border-bottom: 1px solid var(--linha); }
+.wa-check-item:last-child { border-bottom: 0; }
+.wa-check-ponto { width: .55rem; height: .55rem; border-radius: 50%;
+  background: var(--ok, #3f9d6d); }
+.wa-check-item.ruim .wa-check-ponto { background: var(--perigo, #d1495b); }
+.wa-check-item.atencao .wa-check-ponto { background: var(--aviso, #d99a2b); }
+.wa-check-item strong { display: block; font-size: .95rem; }
+.wa-check-detalhe { display: block; font-size: .82rem; color: var(--texto-fraco); margin-top: .15rem; }
+.wa-check-tag { font-size: .7rem; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--texto-fraco); }
+.wa-check-item.ruim .wa-check-tag { color: var(--perigo, #d1495b); }
+.wa-check-item.atencao .wa-check-tag { color: var(--aviso, #d99a2b); }
+
+.wa-fila { list-style: none; margin: 0; padding: 0;
+  display: flex; flex-direction: column; gap: .5rem; }
+.wa-msg { border: 1px solid var(--linha); border-radius: 12px; overflow: hidden; }
+.wa-msg-topo { display: grid; grid-template-columns: auto 1fr auto auto;
+  align-items: center; gap: .6rem; width: 100%; padding: .7rem .9rem;
+  background: none; border: 0; color: inherit; text-align: left; cursor: pointer;
+  font: inherit; }
+.wa-msg-topo:hover { background: var(--realce, rgba(255,255,255,.04)); }
+.wa-msg-tipo { font-size: .9rem; }
+.wa-msg-para { font-size: .82rem; color: var(--texto-fraco);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wa-msg-quando { font-size: .78rem; color: var(--texto-fraco);
+  font-variant-numeric: tabular-nums; }
+.wa-status { font-size: .65rem; letter-spacing: .06em; text-transform: uppercase;
+  padding: .15rem .4rem; border-radius: 4px; white-space: nowrap;
+  background: var(--realce, rgba(255,255,255,.06)); color: var(--texto-fraco); }
+.wa-na_fila { color: var(--aviso, #d99a2b); }
+.wa-enviado, .wa-entregue, .wa-lido { color: var(--ok, #3f9d6d); }
+.wa-falhou { color: var(--perigo, #d1495b); }
+
+.wa-msg-corpo { padding: .2rem .9rem .9rem; border-top: 1px solid var(--linha); }
+.wa-msg-corpo pre { white-space: pre-wrap; word-break: break-word;
+  font: inherit; font-size: .88rem; margin: .8rem 0;
+  background: var(--realce, rgba(255,255,255,.04)); padding: .8rem;
+  border-radius: 10px; }
+
+@media (max-width: 34rem) {
+  .wa-msg-topo { grid-template-columns: auto 1fr auto; }
+  .wa-msg-para { grid-column: 2 / -1; grid-row: 2; }
+}

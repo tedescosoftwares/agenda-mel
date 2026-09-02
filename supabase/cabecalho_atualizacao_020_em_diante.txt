@@ -29,6 +29,10 @@
 --         por sete filtros, e a IA nasce DESLIGADA em todo salão
 --    031  tira TRUNCATE de anon e authenticated — é a única forma de
 --         apagar dados que não passa por RLS
+--    032  a profissional fica sabendo: marcou ou cancelou, chega
+--         WhatsApp pra ela; mais a tela Admin -> WhatsApp que diz
+--         por que uma mensagem não saiu, e a profissional Mel
+--         (mel@exemplo.com) com telefone de verdade para testar
 --
 --  Se der erro, me mande a mensagem inteira: cada bloco abaixo está
 --  marcado com o nome do arquivo de origem, então dá para achar na hora.

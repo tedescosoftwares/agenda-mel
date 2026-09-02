@@ -314,6 +314,39 @@ Deno.serve(async (req) => {
       salao,
     })
 
+    // Aviso com prazo correndo não pode esperar a fila. Quando o bot abre
+    // um pedido de horário, a profissional tem um cronômetro — e a fila
+    // só é escoada quando alguém a empurra. Então esse aviso sai aqui,
+    // na mesma requisição, e a linha da fila é marcada como enviada.
+    // Se falhar, ela continua 'na_fila' e o escoamento normal pega depois.
+    const avisar = (data as any)?.avisar
+    if (avisar?.telefone && avisar?.corpo) {
+      const { data: canalAviso } = await db.rpc('canal_do_telefone', { tel: avisar.telefone })
+      const ca = Array.isArray(canalAviso) ? canalAviso[0] : canalAviso
+      if (ca?.canal && ca.canal !== 'manual') {
+        try {
+          const env = await enviarPor(ca.canal, {
+            telefone: avisar.telefone,
+            corpo: avisar.corpo,
+            identificador: ca.identificador ?? null,
+          })
+          // marcar como enviada SÓ quando saiu mesmo. Marcar no erro
+          // apagaria a mensagem da fila sem ela ter chegado a ninguém —
+          // e o pedido morreria em silêncio, que é o pior desfecho.
+          if (env.ok) {
+            await db.rpc('avisei_na_hora', {
+              fila_id: avisar.fila_id,
+              id_provedor: env.providerId ?? null,
+            })
+          } else {
+            console.error('aviso não saiu; fica na fila:', env.erro)
+          }
+        } catch (e) {
+          console.error('não consegui avisar na hora; fica para a fila', e)
+        }
+      }
+    }
+
     const responder = (data as any)?.responder
     if (!responder) continue
     respostas.push(`${m.telefone}: ${responder}`)

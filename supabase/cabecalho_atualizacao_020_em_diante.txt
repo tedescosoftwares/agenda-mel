@@ -54,6 +54,9 @@
 --         cria um PEDIDO, ela responde 1 ou 2 pelo WhatsApp (ou pela
 --         tela), e cada uma configura o próprio prazo e o que
 --         acontece se ele passar
+--    039  o pedido sai na hora, não pela fila: prazo de 2h esperando
+--         alguém escoar a fila expira antes de ela ver. E confirmar
+--         pela agenda passa a fechar o pedido
 --
 --  Se der erro, me mande a mensagem inteira: cada bloco abaixo está
 --  marcado com o nome do arquivo de origem, então dá para achar na hora.

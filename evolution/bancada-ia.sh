@@ -6,6 +6,7 @@
 #   ./bancada-ia.sh qwen3:1.7b         # outro modelo local, baixando se precisar
 #   IA_THREADS=2 ./bancada-ia.sh       # força o nº de threads no local
 #   ./bancada-ia.sh groq               # a MESMA prova, mas na API do Groq
+#   ./bancada-ia.sh groq --modelos     # lista o que a sua chave alcança
 #   ./bancada-ia.sh groq llama-3.1-8b-instant
 #
 # O modo groq existe para a comparação ser honesta: mesmas dez frases, mesmo
@@ -41,13 +42,56 @@ set -a; . ./.env; set +a
 # perder o que já estava valendo.
 if [ "${1:-}" = 'groq' ]; then
   ONDE='groq'
-  MODELO="${2:-llama-3.1-8b-instant}"
   [ -n "${GROQ_API_KEY:-}" ] || {
     vermelho 'Falta GROQ_API_KEY no .env.'
     echo '  1. Crie a conta em https://console.groq.com (grátis, sem cartão)'
     echo '  2. API Keys -> Create API Key'
     echo '  3. Acrescente ao .env:  GROQ_API_KEY=gsk_...'
     exit 1; }
+
+  command -v jq >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y jq >/dev/null; }
+
+  # Catálogo de API muda: modelo some, troca de nome, sai do plano grátis.
+  # Nome fixo no código vira 10 respostas iguais de "model_not_found", que
+  # foi o que aconteceu com o llama-3.1-8b-instant. Então a lista vem deles.
+  groq_modelos() {
+    curl -s --max-time 20 https://api.groq.com/openai/v1/models \
+      -H "Authorization: Bearer ${GROQ_API_KEY}" \
+    | jq -r '.data[].id' 2>/dev/null \
+    | grep -Eiv 'whisper|tts|embed|guard|prompt-?guard' | sort
+  }
+
+  DISPONIVEIS=$(groq_modelos)
+  [ -n "$DISPONIVEIS" ] || {
+    vermelho 'Não consegui listar os modelos do Groq. A chave está certa?'
+    echo "  resposta: $(curl -s --max-time 20 https://api.groq.com/openai/v1/models \
+                        -H "Authorization: Bearer ${GROQ_API_KEY}" | head -c 300)"
+    exit 1; }
+
+  if [ "${2:-}" = '--modelos' ]; then
+    azul '== Modelos de texto disponíveis para esta chave =='
+    echo "$DISPONIVEIS" | sed 's/^/  /'
+    exit 0
+  fi
+
+  if [ -n "${2:-}" ]; then
+    MODELO="$2"
+    echo "$DISPONIVEIS" | grep -qx "$MODELO" || {
+      vermelho "O modelo '${MODELO}' não está disponível para esta chave."
+      echo 'Escolha um destes:'; echo "$DISPONIVEIS" | sed 's/^/  /'
+      exit 1; }
+  else
+    # sem modelo escolhido, pega o menor/mais rápido que existir hoje:
+    # para classificar quatro campos, modelo grande é dinheiro e latência
+    # jogados fora
+    # As fronteiras nos números não são frescura: sem elas '20b' casa dentro
+    # de '120b' e a escolha do MENOR acaba pegando o MAIOR da lista.
+    for PADRAO in 'instant' '(^|[^0-9])8b' '(^|[^0-9])9b' '(^|[^0-9])20b' 'gemma' '.'; do
+      MODELO=$(echo "$DISPONIVEIS" | grep -iE -- "$PADRAO" | head -1)
+      [ -n "$MODELO" ] && break
+    done
+    echo "  (escolhi ${MODELO} da lista da sua conta; para outro: ./bancada-ia.sh groq --modelos)"
+  fi
 else
   ONDE='local'
   [ -n "${IA_TOKEN:-}" ] || { vermelho 'IA_TOKEN vazio no .env. Rode o ./subir-ia.sh.'; exit 1; }
@@ -219,6 +263,18 @@ while IFS='|' read -r FRASE ESP_INT ESP_SRV ESP_DIA ESP_HORA; do
   SOMA_MS=$((SOMA_MS + MS))
 
   JSON=$(echo "$BRUTO" | jq -r "${CAMINHO} // empty" 2>/dev/null)
+
+  # Erro de configuração (modelo errado, chave sem permissão, cota estourada)
+  # vale para as dez frases igual. Repetir dez vezes a mesma mensagem só
+  # enterra a informação; melhor parar na primeira e dizer o que fazer.
+  ERRO_API=$(echo "$BRUTO" | jq -r '.error.message // empty' 2>/dev/null)
+  if [ -n "$ERRO_API" ]; then
+    echo
+    vermelho "A API recusou: ${ERRO_API}"
+    [ "$ONDE" = 'groq' ] && { echo 'Modelos disponíveis para esta chave:'; groq_modelos | sed 's/^/  /'; }
+    exit 1
+  fi
+
   if [ -z "$JSON" ] || ! echo "$JSON" | jq -e . >/dev/null 2>&1; then
     vermelho "✗ ${FRASE}"
     echo "   não veio JSON. resposta crua: $(echo "$BRUTO" | head -c 200)"

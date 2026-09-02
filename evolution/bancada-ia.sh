@@ -58,7 +58,7 @@ if [ "${1:-}" = 'groq' ]; then
     curl -s --max-time 20 https://api.groq.com/openai/v1/models \
       -H "Authorization: Bearer ${GROQ_API_KEY}" \
     | jq -r '.data[].id' 2>/dev/null \
-    | grep -Eiv 'whisper|tts|embed|guard|prompt-?guard' | sort
+    | grep -Eiv 'whisper|tts|embed|guard|prompt-?guard|orpheus|speech' | sort
   }
 
   DISPONIVEIS=$(groq_modelos)
@@ -172,12 +172,20 @@ servico é null. Se não disser o dia, dia é null. Se não disser a hora, hora
 é null. "de tarde" não é hora, é null. Nome de pessoa não é serviço.
 Errar para null é barato; inventar marca a cliente no serviço errado.'
 
+# additionalProperties:false é obrigatório no modo estrito da API compatível
+# com a da OpenAI, que é o que o Groq usa: sem isso ele recusa o esquema
+# inteiro. O Ollama ignora o campo, então serve para os dois.
+#
+# Os enums de servico e dia estão aqui, e não só no texto do prompt, porque
+# instrução em prosa é sugestão e esquema é lei: foi assim que o 4b-instruct
+# devolveu dia="semana que vem", que está na frase mas não na lista.
 ESQUEMA='{
   "type":"object",
+  "additionalProperties":false,
   "properties":{
     "intencao":{"type":"string","enum":["agendar","remarcar","cancelar","confirmar","preco","horarios","outro"]},
-    "servico":{"type":["string","null"]},
-    "dia":{"type":["string","null"]},
+    "servico":{"type":["string","null"],"enum":["manicure","pedicure","sobrancelha","cilios","cabelo","depilacao",null]},
+    "dia":{"type":["string","null"],"enum":["segunda","terca","quarta","quinta","sexta","sabado","domingo","hoje","amanha",null]},
     "hora":{"type":["string","null"]}
   },
   "required":["intencao","servico","dia","hora"]

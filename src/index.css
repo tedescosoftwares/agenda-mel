@@ -4485,3 +4485,25 @@ body {
    borda da tela */
 .fileira-prof { max-width: calc(100% + 2.3rem); }
 .perfil-capa { max-width: calc(100% + 2.3rem); }
+
+/* ---- rolagem lateral só onde é de propósito ---- */
+/* as fileiras que rolam para o lado (dias, chips, profissionais) não
+   podem passar o gesto para a página: quando chegam no fim, param. */
+.day-picker, .filtro-chips.rolavel, .filtro-chips.dias-chips, .fileira-prof {
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+html { position: relative; }
+#root { width: 100%; }
+
+/* ---- 320px (iPhone SE, mini): o que ainda estourava ---- */
+@media (max-width: 360px) {
+  .link-acoes-2 { grid-template-columns: 1fr; }
+  .intervalo { grid-template-columns: 1fr; }
+  .intervalo-ate { display: none; }
+  .form input, .form select, .form textarea { width: 100%; }
+  .pedido-acoes { grid-template-columns: 1fr; }
+  .atalhos { grid-template-columns: repeat(2, 1fr); }
+  .kpi strong { font-size: 1.45rem; }
+}
+.form input, .form select { max-width: 100%; }

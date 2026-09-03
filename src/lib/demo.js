@@ -153,7 +153,7 @@ const RPC = {
   resumo_da_ia: () => [{ hoje: 12, teto: 200 }],
 }
 
-function consulta(linhas, opts = {}) {
+function consulta(linhas) {
   let dados = [...linhas]
   const filtros = []
   let ordem = null

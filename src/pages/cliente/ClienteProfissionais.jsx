@@ -52,7 +52,7 @@ export default function ClienteProfissionais() {
 
   async function alternarFavorita(p) {
     const era = favoritas.has(p.id)
-    setFavoritas((s) => { const n = new Set(s); era ? n.delete(p.id) : n.add(p.id); return n })
+    setFavoritas((s) => { const n = new Set(s); if (era) n.delete(p.id); else n.add(p.id); return n })
     if (era) {
       await supabase.from('client_favorites').delete().eq('client_id', user.id).eq('professional_id', p.id)
     } else {

@@ -12,7 +12,7 @@ import { toMin, minToHora, formatDataLonga } from '../../lib/booking'
 // (?prof&servico&data&hora). Assim o botão de voltar do celular volta
 // UM passo, e um link no meio do fluxo abre no lugar certo.
 
-function usarEscolhas() {
+function useEscolhas() {
   const [q] = useSearchParams()
   return {
     prof: q.get('prof') || '',
@@ -29,7 +29,7 @@ function comQuery(rota, obj) {
 }
 
 // carrega a profissional e o serviço a partir dos ids da URL
-function usarContexto(profId, servicoId) {
+function useContexto(profId, servicoId) {
   const [prof, setProf] = useState(null)
   const [servico, setServico] = useState(null)
   useEffect(() => {
@@ -129,9 +129,9 @@ export function AgendarServicos() {
 
 // ---------------------------------------------------------------- 2
 export function AgendarData() {
-  const esc = usarEscolhas()
+  const esc = useEscolhas()
   const navigate = useNavigate()
-  const { prof, servico } = usarContexto(esc.prof, esc.servico)
+  const { prof, servico } = useContexto(esc.prof, esc.servico)
   const [horas, setHoras] = useState([])
   const [sugeridos, setSugeridos] = useState([])
   const [data, setData] = useState(esc.data)
@@ -174,9 +174,9 @@ export function AgendarData() {
 
 // ---------------------------------------------------------------- 3
 export function AgendarHora() {
-  const esc = usarEscolhas()
+  const esc = useEscolhas()
   const navigate = useNavigate()
-  const { servico } = usarContexto(esc.prof, esc.servico)
+  const { servico } = useContexto(esc.prof, esc.servico)
   const [slots, setSlots] = useState(null)
   const [hora, setHora] = useState(esc.hora)
 
@@ -230,10 +230,10 @@ export function AgendarHora() {
 
 // ---------------------------------------------------------------- 4
 export function AgendarConfirmar() {
-  const esc = usarEscolhas()
+  const esc = useEscolhas()
   const navigate = useNavigate()
   const { user } = useAuth()
-  const { prof, servico } = usarContexto(esc.prof, esc.servico)
+  const { prof, servico } = useContexto(esc.prof, esc.servico)
   const [obs, setObs] = useState('')
   const [saving, setSaving] = useState(false)
   const [erro, setErro] = useState('')

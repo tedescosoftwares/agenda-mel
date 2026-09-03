@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Navigate, Link } from 'react-router-dom'
+import { Navigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { homeDoPapel } from '../lib/roles'
 import { isSupabaseConfigured, supabase } from '../lib/supabase'

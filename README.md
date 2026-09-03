@@ -248,3 +248,15 @@ where slug = 'slug-dela';
 - [ ] Publicar (Vercel/Netlify) e instalar como PWA no celular
 - [ ] Notificações (lembrete de horário)
 - [ ] Migrar depois para React Native / Expo reaproveitando o Supabase
+
+
+## Modo demonstração (sem Supabase)
+
+```bash
+VITE_DEMO=1 npm run dev
+```
+
+O app inteiro sobe com dados fictícios. Escolha o papel pela URL:
+`/login?demo=cliente`, `?demo=profissional` ou `?demo=admin`
+(`?demo=sair` para ver a tela de login). Nada é gravado. Serve para
+mostrar o produto e para conferir cada tela sem precisar de conta.

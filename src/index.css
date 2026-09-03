@@ -4514,3 +4514,21 @@ html { position: relative; }
 /* belt-and-braces para o Safari: body com largura explícita e
    posição relativa é o que faz o overflow-x hidden valer lá */
 body { position: relative; width: 100%; }
+
+/* ---- remarcação: o pedido de troca e a nota no horário atual ---- */
+.badge-remarcacao { color: var(--roxo); }
+.agd-card.troca { border-left-color: var(--roxo); }
+.agd-troca {
+  font-size: 0.82rem;
+  color: var(--ameixa);
+  background: color-mix(in srgb, var(--violeta) 22%, #fff);
+  border-radius: var(--r-controle);
+  padding: 0.45rem 0.6rem;
+  margin-top: 0.35rem;
+  line-height: 1.35;
+}
+.pedido-card.troca { border-left: 4px solid var(--roxo); }
+.pedido-era { text-decoration: line-through; font-size: 0.85rem; }
+.pedido-quer { font-weight: 600; color: var(--roxo); }
+.resumo-troca-de strong { text-decoration: line-through; color: var(--texto-3); font-weight: 500; }
+.resumo-troca-para strong { color: var(--roxo); }

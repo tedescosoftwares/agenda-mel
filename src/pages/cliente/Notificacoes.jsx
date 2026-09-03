@@ -10,11 +10,13 @@ const ICONE = {
   lembrete_agendamento: '⏰', vaga_disponivel: '⏰', agenda_adiantada: '⚡',
   convite_retorno: '💛', pos_atendimento: '💆', indicacao_creditada: '🎁',
   profissional_cancelou: '⚠️', agendamento_cancelado: '⚠️', novo_agendamento: '🗓️',
+  remarcacao_aceita: '🔁', remarcacao_recusada: '😔',
 }
 const DESTINO = {
   agendamento_confirmado: '/cliente/meus-agendamentos', pedido_aceito: '/cliente/meus-agendamentos',
   pedido_recusado: '/cliente/home', lembrete_agendamento: '/cliente/meus-agendamentos',
   vaga_disponivel: '/cliente/meus-agendamentos', indicacao_creditada: '/cliente/indicacao',
+  remarcacao_aceita: '/cliente/meus-agendamentos', remarcacao_recusada: '/cliente/meus-agendamentos',
 }
 
 export default function Notificacoes() {

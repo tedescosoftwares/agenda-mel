@@ -72,16 +72,23 @@ export default function ProPedidos() {
       ) : (
         <div className="cliente-list">
           {pedidos.map((p) => (
-            <div key={p.appointment_id} className="card pedido-card">
+            <div key={p.appointment_id} className={'card pedido-card' + (p.remarcacao ? ' troca' : '')}>
               <div className="pedido-topo">
                 <strong>{p.cliente}</strong>
                 <span className={'pedido-prazo' + (p.faltam_min != null && p.faltam_min < 30 ? ' urgente' : '')}>⏱ {prazo(p.faltam_min)}</span>
               </div>
-              <span className="pedido-servico">{p.servico}</span>
-              <span className="muted">{p.quando}</span>
+              <span className="pedido-servico">{p.remarcacao ? '🔁 Quer remarcar · ' : ''}{p.servico}</span>
+              {p.remarcacao ? (
+                <>
+                  <span className="muted pedido-era">era {p.antes}</span>
+                  <span className="pedido-quer">quer {p.quando}</span>
+                </>
+              ) : (
+                <span className="muted">{p.quando}</span>
+              )}
               <div className="pedido-acoes">
-                <button className="btn btn-ghost" disabled={respondendo === p.appointment_id} onClick={() => responder(p.appointment_id, false)}>Recusar</button>
-                <button className="btn btn-primary" disabled={respondendo === p.appointment_id} onClick={() => responder(p.appointment_id, true)}>Aceitar</button>
+                <button className="btn btn-ghost" disabled={respondendo === p.appointment_id} onClick={() => responder(p.appointment_id, false)}>{p.remarcacao ? 'Manter como está' : 'Recusar'}</button>
+                <button className="btn btn-primary" disabled={respondendo === p.appointment_id} onClick={() => responder(p.appointment_id, true)}>{p.remarcacao ? 'Aceitar troca' : 'Aceitar'}</button>
               </div>
             </div>
           ))}

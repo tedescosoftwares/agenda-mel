@@ -78,7 +78,7 @@ const clientes = [
   { id: 'a1', full_name: 'Mel Tedesco', phone: '(13) 99120-3410', role: 'admin', accepts_reminders: true, created_at: '2024-11-01' },
 ]
 
-const jn = (a) => ({ ...a, services: servicos.find((s) => s.id === a.service_id), professionals: profissionais.find((p) => p.id === a.professional_id), profiles: clientes.find((c) => c.id === a.client_id), appointment_offers: [] })
+const jn = (a, todos) => ({ ...a, services: servicos.find((s) => s.id === a.service_id), professionals: profissionais.find((p) => p.id === a.professional_id), profiles: clientes.find((c) => c.id === a.client_id), appointment_offers: [], origem: a.remarca_de ? (todos.find((o) => o.id === a.remarca_de) ?? null) : null })
 
 const agendamentos = [
   { id: 'ap1', client_id: 'c1', professional_id: 'pr1', service_id: 'sv2', salon_id: SALAO, date: mais(2), start_time: '14:00:00', end_time: '15:30:00', status: 'pendente', price_cents: 8500, created_at: mais(0) },
@@ -89,13 +89,15 @@ const agendamentos = [
   { id: 'ap6', client_id: 'c3', professional_id: 'pr1', service_id: 'sv5', salon_id: SALAO, date: mais(0), start_time: '10:30:00', end_time: '11:30:00', status: 'confirmado', price_cents: 7500, created_at: mais(-2) },
   { id: 'ap7', client_id: 'c4', professional_id: 'pr1', service_id: 'sv2', salon_id: SALAO, date: mais(0), start_time: '14:00:00', end_time: '15:30:00', status: 'pendente', price_cents: 8500, created_at: mais(0) },
   { id: 'ap8', client_id: 'c2', professional_id: 'pr1', service_id: 'sv4', salon_id: SALAO, date: mais(0), start_time: '16:30:00', end_time: '17:30:00', status: 'confirmado', price_cents: 6500, created_at: mais(-1) },
+  // pedido de troca aberto: a cliente quer mudar o ap2 para outro dia
+  { id: 'ap9', client_id: 'c1', professional_id: 'pr2', service_id: 'sv7', salon_id: SALAO, date: mais(11), start_time: '15:00:00', end_time: '15:45:00', status: 'pendente', price_cents: 6000, created_at: mais(0), remarca_de: 'ap2' },
 ].concat(
   Array.from({ length: 16 }, (_, i) => ({
     id: 'h' + i, client_id: ['c2', 'c3', 'c4', 'c1'][i % 4], professional_id: 'pr1', service_id: ['sv1', 'sv2', 'sv5', 'sv4'][i % 4],
     salon_id: SALAO, date: diaDoMes(i), start_time: ['09:00:00', '10:30:00', '14:00:00', '16:00:00'][i % 4],
     end_time: '11:00:00', status: i === 5 ? 'faltou' : 'concluido', price_cents: [3500, 8500, 7500, 6500][i % 4], created_at: mais(-(i * 2 + 3)),
   })),
-).map(jn)
+).map((a, _i, todos) => jn(a, todos))
 
 const avisos = [
   { id: 'n1', user_id: UID, kind: 'agendamento_confirmado', title: 'Agendamento confirmado', body: 'Corte feminino · ' + mais(9) + ' às 10:30', created_at: new Date(Date.now() - 3600e3).toISOString(), read_at: null },
@@ -149,7 +151,9 @@ const RPC = {
   meu_resumo_indicacoes: () => [{ codigo: 'JULIANA10', premio_indicou_cents: 2000, premio_indicada_cents: 1000, indicadas: 3, creditado_cents: 3000 }],
   meu_resumo_afiliada: () => [],
   minhas_profissionais_indicadas: () => [],
-  meus_pedidos: () => agendamentos.filter((a) => a.status === 'pendente' && a.professional_id === 'pr1').map((a) => ({ appointment_id: a.id, cliente: a.profiles?.full_name, servico: a.services?.name, quando: 'Qui, 16/05 às ' + a.start_time.slice(0, 5), faltam_min: 87 })),
+  meus_pedidos: () => agendamentos.filter((a) => a.status === 'pendente' && a.professional_id === 'pr1').map((a) => ({ appointment_id: a.id, cliente: a.profiles?.full_name, servico: a.services?.name, quando: 'Qui, 16/05 às ' + a.start_time.slice(0, 5), faltam_min: 87, remarcacao: false, antes: null }))
+    .concat([{ appointment_id: 'ap9', cliente: 'Juliana Prado', servico: 'Esmaltação em gel', quando: 'Sáb, 25/05 às 15:00', faltam_min: 41, remarcacao: true, antes: 'Qui, 23/05 às 10:30' }]),
+  pedir_remarcacao: () => ({ ok: true, appointment_id: 'ap9', pendente: true, minutos: 120 }),
   quantas_para_enviar: () => 0,
   config_agenda_profissional: () => [{ no_show_tolerance_minutes: 15 }],
   resumo_do_mes: () => [{ atendimentos: 128, faturamento_cents: 984000, faturamento_mes_anterior_cents: 871000, clientes: 64, ticket_medio_cents: 7687, ocupacao_bps: 8200, minutos_ocupados: 7680, minutos_disponiveis: 9360, faltas: 3, taxa_falta_bps: 230, clientes_novas: 12, descontos_cents: 9000 }],

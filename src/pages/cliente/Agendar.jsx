@@ -11,6 +11,12 @@ import { toMin, minToHora, formatDataLonga } from '../../lib/booking'
 // Cada passo é uma rota, e o que já foi escolhido viaja na URL
 // (?prof&servico&data&hora). Assim o botão de voltar do celular volta
 // UM passo, e um link no meio do fluxo abre no lugar certo.
+//
+// O mesmo fluxo serve para REMARCAR: chega com ?remarcar=<id do
+// agendamento>, pula o passo do serviço (é o mesmo) e, no fim, em vez
+// de criar um agendamento, abre um pedido de troca que passa pelo
+// aceite da profissional. O horário atual fica guardado até ela
+// responder.
 
 function useEscolhas() {
   const [q] = useSearchParams()
@@ -19,7 +25,18 @@ function useEscolhas() {
     servico: q.get('servico') || '',
     data: q.get('data') || '',
     hora: q.get('hora') || '',
+    remarcar: q.get('remarcar') || '',
   }
+}
+
+// o agendamento que está sendo trocado, quando é remarcação
+function useOrigem(id) {
+  const [origem, setOrigem] = useState(null)
+  useEffect(() => {
+    if (!id) return
+    supabase.from('appointments').select('id, date, start_time, end_time, status, service_id, professional_id').eq('id', id).maybeSingle().then(({ data }) => setOrigem(data))
+  }, [id])
+  return origem
 }
 
 function comQuery(rota, obj) {
@@ -48,14 +65,16 @@ function useContexto(profId, servicoId) {
   return { prof, servico }
 }
 
-function Trilha({ passo }) {
-  const nomes = ['Serviço', 'Data', 'Hora', 'Confirmar']
+function Trilha({ passo, remarcar }) {
+  // remarcando, o serviço já está decidido: a trilha começa na data
+  const nomes = remarcar ? ['Data', 'Hora', 'Confirmar'] : ['Serviço', 'Data', 'Hora', 'Confirmar']
+  const atual = remarcar ? passo - 1 : passo
   return (
     <ol className="trilha">
       {nomes.map((r, i) => (
-        <li key={r} className={'trilha-passo' + (i + 1 === passo ? ' atual' : '') + (i + 1 < passo ? ' feito' : '')}>
+        <li key={r} className={'trilha-passo' + (i + 1 === atual ? ' atual' : '') + (i + 1 < atual ? ' feito' : '')}>
           <button type="button" disabled>
-            <span className="trilha-num">{i + 1 < passo ? '✓' : i + 1}</span>
+            <span className="trilha-num">{i + 1 < atual ? '✓' : i + 1}</span>
             <span className="trilha-rotulo">{r}</span>
           </button>
         </li>
@@ -150,9 +169,9 @@ export function AgendarData() {
   const seguir = (iso) => navigate(comQuery('/cliente/agendamento/hora', { ...esc, data: iso }))
 
   return (
-    <ClienteShell titulo="Escolher data" voltar={comQuery(`/cliente/profissional/${esc.prof}/servicos`, { servico: esc.servico })}>
-      <Trilha passo={2} />
-      {prof && servico && <p className="muted" style={{ marginTop: 0 }}>{servico.name} com {prof.name}</p>}
+    <ClienteShell titulo={esc.remarcar ? 'Nova data' : 'Escolher data'} voltar={esc.remarcar ? '/cliente/meus-agendamentos' : comQuery(`/cliente/profissional/${esc.prof}/servicos`, { servico: esc.servico })}>
+      <Trilha passo={2} remarcar={esc.remarcar} />
+      {prof && servico && <p className="muted" style={{ marginTop: 0 }}>{esc.remarcar ? 'Remarcando ' : ''}{servico.name} com {prof.name}</p>}
 
       <CalendarioMes valor={data} diaAberto={horas.length ? diaAberto : undefined} onEscolher={(iso) => { setData(iso); seguir(iso) }} />
 
@@ -187,8 +206,8 @@ export function AgendarHora() {
   }, [esc.prof, esc.data, servico])
 
   return (
-    <ClienteShell titulo="Escolher hora" voltar={comQuery('/cliente/agendamento/data', esc)}>
-      <Trilha passo={3} />
+    <ClienteShell titulo={esc.remarcar ? 'Nova hora' : 'Escolher hora'} voltar={comQuery('/cliente/agendamento/data', esc)}>
+      <Trilha passo={3} remarcar={esc.remarcar} />
       <p className="muted" style={{ marginTop: 0 }}>{esc.data && formatDataLonga(esc.data)}</p>
 
       <h3 className="secao-titulo">Horários disponíveis</h3>
@@ -234,6 +253,7 @@ export function AgendarConfirmar() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const { prof, servico } = useContexto(esc.prof, esc.servico)
+  const origem = useOrigem(esc.remarcar)
   const [obs, setObs] = useState('')
   const [saving, setSaving] = useState(false)
   const [erro, setErro] = useState('')
@@ -242,6 +262,18 @@ export function AgendarConfirmar() {
     if (!servico || !esc.data || !esc.hora) return
     setSaving(true)
     setErro('')
+
+    if (esc.remarcar) {
+      // remarcação: o banco cria o pedido ligado ao horário atual e
+      // decide, pela configuração da profissional, se espera o aceite
+      const { data, error } = await supabase.rpc('pedir_remarcacao', { appt: esc.remarcar, nova_data: esc.data, nova_hora: esc.hora })
+      setSaving(false)
+      if (error) { setErro('Não deu para pedir a remarcação: ' + error.message); return }
+      if (!data?.ok) { setErro(capitalizar(data?.motivo || 'não deu para remarcar') + '.'); return }
+      navigate(`/cliente/agendamento/sucesso/${data.appointment_id}`, { replace: true })
+      return
+    }
+
     const fim = toMin(esc.hora) + servico.duration_minutes
     const { data, error } = await supabase
       .from('appointments')
@@ -265,38 +297,59 @@ export function AgendarConfirmar() {
     navigate(`/cliente/agendamento/sucesso/${data?.id ?? 'novo'}`, { replace: true })
   }, [servico, esc, user, obs, navigate])
 
+  const remarcando = Boolean(esc.remarcar)
+
   return (
-    <ClienteShell titulo="Confirmar pedido" voltar={comQuery('/cliente/agendamento/hora', esc)}>
-      <Trilha passo={4} />
+    <ClienteShell titulo={remarcando ? 'Confirmar troca' : 'Confirmar pedido'} voltar={comQuery('/cliente/agendamento/hora', esc)}>
+      <Trilha passo={4} remarcar={esc.remarcar} />
       {erro && <div className="alert alert-error">{erro}</div>}
 
-      <h3 className="secao-titulo">Resumo do pedido</h3>
+      <h3 className="secao-titulo">{remarcando ? 'Resumo da troca' : 'Resumo do pedido'}</h3>
       <div className="card resumo-pedido">
         <div className="resumo-linha"><span className="muted">Serviço</span><strong>{servico?.name}</strong></div>
         <div className="resumo-linha"><span className="muted">Profissional</span><strong>{prof?.name}</strong></div>
-        <div className="resumo-linha"><span className="muted">Data</span><strong>{esc.data && formatDataLonga(esc.data)}</strong></div>
-        <div className="resumo-linha"><span className="muted">Horário</span><strong>{esc.hora}</strong></div>
+        {remarcando ? (
+          <>
+            <div className="resumo-linha resumo-troca-de"><span className="muted">Era</span><strong>{origem ? `${curta(origem.date)} às ${origem.start_time.slice(0, 5)}` : '…'}</strong></div>
+            <div className="resumo-linha resumo-troca-para"><span className="muted">Passa para</span><strong>{esc.data && curta(esc.data)} às {esc.hora}</strong></div>
+          </>
+        ) : (
+          <>
+            <div className="resumo-linha"><span className="muted">Data</span><strong>{esc.data && formatDataLonga(esc.data)}</strong></div>
+            <div className="resumo-linha"><span className="muted">Horário</span><strong>{esc.hora}</strong></div>
+          </>
+        )}
         {servico && <div className="resumo-linha"><span className="muted">Duração</span><strong>{labelDuracao(servico)}</strong></div>}
         <div className="resumo-linha resumo-total"><span>Valor</span><strong>{servico && formatPreco(servico.price)}</strong></div>
       </div>
 
-      <label className="campo-solto">
-        <span>Observação (opcional)</span>
-        <textarea value={obs} onChange={(e) => setObs(e.target.value)} placeholder="Alguma preferência ou aviso para a profissional?" rows={3} />
-      </label>
+      {!remarcando && (
+        <label className="campo-solto">
+          <span>Observação (opcional)</span>
+          <textarea value={obs} onChange={(e) => setObs(e.target.value)} placeholder="Alguma preferência ou aviso para a profissional?" rows={3} />
+        </label>
+      )}
 
       <div className="card aviso-suave">
-        <strong>Confirmação pelo WhatsApp</strong>
-        <span className="muted">A profissional confirma o pedido e você recebe um aviso. Se ela não responder no prazo dela, o sistema decide sozinho.</span>
+        <strong>{remarcando ? 'Seu horário atual continua guardado' : 'Confirmação pelo WhatsApp'}</strong>
+        <span className="muted">
+          {remarcando
+            ? 'A profissional recebe o pedido de troca e responde. Enquanto isso, nada muda. Se ela não responder no prazo dela, o sistema decide sozinho.'
+            : 'A profissional confirma o pedido e você recebe um aviso. Se ela não responder no prazo dela, o sistema decide sozinho.'}
+        </span>
       </div>
 
       <div className="rodape-fixo">
         <button className="btn btn-primary btn-block" onClick={confirmar} disabled={saving || !servico}>
-          {saving ? 'Enviando…' : 'Confirmar pedido'}
+          {saving ? 'Enviando…' : remarcando ? 'Pedir a troca' : 'Confirmar pedido'}
         </button>
       </div>
     </ClienteShell>
   )
+}
+
+function capitalizar(t) {
+  return t ? t.charAt(0).toUpperCase() + t.slice(1) : t
 }
 
 // ---------------------------------------------------------------- 5
@@ -308,17 +361,27 @@ export function AgendarSucesso() {
     supabase.from('appointments').select('*, services (name), professionals (name)').eq('id', id).maybeSingle().then(({ data }) => setAppt(data))
   }, [id])
 
+  // três finais possíveis: pedido novo, pedido de troca, troca já feita
+  const troca = Boolean(appt?.remarca_de)
+  const jaTrocou = troca && appt.status === 'confirmado'
+  const titulo = jaTrocou ? 'Remarcado!' : troca ? 'Pedido de troca enviado!' : 'Pedido enviado!'
+  const texto = jaTrocou
+    ? 'Sua profissional não pede confirmação, então a troca já valeu. Ela foi avisada.'
+    : troca
+      ? 'Seu horário atual continua guardado. Assim que a profissional aceitar a troca, você recebe um aviso aqui e no WhatsApp.'
+      : 'Seu horário ficou guardado. Assim que a profissional confirmar, você recebe um aviso aqui e no WhatsApp.'
+
   return (
     <ClienteShell semTopo>
       <div className="sucesso">
-        <span className="sucesso-check" aria-hidden="true">✓</span>
-        <h2>Pedido enviado!</h2>
-        <p className="muted">Seu horário ficou guardado. Assim que a profissional confirmar, você recebe um aviso aqui e no WhatsApp.</p>
+        <span className="sucesso-check" aria-hidden="true">{troca ? '🔁' : '✓'}</span>
+        <h2>{titulo}</h2>
+        <p className="muted">{texto}</p>
         {appt && (
           <div className="card resumo-pedido" style={{ textAlign: 'left', width: '100%' }}>
             <div className="resumo-linha"><span className="muted">Serviço</span><strong>{appt.services?.name}</strong></div>
             <div className="resumo-linha"><span className="muted">Com</span><strong>{appt.professionals?.name}</strong></div>
-            <div className="resumo-linha"><span className="muted">Quando</span><strong>{formatDataLonga(appt.date)} às {appt.start_time.slice(0, 5)}</strong></div>
+            <div className="resumo-linha"><span className="muted">{troca ? 'Novo horário' : 'Quando'}</span><strong>{formatDataLonga(appt.date)} às {appt.start_time.slice(0, 5)}</strong></div>
           </div>
         )}
         <Link to="/cliente/meus-agendamentos" className="btn btn-primary btn-block">Ver meus agendamentos</Link>

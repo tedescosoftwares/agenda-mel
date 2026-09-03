@@ -245,8 +245,14 @@ where slug = 'slug-dela';
       verdade só a API oficial desenha
 - [x] Mensagem de WhatsApp escrita por tipo, com emoji, negrito e o link da
       agenda da profissional (o aviso dentro do app continua seco)
-- [ ] Publicar (Vercel/Netlify) e instalar como PWA no celular
-- [ ] Notificações (lembrete de horário)
+- [x] A profissional decide: todo pedido passa pelo aceite dela (1 aceita,
+      2 recusa, prazo configurável), no WhatsApp ou no app
+- [x] Remarcar passa pelo aceite: a cliente pede a troca, o horário atual
+      fica guardado até a resposta, e o pedido cai sozinho se ela desistir
+- [x] Favoritas, avaliações (só de atendimento concluído) e posição na fila
+- [x] Publicado na própria EC2 da Evolution (Caddy + DuckDNS), PWA instalável
+- [ ] Lembretes e prazos rodando sozinhos (pg_cron), sem depender do disparar.sh
+- [ ] Remarcar e avaliar pelo próprio WhatsApp, sem abrir o app
 - [ ] Migrar depois para React Native / Expo reaproveitando o Supabase
 
 

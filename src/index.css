@@ -3325,3 +3325,195 @@ a.prof-row:hover,
   min-width: 1.45rem; height: 1.45rem; padding: 0 .35rem; border-radius: 999px;
   background: var(--marca, #d98cab); color: #1a1118;
   font-size: .8rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* ---------------------------------------------------------------
+   Bancada de testes — ensaiar a conversa sem gastar um telefone.
+   Parece conversa de propósito: é a única forma de ler o que a
+   cliente leria e perceber que o texto ficou estranho.
+   --------------------------------------------------------------- */
+
+.bc-controles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.bc-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1 1 15rem;
+}
+
+.bc-campo > span {
+  font-family: var(--condensada);
+  font-size: 0.66rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--texto-3);
+}
+
+.bc-campo select {
+  background: var(--superficie-2);
+  color: var(--texto);
+  border: 1px solid var(--fio);
+  border-radius: var(--r-controle);
+  padding: 0.5rem 0.6rem;
+  font: inherit;
+}
+
+.bc-nota {
+  color: var(--texto-3);
+  font-size: 0.8rem;
+  margin: 0 0 1rem;
+}
+
+.bc-tela {
+  background: var(--superficie);
+  border: 1px solid var(--fio);
+  border-radius: var(--r-cartao, 14px);
+  padding: 0.9rem;
+  min-height: 12rem;
+  max-height: 28rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.bc-vazio {
+  color: var(--texto-3);
+  font-size: 0.86rem;
+  margin: auto;
+  text-align: center;
+  max-width: 24rem;
+}
+
+.bc-balao {
+  border-radius: 12px;
+  padding: 0.55rem 0.75rem;
+  white-space: pre-wrap;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  max-width: 85%;
+}
+
+.bc-entrada {
+  align-self: flex-end;
+  background: var(--superficie-3);
+  border: 1px solid var(--fio);
+}
+
+.bc-de {
+  display: block;
+  font-size: 0.66rem;
+  color: var(--texto-3);
+  margin-bottom: 0.2rem;
+}
+
+.bc-saida {
+  align-self: flex-start;
+  background: var(--latao-veu);
+  border: 1px solid var(--latao-fio);
+}
+
+.bc-resposta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.bc-nada {
+  color: var(--texto-3);
+  font-size: 0.8rem;
+  font-style: italic;
+}
+
+/* o que sairia por WhatsApp fica visivelmente separado do que o bot
+   respondeu na conversa: são coisas diferentes, para pessoas
+   diferentes, e confundir as duas é o erro que esta tela evita */
+.bc-saidas {
+  border-left: 2px solid var(--azul);
+  padding-left: 0.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.bc-saidas-tit {
+  font-family: var(--condensada);
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--azul);
+}
+
+.bc-envio-para {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--texto-3);
+  margin-bottom: 0.2rem;
+}
+
+.bc-envio pre {
+  margin: 0;
+  white-space: pre-wrap;
+  font-family: inherit;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  background: var(--azul-veu);
+  border-radius: 10px;
+  padding: 0.5rem 0.7rem;
+}
+
+.bc-acao {
+  font-size: 0.68rem;
+  color: var(--texto-3);
+  font-family: var(--condensada);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.bc-atalhos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.7rem 0;
+}
+
+.bc-escrever {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.bc-escrever input {
+  flex: 1;
+  background: var(--superficie-2);
+  color: var(--texto);
+  border: 1px solid var(--fio);
+  border-radius: var(--r-controle);
+  padding: 0.6rem 0.75rem;
+  font: inherit;
+}
+
+.bc-rodape {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.bc-link {
+  color: var(--texto-3);
+  font-size: 0.8rem;
+  margin-left: auto;
+}
+
+.bc-aviso {
+  color: var(--texto-3);
+  font-size: 0.78rem;
+  margin-top: 0.8rem;
+  line-height: 1.5;
+}

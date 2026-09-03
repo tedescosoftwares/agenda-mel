@@ -16,6 +16,7 @@ import AdminHours from "./pages/admin/AdminHours";
 import AdminClientes from "./pages/admin/AdminClientes";
 import AdminNumeros from "./pages/admin/AdminNumeros";
 import AdminWhatsapp from "./pages/admin/AdminWhatsapp";
+import AdminBancada from "./pages/admin/AdminBancada";
 import ProAgenda from "./pages/pro/ProAgenda";
 import ProServicos from "./pages/pro/ProServicos";
 import ProHorarios from "./pages/pro/ProHorarios";
@@ -187,6 +188,14 @@ export default function App() {
               element={
                 <ProtectedRoute requireRole="admin">
                   <AdminWhatsapp />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/bancada"
+              element={
+                <ProtectedRoute requireRole="admin">
+                  <AdminBancada />
                 </ProtectedRoute>
               }
             />

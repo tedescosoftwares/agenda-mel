@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import AdminShell from '../../components/AdminShell'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
@@ -126,6 +127,9 @@ export default function AdminWhatsapp() {
         <button className="btn-mini btn-mini-neutro" onClick={buscar} disabled={loading}>
           {loading ? 'conferindo…' : 'conferir de novo'}
         </button>
+        <Link className="btn-mini btn-mini-neutro" to="/admin/bancada">
+          bancada de testes
+        </Link>
       </div>
 
       <ul className="wa-check">

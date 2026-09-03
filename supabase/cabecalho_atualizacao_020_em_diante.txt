@@ -79,6 +79,15 @@
 --    045  envio que morre no meio devolve a mensagem para a fila: uma
 --         linha marcada 'enviando' por uma execução que não terminou
 --         não saía de lá nunca, e não aparecia como problema
+--    046  bancada de testes: ensaiar a conversa inteira pelo admin, sem
+--         precisar de um segundo telefone. Roda o caminho de verdade e
+--         só o último centímetro é fingido — as mensagens que iriam
+--         para o WhatsApp ficam para você ler
+--    047  agendamento 'pendente' sem pedido nenhum: quando a DONA
+--         marcava pela agenda para uma profissional com aceite ligado,
+--         o gatilho não abria pedido nem confirmava. Ficava pendurado
+--         para sempre, e a cliente esperando um aviso que ninguém ia
+--         mandar. Achado pela bancada, no primeiro uso
 --
 --  Se der erro, me mande a mensagem inteira: cada bloco abaixo está
 --  marcado com o nome do arquivo de origem, então dá para achar na hora.

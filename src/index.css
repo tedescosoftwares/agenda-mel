@@ -4445,3 +4445,43 @@ a.prof-row:hover,
 .atalho span { font-size: 1.3rem; }
 .link-previa .foto-upload { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
 .link-previa .foto-upload-acoes { display: flex; gap: 0.5rem; justify-content: center; }
+
+/* ============================================================
+   SENTIR DE APP, NÃO DE PÁGINA
+   ============================================================ */
+
+/* Nada rola para o lado. Um cartão que estoura a largura por 1px é o
+   bastante para o Safari deixar a tela inteira andar — e isso é o que
+   mais denuncia "isto é um site". clip em vez de hidden nos shells
+   porque hidden viraria contexto de rolagem e quebraria o fixed da
+   barra de baixo. */
+html, body { overflow-x: hidden; max-width: 100%; }
+#root, .admin-shell, .layout { overflow-x: clip; }
+
+/* sem zoom no toque duplo, sem o brilho azul de link ao tocar, sem o
+   elástico que puxa a página inteira quando rola além do fim */
+body {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* barra de baixo e topo não são texto: não se seleciona, não se arrasta */
+.bottom-nav, .topbar, .nav-mais, .fab { user-select: none; -webkit-user-select: none; }
+
+/* o que pode ser mais largo que a tela quebra a linha em vez de empurrar */
+.dado-linha strong, .cliente-meta, .resumo-linha strong, .link-url, .notif-row .cliente-meta {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.cliente-info { min-width: 0; }
+
+/* o iPhone reserva a área do "notch" e da barra de gestos: a barra de
+   baixo já respeita; o topo também precisa */
+.topbar { padding-top: calc(0.85rem + env(safe-area-inset-top)); }
+
+/* a fileira e a capa saem da margem de propósito, mas nunca além da
+   borda da tela */
+.fileira-prof { max-width: calc(100% + 2.3rem); }
+.perfil-capa { max-width: calc(100% + 2.3rem); }

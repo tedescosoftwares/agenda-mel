@@ -6,7 +6,7 @@
 #   ./publicar-site.sh --so-build   sem git pull (código já está aqui)
 #
 # O que faz, em ordem:
-#   1. garante Node 20 (instala pelo NodeSource se não tiver)
+#   1. garante Node 22 (instala pelo NodeSource se não tiver)
 #   2. pergunta o domínio do site UMA vez e guarda em .env
 #   3. confere que ../.env tem as chaves do Supabase (o build precisa)
 #   4. git pull, npm ci, npm run build  →  ../dist
@@ -17,6 +17,7 @@
 
 set -euo pipefail
 cd "$(dirname "$0")"
+AQUI=$(pwd)
 RAIZ=$(cd .. && pwd)
 
 verde()   { printf '\033[1;32m%s\033[0m\n' "$*"; }
@@ -30,9 +31,11 @@ set -a; . ./.env; set +a
 
 # 1. Node ---------------------------------------------------------------------
 azul '== 1/6  Node =='
-if ! command -v node >/dev/null || [ "$(node -v | cut -c2-3)" -lt 20 ]; then
-  echo 'Instalando Node 20…'
-  curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - >/dev/null
+# 22 porque o supabase-js pede >=22 (com 20 builda, mas reclama em cada
+# pacote — e reclamação que se ignora todo dia esconde a que importa)
+if ! command -v node >/dev/null || [ "$(node -v | cut -c2-3)" -lt 22 ]; then
+  echo 'Instalando Node 22…'
+  curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - >/dev/null
   sudo apt-get install -y nodejs >/dev/null
 fi
 verde "  node $(node -v) · npm $(npm -v)"
@@ -99,7 +102,10 @@ npm run build 2>&1 | tail -2
 # o Caddy roda como outro usuário dentro do container: precisa ler
 chmod -R a+rX dist
 verde "  dist/ pronto ($(du -sh dist | cut -f1))"
-cd "$(dirname "$0")"
+# de volta para a pasta da Evolution pelo caminho ABSOLUTO: o $0 era
+# relativo e, depois do cd para a raiz, apontava para o lugar errado —
+# e o docker compose não achava o arquivo
+cd "$AQUI"
 
 # 5. Caddy --------------------------------------------------------------------
 azul '== 5/6  Caddy =='

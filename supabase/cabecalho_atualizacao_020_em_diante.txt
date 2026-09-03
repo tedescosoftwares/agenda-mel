@@ -76,6 +76,9 @@
 --         cliente estava esperando: a Mel aceitava às 22h55 e a cliente
 --         só saberia às 8h. Fato que muda o dia dela sai na hora;
 --         lembrete e convite esperam amanhecer
+--    045  envio que morre no meio devolve a mensagem para a fila: uma
+--         linha marcada 'enviando' por uma execução que não terminou
+--         não saía de lá nunca, e não aparecia como problema
 --
 --  Se der erro, me mande a mensagem inteira: cada bloco abaixo está
 --  marcado com o nome do arquivo de origem, então dá para achar na hora.

@@ -120,8 +120,12 @@ services:
       EMAIL: ${EMAIL}
       # usado só na rota /ia; fica vazio para quem não subiu o modelo
       IA_TOKEN: ${IA_TOKEN:-}
+      # o domínio do SITE; vazio = o site não sobe (ver ./publicar-site.sh)
+      DOMINIO_SITE: ${DOMINIO_SITE:-}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # o build do app, gerado por ./publicar-site.sh
+      - ../dist:/srv/site:ro
       - caddy_data:/data
       - caddy_config:/config
 

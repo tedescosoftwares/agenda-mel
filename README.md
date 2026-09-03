@@ -260,3 +260,18 @@ O app inteiro sobe com dados fictícios. Escolha o papel pela URL:
 `/login?demo=cliente`, `?demo=profissional` ou `?demo=admin`
 (`?demo=sair` para ver a tela de login). Nada é gravado. Serve para
 mostrar o produto e para conferir cada tela sem precisar de conta.
+
+
+## Servir o site na mesma máquina da Evolution
+
+Em vez da Vercel, o app pode ser entregue pelo Caddy que já está na EC2:
+
+```bash
+cd ~/agenda-mel/evolution
+./publicar-site.sh
+```
+
+Pede um segundo nome do DuckDNS (ex.: `mimoapp.duckdns.org`) apontando
+para o mesmo IP, instala Node se precisar, builda e sobe. Publicar de
+novo é rodar o mesmo script. O `.env` do app (chaves do Supabase)
+precisa existir na raiz do repositório na EC2.

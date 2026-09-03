@@ -4507,3 +4507,6 @@ html { position: relative; }
   .kpi strong { font-size: 1.45rem; }
 }
 .form input, .form select { max-width: 100%; }
+
+.search-box { min-width: 0; }
+.search-box input { flex: 1; min-width: 0; width: 100%; }

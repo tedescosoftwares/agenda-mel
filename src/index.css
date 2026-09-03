@@ -4388,3 +4388,58 @@ a.prof-row:hover,
 .switch.on { background: var(--rosa); }
 .switch.on::after { transform: translateX(20px); }
 .switch:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ============================================================
+   PROFISSIONAL E SALÃO — as telas do painel
+   ============================================================ */
+.abas-mini { margin: 0; padding: 0.2rem; }
+.abas-mini .aba { padding: 0.35rem 0.8rem; font-size: 0.8rem; }
+.page-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.8rem; }
+
+.pedido-card { display: flex; flex-direction: column; gap: 0.15rem; }
+.pedido-topo { display: flex; justify-content: space-between; align-items: center; }
+.pedido-topo strong { font-size: 1.05rem; }
+.pedido-prazo { font-size: 0.8rem; font-weight: 600; color: var(--texto-2); background: var(--superficie-3); padding: 0.2rem 0.6rem; border-radius: var(--r-pilula); }
+.pedido-prazo.urgente { color: var(--carmim); background: var(--carmim-veu); }
+.pedido-servico { font-weight: 500; }
+.pedido-fone { font-size: 0.82rem; }
+.pedido-acoes { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-top: 0.8rem; }
+
+.slots-compacto .slot { padding: 0.5rem 0; font-size: 0.85rem; }
+.form select { font: inherit; color: var(--texto); background: var(--branco); border: 1px solid var(--fio-forte); border-radius: var(--r-controle); padding: 0.8rem 0.9rem; }
+
+.dias-chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-bottom: 0.9rem; }
+.dias-chips::-webkit-scrollbar { display: none; }
+.chip.fechado:not(.active) { color: var(--texto-3); border-style: dashed; }
+.intervalo { display: grid; grid-template-columns: 1fr auto 1fr; gap: 0.6rem; align-items: end; margin-top: 0.6rem; }
+.intervalo .campo-solto { margin: 0; }
+.intervalo input[type='time'] { font: inherit; color: var(--texto); background: var(--branco); border: 1px solid var(--fio-forte); border-radius: var(--r-controle); padding: 0.7rem 0.8rem; width: 100%; }
+.intervalo-ate { color: var(--texto-3); font-size: 0.85rem; padding-bottom: 0.9rem; }
+.select-mini { font: inherit; font-size: 0.88rem; color: var(--texto); background: var(--branco); border: 1px solid var(--fio-forte); border-radius: var(--r-controle); padding: 0.45rem 0.6rem; }
+
+.servico-linha.apagado { opacity: 0.55; }
+
+.link-previa { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 0.35rem; padding-top: 1.4rem; }
+.link-previa strong { font-size: 1.15rem; margin-top: 0.4rem; }
+.link-previa .muted { font-size: 0.88rem; }
+.link-url { display: inline-block; margin-top: 0.5rem; padding: 0.45rem 0.9rem; border-radius: var(--r-pilula); background: var(--latao-veu); color: var(--rosa); font-weight: 600; font-size: 0.85rem; text-decoration: none; word-break: break-all; }
+.link-acoes-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin: 0.8rem 0 1rem; }
+.link-acoes-2 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; }
+.qr-area { display: flex; flex-direction: column; align-items: center; gap: 0.6rem; padding-top: 1rem; }
+.qr-area canvas { border-radius: 12px; border: 1px solid var(--fio); }
+
+.kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-bottom: 0.9rem; }
+.kpi { display: flex; flex-direction: column; gap: 0.1rem; padding: 0.9rem 1rem; text-decoration: none; color: inherit; }
+.kpi .muted { font-size: 0.78rem; }
+.kpi strong { font-size: 1.7rem; font-weight: 600; line-height: 1.15; color: var(--texto); }
+.kpi-nota { font-size: 0.74rem; color: var(--texto-3); }
+.kpi-nota.mais { color: var(--menta); }
+.kpi-nota.menos { color: var(--carmim); }
+.kpi-link { border-color: var(--latao-fio); }
+.kpi-link strong { color: var(--rosa); }
+.grafico-linha { width: 100%; height: auto; display: block; }
+.mes-nav-mini { display: flex; gap: 0.3rem; }
+
+.atalhos { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; }
+.atalho { display: flex; flex-direction: column; align-items: center; gap: 0.3rem; padding: 0.7rem 0.3rem; text-decoration: none; color: var(--texto); font-size: 0.7rem; font-weight: 500; text-align: center; }
+.atalho span { font-size: 1.3rem; }

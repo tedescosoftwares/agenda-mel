@@ -8,8 +8,9 @@ import {
   VoltarIcon,
   ClockIcon,
   MarcaIcon,
+  Wordmark,
 } from './icons'
-import { iniciais } from '../lib/booking'
+
 import Avatar from './Avatar'
 
 const TABS = [
@@ -20,7 +21,7 @@ const TABS = [
   { to: '/pro/ajustes', label: 'Ajustes', Icon: ClockIcon },
 ]
 
-export default function ProShell({ children }) {
+export default function ProShell({ children, titulo, voltar }) {
   const { professional, profile, user, signOut } = useAuth()
   const nome = professional?.name || profile?.full_name || user?.email
 
@@ -31,19 +32,20 @@ export default function ProShell({ children }) {
   return (
     <div className="admin-shell">
       <header className="topbar topbar-admin">
-        <span className="brand-inline">
-          <MarcaIcon className="marca" id="pro" />
-          {nome}
-        </span>
+        {voltar && <NavLink to={voltar} className="topo-voltar" aria-label="Voltar">‹</NavLink>}
+        {titulo ? (
+          <span className="topo-titulo">{titulo}</span>
+        ) : (
+          <span className="brand-inline">
+            <MarcaIcon className="marca" id="pro" />
+            <Wordmark tamanho={1.35} />
+          </span>
+        )}
         <div className="topbar-acoes">
           <SinoAvisos />
           <button className="avatar-btn" onClick={handleSair} title="Sair da conta">
-          {professional?.photo_url ? (
-            <Avatar nome={nome} foto={professional.photo_url} className="avatar-topo" />
-          ) : (
-            iniciais(nome)
-          )}
-        </button>
+            <Avatar nome={nome} foto={professional?.photo_url} pequeno />
+          </button>
         </div>
       </header>
 

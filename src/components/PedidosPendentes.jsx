@@ -69,7 +69,7 @@ export default function PedidosPendentes({ aoResponder }) {
             </p>
             <div className="pedido-botoes">
               <button
-                className="btn btn-primario"
+                className="btn btn-primary"
                 onClick={() => responder(p.appointment_id, true)}
                 disabled={mexendo === p.appointment_id}
               >

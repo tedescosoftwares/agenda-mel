@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import AdminShell from '../../components/AdminShell'
 import { useAuth } from '../../context/AuthContext'
 import {
+  TeamIcon,
   GraficoIcon,
   SparkleIcon,
   ClockIcon,
@@ -17,6 +18,12 @@ import {
 // abre o app: são coisas que se configuram uma vez e se conferem de vez
 // em quando. Aba é para o que se usa todo dia.
 const ITENS = [
+  {
+    to: '/admin/equipe',
+    Icon: TeamIcon,
+    titulo: 'Equipe',
+    resumo: 'Quem atende, com quais serviços, e o vínculo com a conta',
+  },
   {
     to: '/admin/numeros',
     Icon: GraficoIcon,

@@ -1,195 +1,119 @@
 import { useCallback, useEffect, useState } from 'react'
 import ProShell from '../../components/ProShell'
 import SemFicha from './SemFicha'
+import BloqueiosEditor from '../../components/BloqueiosEditor'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
-import BloqueiosEditor from '../../components/BloqueiosEditor'
 
-const DIAS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
+// Horários (tela 18): os dias da semana como chips, e para o dia
+// escolhido o expediente e o intervalo entre atendimentos. Bloqueios
+// (almoço, folga, médico) ficam na segunda aba — são o que corta o
+// expediente em pedaços.
+const DIAS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+const DIAS_LONGO = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
 
 export default function ProHorarios() {
-  const { professional } = useAuth()
+  const { professional, recarregarProfessional } = useAuth()
+  const [aba, setAba] = useState('horarios')
+  const [hours, setHours] = useState([])
+  const [dia, setDia] = useState(new Date().getDay() || 1)
+  const [buffer, setBuffer] = useState(professional?.buffer_minutes ?? 0)
+  const [info, setInfo] = useState('')
+  const [erro, setErro] = useState('')
+  const [saving, setSaving] = useState(false)
   const profId = professional?.id
 
-  const [hours, setHours] = useState([])
-  const [buffer, setBuffer] = useState(0)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [info, setInfo] = useState('')
-  const [saving, setSaving] = useState(false)
-
-  const fetchHoras = useCallback(async () => {
+  const carregar = useCallback(async () => {
     if (!profId) return
-    const { data, error } = await supabase
-      .from('professional_hours')
-      .select('*')
-      .eq('professional_id', profId)
-      .order('weekday')
-
-    if (error) {
-      setError('Erro ao carregar horários: ' + error.message)
-    } else {
-      setHours(
-        data.map((h) => ({
-          ...h,
-          start_time: h.start_time.slice(0, 5),
-          end_time: h.end_time.slice(0, 5),
-        })),
-      )
-    }
-    setLoading(false)
+    const { data } = await supabase.from('professional_hours').select('*').eq('professional_id', profId).order('weekday')
+    setHours((data ?? []).map((h) => ({ ...h, start_time: h.start_time.slice(0, 5), end_time: h.end_time.slice(0, 5) })))
   }, [profId])
-
-  useEffect(() => {
-    fetchHoras()
-  }, [fetchHoras])
-
-  useEffect(() => {
-    if (professional?.buffer_minutes != null) setBuffer(professional.buffer_minutes)
-  }, [professional])
+  useEffect(() => { carregar() }, [carregar])
 
   if (!professional) return <SemFicha />
 
-  function updateDay(weekday, patch) {
-    setHours((prev) =>
-      prev.map((h) => (h.weekday === weekday ? { ...h, ...patch } : h)),
-    )
-    setInfo('')
+  const h = hours.find((x) => x.weekday === dia)
+  const mudar = (patch) => { setHours((p) => p.map((x) => (x.weekday === dia ? { ...x, ...patch } : x))); setInfo('') }
+
+  async function copiarParaTodos() {
+    if (!h) return
+    setHours((p) => p.map((x) => (x.weekday === 0 ? x : { ...x, open: h.open, start_time: h.start_time, end_time: h.end_time })))
+    setInfo('Copiado para segunda a sábado. Toque em Salvar.')
   }
 
-  async function handleSave() {
-    setError('')
-    setInfo('')
-
-    for (const h of hours) {
-      if (h.open && h.start_time >= h.end_time) {
-        setError(`${DIAS[h.weekday]}: o horário final precisa ser depois do inicial.`)
-        return
-      }
-    }
-
+  async function salvar() {
+    setErro(''); setInfo('')
+    for (const x of hours) if (x.open && x.start_time >= x.end_time) { setErro(`${DIAS_LONGO[x.weekday]}: o fim precisa ser depois do início.`); return }
     setSaving(true)
-
-    const { error: erroBuffer } = await supabase
-      .from('professionals')
-      .update({ buffer_minutes: Number(buffer) })
-      .eq('id', professional.id)
-    if (erroBuffer) {
-      setError('Erro ao salvar o tempo de arrumação: ' + erroBuffer.message)
-      setSaving(false)
-      return
+    const { error: e1 } = await supabase.from('professionals').update({ buffer_minutes: Number(buffer) }).eq('id', profId)
+    if (e1) { setErro(e1.message); setSaving(false); return }
+    for (const x of hours) {
+      const { error } = await supabase.from('professional_hours').update({ open: x.open, start_time: x.start_time, end_time: x.end_time }).eq('professional_id', profId).eq('weekday', x.weekday)
+      if (error) { setErro(error.message); setSaving(false); return }
     }
-
-    for (const h of hours) {
-      const { error } = await supabase
-        .from('professional_hours')
-        .update({
-          open: h.open,
-          start_time: h.start_time,
-          end_time: h.end_time,
-        })
-        .eq('professional_id', professional.id)
-        .eq('weekday', h.weekday)
-      if (error) {
-        setError('Erro ao salvar: ' + error.message)
-        setSaving(false)
-        return
-      }
-    }
-    setSaving(false)
-    setInfo('Horários salvos.')
+    setSaving(false); setInfo('Horários salvos.'); recarregarProfessional?.()
   }
 
   return (
-    <ProShell>
-      <div className="page-head">
-        <div>
-          <h2>Meus horários</h2>
-          <p className="muted">Os dias e horas em que você atende</p>
-        </div>
+    <ProShell titulo="Horários" voltar="/pro/ajustes">
+      <div className="abas">
+        <button className={aba === 'horarios' ? 'aba active' : 'aba'} onClick={() => setAba('horarios')}>Horários</button>
+        <button className={aba === 'bloqueios' ? 'aba active' : 'aba'} onClick={() => setAba('bloqueios')}>Bloqueios</button>
       </div>
 
-      {error && <div className="alert alert-error">{error}</div>}
-      {info && <div className="alert alert-info">{info}</div>}
+      {aba === 'bloqueios' && <BloqueiosEditor professionalId={profId} />}
 
-      {loading ? (
-        <p className="muted">Carregando…</p>
-      ) : (
+      {aba === 'horarios' && (
         <>
-          <div className="hours-list">
-            {hours.map((h) => (
-              <div
-                key={h.weekday}
-                className={h.open ? 'card hours-row' : 'card hours-row closed'}
-              >
-                <label className="switch">
-                  <input
-                    type="checkbox"
-                    checked={h.open}
-                    onChange={(e) => updateDay(h.weekday, { open: e.target.checked })}
-                  />
-                  <span></span>
-                </label>
+          <div className="filtro-chips dias-chips">
+            {[1, 2, 3, 4, 5, 6, 0].map((d) => {
+              const x = hours.find((y) => y.weekday === d)
+              return (
+                <button key={d} className={'chip' + (dia === d ? ' active' : '') + (x && !x.open ? ' fechado' : '')} onClick={() => setDia(d)}>{DIAS[d]}</button>
+              )
+            })}
+          </div>
 
-                <span className="hours-dia">{DIAS[h.weekday]}</span>
-
-                {h.open ? (
-                  <div className="hours-times">
-                    <input
-                      type="time"
-                      value={h.start_time}
-                      onChange={(e) =>
-                        updateDay(h.weekday, { start_time: e.target.value })
-                      }
-                    />
-                    <span className="muted">até</span>
-                    <input
-                      type="time"
-                      value={h.end_time}
-                      onChange={(e) =>
-                        updateDay(h.weekday, { end_time: e.target.value })
-                      }
-                    />
-                  </div>
-                ) : (
-                  <span className="muted">Fechado</span>
-                )}
+          {h && (
+            <div className="card">
+              <div className="cl-ajuste">
+                <div className="cliente-info">
+                  <span className="cliente-nome"><span className="nome-txt">{DIAS_LONGO[dia]}</span></span>
+                  <span className="muted cliente-meta">{h.open ? 'Atende neste dia' : 'Folga'}</span>
+                </div>
+                <button className={'switch' + (h.open ? ' on' : '')} role="switch" aria-checked={h.open} onClick={() => mudar({ open: !h.open })} aria-label="Atende neste dia" />
               </div>
-            ))}
-          </div>
 
-          <div className="card buffer-card">
-            <div className="buffer-texto">
-              <span className="img-field-label">Tempo de arrumação</span>
-              <span className="muted campo-dica">
-                Minutos reservados depois de cada atendimento para limpar e
-                organizar. Ninguém consegue agendar nesse intervalo.
-              </span>
+              {h.open && (
+                <div className="intervalo">
+                  <label className="campo-solto"><span>Começa</span><input type="time" value={h.start_time} onChange={(e) => mudar({ start_time: e.target.value })} /></label>
+                  <span className="intervalo-ate">até</span>
+                  <label className="campo-solto"><span>Termina</span><input type="time" value={h.end_time} onChange={(e) => mudar({ end_time: e.target.value })} /></label>
+                </div>
+              )}
+
+              <button className="btn-mini" onClick={copiarParaTodos} style={{ marginTop: '0.6rem' }}>Copiar para os outros dias</button>
             </div>
-            <div className="buffer-campo">
-              <input
-                type="number"
-                min="0"
-                max="120"
-                step="5"
-                value={buffer}
-                onChange={(e) => setBuffer(e.target.value)}
-              />
-              <span className="muted">min</span>
+          )}
+
+          <div className="card cl-ajuste" style={{ marginTop: '0.8rem' }}>
+            <div className="cliente-info">
+              <span className="cliente-nome"><span className="nome-txt">Intervalo entre atendimentos</span></span>
+              <span className="muted cliente-meta">Tempo para arrumar entre uma cliente e outra</span>
             </div>
+            <select className="select-mini" value={buffer} onChange={(e) => setBuffer(e.target.value)}>
+              {[0, 5, 10, 15, 20, 30].map((m) => <option key={m} value={m}>{m} min</option>)}
+            </select>
           </div>
 
-          <div className="form-actions hours-save">
-            <button
-              className="btn btn-primary btn-block"
-              onClick={handleSave}
-              disabled={saving}
-            >
-              {saving ? 'Salvando…' : 'Salvar horários'}
-            </button>
-          </div>
+          <p className="muted" style={{ fontSize: '0.82rem' }}>Almoço, médico e folga em data específica ficam na aba <strong>Bloqueios</strong>.</p>
 
-          <BloqueiosEditor professionalId={professional.id} />
+          {erro && <div className="alert alert-error">{erro}</div>}
+          {info && <div className="alert alert-info">{info}</div>}
+
+          <div className="rodape-fixo">
+            <button className="btn btn-primary btn-block" onClick={salvar} disabled={saving}>{saving ? 'Salvando…' : 'Salvar horários'}</button>
+          </div>
         </>
       )}
     </ProShell>

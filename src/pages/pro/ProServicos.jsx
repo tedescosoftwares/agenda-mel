@@ -1,127 +1,62 @@
 import { useCallback, useEffect, useState } from 'react'
 import ProShell from '../../components/ProShell'
 import SemFicha from './SemFicha'
-import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
-import { formatPreco, labelDuracao } from '../../lib/format'
-import { SparkleIcon } from '../../components/icons'
+import { useAuth } from '../../context/AuthContext'
+import { formatPreco, formatDuracao } from '../../lib/format'
 
+// Serviços (tela 19): a lista do salão, e para cada um o switch de
+// "eu faço". Preço e duração aparecem mas não se editam aqui — são do
+// salão, e mudar num lugar só é o que evita duas tabelas de preço.
 export default function ProServicos() {
   const { professional } = useAuth()
-  const [services, setServices] = useState([])
-  const [selecionados, setSelecionados] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [salvandoId, setSalvandoId] = useState(null)
-
+  const [servicos, setServicos] = useState([])
+  const [meus, setMeus] = useState(new Set())
+  const [mudando, setMudando] = useState('')
+  const [erro, setErro] = useState('')
   const profId = professional?.id
 
-  const fetchTudo = useCallback(async () => {
+  const carregar = useCallback(async () => {
     if (!profId) return
-    const [servRes, vincRes] = await Promise.all([
+    const [s, v] = await Promise.all([
       supabase.from('services').select('*').eq('active', true).order('name'),
-      supabase
-        .from('professional_services')
-        .select('service_id')
-        .eq('professional_id', profId),
+      supabase.from('professional_services').select('service_id').eq('professional_id', profId),
     ])
-    if (servRes.error) setError('Erro ao carregar: ' + servRes.error.message)
-    else setServices(servRes.data)
-    setSelecionados((vincRes.data ?? []).map((v) => v.service_id))
-    setLoading(false)
+    setServicos(s.data ?? [])
+    setMeus(new Set((v.data ?? []).map((x) => x.service_id)))
   }, [profId])
-
-  useEffect(() => {
-    fetchTudo()
-  }, [fetchTudo])
+  useEffect(() => { carregar() }, [carregar])
 
   if (!professional) return <SemFicha />
 
-  async function toggle(service) {
-    setSalvandoId(service.id)
-    setError('')
-    const jaTem = selecionados.includes(service.id)
-
-    const { error } = jaTem
-      ? await supabase
-          .from('professional_services')
-          .delete()
-          .eq('professional_id', professional.id)
-          .eq('service_id', service.id)
-      : await supabase
-          .from('professional_services')
-          .insert({ professional_id: professional.id, service_id: service.id })
-
-    setSalvandoId(null)
-    if (error) {
-      setError('Erro ao salvar: ' + error.message)
-      return
-    }
-    setSelecionados((prev) =>
-      jaTem ? prev.filter((id) => id !== service.id) : [...prev, service.id],
-    )
+  async function alternar(s) {
+    setMudando(s.id)
+    const faz = meus.has(s.id)
+    const { error } = faz
+      ? await supabase.from('professional_services').delete().eq('professional_id', profId).eq('service_id', s.id)
+      : await supabase.from('professional_services').insert({ professional_id: profId, service_id: s.id })
+    if (error) setErro(error.message)
+    else setMeus((m) => { const n = new Set(m); if (faz) n.delete(s.id); else n.add(s.id); return n })
+    setMudando('')
   }
 
   return (
     <ProShell>
-      <div className="page-head">
-        <div>
-          <h2>Meus serviços</h2>
-          <p className="muted">
-            Marque o que você atende — só isso aparece no seu link.
-          </p>
-        </div>
+      <div className="page-head"><div><h2>Meus serviços</h2><p className="muted">{meus.size} de {servicos.length} ativos para você</p></div></div>
+      {erro && <div className="alert alert-error">{erro}</div>}
+      <div className="cliente-list">
+        {servicos.map((s) => (
+          <div key={s.id} className={'card servico-linha' + (meus.has(s.id) ? '' : ' apagado')}>
+            <span className="servico-linha-foto" aria-hidden="true">{s.images?.[0] ? <img src={s.images[0]} alt="" /> : '✨'}</span>
+            <span className="cliente-info">
+              <span className="cliente-nome"><span className="nome-txt">{s.name}</span>{s.is_combo && <span className="badge badge-combo">combo</span>}</span>
+              <span className="muted cliente-meta">{formatPreco(s.price)} · {formatDuracao(s.duration_minutes)}</span>
+            </span>
+            <button className={'switch' + (meus.has(s.id) ? ' on' : '')} role="switch" aria-checked={meus.has(s.id)} disabled={mudando === s.id} onClick={() => alternar(s)} aria-label={s.name} />
+          </div>
+        ))}
       </div>
-
-      {error && <div className="alert alert-error">{error}</div>}
-
-      {loading ? (
-        <p className="muted">Carregando…</p>
-      ) : services.length === 0 ? (
-        <div className="card empty-state">
-          <p>O salão ainda não cadastrou serviços.</p>
-          <p className="muted">Assim que houver, eles aparecem aqui.</p>
-        </div>
-      ) : (
-        <div className="service-list">
-          {services.map((s) => (
-            <div
-              key={s.id}
-              className={
-                selecionados.includes(s.id)
-                  ? 'card service-row'
-                  : 'card service-row inactive'
-              }
-            >
-              {s.images?.[0] ? (
-                <img className="service-thumb" src={s.images[0]} alt={s.name} />
-              ) : (
-                <div className="service-thumb service-thumb-vazio">
-                  <SparkleIcon />
-                </div>
-              )}
-              <div className="service-info">
-                <span className="service-nome">
-                  <span className="nome-txt">{s.name}</span>
-                  {s.is_combo && <span className="badge badge-combo">combo</span>}
-                </span>
-                <span className="muted service-meta">
-                  {labelDuracao(s)} · {formatPreco(s.price)}
-                </span>
-              </div>
-              <label className="switch">
-                <input
-                  type="checkbox"
-                  checked={selecionados.includes(s.id)}
-                  disabled={salvandoId === s.id}
-                  onChange={() => toggle(s)}
-                />
-                <span></span>
-              </label>
-            </div>
-          ))}
-        </div>
-      )}
+      <p className="muted" style={{ fontSize: '0.82rem', marginTop: '1rem' }}>Preço e duração são definidos pelo salão, em Admin → Serviços.</p>
     </ProShell>
   )
 }

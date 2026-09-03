@@ -12,6 +12,15 @@
 
 const hoje = new Date()
 const iso = (d) => d.toISOString().slice(0, 10)
+// dias espalhados pelo mês corrente (do dia 1 até hoje) e pelo anterior
+const diaDoMes = (i) => {
+  const d = new Date(hoje.getFullYear(), hoje.getMonth(), 1)
+  const ate = hoje.getDate()
+  const passo = Math.max(1, Math.floor(ate / 8))
+  d.setDate(1 + ((i * passo) % Math.max(1, ate)))
+  if (i >= 8) d.setMonth(d.getMonth() - 1)
+  return iso(d)
+}
 const mais = (dias) => { const d = new Date(hoje); d.setDate(d.getDate() + dias); return iso(d) }
 
 export const PAPEL = (() => {
@@ -80,7 +89,13 @@ const agendamentos = [
   { id: 'ap6', client_id: 'c3', professional_id: 'pr1', service_id: 'sv5', salon_id: SALAO, date: mais(0), start_time: '10:30:00', end_time: '11:30:00', status: 'confirmado', price_cents: 7500, created_at: mais(-2) },
   { id: 'ap7', client_id: 'c4', professional_id: 'pr1', service_id: 'sv2', salon_id: SALAO, date: mais(0), start_time: '14:00:00', end_time: '15:30:00', status: 'pendente', price_cents: 8500, created_at: mais(0) },
   { id: 'ap8', client_id: 'c2', professional_id: 'pr1', service_id: 'sv4', salon_id: SALAO, date: mais(0), start_time: '16:30:00', end_time: '17:30:00', status: 'confirmado', price_cents: 6500, created_at: mais(-1) },
-].map(jn)
+].concat(
+  Array.from({ length: 16 }, (_, i) => ({
+    id: 'h' + i, client_id: ['c2', 'c3', 'c4', 'c1'][i % 4], professional_id: 'pr1', service_id: ['sv1', 'sv2', 'sv5', 'sv4'][i % 4],
+    salon_id: SALAO, date: diaDoMes(i), start_time: ['09:00:00', '10:30:00', '14:00:00', '16:00:00'][i % 4],
+    end_time: '11:00:00', status: i === 5 ? 'faltou' : 'concluido', price_cents: [3500, 8500, 7500, 6500][i % 4], created_at: mais(-(i * 2 + 3)),
+  })),
+).map(jn)
 
 const avisos = [
   { id: 'n1', user_id: UID, kind: 'agendamento_confirmado', title: 'Agendamento confirmado', body: 'Corte feminino · ' + mais(9) + ' às 10:30', created_at: new Date(Date.now() - 3600e3).toISOString(), read_at: null },
@@ -134,10 +149,10 @@ const RPC = {
   meu_resumo_indicacoes: () => [{ codigo: 'JULIANA10', premio_indicou_cents: 2000, premio_indicada_cents: 1000, indicadas: 3, creditado_cents: 3000 }],
   meu_resumo_afiliada: () => [],
   minhas_profissionais_indicadas: () => [],
-  meus_pedidos: () => agendamentos.filter((a) => a.status === 'pendente' && a.professional_id === 'pr1').map((a) => ({ appointment_id: a.id, cliente: a.profiles?.full_name, servico: a.services?.name, quando: 'Qui, 16/05 às ' + a.start_time.slice(0, 5), minutos_restantes: 87, telefone: a.profiles?.phone })),
+  meus_pedidos: () => agendamentos.filter((a) => a.status === 'pendente' && a.professional_id === 'pr1').map((a) => ({ appointment_id: a.id, cliente: a.profiles?.full_name, servico: a.services?.name, quando: 'Qui, 16/05 às ' + a.start_time.slice(0, 5), faltam_min: 87 })),
   quantas_para_enviar: () => 0,
   config_agenda_profissional: () => [{ no_show_tolerance_minutes: 15 }],
-  resumo_do_mes: () => [{ atendimentos: 128, faturamento_cents: 984000, faltas: 3, ocupacao_bps: 8200, novas_clientes: 12 }],
+  resumo_do_mes: () => [{ atendimentos: 128, faturamento_cents: 984000, faturamento_mes_anterior_cents: 871000, clientes: 64, ticket_medio_cents: 7687, ocupacao_bps: 8200, minutos_ocupados: 7680, minutos_disponiveis: 9360, faltas: 3, taxa_falta_bps: 230, clientes_novas: 12, descontos_cents: 9000 }],
   faturamento_por_servico: () => [{ servico: 'Manicure + Pedicure', faturamento_cents: 425000, quantos: 50 }, { servico: 'Esmaltação em gel', faturamento_cents: 300000, quantos: 40 }, { servico: 'Spa dos pés', faturamento_cents: 259000, quantos: 38 }],
   melhores_clientes: () => [{ cliente: 'Carla Mendes', quantos: 9, total_cents: 61000 }, { cliente: 'Mariana Souza', quantos: 7, total_cents: 48000 }],
   clientes_para_retorno: () => [{ client_id: 'c2', nome: 'Juliana Silva', dias_sem_vir: 52, ultimo_servico: 'Manicure', ja_chamada: false }, { client_id: 'c3', nome: 'Carla Mendes', dias_sem_vir: 61, ultimo_servico: 'Escova', ja_chamada: false }, { client_id: 'c4', nome: 'Mariana Souza', dias_sem_vir: 48, ultimo_servico: 'Spa dos pés', ja_chamada: true }],
@@ -204,7 +219,9 @@ export const demo = {
   from: (t) => consulta(TABELAS[t] ?? []),
   rpc: async (nome, args) => {
     const f = RPC[nome]
-    return { data: f ? f(args) : null, error: f ? null : { message: 'demo: sem ' + nome } }
+    // função que não está na lista é escrita (aceitar, encaixar, chamar…):
+    // no demo ela "dá certo" e não guarda nada
+    return { data: f ? f(args) : null, error: null }
   },
   storage: { from: () => ({ upload: async () => ({ error: null }), getPublicUrl: (p) => ({ data: { publicUrl: p } }), remove: async () => ({}) }) },
   channel: () => ({ on() { return this }, subscribe() { return this } }),

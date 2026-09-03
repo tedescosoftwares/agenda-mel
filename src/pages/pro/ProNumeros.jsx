@@ -1,202 +1,66 @@
 import { useCallback, useEffect, useState } from 'react'
 import ProShell from '../../components/ProShell'
 import SemFicha from './SemFicha'
-import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
-import {
-  formatarCents,
-  formatarReaisCurto,
-  formatarPct,
-  formatarHoras,
-  variacao,
-  nomeDoMes,
-  mesDeslocado,
-  mesAtual,
-} from '../../lib/numeros'
-import { ChevronIcon } from '../../components/icons'
+import { useAuth } from '../../context/AuthContext'
+import { formatarCents, formatarReaisCurto, formatarPct, mesAtual, mesDeslocado, nomeDoMes } from '../../lib/numeros'
+import GraficoLinha from '../../components/GraficoLinha'
 
-// O mês em números: o que a profissional hoje só tem de cabeça.
+// Números do mês (tela 22): quatro cartões e a linha do faturamento
+// dia a dia. A linha vem dos próprios atendimentos concluídos — não
+// existe tabela de "faturamento por dia", e não precisa.
 export default function ProNumeros() {
   const { professional } = useAuth()
   const [mes, setMes] = useState(mesAtual())
-  const [resumo, setResumo] = useState(null)
-  const [servicos, setServicos] = useState([])
-  const [clientes, setClientes] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-
+  const [r, setR] = useState(null)
+  const [porDia, setPorDia] = useState([])
+  const [erro, setErro] = useState('')
   const profId = professional?.id
 
-  const buscar = useCallback(async () => {
+  const carregar = useCallback(async () => {
     if (!profId) return
-    setLoading(true)
-    const [r, s, c] = await Promise.all([
+    const ini = mes, fim = mesDeslocado(mes, 1)
+    const [res, ag] = await Promise.all([
       supabase.rpc('resumo_do_mes', { prof: profId, mes }),
-      supabase.rpc('faturamento_por_servico', { prof: profId, mes }),
-      supabase.rpc('melhores_clientes', { prof: profId, meses: 6, limite: 5 }),
+      supabase.from('appointments').select('date, price_cents, status').eq('professional_id', profId).gte('date', ini).lt('date', fim).eq('status', 'concluido'),
     ])
-    if (r.error) setError('Erro ao carregar: ' + r.error.message)
-    else {
-      setResumo(Array.isArray(r.data) ? r.data[0] : r.data)
-      setError('')
-    }
-    setServicos(s.data ?? [])
-    setClientes(c.data ?? [])
-    setLoading(false)
+    if (res.error) setErro(res.error.message)
+    else setR(Array.isArray(res.data) ? res.data[0] : res.data)
+    const soma = {}
+    for (const a of ag.data ?? []) soma[a.date] = (soma[a.date] ?? 0) + (a.price_cents ?? 0)
+    setPorDia(Object.entries(soma).sort().map(([d, v]) => ({ x: d.slice(8, 10), y: v / 100 })))
   }, [profId, mes])
-
-  useEffect(() => {
-    buscar()
-  }, [buscar])
+  useEffect(() => { carregar() }, [carregar])
 
   if (!professional) return <SemFicha />
 
-  const comparacao = resumo
-    ? variacao(resumo.faturamento_cents, resumo.faturamento_mes_anterior_cents)
-    : null
-  const ehMesAtual = mes === mesAtual()
+  const var_ = r && r.faturamento_mes_anterior_cents ? Math.round(((r.faturamento_cents - r.faturamento_mes_anterior_cents) / r.faturamento_mes_anterior_cents) * 100) : null
 
   return (
     <ProShell>
       <div className="page-head">
-        <h2>O mês</h2>
-        <p className="muted">{nomeDoMes(mes)}</p>
-      </div>
-
-      <div className="mes-nav">
-        <button
-          className="btn-mini btn-mini-neutro"
-          onClick={() => setMes(mesDeslocado(mes, -1))}
-        >
-          mês anterior
-        </button>
-        {!ehMesAtual && (
-          <button className="btn-mini btn-mini-neutro" onClick={() => setMes(mesAtual())}>
-            voltar para o atual
-          </button>
-        )}
-      </div>
-
-      {error && <div className="alert alert-error">{error}</div>}
-
-      {loading || !resumo ? (
-        <p className="muted">Carregando…</p>
-      ) : resumo.atendimentos === 0 && resumo.faltas === 0 ? (
-        <div className="card empty-state">
-          <h3>Nada fechado neste mês</h3>
-          <p>Os números aparecem conforme você conclui os atendimentos.</p>
+        <div><h2>Números do mês</h2><p className="muted">{nomeDoMes(mes)}</p></div>
+        <div className="mes-nav-mini">
+          <button className="cal-seta" onClick={() => setMes(mesDeslocado(mes, -1))} aria-label="Mês anterior">‹</button>
+          <button className="cal-seta" onClick={() => setMes(mesDeslocado(mes, 1))} disabled={mes >= mesAtual()} aria-label="Próximo mês">›</button>
         </div>
-      ) : (
+      </div>
+      {erro && <div className="alert alert-error">{erro}</div>}
+      {r && (
         <>
-          <div className="card numero-heroi">
-            <span className="numero-rotulo">entrou no mês</span>
-            <strong className="numero-grande">
-              {formatarReaisCurto(resumo.faturamento_cents)}
-            </strong>
-            {comparacao && (
-              <span className={comparacao.subiu ? 'delta subiu' : 'delta caiu'}>
-                {comparacao.texto} sobre {nomeDoMes(mesDeslocado(mes, -1)).split(' de ')[0]}
-              </span>
-            )}
-            {ehMesAtual && (
-              <span className="numero-nota">o mês ainda está correndo</span>
-            )}
+          <div className="kpis">
+            <div className="card kpi"><span className="muted">Agendamentos</span><strong>{r.atendimentos}</strong><span className="kpi-nota">{r.clientes} clientes</span></div>
+            <div className="card kpi"><span className="muted">Faturamento</span><strong>{formatarReaisCurto(r.faturamento_cents)}</strong>{var_ != null && <span className={'kpi-nota ' + (var_ >= 0 ? 'mais' : 'menos')}>{var_ >= 0 ? '+' : ''}{var_}% vs mês anterior</span>}</div>
+            <div className="card kpi"><span className="muted">Taxa de ocupação</span><strong>{formatarPct(r.ocupacao_bps)}</strong><span className="kpi-nota">da agenda aberta</span></div>
+            <div className="card kpi"><span className="muted">Faltas</span><strong>{r.faltas}</strong><span className="kpi-nota">{formatarPct(r.taxa_falta_bps)} dos horários</span></div>
           </div>
 
-          <div className="grade-numeros">
-            <Cartao
-              rotulo="atendimentos"
-              valor={resumo.atendimentos}
-              nota={`${resumo.clientes} cliente${resumo.clientes === 1 ? '' : 's'}`}
-            />
-            <Cartao
-              rotulo="ticket médio"
-              valor={formatarCents(resumo.ticket_medio_cents)}
-            />
-            <Cartao
-              rotulo="agenda ocupada"
-              valor={formatarPct(resumo.ocupacao_bps)}
-              nota={`${formatarHoras(resumo.minutos_ocupados)} de ${formatarHoras(
-                resumo.minutos_disponiveis,
-              )}`}
-            />
-            <Cartao
-              rotulo="não vieram"
-              valor={resumo.faltas}
-              nota={`${formatarPct(resumo.taxa_falta_bps)} dos horários`}
-              alerta={resumo.taxa_falta_bps > 1000}
-            />
-            <Cartao
-              rotulo="clientes novas"
-              valor={resumo.clientes_novas}
-              nota="primeira vez com você"
-            />
-            <Cartao
-              rotulo="crédito abatido"
-              valor={formatarCents(resumo.descontos_cents)}
-              nota="indique e ganhe"
-            />
+          <div className="card">
+            <div className="secao-cabeca" style={{ margin: '0 0 0.4rem' }}><h3>Faturamento por dia</h3><span className="muted" style={{ fontSize: '0.8rem' }}>ticket médio {formatarCents(r.ticket_medio_cents)}</span></div>
+            {porDia.length ? <GraficoLinha pontos={porDia} /> : <p className="muted">Sem atendimentos concluídos neste mês.</p>}
           </div>
-
-          {servicos.length > 0 && (
-            <section className="secao">
-              <h3 className="secao-titulo">O que mais rendeu</h3>
-              <div className="barra-list">
-                {servicos.map((s) => (
-                  <div key={s.servico} className="barra-item">
-                    <div className="barra-topo">
-                      <span className="barra-nome">{s.servico}</span>
-                      <span className="barra-valor">{formatarCents(s.total_cents)}</span>
-                    </div>
-                    <div className="barra-trilho">
-                      <span
-                        className="barra-preenche"
-                        style={{ width: `${Math.max(2, s.fatia_bps / 100)}%` }}
-                      />
-                    </div>
-                    <span className="barra-nota">
-                      {s.quantidade}× · {formatarPct(s.fatia_bps)} do mês
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {clientes.length > 0 && (
-            <section className="secao">
-              <h3 className="secao-titulo">Quem mais volta</h3>
-              <p className="secao-nota">últimos seis meses</p>
-              <div className="cliente-list">
-                {clientes.map((c) => (
-                  <div key={c.client_id} className="card cliente-row">
-                    <div className="cliente-info">
-                      <span className="cliente-nome">
-                        <span className="nome-txt">{c.nome}</span>
-                      </span>
-                      <span className="muted cliente-meta">
-                        {c.visitas} visita{c.visitas === 1 ? '' : 's'} ·{' '}
-                        {formatarCents(c.total_cents)}
-                      </span>
-                    </div>
-                    <ChevronIcon />
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
         </>
       )}
     </ProShell>
-  )
-}
-
-function Cartao({ rotulo, valor, nota, alerta }) {
-  return (
-    <div className={alerta ? 'card numero-cartao alerta' : 'card numero-cartao'}>
-      <span className="numero-rotulo">{rotulo}</span>
-      <strong className="numero-medio">{valor}</strong>
-      {nota && <span className="numero-nota">{nota}</span>}
-    </div>
   )
 }

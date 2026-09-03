@@ -24,6 +24,7 @@ import AdminNumeros from "./pages/admin/AdminNumeros";
 import AdminWhatsapp from "./pages/admin/AdminWhatsapp";
 import AdminBancada from "./pages/admin/AdminBancada";
 import AdminAjustes from "./pages/admin/AdminAjustes";
+import AdminDashboard from "./pages/admin/AdminDashboard";
 import ProAgenda from "./pages/pro/ProAgenda";
 import ProServicos from "./pages/pro/ProServicos";
 import ProHorarios from "./pages/pro/ProHorarios";
@@ -32,6 +33,7 @@ import ProNumeros from "./pages/pro/ProNumeros";
 import ProRetorno from "./pages/pro/ProRetorno";
 import ProAjustes from "./pages/pro/ProAjustes";
 import ProPedidos from "./pages/pro/ProPedidos";
+import ProEncaixe from "./pages/pro/ProEncaixe";
 import ProEnviar from "./pages/pro/ProEnviar";
 import Indicacao from "./pages/cliente/Indicacao";
 import Notificacoes from "./pages/cliente/Notificacoes";
@@ -172,11 +174,20 @@ export default function App() {
 
 
             {/* área da profissional */}
+            <Route path="/pro" element={<Navigate to="/pro/agenda" replace />} />
             <Route
-              path="/pro"
+              path="/pro/agenda"
               element={
                 <ProtectedRoute requireRole="profissional">
                   <ProAgenda />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/pro/encaixe"
+              element={
+                <ProtectedRoute requireRole="profissional">
+                  <ProEncaixe />
                 </ProtectedRoute>
               }
             />
@@ -248,6 +259,15 @@ export default function App() {
             {/* área do salão */}
             <Route
               path="/admin"
+              element={
+                <ProtectedRoute requireRole="admin">
+                  <AdminDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/admin/dashboard" element={<Navigate to="/admin" replace />} />
+            <Route
+              path="/admin/agenda"
               element={
                 <ProtectedRoute requireRole="admin">
                   <AdminAgenda />

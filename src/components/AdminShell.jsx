@@ -5,9 +5,9 @@ import { MarcaIcon, Wordmark } from './icons'
 import {
   CalendarIcon,
   UsersIcon,
-  TeamIcon,
   ClockIcon,
   MaisIcon,
+  HomeIcon,
 } from './icons'
 
 // Cinco abas, não seis. Numa barra de celular, seis alvos dão 60px
@@ -15,8 +15,8 @@ import {
 // de Ajustes: são coisas que se configuram, não o dia a dia.
 // O botão do meio é a ação da casa — encaixar alguém agora.
 const TABS = [
-  { to: '/admin', end: true, label: 'Agenda', Icon: CalendarIcon },
-  { to: '/admin/equipe', label: 'Equipe', Icon: TeamIcon },
+  { to: '/admin', end: true, label: 'Início', Icon: HomeIcon },
+  { to: '/admin/agenda', label: 'Agenda', Icon: CalendarIcon },
   null,
   { to: '/admin/clientes', label: 'Clientes', Icon: UsersIcon },
   { to: '/admin/ajustes', label: 'Ajustes', Icon: ClockIcon },
@@ -58,7 +58,7 @@ export default function AdminShell({ children }) {
               <button
                 key="mais"
                 className="nav-mais"
-                onClick={() => navigate('/admin?encaixe=1')}
+                onClick={() => navigate('/admin/agenda?encaixe=1')}
                 aria-label="Novo encaixe"
               >
                 <MaisIcon />

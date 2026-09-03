@@ -64,14 +64,28 @@ if [ -n "$IP_AQUI" ] && [ "$IP_DNS" != "$IP_AQUI" ]; then
 fi
 
 # 3. Chaves do Supabase -------------------------------------------------------
+# O build lê VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY. Elas podem estar
+# no .env da raiz do repositório (como no PC) OU aqui mesmo, no .env da
+# Evolution — que já foi carregado lá em cima. Os dois lugares valem.
 azul '== 3/6  Chaves do app =='
-if [ ! -f "$RAIZ/.env" ] || ! grep -q '^VITE_SUPABASE_URL=https' "$RAIZ/.env"; then
-  vermelho "  Falta $RAIZ/.env com VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY."
-  echo '  É o mesmo arquivo que você usa na sua máquina (a chave anon, nunca a de serviço).'
-  echo "  Crie com:  nano $RAIZ/.env"
-  exit 1
+if [ -f "$RAIZ/.env" ]; then
+  # shellcheck disable=SC1091
+  set -a; . "$RAIZ/.env"; set +a
 fi
-verde '  .env do app encontrado'
+case "${VITE_SUPABASE_URL:-}" in
+  https://*) ;;
+  *) vermelho '  Falta VITE_SUPABASE_URL (e VITE_SUPABASE_ANON_KEY).'
+     echo "  Ponha as duas linhas em $RAIZ/.env ou em $(pwd)/.env — a chave ANON, nunca a de serviço."
+     exit 1 ;;
+esac
+[ -n "${VITE_SUPABASE_ANON_KEY:-}" ] || { vermelho '  Falta VITE_SUPABASE_ANON_KEY.'; exit 1; }
+case "$VITE_SUPABASE_ANON_KEY" in
+  eyJ*|sb_publishable_*) ;;
+  sb_secret_*) vermelho '  Essa é a chave de SERVIÇO. No app vai a anon (publishable) — a de serviço no navegador entrega o banco inteiro.'; exit 1 ;;
+  *) amarelo '  A chave anon não tem a cara de sempre (eyJ… ou sb_publishable_…). Confira.' ;;
+esac
+export VITE_SUPABASE_URL VITE_SUPABASE_ANON_KEY
+verde '  chaves do app encontradas'
 
 # 4. Build ----------------------------------------------------------------------
 azul '== 4/6  Build =='

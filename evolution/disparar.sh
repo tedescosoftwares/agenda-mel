@@ -42,17 +42,46 @@ case "${1:-}" in
       echo '   No Ubuntu:  sudo apt-get install -y cron && sudo systemctl enable --now cron'
       exit 1
     fi
+
+    # Sem credenciais guardadas o cron não serve para nada: ele roda sem
+    # terminal, a pergunta interativa não aparece, e o script sai. Melhor
+    # recusar agora do que instalar algo que só falha em silêncio.
+    if [ ! -f .supabase ]; then
+      vermelho 'Antes preciso das credenciais guardadas.'
+      echo '   Rode  ./disparar.sh  uma vez na mão, e depois  ./disparar.sh --cron'
+      exit 1
+    fi
+
     # sem duplicar: tira o que já houver nosso antes de pôr de volta
     { crontab -l 2>/dev/null | grep -vF "$MARCA" | grep -vF "$AQUI/disparar.sh"
       echo "$MARCA"
       echo "$LINHA_CRON"; } | crontab -
-    verde 'Instalado. De minuto em minuto, sozinho.'
-    echo "   Log:  $AQUI/disparar.log"
-    echo '   Tirar:  ./disparar.sh --sem-cron'
+
+    # Conferir, não anunciar. Dizer "instalado" sem olhar de volta é como
+    # esta fila ficou parada dias sem ninguém notar.
+    if crontab -l 2>/dev/null | grep -qF "$AQUI/disparar.sh"; then
+      verde 'Instalado e conferido:'
+      crontab -l | grep -F "$AQUI/disparar.sh" | sed 's/^/     /'
+    else
+      vermelho 'Escrevi no crontab e ele não está lá. Algo recusou a gravação.'
+      echo '   Tente:  crontab -e   e cole a linha:'
+      echo "     $LINHA_CRON"
+      exit 1
+    fi
+
+    # De nada adianta a linha estar no crontab se o serviço não roda.
+    if command -v systemctl >/dev/null; then
+      if [ "$(systemctl is-active cron 2>/dev/null || echo inativo)" != 'active' ]; then
+        amarelo 'O crontab tem a linha, mas o serviço cron NÃO está rodando.'
+        echo '   Ligue com:  sudo systemctl enable --now cron'
+      else
+        verde 'Serviço cron ativo.'
+      fi
+    fi
+
     echo
-    amarelo 'Rode uma vez na mão agora para guardar as credenciais,'
-    amarelo 'senão o cron vai travar esperando você digitar:'
-    echo '     ./disparar.sh'
+    echo "   Log:    $AQUI/disparar.log   (aparece no primeiro minuto)"
+    echo '   Tirar:  ./disparar.sh --sem-cron'
     exit 0
     ;;
   --trocar)

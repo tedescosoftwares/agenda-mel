@@ -82,7 +82,7 @@ export default function Convite() {
         <span className="convite-selo">Convite</span>
         <h1>Sua agenda, seu link, seu app</h1>
         <p className="prof-bio">
-          Uma cliente te indicou para usar o Agenda Mel. Você monta seus
+          Uma cliente te indicou para usar o MIMO. Você monta seus
           serviços, seus horários e ganha um link para mandar no WhatsApp — as
           clientes marcam sozinhas.
         </p>
@@ -106,14 +106,14 @@ export default function Convite() {
 
         {role === 'admin' ? (
           <div className="card empty-state">
-            <p>Você já tem um espaço no Agenda Mel.</p>
+            <p>Você já tem um espaço no MIMO.</p>
             <Link to="/admin" className="btn btn-primary">
               Ir para o meu painel
             </Link>
           </div>
         ) : role === 'profissional' ? (
           <div className="card empty-state">
-            <p>Você já faz parte de uma equipe no Agenda Mel.</p>
+            <p>Você já faz parte de uma equipe no MIMO.</p>
             <Link to="/pro" className="btn btn-primary">
               Ir para a minha agenda
             </Link>
@@ -187,7 +187,7 @@ export default function Convite() {
 
       {mostrarLogin && (
         <AuthModal
-          resumo="Crie sua conta para abrir seu espaço no Agenda Mel."
+          resumo="Crie sua conta para abrir seu espaço no MIMO."
           onClose={() => setMostrarLogin(false)}
         />
       )}

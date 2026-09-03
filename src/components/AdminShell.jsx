@@ -1,27 +1,30 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import SinoAvisos from './SinoAvisos'
 import { MarcaIcon } from './icons'
 import {
   CalendarIcon,
-  SparkleIcon,
-  GraficoIcon,
   UsersIcon,
   TeamIcon,
-  BellIcon,
+  ClockIcon,
+  MaisIcon,
 } from './icons'
 
+// Cinco abas, não seis. Numa barra de celular, seis alvos dão 60px
+// cada e o polegar erra. O mês, Serviços e WhatsApp foram para dentro
+// de Ajustes: são coisas que se configuram, não o dia a dia.
+// O botão do meio é a ação da casa — encaixar alguém agora.
 const TABS = [
   { to: '/admin', end: true, label: 'Agenda', Icon: CalendarIcon },
-  { to: '/admin/numeros', label: 'O mês', Icon: GraficoIcon },
   { to: '/admin/equipe', label: 'Equipe', Icon: TeamIcon },
-  { to: '/admin/servicos', label: 'Serviços', Icon: SparkleIcon },
+  null,
   { to: '/admin/clientes', label: 'Clientes', Icon: UsersIcon },
-  { to: '/admin/whatsapp', label: 'WhatsApp', Icon: BellIcon },
+  { to: '/admin/ajustes', label: 'Ajustes', Icon: ClockIcon },
 ]
 
 export default function AdminShell({ children }) {
   const { profile, user, signOut } = useAuth()
+  const navigate = useNavigate()
   const inicial = (profile?.full_name || user?.email || '?')
     .trim()
     .charAt(0)
@@ -35,8 +38,8 @@ export default function AdminShell({ children }) {
     <div className="admin-shell">
       <header className="topbar topbar-admin">
         <span className="brand-inline">
-          <MarcaIcon className="marca" />
-          Agenda Mel
+          <MarcaIcon className="marca" id="topo" />
+          MIMO
         </span>
         <div className="topbar-acoes">
           <SinoAvisos />
@@ -50,19 +53,30 @@ export default function AdminShell({ children }) {
 
       <nav className="bottom-nav">
         <div className="bottom-nav-inner">
-          {TABS.map(({ to, end, label, Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={end}
-              className={({ isActive }) =>
-                isActive ? 'nav-item active' : 'nav-item'
-              }
-            >
-              <Icon />
-              <span>{label}</span>
-            </NavLink>
-          ))}
+          {TABS.map((t) =>
+            t === null ? (
+              <button
+                key="mais"
+                className="nav-mais"
+                onClick={() => navigate('/admin?encaixe=1')}
+                aria-label="Novo encaixe"
+              >
+                <MaisIcon />
+              </button>
+            ) : (
+              <NavLink
+                key={t.to}
+                to={t.to}
+                end={t.end}
+                className={({ isActive }) =>
+                  isActive ? 'nav-item active' : 'nav-item'
+                }
+              >
+                <t.Icon />
+                <span>{t.label}</span>
+              </NavLink>
+            ),
+          )}
         </div>
       </nav>
     </div>

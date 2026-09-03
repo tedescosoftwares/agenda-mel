@@ -32,7 +32,7 @@ export default function ProShell({ children }) {
     <div className="admin-shell">
       <header className="topbar topbar-admin">
         <span className="brand-inline">
-          <MarcaIcon className="marca" />
+          <MarcaIcon className="marca" id="pro" />
           {nome}
         </span>
         <div className="topbar-acoes">

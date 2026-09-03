@@ -66,9 +66,10 @@ export default function Login() {
     <div className="page-center login-bg">
       <div className="card login-card">
         <div className="brand">
-          <MarcaIcon className="brand-icon" width={30} height={30} />
-          <h1>Agenda Mel</h1>
-          <p className="muted">Sua cliente marca sozinha pelo seu link</p>
+          <MarcaIcon className="brand-icon" width={44} height={36} id="login" />
+          <h1>MIMO</h1>
+          <p className="brand-assinatura">Agenda Mel</p>
+          <p className="muted">Sua beleza. Na sua casa.</p>
         </div>
 
         {!isSupabaseConfigured && (

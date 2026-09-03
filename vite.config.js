@@ -25,14 +25,14 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
       },
       manifest: {
-        name: 'Agenda Mel — Estética',
-        short_name: 'Agenda Mel',
-        description: 'Sua cliente marca sozinha pelo seu link',
+        name: 'MIMO — Agenda Mel',
+        short_name: 'MIMO',
+        description: 'Sua beleza. Na sua casa.',
         lang: 'pt-BR',
         start_url: '/',
         display: 'standalone',
-        background_color: '#0d0d0f',
-        theme_color: '#0d0d0f',
+        background_color: '#f6f2f7',
+        theme_color: '#ff2d72',
         icons: [
           {
             src: 'pwa-192.png',

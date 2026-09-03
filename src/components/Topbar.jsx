@@ -8,8 +8,8 @@ export default function Topbar() {
   return (
     <header className="topbar">
       <span className="brand-inline">
-          <MarcaIcon className="marca" />
-          Agenda Mel
+          <MarcaIcon className="marca" id="topo" />
+          MIMO
         </span>
       <div className="topbar-acoes">
         <SinoAvisos />

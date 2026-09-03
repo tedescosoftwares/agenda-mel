@@ -18,6 +18,11 @@ export default function AgendaDia({
   professionalId = null,
   mostrarProfissional = false,
   diaInicial = null,
+  // Quando quem hospeda a agenda já tem um botão "+" (a barra de baixo
+  // do salão, por exemplo), ela abre o encaixe por aqui e pede para o
+  // botão flutuante sumir — dois "+" na mesma tela é um a mais.
+  pedidoDeEncaixe = 0,
+  semFab = false,
 }) {
   const dias = useMemo(() => {
     const base = diaInicial ? new Date(diaInicial + 'T12:00:00') : new Date()
@@ -155,7 +160,11 @@ export default function AgendaDia({
     fetchAgenda()
   }
 
-  const podeEncaixar = Boolean(professionalId)
+  const podeEncaixar = Boolean(professionalId) && !semFab
+
+  useEffect(() => {
+    if (pedidoDeEncaixe && professionalId) setEncaixando(true)
+  }, [pedidoDeEncaixe, professionalId])
 
   // quem não veio não entra na previsão do dia; o valor é o congelado
   const previsao = appointments

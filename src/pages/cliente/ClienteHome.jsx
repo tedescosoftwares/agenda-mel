@@ -1,249 +1,142 @@
-import { useCallback, useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import Topbar from '../../components/Topbar'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
+import ClienteShell from '../../components/ClienteShell'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
-import { ChevronIcon } from '../../components/icons'
-import { formatPreco, toISODate } from '../../lib/format'
-import { formatDataCurta } from '../../lib/booking'
+import { ChevronIcon, SearchIcon } from '../../components/icons'
 import Avatar from '../../components/Avatar'
-import ConviteAdiantar from '../../components/ConviteAdiantar'
-import OfertaVaga from '../../components/OfertaVaga'
 import { formatarCents } from '../../lib/indicacao'
 
-const STATUS_LABEL = {
-  pendente: 'pendente',
-  confirmado: 'confirmado',
-  concluido: 'concluído',
-}
-
+// Início: quem atende, e o caminho para marcar.
+//
+// Antes esta tela era o app inteiro da cliente — quem atende, o que ela
+// já marcou, a fila de espera e os convites, tudo empilhado. Quem já
+// tinha horário marcado precisava rolar por baixo da lista de
+// profissionais para ver o próprio compromisso. Agora "o que eu marquei"
+// tem aba própria, e aqui fica só o começo de um agendamento.
 export default function ClienteHome() {
   const { profile, user } = useAuth()
   const nome = (profile?.full_name || user?.email || '').split(' ')[0]
+  const [params, setParams] = useSearchParams()
 
   const [profissionais, setProfissionais] = useState([])
-  const [meus, setMeus] = useState([])
-  const [vagas, setVagas] = useState([])
-  const [filas, setFilas] = useState([])
+  const [busca, setBusca] = useState('')
   const [saldo, setSaldo] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const campoBusca = useRef(null)
 
-  const fetchDados = useCallback(async () => {
-    const hoje = toISODate(new Date())
-
-    const [profRes, apptRes, vagasRes, filasRes] = await Promise.all([
-      supabase
+  useEffect(() => {
+    let vivo = true
+    ;(async () => {
+      const { data, error } = await supabase
         .from('professionals')
         .select('*')
         .eq('active', true)
-        .order('name'),
-      supabase
-        .from('appointments')
-        .select(
-          '*, services (name, price), professionals (name), appointment_offers (id, status, proposed_start_time, previous_start_time, expires_at)',
-        )
-        .gte('date', hoje)
-        .neq('status', 'cancelado')
-        .order('date')
-        .order('start_time'),
-      supabase
-        .from('waitlist_offers')
-        .select(
-          '*, waitlist_entries (id, services (name), professionals (name))',
-        )
-        .eq('status', 'pendente')
-        .gt('expires_at', new Date().toISOString())
-        .order('created_at', { ascending: false }),
-      supabase
-        .from('waitlist_entries')
-        .select('*, services (name), professionals (name)')
-        .eq('status', 'aguardando')
-        .order('created_at', { ascending: false }),
-    ])
-
-    if (profRes.error) {
-      setError('Erro ao carregar: ' + profRes.error.message)
-    } else {
-      setProfissionais(profRes.data)
-      setError('')
+        .order('name')
+      if (!vivo) return
+      if (error) setError('Erro ao carregar: ' + error.message)
+      else {
+        setProfissionais(data)
+        setError('')
+      }
+      const { data: saldoAtual } = await supabase.rpc('saldo_creditos')
+      if (vivo) {
+        setSaldo(saldoAtual ?? 0)
+        setLoading(false)
+      }
+    })()
+    return () => {
+      vivo = false
     }
-    if (!apptRes.error) setMeus(apptRes.data)
-    if (!vagasRes.error) setVagas(vagasRes.data)
-    if (!filasRes.error) setFilas(filasRes.data)
-
-    const { data: saldoAtual } = await supabase.rpc('saldo_creditos')
-    setSaldo(saldoAtual ?? 0)
-    setLoading(false)
   }, [])
 
+  // o botão do meio da barra chega aqui com ?buscar=1: abre o teclado
+  // direto no campo, que é o que "quero marcar agora" quer dizer
   useEffect(() => {
-    fetchDados()
-  }, [fetchDados])
+    if (params.get('buscar')) {
+      campoBusca.current?.focus()
+      setParams({}, { replace: true })
+    }
+  }, [params, setParams])
 
-  async function cancelar(appt) {
-    const ok = window.confirm(
-      `Cancelar ${appt.services?.name} em ${formatDataCurta(appt.date)} às ${appt.start_time.slice(0, 5)}?`,
+  // Filtro local, sobre a lista que já veio. Não é busca no servidor:
+  // são poucas profissionais, e uma ida ao banco a cada tecla seria
+  // gastar rede para responder o que a memória já sabe.
+  const lista = useMemo(() => {
+    const t = busca.trim().toLowerCase()
+    if (!t) return profissionais
+    return profissionais.filter(
+      (p) =>
+        p.name.toLowerCase().includes(t) ||
+        (p.bio ?? '').toLowerCase().includes(t),
     )
-    if (!ok) return
-    const { error } = await supabase
-      .from('appointments')
-      .update({ status: 'cancelado' })
-      .eq('id', appt.id)
-    if (error) setError('Erro ao cancelar: ' + error.message)
-    else fetchDados()
-  }
-
-  async function sairDaFila(f) {
-    const { error } = await supabase.rpc('sair_lista_espera', { entrada_id: f.id })
-    if (error) setError('Erro ao sair da fila: ' + error.message)
-    else fetchDados()
-  }
+  }, [profissionais, busca])
 
   return (
-    <div className="layout">
-      <Topbar />
+    <ClienteShell>
+      <div className="cl-saudacao">
+        <h2>Olá, {nome} 💛</h2>
+        <p className="muted">Pronta para se cuidar hoje?</p>
+      </div>
 
-      <main className="content">
-        <h2>Olá, {nome}</h2>
+      {error && <div className="alert alert-error">{error}</div>}
 
-        {error && <div className="alert alert-error">{error}</div>}
+      <label className="cl-busca">
+        <SearchIcon />
+        <input
+          ref={campoBusca}
+          value={busca}
+          onChange={(e) => setBusca(e.target.value)}
+          placeholder="Buscar profissional ou serviço"
+          aria-label="Buscar profissional"
+        />
+      </label>
 
+      <section className="secao">
+        <h3 className="secao-titulo">Agendar com</h3>
         {loading ? (
           <p className="muted">Carregando…</p>
+        ) : lista.length === 0 ? (
+          <div className="card empty-state">
+            <p>
+              {busca
+                ? 'Nenhuma profissional com esse nome.'
+                : 'Nenhuma profissional disponível no momento.'}
+            </p>
+          </div>
         ) : (
-          <>
-            {vagas.map((v) => (
-              <OfertaVaga key={v.id} oferta={v} onRespondido={fetchDados} />
+          <div className="cliente-list">
+            {lista.map((p) => (
+              <Link key={p.id} to={`/p/${p.slug}`} className="card prof-row">
+                <Avatar nome={p.name} foto={p.photo_url} />
+                <div className="cliente-info">
+                  <span className="cliente-nome">
+                    <span className="nome-txt">{p.name}</span>
+                  </span>
+                  {p.bio && <span className="muted servico-desc">{p.bio}</span>}
+                </div>
+                <ChevronIcon />
+              </Link>
             ))}
-
-            {convitesAbertos(meus).map(({ appt, oferta }) => (
-              <ConviteAdiantar
-                key={oferta.id}
-                oferta={oferta}
-                servico={appt.services?.name}
-                profissional={appt.professionals?.name}
-                onRespondido={fetchDados}
-              />
-            ))}
-
-            {meus.length > 0 && (
-              <section className="secao">
-                <h3 className="secao-titulo">Meus agendamentos</h3>
-                <div className="appt-list">
-                  {meus.map((a) => (
-                    <div key={a.id} className="card appt-row">
-                      <div className="appt-time">
-                        <span className="appt-hora">{a.start_time.slice(0, 5)}</span>
-                        <span className="appt-dur">{formatDataCurta(a.date)}</span>
-                      </div>
-                      <div className="appt-info">
-                        <span className="appt-cliente">{a.services?.name}</span>
-                        <span className="appt-servico muted">
-                          {a.professionals ? `com ${a.professionals.name} · ` : ''}
-                          {a.services ? formatPreco(a.services.price) : ''}
-                        </span>
-                      </div>
-                      <div className="appt-acoes">
-                        <span className={`badge badge-${a.status}`}>
-                          {STATUS_LABEL[a.status] ?? a.status}
-                        </span>
-                        {podeCancelar(a) && (
-                          <button
-                            className="btn-link-cancelar"
-                            onClick={() => cancelar(a)}
-                          >
-                            cancelar
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {filas.length > 0 && (
-              <section className="secao">
-                <h3 className="secao-titulo">Estou esperando vaga</h3>
-                <div className="cliente-list">
-                  {filas.map((f) => (
-                    <div key={f.id} className="card fila-row">
-                      <div className="cliente-info">
-                        <span className="cliente-nome"><span className="nome-txt">{f.services?.name}</span></span>
-                        <span className="muted cliente-meta">
-                          com {f.professionals?.name} ·{' '}
-                          {f.window_start.slice(0, 5)}–{f.window_end.slice(0, 5)}{' '}
-                          · até {formatDataCurta(f.date_to)}
-                        </span>
-                      </div>
-                      <button
-                        className="btn-link-cancelar"
-                        onClick={() => sairDaFila(f)}
-                      >
-                        sair da fila
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            <Link to="/indique" className="card indique-atalho">
-              <span className="indique-atalho-icone" aria-hidden="true" />
-              <span className="cliente-info">
-                <span className="cliente-nome"><span className="nome-txt">Indique e ganhe</span></span>
-                <span className="muted cliente-meta">
-                  {saldo > 0
-                    ? `Você tem ${formatarCents(saldo)} de crédito`
-                    : 'Chame uma amiga e as duas ganham desconto'}
-                </span>
-              </span>
-              <ChevronIcon />
-            </Link>
-
-            <section className="secao">
-              <h3 className="secao-titulo">Agendar com</h3>
-              {profissionais.length === 0 ? (
-                <div className="card empty-state">
-                  <p>Nenhuma profissional disponível no momento.</p>
-                </div>
-              ) : (
-                <div className="cliente-list">
-                  {profissionais.map((p) => (
-                    <Link key={p.id} to={`/p/${p.slug}`} className="card prof-row">
-                      <Avatar nome={p.name} foto={p.photo_url} />
-                      <div className="cliente-info">
-                        <span className="cliente-nome"><span className="nome-txt">{p.name}</span></span>
-                        {p.bio && (
-                          <span className="muted servico-desc">{p.bio}</span>
-                        )}
-                      </div>
-                      <ChevronIcon />
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </section>
-          </>
+          </div>
         )}
-      </main>
-    </div>
-  )
-}
+      </section>
 
-// convites de adiantamento ainda válidos, achatados para a tela
-function convitesAbertos(agendamentos) {
-  const agora = new Date()
-  return agendamentos.flatMap((appt) =>
-    (appt.appointment_offers ?? [])
-      .filter((o) => o.status === 'pendente' && new Date(o.expires_at) > agora)
-      .map((oferta) => ({ appt, oferta })),
+      <Link to="/perfil" className="card indique-atalho">
+        <span className="indique-atalho-icone" aria-hidden="true" />
+        <span className="cliente-info">
+          <span className="cliente-nome">
+            <span className="nome-txt">Indique e ganhe</span>
+          </span>
+          <span className="muted cliente-meta">
+            {saldo > 0
+              ? `Você tem ${formatarCents(saldo)} de crédito`
+              : 'Chame uma amiga e as duas ganham desconto'}
+          </span>
+        </span>
+        <ChevronIcon />
+      </Link>
+    </ClienteShell>
   )
-}
-
-// só dá para cancelar o que ainda não aconteceu
-function podeCancelar(a) {
-  if (a.status !== 'pendente' && a.status !== 'confirmado') return false
-  return new Date(`${a.date}T${a.start_time}`) > new Date()
 }

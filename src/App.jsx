@@ -9,6 +9,8 @@ import PaginaProfissional from "./pages/publico/PaginaProfissional";
 import Convite from "./pages/publico/Convite";
 import Estilo from "./pages/Estilo";
 import ClienteHome from "./pages/cliente/ClienteHome";
+import ClienteAgenda from "./pages/cliente/ClienteAgenda";
+import ClientePerfil from "./pages/cliente/ClientePerfil";
 import AdminAgenda from "./pages/admin/AdminAgenda";
 import AdminProfissionais from "./pages/admin/AdminProfissionais";
 import AdminServices from "./pages/admin/AdminServices";
@@ -17,6 +19,7 @@ import AdminClientes from "./pages/admin/AdminClientes";
 import AdminNumeros from "./pages/admin/AdminNumeros";
 import AdminWhatsapp from "./pages/admin/AdminWhatsapp";
 import AdminBancada from "./pages/admin/AdminBancada";
+import AdminAjustes from "./pages/admin/AdminAjustes";
 import ProAgenda from "./pages/pro/ProAgenda";
 import ProServicos from "./pages/pro/ProServicos";
 import ProHorarios from "./pages/pro/ProHorarios";
@@ -114,14 +117,14 @@ export default function App() {
               element={
                 <ProtectedRoute requireRole="profissional">
                   <ProAjustes />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/pro/pedidos"
               element={
                 <ProtectedRoute requireRole="profissional">
                   <ProPedidos />
-                </ProtectedRoute>
-              }
-            />
                 </ProtectedRoute>
               }
             />
@@ -192,10 +195,35 @@ export default function App() {
               }
             />
             <Route
+              path="/admin/ajustes"
+              element={
+                <ProtectedRoute requireRole="admin">
+                  <AdminAjustes />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/admin/bancada"
               element={
                 <ProtectedRoute requireRole="admin">
                   <AdminBancada />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/agenda"
+              element={
+                <ProtectedRoute requireRole="cliente">
+                  <ClienteAgenda />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/perfil"
+              element={
+                <ProtectedRoute requireRole="cliente">
+                  <ClientePerfil />
                 </ProtectedRoute>
               }
             />

@@ -115,22 +115,67 @@ export function VoltarIcon(props) {
 }
 
 // A marca: a lâmpada em volta do espelho do salão
-export function MarcaIcon(props) {
+// A marca do MIMO: dois corações encaixados, o de trás vazado.
+// Preenchido com o gradiente rosa→laranja da casa; por ser um gradiente
+// em SVG, o id precisa ser único na página — daí o sufixo.
+export function MarcaIcon({ id = 'mimo', ...props }) {
+  const grad = `grad-${id}`
   return (
     <svg
-      viewBox="0 0 24 24"
-      width={17}
-      height={17}
+      viewBox="0 0 32 26"
+      width={26}
+      height={21}
       fill="none"
-      stroke="currentColor"
-      strokeWidth={1.9}
-      strokeLinecap="round"
       aria-hidden="true"
       {...props}
     >
-      <circle cx="12" cy="12" r="4.2" />
-      <path d="M12 2.4v2.4M12 19.2v2.4M2.4 12h2.4M19.2 12h2.4" />
-      <path d="M5.2 5.2l1.7 1.7M17.1 17.1l1.7 1.7M18.8 5.2l-1.7 1.7M6.9 17.1l-1.7 1.7" />
+      <defs>
+        <linearGradient id={grad} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#ff2d72" />
+          <stop offset="100%" stopColor="#ff6a00" />
+        </linearGradient>
+      </defs>
+      {/* o coração de trás, só contorno */}
+      <path
+        d="M9.6 24.4C5.2 20.9 1 17.7 1 12.6 1 8.9 3.9 6 7.5 6c2.1 0 4 1 5.2 2.6C13.9 7 15.8 6 17.9 6c3.6 0 6.5 2.9 6.5 6.6 0 5.1-4.2 8.3-8.6 11.8a3.6 3.6 0 0 1-4.4 0Z"
+        stroke={`url(#${grad})`}
+        strokeWidth="2"
+        opacity="0.42"
+      />
+      {/* o da frente, cheio */}
+      <path
+        d="M22.3 23.6c-3.6-2.9-7-5.5-7-9.7 0-3 2.4-5.4 5.3-5.4 1.7 0 3.3.8 4.3 2.1 1-1.3 2.5-2.1 4.2-2.1 2.9 0 5.3 2.4 5.3 5.4 0 4.2-3.4 6.8-7 9.7a2.9 2.9 0 0 1-3.6 0Z"
+        fill={`url(#${grad})`}
+        transform="translate(-8.2 -4.6)"
+      />
+    </svg>
+  )
+}
+
+export function HomeIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" width={19} height={19} fill="none" stroke="currentColor"
+      strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
+      <path d="M3.5 10.4 12 3.6l8.5 6.8V20a1 1 0 0 1-1 1h-4.6v-6.1H9.1V21H4.5a1 1 0 0 1-1-1Z" />
+    </svg>
+  )
+}
+
+export function PessoaIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" width={19} height={19} fill="none" stroke="currentColor"
+      strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
+      <circle cx="12" cy="8" r="3.6" />
+      <path d="M4.8 20.2c.6-3.6 3.6-5.8 7.2-5.8s6.6 2.2 7.2 5.8" />
+    </svg>
+  )
+}
+
+export function MaisIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" width={22} height={22} fill="none" stroke="currentColor"
+      strokeWidth={2.4} strokeLinecap="round" aria-hidden="true" {...props}>
+      <path d="M12 5.5v13M5.5 12h13" />
     </svg>
   )
 }

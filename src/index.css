@@ -1,123 +1,160 @@
 /* =============================================================
-   AGENDA MEL — sistema visual "studio noturno"
+   MIMO — sistema visual "clara e acolhedora"
    ------------------------------------------------------------
-   Grafite quase preto, tipografia grotesca condensada e um
-   acento latão — a cor das lâmpadas em volta do espelho do
-   salão. Sem sombra: profundidade vem de fio de 1px e de
-   camada de superfície. Estado se lê por ponto luminoso, e
-   número (hora, dinheiro) é sempre monoespaçado e grande.
+   Fundo claro, rosa quente como acento único e um gradiente
+   rosa→laranja para o que é ação principal. Poppins nas três
+   funções. Cantos generosos: 16px em cartão, 12px em controle.
+   Profundidade vem de sombra suave e de fundo branco sobre
+   lilás pálido — não mais de fio de 1px.
+
+   Os NOMES dos tokens continuam os mesmos do tema anterior
+   (--tinta, --superficie, --latao…) de propósito: são usados em
+   mais de 300 lugares deste arquivo, e trocar nome junto com
+   valor transformaria uma mudança de tema numa reescrita.
+   O que mudou foi o VALOR de cada um.
    ============================================================= */
 
-/* ---------- as três vozes tipográficas, servidas localmente ---------- */
+/* ---------- Poppins, servida localmente ---------- */
 
 @font-face {
-  font-family: 'Archivo';
+  font-family: 'Poppins';
   font-style: normal;
-  font-weight: 400 700;
+  font-weight: 400;
   font-display: swap;
-  src: url('/fontes/archivo-latin.woff2') format('woff2');
+  src: url('/fontes/poppins-400-latin.woff2') format('woff2');
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
     U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
     U+2212, U+2215, U+FEFF, U+FFFD;
 }
-
 @font-face {
-  font-family: 'Archivo';
+  font-family: 'Poppins';
   font-style: normal;
-  font-weight: 400 700;
+  font-weight: 400;
   font-display: swap;
-  src: url('/fontes/archivo-latin-ext.woff2') format('woff2');
+  src: url('/fontes/poppins-400-latin-ext.woff2') format('woff2');
   unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF,
     U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
     U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
-
 @font-face {
-  font-family: 'Archivo Narrow';
+  font-family: 'Poppins';
   font-style: normal;
-  font-weight: 500 700;
+  font-weight: 500;
   font-display: swap;
-  src: url('/fontes/archivo-narrow-latin.woff2') format('woff2');
+  src: url('/fontes/poppins-500-latin.woff2') format('woff2');
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
     U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
     U+2212, U+2215, U+FEFF, U+FFFD;
 }
-
 @font-face {
-  font-family: 'Archivo Narrow';
+  font-family: 'Poppins';
   font-style: normal;
-  font-weight: 500 700;
+  font-weight: 500;
   font-display: swap;
-  src: url('/fontes/archivo-narrow-latin-ext.woff2') format('woff2');
+  src: url('/fontes/poppins-500-latin-ext.woff2') format('woff2');
   unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF,
     U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
     U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
-
 @font-face {
-  font-family: 'Azeret Mono';
+  font-family: 'Poppins';
   font-style: normal;
-  font-weight: 400 500;
+  font-weight: 600;
   font-display: swap;
-  src: url('/fontes/azeret-mono-latin.woff2') format('woff2');
+  src: url('/fontes/poppins-600-latin.woff2') format('woff2');
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
     U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
     U+2212, U+2215, U+FEFF, U+FFFD;
 }
-
 @font-face {
-  font-family: 'Azeret Mono';
+  font-family: 'Poppins';
   font-style: normal;
-  font-weight: 400 500;
+  font-weight: 600;
   font-display: swap;
-  src: url('/fontes/azeret-mono-latin-ext.woff2') format('woff2');
+  src: url('/fontes/poppins-600-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF,
+    U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
+    U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fontes/poppins-700-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fontes/poppins-700-latin-ext.woff2') format('woff2');
   unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF,
     U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
     U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
 :root {
-  /* fundo e superfícies */
-  --tinta: #0d0d0f;
-  --superficie: #141419;
-  --superficie-2: #1c1c23;
-  --superficie-3: #24242c;
+  /* ---- a paleta MIMO ---- */
+  --rosa: #ff2d72;
+  --rosa-escuro: #e01458;
+  --laranja: #ff6a00;
+  --roxo: #6a2dd6;
+  --preto: #1f1f1e;
+  --lilas: #f6f2f7;
+  --branco: #ffffff;
+  --gradiente: linear-gradient(97deg, #ff2d72 0%, #ff6a00 100%);
 
-  /* fios */
-  --fio: #26262f;
-  --fio-forte: #383843;
+  /* ---- fundo e superfícies ---- */
+  --tinta: #f6f2f7;          /* o fundo da página */
+  --superficie: #ffffff;     /* cartão */
+  --superficie-2: #ffffff;   /* campo, cartão interno */
+  --superficie-3: #f2ecf4;   /* realce discreto dentro do cartão */
 
-  /* texto — branco levemente quente, cor de lâmpada */
-  --texto: #f4f3f1;
-  --texto-2: #9d988f;
-  --texto-3: #6b675f;
+  /* ---- fios: agora quase invisíveis; quem separa é a sombra ---- */
+  --fio: #ece5ef;
+  --fio-forte: #ddd2e1;
 
-  /* acento: latão do espelho */
-  --latao: #e9a23b;
-  --latao-claro: #f5bd6b;
-  --latao-veu: rgba(233, 162, 59, 0.13);
-  --latao-fio: rgba(233, 162, 59, 0.38);
+  /* ---- texto ---- */
+  --texto: #1f1f1e;
+  --texto-2: #6e6873;
+  --texto-3: #9a93a0;
 
-  /* estados — separados do acento, de propósito */
-  --menta: #4fd1a0;
-  --menta-veu: rgba(79, 209, 160, 0.13);
-  --azul: #7fa6f0;
-  --azul-veu: rgba(127, 166, 240, 0.13);
-  --carmim: #f0637e;
-  --carmim-veu: rgba(240, 99, 126, 0.13);
+  /* ---- acento: o rosa MIMO. O nome do token continua "latao"
+         porque ele aparece em 100 lugares deste arquivo ---- */
+  --latao: #ff2d72;
+  --latao-claro: #ff6a00;
+  --latao-veu: rgba(255, 45, 114, 0.09);
+  --latao-fio: rgba(255, 45, 114, 0.26);
 
-  /* tipografia */
-  --condensada: 'Archivo Narrow', 'Arial Narrow', system-ui, sans-serif;
-  --corpo: 'Archivo', system-ui, -apple-system, sans-serif;
-  --mono: 'Azeret Mono', ui-monospace, 'SFMono-Regular', monospace;
+  /* ---- estados: escurecidos para terem contraste em fundo claro ---- */
+  --menta: #12a06a;
+  --menta-veu: rgba(18, 160, 106, 0.1);
+  --azul: #3a6fd8;
+  --azul-veu: rgba(58, 111, 216, 0.1);
+  --carmim: #b3123c;
+  --carmim-veu: rgba(179, 18, 60, 0.08);
 
-  /* medidas */
-  --r-carta: 6px;
-  --r-controle: 4px;
+  /* ---- sombras: a profundidade que antes vinha do fio ---- */
+  --sombra: 0 1px 2px rgba(31, 31, 30, 0.04), 0 4px 16px rgba(31, 31, 30, 0.05);
+  --sombra-alta: 0 4px 12px rgba(31, 31, 30, 0.07), 0 12px 32px rgba(31, 31, 30, 0.09);
+  --sombra-rosa: 0 4px 14px rgba(255, 45, 114, 0.26);
+
+  /* ---- tipografia: uma família só, três funções ---- */
+  --condensada: 'Poppins', system-ui, sans-serif;  /* títulos e rótulos */
+  --corpo: 'Poppins', system-ui, -apple-system, sans-serif;
+  --mono: 'Poppins', system-ui, sans-serif;        /* hora e dinheiro */
+
+  /* ---- medidas: cantos generosos ---- */
+  --r-carta: 16px;
+  --r-controle: 12px;
   --r-pilula: 999px;
   --largura: 660px;
 
-  color-scheme: dark;
+  color-scheme: light;
   font-family: var(--corpo);
   color: var(--texto);
   background: var(--tinta);
@@ -146,8 +183,8 @@ h1,
 h2,
 h3 {
   font-family: var(--condensada);
-  font-weight: 700;
-  letter-spacing: -0.01em;
+  font-weight: 600;
+  letter-spacing: -0.02em;
   margin: 0 0 0.4rem;
   text-wrap: balance;
 }
@@ -195,8 +232,7 @@ a {
 .aviso-quando,
 .slug-prefixo {
   font-family: var(--condensada);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0;
 }
 
 /* ============================================================
@@ -213,7 +249,7 @@ a {
 
 .login-bg {
   background:
-    radial-gradient(60rem 30rem at 50% -10%, rgba(233, 162, 59, 0.09), transparent 70%),
+    radial-gradient(60rem 30rem at 50% -10%, rgba(255, 45, 114, 0.05), transparent 70%),
     var(--tinta);
 }
 
@@ -247,21 +283,22 @@ a {
   justify-content: space-between;
   gap: 1rem;
   padding: 0.85rem 1.15rem;
-  background: rgba(13, 13, 15, 0.86);
+  background: rgba(255, 255, 255, 0.86);
   backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--fio);
 }
 
 .topbar-admin {
-  background: rgba(13, 13, 15, 0.86);
+  background: rgba(255, 255, 255, 0.86);
 }
 
 .brand-inline {
   font-family: var(--condensada);
   font-weight: 700;
-  font-size: 0.95rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  font-size: 1.05rem;
+  letter-spacing: -0.02em;
+  text-transform: none;
+  color: var(--rosa);
   display: flex;
   align-items: center;
   gap: 0.15rem;
@@ -278,12 +315,13 @@ a {
 /* ---------- navegação de baixo ---------- */
 
 .bottom-nav {
+  box-shadow: 0 -2px 18px rgba(31, 31, 30, 0.06);
   position: fixed;
   left: 0;
   right: 0;
   bottom: 0;
   z-index: 30;
-  background: rgba(13, 13, 15, 0.92);
+  background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(14px);
   border-top: 1px solid var(--fio);
   padding-bottom: env(safe-area-inset-bottom);
@@ -310,8 +348,8 @@ a {
 }
 
 .nav-item span {
-  font-size: 0.6rem;
-  font-weight: 600;
+  font-size: 0.62rem;
+  font-weight: 500;
 }
 
 .nav-item svg {
@@ -327,15 +365,8 @@ a {
   color: var(--latao);
 }
 
-/* o traço que marca a aba, no fio de cima */
-.nav-item.active::before {
-  content: '';
-  position: absolute;
-  top: -1px;
-  left: 22%;
-  right: 22%;
-  height: 2px;
-  background: var(--latao);
+.nav-item.active span {
+  font-weight: 600;
 }
 
 /* ============================================================
@@ -347,6 +378,7 @@ a {
   border: 1px solid var(--fio);
   border-radius: var(--r-carta);
   padding: 1.1rem 1.15rem;
+  box-shadow: var(--sombra);
 }
 
 .login-card {
@@ -370,7 +402,6 @@ a {
 .brand h1 {
   font-size: 1.9rem;
   letter-spacing: 0.02em;
-  text-transform: uppercase;
   margin: 0 0 0.25rem;
 }
 
@@ -402,7 +433,6 @@ a {
 
 .page-head h2 {
   font-size: 1.55rem;
-  text-transform: uppercase;
   letter-spacing: 0.01em;
   margin-bottom: 0.15rem;
 }
@@ -415,7 +445,6 @@ a {
 }
 
 .titulo-dia::first-letter {
-  text-transform: uppercase;
 }
 
 .secao {
@@ -448,10 +477,9 @@ a {
 
 .btn {
   font-family: var(--condensada);
-  font-size: 0.86rem;
-  font-weight: 700;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
+  font-size: 0.92rem;
+  font-weight: 600;
+  letter-spacing: 0;
   border: 1px solid transparent;
   border-radius: var(--r-controle);
   padding: 0.7rem 1.15rem;
@@ -461,12 +489,17 @@ a {
 }
 
 .btn-primary {
-  background: var(--latao);
-  color: #1a1204;
+  background: var(--gradiente);
+  color: var(--branco);
+  box-shadow: var(--sombra-rosa);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: var(--latao-claro);
+  filter: saturate(1.1) brightness(1.04);
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
 .btn-primary:disabled {
@@ -474,21 +507,22 @@ a {
   cursor: not-allowed;
 }
 
+/* o secundário do MIMO é o rosa vazado, não o cinza */
 .btn-ghost {
-  background: transparent;
-  color: var(--texto-2);
-  border-color: var(--fio-forte);
+  background: var(--branco);
+  color: var(--rosa);
+  border-color: var(--latao-fio);
 }
 
 .btn-ghost:hover {
-  color: var(--texto);
-  border-color: var(--texto-3);
+  background: var(--latao-veu);
+  border-color: var(--rosa);
 }
 
 .btn-danger {
-  background: transparent;
+  background: var(--carmim-veu);
   color: var(--carmim);
-  border-color: rgba(240, 99, 126, 0.35);
+  border-color: rgba(179, 18, 60, 0.38);
 }
 
 .btn-danger:hover {
@@ -515,15 +549,14 @@ a {
 .btn-whats {
   background: transparent;
   color: var(--menta);
-  border: 1px solid rgba(79, 209, 160, 0.35);
+  border: 1px solid rgba(18, 160, 106, 0.35);
   text-decoration: none;
   display: inline-flex;
   align-items: center;
   font-family: var(--condensada);
   font-size: 0.86rem;
   font-weight: 700;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
+  letter-spacing: 0;
   border-radius: var(--r-controle);
   padding: 0.7rem 1.15rem;
 }
@@ -569,8 +602,7 @@ a {
   font-family: var(--condensada);
   font-size: 0.68rem;
   font-weight: 700;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
+  letter-spacing: 0;
   border: 1px solid var(--fio-forte);
   border-radius: var(--r-controle);
   background: transparent;
@@ -587,7 +619,7 @@ a {
 
 .btn-mini-ok {
   color: var(--menta);
-  border-color: rgba(79, 209, 160, 0.32);
+  border-color: rgba(18, 160, 106, 0.32);
 }
 .btn-mini-ok:hover:not(:disabled) {
   background: var(--menta-veu);
@@ -595,7 +627,7 @@ a {
 
 .btn-mini-nao {
   color: var(--carmim);
-  border-color: rgba(240, 99, 126, 0.3);
+  border-color: rgba(179, 18, 60, 0.32);
 }
 .btn-mini-nao:hover:not(:disabled) {
   background: var(--carmim-veu);
@@ -645,8 +677,7 @@ a {
   color: var(--texto-3);
   font-family: var(--condensada);
   font-size: 0.68rem;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
+  letter-spacing: 0;
   cursor: pointer;
   padding: 4px 2px;
 }
@@ -664,7 +695,7 @@ a {
   border-radius: var(--r-pilula);
   border: 1px solid var(--latao);
   background: var(--latao);
-  color: #1a1204;
+  color: var(--branco);
   font-size: 1.6rem;
   line-height: 1;
   cursor: pointer;
@@ -697,8 +728,7 @@ a {
   display: inline-block;
   margin-bottom: 1rem;
   font-family: var(--condensada);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0;
   font-size: 0.7rem;
 }
 
@@ -717,10 +747,9 @@ a {
   flex-direction: column;
   gap: 0.4rem;
   font-family: var(--condensada);
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font-size: 0.82rem;
+  font-weight: 500;
+  letter-spacing: 0;
   color: var(--texto-2);
 }
 
@@ -730,10 +759,10 @@ a {
   font-family: var(--corpo);
   font-size: 0.95rem;
   color: var(--texto);
-  background: var(--tinta);
+  background: var(--branco);
   border: 1px solid var(--fio-forte);
   border-radius: var(--r-controle);
-  padding: 0.72rem 0.8rem;
+  padding: 0.8rem 0.9rem;
   outline: none;
   letter-spacing: 0;
   text-transform: none;
@@ -753,8 +782,8 @@ a {
 .form input:focus,
 .form textarea:focus,
 .form select:focus {
-  border-color: var(--latao);
-  background: var(--superficie);
+  border-color: var(--rosa);
+  box-shadow: 0 0 0 3px var(--latao-veu);
 }
 
 .form input[type='time'],
@@ -925,10 +954,9 @@ a {
   background: transparent;
   padding: 0.7rem 0;
   font-family: var(--condensada);
-  font-size: 0.74rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font-size: 0.92rem;
+  font-weight: 600;
+  letter-spacing: 0;
   color: var(--texto-3);
   cursor: pointer;
   transition: all 0.14s ease;
@@ -945,12 +973,11 @@ a {
 
 .chip {
   font-family: var(--condensada);
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0;
   border: 1px solid var(--fio-forte);
-  background: transparent;
+  background: var(--branco);
   color: var(--texto-2);
   border-radius: var(--r-pilula);
   padding: 0.4rem 0.85rem;
@@ -968,7 +995,7 @@ a {
 .chip.active {
   background: var(--latao);
   border-color: var(--latao);
-  color: #1a1204;
+  color: var(--branco);
 }
 
 .filtro-chips,
@@ -1000,10 +1027,10 @@ a {
 }
 
 .day-chip {
-  min-width: 50px;
-  padding: 0.5rem 0;
+  min-width: 52px;
+  padding: 0.55rem 0;
   border: 1px solid var(--fio);
-  background: transparent;
+  background: var(--branco);
   color: var(--texto-2);
   border-radius: var(--r-controle);
   display: flex;
@@ -1018,8 +1045,7 @@ a {
 .day-chip-nome {
   font-family: var(--condensada);
   font-size: 0.6rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  letter-spacing: 0;
   color: var(--texto-3);
 }
 
@@ -1034,14 +1060,18 @@ a {
   border-color: var(--fio-forte);
 }
 
+/* o dia escolhido usa o mesmo gesto do botão da casa: gradiente cheio.
+   Contorno rosa sobre fundo rosa pálido, no tema claro, mal se distingue
+   dos dias vizinhos — e escolher o dia é a decisão da tela. */
 .day-chip.active {
-  border-color: var(--latao);
-  background: var(--latao-veu);
+  border-color: transparent;
+  background: var(--gradiente);
+  box-shadow: var(--sombra-rosa);
 }
 
 .day-chip.active .day-chip-num,
 .day-chip.active .day-chip-nome {
-  color: var(--latao);
+  color: var(--branco);
 }
 
 .day-chip:disabled {
@@ -1077,7 +1107,7 @@ a {
 .slot.active {
   background: var(--latao);
   border-color: var(--latao);
-  color: #1a1204;
+  color: var(--branco);
   font-weight: 600;
 }
 
@@ -1092,8 +1122,7 @@ a {
   font-family: var(--condensada);
   font-size: 0.62rem;
   font-weight: 700;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
+  letter-spacing: 0;
   color: var(--texto-2);
   white-space: nowrap;
 }
@@ -1136,7 +1165,7 @@ a {
   border-radius: var(--r-controle);
   padding: 0.05rem 0.32rem;
   font-size: 0.56rem;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   vertical-align: middle;
 }
 
@@ -1224,8 +1253,7 @@ a {
   font-family: var(--condensada);
   font-size: 1rem;
   font-weight: 700;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
+  letter-spacing: 0;
 }
 
 .appt-cliente .badge {
@@ -1324,8 +1352,7 @@ a {
 .semana-nome {
   font-family: var(--condensada);
   font-size: 0.6rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  letter-spacing: 0;
   color: var(--texto-3);
 }
 
@@ -1375,8 +1402,7 @@ a {
 .semana-vazio {
   font-family: var(--condensada);
   font-size: 0.7rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  letter-spacing: 0;
   color: var(--texto-3);
   padding-top: 5px;
 }
@@ -1452,8 +1478,7 @@ a.prof-row:hover,
   font-family: var(--condensada);
   font-size: 0.95rem;
   font-weight: 700;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
+  letter-spacing: 0;
 }
 
 /* o nome encolhe até reticências; o selo ao lado nunca quebra */
@@ -1505,8 +1530,7 @@ a.prof-row:hover,
   font-family: var(--condensada);
   font-size: 0.88rem;
   font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  letter-spacing: 0;
 }
 
 .hours-times {
@@ -1614,8 +1638,7 @@ a.prof-row:hover,
   color: var(--texto);
   font-family: var(--condensada);
   font-size: 0.82rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  letter-spacing: 0;
   cursor: pointer;
 }
 
@@ -1664,7 +1687,12 @@ a.prof-row:hover,
 
 .aviso-row.lido {
   border-left-color: var(--fio);
-  opacity: 0.6;
+  background: var(--superficie);
+}
+
+.aviso-row.lido .aviso-titulo {
+  font-weight: 500;
+  color: var(--texto-2);
 }
 
 .aviso-icone {
@@ -1684,8 +1712,7 @@ a.prof-row:hover,
   font-family: var(--condensada);
   font-size: 0.92rem;
   font-weight: 700;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
+  letter-spacing: 0;
 }
 
 .aviso-texto .muted {
@@ -1736,7 +1763,7 @@ a.prof-row:hover,
   padding: 0 3px;
   border-radius: var(--r-pilula);
   background: var(--latao);
-  color: #1a1204;
+  color: var(--branco);
   font-family: var(--mono);
   font-size: 0.55rem;
   font-weight: 700;
@@ -1815,7 +1842,7 @@ a.prof-row:hover,
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 0 22px rgba(79, 209, 160, 0.22);
+  box-shadow: 0 0 22px rgba(18, 160, 106, 0.22);
 }
 
 /* ============================================================
@@ -1835,7 +1862,7 @@ a.prof-row:hover,
   font-family: var(--condensada);
   font-size: 0.82rem;
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0;
   flex-shrink: 0;
 }
 
@@ -1913,8 +1940,7 @@ a.prof-row:hover,
 .indique-card h3,
 .convite-beneficios h3 {
   font-size: 0.95rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0;
   margin: 0;
 }
 
@@ -2021,8 +2047,7 @@ a.prof-row:hover,
   font-family: var(--condensada);
   font-size: 0.8rem;
   font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  letter-spacing: 0;
 }
 
 .combo-toggle-texto .muted {
@@ -2095,13 +2120,12 @@ a.prof-row:hover,
   padding: 2.6rem 1.2rem 1.8rem;
   border-bottom: 1px solid var(--fio);
   background:
-    radial-gradient(40rem 20rem at 50% -20%, rgba(233, 162, 59, 0.12), transparent 70%),
+    radial-gradient(40rem 20rem at 50% -20%, rgba(255, 45, 114, 0.06), transparent 70%),
     var(--tinta);
 }
 
 .prof-capa h1 {
   font-size: 1.85rem;
-  text-transform: uppercase;
   letter-spacing: 0.01em;
   margin: 0.9rem 0 0.4rem;
 }
@@ -2182,8 +2206,7 @@ a.prof-row:hover,
   font-family: var(--condensada);
   font-size: 1rem;
   font-weight: 700;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
+  letter-spacing: 0;
 }
 
 .servico-desc {
@@ -2263,8 +2286,7 @@ a.prof-row:hover,
 .confirm-info strong {
   font-family: var(--condensada);
   font-size: 0.85rem;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  letter-spacing: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2298,7 +2320,6 @@ a.prof-row:hover,
 }
 
 .sucesso-card h2 {
-  text-transform: uppercase;
 }
 
 .sucesso-card p {
@@ -2364,7 +2385,7 @@ a.prof-row:hover,
 .convite-acoes .btn {
   flex: 1 1 0;
   font-size: 0.78rem;
-  letter-spacing: 0.07em;
+  letter-spacing: 0;
   padding: 0.62rem 0.8rem;
 }
 
@@ -2376,7 +2397,7 @@ a.prof-row:hover,
 .link-acoes .btn {
   flex: 1 1 0;
   font-size: 0.78rem;
-  letter-spacing: 0.07em;
+  letter-spacing: 0;
   padding: 0.62rem 0.8rem;
 }
 
@@ -2443,8 +2464,7 @@ a.prof-row:hover,
 .saldo-card > .muted {
   font-family: var(--condensada);
   font-size: 0.62rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  letter-spacing: 0;
   color: var(--texto-3);
 }
 
@@ -2497,7 +2517,7 @@ a.prof-row:hover,
   text-align: center;
   font-size: 1.15rem;
   font-weight: 500;
-  letter-spacing: 0.22em;
+  letter-spacing: 0;
   color: var(--latao);
 }
 
@@ -2520,8 +2540,7 @@ a.prof-row:hover,
 .afiliada-numeros .muted {
   font-family: var(--condensada);
   font-size: 0.6rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  letter-spacing: 0;
   color: var(--texto-3);
 }
 
@@ -2588,7 +2607,7 @@ a.prof-row:hover,
   position: fixed;
   inset: 0;
   z-index: 60;
-  background: rgba(5, 5, 6, 0.78);
+  background: rgba(31, 31, 30, 0.42);
   backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
@@ -2608,8 +2627,7 @@ a.prof-row:hover,
 }
 
 .modal-caixa h3 {
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0;
 }
 
 .modal-fechar {
@@ -2650,26 +2668,26 @@ a.prof-row:hover,
 
 .alert-error {
   background: var(--carmim-veu);
-  border-color: rgba(240, 99, 126, 0.35);
-  color: #ffb3c2;
+  border-color: rgba(179, 18, 60, 0.38);
+  color: var(--carmim);
 }
 
 .alert-info {
   background: var(--menta-veu);
-  border-color: rgba(79, 209, 160, 0.32);
-  color: #a8ecd0;
+  border-color: rgba(18, 160, 106, 0.32);
+  color: #0a6b46;
 }
 
 .alert-warn {
-  background: var(--latao-veu);
-  border-color: var(--latao-fio);
-  color: var(--latao-claro);
+  background: rgba(255, 106, 0, 0.09);
+  border-color: rgba(255, 106, 0, 0.28);
+  color: #b34a00;
 }
 
 .alert code {
   font-family: var(--mono);
   font-size: 0.9em;
-  background: rgba(0, 0, 0, 0.35);
+  background: rgba(31, 31, 30, 0.10);
   padding: 0.1em 0.3em;
   border-radius: 3px;
 }
@@ -2690,13 +2708,11 @@ a.prof-row:hover,
   font-family: var(--condensada);
   font-size: 1rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  letter-spacing: 0;
   color: var(--texto);
 }
 
 .empty-state h3 {
-  text-transform: uppercase;
 }
 
 .empty-state .btn {
@@ -2739,8 +2755,7 @@ a.prof-row:hover,
   font-family: var(--condensada);
   font-size: 0.62rem;
   font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  letter-spacing: 0;
   color: var(--texto-3);
 }
 
@@ -2773,8 +2788,7 @@ a.prof-row:hover,
   font-family: var(--condensada);
   font-size: 0.72rem;
   font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  letter-spacing: 0;
   margin-top: 2px;
 }
 
@@ -2807,7 +2821,7 @@ a.prof-row:hover,
 }
 
 .numero-cartao.alerta {
-  border-color: rgba(240, 99, 126, 0.3);
+  border-color: rgba(179, 18, 60, 0.32);
 }
 
 /* ---------- barras ---------- */
@@ -2837,8 +2851,7 @@ a.prof-row:hover,
   font-family: var(--condensada);
   font-size: 0.88rem;
   font-weight: 700;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
+  letter-spacing: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2989,8 +3002,7 @@ a.prof-row:hover,
   font-family: var(--condensada);
   font-size: 0.86rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  letter-spacing: 0;
   color: var(--texto);
 }
 
@@ -3037,8 +3049,7 @@ a.prof-row:hover,
   font-family: var(--condensada);
   font-size: 0.86rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  letter-spacing: 0;
 }
 
 .linha-ajuste-solta .muted {
@@ -3097,8 +3108,7 @@ a.prof-row:hover,
   font-family: var(--condensada);
   font-size: 0.98rem;
   font-weight: 700;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
+  letter-spacing: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -3111,7 +3121,7 @@ a.prof-row:hover,
   border-radius: var(--r-controle);
   padding: 0.05rem 0.36rem;
   font-size: 0.56rem;
-  letter-spacing: 0.09em;
+  letter-spacing: 0;
 }
 
 .badge-tipo::before {
@@ -3142,7 +3152,7 @@ a.prof-row:hover,
 .envio-acoes .btn {
   flex: 1 1 auto;
   font-size: 0.8rem;
-  letter-spacing: 0.07em;
+  letter-spacing: 0;
   padding: 0.65rem 0.85rem;
 }
 
@@ -3220,46 +3230,46 @@ a.prof-row:hover,
 .wa-acoes { display: flex; gap: .5rem; margin-bottom: 1rem; }
 
 .wa-check { list-style: none; margin: 0 0 1rem; padding: 0;
-  border: 1px solid var(--linha); border-radius: 12px; overflow: hidden; }
+  border: 1px solid var(--fio); border-radius: 12px; overflow: hidden; }
 .wa-check-item { display: grid; grid-template-columns: auto 1fr auto;
   align-items: center; gap: .75rem; padding: .8rem 1rem;
-  border-bottom: 1px solid var(--linha); }
+  border-bottom: 1px solid var(--fio); }
 .wa-check-item:last-child { border-bottom: 0; }
 .wa-check-ponto { width: .55rem; height: .55rem; border-radius: 50%;
-  background: var(--ok, #3f9d6d); }
-.wa-check-item.ruim .wa-check-ponto { background: var(--perigo, #d1495b); }
-.wa-check-item.atencao .wa-check-ponto { background: var(--aviso, #d99a2b); }
+  background: var(--menta); }
+.wa-check-item.ruim .wa-check-ponto { background: var(--carmim); }
+.wa-check-item.atencao .wa-check-ponto { background: var(--laranja); }
 .wa-check-item strong { display: block; font-size: .95rem; }
-.wa-check-detalhe { display: block; font-size: .82rem; color: var(--texto-fraco); margin-top: .15rem; }
+.wa-check-detalhe { display: block; font-size: .82rem; color: var(--texto-2); margin-top: .15rem; }
 .wa-check-tag { font-size: .7rem; letter-spacing: .06em; text-transform: uppercase;
-  color: var(--texto-fraco); }
-.wa-check-item.ruim .wa-check-tag { color: var(--perigo, #d1495b); }
-.wa-check-item.atencao .wa-check-tag { color: var(--aviso, #d99a2b); }
+  color: var(--texto-2); }
+.wa-check-item.ruim .wa-check-tag { color: var(--carmim); }
+.wa-check-item.atencao .wa-check-tag { color: var(--laranja); }
 
 .wa-fila { list-style: none; margin: 0; padding: 0;
   display: flex; flex-direction: column; gap: .5rem; }
-.wa-msg { border: 1px solid var(--linha); border-radius: 12px; overflow: hidden; }
+.wa-msg { border: 1px solid var(--fio); border-radius: 12px; overflow: hidden; }
 .wa-msg-topo { display: grid; grid-template-columns: auto 1fr auto auto;
   align-items: center; gap: .6rem; width: 100%; padding: .7rem .9rem;
   background: none; border: 0; color: inherit; text-align: left; cursor: pointer;
   font: inherit; }
-.wa-msg-topo:hover { background: var(--realce, rgba(255,255,255,.04)); }
+.wa-msg-topo:hover { background: var(--superficie-3); }
 .wa-msg-tipo { font-size: .9rem; }
-.wa-msg-para { font-size: .82rem; color: var(--texto-fraco);
+.wa-msg-para { font-size: .82rem; color: var(--texto-2);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.wa-msg-quando { font-size: .78rem; color: var(--texto-fraco);
+.wa-msg-quando { font-size: .78rem; color: var(--texto-2);
   font-variant-numeric: tabular-nums; }
 .wa-status { font-size: .65rem; letter-spacing: .06em; text-transform: uppercase;
   padding: .15rem .4rem; border-radius: 4px; white-space: nowrap;
-  background: var(--realce, rgba(255,255,255,.06)); color: var(--texto-fraco); }
-.wa-na_fila { color: var(--aviso, #d99a2b); }
-.wa-enviado, .wa-entregue, .wa-lido { color: var(--ok, #3f9d6d); }
-.wa-falhou { color: var(--perigo, #d1495b); }
+  background: var(--superficie-3); color: var(--texto-2); }
+.wa-na_fila { color: var(--laranja); }
+.wa-enviado, .wa-entregue, .wa-lido { color: var(--menta); }
+.wa-falhou { color: var(--carmim); }
 
-.wa-msg-corpo { padding: .2rem .9rem .9rem; border-top: 1px solid var(--linha); }
+.wa-msg-corpo { padding: .2rem .9rem .9rem; border-top: 1px solid var(--fio); }
 .wa-msg-corpo pre { white-space: pre-wrap; word-break: break-word;
   font: inherit; font-size: .88rem; margin: .8rem 0;
-  background: var(--realce, rgba(255,255,255,.04)); padding: .8rem;
+  background: var(--superficie-3); padding: .8rem;
   border-radius: 10px; }
 
 @media (max-width: 34rem) {
@@ -3268,27 +3278,27 @@ a.prof-row:hover,
 }
 
 /* Chave da IA e o que ela entendeu */
-.wa-ia { border: 1px solid var(--linha); border-radius: 12px;
+.wa-ia { border: 1px solid var(--fio); border-radius: 12px;
   padding: .9rem 1rem; margin: 1.25rem 0; }
 .wa-ia-topo { display: flex; align-items: flex-start; justify-content: space-between;
   gap: 1rem; }
 .wa-ia-topo strong { display: block; font-size: .95rem; }
 .wa-chave { flex: none; font: inherit; font-size: .8rem; cursor: pointer;
   padding: .35rem .8rem; border-radius: 999px;
-  border: 1px solid var(--linha); background: none; color: var(--texto-fraco); }
-.wa-chave-on { border-color: var(--ok, #3f9d6d); color: var(--ok, #3f9d6d); }
+  border: 1px solid var(--fio); background: none; color: var(--texto-2); }
+.wa-chave-on { border-color: var(--menta); color: var(--menta); }
 .wa-chave:disabled { opacity: .5; cursor: wait; }
 
 .wa-lida { display: grid; grid-template-columns: auto 1fr auto auto;
   align-items: center; gap: .6rem; padding: .55rem .9rem;
-  border: 1px solid var(--linha); border-radius: 10px; font-size: .88rem; }
+  border: 1px solid var(--fio); border-radius: 10px; font-size: .88rem; }
 .wa-via { font-size: .62rem; letter-spacing: .06em; text-transform: uppercase;
   padding: .12rem .35rem; border-radius: 3px; }
-.wa-via-regra { background: var(--realce, rgba(255,255,255,.06)); color: var(--texto-fraco); }
-.wa-via-ia { background: rgba(180, 67, 108, .16); color: var(--marca, #d98cab); }
+.wa-via-regra { background: var(--superficie-3); color: var(--texto-2); }
+.wa-via-ia { background: var(--latao-veu); color: var(--rosa); }
 .wa-lida-texto { overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  color: var(--texto-fraco); }
-.wa-lida-seta { color: var(--texto-fraco); }
+  color: var(--texto-2); }
+.wa-lida-seta { color: var(--texto-2); }
 .wa-lida-acao { white-space: nowrap; }
 @media (max-width: 34rem) {
   .wa-lida { grid-template-columns: auto 1fr; }
@@ -3302,9 +3312,9 @@ a.prof-row:hover,
 .pedido { padding: .9rem 1rem; }
 .pedido-quem { display: flex; align-items: baseline; justify-content: space-between;
   gap: .8rem; }
-.pedido-prazo { font-size: .75rem; color: var(--texto-fraco); white-space: nowrap;
+.pedido-prazo { font-size: .75rem; color: var(--texto-2); white-space: nowrap;
   font-variant-numeric: tabular-nums; }
-.pedido-prazo.urgente { color: var(--perigo, #d1495b); font-weight: 600; }
+.pedido-prazo.urgente { color: var(--carmim); font-weight: 600; }
 .pedido-oque { margin: .3rem 0 .8rem; font-size: .92rem; }
 .pedido-botoes { display: flex; gap: .5rem; }
 .pedido-botoes .btn { flex: 1; }
@@ -3323,7 +3333,7 @@ a.prof-row:hover,
   font-size: .95rem; font-weight: 600; margin: 0 0 .7rem; }
 .pedidos-bolha { display: inline-flex; align-items: center; justify-content: center;
   min-width: 1.45rem; height: 1.45rem; padding: 0 .35rem; border-radius: 999px;
-  background: var(--marca, #d98cab); color: #1a1118;
+  background: var(--rosa); color: var(--branco);
   font-size: .8rem; font-weight: 700; font-variant-numeric: tabular-nums; }
 
 /* ---------------------------------------------------------------
@@ -3349,8 +3359,7 @@ a.prof-row:hover,
 .bc-campo > span {
   font-family: var(--condensada);
   font-size: 0.66rem;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
+  letter-spacing: 0;
   color: var(--texto-3);
 }
 
@@ -3444,8 +3453,7 @@ a.prof-row:hover,
 .bc-saidas-tit {
   font-family: var(--condensada);
   font-size: 0.66rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0;
   color: var(--azul);
 }
 
@@ -3471,8 +3479,7 @@ a.prof-row:hover,
   font-size: 0.68rem;
   color: var(--texto-3);
   font-family: var(--condensada);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  letter-spacing: 0;
 }
 
 .bc-atalhos {
@@ -3516,4 +3523,90 @@ a.prof-row:hover,
   font-size: 0.78rem;
   margin-top: 0.8rem;
   line-height: 1.5;
+}
+
+/* ---------- a marca ---------- */
+
+/* MIMO em cima, "Agenda Mel" embaixo em cursiva: a assinatura de origem
+   que a marca carrega enquanto o nome novo não estiver na boca de todo
+   mundo. Some das telas internas — lá o espaço é da tarefa, não da marca. */
+.brand h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  background: var(--gradiente);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  margin: 0.5rem 0 0;
+}
+
+.brand-assinatura {
+  font-family: var(--corpo);
+  font-style: italic;
+  font-size: 1rem;
+  color: var(--rosa);
+  margin: -0.1rem 0 0.7rem;
+}
+
+.brand-icon {
+  display: block;
+  margin: 0 auto;
+}
+
+/* ---------- o botão do meio da barra da cliente ---------- */
+
+/* Não é uma aba: é a ação da casa. Por isso sobe da barra, ganha o
+   gradiente e não recebe estado "ativo" — ele não é um lugar, é um verbo. */
+.nav-mais {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--branco);
+  padding: 0;
+}
+
+.nav-mais::before {
+  content: '';
+  position: absolute;
+}
+
+.nav-mais svg {
+  width: 46px;
+  height: 46px;
+  padding: 12px;
+  border-radius: var(--r-pilula);
+  background: var(--gradiente);
+  box-shadow: var(--sombra-rosa);
+  margin-top: -14px;
+}
+
+.nav-mais:active svg {
+  transform: translateY(1px);
+}
+
+.nav-icone {
+  position: relative;
+  display: inline-flex;
+}
+
+/* o ponto de aviso não lido, no canto do sino */
+.nav-ponto {
+  position: absolute;
+  top: -2px;
+  right: -3px;
+  width: 7px;
+  height: 7px;
+  border-radius: var(--r-pilula);
+  background: var(--rosa);
+  border: 1.5px solid var(--branco);
+}
+
+.topbar-cliente {
+  border-bottom: none;
+  box-shadow: 0 1px 0 var(--fio);
 }

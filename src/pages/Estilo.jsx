@@ -22,7 +22,7 @@ export default function Estilo() {
       <header className="topbar topbar-admin">
         <span className="brand-inline">
           <MarcaIcon className="marca" />
-          Agenda Mel
+          MIMO
         </span>
         <div className="topbar-acoes">
           <span className="sino">

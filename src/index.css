@@ -98,39 +98,44 @@
 }
 
 :root {
-  /* ---- a paleta MIMO ---- */
-  --rosa: #ff2d72;
-  --rosa-escuro: #e01458;
-  --laranja: #ff6a00;
-  --roxo: #6a2dd6;
-  --preto: #1f1f1e;
-  --lilas: #f6f2f7;
+  /* ---- a paleta MIMO, do painel ---- */
+  --rosa: #ff2d7a;           /* rosa primário */
+  --rosa-2: #ff7baa;         /* rosa secundário */
+  --rosa-escuro: #e0155f;
+  --roxo: #aa4cff;
+  --violeta: #b8a7f7;        /* violeta claro */
+  --ameixa: #3d0c4e;         /* o roxo do logotipo */
+  --preto: #1f2026;          /* neutro 900 */
+  --cinza-2: #e5e7eb;        /* neutro 200 */
+  --cinza-1: #f3f4f6;        /* neutro 100 */
+  --lilas: #fbf6fb;
   --branco: #ffffff;
-  --gradiente: linear-gradient(97deg, #ff2d72 0%, #ff6a00 100%);
+  --laranja: #ff7baa;
+  --gradiente: linear-gradient(97deg, #ff2d7a 0%, #ff7baa 100%);
+  --gradiente-logo: linear-gradient(135deg, #ff7bb5 0%, #ff2d7a 55%, #c40a7a 100%);
 
   /* ---- fundo e superfícies ---- */
-  --tinta: #f6f2f7;          /* o fundo da página */
-  --superficie: #ffffff;     /* cartão */
-  --superficie-2: #ffffff;   /* campo, cartão interno */
-  --superficie-3: #f2ecf4;   /* realce discreto dentro do cartão */
+  --tinta: #f8f7fa;          /* o fundo da página: neutro 100 com um fio de lilás */
+  --superficie: #ffffff;
+  --superficie-2: #ffffff;
+  --superficie-3: #f3f4f6;
 
-  /* ---- fios: agora quase invisíveis; quem separa é a sombra ---- */
-  --fio: #ece5ef;
-  --fio-forte: #ddd2e1;
+  /* ---- fios ---- */
+  --fio: #e5e7eb;
+  --fio-forte: #d6d9e0;
 
   /* ---- texto ---- */
-  --texto: #1f1f1e;
-  --texto-2: #6e6873;
-  --texto-3: #9a93a0;
+  --texto: #1f2026;
+  --texto-2: #6b6f7a;
+  --texto-3: #9a9ea8;
 
-  /* ---- acento: o rosa MIMO. O nome do token continua "latao"
-         porque ele aparece em 100 lugares deste arquivo ---- */
-  --latao: #ff2d72;
-  --latao-claro: #ff6a00;
-  --latao-veu: rgba(255, 45, 114, 0.09);
-  --latao-fio: rgba(255, 45, 114, 0.26);
+  /* ---- acento: o rosa. O nome "latao" fica por herança ---- */
+  --latao: #ff2d7a;
+  --latao-claro: #ff7baa;
+  --latao-veu: rgba(255, 45, 122, 0.08);
+  --latao-fio: rgba(255, 45, 122, 0.28);
 
-  /* ---- estados: escurecidos para terem contraste em fundo claro ---- */
+  /* ---- estados ---- */
   --menta: #12a06a;
   --menta-veu: rgba(18, 160, 106, 0.1);
   --azul: #3a6fd8;
@@ -138,17 +143,17 @@
   --carmim: #b3123c;
   --carmim-veu: rgba(179, 18, 60, 0.08);
 
-  /* ---- sombras: a profundidade que antes vinha do fio ---- */
-  --sombra: 0 1px 2px rgba(31, 31, 30, 0.04), 0 4px 16px rgba(31, 31, 30, 0.05);
-  --sombra-alta: 0 4px 12px rgba(31, 31, 30, 0.07), 0 12px 32px rgba(31, 31, 30, 0.09);
-  --sombra-rosa: 0 4px 14px rgba(255, 45, 114, 0.26);
+  /* ---- sombras ---- */
+  --sombra: 0 1px 2px rgba(31, 32, 38, 0.04), 0 4px 16px rgba(31, 32, 38, 0.05);
+  --sombra-alta: 0 4px 12px rgba(31, 32, 38, 0.07), 0 12px 32px rgba(31, 32, 38, 0.09);
+  --sombra-rosa: 0 4px 14px rgba(255, 45, 122, 0.28);
 
-  /* ---- tipografia: uma família só, três funções ---- */
-  --condensada: 'Poppins', system-ui, sans-serif;  /* títulos e rótulos */
+  /* ---- tipografia: Poppins ---- */
+  --condensada: 'Poppins', system-ui, sans-serif;
   --corpo: 'Poppins', system-ui, -apple-system, sans-serif;
-  --mono: 'Poppins', system-ui, sans-serif;        /* hora e dinheiro */
+  --mono: 'Poppins', system-ui, sans-serif;
 
-  /* ---- medidas: cantos generosos ---- */
+  /* ---- medidas ---- */
   --r-carta: 16px;
   --r-controle: 12px;
   --r-pilula: 999px;
@@ -298,7 +303,7 @@ a {
   font-size: 1.05rem;
   letter-spacing: -0.02em;
   text-transform: none;
-  color: var(--rosa);
+  color: var(--ameixa);
   display: flex;
   align-items: center;
   gap: 0.15rem;
@@ -485,6 +490,9 @@ a {
    ============================================================ */
 
 .btn {
+  text-decoration: none;
+  display: inline-block;
+  text-align: center;
   font-family: var(--condensada);
   font-size: 0.92rem;
   font-weight: 600;
@@ -3597,22 +3605,27 @@ a.prof-row:hover,
    que a marca carrega enquanto o nome novo não estiver na boca de todo
    mundo. Some das telas internas — lá o espaço é da tarefa, não da marca. */
 .brand h1 {
-  font-size: 2.5rem;
-  font-weight: 700;
-  letter-spacing: -0.04em;
-  background: var(--gradiente);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  margin: 0.5rem 0 0;
+  font-size: 2.6rem;
+  font-weight: 600;
+  letter-spacing: -0.05em;
+  color: var(--ameixa);
+  margin: 0.4rem 0 0;
+  line-height: 1;
 }
 
 .brand-assinatura {
   font-family: var(--corpo);
   font-style: italic;
-  font-size: 1rem;
+  font-size: 0.95rem;
   color: var(--rosa);
-  margin: -0.1rem 0 0.7rem;
+  margin: 0.15rem 0 0.5rem;
+}
+
+.brand-slogan {
+  color: var(--ameixa);
+  letter-spacing: 0.06em;
+  font-size: 0.85rem;
+  margin: 0 0 1.4rem;
 }
 
 .brand-icon {
@@ -3944,3 +3957,434 @@ a.prof-row:hover,
   font-size: 0.78rem;
   line-height: 1.3;
 }
+
+/* ---------- a palavra ---------- */
+
+.wordmark {
+  font-family: var(--corpo);
+  font-weight: 600;
+  letter-spacing: -0.05em;
+  color: var(--ameixa);
+  line-height: 1;
+  display: inline-block;
+}
+
+/* ---------- a tela de abertura ---------- */
+
+.splash {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  background:
+    radial-gradient(60rem 40rem at 50% 20%, rgba(255, 123, 170, 0.14), transparent 60%),
+    var(--branco);
+  padding: 2rem;
+  text-align: center;
+}
+
+.splash .brand-assinatura { margin-top: 0; }
+
+.splash-roda {
+  width: 26px;
+  height: 26px;
+  border-radius: var(--r-pilula);
+  border: 3px solid var(--latao-veu);
+  border-top-color: var(--rosa);
+  animation: splash-gira 0.9s linear infinite;
+  margin-top: 2.5rem;
+}
+
+@keyframes splash-gira { to { transform: rotate(360deg); } }
+
+/* ============================================================
+   CLIENTE — as telas do painel
+   ============================================================ */
+
+.topo-voltar {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-pilula);
+  color: var(--texto);
+  text-decoration: none;
+  font-size: 1.6rem;
+  line-height: 1;
+  margin-left: -0.4rem;
+  margin-right: 0.2rem;
+}
+
+.topo-titulo {
+  flex: 1;
+  font-weight: 600;
+  font-size: 1.05rem;
+}
+
+.cl-saudacao { margin: 0.4rem 0 1rem; }
+.cl-saudacao h2 { font-size: 1.5rem; margin: 0 0 0.15rem; }
+.cl-saudacao p { margin: 0; }
+
+.cl-busca {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: var(--branco);
+  border: 1px solid var(--fio);
+  border-radius: var(--r-pilula);
+  padding: 0.7rem 1rem;
+  color: var(--texto-3);
+  box-shadow: var(--sombra);
+  margin-bottom: 1.3rem;
+}
+
+.cl-busca input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font: inherit;
+  color: var(--texto);
+  min-width: 0;
+}
+
+.cl-busca input::placeholder { color: var(--texto-3); }
+
+.secao-cabeca {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: 0.4rem 0 0.8rem;
+}
+
+.secao-cabeca h3 { font-size: 1rem; margin: 0; }
+
+.link-ver {
+  color: var(--rosa);
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-decoration: none;
+}
+
+/* a fileira de profissionais: rola para o lado, sem barra */
+.fileira-prof {
+  display: flex;
+  gap: 0.9rem;
+  overflow-x: auto;
+  padding: 0.2rem 0.2rem 0.9rem;
+  margin: 0 -1.15rem 0.8rem;
+  padding-left: 1.15rem;
+  scrollbar-width: none;
+}
+.fileira-prof::-webkit-scrollbar { display: none; }
+
+.prof-bolha {
+  flex: 0 0 auto;
+  width: 84px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  text-decoration: none;
+  color: var(--texto);
+  text-align: center;
+}
+
+.prof-bolha img,
+.prof-bolha-ini {
+  width: 66px;
+  height: 66px;
+  border-radius: var(--r-pilula);
+  object-fit: cover;
+  border: 2px solid var(--branco);
+  box-shadow: 0 0 0 2px var(--rosa-2), var(--sombra);
+}
+
+.prof-bolha-ini {
+  display: grid;
+  place-items: center;
+  background: var(--gradiente);
+  color: var(--branco);
+  font-weight: 600;
+  font-size: 1.4rem;
+}
+
+.prof-bolha strong { font-size: 0.82rem; font-weight: 600; line-height: 1.1; }
+.prof-bolha span { font-size: 0.68rem; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+
+.destaque-row {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  text-decoration: none;
+  color: inherit;
+  padding: 0.75rem 0.85rem;
+}
+
+.destaque-foto,
+.servico-linha-foto {
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  background: var(--latao-veu);
+  display: grid;
+  place-items: center;
+  font-size: 1.3rem;
+  overflow: hidden;
+}
+.destaque-foto img, .servico-linha-foto img { width: 100%; height: 100%; object-fit: cover; }
+
+.destaque-btn {
+  color: var(--rosa);
+  border-color: var(--latao-fio);
+  background: var(--latao-veu);
+  font-size: 0.78rem;
+  padding: 0.4rem 0.8rem;
+}
+
+.filtro-chips.rolavel {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding-bottom: 0.4rem;
+  margin-bottom: 0.8rem;
+  scrollbar-width: none;
+}
+.filtro-chips.rolavel::-webkit-scrollbar { display: none; }
+
+.prof-row-fav { display: flex; align-items: center; gap: 0.5rem; padding-right: 0.6rem; }
+.prof-row-link { display: flex; align-items: center; gap: 0.85rem; flex: 1; min-width: 0; text-decoration: none; color: inherit; }
+
+.fav-btn {
+  border: none;
+  background: transparent;
+  color: var(--texto-3);
+  cursor: pointer;
+  padding: 0.4rem;
+  border-radius: var(--r-pilula);
+  display: grid;
+  place-items: center;
+  transition: color 0.15s, transform 0.15s;
+}
+.fav-btn.on { color: var(--rosa); }
+.fav-btn:active { transform: scale(0.88); }
+
+/* ---- perfil da profissional ---- */
+
+.perfil-capa {
+  position: relative;
+  height: 300px;
+  margin: -1.2rem -1.15rem 0;
+  background: var(--gradiente-logo);
+  overflow: hidden;
+}
+.perfil-capa img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.perfil-capa-ini {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  color: var(--branco); font-size: 4rem; font-weight: 600;
+}
+.perfil-voltar {
+  position: absolute; top: 0.9rem; left: 0.9rem;
+  width: 38px; height: 38px; border-radius: var(--r-pilula);
+  background: rgba(255, 255, 255, 0.9); color: var(--texto);
+  display: grid; place-items: center; text-decoration: none;
+  font-size: 1.6rem; line-height: 1; box-shadow: var(--sombra);
+}
+
+.perfil-cabeca { padding: 1.1rem 0 0.6rem; }
+.perfil-cabeca h2 { margin: 0 0 0.1rem; font-size: 1.35rem; }
+.perfil-cabeca p { margin: 0; }
+.perfil-nota { display: flex; align-items: center; gap: 0.3rem; margin-top: 0.4rem !important; color: var(--rosa); font-size: 0.9rem; }
+.perfil-nota strong { color: var(--texto); }
+
+.abas {
+  display: flex;
+  gap: 0.4rem;
+  margin: 0.6rem 0 1rem;
+  background: var(--superficie-3);
+  padding: 0.25rem;
+  border-radius: var(--r-pilula);
+}
+.aba {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 0.5rem 0.6rem;
+  border-radius: var(--r-pilula);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--texto-2);
+  cursor: pointer;
+}
+.aba.active { background: var(--branco); color: var(--rosa); font-weight: 600; box-shadow: var(--sombra); }
+
+.servico-linha {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  text-decoration: none;
+  color: inherit;
+  padding: 0.75rem 0.85rem;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+.servico-linha.escolhivel .radio-marca {
+  width: 20px; height: 20px; border-radius: var(--r-pilula);
+  border: 2px solid var(--fio-forte); flex-shrink: 0;
+}
+.servico-linha.ativo { border-color: var(--rosa); box-shadow: 0 0 0 3px var(--latao-veu); }
+.servico-linha.ativo .radio-marca { border-color: var(--rosa); background: var(--rosa); box-shadow: inset 0 0 0 3px var(--branco); }
+
+.avaliacao p { margin: 0.4rem 0 0.3rem; font-size: 0.9rem; }
+.avaliacao-topo { display: flex; align-items: center; justify-content: space-between; }
+.estrelas { display: inline-flex; gap: 1px; color: var(--rosa); }
+.avaliacao-quando { font-size: 0.72rem; }
+
+/* o botão que fica no pé, acima da barra de abas */
+.rodape-fixo {
+  position: fixed;
+  left: 0; right: 0;
+  bottom: calc(56px + env(safe-area-inset-bottom));
+  padding: 0.7rem 1.15rem;
+  background: linear-gradient(to top, var(--tinta) 70%, transparent);
+  z-index: 25;
+}
+.rodape-fixo > * { max-width: var(--largura); margin: 0 auto; display: block; }
+.content:has(.rodape-fixo) { padding-bottom: 6.5rem; }
+
+.btn.desabilitado { opacity: 0.45; pointer-events: none; }
+
+.resumo-mini {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.1rem 0.8rem;
+  align-items: baseline;
+  margin-top: 1rem;
+}
+.resumo-mini strong { font-size: 1.25rem; color: var(--rosa); }
+.resumo-mini span:last-child { grid-column: 1 / -1; font-size: 0.8rem; }
+
+.campo-solto { display: flex; flex-direction: column; gap: 0.35rem; margin: 1rem 0; }
+.campo-solto > span { font-size: 0.82rem; font-weight: 500; color: var(--texto-2); }
+.campo-solto textarea {
+  font: inherit; color: var(--texto); background: var(--branco);
+  border: 1px solid var(--fio-forte); border-radius: var(--r-controle);
+  padding: 0.8rem 0.9rem; resize: vertical; outline: none;
+}
+.campo-solto textarea:focus { border-color: var(--rosa); box-shadow: 0 0 0 3px var(--latao-veu); }
+
+.aviso-suave { display: flex; flex-direction: column; gap: 0.2rem; border-color: var(--latao-fio); background: var(--latao-veu); }
+.aviso-suave strong { font-size: 0.9rem; }
+.aviso-suave span { font-size: 0.82rem; line-height: 1.45; }
+
+.sucesso {
+  display: flex; flex-direction: column; align-items: center; gap: 0.8rem;
+  text-align: center; padding: 3rem 0 1rem;
+}
+.sucesso h2 { margin: 0.4rem 0 0; }
+.sucesso .muted { max-width: 22rem; line-height: 1.5; }
+.sucesso-check {
+  width: 78px; height: 78px; border-radius: var(--r-pilula);
+  display: grid; place-items: center; font-size: 2.2rem; font-weight: 700;
+  color: var(--branco); background: var(--menta);
+  box-shadow: 0 8px 24px rgba(18, 160, 106, 0.3);
+}
+.sucesso .btn { width: 100%; }
+
+/* ---- meus agendamentos ---- */
+.agd-card { display: flex; flex-direction: column; gap: 0.2rem; border-left: 4px solid var(--fio-forte); }
+.agd-card.confirmado { border-left-color: var(--menta); }
+.agd-card.pendente { border-left-color: var(--rosa-2); }
+.agd-card.concluido { border-left-color: var(--violeta); }
+.agd-card.cancelado, .agd-card.faltou { border-left-color: var(--fio); opacity: 0.8; }
+.agd-topo { display: flex; justify-content: space-between; align-items: center; }
+.agd-quando { font-weight: 600; font-size: 0.85rem; color: var(--rosa); }
+.agd-servico { font-size: 1.05rem; }
+.agd-meta { font-size: 0.85rem; }
+.agd-acoes { display: flex; gap: 0.45rem; flex-wrap: wrap; margin-top: 0.6rem; }
+.agd-acoes .btn-mini { text-decoration: none; display: inline-flex; align-items: center; gap: 0.3rem; }
+.agd-avaliado { font-size: 0.8rem; align-self: center; }
+.btn-mini-rosa { color: var(--rosa); border-color: var(--latao-fio); background: var(--latao-veu); }
+
+/* ---- modal genérico ---- */
+.modal-fundo { position: fixed; inset: 0; background: rgba(31, 32, 38, 0.45); z-index: 60; display: flex; align-items: flex-end; justify-content: center; }
+.modal-caixa { background: var(--branco); border-radius: 22px 22px 0 0; padding: 1.4rem 1.2rem calc(1.2rem + env(safe-area-inset-bottom)); width: 100%; max-width: var(--largura); box-shadow: var(--sombra-alta); }
+.modal-caixa h3 { margin: 0 0 0.2rem; }
+.modal-caixa textarea { width: 100%; font: inherit; border: 1px solid var(--fio-forte); border-radius: var(--r-controle); padding: 0.8rem; margin-top: 0.8rem; resize: vertical; }
+.modal-acoes { display: flex; gap: 0.6rem; justify-content: flex-end; margin-top: 1rem; }
+.estrelas-escolha { display: flex; gap: 0.3rem; justify-content: center; margin: 1rem 0 0.2rem; }
+.estrelas-escolha button { border: none; background: transparent; color: var(--fio-forte); cursor: pointer; padding: 0.2rem; }
+.estrelas-escolha button.on { color: var(--rosa); }
+
+/* ---- fila de espera ---- */
+.fila-card { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 0.4rem; padding: 1.6rem 1.2rem; }
+.fila-card h3 { margin: 0.2rem 0 0; font-size: 1.3rem; }
+.fila-card p { margin: 0; }
+.fila-ilustra { font-size: 3rem; }
+.fila-posicao { display: flex; flex-direction: column; gap: 0.1rem; margin: 0.8rem 0 0.3rem; padding: 0.9rem 1.4rem; border-radius: var(--r-carta); background: var(--latao-veu); width: 100%; }
+.fila-posicao strong { font-size: 1.6rem; color: var(--rosa); }
+.fila-previsao { font-size: 0.85rem; margin-bottom: 0.8rem !important; }
+.fila-card .btn { width: 100%; }
+
+/* ---- notificações ---- */
+.notif-row { display: flex; align-items: center; gap: 0.8rem; text-decoration: none; color: inherit; padding: 0.8rem 0.9rem; }
+.notif-row.nova { border-color: var(--latao-fio); }
+.notif-icone { width: 42px; height: 42px; border-radius: 12px; background: var(--latao-veu); display: grid; place-items: center; font-size: 1.2rem; flex-shrink: 0; }
+.notif-quando { font-size: 0.72rem; margin-top: 0.15rem; }
+.notif-seta { color: var(--texto-3); font-size: 1.4rem; }
+
+/* ---- perfil ---- */
+.cl-perfil-topo { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 0.6rem 0 0.4rem; }
+.cl-perfil-topo h2 { margin: 0.6rem 0 0; font-size: 1.3rem; }
+.cl-perfil-topo p { margin: 0.1rem 0 0; }
+.dado-linha { display: flex; justify-content: space-between; gap: 1rem; padding: 0.45rem 0; border-bottom: 1px solid var(--fio); font-size: 0.92rem; }
+.dado-linha:last-of-type { border-bottom: none; }
+.dado-linha strong { font-weight: 500; text-align: right; }
+.cl-ajuste { display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; }
+.ajuste-icone { width: 40px; height: 40px; border-radius: 12px; background: var(--latao-veu); display: grid; place-items: center; font-size: 1.1rem; flex-shrink: 0; color: var(--rosa); }
+.cl-valor-mais { color: var(--menta); }
+.cl-valor-menos { color: var(--carmim); }
+
+/* ---- indicação ---- */
+.ind-topo { text-align: center; padding: 0.4rem 0 1rem; }
+.ind-topo h2 { margin: 0.3rem 0 0.3rem; }
+.ind-topo p { margin: 0 auto; max-width: 22rem; font-size: 0.9rem; line-height: 1.5; }
+.ind-ilustra { font-size: 3.4rem; }
+.ind-codigo-card { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; text-align: center; }
+.ind-codigo { display: flex; align-items: center; gap: 0.6rem; }
+.ind-codigo strong { font-size: 1.7rem; letter-spacing: 0.08em; color: var(--ameixa); }
+.ind-copiar { border: 1px solid var(--fio); background: var(--branco); border-radius: var(--r-pilula); width: 36px; height: 36px; display: grid; place-items: center; color: var(--texto-2); cursor: pointer; }
+.ind-copiado { font-size: 0.78rem; color: var(--menta); }
+.ind-codigo-card .btn { margin-top: 0.4rem; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; }
+
+/* ---- login ---- */
+.login-titulo { margin: 0.2rem 0 0; font-size: 1.3rem; text-align: center; }
+.login-sub { margin: 0 0 1.2rem; text-align: center; font-size: 0.9rem; }
+.login-linha { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; margin: -0.2rem 0 0.4rem; }
+.login-linha .link-ver { background: none; border: none; font: inherit; font-weight: 600; font-size: 0.85rem; cursor: pointer; padding: 0; }
+.chave-linha { display: flex; align-items: center; gap: 0.6rem; font-size: 0.85rem; color: var(--texto-2); }
+.login-troca { text-align: center; margin: 1.1rem 0 0; font-size: 0.9rem; }
+.login-troca .link-ver { background: none; border: none; font: inherit; font-weight: 600; cursor: pointer; padding: 0; }
+.login-card .brand { margin-bottom: 0.8rem; }
+
+/* ---- o switch ---- */
+.switch {
+  width: 46px; height: 26px; border-radius: var(--r-pilula);
+  border: none; background: var(--fio-forte); position: relative;
+  cursor: pointer; padding: 0; flex-shrink: 0; transition: background 0.18s;
+}
+.switch::after {
+  content: ''; position: absolute; top: 3px; left: 3px;
+  width: 20px; height: 20px; border-radius: var(--r-pilula);
+  background: var(--branco); box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  transition: transform 0.18s;
+}
+.switch.on { background: var(--rosa); }
+.switch.on::after { transform: translateX(20px); }
+.switch:disabled { opacity: 0.5; cursor: not-allowed; }

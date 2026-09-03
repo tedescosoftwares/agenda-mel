@@ -92,6 +92,9 @@
 --         que o bot usa. Havia duas: a do navegador ignorava os
 --         bloqueios da profissional, então o site oferecia horário em
 --         cima do almoço dela
+--    049  favoritas, avaliações (só de atendimento concluído da própria
+--         cliente) e a posição na fila de espera — as três camadas que
+--         o desenho do MIMO pede e o banco não tinha
 --
 --  Se der erro, me mande a mensagem inteira: cada bloco abaixo está
 --  marcado com o nome do arquivo de origem, então dá para achar na hora.

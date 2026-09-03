@@ -2,5 +2,5 @@
 export function homeDoPapel(role) {
   if (role === 'admin') return '/admin'
   if (role === 'profissional') return '/pro'
-  return '/'
+  return '/cliente/home'
 }

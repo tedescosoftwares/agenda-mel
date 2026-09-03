@@ -4,11 +4,15 @@ import { AuthProvider } from "./context/AuthContext";
 import { NotificacoesProvider } from "./context/NotificacoesContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Login from "./pages/Login";
+import Splash from "./pages/Splash";
 import Avisos from "./pages/Avisos";
 import PaginaProfissional from "./pages/publico/PaginaProfissional";
 import Convite from "./pages/publico/Convite";
 import Estilo from "./pages/Estilo";
 import ClienteHome from "./pages/cliente/ClienteHome";
+import ClienteProfissionais from "./pages/cliente/ClienteProfissionais";
+import ClienteProfissional from "./pages/cliente/ClienteProfissional";
+import { AgendarServicos, AgendarData, AgendarHora, AgendarConfirmar, AgendarSucesso } from "./pages/cliente/Agendar";
 import ClienteAgenda from "./pages/cliente/ClienteAgenda";
 import ClientePerfil from "./pages/cliente/ClientePerfil";
 import AdminAgenda from "./pages/admin/AdminAgenda";
@@ -29,7 +33,9 @@ import ProRetorno from "./pages/pro/ProRetorno";
 import ProAjustes from "./pages/pro/ProAjustes";
 import ProPedidos from "./pages/pro/ProPedidos";
 import ProEnviar from "./pages/pro/ProEnviar";
-import IndiqueEGanhe from "./pages/cliente/IndiqueEGanhe";
+import Indicacao from "./pages/cliente/Indicacao";
+import Notificacoes from "./pages/cliente/Notificacoes";
+import FilaEspera from "./pages/cliente/FilaEspera";
 import { guardarCodigoDaURL } from "./lib/indicacao";
 
 export default function App() {
@@ -44,6 +50,7 @@ export default function App() {
         <NotificacoesProvider>
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/splash" element={<Splash />} />
 
             {/* link público das profissionais — não exige login */}
             <Route path="/p/:slug" element={<PaginaProfissional />} />
@@ -54,14 +61,115 @@ export default function App() {
             {/* mostruário do sistema visual */}
             <Route path="/estilo" element={<Estilo />} />
 
+            <Route path="/" element={<Splash />} />
             <Route
-              path="/"
+              path="/cliente/home"
               element={
                 <ProtectedRoute requireRole="cliente">
                   <ClienteHome />
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/cliente/profissionais"
+              element={
+                <ProtectedRoute requireRole="cliente">
+                  <ClienteProfissionais />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/cliente/profissional/:id"
+              element={
+                <ProtectedRoute requireRole="cliente">
+                  <ClienteProfissional />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/cliente/profissional/:id/servicos"
+              element={
+                <ProtectedRoute requireRole="cliente">
+                  <AgendarServicos />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/cliente/agendamento/data"
+              element={
+                <ProtectedRoute requireRole="cliente">
+                  <AgendarData />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/cliente/agendamento/hora"
+              element={
+                <ProtectedRoute requireRole="cliente">
+                  <AgendarHora />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/cliente/agendamento/confirmar"
+              element={
+                <ProtectedRoute requireRole="cliente">
+                  <AgendarConfirmar />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/cliente/agendamento/sucesso/:id"
+              element={
+                <ProtectedRoute requireRole="cliente">
+                  <AgendarSucesso />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/cliente/meus-agendamentos"
+              element={
+                <ProtectedRoute requireRole="cliente">
+                  <ClienteAgenda />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/cliente/fila-espera"
+              element={
+                <ProtectedRoute requireRole="cliente">
+                  <FilaEspera />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/cliente/perfil"
+              element={
+                <ProtectedRoute requireRole="cliente">
+                  <ClientePerfil />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/cliente/indicacao"
+              element={
+                <ProtectedRoute requireRole="cliente">
+                  <Indicacao />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/cliente/notificacoes"
+              element={
+                <ProtectedRoute requireRole="cliente">
+                  <Notificacoes />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/agenda" element={<Navigate to="/cliente/meus-agendamentos" replace />} />
+            <Route path="/perfil" element={<Navigate to="/cliente/perfil" replace />} />
+            <Route path="/indique" element={<Navigate to="/cliente/indicacao" replace />} />
+
 
             {/* área da profissional */}
             <Route
@@ -211,31 +319,7 @@ export default function App() {
               }
             />
 
-            <Route
-              path="/agenda"
-              element={
-                <ProtectedRoute requireRole="cliente">
-                  <ClienteAgenda />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/perfil"
-              element={
-                <ProtectedRoute requireRole="cliente">
-                  <ClientePerfil />
-                </ProtectedRoute>
-              }
-            />
 
-            <Route
-              path="/indique"
-              element={
-                <ProtectedRoute requireRole="cliente">
-                  <IndiqueEGanhe />
-                </ProtectedRoute>
-              }
-            />
 
             <Route
               path="/avisos"

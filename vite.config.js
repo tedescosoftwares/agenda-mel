@@ -27,7 +27,7 @@ export default defineConfig({
       manifest: {
         name: 'MIMO — Agenda Mel',
         short_name: 'MIMO',
-        description: 'Sua beleza. Na sua casa.',
+        description: 'Beleza na palma da mão',
         lang: 'pt-BR',
         start_url: '/',
         display: 'standalone',

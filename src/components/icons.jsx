@@ -115,39 +115,110 @@ export function VoltarIcon(props) {
 }
 
 // A marca: a lâmpada em volta do espelho do salão
-// A marca do MIMO: dois corações encaixados, o de trás vazado.
-// Preenchido com o gradiente rosa→laranja da casa; por ser um gradiente
-// em SVG, o id precisa ser único na página — daí o sufixo.
+// O coração do MIMO: uma fita de duas alças que se cruzam no alto e
+// deixam um respiro no meio. Gradiente rosa→magenta. O id do gradiente
+// precisa ser único por página — daí o sufixo.
 export function MarcaIcon({ id = 'mimo', ...props }) {
-  const grad = `grad-${id}`
+  const g = `mimo-grad-${id}`
   return (
-    <svg
-      viewBox="0 0 32 26"
-      width={26}
-      height={21}
-      fill="none"
-      aria-hidden="true"
-      {...props}
-    >
+    <svg viewBox="0 0 64 56" width={28} height={24} fill="none" aria-hidden="true" {...props}>
       <defs>
-        <linearGradient id={grad} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#ff2d72" />
-          <stop offset="100%" stopColor="#ff6a00" />
+        <linearGradient id={g} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#ff7bb5" />
+          <stop offset="55%" stopColor="#ff2d7a" />
+          <stop offset="100%" stopColor="#c40a7a" />
         </linearGradient>
       </defs>
-      {/* o coração de trás, só contorno */}
       <path
-        d="M9.6 24.4C5.2 20.9 1 17.7 1 12.6 1 8.9 3.9 6 7.5 6c2.1 0 4 1 5.2 2.6C13.9 7 15.8 6 17.9 6c3.6 0 6.5 2.9 6.5 6.6 0 5.1-4.2 8.3-8.6 11.8a3.6 3.6 0 0 1-4.4 0Z"
-        stroke={`url(#${grad})`}
-        strokeWidth="2"
-        opacity="0.42"
+        d="M32 52 L11 31 C4 24 4 13 11 8 C17 3 26 4 32 11 C38 4 47 3 53 8 C60 13 60 24 53 31 L38 46"
+        stroke={`url(#${g})`}
+        strokeWidth="9.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
-      {/* o da frente, cheio */}
-      <path
-        d="M22.3 23.6c-3.6-2.9-7-5.5-7-9.7 0-3 2.4-5.4 5.3-5.4 1.7 0 3.3.8 4.3 2.1 1-1.3 2.5-2.1 4.2-2.1 2.9 0 5.3 2.4 5.3 5.4 0 4.2-3.4 6.8-7 9.7a2.9 2.9 0 0 1-3.6 0Z"
-        fill={`url(#${grad})`}
-        transform="translate(-8.2 -4.6)"
-      />
+      <circle cx="32" cy="21" r="6" fill={`url(#${g})`} />
+    </svg>
+  )
+}
+
+// A palavra, em roxo-ameixa. Fica separada do coração porque nem todo
+// lugar tem espaço para os dois — na barra do topo cabe o coração; na
+// tela de abertura, os dois um sobre o outro.
+export function Wordmark({ tamanho = 2.4, ...props }) {
+  return (
+    <span
+      className="wordmark"
+      style={{ fontSize: `${tamanho}rem` }}
+      aria-label="mimo"
+      {...props}
+    >
+      mimo
+    </span>
+  )
+}
+
+export function HeartIcon({ cheio = false, ...props }) {
+  return (
+    <svg viewBox="0 0 24 24" width={20} height={20} fill={cheio ? 'currentColor' : 'none'}
+      stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"
+      aria-hidden="true" {...props}>
+      <path d="M12 20.5s-7.5-4.6-7.5-10A4.3 4.3 0 0 1 12 8.2a4.3 4.3 0 0 1 7.5 2.3c0 5.4-7.5 10-7.5 10Z" />
+    </svg>
+  )
+}
+
+export function StarIcon({ cheio = true, ...props }) {
+  return (
+    <svg viewBox="0 0 24 24" width={16} height={16} fill={cheio ? 'currentColor' : 'none'}
+      stroke="currentColor" strokeWidth={1.6} strokeLinejoin="round" aria-hidden="true" {...props}>
+      <path d="m12 3.6 2.6 5.4 5.9.8-4.3 4.1 1.1 5.9L12 17l-5.3 2.8 1.1-5.9-4.3-4.1 5.9-.8Z" />
+    </svg>
+  )
+}
+
+export function VoltarSetaIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" width={20} height={20} fill="none" stroke="currentColor"
+      strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
+      <path d="M15 5.5 8.5 12l6.5 6.5" />
+    </svg>
+  )
+}
+
+export function CalendarioCheckIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" width={19} height={19} fill="none" stroke="currentColor"
+      strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
+      <rect x="3.5" y="5" width="17" height="15.5" rx="2.5" />
+      <path d="M3.5 9.5h17M8 3v4M16 3v4M9 15l2 2 4-4.2" />
+    </svg>
+  )
+}
+
+export function QrIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor"
+      strokeWidth={1.8} strokeLinejoin="round" aria-hidden="true" {...props}>
+      <rect x="4" y="4" width="6" height="6" rx="1" /><rect x="14" y="4" width="6" height="6" rx="1" />
+      <rect x="4" y="14" width="6" height="6" rx="1" /><path d="M14 14h2v2h-2zM18 14h2v2h-2zM14 18h2v2h-2zM18 18h2v2h-2z" />
+    </svg>
+  )
+}
+
+export function CompartilharIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor"
+      strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
+      <path d="M12 3.5v11M8 7.5l4-4 4 4M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5" />
+    </svg>
+  )
+}
+
+export function CopiarIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor"
+      strokeWidth={1.8} strokeLinejoin="round" aria-hidden="true" {...props}>
+      <rect x="8" y="8" width="12" height="12" rx="2" /><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" />
     </svg>
   )
 }

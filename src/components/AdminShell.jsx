@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import SinoAvisos from './SinoAvisos'
-import { MarcaIcon } from './icons'
+import { MarcaIcon, Wordmark } from './icons'
 import {
   CalendarIcon,
   UsersIcon,
@@ -39,7 +39,7 @@ export default function AdminShell({ children }) {
       <header className="topbar topbar-admin">
         <span className="brand-inline">
           <MarcaIcon className="marca" id="topo" />
-          MIMO
+          <Wordmark tamanho={1.35} />
         </span>
         <div className="topbar-acoes">
           <SinoAvisos />

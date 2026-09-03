@@ -9,6 +9,7 @@ import {
   GraficoIcon,
   VoltarIcon,
   MarcaIcon,
+  Wordmark,
 } from '../components/icons'
 
 // Mostruário do sistema visual. Serve para conferir todas as peças
@@ -25,7 +26,7 @@ export default function Estilo() {
       <header className="topbar topbar-admin">
         <span className="brand-inline">
           <MarcaIcon className="marca" />
-          MIMO
+          <Wordmark tamanho={1.35} />
         </span>
         <div className="topbar-acoes">
           <span className="sino">

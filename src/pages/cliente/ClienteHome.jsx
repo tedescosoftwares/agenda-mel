@@ -1,142 +1,134 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import ClienteShell from '../../components/ClienteShell'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
-import { ChevronIcon, SearchIcon } from '../../components/icons'
-import Avatar from '../../components/Avatar'
-import { formatarCents } from '../../lib/indicacao'
+import { SearchIcon } from '../../components/icons'
+import { formatPreco, formatDuracao } from '../../lib/format'
 
-// Início: quem atende, e o caminho para marcar.
-//
-// Antes esta tela era o app inteiro da cliente — quem atende, o que ela
-// já marcou, a fila de espera e os convites, tudo empilhado. Quem já
-// tinha horário marcado precisava rolar por baixo da lista de
-// profissionais para ver o próprio compromisso. Agora "o que eu marquei"
-// tem aba própria, e aqui fica só o começo de um agendamento.
+// Início da cliente (tela 03 do painel): saudação, busca, a fileira de
+// profissionais, e os serviços em destaque. É a vitrine — tudo aqui
+// leva para "marcar com alguém".
 export default function ClienteHome() {
   const { profile, user } = useAuth()
   const nome = (profile?.full_name || user?.email || '').split(' ')[0]
-  const [params, setParams] = useSearchParams()
 
   const [profissionais, setProfissionais] = useState([])
+  const [vinculos, setVinculos] = useState([])
   const [busca, setBusca] = useState('')
-  const [saldo, setSaldo] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const campoBusca = useRef(null)
 
   useEffect(() => {
     let vivo = true
     ;(async () => {
-      const { data, error } = await supabase
-        .from('professionals')
-        .select('*')
-        .eq('active', true)
-        .order('name')
+      const [pr, vi] = await Promise.all([
+        supabase.from('professionals').select('*').eq('active', true).order('name'),
+        supabase.from('professional_services').select('professional_id, service_id, services (*)'),
+      ])
       if (!vivo) return
-      if (error) setError('Erro ao carregar: ' + error.message)
-      else {
-        setProfissionais(data)
-        setError('')
-      }
-      const { data: saldoAtual } = await supabase.rpc('saldo_creditos')
-      if (vivo) {
-        setSaldo(saldoAtual ?? 0)
-        setLoading(false)
-      }
+      setProfissionais(pr.data ?? [])
+      setVinculos(vi.data ?? [])
+      setLoading(false)
     })()
-    return () => {
-      vivo = false
-    }
+    return () => { vivo = false }
   }, [])
 
-  // o botão do meio da barra chega aqui com ?buscar=1: abre o teclado
-  // direto no campo, que é o que "quero marcar agora" quer dizer
-  useEffect(() => {
-    if (params.get('buscar')) {
-      campoBusca.current?.focus()
-      setParams({}, { replace: true })
-    }
-  }, [params, setParams])
+  // a especialidade de cada uma é o que ela faz — o primeiro serviço
+  // dela, não um campo separado que ninguém preencheria
+  const especialidade = (p) => {
+    const nomes = vinculos.filter((v) => v.professional_id === p.id).map((v) => v.services?.name).filter(Boolean)
+    return nomes.slice(0, 2).join(' e ') || p.bio || ''
+  }
 
-  // Filtro local, sobre a lista que já veio. Não é busca no servidor:
-  // são poucas profissionais, e uma ida ao banco a cada tecla seria
-  // gastar rede para responder o que a memória já sabe.
-  const lista = useMemo(() => {
-    const t = busca.trim().toLowerCase()
-    if (!t) return profissionais
-    return profissionais.filter(
-      (p) =>
-        p.name.toLowerCase().includes(t) ||
-        (p.bio ?? '').toLowerCase().includes(t),
-    )
-  }, [profissionais, busca])
+  const t = busca.trim().toLowerCase()
+  const lista = useMemo(
+    () => (t ? profissionais.filter((p) => p.name.toLowerCase().includes(t) || especialidade(p).toLowerCase().includes(t)) : profissionais),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [profissionais, vinculos, t],
+  )
+
+  // serviços em destaque: os que mais profissionais oferecem, com quem faz
+  const destaques = useMemo(() => {
+    const mapa = new Map()
+    for (const v of vinculos) {
+      if (!v.services?.active) continue
+      const item = mapa.get(v.service_id) ?? { servico: v.services, quem: [] }
+      const p = profissionais.find((x) => x.id === v.professional_id)
+      if (p) item.quem.push(p)
+      mapa.set(v.service_id, item)
+    }
+    return [...mapa.values()]
+      .filter((i) => !t || i.servico.name.toLowerCase().includes(t))
+      .sort((a, b) => b.quem.length - a.quem.length)
+      .slice(0, 4)
+  }, [vinculos, profissionais, t])
 
   return (
     <ClienteShell>
       <div className="cl-saudacao">
-        <h2>Olá, {nome} 💛</h2>
-        <p className="muted">Pronta para se cuidar hoje?</p>
+        <h2>Olá, {nome}! 👋</h2>
+        <p className="muted">Como podemos te ajudar hoje?</p>
       </div>
-
-      {error && <div className="alert alert-error">{error}</div>}
 
       <label className="cl-busca">
         <SearchIcon />
         <input
-          ref={campoBusca}
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
           placeholder="Buscar profissional ou serviço"
-          aria-label="Buscar profissional"
+          aria-label="Buscar"
         />
       </label>
 
-      <section className="secao">
-        <h3 className="secao-titulo">Agendar com</h3>
-        {loading ? (
-          <p className="muted">Carregando…</p>
-        ) : lista.length === 0 ? (
-          <div className="card empty-state">
-            <p>
-              {busca
-                ? 'Nenhuma profissional com esse nome.'
-                : 'Nenhuma profissional disponível no momento.'}
-            </p>
-          </div>
-        ) : (
-          <div className="cliente-list">
-            {lista.map((p) => (
-              <Link key={p.id} to={`/p/${p.slug}`} className="card prof-row">
-                <Avatar nome={p.name} foto={p.photo_url} />
-                <div className="cliente-info">
-                  <span className="cliente-nome">
-                    <span className="nome-txt">{p.name}</span>
-                  </span>
-                  {p.bio && <span className="muted servico-desc">{p.bio}</span>}
-                </div>
-                <ChevronIcon />
-              </Link>
-            ))}
-          </div>
-        )}
-      </section>
+      <div className="secao-cabeca">
+        <h3>Profissionais próximas</h3>
+        <Link to="/cliente/profissionais" className="link-ver">Ver todas</Link>
+      </div>
 
-      <Link to="/perfil" className="card indique-atalho">
-        <span className="indique-atalho-icone" aria-hidden="true" />
-        <span className="cliente-info">
-          <span className="cliente-nome">
-            <span className="nome-txt">Indique e ganhe</span>
-          </span>
-          <span className="muted cliente-meta">
-            {saldo > 0
-              ? `Você tem ${formatarCents(saldo)} de crédito`
-              : 'Chame uma amiga e as duas ganham desconto'}
-          </span>
-        </span>
-        <ChevronIcon />
-      </Link>
+      {loading ? (
+        <p className="muted">Carregando…</p>
+      ) : (
+        <div className="fileira-prof">
+          {lista.slice(0, 8).map((p) => (
+            <Link key={p.id} to={`/cliente/profissional/${p.id}`} className="prof-bolha">
+              {p.photo_url ? (
+                <img src={p.photo_url} alt="" />
+              ) : (
+                <span className="prof-bolha-ini">{p.name.charAt(0)}</span>
+              )}
+              <strong>{p.name.split(' ')[0]}</strong>
+              <span className="muted">{especialidade(p).split(' e ')[0]}</span>
+            </Link>
+          ))}
+          {lista.length === 0 && <p className="muted">Ninguém com esse nome.</p>}
+        </div>
+      )}
+
+      <div className="secao-cabeca">
+        <h3>Serviços em destaque</h3>
+      </div>
+
+      <div className="cliente-list">
+        {destaques.map(({ servico, quem }) => (
+          <Link
+            key={servico.id}
+            to={`/cliente/profissional/${quem[0].id}/servicos?servico=${servico.id}`}
+            className="card destaque-row"
+          >
+            <span className="destaque-foto" aria-hidden="true">
+              {servico.images?.[0] ? <img src={servico.images[0]} alt="" /> : '✨'}
+            </span>
+            <span className="cliente-info">
+              <span className="cliente-nome"><span className="nome-txt">{servico.name}</span></span>
+              <span className="muted cliente-meta">
+                {formatPreco(servico.price)} · {formatDuracao(servico.duration_minutes)}
+                {quem.length > 1 ? ` · ${quem.length} profissionais` : ` · com ${quem[0].name.split(' ')[0]}`}
+              </span>
+            </span>
+            <span className="btn-mini destaque-btn">Agendar</span>
+          </Link>
+        ))}
+      </div>
     </ClienteShell>
   )
 }

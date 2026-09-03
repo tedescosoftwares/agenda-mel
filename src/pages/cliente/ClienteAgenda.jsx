@@ -1,193 +1,173 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import ClienteShell from '../../components/ClienteShell'
 import { supabase } from '../../lib/supabase'
+import { useAuth } from '../../context/AuthContext'
 import { formatPreco, toISODate } from '../../lib/format'
 import { formatDataCurta } from '../../lib/booking'
+import { StarIcon } from '../../components/icons'
 import ConviteAdiantar from '../../components/ConviteAdiantar'
 import OfertaVaga from '../../components/OfertaVaga'
 
-// A agenda da cliente: o que ela marcou, o que está esperando e o que
-// alguém ofereceu a ela. Saiu de dentro do Início na virada do MIMO —
-// antes ficava embaixo da lista de profissionais, e quem já tinha
-// horário marcado tinha que rolar a tela inteira para conferir a hora.
+// Meus agendamentos (tela 09): duas abas, Próximos e Histórico. O que
+// vem pela frente pode ser cancelado; o que já passou pode ser avaliado
+// — uma vez só, e só se de fato aconteceu (o banco confere).
 
-const STATUS_LABEL = {
-  pendente: 'aguardando',
-  confirmado: 'confirmado',
-  concluido: 'concluído',
-}
+const ROTULO = { pendente: 'Aguardando', confirmado: 'Confirmado', concluido: 'Concluído', faltou: 'Não fui', cancelado: 'Cancelado' }
 
 export default function ClienteAgenda() {
-  const [meus, setMeus] = useState([])
+  const { user } = useAuth()
+  const [aba, setAba] = useState('proximos')
+  const [proximos, setProximos] = useState([])
+  const [historico, setHistorico] = useState([])
+  const [avaliados, setAvaliados] = useState(new Set())
   const [vagas, setVagas] = useState([])
-  const [filas, setFilas] = useState([])
+  const [avaliando, setAvaliando] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
-  const fetchDados = useCallback(async () => {
+  const carregar = useCallback(async () => {
     const hoje = toISODate(new Date())
-
-    const [apptRes, vagasRes, filasRes] = await Promise.all([
-      supabase
-        .from('appointments')
-        .select(
-          '*, services (name, price), professionals (name), appointment_offers (id, status, proposed_start_time, previous_start_time, expires_at)',
-        )
-        .gte('date', hoje)
-        .neq('status', 'cancelado')
-        .order('date')
-        .order('start_time'),
-      supabase
-        .from('waitlist_offers')
-        .select('*, waitlist_entries (id, services (name), professionals (name))')
-        .eq('status', 'pendente')
-        .gt('expires_at', new Date().toISOString())
-        .order('created_at', { ascending: false }),
-      supabase
-        .from('waitlist_entries')
-        .select('*, services (name), professionals (name)')
-        .eq('status', 'aguardando')
-        .order('created_at', { ascending: false }),
+    const sel = '*, services (name, price), professionals (id, name, photo_url), appointment_offers (id, status, proposed_start_time, previous_start_time, expires_at)'
+    const [px, hs, rv, vg] = await Promise.all([
+      supabase.from('appointments').select(sel).eq('client_id', user.id).gte('date', hoje).neq('status', 'cancelado').order('date').order('start_time'),
+      supabase.from('appointments').select(sel).eq('client_id', user.id).lt('date', hoje).order('date', { ascending: false }).limit(30),
+      supabase.from('reviews').select('appointment_id').eq('client_id', user.id),
+      supabase.from('waitlist_offers').select('*, waitlist_entries (id, services (name), professionals (name))').eq('status', 'pendente').gt('expires_at', new Date().toISOString()),
     ])
-
-    if (apptRes.error) setError('Erro ao carregar: ' + apptRes.error.message)
-    else {
-      setMeus(apptRes.data)
-      setError('')
-    }
-    if (!vagasRes.error) setVagas(vagasRes.data)
-    if (!filasRes.error) setFilas(filasRes.data)
+    if (px.error) setError(px.error.message)
+    setProximos(px.data ?? [])
+    setHistorico(hs.data ?? [])
+    setAvaliados(new Set((rv.data ?? []).map((r) => r.appointment_id)))
+    setVagas(vg.data ?? [])
     setLoading(false)
-  }, [])
+  }, [user.id])
 
-  useEffect(() => {
-    fetchDados()
-  }, [fetchDados])
+  useEffect(() => { carregar() }, [carregar])
 
-  async function cancelar(appt) {
-    const ok = window.confirm(
-      `Cancelar ${appt.services?.name} em ${formatDataCurta(appt.date)} às ${appt.start_time.slice(0, 5)}?`,
-    )
-    if (!ok) return
-    const { error } = await supabase
-      .from('appointments')
-      .update({ status: 'cancelado' })
-      .eq('id', appt.id)
-    if (error) setError('Erro ao cancelar: ' + error.message)
-    else fetchDados()
+  async function cancelar(a) {
+    if (!window.confirm(`Cancelar ${a.services?.name} em ${formatDataCurta(a.date)} às ${a.start_time.slice(0, 5)}?`)) return
+    const { error } = await supabase.from('appointments').update({ status: 'cancelado' }).eq('id', a.id)
+    if (error) setError(error.message)
+    else carregar()
   }
 
-  async function sairDaFila(f) {
-    const { error } = await supabase.rpc('sair_lista_espera', { entrada_id: f.id })
-    if (error) setError('Erro ao sair da fila: ' + error.message)
-    else fetchDados()
-  }
+  const lista = aba === 'proximos' ? proximos : historico
 
   return (
-    <ClienteShell>
-      <div className="page-head">
-        <h2>Minha agenda</h2>
-        <p className="muted">O que está marcado para você</p>
+    <ClienteShell titulo="Meus agendamentos">
+      <div className="abas">
+        <button className={aba === 'proximos' ? 'aba active' : 'aba'} onClick={() => setAba('proximos')}>Próximos</button>
+        <button className={aba === 'historico' ? 'aba active' : 'aba'} onClick={() => setAba('historico')}>Histórico</button>
       </div>
 
       {error && <div className="alert alert-error">{error}</div>}
 
+      {aba === 'proximos' && vagas.map((v) => <OfertaVaga key={v.id} oferta={v} onRespondido={carregar} />)}
+      {aba === 'proximos' && convites(proximos).map(({ appt, oferta }) => (
+        <ConviteAdiantar key={oferta.id} oferta={oferta} servico={appt.services?.name} profissional={appt.professionals?.name} onRespondido={carregar} />
+      ))}
+
       {loading ? (
         <p className="muted">Carregando…</p>
+      ) : lista.length === 0 ? (
+        <div className="card empty-state">
+          <p>{aba === 'proximos' ? 'Nada marcado por enquanto.' : 'Você ainda não tem atendimentos passados.'}</p>
+          {aba === 'proximos' && <Link to="/cliente/home" className="btn btn-primary">Marcar um horário</Link>}
+        </div>
       ) : (
-        <>
-          {vagas.map((v) => (
-            <OfertaVaga key={v.id} oferta={v} onRespondido={fetchDados} />
-          ))}
-
-          {convitesAbertos(meus).map(({ appt, oferta }) => (
-            <ConviteAdiantar
-              key={oferta.id}
-              oferta={oferta}
-              servico={appt.services?.name}
-              profissional={appt.professionals?.name}
-              onRespondido={fetchDados}
-            />
-          ))}
-
-          {meus.length === 0 ? (
-            <div className="card empty-state">
-              <p>Você ainda não tem horário marcado.</p>
-              <p className="muted">
-                Toque no <strong>+</strong> aqui embaixo para escolher com quem se cuidar.
-              </p>
-            </div>
-          ) : (
-            <div className="appt-list">
-              {meus.map((a) => (
-                <div key={a.id} className="card appt-row">
-                  <div className="appt-time">
-                    <span className="appt-hora">{a.start_time.slice(0, 5)}</span>
-                    <span className="appt-dur">{formatDataCurta(a.date)}</span>
-                  </div>
-                  <div className="appt-info">
-                    <span className="appt-cliente">{a.services?.name}</span>
-                    <span className="appt-servico muted">
-                      {a.professionals ? `com ${a.professionals.name} · ` : ''}
-                      {a.services ? formatPreco(a.services.price) : ''}
-                    </span>
-                  </div>
-                  <div className="appt-acoes">
-                    <span className={`badge badge-${a.status}`}>
-                      {STATUS_LABEL[a.status] ?? a.status}
-                    </span>
-                    {podeCancelar(a) && (
-                      <button className="btn-link-cancelar" onClick={() => cancelar(a)}>
-                        cancelar
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {filas.length > 0 && (
-            <section className="secao">
-              <h3 className="secao-titulo">Estou esperando vaga</h3>
-              <div className="cliente-list">
-                {filas.map((f) => (
-                  <div key={f.id} className="card fila-row">
-                    <div className="cliente-info">
-                      <span className="cliente-nome">
-                        <span className="nome-txt">{f.services?.name}</span>
-                      </span>
-                      <span className="muted cliente-meta">
-                        com {f.professionals?.name} · {f.window_start.slice(0, 5)}–
-                        {f.window_end.slice(0, 5)} · até {formatDataCurta(f.date_to)}
-                      </span>
-                    </div>
-                    <button className="btn-link-cancelar" onClick={() => sairDaFila(f)}>
-                      sair da fila
-                    </button>
-                  </div>
-                ))}
+        <div className="cliente-list">
+          {lista.map((a) => (
+            <div key={a.id} className={'card agd-card ' + a.status}>
+              <div className="agd-topo">
+                <span className="agd-quando">{quando(a)}</span>
+                <span className={`badge badge-${a.status}`}>{ROTULO[a.status] ?? a.status}</span>
               </div>
-            </section>
-          )}
-        </>
+              <strong className="agd-servico">{a.services?.name}</strong>
+              <span className="muted agd-meta">
+                {a.professionals?.name} · {formatPreco(a.price_cents != null ? a.price_cents / 100 : a.services?.price)}
+              </span>
+              <div className="agd-acoes">
+                {aba === 'proximos' && podeCancelar(a) && (
+                  <button className="btn-mini btn-mini-nao" onClick={() => cancelar(a)}>Cancelar</button>
+                )}
+                {aba === 'proximos' && a.professionals && (
+                  <Link className="btn-mini" to={`/cliente/profissional/${a.professionals.id}`}>Ver profissional</Link>
+                )}
+                {aba === 'historico' && a.status === 'concluido' && !avaliados.has(a.id) && (
+                  <button className="btn-mini btn-mini-rosa" onClick={() => setAvaliando(a)}><StarIcon /> Avaliar</button>
+                )}
+                {aba === 'historico' && avaliados.has(a.id) && <span className="muted agd-avaliado">Avaliado ✓</span>}
+                {aba === 'historico' && a.professionals && (
+                  <Link className="btn-mini" to={`/cliente/profissional/${a.professionals.id}/servicos?servico=${a.service_id}`}>Marcar de novo</Link>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {avaliando && (
+        <AvaliarModal
+          appt={avaliando}
+          onFechar={() => setAvaliando(null)}
+          onPronto={() => { setAvaliando(null); carregar() }}
+        />
       )}
     </ClienteShell>
   )
 }
 
-// convites de adiantamento ainda válidos, achatados para a tela
-function convitesAbertos(agendamentos) {
-  const agora = new Date()
-  return agendamentos.flatMap((appt) =>
-    (appt.appointment_offers ?? [])
-      .filter((o) => o.status === 'pendente' && new Date(o.expires_at) > agora)
-      .map((oferta) => ({ appt, oferta })),
+function AvaliarModal({ appt, onFechar, onPronto }) {
+  const { user } = useAuth()
+  const [nota, setNota] = useState(0)
+  const [texto, setTexto] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [erro, setErro] = useState('')
+
+  async function enviar() {
+    if (!nota) return
+    setSaving(true)
+    const { error } = await supabase.from('reviews').insert({
+      appointment_id: appt.id, client_id: user.id, professional_id: appt.professional_id, nota, comentario: texto.trim() || null,
+    })
+    setSaving(false)
+    if (error) setErro(error.message)
+    else onPronto()
+  }
+
+  return (
+    <div className="modal-fundo" onClick={onFechar}>
+      <div className="modal-caixa" onClick={(e) => e.stopPropagation()}>
+        <h3>Como foi com {appt.professionals?.name?.split(' ')[0]}?</h3>
+        <p className="muted">{appt.services?.name} · {formatDataCurta(appt.date)}</p>
+        <div className="estrelas-escolha">
+          {[1, 2, 3, 4, 5].map((n) => (
+            <button key={n} type="button" className={n <= nota ? 'on' : ''} onClick={() => setNota(n)} aria-label={`${n} estrelas`}>
+              <StarIcon cheio={n <= nota} width={30} height={30} />
+            </button>
+          ))}
+        </div>
+        <textarea value={texto} onChange={(e) => setTexto(e.target.value)} rows={3} placeholder="Conta pra gente (opcional)" />
+        {erro && <div className="alert alert-error">{erro}</div>}
+        <div className="modal-acoes">
+          <button className="btn btn-ghost" onClick={onFechar}>Depois</button>
+          <button className="btn btn-primary" onClick={enviar} disabled={!nota || saving}>{saving ? 'Enviando…' : 'Enviar avaliação'}</button>
+        </div>
+      </div>
+    </div>
   )
 }
 
-// só dá para cancelar o que ainda não aconteceu
+function quando(a) {
+  const d = new Date(a.date + 'T12:00:00')
+  const dia = d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' }).replace('.', '')
+  return `${dia} · ${a.start_time.slice(0, 5)}`
+}
+function convites(ags) {
+  const agora = new Date()
+  return ags.flatMap((appt) => (appt.appointment_offers ?? []).filter((o) => o.status === 'pendente' && new Date(o.expires_at) > agora).map((oferta) => ({ appt, oferta })))
+}
 function podeCancelar(a) {
-  if (a.status !== 'pendente' && a.status !== 'confirmado') return false
-  return new Date(`${a.date}T${a.start_time}`) > new Date()
+  return (a.status === 'pendente' || a.status === 'confirmado') && new Date(`${a.date}T${a.start_time}`) > new Date()
 }

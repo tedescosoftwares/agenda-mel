@@ -4510,3 +4510,7 @@ html { position: relative; }
 
 .search-box { min-width: 0; }
 .search-box input { flex: 1; min-width: 0; width: 100%; }
+
+/* belt-and-braces para o Safari: body com largura explícita e
+   posição relativa é o que faz o overflow-x hidden valer lá */
+body { position: relative; width: 100%; }

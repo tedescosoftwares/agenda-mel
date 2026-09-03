@@ -4,32 +4,22 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#0d0d0f" />
-    <meta name="description" content="Agenda de serviços estéticos: sua cliente marca sozinha pelo seu link." />
+    <meta name="theme-color" content="#ff2d7a" />
+    <meta name="description" content="MIMO — beleza na palma da mão. Sua cliente marca sozinha pelo seu link." />
+
+    <!-- O iPhone ignora o "display: standalone" do manifesto: sem estas
+         três linhas o app instalado abre com a barra de endereço do
+         Safari em cima, como um site qualquer. -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="MIMO" />
+    <link rel="apple-touch-icon" href="/pwa-192.png" />
 
     <!-- fontes servidas pelo próprio app: funciona offline e não
          depende de CDN de terceiro -->
-    <link
-      rel="preload"
-      as="font"
-      type="font/woff2"
-      href="/fontes/archivo-narrow-latin.woff2"
-      crossorigin
-    />
-    <link
-      rel="preload"
-      as="font"
-      type="font/woff2"
-      href="/fontes/archivo-latin.woff2"
-      crossorigin
-    />
-    <link
-      rel="preload"
-      as="font"
-      type="font/woff2"
-      href="/fontes/azeret-mono-latin.woff2"
-      crossorigin
-    />
+    <link rel="preload" as="font" type="font/woff2" href="/fontes/poppins-400-latin.woff2" crossorigin />
+    <link rel="preload" as="font" type="font/woff2" href="/fontes/poppins-600-latin.woff2" crossorigin />
 
     <title>MIMO — Agenda Mel</title>
   </head>

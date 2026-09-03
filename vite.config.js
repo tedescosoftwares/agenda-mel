@@ -29,8 +29,11 @@ export default defineConfig({
         short_name: 'MIMO',
         description: 'Beleza na palma da mão',
         lang: 'pt-BR',
+        id: '/',
+        scope: '/',
         start_url: '/',
         display: 'standalone',
+        orientation: 'portrait',
         background_color: '#f6f2f7',
         theme_color: '#ff2d72',
         icons: [

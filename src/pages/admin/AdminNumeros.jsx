@@ -18,6 +18,8 @@ export default function AdminNumeros() {
   const [linhas, setLinhas] = useState([])
   const [loading, setLoading] = useState(true)
   const [erro, setErro] = useState('')
+  const [pendentes, setPendentes] = useState(0)
+  const [naFila, setNaFila] = useState(0)
 
   const salaoId = salao?.id
 
@@ -34,6 +36,32 @@ export default function AdminNumeros() {
     }
     setLoading(false)
   }, [salaoId, mes])
+
+  // Duas contagens que não são "do mês": são de AGORA, e é por elas que
+  // alguém abre esta tela num dia corrido. Faturamento fechado responde
+  // "como foi"; estas duas respondem "o que está me esperando".
+  const buscarPendencias = useCallback(async () => {
+    if (!salaoId) return
+    const hoje = new Date().toISOString().slice(0, 10)
+    const [pend, fila] = await Promise.all([
+      supabase
+        .from('appointments')
+        .select('id', { count: 'exact', head: true })
+        .eq('salon_id', salaoId)
+        .eq('status', 'pendente')
+        .gte('date', hoje),
+      supabase
+        .from('waitlist_entries')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'aguardando'),
+    ])
+    setPendentes(pend.count ?? 0)
+    setNaFila(fila.count ?? 0)
+  }, [salaoId])
+
+  useEffect(() => {
+    buscarPendencias()
+  }, [buscarPendencias])
 
   useEffect(() => {
     buscar()
@@ -66,6 +94,21 @@ export default function AdminNumeros() {
       </div>
 
       {erro && <div className="alert alert-error">{erro}</div>}
+
+      {(pendentes > 0 || naFila > 0) && (
+        <div className="painel-agora">
+          <div className="card painel-tile">
+            <strong>{pendentes}</strong>
+            <span className="muted">
+              esperando aceite
+            </span>
+          </div>
+          <div className="card painel-tile">
+            <strong>{naFila}</strong>
+            <span className="muted">na fila de espera</span>
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <p className="muted">Carregando…</p>

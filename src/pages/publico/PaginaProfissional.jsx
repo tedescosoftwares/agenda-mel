@@ -1,19 +1,14 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import AuthModal from '../../components/AuthModal'
 import ListaEsperaForm from '../../components/ListaEsperaForm'
 import { SparkleIcon } from '../../components/icons'
-import { formatPreco, labelDuracao, toISODate } from '../../lib/format'
-import {
-  gerarSlots,
-  toMin,
-  minToHora,
-  formatDataLonga,
-  formatDataMedia,
-} from '../../lib/booking'
-import Avatar from '../../components/Avatar'
+import { formatPreco, labelDuracao } from '../../lib/format'
+import { toMin, minToHora, formatDataLonga } from '../../lib/booking'
+import CalendarioMes from '../../components/CalendarioMes'
+import { iniciais } from '../../lib/booking'
 
 // Página pública da profissional (/p/<slug>): qualquer pessoa vê os
 // serviços e os horários livres; o login só entra na hora de fechar.
@@ -27,10 +22,16 @@ export default function PaginaProfissional() {
   const [loading, setLoading] = useState(true)
   const [erroCarregar, setErroCarregar] = useState('')
 
+  // O agendamento virou um passo de cada vez. Antes as quatro escolhas
+  // ficavam empilhadas na mesma rolagem e a pessoa via, ao mesmo tempo,
+  // um catálogo, um calendário, uma grade de horas e um botão — sem
+  // saber em qual delas estava.
+  const [passo, setPasso] = useState(1)
   const [servicoSel, setServicoSel] = useState(null)
   const [dataSel, setDataSel] = useState('')
   const [horaSel, setHoraSel] = useState('')
   const [slots, setSlots] = useState([])
+  const [diasSugeridos, setDiasSugeridos] = useState([])
   const [loadingSlots, setLoadingSlots] = useState(false)
 
   const [mostrarLogin, setMostrarLogin] = useState(false)
@@ -39,15 +40,6 @@ export default function PaginaProfissional() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [sucesso, setSucesso] = useState(null)
-
-  const dias = useMemo(() => {
-    const hoje = new Date()
-    return Array.from({ length: 14 }, (_, i) => {
-      const d = new Date(hoje)
-      d.setDate(hoje.getDate() + i)
-      return d
-    })
-  }, [])
 
   // --- carrega profissional, serviços dela e horários ---
   useEffect(() => {
@@ -96,7 +88,11 @@ export default function PaginaProfissional() {
     }
   }, [slug])
 
-  // --- calcula os horários livres do dia escolhido ---
+  // --- os horários livres do dia escolhido ---
+  // Quem responde é horarios_livres() no banco: a MESMA função que o bot
+  // do WhatsApp usa. Antes esta tela fazia a conta no navegador e
+  // ignorava os bloqueios da profissional — o site oferecia horário em
+  // cima do almoço dela, e o bot recusava o mesmo minuto.
   useEffect(() => {
     if (!dataSel || !servicoSel || !prof) return
     let cancelled = false
@@ -105,35 +101,18 @@ export default function PaginaProfissional() {
       setLoadingSlots(true)
       setHoraSel('')
 
-      const dia = hours.find(
-        (h) => h.weekday === new Date(dataSel + 'T12:00:00').getDay(),
-      )
-      if (!dia?.open) {
-        if (!cancelled) {
-          setSlots([])
-          setLoadingSlots(false)
-        }
-        return
-      }
-
-      const { data: ocupados, error } = await supabase.rpc('get_busy_slots', {
-        dia: dataSel,
+      const { data, error } = await supabase.rpc('horarios_livres', {
         prof: prof.id,
+        dia: dataSel,
+        duracao: servicoSel.duration_minutes,
       })
       if (cancelled) return
       if (error) {
         setError('Erro ao buscar horários: ' + error.message)
         setSlots([])
       } else {
-        setSlots(
-          gerarSlots({
-            inicio: dia.start_time.slice(0, 5),
-            fim: dia.end_time.slice(0, 5),
-            duracao: servicoSel.duration_minutes,
-            ocupados,
-            ehHoje: dataSel === toISODate(new Date()),
-          }),
-        )
+        setSlots((data ?? []).map((h) => String(h.hora ?? h).slice(0, 5)))
+        setError('')
       }
       setLoadingSlots(false)
     }
@@ -142,7 +121,25 @@ export default function PaginaProfissional() {
     return () => {
       cancelled = true
     }
-  }, [dataSel, servicoSel, prof, hours])
+  }, [dataSel, servicoSel, prof])
+
+  // os próximos dias com vaga de verdade, para os atalhos abaixo do mês
+  useEffect(() => {
+    if (!servicoSel || !prof) return
+    let cancelled = false
+    supabase
+      .rpc('dias_com_vaga', {
+        prof: prof.id,
+        duracao: servicoSel.duration_minutes,
+        quantos: 3,
+      })
+      .then(({ data }) => {
+        if (!cancelled) setDiasSugeridos(data ?? [])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [servicoSel, prof])
 
   const criarAgendamento = useCallback(async () => {
     setSaving(true)
@@ -254,12 +251,31 @@ export default function PaginaProfissional() {
     )
   }
 
+  const PASSOS = ['Serviço', 'Data', 'Hora', 'Confirmar']
+
+  function irPara(n) {
+    setError('')
+    setPasso(n)
+  }
+
   return (
     <div className="layout publico">
       <header className="prof-capa">
-        <Avatar nome={prof.name} foto={prof.photo_url} grande />
-        <h1>{prof.name}</h1>
-        {prof.bio && <p className="prof-bio">{prof.bio}</p>}
+        <div className="prof-capa-foto">
+          {prof.photo_url ? (
+            <img src={prof.photo_url} alt={prof.name} />
+          ) : (
+            <span className="prof-capa-sem-foto">{iniciais(prof.name)}</span>
+          )}
+          <div className="prof-capa-nome">
+            <h1>{prof.name}</h1>
+          </div>
+        </div>
+        {prof.bio && (
+          <div className="prof-capa-info">
+            <p className="prof-bio">{prof.bio}</p>
+          </div>
+        )}
       </header>
 
       <main className="content">
@@ -272,80 +288,118 @@ export default function PaginaProfissional() {
           </div>
         ) : (
           <>
-            <h3 className="secao-titulo">1. Escolha o serviço</h3>
-            <div className="servico-catalogo">
-              {services.map((s) => {
-                const ativo = servicoSel?.id === s.id
+            {/* A trilha mostra onde a pessoa está e o que falta. Os passos
+                já cumpridos voltam com um toque; os da frente, não —
+                pular para "hora" sem serviço escolhido não quer dizer nada. */}
+            <ol className="trilha">
+              {PASSOS.map((rotulo, i) => {
+                const n = i + 1
+                const cumprido = n < passo
                 return (
-                  <button
-                    key={s.id}
-                    type="button"
-                    className={ativo ? 'card servico-card ativo' : 'card servico-card'}
-                    onClick={() => {
-                      setServicoSel(s)
-                      setHoraSel('')
-                      setError('')
-                    }}
+                  <li
+                    key={rotulo}
+                    className={
+                      'trilha-passo' +
+                      (n === passo ? ' atual' : '') +
+                      (cumprido ? ' feito' : '')
+                    }
                   >
-                    {s.images?.[0] ? (
-                      <img className="servico-foto" src={s.images[0]} alt={s.name} />
-                    ) : (
-                      <div className="servico-foto servico-foto-vazia">
-                        <SparkleIcon />
-                      </div>
-                    )}
-                    <div className="servico-card-info">
-                      <span className="servico-nome">
-                        {s.name}
-                        {s.is_combo && (
-                          <span className="badge badge-combo">combo</span>
-                        )}
-                      </span>
-                      {s.description && (
-                        <span className="muted servico-desc">{s.description}</span>
-                      )}
-                      <span className="muted servico-meta">
-                        {labelDuracao(s)} · {formatPreco(s.price)}
-                      </span>
-                    </div>
-                    <span className="radio-marca" aria-hidden="true"></span>
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => cumprido && irPara(n)}
+                      disabled={!cumprido}
+                    >
+                      <span className="trilha-num">{cumprido ? '✓' : n}</span>
+                      <span className="trilha-rotulo">{rotulo}</span>
+                    </button>
+                  </li>
                 )
               })}
-            </div>
+            </ol>
 
-            {servicoSel && (
+            {passo === 1 && (
               <>
-                <h3 className="secao-titulo">2. Escolha o dia</h3>
-                <div className="day-picker">
-                  {dias.map((d) => {
-                    const iso = toISODate(d)
-                    return (
-                      <button
-                        key={iso}
-                        type="button"
-                        className={iso === dataSel ? 'day-chip active' : 'day-chip'}
-                        disabled={!diaAberto(d)}
-                        onClick={() => setDataSel(iso)}
-                      >
-                        <span className="day-chip-nome">
-                          {d
-                            .toLocaleDateString('pt-BR', { weekday: 'short' })
-                            .replace('.', '')}
+                <h3 className="secao-titulo">O que você quer fazer?</h3>
+                <div className="servico-catalogo">
+                  {services.map((s) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      className={
+                        servicoSel?.id === s.id
+                          ? 'card servico-card ativo'
+                          : 'card servico-card'
+                      }
+                      onClick={() => {
+                        setServicoSel(s)
+                        setHoraSel('')
+                        irPara(2)
+                      }}
+                    >
+                      {s.images?.[0] ? (
+                        <img className="servico-foto" src={s.images[0]} alt={s.name} />
+                      ) : (
+                        <div className="servico-foto servico-foto-vazia">
+                          <SparkleIcon />
+                        </div>
+                      )}
+                      <div className="servico-card-info">
+                        <span className="servico-nome">
+                          {s.name}
+                          {s.is_combo && <span className="badge badge-combo">combo</span>}
                         </span>
-                        <span className="day-chip-num">
-                          {String(d.getDate()).padStart(2, '0')}
+                        {s.description && (
+                          <span className="muted servico-desc">{s.description}</span>
+                        )}
+                        <span className="muted servico-meta">
+                          {labelDuracao(s)} · {formatPreco(s.price)}
                         </span>
-                      </button>
-                    )
-                  })}
+                      </div>
+                      <span className="radio-marca" aria-hidden="true"></span>
+                    </button>
+                  ))}
                 </div>
               </>
             )}
 
-            {servicoSel && dataSel && (
+            {passo === 2 && servicoSel && (
               <>
-                <h3 className="secao-titulo">3. Escolha o horário</h3>
+                <h3 className="secao-titulo">Que dia fica melhor?</h3>
+                <CalendarioMes
+                  valor={dataSel}
+                  diaAberto={diaAberto}
+                  onEscolher={(iso) => {
+                    setDataSel(iso)
+                    irPara(3)
+                  }}
+                />
+
+                {diasSugeridos.length > 0 && (
+                  <>
+                    <p className="muted rotulo-solto">Datas com vaga</p>
+                    <div className="filtro-chips">
+                      {diasSugeridos.map((d) => (
+                        <button
+                          key={d.dia}
+                          type="button"
+                          className={dataSel === d.dia ? 'chip active' : 'chip'}
+                          onClick={() => {
+                            setDataSel(d.dia)
+                            irPara(3)
+                          }}
+                        >
+                          {formatDataCurtaSemana(d.dia)}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </>
+            )}
+
+            {passo === 3 && servicoSel && dataSel && (
+              <>
+                <h3 className="secao-titulo">{formatDataLonga(dataSel)}</h3>
                 {loadingSlots ? (
                   <p className="muted">Buscando horários…</p>
                 ) : slots.length === 0 ? (
@@ -362,58 +416,84 @@ export default function PaginaProfissional() {
                     />
                   </>
                 ) : (
-                  <div className="slots-grid">
-                    {slots.map((h) => (
-                      <button
-                        key={h}
-                        type="button"
-                        className={h === horaSel ? 'slot active' : 'slot'}
-                        onClick={() => setHoraSel(h)}
-                      >
-                        {h}
-                      </button>
-                    ))}
-                  </div>
-                )}
+                  <>
+                    <div className="slots-grid">
+                      {slots.map((h) => (
+                        <button
+                          key={h}
+                          type="button"
+                          className={h === horaSel ? 'slot active' : 'slot'}
+                          onClick={() => {
+                            setHoraSel(h)
+                            irPara(4)
+                          }}
+                        >
+                          {h}
+                        </button>
+                      ))}
+                    </div>
 
-                {slots.length > 0 && !horaSel && (
-                  <button
-                    className="btn btn-ghost btn-fila"
-                    onClick={() => setMostrarFila((v) => !v)}
-                  >
-                    {mostrarFila
-                      ? 'Fechar'
-                      : 'Não achei o horário que eu queria →'}
-                  </button>
-                )}
+                    <button
+                      className="btn btn-ghost btn-fila"
+                      onClick={() => setMostrarFila((v) => !v)}
+                    >
+                      {mostrarFila ? 'Fechar' : 'Não achei o horário que eu queria →'}
+                    </button>
 
-                {slots.length > 0 && mostrarFila && (
-                  <ListaEsperaForm
-                    profissional={prof}
-                    servico={servicoSel}
-                    diaSugerido={dataSel}
-                    onPrecisaLogin={() => setMostrarLogin(true)}
-                  />
+                    {mostrarFila && (
+                      <ListaEsperaForm
+                        profissional={prof}
+                        servico={servicoSel}
+                        diaSugerido={dataSel}
+                        onPrecisaLogin={() => setMostrarLogin(true)}
+                      />
+                    )}
+                  </>
                 )}
               </>
             )}
 
-            {horaSel && (
-              <div className="confirm-bar">
-                <div className="confirm-info">
-                  <strong>{formatDataMedia(dataSel)}</strong>
-                  <span className="muted">
-                    às {horaSel} · {formatPreco(servicoSel.price)}
-                  </span>
+            {passo === 4 && servicoSel && dataSel && horaSel && (
+              <>
+                <h3 className="secao-titulo">Confere pra mim</h3>
+                <div className="card resumo-pedido">
+                  <div className="resumo-linha">
+                    <span className="muted">Serviço</span>
+                    <strong>{servicoSel.name}</strong>
+                  </div>
+                  <div className="resumo-linha">
+                    <span className="muted">Com</span>
+                    <strong>{prof.name}</strong>
+                  </div>
+                  <div className="resumo-linha">
+                    <span className="muted">Quando</span>
+                    <strong>
+                      {formatDataLonga(dataSel)} às {horaSel}
+                    </strong>
+                  </div>
+                  <div className="resumo-linha">
+                    <span className="muted">Duração</span>
+                    <strong>{labelDuracao(servicoSel)}</strong>
+                  </div>
+                  <div className="resumo-linha resumo-total">
+                    <span>Valor</span>
+                    <strong>{formatPreco(servicoSel.price)}</strong>
+                  </div>
                 </div>
+
+                <p className="muted resumo-aviso">
+                  Seu horário fica guardado e a profissional confirma. Você é
+                  avisada assim que ela responder.
+                </p>
+
                 <button
-                  className="btn btn-primary"
+                  className="btn btn-primary btn-block"
                   onClick={confirmar}
                   disabled={saving}
                 >
-                  {saving ? 'Agendando…' : 'Confirmar'}
+                  {saving ? 'Agendando…' : 'Confirmar pedido'}
                 </button>
-              </div>
+              </>
             )}
           </>
         )}
@@ -434,4 +514,14 @@ export default function PaginaProfissional() {
       )}
     </div>
   )
+}
+
+// "qui, 16/05" — cabe num chip e diz o dia da semana, que é o que faz
+// alguém reconhecer a data sem contar nos dedos
+function formatDataCurtaSemana(iso) {
+  const d = new Date(iso + 'T12:00:00')
+  const semana = d.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '')
+  const dia = String(d.getDate()).padStart(2, '0')
+  const mes = String(d.getMonth() + 1).padStart(2, '0')
+  return `${semana}, ${dia}/${mes}`
 }

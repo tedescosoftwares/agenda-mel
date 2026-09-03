@@ -451,13 +451,22 @@ a {
   margin-top: 2rem;
 }
 
+/* O título de seção não tinha margem em cima: quando vinha logo depois
+   de um botão de largura cheia, os dois encostavam. Antes isso nunca
+   acontecia porque nenhuma tela punha um do lado do outro. */
 .secao-titulo {
-  font-size: 0.68rem;
-  font-weight: 700;
+  font-size: 0.76rem;
+  font-weight: 600;
   color: var(--texto-3);
-  margin: 0 0 0.85rem;
+  margin: 1.6rem 0 0.85rem;
   padding-bottom: 0.5rem;
   border-bottom: 1px solid var(--fio);
+}
+
+/* mas o primeiro da tela não empurra nada */
+.content > .secao-titulo:first-child,
+.page-head + .secao-titulo {
+  margin-top: 0;
 }
 
 .campo-dica,
@@ -2115,13 +2124,70 @@ a.prof-row:hover,
   background: var(--tinta);
 }
 
+/* A capa da profissional.
+   O link dela é o cartão de visita do MIMO — muita gente conhece o
+   produto por aqui antes de conhecer o app. Por isso a foto ocupa a
+   largura toda em vez de ser um círculo de 96px no meio de um vazio. */
 .prof-capa {
+  position: relative;
   text-align: center;
-  padding: 2.6rem 1.2rem 1.8rem;
+  padding: 0 0 1.5rem;
+  background: var(--branco);
   border-bottom: 1px solid var(--fio);
-  background:
-    radial-gradient(40rem 20rem at 50% -20%, rgba(255, 45, 114, 0.06), transparent 70%),
-    var(--tinta);
+  overflow: hidden;
+}
+
+.prof-capa-foto {
+  position: relative;
+  height: 220px;
+  background: var(--gradiente);
+  display: grid;
+  place-items: center;
+}
+
+.prof-capa-foto img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* o véu no pé da foto: sem ele o nome pousa sobre pele clara e some */
+.prof-capa-foto::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0;
+  height: 60%;
+  background: linear-gradient(to top, rgba(31, 31, 30, 0.55), transparent);
+  pointer-events: none;
+}
+
+.prof-capa-sem-foto {
+  font-family: var(--corpo);
+  font-size: 3.4rem;
+  font-weight: 600;
+  color: var(--branco);
+}
+
+.prof-capa-nome {
+  position: absolute;
+  left: 1.2rem;
+  right: 1.2rem;
+  bottom: 0;
+  z-index: 1;
+  text-align: left;
+}
+
+.prof-capa-nome h1 {
+  color: var(--branco);
+  font-size: 1.6rem;
+  margin: 0;
+  text-shadow: 0 1px 8px rgba(31, 31, 30, 0.4);
+}
+
+.prof-capa-info {
+  padding: 1rem 1.2rem 0;
+  text-align: left;
 }
 
 .prof-capa h1 {
@@ -3609,4 +3675,272 @@ a.prof-row:hover,
 .topbar-cliente {
   border-bottom: none;
   box-shadow: 0 1px 0 var(--fio);
+}
+
+/* ---------- calendário de mês ---------- */
+
+.calendario {
+  padding: 1rem 0.9rem 0.8rem;
+}
+
+.cal-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.8rem;
+}
+
+.cal-topo strong {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.cal-seta {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--r-pilula);
+  border: 1px solid var(--fio);
+  background: var(--branco);
+  color: var(--texto-2);
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.cal-seta:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.cal-grade {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  place-items: center;
+}
+
+.cal-cabecalho {
+  margin-bottom: 0.3rem;
+}
+
+.cal-cabecalho span {
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--texto-3);
+}
+
+.cal-dia {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--r-pilula);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--texto);
+  font-family: var(--corpo);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.cal-dia:hover:not(:disabled) {
+  background: var(--latao-veu);
+}
+
+/* o dia de hoje ganha um fio, não uma cor: cor é para o que foi escolhido */
+.cal-dia.hoje:not(.escolhido) {
+  border-color: var(--latao-fio);
+}
+
+.cal-dia.escolhido {
+  background: var(--gradiente);
+  color: var(--branco);
+  font-weight: 600;
+  box-shadow: var(--sombra-rosa);
+}
+
+/* dia fechado não é "clicável e vazio": ele não existe */
+.cal-dia:disabled {
+  color: var(--texto-3);
+  opacity: 0.35;
+  cursor: default;
+}
+
+.cal-vazio {
+  width: 38px;
+  height: 38px;
+}
+
+/* ---------- a trilha do agendamento ---------- */
+
+/* Quatro passos, e a pessoa sabe em qual está. O que já passou volta
+   com um toque; o que vem pela frente, não — "escolher a hora" antes de
+   escolher o serviço não quer dizer nada. */
+.trilha {
+  display: flex;
+  list-style: none;
+  margin: 0 0 1.4rem;
+  padding: 0;
+  gap: 0.25rem;
+}
+
+.trilha-passo {
+  flex: 1;
+  min-width: 0;
+}
+
+.trilha-passo button {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: default;
+  color: var(--texto-3);
+  font-family: var(--corpo);
+}
+
+.trilha-passo.feito button {
+  cursor: pointer;
+  color: var(--rosa);
+}
+
+.trilha-num {
+  width: 26px;
+  height: 26px;
+  border-radius: var(--r-pilula);
+  display: grid;
+  place-items: center;
+  font-size: 0.78rem;
+  font-weight: 600;
+  background: var(--superficie-3);
+  color: var(--texto-3);
+  border: 1px solid transparent;
+}
+
+.trilha-passo.feito .trilha-num {
+  background: var(--latao-veu);
+  color: var(--rosa);
+  border-color: var(--latao-fio);
+}
+
+.trilha-passo.atual .trilha-num {
+  background: var(--gradiente);
+  color: var(--branco);
+  box-shadow: var(--sombra-rosa);
+}
+
+.trilha-rotulo {
+  font-size: 0.66rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.trilha-passo.atual .trilha-rotulo {
+  color: var(--texto);
+  font-weight: 600;
+}
+
+/* a linha que liga um passo ao outro */
+.trilha-passo + .trilha-passo {
+  position: relative;
+}
+
+.trilha-passo + .trilha-passo::before {
+  content: '';
+  position: absolute;
+  top: 13px;
+  left: -50%;
+  width: 100%;
+  height: 1px;
+  background: var(--fio-forte);
+  z-index: 0;
+}
+
+.trilha-passo.feito::before,
+.trilha-passo.atual::before {
+  background: var(--latao-fio);
+}
+
+.trilha-passo button > * {
+  position: relative;
+  z-index: 1;
+}
+
+.rotulo-solto {
+  font-size: 0.78rem;
+  margin: 1.1rem 0 0.5rem;
+}
+
+/* ---------- o resumo antes de confirmar ---------- */
+
+.resumo-pedido {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.resumo-linha {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.resumo-linha strong {
+  font-weight: 600;
+  text-align: right;
+}
+
+.resumo-total {
+  border-top: 1px solid var(--fio);
+  padding-top: 0.7rem;
+  margin-top: 0.1rem;
+}
+
+.resumo-total strong {
+  font-size: 1.3rem;
+  color: var(--rosa);
+}
+
+.resumo-aviso {
+  font-size: 0.82rem;
+  margin: 0.9rem 0 1rem;
+  line-height: 1.5;
+}
+
+/* ---------- os dois contadores de "agora" ---------- */
+
+/* Ficam antes dos números do mês de propósito: quem abre o painel num
+   dia corrido quer saber o que está esperando resposta, não quanto
+   entrou. Só aparecem quando há algo — zero em caixa alta é ruído. */
+.painel-agora {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.painel-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.9rem 1rem;
+}
+
+.painel-tile strong {
+  font-size: 1.9rem;
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--rosa);
+}
+
+.painel-tile span {
+  font-size: 0.78rem;
+  line-height: 1.3;
 }

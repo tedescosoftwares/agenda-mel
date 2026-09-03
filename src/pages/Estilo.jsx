@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import CalendarioMes from '../components/CalendarioMes'
 import {
   CalendarIcon,
   SparkleIcon,
@@ -16,6 +17,8 @@ export default function Estilo() {
   const [dia, setDia] = useState('03')
   const [hora, setHora] = useState('10:30')
   const [ligado, setLigado] = useState(true)
+  const [passo, setPasso] = useState(2)
+  const [diaCal, setDiaCal] = useState(null)
 
   return (
     <div className="admin-shell">
@@ -515,6 +518,114 @@ export default function Estilo() {
             <ChevronIcon />
           </div>
         </section>
+        {/* ---------- o funil de agendamento ---------- */}
+
+        <h3 className="secao-titulo">Agendamento em passos</h3>
+
+        <ol className="trilha">
+          {['Serviço', 'Data', 'Hora', 'Confirmar'].map((rotulo, i) => {
+            const n = i + 1
+            return (
+              <li
+                key={rotulo}
+                className={
+                  'trilha-passo' +
+                  (n === passo ? ' atual' : '') +
+                  (n < passo ? ' feito' : '')
+                }
+              >
+                <button type="button" onClick={() => n < passo && setPasso(n)}>
+                  <span className="trilha-num">{n < passo ? '✓' : n}</span>
+                  <span className="trilha-rotulo">{rotulo}</span>
+                </button>
+              </li>
+            )
+          })}
+        </ol>
+
+        <div className="filtro-chips" style={{ marginBottom: '1rem' }}>
+          {[1, 2, 3, 4].map((n) => (
+            <button
+              key={n}
+              className={passo === n ? 'chip active' : 'chip'}
+              onClick={() => setPasso(n)}
+            >
+              ver passo {n}
+            </button>
+          ))}
+        </div>
+
+        <CalendarioMes valor={diaCal} onEscolher={setDiaCal} />
+
+        <p className="muted rotulo-solto">Datas com vaga</p>
+        <div className="filtro-chips">
+          <button className="chip active">qui, 16/05</button>
+          <button className="chip">sex, 17/05</button>
+          <button className="chip">sáb, 18/05</button>
+        </div>
+
+        <h3 className="secao-titulo">Confere pra mim</h3>
+        <div className="card resumo-pedido">
+          <div className="resumo-linha">
+            <span className="muted">Serviço</span>
+            <strong>Limpeza de pele</strong>
+          </div>
+          <div className="resumo-linha">
+            <span className="muted">Com</span>
+            <strong>Ana Paula</strong>
+          </div>
+          <div className="resumo-linha">
+            <span className="muted">Quando</span>
+            <strong>quinta, 16 de maio às 14:00</strong>
+          </div>
+          <div className="resumo-linha">
+            <span className="muted">Duração</span>
+            <strong>1h</strong>
+          </div>
+          <div className="resumo-linha resumo-total">
+            <span>Valor</span>
+            <strong>R$ 120,00</strong>
+          </div>
+        </div>
+        <p className="muted resumo-aviso">
+          Seu horário fica guardado e a profissional confirma. Você é avisada
+          assim que ela responder.
+        </p>
+        <button className="btn btn-primary btn-block">Confirmar pedido</button>
+
+        {/* ---------- a capa do link público ---------- */}
+
+        <h3 className="secao-titulo">Capa da profissional</h3>
+        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+          <header className="prof-capa" style={{ borderBottom: 'none' }}>
+            <div className="prof-capa-foto">
+              <span className="prof-capa-sem-foto">AP</span>
+              <div className="prof-capa-nome">
+                <h1>Ana Paula</h1>
+              </div>
+            </div>
+            <div className="prof-capa-info">
+              <p className="prof-bio">
+                Especialista em unhas decoradas e cuidados completos.
+              </p>
+            </div>
+          </header>
+        </div>
+
+        {/* ---------- os contadores de agora ---------- */}
+
+        <h3 className="secao-titulo">O que está esperando</h3>
+        <div className="painel-agora">
+          <div className="card painel-tile">
+            <strong>8</strong>
+            <span className="muted">esperando aceite</span>
+          </div>
+          <div className="card painel-tile">
+            <strong>12</strong>
+            <span className="muted">na fila de espera</span>
+          </div>
+        </div>
+
       </main>
 
       <nav className="bottom-nav">

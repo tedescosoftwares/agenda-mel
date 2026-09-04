@@ -35,7 +35,7 @@ export default function ClienteAgenda() {
 
   const carregar = useCallback(async () => {
     const hoje = toISODate(new Date())
-    const sel = '*, services (name, price), professionals (id, name, photo_url), appointment_offers (id, status, proposed_start_time, previous_start_time, expires_at), origem:appointments!appointments_remarca_de_fkey (date, start_time)'
+    const sel = '*, services (name, price), professionals (id, name, photo_url), appointment_offers (id, status, proposed_start_time, previous_start_time, expires_at)'
     const [px, hs, rv, vg] = await Promise.all([
       supabase.from('appointments').select(sel).eq('client_id', user.id).gte('date', hoje).neq('status', 'cancelado').order('date').order('start_time'),
       supabase.from('appointments').select(sel).eq('client_id', user.id).lt('date', hoje).order('date', { ascending: false }).limit(30),
@@ -43,7 +43,14 @@ export default function ClienteAgenda() {
       supabase.from('waitlist_offers').select('*, waitlist_entries (id, services (name), professionals (name))').eq('status', 'pendente').gt('expires_at', new Date().toISOString()),
     ])
     if (px.error) setError(px.error.message)
-    setProximos(px.data ?? [])
+    // o horário de origem de cada pedido de troca. Sem embed do PostgREST
+    // (a tabela aponta para ela mesma duas vezes e o cache de schema dele
+    // já tropeçou nisso): quase sempre a origem está nesta mesma lista;
+    // o que faltar vem numa segunda busca simples.
+    const lista = px.data ?? []
+    const faltam = lista.filter((a) => a.remarca_de && !lista.some((o) => o.id === a.remarca_de)).map((a) => a.remarca_de)
+    const extras = faltam.length ? (await supabase.from('appointments').select('id, date, start_time').in('id', faltam)).data ?? [] : []
+    setProximos(lista.map((a) => ({ ...a, origem: a.remarca_de ? (lista.find((o) => o.id === a.remarca_de) ?? extras.find((o) => o.id === a.remarca_de) ?? null) : null })))
     setHistorico(hs.data ?? [])
     setAvaliados(new Set((rv.data ?? []).map((r) => r.appointment_id)))
     setVagas(vg.data ?? [])

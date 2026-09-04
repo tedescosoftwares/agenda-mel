@@ -7,10 +7,13 @@
 #   ./disparar.sh --sem-cron  tira do cron
 #   ./disparar.sh --trocar  esquece as credenciais e pergunta de novo
 #
-# Sem o --cron, a fila SÓ anda quando alguém roda isto na mão. O
-# Supabase não tem pg_cron ligado neste projeto, então não existe nada
-# do outro lado empurrando: aviso de horário novo, pedido de aceite e
-# lembrete ficam parados em 'na_fila' até você lembrar. Instale o cron.
+# Sem o --cron, a fila SÓ anda quando alguém roda isto na mão.
+#
+# Desde a migração 052 existe um relógio DENTRO do Supabase (pg_cron +
+# pg_net) que faz o mesmo que este cron, sem depender da VPS. Com ele
+# ligado (select public.ligar_relogio(url, chave) no SQL Editor), o cron
+# daqui vira redundante: rode ./disparar.sh --sem-cron. Rodar na mão
+# continua útil para não esperar o minuto virar.
 #
 # Na primeira vez pergunta o ref do projeto e a chave de serviço, e
 # guarda em .supabase para as próximas.

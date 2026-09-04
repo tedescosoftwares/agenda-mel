@@ -3,7 +3,7 @@
 // Puxa um lote de mensagens que já podem sair, manda pelo canal de cada
 // salão, e escreve o resultado de volta. Roda de dois jeitos:
 //
-//   • pelo pg_cron, de minuto em minuto (veja o SQL no fim do 023)
+//   • pelo pg_cron, de minuto em minuto (chutar_fila(), migração 052)
 //   • na unha:  curl -X POST .../functions/v1/enviar-whatsapp \
 //                    -H "Authorization: Bearer $SERVICE_ROLE_KEY"
 //
@@ -31,10 +31,10 @@ Deno.serve(async (req) => {
     auth: { persistSession: false },
   })
 
-  // Pedido de horário com prazo vencido vira resolvido aqui. Enquanto o
-  // pg_cron não existe, este é o único ponto que roda de tempos em
-  // tempos — e deixar a cliente esperando resposta de um prazo que já
-  // passou é o pior dos mundos. A falha não derruba o envio.
+  // Pedido de horário com prazo vencido vira resolvido aqui também.
+  // rodar_rotinas() (052) faz isso a cada 5 min; aqui é a cada minuto,
+  // e custa nada. Deixar a cliente esperando resposta de um prazo que
+  // já passou é o pior dos mundos. A falha não derruba o envio.
   try {
     const { data: vencidos } = await db.rpc('resolver_aceites_vencidos')
     if (vencidos) console.log(`aceites vencidos resolvidos: ${vencidos}`)

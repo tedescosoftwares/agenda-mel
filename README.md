@@ -256,7 +256,9 @@ where slug = 'slug-dela';
       bonita quando o link é mandado no WhatsApp (Caddy + pagina-publica)
 - [x] `supabase/povoar.sql`: gente de mentira (5 clientes, 4 profissionais com
       3 meses de histórico e avaliações) para ver tudo funcionando
-- [ ] Lembretes e prazos rodando sozinhos (pg_cron), sem depender do disparar.sh
+- [x] O relógio da casa: pg_cron + pg_net dentro do Supabase empurram a fila a
+      cada minuto e resolvem prazos, ofertas e lembretes a cada 5, sem depender
+      da VPS. Liga com `select public.ligar_relogio(url, chave)` (migração 052)
 - [ ] Remarcar e avaliar pelo próprio WhatsApp, sem abrir o app
 - [ ] Migrar depois para React Native / Expo reaproveitando o Supabase
 

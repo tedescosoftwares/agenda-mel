@@ -12,6 +12,19 @@ import { useAuth } from '../../context/AuthContext'
 // a entrar na fila? O banco já sabe responder tudo isso — aqui é só
 // mostrar, com a fila do lado para conferir o texto que saiu.
 
+// transforma o relogio_status() do banco numa linha da lista de checagens
+function checagemDoRelogio(r) {
+  if (!r) return { item: 'Relógio (pg_cron)', situacao: 'falta', detalhe: 'sem resposta do banco — a migração 052 já rodou?' }
+  if (!r.ligado) return { item: 'Relógio (pg_cron)', situacao: 'desligado', detalhe: r.motivo || 'sem jobs. No SQL Editor: select public.ligar_relogio(url, chave)' }
+  const fila = (r.jobs ?? []).find((j) => j.nome === 'mimo-fila')
+  const ultima = fila?.ultima ? new Date(fila.ultima) : null
+  const atrasado = ultima && Date.now() - ultima.getTime() > 5 * 60 * 1000
+  const quando = ultima ? ultima.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'ainda não bateu'
+  if (fila?.status === 'failed') return { item: 'Relógio (pg_cron)', situacao: 'atenção', detalhe: `última batida ${quando} deu erro: ${fila.retorno ?? ''}` }
+  if (atrasado) return { item: 'Relógio (pg_cron)', situacao: 'atenção', detalhe: `última batida às ${quando} — parou?` }
+  return { item: 'Relógio (pg_cron)', situacao: 'ok', detalhe: `a cada minuto · última batida às ${quando}` }
+}
+
 const CORES = {
   ok: 'ok',
   falta: 'ruim',
@@ -70,17 +83,20 @@ export default function AdminWhatsapp() {
   const buscar = useCallback(async () => {
     if (!salaoId) return
     setLoading(true)
-    const [diag, msgs, lidas, canal] = await Promise.all([
+    const [diag, msgs, lidas, canal, relogio] = await Promise.all([
       supabase.rpc('diagnostico_whatsapp', { salao: salaoId }),
       supabase.rpc('fila_do_salao', { salao: salaoId, quantas: 30 }),
       supabase.rpc('leituras_recentes', { salao: salaoId, quantas: 20 }),
       supabase.from('whatsapp_channels').select('usa_ia, usa_bot').eq('salon_id', salaoId).maybeSingle(),
+      supabase.rpc('relogio_status'),
     ])
     const falhou = diag.error || msgs.error || lidas.error
     if (falhou) {
       setErro('Erro ao carregar: ' + falhou.message)
     } else {
-      setChecagens(diag.data ?? [])
+      // o relógio (pg_cron) entra como mais uma checagem: é ele que faz
+      // a fila andar sem ninguém abrir o app nem a VPS estar de pé
+      setChecagens([...(diag.data ?? []), checagemDoRelogio(relogio.data)])
       setFila(msgs.data ?? [])
       setLeituras(lidas.data ?? [])
       setUsaIa(Boolean(canal.data?.usa_ia))

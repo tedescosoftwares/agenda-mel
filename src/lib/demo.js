@@ -176,6 +176,7 @@ const RPC = {
   clientes_para_retorno: () => [{ client_id: 'c2', nome: 'Juliana Silva', dias_sem_vir: 52, ultimo_servico: 'Manicure', ja_chamada: false }, { client_id: 'c3', nome: 'Carla Mendes', dias_sem_vir: 61, ultimo_servico: 'Escova', ja_chamada: false }, { client_id: 'c4', nome: 'Mariana Souza', dias_sem_vir: 48, ultimo_servico: 'Spa dos pés', ja_chamada: true }],
   config_retorno: () => [{ winback_after_days: 45, winback_cooldown_days: 45, followup_active: true, reminder_hours_before: 24 }],
   resumo_do_salao: () => profissionais.map((p, i) => ({ professional_id: p.id, nome: p.name, atendimentos: [48, 36, 28, 16][i], faturamento_cents: [384000, 288000, 196000, 116000][i], faltas: [1, 2, 0, 0][i], ocupacao_bps: [8200, 7100, 6400, 4300][i] })),
+  relogio_status: () => ({ ligado: true, jobs: [{ nome: 'mimo-fila', agenda: '* * * * *', ativo: true, ultima: new Date().toISOString(), status: 'succeeded' }, { nome: 'mimo-rotinas', agenda: '*/5 * * * *', ativo: true, ultima: new Date().toISOString(), status: 'succeeded' }] }),
   diagnostico_whatsapp: () => [{ item: 'Canal', situacao: 'ok', detalhe: 'Evolution, instância 11' }, { item: 'Número', situacao: 'ok', detalhe: '+55 13 99171-9086' }, { item: 'IA', situacao: 'ok', detalhe: 'ligada · 12 chamadas hoje' }],
   fila_do_salao: () => [],
   leituras_recentes: () => [{ telefone: '5511987900115', texto: 'quero marcar um horário', via: 'ia', intencao_ia: 'agendar', acao: 'bot:perguntou', recebido_em: new Date().toISOString() }],

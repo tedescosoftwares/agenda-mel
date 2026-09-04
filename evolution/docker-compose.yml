@@ -129,6 +129,10 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       # o build do app, gerado por ./publicar-site.sh
       - ../dist:/srv/site:ro
+      # sites de parceiros: um .caddy por domínio (só na VPS) e os
+      # arquivos deles em ~/sites/<nome>
+      - ./sites:/etc/caddy/sites:ro
+      - ${SITES_DIR:-/home/ubuntu/sites}:/srv/sites:ro
       - caddy_data:/data
       - caddy_config:/config
 

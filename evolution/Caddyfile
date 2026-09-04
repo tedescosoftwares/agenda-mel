@@ -96,3 +96,27 @@
 		format json
 	}
 }
+
+
+# ---------------------------------------------------------------
+# OUTROS SITES NA MESMA MÁQUINA (parceiros, domínios extras).
+#
+# Cada um é um arquivo em evolution/sites/<nome>.caddy, que fica só
+# na VPS (a pasta é ignorada pelo git): assim um git pull nunca apaga
+# o site de ninguém, e este Caddyfile não precisa mudar. Os arquivos
+# estáticos de cada site moram em /home/ubuntu/sites/<nome>, que o
+# container enxerga como /srv/sites/<nome>.
+#
+# Exemplo, evolution/sites/nutrimilia.caddy:
+#
+#   nutrimilia.com, www.nutrimilia.com {
+#   	tls {$EMAIL}
+#   	root * /srv/sites/nutrimilia
+#   	encode gzip
+#   	try_files {path} /index.html
+#   	file_server
+#   }
+#
+# Depois: docker compose up -d caddy
+# ---------------------------------------------------------------
+import /etc/caddy/sites/*.caddy

@@ -1,0 +1,2 @@
+# Um arquivo .caddy por site extra. Veja o fim do ../Caddyfile.
+# Os .caddy daqui ficam só na VPS (git ignora).

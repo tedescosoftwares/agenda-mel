@@ -1,0 +1,12 @@
+# copie para <nome>.caddy e troque o domínio e a pasta
+nutrimilia.com, www.nutrimilia.com {
+	tls {$EMAIL}
+	root * /srv/sites/nutrimilia
+	encode gzip
+	try_files {path} /index.html
+	file_server
+	log {
+		output file /data/nutrimilia.log
+		format json
+	}
+}

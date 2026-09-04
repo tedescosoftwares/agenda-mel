@@ -25,3 +25,6 @@ dist-ssr
 
 # variáveis de ambiente
 .env
+
+# sites de parceiros: configuracao vive so na VPS
+evolution/sites/*.caddy

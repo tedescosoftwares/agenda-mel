@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useDialogo } from '../../context/DialogoContext'
 import ProShell from '../../components/ProShell'
 import SemFicha from './SemFicha'
 import { useAuth } from '../../context/AuthContext'
@@ -19,6 +20,7 @@ const ROTULO = {
 // o texto escrito, ela envia, volta e marca. É a versão que funciona
 // sem API, sem token e sem chip novo.
 export default function ProEnviar() {
+  const { confirmar } = useDialogo()
   const { professional } = useAuth()
   const [fila, setFila] = useState([])
   const [loading, setLoading] = useState(true)
@@ -60,7 +62,7 @@ export default function ProEnviar() {
   }
 
   async function descartar(m) {
-    const ok = window.confirm(`Não enviar esta mensagem para ${m.cliente}?`)
+    const ok = await confirmar({ titulo: 'Não enviar?', texto: `A mensagem para ${m.cliente} sai da lista e não é enviada.`, ok: 'Não enviar', perigo: true })
     if (!ok) return
     const { error } = await supabase.rpc('descartar_da_fila', { mensagem_id: m.id })
     if (error) setErro(error.message)

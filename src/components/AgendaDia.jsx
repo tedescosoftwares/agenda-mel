@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useDialogo } from '../context/DialogoContext'
 import { supabase } from '../lib/supabase'
 import AdiantarModal from './AdiantarModal'
 import EncaixeModal from './EncaixeModal'
@@ -24,6 +25,7 @@ export default function AgendaDia({
   pedidoDeEncaixe = 0,
   semFab = false,
 }) {
+  const { confirmar } = useDialogo()
   const dias = useMemo(() => {
     const base = diaInicial ? new Date(diaInicial + 'T12:00:00') : new Date()
     return Array.from({ length: 7 }, (_, i) => {
@@ -92,9 +94,11 @@ export default function AgendaDia({
     if (saldo > 0) {
       const precoCents = Math.round(Number(appt.services?.price ?? 0) * 100)
       const maximo = Math.min(saldo, precoCents || saldo)
-      const usar = window.confirm(
-        `${appt.profiles?.full_name ?? 'A cliente'} tem ${formatarCents(saldo)} de crédito. Abater ${formatarCents(maximo)} neste atendimento?`,
-      )
+      const usar = await confirmar({
+        titulo: 'Ela tem crédito',
+        texto: `${appt.profiles?.full_name ?? 'A cliente'} tem ${formatarCents(saldo)} de crédito. Abater ${formatarCents(maximo)} neste atendimento?`,
+        ok: 'Abater', cancelar: 'Cobrar tudo',
+      })
       if (usar) {
         const { error } = await supabase.rpc('usar_credito', {
           appt_id: appt.id,
@@ -114,15 +118,19 @@ export default function AgendaDia({
 
   async function mudarStatus(appt, novo) {
     if (novo === 'faltou') {
-      const ok = window.confirm(
-        `Marcar que ${appt.profiles?.full_name ?? 'a cliente'} não veio? O horário volta a ficar livre e quem está na lista de espera é avisada.`,
-      )
+      const ok = await confirmar({
+        titulo: 'Ela não veio?',
+        texto: `Marcar que ${appt.profiles?.full_name ?? 'a cliente'} não veio? O horário volta a ficar livre e quem está na lista de espera é avisada.`,
+        ok: 'Marcar falta', perigo: true,
+      })
       if (!ok) return
     }
     if (novo === 'cancelado') {
-      const ok = window.confirm(
-        `Recusar o agendamento de ${appt.profiles?.full_name ?? 'cliente'} às ${appt.start_time.slice(0, 5)}? O horário volta a ficar livre.`,
-      )
+      const ok = await confirmar({
+        titulo: 'Recusar este horário?',
+        texto: `${appt.profiles?.full_name ?? 'A cliente'}, às ${appt.start_time.slice(0, 5)}. O horário volta a ficar livre.`,
+        ok: 'Recusar', perigo: true,
+      })
       if (!ok) return
     }
     setMudandoId(appt.id)
@@ -149,9 +157,11 @@ export default function AgendaDia({
   }
 
   async function cancelarConvite(oferta) {
-    const ok = window.confirm(
-      `Desfazer o convite das ${oferta.proposed_start_time.slice(0, 5)}? Se a cliente já tiver aceitado, o horário dela volta ao original.`,
-    )
+    const ok = await confirmar({
+      titulo: 'Desfazer o convite?',
+      texto: `O das ${oferta.proposed_start_time.slice(0, 5)}. Se a cliente já tiver aceitado, o horário dela volta ao original.`,
+      ok: 'Desfazer',
+    })
     if (!ok) return
     const { error } = await supabase.rpc('cancelar_antecipacao', {
       oferta_id: oferta.id,

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useDialogo } from '../../context/DialogoContext'
 import { Link } from 'react-router-dom'
 import ClienteShell from '../../components/ClienteShell'
 import { supabase } from '../../lib/supabase'
@@ -8,6 +9,7 @@ import { formatDataCurta } from '../../lib/booking'
 // esperado, e a porta de saída. "Você está na fila" sem posição é
 // ansiedade — por isso a posição vem do banco, e não de uma estimativa.
 export default function FilaEspera() {
+  const { confirmar } = useDialogo()
   const [entradas, setEntradas] = useState([])
   const [posicoes, setPosicoes] = useState({})
   const [loading, setLoading] = useState(true)
@@ -28,7 +30,7 @@ export default function FilaEspera() {
   useEffect(() => { carregar() }, [carregar])
 
   async function sair(e) {
-    if (!window.confirm('Sair da fila?')) return
+    if (!(await confirmar({ titulo: 'Sair da fila?', texto: 'Você perde a posição. Dá para entrar de novo depois.', ok: 'Sair da fila', perigo: true }))) return
     await supabase.rpc('sair_lista_espera', { entrada_id: e.id })
     carregar()
   }

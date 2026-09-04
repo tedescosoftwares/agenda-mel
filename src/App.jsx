@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { NotificacoesProvider } from "./context/NotificacoesContext";
+import { DialogoProvider } from "./context/DialogoContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Login from "./pages/Login";
 import Splash from "./pages/Splash";
@@ -50,6 +51,7 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <NotificacoesProvider>
+          <DialogoProvider>
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/splash" element={<Splash />} />
@@ -352,6 +354,7 @@ export default function App() {
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          </DialogoProvider>
         </NotificacoesProvider>
       </AuthProvider>
     </BrowserRouter>

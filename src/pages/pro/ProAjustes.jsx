@@ -1,3 +1,4 @@
+import { useDialogo } from '../../context/DialogoContext'
 import { Link } from 'react-router-dom'
 import ProShell from '../../components/ProShell'
 import SemFicha from './SemFicha'
@@ -7,6 +8,7 @@ import { ClockIcon, LinkIcon, ChevronIcon, BellIcon } from '../../components/ico
 // Hub das configurações da profissional. Cada item continua tendo a
 // sua própria tela — aqui é só a porta de entrada.
 export default function ProAjustes() {
+  const { confirmar } = useDialogo()
   const { professional, signOut } = useAuth()
 
   if (!professional) return <SemFicha />
@@ -97,7 +99,7 @@ export default function ProAjustes() {
 
       <button
         className="btn btn-ghost btn-largo sair-conta"
-        onClick={() => window.confirm('Sair da conta?') && signOut()}
+        onClick={async () => { if (await confirmar({ titulo: 'Sair da conta?', ok: 'Sair', cancelar: 'Ficar' })) signOut() }}
       >
         Sair da conta
       </button>

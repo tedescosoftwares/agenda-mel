@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useDialogo } from '../../context/DialogoContext'
 import AdminShell from '../../components/AdminShell'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
@@ -17,6 +18,7 @@ const MAX_IMAGENS = 3
 const MAX_TAMANHO_MB = 5
 
 export default function AdminServices() {
+  const { confirmar } = useDialogo()
   const { salao } = useAuth()
   const [services, setServices] = useState([])
   const [loading, setLoading] = useState(true)
@@ -227,9 +229,11 @@ export default function AdminServices() {
   async function handleDelete() {
     const service = services.find((s) => s.id === editing)
     if (!service) return
-    const ok = window.confirm(
-      `Excluir o serviço "${service.name}"? Essa ação não pode ser desfeita.`,
-    )
+    const ok = await confirmar({
+      titulo: `Excluir "${service.name}"?`,
+      texto: 'Essa ação não pode ser desfeita.',
+      ok: 'Excluir', perigo: true,
+    })
     if (!ok) return
     const { error } = await supabase.from('services').delete().eq('id', service.id)
     if (error) {

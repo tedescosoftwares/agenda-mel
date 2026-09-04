@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useDialogo } from '../../context/DialogoContext'
 import { Link } from 'react-router-dom'
 import ClienteShell from '../../components/ClienteShell'
 import { supabase } from '../../lib/supabase'
@@ -21,6 +22,7 @@ import OfertaVaga from '../../components/OfertaVaga'
 const ROTULO = { pendente: 'Aguardando', confirmado: 'Confirmado', concluido: 'Concluído', faltou: 'Não fui', cancelado: 'Cancelado' }
 
 export default function ClienteAgenda() {
+  const { confirmar } = useDialogo()
   const { user } = useAuth()
   const [aba, setAba] = useState('proximos')
   const [proximos, setProximos] = useState([])
@@ -52,11 +54,11 @@ export default function ClienteAgenda() {
 
   async function cancelar(a) {
     const pergunta = ehPedidoDeTroca(a)
-      ? 'Desistir da troca? Seu horário atual continua valendo.'
+      ? 'Seu horário atual continua valendo.'
       : trocaAberta(a)
-        ? `Cancelar ${a.services?.name} em ${formatDataCurta(a.date)} às ${a.start_time.slice(0, 5)}? O pedido de troca cai junto.`
-        : `Cancelar ${a.services?.name} em ${formatDataCurta(a.date)} às ${a.start_time.slice(0, 5)}?`
-    if (!window.confirm(pergunta)) return
+        ? `${a.services?.name} em ${formatDataCurta(a.date)} às ${a.start_time.slice(0, 5)}. O pedido de troca cai junto.`
+        : `${a.services?.name} em ${formatDataCurta(a.date)} às ${a.start_time.slice(0, 5)}.`
+    if (!(await confirmar({ titulo: ehPedidoDeTroca(a) ? 'Desistir da troca?' : 'Cancelar este horário?', texto: pergunta, ok: ehPedidoDeTroca(a) ? 'Desistir' : 'Cancelar horário', cancelar: 'Manter', perigo: true }))) return
     const { error } = await supabase.from('appointments').update({ status: 'cancelado' }).eq('id', a.id)
     if (error) setError(error.message)
     else carregar()

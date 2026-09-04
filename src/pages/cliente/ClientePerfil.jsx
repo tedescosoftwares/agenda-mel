@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useDialogo } from '../../context/DialogoContext'
 import { Link } from 'react-router-dom'
 import ClienteShell from '../../components/ClienteShell'
 import { supabase } from '../../lib/supabase'
@@ -10,6 +11,7 @@ import { ChevronIcon } from '../../components/icons'
 // Nome e telefone se editam aqui — o telefone é o que amarra a conta ao
 // WhatsApp, então errar ele é ficar sem aviso nenhum.
 export default function ClientePerfil() {
+  const { confirmar } = useDialogo()
   const { profile, user, signOut, recarregarPerfil } = useAuth()
   const [editando, setEditando] = useState(false)
   const [nome, setNome] = useState(profile?.full_name ?? '')
@@ -90,7 +92,7 @@ export default function ClientePerfil() {
         </a>
       </div>
 
-      <button className="btn btn-ghost btn-block" style={{ marginTop: '1.4rem' }} onClick={() => { if (window.confirm('Sair da conta?')) signOut() }}>
+      <button className="btn btn-ghost btn-block" style={{ marginTop: '1.4rem' }} onClick={async () => { if (await confirmar({ titulo: 'Sair da conta?', ok: 'Sair', cancelar: 'Ficar' })) signOut() }}>
         Sair da conta
       </button>
     </ClienteShell>

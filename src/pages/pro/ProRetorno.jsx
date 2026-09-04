@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useDialogo } from '../../context/DialogoContext'
 import ProShell from '../../components/ProShell'
 import SemFicha from './SemFicha'
 import { supabase } from '../../lib/supabase'
@@ -8,6 +9,7 @@ import Avatar from '../../components/Avatar'
 // Clientes sumidas (tela 21): quem não volta há mais tempo que o
 // combinado, com o último serviço, e um botão para chamar de volta.
 export default function ProRetorno() {
+  const { confirmar } = useDialogo()
   const { professional } = useAuth()
   const [lista, setLista] = useState([])
   const [cfg, setCfg] = useState(null)
@@ -35,7 +37,7 @@ export default function ProRetorno() {
     setEnviando('')
   }
   async function chamarTodas() {
-    if (!window.confirm(`Chamar as ${lista.filter((c) => !c.ja_chamada).length} de uma vez?`)) return
+    if (!(await confirmar({ titulo: 'Chamar todas?', texto: `Manda o recado para as ${lista.filter((c) => !c.ja_chamada).length} de uma vez.`, ok: 'Chamar' }))) return
     const { data, error } = await supabase.rpc('chamar_todas_de_volta', { prof: profId })
     if (error) setErro(error.message); else { setInfo(`${data ?? 0} recado(s) enviado(s).`); carregar() }
   }

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useDialogo } from '../../context/DialogoContext'
 import { Link } from 'react-router-dom'
 import AdminShell from '../../components/AdminShell'
 import { supabase } from '../../lib/supabase'
@@ -12,6 +13,7 @@ import FotoUpload from '../../components/FotoUpload'
 const FORM_VAZIO = { name: '', slug: '', phone: '', bio: '', photo_url: null }
 
 export default function AdminProfissionais() {
+  const { confirmar } = useDialogo()
   const { salao } = useAuth()
   const [profissionais, setProfissionais] = useState([])
   const [services, setServices] = useState([])
@@ -185,9 +187,11 @@ export default function AdminProfissionais() {
   async function handleDelete() {
     const p = profissionais.find((x) => x.id === editing)
     if (!p) return
-    const ok = window.confirm(
-      `Excluir ${p.name} da equipe? Se ela já tem agendamentos, prefira apenas desativar.`,
-    )
+    const ok = await confirmar({
+      titulo: `Excluir ${p.name} da equipe?`,
+      texto: 'Se ela já tem agendamentos, prefira apenas desativar.',
+      ok: 'Excluir', perigo: true,
+    })
     if (!ok) return
     const { error } = await supabase.from('professionals').delete().eq('id', p.id)
     if (error) {

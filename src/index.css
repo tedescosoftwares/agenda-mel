@@ -4559,3 +4559,11 @@ body { position: relative; width: 100%; }
 .vit-form label { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.85rem; color: var(--texto-2); }
 .vit-form input, .vit-form textarea { font: inherit; }
 .vitrine button.topo-voltar { border: none; font: inherit; cursor: pointer; font-size: 1.6rem; }
+
+/* ---- diálogos do app (no lugar de confirm/alert do navegador) ---- */
+.dialogo-fundo { z-index: 80; }
+.dialogo-texto { margin: 0.35rem 0 0; line-height: 1.5; white-space: pre-line; }
+.dialogo .modal-acoes { margin-top: 1.2rem; }
+.dialogo .modal-acoes .btn { flex: 1; justify-content: center; }
+.btn-perigo { background: var(--carmim); box-shadow: none; }
+.btn-perigo:hover:not(:disabled) { background: #9a0f33; }

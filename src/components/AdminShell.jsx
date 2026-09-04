@@ -1,3 +1,4 @@
+import { useDialogo } from '../context/DialogoContext'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import SinoAvisos from './SinoAvisos'
@@ -23,6 +24,7 @@ const TABS = [
 ]
 
 export default function AdminShell({ children }) {
+  const { confirmar } = useDialogo()
   const { profile, user, signOut } = useAuth()
   const navigate = useNavigate()
   const inicial = (profile?.full_name || user?.email || '?')
@@ -30,8 +32,8 @@ export default function AdminShell({ children }) {
     .charAt(0)
     .toUpperCase()
 
-  function handleSair() {
-    if (window.confirm('Sair da conta?')) signOut()
+  async function handleSair() {
+    if (await confirmar({ titulo: 'Sair da conta?', ok: 'Sair', cancelar: 'Ficar' })) signOut()
   }
 
   return (

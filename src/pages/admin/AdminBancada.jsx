@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useDialogo } from '../../context/DialogoContext'
 import { Link } from 'react-router-dom'
 import AdminShell from '../../components/AdminShell'
 import { supabase } from '../../lib/supabase'
@@ -29,6 +30,7 @@ const INTENCOES = [
 const ATALHOS = ['1', '2', '3', 'quero marcar um horário', 'confirmo', 'cancelar']
 
 export default function AdminBancada() {
+  const { confirmar, avisar } = useDialogo()
   const { salao } = useAuth()
   const salaoId = salao?.id
 
@@ -112,17 +114,17 @@ export default function AdminBancada() {
 
   async function limpar() {
     if (!salaoId || !de) return
-    if (!window.confirm(`Apagar os horários e mensagens que este ensaio criou para ${de}?`))
+    if (!(await confirmar({ titulo: 'Limpar o ensaio?', texto: `Apaga os horários e mensagens que este ensaio criou para ${de}.`, ok: 'Apagar', perigo: true })))
       return
     const { data, error } = await supabase.rpc('limpar_ensaio', { salao: salaoId, tel: de })
     if (error) setErro(error.message)
     else {
       setLinhas([])
       setErro('')
-      window.alert(
-        `Apagados: ${data?.agendamentos_apagados ?? 0} horário(s) e ` +
-          `${data?.mensagens_apagadas ?? 0} mensagem(ns).`,
-      )
+      avisar({
+        titulo: 'Ensaio limpo',
+        texto: `Apagados: ${data?.agendamentos_apagados ?? 0} horário(s) e ${data?.mensagens_apagadas ?? 0} mensagem(ns).`,
+      })
     }
   }
 

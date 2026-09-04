@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useDialogo } from '../context/DialogoContext'
 import { supabase } from '../lib/supabase'
 
 const DIAS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
@@ -16,6 +17,7 @@ const FORM_VAZIO = {
 // Almoço, folga e compromisso — o que a agenda precisa saber para
 // parar de vender horário que não existe.
 export default function BloqueiosEditor({ professionalId }) {
+  const { confirmar } = useDialogo()
   const [blocos, setBlocos] = useState([])
   const [form, setForm] = useState(FORM_VAZIO)
   const [abrindo, setAbrindo] = useState(false)
@@ -75,7 +77,7 @@ export default function BloqueiosEditor({ professionalId }) {
   }
 
   async function remover(bloco) {
-    const ok = window.confirm('Remover este bloqueio?')
+    const ok = await confirmar({ titulo: 'Remover este bloqueio?', texto: 'O horário volta a aparecer livre para as clientes.', ok: 'Remover', perigo: true })
     if (!ok) return
     const { error } = await supabase
       .from('professional_blocks')

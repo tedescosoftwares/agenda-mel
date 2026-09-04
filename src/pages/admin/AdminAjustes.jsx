@@ -1,3 +1,4 @@
+import { useDialogo } from '../../context/DialogoContext'
 import { Link } from 'react-router-dom'
 import AdminShell from '../../components/AdminShell'
 import { useAuth } from '../../context/AuthContext'
@@ -51,6 +52,7 @@ const ITENS = [
 ]
 
 export default function AdminAjustes() {
+  const { confirmar } = useDialogo()
   const { salao, signOut } = useAuth()
 
   return (
@@ -79,8 +81,8 @@ export default function AdminAjustes() {
 
       <button
         className="btn btn-ghost btn-block"
-        onClick={() => {
-          if (window.confirm('Sair da conta?')) signOut()
+        onClick={async () => {
+          if (await confirmar({ titulo: 'Sair da conta?', ok: 'Sair', cancelar: 'Ficar' })) signOut()
         }}
       >
         Sair da conta

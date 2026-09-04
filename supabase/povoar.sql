@@ -16,7 +16,7 @@
 --
 --   + serviços novos no Espaço Mel, ligados a quem faz cada um
 --   + ~30 atendimentos concluídos por profissional nos últimos 90 dias
---     (a Ana Paula, que já existia, ganha histórico também)
+--     (a Ana Paula e a Mel, que já existiam, ganham histórico também)
 --   + avaliações em boa parte deles, com nota e comentário
 --   + alguns horários confirmados nos próximos dias
 --   + favoritas para as clientes
@@ -256,6 +256,23 @@ begin
     set especialidade = coalesce(especialidade, 'Esteticista · pele e sobrancelhas'),
         instagram = coalesce(instagram, 'anapaula.estetica'),
         photo_url = coalesce(photo_url, pg_temp.foto_de_mentira('Ana Paula', '#ff2d7a', '#3d0c4e'))
+    where id = ana;
+  end if;
+
+  -- e a Mel, dona da casa (do 032), também: ela é quem mais testa
+  select id into ana from public.professionals where slug = 'mel';
+  if ana is not null then
+    pid := pid || ana;
+    servs := servs || array[array[s_limpeza, s_sobr, s_massagem, s_gel]];
+    for j in 1..4 loop
+      insert into public.professional_services (professional_id, service_id)
+      values (ana, servs[array_length(pid, 1)][j]) on conflict do nothing;
+    end loop;
+    update public.professionals
+    set especialidade = coalesce(especialidade, 'Dona do Espaço Mel · pele, sobrancelhas e unhas'),
+        instagram = coalesce(instagram, 'espacomel.santos'),
+        bio = coalesce(bio, 'Abri o Espaço Mel para atender do jeito que eu sempre quis ser atendida: com hora marcada, sem correria e com produto bom. Faço pele, sobrancelhas e unhas em gel.'),
+        photo_url = coalesce(photo_url, pg_temp.foto_de_mentira('Mel Tedesco', '#aa4cff', '#ff2d7a'))
     where id = ana;
   end if;
 

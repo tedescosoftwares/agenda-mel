@@ -110,6 +110,9 @@ fi
 npm ci --no-audit --no-fund >/dev/null
 npm run build 2>&1 | tail -2
 [ -f dist/index.html ] || { vermelho 'O build não gerou dist/index.html.'; exit 1; }
+# para não restar dúvida sobre O QUE foi publicado
+verde "  publicado o commit $(git rev-parse --short HEAD) — $(git log -1 --format=%s | cut -c1-60)"
+verde "  versão do app: $(grep -o "VERSAO = '[^']*'" src/lib/versao.js | cut -d"'" -f2)"
 # o Caddy roda como outro usuário dentro do container: precisa ler
 chmod -R a+rX dist
 verde "  dist/ pronto ($(du -sh dist | cut -f1))"

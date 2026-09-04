@@ -15,6 +15,9 @@ export default function ProLink() {
   const [erro, setErro] = useState('')
   const [mostrarQr, setMostrarQr] = useState(false)
   const canvas = useRef(null)
+  const [vitrine, setVitrine] = useState(null)
+  const [salvando, setSalvando] = useState(false)
+  const [salvo, setSalvo] = useState(false)
 
   const url = professional ? `${window.location.origin}/p/${professional.slug}` : ''
 
@@ -24,6 +27,27 @@ export default function ProLink() {
   }, [mostrarQr, url])
 
   if (!professional) return <SemFicha />
+
+  // o que a vitrine mostra e só ela preenche: uma linha embaixo do nome,
+  // o @ do Instagram, o WhatsApp que ela ESCOLHE mostrar, e a bio
+  const form = vitrine ?? {
+    especialidade: professional.especialidade ?? '',
+    instagram: professional.instagram ?? '',
+    whatsapp_publico: professional.whatsapp_publico ?? '',
+    bio: professional.bio ?? '',
+  }
+  const mudar = (campo) => (e) => { setSalvo(false); setVitrine({ ...form, [campo]: e.target.value }) }
+  async function salvarVitrine() {
+    setSalvando(true)
+    const { error } = await supabase.from('professionals').update({
+      especialidade: form.especialidade.trim() || null,
+      instagram: form.instagram.trim().replace(/^@/, '') || null,
+      whatsapp_publico: form.whatsapp_publico.trim() || null,
+      bio: form.bio.trim() || null,
+    }).eq('id', professional.id)
+    setSalvando(false)
+    if (error) setErro(error.message); else { setErro(''); setSalvo(true); recarregarProfessional?.() }
+  }
 
   async function salvarFoto(foto) {
     const { error } = await supabase.from('professionals').update({ photo_url: foto }).eq('id', professional.id)
@@ -53,6 +77,15 @@ export default function ProLink() {
       <div className="link-acoes-2">
         <button className="btn btn-ghost" onClick={copiar}><CopiarIcon /> {copiado ? 'Copiado!' : 'Copiar link'}</button>
         <button className="btn btn-primary" onClick={compartilhar}><CompartilharIcon /> Compartilhar</button>
+      </div>
+
+      <h3 className="secao-titulo">Sua vitrine</h3>
+      <div className="card form vit-form">
+        <label>Uma linha embaixo do seu nome<input value={form.especialidade} onChange={mudar('especialidade')} placeholder="Nail designer · gel e decoradas" maxLength={60} /></label>
+        <label>Instagram<input value={form.instagram} onChange={mudar('instagram')} placeholder="@seu.perfil" autoCapitalize="none" /></label>
+        <label>WhatsApp para a cliente falar com você<input type="tel" value={form.whatsapp_publico} onChange={mudar('whatsapp_publico')} placeholder="(13) 99999-9999 — vazio = não mostra" /></label>
+        <label>Sobre você<textarea value={form.bio} onChange={mudar('bio')} rows={4} placeholder="Como você atende, há quanto tempo, o que a cliente pode esperar." /></label>
+        <button className="btn btn-primary btn-block" onClick={salvarVitrine} disabled={salvando || !vitrine}>{salvando ? 'Salvando…' : salvo ? 'Salvo ✓' : 'Salvar vitrine'}</button>
       </div>
 
       <div className="card qr-card">

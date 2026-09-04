@@ -90,6 +90,17 @@ esac
 export VITE_SUPABASE_URL VITE_SUPABASE_ANON_KEY
 verde '  chaves do app encontradas'
 
+# o Caddy precisa do ref do projeto para a prévia do link (/p/<slug>
+# vista pelo robô do WhatsApp). Sai da própria URL: https://REF.supabase.co
+if [ -z "${SUPABASE_REF:-}" ]; then
+  SUPABASE_REF=$(printf '%s' "$VITE_SUPABASE_URL" | sed -E 's#https://([^.]+)\.supabase\.co.*#\1#')
+  if [ -n "$SUPABASE_REF" ] && [ "$SUPABASE_REF" != "$VITE_SUPABASE_URL" ]; then
+    printf 'SUPABASE_REF=%s\n' "$SUPABASE_REF" >> "$AQUI/.env"
+    export SUPABASE_REF
+    verde "  SUPABASE_REF=$SUPABASE_REF guardado em $AQUI/.env"
+  fi
+fi
+
 # 4. Build ----------------------------------------------------------------------
 azul '== 4/6  Build =='
 cd "$RAIZ"

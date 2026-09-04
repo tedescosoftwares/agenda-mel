@@ -47,7 +47,7 @@ const FOTO = (n) => {
 }
 
 const profissionais = [
-  { id: 'pr1', user_id: 'p1', name: 'Ana Oliveira', slug: 'ana-oliveira', bio: 'Especialista em unhas decoradas e cuidados completos.', photo_url: FOTO(47), active: true, salon_id: SALAO, aceite_manual: true, minutos_para_aceitar: 120, ao_expirar: 'confirma', buffer_minutes: 0, reminder_hours_before: 24, followup_active: true, winback_after_days: 45, winback_cooldown_days: 45, no_show_tolerance_minutes: 15, phone: '(13) 99871-0002' },
+  { id: 'pr1', user_id: 'p1', name: 'Ana Oliveira', slug: 'ana-oliveira', bio: 'Especialista em unhas decoradas e cuidados completos. Atendo com hora marcada, num cantinho tranquilo no Gonzaga — café, música baixa e capricho em cada detalhe.', especialidade: 'Nail designer · gel e decoradas', instagram: 'ana.oliveira.nails', whatsapp_publico: '5513998710002', photo_url: FOTO(47), active: true, salon_id: SALAO, aceite_manual: true, minutos_para_aceitar: 120, ao_expirar: 'confirma', buffer_minutes: 0, reminder_hours_before: 24, followup_active: true, winback_after_days: 45, winback_cooldown_days: 45, no_show_tolerance_minutes: 15, phone: '(13) 99871-0002' },
   { id: 'pr2', user_id: 'p2', name: 'Camila Rocha', slug: 'camila-rocha', bio: 'Cabeleireira e colorista.', photo_url: FOTO(32), active: true, salon_id: SALAO, aceite_manual: true, minutos_para_aceitar: 120, ao_expirar: 'confirma' },
   { id: 'pr3', user_id: 'p3', name: 'Fernanda Lima', slug: 'fernanda-lima', bio: 'Esteticista facial e corporal.', photo_url: FOTO(44), active: true, salon_id: SALAO, aceite_manual: false },
   { id: 'pr4', user_id: 'p4', name: 'Roberta Souza', slug: 'roberta-souza', bio: 'Maquiagem e sobrancelhas.', photo_url: FOTO(20), active: true, salon_id: SALAO, aceite_manual: true },
@@ -134,7 +134,7 @@ const TABELAS = {
   ],
   client_favorites: [{ client_id: 'c1', professional_id: 'pr1' }, { client_id: 'c1', professional_id: 'pr3' }],
   reviews: [],
-  salons: [{ id: SALAO, name: 'Studio Mel', slug: 'studio-mel', app_url: 'https://mimo.app', city: 'Santos' }],
+  salons: [{ id: SALAO, name: 'Studio Mel', slug: 'studio-mel', app_url: 'https://mimo.app', city: 'Santos', address: 'Rua das Flores, 120 · Gonzaga' }],
   salon_members: [{ salon_id: SALAO, user_id: 'a1', papel: 'admin', salons: { id: SALAO, name: 'Studio Mel', slug: 'studio-mel' } }],
   whatsapp_channels: [{ salon_id: SALAO, canal: 'evolution', identificador: '11', ativo: true, usa_ia: true, usa_bot: true, silencio_inicio: '21:00', silencio_fim: '08:00', teto_diario: 300 }],
   affiliate_settings: [{ id: true, ativo: true, platform_fee_bps: 300, affiliate_share_bps: 50 }],
@@ -154,6 +154,20 @@ const RPC = {
   meus_pedidos: () => agendamentos.filter((a) => a.status === 'pendente' && a.professional_id === 'pr1').map((a) => ({ appointment_id: a.id, cliente: a.profiles?.full_name, servico: a.services?.name, quando: 'Qui, 16/05 às ' + a.start_time.slice(0, 5), faltam_min: 87, remarcacao: false, antes: null }))
     .concat([{ appointment_id: 'ap9', cliente: 'Juliana Prado', servico: 'Esmaltação em gel', quando: 'Sáb, 25/05 às 15:00', faltam_min: 41, remarcacao: true, antes: 'Qui, 23/05 às 10:30' }]),
   pedir_remarcacao: () => ({ ok: true, appointment_id: 'ap9', pendente: true, minutos: 120 }),
+  vitrine_da_profissional: ({ link }) => {
+    const p = profissionais.find((x) => x.slug === link)
+    if (!p) return null
+    return {
+      profissional: { id: p.id, name: p.name, slug: p.slug, bio: p.bio, photo_url: p.photo_url, especialidade: p.especialidade ?? null, instagram: p.instagram ?? null, whatsapp: p.whatsapp_publico ?? null, aceite_manual: p.aceite_manual },
+      salao: { name: 'Studio Mel', city: 'Santos', address: 'Rua das Flores, 120 · Gonzaga', app_url: 'https://mimo.app' },
+      nota: { media: 4.9, quantas: 128 },
+      avaliacoes,
+      galeria: [FOTO(3), FOTO(11), FOTO(25), FOTO(38), FOTO(52)],
+      horarios: [0, 1, 2, 3, 4, 5, 6].map((weekday) => ({ weekday, open: weekday !== 0, inicio: '09:00', fim: weekday === 6 ? '14:00' : '18:00' })),
+      atendimentos: 412,
+      proxima_vaga: { dia: mais(1), hora: '14:00' },
+    }
+  },
   quantas_para_enviar: () => 0,
   config_agenda_profissional: () => [{ no_show_tolerance_minutes: 15 }],
   resumo_do_mes: () => [{ atendimentos: 128, faturamento_cents: 984000, faturamento_mes_anterior_cents: 871000, clientes: 64, ticket_medio_cents: 7687, ocupacao_bps: 8200, minutos_ocupados: 7680, minutos_disponiveis: 9360, faltas: 3, taxa_falta_bps: 230, clientes_novas: 12, descontos_cents: 9000 }],

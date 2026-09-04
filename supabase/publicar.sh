@@ -87,6 +87,10 @@ echo 'whatsapp-webhook (com --no-verify-jwt)...'
 supabase functions deploy whatsapp-webhook --project-ref "$PROJECT_REF" --no-verify-jwt >/dev/null
 verde '  no ar'
 
+echo 'pagina-publica (prévia do link, com --no-verify-jwt)...'
+supabase functions deploy pagina-publica --project-ref "$PROJECT_REF" --no-verify-jwt >/dev/null
+verde '  no ar'
+
 # 3. Conferir que subiu mesmo ----------------------------------------------
 # Sem token na URL, o webhook tem de responder 403: é o segredo dele
 # funcionando. 401 quer dizer que o --no-verify-jwt não pegou; 404 quer

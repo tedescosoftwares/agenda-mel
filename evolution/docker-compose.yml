@@ -122,6 +122,9 @@ services:
       IA_TOKEN: ${IA_TOKEN:-}
       # o domínio do SITE; vazio = o site não sobe (ver ./publicar-site.sh)
       DOMINIO_SITE: ${DOMINIO_SITE:-}
+      # ref do projeto Supabase (o pedaço antes de .supabase.co), para a
+      # prévia de link da página pública; publicar-site.sh preenche
+      SUPABASE_REF: ${SUPABASE_REF:-nenhum}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       # o build do app, gerado por ./publicar-site.sh

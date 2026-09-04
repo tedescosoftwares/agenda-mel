@@ -72,6 +72,22 @@
 	@assets path /assets/*
 	header @assets Cache-Control "public, max-age=31536000, immutable"
 
+	# Prévia bonita no WhatsApp e no Instagram. Os robôs que montam a
+	# prévia de um link não rodam JavaScript: para eles, /p/<slug> vai
+	# buscar numa função do Supabase um HTML pequeno com a foto, o nome
+	# e a nota da profissional nas etiquetas Open Graph. Gente de
+	# verdade nunca cai aqui — recebe o app, como sempre.
+	@robos_no_link {
+		path /p/*
+		header_regexp User-Agent (?i)(whatsapp|facebookexternalhit|facebot|twitterbot|telegrambot|linkedinbot|slackbot|discordbot|pinterest|skypeuripreview|iframely|embedly|googlebot|bingbot)
+	}
+	handle @robos_no_link {
+		rewrite * /functions/v1/pagina-publica{path}
+		reverse_proxy https://{$SUPABASE_REF:nenhum}.supabase.co {
+			header_up Host {upstream_hostport}
+		}
+	}
+
 	try_files {path} /index.html
 	file_server
 

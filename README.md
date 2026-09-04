@@ -251,6 +251,11 @@ where slug = 'slug-dela';
       fica guardado até a resposta, e o pedido cai sozinho se ela desistir
 - [x] Favoritas, avaliações (só de atendimento concluído) e posição na fila
 - [x] Publicado na própria EC2 da Evolution (Caddy + DuckDNS), PWA instalável
+- [x] A vitrine da profissional (/p/<slug>): foto, nota, avaliações, trabalhos,
+      horários, onde fica, próxima vaga, WhatsApp e Instagram — e prévia
+      bonita quando o link é mandado no WhatsApp (Caddy + pagina-publica)
+- [x] `supabase/povoar.sql`: gente de mentira (5 clientes, 4 profissionais com
+      3 meses de histórico e avaliações) para ver tudo funcionando
 - [ ] Lembretes e prazos rodando sozinhos (pg_cron), sem depender do disparar.sh
 - [ ] Remarcar e avaliar pelo próprio WhatsApp, sem abrir o app
 - [ ] Migrar depois para React Native / Expo reaproveitando o Supabase

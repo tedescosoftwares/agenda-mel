@@ -83,9 +83,7 @@
 	}
 	handle @robos_no_link {
 		rewrite * /functions/v1/pagina-publica{path}
-		reverse_proxy https://{$SUPABASE_REF:nenhum}.supabase.co {
-			header_up Host {upstream_hostport}
-		}
+		reverse_proxy https://{$SUPABASE_REF:nenhum}.supabase.co
 	}
 
 	try_files {path} /index.html

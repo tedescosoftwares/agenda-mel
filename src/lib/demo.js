@@ -161,7 +161,7 @@ const RPC = {
       profissional: { id: p.id, name: p.name, slug: p.slug, bio: p.bio, photo_url: p.photo_url, especialidade: p.especialidade ?? null, instagram: p.instagram ?? null, whatsapp: p.whatsapp_publico ?? null, aceite_manual: p.aceite_manual },
       salao: { name: 'Studio Mel', city: 'Santos', address: 'Rua das Flores, 120 · Gonzaga', app_url: 'https://mimo.app' },
       nota: { media: 4.9, quantas: 128 },
-      avaliacoes,
+      avaliacoes: avaliacoes.concat(avaliacoes),
       galeria: [FOTO(3), FOTO(11), FOTO(25), FOTO(38), FOTO(52)],
       horarios: [0, 1, 2, 3, 4, 5, 6].map((weekday) => ({ weekday, open: weekday !== 0, inicio: '09:00', fim: weekday === 6 ? '14:00' : '18:00' })),
       atendimentos: 412,

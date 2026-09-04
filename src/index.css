@@ -4533,87 +4533,29 @@ body { position: relative; width: 100%; }
 .resumo-troca-de strong { text-decoration: line-through; color: var(--texto-3); font-weight: 500; }
 .resumo-troca-para strong { color: var(--roxo); }
 
-/* ---- a vitrine da profissional (/p/<slug>) ---- */
-.vitrine { padding-bottom: 5.5rem; }
-.vit-capa {
-  position: relative;
-  height: min(72vw, 340px);
-  background: var(--gradiente);
-  overflow: hidden;
-}
-.vit-capa img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.vit-capa-ini {
-  display: grid; place-items: center; height: 100%;
-  font-size: 4rem; font-weight: 600; color: #fff;
-}
-.vit-capa::after {
-  content: ''; position: absolute; inset: auto 0 0; height: 70%;
-  background: linear-gradient(to top, rgba(31, 32, 38, 0.82), rgba(31, 32, 38, 0));
-  pointer-events: none;
-}
-.vit-capa-texto {
-  position: absolute; left: 0; right: 0; bottom: 0; z-index: 1;
-  padding: 0 1.15rem 1rem;
-  max-width: var(--largura); margin: 0 auto;
-  color: #fff;
-}
-.vit-capa-texto h1 { margin: 0; font-size: 1.7rem; line-height: 1.1; color: #fff; text-shadow: 0 1px 10px rgba(0,0,0,.35); }
-.vit-especialidade { margin: 0.25rem 0 0; font-size: 0.95rem; opacity: 0.95; }
-.vit-prova { margin: 0.45rem 0 0; font-size: 0.82rem; opacity: 0.95; display: flex; flex-wrap: wrap; align-items: center; }
-.vit-nota { display: inline-flex; align-items: center; gap: 0.25rem; color: #fff; }
-.vit-nota svg { color: #ffd166; }
-.vit-nota strong { color: #fff; }
-.vit-nota-vazia { color: #fff; }
-.vit-corpo { padding-top: 0.9rem; }
-.vit-acoes { display: flex; flex-direction: column; gap: 0.7rem; }
-.vit-vaga {
-  display: flex; align-items: center; justify-content: space-between; gap: 0.6rem;
-  width: 100%; padding: 0.75rem 0.95rem;
-  background: var(--branco); border: 1px solid var(--fio); border-radius: var(--r-carta);
-  font: inherit; cursor: pointer; text-align: left;
-  box-shadow: 0 6px 20px rgba(61, 12, 78, 0.06);
-}
-.vit-vaga strong { color: var(--rosa); font-size: 1rem; }
-.vit-vaga::after { content: '›'; color: var(--rosa); font-size: 1.4rem; line-height: 1; margin-left: auto; }
-.vit-botoes { display: flex; gap: 0.5rem; overflow-x: auto; overscroll-behavior-x: contain; padding-bottom: 0.15rem; scrollbar-width: none; }
-.vit-botoes::-webkit-scrollbar { display: none; }
-.vit-botao {
-  flex: 0 0 auto; display: inline-flex; align-items: center; gap: 0.35rem;
-  padding: 0.5rem 0.85rem; border-radius: var(--r-pilula);
-  background: var(--branco); border: 1px solid var(--fio); color: var(--texto);
-  font: inherit; font-size: 0.85rem; font-weight: 500; text-decoration: none; cursor: pointer;
-  white-space: nowrap;
-}
-.vit-botao svg { width: 16px; height: 16px; }
-.vit-secao { margin-top: 1.4rem; }
-.vit-secao .secao-titulo { margin-top: 0; }
-.vit-bio { margin: 0; line-height: 1.6; color: var(--texto-2); font-size: 0.95rem; }
-.vitrine .servico-card { cursor: pointer; }
-.vitrine .servico-card .link-ver { align-self: center; flex-shrink: 0; }
+/* ---- a vitrine da profissional (/p/<slug>): o perfil do app, aberto ---- */
+.vitrine .content { padding-bottom: 6rem; }
+.vitrine .rodape-fixo { bottom: env(safe-area-inset-bottom); }
+.vitrine .servico-linha { width: 100%; text-align: left; font: inherit; cursor: pointer; }
+.vit-vaga { margin: 0 0 0.2rem; font-size: 0.88rem; }
+.vit-vaga strong { color: var(--rosa); }
+.vit-mais { font-size: 0.82rem; margin: 0.2rem 0 0; }
+.vit-contatos { display: flex; flex-direction: column; gap: 0.5rem; }
+.vit-contatos .btn { justify-content: center; }
 .vit-galeria { display: flex; gap: 0.55rem; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; padding-bottom: 0.2rem; }
 .vit-galeria::-webkit-scrollbar { display: none; }
-.vit-galeria img { flex: 0 0 auto; width: 150px; height: 150px; object-fit: cover; border-radius: var(--r-carta); background: var(--cinza-1); }
-.vit-mais { font-size: 0.82rem; margin: 0.6rem 0 0; }
+.vit-galeria img { flex: 0 0 auto; width: 140px; height: 140px; object-fit: cover; border-radius: var(--r-carta); background: var(--cinza-1); }
 .vit-horarios { display: flex; flex-direction: column; gap: 0.35rem; }
 .vit-hora { display: flex; justify-content: space-between; font-size: 0.92rem; }
 .vit-hora span { text-transform: capitalize; color: var(--texto-2); }
 .vit-hora.fechado strong { color: var(--texto-3); font-weight: 500; }
 .vit-onde { display: flex; flex-direction: column; gap: 0.2rem; }
 .vit-onde .link-ver { margin-top: 0.4rem; align-self: flex-start; }
-.vit-rodape { margin: 2rem 0 0.5rem; display: flex; flex-direction: column; align-items: center; gap: 0.2rem; font-size: 0.82rem; }
+.vit-compartilhar { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; }
+.vit-compartilhar .btn-mini { display: inline-flex; align-items: center; gap: 0.3rem; }
+.vit-rodape { text-align: center; margin: 0.6rem 0 0; font-size: 0.82rem; }
 .vit-marca { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--texto-2); text-decoration: none; }
 .vit-marca strong { color: var(--roxo); }
-.vit-cta { bottom: env(safe-area-inset-bottom); }
-.vit-topo {
-  position: sticky; top: 0; z-index: 20;
-  display: flex; align-items: center; gap: 0.7rem;
-  padding: 0.6rem 1.15rem calc(0.6rem);
-  padding-top: calc(0.6rem + env(safe-area-inset-top));
-  background: var(--branco); border-bottom: 1px solid var(--fio);
-}
-.vit-topo img, .vit-topo-ini { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; flex-shrink: 0; background: var(--gradiente); color: #fff; display: grid; place-items: center; font-weight: 600; font-size: 0.9rem; }
-.vit-topo-texto { display: flex; flex-direction: column; min-width: 0; }
-.vit-topo-texto span { font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.vit-voltar { border: none; background: transparent; font-size: 1.8rem; line-height: 1; color: var(--texto); cursor: pointer; padding: 0 0.2rem; }
 .vit-form label { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.85rem; color: var(--texto-2); }
 .vit-form input, .vit-form textarea { font: inherit; }
+.vitrine button.topo-voltar { border: none; font: inherit; cursor: pointer; font-size: 1.6rem; }

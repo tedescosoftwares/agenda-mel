@@ -56,7 +56,7 @@ as $$
     'avaliacoes', (select coalesce(jsonb_agg(jsonb_build_object(
                      'nota', a.nota, 'comentario', a.comentario,
                      'quem', a.quem, 'quando', a.quando)), '[]'::jsonb)
-                   from public.avaliacoes_da_profissional(p.id, 3) a),
+                   from public.avaliacoes_da_profissional(p.id, 10) a),
     'galeria', (select coalesce(jsonb_agg(g.img), '[]'::jsonb)
                 from (select distinct unnest(sv.images) as img
                       from public.professional_services ps

@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import AuthModal from '../../components/AuthModal'
 import ListaEsperaForm from '../../components/ListaEsperaForm'
-import { SparkleIcon, StarIcon, CompartilharIcon, MarcaIcon } from '../../components/icons'
+import { StarIcon, CompartilharIcon, MarcaIcon } from '../../components/icons'
 import { formatPreco, labelDuracao } from '../../lib/format'
 import { toMin, minToHora, formatDataLonga } from '../../lib/booking'
 import CalendarioMes from '../../components/CalendarioMes'
@@ -49,6 +49,7 @@ export default function PaginaProfissional() {
   const [error, setError] = useState('')
   const [sucesso, setSucesso] = useState(null)
   const [copiado, setCopiado] = useState(false)
+  const [aba, setAba] = useState('servicos')
   const servicosRef = useRef(null)
 
   const prof = vitrine?.profissional ?? null
@@ -222,10 +223,6 @@ export default function PaginaProfissional() {
     window.scrollTo({ top: 0 })
   }
 
-  function irParaServicos() {
-    servicosRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }
-
   function compartilhar() {
     const url = window.location.origin + '/p/' + prof.slug
     const texto = `Agende com ${prof.name} por aqui: ${url}`
@@ -289,156 +286,147 @@ export default function PaginaProfissional() {
   const endereco = [salao.address, salao.city].filter(Boolean).join(' · ')
   const mapa = endereco ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([salao.address, salao.city].filter(Boolean).join(', '))}` : ''
   const zap = prof.whatsapp ? `https://wa.me/${prof.whatsapp}?text=${encodeURIComponent(`Oi, ${prof.name.split(' ')[0]}! Vi seu link no MIMO e queria tirar uma dúvida.`)}` : ''
+  const especialidade = prof.especialidade || services.slice(0, 2).map((s) => s.name).join(' e ')
 
   // ---------------------------------------------------------------- a vitrine
+  // O MESMO desenho do perfil da profissional dentro do app (tela 05):
+  // foto, nome, nota, três abas e o botão fixo. A diferença é o que vai
+  // na aba Sobre — horários, onde fica, WhatsApp, Instagram, trabalhos —
+  // porque quem chega por aqui ainda não conhece nem ela nem o salão.
   if (passo === 1) {
     return (
-      <div className="layout publico vitrine">
-        <header className="vit-capa">
-          {prof.photo_url ? (
-            <img src={prof.photo_url} alt={prof.name} />
-          ) : (
-            <span className="vit-capa-ini">{iniciais(prof.name)}</span>
-          )}
-          <div className="vit-capa-texto">
-            <h1>{prof.name}</h1>
-            {prof.especialidade && <p className="vit-especialidade">{prof.especialidade}</p>}
-            <p className="vit-prova">
-              {nota ? (
-                <span className="vit-nota"><StarIcon /> <strong>{Number(nota.media).toFixed(1)}</strong> · {nota.quantas} {nota.quantas === 1 ? 'avaliação' : 'avaliações'}</span>
-              ) : (
-                <span className="vit-nota vit-nota-vazia">Nova no MIMO</span>
-              )}
-              {vitrine.atendimentos > 0 && <span> · {vitrine.atendimentos} atendimentos</span>}
-              {salao.city && <span> · {salao.city}</span>}
-            </p>
-          </div>
-        </header>
-
-        <main className="content vit-corpo">
+      <div className="admin-shell publico vitrine">
+        <main className="content">
           {error && <div className="alert alert-error">{error}</div>}
 
-          <div className="vit-acoes">
-            {vitrine.proxima_vaga?.dia && (
-              <button type="button" className="vit-vaga" onClick={irParaServicos}>
-                <span className="muted">Próxima vaga</span>
-                <strong>{quandoVaga(vitrine.proxima_vaga)}</strong>
-              </button>
-            )}
-            <div className="vit-botoes">
-              {zap && <a className="vit-botao" href={zap} target="_blank" rel="noreferrer"><span aria-hidden="true">💬</span>WhatsApp</a>}
-              {prof.instagram && <a className="vit-botao" href={`https://instagram.com/${prof.instagram}`} target="_blank" rel="noreferrer"><span aria-hidden="true">📸</span>@{prof.instagram}</a>}
-              {mapa && <a className="vit-botao" href={mapa} target="_blank" rel="noreferrer"><span aria-hidden="true">📍</span>Como chegar</a>}
-              <button type="button" className="vit-botao" onClick={compartilhar}><CompartilharIcon />{copiado ? 'Link copiado!' : 'Compartilhar'}</button>
-            </div>
+          <div className="perfil-capa">
+            {prof.photo_url ? <img src={prof.photo_url} alt="" /> : <span className="perfil-capa-ini">{iniciais(prof.name)}</span>}
           </div>
 
-          {prof.bio && (
-            <section className="vit-secao">
-              <h3 className="secao-titulo">Sobre {prof.name.split(' ')[0]}</h3>
-              <p className="vit-bio">{prof.bio}</p>
-            </section>
-          )}
-
-          <section className="vit-secao" ref={servicosRef} id="servicos">
-            <h3 className="secao-titulo">Serviços</h3>
-            {services.length === 0 ? (
-              <div className="card empty-state">
-                <p>Esta agenda ainda não tem serviços disponíveis.</p>
-                <p className="muted">Volte em breve.</p>
-              </div>
+          <div className="perfil-cabeca">
+            <h2>{prof.name}</h2>
+            {especialidade && <p className="muted">{especialidade}</p>}
+            {nota ? (
+              <p className="perfil-nota">
+                <StarIcon /> <strong>{Number(nota.media).toFixed(1)}</strong>
+                <span className="muted">({nota.quantas} {nota.quantas === 1 ? 'avaliação' : 'avaliações'})</span>
+              </p>
             ) : (
-              <div className="servico-catalogo">
-                {services.map((s) => (
-                  <button key={s.id} type="button" className="card servico-card" onClick={() => escolherServico(s)}>
-                    {s.images?.[0] ? (
-                      <img className="servico-foto" src={s.images[0]} alt={s.name} />
-                    ) : (
-                      <div className="servico-foto servico-foto-vazia"><SparkleIcon /></div>
-                    )}
-                    <div className="servico-card-info">
-                      <span className="servico-nome">
-                        {s.name}
-                        {s.is_combo && <span className="badge badge-combo">combo</span>}
-                      </span>
-                      {s.description && <span className="muted servico-desc">{s.description}</span>}
-                      <span className="muted servico-meta">{labelDuracao(s)} · {formatPreco(s.price)}</span>
-                    </div>
-                    <span className="link-ver">Agendar</span>
-                  </button>
-                ))}
-              </div>
+              <p className="perfil-nota muted">Ainda sem avaliações</p>
             )}
-          </section>
-
-          {galeria.length > 0 && (
-            <section className="vit-secao">
-              <h3 className="secao-titulo">Trabalhos</h3>
-              <div className="vit-galeria">
-                {galeria.map((src, i) => <img key={i} src={src} alt="" loading="lazy" />)}
-              </div>
-            </section>
-          )}
-
-          {avaliacoes.length > 0 && (
-            <section className="vit-secao">
-              <h3 className="secao-titulo">O que as clientes dizem</h3>
-              <div className="cliente-list">
-                {avaliacoes.map((a, i) => (
-                  <div key={i} className="card avaliacao">
-                    <div className="avaliacao-topo">
-                      <strong>{a.quem}</strong>
-                      <span className="estrelas" aria-label={`${a.nota} de 5`}>
-                        {[1, 2, 3, 4, 5].map((n) => <StarIcon key={n} cheio={n <= a.nota} />)}
-                      </span>
-                    </div>
-                    {a.comentario && <p>{a.comentario}</p>}
-                    <span className="muted avaliacao-quando">{new Date(a.quando).toLocaleDateString('pt-BR')}</span>
-                  </div>
-                ))}
-              </div>
-              {nota && nota.quantas > avaliacoes.length && (
-                <p className="muted vit-mais">e mais {nota.quantas - avaliacoes.length} avaliações no app</p>
-              )}
-            </section>
-          )}
-
-          {horarios.length > 0 && (
-            <section className="vit-secao">
-              <h3 className="secao-titulo">Horários</h3>
-              <div className="card vit-horarios">
-                {ordenarSemana(horarios).map((h) => (
-                  <div key={h.weekday} className={'vit-hora' + (h.open ? '' : ' fechado')}>
-                    <span>{DIAS[h.weekday]}</span>
-                    <strong>{h.open ? `${h.inicio} – ${h.fim}` : 'fechado'}</strong>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {(endereco || salao.name) && (
-            <section className="vit-secao">
-              <h3 className="secao-titulo">Onde</h3>
-              <div className="card vit-onde">
-                {salao.name && <strong>{salao.name}</strong>}
-                {endereco && <span className="muted">{endereco}</span>}
-                {mapa && <a className="link-ver" href={mapa} target="_blank" rel="noreferrer">Abrir no mapa</a>}
-              </div>
-            </section>
-          )}
-
-          <footer className="vit-rodape">
-            <Link to="/" className="vit-marca"><MarcaIcon id="vitrine" width={22} height={20} /> Feito com <strong>MIMO</strong></Link>
-            <span className="muted">Beleza na palma da mão</span>
-          </footer>
-        </main>
-
-        {services.length > 0 && (
-          <div className="rodape-fixo vit-cta">
-            <button className="btn btn-primary btn-block" onClick={irParaServicos}>Agendar horário</button>
           </div>
-        )}
+
+          <div className="abas">
+            {[['servicos', 'Serviços'], ['avaliacoes', 'Avaliações'], ['sobre', 'Sobre']].map(([k, r]) => (
+              <button key={k} className={aba === k ? 'aba active' : 'aba'} onClick={() => setAba(k)}>{r}</button>
+            ))}
+          </div>
+
+          {aba === 'servicos' && (
+            <div className="cliente-list" ref={servicosRef}>
+              {vitrine.proxima_vaga?.dia && (
+                <p className="muted vit-vaga">Próxima vaga: <strong>{quandoVaga(vitrine.proxima_vaga)}</strong></p>
+              )}
+              {services.length === 0 && <div className="card empty-state"><p>Ela ainda não cadastrou serviços.</p></div>}
+              {services.map((s) => (
+                <button key={s.id} type="button" className="card servico-linha" onClick={() => escolherServico(s)}>
+                  <span className="servico-linha-foto" aria-hidden="true">
+                    {s.images?.[0] ? <img src={s.images[0]} alt="" /> : '✨'}
+                  </span>
+                  <span className="cliente-info">
+                    <span className="cliente-nome"><span className="nome-txt">{s.name}{s.is_combo && <span className="badge badge-combo">combo</span>}</span></span>
+                    <span className="muted cliente-meta">{formatPreco(s.price)} · {labelDuracao(s)}</span>
+                  </span>
+                  <span className="link-ver">Agendar</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {aba === 'avaliacoes' && (
+            <div className="cliente-list">
+              {avaliacoes.length === 0 && <div className="card empty-state"><p>Nenhuma avaliação ainda.</p><p className="muted">Seja a primeira: marque, seja atendida e conte como foi.</p></div>}
+              {avaliacoes.map((a, i) => (
+                <div key={i} className="card avaliacao">
+                  <div className="avaliacao-topo">
+                    <strong>{a.quem}</strong>
+                    <span className="estrelas" aria-label={`${a.nota} de 5`}>
+                      {[1, 2, 3, 4, 5].map((n) => <StarIcon key={n} cheio={n <= a.nota} />)}
+                    </span>
+                  </div>
+                  {a.comentario && <p>{a.comentario}</p>}
+                  <span className="muted avaliacao-quando">{new Date(a.quando).toLocaleDateString('pt-BR')}</span>
+                </div>
+              ))}
+              {nota && nota.quantas > avaliacoes.length && (
+                <p className="muted vit-mais">e mais {nota.quantas - avaliacoes.length} avaliações</p>
+              )}
+            </div>
+          )}
+
+          {aba === 'sobre' && (
+            <div className="cliente-list">
+              <div className="card">
+                <p style={{ margin: 0 }}>{prof.bio || 'Ela ainda não escreveu sobre si.'}</p>
+                {vitrine.atendimentos > 0 && <p className="muted" style={{ margin: '0.6rem 0 0', fontSize: '0.85rem' }}>{vitrine.atendimentos} atendimentos pelo MIMO</p>}
+              </div>
+
+              {(zap || prof.instagram) && (
+                <div className="card vit-contatos">
+                  {zap && <a className="btn btn-ghost" href={zap} target="_blank" rel="noreferrer">💬 Falar no WhatsApp</a>}
+                  {prof.instagram && <a className="btn btn-ghost" href={`https://instagram.com/${prof.instagram}`} target="_blank" rel="noreferrer">📸 @{prof.instagram}</a>}
+                </div>
+              )}
+
+              {galeria.length > 0 && (
+                <>
+                  <h3 className="secao-titulo">Trabalhos</h3>
+                  <div className="vit-galeria">
+                    {galeria.map((src, i) => <img key={i} src={src} alt="" loading="lazy" />)}
+                  </div>
+                </>
+              )}
+
+              {horarios.length > 0 && (
+                <>
+                  <h3 className="secao-titulo">Horários</h3>
+                  <div className="card vit-horarios">
+                    {ordenarSemana(horarios).map((h) => (
+                      <div key={h.weekday} className={'vit-hora' + (h.open ? '' : ' fechado')}>
+                        <span>{DIAS[h.weekday]}</span>
+                        <strong>{h.open ? `${h.inicio} – ${h.fim}` : 'fechado'}</strong>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {(endereco || salao.name) && (
+                <>
+                  <h3 className="secao-titulo">Onde</h3>
+                  <div className="card vit-onde">
+                    {salao.name && <strong>{salao.name}</strong>}
+                    {endereco && <span className="muted">{endereco}</span>}
+                    {mapa && <a className="link-ver" href={mapa} target="_blank" rel="noreferrer">Abrir no mapa</a>}
+                  </div>
+                </>
+              )}
+
+              <div className="card vit-compartilhar">
+                <span className="muted">Gostou? Manda pra uma amiga.</span>
+                <button type="button" className="btn-mini" onClick={compartilhar}><CompartilharIcon /> {copiado ? 'Link copiado!' : 'Compartilhar'}</button>
+              </div>
+
+              <p className="vit-rodape"><Link to="/" className="vit-marca"><MarcaIcon id="vitrine" width={20} height={18} /> Feito com <strong>MIMO</strong></Link></p>
+            </div>
+          )}
+
+          {services.length > 0 && (
+            <div className="rodape-fixo vit-cta">
+              <button className="btn btn-primary btn-block" onClick={() => { setAba('servicos'); setTimeout(() => servicosRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50) }}>Agendar horário</button>
+            </div>
+          )}
+        </main>
 
         {mostrarLogin && <AuthModal resumo="" onClose={() => { setMostrarLogin(false); setTentandoFechar(false) }} />}
       </div>
@@ -446,17 +434,15 @@ export default function PaginaProfissional() {
   }
 
   // ---------------------------------------------------------------- agendar
+  // o mesmo topo das telas do app: "‹" e o título do passo
   const PASSOS = ['Serviço', 'Data', 'Hora', 'Confirmar']
+  const TITULOS = { 2: 'Escolher data', 3: 'Escolher hora', 4: 'Confirmar pedido' }
 
   return (
-    <div className="layout publico vitrine">
-      <header className="vit-topo">
-        <button type="button" className="vit-voltar" onClick={() => irPara(1)} aria-label="Voltar para a página">‹</button>
-        {prof.photo_url ? <img src={prof.photo_url} alt="" /> : <span className="vit-topo-ini">{iniciais(prof.name)}</span>}
-        <div className="vit-topo-texto">
-          <strong>{prof.name}</strong>
-          {servicoSel && <span className="muted">{servicoSel.name} · {labelDuracao(servicoSel)} · {formatPreco(servicoSel.price)}</span>}
-        </div>
+    <div className="admin-shell publico vitrine">
+      <header className="topbar topbar-cliente">
+        <button type="button" className="topo-voltar" onClick={() => irPara(passo === 2 ? 1 : passo - 1)} aria-label="Voltar">‹</button>
+        <span className="topo-titulo">{TITULOS[passo]}</span>
       </header>
 
       <main className="content">
@@ -464,6 +450,7 @@ export default function PaginaProfissional() {
 
         {/* A trilha mostra onde a pessoa está e o que falta. Os passos
             já cumpridos voltam com um toque; os da frente, não. */}
+        {servicoSel && <p className="muted" style={{ marginTop: 0 }}>{servicoSel.name} com {prof.name} · {formatPreco(servicoSel.price)}</p>}
         <ol className="trilha">
           {PASSOS.map((rotulo, i) => {
             const n = i + 1

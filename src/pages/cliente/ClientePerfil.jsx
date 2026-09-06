@@ -12,7 +12,7 @@ import { ChevronIcon } from '../../components/icons'
 // WhatsApp, então errar ele é ficar sem aviso nenhum.
 export default function ClientePerfil() {
   const { confirmar } = useDialogo()
-  const { profile, user, signOut, recarregarPerfil } = useAuth()
+  const { profile, user, signOut, recarregarPerfil, vinculos, recarregarVinculos } = useAuth()
   const [editando, setEditando] = useState(false)
   const [nome, setNome] = useState(profile?.full_name ?? '')
   const [fone, setFone] = useState(profile?.phone ?? '')
@@ -25,6 +25,14 @@ export default function ClientePerfil() {
     setSalvando(false)
     if (error) setErro(error.message)
     else { setErro(''); setEditando(false); recarregarPerfil?.() }
+  }
+
+  async function sairDaAgenda(ag) {
+    const ok = await confirmar({ titulo: `Sair da agenda de ${ag.salao.nome}?`, texto: 'Você deixa de ver os horários de quem atende lá. Dá para voltar escaneando o QR de novo.', ok: 'Sair da agenda', perigo: true })
+    if (!ok) return
+    const { error } = await supabase.rpc('sair_da_agenda', { salao: ag.salao.id })
+    if (error) setErro(error.message)
+    else recarregarVinculos?.()
   }
 
   async function trocarLembretes(v) {
@@ -62,6 +70,26 @@ export default function ClientePerfil() {
             <button className="btn-mini" style={{ marginTop: '0.7rem' }} onClick={() => { setNome(profile?.full_name ?? ''); setFone(profile?.phone ?? ''); setEditando(true) }}>Editar</button>
           </>
         )}
+      </div>
+
+      <h3 className="secao-titulo">Minhas agendas</h3>
+      <div className="cliente-list">
+        {(vinculos ?? []).map((ag) => (
+          <div key={ag.salao.id} className="card cl-ajuste">
+            <div className="cliente-info">
+              <span className="cliente-nome"><span className="nome-txt">{ag.salao.nome}</span></span>
+              <span className="muted cliente-meta">
+                {ag.trazida_por ? `entrou pela ${ag.trazida_por.nome.split(' ')[0]}` : 'entrou pelo código do salão'} · {new Date(ag.entrou_em).toLocaleDateString('pt-BR')}
+              </span>
+            </div>
+            <button className="btn-mini btn-mini-nao" onClick={() => sairDaAgenda(ag)}>Sair</button>
+          </div>
+        ))}
+        <Link to="/cliente/entrar" className="card prof-row">
+          <span className="ajuste-icone">➕</span>
+          <span className="cliente-info"><span className="cliente-nome"><span className="nome-txt">Entrar em outra agenda</span></span><span className="muted cliente-meta">QR, código ou link da profissional</span></span>
+          <ChevronIcon />
+        </Link>
       </div>
 
       <h3 className="secao-titulo">Preferências</h3>

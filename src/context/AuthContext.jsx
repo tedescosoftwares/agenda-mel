@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { lerCodigoGuardado, limparCodigoGuardado } from '../lib/indicacao'
+import { lerConvite, limparConvite } from '../lib/convite'
 
 const AuthContext = createContext(null)
 
@@ -9,6 +10,8 @@ export function AuthProvider({ children }) {
   const [profile, setProfile] = useState(null)
   const [professional, setProfessional] = useState(null)
   const [salao, setSalao] = useState(null)
+  // as agendas em que a cliente entrou (053). Sem nenhuma, não há app.
+  const [vinculos, setVinculos] = useState([])
   const [loading, setLoading] = useState(isSupabaseConfigured)
 
   useEffect(() => {
@@ -27,6 +30,7 @@ export function AuthProvider({ children }) {
         setProfile(null)
         setProfessional(null)
         setSalao(null)
+        setVinculos([])
         setLoading(false)
       }
     })
@@ -85,6 +89,21 @@ export function AuthProvider({ children }) {
         if (resultado !== 'codigo_invalido') limparCodigoGuardado()
       }
 
+      // cliente: entrou por um link /v/<código> antes de logar? entra agora.
+      // (quem se cadastrou já entrou pelo servidor; aqui é quem já tinha conta)
+      if (perfil?.role === 'cliente') {
+        const convite = lerConvite()
+        if (convite) {
+          const { error } = await supabase.rpc('vincular', { codigo: convite, jeito: 'link' })
+          if (!error) limparConvite()
+        }
+        const { data: agendas } = await supabase.rpc('minhas_agendas')
+        if (cancelled) return
+        setVinculos(Array.isArray(agendas) ? agendas : [])
+      } else {
+        setVinculos([])
+      }
+
       setLoading(false)
     }
 
@@ -121,15 +140,24 @@ export function AuthProvider({ children }) {
     return { error }
   }
 
-  async function signUp(email, password, fullName, phone) {
+  // `extra` vai nos metadados da conta e é lido pelo servidor quando o
+  // perfil nasce: codigo_convite (entrar numa agenda), papel_desejado
+  // (autonoma | salao), nome_negocio, cidade. Ver 053.
+  async function signUp(email, password, fullName, phone, extra = {}) {
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { full_name: fullName, phone },
+        data: { full_name: fullName, phone, ...extra },
       },
     })
     return { error }
+  }
+
+  async function recarregarVinculos() {
+    if (!session?.user) return
+    const { data } = await supabase.rpc('minhas_agendas')
+    setVinculos(Array.isArray(data) ? data : [])
   }
 
   async function signOut() {
@@ -142,6 +170,8 @@ export function AuthProvider({ children }) {
     profile,
     professional,
     salao,
+    vinculos,
+    recarregarVinculos,
     recarregarPerfil,
     recarregarProfessional,
     role: profile?.role ?? null,

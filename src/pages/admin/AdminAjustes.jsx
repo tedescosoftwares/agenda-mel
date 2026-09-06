@@ -2,6 +2,9 @@ import { useDialogo } from '../../context/DialogoContext'
 import { Link } from 'react-router-dom'
 import AdminShell from '../../components/AdminShell'
 import { useAuth } from '../../context/AuthContext'
+import { supabase } from '../../lib/supabase'
+import CodigoQr from '../../components/CodigoQr'
+import { useState } from 'react'
 import {
   TeamIcon,
   GraficoIcon,
@@ -54,6 +57,15 @@ const ITENS = [
 export default function AdminAjustes() {
   const { confirmar } = useDialogo()
   const { salao, signOut } = useAuth()
+  const [codigo, setCodigo] = useState(salao?.codigo ?? null)
+  const [erro, setErro] = useState('')
+
+  async function novoCodigo() {
+    const ok = await confirmar({ titulo: 'Gerar um código novo para o salão?', texto: 'O QR do balcão e o link antigos deixam de funcionar. Quem já entrou continua.', ok: 'Gerar novo' })
+    if (!ok) return
+    const { data, error } = await supabase.rpc('novo_codigo_do_salao', { salao: salao.id })
+    if (error) setErro(error.message); else setCodigo(data)
+  }
 
   return (
     <AdminShell>
@@ -62,6 +74,15 @@ export default function AdminAjustes() {
         <p className="muted">{salao?.name ?? 'Meu salão'}</p>
       </div>
 
+      {erro && <div className="alert alert-error">{erro}</div>}
+      <h3 className="secao-titulo">Código do salão</h3>
+      <div className="card">
+        <CodigoQr codigo={codigo ?? salao?.codigo} nome={salao?.name} onNovo={salao ? novoCodigo : undefined}
+          mensagem={`Entra na agenda do ${salao?.name ?? 'salão'} pelo MIMO: ${window.location.origin}/v/${codigo ?? salao?.codigo}\nOu digita o código ${codigo ?? salao?.codigo} no app.`} />
+      </div>
+      <p className="muted" style={{ fontSize: '0.82rem' }}>Imprima e deixe no balcão. Quem entra por aqui vê todas as profissionais da casa. Cada profissional tem o código dela em Meu link, e a cliente que entra por ele fica registrada como trazida por ela.</p>
+
+      <h3 className="secao-titulo">Configurações</h3>
       <div className="cliente-list">
         {ITENS.map(({ to, Icon, titulo, resumo }) => (
           <Link key={to} to={to} className="card prof-row">

@@ -254,6 +254,11 @@ where slug = 'slug-dela';
 - [x] A vitrine da profissional (/p/<slug>): foto, nota, avaliações, trabalhos,
       horários, onde fica, próxima vaga, WhatsApp e Instagram — e prévia
       bonita quando o link é mandado no WhatsApp (Caddy + pagina-publica)
+- [x] O vínculo (053): a cliente só enxerga as agendas em que entrou — por QR
+      lido no próprio app, código de seis letras ou link `/v/<código>`; o código
+      é da profissional ou do salão, o vínculo é sempre com o salão e registra
+      quem trouxe; cadastro com código vincula no servidor; agendar vincula;
+      "Sou profissional" abre uma agenda autônoma (salão de uma) ou um salão
 - [x] `supabase/povoar.sql`: gente de mentira (5 clientes, 4 profissionais com
       3 meses de histórico e avaliações) para ver tudo funcionando
 - [x] O relógio da casa: pg_cron + pg_net dentro do Supabase empurram a fila a

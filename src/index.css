@@ -4567,3 +4567,33 @@ body { position: relative; width: 100%; }
 .dialogo .modal-acoes .btn { flex: 1; justify-content: center; }
 .btn-perigo { background: var(--carmim); box-shadow: none; }
 .btn-perigo:hover:not(:disabled) { background: #9a0f33; }
+
+/* ---- entrar numa agenda (053): a tela sem app, o leitor, o código ---- */
+.entrar-bg { background: var(--tinta); }
+.entrar-card .brand { margin-bottom: 0.6rem; }
+.entrar-opcoes { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.4rem; }
+.leitor-qr { position: relative; border-radius: var(--r-carta); overflow: hidden; background: #000; aspect-ratio: 1; margin: 0.4rem 0 0.8rem; }
+.leitor-qr video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.leitor-mira { position: absolute; inset: 14%; border: 3px solid rgba(255,255,255,.85); border-radius: 18px; box-shadow: 0 0 0 999px rgba(0,0,0,.35); pointer-events: none; }
+.leitor-dica { position: absolute; left: 0; right: 0; bottom: 0.6rem; margin: 0; text-align: center; color: #fff; font-size: 0.85rem; text-shadow: 0 1px 4px rgba(0,0,0,.6); }
+.convite-quem { display: flex; align-items: center; gap: 0.8rem; margin: 0.2rem 0 0.8rem; text-align: left; }
+.convite-quem img, .convite-ini { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; flex-shrink: 0; background: var(--gradiente); color: #fff; display: grid; place-items: center; font-weight: 600; }
+.convite-quem div { display: flex; flex-direction: column; }
+.convite-quem span { font-size: 0.85rem; }
+.convite-faixa { display: flex; gap: 0.5rem; align-items: flex-start; background: color-mix(in srgb, var(--violeta) 22%, #fff); border-radius: var(--r-controle); padding: 0.6rem 0.75rem; font-size: 0.88rem; margin-bottom: 0.8rem; text-align: left; line-height: 1.4; }
+.escolha { display: flex; flex-direction: column; gap: 0.2rem; text-align: left; font: inherit; cursor: pointer; border: 2px solid transparent; }
+.escolha.ativa { border-color: var(--rosa); }
+.escolha .muted { font-size: 0.85rem; }
+.codigo-qr { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
+.codigo-qr canvas { border-radius: 12px; }
+.codigo-letras { font-size: 1.9rem; font-weight: 700; letter-spacing: 0.28em; color: var(--ameixa); padding-left: 0.28em; }
+.codigo-dica { margin: 0; text-align: center; font-size: 0.82rem; }
+.codigo-qr .link-acoes-2 { width: 100%; }
+.codigo-novo { font-size: 0.8rem; background: none; border: none; cursor: pointer; }
+.home-entrou { margin: -0.3rem 0 0.5rem; font-size: 0.82rem; }
+.home-mais-agenda { margin-top: 1rem; }
+.cliente-row-vinculo { align-items: flex-start; }
+.cliente-origem { display: block; margin-top: 0.15rem; color: var(--roxo) !important; }
+.linha-dupla { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+.cliente-row-vinculo .cliente-meta { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.35; }
+.cliente-row-vinculo .btn-mini { flex-shrink: 0; align-self: center; }

@@ -39,6 +39,9 @@ import ProEnviar from "./pages/pro/ProEnviar";
 import Indicacao from "./pages/cliente/Indicacao";
 import Notificacoes from "./pages/cliente/Notificacoes";
 import FilaEspera from "./pages/cliente/FilaEspera";
+import Entrar from "./pages/cliente/Entrar";
+import EntrarPorCodigo from "./pages/publico/EntrarPorCodigo";
+import Comecar from "./pages/publico/Comecar";
 import { guardarCodigoDaURL } from "./lib/indicacao";
 
 export default function App() {
@@ -61,6 +64,18 @@ export default function App() {
 
             {/* convite para uma profissional entrar no app */}
             <Route path="/convite/:codigo" element={<Convite />} />
+
+            {/* o QR/link de entrar numa agenda, e a porta de quem vai atender */}
+            <Route path="/v/:codigo" element={<EntrarPorCodigo />} />
+            <Route path="/comecar" element={<Comecar />} />
+            <Route
+              path="/cliente/entrar"
+              element={
+                <ProtectedRoute requireRole="cliente" permitirSemVinculo>
+                  <Entrar />
+                </ProtectedRoute>
+              }
+            />
 
             {/* mostruário do sistema visual */}
             <Route path="/estilo" element={<Estilo />} />

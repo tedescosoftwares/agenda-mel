@@ -1,11 +1,12 @@
-import { useEffect, useRef, useState } from 'react'
-import QRCode from 'qrcode'
+import { useEffect, useState } from 'react'
 import ProShell from '../../components/ProShell'
 import SemFicha from './SemFicha'
 import FotoUpload from '../../components/FotoUpload'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import { CopiarIcon, CompartilharIcon } from '../../components/icons'
+import CodigoQr from '../../components/CodigoQr'
+import { useDialogo } from '../../context/DialogoContext'
 
 // Meu link público (tela 20): a prévia de como a cliente vê, o link,
 // copiar, compartilhar, e o QR para imprimir e colar no espelho.
@@ -13,20 +14,27 @@ export default function ProLink() {
   const { professional, recarregarProfessional } = useAuth()
   const [copiado, setCopiado] = useState(false)
   const [erro, setErro] = useState('')
-  const [mostrarQr, setMostrarQr] = useState(false)
-  const canvas = useRef(null)
   const [vitrine, setVitrine] = useState(null)
   const [salvando, setSalvando] = useState(false)
   const [salvo, setSalvo] = useState(false)
+  const [trazidas, setTrazidas] = useState(null)
+  const { confirmar } = useDialogo()
+
+  useEffect(() => {
+    if (!professional) return
+    supabase.rpc('minhas_trazidas').then(({ data }) => setTrazidas(data ?? []))
+  }, [professional])
 
   const url = professional ? `${window.location.origin}/p/${professional.slug}` : ''
 
-  useEffect(() => {
-    if (!mostrarQr || !canvas.current || !url) return
-    QRCode.toCanvas(canvas.current, url, { width: 220, margin: 1, color: { dark: '#1f2026', light: '#ffffff' } }).catch(() => {})
-  }, [mostrarQr, url])
-
   if (!professional) return <SemFicha />
+
+  async function novoCodigo() {
+    const ok = await confirmar({ titulo: 'Gerar um código novo?', texto: 'O QR e o link antigos deixam de funcionar. Quem já entrou continua na agenda.', ok: 'Gerar novo' })
+    if (!ok) return
+    const { error } = await supabase.rpc('novo_codigo')
+    if (error) setErro(error.message); else recarregarProfessional?.()
+  }
 
   // o que a vitrine mostra e só ela preenche: uma linha embaixo do nome,
   // o @ do Instagram, o WhatsApp que ela ESCOLHE mostrar, e a bio
@@ -59,14 +67,21 @@ export default function ProLink() {
     if (navigator.share) navigator.share({ text: msg, url }).catch(() => {})
     else window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank')
   }
-  function baixarQr() {
-    const a = document.createElement('a'); a.download = `qr-${professional.slug}.png`; a.href = canvas.current.toDataURL('image/png'); a.click()
-  }
 
   return (
-    <ProShell titulo="Meu link público" voltar="/pro/ajustes">
+    <ProShell titulo="Meu link e código" voltar="/pro/ajustes">
       {erro && <div className="alert alert-error">{erro}</div>}
 
+      <h3 className="secao-titulo">Entrar na minha agenda</h3>
+      <div className="card">
+        <CodigoQr codigo={professional.codigo} nome={professional.name} onNovo={novoCodigo} />
+      </div>
+      <p className="muted" style={{ fontSize: '0.82rem' }}>
+        Mostre o QR no fim do atendimento ou mande o link. A cliente entra na sua agenda e passa a marcar pelo app.
+        {trazidas && trazidas.length > 0 && <> Você já trouxe <strong>{trazidas.length}</strong> {trazidas.length === 1 ? 'cliente' : 'clientes'}.</>}
+      </p>
+
+      <h3 className="secao-titulo">Minha vitrine</h3>
       <div className="card link-previa">
         <FotoUpload nome={professional.name} pasta={professional.id} valor={professional.photo_url} onChange={salvarFoto} onErro={setErro} />
         <strong>{professional.name}</strong>
@@ -86,22 +101,6 @@ export default function ProLink() {
         <label>WhatsApp para a cliente falar com você<input type="tel" value={form.whatsapp_publico} onChange={mudar('whatsapp_publico')} placeholder="(13) 99999-9999 — vazio = não mostra" /></label>
         <label>Sobre você<textarea value={form.bio} onChange={mudar('bio')} rows={4} placeholder="Como você atende, há quanto tempo, o que a cliente pode esperar." /></label>
         <button className="btn btn-primary btn-block" onClick={salvarVitrine} disabled={salvando || !vitrine}>{salvando ? 'Salvando…' : salvo ? 'Salvo ✓' : 'Salvar vitrine'}</button>
-      </div>
-
-      <div className="card qr-card">
-        <div className="cl-ajuste">
-          <div className="cliente-info">
-            <span className="cliente-nome"><span className="nome-txt">QR Code</span></span>
-            <span className="muted cliente-meta">Imprima e cole no espelho ou no balcão</span>
-          </div>
-          <button className="btn-mini" onClick={() => setMostrarQr((v) => !v)}>{mostrarQr ? 'Esconder' : 'Ver QR'}</button>
-        </div>
-        {mostrarQr && (
-          <div className="qr-area">
-            <canvas ref={canvas} />
-            <button className="btn-mini" onClick={baixarQr}>Baixar QR Code</button>
-          </div>
-        )}
       </div>
 
       <p className="muted" style={{ fontSize: '0.82rem' }}>Coloque o link na bio do Instagram e no status do WhatsApp. A cliente escolhe serviço, dia e hora sozinha — você só confirma.</p>

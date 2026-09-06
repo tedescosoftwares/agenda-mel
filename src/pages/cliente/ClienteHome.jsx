@@ -10,7 +10,7 @@ import { formatPreco, formatDuracao } from '../../lib/format'
 // profissionais, e os serviços em destaque. É a vitrine — tudo aqui
 // leva para "marcar com alguém".
 export default function ClienteHome() {
-  const { profile, user } = useAuth()
+  const { profile, user, vinculos: agendas } = useAuth()
   const nome = (profile?.full_name || user?.email || '').split(' ')[0]
 
   const [profissionais, setProfissionais] = useState([])
@@ -80,29 +80,42 @@ export default function ClienteHome() {
         />
       </label>
 
-      <div className="secao-cabeca">
-        <h3>Profissionais próximas</h3>
-        <Link to="/cliente/profissionais" className="link-ver">Ver todas</Link>
-      </div>
-
-      {loading ? (
-        <p className="muted">Carregando…</p>
-      ) : (
-        <div className="fileira-prof">
-          {lista.slice(0, 8).map((p) => (
-            <Link key={p.id} to={`/cliente/profissional/${p.id}`} className="prof-bolha">
-              {p.photo_url ? (
-                <img src={p.photo_url} alt="" />
-              ) : (
-                <span className="prof-bolha-ini">{p.name.charAt(0)}</span>
-              )}
-              <strong>{p.name.split(' ')[0]}</strong>
-              <span className="muted">{especialidade(p).split(' e ')[0]}</span>
-            </Link>
-          ))}
-          {lista.length === 0 && <p className="muted">Ninguém com esse nome.</p>}
-        </div>
-      )}
+      {/* Uma fileira por agenda em que ela entrou (053). Com uma só, o
+          cabeçalho é o salão; com várias, cada uma tem o seu, e ela sabe
+          por quem entrou em cada. */}
+      {(agendas ?? []).map((ag) => {
+        const daqui = lista.filter((p) => (ag.profissionais ?? []).some((x) => x.id === p.id))
+        const autonoma = ag.salao?.tipo === 'autonoma'
+        return (
+          <section key={ag.salao.id}>
+            <div className="secao-cabeca">
+              <h3>{autonoma ? 'Sua profissional' : ag.salao.nome}</h3>
+              {!autonoma && <Link to="/cliente/profissionais" className="link-ver">Ver todas</Link>}
+            </div>
+            {ag.trazida_por && !autonoma && (
+              <p className="muted home-entrou">Você entrou pela {ag.trazida_por.nome.split(' ')[0]}{ag.trazida_por.ativa ? '' : ' (não está mais na equipe)'}</p>
+            )}
+            {loading ? (
+              <p className="muted">Carregando…</p>
+            ) : (
+              <div className="fileira-prof">
+                {daqui.slice(0, 8).map((p) => (
+                  <Link key={p.id} to={`/cliente/profissional/${p.id}`} className="prof-bolha">
+                    {p.photo_url ? (
+                      <img src={p.photo_url} alt="" />
+                    ) : (
+                      <span className="prof-bolha-ini">{p.name.charAt(0)}</span>
+                    )}
+                    <strong>{p.name.split(' ')[0]}</strong>
+                    <span className="muted">{(p.especialidade || especialidade(p)).split(' · ')[0].split(' e ')[0]}</span>
+                  </Link>
+                ))}
+                {daqui.length === 0 && <p className="muted">{t ? 'Ninguém com esse nome.' : 'Ninguém atendendo por aqui ainda.'}</p>}
+              </div>
+            )}
+          </section>
+        )
+      })}
 
       <div className="secao-cabeca">
         <h3>Serviços em destaque</h3>
@@ -129,6 +142,11 @@ export default function ClienteHome() {
           </Link>
         ))}
       </div>
+
+      <Link to="/cliente/entrar" className="card prof-row home-mais-agenda">
+        <span className="ajuste-icone">➕</span>
+        <span className="cliente-info"><span className="cliente-nome"><span className="nome-txt">Entrar em outra agenda</span></span><span className="muted cliente-meta">Escaneie o QR ou digite o código de outra profissional</span></span>
+      </Link>
     </ClienteShell>
   )
 }

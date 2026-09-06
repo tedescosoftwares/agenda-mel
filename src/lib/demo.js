@@ -47,8 +47,8 @@ const FOTO = (n) => {
 }
 
 const profissionais = [
-  { id: 'pr1', user_id: 'p1', name: 'Ana Oliveira', slug: 'ana-oliveira', bio: 'Especialista em unhas decoradas e cuidados completos. Atendo com hora marcada, num cantinho tranquilo no Gonzaga — café, música baixa e capricho em cada detalhe.', especialidade: 'Nail designer · gel e decoradas', instagram: 'ana.oliveira.nails', whatsapp_publico: '5513998710002', photo_url: FOTO(47), active: true, salon_id: SALAO, aceite_manual: true, minutos_para_aceitar: 120, ao_expirar: 'confirma', buffer_minutes: 0, reminder_hours_before: 24, followup_active: true, winback_after_days: 45, winback_cooldown_days: 45, no_show_tolerance_minutes: 15, phone: '(13) 99871-0002' },
-  { id: 'pr2', user_id: 'p2', name: 'Camila Rocha', slug: 'camila-rocha', bio: 'Cabeleireira e colorista.', photo_url: FOTO(32), active: true, salon_id: SALAO, aceite_manual: true, minutos_para_aceitar: 120, ao_expirar: 'confirma' },
+  { id: 'pr1', user_id: 'p1', codigo: 'ANA7K2', name: 'Ana Oliveira', slug: 'ana-oliveira', bio: 'Especialista em unhas decoradas e cuidados completos. Atendo com hora marcada, num cantinho tranquilo no Gonzaga — café, música baixa e capricho em cada detalhe.', especialidade: 'Nail designer · gel e decoradas', instagram: 'ana.oliveira.nails', whatsapp_publico: '5513998710002', photo_url: FOTO(47), active: true, salon_id: SALAO, aceite_manual: true, minutos_para_aceitar: 120, ao_expirar: 'confirma', buffer_minutes: 0, reminder_hours_before: 24, followup_active: true, winback_after_days: 45, winback_cooldown_days: 45, no_show_tolerance_minutes: 15, phone: '(13) 99871-0002' },
+  { id: 'pr2', user_id: 'p2', codigo: 'CAM3XR', name: 'Camila Rocha', slug: 'camila-rocha', bio: 'Cabeleireira e colorista.', photo_url: FOTO(32), active: true, salon_id: SALAO, aceite_manual: true, minutos_para_aceitar: 120, ao_expirar: 'confirma' },
   { id: 'pr3', user_id: 'p3', name: 'Fernanda Lima', slug: 'fernanda-lima', bio: 'Esteticista facial e corporal.', photo_url: FOTO(44), active: true, salon_id: SALAO, aceite_manual: false },
   { id: 'pr4', user_id: 'p4', name: 'Roberta Souza', slug: 'roberta-souza', bio: 'Maquiagem e sobrancelhas.', photo_url: FOTO(20), active: true, salon_id: SALAO, aceite_manual: true },
 ]
@@ -134,7 +134,7 @@ const TABELAS = {
   ],
   client_favorites: [{ client_id: 'c1', professional_id: 'pr1' }, { client_id: 'c1', professional_id: 'pr3' }],
   reviews: [],
-  salons: [{ id: SALAO, name: 'Studio Mel', slug: 'studio-mel', app_url: 'https://mimo.app', city: 'Santos', address: 'Rua das Flores, 120 · Gonzaga' }],
+  salons: [{ id: SALAO, name: 'Studio Mel', slug: 'studio-mel', app_url: 'https://mimo.app', city: 'Santos', address: 'Rua das Flores, 120 · Gonzaga', codigo: 'MEL2K5', tipo: 'salao' }],
   salon_members: [{ salon_id: SALAO, user_id: 'a1', papel: 'admin', salons: { id: SALAO, name: 'Studio Mel', slug: 'studio-mel' } }],
   whatsapp_channels: [{ salon_id: SALAO, canal: 'evolution', identificador: '11', ativo: true, usa_ia: true, usa_bot: true, silencio_inicio: '21:00', silencio_fim: '08:00', teto_diario: 300 }],
   affiliate_settings: [{ id: true, ativo: true, platform_fee_bps: 300, affiliate_share_bps: 50 }],
@@ -176,6 +176,16 @@ const RPC = {
   clientes_para_retorno: () => [{ client_id: 'c2', nome: 'Juliana Silva', dias_sem_vir: 52, ultimo_servico: 'Manicure', ja_chamada: false }, { client_id: 'c3', nome: 'Carla Mendes', dias_sem_vir: 61, ultimo_servico: 'Escova', ja_chamada: false }, { client_id: 'c4', nome: 'Mariana Souza', dias_sem_vir: 48, ultimo_servico: 'Spa dos pés', ja_chamada: true }],
   config_retorno: () => [{ winback_after_days: 45, winback_cooldown_days: 45, followup_active: true, reminder_hours_before: 24 }],
   resumo_do_salao: () => profissionais.map((p, i) => ({ professional_id: p.id, nome: p.name, atendimentos: [48, 36, 28, 16][i], faturamento_cents: [384000, 288000, 196000, 116000][i], faltas: [1, 2, 0, 0][i], ocupacao_bps: [8200, 7100, 6400, 4300][i] })),
+  minhas_agendas: () => [{ salao: { id: SALAO, nome: 'Studio Mel', tipo: 'salao', cidade: 'Santos', codigo: 'MEL2K5' }, entrou_em: mais(-40), como: 'qr', trazida_por: { id: 'pr1', nome: 'Ana Oliveira', ativa: true }, profissionais: profissionais.map((p) => ({ id: p.id, nome: p.name, foto: p.photo_url, especialidade: p.especialidade ?? null, slug: p.slug })) }],
+  resolver_codigo: ({ chave }) => String(chave).toUpperCase() === 'MEL2K5'
+    ? { tipo: 'salao', codigo: 'MEL2K5', nome: 'Studio Mel', foto: null, profissional_id: null, salao: { id: SALAO, nome: 'Studio Mel', cidade: 'Santos', tipo: 'salao' } }
+    : { tipo: 'profissional', codigo: 'ANA7K2', nome: 'Ana Oliveira', foto: FOTO(47), especialidade: 'Nail designer · gel e decoradas', profissional_id: 'pr1', salao: { id: SALAO, nome: 'Studio Mel', cidade: 'Santos', tipo: 'salao' } },
+  vincular: () => ({ ok: true, novo: true, salao: { id: SALAO, nome: 'Studio Mel' }, trazida_por: 'Ana Oliveira', tipo: 'profissional' }),
+  clientes_do_salao: () => clientes.filter((c) => c.role === 'cliente').map((c, i) => ({ client_id: c.id, nome: c.full_name, telefone: c.phone, entrou_em: mais(-(10 + i * 7)), como: ['qr', 'link', 'agendamento', 'encaixe'][i % 4], trazida_por: ['Ana Oliveira', 'Camila Rocha', null, 'Ana Oliveira'][i % 4], trazida_por_ativa: true, servico_de_entrada: ['Esmaltação em gel', 'Escova', 'Manicure', 'Spa dos pés'][i % 4], com_quem: ['Ana Oliveira', 'Camila Rocha', 'Ana Oliveira', 'Fernanda Lima'][i % 4], atendimentos: [9, 4, 2, 6][i % 4], ultima_visita: mais(-(2 + i * 3)) })),
+  minhas_trazidas: () => [{ client_id: 'c1', nome: 'Juliana Prado', entrou_em: mais(-40), como: 'qr', ultima_visita: mais(-2) }, { client_id: 'c3', nome: 'Carla Mendes', entrou_em: mais(-20), como: 'link', ultima_visita: mais(-5) }],
+  meus_saloes: () => [],
+  novo_codigo: () => 'NOV4B7',
+  novo_codigo_do_salao: () => 'SAL9Q2',
   relogio_status: () => ({ ligado: true, jobs: [{ nome: 'mimo-fila', agenda: '* * * * *', ativo: true, ultima: new Date().toISOString(), status: 'succeeded' }, { nome: 'mimo-rotinas', agenda: '*/5 * * * *', ativo: true, ultima: new Date().toISOString(), status: 'succeeded' }] }),
   diagnostico_whatsapp: () => [{ item: 'Canal', situacao: 'ok', detalhe: 'Evolution, instância 11' }, { item: 'Número', situacao: 'ok', detalhe: '+55 13 99171-9086' }, { item: 'IA', situacao: 'ok', detalhe: 'ligada · 12 chamadas hoje' }],
   fila_do_salao: () => [],

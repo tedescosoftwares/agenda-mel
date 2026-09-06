@@ -1,26 +1,44 @@
-import { useState } from 'react'
-import { Navigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { homeDoPapel } from '../lib/roles'
 import { isSupabaseConfigured, supabase } from '../lib/supabase'
 import { VERSAO } from '../lib/versao'
 import { MarcaIcon, Wordmark } from '../components/icons'
+import { extrairCodigo, guardarConvite } from '../lib/convite'
 
 // Login (tela 02): "Bem-vinda de volta!", e-mail, senha, manter
 // conectado, e a porta para quem esqueceu a senha ou não tem conta.
-// O cadastro fica na mesma tela, trocado por um link — não é uma aba,
-// porque quem chega aqui quase sempre já tem conta.
+// O cadastro fica na mesma tela, trocado por um link.
+//
+// Duas coisas podem chegar pela URL e mudam o que o cadastro grava:
+//   ?convite=ANA7K2   veio de um QR/link de uma agenda: o código vai nos
+//                     metadados da conta e o servidor cria o vínculo
+//   ?papel=autonoma|salao   veio de /comecar: a conta nasce como
+//                     profissional (salão de uma) ou dona de salão
 export default function Login() {
   const { user, role, loading, signIn, signUp } = useAuth()
-  const [modo, setModo] = useState('login') // login | cadastro | esqueci
+  const [q] = useSearchParams()
+  const convite = extrairCodigo(q.get('convite'))
+  const papel = ['autonoma', 'salao'].includes(q.get('papel')) ? q.get('papel') : ''
+  const [modo, setModo] = useState(q.get('modo') === 'cadastro' ? 'cadastro' : 'login') // login | cadastro | esqueci
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
   const [nome, setNome] = useState('')
   const [fone, setFone] = useState('')
+  const [negocio, setNegocio] = useState(q.get('negocio') || '')
+  const [cidade, setCidade] = useState(q.get('cidade') || '')
   const [manter, setManter] = useState(true)
   const [erro, setErro] = useState('')
   const [info, setInfo] = useState('')
   const [enviando, setEnviando] = useState(false)
+  const [quemConvidou, setQuemConvidou] = useState(null)
+
+  useEffect(() => {
+    if (!convite) return
+    guardarConvite(convite)
+    supabase.rpc('resolver_codigo', { chave: convite }).then(({ data }) => setQuemConvidou(data ?? null))
+  }, [convite])
 
   if (loading) return <div className="page-center"><p className="muted">Carregando…</p></div>
   if (user) return <Navigate to={homeDoPapel(role)} replace />
@@ -32,15 +50,19 @@ export default function Login() {
     setEnviando(true)
     try {
       if (modo === 'login') {
-        // "manter conectado" desligado: a sessão vive só nesta aba
-        try { if (!manter) sessionStorage.setItem('mimo-sessao-temporaria', '1') } catch {}
+        try { if (!manter) sessionStorage.setItem('mimo-sessao-temporaria', '1') } catch { /* sem storage */ }
         const { error } = await signIn(email, senha)
         if (error) setErro(traduz(error.message))
       } else if (modo === 'cadastro') {
         if (!nome.trim()) { setErro('Diga seu nome.'); return }
-        const { error } = await signUp(email, senha, nome.trim(), fone.trim())
+        if (!fone.trim()) { setErro('Precisamos do seu WhatsApp: é por ele que os avisos chegam.'); return }
+        if (papel === 'salao' && !negocio.trim()) { setErro('Diga o nome do salão.'); return }
+        const extra = {}
+        if (convite) extra.codigo_convite = convite
+        if (papel) { extra.papel_desejado = papel; extra.nome_negocio = negocio.trim() || null; extra.cidade = cidade.trim() || null }
+        const { error } = await signUp(email, senha, nome.trim(), fone.trim(), extra)
         if (error) setErro(traduz(error.message))
-        else { setInfo('Conta criada! Confira seu e-mail para confirmar.'); setModo('login') }
+        else { setInfo('Conta criada! Confira seu e-mail para confirmar e depois entre aqui.'); setModo('login') }
       } else {
         const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + '/login' })
         if (error) setErro(traduz(error.message))
@@ -49,8 +71,15 @@ export default function Login() {
     } finally { setEnviando(false) }
   }
 
-  const titulo = { login: 'Bem-vinda de volta!', cadastro: 'Criar sua conta', esqueci: 'Recuperar senha' }[modo]
-  const sub = { login: 'Entre para continuar', cadastro: 'Leva menos de um minuto', esqueci: 'Mandamos um link para o seu e-mail' }[modo]
+  const titulo = modo === 'login' ? 'Bem-vinda de volta!'
+    : modo === 'esqueci' ? 'Recuperar senha'
+    : papel === 'salao' ? 'Cadastrar meu salão'
+    : papel === 'autonoma' ? 'Criar minha agenda'
+    : 'Criar sua conta'
+  const sub = modo === 'login' ? 'Entre para continuar'
+    : modo === 'esqueci' ? 'Mandamos um link para o seu e-mail'
+    : papel ? 'Leva um minuto. Depois é só compartilhar seu código com as clientes.'
+    : 'Leva menos de um minuto'
 
   return (
     <div className="page-center login-bg">
@@ -61,6 +90,13 @@ export default function Login() {
           <p className="brand-assinatura">Agenda Mel</p>
         </div>
 
+        {quemConvidou && (
+          <div className="convite-faixa">
+            <span aria-hidden="true">💌</span>
+            <span><strong>{quemConvidou.nome}</strong> te convidou. {modo === 'cadastro' ? 'Crie a conta e você já entra na agenda.' : 'Entre e você já cai na agenda.'}</span>
+          </div>
+        )}
+
         <h2 className="login-titulo">{titulo}</h2>
         <p className="muted login-sub">{sub}</p>
 
@@ -68,7 +104,9 @@ export default function Login() {
           {modo === 'cadastro' && (
             <>
               <label>Nome completo<input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Maria da Silva" autoComplete="name" /></label>
-              <label>WhatsApp<input type="tel" value={fone} onChange={(e) => setFone(e.target.value)} placeholder="(11) 99999-9999" autoComplete="tel" /></label>
+              <label>WhatsApp<input type="tel" value={fone} onChange={(e) => setFone(e.target.value)} placeholder="(11) 99999-9999" autoComplete="tel" required /></label>
+              {papel === 'salao' && <label>Nome do salão<input value={negocio} onChange={(e) => setNegocio(e.target.value)} placeholder="Espaço Bela" /></label>}
+              {papel && <label>Cidade<input value={cidade} onChange={(e) => setCidade(e.target.value)} placeholder="Santos" /></label>}
             </>
           )}
           <label>E-mail<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="voce@email.com" autoComplete="email" required /></label>
@@ -90,7 +128,7 @@ export default function Login() {
           {info && <div className="alert alert-info">{info}</div>}
 
           <button type="submit" className="btn btn-primary btn-block" disabled={enviando}>
-            {enviando ? 'Aguarde…' : modo === 'login' ? 'Entrar' : modo === 'cadastro' ? 'Criar conta' : 'Enviar link'}
+            {enviando ? 'Aguarde…' : modo === 'login' ? 'Entrar' : modo === 'cadastro' ? (papel ? 'Criar e começar' : 'Criar conta') : 'Enviar link'}
           </button>
         </form>
 
@@ -101,6 +139,11 @@ export default function Login() {
             <>Já tem conta? <button type="button" className="link-ver" onClick={() => { setModo('login'); setErro('') }}>Entrar</button></>
           )}
         </p>
+        {!papel && !convite && (
+          <p className="login-troca muted" style={{ marginTop: '0.2rem' }}>
+            Atende clientes? <Link to="/comecar" className="link-ver">Criar minha agenda</Link>
+          </p>
+        )}
 
         <p className="brand-slogan" style={{ marginTop: '1.2rem', marginBottom: 0, textAlign: 'center' }}>Beleza na palma da mão</p>
         <p className="versao-marca">v{VERSAO}</p>

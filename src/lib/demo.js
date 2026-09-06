@@ -31,7 +31,7 @@ export const PAPEL = (() => {
   } catch { return 'cliente' }
 })()
 
-const UID = { cliente: 'c1', profissional: 'p1', admin: 'a1' }[PAPEL] || 'c1'
+const UID = { cliente: 'c1', profissional: 'p1', admin: 'a1', plataforma: 'pl1' }[PAPEL] || 'c1'
 const SALAO = 's1'
 
 // foto fictícia: um retrato abstrato em SVG, para não depender de rede
@@ -76,6 +76,7 @@ const clientes = [
   { id: 'c4', full_name: 'Beatriz Costa', phone: '(13) 99999-0004', role: 'cliente', accepts_reminders: true, created_at: '2025-03-20' },
   { id: 'p1', full_name: 'Ana Oliveira', phone: '(13) 99871-0002', role: 'profissional', accepts_reminders: true, created_at: '2024-12-01' },
   { id: 'a1', full_name: 'Mel Tedesco', phone: '(13) 99120-3410', role: 'admin', accepts_reminders: true, created_at: '2024-11-01' },
+  { id: 'pl1', full_name: 'Bruno Tedesco', phone: '(13) 99871-0000', role: 'plataforma', accepts_reminders: true, created_at: '2024-10-01' },
 ]
 
 const jn = (a, todos) => ({ ...a, services: servicos.find((s) => s.id === a.service_id), professionals: profissionais.find((p) => p.id === a.professional_id), profiles: clientes.find((c) => c.id === a.client_id), appointment_offers: [], origem: a.remarca_de ? (todos.find((o) => o.id === a.remarca_de) ?? null) : null })
@@ -186,6 +187,22 @@ const RPC = {
   meus_saloes: () => [],
   novo_codigo: () => 'NOV4B7',
   novo_codigo_do_salao: () => 'SAL9Q2',
+  plataforma_resumo: () => ({ saloes: 3, autonomas: 5, profissionais: 14, clientes: 212, vinculos: 240, clientes_sem_vinculo: 4, atendimentos_mes: 318, agendados_futuro: 97, novas_contas_7d: 11, whats_hoje: { na_fila: 2, enviadas: 41, falharam: 1 }, emails: { na_fila: 0, enviados: 58, falharam: 2 } }),
+  plataforma_saloes: () => [
+    { id: SALAO, nome: 'Studio Mel', tipo: 'salao', slug: 'studio-mel', codigo: 'MEL2K5', cidade: 'Santos', ativo: true, dona: 'Mel Tedesco', dona_email: 'mel@exemplo.com', profissionais: 4, clientes: 128, atendimentos: 1240, atendimentos_mes: 96, ultimo_atendimento: mais(0), desde: '2024-11-01' },
+    { id: 's2', nome: 'Espaço Bela', tipo: 'salao', slug: 'espaco-bela', codigo: 'BEL4TX', cidade: 'Praia Grande', ativo: true, dona: 'Renata Alves', dona_email: 'renata@exemplo.com', profissionais: 3, clientes: 54, atendimentos: 310, atendimentos_mes: 40, ultimo_atendimento: mais(-1), desde: '2025-03-12' },
+    { id: 's3', nome: 'Léa Solo', tipo: 'autonoma', slug: 'lea-solo', codigo: 'LEA9QW', cidade: 'Santos', ativo: true, dona: 'Léa Solo', dona_email: 'lea@exemplo.com', profissionais: 1, clientes: 19, atendimentos: 88, atendimentos_mes: 12, ultimo_atendimento: mais(-2), desde: '2025-06-02' },
+    { id: 's4', nome: 'Nail da Vi', tipo: 'autonoma', slug: 'nail-da-vi', codigo: 'VIV7MN', cidade: 'São Vicente', ativo: false, dona: 'Vivian Costa', dona_email: 'vi@exemplo.com', profissionais: 1, clientes: 6, atendimentos: 15, atendimentos_mes: 0, ultimo_atendimento: mais(-60), desde: '2025-05-20' },
+  ],
+  plataforma_salao: () => ({ salao: { id: SALAO, name: 'Studio Mel', tipo: 'salao', codigo: 'MEL2K5', city: 'Santos', active: true }, dona: { nome: 'Mel Tedesco', email: 'mel@exemplo.com', telefone: '(13) 99120-3410' }, equipe: profissionais.map((p, i) => ({ id: p.id, nome: p.name, slug: p.slug, codigo: p.codigo ?? 'XXXXXX', ativa: true, tem_conta: i < 3, telefone: p.phone ?? null, trouxe: [23, 9, 4, 0][i], atendimentos: [412, 180, 96, 40][i] })), clientes: clientes.filter((c) => c.role === 'cliente').map((c, i) => ({ nome: c.full_name, telefone: c.phone, entrou_em: mais(-(5 + i * 9)), como: ['qr', 'cadastro', 'agendamento', 'encaixe'][i % 4], trazida_por: ['Ana Oliveira', 'Camila Rocha', null, 'Ana Oliveira'][i % 4] })), ultimos: agendamentos.slice(0, 8).map((a) => ({ data: a.date, hora: a.start_time.slice(0, 5), status: a.status, servico: a.services?.name, profissional: a.professionals?.name, cliente: a.profiles?.full_name })) }),
+  plataforma_pessoas: () => clientes.map((c, i) => ({ id: c.id, nome: c.full_name, email: (c.full_name || 'x').split(' ')[0].toLowerCase() + '@exemplo.com', telefone: c.phone, papel: c.role, desde: mais(-(30 + i * 11)), saloes: c.role === 'admin' ? 'Studio Mel' : null, vinculos: c.role === 'cliente' ? 1 : 0, atendimentos: [9, 4, 2, 6, 0, 0][i % 6], ultimo_acesso: mais(-i) })),
+  plataforma_filas: () => [
+    { canal: 'whatsapp', id: 'f1', quando: new Date(Date.now() - 5 * 60e3).toISOString(), salao: 'Studio Mel', para: '5513998710003', tipo: 'pedido_de_aceite', status: 'enviado', erro: null, resumo: '🔔 Pedido de horário · Juliana Prado · Escova · qui 12/09 às 10:30' },
+    { canal: 'email', id: 'f2', quando: new Date(Date.now() - 12 * 60e3).toISOString(), salao: null, para: 'nova@exemplo.com', tipo: 'boas_vindas', status: 'enviado', erro: null, resumo: 'Você entrou na agenda de Ana Oliveira 💛' },
+    { canal: 'whatsapp', id: 'f3', quando: new Date(Date.now() - 40 * 60e3).toISOString(), salao: 'Espaço Bela', para: '5513997001188', tipo: 'lembrete_agendamento', status: 'falhou', erro: 'número não existe no WhatsApp', resumo: '📅 Amanhã tem horário marcado · Manicure com Renata' },
+    { canal: 'email', id: 'f4', quando: new Date(Date.now() - 3 * 3600e3).toISOString(), salao: null, para: 'pro@exemplo.com', tipo: 'boas_vindas', status: 'na_fila', erro: 'RESEND_API_KEY não configurada', resumo: 'Sua agenda no MIMO está pronta 💛' },
+  ],
+  promover_plataforma: ({ email_ }) => 'ok: ' + email_ + ' agora é plataforma',
   relogio_status: () => ({ ligado: true, jobs: [{ nome: 'mimo-fila', agenda: '* * * * *', ativo: true, ultima: new Date().toISOString(), status: 'succeeded' }, { nome: 'mimo-rotinas', agenda: '*/5 * * * *', ativo: true, ultima: new Date().toISOString(), status: 'succeeded' }] }),
   diagnostico_whatsapp: () => [{ item: 'Canal', situacao: 'ok', detalhe: 'Evolution, instância 11' }, { item: 'Número', situacao: 'ok', detalhe: '+55 13 99171-9086' }, { item: 'IA', situacao: 'ok', detalhe: 'ligada · 12 chamadas hoje' }],
   fila_do_salao: () => [],

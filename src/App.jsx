@@ -43,6 +43,10 @@ import Entrar from "./pages/cliente/Entrar";
 import EntrarPorCodigo from "./pages/publico/EntrarPorCodigo";
 import Comecar from "./pages/publico/Comecar";
 import ComCodigo from "./pages/publico/ComCodigo";
+import PlataformaVisao from "./pages/plataforma/PlataformaVisao";
+import PlataformaSaloes, { PlataformaSalao } from "./pages/plataforma/PlataformaSaloes";
+import PlataformaPessoas from "./pages/plataforma/PlataformaPessoas";
+import PlataformaFilas from "./pages/plataforma/PlataformaFilas";
 import { guardarCodigoDaURL } from "./lib/indicacao";
 
 export default function App() {
@@ -274,6 +278,13 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
+
+            {/* a plataforma: o olho que tudo vê (055) */}
+            <Route path="/plataforma" element={<ProtectedRoute requireRole="plataforma"><PlataformaVisao /></ProtectedRoute>} />
+            <Route path="/plataforma/saloes" element={<ProtectedRoute requireRole="plataforma"><PlataformaSaloes /></ProtectedRoute>} />
+            <Route path="/plataforma/saloes/:id" element={<ProtectedRoute requireRole="plataforma"><PlataformaSalao /></ProtectedRoute>} />
+            <Route path="/plataforma/pessoas" element={<ProtectedRoute requireRole="plataforma"><PlataformaPessoas /></ProtectedRoute>} />
+            <Route path="/plataforma/filas" element={<ProtectedRoute requireRole="plataforma"><PlataformaFilas /></ProtectedRoute>} />
 
             {/* área do salão */}
             <Route

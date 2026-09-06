@@ -4601,3 +4601,15 @@ body { position: relative; width: 100%; }
 .login-convite > span:first-child { font-size: 1.4rem; }
 .login-convite > span:last-child { display: flex; flex-direction: column; gap: 0.1rem; font-size: 0.88rem; }
 .login-convite .muted { font-size: 0.8rem; }
+
+/* ---- a plataforma (055) ---- */
+.plat-tag { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--roxo); background: color-mix(in srgb, var(--violeta) 30%, #fff); padding: 0.15rem 0.45rem; border-radius: var(--r-pilula); margin-left: 0.4rem; font-weight: 700; }
+.kpi-alerta strong { color: var(--carmim); }
+.plat-relogio.ok { border-left: 4px solid var(--menta); }
+.plat-relogio.ruim { border-left: 4px solid var(--carmim); }
+.plat-papel { font-size: 0.65rem; margin-left: 0.4rem; color: var(--texto-3); }
+.plat-papel.plataforma { color: var(--roxo); }
+.plat-papel.admin { color: var(--rosa); }
+.plat-papel.profissional { color: var(--menta); }
+.btn-perigo-borda { color: var(--carmim); border-color: color-mix(in srgb, var(--carmim) 40%, #fff); }
+.prof-row.apagado, .cliente-row.apagado { opacity: 0.6; }

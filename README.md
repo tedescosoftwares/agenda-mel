@@ -262,6 +262,10 @@ where slug = 'slug-dela';
 - [x] E-mail pelo Resend (054): fila `email_outbox`, função `enviar-email`, terceiro
       ponteiro do relógio; boas-vindas no cadastro dizendo quem convidou. Segredos:
       `supabase secrets set RESEND_API_KEY=re_... EMAIL_DE='MIMO <oi@seudominio.com>'`
+- [x] A plataforma (055): o quarto papel, 'plataforma', com /plataforma — números
+      do MIMO inteiro, salões e autônomas de perto, pessoas, filas e relógio, mais
+      desativar salão e trocar dona. Dá o papel com
+      `select public.dar_plataforma('voce@email.com')` no SQL Editor
 - [x] `supabase/povoar.sql`: gente de mentira (5 clientes, 4 profissionais com
       3 meses de histórico e avaliações) para ver tudo funcionando
 - [x] O relógio da casa: pg_cron + pg_net dentro do Supabase empurram a fila a

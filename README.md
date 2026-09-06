@@ -259,6 +259,9 @@ where slug = 'slug-dela';
       é da profissional ou do salão, o vínculo é sempre com o salão e registra
       quem trouxe; cadastro com código vincula no servidor; agendar vincula;
       "Sou profissional" abre uma agenda autônoma (salão de uma) ou um salão
+- [x] E-mail pelo Resend (054): fila `email_outbox`, função `enviar-email`, terceiro
+      ponteiro do relógio; boas-vindas no cadastro dizendo quem convidou. Segredos:
+      `supabase secrets set RESEND_API_KEY=re_... EMAIL_DE='MIMO <oi@seudominio.com>'`
 - [x] `supabase/povoar.sql`: gente de mentira (5 clientes, 4 profissionais com
       3 meses de histórico e avaliações) para ver tudo funcionando
 - [x] O relógio da casa: pg_cron + pg_net dentro do Supabase empurram a fila a

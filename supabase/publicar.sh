@@ -87,6 +87,10 @@ echo 'whatsapp-webhook (com --no-verify-jwt)...'
 supabase functions deploy whatsapp-webhook --project-ref "$PROJECT_REF" --no-verify-jwt >/dev/null
 verde '  no ar'
 
+echo 'enviar-email (Resend)...'
+supabase functions deploy enviar-email --project-ref "$PROJECT_REF" >/dev/null
+verde '  no ar'
+
 echo 'pagina-publica (prévia do link, com --no-verify-jwt)...'
 supabase functions deploy pagina-publica --project-ref "$PROJECT_REF" --no-verify-jwt >/dev/null
 verde '  no ar'
@@ -109,6 +113,11 @@ case "$CODIGO" in
   000) amarelo 'Não consegui alcançar a função daqui (rede). Publicou, mas não conferi.' ;;
   *)   amarelo "Respondeu $CODIGO — inesperado, mas a publicação não deu erro." ;;
 esac
+
+if ! supabase secrets list --project-ref "$PROJECT_REF" 2>/dev/null | grep -q RESEND_API_KEY; then
+  amarelo 'RESEND_API_KEY ainda não está nos segredos: o e-mail de boas-vindas fica na fila sem sair.'
+  echo "   supabase secrets set --project-ref $PROJECT_REF RESEND_API_KEY=re_... EMAIL_DE='MIMO <oi@seudominio.com>'"
+fi
 
 echo
 echo 'Para ver o que a função está registrando:'

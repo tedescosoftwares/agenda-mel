@@ -4597,3 +4597,7 @@ body { position: relative; width: 100%; }
 .linha-dupla { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
 .cliente-row-vinculo .cliente-meta { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.35; }
 .cliente-row-vinculo .btn-mini { flex-shrink: 0; align-self: center; }
+.login-convite { display: flex; gap: 0.7rem; align-items: center; text-align: left; text-decoration: none; color: inherit; margin-top: 0.9rem; padding: 0.8rem 0.9rem; background: color-mix(in srgb, var(--violeta) 22%, #fff); border: none; }
+.login-convite > span:first-child { font-size: 1.4rem; }
+.login-convite > span:last-child { display: flex; flex-direction: column; gap: 0.1rem; font-size: 0.88rem; }
+.login-convite .muted { font-size: 0.8rem; }

@@ -139,6 +139,15 @@ export default function Login() {
             <>Já tem conta? <button type="button" className="link-ver" onClick={() => { setModo('login'); setErro('') }}>Entrar</button></>
           )}
         </p>
+        {!papel && !convite && modo === 'login' && (
+          <Link to="/entrar" className="card login-convite">
+            <span aria-hidden="true">📷</span>
+            <span>
+              <strong>Recebeu um QR ou código da sua profissional?</strong>
+              <span className="muted">Escaneie ou digite pra entrar na agenda dela.</span>
+            </span>
+          </Link>
+        )}
         {!papel && !convite && (
           <p className="login-troca muted" style={{ marginTop: '0.2rem' }}>
             Atende clientes? <Link to="/comecar" className="link-ver">Criar minha agenda</Link>

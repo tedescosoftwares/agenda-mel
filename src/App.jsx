@@ -42,6 +42,7 @@ import FilaEspera from "./pages/cliente/FilaEspera";
 import Entrar from "./pages/cliente/Entrar";
 import EntrarPorCodigo from "./pages/publico/EntrarPorCodigo";
 import Comecar from "./pages/publico/Comecar";
+import ComCodigo from "./pages/publico/ComCodigo";
 import { guardarCodigoDaURL } from "./lib/indicacao";
 
 export default function App() {
@@ -68,6 +69,7 @@ export default function App() {
             {/* o QR/link de entrar numa agenda, e a porta de quem vai atender */}
             <Route path="/v/:codigo" element={<EntrarPorCodigo />} />
             <Route path="/comecar" element={<Comecar />} />
+            <Route path="/entrar" element={<ComCodigo />} />
             <Route
               path="/cliente/entrar"
               element={

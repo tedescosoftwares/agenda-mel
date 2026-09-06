@@ -156,7 +156,7 @@ function traduz(msg) {
   const mapa = {
     'Invalid login credentials': 'E-mail ou senha incorretos.',
     'Email not confirmed': 'Confirme seu e-mail antes de entrar.',
-    'User already registered': 'Este e-mail já está cadastrado.',
+    'User already registered': 'Este e-mail já tem conta. Entre com a senha, ou use "Esqueci a senha".',
     'Password should be at least 6 characters': 'A senha precisa ter pelo menos 6 caracteres.',
     'Failed to fetch': 'Não foi possível conectar. Confira sua internet.',
   }

@@ -144,13 +144,20 @@ export function AuthProvider({ children }) {
   // perfil nasce: codigo_convite (entrar numa agenda), papel_desejado
   // (autonoma | salao), nome_negocio, cidade. Ver 053.
   async function signUp(email, password, fullName, phone, extra = {}) {
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: { full_name: fullName, phone, ...extra },
       },
     })
+    // Com "confirmar e-mail" ligado, o Supabase NÃO dá erro para e-mail
+    // repetido (para não revelar quem tem conta): devolve um usuário
+    // fantasma sem identidades. Sem esta linha o app diria "confira seu
+    // e-mail" e nada chegaria.
+    if (!error && data?.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+      return { error: { message: 'User already registered' } }
+    }
     return { error }
   }
 

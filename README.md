@@ -262,10 +262,11 @@ where slug = 'slug-dela';
 - [x] E-mail pelo Resend (054): fila `email_outbox`, função `enviar-email`, terceiro
       ponteiro do relógio; boas-vindas no cadastro dizendo quem convidou. Segredos:
       `supabase secrets set RESEND_API_KEY=re_... EMAIL_DE='MIMO <oi@seudominio.com>'`
-- [x] A plataforma (055): o quarto papel, 'plataforma', com /plataforma — números
-      do MIMO inteiro, salões e autônomas de perto, pessoas, filas e relógio, mais
-      desativar salão e trocar dona. Dá o papel com
-      `select public.dar_plataforma('voce@email.com')` no SQL Editor
+- [x] A plataforma (055/056): o quarto papel, 'plataforma', com /plataforma — um
+      painel de PC: visão geral com variação e tendência, salões e autônomas com
+      checklist de implantação, pessoas, convites/vínculos com funil, filas e logs,
+      métricas semanais, configurações; criar salão, desativar, trocar dona. Dá o
+      papel com `select public.dar_plataforma('voce@email.com')` no SQL Editor
 - [x] A porta é o código: sem login, o app abre em Escanear o QR / Digitar o código /
       Já tenho conta. Cadastro solto não existe; a conta nasce atrás de um código
       (cliente) ou de "sou profissional". Google/Apple entram com `VITE_OAUTH=google,apple`

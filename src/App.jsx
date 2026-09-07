@@ -43,10 +43,13 @@ import Entrar from "./pages/cliente/Entrar";
 import EntrarPorCodigo from "./pages/publico/EntrarPorCodigo";
 import Comecar from "./pages/publico/Comecar";
 import ComCodigo from "./pages/publico/ComCodigo";
-import PlataformaVisao from "./pages/plataforma/PlataformaVisao";
-import PlataformaSaloes, { PlataformaSalao } from "./pages/plataforma/PlataformaSaloes";
-import PlataformaPessoas from "./pages/plataforma/PlataformaPessoas";
-import PlataformaFilas from "./pages/plataforma/PlataformaFilas";
+import Visao from "./pages/plataforma/Visao";
+import Saloes, { Salao } from "./pages/plataforma/Saloes";
+import Pessoas from "./pages/plataforma/Pessoas";
+import Vinculos from "./pages/plataforma/Vinculos";
+import Filas from "./pages/plataforma/Filas";
+import Metricas from "./pages/plataforma/Metricas";
+import Configuracoes from "./pages/plataforma/Configuracoes";
 import { guardarCodigoDaURL } from "./lib/indicacao";
 
 export default function App() {
@@ -280,11 +283,15 @@ export default function App() {
             />
 
             {/* a plataforma: o olho que tudo vê (055) */}
-            <Route path="/plataforma" element={<ProtectedRoute requireRole="plataforma"><PlataformaVisao /></ProtectedRoute>} />
-            <Route path="/plataforma/saloes" element={<ProtectedRoute requireRole="plataforma"><PlataformaSaloes /></ProtectedRoute>} />
-            <Route path="/plataforma/saloes/:id" element={<ProtectedRoute requireRole="plataforma"><PlataformaSalao /></ProtectedRoute>} />
-            <Route path="/plataforma/pessoas" element={<ProtectedRoute requireRole="plataforma"><PlataformaPessoas /></ProtectedRoute>} />
-            <Route path="/plataforma/filas" element={<ProtectedRoute requireRole="plataforma"><PlataformaFilas /></ProtectedRoute>} />
+            <Route path="/plataforma" element={<ProtectedRoute requireRole="plataforma"><Visao /></ProtectedRoute>} />
+            <Route path="/plataforma/saloes" element={<ProtectedRoute requireRole="plataforma"><Saloes /></ProtectedRoute>} />
+            <Route path="/plataforma/saloes/:id" element={<ProtectedRoute requireRole="plataforma"><Salao /></ProtectedRoute>} />
+            <Route path="/plataforma/pessoas" element={<ProtectedRoute requireRole="plataforma"><Pessoas /></ProtectedRoute>} />
+            <Route path="/plataforma/vinculos" element={<ProtectedRoute requireRole="plataforma"><Vinculos /></ProtectedRoute>} />
+            <Route path="/plataforma/filas" element={<ProtectedRoute requireRole="plataforma"><Filas /></ProtectedRoute>} />
+            <Route path="/plataforma/mensagens" element={<ProtectedRoute requireRole="plataforma"><Filas abaInicial="email" /></ProtectedRoute>} />
+            <Route path="/plataforma/metricas" element={<ProtectedRoute requireRole="plataforma"><Metricas /></ProtectedRoute>} />
+            <Route path="/plataforma/configuracoes" element={<ProtectedRoute requireRole="plataforma"><Configuracoes /></ProtectedRoute>} />
 
             {/* área do salão */}
             <Route

@@ -4,10 +4,13 @@ import LeitorQr from '../../components/LeitorQr'
 import { MarcaIcon, Wordmark } from '../../components/icons'
 import { extrairCodigo } from '../../lib/convite'
 
-// /entrar — para quem ainda NÃO tem conta e recebeu um QR ou código da
-// profissional. Lê o código (câmera ou digitado) e leva para /v/<código>,
-// que mostra quem convidou e manda criar a conta já com o vínculo.
-// Quem já tem conta faz o mesmo por dentro do app (/cliente/entrar).
+// /entrar — a PORTA do MIMO para quem não está logada. Ninguém chega
+// aqui do nada: sempre foi uma profissional ou um salão que chamou. Então
+// a primeira tela pergunta pelo código, não pelo e-mail:
+//   Escanear o QR  ·  Digitar o código  ·  Já tenho conta
+// O código leva para /v/<código>, que mostra quem convidou e cria a
+// conta já com o vínculo. Cadastro solto não existe (a rota até aceita,
+// mas nenhuma tela leva lá).
 export default function ComCodigo() {
   const navigate = useNavigate()
   const [modo, setModo] = useState('menu')
@@ -28,8 +31,8 @@ export default function ComCodigo() {
           <MarcaIcon className="brand-icon" width={44} height={40} id="comcodigo" />
           <Wordmark tamanho={2.2} />
         </div>
-        <h2 className="login-titulo">Entrar na agenda da sua profissional</h2>
-        <p className="muted login-sub">Ela te mostrou um QR ou te passou um código de seis letras. É por ele que você entra.</p>
+        <h2 className="login-titulo">Bem-vinda ao MIMO</h2>
+        <p className="muted login-sub">Sua profissional te mostrou um QR ou te passou um código de seis letras. É por ele que você entra na agenda dela.</p>
 
         {erro && <div className="alert alert-error">{erro}</div>}
 
@@ -53,7 +56,9 @@ export default function ComCodigo() {
           </form>
         )}
 
-        <p className="login-troca muted">Já tem conta? <Link to="/login" className="link-ver">Entrar</Link></p>
+        {modo === 'menu' && <Link to="/login" className="btn btn-ghost btn-block" style={{ marginTop: '0.6rem' }}>Já tenho conta</Link>}
+        <p className="login-troca muted" style={{ marginTop: '1rem' }}>Atende clientes? <Link to="/comecar" className="link-ver">Criar minha agenda</Link></p>
+        <p className="brand-slogan" style={{ marginTop: '0.8rem', marginBottom: 0, textAlign: 'center' }}>Beleza na palma da mão</p>
       </div>
     </div>
   )

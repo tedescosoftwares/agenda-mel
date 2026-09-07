@@ -14,7 +14,8 @@ export default function Splash() {
   useEffect(() => {
     if (loading) return
     const t = setTimeout(() => {
-      navigate(user ? homeDoPapel(role) : '/login', { replace: true })
+      // sem login, a porta é o código: ninguém chega ao MIMO sem alguém ter chamado
+      navigate(user ? homeDoPapel(role) : '/entrar', { replace: true })
     }, 650)
     return () => clearTimeout(t)
   }, [loading, user, role, navigate])

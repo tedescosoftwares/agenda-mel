@@ -4613,3 +4613,6 @@ body { position: relative; width: 100%; }
 .plat-papel.profissional { color: var(--menta); }
 .btn-perigo-borda { color: var(--carmim); border-color: color-mix(in srgb, var(--carmim) 40%, #fff); }
 .prof-row.apagado, .cliente-row.apagado { opacity: 0.6; }
+.login-social { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.9rem; align-items: center; }
+.login-social > .muted { font-size: 0.8rem; }
+.login-social .btn { width: 100%; }

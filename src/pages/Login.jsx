@@ -16,6 +16,8 @@ import { extrairCodigo, guardarConvite } from '../lib/convite'
 //                     metadados da conta e o servidor cria o vínculo
 //   ?papel=autonoma|salao   veio de /comecar: a conta nasce como
 //                     profissional (salão de uma) ou dona de salão
+const OAUTH = String(import.meta.env.VITE_OAUTH || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean)
+
 export default function Login() {
   const { user, role, loading, signIn, signUp } = useAuth()
   const [q] = useSearchParams()
@@ -42,6 +44,9 @@ export default function Login() {
 
   if (loading) return <div className="page-center"><p className="muted">Carregando…</p></div>
   if (user) return <Navigate to={homeDoPapel(role)} replace />
+  // cadastro solto não existe: sem código de convite e sem "sou
+  // profissional", quem quer criar conta volta para a porta do código
+  if (modo === 'cadastro' && !convite && !papel) return <Navigate to="/entrar" replace />
 
   async function enviar(e) {
     e.preventDefault()
@@ -69,6 +74,19 @@ export default function Login() {
         else { setInfo('Se esse e-mail tiver conta, mandamos um link para criar uma senha nova.'); setModo('login') }
       }
     } finally { setEnviando(false) }
+  }
+
+  // Google/Apple: só aparecem quando o provedor está ligado no Supabase
+  // (VITE_OAUTH=google,apple no .env). Depois do login a pessoa volta
+  // para o código, se veio por um, ou para o início.
+  async function social(provider) {
+    setErro('')
+    if (convite) guardarConvite(convite)
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: { redirectTo: window.location.origin + (convite ? `/v/${convite}` : '/') },
+    })
+    if (error) setErro(traduz(error.message))
   }
 
   const titulo = modo === 'login' ? 'Bem-vinda de volta!'
@@ -132,27 +150,23 @@ export default function Login() {
           </button>
         </form>
 
+        {OAUTH.length > 0 && modo !== 'esqueci' && (
+          <div className="login-social">
+            <span className="muted">ou</span>
+            {OAUTH.includes('google') && <button type="button" className="btn btn-ghost btn-block" onClick={() => social('google')}>Continuar com Google</button>}
+            {OAUTH.includes('apple') && <button type="button" className="btn btn-ghost btn-block" onClick={() => social('apple')}>Continuar com Apple</button>}
+          </div>
+        )}
+
         <p className="login-troca muted">
           {modo === 'login' ? (
-            <>Não tem conta? <button type="button" className="link-ver" onClick={() => { setModo('cadastro'); setErro('') }}>Cadastre-se</button></>
+            (convite || papel)
+              ? <>Não tem conta? <button type="button" className="link-ver" onClick={() => { setModo('cadastro'); setErro('') }}>Cadastre-se</button></>
+              : <>Recebeu um QR ou código? <Link to="/entrar" className="link-ver">Entrar por ele</Link></>
           ) : (
             <>Já tem conta? <button type="button" className="link-ver" onClick={() => { setModo('login'); setErro('') }}>Entrar</button></>
           )}
         </p>
-        {!papel && !convite && modo === 'login' && (
-          <Link to="/entrar" className="card login-convite">
-            <span aria-hidden="true">📷</span>
-            <span>
-              <strong>Recebeu um QR ou código da sua profissional?</strong>
-              <span className="muted">Escaneie ou digite pra entrar na agenda dela.</span>
-            </span>
-          </Link>
-        )}
-        {!papel && !convite && (
-          <p className="login-troca muted" style={{ marginTop: '0.2rem' }}>
-            Atende clientes? <Link to="/comecar" className="link-ver">Criar minha agenda</Link>
-          </p>
-        )}
 
         <p className="brand-slogan" style={{ marginTop: '1.2rem', marginBottom: 0, textAlign: 'center' }}>Beleza na palma da mão</p>
         <p className="versao-marca">v{VERSAO}</p>

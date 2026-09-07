@@ -266,6 +266,10 @@ where slug = 'slug-dela';
       do MIMO inteiro, salões e autônomas de perto, pessoas, filas e relógio, mais
       desativar salão e trocar dona. Dá o papel com
       `select public.dar_plataforma('voce@email.com')` no SQL Editor
+- [x] A porta é o código: sem login, o app abre em Escanear o QR / Digitar o código /
+      Já tenho conta. Cadastro solto não existe; a conta nasce atrás de um código
+      (cliente) ou de "sou profissional". Google/Apple entram com `VITE_OAUTH=google,apple`
+      depois de ligar os provedores em Authentication → Providers
 - [x] `supabase/povoar.sql`: gente de mentira (5 clientes, 4 profissionais com
       3 meses de histórico e avaliações) para ver tudo funcionando
 - [x] O relógio da casa: pg_cron + pg_net dentro do Supabase empurram a fila a

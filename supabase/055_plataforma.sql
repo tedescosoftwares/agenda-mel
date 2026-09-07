@@ -142,6 +142,8 @@ revoke execute on function public.plataforma_resumo() from public, anon;
 grant execute on function public.plataforma_resumo() to authenticated;
 
 -- 3. Os salões (e autônomas) ---------------------------------------------------------
+-- a 056 troca o tipo de retorno; sem o drop, rodar de novo quebra
+drop function if exists public.plataforma_saloes();
 create or replace function public.plataforma_saloes()
 returns table (
   id uuid, nome text, tipo text, slug text, codigo text, cidade text, ativo boolean,
@@ -276,6 +278,8 @@ revoke execute on function public.plataforma_pessoas(text, integer) from public,
 grant execute on function public.plataforma_pessoas(text, integer) to authenticated;
 
 -- 5. As filas do sistema inteiro ------------------------------------------------------------
+-- a 056 troca o tipo de retorno; sem o drop, rodar de novo quebra
+drop function if exists public.plataforma_filas(integer);
 create or replace function public.plataforma_filas(quantas integer default 60)
 returns table (
   canal text, id uuid, quando timestamptz, salao text, para text, tipo text,

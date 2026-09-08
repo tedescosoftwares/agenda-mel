@@ -4861,3 +4861,30 @@ body { position: relative; width: 100%; }
 }
 .plat-delta { white-space: nowrap; }
 .plat-painel-tit h3 { white-space: nowrap; }
+
+/* =====================================================================
+   CARA DE APP, NÃO DE SITE (só nas telas de celular; a plataforma de PC
+   não passa por aqui).
+   - pinça não dá zoom, toque duplo não dá zoom, campo em foco não dá zoom
+   - a página não "estica" no fim da rolagem nem arrasta de lado
+   - segurar o dedo não seleciona texto de botão/aba nem abre menu de imagem
+   - o conteúdo termina ACIMA da barra de baixo, nunca embaixo dela
+   ===================================================================== */
+html, body { touch-action: pan-x pan-y; overscroll-behavior: none; }
+html { height: 100%; -webkit-text-size-adjust: 100%; }
+body:not(:has(.plat)) { min-height: 100%; }
+.bottom-nav, .topbar, .btn, .btn-mini, .chip, .aba, .nav-item, .slot, .prof-bolha, .rodape-fixo, .fab, .switch {
+  -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
+}
+img { -webkit-touch-callout: none; -webkit-user-drag: none; }
+a, button { -webkit-tap-highlight-color: transparent; }
+/* iPhone dá zoom automático em campo com fonte menor que 16px */
+@media (pointer: coarse) {
+  input, select, textarea { font-size: max(16px, 1em); }
+}
+/* o conteúdo acaba antes da barra de baixo (56px + área segura) */
+.admin-shell .content { padding-bottom: calc(5.5rem + env(safe-area-inset-bottom)); }
+.admin-shell .content:has(.rodape-fixo) { padding-bottom: calc(10rem + env(safe-area-inset-bottom)); }
+.vitrine .content { padding-bottom: calc(6.5rem + env(safe-area-inset-bottom)); }
+/* fileiras que rolam de lado continuam rolando de lado, e só elas */
+.fileira-prof, .vit-galeria, .vit-botoes, .filtro-chips, .plat-chips { touch-action: pan-x pan-y; }

@@ -301,7 +301,7 @@ cd ~/agenda-mel/evolution
 ./publicar-site.sh
 ```
 
-Pede um segundo nome do DuckDNS (ex.: `mimoapp.duckdns.org`) apontando
+Pede um segundo nome do DuckDNS (ex.: `mimo.com.vc`) apontando
 para o mesmo IP, instala Node se precisar, builda e sobe. Publicar de
 novo é rodar o mesmo script. O `.env` do app (chaves do Supabase)
 precisa existir na raiz do repositório na EC2.

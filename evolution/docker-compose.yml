@@ -122,6 +122,8 @@ services:
       IA_TOKEN: ${IA_TOKEN:-}
       # o domínio do SITE; vazio = o site não sobe (ver ./publicar-site.sh)
       DOMINIO_SITE: ${DOMINIO_SITE:-}
+      # o endereço de antes (DuckDNS), que passa a redirecionar para o novo
+      DOMINIO_SITE_ANTIGO: ${DOMINIO_SITE_ANTIGO:-}
       # ref do projeto Supabase (o pedaço antes de .supabase.co), para a
       # prévia de link da página pública; publicar-site.sh preenche
       SUPABASE_REF: ${SUPABASE_REF:-nenhum}

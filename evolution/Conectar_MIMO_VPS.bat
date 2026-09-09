@@ -25,7 +25,7 @@ set "USUARIO=ubuntu"
 set "CHAVE=%USERPROFILE%\.ssh\mimo.pem"
 set "PROJETO=/home/ubuntu/agenda-mel"
 set "BRANCH=claude/aesthetic-services-booking-app-b327z0"
-set "SITE=https://mimoapp.duckdns.org"
+set "SITE=https://mimo.com.vc"
 
 REM  a chave pode estar em outro lugar: procura nos suspeitos de sempre
 if not exist "%CHAVE%" (

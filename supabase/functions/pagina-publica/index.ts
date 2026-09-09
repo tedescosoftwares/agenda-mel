@@ -58,6 +58,7 @@ Deno.serve(async (req) => {
   const titulo = `${p.name} — agende seu horário`
   const descricao = (p.especialidade || p.bio || 'Escolha o serviço, o dia e a hora. Ela confirma pelo WhatsApp.') + nota
   const imagem = p.photo_url || `${base}/pwa-512.png`
+  // (o host vem do Caddy pelo X-Forwarded-Host: trocar de domínio não muda nada aqui)
 
   return html(`<!doctype html>
 <html lang="pt-BR">

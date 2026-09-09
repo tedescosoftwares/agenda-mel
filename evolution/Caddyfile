@@ -96,6 +96,22 @@
 }
 
 
+# www vai para o endereço sem www, e o domínio antigo (o DuckDNS de
+# antes do mimo.com.vc) vai para o novo. Os dois só existem se as
+# variáveis estiverem no .env; sem elas, respondem em "localhost", ou
+# seja, para ninguém. Redirect permanente: o QR impresso com o endereço
+# antigo continua funcionando para sempre.
+www.{$DOMINIO_SITE:localhost} {
+	tls {$EMAIL}
+	redir https://{$DOMINIO_SITE:localhost}{uri} permanent
+}
+
+{$DOMINIO_SITE_ANTIGO:localhost} {
+	tls {$EMAIL}
+	redir https://{$DOMINIO_SITE:localhost}{uri} permanent
+}
+
+
 # ---------------------------------------------------------------
 # OUTROS SITES NA MESMA MÁQUINA (parceiros, domínios extras).
 #

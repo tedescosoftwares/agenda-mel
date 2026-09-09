@@ -45,7 +45,7 @@ azul '== 2/6  Domínio do site =='
 if [ -z "${DOMINIO_SITE:-}" ]; then
   echo 'O site precisa de um nome próprio, diferente do da Evolution.'
   echo 'No painel do duckdns.org, crie um segundo nome apontando para'
-  echo "o MESMO IP desta máquina (ex.: mimoapp.duckdns.org)."
+  echo "o MESMO IP desta máquina (ex.: mimo.com.vc)."
   read -rp '   Domínio do site: ' DOMINIO_SITE
   DOMINIO_SITE=$(printf '%s' "$DOMINIO_SITE" | sed -E 's#^[a-zA-Z]+://##; s#/.*$##' | tr -d ' ')
   [ -n "$DOMINIO_SITE" ] || { vermelho 'Sem domínio não dá.'; exit 1; }

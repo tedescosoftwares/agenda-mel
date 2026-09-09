@@ -11,7 +11,7 @@ const CHAVE = 'mimo-convite'
 
 export const CODIGO_RE = /^[A-Z2-9]{6}$/
 
-// aceita "ANA7K2", "ana7k2", "https://mimoapp.duckdns.org/v/ANA7K2", "/v/ANA7K2"
+// aceita "ANA7K2", "ana7k2", "https://mimo.com.vc/v/ANA7K2", "/v/ANA7K2"
 export function extrairCodigo(texto) {
   if (!texto) return null
   const t = String(texto).trim()

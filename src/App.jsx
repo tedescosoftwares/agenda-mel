@@ -50,6 +50,9 @@ import Vinculos from "./pages/plataforma/Vinculos";
 import Filas from "./pages/plataforma/Filas";
 import Metricas from "./pages/plataforma/Metricas";
 import Configuracoes from "./pages/plataforma/Configuracoes";
+import PlataformaRecados from "./pages/plataforma/Recados";
+import ProRecados from "./pages/pro/ProRecados";
+import AdminRecados from "./pages/admin/AdminRecados";
 import { guardarCodigoDaURL } from "./lib/indicacao";
 
 export default function App() {
@@ -281,6 +284,14 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/pro/recados"
+              element={
+                <ProtectedRoute requireRole="profissional">
+                  <ProRecados />
+                </ProtectedRoute>
+              }
+            />
 
             {/* a plataforma: o olho que tudo vê (055) */}
             <Route path="/plataforma" element={<ProtectedRoute requireRole="plataforma"><Visao /></ProtectedRoute>} />
@@ -290,6 +301,7 @@ export default function App() {
             <Route path="/plataforma/vinculos" element={<ProtectedRoute requireRole="plataforma"><Vinculos /></ProtectedRoute>} />
             <Route path="/plataforma/filas" element={<ProtectedRoute requireRole="plataforma"><Filas /></ProtectedRoute>} />
             <Route path="/plataforma/mensagens" element={<ProtectedRoute requireRole="plataforma"><Filas abaInicial="email" /></ProtectedRoute>} />
+            <Route path="/plataforma/recados" element={<ProtectedRoute requireRole="plataforma"><PlataformaRecados /></ProtectedRoute>} />
             <Route path="/plataforma/metricas" element={<ProtectedRoute requireRole="plataforma"><Metricas /></ProtectedRoute>} />
             <Route path="/plataforma/configuracoes" element={<ProtectedRoute requireRole="plataforma"><Configuracoes /></ProtectedRoute>} />
 
@@ -356,6 +368,14 @@ export default function App() {
               element={
                 <ProtectedRoute requireRole="admin">
                   <AdminWhatsapp />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/recados"
+              element={
+                <ProtectedRoute requireRole="admin">
+                  <AdminRecados />
                 </ProtectedRoute>
               }
             />

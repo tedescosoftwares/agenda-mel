@@ -282,3 +282,6 @@ export function AlertaIcon(props) {
 export function SetaIcon(props) {
   return (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M5 12h14M13 6l6 6-6 6" /></svg>)
 }
+export function MegafoneIcon(props) {
+  return (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1z" /><path d="M15 9.5a3 3 0 0 1 0 5" /><path d="M18 7a7 7 0 0 1 0 10" /><path d="M7 14v5" /></svg>)
+}

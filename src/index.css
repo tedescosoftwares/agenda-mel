@@ -4890,3 +4890,22 @@ a, button { -webkit-tap-highlight-color: transparent; }
 .vitrine .content { padding-bottom: calc(6.5rem + env(safe-area-inset-bottom)); }
 /* fileiras que rolam de lado continuam rolando de lado, e só elas */
 .fileira-prof, .vit-galeria, .vit-botoes, .filtro-chips, .plat-chips { touch-action: pan-x pan-y; }
+
+/* ---- Recados (061) ---------------------------------------------------- */
+.recado-form { display: flex; flex-direction: column; gap: 0.9rem; }
+.recado-rotulo { display: flex; justify-content: space-between; align-items: baseline; }
+.recado-unico { margin: 0; font-size: 0.9rem; line-height: 1.4; }
+.recado-publicos { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.5rem; }
+.recado-publico { display: flex; flex-direction: column; gap: 0.15rem; text-align: left; padding: 0.7rem 0.8rem; border-radius: 14px; border: 1.5px solid var(--borda, #e5e7eb); background: #fff; font: inherit; color: inherit; cursor: pointer; }
+.recado-publico strong { font-size: 0.95rem; }
+.recado-publico span { font-size: 0.78rem; line-height: 1.3; }
+.recado-publico.ativo { border-color: #ff2d7a; background: #fff1f6; }
+.recado-form select { width: 100%; font: inherit; font-size: max(16px, 1em); padding: 0.75rem 0.9rem; border-radius: 12px; border: 1.5px solid var(--borda, #e5e7eb); background: #fff; color: inherit; }
+.recado-previa { display: flex; align-items: center; gap: 0.6rem; padding: 0.7rem 0.9rem; border-radius: 12px; background: #f6f2f7; font-size: 0.9rem; }
+.recado-previa svg { flex: none; color: #aa4cff; }
+.recado-previa .erro-txt { color: #c0263d; }
+.recado-item .recado-corpo { display: block; font-size: 0.9rem; color: #3d3d44; margin: 0.15rem 0 0.25rem; line-height: 1.4; white-space: pre-wrap; }
+.recados-pc .recado-form { max-width: 720px; }
+.recados-pc .secao-titulo { margin-top: 1.4rem; }
+.plat-select-inline { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.8rem; color: #6b6b75; }
+.plat-select-inline select { font: inherit; padding: 0.45rem 0.7rem; border-radius: 10px; border: 1.5px solid var(--borda, #e5e7eb); background: #fff; min-width: 240px; }

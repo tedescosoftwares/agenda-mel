@@ -8,6 +8,7 @@ import AvisosNoCelular from '../../components/AvisosNoCelular'
 import AvisosPorEmail from '../../components/AvisosPorEmail'
 import { useState } from 'react'
 import {
+  MegafoneIcon,
   TeamIcon,
   GraficoIcon,
   SparkleIcon,
@@ -24,6 +25,12 @@ import {
 // abre o app: são coisas que se configuram uma vez e se conferem de vez
 // em quando. Aba é para o que se usa todo dia.
 const ITENS = [
+  {
+    to: '/admin/recados',
+    Icon: MegafoneIcon,
+    titulo: 'Recados',
+    resumo: 'Um aviso para a carteira ou para a equipe, no celular',
+  },
   {
     to: '/admin/equipe',
     Icon: TeamIcon,

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import ProShell from '../../components/ProShell'
 import SemFicha from './SemFicha'
 import { useAuth } from '../../context/AuthContext'
-import { ClockIcon, LinkIcon, ChevronIcon, BellIcon } from '../../components/icons'
+import { ClockIcon, LinkIcon, ChevronIcon, BellIcon, MegafoneIcon } from '../../components/icons'
 import AvisosNoCelular from '../../components/AvisosNoCelular'
 import AvisosPorEmail from '../../components/AvisosPorEmail'
 
@@ -26,6 +26,21 @@ export default function ProAjustes() {
       <AvisosPorEmail />
 
       <div className="cliente-list">
+        <Link to="/pro/recados" className="card prof-row">
+          <span className="ajuste-icone">
+            <MegafoneIcon />
+          </span>
+          <div className="cliente-info">
+            <span className="cliente-nome">
+              <span className="nome-txt">Recados</span>
+            </span>
+            <span className="muted cliente-meta">
+              Um aviso para todas as suas clientes, no celular
+            </span>
+          </div>
+          <ChevronIcon />
+        </Link>
+
         <Link to="/pro/pedidos" className="card prof-row">
           <span className="ajuste-icone">
             <BellIcon />

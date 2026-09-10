@@ -53,6 +53,7 @@ import Configuracoes from "./pages/plataforma/Configuracoes";
 import PlataformaRecados from "./pages/plataforma/Recados";
 import { Termos, Privacidade } from "./pages/publico/Legal";
 import BemVinda from "./pages/BemVinda";
+import CadastroCliente from "./pages/cliente/CadastroCliente";
 import AvisoCookies from "./components/AvisoCookies";
 import ProRecados from "./pages/pro/ProRecados";
 import AdminRecados from "./pages/admin/AdminRecados";
@@ -83,6 +84,7 @@ export default function App() {
             <Route path="/v/:codigo" element={<EntrarPorCodigo />} />
             <Route path="/comecar" element={<Comecar />} />
             <Route path="/entrar" element={<ComCodigo />} />
+            <Route path="/cadastro" element={<CadastroCliente />} />
             <Route path="/termos" element={<Termos />} />
             <Route path="/privacidade" element={<Privacidade />} />
             <Route path="/bem-vinda" element={<ProtectedRoute permitirSemVinculo permitirPrimeiroAcesso><BemVinda /></ProtectedRoute>} />

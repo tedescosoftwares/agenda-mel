@@ -9,8 +9,8 @@ export default function RodapeSocial({ compacto = false }) {
   return (
     <footer className={'rodape-social' + (compacto ? ' compacto' : '')}>
       {insta && (
-        <a className="rodape-insta" href={insta.url} target="_blank" rel="noopener noreferrer">
-          <InstagramIcon /> <span>@{insta.handle}</span>
+        <a className="rodape-insta" href={insta.url} target="_blank" rel="noopener noreferrer" aria-label={`Instagram @${insta.handle}`}>
+          <InstagramIcon /><span>{insta.handle}</span>
         </a>
       )}
       <nav className="rodape-links muted">

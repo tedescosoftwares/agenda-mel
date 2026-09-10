@@ -70,7 +70,7 @@ const vinculos = [
 ].map(([professional_id, service_id]) => ({ professional_id, service_id }))
 
 const clientes = [
-  { id: 'c1', full_name: 'Juliana Silva', phone: '(11) 98790-0115', role: 'cliente', accepts_reminders: true, referral_code: 'JULIANA10', created_at: '2025-01-10', primeiro_acesso_em: '2025-01-10', aceitou_termos_em: '2025-01-10', termos_versao: '2026-09-10' },
+  { id: 'c1', full_name: 'Juliana Silva', phone: '(11) 98790-0115', role: 'cliente', accepts_reminders: true, referral_code: 'JULIANA10', nascimento: '1994-08-23', created_at: '2025-01-10', primeiro_acesso_em: '2025-01-10', aceitou_termos_em: '2025-01-10', termos_versao: '2026-09-10' },
   { id: 'c2', full_name: 'Carla Mendes', phone: '(13) 99999-0002', role: 'cliente', accepts_reminders: true, created_at: '2025-02-01' },
   { id: 'c3', full_name: 'Mariana Souza', phone: '(13) 99999-0003', role: 'cliente', accepts_reminders: false, created_at: '2025-03-05' },
   { id: 'c4', full_name: 'Beatriz Costa', phone: '(13) 99999-0004', role: 'cliente', accepts_reminders: true, created_at: '2025-03-20' },
@@ -183,6 +183,7 @@ const RPC = {
     : { tipo: 'profissional', codigo: 'ANA7K2', nome: 'Ana Oliveira', foto: FOTO(47), especialidade: 'Nail designer · gel e decoradas', profissional_id: 'pr1', salao: { id: SALAO, nome: 'Studio Mel', cidade: 'Santos', tipo: 'salao' } },
   vincular: () => ({ ok: true, novo: true, salao: { id: SALAO, nome: 'Studio Mel' }, trazida_por: 'Ana Oliveira', tipo: 'profissional' }),
   clientes_do_salao: () => clientes.filter((c) => c.role === 'cliente').map((c, i) => ({ client_id: c.id, nome: c.full_name, telefone: c.phone, entrou_em: mais(-(10 + i * 7)), como: ['qr', 'link', 'agendamento', 'encaixe'][i % 4], trazida_por: ['Ana Oliveira', 'Camila Rocha', null, 'Ana Oliveira'][i % 4], trazida_por_ativa: true, servico_de_entrada: ['Esmaltação em gel', 'Escova', 'Manicure', 'Spa dos pés'][i % 4], com_quem: ['Ana Oliveira', 'Camila Rocha', 'Ana Oliveira', 'Fernanda Lima'][i % 4], atendimentos: [9, 4, 2, 6][i % 4], ultima_visita: mais(-(2 + i * 3)) })),
+  meu_perfil_resumo: () => ({ desde: '2025-01-10T12:00:00Z', atendimentos: 14, proximos: 2, agendas: 1, favoritas: 2, saldo_cents: 3000 }),
   contar_publico: ({ publico }) => ({ minhas_clientes: { pessoas: 38, celulares: 11 }, clientes: { pessoas: 124, celulares: 37 }, equipe: { pessoas: 4, celulares: 3 }, todos: { pessoas: 612, celulares: 158 }, so_clientes: { pessoas: 540, celulares: 131 }, profissionais: { pessoas: 61, celulares: 24 }, donas: { pessoas: 11, celulares: 3 }, salao: { pessoas: 128, celulares: 40 } }[publico] ?? { pessoas: 0, celulares: 0 }),
   enviar_recado: () => ({ id: 'r-novo', destinatarios: 38, celulares: 11 }),
   meus_recados: ({ salao }) => salao

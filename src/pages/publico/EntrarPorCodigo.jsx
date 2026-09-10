@@ -80,7 +80,7 @@ export default function EntrarPorCodigo() {
             )}
             {!user && (
               <div className="entrar-opcoes">
-                <Link to={`/login?modo=cadastro&convite=${codigo}`} className="btn btn-primary btn-block">Criar minha conta</Link>
+                <Link to={`/cadastro?convite=${codigo}`} className="btn btn-primary btn-block">Criar minha conta</Link>
                 <Link to={`/login?convite=${codigo}`} className="btn btn-ghost btn-block">Já tenho conta</Link>
               </div>
             )}

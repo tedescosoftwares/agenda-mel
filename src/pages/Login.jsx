@@ -50,6 +50,8 @@ export default function Login() {
   // cadastro solto não existe: sem código de convite e sem "sou
   // profissional", quem quer criar conta volta para a porta do código
   if (modo === 'cadastro' && !convite && !papel) return <Navigate to="/entrar" replace />
+  // o cadastro da cliente tem tela própria (065)
+  if (modo === 'cadastro' && convite && !papel) return <Navigate to={`/cadastro?convite=${convite}`} replace />
 
   async function enviar(e) {
     e.preventDefault()

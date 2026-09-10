@@ -7,7 +7,7 @@ const BUCKET = 'professional-photos'
 
 // Escolhe, envia e remove a foto de uma profissional.
 // Devolve a URL pública (ou null) pelo onChange.
-export default function FotoUpload({ nome, valor, pasta, onChange, onErro }) {
+export default function FotoUpload({ nome, valor, pasta, onChange, onErro, bucket = BUCKET, compacto = false }) {
   const [enviando, setEnviando] = useState(false)
 
   async function handleFile(e) {
@@ -30,17 +30,17 @@ export default function FotoUpload({ nome, valor, pasta, onChange, onErro }) {
       // a pasta é o identificador da profissional: cada uma só mexe na sua
       const path = `${pasta || 'equipe'}/${crypto.randomUUID()}.${ext}`
       const { error } = await supabase.storage
-        .from(BUCKET)
+        .from(bucket)
         .upload(path, file, { contentType: file.type })
       if (error) {
         onErro?.('Erro ao enviar a foto: ' + error.message)
         return
       }
-      const { data } = supabase.storage.from(BUCKET).getPublicUrl(path)
+      const { data } = supabase.storage.from(bucket).getPublicUrl(path)
       const anterior = valor
       onChange(data.publicUrl)
       onErro?.('')
-      await removerDoStorage(anterior)
+      await removerDoStorage(anterior, bucket)
     } finally {
       setEnviando(false)
     }
@@ -49,7 +49,18 @@ export default function FotoUpload({ nome, valor, pasta, onChange, onErro }) {
   async function remover() {
     const anterior = valor
     onChange(null)
-    await removerDoStorage(anterior)
+    await removerDoStorage(anterior, bucket)
+  }
+
+  if (compacto) {
+    // só o avatar com o botãozinho da câmera em cima (perfil da cliente)
+    return (
+      <label className="avatar-trocar" title={valor ? 'Trocar foto' : 'Colocar foto'}>
+        <Avatar nome={nome} foto={valor} grande />
+        <span className="avatar-trocar-badge" aria-hidden="true">{enviando ? '…' : '📷'}</span>
+        <input type="file" accept="image/*" onChange={handleFile} hidden disabled={enviando} />
+      </label>
+    )
   }
 
   return (
@@ -75,8 +86,8 @@ export default function FotoUpload({ nome, valor, pasta, onChange, onErro }) {
 }
 
 // Melhor esforço: apaga a imagem antiga do Storage
-async function removerDoStorage(url) {
+async function removerDoStorage(url, bucket = BUCKET) {
   if (!url) return
-  const path = url.split(`/${BUCKET}/`)[1]
-  if (path) await supabase.storage.from(BUCKET).remove([path])
+  const path = url.split(`/${bucket}/`)[1]
+  if (path) await supabase.storage.from(bucket).remove([path])
 }

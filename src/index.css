@@ -5005,3 +5005,10 @@ a, button { -webkit-tap-highlight-color: transparent; }
 .folha-dados > p { margin: 0 0 0.9rem; font-size: 0.88rem; line-height: 1.45; }
 .folha-dados .form { margin-bottom: 0.4rem; }
 .campo-codigo { letter-spacing: 0.35em; font-size: 1.4rem !important; text-align: center; font-weight: 600; }
+
+/* ---- Botão de ler QR no meio do menu da cliente (2.9) --------------------- */
+.nav-qr { flex-direction: column; gap: 2px; }
+.nav-qr svg { width: 46px; height: 46px; padding: 12px; margin-top: -16px; }
+.nav-qr span { font-size: 0.62rem; font-weight: 600; color: var(--rosa); }
+.sem-rede { text-align: center; }
+.sem-rede p { margin: 0 0 0.9rem; }

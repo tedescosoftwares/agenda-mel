@@ -5,7 +5,7 @@ import { homeDoPapel } from '../lib/roles'
 // permitirSemVinculo: a tela "Entrar numa agenda" é a única que uma
 // cliente sem vínculo pode ver. Todas as outras mandam para lá.
 export default function ProtectedRoute({ children, requireRole, permitirSemVinculo = false, permitirPrimeiroAcesso = false }) {
-  const { user, role, loading, vinculos, profile } = useAuth()
+  const { user, role, loading, vinculos, profile, erroRede, recarregarVinculos } = useAuth()
 
   if (loading) {
     return (
@@ -29,7 +29,19 @@ export default function ProtectedRoute({ children, requireRole, permitirSemVincu
     return <Navigate to={homeDoPapel(role)} replace />
   }
 
-  if (role === 'cliente' && !permitirSemVinculo && (vinculos ?? []).length === 0) {
+  // cliente: só mando para o QR quando SEI que não há agenda. Enquanto
+  // não sei (rede falhou), espero e ofereço tentar de novo.
+  if (role === 'cliente' && !permitirSemVinculo && vinculos === null) {
+    return (
+      <div className="page-center">
+        <div className="card login-card sem-rede">
+          <p className="muted">{erroRede ? 'Sem conexão agora.' : 'Carregando suas agendas…'}</p>
+          {erroRede && <button className="btn btn-primary btn-block" onClick={() => recarregarVinculos?.()}>Tentar de novo</button>}
+        </div>
+      </div>
+    )
+  }
+  if (role === 'cliente' && !permitirSemVinculo && vinculos.length === 0) {
     return <Navigate to="/cliente/entrar" replace />
   }
 

@@ -11,7 +11,9 @@ export function AuthProvider({ children }) {
   const [professional, setProfessional] = useState(null)
   const [salao, setSalao] = useState(null)
   // as agendas em que a cliente entrou (053). Sem nenhuma, não há app.
-  const [vinculos, setVinculos] = useState([])
+  // null = ainda não sei (carregando ou a rede falhou); [] = sei que não tem
+  const [vinculos, setVinculos] = useState(null)
+  const [erroRede, setErroRede] = useState('')
   const [loading, setLoading] = useState(isSupabaseConfigured)
 
   useEffect(() => {
@@ -30,7 +32,7 @@ export function AuthProvider({ children }) {
         setProfile(null)
         setProfessional(null)
         setSalao(null)
-        setVinculos([])
+        setVinculos(null)
         setLoading(false)
       }
     })
@@ -97,9 +99,12 @@ export function AuthProvider({ children }) {
           const { error } = await supabase.rpc('vincular', { codigo: convite, jeito: 'link' })
           if (!error) limparConvite()
         }
-        const { data: agendas } = await supabase.rpc('minhas_agendas')
+        const { data: agendas, error: erroAgendas } = await supabase.rpc('minhas_agendas')
         if (cancelled) return
-        setVinculos(Array.isArray(agendas) ? agendas : [])
+        // falhou a rede? fica "não sei" — a tela espera e tenta de novo,
+        // em vez de mandar para o QR como se não houvesse agenda nenhuma
+        if (erroAgendas) { setErroRede(erroAgendas.message); setVinculos(null) }
+        else { setErroRede(''); setVinculos(Array.isArray(agendas) ? agendas : []) }
       } else {
         setVinculos([])
       }
@@ -163,9 +168,21 @@ export function AuthProvider({ children }) {
 
   async function recarregarVinculos() {
     if (!session?.user) return
-    const { data } = await supabase.rpc('minhas_agendas')
+    const { data, error } = await supabase.rpc('minhas_agendas')
+    if (error) { setErroRede(error.message); return }
+    setErroRede('')
     setVinculos(Array.isArray(data) ? data : [])
   }
+
+  // o app voltou do fundo (iPhone corta a rede lá): confere as agendas
+  useEffect(() => {
+    if (!isSupabaseConfigured) return
+    function acordou() {
+      if (document.visibilityState === 'visible' && session?.user && profile?.role === 'cliente') recarregarVinculos()
+    }
+    document.addEventListener('visibilitychange', acordou)
+    return () => document.removeEventListener('visibilitychange', acordou)
+  }, [session?.user?.id, profile?.role])
 
   async function signOut() {
     await supabase.auth.signOut()
@@ -178,6 +195,7 @@ export function AuthProvider({ children }) {
     professional,
     salao,
     vinculos,
+    erroRede,
     recarregarVinculos,
     recarregarPerfil,
     recarregarProfessional,

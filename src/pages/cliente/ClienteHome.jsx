@@ -5,7 +5,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { SearchIcon } from '../../components/icons'
 import { formatPreco, formatDuracao } from '../../lib/format'
-import { Sparkles, Plus } from 'lucide-react'
+import { Sparkles } from 'lucide-react'
 
 // Início da cliente (tela 03 do painel): saudação, busca, a fileira de
 // profissionais, e os serviços em destaque. É a vitrine — tudo aqui
@@ -144,10 +144,6 @@ export default function ClienteHome() {
         ))}
       </div>
 
-      <Link to="/cliente/entrar" className="card prof-row home-mais-agenda">
-        <span className="ajuste-icone"><Plus /></span>
-        <span className="cliente-info"><span className="cliente-nome"><span className="nome-txt">Entrar em outra agenda</span></span><span className="muted cliente-meta">Escaneie o QR ou digite o código de outra profissional</span></span>
-      </Link>
     </ClienteShell>
   )
 }

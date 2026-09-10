@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { useDialogo } from '../../context/DialogoContext'
@@ -15,9 +15,10 @@ import { ScanLine } from 'lucide-react'
 // para entrar em mais uma.
 export default function Entrar() {
   const navigate = useNavigate()
+  const [q] = useSearchParams()
   const { vinculos, recarregarVinculos, signOut, profile } = useAuth()
   const { avisar, confirmar } = useDialogo()
-  const [modo, setModo] = useState('menu') // menu | camera | codigo
+  const [modo, setModo] = useState(q.get('modo') === 'camera' ? 'camera' : 'menu') // menu | camera | codigo
   const [texto, setTexto] = useState('')
   const [erro, setErro] = useState('')
   const [enviando, setEnviando] = useState(false)
@@ -48,9 +49,9 @@ export default function Entrar() {
           <Wordmark tamanho={2.2} />
         </div>
 
-        <h2 className="login-titulo">{jaTem ? 'Entrar em outra agenda' : `Oi${profile?.full_name ? ', ' + profile.full_name.split(' ')[0] : ''}!`}</h2>
+        <h2 className="login-titulo">{jaTem ? 'Entrar numa agenda' : `Oi${profile?.full_name ? ', ' + profile.full_name.split(' ')[0] : ''}!`}</h2>
         <p className="muted login-sub">
-          {jaTem ? 'Escaneie o QR de outra profissional ou salão.' : 'Para ver horários e marcar, entre na agenda da sua profissional. Peça o QR ou o código dela.'}
+          {modo === 'camera' ? 'Aponte para o QR da profissional ou do salão.' : jaTem ? 'Escaneie o QR ou digite o código de outra profissional ou salão.' : 'Para ver horários e marcar, entre na agenda da sua profissional. Peça o QR ou o código dela.'}
         </p>
 
         {erro && <div className="alert alert-error">{erro}</div>}
@@ -65,7 +66,8 @@ export default function Entrar() {
         {modo === 'camera' && (
           <>
             <LeitorQr onLido={lido} onErro={erroCamera} />
-            <button className="btn btn-ghost btn-block" onClick={() => setModo('menu')} disabled={enviando}>{enviando ? 'Entrando…' : 'Cancelar'}</button>
+            <button className="btn btn-ghost btn-block" onClick={() => { setErro(''); setModo('codigo') }} disabled={enviando}>Digitar o código</button>
+            <button className="btn btn-ghost btn-block" onClick={() => (jaTem ? navigate(-1) : setModo('menu'))} disabled={enviando}>{enviando ? 'Entrando…' : 'Cancelar'}</button>
           </>
         )}
 

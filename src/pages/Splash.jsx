@@ -2,7 +2,8 @@ import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { homeDoPapel } from '../lib/roles'
-import { AMBIENTE, ehPro, ambienteDoPapel, irParaAmbiente } from '../lib/ambiente'
+import { AMBIENTE, ehPro, ambienteDoPapel } from '../lib/ambiente'
+import AmbienteErrado from '../components/AmbienteErrado'
 import { MarcaIcon, Wordmark } from '../components/icons'
 
 // A abertura: marca, respiro, e vai. Fica na tela o tempo de o app
@@ -20,13 +21,16 @@ export default function Splash() {
         navigate(ehPro ? '/pro/entrar' : '/entrar', { replace: true })
         return
       }
-      // logada no ambiente errado? vai para o certo, sem passar por tela
+      // logada no ambiente errado? a tela de aviso cuida (abaixo)
       const certo = ambienteDoPapel(role)
-      if (certo && certo !== AMBIENTE) { irParaAmbiente(certo, homeDoPapel(role)); return }
+      if (certo && certo !== AMBIENTE) return
       navigate(homeDoPapel(role), { replace: true })
     }, 650)
     return () => clearTimeout(t)
   }, [loading, user, role, navigate])
+
+  const certo = !loading && user ? ambienteDoPapel(role) : null
+  if (certo && certo !== AMBIENTE) return <AmbienteErrado role={role} />
 
   return (
     <div className="splash">

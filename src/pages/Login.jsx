@@ -8,7 +8,7 @@ import { TERMOS_VERSAO } from '../lib/termos'
 import { VERSAO } from '../lib/versao'
 import { MarcaIcon, Wordmark } from '../components/icons'
 import { extrairCodigo, guardarConvite } from '../lib/convite'
-import { AMBIENTE, urlDoAmbiente } from '../lib/ambiente'
+import { AMBIENTE, urlDoAmbiente, ambienteDoPapel } from '../lib/ambiente'
 import { MailCheck } from 'lucide-react'
 
 // Login (tela 02): "Bem-vinda de volta!", e-mail, senha, manter
@@ -41,6 +41,8 @@ export default function Login({ ambiente = AMBIENTE }) {
   const [info, setInfo] = useState('')
   const [enviando, setEnviando] = useState(false)
   const [quemConvidou, setQuemConvidou] = useState(null)
+  const [conferindoConta, setConferindoConta] = useState(false)
+  const [contaErrada, setContaErrada] = useState(null) // 'pro' | 'cliente'
 
   useEffect(() => {
     if (!convite) return
@@ -49,7 +51,7 @@ export default function Login({ ambiente = AMBIENTE }) {
   }, [convite])
 
   if (loading) return <div className="page-center"><p className="muted">Carregando…</p></div>
-  if (user) return <Navigate to={homeDoPapel(role)} replace />
+  if (user && !conferindoConta && !contaErrada) return <Navigate to={homeDoPapel(role)} replace />
   // cadastro solto não existe: sem código de convite e sem "sou
   // profissional", quem quer criar conta volta para a porta do código
   if (modo === 'cadastro' && !convite && !papel) return <Navigate to="/entrar" replace />
@@ -64,8 +66,22 @@ export default function Login({ ambiente = AMBIENTE }) {
     try {
       if (modo === 'login') {
         try { if (!manter) sessionStorage.setItem('mimo-sessao-temporaria', '1') } catch { /* sem storage */ }
+        setConferindoConta(true); setContaErrada(null)
         const { error } = await signIn(email, senha)
-        if (error) setErro(traduz(error.message))
+        if (error) { setConferindoConta(false); setErro(traduz(error.message)); return }
+        // a conta é deste ambiente? senão, sai na hora e avisa
+        const { data: sessao } = await supabase.auth.getSession()
+        const uid = sessao?.session?.user?.id
+        const { data: perfil } = uid ? await supabase.from('profiles').select('role').eq('id', uid).maybeSingle() : { data: null }
+        const certo = ambienteDoPapel(perfil?.role)
+        if (certo && certo !== ambiente) {
+          await supabase.auth.signOut()
+          setContaErrada(certo)
+          setErro(certo === 'pro'
+            ? 'Essa conta é de profissional ou salão. Entre pelo MIMO Pro.'
+            : 'Essa conta é de cliente. Entre pelo MIMO, o app da cliente.')
+        }
+        setConferindoConta(false)
       } else if (modo === 'cadastro') {
         if (!nome.trim()) { setErro('Diga seu nome.'); return }
         if (!fone.trim()) { setErro('Precisamos do seu WhatsApp: é por ele que os avisos chegam.'); return }
@@ -161,7 +177,7 @@ export default function Login({ ambiente = AMBIENTE }) {
             </label>
           )}
 
-          {erro && <div className="alert alert-error">{erro}</div>}
+          {erro && <div className="alert alert-error">{erro}{contaErrada && <> <a href={urlDoAmbiente(contaErrada, contaErrada === 'pro' ? '/pro/entrar' : '/login')} className="link-ver">{contaErrada === 'pro' ? 'Ir para o MIMO Pro' : 'Ir para o MIMO'}</a></>}</div>}
           {info && <div className="alert alert-info">{info}</div>}
 
           <button type="submit" className="btn btn-primary btn-block" disabled={enviando || (modo === 'cadastro' && !termos)}>

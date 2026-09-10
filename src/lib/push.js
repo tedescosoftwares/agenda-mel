@@ -31,11 +31,14 @@ function b64ParaBytes(b64) {
 
 export async function ativarPush(userId) {
   if (!suportaPush()) throw new Error('Este navegador não recebe avisos.')
-  const { data: cfg } = await supabase.rpc('config_publica')
-  const vapid = cfg?.vapid_public
-  if (!vapid) throw new Error('Os avisos ainda não foram configurados no servidor (chave VAPID).')
+  // a permissão é pedida ANTES de qualquer ida ao servidor: o iPhone só
+  // aceita o pedido colado no toque da pessoa
   const permissao = await Notification.requestPermission()
   if (permissao !== 'granted') throw new Error('Sem permissão. Libere os avisos nos ajustes do celular.')
+  const { data: cfg, error: erroCfg } = await supabase.rpc('config_publica')
+  if (erroCfg) throw new Error('Não consegui ler a configuração: ' + erroCfg.message)
+  const vapid = cfg?.vapid_public
+  if (!vapid) throw new Error('Os avisos ainda não foram configurados no servidor (chave VAPID).')
   const reg = await navigator.serviceWorker.ready
   let sub = await reg.pushManager.getSubscription()
   if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ParaBytes(vapid) })

@@ -10,6 +10,7 @@ import AvisosNoCelular from '../../components/AvisosNoCelular'
 import AvisosPorEmail from '../../components/AvisosPorEmail'
 import RodapeSocial from '../../components/RodapeSocial'
 import { formatarFone, foneValido } from '../../lib/fone'
+import { useConfig } from '../../lib/config'
 import CampoSenha from '../../components/CampoSenha'
 import { Plus, Gift, Hourglass, MessageCircle, ShieldCheck, Lock } from 'lucide-react'
 
@@ -22,6 +23,8 @@ export default function ClientePerfil() {
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState('')
   const [resumo, setResumo] = useState(null)
+  const cfg = useConfig()
+  const zapSuporte = (cfg.whatsapp_suporte || '5513991719086').replace(/\D/g, '')
   // o que está aberto embaixo: 'nasc' | 'fone' | 'email' | null
   const [folha, setFolha] = useState(null)
   const [nasc, setNasc] = useState('')
@@ -229,9 +232,9 @@ export default function ClientePerfil() {
           <span className="cliente-info"><span className="cliente-nome"><span className="nome-txt">Fila de espera</span></span><span className="muted cliente-meta">Onde você está esperando vaga</span></span>
           <ChevronIcon />
         </Link>
-        <a href="https://wa.me/5513991719086" className="card prof-row" target="_blank" rel="noreferrer">
+        <a href={`https://wa.me/${zapSuporte}`} className="card prof-row" target="_blank" rel="noreferrer">
           <span className="ajuste-icone"><MessageCircle /></span>
-          <span className="cliente-info"><span className="cliente-nome"><span className="nome-txt">Contato e ajuda</span></span><span className="muted cliente-meta">Fale com o salão pelo WhatsApp</span></span>
+          <span className="cliente-info"><span className="cliente-nome"><span className="nome-txt">Contato e ajuda</span></span><span className="muted cliente-meta">Fale com o MIMO pelo WhatsApp</span></span>
           <ChevronIcon />
         </a>
         <Link to="/privacidade" className="card prof-row">

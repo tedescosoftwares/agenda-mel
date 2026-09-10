@@ -81,13 +81,17 @@
 		path /p/*
 		header_regexp User-Agent (?i)(whatsapp|facebookexternalhit|facebot|twitterbot|telegrambot|linkedinbot|slackbot|discordbot|pinterest|skypeuripreview|iframely|embedly|googlebot|bingbot)
 	}
-	handle @robos_no_link {
-		rewrite * /functions/v1/pagina-publica{path}
-		reverse_proxy https://{$SUPABASE_REF:nenhum}.supabase.co
+	# Dentro de "route" a ordem é a escrita. Fora dele o Caddy roda
+	# try_files ANTES de handle, e aí /p/<slug> já virou /index.html
+	# quando o robô chega — foi assim que a prévia ficou muda.
+	route {
+		handle @robos_no_link {
+			rewrite * /functions/v1/pagina-publica{path}
+			reverse_proxy https://{$SUPABASE_REF:nenhum}.supabase.co
+		}
+		try_files {path} /index.html
+		file_server
 	}
-
-	try_files {path} /index.html
-	file_server
 
 	log {
 		output file /data/site.log

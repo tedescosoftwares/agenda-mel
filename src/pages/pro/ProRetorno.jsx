@@ -5,6 +5,7 @@ import SemFicha from './SemFicha'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import Avatar from '../../components/Avatar'
+import { Check } from 'lucide-react'
 
 // Clientes sumidas (tela 21): quem não volta há mais tempo que o
 // combinado, com o último serviço, e um botão para chamar de volta.
@@ -48,7 +49,7 @@ export default function ProRetorno() {
       {erro && <div className="alert alert-error">{erro}</div>}
       {info && <div className="alert alert-info">{info}</div>}
       {loading ? <p className="muted">Carregando…</p> : lista.length === 0 ? (
-        <div className="card empty-state"><p>Ninguém sumida. 💛</p></div>
+        <div className="card empty-state"><p>Ninguém sumida. Tudo em dia.</p></div>
       ) : (
         <>
           <div className="cliente-list">
@@ -61,7 +62,7 @@ export default function ProRetorno() {
                     <span className="muted cliente-meta">Último: {c.ultimo_servico} · há {c.dias_sem_vir} dias</span>
                   </span>
                 </span>
-                {c.ja_chamada ? <span className="muted" style={{ fontSize: '0.78rem' }}>chamada ✓</span> : (
+                {c.ja_chamada ? <span className="muted" style={{ fontSize: '0.78rem' }}><Check size={12} /> chamada</span> : (
                   <button className="btn-mini btn-mini-rosa" disabled={enviando === c.client_id} onClick={() => chamar(c)}>Enviar</button>
                 )}
               </div>

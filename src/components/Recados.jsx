@@ -66,7 +66,7 @@ export default function Recados({ publicos, salao = null, filtro = {}, compacto 
     setTitulo(''); setCorpo(''); setUrl('')
     carregarHistorico()
     aoEnviar?.(data)
-    await avisar({ titulo: 'Recado enviado 🎉', texto: `${data?.destinatarios ?? 0} pessoas receberam, ${data?.celulares ?? 0} no celular.` })
+    await avisar({ titulo: 'Recado enviado', texto: `${data?.destinatarios ?? 0} pessoas receberam, ${data?.celulares ?? 0} no celular.` })
   }
 
   return (

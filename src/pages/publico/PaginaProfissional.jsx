@@ -4,12 +4,13 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import AuthModal from '../../components/AuthModal'
 import ListaEsperaForm from '../../components/ListaEsperaForm'
-import { StarIcon, CompartilharIcon, MarcaIcon } from '../../components/icons'
+import { StarIcon, CompartilharIcon, MarcaIcon, InstagramIcon } from '../../components/icons'
 import RodapeSocial from '../../components/RodapeSocial'
 import { formatPreco, labelDuracao } from '../../lib/format'
 import { toMin, minToHora, formatDataLonga } from '../../lib/booking'
 import CalendarioMes from '../../components/CalendarioMes'
 import { iniciais } from '../../lib/booking'
+import { Check, Sparkles, MessageCircle } from 'lucide-react'
 
 // A vitrine da profissional (/p/<slug>).
 //
@@ -260,7 +261,7 @@ export default function PaginaProfissional() {
       <div className="layout publico">
         <main className="content">
           <div className="card sucesso-card">
-            <span className="sucesso-icone" aria-hidden="true">✓</span>
+            <span className="sucesso-icone" aria-hidden="true"><Check /></span>
             <h2>{prof.aceite_manual ? 'Pedido enviado!' : 'Agendado!'}</h2>
             <p>
               <strong>{sucesso.servico}</strong> com {prof.name}
@@ -332,7 +333,7 @@ export default function PaginaProfissional() {
               {services.map((s) => (
                 <button key={s.id} type="button" className="card servico-linha" onClick={() => escolherServico(s)}>
                   <span className="servico-linha-foto" aria-hidden="true">
-                    {s.images?.[0] ? <img src={s.images[0]} alt="" /> : '✨'}
+                    {s.images?.[0] ? <img src={s.images[0]} alt="" /> : <Sparkles />}
                   </span>
                   <span className="cliente-info">
                     <span className="cliente-nome"><span className="nome-txt">{s.name}{s.is_combo && <span className="badge badge-combo">combo</span>}</span></span>
@@ -374,8 +375,8 @@ export default function PaginaProfissional() {
 
               {(zap || prof.instagram) && (
                 <div className="card vit-contatos">
-                  {zap && <a className="btn btn-ghost" href={zap} target="_blank" rel="noreferrer">💬 Falar no WhatsApp</a>}
-                  {prof.instagram && <a className="btn btn-ghost" href={`https://instagram.com/${prof.instagram}`} target="_blank" rel="noreferrer">📸 @{prof.instagram}</a>}
+                  {zap && <a className="btn btn-ghost" href={zap} target="_blank" rel="noreferrer"><MessageCircle size={16} /> Falar no WhatsApp</a>}
+                  {prof.instagram && <a className="btn btn-ghost" href={`https://instagram.com/${prof.instagram}`} target="_blank" rel="noreferrer"><InstagramIcon width={16} height={16} /> @{prof.instagram}</a>}
                 </div>
               )}
 
@@ -460,7 +461,7 @@ export default function PaginaProfissional() {
             return (
               <li key={rotulo} className={'trilha-passo' + (n === passo ? ' atual' : '') + (cumprido ? ' feito' : '')}>
                 <button type="button" onClick={() => cumprido && irPara(n)} disabled={!cumprido}>
-                  <span className="trilha-num">{cumprido ? '✓' : n}</span>
+                  <span className="trilha-num">{cumprido ? <Check size={14} /> : n}</span>
                   <span className="trilha-rotulo">{rotulo}</span>
                 </button>
               </li>

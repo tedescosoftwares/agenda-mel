@@ -183,6 +183,8 @@ const RPC = {
     : { tipo: 'profissional', codigo: 'ANA7K2', nome: 'Ana Oliveira', foto: FOTO(47), especialidade: 'Nail designer · gel e decoradas', profissional_id: 'pr1', salao: { id: SALAO, nome: 'Studio Mel', cidade: 'Santos', tipo: 'salao' } },
   vincular: () => ({ ok: true, novo: true, salao: { id: SALAO, nome: 'Studio Mel' }, trazida_por: 'Ana Oliveira', tipo: 'profissional' }),
   clientes_do_salao: () => clientes.filter((c) => c.role === 'cliente').map((c, i) => ({ client_id: c.id, nome: c.full_name, telefone: c.phone, entrou_em: mais(-(10 + i * 7)), como: ['qr', 'link', 'agendamento', 'encaixe'][i % 4], trazida_por: ['Ana Oliveira', 'Camila Rocha', null, 'Ana Oliveira'][i % 4], trazida_por_ativa: true, servico_de_entrada: ['Esmaltação em gel', 'Escova', 'Manicure', 'Spa dos pés'][i % 4], com_quem: ['Ana Oliveira', 'Camila Rocha', 'Ana Oliveira', 'Fernanda Lima'][i % 4], atendimentos: [9, 4, 2, 6][i % 4], ultima_visita: mais(-(2 + i * 3)) })),
+  pedir_troca_whatsapp: ({ novo }) => ({ via: 'whatsapp', para: novo, expira_em: mais(0) }),
+  confirmar_troca_whatsapp: () => ({ ok: true }),
   meu_perfil_resumo: () => ({ desde: '2025-01-10T12:00:00Z', atendimentos: 14, proximos: 2, agendas: 1, favoritas: 2, saldo_cents: 3000 }),
   contar_publico: ({ publico }) => ({ minhas_clientes: { pessoas: 38, celulares: 11 }, clientes: { pessoas: 124, celulares: 37 }, equipe: { pessoas: 4, celulares: 3 }, todos: { pessoas: 612, celulares: 158 }, so_clientes: { pessoas: 540, celulares: 131 }, profissionais: { pessoas: 61, celulares: 24 }, donas: { pessoas: 11, celulares: 3 }, salao: { pessoas: 128, celulares: 40 } }[publico] ?? { pessoas: 0, celulares: 0 }),
   enviar_recado: () => ({ id: 'r-novo', destinatarios: 38, celulares: 11 }),

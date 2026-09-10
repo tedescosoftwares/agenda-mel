@@ -4983,3 +4983,25 @@ a, button { -webkit-tap-highlight-color: transparent; }
 .cl-numeros span { font-size: 0.66rem; color: #7a7a85; text-transform: lowercase; }
 .dado-linha .quebra { word-break: break-all; text-align: right; }
 .dado-linha .link-ver { background: none; border: none; font: inherit; font-weight: 600; color: var(--rosa, #ff2d7a); cursor: pointer; padding: 0; }
+
+/* ---- Ícones em SVG (066): tamanho certo dentro das caixas ------------------- */
+.ajuste-icone svg, .notif-icone svg { width: 20px; height: 20px; }
+.notif-icone { color: var(--rosa); }
+.atalho span svg { width: 24px; height: 24px; color: var(--rosa); }
+.fila-ilustra, .ind-ilustra, .cad-pronto-icone { display: grid; place-items: center; color: var(--rosa); }
+.fila-ilustra { margin-bottom: 0.4rem; }
+.sucesso-check svg, .sucesso-icone svg { width: 60%; height: 60%; }
+.trilha-num svg { width: 14px; height: 14px; }
+.faixa-icone { display: inline-flex; color: var(--roxo); flex: none; margin-top: 0.1rem; }
+.agd-troca svg, .agd-avaliado svg, .plat-vinculo svg, .plat-mapa-linha svg, .plat-check svg { vertical-align: -2px; }
+.plat-periodo svg { vertical-align: -3px; margin-right: 0.15rem; }
+.btn svg, .btn-mini svg { vertical-align: -3px; margin-right: 0.25rem; }
+.recado-previa svg { width: 18px; height: 18px; }
+.servico-linha-foto svg, .servico-foto svg, .home-servico-foto svg { width: 22px; height: 22px; color: var(--rosa); }
+.dado-travado { display: inline-flex; align-items: center; gap: 0.3rem; color: #6b6b75; }
+.dado-linha .link-ver { margin-left: 0.4rem; font-size: 0.82rem; }
+.dado-nota { font-size: 0.78rem; margin: 0.7rem 0 0; line-height: 1.4; }
+.folha-dados h3 { margin-bottom: 0.3rem; }
+.folha-dados > p { margin: 0 0 0.9rem; font-size: 0.88rem; line-height: 1.45; }
+.folha-dados .form { margin-bottom: 0.4rem; }
+.campo-codigo { letter-spacing: 0.35em; font-size: 1.4rem !important; text-align: center; font-weight: 600; }

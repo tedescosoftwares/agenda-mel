@@ -4,6 +4,7 @@ import SemFicha from './SemFicha'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { formatPreco, formatDuracao } from '../../lib/format'
+import { Sparkles } from 'lucide-react'
 
 // Serviços (tela 19): a lista do salão, e para cada um o switch de
 // "eu faço". Preço e duração aparecem mas não se editam aqui — são do
@@ -69,7 +70,7 @@ export default function ProServicos() {
       <div className="cliente-list">
         {servicos.map((s) => (
           <div key={s.id} className={'card servico-linha' + (meus.has(s.id) ? '' : ' apagado')}>
-            <span className="servico-linha-foto" aria-hidden="true">{s.images?.[0] ? <img src={s.images[0]} alt="" /> : '✨'}</span>
+            <span className="servico-linha-foto" aria-hidden="true">{s.images?.[0] ? <img src={s.images[0]} alt="" /> : <Sparkles />}</span>
             <span className="cliente-info">
               <span className="cliente-nome"><span className="nome-txt">{s.name}</span>{s.is_combo && <span className="badge badge-combo">combo</span>}</span>
               <span className="muted cliente-meta">{formatPreco(s.price)} · {formatDuracao(s.duration_minutes)}</span>

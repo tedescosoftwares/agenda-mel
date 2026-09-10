@@ -9,6 +9,7 @@ import { formatDataCurta } from '../../lib/booking'
 import { StarIcon } from '../../components/icons'
 import ConviteAdiantar from '../../components/ConviteAdiantar'
 import OfertaVaga from '../../components/OfertaVaga'
+import { Repeat, Check } from 'lucide-react'
 
 // Meus agendamentos (tela 09): duas abas, Próximos e Histórico. O que
 // vem pela frente pode ser cancelado ou remarcado; o que já passou pode
@@ -109,10 +110,10 @@ export default function ClienteAgenda() {
                 {a.professionals?.name} · {formatPreco(a.price_cents != null ? a.price_cents / 100 : a.services?.price)}
               </span>
               {ehPedidoDeTroca(a) && a.origem && (
-                <span className="agd-troca">🔁 No lugar de {formatDataCurta(a.origem.date)} às {a.origem.start_time.slice(0, 5)}. Até ela responder, o horário de antes continua valendo.</span>
+                <span className="agd-troca"><Repeat size={14} /> No lugar de {formatDataCurta(a.origem.date)} às {a.origem.start_time.slice(0, 5)}. Até ela responder, o horário de antes continua valendo.</span>
               )}
               {aba === 'proximos' && trocaAberta(a) && (
-                <span className="agd-troca">🔁 Você pediu para mudar para {quando(trocaAberta(a))}. Aguardando a profissional.</span>
+                <span className="agd-troca"><Repeat size={14} /> Você pediu para mudar para {quando(trocaAberta(a))}. Aguardando a profissional.</span>
               )}
               <div className="agd-acoes">
                 {aba === 'proximos' && podeCancelar(a) && (
@@ -127,7 +128,7 @@ export default function ClienteAgenda() {
                 {aba === 'historico' && a.status === 'concluido' && !avaliados.has(a.id) && (
                   <button className="btn-mini btn-mini-rosa" onClick={() => setAvaliando(a)}><StarIcon /> Avaliar</button>
                 )}
-                {aba === 'historico' && avaliados.has(a.id) && <span className="muted agd-avaliado">Avaliado ✓</span>}
+                {aba === 'historico' && avaliados.has(a.id) && <span className="muted agd-avaliado"><Check size={13} /> Avaliado</span>}
                 {aba === 'historico' && a.professionals && (
                   <Link className="btn-mini" to={`/cliente/profissional/${a.professionals.id}/servicos?servico=${a.service_id}`}>Marcar de novo</Link>
                 )}

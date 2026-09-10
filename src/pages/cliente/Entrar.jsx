@@ -6,6 +6,7 @@ import { useDialogo } from '../../context/DialogoContext'
 import LeitorQr from '../../components/LeitorQr'
 import { MarcaIcon, Wordmark } from '../../components/icons'
 import { extrairCodigo } from '../../lib/convite'
+import { ScanLine } from 'lucide-react'
 
 // A única tela de quem ainda não entrou em agenda nenhuma. Não tem
 // abas, não tem home: sem vínculo não há app. Três jeitos, um só
@@ -56,7 +57,7 @@ export default function Entrar() {
 
         {modo === 'menu' && (
           <div className="entrar-opcoes">
-            <button className="btn btn-primary btn-block" onClick={() => { setErro(''); setModo('camera') }}>📷 Escanear o QR</button>
+            <button className="btn btn-primary btn-block" onClick={() => { setErro(''); setModo('camera') }}><ScanLine size={18} /> Escanear o QR</button>
             <button className="btn btn-ghost btn-block" onClick={() => { setErro(''); setModo('codigo') }}>Digitar o código ou colar o link</button>
           </div>
         )}

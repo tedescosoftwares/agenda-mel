@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import Avatar from './Avatar'
+import { Camera } from 'lucide-react'
 
 const MAX_MB = 5
 const BUCKET = 'professional-photos'
@@ -57,7 +58,7 @@ export default function FotoUpload({ nome, valor, pasta, onChange, onErro, bucke
     return (
       <label className="avatar-trocar" title={valor ? 'Trocar foto' : 'Colocar foto'}>
         <Avatar nome={nome} foto={valor} grande />
-        <span className="avatar-trocar-badge" aria-hidden="true">{enviando ? '…' : '📷'}</span>
+        <span className="avatar-trocar-badge" aria-hidden="true">{enviando ? '…' : <Camera size={15} />}</span>
         <input type="file" accept="image/*" onChange={handleFile} hidden disabled={enviando} />
       </label>
     )

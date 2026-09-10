@@ -3,6 +3,7 @@ import Shell from '../../components/plataforma/Shell'
 import { Cabecalho, Kpi, Painel, Pilula, Vazio, Iniciais, haQuanto } from '../../components/plataforma/Pecas'
 import { supabase } from '../../lib/supabase'
 import { LinkIcon, UsersIcon, ConviteIcon, ClockIcon, GraficoIcon, QrIcon, MailIcon } from '../../components/icons'
+import { QrCode, Link2, User, Store } from 'lucide-react'
 
 const CANAL = { qr: 'QR', link: 'Link', codigo: 'Código', cadastro: 'Cadastro', vitrine: 'Vitrine', agendamento: 'Agendou', encaixe: 'Encaixe', whatsapp: 'WhatsApp' }
 
@@ -49,7 +50,7 @@ export default function Vinculos() {
                     <td><div className="plat-pessoa"><Iniciais nome={v.pessoa} /><div><strong>{v.pessoa}</strong><small className="muted">{v.contato || '—'}</small></div></div></td>
                     <td><div><strong className="plat-normal">{v.origem}</strong><small className="muted plat-bloco">{v.origem_tipo === 'profissional' ? 'Profissional' : 'Salão'}</small></div></td>
                     <td><div><strong className="plat-normal">{v.destino}</strong><small className="muted plat-bloco">{v.destino_tipo === 'autonoma' ? 'Autônoma' : 'Salão'}</small></div></td>
-                    <td><Pilula tom={v.canal === 'qr' ? 'roxo' : v.canal === 'link' ? 'rosa' : v.canal === 'cadastro' ? 'azul' : 'cinza'}>{v.canal === 'qr' ? '▦ ' : v.canal === 'link' ? '🔗 ' : ''}{CANAL[v.canal] ?? v.canal}</Pilula></td>
+                    <td><Pilula tom={v.canal === 'qr' ? 'roxo' : v.canal === 'link' ? 'rosa' : v.canal === 'cadastro' ? 'azul' : 'cinza'}>{v.canal === 'qr' ? <QrCode size={12} /> : v.canal === 'link' ? <Link2 size={12} /> : null}{v.canal === 'qr' || v.canal === 'link' ? ' ' : ''}{CANAL[v.canal] ?? v.canal}</Pilula></td>
                     <td><Pilula>{v.ativo ? 'Vinculado' : 'Saiu'}</Pilula></td>
                     <td className="muted">{haQuanto(v.criado_em)}</td>
                   </tr>
@@ -62,9 +63,9 @@ export default function Vinculos() {
             <div className="plat-mapa">
               <div className="plat-mapa-col"><header><span>▦ Canais</span><Pilula tom="roxo">{totalCanais}</Pilula></header>{canais.map((c) => <div key={c.canal} className="plat-mapa-linha"><span>{CANAL[c.canal] ?? c.canal}</span><small className="muted">{c.quantos} {Number(c.quantos) === 1 ? 'vínculo' : 'vínculos'}</small></div>)}{canais.length === 0 && <Vazio>Nenhum ainda.</Vazio>}</div>
               <span className="plat-mapa-seta">→</span>
-              <div className="plat-mapa-col"><header><span>👤 Clientes</span><Pilula tom="menta">{funil?.com_vinculo ?? 0}</Pilula></header>{(lista ?? []).filter((v) => v.ativo).slice(0, 3).map((v) => <div key={v.id} className="plat-mapa-linha"><span className="plat-pessoa"><Iniciais nome={v.pessoa} /> {v.pessoa}</span><small className="muted">via {CANAL[v.canal] ?? v.canal}</small></div>)}{(funil?.com_vinculo ?? 0) > 3 && <small className="muted">+{funil.com_vinculo - 3} outras clientes</small>}</div>
+              <div className="plat-mapa-col"><header><span><User size={14} /> Clientes</span><Pilula tom="menta">{funil?.com_vinculo ?? 0}</Pilula></header>{(lista ?? []).filter((v) => v.ativo).slice(0, 3).map((v) => <div key={v.id} className="plat-mapa-linha"><span className="plat-pessoa"><Iniciais nome={v.pessoa} /> {v.pessoa}</span><small className="muted">via {CANAL[v.canal] ?? v.canal}</small></div>)}{(funil?.com_vinculo ?? 0) > 3 && <small className="muted">+{funil.com_vinculo - 3} outras clientes</small>}</div>
               <span className="plat-mapa-seta">→</span>
-              <div className="plat-mapa-col"><header><span>🏠 Salões / Profissionais</span><Pilula tom="azul">{(funil?.destinos ?? []).length}</Pilula></header>{(funil?.destinos ?? []).slice(0, 4).map((d) => <div key={d.nome} className="plat-mapa-linha"><span>{d.tipo === 'autonoma' ? '👤' : '🏠'} {d.nome}</span><small className="muted">{d.quantos} {Number(d.quantos) === 1 ? 'cliente vinculada' : 'clientes vinculadas'}</small></div>)}</div>
+              <div className="plat-mapa-col"><header><span><Store size={14} /> Salões / Profissionais</span><Pilula tom="azul">{(funil?.destinos ?? []).length}</Pilula></header>{(funil?.destinos ?? []).slice(0, 4).map((d) => <div key={d.nome} className="plat-mapa-linha"><span>{d.tipo === 'autonoma' ? <User size={13} /> : <Store size={13} />} {d.nome}</span><small className="muted">{d.quantos} {Number(d.quantos) === 1 ? 'cliente vinculada' : 'clientes vinculadas'}</small></div>)}</div>
             </div>
           </Painel>
         </div>

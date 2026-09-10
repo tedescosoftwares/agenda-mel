@@ -5,6 +5,7 @@ import GraficoLinha from '../../components/GraficoLinha'
 import { supabase } from '../../lib/supabase'
 import { GraficoIcon } from '../../components/icons'
 import { formatarCents } from '../../lib/indicacao'
+import { CalendarDays } from 'lucide-react'
 
 // Métricas: as séries semanais do MIMO inteiro. Doze semanas, um
 // gráfico por medida. Sem projeção, sem estimativa: é o que aconteceu.
@@ -24,7 +25,7 @@ export default function Metricas() {
 
   return (
     <Shell>
-      <Cabecalho titulo="Métricas" sub="As últimas doze semanas do MIMO inteiro, medida por medida." direita={<div className="plat-periodo">📅 Últimas 12 semanas</div>} />
+      <Cabecalho titulo="Métricas" sub="As últimas doze semanas do MIMO inteiro, medida por medida." direita={<div className="plat-periodo"><CalendarDays size={15} /> Últimas 12 semanas</div>} />
       {erro && <div className="alert alert-error">{erro}</div>}
       {!serie ? <Vazio>Carregando…</Vazio> : (
         <div className="plat-grade-3">

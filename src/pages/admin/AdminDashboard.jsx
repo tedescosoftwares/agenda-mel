@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext'
 import { formatarCents, formatarReaisCurto, formatarPct, mesAtual, nomeDoMes } from '../../lib/numeros'
 import GraficoLinha from '../../components/GraficoLinha'
 import { toISODate } from '../../lib/format'
+import { CalendarPlus, Users, Sparkles, MessageCircle } from 'lucide-react'
 
 // Dashboard do salão (tela 23): o dia de hoje em quatro números, o
 // faturamento do mês dia a dia, o que está esperando resposta, e os
@@ -75,10 +76,10 @@ export default function AdminDashboard() {
 
       <h3 className="secao-titulo">Atalhos</h3>
       <div className="atalhos">
-        <Link to="/admin/agenda?encaixe=1" className="card atalho"><span>➕</span>Novo encaixe</Link>
-        <Link to="/admin/equipe" className="card atalho"><span>👩‍🦰</span>Equipe</Link>
-        <Link to="/admin/servicos" className="card atalho"><span>✨</span>Serviços</Link>
-        <Link to="/admin/whatsapp" className="card atalho"><span>💬</span>WhatsApp</Link>
+        <Link to="/admin/agenda?encaixe=1" className="card atalho"><span><CalendarPlus /></span>Novo encaixe</Link>
+        <Link to="/admin/equipe" className="card atalho"><span><Users /></span>Equipe</Link>
+        <Link to="/admin/servicos" className="card atalho"><span><Sparkles /></span>Serviços</Link>
+        <Link to="/admin/whatsapp" className="card atalho"><span><MessageCircle /></span>WhatsApp</Link>
       </div>
     </AdminShell>
   )

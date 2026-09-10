@@ -100,7 +100,7 @@ export default function ProLink() {
         <label>Instagram<input value={form.instagram} onChange={mudar('instagram')} placeholder="@seu.perfil" autoCapitalize="none" /></label>
         <label>WhatsApp para a cliente falar com você<input type="tel" value={form.whatsapp_publico} onChange={mudar('whatsapp_publico')} placeholder="(13) 99999-9999 — vazio = não mostra" /></label>
         <label>Sobre você<textarea value={form.bio} onChange={mudar('bio')} rows={4} placeholder="Como você atende, há quanto tempo, o que a cliente pode esperar." /></label>
-        <button className="btn btn-primary btn-block" onClick={salvarVitrine} disabled={salvando || !vitrine}>{salvando ? 'Salvando…' : salvo ? 'Salvo ✓' : 'Salvar vitrine'}</button>
+        <button className="btn btn-primary btn-block" onClick={salvarVitrine} disabled={salvando || !vitrine}>{salvando ? 'Salvando…' : salvo ? 'Salvo!' : 'Salvar vitrine'}</button>
       </div>
 
       <p className="muted" style={{ fontSize: '0.82rem' }}>Coloque o link na bio do Instagram e no status do WhatsApp. A cliente escolhe serviço, dia e hora sozinha — você só confirma.</p>

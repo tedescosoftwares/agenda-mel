@@ -1,3 +1,4 @@
+import { Check } from 'lucide-react'
 import { useState } from 'react'
 import CalendarioMes from '../components/CalendarioMes'
 import {
@@ -536,7 +537,7 @@ export default function Estilo() {
                 }
               >
                 <button type="button" onClick={() => n < passo && setPasso(n)}>
-                  <span className="trilha-num">{n < passo ? '✓' : n}</span>
+                  <span className="trilha-num">{n < passo ? <Check size={14} /> : n}</span>
                   <span className="trilha-rotulo">{rotulo}</span>
                 </button>
               </li>

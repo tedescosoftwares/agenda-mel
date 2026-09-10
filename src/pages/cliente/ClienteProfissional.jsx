@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase'
 import { StarIcon } from '../../components/icons'
 import { formatPreco, labelDuracao } from '../../lib/format'
 import { iniciais } from '../../lib/booking'
+import { Sparkles } from 'lucide-react'
 
 // Perfil da profissional dentro do app (tela 05): foto grande, nome,
 // nota, e três abas — Serviços, Avaliações, Sobre. O botão "Agendar
@@ -74,7 +75,7 @@ export default function ClienteProfissional() {
           {servicos.map((s) => (
             <Link key={s.id} to={`/cliente/profissional/${prof.id}/servicos?servico=${s.id}`} className="card servico-linha">
               <span className="servico-linha-foto" aria-hidden="true">
-                {s.images?.[0] ? <img src={s.images[0]} alt="" /> : '✨'}
+                {s.images?.[0] ? <img src={s.images[0]} alt="" /> : <Sparkles />}
               </span>
               <span className="cliente-info">
                 <span className="cliente-nome"><span className="nome-txt">{s.name}</span></span>

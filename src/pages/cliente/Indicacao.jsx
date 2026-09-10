@@ -3,6 +3,7 @@ import ClienteShell from '../../components/ClienteShell'
 import { supabase } from '../../lib/supabase'
 import { formatarCents } from '../../lib/indicacao'
 import { CopiarIcon, CompartilharIcon } from '../../components/icons'
+import { Gift } from 'lucide-react'
 
 // Indique e ganhe (tela 11): o código grande, um botão de copiar, um de
 // compartilhar, e os dois números que importam — quantas amigas vieram
@@ -41,7 +42,7 @@ export default function Indicacao() {
       {loading ? <p className="muted">Carregando…</p> : (
         <>
           <div className="ind-topo">
-            <span className="ind-ilustra" aria-hidden="true">💝</span>
+            <span className="ind-ilustra" aria-hidden="true"><Gift size={52} strokeWidth={1.4} /></span>
             <h2>Indique e ganhe</h2>
             <p className="muted">Convide amigas e ganhe créditos. Cada amiga que agendar ganha {resumo && formatarCents(resumo.premio_indicada_cents)}, e você ganha {resumo && formatarCents(resumo.premio_indicou_cents)}.</p>
           </div>

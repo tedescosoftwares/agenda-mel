@@ -4,6 +4,7 @@ import SemFicha from './SemFicha'
 import FilaEspera from '../../components/FilaEspera'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
+import { Repeat } from 'lucide-react'
 
 // Pedidos pendentes (tela 16): duas abas — o que espera o seu sim, e
 // quem está na fila de espera. Cada pedido mostra quanto tempo falta
@@ -77,7 +78,7 @@ export default function ProPedidos() {
                 <strong>{p.cliente}</strong>
                 <span className={'pedido-prazo' + (p.faltam_min != null && p.faltam_min < 30 ? ' urgente' : '')}>⏱ {prazo(p.faltam_min)}</span>
               </div>
-              <span className="pedido-servico">{p.remarcacao ? '🔁 Quer remarcar · ' : ''}{p.servico}</span>
+              <span className="pedido-servico">{p.remarcacao ? <><Repeat size={13} /> Quer remarcar · </> : null}{p.servico}</span>
               {p.remarcacao ? (
                 <>
                   <span className="muted pedido-era">era {p.antes}</span>

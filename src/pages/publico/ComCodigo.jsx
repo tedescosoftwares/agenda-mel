@@ -4,6 +4,7 @@ import LeitorQr from '../../components/LeitorQr'
 import { MarcaIcon, Wordmark } from '../../components/icons'
 import RodapeSocial from '../../components/RodapeSocial'
 import { extrairCodigo } from '../../lib/convite'
+import { ScanLine } from 'lucide-react'
 
 // /entrar — a PORTA do MIMO para quem não está logada. Ninguém chega
 // aqui do nada: sempre foi uma profissional ou um salão que chamou. Então
@@ -39,7 +40,7 @@ export default function ComCodigo() {
 
         {modo === 'menu' && (
           <div className="entrar-opcoes">
-            <button className="btn btn-primary btn-block" onClick={() => { setErro(''); setModo('camera') }}>📷 Escanear o QR</button>
+            <button className="btn btn-primary btn-block" onClick={() => { setErro(''); setModo('camera') }}><ScanLine size={18} /> Escanear o QR</button>
             <button className="btn btn-ghost btn-block" onClick={() => { setErro(''); setModo('codigo') }}>Digitar o código</button>
           </div>
         )}

@@ -2,15 +2,16 @@ import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import ClienteShell from '../../components/ClienteShell'
 import { useNotificacoes } from '../../context/NotificacoesContext'
+import { CalendarCheck, CircleCheck, CircleX, AlarmClock, Zap, Heart, Star, Gift, TriangleAlert, CalendarDays, Repeat, Megaphone, Bell } from 'lucide-react'
 
 // Central de avisos (tela 12): um ícone por tipo, o texto, e para onde
 // leva. Abrir a tela marca tudo como lido — a pessoa veio olhar, olhou.
 const ICONE = {
-  agendamento_confirmado: '📅', pedido_aceito: '✅', pedido_recusado: '😔',
-  lembrete_agendamento: '⏰', vaga_disponivel: '⏰', agenda_adiantada: '⚡',
-  convite_retorno: '💛', pos_atendimento: '💆', indicacao_creditada: '🎁',
-  profissional_cancelou: '⚠️', agendamento_cancelado: '⚠️', novo_agendamento: '🗓️',
-  remarcacao_aceita: '🔁', remarcacao_recusada: '😔',
+  agendamento_confirmado: CalendarCheck, pedido_aceito: CircleCheck, pedido_recusado: CircleX,
+  lembrete_agendamento: AlarmClock, vaga_disponivel: AlarmClock, agenda_adiantada: Zap,
+  convite_retorno: Heart, pos_atendimento: Star, indicacao_creditada: Gift,
+  profissional_cancelou: TriangleAlert, agendamento_cancelado: TriangleAlert, novo_agendamento: CalendarDays,
+  remarcacao_aceita: Repeat, remarcacao_recusada: CircleX, recado: Megaphone, teste: Bell,
 }
 const DESTINO = {
   agendamento_confirmado: '/cliente/meus-agendamentos', pedido_aceito: '/cliente/meus-agendamentos',
@@ -39,7 +40,7 @@ export default function Notificacoes() {
             const para = DESTINO[a.kind] || a.action_url || '/cliente/home'
             return (
               <Link key={a.id} to={para} className={'card notif-row' + (a.read_at ? '' : ' nova')}>
-                <span className="notif-icone" aria-hidden="true">{ICONE[a.kind] ?? '🔔'}</span>
+                <span className="notif-icone" aria-hidden="true">{(() => { const I = ICONE[a.kind] ?? Bell; return <I size={20} /> })()}</span>
                 <span className="cliente-info">
                   <span className="cliente-nome"><span className="nome-txt">{a.title}</span></span>
                   {a.body && <span className="muted cliente-meta">{a.body}</span>}

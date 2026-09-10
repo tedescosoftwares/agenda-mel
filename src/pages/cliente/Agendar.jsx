@@ -6,6 +6,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { formatPreco, labelDuracao } from '../../lib/format'
 import { toMin, minToHora, formatDataLonga } from '../../lib/booking'
+import { Check, Sparkles, Repeat } from 'lucide-react'
 
 // O fluxo de marcar, dentro do app: serviço → data → hora → confirmar.
 // Cada passo é uma rota, e o que já foi escolhido viaja na URL
@@ -74,7 +75,7 @@ function Trilha({ passo, remarcar }) {
       {nomes.map((r, i) => (
         <li key={r} className={'trilha-passo' + (i + 1 === atual ? ' atual' : '') + (i + 1 < atual ? ' feito' : '')}>
           <button type="button" disabled>
-            <span className="trilha-num">{i + 1 < atual ? '✓' : i + 1}</span>
+            <span className="trilha-num">{i + 1 < atual ? <Check size={14} /> : i + 1}</span>
             <span className="trilha-rotulo">{r}</span>
           </button>
         </li>
@@ -120,7 +121,7 @@ export function AgendarServicos() {
             onClick={() => setSel(s.id)}
           >
             <span className="servico-linha-foto" aria-hidden="true">
-              {s.images?.[0] ? <img src={s.images[0]} alt="" /> : '✨'}
+              {s.images?.[0] ? <img src={s.images[0]} alt="" /> : <Sparkles />}
             </span>
             <span className="cliente-info">
               <span className="cliente-nome"><span className="nome-txt">{s.name}</span></span>
@@ -374,7 +375,7 @@ export function AgendarSucesso() {
   return (
     <ClienteShell semTopo>
       <div className="sucesso">
-        <span className="sucesso-check" aria-hidden="true">{troca ? '🔁' : '✓'}</span>
+        <span className="sucesso-check" aria-hidden="true">{troca ? <Repeat /> : <Check />}</span>
         <h2>{titulo}</h2>
         <p className="muted">{texto}</p>
         {appt && (

@@ -8,6 +8,7 @@ import { TERMOS_VERSAO } from '../lib/termos'
 import { VERSAO } from '../lib/versao'
 import { MarcaIcon, Wordmark } from '../components/icons'
 import { extrairCodigo, guardarConvite } from '../lib/convite'
+import { MailCheck } from 'lucide-react'
 
 // Login (tela 02): "Bem-vinda de volta!", e-mail, senha, manter
 // conectado, e a porta para quem esqueceu a senha ou não tem conta.
@@ -116,7 +117,7 @@ export default function Login() {
 
         {quemConvidou && (
           <div className="convite-faixa">
-            <span aria-hidden="true">💌</span>
+            <span aria-hidden="true" className="faixa-icone"><MailCheck size={18} /></span>
             <span><strong>{quemConvidou.nome}</strong> te convidou. {modo === 'cadastro' ? 'Crie a conta e você já entra na agenda.' : 'Entre e você já cai na agenda.'}</span>
           </div>
         )}

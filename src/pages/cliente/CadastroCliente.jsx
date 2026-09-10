@@ -10,6 +10,7 @@ import { iniciais } from '../../lib/booking'
 import CampoSenha from '../../components/CampoSenha'
 import RodapeSocial from '../../components/RodapeSocial'
 import { MarcaIcon, Wordmark } from '../../components/icons'
+import { MailCheck } from 'lucide-react'
 
 // O cadastro da cliente (065). Sempre nasce de um convite: QR, código
 // ou link de uma profissional ou salão. Dois passos curtos — quem é
@@ -81,7 +82,7 @@ export default function CadastroCliente() {
 
         {pronto ? (
           <div className="cad-pronto">
-            <span className="cad-pronto-icone" aria-hidden="true">💌</span>
+            <span className="cad-pronto-icone" aria-hidden="true"><MailCheck size={44} strokeWidth={1.6} /></span>
             <h2 className="login-titulo">Falta só confirmar</h2>
             <p className="muted login-sub">Mandamos um e-mail para <strong>{email.trim()}</strong>. Toca no botão que está nele e a sua conta abre já dentro da agenda {primeiroNome ? `de ${primeiroNome}` : ''}.</p>
             <p className="muted cad-dica">Não chegou? Olha o spam ou as Promoções. Pode levar um minuto.</p>

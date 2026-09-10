@@ -5,6 +5,7 @@ import { Cabecalho, Kpi, Painel, Pilula, Vazio, Iniciais } from '../../component
 import { supabase } from '../../lib/supabase'
 import { useDialogo } from '../../context/DialogoContext'
 import { PredioIcon, UsersIcon, TeamIcon, CalendarIcon, SearchIcon, PulsoIcon, SetaIcon } from '../../components/icons'
+import { User, MapPin, Pencil, Check as CheckIcon } from 'lucide-react'
 
 // Salões e autônomas: a lista de unidades com tamanho e ações, o
 // checklist de implantação de quem ainda não começou, e o ranking do
@@ -79,8 +80,8 @@ export default function Saloes() {
                     <span className={'plat-logo ' + (s.tipo === 'autonoma' ? 'roxo' : 'rosa')}>{s.tipo === 'autonoma' ? <UsersIcon /> : <PredioIcon />}</span>
                     <div className="plat-unidade-info">
                       <div className="plat-unidade-nome"><Link to={`/plataforma/saloes/${s.id}`}><strong>{s.nome}</strong></Link><Pilula>{s.tipo === 'autonoma' ? 'Autônoma' : 'Salão'}</Pilula><Pilula>{!s.ativo ? 'Desativado' : s.atendimentos === 0 ? 'Implantação' : s.tipo === 'autonoma' ? 'Ativa' : 'Ativo'}</Pilula></div>
-                      <span className="muted">👤 {s.dona || 'sem dona ainda'}</span>
-                      <span className="muted">📍 {s.cidade || 'sem cidade'}</span>
+                      <span className="muted"><User size={13} /> {s.dona || 'sem dona ainda'}</span>
+                      <span className="muted"><MapPin size={13} /> {s.cidade || 'sem cidade'}</span>
                       <span className="muted">▦ Código: {s.codigo}</span>
                     </div>
                     <div className="plat-unidade-nums">
@@ -91,7 +92,7 @@ export default function Saloes() {
                     <div className="plat-unidade-acoes">
                       <Link to={`/plataforma/saloes/${s.id}`} className="btn btn-primary">Ver detalhes <SetaIcon /></Link>
                       <div>
-                        <Link to={`/plataforma/saloes/${s.id}`} className="plat-btn-ico" title="Editar">✎</Link>
+                        <Link to={`/plataforma/saloes/${s.id}`} className="plat-btn-ico" title="Editar"><Pencil size={15} /></Link>
                         <Link to={`/plataforma/saloes/${s.id}?aba=equipe`} className="plat-btn-ico" title="Equipe"><TeamIcon /></Link>
                         <button className="plat-btn-ico" title={s.ativo ? 'Desativar' : 'Reativar'} onClick={() => ativar(s, !s.ativo)}>{s.ativo ? '⏻' : '↺'}</button>
                       </div>
@@ -157,7 +158,7 @@ export default function Saloes() {
 }
 
 function Check({ ok, titulo }) {
-  return <li className={ok ? 'ok' : ''}><span className="plat-check">{ok ? '✓' : ''}</span><span>{titulo}</span><Pilula tom={ok ? 'menta' : 'cinza'}>{ok ? 'Concluído' : 'Pendente'}</Pilula></li>
+  return <li className={ok ? 'ok' : ''}><span className="plat-check">{ok ? <CheckIcon size={12} /> : ''}</span><span>{titulo}</span><Pilula tom={ok ? 'menta' : 'cinza'}>{ok ? 'Concluído' : 'Pendente'}</Pilula></li>
 }
 
 // o salão de perto

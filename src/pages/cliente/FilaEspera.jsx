@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import ClienteShell from '../../components/ClienteShell'
 import { supabase } from '../../lib/supabase'
 import { formatDataCurta } from '../../lib/booking'
+import { Hourglass } from 'lucide-react'
 
 // Fila de espera (tela 10): em que lugar você está, o que está sendo
 // esperado, e a porta de saída. "Você está na fila" sem posição é
@@ -50,7 +51,7 @@ export default function FilaEspera() {
           const p = posicoes[e.id]
           return (
             <div key={e.id} className="card fila-card">
-              <span className="fila-ilustra" aria-hidden="true">🕐</span>
+              <span className="fila-ilustra" aria-hidden="true"><Hourglass size={48} strokeWidth={1.4} /></span>
               <h3>Você está na fila!</h3>
               <p className="muted">{e.services?.name} com {e.professionals?.name}</p>
               {p ? (

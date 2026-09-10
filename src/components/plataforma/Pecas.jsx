@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { SetaIcon } from '../icons'
+import { CalendarDays, ChevronDown } from 'lucide-react'
 
 // As peças que se repetem em todo o painel da plataforma: o cabeçalho
 // da tela, o card de número com variação e tendência, o card-painel
@@ -9,7 +10,7 @@ export function Cabecalho({ titulo, sub, direita }) {
   return (
     <div className="plat-cabecalho">
       <div><h1>{titulo}</h1>{sub && <p className="muted">{sub}</p>}</div>
-      {direita ?? <div className="plat-periodo">📅 Últimos 30 dias <span>⌄</span></div>}
+      {direita ?? <div className="plat-periodo"><CalendarDays size={15} /> Últimos 30 dias <ChevronDown size={14} /></div>}
     </div>
   )
 }

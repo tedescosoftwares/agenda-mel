@@ -4347,6 +4347,8 @@ a.prof-row:hover,
 .dado-linha:last-of-type { border-bottom: none; }
 .dado-linha strong { font-weight: 500; text-align: right; }
 .cl-ajuste { display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; }
+.avisos-celular .cliente-meta { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.35; }
+.avisos-celular .switch:disabled { opacity: 0.45; }
 .ajuste-icone { width: 40px; height: 40px; border-radius: 12px; background: var(--latao-veu); display: grid; place-items: center; font-size: 1.1rem; flex-shrink: 0; color: var(--rosa); }
 .cl-valor-mais { color: var(--menta); }
 .cl-valor-menos { color: var(--carmim); }

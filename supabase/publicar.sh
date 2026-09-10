@@ -91,6 +91,10 @@ echo 'enviar-email (Resend)...'
 supabase functions deploy enviar-email --project-ref "$PROJECT_REF" >/dev/null
 verde '  no ar'
 
+echo 'enviar-push (avisos no celular)...'
+supabase functions deploy enviar-push --project-ref "$PROJECT_REF" >/dev/null
+verde '  no ar'
+
 echo 'pagina-publica (prévia do link, com --no-verify-jwt)...'
 supabase functions deploy pagina-publica --project-ref "$PROJECT_REF" --no-verify-jwt >/dev/null
 verde '  no ar'
@@ -114,6 +118,12 @@ case "$CODIGO" in
   *)   amarelo "Respondeu $CODIGO — inesperado, mas a publicação não deu erro." ;;
 esac
 
+if ! supabase secrets list --project-ref "$PROJECT_REF" 2>/dev/null | grep -q VAPID_PRIVATE_KEY; then
+  amarelo 'VAPID_PRIVATE_KEY ainda não está nos segredos: os avisos no celular ficam parados.'
+  echo '   Gere uma vez:  npx web-push generate-vapid-keys'
+  echo "   supabase secrets set --project-ref $PROJECT_REF VAPID_PUBLIC_KEY=... VAPID_PRIVATE_KEY=... VAPID_SUBJECT=mailto:oi@mimo.com.vc"
+  echo "   e no SQL Editor:  select public.definir_config_publica('vapid_public', 'A_CHAVE_PUBLICA');"
+fi
 if ! supabase secrets list --project-ref "$PROJECT_REF" 2>/dev/null | grep -q RESEND_API_KEY; then
   amarelo 'RESEND_API_KEY ainda não está nos segredos: o e-mail de boas-vindas fica na fila sem sair.'
   echo "   supabase secrets set --project-ref $PROJECT_REF RESEND_API_KEY=re_... EMAIL_DE='MIMO <oi@seudominio.com>'"

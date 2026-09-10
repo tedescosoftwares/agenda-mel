@@ -6,6 +6,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import Avatar from '../../components/Avatar'
 import { ChevronIcon } from '../../components/icons'
+import AvisosNoCelular from '../../components/AvisosNoCelular'
 
 // Perfil (tela 14): dados pessoais, contato, preferências, e a saída.
 // Nome e telefone se editam aqui — o telefone é o que amarra a conta ao
@@ -93,6 +94,7 @@ export default function ClientePerfil() {
       </div>
 
       <h3 className="secao-titulo">Preferências</h3>
+      <AvisosNoCelular />
       <div className="card cl-ajuste">
         <div className="cliente-info">
           <span className="cliente-nome"><span className="nome-txt">Lembretes no WhatsApp</span></span>

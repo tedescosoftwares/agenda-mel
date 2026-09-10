@@ -136,7 +136,7 @@ const TABELAS = {
   client_favorites: [{ client_id: 'c1', professional_id: 'pr1' }, { client_id: 'c1', professional_id: 'pr3' }],
   reviews: [],
   salons: [{ id: SALAO, name: 'Studio Mel', slug: 'studio-mel', app_url: 'https://mimo.app', city: 'Santos', address: 'Rua das Flores, 120 · Gonzaga', codigo: 'MEL2K5', tipo: 'salao' }],
-  salon_members: [{ salon_id: SALAO, user_id: 'a1', papel: 'admin', salons: { id: SALAO, name: 'Studio Mel', slug: 'studio-mel' } }],
+  salon_members: [{ salon_id: SALAO, user_id: 'a1', papel: 'admin', salons: { id: SALAO, name: 'Studio Mel', slug: 'studio-mel', codigo: 'MEL2K5', tipo: 'salao', city: 'Santos' } }],
   whatsapp_channels: [{ salon_id: SALAO, canal: 'evolution', identificador: '11', ativo: true, usa_ia: true, usa_bot: true, silencio_inicio: '21:00', silencio_fim: '08:00', teto_diario: 300 }],
   affiliate_settings: [{ id: true, ativo: true, platform_fee_bps: 300, affiliate_share_bps: 50 }],
   message_outbox: [],
@@ -160,7 +160,7 @@ const RPC = {
     if (!p) return null
     return {
       profissional: { id: p.id, name: p.name, slug: p.slug, bio: p.bio, photo_url: p.photo_url, especialidade: p.especialidade ?? null, instagram: p.instagram ?? null, whatsapp: p.whatsapp_publico ?? null, aceite_manual: p.aceite_manual },
-      salao: { name: 'Studio Mel', city: 'Santos', address: 'Rua das Flores, 120 · Gonzaga', app_url: 'https://mimo.app' },
+      salao: { id: SALAO, name: 'Studio Mel', codigo: 'MEL2K5', tipo: 'salao', city: 'Santos', address: 'Rua das Flores, 120 · Gonzaga', app_url: 'https://mimo.app' },
       nota: { media: 4.9, quantas: 128 },
       avaliacoes: avaliacoes.concat(avaliacoes),
       galeria: [FOTO(3), FOTO(11), FOTO(25), FOTO(38), FOTO(52)],
@@ -233,6 +233,7 @@ const RPC = {
     { canal: 'email', id: 'f4', quando: new Date(Date.now() - 3 * 3600e3).toISOString(), salao: null, para: 'pro@exemplo.com', tipo: 'boas_vindas', status: 'na_fila', erro: 'RESEND_API_KEY não configurada', resumo: 'Sua agenda no MIMO está pronta 💛' },
   ],
   promover_plataforma: ({ email_ }) => 'ok: ' + email_ + ' agora é plataforma',
+  config_publica: () => ({ vapid_public: 'BDEMO' }),
   relogio_status: () => ({ ligado: true, jobs: [{ nome: 'mimo-fila', agenda: '* * * * *', ativo: true, ultima: new Date().toISOString(), status: 'succeeded' }, { nome: 'mimo-rotinas', agenda: '*/5 * * * *', ativo: true, ultima: new Date().toISOString(), status: 'succeeded' }] }),
   diagnostico_whatsapp: () => [{ item: 'Canal', situacao: 'ok', detalhe: 'Evolution, instância 11' }, { item: 'Número', situacao: 'ok', detalhe: '+55 13 99171-9086' }, { item: 'IA', situacao: 'ok', detalhe: 'ligada · 12 chamadas hoje' }],
   fila_do_salao: () => [],

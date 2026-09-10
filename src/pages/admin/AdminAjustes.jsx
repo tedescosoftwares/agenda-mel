@@ -4,6 +4,7 @@ import AdminShell from '../../components/AdminShell'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import CodigoQr from '../../components/CodigoQr'
+import AvisosNoCelular from '../../components/AvisosNoCelular'
 import { useState } from 'react'
 import {
   TeamIcon,
@@ -75,6 +76,8 @@ export default function AdminAjustes() {
       </div>
 
       {erro && <div className="alert alert-error">{erro}</div>}
+      <AvisosNoCelular />
+
       <h3 className="secao-titulo">Código do salão</h3>
       <div className="card">
         <CodigoQr codigo={codigo ?? salao?.codigo} nome={salao?.name} onNovo={salao ? novoCodigo : undefined}

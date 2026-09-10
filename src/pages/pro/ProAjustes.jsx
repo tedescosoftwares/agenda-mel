@@ -4,6 +4,7 @@ import ProShell from '../../components/ProShell'
 import SemFicha from './SemFicha'
 import { useAuth } from '../../context/AuthContext'
 import { ClockIcon, LinkIcon, ChevronIcon, BellIcon } from '../../components/icons'
+import AvisosNoCelular from '../../components/AvisosNoCelular'
 
 // Hub das configurações da profissional. Cada item continua tendo a
 // sua própria tela — aqui é só a porta de entrada.
@@ -19,6 +20,8 @@ export default function ProAjustes() {
         <h2>Ajustes</h2>
         <p className="muted">{professional.name}</p>
       </div>
+
+      <AvisosNoCelular />
 
       <div className="cliente-list">
         <Link to="/pro/pedidos" className="card prof-row">

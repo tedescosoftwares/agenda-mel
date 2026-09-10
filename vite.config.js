@@ -21,7 +21,11 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'fontes/*.woff2'],
-      workbox: {
+      // o service worker é nosso (src/sw.js): cache do app + push
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.js',
+      injectManifest: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
       },
       manifest: {

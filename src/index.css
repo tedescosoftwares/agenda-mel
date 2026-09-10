@@ -5017,3 +5017,8 @@ a, button { -webkit-tap-highlight-color: transparent; }
 .ja-tem { line-height: 1.45; }
 .ja-tem-acoes { display: flex; gap: 0.5rem; margin-top: 0.7rem; }
 .ja-tem-acoes .btn { flex: 1; padding: 0.6rem 0.5rem; font-size: 0.88rem; text-align: center; }
+
+/* ---- MIMO Pro (2.11): o ambiente de quem atende ------------------------- */
+.brand-pro { display: inline-flex; align-items: center; gap: 0.4rem; }
+.selo-pro { display: inline-block; background: linear-gradient(90deg, #aa4cff, #ff2d7a); color: #fff; font-size: 0.62rem; font-weight: 800; letter-spacing: 0.12em; padding: 0.15rem 0.45rem; border-radius: 999px; }
+.troca-ambiente { margin-top: 0.4rem; font-size: 0.82rem; }

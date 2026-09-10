@@ -58,7 +58,7 @@
 # Só entra no ar quando DOMINIO_SITE está no .env. Sem ele, o bloco
 # responde em "localhost", ou seja, para ninguém.
 # ---------------------------------------------------------------
-{$DOMINIO_SITE:localhost} {
+{$DOMINIO_SITE:localhost}, pro.{$DOMINIO_SITE:localhost} {
 	tls {$EMAIL}
 	root * /srv/site
 	encode gzip

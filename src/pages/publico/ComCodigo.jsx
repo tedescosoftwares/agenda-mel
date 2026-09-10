@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import LeitorQr from '../../components/LeitorQr'
 import { MarcaIcon, Wordmark } from '../../components/icons'
 import RodapeSocial from '../../components/RodapeSocial'
+import { urlDoAmbiente } from '../../lib/ambiente'
 import { extrairCodigo } from '../../lib/convite'
 import { ScanLine } from 'lucide-react'
 
@@ -59,7 +60,7 @@ export default function ComCodigo() {
         )}
 
         {modo === 'menu' && <Link to="/login" className="btn btn-ghost btn-block" style={{ marginTop: '0.6rem' }}>Já tenho conta</Link>}
-        <p className="login-troca muted" style={{ marginTop: '1rem' }}>Atende clientes? <Link to="/comecar" className="link-ver">Criar minha agenda</Link></p>
+        <p className="login-troca muted" style={{ marginTop: '1rem' }}>Atende clientes? <a href={urlDoAmbiente('pro', '/comecar')} className="link-ver">MIMO Pro</a></p>
         <p className="brand-slogan" style={{ marginTop: '0.8rem', marginBottom: 0, textAlign: 'center' }}>Beleza na palma da mão</p>
         <RodapeSocial />
       </div>

@@ -72,6 +72,7 @@ export default function App() {
           <DialogoProvider>
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/pro/entrar" element={<Login ambiente="pro" />} />
             <Route path="/splash" element={<Splash />} />
 
             {/* link público das profissionais — não exige login */}

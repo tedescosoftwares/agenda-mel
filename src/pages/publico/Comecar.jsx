@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { MarcaIcon, Wordmark } from '../../components/icons'
 import RodapeSocial from '../../components/RodapeSocial'
+import { urlDoAmbiente } from '../../lib/ambiente'
 
 // "Sou profissional" — a porta de quem vai ATENDER pelo MIMO. Duas
 // escolhas: trabalho por conta própria (vira um salão de uma pessoa,
@@ -65,13 +66,13 @@ export default function Comecar() {
             ) : (
               <>
                 <Link to={q(tipo)} className="btn btn-primary btn-block">Criar conta</Link>
-                <Link to="/login" className="btn btn-ghost btn-block">Já tenho conta</Link>
+                <Link to="/pro/entrar" className="btn btn-ghost btn-block">Já tenho conta</Link>
               </>
             )}
           </div>
         )}
 
-        <p className="login-troca muted">É cliente? <Link to="/login" className="link-ver">Entrar</Link></p>
+        <p className="login-troca muted">É cliente? <a href={urlDoAmbiente('cliente', '/entrar')} className="link-ver">Entrar como cliente</a></p>
         <RodapeSocial />
       </div>
     </div>

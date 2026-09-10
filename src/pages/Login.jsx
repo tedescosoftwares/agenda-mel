@@ -8,6 +8,7 @@ import { TERMOS_VERSAO } from '../lib/termos'
 import { VERSAO } from '../lib/versao'
 import { MarcaIcon, Wordmark } from '../components/icons'
 import { extrairCodigo, guardarConvite } from '../lib/convite'
+import { AMBIENTE, urlDoAmbiente } from '../lib/ambiente'
 import { MailCheck } from 'lucide-react'
 
 // Login (tela 02): "Bem-vinda de volta!", e-mail, senha, manter
@@ -21,7 +22,8 @@ import { MailCheck } from 'lucide-react'
 //                     profissional (salão de uma) ou dona de salão
 const OAUTH = String(import.meta.env.VITE_OAUTH || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean)
 
-export default function Login() {
+export default function Login({ ambiente = AMBIENTE }) {
+  const pro = ambiente === 'pro'
   const { user, role, loading, signIn, signUp } = useAuth()
   const [q] = useSearchParams()
   const convite = extrairCodigo(q.get('convite'))
@@ -99,12 +101,12 @@ export default function Login() {
     if (error) setErro(traduz(error.message))
   }
 
-  const titulo = modo === 'login' ? 'Bem-vinda de volta!'
+  const titulo = modo === 'login' ? (pro ? 'Sua agenda te espera' : 'Bem-vinda de volta!')
     : modo === 'esqueci' ? 'Recuperar senha'
     : papel === 'salao' ? 'Cadastrar meu salão'
     : papel === 'autonoma' ? 'Criar minha agenda'
     : 'Criar sua conta'
-  const sub = modo === 'login' ? 'Entre para continuar'
+  const sub = modo === 'login' ? (pro ? 'Entre para ver os horários de hoje' : 'Entre para continuar')
     : modo === 'esqueci' ? 'Mandamos um link para o seu e-mail'
     : papel ? 'Leva um minuto. Depois é só compartilhar seu código com as clientes.'
     : 'Leva menos de um minuto'
@@ -115,7 +117,7 @@ export default function Login() {
         <div className="brand">
           <MarcaIcon className="brand-icon" width={52} height={46} id="login" />
           <Wordmark tamanho={2.6} />
-          <p className="brand-assinatura">Agenda Mel</p>
+          {pro ? <p className="brand-assinatura brand-pro"><span className="selo-pro">PRO</span> a agenda de quem atende</p> : <p className="brand-assinatura">Agenda Mel</p>}
         </div>
 
         {quemConvidou && (
@@ -179,13 +181,20 @@ export default function Login() {
           {modo === 'login' ? (
             (convite || papel)
               ? <>Não tem conta? <button type="button" className="link-ver" onClick={() => { setModo('cadastro'); setErro('') }}>Cadastre-se</button></>
-              : <>Recebeu um QR ou código? <Link to="/entrar" className="link-ver">Entrar por ele</Link></>
+              : pro
+                ? <>Ainda não tem agenda no MIMO? <Link to="/comecar" className="link-ver">Criar minha agenda</Link></>
+                : <>Recebeu um QR ou código? <Link to="/entrar" className="link-ver">Entrar por ele</Link></>
           ) : (
             <>Já tem conta? <button type="button" className="link-ver" onClick={() => { setModo('login'); setErro('') }}>Entrar</button></>
           )}
         </p>
 
         <p className="brand-slogan" style={{ marginTop: '1.2rem', marginBottom: 0, textAlign: 'center' }}>Beleza na palma da mão</p>
+        <p className="login-troca muted troca-ambiente">
+          {pro
+            ? <>É cliente? <a href={urlDoAmbiente('cliente', '/login')} className="link-ver">Entrar como cliente</a></>
+            : <>Atende clientes? <a href={urlDoAmbiente('pro', '/pro/entrar')} className="link-ver">MIMO Pro</a></>}
+        </p>
         <RodapeSocial />
         <p className="versao-marca">v{VERSAO}</p>
       </div>

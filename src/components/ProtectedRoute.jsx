@@ -1,6 +1,7 @@
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { homeDoPapel } from '../lib/roles'
+import { AMBIENTE, ambienteDoPapel, irParaAmbiente } from '../lib/ambiente'
 
 // permitirSemVinculo: a tela "Entrar numa agenda" é a única que uma
 // cliente sem vínculo pode ver. Todas as outras mandam para lá.
@@ -16,7 +17,14 @@ export default function ProtectedRoute({ children, requireRole, permitirSemVincu
   }
 
   if (!user) {
-    return <Navigate to="/login" replace />
+    return <Navigate to={AMBIENTE === 'pro' ? '/pro/entrar' : '/login'} replace />
+  }
+
+  // profissional no endereço da cliente (ou o contrário): troca de ambiente
+  const certo = ambienteDoPapel(role)
+  if (certo && certo !== AMBIENTE) {
+    irParaAmbiente(certo, homeDoPapel(role))
+    return <div className="page-center"><p className="muted">Indo para o seu ambiente…</p></div>
   }
 
   // a primeira entrada explica as permissões e recolhe o aceite (064);

@@ -7,6 +7,7 @@ import { useAuth } from '../../context/AuthContext'
 import Avatar from '../../components/Avatar'
 import { ChevronIcon } from '../../components/icons'
 import AvisosNoCelular from '../../components/AvisosNoCelular'
+import AvisosPorEmail from '../../components/AvisosPorEmail'
 
 // Perfil (tela 14): dados pessoais, contato, preferências, e a saída.
 // Nome e telefone se editam aqui — o telefone é o que amarra a conta ao
@@ -95,6 +96,7 @@ export default function ClientePerfil() {
 
       <h3 className="secao-titulo">Preferências</h3>
       <AvisosNoCelular />
+      <AvisosPorEmail />
       <div className="card cl-ajuste">
         <div className="cliente-info">
           <span className="cliente-nome"><span className="nome-txt">Lembretes no WhatsApp</span></span>

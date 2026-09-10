@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import CodigoQr from '../../components/CodigoQr'
 import AvisosNoCelular from '../../components/AvisosNoCelular'
+import AvisosPorEmail from '../../components/AvisosPorEmail'
 import { useState } from 'react'
 import {
   TeamIcon,
@@ -77,6 +78,7 @@ export default function AdminAjustes() {
 
       {erro && <div className="alert alert-error">{erro}</div>}
       <AvisosNoCelular />
+      <AvisosPorEmail />
 
       <h3 className="secao-titulo">Código do salão</h3>
       <div className="card">

@@ -5,9 +5,12 @@
 //
 // Segredos (supabase secrets set):
 //   RESEND_API_KEY   re_...
-//   EMAIL_DE         'MIMO <oi@seudominio.com>' — o domínio precisa estar
-//                    verificado no Resend. Sem isso, cai no remetente de
-//                    teste do Resend, que só entrega para o dono da conta.
+//   EMAIL_DE         remetente; padrão 'MIMO <oi@mimo.com.vc>'. O domínio
+//                    precisa estar verificado no Resend (DKIM + SPF). Para
+//                    testar sem domínio: 'MIMO <onboarding@resend.dev>',
+//                    que só entrega para o dono da conta do Resend.
+//   EMAIL_RESPONDER  opcional; para onde vai a resposta da cliente
+//                    (ex.: 'contato@mimo.com.vc')
 //
 // Idempotente: puxar_emails() marca 'enviando' com skip locked.
 
@@ -23,7 +26,8 @@ Deno.serve(async (req) => {
   }
 
   const resend = Deno.env.get('RESEND_API_KEY') ?? ''
-  const de = Deno.env.get('EMAIL_DE') ?? 'MIMO <onboarding@resend.dev>'
+  const de = Deno.env.get('EMAIL_DE') ?? 'MIMO <oi@mimo.com.vc>'
+  const responder = Deno.env.get('EMAIL_RESPONDER') || undefined
   const db = createClient(Deno.env.get('SUPABASE_URL') ?? '', chave, { auth: { persistSession: false } })
 
   const { data: fila, error } = await db.rpc('puxar_emails', { quantos: LOTE })
@@ -42,6 +46,7 @@ Deno.serve(async (req) => {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${resend}` },
         body: JSON.stringify({
           from: de,
+          reply_to: responder,
           to: [m.nome ? `${m.nome} <${m.para}>` : m.para],
           subject: m.assunto,
           html: m.html,

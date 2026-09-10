@@ -19,10 +19,5 @@ ligarMedidor()
 for (const ev of ['gesturestart', 'gesturechange', 'gestureend']) {
   document.addEventListener(ev, (e) => e.preventDefault(), { passive: false })
 }
-// toque duplo rápido também dava zoom em alguns iPhones
-let ultimoToque = 0
-document.addEventListener('touchend', (e) => {
-  const agora = Date.now()
-  if (agora - ultimoToque < 300 && e.target.closest('input, textarea, [contenteditable]') === null) e.preventDefault()
-  ultimoToque = agora
-}, { passive: false })
+// (o toque duplo é barrado por CSS: touch-action em html/body. O jeito
+// antigo, cancelando o touchend, roubava o teclado no iOS 18 instalado.)

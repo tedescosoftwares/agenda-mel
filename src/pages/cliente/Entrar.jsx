@@ -74,7 +74,7 @@ export default function Entrar() {
         {modo === 'codigo' && (
           <form className="form" onSubmit={(e) => { e.preventDefault(); vincular(texto, texto.includes('/') ? 'link' : 'codigo') }}>
             <label>Código ou link
-              <input value={texto} onChange={(e) => setTexto(e.target.value)} placeholder="ANA7K2" autoCapitalize="characters" autoCorrect="off" spellCheck={false} autoFocus />
+              <input value={texto} onChange={(e) => setTexto(e.target.value)} placeholder="ANA7K2" autoCapitalize="characters" autoCorrect="off" spellCheck={false} />
             </label>
             <button type="submit" className="btn btn-primary btn-block" disabled={enviando || !texto.trim()}>{enviando ? 'Entrando…' : 'Entrar na agenda'}</button>
             <button type="button" className="btn btn-ghost btn-block" onClick={() => { setErro(''); setModo('menu') }}>Voltar</button>

@@ -151,7 +151,7 @@ export default function ClientePerfil() {
                 <h3>Trocar WhatsApp</h3>
                 <p className="muted">Mandamos um código de 6 dígitos para o número novo. Assim a gente sabe que ele é seu.</p>
                 <div className="form">
-                  <label>Número novo<input type="tel" inputMode="numeric" value={fone} onChange={(e) => setFone(formatarFone(e.target.value))} placeholder="(13) 99999-9999" autoFocus /></label>
+                  <label>Número novo<input type="tel" inputMode="numeric" value={fone} onChange={(e) => setFone(formatarFone(e.target.value))} placeholder="(13) 99999-9999" /></label>
                 </div>
               </>
             )}
@@ -160,7 +160,7 @@ export default function ClientePerfil() {
                 <h3>Digite o código</h3>
                 <p className="muted">{pedido.via === 'whatsapp' ? `Chegou no WhatsApp ${pedido.para}.` : `Nenhuma agenda sua tem WhatsApp ligado, então mandamos para o e-mail ${pedido.para}.`} Vale por 10 minutos.</p>
                 <div className="form">
-                  <label>Código<input inputMode="numeric" maxLength={6} value={codigo} onChange={(e) => setCodigo(e.target.value.replace(/\D/g, ''))} placeholder="000000" className="campo-codigo" autoFocus /></label>
+                  <label>Código<input inputMode="numeric" maxLength={6} value={codigo} onChange={(e) => setCodigo(e.target.value.replace(/\D/g, ''))} placeholder="000000" className="campo-codigo" /></label>
                 </div>
               </>
             )}
@@ -169,7 +169,7 @@ export default function ClientePerfil() {
                 <h3>Trocar e-mail</h3>
                 <p className="muted">Por segurança, confirme a senha. Depois um link vai para o e-mail novo; o antigo continua valendo até você tocar nele.</p>
                 <div className="form">
-                  <label>E-mail novo<input type="email" value={novoEmail} onChange={(e) => setNovoEmail(e.target.value)} placeholder="novo@email.com" autoFocus /></label>
+                  <label>E-mail novo<input type="email" value={novoEmail} onChange={(e) => setNovoEmail(e.target.value)} placeholder="novo@email.com" /></label>
                   <CampoSenha rotulo="Senha atual" valor={senhaAtual} onChange={(e) => setSenhaAtual(e.target.value)} autoComplete="current-password" dica={false} />
                 </div>
               </>

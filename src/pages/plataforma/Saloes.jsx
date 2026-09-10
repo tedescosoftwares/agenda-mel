@@ -142,7 +142,7 @@ export default function Saloes() {
                 <button className={'plat-chip' + (novo.tipo === 'salao' ? ' ativo' : '')} onClick={() => setNovo({ ...novo, tipo: 'salao' })}>Salão</button>
                 <button className={'plat-chip' + (novo.tipo === 'autonoma' ? ' ativo' : '')} onClick={() => setNovo({ ...novo, tipo: 'autonoma' })}>Autônoma</button>
               </div>
-              <label>{novo.tipo === 'salao' ? 'Nome do salão' : 'Nome da agenda (o nome dela)'}<input value={novo.nome} onChange={(e) => setNovo({ ...novo, nome: e.target.value })} autoFocus /></label>
+              <label>{novo.tipo === 'salao' ? 'Nome do salão' : 'Nome da agenda (o nome dela)'}<input value={novo.nome} onChange={(e) => setNovo({ ...novo, nome: e.target.value })} /></label>
               <label>Cidade<input value={novo.cidade} onChange={(e) => setNovo({ ...novo, cidade: e.target.value })} /></label>
               <label>E-mail da dona (opcional)<input type="email" value={novo.email} onChange={(e) => setNovo({ ...novo, email: e.target.value })} placeholder="ela@email.com" /></label>
             </div>

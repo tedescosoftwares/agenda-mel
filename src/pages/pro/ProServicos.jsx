@@ -82,7 +82,7 @@ export default function ProServicos() {
       {dona ? (
         novo ? (
           <div className="card form" style={{ marginTop: '1rem' }}>
-            <label>Nome do serviço<input value={novo.name} onChange={(e) => setNovo({ ...novo, name: e.target.value })} placeholder="Esmaltação em gel" autoFocus /></label>
+            <label>Nome do serviço<input value={novo.name} onChange={(e) => setNovo({ ...novo, name: e.target.value })} placeholder="Esmaltação em gel" /></label>
             <div className="linha-dupla">
               <label>Duração (min)<input type="number" min="15" step="15" value={novo.duration_minutes} onChange={(e) => setNovo({ ...novo, duration_minutes: e.target.value })} /></label>
               <label>Preço (R$)<input inputMode="decimal" value={novo.price} onChange={(e) => setNovo({ ...novo, price: e.target.value })} placeholder="80" /></label>

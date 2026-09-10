@@ -111,7 +111,7 @@ export default function CadastroCliente() {
 
             {passo === 1 ? (
               <form onSubmit={seguir} className="form">
-                <label>Nome e sobrenome<input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Maria da Silva" autoComplete="name" autoFocus required /></label>
+                <label>Nome e sobrenome<input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Maria da Silva" autoComplete="name" required /></label>
                 <label>WhatsApp<input type="tel" inputMode="numeric" value={fone} onChange={(e) => setFone(formatarFone(e.target.value))} placeholder="(13) 99999-9999" autoComplete="tel" required />
                   <span className="campo-dica muted">É por ele que chegam a confirmação e o lembrete.</span></label>
                 <label><span className="campo-rotulo">Aniversário <span className="muted">(opcional)</span></span><input type="date" value={nasc} onChange={(e) => setNasc(e.target.value)} max={hoje()} />
@@ -121,7 +121,7 @@ export default function CadastroCliente() {
               </form>
             ) : (
               <form onSubmit={criar} className="form">
-                <label>E-mail<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="voce@email.com" autoComplete="email" autoFocus required />
+                <label>E-mail<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="voce@email.com" autoComplete="email" required />
                   <span className="campo-dica muted">Vai receber um e-mail para confirmar.</span></label>
                 <CampoSenha valor={senha} onChange={(e) => setSenha(e.target.value)} placeholder="Pelo menos 6 caracteres" />
                 <label className="aceite-termos">

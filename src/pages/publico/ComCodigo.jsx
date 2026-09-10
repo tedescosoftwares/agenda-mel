@@ -52,7 +52,7 @@ export default function ComCodigo() {
         )}
         {modo === 'codigo' && (
           <form className="form" onSubmit={(e) => { e.preventDefault(); seguir(texto) }}>
-            <label>Código ou link<input value={texto} onChange={(e) => setTexto(e.target.value)} placeholder="ANA7K2" autoCapitalize="characters" autoCorrect="off" spellCheck={false} autoFocus /></label>
+            <label>Código ou link<input value={texto} onChange={(e) => setTexto(e.target.value)} placeholder="ANA7K2" autoCapitalize="characters" autoCorrect="off" spellCheck={false} /></label>
             <button type="submit" className="btn btn-primary btn-block" disabled={!texto.trim()}>Continuar</button>
             <button type="button" className="btn btn-ghost btn-block" onClick={() => { setErro(''); setModo('menu') }}>Voltar</button>
           </form>

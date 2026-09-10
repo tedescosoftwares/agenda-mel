@@ -10,15 +10,14 @@
 // Cada aviso vai para TODOS os celulares da pessoa. Celular que sumiu
 // (404/410) é apagado; falha passageira só conta.
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { clienteDoChamador, naoAutorizado, semPermissao } from '../_shared/porteiro.ts'
 import webpush from 'npm:web-push@3.6.7'
 
 const LOTE = 30
 
 Deno.serve(async (req) => {
-  const auth = req.headers.get('Authorization') ?? ''
-  const chave = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-  if (!chave || auth !== `Bearer ${chave}`) return json({ erro: 'não autorizado' }, 401)
+  const db = clienteDoChamador(req)
+  if (!db) return naoAutorizado()
 
   const pub = Deno.env.get('VAPID_PUBLIC_KEY') ?? ''
   const priv = Deno.env.get('VAPID_PRIVATE_KEY') ?? ''
@@ -26,8 +25,8 @@ Deno.serve(async (req) => {
   if (!pub || !priv) return json({ erro: 'VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY não configuradas' }, 500)
   webpush.setVapidDetails(subject, pub, priv)
 
-  const db = createClient(Deno.env.get('SUPABASE_URL') ?? '', chave, { auth: { persistSession: false } })
   const { data: lote, error } = await db.rpc('puxar_push', { quantos: LOTE })
+  if (semPermissao(error)) return naoAutorizado(error?.message)
   if (error) return json({ erro: error.message }, 500)
 
   let enviados = 0, falhas = 0, apagados = 0

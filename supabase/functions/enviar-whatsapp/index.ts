@@ -11,25 +11,15 @@
 // 'enviando' na mesma transação em que as devolve, com skip locked, e
 // duas execuções ao mesmo tempo nunca pegam a mesma mensagem.
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { clienteDoChamador, naoAutorizado, semPermissao } from '../_shared/porteiro.ts'
 import { enviarPor } from '../_shared/canais.ts'
 
 const LOTE = 20
 
 Deno.serve(async (req) => {
-  // só quem tem a chave de serviço drena a fila
-  const auth = req.headers.get('Authorization') ?? ''
-  const chave = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-  if (!chave || auth !== `Bearer ${chave}`) {
-    return new Response(JSON.stringify({ erro: 'não autorizado' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    })
-  }
-
-  const db = createClient(Deno.env.get('SUPABASE_URL') ?? '', chave, {
-    auth: { persistSession: false },
-  })
+  // só quem tem a chave de serviço drena a fila (ver _shared/porteiro.ts)
+  const db = clienteDoChamador(req)
+  if (!db) return naoAutorizado()
 
   // Pedido de horário com prazo vencido vira resolvido aqui também.
   // rodar_rotinas() (052) faz isso a cada 5 min; aqui é a cada minuto,
@@ -43,6 +33,7 @@ Deno.serve(async (req) => {
   }
 
   const { data: fila, error } = await db.rpc('puxar_da_fila', { quantas: LOTE })
+  if (semPermissao(error)) return naoAutorizado(error?.message)
   if (error) {
     return new Response(JSON.stringify({ erro: error.message }), {
       status: 500,

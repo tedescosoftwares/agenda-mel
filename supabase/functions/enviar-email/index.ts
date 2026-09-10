@@ -14,23 +14,20 @@
 //
 // Idempotente: puxar_emails() marca 'enviando' com skip locked.
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { clienteDoChamador, naoAutorizado, semPermissao } from '../_shared/porteiro.ts'
 
 const LOTE = 20
 
 Deno.serve(async (req) => {
-  const auth = req.headers.get('Authorization') ?? ''
-  const chave = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-  if (!chave || auth !== `Bearer ${chave}`) {
-    return json({ erro: 'não autorizado' }, 401)
-  }
+  const db = clienteDoChamador(req)
+  if (!db) return naoAutorizado()
 
   const resend = Deno.env.get('RESEND_API_KEY') ?? ''
   const de = Deno.env.get('EMAIL_DE') ?? 'MIMO <oi@mimo.com.vc>'
   const responder = Deno.env.get('EMAIL_RESPONDER') || undefined
-  const db = createClient(Deno.env.get('SUPABASE_URL') ?? '', chave, { auth: { persistSession: false } })
 
   const { data: fila, error } = await db.rpc('puxar_emails', { quantos: LOTE })
+  if (semPermissao(error)) return naoAutorizado(error?.message)
   if (error) return json({ erro: error.message }, 500)
   if (!resend) {
     // sem chave, devolve tudo para a fila e avisa uma vez só

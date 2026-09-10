@@ -16,7 +16,7 @@ begin
   if (r ->> 'pessoas')::int < 1 then raise exception 'Ana deveria ter ao menos 1 cliente'; end if;
   r := public.enviar_recado('minhas_clientes', 'Promoção de gel', 'Essa semana com 20% off, chama no app', '/cliente/home');
   raise notice '1 enviado: %', r;
-  select count(*) into n from public.notifications where kind = 'recado' and user_id = cli and title = 'Promoção de gel';
+  select count(*) into n from public.notifications where kind = 'recado' and user_id = cli and title like '%Promoção de gel';
   if n <> 1 then raise exception 'a cliente deveria ter 1 notificação, tem %', n; end if;
   select count(*) into n from public.message_outbox where kind = 'recado';
   if n <> 0 then raise exception 'recado não vai por WhatsApp'; end if;

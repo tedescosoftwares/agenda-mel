@@ -34,7 +34,7 @@ Deno.serve(async (req) => {
     const carga = JSON.stringify({ title: n.title, body: n.body ?? '', url: n.action_url ?? '/', kind: n.kind, tag: n.kind })
     for (const c of n.celulares ?? []) {
       try {
-        await webpush.sendNotification({ endpoint: c.endpoint, keys: { p256dh: c.p256dh, auth: c.auth } }, carga, { TTL: 60 * 60 * 6 })
+        await webpush.sendNotification({ endpoint: c.endpoint, keys: { p256dh: c.p256dh, auth: c.auth } }, carga, { TTL: 60 * 60 * 6, urgency: 'high' })
         await db.rpc('push_resultado', { sub_id: c.id, ok: true, apagar: false })
         enviados++
       } catch (e) {

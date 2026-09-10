@@ -49,6 +49,10 @@ if [ -z "${PROJECT_REF:-}" ]; then
   echo '   supabase.com/dashboard/project/XXXXXXXX   <- é esse XXXXXXXX'
   read -rp '   Ref: ' PROJECT_REF
   PROJECT_REF=$(printf '%s' "$PROJECT_REF" | tr -d ' \t\r\n')
+  if [ -n "$PROJECT_REF" ] && [ -f "$ENV" ]; then
+    printf 'PROJECT_REF=%s\n' "$PROJECT_REF" >> "$ENV"
+    verde "Guardado em $ENV — da próxima vez não pergunto."
+  fi
 fi
 
 if [ -z "${SUPABASE_ACCESS_TOKEN:-}" ]; then

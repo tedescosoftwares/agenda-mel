@@ -125,7 +125,12 @@ cd "$AQUI"
 azul '== 5/6  Caddy =='
 # up -d recria só o caddy se algo mudou (a variável nova, a pasta nova)
 docker compose up -d caddy >/dev/null
-verde '  caddy no ar'
+# o Caddyfile é montado de fora: mudou o arquivo, o container continua o
+# mesmo e o "up -d" não relê nada. O reload lê, sem derrubar ninguém —
+# e é ele que faz o Caddy pedir certificado para um domínio novo (pro.)
+docker compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile >/dev/null 2>&1 \
+  && verde '  caddy no ar (configuração relida)' \
+  || amarelo '  caddy no ar, mas não consegui reler a configuração: docker compose logs caddy --tail 30'
 
 # 6. Conferir ----------------------------------------------------------------
 azul '== 6/6  Conferindo =='

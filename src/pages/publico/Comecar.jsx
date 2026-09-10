@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { MarcaIcon, Wordmark } from '../../components/icons'
+import RodapeSocial from '../../components/RodapeSocial'
 
 // "Sou profissional" — a porta de quem vai ATENDER pelo MIMO. Duas
 // escolhas: trabalho por conta própria (vira um salão de uma pessoa,
@@ -71,6 +72,7 @@ export default function Comecar() {
         )}
 
         <p className="login-troca muted">É cliente? <Link to="/login" className="link-ver">Entrar</Link></p>
+        <RodapeSocial />
       </div>
     </div>
   )

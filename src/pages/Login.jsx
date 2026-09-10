@@ -3,6 +3,8 @@ import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { homeDoPapel } from '../lib/roles'
 import { isSupabaseConfigured, supabase } from '../lib/supabase'
+import RodapeSocial from '../components/RodapeSocial'
+import { TERMOS_VERSAO } from '../lib/termos'
 import { VERSAO } from '../lib/versao'
 import { MarcaIcon, Wordmark } from '../components/icons'
 import { extrairCodigo, guardarConvite } from '../lib/convite'
@@ -31,6 +33,7 @@ export default function Login() {
   const [negocio, setNegocio] = useState(q.get('negocio') || '')
   const [cidade, setCidade] = useState(q.get('cidade') || '')
   const [manter, setManter] = useState(true)
+  const [termos, setTermos] = useState(false)
   const [erro, setErro] = useState('')
   const [info, setInfo] = useState('')
   const [enviando, setEnviando] = useState(false)
@@ -62,7 +65,8 @@ export default function Login() {
         if (!nome.trim()) { setErro('Diga seu nome.'); return }
         if (!fone.trim()) { setErro('Precisamos do seu WhatsApp: é por ele que os avisos chegam.'); return }
         if (papel === 'salao' && !negocio.trim()) { setErro('Diga o nome do salão.'); return }
-        const extra = {}
+        if (!termos) { setErro('Para criar a conta, é preciso aceitar os Termos e a Política de privacidade.'); return }
+        const extra = { termos: TERMOS_VERSAO }
         if (convite) extra.codigo_convite = convite
         if (papel) { extra.papel_desejado = papel; extra.nome_negocio = negocio.trim() || null; extra.cidade = cidade.trim() || null }
         const { error } = await signUp(email, senha, nome.trim(), fone.trim(), extra)
@@ -142,10 +146,17 @@ export default function Login() {
             </div>
           )}
 
+          {modo === 'cadastro' && (
+            <label className="aceite-termos">
+              <input type="checkbox" checked={termos} onChange={(e) => setTermos(e.target.checked)} />
+              <span>Li e aceito os <Link to="/termos" target="_blank">Termos de uso</Link> e a <Link to="/privacidade" target="_blank">Política de privacidade</Link>.</span>
+            </label>
+          )}
+
           {erro && <div className="alert alert-error">{erro}</div>}
           {info && <div className="alert alert-info">{info}</div>}
 
-          <button type="submit" className="btn btn-primary btn-block" disabled={enviando}>
+          <button type="submit" className="btn btn-primary btn-block" disabled={enviando || (modo === 'cadastro' && !termos)}>
             {enviando ? 'Aguarde…' : modo === 'login' ? 'Entrar' : modo === 'cadastro' ? (papel ? 'Criar e começar' : 'Criar conta') : 'Enviar link'}
           </button>
         </form>
@@ -169,6 +180,7 @@ export default function Login() {
         </p>
 
         <p className="brand-slogan" style={{ marginTop: '1.2rem', marginBottom: 0, textAlign: 'center' }}>Beleza na palma da mão</p>
+        <RodapeSocial />
         <p className="versao-marca">v{VERSAO}</p>
       </div>
     </div>

@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { estadoPush, ativarPush, desativarPush } from '../lib/push'
+import { BellIcon } from './icons'
 
 // O cartão "Avisos no celular": um switch, e a explicação certa para
 // cada situação (iPhone sem instalar, permissão negada, navegador sem
 // suporte). Usado no perfil da cliente e nos ajustes da profissional e
 // do salão.
-export default function AvisosNoCelular() {
+export default function AvisosNoCelular({ icone = false }) {
   const { user } = useAuth()
   const [estado, setEstado] = useState('carregando')
   const [erro, setErro] = useState('')
@@ -38,6 +39,7 @@ export default function AvisosNoCelular() {
   return (
     <>
       <div className="card cl-ajuste avisos-celular">
+        {icone && <span className="ajuste-icone"><BellIcon /></span>}
         <div className="cliente-info">
           <span className="cliente-nome"><span className="nome-txt">Avisos no celular</span></span>
           <span className="muted cliente-meta">{texto}</span>

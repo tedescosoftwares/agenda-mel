@@ -70,12 +70,12 @@ const vinculos = [
 ].map(([professional_id, service_id]) => ({ professional_id, service_id }))
 
 const clientes = [
-  { id: 'c1', full_name: 'Juliana Silva', phone: '(11) 98790-0115', role: 'cliente', accepts_reminders: true, referral_code: 'JULIANA10', created_at: '2025-01-10' },
+  { id: 'c1', full_name: 'Juliana Silva', phone: '(11) 98790-0115', role: 'cliente', accepts_reminders: true, referral_code: 'JULIANA10', created_at: '2025-01-10', primeiro_acesso_em: '2025-01-10', aceitou_termos_em: '2025-01-10', termos_versao: '2026-09-10' },
   { id: 'c2', full_name: 'Carla Mendes', phone: '(13) 99999-0002', role: 'cliente', accepts_reminders: true, created_at: '2025-02-01' },
   { id: 'c3', full_name: 'Mariana Souza', phone: '(13) 99999-0003', role: 'cliente', accepts_reminders: false, created_at: '2025-03-05' },
   { id: 'c4', full_name: 'Beatriz Costa', phone: '(13) 99999-0004', role: 'cliente', accepts_reminders: true, created_at: '2025-03-20' },
-  { id: 'p1', full_name: 'Ana Oliveira', phone: '(13) 99871-0002', role: 'profissional', accepts_reminders: true, created_at: '2024-12-01' },
-  { id: 'a1', full_name: 'Mel Tedesco', phone: '(13) 99120-3410', role: 'admin', accepts_reminders: true, created_at: '2024-11-01' },
+  { id: 'p1', full_name: 'Ana Oliveira', phone: '(13) 99871-0002', role: 'profissional', accepts_reminders: true, created_at: '2024-12-01', primeiro_acesso_em: '2024-11-01', aceitou_termos_em: '2024-11-01', termos_versao: '2026-09-10' },
+  { id: 'a1', full_name: 'Mel Tedesco', phone: '(13) 99120-3410', role: 'admin', accepts_reminders: true, created_at: '2024-11-01', primeiro_acesso_em: '2024-11-01', aceitou_termos_em: '2024-11-01', termos_versao: '2026-09-10' },
   { id: 'pl1', full_name: 'Bruno Tedesco', phone: '(13) 99871-0000', role: 'plataforma', accepts_reminders: true, created_at: '2024-10-01' },
 ]
 
@@ -238,7 +238,7 @@ const RPC = {
     { canal: 'email', id: 'f4', quando: new Date(Date.now() - 3 * 3600e3).toISOString(), salao: null, para: 'pro@exemplo.com', tipo: 'boas_vindas', status: 'na_fila', erro: 'RESEND_API_KEY não configurada', resumo: 'Sua agenda no MIMO está pronta 💛' },
   ],
   promover_plataforma: ({ email_ }) => 'ok: ' + email_ + ' agora é plataforma',
-  config_publica: () => ({ vapid_public: 'BDEMO' }),
+  config_publica: () => ({ vapid_public: 'BDEMO', instagram: 'mimo.com.vc', app_url: 'https://mimo.com.vc' }),
   relogio_status: () => ({ ligado: true, jobs: [{ nome: 'mimo-fila', agenda: '* * * * *', ativo: true, ultima: new Date().toISOString(), status: 'succeeded' }, { nome: 'mimo-rotinas', agenda: '*/5 * * * *', ativo: true, ultima: new Date().toISOString(), status: 'succeeded' }] }),
   diagnostico_whatsapp: () => [{ item: 'Canal', situacao: 'ok', detalhe: 'Evolution, instância 11' }, { item: 'Número', situacao: 'ok', detalhe: '+55 13 99171-9086' }, { item: 'IA', situacao: 'ok', detalhe: 'ligada · 12 chamadas hoje' }],
   fila_do_salao: () => [],

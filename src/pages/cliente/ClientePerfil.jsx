@@ -8,6 +8,7 @@ import Avatar from '../../components/Avatar'
 import { ChevronIcon } from '../../components/icons'
 import AvisosNoCelular from '../../components/AvisosNoCelular'
 import AvisosPorEmail from '../../components/AvisosPorEmail'
+import RodapeSocial from '../../components/RodapeSocial'
 
 // Perfil (tela 14): dados pessoais, contato, preferências, e a saída.
 // Nome e telefone se editam aqui — o telefone é o que amarra a conta ao
@@ -127,6 +128,7 @@ export default function ClientePerfil() {
       <button className="btn btn-ghost btn-block" style={{ marginTop: '1.4rem' }} onClick={async () => { if (await confirmar({ titulo: 'Sair da conta?', ok: 'Sair', cancelar: 'Ficar' })) signOut() }}>
         Sair da conta
       </button>
+      <RodapeSocial compacto />
     </ClienteShell>
   )
 }

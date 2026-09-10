@@ -51,6 +51,9 @@ import Filas from "./pages/plataforma/Filas";
 import Metricas from "./pages/plataforma/Metricas";
 import Configuracoes from "./pages/plataforma/Configuracoes";
 import PlataformaRecados from "./pages/plataforma/Recados";
+import { Termos, Privacidade } from "./pages/publico/Legal";
+import BemVinda from "./pages/BemVinda";
+import AvisoCookies from "./components/AvisoCookies";
 import ProRecados from "./pages/pro/ProRecados";
 import AdminRecados from "./pages/admin/AdminRecados";
 import { guardarCodigoDaURL } from "./lib/indicacao";
@@ -80,6 +83,9 @@ export default function App() {
             <Route path="/v/:codigo" element={<EntrarPorCodigo />} />
             <Route path="/comecar" element={<Comecar />} />
             <Route path="/entrar" element={<ComCodigo />} />
+            <Route path="/termos" element={<Termos />} />
+            <Route path="/privacidade" element={<Privacidade />} />
+            <Route path="/bem-vinda" element={<ProtectedRoute permitirSemVinculo permitirPrimeiroAcesso><BemVinda /></ProtectedRoute>} />
             <Route
               path="/cliente/entrar"
               element={
@@ -409,6 +415,7 @@ export default function App() {
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          <AvisoCookies />
           </DialogoProvider>
         </NotificacoesProvider>
       </AuthProvider>

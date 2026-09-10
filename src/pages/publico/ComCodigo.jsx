@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import LeitorQr from '../../components/LeitorQr'
 import { MarcaIcon, Wordmark } from '../../components/icons'
+import RodapeSocial from '../../components/RodapeSocial'
 import { extrairCodigo } from '../../lib/convite'
 
 // /entrar — a PORTA do MIMO para quem não está logada. Ninguém chega
@@ -59,6 +60,7 @@ export default function ComCodigo() {
         {modo === 'menu' && <Link to="/login" className="btn btn-ghost btn-block" style={{ marginTop: '0.6rem' }}>Já tenho conta</Link>}
         <p className="login-troca muted" style={{ marginTop: '1rem' }}>Atende clientes? <Link to="/comecar" className="link-ver">Criar minha agenda</Link></p>
         <p className="brand-slogan" style={{ marginTop: '0.8rem', marginBottom: 0, textAlign: 'center' }}>Beleza na palma da mão</p>
+        <RodapeSocial />
       </div>
     </div>
   )

@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext'
 import AuthModal from '../../components/AuthModal'
 import ListaEsperaForm from '../../components/ListaEsperaForm'
 import { StarIcon, CompartilharIcon, MarcaIcon } from '../../components/icons'
+import RodapeSocial from '../../components/RodapeSocial'
 import { formatPreco, labelDuracao } from '../../lib/format'
 import { toMin, minToHora, formatDataLonga } from '../../lib/booking'
 import CalendarioMes from '../../components/CalendarioMes'
@@ -418,6 +419,7 @@ export default function PaginaProfissional() {
               </div>
 
               <p className="vit-rodape"><Link to="/" className="vit-marca"><MarcaIcon id="vitrine" width={20} height={18} /> Feito com <strong>MIMO</strong></Link></p>
+              <RodapeSocial compacto />
             </div>
           )}
 

@@ -26,7 +26,7 @@ export default function Login() {
   const [q] = useSearchParams()
   const convite = extrairCodigo(q.get('convite'))
   const papel = ['autonoma', 'salao'].includes(q.get('papel')) ? q.get('papel') : ''
-  const [modo, setModo] = useState(q.get('modo') === 'cadastro' ? 'cadastro' : 'login') // login | cadastro | esqueci
+  const [modo, setModo] = useState(q.get('modo') === 'cadastro' ? 'cadastro' : q.get('modo') === 'esqueci' ? 'esqueci' : 'login') // login | cadastro | esqueci
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
   const [nome, setNome] = useState('')
@@ -69,6 +69,9 @@ export default function Login() {
         if (!fone.trim()) { setErro('Precisamos do seu WhatsApp: é por ele que os avisos chegam.'); return }
         if (papel === 'salao' && !negocio.trim()) { setErro('Diga o nome do salão.'); return }
         if (!termos) { setErro('Para criar a conta, é preciso aceitar os Termos e a Política de privacidade.'); return }
+        // um WhatsApp, uma conta (067)
+        const { data: livre } = await supabase.rpc('telefone_disponivel', { fone: fone.trim() })
+        if (livre && livre.disponivel === false) { setErro(livre.email ? `Esse WhatsApp já tem conta, no e-mail ${livre.email}. Entre com ela ou use "Esqueci a senha".` : (livre.motivo || 'Confere o WhatsApp.')); return }
         const extra = { termos: TERMOS_VERSAO }
         if (convite) extra.codigo_convite = convite
         if (papel) { extra.papel_desejado = papel; extra.nome_negocio = negocio.trim() || null; extra.cidade = cidade.trim() || null }
@@ -197,6 +200,7 @@ function traduz(msg) {
     'User already registered': 'Este e-mail já tem conta. Entre com a senha, ou use "Esqueci a senha".',
     'Password should be at least 6 characters': 'A senha precisa ter pelo menos 6 caracteres.',
     'Failed to fetch': 'Não foi possível conectar. Confira sua internet.',
+    'Database error saving new user': 'Não deu para criar a conta: esse WhatsApp já está em uso ou algum dado veio errado.',
   }
   return mapa[msg] || msg
 }

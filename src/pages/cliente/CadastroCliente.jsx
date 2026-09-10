@@ -33,6 +33,8 @@ export default function CadastroCliente() {
   const [enviando, setEnviando] = useState(false)
   const [pronto, setPronto] = useState(false)
   const [reenviado, setReenviado] = useState('')
+  const [conferindo, setConferindo] = useState(false)
+  const [jaTem, setJaTem] = useState(null)
 
   useEffect(() => {
     if (!convite) { setQuem(null); return }
@@ -44,11 +46,21 @@ export default function CadastroCliente() {
   if (user) return <Navigate to={homeDoPapel(role)} replace />
   if (!convite) return <Navigate to="/entrar" replace />
 
-  function seguir(e) {
-    e.preventDefault(); setErro('')
+  async function seguir(e) {
+    e.preventDefault(); setErro(''); setJaTem(null)
     if (nome.trim().split(' ').length < 2) { setErro('Diga seu nome e sobrenome, do jeito que a profissional te conhece.'); return }
     if (!foneValido(fone)) { setErro('Confere o WhatsApp: DDD + 9 dígitos, como (13) 99999-9999.'); return }
     if (nasc && !nascimentoOk(nasc)) { setErro('Confere a data de aniversário.'); return }
+    // um WhatsApp, uma conta (067): antes de pedir e-mail e senha
+    setConferindo(true)
+    const { data, error } = await supabase.rpc('telefone_disponivel', { fone: formatarFone(fone) })
+    setConferindo(false)
+    if (error) { setErro('Não consegui conferir o WhatsApp agora. Tenta de novo.'); return }
+    if (data && data.disponivel === false) {
+      if (data.email) setJaTem(data.email)
+      else setErro(data.motivo || 'Esse WhatsApp não serve.')
+      return
+    }
     setPasso(2)
   }
 
@@ -117,7 +129,16 @@ export default function CadastroCliente() {
                 <label><span className="campo-rotulo">Aniversário <span className="muted">(opcional)</span></span><input type="date" value={nasc} onChange={(e) => setNasc(e.target.value)} max={hoje()} />
                   <span className="campo-dica muted">A profissional gosta de lembrar.</span></label>
                 {erro && <div className="alert alert-error">{erro}</div>}
-                <button type="submit" className="btn btn-primary btn-block" disabled={!quem}>Continuar</button>
+                {jaTem && (
+                  <div className="alert alert-info ja-tem">
+                    <strong>Esse WhatsApp já tem conta</strong>, no e-mail <strong>{jaTem}</strong>. É você? Então é só entrar; o convite continua valendo.
+                    <div className="ja-tem-acoes">
+                      <Link to={`/login?convite=${convite}`} className="btn btn-primary">Entrar</Link>
+                      <Link to={`/login?convite=${convite}&modo=esqueci`} className="btn btn-ghost">Esqueci a senha</Link>
+                    </div>
+                  </div>
+                )}
+                <button type="submit" className="btn btn-primary btn-block" disabled={!quem || conferindo}>{conferindo ? 'Conferindo…' : 'Continuar'}</button>
               </form>
             ) : (
               <form onSubmit={criar} className="form">
@@ -155,6 +176,7 @@ function traduz(msg) {
     'Failed to fetch': 'Não foi possível conectar. Confira sua internet.',
     'Load failed': 'Não foi possível conectar. Confira sua internet e tente de novo.',
     'Signup requires a valid password': 'A senha precisa ter pelo menos 6 caracteres.',
+    'Database error saving new user': 'Não deu para criar a conta: esse WhatsApp já está em uso ou algum dado veio errado.',
   }
   return mapa[msg] ?? msg
 }

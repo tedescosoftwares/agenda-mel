@@ -236,7 +236,9 @@ const RPC = {
   ],
   plataforma_previa: ({ texto_ }) => String(texto_ ?? '').replace(/\{nome\}/g, 'Juliana').replace(/\{servico\}/g, 'Manicure').replace(/\{profissional\}/g, 'Ana Oliveira').replace(/\{quando_longo\}/g, 'sábado, 12/09 às 14:00').replace(/\{quando\}/g, '12/09 às 14:00').replace(/\{link_app\}/g, 'https://mimo.com.vc/').replace(/\{link\}/g, 'https://mimo.com.vc/p/ana-oliveira').replace(/\{nome_agenda\}/g, 'Juliana Silva').replace(/\{telefone_cliente\}/g, '(13) 99999-0000').replace(/\{prazo\}/g, '120'),
   plataforma_salvar_modelo: () => ({ ok: true }),
-  plataforma_testar_modelo: () => ({ ok: true, para: '+5513999990000' }),
+  plataforma_testar_modelo: ({ para_ }) => ({ ok: true, para: para_?.length ? para_ : ['5513999990000', '5511977770000'], quantos: para_?.length || 2 }),
+  plataforma_telefones_teste: () => [{ telefone: '5513999990000', apelido: 'Bruno', criado_em: mais(-3) }, { telefone: '5511977770000', apelido: null, criado_em: mais(-1) }],
+  plataforma_salvar_telefones_teste: ({ fones_ }) => (fones_ ?? []).map((f) => { const [a, b] = f.includes(':') ? f.split(':') : [null, f]; return { telefone: '55' + b.replace(/\D/g, '').slice(-11), apelido: a?.trim() || null, criado_em: mais(0) } }),
   plataforma_palavras: () => [{ intencao: 'confirma', palavras: ['1','sim','confirmo','ok','pode ser'] }, { intencao: 'cancela', palavras: ['2','nao','remarcar','cancelar'] }, { intencao: 'sair', palavras: ['sair','parar','stop'] }],
   plataforma_ia: () => [{ salon_id: SALAO, salao: 'Studio Mel', canal: 'evolution', ativo: true, usa_bot: true, usa_ia: true, teto_ia_diario: 200, teto_ia_por_numero: 20, gastas_hoje: 12, orientacao_ia: 'Atendemos de terça a sábado.' }, { salon_id: 's2', salao: 'Espaço Bela', canal: 'manual', ativo: true, usa_bot: false, usa_ia: false, teto_ia_diario: 200, teto_ia_por_numero: 20, gastas_hoje: 0 }],
   plataforma_saloes: () => [

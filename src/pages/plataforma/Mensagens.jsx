@@ -3,6 +3,7 @@ import Shell from '../../components/plataforma/Shell'
 import { Cabecalho, Painel, Pilula, Vazio } from '../../components/plataforma/Pecas'
 import { supabase } from '../../lib/supabase'
 import { useDialogo } from '../../context/DialogoContext'
+import { formatarFone } from '../../lib/fone'
 import { MessageSquareText, Bot, Sparkles, Send, RotateCcw, Check, Plus, X } from 'lucide-react'
 
 // Plataforma › Mensagens (068): tudo que o MIMO escreve no WhatsApp,
@@ -109,9 +110,11 @@ function Editor({ modelo, aoSalvar, confirmar, avisar }) {
     if (error) setErro(error.message); else aoSalvar?.()
   }
   async function testar() {
-    const { data, error } = await supabase.rpc('plataforma_testar_modelo', { texto_: texto })
+    setErro('')
+    const { data, error } = await supabase.rpc('plataforma_testar_modelo', { texto_: texto, para_: null })
     if (error) { setErro(error.message); return }
-    await avisar({ titulo: 'Teste na fila', texto: `Vai para ${data?.para}. Chega em segundos pelo canal ligado.` })
+    const para = (data?.para ?? []).map(bonito).join(', ')
+    await avisar({ titulo: data?.quantos > 1 ? `Teste na fila para ${data.quantos} números` : 'Teste na fila', texto: `Vai para ${para}. Chega em segundos pelo canal ligado.` })
   }
 
   return (
@@ -137,8 +140,62 @@ function Editor({ modelo, aoSalvar, confirmar, avisar }) {
       <div className="plat-botoes msg-acoes">
         <button className="btn btn-primary" onClick={salvar} disabled={salvando || (!mudou && !temRegra)}><Check size={16} /> {salvando ? 'Salvando…' : 'Salvar'}</button>
         <button className="btn btn-ghost" onClick={restaurar} disabled={!modelo.texto && texto === modelo.padrao}><RotateCcw size={16} /> Restaurar padrão</button>
-        <button className="btn btn-ghost" onClick={testar}><Send size={16} /> Testar no meu WhatsApp</button>
       </div>
+      <NumerosDeTeste aoTestar={testar} />
+    </div>
+  )
+}
+
+// 5513999990000 -> (13) 99999-0000
+function bonito(f) {
+  const d = String(f ?? '').replace(/\D/g, '').replace(/^55(?=\d{10,11}$)/, '')
+  return d.length >= 10 ? formatarFone(d) : String(f ?? '')
+}
+
+// Para quem vai o teste (070): a conta da plataforma não tem telefone,
+// então a lista mora no banco e vale para todos os textos. Cada número
+// pode ter um apelido ("Bruno: 13 99999-0000").
+function NumerosDeTeste({ aoTestar }) {
+  const [lista, setLista] = useState(null)
+  const [novo, setNovo] = useState('')
+  const [erro, setErro] = useState('')
+  const [enviando, setEnviando] = useState(false)
+  useEffect(() => { supabase.rpc('plataforma_telefones_teste').then(({ data }) => setLista(data ?? [])) }, [])
+
+  async function salvar(itens) {
+    setErro('')
+    const { data, error } = await supabase.rpc('plataforma_salvar_telefones_teste', { fones_: itens })
+    if (error) { setErro(error.message); return false }
+    setLista(data ?? []); return true
+  }
+  const comoItem = (t) => (t.apelido ? `${t.apelido}: ${t.telefone}` : t.telefone)
+  async function adicionar(e) {
+    e?.preventDefault()
+    if (!novo.trim()) return
+    if (await salvar([...(lista ?? []).map(comoItem), novo.trim()])) setNovo('')
+  }
+  const tirar = (tel) => salvar((lista ?? []).filter((t) => t.telefone !== tel).map(comoItem))
+  async function testar() { setEnviando(true); try { await aoTestar() } finally { setEnviando(false) } }
+
+  return (
+    <div className="msg-regra msg-teste">
+      <div className="msg-teste-topo">
+        <span className="msg-previa-tit">Testar no WhatsApp</span>
+        <button className="btn btn-ghost btn-mini" onClick={testar} disabled={enviando || lista === null || lista.length === 0}><Send size={14} /> {enviando ? 'Enviando…' : lista?.length > 1 ? `Enviar teste para ${lista.length} números` : 'Enviar teste'}</button>
+      </div>
+      <div className="msg-chips">
+        {lista === null && <span className="muted">Carregando…</span>}
+        {lista?.length === 0 && <span className="muted">Nenhum número ainda. Coloque o seu abaixo.</span>}
+        {(lista ?? []).map((t) => (
+          <span key={t.telefone} className="msg-chip" title={t.telefone}>{t.apelido ? `${t.apelido} · ` : ''}{bonito(t.telefone)}<button type="button" onClick={() => tirar(t.telefone)} aria-label="Tirar"><X size={13} /></button></span>
+        ))}
+      </div>
+      <form className="msg-teste-novo" onSubmit={adicionar}>
+        <input value={novo} onChange={(e) => setNovo(e.target.value)} placeholder="Apelido: (13) 99999-0000  ou só o número" />
+        <button type="submit" className="btn btn-ghost btn-mini" disabled={!novo.trim()}><Plus size={14} /> Adicionar</button>
+      </form>
+      {erro && <div className="alert alert-error">{erro}</div>}
+      <p className="muted msg-nota">O teste usa os dados de exemplo da prévia e sai pelo canal ligado. A lista vale para todos os textos.</p>
     </div>
   )
 }

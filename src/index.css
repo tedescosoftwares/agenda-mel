@@ -5050,6 +5050,11 @@ a, button { -webkit-tap-highlight-color: transparent; }
 .msg-previa-tit { display: block; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--texto-3); margin-bottom: 0.4rem; }
 .msg-balao { background: #dcf8c6; color: #111b21; border-radius: 12px 12px 12px 4px; padding: 0.7rem 0.9rem; font-size: 0.92rem; line-height: 1.45; max-width: 420px; box-shadow: 0 1px 1px rgba(0,0,0,.08); white-space: pre-wrap; word-break: break-word; }
 .msg-acoes { flex-wrap: wrap; }
+.msg-teste-topo { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; flex-wrap: wrap; }
+.msg-teste-topo .msg-previa-tit { margin-bottom: 0; }
+.msg-teste-novo { display: flex; gap: 0.5rem; align-items: center; }
+.msg-teste-novo input { flex: 1; min-width: 0; font: inherit; font-size: 0.9rem; padding: 0.5rem 0.7rem; border-radius: 10px; border: 1.5px solid var(--fio); background: #fff; }
+.msg-teste-novo input:focus { outline: none; border-color: var(--rosa); }
 .msg-palavras { display: flex; flex-direction: column; gap: 0.35rem; margin-bottom: 0.7rem; font-size: 0.88rem; }
 .msg-chips { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; }
 .msg-chip { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.2rem 0.35rem 0.2rem 0.6rem; border-radius: 999px; background: var(--cinza-1); font-size: 0.8rem; }

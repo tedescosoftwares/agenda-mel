@@ -663,7 +663,8 @@ $$;
 revoke execute on function public.receber_mensagem(text, text, text, text, text, uuid) from public, anon, authenticated;
 
 -- 8. O que a Plataforma › Mensagens usa -------------------------------------------------
-create or replace function public.plataforma_modelos()
+drop function if exists public.plataforma_modelos();   -- a 072 acrescenta colunas
+create function public.plataforma_modelos()
 returns table (chave text, grupo text, titulo text, descricao text, variaveis text[], padrao text, texto text, ordem integer,
                atualizado_em timestamptz, envia boolean, natureza text, sufixo text)
 language sql

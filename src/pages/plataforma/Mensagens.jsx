@@ -4,13 +4,16 @@ import { Cabecalho, Painel, Pilula, Vazio } from '../../components/plataforma/Pe
 import { supabase } from '../../lib/supabase'
 import { useDialogo } from '../../context/DialogoContext'
 import { formatarFone } from '../../lib/fone'
-import { MessageSquareText, Bot, Sparkles, Send, RotateCcw, Check, Plus, X } from 'lucide-react'
+import { MessageSquareText, Bot, Sparkles, Send, RotateCcw, Check, Plus, X, BellRing, Smartphone } from 'lucide-react'
 
-// Plataforma › Mensagens (068): tudo que o MIMO escreve no WhatsApp,
-// editável aqui. Três abas: Textos (avisos), Bot (respostas e palavras)
-// e IA (por salão). O texto de hoje é o "padrão"; editar cria uma
-// versão sua, restaurar volta.
+// Plataforma › Mensagens (068, 072): tudo que o MIMO escreve, editável
+// aqui. Quatro abas: Textos (WhatsApp), Bot (respostas e palavras), Push
+// (avisos no celular) e IA (por salão). O texto de hoje é o "padrão";
+// editar cria uma versão sua, restaurar volta.
 const GRUPO = { cliente: 'Para a cliente', profissional: 'Para a profissional', resposta: 'Respostas do bot', bot: 'Quando o bot ficaria quieto' }
+// push: a ordem diz para quem é (700 cliente, 800 profissional, 900 outros)
+const PUBLICO_PUSH = { cliente: 'Para a cliente', profissional: 'Para a profissional', outros: 'Indicações' }
+const publicoDoPush = (m) => (m.ordem < 800 ? 'cliente' : m.ordem < 900 ? 'profissional' : 'outros')
 const INTENCAO = { confirma: 'Confirmar', cancela: 'Cancelar / remarcar', sair: 'Sair dos avisos' }
 
 export default function Mensagens() {
@@ -28,15 +31,41 @@ export default function Mensagens() {
 
   return (
     <Shell>
-      <Cabecalho titulo="Mensagens" sub="O que o MIMO escreve no WhatsApp. Edite, veja a prévia, mande um teste para o seu número." />
+      <Cabecalho titulo="Mensagens" sub="O que o MIMO escreve no WhatsApp e nos avisos do celular. Edite, veja a prévia, mande um teste." />
       {erro && <div className="alert alert-error">{erro}</div>}
       <div className="abas plat-abas-linha" style={{ marginBottom: '1rem' }}>
-        {[['textos', 'Textos', MessageSquareText], ['bot', 'Bot', Bot], ['ia', 'IA', Sparkles]].map(([k, r, I]) => (
+        {[['textos', 'Textos', MessageSquareText], ['bot', 'Bot', Bot], ['push', 'Push', BellRing], ['ia', 'IA', Sparkles]].map(([k, r, I]) => (
           <button key={k} className={aba === k ? 'ativo' : ''} onClick={() => { setAba(k); setChave(null) }}><I size={16} /> {r}</button>
         ))}
       </div>
 
-      {aba !== 'ia' && (
+      {aba === 'push' && (
+        <div className="msg-duas">
+          <Painel titulo="Avisos no celular" sub="Um por acontecimento. O código escreve o título e o texto de sempre; aqui você reescreve por cima.">
+            {modelos == null ? <p className="muted">Carregando…</p> : (
+              ['cliente', 'profissional', 'outros'].map((g) => (
+                <div key={g} className="msg-grupo">
+                  <h4>{PUBLICO_PUSH[g]}</h4>
+                  {doGrupo(['push']).filter((m) => publicoDoPush(m) === g).map((m) => (
+                    <button key={m.chave} className={'msg-item' + (chave === m.chave ? ' ativo' : '')} onClick={() => setChave(m.chave)}>
+                      <span className="msg-item-tit">{m.titulo}</span>
+                      <span className="msg-item-meta">
+                        {m.texto ? <Pilula tom="menta">editado</Pilula> : <Pilula tom="cinza">padrão</Pilula>}
+                        {m.envia === false && <Pilula tom="carmim">não envia</Pilula>}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              ))
+            )}
+          </Painel>
+          <Painel titulo={atual ? atual.titulo : 'Escolha um aviso'} sub={atual?.descricao}>
+            {atual ? <EditorPush key={atual.chave} modelo={atual} aoSalvar={carregar} confirmar={confirmar} avisar={avisar} /> : <Vazio>Toque num aviso à esquerda para editar.</Vazio>}
+          </Painel>
+        </div>
+      )}
+
+      {aba !== 'ia' && aba !== 'push' && (
         <div className="msg-duas">
           <Painel titulo={aba === 'textos' ? 'Avisos' : 'Respostas'} sub={aba === 'textos' ? 'Um por acontecimento. Verde = editado.' : 'O que o bot diz, e o que ele entende.'}>
             {modelos == null ? <p className="muted">Carregando…</p> : (
@@ -196,6 +225,108 @@ function NumerosDeTeste({ aoTestar }) {
       </form>
       {erro && <div className="alert alert-error">{erro}</div>}
       <p className="muted msg-nota">O teste usa os dados de exemplo da prévia e sai pelo canal ligado. A lista vale para todos os textos.</p>
+    </div>
+  )
+}
+
+// O editor do push (072): título numa linha, texto embaixo. O modelo
+// guardado é "título\ntexto". A prévia imita a notificação do celular.
+function EditorPush({ modelo, aoSalvar, confirmar, avisar }) {
+  const inicial = modelo.texto ?? modelo.padrao
+  const quebra = inicial.indexOf('\n')
+  const [tit, setTit] = useState(quebra < 0 ? inicial : inicial.slice(0, quebra))
+  const [txt, setTxt] = useState(quebra < 0 ? '' : inicial.slice(quebra + 1))
+  const [previa, setPrevia] = useState('')
+  const [salvando, setSalvando] = useState(false)
+  const [erro, setErro] = useState('')
+  const [envia, setEnvia] = useState(modelo.envia !== false)
+  const [email, setEmail] = useState('')
+  const [celulares, setCelulares] = useState(null)
+  const [enviando, setEnviando] = useState(false)
+  const foco = useRef('tit')
+  const refTit = useRef(null), refTxt = useRef(null)
+  const texto = txt.trim() ? `${tit}\n${txt}` : tit
+  const mudou = texto !== (modelo.texto ?? modelo.padrao) || envia !== (modelo.envia !== false)
+
+  useEffect(() => {
+    const t = setTimeout(() => { supabase.rpc('plataforma_previa', { texto_: texto, chave_: modelo.chave }).then(({ data }) => setPrevia(data ?? '')) }, 300)
+    return () => clearTimeout(t)
+  }, [texto, modelo.chave])
+  useEffect(() => { supabase.rpc('plataforma_celulares_push', { email_: null }).then(({ data }) => setCelulares(data?.celulares ?? 0)) }, [])
+
+  function inserir(v) {
+    const tag = `{${v}}`
+    const el = foco.current === 'txt' ? refTxt.current : refTit.current
+    const set = foco.current === 'txt' ? setTxt : setTit
+    const val = foco.current === 'txt' ? txt : tit
+    const a = el?.selectionStart ?? val.length, b = el?.selectionEnd ?? val.length
+    set(val.slice(0, a) + tag + val.slice(b))
+    requestAnimationFrame(() => { el?.focus(); el?.setSelectionRange(a + tag.length, a + tag.length) })
+  }
+  async function salvar() {
+    setSalvando(true); setErro('')
+    const { error } = await supabase.rpc('plataforma_salvar_modelo', { chave_: modelo.chave, texto_: texto })
+    if (!error) await supabase.rpc('plataforma_regra_push', { kind_: modelo.chave.slice(5), envia_: envia })
+    setSalvando(false)
+    if (error) { setErro(error.message); return }
+    aoSalvar?.()
+  }
+  async function restaurar() {
+    if (!(await confirmar({ titulo: 'Voltar ao padrão?', texto: 'O texto que você escreveu some. Volta a sair o que o código escreve.', ok: 'Restaurar' }))) return
+    const q = modelo.padrao.indexOf('\n')
+    setTit(q < 0 ? modelo.padrao : modelo.padrao.slice(0, q)); setTxt(q < 0 ? '' : modelo.padrao.slice(q + 1))
+    const { error } = await supabase.rpc('plataforma_salvar_modelo', { chave_: modelo.chave, texto_: null })
+    if (error) setErro(error.message); else aoSalvar?.()
+  }
+  async function testar() {
+    setEnviando(true); setErro('')
+    const { data, error } = await supabase.rpc('plataforma_testar_push', { chave_: modelo.chave, texto_: texto, email_: email.trim() || null })
+    setEnviando(false)
+    if (error) { setErro(error.message); return }
+    await avisar({ titulo: 'Teste enviado', texto: `Foi para ${data?.celulares} ${data?.celulares === 1 ? 'aparelho' : 'aparelhos'} de ${data?.nome || 'você'}. Chega em segundos.` })
+  }
+  const [pTit, ...pResto] = (previa || '').split('\n')
+  const pTxt = pResto.join('\n').trim()
+
+  return (
+    <div className="msg-editor">
+      <div className="msg-vars">
+        {(modelo.variaveis ?? []).map((v) => <button key={v} type="button" className="plat-chip" onClick={() => inserir(v)}>{`{${v}}`}</button>)}
+      </div>
+      <label className="msg-campo">Título<input ref={refTit} value={tit} onChange={(e) => setTit(e.target.value)} onFocus={() => { foco.current = 'tit' }} maxLength={80} /></label>
+      <label className="msg-campo">Texto<textarea ref={refTxt} value={txt} onChange={(e) => setTxt(e.target.value)} onFocus={() => { foco.current = 'txt' }} rows={3} className="msg-textarea msg-textarea-curta" placeholder="Vazio = só o título" /></label>
+      <p className="muted msg-nota">{'{titulo}'} e {'{texto}'} são o que o código escreve hoje. O celular corta o texto em duas linhas: seja curto. Linha com variável vazia some sozinha.</p>
+      <div className="msg-regra">
+        <label className="chave-linha"><button type="button" className={'switch' + (envia ? ' on' : '')} onClick={() => setEnvia(!envia)} role="switch" aria-checked={envia} /><span>Manda push para o celular</span></label>
+        <span className="muted msg-nota">Desligado, o aviso continua aparecendo no sininho do app. WhatsApp e e-mail têm as regras deles na aba Textos.</span>
+      </div>
+      <div className="msg-previa">
+        <span className="msg-previa-tit">Prévia no celular</span>
+        <div className="msg-notif">
+          <img src="/pwa-192.png" alt="" />
+          <div className="msg-notif-corpo">
+            <div className="msg-notif-topo"><span>MIMO</span><span>agora</span></div>
+            <strong>{pTit || <span className="muted">(sem título)</span>}</strong>
+            {pTxt && <span>{pTxt}</span>}
+          </div>
+        </div>
+      </div>
+      {erro && <div className="alert alert-error">{erro}</div>}
+      <div className="plat-botoes msg-acoes">
+        <button className="btn btn-primary" onClick={salvar} disabled={salvando || !mudou}><Check size={16} /> {salvando ? 'Salvando…' : 'Salvar'}</button>
+        <button className="btn btn-ghost" onClick={restaurar} disabled={!modelo.texto && texto === modelo.padrao}><RotateCcw size={16} /> Restaurar padrão</button>
+      </div>
+      <div className="msg-regra msg-teste">
+        <div className="msg-teste-topo">
+          <span className="msg-previa-tit">Testar no celular</span>
+          <button className="btn btn-ghost btn-mini" onClick={testar} disabled={enviando}><Send size={14} /> {enviando ? 'Enviando…' : email.trim() ? 'Enviar teste para esse e-mail' : 'Enviar teste para meus aparelhos'}</button>
+        </div>
+        <div className="msg-chips"><Smartphone size={14} /> <span className="muted">{celulares === null ? 'Contando seus aparelhos…' : celulares === 0 ? 'Nenhum aparelho seu com avisos ligados. Instale o app, entre com esta conta e permita os avisos.' : `${celulares} ${celulares === 1 ? 'aparelho seu' : 'aparelhos seus'} com avisos ligados.`}</span></div>
+        <form className="msg-teste-novo" onSubmit={(e) => { e.preventDefault(); testar() }}>
+          <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="ou o e-mail de outra pessoa com o app instalado" type="email" />
+        </form>
+        <p className="muted msg-nota">O teste usa os dados de exemplo da prévia. Só chega em aparelho que já permitiu os avisos.</p>
+      </div>
     </div>
   )
 }

@@ -17,7 +17,7 @@
 
 alter table public.modelos_de_mensagem drop constraint if exists modelos_de_mensagem_grupo_check;
 alter table public.modelos_de_mensagem add constraint modelos_de_mensagem_grupo_check
-  check (grupo in ('cliente', 'profissional', 'resposta', 'bot', 'ia'));
+  check (grupo in ('cliente', 'profissional', 'resposta', 'bot', 'ia', 'push'));   -- 'push' vem na 072
 
 alter table public.whatsapp_channels add column if not exists orientacao_ia text;
 

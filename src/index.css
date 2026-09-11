@@ -5022,3 +5022,35 @@ a, button { -webkit-tap-highlight-color: transparent; }
 .brand-pro { display: inline-flex; align-items: center; gap: 0.4rem; }
 .selo-pro { display: inline-block; background: linear-gradient(90deg, #aa4cff, #ff2d7a); color: #fff; font-size: 0.62rem; font-weight: 800; letter-spacing: 0.12em; padding: 0.15rem 0.45rem; border-radius: 999px; }
 .troca-ambiente { margin-top: 0.4rem; font-size: 0.82rem; }
+
+/* ---- Plataforma › Mensagens (068) ------------------------------------------ */
+.msg-duas { display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 1rem; align-items: start; }
+@media (max-width: 900px) { .msg-duas { grid-template-columns: 1fr; } }
+.msg-grupo h4 { margin: 0.6rem 0 0.4rem; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--texto-3); }
+.msg-item { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; text-align: left; padding: 0.55rem 0.7rem; border-radius: 12px; border: 1px solid transparent; background: transparent; font: inherit; color: inherit; cursor: pointer; }
+.msg-item:hover { background: var(--cinza-1); }
+.msg-item.ativo { background: #fff0f5; border-color: #ffc2d8; }
+.msg-item-tit { font-weight: 600; font-size: 0.9rem; }
+.msg-item-meta { display: flex; gap: 0.3rem; flex: none; }
+.msg-editor { display: flex; flex-direction: column; gap: 0.8rem; }
+.msg-vars { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.msg-vars .plat-chip { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.78rem; padding: 0.25rem 0.6rem; }
+.msg-textarea { width: 100%; font: inherit; font-size: 0.95rem; line-height: 1.5; padding: 0.8rem 0.9rem; border-radius: 14px; border: 1.5px solid var(--fio); resize: vertical; min-height: 180px; }
+.msg-textarea:focus { outline: none; border-color: var(--rosa); }
+.msg-nota { font-size: 0.8rem; margin: 0; }
+.msg-regra { display: flex; flex-direction: column; gap: 0.6rem; padding: 0.8rem 0.9rem; border-radius: 12px; background: var(--cinza-1); }
+.msg-regra .chave-linha { display: flex; align-items: center; gap: 0.6rem; font-size: 0.9rem; }
+.msg-sufixo { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.82rem; color: var(--texto-2); }
+.msg-sufixo input { font: inherit; padding: 0.55rem 0.7rem; border-radius: 10px; border: 1.5px solid var(--fio); }
+.msg-previa-tit { display: block; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--texto-3); margin-bottom: 0.4rem; }
+.msg-balao { background: #dcf8c6; color: #111b21; border-radius: 12px 12px 12px 4px; padding: 0.7rem 0.9rem; font-size: 0.92rem; line-height: 1.45; max-width: 420px; box-shadow: 0 1px 1px rgba(0,0,0,.08); white-space: pre-wrap; word-break: break-word; }
+.msg-acoes { flex-wrap: wrap; }
+.msg-palavras { display: flex; flex-direction: column; gap: 0.35rem; margin-bottom: 0.7rem; font-size: 0.88rem; }
+.msg-chips { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; }
+.msg-chip { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.2rem 0.35rem 0.2rem 0.6rem; border-radius: 999px; background: var(--cinza-1); font-size: 0.8rem; }
+.msg-chip button { border: none; background: transparent; cursor: pointer; display: inline-flex; padding: 0.1rem; color: var(--texto-3); }
+.msg-chip button:hover { color: #c0263d; }
+.msg-chip-nova { display: inline-flex; align-items: center; gap: 0.2rem; }
+.msg-chip-nova input { font: inherit; font-size: 0.8rem; padding: 0.25rem 0.5rem; border-radius: 999px; border: 1px dashed var(--fio); width: 120px; }
+.msg-chip-nova button { border: none; background: var(--rosa); color: #fff; border-radius: 50%; width: 22px; height: 22px; display: inline-grid; place-items: center; cursor: pointer; }
+.plat-tabela-wrap { overflow-x: auto; }

@@ -51,6 +51,7 @@ import Filas from "./pages/plataforma/Filas";
 import Metricas from "./pages/plataforma/Metricas";
 import Configuracoes from "./pages/plataforma/Configuracoes";
 import PlataformaRecados from "./pages/plataforma/Recados";
+import PlataformaMensagens from "./pages/plataforma/Mensagens";
 import { Termos, Privacidade } from "./pages/publico/Legal";
 import BemVinda from "./pages/BemVinda";
 import CadastroCliente from "./pages/cliente/CadastroCliente";
@@ -309,7 +310,7 @@ export default function App() {
             <Route path="/plataforma/pessoas" element={<ProtectedRoute requireRole="plataforma"><Pessoas /></ProtectedRoute>} />
             <Route path="/plataforma/vinculos" element={<ProtectedRoute requireRole="plataforma"><Vinculos /></ProtectedRoute>} />
             <Route path="/plataforma/filas" element={<ProtectedRoute requireRole="plataforma"><Filas /></ProtectedRoute>} />
-            <Route path="/plataforma/mensagens" element={<ProtectedRoute requireRole="plataforma"><Filas abaInicial="email" /></ProtectedRoute>} />
+            <Route path="/plataforma/mensagens" element={<ProtectedRoute requireRole="plataforma"><PlataformaMensagens /></ProtectedRoute>} />
             <Route path="/plataforma/recados" element={<ProtectedRoute requireRole="plataforma"><PlataformaRecados /></ProtectedRoute>} />
             <Route path="/plataforma/metricas" element={<ProtectedRoute requireRole="plataforma"><Metricas /></ProtectedRoute>} />
             <Route path="/plataforma/configuracoes" element={<ProtectedRoute requireRole="plataforma"><Configuracoes /></ProtectedRoute>} />

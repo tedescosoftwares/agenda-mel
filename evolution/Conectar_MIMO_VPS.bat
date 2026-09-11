@@ -102,6 +102,7 @@ echo    %B%%L%5%X%  logs da Evolution         %D%(ao vivo, Ctrl+C sai)%X%
 echo    %B%%L%6%X%  empurrar a fila do Whats  %D%(disparar.sh)%X%
 echo    %B%%L%7%X%  diagnostico da Evolution  %D%(diagnostico.sh)%X%
 echo    %B%%L%8%X%  reconectar o WhatsApp     %D%(conectar.sh - QR code)%X%
+echo    %B%%L%W%X%  religar o WhatsApp        %D%(religar.sh - sem parear, quando da Connection Closed)%X%
 echo    %B%%L%9%X%  publicar as FUNCOES       %D%(publicar.sh - Supabase)%X%
 echo    %B%%L%P%X%  configurar push + e-mail  %D%(configurar-push.sh)%X%
 echo    %B%%L%N%X%  trocar o NUMERO do Whats  %D%(trocar-numero.sh)%X%
@@ -120,6 +121,7 @@ if "%OP%"=="8" goto reconectar
 if "%OP%"=="9" goto funcoes
 if /i "%OP%"=="P" goto push
 if /i "%OP%"=="N" goto numero
+if /i "%OP%"=="W" goto religar
 if "%OP%"=="0" exit /b 0
 echo  %A%opcao invalida%X%
 timeout /t 2 >nul
@@ -194,6 +196,11 @@ goto fim
 echo.
 set /p "NUM=%L%  numero novo, so digitos com 55 na frente (ex. 5513999990000): %X%"
 %SSH% "cd %PROJETO% && git pull --ff-only origin %BRANCH% && cd evolution && ./trocar-numero.sh %NUM%"
+goto fim
+
+:religar
+echo.
+%SSH% "cd %PROJETO% && git pull --ff-only origin %BRANCH% && cd evolution && ./religar.sh"
 goto fim
 
 :reconectar

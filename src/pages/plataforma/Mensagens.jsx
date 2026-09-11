@@ -64,7 +64,7 @@ export default function Mensagens() {
         </div>
       )}
 
-      {aba === 'ia' && <IA />}
+      {aba === 'ia' && <IA modelos={modelos} aoSalvar={carregar} confirmar={confirmar} avisar={avisar} />}
     </Shell>
   )
 }
@@ -183,35 +183,87 @@ function Palavras() {
   )
 }
 
-function IA() {
+function IA({ modelos, aoSalvar, confirmar, avisar }) {
   const [lista, setLista] = useState(null)
+  const [cfg, setCfg] = useState({})
   const [erro, setErro] = useState('')
-  const carregar = () => supabase.rpc('plataforma_ia').then(({ data, error }) => { if (error) setErro(error.message); setLista(data ?? []) })
+  const [editandoSalao, setEditandoSalao] = useState(null)
+  const orientacao = (modelos ?? []).find((m) => m.chave === 'ia.orientacao')
+  const carregar = () => {
+    supabase.rpc('plataforma_ia').then(({ data, error }) => { if (error) setErro(error.message); setLista(data ?? []) })
+    supabase.rpc('config_publica').then(({ data }) => setCfg(data ?? {}))
+  }
   useEffect(() => { carregar() }, [])
   async function ligar(s, bot, ia) {
     const { error } = await supabase.rpc('plataforma_ligar_ia', { salao: s.salon_id, bot, ia })
     if (error) setErro(error.message); else carregar()
   }
+  async function config(chave, valor) {
+    const { error } = await supabase.rpc('definir_config_publica', { chave_: chave, valor_: valor })
+    if (error) setErro(error.message); else carregar()
+  }
+  async function salvarOrientacaoSalao(s, texto) {
+    const { error } = await supabase.rpc('plataforma_orientacao_salao', { salao: s.salon_id, texto_: texto })
+    if (error) setErro(error.message); else { setEditandoSalao(null); carregar() }
+  }
+  const agente = (cfg.ia_agente ?? 'ligado') === 'ligado'
   return (
-    <Painel titulo="Bot e IA por salão" sub="O bot responde por regra (1, 2, palavras). A IA lê texto solto e classifica a intenção; tem teto por dia e por número.">
-      {erro && <div className="alert alert-error">{erro}</div>}
-      {lista == null ? <p className="muted">Carregando…</p> : lista.length === 0 ? <Vazio>Nenhum canal de WhatsApp cadastrado ainda.</Vazio> : (
-        <div className="plat-tabela-wrap"><table className="plat-tabela">
-          <thead><tr><th>Salão</th><th>Canal</th><th>Bot</th><th>IA</th><th>Hoje</th><th>Teto/dia</th><th>Teto/número</th></tr></thead>
-          <tbody>
-            {lista.map((s) => (
-              <tr key={s.salon_id}>
-                <td><strong>{s.salao}</strong></td>
-                <td><Pilula tom={s.ativo && s.canal !== 'manual' ? 'menta' : 'cinza'}>{s.canal}{s.ativo ? '' : ' · desligado'}</Pilula></td>
-                <td><button type="button" className={'switch' + (s.usa_bot ? ' on' : '')} onClick={() => ligar(s, !s.usa_bot, s.usa_ia)} role="switch" aria-checked={Boolean(s.usa_bot)} /></td>
-                <td><button type="button" className={'switch' + (s.usa_ia ? ' on' : '')} onClick={() => ligar(s, s.usa_bot, !s.usa_ia)} role="switch" aria-checked={Boolean(s.usa_ia)} /></td>
-                <td>{s.gastas_hoje}</td><td>{s.teto_ia_diario}</td><td>{s.teto_ia_por_numero}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table></div>
-      )}
-      <p className="muted msg-nota">O texto de orientação da IA ainda mora na função <code>whatsapp-webhook</code>; vem para cá no próximo passo.</p>
-    </Painel>
+    <>
+      <div className="plat-grade-4" style={{ marginBottom: '1rem' }}>
+        <div className="plat-painel"><span className="msg-previa-tit">Agente</span>
+          <label className="chave-linha"><button type="button" className={'switch' + (agente ? ' on' : '')} onClick={() => config('ia_agente', agente ? 'desligado' : 'ligado')} role="switch" aria-checked={agente} /><span>{agente ? 'Conversando com ferramentas' : 'Desligado (só regras e menu antigo)'}</span></label>
+        </div>
+        <div className="plat-painel"><span className="msg-previa-tit">Modelo (Groq)</span>
+          <select value={cfg.ia_modelo ?? 'openai/gpt-oss-120b'} onChange={(e) => config('ia_modelo', e.target.value)} className="msg-select">
+            {['openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'qwen/qwen3.6-27b', 'meta-llama/llama-4-scout-17b-16e-instruct'].map((m) => <option key={m} value={m}>{m}</option>)}
+          </select>
+          <span className="muted msg-nota">Precisa aceitar ferramentas (tool use). Trocou e parou de responder? Volte para o primeiro.</span>
+        </div>
+      </div>
+
+      <div className="msg-duas">
+        <Painel Icon={Sparkles} titulo="Orientação do agente" sub="Quem ele é, como fala, o que nunca faz. Vale para todos os salões; cada salão acrescenta a parte dele na tabela abaixo.">
+          {orientacao ? <Editor key="ia.orientacao" modelo={{ ...orientacao, grupo: 'ia' }} aoSalvar={aoSalvar} confirmar={confirmar} avisar={avisar} /> : <p className="muted">Rode a atualização 069.</p>}
+        </Painel>
+        <Painel titulo="Por salão" sub="Bot por regra (1, 2, palavras) e o agente com IA. A IA tem teto por dia e por número.">
+          {erro && <div className="alert alert-error">{erro}</div>}
+          {lista == null ? <p className="muted">Carregando…</p> : lista.length === 0 ? <Vazio>Nenhum canal de WhatsApp cadastrado ainda.</Vazio> : (
+            <div className="plat-tabela-wrap"><table className="plat-tabela">
+              <thead><tr><th>Salão</th><th>Canal</th><th>Bot</th><th>IA</th><th>Hoje</th><th>Teto</th><th></th></tr></thead>
+              <tbody>
+                {lista.map((s) => (
+                  <>
+                    <tr key={s.salon_id}>
+                      <td><strong>{s.salao}</strong>{s.orientacao_ia && <Pilula tom="roxo">orientação própria</Pilula>}</td>
+                      <td><Pilula tom={s.ativo && s.canal !== 'manual' ? 'menta' : 'cinza'}>{s.canal}{s.ativo ? '' : ' · desligado'}</Pilula></td>
+                      <td><button type="button" className={'switch' + (s.usa_bot ? ' on' : '')} onClick={() => ligar(s, !s.usa_bot, s.usa_ia)} role="switch" aria-checked={Boolean(s.usa_bot)} /></td>
+                      <td><button type="button" className={'switch' + (s.usa_ia ? ' on' : '')} onClick={() => ligar(s, s.usa_bot, !s.usa_ia)} role="switch" aria-checked={Boolean(s.usa_ia)} /></td>
+                      <td>{s.gastas_hoje}</td><td>{s.teto_ia_diario}/dia · {s.teto_ia_por_numero}/nº</td>
+                      <td><button className="btn btn-ghost" style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem' }} onClick={() => setEditandoSalao(editandoSalao === s.salon_id ? null : s.salon_id)}>Orientação</button></td>
+                    </tr>
+                    {editandoSalao === s.salon_id && (
+                      <tr key={s.salon_id + '-o'}><td colSpan={7}>
+                        <OrientacaoSalao salao={s} onSalvar={(t) => salvarOrientacaoSalao(s, t)} onCancelar={() => setEditandoSalao(null)} />
+                      </td></tr>
+                    )}
+                  </>
+                ))}
+              </tbody>
+            </table></div>
+          )}
+        </Painel>
+      </div>
+    </>
+  )
+}
+
+function OrientacaoSalao({ salao, onSalvar, onCancelar }) {
+  const [t, setT] = useState(salao.orientacao_ia ?? '')
+  return (
+    <div className="msg-editor" style={{ padding: '0.4rem 0 0.6rem' }}>
+      <p className="muted msg-nota">Nas palavras da dona: como a casa atende, políticas de atraso e cancelamento, o que não faz, tom. Entra depois da orientação geral.</p>
+      <textarea className="msg-textarea" rows={5} value={t} onChange={(e) => setT(e.target.value)} placeholder={`Ex.: Atendemos de terça a sábado, 9h às 19h. Atraso acima de 15 min perde o horário. Não fazemos unha de fibra. Tom: alegre e acolhedor, pode usar "amiga".`} />
+      <div className="plat-botoes"><button className="btn btn-primary" onClick={() => onSalvar(t)}><Check size={16} /> Salvar</button><button className="btn btn-ghost" onClick={onCancelar}>Cancelar</button></div>
+    </div>
   )
 }

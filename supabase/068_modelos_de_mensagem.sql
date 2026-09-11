@@ -791,7 +791,8 @@ revoke execute on function public.plataforma_salvar_palavras(text, text[]) from 
 grant execute on function public.plataforma_salvar_palavras(text, text[]) to authenticated;
 
 -- a IA por salão: ligada, tetos e o gasto de hoje
-create or replace function public.plataforma_ia()
+drop function if exists public.plataforma_ia();
+create function public.plataforma_ia()
 returns table (salon_id uuid, salao text, canal text, ativo boolean, usa_bot boolean, usa_ia boolean,
                teto_ia_diario integer, teto_ia_por_numero integer, gastas_hoje integer)
 language sql

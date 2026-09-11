@@ -14,6 +14,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { enviarPor } from '../_shared/canais.ts'
 import { classificar } from '../_shared/ia.ts'
+import { conversar } from '../_shared/agente.ts'
 
 const db = createClient(
   Deno.env.get('SUPABASE_URL') ?? '',
@@ -274,6 +275,7 @@ Deno.serve(async (req) => {
   }
 
   const respostas: string[] = []
+  const { data: config } = await db.rpc('config_publica')
   for (const m of mensagens) {
     // A CASCATA -------------------------------------------------------
     // O porteiro (migração 030) diz se vale gastar uma chamada de modelo.
@@ -292,7 +294,10 @@ Deno.serve(async (req) => {
     const p = porteiro as any
     salao = p?.salon_id ?? null
 
-    if (p?.permitido) {
+    // com o agente ligado (069) o classificador antigo fica de lado: é o
+    // agente que lê texto solto, uma chamada só
+    const agenteLigado = (config?.ia_agente ?? 'ligado') === 'ligado'
+    if (p?.permitido && !agenteLigado) {
       const leitura = await classificar(m.texto)
       // registrar SEMPRE, inclusive o erro: é o que conta contra o teto,
       // é o que mostra na tela do admin, e é o que responde depois
@@ -359,7 +364,19 @@ Deno.serve(async (req) => {
       }
     }
 
-    const responder = (data as any)?.responder
+    let responder: string | null = (data as any)?.responder ?? null
+    const acao = String((data as any)?.acao ?? '')
+    if (!responder && salao && ['nada', 'sem_cadastro', 'fora_de_contexto', 'sem_horario'].includes(acao)) {
+      const ag = await conversar(db, salao, m.telefone, m.texto)
+      await db.rpc('registrar_chamada_ia', {
+        salao, tel: m.telefone, modelo_usado: ag.modelo || null, duracao_ms: ag.ms, deu_erro: ag.erro ?? null,
+      }).then(() => {}, () => {})
+      if (ag.erro) console.error('agente:', ag.erro)
+      if (ag.resposta) {
+        responder = ag.resposta
+        respostas.push(`agente[${ag.ferramentas.join(',')}]`)
+      }
+    }
     if (!responder) continue
     respostas.push(`${m.telefone}: ${responder}`)
 
@@ -396,6 +413,9 @@ Deno.serve(async (req) => {
         corpo: responder,
         identificador: c.identificador ?? null,
       })
+      if (env.ok && acao && !(data as any)?.responder) {
+        await db.rpc('bot_registrar_resposta', { salao, tel: m.telefone, corpo: responder, id_provedor: env.providerId ?? null, canal_: c.canal }).then(() => {}, () => {})
+      }
       if (!env.ok) {
         console.error('resposta não saiu; vai para a fila:', env.erro)
         await db.rpc('resposta_nao_saiu', {

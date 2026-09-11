@@ -54,23 +54,27 @@ for i in itens:
     ninho = i.get("instance") if isinstance(i.get("instance"), dict) else i
     n = ninho.get("name") or ninho.get("instanceName")
     if n: print(n)' 2>/dev/null || true)
-for n in $NOMES; do
-  if [ "$n" = "mimo" ]; then
-    amarelo "  'mimo' já existe: vou desconectar e recriar amarrada ao número novo"
-  fi
+# a lista pode vir em formatos diferentes conforme a versão; 'mimo' entra sempre
+for n in $(printf '%s\nmimo\n' "$NOMES" | sort -u); do
+  [ -z "$n" ] && continue
   chamar DELETE "/instance/logout/$n" >/dev/null 2>&1 || true
-  chamar DELETE "/instance/delete/$n" >/dev/null 2>&1 || true
-  verde "  apagada: $n"
+  sleep 1
+  R=$(chamar DELETE "/instance/delete/$n" 2>/dev/null || true)
+  if printf '%s' "$R" | grep -qi '"status":"SUCCESS"\|deleted\|removed'; then verde "  apagada: $n"
+  elif printf '%s' "$R" | grep -qi 'not found\|does not exist'; then :
+  else amarelo "  $n: $R"; fi
 done
-[ -z "$NOMES" ] && verde '  nenhuma'
 
 azul "== 2/5  Criando a instância 'mimo' para +${NUMERO} =="
 RESP=$(chamar POST /instance/create "{\"instanceName\":\"mimo\",\"integration\":\"WHATSAPP-BAILEYS\",\"qrcode\":true,\"number\":\"${NUMERO}\"}")
-if ! printf '%s' "$RESP" | grep -q '"instance"'; then
+if printf '%s' "$RESP" | grep -qi 'already'; then
+  amarelo "  'mimo' já existia e não deixou apagar; sigo com ela e só pareio o número novo"
+elif ! printf '%s' "$RESP" | grep -q '"instance"'; then
   vermelho "A Evolution não criou a instância: $RESP"
   exit 1
+else
+  verde '  criada'
 fi
-verde '  criada'
 sleep 3
 
 azul "== 3/5  Parear o celular =="

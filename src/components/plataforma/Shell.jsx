@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { useDialogo } from '../../context/DialogoContext'
 import { supabase } from '../../lib/supabase'
@@ -24,10 +24,15 @@ export default function Shell({ children, acao }) {
   const { signOut, profile, user } = useAuth()
   const { confirmar } = useDialogo()
   const navigate = useNavigate()
+  const { pathname } = useLocation()
+  const principal = useRef(null)
   const [busca, setBusca] = useState('')
   const [achados, setAchados] = useState(null)
   const [menuAberto, setMenuAberto] = useState(false)
   const caixa = useRef(null)
+
+  // a coluna principal é quem rola; ao trocar de tela, volta ao topo
+  useEffect(() => { principal.current?.scrollTo({ top: 0 }) }, [pathname])
 
   // ⌘K / Ctrl+K foca a busca, como no mock
   useEffect(() => {
@@ -79,7 +84,7 @@ export default function Shell({ children, acao }) {
         </div>
       </aside>
 
-      <div className="plat-principal">
+      <div className="plat-principal" ref={principal}>
         <header className="plat-topo">
           <div className="plat-busca">
             <SearchIcon />

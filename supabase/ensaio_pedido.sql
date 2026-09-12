@@ -8,7 +8,8 @@ begin
   select s.* into svc from public.services s join public.professional_services ps on ps.service_id = s.id where ps.professional_id = prof.id limit 1;
   select id into cli from public.profiles where role = 'cliente' and id <> prof.user_id limit 1;
   update public.profiles set phone = '(13) 99999-0001' where id = prof.user_id;
-  update public.professionals set aceite_manual = true, minutos_para_aceitar = 60 where id = prof.id;
+  -- este ensaio é do fluxo de aceite; o aceite forçado por histórico (077) tem ensaio próprio
+  update public.professionals set aceite_manual = true, minutos_para_aceitar = 60, confirmar_historico_ruim = false where id = prof.id;
   perform set_config('request.jwt.claim.sub', cli::text, false);
   d := current_date + 40;
 

@@ -80,7 +80,7 @@ export default function ProPedidos() {
                 <span className={'pedido-prazo' + (p.faltam_min != null && p.faltam_min < 30 ? ' urgente' : '')}>⏱ {prazo(p.faltam_min)}</span>
               </div>
               <span className="pedido-servico">{p.remarcacao ? <><Repeat size={13} /> Quer remarcar · </> : null}{p.servico}</span>
-              <FichaCliente atendimentos={p.ficha?.comigo?.concluidos ?? p.atendimentos} faltas={p.ficha?.comigo?.faltas ?? p.faltas} cancelamentos={p.ficha?.comigo?.cancelamentos ?? p.cancelamentos} tardios={p.ficha?.comigo?.cancelamentos_tardios ?? 0} remarcacoes={p.ficha?.comigo?.remarcacoes ?? p.remarcacoes} outras={p.ficha ? p.ficha.outras : undefined} compacta />
+              <FichaCliente modo="linha" atendimentos={p.ficha?.comigo?.concluidos ?? p.atendimentos} faltas={p.ficha?.comigo?.faltas ?? p.faltas} cancelamentos={p.ficha?.comigo?.cancelamentos ?? p.cancelamentos} tardios={p.ficha?.comigo?.cancelamentos_tardios ?? 0} remarcacoes={p.ficha?.comigo?.remarcacoes ?? p.remarcacoes} outras={p.ficha ? p.ficha.outras : undefined} compacta />
             {p.por_historico && <span className="pedido-historico">Passou por você porque ela já faltou ou cancelou com você.</span>}
               {p.remarcacao ? (
                 <>

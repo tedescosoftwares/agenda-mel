@@ -5211,3 +5211,43 @@ a, button { -webkit-tap-highlight-color: transparent; }
 .ciencia-contestar textarea { font: inherit; padding: 0.6rem 0.8rem; border-radius: 12px; border: 1.5px solid var(--fio); resize: vertical; }
 .ciencia-mais { font-size: 0.78rem; text-align: center; }
 @media (min-width: 700px) { .ciencia { align-items: center; padding: 1rem; } .ciencia-caixa { border-radius: 22px; } }
+
+/* ---- Fechar o dia, visual (2.19.1) ------------------------------------- */
+.fechar-dia-cab { display: flex; align-items: baseline; justify-content: space-between; margin: 0.2rem 0 0.55rem; }
+.fechar-dia-cab h3 { margin: 0; font-size: 1rem; }
+.fechar-dia-n { font-size: 0.75rem; color: var(--texto-3); background: var(--cinza-1); border-radius: 999px; padding: 0.15rem 0.6rem; }
+.fechar-item { gap: 0.7rem; padding: 0.9rem; border-left: none; border-top: 3px solid var(--rosa); }
+.fechar-item.troca { border-top-color: var(--violeta); }
+.fechar-cab { display: flex; align-items: center; gap: 0.7rem; }
+.fechar-avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--gradiente-logo); color: #fff; font-weight: 600; font-size: 0.85rem; display: grid; place-items: center; flex: none; }
+.fechar-avatar.pequeno { width: 32px; height: 32px; font-size: 0.72rem; }
+.fechar-item .fechar-quem strong { font-size: 1rem; }
+.fechar-item .fechar-quem .muted { font-size: 0.82rem; }
+.fechar-prazo { font-size: 0.7rem; color: var(--texto-2); background: var(--cinza-1); border-radius: 999px; padding: 0.2rem 0.55rem; display: inline-flex; align-items: center; gap: 0.25rem; width: auto; flex: none; white-space: nowrap; }
+.fechar-aviso { display: flex; gap: 0.55rem; align-items: flex-start; padding: 0.6rem 0.75rem; border-radius: 12px; background: #f6ecff; color: #4b1a8f; font-size: 0.82rem; line-height: 1.4; }
+.fechar-aviso svg { flex: none; margin-top: 0.1rem; }
+.fechar-acoes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.5rem; }
+.fechar-acoes.duas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.fa { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.25rem; padding: 0.65rem 0.3rem; border-radius: 14px; border: 1.5px solid var(--fio); background: #fff; font: inherit; font-size: 0.78rem; font-weight: 600; color: var(--texto-2); cursor: pointer; transition: transform .08s; }
+.fa:active { transform: scale(0.97); }
+.fa:disabled { opacity: 0.55; }
+.fa-veio { background: linear-gradient(135deg, #22c281, #0d7a4f); border-color: transparent; color: #fff; box-shadow: 0 6px 16px rgba(13,122,79,.22); }
+.fa-nao { color: var(--carmim); border-color: #f6c5d0; background: #fff5f7; }
+.fa-rem { color: var(--roxo); border-color: #e3d3ff; background: #f9f4ff; }
+.fechar-remarcar { grid-template-columns: 1fr 1fr; }
+.fechar-remarcar .btn { grid-column: span 1; padding: 0.6rem; }
+.fechar-lista { display: flex; flex-direction: column; gap: 0; padding: 0.2rem 0.9rem; }
+.fechar-linha { display: flex; align-items: center; gap: 0.7rem; padding: 0.6rem 0; border-bottom: 1px solid var(--cinza-1); }
+.fechar-linha:last-child { border-bottom: none; }
+.fechar-linha .fechar-quem .muted { font-size: 0.78rem; }
+/* ficha em linha */
+.ficha-modo-linha { gap: 0.2rem; }
+.ficha-linha { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.15rem 0.35rem; font-size: 0.8rem; color: var(--texto-2); line-height: 1.3; }
+.ficha-linha-rotulo { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; margin-right: 0.15rem; }
+.fl { display: inline-flex; align-items: baseline; gap: 0.2rem; }
+.fl strong { font-weight: 700; color: var(--texto); }
+.fl.ok strong { color: #0d7a4f; }
+.fl.ruim strong { color: var(--carmim); }
+.fl.atencao strong { color: #9a6400; }
+.fl-sep { display: inline-block; width: 3px; height: 3px; border-radius: 50%; background: var(--fio-forte); margin: 0 0.25rem 0.2rem 0; }
+.ficha-linha-outras.atencao .fl strong { color: #9a6400; }

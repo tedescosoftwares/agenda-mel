@@ -12,10 +12,12 @@ export default function ProximosHorarios({ maximo = 2 }) {
   const [lista, setLista] = useState(null)
   useEffect(() => {
     let vivo = true
-    supabase.from('appointments').select('id, date, start_time, status, remarca_de, services (name), professionals (name)')
+    // "próximo" é o que ainda não terminou: um horário de hoje às 17h,
+    // às 22h já passou, mesmo que a data seja de hoje
+    supabase.from('appointments').select('id, date, start_time, end_time, status, remarca_de, services (name), professionals (name)')
       .eq('client_id', user.id).gte('date', toISODate(new Date())).in('status', ['pendente', 'confirmado'])
-      .order('date').order('start_time').limit(maximo + 1)
-      .then(({ data }) => { if (vivo) setLista((data ?? []).filter((a) => !a.remarca_de).slice(0, maximo)) })
+      .order('date').order('start_time').limit(maximo + 4)
+      .then(({ data }) => { if (vivo) setLista((data ?? []).filter((a) => !a.remarca_de && aindaVem(a)).slice(0, maximo)) })
     return () => { vivo = false }
   }, [user.id, maximo])
 
@@ -43,6 +45,10 @@ export default function ProximosHorarios({ maximo = 2 }) {
       </div>
     </section>
   )
+}
+
+function aindaVem(a) {
+  return new Date(`${a.date}T${a.end_time || a.start_time}`) > new Date()
 }
 
 function diaCurto(iso) {

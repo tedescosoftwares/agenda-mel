@@ -50,11 +50,15 @@ export default function ClienteAgenda() {
     // (a tabela aponta para ela mesma duas vezes e o cache de schema dele
     // já tropeçou nisso): quase sempre a origem está nesta mesma lista;
     // o que faltar vem numa segunda busca simples.
-    const lista = px.data ?? []
+    // o que é de hoje mas já terminou não é "próximo": vai para o histórico
+    const agora = new Date()
+    const jaFoi = (a) => new Date(`${a.date}T${a.end_time || a.start_time}`) <= agora
+    const lista = (px.data ?? []).filter((a) => !jaFoi(a))
+    const passouHoje = (px.data ?? []).filter(jaFoi).reverse()
     const faltam = lista.filter((a) => a.remarca_de && !lista.some((o) => o.id === a.remarca_de)).map((a) => a.remarca_de)
     const extras = faltam.length ? (await supabase.from('appointments').select('id, date, start_time').in('id', faltam)).data ?? [] : []
     setProximos(lista.map((a) => ({ ...a, origem: a.remarca_de ? (lista.find((o) => o.id === a.remarca_de) ?? extras.find((o) => o.id === a.remarca_de) ?? null) : null })))
-    setHistorico(hs.data ?? [])
+    setHistorico([...passouHoje, ...(hs.data ?? [])])
     setAvaliados(new Set((rv.data ?? []).map((r) => r.appointment_id)))
     setVagas(vg.data ?? [])
     setLoading(false)

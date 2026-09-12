@@ -25,6 +25,7 @@ export default function ClienteAgendamento() {
   const navigate = useNavigate()
   const [a, setA] = useState(null)
   const [origem, setOrigem] = useState(null)
+  const [itens, setItens] = useState([])
   const [loading, setLoading] = useState(true)
   const [erro, setErro] = useState('')
 
@@ -35,6 +36,10 @@ export default function ClienteAgendamento() {
       .eq('id', id).eq('client_id', user.id).maybeSingle()
     if (error) setErro(error.message)
     setA(data ?? null)
+    if (data) {
+      const { data: it } = await supabase.from('appointment_services').select('id, name, price_cents, duration_minutes, ordem').eq('appointment_id', data.id).order('ordem')
+      setItens(it ?? [])
+    }
     if (data?.remarca_de) {
       const { data: o } = await supabase.from('appointments').select('id, date, start_time').eq('id', data.remarca_de).maybeSingle()
       setOrigem(o ?? null)
@@ -84,7 +89,13 @@ export default function ClienteAgendamento() {
         {salao && (
           <div className="agdt-item"><MapPin size={18} /><span><span className="muted agdt-rotulo">Onde</span><strong>{salao.name}</strong>{endereco && <span className="muted">{endereco}</span>}{mapa && <a href={mapa} target="_blank" rel="noreferrer" className="agdt-mapa">Como chegar</a>}</span></div>
         )}
-        <div className="agdt-item"><Sparkles size={18} /><span><span className="muted agdt-rotulo">Serviço</span><strong>{a.services?.name ?? a.service_name}</strong><span className="muted">{[preco != null ? formatPreco(preco) : null, duracao ? formatDuracao(duracao) : null].filter(Boolean).join(' · ')}</span></span></div>
+        {itens.length > 1 ? (
+          <div className="agdt-item"><Sparkles size={18} /><span><span className="muted agdt-rotulo">Serviços</span>
+            <ul className="agdt-itens">{itens.map((x) => <li key={x.id}><span>{x.name}</span><span className="muted">{formatDuracao(x.duration_minutes)} · {formatPreco(x.price_cents / 100)}</span></li>)}</ul>
+            <strong>{[preco != null ? formatPreco(preco) : null, duracao ? formatDuracao(duracao) : null].filter(Boolean).join(' · ')} no total</strong></span></div>
+        ) : (
+          <div className="agdt-item"><Sparkles size={18} /><span><span className="muted agdt-rotulo">Serviço</span><strong>{a.services?.name ?? a.service_name}</strong><span className="muted">{[preco != null ? formatPreco(preco) : null, duracao ? formatDuracao(duracao) : null].filter(Boolean).join(' · ')}</span></span></div>
+        )}
         {a.notes && <div className="agdt-item"><StickyNote size={18} /><span><span className="muted agdt-rotulo">Sua observação</span><span>{a.notes}</span></span></div>}
         <div className="agdt-item"><Clock size={18} /><span><span className="muted agdt-rotulo">Pedido feito</span><span>{new Date(a.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span></span></div>
       </div>

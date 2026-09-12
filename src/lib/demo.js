@@ -135,6 +135,7 @@ const TABELAS = {
   ],
   client_favorites: [{ client_id: 'c1', professional_id: 'pr1' }, { client_id: 'c1', professional_id: 'pr3' }],
   reviews: [],
+  appointment_services: [],
   salons: [{ id: SALAO, name: 'Studio Mel', slug: 'studio-mel', app_url: 'https://mimo.app', city: 'Santos', address: 'Rua das Flores, 120 · Gonzaga', codigo: 'MEL2K5', tipo: 'salao' }],
   salon_members: [{ salon_id: SALAO, user_id: 'a1', papel: 'admin', salons: { id: SALAO, name: 'Studio Mel', slug: 'studio-mel', codigo: 'MEL2K5', tipo: 'salao', city: 'Santos' } }],
   whatsapp_channels: [{ salon_id: SALAO, canal: 'evolution', identificador: '11', ativo: true, usa_ia: true, usa_bot: true, silencio_inicio: '21:00', silencio_fim: '08:00', teto_diario: 300 }],
@@ -243,6 +244,7 @@ const RPC = {
   plataforma_previa: ({ texto_, chave_ }) => String(texto_ ?? '').replace(/\{titulo\}/g, chave_ ? (RPC.plataforma_modelos().find((m) => m.chave === chave_)?.exemplo?.titulo ?? 'Título do aviso') : 'Título do aviso').replace(/\{texto\}/g, chave_ ? (RPC.plataforma_modelos().find((m) => m.chave === chave_)?.exemplo?.texto ?? '') : 'Texto do aviso').replace(/\{nome\}/g, 'Juliana').replace(/\{servico\}/g, 'Manicure').replace(/\{profissional\}/g, 'Ana Oliveira').replace(/\{quando_longo\}/g, 'sábado, 12/09 às 14:00').replace(/\{quando\}/g, '12/09 às 14:00').replace(/\{link_app\}/g, 'https://mimo.com.vc/').replace(/\{link\}/g, 'https://mimo.com.vc/p/ana-oliveira').replace(/\{nome_agenda\}/g, 'Juliana Silva').replace(/\{telefone_cliente\}/g, '(13) 99999-0000').replace(/\{prazo\}/g, '120'),
   plataforma_salvar_modelo: () => ({ ok: true }),
   plataforma_testar_modelo: ({ para_ }) => ({ ok: true, para: para_?.length ? para_ : ['5513999990000', '5511977770000'], quantos: para_?.length || 2 }),
+  marcar_servicos: () => ({ ok: true, appointment_id: 'ap1', servicos: 2 }),
   pendencias_de_baixa: () => [
     { appointment_id: 'ap5', professional_id: 'pr1', profissional: 'Ana Oliveira', client_id: 'c2', cliente: 'Carla Mendes', servico: 'Manicure', dia: mais(0), inicio: '09:00:00', fim: '09:45:00', situacao: 'esperando', perguntado_em: new Date(Date.now() - 20 * 60e3).toISOString(), conclui_em: new Date(Date.now() + 160 * 60e3).toISOString(), troca: null, ficha: { comigo: { concluidos: 4, faltas: 2, cancelamentos: 3, cancelamentos_tardios: 2, remarcacoes: 1 }, outras: { horarios: 5, faltas_pct: 20, cancelamentos_pct: 40, remarcacoes_pct: 0 } }, pode_corrigir: false },
     { appointment_id: 'ap6', professional_id: 'pr1', profissional: 'Ana Oliveira', client_id: 'c3', cliente: 'Mariana Souza', servico: 'Spa dos pés', dia: mais(0), inicio: '10:30:00', fim: '11:30:00', situacao: 'esperando', perguntado_em: new Date(Date.now() - 5 * 60e3).toISOString(), conclui_em: new Date(Date.now() + 175 * 60e3).toISOString(), troca: { id: 'apx', quando: 'sábado 19/09 às 10:30', expira_em: null }, ficha: { comigo: { concluidos: 2, faltas: 0, cancelamentos: 0, cancelamentos_tardios: 0, remarcacoes: 1 }, outras: null }, pode_corrigir: false },

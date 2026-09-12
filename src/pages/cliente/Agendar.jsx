@@ -4,9 +4,9 @@ import ClienteShell from '../../components/ClienteShell'
 import CalendarioMes from '../../components/CalendarioMes'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
-import { formatPreco, labelDuracao } from '../../lib/format'
-import { toMin, minToHora, formatDataLonga } from '../../lib/booking'
-import { Check, Sparkles, Repeat } from 'lucide-react'
+import { formatPreco, labelDuracao, formatDuracao } from '../../lib/format'
+import { formatDataLonga } from '../../lib/booking'
+import { Check, Sparkles, Repeat, Plus } from 'lucide-react'
 
 // O fluxo de marcar, dentro do app: serviço → data → hora → confirmar.
 // Cada passo é uma rota, e o que já foi escolhido viaja na URL
@@ -46,24 +46,45 @@ function comQuery(rota, obj) {
   return `${rota}?${q.toString()}`
 }
 
-// carrega a profissional e o serviço a partir dos ids da URL
-function useContexto(profId, servicoId) {
+// carrega a profissional e o(s) serviço(s) a partir dos ids da URL.
+// Vários serviços (?servico=id1,id2) viram um só para o resto do fluxo:
+// nome junto, duração e preço somados, e a lista para o resumo.
+function useContexto(profId, servicoParam) {
   const [prof, setProf] = useState(null)
   const [servico, setServico] = useState(null)
+  const ids = (servicoParam || '').split(',').filter(Boolean)
+  const chave = ids.join(',')
   useEffect(() => {
     let vivo = true
     ;(async () => {
       const [p, s] = await Promise.all([
         profId ? supabase.from('professionals').select('id, name, photo_url, slug').eq('id', profId).maybeSingle() : { data: null },
-        servicoId ? supabase.from('services').select('*').eq('id', servicoId).maybeSingle() : { data: null },
+        ids.length ? supabase.from('services').select('*').in('id', ids) : { data: null },
       ])
       if (!vivo) return
       setProf(p.data)
-      setServico(s.data)
+      setServico(juntar(ids, s.data))
     })()
     return () => { vivo = false }
-  }, [profId, servicoId])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profId, chave])
   return { prof, servico }
+}
+
+function juntar(ids, lista) {
+  if (!lista?.length) return null
+  const ordenada = ids.map((id) => lista.find((x) => x.id === id)).filter(Boolean)
+  if (ordenada.length === 0) return null
+  if (ordenada.length === 1) return { ...ordenada[0], ids, lista: ordenada }
+  return {
+    id: ordenada[0].id,
+    ids,
+    lista: ordenada,
+    name: ordenada.map((x) => x.name).join(' + '),
+    price: ordenada.reduce((a, x) => a + Number(x.price ?? 0), 0),
+    duration_minutes: ordenada.reduce((a, x) => a + Number(x.duration_minutes ?? 0), 0),
+    is_combo: ordenada.some((x) => x.is_combo),
+  }
 }
 
 function Trilha({ passo, remarcar }) {
@@ -88,7 +109,7 @@ function Trilha({ passo, remarcar }) {
 export function AgendarServicos() {
   const { id } = useParams()
   const [q] = useSearchParams()
-  const preSel = q.get('servico') || ''
+  const preSel = (q.get('servico') || '').split(',').filter(Boolean)
   const [servicos, setServicos] = useState([])
   const [sel, setSel] = useState(preSel)
   const [prof, setProf] = useState(null)
@@ -107,40 +128,55 @@ export function AgendarServicos() {
     return () => { vivo = false }
   }, [id])
 
+  const alternar = (sid) => setSel((atual) => atual.includes(sid) ? atual.filter((x) => x !== sid) : (atual.length >= 6 ? atual : [...atual, sid]))
+  const escolhidos = sel.map((sid) => servicos.find((s) => s.id === sid)).filter(Boolean)
+  const totalMin = escolhidos.reduce((a, s) => a + Number(s.duration_minutes ?? 0), 0)
+  const totalPreco = escolhidos.reduce((a, s) => a + Number(s.price ?? 0), 0)
+
   return (
     <ClienteShell titulo="Serviços" voltar={`/cliente/profissional/${id}`}>
       <Trilha passo={1} />
-      {prof && <p className="muted" style={{ marginTop: 0 }}>Com {prof.name}</p>}
+      {prof && <p className="muted" style={{ marginTop: 0 }}>Com {prof.name}. Pode escolher mais de um: marca tudo no mesmo horário.</p>}
 
       <div className="cliente-list">
-        {servicos.map((s) => (
-          <button
-            key={s.id}
-            type="button"
-            className={'card servico-linha escolhivel' + (sel === s.id ? ' ativo' : '')}
-            onClick={() => setSel(s.id)}
-          >
-            <span className="servico-linha-foto" aria-hidden="true">
-              {s.images?.[0] ? <img src={s.images[0]} alt="" /> : <Sparkles />}
-            </span>
-            <span className="cliente-info">
-              <span className="cliente-nome"><span className="nome-txt">{s.name}</span></span>
-              <span className="muted cliente-meta">{formatPreco(s.price)} · {labelDuracao(s)}</span>
-              {s.description && <span className="muted cliente-meta">{s.description}</span>}
-            </span>
-            <span className="radio-marca" aria-hidden="true" />
-          </button>
-        ))}
+        {servicos.map((s) => {
+          const marcado = sel.includes(s.id)
+          return (
+            <button
+              key={s.id}
+              type="button"
+              className={'card servico-linha escolhivel multi' + (marcado ? ' ativo' : '')}
+              onClick={() => alternar(s.id)}
+              aria-pressed={marcado}
+            >
+              <span className="servico-linha-foto" aria-hidden="true">
+                {s.images?.[0] ? <img src={s.images[0]} alt="" /> : <Sparkles />}
+              </span>
+              <span className="cliente-info">
+                <span className="cliente-nome"><span className="nome-txt">{s.name}</span></span>
+                <span className="muted cliente-meta">{formatPreco(s.price)} · {labelDuracao(s)}</span>
+                {s.description && <span className="muted cliente-meta">{s.description}</span>}
+              </span>
+              <span className={'check-marca' + (marcado ? ' on' : '')} aria-hidden="true">{marcado ? <Check size={14} /> : <Plus size={14} />}</span>
+            </button>
+          )
+        })}
       </div>
 
-      <div className="rodape-fixo">
+      <div className="rodape-fixo rodape-servicos">
+        {escolhidos.length > 0 && (
+          <div className="resumo-servicos">
+            <span className="resumo-servicos-nomes">{escolhidos.map((s) => s.name).join(' + ')}</span>
+            <span className="muted">{escolhidos.length} {escolhidos.length === 1 ? 'serviço' : 'serviços'} · {formatDuracao(totalMin)} · <strong>{formatPreco(totalPreco)}</strong></span>
+          </div>
+        )}
         <Link
-          to={comQuery('/cliente/agendamento/data', { prof: id, servico: sel })}
-          className={'btn btn-primary btn-block' + (sel ? '' : ' desabilitado')}
-          aria-disabled={!sel}
-          onClick={(e) => { if (!sel) e.preventDefault() }}
+          to={comQuery('/cliente/agendamento/data', { prof: id, servico: sel.join(',') })}
+          className={'btn btn-primary btn-block' + (sel.length ? '' : ' desabilitado')}
+          aria-disabled={!sel.length}
+          onClick={(e) => { if (!sel.length) e.preventDefault() }}
         >
-          Continuar
+          {sel.length > 1 ? 'Escolher data para os ' + sel.length : 'Escolher data'}
         </Link>
       </div>
     </ClienteShell>
@@ -275,27 +311,19 @@ export function AgendarConfirmar() {
       return
     }
 
-    const fim = toMin(esc.hora) + servico.duration_minutes
-    const { data, error } = await supabase
-      .from('appointments')
-      .insert({
-        client_id: user.id,
-        professional_id: esc.prof,
-        service_id: servico.id,
-        date: esc.data,
-        start_time: esc.hora,
-        end_time: minToHora(fim),
-        notes: obs.trim() || null,
-      })
-      .select('id')
-      .maybeSingle()
+    // um ou vários serviços: o banco soma duração e preço e guarda os itens (079)
+    const { data, error } = await supabase.rpc('marcar_servicos', { prof: esc.prof, servicos: servico.ids ?? [servico.id], dia: esc.data, hora: esc.hora, obs: obs.trim() || null })
     setSaving(false)
     if (error) {
       if (error.code === '23505' || error.code === '23P01') setErro('Esse horário acabou de ser reservado por outra pessoa. Escolha outro, por favor.')
       else setErro('Erro ao agendar: ' + error.message)
       return
     }
-    navigate(`/cliente/agendamento/sucesso/${data?.id ?? 'novo'}`, { replace: true })
+    if (data?.ok === false) {
+      setErro(data.motivo === 'ocupado' ? 'Esse horário acabou de ser reservado por outra pessoa. Escolha outro, por favor.' : capitalizar(data.motivo || 'não deu para marcar') + '.')
+      return
+    }
+    navigate(`/cliente/agendamento/sucesso/${data?.appointment_id ?? 'novo'}`, { replace: true })
   }, [servico, esc, user, obs, navigate])
 
   const remarcando = Boolean(esc.remarcar)
@@ -307,7 +335,14 @@ export function AgendarConfirmar() {
 
       <h3 className="secao-titulo">{remarcando ? 'Resumo da troca' : 'Resumo do pedido'}</h3>
       <div className="card resumo-pedido">
-        <div className="resumo-linha"><span className="muted">Serviço</span><strong>{servico?.name}</strong></div>
+        {servico?.lista?.length > 1 ? (
+          <div className="resumo-itens">
+            <span className="muted">Serviços</span>
+            <ul>{servico.lista.map((x) => <li key={x.id}><span>{x.name}</span><span className="muted">{labelDuracao(x)} · {formatPreco(x.price)}</span></li>)}</ul>
+          </div>
+        ) : (
+          <div className="resumo-linha"><span className="muted">Serviço</span><strong>{servico?.name}</strong></div>
+        )}
         <div className="resumo-linha"><span className="muted">Profissional</span><strong>{prof?.name}</strong></div>
         {remarcando ? (
           <>

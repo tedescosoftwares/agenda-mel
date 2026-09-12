@@ -32,11 +32,19 @@ juntar() {  # $1 = arquivo de saída ; $2... = migrações
   else
     cabecalho_avulso "$@" >> "$saida"
   fi
+  # o registro do que rodou (080): a tabela nasce aqui em cima, para as
+  # migrações anteriores à 080 também ficarem anotadas
+  {
+    echo 'create table if not exists public.migracoes_aplicadas (arquivo text primary key, aplicada_em timestamptz not null default now());'
+    echo 'alter table public.migracoes_aplicadas enable row level security;'
+    echo
+  } >> "$saida"
   local f
   for f in "$@"; do
     { barra; printf -- '-- >>> %s\n' "$f"; barra; echo; } >> "$saida"
     cat "$f" >> "$saida"
     echo >> "$saida"
+    printf "insert into public.migracoes_aplicadas (arquivo) values ('%s') on conflict (arquivo) do nothing;\n\n" "$f" >> "$saida"
   done
   echo "  $saida  ($(wc -l < "$saida") linhas, $# migrações)"
 }

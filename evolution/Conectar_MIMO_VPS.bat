@@ -95,7 +95,7 @@ echo.
 echo %D%  o que vamos fazer?%X%
 echo.
 echo    %B%%L%1%X%  abrir o terminal          %D%(cai em %PROJETO%/evolution)%X%
-echo    %B%%L%2%X%  PUBLICAR O SITE           %D%(git pull + build + caddy)%X%
+echo    %B%%L%2%X%  PUBLICAR O SITE           %D%(git pull + banco + build + caddy)%X%
 echo    %B%%L%3%X%  status dos containers     %D%(docker compose ps)%X%
 echo    %B%%L%4%X%  logs do site (caddy)      %D%(ao vivo, Ctrl+C sai)%X%
 echo    %B%%L%5%X%  logs da Evolution         %D%(ao vivo, Ctrl+C sai)%X%
@@ -103,6 +103,7 @@ echo    %B%%L%6%X%  empurrar a fila do Whats  %D%(disparar.sh)%X%
 echo    %B%%L%7%X%  diagnostico da Evolution  %D%(diagnostico.sh)%X%
 echo    %B%%L%8%X%  reconectar o WhatsApp     %D%(conectar.sh - QR code)%X%
 echo    %B%%L%W%X%  religar o WhatsApp        %D%(religar.sh - sem parear, quando da Connection Closed)%X%
+echo    %B%%L%B%X%  atualizar o BANCO         %D%(aplicar.sh - so o que falta)%X%
 echo    %B%%L%9%X%  publicar as FUNCOES       %D%(publicar.sh - Supabase)%X%
 echo    %B%%L%P%X%  configurar push + e-mail  %D%(configurar-push.sh)%X%
 echo    %B%%L%N%X%  trocar o NUMERO do Whats  %D%(trocar-numero.sh)%X%
@@ -122,6 +123,7 @@ if "%OP%"=="9" goto funcoes
 if /i "%OP%"=="P" goto push
 if /i "%OP%"=="N" goto numero
 if /i "%OP%"=="W" goto religar
+if /i "%OP%"=="B" goto banco
 if "%OP%"=="0" exit /b 0
 echo  %A%opcao invalida%X%
 timeout /t 2 >nul
@@ -144,7 +146,7 @@ if /i not "%OK%"=="SIM" (
   goto fim
 )
 echo.
-%SSH% "cd %PROJETO%/evolution && git pull --ff-only origin %BRANCH% && ./publicar-site.sh"
+%SSH% "cd %PROJETO% && git pull --ff-only origin %BRANCH% && ./supabase/aplicar.sh --se-configurado && cd evolution && ./publicar-site.sh"
 if errorlevel 1 (
   echo.
   echo  %R%[X] a publicacao falhou. Leia o erro acima.%X%
@@ -180,6 +182,11 @@ goto fim
 :diag
 echo.
 %SSH% "cd %PROJETO%/evolution && ./diagnostico.sh"
+goto fim
+
+:banco
+echo.
+%SSH% "cd %PROJETO% && git pull --ff-only origin %BRANCH% && ./supabase/aplicar.sh"
 goto fim
 
 :funcoes

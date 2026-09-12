@@ -23,6 +23,9 @@
 --  marcado com o nome do arquivo de origem, então dá para achar na hora.
 -- =============================================================
 
+create table if not exists public.migracoes_aplicadas (arquivo text primary key, aplicada_em timestamptz not null default now());
+alter table public.migracoes_aplicadas enable row level security;
+
 -- =============================================================
 -- >>> 001_schema.sql
 -- =============================================================
@@ -90,6 +93,8 @@ create trigger on_auth_user_created
 -- where id = (select id from auth.users where email = 'seu-email@exemplo.com');
 -- =============================================================
 
+insert into public.migracoes_aplicadas (arquivo) values ('001_schema.sql') on conflict (arquivo) do nothing;
+
 -- =============================================================
 -- >>> 002_services.sql
 -- =============================================================
@@ -150,6 +155,8 @@ create policy "admin exclui servicos"
   to authenticated
   using (public.is_admin());
 
+insert into public.migracoes_aplicadas (arquivo) values ('002_services.sql') on conflict (arquivo) do nothing;
+
 -- =============================================================
 -- >>> 003_business_hours.sql
 -- =============================================================
@@ -206,6 +213,8 @@ create policy "admin altera horarios"
   on public.business_hours for update
   to authenticated
   using (public.is_admin());
+
+insert into public.migracoes_aplicadas (arquivo) values ('003_business_hours.sql') on conflict (arquivo) do nothing;
 
 -- =============================================================
 -- >>> 004_appointments.sql
@@ -269,6 +278,8 @@ create policy "admin ve todos os perfis"
   to authenticated
   using (public.is_admin());
 
+insert into public.migracoes_aplicadas (arquivo) values ('004_appointments.sql') on conflict (arquivo) do nothing;
+
 -- =============================================================
 -- >>> 005_service_images_e_slots.sql
 -- =============================================================
@@ -327,6 +338,8 @@ $$;
 
 grant execute on function public.get_busy_slots(date) to authenticated;
 
+insert into public.migracoes_aplicadas (arquivo) values ('005_service_images_e_slots.sql') on conflict (arquivo) do nothing;
+
 -- =============================================================
 -- >>> 006_combos.sql
 -- =============================================================
@@ -344,6 +357,8 @@ alter table public.services
 
 alter table public.services
   add column if not exists combo_service_ids uuid[] not null default '{}';
+
+insert into public.migracoes_aplicadas (arquivo) values ('006_combos.sql') on conflict (arquivo) do nothing;
 
 -- =============================================================
 -- >>> 007_profissionais.sql
@@ -593,6 +608,8 @@ create policy "profissional ve clientes dela"
 -- where slug = 'slug-dela';
 -- =============================================================
 
+insert into public.migracoes_aplicadas (arquivo) values ('007_profissionais.sql') on conflict (arquivo) do nothing;
+
 -- =============================================================
 -- >>> 008_foto_profissional.sql
 -- =============================================================
@@ -642,6 +659,8 @@ create policy "equipe remove foto de profissional"
     bucket_id = 'professional-photos'
     and (public.is_admin() or public.my_professional_id() is not null)
   );
+
+insert into public.migracoes_aplicadas (arquivo) values ('008_foto_profissional.sql') on conflict (arquivo) do nothing;
 
 -- =============================================================
 -- >>> 009_notificacoes.sql
@@ -742,6 +761,8 @@ exception
   when duplicate_object then null;
 end;
 $$;
+
+insert into public.migracoes_aplicadas (arquivo) values ('009_notificacoes.sql') on conflict (arquivo) do nothing;
 
 -- =============================================================
 -- >>> 010_adiantar_agenda.sql
@@ -1159,6 +1180,8 @@ grant execute on function public.horario_mais_cedo_possivel(uuid) to authenticat
 grant execute on function public.propor_antecipacao(uuid, time, integer) to authenticated;
 grant execute on function public.responder_antecipacao(uuid, boolean) to authenticated;
 grant execute on function public.cancelar_antecipacao(uuid) to authenticated;
+
+insert into public.migracoes_aplicadas (arquivo) values ('010_adiantar_agenda.sql') on conflict (arquivo) do nothing;
 
 -- =============================================================
 -- >>> 011_lista_espera.sql
@@ -1595,6 +1618,8 @@ grant execute on function public.faltas_da_cliente(uuid) to authenticated;
 -- o caso normal, só com um pouco mais de atraso.
 -- =============================================================
 
+insert into public.migracoes_aplicadas (arquivo) values ('011_lista_espera.sql') on conflict (arquivo) do nothing;
+
 -- =============================================================
 -- >>> 012_indique_e_ganhe.sql
 -- =============================================================
@@ -2028,6 +2053,8 @@ grant execute on function public.registrar_indicacao(text) to authenticated;
 grant execute on function public.usar_credito(uuid, integer) to authenticated;
 grant execute on function public.meu_resumo_indicacoes() to authenticated;
 
+insert into public.migracoes_aplicadas (arquivo) values ('012_indique_e_ganhe.sql') on conflict (arquivo) do nothing;
+
 -- =============================================================
 -- >>> 013_seguranca.sql
 -- =============================================================
@@ -2342,6 +2369,8 @@ create policy "equipe remove foto de profissional"
       or (storage.foldername(name))[1] = public.my_professional_id()::text
     )
   );
+
+insert into public.migracoes_aplicadas (arquivo) values ('013_seguranca.sql') on conflict (arquivo) do nothing;
 
 -- =============================================================
 -- >>> 014_correcoes.sql
@@ -3146,6 +3175,8 @@ $$;
 
 grant execute on function public.config_agenda_profissional(uuid) to authenticated;
 
+insert into public.migracoes_aplicadas (arquivo) values ('014_correcoes.sql') on conflict (arquivo) do nothing;
+
 -- =============================================================
 -- >>> 015_saloes.sql
 -- =============================================================
@@ -3532,6 +3563,8 @@ end;
 $$;
 
 grant execute on function public.abrir_salao(text, text, text, text) to authenticated;
+
+insert into public.migracoes_aplicadas (arquivo) values ('015_saloes.sql') on conflict (arquivo) do nothing;
 
 -- =============================================================
 -- >>> 016_agenda_real.sql
@@ -3973,6 +4006,8 @@ end;
 $$;
 
 grant execute on function public.usar_credito(uuid, integer) to authenticated;
+
+insert into public.migracoes_aplicadas (arquivo) values ('016_agenda_real.sql') on conflict (arquivo) do nothing;
 
 -- =============================================================
 -- >>> 017_afiliados.sql
@@ -4538,6 +4573,8 @@ grant execute on function public.abrir_salao(text, text, text, text, text) to au
 -- a versão antiga de abrir_salao sai de cena para não ficar ambígua
 drop function if exists public.abrir_salao(text, text, text, text);
 
+insert into public.migracoes_aplicadas (arquivo) values ('017_afiliados.sql') on conflict (arquivo) do nothing;
+
 -- =============================================================
 -- >>> 018_dados_teste.sql
 -- =============================================================
@@ -4828,6 +4865,8 @@ order by p.role;
 -- where email in ('admin@exemplo.com', 'profissional@exemplo.com', 'cliente@exemplo.com');
 -- delete from public.salons where slug = 'espaco-mel';
 -- =============================================================
+
+insert into public.migracoes_aplicadas (arquivo) values ('018_dados_teste.sql') on conflict (arquivo) do nothing;
 
 -- =============================================================
 -- >>> 019_volta_sozinha.sql
@@ -5319,6 +5358,8 @@ create trigger protege_vinculo
   before update on public.professionals
   for each row execute function public.protege_vinculo_profissional();
 
+insert into public.migracoes_aplicadas (arquivo) values ('019_volta_sozinha.sql') on conflict (arquivo) do nothing;
+
 -- =============================================================
 -- >>> 020_numeros.sql
 -- =============================================================
@@ -5689,6 +5730,8 @@ $$;
 revoke execute on function public.resumo_do_salao(uuid, date) from public, anon;
 grant execute on function public.resumo_do_salao(uuid, date) to authenticated;
 
+insert into public.migracoes_aplicadas (arquivo) values ('020_numeros.sql') on conflict (arquivo) do nothing;
+
 -- =============================================================
 -- >>> 021_dados_teste_historico.sql
 -- =============================================================
@@ -5860,6 +5903,8 @@ from public.appointments a
 join public.professionals p on p.id = a.professional_id
 where p.slug = 'ana-paula';
 
+insert into public.migracoes_aplicadas (arquivo) values ('021_dados_teste_historico.sql') on conflict (arquivo) do nothing;
+
 -- =============================================================
 -- >>> 022_gatilhos.sql
 -- =============================================================
@@ -5966,6 +6011,8 @@ create trigger on_valida_status
 -- (o grant de coluna já limitava a status e notes; isto é o cinto)
 revoke update on public.appointments from authenticated;
 grant update (status, notes) on public.appointments to authenticated;
+
+insert into public.migracoes_aplicadas (arquivo) values ('022_gatilhos.sql') on conflict (arquivo) do nothing;
 
 -- =============================================================
 -- >>> 023_whatsapp.sql
@@ -6541,6 +6588,8 @@ $$;
 revoke execute on function public.quantas_para_enviar(uuid) from public, anon;
 grant execute on function public.quantas_para_enviar(uuid) to authenticated;
 
+insert into public.migracoes_aplicadas (arquivo) values ('023_whatsapp.sql') on conflict (arquivo) do nothing;
+
 -- =============================================================
 -- >>> 024_resposta_whatsapp.sql
 -- =============================================================
@@ -7072,6 +7121,8 @@ revoke execute on function public.confirmar_envio(uuid, text)
 -- -- para conferir:   select * from cron.job;
 -- -- para desligar:   select cron.unschedule('agenda-mel-envia-whatsapp');
 
+insert into public.migracoes_aplicadas (arquivo) values ('024_resposta_whatsapp.sql') on conflict (arquivo) do nothing;
+
 -- =============================================================
 -- >>> 025_botoes.sql
 -- =============================================================
@@ -7391,6 +7442,8 @@ $$;
 revoke execute on function public.fila_para_enviar(uuid) from public, anon;
 grant execute on function public.fila_para_enviar(uuid) to authenticated;
 
+insert into public.migracoes_aplicadas (arquivo) values ('025_botoes.sql') on conflict (arquivo) do nothing;
+
 -- =============================================================
 -- >>> 026_botao_so_na_oficial.sql
 -- =============================================================
@@ -7639,6 +7692,8 @@ where r.kind = o.kind
   and o.status in ('enviado', 'entregue')
   and o.enviado_em > now() - interval '6 hours';
 
+insert into public.migracoes_aplicadas (arquivo) values ('026_botao_so_na_oficial.sql') on conflict (arquivo) do nothing;
+
 -- =============================================================
 -- >>> 027_estilo_do_botao.sql
 -- =============================================================
@@ -7802,6 +7857,8 @@ where r.kind = o.kind
   and o.canal = 'evolution'
   and o.status in ('enviado', 'entregue')
   and o.enviado_em > now() - interval '6 hours';
+
+insert into public.migracoes_aplicadas (arquivo) values ('027_estilo_do_botao.sql') on conflict (arquivo) do nothing;
 
 -- =============================================================
 -- >>> 028_primeiro_voto_vale.sql
@@ -8050,6 +8107,8 @@ $$;
 
 revoke execute on function public.receber_resposta_whatsapp(text, text, text, text)
   from public, anon, authenticated;
+
+insert into public.migracoes_aplicadas (arquivo) values ('028_primeiro_voto_vale.sql') on conflict (arquivo) do nothing;
 
 -- =============================================================
 -- >>> 029_texto_bonito.sql
@@ -8539,6 +8598,8 @@ $$;
 revoke execute on function public.receber_resposta_whatsapp(text, text, text, text)
   from public, anon, authenticated;
 
+insert into public.migracoes_aplicadas (arquivo) values ('029_texto_bonito.sql') on conflict (arquivo) do nothing;
+
 -- =============================================================
 -- >>> 030_porteiro_da_ia.sql
 -- =============================================================
@@ -8863,6 +8924,8 @@ $$;
 revoke execute on function public.resumo_da_ia(uuid) from public, anon;
 grant execute on function public.resumo_da_ia(uuid) to authenticated;
 
+insert into public.migracoes_aplicadas (arquivo) values ('030_porteiro_da_ia.sql') on conflict (arquivo) do nothing;
+
 -- =============================================================
 -- >>> 031_truncate_nao.sql
 -- =============================================================
@@ -8914,6 +8977,8 @@ end $$;
 -- semana que vem.
 alter default privileges in schema public
   revoke truncate, references, trigger on tables from anon, authenticated;
+
+insert into public.migracoes_aplicadas (arquivo) values ('031_truncate_nao.sql') on conflict (arquivo) do nothing;
 
 -- =============================================================
 -- >>> 032_avisa_a_profissional.sql
@@ -9405,6 +9470,8 @@ $$;
 revoke execute on function public.fila_do_salao(uuid, integer) from public, anon;
 grant execute on function public.fila_do_salao(uuid, integer) to authenticated;
 
+insert into public.migracoes_aplicadas (arquivo) values ('032_avisa_a_profissional.sql') on conflict (arquivo) do nothing;
+
 -- =============================================================
 -- >>> 033_ia_entende_o_resto.sql
 -- =============================================================
@@ -9807,6 +9874,8 @@ $$;
 revoke execute on function public.leituras_recentes(uuid, integer) from public, anon;
 grant execute on function public.leituras_recentes(uuid, integer) to authenticated;
 
+insert into public.migracoes_aplicadas (arquivo) values ('033_ia_entende_o_resto.sql') on conflict (arquivo) do nothing;
+
 -- =============================================================
 -- >>> 034_pedido_nao_cai_no_vazio.sql
 -- =============================================================
@@ -10187,6 +10256,8 @@ revoke execute on function
   public.receber_resposta_whatsapp(text, text, text, text, text, uuid)
   from public, anon, authenticated;
 
+
+insert into public.migracoes_aplicadas (arquivo) values ('034_pedido_nao_cai_no_vazio.sql') on conflict (arquivo) do nothing;
 
 -- =============================================================
 -- >>> 035_bot_que_marca.sql
@@ -10814,6 +10885,8 @@ do $$ begin
     add constraint via_conhecida check (via in ('regra', 'ia', 'bot'));
 exception when others then null; end $$;
 
+insert into public.migracoes_aplicadas (arquivo) values ('035_bot_que_marca.sql') on conflict (arquivo) do nothing;
+
 -- =============================================================
 -- >>> 036_cliente_ganha_o_telefone.sql
 -- =============================================================
@@ -10853,6 +10926,8 @@ $$;
 
 revoke execute on function public.cliente_pelo_telefone(text)
   from public, anon, authenticated;
+
+insert into public.migracoes_aplicadas (arquivo) values ('036_cliente_ganha_o_telefone.sql') on conflict (arquivo) do nothing;
 
 -- =============================================================
 -- >>> 037_sem_cadastro_nao_some.sql
@@ -11002,6 +11077,8 @@ $fn$;
 
 revoke execute on function public.diagnostico_bot(uuid) from public, anon;
 grant execute on function public.diagnostico_bot(uuid) to authenticated;
+
+insert into public.migracoes_aplicadas (arquivo) values ('037_sem_cadastro_nao_some.sql') on conflict (arquivo) do nothing;
 
 -- =============================================================
 -- >>> 038_aceite_da_profissional.sql
@@ -11935,6 +12012,8 @@ $$;
 revoke execute on function public.avancar_conversa(text, text, uuid)
   from public, anon, authenticated;
 
+insert into public.migracoes_aplicadas (arquivo) values ('038_aceite_da_profissional.sql') on conflict (arquivo) do nothing;
+
 -- =============================================================
 -- >>> 039_o_pedido_sai_na_hora.sql
 -- =============================================================
@@ -12448,6 +12527,8 @@ $$;
 revoke execute on function public.avancar_conversa(text, text, uuid)
   from public, anon, authenticated;
 
+insert into public.migracoes_aplicadas (arquivo) values ('039_o_pedido_sai_na_hora.sql') on conflict (arquivo) do nothing;
+
 -- =============================================================
 -- >>> 040_avisar_quem_nao_agiu.sql
 -- =============================================================
@@ -12957,6 +13038,8 @@ $$;
 revoke execute on function public.montar_texto_whatsapp(text, text, text, uuid, uuid, uuid)
   from public, anon, authenticated;
 
+insert into public.migracoes_aplicadas (arquivo) values ('040_avisar_quem_nao_agiu.sql') on conflict (arquivo) do nothing;
+
 -- =============================================================
 -- >>> 041_aceite_vale_pro_app_tambem.sql
 -- =============================================================
@@ -13119,6 +13202,8 @@ $$;
 revoke execute on function public.como_ficou(uuid) from public, anon;
 grant execute on function public.como_ficou(uuid) to authenticated;
 
+insert into public.migracoes_aplicadas (arquivo) values ('041_aceite_vale_pro_app_tambem.sql') on conflict (arquivo) do nothing;
+
 -- =============================================================
 -- >>> 042_o_nove_da_argentina.sql
 -- =============================================================
@@ -13219,6 +13304,8 @@ $$;
 
 revoke execute on function public.profissional_do_telefone(text)
   from public, anon, authenticated;
+
+insert into public.migracoes_aplicadas (arquivo) values ('042_o_nove_da_argentina.sql') on conflict (arquivo) do nothing;
 
 -- =============================================================
 -- >>> 043_responder_por_onde_chegou.sql
@@ -13380,6 +13467,8 @@ $$;
 revoke execute on function public.respostas_engasgadas(uuid)
   from public, anon;
 grant execute on function public.respostas_engasgadas(uuid) to authenticated;
+
+insert into public.migracoes_aplicadas (arquivo) values ('043_responder_por_onde_chegou.sql') on conflict (arquivo) do nothing;
 
 -- =============================================================
 -- >>> 044_silencio_nao_vale_pra_resposta.sql
@@ -13766,6 +13855,8 @@ revoke execute on function
   public.receber_mensagem(text, text, text, text, text, uuid)
   from public, anon, authenticated;
 
+insert into public.migracoes_aplicadas (arquivo) values ('044_silencio_nao_vale_pra_resposta.sql') on conflict (arquivo) do nothing;
+
 -- =============================================================
 -- >>> 045_envio_que_morreu_no_meio.sql
 -- =============================================================
@@ -13867,6 +13958,8 @@ where r.kind = o.kind
   and not r.respeita_silencio
   and o.status = 'na_fila'
   and o.liberado_em > now();
+
+insert into public.migracoes_aplicadas (arquivo) values ('045_envio_que_morreu_no_meio.sql') on conflict (arquivo) do nothing;
 
 -- =============================================================
 -- >>> 046_bancada_de_testes.sql
@@ -14044,6 +14137,8 @@ $$;
 revoke execute on function public.limpar_ensaio(uuid, text) from public, anon;
 grant execute on function public.limpar_ensaio(uuid, text) to authenticated;
 
+insert into public.migracoes_aplicadas (arquivo) values ('046_bancada_de_testes.sql') on conflict (arquivo) do nothing;
+
 -- =============================================================
 -- >>> 047_pendente_sem_pedido_nao_existe.sql
 -- =============================================================
@@ -14139,6 +14234,8 @@ set status = 'confirmado'
 where a.status = 'pendente'
   and not exists (select 1 from public.aceites ac where ac.appointment_id = a.id);
 
+insert into public.migracoes_aplicadas (arquivo) values ('047_pendente_sem_pedido_nao_existe.sql') on conflict (arquivo) do nothing;
+
 -- =============================================================
 -- >>> 048_a_agenda_publica_diz_a_verdade.sql
 -- =============================================================
@@ -14171,6 +14268,8 @@ where a.status = 'pendente'
 
 grant execute on function public.dias_com_vaga(uuid, integer, integer)
   to anon, authenticated;
+
+insert into public.migracoes_aplicadas (arquivo) values ('048_a_agenda_publica_diz_a_verdade.sql') on conflict (arquivo) do nothing;
 
 -- =============================================================
 -- >>> 049_favoritas_avaliacoes_e_fila.sql
@@ -14325,6 +14424,8 @@ $$;
 
 revoke execute on function public.posicao_na_fila(uuid) from public, anon;
 grant execute on function public.posicao_na_fila(uuid) to authenticated;
+
+insert into public.migracoes_aplicadas (arquivo) values ('049_favoritas_avaliacoes_e_fila.sql') on conflict (arquivo) do nothing;
 
 -- =============================================================
 -- >>> 050_remarcar_passa_pelo_aceite.sql
@@ -14963,6 +15064,8 @@ $$;
 revoke execute on function public.montar_texto_whatsapp(text, text, text, uuid, uuid, uuid)
   from public, anon, authenticated;
 
+insert into public.migracoes_aplicadas (arquivo) values ('050_remarcar_passa_pelo_aceite.sql') on conflict (arquivo) do nothing;
+
 -- =============================================================
 -- >>> 051_vitrine_da_profissional.sql
 -- =============================================================
@@ -15058,6 +15161,8 @@ as $$
 $$;
 
 grant execute on function public.vitrine_da_profissional(text) to anon, authenticated;
+
+insert into public.migracoes_aplicadas (arquivo) values ('051_vitrine_da_profissional.sql') on conflict (arquivo) do nothing;
 
 -- =============================================================
 -- >>> 052_o_relogio_da_casa.sql
@@ -15307,6 +15412,8 @@ $$;
 
 revoke execute on function public.relogio_status() from public, anon;
 grant execute on function public.relogio_status() to authenticated;
+
+insert into public.migracoes_aplicadas (arquivo) values ('052_o_relogio_da_casa.sql') on conflict (arquivo) do nothing;
 
 -- =============================================================
 -- >>> 053_vinculos.sql
@@ -15936,6 +16043,8 @@ where a.client_id is not null and a.salon_id is not null
 order by a.client_id, a.salon_id, a.created_at
 on conflict (client_id, salon_id) do nothing;
 
+insert into public.migracoes_aplicadas (arquivo) values ('053_vinculos.sql') on conflict (arquivo) do nothing;
+
 -- =============================================================
 -- >>> 054_email.sql
 -- =============================================================
@@ -16326,6 +16435,8 @@ $$;
 revoke execute on function public.relogio_status() from public, anon;
 grant execute on function public.relogio_status() to authenticated;
 
+insert into public.migracoes_aplicadas (arquivo) values ('054_email.sql') on conflict (arquivo) do nothing;
+
 -- =============================================================
 -- >>> 055_plataforma.sql
 -- =============================================================
@@ -16641,6 +16752,8 @@ $$;
 
 revoke execute on function public.plataforma_filas(integer) from public, anon;
 grant execute on function public.plataforma_filas(integer) to authenticated;
+
+insert into public.migracoes_aplicadas (arquivo) values ('055_plataforma.sql') on conflict (arquivo) do nothing;
 
 -- =============================================================
 -- >>> 056_plataforma_de_pc.sql
@@ -16997,6 +17110,8 @@ $$;
 revoke execute on function public.plataforma_series(integer) from public, anon;
 grant execute on function public.plataforma_series(integer) to authenticated;
 
+insert into public.migracoes_aplicadas (arquivo) values ('056_plataforma_de_pc.sql') on conflict (arquivo) do nothing;
+
 -- =============================================================
 -- >>> 057_push.sql
 -- =============================================================
@@ -17289,6 +17404,8 @@ exception when others then
   raise notice 'mimo-push não agendado: %', sqlerrm;
 end $$;
 
+insert into public.migracoes_aplicadas (arquivo) values ('057_push.sql') on conflict (arquivo) do nothing;
+
 -- =============================================================
 -- >>> 058_email_de_avisos.sql
 -- =============================================================
@@ -17538,6 +17655,8 @@ revoke execute on function
   public.notificar(uuid, text, text, text, text, jsonb, timestamptz)
   from public, anon, authenticated;
 
+insert into public.migracoes_aplicadas (arquivo) values ('058_email_de_avisos.sql') on conflict (arquivo) do nothing;
+
 -- =============================================================
 -- >>> 059_relogio_visivel_no_editor.sql
 -- =============================================================
@@ -17585,6 +17704,8 @@ end;
 $$;
 revoke execute on function public.relogio_status() from public, anon;
 grant execute on function public.relogio_status() to authenticated;
+
+insert into public.migracoes_aplicadas (arquivo) values ('059_relogio_visivel_no_editor.sql') on conflict (arquivo) do nothing;
 
 -- =============================================================
 -- >>> 060_chave_certa_no_relogio.sql
@@ -17658,6 +17779,8 @@ begin
 end;
 $$;
 revoke execute on function public.ligar_relogio(text, text) from public, anon, authenticated;
+
+insert into public.migracoes_aplicadas (arquivo) values ('060_chave_certa_no_relogio.sql') on conflict (arquivo) do nothing;
 
 -- =============================================================
 -- >>> 061_recados.sql
@@ -17881,6 +18004,8 @@ $$;
 revoke execute on function public.meus_recados(uuid, integer) from public, anon;
 grant execute on function public.meus_recados(uuid, integer) to authenticated;
 
+insert into public.migracoes_aplicadas (arquivo) values ('061_recados.sql') on conflict (arquivo) do nothing;
+
 -- =============================================================
 -- >>> 062_recado_com_remetente.sql
 -- =============================================================
@@ -17953,6 +18078,8 @@ end;
 $$;
 revoke execute on function public.enviar_recado(text, text, text, text, uuid, jsonb) from public, anon;
 grant execute on function public.enviar_recado(text, text, text, text, uuid, jsonb) to authenticated;
+
+insert into public.migracoes_aplicadas (arquivo) values ('062_recado_com_remetente.sql') on conflict (arquivo) do nothing;
 
 -- =============================================================
 -- >>> 063_push_na_hora.sql
@@ -18061,6 +18188,8 @@ revoke execute on function
   public.notificar(uuid, text, text, text, text, jsonb, timestamptz)
   from public, anon, authenticated;
 
+insert into public.migracoes_aplicadas (arquivo) values ('063_push_na_hora.sql') on conflict (arquivo) do nothing;
+
 -- =============================================================
 -- >>> 064_termos_e_primeiro_acesso.sql
 -- =============================================================
@@ -18130,6 +18259,8 @@ create trigger zz_termos_do_cadastro
 
 insert into public.config_publica (chave, valor) values ('instagram', 'mimo.com.vc')
 on conflict (chave) do nothing;
+
+insert into public.migracoes_aplicadas (arquivo) values ('064_termos_e_primeiro_acesso.sql') on conflict (arquivo) do nothing;
 
 -- =============================================================
 -- >>> 065_perfil_da_cliente.sql
@@ -18219,6 +18350,8 @@ as $$
 $$;
 revoke execute on function public.meu_perfil_resumo() from public, anon;
 grant execute on function public.meu_perfil_resumo() to authenticated;
+
+insert into public.migracoes_aplicadas (arquivo) values ('065_perfil_da_cliente.sql') on conflict (arquivo) do nothing;
 
 -- =============================================================
 -- >>> 066_trocar_contato.sql
@@ -18347,6 +18480,8 @@ grant execute on function public.confirmar_troca_whatsapp(text) to authenticated
 
 insert into public.whatsapp_regras (kind, envia, natureza, sufixo) values ('codigo_whatsapp', true, 'utilidade', null)
 on conflict (kind) do nothing;
+
+insert into public.migracoes_aplicadas (arquivo) values ('066_trocar_contato.sql') on conflict (arquivo) do nothing;
 
 -- =============================================================
 -- >>> 067_um_whatsapp_uma_conta.sql
@@ -18521,6 +18656,8 @@ begin
   return jsonb_build_object('ok', true, 'phone', t.novo);
 end;
 $$;
+
+insert into public.migracoes_aplicadas (arquivo) values ('067_um_whatsapp_uma_conta.sql') on conflict (arquivo) do nothing;
 
 -- =============================================================
 -- >>> 068_modelos_de_mensagem.sql
@@ -19347,6 +19484,8 @@ $$;
 revoke execute on function public.plataforma_ligar_ia(uuid, boolean, boolean) from public, anon;
 grant execute on function public.plataforma_ligar_ia(uuid, boolean, boolean) to authenticated;
 
+insert into public.migracoes_aplicadas (arquivo) values ('068_modelos_de_mensagem.sql') on conflict (arquivo) do nothing;
+
 -- =============================================================
 -- >>> 069_agente.sql
 -- =============================================================
@@ -19676,6 +19815,8 @@ $$;
 revoke execute on function public.plataforma_ia() from public, anon;
 grant execute on function public.plataforma_ia() to authenticated;
 
+insert into public.migracoes_aplicadas (arquivo) values ('069_agente.sql') on conflict (arquivo) do nothing;
+
 -- =============================================================
 -- >>> 070_telefones_de_teste.sql
 -- =============================================================
@@ -19798,6 +19939,8 @@ $$;
 revoke execute on function public.plataforma_testar_modelo(text, text[]) from public, anon;
 grant execute on function public.plataforma_testar_modelo(text, text[]) to authenticated;
 
+insert into public.migracoes_aplicadas (arquivo) values ('070_telefones_de_teste.sql') on conflict (arquivo) do nothing;
+
 -- =============================================================
 -- >>> 071_fila_na_hora.sql
 -- =============================================================
@@ -19861,6 +20004,8 @@ as $$
 $$;
 revoke execute on function public.fila_whatsapp_recente(integer) from public, anon;
 grant execute on function public.fila_whatsapp_recente(integer) to authenticated;
+
+insert into public.migracoes_aplicadas (arquivo) values ('071_fila_na_hora.sql') on conflict (arquivo) do nothing;
 
 -- =============================================================
 -- >>> 072_push_editavel.sql
@@ -20211,6 +20356,8 @@ $$;
 revoke execute on function public.plataforma_testar_push(text, text, text) from public, anon;
 grant execute on function public.plataforma_testar_push(text, text, text) to authenticated;
 
+insert into public.migracoes_aplicadas (arquivo) values ('072_push_editavel.sql') on conflict (arquivo) do nothing;
+
 -- =============================================================
 -- >>> 073_push_forte.sql
 -- =============================================================
@@ -20260,6 +20407,8 @@ begin
 end;
 $$;
 revoke execute on function public.puxar_push(integer) from public, anon, authenticated;
+
+insert into public.migracoes_aplicadas (arquivo) values ('073_push_forte.sql') on conflict (arquivo) do nothing;
 
 -- =============================================================
 -- >>> 074_pedido_e_confirmacao.sql
@@ -20466,6 +20615,8 @@ update public.modelos_de_mensagem set exemplo = '{"titulo":"Horário não confir
 update public.modelos_de_mensagem set exemplo = '{"titulo":"Remarcado! 🎉","texto":"Manicure com Ana Oliveira agora é sábado, 12/09 às 14:00."}' where chave = 'push.remarcacao_aceita';
 insert into public.push_regras (kind, envia) values ('pedido_enviado', true) on conflict (kind) do nothing;
 
+insert into public.migracoes_aplicadas (arquivo) values ('074_pedido_e_confirmacao.sql') on conflict (arquivo) do nothing;
+
 -- =============================================================
 -- >>> 075_concluir_sozinho.sql
 -- =============================================================
@@ -20536,6 +20687,8 @@ begin
 end;
 $$;
 revoke execute on function public.rodar_rotinas() from public, anon, authenticated;
+
+insert into public.migracoes_aplicadas (arquivo) values ('075_concluir_sozinho.sql') on conflict (arquivo) do nothing;
 
 -- =============================================================
 -- >>> 076_ficha_da_cliente.sql
@@ -20869,6 +21022,8 @@ begin
 end;
 $$;
 revoke execute on function public.rodar_rotinas() from public, anon, authenticated;
+
+insert into public.migracoes_aplicadas (arquivo) values ('076_ficha_da_cliente.sql') on conflict (arquivo) do nothing;
 
 -- =============================================================
 -- >>> 077_fechar_o_dia.sql
@@ -21819,6 +21974,8 @@ end;
 $$;
 revoke execute on function public.rodar_rotinas() from public, anon, authenticated;
 
+insert into public.migracoes_aplicadas (arquivo) values ('077_fechar_o_dia.sql') on conflict (arquivo) do nothing;
+
 -- =============================================================
 -- >>> 078_um_aviso_so.sql
 -- =============================================================
@@ -21994,6 +22151,8 @@ begin
 end;
 $$;
 
+insert into public.migracoes_aplicadas (arquivo) values ('078_um_aviso_so.sql') on conflict (arquivo) do nothing;
+
 -- =============================================================
 -- >>> 079_varios_servicos.sql
 -- =============================================================
@@ -22111,4 +22270,39 @@ drop trigger if exists tg_copia_itens_da_remarcacao on public.appointments;
 create trigger tg_copia_itens_da_remarcacao
   after insert on public.appointments
   for each row execute function public.copia_itens_da_remarcacao();
+
+insert into public.migracoes_aplicadas (arquivo) values ('079_varios_servicos.sql') on conflict (arquivo) do nothing;
+
+-- =============================================================
+-- >>> 080_migracoes_aplicadas.sql
+-- =============================================================
+
+-- 080 · O banco sabe quais migrações já rodou
+--
+-- Acabou o SQL gigante colado no editor. A tabela abaixo guarda o nome
+-- de cada migração aplicada; o supabase/aplicar.sh (na VPS, opção B do
+-- .bat) roda só o que falta, na ordem, cada uma numa transação, e
+-- anota aqui. Os arquivos gerados (setup_completo, atualizacao_*)
+-- também anotam, para quem ainda colar no editor.
+create table if not exists public.migracoes_aplicadas (
+  arquivo text primary key,
+  aplicada_em timestamptz not null default now()
+);
+alter table public.migracoes_aplicadas enable row level security;
+revoke all on public.migracoes_aplicadas from anon, authenticated;
+
+-- a plataforma vê o que já rodou (Configurações)
+create or replace function public.plataforma_migracoes()
+returns table (arquivo text, aplicada_em timestamptz)
+language sql
+stable
+security definer set search_path = public
+as $$
+  select m.arquivo, m.aplicada_em from public.migracoes_aplicadas m
+  where public.eh_plataforma() order by m.arquivo desc;
+$$;
+revoke execute on function public.plataforma_migracoes() from public, anon;
+grant execute on function public.plataforma_migracoes() to authenticated;
+
+insert into public.migracoes_aplicadas (arquivo) values ('080_migracoes_aplicadas.sql') on conflict (arquivo) do nothing;
 

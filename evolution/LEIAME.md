@@ -547,3 +547,15 @@ from public.whatsapp_inbox
 order by recebido_em desc
 limit 20;
 ```
+
+## Atualizar o banco sem colar SQL (080)
+
+O `.bat` tem a opção **B**: roda `supabase/aplicar.sh` na VPS, que aplica só
+as migrações que ainda não rodaram (o banco anota em `migracoes_aplicadas`).
+A opção **2** (publicar o site) também atualiza o banco antes do build.
+
+Uma vez só, na primeira vez, ele pede a conexão com o banco: no Supabase,
+botão **Connect** → **Session pooler** → copie a URI, troque
+`[YOUR-PASSWORD]` pela senha do banco. Fica em `evolution/.env` como
+`SUPABASE_DB_URL`. Se você já tinha colado o `atualizacao_040_em_diante.sql`
+no editor, diga até onde: `./supabase/aplicar.sh --ja-rodei 079`.

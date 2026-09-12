@@ -5326,3 +5326,22 @@ a, button { -webkit-tap-highlight-color: transparent; }
 .agdt-itens { margin: 0.15rem 0; }
 .agdt-itens li { font-size: 0.88rem; }
 .admin-shell .content:has(.rodape-servicos) { padding-bottom: calc(12rem + env(safe-area-inset-bottom)); }
+
+/* ---- quer aproveitar e adicionar? (2.21.1) ------------------------------ */
+.dica-mais { display: block; margin: -0.3rem 0 0.7rem; font-size: 0.85rem; color: var(--rosa); line-height: 1.45; }
+.dica-mais > svg { vertical-align: -2px; margin-right: 0.2rem; }
+.dica-mais strong { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 5px; border: 1.5px solid var(--rosa); font-size: 0.75rem; line-height: 1; vertical-align: -3px; margin: 0 0.15rem; }
+.resumo-soma { font-weight: 400; font-size: 0.8rem; }
+.resumo-tirar { border: none; background: var(--cinza-1); color: var(--texto-2); width: 22px; height: 22px; border-radius: 50%; margin-left: 0.4rem; cursor: pointer; font-size: 0.95rem; line-height: 1; vertical-align: middle; }
+.resumo-nao-cabe { display: flex; flex-direction: column; gap: 0.6rem; }
+.resumo-nao-cabe-acoes { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.upsell { margin: 1rem 0 0.5rem; }
+.upsell-sub { margin: -0.4rem 0 0.6rem; font-size: 0.85rem; }
+.upsell-lista { display: flex; gap: 0.6rem; overflow-x: auto; padding-bottom: 0.3rem; scrollbar-width: none; margin: 0 -1.15rem; padding-left: 1.15rem; padding-right: 1.15rem; scroll-snap-type: x mandatory; }
+.upsell-lista::-webkit-scrollbar { display: none; }
+.upsell-item { flex: 0 0 170px; scroll-snap-align: start; display: flex; flex-direction: column; align-items: flex-start; gap: 0.45rem; text-align: left; font: inherit; color: inherit; cursor: pointer; padding: 0.75rem; border: 1.5px dashed #ffc2d8; background: #fff8fb; }
+.upsell-item:active { background: #ffeef4; }
+.upsell-foto { width: 38px; height: 38px; border-radius: 11px; background: #fff0f5; color: var(--rosa); display: grid; place-items: center; overflow: hidden; }
+.upsell-foto img { width: 100%; height: 100%; object-fit: cover; }
+.upsell-texto { display: flex; flex-direction: column; gap: 0.1rem; font-size: 0.85rem; line-height: 1.3; }
+.upsell-mais { display: inline-flex; align-items: center; gap: 0.2rem; font-size: 0.8rem; font-weight: 700; color: var(--rosa); margin-top: auto; }

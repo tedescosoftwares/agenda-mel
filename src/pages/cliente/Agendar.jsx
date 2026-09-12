@@ -136,7 +136,8 @@ export function AgendarServicos() {
   return (
     <ClienteShell titulo="Serviços" voltar={`/cliente/profissional/${id}`}>
       <Trilha passo={1} />
-      {prof && <p className="muted" style={{ marginTop: 0 }}>Com {prof.name}. Pode escolher mais de um: marca tudo no mesmo horário.</p>}
+      {prof && <p className="muted" style={{ marginTop: 0 }}>Com {prof.name}.</p>}
+      {sel.length === 1 && <p className="dica-mais"><Plus size={14} /> Quer mais um? Toque no <strong>+</strong> de outro serviço: marca tudo no mesmo horário.</p>}
 
       <div className="cliente-list">
         {servicos.map((s) => {
@@ -294,6 +295,35 @@ export function AgendarConfirmar() {
   const [obs, setObs] = useState('')
   const [saving, setSaving] = useState(false)
   const [erro, setErro] = useState('')
+  const [outros, setOutros] = useState([])
+  const [cabe, setCabe] = useState(true)
+  const [conferindo, setConferindo] = useState(false)
+  const ids = servico?.ids ?? (servico ? [servico.id] : [])
+  const remarcando = Boolean(esc.remarcar)
+
+  // os outros serviços dela, para o "quer aproveitar e adicionar?"
+  useEffect(() => {
+    if (!esc.prof || remarcando) return
+    supabase.from('professional_services').select('services (*)').eq('professional_id', esc.prof)
+      .then(({ data }) => setOutros((data ?? []).map((v) => v.services).filter((x) => x?.active)))
+  }, [esc.prof, remarcando])
+
+  // adicionou serviço: a duração cresce; o horário escolhido ainda cabe?
+  const chaveIds = ids.join(',')
+  useEffect(() => {
+    if (!esc.prof || !esc.data || !esc.hora || !servico || remarcando || ids.length < 2) { setCabe(true); return }
+    let vivo = true
+    setConferindo(true)
+    supabase.rpc('horarios_livres', { prof: esc.prof, dia: esc.data, duracao: servico.duration_minutes })
+      .then(({ data }) => { if (!vivo) return; setCabe((data ?? []).map((h) => String(h.hora ?? h).slice(0, 5)).includes(esc.hora)); setConferindo(false) })
+    return () => { vivo = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [esc.prof, esc.data, esc.hora, chaveIds, servico?.duration_minutes])
+
+  const irCom = (novos) => navigate(comQuery('/cliente/agendamento/confirmar', { ...esc, servico: novos.join(',') }), { replace: true })
+  const adicionar = (id) => { if (ids.length < 6 && !ids.includes(id)) irCom([...ids, id]) }
+  const tirar = (id) => { if (ids.length > 1) irCom(ids.filter((x) => x !== id)) }
+  const sugestoes = outros.filter((x) => !ids.includes(x.id)).slice(0, 4)
 
   const confirmar = useCallback(async () => {
     if (!servico || !esc.data || !esc.hora) return
@@ -326,8 +356,6 @@ export function AgendarConfirmar() {
     navigate(`/cliente/agendamento/sucesso/${data?.appointment_id ?? 'novo'}`, { replace: true })
   }, [servico, esc, user, obs, navigate])
 
-  const remarcando = Boolean(esc.remarcar)
-
   return (
     <ClienteShell titulo={remarcando ? 'Confirmar troca' : 'Confirmar pedido'} voltar={comQuery('/cliente/agendamento/hora', esc)}>
       <Trilha passo={4} remarcar={esc.remarcar} />
@@ -338,7 +366,7 @@ export function AgendarConfirmar() {
         {servico?.lista?.length > 1 ? (
           <div className="resumo-itens">
             <span className="muted">Serviços</span>
-            <ul>{servico.lista.map((x) => <li key={x.id}><span>{x.name}</span><span className="muted">{labelDuracao(x)} · {formatPreco(x.price)}</span></li>)}</ul>
+            <ul>{servico.lista.map((x) => <li key={x.id}><span>{x.name}</span><span className="muted">{labelDuracao(x)} · {formatPreco(x.price)}{!remarcando && <button type="button" className="resumo-tirar" onClick={() => tirar(x.id)} aria-label={`Tirar ${x.name}`}>×</button>}</span></li>)}</ul>
           </div>
         ) : (
           <div className="resumo-linha"><span className="muted">Serviço</span><strong>{servico?.name}</strong></div>
@@ -355,9 +383,35 @@ export function AgendarConfirmar() {
             <div className="resumo-linha"><span className="muted">Horário</span><strong>{esc.hora}</strong></div>
           </>
         )}
-        {servico && <div className="resumo-linha"><span className="muted">Duração</span><strong>{labelDuracao(servico)}</strong></div>}
-        <div className="resumo-linha resumo-total"><span>Valor</span><strong>{servico && formatPreco(servico.price)}</strong></div>
+        {servico && <div className="resumo-linha"><span className="muted">{servico.lista?.length > 1 ? 'Duração total' : 'Duração'}</span><strong>{formatDuracao(servico.duration_minutes)}{servico.lista?.length > 1 && <span className="muted resumo-soma"> ({servico.lista.map((x) => formatDuracao(x.duration_minutes)).join(' + ')})</span>}</strong></div>}
+        <div className="resumo-linha resumo-total"><span>{servico?.lista?.length > 1 ? 'Valor total' : 'Valor'}</span><strong>{servico && formatPreco(servico.price)}</strong></div>
       </div>
+
+      {!remarcando && !cabe && (
+        <div className="alert alert-error resumo-nao-cabe">
+          Com {servico?.lista?.[servico.lista.length - 1]?.name}, o atendimento fica com {formatDuracao(servico?.duration_minutes ?? 0)} e não cabe às {esc.hora}.
+          <div className="resumo-nao-cabe-acoes">
+            <Link className="btn btn-primary btn-mini" to={comQuery('/cliente/agendamento/hora', esc)}>Escolher outro horário</Link>
+            <button type="button" className="btn btn-ghost btn-mini" onClick={() => tirar(ids[ids.length - 1])}>Tirar {servico?.lista?.[servico.lista.length - 1]?.name}</button>
+          </div>
+        </div>
+      )}
+
+      {!remarcando && sugestoes.length > 0 && (
+        <section className="upsell">
+          <h3 className="secao-titulo">Quer aproveitar e adicionar?</h3>
+          <p className="muted upsell-sub">Entra no mesmo horário, um atrás do outro.</p>
+          <div className="upsell-lista">
+            {sugestoes.map((x) => (
+              <button key={x.id} type="button" className="card upsell-item" onClick={() => adicionar(x.id)}>
+                <span className="upsell-foto" aria-hidden="true">{x.images?.[0] ? <img src={x.images[0]} alt="" /> : <Sparkles size={18} />}</span>
+                <span className="upsell-texto"><strong>{x.name}</strong><span className="muted">+{formatDuracao(x.duration_minutes)} · {formatPreco(x.price)}</span></span>
+                <span className="upsell-mais"><Plus size={16} /> Adicionar</span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
 
       {!remarcando && (
         <label className="campo-solto">
@@ -376,7 +430,7 @@ export function AgendarConfirmar() {
       </div>
 
       <div className="rodape-fixo">
-        <button className="btn btn-primary btn-block" onClick={confirmar} disabled={saving || !servico}>
+        <button className="btn btn-primary btn-block" onClick={confirmar} disabled={saving || !servico || !cabe || conferindo}>
           {saving ? 'Enviando…' : remarcando ? 'Pedir a troca' : 'Confirmar pedido'}
         </button>
       </div>

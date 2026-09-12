@@ -20,6 +20,7 @@ begin
    order by d limit 1;
   raise notice 'dias: % e %', dia, dia2;
 
+  update public.professionals set confirmar_historico_ruim = false where id = prof;  -- o ensaio cancela e remarca: não é histórico ruim
   perform set_config('request.jwt.claim.sub', cli::text, false);
 
   -- ===== cenário 1: aceite ligado, profissional aceita a troca =====

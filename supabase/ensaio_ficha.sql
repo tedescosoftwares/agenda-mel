@@ -12,7 +12,7 @@ begin
   -- 1. cliente cancela em cima da hora: fica registrado quem e quando
   perform set_config('request.jwt.claim.sub', cli::text, false);
   insert into public.appointments (client_id, professional_id, service_id, date, start_time, end_time, salon_id, status)
-  values (cli, prof.id, svc.id, public.agora_local()::date + 1, (public.agora_local() + interval '2 hours')::time, (public.agora_local() + interval '3 hours')::time, prof.salon_id, 'confirmado') returning id into a1;
+  values (cli, prof.id, svc.id, (public.agora_local() + interval '2 hours')::date, (public.agora_local() + interval '2 hours')::time, (public.agora_local() + interval '3 hours')::time, prof.salon_id, 'confirmado') returning id into a1;
   update public.appointments set status = 'cancelado' where id = a1;
   select * into ap from public.appointments where id = a1;
   if ap.cancelado_por <> 'cliente' or ap.cancelado_em is null then raise exception 'não marcou quem cancelou: %', ap.cancelado_por; end if;

@@ -14,6 +14,9 @@ begin
   update public.profiles set phone = null where id = prof.user_id;   -- sem telefone: o aceite tem que ir pelo app
   update public.professionals set aceite_manual = false, minutos_para_aceitar = 60 where id = prof.id;
   perform set_config('request.jwt.claim.sub', prof.user_id::text, false);
+  -- o dia de hoje da profissional fica só com os horários do ensaio
+  perform public.silenciar_gatilho();
+  update public.appointments set status = 'cancelado' where professional_id = prof.id and date = agora::date and status not in ('cancelado', 'faltou');
 
   -- 1. terminou há 10 min: a rotina pergunta "veio?" para a profissional (se for hora de gente acordada)
   perform public.silenciar_gatilho();
@@ -60,7 +63,7 @@ begin
   update public.appointments set status = 'faltou' where id = a1;
   perform set_config('request.jwt.claim.sub', cli::text, false);
   insert into public.appointments (client_id, professional_id, service_id, date, start_time, end_time, salon_id)
-  values (cli, prof.id, svc.id, agora::date + 30, '15:00', '16:00', prof.salon_id) returning id into a2;
+  values (cli, prof.id, svc.id, agora::date + 130, '15:00', '16:00', prof.salon_id) returning id into a2;
   if (select status from public.appointments where id = a2) <> 'pendente' then raise exception 'devia esperar o aceite'; end if;
   if not exists (select 1 from public.aceites where appointment_id = a2 and resultado is null) then raise exception 'aceite não aberto (sem telefone?)'; end if;
   perform set_config('request.jwt.claim.sub', prof.user_id::text, false);
@@ -72,7 +75,7 @@ begin
   update public.profiles set phone = '(13) 99999-0002' where id = prof.user_id;
   perform set_config('request.jwt.claim.sub', cli2::text, false);
   insert into public.appointments (client_id, professional_id, service_id, date, start_time, end_time, salon_id)
-  values (cli2, prof.id, svc.id, agora::date + 31, '15:00', '16:00', prof.salon_id) returning id into a3;
+  values (cli2, prof.id, svc.id, agora::date + 131, '15:00', '16:00', prof.salon_id) returning id into a3;
   if (select status from public.appointments where id = a3) <> 'confirmado' then raise exception 'cliente limpa devia entrar direto'; end if;
   raise notice '5b cliente limpa entra direto (ok)';
 
@@ -82,7 +85,7 @@ begin
   update public.appointments set status = 'confirmado' where id = a3;
   update public.appointments set date = agora::date, start_time = (agora - interval '3 hours')::time, end_time = (agora - interval '2 hours')::time where id = a3;
   insert into public.appointments (client_id, professional_id, service_id, date, start_time, end_time, salon_id, status, remarca_de)
-  values (cli2, prof.id, svc.id, agora::date + 7, '15:00', '16:00', prof.salon_id, 'pendente', a3) returning id into troca;
+  values (cli2, prof.id, svc.id, agora::date + 137, '15:00', '16:00', prof.salon_id, 'pendente', a3) returning id into troca;
   insert into public.aceites (appointment_id, professional_id, salon_id, telefone_prof, telefone_cliente, expira_em)
   values (troca, prof.id, prof.salon_id, '', '', now() - interval '1 minute');
   update public.professionals set ao_expirar = 'confirma' where id = prof.id;
@@ -97,7 +100,7 @@ begin
   -- 7. "Remarcamos" pela profissional: horário novo ligado, antigo sai sem contar como cancelamento
   insert into public.appointments (client_id, professional_id, service_id, date, start_time, end_time, salon_id, status)
   values (cli2, prof.id, svc.id, agora::date, (agora - interval '5 hours')::time, (agora - interval '4 hours')::time, prof.salon_id, 'confirmado') returning id into a4;
-  r := public.remarcar_por_fora(a4, agora::date + 3, '11:00');
+  r := public.remarcar_por_fora(a4, agora::date + 133, '11:00');
   if not (r ->> 'ok')::boolean then raise exception 'remarcar falhou: %', r; end if;
   if (select cancelado_por from public.appointments where id = a4) <> 'remarcacao' then raise exception 'antigo devia sair como remarcacao'; end if;
   if (select status from public.appointments where id = (r ->> 'appointment_id')::uuid) <> 'confirmado' then raise exception 'novo devia estar confirmado'; end if;

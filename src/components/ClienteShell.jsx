@@ -1,6 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { ScanLine } from 'lucide-react'
 import SinoAvisos from './SinoAvisos'
+import AvaliarConvite from './AvaliarConvite'
 import { MarcaIcon, Wordmark, HomeIcon, CalendarioCheckIcon, BellIcon, PessoaIcon } from './icons'
 import { useNotificacoes } from '../context/NotificacoesContext'
 
@@ -41,7 +42,10 @@ export default function ClienteShell({ children, titulo, voltar, semTopo = false
         </header>
       )}
 
-      <main className="content">{children}</main>
+      <main className="content">
+        <AvaliarConvite />
+        {children}
+      </main>
 
       <nav className="bottom-nav">
         <div className="bottom-nav-inner">

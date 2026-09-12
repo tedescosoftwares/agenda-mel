@@ -5,6 +5,7 @@ import { Cabecalho, Kpi, Painel, Pilula, Vazio, Iniciais, haQuanto } from '../..
 import { supabase } from '../../lib/supabase'
 import { UsersIcon, TeamIcon, LinkIcon, EngrenagemIcon, ConviteIcon, GraficoIcon, SearchIcon } from '../../components/icons'
 import { Store, Link2 } from 'lucide-react'
+import FichaCliente from '../../components/FichaCliente'
 
 const PAPEL = { cliente: 'cliente', profissional: 'profissional', admin: 'admin', plataforma: 'plataforma' }
 const POR_PAGINA = 8
@@ -65,14 +66,15 @@ export default function Pessoas() {
               </div>
             </div>
             <table className="plat-tabela">
-              <thead><tr><th>Nome</th><th>Papel</th><th>Contato</th><th>Vínculo principal</th><th>Última atividade</th><th>Status</th></tr></thead>
+              <thead><tr><th>Nome</th><th>Papel</th><th>Contato</th><th>Vínculo principal</th><th>Ficha</th><th>Última atividade</th><th>Status</th></tr></thead>
               <tbody>
-                {!lista ? <tr><td colSpan={6}><Vazio>Carregando…</Vazio></td></tr> : pag.length === 0 ? <tr><td colSpan={6}><Vazio>Ninguém com esse filtro.</Vazio></td></tr> : pag.map((p) => (
+                {!lista ? <tr><td colSpan={7}><Vazio>Carregando…</Vazio></td></tr> : pag.length === 0 ? <tr><td colSpan={7}><Vazio>Ninguém com esse filtro.</Vazio></td></tr> : pag.map((p) => (
                   <tr key={p.id}>
                     <td><div className="plat-pessoa"><Iniciais nome={p.nome} /><div><strong>{p.nome || 'Sem nome'}</strong><small className="muted">desde {new Date(p.desde + 'T12:00').toLocaleDateString('pt-BR')}</small></div></div></td>
                     <td><Pilula>{PAPEL[p.papel] ?? p.papel}</Pilula></td>
                     <td><div className="plat-contato"><span>{p.email}</span><small className="muted">{p.telefone || '—'}</small></div></td>
                     <td>{p.saloes ? <span className="plat-vinculo"><Store size={13} /> {p.saloes}</span> : p.papel === 'plataforma' ? <span className="plat-vinculo"><Store size={13} /> Conta da plataforma</span> : p.vinculos > 0 ? <span className="plat-vinculo"><Link2 size={13} /> {p.vinculos} {p.vinculos === 1 ? 'agenda' : 'agendas'}</span> : <span className="muted">—</span>}</td>
+                    <td>{p.papel === 'cliente' ? <FichaCliente atendimentos={p.atendimentos} faltas={p.faltas} cancelamentos={p.cancelamentos} remarcacoes={p.remarcacoes} compacta /> : <span className="muted">—</span>}</td>
                     <td className="muted">{p.ultimo_acesso ? (Date.now() - new Date(p.ultimo_acesso).getTime() < 86400e3 ? <span><i className="plat-online" /> ativo hoje</span> : haQuanto(p.ultimo_acesso)) : 'nunca entrou'}</td>
                     <td><Pilula>{p.papel === 'cliente' && p.vinculos === 0 ? 'Sem vínculo' : p.ultimo_acesso ? 'Ativo' : 'Convite pendente'}</Pilula></td>
                   </tr>

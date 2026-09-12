@@ -4602,6 +4602,7 @@ body { position: relative; width: 100%; }
 .linha-dupla { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
 .cliente-row-vinculo .cliente-meta { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.35; }
 .cliente-row-vinculo .btn-mini { flex-shrink: 0; align-self: center; }
+.cliente-row-vinculo .cliente-info { flex: 1; min-width: 0; }
 .login-convite { display: flex; gap: 0.7rem; align-items: center; text-align: left; text-decoration: none; color: inherit; margin-top: 0.9rem; padding: 0.8rem 0.9rem; background: color-mix(in srgb, var(--violeta) 22%, #fff); border: none; }
 .login-convite > span:first-child { font-size: 1.4rem; }
 .login-convite > span:last-child { display: flex; flex-direction: column; gap: 0.1rem; font-size: 0.88rem; }
@@ -5156,3 +5157,17 @@ a, button { -webkit-tap-highlight-color: transparent; }
 .avaliar-convite-texto { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; flex: 1; font-size: 0.88rem; line-height: 1.3; }
 .avaliar-convite > svg:last-child { color: var(--texto-3); flex: none; }
 .perfil-capa + .avaliar-convite { margin-top: 0.9rem; }
+
+/* ---- ficha da cliente (076) ------------------------------------------ */
+.ficha { display: flex; flex-wrap: wrap; gap: 0.3rem; margin: 0.25rem 0; }
+.ficha-item { display: inline-flex; align-items: center; font-size: 0.72rem; font-weight: 600; padding: 0.12rem 0.5rem; border-radius: 999px; background: var(--cinza-1); color: var(--texto-2); white-space: nowrap; }
+.ficha-item.ok { background: #e2f7ec; color: #0d7a4f; }
+.ficha-item.ruim { background: #fde2e8; color: var(--carmim); }
+.ficha-item.atencao { background: #fff3d6; color: #9a6400; }
+.ficha-vazia { font-size: 0.75rem; }
+.plat-conf-grade { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 1rem; align-items: start; }
+.plat-conf-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.plat-conf-lista h4 { margin: 0 0 0.5rem; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--texto-3); }
+.plat-conf-lista .plat-lista-curta li { display: flex; align-items: center; gap: 0.6rem; }
+.plat-conf-lista .plat-lista-curta small { flex: 1; }
+@media (max-width: 900px) { .plat-conf-grade { grid-template-columns: 1fr; } }

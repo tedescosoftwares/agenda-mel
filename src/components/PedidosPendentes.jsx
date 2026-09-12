@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import FichaCliente from './FichaCliente'
 
 // Os pedidos esperando a profissional, fixos no topo da agenda.
 //
@@ -67,6 +68,7 @@ export default function PedidosPendentes({ aoResponder }) {
               {p.servico}
               <span className="muted"> · {p.quando}</span>
             </p>
+            <FichaCliente atendimentos={p.atendimentos} faltas={p.faltas} cancelamentos={p.cancelamentos} remarcacoes={p.remarcacoes} compacta />
             <div className="pedido-botoes">
               <button
                 className="btn btn-primary"

@@ -248,6 +248,7 @@ revoke execute on function public.plataforma_trocar_dona(uuid, text) from public
 grant execute on function public.plataforma_trocar_dona(uuid, text) to authenticated;
 
 -- 4. As pessoas ---------------------------------------------------------------------------
+drop function if exists public.plataforma_pessoas(text, integer);   -- a 076 muda as colunas
 create or replace function public.plataforma_pessoas(busca text default null, quantas integer default 100)
 returns table (
   id uuid, nome text, email text, telefone text, papel text, desde date,

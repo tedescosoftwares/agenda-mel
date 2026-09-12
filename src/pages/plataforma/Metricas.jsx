@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
 import Shell from '../../components/plataforma/Shell'
-import { Cabecalho, Painel, Vazio } from '../../components/plataforma/Pecas'
+import { Cabecalho, Painel, Vazio, Kpi, Iniciais } from '../../components/plataforma/Pecas'
 import GraficoLinha from '../../components/GraficoLinha'
 import { supabase } from '../../lib/supabase'
 import { GraficoIcon } from '../../components/icons'
 import { formatarCents } from '../../lib/indicacao'
-import { CalendarDays } from 'lucide-react'
+import { CalendarDays, UserX } from 'lucide-react'
 
 // Métricas: as séries semanais do MIMO inteiro. Doze semanas, um
 // gráfico por medida. Sem projeção, sem estimativa: é o que aconteceu.
@@ -20,13 +20,36 @@ const MEDIDAS = [
 
 export default function Metricas() {
   const [serie, setSerie] = useState(null)
+  const [conf, setConf] = useState(null)
   const [erro, setErro] = useState('')
   useEffect(() => { supabase.rpc('plataforma_series', { semanas: 12 }).then(({ data, error }) => { if (error) setErro(error.message); setSerie(data ?? []) }) }, [])
+  useEffect(() => { supabase.rpc('plataforma_confiabilidade', { dias: 30 }).then(({ data }) => setConf(data ?? null)) }, [])
+  const taxa = conf ? (conf.concluidos + conf.faltas > 0 ? Math.round((conf.faltas / (conf.concluidos + conf.faltas)) * 100) : 0) : 0
 
   return (
     <Shell>
       <Cabecalho titulo="Métricas" sub="As últimas doze semanas do MIMO inteiro, medida por medida." direita={<div className="plat-periodo"><CalendarDays size={15} /> Últimas 12 semanas</div>} />
       {erro && <div className="alert alert-error">{erro}</div>}
+
+      <Painel Icon={UserX} titulo="Confiabilidade das clientes" sub="Últimos 30 dias. Falta, cancelamento e remarcação por cliente; a cliente nunca vê isso." className="plat-conf">
+        {!conf ? <Vazio>Carregando…</Vazio> : (
+          <div className="plat-conf-grade">
+            <div className="plat-grade-4 plat-conf-kpis">
+              <Kpi Icon={UserX} cor="carmim" n={conf.faltas} rotulo="faltas" sub={`${taxa}% dos atendimentos`} />
+              <Kpi Icon={CalendarDays} cor="ambar" n={conf.cancelamentos} rotulo="cancelamentos pela cliente" sub={`${conf.cancelamentos_tardios} em cima da hora`} />
+              <Kpi Icon={CalendarDays} cor="roxo" n={conf.remarcacoes} rotulo="remarcações pedidas" sub="pelo app ou pelo bot" />
+              <Kpi Icon={CalendarDays} cor="azul" n={conf.cancelamentos_da_casa} rotulo="cancelados pela casa" sub="profissional ou salão" />
+            </div>
+            <div className="plat-conf-lista">
+              <h4>Quem mais faltou</h4>
+              {(conf.faltosas ?? []).length === 0 ? <Vazio>Ninguém faltou nos últimos 30 dias.</Vazio> : (
+                <ul className="plat-lista-curta">{conf.faltosas.map((f) => <li key={f.id}><Iniciais nome={f.nome} /><strong>{f.nome}</strong><small className="muted">{f.salao}</small><span className="ficha-item ruim">{f.faltas} {f.faltas === 1 ? 'falta' : 'faltas'}</span></li>)}</ul>
+              )}
+            </div>
+          </div>
+        )}
+      </Painel>
+
       {!serie ? <Vazio>Carregando…</Vazio> : (
         <div className="plat-grade-3">
           {MEDIDAS.map(([k, titulo, fmt]) => {

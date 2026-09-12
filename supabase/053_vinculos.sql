@@ -305,6 +305,7 @@ revoke execute on function public.minhas_agendas() from public, anon;
 grant execute on function public.minhas_agendas() to authenticated;
 
 -- 9. O que o salão vê: suas clientes, quem trouxe, por onde entrou, com quem faz ----
+drop function if exists public.clientes_do_salao(uuid);   -- a 076 muda as colunas
 create or replace function public.clientes_do_salao(salao uuid)
 returns table (
   client_id uuid,

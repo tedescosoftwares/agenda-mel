@@ -34,7 +34,7 @@ export default function ProPedidos() {
     if (!profId) return
     const [lista, conf] = await Promise.all([
       supabase.rpc('meus_pedidos'),
-      supabase.from('professionals').select('aceite_manual, minutos_para_aceitar, ao_expirar').eq('id', profId).maybeSingle(),
+      supabase.from('professionals').select('aceite_manual, minutos_para_aceitar, ao_expirar, confirmar_historico_ruim').eq('id', profId).maybeSingle(),
     ])
     if (lista.error) setErro(lista.error.message)
     else { setPedidos(lista.data ?? []); setCfg(conf.data ?? null); setErro('') }
@@ -80,7 +80,8 @@ export default function ProPedidos() {
                 <span className={'pedido-prazo' + (p.faltam_min != null && p.faltam_min < 30 ? ' urgente' : '')}>⏱ {prazo(p.faltam_min)}</span>
               </div>
               <span className="pedido-servico">{p.remarcacao ? <><Repeat size={13} /> Quer remarcar · </> : null}{p.servico}</span>
-              <FichaCliente atendimentos={p.atendimentos} faltas={p.faltas} cancelamentos={p.cancelamentos} remarcacoes={p.remarcacoes} compacta />
+              <FichaCliente atendimentos={p.ficha?.comigo?.concluidos ?? p.atendimentos} faltas={p.ficha?.comigo?.faltas ?? p.faltas} cancelamentos={p.ficha?.comigo?.cancelamentos ?? p.cancelamentos} tardios={p.ficha?.comigo?.cancelamentos_tardios ?? 0} remarcacoes={p.ficha?.comigo?.remarcacoes ?? p.remarcacoes} outras={p.ficha ? p.ficha.outras : undefined} compacta />
+            {p.por_historico && <span className="pedido-historico">Passou por você porque ela já faltou ou cancelou com você.</span>}
               {p.remarcacao ? (
                 <>
                   <span className="muted pedido-era">era {p.antes}</span>
@@ -108,6 +109,15 @@ export default function ProPedidos() {
             </div>
             <button className={'switch' + (cfg.aceite_manual ? ' on' : '')} role="switch" aria-checked={cfg.aceite_manual} onClick={() => salvar({ aceite_manual: !cfg.aceite_manual })} aria-label="Pedir minha confirmação" />
           </div>
+          {!cfg.aceite_manual && (
+            <div className="card cl-ajuste">
+              <div className="cliente-info">
+                <span className="cliente-nome"><span className="nome-txt">Quem já faltou ou cancelou comigo passa pela minha confirmação</span></span>
+                <span className="muted cliente-meta">Mesmo com o automático ligado, o pedido dessa cliente vem para você decidir, com a ficha dela na frente. Para ela é só "aguardando confirmação".</span>
+              </div>
+              <button className={'switch' + (cfg.confirmar_historico_ruim !== false ? ' on' : '')} role="switch" aria-checked={cfg.confirmar_historico_ruim !== false} onClick={() => salvar({ confirmar_historico_ruim: cfg.confirmar_historico_ruim === false })} aria-label="Quem já faltou passa pela minha confirmação" />
+            </div>
+          )}
           {cfg.aceite_manual && (
             <div className="card">
               <p className="muted" style={{ margin: '0 0 0.5rem', fontSize: '0.85rem' }}>Tempo limite para responder</p>

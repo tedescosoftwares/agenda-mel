@@ -2,6 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { ScanLine } from 'lucide-react'
 import SinoAvisos from './SinoAvisos'
 import AvaliarConvite from './AvaliarConvite'
+import CienciaGate from './CienciaGate'
 import { MarcaIcon, Wordmark, HomeIcon, CalendarioCheckIcon, BellIcon, PessoaIcon } from './icons'
 import { useNotificacoes } from '../context/NotificacoesContext'
 
@@ -42,6 +43,7 @@ export default function ClienteShell({ children, titulo, voltar, semTopo = false
         </header>
       )}
 
+      <CienciaGate />
       <main className="content">
         <AvaliarConvite />
         {children}

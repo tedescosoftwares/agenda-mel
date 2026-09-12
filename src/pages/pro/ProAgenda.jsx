@@ -6,6 +6,7 @@ import AgendaSemana from '../../components/AgendaSemana'
 import PedidosPendentes from '../../components/PedidosPendentes'
 import AvisosNovos from '../../components/AvisosNovos'
 import LigarAvisos from '../../components/LigarAvisos'
+import PendenciasBaixa from '../../components/PendenciasBaixa'
 import SemFicha from './SemFicha'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
@@ -41,6 +42,7 @@ export default function ProAgenda() {
       </div>
 
       <AvisosNovos />
+      <PendenciasBaixa />
       <LigarAvisos texto="Pedido de horário, cancelamento e cliente chamando no WhatsApp chegam na hora, mesmo com o app fechado." />
       <PedidosPendentes />
 

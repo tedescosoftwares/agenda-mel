@@ -39,9 +39,15 @@ export default function Metricas() {
               <Kpi Icon={CalendarDays} cor="ambar" n={conf.cancelamentos} rotulo="cancelamentos pela cliente" sub={`${conf.cancelamentos_tardios} em cima da hora`} />
               <Kpi Icon={CalendarDays} cor="roxo" n={conf.remarcacoes} rotulo="remarcações pedidas" sub="pelo app ou pelo bot" />
               <Kpi Icon={CalendarDays} cor="azul" n={conf.cancelamentos_da_casa} rotulo="cancelados pela casa" sub="profissional ou salão" />
+              <Kpi Icon={CalendarDays} cor="carmim" n={conf.sem_resposta ?? 0} rotulo="pedidos sem resposta" sub="venceram com o horário já passado" />
+              <Kpi Icon={UserX} cor="ambar" n={conf.contestacoes ?? 0} rotulo="faltas contestadas" sub={`${conf.concluidos_sozinhos ?? 0} concluídos sozinhos`} />
             </div>
             <div className="plat-conf-lista">
-              <h4>Quem mais faltou</h4>
+              <h4>Profissionais fora da curva</h4>
+              {(conf.profissionais_atencao ?? []).length === 0 ? <Vazio>Ninguém com taxa de falta acima do dobro da média.</Vazio> : (
+                <ul className="plat-lista-curta">{conf.profissionais_atencao.map((f) => <li key={f.id}><Iniciais nome={f.nome} /><strong>{f.nome}</strong><small className="muted">{f.faltas} faltas · {f.sem_resposta} sem resposta</small><span className="ficha-item ruim">{f.taxa}%</span></li>)}</ul>
+              )}
+              <h4 style={{ marginTop: '0.9rem' }}>Quem mais faltou</h4>
               {(conf.faltosas ?? []).length === 0 ? <Vazio>Ninguém faltou nos últimos 30 dias.</Vazio> : (
                 <ul className="plat-lista-curta">{conf.faltosas.map((f) => <li key={f.id}><Iniciais nome={f.nome} /><strong>{f.nome}</strong><small className="muted">{f.salao}</small><span className="ficha-item ruim">{f.faltas} {f.faltas === 1 ? 'falta' : 'faltas'}</span></li>)}</ul>
               )}

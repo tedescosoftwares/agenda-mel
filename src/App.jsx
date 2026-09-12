@@ -16,6 +16,8 @@ import ClienteProfissional from "./pages/cliente/ClienteProfissional";
 import { AgendarServicos, AgendarData, AgendarHora, AgendarConfirmar, AgendarSucesso } from "./pages/cliente/Agendar";
 import ClienteAgenda from "./pages/cliente/ClienteAgenda";
 import ClienteAgendamento from "./pages/cliente/ClienteAgendamento";
+import ProFecharDia from "./pages/pro/ProFecharDia";
+import AdminFecharDia from "./pages/admin/AdminFecharDia";
 import ClientePerfil from "./pages/cliente/ClientePerfil";
 import AdminAgenda from "./pages/admin/AdminAgenda";
 import AdminProfissionais from "./pages/admin/AdminProfissionais";
@@ -224,6 +226,8 @@ export default function App() {
 
             {/* área da profissional */}
             <Route path="/pro" element={<Navigate to="/pro/agenda" replace />} />
+            <Route path="/pro/fechar-dia" element={<ProtectedRoute requireRole="profissional"><ProFecharDia /></ProtectedRoute>} />
+            <Route path="/admin/fechar-dia" element={<ProtectedRoute requireRole="admin"><AdminFecharDia /></ProtectedRoute>} />
             <Route
               path="/pro/agenda"
               element={

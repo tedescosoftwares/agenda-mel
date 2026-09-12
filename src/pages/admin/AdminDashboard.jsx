@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import AdminShell from '../../components/AdminShell'
 import AvisosNovos from '../../components/AvisosNovos'
 import LigarAvisos from '../../components/LigarAvisos'
+import PendenciasBaixa from '../../components/PendenciasBaixa'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { formatarCents, formatarReaisCurto, formatarPct, mesAtual, nomeDoMes } from '../../lib/numeros'
@@ -52,6 +53,7 @@ export default function AdminDashboard() {
     <AdminShell>
       <div className="page-head"><div><h2>{salao?.name ?? 'Meu salão'}</h2><p className="muted titulo-dia">{new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</p></div></div>
       <AvisosNovos />
+      <PendenciasBaixa para="/admin/fechar-dia" />
       <LigarAvisos texto="Pedidos, cancelamentos e clientes chamando no WhatsApp chegam na hora, mesmo com o app fechado." />
 
       <div className="kpis">

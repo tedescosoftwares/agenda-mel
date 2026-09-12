@@ -68,7 +68,8 @@ export default function PedidosPendentes({ aoResponder }) {
               {p.servico}
               <span className="muted"> · {p.quando}</span>
             </p>
-            <FichaCliente atendimentos={p.atendimentos} faltas={p.faltas} cancelamentos={p.cancelamentos} remarcacoes={p.remarcacoes} compacta />
+            <FichaCliente atendimentos={p.ficha?.comigo?.concluidos ?? p.atendimentos} faltas={p.ficha?.comigo?.faltas ?? p.faltas} cancelamentos={p.ficha?.comigo?.cancelamentos ?? p.cancelamentos} tardios={p.ficha?.comigo?.cancelamentos_tardios ?? 0} remarcacoes={p.ficha?.comigo?.remarcacoes ?? p.remarcacoes} outras={p.ficha ? p.ficha.outras : undefined} compacta />
+            {p.por_historico && <span className="pedido-historico">Passou por você porque ela já faltou ou cancelou com você.</span>}
             <div className="pedido-botoes">
               <button
                 className="btn btn-primary"

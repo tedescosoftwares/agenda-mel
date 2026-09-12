@@ -5171,3 +5171,43 @@ a, button { -webkit-tap-highlight-color: transparent; }
 .plat-conf-lista .plat-lista-curta li { display: flex; align-items: center; gap: 0.6rem; }
 .plat-conf-lista .plat-lista-curta small { flex: 1; }
 @media (max-width: 900px) { .plat-conf-grade { grid-template-columns: 1fr; } }
+
+/* ---- Fechar o dia (077) ---------------------------------------------- */
+.fechar-intro { margin: 0 0 0.9rem; font-size: 0.9rem; }
+.fechar-dia { margin-bottom: 1rem; }
+.fechar-item { display: flex; flex-direction: column; gap: 0.55rem; border-left: 4px solid var(--rosa-2); }
+.fechar-item.troca { border-left-color: var(--violeta); }
+.fechar-item.sozinho { border-left-color: var(--fio-forte); }
+.fechar-topo { display: flex; align-items: center; gap: 0.7rem; flex-wrap: wrap; }
+.fechar-hora { font-weight: 700; color: var(--rosa); min-width: 44px; }
+.fechar-quem { display: flex; flex-direction: column; min-width: 0; flex: 1; line-height: 1.3; }
+.fechar-prazo { font-size: 0.75rem; display: inline-flex; align-items: center; gap: 0.25rem; width: 100%; }
+.fechar-nota { margin: 0; font-size: 0.85rem; color: var(--violeta); display: flex; gap: 0.4rem; align-items: flex-start; line-height: 1.35; }
+.fechar-botoes { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.fechar-botoes .btn { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.55rem 0.9rem; flex: 1; justify-content: center; }
+.fechar-nao { color: var(--carmim); }
+.fechar-remarcar { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; align-items: end; }
+.fechar-remarcar label { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.78rem; color: var(--texto-2); }
+.fechar-remarcar input { font: inherit; padding: 0.5rem 0.6rem; border-radius: 10px; border: 1.5px solid var(--fio); }
+.fechar-rodape { font-size: 0.8rem; margin-top: 0.5rem; }
+.pendencias-baixa { display: flex; align-items: center; gap: 0.8rem; text-decoration: none; color: inherit; margin-bottom: 0.9rem; border-left: 4px solid var(--rosa); }
+.pendencias-icone { width: 40px; height: 40px; border-radius: 12px; background: #ffe6ef; color: var(--rosa); display: grid; place-items: center; flex: none; }
+.pendencias-baixa > svg { color: var(--texto-3); flex: none; }
+.ficha-bloco { display: flex; flex-direction: column; gap: 0.15rem; }
+.ficha-rotulo { font-size: 0.72rem; align-self: center; }
+.ficha-outras { font-size: 0.75rem; line-height: 1.3; }
+.ficha-outras.atencao { color: #9a6400; }
+.pedido-historico { display: block; font-size: 0.78rem; color: var(--violeta); margin-top: 0.2rem; }
+/* ciência da cliente */
+.ciencia { position: fixed; inset: 0; z-index: 80; background: rgba(31,32,38,.55); display: flex; align-items: flex-end; justify-content: center; padding: 0; }
+.ciencia-caixa { background: #fff; border-radius: 22px 22px 0 0; padding: 1.3rem 1.2rem calc(1.2rem + env(safe-area-inset-bottom)); width: 100%; max-width: var(--largura, 520px); max-height: 92vh; overflow-y: auto; display: flex; flex-direction: column; gap: 0.7rem; box-shadow: var(--sombra-alta); }
+.ciencia-marca { align-self: flex-start; }
+.ciencia-icone { width: 48px; height: 48px; border-radius: 14px; background: #fff0f5; color: var(--rosa); display: grid; place-items: center; }
+.ciencia-caixa h2 { margin: 0; font-size: 1.25rem; line-height: 1.25; }
+.ciencia-caixa p { margin: 0; font-size: 0.92rem; line-height: 1.45; color: var(--texto-2); }
+.ciencia-quando { color: var(--texto) !important; }
+.ciencia-contestar { display: flex; flex-direction: column; gap: 0.6rem; }
+.ciencia-contestar label { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.82rem; color: var(--texto-2); }
+.ciencia-contestar textarea { font: inherit; padding: 0.6rem 0.8rem; border-radius: 12px; border: 1.5px solid var(--fio); resize: vertical; }
+.ciencia-mais { font-size: 0.78rem; text-align: center; }
+@media (min-width: 700px) { .ciencia { align-items: center; padding: 1rem; } .ciencia-caixa { border-radius: 22px; } }

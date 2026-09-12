@@ -2,23 +2,10 @@ import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import ClienteShell from '../../components/ClienteShell'
 import { useNotificacoes } from '../../context/NotificacoesContext'
-import { CalendarCheck, CircleCheck, CircleX, AlarmClock, Zap, Heart, Star, Gift, TriangleAlert, CalendarDays, Repeat, Megaphone, Bell } from 'lucide-react'
+import { ICONE_AVISO as ICONE, destinoDoAviso, relativo } from '../../lib/avisos'
 
 // Central de avisos (tela 12): um ícone por tipo, o texto, e para onde
 // leva. Abrir a tela marca tudo como lido — a pessoa veio olhar, olhou.
-const ICONE = {
-  agendamento_confirmado: CalendarCheck, pedido_aceito: CircleCheck, pedido_recusado: CircleX,
-  lembrete_agendamento: AlarmClock, vaga_disponivel: AlarmClock, agenda_adiantada: Zap,
-  convite_retorno: Heart, pos_atendimento: Star, indicacao_creditada: Gift,
-  profissional_cancelou: TriangleAlert, agendamento_cancelado: TriangleAlert, novo_agendamento: CalendarDays,
-  remarcacao_aceita: Repeat, remarcacao_recusada: CircleX, recado: Megaphone, teste: Bell,
-}
-const DESTINO = {
-  agendamento_confirmado: '/cliente/meus-agendamentos', pedido_aceito: '/cliente/meus-agendamentos',
-  pedido_recusado: '/cliente/home', lembrete_agendamento: '/cliente/meus-agendamentos',
-  vaga_disponivel: '/cliente/meus-agendamentos', indicacao_creditada: '/cliente/indicacao',
-  remarcacao_aceita: '/cliente/meus-agendamentos', remarcacao_recusada: '/cliente/meus-agendamentos',
-}
 
 export default function Notificacoes() {
   const { avisos, naoLidos, loading, marcarTodosLidos } = useNotificacoes()
@@ -37,10 +24,10 @@ export default function Notificacoes() {
       ) : (
         <div className="cliente-list">
           {avisos.map((a) => {
-            const para = DESTINO[a.kind] || a.action_url || '/cliente/home'
+            const para = destinoDoAviso(a, 'cliente')
             return (
               <Link key={a.id} to={para} className={'card notif-row' + (a.read_at ? '' : ' nova')}>
-                <span className="notif-icone" aria-hidden="true">{(() => { const I = ICONE[a.kind] ?? Bell; return <I size={20} /> })()}</span>
+                <span className="notif-icone" aria-hidden="true">{(() => { const I = ICONE[a.kind] ?? ICONE.teste; return <I size={20} /> })()}</span>
                 <span className="cliente-info">
                   <span className="cliente-nome"><span className="nome-txt">{a.title}</span></span>
                   {a.body && <span className="muted cliente-meta">{a.body}</span>}
@@ -54,15 +41,4 @@ export default function Notificacoes() {
       )}
     </ClienteShell>
   )
-}
-
-function relativo(iso) {
-  const min = Math.round((Date.now() - new Date(iso)) / 60000)
-  if (min < 1) return 'agora'
-  if (min < 60) return `há ${min} min`
-  const h = Math.round(min / 60)
-  if (h < 24) return `há ${h}h`
-  const d = Math.round(h / 24)
-  if (d === 1) return 'ontem'
-  return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
 }

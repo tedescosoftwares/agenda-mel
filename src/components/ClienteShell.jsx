@@ -58,7 +58,7 @@ export default function ClienteShell({ children, titulo, voltar, semTopo = false
             >
               <span className="nav-icone">
                 <t.Icon />
-                {t.sino && naoLidos > 0 && <span className="nav-ponto" aria-hidden="true" />}
+                {t.sino && naoLidos > 0 && <span className="nav-contador" aria-label={`${naoLidos} avisos novos`}>{naoLidos > 9 ? '9+' : naoLidos}</span>}
               </span>
               <span>{t.label}</span>
             </NavLink>

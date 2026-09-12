@@ -22,20 +22,35 @@ registerRoute(new NavigationRoute(createHandlerBoundToURL('/index.html'), {
 }))
 
 // ---- push ---------------------------------------------------------------
+// o app pro (pro.mimo.com.vc) tem o ícone roxo; o da cliente, o rosa
+const EH_PRO = self.location.hostname.startsWith('pro.')
+const ICONE = EH_PRO ? '/pro-192.png' : '/pwa-192.png'
+// avisos que pedem resposta ficam na tela até a pessoa tocar
+const INSISTENTES = new Set(['pedido_de_aceite', 'vaga_disponivel', 'agenda_adiantada', 'atendimento_humano', 'pedido_pelo_whatsapp', 'recado'])
+
 self.addEventListener('push', (event) => {
   let dados = {}
   try { dados = event.data ? event.data.json() : {} } catch { dados = { title: 'MIMO', body: event.data?.text?.() ?? '' } }
   const titulo = dados.title || 'MIMO'
   const opcoes = {
     body: dados.body || '',
-    icon: '/pwa-192.png',
-    badge: '/pwa-192.png',
+    icon: ICONE,
+    badge: '/badge-96.png',
     tag: dados.tag || dados.kind || 'mimo',
-    renotify: Boolean(dados.tag),
-    data: { url: dados.url || '/' },
+    renotify: true,
+    requireInteraction: INSISTENTES.has(dados.kind),
+    vibrate: [90, 40, 90],
+    timestamp: Date.now(),
+    data: { url: dados.url || '/', kind: dados.kind },
     lang: 'pt-BR',
   }
-  event.waitUntil(self.registration.showNotification(titulo, opcoes))
+  event.waitUntil((async () => {
+    await self.registration.showNotification(titulo, opcoes)
+    // número no ícone do app (Android, iOS 16.4+ instalado): quantos não lidos
+    if (typeof dados.badge === 'number' && 'setAppBadge' in self.navigator) {
+      try { await self.navigator.setAppBadge(dados.badge) } catch { /* sem suporte */ }
+    }
+  })())
 })
 
 // toque no aviso: foca o app se estiver aberto, senão abre na tela certa

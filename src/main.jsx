@@ -28,6 +28,10 @@ if (ehPro) {
   if (titulo) titulo.setAttribute('content', 'MIMO Pro')
   const cor = document.querySelector('meta[name="theme-color"]')
   if (cor) cor.setAttribute('content', '#aa4cff')
+  const apple = document.querySelector('link[rel="apple-touch-icon"]')
+  if (apple) apple.setAttribute('href', '/pro-apple-180.png')
+  const fav = document.querySelector('link[rel="icon"]')
+  if (fav) fav.setAttribute('href', '/favicon-pro.svg')
   document.title = 'MIMO Pro — sua agenda'
 }
 

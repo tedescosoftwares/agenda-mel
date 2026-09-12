@@ -94,7 +94,8 @@ create index if not exists notifications_push_idx
 -- lote para a função Edge: cada linha é UM aviso com TODOS os celulares
 -- da pessoa. Marca push_em na mesma transação (skip locked), então duas
 -- execuções nunca empurram o mesmo aviso duas vezes.
-create or replace function public.puxar_push(quantos integer default 30)
+drop function if exists public.puxar_push(integer);   -- a 073 acrescenta nao_lidos
+create function public.puxar_push(quantos integer default 30)
 returns table (
   notification_id uuid, user_id uuid, kind text, title text, body text, action_url text,
   celulares jsonb

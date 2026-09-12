@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import ClienteShell from '../../components/ClienteShell'
+import AvisosNovos from '../../components/AvisosNovos'
+import LigarAvisos from '../../components/LigarAvisos'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { SearchIcon } from '../../components/icons'
@@ -70,6 +72,9 @@ export default function ClienteHome() {
         <h2>Olá, {nome}!</h2>
         <p className="muted">Como podemos te ajudar hoje?</p>
       </div>
+
+      <AvisosNovos />
+      <LigarAvisos texto="Confirmação, lembrete de véspera e vaga na lista de espera chegam na hora, mesmo com o app fechado." />
 
       <label className="cl-busca">
         <SearchIcon />

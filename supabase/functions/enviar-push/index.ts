@@ -31,7 +31,7 @@ Deno.serve(async (req) => {
 
   let enviados = 0, falhas = 0, apagados = 0
   for (const n of lote ?? []) {
-    const carga = JSON.stringify({ title: n.title, body: n.body ?? '', url: n.action_url ?? '/', kind: n.kind, tag: n.kind })
+    const carga = JSON.stringify({ title: n.title, body: n.body ?? '', url: n.action_url ?? '/', kind: n.kind, tag: n.kind, badge: n.nao_lidos ?? undefined })
     for (const c of n.celulares ?? []) {
       try {
         await webpush.sendNotification({ endpoint: c.endpoint, keys: { p256dh: c.p256dh, auth: c.auth } }, carga, { TTL: 60 * 60 * 6, urgency: 'high' })

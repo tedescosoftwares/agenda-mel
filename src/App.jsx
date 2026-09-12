@@ -56,6 +56,7 @@ import { Termos, Privacidade } from "./pages/publico/Legal";
 import BemVinda from "./pages/BemVinda";
 import CadastroCliente from "./pages/cliente/CadastroCliente";
 import AvisoCookies from "./components/AvisoCookies";
+import AvisoAoVivo from "./components/AvisoAoVivo";
 import ProRecados from "./pages/pro/ProRecados";
 import AdminRecados from "./pages/admin/AdminRecados";
 import { guardarCodigoDaURL } from "./lib/indicacao";
@@ -420,6 +421,7 @@ export default function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
           <AvisoCookies />
+          <AvisoAoVivo />
           </DialogoProvider>
         </NotificacoesProvider>
       </AuthProvider>

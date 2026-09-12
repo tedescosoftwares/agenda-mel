@@ -15,6 +15,8 @@ export function NotificacoesProvider({ children }) {
   const { user } = useAuth()
   const [avisos, setAvisos] = useState([])
   const [loading, setLoading] = useState(false)
+  // o último aviso que chegou com o app aberto: vira o banner do topo
+  const [novo, setNovo] = useState(null)
 
   const carregar = useCallback(async () => {
     if (!user) {
@@ -57,12 +59,24 @@ export function NotificacoesProvider({ children }) {
           table: 'notifications',
           filter: `user_id=eq.${user.id}`,
         },
-        () => carregar(),
+        (evento) => {
+          carregar()
+          // chegou agora, com o app aberto: mostra no topo, e o celular vibra
+          if (evento?.eventType === 'INSERT' && evento.new) {
+            setNovo(evento.new)
+            try { navigator.vibrate?.([60, 30, 60]) } catch { /* sem suporte */ }
+          }
+        },
       )
       .subscribe()
 
+    // o realtime cai quando o app fica em segundo plano; ao voltar, recarrega
+    const aoVoltar = () => { if (document.visibilityState === 'visible') carregar() }
+    document.addEventListener('visibilitychange', aoVoltar)
+
     return () => {
       supabase.removeChannel(canal)
+      document.removeEventListener('visibilitychange', aoVoltar)
     }
   }, [user, carregar])
 
@@ -70,6 +84,18 @@ export function NotificacoesProvider({ children }) {
     () => avisos.filter((a) => !a.read_at).length,
     [avisos],
   )
+
+  // o número no ícone do app instalado (Android, iPhone 16.4+) acompanha os não lidos
+  useEffect(() => {
+    if (!('setAppBadge' in navigator)) return
+    try { if (naoLidos > 0) navigator.setAppBadge(naoLidos); else navigator.clearAppBadge?.() } catch { /* sem suporte */ }
+  }, [naoLidos])
+
+  async function marcarLido(id) {
+    const marcadoEm = new Date().toISOString()
+    setAvisos((prev) => prev.map((a) => (a.id === id && !a.read_at ? { ...a, read_at: marcadoEm } : a)))
+    await supabase.from('notifications').update({ read_at: marcadoEm }).eq('id', id)
+  }
 
   async function marcarTodosLidos() {
     if (!naoLidos) return
@@ -80,7 +106,7 @@ export function NotificacoesProvider({ children }) {
     await supabase.rpc('marcar_avisos_lidos')
   }
 
-  const value = { avisos, naoLidos, loading, carregar, marcarTodosLidos }
+  const value = { avisos, naoLidos, loading, carregar, marcarTodosLidos, marcarLido, novo, dispensarNovo: () => setNovo(null) }
 
   return (
     <NotificacoesContext.Provider value={value}>

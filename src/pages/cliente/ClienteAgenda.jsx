@@ -10,7 +10,7 @@ import { StarIcon } from '../../components/icons'
 import ConviteAdiantar from '../../components/ConviteAdiantar'
 import OfertaVaga from '../../components/OfertaVaga'
 import AvaliarModal from '../../components/AvaliarModal'
-import { Repeat, Check, ChevronRight, CalendarDays, Clock, MapPin, Star, Sparkles } from 'lucide-react'
+import { Repeat, Check, ChevronRight, CalendarDays, Clock, MapPin, Star, Sparkles, Users } from 'lucide-react'
 
 // Meus agendamentos (tela 09, repaginada em 2.20): o próximo horário em
 // destaque no topo, os demais em cartões com a data em bloco, e o
@@ -113,7 +113,7 @@ export default function ClienteAgenda() {
             {restantes.length > 0 && <h3 className="ag-secao">Depois</h3>}
             <div className="ag-lista">
               {restantes.map((a) => (
-                <Cartao key={a.id} a={a} troca={trocaAberta(a)} onAbrir={() => navigate(`/cliente/agendamento/${a.id}`)}>
+                <Cartao key={a.id} a={a} troca={trocaAberta(a)} visita={a.visita_id ? proximos.filter((o) => o.visita_id === a.visita_id && o.id !== a.id).length : 0} onAbrir={() => navigate(`/cliente/agendamento/${a.id}`)}>
                   <div className="ag-acoes" onClick={(e) => e.stopPropagation()}>
                     {podeCancelar(a) && <button className="btn-mini btn-mini-nao" onClick={() => cancelar(a)}>{ehPedidoDeTroca(a) ? 'Desistir da troca' : 'Cancelar'}</button>}
                     {podeRemarcar(a) && !trocaAberta(a) && <Link className="btn-mini btn-mini-rosa" to={`/cliente/agendamento/data?prof=${a.professional_id}&servico=${a.service_id}&remarcar=${a.id}`}>Remarcar</Link>}
@@ -197,7 +197,7 @@ function Destaque({ a, troca, onCancelar }) {
   )
 }
 
-function Cartao({ a, troca, historico = false, nota, onAbrir, children }) {
+function Cartao({ a, troca, historico = false, nota, onAbrir, visita = 0, children }) {
   const troca_ = ehPedidoDeTroca(a)
   return (
     <div className={'card ag-card ' + a.status + (troca_ ? ' troca' : '')} role="link" tabIndex={0} onClick={onAbrir} onKeyDown={(e) => { if (e.key === 'Enter') onAbrir() }}>
@@ -222,6 +222,7 @@ function Cartao({ a, troca, historico = false, nota, onAbrir, children }) {
         )}
         {troca_ && a.origem && <span className="ag-nota"><Repeat size={13} /> No lugar de {formatDataCurta(a.origem.date)} às {a.origem.start_time.slice(0, 5)}. Até ela responder, o de antes continua valendo.</span>}
         {troca && <span className="ag-nota"><Repeat size={13} /> Você pediu para mudar para {quando(troca)}. Aguardando a profissional.</span>}
+        {visita > 0 && <span className="ag-nota ag-visita"><Users size={13} /> Na mesma visita: mais {visita === 1 ? '1 parte' : visita + ' partes'} com outra profissional.</span>}
         {children}
       </div>
       <ChevronRight size={18} className="ag-seta" />

@@ -4,7 +4,7 @@ import SemFicha from './SemFicha'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { formatPreco, formatDuracao } from '../../lib/format'
-import { Sparkles } from 'lucide-react'
+import { Sparkles, Link2 } from 'lucide-react'
 
 // Serviços (tela 19): a lista do salão, e para cada um o switch de
 // "eu faço". Preço e duração aparecem mas não se editam aqui — são do
@@ -18,6 +18,9 @@ export default function ProServicos() {
   const [dona, setDona] = useState(false)
   const [novo, setNovo] = useState(null) // { name, duration_minutes, price }
   const [salvando, setSalvando] = useState(false)
+  // "costuma ir junto" (081): a autônoma configura nos serviços dela
+  const [juntos, setJuntos] = useState([])        // linhas de servicos_juntos
+  const [ligando, setLigando] = useState('')      // id do serviço aberto para escolher
   const profId = professional?.id
   const salaoId = professional?.salon_id
 
@@ -29,6 +32,9 @@ export default function ProServicos() {
     ])
     setServicos(s.data ?? [])
     setMeus(new Set((v.data ?? []).map((x) => x.service_id)))
+    const ids = (s.data ?? []).map((x) => x.id)
+    const j = ids.length ? await supabase.from('servicos_juntos').select('service_id, sugerido_id').in('service_id', ids) : { data: [] }
+    setJuntos(j.data ?? [])
   }, [profId])
   useEffect(() => { carregar() }, [carregar])
 
@@ -52,6 +58,15 @@ export default function ProServicos() {
     else { setNovo(null); carregar() }
   }
 
+  async function ligar(servico, sugerido) {
+    const atuais = juntos.filter((j) => j.service_id === servico).map((j) => j.sugerido_id)
+    const novos = atuais.includes(sugerido) ? atuais.filter((x) => x !== sugerido) : [...atuais, sugerido]
+    const { error } = await supabase.rpc('salvar_servicos_juntos', { servico, sugeridos: novos })
+    if (error) { setErro(error.message); return }
+    setJuntos((lista) => [...lista.filter((j) => j.service_id !== servico), ...novos.map((sugerido_id) => ({ service_id: servico, sugerido_id }))])
+  }
+  const nomes = (id) => juntos.filter((j) => j.service_id === id).map((j) => servicos.find((x) => x.id === j.sugerido_id)?.name).filter(Boolean)
+
   async function alternar(s) {
     setMudando(s.id)
     const faz = meus.has(s.id)
@@ -69,13 +84,32 @@ export default function ProServicos() {
       {erro && <div className="alert alert-error">{erro}</div>}
       <div className="cliente-list">
         {servicos.map((s) => (
-          <div key={s.id} className={'card servico-linha' + (meus.has(s.id) ? '' : ' apagado')}>
-            <span className="servico-linha-foto" aria-hidden="true">{s.images?.[0] ? <img src={s.images[0]} alt="" /> : <Sparkles />}</span>
-            <span className="cliente-info">
-              <span className="cliente-nome"><span className="nome-txt">{s.name}</span>{s.is_combo && <span className="badge badge-combo">combo</span>}</span>
-              <span className="muted cliente-meta">{formatPreco(s.price)} · {formatDuracao(s.duration_minutes)}</span>
-            </span>
-            <button className={'switch' + (meus.has(s.id) ? ' on' : '')} role="switch" aria-checked={meus.has(s.id)} disabled={mudando === s.id} onClick={() => alternar(s)} aria-label={s.name} />
+          <div key={s.id} className={'card servico-linha servico-com-juntos' + (meus.has(s.id) ? '' : ' apagado')}>
+            <div className="servico-linha-topo">
+              <span className="servico-linha-foto" aria-hidden="true">{s.images?.[0] ? <img src={s.images[0]} alt="" /> : <Sparkles />}</span>
+              <span className="cliente-info">
+                <span className="cliente-nome"><span className="nome-txt">{s.name}</span>{s.is_combo && <span className="badge badge-combo">combo</span>}</span>
+                <span className="muted cliente-meta">{formatPreco(s.price)} · {formatDuracao(s.duration_minutes)}</span>
+                {nomes(s.id).length > 0 && <span className="muted cliente-meta servico-juntos-nomes"><Link2 size={12} /> Vai junto: {nomes(s.id).join(', ')}</span>}
+              </span>
+              <button className={'switch' + (meus.has(s.id) ? ' on' : '')} role="switch" aria-checked={meus.has(s.id)} disabled={mudando === s.id} onClick={() => alternar(s)} aria-label={s.name} />
+            </div>
+            {dona && meus.has(s.id) && servicos.length > 1 && (
+              ligando === s.id ? (
+                <div className="juntos-escolha">
+                  <span className="muted">Quando a cliente marcar {s.name}, oferecer na sequência:</span>
+                  <div className="filtro-chips">
+                    {servicos.filter((x) => x.id !== s.id).map((x) => {
+                      const on = juntos.some((j) => j.service_id === s.id && j.sugerido_id === x.id)
+                      return <button key={x.id} type="button" className={on ? 'chip active' : 'chip'} onClick={() => ligar(s.id, x.id)}>{x.name}</button>
+                    })}
+                  </div>
+                  <button type="button" className="btn btn-ghost btn-mini" onClick={() => setLigando('')}>Pronto</button>
+                </div>
+              ) : (
+                <button type="button" className="juntos-abrir" onClick={() => setLigando(s.id)}><Link2 size={13} /> {nomes(s.id).length ? 'Mudar o que vai junto' : 'Costuma ir junto com…'}</button>
+              )
+            )}
           </div>
         ))}
       </div>

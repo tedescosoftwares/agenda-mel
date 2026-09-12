@@ -6,7 +6,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { formatPreco, labelDuracao, formatDuracao } from '../../lib/format'
 import { formatDataLonga } from '../../lib/booking'
-import { Check, Sparkles, Repeat, Plus } from 'lucide-react'
+import { Check, Sparkles, Repeat, Plus, Users, Hourglass } from 'lucide-react'
 
 // O fluxo de marcar, dentro do app: serviço → data → hora → confirmar.
 // Cada passo é uma rota, e o que já foi escolhido viaja na URL
@@ -27,7 +27,29 @@ function useEscolhas() {
     data: q.get('data') || '',
     hora: q.get('hora') || '',
     remarcar: q.get('remarcar') || '',
+    // outras partes da visita, com outras profissionais do salão:
+    // servico_profissional_hora, separadas por vírgula (081)
+    extra: q.get('extra') || '',
   }
+}
+
+function lerExtras(extra) {
+  return (extra || '').split(',').filter(Boolean).map((x) => {
+    const [servico, prof, hora] = x.split('_')
+    return servico && prof && hora ? { servico, prof, hora } : null
+  }).filter(Boolean)
+}
+function escreverExtras(lista) {
+  return lista.map((x) => `${x.servico}_${x.prof}_${x.hora}`).join(',')
+}
+function somarMin(hora, min) {
+  const [h, m] = hora.split(':').map(Number)
+  const tot = h * 60 + m + Number(min || 0)
+  return `${String(Math.floor(tot / 60) % 24).padStart(2, '0')}:${String(tot % 60).padStart(2, '0')}`
+}
+function diffMin(a, b) {
+  const [h1, m1] = a.split(':').map(Number), [h2, m2] = b.split(':').map(Number)
+  return h2 * 60 + m2 - (h1 * 60 + m1)
 }
 
 // o agendamento que está sendo trocado, quando é remarcação
@@ -300,6 +322,12 @@ export function AgendarConfirmar() {
   const [conferindo, setConferindo] = useState(false)
   const ids = servico?.ids ?? (servico ? [servico.id] : [])
   const remarcando = Boolean(esc.remarcar)
+  // a visita: partes com outras profissionais do salão (081)
+  const extras = lerExtras(esc.extra)
+  const [comEspera, setComEspera] = useState(false)
+  const [visita, setVisita] = useState([])          // sugestões do banco
+  const [detalhes, setDetalhes] = useState({ servicos: {}, profs: {} })
+  const chaveExtras = esc.extra
 
   // os outros serviços dela, para o "quer aproveitar e adicionar?"
   useEffect(() => {
@@ -320,7 +348,41 @@ export function AgendarConfirmar() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [esc.prof, esc.data, esc.hora, chaveIds, servico?.duration_minutes])
 
-  const irCom = (novos) => navigate(comQuery('/cliente/agendamento/confirmar', { ...esc, servico: novos.join(',') }), { replace: true })
+  // os nomes das partes que vieram na URL
+  useEffect(() => {
+    if (!extras.length) return
+    let vivo = true
+    Promise.all([
+      supabase.from('services').select('id, name, price, duration_minutes').in('id', extras.map((x) => x.servico)),
+      supabase.from('professionals').select('id, name, photo_url').in('id', extras.map((x) => x.prof)),
+    ]).then(([s, p]) => {
+      if (!vivo) return
+      setDetalhes({ servicos: Object.fromEntries((s.data ?? []).map((x) => [x.id, x])), profs: Object.fromEntries((p.data ?? []).map((x) => [x.id, x])) })
+    })
+    return () => { vivo = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chaveExtras])
+
+  // o que outras profissionais do salão fazem na sequência
+  const fimDasPartes = extras.reduce((fim, x) => { const s = detalhes.servicos[x.servico]; const f = s ? somarMin(x.hora, s.duration_minutes) : x.hora; return f > fim ? f : fim }, '00:00')
+  useEffect(() => {
+    if (!esc.prof || !esc.data || !esc.hora || !servico || remarcando) { setVisita([]); return }
+    let vivo = true
+    supabase.rpc('sugestoes_de_visita', { prof: esc.prof, servicos: ids, dia: esc.data, hora: esc.hora, com_espera: comEspera, apos: extras.length ? fimDasPartes : null })
+      .then(({ data }) => { if (vivo) setVisita(data ?? []) })
+    return () => { vivo = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [esc.prof, esc.data, esc.hora, chaveIds, chaveExtras, comEspera, fimDasPartes, remarcando, Boolean(servico)])
+  const sugVisita = visita.filter((v) => !extras.some((x) => x.servico === v.service_id) && !ids.includes(v.service_id)).slice(0, 4)
+  const fimPrincipal = esc.hora && servico ? somarMin(esc.hora, servico.duration_minutes) : ''
+
+  // mudar os serviços principais muda a hora em que ela termina: as partes saem
+  const irCom = (novos) => navigate(comQuery('/cliente/agendamento/confirmar', { ...esc, servico: novos.join(','), extra: '' }), { replace: true })
+  const irComExtras = (lista) => navigate(comQuery('/cliente/agendamento/confirmar', { ...esc, extra: escreverExtras(lista) }), { replace: true })
+  const juntarParte = (v) => { if (extras.length < 3) irComExtras([...extras, { servico: v.service_id, prof: v.professional_id, hora: String(v.hora_sugerida).slice(0, 5) }]) }
+  const tirarParte = (i) => irComExtras(extras.filter((_, k) => k !== i))
+  const partesDetalhadas = extras.map((x) => ({ ...x, s: detalhes.servicos[x.servico], p: detalhes.profs[x.prof] }))
+  const totalVisita = (servico?.price ?? 0) + partesDetalhadas.reduce((a, x) => a + Number(x.s?.price ?? 0), 0)
   const adicionar = (id) => { if (ids.length < 6 && !ids.includes(id)) irCom([...ids, id]) }
   const tirar = (id) => { if (ids.length > 1) irCom(ids.filter((x) => x !== id)) }
   const sugestoes = outros.filter((x) => !ids.includes(x.id)).slice(0, 4)
@@ -342,10 +404,14 @@ export function AgendarConfirmar() {
     }
 
     // um ou vários serviços: o banco soma duração e preço e guarda os itens (079)
-    const { data, error } = await supabase.rpc('marcar_servicos', { prof: esc.prof, servicos: servico.ids ?? [servico.id], dia: esc.data, hora: esc.hora, obs: obs.trim() || null })
+    // com outras profissionais na sequência é uma visita: cada parte vira um pedido (081)
+    const partes = lerExtras(esc.extra)
+    const { data, error } = partes.length
+      ? await supabase.rpc('marcar_visita', { dia: esc.data, partes: [{ prof: esc.prof, servicos: servico.ids ?? [servico.id], hora: esc.hora }, ...partes.map((x) => ({ prof: x.prof, servicos: [x.servico], hora: x.hora }))], obs: obs.trim() || null })
+      : await supabase.rpc('marcar_servicos', { prof: esc.prof, servicos: servico.ids ?? [servico.id], dia: esc.data, hora: esc.hora, obs: obs.trim() || null })
     setSaving(false)
     if (error) {
-      if (error.code === '23505' || error.code === '23P01') setErro('Esse horário acabou de ser reservado por outra pessoa. Escolha outro, por favor.')
+      if (error.code === '23505' || error.code === '23P01' || /^ocupado:/.test(error.message)) setErro(partes.length ? 'Um dos horários acabou de ser reservado por outra pessoa. Nada foi marcado: tire essa parte ou escolha outro horário.' : 'Esse horário acabou de ser reservado por outra pessoa. Escolha outro, por favor.')
       else setErro('Erro ao agendar: ' + error.message)
       return
     }
@@ -387,6 +453,22 @@ export function AgendarConfirmar() {
         <div className="resumo-linha resumo-total"><span>{servico?.lista?.length > 1 ? 'Valor total' : 'Valor'}</span><strong>{servico && formatPreco(servico.price)}</strong></div>
       </div>
 
+      {partesDetalhadas.length > 0 && (
+        <div className="card resumo-pedido resumo-visita">
+          <div className="resumo-visita-topo"><Users size={16} /> <strong>Na mesma visita</strong><span className="muted">cada profissional confirma a parte dela</span></div>
+          <ul className="resumo-partes">
+            {partesDetalhadas.map((x, i) => (
+              <li key={x.servico + x.prof}>
+                <span className="resumo-parte-hora">{x.hora}</span>
+                <span className="resumo-parte-oque"><strong>{x.s?.name ?? '…'}</strong><span className="muted">com {x.p?.name ?? '…'}{x.s ? ` · ${formatDuracao(x.s.duration_minutes)} · ${formatPreco(x.s.price)}` : ''}{fimPrincipal && diffMin(i === 0 ? fimPrincipal : somarMin(partesDetalhadas[i - 1].hora, partesDetalhadas[i - 1].s?.duration_minutes ?? 0), x.hora) > 0 ? ` · espera de ${formatDuracao(diffMin(i === 0 ? fimPrincipal : somarMin(partesDetalhadas[i - 1].hora, partesDetalhadas[i - 1].s?.duration_minutes ?? 0), x.hora))}` : ''}</span></span>
+                <button type="button" className="resumo-tirar" onClick={() => tirarParte(i)} aria-label={`Tirar ${x.s?.name ?? 'parte'}`}>×</button>
+              </li>
+            ))}
+          </ul>
+          <div className="resumo-linha resumo-total"><span>Valor da visita</span><strong>{formatPreco(totalVisita)}</strong></div>
+        </div>
+      )}
+
       {!remarcando && !cabe && (
         <div className="alert alert-error resumo-nao-cabe">
           Com {servico?.lista?.[servico.lista.length - 1]?.name}, o atendimento fica com {formatDuracao(servico?.duration_minutes ?? 0)} e não cabe às {esc.hora}.
@@ -410,6 +492,35 @@ export function AgendarConfirmar() {
               </button>
             ))}
           </div>
+        </section>
+      )}
+
+      {!remarcando && (sugVisita.length > 0 || comEspera) && (
+        <section className="upsell visita-oferta">
+          <h3 className="secao-titulo">No salão, aproveita e faz também</h3>
+          <p className="muted upsell-sub">Com outra profissional, na sequência do seu horário. Cada uma confirma a parte dela.</p>
+          <label className="visita-espera">
+            <input type="checkbox" checked={comEspera} onChange={(e) => setComEspera(e.target.checked)} />
+            <span><strong>Aceito esperar um pouco</strong><span className="muted">abre mais horários no mesmo dia</span></span>
+          </label>
+          {sugVisita.length === 0 ? (
+            <p className="muted visita-vazio">Ninguém livre na sequência neste dia.</p>
+          ) : (
+            <div className="upsell-lista">
+              {sugVisita.map((v) => {
+                const hora = String(v.hora_sugerida).slice(0, 5)
+                const espera = diffMin(extras.length ? fimDasPartes : fimPrincipal, hora)
+                return (
+                  <button key={v.service_id + v.professional_id} type="button" className="card upsell-item visita-item" onClick={() => juntarParte(v)}>
+                    <span className="upsell-foto" aria-hidden="true">{v.photo_url ? <img src={v.photo_url} alt="" /> : <Sparkles size={18} />}</span>
+                    <span className="upsell-texto"><strong>{v.service_name}</strong><span className="muted">com {v.professional_name}</span><span className="muted">{formatDuracao(v.duration_minutes)} · {formatPreco(v.price)}</span></span>
+                    <span className={'visita-hora' + (v.modo === 'logo_depois' ? '' : ' espera')}>{v.modo === 'logo_depois' || espera <= 0 ? <><Check size={13} /> às {hora}, na sequência</> : <><Hourglass size={13} /> às {hora}, espera de {formatDuracao(espera)}</>}</span>
+                    <span className="upsell-mais"><Plus size={16} /> Juntar</span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
         </section>
       )}
 
@@ -452,6 +563,12 @@ export function AgendarSucesso() {
   }, [id])
 
   // três finais possíveis: pedido novo, pedido de troca, troca já feita
+  const [partes, setPartes] = useState([])
+  useEffect(() => {
+    if (!appt?.visita_id) { setPartes([]); return }
+    supabase.rpc('partes_da_visita', { appt: appt.id }).then(({ data }) => setPartes(data ?? []))
+  }, [appt?.id, appt?.visita_id])
+
   const troca = Boolean(appt?.remarca_de)
   const jaTrocou = troca && appt.status === 'confirmado'
   const jaConfirmou = !troca && appt?.status === 'confirmado'
@@ -462,7 +579,9 @@ export function AgendarSucesso() {
       ? 'Sua profissional não pede confirmação: o horário já é seu. Ela foi avisada.'
       : troca
         ? 'Seu horário atual continua guardado. Assim que a profissional aceitar a troca, você recebe um aviso aqui no app.'
-        : 'Seu horário ficou guardado, aguardando a confirmação da profissional. Assim que ela responder, você recebe um aviso aqui no app.'
+        : partes.length
+          ? 'Sua visita ficou guardada. Cada profissional confirma a parte dela, e você recebe um aviso aqui no app.'
+          : 'Seu horário ficou guardado, aguardando a confirmação da profissional. Assim que ela responder, você recebe um aviso aqui no app.'
 
   return (
     <ClienteShell semTopo>
@@ -475,6 +594,9 @@ export function AgendarSucesso() {
             <div className="resumo-linha"><span className="muted">Serviço</span><strong>{appt.services?.name}</strong></div>
             <div className="resumo-linha"><span className="muted">Com</span><strong>{appt.professionals?.name}</strong></div>
             <div className="resumo-linha"><span className="muted">{troca ? 'Novo horário' : 'Quando'}</span><strong>{formatDataLonga(appt.date)} às {appt.start_time.slice(0, 5)}</strong></div>
+            {partes.map((x) => (
+              <div key={x.appointment_id} className="resumo-linha resumo-parte-sucesso"><span className="muted">Depois</span><strong>{x.servico} com {x.profissional} às {String(x.inicio).slice(0, 5)}</strong></div>
+            ))}
           </div>
         )}
         {appt ? <Link to={`/cliente/agendamento/${appt.id}`} className="btn btn-primary btn-block">Ver este agendamento</Link>

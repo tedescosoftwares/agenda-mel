@@ -6,7 +6,7 @@ import { useAuth } from '../../context/AuthContext'
 import { useDialogo } from '../../context/DialogoContext'
 import { formatPreco, formatDuracao } from '../../lib/format'
 import { formatDataLonga, iniciais } from '../../lib/booking'
-import { CalendarDays, Clock, MapPin, Sparkles, StickyNote, Repeat, CircleCheck, Hourglass, CircleX, Check, ChevronRight } from 'lucide-react'
+import { CalendarDays, Clock, MapPin, Sparkles, StickyNote, Repeat, CircleCheck, Hourglass, CircleX, Check, ChevronRight, Users } from 'lucide-react'
 
 // A página de um agendamento (2.16): tudo sobre ele num lugar só. É
 // para onde os avisos apontam e para onde o cartão da lista leva.
@@ -26,6 +26,7 @@ export default function ClienteAgendamento() {
   const [a, setA] = useState(null)
   const [origem, setOrigem] = useState(null)
   const [itens, setItens] = useState([])
+  const [partes, setPartes] = useState([])   // as outras partes da visita (081)
   const [loading, setLoading] = useState(true)
   const [erro, setErro] = useState('')
 
@@ -39,6 +40,10 @@ export default function ClienteAgendamento() {
     if (data) {
       const { data: it } = await supabase.from('appointment_services').select('id, name, price_cents, duration_minutes, ordem').eq('appointment_id', data.id).order('ordem')
       setItens(it ?? [])
+      if (data.visita_id) {
+        const { data: pv } = await supabase.rpc('partes_da_visita', { appt: data.id })
+        setPartes(pv ?? [])
+      } else setPartes([])
     }
     if (data?.remarca_de) {
       const { data: o } = await supabase.from('appointments').select('id, date, start_time').eq('id', data.remarca_de).maybeSingle()
@@ -55,6 +60,14 @@ export default function ClienteAgendamento() {
     if (error) setErro(error.message); else carregar()
   }
 
+  // a visita inteira: esta parte e as outras que ainda valem
+  async function cancelarVisita() {
+    const vivas = partes.filter((x) => x.status === 'pendente' || x.status === 'confirmado')
+    if (!(await confirmar({ titulo: 'Cancelar a visita inteira?', texto: `${a.services?.name ?? a.service_name} e mais ${vivas.length === 1 ? '1 parte' : vivas.length + ' partes'} em ${formatDataLonga(a.date)}.`, ok: 'Cancelar tudo', cancelar: 'Manter', perigo: true }))) return
+    const { error } = await supabase.from('appointments').update({ status: 'cancelado' }).in('id', [a.id, ...vivas.map((x) => x.appointment_id)])
+    if (error) setErro(error.message); else carregar()
+  }
+
   if (loading) return <ClienteShell titulo="Agendamento" voltar="/cliente/meus-agendamentos"><p className="muted">Carregando…</p></ClienteShell>
   if (!a) return <ClienteShell titulo="Agendamento" voltar="/cliente/meus-agendamentos"><div className="card empty-state"><p>Não encontramos esse agendamento.</p>{erro && <p className="muted">{erro}</p>}</div></ClienteShell>
 
@@ -65,6 +78,8 @@ export default function ClienteAgendamento() {
   const preco = a.price_cents != null ? a.price_cents / 100 : a.services?.price
   const duracao = a.services?.duration_minutes ?? minutosEntre(a.start_time, a.end_time)
   const salao = a.salons
+  const vivas = partes.filter((x) => x.status === 'pendente' || x.status === 'confirmado')
+  const recusadas = partes.filter((x) => x.status === 'cancelado')
   const endereco = [salao?.address, salao?.city].filter(Boolean).join(' · ')
   const mapa = endereco ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([salao?.name, salao?.address, salao?.city].filter(Boolean).join(', '))}` : null
 
@@ -96,17 +111,44 @@ export default function ClienteAgendamento() {
         ) : (
           <div className="agdt-item"><Sparkles size={18} /><span><span className="muted agdt-rotulo">Serviço</span><strong>{a.services?.name ?? a.service_name}</strong><span className="muted">{[preco != null ? formatPreco(preco) : null, duracao ? formatDuracao(duracao) : null].filter(Boolean).join(' · ')}</span></span></div>
         )}
+        {partes.length > 0 && (
+          <div className="agdt-item"><Users size={18} /><span><span className="muted agdt-rotulo">Na mesma visita</span>
+            <ul className="agdt-partes">
+              {partes.map((x) => (
+                <li key={x.appointment_id} className={x.status}>
+                  <span className="agdt-parte-hora">{String(x.inicio).slice(0, 5)}</span>
+                  <span className="agdt-parte-oque"><strong>{x.servico}</strong><span className="muted">com {x.profissional}{x.price_cents != null ? ` · ${formatPreco(x.price_cents / 100)}` : ''}</span></span>
+                  <span className={`badge badge-${x.status}`}>{PARTE[x.status] ?? x.status}</span>
+                </li>
+              ))}
+            </ul>
+            <span className="muted">Cada profissional confirma a parte dela.</span></span></div>
+        )}
         {a.notes && <div className="agdt-item"><StickyNote size={18} /><span><span className="muted agdt-rotulo">Sua observação</span><span>{a.notes}</span></span></div>}
         <div className="agdt-item"><Clock size={18} /><span><span className="muted agdt-rotulo">Pedido feito</span><span>{new Date(a.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span></span></div>
       </div>
 
       {erro && <div className="alert alert-error">{erro}</div>}
 
+      {recusadas.length > 0 && podeMexer && (
+        <div className="card visita-decisao">
+          <strong>{recusadas.map((x) => `${x.profissional} não pôde fazer ${x.servico}`).join('. ')}.</strong>
+          <span className="muted">O resto da visita continua como está. O que você prefere?</span>
+          <div className="visita-decisao-acoes">
+            {recusadas.map((x) => x.service_id && (
+              <Link key={x.appointment_id} className="btn btn-primary btn-mini" to={`/cliente/profissional/${x.professional_id}/servicos?servico=${x.service_id}`}>Marcar {x.servico} outro dia</Link>
+            ))}
+            <span className="muted visita-decisao-ou">ou manter só {a.services?.name ?? a.service_name}{vivas.length ? ' e o resto' : ''}: não precisa fazer nada.</span>
+          </div>
+        </div>
+      )}
+
       <div className="agdt-acoes">
         {podeMexer && !troca && a.service_id && (
           <Link className="btn btn-primary btn-block" to={`/cliente/agendamento/data?prof=${a.professional_id}&servico=${a.service_id}&remarcar=${a.id}`}><Repeat size={16} /> Remarcar</Link>
         )}
-        {podeMexer && <button className="btn btn-ghost btn-block" onClick={cancelar}>{troca ? 'Desistir da troca' : 'Cancelar horário'}</button>}
+        {podeMexer && <button className="btn btn-ghost btn-block" onClick={cancelar}>{troca ? 'Desistir da troca' : vivas.length ? 'Cancelar só esta parte' : 'Cancelar horário'}</button>}
+        {podeMexer && !troca && vivas.length > 0 && <button className="btn btn-ghost btn-block" onClick={cancelarVisita}>Cancelar a visita inteira</button>}
         {!podeMexer && a.professionals && a.service_id && (
           <Link className="btn btn-primary btn-block" to={`/cliente/profissional/${a.professionals.id}/servicos?servico=${a.service_id}`}>Marcar de novo</Link>
         )}
@@ -115,6 +157,8 @@ export default function ClienteAgendamento() {
     </ClienteShell>
   )
 }
+
+const PARTE = { pendente: 'Aguardando', confirmado: 'Confirmado', concluido: 'Concluído', cancelado: 'Recusado', faltou: 'Não foi' }
 
 function minutosEntre(ini, fim) {
   if (!ini || !fim) return null

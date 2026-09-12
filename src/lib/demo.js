@@ -83,7 +83,7 @@ const jn = (a, todos) => ({ ...a, services: servicos.find((s) => s.id === a.serv
 
 const agendamentos = [
   { id: 'ap1', client_id: 'c1', professional_id: 'pr1', service_id: 'sv2', salon_id: SALAO, date: mais(2), start_time: '14:00:00', end_time: '15:30:00', status: 'pendente', price_cents: 8500, created_at: mais(0) },
-  { id: 'ap2', client_id: 'c1', professional_id: 'pr2', service_id: 'sv7', salon_id: SALAO, date: mais(9), start_time: '10:30:00', end_time: '11:15:00', status: 'confirmado', price_cents: 6000, created_at: mais(-1) },
+  { id: 'ap2', client_id: 'c1', professional_id: 'pr2', service_id: 'sv7', salon_id: SALAO, date: mais(9), start_time: '10:30:00', end_time: '11:15:00', status: 'confirmado', price_cents: 6000, created_at: mais(-1), visita_id: 'v1' },
   { id: 'ap3', client_id: 'c1', professional_id: 'pr1', service_id: 'sv1', salon_id: SALAO, date: mais(-12), start_time: '09:00:00', end_time: '09:45:00', status: 'concluido', price_cents: 3500, created_at: mais(-14) },
   { id: 'ap4', client_id: 'c1', professional_id: 'pr3', service_id: 'sv4', salon_id: SALAO, date: mais(-30), start_time: '16:00:00', end_time: '17:00:00', status: 'concluido', price_cents: 6500, created_at: mais(-33) },
   { id: 'ap5', client_id: 'c2', professional_id: 'pr1', service_id: 'sv1', salon_id: SALAO, date: mais(0), start_time: '09:00:00', end_time: '09:45:00', status: 'confirmado', price_cents: 3500, created_at: mais(-2) },
@@ -136,6 +136,7 @@ const TABELAS = {
   client_favorites: [{ client_id: 'c1', professional_id: 'pr1' }, { client_id: 'c1', professional_id: 'pr3' }],
   reviews: [],
   appointment_services: [],
+  servicos_juntos: [{ service_id: 'sv1', sugerido_id: 'sv3' }],
   salons: [{ id: SALAO, name: 'Studio Mel', slug: 'studio-mel', app_url: 'https://mimo.app', city: 'Santos', address: 'Rua das Flores, 120 · Gonzaga', codigo: 'MEL2K5', tipo: 'salao' }],
   salon_members: [{ salon_id: SALAO, user_id: 'a1', papel: 'admin', salons: { id: SALAO, name: 'Studio Mel', slug: 'studio-mel', codigo: 'MEL2K5', tipo: 'salao', city: 'Santos' } }],
   whatsapp_channels: [{ salon_id: SALAO, canal: 'evolution', identificador: '11', ativo: true, usa_ia: true, usa_bot: true, silencio_inicio: '21:00', silencio_fim: '08:00', teto_diario: 300 }],
@@ -144,6 +145,15 @@ const TABELAS = {
 }
 
 const RPC = {
+  sugestoes_de_visita: ({ com_espera }) => [
+    { service_id: 'sv3', service_name: servicos[2]?.name ?? 'Manicure', price: servicos[2]?.price ?? 60, duration_minutes: servicos[2]?.duration_minutes ?? 45, professional_id: 'pr2', professional_name: profissionais[1]?.name ?? 'Camila', photo_url: null, hora_sugerida: '11:30:00', modo: 'logo_depois' },
+    ...(com_espera ? [{ service_id: 'sv4', service_name: servicos[3]?.name ?? 'Sobrancelha', price: servicos[3]?.price ?? 50, duration_minutes: servicos[3]?.duration_minutes ?? 30, professional_id: 'pr2', professional_name: profissionais[1]?.name ?? 'Camila', photo_url: null, hora_sugerida: '14:00:00', modo: 'com_espera' }] : []),
+  ],
+  marcar_visita: () => ({ ok: true, appointment_id: 'ap2', visita_id: 'v1', partes: ['ap2', 'ap2b'], confirmada: false }),
+  partes_da_visita: () => [
+    { appointment_id: 'ap2b', servico: servicos[7]?.name ?? 'Design de sobrancelhas', service_id: 'sv8', profissional: profissionais[0]?.name ?? 'Ana', professional_id: 'pr1', photo_url: null, inicio: '11:15:00', fim: '11:45:00', status: 'confirmado', price_cents: 4500 },
+    { appointment_id: 'ap2c', servico: servicos[2]?.name ?? 'Pedicure', service_id: 'sv3', profissional: profissionais[2]?.name ?? 'Fernanda', professional_id: 'pr3', photo_url: null, inicio: '11:45:00', fim: '12:30:00', status: 'cancelado', price_cents: 4000 },
+  ],
   saldo_creditos: () => 3000,
   horarios_livres: () => ['09:00', '09:30', '10:00', '10:30', '11:00', '14:00', '14:30', '15:00', '16:00', '17:00'].map((hora) => ({ hora })),
   dias_com_vaga: () => [mais(1), mais(2), mais(3)].map((dia) => ({ dia, vagas: 6 })),

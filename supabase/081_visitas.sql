@@ -202,13 +202,14 @@ revoke execute on function public.marcar_visita(date, jsonb, text) from public, 
 grant execute on function public.marcar_visita(date, jsonb, text) to authenticated;
 
 -- as outras partes da visita de um agendamento (para a página da cliente)
-create or replace function public.partes_da_visita(appt uuid)
-returns table (appointment_id uuid, servico text, profissional text, professional_id uuid, photo_url text, inicio time, fim time, status text, price_cents integer)
+drop function if exists public.partes_da_visita(uuid);
+create function public.partes_da_visita(appt uuid)
+returns table (appointment_id uuid, servico text, service_id uuid, profissional text, professional_id uuid, photo_url text, inicio time, fim time, status text, price_cents integer)
 language sql
 stable
 security definer set search_path = public
 as $$
-  select o.id, coalesce(o.service_name, 'atendimento'), p.name, p.id, p.photo_url, o.start_time, o.end_time, o.status, o.price_cents
+  select o.id, coalesce(o.service_name, 'atendimento'), o.service_id, p.name, p.id, p.photo_url, o.start_time, o.end_time, o.status, o.price_cents
   from public.appointments a
   join public.appointments o on o.visita_id = a.visita_id and o.id <> a.id
   join public.professionals p on p.id = o.professional_id

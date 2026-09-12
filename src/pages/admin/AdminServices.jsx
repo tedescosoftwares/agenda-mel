@@ -28,6 +28,10 @@ export default function AdminServices() {
   // cada item: { url } (já salva) ou { file, preview } (nova)
   const [imagens, setImagens] = useState([])
   const [comboIds, setComboIds] = useState([])
+  // "costuma ir junto": o que sugerir quando a cliente marca este serviço,
+  // inclusive com outra profissional do salão (081)
+  const [juntos, setJuntos] = useState([])
+  const [juntosTodos, setJuntosTodos] = useState([])   // linhas de servicos_juntos do salão
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -45,6 +49,9 @@ export default function AdminServices() {
     } else {
       setServices(data)
       setError('')
+      const ids = data.map((s) => s.id)
+      const { data: j } = ids.length ? await supabase.from('servicos_juntos').select('service_id, sugerido_id').in('service_id', ids) : { data: [] }
+      setJuntosTodos(j ?? [])
     }
     setLoading(false)
   }
@@ -53,6 +60,7 @@ export default function AdminServices() {
     setForm(FORM_VAZIO)
     setImagens([])
     setComboIds([])
+    setJuntos([])
     setEditing('new')
     setError('')
   }
@@ -67,6 +75,7 @@ export default function AdminServices() {
     })
     setImagens((service.images ?? []).map((url) => ({ url })))
     setComboIds(service.combo_service_ids ?? [])
+    setJuntos(juntosTodos.filter((j) => j.service_id === service.id).map((j) => j.sugerido_id))
     setEditing(service.id)
     setError('')
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -78,7 +87,13 @@ export default function AdminServices() {
     setForm(FORM_VAZIO)
     setImagens([])
     setComboIds([])
+    setJuntos([])
   }
+
+  function toggleJunto(id) {
+    setJuntos((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
+  }
+  const candidatosJuntos = services.filter((s) => s.active && s.id !== editing)
 
   function toggleComboId(id) {
     setComboIds((prev) =>
@@ -195,13 +210,19 @@ export default function AdminServices() {
 
       const query =
         editing === 'new'
-          ? supabase.from('services').insert({ ...payload, salon_id: salao?.id })
-          : supabase.from('services').update(payload).eq('id', editing)
+          ? supabase.from('services').insert({ ...payload, salon_id: salao?.id }).select('id').maybeSingle()
+          : supabase.from('services').update(payload).eq('id', editing).select('id').maybeSingle()
 
-      const { error } = await query
+      const { data: salvo, error } = await query
       if (error) {
         setError('Erro ao salvar: ' + error.message)
         return
+      }
+      const idSalvo = salvo?.id ?? (editing !== 'new' ? editing : null)
+      const antesJuntos = juntosTodos.filter((j) => j.service_id === idSalvo).map((j) => j.sugerido_id)
+      if (idSalvo && (juntos.length || antesJuntos.length)) {
+        const { error: ej } = await supabase.rpc('salvar_servicos_juntos', { servico: idSalvo, sugeridos: juntos })
+        if (ej) { setError('Serviço salvo, mas não deu para guardar o "costuma ir junto": ' + ej.message); return }
       }
 
       await limparImagensRemovidas(antigas, images)
@@ -337,6 +358,30 @@ export default function AdminServices() {
             </div>
           )}
 
+          {candidatosJuntos.length > 0 && (
+            <div className="combo-picker juntos-picker">
+              <span className="img-field-label">Costuma ir junto</span>
+              <p className="muted combo-aviso">
+                Quando a cliente marcar este serviço, o app oferece estes na
+                sequência, inclusive com outra profissional do salão. Não é
+                combo: cada um continua com o próprio preço e a própria agenda.
+              </p>
+              <div className="combo-lista">
+                {candidatosJuntos.map((s) => (
+                  <label key={s.id} className="combo-item">
+                    <input
+                      type="checkbox"
+                      checked={juntos.includes(s.id)}
+                      onChange={() => toggleJunto(s.id)}
+                    />
+                    <span className="combo-item-nome">{s.name}</span>
+                    <span className="muted">{formatDuracao(s.duration_minutes)}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="form-row">
             {!form.is_combo && (
               <label>
@@ -449,6 +494,11 @@ export default function AdminServices() {
                 <span className="muted service-meta">
                   {labelDuracao(s)} · {formatPreco(s.price)}
                 </span>
+                {juntosTodos.some((j) => j.service_id === s.id) && (
+                  <span className="muted service-meta service-juntos">
+                    Vai junto: {juntosTodos.filter((j) => j.service_id === s.id).map((j) => services.find((x) => x.id === j.sugerido_id)?.name).filter(Boolean).join(', ')}
+                  </span>
+                )}
               </div>
               <label className="switch" title={s.active ? 'Desativar' : 'Ativar'}>
                 <input

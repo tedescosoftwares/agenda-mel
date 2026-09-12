@@ -1,4 +1,4 @@
-import { CalendarCheck, CircleCheck, CircleX, AlarmClock, Zap, Heart, Star, Gift, TriangleAlert, CalendarDays, Repeat, Megaphone, Bell, MessageCircle, Wallet } from 'lucide-react'
+import { CalendarCheck, CircleCheck, CircleX, AlarmClock, Zap, Heart, Star, Gift, TriangleAlert, CalendarDays, Repeat, Megaphone, Bell, MessageCircle, Wallet, Hourglass } from 'lucide-react'
 
 // Um ícone por tipo de aviso e para onde cada um leva. Usado no banner
 // ao vivo, na faixa de novidades e na central de avisos.
@@ -9,7 +9,7 @@ export const ICONE_AVISO = {
   profissional_cancelou: TriangleAlert, agendamento_cancelado: TriangleAlert, cancelou_comigo: TriangleAlert,
   novo_agendamento: CalendarDays, pedido_de_aceite: CalendarDays, pedido_pelo_whatsapp: MessageCircle, atendimento_humano: MessageCircle,
   remarcacao_aceita: Repeat, remarcacao_recusada: CircleX, recado: Megaphone, afiliado_novo: Wallet, afiliado_cashback: Wallet,
-  teste: Bell, teste_push: Bell,
+  pedido_enviado: Hourglass, teste: Bell, teste_push: Bell,
 }
 
 const DESTINO_CLIENTE = {
@@ -21,6 +21,9 @@ const DESTINO_CLIENTE = {
 }
 
 export function destinoDoAviso(aviso, role) {
+  // aviso de um horário leva ao próprio horário
+  const appt = aviso.data?.appointment_id
+  if (role === 'cliente' && appt && aviso.kind !== 'remarcacao_recusada') return `/cliente/agendamento/${appt}`
   if (role === 'cliente' && DESTINO_CLIENTE[aviso.kind]) return DESTINO_CLIENTE[aviso.kind]
   if (aviso.action_url && aviso.action_url !== '/') return aviso.action_url
   if (role === 'cliente') return '/cliente/notificacoes'

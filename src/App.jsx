@@ -15,6 +15,7 @@ import ClienteProfissionais from "./pages/cliente/ClienteProfissionais";
 import ClienteProfissional from "./pages/cliente/ClienteProfissional";
 import { AgendarServicos, AgendarData, AgendarHora, AgendarConfirmar, AgendarSucesso } from "./pages/cliente/Agendar";
 import ClienteAgenda from "./pages/cliente/ClienteAgenda";
+import ClienteAgendamento from "./pages/cliente/ClienteAgendamento";
 import ClientePerfil from "./pages/cliente/ClientePerfil";
 import AdminAgenda from "./pages/admin/AdminAgenda";
 import AdminProfissionais from "./pages/admin/AdminProfissionais";
@@ -165,6 +166,14 @@ export default function App() {
               element={
                 <ProtectedRoute requireRole="cliente">
                   <AgendarSucesso />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/cliente/agendamento/:id"
+              element={
+                <ProtectedRoute requireRole="cliente">
+                  <ClienteAgendamento />
                 </ProtectedRoute>
               }
             />

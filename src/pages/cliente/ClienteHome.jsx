@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import ClienteShell from '../../components/ClienteShell'
 import AvisosNovos from '../../components/AvisosNovos'
 import LigarAvisos from '../../components/LigarAvisos'
+import ProximosHorarios from '../../components/ProximosHorarios'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { SearchIcon } from '../../components/icons'
@@ -74,6 +75,7 @@ export default function ClienteHome() {
       </div>
 
       <AvisosNovos />
+      <ProximosHorarios />
       <LigarAvisos texto="Confirmação, lembrete de véspera e vaga na lista de espera chegam na hora, mesmo com o app fechado." />
 
       <label className="cl-busca">

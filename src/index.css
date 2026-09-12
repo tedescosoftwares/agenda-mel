@@ -4187,7 +4187,10 @@ a.prof-row:hover,
   color: var(--branco); font-size: 4rem; font-weight: 600;
 }
 .perfil-voltar {
-  position: absolute; top: 0.9rem; left: 0.9rem;
+  /* abaixo da área do relógio/notch no iPhone instalado: sem isto o botão
+     ficava embaixo da barra de status e não recebia o toque */
+  position: absolute; top: calc(0.9rem + env(safe-area-inset-top)); left: 0.9rem;
+  border: none; font-family: inherit; cursor: pointer;
   width: 38px; height: 38px; border-radius: var(--r-pilula);
   background: rgba(255, 255, 255, 0.9); color: var(--texto);
   display: grid; place-items: center; text-decoration: none;
@@ -5109,3 +5112,40 @@ a, button { -webkit-tap-highlight-color: transparent; }
 .ligar-avisos-botoes { display: flex; gap: 0.5rem; margin-top: 0.35rem; flex-wrap: wrap; }
 .ligar-avisos-erro { color: var(--carmim); font-size: 0.8rem; }
 .ligar-avisos-fechar { position: absolute; top: 0.5rem; right: 0.5rem; border: none; background: transparent; color: var(--texto-3); cursor: pointer; padding: 0.2rem; }
+
+/* ---- Página do agendamento e próximos horários (2.16) ---------------- */
+.agd-clicavel { cursor: pointer; }
+.agd-clicavel:active { background: var(--cinza-1); }
+.agd-abrir { color: var(--texto-3); font-weight: 400; margin-left: 0.2rem; }
+.agdt-topo { display: flex; flex-direction: column; gap: 0.5rem; border-left: 4px solid var(--fio-forte); }
+.agdt-topo.confirmado { border-left-color: var(--menta); }
+.agdt-topo.pendente { border-left-color: var(--rosa-2); }
+.agdt-topo.concluido { border-left-color: var(--violeta); }
+.agdt-topo .badge { align-self: flex-start; display: inline-flex; align-items: center; gap: 0.3rem; }
+.agdt-servico { margin: 0.2rem 0 0; font-size: 1.35rem; }
+.agdt-quando { display: flex; gap: 0.6rem; align-items: flex-start; margin: 0; color: var(--rosa); line-height: 1.35; }
+.agdt-quando strong { color: var(--texto); font-size: 1.02rem; }
+.agdt-nota { margin: 0; font-size: 0.88rem; }
+.agdt-linha { display: flex; align-items: center; gap: 0.8rem; text-decoration: none; color: inherit; }
+.agdt-avatar { width: 46px; height: 46px; border-radius: 50%; background: var(--gradiente-logo); color: #fff; display: grid; place-items: center; font-weight: 600; overflow: hidden; flex: none; }
+.agdt-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.agdt-rotulo { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; display: block; }
+.agdt-seta { color: var(--texto-3); margin-left: auto; flex: none; }
+.agdt-dados { display: flex; flex-direction: column; gap: 0.9rem; }
+.agdt-item { display: flex; gap: 0.8rem; align-items: flex-start; color: var(--texto-2); }
+.agdt-item > svg { flex: none; margin-top: 0.15rem; color: var(--rosa); }
+.agdt-item > span { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; font-size: 0.92rem; color: var(--texto); }
+.agdt-mapa { color: var(--rosa); font-size: 0.85rem; font-weight: 600; text-decoration: none; margin-top: 0.15rem; }
+.agdt-acoes { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.4rem; }
+.agdt-acoes .btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; }
+.proximos { margin-bottom: 0.9rem; }
+.proximos-lista { display: flex; flex-direction: column; gap: 0.45rem; }
+.proximo { display: flex; align-items: center; gap: 0.7rem; padding: 0.55rem 0.7rem; border-radius: 14px; background: #fff; border: 1px solid var(--fio); text-decoration: none; color: inherit; }
+.proximo-dia { display: flex; flex-direction: column; align-items: center; min-width: 58px; padding: 0.3rem 0.4rem; border-radius: 10px; background: #f0fbf5; color: #0d7a4f; font-size: 0.72rem; line-height: 1.2; }
+.proximo.pendente .proximo-dia { background: #fff0f5; color: var(--rosa); }
+.proximo-dia strong { font-size: 0.8rem; }
+.proximo-texto { display: flex; flex-direction: column; min-width: 0; flex: 1; font-size: 0.88rem; line-height: 1.3; }
+.proximo-texto .muted { font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.proximo-estado { display: flex; align-items: center; gap: 0.1rem; color: var(--texto-3); flex: none; }
+.proximo.confirmado .proximo-estado svg:first-child { color: #0d7a4f; }
+.proximo.pendente .proximo-estado svg:first-child { color: var(--rosa); }

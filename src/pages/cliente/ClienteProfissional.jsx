@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import ClienteShell from '../../components/ClienteShell'
 import { supabase } from '../../lib/supabase'
 import { StarIcon } from '../../components/icons'
@@ -12,6 +12,7 @@ import { Sparkles } from 'lucide-react'
 // horário" fica fixo no pé: é a única razão de esta tela existir.
 export default function ClienteProfissional() {
   const { id } = useParams()
+  const navigate = useNavigate()
   const [prof, setProf] = useState(null)
   const [servicos, setServicos] = useState([])
   const [nota, setNota] = useState(null)
@@ -43,11 +44,14 @@ export default function ClienteProfissional() {
 
   const especialidade = servicos.slice(0, 2).map((s) => s.name).join(' e ')
 
+  // volta para de onde veio (início, lista, agenda); sem histórico, para o início
+  const voltar = () => { if (window.history.length > 1) navigate(-1); else navigate('/cliente/home') }
+
   return (
     <ClienteShell semTopo>
       <div className="perfil-capa">
         {prof.photo_url ? <img src={prof.photo_url} alt="" /> : <span className="perfil-capa-ini">{iniciais(prof.name)}</span>}
-        <Link to="/cliente/profissionais" className="perfil-voltar" aria-label="Voltar">‹</Link>
+        <button type="button" onClick={voltar} className="perfil-voltar" aria-label="Voltar">‹</button>
       </div>
 
       <div className="perfil-cabeca">

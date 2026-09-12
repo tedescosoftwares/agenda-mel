@@ -365,12 +365,15 @@ export function AgendarSucesso() {
   // três finais possíveis: pedido novo, pedido de troca, troca já feita
   const troca = Boolean(appt?.remarca_de)
   const jaTrocou = troca && appt.status === 'confirmado'
-  const titulo = jaTrocou ? 'Remarcado!' : troca ? 'Pedido de troca enviado!' : 'Pedido enviado!'
+  const jaConfirmou = !troca && appt?.status === 'confirmado'
+  const titulo = jaTrocou ? 'Remarcado!' : jaConfirmou ? 'Agendamento confirmado! 🎉' : troca ? 'Pedido de troca enviado!' : 'Pedido enviado!'
   const texto = jaTrocou
     ? 'Sua profissional não pede confirmação, então a troca já valeu. Ela foi avisada.'
-    : troca
-      ? 'Seu horário atual continua guardado. Assim que a profissional aceitar a troca, você recebe um aviso aqui e no WhatsApp.'
-      : 'Seu horário ficou guardado. Assim que a profissional confirmar, você recebe um aviso aqui e no WhatsApp.'
+    : jaConfirmou
+      ? 'Sua profissional não pede confirmação: o horário já é seu. Ela foi avisada.'
+      : troca
+        ? 'Seu horário atual continua guardado. Assim que a profissional aceitar a troca, você recebe um aviso aqui no app.'
+        : 'Seu horário ficou guardado, aguardando a confirmação da profissional. Assim que ela responder, você recebe um aviso aqui no app.'
 
   return (
     <ClienteShell semTopo>
@@ -385,7 +388,8 @@ export function AgendarSucesso() {
             <div className="resumo-linha"><span className="muted">{troca ? 'Novo horário' : 'Quando'}</span><strong>{formatDataLonga(appt.date)} às {appt.start_time.slice(0, 5)}</strong></div>
           </div>
         )}
-        <Link to="/cliente/meus-agendamentos" className="btn btn-primary btn-block">Ver meus agendamentos</Link>
+        {appt ? <Link to={`/cliente/agendamento/${appt.id}`} className="btn btn-primary btn-block">Ver este agendamento</Link>
+              : <Link to="/cliente/meus-agendamentos" className="btn btn-primary btn-block">Ver meus agendamentos</Link>}
         <Link to="/cliente/home" className="btn btn-ghost btn-block">Voltar ao início</Link>
       </div>
     </ClienteShell>

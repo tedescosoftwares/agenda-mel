@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useDialogo } from '../../context/DialogoContext'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import ClienteShell from '../../components/ClienteShell'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
@@ -25,7 +25,9 @@ const ROTULO = { pendente: 'Aguardando', confirmado: 'Confirmado', concluido: 'C
 export default function ClienteAgenda() {
   const { confirmar } = useDialogo()
   const { user } = useAuth()
-  const [aba, setAba] = useState('proximos')
+  const navigate = useNavigate()
+  const [params] = useSearchParams()
+  const [aba, setAba] = useState(params.get('aba') === 'historico' ? 'historico' : 'proximos')
   const [proximos, setProximos] = useState([])
   const [historico, setHistorico] = useState([])
   const [avaliados, setAvaliados] = useState(new Set())
@@ -100,9 +102,10 @@ export default function ClienteAgenda() {
       ) : (
         <div className="cliente-list">
           {lista.map((a) => (
-            <div key={a.id} className={'card agd-card ' + a.status + (ehPedidoDeTroca(a) ? ' troca' : '')}>
+            <div key={a.id} className={'card agd-card agd-clicavel ' + a.status + (ehPedidoDeTroca(a) ? ' troca' : '')} role="link" tabIndex={0}
+              onClick={() => navigate(`/cliente/agendamento/${a.id}`)} onKeyDown={(e) => { if (e.key === 'Enter') navigate(`/cliente/agendamento/${a.id}`) }}>
               <div className="agd-topo">
-                <span className="agd-quando">{quando(a)}</span>
+                <span className="agd-quando">{quando(a)} <span className="agd-abrir">›</span></span>
                 <span className={`badge badge-${ehPedidoDeTroca(a) ? 'remarcacao' : a.status}`}>{ehPedidoDeTroca(a) ? 'Troca aguardando' : ROTULO[a.status] ?? a.status}</span>
               </div>
               <strong className="agd-servico">{a.services?.name}</strong>
@@ -115,7 +118,7 @@ export default function ClienteAgenda() {
               {aba === 'proximos' && trocaAberta(a) && (
                 <span className="agd-troca"><Repeat size={14} /> Você pediu para mudar para {quando(trocaAberta(a))}. Aguardando a profissional.</span>
               )}
-              <div className="agd-acoes">
+              <div className="agd-acoes" onClick={(e) => e.stopPropagation()}>
                 {aba === 'proximos' && podeCancelar(a) && (
                   <button className="btn-mini btn-mini-nao" onClick={() => cancelar(a)}>{ehPedidoDeTroca(a) ? 'Desistir da troca' : 'Cancelar'}</button>
                 )}

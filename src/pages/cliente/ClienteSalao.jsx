@@ -2,12 +2,11 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import ClienteShell from '../../components/ClienteShell'
 import { supabase } from '../../lib/supabase'
-import { formatPreco, labelDuracao } from '../../lib/format'
 import { iniciais } from '../../lib/booking'
 import { useCategorias, agruparPorCategoria } from '../../lib/categorias'
 import CategoriaCard from '../../components/CategoriaCard'
 import { StarIcon, InstagramIcon } from '../../components/icons'
-import { MapPin, Phone, Clock, Sparkles, Store, ChevronRight, BadgePercent, MessageCircle } from 'lucide-react'
+import { MapPin, Phone, Clock, Store, ChevronRight, BadgePercent, MessageCircle, Star } from 'lucide-react'
 
 // A página do salão (085): fotos, descrição, contatos, horário, a
 // equipe, os serviços por categoria (com quem faz) e as promoções da
@@ -31,6 +30,10 @@ export default function ClienteSalao() {
   }, [id])
 
   const voltar = () => { if (window.history.length > 1) navigate(-1); else navigate('/cliente/home') }
+  async function escolherPreferida(profId) {
+    setPg((x) => ({ ...x, preferida: profId }))
+    await supabase.rpc('escolher_preferida', { salao: id, prof: profId })
+  }
   if (loading) return <ClienteShell voltar="/cliente/home"><p className="muted">Carregando…</p></ClienteShell>
   const s = pg?.salao
   if (!s) return <ClienteShell voltar="/cliente/home"><div className="card empty-state"><p>Não encontramos esse salão.</p></div></ClienteShell>
@@ -46,7 +49,7 @@ export default function ClienteSalao() {
   const equipe = pg.equipe ?? []
   const servicos = pg.servicos ?? []
   const promos = pg.promocoes ?? []
-  const linkServico = (sv) => `/cliente/servico/${sv.id}${sv.quem?.length === 1 ? `?prof=${sv.quem[0].id}` : ''}`
+  const preferida = pg.preferida ? equipe.find((p) => p.id === pg.preferida) : null
 
   return (
     <ClienteShell semTopo>
@@ -103,22 +106,11 @@ export default function ClienteSalao() {
       </div>
 
       {aba === 'servicos' && (
-        <div className="cliente-list">
+        <div className="cat-vitrine">
           {servicos.length === 0 && <div className="card empty-state"><p>O salão ainda não cadastrou serviços.</p></div>}
+          {preferida && <p className="muted salao-preferida-nota"><Star size={13} /> Sua preferida aqui é <strong>{preferida.nome}</strong>. <button type="button" className="link-ver" onClick={() => setAba('equipe')}>Trocar</button></p>}
           {agruparPorCategoria(servicos, cats).map((g) => (
-            <CategoriaCard key={g.id || 'outros'} nome={g.nome} imagem={pg.capas?.[g.id]} quantos={g.itens.length}>
-              {g.itens.map((sv) => (
-                <Link key={sv.id} to={linkServico(sv)} className="card servico-linha">
-                  <span className="servico-linha-foto" aria-hidden="true">{sv.images?.[0] ? <img src={sv.images[0]} alt="" /> : <Sparkles />}</span>
-                  <span className="cliente-info">
-                    <span className="cliente-nome"><span className="nome-txt">{sv.name}</span>{sv.is_combo && <span className="badge badge-combo">combo</span>}</span>
-                    <span className="muted cliente-meta">{formatPreco(sv.price)} · {labelDuracao(sv)}</span>
-                    {sv.quem?.length > 0 && <span className="muted cliente-meta">com {sv.quem.map((p) => p.nome.split(' ')[0]).join(', ')}</span>}
-                  </span>
-                  <ChevronRight size={18} className="agdt-seta" />
-                </Link>
-              ))}
-            </CategoriaCard>
+            <CategoriaCard key={g.id || 'outros'} nome={g.nome} imagens={pg.capas?.[g.id]} quantos={g.itens.length} onAbrir={() => navigate(`/cliente/salao/${id}/categoria/${g.id || 'outros'}`)} />
           ))}
         </div>
       )}
@@ -126,15 +118,22 @@ export default function ClienteSalao() {
       {aba === 'equipe' && (
         <div className="cliente-list">
           {equipe.length === 0 && <div className="card empty-state"><p>Ninguém atendendo por aqui ainda.</p></div>}
+          {equipe.length > 1 && <p className="muted salao-preferida-dica">Tem alguém de preferência? Marque a estrela: quando mais de uma faz o mesmo serviço, o app já leva para ela.</p>}
           {equipe.map((p) => (
-            <Link key={p.id} to={`/cliente/profissional/${p.id}`} className="card prof-row">
-              <span className="agdt-avatar">{p.foto ? <img src={p.foto} alt="" /> : iniciais(p.nome)}</span>
-              <span className="cliente-info">
-                <span className="cliente-nome"><span className="nome-txt">{p.nome}</span>{p.nota && <span className="muted salao-nota-mini"><StarIcon /> {Number(p.nota).toFixed(1)}</span>}</span>
-                <span className="muted cliente-meta">{(p.faz ?? []).slice(0, 3).join(' · ') || p.bio || ''}</span>
-              </span>
-              <ChevronRight size={18} className="agdt-seta" />
-            </Link>
+            <div key={p.id} className={'card prof-row prof-row-fav' + (pg.preferida === p.id ? ' preferida' : '')}>
+              <Link to={`/cliente/profissional/${p.id}`} className="prof-row-link">
+                <span className="agdt-avatar">{p.foto ? <img src={p.foto} alt="" /> : iniciais(p.nome)}</span>
+                <span className="cliente-info">
+                  <span className="cliente-nome"><span className="nome-txt">{p.nome}</span>{p.nota && <span className="muted salao-nota-mini"><StarIcon /> {Number(p.nota).toFixed(1)}</span>}</span>
+                  <span className="muted cliente-meta">{pg.preferida === p.id ? 'Sua preferida · ' : ''}{(p.faz ?? []).slice(0, 3).join(' · ') || p.bio || ''}</span>
+                </span>
+              </Link>
+              {equipe.length > 1 && (
+                <button type="button" className={'fav-btn preferida-btn' + (pg.preferida === p.id ? ' on' : '')} onClick={() => escolherPreferida(pg.preferida === p.id ? null : p.id)} aria-pressed={pg.preferida === p.id} aria-label={pg.preferida === p.id ? 'Tirar a preferência' : `Marcar ${p.nome} como preferida`}>
+                  <Star size={20} />
+                </button>
+              )}
+            </div>
           ))}
         </div>
       )}

@@ -27,7 +27,9 @@ grant select on public.capas_de_categoria to anon, authenticated;
 grant insert, update, delete on public.capas_de_categoria to authenticated;
 
 -- a página do salão entrega as capas resolvidas (a do salão, senão a padrão)
-create or replace function public.capas_do_salao(salao uuid)
+-- (o 088 muda o retorno: por isso o drop)
+drop function if exists public.capas_do_salao(uuid);
+create function public.capas_do_salao(salao uuid)
 returns table (categoria_id uuid, imagem_url text)
 language sql
 stable

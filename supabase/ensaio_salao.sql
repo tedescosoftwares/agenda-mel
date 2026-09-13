@@ -52,20 +52,34 @@ begin
 
   -- 5. capas (087): a padrão da plataforma vale; a do salão sobrepõe
   update public.categorias_de_servico set imagem_url = 'https://x/padrao.jpg' where salon_id is null and nome = 'Cabelo';
-  if (public.pagina_do_salao(sal) -> 'capas' ->> (select id::text from public.categorias_de_servico where salon_id is null and nome = 'Cabelo')) <> 'https://x/padrao.jpg' then raise exception 'capa padrão não veio'; end if;
+  if (public.pagina_do_salao(sal) -> 'capas' -> (select id::text from public.categorias_de_servico where salon_id is null and nome = 'Cabelo') ->> 0) <> 'https://x/padrao.jpg' then raise exception 'capa padrão não veio'; end if;
   perform set_config('request.jwt.claim.sub', dona::text, false);
   set role authenticated;
-  insert into public.capas_de_categoria (salon_id, categoria_id, imagem_url) values (sal, (select id from public.categorias_de_servico where salon_id is null and nome = 'Cabelo'), 'https://x/minha.jpg');
+  insert into public.capas_de_categoria (salon_id, categoria_id, imagens) values (sal, (select id from public.categorias_de_servico where salon_id is null and nome = 'Cabelo'), array['https://x/minha1.jpg', 'https://x/minha2.jpg']);
   reset role;
-  if (public.pagina_do_salao(sal) -> 'capas' ->> (select id::text from public.categorias_de_servico where salon_id is null and nome = 'Cabelo')) <> 'https://x/minha.jpg' then raise exception 'capa do salão não sobrepôs'; end if;
+  if (public.pagina_do_salao(sal) -> 'capas' -> (select id::text from public.categorias_de_servico where salon_id is null and nome = 'Cabelo') ->> 1) <> 'https://x/minha2.jpg' then raise exception 'capas do salão não sobrepuseram'; end if;
+  -- preferida (088): a cliente escolhe, troca e desfaz; só profissional do salão
+  perform set_config('request.jwt.claim.sub', cli::text, false);
+  perform public.escolher_preferida(sal, (select id from public.professionals where salon_id = sal and active limit 1));
+  if (public.pagina_do_salao(sal) ->> 'preferida') is null then raise exception 'preferida não ficou'; end if;
+  if exists (select 1 from public.professionals where salon_id <> sal and active) then
+    begin
+      perform public.escolher_preferida(sal, (select id from public.professionals where salon_id <> sal and active limit 1));
+      raise exception 'aceitou profissional de outro salão';
+    exception when others then
+      if sqlerrm not like '%não atende nesse salão%' then raise; end if;
+    end;
+  end if;
+  perform public.escolher_preferida(sal, null);
+  if (public.pagina_do_salao(sal) ->> 'preferida') is not null then raise exception 'preferida não sumiu'; end if;
   perform set_config('request.jwt.claim.sub', cli::text, false);
   set role authenticated;
-  insert into public.capas_de_categoria (salon_id, categoria_id, imagem_url) values (sal, (select id from public.categorias_de_servico where salon_id is null and nome = 'Unhas'), 'https://x/hack.jpg');
+  insert into public.capas_de_categoria (salon_id, categoria_id, imagens) values (sal, (select id from public.categorias_de_servico where salon_id is null and nome = 'Unhas'), array['https://x/hack.jpg']);
   reset role;
   raise exception 'cliente pôs capa';
 exception when insufficient_privilege then
   reset role;
-  raise notice '5 capas: padrão, do salão sobrepõe, cliente barrada (ok)';
+  raise notice '5 capas em lista, preferida e cliente barrada na capa (ok)';
   raise notice 'FIM DO ENSAIO — tudo certo';
 end $$;
 rollback;

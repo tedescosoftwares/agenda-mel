@@ -7,8 +7,7 @@ import { useAuth } from '../../context/AuthContext'
 import { formatPreco, labelDuracao, formatDuracao } from '../../lib/format'
 import { formatDataLonga } from '../../lib/booking'
 import { Check, Sparkles, Repeat, Plus, Users, Hourglass, Search, BadgePercent } from 'lucide-react'
-import { useCategorias, agruparPorCategoria, bate, useCapas } from '../../lib/categorias'
-import CategoriaCard from '../../components/CategoriaCard'
+import { useCategorias, agruparPorCategoria, bate } from '../../lib/categorias'
 
 // O fluxo de marcar, dentro do app: serviço → data → hora → confirmar.
 // Cada passo é uma rota, e o que já foi escolhido viaja na URL
@@ -142,7 +141,6 @@ export function AgendarServicos() {
   const [busca, setBusca] = useState('')
   const [descontos, setDescontos] = useState({})   // service_id → desconto (084)
   const navigate = useNavigate()
-  const capas = useCapas(prof?.salon_id)
 
   useEffect(() => {
     let vivo = true
@@ -193,7 +191,8 @@ export function AgendarServicos() {
 
       {visiveis.length === 0 && servicos.length > 0 && <p className="muted">Nada com esse nome.</p>}
       {visiveis.map((g) => (
-      <CategoriaCard key={g.id || 'outros'} nome={g.nome} imagem={capas[g.id]} quantos={g.itens.length}>
+      <section key={g.id || 'outros'} className="cat-grupo">
+        {grupos.length > 1 && <h3 className="cat-titulo">{g.nome}</h3>}
       <div className="cliente-list">
         {g.itens.map((s) => {
           const marcado = sel.includes(s.id)
@@ -226,7 +225,7 @@ export function AgendarServicos() {
           )
         })}
       </div>
-      </CategoriaCard>
+      </section>
       ))}
 
       <div className="rodape-fixo rodape-servicos">

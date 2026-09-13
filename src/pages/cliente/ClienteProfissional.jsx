@@ -5,9 +5,8 @@ import { supabase } from '../../lib/supabase'
 import { StarIcon } from '../../components/icons'
 import { formatPreco, labelDuracao } from '../../lib/format'
 import { iniciais } from '../../lib/booking'
-import { Sparkles } from 'lucide-react'
-import { useCategorias, agruparPorCategoria, useCapas } from '../../lib/categorias'
-import CategoriaCard from '../../components/CategoriaCard'
+import { Sparkles, Star } from 'lucide-react'
+import { useCategorias, agruparPorCategoria } from '../../lib/categorias'
 
 // Perfil da profissional dentro do app (tela 05): foto grande, nome,
 // nota, e três abas — Serviços, Avaliações, Sobre. O botão "Agendar
@@ -17,7 +16,11 @@ export default function ClienteProfissional() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [prof, setProf] = useState(null)
-  const capas = useCapas(prof?.salon_id)
+  const [preferida, setPreferida] = useState(false)
+  useEffect(() => {
+    if (!prof?.salon_id) return
+    supabase.from('profissional_preferida').select('professional_id').eq('salon_id', prof.salon_id).maybeSingle().then(({ data }) => setPreferida(data?.professional_id === prof.id))
+  }, [prof?.salon_id, prof?.id])
   const [servicos, setServicos] = useState([])
   const [nota, setNota] = useState(null)
   const [avaliacoes, setAvaliacoes] = useState([])
@@ -48,6 +51,11 @@ export default function ClienteProfissional() {
 
   const especialidade = servicos.slice(0, 2).map((s) => s.name).join(' e ')
   const salaoNome = prof.salons?.tipo === 'salao' ? prof.salons?.name : null
+  async function alternarPreferida() {
+    const nova = preferida ? null : prof.id
+    setPreferida(Boolean(nova))
+    await supabase.rpc('escolher_preferida', { salao: prof.salon_id, prof: nova })
+  }
 
   // volta para de onde veio (início, lista, agenda); sem histórico, para o início
   const voltar = () => { if (window.history.length > 1) navigate(-1); else navigate('/cliente/home') }
@@ -62,7 +70,7 @@ export default function ClienteProfissional() {
       <div className="perfil-cabeca">
         <h2>{prof.name}</h2>
         {especialidade && <p className="muted">{especialidade}</p>}
-        {salaoNome && <p className="muted perfil-salao"><Link to={`/cliente/salao/${prof.salon_id}`}>{salaoNome}</Link></p>}
+        {salaoNome && <p className="muted perfil-salao"><Link to={`/cliente/salao/${prof.salon_id}`}>{salaoNome}</Link> · <button type="button" className={'link-ver preferida-link' + (preferida ? ' on' : '')} onClick={alternarPreferida}><Star size={13} /> {preferida ? 'Sua preferida neste salão' : 'Marcar como minha preferida'}</button></p>}
         {nota ? (
           <p className="perfil-nota">
             <StarIcon /> <strong>{Number(nota.media).toFixed(1)}</strong>
@@ -82,7 +90,8 @@ export default function ClienteProfissional() {
       {aba === 'servicos' && (
         <div className="cliente-list">
           {servicos.length === 0 && <div className="card empty-state"><p>Ela ainda não cadastrou serviços.</p></div>}
-          {agruparPorCategoria(servicos, cats).map((g) => (<CategoriaCard key={g.id || 'outros'} nome={g.nome} imagem={capas[g.id]} quantos={g.itens.length}>
+          {agruparPorCategoria(servicos, cats).map((g, _, todos) => (<section key={g.id || 'outros'} className="cat-grupo">
+          {todos.length > 1 && <h3 className="cat-titulo">{g.nome}</h3>}
           {g.itens.map((s) => (
             <Link key={s.id} to={`/cliente/servico/${s.id}?prof=${prof.id}`} className="card servico-linha">
               <span className="servico-linha-foto" aria-hidden="true">
@@ -95,7 +104,7 @@ export default function ClienteProfissional() {
               <span className="link-ver">Ver</span>
             </Link>
           ))}
-          </CategoriaCard>))}
+          </section>))}
         </div>
       )}
 

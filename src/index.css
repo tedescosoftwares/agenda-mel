@@ -5649,3 +5649,46 @@ a, button { -webkit-tap-highlight-color: transparent; }
 .cat-capa-nome { position: absolute; left: 0.5rem; bottom: 0.4rem; color: #fff; font-weight: 800; font-size: 0.85rem; text-shadow: 0 1px 3px rgba(0,0,0,0.5); }
 .cat-capa-acao { position: absolute; top: 0.35rem; right: 0.35rem; font-size: 0.62rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: var(--rosa); background: rgba(255,255,255,0.92); padding: 0.15rem 0.45rem; border-radius: 999px; }
 .cat-capa-item .btn-mini { align-self: flex-start; }
+
+/* ---- cartão de categoria só com imagens, página da categoria, preferida (2.29) ---- */
+.cat-vitrine { display: flex; flex-direction: column; gap: 0.7rem; }
+.cat-card { display: block; width: 100%; padding: 0; border: none; background: none; cursor: pointer; font: inherit; color: inherit; text-align: left; border-radius: 18px; overflow: hidden; box-shadow: var(--sombra, 0 4px 14px rgba(31, 32, 38, 0.08)); }
+.cat-card:active { transform: scale(0.99); }
+.cat-card-capa { position: relative; display: block; aspect-ratio: 5 / 2; background: var(--cinza-1); }
+.cat-card.compacto .cat-card-capa { aspect-ratio: 4 / 1; }
+.cat-card-capa img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .8s ease; }
+.cat-card-capa img.on { opacity: 1; }
+.cat-card-veu span { display: inline-flex; align-items: center; gap: 0.2rem; }
+.cat-card-pontos { position: absolute; right: 0.7rem; top: 0.6rem; display: flex; gap: 0.25rem; }
+.cat-card-pontos i { width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,0.55); }
+.cat-card-pontos i.on { width: 14px; border-radius: 3px; background: #fff; }
+.catpg-capa { position: relative; margin: -1.2rem -1.15rem 0.9rem; height: 210px; overflow: hidden; background: var(--cinza-1); }
+.catpg-capa .cat-card-veu { padding-bottom: 1.6rem; }
+.catpg-capa .cat-card-veu strong { font-size: 1.5rem; }
+.catpg-quem { margin-bottom: 0.7rem; }
+.catpg-rotulo { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 0.35rem; }
+.chip-prof { display: inline-flex; align-items: center; gap: 0.35rem; padding-left: 0.3rem; }
+.chip-avatar { width: 22px; height: 22px; border-radius: 50%; overflow: hidden; background: var(--gradiente-logo); color: #fff; font-size: 0.65rem; font-weight: 700; display: grid; place-items: center; flex: none; }
+.chip-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.chip-estrela { color: #f5a623; fill: #f5a623; }
+.catpg-pref { display: flex; align-items: center; gap: 0.3rem; flex-wrap: wrap; font-size: 0.8rem; margin: 0.4rem 0 0; }
+.catpg-pref svg { color: #f5a623; fill: #f5a623; }
+.catpg-pref .link-ver { border: none; background: none; padding: 0; font: inherit; font-size: 0.8rem; cursor: pointer; display: inline-flex; align-items: center; gap: 0.2rem; }
+.catpg-quem-linha { display: inline-flex; align-items: center; gap: 0.4rem; margin-top: 0.15rem; }
+.catpg-quem-linha .muted { font-size: 0.78rem; }
+.salao-preferida-nota, .salao-preferida-dica { display: flex; align-items: center; gap: 0.3rem; font-size: 0.82rem; margin: 0 0 0.4rem; flex-wrap: wrap; }
+.salao-preferida-nota svg { color: #f5a623; fill: #f5a623; }
+.salao-preferida-nota .link-ver { border: none; background: none; padding: 0; font: inherit; font-size: 0.82rem; cursor: pointer; }
+.preferida-btn { color: var(--texto-3); }
+.preferida-btn.on { color: #f5a623; }
+.preferida-btn.on svg { fill: #f5a623; }
+.prof-row.preferida { border-color: #f5a623; }
+.preferida-link { display: inline-flex; align-items: center; gap: 0.2rem; border: none; background: none; padding: 0; font: inherit; font-size: inherit; cursor: pointer; }
+.preferida-link.on { color: #b8760a; }
+.preferida-link.on svg { fill: #f5a623; color: #f5a623; }
+.cat-capa-minis { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+.cat-capa-mini { position: relative; width: 60px; aspect-ratio: 3 / 1; border-radius: 6px; overflow: hidden; }
+.cat-capa-mini img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cat-capa-mini button { position: absolute; top: 1px; right: 1px; width: 16px; height: 16px; border-radius: 50%; border: none; background: rgba(255,255,255,0.92); color: #c0392b; font-size: 0.7rem; line-height: 1; cursor: pointer; display: grid; place-items: center; }
+.cat-capa-add { align-self: flex-start; cursor: pointer; }
+.cat-capa-add.desabilitado { opacity: 0.5; pointer-events: none; }

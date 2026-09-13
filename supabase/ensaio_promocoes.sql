@@ -2,7 +2,7 @@
 begin;
 do $$
 declare sal uuid; dona uuid; prof record; outra record; cli uuid; cli2 uuid; sv uuid;
-        p_plat uuid; p_sal uuid; p_prof uuid; p_outra uuid; n integer; r record;
+        p_plat uuid; p_sal uuid; p_prof uuid; p_outra uuid; n integer; r record; j jsonb;
 begin
   -- um salão com dona e duas profissionais com conta
   select s.id, s.owner_id into sal, dona from public.salons s
@@ -94,6 +94,25 @@ begin
   perform public.promocao_clicada(p_sal);
   if (select vistas from public.promocoes where id = p_sal) <> 1 or (select cliques from public.promocoes where id = p_sal) <> 1 then raise exception 'contadores'; end if;
   raise notice '6 vistas e cliques (ok)';
+
+  -- 7. desconto (084): a promo do salão dá 25% no serviço; a cliente da carteira paga com desconto, a de fora não
+  update public.promocoes set desconto_pct = 25 where id = p_sal;
+  perform set_config('request.jwt.claim.sub', cli::text, false);
+  select * into r from public.descontos_para_mim(array[sv]);
+  if r.desconto_pct <> 25 or r.preco_com_desconto_cents <> round(r.preco_cents * 0.75) then raise exception 'desconto errado: %', r; end if;
+  if (select x.preco_por from public.promocoes_para_mim() x where x.id = p_sal) is null then raise exception 'carrossel sem de/por'; end if;
+  update public.professionals set aceite_manual = false, confirmar_historico_ruim = false where id = prof.id;
+  delete from public.professional_hours where professional_id = prof.id and weekday = extract(dow from current_date + 150);
+  insert into public.professional_hours (professional_id, weekday, open, start_time, end_time) values (prof.id, extract(dow from current_date + 150), true, '08:00', '20:00');
+  j := public.marcar_servicos(prof.id, array[sv], current_date + 150, '15:00', null);
+  if not (j ->> 'ok')::boolean then raise exception 'não marcou: %', j; end if;
+  if (j ->> 'desconto_cents')::integer <= 0 then raise exception 'sem desconto no pedido: %', j; end if;
+  if (select price_cents + desconto_cents from public.appointments where id = (j ->> 'appointment_id')::uuid)
+     <> (select round(price * 100)::integer from public.services where id = sv) then raise exception 'preço cheio não bate'; end if;
+  if (select promocao_id from public.appointment_services where appointment_id = (j ->> 'appointment_id')::uuid) <> p_sal then raise exception 'item sem a promoção'; end if;
+  perform set_config('request.jwt.claim.sub', cli2::text, false);
+  if exists (select 1 from public.descontos_para_mim(array[sv])) then raise exception 'de fora ganhou desconto'; end if;
+  raise notice '7 desconto na finalização só para quem vê a promoção (ok)';
   raise notice 'FIM DO ENSAIO — tudo certo';
 end $$;
 rollback;

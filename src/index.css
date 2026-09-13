@@ -5481,3 +5481,42 @@ a, button { -webkit-tap-highlight-color: transparent; }
 .promo-dica .link-ver { border: none; background: none; padding: 0; font: inherit; font-size: 0.78rem; cursor: pointer; }
 .plat-miniatura-promo { width: 96px; aspect-ratio: 2 / 1; object-fit: cover; border-radius: 6px; display: block; }
 .plat-rolagem { overflow-x: auto; }
+
+/* ---- página do serviço e desconto da promoção (2.25) ---- */
+.svc-galeria { position: relative; border-radius: 18px; overflow: hidden; background: var(--cinza-1); aspect-ratio: 4 / 3; margin-bottom: 0.9rem; }
+.svc-galeria > img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.svc-sem-foto { height: 100%; display: grid; place-items: center; color: var(--rosa); background: #fff0f6; }
+.svc-selo, .promo-selo { position: absolute; top: 0.7rem; right: 0.7rem; display: inline-flex; align-items: center; gap: 0.25rem; background: var(--rosa); color: #fff; font-weight: 800; font-size: 0.85rem; padding: 0.25rem 0.6rem; border-radius: 999px; box-shadow: 0 2px 8px rgba(255, 45, 122, 0.35); }
+.svc-miniaturas { position: absolute; left: 0.6rem; bottom: 0.6rem; display: flex; gap: 0.35rem; }
+.svc-miniaturas button { width: 44px; height: 44px; border-radius: 10px; overflow: hidden; border: 2px solid rgba(255,255,255,0.7); padding: 0; background: none; cursor: pointer; opacity: 0.75; }
+.svc-miniaturas button.on { opacity: 1; border-color: var(--rosa); }
+.svc-miniaturas img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.svc-cabeca { margin-bottom: 0.8rem; }
+.svc-cabeca h2 { margin: 0.1rem 0 0.35rem; font-size: 1.35rem; }
+.svc-cat { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; }
+.svc-preco { display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap; }
+.svc-preco > strong { font-size: 1.35rem; color: var(--rosa); }
+.svc-preco s { font-size: 0.95rem; }
+.svc-promo-nome { font-size: 0.78rem; font-weight: 700; color: var(--violeta); background: #f5eeff; padding: 0.1rem 0.5rem; border-radius: 999px; }
+.svc-dur { display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.88rem; margin-left: auto; }
+.svc-bloco { display: flex; gap: 0.6rem; align-items: flex-start; }
+.svc-bloco p { margin: 0; line-height: 1.5; }
+.svc-bloco svg { flex: none; color: var(--rosa); margin-top: 0.2rem; }
+.svc-secao { margin-top: 1rem; }
+.svc-secao .secao-titulo { display: flex; align-items: center; gap: 0.35rem; }
+.svc-prof-atual { border-color: var(--rosa); }
+.svc-rodape-nota { margin: 0 0 0.5rem; font-size: 0.82rem; text-align: center; }
+.rodape-servicos .btn + .btn { margin-top: 0.5rem; }
+.badge-promo { background: var(--rosa); color: #fff; margin-left: 0.4rem; font-size: 0.68rem; vertical-align: middle; }
+.preco-por { color: var(--rosa); }
+.servico-ver { font-size: 0.78rem; margin-top: 0.15rem; }
+.servico-linha.multi .check-marca { cursor: pointer; background: #fff; }
+.servico-linha.multi { cursor: pointer; }
+.resumo-desconto { color: var(--violeta); }
+.resumo-desconto span { display: inline-flex; align-items: center; gap: 0.3rem; }
+.resumo-de { margin-right: 0.35rem; font-weight: 500; }
+.promo-servico-novo { border: 1.5px dashed #ffc2d8; border-radius: 12px; padding: 0.7rem 0.8rem 0.2rem; margin: -0.3rem 0 0.9rem; background: #fff8fb; }
+.promo-pct-linha { display: flex; align-items: center; gap: 0.7rem; }
+.promo-pct-linha input { width: 6rem; }
+.promo-pct-previa { font-size: 0.85rem; }
+.svc-espaco { height: 12rem; }

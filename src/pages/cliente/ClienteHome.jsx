@@ -135,7 +135,7 @@ export default function ClienteHome() {
         {destaques.map(({ servico, quem }) => (
           <Link
             key={servico.id}
-            to={`/cliente/profissional/${quem[0].id}/servicos?servico=${servico.id}`}
+            to={`/cliente/servico/${servico.id}${quem.length === 1 ? `?prof=${quem[0].id}` : ''}`}
             className="card destaque-row"
           >
             <span className="destaque-foto" aria-hidden="true">

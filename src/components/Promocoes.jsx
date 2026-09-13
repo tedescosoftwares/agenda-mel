@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useDialogo } from '../context/DialogoContext'
 import { ajustarCriativo, CRIATIVO } from '../lib/imagem'
+import { formatPreco } from '../lib/format'
+import { useCategorias, categoriasDoSalao } from '../lib/categorias'
 import { BadgePercent, Eye, MousePointerClick, ImagePlus, Pause, Play, Pencil, Trash2 } from 'lucide-react'
 
 // Promoções (083): o mesmo painel serve o salão, a profissional e a
@@ -11,10 +13,14 @@ import { BadgePercent, Eye, MousePointerClick, ImagePlus, Pause, Play, Pencil, T
 //   escopo 'plataforma'   → sem salão: todo mundo vê
 // O criativo é ajustado no navegador para 1200×600 antes de subir.
 
-const VAZIO = { titulo: '', texto: '', service_id: '', inicio: '', fim: '', ativa: true }
+const VAZIO = { titulo: '', texto: '', service_id: '', inicio: '', fim: '', ativa: true, com_desconto: false, desconto_pct: '' }
+const NOVO_SERVICO = '__novo__'
+const SERVICO_VAZIO = { name: '', duration_minutes: 60, price: '', categoria_id: '' }
 
-export default function Promocoes({ escopo, salao, prof, servicos = [], compacto = false }) {
+export default function Promocoes({ escopo, salao, prof, servicos = [], compacto = false, onServicoNovo }) {
   const { confirmar } = useDialogo()
+  const cats = categoriasDoSalao(useCategorias(), salao)
+  const [novoServico, setNovoServico] = useState(SERVICO_VAZIO)   // cadastrar um serviço na hora
   const [lista, setLista] = useState([])
   const [loading, setLoading] = useState(true)
   const [erro, setErro] = useState('')
@@ -37,11 +43,12 @@ export default function Promocoes({ escopo, salao, prof, servicos = [], compacto
 
   function abrir(p) {
     if (p) {
-      setForm({ titulo: p.titulo, texto: p.texto ?? '', service_id: p.service_id ?? '', inicio: p.inicio ?? '', fim: p.fim ?? '', ativa: p.ativa })
+      setForm({ titulo: p.titulo, texto: p.texto ?? '', service_id: p.service_id ?? '', inicio: p.inicio ?? '', fim: p.fim ?? '', ativa: p.ativa, com_desconto: p.desconto_pct != null, desconto_pct: p.desconto_pct ?? '' })
       setImagem({ url: p.imagem_url })
       setEditando(p.id)
     } else {
       setForm({ ...VAZIO, inicio: hojeIso() })
+      setNovoServico(SERVICO_VAZIO)
       setImagem(null)
       setEditando('nova')
     }
@@ -69,9 +76,24 @@ export default function Promocoes({ escopo, salao, prof, servicos = [], compacto
     e.preventDefault()
     if (!form.titulo.trim()) { setErro('Dá um título para a promoção.'); return }
     if (!imagem) { setErro('Escolha o criativo (a imagem da promoção).'); return }
+    const pct = form.com_desconto ? Number(form.desconto_pct) : null
+    if (form.com_desconto && (!form.service_id || Number.isNaN(pct) || pct < 1 || pct > 90)) { setErro('Para dar desconto, escolha o serviço e diga a porcentagem (de 1 a 90).'); return }
+    if (form.service_id === NOVO_SERVICO && !novoServico.name.trim()) { setErro('Dá um nome ao serviço novo.'); return }
     setSalvando(true)
     setErro('')
     try {
+      // o serviço cadastrado ali na hora (fica do salão; a profissional já sai fazendo)
+      let servicoId = form.service_id || null
+      if (form.service_id === NOVO_SERVICO) {
+        const { data: sv, error: es } = await supabase.from('services').insert({
+          salon_id: salao, name: novoServico.name.trim(), duration_minutes: Number(novoServico.duration_minutes) || 60,
+          price: Number(String(novoServico.price).replace(',', '.')) || 0, categoria_id: novoServico.categoria_id || null,
+        }).select('id, name').maybeSingle()
+        if (es) throw new Error('Não deu para cadastrar o serviço: ' + es.message)
+        servicoId = sv?.id ?? null
+        if (servicoId && escopo === 'profissional') await supabase.from('professional_services').insert({ professional_id: prof, service_id: servicoId })
+        if (sv) onServicoNovo?.(sv)
+      }
       let url = imagem.url
       if (imagem.blob) {
         const path = `${escopo}/${crypto.randomUUID()}.jpg`
@@ -81,7 +103,8 @@ export default function Promocoes({ escopo, salao, prof, servicos = [], compacto
       }
       const payload = {
         titulo: form.titulo.trim(), texto: form.texto.trim() || null, imagem_url: url,
-        service_id: form.service_id || null, inicio: form.inicio || hojeIso(), fim: form.fim || null, ativa: form.ativa,
+        service_id: servicoId, desconto_pct: form.com_desconto && servicoId ? pct : null,
+        inicio: form.inicio || hojeIso(), fim: form.fim || null, ativa: form.ativa,
         ...(escopo === 'plataforma' ? { salon_id: null, professional_id: null }
           : escopo === 'profissional' ? { professional_id: prof }
           : { salon_id: salao, professional_id: null }),
@@ -137,10 +160,10 @@ export default function Promocoes({ escopo, salao, prof, servicos = [], compacto
               <article key={p.id} className={'card promo-cartao ' + st.replace(' ', '-')}>
                 <div className="promo-figura"><img src={p.imagem_url} alt="" loading="lazy" /><span className={'badge promo-estado ' + st.replace(' ', '-')}>{st}</span></div>
                 <div className="promo-corpo">
-                  <strong>{p.titulo}</strong>
+                  <strong>{p.titulo}{p.desconto_pct != null && <span className="badge badge-promo">-{p.desconto_pct}%</span>}</strong>
                   {p.texto && <span className="muted">{p.texto}</span>}
                   <span className="muted promo-meta">
-                    {periodo(p)}{p.service_id && servicos.find((s) => s.id === p.service_id) ? ` · toca e marca ${servicos.find((s) => s.id === p.service_id).name}` : ''}
+                    {periodo(p)}{p.service_id && servicos.find((s) => s.id === p.service_id) ? ` · ${servicos.find((s) => s.id === p.service_id).name}${p.desconto_pct != null ? ` com ${p.desconto_pct}% off` : ''}` : ''}
                   </span>
                   <span className="promo-numeros"><Eye size={13} /> {p.vistas} <MousePointerClick size={13} /> {p.cliques}</span>
                 </div>
@@ -179,13 +202,47 @@ export default function Promocoes({ escopo, salao, prof, servicos = [], compacto
 
             <label>Título<input value={form.titulo} maxLength={60} onChange={(e) => setForm({ ...form, titulo: e.target.value })} placeholder="Ex.: Semana da sobrancelha" required /></label>
             <label>Texto curto (opcional)<input value={form.texto} maxLength={140} onChange={(e) => setForm({ ...form, texto: e.target.value })} placeholder="Ex.: 20% off até sexta" /></label>
-            {escopo !== 'plataforma' && servicos.length > 0 && (
-              <label>Ao tocar, marcar (opcional)
-                <select value={form.service_id} onChange={(e) => setForm({ ...form, service_id: e.target.value })}>
-                  <option value="">Só mostrar a promoção</option>
-                  {servicos.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
-              </label>
+            {escopo !== 'plataforma' && (
+              <>
+                <label>Serviço promovido
+                  <select value={form.service_id} onChange={(e) => setForm({ ...form, service_id: e.target.value, com_desconto: e.target.value ? form.com_desconto : false })}>
+                    <option value="">Nenhum: só mostrar a promoção</option>
+                    {servicos.map((s) => <option key={s.id} value={s.id}>{s.name}{s.is_combo ? ' (combo)' : ''}{s.price != null ? ` · ${formatPreco(s.price)}` : ''}</option>)}
+                    <option value={NOVO_SERVICO}>+ Cadastrar um serviço novo…</option>
+                  </select>
+                </label>
+                {form.service_id === NOVO_SERVICO && (
+                  <div className="promo-servico-novo">
+                    <label>Nome do serviço<input value={novoServico.name} onChange={(e) => setNovoServico({ ...novoServico, name: e.target.value })} placeholder="Ex.: Escova modelada" /></label>
+                    <div className="form-row">
+                      <label>Duração (min)<input type="number" min="5" step="5" value={novoServico.duration_minutes} onChange={(e) => setNovoServico({ ...novoServico, duration_minutes: e.target.value })} /></label>
+                      <label>Preço (R$)<input inputMode="decimal" value={novoServico.price} onChange={(e) => setNovoServico({ ...novoServico, price: e.target.value })} placeholder="80" /></label>
+                    </div>
+                    <label>Categoria
+                      <select value={novoServico.categoria_id} onChange={(e) => setNovoServico({ ...novoServico, categoria_id: e.target.value })}>
+                        <option value="">Deixar o app escolher pelo nome</option>
+                        {cats.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                      </select>
+                    </label>
+                    <p className="muted promo-dica">Entra na lista de serviços {escopo === 'profissional' ? 'do salão, já marcado como seu' : 'do salão'}. Depois dá para ajustar em Serviços.</p>
+                  </div>
+                )}
+                {form.service_id && (
+                  <div className="combo-toggle">
+                    <label className="switch"><input type="checkbox" checked={form.com_desconto} onChange={(e) => setForm({ ...form, com_desconto: e.target.checked })} /><span></span></label>
+                    <div className="combo-toggle-texto"><span>A promoção dá desconto</span><span className="muted">Aplicado no preço deste serviço na finalização, só para quem vê a promoção</span></div>
+                  </div>
+                )}
+                {form.service_id && form.com_desconto && (
+                  <label className="promo-pct">Desconto (%)
+                    <div className="promo-pct-linha">
+                      <input type="number" min="1" max="90" step="1" inputMode="numeric" value={form.desconto_pct} onChange={(e) => setForm({ ...form, desconto_pct: e.target.value })} placeholder="20" required />
+                      {previaPreco(form, servicos, novoServico)}
+                    </div>
+                  </label>
+                )}
+                <p className="muted promo-dica">Ao tocar no banner, a cliente vai direto marcar {form.service_id ? 'este serviço' : '(escolha um serviço acima para isso)'}.</p>
+              </>
             )}
             <div className="form-row">
               <label>Começa<input type="date" value={form.inicio} onChange={(e) => setForm({ ...form, inicio: e.target.value })} /></label>
@@ -215,4 +272,11 @@ function br(iso) { const [a, m, d] = iso.split('-'); return `${d}/${m}${a !== St
 function periodo(p) {
   if (p.fim) return `${br(p.inicio)} a ${br(p.fim)}`
   return `desde ${br(p.inicio)}, sem data para acabar`
+}
+
+function previaPreco(form, servicos, novo) {
+  const pct = Number(form.desconto_pct)
+  const preco = form.service_id === NOVO_SERVICO ? Number(String(novo.price).replace(',', '.')) : Number(servicos.find((s) => s.id === form.service_id)?.price)
+  if (!pct || pct < 1 || pct > 90 || !preco) return null
+  return <span className="muted promo-pct-previa">de {formatPreco(preco)} por <strong>{formatPreco(preco * (100 - pct) / 100)}</strong></span>
 }

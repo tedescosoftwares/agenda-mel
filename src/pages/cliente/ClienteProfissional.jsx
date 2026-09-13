@@ -81,7 +81,7 @@ export default function ClienteProfissional() {
           {agruparPorCategoria(servicos, cats).map((g, _, todos) => (<section key={g.id || 'outros'} className="cat-grupo">
           {todos.length > 1 && <h3 className="cat-titulo">{g.nome}</h3>}
           {g.itens.map((s) => (
-            <Link key={s.id} to={`/cliente/profissional/${prof.id}/servicos?servico=${s.id}`} className="card servico-linha">
+            <Link key={s.id} to={`/cliente/servico/${s.id}?prof=${prof.id}`} className="card servico-linha">
               <span className="servico-linha-foto" aria-hidden="true">
                 {s.images?.[0] ? <img src={s.images[0]} alt="" /> : <Sparkles />}
               </span>
@@ -89,7 +89,7 @@ export default function ClienteProfissional() {
                 <span className="cliente-nome"><span className="nome-txt">{s.name}</span></span>
                 <span className="muted cliente-meta">{formatPreco(s.price)} · {labelDuracao(s)}</span>
               </span>
-              <span className="link-ver">Agendar</span>
+              <span className="link-ver">Ver</span>
             </Link>
           ))}
           </section>))}

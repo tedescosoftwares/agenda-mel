@@ -63,10 +63,11 @@ export default function BannerPromocoes() {
         {promos.map((p) => (
           <button key={p.id} type="button" className="promo-slide" onClick={() => abrir(p)} aria-label={p.titulo}>
             <img src={p.imagem_url} alt="" loading="lazy" />
+            {p.desconto_pct != null && <span className="promo-selo">-{p.desconto_pct}%</span>}
             <span className="promo-veu">
               <strong>{p.titulo}</strong>
               {p.texto && <span>{p.texto}</span>}
-              <small>{p.profissional ?? p.salao ?? 'MIMO'}{p.fim ? ` · até ${ate(p.fim)}` : ''}</small>
+              <small>{p.profissional ?? p.salao ?? 'MIMO'}{p.preco_por != null ? ` · ${p.servico} de ${fmt(p.preco_de)} por ${fmt(p.preco_por)}` : ''}{p.fim ? ` · até ${ate(p.fim)}` : ''}</small>
             </span>
           </button>
         ))}
@@ -83,4 +84,5 @@ export default function BannerPromocoes() {
 }
 
 function atualDe(el) { return Math.round(el.scrollLeft / Math.max(1, el.clientWidth)) }
+function fmt(v) { return 'R$ ' + Number(v).toFixed(2).replace('.', ',') }
 function ate(iso) { const [, m, d] = iso.split('-'); return `${d}/${m}` }

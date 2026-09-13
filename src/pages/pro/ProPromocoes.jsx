@@ -11,7 +11,7 @@ export default function ProPromocoes() {
   const [servicos, setServicos] = useState([])
   useEffect(() => {
     if (!professional?.id) return
-    supabase.from('professional_services').select('services (id, name, active)').eq('professional_id', professional.id)
+    supabase.from('professional_services').select('services (id, name, price, is_combo, active)').eq('professional_id', professional.id)
       .then(({ data }) => setServicos((data ?? []).map((v) => v.services).filter((s) => s?.active).sort((a, b) => a.name.localeCompare(b.name))))
   }, [professional?.id])
   if (!professional) return <SemFicha />
@@ -21,7 +21,7 @@ export default function ProPromocoes() {
         <h2>Promoções</h2>
         <p className="muted">Um criativo para as suas clientes verem na home</p>
       </div>
-      <Promocoes escopo="profissional" prof={professional.id} salao={professional.salon_id} servicos={servicos} />
+      <Promocoes escopo="profissional" prof={professional.id} salao={professional.salon_id} servicos={servicos} onServicoNovo={(sv) => setServicos((l) => [...l, sv].sort((a, b) => a.name.localeCompare(b.name)))} />
     </ProShell>
   )
 }

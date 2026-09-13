@@ -6,7 +6,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { formatPreco, labelDuracao, formatDuracao } from '../../lib/format'
 import { formatDataLonga } from '../../lib/booking'
-import { Check, Sparkles, Repeat, Plus, Users, Hourglass, Search } from 'lucide-react'
+import { Check, Sparkles, Repeat, Plus, Users, Hourglass, Search, BadgePercent } from 'lucide-react'
 import { useCategorias, agruparPorCategoria, bate } from '../../lib/categorias'
 
 // O fluxo de marcar, dentro do app: serviço → data → hora → confirmar.
@@ -139,6 +139,8 @@ export function AgendarServicos() {
   const cats = useCategorias()
   const [cat, setCat] = useState('')       // filtro por categoria ('' = todas)
   const [busca, setBusca] = useState('')
+  const [descontos, setDescontos] = useState({})   // service_id → desconto (084)
+  const navigate = useNavigate()
 
   useEffect(() => {
     let vivo = true
@@ -149,15 +151,21 @@ export function AgendarServicos() {
       ])
       if (!vivo) return
       setProf(p.data)
-      setServicos((vi.data ?? []).map((v) => v.services).filter((s) => s?.active))
+      const lista = (vi.data ?? []).map((v) => v.services).filter((s) => s?.active)
+      setServicos(lista)
+      if (lista.length) {
+        const { data: d } = await supabase.rpc('descontos_para_mim', { servicos: lista.map((s) => s.id) })
+        if (vivo) setDescontos(Object.fromEntries((d ?? []).map((x) => [x.service_id, x])))
+      }
     })()
     return () => { vivo = false }
   }, [id])
 
+  const precoDe = (s) => descontos[s.id] ? descontos[s.id].preco_com_desconto_cents / 100 : Number(s.price ?? 0)
   const alternar = (sid) => setSel((atual) => atual.includes(sid) ? atual.filter((x) => x !== sid) : (atual.length >= 6 ? atual : [...atual, sid]))
   const escolhidos = sel.map((sid) => servicos.find((s) => s.id === sid)).filter(Boolean)
   const totalMin = escolhidos.reduce((a, s) => a + Number(s.duration_minutes ?? 0), 0)
-  const totalPreco = escolhidos.reduce((a, s) => a + Number(s.price ?? 0), 0)
+  const totalPreco = escolhidos.reduce((a, s) => a + precoDe(s), 0)
   // muitos serviços: agrupados por categoria, com filtro e busca
   const grupos = agruparPorCategoria(servicos, cats)
   const muitos = servicos.length > 8
@@ -167,7 +175,7 @@ export function AgendarServicos() {
     <ClienteShell titulo="Serviços" voltar={`/cliente/profissional/${id}`}>
       <Trilha passo={1} />
       {prof && <p className="muted" style={{ marginTop: 0 }}>Com {prof.name}.</p>}
-      {sel.length === 1 && <p className="dica-mais"><Plus size={14} /> Quer mais um? Toque no <strong>+</strong> de outro serviço: marca tudo no mesmo horário.</p>}
+      <p className="dica-mais"><Plus size={14} /> Toque no serviço para ver os detalhes, ou no <strong>+</strong> para adicionar direto. Vários entram no mesmo horário.</p>
 
       {muitos && (
         <>
@@ -189,23 +197,31 @@ export function AgendarServicos() {
         {g.itens.map((s) => {
           const marcado = sel.includes(s.id)
           return (
-            <button
+            <div
               key={s.id}
-              type="button"
+              role="link"
+              tabIndex={0}
               className={'card servico-linha escolhivel multi' + (marcado ? ' ativo' : '')}
-              onClick={() => alternar(s.id)}
-              aria-pressed={marcado}
+              onClick={() => navigate(`/cliente/servico/${s.id}?${new URLSearchParams({ prof: id, sel: sel.join(',') })}`)}
+              onKeyDown={(e) => { if (e.key === 'Enter') navigate(`/cliente/servico/${s.id}?${new URLSearchParams({ prof: id, sel: sel.join(',') })}`) }}
             >
               <span className="servico-linha-foto" aria-hidden="true">
                 {s.images?.[0] ? <img src={s.images[0]} alt="" /> : <Sparkles />}
               </span>
               <span className="cliente-info">
-                <span className="cliente-nome"><span className="nome-txt">{s.name}</span></span>
-                <span className="muted cliente-meta">{formatPreco(s.price)} · {labelDuracao(s)}</span>
+                <span className="cliente-nome"><span className="nome-txt">{s.name}</span>{descontos[s.id] && <span className="badge badge-promo">-{descontos[s.id].desconto_pct}%</span>}</span>
+                <span className="muted cliente-meta">{descontos[s.id] ? <><strong className="preco-por">{formatPreco(precoDe(s))}</strong> <s>{formatPreco(s.price)}</s></> : formatPreco(s.price)} · {labelDuracao(s)}</span>
                 {s.description && <span className="muted cliente-meta">{s.description}</span>}
+                <span className="link-ver servico-ver">Ver detalhes</span>
               </span>
-              <span className={'check-marca' + (marcado ? ' on' : '')} aria-hidden="true">{marcado ? <Check size={14} /> : <Plus size={14} />}</span>
-            </button>
+              <button
+                type="button"
+                className={'check-marca' + (marcado ? ' on' : '')}
+                onClick={(e) => { e.stopPropagation(); alternar(s.id) }}
+                aria-pressed={marcado}
+                aria-label={marcado ? `Tirar ${s.name}` : `Adicionar ${s.name}`}
+              >{marcado ? <Check size={14} /> : <Plus size={14} />}</button>
+            </div>
           )
         })}
       </div>
@@ -348,6 +364,17 @@ export function AgendarConfirmar() {
   const [conferindo, setConferindo] = useState(false)
   const ids = servico?.ids ?? (servico ? [servico.id] : [])
   const remarcando = Boolean(esc.remarcar)
+  // o desconto das promoções que ela enxerga (084): o banco aplica de novo ao marcar
+  const [descontos, setDescontos] = useState({})
+  useEffect(() => {
+    if (!ids.length || remarcando) { setDescontos({}); return }
+    supabase.rpc('descontos_para_mim', { servicos: ids }).then(({ data }) => setDescontos(Object.fromEntries((data ?? []).map((x) => [x.service_id, x]))))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ids.join(','), remarcando])
+  const precoDe = (x) => descontos[x.id] ? descontos[x.id].preco_com_desconto_cents / 100 : Number(x.price ?? 0)
+  const totalCheio = servico ? Number(servico.price ?? 0) : 0
+  const totalComDesconto = servico ? (servico.lista ?? [servico]).reduce((a, x) => a + precoDe(x), 0) : 0
+  const economia = totalCheio - totalComDesconto
   // a visita: partes com outras profissionais do salão (081)
   const extras = lerExtras(esc.extra)
   const [comEspera, setComEspera] = useState(false)
@@ -415,7 +442,7 @@ export function AgendarConfirmar() {
   const juntarParte = (v) => { if (extras.length < 3) irComExtras([...extras, { servico: v.service_id, prof: v.professional_id, hora: String(v.hora_sugerida).slice(0, 5) }]) }
   const tirarParte = (i) => irComExtras(extras.filter((_, k) => k !== i))
   const partesDetalhadas = extras.map((x) => ({ ...x, s: detalhes.servicos[x.servico], p: detalhes.profs[x.prof] }))
-  const totalVisita = (servico?.price ?? 0) + partesDetalhadas.reduce((a, x) => a + Number(x.s?.price ?? 0), 0)
+  const totalVisita = totalComDesconto + partesDetalhadas.reduce((a, x) => a + Number(x.s?.price ?? 0), 0)
   const adicionar = (id) => { if (ids.length < 6 && !ids.includes(id)) irCom([...ids, id]) }
   const tirar = (id) => { if (ids.length > 1) irCom(ids.filter((x) => x !== id)) }
   const peso = (x) => (juntos.includes(x.id) ? 0 : servico?.lista?.some((s) => s.categoria_id && s.categoria_id === x.categoria_id) ? 1 : 2)
@@ -466,7 +493,7 @@ export function AgendarConfirmar() {
         {servico?.lista?.length > 1 ? (
           <div className="resumo-itens">
             <span className="muted">Serviços</span>
-            <ul>{servico.lista.map((x) => <li key={x.id}><span>{x.name}</span><span className="muted">{labelDuracao(x)} · {formatPreco(x.price)}{!remarcando && <button type="button" className="resumo-tirar" onClick={() => tirar(x.id)} aria-label={`Tirar ${x.name}`}>×</button>}</span></li>)}</ul>
+            <ul>{servico.lista.map((x) => <li key={x.id}><span>{x.name}{descontos[x.id] && <span className="badge badge-promo">-{descontos[x.id].desconto_pct}%</span>}</span><span className="muted">{labelDuracao(x)} · {descontos[x.id] ? <><s>{formatPreco(x.price)}</s> {formatPreco(precoDe(x))}</> : formatPreco(x.price)}{!remarcando && <button type="button" className="resumo-tirar" onClick={() => tirar(x.id)} aria-label={`Tirar ${x.name}`}>×</button>}</span></li>)}</ul>
           </div>
         ) : (
           <div className="resumo-linha"><span className="muted">Serviço</span><strong>{servico?.name}</strong></div>
@@ -484,7 +511,10 @@ export function AgendarConfirmar() {
           </>
         )}
         {servico && <div className="resumo-linha"><span className="muted">{servico.lista?.length > 1 ? 'Duração total' : 'Duração'}</span><strong>{formatDuracao(servico.duration_minutes)}{servico.lista?.length > 1 && <span className="muted resumo-soma"> ({servico.lista.map((x) => formatDuracao(x.duration_minutes)).join(' + ')})</span>}</strong></div>}
-        <div className="resumo-linha resumo-total"><span>{servico?.lista?.length > 1 ? 'Valor total' : 'Valor'}</span><strong>{servico && formatPreco(servico.price)}</strong></div>
+        {economia > 0 && !remarcando && (
+          <div className="resumo-linha resumo-desconto"><span><BadgePercent size={14} /> {Object.values(descontos).map((d) => d.titulo).filter((v, i, a) => a.indexOf(v) === i).join(', ')}</span><strong>− {formatPreco(economia)}</strong></div>
+        )}
+        <div className="resumo-linha resumo-total"><span>{servico?.lista?.length > 1 ? 'Valor total' : 'Valor'}</span><strong>{servico && (economia > 0 && !remarcando ? <><s className="muted resumo-de">{formatPreco(totalCheio)}</s> {formatPreco(totalComDesconto)}</> : formatPreco(servico.price))}</strong></div>
       </div>
 
       {partesDetalhadas.length > 0 && (

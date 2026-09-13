@@ -38,7 +38,7 @@ export default function ClienteAgendamento() {
     if (error) setErro(error.message)
     setA(data ?? null)
     if (data) {
-      const { data: it } = await supabase.from('appointment_services').select('id, name, price_cents, duration_minutes, ordem').eq('appointment_id', data.id).order('ordem')
+      const { data: it } = await supabase.from('appointment_services').select('id, name, price_cents, preco_cheio_cents, promocao_id, duration_minutes, ordem').eq('appointment_id', data.id).order('ordem')
       setItens(it ?? [])
       if (data.visita_id) {
         const { data: pv } = await supabase.rpc('partes_da_visita', { appt: data.id })
@@ -106,10 +106,10 @@ export default function ClienteAgendamento() {
         )}
         {itens.length > 1 ? (
           <div className="agdt-item"><Sparkles size={18} /><span><span className="muted agdt-rotulo">Serviços</span>
-            <ul className="agdt-itens">{itens.map((x) => <li key={x.id}><span>{x.name}</span><span className="muted">{formatDuracao(x.duration_minutes)} · {formatPreco(x.price_cents / 100)}</span></li>)}</ul>
+            <ul className="agdt-itens">{itens.map((x) => <li key={x.id}><span>{x.name}</span><span className="muted">{formatDuracao(x.duration_minutes)} · {x.preco_cheio_cents > x.price_cents ? <><s>{formatPreco(x.preco_cheio_cents / 100)}</s> {formatPreco(x.price_cents / 100)}</> : formatPreco(x.price_cents / 100)}</span></li>)}</ul>
             <strong>{[preco != null ? formatPreco(preco) : null, duracao ? formatDuracao(duracao) : null].filter(Boolean).join(' · ')} no total</strong></span></div>
         ) : (
-          <div className="agdt-item"><Sparkles size={18} /><span><span className="muted agdt-rotulo">Serviço</span><strong>{a.services?.name ?? a.service_name}</strong><span className="muted">{[preco != null ? formatPreco(preco) : null, duracao ? formatDuracao(duracao) : null].filter(Boolean).join(' · ')}</span></span></div>
+          <div className="agdt-item"><Sparkles size={18} /><span><span className="muted agdt-rotulo">Serviço</span><strong>{a.services?.name ?? a.service_name}</strong><span className="muted">{a.desconto_cents > 0 && preco != null ? <><s>{formatPreco((a.price_cents + a.desconto_cents) / 100)}</s> {formatPreco(preco)} · promoção</> : preco != null ? formatPreco(preco) : null}{duracao ? `${preco != null ? ' · ' : ''}${formatDuracao(duracao)}` : ''}</span></span></div>
         )}
         {partes.length > 0 && (
           <div className="agdt-item"><Users size={18} /><span><span className="muted agdt-rotulo">Na mesma visita</span>

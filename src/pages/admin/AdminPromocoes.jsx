@@ -10,7 +10,7 @@ export default function AdminPromocoes() {
   const [servicos, setServicos] = useState([])
   useEffect(() => {
     if (!salao?.id) return
-    supabase.from('services').select('id, name').eq('salon_id', salao.id).eq('active', true).order('name').then(({ data }) => setServicos(data ?? []))
+    supabase.from('services').select('id, name, price, is_combo').eq('salon_id', salao.id).eq('active', true).order('name').then(({ data }) => setServicos(data ?? []))
   }, [salao?.id])
   return (
     <AdminShell>
@@ -18,7 +18,7 @@ export default function AdminPromocoes() {
         <h2>Promoções</h2>
         <p className="muted">{salao?.name ?? 'Meu salão'}</p>
       </div>
-      {salao?.id ? <Promocoes escopo="salao" salao={salao.id} servicos={servicos} /> : <p className="muted">Carregando o salão…</p>}
+      {salao?.id ? <Promocoes escopo="salao" salao={salao.id} servicos={servicos} onServicoNovo={(sv) => setServicos((l) => [...l, sv].sort((a, b) => a.name.localeCompare(b.name)))} /> : <p className="muted">Carregando o salão…</p>}
     </AdminShell>
   )
 }

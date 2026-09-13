@@ -107,8 +107,9 @@ create policy "quem atende remove criativo" on storage.objects for delete to aut
   using (bucket_id = 'promocoes' and (public.eh_plataforma() or public.is_admin()
          or exists (select 1 from public.professionals p where p.user_id = auth.uid())));
 
--- o carrossel da cliente
-create or replace function public.promocoes_para_mim()
+-- o carrossel da cliente (o 084 muda o retorno: por isso o drop)
+drop function if exists public.promocoes_para_mim();
+create function public.promocoes_para_mim()
 returns table (
   id uuid, titulo text, texto text, imagem_url text,
   salon_id uuid, salao text, professional_id uuid, profissional text, service_id uuid, servico text,

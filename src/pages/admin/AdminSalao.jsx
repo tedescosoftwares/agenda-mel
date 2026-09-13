@@ -101,18 +101,18 @@ export default function AdminSalao() {
             </label>
             <div>
               <label>Nome do salão<input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required maxLength={60} /></label>
-              <span className="muted salao-dica">Toque no quadrado para trocar o logo. Fica quadrado, até 512px.</span>
+              <span className="muted salao-dica">Toque no quadrado para trocar o logo. Use a marca do salão, não uma foto: ele aparece pequeno, ao lado do nome.</span>
             </div>
           </div>
 
           <label>Descrição
-            <textarea value={form.descricao} maxLength={800} rows={4} onChange={(e) => setForm({ ...form, descricao: e.target.value })} placeholder="Conte do espaço, do jeito de atender, do que a casa tem de especial…" />
+            <textarea value={form.descricao} maxLength={800} rows={4} onChange={(e) => setForm({ ...form, descricao: e.target.value })} placeholder="Fale do espaço e do jeito de atender: estacionamento, café, se aceita cartão, o que a casa tem de especial. A lista de serviços e preços a cliente já vê ao lado." />
             <span className="muted salao-dica">{form.descricao.length}/800</span>
           </label>
 
           <div className="img-field">
             <span className="img-field-label">Fotos do salão ({fotos.length}/{MAX_FOTOS})</span>
-            <p className="muted salao-dica">A primeira vira a capa. Fotos na horizontal (4:3) ficam melhores. A gente reduz para 1600px.</p>
+            <p className="muted salao-dica">Aqui vai o seu espaço: fachada, recepção, cadeiras, o cantinho do café. É o que a cliente vê ao abrir o salão no app, como se estivesse na porta. Fotos de serviços e resultados ficam em cada serviço, em Serviços. A primeira vira a capa; horizontais (4:3) ficam melhores. A gente reduz para 1600px.</p>
             <div className="salao-fotos">
               {fotos.map((f, i) => (
                 <div key={f.url ?? f.preview} className={'salao-foto' + (i === 0 ? ' capa' : '')}>

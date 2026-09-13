@@ -521,6 +521,7 @@ export default function AdminServices() {
             <span className="img-field-label">
               Fotos ({imagens.length}/{MAX_IMAGENS})
             </span>
+            <p className="muted salao-dica">Fotos do resultado deste serviço: o antes e depois, o acabamento, o detalhe. A primeira aparece na lista; as outras, na página do serviço. Fotos do espaço ficam em Página do salão.</p>
             <div className="img-thumbs">
               {imagens.map((img, i) => (
                 <div key={img.url ?? img.preview} className="img-thumb">
@@ -673,7 +674,7 @@ export default function AdminServices() {
               <p className="muted cat-gestao-pre">Da plataforma: {cats.filter((c) => !c.salon_id).map((c) => c.nome).join(', ')}.</p>
 
               <h4 className="cat-capas-titulo">Capas das categorias</h4>
-              <p className="muted">A imagem larga que aparece no topo de cada categoria na página do salão. Recomendado 1200×400 (3:1); a gente ajusta e corta pelo centro. Só aparecem as categorias com serviço.</p>
+              <p className="muted">A imagem larga que abre cada categoria na página do salão. Escolha uma foto que represente o tipo de trabalho, como um close de unhas para Unhas ou um cabelo finalizado para Cabelo. Não precisa ser do seu salão, mas evite texto e logos na imagem: o nome da categoria já vai escrito por cima. Recomendado 1200×400 (3:1); a gente ajusta e corta pelo centro. Sem imagem, o app usa um fundo da marca. Só aparecem as categorias com serviço.</p>
               <div className="cat-capas">
                 {agruparPorCategoria(services.filter((s) => s.active), cats).filter((g) => g.id).map((g) => {
                   const c = cats.find((x) => x.id === g.id)

@@ -5418,3 +5418,19 @@ a, button { -webkit-tap-highlight-color: transparent; }
 .modal-form h3 { padding-right: 2.2rem; }
 .modal-form .form-actions { position: sticky; bottom: -1.2rem; margin: 0.6rem -1.2rem -1.2rem; padding: 0.8rem 1.2rem calc(0.8rem + env(safe-area-inset-bottom)); background: var(--branco); border-top: 1px solid var(--fio); }
 @media (min-width: 700px) { .modal-fundo:has(.modal-form) { align-items: center; padding: 1rem; } .modal-form { border-radius: 22px; max-height: 88vh; } }
+
+/* ---- rolagem bonita no desktop (2.23.2) ----
+   Mouse/trackpad: barra fina, arredondada, na cor da marca, trilho
+   invisível e afastada dos cantos. No celular a barra é do sistema e
+   some sozinha, então não mexemos. */
+@media (pointer: fine) {
+  * { scrollbar-width: thin; scrollbar-color: #e9c3d8 transparent; }
+  *::-webkit-scrollbar { width: 10px; height: 10px; }
+  *::-webkit-scrollbar-track { background: transparent; }
+  *::-webkit-scrollbar-thumb { background: #e9c3d8; border-radius: 999px; border: 3px solid transparent; background-clip: padding-box; }
+  *::-webkit-scrollbar-thumb:hover { background: #ff7baa; border: 3px solid transparent; background-clip: padding-box; }
+  *::-webkit-scrollbar-corner { background: transparent; }
+  .modal-form::-webkit-scrollbar-track { margin: 18px 0; }
+  .modal-form { scrollbar-gutter: stable; }
+  .plat-principal::-webkit-scrollbar-track { margin: 8px 0; }
+}

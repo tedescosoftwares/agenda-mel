@@ -16,6 +16,7 @@ import {
   BellIcon,
   ChevronIcon,
 } from '../../components/icons'
+import { BadgePercent } from 'lucide-react'
 
 // Hub de ajustes do salão.
 //
@@ -30,6 +31,12 @@ const ITENS = [
     Icon: MegafoneIcon,
     titulo: 'Recados',
     resumo: 'Um aviso para a carteira ou para a equipe, no celular',
+  },
+  {
+    to: '/admin/promocoes',
+    Icon: BadgePercent,
+    titulo: 'Promoções',
+    resumo: 'Um criativo na home das clientes da carteira',
   },
   {
     to: '/admin/equipe',

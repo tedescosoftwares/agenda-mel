@@ -4,6 +4,7 @@ import ProShell from '../../components/ProShell'
 import SemFicha from './SemFicha'
 import { useAuth } from '../../context/AuthContext'
 import { ClockIcon, LinkIcon, ChevronIcon, BellIcon, MegafoneIcon } from '../../components/icons'
+import { BadgePercent } from 'lucide-react'
 import AvisosNoCelular from '../../components/AvisosNoCelular'
 import AvisosPorEmail from '../../components/AvisosPorEmail'
 
@@ -36,6 +37,21 @@ export default function ProAjustes() {
             </span>
             <span className="muted cliente-meta">
               Um aviso para todas as suas clientes, no celular
+            </span>
+          </div>
+          <ChevronIcon />
+        </Link>
+
+        <Link to="/pro/promocoes" className="card prof-row">
+          <span className="ajuste-icone">
+            <BadgePercent />
+          </span>
+          <div className="cliente-info">
+            <span className="cliente-nome">
+              <span className="nome-txt">Promoções</span>
+            </span>
+            <span className="muted cliente-meta">
+              Um criativo na home das suas clientes
             </span>
           </div>
           <ChevronIcon />

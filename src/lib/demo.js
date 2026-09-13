@@ -125,6 +125,13 @@ const avaliacoes = [
   { nota: 4, comentario: 'Ficou lindo, só atrasou um pouquinho.', quem: 'Beatriz', quando: mais(-20) },
 ]
 
+const PROMO_IMG = (a, b, txt) => 'data:image/svg+xml;utf8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="600"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient></defs><rect width="1200" height="600" fill="url(#g)"/><circle cx="980" cy="120" r="160" fill="rgba(255,255,255,0.18)"/><circle cx="200" cy="520" r="220" fill="rgba(255,255,255,0.12)"/><text x="80" y="330" font-family="Poppins, Arial" font-size="96" font-weight="700" fill="white">${txt}</text></svg>`)
+const promocoes = [
+  { id: 'pm1', salon_id: SALAO, professional_id: 'pr1', service_id: 'sv5', titulo: 'Esmaltação em gel com 20% off', texto: 'Só esta semana, com a Ana', imagem_url: PROMO_IMG('#FF2D7A', '#AA4CFF', '-20%'), inicio: mais(-2), fim: mais(5), ativa: true, vistas: 128, cliques: 23, created_at: mais(-2) },
+  { id: 'pm2', salon_id: SALAO, professional_id: null, service_id: 'sv8', titulo: 'Semana da sobrancelha', texto: 'Design por R$ 39 no Studio Mel', imagem_url: PROMO_IMG('#AA4CFF', '#FF7BAA', 'R$ 39'), inicio: mais(-1), fim: null, ativa: true, vistas: 310, cliques: 41, created_at: mais(-1) },
+  { id: 'pm3', salon_id: null, professional_id: null, service_id: null, titulo: 'Indique uma amiga e ganhe', texto: 'Crédito na próxima visita', imagem_url: PROMO_IMG('#1F2026', '#FF2D7A', 'MIMO'), inicio: mais(-10), fim: null, ativa: true, vistas: 2040, cliques: 96, created_at: mais(-10) },
+  { id: 'pm4', salon_id: SALAO, professional_id: null, service_id: null, titulo: 'Dia das Mães', texto: 'Encerrada', imagem_url: PROMO_IMG('#FF7BAA', '#FFC2D8', '❤'), inicio: mais(-40), fim: mais(-20), ativa: true, vistas: 900, cliques: 120, created_at: mais(-40) },
+]
 const TABELAS = {
   profiles: clientes,
   professionals: profissionais,
@@ -145,6 +152,7 @@ const TABELAS = {
   reviews: [],
   appointment_services: [],
   categorias_de_servico: CATS,
+  promocoes: promocoes.map((p) => ({ ...p, salons: p.salon_id ? { name: 'Studio Mel' } : null, professionals: p.professional_id ? { name: profissionais.find((x) => x.id === p.professional_id)?.name } : null })),
   servicos_juntos: [{ service_id: 'sv1', sugerido_id: 'sv3' }],
   salons: [{ id: SALAO, name: 'Studio Mel', slug: 'studio-mel', app_url: 'https://mimo.app', city: 'Santos', address: 'Rua das Flores, 120 · Gonzaga', codigo: 'MEL2K5', tipo: 'salao' }],
   salon_members: [{ salon_id: SALAO, user_id: 'a1', papel: 'admin', salons: { id: SALAO, name: 'Studio Mel', slug: 'studio-mel', codigo: 'MEL2K5', tipo: 'salao', city: 'Santos' } }],
@@ -154,6 +162,9 @@ const TABELAS = {
 }
 
 const RPC = {
+  promocoes_para_mim: () => promocoes.filter((p) => p.ativa && (!p.fim || p.fim >= mais(0))).map((p) => ({ ...p, salao: p.salon_id ? 'Studio Mel' : null, profissional: p.professional_id ? profissionais.find((x) => x.id === p.professional_id)?.name : null, professional_id: p.professional_id ?? (p.service_id ? 'pr1' : null), servico: servicos.find((s) => s.id === p.service_id)?.name ?? null })),
+  promocao_vista: () => null,
+  promocao_clicada: () => null,
   sugestoes_de_visita: ({ com_espera }) => [
     { service_id: 'sv3', service_name: servicos[2]?.name ?? 'Manicure', price: servicos[2]?.price ?? 60, duration_minutes: servicos[2]?.duration_minutes ?? 45, professional_id: 'pr2', professional_name: profissionais[1]?.name ?? 'Camila', photo_url: null, hora_sugerida: '11:30:00', modo: 'logo_depois' },
     ...(com_espera ? [{ service_id: 'sv4', service_name: servicos[3]?.name ?? 'Sobrancelha', price: servicos[3]?.price ?? 50, duration_minutes: servicos[3]?.duration_minutes ?? 30, professional_id: 'pr2', professional_name: profissionais[1]?.name ?? 'Camila', photo_url: null, hora_sugerida: '14:00:00', modo: 'com_espera' }] : []),
@@ -323,7 +334,8 @@ function consulta(linhas) {
     gt: (c, v) => { filtros.push((r) => r[c] > v); return q },
     lt: (c, v) => { filtros.push((r) => r[c] < v); return q },
     in: (c, v) => { filtros.push((r) => v.includes(r[c])); return q },
-    not: () => q,
+    is: (c, v) => { filtros.push((r) => (v === null ? r[c] == null : r[c] === v)); return q },
+    not: (c, op, v) => { if (op === 'is' && v === null) filtros.push((r) => r[c] != null); return q },
     or: () => q,
     ilike: (c, v) => { const t = String(v).replace(/%/g, '').toLowerCase(); filtros.push((r) => String(r[c] ?? '').toLowerCase().includes(t)); return q },
     order: (c, o) => { ordem = [c, o?.ascending === false ? -1 : 1]; return q },

@@ -62,6 +62,9 @@ import AvisoCookies from "./components/AvisoCookies";
 import AvisoAoVivo from "./components/AvisoAoVivo";
 import ProRecados from "./pages/pro/ProRecados";
 import AdminRecados from "./pages/admin/AdminRecados";
+import AdminPromocoes from "./pages/admin/AdminPromocoes";
+import ProPromocoes from "./pages/pro/ProPromocoes";
+import PlataformaPromocoes from "./pages/plataforma/Promocoes";
 import { guardarCodigoDaURL } from "./lib/indicacao";
 
 export default function App() {
@@ -227,6 +230,8 @@ export default function App() {
             {/* área da profissional */}
             <Route path="/pro" element={<Navigate to="/pro/agenda" replace />} />
             <Route path="/pro/fechar-dia" element={<ProtectedRoute requireRole="profissional"><ProFecharDia /></ProtectedRoute>} />
+            <Route path="/pro/promocoes" element={<ProtectedRoute requireRole="profissional"><ProPromocoes /></ProtectedRoute>} />
+            <Route path="/admin/promocoes" element={<ProtectedRoute requireRole="admin"><AdminPromocoes /></ProtectedRoute>} />
             <Route path="/admin/fechar-dia" element={<ProtectedRoute requireRole="admin"><AdminFecharDia /></ProtectedRoute>} />
             <Route
               path="/pro/agenda"
@@ -326,6 +331,7 @@ export default function App() {
             <Route path="/plataforma/filas" element={<ProtectedRoute requireRole="plataforma"><Filas /></ProtectedRoute>} />
             <Route path="/plataforma/mensagens" element={<ProtectedRoute requireRole="plataforma"><PlataformaMensagens /></ProtectedRoute>} />
             <Route path="/plataforma/recados" element={<ProtectedRoute requireRole="plataforma"><PlataformaRecados /></ProtectedRoute>} />
+            <Route path="/plataforma/promocoes" element={<ProtectedRoute requireRole="plataforma"><PlataformaPromocoes /></ProtectedRoute>} />
             <Route path="/plataforma/metricas" element={<ProtectedRoute requireRole="plataforma"><Metricas /></ProtectedRoute>} />
             <Route path="/plataforma/configuracoes" element={<ProtectedRoute requireRole="plataforma"><Configuracoes /></ProtectedRoute>} />
 

@@ -5434,3 +5434,50 @@ a, button { -webkit-tap-highlight-color: transparent; }
   .modal-form { scrollbar-gutter: stable; }
   .plat-principal::-webkit-scrollbar-track { margin: 8px 0; }
 }
+
+/* ---- promoções (2.24) ---- */
+.promo-banner { margin: 0.2rem 0 1.1rem; }
+.promo-faixa { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; gap: 0; border-radius: 18px; }
+.promo-faixa::-webkit-scrollbar { display: none; }
+.promo-slide { flex: 0 0 100%; scroll-snap-align: start; position: relative; aspect-ratio: 2 / 1; border: none; padding: 0; background: var(--cinza-1); cursor: pointer; overflow: hidden; border-radius: 18px; text-align: left; font: inherit; color: #fff; }
+.promo-slide img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.promo-veu { position: absolute; inset: auto 0 0 0; padding: 2.2rem 1rem 0.85rem; background: linear-gradient(to top, rgba(20, 16, 24, 0.82), rgba(20, 16, 24, 0)); display: flex; flex-direction: column; gap: 0.1rem; }
+.promo-veu strong { font-size: 1.05rem; line-height: 1.2; text-shadow: 0 1px 2px rgba(0,0,0,0.4); }
+.promo-veu span { font-size: 0.85rem; opacity: 0.95; }
+.promo-veu small { font-size: 0.72rem; opacity: 0.85; margin-top: 0.15rem; }
+.promo-pontos { display: flex; justify-content: center; gap: 0.35rem; margin-top: 0.5rem; }
+.promo-pontos button { width: 7px; height: 7px; border-radius: 50%; border: none; padding: 0; background: #e5c8d6; cursor: pointer; transition: width 0.2s; }
+.promo-pontos button.on { width: 20px; border-radius: 4px; background: var(--rosa); }
+
+.promos-topo { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.8rem; margin-bottom: 0.9rem; }
+.promos-topo p { margin: 0; font-size: 0.85rem; flex: 1; }
+.promos-topo .btn { white-space: nowrap; display: inline-flex; align-items: center; gap: 0.35rem; }
+.promos-lista { display: grid; gap: 0.7rem; }
+@media (min-width: 720px) { .promos-lista { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); } }
+.promo-cartao { display: flex; flex-direction: column; gap: 0.5rem; padding: 0; overflow: hidden; }
+.promo-cartao.pausada, .promo-cartao.encerrada { opacity: 0.75; }
+.promo-figura { position: relative; aspect-ratio: 2 / 1; background: var(--cinza-1); }
+.promo-figura img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.promo-estado { text-transform: capitalize; }
+.promo-figura .promo-estado { position: absolute; top: 0.6rem; left: 0.6rem; }
+.promo-estado.no-ar { background: #e8f7ee; color: #1a8a4a; }
+.promo-estado.pausada { background: #f3f4f6; color: #4b5563; }
+.promo-estado.encerrada { background: #fdecea; color: #b3261e; }
+.promo-estado.agendada { background: #fff3dc; color: #9a5b00; }
+.promo-corpo { display: flex; flex-direction: column; gap: 0.15rem; padding: 0 0.9rem; }
+.promo-corpo .muted { font-size: 0.82rem; }
+.promo-meta { font-size: 0.78rem; }
+.promo-numeros { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.78rem; color: var(--texto-2); margin-top: 0.2rem; }
+.promo-numeros svg + svg { margin-left: 0.5rem; }
+.promo-acoes { display: flex; gap: 0.3rem; justify-content: flex-end; padding: 0 0.6rem 0.6rem; }
+.promo-acoes .icon-btn.perigo { color: #c0392b; }
+.promo-criativo { margin-bottom: 0.9rem; }
+.promo-drop { display: block; aspect-ratio: 2 / 1; border: 2px dashed #ffc2d8; border-radius: 14px; background: #fff8fb; overflow: hidden; cursor: pointer; }
+.promo-drop.com-imagem { border-style: solid; border-color: var(--fio); }
+.promo-drop img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.promo-drop-vazio { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.2rem; color: var(--rosa); }
+.promo-drop-vazio .muted { font-size: 0.78rem; }
+.promo-dica { font-size: 0.78rem; margin: 0.4rem 0 0; }
+.promo-dica .link-ver { border: none; background: none; padding: 0; font: inherit; font-size: 0.78rem; cursor: pointer; }
+.plat-miniatura-promo { width: 96px; aspect-ratio: 2 / 1; object-fit: cover; border-radius: 6px; display: block; }
+.plat-rolagem { overflow-x: auto; }

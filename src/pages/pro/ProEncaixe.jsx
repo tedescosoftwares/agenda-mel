@@ -5,11 +5,13 @@ import SemFicha from './SemFicha'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { toISODate } from '../../lib/format'
+import { useCategorias, agruparPorCategoria } from '../../lib/categorias'
 
 // Encaixe manual (tela 17): serviço, data, horário e — se quiser — a
 // cliente. Virou tela em vez de modal porque um formulário de quatro
 // campos num celular precisa da tela inteira, e o teclado come metade.
 export default function ProEncaixe() {
+  const cats = useCategorias()
   const { professional } = useAuth()
   const navigate = useNavigate()
   const [servicos, setServicos] = useState([])
@@ -58,7 +60,11 @@ export default function ProEncaixe() {
         <label>Serviço
           <select value={servicoId} onChange={(e) => { setServicoId(e.target.value); setHora('') }}>
             <option value="">Selecione</option>
-            {servicos.map((s) => <option key={s.id} value={s.id}>{s.name} · {s.duration_minutes}min</option>)}
+            {agruparPorCategoria(servicos, cats).map((g) => (
+              <optgroup key={g.id || 'outros'} label={g.nome}>
+                {g.itens.map((s) => <option key={s.id} value={s.id}>{s.name} · {s.duration_minutes}min</option>)}
+              </optgroup>
+            ))}
           </select>
         </label>
         <label>Data<input type="date" value={data} min={toISODate(new Date())} onChange={(e) => { setData(e.target.value); setHora('') }} /></label>

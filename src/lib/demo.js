@@ -53,15 +53,23 @@ const profissionais = [
   { id: 'pr4', user_id: 'p4', name: 'Roberta Souza', slug: 'roberta-souza', bio: 'Maquiagem e sobrancelhas.', photo_url: FOTO(20), active: true, salon_id: SALAO, aceite_manual: true },
 ]
 
+const CATS = [
+  { id: 'ct1', salon_id: null, nome: 'Cabelo', ordem: 10 }, { id: 'ct2', salon_id: null, nome: 'Unhas', ordem: 20 },
+  { id: 'ct3', salon_id: null, nome: 'Sobrancelhas e cílios', ordem: 30 }, { id: 'ct4', salon_id: null, nome: 'Rosto', ordem: 40 },
+  { id: 'ct5', salon_id: null, nome: 'Corpo', ordem: 50 }, { id: 'ct6', salon_id: null, nome: 'Depilação', ordem: 60 },
+  { id: 'ct7', salon_id: null, nome: 'Maquiagem', ordem: 70 }, { id: 'ct8', salon_id: null, nome: 'Massagem e bem-estar', ordem: 80 },
+  { id: 'ct9', salon_id: null, nome: 'Barba', ordem: 90 }, { id: 'ct10', salon_id: null, nome: 'Outros', ordem: 999 },
+  { id: 'ct11', salon_id: SALAO, nome: 'Noivas', ordem: 500 },
+]
 const servicos = [
-  { id: 'sv1', name: 'Manicure', description: 'Cutilagem, lixamento e esmaltação.', duration_minutes: 45, price: 35, active: true, images: [], salon_id: SALAO, is_combo: false, return_days: 15 },
-  { id: 'sv2', name: 'Manicure + Pedicure', description: 'O combo completo.', duration_minutes: 90, price: 85, active: true, images: [], salon_id: SALAO, is_combo: true, combo_service_ids: ['sv1', 'sv3'], return_days: 15 },
-  { id: 'sv3', name: 'Pedicure', description: '', duration_minutes: 45, price: 40, active: true, images: [], salon_id: SALAO, is_combo: false, return_days: 20 },
-  { id: 'sv4', name: 'Spa dos pés', description: 'Hidratação profunda e massagem.', duration_minutes: 60, price: 65, active: true, images: [], salon_id: SALAO, is_combo: false, return_days: 30 },
-  { id: 'sv5', name: 'Esmaltação em gel', description: 'Dura até 3 semanas.', duration_minutes: 60, price: 75, active: true, images: [], salon_id: SALAO, is_combo: false, return_days: 21 },
-  { id: 'sv6', name: 'Corte feminino', description: '', duration_minutes: 60, price: 80, active: true, images: [], salon_id: SALAO, is_combo: false, return_days: 45 },
-  { id: 'sv7', name: 'Escova', description: '', duration_minutes: 45, price: 60, active: true, images: [], salon_id: SALAO, is_combo: false, return_days: 10 },
-  { id: 'sv8', name: 'Design de sobrancelhas', description: '', duration_minutes: 30, price: 45, active: true, images: [], salon_id: SALAO, is_combo: false, return_days: 20 },
+  { id: 'sv1', name: 'Manicure', description: 'Cutilagem, lixamento e esmaltação.', duration_minutes: 45, price: 35, categoria_id: 'ct2', active: true, images: [], salon_id: SALAO, is_combo: false, return_days: 15 },
+  { id: 'sv2', name: 'Manicure + Pedicure', description: 'O combo completo.', duration_minutes: 90, price: 85, categoria_id: 'ct2', active: true, images: [], salon_id: SALAO, is_combo: true, combo_service_ids: ['sv1', 'sv3'], return_days: 15 },
+  { id: 'sv3', name: 'Pedicure', description: '', duration_minutes: 45, price: 40, categoria_id: 'ct2', active: true, images: [], salon_id: SALAO, is_combo: false, return_days: 20 },
+  { id: 'sv4', name: 'Spa dos pés', description: 'Hidratação profunda e massagem.', duration_minutes: 60, price: 65, categoria_id: 'ct2', active: true, images: [], salon_id: SALAO, is_combo: false, return_days: 30 },
+  { id: 'sv5', name: 'Esmaltação em gel', description: 'Dura até 3 semanas.', duration_minutes: 60, price: 75, categoria_id: 'ct2', active: true, images: [], salon_id: SALAO, is_combo: false, return_days: 21 },
+  { id: 'sv6', name: 'Corte feminino', description: '', duration_minutes: 60, price: 80, categoria_id: 'ct1', active: true, images: [], salon_id: SALAO, is_combo: false, return_days: 45 },
+  { id: 'sv7', name: 'Escova', description: '', duration_minutes: 45, price: 60, categoria_id: 'ct1', active: true, images: [], salon_id: SALAO, is_combo: false, return_days: 10 },
+  { id: 'sv8', name: 'Design de sobrancelhas', description: '', duration_minutes: 30, price: 45, categoria_id: 'ct3', active: true, images: [], salon_id: SALAO, is_combo: false, return_days: 20 },
 ]
 
 const vinculos = [
@@ -136,6 +144,7 @@ const TABELAS = {
   client_favorites: [{ client_id: 'c1', professional_id: 'pr1' }, { client_id: 'c1', professional_id: 'pr3' }],
   reviews: [],
   appointment_services: [],
+  categorias_de_servico: CATS,
   servicos_juntos: [{ service_id: 'sv1', sugerido_id: 'sv3' }],
   salons: [{ id: SALAO, name: 'Studio Mel', slug: 'studio-mel', app_url: 'https://mimo.app', city: 'Santos', address: 'Rua das Flores, 120 · Gonzaga', codigo: 'MEL2K5', tipo: 'salao' }],
   salon_members: [{ salon_id: SALAO, user_id: 'a1', papel: 'admin', salons: { id: SALAO, name: 'Studio Mel', slug: 'studio-mel', codigo: 'MEL2K5', tipo: 'salao', city: 'Santos' } }],

@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { ChevronIcon, SparkleIcon } from '../../components/icons'
 import { formatPreco, formatDuracao, labelDuracao } from '../../lib/format'
+import { useCategorias, categoriasDoSalao, agruparPorCategoria, bate } from '../../lib/categorias'
 
 const FORM_VAZIO = {
   name: '',
@@ -12,7 +13,9 @@ const FORM_VAZIO = {
   duration_minutes: 60,
   price: '',
   is_combo: false,
+  categoria_id: '',   // vazio = o app chuta pelo nome
 }
+const NOVA = '__nova__'
 
 const MAX_IMAGENS = 3
 const MAX_TAMANHO_MB = 5
@@ -33,6 +36,14 @@ export default function AdminServices() {
   const [juntos, setJuntos] = useState([])
   const [juntosTodos, setJuntosTodos] = useState([])   // linhas de servicos_juntos do salão
   const [saving, setSaving] = useState(false)
+  // categorias (082): as da plataforma e as do salão
+  const catsTodas = useCategorias()
+  const [catsExtra, setCatsExtra] = useState([])       // criadas/renomeadas nesta tela
+  const [novaCat, setNovaCat] = useState('')
+  const [buscaPicker, setBuscaPicker] = useState('')
+  const [gerindo, setGerindo] = useState(false)
+  const [catEdit, setCatEdit] = useState(null)         // { id, nome }
+  const cats = categoriasDoSalao([...catsTodas.filter((c) => !catsExtra.some((e) => e.id === c.id)), ...catsExtra].filter((c) => !c.apagada), salao?.id)
 
   useEffect(() => {
     fetchServices()
@@ -72,6 +83,7 @@ export default function AdminServices() {
       duration_minutes: service.duration_minutes,
       price: String(service.price),
       is_combo: Boolean(service.is_combo),
+      categoria_id: service.categoria_id ?? '',
     })
     setImagens((service.images ?? []).map((url) => ({ url })))
     setComboIds(service.combo_service_ids ?? [])
@@ -88,6 +100,36 @@ export default function AdminServices() {
     setImagens([])
     setComboIds([])
     setJuntos([])
+  }
+
+  // cria a categoria do salão na hora, dentro do formulário do serviço
+  async function criarCategoria() {
+    const nome = novaCat.trim()
+    if (!nome) return
+    const { data, error } = await supabase.from('categorias_de_servico').insert({ salon_id: salao?.id, nome, ordem: 500 }).select('id, salon_id, nome, ordem').maybeSingle()
+    if (error) { setError(error.message.includes('duplicate') ? 'Já existe uma categoria com esse nome.' : 'Não deu para criar a categoria: ' + error.message); return }
+    const criada = data ?? { id: crypto.randomUUID(), salon_id: salao?.id, nome, ordem: 500 }
+    setCatsExtra((l) => [...l, criada])
+    setForm((f) => ({ ...f, categoria_id: criada.id }))
+    setNovaCat('')
+  }
+  async function renomearCategoria() {
+    const nome = catEdit?.nome?.trim()
+    if (!catEdit || !nome) return
+    const { error } = await supabase.from('categorias_de_servico').update({ nome }).eq('id', catEdit.id)
+    if (error) { setError(error.message.includes('duplicate') ? 'Já existe uma categoria com esse nome.' : error.message); return }
+    const base = cats.find((c) => c.id === catEdit.id)
+    setCatsExtra((l) => [...l.filter((c) => c.id !== catEdit.id), { ...base, nome }])
+    setCatEdit(null)
+  }
+  async function apagarCategoria(c) {
+    const quantos = services.filter((s) => s.categoria_id === c.id).length
+    const ok = await confirmar({ titulo: `Apagar "${c.nome}"?`, texto: quantos ? `${quantos} ${quantos === 1 ? 'serviço volta' : 'serviços voltam'} para a categoria sugerida pelo nome.` : 'Nenhum serviço usa essa categoria.', ok: 'Apagar', perigo: true })
+    if (!ok) return
+    const { error } = await supabase.from('categorias_de_servico').delete().eq('id', c.id)
+    if (error) { setError(error.message); return }
+    setCatsExtra((l) => [...l.filter((x) => x.id !== c.id), { ...c, apagada: true }])
+    fetchServices()
   }
 
   function toggleJunto(id) {
@@ -201,6 +243,7 @@ export default function AdminServices() {
         images,
         is_combo: form.is_combo,
         combo_service_ids: form.is_combo ? comboIds : [],
+        categoria_id: form.categoria_id || null,
       }
 
       const antigas =
@@ -307,6 +350,29 @@ export default function AdminServices() {
             />
           </label>
 
+          <label>
+            Categoria
+            <select
+              value={form.categoria_id}
+              onChange={(e) => setForm({ ...form, categoria_id: e.target.value === NOVA ? '' : e.target.value })}
+            >
+              <option value="">Deixar o app escolher pelo nome</option>
+              {cats.map((c) => (
+                <option key={c.id} value={c.id}>{c.nome}{c.salon_id ? ' · do salão' : ''}</option>
+              ))}
+            </select>
+          </label>
+          <div className="cat-nova">
+            <input
+              value={novaCat}
+              onChange={(e) => setNovaCat(e.target.value)}
+              placeholder="Nova categoria do salão (ex.: Noivas)"
+              maxLength={40}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); criarCategoria() } }}
+            />
+            <button type="button" className="btn btn-ghost btn-mini" onClick={criarCategoria} disabled={!novaCat.trim()}>+ Criar</button>
+          </div>
+
           <div className="combo-toggle">
             <label className="switch">
               <input
@@ -333,21 +399,14 @@ export default function AdminServices() {
                   Cadastre pelo menos 2 serviços comuns antes de criar um combo.
                 </p>
               ) : (
-                <div className="combo-lista">
-                  {candidatosCombo.map((s) => (
-                    <label key={s.id} className="combo-item">
-                      <input
-                        type="checkbox"
-                        checked={comboIds.includes(s.id)}
-                        onChange={() => toggleComboId(s.id)}
-                      />
-                      <span className="combo-item-nome">{s.name}</span>
-                      <span className="muted">
-                        {formatDuracao(s.duration_minutes)}
-                      </span>
-                    </label>
-                  ))}
-                </div>
+                <ListaPorCategoria
+                  itens={candidatosCombo}
+                  cats={cats}
+                  marcados={comboIds}
+                  onToggle={toggleComboId}
+                  busca={buscaPicker}
+                  setBusca={setBuscaPicker}
+                />
               )}
               {comboIds.length > 0 && (
                 <p className="muted combo-soma">
@@ -366,19 +425,14 @@ export default function AdminServices() {
                 sequência, inclusive com outra profissional do salão. Não é
                 combo: cada um continua com o próprio preço e a própria agenda.
               </p>
-              <div className="combo-lista">
-                {candidatosJuntos.map((s) => (
-                  <label key={s.id} className="combo-item">
-                    <input
-                      type="checkbox"
-                      checked={juntos.includes(s.id)}
-                      onChange={() => toggleJunto(s.id)}
-                    />
-                    <span className="combo-item-nome">{s.name}</span>
-                    <span className="muted">{formatDuracao(s.duration_minutes)}</span>
-                  </label>
-                ))}
-              </div>
+              <ListaPorCategoria
+                itens={candidatosJuntos}
+                cats={cats}
+                marcados={juntos}
+                onToggle={toggleJunto}
+                busca={buscaPicker}
+                setBusca={setBuscaPicker}
+              />
             </div>
           )}
 
@@ -474,7 +528,10 @@ export default function AdminServices() {
         </div>
       ) : (
         <div className="service-list">
-          {services.map((s) => (
+          {agruparPorCategoria(services, cats).map((g, _, todos) => (
+          <section key={g.id || 'outros'} className="cat-grupo">
+          {todos.length > 1 && <h3 className="cat-titulo">{g.nome} <span className="muted">{g.itens.length}</span></h3>}
+          {g.itens.map((s) => (
             <div
               key={s.id}
               className={s.active ? 'card service-row' : 'card service-row inactive'}
@@ -517,7 +574,44 @@ export default function AdminServices() {
               </button>
             </div>
           ))}
+          </section>
+          ))}
         </div>
+      )}
+
+      {!loading && editing === null && (
+        <section className="card cat-gestao">
+          <button type="button" className="cat-gestao-topo" onClick={() => setGerindo((v) => !v)} aria-expanded={gerindo}>
+            <span><strong>Categorias do salão</strong><span className="muted"> · {cats.filter((c) => c.salon_id).length} suas, {cats.filter((c) => !c.salon_id).length} da plataforma</span></span>
+            <ChevronIcon />
+          </button>
+          {gerindo && (
+            <div className="cat-gestao-corpo">
+              <p className="muted">As da plataforma valem para todo mundo. As suas aparecem só para o seu salão. Para criar uma nova, abra um serviço.</p>
+              <ul className="cat-gestao-lista">
+                {cats.filter((c) => c.salon_id).map((c) => (
+                  <li key={c.id}>
+                    {catEdit?.id === c.id ? (
+                      <>
+                        <input value={catEdit.nome} maxLength={40} onChange={(e) => setCatEdit({ ...catEdit, nome: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); renomearCategoria() } }} autoFocus />
+                        <button type="button" className="btn btn-primary btn-mini" onClick={renomearCategoria}>Salvar</button>
+                        <button type="button" className="btn btn-ghost btn-mini" onClick={() => setCatEdit(null)}>Cancelar</button>
+                      </>
+                    ) : (
+                      <>
+                        <span className="cat-gestao-nome">{c.nome} <span className="muted">{services.filter((s) => s.categoria_id === c.id).length}</span></span>
+                        <button type="button" className="btn btn-ghost btn-mini" onClick={() => setCatEdit({ id: c.id, nome: c.nome })}>Renomear</button>
+                        <button type="button" className="btn btn-ghost btn-mini perigo" onClick={() => apagarCategoria(c)}>Apagar</button>
+                      </>
+                    )}
+                  </li>
+                ))}
+                {cats.filter((c) => c.salon_id).length === 0 && <li className="muted">Nenhuma categoria sua ainda.</li>}
+              </ul>
+              <p className="muted cat-gestao-pre">Da plataforma: {cats.filter((c) => !c.salon_id).map((c) => c.nome).join(', ')}.</p>
+            </div>
+          )}
+        </section>
       )}
 
       {editing === null && (
@@ -526,5 +620,33 @@ export default function AdminServices() {
         </button>
       )}
     </AdminShell>
+  )
+}
+
+// checkboxes agrupados por categoria, com busca quando a lista é grande
+function ListaPorCategoria({ itens, cats, marcados, onToggle, busca, setBusca }) {
+  const grupos = agruparPorCategoria(itens.filter((s) => bate(s.name, busca)), cats)
+  return (
+    <div className="combo-lista combo-lista-cats">
+      {itens.length > 10 && (
+        <input className="combo-busca" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar serviço" aria-label="Buscar serviço" />
+      )}
+      {marcados.length > 0 && (
+        <p className="muted combo-marcados">Marcados: {marcados.map((id) => itens.find((s) => s.id === id)?.name).filter(Boolean).join(', ')}</p>
+      )}
+      {grupos.length === 0 && <p className="muted">Nada com esse nome.</p>}
+      {grupos.map((g) => (
+        <div key={g.id || 'outros'} className="combo-grupo">
+          {grupos.length > 1 && <span className="combo-grupo-titulo">{g.nome}</span>}
+          {g.itens.map((s) => (
+            <label key={s.id} className="combo-item">
+              <input type="checkbox" checked={marcados.includes(s.id)} onChange={() => onToggle(s.id)} />
+              <span className="combo-item-nome">{s.name}</span>
+              <span className="muted">{formatDuracao(s.duration_minutes)}</span>
+            </label>
+          ))}
+        </div>
+      ))}
+    </div>
   )
 }

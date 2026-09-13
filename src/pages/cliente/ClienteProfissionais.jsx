@@ -5,11 +5,11 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { SearchIcon, HeartIcon } from '../../components/icons'
 import Avatar from '../../components/Avatar'
+import { useCategorias } from '../../lib/categorias'
 
-// Lista de profissionais (tela 04): busca, filtro por serviço e o
-// coração de favorita. Os chips são os serviços que o salão oferece —
-// não existe "categoria" no banco, e inventar uma tabela para isso seria
-// pedir para alguém preencher o que os próprios serviços já dizem.
+// Lista de profissionais (tela 04): busca, filtro por categoria e o
+// coração de favorita. Os chips são as categorias (082) em que alguém
+// do salão atende; 300 serviços em chips não cabiam em lugar nenhum.
 export default function ClienteProfissionais() {
   const { user } = useAuth()
   const [profissionais, setProfissionais] = useState([])
@@ -18,13 +18,14 @@ export default function ClienteProfissionais() {
   const [busca, setBusca] = useState('')
   const [filtro, setFiltro] = useState('')
   const [loading, setLoading] = useState(true)
+  const cats = useCategorias()
 
   useEffect(() => {
     let vivo = true
     ;(async () => {
       const [pr, vi, fav] = await Promise.all([
         supabase.from('professionals').select('*').eq('active', true).order('name'),
-        supabase.from('professional_services').select('professional_id, service_id, services (id, name, active)'),
+        supabase.from('professional_services').select('professional_id, service_id, services (id, name, active, categoria_id)'),
         supabase.from('client_favorites').select('professional_id').eq('client_id', user.id),
       ])
       if (!vivo) return
@@ -36,16 +37,18 @@ export default function ClienteProfissionais() {
     return () => { vivo = false }
   }, [user.id])
 
-  const servicos = useMemo(() => {
-    const m = new Map()
-    for (const v of vinculos) if (v.services?.active) m.set(v.service_id, v.services.name)
-    return [...m.entries()].sort((a, b) => a[1].localeCompare(b[1]))
-  }, [vinculos])
+  // as categorias em que alguém atende ('' = sem categoria)
+  const categorias = useMemo(() => {
+    const usadas = new Set(vinculos.filter((v) => v.services?.active).map((v) => v.services.categoria_id || ''))
+    const lista = cats.filter((c) => usadas.has(c.id)).map((c) => [c.id, c.nome, c.ordem])
+    if (usadas.has('')) lista.push(['', 'Outros', 999])
+    return lista.sort((a, b) => a[2] - b[2] || a[1].localeCompare(b[1]))
+  }, [vinculos, cats])
 
   const faz = (p) => vinculos.filter((v) => v.professional_id === p.id)
   const t = busca.trim().toLowerCase()
   const lista = profissionais.filter((p) => {
-    if (filtro && !faz(p).some((v) => v.service_id === filtro)) return false
+    if (filtro && !faz(p).some((v) => v.services?.active && (v.services.categoria_id || '') === (filtro === 'outros' ? '' : filtro))) return false
     if (!t) return true
     return p.name.toLowerCase().includes(t) || faz(p).some((v) => v.services?.name.toLowerCase().includes(t))
   })
@@ -69,8 +72,8 @@ export default function ClienteProfissionais() {
 
       <div className="filtro-chips rolavel">
         <button className={filtro === '' ? 'chip active' : 'chip'} onClick={() => setFiltro('')}>Todos</button>
-        {servicos.map(([id, nome]) => (
-          <button key={id} className={filtro === id ? 'chip active' : 'chip'} onClick={() => setFiltro(id)}>{nome}</button>
+        {categorias.map(([id, nome]) => (
+          <button key={id || 'outros'} className={filtro === (id || 'outros') ? 'chip active' : 'chip'} onClick={() => setFiltro(id || 'outros')}>{nome}</button>
         ))}
       </div>
 

@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { formatPreco, formatDuracao } from '../../lib/format'
 import { Sparkles, Link2 } from 'lucide-react'
+import { useCategorias, categoriasDoSalao, agruparPorCategoria } from '../../lib/categorias'
 
 // Serviços (tela 19): a lista do salão, e para cada um o switch de
 // "eu faço". Preço e duração aparecem mas não se editam aqui — são do
@@ -21,8 +22,12 @@ export default function ProServicos() {
   // "costuma ir junto" (081): a autônoma configura nos serviços dela
   const [juntos, setJuntos] = useState([])        // linhas de servicos_juntos
   const [ligando, setLigando] = useState('')      // id do serviço aberto para escolher
+  const catsTodas = useCategorias()
+  const [catsNovas, setCatsNovas] = useState([])
+  const [novaCat, setNovaCat] = useState('')
   const profId = professional?.id
   const salaoId = professional?.salon_id
+  const cats = categoriasDoSalao([...catsTodas, ...catsNovas], salaoId)
 
   const carregar = useCallback(async () => {
     if (!profId) return
@@ -51,11 +56,23 @@ export default function ProServicos() {
     setSalvando(true)
     const { data, error } = await supabase.from('services').insert({
       salon_id: salaoId, name: novo.name.trim(), duration_minutes: Number(novo.duration_minutes) || 60, price: Number(String(novo.price).replace(',', '.')) || 0,
+      categoria_id: novo.categoria_id || null,
     }).select('id').maybeSingle()
     if (!error && data?.id) await supabase.from('professional_services').insert({ professional_id: profId, service_id: data.id })
     setSalvando(false)
     if (error) setErro(error.message)
     else { setNovo(null); carregar() }
+  }
+
+  async function criarCategoria() {
+    const nome = novaCat.trim()
+    if (!nome) return
+    const { data, error } = await supabase.from('categorias_de_servico').insert({ salon_id: salaoId, nome, ordem: 500 }).select('id, salon_id, nome, ordem').maybeSingle()
+    if (error) { setErro(error.message.includes('duplicate') ? 'Já existe uma categoria com esse nome.' : error.message); return }
+    const criada = data ?? { id: crypto.randomUUID(), salon_id: salaoId, nome, ordem: 500 }
+    setCatsNovas((l) => [...l, criada])
+    setNovo((n) => ({ ...n, categoria_id: criada.id }))
+    setNovaCat('')
   }
 
   async function ligar(servico, sugerido) {
@@ -83,7 +100,10 @@ export default function ProServicos() {
       <div className="page-head"><div><h2>Meus serviços</h2><p className="muted">{meus.size} de {servicos.length} ativos para você</p></div></div>
       {erro && <div className="alert alert-error">{erro}</div>}
       <div className="cliente-list">
-        {servicos.map((s) => (
+        {agruparPorCategoria(servicos, cats).map((g, _, todos) => (
+        <section key={g.id || 'outros'} className="cat-grupo">
+        {todos.length > 1 && <h3 className="cat-titulo">{g.nome} <span className="muted">{g.itens.filter((s) => meus.has(s.id)).length}/{g.itens.length}</span></h3>}
+        {g.itens.map((s) => (
           <div key={s.id} className={'card servico-linha servico-com-juntos' + (meus.has(s.id) ? '' : ' apagado')}>
             <div className="servico-linha-topo">
               <span className="servico-linha-foto" aria-hidden="true">{s.images?.[0] ? <img src={s.images[0]} alt="" /> : <Sparkles />}</span>
@@ -98,12 +118,17 @@ export default function ProServicos() {
               ligando === s.id ? (
                 <div className="juntos-escolha">
                   <span className="muted">Quando a cliente marcar {s.name}, oferecer na sequência:</span>
-                  <div className="filtro-chips">
-                    {servicos.filter((x) => x.id !== s.id).map((x) => {
-                      const on = juntos.some((j) => j.service_id === s.id && j.sugerido_id === x.id)
-                      return <button key={x.id} type="button" className={on ? 'chip active' : 'chip'} onClick={() => ligar(s.id, x.id)}>{x.name}</button>
-                    })}
-                  </div>
+                  {agruparPorCategoria(servicos.filter((x) => x.id !== s.id), cats).map((gg, _, tt) => (
+                    <div key={gg.id || 'outros'} className="juntos-grupo">
+                      {tt.length > 1 && <span className="combo-grupo-titulo">{gg.nome}</span>}
+                      <div className="filtro-chips">
+                        {gg.itens.map((x) => {
+                          const on = juntos.some((j) => j.service_id === s.id && j.sugerido_id === x.id)
+                          return <button key={x.id} type="button" className={on ? 'chip active' : 'chip'} onClick={() => ligar(s.id, x.id)}>{x.name}</button>
+                        })}
+                      </div>
+                    </div>
+                  ))}
                   <button type="button" className="btn btn-ghost btn-mini" onClick={() => setLigando('')}>Pronto</button>
                 </div>
               ) : (
@@ -112,11 +137,23 @@ export default function ProServicos() {
             )}
           </div>
         ))}
+        </section>
+        ))}
       </div>
       {dona ? (
         novo ? (
           <div className="card form" style={{ marginTop: '1rem' }}>
             <label>Nome do serviço<input value={novo.name} onChange={(e) => setNovo({ ...novo, name: e.target.value })} placeholder="Esmaltação em gel" /></label>
+            <label>Categoria
+              <select value={novo.categoria_id ?? ''} onChange={(e) => setNovo({ ...novo, categoria_id: e.target.value })}>
+                <option value="">Deixar o app escolher pelo nome</option>
+                {cats.map((c) => <option key={c.id} value={c.id}>{c.nome}{c.salon_id ? ' · minha' : ''}</option>)}
+              </select>
+            </label>
+            <div className="cat-nova">
+              <input value={novaCat} maxLength={40} onChange={(e) => setNovaCat(e.target.value)} placeholder="Nova categoria (ex.: Noivas)" onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); criarCategoria() } }} />
+              <button type="button" className="btn btn-ghost btn-mini" onClick={criarCategoria} disabled={!novaCat.trim()}>+ Criar</button>
+            </div>
             <div className="linha-dupla">
               <label>Duração (min)<input type="number" min="15" step="15" value={novo.duration_minutes} onChange={(e) => setNovo({ ...novo, duration_minutes: e.target.value })} /></label>
               <label>Preço (R$)<input inputMode="decimal" value={novo.price} onChange={(e) => setNovo({ ...novo, price: e.target.value })} placeholder="80" /></label>
@@ -127,7 +164,7 @@ export default function ProServicos() {
             </div>
           </div>
         ) : (
-          <button className="btn btn-ghost btn-block" style={{ marginTop: '1rem' }} onClick={() => setNovo({ name: '', duration_minutes: 60, price: '' })}>+ Novo serviço</button>
+          <button className="btn btn-ghost btn-block" style={{ marginTop: '1rem' }} onClick={() => setNovo({ name: '', duration_minutes: 60, price: '', categoria_id: '' })}>+ Novo serviço</button>
         )
       ) : (
         <p className="muted" style={{ fontSize: '0.82rem', marginTop: '1rem' }}>Preço e duração são definidos pelo salão, em Admin → Serviços.</p>

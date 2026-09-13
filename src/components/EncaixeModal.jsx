@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { formatDuracao, formatPreco } from '../lib/format'
 import { formatDataLonga } from '../lib/booking'
+import { useCategorias, agruparPorCategoria } from '../lib/categorias'
 
 // Encaixe manual: a cliente ligou, apareceu na porta, ou simplesmente
 // não usa o app. O horário entra na agenda do mesmo jeito.
 export default function EncaixeModal({ professionalId, data, onFechar, onPronto }) {
   const [services, setServices] = useState([])
+  const cats = useCategorias()
   const [servicoId, setServicoId] = useState('')
   const [hora, setHora] = useState('')
   const [nome, setNome] = useState('')
@@ -17,7 +19,7 @@ export default function EncaixeModal({ professionalId, data, onFechar, onPronto 
   useEffect(() => {
     supabase
       .from('professional_services')
-      .select('services (id, name, duration_minutes, price, active)')
+      .select('services (id, name, duration_minutes, price, active, categoria_id)')
       .eq('professional_id', professionalId)
       .then(({ data }) => {
         const lista = (data ?? [])
@@ -77,11 +79,15 @@ export default function EncaixeModal({ professionalId, data, onFechar, onPronto 
               required
             >
               {services.length === 0 && <option value="">Nenhum serviço ativo</option>}
-              {services.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name} · {formatDuracao(s.duration_minutes)} ·{' '}
-                  {formatPreco(s.price)}
-                </option>
+              {agruparPorCategoria(services, cats).map((g) => (
+                <optgroup key={g.id || 'outros'} label={g.nome}>
+                  {g.itens.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} · {formatDuracao(s.duration_minutes)} ·{' '}
+                      {formatPreco(s.price)}
+                    </option>
+                  ))}
+                </optgroup>
               ))}
             </select>
           </label>

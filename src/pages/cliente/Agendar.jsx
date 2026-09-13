@@ -6,7 +6,8 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { formatPreco, labelDuracao, formatDuracao } from '../../lib/format'
 import { formatDataLonga } from '../../lib/booking'
-import { Check, Sparkles, Repeat, Plus, Users, Hourglass } from 'lucide-react'
+import { Check, Sparkles, Repeat, Plus, Users, Hourglass, Search } from 'lucide-react'
+import { useCategorias, agruparPorCategoria, bate } from '../../lib/categorias'
 
 // O fluxo de marcar, dentro do app: serviço → data → hora → confirmar.
 // Cada passo é uma rota, e o que já foi escolhido viaja na URL
@@ -135,6 +136,9 @@ export function AgendarServicos() {
   const [servicos, setServicos] = useState([])
   const [sel, setSel] = useState(preSel)
   const [prof, setProf] = useState(null)
+  const cats = useCategorias()
+  const [cat, setCat] = useState('')       // filtro por categoria ('' = todas)
+  const [busca, setBusca] = useState('')
 
   useEffect(() => {
     let vivo = true
@@ -154,6 +158,10 @@ export function AgendarServicos() {
   const escolhidos = sel.map((sid) => servicos.find((s) => s.id === sid)).filter(Boolean)
   const totalMin = escolhidos.reduce((a, s) => a + Number(s.duration_minutes ?? 0), 0)
   const totalPreco = escolhidos.reduce((a, s) => a + Number(s.price ?? 0), 0)
+  // muitos serviços: agrupados por categoria, com filtro e busca
+  const grupos = agruparPorCategoria(servicos, cats)
+  const muitos = servicos.length > 8
+  const visiveis = grupos.filter((g) => !cat || g.id === cat).map((g) => ({ ...g, itens: g.itens.filter((s) => bate(s.name, busca)) })).filter((g) => g.itens.length)
 
   return (
     <ClienteShell titulo="Serviços" voltar={`/cliente/profissional/${id}`}>
@@ -161,8 +169,24 @@ export function AgendarServicos() {
       {prof && <p className="muted" style={{ marginTop: 0 }}>Com {prof.name}.</p>}
       {sel.length === 1 && <p className="dica-mais"><Plus size={14} /> Quer mais um? Toque no <strong>+</strong> de outro serviço: marca tudo no mesmo horário.</p>}
 
+      {muitos && (
+        <>
+          <label className="cl-busca"><Search size={18} /><input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar serviço" aria-label="Buscar serviço" /></label>
+          {grupos.length > 1 && (
+            <div className="filtro-chips rolavel">
+              <button type="button" className={cat === '' ? 'chip active' : 'chip'} onClick={() => setCat('')}>Todos</button>
+              {grupos.map((g) => <button key={g.id || 'outros'} type="button" className={cat === g.id ? 'chip active' : 'chip'} onClick={() => setCat(g.id)}>{g.nome}</button>)}
+            </div>
+          )}
+        </>
+      )}
+
+      {visiveis.length === 0 && servicos.length > 0 && <p className="muted">Nada com esse nome.</p>}
+      {visiveis.map((g) => (
+      <section key={g.id || 'outros'} className="cat-grupo">
+        {grupos.length > 1 && <h3 className="cat-titulo">{g.nome}</h3>}
       <div className="cliente-list">
-        {servicos.map((s) => {
+        {g.itens.map((s) => {
           const marcado = sel.includes(s.id)
           return (
             <button
@@ -185,6 +209,8 @@ export function AgendarServicos() {
           )
         })}
       </div>
+      </section>
+      ))}
 
       <div className="rodape-fixo rodape-servicos">
         {escolhidos.length > 0 && (
@@ -329,12 +355,19 @@ export function AgendarConfirmar() {
   const [detalhes, setDetalhes] = useState({ servicos: {}, profs: {} })
   const chaveExtras = esc.extra
 
-  // os outros serviços dela, para o "quer aproveitar e adicionar?"
+  // os outros serviços dela, para o "quer aproveitar e adicionar?":
+  // primeiro o que "costuma ir junto", depois a mesma categoria, depois o resto
+  const [juntos, setJuntos] = useState([])
   useEffect(() => {
     if (!esc.prof || remarcando) return
     supabase.from('professional_services').select('services (*)').eq('professional_id', esc.prof)
       .then(({ data }) => setOutros((data ?? []).map((v) => v.services).filter((x) => x?.active)))
   }, [esc.prof, remarcando])
+  useEffect(() => {
+    if (!ids.length || remarcando) return
+    supabase.from('servicos_juntos').select('sugerido_id').in('service_id', ids).then(({ data }) => setJuntos((data ?? []).map((x) => x.sugerido_id)))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ids.join(','), remarcando])
 
   // adicionou serviço: a duração cresce; o horário escolhido ainda cabe?
   const chaveIds = ids.join(',')
@@ -385,7 +418,8 @@ export function AgendarConfirmar() {
   const totalVisita = (servico?.price ?? 0) + partesDetalhadas.reduce((a, x) => a + Number(x.s?.price ?? 0), 0)
   const adicionar = (id) => { if (ids.length < 6 && !ids.includes(id)) irCom([...ids, id]) }
   const tirar = (id) => { if (ids.length > 1) irCom(ids.filter((x) => x !== id)) }
-  const sugestoes = outros.filter((x) => !ids.includes(x.id)).slice(0, 4)
+  const peso = (x) => (juntos.includes(x.id) ? 0 : servico?.lista?.some((s) => s.categoria_id && s.categoria_id === x.categoria_id) ? 1 : 2)
+  const sugestoes = outros.filter((x) => !ids.includes(x.id)).sort((a, b) => peso(a) - peso(b) || a.name.localeCompare(b.name)).slice(0, 4)
 
   const confirmar = useCallback(async () => {
     if (!servico || !esc.data || !esc.hora) return

@@ -11,6 +11,7 @@ import { toMin, minToHora, formatDataLonga } from '../../lib/booking'
 import CalendarioMes from '../../components/CalendarioMes'
 import { iniciais } from '../../lib/booking'
 import { Check, Sparkles, MessageCircle } from 'lucide-react'
+import { useCategorias, agruparPorCategoria } from '../../lib/categorias'
 
 // A vitrine da profissional (/p/<slug>).
 //
@@ -33,6 +34,7 @@ export default function PaginaProfissional() {
 
   const [vitrine, setVitrine] = useState(null)
   const [services, setServices] = useState([])
+  const cats = useCategorias()
   const [loading, setLoading] = useState(true)
   const [erroCarregar, setErroCarregar] = useState('')
 
@@ -330,7 +332,9 @@ export default function PaginaProfissional() {
                 <p className="muted vit-vaga">Próxima vaga: <strong>{quandoVaga(vitrine.proxima_vaga)}</strong></p>
               )}
               {services.length === 0 && <div className="card empty-state"><p>Ela ainda não cadastrou serviços.</p></div>}
-              {services.map((s) => (
+              {agruparPorCategoria(services, cats).map((g, _, todos) => (<section key={g.id || 'outros'} className="cat-grupo">
+              {todos.length > 1 && <h3 className="cat-titulo">{g.nome}</h3>}
+              {g.itens.map((s) => (
                 <button key={s.id} type="button" className="card servico-linha" onClick={() => escolherServico(s)}>
                   <span className="servico-linha-foto" aria-hidden="true">
                     {s.images?.[0] ? <img src={s.images[0]} alt="" /> : <Sparkles />}
@@ -342,6 +346,7 @@ export default function PaginaProfissional() {
                   <span className="link-ver">Agendar</span>
                 </button>
               ))}
+              </section>))}
             </div>
           )}
 

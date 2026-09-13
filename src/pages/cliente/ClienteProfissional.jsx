@@ -6,11 +6,13 @@ import { StarIcon } from '../../components/icons'
 import { formatPreco, labelDuracao } from '../../lib/format'
 import { iniciais } from '../../lib/booking'
 import { Sparkles } from 'lucide-react'
+import { useCategorias, agruparPorCategoria } from '../../lib/categorias'
 
 // Perfil da profissional dentro do app (tela 05): foto grande, nome,
 // nota, e três abas — Serviços, Avaliações, Sobre. O botão "Agendar
 // horário" fica fixo no pé: é a única razão de esta tela existir.
 export default function ClienteProfissional() {
+  const cats = useCategorias()
   const { id } = useParams()
   const navigate = useNavigate()
   const [prof, setProf] = useState(null)
@@ -76,7 +78,9 @@ export default function ClienteProfissional() {
       {aba === 'servicos' && (
         <div className="cliente-list">
           {servicos.length === 0 && <div className="card empty-state"><p>Ela ainda não cadastrou serviços.</p></div>}
-          {servicos.map((s) => (
+          {agruparPorCategoria(servicos, cats).map((g, _, todos) => (<section key={g.id || 'outros'} className="cat-grupo">
+          {todos.length > 1 && <h3 className="cat-titulo">{g.nome}</h3>}
+          {g.itens.map((s) => (
             <Link key={s.id} to={`/cliente/profissional/${prof.id}/servicos?servico=${s.id}`} className="card servico-linha">
               <span className="servico-linha-foto" aria-hidden="true">
                 {s.images?.[0] ? <img src={s.images[0]} alt="" /> : <Sparkles />}
@@ -88,6 +92,7 @@ export default function ClienteProfissional() {
               <span className="link-ver">Agendar</span>
             </Link>
           ))}
+          </section>))}
         </div>
       )}
 

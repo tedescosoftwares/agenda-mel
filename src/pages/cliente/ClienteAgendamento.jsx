@@ -33,7 +33,7 @@ export default function ClienteAgendamento() {
   const carregar = useCallback(async () => {
     const { data, error } = await supabase
       .from('appointments')
-      .select('*, services (name, price, duration_minutes), professionals (id, name, photo_url), salons (name, address, city, phone, tipo)')
+      .select('*, services (name, price, duration_minutes), professionals (id, name, photo_url), salons (id, name, address, city, phone, tipo)')
       .eq('id', id).eq('client_id', user.id).maybeSingle()
     if (error) setErro(error.message)
     setA(data ?? null)
@@ -102,7 +102,7 @@ export default function ClienteAgendamento() {
 
       <div className="card agdt-dados">
         {salao && (
-          <div className="agdt-item"><MapPin size={18} /><span><span className="muted agdt-rotulo">Onde</span><strong>{salao.name}</strong>{endereco && <span className="muted">{endereco}</span>}{mapa && <a href={mapa} target="_blank" rel="noreferrer" className="agdt-mapa">Como chegar</a>}</span></div>
+          <div className="agdt-item"><MapPin size={18} /><span><span className="muted agdt-rotulo">Onde</span><strong>{salao.tipo === 'salao' && salao.id ? <Link to={`/cliente/salao/${salao.id}`} className="agdt-salao-link">{salao.name}</Link> : salao.name}</strong>{endereco && <span className="muted">{endereco}</span>}{mapa && <a href={mapa} target="_blank" rel="noreferrer" className="agdt-mapa">Como chegar</a>}</span></div>
         )}
         {itens.length > 1 ? (
           <div className="agdt-item"><Sparkles size={18} /><span><span className="muted agdt-rotulo">Serviços</span>

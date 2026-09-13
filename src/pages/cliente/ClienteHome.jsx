@@ -99,8 +99,8 @@ export default function ClienteHome() {
         return (
           <section key={ag.salao.id}>
             <div className="secao-cabeca">
-              <h3>{autonoma ? 'Sua profissional' : ag.salao.nome}</h3>
-              {!autonoma && <Link to="/cliente/profissionais" className="link-ver">Ver todas</Link>}
+              <h3>{autonoma ? 'Sua profissional' : <Link to={`/cliente/salao/${ag.salao.id}`} className="home-salao-link">{ag.salao.nome}</Link>}</h3>
+              {!autonoma && <Link to={`/cliente/salao/${ag.salao.id}`} className="link-ver">Ver o salão</Link>}
             </div>
             {ag.trazida_por && !autonoma && (
               <p className="muted home-entrou">Você entrou pela {ag.trazida_por.nome.split(' ')[0]}{ag.trazida_por.ativa ? '' : ' (não está mais na equipe)'}</p>

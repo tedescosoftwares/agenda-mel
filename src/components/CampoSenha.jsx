@@ -1,7 +1,10 @@
 import { useState } from 'react'
+import { Eye, EyeOff } from 'lucide-react'
 
 // Senha com o olhinho e uma dica de força, sem exigir malabarismo.
 export default function CampoSenha({ valor, onChange, rotulo = 'Senha', autoComplete = 'new-password', dica = true, ...resto }) {
+  // dica de força só faz sentido ao criar senha; no login é só o olhinho
+  const mostrarDica = dica && autoComplete !== 'current-password'
   const [ver, setVer] = useState(false)
   const forca = medir(valor)
   return (
@@ -9,9 +12,9 @@ export default function CampoSenha({ valor, onChange, rotulo = 'Senha', autoComp
       {rotulo}
       <span className="campo-senha-caixa">
         <input type={ver ? 'text' : 'password'} value={valor} onChange={onChange} autoComplete={autoComplete} minLength={6} required {...resto} />
-        <button type="button" className="campo-senha-olho" onClick={() => setVer(!ver)} aria-label={ver ? 'Esconder senha' : 'Mostrar senha'}>{ver ? 'Esconder' : 'Mostrar'}</button>
+        <button type="button" className="campo-senha-olho" onClick={() => setVer(!ver)} aria-label={ver ? 'Esconder senha' : 'Mostrar senha'} title={ver ? 'Esconder senha' : 'Mostrar senha'}>{ver ? <EyeOff size={18} /> : <Eye size={18} />}</button>
       </span>
-      {dica && valor.length > 0 && (
+      {mostrarDica && valor.length > 0 && (
         <span className={'senha-forca f' + forca.nivel}><i /><i /><i /><em>{forca.texto}</em></span>
       )}
     </label>

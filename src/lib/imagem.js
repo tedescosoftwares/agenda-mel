@@ -29,3 +29,22 @@ function carregar(file) {
     img.src = url
   })
 }
+
+// Foto comum (galeria do salão, logo): reduz até caber em `max` px no
+// lado maior, mantendo a proporção. Sai JPEG. Para o logo, quadrado.
+export async function reduzirFoto(file, { max = 1600, qualidade = 0.85, quadrado = false } = {}) {
+  if (!file?.type?.startsWith('image/')) throw new Error('Escolha uma imagem (JPG, PNG ou WebP).')
+  if (file.size > CRIATIVO.maxMb * 1024 * 1024) throw new Error(`Imagem muito grande (máx. ${CRIATIVO.maxMb} MB).`)
+  const img = await carregar(file)
+  let sx = 0, sy = 0, sw = img.width, sh = img.height
+  if (quadrado) { const lado = Math.min(sw, sh); sx = (sw - lado) / 2; sy = (sh - lado) / 2; sw = sh = lado }
+  const escala = Math.min(1, max / Math.max(sw, sh))
+  const canvas = document.createElement('canvas')
+  canvas.width = Math.round(sw * escala)
+  canvas.height = Math.round(sh * escala)
+  const ctx = canvas.getContext('2d')
+  ctx.imageSmoothingQuality = 'high'
+  ctx.drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height)
+  const blob = await new Promise((ok, erro) => canvas.toBlob((b) => (b ? ok(b) : erro(new Error('Não deu para processar a imagem.'))), 'image/jpeg', qualidade))
+  return { blob, preview: URL.createObjectURL(blob) }
+}

@@ -26,7 +26,7 @@ export default function ClienteProfissional() {
     let vivo = true
     ;(async () => {
       const [p, vi, n, av] = await Promise.all([
-        supabase.from('professionals').select('id, name, slug, bio, photo_url').eq('id', id).maybeSingle(),
+        supabase.from('professionals').select('id, name, slug, bio, photo_url, salon_id, salons (name, tipo)').eq('id', id).maybeSingle(),
         supabase.from('professional_services').select('services (*)').eq('professional_id', id),
         supabase.rpc('avaliacao_da_profissional', { prof: id }),
         supabase.rpc('avaliacoes_da_profissional', { prof: id, quantas: 10 }),
@@ -45,6 +45,7 @@ export default function ClienteProfissional() {
   if (!prof) return <ClienteShell voltar="/cliente/profissionais"><div className="card empty-state"><p>Não encontramos essa profissional.</p></div></ClienteShell>
 
   const especialidade = servicos.slice(0, 2).map((s) => s.name).join(' e ')
+  const salaoNome = prof.salons?.tipo === 'salao' ? prof.salons?.name : null
 
   // volta para de onde veio (início, lista, agenda); sem histórico, para o início
   const voltar = () => { if (window.history.length > 1) navigate(-1); else navigate('/cliente/home') }
@@ -59,6 +60,7 @@ export default function ClienteProfissional() {
       <div className="perfil-cabeca">
         <h2>{prof.name}</h2>
         {especialidade && <p className="muted">{especialidade}</p>}
+        {salaoNome && <p className="muted perfil-salao"><Link to={`/cliente/salao/${prof.salon_id}`}>{salaoNome}</Link></p>}
         {nota ? (
           <p className="perfil-nota">
             <StarIcon /> <strong>{Number(nota.media).toFixed(1)}</strong>

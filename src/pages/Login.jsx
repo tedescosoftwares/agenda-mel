@@ -10,6 +10,7 @@ import { MarcaIcon, Wordmark } from '../components/icons'
 import { extrairCodigo, guardarConvite } from '../lib/convite'
 import { AMBIENTE, urlDoAmbiente, ambienteDoPapel } from '../lib/ambiente'
 import { MailCheck } from 'lucide-react'
+import CampoSenha from '../components/CampoSenha'
 
 // Login (tela 02): "Bem-vinda de volta!", e-mail, senha, manter
 // conectado, e a porta para quem esqueceu a senha ou não tem conta.
@@ -157,7 +158,7 @@ export default function Login({ ambiente = AMBIENTE }) {
           )}
           <label>E-mail<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="voce@email.com" autoComplete="email" required /></label>
           {modo !== 'esqueci' && (
-            <label>Senha<input type="password" value={senha} onChange={(e) => setSenha(e.target.value)} placeholder="••••••••" autoComplete={modo === 'login' ? 'current-password' : 'new-password'} minLength={6} required /></label>
+            <CampoSenha valor={senha} onChange={(e) => setSenha(e.target.value)} placeholder="••••••••" autoComplete={modo === 'login' ? 'current-password' : 'new-password'} />
           )}
 
           {modo === 'login' && (

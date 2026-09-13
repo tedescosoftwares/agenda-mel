@@ -63,7 +63,40 @@ begin
     if not exists (select 1 from public.promocoes where id = p_prof) then raise exception 'profissional apagou a da colega'; end if;
   end;
   reset role;
-  raise notice '2 salão e profissionais criaram; cada uma só mexe na sua (ok)';
+  -- 086: a da profissional nasce pendente e só aparece depois que a dona aprova
+  if (select aprovacao from public.promocoes where id = p_prof) <> 'pendente' then raise exception 'promo da profissional devia nascer pendente'; end if;
+  if not exists (select 1 from public.notifications where user_id = dona and kind = 'promocao_pendente') then raise exception 'dona não foi avisada'; end if;
+  perform set_config('request.jwt.claim.sub', cli::text, false);
+  if exists (select 1 from public.promocoes_para_mim() x where x.id = p_prof) then raise exception 'pendente apareceu para a cliente'; end if;
+  -- a profissional não consegue se aprovar
+  perform set_config('request.jwt.claim.sub', prof.user_id::text, false);
+  set role authenticated;
+  update public.promocoes set aprovacao = 'aprovada' where id = p_prof;
+  reset role;
+  if (select aprovacao from public.promocoes where id = p_prof) <> 'pendente' then raise exception 'profissional se aprovou'; end if;
+  -- a dona recusa com motivo, a profissional é avisada; depois aprova as duas
+  perform set_config('request.jwt.claim.sub', dona::text, false);
+  set role authenticated;
+  update public.promocoes set aprovacao = 'recusada', motivo_recusa = 'desconto alto' where id = p_prof;
+  reset role;
+  if not exists (select 1 from public.notifications where user_id = prof.user_id and kind = 'promocao_recusada' and body like '%desconto alto%') then raise exception 'profissional não soube da recusa'; end if;
+  perform set_config('request.jwt.claim.sub', dona::text, false);
+  set role authenticated;
+  update public.promocoes set aprovacao = 'aprovada' where id in (p_prof, p_outra);
+  reset role;
+  if (select motivo_recusa from public.promocoes where id = p_prof) is not null then raise exception 'motivo devia limpar'; end if;
+  if not exists (select 1 from public.notifications where user_id = prof.user_id and kind = 'promocao_aprovada') then raise exception 'profissional não soube da aprovação'; end if;
+  -- editou o conteúdo: volta para a fila
+  perform set_config('request.jwt.claim.sub', prof.user_id::text, false);
+  set role authenticated;
+  update public.promocoes set titulo = 'Minha promo 2' where id = p_prof;
+  reset role;
+  if (select aprovacao from public.promocoes where id = p_prof) <> 'pendente' then raise exception 'edição devia voltar para a fila'; end if;
+  perform set_config('request.jwt.claim.sub', dona::text, false);
+  set role authenticated;
+  update public.promocoes set aprovacao = 'aprovada' where id = p_prof;
+  reset role;
+  raise notice '2 salão e profissionais criaram; a da profissional passa pela dona (ok)';
 
   -- 3. a cliente que marcou com prof vê: plataforma, salão, prof — e não a da outra
   perform set_config('request.jwt.claim.sub', cli::text, false);

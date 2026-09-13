@@ -4,6 +4,7 @@ import AdminShell from '../../components/AdminShell'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { ChevronIcon, SparkleIcon } from '../../components/icons'
+import { Star } from 'lucide-react'
 import { formatPreco, formatDuracao, labelDuracao } from '../../lib/format'
 import { useCategorias, categoriasDoSalao, agruparPorCategoria, bate } from '../../lib/categorias'
 
@@ -277,6 +278,13 @@ export default function AdminServices() {
     }
   }
 
+  // destaque (086): aparece na home das clientes do salão
+  async function toggleDestaque(service) {
+    const { error } = await supabase.from('services').update({ destaque: !service.destaque }).eq('id', service.id)
+    if (error) setError('Erro ao atualizar: ' + error.message)
+    else setServices((l) => l.map((s) => (s.id === service.id ? { ...s, destaque: !s.destaque } : s)))
+  }
+
   async function toggleActive(service) {
     const { error } = await supabase
       .from('services')
@@ -318,6 +326,7 @@ export default function AdminServices() {
           <p className="muted">
             {services.length} {services.length === 1 ? 'cadastrado' : 'cadastrados'}
             {services.length > 0 ? ` · ${ativos} ${ativos === 1 ? 'ativo' : 'ativos'}` : ''}
+            {services.some((s) => s.destaque) ? ` · ${services.filter((s) => s.destaque).length} em destaque na home` : ' · toque na ★ para destacar na home das clientes'}
           </p>
         </div>
       </div>
@@ -560,6 +569,16 @@ export default function AdminServices() {
                   </span>
                 )}
               </div>
+              <button
+                type="button"
+                className={'icon-btn destaque-estrela' + (s.destaque ? ' on' : '')}
+                onClick={() => toggleDestaque(s)}
+                aria-pressed={Boolean(s.destaque)}
+                aria-label={s.destaque ? `Tirar ${s.name} dos destaques` : `Destacar ${s.name} na home`}
+                title={s.destaque ? 'Em destaque na home' : 'Destacar na home'}
+              >
+                <Star size={18} />
+              </button>
               <label className="switch" title={s.active ? 'Desativar' : 'Ativar'}>
                 <input
                   type="checkbox"

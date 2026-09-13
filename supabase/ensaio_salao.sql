@@ -37,6 +37,18 @@ begin
   update public.salons set active = false where id = sal;
   if (public.pagina_do_salao(sal) -> 'salao') is not null and jsonb_typeof(public.pagina_do_salao(sal) -> 'salao') <> 'null' then raise exception 'inativo com página'; end if;
   raise notice '3 salão inativo some (ok)';
+
+  -- 4. destaques (086): a dona marca; a cliente com vínculo vê
+  update public.salons set active = true where id = sal;
+  perform set_config('request.jwt.claim.sub', dona::text, false);
+  set role authenticated;
+  update public.services set destaque = true where id = (select id from public.services where salon_id = sal and active limit 1);
+  reset role;
+  insert into public.vinculos (client_id, salon_id, como) values (cli, sal, 'codigo') on conflict (client_id, salon_id) do update set saiu_em = null;
+  perform set_config('request.jwt.claim.sub', cli::text, false);
+  select count(*) into n from public.destaques_para_mim() d where d.salon_id = sal;
+  if n <> 1 then raise exception 'destaques: %', n; end if;
+  raise notice '4 destaques do salão (ok)';
   raise notice 'FIM DO ENSAIO — tudo certo';
 end $$;
 rollback;

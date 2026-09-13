@@ -4,7 +4,7 @@ import { useDialogo } from '../context/DialogoContext'
 import { ajustarCriativo, CRIATIVO } from '../lib/imagem'
 import { formatPreco } from '../lib/format'
 import { useCategorias, categoriasDoSalao } from '../lib/categorias'
-import { BadgePercent, Eye, MousePointerClick, ImagePlus, Pause, Play, Pencil, Trash2 } from 'lucide-react'
+import { BadgePercent, Eye, MousePointerClick, ImagePlus, Pause, Play, Pencil, Trash2, Check, X, Hourglass } from 'lucide-react'
 
 // Promoções (083): o mesmo painel serve o salão, a profissional e a
 // plataforma. Muda só o "dono" da promoção:
@@ -17,7 +17,10 @@ const VAZIO = { titulo: '', texto: '', service_id: '', inicio: '', fim: '', ativ
 const NOVO_SERVICO = '__novo__'
 const SERVICO_VAZIO = { name: '', duration_minutes: 60, price: '', categoria_id: '' }
 
-export default function Promocoes({ escopo, salao, prof, servicos = [], compacto = false, onServicoNovo }) {
+// aprovacao (086): a promoção da profissional de um salão nasce 'pendente'
+// e a dona aprova ou recusa. dona=true quando quem usa o painel
+// administra o salão (autônoma inclusive): a dela já nasce aprovada.
+export default function Promocoes({ escopo, salao, prof, servicos = [], compacto = false, onServicoNovo, dona = escopo !== 'profissional' }) {
   const { confirmar } = useDialogo()
   const cats = categoriasDoSalao(useCategorias(), salao)
   const [novoServico, setNovoServico] = useState(SERVICO_VAZIO)   // cadastrar um serviço na hora
@@ -132,7 +135,7 @@ export default function Promocoes({ escopo, salao, prof, servicos = [], compacto
   }
 
   const hoje = hojeIso()
-  const estado = (p) => (!p.ativa ? 'pausada' : p.fim && p.fim < hoje ? 'encerrada' : p.inicio > hoje ? 'agendada' : 'no ar')
+  const estado = (p) => (p.aprovacao === 'pendente' ? 'aguardando' : p.aprovacao === 'recusada' ? 'recusada' : !p.ativa ? 'pausada' : p.fim && p.fim < hoje ? 'encerrada' : p.inicio > hoje ? 'agendada' : 'no ar')
 
   return (
     <div className="promos">
@@ -141,7 +144,7 @@ export default function Promocoes({ escopo, salao, prof, servicos = [], compacto
       <div className="promos-topo">
         <p className="muted">
           {escopo === 'plataforma' ? 'Aparece para todas as clientes do MIMO.'
-            : escopo === 'profissional' ? 'Aparece para as clientes que já marcaram com você, te favoritaram ou entraram pelo seu código.'
+            : escopo === 'profissional' ? (dona ? 'Aparece para as clientes que já marcaram com você, te favoritaram ou entraram pelo seu código.' : 'Vale só para as suas clientes. Cada promoção passa pela aprovação da dona do salão antes de entrar no ar.')
             : 'Aparece para as clientes da carteira do salão: quem tem vínculo com a casa ou já marcou com alguém da equipe.'}
         </p>
         <button className="btn btn-primary" onClick={() => abrir(null)}><BadgePercent size={16} /> Nova promoção</button>
@@ -166,6 +169,8 @@ export default function Promocoes({ escopo, salao, prof, servicos = [], compacto
                     {periodo(p)}{p.service_id && servicos.find((s) => s.id === p.service_id) ? ` · ${servicos.find((s) => s.id === p.service_id).name}${p.desconto_pct != null ? ` com ${p.desconto_pct}% off` : ''}` : ''}
                   </span>
                   <span className="promo-numeros"><Eye size={13} /> {p.vistas} <MousePointerClick size={13} /> {p.cliques}</span>
+                  {p.aprovacao === 'pendente' && escopo === 'profissional' && <span className="promo-aviso aguardando"><Hourglass size={13} /> Aguardando a dona do salão aprovar.</span>}
+                  {p.aprovacao === 'recusada' && escopo === 'profissional' && <span className="promo-aviso recusada"><X size={13} /> Não aprovada{p.motivo_recusa ? `: ${p.motivo_recusa}` : ''}. Edite e salve para enviar de novo.</span>}
                 </div>
                 <div className="promo-acoes">
                   <button type="button" className="icon-btn" onClick={() => pausar(p)} aria-label={p.ativa ? 'Pausar' : 'Reativar'} title={p.ativa ? 'Pausar' : 'Reativar'}>{p.ativa ? <Pause size={16} /> : <Play size={16} />}</button>

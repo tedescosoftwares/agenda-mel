@@ -4,7 +4,7 @@ import SemFicha from './SemFicha'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { formatPreco, formatDuracao } from '../../lib/format'
-import { Sparkles, Link2 } from 'lucide-react'
+import { Sparkles, Link2, Star } from 'lucide-react'
 import { useCategorias, categoriasDoSalao, agruparPorCategoria } from '../../lib/categorias'
 
 // Serviços (tela 19): a lista do salão, e para cada um o switch de
@@ -75,6 +75,12 @@ export default function ProServicos() {
     setNovaCat('')
   }
 
+  async function destacar(s) {
+    const { error } = await supabase.from('services').update({ destaque: !s.destaque }).eq('id', s.id)
+    if (error) { setErro(error.message); return }
+    setServicos((l) => l.map((x) => (x.id === s.id ? { ...x, destaque: !x.destaque } : x)))
+  }
+
   async function ligar(servico, sugerido) {
     const atuais = juntos.filter((j) => j.service_id === servico).map((j) => j.sugerido_id)
     const novos = atuais.includes(sugerido) ? atuais.filter((x) => x !== sugerido) : [...atuais, sugerido]
@@ -112,6 +118,7 @@ export default function ProServicos() {
                 <span className="muted cliente-meta">{formatPreco(s.price)} · {formatDuracao(s.duration_minutes)}</span>
                 {nomes(s.id).length > 0 && <span className="muted cliente-meta servico-juntos-nomes"><Link2 size={12} /> Vai junto: {nomes(s.id).join(', ')}</span>}
               </span>
+              {dona && <button type="button" className={'icon-btn destaque-estrela' + (s.destaque ? ' on' : '')} onClick={() => destacar(s)} aria-pressed={Boolean(s.destaque)} aria-label={s.destaque ? 'Tirar da home' : 'Destacar na home'} title={s.destaque ? 'Em destaque na home das clientes' : 'Destacar na home das clientes'}><Star size={18} /></button>}
               <button className={'switch' + (meus.has(s.id) ? ' on' : '')} role="switch" aria-checked={meus.has(s.id)} disabled={mudando === s.id} onClick={() => alternar(s)} aria-label={s.name} />
             </div>
             {dona && meus.has(s.id) && servicos.length > 1 && (

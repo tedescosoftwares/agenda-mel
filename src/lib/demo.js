@@ -63,13 +63,13 @@ const CATS = [
 ]
 const servicos = [
   { id: 'sv1', name: 'Manicure', description: 'Cutilagem, lixamento e esmaltação.', duration_minutes: 45, price: 35, categoria_id: 'ct2', active: true, images: [], salon_id: SALAO, is_combo: false, return_days: 15 },
-  { id: 'sv2', name: 'Manicure + Pedicure', description: 'O combo completo.', duration_minutes: 90, price: 85, categoria_id: 'ct2', active: true, images: [], salon_id: SALAO, is_combo: true, combo_service_ids: ['sv1', 'sv3'], return_days: 15 },
+  { id: 'sv2', name: 'Manicure + Pedicure', description: 'O combo completo.', duration_minutes: 90, price: 85, categoria_id: 'ct2', destaque: true, active: true, images: [], salon_id: SALAO, is_combo: true, combo_service_ids: ['sv1', 'sv3'], return_days: 15 },
   { id: 'sv3', name: 'Pedicure', description: '', duration_minutes: 45, price: 40, categoria_id: 'ct2', active: true, images: [], salon_id: SALAO, is_combo: false, return_days: 20 },
   { id: 'sv4', name: 'Spa dos pés', description: 'Hidratação profunda e massagem.', duration_minutes: 60, price: 65, categoria_id: 'ct2', active: true, images: [], salon_id: SALAO, is_combo: false, return_days: 30 },
-  { id: 'sv5', name: 'Esmaltação em gel', description: 'Dura até 3 semanas.', duration_minutes: 60, price: 75, categoria_id: 'ct2', active: true, images: [], salon_id: SALAO, is_combo: false, return_days: 21 },
+  { id: 'sv5', name: 'Esmaltação em gel', description: 'Dura até 3 semanas.', duration_minutes: 60, price: 75, categoria_id: 'ct2', destaque: true, active: true, images: [], salon_id: SALAO, is_combo: false, return_days: 21 },
   { id: 'sv6', name: 'Corte feminino', description: '', duration_minutes: 60, price: 80, categoria_id: 'ct1', active: true, images: [], salon_id: SALAO, is_combo: false, return_days: 45 },
   { id: 'sv7', name: 'Escova', description: '', duration_minutes: 45, price: 60, categoria_id: 'ct1', active: true, images: [], salon_id: SALAO, is_combo: false, return_days: 10 },
-  { id: 'sv8', name: 'Design de sobrancelhas', description: '', duration_minutes: 30, price: 45, categoria_id: 'ct3', active: true, images: [], salon_id: SALAO, is_combo: false, return_days: 20 },
+  { id: 'sv8', name: 'Design de sobrancelhas', description: '', duration_minutes: 30, price: 45, categoria_id: 'ct3', destaque: true, active: true, images: [], salon_id: SALAO, is_combo: false, return_days: 20 },
 ]
 
 const vinculos = [
@@ -130,6 +130,7 @@ const promocoes = [
   { id: 'pm1', salon_id: SALAO, professional_id: 'pr1', service_id: 'sv5', titulo: 'Esmaltação em gel com 20% off', texto: 'Só esta semana, com a Ana', imagem_url: PROMO_IMG('#FF2D7A', '#AA4CFF', '-20%'), inicio: mais(-2), fim: mais(5), ativa: true, desconto_pct: 20, vistas: 128, cliques: 23, created_at: mais(-2) },
   { id: 'pm2', salon_id: SALAO, professional_id: null, service_id: 'sv8', titulo: 'Semana da sobrancelha', texto: 'Design por R$ 39 no Studio Mel', imagem_url: PROMO_IMG('#AA4CFF', '#FF7BAA', 'R$ 39'), inicio: mais(-1), fim: null, ativa: true, vistas: 310, cliques: 41, created_at: mais(-1) },
   { id: 'pm3', salon_id: null, professional_id: null, service_id: null, titulo: 'Indique uma amiga e ganhe', texto: 'Crédito na próxima visita', imagem_url: PROMO_IMG('#1F2026', '#FF2D7A', 'MIMO'), inicio: mais(-10), fim: null, ativa: true, vistas: 2040, cliques: 96, created_at: mais(-10) },
+  { id: 'pm5', salon_id: SALAO, professional_id: 'pr2', service_id: 'sv6', titulo: 'Corte + escova com 15% off', texto: 'Terças e quartas', imagem_url: PROMO_IMG('#AA4CFF', '#1F2026', '-15%'), inicio: mais(0), fim: mais(20), ativa: true, desconto_pct: 15, aprovacao: 'pendente', vistas: 0, cliques: 0, created_at: mais(0) },
   { id: 'pm4', salon_id: SALAO, professional_id: null, service_id: null, titulo: 'Dia das Mães', texto: 'Encerrada', imagem_url: PROMO_IMG('#FF7BAA', '#FFC2D8', '❤'), inicio: mais(-40), fim: mais(-20), ativa: true, vistas: 900, cliques: 120, created_at: mais(-40) },
 ]
 const TABELAS = {
@@ -152,7 +153,7 @@ const TABELAS = {
   reviews: [],
   appointment_services: [],
   categorias_de_servico: CATS,
-  promocoes: promocoes.map((p) => ({ ...p, salons: p.salon_id ? { name: 'Studio Mel' } : null, professionals: p.professional_id ? { name: profissionais.find((x) => x.id === p.professional_id)?.name } : null })),
+  promocoes: promocoes.map((p) => ({ ...p, aprovacao: p.aprovacao ?? 'aprovada', services: servicos.find((s) => s.id === p.service_id) ? { name: servicos.find((s) => s.id === p.service_id).name } : null, salons: p.salon_id ? { name: 'Studio Mel' } : null, professionals: p.professional_id ? { name: profissionais.find((x) => x.id === p.professional_id)?.name } : null })),
   servicos_juntos: [{ service_id: 'sv1', sugerido_id: 'sv3' }],
   salons: [{ id: SALAO, name: 'Studio Mel', slug: 'studio-mel', app_url: 'https://mimo.app', city: 'Santos', address: 'Rua das Flores, 120 · Gonzaga', codigo: 'MEL2K5', tipo: 'salao', descricao: 'Um cantinho no Gonzaga para você se cuidar com calma: café, música baixa e uma equipe que capricha em cada detalhe.', fotos: [PROMO_IMG('#FF7BAA', '#AA4CFF', ''), PROMO_IMG('#FFC2D8', '#FF2D7A', '')], logo_url: null, phone: '(13) 3333-0000', whatsapp: '(13) 99120-3410', instagram: 'studiomel' }],
   salon_members: [{ salon_id: SALAO, user_id: 'a1', papel: 'admin', salons: { id: SALAO, name: 'Studio Mel', slug: 'studio-mel', codigo: 'MEL2K5', tipo: 'salao', city: 'Santos' } }],
@@ -162,8 +163,9 @@ const TABELAS = {
 }
 
 const RPC = {
-  promocoes_para_mim: () => promocoes.filter((p) => p.ativa && (!p.fim || p.fim >= mais(0))).map((p) => ({ ...p, desconto_pct: p.desconto_pct ?? null, preco_de: servicos.find((s) => s.id === p.service_id)?.price ?? null, preco_por: p.desconto_pct ? Math.round(servicos.find((s) => s.id === p.service_id)?.price * (100 - p.desconto_pct)) / 100 : null, salao: p.salon_id ? 'Studio Mel' : null, profissional: p.professional_id ? profissionais.find((x) => x.id === p.professional_id)?.name : null, professional_id: p.professional_id ?? (p.service_id ? 'pr1' : null), servico: servicos.find((s) => s.id === p.service_id)?.name ?? null })),
+  promocoes_para_mim: () => promocoes.filter((p) => p.ativa && p.aprovacao !== 'pendente' && (!p.fim || p.fim >= mais(0))).map((p) => ({ ...p, desconto_pct: p.desconto_pct ?? null, preco_de: servicos.find((s) => s.id === p.service_id)?.price ?? null, preco_por: p.desconto_pct ? Math.round(servicos.find((s) => s.id === p.service_id)?.price * (100 - p.desconto_pct)) / 100 : null, salao: p.salon_id ? 'Studio Mel' : null, profissional: p.professional_id ? profissionais.find((x) => x.id === p.professional_id)?.name : null, professional_id: p.professional_id ?? (p.service_id ? 'pr1' : null), servico: servicos.find((s) => s.id === p.service_id)?.name ?? null })),
   promocao_vista: () => null,
+  destaques_para_mim: () => servicos.filter((s) => s.destaque && s.active).map((s) => ({ ...s, salon_id: SALAO, salao: 'Studio Mel', quem: vinculos.filter((v) => v.service_id === s.id).map((v) => ({ id: v.professional_id, name: profissionais.find((p) => p.id === v.professional_id)?.name ?? '' })) })),
   pagina_do_salao: () => ({
     salao: { id: SALAO, nome: 'Studio Mel', tipo: 'salao', descricao: 'Um cantinho no Gonzaga para você se cuidar com calma: café, música baixa e uma equipe que capricha em cada detalhe.', fotos: [PROMO_IMG('#FF7BAA', '#AA4CFF', ''), PROMO_IMG('#FFC2D8', '#FF2D7A', '')], logo_url: null, endereco: 'Rua das Flores, 120 · Gonzaga', cidade: 'Santos', telefone: '(13) 3333-0000', whatsapp: '(13) 99120-3410', instagram: 'studiomel' },
     horarios: [0, 1, 2, 3, 4, 5, 6].map((weekday) => ({ weekday, open: weekday > 0, start_time: '09:00:00', end_time: weekday === 6 ? '14:00:00' : '18:00:00' })),

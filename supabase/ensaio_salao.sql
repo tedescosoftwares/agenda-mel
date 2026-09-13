@@ -49,6 +49,23 @@ begin
   select count(*) into n from public.destaques_para_mim() d where d.salon_id = sal;
   if n <> 1 then raise exception 'destaques: %', n; end if;
   raise notice '4 destaques do salão (ok)';
+
+  -- 5. capas (087): a padrão da plataforma vale; a do salão sobrepõe
+  update public.categorias_de_servico set imagem_url = 'https://x/padrao.jpg' where salon_id is null and nome = 'Cabelo';
+  if (public.pagina_do_salao(sal) -> 'capas' ->> (select id::text from public.categorias_de_servico where salon_id is null and nome = 'Cabelo')) <> 'https://x/padrao.jpg' then raise exception 'capa padrão não veio'; end if;
+  perform set_config('request.jwt.claim.sub', dona::text, false);
+  set role authenticated;
+  insert into public.capas_de_categoria (salon_id, categoria_id, imagem_url) values (sal, (select id from public.categorias_de_servico where salon_id is null and nome = 'Cabelo'), 'https://x/minha.jpg');
+  reset role;
+  if (public.pagina_do_salao(sal) -> 'capas' ->> (select id::text from public.categorias_de_servico where salon_id is null and nome = 'Cabelo')) <> 'https://x/minha.jpg' then raise exception 'capa do salão não sobrepôs'; end if;
+  perform set_config('request.jwt.claim.sub', cli::text, false);
+  set role authenticated;
+  insert into public.capas_de_categoria (salon_id, categoria_id, imagem_url) values (sal, (select id from public.categorias_de_servico where salon_id is null and nome = 'Unhas'), 'https://x/hack.jpg');
+  reset role;
+  raise exception 'cliente pôs capa';
+exception when insufficient_privilege then
+  reset role;
+  raise notice '5 capas: padrão, do salão sobrepõe, cliente barrada (ok)';
   raise notice 'FIM DO ENSAIO — tudo certo';
 end $$;
 rollback;

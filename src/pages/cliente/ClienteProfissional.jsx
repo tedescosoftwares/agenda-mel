@@ -6,7 +6,8 @@ import { StarIcon } from '../../components/icons'
 import { formatPreco, labelDuracao } from '../../lib/format'
 import { iniciais } from '../../lib/booking'
 import { Sparkles } from 'lucide-react'
-import { useCategorias, agruparPorCategoria } from '../../lib/categorias'
+import { useCategorias, agruparPorCategoria, useCapas } from '../../lib/categorias'
+import CategoriaCard from '../../components/CategoriaCard'
 
 // Perfil da profissional dentro do app (tela 05): foto grande, nome,
 // nota, e três abas — Serviços, Avaliações, Sobre. O botão "Agendar
@@ -16,6 +17,7 @@ export default function ClienteProfissional() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [prof, setProf] = useState(null)
+  const capas = useCapas(prof?.salon_id)
   const [servicos, setServicos] = useState([])
   const [nota, setNota] = useState(null)
   const [avaliacoes, setAvaliacoes] = useState([])
@@ -80,8 +82,7 @@ export default function ClienteProfissional() {
       {aba === 'servicos' && (
         <div className="cliente-list">
           {servicos.length === 0 && <div className="card empty-state"><p>Ela ainda não cadastrou serviços.</p></div>}
-          {agruparPorCategoria(servicos, cats).map((g, _, todos) => (<section key={g.id || 'outros'} className="cat-grupo">
-          {todos.length > 1 && <h3 className="cat-titulo">{g.nome}</h3>}
+          {agruparPorCategoria(servicos, cats).map((g) => (<CategoriaCard key={g.id || 'outros'} nome={g.nome} imagem={capas[g.id]} quantos={g.itens.length}>
           {g.itens.map((s) => (
             <Link key={s.id} to={`/cliente/servico/${s.id}?prof=${prof.id}`} className="card servico-linha">
               <span className="servico-linha-foto" aria-hidden="true">
@@ -94,7 +95,7 @@ export default function ClienteProfissional() {
               <span className="link-ver">Ver</span>
             </Link>
           ))}
-          </section>))}
+          </CategoriaCard>))}
         </div>
       )}
 

@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import ClienteShell from '../../components/ClienteShell'
 import { supabase } from '../../lib/supabase'
 import { formatPreco, labelDuracao } from '../../lib/format'
 import { iniciais } from '../../lib/booking'
 import { useCategorias, agruparPorCategoria } from '../../lib/categorias'
+import CategoriaCard from '../../components/CategoriaCard'
 import { StarIcon, InstagramIcon } from '../../components/icons'
 import { MapPin, Phone, Clock, Sparkles, Store, ChevronRight, BadgePercent, MessageCircle } from 'lucide-react'
 
@@ -19,6 +20,7 @@ export default function ClienteSalao() {
   const cats = useCategorias()
   const [pg, setPg] = useState(null)
   const [foto, setFoto] = useState(0)
+  const faixa = useRef(null)
   const [aba, setAba] = useState('servicos')
   const [loading, setLoading] = useState(true)
 
@@ -49,10 +51,17 @@ export default function ClienteSalao() {
   return (
     <ClienteShell semTopo>
       <div className="perfil-capa salao-capa">
-        {fotos.length ? <img src={fotos[foto]} alt="" /> : <span className="perfil-capa-ini"><Store size={64} /></span>}
+        {fotos.length ? (
+          <div className="salao-carrossel" ref={faixa} onScroll={() => { const el = faixa.current; if (el) setFoto(Math.round(el.scrollLeft / Math.max(1, el.clientWidth))) }}>
+            {fotos.map((f, i) => <img key={f} src={f} alt="" loading={i === 0 ? 'eager' : 'lazy'} />)}
+          </div>
+        ) : <span className="perfil-capa-ini"><Store size={64} /></span>}
         <button type="button" onClick={voltar} className="perfil-voltar" aria-label="Voltar">‹</button>
         {fotos.length > 1 && (
-          <div className="salao-capa-pontos">{fotos.map((f, i) => <button key={f} type="button" className={i === foto ? 'on' : ''} onClick={() => setFoto(i)} aria-label={`Foto ${i + 1}`} />)}</div>
+          <>
+            <span className="salao-capa-contador">{foto + 1}/{fotos.length}</span>
+            <div className="salao-capa-pontos">{fotos.map((f, i) => <button key={f} type="button" className={i === foto ? 'on' : ''} onClick={() => faixa.current?.scrollTo({ left: i * faixa.current.clientWidth, behavior: 'smooth' })} aria-label={`Foto ${i + 1}`} />)}</div>
+          </>
         )}
         {s.logo_url && <img className="salao-capa-logo" src={s.logo_url} alt="" />}
       </div>
@@ -96,9 +105,8 @@ export default function ClienteSalao() {
       {aba === 'servicos' && (
         <div className="cliente-list">
           {servicos.length === 0 && <div className="card empty-state"><p>O salão ainda não cadastrou serviços.</p></div>}
-          {agruparPorCategoria(servicos, cats).map((g, _, todos) => (
-            <section key={g.id || 'outros'} className="cat-grupo">
-              {todos.length > 1 && <h3 className="cat-titulo">{g.nome}</h3>}
+          {agruparPorCategoria(servicos, cats).map((g) => (
+            <CategoriaCard key={g.id || 'outros'} nome={g.nome} imagem={pg.capas?.[g.id]} quantos={g.itens.length}>
               {g.itens.map((sv) => (
                 <Link key={sv.id} to={linkServico(sv)} className="card servico-linha">
                   <span className="servico-linha-foto" aria-hidden="true">{sv.images?.[0] ? <img src={sv.images[0]} alt="" /> : <Sparkles />}</span>
@@ -110,7 +118,7 @@ export default function ClienteSalao() {
                   <ChevronRight size={18} className="agdt-seta" />
                 </Link>
               ))}
-            </section>
+            </CategoriaCard>
           ))}
         </div>
       )}

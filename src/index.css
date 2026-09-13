@@ -5625,3 +5625,27 @@ a, button { -webkit-tap-highlight-color: transparent; }
 .vitrine-veu strong { font-size: 0.98rem; line-height: 1.2; text-shadow: 0 1px 2px rgba(0,0,0,0.4); }
 .vitrine-veu span { font-size: 0.76rem; opacity: 0.92; }
 .vitrine-veu small { font-size: 0.68rem; opacity: 0.8; }
+
+/* ---- carrossel da capa e cartões de categoria (2.28) ---- */
+.salao-carrossel { display: flex; height: 100%; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; }
+.salao-carrossel::-webkit-scrollbar { display: none; }
+.salao-carrossel img { flex: 0 0 100%; width: 100%; height: 100%; object-fit: cover; scroll-snap-align: start; display: block; }
+.salao-capa-contador { position: absolute; top: 0.9rem; right: 1rem; font-size: 0.72rem; font-weight: 700; color: #fff; background: rgba(31, 32, 38, 0.55); padding: 0.15rem 0.5rem; border-radius: 999px; }
+.cat-card { margin: 0 0 1rem; border-radius: 18px; overflow: hidden; background: var(--branco); box-shadow: var(--sombra, 0 4px 14px rgba(31, 32, 38, 0.06)); }
+.cat-card-capa { position: relative; aspect-ratio: 3 / 1; background: var(--cinza-1); }
+.cat-card-capa img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cat-card-veu { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: flex-end; padding: 1.4rem 0.9rem 0.6rem; background: linear-gradient(to top, rgba(20, 16, 24, 0.72), rgba(20, 16, 24, 0.05) 70%); color: #fff; }
+.cat-card-veu strong { font-size: 1.2rem; line-height: 1.15; text-shadow: 0 1px 3px rgba(0,0,0,0.4); }
+.cat-card-veu span { font-size: 0.75rem; opacity: 0.9; }
+.cat-card-corpo { padding: 0.5rem 0.5rem 0.55rem; }
+.cat-card-corpo .cliente-list { gap: 0.4rem; }
+.cat-card-corpo .card { box-shadow: none; border: 1px solid var(--fio); }
+.cat-capas-titulo { margin: 0.9rem 0 0.15rem; font-size: 0.95rem; }
+.cat-capas { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.6rem; margin-top: 0.4rem; }
+.cat-capa-item { display: flex; flex-direction: column; gap: 0.3rem; }
+.cat-capa-figura { position: relative; aspect-ratio: 3 / 1; border-radius: 10px; overflow: hidden; cursor: pointer; background: var(--cinza-1); display: block; }
+.cat-capa-figura img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cat-capa-figura.subindo { opacity: 0.6; }
+.cat-capa-nome { position: absolute; left: 0.5rem; bottom: 0.4rem; color: #fff; font-weight: 800; font-size: 0.85rem; text-shadow: 0 1px 3px rgba(0,0,0,0.5); }
+.cat-capa-acao { position: absolute; top: 0.35rem; right: 0.35rem; font-size: 0.62rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: var(--rosa); background: rgba(255,255,255,0.92); padding: 0.15rem 0.45rem; border-radius: 999px; }
+.cat-capa-item .btn-mini { align-self: flex-start; }

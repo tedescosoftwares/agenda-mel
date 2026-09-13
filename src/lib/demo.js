@@ -153,6 +153,7 @@ const TABELAS = {
   reviews: [],
   appointment_services: [],
   categorias_de_servico: CATS,
+  capas_de_categoria: [],
   promocoes: promocoes.map((p) => ({ ...p, aprovacao: p.aprovacao ?? 'aprovada', services: servicos.find((s) => s.id === p.service_id) ? { name: servicos.find((s) => s.id === p.service_id).name } : null, salons: p.salon_id ? { name: 'Studio Mel' } : null, professionals: p.professional_id ? { name: profissionais.find((x) => x.id === p.professional_id)?.name } : null })),
   servicos_juntos: [{ service_id: 'sv1', sugerido_id: 'sv3' }],
   salons: [{ id: SALAO, name: 'Studio Mel', slug: 'studio-mel', app_url: 'https://mimo.app', city: 'Santos', address: 'Rua das Flores, 120 · Gonzaga', codigo: 'MEL2K5', tipo: 'salao', descricao: 'Um cantinho no Gonzaga para você se cuidar com calma: café, música baixa e uma equipe que capricha em cada detalhe.', fotos: [PROMO_IMG('#FF7BAA', '#AA4CFF', ''), PROMO_IMG('#FFC2D8', '#FF2D7A', '')], logo_url: null, phone: '(13) 3333-0000', whatsapp: '(13) 99120-3410', instagram: 'studiomel' }],
@@ -165,6 +166,7 @@ const TABELAS = {
 const RPC = {
   promocoes_para_mim: () => promocoes.filter((p) => p.ativa && p.aprovacao !== 'pendente' && (!p.fim || p.fim >= mais(0))).map((p) => ({ ...p, desconto_pct: p.desconto_pct ?? null, preco_de: servicos.find((s) => s.id === p.service_id)?.price ?? null, preco_por: p.desconto_pct ? Math.round(servicos.find((s) => s.id === p.service_id)?.price * (100 - p.desconto_pct)) / 100 : null, salao: p.salon_id ? 'Studio Mel' : null, profissional: p.professional_id ? profissionais.find((x) => x.id === p.professional_id)?.name : null, professional_id: p.professional_id ?? (p.service_id ? 'pr1' : null), servico: servicos.find((s) => s.id === p.service_id)?.name ?? null })),
   promocao_vista: () => null,
+  capas_do_salao: () => [{ categoria_id: 'ct2', imagem_url: PROMO_IMG('#FF2D7A', '#AA4CFF', '') }],
   destaques_para_mim: () => servicos.filter((s) => s.destaque && s.active).map((s) => ({ ...s, salon_id: SALAO, salao: 'Studio Mel', quem: vinculos.filter((v) => v.service_id === s.id).map((v) => ({ id: v.professional_id, name: profissionais.find((p) => p.id === v.professional_id)?.name ?? '' })) })),
   pagina_do_salao: () => ({
     salao: { id: SALAO, nome: 'Studio Mel', tipo: 'salao', descricao: 'Um cantinho no Gonzaga para você se cuidar com calma: café, música baixa e uma equipe que capricha em cada detalhe.', fotos: [PROMO_IMG('#FF7BAA', '#AA4CFF', ''), PROMO_IMG('#FFC2D8', '#FF2D7A', '')], logo_url: null, endereco: 'Rua das Flores, 120 · Gonzaga', cidade: 'Santos', telefone: '(13) 3333-0000', whatsapp: '(13) 99120-3410', instagram: 'studiomel' },
@@ -172,6 +174,7 @@ const RPC = {
     nota: { media: 4.8, quantas: 212 },
     equipe: profissionais.filter((p) => p.active).map((p) => ({ id: p.id, nome: p.name, foto: p.photo_url, bio: p.bio, nota: 4.9, faz: vinculos.filter((v) => v.professional_id === p.id).map((v) => servicos.find((s) => s.id === v.service_id)?.name).filter(Boolean) })),
     servicos: servicos.filter((s) => s.active).map((s) => ({ ...s, quem: vinculos.filter((v) => v.service_id === s.id).map((v) => ({ id: v.professional_id, nome: profissionais.find((p) => p.id === v.professional_id)?.name ?? '' })) })),
+    capas: { ct2: PROMO_IMG('#FF2D7A', '#AA4CFF', '') },
     promocoes: promocoes.filter((p) => p.salon_id && p.ativa && (!p.fim || p.fim >= mais(0))),
   }),
   descontos_para_mim: ({ servicos: ids }) => promocoes.filter((p) => p.desconto_pct && p.service_id && (ids ?? []).includes(p.service_id)).map((p) => { const s = servicos.find((x) => x.id === p.service_id); const cents = Math.round((s?.price ?? 0) * 100); return { service_id: p.service_id, promocao_id: p.id, titulo: p.titulo, desconto_pct: p.desconto_pct, preco_cents: cents, preco_com_desconto_cents: Math.round(cents * (100 - p.desconto_pct) / 100) } }),

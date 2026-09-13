@@ -42,3 +42,26 @@ export function bate(texto, busca) {
   const n = (t) => String(t ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
   return !busca || n(texto).includes(n(busca))
 }
+
+// capa padrão quando ninguém subiu imagem: um gradiente da marca que
+// muda com o nome, para cada categoria ter a sua cara
+const TONS = [['#FF2D7A', '#AA4CFF'], ['#AA4CFF', '#FF7BAA'], ['#FF7BAA', '#FF2D7A'], ['#1F2026', '#AA4CFF'], ['#FF9A6C', '#FF2D7A'], ['#6C4CFF', '#FF7BAA']]
+export function capaPadrao(nome) {
+  let h = 0
+  for (const ch of String(nome ?? '')) h = (h * 31 + ch.charCodeAt(0)) >>> 0
+  const [a, b] = TONS[h % TONS.length]
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="400"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient></defs><rect width="1200" height="400" fill="url(#g)"/><circle cx="1040" cy="60" r="150" fill="rgba(255,255,255,0.16)"/><circle cx="160" cy="380" r="200" fill="rgba(255,255,255,0.10)"/></svg>`
+  return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg)
+}
+
+// as capas de um salão: a dele, senão a padrão da plataforma (087)
+export function useCapas(salaoId) {
+  const [capas, setCapas] = useState({})
+  useEffect(() => {
+    if (!salaoId) { setCapas({}); return }
+    let vivo = true
+    supabase.rpc('capas_do_salao', { salao: salaoId }).then(({ data }) => { if (vivo) setCapas(Object.fromEntries((data ?? []).map((c) => [c.categoria_id, c.imagem_url]))) })
+    return () => { vivo = false }
+  }, [salaoId])
+  return capas
+}

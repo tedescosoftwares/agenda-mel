@@ -6,7 +6,8 @@ import { useAuth } from '../../context/AuthContext'
 import { ChevronIcon, SparkleIcon } from '../../components/icons'
 import { Star } from 'lucide-react'
 import { formatPreco, formatDuracao, labelDuracao } from '../../lib/format'
-import { useCategorias, categoriasDoSalao, agruparPorCategoria, bate } from '../../lib/categorias'
+import { useCategorias, categoriasDoSalao, agruparPorCategoria, bate, capaPadrao } from '../../lib/categorias'
+import { ajustarCriativo } from '../../lib/imagem'
 
 const FORM_VAZIO = {
   name: '',
@@ -44,11 +45,50 @@ export default function AdminServices() {
   const [buscaPicker, setBuscaPicker] = useState('')
   const [gerindo, setGerindo] = useState(false)
   const [catEdit, setCatEdit] = useState(null)         // { id, nome }
+  const [capas, setCapas] = useState({})               // categoria_id → url (087): a do salão, senão a padrão
+  const [capasDoSalao, setCapasDoSalao] = useState({}) // só as que o salão subiu
+  const [subindoCapa, setSubindoCapa] = useState('')
   const cats = categoriasDoSalao([...catsTodas.filter((c) => !catsExtra.some((e) => e.id === c.id)), ...catsExtra].filter((c) => !c.apagada), salao?.id)
 
   useEffect(() => {
     fetchServices()
   }, [])
+  useEffect(() => {
+    if (!salao?.id) return
+    supabase.rpc('capas_do_salao', { salao: salao.id }).then(({ data }) => setCapas(Object.fromEntries((data ?? []).map((c) => [c.categoria_id, c.imagem_url]))))
+    supabase.from('capas_de_categoria').select('categoria_id, imagem_url').eq('salon_id', salao.id).then(({ data }) => setCapasDoSalao(Object.fromEntries((data ?? []).map((c) => [c.categoria_id, c.imagem_url]))))
+  }, [salao?.id])
+
+  // a capa da categoria (087): imagem larga que vira o cabeçalho do cartão na página do salão
+  async function trocarCapa(c, e) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setSubindoCapa(c.id)
+    setError('')
+    try {
+      const { blob } = await ajustarCriativo(file, { largura: 1200, altura: 400 })
+      const path = `${salao.id}/capas/${crypto.randomUUID()}.jpg`
+      const { error: eu } = await supabase.storage.from('saloes').upload(path, blob, { contentType: 'image/jpeg', cacheControl: '31536000' })
+      if (eu) throw new Error(eu.message)
+      const url = supabase.storage.from('saloes').getPublicUrl(path).data.publicUrl
+      const { error: ec } = await supabase.from('capas_de_categoria').upsert({ salon_id: salao.id, categoria_id: c.id, imagem_url: url })
+      if (ec) throw new Error(ec.message)
+      const antiga = capasDoSalao[c.id]?.split('/saloes/')[1]
+      if (antiga) supabase.storage.from('saloes').remove([antiga])
+      setCapas((m) => ({ ...m, [c.id]: url }))
+      setCapasDoSalao((m) => ({ ...m, [c.id]: url }))
+    } catch (err) { setError('Não deu para trocar a capa: ' + err.message) } finally { setSubindoCapa('') }
+  }
+  async function tirarCapa(c) {
+    const { error } = await supabase.from('capas_de_categoria').delete().eq('salon_id', salao.id).eq('categoria_id', c.id)
+    if (error) { setError(error.message); return }
+    const antiga = capasDoSalao[c.id]?.split('/saloes/')[1]
+    if (antiga) supabase.storage.from('saloes').remove([antiga])
+    setCapasDoSalao((m) => { const n = { ...m }; delete n[c.id]; return n })
+    const { data } = await supabase.rpc('capas_do_salao', { salao: salao.id })
+    setCapas(Object.fromEntries((data ?? []).map((x) => [x.categoria_id, x.imagem_url])))
+  }
 
   async function fetchServices() {
     setLoading(true)
@@ -631,6 +671,26 @@ export default function AdminServices() {
                 {cats.filter((c) => c.salon_id).length === 0 && <li className="muted">Nenhuma categoria sua ainda.</li>}
               </ul>
               <p className="muted cat-gestao-pre">Da plataforma: {cats.filter((c) => !c.salon_id).map((c) => c.nome).join(', ')}.</p>
+
+              <h4 className="cat-capas-titulo">Capas das categorias</h4>
+              <p className="muted">A imagem larga que aparece no topo de cada categoria na página do salão. Recomendado 1200×400 (3:1); a gente ajusta e corta pelo centro. Só aparecem as categorias com serviço.</p>
+              <div className="cat-capas">
+                {agruparPorCategoria(services.filter((s) => s.active), cats).filter((g) => g.id).map((g) => {
+                  const c = cats.find((x) => x.id === g.id)
+                  if (!c) return null
+                  return (
+                    <div key={c.id} className="cat-capa-item">
+                      <label className={'cat-capa-figura' + (subindoCapa === c.id ? ' subindo' : '')}>
+                        <img src={capas[c.id] || capaPadrao(c.nome)} alt="" />
+                        <span className="cat-capa-nome">{c.nome}</span>
+                        <span className="cat-capa-acao">{subindoCapa === c.id ? 'Enviando…' : capasDoSalao[c.id] ? 'Trocar' : 'Escolher imagem'}</span>
+                        <input type="file" accept="image/*" hidden onChange={(e) => trocarCapa(c, e)} disabled={Boolean(subindoCapa)} />
+                      </label>
+                      {capasDoSalao[c.id] && <button type="button" className="btn btn-ghost btn-mini" onClick={() => tirarCapa(c)}>Voltar para a padrão</button>}
+                    </div>
+                  )
+                })}
+              </div>
             </div>
           )}
         </section>

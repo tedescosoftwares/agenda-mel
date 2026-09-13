@@ -9,7 +9,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { SearchIcon } from '../../components/icons'
 import { formatPreco, formatDuracao } from '../../lib/format'
-import { Sparkles, Store, MapPin, ChevronRight } from 'lucide-react'
+import { Sparkles, Store, MapPin, ChevronRight, Star } from 'lucide-react'
 
 // Início da cliente (tela 03 do painel): saudação, busca, a fileira de
 // profissionais, e os serviços em destaque. É a vitrine — tudo aqui
@@ -24,13 +24,20 @@ export default function ClienteHome() {
   const [loading, setLoading] = useState(true)
   const [saloes, setSaloes] = useState({})        // id → fotos, logo, cidade (085)
   const [destaquesConfig, setDestaquesConfig] = useState(null)   // o que os salões marcaram (086)
+  const [descontos, setDescontos] = useState({})
 
   useEffect(() => {
     const ids = (agendas ?? []).map((a) => a.salao?.id).filter(Boolean)
     if (!ids.length) return
     supabase.from('salons').select('id, name, city, address, fotos, logo_url, tipo').in('id', ids)
       .then(({ data }) => setSaloes(Object.fromEntries((data ?? []).map((s) => [s.id, s]))))
-    supabase.rpc('destaques_para_mim').then(({ data }) => setDestaquesConfig(data ?? []))
+    supabase.rpc('destaques_para_mim').then(async ({ data }) => {
+      setDestaquesConfig(data ?? [])
+      if (data?.length) {
+        const { data: d } = await supabase.rpc('descontos_para_mim', { servicos: data.map((x) => x.id) })
+        setDescontos(Object.fromEntries((d ?? []).map((x) => [x.service_id, x])))
+      }
+    })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [(agendas ?? []).map((a) => a.salao?.id).join(',')])
 
@@ -172,28 +179,26 @@ export default function ClienteHome() {
         <h3>Serviços em destaque</h3>
       </div>
 
-      <div className="cliente-list">
-        {destaques.length === 0 && <p className="muted">Nada em destaque por enquanto.</p>}
-        {destaques.map(({ servico, quem, salao }) => (
-          <Link
-            key={servico.id}
-            to={`/cliente/servico/${servico.id}${quem.length === 1 ? `?prof=${quem[0].id}` : ''}`}
-            className="card destaque-row"
-          >
-            <span className="destaque-foto" aria-hidden="true">
-              {servico.images?.[0] ? <img src={servico.images[0]} alt="" /> : <Sparkles />}
-            </span>
-            <span className="cliente-info">
-              <span className="cliente-nome"><span className="nome-txt">{servico.name}</span></span>
-              <span className="muted cliente-meta">
-                {formatPreco(servico.price)} · {formatDuracao(servico.duration_minutes)}
-                {quem.length > 1 ? ` · ${quem.length} profissionais` : quem.length === 1 ? ` · com ${quem[0].name.split(' ')[0]}` : ''}{salao && (agendas ?? []).length > 1 ? ` · ${salao}` : ''}
+      {destaques.length === 0 ? <p className="muted">Nada em destaque por enquanto.</p> : (
+        <div className="vitrine">
+          {destaques.map(({ servico, quem, salao }, i) => (
+            <Link
+              key={servico.id}
+              to={`/cliente/servico/${servico.id}${quem.length === 1 ? `?prof=${quem[0].id}` : ''}`}
+              className={'vitrine-item' + (servico.images?.[0] ? '' : ' tom-' + (i % 4))}
+            >
+              {servico.images?.[0] ? <img src={servico.images[0]} alt="" loading="lazy" /> : <span className="vitrine-brilho" aria-hidden="true"><Sparkles size={44} /></span>}
+              <span className="vitrine-selo"><Star size={11} /> Destaque</span>
+              <span className="vitrine-preco">{descontos[servico.id] ? <><s>{formatPreco(servico.price)}</s> {formatPreco(descontos[servico.id].preco_com_desconto_cents / 100)}</> : formatPreco(servico.price)}</span>
+              <span className="vitrine-veu">
+                <strong>{servico.name}</strong>
+                <span>{formatDuracao(servico.duration_minutes)}{quem.length > 1 ? ` · ${quem.length} profissionais` : quem.length === 1 ? ` · com ${quem[0].name.split(' ')[0]}` : ''}</span>
+                {salao && (agendas ?? []).length > 1 && <small>{salao}</small>}
               </span>
-            </span>
-            <span className="btn-mini destaque-btn">Agendar</span>
-          </Link>
-        ))}
-      </div>
+            </Link>
+          ))}
+        </div>
+      )}
 
     </ClienteShell>
   )

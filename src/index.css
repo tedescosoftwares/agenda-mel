@@ -5413,3 +5413,8 @@ a, button { -webkit-tap-highlight-color: transparent; }
 .cat-gestao-pre { font-size: 0.8rem; }
 .btn-mini.perigo { color: #c0392b; border-color: #f3c4bf; }
 .form .combo-item { flex-direction: row; align-items: center; gap: 0.7rem; font-family: inherit; font-size: 0.9rem; color: inherit; }
+/* formulário de serviço como modal por cima da lista (2.23.1) */
+.modal-form { position: relative; max-height: 92dvh; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+.modal-form h3 { padding-right: 2.2rem; }
+.modal-form .form-actions { position: sticky; bottom: -1.2rem; margin: 0.6rem -1.2rem -1.2rem; padding: 0.8rem 1.2rem calc(0.8rem + env(safe-area-inset-bottom)); background: var(--branco); border-top: 1px solid var(--fio); }
+@media (min-width: 700px) { .modal-fundo:has(.modal-form) { align-items: center; padding: 1rem; } .modal-form { border-radius: 22px; max-height: 88vh; } }

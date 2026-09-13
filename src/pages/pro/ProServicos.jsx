@@ -140,9 +140,13 @@ export default function ProServicos() {
         </section>
         ))}
       </div>
+      {dona && <button className="btn btn-ghost btn-block" style={{ marginTop: '1rem' }} onClick={() => setNovo({ name: '', duration_minutes: 60, price: '', categoria_id: '' })}>+ Novo serviço</button>}
       {dona ? (
         novo ? (
-          <div className="card form" style={{ marginTop: '1rem' }}>
+          <div className="modal-fundo" onClick={() => setNovo(null)}>
+          <div className="card modal-caixa modal-form form" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Novo serviço">
+            <button type="button" className="modal-fechar" onClick={() => setNovo(null)} aria-label="Fechar">×</button>
+            <h3>Novo serviço</h3>
             <label>Nome do serviço<input value={novo.name} onChange={(e) => setNovo({ ...novo, name: e.target.value })} placeholder="Esmaltação em gel" /></label>
             <label>Categoria
               <select value={novo.categoria_id ?? ''} onChange={(e) => setNovo({ ...novo, categoria_id: e.target.value })}>
@@ -163,9 +167,8 @@ export default function ProServicos() {
               <button className="btn btn-primary" onClick={criar} disabled={salvando || !novo.name.trim()}>{salvando ? 'Salvando…' : 'Criar serviço'}</button>
             </div>
           </div>
-        ) : (
-          <button className="btn btn-ghost btn-block" style={{ marginTop: '1rem' }} onClick={() => setNovo({ name: '', duration_minutes: 60, price: '', categoria_id: '' })}>+ Novo serviço</button>
-        )
+          </div>
+        ) : null
       ) : (
         <p className="muted" style={{ fontSize: '0.82rem', marginTop: '1rem' }}>Preço e duração são definidos pelo salão, em Admin → Serviços.</p>
       )}

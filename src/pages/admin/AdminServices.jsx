@@ -90,7 +90,6 @@ export default function AdminServices() {
     setJuntos(juntosTodos.filter((j) => j.service_id === service.id).map((j) => j.sugerido_id))
     setEditing(service.id)
     setError('')
-    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   function cancelEdit() {
@@ -323,11 +322,14 @@ export default function AdminServices() {
         </div>
       </div>
 
-      {error && <div className="alert alert-error">{error}</div>}
+      {error && editing === null && <div className="alert alert-error">{error}</div>}
 
       {editing !== null && (
-        <form className="card form service-form" onSubmit={handleSave}>
+        <div className="modal-fundo" onClick={cancelEdit}>
+        <form className="card modal-caixa modal-form form service-form" onSubmit={handleSave} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={editing === 'new' ? 'Novo serviço' : 'Editar serviço'}>
+          <button type="button" className="modal-fechar" onClick={cancelEdit} aria-label="Fechar">×</button>
           <h3>{editing === 'new' ? 'Novo serviço' : 'Editar serviço'}</h3>
+          {error && <div className="alert alert-error">{error}</div>}
 
           <label>
             Nome
@@ -517,11 +519,12 @@ export default function AdminServices() {
             </button>
           </div>
         </form>
+        </div>
       )}
 
       {loading ? (
         <p className="muted">Carregando…</p>
-      ) : services.length === 0 && editing === null ? (
+      ) : services.length === 0 ? (
         <div className="card empty-state">
           <p>Nenhum serviço cadastrado ainda.</p>
           <p className="muted">Toque no botão + para começar.</p>

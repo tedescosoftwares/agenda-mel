@@ -1,5 +1,6 @@
+import { useEffect, useRef } from 'react'
 import { useDialogo } from '../context/DialogoContext'
-import { NavLink } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import SinoAvisos from './SinoAvisos'
 import {
@@ -23,6 +24,10 @@ const TABS = [
 ]
 
 export default function ProShell({ children, titulo, voltar }) {
+  // só o miolo rola: ao trocar de página, volta para o topo dele
+  const miolo = useRef(null)
+  const { pathname } = useLocation()
+  useEffect(() => { miolo.current?.scrollTo({ top: 0 }) }, [pathname])
   const { confirmar } = useDialogo()
   const { professional, profile, user, signOut } = useAuth()
   const nome = professional?.name || profile?.full_name || user?.email
@@ -51,7 +56,7 @@ export default function ProShell({ children, titulo, voltar }) {
         </div>
       </header>
 
-      <main className="content admin-content">{children}</main>
+      <main className="content admin-content" ref={miolo}><div className="miolo">{children}</div></main>
 
       <nav className="bottom-nav">
         <div className="bottom-nav-inner">

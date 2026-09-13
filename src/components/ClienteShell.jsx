@@ -1,4 +1,5 @@
-import { NavLink, useNavigate } from 'react-router-dom'
+import { useEffect, useRef } from 'react'
+import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { ScanLine } from 'lucide-react'
 import SinoAvisos from './SinoAvisos'
 import AvaliarConvite from './AvaliarConvite'
@@ -17,6 +18,10 @@ const TABS = [
 ]
 
 export default function ClienteShell({ children, titulo, voltar, semTopo = false }) {
+  // só o miolo rola: ao trocar de página, volta para o topo dele
+  const miolo = useRef(null)
+  const { pathname } = useLocation()
+  useEffect(() => { miolo.current?.scrollTo({ top: 0 }) }, [pathname])
   const { naoLidos } = useNotificacoes()
   const navigate = useNavigate()
 
@@ -24,7 +29,9 @@ export default function ClienteShell({ children, titulo, voltar, semTopo = false
     <div className="admin-shell">
       {!semTopo && (
         <header className="topbar topbar-cliente">
-          {voltar ? (
+          {typeof voltar === 'function' ? (
+            <button type="button" onClick={voltar} className="topo-voltar" aria-label="Voltar">‹</button>
+          ) : voltar ? (
             <NavLink to={voltar} className="topo-voltar" aria-label="Voltar">
               ‹
             </NavLink>
@@ -44,9 +51,11 @@ export default function ClienteShell({ children, titulo, voltar, semTopo = false
       )}
 
       <CienciaGate />
-      <main className="content">
-        <AvaliarConvite />
-        {children}
+      <main className="content" ref={miolo}>
+        <div className="miolo">
+          <AvaliarConvite />
+          {children}
+        </div>
       </main>
 
       <nav className="bottom-nav">

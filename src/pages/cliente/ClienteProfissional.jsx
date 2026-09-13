@@ -61,10 +61,9 @@ export default function ClienteProfissional() {
   const voltar = () => { if (window.history.length > 1) navigate(-1); else navigate('/cliente/home') }
 
   return (
-    <ClienteShell semTopo>
+    <ClienteShell titulo={prof.name} voltar={voltar}>
       <div className="perfil-capa">
         {prof.photo_url ? <img src={prof.photo_url} alt="" /> : <span className="perfil-capa-ini">{iniciais(prof.name)}</span>}
-        <button type="button" onClick={voltar} className="perfil-voltar" aria-label="Voltar">‹</button>
       </div>
 
       <div className="perfil-cabeca">

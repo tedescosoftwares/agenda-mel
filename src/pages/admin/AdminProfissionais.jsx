@@ -76,7 +76,7 @@ export default function AdminProfissionais() {
     setEditing(p.id)
     setError('')
     setInfo('')
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    document.querySelector('.admin-shell .content')?.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   function cancelEdit() {

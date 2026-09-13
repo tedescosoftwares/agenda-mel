@@ -260,18 +260,29 @@ a {
 
 .layout,
 .admin-shell {
-  min-height: 100vh;
+  /* a tela inteira: barra de cima, o miolo que rola, barra de baixo.
+     Só o miolo rola, então as barras nunca somem (2.29.1) */
+  height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .content {
   flex: 1;
+  min-height: 0;
   width: 100%;
-  max-width: var(--largura);
-  margin: 0 auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   padding: 1.5rem 1.15rem 3rem;
 }
+/* a largura do app fica num invólucro interno (.miolo), para a rolagem
+   ser da tela toda e a barra de rolagem ficar na borda; as margens
+   negativas (capa, vitrines) continuam relativas à coluna do app */
+.miolo { max-width: var(--largura); margin: 0 auto; }
 
 .admin-content {
   padding-bottom: 7.5rem;
@@ -280,8 +291,8 @@ a {
 /* ---------- barra de cima ---------- */
 
 .topbar {
-  position: sticky;
-  top: 0;
+  position: relative;
+  flex: none;
   z-index: 30;
   display: flex;
   align-items: center;
@@ -321,10 +332,8 @@ a {
 
 .bottom-nav {
   box-shadow: 0 -2px 18px rgba(31, 31, 30, 0.06);
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  position: relative;
+  flex: none;
   z-index: 30;
   background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(14px);
@@ -469,7 +478,7 @@ a {
 }
 
 /* mas o primeiro da tela não empurra nada */
-.content > .secao-titulo:first-child,
+.miolo > .secao-titulo:first-child,
 .page-head + .secao-titulo {
   margin-top: 0;
 }
@@ -4186,16 +4195,6 @@ a.prof-row:hover,
   position: absolute; inset: 0; display: grid; place-items: center;
   color: var(--branco); font-size: 4rem; font-weight: 600;
 }
-.perfil-voltar {
-  /* abaixo da área do relógio/notch no iPhone instalado: sem isto o botão
-     ficava embaixo da barra de status e não recebia o toque */
-  position: absolute; top: calc(0.9rem + env(safe-area-inset-top)); left: 0.9rem;
-  border: none; font-family: inherit; cursor: pointer;
-  width: 38px; height: 38px; border-radius: var(--r-pilula);
-  background: rgba(255, 255, 255, 0.9); color: var(--texto);
-  display: grid; place-items: center; text-decoration: none;
-  font-size: 1.6rem; line-height: 1; box-shadow: var(--sombra);
-}
 
 .perfil-cabeca { padding: 1.1rem 0 0.6rem; }
 .perfil-cabeca h2 { margin: 0 0 0.1rem; font-size: 1.35rem; }
@@ -4563,7 +4562,7 @@ body { position: relative; width: 100%; }
 .vit-marca strong { color: var(--roxo); }
 .vit-form label { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.85rem; color: var(--texto-2); }
 .vit-form input, .vit-form textarea { font: inherit; }
-.vitrine button.topo-voltar { border: none; font: inherit; cursor: pointer; font-size: 1.6rem; }
+.vitrine button.topo-voltar, .topbar button.topo-voltar { border: none; background: transparent; font: inherit; cursor: pointer; font-size: 1.6rem; }
 
 /* ---- diálogos do app (no lugar de confirm/alert do navegador) ---- */
 .dialogo-fundo { z-index: 80; }

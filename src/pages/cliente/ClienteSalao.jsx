@@ -52,14 +52,13 @@ export default function ClienteSalao() {
   const preferida = pg.preferida ? equipe.find((p) => p.id === pg.preferida) : null
 
   return (
-    <ClienteShell semTopo>
+    <ClienteShell titulo={s.nome} voltar={voltar}>
       <div className="perfil-capa salao-capa">
         {fotos.length ? (
           <div className="salao-carrossel" ref={faixa} onScroll={() => { const el = faixa.current; if (el) setFoto(Math.round(el.scrollLeft / Math.max(1, el.clientWidth))) }}>
             {fotos.map((f, i) => <img key={f} src={f} alt="" loading={i === 0 ? 'eager' : 'lazy'} />)}
           </div>
         ) : <span className="perfil-capa-ini"><Store size={64} /></span>}
-        <button type="button" onClick={voltar} className="perfil-voltar" aria-label="Voltar">‹</button>
         {fotos.length > 1 && (
           <>
             <span className="salao-capa-contador">{foto + 1}/{fotos.length}</span>

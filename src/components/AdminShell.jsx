@@ -1,5 +1,6 @@
+import { useEffect, useRef } from 'react'
 import { useDialogo } from '../context/DialogoContext'
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import SinoAvisos from './SinoAvisos'
 import { MarcaIcon, Wordmark } from './icons'
@@ -24,6 +25,10 @@ const TABS = [
 ]
 
 export default function AdminShell({ children }) {
+  // só o miolo rola: ao trocar de página, volta para o topo dele
+  const miolo = useRef(null)
+  const { pathname } = useLocation()
+  useEffect(() => { miolo.current?.scrollTo({ top: 0 }) }, [pathname])
   const { confirmar } = useDialogo()
   const { profile, user, signOut } = useAuth()
   const navigate = useNavigate()
@@ -51,7 +56,7 @@ export default function AdminShell({ children }) {
         </div>
       </header>
 
-      <main className="content admin-content">{children}</main>
+      <main className="content admin-content" ref={miolo}><div className="miolo">{children}</div></main>
 
       <nav className="bottom-nav">
         <div className="bottom-nav-inner">

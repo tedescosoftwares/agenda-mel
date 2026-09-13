@@ -96,12 +96,12 @@ export default function AdminSalao() {
         <form className="card form salao-form" onSubmit={salvar}>
           <div className="salao-logo-linha">
             <label className="salao-logo">
-              {logo ? <img src={logo.preview ?? logo.url} alt="Logo" /> : <span><Store size={22} /></span>}
+              {logo ? <img src={logo.preview ?? logo.url} alt="Logo" /> : <span><Store size={22} />Logo</span>}
               <input type="file" accept="image/*" onChange={trocarLogo} hidden />
             </label>
             <div>
               <label>Nome do salão<input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required maxLength={60} /></label>
-              <span className="muted salao-dica">Toque no círculo para trocar o logo (quadrado, até 512px).</span>
+              <span className="muted salao-dica">Toque no quadrado para trocar o logo. Fica quadrado, até 512px.</span>
             </div>
           </div>
 

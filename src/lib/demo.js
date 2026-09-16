@@ -91,7 +91,7 @@ const jn = (a, todos) => ({ ...a, services: servicos.find((s) => s.id === a.serv
 
 const agendamentos = [
   { id: 'ap1', client_id: 'c1', professional_id: 'pr1', service_id: 'sv2', salon_id: SALAO, date: mais(2), start_time: '14:00:00', end_time: '15:30:00', status: 'pendente', price_cents: 8500, created_at: mais(0) },
-  { id: 'ap2', client_id: 'c1', professional_id: 'pr2', service_id: 'sv7', salon_id: SALAO, date: mais(9), start_time: '10:30:00', end_time: '11:15:00', status: 'confirmado', price_cents: 6000, created_at: mais(-1), visita_id: 'v1' },
+  { id: 'ap2', client_id: 'c1', professional_id: 'pr2', service_id: 'sv7', salon_id: SALAO, date: mais(9), start_time: '10:30:00', end_time: '11:15:00', status: 'confirmado', price_cents: 6000, pago_cents: 3000, created_at: mais(-1), visita_id: 'v1' },
   { id: 'ap3', client_id: 'c1', professional_id: 'pr1', service_id: 'sv1', salon_id: SALAO, date: mais(-12), start_time: '09:00:00', end_time: '09:45:00', status: 'concluido', price_cents: 3500, created_at: mais(-14) },
   { id: 'ap4', client_id: 'c1', professional_id: 'pr3', service_id: 'sv4', salon_id: SALAO, date: mais(-30), start_time: '16:00:00', end_time: '17:00:00', status: 'concluido', price_cents: 6500, created_at: mais(-33) },
   { id: 'ap5', client_id: 'c2', professional_id: 'pr1', service_id: 'sv1', salon_id: SALAO, date: mais(0), start_time: '09:00:00', end_time: '09:45:00', status: 'confirmado', price_cents: 3500, created_at: mais(-2) },
@@ -134,6 +134,8 @@ const promocoes = [
   { id: 'pm4', salon_id: SALAO, professional_id: null, service_id: null, titulo: 'Dia das Mães', texto: 'Encerrada', imagem_url: PROMO_IMG('#FF7BAA', '#FFC2D8', '❤'), inicio: mais(-40), fim: mais(-20), ativa: true, vistas: 900, cliques: 120, created_at: mais(-40) },
 ]
 const TABELAS = {
+  pagamentos: [{ id: 'pg1', appointment_id: 'ap2', client_id: 'c1', salon_id: SALAO, status: 'pago', valor_cents: 3000, total_cents: 6000, sinal_pct: 50, pago_em: mais(-1), criado_em: mais(-1), appointments: { service_name: 'Escova', date: mais(9), start_time: '10:30:00', profiles: { full_name: 'Juliana Silva' } } }],
+  contas_de_recebimento: [],
   profiles: clientes,
   professionals: profissionais,
   services: servicos,
@@ -170,8 +172,10 @@ const RPC = {
   capas_do_salao: () => [{ categoria_id: 'ct2', imagens: [PROMO_IMG('#FF2D7A', '#AA4CFF', ''), PROMO_IMG('#AA4CFF', '#FF7BAA', '')] }],
   escolher_preferida: () => null,
   destaques_para_mim: () => servicos.filter((s) => s.destaque && s.active).map((s) => ({ ...s, salon_id: SALAO, salao: 'Studio Mel', quem: vinculos.filter((v) => v.service_id === s.id).map((v) => ({ id: v.professional_id, name: profissionais.find((p) => p.id === v.professional_id)?.name ?? '' })) })),
+  pagamento_do_salao: () => ({ modo: 'opcional', sinal_pct: 50, estorno_horas: 24 }),
+  pagamento_dos_saloes: ({ ids }) => (ids ?? []).map((id) => ({ salon_id: id, modo: 'opcional', sinal_pct: 50 })),
   pagina_do_salao: () => ({
-    salao: { id: SALAO, nome: 'Studio Mel', tipo: 'salao', descricao: 'Um cantinho no Gonzaga para você se cuidar com calma: café, música baixa e uma equipe que capricha em cada detalhe.', fotos: [PROMO_IMG('#FF7BAA', '#AA4CFF', ''), PROMO_IMG('#FFC2D8', '#FF2D7A', '')], logo_url: null, endereco: 'Rua das Flores, 120 · Gonzaga', cidade: 'Santos', telefone: '(13) 3333-0000', whatsapp: '(13) 99120-3410', instagram: 'studiomel' },
+    salao: { id: SALAO, nome: 'Studio Mel', pagamento: { modo: 'opcional', sinal_pct: 50, estorno_horas: 24 }, tipo: 'salao', descricao: 'Um cantinho no Gonzaga para você se cuidar com calma: café, música baixa e uma equipe que capricha em cada detalhe.', fotos: [PROMO_IMG('#FF7BAA', '#AA4CFF', ''), PROMO_IMG('#FFC2D8', '#FF2D7A', '')], logo_url: null, endereco: 'Rua das Flores, 120 · Gonzaga', cidade: 'Santos', telefone: '(13) 3333-0000', whatsapp: '(13) 99120-3410', instagram: 'studiomel' },
     horarios: [0, 1, 2, 3, 4, 5, 6].map((weekday) => ({ weekday, open: weekday > 0, start_time: '09:00:00', end_time: weekday === 6 ? '14:00:00' : '18:00:00' })),
     nota: { media: 4.8, quantas: 212 },
     equipe: profissionais.filter((p) => p.active).map((p) => ({ id: p.id, nome: p.name, foto: p.photo_url, bio: p.bio, nota: 4.9, faz: vinculos.filter((v) => v.professional_id === p.id).map((v) => servicos.find((s) => s.id === v.service_id)?.name).filter(Boolean) })),

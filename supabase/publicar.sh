@@ -99,6 +99,22 @@ echo 'enviar-push (avisos no celular)...'
 supabase functions deploy enviar-push --project-ref "$PROJECT_REF" >/dev/null
 verde '  no ar'
 
+echo 'conta-recebimento (Asaas BaaS)...'
+supabase functions deploy conta-recebimento --project-ref "$PROJECT_REF" >/dev/null
+verde '  no ar'
+
+echo 'pagamento-criar (PIX)...'
+supabase functions deploy pagamento-criar --project-ref "$PROJECT_REF" >/dev/null
+verde '  no ar'
+
+echo 'pagamento-webhook (com --no-verify-jwt)...'
+supabase functions deploy pagamento-webhook --project-ref "$PROJECT_REF" --no-verify-jwt >/dev/null
+verde '  no ar'
+
+echo 'pagamento-cuidar (estornos e baixas)...'
+supabase functions deploy pagamento-cuidar --project-ref "$PROJECT_REF" >/dev/null
+verde '  no ar'
+
 echo 'pagina-publica (prévia do link, com --no-verify-jwt)...'
 supabase functions deploy pagina-publica --project-ref "$PROJECT_REF" --no-verify-jwt >/dev/null
 verde '  no ar'
@@ -127,6 +143,10 @@ if ! supabase secrets list --project-ref "$PROJECT_REF" 2>/dev/null | grep -q VA
   echo '   Gere uma vez:  npx web-push generate-vapid-keys'
   echo "   supabase secrets set --project-ref $PROJECT_REF VAPID_PUBLIC_KEY=... VAPID_PRIVATE_KEY=... VAPID_SUBJECT=mailto:oi@mimo.com.vc"
   echo "   e no SQL Editor:  select public.definir_config_publica('vapid_public', 'A_CHAVE_PUBLICA');"
+fi
+if ! supabase secrets list --project-ref "$PROJECT_REF" 2>/dev/null | grep -q ASAAS_API_KEY; then
+  amarelo 'ASAAS_API_KEY ainda não está nos segredos: o pagamento pelo app fica desligado.'
+  echo "   supabase secrets set --project-ref $PROJECT_REF ASAAS_API_KEY=... ASAAS_AMBIENTE=sandbox ASAAS_WEBHOOK_TOKEN=... MIMO_WALLET_ID=... MIMO_TAXA_PCT=0"
 fi
 if ! supabase secrets list --project-ref "$PROJECT_REF" 2>/dev/null | grep -q RESEND_API_KEY; then
   amarelo 'RESEND_API_KEY ainda não está nos segredos: o e-mail de boas-vindas fica na fila sem sair.'

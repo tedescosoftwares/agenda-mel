@@ -242,6 +242,7 @@ export default function AgendaDia({
                       {a.profiles?.full_name || a.guest_name || 'Cliente'}
                     </span>
                     {!a.client_id && <span className="badge badge-encaixe">encaixe</span>}
+                    {a.pago_cents > 0 && <span className="badge badge-pago">{a.pago_cents < (a.price_cents ?? 0) ? 'sinal pago' : 'pago'}</span>}
                   </span>
                   <span className="appt-servico muted">
                     {a.service_name || a.services?.name}

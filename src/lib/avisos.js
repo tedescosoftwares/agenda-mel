@@ -9,7 +9,7 @@ export const ICONE_AVISO = {
   profissional_cancelou: TriangleAlert, agendamento_cancelado: TriangleAlert, cancelou_comigo: TriangleAlert,
   novo_agendamento: CalendarDays, pedido_de_aceite: CalendarDays, pedido_pelo_whatsapp: MessageCircle, atendimento_humano: MessageCircle,
   remarcacao_aceita: Repeat, remarcacao_recusada: CircleX, recado: Megaphone, afiliado_novo: Wallet, afiliado_cashback: Wallet,
-  pedido_enviado: Hourglass, fechar_dia: ClipboardCheck, veio: ClipboardCheck, contestacao: MessageSquareWarning, troca_vencida: CalendarX, parte_recusada: TriangleAlert, visita_em_espera: Users, promocao_pendente: BadgePercent, promocao_aprovada: BadgePercent, promocao_recusada: BadgePercent, avaliar_atendimento: Star, teste: Bell, teste_push: Bell,
+  pedido_enviado: Hourglass, fechar_dia: ClipboardCheck, veio: ClipboardCheck, contestacao: MessageSquareWarning, troca_vencida: CalendarX, parte_recusada: TriangleAlert, visita_em_espera: Users, promocao_pendente: BadgePercent, promocao_aprovada: BadgePercent, promocao_recusada: BadgePercent, avaliar_atendimento: Star, pagamento_confirmado: Wallet, reserva_expirada: TriangleAlert, estorno_a_caminho: Wallet, sinal_retido: Wallet, teste: Bell, teste_push: Bell,
 }
 
 const DESTINO_CLIENTE = {

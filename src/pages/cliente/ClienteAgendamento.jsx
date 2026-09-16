@@ -2,12 +2,13 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import ClienteShell from '../../components/ClienteShell'
 import AvaliarModal from '../../components/AvaliarModal'
+import { formatCents } from '../../lib/pagamento'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { useDialogo } from '../../context/DialogoContext'
 import { formatPreco, formatDuracao } from '../../lib/format'
 import { formatDataLonga, iniciais } from '../../lib/booking'
-import { CalendarDays, Clock, MapPin, Sparkles, StickyNote, Repeat, CircleCheck, Hourglass, CircleX, Check, ChevronRight, Users, Star } from 'lucide-react'
+import { CalendarDays, Clock, MapPin, Sparkles, StickyNote, Repeat, CircleCheck, Hourglass, CircleX, Check, ChevronRight, Users, Star, Wallet } from 'lucide-react'
 
 // A página de um agendamento (2.16): tudo sobre ele num lugar só. É
 // para onde os avisos apontam e para onde o cartão da lista leva.
@@ -17,6 +18,7 @@ const ESTADO = {
   concluido: { rotulo: 'Concluído', Icone: Check, texto: 'Já aconteceu. Que tal contar como foi?' },
   cancelado: { rotulo: 'Cancelado', Icone: CircleX, texto: 'Este horário não vale mais.' },
   faltou: { rotulo: 'Não compareceu', Icone: CircleX, texto: 'Este horário passou sem atendimento.' },
+  aguardando_pagamento: { rotulo: 'Aguardando pagamento', Icone: Hourglass, texto: 'Assim que o PIX cair, o pedido vai para a profissional.' },
 }
 
 export default function ClienteAgendamento() {
@@ -30,6 +32,8 @@ export default function ClienteAgendamento() {
   const [partes, setPartes] = useState([])   // as outras partes da visita (081)
   const [loading, setLoading] = useState(true)
   const [erro, setErro] = useState('')
+  const [pagamento, setPagamento] = useState(null)   // o último pagamento deste horário (090)
+  const [regras, setRegras] = useState(null)         // modo/sinal/estorno do salão
   const [avaliada, setAvaliada] = useState(null)   // null = ainda não sei; false = sem avaliação; {nota}
   const [avaliando, setAvaliando] = useState(false)
   const [q, setQ] = useSearchParams()
@@ -42,6 +46,9 @@ export default function ClienteAgendamento() {
     if (error) setErro(error.message)
     setA(data ?? null)
     if (data) {
+      const { data: pgs } = await supabase.from('pagamentos').select('id, status, valor_cents, total_cents, sinal_pct, pago_em, estorno_cents, motivo_estorno').eq('appointment_id', data.id).order('criado_em', { ascending: false }).limit(1)
+      setPagamento(pgs?.[0] ?? null)
+      if (data.salon_id) supabase.rpc('pagamento_do_salao', { salao: data.salon_id }).then(({ data: r }) => setRegras(r ?? null))
       const { data: rv } = await supabase.from('reviews').select('id, nota').eq('appointment_id', data.id).maybeSingle()
       setAvaliada(rv ?? false)
       const { data: it } = await supabase.from('appointment_services').select('id, name, price_cents, preco_cheio_cents, promocao_id, duration_minutes, ordem').eq('appointment_id', data.id).order('ordem')
@@ -71,7 +78,10 @@ export default function ClienteAgendamento() {
 
   async function cancelar() {
     const troca = Boolean(a.remarca_de) && a.status === 'pendente'
-    if (!(await confirmar({ titulo: troca ? 'Desistir da troca?' : 'Cancelar este horário?', texto: troca ? 'Seu horário atual continua valendo.' : `${a.services?.name} em ${formatDataLonga(a.date)} às ${a.start_time.slice(0, 5)}.`, ok: troca ? 'Desistir' : 'Cancelar horário', cancelar: 'Manter', perigo: true }))) return
+    const horas = regras?.estorno_horas ?? 24
+    const devolve = a.pago_cents > 0 && (new Date(`${a.date}T${a.start_time}`) - Date.now()) >= horas * 3600e3
+    const textoPago = a.pago_cents > 0 ? (devolve ? ` Os ${formatCents(a.pago_cents)} pagos voltam para a sua conta em até 1 dia útil.` : ` Como faltam menos de ${horas} h, o sinal de ${formatCents(a.pago_cents)} fica com a profissional.`) : ''
+    if (!(await confirmar({ titulo: troca ? 'Desistir da troca?' : 'Cancelar este horário?', texto: troca ? 'Seu horário atual continua valendo.' : `${a.services?.name} em ${formatDataLonga(a.date)} às ${a.start_time.slice(0, 5)}.${textoPago}`, ok: troca ? 'Desistir' : 'Cancelar horário', cancelar: 'Manter', perigo: true }))) return
     const { error } = await supabase.from('appointments').update({ status: 'cancelado' }).eq('id', a.id)
     if (error) setErro(error.message); else carregar()
   }
@@ -90,7 +100,7 @@ export default function ClienteAgendamento() {
   const troca = Boolean(a.remarca_de) && a.status === 'pendente'
   const futuro = new Date(`${a.date}T${a.start_time}`) > new Date()
   const est = a.status === 'confirmado' && !futuro ? { ...ESTADO.confirmado, texto: 'Já aconteceu. Que tal contar como foi?' } : (ESTADO[a.status] ?? ESTADO.pendente)
-  const podeMexer = futuro && (a.status === 'pendente' || a.status === 'confirmado')
+  const podeMexer = futuro && (a.status === 'pendente' || a.status === 'confirmado' || a.status === 'aguardando_pagamento')
   const preco = a.price_cents != null ? a.price_cents / 100 : a.services?.price
   const duracao = a.services?.duration_minutes ?? minutosEntre(a.start_time, a.end_time)
   const salao = a.salons
@@ -107,6 +117,20 @@ export default function ClienteAgendamento() {
         <p className="agdt-quando"><CalendarDays size={18} /> <span><strong>{capitalizar(formatDataLonga(a.date))}</strong><br />às {a.start_time.slice(0, 5)}{a.end_time ? ` · até ${a.end_time.slice(0, 5)}` : ''}</span></p>
         <p className="muted agdt-nota">{troca && origem ? `No lugar de ${formatDataLonga(origem.date)} às ${origem.start_time.slice(0, 5)}. Até ela responder, o horário de antes continua valendo.` : est.texto}</p>
       </div>
+
+      {(a.pago_cents > 0 || pagamento || a.status === 'aguardando_pagamento') && (
+        <div className={'card pag-estado ' + (a.status === 'aguardando_pagamento' ? 'aguardando' : pagamento?.status ?? 'pago')}>
+          <Wallet size={18} />
+          <span>
+            {a.status === 'aguardando_pagamento' ? <><strong>Aguardando o PIX</strong><span className="muted">A vaga fica guardada por 15 minutos.</span></>
+              : pagamento?.status === 'estorno_pendente' || pagamento?.status === 'estornado' ? <><strong>{pagamento.status === 'estornado' ? 'Devolvido' : 'Devolução a caminho'}</strong><span className="muted">{formatCents(pagamento.estorno_cents ?? pagamento.valor_cents)} voltam para a sua conta.</span></>
+              : pagamento?.status === 'retido' ? <><strong>Sinal retido</strong><span className="muted">Cancelado em cima da hora: {formatCents(pagamento.valor_cents)} ficaram com a profissional.</span></>
+              : a.pago_cents > 0 ? <><strong>{a.pago_cents < (a.price_cents ?? 0) ? `Sinal pago: ${formatCents(a.pago_cents)}` : `Pago pelo app: ${formatCents(a.pago_cents)}`}</strong>{a.pago_cents < (a.price_cents ?? 0) && <span className="muted">Faltam {formatCents(a.price_cents - a.pago_cents)}, no atendimento.</span>}</>
+              : <><strong>Pagamento não concluído</strong><span className="muted">{pagamento?.status === 'expirado' ? 'A reserva venceu.' : 'Nenhum PIX confirmado.'}</span></>}
+          </span>
+          {a.status === 'aguardando_pagamento' && <Link className="btn btn-primary btn-mini" to={`/cliente/pagamento/${a.id}`}>Pagar</Link>}
+        </div>
+      )}
 
       {a.professionals && (
         <Link to={`/cliente/profissional/${a.professionals.id}`} className="card agdt-linha agdt-link">
@@ -160,8 +184,11 @@ export default function ClienteAgendamento() {
       )}
 
       <div className="agdt-acoes">
+        {podeMexer && regras && regras.modo !== 'nao' && a.pago_cents === 0 && a.status !== 'aguardando_pagamento' && (
+          <Link className="btn btn-primary btn-block" to={`/cliente/pagamento/${a.id}`}><Wallet size={16} /> Pagar agora pelo app</Link>
+        )}
         {podeMexer && !troca && a.service_id && (
-          <Link className="btn btn-primary btn-block" to={`/cliente/agendamento/data?prof=${a.professional_id}&servico=${a.service_id}&remarcar=${a.id}`}><Repeat size={16} /> Remarcar</Link>
+          <Link className={'btn btn-block ' + (regras && regras.modo !== 'nao' && a.pago_cents === 0 ? 'btn-ghost' : 'btn-primary')} to={`/cliente/agendamento/data?prof=${a.professional_id}&servico=${a.service_id}&remarcar=${a.id}`}><Repeat size={16} /> Remarcar</Link>
         )}
         {podeMexer && <button className="btn btn-ghost btn-block" onClick={cancelar}>{troca ? 'Desistir da troca' : vivas.length ? 'Cancelar só esta parte' : 'Cancelar horário'}</button>}
         {podeMexer && !troca && vivas.length > 0 && <button className="btn btn-ghost btn-block" onClick={cancelarVisita}>Cancelar a visita inteira</button>}

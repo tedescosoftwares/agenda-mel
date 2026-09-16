@@ -16,7 +16,7 @@ import {
   BellIcon,
   ChevronIcon,
 } from '../../components/icons'
-import { BadgePercent, Store } from 'lucide-react'
+import { BadgePercent, Store, Wallet } from 'lucide-react'
 
 // Hub de ajustes do salão.
 //
@@ -26,6 +26,12 @@ import { BadgePercent, Store } from 'lucide-react'
 // abre o app: são coisas que se configuram uma vez e se conferem de vez
 // em quando. Aba é para o que se usa todo dia.
 const ITENS = [
+  {
+    to: '/admin/receber',
+    Icon: Wallet,
+    titulo: 'Receber pelo app',
+    resumo: 'A cliente paga por PIX ao marcar; sinal contra falta',
+  },
   {
     to: '/admin/salao',
     Icon: Store,

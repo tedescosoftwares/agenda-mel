@@ -8,6 +8,7 @@ import { formatPreco, labelDuracao, formatDuracao } from '../../lib/format'
 import { formatDataLonga } from '../../lib/booking'
 import { Check, Sparkles, Repeat, Plus, Users, Hourglass, Search, BadgePercent } from 'lucide-react'
 import { useCategorias, agruparPorCategoria, bate } from '../../lib/categorias'
+import { textoSinal, formatCents } from '../../lib/pagamento'
 
 // O fluxo de marcar, dentro do app: serviço → data → hora → confirmar.
 // Cada passo é uma rota, e o que já foi escolhido viaja na URL
@@ -81,7 +82,7 @@ function useContexto(profId, servicoParam) {
     let vivo = true
     ;(async () => {
       const [p, s] = await Promise.all([
-        profId ? supabase.from('professionals').select('id, name, photo_url, slug').eq('id', profId).maybeSingle() : { data: null },
+        profId ? supabase.from('professionals').select('id, name, photo_url, slug, salon_id').eq('id', profId).maybeSingle() : { data: null },
         ids.length ? supabase.from('services').select('*').in('id', ids) : { data: null },
       ])
       if (!vivo) return
@@ -355,6 +356,12 @@ export function AgendarConfirmar() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const { prof, servico } = useContexto(esc.prof, esc.servico)
+  const [pagamento, setPagamento] = useState(null)  // { modo, sinal_pct } do salão (090)
+  const [querPagar, setQuerPagar] = useState(false)
+  useEffect(() => {
+    if (!prof?.salon_id) return
+    supabase.rpc('pagamento_do_salao', { salao: prof.salon_id }).then(({ data }) => setPagamento(data ?? null))
+  }, [prof?.salon_id])
   const origem = useOrigem(esc.remarcar)
   const [obs, setObs] = useState('')
   const [saving, setSaving] = useState(false)
@@ -469,7 +476,7 @@ export function AgendarConfirmar() {
     const partes = lerExtras(esc.extra)
     const { data, error } = partes.length
       ? await supabase.rpc('marcar_visita', { dia: esc.data, partes: [{ prof: esc.prof, servicos: servico.ids ?? [servico.id], hora: esc.hora }, ...partes.map((x) => ({ prof: x.prof, servicos: [x.servico], hora: x.hora }))], obs: obs.trim() || null })
-      : await supabase.rpc('marcar_servicos', { prof: esc.prof, servicos: servico.ids ?? [servico.id], dia: esc.data, hora: esc.hora, obs: obs.trim() || null })
+      : await supabase.rpc('marcar_servicos', { prof: esc.prof, servicos: servico.ids ?? [servico.id], dia: esc.data, hora: esc.hora, obs: obs.trim() || null, pagar: querPagar })
     setSaving(false)
     if (error) {
       if (error.code === '23505' || error.code === '23P01' || /^ocupado:/.test(error.message)) setErro(partes.length ? 'Um dos horários acabou de ser reservado por outra pessoa. Nada foi marcado: tire essa parte ou escolha outro horário.' : 'Esse horário acabou de ser reservado por outra pessoa. Escolha outro, por favor.')
@@ -480,8 +487,9 @@ export function AgendarConfirmar() {
       setErro(data.motivo === 'ocupado' ? 'Esse horário acabou de ser reservado por outra pessoa. Escolha outro, por favor.' : capitalizar(data.motivo || 'não deu para marcar') + '.')
       return
     }
+    if (data?.pagar && data?.appointment_id) { navigate(`/cliente/pagamento/${data.appointment_id}`, { replace: true }); return }
     navigate(`/cliente/agendamento/sucesso/${data?.appointment_id ?? 'novo'}`, { replace: true })
-  }, [servico, esc, user, obs, navigate])
+  }, [servico, esc, user, obs, navigate, querPagar])
 
   return (
     <ClienteShell titulo={remarcando ? 'Confirmar troca' : 'Confirmar pedido'} voltar={comQuery('/cliente/agendamento/hora', esc)}>
@@ -595,6 +603,22 @@ export function AgendarConfirmar() {
         </label>
       )}
 
+      {!remarcando && partesDetalhadas.length === 0 && pagamento && pagamento.modo !== 'nao' && (
+        <div className={'card pag-escolha' + (pagamento.modo === 'obrigatorio' || querPagar ? ' on' : '')}>
+          {pagamento.modo === 'obrigatorio' ? (
+            <>
+              <strong>Reserva com pagamento</strong>
+              <span className="muted">Aqui o horário só fica guardado depois do PIX: {textoSinal(pagamento.sinal_pct)}, {formatCents(Math.round(totalComDesconto * 100 * pagamento.sinal_pct / 100))} agora, pelo app. Você tem 15 minutos para pagar.</span>
+            </>
+          ) : (
+            <label className="pag-escolha-check">
+              <input type="checkbox" checked={querPagar} onChange={(e) => setQuerPagar(e.target.checked)} />
+              <span><strong>Pagar agora pelo app</strong><span className="muted">{textoSinal(pagamento.sinal_pct)}, {formatCents(Math.round(totalComDesconto * 100 * pagamento.sinal_pct / 100))} por PIX. Sem obrigação: dá para pagar no atendimento.</span></span>
+            </label>
+          )}
+        </div>
+      )}
+
       <div className="card aviso-suave">
         <strong>{remarcando ? 'Seu horário atual continua guardado' : 'Confirmação pelo WhatsApp'}</strong>
         <span className="muted">
@@ -606,7 +630,7 @@ export function AgendarConfirmar() {
 
       <div className="rodape-fixo">
         <button className="btn btn-primary btn-block" onClick={confirmar} disabled={saving || !servico || !cabe || conferindo}>
-          {saving ? 'Enviando…' : remarcando ? 'Pedir a troca' : 'Confirmar pedido'}
+          {saving ? 'Enviando…' : remarcando ? 'Pedir a troca' : (pagamento?.modo === 'obrigatorio' || querPagar) && partesDetalhadas.length === 0 ? 'Reservar e pagar' : 'Confirmar pedido'}
         </button>
       </div>
     </ClienteShell>

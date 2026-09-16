@@ -159,3 +159,35 @@ Para testar as três no seu celular sem passar pelo app:
   enviada foi o lembrete.
 - **Tenta de novo com juízo.** 2, 8 e 32 minutos; erro que não melhora
   (número errado, fora da janela) desiste na hora.
+
+---
+
+# Pagamento pelo app (Asaas BaaS) — 090
+
+Quatro funções cuidam do dinheiro. As regras (estados, prazos, estorno)
+moram no banco, em `090_pagamento_pelo_app.sql`; aqui é só a conversa
+com o Asaas.
+
+| função | quem chama | o que faz |
+| --- | --- | --- |
+| `conta-recebimento` | a dona, pelo app | cria a subconta do salão (`POST /v3/accounts`) e guarda a chave dela no Vault; relê aprovação e documentos |
+| `pagamento-criar` | a cliente, pelo app | abre a cobrança PIX na subconta, com split para o MIMO, e devolve o copia e cola |
+| `pagamento-webhook` | o Asaas (`--no-verify-jwt`) | confirma o pagamento (conferindo na API antes), estornos e aprovação da subconta |
+| `pagamento-cuidar` | o relógio (`chutar_pagamentos`) | faz os estornos pendentes e apaga cobranças de reservas que venceram |
+
+Segredos (`supabase secrets set --project-ref ...`):
+
+```
+ASAAS_API_KEY=...            a chave da conta-pai (sandbox: sandbox.asaas.com › Integrações)
+ASAAS_AMBIENTE=sandbox       ou producao
+ASAAS_WEBHOOK_TOKEN=...      um token longo seu; vai no webhook de cada subconta
+MIMO_WALLET_ID=...           a wallet da conta-pai (opcional; sem ela não há split)
+MIMO_TAXA_PCT=0              a parte do MIMO em cada pagamento, em %
+```
+
+O webhook não precisa ser cadastrado na mão: cada subconta nasce com o
+webhook apontando para `.../functions/v1/pagamento-webhook`, autenticado
+pelo `ASAAS_WEBHOOK_TOKEN` no header `asaas-access-token`.
+
+No sandbox, o PIX se paga sozinho pelo simulador do Asaas
+(`POST /v3/pix/qrCodes/pay` com o copia e cola) ou pelo painel.

@@ -9,7 +9,8 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { SearchIcon } from '../../components/icons'
 import { formatPreco, formatDuracao } from '../../lib/format'
-import { Sparkles, Store, MapPin, ChevronRight, Star } from 'lucide-react'
+import { Sparkles, Store, MapPin, ChevronRight, Star, Wallet } from 'lucide-react'
+import { MODOS } from '../../lib/pagamento'
 
 // Início da cliente (tela 03 do painel): saudação, busca, a fileira de
 // profissionais, e os serviços em destaque. É a vitrine — tudo aqui
@@ -25,12 +26,14 @@ export default function ClienteHome() {
   const [saloes, setSaloes] = useState({})        // id → fotos, logo, cidade (085)
   const [destaquesConfig, setDestaquesConfig] = useState(null)   // o que os salões marcaram (086)
   const [descontos, setDescontos] = useState({})
+  const [pagamentos, setPagamentos] = useState({})   // salão → { modo, sinal_pct } (090)
 
   useEffect(() => {
     const ids = (agendas ?? []).map((a) => a.salao?.id).filter(Boolean)
     if (!ids.length) return
     supabase.from('salons').select('id, name, city, address, fotos, logo_url, tipo').in('id', ids)
       .then(({ data }) => setSaloes(Object.fromEntries((data ?? []).map((s) => [s.id, s]))))
+    supabase.rpc('pagamento_dos_saloes', { ids }).then(({ data }) => setPagamentos(Object.fromEntries((data ?? []).map((x) => [x.salon_id, x]))))
     supabase.rpc('destaques_para_mim').then(async ({ data }) => {
       setDestaquesConfig(data ?? [])
       if (data?.length) {
@@ -134,6 +137,7 @@ export default function ClienteHome() {
                 </span>
                 <span className="home-salao-corpo">
                   <strong>{ag.salao.nome}</strong>
+                  {pagamentos[ag.salao.id]?.modo && pagamentos[ag.salao.id].modo !== 'nao' && <span className={'selo-pag mini ' + pagamentos[ag.salao.id].modo}><Wallet size={11} /> {MODOS[pagamentos[ag.salao.id].modo].curto}</span>}
                   {(s?.address || s?.city) && <span className="muted home-salao-onde"><MapPin size={12} /> {[s.address, s.city].filter(Boolean).join(' · ')}</span>}
                   <span className="home-salao-equipe">
                     <span className="home-salao-avatares">

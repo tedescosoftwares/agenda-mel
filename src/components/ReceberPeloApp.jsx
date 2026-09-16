@@ -23,7 +23,7 @@ export default function ReceberPeloApp({ salao, nomeSalao }) {
   const [aviso, setAviso] = useState('')
 
   const carregar = useCallback(async () => {
-    const [{ data: s }, { data: c }, { data: p }] = await Promise.all([
+    const [{ data: s, error: es }, { data: c, error: ec }, { data: p }] = await Promise.all([
       supabase.from('salons').select('pagamento_modo, sinal_pct, estorno_horas, name').eq('id', salao).maybeSingle(),
       supabase.from('contas_de_recebimento').select('*').eq('salon_id', salao).maybeSingle(),
       supabase.from('pagamentos').select('id, valor_cents, total_cents, sinal_pct, status, pago_em, criado_em, appointment_id, appointments (service_name, date, start_time, profiles (full_name))').eq('salon_id', salao).order('criado_em', { ascending: false }).limit(30),
@@ -31,6 +31,7 @@ export default function ReceberPeloApp({ salao, nomeSalao }) {
     setConfig(s ?? null)
     setConta(c ?? null)
     setPagamentos(p ?? [])
+    if (es || ec) setErro('O banco ainda não tem a atualização do pagamento (migração 090). Publique o banco (opção B do MIMO VPS) e recarregue. Detalhe: ' + (es?.message ?? ec?.message))
     if (s) setForm((f) => (f.nome ? f : { ...f, nome: s.name ?? '', email: user?.email ?? '' }))
   }, [salao, user?.email])
   useEffect(() => { carregar() }, [carregar])

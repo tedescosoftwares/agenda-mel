@@ -41,8 +41,12 @@ Deno.serve(async (req) => {
     if (d.tipo_pessoa === 'fisica' && !d.nascimento) faltando.push('nascimento')
     if (faltando.length) return json({ erro: 'faltou: ' + faltando.join(', ') }, 400)
 
-    const { data: ja } = await servico.from('contas_de_recebimento').select('conta_id').eq('salon_id', salao).maybeSingle()
+    const { data: ja, error: erroJa } = await servico.from('contas_de_recebimento').select('conta_id').eq('salon_id', salao).maybeSingle()
+    if (erroJa) return json({ erro: 'o banco ainda não tem a migração 090 (pagamento pelo app): ' + erroJa.message }, 500)
     if (ja?.conta_id) return json({ erro: 'este salão já tem conta de recebimento' }, 409)
+    // o Vault precisa estar pronto antes de criar lá fora: chave perdida é subconta perdida
+    const { error: erroVault } = await servico.rpc('ler_segredo', { nome: nomeSegredo })
+    if (erroVault) return json({ erro: 'o banco ainda não tem a migração 090 (ler_segredo): ' + erroVault.message }, 500)
 
     const webhook = {
       url: `${URL_SUPABASE}/functions/v1/pagamento-webhook`,
@@ -54,13 +58,16 @@ Deno.serve(async (req) => {
     try {
       const criada = await asaas(chavePai(), 'POST', '/accounts', corpoSubconta(d, webhook))
       const chaveSub = String(criada.apiKey ?? '')
-      if (chaveSub) await servico.rpc('guardar_segredo', { nome: nomeSegredo, valor: chaveSub })
+      if (!chaveSub) return json({ erro: 'o Asaas criou a subconta ' + criada.id + ' mas não devolveu a chave dela' }, 502)
+      const { error: erroGuardar } = await servico.rpc('guardar_segredo', { nome: nomeSegredo, valor: chaveSub })
+      if (erroGuardar) return json({ erro: 'subconta ' + criada.id + ' criada no Asaas, mas não deu para guardar a chave no Vault: ' + erroGuardar.message }, 500)
       const dadosVisiveis = { ...d, documento: d.documento.replace(/\D/g, '').replace(/^(\d{3})\d+(\d{2})$/, '$1***$2') }
-      await servico.from('contas_de_recebimento').upsert({
+      const { error: erroGravar } = await servico.from('contas_de_recebimento').upsert({
         salon_id: salao, provedor: 'asaas', conta_id: String(criada.id), wallet_id: String(criada.walletId ?? ''),
         tipo_pessoa: d.tipo_pessoa, documento: dadosVisiveis.documento, nome: d.nome, email: d.email, celular: d.celular,
         dados: dadosVisiveis, status: 'aguardando', criado_por: u.user.id, atualizado_em: new Date().toISOString(), erro: null,
       })
+      if (erroGravar) return json({ erro: 'subconta ' + criada.id + ' criada no Asaas, mas não deu para gravar aqui: ' + erroGravar.message }, 500)
       // a situação inicial (a lista de documentos pode demorar uns 15 s para existir)
       let situ = null
       if (chaveSub) { try { situ = await situacaoDaSubconta(chaveSub) } catch (_) { /* ainda não */ } }

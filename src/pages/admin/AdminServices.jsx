@@ -8,6 +8,7 @@ import { Star } from 'lucide-react'
 import { formatPreco, formatDuracao, labelDuracao } from '../../lib/format'
 import { useCategorias, categoriasDoSalao, agruparPorCategoria, bate, capaPadrao } from '../../lib/categorias'
 import { ajustarCriativo } from '../../lib/imagem'
+import Portal from '../../components/Portal'
 
 const FORM_VAZIO = {
   name: '',
@@ -388,7 +389,7 @@ export default function AdminServices() {
       {error && editing === null && <div className="alert alert-error">{error}</div>}
 
       {editing !== null && (
-        <div className="modal-fundo" onClick={cancelEdit}>
+        <Portal><div className="modal-fundo" onClick={cancelEdit}>
         <form className="card modal-caixa modal-form form service-form" onSubmit={handleSave} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={editing === 'new' ? 'Novo serviço' : 'Editar serviço'}>
           <button type="button" className="modal-fechar" onClick={cancelEdit} aria-label="Fechar">×</button>
           <h3>{editing === 'new' ? 'Novo serviço' : 'Editar serviço'}</h3>
@@ -583,7 +584,7 @@ export default function AdminServices() {
             </button>
           </div>
         </form>
-        </div>
+        </div></Portal>
       )}
 
       {loading ? (

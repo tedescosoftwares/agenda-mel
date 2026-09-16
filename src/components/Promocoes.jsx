@@ -5,6 +5,7 @@ import { ajustarCriativo, CRIATIVO } from '../lib/imagem'
 import { formatPreco } from '../lib/format'
 import { useCategorias, categoriasDoSalao } from '../lib/categorias'
 import { BadgePercent, Eye, MousePointerClick, ImagePlus, Pause, Play, Pencil, Trash2, Check, X, Hourglass } from 'lucide-react'
+import Portal from './Portal'
 
 // Promoções (083): o mesmo painel serve o salão, a profissional e a
 // plataforma. Muda só o "dono" da promoção:
@@ -184,7 +185,7 @@ export default function Promocoes({ escopo, salao, prof, servicos = [], compacto
       )}
 
       {editando !== null && (
-        <div className="modal-fundo" onClick={fechar}>
+        <Portal><div className="modal-fundo" onClick={fechar}>
           <form className="card modal-caixa modal-form form promo-form" onSubmit={salvar} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
             <button type="button" className="modal-fechar" onClick={fechar} aria-label="Fechar">×</button>
             <h3>{editando === 'nova' ? 'Nova promoção' : 'Editar promoção'}</h3>
@@ -263,7 +264,7 @@ export default function Promocoes({ escopo, salao, prof, servicos = [], compacto
               <button type="submit" className="btn btn-primary" disabled={salvando}>{salvando ? 'Salvando…' : 'Salvar'}</button>
             </div>
           </form>
-        </div>
+        </div></Portal>
       )}
     </div>
   )

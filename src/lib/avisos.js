@@ -9,7 +9,7 @@ export const ICONE_AVISO = {
   profissional_cancelou: TriangleAlert, agendamento_cancelado: TriangleAlert, cancelou_comigo: TriangleAlert,
   novo_agendamento: CalendarDays, pedido_de_aceite: CalendarDays, pedido_pelo_whatsapp: MessageCircle, atendimento_humano: MessageCircle,
   remarcacao_aceita: Repeat, remarcacao_recusada: CircleX, recado: Megaphone, afiliado_novo: Wallet, afiliado_cashback: Wallet,
-  pedido_enviado: Hourglass, fechar_dia: ClipboardCheck, veio: ClipboardCheck, contestacao: MessageSquareWarning, troca_vencida: CalendarX, parte_recusada: TriangleAlert, visita_em_espera: Users, promocao_pendente: BadgePercent, promocao_aprovada: BadgePercent, promocao_recusada: BadgePercent, teste: Bell, teste_push: Bell,
+  pedido_enviado: Hourglass, fechar_dia: ClipboardCheck, veio: ClipboardCheck, contestacao: MessageSquareWarning, troca_vencida: CalendarX, parte_recusada: TriangleAlert, visita_em_espera: Users, promocao_pendente: BadgePercent, promocao_aprovada: BadgePercent, promocao_recusada: BadgePercent, avaliar_atendimento: Star, teste: Bell, teste_push: Bell,
 }
 
 const DESTINO_CLIENTE = {
@@ -23,6 +23,7 @@ const DESTINO_CLIENTE = {
 export function destinoDoAviso(aviso, role) {
   // aviso de um horário leva ao próprio horário
   const appt = aviso.data?.appointment_id
+  if (role === 'cliente' && appt && aviso.kind === 'avaliar_atendimento') return `/cliente/agendamento/${appt}?avaliar=1`
   if (role === 'cliente' && appt && aviso.kind !== 'remarcacao_recusada') return `/cliente/agendamento/${appt}`
   if (role === 'cliente' && DESTINO_CLIENTE[aviso.kind]) return DESTINO_CLIENTE[aviso.kind]
   if (aviso.action_url && aviso.action_url !== '/') return aviso.action_url

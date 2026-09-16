@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { formatDataLonga } from '../lib/booking'
+import Portal from './Portal'
 
 const PRAZOS = [
   { valor: 10, texto: '10 min' },
@@ -52,7 +53,7 @@ export default function AdiantarModal({ appt, onFechar, onPronto }) {
   }
 
   return (
-    <div className="modal-fundo" onClick={onFechar}>
+    <Portal><div className="modal-fundo" onClick={onFechar}>
       <div className="card modal-caixa" onClick={(e) => e.stopPropagation()} role="dialog">
         <button className="modal-fechar" onClick={onFechar} aria-label="Fechar">
           ×
@@ -133,6 +134,6 @@ export default function AdiantarModal({ appt, onFechar, onPronto }) {
           </>
         )}
       </div>
-    </div>
+    </div></Portal>
   )
 }

@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext'
 import { formatPreco, formatDuracao } from '../../lib/format'
 import { Sparkles, Link2, Star } from 'lucide-react'
 import { useCategorias, categoriasDoSalao, agruparPorCategoria } from '../../lib/categorias'
+import Portal from '../../components/Portal'
 
 // Serviços (tela 19): a lista do salão, e para cada um o switch de
 // "eu faço". Preço e duração aparecem mas não se editam aqui — são do
@@ -150,7 +151,7 @@ export default function ProServicos() {
       {dona && <button className="btn btn-ghost btn-block" style={{ marginTop: '1rem' }} onClick={() => setNovo({ name: '', duration_minutes: 60, price: '', categoria_id: '' })}>+ Novo serviço</button>}
       {dona ? (
         novo ? (
-          <div className="modal-fundo" onClick={() => setNovo(null)}>
+          <Portal><div className="modal-fundo" onClick={() => setNovo(null)}>
           <div className="card modal-caixa modal-form form" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Novo serviço">
             <button type="button" className="modal-fechar" onClick={() => setNovo(null)} aria-label="Fechar">×</button>
             <h3>Novo serviço</h3>
@@ -174,7 +175,7 @@ export default function ProServicos() {
               <button className="btn btn-primary" onClick={criar} disabled={salvando || !novo.name.trim()}>{salvando ? 'Salvando…' : 'Criar serviço'}</button>
             </div>
           </div>
-          </div>
+          </div></Portal>
         ) : null
       ) : (
         <p className="muted" style={{ fontSize: '0.82rem', marginTop: '1rem' }}>Preço e duração são definidos pelo salão, em Admin → Serviços.</p>

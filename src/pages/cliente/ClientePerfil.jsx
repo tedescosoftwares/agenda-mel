@@ -13,6 +13,7 @@ import { formatarFone, foneValido } from '../../lib/fone'
 import { useConfig } from '../../lib/config'
 import CampoSenha from '../../components/CampoSenha'
 import { Plus, Gift, Hourglass, MessageCircle, ShieldCheck, Lock } from 'lucide-react'
+import Portal from '../../components/Portal'
 
 // Perfil da cliente (065): foto, nome, desde quando, os números dela
 // (atendimentos, próximos, agendas, créditos), dados editáveis na
@@ -138,7 +139,7 @@ export default function ClientePerfil() {
       </div>
 
       {folha && (
-        <div className="modal-fundo" onClick={fechar} role="presentation">
+        <Portal><div className="modal-fundo" onClick={fechar} role="presentation">
           <div className="modal-caixa folha-dados" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
             {folha === 'nasc' && (
               <>
@@ -186,7 +187,7 @@ export default function ClientePerfil() {
               {folha === 'email' && <button className="btn btn-primary" onClick={trocarEmail} disabled={salvando || !novoEmail || !senhaAtual}>{salvando ? 'Enviando…' : 'Mandar link'}</button>}
             </div>
           </div>
-        </div>
+        </div></Portal>
       )}
 
       <h3 className="secao-titulo">Minhas agendas</h3>

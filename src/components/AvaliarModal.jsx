@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { formatDataCurta } from '../lib/booking'
 import { StarIcon } from './icons'
+import Portal from './Portal'
 
 // A folha de avaliar um atendimento: estrelas e um comentário opcional.
 // Usada no histórico e no convite que aparece sozinho (2.17).
@@ -26,7 +27,7 @@ function AvaliarModal({ appt, onFechar, onPronto }) {
   }
 
   return (
-    <div className="modal-fundo" onClick={onFechar}>
+    <Portal><div className="modal-fundo" onClick={onFechar}>
       <div className="modal-caixa" onClick={(e) => e.stopPropagation()}>
         <h3>Como foi com {appt.professionals?.name?.split(' ')[0]}?</h3>
         <p className="muted">{appt.services?.name} · {formatDataCurta(appt.date)}</p>
@@ -44,6 +45,6 @@ function AvaliarModal({ appt, onFechar, onPronto }) {
           <button className="btn btn-primary" onClick={enviar} disabled={!nota || saving}>{saving ? 'Enviando…' : 'Enviar avaliação'}</button>
         </div>
       </div>
-    </div>
+    </div></Portal>
   )
 }

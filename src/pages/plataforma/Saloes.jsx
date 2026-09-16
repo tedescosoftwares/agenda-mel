@@ -6,6 +6,7 @@ import { supabase } from '../../lib/supabase'
 import { useDialogo } from '../../context/DialogoContext'
 import { PredioIcon, UsersIcon, TeamIcon, CalendarIcon, SearchIcon, PulsoIcon, SetaIcon } from '../../components/icons'
 import { User, MapPin, Pencil, Check as CheckIcon } from 'lucide-react'
+import Portal from '../../components/Portal'
 
 // Salões e autônomas: a lista de unidades com tamanho e ações, o
 // checklist de implantação de quem ainda não começou, e o ranking do
@@ -133,7 +134,7 @@ export default function Saloes() {
       </div>
 
       {novo && (
-        <div className="modal-fundo plat-modal-fundo" onClick={() => setNovo(null)}>
+        <Portal><div className="modal-fundo plat-modal-fundo" onClick={() => setNovo(null)}>
           <div className="modal-caixa plat-modal" onClick={(e) => e.stopPropagation()}>
             <h3>Novo cadastro</h3>
             <p className="muted">Cria a unidade já com código. Se a dona já tem conta no MIMO, coloca o e-mail dela e ela vira admin na hora; senão, deixa em branco e troca a dona depois.</p>
@@ -151,7 +152,7 @@ export default function Saloes() {
               <button className="btn btn-primary" onClick={criar} disabled={salvando || !novo.nome.trim()}>{salvando ? 'Criando…' : 'Criar'}</button>
             </div>
           </div>
-        </div>
+        </div></Portal>
       )}
     </Shell>
   )

@@ -348,6 +348,7 @@ function consulta(linhas) {
     eq: (c, v) => { filtros.push((r) => r[c] === v); return q },
     neq: (c, v) => { filtros.push((r) => r[c] !== v); return q },
     gte: (c, v) => { filtros.push((r) => r[c] >= v); return q },
+    lte: (c, v) => { filtros.push((r) => r[c] <= v); return q },
     gt: (c, v) => { filtros.push((r) => r[c] > v); return q },
     lt: (c, v) => { filtros.push((r) => r[c] < v); return q },
     in: (c, v) => { filtros.push((r) => v.includes(r[c])); return q },

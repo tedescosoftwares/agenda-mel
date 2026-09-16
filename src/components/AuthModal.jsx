@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import CampoSenha from './CampoSenha'
+import Portal from './Portal'
 
 // Login/cadastro rápido dentro da página pública da profissional:
 // a cliente escolhe tudo primeiro e só se identifica para fechar.
@@ -45,7 +46,7 @@ export default function AuthModal({ resumo, onClose }) {
   }
 
   return (
-    <div className="modal-fundo" onClick={onClose}>
+    <Portal><div className="modal-fundo" onClick={onClose}>
       <div
         className="card modal-caixa"
         onClick={(e) => e.stopPropagation()}
@@ -139,7 +140,7 @@ export default function AuthModal({ resumo, onClose }) {
           </button>
         </form>
       </div>
-    </div>
+    </div></Portal>
   )
 }
 

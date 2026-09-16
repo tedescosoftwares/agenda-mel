@@ -18,11 +18,15 @@ export default function AvaliarConvite() {
 
   const buscar = useCallback(async () => {
     const desde = new Date(Date.now() - 45 * 86400e3).toISOString().slice(0, 10)
-    const { data: feitos } = await supabase.from('appointments')
-      .select('id, date, professional_id, service_id, services (name), professionals (id, name, photo_url)')
-      .eq('client_id', user.id).eq('status', 'concluido').gte('date', desde)
-      .order('date', { ascending: false }).order('start_time', { ascending: false }).limit(10)
-    if (!feitos?.length) { setPendente(null); return }
+    const agora = new Date()
+    const hoje = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}-${String(agora.getDate()).padStart(2, '0')}`
+    // concluído, ou confirmado que já terminou (a baixa pode levar 3 h; a cliente não espera)
+    const { data: lista } = await supabase.from('appointments')
+      .select('id, date, end_time, status, professional_id, service_id, services (name), professionals (id, name, photo_url)')
+      .eq('client_id', user.id).in('status', ['concluido', 'confirmado']).gte('date', desde).lte('date', hoje)
+      .order('date', { ascending: false }).order('start_time', { ascending: false }).limit(20)
+    const feitos = (lista ?? []).filter((a) => a.status === 'concluido' || new Date(`${a.date}T${a.end_time ?? '23:59'}`) < agora)
+    if (!feitos.length) { setPendente(null); return }
     const { data: notas } = await supabase.from('reviews').select('appointment_id').in('appointment_id', feitos.map((a) => a.id))
     const ja = new Set((notas ?? []).map((r) => r.appointment_id))
     const falta = feitos.find((a) => !ja.has(a.id) && a.professionals) ?? null

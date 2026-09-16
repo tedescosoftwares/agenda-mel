@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { formatDuracao, formatPreco } from '../lib/format'
 import { formatDataLonga } from '../lib/booking'
 import { useCategorias, agruparPorCategoria } from '../lib/categorias'
+import Portal from './Portal'
 
 // Encaixe manual: a cliente ligou, apareceu na porta, ou simplesmente
 // não usa o app. O horário entra na agenda do mesmo jeito.
@@ -61,7 +62,7 @@ export default function EncaixeModal({ professionalId, data, onFechar, onPronto 
   }
 
   return (
-    <div className="modal-fundo" onClick={onFechar}>
+    <Portal><div className="modal-fundo" onClick={onFechar}>
       <div className="card modal-caixa" onClick={(e) => e.stopPropagation()} role="dialog">
         <button className="modal-fechar" onClick={onFechar} aria-label="Fechar">
           ×
@@ -146,7 +147,7 @@ export default function EncaixeModal({ professionalId, data, onFechar, onPronto 
           </div>
         </form>
       </div>
-    </div>
+    </div></Portal>
   )
 }
 

@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import ClienteShell from '../../components/ClienteShell'
+import AvaliarModal from '../../components/AvaliarModal'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { useDialogo } from '../../context/DialogoContext'
 import { formatPreco, formatDuracao } from '../../lib/format'
 import { formatDataLonga, iniciais } from '../../lib/booking'
-import { CalendarDays, Clock, MapPin, Sparkles, StickyNote, Repeat, CircleCheck, Hourglass, CircleX, Check, ChevronRight, Users } from 'lucide-react'
+import { CalendarDays, Clock, MapPin, Sparkles, StickyNote, Repeat, CircleCheck, Hourglass, CircleX, Check, ChevronRight, Users, Star } from 'lucide-react'
 
 // A página de um agendamento (2.16): tudo sobre ele num lugar só. É
 // para onde os avisos apontam e para onde o cartão da lista leva.
@@ -29,6 +30,9 @@ export default function ClienteAgendamento() {
   const [partes, setPartes] = useState([])   // as outras partes da visita (081)
   const [loading, setLoading] = useState(true)
   const [erro, setErro] = useState('')
+  const [avaliada, setAvaliada] = useState(null)   // null = ainda não sei; false = sem avaliação; {nota}
+  const [avaliando, setAvaliando] = useState(false)
+  const [q, setQ] = useSearchParams()
 
   const carregar = useCallback(async () => {
     const { data, error } = await supabase
@@ -38,6 +42,8 @@ export default function ClienteAgendamento() {
     if (error) setErro(error.message)
     setA(data ?? null)
     if (data) {
+      const { data: rv } = await supabase.from('reviews').select('id, nota').eq('appointment_id', data.id).maybeSingle()
+      setAvaliada(rv ?? false)
       const { data: it } = await supabase.from('appointment_services').select('id, name, price_cents, preco_cheio_cents, promocao_id, duration_minutes, ordem').eq('appointment_id', data.id).order('ordem')
       setItens(it ?? [])
       if (data.visita_id) {
@@ -52,6 +58,16 @@ export default function ClienteAgendamento() {
     setLoading(false)
   }, [id, user.id])
   useEffect(() => { carregar() }, [carregar])
+
+  // veio do push "Como foi com Ana?": abre a folha de estrelas direto
+  const podeAvaliar = Boolean(a) && (a.status === 'concluido' || (a.status === 'confirmado' && new Date(`${a.date}T${a.end_time ?? a.start_time}`) < new Date()))
+  useEffect(() => {
+    if (q.get('avaliar') === '1' && podeAvaliar && avaliada === false) setAvaliando(true)
+  }, [q, podeAvaliar, avaliada])
+  function fecharAvaliacao() {
+    setAvaliando(false)
+    if (q.get('avaliar')) setQ({}, { replace: true })
+  }
 
   async function cancelar() {
     const troca = Boolean(a.remarca_de) && a.status === 'pendente'
@@ -72,8 +88,8 @@ export default function ClienteAgendamento() {
   if (!a) return <ClienteShell titulo="Agendamento" voltar="/cliente/meus-agendamentos"><div className="card empty-state"><p>Não encontramos esse agendamento.</p>{erro && <p className="muted">{erro}</p>}</div></ClienteShell>
 
   const troca = Boolean(a.remarca_de) && a.status === 'pendente'
-  const est = ESTADO[a.status] ?? ESTADO.pendente
   const futuro = new Date(`${a.date}T${a.start_time}`) > new Date()
+  const est = a.status === 'confirmado' && !futuro ? { ...ESTADO.confirmado, texto: 'Já aconteceu. Que tal contar como foi?' } : (ESTADO[a.status] ?? ESTADO.pendente)
   const podeMexer = futuro && (a.status === 'pendente' || a.status === 'confirmado')
   const preco = a.price_cents != null ? a.price_cents / 100 : a.services?.price
   const duracao = a.services?.duration_minutes ?? minutosEntre(a.start_time, a.end_time)
@@ -149,11 +165,13 @@ export default function ClienteAgendamento() {
         )}
         {podeMexer && <button className="btn btn-ghost btn-block" onClick={cancelar}>{troca ? 'Desistir da troca' : vivas.length ? 'Cancelar só esta parte' : 'Cancelar horário'}</button>}
         {podeMexer && !troca && vivas.length > 0 && <button className="btn btn-ghost btn-block" onClick={cancelarVisita}>Cancelar a visita inteira</button>}
+        {podeAvaliar && avaliada === false && <button type="button" className="btn btn-primary btn-block" onClick={() => setAvaliando(true)}><Star size={16} /> Avaliar como foi</button>}
         {!podeMexer && a.professionals && a.service_id && (
-          <Link className="btn btn-primary btn-block" to={`/cliente/profissional/${a.professionals.id}/servicos?servico=${a.service_id}`}>Marcar de novo</Link>
+          <Link className={'btn btn-block ' + (podeAvaliar && avaliada === false ? 'btn-ghost' : 'btn-primary')} to={`/cliente/profissional/${a.professionals.id}/servicos?servico=${a.service_id}`}>Marcar de novo</Link>
         )}
-        {a.status === 'concluido' && <Link className="btn btn-ghost btn-block" to="/cliente/meus-agendamentos?aba=historico">Avaliar</Link>}
+        {avaliada && <p className="muted agdt-avaliada"><Star size={14} /> Você deu {avaliada.nota} {avaliada.nota === 1 ? 'estrela' : 'estrelas'}. Obrigada por contar!</p>}
       </div>
+      {avaliando && a.professionals && <AvaliarModal appt={a} onFechar={fecharAvaliacao} onPronto={() => { fecharAvaliacao(); carregar() }} />}
     </ClienteShell>
   )
 }

@@ -276,7 +276,6 @@ a {
   overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
   padding: 1.5rem 1.15rem 3rem;
 }
 /* a largura do app fica num invólucro interno (.miolo), para a rolagem
@@ -5691,3 +5690,7 @@ a, button { -webkit-tap-highlight-color: transparent; }
 .cat-capa-mini button { position: absolute; top: 1px; right: 1px; width: 16px; height: 16px; border-radius: 50%; border: none; background: rgba(255,255,255,0.92); color: #c0392b; font-size: 0.7rem; line-height: 1; cursor: pointer; display: grid; place-items: center; }
 .cat-capa-add { align-self: flex-start; cursor: pointer; }
 .cat-capa-add.desabilitado { opacity: 0.5; pointer-events: none; }
+
+/* avaliação já feita, na página do horário */
+.agdt-avaliada { display: flex; align-items: center; justify-content: center; gap: 0.35rem; margin: 0.2rem 0 0; font-size: 0.88rem; }
+.agdt-avaliada svg { color: #e6a100; }

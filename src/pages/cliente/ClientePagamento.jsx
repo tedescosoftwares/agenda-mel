@@ -35,19 +35,23 @@ export default function ClientePagamento() {
   useEffect(() => {
     let vivo = true
     ;(async () => {
-      const { data } = await supabase.from('appointments').select('id, status, date, start_time, price_cents, service_name, pago_cents, salon_id, services (name), professionals (name), salons (name)').eq('id', appt).eq('client_id', user.id).maybeSingle()
+      const { data } = await supabase.from('appointments').select('id, status, date, start_time, price_cents, service_name, pago_cents, salon_id, cancelado_em, cancelado_por, services (name), professionals (name), salons (name, tipo)').eq('id', appt).eq('client_id', user.id).maybeSingle()
       if (!vivo) return
       setA(data ?? null)
       if (!data) { setEstado('erro'); setErro('Não encontramos esse horário.'); return }
       const [{ data: it }, { data: r }, { data: pgs }] = await Promise.all([
         supabase.from('appointment_services').select('id, name, price_cents, preco_cheio_cents, ordem').eq('appointment_id', data.id).order('ordem'),
         data.salon_id ? supabase.rpc('pagamento_do_salao', { salao: data.salon_id }) : Promise.resolve({ data: null }),
-        supabase.from('pagamentos').select('id, status, valor_cents, total_cents, sinal_pct, pago_em, cobranca_id, termos_aceitos_em').eq('appointment_id', data.id).eq('status', 'pago').order('pago_em', { ascending: false }).limit(1),
+        supabase.from('pagamentos').select('id, status, valor_cents, total_cents, sinal_pct, pago_em, cobranca_id, termos_aceitos_em, estorno_cents, estornado_em, motivo_estorno, liquido_cents, tentativas_estorno').eq('appointment_id', data.id).in('status', ['pago', 'estornado', 'estorno_pendente']).order('pago_em', { ascending: false }).limit(1),
       ])
       if (!vivo) return
       setItens(it ?? [])
       setRegras(r ?? null)
-      if (pgs?.[0]) { setPago(pgs[0]); setEstado('pago') } else setEstado('resumo')
+      // pago: comprovante do pagamento; devolvido (ou devolvendo): comprovante da devolução
+      if (pgs?.[0]?.status === 'pago') { setPago(pgs[0]); setEstado('pago') }
+      else if (pgs?.[0]) { setPago(pgs[0]); setEstado('devolvido') }
+      else if (data.status === 'cancelado') { setEstado('erro'); setErro('Este horário foi cancelado.') }
+      else setEstado('resumo')
     })()
     return () => { vivo = false }
   }, [appt, user.id])
@@ -139,8 +143,8 @@ export default function ClientePagamento() {
   )
 
   return (
-    <ClienteShell titulo={estado === 'pago' ? 'Comprovante' : 'Pagar pelo app'} voltar={voltar}>
-      {estado !== 'pago' && resumo}
+    <ClienteShell titulo={estado === 'pago' || estado === 'devolvido' ? 'Comprovante' : 'Pagar pelo app'} voltar={voltar}>
+      {estado !== 'pago' && estado !== 'devolvido' && resumo}
 
       {erro && <div className="alert alert-error">{erro}</div>}
 
@@ -216,6 +220,30 @@ export default function ClientePagamento() {
             {pago.termos_aceitos_em && <p className="muted pag-comprovante-id">Condições aceitas em {new Date(pago.termos_aceitos_em).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}.</p>}
           </div>
           <Link to={`/cliente/agendamento/sucesso/${appt}`} className="btn btn-primary btn-block">Tudo certo, seguir</Link>
+          <Link to={`/cliente/agendamento/${appt}`} className="btn btn-ghost btn-block">Ver o horário</Link>
+        </>
+      )}
+
+      {estado === 'devolvido' && a && pago && (
+        <>
+          <div className="card pag-comprovante">
+            <div className="pag-comprovante-topo"><Receipt size={18} /><strong>{pago.status === 'estornado' ? 'Comprovante da devolução' : 'Devolução a caminho'}</strong></div>
+            <div className="resumo-linha"><span className="muted">Você pagou</span><strong>{formatCents(pago.valor_cents)}{pago.sinal_pct && pago.sinal_pct < 100 ? ` (sinal de ${pago.sinal_pct}%)` : ''}</strong></div>
+            <div className="resumo-linha"><span className="muted">Pago em</span><strong>{pago.pago_em ? new Date(pago.pago_em).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}</strong></div>
+            <div className="resumo-linha"><span className="muted">Cancelado</span><strong>{a.cancelado_em ? new Date(a.cancelado_em).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}{a.cancelado_por === 'cliente' ? ', por você' : a.cancelado_por && a.cancelado_por !== 'sistema' ? (a.salons?.tipo === 'autonoma' ? ', pela profissional' : ', pelo salão') : ''}</strong></div>
+            <div className="resumo-linha resumo-total"><span>{pago.status === 'estornado' ? 'Devolvido' : 'Vai voltar'}</span><strong>{formatCents(pago.estorno_cents ?? pago.valor_cents)}</strong></div>
+            {(pago.estorno_cents ?? pago.valor_cents) < pago.valor_cents && <div className="resumo-linha"><span className="muted">Taxa do PIX, não devolvida</span><strong>{formatCents(pago.valor_cents - (pago.estorno_cents ?? pago.valor_cents))}</strong></div>}
+            <div className="resumo-linha"><span className="muted">{pago.status === 'estornado' ? 'Devolvido em' : 'Situação'}</span><strong>{pago.status === 'estornado' ? (pago.estornado_em ? new Date(pago.estornado_em).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—') : pago.tentativas_estorno >= 3 ? 'Atrasada, já avisamos a profissional' : 'Em até 1 dia útil, na conta de onde veio o PIX'}</strong></div>
+            <div className="resumo-linha"><span className="muted">Com</span><strong>{a.professionals?.name}{a.salons?.name && a.salons.name !== a.professionals?.name ? ` · ${a.salons.name}` : ''}</strong></div>
+            <div className="resumo-linha"><span className="muted">Horário</span><strong>{formatDataLonga(a.date)} às {a.start_time?.slice(0, 5)}</strong></div>
+            {itens.length > 0 ? itens.map((x) => (
+              <div key={x.id} className="resumo-linha pag-item"><span>{x.name}</span><span>{formatCents(x.price_cents)}</span></div>
+            )) : (
+              <div className="resumo-linha pag-item"><span>{a.service_name ?? a.services?.name}</span><span>{formatCents(total)}</span></div>
+            )}
+            {pago.motivo_estorno && <p className="muted pag-comprovante-id">Motivo: {pago.motivo_estorno}.</p>}
+            {pago.cobranca_id && <p className="muted pag-comprovante-id">Identificação do pagamento: {pago.cobranca_id}</p>}
+          </div>
           <Link to={`/cliente/agendamento/${appt}`} className="btn btn-ghost btn-block">Ver o horário</Link>
         </>
       )}

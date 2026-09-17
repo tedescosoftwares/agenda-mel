@@ -10,7 +10,7 @@ import { StarIcon } from '../../components/icons'
 import ConviteAdiantar from '../../components/ConviteAdiantar'
 import OfertaVaga from '../../components/OfertaVaga'
 import AvaliarModal from '../../components/AvaliarModal'
-import { Repeat, Check, ChevronRight, CalendarDays, Clock, MapPin, Star, Sparkles, Users } from 'lucide-react'
+import { Repeat, Check, ChevronRight, CalendarDays, Clock, MapPin, Star, Sparkles, Users, Wallet } from 'lucide-react'
 
 // Meus agendamentos (tela 09, repaginada em 2.20): o próximo horário em
 // destaque no topo, os demais em cartões com a data em bloco, e o
@@ -31,6 +31,7 @@ export default function ClienteAgenda() {
   const [aba, setAba] = useState(params.get('aba') === 'historico' ? 'historico' : 'proximos')
   const [proximos, setProximos] = useState([])
   const [historico, setHistorico] = useState([])
+  const [dinheiro, setDinheiro] = useState(new Map())   // appointment_id → pagamento (devolvido, crédito, retido…)
   const [notas, setNotas] = useState(new Map())
   const [vagas, setVagas] = useState([])
   const [avaliando, setAvaliando] = useState(null)
@@ -39,10 +40,12 @@ export default function ClienteAgenda() {
 
   const carregar = useCallback(async () => {
     const hoje = toISODate(new Date())
-    const sel = '*, services (name, price, duration_minutes), professionals (id, name, photo_url), salons (name, city), appointment_offers (id, status, proposed_start_time, previous_start_time, expires_at)'
-    const [px, hs, rv, vg] = await Promise.all([
+    const sel = '*, services (name, price, duration_minutes), professionals (id, name, photo_url), salons (name, city, tipo), appointment_offers (id, status, proposed_start_time, previous_start_time, expires_at)'
+    const [px, hs, hc, rv, vg] = await Promise.all([
       supabase.from('appointments').select(sel).eq('client_id', user.id).gte('date', hoje).neq('status', 'cancelado').order('date').order('start_time'),
       supabase.from('appointments').select(sel).eq('client_id', user.id).lt('date', hoje).order('date', { ascending: false }).order('start_time', { ascending: false }).limit(40),
+      // cancelado com data ainda por vir: não é "próximo", mas faz parte da história (e do dinheiro)
+      supabase.from('appointments').select(sel).eq('client_id', user.id).gte('date', hoje).eq('status', 'cancelado').order('date', { ascending: false }).limit(20),
       supabase.from('reviews').select('appointment_id, nota').eq('client_id', user.id),
       supabase.from('waitlist_offers').select('*, waitlist_entries (id, services (name), professionals (name))').eq('status', 'pendente').gt('expires_at', new Date().toISOString()),
     ])
@@ -55,7 +58,15 @@ export default function ClienteAgenda() {
     const faltam = lista.filter((a) => a.remarca_de && !lista.some((o) => o.id === a.remarca_de)).map((a) => a.remarca_de)
     const extras = faltam.length ? (await supabase.from('appointments').select('id, date, start_time').in('id', faltam)).data ?? [] : []
     setProximos(lista.map((a) => ({ ...a, origem: a.remarca_de ? (lista.find((o) => o.id === a.remarca_de) ?? extras.find((o) => o.id === a.remarca_de) ?? null) : null })))
-    setHistorico([...passouHoje, ...(hs.data ?? [])])
+    const historicoTodo = [...(hc.data ?? []), ...passouHoje, ...(hs.data ?? [])]
+      .sort((a, b) => (b.date + b.start_time).localeCompare(a.date + a.start_time))
+    setHistorico(historicoTodo)
+    // o que aconteceu com o dinheiro dos que foram pagos pelo app (devolvido, crédito, retido)
+    const idsPagos = historicoTodo.filter((a) => (a.pago_cents ?? 0) > 0).map((a) => a.id)
+    if (idsPagos.length) {
+      const { data: pgs } = await supabase.from('pagamentos').select('appointment_id, status, valor_cents, estorno_cents, credito_ate, estornado_em').in('appointment_id', idsPagos).in('status', ['estornado', 'estorno_pendente', 'credito', 'retido', 'pago'])
+      setDinheiro(new Map((pgs ?? []).map((p) => [p.appointment_id, p])))
+    } else setDinheiro(new Map())
     setNotas(new Map((rv.data ?? []).map((r) => [r.appointment_id, r.nota])))
     setVagas(vg.data ?? [])
     setLoading(false)
@@ -136,7 +147,7 @@ export default function ClienteAgenda() {
               <h3 className="ag-secao">{mes} <span className="muted">· {itens.filter((a) => a.status === 'concluido').length} {itens.filter((a) => a.status === 'concluido').length === 1 ? 'atendimento' : 'atendimentos'}</span></h3>
               <div className="ag-lista">
                 {itens.map((a) => (
-                  <Cartao key={a.id} a={a} historico nota={notas.get(a.id)} onAbrir={() => navigate(`/cliente/agendamento/${a.id}`)}>
+                  <Cartao key={a.id} a={a} historico nota={notas.get(a.id)} pagamento={dinheiro.get(a.id)} onAbrir={() => navigate(`/cliente/agendamento/${a.id}`)}>
                     <div className="ag-acoes" onClick={(e) => e.stopPropagation()}>
                       {a.status === 'concluido' && !notas.has(a.id) && <button className="btn-mini btn-mini-rosa" onClick={() => setAvaliando(a)}><StarIcon /> Avaliar</button>}
                       {a.professionals && a.service_id && <Link className="btn-mini" to={`/cliente/profissional/${a.professionals.id}/servicos?servico=${a.service_id}`}>Marcar de novo</Link>}
@@ -197,8 +208,29 @@ function Destaque({ a, troca, onCancelar }) {
   )
 }
 
-function Cartao({ a, troca, historico = false, nota, onAbrir, visita = 0, children }) {
+// quem cancelou: o selo fica curto ("Cancelado") e a linha de baixo diz por quem
+function quemCancelou(a) {
+  if (a.status !== 'cancelado') return null
+  const por = a.cancelado_por ?? 'sistema'
+  if (por === 'cliente') return 'Cancelado por você'
+  if (por === 'sistema') return a.motivo_cancelamento === 'reserva não paga' ? 'Reserva não paga a tempo' : /sem_resposta|troca_sem_resposta/.test(a.motivo_cancelamento ?? '') ? 'Cancelado por falta de resposta' : 'Cancelado'
+  return a.salons?.tipo === 'salao' ? 'Cancelado pelo salão' : 'Cancelado pela profissional'
+}
+
+// o que aconteceu com o dinheiro pago pelo app, numa linha
+function linhaDoDinheiro(p) {
+  if (!p) return null
+  const dia = (d) => (d ? new Date(String(d).slice(0, 10) + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : '')
+  if (p.status === 'estornado') return `${formatPreco((p.estorno_cents ?? p.valor_cents) / 100)} devolvidos${p.estornado_em ? ` em ${dia(p.estornado_em)}` : ''} · ver comprovante`
+  if (p.status === 'estorno_pendente') return `Devolução de ${formatPreco((p.estorno_cents ?? p.valor_cents) / 100)} a caminho`
+  if (p.status === 'credito') return `Sinal de ${formatPreco(p.valor_cents / 100)} virou crédito até ${dia(p.credito_ate)}`
+  if (p.status === 'retido') return `Sinal de ${formatPreco(p.valor_cents / 100)} ficou com a profissional`
+  return null
+}
+
+function Cartao({ a, troca, historico = false, nota, pagamento, onAbrir, visita = 0, children }) {
   const troca_ = ehPedidoDeTroca(a)
+  const dinheiro = historico ? linhaDoDinheiro(pagamento) : null
   return (
     <div className={'card ag-card ' + a.status + (troca_ ? ' troca' : '')} role="link" tabIndex={0} onClick={onAbrir} onKeyDown={(e) => { if (e.key === 'Enter') onAbrir() }}>
       <div className="ag-data">
@@ -217,6 +249,8 @@ function Cartao({ a, troca, historico = false, nota, onAbrir, visita = 0, childr
           <span className="muted">{a.professionals?.name}{a.salons?.name ? ` · ${a.salons.name}` : ''}</span>
           <span className="ag-preco">{formatPreco(a.price_cents != null ? a.price_cents / 100 : a.services?.price)}</span>
         </span>
+        {historico && a.status === 'cancelado' && <span className="ag-nota ag-quem-cancelou">{quemCancelou(a)}</span>}
+        {dinheiro && <span className={'ag-nota ag-dinheiro ' + pagamento.status}><Wallet size={13} /> {dinheiro}</span>}
         {historico && a.status === 'concluido' && nota && (
           <span className="ag-estrelas" aria-label={`Você deu ${nota} estrelas`}>{[1, 2, 3, 4, 5].map((n) => <Star key={n} size={13} className={n <= nota ? 'cheia' : ''} />)} <span className="muted">sua avaliação</span></span>
         )}

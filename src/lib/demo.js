@@ -94,6 +94,8 @@ const agendamentos = [
   { id: 'ap2', client_id: 'c1', professional_id: 'pr2', service_id: 'sv7', salon_id: SALAO, date: mais(9), start_time: '10:30:00', end_time: '11:15:00', status: 'confirmado', price_cents: 6000, pago_cents: 3000, created_at: mais(-1), visita_id: 'v1' },
   { id: 'ap3', client_id: 'c1', professional_id: 'pr1', service_id: 'sv1', salon_id: SALAO, date: mais(-12), start_time: '09:00:00', end_time: '09:45:00', status: 'concluido', price_cents: 3500, created_at: mais(-14) },
   { id: 'ap4', client_id: 'c1', professional_id: 'pr3', service_id: 'sv4', salon_id: SALAO, date: mais(-30), start_time: '16:00:00', end_time: '17:00:00', status: 'concluido', price_cents: 6500, created_at: mais(-33) },
+  // cancelado pelo salão com sinal devolvido (095): aparece no histórico com o comprovante da devolução
+  { id: 'apdev', client_id: 'c1', professional_id: 'pr2', service_id: 'sv7', salon_id: SALAO, date: mais(4), start_time: '15:00:00', end_time: '15:45:00', status: 'cancelado', cancelado_por: 'salao', cancelado_em: mais(-1) + 'T18:20:00', price_cents: 6000, pago_cents: 3000, created_at: mais(-3) },
   { id: 'ap5', client_id: 'c2', professional_id: 'pr1', service_id: 'sv1', salon_id: SALAO, date: mais(0), start_time: '09:00:00', end_time: '09:45:00', status: 'confirmado', price_cents: 3500, created_at: mais(-2) },
   { id: 'ap6', client_id: 'c3', professional_id: 'pr1', service_id: 'sv5', salon_id: SALAO, date: mais(0), start_time: '10:30:00', end_time: '11:30:00', status: 'confirmado', price_cents: 7500, created_at: mais(-2) },
   { id: 'ap7', client_id: 'c4', professional_id: 'pr1', service_id: 'sv2', salon_id: SALAO, date: mais(0), start_time: '14:00:00', end_time: '15:30:00', status: 'pendente', price_cents: 8500, created_at: mais(0) },
@@ -134,7 +136,9 @@ const promocoes = [
   { id: 'pm4', salon_id: SALAO, professional_id: null, service_id: null, titulo: 'Dia das Mães', texto: 'Encerrada', imagem_url: PROMO_IMG('#FF7BAA', '#FFC2D8', '❤'), inicio: mais(-40), fim: mais(-20), ativa: true, vistas: 900, cliques: 120, created_at: mais(-40) },
 ]
 const TABELAS = {
-  pagamentos: [{ id: 'pg1', appointment_id: 'ap2', client_id: 'c1', salon_id: SALAO, status: 'pago', valor_cents: 3000, total_cents: 6000, sinal_pct: 50, pago_em: mais(-1) + 'T14:32:00', criado_em: mais(-1), cobranca_id: 'pay_demo_8f3k2', termos_aceitos_em: mais(-1) + 'T14:30:00', appointments: { service_name: 'Escova', date: mais(9), start_time: '10:30:00', profiles: { full_name: 'Juliana Silva' } } }],
+  pagamentos: [
+    { id: 'pg5', appointment_id: 'apdev', client_id: 'c1', salon_id: SALAO, status: 'estornado', valor_cents: 3000, total_cents: 6000, sinal_pct: 50, liquido_cents: 2801, estorno_cents: 2801, pago_em: mais(-3) + 'T10:12:00', estornado_em: mais(-1) + 'T18:25:00', motivo_estorno: 'cancelado pela casa', cobranca_id: 'pay_demo_2k9x1', termos_aceitos_em: mais(-3) + 'T10:10:00', criado_em: mais(-3) },
+    { id: 'pg1', appointment_id: 'ap2', client_id: 'c1', salon_id: SALAO, status: 'pago', valor_cents: 3000, total_cents: 6000, sinal_pct: 50, pago_em: mais(-1) + 'T14:32:00', criado_em: mais(-1), cobranca_id: 'pay_demo_8f3k2', termos_aceitos_em: mais(-1) + 'T14:30:00', appointments: { service_name: 'Escova', date: mais(9), start_time: '10:30:00', profiles: { full_name: 'Juliana Silva' } } }],
   contas_de_recebimento: [{ salon_id: SALAO, conta_id: 'acc_demo', wallet_id: 'wal_demo', status: 'aprovada', nome: 'Studio Mel', tipo_pessoa: 'juridica', documento: '12.345.678/0001-90', pix_pronto: true, pix_chave: '3b1c2d4e-demo-4f5a-9b8c-7d6e5f4a3b2c', situacao: { saldo_cents: 141230, saldo_em: new Date().toISOString() }, documentos: [] }],
   profiles: clientes,
   professionals: profissionais,

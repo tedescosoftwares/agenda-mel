@@ -136,7 +136,7 @@ export default function ClienteAgendamento() {
           </span>
           {a.status === 'aguardando_pagamento' && <Link className="btn btn-primary btn-mini" to={`/cliente/pagamento/${a.id}`}>Pagar</Link>}
           {pagamento?.status === 'credito' && a.professionals && a.service_id && <Link className="btn btn-primary btn-mini" to={`/cliente/profissional/${a.professionals.id}/servicos?servico=${a.service_id}`}>Usar</Link>}
-          {pagamento?.status === 'pago' && a.pago_cents > 0 && <Link className="btn btn-ghost btn-mini" to={`/cliente/pagamento/${a.id}`}>Comprovante</Link>}
+          {((pagamento?.status === 'pago' && a.pago_cents > 0) || pagamento?.status === 'estornado' || pagamento?.status === 'estorno_pendente') && <Link className="btn btn-ghost btn-mini" to={`/cliente/pagamento/${a.id}`}>Comprovante</Link>}
         </div>
       )}
 

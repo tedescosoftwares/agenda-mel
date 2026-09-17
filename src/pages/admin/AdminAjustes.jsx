@@ -84,7 +84,7 @@ const ITENS = [
 
 export default function AdminAjustes() {
   const { confirmar } = useDialogo()
-  const { salao, signOut } = useAuth()
+  const { salao, saloes, trocarSalao, signOut } = useAuth()
   const [codigo, setCodigo] = useState(salao?.codigo ?? null)
   const [erro, setErro] = useState('')
 
@@ -103,6 +103,15 @@ export default function AdminAjustes() {
       </div>
 
       {erro && <div className="alert alert-error">{erro}</div>}
+      {saloes?.length > 1 && (
+        <div className="card salao-troca">
+          <strong>Você administra {saloes.length} salões</strong>
+          <span className="muted">Tudo que você cadastra (serviços, equipe, página) vai para o salão escolhido aqui. As clientes e a equipe de cada um só veem o dele.</span>
+          <div className="filtro-chips">
+            {saloes.map((x) => <button key={x.id} type="button" className={x.id === salao?.id ? 'chip active' : 'chip'} onClick={() => trocarSalao(x.id)}>{x.name}</button>)}
+          </div>
+        </div>
+      )}
       <AvisosNoCelular />
       <AvisosPorEmail />
 

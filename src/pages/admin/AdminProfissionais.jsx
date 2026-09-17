@@ -29,8 +29,8 @@ export default function AdminProfissionais() {
 
   const fetchTudo = useCallback(async () => {
     const [profRes, servRes, vincRes] = await Promise.all([
-      supabase.from('professionals').select('*').order('name'),
-      supabase.from('services').select('*').eq('active', true).order('name'),
+      supabase.from('professionals').select('*').eq('salon_id', salao?.id).order('name'),
+      supabase.from('services').select('*').eq('salon_id', salao?.id).eq('active', true).order('name'),
       supabase.from('professional_services').select('*'),
     ])
 
@@ -48,7 +48,7 @@ export default function AdminProfissionais() {
     }
     setVinculos(mapa)
     setLoading(false)
-  }, [])
+  }, [salao?.id])
 
   useEffect(() => {
     fetchTudo()

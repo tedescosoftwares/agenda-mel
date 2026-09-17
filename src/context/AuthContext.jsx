@@ -10,6 +10,7 @@ export function AuthProvider({ children }) {
   const [profile, setProfile] = useState(null)
   const [professional, setProfessional] = useState(null)
   const [salao, setSalao] = useState(null)
+  const [saloes, setSaloes] = useState([])      // todos os salões que a admin administra
   // as agendas em que a cliente entrou (053). Sem nenhuma, não há app.
   // null = ainda não sei (carregando ou a rede falhou); [] = sei que não tem
   const [vinculos, setVinculos] = useState(null)
@@ -53,18 +54,23 @@ export function AuthProvider({ children }) {
       if (cancelled) return
       setProfile(perfil)
 
-      // admin: carrega o salão que ela administra
+      // admin: carrega os salões que ela administra. Com mais de um, vale o
+      // que ela escolheu por último neste aparelho (Ajustes › Trocar de salão);
+      // antes era sempre o primeiro da lista, e quem tinha dois gravava no errado
       if (perfil?.role === 'admin') {
-        const { data: vinculo } = await supabase
+        const { data: vinculos } = await supabase
           .from('salon_members')
           .select('salon_id, salons (*)')
           .eq('user_id', session.user.id)
           .eq('papel', 'admin')
-          .limit(1)
-          .maybeSingle()
         if (cancelled) return
-        setSalao(vinculo?.salons ?? null)
+        const lista = (vinculos ?? []).map((v) => v.salons).filter(Boolean).sort((a, b) => String(a.name).localeCompare(String(b.name)))
+        let preferido = null
+        try { preferido = localStorage.getItem('mimo-salao-admin') } catch { /* sem armazenamento */ }
+        setSaloes(lista)
+        setSalao(lista.find((x) => x.id === preferido) ?? lista[0] ?? null)
       } else {
+        setSaloes([])
         setSalao(null)
       }
 
@@ -188,12 +194,22 @@ export function AuthProvider({ children }) {
     await supabase.auth.signOut()
   }
 
+  // a admin com mais de um salão escolhe em qual está trabalhando
+  function trocarSalao(id) {
+    const alvo = saloes.find((x) => x.id === id)
+    if (!alvo) return
+    try { localStorage.setItem('mimo-salao-admin', id) } catch { /* sem armazenamento */ }
+    setSalao(alvo)
+  }
+
   const value = {
     session,
     user: session?.user ?? null,
     profile,
     professional,
     salao,
+    saloes,
+    trocarSalao,
     vinculos,
     erroRede,
     recarregarVinculos,

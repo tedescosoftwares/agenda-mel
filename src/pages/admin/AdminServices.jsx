@@ -113,6 +113,7 @@ export default function AdminServices() {
     const { data, error } = await supabase
       .from('services')
       .select('*')
+      .eq('salon_id', salao?.id)
       .order('name')
     if (error) {
       setError('Erro ao carregar serviços: ' + error.message)

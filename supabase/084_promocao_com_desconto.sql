@@ -130,7 +130,7 @@ begin
   create temp table if not exists itens_do_pedido (
     ord integer, service_id uuid, name text, cents integer, cheio integer, promocao_id uuid, duration_minutes integer
   ) on commit drop;
-  delete from itens_do_pedido;
+  delete from itens_do_pedido where true;
   insert into itens_do_pedido (ord, service_id, name, cents, cheio, promocao_id, duration_minutes)
   select x.ord, s.id, s.name,
          coalesce(d.preco_com_desconto_cents, round(s.price * 100)::integer),

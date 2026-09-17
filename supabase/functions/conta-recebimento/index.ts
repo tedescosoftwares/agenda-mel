@@ -3,13 +3,14 @@
 // Chamada pelo app, com o token da dona:
 //   POST { acao: 'criar', salao, dados }   cria a subconta e guarda a chave no Vault
 //   POST { acao: 'situacao', salao }       relê aprovação e documentos pendentes
+//   POST { acao: 'devolver', salao, pagamento_id }  tenta a devolução agora, sem esperar a fila
 //
 // A subconta é criada com a chave da conta-pai; a chave da subconta
 // volta uma única vez e vai direto para o Vault (guardar_segredo). O
 // que fica na tabela é o que a dona pode ver: ids, status, documentos.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { asaas, chavePai, corpoSubconta, situacaoDaSubconta, garantirChavePix, saldoDaConta, json, preflight, ErroAsaas, type DadosSubconta } from '../_shared/asaas.ts'
+import { asaas, chavePai, corpoSubconta, situacaoDaSubconta, garantirChavePix, saldoDaConta, devolverPagamento, json, preflight, ErroAsaas, type DadosSubconta } from '../_shared/asaas.ts'
 
 const URL_SUPABASE = Deno.env.get('SUPABASE_URL') ?? ''
 const servico = createClient(URL_SUPABASE, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '', { auth: { persistSession: false } })
@@ -23,7 +24,7 @@ Deno.serve(async (req) => {
   const { data: u } = await quem.auth.getUser()
   if (!u?.user) return json({ erro: 'entre na sua conta' }, 401)
 
-  let corpo: { acao?: string; salao?: string; dados?: DadosSubconta } = {}
+  let corpo: { acao?: string; salao?: string; dados?: DadosSubconta; pagamento_id?: string } = {}
   try { corpo = await req.json() } catch { return json({ erro: 'corpo inválido' }, 400) }
   const salao = corpo.salao
   if (!salao) return json({ erro: 'salão?' }, 400)
@@ -80,6 +81,27 @@ Deno.serve(async (req) => {
       const msg = e instanceof ErroAsaas ? e.message : String(e)
       await servico.from('contas_de_recebimento').upsert({ salon_id: salao, status: 'erro', erro: msg.slice(0, 300), criado_por: u.user.id, atualizado_em: new Date().toISOString() })
       return json({ erro: msg }, 502)
+    }
+  }
+
+  // a dona tocou em "Tentar devolver agora": mesma coisa que a fila faz, na hora,
+  // e o motivo de não dar volta para a tela
+  if (corpo.acao === 'devolver') {
+    if (!corpo.pagamento_id) return json({ erro: 'pagamento?' }, 400)
+    const { data: p } = await servico.from('pagamentos').select('id, salon_id, status, cobranca_id, valor_cents, estorno_cents, motivo_estorno').eq('id', corpo.pagamento_id).eq('salon_id', salao).maybeSingle()
+    if (!p) return json({ erro: 'pagamento não encontrado' }, 404)
+    if (p.status !== 'estorno_pendente') return json({ ok: false, erro: 'este pagamento não está esperando devolução (' + p.status + ')' })
+    if (!p.cobranca_id) return json({ ok: false, erro: 'sem cobrança para estornar' })
+    const { data: chaveSub } = await servico.rpc('ler_segredo', { nome: nomeSegredo })
+    if (!chaveSub) return json({ erro: 'este salão ainda não tem conta de recebimento' }, 404)
+    try {
+      const jeito = await devolverPagamento(String(chaveSub), p)
+      await servico.rpc('pagamento_cuidado', { pagamento: p.id, resultado: 'estornado' })
+      return json({ ok: true, jeito })
+    } catch (e) {
+      const msg = e instanceof ErroAsaas ? e.message : String(e)
+      await servico.rpc('pagamento_cuidado', { pagamento: p.id, resultado: 'erro', detalhe: msg })
+      return json({ ok: false, erro: msg })
     }
   }
 

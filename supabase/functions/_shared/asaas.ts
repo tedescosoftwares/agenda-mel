@@ -203,6 +203,23 @@ export const apagarCobranca = (chaveSub: string, id: string) => asaas(chaveSub, 
 export const estornarCobranca = (chaveSub: string, id: string, valorCents: number | null, motivo: string) =>
   asaas(chaveSub, 'POST', `/payments/${id}/refund`, { value: valorCents ? Math.round(valorCents) / 100 : undefined, description: motivo.slice(0, 200) })
 
+// devolve um pagamento: estorno de verdade; no sandbox, se a cobrança foi
+// baixada "em dinheiro" (simulação sem saldo), desfaz a baixa e apaga a
+// cobrança, que é o caminho de volta que existe lá. Lança se não deu.
+export async function devolverPagamento(chaveSub: string, p: { cobranca_id: string; valor_cents: number; estorno_cents?: number | null; motivo_estorno?: string | null }): Promise<'estorno' | 'baixa_desfeita'> {
+  try {
+    await estornarCobranca(chaveSub, p.cobranca_id, p.estorno_cents && p.estorno_cents < p.valor_cents ? p.estorno_cents : null, p.motivo_estorno ?? 'cancelamento')
+    return 'estorno'
+  } catch (e) {
+    if (AMBIENTE === 'producao') throw e
+    const real = await obterCobranca(chaveSub, p.cobranca_id).catch(() => null)
+    if (String(real?.status ?? '') !== 'RECEIVED_IN_CASH') throw e
+    await desfazerBaixaSandbox(chaveSub, p.cobranca_id)
+    await apagarCobranca(chaveSub, p.cobranca_id).catch(() => {})
+    return 'baixa_desfeita'
+  }
+}
+
 export function json(corpo: unknown, status = 200) {
   return new Response(JSON.stringify(corpo), { status, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type' } })
 }

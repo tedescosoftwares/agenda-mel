@@ -26,7 +26,7 @@ export default function ReceberPeloApp({ salao, nomeSalao }) {
     const [{ data: s, error: es }, { data: c, error: ec }, { data: p }] = await Promise.all([
       supabase.from('salons').select('pagamento_modo, sinal_pct, estorno_horas, estorno_desconta_taxa, name').eq('id', salao).maybeSingle(),
       supabase.from('contas_de_recebimento').select('*').eq('salon_id', salao).maybeSingle(),
-      supabase.from('pagamentos').select('id, valor_cents, total_cents, sinal_pct, status, pago_em, criado_em, appointment_id, estorno_cents, tentativas_estorno, erro, appointments (service_name, date, start_time, profiles (full_name))').eq('salon_id', salao).order('criado_em', { ascending: false }).limit(30),
+      supabase.from('pagamentos').select('id, valor_cents, total_cents, sinal_pct, status, pago_em, criado_em, appointment_id, estorno_cents, tentativas_estorno, proxima_tentativa_em, erro, appointments (service_name, date, start_time, profiles (full_name))').eq('salon_id', salao).order('criado_em', { ascending: false }).limit(30),
     ])
     setConfig(s ?? null)
     setConta(c ?? null)
@@ -51,6 +51,15 @@ export default function ReceberPeloApp({ salao, nomeSalao }) {
     try {
       const r = await chamar('conta-recebimento', { acao: 'criar', salao, dados: { ...form, documento: form.documento.replace(/\D/g, ''), cep: form.cep.replace(/\D/g, ''), renda_mensal: Number(String(form.renda_mensal).replace(/\./g, '').replace(',', '.')) } })
       setAviso(r.documentos?.length ? 'Conta criada! Agora falta enviar os documentos abaixo.' : 'Conta criada! A aprovação leva pouco tempo, e você já pode receber.')
+      await carregar()
+    } catch (err) { setErro(err.message) } finally { setMexendo(false) }
+  }
+
+  async function devolverAgora(pagamentoId) {
+    setMexendo(true); setErro('')
+    try {
+      const r = await chamar('conta-recebimento', { acao: 'devolver', salao, pagamento_id: pagamentoId })
+      if (r?.ok === false) setErro('A devolução não saiu: ' + r.erro)
       await carregar()
     } catch (err) { setErro(err.message) } finally { setMexendo(false) }
   }
@@ -196,7 +205,10 @@ export default function ReceberPeloApp({ salao, nomeSalao }) {
               <div className="pag-valor">
                 <strong>{formatCents(p.valor_cents)}</strong>
                 <span className={`badge badge-pag-${p.status}`}>{p.status === 'estorno_pendente' && p.tentativas_estorno >= 2 ? 'devolução parada' : ROTULO_PAG[p.status] ?? p.status}</span>
-                {p.status === 'estorno_pendente' && p.tentativas_estorno >= 2 && <span className="muted pag-erro">{p.erro?.includes('aldo') ? 'falta saldo na conta de recebimento' : p.erro}</span>}
+                {(p.status === 'estorno_pendente' || p.status === 'estornado') && p.estorno_cents != null && p.estorno_cents !== p.valor_cents && <span className="muted pag-erro">devolve {formatCents(p.estorno_cents)}</span>}
+                {p.status === 'estorno_pendente' && p.erro && <span className="muted pag-erro">{p.erro.includes('aldo') ? 'falta saldo na conta de recebimento' : p.erro}</span>}
+                {p.status === 'estorno_pendente' && p.tentativas_estorno > 0 && p.proxima_tentativa_em && <span className="muted pag-erro">tenta de novo {new Date(p.proxima_tentativa_em).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>}
+                {p.status === 'estorno_pendente' && <button type="button" className="btn-mini" onClick={() => devolverAgora(p.id)} disabled={mexendo}>Tentar devolver agora</button>}
               </div>
             </div>
           ))}

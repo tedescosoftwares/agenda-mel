@@ -77,7 +77,7 @@ Deno.serve(async (req) => {
       // subconta sem chave Pix: cria uma aleatória e tenta de novo uma vez
       if (e instanceof ErroAsaas && /chave pix/i.test(e.message)) {
         const pix = await garantirChavePix(String(chaveSub))
-        await servico.from('contas_de_recebimento').update({ pix_pronto: pix.ok, atualizado_em: new Date().toISOString() }).eq('salon_id', prep.salon_id)
+        await servico.from('contas_de_recebimento').update({ pix_pronto: pix.ok, pix_chave: pix.chave ?? null, atualizado_em: new Date().toISOString() }).eq('salon_id', prep.salon_id)
         if (!pix.ok) throw new ErroAsaas(409, 'a conta de recebimento ainda não tem chave Pix ativa' + (pix.status === 'AWAITING_ACTIVATION' ? ' (ativação em andamento, tente em instantes)' : pix.erro ? ': ' + pix.erro : ''))
         cob = await criarCobrancaPix(String(chaveSub), pedido)
       } else throw e

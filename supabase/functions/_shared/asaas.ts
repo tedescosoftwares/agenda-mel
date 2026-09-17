@@ -129,14 +129,14 @@ export async function situacaoDaSubconta(chaveSub: string) {
 
 // a subconta precisa de uma chave Pix para gerar QR; uma aleatória (EVP)
 // basta e nunca aparece para ninguém. Devolve true se já tem ou criou.
-export async function garantirChavePix(chaveSub: string): Promise<{ ok: boolean; status?: string; erro?: string }> {
+export async function garantirChavePix(chaveSub: string): Promise<{ ok: boolean; status?: string; chave?: string; erro?: string }> {
   try {
     const lista = await asaas(chaveSub, 'GET', '/pix/addressKeys?status=ACTIVE&limit=1')
-    if ((lista?.data ?? []).length) return { ok: true, status: 'ACTIVE' }
+    if ((lista?.data ?? []).length) return { ok: true, status: 'ACTIVE', chave: String(lista.data[0].key ?? '') }
     const pendentes = await asaas(chaveSub, 'GET', '/pix/addressKeys?status=AWAITING_ACTIVATION&limit=1')
     if ((pendentes?.data ?? []).length) return { ok: false, status: 'AWAITING_ACTIVATION' }
     const nova = await asaas(chaveSub, 'POST', '/pix/addressKeys', { type: 'EVP' })
-    return { ok: nova?.status === 'ACTIVE', status: String(nova?.status ?? '') }
+    return { ok: nova?.status === 'ACTIVE', status: String(nova?.status ?? ''), chave: nova?.key ? String(nova.key) : undefined }
   } catch (e) {
     return { ok: false, erro: e instanceof ErroAsaas ? e.message : String(e) }
   }

@@ -68,11 +68,11 @@ begin
   if not (r ->> 'repetido')::boolean then raise exception 'webhook repetido não foi ignorado'; end if;
   raise notice '4 pago → pedido, avisos ok, repetição ignorada (ok)';
 
-  -- 5. cancelou com antecedência (3 dias): estorno pendente e aviso
+  -- 5. cancelou com antecedência (3 dias): estorno pendente (do líquido, 093) e aviso
   perform set_config('request.jwt.claim.sub', cli::text, false);
   update public.appointments set status = 'cancelado' where id = a1;
   select * into p from public.pagamentos where id = p.id;
-  if p.status <> 'estorno_pendente' or p.estorno_cents <> p.valor_cents then raise exception 'devia estornar: % %', p.status, p.estorno_cents; end if;
+  if p.status <> 'estorno_pendente' or p.estorno_cents <> p.liquido_cents then raise exception 'devia estornar o líquido: % % (líquido %)', p.status, p.estorno_cents, p.liquido_cents; end if;
   if not exists (select 1 from public.notifications where user_id = cli and kind = 'estorno_a_caminho') then raise exception 'sem aviso de estorno'; end if;
   if not exists (select 1 from public.pagamentos_para_cuidar(10) x where x.id = p.id) then raise exception 'não entrou na fila de cuidar'; end if;
   perform public.pagamento_cuidado(p.id, 'estornado');
@@ -129,6 +129,36 @@ begin
   if (select count(*) from public.pagamentos) <> (select count(*) from public.pagamentos where client_id = cli) then raise exception 'cliente viu pagamento alheio'; end if;
   reset role;
   raise notice '9 RLS (ok)';
+
+  -- 11. cliente cancelou com antecedência: devolve o líquido (093); a casa cancelou: devolve tudo
+  perform set_config('request.jwt.claim.sub', cli::text, false);
+  r := public.marcar_servicos(prof.id, array[svc.id], dia + 1, '10:00', null);
+  a3 := (r ->> 'appointment_id')::uuid;
+  perform set_config('request.jwt.claim.sub', '', false);
+  pg := public.pagamento_preparar(a3, cli);
+  perform public.confirmar_pagamento((pg ->> 'pagamento_id')::uuid, 'pay_11', (pg ->> 'valor_cents')::int - 199);
+  perform set_config('request.jwt.claim.sub', cli::text, false);
+  update public.appointments set status = 'cancelado' where id = a3;
+  select * into p from public.pagamentos where id = (pg ->> 'pagamento_id')::uuid;
+  if p.status <> 'estorno_pendente' or p.estorno_cents <> p.valor_cents - 199 then raise exception 'devia devolver o líquido: % de %', p.estorno_cents, p.valor_cents; end if;
+  raise notice '11 cliente cancelou: volta % de % (ok)', p.estorno_cents, p.valor_cents;
+
+  -- 12. a fila falha por falta de saldo: espaça, avisa a profissional na 2ª, a cliente na 3ª, e some da fila até a hora
+  perform set_config('request.jwt.claim.sub', '', false);
+  perform public.pagamento_cuidado(p.id, 'erro', 'Saldo insuficiente para estorno');
+  select * into p from public.pagamentos where id = p.id;
+  if p.tentativas_estorno <> 1 or p.proxima_tentativa_em is null then raise exception 'não espaçou'; end if;
+  if exists (select 1 from public.pagamentos_para_cuidar(50) x where x.id = p.id) then raise exception 'voltou para a fila antes da hora'; end if;
+  perform public.pagamento_cuidado(p.id, 'erro', 'Saldo insuficiente para estorno');
+  if not exists (select 1 from public.notifications where user_id = prof.user_id and kind = 'estorno_sem_saldo') then raise exception 'profissional não foi avisada do saldo'; end if;
+  perform public.pagamento_cuidado(p.id, 'erro', 'Saldo insuficiente para estorno');
+  if not exists (select 1 from public.notifications where user_id = cli and kind = 'estorno_atrasado') then raise exception 'cliente não foi avisada do atraso'; end if;
+  if (select count(*) from public.notifications where user_id = prof.user_id and kind = 'estorno_sem_saldo') <> 1 then raise exception 'avisou a profissional mais de uma vez em 24 h'; end if;
+  update public.pagamentos set proxima_tentativa_em = now() - interval '1 minute' where id = p.id;
+  if not exists (select 1 from public.pagamentos_para_cuidar(50) x where x.id = p.id) then raise exception 'não voltou para a fila na hora'; end if;
+  perform public.pagamento_cuidado(p.id, 'estornado');
+  if not exists (select 1 from public.notifications where user_id = cli and kind = 'estorno_a_caminho' and title = 'Devolução feita') then raise exception 'cliente não soube que saiu'; end if;
+  raise notice '12 fila com falta de saldo: espaça, avisa, some e volta (ok)';
 
   -- 10. a rotina geral devolve as contagens
   r := public.rodar_rotinas();

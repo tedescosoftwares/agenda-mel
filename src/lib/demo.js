@@ -172,7 +172,7 @@ const RPC = {
   capas_do_salao: () => [{ categoria_id: 'ct2', imagens: [PROMO_IMG('#FF2D7A', '#AA4CFF', ''), PROMO_IMG('#AA4CFF', '#FF7BAA', '')] }],
   escolher_preferida: () => null,
   destaques_para_mim: () => servicos.filter((s) => s.destaque && s.active).map((s) => ({ ...s, salon_id: SALAO, salao: 'Studio Mel', quem: vinculos.filter((v) => v.service_id === s.id).map((v) => ({ id: v.professional_id, name: profissionais.find((p) => p.id === v.professional_id)?.name ?? '' })) })),
-  pagamento_do_salao: () => ({ modo: 'opcional', sinal_pct: 50, estorno_horas: 24 }),
+  pagamento_do_salao: () => ({ modo: 'opcional', sinal_pct: 50, estorno_horas: 24, estorno_desconta_taxa: true }),
   pagamento_dos_saloes: ({ ids }) => (ids ?? []).map((id) => ({ salon_id: id, modo: 'opcional', sinal_pct: 50 })),
   pagina_do_salao: () => ({
     salao: { id: SALAO, nome: 'Studio Mel', pagamento: { modo: 'opcional', sinal_pct: 50, estorno_horas: 24 }, tipo: 'salao', descricao: 'Um cantinho no Gonzaga para você se cuidar com calma: café, música baixa e uma equipe que capricha em cada detalhe.', fotos: [PROMO_IMG('#FF7BAA', '#AA4CFF', ''), PROMO_IMG('#FFC2D8', '#FF2D7A', '')], logo_url: null, endereco: 'Rua das Flores, 120 · Gonzaga', cidade: 'Santos', telefone: '(13) 3333-0000', whatsapp: '(13) 99120-3410', instagram: 'studiomel' },

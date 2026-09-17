@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Wallet, ShieldCheck, Clock, BadgePercent, RefreshCw, ExternalLink, CircleCheck, CircleX, Hourglass } from 'lucide-react'
+import { Wallet, ShieldCheck, Clock, BadgePercent, RefreshCw, ExternalLink, CircleCheck, CircleX, Hourglass, Copy } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { MODOS, SINAIS, COMO_FUNCIONA, chamar, formatCents, textoSinal } from '../lib/pagamento'
@@ -24,9 +24,9 @@ export default function ReceberPeloApp({ salao, nomeSalao }) {
 
   const carregar = useCallback(async () => {
     const [{ data: s, error: es }, { data: c, error: ec }, { data: p }] = await Promise.all([
-      supabase.from('salons').select('pagamento_modo, sinal_pct, estorno_horas, name').eq('id', salao).maybeSingle(),
+      supabase.from('salons').select('pagamento_modo, sinal_pct, estorno_horas, estorno_desconta_taxa, name').eq('id', salao).maybeSingle(),
       supabase.from('contas_de_recebimento').select('*').eq('salon_id', salao).maybeSingle(),
-      supabase.from('pagamentos').select('id, valor_cents, total_cents, sinal_pct, status, pago_em, criado_em, appointment_id, appointments (service_name, date, start_time, profiles (full_name))').eq('salon_id', salao).order('criado_em', { ascending: false }).limit(30),
+      supabase.from('pagamentos').select('id, valor_cents, total_cents, sinal_pct, status, pago_em, criado_em, appointment_id, estorno_cents, tentativas_estorno, erro, appointments (service_name, date, start_time, profiles (full_name))').eq('salon_id', salao).order('criado_em', { ascending: false }).limit(30),
     ])
     setConfig(s ?? null)
     setConta(c ?? null)
@@ -40,7 +40,7 @@ export default function ReceberPeloApp({ salao, nomeSalao }) {
     setErro('')
     const novo = { ...config, ...patch }
     setConfig(novo)
-    const { error } = await supabase.from('salons').update({ pagamento_modo: novo.pagamento_modo, sinal_pct: novo.sinal_pct, estorno_horas: novo.estorno_horas }).eq('id', salao)
+    const { error } = await supabase.from('salons').update({ pagamento_modo: novo.pagamento_modo, sinal_pct: novo.sinal_pct, estorno_horas: novo.estorno_horas, estorno_desconta_taxa: novo.estorno_desconta_taxa }).eq('id', salao)
     if (error) setErro(error.message)
   }
 
@@ -126,7 +126,7 @@ export default function ReceberPeloApp({ salao, nomeSalao }) {
           </div>
           <p><strong>{conta.nome}</strong> · {conta.tipo_pessoa === 'juridica' ? 'CNPJ' : 'CPF'} {conta.documento}</p>
           {conta.status !== 'aprovada' && conta.status !== 'recusada' && <p className="muted">Você já pode receber. O saque para o banco libera quando a análise termina.</p>}
-          {conta.pix_pronto ? <p className="muted"><CircleCheck size={13} /> Chave Pix pronta: as clientes já conseguem pagar.</p> : <p className="muted"><Hourglass size={13} /> Chave Pix ainda não ativa. Toque em Atualizar; se demorar, o Asaas ativa em alguns minutos.</p>}
+          {conta.pix_pronto ? <p className="muted"><CircleCheck size={13} /> Chave Pix pronta: as clientes já conseguem pagar.{conta.pix_chave && <> Para repor saldo (quando precisar devolver), deposite por Pix na chave <code className="receber-chave">{conta.pix_chave}</code> <button type="button" className="btn-mini" onClick={() => navigator.clipboard?.writeText(conta.pix_chave)}><Copy size={11} /> copiar</button></>}</p> : <p className="muted"><Hourglass size={13} /> Chave Pix ainda não ativa. Toque em Atualizar; se demorar, o Asaas ativa em alguns minutos.</p>}
           {conta.status === 'recusada' && <p className="muted">O cadastro não foi aprovado{conta.situacao?.rejectReasons ? `: ${conta.situacao.rejectReasons}` : ''}. Fale com a gente pelo suporte.</p>}
           {conta.erro && <p className="muted">Último erro: {conta.erro}</p>}
           {pendentes.length > 0 && (
@@ -164,11 +164,18 @@ export default function ReceberPeloApp({ salao, nomeSalao }) {
             </div>
             <span className="campo-dica">Hoje: {textoSinal(config.sinal_pct)}. O resto ela acerta com você no atendimento.</span>
           </label>
-          <label className="receber-campo">Devolve tudo se cancelar com pelo menos
+          <label className="receber-campo">Quando a cliente cancela com antecedência
+            <div className="chips">
+              <button type="button" className={'chip' + (config.estorno_desconta_taxa !== false ? ' active' : '')} onClick={() => salvarConfig({ estorno_desconta_taxa: true })}>Devolve menos a taxa do PIX</button>
+              <button type="button" className={'chip' + (config.estorno_desconta_taxa === false ? ' active' : '')} onClick={() => salvarConfig({ estorno_desconta_taxa: false })}>Devolve tudo</button>
+            </div>
+            <span className="campo-dica">O provedor não devolve a taxa do PIX. "Menos a taxa" devolve o que entrou na sua conta e não exige saldo extra. "Tudo" é mais generoso, mas a taxa sai do seu bolso. Se você cancelar, devolve tudo sempre.</span>
+          </label>
+          <label className="receber-campo">Devolve se cancelar com pelo menos
             <div className="chips">
               {[6, 12, 24, 48].map((h) => <button key={h} type="button" className={'chip' + (config.estorno_horas === h ? ' active' : '')} onClick={() => salvarConfig({ estorno_horas: h })}>{h} h</button>)}
             </div>
-            <span className="campo-dica">Cancelou com menos que isso, o sinal fica com você. Se você cancelar, a cliente recebe tudo de volta.</span>
+            <span className="campo-dica">Cancelou com menos que isso, o sinal fica com você. A devolução sai da sua conta de recebimento: se não houver saldo (por exemplo, se você já sacou), o app avisa e ela sai assim que houver.</span>
           </label>
         </div>
       )}
@@ -187,7 +194,8 @@ export default function ReceberPeloApp({ salao, nomeSalao }) {
               </div>
               <div className="pag-valor">
                 <strong>{formatCents(p.valor_cents)}</strong>
-                <span className={`badge badge-pag-${p.status}`}>{ROTULO_PAG[p.status] ?? p.status}</span>
+                <span className={`badge badge-pag-${p.status}`}>{p.status === 'estorno_pendente' && p.tentativas_estorno >= 2 ? 'devolução parada' : ROTULO_PAG[p.status] ?? p.status}</span>
+                {p.status === 'estorno_pendente' && p.tentativas_estorno >= 2 && <span className="muted pag-erro">{p.erro?.includes('aldo') ? 'falta saldo na conta de recebimento' : p.erro}</span>}
               </div>
             </div>
           ))}

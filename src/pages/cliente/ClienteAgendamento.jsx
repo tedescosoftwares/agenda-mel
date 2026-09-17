@@ -46,7 +46,7 @@ export default function ClienteAgendamento() {
     if (error) setErro(error.message)
     setA(data ?? null)
     if (data) {
-      const { data: pgs } = await supabase.from('pagamentos').select('id, status, valor_cents, total_cents, sinal_pct, pago_em, estorno_cents, motivo_estorno').eq('appointment_id', data.id).order('criado_em', { ascending: false }).limit(1)
+      const { data: pgs } = await supabase.from('pagamentos').select('id, status, valor_cents, total_cents, sinal_pct, pago_em, estorno_cents, motivo_estorno, liquido_cents, tentativas_estorno').eq('appointment_id', data.id).order('criado_em', { ascending: false }).limit(1)
       setPagamento(pgs?.[0] ?? null)
       if (data.salon_id) supabase.rpc('pagamento_do_salao', { salao: data.salon_id }).then(({ data: r }) => setRegras(r ?? null))
       const { data: rv } = await supabase.from('reviews').select('id, nota').eq('appointment_id', data.id).maybeSingle()
@@ -80,7 +80,9 @@ export default function ClienteAgendamento() {
     const troca = Boolean(a.remarca_de) && a.status === 'pendente'
     const horas = regras?.estorno_horas ?? 24
     const devolve = a.pago_cents > 0 && (new Date(`${a.date}T${a.start_time}`) - Date.now()) >= horas * 3600e3
-    const textoPago = a.pago_cents > 0 ? (devolve ? ` Os ${formatCents(a.pago_cents)} pagos voltam para a sua conta em até 1 dia útil.` : ` Como faltam menos de ${horas} h, o sinal de ${formatCents(a.pago_cents)} fica com a profissional.`) : ''
+    const taxa = pagamento?.liquido_cents != null ? Math.max(0, pagamento.valor_cents - pagamento.liquido_cents) : 0
+    const volta = regras?.estorno_desconta_taxa === false ? a.pago_cents : Math.max(0, a.pago_cents - taxa)
+    const textoPago = a.pago_cents > 0 ? (devolve ? ` ${formatCents(volta)} voltam para a sua conta em até 1 dia útil${volta < a.pago_cents ? ` (a taxa do PIX, ${formatCents(taxa)}, não é devolvida)` : ''}.` : ` Como faltam menos de ${horas} h, o sinal de ${formatCents(a.pago_cents)} fica com a profissional.`) : ''
     if (!(await confirmar({ titulo: troca ? 'Desistir da troca?' : 'Cancelar este horário?', texto: troca ? 'Seu horário atual continua valendo.' : `${a.services?.name} em ${formatDataLonga(a.date)} às ${a.start_time.slice(0, 5)}.${textoPago}`, ok: troca ? 'Desistir' : 'Cancelar horário', cancelar: 'Manter', perigo: true }))) return
     const { error } = await supabase.from('appointments').update({ status: 'cancelado' }).eq('id', a.id)
     if (error) setErro(error.message); else carregar()
@@ -123,7 +125,7 @@ export default function ClienteAgendamento() {
           <Wallet size={18} />
           <span>
             {a.status === 'aguardando_pagamento' ? <><strong>Aguardando o PIX</strong><span className="muted">A vaga fica guardada por 15 minutos.</span></>
-              : pagamento?.status === 'estorno_pendente' || pagamento?.status === 'estornado' ? <><strong>{pagamento.status === 'estornado' ? 'Devolvido' : 'Devolução a caminho'}</strong><span className="muted">{formatCents(pagamento.estorno_cents ?? pagamento.valor_cents)} voltam para a sua conta.</span></>
+              : pagamento?.status === 'estorno_pendente' || pagamento?.status === 'estornado' ? <><strong>{pagamento.status === 'estornado' ? 'Devolvido' : pagamento.tentativas_estorno >= 3 ? 'Devolução atrasada' : 'Devolução a caminho'}</strong><span className="muted">{formatCents(pagamento.estorno_cents ?? pagamento.valor_cents)} {pagamento.status === 'estornado' ? 'voltaram' : 'voltam'} para a sua conta.{pagamento.status !== 'estornado' && pagamento.tentativas_estorno >= 3 ? ' Já avisamos a profissional.' : ''}</span></>
               : pagamento?.status === 'retido' ? <><strong>Sinal retido</strong><span className="muted">Cancelado em cima da hora: {formatCents(pagamento.valor_cents)} ficaram com a profissional.</span></>
               : a.pago_cents > 0 ? <><strong>{a.pago_cents < (a.price_cents ?? 0) ? `Sinal pago: ${formatCents(a.pago_cents)}` : `Pago pelo app: ${formatCents(a.pago_cents)}`}</strong>{a.pago_cents < (a.price_cents ?? 0) && <span className="muted">Faltam {formatCents(a.price_cents - a.pago_cents)}, no atendimento.</span>}</>
               : <><strong>Pagamento não concluído</strong><span className="muted">{pagamento?.status === 'expirado' ? 'A reserva venceu.' : 'Nenhum PIX confirmado.'}</span></>}

@@ -22,6 +22,14 @@ export default function ClienteSalao() {
   const [foto, setFoto] = useState(0)
   const faixa = useRef(null)
   const [aba, setAba] = useState('servicos')
+  const [descAberta, setDescAberta] = useState(false)   // a descrição longa começa fechada
+  const [descCortada, setDescCortada] = useState(false) // e o "continuar lendo" só aparece se o corte aconteceu de fato
+  const descRef = useRef(null)
+  useEffect(() => {
+    const el = descRef.current
+    if (!el || descAberta) return
+    setDescCortada(el.scrollHeight > el.clientHeight + 2)
+  }, [pg, descAberta])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -90,7 +98,15 @@ export default function ClienteSalao() {
         </div>
       </div>
 
-      {s.descricao && <div className="card svc-bloco salao-descricao"><Store size={16} /><p>{s.descricao}</p></div>}
+      {s.descricao && (
+        <div className={'card svc-bloco salao-descricao' + (descAberta ? ' aberta' : '')}>
+          <Store size={16} />
+          <div className="salao-descricao-texto">
+            <p ref={descRef}>{s.descricao}</p>
+            {(descCortada || descAberta) && <button type="button" className="link-ver" onClick={() => setDescAberta((v) => !v)}>{descAberta ? 'Mostrar menos' : 'Continuar lendo'}</button>}
+          </div>
+        </div>
+      )}
 
       {promos.length > 0 && (
         <section className="salao-secao">

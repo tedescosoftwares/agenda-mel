@@ -6252,3 +6252,25 @@ button.link-ver.pag-desistir { color: var(--texto-3); }
 .ag-dinheiro.retido svg { color: var(--carmim); }
 .ag-quem-cancelou { color: var(--carmim); font-weight: 600; }
 .ag-saiu { color: var(--texto-3); font-style: italic; }
+
+/* ---- descrição do salão: fechada em 3 linhas, abre no toque ---- */
+.salao-descricao { align-items: flex-start; }
+.salao-descricao-texto { display: flex; flex-direction: column; gap: 0.3rem; min-width: 0; }
+.salao-descricao-texto p { margin: 0; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.45; }
+.salao-descricao.aberta .salao-descricao-texto p { display: block; -webkit-line-clamp: unset; overflow: visible; }
+.salao-descricao-texto .link-ver { align-self: flex-start; font-size: 0.82rem; }
+
+/* ---- cartões de categoria: grade de dois, foto de verdade ou cartão limpo ---- */
+.cliente-shell .cat-vitrine { display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; }
+.cliente-shell .cat-card { border-radius: 16px; box-shadow: 0 2px 10px rgba(31, 32, 38, 0.06); border: 1px solid var(--fio); background: var(--branco); }
+.cliente-shell .cat-card:active { transform: scale(0.98); }
+.cliente-shell .cat-card.com-foto .cat-card-capa { aspect-ratio: 4 / 3; }
+.cliente-shell .cat-card.com-foto .cat-card-veu { padding: 1.2rem 0.75rem 0.65rem; background: linear-gradient(to top, rgba(20, 16, 24, 0.78), rgba(20, 16, 24, 0.12) 60%, transparent); }
+.cliente-shell .cat-card.com-foto .cat-card-veu strong { font-size: 1rem; text-shadow: none; }
+.cliente-shell .cat-card.com-foto .cat-card-veu span { font-size: 0.72rem; }
+.cat-card-limpo { display: flex; flex-direction: column; justify-content: space-between; aspect-ratio: 4 / 3; padding: 0.85rem 0.85rem 0.75rem; }
+.cat-card-icone { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; color: var(--cat-tom, var(--rosa)); background: color-mix(in srgb, var(--cat-tom, var(--rosa)) 11%, #fff); }
+.cat-card-limpo strong { font-size: 1rem; line-height: 1.2; color: var(--texto); margin-top: 0.6rem; }
+.cat-card-conta { display: inline-flex; align-items: center; gap: 0.15rem; font-size: 0.75rem; color: var(--texto-3); margin-top: 0.15rem; }
+.cat-card-conta svg { color: var(--cat-tom, var(--rosa)); }
+.cliente-shell .cat-vitrine > :not(.cat-card) { grid-column: 1 / -1; }

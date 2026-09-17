@@ -57,6 +57,7 @@
 --    089  
 --    090  
 --    091  
+--    092  
 --
 --  Se der erro, me mande a mensagem inteira: cada bloco abaixo está
 --  marcado com o nome do arquivo de origem.
@@ -12293,4 +12294,18 @@ $$;
 grant execute on function public.marcar_servicos(uuid, uuid[], date, time, text, boolean) to authenticated;
 
 insert into public.migracoes_aplicadas (arquivo) values ('091_delete_com_where.sql') on conflict (arquivo) do nothing;
+
+-- =============================================================
+-- >>> 092_chave_pix_da_subconta.sql
+-- =============================================================
+
+-- 092 · A chave Pix da subconta
+--
+-- O Asaas só gera QR para conta com chave Pix cadastrada. A Edge
+-- Function cria uma chave aleatória (EVP) na subconta assim que ela
+-- nasce, e a tela mostra se está pronta.
+
+alter table public.contas_de_recebimento add column if not exists pix_pronto boolean not null default false;
+
+insert into public.migracoes_aplicadas (arquivo) values ('092_chave_pix_da_subconta.sql') on conflict (arquivo) do nothing;
 

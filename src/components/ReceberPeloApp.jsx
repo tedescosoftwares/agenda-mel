@@ -126,6 +126,7 @@ export default function ReceberPeloApp({ salao, nomeSalao }) {
           </div>
           <p><strong>{conta.nome}</strong> · {conta.tipo_pessoa === 'juridica' ? 'CNPJ' : 'CPF'} {conta.documento}</p>
           {conta.status !== 'aprovada' && conta.status !== 'recusada' && <p className="muted">Você já pode receber. O saque para o banco libera quando a análise termina.</p>}
+          {conta.pix_pronto ? <p className="muted"><CircleCheck size={13} /> Chave Pix pronta: as clientes já conseguem pagar.</p> : <p className="muted"><Hourglass size={13} /> Chave Pix ainda não ativa. Toque em Atualizar; se demorar, o Asaas ativa em alguns minutos.</p>}
           {conta.status === 'recusada' && <p className="muted">O cadastro não foi aprovado{conta.situacao?.rejectReasons ? `: ${conta.situacao.rejectReasons}` : ''}. Fale com a gente pelo suporte.</p>}
           {conta.erro && <p className="muted">Último erro: {conta.erro}</p>}
           {pendentes.length > 0 && (

@@ -10,7 +10,7 @@
 // da conta-pai (MIMO_WALLET_ID / MIMO_TAXA_PCT).
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { garantirCliente, criarCobrancaPix, json, preflight, ErroAsaas } from '../_shared/asaas.ts'
+import { garantirCliente, criarCobrancaPix, garantirChavePix, json, preflight, ErroAsaas } from '../_shared/asaas.ts'
 
 const URL_SUPABASE = Deno.env.get('SUPABASE_URL') ?? ''
 const servico = createClient(URL_SUPABASE, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '', { auth: { persistSession: false } })
@@ -47,10 +47,19 @@ Deno.serve(async (req) => {
     }
     const hoje = new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10)   // dia local (UTC-3), o Asaas não aceita vencimento no passado
     const taxa = Number(Deno.env.get('MIMO_TAXA_PCT') ?? '0')
-    const cob = await criarCobrancaPix(String(chaveSub), {
-      customer, valorCents: prep.valor_cents, descricao: prep.descricao, ref: prep.pagamento_id, vencimento: hoje,
-      splitWallet: Deno.env.get('MIMO_WALLET_ID') ?? undefined, splitPct: taxa,
-    })
+    const pedido = { customer, valorCents: prep.valor_cents, descricao: prep.descricao, ref: prep.pagamento_id, vencimento: hoje, splitWallet: Deno.env.get('MIMO_WALLET_ID') ?? undefined, splitPct: taxa }
+    let cob
+    try {
+      cob = await criarCobrancaPix(String(chaveSub), pedido)
+    } catch (e) {
+      // subconta sem chave Pix: cria uma aleatória e tenta de novo uma vez
+      if (e instanceof ErroAsaas && /chave pix/i.test(e.message)) {
+        const pix = await garantirChavePix(String(chaveSub))
+        await servico.from('contas_de_recebimento').update({ pix_pronto: pix.ok, atualizado_em: new Date().toISOString() }).eq('salon_id', prep.salon_id)
+        if (!pix.ok) throw new ErroAsaas(409, 'a conta de recebimento ainda não tem chave Pix ativa' + (pix.status === 'AWAITING_ACTIVATION' ? ' (ativação em andamento, tente em instantes)' : pix.erro ? ': ' + pix.erro : ''))
+        cob = await criarCobrancaPix(String(chaveSub), pedido)
+      } else throw e
+    }
     const mimoCents = taxa > 0 && cob.netValue ? Math.round(cob.netValue * 100 * taxa / 100) : 0
     await servico.from('pagamentos').update({
       cobranca_id: cob.id, customer_id: customer, copia_cola: cob.copiaCola, link_url: cob.link,

@@ -9,7 +9,7 @@
 // que fica na tabela é o que a dona pode ver: ids, status, documentos.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { asaas, chavePai, corpoSubconta, situacaoDaSubconta, json, preflight, ErroAsaas, type DadosSubconta } from '../_shared/asaas.ts'
+import { asaas, chavePai, corpoSubconta, situacaoDaSubconta, garantirChavePix, json, preflight, ErroAsaas, type DadosSubconta } from '../_shared/asaas.ts'
 
 const URL_SUPABASE = Deno.env.get('SUPABASE_URL') ?? ''
 const servico = createClient(URL_SUPABASE, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '', { auth: { persistSession: false } })
@@ -71,6 +71,9 @@ Deno.serve(async (req) => {
       // a situação inicial (a lista de documentos pode demorar uns 15 s para existir)
       let situ = null
       if (chaveSub) { try { situ = await situacaoDaSubconta(chaveSub) } catch (_) { /* ainda não */ } }
+      // a chave Pix da subconta: sem ela não sai QR (pode falhar antes da aprovação; o "situacao" tenta de novo)
+      const pix = await garantirChavePix(chaveSub)
+      await servico.from('contas_de_recebimento').update({ pix_pronto: pix.ok, atualizado_em: new Date().toISOString() }).eq('salon_id', salao)
       if (situ) await servico.from('contas_de_recebimento').update({ status: situ.status, situacao: situ.situacao, documentos: situ.documentos, atualizado_em: new Date().toISOString() }).eq('salon_id', salao)
       return json({ ok: true, conta_id: criada.id, status: situ?.status ?? 'aguardando', documentos: situ?.documentos ?? [] })
     } catch (e) {
@@ -85,8 +88,9 @@ Deno.serve(async (req) => {
     if (!chaveSub) return json({ erro: 'este salão ainda não tem conta de recebimento' }, 404)
     try {
       const situ = await situacaoDaSubconta(String(chaveSub))
-      await servico.from('contas_de_recebimento').update({ status: situ.status, situacao: situ.situacao, documentos: situ.documentos, erro: null, atualizado_em: new Date().toISOString() }).eq('salon_id', salao)
-      return json({ ok: true, ...situ })
+      const pix = await garantirChavePix(String(chaveSub))
+      await servico.from('contas_de_recebimento').update({ status: situ.status, situacao: situ.situacao, documentos: situ.documentos, pix_pronto: pix.ok, erro: pix.ok ? null : ('Chave Pix: ' + (pix.erro ?? pix.status ?? 'pendente')), atualizado_em: new Date().toISOString() }).eq('salon_id', salao)
+      return json({ ok: true, ...situ, pix_pronto: pix.ok })
     } catch (e) {
       return json({ erro: e instanceof ErroAsaas ? e.message : String(e) }, 502)
     }

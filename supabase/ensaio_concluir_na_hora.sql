@@ -110,6 +110,19 @@ begin
   if exists (select 1 from public.destaques_para_mim() d where d.name = 'Destaque sem ninguem') then raise exception 'destaque sem ninguém apareceu'; end if;
   raise notice '8 destaques: 15 de 15, sem ninguém some, salão inativo some, equipe vê (ok)';
 
+  -- 9. saiu do salão: mesmo com agendamento antigo com a profissional, nada aparece (099)
+  perform set_config('request.jwt.claim.sub', cli::text, false);
+  insert into public.vinculos (client_id, salon_id, saiu_em) values (cli, prof.salon_id, now());
+  select count(*) into n from public.destaques_para_mim() d where d.salon_id = prof.salon_id;
+  if n <> 0 then raise exception 'saiu e ainda vê destaques: %', n; end if;
+  select count(*) into n from public.promocoes_visiveis_para(cli) pr where pr.salon_id = prof.salon_id;
+  if n <> 0 then raise exception 'saiu e ainda vê promoções: %', n; end if;
+  -- voltou: vê de novo
+  update public.vinculos set saiu_em = null where client_id = cli and salon_id = prof.salon_id;
+  select count(*) into n from public.destaques_para_mim() d where d.salon_id = prof.salon_id and d.name like 'Destaque %';
+  if n <> 15 then raise exception 'voltou e não vê: %', n; end if;
+  raise notice '9 quem saiu não vê; quem voltou vê (ok)';
+
   raise notice 'FIM DO ENSAIO — tudo certo';
 end $$;
 rollback;

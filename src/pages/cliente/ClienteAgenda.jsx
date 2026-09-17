@@ -32,6 +32,7 @@ export default function ClienteAgenda() {
   const [proximos, setProximos] = useState([])
   const [historico, setHistorico] = useState([])
   const [dinheiro, setDinheiro] = useState(new Map())   // appointment_id → pagamento (devolvido, crédito, retido…)
+  const [saiuDe, setSaiuDe] = useState(new Set())        // salões de que ela saiu: o histórico fica, com aviso
   const [notas, setNotas] = useState(new Map())
   const [vagas, setVagas] = useState([])
   const [avaliando, setAvaliando] = useState(null)
@@ -58,6 +59,9 @@ export default function ClienteAgenda() {
     const faltam = lista.filter((a) => a.remarca_de && !lista.some((o) => o.id === a.remarca_de)).map((a) => a.remarca_de)
     const extras = faltam.length ? (await supabase.from('appointments').select('id, date, start_time').in('id', faltam)).data ?? [] : []
     setProximos(lista.map((a) => ({ ...a, origem: a.remarca_de ? (lista.find((o) => o.id === a.remarca_de) ?? extras.find((o) => o.id === a.remarca_de) ?? null) : null })))
+    const { data: vs } = await supabase.from('vinculos').select('salon_id, saiu_em').eq('client_id', user.id)
+    const ativos = new Set((vs ?? []).filter((v) => !v.saiu_em).map((v) => v.salon_id))
+    setSaiuDe(new Set((vs ?? []).filter((v) => v.saiu_em && !ativos.has(v.salon_id)).map((v) => v.salon_id)))
     const historicoTodo = [...(hc.data ?? []), ...passouHoje, ...(hs.data ?? [])]
       .sort((a, b) => (b.date + b.start_time).localeCompare(a.date + a.start_time))
     setHistorico(historicoTodo)
@@ -147,7 +151,7 @@ export default function ClienteAgenda() {
               <h3 className="ag-secao">{mes} <span className="muted">· {itens.filter((a) => a.status === 'concluido').length} {itens.filter((a) => a.status === 'concluido').length === 1 ? 'atendimento' : 'atendimentos'}</span></h3>
               <div className="ag-lista">
                 {itens.map((a) => (
-                  <Cartao key={a.id} a={a} historico nota={notas.get(a.id)} pagamento={dinheiro.get(a.id)} onAbrir={() => navigate(`/cliente/agendamento/${a.id}`)}>
+                  <Cartao key={a.id} a={a} historico nota={notas.get(a.id)} pagamento={dinheiro.get(a.id)} saiu={saiuDe.has(a.salon_id)} onAbrir={() => navigate(`/cliente/agendamento/${a.id}`)}>
                     <div className="ag-acoes" onClick={(e) => e.stopPropagation()}>
                       {a.status === 'concluido' && !notas.has(a.id) && <button className="btn-mini btn-mini-rosa" onClick={() => setAvaliando(a)}><StarIcon /> Avaliar</button>}
                       {a.professionals && a.service_id && <Link className="btn-mini" to={`/cliente/profissional/${a.professionals.id}/servicos?servico=${a.service_id}`}>Marcar de novo</Link>}
@@ -228,7 +232,7 @@ function linhaDoDinheiro(p) {
   return null
 }
 
-function Cartao({ a, troca, historico = false, nota, pagamento, onAbrir, visita = 0, children }) {
+function Cartao({ a, troca, historico = false, nota, pagamento, saiu = false, onAbrir, visita = 0, children }) {
   const troca_ = ehPedidoDeTroca(a)
   const dinheiro = historico ? linhaDoDinheiro(pagamento) : null
   return (
@@ -251,6 +255,7 @@ function Cartao({ a, troca, historico = false, nota, pagamento, onAbrir, visita 
         </span>
         {historico && a.status === 'cancelado' && <span className="ag-nota ag-quem-cancelou">{quemCancelou(a)}</span>}
         {dinheiro && <span className={'ag-nota ag-dinheiro ' + pagamento.status}><Wallet size={13} /> {dinheiro}</span>}
+        {saiu && <span className="ag-nota ag-saiu">Você não segue mais a agenda {a.salons?.tipo === 'salao' ? 'deste salão' : 'desta profissional'}. O histórico fica guardado.</span>}
         {historico && a.status === 'concluido' && nota && (
           <span className="ag-estrelas" aria-label={`Você deu ${nota} estrelas`}>{[1, 2, 3, 4, 5].map((n) => <Star key={n} size={13} className={n <= nota ? 'cheia' : ''} />)} <span className="muted">sua avaliação</span></span>
         )}

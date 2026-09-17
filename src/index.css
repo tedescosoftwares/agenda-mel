@@ -6251,3 +6251,4 @@ button.link-ver.pag-desistir { color: var(--texto-3); }
 .ag-dinheiro.estorno_pendente svg { color: #3949ab; }
 .ag-dinheiro.retido svg { color: var(--carmim); }
 .ag-quem-cancelou { color: var(--carmim); font-weight: 600; }
+.ag-saiu { color: var(--texto-3); font-style: italic; }

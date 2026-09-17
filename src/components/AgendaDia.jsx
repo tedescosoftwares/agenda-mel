@@ -43,6 +43,14 @@ export default function AgendaDia({
   const [adiantando, setAdiantando] = useState(null)
   const [toleranciaMin, setToleranciaMin] = useState(15)
   const [encaixando, setEncaixando] = useState(false)
+  // o relógio da tela: "Concluir" e "Não veio" dependem da hora, e a
+  // profissional deixa a agenda aberta — sem isto o botão só apareceria
+  // depois de sair e voltar
+  const [agora, setAgora] = useState(() => Date.now())
+  useEffect(() => {
+    const t = setInterval(() => setAgora(Date.now()), 60000)
+    return () => clearInterval(t)
+  }, [])
 
   const fetchAgenda = useCallback(async () => {
     let query = supabase
@@ -276,14 +284,16 @@ export default function AgendaDia({
                     )}
                     {a.status === 'confirmado' && (
                       <>
-                        <button
-                          className="btn-mini btn-mini-ok"
-                          disabled={mudandoId === a.id}
-                          onClick={() => concluir(a)}
-                        >
-                          Concluir
-                        </button>
-                        {passouDaTolerancia(a, toleranciaMin) && (
+                        {jaComecou(a, agora) && (
+                          <button
+                            className="btn-mini btn-mini-ok"
+                            disabled={mudandoId === a.id}
+                            onClick={() => concluir(a)}
+                          >
+                            Concluir
+                          </button>
+                        )}
+                        {passouDaTolerancia(a, toleranciaMin, agora) && (
                           <button
                             className="btn-mini btn-mini-nao"
                             disabled={mudandoId === a.id}
@@ -378,10 +388,20 @@ function podeAdiantar(a) {
   return a.status === 'pendente' || a.status === 'confirmado'
 }
 
+// o horário marcado, no fuso do aparelho (date + start_time, sem Z)
+function inicioDe(a) {
+  return new Date(`${a.date}T${a.start_time}`).getTime()
+}
+
+// "Concluir" só depois que o horário começou: antes disso um toque
+// errado fechava um atendimento que nem aconteceu (o banco também recusa)
+function jaComecou(a, agora) {
+  return agora >= inicioDe(a)
+}
+
 // "Não veio" só aparece depois do horário marcado + tolerância
-function passouDaTolerancia(a, toleranciaMin) {
-  const marcado = new Date(`${a.date}T${a.start_time}`)
-  return Date.now() > marcado.getTime() + toleranciaMin * 60000
+function passouDaTolerancia(a, toleranciaMin, agora) {
+  return agora > inicioDe(a) + toleranciaMin * 60000
 }
 
 function convitePendente(a) {

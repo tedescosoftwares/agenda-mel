@@ -39,12 +39,12 @@ export default function Indicacao() {
 
   return (
     <ClienteShell titulo="Indique e ganhe" voltar="/cliente/perfil">
-      {loading ? <p className="muted">Carregando…</p> : (
+      {loading ? <p className="carregando">Carregando…</p> : (
         <>
           <div className="ind-topo">
             <span className="ind-ilustra" aria-hidden="true"><Gift size={52} strokeWidth={1.4} /></span>
-            <h2>Indique e ganhe</h2>
-            <p className="muted">Convide amigas e ganhe créditos. Cada amiga que agendar ganha {resumo && formatarCents(resumo.premio_indicada_cents)}, e você ganha {resumo && formatarCents(resumo.premio_indicou_cents)}.</p>
+            <h2>Convide amigas, ganhe créditos</h2>
+            <p className="muted">Cada amiga que agendar ganha {resumo && formatarCents(resumo.premio_indicada_cents)}, e você ganha {resumo && formatarCents(resumo.premio_indicou_cents)}.</p>
           </div>
 
           {resumo && (
@@ -54,8 +54,9 @@ export default function Indicacao() {
                 <strong>{resumo.codigo}</strong>
                 <button className="ind-copiar" onClick={copiar} aria-label="Copiar código"><CopiarIcon /></button>
               </div>
-              {copiado && <span className="muted ind-copiado">Copiado!</span>}
               <button className="btn btn-primary btn-block" onClick={compartilhar}><CompartilharIcon /> Compartilhar</button>
+              {/* fica embaixo do botão, posicionado pelo CSS: o card não muda de altura */}
+              <span className={'muted ind-copiado' + (copiado ? '' : ' oculto')}>Copiado!</span>
             </div>
           )}
 
@@ -67,7 +68,7 @@ export default function Indicacao() {
           {extrato.length > 0 && (
             <>
               <h3 className="secao-titulo">Extrato</h3>
-              <div className="cliente-list">
+              <div className="cliente-list ind-extrato">
                 {extrato.map((t) => (
                   <div key={t.id} className="card fila-row">
                     <span className="cliente-info">

@@ -98,7 +98,7 @@ export default function ClienteAgenda() {
       ))}
 
       {loading ? (
-        <p className="muted">Carregando…</p>
+        <p className="carregando">Carregando…</p>
       ) : aba === 'proximos' ? (
         proximos.length === 0 ? (
           <div className="card ag-vazio">
@@ -167,7 +167,7 @@ function Destaque({ a, troca, onCancelar }) {
   return (
     <div className={'card ag-destaque ' + a.status} role="link" tabIndex={0} onClick={() => navigate(`/cliente/agendamento/${a.id}`)} onKeyDown={(e) => { if (e.key === 'Enter') navigate(`/cliente/agendamento/${a.id}`) }}>
       <div className="ag-destaque-topo">
-        <span className="ag-destaque-rotulo">{a.status === 'pendente' ? 'Aguardando confirmação' : 'Seu próximo horário'}</span>
+        <span>{a.status === 'pendente' ? 'Aguardando confirmação' : 'Seu próximo horário'}</span>
         <span className="ag-destaque-quando">{emQuanto(a)}</span>
       </div>
       <div className="ag-destaque-corpo">

@@ -99,7 +99,7 @@ export default function ClienteAgendamento() {
     if (error) setErro(error.message); else carregar()
   }
 
-  if (loading) return <ClienteShell titulo="Agendamento" voltar="/cliente/meus-agendamentos"><p className="muted">Carregando…</p></ClienteShell>
+  if (loading) return <ClienteShell titulo="Agendamento" voltar="/cliente/meus-agendamentos"><p className="carregando">Carregando…</p></ClienteShell>
   if (!a) return <ClienteShell titulo="Agendamento" voltar="/cliente/meus-agendamentos"><div className="card empty-state"><p>Não encontramos esse agendamento.</p>{erro && <p className="muted">{erro}</p>}</div></ClienteShell>
 
   const troca = Boolean(a.remarca_de) && a.status === 'pendente'
@@ -199,7 +199,7 @@ export default function ClienteAgendamento() {
           <Link className={'btn btn-block ' + (regras && regras.modo !== 'nao' && a.pago_cents === 0 ? 'btn-ghost' : 'btn-primary')} to={`/cliente/agendamento/data?prof=${a.professional_id}&servico=${a.service_id}&remarcar=${a.id}`}><Repeat size={16} /> Remarcar</Link>
         )}
         {podeMexer && <button className="btn btn-ghost btn-block" onClick={cancelar}>{troca ? 'Desistir da troca' : vivas.length ? 'Cancelar só esta parte' : 'Cancelar horário'}</button>}
-        {podeMexer && !troca && vivas.length > 0 && <button className="btn btn-ghost btn-block" onClick={cancelarVisita}>Cancelar a visita inteira</button>}
+        {podeMexer && !troca && vivas.length > 0 && <button className="btn btn-ghost btn-block perigo" onClick={cancelarVisita}>Cancelar a visita inteira</button>}
         {podeAvaliar && avaliada === false && <button type="button" className="btn btn-primary btn-block" onClick={() => setAvaliando(true)}><Star size={16} /> Avaliar como foi</button>}
         {!podeMexer && a.professionals && a.service_id && (
           <Link className={'btn btn-block ' + (podeAvaliar && avaliada === false ? 'btn-ghost' : 'btn-primary')} to={`/cliente/profissional/${a.professionals.id}/servicos?servico=${a.service_id}`}>Marcar de novo</Link>

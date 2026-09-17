@@ -10,12 +10,31 @@ import { Sparkles, Clock, Tag, Users, Plus, Check, ChevronRight, BadgePercent } 
 // A página de um serviço (2.25): fotos, descrição, preço (com o desconto
 // da promoção que ela enxerga), duração, quem faz e o que costuma ir
 // junto. Chega com ?prof=<id> quando ela já está no fluxo de uma
-// profissional, e ?sel=<ids> com o que já tinha escolhido.
+// profissional, ?sel=<ids> com o que já tinha escolhido e ?de=<origem>
+// dizendo de onde veio — é isso que decide o "voltar".
+
+// De onde ela veio → para onde o voltar leva. Sem `de`, vale a regra
+// antiga: com profissional, a lista de serviços dela; senão, a Home.
+//   home                      → /cliente/home
+//   salao:<id>                → página do salão
+//   categoria:<salao>:<cat>   → categoria do salão
+//   perfil:<prof>             → perfil da profissional
+function rotaDeOrigem(de, profId, sel = []) {
+  if (de === 'home') return '/cliente/home'
+  const [tipo, a, b] = (de || '').split(':')
+  if (tipo === 'salao' && a) return `/cliente/salao/${a}`
+  if (tipo === 'categoria' && a && b) return `/cliente/salao/${a}/categoria/${b}`
+  if (tipo === 'perfil' && a) return `/cliente/profissional/${a}`
+  if (profId) return `/cliente/profissional/${profId}/servicos${sel.length ? `?servico=${sel.join(',')}` : ''}`
+  return '/cliente/home'
+}
+
 export default function ClienteServico() {
   const { id } = useParams()
   const [q] = useSearchParams()
   const navigate = useNavigate()
   const profId = q.get('prof') || ''
+  const de = q.get('de') || ''
   const sel = (q.get('sel') || '').split(',').filter(Boolean)
   const cats = useCategorias()
   const [s, setS] = useState(null)
@@ -48,8 +67,8 @@ export default function ClienteServico() {
     return () => { vivo = false }
   }, [id])
 
-  const voltar = profId ? `/cliente/profissional/${profId}/servicos${sel.length ? `?servico=${sel.join(',')}` : ''}` : '/cliente/home'
-  if (loading) return <ClienteShell titulo="Serviço" voltar={voltar}><p className="muted">Carregando…</p></ClienteShell>
+  const voltar = rotaDeOrigem(de, profId, sel)
+  if (loading) return <ClienteShell titulo="Serviço" voltar={voltar}><p className="carregando">Carregando…</p></ClienteShell>
   if (!s) return <ClienteShell titulo="Serviço" voltar={voltar}><div className="card empty-state"><p>Não encontramos esse serviço.</p></div></ClienteShell>
 
   const jaEscolhido = sel.includes(s.id)
@@ -58,10 +77,12 @@ export default function ClienteServico() {
   const prof = profId || (quem.length === 1 ? quem[0].id : '')
   const fotos = s.images ?? []
   const precoPor = desconto ? desconto.preco_com_desconto_cents / 100 : null
+  // a origem segue junto para o próximo serviço e para o fluxo de marcar
+  const comOrigem = (obj) => new URLSearchParams({ ...obj, ...(de ? { de } : {}) })
 
   return (
     <ClienteShell titulo={s.name} voltar={voltar}>
-      <div className="svc-galeria">
+      <div className={'svc-galeria' + (fotos.length ? '' : ' sem-foto')}>
         {fotos.length ? <img src={fotos[foto]} alt={s.name} /> : <span className="svc-sem-foto"><Sparkles size={42} /></span>}
         {desconto && <span className="svc-selo"><BadgePercent size={14} /> -{desconto.desconto_pct}%</span>}
         {fotos.length > 1 && (
@@ -104,7 +125,7 @@ export default function ClienteServico() {
           <h3 className="secao-titulo">Costuma ir junto</h3>
           <div className="cliente-list">
             {juntos.map((x) => (
-              <Link key={x.id} to={`/cliente/servico/${x.id}?${new URLSearchParams({ ...(prof ? { prof } : {}), sel: escolha.join(',') })}`} className="card servico-linha">
+              <Link key={x.id} to={`/cliente/servico/${x.id}?${comOrigem({ ...(prof ? { prof } : {}), sel: escolha.join(',') })}`} className="card servico-linha">
                 <span className="servico-linha-foto" aria-hidden="true">{x.images?.[0] ? <img src={x.images[0]} alt="" /> : <Sparkles />}</span>
                 <span className="cliente-info"><span className="cliente-nome"><span className="nome-txt">{x.name}</span></span><span className="muted cliente-meta">{formatPreco(x.price)} · {formatDuracao(x.duration_minutes)}</span></span>
                 <ChevronRight size={18} className="agdt-seta" />
@@ -114,23 +135,25 @@ export default function ClienteServico() {
         </section>
       )}
 
-      <div className="svc-espaco" aria-hidden="true" />
-
-      <div className="rodape-fixo rodape-servicos">
-        {sel.length > 0 && !jaEscolhido && <p className="muted svc-rodape-nota">Entra junto com {sel.length === 1 ? 'o que você já escolheu' : `os ${sel.length} que você já escolheu`}.</p>}
-        {prof ? (
-          <>
-            <button className="btn btn-primary btn-block" onClick={() => navigate(`/cliente/agendamento/data?prof=${prof}&servico=${escolha.join(',')}`)}>
+      {/* o rodapé fixo só existe quando há com quem marcar; sem ninguém, a
+          nota vai no fluxo, em cartão, em vez de flutuar no pé da tela */}
+      {prof ? (
+        <>
+          <div className="svc-espaco" aria-hidden="true" />
+          <div className="rodape-fixo rodape-servicos">
+            {sel.length > 0 && !jaEscolhido && <p className="muted svc-rodape-nota">Entra junto com {sel.length === 1 ? 'o que você já escolheu' : `os ${sel.length} que você já escolheu`}.</p>}
+            <button className="btn btn-primary btn-block" onClick={() => navigate(`/cliente/agendamento/data?${comOrigem({ prof, servico: escolha.join(',') })}`)}>
               {jaEscolhido ? <><Check size={16} /> Escolher data</> : sel.length ? <><Plus size={16} /> Adicionar e escolher data</> : 'Escolher data'}
             </button>
             <Link to={`/cliente/profissional/${prof}/servicos?servico=${escolha.join(',')}`} className="btn btn-ghost btn-block">{jaEscolhido ? 'Ver outros serviços' : 'Adicionar e ver outros serviços'}</Link>
-          </>
-        ) : quem.length > 1 ? (
-          <p className="muted svc-rodape-nota">Escolha acima com quem quer marcar.</p>
-        ) : (
-          <p className="muted svc-rodape-nota">Ninguém atendendo com este serviço agora.</p>
-        )}
-      </div>
+          </div>
+        </>
+      ) : (
+        <div className="card empty-state">
+          <p>{quem.length > 1 ? 'Escolha acima com quem quer marcar.' : 'Ninguém atendendo com este serviço agora.'}</p>
+          {quem.length > 1 && <p className="muted">Toque numa das profissionais para ver o horário dela.</p>}
+        </div>
+      )}
     </ClienteShell>
   )
 }

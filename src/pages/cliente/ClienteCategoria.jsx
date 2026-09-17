@@ -61,7 +61,7 @@ export default function ClienteCategoria() {
   }
 
   const voltar = `/cliente/salao/${id}`
-  if (!pg) return <ClienteShell titulo="Categoria" voltar={voltar}><p className="muted">Carregando…</p></ClienteShell>
+  if (!pg) return <ClienteShell titulo="Categoria" voltar={voltar}><p className="carregando">Carregando…</p></ClienteShell>
   if (!categoria) return <ClienteShell titulo="Categoria" voltar={voltar}><div className="card empty-state"><p>Categoria não encontrada.</p></div></ClienteShell>
 
   return (
@@ -87,21 +87,21 @@ export default function ClienteCategoria() {
             ))}
           </div>
           {preferida ? (
-            <p className="muted catpg-pref"><Star size={12} /> Sua preferida é {preferida.nome.split(' ')[0]}: o toque no serviço já vai para ela.{filtro && filtro !== preferida.id && <> <button type="button" className="link-ver" onClick={() => marcarPreferida(filtro)}>Tornar {quemFaz.find((p) => p.id === filtro)?.nome.split(' ')[0]} a preferida</button></>}</p>
+            <p className="muted catpg-pref"><Star size={12} /> Sua preferida é {preferida.nome.split(' ')[0]}: o toque já vai para ela.{filtro && filtro !== preferida.id && <> <button type="button" className="link-ver" onClick={() => marcarPreferida(filtro)}>Tornar {quemFaz.find((p) => p.id === filtro)?.nome.split(' ')[0]} a preferida</button></>}</p>
           ) : filtro ? (
             <p className="muted catpg-pref"><button type="button" className="link-ver" onClick={() => marcarPreferida(filtro)}><Star size={12} /> Marcar {quemFaz.find((p) => p.id === filtro)?.nome.split(' ')[0]} como minha preferida neste salão</button></p>
           ) : null}
         </div>
       )}
 
-      <div className="cliente-list catpg-lista">
+      <div className="cliente-list">
         {visiveis.length === 0 && <div className="card empty-state"><p>Nada nesta categoria{filtro ? ' com ela' : ''}.</p></div>}
         {visiveis.map((sv) => {
           const prof = profPara(sv)
           const quem = sv.quem ?? []
           const d = descontos[sv.id]
           return (
-            <Link key={sv.id} to={`/cliente/servico/${sv.id}${prof ? `?prof=${prof}` : ''}`} className="card servico-linha">
+            <Link key={sv.id} to={`/cliente/servico/${sv.id}?${new URLSearchParams({ ...(prof ? { prof } : {}), de: `categoria:${id}:${cat}` })}`} className="card servico-linha">
               <span className="servico-linha-foto" aria-hidden="true">{sv.images?.[0] ? <img src={sv.images[0]} alt="" /> : <Sparkles />}</span>
               <span className="cliente-info">
                 <span className="cliente-nome"><span className="nome-txt">{sv.name}</span>{sv.is_combo && <span className="badge badge-combo">combo</span>}{d && <span className="badge badge-promo"><BadgePercent size={10} /> -{d.desconto_pct}%</span>}</span>
@@ -109,7 +109,8 @@ export default function ClienteCategoria() {
                 {quem.length > 0 && (
                   <span className="catpg-quem-linha">
                     <span className="home-salao-avatares">{quem.slice(0, 4).map((q) => q.foto ? <img key={q.id} src={q.foto} alt="" /> : <span key={q.id}>{q.nome.charAt(0)}</span>)}</span>
-                    <span className="muted">{quem.length === 1 ? `com ${quem[0].nome.split(' ')[0]}` : prof ? `com ${quem.find((q) => q.id === prof)?.nome.split(' ')[0]}${preferida?.id === prof ? ' (sua preferida)' : ''} · ${quem.length} fazem` : `${quem.length} profissionais fazem`}</span>
+                    {/* curto de propósito: fica ao lado dos avatares numa linha só */}
+                    <span className="muted">{quem.length === 1 ? `com ${quem[0].nome.split(' ')[0]}` : prof ? `com ${quem.find((q) => q.id === prof)?.nome.split(' ')[0]}${preferida?.id === prof ? ' ★' : ''} · +${quem.length - 1}` : `${quem.length} profissionais`}</span>
                   </span>
                 )}
               </span>

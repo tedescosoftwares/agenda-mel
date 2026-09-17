@@ -125,7 +125,8 @@ export default function ClientePagamento() {
   const resumo = a && (
     <div className="card resumo-pedido pag-resumo">
       <div className="resumo-linha"><span className="muted">Com</span><strong>{a.professionals?.name}{a.salons?.name && a.salons.name !== a.professionals?.name ? ` · ${a.salons.name}` : ''}</strong></div>
-      <div className="resumo-linha"><span className="muted">Quando</span><strong>{formatDataLonga(a.date)} às {a.start_time?.slice(0, 5)}</strong></div>
+      <div className="resumo-linha"><span className="muted">Data</span><strong>{formatDataLonga(a.date)}</strong></div>
+      <div className="resumo-linha"><span className="muted">Horário</span><strong>{a.start_time?.slice(0, 5)}</strong></div>
       {itens.length > 0 ? itens.map((x) => (
         <div key={x.id} className="resumo-linha pag-item"><span>{x.name}</span><span>{x.preco_cheio_cents > x.price_cents ? <><s className="muted">{formatCents(x.preco_cheio_cents)}</s> </> : null}{formatCents(x.price_cents)}</span></div>
       )) : (
@@ -143,7 +144,7 @@ export default function ClientePagamento() {
 
       {erro && <div className="alert alert-error">{erro}</div>}
 
-      {estado === 'carregando' && <p className="muted">Carregando…</p>}
+      {estado === 'carregando' && <p className="carregando">Carregando…</p>}
 
       {estado === 'resumo' && a && (
         <div className="card pag-termos">
@@ -157,7 +158,7 @@ export default function ClientePagamento() {
           </ul>
           <label className="pag-escolha-check">
             <input type="checkbox" checked={aceite} onChange={(e) => setAceite(e.target.checked)} />
-            <span><strong>Li e aceito as condições</strong><span className="muted">de pagamento, devolução e crédito descritas acima.</span></span>
+            <span><strong>Li e aceito as condições</strong> <span className="muted">de pagamento, devolução e crédito descritas acima.</span></span>
           </label>
           <button type="button" className="btn btn-primary btn-block" disabled={!aceite} onClick={gerar}>Gerar o PIX de {formatCents(agora)}</button>
           <button type="button" className="link-ver pag-desistir" onClick={desistir}>Desistir do horário</button>
@@ -202,7 +203,8 @@ export default function ClientePagamento() {
             <div className="resumo-linha"><span className="muted">Pago em</span><strong>{pago.pago_em ? new Date(pago.pago_em).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}</strong></div>
             {a.salons?.name && a.salons.name !== a.professionals?.name && <div className="resumo-linha"><span className="muted">Para</span><strong>{a.salons.name}</strong></div>}
             <div className="resumo-linha"><span className="muted">Com</span><strong>{a.professionals?.name}</strong></div>
-            <div className="resumo-linha"><span className="muted">Quando</span><strong>{formatDataLonga(a.date)} às {a.start_time?.slice(0, 5)}</strong></div>
+            <div className="resumo-linha"><span className="muted">Data</span><strong>{formatDataLonga(a.date)}</strong></div>
+            <div className="resumo-linha"><span className="muted">Horário</span><strong>{a.start_time?.slice(0, 5)}</strong></div>
             {itens.length > 0 ? itens.map((x) => (
               <div key={x.id} className="resumo-linha pag-item"><span>{x.name}</span><span>{formatCents(x.price_cents)}</span></div>
             )) : (

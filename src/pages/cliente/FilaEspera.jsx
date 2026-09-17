@@ -39,7 +39,7 @@ export default function FilaEspera() {
   return (
     <ClienteShell titulo="Fila de espera" voltar="/cliente/meus-agendamentos">
       {loading ? (
-        <p className="muted">Carregando…</p>
+        <p className="carregando">Carregando…</p>
       ) : entradas.length === 0 ? (
         <div className="card empty-state">
           <p>Você não está em nenhuma fila.</p>
@@ -67,7 +67,7 @@ export default function FilaEspera() {
                 <p className="muted fila-previsao">Entre {e.window_start.slice(0, 5)} e {e.window_end.slice(0, 5)}, até {formatDataCurta(e.date_to)}</p>
               )}
               <Link to="/cliente/meus-agendamentos" className="btn btn-primary btn-block">Ver meus agendamentos</Link>
-              <button className="btn-link-cancelar" onClick={() => sair(e)}>Sair da fila</button>
+              <button className="link-ver discreto" onClick={() => sair(e)}>Sair da fila</button>
             </div>
           )
         })

@@ -78,7 +78,7 @@ export default function ClienteProfissionais() {
       </div>
 
       {loading ? (
-        <p className="muted">Carregando…</p>
+        <p className="carregando">Carregando…</p>
       ) : lista.length === 0 ? (
         <div className="card empty-state"><p>Ninguém por aqui com esse filtro.</p></div>
       ) : (

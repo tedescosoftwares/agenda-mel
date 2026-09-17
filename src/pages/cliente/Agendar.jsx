@@ -32,6 +32,9 @@ function useEscolhas() {
     // outras partes da visita, com outras profissionais do salão:
     // servico_profissional_hora, separadas por vírgula (081)
     extra: q.get('extra') || '',
+    // de onde ela veio (home / salão / categoria), para o voltar da tela
+    // de data devolver à página do serviço e ela, por sua vez, à origem
+    de: q.get('de') || '',
   }
 }
 
@@ -62,6 +65,14 @@ function useOrigem(id) {
     supabase.from('appointments').select('id, date, start_time, end_time, status, service_id, professional_id').eq('id', id).maybeSingle().then(({ data }) => setOrigem(data))
   }, [id])
   return origem
+}
+
+// voltar da tela de data: se veio pela página do serviço (?de=), volta UM
+// passo para ela (que sabe voltar para a Home/salão/categoria); senão, a
+// lista de serviços da profissional, como sempre foi
+function voltarDaData(esc) {
+  if (esc.de) return comQuery(`/cliente/servico/${esc.servico.split(',').pop()}`, { prof: esc.prof, de: esc.de, sel: esc.servico })
+  return comQuery(`/cliente/profissional/${esc.prof}/servicos`, { servico: esc.servico })
 }
 
 function comQuery(rota, obj) {
@@ -175,7 +186,7 @@ export function AgendarServicos() {
   return (
     <ClienteShell titulo="Serviços" voltar={`/cliente/profissional/${id}`}>
       <Trilha passo={1} />
-      {prof && <p className="muted" style={{ marginTop: 0 }}>Com {prof.name}.</p>}
+      {prof && <p className="agendar-contexto">Com {prof.name}.</p>}
       <p className="dica-mais"><Plus size={14} /> Toque no serviço para ver os detalhes, ou no <strong>+</strong> para adicionar direto. Vários entram no mesmo horário.</p>
 
       {muitos && (
@@ -190,7 +201,7 @@ export function AgendarServicos() {
         </>
       )}
 
-      {visiveis.length === 0 && servicos.length > 0 && <p className="muted">Nada com esse nome.</p>}
+      {visiveis.length === 0 && servicos.length > 0 && <div className="card empty-state"><p className="muted">Nada com esse nome.</p></div>}
       {visiveis.map((g) => (
       <section key={g.id || 'outros'} className="cat-grupo">
         {grupos.length > 1 && <h3 className="cat-titulo">{g.nome}</h3>}
@@ -212,8 +223,8 @@ export function AgendarServicos() {
               <span className="cliente-info">
                 <span className="cliente-nome"><span className="nome-txt">{s.name}</span>{descontos[s.id] && <span className="badge badge-promo">-{descontos[s.id].desconto_pct}%</span>}</span>
                 <span className="muted cliente-meta">{descontos[s.id] ? <><strong className="preco-por">{formatPreco(precoDe(s))}</strong> <s>{formatPreco(s.price)}</s></> : formatPreco(s.price)} · {labelDuracao(s)}</span>
-                {s.description && <span className="muted cliente-meta">{s.description}</span>}
-                <span className="link-ver servico-ver">Ver detalhes</span>
+                {/* até duas linhas; a dica lá em cima já diz que o cartão abre os detalhes */}
+                {s.description && <span className="muted servico-desc">{s.description}</span>}
               </span>
               <button
                 type="button"
@@ -221,7 +232,7 @@ export function AgendarServicos() {
                 onClick={(e) => { e.stopPropagation(); alternar(s.id) }}
                 aria-pressed={marcado}
                 aria-label={marcado ? `Tirar ${s.name}` : `Adicionar ${s.name}`}
-              >{marcado ? <Check size={14} /> : <Plus size={14} />}</button>
+              >{marcado ? <Check size={16} /> : <Plus size={16} />}</button>
             </div>
           )
         })}
@@ -272,15 +283,15 @@ export function AgendarData() {
   const seguir = (iso) => navigate(comQuery('/cliente/agendamento/hora', { ...esc, data: iso }))
 
   return (
-    <ClienteShell titulo={esc.remarcar ? 'Nova data' : 'Escolher data'} voltar={esc.remarcar ? '/cliente/meus-agendamentos' : comQuery(`/cliente/profissional/${esc.prof}/servicos`, { servico: esc.servico })}>
+    <ClienteShell titulo={esc.remarcar ? 'Nova data' : 'Escolher data'} voltar={esc.remarcar ? '/cliente/meus-agendamentos' : voltarDaData(esc)}>
       <Trilha passo={2} remarcar={esc.remarcar} />
-      {prof && servico && <p className="muted" style={{ marginTop: 0 }}>{esc.remarcar ? 'Remarcando ' : ''}{servico.name} com {prof.name}</p>}
+      {prof && servico && <p className="agendar-contexto">{esc.remarcar ? 'Remarcando ' : ''}{servico.name} com {prof.name}</p>}
 
       <CalendarioMes valor={data} diaAberto={horas.length ? diaAberto : undefined} onEscolher={(iso) => { setData(iso); seguir(iso) }} />
 
       {sugeridos.length > 0 && (
         <>
-          <p className="muted rotulo-solto">Datas disponíveis</p>
+          <h3 className="secao-titulo">Datas disponíveis</h3>
           <div className="filtro-chips">
             {sugeridos.map((d) => (
               <button key={d.dia} className={data === d.dia ? 'chip active' : 'chip'} onClick={() => seguir(d.dia)}>
@@ -311,11 +322,12 @@ export function AgendarHora() {
   return (
     <ClienteShell titulo={esc.remarcar ? 'Nova hora' : 'Escolher hora'} voltar={comQuery('/cliente/agendamento/data', esc)}>
       <Trilha passo={3} remarcar={esc.remarcar} />
-      <p className="muted" style={{ marginTop: 0 }}>{esc.data && formatDataLonga(esc.data)}</p>
+      {/* a data é o título da tela; "Horários disponíveis" é a seção logo abaixo */}
+      {esc.data && <h3 className="agendar-data">{formatDataLonga(esc.data)}</h3>}
 
       <h3 className="secao-titulo">Horários disponíveis</h3>
       {slots === null ? (
-        <p className="muted">Buscando…</p>
+        <div className="card empty-state"><p className="muted">Buscando…</p></div>
       ) : slots.length === 0 ? (
         <div className="card empty-state">
           <p>Nenhum horário livre neste dia.</p>
@@ -331,9 +343,8 @@ export function AgendarHora() {
 
       {servico && (
         <div className="card resumo-mini">
-          <span className="muted">Valor</span>
-          <strong>{formatPreco(servico.price)}</strong>
-          <span className="muted">Duração: {labelDuracao(servico)}</span>
+          <div className="resumo-linha"><span className="muted">Valor</span><strong>{formatPreco(servico.price)}</strong></div>
+          <div className="resumo-linha"><span className="muted">Duração</span><span className="resumo-mini-dur">{labelDuracao(servico)}</span></div>
         </div>
       )}
 
@@ -687,12 +698,14 @@ export function AgendarSucesso() {
         <h2>{titulo}</h2>
         <p className="muted">{texto}</p>
         {appt && (
-          <div className="card resumo-pedido" style={{ textAlign: 'left', width: '100%' }}>
+          <div className="card resumo-pedido">
             <div className="resumo-linha"><span className="muted">Serviço</span><strong>{appt.services?.name}</strong></div>
             <div className="resumo-linha"><span className="muted">Com</span><strong>{appt.professionals?.name}</strong></div>
-            <div className="resumo-linha"><span className="muted">{troca ? 'Novo horário' : 'Quando'}</span><strong>{formatDataLonga(appt.date)} às {appt.start_time.slice(0, 5)}</strong></div>
+            <div className="resumo-linha"><span className="muted">{troca ? 'Nova data' : 'Data'}</span><strong>{formatDataLonga(appt.date)}</strong></div>
+            <div className="resumo-linha"><span className="muted">Horário</span><strong>{appt.start_time.slice(0, 5)}</strong></div>
+            {/* as outras partes da visita, cada uma rotulada pela hora em que começa */}
             {partes.map((x) => (
-              <div key={x.appointment_id} className="resumo-linha resumo-parte-sucesso"><span className="muted">Depois</span><strong>{x.servico} com {x.profissional} às {String(x.inicio).slice(0, 5)}</strong></div>
+              <div key={x.appointment_id} className="resumo-linha resumo-parte-sucesso"><span className="muted">{String(x.inicio).slice(0, 5)}</span><strong>{x.servico} <span className="muted">com {x.profissional}</span></strong></div>
             ))}
           </div>
         )}

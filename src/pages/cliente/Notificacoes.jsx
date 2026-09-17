@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import ClienteShell from '../../components/ClienteShell'
 import { useNotificacoes } from '../../context/NotificacoesContext'
 import { ICONE_AVISO as ICONE, destinoDoAviso, relativo } from '../../lib/avisos'
+import { ChevronRight } from 'lucide-react'
 
 // Central de avisos (tela 12): um ícone por tipo, o texto, e para onde
 // leva. Abrir a tela marca tudo como lido — a pessoa veio olhar, olhou.
@@ -18,7 +19,7 @@ export default function Notificacoes() {
   return (
     <ClienteShell titulo="Notificações">
       {loading ? (
-        <p className="muted">Carregando…</p>
+        <p className="carregando">Carregando…</p>
       ) : avisos.length === 0 ? (
         <div className="card empty-state"><p>Nenhum aviso por enquanto.</p></div>
       ) : (
@@ -33,7 +34,7 @@ export default function Notificacoes() {
                   {a.body && <span className="muted cliente-meta">{a.body}</span>}
                   <span className="muted notif-quando">{relativo(a.created_at)}</span>
                 </span>
-                <span className="notif-seta">›</span>
+                <ChevronRight size={18} className="notif-seta" />
               </Link>
             )
           })}

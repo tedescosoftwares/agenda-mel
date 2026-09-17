@@ -35,7 +35,7 @@ export default function ClienteSalao() {
     setPg((x) => ({ ...x, preferida: profId }))
     await supabase.rpc('escolher_preferida', { salao: id, prof: profId })
   }
-  if (loading) return <ClienteShell voltar="/cliente/home"><p className="muted">Carregando…</p></ClienteShell>
+  if (loading) return <ClienteShell voltar="/cliente/home"><p className="carregando">Carregando…</p></ClienteShell>
   const s = pg?.salao
   if (!s) return <ClienteShell voltar="/cliente/home"><div className="card empty-state"><p>Não encontramos esse salão.</p></div></ClienteShell>
 
@@ -71,8 +71,14 @@ export default function ClienteSalao() {
 
       <div className="perfil-cabeca">
         <h2>{s.nome}</h2>
-        {s.pagamento?.modo && s.pagamento.modo !== 'nao' && <p className={'selo-pag ' + s.pagamento.modo}><Wallet size={13} /><span className="selo-pag-rotulo">{MODOS[s.pagamento.modo].curto}</span><span className="muted">{textoSinal(s.pagamento.sinal_pct)} por PIX ao marcar{s.pagamento.politica ? ` · cancelamento ${POLITICAS[s.pagamento.politica]?.rotulo.toLowerCase() ?? ''}: devolve até ${POLITICAS[s.pagamento.politica]?.horas} h antes` : ''}</span></p>}
-        {endereco && <p className="muted salao-linha"><MapPin size={14} /> {endereco}{mapa && <> · <a href={mapa} target="_blank" rel="noreferrer">como chegar</a></>}</p>}
+        {/* a pílula fica só com o rótulo; a explicação vai em linha própria */}
+        {s.pagamento?.modo && s.pagamento.modo !== 'nao' && (
+          <>
+            <p className={'selo-pag ' + s.pagamento.modo}><Wallet size={13} /><span className="selo-pag-rotulo">{MODOS[s.pagamento.modo].curto}</span></p>
+            <p className="muted salao-pag-nota">{textoSinal(s.pagamento.sinal_pct)} por PIX ao marcar{s.pagamento.politica ? ` · cancelamento ${POLITICAS[s.pagamento.politica]?.rotulo.toLowerCase() ?? ''}: devolve até ${POLITICAS[s.pagamento.politica]?.horas} h antes` : ''}</p>
+          </>
+        )}
+        {endereco && <p className="muted salao-linha"><MapPin size={14} /><span>{endereco}</span>{mapa && <a href={mapa} target="_blank" rel="noreferrer" className="link-ver salao-mapa">Como chegar</a>}</p>}
         {nota ? (
           <p className="perfil-nota"><StarIcon /> <strong>{Number(nota.media).toFixed(1)}</strong><span className="muted">({nota.quantas} {nota.quantas === 1 ? 'avaliação' : 'avaliações'} da equipe)</span></p>
         ) : <p className="perfil-nota muted">Ainda sem avaliações</p>}
@@ -90,7 +96,7 @@ export default function ClienteSalao() {
           <h3 className="secao-titulo"><BadgePercent size={15} /> Promoções da casa</h3>
           <div className="upsell-lista salao-promos">
             {promos.map((p) => (
-              <button key={p.id} type="button" className="salao-promo" onClick={() => { supabase.rpc('promocao_clicada', { promo: p.id }); if (p.service_id) navigate(`/cliente/servico/${p.service_id}${p.professional_id ? `?prof=${p.professional_id}` : ''}`) }}>
+              <button key={p.id} type="button" className="salao-promo" onClick={() => { supabase.rpc('promocao_clicada', { promo: p.id }); if (p.service_id) navigate(`/cliente/servico/${p.service_id}?${new URLSearchParams({ ...(p.professional_id ? { prof: p.professional_id } : {}), de: `salao:${id}` })}`) }}>
                 <img src={p.imagem_url} alt="" loading="lazy" />
                 {p.desconto_pct != null && <span className="promo-selo">-{p.desconto_pct}%</span>}
                 <span className="promo-veu"><strong>{p.titulo}</strong>{p.texto && <span>{p.texto}</span>}</span>

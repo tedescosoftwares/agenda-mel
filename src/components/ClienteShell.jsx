@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
-import { ScanLine } from 'lucide-react'
+import { ScanLine, ChevronLeft } from 'lucide-react'
 import SinoAvisos from './SinoAvisos'
 import AvaliarConvite from './AvaliarConvite'
 import CienciaGate from './CienciaGate'
@@ -17,6 +17,11 @@ const TABS = [
   { to: '/cliente/perfil', label: 'Perfil', Icon: PessoaIcon },
 ]
 
+// Enquanto ela está marcando (serviços → data → hora → confirmar → sucesso)
+// ou pagando, o convite de avaliar não entra no topo: competia com a
+// tarefa e empurrava a trilha. Volta a aparecer nas outras telas.
+const NO_FLUXO = /^\/cliente\/(agendamento\/(data|hora|confirmar|sucesso)|pagamento\/|profissional\/[^/]+\/servicos)/
+
 export default function ClienteShell({ children, titulo, voltar, semTopo = false }) {
   // só o miolo rola: ao trocar de página, volta para o topo dele
   const miolo = useRef(null)
@@ -26,14 +31,14 @@ export default function ClienteShell({ children, titulo, voltar, semTopo = false
   const navigate = useNavigate()
 
   return (
-    <div className="admin-shell">
+    <div className="admin-shell cliente-shell">
       {!semTopo && (
         <header className="topbar topbar-cliente">
           {typeof voltar === 'function' ? (
-            <button type="button" onClick={voltar} className="topo-voltar" aria-label="Voltar">‹</button>
+            <button type="button" onClick={voltar} className="topo-voltar" aria-label="Voltar"><ChevronLeft size={22} /></button>
           ) : voltar ? (
             <NavLink to={voltar} className="topo-voltar" aria-label="Voltar">
-              ‹
+              <ChevronLeft size={22} />
             </NavLink>
           ) : null}
           {titulo ? (
@@ -53,7 +58,7 @@ export default function ClienteShell({ children, titulo, voltar, semTopo = false
       <CienciaGate />
       <main className="content" ref={miolo}>
         <div className="miolo">
-          <AvaliarConvite />
+          {!semTopo && !NO_FLUXO.test(pathname) && <AvaliarConvite />}
           {children}
         </div>
       </main>

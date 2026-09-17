@@ -42,11 +42,14 @@ export default function BannerPromocoes() {
   function aoRolar() {
     if (faixa.current) setAtual(atualDe(faixa.current))
   }
+  // promoção de um serviço abre a página dele (com de=home, o voltar
+  // traz de volta para cá); de uma profissional, o perfil; do salão, a
+  // página do salão
   function abrir(p) {
     supabase.rpc('promocao_clicada', { promo: p.id })
-    if (p.service_id && p.professional_id) navigate(`/cliente/profissional/${p.professional_id}/servicos?servico=${p.service_id}`)
+    if (p.service_id) navigate(`/cliente/servico/${p.service_id}?${new URLSearchParams({ ...(p.professional_id ? { prof: p.professional_id } : {}), de: 'home' })}`)
     else if (p.professional_id) navigate(`/cliente/profissional/${p.professional_id}`)
-    else if (p.salon_id) navigate('/cliente/profissionais')
+    else if (p.salon_id) navigate(`/cliente/salao/${p.salon_id}`)
   }
 
   if (promos.length === 0) return null

@@ -12,7 +12,7 @@ import RodapeSocial from '../../components/RodapeSocial'
 import { formatarFone, foneValido } from '../../lib/fone'
 import { useConfig } from '../../lib/config'
 import CampoSenha from '../../components/CampoSenha'
-import { Plus, Gift, Hourglass, MessageCircle, ShieldCheck, Lock } from 'lucide-react'
+import { Plus, Gift, Hourglass, MessageCircle, ShieldCheck, Lock, Store } from 'lucide-react'
 import Portal from '../../components/Portal'
 
 // Perfil da cliente (065): foto, nome, desde quando, os números dela
@@ -193,13 +193,14 @@ export default function ClientePerfil() {
       <h3 className="secao-titulo">Minhas agendas</h3>
       <div className="cliente-list">
         {(vinculos ?? []).map((ag) => (
-          <div key={ag.salao.id} className="card cl-ajuste">
-            <div className="cliente-info">
+          <div key={ag.salao.id} className="card prof-row">
+            <span className="ajuste-icone"><Store /></span>
+            <span className="cliente-info">
               <span className="cliente-nome"><span className="nome-txt">{ag.salao.nome}</span></span>
               <span className="muted cliente-meta">
                 {ag.trazida_por ? `entrou pela ${ag.trazida_por.nome.split(' ')[0]}` : 'entrou pelo código do salão'} · {new Date(ag.entrou_em).toLocaleDateString('pt-BR')}
               </span>
-            </div>
+            </span>
             <button className="btn-mini btn-mini-nao" onClick={() => sairDaAgenda(ag)}>Sair</button>
           </div>
         ))}
@@ -211,21 +212,23 @@ export default function ClientePerfil() {
       </div>
 
       <h3 className="secao-titulo">Como você quer ser avisada</h3>
-      <AvisosNoCelular />
-      <AvisosPorEmail />
-      <div className="card cl-ajuste">
-        <div className="cliente-info">
-          <span className="cliente-nome"><span className="nome-txt">Lembretes no WhatsApp</span></span>
-          <span className="muted cliente-meta">Aviso na véspera do seu horário</span>
+      <div className="cliente-list">
+        <AvisosNoCelular />
+        <AvisosPorEmail />
+        <div className="card cl-ajuste">
+          <div className="cliente-info">
+            <span className="cliente-nome"><span className="nome-txt">Lembretes no WhatsApp</span></span>
+            <span className="muted cliente-meta">Aviso na véspera do seu horário</span>
+          </div>
+          <button className={'switch' + (profile?.accepts_reminders ? ' on' : '')} onClick={() => trocarLembretes(!profile?.accepts_reminders)} role="switch" aria-checked={Boolean(profile?.accepts_reminders)} aria-label="Lembretes no WhatsApp" />
         </div>
-        <button className={'switch' + (profile?.accepts_reminders ? ' on' : '')} onClick={() => trocarLembretes(!profile?.accepts_reminders)} role="switch" aria-checked={Boolean(profile?.accepts_reminders)} aria-label="Lembretes no WhatsApp" />
       </div>
 
       <h3 className="secao-titulo">Mais</h3>
       <div className="cliente-list">
         <Link to="/cliente/indicacao" className="card prof-row">
           <span className="ajuste-icone"><Gift /></span>
-          <span className="cliente-info"><span className="cliente-nome"><span className="nome-txt">Indique e ganhe</span></span><span className="muted cliente-meta">Seu código, suas amigas e seus créditos</span></span>
+          <span className="cliente-info"><span className="cliente-nome"><span className="nome-txt">Indique e ganhe</span></span><span className="muted cliente-meta">Seu código, amigas e créditos</span></span>
           <ChevronIcon />
         </Link>
         <Link to="/cliente/fila-espera" className="card prof-row">
@@ -240,12 +243,12 @@ export default function ClientePerfil() {
         </a>
         <Link to="/privacidade" className="card prof-row">
           <span className="ajuste-icone"><ShieldCheck /></span>
-          <span className="cliente-info"><span className="cliente-nome"><span className="nome-txt">Seus dados e privacidade</span></span><span className="muted cliente-meta">O que guardamos e como pedir a exclusão</span></span>
+          <span className="cliente-info"><span className="cliente-nome"><span className="nome-txt">Seus dados e privacidade</span></span><span className="muted cliente-meta">O que guardamos e como apagar</span></span>
           <ChevronIcon />
         </Link>
       </div>
 
-      <button className="btn btn-ghost btn-block" style={{ marginTop: '1.4rem' }} onClick={async () => { if (await confirmar({ titulo: 'Sair da conta?', ok: 'Sair', cancelar: 'Ficar' })) signOut() }}>
+      <button className="btn btn-ghost btn-block sair-conta" onClick={async () => { if (await confirmar({ titulo: 'Sair da conta?', ok: 'Sair', cancelar: 'Ficar' })) signOut() }}>
         Sair da conta
       </button>
       <RodapeSocial compacto />

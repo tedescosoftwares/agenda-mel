@@ -36,7 +36,7 @@ export default function ProximosHorarios({ maximo = 2 }) {
               <span className="proximo-dia"><strong>{diaCurto(a.date)}</strong><span>{a.start_time.slice(0, 5)}</span></span>
               <span className="proximo-texto">
                 <strong>{a.services?.name}</strong>
-                <span className="muted">{a.professionals?.name}{a.status === 'pendente' ? ' · aguardando confirmação' : ''}</span>
+                <span className="muted">{a.professionals?.name}{a.status === 'pendente' && <span className="proximo-tag">aguardando</span>}</span>
               </span>
               <span className="proximo-estado"><Icone size={16} /><ChevronRight size={16} /></span>
             </Link>

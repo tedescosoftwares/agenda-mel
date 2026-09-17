@@ -73,14 +73,14 @@ export default function ClienteHome() {
     [profissionais, vinculos, t],
   )
 
-  // serviços em destaque: o que o salão marcou (086); sem nada marcado,
-  // os que mais profissionais oferecem
+  // serviços em destaque: o que o salão marcou (086), TODOS — a fileira
+  // rola, então não tem por que cortar. Sem nada marcado, os que mais
+  // profissionais oferecem.
   const destaques = useMemo(() => {
     if (destaquesConfig?.length) {
       return destaquesConfig
         .filter((d) => !t || d.name.toLowerCase().includes(t))
         .map((d) => ({ servico: d, quem: (d.quem ?? []).map((q) => ({ id: q.id, name: q.name })), salao: d.salao }))
-        .slice(0, 8)
     }
     const mapa = new Map()
     for (const v of vinculos) {
@@ -103,11 +103,7 @@ export default function ClienteHome() {
         <p className="muted">Como podemos te ajudar hoje?</p>
       </div>
 
-      <AvisosNovos />
-      <ProximosHorarios />
-      <BannerPromocoes />
-      <LigarAvisos texto="Confirmação, lembrete de véspera e vaga na lista de espera chegam na hora, mesmo com o app fechado." />
-
+      {/* a busca fica colada na pergunta da saudação, não enterrada no meio da página */}
       <label className="cl-busca">
         <SearchIcon />
         <input
@@ -117,6 +113,11 @@ export default function ClienteHome() {
           aria-label="Buscar"
         />
       </label>
+
+      <AvisosNovos />
+      <ProximosHorarios />
+      <BannerPromocoes />
+      <LigarAvisos texto="Confirmação, lembrete de véspera e vaga na lista de espera chegam na hora, mesmo com o app fechado." />
 
       {/* Uma fileira por agenda em que ela entrou (053). Com uma só, o
           cabeçalho é o salão; com várias, cada uma tem o seu, e ela sabe
@@ -138,12 +139,15 @@ export default function ClienteHome() {
                 <span className="home-salao-corpo">
                   <strong>{ag.salao.nome}</strong>
                   {pagamentos[ag.salao.id]?.modo && pagamentos[ag.salao.id].modo !== 'nao' && <span className={'selo-pag mini ' + pagamentos[ag.salao.id].modo}><Wallet size={11} /> {MODOS[pagamentos[ag.salao.id].modo].curto}</span>}
-                  {(s?.address || s?.city) && <span className="muted home-salao-onde"><MapPin size={12} /> {[s.address, s.city].filter(Boolean).join(' · ')}</span>}
+                  {(s?.address || s?.city) && <span className="muted home-salao-onde"><MapPin size={12} /><span>{[s.address, s.city].filter(Boolean).join(' · ')}</span></span>}
                   <span className="home-salao-equipe">
                     <span className="home-salao-avatares">
                       {(ag.profissionais ?? []).slice(0, 4).map((p) => p.foto ? <img key={p.id} src={p.foto} alt="" /> : <span key={p.id}>{p.nome.charAt(0)}</span>)}
                     </span>
-                    <span className="muted">{(ag.profissionais ?? []).length} {(ag.profissionais ?? []).length === 1 ? 'profissional' : 'profissionais'}{ag.trazida_por ? ` · você entrou pela ${ag.trazida_por.nome.split(' ')[0]}` : ''}</span>
+                    <span className="muted">
+                      {(ag.profissionais ?? []).length} {(ag.profissionais ?? []).length === 1 ? 'profissional' : 'profissionais'}
+                      {ag.trazida_por && <span className="muted home-salao-via">via {ag.trazida_por.nome.split(' ')[0]}</span>}
+                    </span>
                   </span>
                 </span>
                 <ChevronRight size={18} className="agdt-seta" />
@@ -158,7 +162,9 @@ export default function ClienteHome() {
               {!autonoma && <Link to={`/cliente/salao/${ag.salao.id}`} className="link-ver">Ver o salão</Link>}
             </div>
             {loading ? (
-              <p className="muted">Carregando…</p>
+              <p className="carregando">Carregando…</p>
+            ) : daqui.length === 0 ? (
+              <div className="card empty-state"><p>{t ? 'Ninguém com esse nome.' : 'Ninguém atendendo por aqui ainda.'}</p></div>
             ) : (
               <div className="fileira-prof">
                 {daqui.slice(0, 8).map((p) => (
@@ -172,7 +178,6 @@ export default function ClienteHome() {
                     <span className="muted">{(p.especialidade || especialidade(p)).split(' · ')[0].split(' e ')[0]}</span>
                   </Link>
                 ))}
-                {daqui.length === 0 && <p className="muted">{t ? 'Ninguém com esse nome.' : 'Ninguém atendendo por aqui ainda.'}</p>}
               </div>
             )}
           </section>
@@ -181,20 +186,23 @@ export default function ClienteHome() {
 
       <div className="secao-cabeca">
         <h3>Serviços em destaque</h3>
+        {destaques.length > 2 && <span className="muted secao-conta">{destaques.length} serviços</span>}
       </div>
 
-      {destaques.length === 0 ? <p className="muted">Nada em destaque por enquanto.</p> : (
+      {destaques.length === 0 ? <div className="card empty-state"><p>{t ? 'Nada em destaque com esse nome.' : 'Nada em destaque por enquanto.'}</p></div> : (
         <div className="vitrine">
+          {/* de=home: a página do serviço sabe voltar para cá, e não para
+              a lista de serviços da profissional */}
           {destaques.map(({ servico, quem, salao }, i) => (
             <Link
               key={servico.id}
-              to={`/cliente/servico/${servico.id}${quem.length === 1 ? `?prof=${quem[0].id}` : ''}`}
+              to={`/cliente/servico/${servico.id}?${new URLSearchParams({ ...(quem.length === 1 ? { prof: quem[0].id } : {}), de: 'home' })}`}
               className={'vitrine-item' + (servico.images?.[0] ? '' : ' tom-' + (i % 4))}
             >
               {servico.images?.[0] ? <img src={servico.images[0]} alt="" loading="lazy" /> : <span className="vitrine-brilho" aria-hidden="true"><Sparkles size={44} /></span>}
               <span className="vitrine-selo"><Star size={11} /> Destaque</span>
-              <span className="vitrine-preco">{descontos[servico.id] ? <><s>{formatPreco(servico.price)}</s> {formatPreco(descontos[servico.id].preco_com_desconto_cents / 100)}</> : formatPreco(servico.price)}</span>
               <span className="vitrine-veu">
+                <span className="vitrine-preco">{descontos[servico.id] ? <><s>{formatPreco(servico.price)}</s> {formatPreco(descontos[servico.id].preco_com_desconto_cents / 100)}</> : formatPreco(servico.price)}</span>
                 <strong>{servico.name}</strong>
                 <span>{formatDuracao(servico.duration_minutes)}{quem.length > 1 ? ` · ${quem.length} profissionais` : quem.length === 1 ? ` · com ${quem[0].name.split(' ')[0]}` : ''}</span>
                 {salao && (agendas ?? []).length > 1 && <small>{salao}</small>}

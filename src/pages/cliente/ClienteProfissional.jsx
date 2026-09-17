@@ -5,7 +5,7 @@ import { supabase } from '../../lib/supabase'
 import { StarIcon } from '../../components/icons'
 import { formatPreco, labelDuracao } from '../../lib/format'
 import { iniciais } from '../../lib/booking'
-import { Sparkles, Star } from 'lucide-react'
+import { Sparkles, Star, User } from 'lucide-react'
 import { useCategorias, agruparPorCategoria } from '../../lib/categorias'
 
 // Perfil da profissional dentro do app (tela 05): foto grande, nome,
@@ -46,7 +46,7 @@ export default function ClienteProfissional() {
     return () => { vivo = false }
   }, [id])
 
-  if (loading) return <ClienteShell voltar="/cliente/profissionais"><p className="muted">Carregando…</p></ClienteShell>
+  if (loading) return <ClienteShell voltar="/cliente/profissionais"><p className="carregando">Carregando…</p></ClienteShell>
   if (!prof) return <ClienteShell voltar="/cliente/profissionais"><div className="card empty-state"><p>Não encontramos essa profissional.</p></div></ClienteShell>
 
   const especialidade = servicos.slice(0, 2).map((s) => s.name).join(' e ')
@@ -92,7 +92,7 @@ export default function ClienteProfissional() {
           {agruparPorCategoria(servicos, cats).map((g, _, todos) => (<section key={g.id || 'outros'} className="cat-grupo">
           {todos.length > 1 && <h3 className="cat-titulo">{g.nome}</h3>}
           {g.itens.map((s) => (
-            <Link key={s.id} to={`/cliente/servico/${s.id}?prof=${prof.id}`} className="card servico-linha">
+            <Link key={s.id} to={`/cliente/servico/${s.id}?prof=${prof.id}&de=perfil:${prof.id}`} className="card servico-linha">
               <span className="servico-linha-foto" aria-hidden="true">
                 {s.images?.[0] ? <img src={s.images[0]} alt="" /> : <Sparkles />}
               </span>
@@ -126,8 +126,9 @@ export default function ClienteProfissional() {
       )}
 
       {aba === 'sobre' && (
-        <div className="card">
-          <p style={{ margin: 0 }}>{prof.bio || 'Ela ainda não escreveu sobre si.'}</p>
+        <div className="card svc-bloco">
+          <User size={16} />
+          <p>{prof.bio || 'Ela ainda não escreveu sobre si.'}</p>
         </div>
       )}
 

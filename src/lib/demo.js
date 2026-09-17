@@ -125,7 +125,7 @@ const avaliacoes = [
   { nota: 4, comentario: 'Ficou lindo, só atrasou um pouquinho.', quem: 'Beatriz', quando: mais(-20) },
 ]
 
-const PROMO_IMG = (a, b, txt) => 'data:image/svg+xml;utf8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="600"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient></defs><rect width="1200" height="600" fill="url(#g)"/><circle cx="980" cy="120" r="160" fill="rgba(255,255,255,0.18)"/><circle cx="200" cy="520" r="220" fill="rgba(255,255,255,0.12)"/><text x="80" y="330" font-family="Poppins, Arial" font-size="96" font-weight="700" fill="white">${txt}</text></svg>`)
+const PROMO_IMG = (a, b, txt) => 'data:image/svg+xml;utf8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="600"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient></defs><rect width="1200" height="600" fill="url(#g)"/><circle cx="980" cy="120" r="160" fill="rgba(255,255,255,0.18)"/><circle cx="200" cy="520" r="220" fill="rgba(255,255,255,0.12)"/><text x="80" y="330" font-family="Poppins, Arial" font-size="96" font-weight="700" fill="rgba(255,255,255,0.32)">${txt}</text></svg>`)
 const promocoes = [
   { id: 'pm1', salon_id: SALAO, professional_id: 'pr1', service_id: 'sv5', titulo: 'Esmaltação em gel com 20% off', texto: 'Só esta semana, com a Ana', imagem_url: PROMO_IMG('#FF2D7A', '#AA4CFF', '-20%'), inicio: mais(-2), fim: mais(5), ativa: true, desconto_pct: 20, vistas: 128, cliques: 23, created_at: mais(-2) },
   { id: 'pm2', salon_id: SALAO, professional_id: null, service_id: 'sv8', titulo: 'Semana da sobrancelha', texto: 'Design por R$ 39 no Studio Mel', imagem_url: PROMO_IMG('#AA4CFF', '#FF7BAA', 'R$ 39'), inicio: mais(-1), fim: null, ativa: true, vistas: 310, cliques: 41, created_at: mais(-1) },
@@ -139,7 +139,8 @@ const TABELAS = {
   profiles: clientes,
   professionals: profissionais,
   services: servicos,
-  professional_services: vinculos.map((v) => ({ ...v, services: servicos.find((s) => s.id === v.service_id) })),
+  // a página do serviço pede `professionals (…)` aninhado; sem isso "Quem faz" saía vazio na demo
+  professional_services: vinculos.map((v) => ({ ...v, services: servicos.find((s) => s.id === v.service_id), professionals: profissionais.find((p) => p.id === v.professional_id) })),
   professional_hours: [1, 2, 3, 4, 5, 6].map((weekday) => ({ professional_id: 'pr1', weekday, open: weekday !== 6 || true, start_time: '09:00:00', end_time: weekday === 6 ? '14:00:00' : '18:00:00' })).concat([{ professional_id: 'pr1', weekday: 0, open: false, start_time: '09:00:00', end_time: '18:00:00' }]),
   professional_blocks: [{ id: 'b1', professional_id: 'pr1', kind: 'semanal', weekday: 1, all_day: false, start_time: '13:00:00', end_time: '14:00:00', reason: 'Almoço' }],
   business_hours: [1, 2, 3, 4, 5, 6].map((weekday) => ({ salon_id: SALAO, weekday, open: true, start_time: '09:00:00', end_time: '18:00:00' })),

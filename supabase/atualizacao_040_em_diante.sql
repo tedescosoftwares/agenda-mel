@@ -61,6 +61,7 @@
 --    093  
 --    094  
 --    095  
+--    096  
 --
 --  Se der erro, me mande a mensagem inteira: cada bloco abaixo está
 --  marcado com o nome do arquivo de origem.
@@ -13355,4 +13356,19 @@ on conflict (chave) do update set grupo = excluded.grupo, titulo = excluded.titu
 insert into public.push_regras (kind, envia) values ('agendamento_pago', true) on conflict (kind) do nothing;
 
 insert into public.migracoes_aplicadas (arquivo) values ('095_pago_e_confirmado.sql') on conflict (arquivo) do nothing;
+
+-- =============================================================
+-- >>> 096_aceite_do_pagamento.sql
+-- =============================================================
+
+-- 096 · O aceite da cliente fica registrado no pagamento
+--
+-- Antes de gerar o PIX, a cliente vê o resumo (serviços, sinal, resto no
+-- atendimento) e as condições: a taxa do PIX não volta, o prazo da
+-- política, o crédito de 30 dias. O "li e aceito" fica gravado aqui,
+-- com a versão do texto que ela leu.
+alter table public.pagamentos add column if not exists termos_aceitos_em timestamptz;
+alter table public.pagamentos add column if not exists termos_versao text;
+
+insert into public.migracoes_aplicadas (arquivo) values ('096_aceite_do_pagamento.sql') on conflict (arquivo) do nothing;
 

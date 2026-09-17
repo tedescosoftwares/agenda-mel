@@ -23,7 +23,7 @@ Deno.serve(async (req) => {
   const { data: u } = await quem.auth.getUser()
   if (!u?.user) return json({ erro: 'entre na sua conta' }, 401)
 
-  let corpo: { appointment_id?: string; simular?: boolean } = {}
+  let corpo: { appointment_id?: string; simular?: boolean; aceite?: boolean; termos_versao?: string } = {}
   try { corpo = await req.json() } catch { return json({ erro: 'corpo inválido' }, 400) }
   if (!corpo.appointment_id) return json({ erro: 'horário?' }, 400)
   const sandbox = AMBIENTE !== 'producao'
@@ -50,9 +50,14 @@ Deno.serve(async (req) => {
     }
   }
 
+  // sem o "li e aceito" não tem PIX (096)
+  if (corpo.aceite !== true) return json({ erro: 'é preciso aceitar as condições de pagamento antes de gerar o PIX' }, 400)
+
   const { data: prep, error } = await servico.rpc('pagamento_preparar', { appt: corpo.appointment_id, cliente: u.user.id })
   if (error) return json({ erro: error.message }, 500)
   if (!prep?.ok) return json({ ok: false, motivo: prep?.motivo ?? 'não deu' }, prep?.motivo === 'sem_cpf' ? 200 : 400)
+  // o aceite fica no pagamento, com a versão do texto que ela leu
+  await servico.from('pagamentos').update({ termos_aceitos_em: new Date().toISOString(), termos_versao: String(corpo.termos_versao ?? '').slice(0, 40) || null }).eq('id', prep.pagamento_id).is('termos_aceitos_em', null)
 
   // já tinha uma cobrança aberta: devolve ela
   if (prep.existente && prep.copia_cola) {

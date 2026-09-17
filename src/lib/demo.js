@@ -134,7 +134,7 @@ const promocoes = [
   { id: 'pm4', salon_id: SALAO, professional_id: null, service_id: null, titulo: 'Dia das Mães', texto: 'Encerrada', imagem_url: PROMO_IMG('#FF7BAA', '#FFC2D8', '❤'), inicio: mais(-40), fim: mais(-20), ativa: true, vistas: 900, cliques: 120, created_at: mais(-40) },
 ]
 const TABELAS = {
-  pagamentos: [{ id: 'pg1', appointment_id: 'ap2', client_id: 'c1', salon_id: SALAO, status: 'pago', valor_cents: 3000, total_cents: 6000, sinal_pct: 50, pago_em: mais(-1), criado_em: mais(-1), appointments: { service_name: 'Escova', date: mais(9), start_time: '10:30:00', profiles: { full_name: 'Juliana Silva' } } }],
+  pagamentos: [{ id: 'pg1', appointment_id: 'ap2', client_id: 'c1', salon_id: SALAO, status: 'pago', valor_cents: 3000, total_cents: 6000, sinal_pct: 50, pago_em: mais(-1) + 'T14:32:00', criado_em: mais(-1), cobranca_id: 'pay_demo_8f3k2', termos_aceitos_em: mais(-1) + 'T14:30:00', appointments: { service_name: 'Escova', date: mais(9), start_time: '10:30:00', profiles: { full_name: 'Juliana Silva' } } }],
   contas_de_recebimento: [{ salon_id: SALAO, conta_id: 'acc_demo', wallet_id: 'wal_demo', status: 'aprovada', nome: 'Studio Mel', tipo_pessoa: 'juridica', documento: '12.345.678/0001-90', pix_pronto: true, pix_chave: '3b1c2d4e-demo-4f5a-9b8c-7d6e5f4a3b2c', situacao: { saldo_cents: 141230, saldo_em: new Date().toISOString() }, documentos: [] }],
   profiles: clientes,
   professionals: profissionais,

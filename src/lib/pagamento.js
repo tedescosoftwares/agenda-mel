@@ -19,6 +19,10 @@ export const POLITICAS = {
   rigorosa: { rotulo: 'Rigorosa', horas: 24, explica: 'Até 24 h antes, devolve o sinal (menos a taxa do PIX) ou remarca levando o sinal. Depois disso, o sinal vira crédito por 30 dias.' },
 }
 export const CREDITO_DIAS = 30
+// a versão das condições que a cliente aceita antes de pagar (096): mude
+// quando o texto mudar, para saber o que cada uma leu
+export const TERMOS_VERSAO = '2026-09-17'
+export const TAXA_PIX_TEXTO = 'até R$ 1,99'
 
 // a mesma regra, contada para a cliente
 export function textoPolitica(p) {

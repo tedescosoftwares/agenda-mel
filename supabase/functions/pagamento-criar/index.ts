@@ -51,7 +51,7 @@ Deno.serve(async (req) => {
   }
 
   // sem o "li e aceito" não tem PIX (096)
-  if (corpo.aceite !== true) return json({ erro: 'é preciso aceitar as condições de pagamento antes de gerar o PIX' }, 400)
+  if (corpo.aceite !== true) return json({ erro: 'Esta versão do app ainda não mostra as condições de pagamento. Feche o MIMO e abra de novo para atualizar; aí é só ler, aceitar e gerar o PIX.' }, 400)
 
   const { data: prep, error } = await servico.rpc('pagamento_preparar', { appt: corpo.appointment_id, cliente: u.user.id })
   if (error) return json({ erro: error.message }, 500)

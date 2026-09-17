@@ -37,3 +37,20 @@ if (ehPro) {
 
 // (o toque duplo é barrado por CSS: touch-action em html/body. O jeito
 // antigo, cancelando o touchend, roubava o teclado no iOS 18 instalado.)
+
+// Versão nova no ar: o service worker novo assume (skipWaiting +
+// clientsClaim no sw.js) e o app aberto recarrega uma vez, para não
+// ficar uma tela antiga falando com funções novas. Também pede ao
+// navegador para conferir se há versão nova ao voltar para o app e a
+// cada 15 minutos, em vez de só uma vez por dia.
+if ('serviceWorker' in navigator) {
+  let recarregou = false
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (recarregou || !navigator.serviceWorker.controller) return
+    recarregou = true
+    window.location.reload()
+  })
+  const conferir = () => navigator.serviceWorker.getRegistration().then((r) => r?.update()).catch(() => {})
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') conferir() })
+  setInterval(conferir, 15 * 60 * 1000)
+}

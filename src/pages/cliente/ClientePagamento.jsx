@@ -82,7 +82,8 @@ export default function ClientePagamento() {
     setSimulando(true); setErro('')
     try {
       const r = await chamar('pagamento-criar', { appointment_id: appt, simular: true })
-      setSimulado(r?.jeito === 'pix' ? 'Pago com o saldo da conta MIMO do sandbox: o dinheiro entrou de verdade na conta da profissional (no sandbox).'
+      setSimulado(r?.jeito === 'pix' && r.pendente ? (r.repetida ? 'Já existe uma transação esperando autorização no painel do sandbox da conta MIMO. Aprove lá com o token 000000; não criei outra.' : 'A conta MIMO do sandbox pediu autorização (ação crítica). Aprove no painel com o token 000000 e esta tela confirma sozinha. Não toque de novo: cada toque criaria outra transação.')
+        : r?.jeito === 'pix' ? 'Pago com o saldo da conta MIMO do sandbox: o dinheiro entrou de verdade na conta da profissional (no sandbox).'
         : 'A conta MIMO do sandbox não tinha saldo' + (r?.motivo_pix ? ` (${r.motivo_pix})` : '') + ', então a cobrança foi baixada como "recebida em dinheiro". Não gera saldo; a devolução, se houver, desfaz a baixa.')
     } catch (e) { setErro(e.message) } finally { setSimulando(false) }
   }

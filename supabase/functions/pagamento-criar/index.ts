@@ -36,8 +36,8 @@ Deno.serve(async (req) => {
     let motivoPix = ''
     // 1º: a conta do MIMO paga o QR (precisa de saldo e chave Pix no sandbox)
     try {
-      const r = await pagarQrSandbox(chavePai(), pg.copia_cola, pg.valor_cents)
-      return json({ ok: true, jeito: 'pix', transacao: r?.id ?? null })
+      const r = await pagarQrSandbox(chavePai(), pg.copia_cola, pg.valor_cents, pg.id)
+      return json({ ok: true, jeito: 'pix', transacao: r.id || null, status: r.status, pendente: r.status !== 'DONE', repetida: r.repetida })
     } catch (e) { motivoPix = e instanceof ErroAsaas ? e.message : String(e) /* sem saldo ou sem chave: vai pelo 2º */ }
     // 2º: a subconta dá baixa como "recebido em dinheiro"; dispara o mesmo webhook
     const { data: chaveSub } = await servico.rpc('ler_segredo', { nome: `asaas_sub_${pg.salon_id}` })

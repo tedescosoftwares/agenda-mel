@@ -177,9 +177,20 @@ export async function criarCobrancaPix(chaveSub: string, p: {
   }
 }
 
-// só no sandbox: uma conta "paga" o QR de outra, como uma cliente faria
-export const pagarQrSandbox = (chavePagador: string, payload: string, valorCents: number) =>
-  asaas(chavePagador, 'POST', '/pix/qrCodes/pay', { qrCode: { payload }, value: Math.round(valorCents) / 100, description: 'Teste MIMO (sandbox)' })
+// só no sandbox: uma conta "paga" o QR de outra, como uma cliente faria.
+// A conta pode exigir "ação crítica" (token no painel; no sandbox é 000000):
+// aí a transação fica pendente e a gente não cria outra igual por cima.
+const FINAIS_PIX = new Set(['DONE', 'REFUSED', 'CANCELLED', 'ERROR'])
+export async function pagarQrSandbox(chavePagador: string, payload: string, valorCents: number, ref: string) {
+  const descricao = `MIMO ${ref}`
+  try {
+    const lista = await asaas(chavePagador, 'GET', '/pix/transactions?limit=50')
+    const pendente = (lista?.data ?? []).find((t: { description?: string; status?: string }) => t.description === descricao && !FINAIS_PIX.has(String(t.status ?? '')))
+    if (pendente) return { id: String(pendente.id ?? ''), status: String(pendente.status ?? ''), repetida: true }
+  } catch (_) { /* sem lista, segue */ }
+  const r = await asaas(chavePagador, 'POST', '/pix/qrCodes/pay', { qrCode: { payload }, value: Math.round(valorCents) / 100, description: descricao })
+  return { id: String(r?.id ?? ''), status: String(r?.status ?? ''), repetida: false }
+}
 
 // só no sandbox: a própria subconta dá baixa na cobrança ("recebido em
 // dinheiro"); não precisa de saldo e dispara o webhook PAYMENT_RECEIVED

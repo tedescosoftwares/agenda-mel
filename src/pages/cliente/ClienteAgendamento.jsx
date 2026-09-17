@@ -84,7 +84,7 @@ export default function ClienteAgendamento() {
     if (a.pago_cents > 0 && dinheiro) {
       textoPago = dinheiro.dentro_do_prazo
         ? ` ${formatCents(dinheiro.volta_cents)} voltam para a sua conta em até 1 dia útil${dinheiro.taxa_cents > 0 ? ` (a taxa do PIX, ${formatCents(dinheiro.taxa_cents)}, não é devolvida)` : ''}. Se preferir, remarque: o sinal vai junto.`
-        : ` Como faltam menos de ${dinheiro.horas} h, o sinal de ${formatCents(a.pago_cents)} não volta, mas vira crédito com ${dinheiro.salao ?? 'a profissional'} até ${formatDiaCurto(dinheiro.credito_ate_se_cancelar)}. Remarcar mantém o sinal sem prazo.`
+        : ` Como faltam menos de ${dinheiro.horas} h, o sinal de ${formatCents(a.pago_cents)} não volta, mas vira crédito com ${dinheiro.salao ?? 'a profissional'} até ${formatDiaCurto(dinheiro.credito_ate_se_cancelar)}. Remarcar leva o sinal junto e já entra confirmado.`
     }
     if (!(await confirmar({ titulo: troca ? 'Desistir da troca?' : 'Cancelar este horário?', texto: troca ? 'Seu horário atual continua valendo.' : `${a.services?.name} em ${formatDataLonga(a.date)} às ${a.start_time.slice(0, 5)}.${textoPago}`, ok: troca ? 'Desistir' : 'Cancelar horário', cancelar: 'Manter', perigo: true }))) return
     const { error } = await supabase.from('appointments').update({ status: 'cancelado' }).eq('id', a.id)

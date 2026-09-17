@@ -58,7 +58,8 @@ begin
   r := public.confirmar_pagamento((pg ->> 'pagamento_id')::uuid, 'pay_teste', 1700);
   if not (r ->> 'ok')::boolean then raise exception 'confirmar falhou: %', r; end if;
   select * into ap from public.appointments where id = a1;
-  if ap.status not in ('pendente', 'confirmado') then raise exception 'depois de pago devia ser pedido: %', ap.status; end if;
+  if ap.status <> 'confirmado' then raise exception 'pago devia entrar confirmado (095): %', ap.status; end if;
+  if not exists (select 1 from public.notifications where user_id = prof.user_id and kind = 'agendamento_pago' and (data ->> 'appointment_id')::uuid = a1) then raise exception 'profissional não soube que entrou pago e confirmado'; end if;
   if ap.pago_cents <> (pg ->> 'valor_cents')::int then raise exception 'pago_cents %', ap.pago_cents; end if;
   if not exists (select 1 from public.notifications where user_id = prof.user_id and (data ->> 'appointment_id')::uuid = a1) then raise exception 'profissional não foi avisada depois do pagamento'; end if;
   if not exists (select 1 from public.notifications where user_id = cli and kind = 'pagamento_confirmado') then raise exception 'cliente sem aviso de pagamento'; end if;
@@ -105,7 +106,8 @@ begin
   r := public.marcar_servicos(prof.id, array[svc.id], dia + 2, '11:00', null);
   if (r ->> 'pagar')::boolean or (r ->> 'credito_usado')::int <> p.valor_cents then raise exception 'crédito não foi usado: %', r; end if;
   select * into ap from public.appointments where id = (r ->> 'appointment_id')::uuid;
-  if ap.status <> 'pendente' or ap.pago_cents <> p.valor_cents then raise exception 'horário com crédito: % %', ap.status, ap.pago_cents; end if;
+  if ap.status <> 'confirmado' or ap.pago_cents <> p.valor_cents then raise exception 'horário com crédito devia entrar confirmado: % %', ap.status, ap.pago_cents; end if;
+  update public.pagamentos set liquido_cents = valor_cents - 199 where id = p.id;
   select * into p from public.pagamentos where id = p.id;
   if p.status <> 'pago' or p.appointment_id <> ap.id or p.remarcado_de <> a2 then raise exception 'pagamento não mudou de horário: % %', p.status, p.appointment_id; end if;
   if public.meu_credito(sal) is not null then raise exception 'crédito continuou disponível'; end if;
@@ -113,7 +115,7 @@ begin
   perform set_config('request.jwt.claim.sub', prof.user_id::text, false);
   update public.appointments set status = 'cancelado' where id = ap.id;
   select * into p from public.pagamentos where id = p.id;
-  if p.status <> 'estorno_pendente' or p.estorno_cents <> p.valor_cents then raise exception 'casa cancelou devia devolver tudo: % %', p.status, p.estorno_cents; end if;
+  if p.status <> 'estorno_pendente' or p.estorno_cents <> p.valor_cents - 199 then raise exception 'casa cancelou devia devolver o líquido (095): % %', p.status, p.estorno_cents; end if;
   perform public.pagamento_cuidado(p.id, 'estornado');
   raise notice '6b crédito usado como sinal (ok)';
 
@@ -163,6 +165,33 @@ begin
   if ap.pago_cents <> p.valor_cents or p.appointment_id <> ap.id or p.status <> 'pago' or p.remarcado_de <> a2 then raise exception 'sinal não acompanhou a troca: % % %', ap.pago_cents, p.appointment_id, p.status; end if;
   if exists (select 1 from public.notifications where user_id = cli and kind in ('estorno_a_caminho') and (data ->> 'appointment_id')::uuid = a2) then raise exception 'troca gerou devolução'; end if;
   raise notice '6e troca leva o sinal junto (ok)';
+
+  -- 6g. a profissional pede aceite: pago entra confirmado mesmo assim; pagar depois fecha o pedido aberto
+  update public.professionals set aceite_manual = true where id = prof.id;
+  perform set_config('request.jwt.claim.sub', cli::text, false);
+  r := public.marcar_servicos(prof.id, array[svc.id], dia + 6, '10:00', null, true);
+  a2 := (r ->> 'appointment_id')::uuid;
+  perform set_config('request.jwt.claim.sub', '', false);
+  pg := public.pagamento_preparar(a2, cli);
+  perform public.confirmar_pagamento((pg ->> 'pagamento_id')::uuid, 'pay_2g', null);
+  select * into ap from public.appointments where id = a2;
+  if ap.status <> 'confirmado' then raise exception 'com aceite manual, pago devia confirmar direto: %', ap.status; end if;
+  update public.salons set pagamento_modo = 'opcional' where id = sal;
+  perform set_config('request.jwt.claim.sub', cli::text, false);
+  r := public.marcar_servicos(prof.id, array[svc.id], dia + 6, '14:00', null, false);
+  a2 := (r ->> 'appointment_id')::uuid;
+  select * into ap from public.appointments where id = a2;
+  raise notice '   (sem pagar, com aceite manual: %)', ap.status;
+  perform set_config('request.jwt.claim.sub', '', false);
+  pg := public.pagamento_preparar(a2, cli);
+  perform public.confirmar_pagamento((pg ->> 'pagamento_id')::uuid, 'pay_2h', null);
+  select * into ap from public.appointments where id = a2;
+  if ap.status <> 'confirmado' then raise exception 'pagou depois: devia confirmar: %', ap.status; end if;
+  if exists (select 1 from public.aceites where appointment_id = a2 and resultado is null) then raise exception 'aceite ficou aberto depois do pagamento'; end if;
+  update public.professionals set aceite_manual = false where id = prof.id;
+  update public.salons set pagamento_modo = 'obrigatorio' where id = sal;
+  perform set_config('request.jwt.claim.sub', prof.user_id::text, false);
+  raise notice '6g pago não espera aceite (ok)';
 
   -- 6f. o financeiro do mês, visto pela casa
   insert into public.salon_members (salon_id, user_id, papel) values (sal, prof.user_id, 'admin') on conflict (salon_id, user_id) do update set papel = 'admin';

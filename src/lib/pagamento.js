@@ -6,8 +6,8 @@ import { supabase, isDemo } from './supabase'
 
 export const MODOS = {
   nao: { rotulo: 'Não recebo pelo app', curto: null, explica: 'A cliente marca e paga com você, no atendimento.' },
-  opcional: { rotulo: 'A cliente escolhe', curto: 'Paga pelo app', explica: 'Ela pode pagar pelo app na hora de marcar ou depois, mas não é obrigada.' },
-  obrigatorio: { rotulo: 'Só com pagamento', curto: 'Só com pagamento', explica: 'O horário só fica reservado depois que o PIX cai. É o que mais reduz falta.' },
+  opcional: { rotulo: 'A cliente escolhe', curto: 'Paga pelo app', explica: 'Ela pode pagar pelo app na hora de marcar ou depois, mas não é obrigada. O que ela paga entra confirmado.' },
+  obrigatorio: { rotulo: 'Só com pagamento', curto: 'Só com pagamento', explica: 'O horário só fica reservado depois que o PIX cai, e já entra confirmado. É o que mais reduz falta.' },
 }
 
 export const SINAIS = [30, 50, 100]

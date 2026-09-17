@@ -87,6 +87,7 @@ export default function ReceberPeloApp({ salao, nomeSalao }) {
         <li><ShieldCheck size={16} /><span><strong>Quem recebe é {nomeSalao ? `o ${nomeSalao}` : 'a sua conta'}.</strong> O dinheiro fica numa conta de recebimento em nome do seu CPF ou CNPJ, aberta por aqui mesmo. Quem trabalha em salão não precisa fazer nada: o salão recebe.</span></li>
         <li><Clock size={16} /><span><strong>Prazo:</strong> {COMO_FUNCIONA.prazo}.</span></li>
         <li><BadgePercent size={16} /><span><strong>Taxa:</strong> {COMO_FUNCIONA.taxaPix}, descontada do valor recebido. Sem mensalidade e sem taxa quando ninguém paga.</span></li>
+        <li><CircleCheck size={16} /><span><strong>Pagou, confirmou.</strong> Horário pago pelo app entra confirmado na sua agenda, sem pedir aceite: você recebe o aviso "Pago e confirmado". Se não puder atender, cancele por aqui e o valor volta para ela (menos a taxa do PIX).</span></li>
         <li><RefreshCw size={16} /><span><strong>Cancelamento:</strong> a cliente que cancela dentro do prazo recebe o sinal de volta sozinha (menos a taxa do PIX), ou remarca levando o sinal. Depois do prazo, o sinal não volta: vira crédito por {CREDITO_DIAS} dias para ela remarcar com você. Você escolhe o prazo em Regras.</span></li>
       </ul>
       <p className="muted receber-provedor">Os pagamentos são processados por {COMO_FUNCIONA.provedor}, instituição autorizada pelo Banco Central. O MIMO não guarda o seu dinheiro.</p>
@@ -187,7 +188,7 @@ export default function ReceberPeloApp({ salao, nomeSalao }) {
                 </button>
               ))}
             </div>
-            <span className="campo-dica">Quem paga já dentro do prazo ainda pode desistir com devolução até 1 hora depois de pagar. Se você cancelar, devolve tudo, sempre. A devolução sai da sua conta de recebimento: se não houver saldo, o app avisa e ela sai assim que houver.</span>
+            <span className="campo-dica">Quem paga já dentro do prazo ainda pode desistir com devolução até 1 hora depois de pagar. Se você cancelar, devolve sempre, em qualquer prazo. Toda devolução é do que entrou na sua conta (o valor menos a taxa do PIX): se não houver saldo, o app avisa e ela sai assim que houver.</span>
           </label>
         </div>
       )}

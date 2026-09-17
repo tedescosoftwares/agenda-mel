@@ -139,7 +139,7 @@ export default function ClientePagamento() {
         <div className="card sucesso pag-pago">
           <span className="sucesso-check" aria-hidden="true"><Check /></span>
           <h2>Pagamento confirmado!</h2>
-          <p className="muted">Seu horário está guardado.</p>
+          <p className="muted">Seu horário já está confirmado na agenda da profissional.</p>
         </div>
       )}
 

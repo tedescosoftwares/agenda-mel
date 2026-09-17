@@ -5764,3 +5764,14 @@ a, button { -webkit-tap-highlight-color: transparent; }
 .receber-saldo { display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; margin: 0.25rem 0; }
 .receber-saldo strong { font-size: 1.1rem; }
 .pag-erro { font-size: 0.75rem; text-align: right; max-width: 160px; }
+.receber-abas { margin: 0.2rem 0 0.8rem; }
+.pag-politica { display: block; font-size: 0.78rem; margin-top: 0.5rem; line-height: 1.35; }
+.fin-mes { font-weight: 600; }
+.receber-como { display: block; margin: -0.2rem 0 0.8rem; font-size: 0.85rem; }
+.fin-alerta { display: flex; gap: 0.6rem; align-items: flex-start; font-size: 0.88rem; line-height: 1.4; background: #fff7ed; border-color: #fed7aa; }
+.fin-alerta svg { color: var(--carmim); flex: none; margin-top: 2px; }
+.fin-grafico { padding: 0.8rem 0.6rem 0.4rem; margin-bottom: 0.9rem; }
+.fin-grafico .numero-rotulo { margin-left: 0.4rem; }
+.fin-filtros { margin-bottom: 0.7rem; }
+.fin-rodape { display: flex; gap: 0.4rem; align-items: flex-start; font-size: 0.78rem; margin: 1rem 0 0; line-height: 1.4; }
+.fin-rodape svg { flex: none; margin-top: 2px; }

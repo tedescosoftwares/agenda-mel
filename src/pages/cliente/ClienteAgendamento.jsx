@@ -33,7 +33,8 @@ export default function ClienteAgendamento() {
   const [loading, setLoading] = useState(true)
   const [erro, setErro] = useState('')
   const [pagamento, setPagamento] = useState(null)   // o último pagamento deste horário (090)
-  const [regras, setRegras] = useState(null)         // modo/sinal/estorno do salão
+  const [regras, setRegras] = useState(null)         // modo/sinal do salão
+  const [dinheiro, setDinheiro] = useState(null)     // prazo, quanto volta, crédito (094)
   const [avaliada, setAvaliada] = useState(null)   // null = ainda não sei; false = sem avaliação; {nota}
   const [avaliando, setAvaliando] = useState(false)
   const [q, setQ] = useSearchParams()
@@ -49,6 +50,7 @@ export default function ClienteAgendamento() {
       const { data: pgs } = await supabase.from('pagamentos').select('id, status, valor_cents, total_cents, sinal_pct, pago_em, estorno_cents, motivo_estorno, liquido_cents, tentativas_estorno').eq('appointment_id', data.id).order('criado_em', { ascending: false }).limit(1)
       setPagamento(pgs?.[0] ?? null)
       if (data.salon_id) supabase.rpc('pagamento_do_salao', { salao: data.salon_id }).then(({ data: r }) => setRegras(r ?? null))
+      if (data.pago_cents > 0 || pgs?.[0]) supabase.rpc('regras_do_agendamento', { appt: data.id }).then(({ data: r }) => setDinheiro(r ?? null)); else setDinheiro(null)
       const { data: rv } = await supabase.from('reviews').select('id, nota').eq('appointment_id', data.id).maybeSingle()
       setAvaliada(rv ?? false)
       const { data: it } = await supabase.from('appointment_services').select('id, name, price_cents, preco_cheio_cents, promocao_id, duration_minutes, ordem').eq('appointment_id', data.id).order('ordem')
@@ -78,11 +80,12 @@ export default function ClienteAgendamento() {
 
   async function cancelar() {
     const troca = Boolean(a.remarca_de) && a.status === 'pendente'
-    const horas = regras?.estorno_horas ?? 24
-    const devolve = a.pago_cents > 0 && (new Date(`${a.date}T${a.start_time}`) - Date.now()) >= horas * 3600e3
-    const taxa = pagamento?.liquido_cents != null ? Math.max(0, pagamento.valor_cents - pagamento.liquido_cents) : 0
-    const volta = regras?.estorno_desconta_taxa === false ? a.pago_cents : Math.max(0, a.pago_cents - taxa)
-    const textoPago = a.pago_cents > 0 ? (devolve ? ` ${formatCents(volta)} voltam para a sua conta em até 1 dia útil${volta < a.pago_cents ? ` (a taxa do PIX, ${formatCents(taxa)}, não é devolvida)` : ''}.` : ` Como faltam menos de ${horas} h, o sinal de ${formatCents(a.pago_cents)} fica com a profissional.`) : ''
+    let textoPago = ''
+    if (a.pago_cents > 0 && dinheiro) {
+      textoPago = dinheiro.dentro_do_prazo
+        ? ` ${formatCents(dinheiro.volta_cents)} voltam para a sua conta em até 1 dia útil${dinheiro.taxa_cents > 0 ? ` (a taxa do PIX, ${formatCents(dinheiro.taxa_cents)}, não é devolvida)` : ''}. Se preferir, remarque: o sinal vai junto.`
+        : ` Como faltam menos de ${dinheiro.horas} h, o sinal de ${formatCents(a.pago_cents)} não volta, mas vira crédito com ${dinheiro.salao ?? 'a profissional'} até ${formatDiaCurto(dinheiro.credito_ate_se_cancelar)}. Remarcar mantém o sinal sem prazo.`
+    }
     if (!(await confirmar({ titulo: troca ? 'Desistir da troca?' : 'Cancelar este horário?', texto: troca ? 'Seu horário atual continua valendo.' : `${a.services?.name} em ${formatDataLonga(a.date)} às ${a.start_time.slice(0, 5)}.${textoPago}`, ok: troca ? 'Desistir' : 'Cancelar horário', cancelar: 'Manter', perigo: true }))) return
     const { error } = await supabase.from('appointments').update({ status: 'cancelado' }).eq('id', a.id)
     if (error) setErro(error.message); else carregar()
@@ -126,11 +129,13 @@ export default function ClienteAgendamento() {
           <span>
             {a.status === 'aguardando_pagamento' ? <><strong>Aguardando o PIX</strong><span className="muted">A vaga fica guardada por 15 minutos.</span></>
               : pagamento?.status === 'estorno_pendente' || pagamento?.status === 'estornado' ? <><strong>{pagamento.status === 'estornado' ? 'Devolvido' : pagamento.tentativas_estorno >= 3 ? 'Devolução atrasada' : 'Devolução a caminho'}</strong><span className="muted">{formatCents(pagamento.estorno_cents ?? pagamento.valor_cents)} {pagamento.status === 'estornado' ? 'voltaram' : 'voltam'} para a sua conta.{pagamento.status !== 'estornado' && pagamento.tentativas_estorno >= 3 ? ' Já avisamos a profissional.' : ''}</span></>
-              : pagamento?.status === 'retido' ? <><strong>Sinal retido</strong><span className="muted">Cancelado em cima da hora: {formatCents(pagamento.valor_cents)} ficaram com a profissional.</span></>
-              : a.pago_cents > 0 ? <><strong>{a.pago_cents < (a.price_cents ?? 0) ? `Sinal pago: ${formatCents(a.pago_cents)}` : `Pago pelo app: ${formatCents(a.pago_cents)}`}</strong>{a.pago_cents < (a.price_cents ?? 0) && <span className="muted">Faltam {formatCents(a.price_cents - a.pago_cents)}, no atendimento.</span>}</>
+              : pagamento?.status === 'credito' ? <><strong>Sinal virou crédito: {formatCents(pagamento.valor_cents)}</strong><span className="muted">Vale até {formatDiaCurto(pagamento.credito_ate)} para marcar de novo com {dinheiro?.salao ?? 'a profissional'}. Entra como sinal, sem pagar de novo.</span></>
+              : pagamento?.status === 'retido' ? <><strong>Sinal retido</strong><span className="muted">{pagamento.motivo_estorno?.includes('venceu') ? `O crédito de ${formatCents(pagamento.valor_cents)} passou dos 30 dias sem uso e ficou com a profissional.` : `Cancelado em cima da hora: ${formatCents(pagamento.valor_cents)} ficaram com a profissional.`}</span></>
+              : a.pago_cents > 0 ? <><strong>{a.pago_cents < (a.price_cents ?? 0) ? `Sinal pago: ${formatCents(a.pago_cents)}` : `Pago pelo app: ${formatCents(a.pago_cents)}`}</strong>{a.pago_cents < (a.price_cents ?? 0) && <span className="muted">Faltam {formatCents(a.price_cents - a.pago_cents)}, no atendimento.</span>}{podeMexer && dinheiro && <span className="muted">{dinheiro.dentro_do_prazo ? `Cancelando até ${formatQuando(dinheiro.limite)}, ${formatCents(dinheiro.volta_cents)} voltam. Remarcar leva o sinal junto.` : `Passou o prazo de ${dinheiro.horas} h: cancelando, o sinal vira crédito por 30 dias. Remarcar leva o sinal junto.`}</span>}</>
               : <><strong>Pagamento não concluído</strong><span className="muted">{pagamento?.status === 'expirado' ? 'A reserva venceu.' : 'Nenhum PIX confirmado.'}</span></>}
           </span>
           {a.status === 'aguardando_pagamento' && <Link className="btn btn-primary btn-mini" to={`/cliente/pagamento/${a.id}`}>Pagar</Link>}
+          {pagamento?.status === 'credito' && a.professionals && a.service_id && <Link className="btn btn-primary btn-mini" to={`/cliente/profissional/${a.professionals.id}/servicos?servico=${a.service_id}`}>Usar</Link>}
         </div>
       )}
 
@@ -213,3 +218,13 @@ function minutosEntre(ini, fim) {
   return h2 * 60 + m2 - (h1 * 60 + m1)
 }
 function capitalizar(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s }
+
+function formatDiaCurto(d) {
+  if (!d) return ''
+  return new Date(String(d).slice(0, 10) + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+}
+function formatQuando(ts) {
+  if (!ts) return ''
+  const d = new Date(ts)
+  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) + ' às ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+}

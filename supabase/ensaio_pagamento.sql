@@ -80,19 +80,98 @@ begin
   if p.status <> 'estornado' or p.estornado_em is null then raise exception 'não marcou estornado'; end if;
   raise notice '5 estorno com antecedência (ok)';
 
-  -- 6. cancelou em cima da hora: sinal retido
+  -- 6. cancelou em cima da hora (pagou há 2 h, atendimento em 3 h): o sinal vira crédito por 30 dias
+  update public.salons set politica_cancelamento = 'moderada' where id = sal;
   perform set_config('request.jwt.claim.sub', cli::text, false);
   r := public.marcar_servicos(prof.id, array[svc.id], (public.agora_local() + interval '3 hours')::date, (public.agora_local() + interval '3 hours')::time, null);
   a2 := (r ->> 'appointment_id')::uuid;
   perform set_config('request.jwt.claim.sub', '', false);
   pg := public.pagamento_preparar(a2, cli);
   perform public.confirmar_pagamento((pg ->> 'pagamento_id')::uuid, 'pay_2', null);
+  update public.pagamentos set pago_em = now() - interval '2 hours' where id = (pg ->> 'pagamento_id')::uuid;
   perform set_config('request.jwt.claim.sub', cli::text, false);
+  r := public.regras_do_agendamento(a2);
+  if (r ->> 'dentro_do_prazo')::boolean then raise exception 'devia estar fora do prazo: %', r; end if;
   update public.appointments set status = 'cancelado' where id = a2;
   select * into p from public.pagamentos where id = (pg ->> 'pagamento_id')::uuid;
-  if p.status <> 'retido' then raise exception 'em cima da hora devia reter: %', p.status; end if;
-  if not exists (select 1 from public.notifications where user_id = cli and kind = 'sinal_retido') then raise exception 'sem aviso de sinal retido'; end if;
-  raise notice '6 sinal retido (ok)';
+  if p.status <> 'credito' or p.credito_ate <> public.agora_local()::date + 30 then raise exception 'em cima da hora devia virar crédito: % %', p.status, p.credito_ate; end if;
+  if not exists (select 1 from public.notifications where user_id = cli and kind = 'sinal_em_credito') then raise exception 'sem aviso de crédito'; end if;
+  r := public.meu_credito(sal);
+  if (r ->> 'valor_cents')::int <> p.valor_cents then raise exception 'meu_credito errado: %', r; end if;
+  raise notice '6 sinal virou crédito (ok)';
+
+  -- 6b. marca de novo com a mesma casa: o crédito entra como sinal, sem pagar
+  update public.salons set pagamento_modo = 'obrigatorio' where id = sal;
+  r := public.marcar_servicos(prof.id, array[svc.id], dia + 2, '11:00', null);
+  if (r ->> 'pagar')::boolean or (r ->> 'credito_usado')::int <> p.valor_cents then raise exception 'crédito não foi usado: %', r; end if;
+  select * into ap from public.appointments where id = (r ->> 'appointment_id')::uuid;
+  if ap.status <> 'pendente' or ap.pago_cents <> p.valor_cents then raise exception 'horário com crédito: % %', ap.status, ap.pago_cents; end if;
+  select * into p from public.pagamentos where id = p.id;
+  if p.status <> 'pago' or p.appointment_id <> ap.id or p.remarcado_de <> a2 then raise exception 'pagamento não mudou de horário: % %', p.status, p.appointment_id; end if;
+  if public.meu_credito(sal) is not null then raise exception 'crédito continuou disponível'; end if;
+  -- e a casa cancela esse novo horário: devolve tudo
+  perform set_config('request.jwt.claim.sub', prof.user_id::text, false);
+  update public.appointments set status = 'cancelado' where id = ap.id;
+  select * into p from public.pagamentos where id = p.id;
+  if p.status <> 'estorno_pendente' or p.estorno_cents <> p.valor_cents then raise exception 'casa cancelou devia devolver tudo: % %', p.status, p.estorno_cents; end if;
+  perform public.pagamento_cuidado(p.id, 'estornado');
+  raise notice '6b crédito usado como sinal (ok)';
+
+  -- 6c. crédito que passou dos 30 dias fica com a casa
+  perform set_config('request.jwt.claim.sub', cli::text, false);
+  r := public.marcar_servicos(prof.id, array[svc.id], (public.agora_local() + interval '3 hours')::date, (public.agora_local() + interval '4 hours')::time, null);
+  a2 := (r ->> 'appointment_id')::uuid;
+  perform set_config('request.jwt.claim.sub', '', false);
+  pg := public.pagamento_preparar(a2, cli);
+  perform public.confirmar_pagamento((pg ->> 'pagamento_id')::uuid, 'pay_2c', null);
+  update public.pagamentos set pago_em = now() - interval '2 hours' where id = (pg ->> 'pagamento_id')::uuid;
+  perform set_config('request.jwt.claim.sub', cli::text, false);
+  update public.appointments set status = 'cancelado' where id = a2;
+  update public.pagamentos set credito_ate = public.agora_local()::date - 1 where id = (pg ->> 'pagamento_id')::uuid;
+  if public.expirar_creditos() <> 1 then raise exception 'não venceu o crédito'; end if;
+  select * into p from public.pagamentos where id = (pg ->> 'pagamento_id')::uuid;
+  if p.status <> 'retido' then raise exception 'crédito vencido devia ficar retido: %', p.status; end if;
+  if not exists (select 1 from public.notifications where user_id = cli and kind = 'credito_vencido') then raise exception 'sem aviso de crédito vencido'; end if;
+  raise notice '6c crédito venceu (ok)';
+
+  -- 6d. carência: pagou já dentro do prazo e desistiu em menos de 1 h: devolve
+  r := public.marcar_servicos(prof.id, array[svc.id], (public.agora_local() + interval '3 hours')::date, (public.agora_local() + interval '5 hours')::time, null);
+  a2 := (r ->> 'appointment_id')::uuid;
+  perform set_config('request.jwt.claim.sub', '', false);
+  pg := public.pagamento_preparar(a2, cli);
+  perform public.confirmar_pagamento((pg ->> 'pagamento_id')::uuid, 'pay_2d', null);
+  perform set_config('request.jwt.claim.sub', cli::text, false);
+  r := public.regras_do_agendamento(a2);
+  if not (r ->> 'dentro_do_prazo')::boolean then raise exception 'carência devia valer: %', r; end if;
+  update public.appointments set status = 'cancelado' where id = a2;
+  select * into p from public.pagamentos where id = (pg ->> 'pagamento_id')::uuid;
+  if p.status <> 'estorno_pendente' then raise exception 'na carência devia devolver: %', p.status; end if;
+  perform public.pagamento_cuidado(p.id, 'estornado');
+  raise notice '6d carência de 1 h (ok)';
+
+  -- 6e. a casa remarca um horário pago: o sinal vai junto, sem devolver
+  r := public.marcar_servicos(prof.id, array[svc.id], dia + 5, '10:00', null);
+  a2 := (r ->> 'appointment_id')::uuid;
+  perform set_config('request.jwt.claim.sub', '', false);
+  pg := public.pagamento_preparar(a2, cli);
+  perform public.confirmar_pagamento((pg ->> 'pagamento_id')::uuid, 'pay_2e', null);
+  perform set_config('request.jwt.claim.sub', prof.user_id::text, false);
+  r := public.remarcar_por_fora(a2, dia + 5, '15:00');
+  if not (r ->> 'ok')::boolean then raise exception 'remarcar_por_fora falhou: %', r; end if;
+  select * into ap from public.appointments where id = (r ->> 'appointment_id')::uuid;
+  select * into p from public.pagamentos where id = (pg ->> 'pagamento_id')::uuid;
+  if ap.pago_cents <> p.valor_cents or p.appointment_id <> ap.id or p.status <> 'pago' or p.remarcado_de <> a2 then raise exception 'sinal não acompanhou a troca: % % %', ap.pago_cents, p.appointment_id, p.status; end if;
+  if exists (select 1 from public.notifications where user_id = cli and kind in ('estorno_a_caminho') and (data ->> 'appointment_id')::uuid = a2) then raise exception 'troca gerou devolução'; end if;
+  raise notice '6e troca leva o sinal junto (ok)';
+
+  -- 6f. o financeiro do mês, visto pela casa
+  insert into public.salon_members (salon_id, user_id, papel) values (sal, prof.user_id, 'admin') on conflict (salon_id, user_id) do update set papel = 'admin';
+  r := public.financeiro_do_salao(sal, to_char(public.agora_local(), 'YYYY-MM'));
+  if (r ->> 'recebido_cents')::int <= 0 or (r ->> 'pagamentos')::int < 3 then raise exception 'financeiro vazio: %', r; end if;
+  if jsonb_array_length(r -> 'por_profissional') < 1 or jsonb_array_length(r -> 'movimentos') < 3 then raise exception 'financeiro sem listas: %', r; end if;
+  raise notice '6f financeiro: recebido % em % pagamentos, devolvido %, retido % (ok)', r ->> 'recebido_cents', r ->> 'pagamentos', r ->> 'devolvido_cents', r ->> 'retido_cents';
+  perform set_config('request.jwt.claim.sub', cli::text, false);
+  update public.salons set pagamento_modo = 'obrigatorio', sinal_pct = 50 where id = sal;
 
   -- 7. reserva que ninguém pagou expira em 15 min, sem avisar a profissional
   r := public.marcar_servicos(prof.id, array[svc.id], dia, '14:00', null);
@@ -162,7 +241,7 @@ begin
 
   -- 10. a rotina geral devolve as contagens
   r := public.rodar_rotinas();
-  if not (r ? 'reservas_expiradas') or not (r ? 'pagamentos') then raise exception 'rodar_rotinas sem os campos: %', r; end if;
+  if not (r ? 'reservas_expiradas') or not (r ? 'pagamentos') or not (r ? 'creditos_vencidos') then raise exception 'rodar_rotinas sem os campos: %', r; end if;
   raise notice '10 rodar_rotinas ok';
 end $$;
 rollback;

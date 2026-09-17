@@ -7,7 +7,7 @@ import { useCategorias, agruparPorCategoria } from '../../lib/categorias'
 import CategoriaCard from '../../components/CategoriaCard'
 import { StarIcon, InstagramIcon } from '../../components/icons'
 import { MapPin, Phone, Clock, Store, BadgePercent, MessageCircle, Star, Wallet } from 'lucide-react'
-import { MODOS, textoSinal } from '../../lib/pagamento'
+import { MODOS, textoSinal, POLITICAS } from '../../lib/pagamento'
 
 // A página do salão (085): fotos, descrição, contatos, horário, a
 // equipe, os serviços por categoria (com quem faz) e as promoções da
@@ -71,7 +71,7 @@ export default function ClienteSalao() {
 
       <div className="perfil-cabeca">
         <h2>{s.nome}</h2>
-        {s.pagamento?.modo && s.pagamento.modo !== 'nao' && <p className={'selo-pag ' + s.pagamento.modo}><Wallet size={13} /><span className="selo-pag-rotulo">{MODOS[s.pagamento.modo].curto}</span><span className="muted">{textoSinal(s.pagamento.sinal_pct)} por PIX ao marcar</span></p>}
+        {s.pagamento?.modo && s.pagamento.modo !== 'nao' && <p className={'selo-pag ' + s.pagamento.modo}><Wallet size={13} /><span className="selo-pag-rotulo">{MODOS[s.pagamento.modo].curto}</span><span className="muted">{textoSinal(s.pagamento.sinal_pct)} por PIX ao marcar{s.pagamento.politica ? ` · cancelamento ${POLITICAS[s.pagamento.politica]?.rotulo.toLowerCase() ?? ''}: devolve até ${POLITICAS[s.pagamento.politica]?.horas} h antes` : ''}</span></p>}
         {endereco && <p className="muted salao-linha"><MapPin size={14} /> {endereco}{mapa && <> · <a href={mapa} target="_blank" rel="noreferrer">como chegar</a></>}</p>}
         {nota ? (
           <p className="perfil-nota"><StarIcon /> <strong>{Number(nota.media).toFixed(1)}</strong><span className="muted">({nota.quantas} {nota.quantas === 1 ? 'avaliação' : 'avaliações'} da equipe)</span></p>

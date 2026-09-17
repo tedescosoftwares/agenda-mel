@@ -12,6 +12,20 @@ export const MODOS = {
 
 export const SINAIS = [30, 50, 100]
 
+// a política de cancelamento (094): três jeitos, nada em aberto
+export const POLITICAS = {
+  flexivel: { rotulo: 'Flexível', horas: 6, explica: 'Até 6 h antes, devolve o sinal (menos a taxa do PIX) ou remarca levando o sinal. Depois disso, o sinal vira crédito por 30 dias.' },
+  moderada: { rotulo: 'Moderada', horas: 12, explica: 'Até 12 h antes, devolve o sinal (menos a taxa do PIX) ou remarca levando o sinal. Depois disso, o sinal vira crédito por 30 dias.' },
+  rigorosa: { rotulo: 'Rigorosa', horas: 24, explica: 'Até 24 h antes, devolve o sinal (menos a taxa do PIX) ou remarca levando o sinal. Depois disso, o sinal vira crédito por 30 dias.' },
+}
+export const CREDITO_DIAS = 30
+
+// a mesma regra, contada para a cliente
+export function textoPolitica(p) {
+  const pol = POLITICAS[p] ?? POLITICAS.moderada
+  return `Cancelamento ${pol.rotulo.toLowerCase()}: devolve até ${pol.horas} h antes (menos a taxa do PIX). Depois, o sinal vira crédito por ${CREDITO_DIAS} dias para remarcar.`
+}
+
 export function textoSinal(pct) {
   return pct >= 100 ? 'o valor inteiro' : `um sinal de ${pct}%`
 }

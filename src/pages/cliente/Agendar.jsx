@@ -8,7 +8,7 @@ import { formatPreco, labelDuracao, formatDuracao } from '../../lib/format'
 import { formatDataLonga } from '../../lib/booking'
 import { Check, Sparkles, Repeat, Plus, Users, Hourglass, Search, BadgePercent } from 'lucide-react'
 import { useCategorias, agruparPorCategoria, bate } from '../../lib/categorias'
-import { textoSinal, formatCents } from '../../lib/pagamento'
+import { textoSinal, formatCents, textoPolitica } from '../../lib/pagamento'
 
 // O fluxo de marcar, dentro do app: serviço → data → hora → confirmar.
 // Cada passo é uma rota, e o que já foi escolhido viaja na URL
@@ -358,9 +358,11 @@ export function AgendarConfirmar() {
   const { prof, servico } = useContexto(esc.prof, esc.servico)
   const [pagamento, setPagamento] = useState(null)  // { modo, sinal_pct } do salão (090)
   const [querPagar, setQuerPagar] = useState(false)
+  const [credito, setCredito] = useState(null)      // crédito de remarcação com esta casa (094)
   useEffect(() => {
     if (!prof?.salon_id) return
     supabase.rpc('pagamento_do_salao', { salao: prof.salon_id }).then(({ data }) => setPagamento(data ?? null))
+    supabase.rpc('meu_credito', { salao: prof.salon_id }).then(({ data }) => setCredito(data ?? null))
   }, [prof?.salon_id])
   const origem = useOrigem(esc.remarcar)
   const [obs, setObs] = useState('')
@@ -603,7 +605,13 @@ export function AgendarConfirmar() {
         </label>
       )}
 
-      {!remarcando && partesDetalhadas.length === 0 && pagamento && pagamento.modo !== 'nao' && (
+      {!remarcando && credito && (
+        <div className="card pag-escolha on">
+          <strong>Você tem {formatCents(credito.valor_cents)} de crédito aqui</strong>
+          <span className="muted">Do sinal de {credito.de ?? 'um horário'} que você cancelou. Ele entra como sinal deste pedido e você não paga nada agora. Vale até {new Date(credito.ate + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}.</span>
+        </div>
+      )}
+      {!remarcando && !credito && partesDetalhadas.length === 0 && pagamento && pagamento.modo !== 'nao' && (
         <div className={'card pag-escolha' + (pagamento.modo === 'obrigatorio' || querPagar ? ' on' : '')}>
           {pagamento.modo === 'obrigatorio' ? (
             <>
@@ -616,6 +624,7 @@ export function AgendarConfirmar() {
               <span><strong>Pagar agora pelo app</strong><span className="muted">{textoSinal(pagamento.sinal_pct)}, {formatCents(Math.round(totalComDesconto * 100 * pagamento.sinal_pct / 100))} por PIX. Sem obrigação: dá para pagar no atendimento.</span></span>
             </label>
           )}
+          {(pagamento.modo === 'obrigatorio' || querPagar) && <span className="muted pag-politica">{textoPolitica(pagamento.politica)}</span>}
         </div>
       )}
 

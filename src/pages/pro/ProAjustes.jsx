@@ -51,7 +51,7 @@ export default function ProAjustes() {
               <span className="nome-txt">Receber pelo app</span>
             </span>
             <span className="muted cliente-meta">
-              A cliente paga por PIX ao marcar; sinal contra falta
+              PIX ao marcar, política de cancelamento e o financeiro do mês
             </span>
           </div>
           <ChevronIcon />

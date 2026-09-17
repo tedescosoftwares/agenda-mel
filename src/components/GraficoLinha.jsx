@@ -23,7 +23,7 @@ export default function GraficoLinha({ pontos, altura = 150 }) {
       <path d={area} fill="url(#gl-area)" />
       <path d={d} fill="none" stroke="#ff2d7a" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
       {pontos.map((p, i) => <circle key={i} cx={X(i)} cy={Y(p.y)} r={i === iMax ? 5 : 2.5} fill={i === iMax ? '#ff2d7a' : '#fff'} stroke="#ff2d7a" strokeWidth="1.5" />)}
-      <text x={X(iMax)} y={Y(max) - 9} textAnchor="middle" fontSize="11" fontWeight="600" fill="#1f2026">R$ {max.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}</text>
+      <text x={Math.min(W - 34, Math.max(34, X(iMax)))} y={Y(max) - 9} textAnchor="middle" fontSize="11" fontWeight="600" fill="#1f2026">R$ {max.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}</text>
       {pontos.map((p, i) => (i % passo === 0 || i === pontos.length - 1) && <text key={'t' + i} x={X(i)} y={H + 12} textAnchor="middle" fontSize="10" fill="#9a9ea8">{p.x}</text>)}
     </svg>
   )

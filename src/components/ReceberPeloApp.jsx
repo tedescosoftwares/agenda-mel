@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { Wallet, ShieldCheck, Clock, BadgePercent, RefreshCw, ExternalLink, CircleCheck, CircleX, Hourglass, Copy } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
-import { MODOS, SINAIS, COMO_FUNCIONA, chamar, formatCents, textoSinal } from '../lib/pagamento'
+import { MODOS, SINAIS, POLITICAS, CREDITO_DIAS, COMO_FUNCIONA, chamar, formatCents, textoSinal } from '../lib/pagamento'
+import FinanceiroDoSalao from './FinanceiroDoSalao'
 
 // "Receber pelo app" (090): a tela onde o salão ou a autônoma liga o
 // pagamento por PIX dentro do MIMO. Três partes: como funciona (para
@@ -15,22 +16,21 @@ export default function ReceberPeloApp({ salao, nomeSalao }) {
   const { user } = useAuth()
   const [config, setConfig] = useState(null)      // pagamento_modo, sinal_pct, estorno_horas
   const [conta, setConta] = useState(null)        // contas_de_recebimento
-  const [pagamentos, setPagamentos] = useState([])
   const [form, setForm] = useState(CAMPOS_VAZIOS)
   const [aceite, setAceite] = useState(false)
   const [mexendo, setMexendo] = useState(false)
   const [erro, setErro] = useState('')
   const [aviso, setAviso] = useState('')
+  const [aba, setAba] = useState('conta')     // conta | regras | financeiro
+  const [comoFunciona, setComoFunciona] = useState(false)   // a explicação longa, depois que a conta existe
 
   const carregar = useCallback(async () => {
-    const [{ data: s, error: es }, { data: c, error: ec }, { data: p }] = await Promise.all([
-      supabase.from('salons').select('pagamento_modo, sinal_pct, estorno_horas, estorno_desconta_taxa, name').eq('id', salao).maybeSingle(),
+    const [{ data: s, error: es }, { data: c, error: ec }] = await Promise.all([
+      supabase.from('salons').select('pagamento_modo, sinal_pct, politica_cancelamento, name').eq('id', salao).maybeSingle(),
       supabase.from('contas_de_recebimento').select('*').eq('salon_id', salao).maybeSingle(),
-      supabase.from('pagamentos').select('id, valor_cents, total_cents, sinal_pct, status, pago_em, criado_em, appointment_id, estorno_cents, tentativas_estorno, proxima_tentativa_em, erro, appointments (service_name, date, start_time, profiles (full_name))').eq('salon_id', salao).order('criado_em', { ascending: false }).limit(30),
     ])
     setConfig(s ?? null)
     setConta(c ?? null)
-    setPagamentos(p ?? [])
     if (es || ec) setErro('O banco ainda não tem a atualização do pagamento (migração 090). Publique o banco (opção B do MIMO VPS) e recarregue. Detalhe: ' + (es?.message ?? ec?.message))
     if (s) setForm((f) => (f.nome ? f : { ...f, nome: s.name ?? '', email: user?.email ?? '' }))
   }, [salao, user?.email])
@@ -40,7 +40,7 @@ export default function ReceberPeloApp({ salao, nomeSalao }) {
     setErro('')
     const novo = { ...config, ...patch }
     setConfig(novo)
-    const { error } = await supabase.from('salons').update({ pagamento_modo: novo.pagamento_modo, sinal_pct: novo.sinal_pct, estorno_horas: novo.estorno_horas, estorno_desconta_taxa: novo.estorno_desconta_taxa }).eq('id', salao)
+    const { error } = await supabase.from('salons').update({ pagamento_modo: novo.pagamento_modo, sinal_pct: novo.sinal_pct, politica_cancelamento: novo.politica_cancelamento }).eq('id', salao)
     if (error) setErro(error.message)
   }
 
@@ -51,15 +51,6 @@ export default function ReceberPeloApp({ salao, nomeSalao }) {
     try {
       const r = await chamar('conta-recebimento', { acao: 'criar', salao, dados: { ...form, documento: form.documento.replace(/\D/g, ''), cep: form.cep.replace(/\D/g, ''), renda_mensal: Number(String(form.renda_mensal).replace(/\./g, '').replace(',', '.')) } })
       setAviso(r.documentos?.length ? 'Conta criada! Agora falta enviar os documentos abaixo.' : 'Conta criada! A aprovação leva pouco tempo, e você já pode receber.')
-      await carregar()
-    } catch (err) { setErro(err.message) } finally { setMexendo(false) }
-  }
-
-  async function devolverAgora(pagamentoId) {
-    setMexendo(true); setErro('')
-    try {
-      const r = await chamar('conta-recebimento', { acao: 'devolver', salao, pagamento_id: pagamentoId })
-      if (r?.ok === false) setErro('A devolução não saiu: ' + r.erro)
       await carregar()
     } catch (err) { setErro(err.message) } finally { setMexendo(false) }
   }
@@ -75,7 +66,16 @@ export default function ReceberPeloApp({ salao, nomeSalao }) {
 
   return (
     <>
-      {/* 1. como funciona: para ela decidir sabendo de tudo */}
+      {/* 1. como funciona: para ela decidir sabendo de tudo (com a conta aberta, fica guardado atrás de um toque) */}
+      {conta?.conta_id && (
+        <div className="abas receber-abas" role="tablist">
+          {[['conta', 'Conta'], ['regras', 'Regras'], ['financeiro', 'Financeiro']].map(([k, r]) => (
+            <button key={k} type="button" role="tab" className={'aba' + (aba === k ? ' active' : '')} onClick={() => setAba(k)}>{r}</button>
+          ))}
+        </div>
+      )}
+      {conta?.conta_id && aba === 'conta' && !comoFunciona && <button type="button" className="link-ver receber-como" onClick={() => setComoFunciona(true)}>Como funciona, prazos e taxa</button>}
+      {(!conta?.conta_id || (aba === 'conta' && comoFunciona)) && <>
       <div className="card receber-intro">
         <span className="receber-icone"><Wallet size={22} /></span>
         <div>
@@ -87,14 +87,16 @@ export default function ReceberPeloApp({ salao, nomeSalao }) {
         <li><ShieldCheck size={16} /><span><strong>Quem recebe é {nomeSalao ? `o ${nomeSalao}` : 'a sua conta'}.</strong> O dinheiro fica numa conta de recebimento em nome do seu CPF ou CNPJ, aberta por aqui mesmo. Quem trabalha em salão não precisa fazer nada: o salão recebe.</span></li>
         <li><Clock size={16} /><span><strong>Prazo:</strong> {COMO_FUNCIONA.prazo}.</span></li>
         <li><BadgePercent size={16} /><span><strong>Taxa:</strong> {COMO_FUNCIONA.taxaPix}, descontada do valor recebido. Sem mensalidade e sem taxa quando ninguém paga.</span></li>
-        <li><RefreshCw size={16} /><span><strong>Cancelamento:</strong> a cliente que cancela com antecedência recebe tudo de volta sozinha. Em cima da hora, o sinal fica com você. Você escolhe o prazo abaixo.</span></li>
+        <li><RefreshCw size={16} /><span><strong>Cancelamento:</strong> a cliente que cancela dentro do prazo recebe o sinal de volta sozinha (menos a taxa do PIX), ou remarca levando o sinal. Depois do prazo, o sinal não volta: vira crédito por {CREDITO_DIAS} dias para ela remarcar com você. Você escolhe o prazo em Regras.</span></li>
       </ul>
       <p className="muted receber-provedor">Os pagamentos são processados por {COMO_FUNCIONA.provedor}, instituição autorizada pelo Banco Central. O MIMO não guarda o seu dinheiro.</p>
+      </>}
 
       {erro && <div className="alert alert-error">{erro}</div>}
       {aviso && <div className="alert alert-info">{aviso}</div>}
 
       {/* 2. a conta de recebimento */}
+      {(!conta?.conta_id || aba === 'conta') && <>
       <h3 className="secao-titulo">Conta de recebimento</h3>
       {!conta?.conta_id ? (
         <form className="card form receber-form" onSubmit={criarConta}>
@@ -156,7 +158,10 @@ export default function ReceberPeloApp({ salao, nomeSalao }) {
         </div>
       )}
 
+      </>}
+
       {/* 3. as regras */}
+      {(!conta?.conta_id || aba === 'regras') && <>
       <h3 className="secao-titulo">Como a cliente paga</h3>
       {config && (
         <div className="card receber-regras">
@@ -174,48 +179,23 @@ export default function ReceberPeloApp({ salao, nomeSalao }) {
             </div>
             <span className="campo-dica">Hoje: {textoSinal(config.sinal_pct)}. O resto ela acerta com você no atendimento.</span>
           </label>
-          <label className="receber-campo">Quando a cliente cancela com antecedência
-            <div className="chips">
-              <button type="button" className={'chip' + (config.estorno_desconta_taxa !== false ? ' active' : '')} onClick={() => salvarConfig({ estorno_desconta_taxa: true })}>Devolve menos a taxa do PIX</button>
-              <button type="button" className={'chip' + (config.estorno_desconta_taxa === false ? ' active' : '')} onClick={() => salvarConfig({ estorno_desconta_taxa: false })}>Devolve tudo</button>
+          <label className="receber-campo">Política de cancelamento
+            <div className="modo-opcoes vertical">
+              {Object.entries(POLITICAS).map(([k, pol]) => (
+                <button key={k} type="button" className={'modo-opcao' + ((config.politica_cancelamento ?? 'moderada') === k ? ' on' : '')} onClick={() => salvarConfig({ politica_cancelamento: k })}>
+                  <strong>{pol.rotulo} · {pol.horas} h</strong><span className="muted">{pol.explica}</span>
+                </button>
+              ))}
             </div>
-            <span className="campo-dica">O provedor não devolve a taxa do PIX. "Menos a taxa" devolve o que entrou na sua conta e não exige saldo extra. "Tudo" é mais generoso, mas a taxa sai do seu bolso. Se você cancelar, devolve tudo sempre.</span>
-          </label>
-          <label className="receber-campo">Devolve se cancelar com pelo menos
-            <div className="chips">
-              {[6, 12, 24, 48].map((h) => <button key={h} type="button" className={'chip' + (config.estorno_horas === h ? ' active' : '')} onClick={() => salvarConfig({ estorno_horas: h })}>{h} h</button>)}
-            </div>
-            <span className="campo-dica">Cancelou com menos que isso, o sinal fica com você. A devolução sai da sua conta de recebimento: se não houver saldo (por exemplo, se você já sacou), o app avisa e ela sai assim que houver.</span>
+            <span className="campo-dica">Quem paga já dentro do prazo ainda pode desistir com devolução até 1 hora depois de pagar. Se você cancelar, devolve tudo, sempre. A devolução sai da sua conta de recebimento: se não houver saldo, o app avisa e ela sai assim que houver.</span>
           </label>
         </div>
       )}
+      </>}
 
-      {/* 4. o que entrou */}
-      <h3 className="secao-titulo">Pagamentos</h3>
-      {pagamentos.length === 0 ? (
-        <div className="card empty-state"><p className="muted">Nenhum pagamento ainda. Quando a primeira cliente pagar pelo app, aparece aqui.</p></div>
-      ) : (
-        <div className="cliente-list">
-          {pagamentos.map((p) => (
-            <div key={p.id} className="card pag-linha">
-              <div className="pag-info">
-                <strong>{p.appointments?.profiles?.full_name ?? 'Cliente'}</strong>
-                <span className="muted">{p.appointments?.service_name ?? 'Atendimento'} · {p.appointments?.date ? new Date(p.appointments.date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : ''} {p.appointments?.start_time?.slice(0, 5)}</span>
-              </div>
-              <div className="pag-valor">
-                <strong>{formatCents(p.valor_cents)}</strong>
-                <span className={`badge badge-pag-${p.status}`}>{p.status === 'estorno_pendente' && p.tentativas_estorno >= 2 ? 'devolução parada' : ROTULO_PAG[p.status] ?? p.status}</span>
-                {(p.status === 'estorno_pendente' || p.status === 'estornado') && p.estorno_cents != null && p.estorno_cents !== p.valor_cents && <span className="muted pag-erro">devolve {formatCents(p.estorno_cents)}</span>}
-                {p.status === 'estorno_pendente' && p.erro && <span className="muted pag-erro">{p.erro.includes('aldo') ? 'falta saldo na conta de recebimento' : p.erro}</span>}
-                {p.status === 'estorno_pendente' && p.tentativas_estorno > 0 && p.proxima_tentativa_em && <span className="muted pag-erro">tenta de novo {new Date(p.proxima_tentativa_em).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>}
-                {p.status === 'estorno_pendente' && <button type="button" className="btn-mini" onClick={() => devolverAgora(p.id)} disabled={mexendo}>Tentar devolver agora</button>}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      {/* 4. o financeiro */}
+      {conta?.conta_id && aba === 'financeiro' && <FinanceiroDoSalao salao={salao} aoMexer={carregar} />}
     </>
   )
 }
 
-const ROTULO_PAG = { aguardando: 'aguardando', pago: 'pago', expirado: 'expirou', cancelado: 'cancelado', estorno_pendente: 'estornando', estornado: 'estornado', retido: 'retido', falhou: 'falhou' }

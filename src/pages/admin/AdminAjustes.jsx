@@ -30,7 +30,7 @@ const ITENS = [
     to: '/admin/receber',
     Icon: Wallet,
     titulo: 'Receber pelo app',
-    resumo: 'A cliente paga por PIX ao marcar; sinal contra falta',
+    resumo: 'PIX ao marcar, política de cancelamento e o financeiro do mês',
   },
   {
     to: '/admin/salao',

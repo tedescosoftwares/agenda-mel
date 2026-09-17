@@ -69,6 +69,22 @@ if [ "$MODO" = "--ja-rodei" ]; then
 fi
 
 APLICADAS=$("${PSQL[@]}" -tAc 'select arquivo from public.migracoes_aplicadas' | tr -d '\r')
+
+# a anotação nasceu na 040: um banco que anotou a 040 (ou qualquer outra)
+# já tinha tudo antes dela aplicado pelo setup antigo. Tudo abaixo da
+# primeira anotada conta como feito (e fica anotado, para não perguntar
+# de novo). Rodar migração velha em banco novo quebra: a 004 cria uma
+# regra que a 016 substituiu.
+MENOR=$(printf '%s\n' "$APLICADAS" | grep -E '^[0-9]{3}_' | sort | head -1 | cut -c1-3)
+if [ -n "$MENOR" ]; then
+  for f in $(ls -1 [0-9][0-9][0-9]_*.sql | sort | awk -F_ -v m="$MENOR" '$1+0 < m+0'); do
+    if ! grep -qxF "$f" <<< "$APLICADAS"; then
+      "${PSQL[@]}" -c "insert into public.migracoes_aplicadas (arquivo) values ('$f') on conflict (arquivo) do nothing;" >/dev/null
+      APLICADAS=$(printf '%s\n%s' "$APLICADAS" "$f")
+    fi
+  done
+fi
+
 PENDENTES=()
 for f in $(ls -1 [0-9][0-9][0-9]_*.sql | sort); do
   if ! grep -qxF "$f" <<< "$APLICADAS"; then PENDENTES+=("$f"); fi

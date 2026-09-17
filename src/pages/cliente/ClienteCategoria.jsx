@@ -36,7 +36,8 @@ export default function ClienteCategoria() {
   }, [id])
 
   const categoria = cat === 'outros' ? { id: '', nome: 'Outros' } : cats.find((c) => c.id === cat)
-  const servicos = useMemo(() => (pg?.servicos ?? []).filter((s) => (cat === 'outros' ? !s.categoria_id || !cats.some((c) => c.id === s.categoria_id) : s.categoria_id === cat)), [pg, cat, cats])
+  // só o que alguém faz (o resto não dá para marcar), da categoria pedida
+  const servicos = useMemo(() => (pg?.servicos ?? []).filter((s) => (s.quem ?? []).length > 0).filter((s) => (cat === 'outros' ? !s.categoria_id || !cats.some((c) => c.id === s.categoria_id) : s.categoria_id === cat)), [pg, cat, cats])
   const imagens = (cat !== 'outros' && pg?.capas?.[cat]?.length) ? pg.capas[cat] : [capaPadrao(categoria?.nome)]
   const equipe = pg?.equipe ?? []
   const preferida = pg?.preferida ? equipe.find((p) => p.id === pg.preferida) : null

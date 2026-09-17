@@ -48,7 +48,8 @@ export default function ClienteSalao() {
   const hoje = new Date().getDay()
   const horarios = (pg.horarios ?? [])
   const equipe = pg.equipe ?? []
-  const servicos = pg.servicos ?? []
+  // o que ninguém faz não dá para marcar: fica fora da vitrine
+  const servicos = (pg.servicos ?? []).filter((s) => (s.quem ?? []).length > 0)
   const promos = pg.promocoes ?? []
   const preferida = pg.preferida ? equipe.find((p) => p.id === pg.preferida) : null
 

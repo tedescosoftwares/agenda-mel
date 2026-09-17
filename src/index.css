@@ -6237,3 +6237,11 @@ button.link-ver.pag-desistir { color: var(--texto-3); }
 .cliente-shell .vitrine-veu > .vitrine-preco s { display: block; font-size: 0.72rem; margin: 0 0 0.05rem; }
 /* indique e ganhe: só o espaço que o "Copiado!" precisa */
 .cliente-shell .ind-codigo-card { padding-bottom: 1.3rem; }
+
+/* ---- quem faz o serviço (admin) e troca de categoria (pro) ---- */
+.campo-quem-faz { display: flex; flex-direction: column; gap: 0.45rem; margin: 0.2rem 0 0.8rem; }
+.campo-quem-faz-rotulo { font-weight: 600; font-size: 0.9rem; }
+.campo-dica-alerta { color: var(--carmim); }
+.service-sem-quem { background: none; border: 0; padding: 0; font: inherit; font-size: 0.78rem; text-align: left; color: var(--carmim); cursor: pointer; }
+.servico-categoria-troca { display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; margin-top: 0.2rem; }
+.servico-categoria-troca select { font: inherit; font-size: 0.8rem; padding: 0.15rem 0.4rem; border: 1px solid var(--fio); border-radius: 8px; background: var(--branco); max-width: 60%; }

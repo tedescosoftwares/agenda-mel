@@ -30,6 +30,13 @@ export default function ProServicos() {
   const salaoId = professional?.salon_id
   const cats = categoriasDoSalao([...catsTodas, ...catsNovas], salaoId)
 
+  // a dona muda a categoria de um serviço que já existe, sem recriar
+  async function mudarCategoria(s, categoriaId) {
+    const { error } = await supabase.from('services').update({ categoria_id: categoriaId || null }).eq('id', s.id)
+    if (error) { setErro('Não deu para mudar a categoria: ' + error.message); return }
+    setServicos((lista) => lista.map((x) => (x.id === s.id ? { ...x, categoria_id: categoriaId || null } : x)))
+  }
+
   const carregar = useCallback(async () => {
     if (!profId) return
     const [s, v] = await Promise.all([
@@ -117,6 +124,15 @@ export default function ProServicos() {
               <span className="cliente-info">
                 <span className="cliente-nome"><span className="nome-txt">{s.name}</span>{s.is_combo && <span className="badge badge-combo">combo</span>}</span>
                 <span className="muted cliente-meta">{formatPreco(s.price)} · {formatDuracao(s.duration_minutes)}</span>
+                {dona && (
+                  <label className="servico-categoria-troca">
+                    <span className="muted">Categoria</span>
+                    <select value={s.categoria_id ?? ''} onChange={(e) => mudarCategoria(s, e.target.value)}>
+                      <option value="">Outros</option>
+                      {cats.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                    </select>
+                  </label>
+                )}
                 {nomes(s.id).length > 0 && <span className="muted cliente-meta servico-juntos-nomes"><Link2 size={12} /> Vai junto: {nomes(s.id).join(', ')}</span>}
               </span>
               {dona && <button type="button" className={'icon-btn destaque-estrela' + (s.destaque ? ' on' : '')} onClick={() => destacar(s)} aria-pressed={Boolean(s.destaque)} aria-label={s.destaque ? 'Tirar da home' : 'Destacar na home'} title={s.destaque ? 'Em destaque na home das clientes' : 'Destacar na home das clientes'}><Star size={18} /></button>}

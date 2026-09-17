@@ -91,6 +91,8 @@ begin
     insert into public.services (name, price, duration_minutes, salon_id, destaque, active) values ('Destaque ' || i, 50, 30, prof.salon_id, true, true) returning id into svc;
     insert into public.professional_services (professional_id, service_id) values (prof.id, svc.id);
   end loop;
+  -- um destaque que ninguém faz fica de fora (098)
+  insert into public.services (name, price, duration_minutes, salon_id, destaque, active) values ('Destaque sem ninguem', 50, 30, prof.salon_id, true, true);
   -- sem vínculo nenhum: só o agendamento com a profissional já basta
   delete from public.vinculos where client_id = cli;
   perform set_config('request.jwt.claim.sub', cli::text, false);
@@ -105,7 +107,8 @@ begin
   perform set_config('request.jwt.claim.sub', prof.user_id::text, false);
   select count(*) into n from public.destaques_para_mim() d where d.salon_id = prof.salon_id and d.name like 'Destaque %';
   if n <> 15 then raise exception 'equipe: esperava 15, veio %', n; end if;
-  raise notice '8 destaques: 15 de 15, salão inativo some, equipe vê (ok)';
+  if exists (select 1 from public.destaques_para_mim() d where d.name = 'Destaque sem ninguem') then raise exception 'destaque sem ninguém apareceu'; end if;
+  raise notice '8 destaques: 15 de 15, sem ninguém some, salão inativo some, equipe vê (ok)';
 
   raise notice 'FIM DO ENSAIO — tudo certo';
 end $$;

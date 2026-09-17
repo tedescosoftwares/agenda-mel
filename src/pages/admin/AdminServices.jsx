@@ -27,6 +27,9 @@ export default function AdminServices() {
   const { confirmar } = useDialogo()
   const { salao } = useAuth()
   const [services, setServices] = useState([])
+  const [profs, setProfs] = useState([])               // a equipe do salão (para "quem faz")
+  const [quemFaz, setQuemFaz] = useState({})           // service_id → [professional_id]: sem ninguém, a cliente não vê
+  const [quem, setQuem] = useState([])                 // no formulário: quem faz este serviço
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [editing, setEditing] = useState(null) // null | 'new' | id do serviço
@@ -117,8 +120,16 @@ export default function AdminServices() {
       setServices(data)
       setError('')
       const ids = data.map((s) => s.id)
-      const { data: j } = ids.length ? await supabase.from('servicos_juntos').select('service_id, sugerido_id').in('service_id', ids) : { data: [] }
+      const [{ data: j }, { data: v }, { data: pr }] = await Promise.all([
+        ids.length ? supabase.from('servicos_juntos').select('service_id, sugerido_id').in('service_id', ids) : { data: [] },
+        ids.length ? supabase.from('professional_services').select('professional_id, service_id').in('service_id', ids) : { data: [] },
+        salao?.id ? supabase.from('professionals').select('id, name').eq('salon_id', salao.id).eq('active', true).order('name') : { data: [] },
+      ])
       setJuntosTodos(j ?? [])
+      const mapa = {}
+      for (const x of v ?? []) (mapa[x.service_id] ??= []).push(x.professional_id)
+      setQuemFaz(mapa)
+      setProfs(pr ?? [])
     }
     setLoading(false)
   }
@@ -128,6 +139,7 @@ export default function AdminServices() {
     setImagens([])
     setComboIds([])
     setJuntos([])
+    setQuem(profs.length === 1 ? [profs[0].id] : [])   // só uma na casa? já é ela
     setEditing('new')
     setError('')
   }
@@ -144,6 +156,7 @@ export default function AdminServices() {
     setImagens((service.images ?? []).map((url) => ({ url })))
     setComboIds(service.combo_service_ids ?? [])
     setJuntos(juntosTodos.filter((j) => j.service_id === service.id).map((j) => j.sugerido_id))
+    setQuem(quemFaz[service.id] ?? [])
     setEditing(service.id)
     setError('')
   }
@@ -323,6 +336,21 @@ export default function AdminServices() {
         if (ej) { setError('Serviço salvo, mas não deu para guardar o "costuma ir junto": ' + ej.message); return }
       }
 
+      // quem faz: sem pelo menos uma profissional o serviço não aparece para as clientes
+      if (idSalvo) {
+        const antes = quemFaz[idSalvo] ?? []
+        const entra = quem.filter((id) => !antes.includes(id))
+        const sai = antes.filter((id) => !quem.includes(id))
+        if (entra.length) {
+          const { error: ev } = await supabase.from('professional_services').insert(entra.map((professional_id) => ({ professional_id, service_id: idSalvo })))
+          if (ev) { setError('Serviço salvo, mas não deu para marcar quem faz: ' + ev.message); return }
+        }
+        if (sai.length) {
+          const { error: ev } = await supabase.from('professional_services').delete().eq('service_id', idSalvo).in('professional_id', sai)
+          if (ev) { setError('Serviço salvo, mas não deu para tirar quem não faz mais: ' + ev.message); return }
+        }
+      }
+
       await limparImagensRemovidas(antigas, images)
       cancelEdit()
       fetchServices()
@@ -428,6 +456,20 @@ export default function AdminServices() {
               ))}
             </select>
           </label>
+          <div className="campo-quem-faz">
+            <span className="campo-quem-faz-rotulo">Quem faz</span>
+            {profs.length === 0 ? (
+              <span className="muted">Cadastre a equipe em Profissionais; sem alguém que faça, o serviço não aparece para as clientes.</span>
+            ) : (
+              <div className="filtro-chips">
+                {profs.map((p) => {
+                  const on = quem.includes(p.id)
+                  return <button key={p.id} type="button" className={on ? 'chip active' : 'chip'} onClick={() => setQuem((q) => (on ? q.filter((x) => x !== p.id) : [...q, p.id]))}>{p.name}</button>
+                })}
+              </div>
+            )}
+            {profs.length > 0 && quem.length === 0 && <span className="campo-dica campo-dica-alerta">Sem ninguém marcado, o serviço fica só aqui: não entra na categoria nem no marcar da cliente.</span>}
+          </div>
           <div className="cat-nova">
             <input
               value={novaCat}
@@ -619,6 +661,9 @@ export default function AdminServices() {
                 <span className="muted service-meta">
                   {labelDuracao(s)} · {formatPreco(s.price)}
                 </span>
+                {s.active && profs.length > 0 && !(quemFaz[s.id] ?? []).length && (
+                  <button type="button" className="service-meta service-sem-quem" onClick={() => startEdit(s)}>Ninguém faz ainda: toque e marque quem faz, senão a cliente não vê</button>
+                )}
                 {juntosTodos.some((j) => j.service_id === s.id) && (
                   <span className="muted service-meta service-juntos">
                     Vai junto: {juntosTodos.filter((j) => j.service_id === s.id).map((j) => services.find((x) => x.id === j.sugerido_id)?.name).filter(Boolean).join(', ')}

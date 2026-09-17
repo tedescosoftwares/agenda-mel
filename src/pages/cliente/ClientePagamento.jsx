@@ -77,9 +77,14 @@ export default function ClientePagamento() {
   }
 
   const [simulando, setSimulando] = useState(false)
+  const [simulado, setSimulado] = useState('')
   async function simular() {
     setSimulando(true); setErro('')
-    try { await chamar('pagamento-criar', { appointment_id: appt, simular: true }) } catch (e) { setErro(e.message) } finally { setSimulando(false) }
+    try {
+      const r = await chamar('pagamento-criar', { appointment_id: appt, simular: true })
+      setSimulado(r?.jeito === 'pix' ? 'Pago com o saldo da conta MIMO do sandbox: o dinheiro entrou de verdade na conta da profissional (no sandbox).'
+        : 'A conta MIMO do sandbox não tinha saldo' + (r?.motivo_pix ? ` (${r.motivo_pix})` : '') + ', então a cobrança foi baixada como "recebida em dinheiro". Não gera saldo; a devolução, se houver, desfaz a baixa.')
+    } catch (e) { setErro(e.message) } finally { setSimulando(false) }
   }
 
   async function desistir() {
@@ -125,6 +130,7 @@ export default function ClientePagamento() {
           <p className="muted pag-espera">Assim que o PIX cair, esta tela confirma sozinha.</p>
           <button type="button" className="link-ver pag-desistir" onClick={desistir}>Desistir do horário</button>
           {pg.sandbox && <button type="button" className="btn btn-ghost btn-block pag-simular" onClick={simular} disabled={simulando}>{simulando ? 'Simulando…' : 'Simular pagamento (teste)'}</button>}
+          {simulado && <p className="muted pag-espera">{simulado}</p>}
         </div>
       )}
 

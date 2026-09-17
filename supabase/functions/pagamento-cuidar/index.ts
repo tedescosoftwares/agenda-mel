@@ -6,7 +6,7 @@
 //   curl -X POST .../functions/v1/pagamento-cuidar -H "Authorization: Bearer $SERVICE_ROLE_KEY"
 
 import { clienteDoChamador, naoAutorizado, semPermissao } from '../_shared/porteiro.ts'
-import { estornarCobranca, apagarCobranca, json, ErroAsaas } from '../_shared/asaas.ts'
+import { estornarCobranca, apagarCobranca, obterCobranca, desfazerBaixaSandbox, AMBIENTE, json, ErroAsaas } from '../_shared/asaas.ts'
 
 Deno.serve(async (req) => {
   const db = clienteDoChamador(req)
@@ -22,7 +22,18 @@ Deno.serve(async (req) => {
     try {
       if (p.status === 'estorno_pendente') {
         if (!p.cobranca_id) { await db.rpc('pagamento_cuidado', { pagamento: p.id, resultado: 'erro', detalhe: 'sem cobrança para estornar' }); falhas++; continue }
-        await estornarCobranca(String(chaveSub), p.cobranca_id, p.estorno_cents && p.estorno_cents < p.valor_cents ? p.estorno_cents : null, p.motivo_estorno ?? 'cancelamento')
+        try {
+          await estornarCobranca(String(chaveSub), p.cobranca_id, p.estorno_cents && p.estorno_cents < p.valor_cents ? p.estorno_cents : null, p.motivo_estorno ?? 'cancelamento')
+        } catch (e) {
+          // sandbox: a cobrança simulada foi baixada "em dinheiro" e o Asaas não
+          // estorna isso; desfazer a baixa é o caminho de volta que existe lá.
+          // Nunca em produção: lá o estorno de verdade é o único caminho.
+          if (AMBIENTE === 'producao') throw e
+          const real = await obterCobranca(String(chaveSub), p.cobranca_id).catch(() => null)
+          if (String(real?.status ?? '') !== 'RECEIVED_IN_CASH') throw e
+          await desfazerBaixaSandbox(String(chaveSub), p.cobranca_id)
+          await apagarCobranca(String(chaveSub), p.cobranca_id).catch(() => {})
+        }
         await db.rpc('pagamento_cuidado', { pagamento: p.id, resultado: 'estornado' })
         estornados++
       } else {

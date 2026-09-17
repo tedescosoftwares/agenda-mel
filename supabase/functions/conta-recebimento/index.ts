@@ -9,7 +9,7 @@
 // que fica na tabela é o que a dona pode ver: ids, status, documentos.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { asaas, chavePai, corpoSubconta, situacaoDaSubconta, garantirChavePix, json, preflight, ErroAsaas, type DadosSubconta } from '../_shared/asaas.ts'
+import { asaas, chavePai, corpoSubconta, situacaoDaSubconta, garantirChavePix, saldoDaConta, json, preflight, ErroAsaas, type DadosSubconta } from '../_shared/asaas.ts'
 
 const URL_SUPABASE = Deno.env.get('SUPABASE_URL') ?? ''
 const servico = createClient(URL_SUPABASE, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '', { auth: { persistSession: false } })
@@ -89,8 +89,10 @@ Deno.serve(async (req) => {
     try {
       const situ = await situacaoDaSubconta(String(chaveSub))
       const pix = await garantirChavePix(String(chaveSub))
-      await servico.from('contas_de_recebimento').update({ status: situ.status, situacao: situ.situacao, documentos: situ.documentos, pix_pronto: pix.ok, pix_chave: pix.chave ?? null, erro: pix.ok ? null : ('Chave Pix: ' + (pix.erro ?? pix.status ?? 'pendente')), atualizado_em: new Date().toISOString() }).eq('salon_id', salao)
-      return json({ ok: true, ...situ, pix_pronto: pix.ok })
+      const saldo = await saldoDaConta(String(chaveSub))
+      const situacao = { ...(situ.situacao ?? {}), saldo_cents: saldo, saldo_em: new Date().toISOString() }
+      await servico.from('contas_de_recebimento').update({ status: situ.status, situacao, documentos: situ.documentos, pix_pronto: pix.ok, pix_chave: pix.chave ?? null, erro: pix.ok ? null : ('Chave Pix: ' + (pix.erro ?? pix.status ?? 'pendente')), atualizado_em: new Date().toISOString() }).eq('salon_id', salao)
+      return json({ ok: true, ...situ, situacao, pix_pronto: pix.ok, saldo_cents: saldo })
     } catch (e) {
       return json({ erro: e instanceof ErroAsaas ? e.message : String(e) }, 502)
     }

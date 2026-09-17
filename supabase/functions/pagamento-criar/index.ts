@@ -33,17 +33,18 @@ Deno.serve(async (req) => {
     if (!sandbox) return json({ erro: 'simulação só existe no sandbox' }, 403)
     const { data: pg } = await servico.from('pagamentos').select('id, salon_id, cobranca_id, copia_cola, valor_cents, status').eq('appointment_id', corpo.appointment_id).eq('client_id', u.user.id).eq('status', 'aguardando').order('criado_em', { ascending: false }).limit(1).maybeSingle()
     if (!pg?.cobranca_id) return json({ erro: 'não há PIX aguardando para este horário' }, 404)
+    let motivoPix = ''
     // 1º: a conta do MIMO paga o QR (precisa de saldo e chave Pix no sandbox)
     try {
       const r = await pagarQrSandbox(chavePai(), pg.copia_cola, pg.valor_cents)
       return json({ ok: true, jeito: 'pix', transacao: r?.id ?? null })
-    } catch (_) { /* sem saldo ou sem chave: vai pelo 2º */ }
+    } catch (e) { motivoPix = e instanceof ErroAsaas ? e.message : String(e) /* sem saldo ou sem chave: vai pelo 2º */ }
     // 2º: a subconta dá baixa como "recebido em dinheiro"; dispara o mesmo webhook
     const { data: chaveSub } = await servico.rpc('ler_segredo', { nome: `asaas_sub_${pg.salon_id}` })
     if (!chaveSub) return json({ erro: 'sem chave da subconta' }, 409)
     try {
       await baixarEmDinheiroSandbox(String(chaveSub), pg.cobranca_id, pg.valor_cents)
-      return json({ ok: true, jeito: 'baixa' })
+      return json({ ok: true, jeito: 'baixa', motivo_pix: motivoPix })
     } catch (e) {
       return json({ erro: 'A simulação não passou: ' + (e instanceof ErroAsaas ? e.message : String(e)) }, 502)
     }

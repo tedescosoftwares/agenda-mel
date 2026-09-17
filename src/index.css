@@ -5761,4 +5761,6 @@ a, button { -webkit-tap-highlight-color: transparent; }
 .selo-pag-rotulo { white-space: nowrap; }
 .pag-simular { margin-top: 0.6rem; border-style: dashed; }
 .receber-chave { font-size: 0.78rem; word-break: break-all; background: var(--superficie-3); padding: 0.1rem 0.35rem; border-radius: 6px; }
+.receber-saldo { display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; margin: 0.25rem 0; }
+.receber-saldo strong { font-size: 1.1rem; }
 .pag-erro { font-size: 0.75rem; text-align: right; max-width: 160px; }

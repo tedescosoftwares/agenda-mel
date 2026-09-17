@@ -186,6 +186,18 @@ export const pagarQrSandbox = (chavePagador: string, payload: string, valorCents
 export const baixarEmDinheiroSandbox = (chaveSub: string, id: string, valorCents: number) =>
   asaas(chaveSub, 'POST', `/payments/${id}/receiveInCash`, { paymentDate: new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10), value: Math.round(valorCents) / 100, notifyCustomer: false })
 
+// só no sandbox: desfaz a baixa "em dinheiro" (o Asaas não estorna esse
+// tipo de recebimento; desfazer é o caminho de volta que existe lá)
+export const desfazerBaixaSandbox = (chaveSub: string, id: string) => asaas(chaveSub, 'POST', `/payments/${id}/undoReceivedInCash`)
+
+// o saldo disponível da conta, em centavos (null se não deu para ler)
+export async function saldoDaConta(chave: string): Promise<number | null> {
+  try {
+    const r = await asaas(chave, 'GET', '/finance/balance')
+    return r?.balance != null ? Math.round(Number(r.balance) * 100) : null
+  } catch (_) { return null }
+}
+
 export const obterCobranca = (chaveSub: string, id: string) => asaas(chaveSub, 'GET', `/payments/${id}`)
 export const apagarCobranca = (chaveSub: string, id: string) => asaas(chaveSub, 'DELETE', `/payments/${id}`)
 export const estornarCobranca = (chaveSub: string, id: string, valorCents: number | null, motivo: string) =>

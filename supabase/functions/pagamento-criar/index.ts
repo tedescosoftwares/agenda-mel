@@ -10,7 +10,7 @@
 // da conta-pai (MIMO_WALLET_ID / MIMO_TAXA_PCT).
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { garantirCliente, criarCobrancaPix, garantirChavePix, pagarQrSandbox, chavePai, AMBIENTE, json, preflight, ErroAsaas } from '../_shared/asaas.ts'
+import { garantirCliente, criarCobrancaPix, garantirChavePix, pagarQrSandbox, baixarEmDinheiroSandbox, chavePai, AMBIENTE, json, preflight, ErroAsaas } from '../_shared/asaas.ts'
 
 const URL_SUPABASE = Deno.env.get('SUPABASE_URL') ?? ''
 const servico = createClient(URL_SUPABASE, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '', { auth: { persistSession: false } })
@@ -31,14 +31,21 @@ Deno.serve(async (req) => {
   // sandbox: a conta do MIMO paga o QR, como uma cliente faria. Nunca em produção.
   if (corpo.simular) {
     if (!sandbox) return json({ erro: 'simulação só existe no sandbox' }, 403)
-    const { data: pg } = await servico.from('pagamentos').select('id, copia_cola, valor_cents, status').eq('appointment_id', corpo.appointment_id).eq('client_id', u.user.id).eq('status', 'aguardando').order('criado_em', { ascending: false }).limit(1).maybeSingle()
-    if (!pg?.copia_cola) return json({ erro: 'não há PIX aguardando para este horário' }, 404)
+    const { data: pg } = await servico.from('pagamentos').select('id, salon_id, cobranca_id, copia_cola, valor_cents, status').eq('appointment_id', corpo.appointment_id).eq('client_id', u.user.id).eq('status', 'aguardando').order('criado_em', { ascending: false }).limit(1).maybeSingle()
+    if (!pg?.cobranca_id) return json({ erro: 'não há PIX aguardando para este horário' }, 404)
+    // 1º: a conta do MIMO paga o QR (precisa de saldo e chave Pix no sandbox)
     try {
       const r = await pagarQrSandbox(chavePai(), pg.copia_cola, pg.valor_cents)
-      return json({ ok: true, transacao: r?.id ?? null, status: r?.status ?? null })
+      return json({ ok: true, jeito: 'pix', transacao: r?.id ?? null })
+    } catch (_) { /* sem saldo ou sem chave: vai pelo 2º */ }
+    // 2º: a subconta dá baixa como "recebido em dinheiro"; dispara o mesmo webhook
+    const { data: chaveSub } = await servico.rpc('ler_segredo', { nome: `asaas_sub_${pg.salon_id}` })
+    if (!chaveSub) return json({ erro: 'sem chave da subconta' }, 409)
+    try {
+      await baixarEmDinheiroSandbox(String(chaveSub), pg.cobranca_id, pg.valor_cents)
+      return json({ ok: true, jeito: 'baixa' })
     } catch (e) {
-      const msg = e instanceof ErroAsaas ? e.message : String(e)
-      return json({ erro: 'A simulação não passou: ' + msg + '. Alternativa: no painel do sandbox, Cobranças, abra a cobrança e use "Confirmar recebimento".' }, 502)
+      return json({ erro: 'A simulação não passou: ' + (e instanceof ErroAsaas ? e.message : String(e)) }, 502)
     }
   }
 

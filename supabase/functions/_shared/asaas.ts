@@ -181,6 +181,11 @@ export async function criarCobrancaPix(chaveSub: string, p: {
 export const pagarQrSandbox = (chavePagador: string, payload: string, valorCents: number) =>
   asaas(chavePagador, 'POST', '/pix/qrCodes/pay', { qrCode: { payload }, value: Math.round(valorCents) / 100, description: 'Teste MIMO (sandbox)' })
 
+// só no sandbox: a própria subconta dá baixa na cobrança ("recebido em
+// dinheiro"); não precisa de saldo e dispara o webhook PAYMENT_RECEIVED
+export const baixarEmDinheiroSandbox = (chaveSub: string, id: string, valorCents: number) =>
+  asaas(chaveSub, 'POST', `/payments/${id}/receiveInCash`, { paymentDate: new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10), value: Math.round(valorCents) / 100, notifyCustomer: false })
+
 export const obterCobranca = (chaveSub: string, id: string) => asaas(chaveSub, 'GET', `/payments/${id}`)
 export const apagarCobranca = (chaveSub: string, id: string) => asaas(chaveSub, 'DELETE', `/payments/${id}`)
 export const estornarCobranca = (chaveSub: string, id: string, valorCents: number | null, motivo: string) =>

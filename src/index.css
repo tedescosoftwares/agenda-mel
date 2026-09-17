@@ -5759,3 +5759,4 @@ a, button { -webkit-tap-highlight-color: transparent; }
 .form-linha input { width: 100%; }
 .selo-pag { flex-wrap: wrap; row-gap: 0; }
 .selo-pag-rotulo { white-space: nowrap; }
+.pag-simular { margin-top: 0.6rem; border-style: dashed; }

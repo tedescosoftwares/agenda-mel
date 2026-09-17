@@ -10,7 +10,7 @@
 // da conta-pai (MIMO_WALLET_ID / MIMO_TAXA_PCT).
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { garantirCliente, criarCobrancaPix, garantirChavePix, json, preflight, ErroAsaas } from '../_shared/asaas.ts'
+import { garantirCliente, criarCobrancaPix, garantirChavePix, pagarQrSandbox, chavePai, AMBIENTE, json, preflight, ErroAsaas } from '../_shared/asaas.ts'
 
 const URL_SUPABASE = Deno.env.get('SUPABASE_URL') ?? ''
 const servico = createClient(URL_SUPABASE, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '', { auth: { persistSession: false } })
@@ -23,9 +23,24 @@ Deno.serve(async (req) => {
   const { data: u } = await quem.auth.getUser()
   if (!u?.user) return json({ erro: 'entre na sua conta' }, 401)
 
-  let corpo: { appointment_id?: string } = {}
+  let corpo: { appointment_id?: string; simular?: boolean } = {}
   try { corpo = await req.json() } catch { return json({ erro: 'corpo inválido' }, 400) }
   if (!corpo.appointment_id) return json({ erro: 'horário?' }, 400)
+  const sandbox = AMBIENTE !== 'producao'
+
+  // sandbox: a conta do MIMO paga o QR, como uma cliente faria. Nunca em produção.
+  if (corpo.simular) {
+    if (!sandbox) return json({ erro: 'simulação só existe no sandbox' }, 403)
+    const { data: pg } = await servico.from('pagamentos').select('id, copia_cola, valor_cents, status').eq('appointment_id', corpo.appointment_id).eq('client_id', u.user.id).eq('status', 'aguardando').order('criado_em', { ascending: false }).limit(1).maybeSingle()
+    if (!pg?.copia_cola) return json({ erro: 'não há PIX aguardando para este horário' }, 404)
+    try {
+      const r = await pagarQrSandbox(chavePai(), pg.copia_cola, pg.valor_cents)
+      return json({ ok: true, transacao: r?.id ?? null, status: r?.status ?? null })
+    } catch (e) {
+      const msg = e instanceof ErroAsaas ? e.message : String(e)
+      return json({ erro: 'A simulação não passou: ' + msg + '. Alternativa: no painel do sandbox, Cobranças, abra a cobrança e use "Confirmar recebimento".' }, 502)
+    }
+  }
 
   const { data: prep, error } = await servico.rpc('pagamento_preparar', { appt: corpo.appointment_id, cliente: u.user.id })
   if (error) return json({ erro: error.message }, 500)
@@ -33,7 +48,7 @@ Deno.serve(async (req) => {
 
   // já tinha uma cobrança aberta: devolve ela
   if (prep.existente && prep.copia_cola) {
-    return json({ ok: true, pagamento_id: prep.pagamento_id, copia_cola: prep.copia_cola, valor_cents: prep.valor_cents, expira_em: prep.expira_em, sinal_pct: prep.sinal_pct, existente: true })
+    return json({ ok: true, pagamento_id: prep.pagamento_id, copia_cola: prep.copia_cola, valor_cents: prep.valor_cents, expira_em: prep.expira_em, sinal_pct: prep.sinal_pct, existente: true, sandbox })
   }
 
   const { data: chaveSub } = await servico.rpc('ler_segredo', { nome: `asaas_sub_${prep.salon_id}` })
@@ -65,7 +80,7 @@ Deno.serve(async (req) => {
       cobranca_id: cob.id, customer_id: customer, copia_cola: cob.copiaCola, link_url: cob.link,
       liquido_cents: cob.netValue != null ? Math.round(cob.netValue * 100) : null, mimo_cents: mimoCents, atualizado_em: new Date().toISOString(),
     }).eq('id', prep.pagamento_id)
-    return json({ ok: true, pagamento_id: prep.pagamento_id, copia_cola: cob.copiaCola, valor_cents: prep.valor_cents, expira_em: prep.expira_em, sinal_pct: prep.sinal_pct, existente: false })
+    return json({ ok: true, pagamento_id: prep.pagamento_id, copia_cola: cob.copiaCola, valor_cents: prep.valor_cents, expira_em: prep.expira_em, sinal_pct: prep.sinal_pct, existente: false, sandbox })
   } catch (e) {
     const msg = e instanceof ErroAsaas ? e.message : String(e)
     await servico.from('pagamentos').update({ status: 'falhou', erro: msg.slice(0, 300), atualizado_em: new Date().toISOString() }).eq('id', prep.pagamento_id)

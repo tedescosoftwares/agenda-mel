@@ -9,7 +9,7 @@
 // (banco fora) responde 500 e o Asaas tenta de novo.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { obterCobranca, situacaoDaSubconta, json } from '../_shared/asaas.ts'
+import { obterCobranca, situacaoDaSubconta, AMBIENTE, json } from '../_shared/asaas.ts'
 
 const servico = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '', { auth: { persistSession: false } })
 
@@ -47,7 +47,8 @@ Deno.serve(async (req) => {
       let real
       try { real = await obterCobranca(String(chaveSub), cobranca) } catch (e) { return json({ erro: 'não deu para conferir: ' + String(e) }, 500) }
       const st = String(real?.status ?? '')
-      if (st !== 'RECEIVED' && st !== 'CONFIRMED') return json({ ok: true, ignorado: 'status ' + st })
+      const valeu = st === 'RECEIVED' || st === 'CONFIRMED' || (AMBIENTE !== 'producao' && st === 'RECEIVED_IN_CASH')
+      if (!valeu) return json({ ok: true, ignorado: 'status ' + st })
       const liquido = real?.netValue != null ? Math.round(Number(real.netValue) * 100) : null
       const quando = real?.paymentDate ? new Date(real.paymentDate + 'T12:00:00-03:00').toISOString() : new Date().toISOString()
       const { data: r, error } = await servico.rpc('confirmar_pagamento', { pagamento: linha.id, cobranca, liquido, quando })

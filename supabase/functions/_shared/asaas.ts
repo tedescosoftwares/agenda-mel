@@ -177,6 +177,10 @@ export async function criarCobrancaPix(chaveSub: string, p: {
   }
 }
 
+// só no sandbox: uma conta "paga" o QR de outra, como uma cliente faria
+export const pagarQrSandbox = (chavePagador: string, payload: string, valorCents: number) =>
+  asaas(chavePagador, 'POST', '/pix/qrCodes/pay', { qrCode: { payload }, value: Math.round(valorCents) / 100, description: 'Teste MIMO (sandbox)' })
+
 export const obterCobranca = (chaveSub: string, id: string) => asaas(chaveSub, 'GET', `/payments/${id}`)
 export const apagarCobranca = (chaveSub: string, id: string) => asaas(chaveSub, 'DELETE', `/payments/${id}`)
 export const estornarCobranca = (chaveSub: string, id: string, valorCents: number | null, motivo: string) =>

@@ -76,6 +76,12 @@ export default function ClientePagamento() {
     try { await navigator.clipboard.writeText(pg.copia_cola); setCopiado(true); setTimeout(() => setCopiado(false), 2000) } catch { /* sem clipboard */ }
   }
 
+  const [simulando, setSimulando] = useState(false)
+  async function simular() {
+    setSimulando(true); setErro('')
+    try { await chamar('pagamento-criar', { appointment_id: appt, simular: true }) } catch (e) { setErro(e.message) } finally { setSimulando(false) }
+  }
+
   async function desistir() {
     if (!(await confirmar({ titulo: 'Desistir do horário?', texto: 'A vaga volta a ficar livre para outra pessoa.', ok: 'Desistir', cancelar: 'Continuar pagando', perigo: true }))) return
     await supabase.from('appointments').update({ status: 'cancelado' }).eq('id', appt)
@@ -118,6 +124,7 @@ export default function ClientePagamento() {
           {minutos && <p className="pag-relogio"><Clock size={14} /> {restante > 0 ? <>Reserva guardada por <strong>{minutos}</strong></> : 'A reserva venceu'}</p>}
           <p className="muted pag-espera">Assim que o PIX cair, esta tela confirma sozinha.</p>
           <button type="button" className="link-ver pag-desistir" onClick={desistir}>Desistir do horário</button>
+          {pg.sandbox && <button type="button" className="btn btn-ghost btn-block pag-simular" onClick={simular} disabled={simulando}>{simulando ? 'Simulando…' : 'Simular pagamento (teste)'}</button>}
         </div>
       )}
 

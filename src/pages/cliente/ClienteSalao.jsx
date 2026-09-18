@@ -133,8 +133,8 @@ export default function ClienteSalao() {
         <div className="cat-vitrine">
           {servicos.length === 0 && <div className="card empty-state"><p>O salão ainda não cadastrou serviços.</p></div>}
           {preferida && <p className="muted salao-preferida-nota"><Star size={13} /> Sua preferida aqui é <strong>{preferida.nome}</strong>. <button type="button" className="link-ver" onClick={() => setAba('equipe')}>Trocar</button></p>}
-          {agruparPorCategoria(servicos, cats).map((g) => (
-            <CategoriaCard key={g.id || 'outros'} nome={g.nome} imagens={pg.capas?.[g.id]} quantos={g.itens.length} onAbrir={() => navigate(`/cliente/salao/${id}/categoria/${g.id || 'outros'}`)} />
+          {agruparPorCategoria(servicos, cats).map((g, k) => (
+            <CategoriaCard key={g.id || 'outros'} indice={k} nome={g.nome} imagens={pg.capas?.[g.id]} quantos={g.itens.length} onAbrir={() => navigate(`/cliente/salao/${id}/categoria/${g.id || 'outros'}`)} />
           ))}
         </div>
       )}

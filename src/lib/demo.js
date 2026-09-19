@@ -265,8 +265,9 @@ const RPC = {
   minhas_trazidas: () => [{ client_id: 'c1', nome: 'Juliana Prado', entrou_em: mais(-40), como: 'qr', ultima_visita: mais(-2) }, { client_id: 'c3', nome: 'Carla Mendes', entrou_em: mais(-20), como: 'link', ultima_visita: mais(-5) }],
   meus_saloes: () => [],
   minha_parceria: () => null,
-  pdv_dia: () => {
-    const hoje = mais(0)
+  pdv_dia: ({ dia } = {}) => {
+    const hoje = dia || mais(0)
+    if (dia && dia !== mais(0)) return { dia, agenda: dia < mais(0) ? [{ id: 'apv-' + dia, start_time: '10:00:00', end_time: '11:00:00', status: 'concluido', client_id: 'c1', cliente: 'Juliana Silva', professional_id: 'pr1', profissional: 'Ana Oliveira', servico: 'Escova', price_cents: 6000, pago_cents: 0, itens: [], comanda_id: 'cmv' }] : [{ id: 'apf-' + dia, start_time: '14:00:00', end_time: '15:00:00', status: 'confirmado', client_id: 'c2', cliente: 'Carla Mendes', professional_id: 'pr2', profissional: 'Camila Rocha', servico: 'Corte feminino', price_cents: 8000, pago_cents: 0, itens: [], comanda_id: null }], comandas: [], caixa: { total_cents: 0, por_forma: [], por_profissional: [] } }
     const linhas = [['ap1', 'c1', 'pr1', 'sv2', '09:00:00', '10:30:00', 'concluido', 8500, 0], ['apx1', 'c2', 'pr2', 'sv7', '10:30:00', '11:15:00', 'confirmado', 6000, 3000], ['apx2', 'c3', 'pr1', 'sv1', '11:00:00', '11:45:00', 'confirmado', 3500, 0], ['apx3', 'c4', 'pr3', 'sv4', '14:00:00', '15:00:00', 'pendente', 6500, 0], ['apx4', 'c5', 'pr2', 'sv3', '15:30:00', '16:30:00', 'confirmado', 12000, 0]]
     return {
       dia: hoje,
@@ -278,6 +279,13 @@ const RPC = {
   pdv_fechar: ({ comanda }) => ({ ok: true, comanda_id: 'cm-novo', total_cents: (comanda?.itens ?? []).reduce((s, i) => s + i.preco_cents * (i.qtd ?? 1), 0) - (comanda?.desconto_cents ?? 0) }),
   pdv_estornar: () => ({ ok: true }),
   mover_horario: () => ({ ok: true, appointment_id: 'ap-movido' }),
+  pdv_dias: ({ de, ate }) => { const out = []; for (let d = de; d <= ate; d = (() => { const x = new Date(d + 'T12:00:00'); x.setDate(x.getDate() + 1); return x.toISOString().slice(0, 10) })()) { const n = (new Date(d + 'T12:00:00').getDay() + 3) % 5; out.push({ dia: d, quantos: n, concluidos: d < mais(0) ? n : 0, valor_cents: n * 6500 }) } return out },
+  pdv_historico: () => [
+    { id: 'h1', dia: mais(-12), hora: '09:00:00', status: 'concluido', servico: 'Manicure', profissional: 'Ana Oliveira', price_cents: 3500, pago_cents: 0, itens: [{ nome: 'Manicure', preco_cents: 3500 }], comanda: { total_cents: 3500, pagamentos: [{ forma: 'pix', valor_cents: 3500 }] }, avaliacao: 5 },
+    { id: 'h2', dia: mais(-30), hora: '16:00:00', status: 'concluido', servico: 'Spa dos pés', profissional: 'Fernanda Lima', price_cents: 6500, pago_cents: 3250, itens: [], comanda: { total_cents: 6500, pagamentos: [{ forma: 'app', valor_cents: 3250 }, { forma: 'dinheiro', valor_cents: 3250 }] }, avaliacao: null },
+    { id: 'h3', dia: mais(-58), hora: '11:00:00', status: 'faltou', servico: 'Escova', profissional: 'Camila Rocha', price_cents: 6000, pago_cents: 0, itens: [], comanda: null, avaliacao: null },
+    { id: 'h4', dia: mais(-95), hora: '10:00:00', status: 'concluido', servico: 'Esmaltação em gel', profissional: 'Ana Oliveira', price_cents: 7500, pago_cents: 0, itens: [{ nome: 'Esmaltação em gel', preco_cents: 7500 }, { nome: 'Pedicure', preco_cents: 4000 }], comanda: { total_cents: 11500, pagamentos: [{ forma: 'credito', valor_cents: 11500 }] }, avaliacao: 4 },
+  ],
   parcerias_da_equipe: () => profissionais.filter((p) => p.active).map((p, i) => ({ professional_id: p.id, nome: p.name, parceria_id: null, status: i === 0 ? 'vigente' : 'sem_contrato', homologacao: i === 0 ? 'homologado' : null })),
   novo_codigo: () => 'NOV4B7',
   novo_codigo_do_salao: () => 'SAL9Q2',

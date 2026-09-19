@@ -39,6 +39,8 @@ export default function AdminPdv() {
   const [painel, setPainel] = useState('agenda')
   const [modo, setModo] = useState(() => { try { return localStorage.getItem('mimo-pdv-modo') || 'quadro' } catch { return 'quadro' } })
   const [horas, setHoras] = useState([])
+  const [diaSel, setDiaSel] = useState(() => hojeIso())
+  const [semana, setSemana] = useState([])
   function trocarModo(m) { setModo(m); try { localStorage.setItem('mimo-pdv-modo', m) } catch { /* sem armazenamento */ } }
   const [filtroProf, setFiltroProf] = useState('')
   const [busca, setBusca] = useState('')
@@ -50,19 +52,22 @@ export default function AdminPdv() {
 
   const carregar = useCallback(async () => {
     if (!salao?.id) return
-    const [d, s, p, cl, bh] = await Promise.all([
-      supabase.rpc('pdv_dia', { salao: salao.id }),
+    const de = somarDias(inicioDaSemana(diaSel), -7), ate = somarDias(inicioDaSemana(diaSel), 20)
+    const [d, s, p, cl, bh, sem] = await Promise.all([
+      supabase.rpc('pdv_dia', { salao: salao.id, dia: diaSel }),
       supabase.from('services').select('id, name, price, duration_minutes, categoria_id, active').eq('salon_id', salao.id).eq('active', true).order('name'),
       supabase.from('professionals').select('id, name, photo_url, active').eq('salon_id', salao.id).eq('active', true).order('name'),
       supabase.rpc('clientes_do_salao', { salao: salao.id }),
-      supabase.from('business_hours').select('weekday, open, start_time, end_time').eq('salon_id', salao.id).eq('weekday', new Date().getDay()),
+      supabase.from('business_hours').select('weekday, open, start_time, end_time').eq('salon_id', salao.id),
+      supabase.rpc('pdv_dias', { salao: salao.id, de, ate }),
     ])
     if (d.error) setErro(d.error.message); else setDia(d.data)
     setHoras(bh.data ?? [])
+    setSemana(sem.data ?? [])
     setServicos(s.data ?? []); setProfs(p.data ?? []); setClientes(cl.data ?? [])
-  }, [salao?.id])
+  }, [salao?.id, diaSel])
   useEffect(() => { carregar() }, [carregar])
-  useEffect(() => { const t = setInterval(carregar, 60000); return () => clearInterval(t) }, [carregar])
+  useEffect(() => { if (diaSel !== hojeIso()) return; const t = setInterval(carregar, 60000); return () => clearInterval(t) }, [carregar, diaSel])
   useEffect(() => { if (!toast) return; const t = setTimeout(() => setToast(''), 3500); return () => clearTimeout(t) }, [toast])
 
   const grupos = useMemo(() => agruparPorCategoria(servicos, cats), [servicos, cats])
@@ -161,7 +166,7 @@ export default function AdminPdv() {
       {modo === 'quadro' ? (
         <div className="pdv-corpo pdv-corpo-quadro">
           <div className="pdv-painel pdv-quadro-painel">
-            <QuadroDoDia dia={dia?.dia ?? new Date().toISOString().slice(0, 10)} agenda={dia?.agenda ?? []} profs={profs} horas={horas} servicos={servicos} cats={cats} clientes={clientes} salaoId={salao?.id}
+            <QuadroDoDia dia={diaSel} agenda={dia?.dia === diaSel ? (dia?.agenda ?? []) : []} semana={semana} onTrocarDia={setDiaSel} profs={profs} horas={horas} servicos={servicos} cats={cats} clientes={clientes} salaoId={salao?.id}
               onAbrirComanda={(a) => { abrirHorario(a); trocarModo('comanda') }} onMudou={carregar} />
           </div>
         </div>
@@ -300,3 +305,6 @@ export default function AdminPdv() {
 }
 
 const capitalizar = (t) => (t ? t.charAt(0).toUpperCase() + t.slice(1) : '')
+const hojeIso = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
+const somarDias = (iso, n) => { const d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() + n); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
+const inicioDaSemana = (iso) => { const d = new Date(iso + 'T12:00:00'); return somarDias(iso, -((d.getDay() + 6) % 7)) }

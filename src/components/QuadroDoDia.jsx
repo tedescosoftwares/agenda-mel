@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { X, Receipt, Ban, Clock, UserRound, Sparkles, GripVertical } from 'lucide-react'
+import { X, Receipt, Ban, Clock, UserRound, Sparkles, GripVertical, ChevronLeft, ChevronRight, Star, History } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useDialogo } from '../context/DialogoContext'
 import { formatCents } from '../lib/pagamento'
@@ -16,7 +16,14 @@ const PASSO = 15                // arrasto e cliques caem em múltiplos de 15 mi
 const min = (t) => { const [h, m] = String(t).slice(0, 5).split(':').map(Number); return h * 60 + m }
 const hhmm = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
 
-export default function QuadroDoDia({ dia, agenda, profs, horas, servicos, cats, clientes, salaoId, onAbrirComanda, onMudou }) {
+const DIAS_CURTOS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb']
+const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
+const isoHoje = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
+const somar = (iso, n) => { const d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() + n); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
+const semanaDe = (iso) => { const d = new Date(iso + 'T12:00:00'); const seg = somar(iso, -((d.getDay() + 6) % 7)); return Array.from({ length: 7 }, (_, i) => somar(seg, i)) }
+const rotuloDia = (iso) => { const d = new Date(iso + 'T12:00:00'); const t = `${DIAS_CURTOS[d.getDay()]}, ${d.getDate()} de ${MESES[d.getMonth()]}`; return t.charAt(0).toUpperCase() + t.slice(1) }
+
+export default function QuadroDoDia({ dia, agenda, semana = [], onTrocarDia, profs, horas, servicos, cats, clientes, salaoId, onAbrirComanda, onMudou }) {
   const { confirmar } = useDialogo()
   const [agora, setAgora] = useState(() => new Date())
   useEffect(() => { const t = setInterval(() => setAgora(new Date()), 60000); return () => clearInterval(t) }, [])
@@ -27,17 +34,21 @@ export default function QuadroDoDia({ dia, agenda, profs, horas, servicos, cats,
   const [erro, setErro] = useState('')
   const [ocupado, setOcupado] = useState(false)
 
+  const weekday = new Date(dia + 'T12:00:00').getDay()
   const [ini, fim] = useMemo(() => {
-    const abertos = (horas ?? []).filter((h) => h.open)
+    const abertos = (horas ?? []).filter((h) => h.open && (h.weekday == null || h.weekday === weekday))
     const a = abertos.length ? Math.min(...abertos.map((h) => min(h.start_time))) : 8 * 60
     const b = abertos.length ? Math.max(...abertos.map((h) => min(h.end_time))) : 20 * 60
     const extra = (agenda ?? []).reduce((acc, x) => [Math.min(acc[0], min(x.start_time)), Math.max(acc[1], min(x.end_time))], [a, b])
     return [Math.floor(extra[0] / 60) * 60, Math.ceil(extra[1] / 60) * 60]
-  }, [horas, agenda])
+  }, [horas, agenda, weekday])
   const altura = (fim - ini) * PX_POR_MIN
   const linhas = useMemo(() => { const l = []; for (let m = ini; m < fim; m += 30) l.push(m); return l }, [ini, fim])
-  const hojeStr = new Date().toISOString().slice(0, 10)
+  const hojeStr = isoHoje()
   const ehHoje = dia === hojeStr
+  const passado = dia < hojeStr
+  const diasDaSemana = useMemo(() => semanaDe(dia), [dia])
+  const contagem = useMemo(() => Object.fromEntries((semana ?? []).map((x) => [String(x.dia).slice(0, 10), x])), [semana])
   const agoraMin = agora.getHours() * 60 + agora.getMinutes()
 
   function posDoEvento(e, col) {
@@ -55,12 +66,12 @@ export default function QuadroDoDia({ dia, agenda, profs, horas, servicos, cats,
     if (inicio === min(a.start_time) && prof === a.professional_id) return
     mover(a, prof, inicio)
   }
-  async function mover(a, prof, inicio) {
+  async function mover(a, prof, inicio, novoDia = dia) {
     const p = profs.find((x) => x.id === prof)
-    const ok = await confirmar({ titulo: `Mover ${a.cliente} para ${hhmm(inicio)}${p && prof !== a.professional_id ? `, com ${p.name}` : ''}?`, texto: 'O horário antigo é cancelado e ela recebe o aviso do novo.', ok: 'Mover' })
+    const ok = await confirmar({ titulo: `Mover ${a.cliente} para ${novoDia !== dia ? rotuloDia(novoDia) + ' às ' : ''}${hhmm(inicio)}${p && prof !== a.professional_id ? `, com ${p.name}` : ''}?`, texto: 'O horário antigo é cancelado e ela recebe o aviso do novo.', ok: 'Mover' })
     if (!ok) return
     setOcupado(true); setErro('')
-    const { data, error } = await supabase.rpc('mover_horario', { appt: a.id, nova_data: dia, nova_hora: hhmm(inicio), nova_prof: prof })
+    const { data, error } = await supabase.rpc('mover_horario', { appt: a.id, nova_data: novoDia, nova_hora: hhmm(inicio), nova_prof: prof })
     setOcupado(false)
     if (error) { setErro(error.message); return }
     if (data && data.ok === false) { setErro(data.motivo === 'ocupado' ? 'Esse horário já está ocupado.' : data.motivo === 'nao_faz' ? `${data.profissional} não faz esse serviço.` : 'Não deu para mover.'); return }
@@ -77,10 +88,37 @@ export default function QuadroDoDia({ dia, agenda, profs, horas, servicos, cats,
   return (
     <div className="quadro">
       {erro && <div className="alert alert-error quadro-erro">{erro}<button type="button" onClick={() => setErro('')} aria-label="Fechar">×</button></div>}
+      <div className="quadro-nav">
+        <div className="quadro-nav-dia">
+          <button type="button" className="quadro-nav-btn" onClick={() => onTrocarDia?.(somar(dia, -1))} aria-label="Dia anterior"><ChevronLeft size={18} /></button>
+          <button type="button" className="quadro-nav-btn" onClick={() => onTrocarDia?.(somar(dia, 1))} aria-label="Dia seguinte"><ChevronRight size={18} /></button>
+          <strong className="quadro-nav-rotulo">{rotuloDia(dia)}{ehHoje ? ' · hoje' : passado ? ' · passado' : ''}</strong>
+          <input type="date" className="quadro-nav-data" value={dia} onChange={(e) => e.target.value && onTrocarDia?.(e.target.value)} aria-label="Escolher o dia" />
+          {!ehHoje && <button type="button" className="btn-mini btn-mini-neutro" onClick={() => onTrocarDia?.(hojeStr)}>Hoje</button>}
+        </div>
+        <div className="quadro-semana">
+          <button type="button" className="quadro-nav-btn" onClick={() => onTrocarDia?.(somar(dia, -7))} aria-label="Semana anterior"><ChevronLeft size={16} /></button>
+          {diasDaSemana.map((d) => {
+            const c = contagem[d]; const dt = new Date(d + 'T12:00:00')
+            return (
+              <button key={d} type="button" className={'quadro-dia' + (d === dia ? ' ativo' : '') + (d === hojeStr ? ' hoje' : '') + (sombra?.dia === d ? ' alvo' : '')}
+                onClick={() => onTrocarDia?.(d)}
+                onDragOver={(e) => { e.preventDefault(); if (sombra?.dia !== d) setSombra({ dia: d }) }}
+                onDragLeave={() => setSombra((s) => (s?.dia === d ? null : s))}
+                onDrop={(e) => { e.preventDefault(); const id = e.dataTransfer.getData('text/plain') || arrastando; setSombra(null); setArrastando(null); const a = agenda.find((x) => x.id === id); if (a && d !== dia) mover(a, a.professional_id, min(a.start_time), d) }}>
+                <span className="quadro-dia-nome">{DIAS_CURTOS[dt.getDay()]}</span>
+                <strong>{dt.getDate()}</strong>
+                <span className="quadro-dia-conta">{c?.quantos ? `${c.quantos}` : '·'}</span>
+              </button>
+            )
+          })}
+          <button type="button" className="quadro-nav-btn" onClick={() => onTrocarDia?.(somar(dia, 7))} aria-label="Semana seguinte"><ChevronRight size={16} /></button>
+        </div>
+      </div>
       <div className="quadro-cabeca">
         <div className="quadro-gutter" />
         {colunas.map((p) => (
-          <div key={p.id} className="quadro-col-cabeca"><Avatar nome={p.name} foto={p.photo_url} pequeno /><strong>{p.name}</strong><span className="muted">{agenda.filter((a) => a.professional_id === p.id && a.status !== 'cancelado').length} hoje</span></div>
+          <div key={p.id} className="quadro-col-cabeca"><Avatar nome={p.name} foto={p.photo_url} pequeno /><strong>{p.name}</strong><span className="muted">{agenda.filter((a) => a.professional_id === p.id && a.status !== 'cancelado').length} no dia</span></div>
         ))}
       </div>
       <div className="quadro-rolagem">
@@ -97,7 +135,7 @@ export default function QuadroDoDia({ dia, agenda, profs, horas, servicos, cats,
             >
               {linhas.map((m) => <span key={m} className={'quadro-linha' + (m % 60 ? ' meia' : '')} style={{ top: (m - ini) * PX_POR_MIN }} />)}
               {ehHoje && agoraMin >= ini && agoraMin <= fim && <span className="quadro-agora" style={{ top: (agoraMin - ini) * PX_POR_MIN }} />}
-              {sombra?.prof === p.id && arrastando && (() => { const a = agenda.find((x) => x.id === arrastando); if (!a) return null; const d = min(a.end_time) - min(a.start_time); return <span className="quadro-sombra" style={{ top: (sombra.inicio - ini) * PX_POR_MIN, height: d * PX_POR_MIN }}>{hhmm(sombra.inicio)}</span> })()}
+              {sombra?.prof === p.id && !sombra?.dia && arrastando && (() => { const a = agenda.find((x) => x.id === arrastando); if (!a) return null; const d = min(a.end_time) - min(a.start_time); return <span className="quadro-sombra" style={{ top: (sombra.inicio - ini) * PX_POR_MIN, height: d * PX_POR_MIN }}>{hhmm(sombra.inicio)}</span> })()}
               {agenda.filter((a) => a.professional_id === p.id).map((a) => {
                 const top = (min(a.start_time) - ini) * PX_POR_MIN, h = Math.max(24, (min(a.end_time) - min(a.start_time)) * PX_POR_MIN)
                 const movel = (a.status === 'pendente' || a.status === 'confirmado') && !a.comanda_id
@@ -135,7 +173,8 @@ export default function QuadroDoDia({ dia, agenda, profs, horas, servicos, cats,
               {(aberto.status === 'pendente' || aberto.status === 'confirmado') && !aberto.comanda_id && <button type="button" className="btn btn-primary" onClick={() => { onAbrirComanda?.(aberto); setAberto(null) }}><Receipt size={15} /> Abrir comanda</button>}
               {(aberto.status === 'pendente' || aberto.status === 'confirmado') && !aberto.comanda_id && <button type="button" className="btn btn-ghost" onClick={() => cancelar(aberto)}><Ban size={15} /> Cancelar horário</button>}
             </div>
-            {(aberto.status === 'pendente' || aberto.status === 'confirmado') && !aberto.comanda_id && <p className="muted quadro-dica">Para remarcar, arraste o cartão no quadro para outra hora ou outra coluna.</p>}
+            {(aberto.status === 'pendente' || aberto.status === 'confirmado') && !aberto.comanda_id && <p className="muted quadro-dica">Para remarcar, arraste o cartão no quadro para outra hora, outra coluna ou um dia da faixa de cima.</p>}
+            {aberto.client_id && <LinhaDoTempo salaoId={salaoId} clienteId={aberto.client_id} atualId={aberto.id} />}
           </div>
         </div>
       )}
@@ -209,6 +248,49 @@ function NovoHorario({ prof, inicio, dia, servicos, cats, clientes, onFechar, on
           <button type="submit" className="btn btn-primary" disabled={salvando || !servico}>{salvando ? 'Marcando…' : `Marcar ${servico ? servico.name : ''}`}</button>
         </div>
       </form>
+    </div>
+  )
+}
+
+// a linha do tempo da cliente na casa: o que ela já fez, com quem, quanto, como pagou
+function LinhaDoTempo({ salaoId, clienteId, atualId }) {
+  const [lista, setLista] = useState(null)
+  useEffect(() => {
+    let vivo = true
+    supabase.rpc('pdv_historico', { salao: salaoId, cliente: clienteId, limite: 30 }).then(({ data }) => { if (vivo) setLista(data ?? []) })
+    return () => { vivo = false }
+  }, [salaoId, clienteId])
+  const passados = (lista ?? []).filter((x) => x.id !== atualId)
+  const feitos = passados.filter((x) => x.status === 'concluido')
+  const gasto = feitos.reduce((s, x) => s + Number(x.comanda?.total_cents ?? x.price_cents ?? 0), 0)
+  if (lista === null) return <p className="muted quadro-dica">Buscando o histórico…</p>
+  if (passados.length === 0) return <p className="muted quadro-dica"><History size={14} /> Primeira vez dela na casa.</p>
+  const ultima = feitos[0]
+  return (
+    <div className="lt">
+      <div className="lt-resumo">
+        <span><strong>{feitos.length}</strong> {feitos.length === 1 ? 'atendimento' : 'atendimentos'}</span>
+        <span><strong>{formatCents(gasto)}</strong> na casa</span>
+        {ultima && <span>última vez <strong>{new Date(ultima.dia + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</strong></span>}
+      </div>
+      <ol className="lt-lista">
+        {passados.map((x) => {
+          const dt = new Date(x.dia + 'T12:00:00')
+          const total = x.comanda?.total_cents ?? x.price_cents ?? 0
+          const formas = (x.comanda?.pagamentos ?? []).map((p) => p.forma === 'app' ? 'app' : p.forma).join(' + ')
+          return (
+            <li key={x.id} className={'lt-item ' + x.status}>
+              <span className="lt-ponto" />
+              <span className="lt-quando"><strong>{dt.getDate()}</strong><small>{MESES[dt.getMonth()]}{dt.getFullYear() !== new Date().getFullYear() ? ` ${String(dt.getFullYear()).slice(2)}` : ''}</small></span>
+              <span className="lt-texto">
+                <strong>{(x.itens?.length ? x.itens.map((i) => i.nome).join(' + ') : x.servico)}</strong>
+                <span className="muted">{x.profissional ? `com ${x.profissional.split(' ')[0]}` : ''}{x.status === 'faltou' ? ' · não veio' : x.status !== 'concluido' ? ` · ${x.status}` : ''}{formas ? ` · ${formas}` : ''}{x.avaliacao ? ' · ' : ''}{x.avaliacao ? <em className="lt-nota"><Star size={10} /> {x.avaliacao}</em> : null}</span>
+              </span>
+              <span className="lt-valor">{x.status === 'concluido' ? formatCents(total) : ''}</span>
+            </li>
+          )
+        })}
+      </ol>
     </div>
   )
 }

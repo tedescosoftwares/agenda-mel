@@ -6629,3 +6629,43 @@ label.check input { margin-top: 3px; }
 .quadro-servicos-col { flex: 0 0 190px; display: flex; flex-direction: column; gap: 0.4rem; }
 .quadro-servicos-cat { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--cinza-3, #6b7280); padding: 0.2rem 0.2rem 0; }
 .pdv-servico.escolhido { border-color: var(--rosa); background: #fff0f5; box-shadow: 0 0 0 3px #ffe3ee; }
+
+/* ---- o quadro anda no tempo (104): navegação do dia, faixa da semana, linha do tempo da cliente ---- */
+.quadro-nav { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.55rem 0.8rem; border-bottom: 1px solid var(--fio); flex-wrap: wrap; }
+.quadro-nav-dia { display: flex; align-items: center; gap: 0.4rem; }
+.quadro-nav-btn { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--fio); background: #fff; display: grid; place-items: center; cursor: pointer; color: inherit; }
+.quadro-nav-btn:hover { border-color: var(--rosa); color: var(--rosa); }
+.quadro-nav-rotulo { font-size: 0.95rem; margin: 0 0.3rem; }
+.quadro-nav-data { font: inherit; font-size: 0.8rem; padding: 0.3rem 0.5rem; border: 1px solid var(--fio); border-radius: 8px; color: var(--cinza-3, #6b7280); }
+.quadro-semana { display: flex; align-items: center; gap: 0.3rem; }
+.quadro-dia { display: flex; flex-direction: column; align-items: center; gap: 0; width: 52px; padding: 0.3rem 0 0.25rem; border: 1px solid transparent; border-radius: 12px; background: none; font: inherit; color: inherit; cursor: pointer; transition: background .15s, border-color .15s; }
+.quadro-dia:hover { background: var(--cinza-1); }
+.quadro-dia-nome { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--cinza-3, #6b7280); font-weight: 700; }
+.quadro-dia strong { font-size: 1.05rem; line-height: 1.2; }
+.quadro-dia-conta { font-size: 0.66rem; color: var(--cinza-3, #9ca3af); font-weight: 600; min-height: 0.9rem; }
+.quadro-dia.hoje strong { color: var(--rosa); }
+.quadro-dia.ativo { background: var(--ameixa, #1f2026); color: #fff; }
+.quadro-dia.ativo .quadro-dia-nome, .quadro-dia.ativo .quadro-dia-conta, .quadro-dia.ativo strong { color: #fff; }
+.quadro-dia.alvo { border-color: var(--rosa); background: #fff0f5; }
+.quadro-dia.alvo strong { color: var(--rosa); }
+
+.lt { margin-top: 1rem; padding-top: 0.8rem; border-top: 1px solid var(--fio); }
+.lt-resumo { display: flex; gap: 0.9rem; flex-wrap: wrap; font-size: 0.78rem; color: var(--cinza-3, #6b7280); margin-bottom: 0.6rem; }
+.lt-resumo strong { color: var(--grafite, #1f2026); }
+.lt-lista { list-style: none; margin: 0; padding: 0; position: relative; max-height: 34vh; overflow-y: auto; }
+.lt-lista::before { content: ''; position: absolute; left: 7px; top: 8px; bottom: 8px; width: 2px; background: linear-gradient(to bottom, var(--rosa), #ffc2d8 60%, transparent); }
+.lt-item { position: relative; display: grid; grid-template-columns: 16px 40px 1fr auto; gap: 0.55rem; align-items: center; padding: 0.4rem 0; }
+.lt-item p { margin: 0; }
+.lt-ponto { width: 12px; height: 12px; border-radius: 50%; background: #fff; border: 3px solid var(--rosa); margin-left: 2px; box-shadow: 0 0 0 3px #fff; }
+.lt-item.faltou .lt-ponto { border-color: #c4c7cf; }
+.lt-item.faltou .lt-texto { opacity: 0.6; }
+.lt-item:first-child .lt-ponto { background: var(--rosa); }
+.lt-quando { display: flex; flex-direction: column; align-items: center; line-height: 1; }
+.lt-quando strong { font-size: 1rem; font-family: var(--condensada); }
+.lt-quando small { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--cinza-3, #6b7280); }
+.lt-texto { display: flex; flex-direction: column; min-width: 0; }
+.lt-texto strong { font-size: 0.86rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lt-texto .muted { font-size: 0.72rem; display: inline-flex; align-items: center; gap: 0.15rem; flex-wrap: wrap; }
+.lt-nota { font-style: normal; display: inline-flex; align-items: center; gap: 0.15rem; color: #b45309; font-weight: 600; }
+.lt-valor { font-size: 0.84rem; font-weight: 700; color: var(--ameixa); white-space: nowrap; }
+.quadro-detalhe { max-width: 460px; }

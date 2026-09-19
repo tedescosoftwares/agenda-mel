@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react'
-import { useDialogo } from '../context/DialogoContext'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import SinoAvisos from './SinoAvisos'
+import MenuDaConta, { ITENS_ADMIN } from './MenuDaConta'
 import { MarcaIcon, Wordmark } from './icons'
 import {
   CalendarIcon,
@@ -29,17 +29,8 @@ export default function AdminShell({ children }) {
   const miolo = useRef(null)
   const { pathname } = useLocation()
   useEffect(() => { miolo.current?.scrollTo({ top: 0 }) }, [pathname])
-  const { confirmar } = useDialogo()
-  const { profile, user, signOut } = useAuth()
+  const { salao } = useAuth()
   const navigate = useNavigate()
-  const inicial = (profile?.full_name || user?.email || '?')
-    .trim()
-    .charAt(0)
-    .toUpperCase()
-
-  async function handleSair() {
-    if (await confirmar({ titulo: 'Sair da conta?', ok: 'Sair', cancelar: 'Ficar' })) signOut()
-  }
 
   return (
     <div className="admin-shell">
@@ -50,9 +41,7 @@ export default function AdminShell({ children }) {
         </span>
         <div className="topbar-acoes">
           <SinoAvisos />
-          <button className="avatar-btn" onClick={handleSair} title="Sair da conta">
-          {inicial}
-        </button>
+          <MenuDaConta itens={ITENS_ADMIN} papel={salao?.name ? `Dona · ${salao.name}` : 'Dona do salão'} />
         </div>
       </header>
 

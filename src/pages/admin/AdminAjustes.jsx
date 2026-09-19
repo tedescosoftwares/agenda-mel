@@ -1,92 +1,60 @@
-import { useDialogo } from '../../context/DialogoContext'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { Store, Wallet, Users, Sparkles, Clock, BadgePercent, Megaphone, MessageCircle, BarChart3, QrCode, ChevronRight } from 'lucide-react'
 import AdminShell from '../../components/AdminShell'
 import { useAuth } from '../../context/AuthContext'
+import { useDialogo } from '../../context/DialogoContext'
 import { supabase } from '../../lib/supabase'
 import CodigoQr from '../../components/CodigoQr'
 import AvisosNoCelular from '../../components/AvisosNoCelular'
 import AvisosPorEmail from '../../components/AvisosPorEmail'
-import { useState } from 'react'
-import {
-  MegafoneIcon,
-  TeamIcon,
-  GraficoIcon,
-  SparkleIcon,
-  ClockIcon,
-  BellIcon,
-  ChevronIcon,
-} from '../../components/icons'
-import { BadgePercent, Store, Wallet } from 'lucide-react'
+import { MODOS } from '../../lib/pagamento'
 
-// Hub de ajustes do salão.
-//
-// Nasceu quando a barra do admin caiu de seis abas para cinco. Seis
-// abas numa barra de celular dão 60px cada — o polegar erra. As três
-// que saíram (O mês, Serviços, WhatsApp) não são o dia a dia de quem
-// abre o app: são coisas que se configuram uma vez e se conferem de vez
-// em quando. Aba é para o que se usa todo dia.
-const ITENS = [
-  {
-    to: '/admin/receber',
-    Icon: Wallet,
-    titulo: 'Receber pelo app',
-    resumo: 'PIX ao marcar, política de cancelamento e o financeiro do mês',
-  },
-  {
-    to: '/admin/salao',
-    Icon: Store,
-    titulo: 'Página do salão',
-    resumo: 'Fotos, descrição e contatos que a cliente vê no app',
-  },
-  {
-    to: '/admin/recados',
-    Icon: MegafoneIcon,
-    titulo: 'Recados',
-    resumo: 'Um aviso para a carteira ou para a equipe, no celular',
-  },
-  {
-    to: '/admin/promocoes',
-    Icon: BadgePercent,
-    titulo: 'Promoções',
-    resumo: 'Um criativo na home das clientes da carteira',
-  },
-  {
-    to: '/admin/equipe',
-    Icon: TeamIcon,
-    titulo: 'Equipe',
-    resumo: 'Quem atende, com quais serviços, e o vínculo com a conta',
-  },
-  {
-    to: '/admin/numeros',
-    Icon: GraficoIcon,
-    titulo: 'O mês',
-    resumo: 'Faturamento, ocupação e atendimentos do salão',
-  },
-  {
-    to: '/admin/servicos',
-    Icon: SparkleIcon,
-    titulo: 'Serviços',
-    resumo: 'O que o salão oferece, com preço, duração e foto',
-  },
-  {
-    to: '/admin/horarios',
-    Icon: ClockIcon,
-    titulo: 'Horário do salão',
-    resumo: 'Os dias e horas em que a casa abre',
-  },
-  {
-    to: '/admin/whatsapp',
-    Icon: BellIcon,
-    titulo: 'WhatsApp',
-    resumo: 'Diagnóstico do canal, a IA e o bot que marca sozinho',
-  },
-]
+// Ajustes do salão: o hub. Cada área é um cartão que diz o que faz e em
+// que pé está (fotos, pino, PIX, equipe com contrato, horário…), em vez
+// de uma lista de botões. O código do balcão fica compacto; o QR grande
+// abre só quando vai imprimir. Sair e a conta ficam no menu do avatar.
+const DIAS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb']
 
 export default function AdminAjustes() {
+  const { salao, saloes, trocarSalao } = useAuth()
   const { confirmar } = useDialogo()
-  const { salao, saloes, trocarSalao, signOut } = useAuth()
   const [codigo, setCodigo] = useState(salao?.codigo ?? null)
+  const [qr, setQr] = useState(false)
   const [erro, setErro] = useState('')
+  const [st, setSt] = useState(null)   // a situação de cada área
+
+  useEffect(() => {
+    if (!salao?.id) return
+    let vivo = true
+    ;(async () => {
+      const hoje = new Date().toISOString().slice(0, 10)
+      const [s, profs, servs, horas, promos, parc] = await Promise.all([
+        supabase.from('salons').select('logo_url, fotos, descricao, lat, lng, pagamento_modo, sinal_pct, politica_cancelamento, city, whatsapp').eq('id', salao.id).maybeSingle(),
+        supabase.from('professionals').select('id, active').eq('salon_id', salao.id),
+        supabase.from('services').select('id, active, destaque').eq('salon_id', salao.id),
+        supabase.from('business_hours').select('weekday, open, start_time, end_time').eq('salon_id', salao.id),
+        supabase.from('promocoes').select('id, fim').eq('salon_id', salao.id),
+        supabase.rpc('parcerias_da_equipe', { salao: salao.id }),
+      ])
+      if (!vivo) return
+      const abertos = (horas.data ?? []).filter((h) => h.open).map((h) => h.weekday).sort()
+      const ativosP = (profs.data ?? []).filter((p) => p.active).length
+      const ativosS = (servs.data ?? []).filter((x) => x.active)
+      const promosAtivas = (promos.data ?? []).filter((p) => !p.fim || p.fim >= hoje).length
+      const comContrato = (parc.data ?? []).filter((l) => l.status === 'vigente' || l.status === 'assinado').length
+      const ex = abertos.length ? faixa(abertos) : ''
+      const h0 = (horas.data ?? []).find((h) => h.open)
+      setSt({
+        salao: s.data ?? {},
+        profissionais: ativosP, comContrato, semContrato: (parc.data ?? []).filter((l) => l.status === 'sem_contrato').length,
+        servicos: ativosS.length, destaques: ativosS.filter((x) => x.destaque).length,
+        horario: abertos.length ? `${ex}${h0 ? ` · ${h0.start_time.slice(0, 5)}–${h0.end_time.slice(0, 5)}` : ''}` : '',
+        promocoes: promosAtivas,
+      })
+    })()
+    return () => { vivo = false }
+  }, [salao?.id])
 
   async function novoCodigo() {
     const ok = await confirmar({ titulo: 'Gerar um código novo para o salão?', texto: 'O QR do balcão e o link antigos deixam de funcionar. Quem já entrou continua.', ok: 'Gerar novo' })
@@ -94,60 +62,117 @@ export default function AdminAjustes() {
     const { data, error } = await supabase.rpc('novo_codigo_do_salao', { salao: salao.id })
     if (error) setErro(error.message); else setCodigo(data)
   }
+  async function copiarLink() {
+    try { await navigator.clipboard.writeText(`${window.location.origin}/v/${codigo ?? salao?.codigo}`); setErro('') } catch { setErro('Não deu para copiar. Toque em "QR e link" e copie por lá.') }
+  }
+
+  const s = st?.salao ?? {}
+  const cod = codigo ?? salao?.codigo
+  const pag = s.pagamento_modo && s.pagamento_modo !== 'nao'
+  const fotos = (s.fotos ?? []).length
+  const pino = Number.isFinite(Number(s.lat)) && s.lat != null
+
+  // cada área: para onde vai, o que faz e a situação de agora (tom + texto)
+  const AREAS = [
+    { titulo: 'A casa', cartoes: [
+      { to: '/admin/salao', Icon: Store, tom: 'rosa', titulo: 'Página do salão', texto: 'Fotos, descrição, contatos e o pino no mapa que a cliente vê.', situacao: st && (fotos ? `${fotos} ${fotos === 1 ? 'foto' : 'fotos'}` : 'sem fotos') + (st ? (pino ? ' · pino no mapa' : ' · sem pino no mapa') : ''), ok: st ? fotos > 0 && pino : null },
+      { to: '/admin/horarios', Icon: Clock, tom: 'roxo', titulo: 'Horário do salão', texto: 'Os dias e as horas em que a casa abre, e o padrão da equipe.', situacao: st && (st.horario || 'sem horário definido'), ok: st ? Boolean(st.horario) : null },
+      { to: '/admin/servicos', Icon: Sparkles, tom: 'ambar', titulo: 'Serviços', texto: 'O cardápio: preço, duração, foto, categoria e quem faz.', situacao: st && (st.servicos ? `${st.servicos} ativos · ${st.destaques} em destaque` : 'nenhum serviço ainda'), ok: st ? st.servicos > 0 : null },
+      { to: '/admin/equipe', Icon: Users, tom: 'menta', titulo: 'Equipe', texto: 'Quem atende, com quais serviços, e o contrato de parceria.', situacao: st && (st.profissionais ? `${st.profissionais} ${st.profissionais === 1 ? 'ativa' : 'ativas'} · ${st.comContrato} com contrato` : 'ninguém cadastrada'), ok: st ? st.profissionais > 0 && st.semContrato === 0 : null },
+    ] },
+    { titulo: 'Dinheiro', cartoes: [
+      { to: '/admin/receber', Icon: Wallet, tom: 'rosa', titulo: 'Receber pelo app', texto: 'PIX ao marcar, política de cancelamento e o financeiro do mês.', situacao: st && (pag ? `${MODOS[s.pagamento_modo]?.curto ?? s.pagamento_modo} · sinal de ${s.sinal_pct ?? 0}%` : 'desligado'), ok: st ? pag : null },
+      { to: '/admin/numeros', Icon: BarChart3, tom: 'roxo', titulo: 'O mês', texto: 'Faturamento, ocupação e atendimentos, por profissional.', situacao: null },
+    ] },
+    { titulo: 'Clientes', cartoes: [
+      { to: '/admin/promocoes', Icon: BadgePercent, tom: 'ambar', titulo: 'Promoções', texto: 'Um criativo na home das clientes, com desconto ou preço especial.', situacao: st && (st.promocoes ? `${st.promocoes} no ar` : 'nenhuma no ar'), ok: st ? st.promocoes > 0 : null },
+      { to: '/admin/recados', Icon: Megaphone, tom: 'menta', titulo: 'Recados', texto: 'Um aviso para a carteira inteira ou para a equipe, no celular.', situacao: null },
+      { to: '/admin/whatsapp', Icon: MessageCircle, tom: 'verde', titulo: 'WhatsApp', texto: 'O canal, a IA que responde e o bot que marca sozinho.', situacao: st && (s.whatsapp ? `número ${s.whatsapp}` : 'sem número cadastrado'), ok: st ? Boolean(s.whatsapp) : null },
+    ] },
+  ]
 
   return (
     <AdminShell>
-      <div className="page-head">
-        <h2>Ajustes</h2>
-        <p className="muted">{salao?.name ?? 'Meu salão'}</p>
-      </div>
-
+      <div className="page-head"><div><h2>Ajustes</h2><p className="muted">Tudo que se configura uma vez e se confere de vez em quando.</p></div></div>
       {erro && <div className="alert alert-error">{erro}</div>}
-      {saloes?.length > 1 && (
-        <div className="card salao-troca">
-          <strong>Você administra {saloes.length} salões</strong>
-          <span className="muted">Tudo que você cadastra (serviços, equipe, página) vai para o salão escolhido aqui. As clientes e a equipe de cada um só veem o dele.</span>
-          <div className="filtro-chips">
-            {saloes.map((x) => <button key={x.id} type="button" className={x.id === salao?.id ? 'chip active' : 'chip'} onClick={() => trocarSalao(x.id)}>{x.name}</button>)}
-          </div>
+
+      {/* o salão em uso */}
+      <div className="card aj-salao">
+        <span className="aj-salao-logo">{s.logo_url ? <img src={s.logo_url} alt="" /> : <Store size={22} />}</span>
+        <div className="aj-salao-quem">
+          <strong>{salao?.name ?? 'Meu salão'}</strong>
+          <span className="muted">{[s.city, st ? `${st.profissionais} na equipe` : null, st ? `${st.servicos} serviços` : null].filter(Boolean).join(' · ')}</span>
         </div>
-      )}
-      <AvisosNoCelular />
-      <AvisosPorEmail />
-
-      <h3 className="secao-titulo">Código do salão</h3>
-      <div className="card">
-        <CodigoQr codigo={codigo ?? salao?.codigo} nome={salao?.name} onNovo={salao ? novoCodigo : undefined}
-          mensagem={`Entra na agenda do ${salao?.name ?? 'salão'} pelo MIMO: ${window.location.origin}/v/${codigo ?? salao?.codigo}\nOu digita o código ${codigo ?? salao?.codigo} no app.`} />
-      </div>
-      <p className="muted" style={{ fontSize: '0.82rem' }}>Imprima e deixe no balcão. Quem entra por aqui vê todas as profissionais da casa. Cada profissional tem o código dela em Meu link, e a cliente que entra por ele fica registrada como trazida por ela.</p>
-
-      <h3 className="secao-titulo">Configurações</h3>
-      <div className="cliente-list">
-        {ITENS.map(({ to, Icon, titulo, resumo }) => (
-          <Link key={to} to={to} className="card prof-row">
-            <span className="ajuste-icone">
-              <Icon />
-            </span>
-            <div className="cliente-info">
-              <span className="cliente-nome">
-                <span className="nome-txt">{titulo}</span>
-              </span>
-              <span className="muted cliente-meta">{resumo}</span>
-            </div>
-            <ChevronIcon />
-          </Link>
-        ))}
+        <Link to="/admin/salao" className="icon-btn" aria-label="Editar a página do salão"><ChevronRight size={18} /></Link>
+        {saloes?.length > 1 && (
+          <div className="aj-salao-troca">
+            <span className="muted">Você administra {saloes.length} salões. Tudo que cadastra vai para o escolhido:</span>
+            <div className="chips">{saloes.map((x) => <button key={x.id} type="button" className={x.id === salao?.id ? 'chip active' : 'chip'} onClick={() => trocarSalao(x.id)}>{x.name}</button>)}</div>
+          </div>
+        )}
       </div>
 
-      <button
-        className="btn btn-ghost btn-block"
-        onClick={async () => {
-          if (await confirmar({ titulo: 'Sair da conta?', ok: 'Sair', cancelar: 'Ficar' })) signOut()
-        }}
-      >
-        Sair da conta
-      </button>
+      {/* o código do balcão, compacto */}
+      <div className="card aj-codigo">
+        <div className="aj-codigo-topo">
+          <span className="aj-codigo-icone"><QrCode size={20} /></span>
+          <div className="aj-codigo-texto">
+            <strong>Código do balcão</strong>
+            <span className="muted">A cliente entra na agenda da casa lendo o QR, abrindo o link ou digitando as letras.</span>
+          </div>
+          <span className="aj-codigo-letras">{cod ?? '——'}</span>
+        </div>
+        <div className="aj-codigo-acoes">
+          <button type="button" className="btn btn-ghost btn-mini" onClick={copiarLink}>Copiar link</button>
+          <button type="button" className={'btn btn-mini ' + (qr ? 'btn-ghost' : 'btn-primary')} onClick={() => setQr((v) => !v)}>{qr ? 'Fechar o QR' : 'QR e link'}</button>
+        </div>
+        {qr && (
+          <div className="aj-codigo-qr">
+            <CodigoQr codigo={cod} nome={salao?.name} onNovo={salao ? novoCodigo : undefined}
+              mensagem={`Entra na agenda do ${salao?.name ?? 'salão'} pelo MIMO: ${window.location.origin}/v/${cod}\nOu digita o código ${cod} no app.`} />
+            <p className="muted aj-codigo-dica">Imprima e deixe no balcão. Quem entra por aqui vê todas as profissionais da casa. Cada profissional tem o código dela em Meu link, e a cliente que entra por ele fica registrada como trazida por ela.</p>
+          </div>
+        )}
+      </div>
+
+      {AREAS.map((a) => (
+        <section key={a.titulo} className="secao aj-secao">
+          <h3 className="secao-titulo">{a.titulo}</h3>
+          <div className="aj-grade">
+            {a.cartoes.map((c) => (
+              <Link key={c.to} to={c.to} className={'card aj-cartao aj-' + c.tom}>
+                <span className="aj-cartao-icone"><c.Icon size={20} /></span>
+                <strong>{c.titulo}</strong>
+                <span className="aj-cartao-texto">{c.texto}</span>
+                {c.situacao !== null && (
+                  <span className={'aj-cartao-situacao' + (c.ok === true ? ' ok' : c.ok === false ? ' atencao' : '')}>
+                    <i />{c.situacao ?? 'conferindo…'}
+                  </span>
+                )}
+                <ChevronRight size={16} className="aj-cartao-seta" />
+              </Link>
+            ))}
+          </div>
+        </section>
+      ))}
+
+      <section className="secao aj-secao">
+        <h3 className="secao-titulo">Avisos para você</h3>
+        <AvisosNoCelular />
+        <AvisosPorEmail />
+      </section>
+
+      <p className="muted aj-rodape">Sua conta e a saída ficam no menu do avatar, lá em cima.</p>
     </AdminShell>
   )
+}
+
+// "seg a sex", "ter a sáb", "seg, qua e sex"
+function faixa(dias) {
+  if (!dias.length) return ''
+  const seq = dias.every((d, i) => i === 0 || d === dias[i - 1] + 1)
+  if (seq && dias.length > 2) return `${DIAS[dias[0]]} a ${DIAS[dias[dias.length - 1]]}`
+  if (dias.length === 7) return 'todos os dias'
+  const nomes = dias.map((d) => DIAS[d])
+  return nomes.length > 1 ? nomes.slice(0, -1).join(', ') + ' e ' + nomes[nomes.length - 1] : nomes[0]
 }

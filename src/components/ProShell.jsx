@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react'
-import { useDialogo } from '../context/DialogoContext'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import SinoAvisos from './SinoAvisos'
+import MenuDaConta, { ITENS_PRO } from './MenuDaConta'
 import {
   CalendarIcon,
   SparkleIcon,
@@ -13,7 +13,6 @@ import {
   Wordmark,
 } from './icons'
 
-import Avatar from './Avatar'
 
 const TABS = [
   { to: '/pro', end: true, label: 'Agenda', Icon: CalendarIcon },
@@ -28,13 +27,7 @@ export default function ProShell({ children, titulo, voltar }) {
   const miolo = useRef(null)
   const { pathname } = useLocation()
   useEffect(() => { miolo.current?.scrollTo({ top: 0 }) }, [pathname])
-  const { confirmar } = useDialogo()
-  const { professional, profile, user, signOut } = useAuth()
-  const nome = professional?.name || profile?.full_name || user?.email
-
-  async function handleSair() {
-    if (await confirmar({ titulo: 'Sair da conta?', ok: 'Sair', cancelar: 'Ficar' })) signOut()
-  }
+  const { professional } = useAuth()
 
   return (
     <div className="admin-shell">
@@ -50,9 +43,7 @@ export default function ProShell({ children, titulo, voltar }) {
         )}
         <div className="topbar-acoes">
           <SinoAvisos />
-          <button className="avatar-btn" onClick={handleSair} title="Sair da conta">
-            <Avatar nome={nome} foto={professional?.photo_url} pequeno />
-          </button>
+          <MenuDaConta itens={ITENS_PRO} papel={professional?.especialidade || 'Profissional'} foto={professional?.photo_url} />
         </div>
       </header>
 

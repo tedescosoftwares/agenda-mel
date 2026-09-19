@@ -277,6 +277,7 @@ const RPC = {
   },
   pdv_fechar: ({ comanda }) => ({ ok: true, comanda_id: 'cm-novo', total_cents: (comanda?.itens ?? []).reduce((s, i) => s + i.preco_cents * (i.qtd ?? 1), 0) - (comanda?.desconto_cents ?? 0) }),
   pdv_estornar: () => ({ ok: true }),
+  mover_horario: () => ({ ok: true, appointment_id: 'ap-movido' }),
   parcerias_da_equipe: () => profissionais.filter((p) => p.active).map((p, i) => ({ professional_id: p.id, nome: p.name, parceria_id: null, status: i === 0 ? 'vigente' : 'sem_contrato', homologacao: i === 0 ? 'homologado' : null })),
   novo_codigo: () => 'NOV4B7',
   novo_codigo_do_salao: () => 'SAL9Q2',

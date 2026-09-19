@@ -8,6 +8,8 @@ import { supabase } from '../../lib/supabase'
 import { formatCents } from '../../lib/pagamento'
 import { useCategorias, categoriasDoSalao, agruparPorCategoria, bate } from '../../lib/categorias'
 import { MarcaIcon, Wordmark } from '../../components/icons'
+import QuadroDoDia from '../../components/QuadroDoDia'
+import { CalendarDays } from 'lucide-react'
 
 // O PDV do balcão (102): tela cheia, feita para o computador do salão.
 // Esquerda, a agenda de hoje (ou o caixa); centro, o catálogo; direita,
@@ -35,6 +37,9 @@ export default function AdminPdv() {
   const catsTodas = useCategorias()
   const cats = useMemo(() => categoriasDoSalao(catsTodas, salao?.id), [catsTodas, salao?.id])
   const [painel, setPainel] = useState('agenda')
+  const [modo, setModo] = useState(() => { try { return localStorage.getItem('mimo-pdv-modo') || 'quadro' } catch { return 'quadro' } })
+  const [horas, setHoras] = useState([])
+  function trocarModo(m) { setModo(m); try { localStorage.setItem('mimo-pdv-modo', m) } catch { /* sem armazenamento */ } }
   const [filtroProf, setFiltroProf] = useState('')
   const [busca, setBusca] = useState('')
   const [cat, setCat] = useState('')
@@ -45,13 +50,15 @@ export default function AdminPdv() {
 
   const carregar = useCallback(async () => {
     if (!salao?.id) return
-    const [d, s, p, cl] = await Promise.all([
+    const [d, s, p, cl, bh] = await Promise.all([
       supabase.rpc('pdv_dia', { salao: salao.id }),
       supabase.from('services').select('id, name, price, duration_minutes, categoria_id, active').eq('salon_id', salao.id).eq('active', true).order('name'),
       supabase.from('professionals').select('id, name, photo_url, active').eq('salon_id', salao.id).eq('active', true).order('name'),
       supabase.rpc('clientes_do_salao', { salao: salao.id }),
+      supabase.from('business_hours').select('weekday, open, start_time, end_time').eq('salon_id', salao.id).eq('weekday', new Date().getDay()),
     ])
     if (d.error) setErro(d.error.message); else setDia(d.data)
+    setHoras(bh.data ?? [])
     setServicos(s.data ?? []); setProfs(p.data ?? []); setClientes(cl.data ?? [])
   }, [salao?.id])
   useEffect(() => { carregar() }, [carregar])
@@ -136,6 +143,10 @@ export default function AdminPdv() {
     <div className="pdv">
       <header className="pdv-topo">
         <span className="brand-inline"><MarcaIcon className="marca" id="pdv" /><Wordmark tamanho={1.2} /></span>
+        <div className="pdv-modos" role="tablist">
+          <button type="button" role="tab" className={modo === 'quadro' ? 'active' : ''} onClick={() => trocarModo('quadro')}><CalendarDays size={14} /> Quadro</button>
+          <button type="button" role="tab" className={modo === 'comanda' ? 'active' : ''} onClick={() => trocarModo('comanda')}><Receipt size={14} /> Comanda</button>
+        </div>
         <span className="pdv-topo-salao"><strong>{salao?.name}</strong><span className="muted">{capitalizar(new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }))}</span></span>
         <div className="pdv-topo-caixa">
           <span className="pdv-chip forte">Caixa do dia <strong>{formatCents(caixa.total_cents)}</strong></span>
@@ -147,6 +158,14 @@ export default function AdminPdv() {
         </div>
       </header>
 
+      {modo === 'quadro' ? (
+        <div className="pdv-corpo pdv-corpo-quadro">
+          <div className="pdv-painel pdv-quadro-painel">
+            <QuadroDoDia dia={dia?.dia ?? new Date().toISOString().slice(0, 10)} agenda={dia?.agenda ?? []} profs={profs} horas={horas} servicos={servicos} cats={cats} clientes={clientes} salaoId={salao?.id}
+              onAbrirComanda={(a) => { abrirHorario(a); trocarModo('comanda') }} onMudou={carregar} />
+          </div>
+        </div>
+      ) : (
       <div className="pdv-corpo">
         <aside className="pdv-painel pdv-agenda">
           <div className="tabs pdv-tabs" role="tablist">
@@ -274,6 +293,7 @@ export default function AdminPdv() {
           {!podeFechar && c.itens.length > 0 && <p className="muted pdv-vazio">{!c.professional_id ? 'Diga quem atendeu.' : !(c.client_id || c.cliente.trim()) ? 'Diga quem é a cliente.' : restante !== 0 ? 'Os pagamentos precisam fechar com o total.' : ''}</p>}
         </aside>
       </div>
+      )}
       {toast && <div className="pdv-toast">{toast}</div>}
     </div>
   )

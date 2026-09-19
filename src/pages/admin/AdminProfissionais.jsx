@@ -9,6 +9,8 @@ import { formatDuracao, formatPreco } from '../../lib/format'
 import { gerarSlug } from '../../lib/booking'
 import Avatar from '../../components/Avatar'
 import FotoUpload from '../../components/FotoUpload'
+import { FileSignature } from 'lucide-react'
+import { STATUS } from '../../lib/contratoParceria'
 
 const FORM_VAZIO = { name: '', slug: '', phone: '', bio: '', photo_url: null }
 
@@ -18,6 +20,7 @@ export default function AdminProfissionais() {
   const [profissionais, setProfissionais] = useState([])
   const [services, setServices] = useState([])
   const [vinculos, setVinculos] = useState({}) // professional_id -> [service_id]
+  const [parcerias, setParcerias] = useState({}) // professional_id -> linha de parcerias_da_equipe
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [info, setInfo] = useState('')
@@ -28,11 +31,13 @@ export default function AdminProfissionais() {
   const [saving, setSaving] = useState(false)
 
   const fetchTudo = useCallback(async () => {
-    const [profRes, servRes, vincRes] = await Promise.all([
+    const [profRes, servRes, vincRes, parcRes] = await Promise.all([
       supabase.from('professionals').select('*').eq('salon_id', salao?.id).order('name'),
       supabase.from('services').select('*').eq('salon_id', salao?.id).eq('active', true).order('name'),
       supabase.from('professional_services').select('*'),
+      supabase.rpc('parcerias_da_equipe', { salao: salao?.id }),
     ])
+    setParcerias(Object.fromEntries((parcRes.data ?? []).map((l) => [l.professional_id, l])))
 
     if (profRes.error) {
       setError('Erro ao carregar a equipe: ' + profRes.error.message)
@@ -380,7 +385,13 @@ export default function AdminProfissionais() {
                   {(vinculos[p.id] ?? []).length === 1 ? '' : 's'}
                   {!p.user_id && ' · sem login'}
                 </span>
+                {parcerias[p.id] && <span className={'parceria-selo ' + parcerias[p.id].status}>{parcerias[p.id].status === 'sem_contrato' ? 'sem contrato' : `${STATUS[parcerias[p.id].status]?.toLowerCase()}${parcerias[p.id].status === 'assinado' && parcerias[p.id].homologacao !== 'homologado' ? ', sem homologação' : ''}`}</span>}
               </div>
+              {parcerias[p.id] && (
+                <Link to={`/admin/equipe/${p.id}/parceria`} className="icon-btn" aria-label={`Contrato de parceria de ${p.name}`} title="Contrato de parceria">
+                  <FileSignature size={18} />
+                </Link>
+              )}
               <button
                 className="icon-btn"
                 onClick={() => copiarLink(p)}

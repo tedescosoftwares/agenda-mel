@@ -6370,3 +6370,61 @@ button.link-ver.pag-desistir { color: var(--texto-3); }
 .local-dica { display: flex; gap: 0.4rem; align-items: flex-start; font-size: 0.82rem; margin: 0; }
 .local-dica svg { flex: none; margin-top: 2px; }
 .local-nota { margin: 0; font-size: 0.85rem; color: var(--roxo, #aa4cff); font-weight: 600; }
+
+/* ---- contrato de parceria (101): linha do tempo, o contrato na tela, o formulário ---- */
+.linha-contrato { position: relative; display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.4rem; }
+.lc-passo { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 0.25rem; font-size: 0.78rem; }
+.lc-passo strong { font-size: 0.78rem; }
+.lc-passo .muted { font-size: 0.68rem; line-height: 1.2; }
+.lc-bola { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--cinza-1); color: var(--cinza-3, #6b7280); font-size: 0.72rem; font-weight: 700; border: 2px solid var(--fio); }
+.lc-passo.feito .lc-bola { background: var(--rosa); color: #fff; border-color: var(--rosa); }
+.lc-passo.atual .lc-bola { border-color: var(--rosa); color: var(--rosa); background: #fff; box-shadow: 0 0 0 4px #ffe3ee; }
+.lc-passo.alerta .lc-bola { border-color: #f59e0b; color: #b45309; background: #fff7e6; }
+.lc-encerrado { grid-column: 1 / -1; margin-top: 0.4rem; padding: 0.45rem 0.7rem; border-radius: 10px; background: var(--cinza-1); font-size: 0.8rem; text-align: center; }
+.linha-contrato.encerrado .lc-passo { opacity: 0.55; }
+
+.contrato { font-family: Georgia, 'Times New Roman', serif; color: var(--grafite, #1f2026); line-height: 1.55; font-size: 0.95rem; }
+.contrato-titulo { text-align: center; font-size: 1.15rem; letter-spacing: 0.06em; margin: 0.4rem 0 0.1rem; font-family: inherit; }
+.contrato-sub { text-align: center; font-size: 0.78rem; margin: 0 0 1.2rem; }
+.contrato h3 { font-family: inherit; font-size: 0.98rem; margin: 1.1rem 0 0.35rem; }
+.contrato p { margin: 0 0 0.6rem; text-align: left; hyphens: auto; }
+@media (min-width: 600px) { .contrato p { text-align: justify; } }
+.contrato ul { margin: 0 0 0.6rem 1.1rem; padding: 0; }
+.contrato li { margin-bottom: 0.25rem; }
+.contrato-nota { font-family: var(--fonte, inherit); font-size: 0.78rem; }
+.contrato-assinaturas { display: grid; grid-template-columns: 1fr 1fr; gap: 1.6rem 1.2rem; margin: 2rem 0 0.6rem; }
+.contrato-assinatura { display: flex; flex-direction: column; gap: 0.15rem; font-size: 0.8rem; }
+.contrato-linha { display: block; border-top: 1px solid var(--grafite, #1f2026); margin-bottom: 0.35rem; }
+.contrato-assinatura small { font-size: 0.66rem; letter-spacing: 0.08em; color: var(--cinza-3, #6b7280); font-weight: 700; }
+@media (max-width: 420px) { .contrato-assinaturas { grid-template-columns: 1fr; gap: 1.2rem; } .linha-contrato { grid-template-columns: repeat(2, 1fr); } }
+
+.parceria-intro p { margin: 0 0 0.5rem; }
+.parceria-aviso { display: flex; gap: 0.4rem; align-items: flex-start; font-size: 0.82rem; }
+.parceria-aviso svg { flex: none; margin-top: 2px; color: #b45309; }
+.parceria-form fieldset { border: 0; padding: 0; margin: 0; display: contents; }
+.parceria-form fieldset:disabled input, .parceria-form fieldset:disabled select, .parceria-form fieldset:disabled textarea { background: var(--cinza-1); color: var(--cinza-3, #6b7280); }
+.parceria-form .secao-titulo { margin-top: 0.9rem; }
+.parceria-form .secao-titulo:first-of-type { margin-top: 0; }
+.parceria-excecao { align-items: end; }
+.parceria-pendencias { display: flex; gap: 0.4rem; align-items: flex-start; font-size: 0.82rem; margin: 0.2rem 0 0; }
+.parceria-pendencias svg { flex: none; margin-top: 2px; color: #b45309; }
+.parceria-acoes { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; margin-top: 0.4rem; }
+.parceria-acoes.topo { margin: 0 0 0.8rem; }
+.parceria-acoes .btn { display: inline-flex; align-items: center; gap: 0.4rem; }
+.parceria-hash { font-size: 0.72rem; font-family: ui-monospace, monospace; }
+.parceria-bloco .secao-titulo { display: flex; align-items: center; gap: 0.4rem; margin-top: 0; }
+.parceria-assinatura-linha { margin: 0.25rem 0; font-size: 0.86rem; }
+.parceria-assinar { margin-top: 0.6rem; display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-start; }
+.parceria-externo { margin-top: 0.9rem; padding-top: 0.8rem; border-top: 1px solid var(--fio); display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-start; }
+.parceria-externo .btn { display: inline-flex; align-items: center; gap: 0.4rem; cursor: pointer; }
+.parceria-form-mini { margin-top: 0.4rem; }
+.parceria-selo { display: inline-block; margin-top: 0.2rem; font-size: 0.68rem; font-weight: 600; padding: 0.12rem 0.5rem; border-radius: 999px; background: var(--cinza-1); color: var(--cinza-3, #6b7280); }
+.parceria-selo.sem_contrato { background: #fff1e6; color: #b45309; }
+.parceria-selo.enviado, .parceria-selo.rascunho { background: #eef2ff; color: #4338ca; }
+.parceria-selo.assinado { background: #fff7e6; color: #92400e; }
+.parceria-selo.vigente { background: #e6f7ee; color: #067647; }
+.parceria-alerta { text-decoration: none; color: inherit; }
+.parceria-anterior { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.86rem; }
+.parceria-anterior .btn-mini { align-self: flex-start; margin-top: 0.3rem; }
+label.check { display: flex; gap: 0.5rem; align-items: flex-start; font-size: 0.9rem; cursor: pointer; }
+label.check input { margin-top: 3px; }

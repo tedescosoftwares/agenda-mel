@@ -165,6 +165,7 @@ const TABELAS = {
   profissional_preferida: [{ client_id: 'c1', salon_id: SALAO, professional_id: 'pr1' }],
   promocoes: promocoes.map((p) => ({ ...p, aprovacao: p.aprovacao ?? 'aprovada', services: servicos.find((s) => s.id === p.service_id) ? { name: servicos.find((s) => s.id === p.service_id).name } : null, salons: p.salon_id ? { name: 'Studio Mel' } : null, professionals: p.professional_id ? { name: profissionais.find((x) => x.id === p.professional_id)?.name } : null })),
   servicos_juntos: [{ service_id: 'sv1', sugerido_id: 'sv3' }],
+  parcerias: [],
   salons: [{ id: SALAO, name: 'Studio Mel', slug: 'studio-mel', pagamento_modo: 'opcional', sinal_pct: 50, politica_cancelamento: 'moderada', app_url: 'https://mimo.app', city: 'Santos', address: 'Rua das Flores, 120 · Gonzaga', cep: '11060300', lat: -23.9668, lng: -46.3325, codigo: 'MEL2K5', tipo: 'salao', descricao: 'Um cantinho no Gonzaga para você se cuidar com calma: café, música baixa e uma equipe que capricha em cada detalhe.', fotos: [PROMO_IMG('#FF7BAA', '#AA4CFF', ''), PROMO_IMG('#FFC2D8', '#FF2D7A', '')], logo_url: null, phone: '(13) 3333-0000', whatsapp: '(13) 99120-3410', instagram: 'studiomel' }],
   salon_members: [{ salon_id: SALAO, user_id: 'a1', papel: 'admin', salons: { id: SALAO, name: 'Studio Mel', slug: 'studio-mel', codigo: 'MEL2K5', tipo: 'salao', city: 'Santos' } }],
   whatsapp_channels: [{ salon_id: SALAO, canal: 'evolution', identificador: '11', ativo: true, usa_ia: true, usa_bot: true, silencio_inicio: '21:00', silencio_fim: '08:00', teto_diario: 300 }],
@@ -263,6 +264,8 @@ const RPC = {
     : [{ id: 'r3', publico: 'minhas_clientes', titulo: 'Voltei de férias 💅', corpo: 'Agenda aberta a partir de segunda. Quem marcar essa semana ganha nail art simples.', url: '/cliente/home', destinatarios: 35, celulares: 9, criado_em: mais(-12), autor_nome: 'Ana Oliveira' }],
   minhas_trazidas: () => [{ client_id: 'c1', nome: 'Juliana Prado', entrou_em: mais(-40), como: 'qr', ultima_visita: mais(-2) }, { client_id: 'c3', nome: 'Carla Mendes', entrou_em: mais(-20), como: 'link', ultima_visita: mais(-5) }],
   meus_saloes: () => [],
+  minha_parceria: () => null,
+  parcerias_da_equipe: () => profissionais.filter((p) => p.active).map((p, i) => ({ professional_id: p.id, nome: p.name, parceria_id: null, status: i === 0 ? 'vigente' : 'sem_contrato', homologacao: i === 0 ? 'homologado' : null })),
   novo_codigo: () => 'NOV4B7',
   novo_codigo_do_salao: () => 'SAL9Q2',
   plataforma_kpis: () => ({
@@ -415,7 +418,7 @@ export const demo = {
     // no demo ela "dá certo" e não guarda nada
     return { data: f ? f(args) : null, error: null }
   },
-  storage: { from: () => ({ upload: async () => ({ error: null }), getPublicUrl: (p) => ({ data: { publicUrl: p } }), remove: async () => ({}) }) },
+  storage: { from: () => ({ upload: async () => ({ error: null }), getPublicUrl: (p) => ({ data: { publicUrl: p } }), createSignedUrl: async (p) => ({ data: { signedUrl: p } }), remove: async () => ({}) }) },
   channel: () => ({ on() { return this }, subscribe() { return this } }),
   removeChannel: () => {},
 }

@@ -9,7 +9,7 @@ import { useAuth } from '../../context/AuthContext'
 import { formatarCents, formatarReaisCurto, formatarPct, mesAtual, nomeDoMes } from '../../lib/numeros'
 import GraficoLinha from '../../components/GraficoLinha'
 import { toISODate } from '../../lib/format'
-import { CalendarPlus, Users, Sparkles, MessageCircle } from 'lucide-react'
+import { CalendarPlus, Users, Sparkles, MessageCircle, FileSignature } from 'lucide-react'
 
 // Dashboard do salão (tela 23): o dia de hoje em quatro números, o
 // faturamento do mês dia a dia, o que está esperando resposta, e os
@@ -21,6 +21,7 @@ export default function AdminDashboard() {
   const [naFila, setNaFila] = useState(0)
   const [linhas, setLinhas] = useState([])
   const [porDia, setPorDia] = useState([])
+  const [semContrato, setSemContrato] = useState([])
   const salaoId = salao?.id
 
   const carregar = useCallback(async () => {
@@ -43,6 +44,10 @@ export default function AdminDashboard() {
     setPorDia(Object.entries(soma).sort().map(([k, v]) => ({ x: k.slice(8, 10), y: v / 100 })))
   }, [salaoId])
   useEffect(() => { carregar() }, [carregar])
+  useEffect(() => {
+    if (!salao?.id || salao?.tipo === 'autonoma') return
+    supabase.rpc('parcerias_da_equipe', { salao: salao.id }).then(({ data }) => setSemContrato((data ?? []).filter((l) => l.status === 'sem_contrato' || l.status === 'rascunho' || l.status === 'enviado')))
+  }, [salao?.id, salao?.tipo])
 
   const totalMes = linhas.reduce((s, l) => s + Number(l.faturamento_cents ?? 0), 0)
   const atendMes = linhas.reduce((s, l) => s + Number(l.atendimentos ?? 0), 0)
@@ -55,6 +60,13 @@ export default function AdminDashboard() {
       <AvisosNovos />
       <PendenciasBaixa para="/admin/fechar-dia" />
       <LigarAvisos texto="Pedidos, cancelamentos e clientes chamando no WhatsApp chegam na hora, mesmo com o app fechado." />
+
+      {semContrato.length > 0 && (
+        <Link to="/admin/equipe" className="card fin-alerta parceria-alerta">
+          <FileSignature size={18} />
+          <span><strong>{semContrato.length === 1 ? `${semContrato[0].nome} atende sem contrato de parceria.` : `${semContrato.length} profissionais atendem sem contrato de parceria.`}</strong> Sem o contrato escrito, a lei trata a relação como emprego. Formalize em Equipe.</span>
+        </Link>
+      )}
 
       <div className="kpis">
         <div className="card kpi"><span className="muted">Hoje</span><strong>{hoje.atendimentos}</strong><span className="kpi-nota">atendimentos · {formatarCents(hoje.faturamento)}</span></div>

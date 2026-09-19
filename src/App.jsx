@@ -70,6 +70,7 @@ import AdminPromocoes from "./pages/admin/AdminPromocoes";
 import ProPromocoes from "./pages/pro/ProPromocoes";
 import AdminReceber from "./pages/admin/AdminReceber";
 import ProReceber from "./pages/pro/ProReceber";
+import ProLocal from "./pages/pro/ProLocal";
 import ClientePagamento from "./pages/cliente/ClientePagamento";
 import PlataformaPromocoes from "./pages/plataforma/Promocoes";
 import { guardarCodigoDaURL } from "./lib/indicacao";
@@ -245,6 +246,7 @@ export default function App() {
             <Route path="/admin/promocoes" element={<ProtectedRoute requireRole="admin"><AdminPromocoes /></ProtectedRoute>} />
             <Route path="/admin/receber" element={<ProtectedRoute requireRole="admin"><AdminReceber /></ProtectedRoute>} />
             <Route path="/pro/receber" element={<ProtectedRoute requireRole="profissional"><ProReceber /></ProtectedRoute>} />
+            <Route path="/pro/local" element={<ProtectedRoute requireRole="profissional"><ProLocal /></ProtectedRoute>} />
             <Route path="/cliente/pagamento/:appt" element={<ProtectedRoute requireRole="cliente"><ClientePagamento /></ProtectedRoute>} />
             <Route path="/admin/fechar-dia" element={<ProtectedRoute requireRole="admin"><AdminFecharDia /></ProtectedRoute>} />
             <Route

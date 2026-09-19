@@ -5,6 +5,8 @@ import { supabase } from '../../lib/supabase'
 import { iniciais } from '../../lib/booking'
 import { useCategorias, agruparPorCategoria } from '../../lib/categorias'
 import CategoriaCard from '../../components/CategoriaCard'
+import ComoChegar from '../../components/ComoChegar'
+import { temPino, linksDeRota } from '../../lib/geo'
 import { StarIcon, InstagramIcon } from '../../components/icons'
 import { MapPin, Phone, Clock, Store, BadgePercent, MessageCircle, Star, Wallet } from 'lucide-react'
 import { MODOS, textoSinal, POLITICAS } from '../../lib/pagamento'
@@ -50,7 +52,8 @@ export default function ClienteSalao() {
   const fotos = s.fotos ?? []
   const nota = pg.nota?.quantas ? pg.nota : null
   const endereco = [s.endereco, s.cidade].filter(Boolean).join(' · ')
-  const mapa = endereco ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([s.nome, s.endereco, s.cidade].filter(Boolean).join(', '))}` : null
+  const pino = temPino(s.lat, s.lng)
+  const mapa = linksDeRota({ lat: s.lat, lng: s.lng, nome: s.nome, endereco: s.endereco, cidade: s.cidade })?.google ?? null
   const zap = s.whatsapp ? 'https://wa.me/55' + String(s.whatsapp).replace(/\D/g, '').replace(/^55/, '') : null
   const insta = s.instagram ? 'https://instagram.com/' + String(s.instagram).replace(/^@/, '') : null
   const hoje = new Date().getDay()
@@ -87,7 +90,8 @@ export default function ClienteSalao() {
             <p className="muted salao-pag-nota">{textoSinal(s.pagamento.sinal_pct)} por PIX ao marcar{s.pagamento.politica ? ` · cancelamento ${POLITICAS[s.pagamento.politica]?.rotulo.toLowerCase() ?? ''}: devolve até ${POLITICAS[s.pagamento.politica]?.horas} h antes` : ''}</p>
           </>
         )}
-        {endereco && <p className="muted salao-linha"><MapPin size={14} /><span>{endereco}</span>{mapa && <a href={mapa} target="_blank" rel="noreferrer" className="link-ver salao-mapa">Como chegar</a>}</p>}
+        {endereco && <p className="muted salao-linha"><MapPin size={14} /><span>{endereco}</span>{mapa && !pino && <a href={mapa} target="_blank" rel="noreferrer" className="link-ver salao-mapa">Como chegar</a>}</p>}
+        {pino && <ComoChegar lat={s.lat} lng={s.lng} nome={s.nome} endereco={s.endereco} cidade={s.cidade} altura={150} />}
         {nota ? (
           <p className="perfil-nota"><StarIcon /> <strong>{Number(nota.media).toFixed(1)}</strong><span className="muted">({nota.quantas} {nota.quantas === 1 ? 'avaliação' : 'avaliações'} da equipe)</span></p>
         ) : <p className="perfil-nota muted">Ainda sem avaliações</p>}

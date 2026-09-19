@@ -8,6 +8,8 @@ import { useAuth } from '../../context/AuthContext'
 import { useDialogo } from '../../context/DialogoContext'
 import { formatPreco, formatDuracao } from '../../lib/format'
 import { formatDataLonga, iniciais } from '../../lib/booking'
+import ComoChegar from '../../components/ComoChegar'
+import { temPino, linksDeRota } from '../../lib/geo'
 import { CalendarDays, Clock, MapPin, Sparkles, StickyNote, Repeat, CircleCheck, Hourglass, CircleX, Check, ChevronRight, Users, Star, Wallet } from 'lucide-react'
 
 // A página de um agendamento (2.16): tudo sobre ele num lugar só. É
@@ -42,7 +44,7 @@ export default function ClienteAgendamento() {
   const carregar = useCallback(async () => {
     const { data, error } = await supabase
       .from('appointments')
-      .select('*, services (name, price, duration_minutes), professionals (id, name, photo_url), salons (id, name, address, city, phone, tipo)')
+      .select('*, services (name, price, duration_minutes), professionals (id, name, photo_url), salons (id, name, address, city, phone, tipo, lat, lng)')
       .eq('id', id).eq('client_id', user.id).maybeSingle()
     if (error) setErro(error.message)
     setA(data ?? null)
@@ -112,7 +114,8 @@ export default function ClienteAgendamento() {
   const vivas = partes.filter((x) => x.status === 'pendente' || x.status === 'confirmado')
   const recusadas = partes.filter((x) => x.status === 'cancelado')
   const endereco = [salao?.address, salao?.city].filter(Boolean).join(' · ')
-  const mapa = endereco ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([salao?.name, salao?.address, salao?.city].filter(Boolean).join(', '))}` : null
+  const pino = temPino(salao?.lat, salao?.lng)
+  const mapa = linksDeRota({ lat: salao?.lat, lng: salao?.lng, nome: salao?.name, endereco: salao?.address, cidade: salao?.city })?.google ?? null
 
   return (
     <ClienteShell titulo="Agendamento" voltar="/cliente/meus-agendamentos">
@@ -150,7 +153,7 @@ export default function ClienteAgendamento() {
 
       <div className="card agdt-dados">
         {salao && (
-          <div className="agdt-item"><MapPin size={18} /><span><span className="muted agdt-rotulo">Onde</span><strong>{salao.tipo === 'salao' && salao.id ? <Link to={`/cliente/salao/${salao.id}`} className="agdt-salao-link">{salao.name}</Link> : salao.name}</strong>{endereco && <span className="muted">{endereco}</span>}{mapa && <a href={mapa} target="_blank" rel="noreferrer" className="agdt-mapa">Como chegar</a>}</span></div>
+          <div className="agdt-item"><MapPin size={18} /><span><span className="muted agdt-rotulo">Onde</span><strong>{salao.tipo === 'salao' && salao.id ? <Link to={`/cliente/salao/${salao.id}`} className="agdt-salao-link">{salao.name}</Link> : salao.name}</strong>{endereco && <span className="muted">{endereco}</span>}{mapa && !pino && <a href={mapa} target="_blank" rel="noreferrer" className="agdt-mapa">Como chegar</a>}{pino && futuro && a.status !== 'cancelado' && <ComoChegar lat={salao.lat} lng={salao.lng} nome={salao.name} endereco={salao.address} cidade={salao.city} altura={130} />}</span></div>
         )}
         {itens.length > 1 ? (
           <div className="agdt-item"><Sparkles size={18} /><span><span className="muted agdt-rotulo">Serviços</span>

@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import ComoChegar from '../../components/ComoChegar'
+import { temPino, linksDeRota } from '../../lib/geo'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
@@ -288,7 +290,8 @@ export default function PaginaProfissional() {
   const avaliacoes = vitrine.avaliacoes ?? []
   const horarios = vitrine.horarios ?? []
   const endereco = [salao.address, salao.city].filter(Boolean).join(' · ')
-  const mapa = endereco ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([salao.address, salao.city].filter(Boolean).join(', '))}` : ''
+  const pino = temPino(salao.lat, salao.lng)
+  const mapa = linksDeRota({ lat: salao.lat, lng: salao.lng, nome: salao.name, endereco: salao.address, cidade: salao.city })?.google ?? ''
   const zap = prof.whatsapp ? `https://wa.me/${prof.whatsapp}?text=${encodeURIComponent(`Oi, ${prof.name.split(' ')[0]}! Vi seu link no MIMO e queria tirar uma dúvida.`)}` : ''
   const especialidade = prof.especialidade || services.slice(0, 2).map((s) => s.name).join(' e ')
 
@@ -414,7 +417,8 @@ export default function PaginaProfissional() {
                   <div className="card vit-onde">
                     {salao.name && <strong>{salao.name}</strong>}
                     {endereco && <span className="muted">{endereco}</span>}
-                    {mapa && <a className="link-ver" href={mapa} target="_blank" rel="noreferrer">Abrir no mapa</a>}
+                    {mapa && !pino && <a className="link-ver" href={mapa} target="_blank" rel="noreferrer">Abrir no mapa</a>}
+                    {pino && <ComoChegar lat={salao.lat} lng={salao.lng} nome={salao.name} endereco={salao.address} cidade={salao.city} altura={140} />}
                   </div>
                 </>
               )}

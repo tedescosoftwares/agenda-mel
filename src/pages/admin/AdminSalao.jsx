@@ -3,6 +3,8 @@ import AdminShell from '../../components/AdminShell'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import { reduzirFoto } from '../../lib/imagem'
+import { limparCep, temPino } from '../../lib/geo'
+import LocalDoSalao from '../../components/LocalDoSalao'
 import { ImagePlus, Store } from 'lucide-react'
 
 // A página do salão (085): o que a cliente vê quando abre o salão no
@@ -20,9 +22,9 @@ export default function AdminSalao() {
 
   useEffect(() => {
     if (!salao?.id) return
-    supabase.from('salons').select('name, descricao, fotos, logo_url, address, city, phone, whatsapp, instagram').eq('id', salao.id).maybeSingle().then(({ data }) => {
+    supabase.from('salons').select('name, descricao, fotos, logo_url, address, city, cep, lat, lng, phone, whatsapp, instagram').eq('id', salao.id).maybeSingle().then(({ data }) => {
       if (!data) return
-      setForm({ name: data.name ?? '', descricao: data.descricao ?? '', address: data.address ?? '', city: data.city ?? '', phone: data.phone ?? '', whatsapp: data.whatsapp ?? '', instagram: data.instagram ?? '' })
+      setForm({ name: data.name ?? '', descricao: data.descricao ?? '', address: data.address ?? '', city: data.city ?? '', cep: data.cep ?? '', lat: data.lat ?? null, lng: data.lng ?? null, pinoMexido: false, phone: data.phone ?? '', whatsapp: data.whatsapp ?? '', instagram: data.instagram ?? '' })
       setFotos((data.fotos ?? []).map((url) => ({ url })))
       setLogo(data.logo_url ? { url: data.logo_url } : null)
     })
@@ -72,11 +74,14 @@ export default function AdminSalao() {
       const { error } = await supabase.from('salons').update({
         name: form.name.trim(), descricao: form.descricao.trim() || null, fotos: urls, logo_url: logoUrl,
         address: form.address.trim() || null, city: form.city.trim() || null, phone: form.phone.trim() || null,
+        cep: limparCep(form.cep) || null, lat: temPino(form.lat, form.lng) ? form.lat : null, lng: temPino(form.lat, form.lng) ? form.lng : null,
+        ...(form.pinoMexido ? { pino_ajustado_em: new Date().toISOString() } : {}),
         whatsapp: form.whatsapp.trim() || null, instagram: form.instagram.trim().replace(/^@/, '') || null,
       }).eq('id', salao.id)
       if (error) throw new Error(error.message)
       setFotos(urls.map((url) => ({ url })))
       setLogo(logoUrl ? { url: logoUrl } : null)
+      setForm((f) => ({ ...f, pinoMexido: false }))
       setInfo('Página salva. É assim que a cliente vê o salão.')
     } catch (err) { setErro(err.message) } finally { setSalvando(false) }
   }
@@ -131,9 +136,10 @@ export default function AdminSalao() {
             </div>
           </div>
 
-          <div className="form-row">
-            <label>Endereço<input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Rua, número · bairro" /></label>
-            <label>Cidade<input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} /></label>
+          <div className="img-field">
+            <span className="img-field-label">Onde fica</span>
+            <p className="muted salao-dica">Busque pelo CEP, use a sua localização estando no salão, ou arraste o pino até a porta. É o que a cliente vê no "Como chegar".</p>
+            <LocalDoSalao valor={form} onChange={setForm} />
           </div>
           <div className="form-row">
             <label>Telefone<input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} inputMode="tel" placeholder="(13) 3333-0000" /></label>

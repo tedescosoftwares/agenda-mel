@@ -165,7 +165,7 @@ const TABELAS = {
   profissional_preferida: [{ client_id: 'c1', salon_id: SALAO, professional_id: 'pr1' }],
   promocoes: promocoes.map((p) => ({ ...p, aprovacao: p.aprovacao ?? 'aprovada', services: servicos.find((s) => s.id === p.service_id) ? { name: servicos.find((s) => s.id === p.service_id).name } : null, salons: p.salon_id ? { name: 'Studio Mel' } : null, professionals: p.professional_id ? { name: profissionais.find((x) => x.id === p.professional_id)?.name } : null })),
   servicos_juntos: [{ service_id: 'sv1', sugerido_id: 'sv3' }],
-  salons: [{ id: SALAO, name: 'Studio Mel', slug: 'studio-mel', pagamento_modo: 'opcional', sinal_pct: 50, politica_cancelamento: 'moderada', app_url: 'https://mimo.app', city: 'Santos', address: 'Rua das Flores, 120 · Gonzaga', codigo: 'MEL2K5', tipo: 'salao', descricao: 'Um cantinho no Gonzaga para você se cuidar com calma: café, música baixa e uma equipe que capricha em cada detalhe.', fotos: [PROMO_IMG('#FF7BAA', '#AA4CFF', ''), PROMO_IMG('#FFC2D8', '#FF2D7A', '')], logo_url: null, phone: '(13) 3333-0000', whatsapp: '(13) 99120-3410', instagram: 'studiomel' }],
+  salons: [{ id: SALAO, name: 'Studio Mel', slug: 'studio-mel', pagamento_modo: 'opcional', sinal_pct: 50, politica_cancelamento: 'moderada', app_url: 'https://mimo.app', city: 'Santos', address: 'Rua das Flores, 120 · Gonzaga', cep: '11060300', lat: -23.9668, lng: -46.3325, codigo: 'MEL2K5', tipo: 'salao', descricao: 'Um cantinho no Gonzaga para você se cuidar com calma: café, música baixa e uma equipe que capricha em cada detalhe.', fotos: [PROMO_IMG('#FF7BAA', '#AA4CFF', ''), PROMO_IMG('#FFC2D8', '#FF2D7A', '')], logo_url: null, phone: '(13) 3333-0000', whatsapp: '(13) 99120-3410', instagram: 'studiomel' }],
   salon_members: [{ salon_id: SALAO, user_id: 'a1', papel: 'admin', salons: { id: SALAO, name: 'Studio Mel', slug: 'studio-mel', codigo: 'MEL2K5', tipo: 'salao', city: 'Santos' } }],
   whatsapp_channels: [{ salon_id: SALAO, canal: 'evolution', identificador: '11', ativo: true, usa_ia: true, usa_bot: true, silencio_inicio: '21:00', silencio_fim: '08:00', teto_diario: 300 }],
   affiliate_settings: [{ id: true, ativo: true, platform_fee_bps: 300, affiliate_share_bps: 50 }],
@@ -192,7 +192,7 @@ const RPC = {
     ] }),
   pagamento_dos_saloes: ({ ids }) => (ids ?? []).map((id) => ({ salon_id: id, modo: 'opcional', sinal_pct: 50 })),
   pagina_do_salao: () => ({
-    salao: { id: SALAO, nome: 'Studio Mel', pagamento: { modo: 'opcional', sinal_pct: 50, politica: 'moderada', estorno_horas: 12 }, tipo: 'salao', descricao: 'Um cantinho no Gonzaga para você se cuidar com calma: café, música baixa e uma equipe que capricha em cada detalhe.', fotos: [PROMO_IMG('#FF7BAA', '#AA4CFF', ''), PROMO_IMG('#FFC2D8', '#FF2D7A', '')], logo_url: null, endereco: 'Rua das Flores, 120 · Gonzaga', cidade: 'Santos', telefone: '(13) 3333-0000', whatsapp: '(13) 99120-3410', instagram: 'studiomel' },
+    salao: { id: SALAO, nome: 'Studio Mel', pagamento: { modo: 'opcional', sinal_pct: 50, politica: 'moderada', estorno_horas: 12 }, tipo: 'salao', descricao: 'Um cantinho no Gonzaga para você se cuidar com calma: café, música baixa e uma equipe que capricha em cada detalhe.', fotos: [PROMO_IMG('#FF7BAA', '#AA4CFF', ''), PROMO_IMG('#FFC2D8', '#FF2D7A', '')], logo_url: null, endereco: 'Rua das Flores, 120 · Gonzaga', cidade: 'Santos', cep: '11060300', lat: -23.9668, lng: -46.3325, telefone: '(13) 3333-0000', whatsapp: '(13) 99120-3410', instagram: 'studiomel' },
     horarios: [0, 1, 2, 3, 4, 5, 6].map((weekday) => ({ weekday, open: weekday > 0, start_time: '09:00:00', end_time: weekday === 6 ? '14:00:00' : '18:00:00' })),
     nota: { media: 4.8, quantas: 212 },
     equipe: profissionais.filter((p) => p.active).map((p) => ({ id: p.id, nome: p.name, foto: p.photo_url, bio: p.bio, nota: 4.9, faz: vinculos.filter((v) => v.professional_id === p.id).map((v) => servicos.find((s) => s.id === v.service_id)?.name).filter(Boolean) })),
@@ -229,7 +229,7 @@ const RPC = {
     if (!p) return null
     return {
       profissional: { id: p.id, name: p.name, slug: p.slug, bio: p.bio, photo_url: p.photo_url, especialidade: p.especialidade ?? null, instagram: p.instagram ?? null, whatsapp: p.whatsapp_publico ?? null, aceite_manual: p.aceite_manual },
-      salao: { id: SALAO, name: 'Studio Mel', codigo: 'MEL2K5', tipo: 'salao', city: 'Santos', address: 'Rua das Flores, 120 · Gonzaga', app_url: 'https://mimo.app' },
+      salao: { id: SALAO, name: 'Studio Mel', codigo: 'MEL2K5', tipo: 'salao', city: 'Santos', address: 'Rua das Flores, 120 · Gonzaga', lat: -23.9668, lng: -46.3325, app_url: 'https://mimo.app' },
       nota: { media: 4.9, quantas: 128 },
       avaliacoes: avaliacoes.concat(avaliacoes),
       galeria: [FOTO(3), FOTO(11), FOTO(25), FOTO(38), FOTO(52)],

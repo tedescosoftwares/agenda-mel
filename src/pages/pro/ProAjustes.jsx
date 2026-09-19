@@ -4,7 +4,7 @@ import ProShell from '../../components/ProShell'
 import SemFicha from './SemFicha'
 import { useAuth } from '../../context/AuthContext'
 import { ClockIcon, LinkIcon, ChevronIcon, BellIcon, MegafoneIcon } from '../../components/icons'
-import { BadgePercent, Wallet } from 'lucide-react'
+import { BadgePercent, Wallet, MapPin } from 'lucide-react'
 import AvisosNoCelular from '../../components/AvisosNoCelular'
 import AvisosPorEmail from '../../components/AvisosPorEmail'
 
@@ -52,6 +52,21 @@ export default function ProAjustes() {
             </span>
             <span className="muted cliente-meta">
               PIX ao marcar, política de cancelamento e o financeiro do mês
+            </span>
+          </div>
+          <ChevronIcon />
+        </Link>
+
+        <Link to="/pro/local" className="card prof-row">
+          <span className="ajuste-icone">
+            <MapPin />
+          </span>
+          <div className="cliente-info">
+            <span className="cliente-nome">
+              <span className="nome-txt">Onde você atende</span>
+            </span>
+            <span className="muted cliente-meta">
+              Endereço e pino no mapa para a cliente chegar
             </span>
           </div>
           <ChevronIcon />

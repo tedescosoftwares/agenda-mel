@@ -6328,3 +6328,45 @@ button.link-ver.pag-desistir { color: var(--texto-3); }
 @media (prefers-reduced-motion: reduce) {
   .cliente-shell .cat-card, .cat-card-fundo img, .cat-card-aurora::before, .cat-card-aurora::after { animation: none; }
 }
+
+/* ---- mapa (100): Leaflet contido, pino da marca, como chegar, editor do pino ---- */
+.mapa-caixa { position: relative; width: 100%; border-radius: 16px; overflow: hidden; background: var(--cinza-1); isolation: isolate; z-index: 0; }
+.mapa-carregando { background: linear-gradient(90deg, var(--cinza-1) 25%, #fff 50%, var(--cinza-1) 75%); background-size: 200% 100%; animation: mapa-pulsa 1.4s ease-in-out infinite; }
+@keyframes mapa-pulsa { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+.mapa-caixa.leaflet-container { font: inherit; }
+.mapa-caixa .leaflet-control-attribution { font-size: 9px; background: rgba(255, 255, 255, 0.72); padding: 1px 5px; border-radius: 6px 0 0 0; }
+.mapa-caixa .leaflet-control-attribution a { color: var(--cinza-3, #6b7280); }
+.mapa-caixa .leaflet-bar { border: none; box-shadow: 0 4px 12px rgba(31, 32, 38, 0.16); border-radius: 10px; overflow: hidden; }
+.mapa-caixa .leaflet-bar a { width: 32px; height: 32px; line-height: 32px; color: var(--grafite, #1f2026); border-color: var(--fio); }
+.mapa-pino { background: none; border: 0; filter: drop-shadow(0 5px 6px rgba(0, 0, 0, 0.28)); transition: transform .15s ease; }
+.mapa-pino svg { display: block; width: 34px; height: 44px; }
+.leaflet-marker-draggable.mapa-pino { cursor: grab; }
+.leaflet-marker-draggable.mapa-pino:active, .leaflet-drag-target.mapa-pino { transform: translateY(-6px) scale(1.06); cursor: grabbing; }
+
+/* a cliente: mapa que abre a rota num toque + atalhos */
+.como-chegar { display: flex; flex-direction: column; gap: 0.55rem; margin: 0.45rem 0 0.25rem; width: 100%; }
+.como-chegar-mapa { position: relative; }
+.como-chegar-mapa > a { position: absolute; inset: 0; z-index: 1; border-radius: 16px; }
+.como-chegar-toque { position: absolute; right: 0.6rem; bottom: 0.6rem; z-index: 1; pointer-events: none; display: inline-flex; align-items: center; gap: 0.3rem; background: rgba(31, 32, 38, 0.8); color: #fff; font-size: 0.7rem; font-weight: 600; padding: 0.3rem 0.6rem; border-radius: 999px; }
+.rota-chips { display: flex; gap: 0.45rem; flex-wrap: wrap; }
+.rota-chip { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.42rem 0.8rem; border-radius: 999px; border: 1.5px solid #ffc2d8; color: var(--rosa); font-weight: 600; font-size: 0.82rem; text-decoration: none; background: #fff; white-space: nowrap; }
+.rota-chip:active { background: #fff0f5; }
+.cliente-shell .agdt-item > span > .como-chegar { margin-top: 0.5rem; }
+.cliente-shell .salao-linha + .como-chegar { margin-top: 0.2rem; }
+
+/* a dona: CEP, endereço e o pino que se arrasta */
+.local-editor { display: flex; flex-direction: column; gap: 0.7rem; }
+.local-editor label { display: flex; flex-direction: column; gap: 0.3rem; }
+.local-cep { display: flex; gap: 0.45rem; align-items: stretch; }
+.local-editor .form-row > label { min-width: 0; }
+.local-cep input { flex: 1 1 0; min-width: 0; width: 100%; }
+.local-cep .btn-mini { flex: none; padding: 0 0.9rem; }
+.local-mapa { margin-top: 0.15rem; }
+.local-sem-pino { display: flex; flex-direction: column; align-items: center; gap: 0.35rem; text-align: center; padding: 1.5rem 1rem; border: 2px dashed #ffc2d8; border-radius: 16px; background: #fff8fb; color: var(--rosa); }
+.local-sem-pino strong { color: var(--grafite, #1f2026); }
+.local-sem-pino .muted { font-size: 0.85rem; max-width: 30ch; }
+.local-acoes { display: flex; gap: 0.45rem; flex-wrap: wrap; }
+.local-acoes .btn-mini { display: inline-flex; align-items: center; gap: 0.35rem; }
+.local-dica { display: flex; gap: 0.4rem; align-items: flex-start; font-size: 0.82rem; margin: 0; }
+.local-dica svg { flex: none; margin-top: 2px; }
+.local-nota { margin: 0; font-size: 0.85rem; color: var(--roxo, #aa4cff); font-weight: 600; }

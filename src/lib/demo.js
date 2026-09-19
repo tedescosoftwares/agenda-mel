@@ -265,6 +265,18 @@ const RPC = {
   minhas_trazidas: () => [{ client_id: 'c1', nome: 'Juliana Prado', entrou_em: mais(-40), como: 'qr', ultima_visita: mais(-2) }, { client_id: 'c3', nome: 'Carla Mendes', entrou_em: mais(-20), como: 'link', ultima_visita: mais(-5) }],
   meus_saloes: () => [],
   minha_parceria: () => null,
+  pdv_dia: () => {
+    const hoje = mais(0)
+    const linhas = [['ap1', 'c1', 'pr1', 'sv2', '09:00:00', '10:30:00', 'concluido', 8500, 0], ['apx1', 'c2', 'pr2', 'sv7', '10:30:00', '11:15:00', 'confirmado', 6000, 3000], ['apx2', 'c3', 'pr1', 'sv1', '11:00:00', '11:45:00', 'confirmado', 3500, 0], ['apx3', 'c4', 'pr3', 'sv4', '14:00:00', '15:00:00', 'pendente', 6500, 0], ['apx4', 'c5', 'pr2', 'sv3', '15:30:00', '16:30:00', 'confirmado', 12000, 0]]
+    return {
+      dia: hoje,
+      agenda: linhas.map(([id, cid, pid, sid, ini, fim, status, preco, pago]) => { const s = servicos.find((x) => x.id === sid); const p = profissionais.find((x) => x.id === pid); const cl = clientes.find((x) => x.id === cid); return { id, start_time: ini, end_time: fim, status, client_id: cid, cliente: cl?.full_name ?? 'Cliente', professional_id: pid, profissional: p?.name, servico: s?.name, price_cents: preco, pago_cents: pago, itens: s ? [{ service_id: s.id, nome: s.name, preco_cents: preco, duracao: s.duration_minutes, qtd: 1 }] : [], comanda_id: id === 'ap1' ? 'cm1' : null } }),
+      comandas: [{ id: 'cm1', fechada_em: hoje + 'T10:32:00', cliente: 'Juliana Silva', profissional: 'Ana Oliveira', professional_id: 'pr1', total_cents: 8500, desconto_cents: 0, sinal_app_cents: 0, status: 'fechada', itens: [{ nome: 'Escova' }], appointment_id: 'ap1', pagamentos: [{ forma: 'pix', valor_cents: 8500 }] }],
+      caixa: { total_cents: 8500, por_forma: [{ forma: 'pix', valor_cents: 8500 }], por_profissional: [{ professional_id: 'pr1', nome: 'Ana Oliveira', valor_cents: 8500, comandas: 1 }] },
+    }
+  },
+  pdv_fechar: ({ comanda }) => ({ ok: true, comanda_id: 'cm-novo', total_cents: (comanda?.itens ?? []).reduce((s, i) => s + i.preco_cents * (i.qtd ?? 1), 0) - (comanda?.desconto_cents ?? 0) }),
+  pdv_estornar: () => ({ ok: true }),
   parcerias_da_equipe: () => profissionais.filter((p) => p.active).map((p, i) => ({ professional_id: p.id, nome: p.name, parceria_id: null, status: i === 0 ? 'vigente' : 'sem_contrato', homologacao: i === 0 ? 'homologado' : null })),
   novo_codigo: () => 'NOV4B7',
   novo_codigo_do_salao: () => 'SAL9Q2',

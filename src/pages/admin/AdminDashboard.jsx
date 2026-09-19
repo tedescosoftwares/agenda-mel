@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import AdminShell from '../../components/AdminShell'
 import AvisosNovos from '../../components/AvisosNovos'
 import LigarAvisos from '../../components/LigarAvisos'
@@ -22,6 +22,12 @@ export default function AdminDashboard() {
   const [linhas, setLinhas] = useState([])
   const [porDia, setPorDia] = useState([])
   const [semContrato, setSemContrato] = useState([])
+  const navigate = useNavigate()
+  useEffect(() => {
+    try {
+      if (localStorage.getItem('mimo-pdv') === '1' && window.innerWidth >= 900 && !sessionStorage.getItem('mimo-pdv-pausado')) navigate('/admin/pdv', { replace: true })
+    } catch { /* sem armazenamento */ }
+  }, [navigate])
   const salaoId = salao?.id
 
   const carregar = useCallback(async () => {

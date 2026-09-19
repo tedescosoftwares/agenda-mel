@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Store, Wallet, Users, Sparkles, Clock, BadgePercent, Megaphone, MessageCircle, BarChart3, QrCode, ChevronRight } from 'lucide-react'
+import { Store, Wallet, Users, Sparkles, Clock, BadgePercent, Megaphone, MessageCircle, BarChart3, QrCode, ChevronRight, Monitor } from 'lucide-react'
 import AdminShell from '../../components/AdminShell'
 import { useAuth } from '../../context/AuthContext'
 import { useDialogo } from '../../context/DialogoContext'
@@ -23,6 +23,9 @@ export default function AdminAjustes() {
   const [qr, setQr] = useState(false)
   const [erro, setErro] = useState('')
   const [st, setSt] = useState(null)   // a situação de cada área
+  const [pdv, setPdv] = useState(() => { try { return localStorage.getItem('mimo-pdv') === '1' } catch { return false } })
+  const desktop = typeof window !== 'undefined' && window.innerWidth >= 900
+  function ligarPdv(v) { setPdv(v); try { localStorage.setItem('mimo-pdv', v ? '1' : '0'); sessionStorage.removeItem('mimo-pdv-pausado') } catch { /* sem armazenamento */ } }
 
   useEffect(() => {
     if (!salao?.id) return
@@ -83,6 +86,7 @@ export default function AdminAjustes() {
     { titulo: 'Dinheiro', cartoes: [
       { to: '/admin/receber', Icon: Wallet, tom: 'rosa', titulo: 'Receber pelo app', texto: 'PIX ao marcar, política de cancelamento e o financeiro do mês.', situacao: st && (pag ? `${MODOS[s.pagamento_modo]?.curto ?? s.pagamento_modo} · sinal de ${s.sinal_pct ?? 0}%` : 'desligado'), ok: st ? pag : null },
       { to: '/admin/numeros', Icon: BarChart3, tom: 'roxo', titulo: 'O mês', texto: 'Faturamento, ocupação e atendimentos, por profissional.', situacao: null },
+      { to: '/admin/pdv', Icon: Monitor, tom: 'verde', titulo: 'PDV do balcão', texto: 'Comanda, catálogo e caixa do dia, na tela cheia do computador.', situacao: desktop ? (pdv ? 'abre direto ao entrar' : 'pronto para abrir') : 'só no computador', ok: desktop ? true : false },
     ] },
     { titulo: 'Clientes', cartoes: [
       { to: '/admin/promocoes', Icon: BadgePercent, tom: 'ambar', titulo: 'Promoções', texto: 'Um criativo na home das clientes, com desconto ou preço especial.', situacao: st && (st.promocoes ? `${st.promocoes} no ar` : 'nenhuma no ar'), ok: st ? st.promocoes > 0 : null },
@@ -155,6 +159,17 @@ export default function AdminAjustes() {
           </div>
         </section>
       ))}
+
+      <section className="secao aj-secao">
+        <h3 className="secao-titulo">Modo PDV</h3>
+        <div className="card cl-ajuste avisos-celular">
+          <div className="cliente-info">
+            <span className="cliente-nome"><span className="nome-txt">Abrir no modo PDV pelo computador</span></span>
+            <span className="muted cliente-meta">{desktop ? 'Ao entrar no painel por um computador, vai direto para o PDV do balcão. "Sair do PDV" traz o painel de volta.' : 'Você está no celular. Ligue aqui e, quando entrar pelo computador do salão, o painel abre direto no PDV.'}</span>
+          </div>
+          <label className="switch"><input type="checkbox" checked={pdv} onChange={(e) => ligarPdv(e.target.checked)} /><span></span></label>
+        </div>
+      </section>
 
       <section className="secao aj-secao">
         <h3 className="secao-titulo">Avisos para você</h3>

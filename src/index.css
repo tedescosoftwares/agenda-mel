@@ -6743,3 +6743,5 @@ label.check input { margin-top: 3px; }
 .cupom-pagamentos .resumo-linha > .muted { flex: 1; min-width: 0; line-height: 1.3; }
 .cupom-pagamentos .resumo-linha > strong { flex: none; white-space: nowrap; }
 .fc-tecla { padding: 0.6rem; }
+.cliente-shell .cupom-pagamentos .resumo-linha { display: flex; }
+.cliente-shell .cupom-pagamentos .resumo-linha > .muted { white-space: normal; overflow: visible; text-overflow: clip; }

@@ -166,6 +166,7 @@ const TABELAS = {
   promocoes: promocoes.map((p) => ({ ...p, aprovacao: p.aprovacao ?? 'aprovada', services: servicos.find((s) => s.id === p.service_id) ? { name: servicos.find((s) => s.id === p.service_id).name } : null, salons: p.salon_id ? { name: 'Studio Mel' } : null, professionals: p.professional_id ? { name: profissionais.find((x) => x.id === p.professional_id)?.name } : null })),
   servicos_juntos: [{ service_id: 'sv1', sugerido_id: 'sv3' }],
   parcerias: [],
+  comandas: [{ id: 'cmv', appointment_id: 'ap3', status: 'fechada' }],
   salons: [{ id: SALAO, name: 'Studio Mel', slug: 'studio-mel', pagamento_modo: 'opcional', sinal_pct: 50, politica_cancelamento: 'moderada', app_url: 'https://mimo.app', city: 'Santos', address: 'Rua das Flores, 120 · Gonzaga', cep: '11060300', lat: -23.9668, lng: -46.3325, codigo: 'MEL2K5', tipo: 'salao', descricao: 'Um cantinho no Gonzaga para você se cuidar com calma: café, música baixa e uma equipe que capricha em cada detalhe.', fotos: [PROMO_IMG('#FF7BAA', '#AA4CFF', ''), PROMO_IMG('#FFC2D8', '#FF2D7A', '')], logo_url: null, phone: '(13) 3333-0000', whatsapp: '(13) 99120-3410', instagram: 'studiomel' }],
   salon_members: [{ salon_id: SALAO, user_id: 'a1', papel: 'admin', salons: { id: SALAO, name: 'Studio Mel', slug: 'studio-mel', codigo: 'MEL2K5', tipo: 'salao', city: 'Santos' } }],
   whatsapp_channels: [{ salon_id: SALAO, canal: 'evolution', identificador: '11', ativo: true, usa_ia: true, usa_bot: true, silencio_inicio: '21:00', silencio_fim: '08:00', teto_diario: 300 }],
@@ -276,8 +277,9 @@ const RPC = {
       caixa: { total_cents: 8500, por_forma: [{ forma: 'pix', valor_cents: 8500 }], por_profissional: [{ professional_id: 'pr1', nome: 'Ana Oliveira', valor_cents: 8500, comandas: 1 }] },
     }
   },
-  pdv_fechar: ({ comanda }) => ({ ok: true, comanda_id: 'cm-novo', total_cents: (comanda?.itens ?? []).reduce((s, i) => s + i.preco_cents * (i.qtd ?? 1), 0) - (comanda?.desconto_cents ?? 0) }),
+  pdv_fechar: ({ comanda }) => ({ ok: true, comanda_id: 'cm-novo', cupom: Boolean(comanda?.client_id) && comanda?.enviar_cupom !== false, total_cents: (comanda?.itens ?? []).reduce((s, i) => s + i.preco_cents * (i.qtd ?? 1), 0) - (comanda?.desconto_cents ?? 0) }),
   pdv_estornar: () => ({ ok: true }),
+  comprovante_da_comanda: () => ({ id: 'cmv', fechada_em: mais(-12) + 'T09:48:00', status: 'fechada', itens: [{ nome: 'Manicure', preco_cents: 3500, qtd: 1 }, { nome: 'Esmaltação em gel', preco_cents: 7500, qtd: 1 }], subtotal_cents: 11000, desconto_cents: 1000, total_cents: 10000, sinal_app_cents: 3500, pagamentos: [{ forma: 'app', valor_cents: 3500, troco_cents: 0, detalhe: 'sinal pago pelo app' }, { forma: 'dinheiro', valor_cents: 4000, recebido_cents: 5000, troco_cents: 1000 }, { forma: 'credito', valor_cents: 2500, parcelas: 1, detalhe: 'Stone' }], atendida_por: 'Ana Oliveira', appointment_id: 'ap3', dia: mais(-12), hora: '09:00:00', salao: { id: SALAO, nome: 'Studio Mel', tipo: 'salao', endereco: 'Rua das Flores, 120 · Gonzaga', cidade: 'Santos', cnpj: '12.345.678/0001-95', logo_url: null }, cliente: 'Juliana Silva' }),
   mover_horario: () => ({ ok: true, appointment_id: 'ap-movido' }),
   pdv_dias: ({ de, ate }) => { const out = []; for (let d = de; d <= ate; d = (() => { const x = new Date(d + 'T12:00:00'); x.setDate(x.getDate() + 1); return x.toISOString().slice(0, 10) })()) { const n = (new Date(d + 'T12:00:00').getDay() + 3) % 5; out.push({ dia: d, quantos: n, concluidos: d < mais(0) ? n : 0, valor_cents: n * 6500 }) } return out },
   pdv_historico: () => [

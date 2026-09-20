@@ -97,6 +97,8 @@ begin
   end loop;
   if desconto > subtotal then raise exception 'O desconto é maior que a comanda.'; end if;
   total := subtotal - desconto;
+  if primeiro is null then select id into primeiro from public.services sv where sv.salon_id = salao and sv.active order by sv.name limit 1; end if;
+  if primeiro is null and appt is null then raise exception 'Cadastre ao menos um serviço no catálogo para fechar comanda avulsa.'; end if;
 
   if appt is not null then
     select * into a from public.appointments where id = appt;
@@ -120,7 +122,12 @@ begin
   if appt is not null then
     -- a cliente veio antes da hora: o horário começa agora, para a regra de "só conclui depois de começar"
     if (a.date + a.start_time) > agora then
-      update public.appointments set start_time = agora::time where id = appt;
+      -- ela chegou antes: o horário passa a começar agora, com a duração de sempre (ou o que couber)
+      begin
+        update public.appointments set start_time = agora::time, end_time = least(agora::time + (a.end_time - a.start_time), time '23:59') where id = appt;
+      exception when exclusion_violation then
+        update public.appointments set start_time = agora::time, end_time = least(agora::time + interval '1 minute', time '23:59') where id = appt;
+      end;
     end if;
     delete from public.appointment_services where appointment_id = appt;
     for it in select * from jsonb_array_elements(itens) loop
@@ -138,6 +145,9 @@ begin
     -- avulsa: o atendimento nasce já concluído, na última brecha da agenda da
     -- profissional que termina agora (ou antes, se ela está com alguém)
     fim_av := agora; dur_av := make_interval(mins => greatest(duracao, 15));
+    -- perto da meia-noite, a brecha não pode vazar para o dia anterior
+    if fim_av < agora::date + interval '1 minute' then fim_av := agora::date + interval '1 minute'; end if;
+    if fim_av - dur_av < agora::date then dur_av := greatest(fim_av - agora::date, interval '1 minute'); end if;
     for i in 1..20 loop
       select min(x.date + x.start_time) into ult from public.appointments x
        where x.professional_id = prof.id and x.date = agora::date and x.status not in ('cancelado', 'faltou')
@@ -145,8 +155,25 @@ begin
       exit when ult is null;
       fim_av := ult;
       if fim_av - dur_av < agora::date + time '00:01' then dur_av := interval '1 minute'; end if;
-      if fim_av <= agora::date + time '00:01' then raise exception 'Não há brecha na agenda de hoje desta profissional para registrar uma avulsa.'; end if;
+      if fim_av <= agora::date + time '00:01' then
+        -- não coube antes de agora: vai para a primeira brecha depois de agora
+        fim_av := null; exit;
+      end if;
     end loop;
+    if fim_av is null then
+      dur_av := make_interval(mins => greatest(duracao, 15));
+      ult := agora;                       -- aqui `ult` é o começo candidato
+      for i in 1..20 loop
+        select max(x.date + x.end_time) into fim_av from public.appointments x
+         where x.professional_id = prof.id and x.date = agora::date and x.status not in ('cancelado', 'faltou')
+           and (x.date + x.start_time) < ult + dur_av and (x.date + x.end_time) > ult;
+        exit when fim_av is null;
+        ult := fim_av;
+      end loop;
+      fim_av := ult + dur_av;
+      if fim_av > agora::date + time '23:59' then fim_av := agora::date + time '23:59'; dur_av := fim_av - ult; end if;
+      if dur_av < interval '1 minute' then raise exception 'Não há brecha na agenda de hoje desta profissional para registrar uma avulsa.'; end if;
+    end if;
     insert into public.appointments (client_id, guest_name, professional_id, service_id, salon_id, date, start_time, end_time, status, baixa_por, price_cents, desconto_cents, service_name)
     values (cli, case when cli is null then nome else null end, prof.id, primeiro, salao, agora::date,
             (fim_av - dur_av)::time, fim_av::time, 'confirmado', 'salao', total, desconto,

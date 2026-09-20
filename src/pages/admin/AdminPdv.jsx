@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Monitor, Search, Plus, Minus, Trash2, Banknote, CreditCard, QrCode, Smartphone, RotateCcw, LogOut, LayoutDashboard, UserRound, Receipt, CircleCheck } from 'lucide-react'
+import { Monitor, Search, Plus, Minus, Trash2, RotateCcw, LogOut, LayoutDashboard, UserRound, Receipt, CircleCheck, Smartphone } from 'lucide-react'
 import AdminShell from '../../components/AdminShell'
 import { useAuth } from '../../context/AuthContext'
 import { useDialogo } from '../../context/DialogoContext'
@@ -9,6 +9,8 @@ import { formatCents } from '../../lib/pagamento'
 import { useCategorias, categoriasDoSalao, agruparPorCategoria, bate } from '../../lib/categorias'
 import { MarcaIcon, Wordmark } from '../../components/icons'
 import QuadroDoDia from '../../components/QuadroDoDia'
+import FecharComanda from '../../components/FecharComanda'
+import { imprimirCupom } from '../../lib/cupom'
 import { CalendarDays } from 'lucide-react'
 
 // O PDV do balcão (102): tela cheia, feita para o computador do salão.
@@ -16,7 +18,6 @@ import { CalendarDays } from 'lucide-react'
 // a comanda. Puxa o horário da cliente, acrescenta o que ela fez, dá o
 // desconto, registra como pagou (o sinal do app já vem abatido) e fecha.
 // Fechar conclui o atendimento na agenda e deixa o rastro no caixa.
-const FORMAS = [['dinheiro', 'Dinheiro', Banknote], ['debito', 'Débito', CreditCard], ['credito', 'Crédito', CreditCard], ['pix', 'PIX na hora', QrCode], ['outro', 'Outro', Receipt]]
 const ROTULO_FORMA = { dinheiro: 'dinheiro', debito: 'débito', credito: 'crédito', pix: 'PIX', app: 'pelo app', outro: 'outro' }
 const LARGURA_MINIMA = 900
 const vazia = () => ({ appointment_id: null, client_id: null, cliente: '', professional_id: '', itens: [], sinal: 0, desconto: '', pagamentos: [], observacao: '' })
@@ -49,21 +50,27 @@ export default function AdminPdv() {
   const [ocupado, setOcupado] = useState(false)
   const [erro, setErro] = useState('')
   const [toast, setToast] = useState('')
+  const [folha, setFolha] = useState(false)          // a folha de fechar
+  const [resultado, setResultado] = useState(null)   // o que o banco devolveu ao fechar
+  const [ultima, setUltima] = useState(null)         // a última comanda fechada, para imprimir
+  const [salaoInfo, setSalaoInfo] = useState(null)
 
   const carregar = useCallback(async () => {
     if (!salao?.id) return
     const de = somarDias(inicioDaSemana(diaSel), -7), ate = somarDias(inicioDaSemana(diaSel), 20)
-    const [d, s, p, cl, bh, sem] = await Promise.all([
+    const [d, s, p, cl, bh, sem, si] = await Promise.all([
       supabase.rpc('pdv_dia', { salao: salao.id, dia: diaSel }),
       supabase.from('services').select('id, name, price, duration_minutes, categoria_id, active').eq('salon_id', salao.id).eq('active', true).order('name'),
       supabase.from('professionals').select('id, name, photo_url, active').eq('salon_id', salao.id).eq('active', true).order('name'),
       supabase.rpc('clientes_do_salao', { salao: salao.id }),
       supabase.from('business_hours').select('weekday, open, start_time, end_time').eq('salon_id', salao.id),
       supabase.rpc('pdv_dias', { salao: salao.id, de, ate }),
+      supabase.from('salons').select('name, address, city, cnpj').eq('id', salao.id).maybeSingle(),
     ])
     if (d.error) setErro(d.error.message); else setDia(d.data)
     setHoras(bh.data ?? [])
     setSemana(sem.data ?? [])
+    if (si?.data) setSalaoInfo(si.data)
     setServicos(s.data ?? []); setProfs(p.data ?? []); setClientes(cl.data ?? [])
   }, [salao?.id, diaSel])
   useEffect(() => { carregar() }, [carregar])
@@ -78,12 +85,11 @@ export default function AdminPdv() {
   const desconto = Math.min(subtotal, reais(c.desconto))
   const total = subtotal - desconto
   const sinal = Math.min(total, Number(c.sinal ?? 0))
-  const pago = c.pagamentos.reduce((s, p) => s + Number(p.valor_cents ?? 0), 0)
-  const restante = total - sinal - pago
-  const podeFechar = c.itens.length > 0 && c.professional_id && (c.client_id || c.cliente.trim()) && restante === 0 && !ocupado
+  const podeAbrirCaixa = c.itens.length > 0 && c.professional_id && (c.client_id || c.cliente.trim()) && total >= 0
 
   function abrirHorario(a) {
     if (a.comanda_id) { setToast('Este horário já tem comanda fechada. Veja no Caixa.'); return }
+    if (diaSel > hojeIso()) { setToast('Esse horário é de outro dia. A comanda fecha no dia do atendimento.'); return }
     if (a.status !== 'pendente' && a.status !== 'confirmado') { setToast(`Este horário está ${a.status}.`); return }
     const itens = a.itens?.length ? a.itens.map((i) => ({ ...i, qtd: i.qtd ?? 1 })) : [{ service_id: null, nome: a.servico ?? 'Atendimento', preco_cents: a.price_cents ?? 0, qtd: 1, duracao: 0 }]
     setC({ ...vazia(), appointment_id: a.id, client_id: a.client_id, cliente: a.cliente, professional_id: a.professional_id ?? '', itens, sinal: a.pago_cents ?? 0 })
@@ -99,27 +105,28 @@ export default function AdminPdv() {
   const qtd = (k, d) => setC((x) => ({ ...x, itens: x.itens.map((i, j) => (j === k ? { ...i, qtd: Math.max(1, i.qtd + d) } : i)) }))
   const tirar = (k) => setC((x) => ({ ...x, itens: x.itens.filter((_, j) => j !== k) }))
   const preco = (k, v) => setC((x) => ({ ...x, itens: x.itens.map((i, j) => (j === k ? { ...i, preco_cents: reais(v) } : i)) }))
-  function addPagamento(forma) { setC((x) => ({ ...x, pagamentos: [...x.pagamentos, { forma, valor_cents: Math.max(0, restante) }] })) }
-  const mudarPag = (k, v) => setC((x) => ({ ...x, pagamentos: x.pagamentos.map((p, j) => (j === k ? { ...p, valor_cents: reais(v) } : p)) }))
-  const tirarPag = (k) => setC((x) => ({ ...x, pagamentos: x.pagamentos.filter((_, j) => j !== k) }))
   function escolherCliente(nome) {
     const achou = clientes.find((x) => x.nome?.toLowerCase() === nome.trim().toLowerCase())
     setC((x) => ({ ...x, cliente: nome, client_id: achou?.client_id ?? null }))
   }
 
-  async function fechar() {
-    if (!podeFechar) return
+  async function fechar(pagamentos, opcoes) {
     setOcupado(true); setErro('')
     const { data, error } = await supabase.rpc('pdv_fechar', { salao: salao.id, comanda: {
       appointment_id: c.appointment_id, client_id: c.client_id, cliente_nome: c.client_id ? null : c.cliente.trim(), professional_id: c.professional_id,
-      itens: c.itens, desconto_cents: desconto, pagamentos: c.pagamentos.map((p) => ({ forma: p.forma, valor_cents: Number(p.valor_cents) })), observacao: c.observacao || null,
+      itens: c.itens, desconto_cents: desconto, observacao: c.observacao || null, enviar_cupom: Boolean(opcoes?.enviarCupom),
+      pagamentos: pagamentos.map((p) => ({ forma: p.forma, valor_cents: Number(p.valor_cents), recebido_cents: p.recebido_cents ?? null, detalhe: p.detalhe ?? null, parcelas: p.parcelas ?? null })),
     } })
     setOcupado(false)
     if (error) { setErro(error.message); return }
-    setToast(`Comanda fechada · ${formatCents(data?.total_cents ?? total)}`)
-    setC(vazia())
+    const prof = profs.find((x) => x.id === c.professional_id)
+    setUltima({ salao: { nome: salaoInfo?.name ?? salao?.name, endereco: salaoInfo?.address, cidade: salaoInfo?.city, cnpj: salaoInfo?.cnpj }, cliente: c.cliente, itens: c.itens, desconto, total, atendidaPor: prof?.name,
+      quando: new Date().toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }), comandaId: data?.comanda_id,
+      pagamentos: [...(sinal > 0 ? [{ forma: 'app', valor_cents: sinal, troco_cents: 0 }] : []), ...pagamentos] })
+    setResultado({ comanda_id: data?.comanda_id, cupom: Boolean(data?.cupom), total: data?.total_cents ?? total })
     carregar()
   }
+  function novaComanda() { setResultado(null); setFolha(false); setC(vazia()); setErro('') }
   async function estornar(cm) {
     const ok = await confirmar({ titulo: 'Estornar esta comanda?', texto: `${formatCents(cm.total_cents)} de ${cm.cliente}. O caixa é corrigido e o horário volta para "confirmado", para fechar de novo.`, ok: 'Estornar' })
     if (!ok) return
@@ -279,26 +286,15 @@ export default function AdminPdv() {
             <div className="pdv-total"><span>Total</span><strong>{formatCents(total)}</strong></div>
           </div>
 
-          <div className="pdv-pagamentos">
-            <span className="muted pdv-pag-rotulo">{restante > 0 ? `Falta ${formatCents(restante)}` : restante < 0 ? `Sobra ${formatCents(-restante)} (troco ou valor a mais)` : total > 0 ? 'Pagamento fechado' : ''}</span>
-            {c.pagamentos.map((p, k) => (
-              <div key={k} className="pdv-pag">
-                <span>{ROTULO_FORMA[p.forma]}</span>
-                <span className="pdv-totais-input">R$ <input value={emReais(p.valor_cents)} onChange={(e) => mudarPag(k, e.target.value)} inputMode="decimal" /></span>
-                <button type="button" className="pdv-item-tirar" onClick={() => tirarPag(k)} aria-label="Tirar"><Trash2 size={14} /></button>
-              </div>
-            ))}
-            <div className="pdv-formas">
-              {FORMAS.map(([k, r, Icon]) => <button key={k} type="button" className="pdv-forma" onClick={() => addPagamento(k)} disabled={total === 0}><Icon size={15} /> {r}</button>)}
-            </div>
-          </div>
-
-          {erro && <div className="alert alert-error">{erro}</div>}
-          <button type="button" className="btn btn-primary btn-block pdv-fechar" onClick={fechar} disabled={!podeFechar}>{ocupado ? 'Fechando…' : `Fechar comanda · ${formatCents(total)}`}</button>
-          {!podeFechar && c.itens.length > 0 && <p className="muted pdv-vazio">{!c.professional_id ? 'Diga quem atendeu.' : !(c.client_id || c.cliente.trim()) ? 'Diga quem é a cliente.' : restante !== 0 ? 'Os pagamentos precisam fechar com o total.' : ''}</p>}
+          {erro && !folha && <div className="alert alert-error">{erro}</div>}
+          <button type="button" className="btn btn-primary btn-block pdv-fechar" onClick={() => { setErro(''); setFolha(true) }} disabled={!podeAbrirCaixa || ocupado}><Receipt size={16} /> Fechar comanda · {formatCents(total)}</button>
+          {!podeAbrirCaixa && c.itens.length > 0 && <p className="muted pdv-vazio">{!c.professional_id ? 'Diga quem atendeu.' : 'Diga quem é a cliente.'}</p>}
+          {c.itens.length > 0 && podeAbrirCaixa && <p className="muted pdv-vazio">{sinal > 0 ? `O sinal de ${formatCents(sinal)} pago pelo app já entra abatido. ` : ''}No caixa você escolhe dinheiro, PIX, cartão, vê o troco e manda o cupom para ela.</p>}
         </aside>
       </div>
       )}
+      {folha && <FecharComanda total={total} sinal={sinal} itens={c.itens} cliente={c.cliente} temConta={Boolean(c.client_id)} ocupado={ocupado} erro={erro} resultado={resultado}
+        onCancelar={() => { if (!ocupado) { setFolha(false); setErro('') } }} onConfirmar={fechar} onImprimir={() => ultima && imprimirCupom(ultima)} onNova={novaComanda} />}
       {toast && <div className="pdv-toast">{toast}</div>}
     </div>
   )

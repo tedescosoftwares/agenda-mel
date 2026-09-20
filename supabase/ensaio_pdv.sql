@@ -12,7 +12,9 @@ begin
   perform public.silenciar_gatilho();
   -- um horário de hoje, confirmado, já começado, com sinal pago pelo app
   insert into public.appointments (client_id, professional_id, service_id, salon_id, date, start_time, end_time, status, price_cents, pago_cents)
-  values (cli, prof.id, svc.id, sal.id, public.agora_local()::date, (public.agora_local() - interval '1 hour')::time, (public.agora_local() - interval '15 minutes')::time, 'confirmado', 8000, 3000)
+  values (cli, prof.id, svc.id, sal.id, public.agora_local()::date,
+          greatest(public.agora_local() - interval '1 hour', public.agora_local()::date + time '00:00')::time,
+          greatest(public.agora_local() - interval '15 minutes', greatest(public.agora_local() - interval '1 hour', public.agora_local()::date + time '00:00') + interval '1 minute')::time, 'confirmado', 8000, 3000)
   returning id into appt;
   insert into public.appointment_services (appointment_id, service_id, name, price_cents, duration_minutes, ordem) values (appt, svc.id, svc.name, 8000, 45, 1);
 

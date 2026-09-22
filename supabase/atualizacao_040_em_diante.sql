@@ -71,6 +71,7 @@
 --    103  
 --    104  
 --    105  
+--    106  
 --
 --  Se der erro, me mande a mensagem inteira: cada bloco abaixo está
 --  marcado com o nome do arquivo de origem.
@@ -14993,4 +14994,29 @@ revoke execute on function public.pdv_estornar(uuid, text) from public, anon;
 grant execute on function public.pdv_estornar(uuid, text) to authenticated;
 
 insert into public.migracoes_aplicadas (arquivo) values ('105_caixa_e_cupom.sql') on conflict (arquivo) do nothing;
+
+-- =============================================================
+-- >>> 106_movimentacao_ao_vivo.sql
+-- =============================================================
+
+-- 106 · Movimentação ao vivo no PDV: os horários e os pagamentos passam a
+-- sair pelo Realtime (a RLS continua valendo: cada dona só ouve o que é
+-- do salão dela). `replica identity full` para o filtro por salão valer
+-- também nas atualizações.
+do $$
+begin
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'appointments') then
+    alter publication supabase_realtime add table public.appointments;
+  end if;
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'pagamentos') then
+    alter publication supabase_realtime add table public.pagamentos;
+  end if;
+exception when undefined_object then
+  -- sem a publicação (banco de teste sem Realtime): segue
+  null;
+end $$;
+alter table public.appointments replica identity full;
+alter table public.pagamentos replica identity full;
+
+insert into public.migracoes_aplicadas (arquivo) values ('106_movimentacao_ao_vivo.sql') on conflict (arquivo) do nothing;
 

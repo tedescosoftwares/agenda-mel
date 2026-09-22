@@ -11,6 +11,9 @@ import { MarcaIcon, Wordmark } from '../../components/icons'
 import QuadroDoDia from '../../components/QuadroDoDia'
 import FecharComanda from '../../components/FecharComanda'
 import { imprimirCupom } from '../../lib/cupom'
+import { useMovimentacao } from '../../lib/useMovimentacao'
+import { preparar as prepararSom, tocar } from '../../lib/som'
+import { Bell, Volume2, VolumeX, CalendarPlus, CalendarX, Banknote, MessageSquare, Clock3, CheckCircle2, X as XIcon } from 'lucide-react'
 import { CalendarDays } from 'lucide-react'
 
 // O PDV do balcão (102): tela cheia, feita para o computador do salão.
@@ -25,9 +28,13 @@ const reais = (t) => { const n = Number(String(t ?? '').replace(/[^\d,.-]/g, '')
 const emReais = (c) => (Number(c ?? 0) / 100).toFixed(2).replace('.', ',')
 
 export default function AdminPdv() {
-  const { salao } = useAuth()
+  const { salao, user } = useAuth()
   const { confirmar } = useDialogo()
   const navigate = useNavigate()
+  const [som, setSom] = useState(() => { try { return localStorage.getItem('mimo-pdv-som') !== '0' } catch { return true } })
+  const [feed, setFeed] = useState(false)
+  const [vivo, setVivo] = useState(null)       // o evento que acabou de chegar, no aviso do canto
+  useEffect(() => { const f = () => prepararSom(); window.addEventListener('pointerdown', f, { once: true }); return () => window.removeEventListener('pointerdown', f) }, [])
   const [largo, setLargo] = useState(() => window.innerWidth >= LARGURA_MINIMA)
   useEffect(() => { const f = () => setLargo(window.innerWidth >= LARGURA_MINIMA); window.addEventListener('resize', f); return () => window.removeEventListener('resize', f) }, [])
 
@@ -76,6 +83,10 @@ export default function AdminPdv() {
   useEffect(() => { carregar() }, [carregar])
   useEffect(() => { if (diaSel !== hojeIso()) return; const t = setInterval(carregar, 60000); return () => clearInterval(t) }, [carregar, diaSel])
   useEffect(() => { if (!toast) return; const t = setTimeout(() => setToast(''), 3500); return () => clearTimeout(t) }, [toast])
+  const { eventos, naoVistos, marcarVistos } = useMovimentacao({ salaoId: salao?.id, userId: user?.id, ligado: largo, som, onEvento: (ev) => { setVivo(ev); carregar() } })
+  useEffect(() => { if (!vivo) return; const t = setTimeout(() => setVivo(null), 7000); return () => clearTimeout(t) }, [vivo])
+  useEffect(() => { const base = 'MIMO · PDV'; document.title = naoVistos > 0 ? `(${naoVistos}) ${base}` : base; return () => { document.title = 'MIMO' } }, [naoVistos])
+  function trocarSom(v) { setSom(v); try { localStorage.setItem('mimo-pdv-som', v ? '1' : '0') } catch { /* sem armazenamento */ } if (v) tocar('novo') }
 
   const grupos = useMemo(() => agruparPorCategoria(servicos, cats), [servicos, cats])
   const visiveis = useMemo(() => servicos.filter((s) => (!cat || (s.categoria_id ?? '') === cat) && (!busca || bate(s.name, busca))), [servicos, cat, busca])
@@ -165,6 +176,8 @@ export default function AdminPdv() {
           {(caixa.por_forma ?? []).map((f) => <span key={f.forma} className="pdv-chip">{ROTULO_FORMA[f.forma] ?? f.forma} <strong>{formatCents(f.valor_cents)}</strong></span>)}
         </div>
         <div className="pdv-topo-acoes">
+          <button type="button" className={'pdv-sino' + (naoVistos > 0 ? ' tem' : '')} onClick={() => { setFeed((v) => !v); marcarVistos() }} aria-label="Movimentação" title="Movimentação ao vivo"><Bell size={16} />{naoVistos > 0 && <span className="pdv-sino-conta">{naoVistos > 9 ? '9+' : naoVistos}</span>}</button>
+          <button type="button" className="pdv-sino" onClick={() => trocarSom(!som)} aria-label={som ? 'Silenciar' : 'Ligar o som'} title={som ? 'Som ligado' : 'Som desligado'}>{som ? <Volume2 size={16} /> : <VolumeX size={16} />}</button>
           <Link to="/admin/agenda" className="btn btn-ghost btn-mini"><LayoutDashboard size={14} /> Painel</Link>
           <button type="button" className="btn btn-ghost btn-mini" onClick={sairDoPdv}><LogOut size={14} /> Sair do PDV</button>
         </div>
@@ -295,12 +308,42 @@ export default function AdminPdv() {
       )}
       {folha && <FecharComanda total={total} sinal={sinal} itens={c.itens} cliente={c.cliente} temConta={Boolean(c.client_id)} ocupado={ocupado} erro={erro} resultado={resultado}
         onCancelar={() => { if (!ocupado) { setFolha(false); setErro('') } }} onConfirmar={fechar} onImprimir={() => ultima && imprimirCupom(ultima)} onNova={novaComanda} />}
+      {vivo && (
+        <div className={'pdv-vivo ' + vivo.tipo} role="status" onClick={() => setVivo(null)}>
+          <span className="pdv-vivo-icone"><IconeEvento tipo={vivo.tipo} /></span>
+          <span className="pdv-vivo-texto"><strong>{vivo.titulo}</strong><span>{vivo.texto}</span></span>
+        </div>
+      )}
+      {feed && (
+        <aside className="pdv-feed">
+          <div className="pdv-feed-topo"><strong><Bell size={15} /> Movimentação</strong><button type="button" className="icon-btn" onClick={() => setFeed(false)} aria-label="Fechar"><XIcon size={16} /></button></div>
+          <p className="muted pdv-feed-dica">Horários novos, pedidos, cancelamentos, PIX que caiu e avisos, na hora em que acontecem. {som ? 'Com som.' : 'Sem som.'}</p>
+          <div className="pdv-feed-lista">
+            {eventos.length === 0 && <p className="muted">Nada ainda. Fica aqui ouvindo.</p>}
+            {eventos.map((ev) => (
+              <div key={ev.id} className={'pdv-feed-item ' + ev.tipo}>
+                <span className="pdv-vivo-icone"><IconeEvento tipo={ev.tipo} /></span>
+                <span className="pdv-vivo-texto"><strong>{ev.titulo}</strong><span>{ev.texto}</span><small className="muted">{new Date(ev.quando).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</small></span>
+              </div>
+            ))}
+          </div>
+        </aside>
+      )}
       {toast && <div className="pdv-toast">{toast}</div>}
     </div>
   )
 }
 
 const capitalizar = (t) => (t ? t.charAt(0).toUpperCase() + t.slice(1) : '')
+function IconeEvento({ tipo }) {
+  if (tipo === 'novo') return <CalendarPlus size={18} />
+  if (tipo === 'cancelou' || tipo === 'faltou') return <CalendarX size={18} />
+  if (tipo === 'pago' || tipo === 'estorno') return <Banknote size={18} />
+  if (tipo === 'remarcou') return <Clock3 size={18} />
+  if (tipo === 'concluido' || tipo === 'status') return <CheckCircle2 size={18} />
+  if (tipo === 'aviso') return <MessageSquare size={18} />
+  return <Bell size={18} />
+}
 const hojeIso = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
 const somarDias = (iso, n) => { const d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() + n); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
 const inicioDaSemana = (iso) => { const d = new Date(iso + 'T12:00:00'); return somarDias(iso, -((d.getDay() + 6) % 7)) }

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { X, Receipt, Ban, Clock, UserRound, Sparkles, GripVertical, ChevronLeft, ChevronRight, Star, History } from 'lucide-react'
+import { X, Receipt, Ban, Clock, UserRound, Sparkles, GripVertical, ChevronLeft, ChevronRight, Star, History, Plus, Heart, AlertTriangle } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useDialogo } from '../context/DialogoContext'
 import { formatCents } from '../lib/pagamento'
@@ -31,6 +31,7 @@ export default function QuadroDoDia({ dia, agenda, semana = [], onTrocarDia, pro
   const [sombra, setSombra] = useState(null)              // { prof, inicio } enquanto arrasta
   const [novo, setNovo] = useState(null)                  // { prof, inicio } → modal de encaixe
   const [aberto, setAberto] = useState(null)              // cartão clicado
+  const [adicionarEm, setAdicionarEm] = useState(null)    // horário que vai ganhar mais um serviço
   const [erro, setErro] = useState('')
   const [ocupado, setOcupado] = useState(false)
 
@@ -146,6 +147,8 @@ export default function QuadroDoDia({ dia, agenda, semana = [], onTrocarDia, pro
                     onDragEnd={() => { setArrastando(null); setSombra(null) }}
                     onClick={(e) => { e.stopPropagation(); setAberto(a) }}>
                     {movel && <GripVertical size={12} className="quadro-grip" />}
+                    {a.client_id && a.atendimentos === 0 && <span className="quadro-marca nova" title="Primeira vez na casa">1ª vez</span>}
+                    {a.preferida_id && a.preferida_id !== a.professional_id && <span className="quadro-marca prefere" title={`Prefere ${a.preferida}`}><Heart size={9} /> {a.preferida?.split(' ')[0]}</span>}
                     <span className="quadro-cartao-hora">{a.start_time.slice(0, 5)}–{a.end_time.slice(0, 5)}</span>
                     <strong>{a.cliente}</strong>
                     {h >= 54 && <span className="quadro-cartao-serv">{a.servico}</span>}
@@ -158,7 +161,8 @@ export default function QuadroDoDia({ dia, agenda, semana = [], onTrocarDia, pro
         </div>
       </div>
 
-      {novo && <NovoHorario prof={profs.find((p) => p.id === novo.prof)} inicio={novo.inicio} dia={dia} servicos={servicos} cats={cats} clientes={clientes} salaoId={salaoId} onFechar={() => setNovo(null)} onPronto={() => { setNovo(null); onMudou?.() }} />}
+      {novo && <NovoHorario prof={profs.find((p) => p.id === novo.prof)} inicio={novo.inicio} dia={dia} servicos={servicos} cats={cats} clientes={clientes} salaoId={salaoId} agenda={agenda} onFechar={() => setNovo(null)} onPronto={() => { setNovo(null); onMudou?.() }} />}
+      {adicionarEm && <NovoHorario prof={profs.find((p) => p.id === adicionarEm.professional_id)} inicio={min(adicionarEm.end_time)} dia={dia} servicos={servicos} cats={cats} clientes={clientes} salaoId={salaoId} agenda={agenda} juntarEm={adicionarEm} onFechar={() => setAdicionarEm(null)} onPronto={() => { setAdicionarEm(null); onMudou?.() }} />}
 
       {aberto && (
         <div className="modal-fundo" onClick={() => setAberto(null)}>
@@ -169,8 +173,24 @@ export default function QuadroDoDia({ dia, agenda, semana = [], onTrocarDia, pro
             <p className="muted"><Clock size={14} /> {aberto.start_time.slice(0, 5)} até {aberto.end_time.slice(0, 5)} · {aberto.profissional}</p>
             <p className="muted"><Sparkles size={14} /> {aberto.servico} · {formatCents(aberto.price_cents ?? 0)}{aberto.pago_cents > 0 ? ` · sinal de ${formatCents(aberto.pago_cents)} pago pelo app` : ''}</p>
             {aberto.telefone && <p className="muted"><UserRound size={14} /> {aberto.telefone}</p>}
+            {aberto.client_id ? (
+              <div className="quadro-resumo">
+                <span className={'quadro-resumo-chip' + (aberto.atendimentos === 0 ? ' nova' : '')}>{aberto.atendimentos === 0 ? 'Primeira vez na casa' : `${aberto.atendimentos} ${aberto.atendimentos === 1 ? 'atendimento' : 'atendimentos'} aqui`}</span>
+                {aberto.ultima_visita && <span className="quadro-resumo-chip">última vez {new Date(aberto.ultima_visita + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</span>}
+                {aberto.faltas > 0 && <span className="quadro-resumo-chip atencao"><AlertTriangle size={11} /> {aberto.faltas} {aberto.faltas === 1 ? 'falta' : 'faltas'}</span>}
+                {aberto.preferida_id ? (
+                  aberto.preferida_id === aberto.professional_id
+                    ? <span className="quadro-resumo-chip ok"><Heart size={11} /> está com a preferida</span>
+                    : <span className="quadro-resumo-chip prefere"><Heart size={11} /> prefere {aberto.preferida}, está com {aberto.profissional?.split(' ')[0]}</span>
+                ) : <span className="quadro-resumo-chip">sem preferida</span>}
+              </div>
+            ) : <p className="muted quadro-dica">Cliente avulsa, sem conta no MIMO.</p>}
+            {aberto.preferida_id && aberto.preferida_id !== aberto.professional_id && (aberto.status === 'pendente' || aberto.status === 'confirmado') && !aberto.comanda_id && (
+              <p className="muted quadro-dica">Se a {aberto.preferida?.split(' ')[0]} tiver vaga, arraste o cartão para a coluna dela.</p>
+            )}
             <div className="quadro-detalhe-acoes">
               {(aberto.status === 'pendente' || aberto.status === 'confirmado') && !aberto.comanda_id && <button type="button" className="btn btn-primary" onClick={() => { onAbrirComanda?.(aberto); setAberto(null) }}><Receipt size={15} /> Abrir comanda</button>}
+              {(aberto.status === 'pendente' || aberto.status === 'confirmado') && !aberto.comanda_id && <button type="button" className="btn btn-ghost" onClick={() => { setAdicionarEm(aberto); setAberto(null) }}><Plus size={15} /> Adicionar serviço</button>}
               {(aberto.status === 'pendente' || aberto.status === 'confirmado') && !aberto.comanda_id && <button type="button" className="btn btn-ghost" onClick={() => cancelar(aberto)}><Ban size={15} /> Cancelar horário</button>}
             </div>
             {(aberto.status === 'pendente' || aberto.status === 'confirmado') && !aberto.comanda_id && <p className="muted quadro-dica">Para remarcar, arraste o cartão no quadro para outra hora, outra coluna ou um dia da faixa de cima.</p>}
@@ -183,11 +203,12 @@ export default function QuadroDoDia({ dia, agenda, semana = [], onTrocarDia, pro
 }
 
 // o modal de serviços: por categoria, escolhe um, a duração já vem; nome da cliente com a lista da carteira
-function NovoHorario({ prof, inicio, dia, servicos, cats, clientes, onFechar, onPronto }) {
+function NovoHorario({ prof, inicio, dia, servicos, cats, clientes, agenda = [], juntarEm = null, onFechar, onPronto }) {
   const [busca, setBusca] = useState('')
   const [servico, setServico] = useState(null)
-  const [nome, setNome] = useState('')
-  const [clienteId, setClienteId] = useState(null)
+  const [nome, setNome] = useState(juntarEm?.cliente ?? '')
+  const [clienteId, setClienteId] = useState(juntarEm?.client_id ?? null)
+  const [aviso, setAviso] = useState('')
   const [telefone, setTelefone] = useState('')
   const [hora, setHora] = useState(hhmm(inicio))
   const [meus, setMeus] = useState(null)   // ids dos serviços que a profissional faz
@@ -202,6 +223,8 @@ function NovoHorario({ prof, inicio, dia, servicos, cats, clientes, onFechar, on
   const lista = useMemo(() => servicos.filter((s) => (!meus || meus.size === 0 || meus.has(s.id)) && (!busca || bate(s.name, busca))), [servicos, meus, busca])
   const grupos = useMemo(() => agruparPorCategoria(lista, cats), [lista, cats])
   function escolherCliente(v) { setNome(v); const c = clientes.find((x) => x.nome?.toLowerCase() === v.trim().toLowerCase()); setClienteId(c?.client_id ?? null); if (c?.telefone && !telefone) setTelefone(c.telefone) }
+  // ela já está na cadeira (ou marcada) com essa profissional hoje? então o serviço entra no mesmo atendimento
+  const jaTem = juntarEm ?? (clienteId ? agenda.find((a) => a.client_id === clienteId && a.professional_id === prof?.id && (a.status === 'pendente' || a.status === 'confirmado') && !a.comanda_id) : null)
   async function salvar(e) {
     e.preventDefault()
     if (!servico) { setErro('Escolha o serviço.'); return }
@@ -212,22 +235,39 @@ function NovoHorario({ prof, inicio, dia, servicos, cats, clientes, onFechar, on
     if (error) { setErro(error.message); return }
     onPronto()
   }
+  async function juntar() {
+    if (!servico || !jaTem) return
+    setSalvando(true); setErro('')
+    const { data, error } = await supabase.rpc('adicionar_servico_ao_horario', { appt: jaTem.id, servico: servico.id })
+    setSalvando(false)
+    if (error) { setErro(error.message); return }
+    if (data && data.esticou === false) setAviso('O serviço entrou, mas o próximo horário dela está colado: o fim não esticou. Se precisar, arraste o próximo.')
+    if (data && data.esticou === false) { setTimeout(onPronto, 2200) } else onPronto()
+  }
   return (
     <div className="modal-fundo" onClick={onFechar}>
       <form className="modal-caixa form quadro-novo" onClick={(e) => e.stopPropagation()} onSubmit={salvar}>
         <button type="button" className="modal-fechar" onClick={onFechar} aria-label="Fechar"><X size={18} /></button>
-        <h3>Novo horário com {prof?.name?.split(' ')[0]}</h3>
-        <div className="form-row">
+        <h3>{juntarEm ? `Mais um serviço para ${juntarEm.cliente}` : `Novo horário com ${prof?.name?.split(' ')[0]}`}</h3>
+        {jaTem && !juntarEm && (
+          <div className="quadro-juntar">
+            <strong><Sparkles size={14} /> {nome.split(' ')[0]} já está com {prof?.name?.split(' ')[0]} às {jaTem.start_time.slice(0, 5)}.</strong>
+            <span className="muted">Dá para pôr este serviço no mesmo atendimento: uma comanda só, o horário estica até {servico ? hhmm(min(jaTem.end_time) + servico.duration_minutes) : 'o fim do novo serviço'}.</span>
+          </div>
+        )}
+        {juntarEm && <p className="muted quadro-dica">Entra no atendimento das {juntarEm.start_time.slice(0, 5)} com {prof?.name?.split(' ')[0]}: mesma comanda, o horário estica {servico ? `até ${hhmm(min(juntarEm.end_time) + servico.duration_minutes)}` : 'pela duração do serviço'}.</p>}
+        {aviso && <div className="alert alert-info">{aviso}</div>}
+        {!juntarEm && <div className="form-row">
           <label>Cliente
             <input ref={primeiro} list="quadro-clientes" value={nome} onChange={(e) => escolherCliente(e.target.value)} placeholder="Nome (ou escolha da lista)" />
             <datalist id="quadro-clientes">{clientes.map((x) => <option key={x.client_id} value={x.nome} />)}</datalist>
           </label>
           <label>Telefone <span className="muted">(opcional)</span><input value={telefone} onChange={(e) => setTelefone(e.target.value)} inputMode="tel" /></label>
-        </div>
-        <div className="form-row">
+        </div>}
+        {!juntarEm && !jaTem && <div className="form-row">
           <label>Começa às<input type="time" step="300" value={hora} onChange={(e) => setHora(e.target.value)} required /></label>
           <label>Termina<input value={servico ? hhmm(min(hora) + servico.duration_minutes) : '—'} readOnly disabled /></label>
-        </div>
+        </div>}
         <div className="pdv-busca"><input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar serviço…" /></div>
         <div className="quadro-servicos">
           {grupos.map((g) => (
@@ -245,7 +285,10 @@ function NovoHorario({ prof, inicio, dia, servicos, cats, clientes, onFechar, on
         {erro && <div className="alert alert-error">{erro}</div>}
         <div className="form-actions">
           <button type="button" className="btn btn-ghost" onClick={onFechar}>Cancelar</button>
-          <button type="submit" className="btn btn-primary" disabled={salvando || !servico}>{salvando ? 'Marcando…' : `Marcar ${servico ? servico.name : ''}`}</button>
+          {jaTem
+            ? <button type="button" className="btn btn-primary" disabled={salvando || !servico} onClick={juntar}><Plus size={15} /> {salvando ? 'Adicionando…' : `Adicionar ao atendimento${servico ? ` · ${servico.name}` : ''}`}</button>
+            : <button type="submit" className="btn btn-primary" disabled={salvando || !servico}>{salvando ? 'Marcando…' : `Marcar ${servico ? servico.name : ''}`}</button>}
+          {jaTem && !juntarEm && <button type="submit" className="btn-mini btn-mini-neutro" disabled={salvando || !servico}>Não, marcar separado às {hora}</button>}
         </div>
       </form>
     </div>

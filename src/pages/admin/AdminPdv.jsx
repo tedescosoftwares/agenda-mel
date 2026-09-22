@@ -172,8 +172,9 @@ export default function AdminPdv() {
         </div>
         <span className="pdv-topo-salao"><strong>{salao?.name}</strong><span className="muted">{capitalizar(new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }))}</span></span>
         <div className="pdv-topo-caixa">
-          <span className="pdv-chip forte">Caixa do dia <strong>{formatCents(caixa.total_cents)}</strong></span>
-          {(caixa.por_forma ?? []).map((f) => <span key={f.forma} className="pdv-chip">{ROTULO_FORMA[f.forma] ?? f.forma} <strong>{formatCents(f.valor_cents)}</strong></span>)}
+          <span className="pdv-chip forte" title="Tudo que entrou hoje, no balcão e pelo app">Caixa do dia <strong>{formatCents(caixa.total_cents)}</strong></span>
+          {caixa.app_cents > 0 && <span className="pdv-chip" title="Sinais pagos pelo app, já na conta de recebimento">pelo app <strong>{formatCents(caixa.app_cents)}</strong></span>}
+          {(caixa.por_forma ?? []).filter((f) => f.forma !== 'app').map((f) => <span key={f.forma} className="pdv-chip">{ROTULO_FORMA[f.forma] ?? f.forma} <strong>{formatCents(f.valor_cents)}</strong></span>)}
         </div>
         <div className="pdv-topo-acoes">
           <button type="button" className={'pdv-sino' + (naoVistos > 0 ? ' tem' : '')} onClick={() => { setFeed((v) => !v); marcarVistos() }} aria-label="Movimentação" title="Movimentação ao vivo"><Bell size={16} />{naoVistos > 0 && <span className="pdv-sino-conta">{naoVistos > 9 ? '9+' : naoVistos}</span>}</button>
@@ -295,12 +296,13 @@ export default function AdminPdv() {
           <div className="pdv-totais">
             <div><span>Subtotal</span><strong>{formatCents(subtotal)}</strong></div>
             <div><span>Desconto</span><span className="pdv-totais-input">R$ <input value={c.desconto} onChange={(e) => setC({ ...c, desconto: e.target.value })} inputMode="decimal" placeholder="0,00" /></span></div>
-            {sinal > 0 && <div><span><Smartphone size={13} /> Sinal pago pelo app</span><strong>− {formatCents(sinal)}</strong></div>}
             <div className="pdv-total"><span>Total</span><strong>{formatCents(total)}</strong></div>
+            {sinal > 0 && <div><span><Smartphone size={13} /> Já pago pelo app (sinal)</span><strong>− {formatCents(sinal)}</strong></div>}
+            {sinal > 0 && <div className="pdv-total pdv-a-receber"><span>A receber agora</span><strong>{formatCents(Math.max(0, total - sinal))}</strong></div>}
           </div>
 
           {erro && !folha && <div className="alert alert-error">{erro}</div>}
-          <button type="button" className="btn btn-primary btn-block pdv-fechar" onClick={() => { setErro(''); setFolha(true) }} disabled={!podeAbrirCaixa || ocupado}><Receipt size={16} /> Fechar comanda · {formatCents(total)}</button>
+          <button type="button" className="btn btn-primary btn-block pdv-fechar" onClick={() => { setErro(''); setFolha(true) }} disabled={!podeAbrirCaixa || ocupado}><Receipt size={16} /> {sinal > 0 ? `Receber ${formatCents(Math.max(0, total - sinal))}` : `Fechar comanda · ${formatCents(total)}`}</button>
           {!podeAbrirCaixa && c.itens.length > 0 && <p className="muted pdv-vazio">{!c.professional_id ? 'Diga quem atendeu.' : 'Diga quem é a cliente.'}</p>}
           {c.itens.length > 0 && podeAbrirCaixa && <p className="muted pdv-vazio">{sinal > 0 ? `O sinal de ${formatCents(sinal)} pago pelo app já entra abatido. ` : ''}No caixa você escolhe dinheiro, PIX, cartão, vê o troco e manda o cupom para ela.</p>}
         </aside>

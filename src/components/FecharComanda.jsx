@@ -78,7 +78,8 @@ export default function FecharComanda({ total, sinal = 0, itens = [], cliente, t
         <div className="modal-caixa fc-caixa fc-sucesso" onClick={(e) => e.stopPropagation()}>
           <span className="fc-check"><Check size={34} strokeWidth={3} /></span>
           <h3>Comanda fechada</h3>
-          <p className="fc-sucesso-total">{formatCents(total)}</p>
+          <p className="fc-sucesso-total">{formatCents(Math.max(0, total - sinal))}</p>
+          {sinal > 0 && <p className="muted">recebidos agora · {formatCents(total)} no total, com o sinal de {formatCents(sinal)} pelo app</p>}
           {trocoTotal > 0 && <p className="fc-troco-aviso"><Banknote size={16} /> Troco para ela: <strong>{formatCents(trocoTotal)}</strong></p>}
           <p className="muted">{resultado.cupom ? 'O comprovante foi para o app dela e para o e-mail.' : temConta ? 'Fechada sem enviar o comprovante.' : 'Cliente sem conta no MIMO: imprima o cupom se ela quiser.'}</p>
           <div className="fc-acoes">
@@ -96,7 +97,9 @@ export default function FecharComanda({ total, sinal = 0, itens = [], cliente, t
         <button type="button" className="modal-fechar" onClick={onCancelar} aria-label="Fechar" disabled={ocupado}><X size={18} /></button>
         <div className="fc-topo">
           <span className="muted">Fechar comanda{cliente ? ` · ${cliente}` : ''}</span>
-          <strong className="fc-total">{formatCents(total)}</strong>
+          {sinal > 0
+            ? <span className="fc-total-linha"><strong className="fc-total">{formatCents(Math.max(0, total - sinal))}</strong><span className="muted">a receber agora · total {formatCents(total)}, sinal de {formatCents(sinal)} já pago pelo app</span></span>
+            : <strong className="fc-total">{formatCents(total)}</strong>}
           <span className="muted fc-itens">{itens.map((i) => `${i.nome}${(i.qtd ?? 1) > 1 ? ` x${i.qtd}` : ''}`).join(' · ')}</span>
           <div className="fc-barra"><span style={{ width: pct + '%' }} /></div>
           <div className="fc-barra-legenda">
@@ -151,7 +154,7 @@ export default function FecharComanda({ total, sinal = 0, itens = [], cliente, t
             )}
             <div className="fc-acoes">
               <button type="button" className="btn btn-ghost" onClick={() => setCalc('')}><Calculator size={16} /> Calculadora</button>
-              <button type="button" className="btn btn-primary fc-fechar" disabled={!podeFechar} onClick={() => onConfirmar?.(pagamentos, { enviarCupom: temConta && enviarCupom })}>{ocupado ? 'Fechando…' : `Fechar comanda · ${formatCents(total)}`}</button>
+              <button type="button" className="btn btn-primary fc-fechar" disabled={!podeFechar} onClick={() => onConfirmar?.(pagamentos, { enviarCupom: temConta && enviarCupom })}>{ocupado ? 'Fechando…' : `Fechar comanda · ${formatCents(Math.max(0, total - sinal))}${sinal > 0 ? ' agora' : ''}`}</button>
             </div>
           </div>
         ) : (

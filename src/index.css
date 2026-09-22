@@ -6772,3 +6772,20 @@ label.check input { margin-top: 3px; }
 .pdv-feed-lista { flex: 1; overflow-y: auto; padding: 0 0.6rem 0.6rem; display: flex; flex-direction: column; gap: 0.4rem; }
 .pdv-feed-item { display: flex; gap: 0.6rem; align-items: flex-start; padding: 0.6rem 0.65rem; border-radius: 12px; border: 1px solid var(--fio); animation: fc-entra .25s ease; }
 .pdv-feed-item .pdv-vivo-icone { width: 32px; height: 32px; }
+
+/* ---- o quadro sabe a cliente (107) ---- */
+.quadro-marca { position: absolute; right: 6px; top: 5px; font-size: 0.6rem; font-weight: 700; padding: 0.1rem 0.4rem; border-radius: 999px; display: inline-flex; align-items: center; gap: 0.15rem; z-index: 1; }
+.quadro-marca.nova { background: #fff; color: var(--rosa); border: 1px solid #ffc2d8; }
+.quadro-marca.prefere { background: #fff7e6; color: #b45309; border: 1px solid #fde2b0; }
+.quadro-resumo { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0.6rem 0 0.2rem; }
+.quadro-resumo-chip { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.74rem; font-weight: 600; padding: 0.25rem 0.6rem; border-radius: 999px; background: var(--cinza-1); color: var(--grafite, #1f2026); }
+.quadro-resumo-chip.nova { background: #fff0f5; color: var(--rosa); }
+.quadro-resumo-chip.ok { background: #e6f7ee; color: #067647; }
+.quadro-resumo-chip.prefere { background: #fff7e6; color: #b45309; }
+.quadro-resumo-chip.atencao { background: #fff1e6; color: #b42318; }
+.quadro-juntar { display: flex; flex-direction: column; gap: 0.2rem; padding: 0.7rem 0.85rem; border-radius: 12px; background: #fff0f5; border: 1px solid #ffc2d8; margin-bottom: 0.6rem; }
+.quadro-juntar strong { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.9rem; color: var(--rosa); }
+.quadro-juntar .muted { font-size: 0.8rem; }
+.pdv-a-receber strong { color: var(--rosa); }
+.fc-total-linha { display: flex; flex-direction: column; gap: 0.1rem; }
+.fc-total-linha .muted { font-size: 0.76rem; }

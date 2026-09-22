@@ -6789,3 +6789,9 @@ label.check input { margin-top: 3px; }
 .pdv-a-receber strong { color: var(--rosa); }
 .fc-total-linha { display: flex; flex-direction: column; gap: 0.1rem; }
 .fc-total-linha .muted { font-size: 0.76rem; }
+.quadro-cartao-cliente { display: flex; flex-wrap: wrap; gap: 0.25rem; margin-top: 0.3rem; }
+.quadro-cartao-cliente > span { display: inline-flex; align-items: center; gap: 0.2rem; font-size: 0.64rem; font-weight: 700; padding: 0.1rem 0.45rem; border-radius: 999px; background: rgba(255, 255, 255, 0.75); color: inherit; white-space: nowrap; }
+.quadro-cartao-cliente > span.nova { background: #fff; color: var(--rosa); }
+.quadro-cartao-cliente > span.ok { background: #e6f7ee; color: #067647; }
+.quadro-cartao-cliente > span.prefere { background: #fff7e6; color: #b45309; }
+.quadro-cartao-cliente > span.atencao { background: #fff1e6; color: #b42318; }

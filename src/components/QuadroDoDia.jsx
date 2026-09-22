@@ -147,12 +147,20 @@ export default function QuadroDoDia({ dia, agenda, semana = [], onTrocarDia, pro
                     onDragEnd={() => { setArrastando(null); setSombra(null) }}
                     onClick={(e) => { e.stopPropagation(); setAberto(a) }}>
                     {movel && <GripVertical size={12} className="quadro-grip" />}
-                    {a.client_id && a.atendimentos === 0 && <span className="quadro-marca nova" title="Primeira vez na casa">1ª vez</span>}
-                    {a.preferida_id && a.preferida_id !== a.professional_id && <span className="quadro-marca prefere" title={`Prefere ${a.preferida}`}><Heart size={9} /> {a.preferida?.split(' ')[0]}</span>}
+                    {h < 84 && a.client_id && a.atendimentos === 0 && <span className="quadro-marca nova" title="Primeira vez na casa">1ª vez</span>}
+                    {h < 84 && a.preferida_id && a.preferida_id !== a.professional_id && <span className="quadro-marca prefere" title={`Prefere ${a.preferida}`}><Heart size={9} /> {a.preferida?.split(' ')[0]}</span>}
                     <span className="quadro-cartao-hora">{a.start_time.slice(0, 5)}–{a.end_time.slice(0, 5)}</span>
                     <strong>{a.cliente}</strong>
                     {h >= 54 && <span className="quadro-cartao-serv">{a.servico}</span>}
                     {h >= 72 && <span className="quadro-cartao-pe">{formatCents(a.price_cents ?? 0)}{a.pago_cents > 0 ? ` · sinal ${formatCents(a.pago_cents)}` : ''}{a.comanda_id ? ' · fechado' : ''}</span>}
+                    {h >= 84 && a.client_id && (
+                      <span className="quadro-cartao-cliente">
+                        <span className={a.atendimentos === 0 ? 'nova' : ''}>{a.atendimentos === 0 ? 'Primeira vez' : `${a.atendimentos + 1}ª visita`}</span>
+                        {a.preferida_id && <span className={a.preferida_id === a.professional_id ? 'ok' : 'prefere'}><Heart size={9} /> {a.preferida_id === a.professional_id ? 'preferida' : `prefere ${a.preferida?.split(' ')[0]}`}</span>}
+                        {a.faltas > 0 && <span className="atencao">{a.faltas} {a.faltas === 1 ? 'falta' : 'faltas'}</span>}
+                      </span>
+                    )}
+                    {h >= 84 && !a.client_id && <span className="quadro-cartao-cliente"><span>avulsa, sem conta</span></span>}
                   </button>
                 )
               })}

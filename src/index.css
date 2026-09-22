@@ -6806,3 +6806,7 @@ label.check input { margin-top: 3px; }
 .pdv-visita-linha.fora span { color: var(--cinza-3, #6b7280); text-decoration: line-through; }
 .pdv-visita small { font-size: 0.7rem; }
 .pdv-item-prof { margin-left: 0.4rem; font-size: 0.66rem; font-weight: 700; padding: 0.08rem 0.4rem; border-radius: 999px; background: #f3e8ff; color: #6d28d9; vertical-align: middle; }
+.pdv-visita-cartao { border-style: dashed; border-color: #c4b5fd; background: #faf8ff; align-items: start; }
+.pdv-visita-cartao .pdv-hora { padding-top: 0.1rem; }
+.pdv-visita-cartao .pdv-horario-texto .muted b { font-weight: 700; color: #6d28d9; }
+.pdv-selo.visita { display: inline-flex; align-items: center; gap: 0.2rem; background: #f3e8ff; color: #6d28d9; }

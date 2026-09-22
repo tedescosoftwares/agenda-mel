@@ -94,6 +94,21 @@ export default function AdminPdv() {
   const grupos = useMemo(() => agruparPorCategoria(servicos, cats), [servicos, cats])
   const visiveis = useMemo(() => servicos.filter((s) => (!cat || (s.categoria_id ?? '') === cat) && (!busca || bate(s.name, busca))), [servicos, cat, busca])
   const agenda = useMemo(() => (dia?.agenda ?? []).filter((a) => !filtroProf || a.professional_id === filtroProf), [dia, filtroProf])
+  // a lista da esquerda agrupa a visita: horários abertos da mesma cliente no dia viram um cartão só
+  const lista = useMemo(() => {
+    const todos = [...(dia?.agenda ?? [])].sort((x, y) => String(x.start_time).localeCompare(String(y.start_time)))
+    const aberto = (a) => a.client_id && !a.comanda_id && (a.status === 'pendente' || a.status === 'confirmado')
+    const grupos = new Map()
+    for (const a of todos) if (aberto(a)) grupos.set(a.client_id, [...(grupos.get(a.client_id) ?? []), a])
+    const vistos = new Set(); const out = []
+    for (const a of todos) {
+      if (vistos.has(a.id)) continue
+      const g = aberto(a) ? grupos.get(a.client_id) : null
+      if (g && g.length > 1) { g.forEach((x) => vistos.add(x.id)); if (!filtroProf || g.some((x) => x.professional_id === filtroProf)) out.push({ visita: true, id: 'v-' + a.id, horarios: g }) }
+      else if (!filtroProf || a.professional_id === filtroProf) out.push(a)
+    }
+    return out
+  }, [dia, filtroProf])
 
   const subtotal = c.itens.reduce((s, i) => s + i.preco_cents * i.qtd, 0)
   const desconto = Math.min(subtotal, reais(c.desconto))
@@ -226,7 +241,20 @@ export default function AdminPdv() {
               </div>
               <button type="button" className="btn btn-primary btn-block pdv-avulsa" onClick={() => { setC(vazia()); setErro('') }}><Plus size={15} /> Comanda avulsa</button>
               <div className="pdv-lista">
-                {!dia ? <p className="muted">Carregando…</p> : agenda.length === 0 ? <p className="muted">Nenhum horário hoje{filtroProf ? ' para ela' : ''}.</p> : agenda.map((a) => (
+                {!dia ? <p className="muted">Carregando…</p> : lista.length === 0 ? <p className="muted">Nenhum horário hoje{filtroProf ? ' para ela' : ''}.</p> : lista.map((a) => a.visita ? (
+                  <button key={a.id} type="button" className={'pdv-horario pdv-visita-cartao' + (a.horarios.some((h) => h.id === c.appointment_id) ? ' ativo' : '')} onClick={() => abrirHorario(a.horarios[0])}>
+                    <span className="pdv-hora">{a.horarios[0].start_time.slice(0, 5)}</span>
+                    <span className="pdv-horario-texto">
+                      <strong>{a.horarios[0].cliente}</strong>
+                      {a.horarios.map((h) => <span key={h.id} className="muted"><b>{h.start_time.slice(0, 5)}</b> {h.servico}{h.profissional ? ` · ${h.profissional.split(' ')[0]}` : ''}</span>)}
+                    </span>
+                    <span className="pdv-horario-lado">
+                      <span>{formatCents(a.horarios.reduce((t, h) => t + (h.price_cents ?? 0), 0))}</span>
+                      <em className="pdv-selo visita"><Users size={11} /> {a.horarios.length} horários</em>
+                      {a.horarios.some((h) => h.pago_cents > 0) && <em className="pdv-selo app">sinal {formatCents(a.horarios.reduce((t, h) => t + (h.pago_cents ?? 0), 0))}</em>}
+                    </span>
+                  </button>
+                ) : (
                   <button key={a.id} type="button" className={'pdv-horario' + (a.id === c.appointment_id ? ' ativo' : '') + (a.comanda_id ? ' fechado' : '') + (a.status === 'concluido' && !a.comanda_id ? ' concluido' : '')} onClick={() => abrirHorario(a)}>
                     <span className="pdv-hora">{a.start_time.slice(0, 5)}</span>
                     <span className="pdv-horario-texto">

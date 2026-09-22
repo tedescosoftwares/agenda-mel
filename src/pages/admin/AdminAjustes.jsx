@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Store, Wallet, Users, Sparkles, Clock, BadgePercent, Megaphone, MessageCircle, BarChart3, QrCode, ChevronRight, Monitor } from 'lucide-react'
+import { Store, Wallet, Users, Sparkles, Clock, BadgePercent, Megaphone, MessageCircle, BarChart3, QrCode, ChevronRight, Monitor, HandCoins } from 'lucide-react'
 import AdminShell from '../../components/AdminShell'
 import { useAuth } from '../../context/AuthContext'
 import { useDialogo } from '../../context/DialogoContext'
@@ -86,6 +86,7 @@ export default function AdminAjustes() {
     { titulo: 'Dinheiro', cartoes: [
       { to: '/admin/receber', Icon: Wallet, tom: 'rosa', titulo: 'Receber pelo app', texto: 'PIX ao marcar, política de cancelamento e o financeiro do mês.', situacao: st && (pag ? `${MODOS[s.pagamento_modo]?.curto ?? s.pagamento_modo} · sinal de ${s.sinal_pct ?? 0}%` : 'desligado'), ok: st ? pag : null },
       { to: '/admin/numeros', Icon: BarChart3, tom: 'roxo', titulo: 'O mês', texto: 'Faturamento, ocupação e atendimentos, por profissional.', situacao: null },
+      { to: '/admin/repasses', Icon: HandCoins, tom: 'menta', titulo: 'Repasses', texto: 'O que é de cada profissional no período, já com a cota do contrato.', situacao: st && (st.comContrato ? `${st.comContrato} com cota no contrato` : 'sem contratos ainda'), ok: st ? st.comContrato > 0 : null },
       { to: '/admin/pdv', Icon: Monitor, tom: 'verde', titulo: 'PDV do balcão', texto: 'Comanda, catálogo e caixa do dia, na tela cheia do computador.', situacao: desktop ? (pdv ? 'abre direto ao entrar' : 'pronto para abrir') : 'só no computador', ok: desktop ? true : false },
     ] },
     { titulo: 'Clientes', cartoes: [

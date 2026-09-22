@@ -7,7 +7,8 @@ const ROTULO = { dinheiro: 'Dinheiro', debito: 'Débito', credito: 'Crédito', p
 const esc = (t) => String(t ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
 
 export function cupomHtml({ salao, cliente, itens = [], desconto = 0, total = 0, pagamentos = [], atendidaPor, quando, comandaId }) {
-  const linhas = itens.map((i) => `<tr><td>${esc(i.nome)}${(i.qtd ?? 1) > 1 ? ` x${i.qtd}` : ''}</td><td class="v">${formatCents((i.preco_cents ?? 0) * (i.qtd ?? 1))}</td></tr>`).join('')
+  const varias = new Set(itens.map((i) => i.profissional).filter(Boolean)).size > 1
+  const linhas = itens.map((i) => `<tr><td>${esc(i.nome)}${(i.qtd ?? 1) > 1 ? ` x${i.qtd}` : ''}${varias && i.profissional ? ` <span class="m">· com ${esc(i.profissional.split(' ')[0])}</span>` : ''}</td><td class="v">${formatCents((i.preco_cents ?? 0) * (i.qtd ?? 1))}</td></tr>`).join('')
   const pags = pagamentos.map((p) => `<tr><td>${ROTULO[p.forma] ?? p.forma}${p.parcelas > 1 ? ` ${p.parcelas}x` : ''}${p.detalhe && p.forma !== 'app' ? ` · ${esc(p.detalhe)}` : ''}</td><td class="v">${formatCents(p.valor_cents)}</td></tr>${p.troco_cents > 0 ? `<tr class="m"><td>entregue ${formatCents(p.recebido_cents)} · troco ${formatCents(p.troco_cents)}</td><td></td></tr>` : ''}`).join('')
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Cupom</title><style>
     @page { size: 80mm auto; margin: 4mm; }

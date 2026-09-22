@@ -14,7 +14,7 @@ import { imprimirCupom } from '../../lib/cupom'
 import { useMovimentacao } from '../../lib/useMovimentacao'
 import { preparar as prepararSom, tocar } from '../../lib/som'
 import { Bell, Volume2, VolumeX, CalendarPlus, CalendarX, Banknote, MessageSquare, Clock3, CheckCircle2, X as XIcon } from 'lucide-react'
-import { CalendarDays, Users } from 'lucide-react'
+import { CalendarDays, Users, HandCoins } from 'lucide-react'
 
 // O PDV do balcão (102): tela cheia, feita para o computador do salão.
 // Esquerda, a agenda de hoje (ou o caixa); centro, o catálogo; direita,
@@ -116,7 +116,18 @@ export default function AdminPdv() {
   const visitaInclusa = c.visita.filter((v) => v.incluido)
   const sinal = Math.min(total, Number(c.sinal ?? 0) + visitaInclusa.reduce((s, v) => s + (v.pago_cents ?? 0), 0))
   const variasProfs = new Set(c.itens.map((i) => i.professional_id || c.professional_id).filter(Boolean)).size > 1
-  const podeAbrirCaixa = c.itens.length > 0 && c.professional_id && (c.client_id || c.cliente.trim()) && total >= 0
+  // a comanda agrupada por quem fez cada serviço: é assim que a cliente avalia e é assim que o repasse separa
+  const porQuem = useMemo(() => {
+    const ordem = []; const mapa = new Map()
+    c.itens.forEach((i, k) => {
+      const pid = i.professional_id || c.professional_id || ''
+      if (!mapa.has(pid)) { mapa.set(pid, { id: pid, nome: profs.find((p) => p.id === pid)?.name ?? i.profissional ?? 'Sem profissional', itens: [], soma: 0 }); ordem.push(pid) }
+      const g = mapa.get(pid); g.itens.push({ i, k }); g.soma += i.preco_cents * i.qtd
+    })
+    return ordem.map((id) => mapa.get(id))
+  }, [c.itens, c.professional_id, profs])
+  const profDoItem = (k, pid) => setC((x) => ({ ...x, itens: x.itens.map((i, j) => (j === k ? { ...i, professional_id: pid, profissional: profs.find((p) => p.id === pid)?.name ?? null } : i)) }))
+  const podeAbrirCaixa = c.itens.length > 0 && c.professional_id && c.itens.every((i) => i.professional_id || c.professional_id) && (c.client_id || c.cliente.trim()) && total >= 0
 
   function abrirHorario(a) {
     if (a.comanda_id) { setToast('Este horário já tem comanda fechada. Veja no Caixa.'); return }
@@ -165,7 +176,7 @@ export default function AdminPdv() {
     setOcupado(false)
     if (error) { setErro(error.message); return }
     const prof = profs.find((x) => x.id === c.professional_id)
-    const nomesProfs = [...new Set([prof?.name, ...visitaInclusa.map((v) => v.profissional)].filter(Boolean))]
+    const nomesProfs = [...new Set(c.itens.map((i) => profs.find((p) => p.id === (i.professional_id || c.professional_id))?.name ?? i.profissional).filter(Boolean))]
     setUltima({ salao: { nome: salaoInfo?.name ?? salao?.name, endereco: salaoInfo?.address, cidade: salaoInfo?.city, cnpj: salaoInfo?.cnpj }, cliente: c.cliente, itens: c.itens, desconto, total, atendidaPor: nomesProfs.join(' e ') || prof?.name,
       quando: new Date().toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }), comandaId: data?.comanda_id,
       pagamentos: [...(sinal > 0 ? [{ forma: 'app', valor_cents: sinal, troco_cents: 0 }] : []), ...pagamentos] })
@@ -274,6 +285,7 @@ export default function AdminPdv() {
               <div className="pdv-caixa-resumo">
                 {(caixa.por_profissional ?? []).map((p) => <div key={p.professional_id ?? p.nome} className="pdv-caixa-linha"><span>{p.nome ?? 'Sem profissional'}</span><strong>{formatCents(p.valor_cents)}</strong><span className="muted">{p.comandas} {p.comandas === 1 ? 'comanda' : 'comandas'}</span></div>)}
                 {(caixa.por_profissional ?? []).length === 0 && <p className="muted">Nenhuma comanda fechada hoje.</p>}
+                <Link to="/admin/repasses" className="pdv-caixa-link"><HandCoins size={13} /> O que é de quem, no período</Link>
               </div>
               {(dia?.comandas ?? []).map((cm) => (
                 <div key={cm.id} className={'pdv-comanda-fechada' + (cm.status === 'estornada' ? ' estornada' : '')}>
@@ -322,12 +334,15 @@ export default function AdminPdv() {
               </>
             )}
           </label>
-          <label className="pdv-campo">Quem atendeu
-            <select value={c.professional_id} onChange={(e) => setC({ ...c, professional_id: e.target.value })}>
-              <option value="">escolha…</option>
-              {profs.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
-          </label>
+          {(!c.appointment_id || !c.professional_id) && (
+            <label className="pdv-campo">Quem atendeu
+              <select value={c.professional_id} onChange={(e) => setC({ ...c, professional_id: e.target.value })}>
+                <option value="">escolha…</option>
+                {profs.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+              {c.itens.length > 0 && <small className="muted">Cada serviço pode ter a sua: troque no item.</small>}
+            </label>
+          )}
           {c.visita.length > 0 && (
             <div className="pdv-visita">
               <p><Users size={13} /> Ela continua no salão hoje</p>
@@ -344,12 +359,21 @@ export default function AdminPdv() {
 
           <div className="pdv-itens">
             {c.itens.length === 0 && <p className="muted pdv-vazio">Toque num serviço do catálogo ou puxe um horário da agenda.</p>}
-            {c.itens.map((i, k) => (
-              <div key={k} className="pdv-item">
-                <span className="pdv-item-nome">{i.nome}{variasProfs && <small className="pdv-item-prof">{(i.profissional ?? profs.find((p) => p.id === (i.professional_id || c.professional_id))?.name ?? '').split(' ')[0]}</small>}</span>
-                <span className="pdv-item-qtd"><button type="button" onClick={() => qtd(k, -1)} aria-label="Menos"><Minus size={12} /></button>{i.qtd}<button type="button" onClick={() => qtd(k, 1)} aria-label="Mais"><Plus size={12} /></button></span>
-                <span className="pdv-item-preco">R$ <input value={emReais(i.preco_cents)} onChange={(e) => preco(k, e.target.value)} inputMode="decimal" /></span>
-                <button type="button" className="pdv-item-tirar" onClick={() => tirar(k)} aria-label="Tirar"><Trash2 size={14} /></button>
+            {porQuem.map((g) => (
+              <div key={g.id || 'sem'} className="pdv-grupo">
+                {(variasProfs || c.visita.length > 0) && <div className="pdv-grupo-topo"><span><UserRound size={12} /> {g.nome}</span><strong>{formatCents(g.soma)}</strong></div>}
+                {g.itens.map(({ i, k }) => (
+                  <div key={k} className="pdv-item">
+                    <span className="pdv-item-nome">{i.nome}</span>
+                    <select className="pdv-item-prof" value={i.professional_id || c.professional_id || ''} onChange={(e) => profDoItem(k, e.target.value)} aria-label="Quem fez este serviço" title="Quem fez este serviço">
+                      {!(i.professional_id || c.professional_id) && <option value="">quem?</option>}
+                      {profs.map((p) => <option key={p.id} value={p.id}>{p.name.split(' ')[0]}</option>)}
+                    </select>
+                    <span className="pdv-item-qtd"><button type="button" onClick={() => qtd(k, -1)} aria-label="Menos"><Minus size={12} /></button>{i.qtd}<button type="button" onClick={() => qtd(k, 1)} aria-label="Mais"><Plus size={12} /></button></span>
+                    <span className="pdv-item-preco">R$ <input value={emReais(i.preco_cents)} onChange={(e) => preco(k, e.target.value)} inputMode="decimal" /></span>
+                    <button type="button" className="pdv-item-tirar" onClick={() => tirar(k)} aria-label="Tirar"><Trash2 size={14} /></button>
+                  </div>
+                ))}
               </div>
             ))}
           </div>

@@ -163,7 +163,7 @@ export default function ClienteAgendamento() {
           <div className="agdt-item"><MapPin size={18} /><span><span className="muted agdt-rotulo">Onde</span><strong>{salao.tipo === 'salao' && salao.id ? <Link to={`/cliente/salao/${salao.id}`} className="agdt-salao-link">{salao.name}</Link> : salao.name}</strong>{endereco && <span className="muted">{endereco}</span>}{mapa && !pino && <a href={mapa} target="_blank" rel="noreferrer" className="agdt-mapa">Como chegar</a>}{pino && futuro && a.status !== 'cancelado' && <ComoChegar lat={salao.lat} lng={salao.lng} nome={salao.name} endereco={salao.address} cidade={salao.city} altura={130} />}</span></div>
         )}
         {comandaId && (
-          <div className="agdt-item"><Receipt size={18} /><span><span className="muted agdt-rotulo">Comprovante</span><strong>Atendimento fechado no balcão</strong>{comandaHorarios > 1 && <span className="muted">Um comprovante só, com os {comandaHorarios} horários dessa visita.</span>}<Link to={`/cliente/comanda/${comandaId}`} className="agdt-mapa">Ver o comprovante</Link></span></div>
+          <div className="agdt-item"><Receipt size={18} /><span><span className="muted agdt-rotulo">Comprovante</span><strong>Atendimento fechado no balcão</strong>{comandaHorarios > 1 && <span className="muted">Um comprovante só, com os {comandaHorarios} horários dessa visita.</span>}<Link to={`/cliente/comanda/${comandaId}?de=${a.id}`} className="agdt-mapa">Ver o comprovante</Link></span></div>
         )}
         {itens.length > 1 ? (
           <div className="agdt-item"><Sparkles size={18} /><span><span className="muted agdt-rotulo">Serviços</span>

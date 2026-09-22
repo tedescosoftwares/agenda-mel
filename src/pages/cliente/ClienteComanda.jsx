@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { Receipt, Share2, Store } from 'lucide-react'
 import ClienteShell from '../../components/ClienteShell'
 import { supabase } from '../../lib/supabase'
@@ -11,6 +11,8 @@ const ROTULO = { dinheiro: 'Dinheiro', debito: 'Cartão de débito', credito: 'C
 
 export default function ClienteComanda() {
   const { id } = useParams()
+  const [busca] = useSearchParams()
+  const veioDe = busca.get('de')   // o horário que trouxe a cliente até aqui (numa visita com vários, não é sempre o principal)
   const [c, setC] = useState(undefined)
   useEffect(() => { supabase.rpc('comprovante_da_comanda', { comanda: id }).then(({ data }) => setC(data ?? null)) }, [id])
 
@@ -20,7 +22,7 @@ export default function ClienteComanda() {
     try { if (navigator.share) await navigator.share({ title: 'Comprovante', text: texto }); else await navigator.clipboard.writeText(texto) } catch { /* cancelou */ }
   }
 
-  const voltar = c?.appointment_id ? `/cliente/agendamento/${c.appointment_id}` : '/cliente/meus-agendamentos'
+  const voltar = veioDe ? `/cliente/agendamento/${veioDe}` : c?.appointment_id ? `/cliente/agendamento/${c.appointment_id}` : '/cliente/meus-agendamentos'
   if (c === undefined) return <ClienteShell titulo="Comprovante" voltar="/cliente/meus-agendamentos"><p className="carregando">Carregando…</p></ClienteShell>
   if (!c) return <ClienteShell titulo="Comprovante" voltar="/cliente/meus-agendamentos"><div className="card empty-state"><p>Não encontramos esse comprovante.</p></div></ClienteShell>
   const quando = c.dia ? new Date(c.dia + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }) : new Date(c.fechada_em).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })

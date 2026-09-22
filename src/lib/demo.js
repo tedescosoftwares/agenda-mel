@@ -92,7 +92,7 @@ const jn = (a, todos) => ({ ...a, services: servicos.find((s) => s.id === a.serv
 const agendamentos = [
   { id: 'ap1', client_id: 'c1', professional_id: 'pr1', service_id: 'sv2', salon_id: SALAO, date: mais(2), start_time: '14:00:00', end_time: '15:30:00', status: 'pendente', price_cents: 8500, created_at: mais(0) },
   { id: 'ap2', client_id: 'c1', professional_id: 'pr2', service_id: 'sv7', salon_id: SALAO, date: mais(9), start_time: '10:30:00', end_time: '11:15:00', status: 'confirmado', price_cents: 6000, pago_cents: 3000, created_at: mais(-1), visita_id: 'v1' },
-  { id: 'ap3', client_id: 'c1', professional_id: 'pr1', service_id: 'sv1', salon_id: SALAO, date: mais(-12), start_time: '09:00:00', end_time: '09:45:00', status: 'concluido', price_cents: 3500, created_at: mais(-14) },
+  { id: 'ap3', client_id: 'c1', professional_id: 'pr1', service_id: 'sv1', salon_id: SALAO, date: mais(-12), start_time: '09:00:00', end_time: '10:45:00', status: 'concluido', price_cents: 11000, service_name: 'Manicure + Esmaltação em gel', created_at: mais(-14) },
   { id: 'ap4', client_id: 'c1', professional_id: 'pr3', service_id: 'sv4', salon_id: SALAO, date: mais(-30), start_time: '16:00:00', end_time: '17:00:00', status: 'concluido', price_cents: 6500, created_at: mais(-33) },
   // cancelado pelo salão com sinal devolvido (095): aparece no histórico com o comprovante da devolução
   { id: 'apdev', client_id: 'c1', professional_id: 'pr2', service_id: 'sv7', salon_id: SALAO, date: mais(4), start_time: '15:00:00', end_time: '15:45:00', status: 'cancelado', cancelado_por: 'salao', cancelado_em: mais(-1) + 'T18:20:00', price_cents: 6000, pago_cents: 3000, created_at: mais(-3) },
@@ -159,7 +159,7 @@ const TABELAS = {
   ],
   client_favorites: [{ client_id: 'c1', professional_id: 'pr1' }, { client_id: 'c1', professional_id: 'pr3' }],
   reviews: [],
-  appointment_services: [],
+  appointment_services: [{ id: 'as1', appointment_id: 'ap3', name: 'Manicure', price_cents: 3500, preco_cheio_cents: 3500, duration_minutes: 45, ordem: 1 }, { id: 'as2', appointment_id: 'ap3', name: 'Esmaltação em gel', price_cents: 7500, preco_cheio_cents: 7500, duration_minutes: 60, ordem: 2 }],
   categorias_de_servico: CATS,
   capas_de_categoria: [],
   profissional_preferida: [{ client_id: 'c1', salon_id: SALAO, professional_id: 'pr1' }],

@@ -6867,3 +6867,7 @@ label.check input { margin-top: 3px; }
   .rp-pessoa-numeros { grid-column: 1 / -1; justify-content: space-between; padding-top: 0.3rem; }
   .rp-itens { overflow-x: auto; }
 }
+
+/* cliente · visita ajustada no salão (serviço somado ao mesmo horário) */
+.ag-nota.ag-ajustado { color: #6d28d9; }
+.agdt-ajustado { display: flex; gap: 0.3rem; align-items: flex-start; font-size: 0.78rem; color: #6d28d9 !important; margin-top: 0.25rem; }

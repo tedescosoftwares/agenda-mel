@@ -10,6 +10,8 @@ import { formatPreco, formatDuracao } from '../../lib/format'
 import { formatDataLonga, iniciais } from '../../lib/booking'
 import ComoChegar from '../../components/ComoChegar'
 import { Receipt } from 'lucide-react'
+const nomeDoServico = (a) => a.service_name || a.services?.name
+const ajustadoNoSalao = (a) => Boolean(a.service_name && a.services?.name && a.service_name !== a.services.name)
 import { temPino, linksDeRota } from '../../lib/geo'
 import { CalendarDays, Clock, MapPin, Sparkles, StickyNote, Repeat, CircleCheck, Hourglass, CircleX, Check, ChevronRight, Users, Star, Wallet } from 'lucide-react'
 
@@ -116,7 +118,8 @@ export default function ClienteAgendamento() {
   const est = a.status === 'confirmado' && !futuro ? { ...ESTADO.confirmado, texto: 'Já aconteceu. Que tal contar como foi?' } : (ESTADO[a.status] ?? ESTADO.pendente)
   const podeMexer = futuro && (a.status === 'pendente' || a.status === 'confirmado' || a.status === 'aguardando_pagamento')
   const preco = a.price_cents != null ? a.price_cents / 100 : a.services?.price
-  const duracao = a.services?.duration_minutes ?? minutosEntre(a.start_time, a.end_time)
+  // com mais de um serviço no horário, a duração é a soma dos itens (ou o intervalo real), não a do serviço marcado
+  const duracao = itens.length > 1 ? (itens.reduce((t, x) => t + (x.duration_minutes ?? 0), 0) || minutosEntre(a.start_time, a.end_time)) : (a.services?.duration_minutes ?? minutosEntre(a.start_time, a.end_time))
   const salao = a.salons
   const vivas = partes.filter((x) => x.status === 'pendente' || x.status === 'confirmado')
   const recusadas = partes.filter((x) => x.status === 'cancelado')
@@ -128,7 +131,7 @@ export default function ClienteAgendamento() {
     <ClienteShell titulo="Agendamento" voltar="/cliente/meus-agendamentos">
       <div className={'card agdt-topo ' + a.status}>
         <span className={`badge badge-${troca ? 'remarcacao' : a.status}`}><est.Icone size={13} /> {troca ? 'Troca aguardando' : est.rotulo}</span>
-        <h2 className="agdt-servico">{a.services?.name ?? a.service_name}</h2>
+        <h2 className="agdt-servico">{nomeDoServico(a)}</h2>
         <p className="agdt-quando"><CalendarDays size={18} /> <span><strong>{capitalizar(formatDataLonga(a.date))}</strong><br />às {a.start_time.slice(0, 5)}{a.end_time ? ` · até ${a.end_time.slice(0, 5)}` : ''}</span></p>
         <p className="muted agdt-nota">{troca && origem ? `No lugar de ${formatDataLonga(origem.date)} às ${origem.start_time.slice(0, 5)}. Até ela responder, o horário de antes continua valendo.` : est.texto}</p>
       </div>
@@ -168,9 +171,10 @@ export default function ClienteAgendamento() {
         {itens.length > 1 ? (
           <div className="agdt-item"><Sparkles size={18} /><span><span className="muted agdt-rotulo">Serviços</span>
             <ul className="agdt-itens">{itens.map((x) => <li key={x.id}><span>{x.name}</span><span className="muted">{formatDuracao(x.duration_minutes)} · {x.preco_cheio_cents > x.price_cents ? <><s>{formatPreco(x.preco_cheio_cents / 100)}</s> {formatPreco(x.price_cents / 100)}</> : formatPreco(x.price_cents / 100)}</span></li>)}</ul>
-            <strong>{[preco != null ? formatPreco(preco) : null, duracao ? formatDuracao(duracao) : null].filter(Boolean).join(' · ')} no total</strong></span></div>
+            <strong>{[preco != null ? formatPreco(preco) : null, duracao ? formatDuracao(duracao) : null].filter(Boolean).join(' · ')} no total</strong>
+            {ajustadoNoSalao(a) && <span className="muted agdt-ajustado"><Sparkles size={13} /> Ajustado no salão: você tinha marcado {a.services.name}{itens.filter((x) => x.name !== a.services.name).length ? `, e entrou ${itens.filter((x) => x.name !== a.services.name).map((x) => x.name).join(' + ')} com ${a.professionals?.name?.split(' ')[0] ?? 'a mesma profissional'}` : ''}.</span>}</span></div>
         ) : (
-          <div className="agdt-item"><Sparkles size={18} /><span><span className="muted agdt-rotulo">Serviço</span><strong>{a.services?.name ?? a.service_name}</strong><span className="muted">{a.desconto_cents > 0 && preco != null ? <><s>{formatPreco((a.price_cents + a.desconto_cents) / 100)}</s> {formatPreco(preco)} · promoção</> : preco != null ? formatPreco(preco) : null}{duracao ? `${preco != null ? ' · ' : ''}${formatDuracao(duracao)}` : ''}</span></span></div>
+          <div className="agdt-item"><Sparkles size={18} /><span><span className="muted agdt-rotulo">Serviço</span><strong>{nomeDoServico(a)}</strong>{ajustadoNoSalao(a) && <span className="muted agdt-ajustado"><Sparkles size={13} /> Ajustado no salão: você tinha marcado {a.services.name}.</span>}<span className="muted">{a.desconto_cents > 0 && preco != null ? <><s>{formatPreco((a.price_cents + a.desconto_cents) / 100)}</s> {formatPreco(preco)} · promoção</> : preco != null ? formatPreco(preco) : null}{duracao ? `${preco != null ? ' · ' : ''}${formatDuracao(duracao)}` : ''}</span></span></div>
         )}
         {partes.length > 0 && (
           <div className="agdt-item"><Users size={18} /><span><span className="muted agdt-rotulo">Na mesma visita</span>

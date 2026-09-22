@@ -12,6 +12,14 @@ import OfertaVaga from '../../components/OfertaVaga'
 import AvaliarModal from '../../components/AvaliarModal'
 import { Repeat, Check, ChevronRight, CalendarDays, Clock, MapPin, Star, Sparkles, Users, Wallet } from 'lucide-react'
 
+// O nome que vale é o do atendimento (service_name): se o salão juntou um
+// serviço na mesma visita, ele vira 'Coloração + Escova'. O do catálogo é
+// o que a cliente marcou; quando os dois diferem, a visita foi ajustada lá.
+const nomeDoServico = (a) => a.service_name || a.services?.name
+const ajustadoNoSalao = (a) => Boolean(a.service_name && a.services?.name && a.service_name !== a.services.name)
+// duração: a do catálogo, salvo quando a visita foi ajustada (aí vale o intervalo real do horário)
+const minutosDe = (a) => { if (!ajustadoNoSalao(a) || !a.end_time) return a.services?.duration_minutes; const [h1, m1] = a.start_time.split(':').map(Number); const [h2, m2] = a.end_time.split(':').map(Number); const d = (h2 * 60 + m2) - (h1 * 60 + m1); return d > 0 ? d : a.services?.duration_minutes }
+
 // Meus agendamentos (tela 09, repaginada em 2.20): o próximo horário em
 // destaque no topo, os demais em cartões com a data em bloco, e o
 // histórico agrupado por mês com as estrelas que ela deu. Tudo abre a
@@ -191,8 +199,8 @@ function Destaque({ a, troca, onCancelar }) {
           <span>{mesCurto(a.date)}</span>
         </div>
         <div className="ag-destaque-texto">
-          <strong className="ag-destaque-servico">{a.services?.name ?? a.service_name}</strong>
-          <span className="ag-destaque-linha"><Clock size={14} /> {diaSemana(a.date)} às {a.start_time.slice(0, 5)}{a.services?.duration_minutes ? ` · ${formatDuracao(a.services.duration_minutes)}` : ''}</span>
+          <strong className="ag-destaque-servico">{nomeDoServico(a)}</strong>
+          <span className="ag-destaque-linha"><Clock size={14} /> {diaSemana(a.date)} às {a.start_time.slice(0, 5)}{minutosDe(a) ? ` · ${formatDuracao(minutosDe(a))}` : ''}</span>
           {a.salons?.name && <span className="ag-destaque-linha"><MapPin size={14} /> {a.salons.name}{a.salons.city ? ` · ${a.salons.city}` : ''}</span>}
         </div>
       </div>
@@ -244,10 +252,11 @@ function Cartao({ a, troca, historico = false, nota, pagamento, saiu = false, on
       </div>
       <div className="ag-corpo">
         <div className="ag-topo">
-          <span className="ag-hora">{a.start_time.slice(0, 5)}{a.services?.duration_minutes ? ` · ${formatDuracao(a.services.duration_minutes)}` : ''}</span>
+          <span className="ag-hora">{a.start_time.slice(0, 5)}{minutosDe(a) ? ` · ${formatDuracao(minutosDe(a))}` : ''}</span>
           <span className={`badge badge-${troca_ ? 'remarcacao' : a.status}`}>{troca_ ? 'Troca aguardando' : ROTULO[a.status] ?? a.status}</span>
         </div>
-        <strong className="ag-servico">{a.services?.name ?? a.service_name}</strong>
+        <strong className="ag-servico">{nomeDoServico(a)}</strong>
+        {ajustadoNoSalao(a) && <span className="ag-nota ag-ajustado"><Sparkles size={13} /> Ajustado no salão: você tinha marcado {a.services.name}.</span>}
         <span className="ag-prof">
           <span className="ag-avatar pequeno">{a.professionals?.photo_url ? <img src={a.professionals.photo_url} alt="" /> : iniciais(a.professionals?.name)}</span>
           <span className="muted">{a.professionals?.name}{a.salons?.name ? ` · ${a.salons.name}` : ''}</span>

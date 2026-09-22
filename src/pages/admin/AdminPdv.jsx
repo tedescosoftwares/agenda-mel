@@ -14,7 +14,7 @@ import { imprimirCupom } from '../../lib/cupom'
 import { useMovimentacao } from '../../lib/useMovimentacao'
 import { preparar as prepararSom, tocar } from '../../lib/som'
 import { Bell, Volume2, VolumeX, CalendarPlus, CalendarX, Banknote, MessageSquare, Clock3, CheckCircle2, X as XIcon } from 'lucide-react'
-import { CalendarDays } from 'lucide-react'
+import { CalendarDays, Users } from 'lucide-react'
 
 // O PDV do balcão (102): tela cheia, feita para o computador do salão.
 // Esquerda, a agenda de hoje (ou o caixa); centro, o catálogo; direita,
@@ -23,7 +23,10 @@ import { CalendarDays } from 'lucide-react'
 // Fechar conclui o atendimento na agenda e deixa o rastro no caixa.
 const ROTULO_FORMA = { dinheiro: 'dinheiro', debito: 'débito', credito: 'crédito', pix: 'PIX', app: 'pelo app', outro: 'outro' }
 const LARGURA_MINIMA = 900
-const vazia = () => ({ appointment_id: null, client_id: null, cliente: '', professional_id: '', itens: [], sinal: 0, desconto: '', pagamentos: [], observacao: '' })
+const vazia = () => ({ appointment_id: null, client_id: null, cliente: '', professional_id: '', itens: [], sinal: 0, desconto: '', pagamentos: [], observacao: '', visita: [] })
+// os itens de um horário, cada um sabendo de que horário e de quem é
+const itensDoHorario = (h) => (h.itens?.length ? h.itens : [{ service_id: null, nome: h.servico ?? 'Atendimento', preco_cents: h.price_cents ?? 0, duracao: 0 }])
+  .map((i) => ({ ...i, qtd: i.qtd ?? 1, appointment_id: h.id, professional_id: h.professional_id ?? '', profissional: h.profissional ?? null }))
 const reais = (t) => { const n = Number(String(t ?? '').replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.')); return Number.isFinite(n) ? Math.round(n * 100) : 0 }
 const emReais = (c) => (Number(c ?? 0) / 100).toFixed(2).replace('.', ',')
 
@@ -95,21 +98,36 @@ export default function AdminPdv() {
   const subtotal = c.itens.reduce((s, i) => s + i.preco_cents * i.qtd, 0)
   const desconto = Math.min(subtotal, reais(c.desconto))
   const total = subtotal - desconto
-  const sinal = Math.min(total, Number(c.sinal ?? 0))
+  const visitaInclusa = c.visita.filter((v) => v.incluido)
+  const sinal = Math.min(total, Number(c.sinal ?? 0) + visitaInclusa.reduce((s, v) => s + (v.pago_cents ?? 0), 0))
+  const variasProfs = new Set(c.itens.map((i) => i.professional_id || c.professional_id).filter(Boolean)).size > 1
   const podeAbrirCaixa = c.itens.length > 0 && c.professional_id && (c.client_id || c.cliente.trim()) && total >= 0
 
   function abrirHorario(a) {
     if (a.comanda_id) { setToast('Este horário já tem comanda fechada. Veja no Caixa.'); return }
     if (diaSel > hojeIso()) { setToast('Esse horário é de outro dia. A comanda fecha no dia do atendimento.'); return }
     if (a.status !== 'pendente' && a.status !== 'confirmado') { setToast(`Este horário está ${a.status}.`); return }
-    const itens = a.itens?.length ? a.itens.map((i) => ({ ...i, qtd: i.qtd ?? 1 })) : [{ service_id: null, nome: a.servico ?? 'Atendimento', preco_cents: a.price_cents ?? 0, qtd: 1, duracao: 0 }]
-    setC({ ...vazia(), appointment_id: a.id, client_id: a.client_id, cliente: a.cliente, professional_id: a.professional_id ?? '', itens, sinal: a.pago_cents ?? 0 })
+    // a visita inteira: os outros horários dela hoje, ainda abertos, entram na mesma comanda (mesmo com outra profissional)
+    const outros = (dia?.agenda ?? []).filter((o) => o.id !== a.id && a.client_id && o.client_id === a.client_id && !o.comanda_id && (o.status === 'pendente' || o.status === 'confirmado'))
+      .sort((x, y) => String(x.start_time).localeCompare(String(y.start_time)))
+    const visita = outros.map((o) => ({ appointment_id: o.id, professional_id: o.professional_id ?? '', profissional: o.profissional ?? null, hora: String(o.start_time ?? '').slice(0, 5), servico: o.servico ?? (o.itens ?? []).map((i) => i.nome).join(' + '), pago_cents: o.pago_cents ?? 0, itens: itensDoHorario(o), incluido: true }))
+    setC({ ...vazia(), appointment_id: a.id, client_id: a.client_id, cliente: a.cliente, professional_id: a.professional_id ?? '', itens: [...itensDoHorario(a), ...visita.flatMap((v) => v.itens)], sinal: a.pago_cents ?? 0, visita })
     setErro('')
+    if (outros.length) setToast(`${String(a.cliente ?? '').split(' ')[0]} tem mais ${outros.length === 1 ? 'um horário' : `${outros.length} horários`} hoje. Entrou tudo na mesma comanda.`)
+  }
+  function alternarVisita(id) {
+    setC((x) => {
+      const visita = x.visita.map((v) => (v.appointment_id === id ? { ...v, incluido: !v.incluido } : v))
+      const v = visita.find((y) => y.appointment_id === id)
+      const itens = v.incluido ? [...x.itens, ...v.itens] : x.itens.filter((i) => i.appointment_id !== id)
+      return { ...x, visita, itens }
+    })
   }
   function addItem(s) {
     setC((x) => {
-      const k = x.itens.findIndex((i) => i.service_id === s.id)
-      const itens = k >= 0 ? x.itens.map((i, j) => (j === k ? { ...i, qtd: i.qtd + 1 } : i)) : [...x.itens, { service_id: s.id, nome: s.name, preco_cents: Math.round(Number(s.price) * 100), qtd: 1, duracao: s.duration_minutes }]
+      const k = x.itens.findIndex((i) => i.service_id === s.id && (i.appointment_id ?? null) === (x.appointment_id ?? null))
+      const novo = { service_id: s.id, nome: s.name, preco_cents: Math.round(Number(s.price) * 100), qtd: 1, duracao: s.duration_minutes, appointment_id: x.appointment_id ?? null, professional_id: x.professional_id || null, profissional: null }
+      const itens = k >= 0 ? x.itens.map((i, j) => (j === k ? { ...i, qtd: i.qtd + 1 } : i)) : [...x.itens, novo]
       return { ...x, itens }
     })
   }
@@ -124,14 +142,16 @@ export default function AdminPdv() {
   async function fechar(pagamentos, opcoes) {
     setOcupado(true); setErro('')
     const { data, error } = await supabase.rpc('pdv_fechar', { salao: salao.id, comanda: {
-      appointment_id: c.appointment_id, client_id: c.client_id, cliente_nome: c.client_id ? null : c.cliente.trim(), professional_id: c.professional_id,
-      itens: c.itens, desconto_cents: desconto, observacao: c.observacao || null, enviar_cupom: Boolean(opcoes?.enviarCupom),
+      appointment_id: c.appointment_id, appointment_ids: [c.appointment_id, ...visitaInclusa.map((v) => v.appointment_id)].filter(Boolean),
+      client_id: c.client_id, cliente_nome: c.client_id ? null : c.cliente.trim(), professional_id: c.professional_id,
+      itens: c.itens.map((i) => ({ ...i, professional_id: i.professional_id || c.professional_id, appointment_id: i.appointment_id ?? c.appointment_id ?? null })), desconto_cents: desconto, observacao: c.observacao || null, enviar_cupom: Boolean(opcoes?.enviarCupom),
       pagamentos: pagamentos.map((p) => ({ forma: p.forma, valor_cents: Number(p.valor_cents), recebido_cents: p.recebido_cents ?? null, detalhe: p.detalhe ?? null, parcelas: p.parcelas ?? null })),
     } })
     setOcupado(false)
     if (error) { setErro(error.message); return }
     const prof = profs.find((x) => x.id === c.professional_id)
-    setUltima({ salao: { nome: salaoInfo?.name ?? salao?.name, endereco: salaoInfo?.address, cidade: salaoInfo?.city, cnpj: salaoInfo?.cnpj }, cliente: c.cliente, itens: c.itens, desconto, total, atendidaPor: prof?.name,
+    const nomesProfs = [...new Set([prof?.name, ...visitaInclusa.map((v) => v.profissional)].filter(Boolean))]
+    setUltima({ salao: { nome: salaoInfo?.name ?? salao?.name, endereco: salaoInfo?.address, cidade: salaoInfo?.city, cnpj: salaoInfo?.cnpj }, cliente: c.cliente, itens: c.itens, desconto, total, atendidaPor: nomesProfs.join(' e ') || prof?.name,
       quando: new Date().toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }), comandaId: data?.comanda_id,
       pagamentos: [...(sinal > 0 ? [{ forma: 'app', valor_cents: sinal, troco_cents: 0 }] : []), ...pagamentos] })
     setResultado({ comanda_id: data?.comanda_id, cupom: Boolean(data?.cupom), total: data?.total_cents ?? total })
@@ -262,7 +282,7 @@ export default function AdminPdv() {
 
         <aside className="pdv-painel pdv-comanda">
           <div className="pdv-comanda-topo">
-            <h3>{c.appointment_id ? 'Comanda do horário' : 'Comanda avulsa'}</h3>
+            <h3>{c.appointment_id ? (visitaInclusa.length ? 'Comanda da visita' : 'Comanda do horário') : 'Comanda avulsa'}</h3>
             {(c.itens.length > 0 || c.appointment_id) && <button type="button" className="btn-mini btn-mini-neutro" onClick={() => setC(vazia())}>Limpar</button>}
           </div>
           <label className="pdv-campo"><UserRound size={14} /> Cliente
@@ -280,12 +300,25 @@ export default function AdminPdv() {
               {profs.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           </label>
+          {c.visita.length > 0 && (
+            <div className="pdv-visita">
+              <p><Users size={13} /> Ela continua no salão hoje</p>
+              {c.visita.map((v) => (
+                <label key={v.appointment_id} className={'pdv-visita-linha' + (v.incluido ? '' : ' fora')}>
+                  <input type="checkbox" checked={v.incluido} onChange={() => alternarVisita(v.appointment_id)} />
+                  <span><strong>{v.hora}</strong> {v.servico}{v.profissional ? ` · ${v.profissional.split(' ')[0]}` : ''}</span>
+                  {v.pago_cents > 0 && <em>sinal {formatCents(v.pago_cents)}</em>}
+                </label>
+              ))}
+              <small className="muted">Tudo numa comanda só, mesmo com outra profissional. Desmarque o que ela paga separado.</small>
+            </div>
+          )}
 
           <div className="pdv-itens">
             {c.itens.length === 0 && <p className="muted pdv-vazio">Toque num serviço do catálogo ou puxe um horário da agenda.</p>}
             {c.itens.map((i, k) => (
               <div key={k} className="pdv-item">
-                <span className="pdv-item-nome">{i.nome}</span>
+                <span className="pdv-item-nome">{i.nome}{variasProfs && <small className="pdv-item-prof">{(i.profissional ?? profs.find((p) => p.id === (i.professional_id || c.professional_id))?.name ?? '').split(' ')[0]}</small>}</span>
                 <span className="pdv-item-qtd"><button type="button" onClick={() => qtd(k, -1)} aria-label="Menos"><Minus size={12} /></button>{i.qtd}<button type="button" onClick={() => qtd(k, 1)} aria-label="Mais"><Plus size={12} /></button></span>
                 <span className="pdv-item-preco">R$ <input value={emReais(i.preco_cents)} onChange={(e) => preco(k, e.target.value)} inputMode="decimal" /></span>
                 <button type="button" className="pdv-item-tirar" onClick={() => tirar(k)} aria-label="Tirar"><Trash2 size={14} /></button>

@@ -10,6 +10,8 @@ begin
   select s.* into svc from public.services s where s.salon_id = sal.id and s.active limit 1;
   select id into cli from public.profiles where role = 'cliente' limit 1;
   perform public.silenciar_gatilho();
+  -- limpa a agenda de hoje dessa profissional (dados de teste) pra não esbarrar em horário semeado
+  update public.appointments set status = 'cancelado' where professional_id = prof.id and date = public.agora_local()::date and status not in ('cancelado', 'faltou');
   -- um horário de hoje, confirmado, já começado, com sinal pago pelo app
   insert into public.appointments (client_id, professional_id, service_id, salon_id, date, start_time, end_time, status, price_cents, pago_cents)
   values (cli, prof.id, svc.id, sal.id, public.agora_local()::date,

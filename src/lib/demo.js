@@ -166,7 +166,7 @@ const TABELAS = {
   promocoes: promocoes.map((p) => ({ ...p, aprovacao: p.aprovacao ?? 'aprovada', services: servicos.find((s) => s.id === p.service_id) ? { name: servicos.find((s) => s.id === p.service_id).name } : null, salons: p.salon_id ? { name: 'Studio Mel' } : null, professionals: p.professional_id ? { name: profissionais.find((x) => x.id === p.professional_id)?.name } : null })),
   servicos_juntos: [{ service_id: 'sv1', sugerido_id: 'sv3' }],
   parcerias: [],
-  comandas: [{ id: 'cmv', appointment_id: 'ap3', status: 'fechada' }],
+  comandas: [{ id: 'cmv', appointment_id: 'ap3', appointment_ids: ['ap3'], status: 'fechada' }],
   salons: [{ id: SALAO, name: 'Studio Mel', slug: 'studio-mel', pagamento_modo: 'opcional', sinal_pct: 50, politica_cancelamento: 'moderada', app_url: 'https://mimo.app', city: 'Santos', address: 'Rua das Flores, 120 · Gonzaga', cep: '11060300', lat: -23.9668, lng: -46.3325, codigo: 'MEL2K5', tipo: 'salao', descricao: 'Um cantinho no Gonzaga para você se cuidar com calma: café, música baixa e uma equipe que capricha em cada detalhe.', fotos: [PROMO_IMG('#FF7BAA', '#AA4CFF', ''), PROMO_IMG('#FFC2D8', '#FF2D7A', '')], logo_url: null, phone: '(13) 3333-0000', whatsapp: '(13) 99120-3410', instagram: 'studiomel' }],
   salon_members: [{ salon_id: SALAO, user_id: 'a1', papel: 'admin', salons: { id: SALAO, name: 'Studio Mel', slug: 'studio-mel', codigo: 'MEL2K5', tipo: 'salao', city: 'Santos' } }],
   whatsapp_channels: [{ salon_id: SALAO, canal: 'evolution', identificador: '11', ativo: true, usa_ia: true, usa_bot: true, silencio_inicio: '21:00', silencio_fim: '08:00', teto_diario: 300 }],

@@ -36,6 +36,7 @@ export default function ClienteAgendamento() {
   const [loading, setLoading] = useState(true)
   const [erro, setErro] = useState('')
   const [comandaId, setComandaId] = useState(null)
+  const [comandaHorarios, setComandaHorarios] = useState(0)
   const [pagamento, setPagamento] = useState(null)   // o último pagamento deste horário (090)
   const [regras, setRegras] = useState(null)         // modo/sinal do salão
   const [dinheiro, setDinheiro] = useState(null)     // prazo, quanto volta, crédito (094)
@@ -56,8 +57,10 @@ export default function ClienteAgendamento() {
       if (data.salon_id) supabase.rpc('pagamento_do_salao', { salao: data.salon_id }).then(({ data: r }) => setRegras(r ?? null))
       if (data.pago_cents > 0 || pgs?.[0]) supabase.rpc('regras_do_agendamento', { appt: data.id }).then(({ data: r }) => setDinheiro(r ?? null)); else setDinheiro(null)
       const { data: rv } = await supabase.from('reviews').select('id, nota').eq('appointment_id', data.id).maybeSingle()
-      const { data: cm } = await supabase.from('comandas').select('id').eq('appointment_id', data.id).eq('status', 'fechada').maybeSingle()
+      // o comprovante é um só por visita: o horário pode ser o principal da comanda ou um dos outros (appointment_ids)
+      const { data: cm } = await supabase.from('comandas').select('id, appointment_ids').eq('status', 'fechada').or(`appointment_id.eq.${data.id},appointment_ids.cs.{${data.id}}`).limit(1).maybeSingle()
       setComandaId(cm?.id ?? null)
+      setComandaHorarios((cm?.appointment_ids ?? []).length)
       setAvaliada(rv ?? false)
       const { data: it } = await supabase.from('appointment_services').select('id, name, price_cents, preco_cheio_cents, promocao_id, duration_minutes, ordem').eq('appointment_id', data.id).order('ordem')
       setItens(it ?? [])
@@ -160,7 +163,7 @@ export default function ClienteAgendamento() {
           <div className="agdt-item"><MapPin size={18} /><span><span className="muted agdt-rotulo">Onde</span><strong>{salao.tipo === 'salao' && salao.id ? <Link to={`/cliente/salao/${salao.id}`} className="agdt-salao-link">{salao.name}</Link> : salao.name}</strong>{endereco && <span className="muted">{endereco}</span>}{mapa && !pino && <a href={mapa} target="_blank" rel="noreferrer" className="agdt-mapa">Como chegar</a>}{pino && futuro && a.status !== 'cancelado' && <ComoChegar lat={salao.lat} lng={salao.lng} nome={salao.name} endereco={salao.address} cidade={salao.city} altura={130} />}</span></div>
         )}
         {comandaId && (
-          <div className="agdt-item"><Receipt size={18} /><span><span className="muted agdt-rotulo">Comprovante</span><strong>Atendimento fechado no balcão</strong><Link to={`/cliente/comanda/${comandaId}`} className="agdt-mapa">Ver o comprovante</Link></span></div>
+          <div className="agdt-item"><Receipt size={18} /><span><span className="muted agdt-rotulo">Comprovante</span><strong>Atendimento fechado no balcão</strong>{comandaHorarios > 1 && <span className="muted">Um comprovante só, com os {comandaHorarios} horários dessa visita.</span>}<Link to={`/cliente/comanda/${comandaId}`} className="agdt-mapa">Ver o comprovante</Link></span></div>
         )}
         {itens.length > 1 ? (
           <div className="agdt-item"><Sparkles size={18} /><span><span className="muted agdt-rotulo">Serviços</span>

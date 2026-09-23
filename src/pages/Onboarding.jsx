@@ -33,6 +33,9 @@ const ANTECEDENCIAS = [[0, 'Sem antecedência'], [30, '30 minutos'], [60, '1 hor
 const CANCELAMENTO = [['flexivel', '6 horas'], ['moderada', '12 horas'], ['rigorosa', '24 horas']]
 const CATEGORIAS_SUGERIDAS = ['Cabelo', 'Unhas', 'Estética', 'Massagem', 'Sobrancelhas', 'Maquiagem', 'Depilação', 'Barba']
 const SUPORTE = import.meta.env.VITE_SUPORTE_WHATS || ''
+const CHAVE_LOGO = 'mimo-onboarding-logo'   // a foto escolhida antes de existir conta espera aqui e sobe no primeiro acesso
+const blobParaDataUrl = (blob) => new Promise((ok, erro) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = erro; r.readAsDataURL(blob) })
+const dataUrlParaBlob = async (u) => (await fetch(u)).blob()
 const reais = (t) => { const n = Number(String(t ?? '').replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.')); return Number.isFinite(n) ? Math.round(n * 100) : 0 }
 const emReais = (c) => (Number(c ?? 0) / 100).toFixed(2).replace('.', ',')
 
@@ -51,6 +54,22 @@ export default function Onboarding({ publico = false }) {
   useEffect(() => {
     if (!salao || publico) return
     setS((x) => x ?? { ...salao })
+    // a foto escolhida no cadastro (antes da conta existir) sobe agora
+    let guardada = null
+    try { guardada = localStorage.getItem(CHAVE_LOGO) } catch { /* sem storage */ }
+    if (guardada && !salao.logo_url) {
+      ;(async () => {
+        try {
+          const blob = await dataUrlParaBlob(guardada)
+          const path = `${salao.id}/logo/${crypto.randomUUID()}.jpg`
+          const { error } = await supabase.storage.from('saloes').upload(path, blob, { contentType: 'image/jpeg', cacheControl: '31536000' })
+          if (error) return
+          const logo_url = supabase.storage.from('saloes').getPublicUrl(path).data.publicUrl
+          await supabase.rpc('onboarding_salvar', { salao: salao.id, dados: { logo_url } })
+          setS((x) => (x ? { ...x, logo_url } : x))
+        } finally { try { localStorage.removeItem(CHAVE_LOGO) } catch { /* nada */ } }
+      })()
+    }
     // retoma de onde parou; quem já concluiu e abriu de novo começa do 1 (revisão)
     setPasso((p) => (p === 1 && !salao.onboarding_concluido_em && salao.onboarding_passo > 1 ? Math.min(6, salao.onboarding_passo) : p))
   }, [salao])
@@ -228,6 +247,8 @@ function PassoDados({ s, setS, seguir, voltar, salvando, erro, setErro, user, ro
       const { data: livre } = await supabase.rpc('telefone_disponivel', { fone: f.whatsapp.trim() })
       if (livre && livre.disponivel === false) { setErro(livre.email ? `Esse WhatsApp já tem conta, no e-mail ${livre.email}. Entre com ela.` : (livre.motivo || 'Confere o WhatsApp.')); return }
       const dadosSalao = { cnpj: f.cnpj, email: f.email.trim(), whatsapp: f.whatsapp.trim(), responsavel_nome: f.responsavel_nome.trim(), address: f.address, bairro: f.bairro, city: f.city, uf: f.uf, cep: f.cep.replace(/\D/g, '') }
+      // a foto espera no navegador e sobe assim que a conta entrar no onboarding
+      try { if (logo?.blob) localStorage.setItem(CHAVE_LOGO, await blobParaDataUrl(logo.blob)); else localStorage.removeItem(CHAVE_LOGO) } catch { /* sem storage: a foto fica pra depois */ }
       if (user) {
         // já logada como cliente, sem negócio: abre agora e segue
         const { data, error } = await supabase.rpc('abrir_negocio', { tipo: s.tipo, nome_negocio: f.name.trim() || null, cidade: f.city.trim() || null })
@@ -271,7 +292,7 @@ function PassoDados({ s, setS, seguir, voltar, salvando, erro, setErro, user, ro
       <>
         <h1 className="ob-titulo">Conta criada! <span aria-hidden="true">🎉</span></h1>
         <p className="ob-sub">Falta só confirmar o e-mail</p>
-        <div className="ob-pronto"><span className="ob-pronto-check"><Check size={18} /></span><span><strong>Mandamos um link para {f.email.trim()}</strong><small>Abra o e-mail, toque em confirmar e entre. Você continua daqui, no passo 3, com tudo o que já preencheu guardado.</small></span></div>
+        <div className="ob-pronto"><span className="ob-pronto-check"><Check size={18} /></span><span><strong>Mandamos um link para {f.email.trim()}</strong><small>Abra o e-mail, toque em confirmar e entre. Você continua daqui, no passo 3, com tudo o que já preencheu guardado{logo ? ', a foto inclusive (entrando por este mesmo navegador)' : ''}.</small></span></div>
         <div className="ob-rodape"><span /><Link to="/pro/entrar" className="btn btn-primary ob-continuar">Já confirmei, entrar <ArrowRight size={16} /></Link></div>
       </>
     )
@@ -298,12 +319,12 @@ function PassoDados({ s, setS, seguir, voltar, salvando, erro, setErro, user, ro
         <div className="ob-form">
           <div className="ob-logo-campo">
             <span className="ob-rotulo">{autonoma ? 'Sua foto ou logo' : 'Logo ou foto do salão'}</span>
-            <button type="button" className={'ob-logo' + (logo ? ' com' : '')} onClick={() => (publico ? setErro('A foto entra no primeiro acesso, logo depois de confirmar o e-mail (passo 2, em Ajustes também).') : arq.current?.click())}>
+            <button type="button" className={'ob-logo' + (logo ? ' com' : '')} onClick={() => arq.current?.click()}>
               {logo ? <img src={logo.preview ?? logo.url} alt="" /> : <span className="ob-logo-vazio"><span className="ob-logo-iniciais">{(f.name || 'ES').split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase()}</span><span>{f.name || 'Seu salão'}</span></span>}
               <span className="ob-logo-cam"><Camera size={15} /></span>
             </button>
             <input ref={arq} type="file" accept="image/*" hidden onChange={trocarLogo} />
-            <small className="muted">{publico ? 'JPG ou PNG, até 5 MB. Dá pra colocar depois do primeiro acesso.' : 'JPG ou PNG. Tamanho máximo de 5 MB.'}</small>
+            <small className="muted">JPG ou PNG. Tamanho máximo de 5 MB.</small>
             {logo && <button type="button" className="link-ver" onClick={() => setLogo(null)}>Remover</button>}
           </div>
           <label>CEP<input value={formatarCep(f.cep)} onChange={(e) => porCep(e.target.value)} placeholder="11060-300" inputMode="numeric" />{buscandoCep && <small className="muted">buscando…</small>}</label>

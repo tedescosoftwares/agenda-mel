@@ -13,6 +13,9 @@ import { formatDataLonga } from '../../lib/booking'
 // (cada serviço, o sinal, o resto no atendimento), as condições com o
 // "li e aceito", o QR com o relógio dos 15 minutos, e o comprovante.
 // Depois de pago ela vê o comprovante e segue pelo botão; não pula sozinha.
+const FORMA = { dinheiro: 'Dinheiro', debito: 'Cartão de débito', credito: 'Cartão de crédito', pix: 'PIX no balcão', app: 'Pago pelo app', outro: 'Outro' }
+const hojeIso = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
+
 export default function ClientePagamento() {
   const { appt } = useParams()
   const { user, profile, recarregarPerfil } = useAuth()
@@ -28,6 +31,7 @@ export default function ClientePagamento() {
   const [erro, setErro] = useState('')
   const [copiado, setCopiado] = useState(false)
   const [restante, setRestante] = useState(null)
+  const [comanda, setComanda] = useState(null)   // o fechamento no balcão, quando já houve (comprovante_da_comanda)
   const [estado, setEstado] = useState('carregando')   // carregando | resumo | cpf | gerando | aguardando | pago | expirado | erro
   const canvas = useRef(null)
 
@@ -48,6 +52,9 @@ export default function ClientePagamento() {
       setItens(it ?? [])
       setRegras(r ?? null)
       // pago: comprovante do pagamento; devolvido (ou devolvendo): comprovante da devolução
+      // se o salão já fechou a visita, o comprovante do sinal mostra também como o resto foi pago
+      const { data: cm } = await supabase.from('comandas').select('id').eq('status', 'fechada').or(`appointment_id.eq.${data.id},appointment_ids.cs.{${data.id}}`).limit(1).maybeSingle()
+      if (cm?.id) { const { data: cp } = await supabase.rpc('comprovante_da_comanda', { comanda: cm.id }); setComanda(cp ?? null) } else setComanda(null)
       if (pgs?.[0]?.status === 'pago') { setPago(pgs[0]); setEstado('pago') }
       else if (pgs?.[0]) { setPago(pgs[0]); setEstado('devolvido') }
       else if (data.status === 'cancelado') { setEstado('erro'); setErro('Este horário foi cancelado.') }
@@ -100,6 +107,9 @@ export default function ClientePagamento() {
   }
 
   const [simulando, setSimulando] = useState(false)
+  // depois que a visita fechou, nada mais falta; e só faz sentido 'seguir' quando o horário ainda vai acontecer
+  const fechado = a?.status === 'concluido' || Boolean(comanda)
+  const futuro = Boolean(a) && (a.status === 'pendente' || a.status === 'confirmado') && a.date >= hojeIso()
   const [simulado, setSimulado] = useState('')
   async function simular() {
     setSimulando(true); setErro('')
@@ -197,8 +207,8 @@ export default function ClientePagamento() {
         <>
           <div className="card sucesso pag-pago">
             <span className="sucesso-check" aria-hidden="true"><Check /></span>
-            <h2>Pagamento confirmado!</h2>
-            <p className="muted">Seu horário já está confirmado na agenda da profissional.</p>
+            <h2>{fechado ? 'Atendimento concluído' : 'Pagamento confirmado!'}</h2>
+            <p className="muted">{fechado ? (comanda ? 'Você pagou o sinal pelo app e o restante no salão. Está tudo aqui.' : 'O sinal foi pago pelo app.') : a.status === 'cancelado' ? 'Este horário foi cancelado.' : 'Seu horário já está confirmado na agenda da profissional.'}</p>
           </div>
           <div className="card pag-comprovante">
             <div className="pag-comprovante-topo"><Receipt size={18} /><strong>Comprovante</strong></div>
@@ -209,18 +219,31 @@ export default function ClientePagamento() {
             <div className="resumo-linha"><span className="muted">Com</span><strong>{a.professionals?.name}</strong></div>
             <div className="resumo-linha"><span className="muted">Data</span><strong>{formatDataLonga(a.date)}</strong></div>
             <div className="resumo-linha"><span className="muted">Horário</span><strong>{a.start_time?.slice(0, 5)}</strong></div>
-            {itens.length > 0 ? itens.map((x) => (
+            {!comanda && (itens.length > 0 ? itens.map((x) => (
               <div key={x.id} className="resumo-linha pag-item"><span>{x.name}</span><span>{formatCents(x.price_cents)}</span></div>
             )) : (
               <div className="resumo-linha pag-item"><span>{a.service_name ?? a.services?.name}</span><span>{formatCents(total)}</span></div>
+            ))}
+            {!comanda && <div className="resumo-linha"><span className="muted">Total dos serviços</span><strong>{formatCents(pago.total_cents ?? total)}</strong></div>}
+            {!fechado && (pago.total_cents ?? total) - pago.valor_cents > 0 && <div className="resumo-linha"><span className="muted">Restante no atendimento</span><strong>{formatCents((pago.total_cents ?? total) - pago.valor_cents)}</strong></div>}
+            {comanda && (
+              <div className="pag-no-salao">
+                <div className="pag-comprovante-topo"><Receipt size={16} /><strong>No salão, ao fechar</strong></div>
+                {(comanda.itens ?? []).map((x, k) => <div key={k} className="resumo-linha pag-item"><span>{x.nome}{(x.qtd ?? 1) > 1 ? ` × ${x.qtd}` : ''}</span><span>{formatCents(x.preco_cents * (x.qtd ?? 1))}</span></div>)}
+                {comanda.desconto_cents > 0 && <div className="resumo-linha"><span className="muted">Desconto</span><strong>− {formatCents(comanda.desconto_cents)}</strong></div>}
+                <div className="resumo-linha resumo-total"><span>Total do atendimento</span><strong>{formatCents(comanda.total_cents)}</strong></div>
+                <div className="cupom-pagamentos">{(comanda.pagamentos ?? []).map((p, k) => (
+                  <div key={k} className="resumo-linha"><span className="muted">{p.forma === 'app' ? 'Sinal pago pelo app' : `${FORMA[p.forma] ?? p.forma}${p.parcelas > 1 ? ` em ${p.parcelas}x` : ''}${p.detalhe ? ` · ${p.detalhe}` : ''}${p.troco_cents > 0 ? ` · entregue ${formatCents(p.recebido_cents)}, troco ${formatCents(p.troco_cents)}` : ''}`}</span><strong>{formatCents(p.valor_cents)}</strong></div>
+                ))}</div>
+                {comanda.atendida_por && <p className="muted pag-comprovante-id">Com {comanda.atendida_por} · comprovante nº {String(comanda.id).slice(0, 8)}</p>}
+              </div>
             )}
-            <div className="resumo-linha"><span className="muted">Total dos serviços</span><strong>{formatCents(pago.total_cents ?? total)}</strong></div>
-            {(pago.total_cents ?? total) - pago.valor_cents > 0 && <div className="resumo-linha"><span className="muted">Restante no atendimento</span><strong>{formatCents((pago.total_cents ?? total) - pago.valor_cents)}</strong></div>}
             {pago.cobranca_id && <p className="muted pag-comprovante-id">Identificação do pagamento: {pago.cobranca_id}</p>}
             {pago.termos_aceitos_em && <p className="muted pag-comprovante-id">Condições aceitas em {new Date(pago.termos_aceitos_em).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}.</p>}
           </div>
-          <Link to={`/cliente/agendamento/sucesso/${appt}`} className="btn btn-primary btn-block">Tudo certo, seguir</Link>
-          <Link to={`/cliente/agendamento/${appt}`} className="btn btn-ghost btn-block">Ver o horário</Link>
+          {futuro ? <Link to={`/cliente/agendamento/sucesso/${appt}`} className="btn btn-primary btn-block">Tudo certo, seguir</Link> : <Link to={`/cliente/agendamento/${appt}`} className="btn btn-primary btn-block">Ver o horário</Link>}
+          {futuro && <Link to={`/cliente/agendamento/${appt}`} className="btn btn-ghost btn-block">Ver o horário</Link>}
+          {comanda && <Link to={`/cliente/comanda/${comanda.id}?de=${appt}`} className="btn btn-ghost btn-block">Comprovante completo do atendimento</Link>}
         </>
       )}
 

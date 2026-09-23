@@ -6744,7 +6744,7 @@ label.check input { margin-top: 3px; }
 .cupom-pagamentos .resumo-linha > strong { flex: none; white-space: nowrap; }
 .fc-tecla { padding: 0.6rem; }
 .cliente-shell .cupom-pagamentos .resumo-linha { display: flex; }
-.cliente-shell .cupom-pagamentos .resumo-linha > .muted { white-space: normal; overflow: visible; text-overflow: clip; }
+.cliente-shell .cupom-pagamentos .resumo-linha > .muted:first-child { flex: 1; min-width: 0; white-space: normal; overflow: visible; text-overflow: clip; }
 
 /* ---- movimentação ao vivo no PDV (106) ---- */
 .pdv-sino { position: relative; width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--fio); background: #fff; display: grid; place-items: center; cursor: pointer; color: var(--grafite, #1f2026); }
@@ -6871,3 +6871,7 @@ label.check input { margin-top: 3px; }
 /* cliente · visita ajustada no salão (serviço somado ao mesmo horário) */
 .ag-nota.ag-ajustado { color: #6d28d9; }
 .agdt-ajustado { display: flex; gap: 0.3rem; align-items: flex-start; font-size: 0.78rem; color: #6d28d9 !important; margin-top: 0.25rem; }
+
+/* comprovante do sinal · o fechamento no salão, quando já houve */
+.pag-no-salao { margin-top: 0.6rem; padding-top: 0.6rem; border-top: 1px dashed var(--fio); display: flex; flex-direction: column; gap: 0.35rem; }
+.pag-no-salao .pag-comprovante-topo { margin-bottom: 0.1rem; }

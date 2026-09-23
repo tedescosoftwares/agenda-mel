@@ -125,17 +125,17 @@ export function MockRetorno() {
       <div className="ld-retorno-resumo"><RotateCcw size={18} /><strong>3 clientes para retornar hoje</strong></div>
       <article className="ld-retorno-carta">
         <div className="ld-avatar">C</div>
-        <div><strong>Camila</strong><small>Último atendimento: 32 dias</small><small>Serviço: manutenção em gel · com Bia</small></div>
+        <div><strong>Camila Souza</strong><small>Último atendimento: 32 dias</small><small>Serviço: manutenção em gel · com Bia</small></div>
         <span className="ld-btn ld-whats"><MessageCircle size={14} /> Chamar no WhatsApp</span>
       </article>
       <article className="ld-retorno-carta">
         <div className="ld-avatar b">J</div>
-        <div><strong>Juliana</strong><small>Retorno sugerido esta semana</small><small>Último serviço: coloração · com Ana</small></div>
+        <div><strong>Juliana Martins</strong><small>Retorno sugerido esta semana</small><small>Último serviço: coloração · com Ana</small></div>
         <span className="ld-chip">manutenção</span>
       </article>
       <article className="ld-retorno-carta apagada">
         <div className="ld-avatar c">P</div>
-        <div><strong>Paula</strong><small>Último atendimento: 47 dias</small><small>Sobrancelha · com Carla</small></div>
+        <div><strong>Paula Ribeiro</strong><small>Último atendimento: 47 dias</small><small>Sobrancelha · com Carla</small></div>
         <span className="ld-chip">sumida</span>
       </article>
     </div>
@@ -147,8 +147,8 @@ export function MockEspera() {
   return (
     <div className="ld-espera">
       <div className="ld-espera-topo"><Ban size={16} /><div><strong>16:30 ficou disponível</strong><small>Renata cancelou · manicure com Bia</small></div></div>
-      <small className="ld-espera-rotulo">Possíveis clientes</small>
-      {[['Mariana', 'quer manicure', '15h–18h', 'M'], ['Carla', 'quer manicure', '16h–19h', 'C']].map(([n, q, f, l]) => (
+      <small className="ld-espera-rotulo">Clientes compatíveis</small>
+      {[['Mariana', 'Manicure', 'pode entre 15h e 18h', 'M'], ['Carla', 'Manicure', 'pode entre 16h e 19h', 'C']].map(([n, q, f, l]) => (
         <div className="ld-espera-item" key={n}><div className="ld-avatar">{l}</div><div><strong>{n}</strong><small>{q} · {f}</small></div><Check size={16} /></div>
       ))}
       <span className="ld-btn ld-primario ld-espera-btn">Preencher horário</span>
@@ -184,6 +184,7 @@ export function MockPagamento() {
         <div><span>Serviço</span><b>R$ 180</b></div>
         <div className="ld-pag-sinal"><span>Sinal <small>pago por Pix</small></span><b>R$ 50</b></div>
         <div><span>Restante <small>no salão, ao fechar</small></span><b>R$ 130</b></div>
+        <div className="ld-pag-status"><span>Status</span><b>Sinal pago · restante em aberto</b></div>
       </div>
       <div className="ld-pag-barra"><i style={{ width: '28%' }} /></div>
       <div className="ld-pag-pe"><Receipt size={14} /> O status financeiro fica no próprio atendimento, e na comanda quando o dia fecha.</div>

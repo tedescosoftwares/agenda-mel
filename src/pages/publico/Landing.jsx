@@ -6,6 +6,7 @@ import {
 import { useSeo } from '../../lib/seo'
 import { NavSite, PeSite, Foto, Coracao, MarcaCartaz, Cabeca, useRevelar, comecarEm } from '../../components/site/Pecas'
 import { PalcoCelular, MockDesktop, MockProfissional, MockRetorno, MockEspera, MockWhats, MockPagamento, MockQr, VINCULOS } from '../../components/site/Mocks'
+import { RotinaCartas, Historias, AntesDepois, ProdutoReal, Tamanhos, Simulador, CapturaLead, Confianca, PorQue } from '../../components/site/Secoes'
 import '../../landing.css'
 
 // A porta da rua: mimo.com.vc para quem ainda não é de casa. Fala com a
@@ -42,9 +43,9 @@ const CARTAZES = [
 
 const GRUPOS = [
   { Icone: CalendarDays, nome: 'Agenda', itens: ['Agenda geral', 'Agenda por profissional', 'Bloqueios', 'Pausas', 'Encaixes', 'Múltiplos serviços', 'Lista de espera'] },
-  { Icone: Heart, nome: 'Clientes', itens: ['Histórico', 'Retorno', 'Preferências', 'Origem', 'Avaliações'] },
+  { Icone: Heart, nome: 'Clientes', itens: ['Histórico', 'Origem', 'Retorno', 'Preferências', 'Avaliações'] },
   { Icone: Users, nome: 'Equipe', itens: ['Vínculos', 'Serviços', 'Horários', 'Permissões', 'Comissões'] },
-  { Icone: MessageCircle, nome: 'Comunicação', itens: ['WhatsApp', 'Confirmação', 'Lembretes', 'Reagendamento', 'Pós-atendimento'] },
+  { Icone: MessageCircle, nome: 'Comunicação', itens: ['WhatsApp', 'Confirmação', 'Lembrete', 'Reagendamento', 'Pós-atendimento', 'Retorno'] },
   { Icone: Wallet, nome: 'Financeiro', itens: ['Sinal', 'Pagamentos', 'Comanda', 'Caixa', 'Comissões'] },
 ]
 
@@ -76,7 +77,6 @@ const JSON_LD = {
 export default function Landing() {
   const raiz = useRevelar()
   const comecar = comecarEm
-
   useSeo({ titulo: TITULO, descricao: DESCRICAO, caminho: '/', jsonLd: JSON_LD })
 
   return (
@@ -92,7 +92,7 @@ export default function Landing() {
               <h1>Sua rotina no lugar.<span>Seus clientes mais perto.</span></h1>
               <Coracao className="ld-hero-coracao" />
               <p className="ld-lead">A MIMO conecta agenda, clientes, equipe, WhatsApp, retorno e pagamentos numa experiência feita para a rotina real de quem trabalha com beleza.</p>
-              <p className="ld-lead ld-lead-2">Menos conversa perdida. Menos horário vazio. Mais organização para o salão e mais facilidade para a cliente.</p>
+              <p className="ld-lead ld-lead-2">Menos conversa perdida. Menos horário vazio. Mais clareza para trabalhar.</p>
               <div className="ld-hero-cta">
                 <a className="ld-btn ld-primario ld-grande" href={comecar()}>Começar agora <ArrowRight size={18} /></a>
                 <a className="ld-btn ld-fantasma ld-grande" href="#como-funciona">Ver como funciona</a>
@@ -119,44 +119,40 @@ export default function Landing() {
         {/* ---------- A ROTINA REAL ---------- */}
         <section>
           <div className="ld-wrap">
-            <Cabeca kicker="A rotina real" titulo={['Um salão não funciona em uma tela só.', 'Por isso a MIMO conecta tudo.']} />
+            <Cabeca kicker="A rotina real do salão" titulo={['Um salão não funciona em uma tela só.', 'Por isso a MIMO conecta tudo.']} />
             <div className="ld-rotina">
               <div className="ld-rotina-foto ld-rv"><Foto nome="salao" alt="Salão de beleza com recepção, cadeiras e espelhos iluminados" /></div>
               <div className="ld-rotina-texto ld-rv">
                 <p>A agenda é só uma parte da rotina.</p>
-                <p>Tem cliente perguntando horário no WhatsApp, profissional com disponibilidade diferente, cancelamento de última hora, comissão, retorno, encaixe e uma cadeira que não pode ficar vazia.</p>
-                <p>A MIMO conecta essas partes para o salão não depender de memória, papel e dez ferramentas diferentes.</p>
+                <p>Tem cliente perguntando horário no WhatsApp, profissional com disponibilidade diferente, cancelamento de última hora, retorno, encaixe, pagamento e uma cadeira que não pode ficar vazia.</p>
+                <p>A MIMO conecta essas partes para o salão não depender de memória, papel e várias ferramentas desconectadas.</p>
               </div>
-              <div className="ld-rotina-cartas">
-                {[[CalendarDays, 'Agenda', 'Horários, bloqueios, encaixes e múltiplos serviços.'], [Heart, 'Clientes', 'Histórico, preferências, retornos e relacionamento.'], [Users, 'Equipe', 'Cada profissional com seus serviços, horários e regras.'], [MessageCircle, 'Comunicação', 'Confirmações, lembretes e retorno pelo WhatsApp.']].map(([Ic, t, d], i) => (
-                  <article className="ld-rotina-carta ld-rv" key={t} style={{ transitionDelay: `${i * 70}ms` }}><div className="ld-ico"><Ic size={22} /></div><h3>{t}</h3><p>{d}</p></article>
-                ))}
-              </div>
+              <RotinaCartas />
             </div>
           </div>
         </section>
 
-        {/* ---------- COMO A MIMO CONECTA ---------- */}
+        {/* ---------- HISTÓRIAS DE USO ---------- */}
         <section id="como-funciona" className="ld-alt">
           <div className="ld-wrap">
-            <Cabeca kicker="Como a MIMO funciona" titulo={['Cliente, profissional e salão.', 'Tudo conectado, sem misturar as relações.']} centro />
-            <div className="ld-conecta">
-              <div className="ld-grafo ld-rv">
-                <div className="ld-no ld-no-cliente"><i><UserRound size={22} /></i><strong>Cliente</strong><span>uma conta, vários negócios</span></div>
-                <span className="ld-seta" aria-hidden="true"><ArrowRight size={22} /></span>
-                <div className="ld-no ld-no-salao"><i><LayoutGrid size={22} /></i><strong>Salão</strong><span>vínculo por QR, link, convite</span></div>
-                <span className="ld-seta" aria-hidden="true"><ArrowRight size={22} /></span>
-                <div className="ld-no ld-no-prof"><i><Scissors size={22} /></i><strong>Profissional</strong><span>origem e histórico guardados</span></div>
-              </div>
-              <div className="ld-conecta-baixo">
-              <div className="ld-conecta-foto ld-rv"><Foto nome="cliente" alt="Cliente escolhendo data e horário no celular com a profissional, no balcão do salão" /></div>
-              <div className="ld-conecta-texto ld-rv">
-                <p>Na MIMO, a cliente não precisa entrar em um marketplace genérico para procurar seu salão.</p>
-                <p>Ela pode chegar pelo seu QR Code, link, convite ou por uma profissional do salão. A MIMO registra essa origem e mantém o relacionamento organizado dentro do contexto correto.</p>
-                <p className="ld-sub">Uma cliente pode conhecer vários negócios. Cada relação continua sendo independente.</p>
-              </div>
-              </div>
-            </div>
+            <Cabeca kicker="Histórias de uso" titulo={['A MIMO trabalha', 'quando a rotina muda.']}>Uma cliente cancela, outra some, entra uma profissional nova, alguém escaneia o QR do balcão. É nessas horas que a agenda de papel trava e a MIMO segue.</Cabeca>
+            <Historias />
+          </div>
+        </section>
+
+        {/* ---------- ANTES × COM MIMO ---------- */}
+        <section>
+          <div className="ld-wrap">
+            <Cabeca kicker="Antes × com MIMO" titulo={['A informação existe.', 'A diferença é onde ela mora.']} centro />
+            <AntesDepois />
+          </div>
+        </section>
+
+        {/* ---------- PRODUTO REAL ---------- */}
+        <section className="ld-alt">
+          <div className="ld-wrap">
+            <Cabeca kicker="Produto real" titulo={['Não é só agenda.', 'É o dia inteiro do salão conectado.']} centro>O salão no PC, a profissional e a cliente no celular. Cada parte da rotina tem um lugar, e todas conversam.</Cabeca>
+            <ProdutoReal />
           </div>
         </section>
 
@@ -180,20 +176,14 @@ export default function Landing() {
           <div className="ld-wrap ld-duas">
             <div>
               <Cabeca kicker="Equipe e vínculos" titulo={['Cada profissional trabalha de um jeito.', 'A MIMO acompanha isso.']}>
-                O salão cadastra a profissional e define como ela trabalha dentro da operação. Serviços, horários, agenda e permissões são configurados pelo próprio salão.
+                O salão cadastra a profissional e define como ela trabalha dentro da operação. Serviços, horários, agenda, acesso e permissões são configurados pelo próprio salão.
               </Cabeca>
               <div className="ld-vinculos ld-rv">
                 {VINCULOS.map((v) => <span className="ld-chip" key={v}>{v}</span>)}
               </div>
-              <p className="ld-sub ld-rv">O tipo de vínculo funciona como uma configuração inicial. O salão continua podendo ajustar horários, serviços e permissões individualmente.</p>
+              <p className="ld-sub ld-rv">O vínculo funciona como uma configuração inicial. Depois o salão pode ajustar regras individualmente. A profissional recebe o convite e ativa o acesso quando tudo já está pronto.</p>
             </div>
             <div className="ld-rv"><MockProfissional /></div>
-          </div>
-          <div className="ld-wrap">
-            <figure className="ld-faixa ld-rv">
-              <Foto nome="equipe" alt="Dona do salão e duas profissionais olhando a agenda no tablet" />
-              <figcaption>Cada uma com a sua agenda. O salão com a visão geral.</figcaption>
-            </figure>
           </div>
         </section>
 
@@ -203,9 +193,9 @@ export default function Landing() {
             <div className="ld-rv"><MockRetorno /></div>
             <div>
               <Cabeca kicker="Clientes e retorno" titulo={['A agenda termina.', 'O relacionamento continua.']}>
-                A MIMO ajuda o salão a lembrar quem deveria voltar, quem está há muito tempo sem atendimento e quem já tem histórico com determinada profissional.
+                A MIMO ajuda o salão a lembrar quem deveria voltar, quem está há muito tempo sem atendimento e quem possui histórico com determinada profissional.
               </Cabeca>
-              <ul className="ld-checks ld-rv"><li>Manutenção no prazo certo</li><li>Recorrência sem depender da memória</li><li>Histórico por profissional e por serviço</li><li>Retenção que vira ação, não relatório</li></ul>
+              <ul className="ld-checks ld-rv"><li>Manutenção no prazo certo</li><li>Recorrência sem depender da memória</li><li>Histórico por profissional e por serviço</li><li>Encontre quem deveria voltar, sem procurar conversa antiga</li></ul>
             </div>
           </div>
         </section>
@@ -215,7 +205,7 @@ export default function Landing() {
           <div className="ld-wrap ld-duas">
             <div>
               <Cabeca kicker="Lista de espera" titulo={['Cancelou?', 'A vaga não precisa morrer junto.']}>
-                Quando um horário fica livre, a MIMO ajuda o salão a encontrar clientes da lista de espera que combinam com aquele serviço, profissional e período.
+                Quando um horário fica livre, a MIMO ajuda o salão a encontrar clientes da lista de espera compatíveis com aquele serviço, profissional e período.
               </Cabeca>
             </div>
             <div className="ld-rv"><MockEspera /></div>
@@ -228,7 +218,7 @@ export default function Landing() {
             <div className="ld-rv"><MockWhats /></div>
             <div>
               <Cabeca kicker="WhatsApp" titulo={['O WhatsApp continua sendo WhatsApp.', 'Só deixa de ser bagunça.']}>
-                Confirmação, lembrete, cancelamento, reagendamento e retorno acompanham o contexto real da agenda. A conversa não precisa ficar desconectada do atendimento.
+                Confirmação, lembrete, cancelamento, reagendamento e retorno acompanham o contexto real da agenda. Confirme um horário sem procurar conversa antiga.
               </Cabeca>
             </div>
           </div>
@@ -239,7 +229,7 @@ export default function Landing() {
           <div className="ld-wrap ld-duas">
             <div>
               <Cabeca kicker="Pagamentos" titulo={['Agenda e pagamento', 'falando a mesma língua.']}>
-                Quando habilitado pelo salão, o agendamento pode trabalhar com sinal ou pagamento completo. O status financeiro fica ligado ao próprio atendimento.
+                Quando habilitado pelo salão, o agendamento pode trabalhar com sinal ou pagamento completo. O status financeiro acompanha o próprio atendimento.
               </Cabeca>
             </div>
             <div className="ld-rv"><MockPagamento /></div>
@@ -261,19 +251,23 @@ export default function Landing() {
           </div>
         </section>
 
-        {/* ---------- DIFERENCIAL ---------- */}
+        {/* ---------- DIFERENCIAL DE RELACIONAMENTO ---------- */}
         <section className="ld-manifesto">
           <div className="ld-wrap ld-manifesto-grade">
             <div className="ld-rv">
               <span className="ld-kicker">O que a MIMO acredita</span>
               <h2>A MIMO não quer tomar sua cliente. Quer ajudar você a cuidar melhor da relação.</h2>
               <p>Clientes não são propriedade de uma plataforma. Por isso a MIMO separa identidade, vínculo e origem.</p>
-              <div className="ld-nota">Se uma cliente chegou pelo seu salão ou por uma profissional da sua equipe, essa informação continua registrada.</div>
+              <div className="ld-nota">Se uma cliente chegou pelo salão, por uma profissional ou por uma campanha, essa informação continua registrada no contexto correto.</div>
             </div>
-            <blockquote className="ld-citacao ld-rv">
-              Beleza, <em>organização</em> e relacionamento. Não é software de contador.
-              <Coracao className="ld-citacao-coracao" />
-            </blockquote>
+            <div className="ld-grafo ld-grafo-escuro ld-rv">
+              <div className="ld-no ld-no-cliente"><i><UserRound size={22} /></i><strong>Cliente</strong><span>uma conta, vários negócios</span></div>
+              <span className="ld-seta" aria-hidden="true"><ArrowRight size={22} /></span>
+              <div className="ld-no ld-no-salao"><i><LayoutGrid size={22} /></i><strong>Salão</strong><span>vínculo por QR, link, convite</span></div>
+              <span className="ld-seta" aria-hidden="true"><ArrowRight size={22} /></span>
+              <div className="ld-no ld-no-prof"><i><Scissors size={22} /></i><strong>Profissional</strong><span>quem atendeu fica no histórico</span></div>
+              <div className="ld-grafo-tags"><span>origem registrada</span><span>vínculo preservado</span><span>histórico separado</span></div>
+            </div>
           </div>
         </section>
 
@@ -294,6 +288,14 @@ export default function Landing() {
                 </article>
               ))}
             </div>
+          </div>
+        </section>
+
+        {/* ---------- FEITA PARA CADA TAMANHO ---------- */}
+        <section>
+          <div className="ld-wrap">
+            <Cabeca kicker="Feita para cada tamanho" titulo={['Feita para o tamanho', 'que você tem hoje.']} centro />
+            <Tamanhos />
           </div>
         </section>
 
@@ -324,22 +326,11 @@ export default function Landing() {
           </div>
         </section>
 
-        {/* ---------- FUNCIONALIDADES ---------- */}
-        <section id="funcionalidades">
+        {/* ---------- SIMULADOR ---------- */}
+        <section id="simulador">
           <div className="ld-wrap">
-            <Cabeca kicker="Funcionalidades" titulo={['Tudo o que a rotina pede,', 'agrupado do jeito que ela acontece.']} centro />
-            <figure className="ld-faixa ld-faixa-alta ld-rv">
-              <Foto nome="painel" alt="Notebook com o painel do salão e celular com o app da cliente, sobre a bancada" />
-              <figcaption>O salão no PC, a profissional e a cliente no celular.</figcaption>
-            </figure>
-            <div className="ld-grupos">
-              {GRUPOS.map(({ Icone, nome, itens }, i) => (
-                <article className="ld-grupo ld-rv" key={nome} style={{ transitionDelay: `${i * 50}ms` }}>
-                  <div className="ld-grupo-topo"><div className="ld-ico"><Icone size={20} /></div><h3>{nome}</h3></div>
-                  <ul>{itens.map((it) => <li key={it}>{it}</li>)}</ul>
-                </article>
-              ))}
-            </div>
+            <Cabeca kicker="Simulador de preço" titulo={['Veja quanto ficaria', 'para o seu salão.']} centro />
+            <Simulador />
           </div>
         </section>
 
@@ -353,7 +344,7 @@ export default function Landing() {
                 <h3>Grátis</h3>
                 <div className="ld-preco">R$ 0 <small>/mês</small></div>
                 <p>Para quem trabalha por conta própria.</p>
-                <ul className="ld-checks"><li>1 agenda profissional</li><li>Clientes</li><li>Serviços</li><li>Horários</li><li>QR e link</li></ul>
+                <ul className="ld-checks"><li>1 agenda profissional</li><li>Serviços</li><li>Clientes</li><li>Horários</li><li>QR e link</li><li>Retorno</li></ul>
                 <a className="ld-btn ld-fantasma" href={comecar('autonoma')}>Criar agenda grátis</a>
               </article>
               <article className="ld-plano ld-quente ld-rv">
@@ -369,15 +360,39 @@ export default function Landing() {
           </div>
         </section>
 
-        {/* ---------- CONTEÚDO ---------- */}
+        {/* ---------- POR QUE A MIMO EXISTE ---------- */}
+        <section>
+          <div className="ld-wrap">
+            <Cabeca kicker="Por que a MIMO existe" titulo={['A MIMO começou', 'olhando a rotina real.']} />
+            <PorQue />
+          </div>
+        </section>
+
+        {/* ---------- FUNCIONALIDADES ---------- */}
+        <section id="funcionalidades" className="ld-alt">
+          <div className="ld-wrap">
+            <Cabeca kicker="Funcionalidades" titulo={['Tudo o que a rotina pede,', 'agrupado do jeito que ela acontece.']} centro />
+            <div className="ld-grupos">
+              {GRUPOS.map(({ Icone, nome, itens }, i) => (
+                <article className="ld-grupo ld-rv" key={nome} style={{ transitionDelay: `${i * 50}ms` }}>
+                  <div className="ld-grupo-topo"><div className="ld-ico"><Icone size={20} /></div><h3>{nome}</h3></div>
+                  <ul>{itens.map((it) => <li key={it}>{it}</li>)}</ul>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ---------- MIMO ENSINA ---------- */}
         <section id="conteudos">
           <div className="ld-wrap">
-            <Cabeca kicker="Conteúdos" titulo={['O que a dona do salão', 'já está perguntando.']}>Guias curtos, ligados à rotina. Sem blog genérico. <Link to="/blog" className="ld-link">Ver todos os guias →</Link></Cabeca>
+            <Cabeca kicker="MIMO ensina" titulo={['Rotina de salão,', 'sem enrolação.']}>Guias curtos, ligados à rotina. Úteis mesmo para quem ainda não usa a MIMO.</Cabeca>
             <div className="ld-artigos">
               {ARTIGOS.map(([tag, t, d, slug], i) => (
                 <Link className="ld-artigo ld-rv" to={`/blog/${slug}`} key={slug} style={{ transitionDelay: `${i * 60}ms` }}><small>{tag}</small><h3>{t}</h3><p>{d}</p><span className="ld-embreve">Ler o guia →</span></Link>
               ))}
             </div>
+            <div className="ld-centro-botao ld-rv"><Link className="ld-btn ld-fantasma" to="/blog">Ver todos os conteúdos <ArrowRight size={16} /></Link></div>
           </div>
         </section>
 
@@ -396,9 +411,21 @@ export default function Landing() {
           </div>
         </section>
 
-        {/* ---------- CTA ---------- */}
-        <section>
+        {/* ---------- CAPTURA DE LEAD ---------- */}
+        <section id="quero-ver">
+          <div className="ld-wrap ld-captura">
+            <div className="ld-rv">
+              <Cabeca kicker="Vamos conversar" titulo={['Quer ver como a MIMO', 'ficaria no seu salão?']}>Conta quantas profissionais atendem e a gente te mostra a agenda montada do seu jeito, sem compromisso.</Cabeca>
+              <ul className="ld-checks"><li>Resposta de gente, pelo WhatsApp</li><li>Sem cartão, sem contrato</li><li>Se preferir, crie a conta agora e veja por dentro</li></ul>
+            </div>
+            <CapturaLead />
+          </div>
+        </section>
+
+        {/* ---------- CONFIANÇA + CTA ---------- */}
+        <section className="ld-alt ld-fim">
           <div className="ld-wrap">
+            <Confianca />
             <div className="ld-cta ld-rv">
               <div>
                 <h2>A agenda é só o começo. A relação é o produto.</h2>
@@ -418,4 +445,3 @@ export default function Landing() {
     </div>
   )
 }
-

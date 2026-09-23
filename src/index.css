@@ -7363,3 +7363,5 @@ button.quadro-col-cabeca:hover strong { color: var(--rosa); }
 .form-label-solto textarea, .form-label-solto select { border: 1px solid var(--fio); border-radius: 10px; padding: 0.55rem 0.7rem; font: inherit; }
 .seo-editor.mono, textarea.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 @media (max-width: 900px) { .seo-duas, .seo-linha-3 { grid-template-columns: 1fr; } }
+
+.seo-lido td { opacity: 0.6; }

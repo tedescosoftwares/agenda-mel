@@ -4,7 +4,7 @@ import Shell from '../../components/plataforma/Shell'
 import { Cabecalho, Painel, Pilula, Vazio } from '../../components/plataforma/Pecas'
 import { supabase } from '../../lib/supabase'
 import { useDialogo } from '../../context/DialogoContext'
-import { Globe, FileText, Newspaper, Tags, Wrench, ArrowRightLeft, ExternalLink, Plus, Search } from 'lucide-react'
+import { Globe, FileText, Newspaper, Tags, Wrench, ArrowRightLeft, ExternalLink, Plus, Search, Inbox, MessageCircle } from 'lucide-react'
 
 // SEO e Conteúdo (116): o site público, cuidado daqui. Páginas com
 // title/description/OG e prévia do Google, artigos do blog com editor
@@ -12,7 +12,7 @@ import { Globe, FileText, Newspaper, Tags, Wrench, ArrowRightLeft, ExternalLink,
 // e redirecionamentos. Não é o painel do salão: é o da plataforma.
 
 const SITE = 'https://mimo.com.vc'
-const ABAS = [['paginas', 'Páginas', FileText], ['artigos', 'Artigos', Newspaper], ['categorias', 'Categorias', Tags], ['tecnico', 'SEO Técnico', Wrench], ['redirects', 'Redirecionamentos', ArrowRightLeft]]
+const ABAS = [['paginas', 'Páginas', FileText], ['artigos', 'Artigos', Newspaper], ['categorias', 'Categorias', Tags], ['tecnico', 'SEO Técnico', Wrench], ['redirects', 'Redirecionamentos', ArrowRightLeft], ['leads', 'Leads', Inbox]]
 const TIPO = { HOME: 'home', INSTITUTIONAL: 'institucional', SEO_LANDING: 'SEO', BLOG_INDEX: 'blog', OTHER: 'outra' }
 const dataBr = (iso) => (iso ? new Date(iso).toLocaleDateString('pt-BR') : '—')
 
@@ -27,6 +27,7 @@ export default function Seo() {
       {aba === 'categorias' && <Categorias />}
       {aba === 'tecnico' && <Tecnico />}
       {aba === 'redirects' && <Redirects />}
+      {aba === 'leads' && <Leads />}
     </Shell>
   )
 }
@@ -306,5 +307,24 @@ function Redirects() {
         <div className="form"><label>De (caminho antigo)<input value={novo.from_path} onChange={(e) => setNovo({ ...novo, from_path: e.target.value })} placeholder="/cadastro-antigo" /></label><label>Para<input value={novo.to_path} onChange={(e) => setNovo({ ...novo, to_path: e.target.value })} placeholder="/comecar ou https://…" /></label><label>Código<select value={novo.http_status} onChange={(e) => setNovo({ ...novo, http_status: e.target.value })}><option value={301}>301 permanente</option><option value={302}>302 temporário</option></select></label><button className="btn btn-primary" onClick={criar}>Criar</button></div>
       </Painel>
     </div>
+  )
+}
+
+// ---------- Leads da landing (117) ----------
+const FAIXA = { '1': 'só ela', '2-3': '2 a 3', '4-6': '4 a 6', '7-10': '7 a 10', '11+': 'mais de 10' }
+function Leads() {
+  const [linhas, setLinhas] = useState(null)
+  const carregar = () => supabase.from('landing_leads').select('*').order('created_at', { ascending: false }).limit(200).then(({ data }) => setLinhas(data ?? []))
+  useEffect(() => { carregar() }, [])
+  async function atendido(l) { await supabase.from('landing_leads').update({ atendido_em: l.atendido_em ? null : new Date().toISOString() }).eq('id', l.id); carregar() }
+  const wa = (d) => `https://wa.me/${d.startsWith('55') ? d : '55' + d}?text=${encodeURIComponent('Oi! Aqui é da MIMO. Vi que você quer ver como a agenda ficaria no seu salão.')}`
+  return (
+    <Painel Icon={Inbox} titulo="Leads da landing" sub="Quem deixou o WhatsApp em mimo.com.vc para ver a MIMO no próprio salão.">
+      {linhas === null ? <Vazio>Carregando…</Vazio> : linhas.length === 0 ? <Vazio>Nenhum lead ainda.</Vazio> : (
+        <table className="plat-tabela"><thead><tr><th>Salão</th><th>Profissionais</th><th>WhatsApp</th><th>Origem</th><th>Quando</th><th>Status</th><th /></tr></thead><tbody>
+          {linhas.map((l) => <tr key={l.id} className={l.atendido_em ? 'seo-lido' : ''}><td><strong>{l.salon_name}</strong></td><td>{FAIXA[l.professionals_count] || l.professionals_count || '—'}</td><td className="mono">{l.whatsapp}</td><td><small className="muted">{[l.utm_source, l.utm_medium, l.utm_campaign].filter(Boolean).join(' · ') || l.origem || '—'}</small></td><td>{dataBr(l.created_at)}</td><td><Pilula tom={l.atendido_em ? 'menta' : 'ambar'}>{l.atendido_em ? 'atendido' : 'novo'}</Pilula></td><td className="seo-acoes"><a className="plat-link" href={wa(l.whatsapp)} target="_blank" rel="noopener noreferrer"><MessageCircle size={14} /> Chamar</a><button className="plat-link" onClick={() => atendido(l)}>{l.atendido_em ? 'Reabrir' : 'Marcar atendido'}</button></td></tr>)}
+        </tbody></table>
+      )}
+    </Painel>
   )
 }

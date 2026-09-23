@@ -6896,3 +6896,11 @@ label.check input { margin-top: 3px; }
 .quadro-lupa .quadro-nav-btn:disabled { opacity: 0.35; cursor: default; }
 .quadro-lupa-nome { font-size: 0.72rem; font-weight: 700; color: var(--cinza-3, #6b7280); min-width: 3.6rem; text-align: center; font-family: var(--condensada); }
 .quadro-hora.fracao { font-size: 0.64rem; font-weight: 500; }
+
+/* quadro · o cartão abre ao passar o mouse (pra baixo, ou pra cima quando não cabe) */
+.quadro-cartao { transform-origin: top center; }
+.quadro-cartao.aberto { z-index: 6; box-shadow: 0 10px 28px rgba(31, 32, 38, 0.18); transform: scale(1.02); overflow: visible; animation: quadro-abrir .16s cubic-bezier(.2,.8,.2,1); }
+.quadro-cartao.aberto.para-cima { transform: translateY(-100%) scale(1.02); transform-origin: bottom center; animation-name: quadro-abrir-cima; }
+.quadro-cartao.aberto .quadro-cartao-cliente > span, .quadro-cartao.aberto strong, .quadro-cartao.aberto .quadro-cartao-serv { white-space: normal; }
+@keyframes quadro-abrir { from { transform: scale(0.99); box-shadow: 0 1px 3px rgba(31, 32, 38, 0.08); } to { transform: scale(1.02); } }
+@keyframes quadro-abrir-cima { from { transform: translateY(-100%) scale(0.99); box-shadow: 0 1px 3px rgba(31, 32, 38, 0.08); } to { transform: translateY(-100%) scale(1.02); } }

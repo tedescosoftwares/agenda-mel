@@ -14,7 +14,7 @@ import Avatar from './Avatar'
 // 90px por hora é o nível de sempre. A lupa do tempo: Ctrl + rodinha (ou os botões) troca a escala; cada nível
 // diz quantos px tem um minuto, de quanto em quanto vai a grade e o rótulo
 const ZOOMS = [
-  { escala: 0.8, grade: 60, rotulo: 60, nome: '1 h' },
+  { escala: 0.8, grade: 30, rotulo: 60, nome: '1 h' },
   { escala: 1.5, grade: 30, rotulo: 60, nome: '30 min' },
   { escala: 2.6, grade: 15, rotulo: 30, nome: '15 min' },
   { escala: 4.2, grade: 15, rotulo: 15, nome: '15 min · lupa' },
@@ -53,6 +53,7 @@ export default function QuadroDoDia({ dia, agenda, semana = [], onTrocarDia, pro
     return [Math.floor(extra[0] / 60) * 60, Math.ceil(extra[1] / 60) * 60]
   }, [horas, agenda, weekday])
   const [zoom, setZoom] = useState(lerZoom)
+  const [sobre, setSobre] = useState(null)   // { id, paraCima }: o cartão aberto pelo mouse e pra que lado ele cresce
   const { escala, grade, rotulo: rotuloCada } = ZOOMS[zoom]
   const rolagem = useRef(null)
   function mudarZoom(delta, ancoraY) {
@@ -183,28 +184,38 @@ export default function QuadroDoDia({ dia, agenda, semana = [], onTrocarDia, pro
               {agenda.filter((a) => a.professional_id === p.id).map((a) => {
                 const top = (min(a.start_time) - ini) * escala, h = Math.max(24, (min(a.end_time) - min(a.start_time)) * escala)
                 const movel = (a.status === 'pendente' || a.status === 'confirmado') && !a.comanda_id
+                const aberto_ = sobre?.id === a.id && !arrastando
+                const hv = aberto_ ? 999 : h   // com o mouse em cima, mostra tudo
                 return (
-                  <button key={a.id} type="button" draggable={movel && !ocupado} className={`quadro-cartao ${a.status}${a.comanda_id ? ' fechado' : ''}${arrastando === a.id ? ' no-ar' : ''}${movel ? ' movel' : ''}`}
-                    style={{ top, height: h }} title={`${a.cliente} · ${a.servico}`}
+                  <button key={a.id} type="button" draggable={movel && !ocupado} className={`quadro-cartao ${a.status}${a.comanda_id ? ' fechado' : ''}${arrastando === a.id ? ' no-ar' : ''}${movel ? ' movel' : ''}${aberto_ ? (sobre.paraCima ? ' aberto para-cima' : ' aberto') : ''}`}
+                    style={aberto_ ? (sobre.paraCima ? { top: top + h, height: 'auto', minHeight: h } : { top, height: 'auto', minHeight: h }) : { top, height: h }} title={aberto_ ? undefined : `${a.cliente} · ${a.servico}`}
+                    onMouseEnter={(e) => {
+                      // cresce pra baixo; se não couber na parte visível do quadro, cresce pra cima
+                      const el = rolagem.current; const r = e.currentTarget.getBoundingClientRect(); const rr = el?.getBoundingClientRect()
+                      const precisa = 150
+                      const paraCima = Boolean(rr) && r.top + precisa > rr.bottom && r.top - rr.top > precisa
+                      setSobre({ id: a.id, paraCima })
+                    }}
+                    onMouseLeave={() => setSobre((x) => (x?.id === a.id ? null : x))}
                     onDragStart={(e) => { e.dataTransfer.setData('text/plain', a.id); e.dataTransfer.effectAllowed = 'move'; setArrastando(a.id) }}
                     onDragEnd={() => { setArrastando(null); setSombra(null) }}
                     onClick={(e) => { e.stopPropagation(); setAberto(a) }}>
                     {movel && <GripVertical size={12} className="quadro-grip" />}
-                    {h < 84 && a.client_id && a.atendimentos === 0 && <span className="quadro-marca nova" title="Primeira vez na casa">1ª vez</span>}
-                    {h < 84 && a.preferida_id && a.preferida_id !== a.professional_id && <span className="quadro-marca prefere" title={`Prefere ${a.preferida}`}><Heart size={9} /> {a.preferida?.split(' ')[0]}</span>}
+                    {hv < 84 && a.client_id && a.atendimentos === 0 && <span className="quadro-marca nova" title="Primeira vez na casa">1ª vez</span>}
+                    {hv < 84 && a.preferida_id && a.preferida_id !== a.professional_id && <span className="quadro-marca prefere" title={`Prefere ${a.preferida}`}><Heart size={9} /> {a.preferida?.split(' ')[0]}</span>}
                     <span className="quadro-cartao-hora">{a.start_time.slice(0, 5)}–{a.end_time.slice(0, 5)}</span>
                     <strong>{a.cliente}</strong>
-                    {h >= 54 && <span className="quadro-cartao-serv">{a.servico}</span>}
-                    {h >= 72 && <span className="quadro-cartao-pe">{formatCents(a.price_cents ?? 0)}{a.pago_cents > 0 ? ` · sinal ${formatCents(a.pago_cents)}` : ''}{a.comanda_id ? ' · fechado' : ''}{a.avaliacao?.nota ? <em className="quadro-nota" title={a.avaliacao.comentario ?? 'Avaliação da cliente'}>{'★'.repeat(a.avaliacao.nota)}</em> : null}</span>}
-                    {h < 72 && a.avaliacao?.nota && <span className="quadro-marca nota" title={`Avaliou com ${a.avaliacao.nota} ${a.avaliacao.nota === 1 ? 'estrela' : 'estrelas'}`}>★ {a.avaliacao.nota}</span>}
-                    {h >= 84 && a.client_id && (
+                    {hv >= 54 && <span className="quadro-cartao-serv">{a.servico}</span>}
+                    {hv >= 72 && <span className="quadro-cartao-pe">{formatCents(a.price_cents ?? 0)}{a.pago_cents > 0 ? ` · sinal ${formatCents(a.pago_cents)}` : ''}{a.comanda_id ? ' · fechado' : ''}{a.avaliacao?.nota ? <em className="quadro-nota" title={a.avaliacao.comentario ?? 'Avaliação da cliente'}>{'★'.repeat(a.avaliacao.nota)}</em> : null}</span>}
+                    {hv < 72 && a.avaliacao?.nota && <span className="quadro-marca nota" title={`Avaliou com ${a.avaliacao.nota} ${a.avaliacao.nota === 1 ? 'estrela' : 'estrelas'}`}>★ {a.avaliacao.nota}</span>}
+                    {hv >= 84 && a.client_id && (
                       <span className="quadro-cartao-cliente">
                         <span className={a.atendimentos === 0 ? 'nova' : ''}>{a.atendimentos === 0 ? 'Primeira vez' : `${a.atendimentos + 1}ª visita`}</span>
                         {a.preferida_id && <span className={a.preferida_id === a.professional_id ? 'ok' : 'prefere'}><Heart size={9} /> {a.preferida_id === a.professional_id ? 'preferida' : `prefere ${a.preferida?.split(' ')[0]}`}</span>}
                         {a.faltas > 0 && <span className="atencao">{a.faltas} {a.faltas === 1 ? 'falta' : 'faltas'}</span>}
                       </span>
                     )}
-                    {h >= 84 && !a.client_id && <span className="quadro-cartao-cliente"><span>avulsa, sem conta</span></span>}
+                    {hv >= 84 && !a.client_id && <span className="quadro-cartao-cliente"><span>avulsa, sem conta</span></span>}
                   </button>
                 )
               })}

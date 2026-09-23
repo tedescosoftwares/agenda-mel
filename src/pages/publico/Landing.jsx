@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   CalendarDays, Users, Heart, RotateCcw, MessageCircle, Wallet, QrCode, Clock, Star,
-  Check, Menu, X, ArrowRight, Sparkles, LayoutGrid, Receipt, ChevronDown,
+  Check, Menu, X, ArrowRight, Sparkles, LayoutGrid, Receipt, ChevronDown, Hand, Scissors, Palette, Eye, Flower2,
 } from 'lucide-react'
 import { MarcaIcon, Wordmark } from '../../components/icons'
 import { urlDoAmbiente } from '../../lib/ambiente'
@@ -47,6 +47,16 @@ const PASSOS = [
   ['Compartilhe o QR', 'A cliente escaneia, cria a conta vinculada a você e marca sozinha.'],
 ]
 
+const CATEGORIAS = [[Hand, 'unhas'], [Scissors, 'cabelo'], [Palette, 'make'], [Eye, 'sobrancelha'], [Flower2, 'estética']]
+
+// os cartazes da parede: frases do nicho, no tom das artes da marca
+const CARTAZES = [
+  { tom: 'rosa', gira: -2, titulo: ['Cadeira', 'vazia', '*custa caro.'], sub: 'A lista de espera preenche a vaga que abriu.', bilhete: 'agenda cheia' },
+  { tom: 'creme', gira: 1.5, titulo: ['Sua cliente', '*marca', 'sozinha.'], sub: 'Pelo seu QR, no horário que você abriu.', bilhete: 'sem WhatsApp às 23h' },
+  { tom: 'preto', gira: -1, titulo: ['Mani?', 'Escova?', 'Cílios?', '*Fecha junto.'], sub: 'Uma comanda só. O repasse já sai separado.', bilhete: 'o que é de quem' },
+  { tom: 'rosa-2', gira: 2, titulo: ['Avaliação', 'na hora.', '*Nota no quadro.'], sub: 'Cada serviço, cada profissional.', bilhete: 'cinco estrelas' },
+]
+
 const JSON_LD = {
   '@context': 'https://schema.org',
   '@graph': [
@@ -63,6 +73,26 @@ const JSON_LD = {
     },
     { '@type': 'FAQPage', '@id': 'https://mimo.com.vc/#faq', mainEntity: FAQ.map(([q, a]) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } })) },
   ],
+}
+
+// coração de pincel, como nos cartazes da marca
+function Coracao({ className }) {
+  return (
+    <svg viewBox="0 0 64 60" className={className} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M32 54 C 12 40, 4 29, 7 17 C 10 7, 22 5, 31 16 C 41 5, 54 7, 57 17 C 60 29, 52 40, 32 54 Z" />
+      <path d="M33 51 C 15 38, 9 28, 11 19" strokeWidth="4" opacity="0.55" />
+    </svg>
+  )
+}
+
+// a marca como nos cartazes: MIMO em caixa alta com o coração sobre o i
+function MarcaCartaz() {
+  return (
+    <span className="ld-cz-marca" aria-label="mimo">
+      <span className="ld-cz-marca-nome">M<b>i<Coracao /></b>MO</span>
+      <small>agenda de salão</small>
+    </span>
+  )
 }
 
 // aparece quando entra na tela (uma vez só)
@@ -84,6 +114,8 @@ function useRevelar() {
 export default function Landing() {
   const raiz = useRevelar()
   const [menu, setMenu] = useState(false)
+  const [entrarAberto, setEntrarAberto] = useState(false)
+  const entrarRef = useRef(null)
   const comecar = (tipo) => urlDoAmbiente('pro', tipo ? `/comecar?tipo=${tipo}` : '/comecar')
   const entrar = urlDoAmbiente('pro', '/pro/entrar')
 
@@ -100,11 +132,13 @@ export default function Landing() {
   }, [])
 
   useEffect(() => {
-    if (!menu) return
-    const fechar = (e) => { if (e.key === 'Escape') setMenu(false) }
-    window.addEventListener('keydown', fechar)
-    return () => window.removeEventListener('keydown', fechar)
-  }, [menu])
+    if (!menu && !entrarAberto) return
+    const tecla = (e) => { if (e.key === 'Escape') { setMenu(false); setEntrarAberto(false) } }
+    const fora = (e) => { if (entrarRef.current && !entrarRef.current.contains(e.target)) setEntrarAberto(false) }
+    window.addEventListener('keydown', tecla)
+    document.addEventListener('pointerdown', fora)
+    return () => { window.removeEventListener('keydown', tecla); document.removeEventListener('pointerdown', fora) }
+  }, [menu, entrarAberto])
 
   return (
     <div className="ld" ref={raiz}>
@@ -117,7 +151,15 @@ export default function Landing() {
             <a href="#saloes">Salões</a><a href="#autonomas">Autônomas</a><a href="#recursos">Recursos</a><a href="#como-funciona">Como funciona</a><a href="#planos">Planos</a><a href="#duvidas">Dúvidas</a>
           </nav>
           <div className="ld-acoes">
-            <a className="ld-btn ld-fantasma" href={entrar}>Entrar</a>
+            <div className="ld-entrar" ref={entrarRef}>
+              <button className="ld-btn ld-fantasma" aria-haspopup="menu" aria-expanded={entrarAberto} onClick={() => setEntrarAberto((a) => !a)}>Entrar <ChevronDown size={16} /></button>
+              {entrarAberto && (
+                <div className="ld-entrar-menu" role="menu">
+                  <a role="menuitem" href={entrar}><MarcaIcon width={22} height={19} id="ld-en-pro" /><span><b>MIMO Pro</b><small>Salão e profissional · pro.mimo.com.vc</small></span></a>
+                  <Link role="menuitem" to="/entrar"><MarcaIcon width={22} height={19} id="ld-en-cli" /><span><b>MIMO</b><small>Cliente: entrar com o código · mimo.com.vc</small></span></Link>
+                </div>
+              )}
+            </div>
             <a className="ld-btn ld-primario" href={comecar()}>Começar agora</a>
             <button className="ld-menu-btn" aria-label={menu ? 'Fechar menu' : 'Abrir menu'} aria-expanded={menu} onClick={() => setMenu((m) => !m)}>{menu ? <X size={22} /> : <Menu size={22} />}</button>
           </div>
@@ -125,11 +167,12 @@ export default function Landing() {
         {menu && (
           <div className="ld-menu" onClick={() => setMenu(false)}>
             <a href="#saloes">Salões</a><a href="#autonomas">Autônomas</a><a href="#recursos">Recursos</a><a href="#como-funciona">Como funciona</a><a href="#planos">Planos</a><a href="#duvidas">Dúvidas</a>
-            <div className="ld-menu-acoes">
-              <a className="ld-btn ld-fantasma" href={entrar}>Entrar</a>
-              <a className="ld-btn ld-primario" href={comecar()}>Começar agora</a>
+            <a className="ld-btn ld-primario" href={comecar()}>Começar agora</a>
+            <div className="ld-menu-entrar">
+              <span>Entrar</span>
+              <a href={entrar}><b>MIMO Pro</b><small>salão e profissional</small></a>
+              <Link to="/entrar"><b>MIMO</b><small>cliente, com o código</small></Link>
             </div>
-            <Link to="/entrar" className="ld-menu-cliente">Sou cliente: entrar com o código</Link>
           </div>
         )}
       </header>
@@ -140,10 +183,12 @@ export default function Landing() {
             <div className="ld-hero-texto">
               <span className="ld-selo"><Sparkles size={14} /> Sistema para salão de beleza e profissional autônoma</span>
               <h1>Beleza daqui.<span>Rotina no lugar.</span></h1>
+              <Coracao className="ld-hero-coracao" />
               <p className="ld-lead">A MIMO junta agenda, equipe, clientes, WhatsApp, avaliações e pagamentos numa tela com cara de salão, não de escritório. Você abre e já sabe o que fazer agora.</p>
               <div className="ld-hero-cta">
                 <a className="ld-btn ld-primario ld-grande" href={comecar('salao')}>Criar meu salão <ArrowRight size={18} /></a>
                 <a className="ld-btn ld-fantasma ld-grande" href={comecar('autonoma')}>Sou autônoma: começar grátis</a>
+                <span className="ld-bilhete ld-bilhete-hero">sua cliente marca sozinha <i>♥</i></span>
               </div>
               <ul className="ld-prova">
                 <li><i><Check size={12} /></i> Autônoma grátis, sem cartão</li>
@@ -172,7 +217,8 @@ export default function Landing() {
               <div className="ld-nota">Pessoas primeiro, painel depois. O bonito aqui serve a operação.</div>
             </div>
             <blockquote className="ld-citacao ld-rv">
-              “Seu salão não precisa de mais <em>um sistema</em>. Precisa de uma rotina que finalmente <em>faça sentido</em>.”
+              Seu salão não precisa de mais <em>um sistema</em>. Precisa de uma rotina que finalmente <em>faça sentido</em>.
+              <Coracao className="ld-citacao-coracao" />
             </blockquote>
           </div>
         </section>
@@ -205,6 +251,32 @@ export default function Landing() {
                   <li>O quadro aponta o que merece atenção agora.</li>
                 </ul>
               </article>
+            </div>
+          </div>
+        </section>
+
+        <section className="ld-parede">
+          <div className="ld-wrap">
+            <div className="ld-cabeca ld-centro ld-rv">
+              <span className="ld-kicker">A cara da casa</span>
+              <h2>Na parede do salão.</h2>
+              <p>A MIMO fala como o salão fala: direto, com carinho e sem cara de planilha.</p>
+            </div>
+            <div className="ld-cartazes">
+              {CARTAZES.map((c, i) => (
+                <article className={`ld-cartaz ld-cz-${c.tom} ld-rv`} key={i} style={{ '--gira': `${c.gira}deg`, transitionDelay: `${i * 80}ms` }}>
+                  <h3>{c.titulo.map((l, k) => <span key={k} className={l.startsWith('*') ? 'ld-cz-destaque' : ''}>{l.replace(/^\*/, '')}</span>)}</h3>
+                  <p>{c.sub}</p>
+                  <Coracao className="ld-cz-coracao" />
+                  <div className="ld-cz-rodape">
+                    <MarcaCartaz />
+                    <span className="ld-bilhete ld-cz-bilhete">{c.bilhete} <i>♥</i></span>
+                  </div>
+                  <div className="ld-cz-icones">
+                    {CATEGORIAS.map(([Ic, n]) => <span key={n}><Ic size={18} />{n}</span>)}
+                  </div>
+                </article>
+              ))}
             </div>
           </div>
         </section>
@@ -271,6 +343,9 @@ export default function Landing() {
                 <ul className="ld-checks"><li>Equipe e agendas separadas</li><li>Vínculo e repasse por profissional</li><li>Quadro do dia e comanda</li><li>Avaliações e projeção da semana</li><li>Clientes e origem preservadas</li></ul>
                 <a className="ld-btn ld-primario" href={comecar('salao')}>Criar meu salão</a>
               </article>
+            </div>
+            <div className="ld-categorias ld-rv" aria-hidden="true">
+              {CATEGORIAS.map(([Ic, n]) => <span key={n}><i><Ic size={26} /></i>{n}</span>)}
             </div>
             <div className="ld-profissoes ld-rv" aria-label="Para quem é">
               <span className="ld-profissoes-titulo">Feita para</span>
@@ -361,7 +436,10 @@ export default function Landing() {
                 <h2>A agenda é só o começo. A relação é o produto.</h2>
                 <p>A MIMO organiza o dia do salão, preserva o vínculo com a cliente e transforma operação em relacionamento. Bonita por fora, afiada por dentro.</p>
               </div>
-              <a className="ld-btn ld-branco ld-grande" href={comecar()}>Começar agora <ArrowRight size={18} /></a>
+              <div className="ld-cta-lado">
+                <a className="ld-btn ld-branco ld-grande" href={comecar()}>Começar agora <ArrowRight size={18} /></a>
+                <span className="ld-bilhete ld-bilhete-cta">esse é só o começo <i>♥</i></span>
+              </div>
             </div>
           </div>
         </section>

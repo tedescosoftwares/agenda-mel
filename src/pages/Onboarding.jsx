@@ -46,7 +46,8 @@ export default function Onboarding() {
   useEffect(() => {
     if (!salao) return
     setS((x) => x ?? { ...salao })
-    setPasso((p) => (p === 1 && salao.onboarding_passo > 1 ? Math.min(6, salao.onboarding_passo) : p))
+    // retoma de onde parou; quem já concluiu e abriu de novo começa do 1 (revisão)
+    setPasso((p) => (p === 1 && !salao.onboarding_concluido_em && salao.onboarding_passo > 1 ? Math.min(6, salao.onboarding_passo) : p))
   }, [salao])
 
   const autonoma = s?.tipo === 'autonoma'

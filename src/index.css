@@ -7306,3 +7306,8 @@ button.quadro-col-cabeca:hover strong { color: var(--rosa); }
   .ob-rodape { position: sticky; bottom: 0; background: #fff; padding: 0.7rem 0 calc(0.4rem + env(safe-area-inset-bottom)); border-top: 0; }
   .ob-rodape .btn-ghost { display: none; } .ob-continuar { width: 100%; }
 }
+
+.ob-termos { flex-direction: row !important; flex-wrap: nowrap !important; align-items: flex-start !important; gap: 0.5rem !important; font-weight: 500 !important; font-size: 0.8rem !important; color: var(--grafite, #1f2026) !important; }
+.ob-termos input { width: auto !important; flex: none !important; margin-top: 0.15rem; accent-color: var(--rosa); }
+.ob-termos a { color: var(--rosa); }
+.ob .rodape-social { margin-top: 0.4rem; }

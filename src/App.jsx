@@ -48,7 +48,6 @@ import Notificacoes from "./pages/cliente/Notificacoes";
 import FilaEspera from "./pages/cliente/FilaEspera";
 import Entrar from "./pages/cliente/Entrar";
 import EntrarPorCodigo from "./pages/publico/EntrarPorCodigo";
-import Comecar from "./pages/publico/Comecar";
 import ComCodigo from "./pages/publico/ComCodigo";
 import Visao from "./pages/plataforma/Visao";
 import Saloes, { Salao } from "./pages/plataforma/Saloes";
@@ -106,7 +105,7 @@ export default function App() {
 
             {/* o QR/link de entrar numa agenda, e a porta de quem vai atender */}
             <Route path="/v/:codigo" element={<EntrarPorCodigo />} />
-            <Route path="/comecar" element={<Comecar />} />
+            <Route path="/comecar" element={<Onboarding publico />} />
             <Route path="/equipe/:codigo" element={<ConviteEquipe />} />
             <Route path="/onboarding" element={<ProtectedRoute permitirSemVinculo permitirOnboarding><Onboarding /></ProtectedRoute>} />
             <Route path="/entrar" element={<ComCodigo />} />

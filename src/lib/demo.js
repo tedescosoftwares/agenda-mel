@@ -281,6 +281,7 @@ const RPC = {
   pdv_fechar: ({ comanda }) => ({ ok: true, comanda_id: 'cm-novo', appointment_ids: comanda?.appointment_ids ?? [], cupom: Boolean(comanda?.client_id) && comanda?.enviar_cupom !== false, total_cents: (comanda?.itens ?? []).reduce((s, i) => s + i.preco_cents * (i.qtd ?? 1), 0) - (comanda?.desconto_cents ?? 0) }),
   pdv_estornar: () => ({ ok: true }),
   onboarding_salvar: ({ passo }) => ({ ok: true, passo: passo ?? 1 }),
+  abrir_negocio: ({ tipo }) => ({ ok: true, salao_id: SALAO, tipo }),
   onboarding_concluir: () => ({ ok: true }),
   onboarding_horarios: ({ horarios }) => ({ ok: true, dias: (horarios ?? []).length }),
   trocar_tipo_negocio: ({ novo }) => ({ ok: true, tipo: novo }),

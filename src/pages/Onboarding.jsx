@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import QRCode from 'qrcode'
 import { Store, UserRound, Check, ArrowLeft, ArrowRight, LogOut, Camera, MapPin, Plus, X, Copy, Download, MoreHorizontal, Link2, CheckCircle2, Info, Crown, Sparkles, MessageCircle, Users, Minus } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
@@ -11,6 +11,8 @@ import { linkDoCodigo } from '../lib/convite'
 import { urlDoAmbiente } from '../lib/ambiente'
 import { formatPreco } from '../lib/format'
 import Avatar from '../components/Avatar'
+import { TERMOS_VERSAO } from '../lib/termos'
+import RodapeSocial from '../components/RodapeSocial'
 
 // O onboarding do salão (114): do cadastro à agenda em seis passos, o
 // mesmo fluxo no computador e no celular. Cada passo grava ao continuar
@@ -34,17 +36,20 @@ const SUPORTE = import.meta.env.VITE_SUPORTE_WHATS || ''
 const reais = (t) => { const n = Number(String(t ?? '').replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.')); return Number.isFinite(n) ? Math.round(n * 100) : 0 }
 const emReais = (c) => (Number(c ?? 0) / 100).toFixed(2).replace('.', ',')
 
-export default function Onboarding() {
-  const { user, salao, recarregarPerfil } = useAuth()
+// `publico`: os passos 1 e 2 antes de existir conta (/comecar). O passo 2
+// cria a conta com os dados do salão nos metadados; o servidor grava tudo
+// e a conta acorda no passo 3, já logada em /onboarding.
+export default function Onboarding({ publico = false }) {
+  const { user, role, salao, recarregarPerfil, loading } = useAuth()
   const navigate = useNavigate()
-  const [s, setS] = useState(null)                 // o salão, como está no banco (com o que a tela mudou por cima)
+  const [s, setS] = useState(publico ? { id: null, tipo: 'salao', publico: true } : null)   // o salão, como está no banco (com o que a tela mudou por cima)
   const [passo, setPasso] = useState(1)
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState('')
   const [pronto, setPronto] = useState(false)
 
   useEffect(() => {
-    if (!salao) return
+    if (!salao || publico) return
     setS((x) => x ?? { ...salao })
     // retoma de onde parou; quem já concluiu e abriu de novo começa do 1 (revisão)
     setPasso((p) => (p === 1 && !salao.onboarding_concluido_em && salao.onboarding_passo > 1 ? Math.min(6, salao.onboarding_passo) : p))
@@ -58,7 +63,7 @@ export default function Onboarding() {
   const voltarDe = (n) => { const k = passos.findIndex((p) => p.id === n); return passos[Math.max(0, k - 1)]?.id ?? n }
 
   async function gravar(dados, proximo) {
-    if (!s?.id) return
+    if (!s?.id) { setS((x) => ({ ...x, ...dados })); return true }
     setSalvando(true); setErro('')
     const { data, error } = await supabase.rpc('onboarding_salvar', { salao: s.id, dados, passo: proximo })
     setSalvando(false)
@@ -88,9 +93,10 @@ export default function Onboarding() {
     navigate(autonoma ? '/pro/agenda' : '/admin')
   }
 
+  if (publico && !loading && user && salao) return <Navigate to="/onboarding" replace />
   if (!s) return <div className="page-center"><p className="muted">Carregando…</p></div>
 
-  const props = { s, setS, salvando, erro, setErro, seguir, voltar, gravar, user, autonoma, concluir, pronto }
+  const props = { s, setS, salvando, erro, setErro, seguir, voltar, gravar, user, role, autonoma, concluir, pronto, publico, recarregarPerfil, navigate }
   return (
     <div className="ob">
       <header className="ob-topo">
@@ -100,8 +106,8 @@ export default function Onboarding() {
           <span className="ob-progresso-num">{idx + 1} de {total}</span>
           <span className="ob-trilha">{passos.map((p, i) => <span key={p.id} className={'ob-ponto' + (i < idx ? ' feito' : i === idx ? ' atual' : '')} />)}</span>
         </div>
-        <button type="button" className="ob-sair" onClick={sair}><LogOut size={14} /> Sair do cadastro</button>
-        <button type="button" className="ob-pular" onClick={() => (passo === 6 ? concluir() : seguir({}))}>{passo === 6 ? 'Concluir' : 'Pular'}</button>
+        {publico ? <Link className="ob-sair" to="/pro/entrar"><LogOut size={14} /> Já tenho conta</Link> : <button type="button" className="ob-sair" onClick={sair}><LogOut size={14} /> Sair do cadastro</button>}
+        {!(publico && passo === 2) && <button type="button" className="ob-pular" onClick={() => (passo === 6 ? concluir() : seguir({}))}>{passo === 6 ? 'Concluir' : 'Pular'}</button>}
       </header>
 
       <div className="ob-corpo">
@@ -110,7 +116,7 @@ export default function Onboarding() {
           <ol className="ob-passos">
             {passos.map((p, i) => (
               <li key={p.id} className={i < idx ? 'feito' : i === idx ? 'atual' : ''}>
-                <button type="button" onClick={() => { if (i <= idx || p.id <= (s.onboarding_passo ?? 1)) setPasso(p.id) }}>
+                <button type="button" onClick={() => { if (publico ? p.id <= 2 && i <= idx : (i <= idx || p.id <= (s.onboarding_passo ?? 1))) setPasso(p.id) }}>
                   <span className="ob-passo-num">{i < idx ? <Check size={12} /> : i + 1}</span>{p.rotulo}
                 </button>
               </li>
@@ -146,6 +152,7 @@ function Rodape({ voltar, avancar, rotulo = 'Continuar', salvando, primeiro = fa
 function PassoTipo({ s, setS, seguir, salvando, erro, setErro }) {
   const [tipo, setTipo] = useState(s.tipo ?? 'salao')
   async function avancar() {
+    if (tipo !== s.tipo && !s.id) { setS((x) => ({ ...x, tipo })); seguir({}); return }
     if (tipo !== s.tipo) {
       const { data, error } = await supabase.rpc('trocar_tipo_negocio', { salao: s.id, novo: tipo })
       if (error) { setErro(error.message); return }
@@ -179,7 +186,11 @@ function PassoTipo({ s, setS, seguir, salvando, erro, setErro }) {
 }
 
 // ---------- 2 · Dados do salão -----------------------------------------------------
-function PassoDados({ s, setS, seguir, voltar, salvando, erro, setErro, user, autonoma }) {
+function PassoDados({ s, setS, seguir, voltar, salvando, erro, setErro, user, role, autonoma, publico, recarregarPerfil, navigate }) {
+  const { signUp } = useAuth()
+  const [conta, setConta] = useState({ senha: '', termos: false })
+  const [criada, setCriada] = useState(false)
+  const [criando, setCriando] = useState(false)
   const [f, setF] = useState({ name: s.name ?? '', cnpj: s.cnpj ?? '', whatsapp: s.whatsapp ?? s.phone ?? '', email: s.email ?? '', responsavel_nome: s.responsavel_nome ?? '', address: s.address ?? '', bairro: s.bairro ?? '', city: s.city ?? '', uf: s.uf ?? '', cep: s.cep ?? '', lat: s.lat ?? null, lng: s.lng ?? null })
   const [logo, setLogo] = useState(s.logo_url ? { url: s.logo_url } : null)
   const [geo, setGeo] = useState('')
@@ -187,7 +198,7 @@ function PassoDados({ s, setS, seguir, voltar, salvando, erro, setErro, user, au
   const arq = useRef(null)
   const m = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.value }))
 
-  useEffect(() => { if (!f.responsavel_nome && user) supabase.from('profiles').select('full_name, email').eq('id', user.id).maybeSingle().then(({ data }) => { if (data) setF((x) => ({ ...x, responsavel_nome: x.responsavel_nome || data.full_name || '', email: x.email || data.email || '' })) }) }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (!f.responsavel_nome && user && !publico) supabase.from('profiles').select('full_name, email').eq('id', user.id).maybeSingle().then(({ data }) => { if (data) setF((x) => ({ ...x, responsavel_nome: x.responsavel_nome || data.full_name || '', email: x.email || data.email || '' })) }) }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function trocarLogo(e) {
     const file = e.target.files?.[0]; e.target.value = ''
@@ -205,8 +216,38 @@ function PassoDados({ s, setS, seguir, voltar, salvando, erro, setErro, user, au
     setGeo('achando…'); setErro('')
     try { const p = await minhaPosicao(); setF((x) => ({ ...x, lat: p.lat, lng: p.lng })); setGeo(`pino marcado (precisão ${p.precisao} m)`) } catch (err) { setGeo(''); setErro(err.message) }
   }
+  // no público: cria a conta com tudo isso nos metadados; o servidor abre o negócio e grava os dados
+  async function criarConta() {
+    if (!f.responsavel_nome.trim()) { setErro('Diga o seu nome.'); return }
+    if (!f.whatsapp.trim()) { setErro('Precisamos do WhatsApp: é por ele que os avisos chegam.'); return }
+    if (!f.email.trim()) { setErro('Diga o seu e-mail: é com ele que você entra.'); return }
+    if (conta.senha.length < 6) { setErro('A senha precisa ter pelo menos 6 caracteres.'); return }
+    if (!conta.termos) { setErro('Para criar a conta, é preciso aceitar os Termos e a Política de privacidade.'); return }
+    setCriando(true); setErro('')
+    try {
+      const { data: livre } = await supabase.rpc('telefone_disponivel', { fone: f.whatsapp.trim() })
+      if (livre && livre.disponivel === false) { setErro(livre.email ? `Esse WhatsApp já tem conta, no e-mail ${livre.email}. Entre com ela.` : (livre.motivo || 'Confere o WhatsApp.')); return }
+      const dadosSalao = { cnpj: f.cnpj, email: f.email.trim(), whatsapp: f.whatsapp.trim(), responsavel_nome: f.responsavel_nome.trim(), address: f.address, bairro: f.bairro, city: f.city, uf: f.uf, cep: f.cep.replace(/\D/g, '') }
+      if (user) {
+        // já logada como cliente, sem negócio: abre agora e segue
+        const { data, error } = await supabase.rpc('abrir_negocio', { tipo: s.tipo, nome_negocio: f.name.trim() || null, cidade: f.city.trim() || null })
+        if (error) throw new Error(error.message)
+        await supabase.rpc('onboarding_salvar', { salao: data.salao_id, dados: dadosSalao, passo: 3 })
+        await recarregarPerfil?.()
+        navigate('/onboarding', { replace: true })
+        return
+      }
+      const { error } = await signUp(f.email.trim(), conta.senha, f.responsavel_nome.trim(), f.whatsapp.trim(),
+        { termos: TERMOS_VERSAO, papel_desejado: s.tipo, nome_negocio: f.name.trim() || null, cidade: f.city.trim() || null, salao: dadosSalao })
+      if (error) { setErro(traduzErro(error.message)); return }
+      const { data: sess } = await supabase.auth.getSession()
+      if (sess?.session) { await recarregarPerfil?.(); navigate('/onboarding', { replace: true }); return }
+      setCriada(true)
+    } catch (err) { setErro(err.message) } finally { setCriando(false) }
+  }
   async function avancar() {
     if (!f.name.trim()) { setErro(autonoma ? 'Diga o nome da sua agenda.' : 'Diga o nome do salão.'); return }
+    if (publico) { await criarConta(); return }
     if (!f.whatsapp.trim()) { setErro('Precisamos do WhatsApp: é por ele que as clientes falam com vocês.'); return }
     if (!f.email.trim()) { setErro('Diga um e-mail de contato.'); return }
     if (!f.city.trim()) { setErro('Diga a cidade.'); return }
@@ -225,28 +266,44 @@ function PassoDados({ s, setS, seguir, voltar, salvando, erro, setErro, user, au
     if (lat != null && lng != null) { dados.lat = lat; dados.lng = lng } else { delete dados.lat; delete dados.lng }
     seguir(dados)
   }
+  if (criada) {
+    return (
+      <>
+        <h1 className="ob-titulo">Conta criada! <span aria-hidden="true">🎉</span></h1>
+        <p className="ob-sub">Falta só confirmar o e-mail</p>
+        <div className="ob-pronto"><span className="ob-pronto-check"><Check size={18} /></span><span><strong>Mandamos um link para {f.email.trim()}</strong><small>Abra o e-mail, toque em confirmar e entre. Você continua daqui, no passo 3, com tudo o que já preencheu guardado.</small></span></div>
+        <div className="ob-rodape"><span /><Link to="/pro/entrar" className="btn btn-primary ob-continuar">Já confirmei, entrar <ArrowRight size={16} /></Link></div>
+      </>
+    )
+  }
   return (
     <>
       <h1 className="ob-titulo">{autonoma ? 'Seus dados' : 'Dados do seu salão'}</h1>
-      <p className="ob-sub">{autonoma ? 'As informações que as clientes vão ver' : 'Preencha as informações principais do seu salão'}</p>
+      <p className="ob-sub">{publico ? 'Preencha as informações principais e crie o seu acesso' : autonoma ? 'As informações que as clientes vão ver' : 'Preencha as informações principais do seu salão'}</p>
       {erro && <div className="alert alert-error">{erro}</div>}
       <div className="ob-dados">
         <div className="ob-form">
           <label>{autonoma ? 'Nome da agenda' : 'Nome do salão'} <b>*</b><input value={f.name} onChange={m('name')} placeholder="Studio Essenza Hair" /></label>
-          <label>CNPJ <span className="muted">(opcional)</span><input value={f.cnpj} onChange={m('cnpj')} placeholder="12.345.678/0001-90" inputMode="numeric" /></label>
-          <label>WhatsApp <b>*</b><span className="ob-fone"><span className="ob-ddi">🇧🇷 +55</span><input type="tel" value={f.whatsapp} onChange={m('whatsapp')} placeholder="(11) 91234-5678" /></span></label>
-          <label>E-mail <b>*</b><input type="email" value={f.email} onChange={m('email')} placeholder="contato@essenzahair.com.br" /></label>
-          <label>Nome da responsável <b>*</b><input value={f.responsavel_nome} onChange={m('responsavel_nome')} placeholder="Juliana Lima" /></label>
+          {!autonoma && <label>CNPJ <span className="muted">(opcional)</span><input value={f.cnpj} onChange={m('cnpj')} placeholder="12.345.678/0001-90" inputMode="numeric" /></label>}
+          <label>WhatsApp <b>*</b><span className="ob-fone"><span className="ob-ddi">🇧🇷 +55</span><input type="tel" value={f.whatsapp} onChange={m('whatsapp')} placeholder="(11) 91234-5678" autoComplete="tel" /></span></label>
+          <label>E-mail <b>*</b>{publico && <span className="muted">(é com ele que você entra)</span>}<input type="email" value={f.email} onChange={m('email')} placeholder="contato@essenzahair.com.br" autoComplete="email" /></label>
+          <label>{publico ? 'Seu nome completo' : 'Nome da responsável'} <b>*</b><input value={f.responsavel_nome} onChange={m('responsavel_nome')} placeholder="Juliana Lima" autoComplete="name" /></label>
+          {publico && !user && (
+            <>
+              <label>Senha <b>*</b><input type="password" value={conta.senha} onChange={(e) => setConta((x) => ({ ...x, senha: e.target.value }))} placeholder="mínimo 6 caracteres" autoComplete="new-password" /></label>
+              <label className="ob-termos"><input type="checkbox" checked={conta.termos} onChange={(e) => setConta((x) => ({ ...x, termos: e.target.checked }))} /><span>Li e aceito os <Link to="/termos" target="_blank">Termos de uso</Link> e a <Link to="/privacidade" target="_blank">Política de privacidade</Link>.</span></label>
+            </>
+          )}
         </div>
         <div className="ob-form">
           <div className="ob-logo-campo">
             <span className="ob-rotulo">{autonoma ? 'Sua foto ou logo' : 'Logo ou foto do salão'}</span>
-            <button type="button" className={'ob-logo' + (logo ? ' com' : '')} onClick={() => arq.current?.click()}>
+            <button type="button" className={'ob-logo' + (logo ? ' com' : '')} onClick={() => (publico ? setErro('A foto entra no primeiro acesso, logo depois de confirmar o e-mail (passo 2, em Ajustes também).') : arq.current?.click())}>
               {logo ? <img src={logo.preview ?? logo.url} alt="" /> : <span className="ob-logo-vazio"><span className="ob-logo-iniciais">{(f.name || 'ES').split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase()}</span><span>{f.name || 'Seu salão'}</span></span>}
               <span className="ob-logo-cam"><Camera size={15} /></span>
             </button>
             <input ref={arq} type="file" accept="image/*" hidden onChange={trocarLogo} />
-            <small className="muted">JPG ou PNG. Tamanho máximo de 5 MB.</small>
+            <small className="muted">{publico ? 'JPG ou PNG, até 5 MB. Dá pra colocar depois do primeiro acesso.' : 'JPG ou PNG. Tamanho máximo de 5 MB.'}</small>
             {logo && <button type="button" className="link-ver" onClick={() => setLogo(null)}>Remover</button>}
           </div>
           <label>CEP<input value={formatarCep(f.cep)} onChange={(e) => porCep(e.target.value)} placeholder="11060-300" inputMode="numeric" />{buscandoCep && <small className="muted">buscando…</small>}</label>
@@ -259,9 +316,20 @@ function PassoDados({ s, setS, seguir, voltar, salvando, erro, setErro, user, au
           <button type="button" className="ob-geo" onClick={usarLocalizacao}><MapPin size={14} /> Usar minha localização atual{geo ? <small className="muted"> · {geo}</small> : f.lat != null ? <small className="muted"> · pino marcado</small> : null}</button>
         </div>
       </div>
-      <Rodape voltar={voltar} avancar={avancar} salvando={salvando} />
+      <Rodape voltar={voltar} avancar={avancar} salvando={salvando || criando} rotulo={publico ? (user ? 'Abrir minha agenda' : 'Criar conta e continuar') : 'Continuar'} />
+      {publico && <RodapeSocial />}
     </>
   )
+}
+
+function traduzErro(msg) {
+  const mapa = {
+    'User already registered': 'Este e-mail já tem conta. Entre com a senha, ou use "Esqueci a senha".',
+    'Password should be at least 6 characters': 'A senha precisa ter pelo menos 6 caracteres.',
+    'Failed to fetch': 'Não foi possível conectar. Confira sua internet.',
+    'Database error saving new user': 'Não deu para criar a conta: esse WhatsApp já está em uso ou algum dado veio errado.',
+  }
+  return mapa[msg] || msg
 }
 
 // ---------- 3 · Estrutura e operação ------------------------------------------------

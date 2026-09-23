@@ -36,7 +36,7 @@
   background: var(--ld-papel);
   font-family: var(--corpo);
   line-height: 1.55;
-  overflow-x: hidden;
+  overflow-x: clip;
   -webkit-font-smoothing: antialiased;
 }
 .ld * { box-sizing: border-box; }

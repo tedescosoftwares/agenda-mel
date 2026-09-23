@@ -66,7 +66,7 @@ const JSON_LD = {
       offers: [
         { '@type': 'Offer', name: 'MIMO Autônoma', price: '0', priceCurrency: 'BRL' },
         { '@type': 'Offer', name: 'MIMO Pro', price: '49.90', priceCurrency: 'BRL', description: 'Salão com até 10 agendas: até 3 profissionais inclusas, mais R$ 9,90 por profissional adicional.' },
-        { '@type': 'Offer', name: 'MIMO Pro+', price: '149.90', priceCurrency: 'BRL', description: 'Salão com 11 ou mais agendas: até 10 profissionais inclusas, mais R$ 7,90 por profissional adicional, sem limite.' },
+        { '@type': 'Offer', name: 'MIMO Pro+', price: '149.90', priceCurrency: 'BRL', description: 'Salão com 11 ou mais agendas: até 11 profissionais inclusas, mais R$ 7,90 por profissional a partir da 12ª, sem limite.' },
       ],
       publisher: { '@id': 'https://mimo.com.vc/#organization' },
     },
@@ -361,7 +361,7 @@ export default function Landing() {
                 <span className="ld-pilula">Salão com 11 ou mais</span>
                 <h3>MIMO Pro+</h3>
                 <div className="ld-preco">R$ 149,90 <small>/mês</small></div>
-                <p>Até 10 profissionais inclusas. A partir da 11ª, + R$ 7,90 por profissional, sem limite.</p>
+                <p>Até 11 profissionais inclusas. Da 12ª em diante, + R$ 7,90 por profissional, sem limite.</p>
                 <ul className="ld-checks"><li>Tudo do MIMO Pro</li><li>Profissionais sem limite</li><li>Permissões por profissional</li><li>Comissões e relatórios</li><li>Operação mais estruturada</li></ul>
                 <a className="ld-btn ld-fantasma" href={comecar('salao')}>Criar meu salão</a>
               </article>

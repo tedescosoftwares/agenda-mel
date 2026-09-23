@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import QRCode from 'qrcode'
-import { Store, UserRound, Check, ArrowLeft, ArrowRight, LogOut, Camera, MapPin, Plus, X, Copy, Download, MoreHorizontal, Link2, CheckCircle2, Info, Crown, Sparkles, MessageCircle, Users, Minus } from 'lucide-react'
+import { Store, Check, ArrowLeft, ArrowRight, LogOut, Camera, MapPin, Plus, X, Copy, Download, MoreHorizontal, Link2, CheckCircle2, Info, Crown, Sparkles, MessageCircle, Users, Minus } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
-import { MarcaIcon, Wordmark } from '../components/icons'
+import { planoDoNegocio, reais as emDinheiro, PLANOS } from '../lib/planos'
+import '../onboarding.css'
 import { reduzirFoto } from '../lib/imagem'
 import { buscarCep, formatarCep, minhaPosicao, geocodificar } from '../lib/geo'
 import { formatarFone } from '../lib/fone'
@@ -19,13 +20,14 @@ import RodapeSocial from '../components/RodapeSocial'
 // mesmo fluxo no computador e no celular. Cada passo grava ao continuar
 // e a conta lembra onde parou; quem sair volta pro mesmo lugar. A
 // autônoma passa por cinco: não tem o passo da equipe.
+// cada passo tem a foto, o bilhete e a frase do painel da esquerda
 const PASSOS = [
-  { id: 1, rotulo: 'Tipo de conta' },
-  { id: 2, rotulo: 'Dados do salão' },
-  { id: 3, rotulo: 'Estrutura e operação' },
-  { id: 4, rotulo: 'Serviços' },
-  { id: 5, rotulo: 'Equipe' },
-  { id: 6, rotulo: 'Clientes e ativação' },
+  { id: 1, rotulo: 'Tipo de conta', foto: 'profissional', bilhete: 'bem-vinda', titulo: 'Sua rotina no lugar.', texto: 'Escolha como você trabalha. Autônoma é grátis; salão paga só pelas agendas que usa.' },
+  { id: 2, rotulo: 'Dados do salão', foto: 'salao', bilhete: 'é a cara da casa', titulo: 'O que a cliente vê.', texto: 'Nome, foto, WhatsApp e endereço aparecem na página do seu negócio e no app da cliente.' },
+  { id: 3, rotulo: 'Estrutura e operação', foto: 'painel', bilhete: 'do seu jeito', titulo: 'Como o dia funciona.', texto: 'Horários, política de agendamento, sinal e quem confirma. Tudo dá pra mudar depois em Ajustes.' },
+  { id: 4, rotulo: 'Serviços', foto: 'lifestyle', bilhete: 'preço e tempo', titulo: 'O que você oferece.', texto: 'Cadastre os principais com duração real. É isso que impede a agenda de oferecer um horário que não existe.' },
+  { id: 5, rotulo: 'Equipe', foto: 'equipe', bilhete: 'cada uma com a sua agenda', titulo: 'Quem atende.', texto: 'Você configura tudo; a profissional entra pelo link da equipe e já encontra a agenda dela pronta.' },
+  { id: 6, rotulo: 'Clientes e ativação', foto: 'qr', bilhete: 'do balcão pra agenda', titulo: 'Pronta pra receber.', texto: 'Imprima o QR, coloque no balcão e na bio. A cliente escaneia e marca sozinha.' },
 ]
 const DIAS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
 const ORDEM_DIAS = [1, 2, 3, 4, 5, 6, 0]
@@ -126,44 +128,47 @@ export default function Onboarding({ publico = false }) {
   if (!s) return <div className="page-center"><p className="muted">Carregando…</p></div>
 
   const props = { s, setS, salvando, erro, setErro, seguir, voltar, gravar, user, role, autonoma, concluir, pronto, publico, recarregarPerfil, navigate }
+  const atual = passos[idx] ?? passos[0]
+  const plano = planoDoNegocio(s.tipo, s.equipe_prevista)
+  const sairLink = publico ? <Link className="ob-sair" to="/pro/entrar"><LogOut size={14} /> Já tenho conta</Link> : <button type="button" className="ob-sair" onClick={sair}><LogOut size={14} /> Sair do cadastro</button>
   return (
     <div className="ob">
-      <header className="ob-topo">
-        <div className="ob-marca"><MarcaIcon width={30} height={27} id="ob" /><Wordmark tamanho={1.5} /></div>
-        <button type="button" className="ob-voltar-m" onClick={() => (idx === 0 ? sair() : voltar())} aria-label="Voltar"><ArrowLeft size={20} /></button>
-        <div className="ob-progresso" aria-label={`Passo ${idx + 1} de ${total}`}>
-          <span className="ob-progresso-num">{idx + 1} de {total}</span>
-          <span className="ob-trilha">{passos.map((p, i) => <span key={p.id} className={'ob-ponto' + (i < idx ? ' feito' : i === idx ? ' atual' : '')} />)}</span>
+      <aside className="ob-painel">
+        <div className="ob-painel-topo"><img src="/mimo-logo.svg" alt="MIMO" />{sairLink}</div>
+        <div className="ob-painel-foto"><img src={`/imagens/${atual.foto}-720.webp`} alt="" /><span className="ob-painel-bilhete">{atual.bilhete} <i>♥</i></span></div>
+        <div className="ob-painel-texto"><small>Passo {idx + 1} de {total}</small><h2>{atual.titulo}</h2><p>{atual.texto}</p></div>
+        <ol className="ob-passos">
+          {passos.map((p, i) => (
+            <li key={p.id} className={i < idx ? 'feito' : i === idx ? 'atual' : ''}>
+              <button type="button" onClick={() => { if (publico ? p.id <= 2 && i <= idx : (i <= idx || p.id <= (s.onboarding_passo ?? 1))) setPasso(p.id) }}>
+                <span className="ob-passo-num">{i < idx ? <Check size={12} /> : i + 1}</span>{p.rotulo}
+              </button>
+            </li>
+          ))}
+        </ol>
+        <div className="ob-plano-painel">
+          <small>Seu plano</small>
+          <strong>{plano.nome}</strong>
+          <b>{plano.total === 0 ? 'Grátis' : emDinheiro(plano.total)}{plano.total > 0 && <small> /mês</small>}</b>
+          <span>{autonoma ? 'Uma agenda, sem mensalidade.' : `${s.equipe_prevista || 1} ${(s.equipe_prevista || 1) === 1 ? 'agenda' : 'agendas'} · ajuste no passo 3`}</span>
         </div>
-        {publico ? <Link className="ob-sair" to="/pro/entrar"><LogOut size={14} /> Já tenho conta</Link> : <button type="button" className="ob-sair" onClick={sair}><LogOut size={14} /> Sair do cadastro</button>}
-        {!(publico && passo === 2) && <button type="button" className="ob-pular" onClick={() => (passo === 6 ? concluir() : seguir({}))}>{passo === 6 ? 'Concluir' : 'Pular'}</button>}
-      </header>
+        {SUPORTE && <a className="ob-ajuda" href={`https://wa.me/${SUPORTE.replace(/\D/g, '')}?text=${encodeURIComponent('Oi! Estou fazendo o cadastro do meu salão no MIMO e preciso de ajuda.')}`} target="_blank" rel="noreferrer"><MessageCircle size={18} /><span><strong>Precisa de ajuda?</strong><small>Fale com a gente pelo WhatsApp</small></span></a>}
+      </aside>
 
-      <div className="ob-corpo">
-        <aside className="ob-lateral">
-          <strong className="ob-lateral-titulo"><Sparkles size={14} /> Onboarding</strong>
-          <ol className="ob-passos">
-            {passos.map((p, i) => (
-              <li key={p.id} className={i < idx ? 'feito' : i === idx ? 'atual' : ''}>
-                <button type="button" onClick={() => { if (publico ? p.id <= 2 && i <= idx : (i <= idx || p.id <= (s.onboarding_passo ?? 1))) setPasso(p.id) }}>
-                  <span className="ob-passo-num">{i < idx ? <Check size={12} /> : i + 1}</span>{p.rotulo}
-                </button>
-              </li>
-            ))}
-          </ol>
-          {SUPORTE && <a className="ob-ajuda" href={`https://wa.me/${SUPORTE.replace(/\D/g, '')}?text=${encodeURIComponent('Oi! Estou fazendo o cadastro do meu salão no MIMO e preciso de ajuda.')}`} target="_blank" rel="noreferrer"><MessageCircle size={18} /><span><strong>Precisa de ajuda?</strong><small>Fale com nosso time pelo WhatsApp</small></span></a>}
-        </aside>
-
-        <main className="ob-conteudo">
-          <span className="ob-conteudo-num">{idx + 1} de {total}</span>
-          {passo === 1 && <PassoTipo {...props} />}
-          {passo === 2 && <PassoDados {...props} />}
-          {passo === 3 && <PassoEstrutura {...props} />}
-          {passo === 4 && <PassoServicos {...props} />}
-          {passo === 5 && <PassoEquipe {...props} />}
-          {passo === 6 && <PassoAtivacao {...props} />}
-        </main>
-      </div>
+      <main className="ob-conteudo">
+        <div className="ob-topo-m">
+          <button type="button" onClick={() => (idx === 0 ? sair() : voltar())} aria-label="Voltar"><ArrowLeft size={20} /></button>
+          <div className="ob-barra" aria-label={`Passo ${idx + 1} de ${total}`}><i style={{ width: `${((idx + 1) / total) * 100}%` }} /></div>
+          {!(publico && passo === 2) ? <button type="button" onClick={() => (passo === 6 ? concluir() : seguir({}))}>{passo === 6 ? 'Concluir' : 'Pular'}</button> : <span />}
+        </div>
+        <span className="ob-conteudo-num">Passo {idx + 1} de {total} · {atual.rotulo}</span>
+        {passo === 1 && <PassoTipo {...props} />}
+        {passo === 2 && <PassoDados {...props} />}
+        {passo === 3 && <PassoEstrutura {...props} />}
+        {passo === 4 && <PassoServicos {...props} />}
+        {passo === 5 && <PassoEquipe {...props} />}
+        {passo === 6 && <PassoAtivacao {...props} />}
+      </main>
     </div>
   )
 }
@@ -191,24 +196,25 @@ function PassoTipo({ s, setS, seguir, salvando, erro, setErro }) {
   }
   return (
     <>
-      <h1 className="ob-titulo">Bem-vindo ao MIMO! <span aria-hidden="true">✨</span></h1>
-      <p className="ob-sub">Escolha o tipo de conta para continuar</p>
+      <h1 className="ob-titulo">Como você trabalha?</h1>
+      <p className="ob-sub">Escolha o tipo de conta. Dá pra mudar depois, sem perder nada.</p>
       {erro && <div className="alert alert-error">{erro}</div>}
       <div className="ob-tipos">
         {[
-          { id: 'salao', Icone: Store, titulo: 'Cadastrar salão', texto: 'Gerencie sua equipe, serviços, agenda e seus clientes em um só lugar.', itens: ['Agenda compartilhada', 'Gestão de profissionais', 'Cadastro de serviços', 'Divulgação para novos clientes'] },
-          { id: 'autonoma', Icone: UserRound, titulo: 'Sou profissional autônoma', texto: 'Se você atende de forma independente, crie sua conta como profissional.', itens: ['Agenda individual', 'Seus próprios clientes', 'Divulgação do seu perfil', 'Plano gratuito disponível'] },
+          { id: 'salao', foto: 'equipe', pilula: 'Salão · MIMO Pro', titulo: 'Tenho salão, com equipe', texto: 'Agenda geral, uma agenda por profissional, comanda, repasses, lista de espera e WhatsApp.', preco: 'R$ 49,90', sub: '/mês até 3 profissionais · R$ 9,90 por agenda a mais', itens: ['Até 10 agendas no Pro, sem limite no Pro+', 'Você configura; a profissional só entra', 'Comanda e repasse por profissional', 'QR e link do salão'] },
+          { id: 'autonoma', foto: 'profissional', pilula: 'Autônoma · grátis', titulo: 'Trabalho sozinha', texto: 'Uma agenda, serviços, clientes, retorno, QR e link próprios. Sem menu de equipe.', preco: 'R$ 0', sub: '/mês, sem cartão', itens: ['Agenda e horários', 'Serviços e preços', 'Clientes e histórico', 'QR e link próprios'] },
         ].map((o) => (
           <button key={o.id} type="button" className={'ob-tipo' + (tipo === o.id ? ' ativo' : '')} onClick={() => setTipo(o.id)} aria-pressed={tipo === o.id}>
-            <span className="ob-tipo-icone"><o.Icone size={28} /></span>
-            {tipo === o.id && <span className="ob-tipo-check"><Check size={13} /></span>}
+            <span className="ob-tipo-foto"><img src={`/imagens/${o.foto}-720.webp`} alt="" /><span className="ob-pilula">{o.pilula}</span></span>
+            {tipo === o.id && <span className="ob-tipo-check"><Check size={14} /></span>}
             <strong>{o.titulo}</strong>
             <span className="muted">{o.texto}</span>
+            <span className="ob-tipo-preco"><b>{o.preco}</b><small>{o.sub}</small></span>
             <ul>{o.itens.map((i) => <li key={i}><Check size={13} /> {i}</li>)}</ul>
           </button>
         ))}
       </div>
-      <div className="ob-nota"><span className="ob-nota-icone"><Crown size={16} /></span><span><strong>Seu salão, mais conectado</strong><small>Profissionais do seu salão também podem ter seus próprios links de agendamento, mantendo o vínculo com o salão.</small></span></div>
+      <div className="ob-nota"><span className="ob-nota-icone"><Crown size={16} /></span><span><strong>Nenhuma cobrança neste cadastro</strong><small>A mensalidade do salão é combinada depois, direto com a MIMO. Autônoma não paga nada.</small></span></div>
       <Rodape primeiro avancar={avancar} salvando={salvando} />
     </>
   )
@@ -300,7 +306,7 @@ function PassoDados({ s, setS, seguir, voltar, salvando, erro, setErro, user, ro
   if (criada) {
     return (
       <>
-        <h1 className="ob-titulo">Conta criada! <span aria-hidden="true">🎉</span></h1>
+        <h1 className="ob-titulo">Conta criada!</h1>
         <p className="ob-sub">Falta só confirmar o e-mail</p>
         <div className="ob-pronto"><span className="ob-pronto-check"><Check size={18} /></span><span><strong>Mandamos um link para {f.email.trim()}</strong><small>Abra o e-mail, toque em confirmar e entre. Você continua daqui, no passo 3, com tudo o que já preencheu guardado{logo ? ', a foto inclusive (entrando por este mesmo navegador)' : ''}.</small></span></div>
         <div className="ob-rodape"><span /><Link to="/pro/entrar" className="btn btn-primary ob-continuar">Já confirmei, entrar <ArrowRight size={16} /></Link></div>
@@ -309,7 +315,7 @@ function PassoDados({ s, setS, seguir, voltar, salvando, erro, setErro, user, ro
   }
   return (
     <>
-      <h1 className="ob-titulo">{autonoma ? 'Seus dados' : 'Dados do seu salão'}</h1>
+      <h1 className="ob-titulo">{autonoma ? 'Seus dados' : 'A cara do salão'}</h1>
       <p className="ob-sub">{publico ? 'Preencha as informações principais e crie o seu acesso' : autonoma ? 'As informações que as clientes vão ver' : 'Preencha as informações principais do seu salão'}</p>
       {erro && <div className="alert alert-error">{erro}</div>}
       <div className="ob-dados">
@@ -404,7 +410,7 @@ function PassoEstrutura({ s, seguir, voltar, salvando, erro, setErro, autonoma }
   }
   return (
     <>
-      <h1 className="ob-titulo">Estrutura e operação</h1>
+      <h1 className="ob-titulo">Como o dia funciona</h1>
       <p className="ob-sub">{autonoma ? 'Defina como você atende no dia a dia' : 'Defina como seu salão funciona no dia a dia'}</p>
       {erro && <div className="alert alert-error">{erro}</div>}
       <div className="ob-estrutura">
@@ -440,9 +446,12 @@ function PassoEstrutura({ s, seguir, voltar, salvando, erro, setErro, autonoma }
         </div>
         {!autonoma && (
           <div className="ob-card">
-            <strong className="ob-card-titulo">Profissionais ativos no salão</strong>
-            <span className="muted">Quantos profissionais fazem parte da sua equipe?</span>
+            <strong className="ob-card-titulo">Profissionais com agenda</strong>
+            <span className="muted">Quantas atendem no salão? Recepção e administração não contam.</span>
             <div className="ob-contador"><button type="button" onClick={() => p('equipe_prevista')(Math.max(1, Number(pol.equipe_prevista) - 1))} aria-label="Menos"><Minus size={14} /></button><strong>{pol.equipe_prevista}</strong><button type="button" onClick={() => p('equipe_prevista')(Number(pol.equipe_prevista) + 1)} aria-label="Mais"><Plus size={14} /></button></div>
+            {(() => { const c = planoDoNegocio('salao', pol.equipe_prevista); return (
+              <div className="ob-preco-vivo"><small>{c.nome}</small><b>{emDinheiro(c.total)}<small> /mês</small></b><span>{c.extras === 0 ? `Até ${c.plano === 'pro' ? PLANOS.pro.inclusas : PLANOS.promais.inclusas} agendas inclusas.` : `${c.plano === 'pro' ? PLANOS.pro.inclusas : PLANOS.promais.inclusas} inclusas + ${c.extras} × ${emDinheiro(c.valorExtra)}.`} Nenhuma cobrança agora.</span></div>
+            ) })()}
           </div>
         )}
         <div className="ob-card">
@@ -494,7 +503,7 @@ function PassoServicos({ s, seguir, voltar, salvando, erro, setErro, autonoma })
   return (
     <>
       <div className="ob-titulo-linha">
-        <div><h1 className="ob-titulo">{autonoma ? 'Seus serviços' : 'Serviços do salão'}</h1><p className="ob-sub">Cadastre os principais serviços oferecidos</p></div>
+        <div><h1 className="ob-titulo">{autonoma ? 'Seus serviços' : 'O que o salão oferece'}</h1><p className="ob-sub">Nome, duração real e preço. Dá pra mudar depois.</p></div>
         <button type="button" className="btn btn-secondary ob-add" onClick={() => setModal('novo')}><Plus size={15} /> Adicionar serviço</button>
       </div>
       {erro && <div className="alert alert-error">{erro}</div>}
@@ -630,7 +639,7 @@ function PassoEquipe({ s, seguir, voltar, salvando, erro, setErro, user }) {
   return (
     <>
       <div className="ob-titulo-linha">
-        <div><h1 className="ob-titulo">Equipe e vínculos</h1><p className="ob-sub">Convide seus profissionais e defina os acessos</p></div>
+        <div><h1 className="ob-titulo">Quem atende</h1><p className="ob-sub">Você configura tudo; elas entram pelo link da equipe.</p></div>
         <button type="button" className="btn btn-primary ob-add" onClick={() => setModal(true)}><Plus size={15} /> Convidar profissional</button>
       </div>
       {erro && <div className="alert alert-error">{erro}</div>}
@@ -721,7 +730,7 @@ function PassoAtivacao({ s, voltar, salvando, erro, concluir, pronto, autonoma }
   }
   return (
     <>
-      <h1 className="ob-titulo">Clientes e ativação</h1>
+      <h1 className="ob-titulo">Pronta pra receber</h1>
       <p className="ob-sub">{autonoma ? 'Divulgue sua agenda e comece a receber agendamentos' : 'Divulgue seu salão e comece a receber agendamentos'}</p>
       {erro && <div className="alert alert-error">{erro}</div>}
       <div className="ob-card ob-ativacao">
@@ -748,7 +757,13 @@ function PassoAtivacao({ s, voltar, salvando, erro, concluir, pronto, autonoma }
           <span className="ob-importante-icone"><Users size={34} /></span>
         </div>
       </div>
-      <div className="ob-pronto"><span className="ob-pronto-check"><Check size={18} /></span><span><strong>Tudo pronto!</strong><small>Seu salão foi configurado com sucesso. Agora é só começar a receber agendamentos!</small></span></div>
+      {(() => { const c = planoDoNegocio(s.tipo, s.equipe_prevista); return (
+        <div className="ob-resumo-plano">
+          <div><small>Seu plano</small><strong>{c.nome}</strong><p>{autonoma ? 'Uma agenda, sem mensalidade, sem cartão.' : `${s.equipe_prevista || 1} ${(s.equipe_prevista || 1) === 1 ? 'agenda' : 'agendas'} · ${c.extras === 0 ? 'todas inclusas' : `${c.extras} além das inclusas`}. Nenhuma cobrança agora: a mensalidade é combinada com a MIMO.`}</p></div>
+          <b>{c.total === 0 ? 'Grátis' : <>{emDinheiro(c.total)}<small> /mês</small></>}</b>
+        </div>
+      ) })()}
+      <div className="ob-pronto"><span className="ob-pronto-check"><Check size={18} /></span><span><strong>Tudo pronto!</strong><small>{autonoma ? 'Sua agenda está configurada. Agora é só divulgar o link.' : 'Seu salão está configurado. Agora é só começar a receber agendamentos.'}</small></span></div>
       <Rodape voltar={voltar} avancar={concluir} salvando={salvando || pronto} rotulo="Finalizar e entrar no painel" icone={<ArrowRight size={16} />} />
     </>
   )

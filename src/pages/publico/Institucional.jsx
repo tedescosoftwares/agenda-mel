@@ -47,12 +47,12 @@ export function Planos() {
           <span className="ld-pilula">Salão com 11 ou mais</span>
           <h3>MIMO Pro+</h3>
           <div className="ld-preco">R$ 149,90 <small>/mês</small></div>
-          <p>Até 10 profissionais inclusas. A partir da 11ª, + R$ 7,90 por profissional, sem limite.</p>
+          <p>Até 11 profissionais inclusas. Da 12ª em diante, + R$ 7,90 por profissional, sem limite.</p>
           <ul className="ld-checks"><li>Tudo do MIMO Pro</li><li>Profissionais sem limite</li><li>Permissões por profissional</li><li>Comissões e relatórios</li><li>Operação mais estruturada</li></ul>
           <a className="ld-btn ld-fantasma" href={comecarEm('salao')}>Criar meu salão</a>
         </article>
       </div>
-      <p className="sp-nota">Exemplos: 3 profissionais, R$ 49,90. 6 profissionais, R$ 79,60. 10 profissionais, R$ 119,20. 15 profissionais, R$ 189,40. Sem fidelidade. A autônoma que abrir um salão passa para o MIMO Pro com a mesma conta, sem perder clientes nem histórico.</p>
+      <p className="sp-nota">Exemplos: 3 profissionais, R$ 49,90. 6 profissionais, R$ 79,60. 10 profissionais, R$ 119,20. 15 profissionais, R$ 181,50. Sem fidelidade. A autônoma que abrir um salão passa para o MIMO Pro com a mesma conta, sem perder clientes nem histórico.</p>
     </Pagina>
   )
 }

@@ -23,13 +23,36 @@ function Pagina({ caminho, titulo, descricao, migalha, children }) {
 
 export function Planos() {
   return (
-    <Pagina caminho="/planos" migalha="Planos" titulo="Planos e preços | MIMO" descricao="Autônoma grátis. Salão por R$ 49,90/mês mais R$ 9,90 por profissional ativa na agenda. Sem orçamento, sem surpresa.">
-      <Cabeca kicker="Planos" titulo={['Preço que o salão entende', 'sem pedir orçamento.']}>Você paga pelas agendas profissionais que realmente utiliza. Recepção, gerente e conta administrativa não contam como agenda.</Cabeca>
-      <div className="ld-planos">
-        <article className="ld-plano ld-rv"><span className="ld-pilula">Autônoma</span><h3>Grátis</h3><div className="ld-preco">R$ 0 <small>/mês</small></div><p>Para quem trabalha por conta própria.</p><ul className="ld-checks"><li>1 agenda profissional</li><li>Clientes e histórico</li><li>Serviços e horários</li><li>QR e link próprios</li><li>Retorno de clientes</li></ul><a className="ld-btn ld-fantasma" href={comecarEm('autonoma')}>Criar agenda grátis</a></article>
-        <article className="ld-plano ld-quente ld-rv"><span className="ld-etiqueta">feito para crescer</span><span className="ld-pilula">Salão</span><h3>MIMO Pro</h3><div className="ld-preco">R$ 49,90 <small>/mês</small></div><p>+ R$ 9,90 por profissional ativa na agenda.</p><ul className="ld-checks"><li>Equipe e várias agendas</li><li>Agenda geral, comanda e repasses</li><li>Lista de espera e WhatsApp</li><li>Sinal e pagamentos</li><li>Avaliações e projeção da semana</li></ul><a className="ld-btn ld-primario" href={comecarEm('salao')}>Criar meu salão</a></article>
+    <Pagina caminho="/planos" migalha="Planos" titulo="Planos e preços | MIMO" descricao="Autônoma grátis. MIMO Pro por R$ 49,90/mês até 3 profissionais, mais R$ 9,90 por profissional até 10. MIMO Pro+ por R$ 149,90/mês para 11 ou mais, mais R$ 7,90 por profissional.">
+      <Cabeca kicker="Planos" titulo={['Preço que o salão entende', 'sem pedir orçamento.']}>Três planos, uma regra: você paga pelas agendas profissionais que realmente utiliza. Recepção, gerente e conta administrativa não contam como agenda.</Cabeca>
+      <div className="ld-planos ld-planos-3">
+        <article className="ld-plano ld-rv">
+          <span className="ld-pilula">Autônoma</span>
+          <h3>Grátis</h3>
+          <div className="ld-preco">R$ 0 <small>/mês</small></div>
+          <p>Para quem trabalha por conta própria.</p>
+          <ul className="ld-checks"><li>1 agenda profissional</li><li>Serviços e horários</li><li>Clientes e histórico</li><li>QR e link próprios</li><li>Retorno de clientes</li></ul>
+          <a className="ld-btn ld-fantasma" href={comecarEm('autonoma')}>Criar agenda grátis</a>
+        </article>
+        <article className="ld-plano ld-quente ld-rv">
+          <span className="ld-etiqueta">feito para crescer</span>
+          <span className="ld-pilula">Salão até 10 agendas</span>
+          <h3>MIMO Pro</h3>
+          <div className="ld-preco">R$ 49,90 <small>/mês</small></div>
+          <p>Até 3 profissionais inclusas. Da 4ª à 10ª, + R$ 9,90 por profissional ativa na agenda.</p>
+          <ul className="ld-checks"><li>Equipe e várias agendas</li><li>Agenda geral, comanda e repasses</li><li>Lista de espera e WhatsApp</li><li>Sinal e pagamentos</li><li>Avaliações e projeção da semana</li></ul>
+          <a className="ld-btn ld-primario" href={comecarEm('salao')}>Criar meu salão</a>
+        </article>
+        <article className="ld-plano ld-rv">
+          <span className="ld-pilula">Salão com 11 ou mais</span>
+          <h3>MIMO Pro+</h3>
+          <div className="ld-preco">R$ 149,90 <small>/mês</small></div>
+          <p>Até 10 profissionais inclusas. A partir da 11ª, + R$ 7,90 por profissional, sem limite.</p>
+          <ul className="ld-checks"><li>Tudo do MIMO Pro</li><li>Profissionais sem limite</li><li>Permissões por profissional</li><li>Comissões e relatórios</li><li>Operação mais estruturada</li></ul>
+          <a className="ld-btn ld-fantasma" href={comecarEm('salao')}>Criar meu salão</a>
+        </article>
       </div>
-      <p className="sp-nota">Sem fidelidade. A autônoma que abrir um salão passa para o MIMO Pro com a mesma conta, sem perder clientes nem histórico.</p>
+      <p className="sp-nota">Exemplos: 3 profissionais, R$ 49,90. 6 profissionais, R$ 79,60. 10 profissionais, R$ 119,20. 15 profissionais, R$ 189,40. Sem fidelidade. A autônoma que abrir um salão passa para o MIMO Pro com a mesma conta, sem perder clientes nem histórico.</p>
     </Pagina>
   )
 }

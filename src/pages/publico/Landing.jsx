@@ -65,7 +65,8 @@ const JSON_LD = {
       applicationCategory: 'BusinessApplication', operatingSystem: 'Web, iOS, Android', inLanguage: 'pt-BR', description: DESCRICAO,
       offers: [
         { '@type': 'Offer', name: 'MIMO Autônoma', price: '0', priceCurrency: 'BRL' },
-        { '@type': 'Offer', name: 'MIMO Pro Salão', price: '49.90', priceCurrency: 'BRL', description: 'Mensalidade base, mais R$ 9,90 por profissional ativa na agenda.' },
+        { '@type': 'Offer', name: 'MIMO Pro', price: '49.90', priceCurrency: 'BRL', description: 'Salão com até 10 agendas: até 3 profissionais inclusas, mais R$ 9,90 por profissional adicional.' },
+        { '@type': 'Offer', name: 'MIMO Pro+', price: '149.90', priceCurrency: 'BRL', description: 'Salão com 11 ou mais agendas: até 10 profissionais inclusas, mais R$ 7,90 por profissional adicional, sem limite.' },
       ],
       publisher: { '@id': 'https://mimo.com.vc/#organization' },
     },
@@ -337,24 +338,32 @@ export default function Landing() {
         {/* ---------- PLANOS ---------- */}
         <section id="planos" className="ld-alt">
           <div className="ld-wrap">
-            <Cabeca kicker="Planos" titulo={['Preço que o salão entende', 'sem pedir orçamento.']} centro>Você paga pelas agendas profissionais que realmente utiliza.</Cabeca>
-            <div className="ld-planos">
+            <Cabeca kicker="Planos" titulo={['Preço que o salão entende', 'sem pedir orçamento.']} centro>Você paga pelas agendas profissionais que realmente utiliza. Recepção e administração não contam.</Cabeca>
+            <div className="ld-planos ld-planos-3">
               <article className="ld-plano ld-rv">
                 <span className="ld-pilula">Autônoma</span>
                 <h3>Grátis</h3>
                 <div className="ld-preco">R$ 0 <small>/mês</small></div>
                 <p>Para quem trabalha por conta própria.</p>
-                <ul className="ld-checks"><li>1 agenda profissional</li><li>Serviços</li><li>Clientes</li><li>Horários</li><li>QR e link</li><li>Retorno</li></ul>
+                <ul className="ld-checks"><li>1 agenda profissional</li><li>Serviços e horários</li><li>Clientes e histórico</li><li>QR e link próprios</li><li>Retorno de clientes</li></ul>
                 <a className="ld-btn ld-fantasma" href={comecar('autonoma')}>Criar agenda grátis</a>
               </article>
               <article className="ld-plano ld-quente ld-rv">
                 <span className="ld-etiqueta">feito para crescer</span>
-                <span className="ld-pilula">Salão</span>
+                <span className="ld-pilula">Salão até 10 agendas</span>
                 <h3>MIMO Pro</h3>
                 <div className="ld-preco">R$ 49,90 <small>/mês</small></div>
-                <p>+ R$ 9,90 por profissional ativa na agenda.</p>
+                <p>Até 3 profissionais inclusas. Da 4ª à 10ª, + R$ 9,90 por profissional ativa na agenda.</p>
                 <ul className="ld-checks"><li>Equipe e várias agendas</li><li>Agenda geral, comanda e repasses</li><li>Lista de espera e WhatsApp</li><li>Sinal e pagamentos</li><li>Avaliações e projeção da semana</li></ul>
                 <a className="ld-btn ld-primario" href={comecar('salao')}>Criar meu salão</a>
+              </article>
+              <article className="ld-plano ld-rv">
+                <span className="ld-pilula">Salão com 11 ou mais</span>
+                <h3>MIMO Pro+</h3>
+                <div className="ld-preco">R$ 149,90 <small>/mês</small></div>
+                <p>Até 10 profissionais inclusas. A partir da 11ª, + R$ 7,90 por profissional, sem limite.</p>
+                <ul className="ld-checks"><li>Tudo do MIMO Pro</li><li>Profissionais sem limite</li><li>Permissões por profissional</li><li>Comissões e relatórios</li><li>Operação mais estruturada</li></ul>
+                <a className="ld-btn ld-fantasma" href={comecar('salao')}>Criar meu salão</a>
               </article>
             </div>
           </div>

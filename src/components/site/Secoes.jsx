@@ -4,6 +4,7 @@ import { ArrowRight, Check, Minus, Plus, ShieldCheck, Lock, CreditCard, Headset,
 import { supabase } from '../../lib/supabase'
 import { formatarFone, soDigitos, foneValido } from '../../lib/fone'
 import { Foto, Coracao, comecarEm } from './Pecas'
+import { PLANOS, precoPara, reais } from '../../lib/planos'
 
 // As seções novas da landing: rotina com recortes de UI, histórias de
 // uso, antes × com MIMO, produto real com callouts, tamanhos, simulador
@@ -93,7 +94,7 @@ export function Tamanhos() {
   const t = [
     { nome: 'Autônoma', fala: 'Só preciso organizar minha agenda.', itens: ['Agenda', 'Clientes', 'Serviços', 'Horários', 'Retorno', 'QR e link'], tag: 'Plano grátis', tipo: 'autonoma' },
     { nome: 'Salão pequeno', fala: 'Preciso organizar equipe e clientes.', itens: ['Múltiplas agendas', 'Equipe', 'Serviços', 'Clientes', 'WhatsApp', 'Pagamentos'], tag: 'MIMO Pro', tipo: 'salao', quente: true },
-    { nome: 'Salão crescendo', fala: 'Preciso de mais controle sem criar mais complicação.', itens: ['Mais profissionais', 'Permissões', 'Comissões', 'Relatórios', 'Operação mais estruturada'], tag: 'MIMO Pro', tipo: 'salao' },
+    { nome: 'Salão crescendo', fala: 'Preciso de mais controle sem criar mais complicação.', itens: ['Mais de 10 profissionais', 'Permissões', 'Comissões', 'Relatórios', 'Operação mais estruturada'], tag: 'MIMO Pro+', tipo: 'salao' },
   ]
   return (
     <div className="tm">
@@ -110,23 +111,23 @@ export function Tamanhos() {
 }
 
 // ---------- simulador de preço ----------
-const BASE = 49.9, POR_AGENDA = 9.9, MAX = 10
-const reais = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+const MAX = 30
 export function Simulador() {
   const [n, setN] = useState(3)
-  const total = BASE + POR_AGENDA * n
+  const c = precoPara(n)
   return (
     <div className="sm ld-rv">
       <div className="sm-controle">
         <label htmlFor="sm-n">Quantas profissionais usam agenda?</label>
         <div className="sm-passos"><button type="button" aria-label="Menos uma" onClick={() => setN((v) => Math.max(1, v - 1))} disabled={n <= 1}><Minus size={20} /></button><output id="sm-n">{n}</output><button type="button" aria-label="Mais uma" onClick={() => setN((v) => Math.min(MAX, v + 1))} disabled={n >= MAX}><Plus size={20} /></button></div>
         <input type="range" min={1} max={MAX} value={n} onChange={(e) => setN(Number(e.target.value))} aria-label="Profissionais com agenda" />
-        {n >= MAX && <small className="sm-mais">Mais de {MAX} profissionais? <a href="#quero-ver">Fala com a gente</a>.</small>}
+        <div className="sm-faixas" aria-hidden="true"><span className={c.plano === 'pro' ? 'on' : ''}>MIMO Pro · até 10</span><span className={c.plano === 'promais' ? 'on' : ''}>MIMO Pro+ · 11 ou mais</span></div>
+        {n >= MAX && <small className="sm-mais">Mais de {MAX}? A conta segue a mesma: R$ {PLANOS.promais.extra.toFixed(2).replace('.', ',')} por agenda. <a href="#quero-ver">Fala com a gente</a>.</small>}
       </div>
       <div className="sm-conta">
-        <div><span>Mensalidade base</span><b>{reais(BASE)}</b></div>
-        <div><span>{n} {n === 1 ? 'agenda' : 'agendas'} × {reais(POR_AGENDA)}</span><b>{reais(POR_AGENDA * n)}</b></div>
-        <div className="sm-total"><span>Total</span><b>{reais(total)} <small>/mês</small></b></div>
+        <div><span>{c.nome} <small>até {c.plano === 'pro' ? PLANOS.pro.inclusas : PLANOS.promais.inclusas} agendas inclusas</small></span><b>{reais(c.base)}</b></div>
+        <div><span>{c.extras === 0 ? 'Nenhuma agenda a mais' : `${c.extras} ${c.extras === 1 ? 'agenda a mais' : 'agendas a mais'} × ${reais(c.valorExtra)}`}</span><b>{reais(c.extras * c.valorExtra)}</b></div>
+        <div className="sm-total"><span>Total</span><b>{reais(c.total)} <small>/mês</small></b></div>
         <p>Você paga apenas pelas agendas profissionais ativas. Recepção, administração e gestão não contam como agenda profissional.</p>
         <a className="ld-btn ld-primario" href={comecarEm('salao')}>Criar meu salão <ArrowRight size={16} /></a>
       </div>

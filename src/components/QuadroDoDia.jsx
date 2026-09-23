@@ -152,7 +152,8 @@ export default function QuadroDoDia({ dia, agenda, semana = [], onTrocarDia, pro
                     <span className="quadro-cartao-hora">{a.start_time.slice(0, 5)}–{a.end_time.slice(0, 5)}</span>
                     <strong>{a.cliente}</strong>
                     {h >= 54 && <span className="quadro-cartao-serv">{a.servico}</span>}
-                    {h >= 72 && <span className="quadro-cartao-pe">{formatCents(a.price_cents ?? 0)}{a.pago_cents > 0 ? ` · sinal ${formatCents(a.pago_cents)}` : ''}{a.comanda_id ? ' · fechado' : ''}</span>}
+                    {h >= 72 && <span className="quadro-cartao-pe">{formatCents(a.price_cents ?? 0)}{a.pago_cents > 0 ? ` · sinal ${formatCents(a.pago_cents)}` : ''}{a.comanda_id ? ' · fechado' : ''}{a.avaliacao?.nota ? <em className="quadro-nota" title={a.avaliacao.comentario ?? 'Avaliação da cliente'}>{'★'.repeat(a.avaliacao.nota)}</em> : null}</span>}
+                    {h < 72 && a.avaliacao?.nota && <span className="quadro-marca nota" title={`Avaliou com ${a.avaliacao.nota} ${a.avaliacao.nota === 1 ? 'estrela' : 'estrelas'}`}>★ {a.avaliacao.nota}</span>}
                     {h >= 84 && a.client_id && (
                       <span className="quadro-cartao-cliente">
                         <span className={a.atendimentos === 0 ? 'nova' : ''}>{a.atendimentos === 0 ? 'Primeira vez' : `${a.atendimentos + 1}ª visita`}</span>
@@ -181,6 +182,16 @@ export default function QuadroDoDia({ dia, agenda, semana = [], onTrocarDia, pro
             <p className="muted"><Clock size={14} /> {aberto.start_time.slice(0, 5)} até {aberto.end_time.slice(0, 5)} · {aberto.profissional}</p>
             <p className="muted"><Sparkles size={14} /> {aberto.servico} · {formatCents(aberto.price_cents ?? 0)}{aberto.pago_cents > 0 ? ` · sinal de ${formatCents(aberto.pago_cents)} pago pelo app` : ''}</p>
             {aberto.telefone && <p className="muted"><UserRound size={14} /> {aberto.telefone}</p>}
+            {aberto.avaliacao?.nota && (
+              <div className="quadro-avaliacao">
+                <span className="quadro-avaliacao-estrelas" aria-label={`${aberto.avaliacao.nota} de 5`}>{[1, 2, 3, 4, 5].map((n) => <Star key={n} size={15} className={n <= aberto.avaliacao.nota ? 'cheia' : ''} />)}</span>
+                <span className="quadro-avaliacao-texto">
+                  <strong>Ela avaliou este atendimento com {aberto.avaliacao.nota} {aberto.avaliacao.nota === 1 ? 'estrela' : 'estrelas'}</strong>
+                  {aberto.avaliacao.comentario ? <q>{aberto.avaliacao.comentario}</q> : <span className="muted">Sem comentário.</span>}
+                  {aberto.avaliacao.em && <small className="muted">{new Date(aberto.avaliacao.em).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</small>}
+                </span>
+              </div>
+            )}
             {aberto.client_id ? (
               <div className="quadro-resumo">
                 <span className={'quadro-resumo-chip' + (aberto.atendimentos === 0 ? ' nova' : '')}>{aberto.atendimentos === 0 ? 'Primeira vez na casa' : `${aberto.atendimentos} ${aberto.atendimentos === 1 ? 'atendimento' : 'atendimentos'} aqui`}</span>
@@ -336,6 +347,7 @@ function LinhaDoTempo({ salaoId, clienteId, atualId }) {
               <span className="lt-texto">
                 <strong>{(x.itens?.length ? x.itens.map((i) => i.nome).join(' + ') : x.servico)}</strong>
                 <span className="muted">{x.profissional ? `com ${x.profissional.split(' ')[0]}` : ''}{x.status === 'faltou' ? ' · não veio' : x.status !== 'concluido' ? ` · ${x.status}` : ''}{formas ? ` · ${formas}` : ''}{x.avaliacao ? ' · ' : ''}{x.avaliacao ? <em className="lt-nota"><Star size={10} /> {x.avaliacao}</em> : null}</span>
+                {x.comentario && <q className="lt-comentario">{x.comentario}</q>}
               </span>
               <span className="lt-valor">{x.status === 'concluido' ? formatCents(total) : ''}</span>
             </li>

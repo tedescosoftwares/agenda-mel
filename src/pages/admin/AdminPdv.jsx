@@ -14,7 +14,7 @@ import { imprimirCupom } from '../../lib/cupom'
 import { useMovimentacao } from '../../lib/useMovimentacao'
 import { preparar as prepararSom, tocar } from '../../lib/som'
 import { Bell, Volume2, VolumeX, CalendarPlus, CalendarX, Banknote, MessageSquare, Clock3, CheckCircle2, X as XIcon } from 'lucide-react'
-import { CalendarDays, Users, HandCoins } from 'lucide-react'
+import { CalendarDays, Users, HandCoins, Star } from 'lucide-react'
 
 // O PDV do balcão (102): tela cheia, feita para o computador do salão.
 // Esquerda, a agenda de hoje (ou o caixa); centro, o catálogo; direita,
@@ -429,6 +429,7 @@ function IconeEvento({ tipo }) {
   if (tipo === 'remarcou') return <Clock3 size={18} />
   if (tipo === 'concluido' || tipo === 'status') return <CheckCircle2 size={18} />
   if (tipo === 'aviso') return <MessageSquare size={18} />
+  if (tipo === 'avaliacao') return <Star size={18} />
   return <Bell size={18} />
 }
 const hojeIso = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }

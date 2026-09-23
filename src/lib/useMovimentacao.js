@@ -52,7 +52,8 @@ export function useMovimentacao({ salaoId, userId, ligado = true, som = true, on
     if (DEMO) {
       const t1 = setTimeout(() => emitir({ id: 'd1', tipo: 'novo', titulo: 'Novo horário', texto: 'Beatriz Costa marcou Spa dos pés com Fernanda, hoje às 14:00.', som: 'novo' }), 1200)
       const t2 = setTimeout(() => emitir({ id: 'd2', tipo: 'pago', titulo: 'PIX caiu', texto: 'Carla Mendes pagou R$ 30,00 de sinal de Escova, hoje às 10:30.', som: 'dinheiro' }), 2400)
-      return () => { clearTimeout(t1); clearTimeout(t2) }
+      const t3 = setTimeout(() => emitir({ id: 'd3', tipo: 'avaliacao', titulo: 'Nova avaliação ★★★★★', texto: 'Juliana Silva avaliou a Escova com Ana: “Amei, saiu perfeita!”', som: 'estrela' }), 3800)
+      return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3) }
     }
     const canal = supabase.channel(`pdv-${salaoId}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'appointments', filter: `salon_id=eq.${salaoId}` }, async (p) => {
@@ -90,6 +91,15 @@ export function useMovimentacao({ salaoId, userId, ligado = true, som = true, on
         emitir({ id: `pg-${g.id}-${g.status}`, chave: `pg-${g.id}-${g.status}`, tipo: g.status === 'pago' ? 'pago' : 'estorno', appointment_id: g.appointment_id, som: g.status === 'pago' ? 'dinheiro' : 'atencao',
           titulo: g.status === 'pago' ? 'PIX caiu' : 'Devolução feita',
           texto: d ? `${d.cliente} ${g.status === 'pago' ? 'pagou' : 'recebeu de volta'} ${valor}${g.sinal_pct && g.sinal_pct < 100 ? ' de sinal' : ''} de ${d.servico}, ${d.quando}.` : `${valor} ${g.status === 'pago' ? 'recebido' : 'devolvido'} pelo app.` })
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'reviews', filter: `salon_id=eq.${salaoId}` }, async (p) => {
+        const r = p.new; if (!r?.nota) return
+        const d = r.appointment_id ? await descrever(r.appointment_id) : null
+        const estrelas = '★'.repeat(r.nota) + '☆'.repeat(5 - r.nota)
+        const fala = r.comentario ? ` “${String(r.comentario).trim().slice(0, 140)}${String(r.comentario).trim().length > 140 ? '…' : ''}”` : ''
+        emitir({ id: `av-${r.id}`, chave: `av-${r.id}`, tipo: 'avaliacao', appointment_id: r.appointment_id, som: r.nota >= 4 ? 'estrela' : 'atencao',
+          titulo: `Nova avaliação ${estrelas}`,
+          texto: d ? `${d.cliente} avaliou ${d.servico}${d.profissional ? ` com ${d.profissional}` : ''}${fala ? ':' : '.'}${fala}` : `Uma cliente avaliou com ${r.nota} ${r.nota === 1 ? 'estrela' : 'estrelas'}.${fala}` })
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` }, (p) => {
         const n = p.new; if (!n) return

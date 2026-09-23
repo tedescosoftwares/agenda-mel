@@ -6875,3 +6875,17 @@ label.check input { margin-top: 3px; }
 /* comprovante do sinal · o fechamento no salão, quando já houve */
 .pag-no-salao { margin-top: 0.6rem; padding-top: 0.6rem; border-top: 1px dashed var(--fio); display: flex; flex-direction: column; gap: 0.35rem; }
 .pag-no-salao .pag-comprovante-topo { margin-bottom: 0.1rem; }
+
+/* quadro · a avaliação da cliente no cartão, no detalhe e na linha do tempo */
+.quadro-nota { font-style: normal; margin-left: 0.35rem; color: #b45309; letter-spacing: 0.03em; }
+.quadro-marca.nota { background: #fff7e6; color: #b45309; }
+.quadro-avaliacao { display: flex; gap: 0.6rem; align-items: flex-start; margin: 0.5rem 0 0.2rem; padding: 0.6rem 0.7rem; border-radius: 12px; background: #fff8ea; border: 1px solid #fde4b5; }
+.quadro-avaliacao-estrelas { display: inline-flex; gap: 0.1rem; color: #e5c079; flex: none; padding-top: 0.1rem; }
+.quadro-avaliacao-estrelas svg.cheia { fill: #f5b301; color: #f5b301; }
+.quadro-avaliacao-texto { display: flex; flex-direction: column; gap: 0.15rem; font-size: 0.84rem; min-width: 0; }
+.quadro-avaliacao-texto strong { font-size: 0.82rem; color: #92400e; }
+.quadro-avaliacao-texto q { font-style: italic; line-height: 1.35; }
+.quadro-avaliacao-texto q::before, .quadro-avaliacao-texto q::after { color: #b45309; }
+.quadro-avaliacao-texto small { font-size: 0.7rem; }
+.lt-comentario { display: block; font-size: 0.78rem; font-style: italic; color: var(--cinza-3, #6b7280); margin-top: 0.1rem; line-height: 1.3; }
+.pdv-feed-item.avaliacao .pdv-feed-icone, .pdv-vivo-toast.avaliacao .pdv-feed-icone { background: #fff7e6; color: #b45309; }

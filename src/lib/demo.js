@@ -280,6 +280,30 @@ const RPC = {
   },
   pdv_fechar: ({ comanda }) => ({ ok: true, comanda_id: 'cm-novo', appointment_ids: comanda?.appointment_ids ?? [], cupom: Boolean(comanda?.client_id) && comanda?.enviar_cupom !== false, total_cents: (comanda?.itens ?? []).reduce((s, i) => s + i.preco_cents * (i.qtd ?? 1), 0) - (comanda?.desconto_cents ?? 0) }),
   pdv_estornar: () => ({ ok: true }),
+  avaliacoes_do_periodo: ({ de, ate }) => {
+    const ps = profissionais.filter((p) => p.active).slice(0, 3)
+    const lista = [
+      ['r1', mais(-1), 'Juliana Silva', ps[0], 'Escova', 5, 'Amei, saiu perfeita! A Ana é um amor.'], ['r2', mais(-2), 'Carla Mendes', ps[1], 'Corte feminino', 4, null], ['r3', mais(-4), 'Mariana Souza', ps[0], 'Manicure', 5, 'Unhas impecáveis, como sempre.'],
+      ['r4', mais(-6), 'Beatriz Costa', ps[2], 'Spa dos pés', 3, 'Demorou pra começar, mas o serviço foi bom.'], ['r5', mais(-9), 'Juliana Prado', ps[0], 'Coloração', 5, null], ['r6', mais(-12), 'Carla Mendes', ps[1], 'Escova', 2, 'Saí com o cabelo ainda úmido.'],
+      ['r7', mais(-15), 'Ana Beatriz', ps[2], 'Massagem relaxante', 5, 'Melhor massagem da cidade.'], ['r8', mais(-20), 'Juliana Silva', ps[0], 'Escova', 4, null],
+    ].filter(([, d]) => d >= de && d <= ate).map(([id, dia, cliente, p, servico, nota, comentario]) => ({ id, em: dia + 'T15:20:00', dia, appointment_id: 'ap-' + id, cliente, professional_id: p?.id, profissional: p?.name, servico, nota, comentario }))
+    const grupo = (chave, rotulo) => { const m = new Map(); for (const x of lista) { const k = x[chave]; if (!m.has(k)) m.set(k, []); m.get(k).push(x) } return [...m.entries()].map(([k, xs]) => ({ [chave]: k, [rotulo]: xs[0][rotulo], quantas: xs.length, media: Math.round((xs.reduce((t, x) => t + x.nota, 0) / xs.length) * 100) / 100, cinco: xs.filter((x) => x.nota === 5).length, baixas: xs.filter((x) => x.nota <= 3).length, atendimentos: xs.length * 3 })).sort((a, b) => b.media - a.media || b.quantas - a.quantas) }
+    const dist = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }; lista.forEach((x) => { dist[x.nota] += 1 })
+    return { de, ate, total: { quantas: lista.length, media: lista.length ? Math.round((lista.reduce((t, x) => t + x.nota, 0) / lista.length) * 100) / 100 : null, com_comentario: lista.filter((x) => x.comentario).length, atendimentos: lista.length * 3, distribuicao: dist },
+      por_profissional: grupo('professional_id', 'profissional').map((g) => ({ ...g, nome: g.profissional })), por_servico: grupo('servico', 'servico'), lista }
+  },
+  projecao_semanal: ({ inicio }) => {
+    const seg = inicio ?? mais(0)
+    const dias = [...Array(7)].map((_, i) => { const d = new Date(seg + 'T12:00:00'); d.setDate(d.getDate() + i); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` })
+    const hoje = mais(0)
+    const linhas = dias.map((dia, i) => { const n = [6, 5, 7, 4, 8, 9, 0][i]; const preco = n * 7500; const passado = dia < hoje; const ehHoje = dia === hoje; const conc = passado ? n : ehHoje ? Math.floor(n / 2) : 0; const pend = passado ? 0 : Math.floor(n / 4); const conf = n - conc - pend; return { dia, horarios: n, confirmados: conf, pendentes: pend, concluidos: conc, faltas: passado && n > 5 ? 1 : 0, previsto_cents: preco, confirmado_cents: conf * 7500, pendente_cents: pend * 7500, realizado_cents: conc * 7500 + (passado ? 1500 : 0), sinal_cents: (conf + pend) * 2500, perdido_cents: passado && n > 5 ? 6000 : 0 } })
+    const soma = (k) => linhas.reduce((t, x) => t + x[k], 0)
+    const ps = profissionais.filter((p) => p.active).slice(0, 4)
+    return { inicio: seg, fim: dias[6], hoje, dias: linhas,
+      total: { horarios: soma('horarios'), confirmados: soma('confirmados'), pendentes: soma('pendentes'), concluidos: soma('concluidos'), faltas: soma('faltas'), previsto_cents: soma('previsto_cents'), confirmado_cents: soma('confirmado_cents'), pendente_cents: soma('pendente_cents'), realizado_cents: soma('realizado_cents'), sinal_cents: soma('sinal_cents'), perdido_cents: soma('perdido_cents') },
+      por_profissional: ps.map((p, i) => ({ professional_id: p.id, nome: p.name, horarios: [12, 10, 9, 8][i], pendentes: [2, 1, 1, 0][i], previsto_cents: [90000, 75000, 67500, 60000][i], realizado_cents: [37500, 30000, 22500, 15000][i], sinal_cents: [15000, 12500, 10000, 7500][i] })),
+      semana_passada: { realizado_cents: 268500, horarios: 36 } }
+  },
   casa_decide: ({ aceitou }) => ({ ok: true, status: aceitou ? 'confirmado' : 'cancelado' }),
   salao_aceite: ({ modo, minutos, no_silencio }) => ({ modo, minutos: minutos ?? 60, no_silencio: no_silencio ?? 'confirma', profissionais_ajustadas: modo === 'profissional' ? 0 : 4 }),
   pdv_repasse: ({ de, ate }) => {

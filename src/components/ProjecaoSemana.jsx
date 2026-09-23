@@ -1,11 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ChevronLeft, ChevronRight, Info, TrendingUp, Smartphone, AlertTriangle } from 'lucide-react'
-import AdminShell from '../../components/AdminShell'
-import { useAuth } from '../../context/AuthContext'
-import { supabase } from '../../lib/supabase'
-import { formatCents } from '../../lib/pagamento'
+import { supabase } from '../lib/supabase'
+import { formatCents } from '../lib/pagamento'
 
-// Projeção da semana: uma ESTIMATIVA. Soma o que está marcado (confirmado
+// Projeção da semana (aba do PDV): uma ESTIMATIVA. Soma o que está marcado (confirmado
 // e pendente) com o que já foi feito, e separa o que já entrou no caixa
 // (sinal pelo app, comandas fechadas) do que ainda depende de a cliente
 // vir. Ninguém aqui promete nada: horário pendente pode não virar, e a
@@ -16,18 +14,17 @@ const DIAS = ['seg', 'ter', 'qua', 'qui', 'sex', 'sáb', 'dom']
 const dataCurta = (d) => new Date(String(d).slice(0, 10) + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
 const pct = (a, b) => (b > 0 ? Math.round((a / b) * 100) : 0)
 
-export default function AdminProjecao() {
-  const { salao } = useAuth()
+export default function ProjecaoSemana({ salaoId }) {
   const [inicio, setInicio] = useState(() => { const h = new Date(); h.setDate(h.getDate() - ((h.getDay() + 6) % 7)); return iso(h) })
   const [dados, setDados] = useState(null)
   const [erro, setErro] = useState('')
 
   const carregar = useCallback(async () => {
-    if (!salao?.id) return
-    const { data, error } = await supabase.rpc('projecao_semanal', { salao: salao.id, inicio })
+    if (!salaoId) return
+    const { data, error } = await supabase.rpc('projecao_semanal', { salao: salaoId, inicio })
     if (error) { setErro(error.message); return }
     setErro(''); setDados(data)
-  }, [salao?.id, inicio])
+  }, [salaoId, inicio])
   useEffect(() => { carregar() }, [carregar])
 
   const t = dados?.total
@@ -40,10 +37,8 @@ export default function AdminProjecao() {
   const rotuloSemana = dados ? `${dataCurta(dados.inicio)} a ${dataCurta(dados.fim)}${semanaAtual ? ' · esta semana' : hoje && dados.fim < hoje ? ' · já passou' : ''}` : ''
 
   return (
-    <AdminShell>
-      <div className="page-head">
-        <div><h2>Projeção da semana</h2><p className="muted">Uma estimativa a partir do que está marcado. Não é faturamento.</p></div>
-      </div>
+    <div className="pdv-projecao">
+      <div className="pdv-projecao-topo"><h3>Projeção da semana</h3><p className="muted">Uma estimativa a partir do que está marcado. Não é faturamento.</p></div>
 
       <div className="pj-nav">
         <button type="button" className="quadro-nav-btn" onClick={() => setInicio((x) => somar(x, -7))} aria-label="Semana anterior"><ChevronLeft size={18} /></button>
@@ -121,6 +116,6 @@ export default function AdminProjecao() {
         <p><AlertTriangle size={15} /> <strong>É só uma estimativa.</strong> A conta soma o preço dos horários confirmados e a confirmar com o que já foi fechado. Horário a confirmar pode não virar, cliente pode faltar, e a comanda pode fechar com mais (ou menos) serviço do que foi marcado. O que é certo: o sinal já recebido pelo app e as comandas fechadas.</p>
         <p className="muted"><Info size={14} /> "Fechado" usa o valor da comanda; sem comanda, o valor do horário concluído. Faltas saem da estimativa.</p>
       </div>
-    </AdminShell>
+    </div>
   )
 }

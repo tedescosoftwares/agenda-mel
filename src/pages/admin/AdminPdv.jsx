@@ -14,7 +14,8 @@ import { imprimirCupom } from '../../lib/cupom'
 import { useMovimentacao } from '../../lib/useMovimentacao'
 import { preparar as prepararSom, tocar } from '../../lib/som'
 import { Bell, Volume2, VolumeX, CalendarPlus, CalendarX, Banknote, MessageSquare, Clock3, CheckCircle2, X as XIcon } from 'lucide-react'
-import { CalendarDays, Users, HandCoins, Star } from 'lucide-react'
+import { CalendarDays, Users, HandCoins, Star, TrendingUp } from 'lucide-react'
+import ProjecaoSemana from '../../components/ProjecaoSemana'
 
 // O PDV do balcão (102): tela cheia, feita para o computador do salão.
 // Esquerda, a agenda de hoje (ou o caixa); centro, o catálogo; direita,
@@ -224,6 +225,7 @@ export default function AdminPdv() {
         <div className="pdv-modos" role="tablist">
           <button type="button" role="tab" className={modo === 'quadro' ? 'active' : ''} onClick={() => trocarModo('quadro')}><CalendarDays size={14} /> Quadro</button>
           <button type="button" role="tab" className={modo === 'comanda' ? 'active' : ''} onClick={() => trocarModo('comanda')}><Receipt size={14} /> Comanda</button>
+          <button type="button" role="tab" className={modo === 'projecao' ? 'active' : ''} onClick={() => trocarModo('projecao')}><TrendingUp size={14} /> Projeção</button>
         </div>
         <span className="pdv-topo-salao"><strong>{salao?.name}</strong><span className="muted">{capitalizar(new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }))}</span></span>
         <div className="pdv-topo-caixa">
@@ -239,7 +241,11 @@ export default function AdminPdv() {
         </div>
       </header>
 
-      {modo === 'quadro' ? (
+      {modo === 'projecao' ? (
+        <div className="pdv-corpo pdv-corpo-quadro">
+          <div className="pdv-painel pdv-quadro-painel pdv-projecao-painel"><ProjecaoSemana salaoId={salao?.id} /></div>
+        </div>
+      ) : modo === 'quadro' ? (
         <div className="pdv-corpo pdv-corpo-quadro">
           <div className="pdv-painel pdv-quadro-painel">
             <QuadroDoDia dia={diaSel} agenda={dia?.dia === diaSel ? (dia?.agenda ?? []) : []} semana={semana} onTrocarDia={setDiaSel} profs={profs} horas={horas} servicos={servicos} cats={cats} clientes={clientes} salaoId={salao?.id}

@@ -7010,3 +7010,24 @@ label.check input { margin-top: 3px; }
 .pj-prof-num small { font-size: 0.64rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: var(--cinza-3, #6b7280); }
 .pj-prof-num strong { font-size: 0.9rem; }
 @media (max-width: 640px) { .pj-prof { grid-template-columns: 30px 1fr; } .pj-prof-num { grid-column: 2; flex-direction: row; justify-content: space-between; } }
+
+/* PDV · aba Projeção e o modal de avaliações da profissional */
+.pdv-projecao-painel { overflow: auto; }
+.pdv-projecao { padding: 1rem 1.1rem 1.4rem; max-width: 1100px; margin: 0 auto; }
+.pdv-projecao-topo { display: flex; align-items: baseline; gap: 0.8rem; flex-wrap: wrap; margin-bottom: 0.7rem; }
+.pdv-projecao-topo h3 { margin: 0; font-size: 1.1rem; }
+.pdv-projecao-topo .muted { margin: 0; font-size: 0.82rem; }
+button.quadro-col-cabeca { font: inherit; color: inherit; background: transparent; cursor: pointer; text-align: left; width: 100%; transition: background .15s; }
+button.quadro-col-cabeca:hover { background: #fff7fb; }
+button.quadro-col-cabeca:hover strong { color: var(--rosa); }
+.av-modal-fundo { align-items: center; padding: 1rem; }
+.av-modal { max-width: 640px; border-radius: 22px; max-height: 92vh; overflow: auto; padding: 1.3rem 1.3rem 1.2rem; display: flex; flex-direction: column; gap: 0.8rem; animation: fc-entra .22s cubic-bezier(.2,.8,.2,1); }
+.av-modal-topo { display: flex; align-items: center; gap: 0.7rem; }
+.av-modal-topo h3 { margin: 0; }
+.av-modal-topo .muted { margin: 0; font-size: 0.8rem; }
+.av-modal-chips { margin: 0; }
+.av-resumo-modal { margin-bottom: 0; padding: 0.8rem 0.9rem; border: 1px solid var(--fio); border-radius: 14px; }
+.av-servicos-modal { border: 1px solid var(--fio); border-radius: 14px; }
+.av-lista-modal .av-item { border: 1px solid var(--fio); border-left-width: 4px; border-radius: 12px; }
+.av-lista-topo { display: flex; align-items: center; justify-content: space-between; font-size: 0.84rem; }
+.av-lista-topo strong { display: inline-flex; align-items: center; gap: 0.35rem; }

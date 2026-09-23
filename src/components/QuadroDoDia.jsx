@@ -5,6 +5,7 @@ import { useDialogo } from '../context/DialogoContext'
 import { formatCents } from '../lib/pagamento'
 import { agruparPorCategoria, bate } from '../lib/categorias'
 import Avatar from './Avatar'
+import AvaliacoesDaProfissional from './AvaliacoesDaProfissional'
 
 // O quadro do dia (103): uma coluna por profissional, as horas descendo,
 // cada horário é um cartão que se arrasta para outra hora ou outra
@@ -53,6 +54,7 @@ export default function QuadroDoDia({ dia, agenda, semana = [], onTrocarDia, pro
     return [Math.floor(extra[0] / 60) * 60, Math.ceil(extra[1] / 60) * 60]
   }, [horas, agenda, weekday])
   const [zoom, setZoom] = useState(lerZoom)
+  const [profAv, setProfAv] = useState(null)   // a profissional cujas avaliações estão abertas
   const [sobre, setSobre] = useState(null)   // { id, paraCima }: o cartão aberto pelo mouse e pra que lado ele cresce
   const { escala, grade, rotulo: rotuloCada } = ZOOMS[zoom]
   const rolagem = useRef(null)
@@ -175,7 +177,7 @@ export default function QuadroDoDia({ dia, agenda, semana = [], onTrocarDia, pro
       <div className="quadro-cabeca">
         <div className="quadro-gutter" />
         {colunas.map((p) => (
-          <div key={p.id} className="quadro-col-cabeca"><Avatar nome={p.name} foto={p.photo_url} pequeno /><strong>{p.name}</strong><span className="muted">{agenda.filter((a) => a.professional_id === p.id && a.status !== 'cancelado').length} no dia</span></div>
+          <button key={p.id} type="button" className="quadro-col-cabeca" onClick={() => setProfAv(p)} title={`Avaliações de ${p.name}`}><Avatar nome={p.name} foto={p.photo_url} pequeno /><strong>{p.name}</strong><span className="muted">{agenda.filter((a) => a.professional_id === p.id && a.status !== 'cancelado').length} no dia</span></button>
         ))}
       </div>
       <div className="quadro-rolagem" ref={rolagem}>
@@ -236,6 +238,7 @@ export default function QuadroDoDia({ dia, agenda, semana = [], onTrocarDia, pro
         </div>
       </div>
 
+      {profAv && <AvaliacoesDaProfissional prof={profAv} salaoId={salaoId} onFechar={() => setProfAv(null)} />}
       {novo && <NovoHorario prof={profs.find((p) => p.id === novo.prof)} inicio={novo.inicio} dia={dia} servicos={servicos} cats={cats} clientes={clientes} salaoId={salaoId} agenda={agenda} onFechar={() => setNovo(null)} onPronto={() => { setNovo(null); onMudou?.() }} />}
       {adicionarEm && <NovoHorario prof={profs.find((p) => p.id === adicionarEm.professional_id)} inicio={min(adicionarEm.end_time)} dia={dia} servicos={servicos} cats={cats} clientes={clientes} salaoId={salaoId} agenda={agenda} juntarEm={adicionarEm} onFechar={() => setAdicionarEm(null)} onPronto={() => { setAdicionarEm(null); onMudou?.() }} />}
 

@@ -96,6 +96,23 @@ function MarcaCartaz() {
   )
 }
 
+// as fotos do pacote da marca: WebP em dois tamanhos, preguiçosas
+// fora do herói. A alt descreve a cena, não repete o título.
+function Foto({ nome, alt, className = '', prioridade = false }) {
+  return (
+    <img
+      className={'ld-foto ' + className}
+      src={`/imagens/${nome}-1400.webp`}
+      srcSet={`/imagens/${nome}-720.webp 720w, /imagens/${nome}-1400.webp 1400w`}
+      sizes="(max-width: 700px) 100vw, 640px"
+      alt={alt}
+      loading={prioridade ? 'eager' : 'lazy'}
+      fetchPriority={prioridade ? 'high' : 'auto'}
+      decoding="async"
+    />
+  )
+}
+
 function Logo({ altura = 40 }) {
   return <img src="/mimo-logo.svg" alt="MIMO" height={altura} style={{ height: altura, width: 'auto' }} />
 }
@@ -163,7 +180,7 @@ export default function Landing() {
 
       <header className="ld-nav">
         <div className="ld-wrap ld-nav-in">
-          <a href="#topo" className="ld-logo" aria-label="MIMO, início"><Logo altura={38} /></a>
+          <a href="#topo" className="ld-logo" aria-label="MIMO, início"><Logo altura={52} /></a>
           <nav className="ld-links" aria-label="Seções">{links.map(([h, t]) => <a key={h} href={h}>{t}</a>)}</nav>
           <div className="ld-acoes">
             <div className="ld-entrar" ref={entrarRef}>
@@ -230,6 +247,7 @@ export default function Landing() {
           <div className="ld-wrap">
             <Cabeca kicker="A rotina real" titulo={['Um salão não funciona em uma tela só.', 'Por isso a MIMO conecta tudo.']} />
             <div className="ld-rotina">
+              <div className="ld-rotina-foto ld-rv"><Foto nome="salao" alt="Salão de beleza com recepção, cadeiras e espelhos iluminados" /></div>
               <div className="ld-rotina-texto ld-rv">
                 <p>A agenda é só uma parte da rotina.</p>
                 <p>Tem cliente perguntando horário no WhatsApp, profissional com disponibilidade diferente, cancelamento de última hora, comissão, retorno, encaixe e uma cadeira que não pode ficar vazia.</p>
@@ -256,10 +274,13 @@ export default function Landing() {
                 <span className="ld-seta" aria-hidden="true"><ArrowRight size={22} /></span>
                 <div className="ld-no ld-no-prof"><i><Scissors size={22} /></i><strong>Profissional</strong><span>origem e histórico guardados</span></div>
               </div>
+              <div className="ld-conecta-baixo">
+              <div className="ld-conecta-foto ld-rv"><Foto nome="cliente" alt="Cliente escolhendo data e horário no celular com a profissional, no balcão do salão" /></div>
               <div className="ld-conecta-texto ld-rv">
                 <p>Na MIMO, a cliente não precisa entrar em um marketplace genérico para procurar seu salão.</p>
                 <p>Ela pode chegar pelo seu QR Code, link, convite ou por uma profissional do salão. A MIMO registra essa origem e mantém o relacionamento organizado dentro do contexto correto.</p>
                 <p className="ld-sub">Uma cliente pode conhecer vários negócios. Cada relação continua sendo independente.</p>
+              </div>
               </div>
             </div>
           </div>
@@ -293,6 +314,12 @@ export default function Landing() {
               <p className="ld-sub ld-rv">O tipo de vínculo funciona como uma configuração inicial. O salão continua podendo ajustar horários, serviços e permissões individualmente.</p>
             </div>
             <div className="ld-rv"><MockProfissional /></div>
+          </div>
+          <div className="ld-wrap">
+            <figure className="ld-faixa ld-rv">
+              <Foto nome="equipe" alt="Dona do salão e duas profissionais olhando a agenda no tablet" />
+              <figcaption>Cada uma com a sua agenda. O salão com a visão geral.</figcaption>
+            </figure>
           </div>
         </section>
 
@@ -408,10 +435,15 @@ export default function Landing() {
                 {PROFISSOES.map((p) => <span className="ld-chip" key={p}>{p}</span>)}
               </div>
             </div>
-            <article className="ld-plano ld-plano-leve ld-rv">
-              <span className="ld-pilula">Plano Autônoma</span>
-              <div className="ld-preco">R$ 0 <small>/mês</small></div>
-              <p>O essencial, de graça, sem cartão.</p>
+            <div className="ld-auto-foto ld-rv"><Foto nome="agenda-celular" alt="Dois celulares com a agenda do dia e a lista de serviços da MIMO" /></div>
+          </div>
+          <div className="ld-wrap">
+            <article className="ld-plano ld-plano-leve ld-plano-faixa ld-rv">
+              <div>
+                <span className="ld-pilula">Plano Autônoma</span>
+                <div className="ld-preco">R$ 0 <small>/mês</small></div>
+                <p>O essencial, de graça, sem cartão.</p>
+              </div>
               <ul className="ld-checks ld-checks-2col"><li>Agenda</li><li>Serviços</li><li>Horários</li><li>Clientes</li><li>Histórico</li><li>QR</li><li>Link próprio</li><li>Retorno</li></ul>
               <a className="ld-btn ld-primario" href={comecar('autonoma')}>Criar agenda grátis</a>
             </article>
@@ -422,6 +454,10 @@ export default function Landing() {
         <section id="funcionalidades">
           <div className="ld-wrap">
             <Cabeca kicker="Funcionalidades" titulo={['Tudo o que a rotina pede,', 'agrupado do jeito que ela acontece.']} centro />
+            <figure className="ld-faixa ld-faixa-alta ld-rv">
+              <Foto nome="painel" alt="Notebook com o painel do salão e celular com o app da cliente, sobre a bancada" />
+              <figcaption>O salão no PC, a profissional e a cliente no celular.</figcaption>
+            </figure>
             <div className="ld-grupos">
               {GRUPOS.map(({ Icone, nome, itens }, i) => (
                 <article className="ld-grupo ld-rv" key={nome} style={{ transitionDelay: `${i * 50}ms` }}>
@@ -493,11 +529,12 @@ export default function Landing() {
               <div>
                 <h2>A agenda é só o começo. A relação é o produto.</h2>
                 <p>A MIMO organiza o dia do salão, preserva o vínculo com a cliente e transforma operação em relacionamento. Construída e testada junto à rotina real de profissionais de beleza.</p>
+                <div className="ld-cta-lado">
+                  <a className="ld-btn ld-branco ld-grande" href={comecar()}>Começar agora <ArrowRight size={18} /></a>
+                  <span className="ld-bilhete ld-bilhete-cta">esse é só o começo <i>♥</i></span>
+                </div>
               </div>
-              <div className="ld-cta-lado">
-                <a className="ld-btn ld-branco ld-grande" href={comecar()}>Começar agora <ArrowRight size={18} /></a>
-                <span className="ld-bilhete ld-bilhete-cta">esse é só o começo <i>♥</i></span>
-              </div>
+              <div className="ld-cta-foto"><Foto nome="lifestyle" alt="Bancada de beleza com pincéis, esmaltes e o app MIMO no celular" /></div>
             </div>
           </div>
         </section>
@@ -506,7 +543,7 @@ export default function Landing() {
       <footer className="ld-pe">
         <div className="ld-wrap ld-pe-in">
           <div>
-            <Logo altura={34} />
+            <Logo altura={44} />
             <p>Beleza, organização e relacionamento.</p>
           </div>
           <nav className="ld-pe-links" aria-label="Rodapé">
@@ -537,8 +574,9 @@ function PalcoCelular() {
     ['17:30', 'Coloração', 'Fernanda · com Carla', 'pedido'],
   ]
   return (
-    <div className="ld-palco" aria-label="Exemplo da agenda da MIMO no celular">
+    <div className="ld-palco" aria-label="Profissional de beleza mostrando a MIMO no celular">
       <div className="ld-halo" aria-hidden="true" />
+      <div className="ld-hero-foto"><Foto nome="profissional" alt="Profissional de beleza sorrindo no salão, com o app MIMO aberto no celular" prioridade /></div>
       <div className="ld-cel">
         <div className="ld-cel-tela">
           <div className="ld-cel-status"><span>9:41</span><span>●●●</span></div>
@@ -709,17 +747,11 @@ function MockPagamento() {
   )
 }
 
-// qr: a plaquinha do balcão
+// qr: a foto do balcão, com os lugares onde a plaquinha cabe
 function MockQr() {
   return (
     <div className="ld-qr-cena">
-      <div className="ld-qr-placa">
-        <Logo altura={30} />
-        <img src="/qr-exemplo.svg" alt="" className="ld-qr-img" />
-        <strong>Agende pelo celular</strong>
-        <small>Aponte a câmera e marque seu horário no Studio Essenza</small>
-        <span className="ld-bilhete">a gente cuida do resto <i>♥</i></span>
-      </div>
+      <Foto nome="qr" alt="Cliente apontando a câmera do celular para a plaquinha com o QR da MIMO no balcão do salão" />
       <div className="ld-qr-onde">
         {[[MapPin, 'Balcão'], [Eye, 'Espelho'], [QrCode, 'Cartão'], [Star, 'Instagram']].map(([Ic, n]) => <span key={n}><Ic size={16} />{n}</span>)}
       </div>

@@ -89,7 +89,12 @@
 			rewrite * /functions/v1/pagina-publica{path}
 			reverse_proxy https://{$SUPABASE_REF:nenhum}.supabase.co
 		}
-		try_files {path} /index.html
+		# as páginas do site público (blog, /sistema-para-salao-de-beleza…)
+		# têm um index.html próprio gerado no build, com título, descrição
+		# e Open Graph daquela página: o robô do Google e o do WhatsApp
+		# leem o certo sem rodar JavaScript. Por isso {path}/index.html
+		# vem antes do fallback para o app.
+		try_files {path} {path}/index.html /index.html
 		file_server
 	}
 

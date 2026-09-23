@@ -1,7 +1,16 @@
 User-agent: *
 Allow: /
+
 Disallow: /admin/
 Disallow: /pro/
 Disallow: /cliente/
 Disallow: /plataforma/
+Disallow: /login
+Disallow: /onboarding
+Disallow: /comecar
+Disallow: /entrar
+Disallow: /v/
+Disallow: /equipe/
+Disallow: /convite/
+
 Sitemap: https://mimo.com.vc/sitemap.xml

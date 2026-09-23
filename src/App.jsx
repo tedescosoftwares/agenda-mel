@@ -78,6 +78,13 @@ import Onboarding from "./pages/Onboarding";
 import RedeDeProtecao from "./components/RedeDeProtecao";
 import ConviteEquipe from "./pages/publico/ConviteEquipe";
 import Landing from "./pages/publico/Landing";
+import PaginaSeo from "./pages/publico/PaginaSeo";
+import Blog from "./pages/publico/Blog";
+import Artigo from "./pages/publico/Artigo";
+import NaoEncontrada from "./pages/publico/NaoEncontrada";
+import { Planos, Sobre, Contato } from "./pages/publico/Institucional";
+import PlataformaSeo from "./pages/plataforma/Seo";
+import { PAGINAS_SEO } from "./conteudo/paginasSeo";
 import ClientePagamento from "./pages/cliente/ClientePagamento";
 import ClienteComanda from "./pages/cliente/ClienteComanda";
 import PlataformaPromocoes from "./pages/plataforma/Promocoes";
@@ -129,6 +136,14 @@ export default function App() {
 
             <Route path="/" element={<Splash />} />
             <Route path="/landing" element={<Landing />} />
+            {/* o site público: páginas por intenção de busca, blog e institucionais (116) */}
+            {PAGINAS_SEO.map((p) => <Route key={p.rota} path={p.rota} element={<PaginaSeo />} />)}
+            <Route path="/blog" element={<Blog />} />
+            <Route path="/blog/categoria/:slug" element={<Blog />} />
+            <Route path="/blog/:slug" element={<Artigo />} />
+            <Route path="/planos" element={<Planos />} />
+            <Route path="/sobre" element={<Sobre />} />
+            <Route path="/contato" element={<Contato />} />
             <Route
               path="/cliente/home"
               element={
@@ -366,6 +381,7 @@ export default function App() {
             <Route path="/plataforma/promocoes" element={<ProtectedRoute requireRole="plataforma"><PlataformaPromocoes /></ProtectedRoute>} />
             <Route path="/plataforma/metricas" element={<ProtectedRoute requireRole="plataforma"><Metricas /></ProtectedRoute>} />
             <Route path="/plataforma/configuracoes" element={<ProtectedRoute requireRole="plataforma"><Configuracoes /></ProtectedRoute>} />
+            <Route path="/plataforma/seo" element={<ProtectedRoute requireRole="plataforma"><PlataformaSeo /></ProtectedRoute>} />
 
             {/* área do salão */}
             <Route
@@ -469,7 +485,7 @@ export default function App() {
               }
             />
 
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<NaoEncontrada />} />
           </Routes>
           <AvisoCookies />
           <AvisoAoVivo />

@@ -10,6 +10,9 @@
 // Nunca entra num build de produção: o supabase.js só importa isto
 // quando a variável está ligada, e o Vite descarta o resto.
 
+import { ARTIGOS, CATEGORIAS as CATS_BLOG, minutosDeLeitura } from '../conteudo/artigos'
+import { PAGINAS_SEO, PAGINAS_INSTITUCIONAIS } from '../conteudo/paginasSeo'
+
 const hoje = new Date()
 const iso = (d) => d.toISOString().slice(0, 10)
 // dias espalhados pelo mês corrente (do dia 1 até hoje) e pelo anterior
@@ -472,6 +475,14 @@ function consulta(linhas) {
   return q
 }
 
+// o site público no demo: categorias, artigos e páginas vindos do código
+const CONTEUDO = {
+  blog_categories: CATS_BLOG.map((c, i) => ({ id: 'bc' + i, name: c.nome, slug: c.slug, description: c.descricao, ordem: (i + 1) * 10 })),
+  blog_posts: ARTIGOS.map((a, i) => ({ id: 'bp' + i, title: a.titulo, slug: a.slug, excerpt: a.resumo, content: a.conteudo, cover_image_url: `/imagens/${a.foto}-1400.webp`, cover_alt: a.alt, category_id: 'bc' + CATS_BLOG.findIndex((c) => c.slug === a.categoria), blog_categories: { slug: a.categoria, name: CATS_BLOG.find((c) => c.slug === a.categoria)?.nome }, author_name: a.autor, seo_title: a.seo_title, meta_description: a.meta_description, og_image_url: `https://mimo.com.vc/imagens/${a.foto}-1400.webp`, robots_index: true, status: 'published', published_at: a.publicado_em + 'T12:00:00-03:00', updated_at: a.publicado_em + 'T12:00:00-03:00', reading_time_minutes: minutosDeLeitura(a.conteudo), produto_url: a.produto, produto_rotulo: a.produto_rotulo, relacionados: a.relacionados, caixa: a.caixa, faq: a.faq })),
+  seo_pages: [...PAGINAS_INSTITUCIONAIS.map((p, i) => ({ id: 'sp' + i, route: p.rota, page_type: p.tipo === 'home' ? 'HOME' : p.tipo === 'blog' ? 'BLOG_INDEX' : 'INSTITUTIONAL', title: p.titulo, slug: p.rota === '/' ? 'home' : p.rota.slice(1), seo_title: p.seo_title, meta_description: p.meta_description, og_title: p.seo_title, og_description: p.meta_description, og_image_url: 'https://mimo.com.vc/og-mimo.png', robots_index: true, robots_follow: true, status: 'published', updated_at: '2026-09-20T12:00:00-03:00' })), ...PAGINAS_SEO.map((p, i) => ({ id: 'sq' + i, route: p.rota, page_type: 'SEO_LANDING', title: p.h1.join(' '), slug: p.rota.slice(1), seo_title: p.seo_title, meta_description: p.meta_description, og_title: p.seo_title, og_description: p.meta_description, og_image_url: `https://mimo.com.vc/imagens/${p.foto}-1400.webp`, robots_index: true, robots_follow: true, status: 'published', updated_at: '2026-09-22T12:00:00-03:00' }))],
+  redirects: [{ id: 'rd1', from_path: '/cadastro-antigo', to_path: '/comecar', http_status: 301, active: true, created_at: '2026-09-01T12:00:00-03:00' }],
+}
+
 const sessao = PAPEL === 'sair' ? null : { user: { id: UID, email: PAPEL + '@mimo.demo' }, access_token: 'demo' }
 
 export const demo = {
@@ -483,9 +494,9 @@ export const demo = {
     signOut: async () => { try { localStorage.removeItem('mimo-demo-papel') } catch {} ; window.location.href = '/login'; return {} },
     resetPasswordForEmail: async () => ({ error: null }),
   },
-  from: (t) => consulta(TABELAS[t] ?? []),
+  from: (t) => consulta(TABELAS[t] ?? CONTEUDO[t] ?? []),
   rpc: async (nome, args) => {
-    const f = RPC[nome]
+    const f = RPC[nome] ?? (nome === 'seo_sitemap' ? () => [...CONTEUDO.seo_pages.map((p) => ({ caminho: p.route, atualizado_em: p.updated_at })), ...CONTEUDO.blog_posts.map((a) => ({ caminho: '/blog/' + a.slug, atualizado_em: a.updated_at }))] : undefined)
     // função que não está na lista é escrita (aceitar, encaixar, chamar…):
     // no demo ela "dá certo" e não guarda nada
     return { data: f ? f(args) : null, error: null }

@@ -28,7 +28,8 @@ export default function Login({ ambiente = AMBIENTE }) {
   const { user, role, loading, signIn, signUp } = useAuth()
   const [q] = useSearchParams()
   const convite = extrairCodigo(q.get('convite'))
-  const papel = ['autonoma', 'salao'].includes(q.get('papel')) ? q.get('papel') : ''
+  const papel = ['autonoma', 'salao', 'equipe'].includes(q.get('papel')) ? q.get('papel') : ''
+  const equipe = (q.get('equipe') || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6)
   const [modo, setModo] = useState(q.get('modo') === 'cadastro' ? 'cadastro' : q.get('modo') === 'esqueci' ? 'esqueci' : 'login') // login | cadastro | esqueci
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
@@ -70,6 +71,7 @@ export default function Login({ ambiente = AMBIENTE }) {
         setConferindoConta(true); setContaErrada(null)
         const { error } = await signIn(email, senha)
         if (error) { setConferindoConta(false); setErro(traduz(error.message)); return }
+        if (equipe) { window.location.href = `/equipe/${equipe}`; return }
         // a conta é deste ambiente? senão, sai na hora e avisa
         const { data: sessao } = await supabase.auth.getSession()
         const uid = sessao?.session?.user?.id
@@ -93,7 +95,8 @@ export default function Login({ ambiente = AMBIENTE }) {
         if (livre && livre.disponivel === false) { setErro(livre.email ? `Esse WhatsApp já tem conta, no e-mail ${livre.email}. Entre com ela ou use "Esqueci a senha".` : (livre.motivo || 'Confere o WhatsApp.')); return }
         const extra = { termos: TERMOS_VERSAO }
         if (convite) extra.codigo_convite = convite
-        if (papel) { extra.papel_desejado = papel; extra.nome_negocio = negocio.trim() || null; extra.cidade = cidade.trim() || null }
+        if (papel === 'equipe' && equipe) extra.equipe_codigo = equipe
+        else if (papel) { extra.papel_desejado = papel; extra.nome_negocio = negocio.trim() || null; extra.cidade = cidade.trim() || null }
         const { error } = await signUp(email, senha, nome.trim(), fone.trim(), extra)
         if (error) setErro(traduz(error.message))
         else { setInfo('Conta criada! Confira seu e-mail para confirmar e depois entre aqui.'); setModo('login') }
@@ -122,9 +125,11 @@ export default function Login({ ambiente = AMBIENTE }) {
     : modo === 'esqueci' ? 'Recuperar senha'
     : papel === 'salao' ? 'Cadastrar meu salão'
     : papel === 'autonoma' ? 'Criar minha agenda'
+    : papel === 'equipe' ? 'Entrar na equipe'
     : 'Criar sua conta'
   const sub = modo === 'login' ? (pro ? 'Entre para ver os horários de hoje' : 'Entre para continuar')
     : modo === 'esqueci' ? 'Mandamos um link para o seu e-mail'
+    : papel === 'equipe' ? 'Crie a conta e você já entra na equipe do salão, com a sua agenda.'
     : papel ? 'Leva um minuto. Depois é só compartilhar seu código com as clientes.'
     : 'Leva menos de um minuto'
 
@@ -153,7 +158,7 @@ export default function Login({ ambiente = AMBIENTE }) {
               <label>Nome completo<input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Maria da Silva" autoComplete="name" /></label>
               <label>WhatsApp<input type="tel" value={fone} onChange={(e) => setFone(e.target.value)} placeholder="(11) 99999-9999" autoComplete="tel" required /></label>
               {papel === 'salao' && <label>Nome do salão<input value={negocio} onChange={(e) => setNegocio(e.target.value)} placeholder="Espaço Bela" /></label>}
-              {papel && <label>Cidade<input value={cidade} onChange={(e) => setCidade(e.target.value)} placeholder="Santos" /></label>}
+              {papel && papel !== 'equipe' && <label>Cidade<input value={cidade} onChange={(e) => setCidade(e.target.value)} placeholder="Santos" /></label>}
             </>
           )}
           <label>E-mail<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="voce@email.com" autoComplete="email" required /></label>

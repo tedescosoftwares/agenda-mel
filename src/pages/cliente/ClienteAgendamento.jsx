@@ -215,7 +215,7 @@ export default function ClienteAgendamento() {
         {podeMexer && regras && regras.modo !== 'nao' && a.pago_cents === 0 && a.status !== 'aguardando_pagamento' && (
           <Link className="btn btn-primary btn-block" to={`/cliente/pagamento/${a.id}`}><Wallet size={16} /> Pagar agora pelo app</Link>
         )}
-        {podeMexer && !troca && a.service_id && (
+        {podeMexer && !troca && a.service_id && regras?.permite_remarcar !== false && (
           <Link className={'btn btn-block ' + (regras && regras.modo !== 'nao' && a.pago_cents === 0 ? 'btn-ghost' : 'btn-primary')} to={`/cliente/agendamento/data?prof=${a.professional_id}&servico=${a.service_id}&remarcar=${a.id}`}><Repeat size={16} /> Remarcar</Link>
         )}
         {podeMexer && <button className="btn btn-ghost btn-block" onClick={cancelar}>{troca ? 'Desistir da troca' : vivas.length ? 'Cancelar só esta parte' : 'Cancelar horário'}</button>}

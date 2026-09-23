@@ -75,6 +75,8 @@ import ProContrato from "./pages/pro/ProContrato";
 import AdminParceria from "./pages/admin/AdminParceria";
 import AdminPdv from "./pages/admin/AdminPdv";
 import AdminRepasses from "./pages/admin/AdminRepasses";
+import Onboarding from "./pages/Onboarding";
+import ConviteEquipe from "./pages/publico/ConviteEquipe";
 import ClientePagamento from "./pages/cliente/ClientePagamento";
 import ClienteComanda from "./pages/cliente/ClienteComanda";
 import PlataformaPromocoes from "./pages/plataforma/Promocoes";
@@ -105,6 +107,8 @@ export default function App() {
             {/* o QR/link de entrar numa agenda, e a porta de quem vai atender */}
             <Route path="/v/:codigo" element={<EntrarPorCodigo />} />
             <Route path="/comecar" element={<Comecar />} />
+            <Route path="/equipe/:codigo" element={<ConviteEquipe />} />
+            <Route path="/onboarding" element={<ProtectedRoute permitirSemVinculo permitirOnboarding><Onboarding /></ProtectedRoute>} />
             <Route path="/entrar" element={<ComCodigo />} />
             <Route path="/cadastro" element={<CadastroCliente />} />
             <Route path="/termos" element={<Termos />} />

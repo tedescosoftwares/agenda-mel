@@ -27,7 +27,7 @@ export default function Comecar() {
     if (error) { setErro(error.message); return }
     if (!data?.ok) { setErro('não deu para abrir'); return }
     await recarregarPerfil?.()
-    window.location.href = tipo === 'salao' ? '/admin' : '/pro/agenda'
+    window.location.href = '/onboarding'
   }
 
   const q = (t) => `/login?modo=cadastro&papel=${t}${nome ? '&negocio=' + encodeURIComponent(nome.trim()) : ''}${cidade ? '&cidade=' + encodeURIComponent(cidade.trim()) : ''}`

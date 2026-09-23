@@ -6,8 +6,8 @@ import AmbienteErrado from './AmbienteErrado'
 
 // permitirSemVinculo: a tela "Entrar numa agenda" é a única que uma
 // cliente sem vínculo pode ver. Todas as outras mandam para lá.
-export default function ProtectedRoute({ children, requireRole, permitirSemVinculo = false, permitirPrimeiroAcesso = false }) {
-  const { user, role, loading, vinculos, profile, erroRede, recarregarVinculos } = useAuth()
+export default function ProtectedRoute({ children, requireRole, permitirSemVinculo = false, permitirPrimeiroAcesso = false, permitirOnboarding = false }) {
+  const { user, role, loading, vinculos, profile, erroRede, recarregarVinculos, salao } = useAuth()
 
   if (loading) {
     return (
@@ -29,6 +29,11 @@ export default function ProtectedRoute({ children, requireRole, permitirSemVincu
   // a plataforma é painel de PC e não passa por ela
   if (!permitirPrimeiroAcesso && profile && !profile.primeiro_acesso_em && role !== 'plataforma') {
     return <Navigate to="/bem-vinda" replace />
+  }
+
+  // o negócio novo passa pelo onboarding (114) antes do painel; só a dona
+  if (!permitirOnboarding && salao && !salao.onboarding_concluido_em && salao.owner_id === user.id && (role === 'admin' || role === 'profissional')) {
+    return <Navigate to="/onboarding" replace />
   }
 
   if (requireRole && role !== requireRole) {

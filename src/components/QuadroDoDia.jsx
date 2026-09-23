@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { X, Receipt, Ban, Clock, UserRound, Sparkles, GripVertical, ChevronLeft, ChevronRight, Star, History, Plus, Heart, AlertTriangle } from 'lucide-react'
+import { X, Receipt, Ban, Clock, UserRound, Sparkles, GripVertical, ChevronLeft, ChevronRight, Star, History, Plus, Heart, AlertTriangle, ZoomIn, ZoomOut } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useDialogo } from '../context/DialogoContext'
 import { formatCents } from '../lib/pagamento'
@@ -11,7 +11,16 @@ import Avatar from './Avatar'
 // coluna (remarca pela casa e avisa a cliente). Clique num espaço vazio
 // abre o modal de serviços para encaixar; clique num cartão abre o
 // horário, com "abrir comanda" e "cancelar".
-const PX_POR_MIN = 1.5          // 90px por hora
+// 90px por hora é o nível de sempre. A lupa do tempo: Ctrl + rodinha (ou os botões) troca a escala; cada nível
+// diz quantos px tem um minuto, de quanto em quanto vai a grade e o rótulo
+const ZOOMS = [
+  { escala: 0.8, grade: 60, rotulo: 60, nome: '1 h' },
+  { escala: 1.5, grade: 30, rotulo: 60, nome: '30 min' },
+  { escala: 2.6, grade: 15, rotulo: 30, nome: '15 min' },
+  { escala: 4.2, grade: 15, rotulo: 15, nome: '15 min · lupa' },
+]
+const ZOOM_PADRAO = 1
+const lerZoom = () => { try { const z = Number(localStorage.getItem('mimo-quadro-zoom')); return Number.isInteger(z) && z >= 0 && z < ZOOMS.length ? z : ZOOM_PADRAO } catch { return ZOOM_PADRAO } }
 const PASSO = 15                // arrasto e cliques caem em múltiplos de 15 min
 const min = (t) => { const [h, m] = String(t).slice(0, 5).split(':').map(Number); return h * 60 + m }
 const hhmm = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
@@ -43,8 +52,37 @@ export default function QuadroDoDia({ dia, agenda, semana = [], onTrocarDia, pro
     const extra = (agenda ?? []).reduce((acc, x) => [Math.min(acc[0], min(x.start_time)), Math.max(acc[1], min(x.end_time))], [a, b])
     return [Math.floor(extra[0] / 60) * 60, Math.ceil(extra[1] / 60) * 60]
   }, [horas, agenda, weekday])
-  const altura = (fim - ini) * PX_POR_MIN
-  const linhas = useMemo(() => { const l = []; for (let m = ini; m < fim; m += 30) l.push(m); return l }, [ini, fim])
+  const [zoom, setZoom] = useState(lerZoom)
+  const { escala, grade, rotulo: rotuloCada } = ZOOMS[zoom]
+  const rolagem = useRef(null)
+  function mudarZoom(delta, ancoraY) {
+    setZoom((z) => {
+      const novo = Math.max(0, Math.min(ZOOMS.length - 1, z + delta))
+      if (novo === z) return z
+      try { localStorage.setItem('mimo-quadro-zoom', String(novo)) } catch { /* sem armazenamento */ }
+      // mantém o mesmo minuto embaixo do cursor (ou no meio da tela) depois de trocar a escala
+      const el = rolagem.current
+      if (el) {
+        const y = ancoraY ?? el.clientHeight / 2
+        const minuto = (el.scrollTop + y - 10) / ZOOMS[z].escala
+        requestAnimationFrame(() => { el.scrollTop = Math.max(0, minuto * ZOOMS[novo].escala - y + 10) })
+      }
+      return novo
+    })
+  }
+  useEffect(() => {
+    const el = rolagem.current; if (!el) return
+    const aoRolar = (e) => {
+      if (!e.ctrlKey && !e.metaKey) return
+      e.preventDefault()
+      const r = el.getBoundingClientRect()
+      mudarZoom(e.deltaY < 0 ? 1 : -1, e.clientY - r.top)
+    }
+    el.addEventListener('wheel', aoRolar, { passive: false })
+    return () => el.removeEventListener('wheel', aoRolar)
+  }, [])
+  const altura = (fim - ini) * escala
+  const linhas = useMemo(() => { const l = []; for (let m = ini; m < fim; m += grade) l.push(m); return l }, [ini, fim, grade])
   const hojeStr = isoHoje()
   const ehHoje = dia === hojeStr
   const passado = dia < hojeStr
@@ -55,7 +93,7 @@ export default function QuadroDoDia({ dia, agenda, semana = [], onTrocarDia, pro
   function posDoEvento(e, col) {
     const r = col.getBoundingClientRect()
     const y = Math.max(0, e.clientY - r.top + col.scrollTop)
-    return ini + Math.round((y / PX_POR_MIN) / PASSO) * PASSO
+    return ini + Math.round((y / escala) / PASSO) * PASSO
   }
   function soltar(e, prof) {
     e.preventDefault()
@@ -94,6 +132,11 @@ export default function QuadroDoDia({ dia, agenda, semana = [], onTrocarDia, pro
           <button type="button" className="quadro-nav-btn" onClick={() => onTrocarDia?.(somar(dia, -1))} aria-label="Dia anterior"><ChevronLeft size={18} /></button>
           <button type="button" className="quadro-nav-btn" onClick={() => onTrocarDia?.(somar(dia, 1))} aria-label="Dia seguinte"><ChevronRight size={18} /></button>
           <strong className="quadro-nav-rotulo">{rotuloDia(dia)}{ehHoje ? ' · hoje' : passado ? ' · passado' : ''}</strong>
+          <span className="quadro-lupa" title="Ctrl + rodinha do mouse também muda a escala">
+            <button type="button" className="quadro-nav-btn" onClick={() => mudarZoom(-1)} disabled={zoom === 0} aria-label="Menos detalhe"><ZoomOut size={15} /></button>
+            <span className="quadro-lupa-nome">{ZOOMS[zoom].nome}</span>
+            <button type="button" className="quadro-nav-btn" onClick={() => mudarZoom(1)} disabled={zoom === ZOOMS.length - 1} aria-label="Mais detalhe"><ZoomIn size={15} /></button>
+          </span>
           <input type="date" className="quadro-nav-data" value={dia} onChange={(e) => e.target.value && onTrocarDia?.(e.target.value)} aria-label="Escolher o dia" />
           {!ehHoje && <button type="button" className="btn-mini btn-mini-neutro" onClick={() => onTrocarDia?.(hojeStr)}>Hoje</button>}
         </div>
@@ -122,10 +165,10 @@ export default function QuadroDoDia({ dia, agenda, semana = [], onTrocarDia, pro
           <div key={p.id} className="quadro-col-cabeca"><Avatar nome={p.name} foto={p.photo_url} pequeno /><strong>{p.name}</strong><span className="muted">{agenda.filter((a) => a.professional_id === p.id && a.status !== 'cancelado').length} no dia</span></div>
         ))}
       </div>
-      <div className="quadro-rolagem">
+      <div className="quadro-rolagem" ref={rolagem}>
         <div className="quadro-grade" style={{ height: altura }}>
           <div className="quadro-gutter">
-            {linhas.map((m) => <span key={m} className={'quadro-hora' + (m % 60 ? ' meia' : '')} style={{ top: (m - ini) * PX_POR_MIN }}>{m % 60 ? '' : hhmm(m)}</span>)}
+            {linhas.map((m) => <span key={m} className={'quadro-hora' + (m % rotuloCada ? ' meia' : '') + (m % 60 ? ' fracao' : '')} style={{ top: (m - ini) * escala }}>{m % rotuloCada ? '' : hhmm(m)}</span>)}
           </div>
           {colunas.map((p) => (
             <div key={p.id} className={'quadro-col' + (sombra?.prof === p.id ? ' alvo' : '')}
@@ -134,11 +177,11 @@ export default function QuadroDoDia({ dia, agenda, semana = [], onTrocarDia, pro
               onDrop={(e) => soltar(e, p.id)}
               onClick={(e) => { if (e.target !== e.currentTarget) return; const inicio = Math.min(fim - PASSO, Math.max(ini, posDoEvento(e, e.currentTarget))); setNovo({ prof: p.id, inicio }) }}
             >
-              {linhas.map((m) => <span key={m} className={'quadro-linha' + (m % 60 ? ' meia' : '')} style={{ top: (m - ini) * PX_POR_MIN }} />)}
-              {ehHoje && agoraMin >= ini && agoraMin <= fim && <span className="quadro-agora" style={{ top: (agoraMin - ini) * PX_POR_MIN }} />}
-              {sombra?.prof === p.id && !sombra?.dia && arrastando && (() => { const a = agenda.find((x) => x.id === arrastando); if (!a) return null; const d = min(a.end_time) - min(a.start_time); return <span className="quadro-sombra" style={{ top: (sombra.inicio - ini) * PX_POR_MIN, height: d * PX_POR_MIN }}>{hhmm(sombra.inicio)}</span> })()}
+              {linhas.map((m) => <span key={m} className={'quadro-linha' + (m % 60 ? ' meia' : '')} style={{ top: (m - ini) * escala }} />)}
+              {ehHoje && agoraMin >= ini && agoraMin <= fim && <span className="quadro-agora" style={{ top: (agoraMin - ini) * escala }} />}
+              {sombra?.prof === p.id && !sombra?.dia && arrastando && (() => { const a = agenda.find((x) => x.id === arrastando); if (!a) return null; const d = min(a.end_time) - min(a.start_time); return <span className="quadro-sombra" style={{ top: (sombra.inicio - ini) * escala, height: d * escala }}>{hhmm(sombra.inicio)}</span> })()}
               {agenda.filter((a) => a.professional_id === p.id).map((a) => {
-                const top = (min(a.start_time) - ini) * PX_POR_MIN, h = Math.max(24, (min(a.end_time) - min(a.start_time)) * PX_POR_MIN)
+                const top = (min(a.start_time) - ini) * escala, h = Math.max(24, (min(a.end_time) - min(a.start_time)) * escala)
                 const movel = (a.status === 'pendente' || a.status === 'confirmado') && !a.comanda_id
                 return (
                   <button key={a.id} type="button" draggable={movel && !ocupado} className={`quadro-cartao ${a.status}${a.comanda_id ? ' fechado' : ''}${arrastando === a.id ? ' no-ar' : ''}${movel ? ' movel' : ''}`}

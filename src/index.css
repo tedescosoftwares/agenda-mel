@@ -6889,3 +6889,10 @@ label.check input { margin-top: 3px; }
 .quadro-avaliacao-texto small { font-size: 0.7rem; }
 .lt-comentario { display: block; font-size: 0.78rem; font-style: italic; color: var(--cinza-3, #6b7280); margin-top: 0.1rem; line-height: 1.3; }
 .pdv-feed-item.avaliacao .pdv-feed-icone, .pdv-vivo-toast.avaliacao .pdv-feed-icone { background: #fff7e6; color: #b45309; }
+
+/* quadro · a lupa do tempo */
+.quadro-lupa { display: inline-flex; align-items: center; gap: 0.3rem; margin-left: 0.6rem; }
+.quadro-lupa .quadro-nav-btn { width: 26px; height: 26px; }
+.quadro-lupa .quadro-nav-btn:disabled { opacity: 0.35; cursor: default; }
+.quadro-lupa-nome { font-size: 0.72rem; font-weight: 700; color: var(--cinza-3, #6b7280); min-width: 3.6rem; text-align: center; font-family: var(--condensada); }
+.quadro-hora.fracao { font-size: 0.64rem; font-weight: 500; }

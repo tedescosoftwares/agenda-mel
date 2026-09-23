@@ -11,6 +11,7 @@ export function AuthProvider({ children }) {
   const [professional, setProfessional] = useState(null)
   const [salao, setSalao] = useState(null)
   const [saloes, setSaloes] = useState([])      // todos os salões que a admin administra
+  const [negocio, setNegocio] = useState(null)   // o negócio que ela é dona (salão ou a agenda de autônoma): quem passa pelo onboarding
   // as agendas em que a cliente entrou (053). Sem nenhuma, não há app.
   // null = ainda não sei (carregando ou a rede falhou); [] = sei que não tem
   const [vinculos, setVinculos] = useState(null)
@@ -33,6 +34,7 @@ export function AuthProvider({ children }) {
         setProfile(null)
         setProfessional(null)
         setSalao(null)
+        setNegocio(null)
         setVinculos(null)
         setLoading(false)
       }
@@ -53,6 +55,7 @@ export function AuthProvider({ children }) {
         .single()
       if (cancelled) return
       setProfile(perfil)
+      if (perfil?.role === 'admin' || perfil?.role === 'profissional') { await carregarNegocio(session.user.id); if (cancelled) return } else setNegocio(null)
 
       // admin: carrega os salões que ela administra. Com mais de um, vale o
       // que ela escolheu por último neste aparelho (Ajustes › Trocar de salão);
@@ -133,6 +136,14 @@ export function AuthProvider({ children }) {
       .eq('id', session.user.id)
       .maybeSingle()
     if (data) setProfile(data)
+    await carregarNegocio(session.user.id)
+  }
+
+  // o negócio que a conta é dona (114): é por ele que o onboarding sabe onde está
+  async function carregarNegocio(uid) {
+    const { data } = await supabase.from('salons').select('*').eq('owner_id', uid).order('created_at', { ascending: false }).limit(1).maybeSingle()
+    setNegocio(data ?? null)
+    return data ?? null
   }
 
   // usada quando a profissional edita a própria ficha (foto, etc.)
@@ -160,6 +171,8 @@ export function AuthProvider({ children }) {
       password,
       options: {
         data: { full_name: fullName, phone, ...extra },
+        // o link de confirmação volta pro lugar certo: quem abre negócio cai no onboarding, quem entra numa equipe no convite
+        emailRedirectTo: window.location.origin + (extra.papel_desejado ? '/onboarding' : extra.equipe_codigo ? `/equipe/${extra.equipe_codigo}` : '/'),
       },
     })
     // Com "confirmar e-mail" ligado, o Supabase NÃO dá erro para e-mail
@@ -209,6 +222,8 @@ export function AuthProvider({ children }) {
     professional,
     salao,
     saloes,
+    negocio,
+    recarregarNegocio: () => (session?.user ? carregarNegocio(session.user.id) : Promise.resolve(null)),
     trocarSalao,
     vinculos,
     erroRede,

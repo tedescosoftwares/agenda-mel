@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import CampoSenha from './CampoSenha'
 import Portal from './Portal'
+import { formatarFone } from '../lib/fone'
 
 // Login/cadastro rápido dentro da página pública da profissional:
 // a cliente escolhe tudo primeiro e só se identifica para fechar.
@@ -101,7 +102,8 @@ export default function AuthModal({ resumo, onClose }) {
                 <input
                   type="tel"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  inputMode="numeric"
+                  onChange={(e) => setPhone(formatarFone(e.target.value))}
                   placeholder="(13) 99999-9999"
                   autoComplete="tel"
                 />

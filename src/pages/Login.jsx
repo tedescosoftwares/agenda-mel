@@ -11,6 +11,7 @@ import { extrairCodigo, guardarConvite } from '../lib/convite'
 import { AMBIENTE, urlDoAmbiente, ambienteDoPapel } from '../lib/ambiente'
 import { MailCheck } from 'lucide-react'
 import CampoSenha from '../components/CampoSenha'
+import { formatarFone } from '../lib/fone'
 
 // Login (tela 02): "Bem-vinda de volta!", e-mail, senha, manter
 // conectado, e a porta para quem esqueceu a senha ou não tem conta.
@@ -156,7 +157,7 @@ export default function Login({ ambiente = AMBIENTE }) {
           {modo === 'cadastro' && (
             <>
               <label>Nome completo<input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Maria da Silva" autoComplete="name" /></label>
-              <label>WhatsApp<input type="tel" value={fone} onChange={(e) => setFone(e.target.value)} placeholder="(11) 99999-9999" autoComplete="tel" required /></label>
+              <label>WhatsApp<input type="tel" inputMode="numeric" value={fone} onChange={(e) => setFone(formatarFone(e.target.value))} placeholder="(11) 99999-9999" autoComplete="tel" required /></label>
               {papel === 'salao' && <label>Nome do salão<input value={negocio} onChange={(e) => setNegocio(e.target.value)} placeholder="Espaço Bela" /></label>}
               {papel && papel !== 'equipe' && <label>Cidade<input value={cidade} onChange={(e) => setCidade(e.target.value)} placeholder="Santos" /></label>}
             </>

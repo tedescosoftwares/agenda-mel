@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext'
 import AuthModal from '../../components/AuthModal'
 import { gerarSlug } from '../../lib/booking'
 import { formatarCents } from '../../lib/indicacao'
+import { formatarFone } from '../../lib/fone'
 
 // Convite para o outro lado do balcão: uma cliente traz uma
 // profissional para trabalhar com o app.
@@ -170,7 +171,8 @@ export default function Convite() {
                 <input
                   type="tel"
                   value={form.telefone}
-                  onChange={(e) => setForm({ ...form, telefone: e.target.value })}
+                  inputMode="numeric"
+                  onChange={(e) => setForm({ ...form, telefone: formatarFone(e.target.value) })}
                   placeholder="(13) 99999-9999"
                 />
               </label>

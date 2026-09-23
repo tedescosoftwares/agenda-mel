@@ -11,6 +11,7 @@ import Avatar from '../../components/Avatar'
 import FotoUpload from '../../components/FotoUpload'
 import { FileSignature } from 'lucide-react'
 import { STATUS } from '../../lib/contratoParceria'
+import { formatarFone } from '../../lib/fone'
 
 const FORM_VAZIO = { name: '', slug: '', phone: '', bio: '', photo_url: null }
 
@@ -303,7 +304,8 @@ export default function AdminProfissionais() {
             <input
               type="tel"
               value={form.phone}
-              onChange={(e) => setForm({ ...form, phone: e.target.value })}
+              inputMode="numeric"
+              onChange={(e) => setForm({ ...form, phone: formatarFone(e.target.value) })}
               placeholder="(13) 99999-9999"
             />
           </label>

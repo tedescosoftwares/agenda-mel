@@ -7,6 +7,7 @@ import { supabase } from '../lib/supabase'
 import { MarcaIcon, Wordmark } from '../components/icons'
 import { reduzirFoto } from '../lib/imagem'
 import { buscarCep, formatarCep, minhaPosicao, geocodificar } from '../lib/geo'
+import { formatarFone } from '../lib/fone'
 import { linkDoCodigo } from '../lib/convite'
 import { urlDoAmbiente } from '../lib/ambiente'
 import { formatPreco } from '../lib/format'
@@ -43,7 +44,8 @@ const emReais = (c) => (Number(c ?? 0) / 100).toFixed(2).replace('.', ',')
 // cria a conta com os dados do salão nos metadados; o servidor grava tudo
 // e a conta acorda no passo 3, já logada em /onboarding.
 export default function Onboarding({ publico = false }) {
-  const { user, role, salao, recarregarPerfil, loading } = useAuth()
+  const { user, role, salao: salaoAdmin, negocio, recarregarPerfil, loading } = useAuth()
+  const salao = negocio ?? salaoAdmin   // a autônoma não tem 'salao' de admin; o negócio que ela é dona vale pros dois
   const navigate = useNavigate()
   const [s, setS] = useState(publico ? { id: null, tipo: 'salao', publico: true } : null)   // o salão, como está no banco (com o que a tela mudou por cima)
   const [passo, setPasso] = useState(1)
@@ -102,6 +104,9 @@ export default function Onboarding({ publico = false }) {
     setSalvando(false)
     if (error) { setErro(error.message); return }
     setPronto(true)
+    // o onboarding já apresentou o app: conta como primeiro acesso feito (e os termos aceitos no cadastro)
+    try { await supabase.rpc('aceitar_termos', { versao: TERMOS_VERSAO }) } catch { /* já aceitos */ }
+    try { await supabase.rpc('concluir_primeiro_acesso') } catch { /* segue */ }
     await recarregarPerfil?.()
     navigate(autonoma ? '/pro/agenda' : '/admin', { replace: true })
   }
@@ -306,7 +311,7 @@ function PassoDados({ s, setS, seguir, voltar, salvando, erro, setErro, user, ro
         <div className="ob-form">
           <label>{autonoma ? 'Nome da agenda' : 'Nome do salão'} <b>*</b><input value={f.name} onChange={m('name')} placeholder="Studio Essenza Hair" /></label>
           {!autonoma && <label>CNPJ <span className="muted">(opcional)</span><input value={f.cnpj} onChange={m('cnpj')} placeholder="12.345.678/0001-90" inputMode="numeric" /></label>}
-          <label>WhatsApp <b>*</b><span className="ob-fone"><span className="ob-ddi">🇧🇷 +55</span><input type="tel" value={f.whatsapp} onChange={m('whatsapp')} placeholder="(11) 91234-5678" autoComplete="tel" /></span></label>
+          <label>WhatsApp <b>*</b><span className="ob-fone"><span className="ob-ddi">🇧🇷 +55</span><input type="tel" inputMode="numeric" value={f.whatsapp} onChange={(e) => setF((x) => ({ ...x, whatsapp: formatarFone(e.target.value) }))} placeholder="(11) 91234-5678" autoComplete="tel" /></span></label>
           <label>E-mail <b>*</b>{publico && <span className="muted">(é com ele que você entra)</span>}<input type="email" value={f.email} onChange={m('email')} placeholder="contato@essenzahair.com.br" autoComplete="email" /></label>
           <label>{publico ? 'Seu nome completo' : 'Nome da responsável'} <b>*</b><input value={f.responsavel_nome} onChange={m('responsavel_nome')} placeholder="Juliana Lima" autoComplete="name" /></label>
           {publico && !user && (
@@ -689,7 +694,7 @@ function ModalProfissional({ salaoId, servicos, onFechar, onSalvo }) {
         {erro && <div className="alert alert-error">{erro}</div>}
         <div className="ob-form">
           <label>Nome<input value={f.name} onChange={m('name')} placeholder="Carla Mendes" autoFocus /></label>
-          <label>WhatsApp<input type="tel" value={f.phone} onChange={m('phone')} placeholder="(11) 98765-4321" /></label>
+          <label>WhatsApp<input type="tel" inputMode="numeric" value={f.phone} onChange={(e) => setF((x) => ({ ...x, phone: formatarFone(e.target.value) }))} placeholder="(11) 98765-4321" /></label>
           <label>Função <span className="muted">(opcional)</span><input value={f.especialidade} onChange={m('especialidade')} placeholder="Cabeleireira" /></label>
           {servicos.length > 0 && <div className="ob-quem"><span className="ob-rotulo">Serviços que ela faz</span><div className="chips"><button type="button" className={'chip' + (sel.length === 0 ? ' active' : '')} onClick={() => setSel([])}>Todos</button>{servicos.map((x) => <button key={x.id} type="button" className={'chip' + (sel.includes(x.id) ? ' active' : '')} onClick={() => setSel((y) => (y.includes(x.id) ? y.filter((z) => z !== x.id) : [...y, x.id]))}>{x.name}</button>)}</div></div>}
         </div>

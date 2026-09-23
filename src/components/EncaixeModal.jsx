@@ -4,6 +4,7 @@ import { formatDuracao, formatPreco } from '../lib/format'
 import { formatDataLonga } from '../lib/booking'
 import { useCategorias, agruparPorCategoria } from '../lib/categorias'
 import Portal from './Portal'
+import { formatarFone } from '../lib/fone'
 
 // Encaixe manual: a cliente ligou, apareceu na porta, ou simplesmente
 // não usa o app. O horário entra na agenda do mesmo jeito.
@@ -125,7 +126,8 @@ export default function EncaixeModal({ professionalId, data, onFechar, onPronto 
             <input
               type="tel"
               value={telefone}
-              onChange={(e) => setTelefone(e.target.value)}
+              inputMode="numeric"
+              onChange={(e) => setTelefone(formatarFone(e.target.value))}
               placeholder="(13) 99999-9999"
             />
           </label>

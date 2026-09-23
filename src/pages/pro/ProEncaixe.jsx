@@ -6,6 +6,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { toISODate } from '../../lib/format'
 import { useCategorias, agruparPorCategoria } from '../../lib/categorias'
+import { formatarFone } from '../../lib/fone'
 
 // Encaixe manual (tela 17): serviço, data, horário e — se quiser — a
 // cliente. Virou tela em vez de modal porque um formulário de quatro
@@ -78,7 +79,7 @@ export default function ProEncaixe() {
           ) : <span className="muted">Escolha o serviço primeiro.</span>}
         </label>
         <label>Cliente (opcional)<input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Como você anota na agenda" /></label>
-        <label>WhatsApp da cliente (opcional)<input type="tel" value={fone} onChange={(e) => setFone(e.target.value)} placeholder="(13) 99999-9999" /></label>
+        <label>WhatsApp da cliente (opcional)<input type="tel" inputMode="numeric" value={fone} onChange={(e) => setFone(formatarFone(e.target.value))} placeholder="(13) 99999-9999" /></label>
         {erro && <div className="alert alert-error">{erro}</div>}
         <button className="btn btn-primary btn-block" disabled={salvando}>{salvando ? 'Salvando…' : 'Salvar encaixe'}</button>
       </form>

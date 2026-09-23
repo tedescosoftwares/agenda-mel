@@ -7311,3 +7311,5 @@ button.quadro-col-cabeca:hover strong { color: var(--rosa); }
 .ob-termos input { width: auto !important; flex: none !important; margin-top: 0.15rem; accent-color: var(--rosa); }
 .ob-termos a { color: var(--rosa); }
 .ob .rodape-social { margin-top: 0.4rem; }
+
+.rede-erro { white-space: pre-wrap; word-break: break-word; font-size: 0.78rem; background: #fff1f2; color: #9f1239; padding: 0.6rem 0.7rem; border-radius: 10px; margin: 0.4rem 0 0.8rem; text-align: left; }

@@ -7,6 +7,7 @@ import { supabase } from '../../lib/supabase'
 import { CopiarIcon, CompartilharIcon } from '../../components/icons'
 import CodigoQr from '../../components/CodigoQr'
 import { useDialogo } from '../../context/DialogoContext'
+import { formatarFone } from '../../lib/fone'
 
 // Meu link público (tela 20): a prévia de como a cliente vê, o link,
 // copiar, compartilhar, e o QR para imprimir e colar no espelho.
@@ -98,7 +99,7 @@ export default function ProLink() {
       <div className="card form vit-form">
         <label>Uma linha embaixo do seu nome<input value={form.especialidade} onChange={mudar('especialidade')} placeholder="Nail designer · gel e decoradas" maxLength={60} /></label>
         <label>Instagram<input value={form.instagram} onChange={mudar('instagram')} placeholder="@seu.perfil" autoCapitalize="none" /></label>
-        <label>WhatsApp para a cliente falar com você<input type="tel" value={form.whatsapp_publico} onChange={mudar('whatsapp_publico')} placeholder="(13) 99999-9999 — vazio = não mostra" /></label>
+        <label>WhatsApp para a cliente falar com você<input type="tel" inputMode="numeric" value={form.whatsapp_publico} onChange={(e) => mudar('whatsapp_publico')({ target: { value: formatarFone(e.target.value) } })} placeholder="(13) 99999-9999 — vazio = não mostra" /></label>
         <label>Sobre você<textarea value={form.bio} onChange={mudar('bio')} rows={4} placeholder="Como você atende, há quanto tempo, o que a cliente pode esperar." /></label>
         <button className="btn btn-primary btn-block" onClick={salvarVitrine} disabled={salvando || !vitrine}>{salvando ? 'Salvando…' : salvo ? 'Salvo!' : 'Salvar vitrine'}</button>
       </div>

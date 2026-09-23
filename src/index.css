@@ -6614,8 +6614,8 @@ label.check input { margin-top: 3px; }
 .quadro-cartao-hora { font-size: 0.66rem; font-weight: 700; opacity: 0.8; font-family: var(--condensada); }
 .quadro-cartao strong { font-size: 0.8rem; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .quadro-cartao-serv, .quadro-cartao-pe { font-size: 0.7rem; opacity: 0.85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.quadro-cartao.confirmado { background: #fff0f5; border-color: #ffc2d8; color: #8a1245; }
-.quadro-cartao.pendente { background: #fff7e6; border-color: #fde2b0; color: #92400e; }
+.quadro-cartao.confirmado { background: #eef2ff; border-color: #c7d2fe; color: #312e81; }
+.quadro-cartao.pendente { background: #fffbeb; border-color: #f5c96b; border-style: dashed; color: #92400e; }
 .quadro-cartao.concluido, .quadro-cartao.fechado { background: #e6f7ee; border-color: #b7e4c7; color: #067647; }
 .quadro-cartao.faltou { background: var(--cinza-1); border-color: var(--fio); color: var(--cinza-3, #6b7280); text-decoration: line-through; }
 .quadro-detalhe h3 { margin: 0.5rem 0 0.3rem; }
@@ -6904,3 +6904,31 @@ label.check input { margin-top: 3px; }
 .quadro-cartao.aberto .quadro-cartao-cliente > span, .quadro-cartao.aberto strong, .quadro-cartao.aberto .quadro-cartao-serv { white-space: normal; }
 @keyframes quadro-abrir { from { transform: scale(0.99); box-shadow: 0 1px 3px rgba(31, 32, 38, 0.08); } to { transform: scale(1.02); } }
 @keyframes quadro-abrir-cima { from { transform: translateY(-100%) scale(0.99); box-shadow: 0 1px 3px rgba(31, 32, 38, 0.08); } to { transform: translateY(-100%) scale(1.02); } }
+
+/* quadro · pedido esperando a casa */
+.quadro-cartao-pendente { font-style: normal; margin-left: 0.35rem; font-size: 0.6rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; padding: 0.05rem 0.35rem; border-radius: 999px; background: #f5c96b; color: #78350f; }
+.quadro-pedido { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.6rem; margin: 0.6rem 0 0.2rem; padding: 0.6rem 0.75rem; border-radius: 12px; background: #fffbeb; border: 1px dashed #f5c96b; font-size: 0.84rem; color: #78350f; }
+.quadro-pedido > span:first-child { display: inline-flex; align-items: center; gap: 0.35rem; }
+.quadro-pedido-botoes { display: inline-flex; gap: 0.4rem; }
+.pdv-pedido-acoes { display: inline-flex; gap: 0.4rem; margin-top: 0.35rem; }
+.pdv-pedido-acoes .btn-mini { display: inline-flex; align-items: center; gap: 0.25rem; }
+.pdv-pedido-feito { display: inline-block; margin-top: 0.3rem; font-style: normal; font-size: 0.7rem; font-weight: 700; padding: 0.1rem 0.45rem; border-radius: 999px; background: var(--cinza-1); color: var(--cinza-3, #6b7280); }
+.pdv-pedido-feito.confirmado { background: #e6f7ee; color: #067647; }
+.pdv-pedido-feito.cancelado { background: #fff1e6; color: #b42318; }
+
+/* ajustes · pedidos de horário */
+.aj-aceite-intro { margin: -0.2rem 0 0.6rem; font-size: 0.86rem; }
+.aj-aceite { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 0.6rem; }
+.aj-aceite-opcao { display: flex; gap: 0.7rem; align-items: flex-start; text-align: left; font: inherit; color: inherit; cursor: pointer; padding: 0.85rem 0.9rem; border: 1.5px solid var(--fio); transition: border-color .15s, box-shadow .15s; }
+.aj-aceite-opcao > span:last-child { display: flex; flex-direction: column; gap: 0.15rem; font-size: 0.86rem; }
+.aj-aceite-opcao .muted { font-size: 0.78rem; line-height: 1.35; }
+.aj-aceite-marca { flex: none; width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--fio); margin-top: 0.1rem; position: relative; }
+.aj-aceite-opcao.ativa { border-color: var(--rosa); box-shadow: 0 0 0 3px #ffe1ec; }
+.aj-aceite-opcao.ativa .aj-aceite-marca { border-color: var(--rosa); }
+.aj-aceite-opcao.ativa .aj-aceite-marca::after { content: ''; position: absolute; inset: 3px; border-radius: 50%; background: var(--rosa); }
+.aj-aceite-opcao:disabled { opacity: 0.6; cursor: default; }
+.aj-aceite-prazo { margin-top: 0.6rem; display: flex; flex-direction: column; gap: 0.6rem; }
+.aj-aceite-prazo label { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.78rem; font-weight: 600; color: var(--cinza-3, #6b7280); }
+.aj-aceite-prazo select { font: inherit; font-size: 0.9rem; font-weight: 500; color: var(--grafite, #1f2026); padding: 0.5rem 0.65rem; border: 1px solid var(--fio); border-radius: 10px; background: #fff; }
+.aj-aceite-prazo p { margin: 0; font-size: 0.8rem; line-height: 1.4; }
+.aj-aceite-msg { margin: 0.5rem 0 0; font-size: 0.82rem; color: #067647; }

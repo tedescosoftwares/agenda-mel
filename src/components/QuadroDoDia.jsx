@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { X, Receipt, Ban, Clock, UserRound, Sparkles, GripVertical, ChevronLeft, ChevronRight, Star, History, Plus, Heart, AlertTriangle, ZoomIn, ZoomOut } from 'lucide-react'
+import { X, Receipt, Ban, Clock, UserRound, Sparkles, GripVertical, ChevronLeft, ChevronRight, Star, History, Plus, Heart, AlertTriangle, ZoomIn, ZoomOut, Hourglass, Check } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useDialogo } from '../context/DialogoContext'
 import { formatCents } from '../lib/pagamento'
@@ -124,6 +124,18 @@ export default function QuadroDoDia({ dia, agenda, semana = [], onTrocarDia, pro
     if (error) setErro(error.message); else { setAberto(null); onMudou?.() }
   }
 
+  // a casa decide um pedido pendente: confirma ou recusa (a cliente é avisada)
+  async function decidir(a, aceitou) {
+    if (!aceitou) {
+      const ok = await confirmar({ titulo: 'Recusar este pedido?', texto: `${a.cliente}, às ${a.start_time.slice(0, 5)}. O horário volta a ficar livre e ela recebe o aviso para escolher outro.`, ok: 'Recusar', perigo: true })
+      if (!ok) return
+    }
+    const { data, error } = await supabase.rpc('casa_decide', { appt: a.id, aceitou })
+    if (error) { setErro(error.message); return }
+    if (data?.ok === false) setErro(data.motivo ?? 'Não deu para decidir.')
+    setAberto(null); onMudou?.()
+  }
+
   const colunas = profs
   return (
     <div className="quadro">
@@ -203,7 +215,7 @@ export default function QuadroDoDia({ dia, agenda, semana = [], onTrocarDia, pro
                     {movel && <GripVertical size={12} className="quadro-grip" />}
                     {hv < 84 && a.client_id && a.atendimentos === 0 && <span className="quadro-marca nova" title="Primeira vez na casa">1ª vez</span>}
                     {hv < 84 && a.preferida_id && a.preferida_id !== a.professional_id && <span className="quadro-marca prefere" title={`Prefere ${a.preferida}`}><Heart size={9} /> {a.preferida?.split(' ')[0]}</span>}
-                    <span className="quadro-cartao-hora">{a.start_time.slice(0, 5)}–{a.end_time.slice(0, 5)}</span>
+                    <span className="quadro-cartao-hora">{a.start_time.slice(0, 5)}–{a.end_time.slice(0, 5)}{a.status === 'pendente' && <em className="quadro-cartao-pendente">a confirmar</em>}</span>
                     <strong>{a.cliente}</strong>
                     {hv >= 54 && <span className="quadro-cartao-serv">{a.servico}</span>}
                     {hv >= 72 && <span className="quadro-cartao-pe">{formatCents(a.price_cents ?? 0)}{a.pago_cents > 0 ? ` · sinal ${formatCents(a.pago_cents)}` : ''}{a.comanda_id ? ' · fechado' : ''}{a.avaliacao?.nota ? <em className="quadro-nota" title={a.avaliacao.comentario ?? 'Avaliação da cliente'}>{'★'.repeat(a.avaliacao.nota)}</em> : null}</span>}
@@ -261,8 +273,17 @@ export default function QuadroDoDia({ dia, agenda, semana = [], onTrocarDia, pro
             {aberto.preferida_id && aberto.preferida_id !== aberto.professional_id && (aberto.status === 'pendente' || aberto.status === 'confirmado') && !aberto.comanda_id && (
               <p className="muted quadro-dica">Se a {aberto.preferida?.split(' ')[0]} tiver vaga, arraste o cartão para a coluna dela.</p>
             )}
+            {aberto.status === 'pendente' && !aberto.comanda_id && (
+              <div className="quadro-pedido">
+                <span><Hourglass size={14} /> <strong>Pedido esperando a casa.</strong> Confirme agora ou deixe o prazo correr.</span>
+                <span className="quadro-pedido-botoes">
+                  <button type="button" className="btn btn-primary" onClick={() => decidir(aberto, true)}><Check size={15} /> Confirmar</button>
+                  <button type="button" className="btn btn-ghost" onClick={() => decidir(aberto, false)}><Ban size={15} /> Recusar</button>
+                </span>
+              </div>
+            )}
             <div className="quadro-detalhe-acoes">
-              {(aberto.status === 'pendente' || aberto.status === 'confirmado') && !aberto.comanda_id && <button type="button" className="btn btn-primary" onClick={() => { onAbrirComanda?.(aberto); setAberto(null) }}><Receipt size={15} /> Abrir comanda</button>}
+              {(aberto.status === 'pendente' || aberto.status === 'confirmado') && !aberto.comanda_id && <button type="button" className={'btn ' + (aberto.status === 'pendente' ? 'btn-ghost' : 'btn-primary')} onClick={() => { onAbrirComanda?.(aberto); setAberto(null) }}><Receipt size={15} /> Abrir comanda</button>}
               {(aberto.status === 'pendente' || aberto.status === 'confirmado') && !aberto.comanda_id && <button type="button" className="btn btn-ghost" onClick={() => { setAdicionarEm(aberto); setAberto(null) }}><Plus size={15} /> Adicionar serviço</button>}
               {(aberto.status === 'pendente' || aberto.status === 'confirmado') && !aberto.comanda_id && <button type="button" className="btn btn-ghost" onClick={() => cancelar(aberto)}><Ban size={15} /> Cancelar horário</button>}
             </div>

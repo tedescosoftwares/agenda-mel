@@ -50,7 +50,7 @@ export function useMovimentacao({ salaoId, userId, ligado = true, som = true, on
   useEffect(() => {
     if (!ligado || !salaoId || !userId) return
     if (DEMO) {
-      const t1 = setTimeout(() => emitir({ id: 'd1', tipo: 'novo', titulo: 'Novo horário', texto: 'Beatriz Costa marcou Spa dos pés com Fernanda, hoje às 14:00.', som: 'novo' }), 1200)
+      const t1 = setTimeout(() => emitir({ id: 'd1', tipo: 'novo', appointment_id: 'apx3', titulo: 'Pedido de horário', texto: 'Beatriz Costa · Spa dos pés com Fernanda, hoje às 14:00. A casa confirma em até 60 min.', som: 'novo' }), 1200)
       const t2 = setTimeout(() => emitir({ id: 'd2', tipo: 'pago', titulo: 'PIX caiu', texto: 'Carla Mendes pagou R$ 30,00 de sinal de Escova, hoje às 10:30.', som: 'dinheiro' }), 2400)
       const t3 = setTimeout(() => emitir({ id: 'd3', tipo: 'avaliacao', titulo: 'Nova avaliação ★★★★★', texto: 'Juliana Silva avaliou a Escova com Ana: “Amei, saiu perfeita!”', som: 'estrela' }), 3800)
       return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3) }

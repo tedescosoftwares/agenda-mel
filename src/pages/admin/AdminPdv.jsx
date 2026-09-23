@@ -60,6 +60,15 @@ export default function AdminPdv() {
   const [ocupado, setOcupado] = useState(false)
   const [erro, setErro] = useState('')
   const [toast, setToast] = useState('')
+  const [decididos, setDecididos] = useState({})   // appointment_id → 'confirmado' | 'cancelado' (o que a casa já decidiu pelo alerta)
+  async function decidirPedido(id, aceitou) {
+    const { data, error } = await supabase.rpc('casa_decide', { appt: id, aceitou })
+    if (error) { setToast(error.message); return }
+    if (data?.ok === false) { setToast(data.motivo ?? 'Esse pedido já foi resolvido.'); setDecididos((x) => ({ ...x, [id]: data.status ?? 'resolvido' })); return }
+    setDecididos((x) => ({ ...x, [id]: data?.status ?? (aceitou ? 'confirmado' : 'cancelado') }))
+    setToast(aceitou ? 'Confirmado. Ela foi avisada.' : 'Recusado. Ela foi avisada para escolher outro horário.')
+    carregar()
+  }
   const [folha, setFolha] = useState(false)          // a folha de fechar
   const [resultado, setResultado] = useState(null)   // o que o banco devolveu ao fechar
   const [ultima, setUltima] = useState(null)         // a última comanda fechada, para imprimir
@@ -398,7 +407,7 @@ export default function AdminPdv() {
       {vivo && (
         <div className={'pdv-vivo ' + vivo.tipo} role="status" onClick={() => setVivo(null)}>
           <span className="pdv-vivo-icone"><IconeEvento tipo={vivo.tipo} /></span>
-          <span className="pdv-vivo-texto"><strong>{vivo.titulo}</strong><span>{vivo.texto}</span></span>
+          <span className="pdv-vivo-texto"><strong>{vivo.titulo}</strong><span>{vivo.texto}</span>{ehPedido(vivo) && <AcoesDoPedido id={vivo.appointment_id} feito={decididos[vivo.appointment_id]} onDecidir={decidirPedido} />}</span>
         </div>
       )}
       {feed && (
@@ -410,7 +419,7 @@ export default function AdminPdv() {
             {eventos.map((ev) => (
               <div key={ev.id} className={'pdv-feed-item ' + ev.tipo}>
                 <span className="pdv-vivo-icone"><IconeEvento tipo={ev.tipo} /></span>
-                <span className="pdv-vivo-texto"><strong>{ev.titulo}</strong><span>{ev.texto}</span><small className="muted">{new Date(ev.quando).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</small></span>
+                <span className="pdv-vivo-texto"><strong>{ev.titulo}</strong><span>{ev.texto}</span>{ehPedido(ev) && <AcoesDoPedido id={ev.appointment_id} feito={decididos[ev.appointment_id]} onDecidir={decidirPedido} />}<small className="muted">{new Date(ev.quando).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</small></span>
               </div>
             ))}
           </div>
@@ -422,6 +431,19 @@ export default function AdminPdv() {
 }
 
 const capitalizar = (t) => (t ? t.charAt(0).toUpperCase() + t.slice(1) : '')
+// um evento é um pedido esperando a casa quando nasce pendente (pedido de horário ou de troca)
+const ehPedido = (ev) => Boolean(ev?.appointment_id) && /^Pedido de/.test(ev?.titulo ?? '')
+function AcoesDoPedido({ id, feito, onDecidir }) {
+  const [ocupado, setOcupado] = useState(false)
+  if (feito) return <em className={'pdv-pedido-feito ' + feito}>{feito === 'confirmado' ? 'confirmado pela casa' : feito === 'cancelado' ? 'recusado' : 'já resolvido'}</em>
+  const agir = async (e, aceitou) => { e.stopPropagation(); setOcupado(true); try { await onDecidir(id, aceitou) } finally { setOcupado(false) } }
+  return (
+    <span className="pdv-pedido-acoes" onClick={(e) => e.stopPropagation()}>
+      <button type="button" className="btn-mini" disabled={ocupado} onClick={(e) => agir(e, true)}><CheckCircle2 size={12} /> Confirmar</button>
+      <button type="button" className="btn-mini btn-mini-neutro" disabled={ocupado} onClick={(e) => agir(e, false)}><XIcon size={12} /> Recusar</button>
+    </span>
+  )
+}
 function IconeEvento({ tipo }) {
   if (tipo === 'novo') return <CalendarPlus size={18} />
   if (tipo === 'cancelou' || tipo === 'faltou') return <CalendarX size={18} />

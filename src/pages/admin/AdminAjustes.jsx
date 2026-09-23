@@ -25,6 +25,15 @@ export default function AdminAjustes() {
   const [st, setSt] = useState(null)   // a situação de cada área
   const [pdv, setPdv] = useState(() => { try { return localStorage.getItem('mimo-pdv') === '1' } catch { return false } })
   const desktop = typeof window !== 'undefined' && window.innerWidth >= 900
+  const [aceite, setAceite] = useState(null)        // { modo, minutos, no_silencio }
+  const [aceiteMsg, setAceiteMsg] = useState('')
+  async function salvarAceite(mudanca) {
+    const novo = { ...aceite, ...mudanca }
+    setAceite(novo); setAceiteMsg('')
+    const { data, error } = await supabase.rpc('salao_aceite', { salao: salao.id, modo: novo.modo, minutos: novo.minutos, no_silencio: novo.no_silencio })
+    if (error) { setAceiteMsg(error.message); return }
+    setAceiteMsg(data?.modo === 'automatico' ? 'Pronto: tudo entra confirmado na hora.' : data?.modo === 'casa' ? `Pronto: a casa confirma em até ${data.minutos} min, ${data.profissionais_ajustadas} ${data.profissionais_ajustadas === 1 ? 'profissional segue' : 'profissionais seguem'} a regra.` : 'Pronto: cada profissional decide nas próprias configurações.')
+  }
   function ligarPdv(v) { setPdv(v); try { localStorage.setItem('mimo-pdv', v ? '1' : '0'); sessionStorage.removeItem('mimo-pdv-pausado') } catch { /* sem armazenamento */ } }
 
   useEffect(() => {
@@ -33,7 +42,7 @@ export default function AdminAjustes() {
     ;(async () => {
       const hoje = new Date().toISOString().slice(0, 10)
       const [s, profs, servs, horas, promos, parc] = await Promise.all([
-        supabase.from('salons').select('logo_url, fotos, descricao, lat, lng, pagamento_modo, sinal_pct, politica_cancelamento, city, whatsapp').eq('id', salao.id).maybeSingle(),
+        supabase.from('salons').select('logo_url, fotos, descricao, lat, lng, pagamento_modo, sinal_pct, politica_cancelamento, city, whatsapp, aceite_modo, minutos_para_aceitar, ao_expirar').eq('id', salao.id).maybeSingle(),
         supabase.from('professionals').select('id, active').eq('salon_id', salao.id),
         supabase.from('services').select('id, active, destaque').eq('salon_id', salao.id),
         supabase.from('business_hours').select('weekday, open, start_time, end_time').eq('salon_id', salao.id),
@@ -48,6 +57,7 @@ export default function AdminAjustes() {
       const comContrato = (parc.data ?? []).filter((l) => l.status === 'vigente' || l.status === 'assinado').length
       const ex = abertos.length ? faixa(abertos) : ''
       const h0 = (horas.data ?? []).find((h) => h.open)
+      setAceite({ modo: s.data?.aceite_modo ?? 'profissional', minutos: s.data?.minutos_para_aceitar ?? 120, no_silencio: s.data?.ao_expirar ?? 'confirma' })
       setSt({
         salao: s.data ?? {},
         profissionais: ativosP, comContrato, semContrato: (parc.data ?? []).filter((l) => l.status === 'sem_contrato').length,
@@ -160,6 +170,40 @@ export default function AdminAjustes() {
           </div>
         </section>
       ))}
+
+      <section className="secao aj-secao">
+        <h3 className="secao-titulo">Pedidos de horário</h3>
+        <p className="muted aj-aceite-intro">Quando uma cliente marca pelo app ou pelo WhatsApp, quem confirma?</p>
+        <div className="aj-aceite">
+          {[
+            { id: 'automatico', titulo: 'Entra confirmado na hora', texto: 'A vaga estava livre, ela pegou. Ninguém precisa responder.' },
+            { id: 'casa', titulo: 'A casa confirma', texto: 'Vira um pedido; você confirma pelo quadro ou pelo alerta, dentro do prazo.' },
+            { id: 'profissional', titulo: 'Cada profissional decide', texto: 'Vale o que cada uma configurou na própria agenda.' },
+          ].map((o) => (
+            <button key={o.id} type="button" className={'card aj-aceite-opcao' + (aceite?.modo === o.id ? ' ativa' : '')} onClick={() => salvarAceite({ modo: o.id })} disabled={!aceite} aria-pressed={aceite?.modo === o.id}>
+              <span className="aj-aceite-marca" />
+              <span><strong>{o.titulo}</strong><span className="muted">{o.texto}</span></span>
+            </button>
+          ))}
+        </div>
+        {aceite?.modo === 'casa' && (
+          <div className="card aj-aceite-prazo">
+            <label>Prazo para a casa responder
+              <select value={aceite.minutos} onChange={(e) => salvarAceite({ minutos: Number(e.target.value) })}>
+                {[15, 30, 60, 120, 240, 480, 1440].map((m) => <option key={m} value={m}>{m < 60 ? `${m} min` : m < 1440 ? `${m / 60} h` : '1 dia'}</option>)}
+              </select>
+            </label>
+            <label>Se ninguém responder no prazo
+              <select value={aceite.no_silencio} onChange={(e) => salvarAceite({ no_silencio: e.target.value })}>
+                <option value="confirma">confirma sozinho (a cliente não perde a vaga)</option>
+                <option value="cancela">cancela e avisa a cliente</option>
+              </select>
+            </label>
+            <p className="muted">O pedido chega no celular de quem manda no salão e no alerta do PDV, com "Confirmar" e "Recusar". No quadro, o cartão fica marcado "a confirmar" até alguém decidir.</p>
+          </div>
+        )}
+        {aceiteMsg && <p className="muted aj-aceite-msg">{aceiteMsg}</p>}
+      </section>
 
       <section className="secao aj-secao">
         <h3 className="secao-titulo">Modo PDV</h3>

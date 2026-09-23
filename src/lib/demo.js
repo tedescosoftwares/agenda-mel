@@ -168,7 +168,7 @@ const TABELAS = {
   servicos_juntos: [{ service_id: 'sv1', sugerido_id: 'sv3' }],
   parcerias: [],
   comandas: [{ id: 'cmv', appointment_id: 'ap3', appointment_ids: ['ap3'], status: 'fechada' }],
-  salons: [{ id: SALAO, name: 'Studio Mel', slug: 'studio-mel', pagamento_modo: 'opcional', sinal_pct: 50, politica_cancelamento: 'moderada', app_url: 'https://mimo.app', city: 'Santos', address: 'Rua das Flores, 120 · Gonzaga', cep: '11060300', lat: -23.9668, lng: -46.3325, codigo: 'MEL2K5', tipo: 'salao', descricao: 'Um cantinho no Gonzaga para você se cuidar com calma: café, música baixa e uma equipe que capricha em cada detalhe.', fotos: [PROMO_IMG('#FF7BAA', '#AA4CFF', ''), PROMO_IMG('#FFC2D8', '#FF2D7A', '')], logo_url: null, phone: '(13) 3333-0000', whatsapp: '(13) 99120-3410', instagram: 'studiomel' }],
+  salons: [{ id: SALAO, name: 'Studio Mel', slug: 'studio-mel', aceite_modo: 'casa', minutos_para_aceitar: 60, ao_expirar: 'confirma', pagamento_modo: 'opcional', sinal_pct: 50, politica_cancelamento: 'moderada', app_url: 'https://mimo.app', city: 'Santos', address: 'Rua das Flores, 120 · Gonzaga', cep: '11060300', lat: -23.9668, lng: -46.3325, codigo: 'MEL2K5', tipo: 'salao', descricao: 'Um cantinho no Gonzaga para você se cuidar com calma: café, música baixa e uma equipe que capricha em cada detalhe.', fotos: [PROMO_IMG('#FF7BAA', '#AA4CFF', ''), PROMO_IMG('#FFC2D8', '#FF2D7A', '')], logo_url: null, phone: '(13) 3333-0000', whatsapp: '(13) 99120-3410', instagram: 'studiomel' }],
   salon_members: [{ salon_id: SALAO, user_id: 'a1', papel: 'admin', salons: { id: SALAO, name: 'Studio Mel', slug: 'studio-mel', codigo: 'MEL2K5', tipo: 'salao', city: 'Santos' } }],
   whatsapp_channels: [{ salon_id: SALAO, canal: 'evolution', identificador: '11', ativo: true, usa_ia: true, usa_bot: true, silencio_inicio: '21:00', silencio_fim: '08:00', teto_diario: 300 }],
   affiliate_settings: [{ id: true, ativo: true, platform_fee_bps: 300, affiliate_share_bps: 50 }],
@@ -280,6 +280,8 @@ const RPC = {
   },
   pdv_fechar: ({ comanda }) => ({ ok: true, comanda_id: 'cm-novo', appointment_ids: comanda?.appointment_ids ?? [], cupom: Boolean(comanda?.client_id) && comanda?.enviar_cupom !== false, total_cents: (comanda?.itens ?? []).reduce((s, i) => s + i.preco_cents * (i.qtd ?? 1), 0) - (comanda?.desconto_cents ?? 0) }),
   pdv_estornar: () => ({ ok: true }),
+  casa_decide: ({ aceitou }) => ({ ok: true, status: aceitou ? 'confirmado' : 'cancelado' }),
+  salao_aceite: ({ modo, minutos, no_silencio }) => ({ modo, minutos: minutos ?? 60, no_silencio: no_silencio ?? 'confirma', profissionais_ajustadas: modo === 'profissional' ? 0 : 4 }),
   pdv_repasse: ({ de, ate }) => {
     const ps = profissionais.filter((p) => p.active).slice(0, 3)
     const itens = [

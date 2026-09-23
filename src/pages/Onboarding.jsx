@@ -43,11 +43,16 @@ const emReais = (c) => (Number(c ?? 0) / 100).toFixed(2).replace('.', ',')
 // `publico`: os passos 1 e 2 antes de existir conta (/comecar). O passo 2
 // cria a conta com os dados do salão nos metadados; o servidor grava tudo
 // e a conta acorda no passo 3, já logada em /onboarding.
+// a landing manda ?tipo=autonoma ou ?tipo=salao; sem isso, salão
+function tipoDaURL() {
+  try { return new URLSearchParams(window.location.search).get('tipo') === 'autonoma' ? 'autonoma' : 'salao' } catch { return 'salao' }
+}
+
 export default function Onboarding({ publico = false }) {
   const { user, role, salao: salaoAdmin, negocio, recarregarPerfil, loading } = useAuth()
   const salao = negocio ?? salaoAdmin   // a autônoma não tem 'salao' de admin; o negócio que ela é dona vale pros dois
   const navigate = useNavigate()
-  const [s, setS] = useState(publico ? { id: null, tipo: 'salao', publico: true } : null)   // o salão, como está no banco (com o que a tela mudou por cima)
+  const [s, setS] = useState(publico ? { id: null, tipo: tipoDaURL(), publico: true } : null)   // o salão, como está no banco (com o que a tela mudou por cima)
   const [passo, setPasso] = useState(1)
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState('')

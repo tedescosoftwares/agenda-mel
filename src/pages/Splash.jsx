@@ -5,6 +5,7 @@ import { homeDoPapel } from '../lib/roles'
 import { AMBIENTE, ehPro, ambienteDoPapel } from '../lib/ambiente'
 import AmbienteErrado from '../components/AmbienteErrado'
 import { MarcaIcon, Wordmark } from '../components/icons'
+import Landing from './publico/Landing'
 
 // A abertura: marca, respiro, e vai. Fica na tela o tempo de o app
 // descobrir quem está logado — nem um segundo a mais. Splash que segura
@@ -17,8 +18,10 @@ export default function Splash() {
     if (loading) return
     const t = setTimeout(() => {
       if (!user) {
-        // cliente: a porta é o código. Pro: a porta é o login da agenda.
-        navigate(ehPro ? '/pro/entrar' : '/entrar', { replace: true })
+        // pro: a porta é o login da agenda. Cliente sem login vê a
+        // landing (abaixo) — a não ser que tenha chegado por um convite.
+        if (ehPro) navigate('/pro/entrar', { replace: true })
+        else if (new URLSearchParams(window.location.search).has('indique')) navigate('/entrar', { replace: true })
         return
       }
       // logada no ambiente errado? a tela de aviso cuida (abaixo)
@@ -31,6 +34,8 @@ export default function Splash() {
 
   const certo = !loading && user ? ambienteDoPapel(role) : null
   if (certo && certo !== AMBIENTE) return <AmbienteErrado role={role} />
+  // mimo.com.vc sem login: a porta da rua
+  if (!loading && !user && !ehPro && !new URLSearchParams(window.location.search).has('indique')) return <Landing />
 
   return (
     <div className="splash">

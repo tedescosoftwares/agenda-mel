@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /pro/
+Disallow: /cliente/
+Disallow: /plataforma/
+Sitemap: https://mimo.com.vc/sitemap.xml

@@ -77,6 +77,7 @@ import AdminRepasses from "./pages/admin/AdminRepasses";
 import Onboarding from "./pages/Onboarding";
 import RedeDeProtecao from "./components/RedeDeProtecao";
 import ConviteEquipe from "./pages/publico/ConviteEquipe";
+import Landing from "./pages/publico/Landing";
 import ClientePagamento from "./pages/cliente/ClientePagamento";
 import ClienteComanda from "./pages/cliente/ClienteComanda";
 import PlataformaPromocoes from "./pages/plataforma/Promocoes";
@@ -127,6 +128,7 @@ export default function App() {
             <Route path="/estilo" element={<Estilo />} />
 
             <Route path="/" element={<Splash />} />
+            <Route path="/landing" element={<Landing />} />
             <Route
               path="/cliente/home"
               element={

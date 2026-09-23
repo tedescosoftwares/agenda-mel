@@ -58,7 +58,8 @@ export function useRevelar(chave = true) {
   const ref = useRef(null)
   useEffect(() => {
     const raiz = ref.current
-    if (!raiz || !('IntersectionObserver' in window)) return
+    if (!raiz || !('IntersectionObserver' in window) || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
+    raiz.classList.add('ld-anima')
     const io = new IntersectionObserver((es) => {
       for (const e of es) if (e.isIntersecting) { e.target.classList.add('ld-vis'); io.unobserve(e.target) }
     }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 })
@@ -67,7 +68,7 @@ export function useRevelar(chave = true) {
     // o conteúdo que chega depois (artigos do banco, fotos) também entra
     const mo = new MutationObserver(olhar)
     mo.observe(raiz, { childList: true, subtree: true })
-    return () => { io.disconnect(); mo.disconnect() }
+    return () => { io.disconnect(); mo.disconnect(); raiz.classList.remove('ld-anima') }
   }, [chave])
   return ref
 }
@@ -156,7 +157,7 @@ export function PeSite() {
             <Link to="/entrar">Sou cliente</Link>
             <a href={entrar}>Sou profissional</a>
           </nav>
-          <div className="ld-pe-fim">mimo.com.vc<br />© {new Date().getFullYear()} Tedesco Softwares</div>
+          <div className="ld-pe-fim">mimo.com.vc<br />© {new Date().getFullYear()} MIMO Desenvolvimento Ltda</div>
         </div>
       </footer>
   )

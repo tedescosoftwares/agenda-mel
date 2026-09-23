@@ -23,7 +23,7 @@ export function Termos() {
   return (
     <Pagina titulo="Termos de uso">
       <h2>1. O que é o MIMO</h2>
-      <p>O MIMO é um aplicativo de agendamento de serviços de beleza. Ele conecta <strong>clientes</strong> a <strong>profissionais</strong> e <strong>salões</strong>: a cliente entra na agenda de quem a atende por um QR code, código ou link, vê horários livres, marca, remarca, avalia e recebe avisos. O MIMO é operado por <strong>Tedesco Softwares</strong> ("nós"), e este documento vale para todo mundo que usa o app: clientes, profissionais e donas de salão.</p>
+      <p>O MIMO é um aplicativo de agendamento de serviços de beleza. Ele conecta <strong>clientes</strong> a <strong>profissionais</strong> e <strong>salões</strong>: a cliente entra na agenda de quem a atende por um QR code, código ou link, vê horários livres, marca, remarca, avalia e recebe avisos. O MIMO é operado por <strong>MIMO Desenvolvimento Ltda</strong> ("nós"), e este documento vale para todo mundo que usa o app: clientes, profissionais e donas de salão.</p>
 
       <h2>2. Conta e acesso</h2>
       <p>Para usar o MIMO você cria uma conta com nome, e-mail, WhatsApp e senha. Você é responsável por manter a senha em sigilo e por tudo que for feito com a sua conta. Cliente só vê a agenda de quem a convidou (por QR, código ou link); nenhuma agenda é pública para todo mundo. Menores de 18 anos só podem usar o MIMO com autorização de um responsável.</p>
@@ -56,7 +56,7 @@ export function Termos() {
 export function Privacidade() {
   return (
     <Pagina titulo="Política de privacidade">
-      <p>Esta política explica, em linguagem simples, quais dados o MIMO coleta, para quê, com quem compartilha e quais são os seus direitos, conforme a <strong>Lei Geral de Proteção de Dados (LGPD, Lei 13.709/2018)</strong>. Controlador dos dados: <strong>Tedesco Softwares</strong>. Contato do encarregado (DPO): <a href={`mailto:${EMAIL_CONTATO}`}>{EMAIL_CONTATO}</a>.</p>
+      <p>Esta política explica, em linguagem simples, quais dados o MIMO coleta, para quê, com quem compartilha e quais são os seus direitos, conforme a <strong>Lei Geral de Proteção de Dados (LGPD, Lei 13.709/2018)</strong>. Controlador dos dados: <strong>MIMO Desenvolvimento Ltda</strong>. Contato do encarregado (DPO): <a href={`mailto:${EMAIL_CONTATO}`}>{EMAIL_CONTATO}</a>.</p>
 
       <h2>1. Quais dados coletamos</h2>
       <ul>

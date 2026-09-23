@@ -45,7 +45,7 @@ export function Sobre() {
           <p><strong>Clientes não são propriedade de uma plataforma.</strong> A cliente chega pelo seu QR, pelo seu link ou por uma profissional da sua equipe, e essa origem fica registrada. Não existe vitrine genérica com o concorrente ao lado.</p>
           <p><strong>Bonita, mas não fútil. Simples, mas não rasa.</strong> A MIMO fala a língua do salão: cadeira vazia, encaixe, retorno, comanda. Nada de dashboard decorativo.</p>
           <p><strong>Tecnologia que não parece software de contador.</strong> A dona abre e sabe o que fazer agora. A profissional vê só a agenda dela. A cliente marca sozinha.</p>
-          <p>A MIMO é operada pela <strong>Tedesco Softwares</strong>, no litoral de São Paulo. Começou em Itanhaém, Peruíbe e Mongaguá e cresce salão a salão.</p>
+          <p>A MIMO é desenvolvida pela <strong>MIMO Desenvolvimento Ltda</strong>, no litoral de São Paulo. Começou em Itanhaém, Peruíbe e Mongaguá e cresce salão a salão.</p>
           <a className="ld-btn ld-primario" href={comecarEm()}>Começar agora <ArrowRight size={16} /></a>
         </div>
       </div>

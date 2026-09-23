@@ -4457,15 +4457,20 @@ a.prof-row:hover,
    mais denuncia "isto é um site". clip em vez de hidden nos shells
    porque hidden viraria contexto de rolagem e quebraria o fixed da
    barra de baixo. */
-html, body { overflow-x: hidden; max-width: 100%; }
+/* as regras de app (sem rolagem lateral, sem elástico, altura presa)
+   não valem para o site público (.ld): lá a página rola como página. */
+body:not(:has(.ld)) { overflow-x: hidden; max-width: 100%; }
+html:not(:has(.ld)) { overflow-x: hidden; }
 #root, .admin-shell, .layout { overflow-x: clip; }
 
 /* sem zoom no toque duplo, sem o brilho azul de link ao tocar, sem o
    elástico que puxa a página inteira quando rola além do fim */
-body {
+body:not(:has(.ld)) {
   touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
   overscroll-behavior-y: none;
+}
+body {
+  -webkit-tap-highlight-color: transparent;
   -webkit-text-size-adjust: 100%;
 }
 
@@ -4878,8 +4883,9 @@ body:has(.plat) { touch-action: auto; overscroll-behavior: auto; overflow: hidde
    - segurar o dedo não seleciona texto de botão/aba nem abre menu de imagem
    - o conteúdo termina ACIMA da barra de baixo, nunca embaixo dela
    ===================================================================== */
-html, body { touch-action: pan-x pan-y; overscroll-behavior: none; }
-html { height: 100%; -webkit-text-size-adjust: 100%; }
+html:not(:has(.ld)), body:not(:has(.ld)) { touch-action: pan-x pan-y; overscroll-behavior: none; }
+html:not(:has(.ld)) { height: 100%; }
+html { -webkit-text-size-adjust: 100%; }
 body:not(:has(.plat)) { min-height: 100%; }
 .bottom-nav, .topbar, .btn, .btn-mini, .chip, .aba, .nav-item, .slot, .prof-bolha, .rodape-fixo, .fab, .switch {
   -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;

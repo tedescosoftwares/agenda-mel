@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { HandCoins, ChevronDown, ChevronUp, Download, FileSignature, Info } from 'lucide-react'
+import { HandCoins, ChevronDown, ChevronUp, Download, FileSignature, Info, Scale } from 'lucide-react'
 import AdminShell from '../../components/AdminShell'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
@@ -31,6 +31,13 @@ export default function AdminRepasses() {
   const [erro, setErro] = useState('')
   const [carregando, setCarregando] = useState(true)
   const [aberto, setAberto] = useState(null)
+  const [padraoMsg, setPadraoMsg] = useState('')
+  async function salvarPadrao(pct, base) {
+    const { data, error } = await supabase.rpc('salao_cota_padrao', { salao: salao.id, pct, base })
+    if (error) { setPadraoMsg(error.message); return }
+    setPadraoMsg(`Padrão da casa: ${Number(data.cota_pct)}% do ${data.base === 'liquido' ? 'líquido' : 'bruto'} para quem não tem contrato.`)
+    carregar()
+  }
 
   const carregar = useCallback(async () => {
     if (!salao?.id || !de || !ate) return
@@ -74,6 +81,15 @@ export default function AdminRepasses() {
         </div>
       </div>
 
+      {dados?.padrao && (
+        <div className="card rp-padrao">
+          <span className="rp-padrao-texto"><Scale size={15} /> <strong>Padrão da casa:</strong> quem não tem contrato de parceria fica com</span>
+          <label><input type="number" min="0" max="100" step="5" defaultValue={Number(dados.padrao.cota_pct)} key={dados.padrao.cota_pct} onBlur={(e) => { const v = Number(e.target.value); if (Number.isFinite(v) && v !== Number(dados.padrao.cota_pct)) salvarPadrao(v, dados.padrao.base) }} />%</label>
+          <label>do <select value={dados.padrao.base} onChange={(e) => salvarPadrao(Number(dados.padrao.cota_pct), e.target.value)}><option value="liquido">líquido (depois do desconto)</option><option value="bruto">bruto</option></select></label>
+          <span className="muted">O contrato de parceria, quando existe, manda sobre isso.</span>
+          {padraoMsg && <span className="rp-padrao-msg">{padraoMsg}</span>}
+        </div>
+      )}
       {erro && <div className="alert alert-error">{erro}</div>}
       {carregando && !dados && <p className="muted">Somando…</p>}
 
@@ -83,7 +99,8 @@ export default function AdminRepasses() {
           <div><span>Descontos</span><strong>− {formatCents(t.desconto_cents)}</strong></div>
           <div className="rp-total-liq"><span>Líquido</span><strong>{formatCents(t.liquido_cents)}</strong></div>
           <div><span>Comandas</span><strong>{t.comandas}</strong><small className="muted">{t.itens} {t.itens === 1 ? 'serviço' : 'serviços'}</small></div>
-          {t.repasse_cents > 0 && <div className="rp-total-rep"><span>Para a equipe</span><strong>{formatCents(t.repasse_cents)}</strong><small className="muted">pela cota dos contratos</small></div>}
+          {t.repasse_cents > 0 && <div className="rp-total-rep"><span>Para a equipe</span><strong>{formatCents(t.repasse_cents)}</strong><small className="muted">pela cota (contrato ou padrão da casa)</small></div>}
+          {t.repasse_cents > 0 && <div><span>Para a casa</span><strong>{formatCents(t.liquido_cents - t.repasse_cents)}</strong></div>}
         </div>
       )}
 
@@ -99,27 +116,27 @@ export default function AdminRepasses() {
                 <span className="rp-pessoa-quem">
                   <strong>{p.nome}</strong>
                   <span className="muted">{p.comandas} {p.comandas === 1 ? 'comanda' : 'comandas'} · {p.itens} {p.itens === 1 ? 'serviço' : 'serviços'}
-                    {p.contrato ? ` · cota de ${Number(p.contrato.cota_pct)}% do ${p.contrato.base_calculo === 'liquido' ? 'líquido' : 'bruto'}, ${PERIODICIDADE[p.contrato.periodicidade] ?? p.contrato.periodicidade}` : ' · sem contrato de parceria'}
+                    {p.contrato?.origem === 'contrato' ? ` · contrato: ${Number(p.contrato.cota_pct)}% do ${p.contrato.base_calculo === 'liquido' ? 'líquido' : 'bruto'}, ${PERIODICIDADE[p.contrato.periodicidade] ?? p.contrato.periodicidade}` : ` · padrão da casa: ${Number(p.contrato?.cota_pct ?? 0)}% do ${p.contrato?.base_calculo === 'bruto' ? 'bruto' : 'líquido'}`}
                   </span>
                 </span>
                 <span className="rp-pessoa-numeros">
                   <span className="rp-num"><small>líquido</small><strong>{formatCents(p.liquido_cents)}</strong></span>
-                  {p.contrato ? <span className="rp-num rp-num-rep"><small>para ela</small><strong>{formatCents(p.repasse_cents)}</strong></span> : <span className="rp-num rp-num-vazio"><small>para ela</small><strong>—</strong></span>}
-                  {p.contrato && <span className="rp-num"><small>para a casa</small><strong>{formatCents(p.casa_cents)}</strong></span>}
+                  <span className="rp-num rp-num-rep"><small>para ela</small><strong>{formatCents(p.repasse_cents)}</strong></span>
+                  <span className="rp-num"><small>para a casa</small><strong>{formatCents(p.casa_cents)}</strong></span>
                 </span>
                 {ab ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
               </button>
               {ab && (
                 <div className="rp-itens">
-                  {!p.contrato && p.professional_id && <p className="rp-aviso"><FileSignature size={14} /> Sem contrato vigente, a cota não é calculada. <Link to={`/admin/equipe/${p.professional_id}/parceria`}>Fazer o contrato de parceria</Link>.</p>}
+                  {p.contrato?.origem !== 'contrato' && p.professional_id && <p className="rp-aviso rp-aviso-neutro"><FileSignature size={14} /> Vale o padrão da casa. Um <Link to={`/admin/equipe/${p.professional_id}/parceria`}>contrato de parceria</Link> pode dar a ela uma cota própria e exceções por serviço.</p>}
                   <table>
-                    <thead><tr><th>Dia</th><th>Cliente</th><th>Serviço</th><th className="n">Bruto</th><th className="n">Desc.</th><th className="n">Líquido</th>{p.contrato && <th className="n">Cota</th>}{p.contrato && <th className="n">Para ela</th>}</tr></thead>
+                    <thead><tr><th>Dia</th><th>Cliente</th><th>Serviço</th><th className="n">Bruto</th><th className="n">Desc.</th><th className="n">Líquido</th><th className="n">Cota</th><th className="n">Para ela</th></tr></thead>
                     <tbody>
                       {itensDe(p.professional_id).map((i) => (
                         <tr key={i.id}>
                           <td>{dataCurta(i.dia)}</td><td>{i.cliente}</td><td>{i.nome}{i.qtd > 1 ? ` ×${i.qtd}` : ''}</td>
                           <td className="n">{formatCents(i.valor_cents)}</td><td className="n muted">{i.desconto_cents ? `− ${formatCents(i.desconto_cents)}` : ''}</td><td className="n">{formatCents(i.liquido_cents)}</td>
-                          {p.contrato && <td className="n muted">{i.cota_pct != null ? `${Number(i.cota_pct)}%` : ''}</td>}{p.contrato && <td className="n"><strong>{i.repasse_cents != null ? formatCents(i.repasse_cents) : ''}</strong></td>}
+                          <td className="n muted">{i.cota_pct != null ? `${Number(i.cota_pct)}%` : ''}</td><td className="n"><strong>{i.repasse_cents != null ? formatCents(i.repasse_cents) : ''}</strong></td>
                         </tr>
                       ))}
                     </tbody>
@@ -132,7 +149,7 @@ export default function AdminRepasses() {
       </div>
 
       <div className="card rp-como">
-        <p><Info size={15} /> <strong>Como é contado.</strong> Cada serviço da comanda fica com a profissional que o fez, mesmo quando a cliente passou por mais de uma na mesma visita. O desconto da comanda é rateado na proporção do valor de cada serviço. O sinal pago pelo app não muda nada aqui: ele é só uma forma de pagamento. A cota vem do contrato de parceria vigente (com as exceções por serviço, se houver). Comandas estornadas saem da conta.</p>
+        <p><Info size={15} /> <strong>Como é contado.</strong> Cada serviço da comanda fica com a profissional que o fez, mesmo quando a cliente passou por mais de uma na mesma visita. O desconto da comanda é rateado na proporção do valor de cada serviço. O sinal pago pelo app não muda nada aqui: ele é só uma forma de pagamento. A cota vem do contrato de parceria vigente (com as exceções por serviço, se houver); sem contrato, vale o padrão da casa. Comandas estornadas saem da conta.</p>
         <p className="muted"><HandCoins size={14} /> A transferência do repasse pelo app vem depois; por enquanto esta tela e a planilha são o fechamento.</p>
       </div>
     </AdminShell>

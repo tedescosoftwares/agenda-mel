@@ -243,7 +243,7 @@ export default function AdminPdv() {
 
       {modo === 'projecao' ? (
         <div className="pdv-corpo pdv-corpo-quadro">
-          <div className="pdv-painel pdv-quadro-painel pdv-projecao-painel"><ProjecaoSemana salaoId={salao?.id} /></div>
+          <div className="pdv-painel pdv-quadro-painel pdv-projecao-painel"><ProjecaoSemana salaoId={salao?.id} profs={profs} /></div>
         </div>
       ) : modo === 'quadro' ? (
         <div className="pdv-corpo pdv-corpo-quadro">

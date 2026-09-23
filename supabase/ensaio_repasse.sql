@@ -1,4 +1,4 @@
--- Ensaio da 109: itens da comanda e o repasse por profissional. Desfaz no fim.
+-- Ensaio da 109/113: itens da comanda e o repasse por profissional (contrato ou padrão da casa). Desfaz no fim.
 begin;
 do $$
 declare
@@ -17,7 +17,9 @@ begin
   insert into public.appointments (client_id, professional_id, service_id, salon_id, date, start_time, end_time, status, price_cents, pago_cents)
   values (cli, p2.id, svc.id, sal.id, public.agora_local()::date, time '04:00', time '04:30', 'confirmado', 3000, 0) returning id into a2;
   -- contrato vigente só pra p1: 40% do líquido
-  insert into public.parcerias (salon_id, professional_id, status, inicio, cota_pct, base_calculo) values (sal.id, p1.id, 'vigente', current_date - 10, 40, 'liquido');
+  -- o status é recalculado pelo gatilho: assinado pelas duas partes e homologado → vigente
+  insert into public.parcerias (salon_id, professional_id, status, inicio, cota_pct, base_calculo, homologacao, assinaturas)
+  values (sal.id, p1.id, 'vigente', current_date - 10, 40, 'liquido', 'homologado', jsonb_build_array(jsonb_build_object('parte', 'profissional', 'modo', 'app', 'em', now()), jsonb_build_object('parte', 'salao', 'modo', 'app', 'em', now())));
 
   perform set_config('request.jwt.claim.sub', dona::text, false);
   set role authenticated;
@@ -44,7 +46,7 @@ begin
   select x into linha from jsonb_array_elements(rep -> 'por_profissional') x where x ->> 'professional_id' = p1.id::text;
   if linha is null or (linha ->> 'liquido_cents')::int <> 8250 or (linha ->> 'repasse_cents')::int <> 3300 or (linha ->> 'casa_cents')::int <> 4950 then raise exception '2: linha de p1 errada: %', linha; end if;
   select x into linha from jsonb_array_elements(rep -> 'por_profissional') x where x ->> 'professional_id' = p2.id::text;
-  if linha is null or (linha ->> 'liquido_cents')::int <> 2750 or linha -> 'contrato' <> 'null'::jsonb then raise exception '2: linha de p2 errada: %', linha; end if;
+  if linha is null or (linha ->> 'liquido_cents')::int <> 2750 or linha -> 'contrato' ->> 'origem' <> 'casa' or (linha ->> 'repasse_cents')::int <> 1375 then raise exception '2: linha de p2 errada (padrão da casa 50%% do líquido): %', linha; end if;
   raise notice '2 repasse por profissional ok';
 
   -- 3. a profissional vê só o dela

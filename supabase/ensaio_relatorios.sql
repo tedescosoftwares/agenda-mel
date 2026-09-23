@@ -1,4 +1,4 @@
--- Ensaio da 112: avaliações do período e projeção da semana. Desfaz no fim.
+-- Ensaio da 112/113: avaliações do período e projeção da semana. Desfaz no fim.
 begin;
 do $$
 declare sal record; dona uuid; p1 record; p2 record; svc record; cli uuid; a1 uuid; a2 uuid; a3 uuid; r jsonb; x jsonb; seg date; deu boolean; n integer;
@@ -41,6 +41,17 @@ begin
   select value into x from jsonb_array_elements(r -> 'por_profissional') where value ->> 'professional_id' = p1.id::text;
   if x is null or (x ->> 'previsto_cents')::int <> 16000 or (x ->> 'sinal_cents')::int <> 5000 then raise exception '2: linha de p1 errada: %', x; end if;
   raise notice '2 por profissional ok';
+
+  -- 2b. sem contrato vale a cota padrão da casa (50%%): p1 equipe 8000, casa 8000; filtro por profissional
+  if (x ->> 'equipe_cents')::int <> 8000 or (x ->> 'casa_cents')::int <> 8000 or (x ->> 'contrato')::boolean then raise exception '2b: cota padrão errada: %', x; end if;
+  if (r -> 'total' ->> 'ticket_medio_cents')::int <> 8000 then raise exception '2b: ticket médio errado: %', r -> 'total' ->> 'ticket_medio_cents'; end if;
+  if jsonb_array_length(r -> 'semanas') <> 5 then raise exception '2b: devia trazer 5 semanas'; end if;
+  perform set_config('request.jwt.claim.sub', dona::text, false);
+  set role authenticated;
+  r := public.projecao_semanal(sal.id, seg, p2.id);
+  reset role;
+  if (r -> 'total' ->> 'previsto_cents')::int <> 8000 or jsonb_array_length(r -> 'por_profissional') <> 1 then raise exception '2b: filtro por profissional errado: %', r -> 'total'; end if;
+  raise notice '2b cota padrao, ticket, semanas e filtro ok';
 
   -- 3. avaliações: duas notas, média 4,5, por serviço e lista
   delete from public.reviews where appointment_id in (a1, a3);

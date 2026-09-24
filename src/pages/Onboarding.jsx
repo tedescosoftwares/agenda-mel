@@ -146,6 +146,7 @@ export default function Onboarding({ publico = false }) {
             </li>
           ))}
         </ol>
+        <span className="ob-painel-espaco" />
         <div className="ob-plano-painel">
           <small>Seu plano</small>
           <strong>{plano.nome}</strong>

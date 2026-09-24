@@ -265,3 +265,31 @@
 .ob-termos input { width: auto !important; flex: none !important; margin-top: 0.15rem; accent-color: var(--rosa); }
 .ob-termos a { color: var(--rosa); }
 .ob .rodape-social { margin-top: 0.4rem; }
+
+/* ---- o painel se ajusta à altura da tela (notebook, zoom 125%) ---- */
+.ob-painel { overflow-y: auto; scrollbar-width: none; }
+.ob-painel::-webkit-scrollbar { display: none; }
+.ob-passos { margin-top: 0; }
+.ob-painel-espaco { flex: 1; }
+@media (max-width: 1200px) and (min-width: 901px) {
+  .ob { grid-template-columns: 320px minmax(0, 1fr); }
+  .ob-painel { padding: 20px 22px; }
+  .ob-conteudo { padding: 26px 30px 32px; }
+}
+@media (max-height: 880px) and (min-width: 901px) {
+  .ob-painel { gap: 14px; padding: 18px 22px; }
+  .ob-painel-foto { aspect-ratio: 16 / 9; }
+  .ob-painel-bilhete { font-size: 1.25rem; }
+  .ob-painel-texto h2 { font-size: 1.5rem; }
+  .ob-painel-texto p { font-size: 0.82rem; }
+  .ob-passos button { padding: 5px 8px; font-size: 0.82rem; }
+  .ob-passo-num { width: 22px; height: 22px; }
+  .ob-plano-painel { padding: 10px 14px; gap: 2px; }
+  .ob-plano-painel b { font-size: 1.4rem; }
+  .ob-conteudo { padding: 26px 40px 32px; }
+}
+@media (max-height: 740px) and (min-width: 901px) {
+  .ob-painel-foto { display: none; }
+  .ob-painel-texto p { display: none; }
+  .ob-ajuda small { display: none; }
+}

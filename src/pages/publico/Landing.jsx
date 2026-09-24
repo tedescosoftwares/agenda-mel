@@ -33,12 +33,13 @@ const FAQ = [
 const PROFISSOES = ['manicure', 'cabeleireira', 'lash designer', 'designer de sobrancelhas', 'maquiadora', 'barbeira', 'esteticista', 'nail designer', 'trancista', 'depiladora', 'colorista', 'massoterapeuta']
 const CATEGORIAS = [[Hand, 'unhas'], [Scissors, 'cabelo'], [Palette, 'make'], [Eye, 'sobrancelha'], [Flower2, 'estética']]
 
-// os cartazes da parede: frases do nicho, no tom das artes da marca
+// os cartazes: quatro coisas que a dona do salão passa a fazer com a MIMO,
+// no tom das artes da marca
 const CARTAZES = [
-  { tom: 'rosa', gira: -2, titulo: ['Cadeira', 'vazia', '*custa caro.'], sub: 'A lista de espera preenche a vaga que abriu.', bilhete: 'agenda cheia' },
-  { tom: 'creme', gira: 1.5, titulo: ['Sua cliente', '*marca', 'sozinha.'], sub: 'Pelo seu QR, no horário que você abriu.', bilhete: 'sem WhatsApp às 23h' },
-  { tom: 'preto', gira: -1, titulo: ['Mani?', 'Escova?', 'Cílios?', '*Fecha junto.'], sub: 'Uma comanda só. O repasse já sai separado.', bilhete: 'o que é de quem' },
-  { tom: 'rosa-2', gira: 2, titulo: ['Avaliação', 'na hora.', '*Nota no quadro.'], sub: 'Cada serviço, cada profissional.', bilhete: 'cinco estrelas' },
+  { tom: 'rosa', gira: -2, titulo: ['Veja', 'quem', '*vem hoje.'], sub: 'O dia inteiro numa tela só, por profissional.', bilhete: 'sem caça ao tesouro' },
+  { tom: 'creme', gira: 1.5, titulo: ['Saiba', 'quem', '*cancelou.'], sub: 'E preencha a vaga com quem estava na lista de espera.', bilhete: 'cadeira ocupada' },
+  { tom: 'preto', gira: -1, titulo: ['Encontre', 'quem deveria', '*voltar.'], sub: 'Retorno no prazo certo, com o serviço certo.', bilhete: 'ela volta' },
+  { tom: 'rosa-2', gira: 2, titulo: ['Confirme', 'sem procurar', '*conversa antiga.'], sub: 'O WhatsApp ligado ao horário, não a um chat solto.', bilhete: 'menos bagunça' },
 ]
 
 const GRUPOS = [
@@ -274,7 +275,7 @@ export default function Landing() {
 
         <section className="ld-parede">
           <div className="ld-wrap">
-            <Cabeca kicker="A cara da casa" titulo={['Na parede do salão.']} centro>A MIMO fala como o salão fala: direto, com carinho e sem cara de planilha.</Cabeca>
+            <Cabeca kicker="O que muda no seu dia" titulo={['Quatro coisas que você', 'passa a fazer sem esforço.']} centro>Não é lista de funcionalidade. É o que acontece no balcão a partir da primeira semana.</Cabeca>
             <div className="ld-cartazes">
               {CARTAZES.map((c, i) => (
                 <article className={`ld-cartaz ld-cz-${c.tom} ld-rv`} key={i} style={{ '--gira': `${c.gira}deg`, transitionDelay: `${i * 80}ms` }}>

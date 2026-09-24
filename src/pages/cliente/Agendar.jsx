@@ -98,7 +98,14 @@ function useContexto(profId, servicoParam) {
       ])
       if (!vivo) return
       setProf(p.data)
-      setServico(juntar(ids, s.data))
+      // preço e duração dela, quando o salão configurou diferente (119)
+      let lista = s.data
+      if (profId && ids.length && lista?.length) {
+        const { data: pr } = await supabase.from('professional_services').select('service_id, preco_cents, duracao_minutos').eq('professional_id', profId).in('service_id', ids)
+        if (!vivo) return
+        lista = lista.map((x) => { const o = (pr ?? []).find((y) => y.service_id === x.id); return o ? { ...x, price: o.preco_cents != null ? o.preco_cents / 100 : x.price, duration_minutes: o.duracao_minutos ?? x.duration_minutes } : x })
+      }
+      setServico(juntar(ids, lista))
     })()
     return () => { vivo = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps

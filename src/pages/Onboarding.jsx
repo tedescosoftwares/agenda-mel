@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import QRCode from 'qrcode'
-import { Store, Check, ArrowLeft, ArrowRight, LogOut, Camera, MapPin, Plus, X, Copy, Download, MoreHorizontal, Link2, CheckCircle2, Info, Crown, Sparkles, MessageCircle, Users, Minus } from 'lucide-react'
+import { Check, ArrowLeft, ArrowRight, LogOut, Camera, MapPin, Plus, X, Copy, Download, MoreHorizontal, Link2, Info, Crown, Sparkles, MessageCircle, Users, Minus, Eye, Lock, Wand2, CalendarCheck, QrCode, Send, Home } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { planoDoNegocio, reais as emDinheiro, PLANOS } from '../lib/planos'
@@ -12,21 +12,23 @@ import { formatarFone } from '../lib/fone'
 import { linkDoCodigo } from '../lib/convite'
 import { urlDoAmbiente } from '../lib/ambiente'
 import { formatPreco } from '../lib/format'
-import Avatar from '../components/Avatar'
+import { sugestoesPara, primeiroNome } from '../lib/equipe'
+import ProfissionalDrawer, { CartaoProfissional } from '../components/ProfissionalDrawer'
 import { TERMOS_VERSAO } from '../lib/termos'
 import RodapeSocial from '../components/RodapeSocial'
 
-// O onboarding do salão (114): do cadastro à agenda em seis passos, o
-// mesmo fluxo no computador e no celular. Cada passo grava ao continuar
-// e a conta lembra onde parou; quem sair volta pro mesmo lugar. A
-// autônoma passa por cinco: não tem o passo da equipe.
+// O onboarding do salão (114, 119): do cadastro à agenda em seis passos, o
+// mesmo fluxo no computador e no celular. Cada passo explica por que
+// pergunta, mostra o efeito da escolha, grava sozinho (autosave) e a
+// conta lembra onde parou; quem sair volta pro mesmo lugar. A autônoma
+// passa por cinco: não tem o passo da equipe.
 // cada passo tem a foto, o bilhete e a frase do painel da esquerda
 const PASSOS = [
   { id: 1, rotulo: 'Tipo de conta', foto: 'profissional', bilhete: 'bem-vinda', titulo: 'Sua rotina no lugar.', texto: 'Escolha como você trabalha. Autônoma é grátis; salão paga só pelas agendas que usa.' },
   { id: 2, rotulo: 'Dados do salão', foto: 'salao', bilhete: 'é a cara da casa', titulo: 'O que a cliente vê.', texto: 'Nome, foto, WhatsApp e endereço aparecem na página do seu negócio e no app da cliente.' },
-  { id: 3, rotulo: 'Estrutura e operação', foto: 'painel', bilhete: 'do seu jeito', titulo: 'Como o dia funciona.', texto: 'Horários, política de agendamento, sinal e quem confirma. Tudo dá pra mudar depois em Ajustes.' },
-  { id: 4, rotulo: 'Serviços', foto: 'lifestyle', bilhete: 'preço e tempo', titulo: 'O que você oferece.', texto: 'Cadastre os principais com duração real. É isso que impede a agenda de oferecer um horário que não existe.' },
-  { id: 5, rotulo: 'Equipe', foto: 'equipe', bilhete: 'cada uma com a sua agenda', titulo: 'Quem atende.', texto: 'Você configura tudo; a profissional entra pelo link da equipe e já encontra a agenda dela pronta.' },
+  { id: 3, rotulo: 'Estrutura e operação', foto: 'agenda-celular', bilhete: 'do seu jeito', titulo: 'Como o dia funciona.', texto: 'Horário, regras de agendamento e quantas agendas. Tudo muda depois em Ajustes.' },
+  { id: 4, rotulo: 'Serviços', foto: 'lifestyle', bilhete: 'o que você faz', titulo: 'O cardápio da casa.', texto: 'Nome, duração real e preço. A duração é o que a agenda usa pra achar horário livre.' },
+  { id: 5, rotulo: 'Equipe', foto: 'equipe', bilhete: 'quem atende', titulo: 'Monte sua operação.', texto: 'Você configura cada profissional. Ela recebe um link e entra com a agenda pronta.' },
   { id: 6, rotulo: 'Clientes e ativação', foto: 'qr', bilhete: 'do balcão pra agenda', titulo: 'Pronta pra receber.', texto: 'Imprima o QR, coloque no balcão e na bio. A cliente escaneia e marca sozinha.' },
 ]
 const DIAS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
@@ -35,6 +37,8 @@ const UFS = ['AC', 'AL', 'AM', 'AP', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MG', '
 const ANTECEDENCIAS = [[0, 'Sem antecedência'], [30, '30 minutos'], [60, '1 hora'], [120, '2 horas'], [240, '4 horas'], [720, '12 horas'], [1440, '24 horas'], [2880, '48 horas']]
 const CANCELAMENTO = [['flexivel', '6 horas'], ['moderada', '12 horas'], ['rigorosa', '24 horas']]
 const CATEGORIAS_SUGERIDAS = ['Cabelo', 'Unhas', 'Estética', 'Massagem', 'Sobrancelhas', 'Maquiagem', 'Depilação', 'Barba']
+// a política que a maioria dos salões usa pra começar; muda depois em Ajustes
+const RECOMENDADO = { antecedencia_min_minutos: 60, politica_cancelamento: 'moderada', permite_remarcar: true, sinal_ligado: false }
 const SUPORTE = import.meta.env.VITE_SUPORTE_WHATS || ''
 const CHAVE_LOGO = 'mimo-onboarding-logo'   // a foto escolhida antes de existir conta espera aqui e sobe no primeiro acesso
 const blobParaDataUrl = (blob) => new Promise((ok, erro) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = erro; r.readAsDataURL(blob) })
@@ -50,6 +54,32 @@ function tipoDaURL() {
   try { return new URLSearchParams(window.location.search).get('tipo') === 'autonoma' ? 'autonoma' : 'salao' } catch { return 'salao' }
 }
 
+// Autosave: a tela muda um campo, espera um instante, grava e avisa
+// baixinho ("Salvando… / Salvo / Erro ao salvar"). Nada de toast por campo.
+function useAutosave(gravar, dados, { ativo = true, espera = 900 } = {}) {
+  const [estado, setEstado] = useState('')   // '' | 'salvando' | 'salvo' | 'erro'
+  const primeiro = useRef(true)
+  const ultimo = useRef(JSON.stringify(dados))
+  useEffect(() => {
+    if (!ativo) return
+    const agora = JSON.stringify(dados)
+    if (primeiro.current) { primeiro.current = false; ultimo.current = agora; return }
+    if (agora === ultimo.current) return
+    ultimo.current = agora
+    setEstado('salvando')
+    const t = setTimeout(async () => {
+      try { const ok = await gravar(); setEstado(ok === false ? 'erro' : 'salvo') } catch { setEstado('erro') }
+    }, espera)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(dados), ativo])
+  return estado
+}
+function EstadoSalvo({ estado }) {
+  if (!estado) return null
+  return <span className={'ob-salvo ' + estado} aria-live="polite">{estado === 'salvando' ? 'Salvando…' : estado === 'salvo' ? <><Check size={12} /> Salvo</> : 'Erro ao salvar'}</span>
+}
+
 export default function Onboarding({ publico = false }) {
   const { user, role, salao: salaoAdmin, negocio, recarregarPerfil, loading } = useAuth()
   const salao = negocio ?? salaoAdmin   // a autônoma não tem 'salao' de admin; o negócio que ela é dona vale pros dois
@@ -59,6 +89,8 @@ export default function Onboarding({ publico = false }) {
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState('')
   const [pronto, setPronto] = useState(false)
+  const [retomado, setRetomado] = useState(false)
+  const [estadoAuto, setEstadoAuto] = useState('')
 
   useEffect(() => {
     if (!salao || publico) return
@@ -80,7 +112,10 @@ export default function Onboarding({ publico = false }) {
       })()
     }
     // retoma de onde parou; quem já concluiu e abriu de novo começa do 1 (revisão)
-    setPasso((p) => (p === 1 && !salao.onboarding_concluido_em && salao.onboarding_passo > 1 ? Math.min(6, salao.onboarding_passo) : p))
+    setPasso((p) => {
+      if (p === 1 && !salao.onboarding_concluido_em && salao.onboarding_passo > 2) { setRetomado(true); return Math.min(6, salao.onboarding_passo) }
+      return p
+    })
   }, [salao])
 
   const autonoma = s?.tipo === 'autonoma'
@@ -99,12 +134,20 @@ export default function Onboarding({ publico = false }) {
     setS((x) => ({ ...x, ...dados, onboarding_passo: data?.passo ?? x.onboarding_passo }))
     return true
   }
+  // o autosave grava sem mexer no passo e sem o "Salvando…" do botão
+  async function gravarQuieto(dados) {
+    if (!s?.id) { setS((x) => ({ ...x, ...dados })); return true }
+    const { error } = await supabase.rpc('onboarding_salvar', { salao: s.id, dados })
+    if (error) return false
+    setS((x) => ({ ...x, ...dados }))
+    return true
+  }
   async function seguir(dados = {}) {
     const proximo = pular(passo)
     const ok = await gravar(dados, proximo)
-    if (ok) { setPasso(proximo); window.scrollTo({ top: 0, behavior: 'smooth' }) }
+    if (ok) { setPasso(proximo); setRetomado(false); window.scrollTo({ top: 0, behavior: 'smooth' }) }
   }
-  function voltar() { setPasso(voltarDe(passo)); window.scrollTo({ top: 0 }) }
+  function voltar() { setPasso(voltarDe(passo)); setRetomado(false); window.scrollTo({ top: 0 }) }
   async function concluir() {
     setSalvando(true); setErro('')
     const { error } = await supabase.rpc('onboarding_concluir', { salao: s.id })
@@ -127,7 +170,7 @@ export default function Onboarding({ publico = false }) {
   if (publico && !loading && user && salao) return <Navigate to="/onboarding" replace />
   if (!s) return <div className="page-center"><p className="muted">Carregando…</p></div>
 
-  const props = { s, setS, salvando, erro, setErro, seguir, voltar, gravar, user, role, autonoma, concluir, pronto, publico, recarregarPerfil, navigate }
+  const props = { s, setS, salvando, erro, setErro, seguir, voltar, gravar, gravarQuieto, setEstadoAuto, user, role, autonoma, concluir, pronto, publico, recarregarPerfil, navigate, irPara: (n) => { setPasso(n); window.scrollTo({ top: 0 }) } }
   const atual = passos[idx] ?? passos[0]
   const plano = planoDoNegocio(s.tipo, s.equipe_prevista)
   const sairLink = publico ? <Link className="ob-sair" to="/pro/entrar"><LogOut size={14} /> Já tenho conta</Link> : <button type="button" className="ob-sair" onClick={sair}><LogOut size={14} /> Sair do cadastro</button>
@@ -140,7 +183,7 @@ export default function Onboarding({ publico = false }) {
         <ol className="ob-passos">
           {passos.map((p, i) => (
             <li key={p.id} className={i < idx ? 'feito' : i === idx ? 'atual' : ''}>
-              <button type="button" onClick={() => { if (publico ? p.id <= 2 && i <= idx : (i <= idx || p.id <= (s.onboarding_passo ?? 1))) setPasso(p.id) }}>
+              <button type="button" onClick={() => { if (publico ? p.id <= 2 && i <= idx : (i <= idx || p.id <= (s.onboarding_passo ?? 1))) { setPasso(p.id); setRetomado(false) } }}>
                 <span className="ob-passo-num">{i < idx ? <Check size={12} /> : i + 1}</span>{p.rotulo}
               </button>
             </li>
@@ -162,7 +205,8 @@ export default function Onboarding({ publico = false }) {
           <div className="ob-barra" aria-label={`Passo ${idx + 1} de ${total}`}><i style={{ width: `${((idx + 1) / total) * 100}%` }} /></div>
           {!(publico && passo === 2) ? <button type="button" onClick={() => (passo === 6 ? concluir() : seguir({}))}>{passo === 6 ? 'Concluir' : 'Pular'}</button> : <span />}
         </div>
-        <span className="ob-conteudo-num">Passo {idx + 1} de {total} · {atual.rotulo}</span>
+        <div className="ob-conteudo-linha"><span className="ob-conteudo-num">Passo {idx + 1} de {total} · {atual.rotulo}</span><EstadoSalvo estado={estadoAuto} /></div>
+        {retomado && <div className="ob-retomada"><Wand2 size={15} /><span><strong>Continuando de onde você parou.</strong> O que você já preencheu está guardado; os passos anteriores ficam no menu ao lado.</span><button type="button" onClick={() => setRetomado(false)} aria-label="Fechar"><X size={14} /></button></div>}
         {passo === 1 && <PassoTipo {...props} />}
         {passo === 2 && <PassoDados {...props} />}
         {passo === 3 && <PassoEstrutura {...props} />}
@@ -182,6 +226,9 @@ function Rodape({ voltar, avancar, rotulo = 'Continuar', salvando, primeiro = fa
     </div>
   )
 }
+const Selo = ({ publico }) => publico
+  ? <span className="ob-selo publico" title="Aparece na página do salão e no app da cliente"><Eye size={11} /> Visível para clientes</span>
+  : <span className="ob-selo interno" title="Só você e a MIMO veem"><Lock size={11} /> Uso administrativo</span>
 
 // ---------- 1 · Tipo de conta ------------------------------------------------------
 function PassoTipo({ s, setS, seguir, salvando, erro, setErro }) {
@@ -195,23 +242,25 @@ function PassoTipo({ s, setS, seguir, salvando, erro, setErro }) {
     }
     seguir({})
   }
+  const pro = PLANOS.pro
   return (
     <>
       <h1 className="ob-titulo">Como você trabalha?</h1>
-      <p className="ob-sub">Escolha o tipo de conta. Dá pra mudar depois, sem perder nada.</p>
+      <p className="ob-sub">Escolha o tipo de conta. Você poderá mudar depois, sem perder seus dados.</p>
       {erro && <div className="alert alert-error">{erro}</div>}
       <div className="ob-tipos">
         {[
-          { id: 'salao', foto: 'equipe', pilula: 'Salão · MIMO Pro', titulo: 'Tenho salão, com equipe', texto: 'Agenda geral, uma agenda por profissional, comanda, repasses, lista de espera e WhatsApp.', preco: 'R$ 49,90', sub: '/mês até 3 profissionais · R$ 9,90 por agenda a mais', itens: ['Até 10 agendas no Pro, sem limite no Pro+', 'Você configura; a profissional só entra', 'Comanda e repasse por profissional', 'QR e link do salão'] },
-          { id: 'autonoma', foto: 'profissional', pilula: 'Autônoma · grátis', titulo: 'Trabalho sozinha', texto: 'Uma agenda, serviços, clientes, retorno, QR e link próprios. Sem menu de equipe.', preco: 'R$ 0', sub: '/mês, sem cartão', itens: ['Agenda e horários', 'Serviços e preços', 'Clientes e histórico', 'QR e link próprios'] },
+          { id: 'salao', foto: 'equipe', pilula: 'Salão · MIMO Pro', titulo: 'Tenho salão, com equipe', texto: 'Para salões com duas ou mais profissionais.', bloco: 'Você controla a operação', itens: ['cadastra sua equipe', 'define serviços e horários', 'organiza agendas', 'configura permissões', 'acompanha a operação do salão'], destaque: 'Você configura tudo primeiro. Cada profissional recebe o acesso depois, com a agenda pronta.', preco: emDinheiro(pro.base), sub: `/mês até ${pro.inclusas} profissionais · ${emDinheiro(pro.extra)} por agenda a mais` },
+          { id: 'autonoma', foto: 'profissional', pilula: 'Autônoma · grátis', titulo: 'Trabalho sozinha', texto: 'Para quem atende por conta própria.', bloco: 'Tudo seu, sem equipe', itens: ['sua agenda', 'seus serviços', 'seus horários', 'seus clientes', 'seu QR e link'], destaque: 'Sem menus ou configurações de equipe.', preco: 'R$ 0', sub: '/mês, sem cartão' },
         ].map((o) => (
           <button key={o.id} type="button" className={'ob-tipo' + (tipo === o.id ? ' ativo' : '')} onClick={() => setTipo(o.id)} aria-pressed={tipo === o.id}>
             <span className="ob-tipo-foto"><img src={`/imagens/${o.foto}-720.webp`} alt="" /><span className="ob-pilula">{o.pilula}</span></span>
             {tipo === o.id && <span className="ob-tipo-check"><Check size={14} /></span>}
             <strong>{o.titulo}</strong>
             <span className="muted">{o.texto}</span>
+            <span className="ob-tipo-bloco"><small>{o.bloco}</small><ul>{o.itens.map((i) => <li key={i}><Check size={13} /> {i}</li>)}</ul></span>
+            <span className="ob-tipo-destaque">{o.destaque}</span>
             <span className="ob-tipo-preco"><b>{o.preco}</b><small>{o.sub}</small></span>
-            <ul>{o.itens.map((i) => <li key={i}><Check size={13} /> {i}</li>)}</ul>
           </button>
         ))}
       </div>
@@ -222,7 +271,7 @@ function PassoTipo({ s, setS, seguir, salvando, erro, setErro }) {
 }
 
 // ---------- 2 · Dados do salão -----------------------------------------------------
-function PassoDados({ s, setS, seguir, voltar, salvando, erro, setErro, user, role, autonoma, publico, recarregarPerfil, navigate }) {
+function PassoDados({ s, seguir, voltar, salvando, erro, setErro, user, autonoma, publico, recarregarPerfil, navigate, gravarQuieto, setEstadoAuto }) {
   const { signUp } = useAuth()
   const [conta, setConta] = useState({ senha: '', termos: false })
   const [criada, setCriada] = useState(false)
@@ -233,6 +282,9 @@ function PassoDados({ s, setS, seguir, voltar, salvando, erro, setErro, user, ro
   const [buscandoCep, setBuscandoCep] = useState(false)
   const arq = useRef(null)
   const m = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.value }))
+  // autosave dos campos de texto (a foto e o pino vão no Continuar)
+  const estado = useAutosave(() => gravarQuieto({ name: f.name, cnpj: f.cnpj, whatsapp: f.whatsapp, email: f.email, responsavel_nome: f.responsavel_nome, address: f.address, bairro: f.bairro, city: f.city, uf: f.uf, cep: f.cep.replace(/\D/g, '') }), f, { ativo: Boolean(s.id) && !publico })
+  useEffect(() => { setEstadoAuto(estado); return () => setEstadoAuto('') }, [estado, setEstadoAuto])
 
   useEffect(() => { if (!f.responsavel_nome && user && !publico) supabase.from('profiles').select('full_name, email').eq('id', user.id).maybeSingle().then(({ data }) => { if (data) setF((x) => ({ ...x, responsavel_nome: x.responsavel_nome || data.full_name || '', email: x.email || data.email || '' })) }) }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -314,17 +366,20 @@ function PassoDados({ s, setS, seguir, voltar, salvando, erro, setErro, user, ro
       </>
     )
   }
+  const iniciais = (f.name || 'ES').split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase()
   return (
     <>
       <h1 className="ob-titulo">{autonoma ? 'Seus dados' : 'A cara do salão'}</h1>
-      <p className="ob-sub">{publico ? 'Preencha as informações principais e crie o seu acesso' : autonoma ? 'As informações que as clientes vão ver' : 'Preencha as informações principais do seu salão'}</p>
+      <p className="ob-sub">{publico ? 'Essas informações formam a identidade do seu negócio na MIMO. Preencha e crie o seu acesso.' : autonoma ? 'Essas informações formam a sua identidade na MIMO: é o que as clientes veem.' : 'Essas informações formam a identidade do seu salão na MIMO.'}</p>
       {erro && <div className="alert alert-error">{erro}</div>}
       <div className="ob-dados">
         <div className="ob-form">
+          <span className="ob-grupo-selo"><Selo publico /></span>
           <label>{autonoma ? 'Nome da agenda' : 'Nome do salão'} <b>*</b><input value={f.name} onChange={m('name')} placeholder="Studio Essenza Hair" /></label>
+          <label>WhatsApp {autonoma ? 'de contato' : 'comercial'} <b>*</b><span className="ob-fone"><span className="ob-ddi">🇧🇷 +55</span><input type="tel" inputMode="numeric" value={f.whatsapp} onChange={(e) => setF((x) => ({ ...x, whatsapp: formatarFone(e.target.value) }))} placeholder="(11) 91234-5678" autoComplete="tel" /></span></label>
+          <span className="ob-grupo-selo ob-grupo-selo-2"><Selo /></span>
           {!autonoma && <label>CNPJ <span className="muted">(opcional)</span><input value={f.cnpj} onChange={m('cnpj')} placeholder="12.345.678/0001-90" inputMode="numeric" /></label>}
-          <label>WhatsApp <b>*</b><span className="ob-fone"><span className="ob-ddi">🇧🇷 +55</span><input type="tel" inputMode="numeric" value={f.whatsapp} onChange={(e) => setF((x) => ({ ...x, whatsapp: formatarFone(e.target.value) }))} placeholder="(11) 91234-5678" autoComplete="tel" /></span></label>
-          <label>E-mail <b>*</b>{publico && <span className="muted">(é com ele que você entra)</span>}<input type="email" value={f.email} onChange={m('email')} placeholder="contato@essenzahair.com.br" autoComplete="email" /></label>
+          <label>E-mail da conta <b>*</b>{publico && <span className="muted">(é com ele que você entra)</span>}<input type="email" value={f.email} onChange={m('email')} placeholder="contato@essenzahair.com.br" autoComplete="email" /></label>
           <label>{publico ? 'Seu nome completo' : 'Nome da responsável'} <b>*</b><input value={f.responsavel_nome} onChange={m('responsavel_nome')} placeholder="Juliana Lima" autoComplete="name" /></label>
           {publico && !user && (
             <>
@@ -334,10 +389,11 @@ function PassoDados({ s, setS, seguir, voltar, salvando, erro, setErro, user, ro
           )}
         </div>
         <div className="ob-form">
+          <span className="ob-grupo-selo"><Selo publico /></span>
           <div className="ob-logo-campo">
             <span className="ob-rotulo">{autonoma ? 'Sua foto ou logo' : 'Logo ou foto do salão'}</span>
             <button type="button" className={'ob-logo' + (logo ? ' com' : '')} onClick={() => arq.current?.click()}>
-              {logo ? <img src={logo.preview ?? logo.url} alt="" /> : <span className="ob-logo-vazio"><span className="ob-logo-iniciais">{(f.name || 'ES').split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase()}</span><span>{f.name || 'Seu salão'}</span></span>}
+              {logo ? <img src={logo.preview ?? logo.url} alt="" /> : <span className="ob-logo-vazio"><span className="ob-logo-iniciais">{iniciais}</span><span>{f.name || 'Seu salão'}</span></span>}
               <span className="ob-logo-cam"><Camera size={15} /></span>
             </button>
             <input ref={arq} type="file" accept="image/*" hidden onChange={trocarLogo} />
@@ -352,6 +408,15 @@ function PassoDados({ s, setS, seguir, voltar, salvando, erro, setErro, user, ro
             <label>UF<select value={f.uf} onChange={m('uf')}><option value="">—</option>{UFS.map((u) => <option key={u} value={u}>{u}</option>)}</select></label>
           </div>
           <button type="button" className="ob-geo" onClick={usarLocalizacao}><MapPin size={14} /> Usar minha localização atual{geo ? <small className="muted"> · {geo}</small> : f.lat != null ? <small className="muted"> · pino marcado</small> : null}</button>
+          {/* como a cliente vai ver: atualiza ao vivo */}
+          <div className="ob-preview">
+            <small><Eye size={11} /> Como sua cliente verá</small>
+            <div className="ob-preview-cartao">
+              <span className="ob-preview-logo">{logo ? <img src={logo.preview ?? logo.url} alt="" /> : iniciais}</span>
+              <span className="ob-preview-texto"><strong>{f.name || (autonoma ? 'Sua agenda' : 'Seu salão')}</strong><span>{[f.bairro, f.city].filter(Boolean).join(' • ') || 'Bairro • Cidade'}</span></span>
+              <span className="ob-preview-botao">Ver serviços</span>
+            </div>
+          </div>
         </div>
       </div>
       <Rodape voltar={voltar} avancar={avancar} salvando={salvando || criando} rotulo={publico ? (user ? 'Abrir minha agenda' : 'Criar conta e continuar') : 'Continuar'} />
@@ -371,12 +436,24 @@ function traduzErro(msg) {
 }
 
 // ---------- 3 · Estrutura e operação ------------------------------------------------
-function PassoEstrutura({ s, seguir, voltar, salvando, erro, setErro, autonoma }) {
+function PassoEstrutura({ s, seguir, voltar, salvando, erro, setErro, autonoma, gravarQuieto, setEstadoAuto }) {
   const [horas, setHoras] = useState(null)
   const [cats, setCats] = useState([])
   const [novaCat, setNovaCat] = useState('')
+  const [copiar, setCopiar] = useState(null)   // null | { dias: Set }
   const [pol, setPol] = useState({ antecedencia_min_minutos: s.antecedencia_min_minutos ?? 60, politica_cancelamento: s.politica_cancelamento ?? 'moderada', permite_remarcar: s.permite_remarcar ?? true, sinal_ligado: (s.pagamento_modo ?? 'nao') !== 'nao', sinal_modo: s.sinal_modo ?? 'fixo', sinal_fixo: emReais(s.sinal_fixo_cents ?? 5000), sinal_pct: s.sinal_pct ?? 50, equipe_prevista: s.equipe_prevista ?? 4, aceite_modo: s.aceite_modo ?? 'casa', minutos_para_aceitar: s.minutos_para_aceitar ?? 120 })
   const p = (k) => (v) => setPol((x) => ({ ...x, [k]: v }))
+  const dadosDaPolitica = () => ({ antecedencia_min_minutos: Number(pol.antecedencia_min_minutos), politica_cancelamento: pol.politica_cancelamento, permite_remarcar: pol.permite_remarcar,
+    pagamento_modo: pol.sinal_ligado ? (s.pagamento_modo && s.pagamento_modo !== 'nao' ? s.pagamento_modo : 'opcional') : 'nao', sinal_modo: pol.sinal_modo, sinal_fixo_cents: reais(pol.sinal_fixo), sinal_pct: Number(pol.sinal_pct),
+    equipe_prevista: Number(pol.equipe_prevista) || null, aceite_modo: pol.aceite_modo, minutos_para_aceitar: Number(pol.minutos_para_aceitar) })
+  // autosave: as regras vão pelo onboarding_salvar; os horários, pelo onboarding_horarios
+  const estado = useAutosave(async () => {
+    const ok = await gravarQuieto(dadosDaPolitica())
+    if (!horas || horas.some((h) => h.open && h.start_time >= h.end_time)) return ok
+    const { error } = await supabase.rpc('onboarding_horarios', { salao: s.id, horarios: horas })
+    return ok && !error
+  }, { pol, horas }, { ativo: Boolean(s.id) && horas != null })
+  useEffect(() => { setEstadoAuto(estado); return () => setEstadoAuto('') }, [estado, setEstadoAuto])
 
   useEffect(() => {
     supabase.from('business_hours').select('weekday, open, start_time, end_time').eq('salon_id', s.id).then(({ data }) => {
@@ -400,23 +477,28 @@ function PassoEstrutura({ s, seguir, voltar, salvando, erro, setErro, autonoma }
     setCats((x) => x.filter((y) => y.id !== c.id))
   }
   const mudaHora = (d, k, v) => setHoras((x) => x.map((h) => (h.weekday === d ? { ...h, [k]: v } : h)))
+  function aplicarSegunda() {
+    const seg = horas.find((h) => h.weekday === 1)
+    setHoras((x) => x.map((h) => (copiar.dias.has(h.weekday) ? { ...h, open: seg.open, start_time: seg.start_time, end_time: seg.end_time } : h)))
+    setCopiar(null)
+  }
+  const recomendadoAtivo = Number(pol.antecedencia_min_minutos) === RECOMENDADO.antecedencia_min_minutos && pol.politica_cancelamento === RECOMENDADO.politica_cancelamento && pol.permite_remarcar === RECOMENDADO.permite_remarcar && pol.sinal_ligado === RECOMENDADO.sinal_ligado
 
   async function avancar() {
     for (const h of horas ?? []) if (h.open && h.start_time >= h.end_time) { setErro(`${DIAS[h.weekday]}: o fim precisa ser depois do início.`); return }
     const { error } = await supabase.rpc('onboarding_horarios', { salao: s.id, horarios: horas })
     if (error) { setErro(error.message); return }
-    seguir({ antecedencia_min_minutos: Number(pol.antecedencia_min_minutos), politica_cancelamento: pol.politica_cancelamento, permite_remarcar: pol.permite_remarcar,
-      pagamento_modo: pol.sinal_ligado ? (s.pagamento_modo && s.pagamento_modo !== 'nao' ? s.pagamento_modo : 'opcional') : 'nao', sinal_modo: pol.sinal_modo, sinal_fixo_cents: reais(pol.sinal_fixo), sinal_pct: Number(pol.sinal_pct),
-      equipe_prevista: Number(pol.equipe_prevista) || null, aceite_modo: pol.aceite_modo, minutos_para_aceitar: Number(pol.minutos_para_aceitar) })
+    seguir(dadosDaPolitica())
   }
   return (
     <>
       <h1 className="ob-titulo">Como o dia funciona</h1>
-      <p className="ob-sub">{autonoma ? 'Defina como você atende no dia a dia' : 'Defina como seu salão funciona no dia a dia'}</p>
+      <p className="ob-sub">{autonoma ? 'Defina como você atende no dia a dia. Tudo pode mudar depois em Ajustes.' : 'Defina como seu salão funciona no dia a dia. Tudo pode mudar depois em Ajustes.'}</p>
       {erro && <div className="alert alert-error">{erro}</div>}
       <div className="ob-estrutura">
         <div className="ob-card">
           <strong className="ob-card-titulo">Horário de funcionamento</strong>
+          <span className="muted">{autonoma ? 'O horário padrão da sua agenda. Folgas e feriados você marca depois, em Bloqueios.' : 'Defina o horário padrão do salão. Depois você personaliza os dias e horários de cada profissional.'}</span>
           {!horas ? <p className="muted">Carregando…</p> : (
             <div className="ob-horas">
               {horas.map((h) => (
@@ -426,12 +508,29 @@ function PassoEstrutura({ s, seguir, voltar, salvando, erro, setErro, autonoma }
                   <label className="switch"><input type="checkbox" checked={h.open} onChange={(e) => mudaHora(h.weekday, 'open', e.target.checked)} /><span></span></label>
                 </div>
               ))}
+              <div className="ob-copiar">
+                <button type="button" className="link-ver" onClick={() => setCopiar(copiar ? null : { dias: new Set([2, 3, 4, 5]) })}><Copy size={12} /> Copiar segunda para os demais dias</button>
+                {copiar && (
+                  <div className="ob-copiar-caixa">
+                    <small>Aplicar para:</small>
+                    {[2, 3, 4, 5, 6, 0].map((d) => <label key={d}><input type="checkbox" checked={copiar.dias.has(d)} onChange={(e) => setCopiar((c) => { const dias = new Set(c.dias); if (e.target.checked) dias.add(d); else dias.delete(d); return { dias } })} /> {DIAS[d]}</label>)}
+                    <button type="button" className="btn-mini" onClick={aplicarSegunda}>Aplicar</button>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
         <div className="ob-card">
-          <strong className="ob-card-titulo">Política de agendamento</strong>
-          <label className="ob-campo">Antecedência mínima<select value={pol.antecedencia_min_minutos} onChange={(e) => p('antecedencia_min_minutos')(e.target.value)}>{ANTECEDENCIAS.map(([v, r]) => <option key={v} value={v}>{r}</option>)}</select></label>
+          <span className="ob-card-linha"><strong className="ob-card-titulo">Política de agendamento</strong>{recomendadoAtivo && <em className="ob-badge">Recomendado para começar</em>}</span>
+          {!recomendadoAtivo && (
+            <div className="ob-recomendado">
+              <small><Wand2 size={12} /> Configuração recomendada</small>
+              <span className="muted">Antecedência mínima 1 hora · cancelamento até 12 h antes · reagendamento permitido · sinal desligado · confirmação como está.</span>
+              <button type="button" className="btn-mini" onClick={() => setPol((x) => ({ ...x, ...RECOMENDADO }))}>Usar recomendado</button>
+            </div>
+          )}
+          <label className="ob-campo">Antecedência mínima<select value={pol.antecedencia_min_minutos} onChange={(e) => p('antecedencia_min_minutos')(e.target.value)}>{ANTECEDENCIAS.map(([v, r]) => <option key={v} value={v}>{r}</option>)}</select><small className="muted">Quanto antes do horário a cliente ainda consegue marcar.</small></label>
           <label className="ob-campo">Cancelamento gratuito até<select value={pol.politica_cancelamento} onChange={(e) => p('politica_cancelamento')(e.target.value)}>{CANCELAMENTO.map(([v, r]) => <option key={v} value={v}>{r} antes</option>)}</select></label>
           <div className="ob-toggle"><span>Permitir reagendamento</span><label className="switch"><input type="checkbox" checked={pol.permite_remarcar} onChange={(e) => p('permite_remarcar')(e.target.checked)} /><span></span></label></div>
           <div className="ob-toggle"><span>Sinal <span className="muted">(opcional)</span></span><label className="switch"><input type="checkbox" checked={pol.sinal_ligado} onChange={(e) => p('sinal_ligado')(e.target.checked)} /><span></span></label></div>
@@ -444,11 +543,12 @@ function PassoEstrutura({ s, seguir, voltar, salvando, erro, setErro, autonoma }
             </div>
           )}
           <label className="ob-campo">Quem confirma o horário<select value={pol.aceite_modo} onChange={(e) => p('aceite_modo')(e.target.value)}><option value="automatico">Entra confirmado na hora</option><option value="casa">A casa confirma{pol.aceite_modo === 'casa' ? ` (até ${pol.minutos_para_aceitar} min)` : ''}</option><option value="profissional">Cada profissional decide</option></select></label>
+          <small className="muted">Você poderá mudar essas regras a qualquer momento em Ajustes.</small>
         </div>
         {!autonoma && (
           <div className="ob-card">
             <strong className="ob-card-titulo">Profissionais com agenda</strong>
-            <span className="muted">Quantas atendem no salão? Recepção e administração não contam.</span>
+            <span className="muted">Quantas pessoas atendem clientes e precisam de agenda própria? Recepção, administração e pessoas sem agenda não contam.</span>
             <div className="ob-contador"><button type="button" onClick={() => p('equipe_prevista')(Math.max(1, Number(pol.equipe_prevista) - 1))} aria-label="Menos"><Minus size={14} /></button><strong>{pol.equipe_prevista}</strong><button type="button" onClick={() => p('equipe_prevista')(Number(pol.equipe_prevista) + 1)} aria-label="Mais"><Plus size={14} /></button></div>
             {(() => { const c = planoDoNegocio('salao', pol.equipe_prevista); return (
               <div className="ob-preco-vivo"><small>{c.nome}</small><b>{emDinheiro(c.total)}<small> /mês</small></b><span>{c.extras === 0 ? `Até ${c.plano === 'pro' ? PLANOS.pro.inclusas : PLANOS.promais.inclusas} agendas inclusas.` : `${c.plano === 'pro' ? PLANOS.pro.inclusas : PLANOS.promais.inclusas} inclusas + ${c.extras} × ${emDinheiro(c.valorExtra)}.`} Nenhuma cobrança agora.</span></div>
@@ -457,7 +557,7 @@ function PassoEstrutura({ s, seguir, voltar, salvando, erro, setErro, autonoma }
         )}
         <div className="ob-card">
           <strong className="ob-card-titulo">Categorias de serviços</strong>
-          <span className="muted">Quais categorias você oferece?</span>
+          <span className="muted">Escolha apenas as categorias que fazem sentido para {autonoma ? 'você' : 'o salão'}. Elas organizam o cadastro dos serviços no próximo passo.</span>
           <div className="ob-cats">
             {minhasCats.map((c) => <span key={c.id} className="ob-cat">{c.nome}<button type="button" onClick={() => tirarCat(c)} aria-label={`Tirar ${c.nome}`}><X size={12} /></button></span>)}
             {CATEGORIAS_SUGERIDAS.filter((n) => !cats.some((c) => c.nome.toLowerCase() === n.toLowerCase())).map((n) => <button key={n} type="button" className="ob-cat sugerida" onClick={() => addCat(n)}><Plus size={12} /> {n}</button>)}
@@ -478,12 +578,13 @@ function PassoServicos({ s, seguir, voltar, salvando, erro, setErro, autonoma })
   const [profs, setProfs] = useState([])
   const [quem, setQuem] = useState({})     // service_id → [professional_id]
   const [filtro, setFiltro] = useState('')
-  const [modal, setModal] = useState(null) // null | 'novo' | serviço
+  const [modal, setModal] = useState(null) // null | 'novo' | serviço | { sugestao }
   const [menu, setMenu] = useState(null)
+  const [exemplos, setExemplos] = useState(false)
 
   const carregar = useCallback(async () => {
     const [sv, ct, pr, ps] = await Promise.all([
-      supabase.from('services').select('id, name, duration_minutes, price, images, categoria_id, active').eq('salon_id', s.id).eq('active', true).order('name'),
+      supabase.from('services').select('id, name, description, duration_minutes, price, a_partir, images, categoria_id, active').eq('salon_id', s.id).eq('active', true).order('name'),
       supabase.from('categorias_de_servico').select('id, salon_id, nome, ordem').or(`salon_id.eq.${s.id},salon_id.is.null`).order('ordem'),
       supabase.from('professionals').select('id, name, user_id').eq('salon_id', s.id).eq('active', true).order('name'),
       supabase.from('professional_services').select('professional_id, service_id'),
@@ -496,25 +597,36 @@ function PassoServicos({ s, seguir, voltar, salvando, erro, setErro, autonoma })
 
   const nomeCat = (id) => cats.find((c) => c.id === id)?.nome ?? 'Outros'
   const lista = (servicos ?? []).filter((x) => !filtro || x.categoria_id === filtro)
+  // sugestões rápidas pelas categorias do salão (nome + duração de referência; preço nunca é inventado)
+  const minhasCats = cats.filter((c) => c.salon_id === s.id)
+  const sugestoes = useMemo(() => {
+    const vistos = new Set((servicos ?? []).map((x) => x.name.toLowerCase()))
+    const out = []
+    for (const c of (minhasCats.length ? minhasCats : cats)) for (const [nome, min] of sugestoesPara(c.nome)) if (!vistos.has(nome.toLowerCase()) && !out.some((o) => o.nome === nome)) out.push({ nome, min, categoria_id: c.id })
+    return out.slice(0, 14)
+  }, [cats, minhasCats, servicos])
   async function remover(sv) {
     const { error } = await supabase.from('services').update({ active: false }).eq('id', sv.id)
     if (error) { setErro(error.message); return }
     setMenu(null); carregar()
   }
+  const vazio = (servicos ?? []).length === 0
   return (
     <>
       <div className="ob-titulo-linha">
-        <div><h1 className="ob-titulo">{autonoma ? 'Seus serviços' : 'O que o salão oferece'}</h1><p className="ob-sub">Nome, duração real e preço. Dá pra mudar depois.</p></div>
-        <button type="button" className="btn btn-secondary ob-add" onClick={() => setModal('novo')}><Plus size={15} /> Adicionar serviço</button>
+        <div><h1 className="ob-titulo">{vazio ? 'Comece pelos serviços mais importantes' : autonoma ? 'Seus serviços' : 'O que o salão oferece'}</h1><p className="ob-sub">{vazio ? 'Você não precisa cadastrar tudo agora. Adicione de 3 a 5 serviços principais para começar a usar a agenda.' : 'Nome, duração real e preço. A duração é o que a agenda usa pra achar horário livre.'}</p></div>
+        {!vazio && <button type="button" className="btn btn-secondary ob-add" onClick={() => setModal('novo')}><Plus size={15} /> Adicionar serviço</button>}
       </div>
       {erro && <div className="alert alert-error">{erro}</div>}
-      <div className="chips ob-chips">
-        <button type="button" className={'chip' + (!filtro ? ' active' : '')} onClick={() => setFiltro('')}>Todos</button>
-        {cats.filter((c) => (servicos ?? []).some((x) => x.categoria_id === c.id) || c.salon_id === s.id).map((c) => <button key={c.id} type="button" className={'chip' + (filtro === c.id ? ' active' : '')} onClick={() => setFiltro(c.id)}>{c.nome}</button>)}
-      </div>
+      {!vazio && (
+        <div className="chips ob-chips">
+          <button type="button" className={'chip' + (!filtro ? ' active' : '')} onClick={() => setFiltro('')}>Todos</button>
+          {cats.filter((c) => (servicos ?? []).some((x) => x.categoria_id === c.id) || c.salon_id === s.id).map((c) => <button key={c.id} type="button" className={'chip' + (filtro === c.id ? ' active' : '')} onClick={() => setFiltro(c.id)}>{c.nome}</button>)}
+        </div>
+      )}
       <div className="ob-card ob-tabela-card">
         {!servicos ? <p className="muted">Carregando…</p> : lista.length === 0 ? (
-          <div className="ob-vazio"><Sparkles size={22} /><strong>Nenhum serviço ainda</strong><span className="muted">Cadastre os principais: nome, duração e preço. Dá pra mudar depois.</span><button type="button" className="btn btn-primary" onClick={() => setModal('novo')}><Plus size={15} /> Adicionar serviço</button></div>
+          <div className="ob-vazio"><Sparkles size={22} /><strong>{vazio ? 'Nenhum serviço ainda' : 'Nada nessa categoria'}</strong><span className="muted">Nome, duração e preço. Dá pra mudar depois, e a cliente só vê o que está aqui.</span><span className="ob-vazio-acoes"><button type="button" className="btn btn-primary" onClick={() => setModal('novo')}><Plus size={15} /> Adicionar serviço</button>{sugestoes.length > 0 && <button type="button" className="btn btn-ghost" onClick={() => setExemplos((x) => !x)}>{exemplos ? 'Esconder exemplos' : 'Ver exemplos'}</button>}</span></div>
         ) : (
           <table className="ob-tabela">
             <thead><tr><th></th><th>Serviço</th><th>Categoria</th><th>Duração</th><th>Preço</th><th>Profissional</th><th></th></tr></thead>
@@ -528,7 +640,7 @@ function PassoServicos({ s, seguir, voltar, salvando, erro, setErro, autonoma })
                     <td><strong>{sv.name}</strong></td>
                     <td><span className="ob-cat-selo">{nomeCat(sv.categoria_id)}</span></td>
                     <td>{sv.duration_minutes} min</td>
-                    <td>{formatPreco(sv.price)}</td>
+                    <td>{sv.a_partir ? <span className="muted">a partir de </span> : null}{formatPreco(sv.price)}</td>
                     <td className="muted">{rotulo}</td>
                     <td className="ob-td-menu">
                       <button type="button" className="ob-menu-btn" onClick={() => setMenu(menu === sv.id ? null : sv.id)} aria-label="Opções"><MoreHorizontal size={16} /></button>
@@ -541,14 +653,20 @@ function PassoServicos({ s, seguir, voltar, salvando, erro, setErro, autonoma })
           </table>
         )}
       </div>
-      {modal && <ModalServico salaoId={s.id} servico={modal === 'novo' ? null : modal} cats={cats} profs={profs} quem={modal === 'novo' ? [] : (quem[modal.id] ?? [])} onFechar={() => setModal(null)} onSalvo={() => { setModal(null); carregar() }} />}
+      {sugestoes.length > 0 && (exemplos || !vazio) && (
+        <div className="ob-sugestoes">
+          <small><Sparkles size={12} /> Sugestões rápidas pelas suas categorias · toque pra preencher nome e categoria; o preço é seu</small>
+          <div className="chips">{sugestoes.map((x) => <button key={x.nome} type="button" className="chip" onClick={() => setModal({ sugestao: x })}><Plus size={12} /> {x.nome}</button>)}</div>
+        </div>
+      )}
+      {modal && <ModalServico salaoId={s.id} servico={modal === 'novo' || modal.sugestao ? null : modal} sugestao={modal.sugestao} cats={cats} profs={profs} quem={modal === 'novo' || modal.sugestao ? [] : (quem[modal.id] ?? [])} onFechar={() => setModal(null)} onSalvo={() => { setModal(null); carregar() }} />}
       <Rodape voltar={voltar} avancar={() => seguir({})} salvando={salvando} />
     </>
   )
 }
 
-function ModalServico({ salaoId, servico, cats, profs, quem, onFechar, onSalvo }) {
-  const [f, setF] = useState({ name: servico?.name ?? '', categoria_id: servico?.categoria_id ?? '', duration_minutes: servico?.duration_minutes ?? 60, price: servico ? String(Number(servico.price).toFixed(2)).replace('.', ',') : '' })
+function ModalServico({ salaoId, servico, sugestao, cats, profs, quem, onFechar, onSalvo }) {
+  const [f, setF] = useState({ name: servico?.name ?? sugestao?.nome ?? '', categoria_id: servico?.categoria_id ?? sugestao?.categoria_id ?? '', duration_minutes: servico?.duration_minutes ?? sugestao?.min ?? 60, price: servico ? String(Number(servico.price).toFixed(2)).replace('.', ',') : '', a_partir: Boolean(servico?.a_partir), description: servico?.description ?? '' })
   const [sel, setSel] = useState(quem.length ? quem : [])   // vazio = qualquer
   const [foto, setFoto] = useState(servico?.images?.[0] ? { url: servico.images[0] } : null)
   const [erro, setErro] = useState('')
@@ -569,7 +687,7 @@ function ModalServico({ salaoId, servico, cats, profs, quem, onFechar, onSalvo }
         if (error) throw new Error('Não deu para subir a foto: ' + error.message)
         images = [supabase.storage.from('service-images').getPublicUrl(path).data.publicUrl]
       }
-      const payload = { name: f.name.trim(), duration_minutes: Number(f.duration_minutes) || 30, price: preco, images, categoria_id: f.categoria_id || null }
+      const payload = { name: f.name.trim(), duration_minutes: Number(f.duration_minutes) || 30, price: preco, images, categoria_id: f.categoria_id || null, a_partir: f.a_partir, description: f.description.trim() || null }
       const q = servico ? supabase.from('services').update(payload).eq('id', servico.id).select('id').maybeSingle() : supabase.from('services').insert({ ...payload, salon_id: salaoId }).select('id').maybeSingle()
       const { data, error } = await q
       if (error) throw new Error(error.message)
@@ -586,6 +704,7 @@ function ModalServico({ salaoId, servico, cats, profs, quem, onFechar, onSalvo }
       <div className="modal-caixa ob-modal" onClick={(e) => e.stopPropagation()}>
         <button type="button" className="modal-fechar" onClick={onFechar} aria-label="Fechar"><X size={18} /></button>
         <h3>{servico ? 'Editar serviço' : 'Adicionar serviço'}</h3>
+        {sugestao && <p className="muted">Nome e categoria já preenchidos. A duração é só uma referência; confira, e o preço é o seu.</p>}
         {erro && <div className="alert alert-error">{erro}</div>}
         <div className="ob-modal-corpo">
           <button type="button" className={'ob-foto-serv' + (foto ? ' com' : '')} onClick={() => arq.current?.click()}>{foto ? <img src={foto.preview ?? foto.url} alt="" /> : <><Camera size={18} /><span>Foto</span></>}</button>
@@ -594,9 +713,11 @@ function ModalServico({ salaoId, servico, cats, profs, quem, onFechar, onSalvo }
             <label>Nome do serviço<input value={f.name} onChange={m('name')} placeholder="Corte feminino" autoFocus /></label>
             <label>Categoria<select value={f.categoria_id} onChange={m('categoria_id')}><option value="">Outros</option>{cats.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}</select></label>
             <div className="ob-linha-2">
-              <label>Duração (min)<input type="number" min="5" step="5" value={f.duration_minutes} onChange={m('duration_minutes')} /></label>
-              <label>Preço<span className="ob-campo-reais"><span>R$</span><input value={f.price} onChange={m('price')} inputMode="decimal" placeholder="120,00" /></span></label>
+              <label>Duração (min)<input type="number" min="5" step="5" value={f.duration_minutes} onChange={m('duration_minutes')} /><small className="muted">A agenda usa a duração para calcular os horários disponíveis.</small></label>
+              <label>Preço<span className="ob-campo-reais"><span>R$</span><input value={f.price} onChange={m('price')} inputMode="decimal" placeholder="120,00" /></span><small className="muted">Esse valor é exibido para a cliente.</small></label>
             </div>
+            <label className="ob-termos"><input type="checkbox" checked={f.a_partir} onChange={(e) => setF((x) => ({ ...x, a_partir: e.target.checked }))} /><span>Exibir como "a partir de"{f.price ? ` — A partir de ${formatPreco(reais(f.price) / 100)}` : ''}<small className="muted"> · pra progressiva, coloração e o que depende de tamanho ou volume</small></span></label>
+            <label>Descrição para a cliente <span className="muted">(opcional)</span><input value={f.description} onChange={m('description')} placeholder="inclui lavagem e finalização" /></label>
             {profs.length > 1 && (
               <div className="ob-quem">
                 <span className="ob-rotulo">Quem faz</span>
@@ -611,152 +732,137 @@ function ModalServico({ salaoId, servico, cats, profs, quem, onFechar, onSalvo }
   )
 }
 
-// ---------- 5 · Equipe e vínculos ---------------------------------------------------
-function PassoEquipe({ s, seguir, voltar, salvando, erro, setErro, user }) {
-  const [profs, setProfs] = useState(null)
+// ---------- 5 · Equipe --------------------------------------------------------------
+// O salão configura a profissional; ela só ativa o acesso. A lista vem da
+// equipe_da_casa (situação, serviços, dias, token); a gaveta salva tudo.
+function PassoEquipe({ s, seguir, voltar, salvando, erro, setErro }) {
+  const [equipe, setEquipe] = useState(null)
   const [servicos, setServicos] = useState([])
-  const [modal, setModal] = useState(false)
+  const [cats, setCats] = useState([])
+  const [gaveta, setGaveta] = useState(null)   // null | 'nova' | profissional
   const [menu, setMenu] = useState(null)
+  const [aviso, setAviso] = useState('')
+  const [coletar, setColetar] = useState(false)
   const [copiado, setCopiado] = useState(false)
   const qr = useRef(null)
   const link = urlDoAmbiente('pro', `/equipe/${s.codigo_equipe ?? ''}`)
   const carregar = useCallback(async () => {
-    const [pr, sv] = await Promise.all([
-      supabase.from('professionals').select('id, name, phone, user_id, photo_url, slug, especialidade, active').eq('salon_id', s.id).eq('active', true).order('created_at'),
-      supabase.from('services').select('id, name').eq('salon_id', s.id).eq('active', true).order('name'),
+    const [eq, sv, ct] = await Promise.all([
+      supabase.rpc('equipe_da_casa', { salao: s.id }),
+      supabase.from('services').select('id, name, price, duration_minutes, categoria_id').eq('salon_id', s.id).eq('active', true).order('name'),
+      supabase.from('categorias_de_servico').select('id, salon_id, nome').or(`salon_id.eq.${s.id},salon_id.is.null`),
     ])
-    setProfs(pr.data ?? []); setServicos(sv.data ?? [])
+    setEquipe(Array.isArray(eq.data) ? eq.data : []); setServicos(sv.data ?? []); setCats(ct.data ?? [])
   }, [s.id])
   useEffect(() => { carregar() }, [carregar])
-  useEffect(() => { if (qr.current && link) QRCode.toCanvas(qr.current, link, { width: 96, margin: 1, color: { dark: '#1f2026', light: '#ffffff' } }).catch(() => {}) }, [link])
+  useEffect(() => { if (coletar && qr.current && link) QRCode.toCanvas(qr.current, link, { width: 88, margin: 1, color: { dark: '#1f2026', light: '#ffffff' } }).catch(() => {}) }, [link, coletar])
 
   function copiar() { navigator.clipboard?.writeText(link); setCopiado(true); setTimeout(() => setCopiado(false), 2000) }
-  async function remover(p) {
-    if (p.user_id === user?.id) { setErro('Você é a dona: não dá pra se tirar da equipe.'); return }
-    const { error } = await supabase.from('professionals').update({ active: false }).eq('id', p.id)
+  async function acao(qual, p) {
+    setErro(''); setAviso('')
+    if (qual === 'enviado') { try { await supabase.rpc('equipe_acesso_enviado', { prof: p.id }) } catch { /* segue */ } carregar(); return }
+    if (qual === 'copiado') { setAviso(`Link de acesso de ${primeiroNome(p.name)} copiado.`); try { await supabase.rpc('equipe_acesso_enviado', { prof: p.id }) } catch { /* segue */ } carregar(); return }
+    if (qual === 'remover' && !window.confirm(`Remover ${p.name} do salão? O histórico de atendimentos dela fica guardado.`)) return
+    const { error } = await supabase.rpc('equipe_situacao', { prof: p.id, acao: qual })
     if (error) { setErro(error.message); return }
-    setMenu(null); carregar()
+    carregar()
   }
+  const pendentes = (equipe ?? []).filter((p) => p.situacao === 'configurada' && !p.user_id)
+  const lista = equipe ?? []
   return (
     <>
       <div className="ob-titulo-linha">
-        <div><h1 className="ob-titulo">Quem atende</h1><p className="ob-sub">Você configura tudo; elas entram pelo link da equipe.</p></div>
-        <button type="button" className="btn btn-primary ob-add" onClick={() => setModal(true)}><Plus size={15} /> Convidar profissional</button>
+        <div><h1 className="ob-titulo">Monte sua equipe</h1><p className="ob-sub">Você configura cada profissional. Depois ela recebe um link e entra com a agenda pronta.</p></div>
+        <button type="button" className="btn btn-primary ob-add" onClick={() => setGaveta('nova')}><Plus size={15} /> Adicionar profissional</button>
       </div>
       {erro && <div className="alert alert-error">{erro}</div>}
-      <div className="ob-nota ob-nota-roxa"><span className="ob-nota-icone"><Store size={16} /></span><span><strong>Todos no mesmo salão</strong><small>Cada profissional pode ter seu próprio link de agendamento, mas continuará vinculado ao seu salão, compartilhando a agenda e os clientes.</small></span></div>
-      <div className="ob-equipe">
-        {!profs ? <p className="muted">Carregando…</p> : profs.length === 0 ? <p className="muted ob-equipe-vazia">Ninguém ainda. Convide pelo botão, ou mande o link abaixo pra elas se cadastrarem sozinhas.</p> : profs.map((p) => {
-          const dona = p.user_id === user?.id || (p.user_id && p.user_id === s.owner_id)
-          return (
-            <div key={p.id} className="ob-pessoa">
-              <Avatar nome={p.name} foto={p.photo_url} />
-              <span className="ob-pessoa-texto">
-                <strong>{p.name} <em className={'ob-papel' + (dona ? ' dona' : '')}>{dona ? 'Administradora' : 'Profissional'}</em></strong>
-                <span className="muted">{p.especialidade || p.phone || 'sem contato'}</span>
-              </span>
-              <span className="ob-pessoa-lado">
-                {p.user_id ? <em className="ob-vinculo ok"><CheckCircle2 size={12} /> Vinculada ao salão</em> : <em className="ob-vinculo espera"><Info size={12} /> Aguardando ela entrar</em>}
-                {p.slug && <a className="ob-ver-link" href={urlDoAmbiente('cliente', `/p/${p.slug}`)} target="_blank" rel="noreferrer"><Link2 size={12} /> Ver link</a>}
-              </span>
-              <span className="ob-td-menu">
-                <button type="button" className="ob-menu-btn" onClick={() => setMenu(menu === p.id ? null : p.id)} aria-label="Opções"><MoreHorizontal size={16} /></button>
-                {menu === p.id && <span className="ob-menu">{!dona && <button type="button" className="perigo" onClick={() => remover(p)}>Tirar da equipe</button>}{dona && <span className="muted">Você é a administradora.</span>}</span>}
-              </span>
-            </div>
-          )
-        })}
-      </div>
-      <div className="ob-convite">
-        <div className="ob-convite-texto">
-          <strong><Link2 size={15} /> Link convite para profissionais</strong>
-          <span className="muted">Compartilhe este link para que profissionais se cadastrem e já fiquem vinculados ao seu salão.</span>
-          <div className="ob-link"><input readOnly value={link} onFocus={(e) => e.target.select()} /><button type="button" className="btn-mini" onClick={copiar}><Copy size={12} /> {copiado ? 'Copiado!' : 'Copiar link'}</button></div>
+      {aviso && <div className="alert alert-info">{aviso}</div>}
+      <div className="eq-bloco">
+        <span className="eq-bloco-icone"><Home size={17} /></span>
+        <div>
+          <strong>Tudo continua dentro do salão</strong>
+          <p>Cada profissional tem a própria agenda, mas continua vinculada ao salão. Você define como ela trabalha, quais serviços faz, horários, repasse e permissões. Depois ela recebe apenas o acesso.</p>
         </div>
-        <div className="ob-convite-qr"><canvas ref={qr} /><small className="muted">Ou aponte o QR Code</small></div>
       </div>
-      {modal && <ModalProfissional salaoId={s.id} servicos={servicos} onFechar={() => setModal(false)} onSalvo={() => { setModal(false); carregar() }} />}
+      <div className="eq-lista">
+        {!equipe ? <p className="muted">Carregando…</p> : lista.length === 0 ? (
+          <div className="ob-vazio"><Users size={22} /><strong>Ninguém na equipe ainda</strong><span className="muted">Adicione a primeira profissional: leva um minuto e ela já entra com tudo pronto.</span><button type="button" className="btn btn-primary" onClick={() => setGaveta('nova')}><Plus size={15} /> Adicionar profissional</button></div>
+        ) : lista.map((p) => <CartaoProfissional key={p.id} p={p} salao={s} onConfigurar={(x) => setGaveta(x)} onAcao={acao} menuAberto={menu} setMenu={setMenu} />)}
+      </div>
+      {pendentes.length > 0 && <p className="ob-dica"><Info size={13} /> {pendentes.length === 1 ? `${primeiroNome(pendentes[0].name)} ainda não ativou o acesso.` : `${pendentes.length} profissionais ainda não ativaram o acesso.`} Mande o link pelo WhatsApp: ela confirma o número, cria a senha e entra.</p>}
+      <div className="eq-coletar">
+        <div>
+          <strong><Link2 size={14} /> Coletar dados da equipe por link</strong>
+          <p>Salão grande? Compartilhe este link para a profissional informar nome e WhatsApp. Você conclui a configuração dela antes de liberar o acesso.</p>
+          {coletar ? <div className="ob-link"><input readOnly value={link} onFocus={(e) => e.target.select()} /><button type="button" className="btn-mini" onClick={copiar}><Copy size={12} /> {copiado ? 'Copiado!' : 'Copiar link'}</button></div> : <button type="button" className="btn-mini btn-mini-neutro" onClick={() => setColetar(true)}>Mostrar link</button>}
+        </div>
+        {coletar && <div className="eq-coletar-qr"><canvas ref={qr} /><span>ou o QR</span></div>}
+      </div>
+      {gaveta && <ProfissionalDrawer salao={s} profissional={gaveta === 'nova' ? null : gaveta} servicos={servicos} cats={cats} onFechar={() => { setGaveta(null); carregar() }} onSalvo={() => carregar()} />}
       <Rodape voltar={voltar} avancar={() => seguir({})} salvando={salvando} />
     </>
   )
 }
 
-function ModalProfissional({ salaoId, servicos, onFechar, onSalvo }) {
-  const [f, setF] = useState({ name: '', phone: '', especialidade: '' })
-  const [sel, setSel] = useState([])
-  const [erro, setErro] = useState('')
-  const [salvando, setSalvando] = useState(false)
-  const m = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.value }))
-  async function salvar() {
-    if (!f.name.trim()) { setErro('Diga o nome.'); return }
-    if (!f.phone.trim()) { setErro('Diga o WhatsApp: é por ele que a conta dela se liga ao salão.'); return }
-    setSalvando(true); setErro('')
-    try {
-      const slug = f.name.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-' + Math.random().toString(36).slice(2, 6)
-      const { data, error } = await supabase.from('professionals').insert({ salon_id: salaoId, name: f.name.trim(), phone: f.phone.trim(), especialidade: f.especialidade.trim() || null, slug, active: true }).select('id').maybeSingle()
-      if (error) throw new Error(error.message)
-      const alvo = sel.length ? sel : servicos.map((x) => x.id)
-      if (alvo.length) await supabase.from('professional_services').insert(alvo.map((service_id) => ({ professional_id: data.id, service_id })))
-      onSalvo()
-    } catch (err) { setErro(err.message) } finally { setSalvando(false) }
-  }
-  return (
-    <div className="modal-fundo ob-modal-fundo" onClick={onFechar}>
-      <div className="modal-caixa ob-modal" onClick={(e) => e.stopPropagation()}>
-        <button type="button" className="modal-fechar" onClick={onFechar} aria-label="Fechar"><X size={18} /></button>
-        <h3>Convidar profissional</h3>
-        <p className="muted">Ela recebe o acesso quando criar a conta com este WhatsApp, ou pelo link de convite.</p>
-        {erro && <div className="alert alert-error">{erro}</div>}
-        <div className="ob-form">
-          <label>Nome<input value={f.name} onChange={m('name')} placeholder="Carla Mendes" autoFocus /></label>
-          <label>WhatsApp<input type="tel" inputMode="numeric" value={f.phone} onChange={(e) => setF((x) => ({ ...x, phone: formatarFone(e.target.value) }))} placeholder="(11) 98765-4321" /></label>
-          <label>Função <span className="muted">(opcional)</span><input value={f.especialidade} onChange={m('especialidade')} placeholder="Cabeleireira" /></label>
-          {servicos.length > 0 && <div className="ob-quem"><span className="ob-rotulo">Serviços que ela faz</span><div className="chips"><button type="button" className={'chip' + (sel.length === 0 ? ' active' : '')} onClick={() => setSel([])}>Todos</button>{servicos.map((x) => <button key={x.id} type="button" className={'chip' + (sel.includes(x.id) ? ' active' : '')} onClick={() => setSel((y) => (y.includes(x.id) ? y.filter((z) => z !== x.id) : [...y, x.id]))}>{x.name}</button>)}</div></div>}
-        </div>
-        <div className="ob-modal-acoes"><button type="button" className="btn btn-ghost" onClick={onFechar}>Cancelar</button><button type="button" className="btn btn-primary" onClick={salvar} disabled={salvando}>{salvando ? 'Salvando…' : 'Convidar'}</button></div>
-      </div>
-    </div>
-  )
-}
-
 // ---------- 6 · Clientes e ativação --------------------------------------------------
-function PassoAtivacao({ s, voltar, salvando, erro, concluir, pronto, autonoma }) {
+function PassoAtivacao({ s, voltar, salvando, erro, concluir, pronto, autonoma, irPara }) {
   const [copiado, setCopiado] = useState(false)
+  const [resumo, setResumo] = useState(null)
   const qr = useRef(null)
   const link = s.codigo ? urlDoAmbiente('cliente', `/v/${s.codigo}`) : linkDoCodigo('')
   useEffect(() => { if (qr.current && s.codigo) QRCode.toCanvas(qr.current, link, { width: 120, margin: 1, color: { dark: '#1f2026', light: '#ffffff' } }).catch(() => {}) }, [link, s.codigo])
+  useEffect(() => { supabase.rpc('primeiros_passos', { salao: s.id }).then(({ data }) => setResumo(data ?? {})) }, [s.id])
   function copiar() { navigator.clipboard?.writeText(link); setCopiado(true); setTimeout(() => setCopiado(false), 2000) }
+  async function feito(chave) { try { await supabase.rpc('primeiro_passo_feito', { salao: s.id, chave }); setResumo((r) => ({ ...r, feitos: { ...(r?.feitos ?? {}), [chave]: new Date().toISOString() } })) } catch { /* segue */ } }
   async function baixar() {
-    try { const url = await QRCode.toDataURL(link, { width: 720, margin: 2 }); const a = document.createElement('a'); a.href = url; a.download = `qr-${s.codigo}.png`; a.click() } catch { /* nada */ }
+    try { const url = await QRCode.toDataURL(link, { width: 720, margin: 2 }); const a = document.createElement('a'); a.href = url; a.download = `qr-${s.codigo}.png`; a.click(); feito('qr_baixado') } catch { /* nada */ }
   }
+  function testar() { window.open(link, '_blank', 'noopener'); feito('agendamento_teste') }
+  const n = (k) => Number(resumo?.[k] ?? 0)
+  const checklist = [
+    { ok: Boolean(resumo?.dados), texto: autonoma ? 'Seus dados' : 'Dados do salão' },
+    { ok: Boolean(resumo?.horarios), texto: 'Horários configurados' },
+    { ok: n('servicos') > 0, texto: n('servicos') > 0 ? `${n('servicos')} ${n('servicos') === 1 ? 'serviço cadastrado' : 'serviços cadastrados'}` : 'Nenhum serviço cadastrado' },
+    ...(!autonoma ? [{ ok: n('equipe') > 0, texto: n('equipe') > 0 ? `${n('equipe')} ${n('equipe') === 1 ? 'profissional configurada' : 'profissionais configuradas'}` : 'Equipe ainda vazia' }] : []),
+    { ok: Boolean(s.codigo), texto: `Link ${autonoma ? 'da agenda' : 'do salão'} criado` },
+  ]
+  const pendentes = n('equipe_pendente')
   return (
     <>
       <h1 className="ob-titulo">Pronta pra receber</h1>
-      <p className="ob-sub">{autonoma ? 'Divulgue sua agenda e comece a receber agendamentos' : 'Divulgue seu salão e comece a receber agendamentos'}</p>
+      <p className="ob-sub">{autonoma ? 'Sua agenda está montada. Agora é divulgar e começar a receber agendamentos.' : 'Seu salão está montado. Agora é divulgar e começar a receber agendamentos.'}</p>
       {erro && <div className="alert alert-error">{erro}</div>}
-      <div className="ob-card ob-ativacao">
-        <div>
-          <strong className="ob-card-titulo">Link e QR Code {autonoma ? 'da sua agenda' : 'do salão'}</strong>
-          <span className="muted">Compartilhe com seus clientes para que eles conheçam seu salão, e façam agendamentos.</span>
-          <div className="ob-link"><input readOnly value={link} onFocus={(e) => e.target.select()} /><button type="button" className="btn-mini" onClick={copiar}><Copy size={12} /> {copiado ? 'Copiado!' : 'Copiar link'}</button></div>
-          <span className="muted ob-codigo">Ou o código <b>{s.codigo}</b>, digitado no app.</span>
+      <div className="ob-duas ob-duas-final">
+        <div className="ob-card ob-checklist">
+          <strong className="ob-card-titulo">O que já está pronto</strong>
+          <ul>{checklist.map((c) => <li key={c.texto} className={c.ok ? 'ok' : ''}><span>{c.ok ? <Check size={13} /> : <Minus size={13} />}</span>{c.texto}</li>)}</ul>
         </div>
-        <div className="ob-qr-grande"><canvas ref={qr} /><small className="muted">QR Code do salão</small><button type="button" className="btn-mini btn-mini-neutro" onClick={baixar}><Download size={12} /> Baixar QR Code</button></div>
+        <div className="ob-card ob-ativacao">
+          <div>
+            <strong className="ob-card-titulo">Link e QR Code {autonoma ? 'da sua agenda' : 'do salão'}</strong>
+            <span className="muted">Compartilhe com as clientes: elas veem {autonoma ? 'sua agenda' : 'o salão, os serviços e a equipe'} e marcam sozinhas.</span>
+            <div className="ob-link"><input readOnly value={link} onFocus={(e) => e.target.select()} /><button type="button" className="btn-mini" onClick={copiar}><Copy size={12} /> {copiado ? 'Copiado!' : 'Copiar link'}</button></div>
+            <span className="muted ob-codigo">Ou o código <b>{s.codigo}</b>, digitado no app.</span>
+          </div>
+          <div className="ob-qr-grande"><canvas ref={qr} /><small className="muted">QR Code {autonoma ? 'da agenda' : 'do salão'}</small></div>
+        </div>
       </div>
-      <div className="ob-duas">
-        <div className="ob-card">
-          <strong className="ob-card-titulo">Como funciona?</strong>
-          <ol className="ob-como">
-            <li><span>1</span><span><strong>Cliente acessa o link ou QR Code</strong><small>Ela visualiza seu salão, serviços e profissionais.</small></span></li>
-            <li><span>2</span><span><strong>Faz o cadastro</strong><small>O cliente cria uma conta no MIMO.</small></span></li>
-            <li><span>3</span><span><strong>Agenda com você ou com um profissional</strong><small>O cliente pode agendar com o salão ou com um profissional vinculado e verá todas as opções disponíveis.</small></span></li>
-          </ol>
-        </div>
-        <div className="ob-card ob-importante">
-          <strong className="ob-card-titulo"><Info size={15} /> Importante</strong>
-          <span className="muted">Todo cliente ativado pelo link do seu salão ou pelo link de um profissional vinculado, ficará associado ao seu salão e terá acesso às agendas relacionadas.</span>
-          <span className="ob-importante-icone"><Users size={34} /></span>
-        </div>
+      <strong className="ob-secao">Próximos passos</strong>
+      <div className="ob-proximos">
+        <div className="ob-proximo"><span className="ob-proximo-icone"><CalendarCheck size={18} /></span><strong>Faça um agendamento de teste</strong><p>Veja exatamente como sua cliente vai enxergar {autonoma ? 'sua agenda' : 'o salão e a disponibilidade da equipe'}.</p><button type="button" className="btn-mini" onClick={testar}>{resumo?.feitos?.agendamento_teste ? <><Check size={12} /> Página aberta</> : 'Fazer agendamento teste'}</button></div>
+        <div className="ob-proximo"><span className="ob-proximo-icone"><QrCode size={18} /></span><strong>Coloque o QR no salão</strong><p>Imprima o QR e coloque no balcão, no espelho ou na recepção. Na bio do Instagram vai o link.</p><button type="button" className="btn-mini" onClick={baixar}>{resumo?.feitos?.qr_baixado ? <><Check size={12} /> QR baixado</> : <><Download size={12} /> Baixar QR Code</>}</button></div>
+        {!autonoma && (
+          <div className="ob-proximo"><span className="ob-proximo-icone"><Send size={18} /></span><strong>Ative sua equipe</strong>
+            {pendentes > 0 ? <><p>{pendentes === 1 ? '1 profissional ainda não ativou o acesso.' : `${pendentes} profissionais ainda não ativaram o acesso.`}</p><button type="button" className="btn-mini" onClick={() => irPara(5)}>Enviar acessos</button></>
+              : n('equipe') > 0 ? <p className="ob-proximo-ok"><Check size={13} /> Sua equipe está ativa.</p>
+              : <><p>Ninguém na equipe ainda. Dá pra adicionar agora ou depois, em Equipe.</p><button type="button" className="btn-mini" onClick={() => irPara(5)}>Adicionar profissional</button></>}
+          </div>
+        )}
+      </div>
+      <div className="ob-card ob-importante">
+        <strong className="ob-card-titulo"><Info size={15} /> Importante</strong>
+        <span className="muted">Clientes que entrarem pelo link ou QR {autonoma ? 'da sua agenda' : 'do salão'} passam a ter relacionamento com {autonoma ? 'você' : 'esse salão'} na MIMO e podem agendar os serviços e profissionais vinculados a ele. Quem vem pelo link de uma profissional fica ligada ao salão e a ela.</span>
+        <span className="ob-importante-icone"><Users size={34} /></span>
       </div>
       {(() => { const c = planoDoNegocio(s.tipo, s.equipe_prevista); return (
         <div className="ob-resumo-plano">
@@ -764,7 +870,6 @@ function PassoAtivacao({ s, voltar, salvando, erro, concluir, pronto, autonoma }
           <b>{c.total === 0 ? 'Grátis' : <>{emDinheiro(c.total)}<small> /mês</small></>}</b>
         </div>
       ) })()}
-      <div className="ob-pronto"><span className="ob-pronto-check"><Check size={18} /></span><span><strong>Tudo pronto!</strong><small>{autonoma ? 'Sua agenda está configurada. Agora é só divulgar o link.' : 'Seu salão está configurado. Agora é só começar a receber agendamentos.'}</small></span></div>
       <Rodape voltar={voltar} avancar={concluir} salvando={salvando || pronto} rotulo="Finalizar e entrar no painel" icone={<ArrowRight size={16} />} />
     </>
   )

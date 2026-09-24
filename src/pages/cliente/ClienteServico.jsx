@@ -49,13 +49,13 @@ export default function ClienteServico() {
     ;(async () => {
       const [sv, ps, ju, de] = await Promise.all([
         supabase.from('services').select('*').eq('id', id).maybeSingle(),
-        supabase.from('professional_services').select('professionals (id, name, photo_url, active, salon_id)').eq('service_id', id),
+        supabase.from('professional_services').select('preco_cents, duracao_minutos, professionals (id, name, photo_url, active, salon_id)').eq('service_id', id),
         supabase.rpc('servicos_sugeridos_para', { servicos: [id] }),
         supabase.rpc('descontos_para_mim', { servicos: [id] }),
       ])
       if (!vivo) return
       setS(sv.data ?? null)
-      setQuem((ps.data ?? []).map((v) => v.professionals).filter((p) => p?.active).sort((a, b) => a.name.localeCompare(b.name)))
+      setQuem((ps.data ?? []).map((v) => (v.professionals ? { ...v.professionals, preco_cents: v.preco_cents, duracao_minutos: v.duracao_minutos } : null)).filter((p) => p?.active).sort((a, b) => a.name.localeCompare(b.name)))
       const ids = (ju.data ?? []).map((x) => x.sugerido_id)
       if (ids.length) {
         const { data: js } = await supabase.from('services').select('id, name, price, duration_minutes, images').in('id', ids)
@@ -98,7 +98,7 @@ export default function ClienteServico() {
         <div className="svc-preco">
           {precoPor != null ? (
             <><strong>{formatPreco(precoPor)}</strong><s className="muted">{formatPreco(s.price)}</s><span className="svc-promo-nome">{desconto.titulo}</span></>
-          ) : <strong>{formatPreco(s.price)}</strong>}
+          ) : <strong>{s.a_partir ? <span className="muted svc-a-partir">a partir de </span> : null}{formatPreco(s.price)}</strong>}
           <span className="muted svc-dur"><Clock size={14} /> {labelDuracao(s)}</span>
         </div>
       </div>
@@ -112,7 +112,7 @@ export default function ClienteServico() {
             {quem.map((p) => (
               <Link key={p.id} to={`/cliente/profissional/${p.id}`} className={'card agdt-linha agdt-link' + (p.id === profId ? ' svc-prof-atual' : '')}>
                 <span className="agdt-avatar">{p.photo_url ? <img src={p.photo_url} alt="" /> : iniciais(p.name)}</span>
-                <span className="cliente-info"><span className="cliente-nome"><span className="nome-txt">{p.name}</span></span>{p.id === profId && <span className="muted cliente-meta">você está marcando com ela</span>}</span>
+                <span className="cliente-info"><span className="cliente-nome"><span className="nome-txt">{p.name}</span></span>{p.id === profId && <span className="muted cliente-meta">você está marcando com ela</span>}{(p.preco_cents != null || p.duracao_minutos != null) && <span className="muted cliente-meta">com ela: {[p.preco_cents != null ? formatPreco(p.preco_cents / 100) : null, p.duracao_minutos != null ? formatDuracao(p.duracao_minutos) : null].filter(Boolean).join(' · ')}</span>}</span>
                 <ChevronRight size={18} className="agdt-seta" />
               </Link>
             ))}

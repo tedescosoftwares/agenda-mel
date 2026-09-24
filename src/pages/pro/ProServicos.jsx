@@ -3,6 +3,7 @@ import ProShell from '../../components/ProShell'
 import SemFicha from './SemFicha'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
+import { pode } from '../../lib/equipe'
 import { formatPreco, formatDuracao } from '../../lib/format'
 import { Sparkles, Link2, Star } from 'lucide-react'
 import { useCategorias, categoriasDoSalao, agruparPorCategoria } from '../../lib/categorias'
@@ -98,7 +99,9 @@ export default function ProServicos() {
   }
   const nomes = (id) => juntos.filter((j) => j.service_id === id).map((j) => servicos.find((x) => x.id === j.sugerido_id)?.name).filter(Boolean)
 
+  const podeEscolher = pode(professional, 'servicos')
   async function alternar(s) {
+    if (!podeEscolher) { setErro('O salão define os serviços que você faz. Fale com a administração pra mudar.'); return }
     setMudando(s.id)
     const faz = meus.has(s.id)
     const { error } = faz

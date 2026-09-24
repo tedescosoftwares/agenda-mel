@@ -3,11 +3,12 @@ import { useAuth } from '../context/AuthContext'
 import { homeDoPapel } from '../lib/roles'
 import { AMBIENTE, ambienteDoPapel } from '../lib/ambiente'
 import AmbienteErrado from './AmbienteErrado'
+import Aguardando from '../pages/pro/Aguardando'
 
 // permitirSemVinculo: a tela "Entrar numa agenda" é a única que uma
 // cliente sem vínculo pode ver. Todas as outras mandam para lá.
 export default function ProtectedRoute({ children, requireRole, permitirSemVinculo = false, permitirPrimeiroAcesso = false, permitirOnboarding = false }) {
-  const { user, role, loading, vinculos, profile, erroRede, recarregarVinculos, salao, negocio } = useAuth()
+  const { user, role, loading, vinculos, profile, erroRede, recarregarVinculos, salao, negocio, professional } = useAuth()
 
   if (loading) {
     return (
@@ -35,6 +36,11 @@ export default function ProtectedRoute({ children, requireRole, permitirSemVincu
   const meu = negocio ?? salao
   if (!permitirOnboarding && meu && !meu.onboarding_concluido_em && meu.owner_id === user.id && (role === 'admin' || role === 'profissional')) {
     return <Navigate to="/onboarding" replace />
+  }
+
+  // a profissional cuja agenda o salão ainda não liberou (rascunho) ou desativou (119)
+  if (role === 'profissional' && professional && (professional.situacao === 'rascunho' || professional.situacao === 'inativa')) {
+    return <Aguardando situacao={professional.situacao} />
   }
 
   if (requireRole && role !== requireRole) {

@@ -4,6 +4,7 @@ import AdminShell from '../../components/AdminShell'
 import AvisosNovos from '../../components/AvisosNovos'
 import LigarAvisos from '../../components/LigarAvisos'
 import PendenciasBaixa from '../../components/PendenciasBaixa'
+import PrimeirosPassos from '../../components/PrimeirosPassos'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { formatarCents, formatarReaisCurto, formatarPct, mesAtual, nomeDoMes } from '../../lib/numeros'
@@ -52,7 +53,11 @@ export default function AdminDashboard() {
   useEffect(() => { carregar() }, [carregar])
   useEffect(() => {
     if (!salao?.id || salao?.tipo === 'autonoma') return
-    supabase.rpc('parcerias_da_equipe', { salao: salao.id }).then(({ data }) => setSemContrato((data ?? []).filter((l) => l.status === 'sem_contrato' || l.status === 'rascunho' || l.status === 'enviado')))
+    // só quem foi configurada como parceira (ou de antes da 119, sem vínculo definido) entra no aviso
+    Promise.all([supabase.rpc('parcerias_da_equipe', { salao: salao.id }), supabase.from('professionals').select('id, vinculo').eq('salon_id', salao.id)]).then(([{ data }, { data: profs }]) => {
+      const parceiras = new Set((profs ?? []).filter((p) => !p.vinculo || p.vinculo === 'parceira').map((p) => p.id))
+      setSemContrato((data ?? []).filter((l) => parceiras.has(l.professional_id) && (l.status === 'sem_contrato' || l.status === 'rascunho' || l.status === 'enviado')))
+    })
   }, [salao?.id, salao?.tipo])
 
   const totalMes = linhas.reduce((s, l) => s + Number(l.faturamento_cents ?? 0), 0)
@@ -66,11 +71,12 @@ export default function AdminDashboard() {
       <AvisosNovos />
       <PendenciasBaixa para="/admin/fechar-dia" />
       <LigarAvisos texto="Pedidos, cancelamentos e clientes chamando no WhatsApp chegam na hora, mesmo com o app fechado." />
+      <PrimeirosPassos salao={salao} />
 
       {semContrato.length > 0 && (
         <Link to="/admin/equipe" className="card fin-alerta parceria-alerta">
           <FileSignature size={18} />
-          <span><strong>{semContrato.length === 1 ? `${semContrato[0].nome} atende sem contrato de parceria.` : `${semContrato.length} profissionais atendem sem contrato de parceria.`}</strong> Sem o contrato escrito, a lei trata a relação como emprego. Formalize em Equipe.</span>
+          <span><strong>Parceria ainda não formalizada.</strong> {semContrato.length === 1 ? `${semContrato[0].nome} está configurada como parceira na MIMO, mas não há contrato registrado.` : `${semContrato.length} profissionais estão configuradas como parceiras na MIMO, mas não há contrato registrado.`} Confira se a formalização da relação está adequada ao modelo adotado pelo salão. <u>Ver orientação</u></span>
         </Link>
       )}
 

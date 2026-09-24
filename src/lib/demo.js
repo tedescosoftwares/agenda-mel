@@ -54,7 +54,8 @@ const profissionais = [
   { id: 'pr2', user_id: 'p2', codigo: 'CAM3XR', name: 'Camila Rocha', slug: 'camila-rocha', bio: 'Cabeleireira e colorista.', photo_url: FOTO(32), active: true, salon_id: SALAO, aceite_manual: true, minutos_para_aceitar: 120, ao_expirar: 'confirma' },
   { id: 'pr3', user_id: 'p3', name: 'Fernanda Lima', slug: 'fernanda-lima', bio: 'Esteticista facial e corporal.', photo_url: FOTO(44), active: true, salon_id: SALAO, aceite_manual: false },
   { id: 'pr4', user_id: 'p4', name: 'Roberta Souza', slug: 'roberta-souza', bio: 'Maquiagem e sobrancelhas.', photo_url: FOTO(20), active: true, salon_id: SALAO, aceite_manual: true },
-]
+  { id: 'pr5', user_id: null, name: 'Carla Mendes', slug: 'carla-mendes', phone: '(11) 98765-4321', especialidade: 'Cabeleireira', photo_url: null, active: true, salon_id: SALAO, aceite_manual: true, vinculo: 'parceira', situacao: 'configurada', cota_pct: 30, permissoes: { confirmar: true, bloquear: true, clientes: 'proprias', servicos: false, ver_repasse: true }, token: 'demo0123456789ab' },
+].map((p) => ({ situacao: p.user_id ? 'ativa' : 'configurada', vinculo: 'funcionaria', permissoes: { confirmar: true, bloquear: true, clientes: 'salao', servicos: true, ver_repasse: true }, usa_horario_salao: true, ...p }))
 
 const CATS = [
   { id: 'ct1', salon_id: null, nome: 'Cabelo', ordem: 10 }, { id: 'ct2', salon_id: null, nome: 'Unhas', ordem: 20 },
@@ -171,14 +172,25 @@ const TABELAS = {
   servicos_juntos: [{ service_id: 'sv1', sugerido_id: 'sv3' }],
   parcerias: [],
   comandas: [{ id: 'cmv', appointment_id: 'ap3', appointment_ids: ['ap3'], status: 'fechada' }],
-  salons: [{ id: SALAO, name: 'Studio Mel', slug: 'studio-mel', aceite_modo: 'casa', minutos_para_aceitar: 60, ao_expirar: 'confirma', onboarding_passo: 1, onboarding_concluido_em: null, codigo_equipe: 'EQ7P2M', owner_id: 'a1', email: 'contato@studiomel.com.br', uf: 'SP', bairro: 'Gonzaga', cnpj: '12.345.678/0001-95', responsavel_nome: 'Mel Tedesco', antecedencia_min_minutos: 60, permite_remarcar: true, sinal_modo: 'fixo', sinal_fixo_cents: 5000, equipe_prevista: 4, pagamento_modo: 'opcional', sinal_pct: 50, politica_cancelamento: 'moderada', app_url: 'https://mimo.app', city: 'Santos', address: 'Rua das Flores, 120 · Gonzaga', cep: '11060300', lat: -23.9668, lng: -46.3325, codigo: 'MEL2K5', tipo: 'salao', descricao: 'Um cantinho no Gonzaga para você se cuidar com calma: café, música baixa e uma equipe que capricha em cada detalhe.', fotos: [PROMO_IMG('#FF7BAA', '#AA4CFF', ''), PROMO_IMG('#FFC2D8', '#FF2D7A', '')], logo_url: null, phone: '(13) 3333-0000', whatsapp: '(13) 99120-3410', instagram: 'studiomel' }],
+  salons: [{ id: SALAO, name: 'Studio Mel', slug: 'studio-mel', aceite_modo: 'casa', minutos_para_aceitar: 60, ao_expirar: 'confirma', onboarding_passo: 1, onboarding_concluido_em: (typeof localStorage !== 'undefined' && localStorage.getItem('mimo-demo-onboarding') === '1') ? null : '2025-01-10', codigo_equipe: 'EQ7P2M', owner_id: 'a1', email: 'contato@studiomel.com.br', uf: 'SP', bairro: 'Gonzaga', cnpj: '12.345.678/0001-95', responsavel_nome: 'Mel Tedesco', antecedencia_min_minutos: 60, permite_remarcar: true, sinal_modo: 'fixo', sinal_fixo_cents: 5000, equipe_prevista: 4, pagamento_modo: 'opcional', sinal_pct: 50, politica_cancelamento: 'moderada', app_url: 'https://mimo.app', city: 'Santos', address: 'Rua das Flores, 120 · Gonzaga', cep: '11060300', lat: -23.9668, lng: -46.3325, codigo: 'MEL2K5', tipo: 'salao', descricao: 'Um cantinho no Gonzaga para você se cuidar com calma: café, música baixa e uma equipe que capricha em cada detalhe.', fotos: [PROMO_IMG('#FF7BAA', '#AA4CFF', ''), PROMO_IMG('#FFC2D8', '#FF2D7A', '')], logo_url: null, phone: '(13) 3333-0000', whatsapp: '(13) 99120-3410', instagram: 'studiomel' }],
   salon_members: [{ salon_id: SALAO, user_id: 'a1', papel: 'admin', salons: { id: SALAO, name: 'Studio Mel', slug: 'studio-mel', codigo: 'MEL2K5', tipo: 'salao', city: 'Santos', owner_id: 'a1', onboarding_passo: 3, onboarding_concluido_em: (typeof localStorage !== 'undefined' && localStorage.getItem('mimo-demo-onboarding') === '1') ? null : '2025-01-10', codigo_equipe: 'EQ7P2M' } }],
   whatsapp_channels: [{ salon_id: SALAO, canal: 'evolution', identificador: '11', ativo: true, usa_ia: true, usa_bot: true, silencio_inicio: '21:00', silencio_fim: '08:00', teto_diario: 300 }],
   affiliate_settings: [{ id: true, ativo: true, platform_fee_bps: 300, affiliate_share_bps: 50 }],
   message_outbox: [],
 }
 
+const HORAS = [0, 1, 2, 3, 4, 5, 6].map((weekday) => ({ weekday, open: weekday > 0, start_time: '09:00:00', end_time: weekday === 6 ? '14:00:00' : '18:00:00' }))
 const RPC = {
+  // a equipe configurada pelo salão (119)
+  equipe_da_casa: () => profissionais.map((p, i) => ({ ...p, dona: false, servicos: vinculos.filter((v) => v.professional_id === p.id).map((v) => ({ service_id: v.service_id, preco_cents: p.id === 'pr5' && v.service_id === 'sv7' ? 7000 : null, duracao_minutos: null })).concat(p.id === 'pr5' ? [{ service_id: 'sv6', preco_cents: null, duracao_minutos: 50 }, { service_id: 'sv7', preco_cents: 7000, duracao_minutos: null }] : []), horarios: HORAS, token: p.token ?? null, acesso_enviado_em: i === 4 ? null : undefined, parceria: i === 0 ? 'vigente' : null, tem_historico: i < 4, created_at: '2025-0' + (i + 1) + '-01' })),
+  equipe_salvar_profissional: ({ dados }) => ({ ok: true, id: dados?.id ?? 'pr9', situacao: 'configurada', slug: 'nova', token: 'demo0123456789ab' }),
+  equipe_acesso_enviado: () => ({ ok: true }),
+  equipe_situacao: ({ acao }) => ({ ok: true, acao }),
+  acesso_por_token: () => ({ salao: { id: SALAO, nome: 'Studio Mel', logo_url: null, cidade: 'Santos' }, profissional: { id: 'pr5', nome: 'Carla Mendes', especialidade: 'Cabeleireira', vinculo: 'parceira', telefone_final: '4321', servicos: 2, dias: [1, 2, 3, 4, 5, 6] }, situacao: 'configurada', tem_conta: false, usado: false }),
+  ativar_acesso: () => ({ ok: true, salao: 'Studio Mel', professional_id: 'pr5', situacao: 'ativa' }),
+  equipe_informar_dados: () => ({ ok: true, ja: false, salao: 'Studio Mel' }),
+  primeiros_passos: () => ({ tipo: 'salao', codigo: 'MEL2K5', nome: 'Studio Mel', dados: true, horarios: true, servicos: servicos.length, equipe: profissionais.length, equipe_pendente: 1, equipe_rascunho: 0, agendamentos: 0, avisos: false, feitos: {}, onboarding_concluido_em: '2025-01-10' }),
+  primeiro_passo_feito: () => ({}),
   promocoes_para_mim: () => promocoes.filter((p) => p.ativa && p.aprovacao !== 'pendente' && (!p.fim || p.fim >= mais(0))).map((p) => ({ ...p, desconto_pct: p.desconto_pct ?? null, preco_de: servicos.find((s) => s.id === p.service_id)?.price ?? null, preco_por: p.desconto_pct ? Math.round(servicos.find((s) => s.id === p.service_id)?.price * (100 - p.desconto_pct)) / 100 : null, salao: p.salon_id ? 'Studio Mel' : null, profissional: p.professional_id ? profissionais.find((x) => x.id === p.professional_id)?.name : null, professional_id: p.professional_id ?? (p.service_id ? 'pr1' : null), servico: servicos.find((s) => s.id === p.service_id)?.name ?? null })),
   promocao_vista: () => null,
   capas_do_salao: () => [{ categoria_id: 'ct2', imagens: [PROMO_IMG('#FF2D7A', '#AA4CFF', ''), PROMO_IMG('#AA4CFF', '#FF7BAA', '')] }],

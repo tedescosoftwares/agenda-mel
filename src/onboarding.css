@@ -315,3 +315,60 @@
   .ob-tipo-foto { aspect-ratio: 3 / 1; }
   .ob-tipo ul { display: none; }
 }
+
+/* ---- 119: o onboarding explica, mostra o efeito e grava sozinho ---- */
+.ob-conteudo-linha { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.ob-salvo { display: inline-flex; align-items: center; gap: 4px; font-size: 0.72rem; font-weight: 600; color: var(--ob-cinza); transition: opacity 0.2s; }
+.ob-salvo.salvo { color: #067647; } .ob-salvo.erro { color: #b42318; } .ob-salvo.salvando { opacity: 0.7; }
+.ob-retomada { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 14px; background: var(--ob-lilas); border: 1px solid var(--ob-fio); font-size: 0.84rem; color: var(--ob-ameixa); }
+.ob-retomada svg { color: var(--ob-rosa); flex: none; } .ob-retomada span { flex: 1; } .ob-retomada button { border: 0; background: none; cursor: pointer; color: var(--ob-cinza); padding: 4px; display: grid; }
+/* 1 · o preço fica em segundo plano; o que ela controla vem primeiro */
+.ob-tipo-bloco { display: grid; gap: 4px; margin: 0 20px; }
+.ob-tipo-bloco small { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ob-rosa); }
+.ob-tipo-bloco ul { margin: 0; }
+.ob-tipo-destaque { margin: 0 20px; padding: 8px 10px; border-radius: 10px; background: var(--ob-lilas); font-size: 0.78rem; line-height: 1.4; color: var(--ob-ameixa); }
+.ob-tipo-preco { margin-top: 2px; } .ob-tipo-preco b { font-size: 1.35rem; color: var(--ob-ameixa); }
+/* 2 · público ou administrativo, e a prévia */
+.ob-selo { display: inline-flex; align-items: center; gap: 4px; font-size: 0.64rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; padding: 3px 8px; border-radius: 999px; }
+.ob-selo.publico { background: #fff0f5; color: var(--ob-rosa); } .ob-selo.interno { background: #f1eef2; color: #5b5866; }
+.ob-grupo-selo { display: flex; margin-bottom: -4px; } .ob-grupo-selo-2 { margin-top: 6px; }
+.ob-preview { display: grid; gap: 6px; margin-top: 6px; }
+.ob-preview > small { display: inline-flex; align-items: center; gap: 4px; font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ob-cinza); }
+.ob-preview-cartao { display: grid; grid-template-columns: 44px 1fr auto; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 16px; background: #fff; border: 1px solid var(--ob-fio); box-shadow: 0 10px 30px rgba(61, 12, 78, 0.08); }
+.ob-preview-logo { width: 44px; height: 44px; border-radius: 12px; background: var(--ob-lilas); color: var(--ob-ameixa); display: grid; place-items: center; font-weight: 700; font-size: 0.85rem; overflow: hidden; }
+.ob-preview-logo img { width: 100%; height: 100%; object-fit: cover; }
+.ob-preview-texto { display: grid; min-width: 0; } .ob-preview-texto strong { font-size: 0.92rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .ob-preview-texto span { font-size: 0.74rem; color: var(--ob-cinza); }
+.ob-preview-botao { font-size: 0.72rem; font-weight: 700; color: #fff; background: var(--ob-rosa); padding: 6px 10px; border-radius: 999px; white-space: nowrap; }
+/* 3 · copiar segunda, recomendado */
+.ob-copiar { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+.ob-copiar .link-ver { display: inline-flex; align-items: center; gap: 4px; font-size: 0.76rem; }
+.ob-copiar-caixa { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; padding: 8px 10px; border-radius: 10px; background: var(--ob-lilas); font-size: 0.78rem; }
+.ob-copiar-caixa small { font-weight: 700; color: var(--ob-ameixa); width: 100%; } .ob-copiar-caixa label { display: inline-flex; gap: 4px; align-items: center; } .ob-copiar-caixa input { accent-color: var(--ob-rosa); }
+.ob-card-linha { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.ob-badge { font-style: normal; font-size: 0.64rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; padding: 3px 8px; border-radius: 999px; background: #e6f7ee; color: #067647; }
+.ob-recomendado { display: grid; gap: 4px; padding: 10px 12px; border-radius: 12px; background: var(--ob-lilas); border: 1px dashed #d9c9dc; }
+.ob-recomendado small { display: inline-flex; align-items: center; gap: 4px; font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ob-rosa); }
+.ob-recomendado .muted { font-size: 0.76rem; line-height: 1.4; } .ob-recomendado .btn-mini { justify-self: start; }
+.ob-campo > small { flex: 0 0 100%; font-weight: 500; }
+/* 4 · vazio e sugestões */
+.ob-vazio-acoes { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 4px; }
+.ob-sugestoes { display: grid; gap: 8px; padding: 12px 14px; border-radius: 16px; background: var(--ob-lilas); border: 1px solid var(--ob-fio); }
+.ob-sugestoes > small { display: inline-flex; align-items: center; gap: 4px; font-size: 0.74rem; color: var(--ob-cinza); }
+.ob-sugestoes .chip { background: #fff; }
+.ob-modal .ob-termos { margin-top: -2px; }
+.ob-modal .ob-linha-2 { grid-template-columns: 1fr 1fr; } .ob-modal .ob-linha-2 label > small { flex: 0 0 100%; font-weight: 500; line-height: 1.3; }
+/* 5 · dica */
+.ob-dica { display: flex; gap: 6px; align-items: flex-start; margin: 0; font-size: 0.8rem; color: var(--ob-cinza); line-height: 1.4; } .ob-dica svg { flex: none; margin-top: 2px; color: var(--ob-rosa); }
+/* 6 · checklist e próximos passos */
+.ob-duas-final { grid-template-columns: 1fr 1.4fr; }
+.ob-checklist ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.ob-checklist li { display: flex; gap: 8px; align-items: center; font-size: 0.86rem; color: var(--ob-cinza); }
+.ob-checklist li span { width: 22px; height: 22px; border-radius: 50%; display: inline-grid; place-items: center; background: #f1eef2; color: #9a94a3; flex: none; }
+.ob-checklist li.ok { color: #1f2026; } .ob-checklist li.ok span { background: #e6f7ee; color: #067647; }
+.ob-secao { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ob-rosa); margin-top: 4px; }
+.ob-proximos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.ob-proximo { display: grid; gap: 6px; align-content: start; padding: 14px 16px; border-radius: 18px; border: 1px solid var(--ob-fio); background: #fff; box-shadow: 0 10px 30px rgba(61, 12, 78, 0.06); font-size: 0.84rem; }
+.ob-proximo-icone { width: 38px; height: 38px; border-radius: 12px; background: var(--ob-lilas); color: var(--ob-rosa); display: grid; place-items: center; }
+.ob-proximo strong { color: var(--ob-ameixa); } .ob-proximo p { margin: 0; color: var(--ob-cinza); line-height: 1.45; font-size: 0.8rem; } .ob-proximo .btn-mini { justify-self: start; margin-top: 2px; }
+.ob-proximo-ok { display: inline-flex; align-items: center; gap: 4px; color: #067647 !important; font-weight: 600; }
+@media (max-width: 900px) { .ob-proximos, .ob-duas-final { grid-template-columns: 1fr; } }

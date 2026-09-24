@@ -5,224 +5,71 @@ import AdminShell from '../../components/AdminShell'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { ChevronIcon, LinkIcon, ClockIcon } from '../../components/icons'
-import { formatDuracao, formatPreco } from '../../lib/format'
-import { gerarSlug } from '../../lib/booking'
 import Avatar from '../../components/Avatar'
-import FotoUpload from '../../components/FotoUpload'
-import { FileSignature } from 'lucide-react'
+import { FileSignature, MessageCircle, Plus, Link2, Copy } from 'lucide-react'
 import { STATUS } from '../../lib/contratoParceria'
-import { formatarFone } from '../../lib/fone'
+import { urlDoAmbiente } from '../../lib/ambiente'
+import { situacaoDe, resumoDias, vinculoPor, mensagemDeAcesso, primeiroNome } from '../../lib/equipe'
+import ProfissionalDrawer from '../../components/ProfissionalDrawer'
+import '../../equipe.css'
 
-const FORM_VAZIO = { name: '', slug: '', phone: '', bio: '', photo_url: null }
-
+// A equipe do salão (119): a mesma gaveta do onboarding configura a
+// profissional inteira (dados, vínculo, serviços, horários, repasse,
+// permissões) e a lista mostra a situação de cada uma — quem ainda não
+// ativou o acesso ganha o botão de mandar o link.
 export default function AdminProfissionais() {
   const { confirmar } = useDialogo()
   const { salao } = useAuth()
-  const [profissionais, setProfissionais] = useState([])
+  const [equipe, setEquipe] = useState(null)
   const [services, setServices] = useState([])
-  const [vinculos, setVinculos] = useState({}) // professional_id -> [service_id]
+  const [cats, setCats] = useState([])
   const [parcerias, setParcerias] = useState({}) // professional_id -> linha de parcerias_da_equipe
-  const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [info, setInfo] = useState('')
-  const [editing, setEditing] = useState(null) // null | 'new' | id
-  const [form, setForm] = useState(FORM_VAZIO)
-  const [slugEditado, setSlugEditado] = useState(false)
-  const [servicosSel, setServicosSel] = useState([])
-  const [saving, setSaving] = useState(false)
+  const [gaveta, setGaveta] = useState(null) // null | 'nova' | profissional
+  const [coletar, setColetar] = useState(false)
+  const linkEquipe = urlDoAmbiente('pro', `/equipe/${salao?.codigo_equipe ?? ''}`)
 
   const fetchTudo = useCallback(async () => {
-    const [profRes, servRes, vincRes, parcRes] = await Promise.all([
-      supabase.from('professionals').select('*').eq('salon_id', salao?.id).order('name'),
-      supabase.from('services').select('*').eq('salon_id', salao?.id).eq('active', true).order('name'),
-      supabase.from('professional_services').select('*'),
-      supabase.rpc('parcerias_da_equipe', { salao: salao?.id }),
+    if (!salao?.id) return
+    const [eq, servRes, catRes, parcRes] = await Promise.all([
+      supabase.rpc('equipe_da_casa', { salao: salao.id }),
+      supabase.from('services').select('id, name, price, duration_minutes, categoria_id').eq('salon_id', salao.id).eq('active', true).order('name'),
+      supabase.from('categorias_de_servico').select('id, salon_id, nome').or(`salon_id.eq.${salao.id},salon_id.is.null`),
+      supabase.rpc('parcerias_da_equipe', { salao: salao.id }),
     ])
+    if (eq.error) setError('Erro ao carregar a equipe: ' + eq.error.message)
+    else { setEquipe(Array.isArray(eq.data) ? eq.data : []); setError('') }
+    setServices(servRes.data ?? []); setCats(catRes.data ?? [])
     setParcerias(Object.fromEntries((parcRes.data ?? []).map((l) => [l.professional_id, l])))
-
-    if (profRes.error) {
-      setError('Erro ao carregar a equipe: ' + profRes.error.message)
-    } else {
-      setProfissionais(profRes.data)
-      setError('')
-    }
-    if (!servRes.error) setServices(servRes.data)
-
-    const mapa = {}
-    for (const v of vincRes.data ?? []) {
-      ;(mapa[v.professional_id] ??= []).push(v.service_id)
-    }
-    setVinculos(mapa)
-    setLoading(false)
   }, [salao?.id])
+  useEffect(() => { fetchTudo() }, [fetchTudo])
 
-  useEffect(() => {
-    fetchTudo()
-  }, [fetchTudo])
-
-  function startNew() {
-    setForm(FORM_VAZIO)
-    setServicosSel([])
-    setSlugEditado(false)
-    setEditing('new')
-    setError('')
-    setInfo('')
-  }
-
-  function startEdit(p) {
-    setForm({
-      name: p.name,
-      slug: p.slug,
-      phone: p.phone ?? '',
-      bio: p.bio ?? '',
-      photo_url: p.photo_url ?? null,
-    })
-    setServicosSel(vinculos[p.id] ?? [])
-    setSlugEditado(true)
-    setEditing(p.id)
-    setError('')
-    setInfo('')
-    document.querySelector('.admin-shell .content')?.scrollTo({ top: 0, behavior: 'smooth' })
-  }
-
-  function cancelEdit() {
-    setEditing(null)
-    setForm(FORM_VAZIO)
-    setServicosSel([])
-  }
-
-  function onChangeNome(valor) {
-    setForm((f) => ({
-      ...f,
-      name: valor,
-      slug: slugEditado ? f.slug : gerarSlug(valor),
-    }))
-  }
-
-  function toggleServico(id) {
-    setServicosSel((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
-    )
-  }
-
-  async function salvarVinculos(professionalId) {
-    const atuais = vinculos[professionalId] ?? []
-    const paraAdicionar = servicosSel.filter((id) => !atuais.includes(id))
-    const paraRemover = atuais.filter((id) => !servicosSel.includes(id))
-
-    if (paraAdicionar.length) {
-      const { error } = await supabase.from('professional_services').insert(
-        paraAdicionar.map((service_id) => ({
-          professional_id: professionalId,
-          service_id,
-        })),
-      )
-      if (error) throw new Error('Erro ao salvar serviços: ' + error.message)
+  async function acao(qual, p) {
+    setError(''); setInfo('')
+    if (qual === 'remover') {
+      const ok = await confirmar({ titulo: `Remover ${p.name} do salão?`, texto: 'Ela perde o acesso à agenda deste salão. O histórico de atendimentos fica guardado.', ok: 'Remover', perigo: true })
+      if (!ok) return
     }
-    if (paraRemover.length) {
-      const { error } = await supabase
-        .from('professional_services')
-        .delete()
-        .eq('professional_id', professionalId)
-        .in('service_id', paraRemover)
-      if (error) throw new Error('Erro ao remover serviços: ' + error.message)
-    }
-  }
-
-  async function handleSave(e) {
-    e.preventDefault()
-    setError('')
-
-    const nome = form.name.trim()
-    const slug = gerarSlug(form.slug || form.name)
-    if (!nome) {
-      setError('Informe o nome da profissional.')
-      return
-    }
-    if (!slug) {
-      setError('O link precisa ter letras ou números.')
-      return
-    }
-
-    setSaving(true)
-    try {
-      const payload = {
-        name: nome,
-        slug,
-        phone: form.phone.trim() || null,
-        bio: form.bio.trim() || null,
-        photo_url: form.photo_url,
-      }
-
-      let professionalId = editing
-      if (editing === 'new') {
-        const { data, error } = await supabase
-          .from('professionals')
-          .insert({ ...payload, salon_id: salao?.id })
-          .select()
-          .single()
-        if (error) throw new Error(traduzErro(error))
-        professionalId = data.id
-      } else {
-        const { error } = await supabase
-          .from('professionals')
-          .update(payload)
-          .eq('id', editing)
-        if (error) throw new Error(traduzErro(error))
-      }
-
-      await salvarVinculos(professionalId)
-      cancelEdit()
-      await fetchTudo()
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  async function toggleAtiva(p) {
-    const { error } = await supabase
-      .from('professionals')
-      .update({ active: !p.active })
-      .eq('id', p.id)
-    if (error) setError('Erro ao atualizar: ' + error.message)
+    const { error } = await supabase.rpc('equipe_situacao', { prof: p.id, acao: qual })
+    if (error) setError(error.message)
     else fetchTudo()
   }
-
-  async function handleDelete() {
-    const p = profissionais.find((x) => x.id === editing)
-    if (!p) return
-    const ok = await confirmar({
-      titulo: `Excluir ${p.name} da equipe?`,
-      texto: 'Se ela já tem agendamentos, prefira apenas desativar.',
-      ok: 'Excluir', perigo: true,
-    })
-    if (!ok) return
-    const { error } = await supabase.from('professionals').delete().eq('id', p.id)
-    if (error) {
-      setError(
-        error.code === '23503'
-          ? 'Essa profissional já tem agendamentos — desative em vez de excluir.'
-          : 'Erro ao excluir: ' + error.message,
-      )
-      return
-    }
-    cancelEdit()
-    fetchTudo()
-  }
-
   async function copiarLink(p) {
-    const url = `${window.location.origin}/p/${p.slug}`
-    try {
-      await navigator.clipboard.writeText(url)
-      setInfo(`Link de ${p.name} copiado: ${url}`)
-    } catch {
-      setInfo(`Link de ${p.name}: ${url}`)
-    }
+    const url = urlDoAmbiente('cliente', `/p/${p.slug}`)
+    try { await navigator.clipboard.writeText(url); setInfo(`Link de ${p.name} copiado: ${url}`) } catch { setInfo(`Link de ${p.name}: ${url}`) }
+  }
+  async function enviado(p) { try { await supabase.rpc('equipe_acesso_enviado', { prof: p.id }) } catch { /* segue */ } fetchTudo() }
+  async function copiarAcesso(p) {
+    const url = urlDoAmbiente('pro', `/ativar/${p.token}`)
+    try { await navigator.clipboard.writeText(url); setInfo(`Link de acesso de ${primeiroNome(p.name)} copiado.`) } catch { setInfo(`Link de acesso: ${url}`) }
+    enviado(p)
   }
 
-  const ativas = profissionais.filter((p) => p.active).length
+  const lista = equipe ?? []
+  const ativas = lista.filter((p) => p.situacao === 'ativa').length
+  const pendentes = lista.filter((p) => p.situacao === 'configurada' && !p.user_id)
+  const rascunhos = lista.filter((p) => p.situacao === 'rascunho')
 
   return (
     <AdminShell>
@@ -230,213 +77,85 @@ export default function AdminProfissionais() {
         <div>
           <h2>Equipe</h2>
           <p className="muted">
-            {profissionais.length}{' '}
-            {profissionais.length === 1 ? 'profissional' : 'profissionais'}
-            {profissionais.length > 0 ? ` · ${ativas} ativa${ativas === 1 ? '' : 's'}` : ''}
+            {lista.length} {lista.length === 1 ? 'profissional' : 'profissionais'}
+            {lista.length > 0 ? ` · ${ativas} ativa${ativas === 1 ? '' : 's'}` : ''}
+            {pendentes.length > 0 ? ` · ${pendentes.length} aguardando ativação` : ''}
           </p>
         </div>
       </div>
 
       {error && <div className="alert alert-error">{error}</div>}
       {info && <div className="alert alert-info">{info}</div>}
+      {rascunhos.length > 0 && <div className="alert alert-info">{rascunhos.length === 1 ? `${rascunhos[0].name} mandou nome e WhatsApp pelo link da equipe.` : `${rascunhos.length} profissionais mandaram os dados pelo link da equipe.`} Configure para liberar o acesso.</div>}
 
       {/* o horário padrão do salão é da casa, não de uma profissional */}
       <Link to="/admin/horarios" className="card prof-row atalho-horarios">
-        <span className="ajuste-icone">
-          <ClockIcon />
-        </span>
+        <span className="ajuste-icone"><ClockIcon /></span>
         <div className="cliente-info">
-          <span className="cliente-nome">
-            <span className="nome-txt">Horário padrão do salão</span>
-          </span>
-          <span className="muted cliente-meta">
-            Vale para quem entrar na equipe daqui pra frente
-          </span>
+          <span className="cliente-nome"><span className="nome-txt">Horário padrão do salão</span></span>
+          <span className="muted cliente-meta">Quem usa o horário do salão acompanha quando ele mudar</span>
         </div>
         <ChevronIcon />
       </Link>
 
-      {editing !== null && (
-        <form className="card form service-form" onSubmit={handleSave}>
-          <h3>{editing === 'new' ? 'Nova profissional' : 'Editar profissional'}</h3>
-
-          <FotoUpload
-            nome={form.name}
-            pasta={editing === 'new' ? 'equipe' : editing}
-            valor={form.photo_url}
-            onChange={(url) => setForm((f) => ({ ...f, photo_url: url }))}
-            onErro={setError}
-          />
-
-          <label>
-            Nome
-            <input
-              type="text"
-              value={form.name}
-              onChange={(e) => onChangeNome(e.target.value)}
-              placeholder="Ex.: Ana Paula"
-              required
-            />
-          </label>
-
-          <label>
-            Link da agenda dela
-            <div className="slug-input">
-              <span className="slug-prefixo">/p/</span>
-              <input
-                type="text"
-                value={form.slug}
-                onChange={(e) => {
-                  setSlugEditado(true)
-                  setForm({ ...form, slug: e.target.value })
-                }}
-                placeholder="ana-paula"
-                required
-              />
-            </div>
-            <span className="muted campo-dica">
-              É o endereço que ela passa para as clientes.
-            </span>
-          </label>
-
-          <label>
-            WhatsApp (opcional)
-            <input
-              type="tel"
-              value={form.phone}
-              inputMode="numeric"
-              onChange={(e) => setForm({ ...form, phone: formatarFone(e.target.value) })}
-              placeholder="(13) 99999-9999"
-            />
-          </label>
-
-          <label>
-            Apresentação (opcional)
-            <textarea
-              value={form.bio}
-              onChange={(e) => setForm({ ...form, bio: e.target.value })}
-              placeholder="Especialista em limpeza de pele e sobrancelhas…"
-              rows={2}
-            />
-          </label>
-
-          <div className="combo-picker">
-            <span className="img-field-label">Serviços que ela atende</span>
-            {services.length === 0 ? (
-              <p className="muted combo-aviso">
-                Cadastre serviços na aba Serviços primeiro.
-              </p>
-            ) : (
-              <div className="combo-lista">
-                {services.map((s) => (
-                  <label key={s.id} className="combo-item">
-                    <input
-                      type="checkbox"
-                      checked={servicosSel.includes(s.id)}
-                      onChange={() => toggleServico(s.id)}
-                    />
-                    <span className="combo-item-nome">{s.name}</span>
-                    <span className="muted">
-                      {formatDuracao(s.duration_minutes)} · {formatPreco(s.price)}
-                    </span>
-                  </label>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="form-actions">
-            {editing !== 'new' && (
-              <button
-                type="button"
-                className="btn btn-danger btn-excluir"
-                onClick={handleDelete}
-              >
-                Excluir
-              </button>
-            )}
-            <button type="button" className="btn btn-ghost" onClick={cancelEdit}>
-              Cancelar
-            </button>
-            <button type="submit" className="btn btn-primary" disabled={saving}>
-              {saving ? 'Salvando…' : 'Salvar'}
-            </button>
-          </div>
-        </form>
-      )}
-
-      {loading ? (
+      {equipe === null ? (
         <p className="muted">Carregando…</p>
-      ) : profissionais.length === 0 && editing === null ? (
+      ) : lista.length === 0 ? (
         <div className="card empty-state">
-          <p>Nenhuma profissional cadastrada ainda.</p>
-          <p className="muted">Toque no botão + para montar sua equipe.</p>
+          <p>Ninguém na equipe ainda.</p>
+          <p className="muted">Você configura cada profissional; ela recebe um link e entra com a agenda pronta.</p>
+          <button type="button" className="btn btn-primary" onClick={() => setGaveta('nova')}><Plus size={16} /> Adicionar profissional</button>
         </div>
       ) : (
         <div className="cliente-list">
-          {profissionais.map((p) => (
-            <div
-              key={p.id}
-              className={p.active ? 'card prof-row' : 'card prof-row inactive'}
-            >
-              <Avatar nome={p.name} foto={p.photo_url} />
-              <div className="cliente-info">
-                <span className="cliente-nome"><span className="nome-txt">{p.name}</span></span>
-                <span className="muted cliente-meta">
-                  /p/{p.slug} · {(vinculos[p.id] ?? []).length} serviço
-                  {(vinculos[p.id] ?? []).length === 1 ? '' : 's'}
-                  {!p.user_id && ' · sem login'}
-                </span>
-                {parcerias[p.id] && <span className={'parceria-selo ' + parcerias[p.id].status}>{parcerias[p.id].status === 'sem_contrato' ? 'sem contrato' : `${STATUS[parcerias[p.id].status]?.toLowerCase()}${parcerias[p.id].status === 'assinado' && parcerias[p.id].homologacao !== 'homologado' ? ', sem homologação' : ''}`}</span>}
+          {lista.map((p) => {
+            const sit = situacaoDe(p)
+            const pendente = p.situacao === 'configurada' && !p.user_id
+            const whats = pendente && p.token ? `https://wa.me/55${String(p.phone ?? '').replace(/\D/g, '')}?text=${encodeURIComponent(mensagemDeAcesso({ salao: salao?.name, profissional: p.name, link: urlDoAmbiente('pro', `/ativar/${p.token}`) }))}` : ''
+            return (
+              <div key={p.id} className={'card prof-row' + (p.situacao === 'inativa' ? ' inactive' : '')}>
+                <Avatar nome={p.name} foto={p.photo_url} />
+                <div className="cliente-info">
+                  <span className="cliente-nome"><span className="nome-txt">{p.name}</span>{p.dona && <em className="eq-papel">Administradora</em>}</span>
+                  <span className="muted cliente-meta">
+                    {p.especialidade || vinculoPor(p.vinculo)?.nome || 'Profissional'} · {p.situacao === 'rascunho' ? 'só nome e WhatsApp' : `${(p.servicos ?? []).length} serviço${(p.servicos ?? []).length === 1 ? '' : 's'} · ${resumoDias(p.horarios)}`}
+                  </span>
+                  <span className="prof-selos">
+                    <span className={'gv-situacao ' + sit.cor}>{sit.rotulo}</span>
+                    {parcerias[p.id] && (!p.vinculo || p.vinculo === 'parceira') && <span className={'parceria-selo ' + parcerias[p.id].status}>{parcerias[p.id].status === 'sem_contrato' ? 'sem contrato' : `${STATUS[parcerias[p.id].status]?.toLowerCase()}${parcerias[p.id].status === 'assinado' && parcerias[p.id].homologacao !== 'homologado' ? ', sem homologação' : ''}`}</span>}
+                  </span>
+                  {p.situacao === 'rascunho' && <button type="button" className="btn-mini prof-acao" onClick={() => setGaveta(p)}>Configurar profissional</button>}
+                  {pendente && whats && <span className="prof-acoes"><a className="btn-mini" href={whats} target="_blank" rel="noreferrer" onClick={() => enviado(p)}><MessageCircle size={12} /> {p.acesso_enviado_em ? 'Reenviar acesso' : 'Enviar acesso'}</a><button type="button" className="btn-mini btn-mini-neutro" onClick={() => copiarAcesso(p)}><Copy size={12} /> Copiar link</button></span>}
+                </div>
+                {parcerias[p.id] && (!p.vinculo || p.vinculo === 'parceira') && (
+                  <Link to={`/admin/equipe/${p.id}/parceria`} className="icon-btn" aria-label={`Contrato de parceria de ${p.name}`} title="Contrato de parceria"><FileSignature size={18} /></Link>
+                )}
+                <button className="icon-btn" onClick={() => copiarLink(p)} aria-label={`Copiar link de ${p.name}`} title="Copiar link da agenda dela"><LinkIcon /></button>
+                {!p.dona && (
+                  <label className="switch" title={p.situacao === 'inativa' ? 'Reativar' : 'Desativar'}>
+                    <input type="checkbox" checked={p.situacao !== 'inativa'} onChange={() => acao(p.situacao === 'inativa' ? 'reativar' : 'desativar', p)} />
+                    <span></span>
+                  </label>
+                )}
+                <button className="icon-btn" onClick={() => setGaveta(p)} aria-label={`Configurar ${p.name}`}><ChevronIcon /></button>
               </div>
-              {parcerias[p.id] && (
-                <Link to={`/admin/equipe/${p.id}/parceria`} className="icon-btn" aria-label={`Contrato de parceria de ${p.name}`} title="Contrato de parceria">
-                  <FileSignature size={18} />
-                </Link>
-              )}
-              <button
-                className="icon-btn"
-                onClick={() => copiarLink(p)}
-                aria-label={`Copiar link de ${p.name}`}
-                title="Copiar link da agenda"
-              >
-                <LinkIcon />
-              </button>
-              <label className="switch" title={p.active ? 'Desativar' : 'Ativar'}>
-                <input
-                  type="checkbox"
-                  checked={p.active}
-                  onChange={() => toggleAtiva(p)}
-                />
-                <span></span>
-              </label>
-              <button
-                className="icon-btn"
-                onClick={() => startEdit(p)}
-                aria-label={`Editar ${p.name}`}
-              >
-                <ChevronIcon />
-              </button>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 
-      {editing === null && (
-        <button className="fab" onClick={startNew} aria-label="Nova profissional">
-          +
-        </button>
+      {salao?.codigo_equipe && (
+        <div className="card eq-coletar" style={{ marginTop: '0.8rem' }}>
+          <div>
+            <strong><Link2 size={14} /> Coletar dados da equipe por link</strong>
+            <p>Compartilhe este link para a profissional informar nome e WhatsApp. Você conclui a configuração dela antes de liberar o acesso.</p>
+            {coletar ? <div className="ob-link"><input readOnly value={linkEquipe} onFocus={(e) => e.target.select()} /><button type="button" className="btn-mini" onClick={() => { navigator.clipboard?.writeText(linkEquipe); setInfo('Link da equipe copiado.') }}><Copy size={12} /> Copiar</button></div> : <button type="button" className="btn-mini btn-mini-neutro" onClick={() => setColetar(true)}>Mostrar link</button>}
+          </div>
+        </div>
       )}
+
+      {gaveta && salao && <ProfissionalDrawer salao={salao} profissional={gaveta === 'nova' ? null : gaveta} servicos={services} cats={cats} onFechar={() => { setGaveta(null); fetchTudo() }} onSalvo={() => fetchTudo()} />}
+      {!gaveta && <button className="fab" onClick={() => setGaveta('nova')} aria-label="Adicionar profissional">+</button>}
     </AdminShell>
   )
-}
-
-function traduzErro(error) {
-  if (error.code === '23505') {
-    return 'Já existe uma profissional com esse link. Escolha outro.'
-  }
-  if (error.code === '23514') {
-    return 'O link só aceita letras minúsculas, números e hífen.'
-  }
-  return 'Erro ao salvar: ' + error.message
 }

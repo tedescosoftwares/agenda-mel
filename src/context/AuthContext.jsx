@@ -172,7 +172,7 @@ export function AuthProvider({ children }) {
       options: {
         data: { full_name: fullName, phone, ...extra },
         // o link de confirmação volta pro lugar certo: quem abre negócio cai no onboarding, quem entra numa equipe no convite
-        emailRedirectTo: window.location.origin + (extra.papel_desejado ? '/onboarding' : extra.equipe_codigo ? `/equipe/${extra.equipe_codigo}` : '/'),
+        emailRedirectTo: window.location.origin + (extra.papel_desejado ? '/onboarding' : extra.ativar_token ? '/pro/agenda' : extra.equipe_codigo ? `/equipe/${extra.equipe_codigo}` : '/'),
       },
     })
     // Com "confirmar e-mail" ligado, o Supabase NÃO dá erro para e-mail

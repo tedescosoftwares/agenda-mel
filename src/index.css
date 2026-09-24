@@ -7174,3 +7174,28 @@ button.quadro-col-cabeca:hover strong { color: var(--rosa); }
 @media (max-width: 900px) { .seo-duas, .seo-linha-3 { grid-template-columns: 1fr; } }
 
 .seo-lido td { opacity: 0.6; }
+
+/* ---- primeiros passos, equipe pendente e QR no painel (119) ---- */
+.pp { display: grid; gap: 0.5rem; }
+.pp-topo { display: flex; justify-content: space-between; align-items: baseline; gap: 0.6rem; } .pp-topo strong { font-size: 1rem; } .pp-topo .muted { font-size: 0.8rem; }
+.pp-barra { height: 6px; border-radius: 999px; background: var(--cinza-1, #f3f4f6); overflow: hidden; } .pp-barra i { display: block; height: 100%; background: linear-gradient(90deg, #ff2d7a, #ff7baa); border-radius: 999px; transition: width 0.3s; }
+.pp-lista { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 0.35rem 0.8rem; }
+.pp-lista li { display: flex; align-items: center; gap: 0.5rem; font-size: 0.86rem; color: var(--texto-2, #4b4f5c); }
+.pp-lista li.ok { color: var(--texto-3, #9a94a3); text-decoration: line-through; }
+.pp-check { width: 20px; height: 20px; border-radius: 50%; display: inline-grid; place-items: center; background: var(--cinza-1, #f3f4f6); color: #9a94a3; flex: none; }
+.pp-lista li.ok .pp-check { background: #e6f7ee; color: #067647; }
+.pp-lista a, .pp-lista button { font: inherit; color: #3d0c4e; font-weight: 600; text-decoration: none; background: none; border: 0; padding: 0; cursor: pointer; text-align: left; }
+.pp-lista a:hover, .pp-lista button:hover { color: #ff2d7a; }
+.pp-festa { display: flex; align-items: center; gap: 0.6rem; background: linear-gradient(120deg, #3d0c4e, #6a1150); color: #fff; font-weight: 600; }
+.pp-festa svg { color: #ff9ec0; flex: none; } .pp-festa span { flex: 1; } .pp-festa button { border: 0; background: rgba(255,255,255,0.12); color: #fff; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; cursor: pointer; }
+.pp-equipe { display: flex; align-items: center; gap: 0.7rem; text-decoration: none; color: inherit; background: #fff8ea; border-color: #fde68a; }
+.pp-equipe > svg { color: #92400e; flex: none; } .pp-equipe > span { flex: 1; display: grid; } .pp-equipe small { font-size: 0.8rem; line-height: 1.35; }
+.pp-equipe-acao { font-size: 0.8rem; font-weight: 700; color: #92400e; white-space: nowrap; }
+.pp-qr { display: grid; grid-template-columns: 72px 1fr auto; align-items: center; gap: 0.8rem; }
+.pp-qr canvas { border-radius: 8px; border: 1px solid var(--fio, #e5e7eb); }
+.pp-qr > span { display: grid; gap: 2px; } .pp-qr strong { display: inline-flex; align-items: center; gap: 4px; font-size: 0.92rem; } .pp-qr small { font-size: 0.8rem; }
+@media (max-width: 520px) { .pp-lista { grid-template-columns: 1fr; } .pp-qr { grid-template-columns: 60px 1fr; } .pp-qr .btn-mini { grid-column: 2; justify-self: start; } }
+
+.prof-selos { display: flex; gap: 0.35rem; flex-wrap: wrap; margin-top: 0.2rem; }
+.prof-acoes { display: flex; gap: 0.35rem; flex-wrap: wrap; margin-top: 0.35rem; } .prof-acoes .btn-mini { text-decoration: none; }
+.prof-acao { align-self: flex-start; margin-top: 0.35rem; }

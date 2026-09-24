@@ -5,6 +5,7 @@ import FilaEspera from '../../components/FilaEspera'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { Repeat } from 'lucide-react'
+import { pode } from '../../lib/equipe'
 import FichaCliente from '../../components/FichaCliente'
 
 // Pedidos pendentes (tela 16): duas abas — o que espera o seu sim, e
@@ -91,8 +92,9 @@ export default function ProPedidos() {
                 <span className="muted">{p.quando}</span>
               )}
               <div className="pedido-acoes">
+                {!pode(professional, 'confirmar') ? <span className="muted pedido-so-ver">O salão confirma os pedidos por você.</span> : <>
                 <button className="btn btn-ghost" disabled={respondendo === p.appointment_id} onClick={() => responder(p.appointment_id, false)}>{p.remarcacao ? 'Manter como está' : 'Recusar'}</button>
-                <button className="btn btn-primary" disabled={respondendo === p.appointment_id} onClick={() => responder(p.appointment_id, true)}>{p.remarcacao ? 'Aceitar troca' : 'Aceitar'}</button>
+                <button className="btn btn-primary" disabled={respondendo === p.appointment_id} onClick={() => responder(p.appointment_id, true)}>{p.remarcacao ? 'Aceitar troca' : 'Aceitar'}</button></>}
               </div>
             </div>
           ))}

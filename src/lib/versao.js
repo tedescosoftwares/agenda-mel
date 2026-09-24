@@ -1,4 +1,4 @@
 // Marca visível para saber, de bate-pronto, se a máquina está com o
 // código novo. Suba este número a cada entrega grande.
-export const VERSAO = '2.58.4-mimo'
-export const ENTREGA = 'Onboarding com a cara da landing e os planos dentro'
+export const VERSAO = '2.59.0-mimo'
+export const ENTREGA = 'Equipe configurada pelo salão: a profissional só ativa o acesso'

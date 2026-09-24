@@ -361,8 +361,8 @@ function PassoDados({ s, seguir, voltar, salvando, erro, setErro, user, autonoma
       <>
         <h1 className="ob-titulo">Conta criada!</h1>
         <p className="ob-sub">Falta só confirmar o e-mail</p>
-        <div className="ob-pronto"><span className="ob-pronto-check"><Check size={18} /></span><span><strong>Mandamos um link para {f.email.trim()}</strong><small>Abra o e-mail, toque em confirmar e entre. Você continua daqui, no passo 3, com tudo o que já preencheu guardado{logo ? ', a foto inclusive (entrando por este mesmo navegador)' : ''}.</small></span></div>
-        <div className="ob-rodape"><span /><Link to="/pro/entrar" className="btn btn-primary ob-continuar">Já confirmei, entrar <ArrowRight size={16} /></Link></div>
+        <div className="ob-pronto"><span className="ob-pronto-check"><Check size={18} /></span><span><strong>Mandamos um link para {f.email.trim()}</strong><small>Toque no link do e-mail e você volta pra cá já dentro do cadastro, no passo 3, sem precisar entrar de novo. Tudo o que preencheu está guardado{logo ? ' (a foto sobe quando abrir por este mesmo navegador)' : ''}.</small></span></div>
+        <div className="ob-rodape"><span /><Link to="/pro/entrar" className="btn btn-ghost ob-continuar">Abri o link e não entrou? Entrar <ArrowRight size={16} /></Link></div>
       </>
     )
   }

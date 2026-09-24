@@ -113,5 +113,9 @@ if (typeof document !== 'undefined' && !isDemo) {
 export const supabase = isDemo
   ? (await import('./demo.js')).demo
   : isSupabaseConfigured
-    ? (cliente = createClient(supabaseUrl, supabaseAnonKey, { global: { fetch: fetchResiliente } }))
+    // flowType 'implicit': o link de confirmação do e-mail (e o de senha nova)
+    // traz a sessão na própria URL e entra sozinho em qualquer navegador. No
+    // PKCE (padrão) o link só funcionava no navegador que fez o cadastro; aberto
+    // pelo celular, caía na tela de login.
+    ? (cliente = createClient(supabaseUrl, supabaseAnonKey, { global: { fetch: fetchResiliente }, auth: { flowType: 'implicit', detectSessionInUrl: true } }))
     : null

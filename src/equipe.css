@@ -170,3 +170,6 @@ body.com-gaveta { overflow: hidden; }
 .gv-slug-campo > span { font-weight: 600; color: var(--eq-cinza); }
 .pedido-so-ver { font-size: 0.8rem; }
 .svc-a-partir { font-size: 0.8rem; font-weight: 500; }
+
+/* revisão de layout (2.59.1): título da gaveta em Poppins, como o resto */
+.gv-topo-texto strong { font-family: inherit; font-weight: 700; text-transform: none; letter-spacing: -0.03em; font-size: 1.35rem; line-height: 1.2; }

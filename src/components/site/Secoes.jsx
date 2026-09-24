@@ -83,7 +83,7 @@ export function ProdutoReal() {
   const chamadas = [['Agenda geral', LayoutGrid, 'e1'], ['Agenda por profissional', UserRound, 'e2'], ['Clientes', Heart, 'e3'], ['Equipe', Users, 'e4'], ['Retorno', RotateCcw, 'd1'], ['WhatsApp', MessageCircle, 'd2'], ['Sinal', Wallet, 'd3'], ['Comanda e caixa', Receipt, 'd4'], ['Relatórios', BarChart3, 'd5']]
   return (
     <div className="pr ld-rv">
-      <div className="pr-foto"><Foto nome="painel" alt="Painel do salão no notebook e app da cliente no celular, sobre a bancada" /></div>
+      <div className="pr-foto"><Foto nome="painel" alt="Painel do salão no notebook e app da cliente no celular, sobre a bancada" largura="cheia" /></div>
       <ul className="pr-chamadas">{chamadas.map(([t, Ic, pos]) => <li key={t} className={'pr-' + pos}><Ic size={14} />{t}</li>)}</ul>
     </div>
   )

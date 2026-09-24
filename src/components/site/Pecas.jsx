@@ -32,13 +32,16 @@ export function MarcaCartaz() {
 
 // as fotos do pacote da marca: WebP em dois tamanhos, preguiçosas
 // fora do herói. A alt descreve a cena, não repete o título.
-export function Foto({ nome, alt, className = '', prioridade = false }) {
+export function Foto({ nome, alt, className = '', prioridade = false, largura = 'coluna' }) {
+  // 'coluna': metade da tela no PC (herói, blocos lado a lado); 'cheia': a largura toda (faixas, produto real)
+  // as fotos são recortadas (object-fit: cover): pedir um pouco mais largo que a caixa evita o estouro em tela 2x
+  const sizes = largura === 'cheia' ? '(max-width: 700px) 100vw, min(100vw, 1200px)' : '(max-width: 700px) 100vw, min(70vw, 1000px)'
   return (
     <img
       className={'ld-foto ' + className}
       src={`/imagens/${nome}-1400.webp`}
-      srcSet={`/imagens/${nome}-720.webp 720w, /imagens/${nome}-1400.webp 1400w`}
-      sizes="(max-width: 700px) 100vw, 640px"
+      srcSet={`/imagens/${nome}-720.webp 720w, /imagens/${nome}-1400.webp 1400w, /imagens/${nome}-2200.webp 2200w, /imagens/${nome}-3300.webp 3300w`}
+      sizes={sizes}
       alt={alt}
       loading={prioridade ? 'eager' : 'lazy'}
       fetchPriority={prioridade ? 'high' : 'auto'}

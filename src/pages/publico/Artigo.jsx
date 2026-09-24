@@ -61,7 +61,7 @@ export default function Artigo() {
             </div>
           </header>
           {a.cover_image_url && (
-            <div className="ld-wrap sp-estreito"><figure className="sp-capa ld-rv"><img src={a.cover_image_url} alt={a.cover_alt || ''} width="1400" height="788" fetchPriority="high" /></figure></div>
+            <div className="ld-wrap sp-estreito"><figure className="sp-capa ld-rv"><img src={a.cover_image_url} srcSet={/^\/imagens\/.*-1400\.webp$/.test(a.cover_image_url) ? `${a.cover_image_url} 1400w, ${a.cover_image_url.replace('-1400.webp', '-2200.webp')} 2200w` : undefined} sizes="(max-width: 700px) 100vw, 820px" alt={a.cover_alt || ''} width="1400" height="788" fetchPriority="high" /></figure></div>
           )}
           <div className="ld-wrap sp-estreito sp-corpo">
             {indice.length > 2 && (

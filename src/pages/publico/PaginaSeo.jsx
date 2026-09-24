@@ -101,7 +101,7 @@ export default function PaginaSeo() {
         <section>
           <div className="ld-wrap">
             <div className="sp-faixa ld-rv">
-              <div className="sp-faixa-foto"><Foto nome={pagina.faixa.foto} alt="" /><span className="ld-bilhete sp-faixa-bilhete">{pagina.faixa.bilhete} <i>♥</i></span></div>
+              <div className="sp-faixa-foto"><Foto nome={pagina.faixa.foto} alt="" largura="cheia" /><span className="ld-bilhete sp-faixa-bilhete">{pagina.faixa.bilhete} <i>♥</i></span></div>
               <div className="sp-faixa-texto">
                 <h2>{pagina.faixa.titulo}</h2>
                 <p>{pagina.faixa.texto}</p>

@@ -293,3 +293,25 @@
   .ob-painel-texto p { display: none; }
   .ob-ajuda small { display: none; }
 }
+
+/* ---- o botão de continuar nunca some: rodapé grudado embaixo, também no PC ---- */
+.ob-rodape { position: sticky; bottom: 0; z-index: 3; background: rgba(255, 255, 255, 0.94); backdrop-filter: blur(10px); margin-left: -12px; margin-right: -12px; padding: 14px 12px calc(14px + env(safe-area-inset-bottom)); }
+.ob-conteudo { padding-bottom: 0; }
+
+/* ---- tela baixa: o passo 1 cabe sem rolar ---- */
+@media (max-height: 880px) and (min-width: 901px) {
+  .ob-conteudo { gap: 12px; }
+  .ob-titulo { font-size: 2.1rem; }
+  .ob-sub { font-size: 0.9rem; }
+  .ob-tipo-foto { aspect-ratio: 21 / 9; }
+  .ob-tipo > strong { font-size: 1.25rem; margin-top: 2px; }
+  .ob-tipo > .muted { font-size: 0.8rem; }
+  .ob-tipo-preco b { font-size: 1.5rem; }
+  .ob-tipo ul { font-size: 0.78rem; gap: 3px; }
+  .ob-tipo { gap: 7px; padding-bottom: 14px; }
+  .ob-nota { padding: 10px 12px; }
+}
+@media (max-height: 740px) and (min-width: 901px) {
+  .ob-tipo-foto { aspect-ratio: 3 / 1; }
+  .ob-tipo ul { display: none; }
+}

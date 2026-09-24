@@ -4459,13 +4459,13 @@ a.prof-row:hover,
    barra de baixo. */
 /* as regras de app (sem rolagem lateral, sem elástico, altura presa)
    não valem para o site público (.ld): lá a página rola como página. */
-body:not(:has(.ld)) { overflow-x: hidden; max-width: 100%; }
-html:not(:has(.ld)) { overflow-x: hidden; }
+body:not(:has(.ld, .ob)) { overflow-x: hidden; max-width: 100%; }
+html:not(:has(.ld, .ob)) { overflow-x: hidden; }
 #root, .admin-shell, .layout { overflow-x: clip; }
 
 /* sem zoom no toque duplo, sem o brilho azul de link ao tocar, sem o
    elástico que puxa a página inteira quando rola além do fim */
-body:not(:has(.ld)) {
+body:not(:has(.ld, .ob)) {
   touch-action: manipulation;
   overscroll-behavior-y: none;
 }
@@ -4883,8 +4883,8 @@ body:has(.plat) { touch-action: auto; overscroll-behavior: auto; overflow: hidde
    - segurar o dedo não seleciona texto de botão/aba nem abre menu de imagem
    - o conteúdo termina ACIMA da barra de baixo, nunca embaixo dela
    ===================================================================== */
-html:not(:has(.ld)), body:not(:has(.ld)) { touch-action: pan-x pan-y; overscroll-behavior: none; }
-html:not(:has(.ld)) { height: 100%; }
+html:not(:has(.ld, .ob)), body:not(:has(.ld, .ob)) { touch-action: pan-x pan-y; overscroll-behavior: none; }
+html:not(:has(.ld, .ob)) { height: 100%; }
 html { -webkit-text-size-adjust: 100%; }
 body:not(:has(.plat)) { min-height: 100%; }
 .bottom-nav, .topbar, .btn, .btn-mini, .chip, .aba, .nav-item, .slot, .prof-bolha, .rodape-fixo, .fab, .switch {

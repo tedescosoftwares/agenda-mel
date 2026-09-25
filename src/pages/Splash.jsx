@@ -14,9 +14,15 @@ export default function Splash() {
   const { user, role, loading } = useAuth()
   const navigate = useNavigate()
 
+  // instalado no celular (PWA) abre direto na agenda; no navegador, a landing é a casa de quem está logada (2.60)
+  const naApp = typeof window !== 'undefined' && Boolean(window.matchMedia?.('(display-mode: standalone)')?.matches || window.navigator.standalone)
+  const porIndicacao = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('indique')
+  const ficaNaLanding = !ehPro && !porIndicacao && !naApp
+
   useEffect(() => {
     if (loading) return
     const t = setTimeout(() => {
+      if (user && ficaNaLanding) return
       if (!user) {
         // pro: a porta é o login da agenda. Cliente sem login vê a
         // landing (abaixo) — a não ser que tenha chegado por um convite.
@@ -30,12 +36,12 @@ export default function Splash() {
       navigate(homeDoPapel(role), { replace: true })
     }, 650)
     return () => clearTimeout(t)
-  }, [loading, user, role, navigate])
+  }, [loading, user, role, navigate, ficaNaLanding])
 
+  // mimo.com.vc no navegador: a porta da rua, logada ou não
+  if (!loading && ficaNaLanding) return <Landing />
   const certo = !loading && user ? ambienteDoPapel(role) : null
   if (certo && certo !== AMBIENTE) return <AmbienteErrado role={role} />
-  // mimo.com.vc sem login: a porta da rua
-  if (!loading && !user && !ehPro && !new URLSearchParams(window.location.search).has('indique')) return <Landing />
 
   return (
     <div className="splash">

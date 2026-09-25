@@ -110,6 +110,50 @@ if (typeof document !== 'undefined' && !isDemo) {
   })
 }
 
+// ---- Uma sessão para os dois endereços (2.60) ---------------------------
+// A landing (mimo.com.vc) precisa saber quem está logado no pro.mimo.com.vc
+// e vice-versa. O localStorage é por endereço; o cookie no domínio raiz
+// (.mimo.com.vc) vale para os dois. A sessão é maior que um cookie aguenta,
+// então vai em pedaços (chave.0, chave.1…). Quem já estava logada no
+// localStorage migra sozinha na primeira leitura. No PC de desenvolvimento
+// (localhost) segue o localStorage de sempre.
+const ANO = 60 * 60 * 24 * 365
+const PEDACO = 3500
+function dominioDaSessao() {
+  if (typeof window === 'undefined') return null
+  const h = window.location.hostname
+  if (!h.includes('.') || h === 'localhost' || /^\d+\.\d+\.\d+\.\d+$/.test(h) || window.location.protocol !== 'https:') return null
+  return '.' + h.replace(/^pro\./, '')
+}
+function armazemEmCookie(dominio) {
+  const ler = (nome) => {
+    const m = document.cookie.match(new RegExp('(?:^|; )' + nome.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '=([^;]*)'))
+    return m ? m[1] : null
+  }
+  const gravar = (nome, valor, idade) => { document.cookie = `${nome}=${valor}; Domain=${dominio}; Path=/; Max-Age=${idade}; Secure; SameSite=Lax` }
+  const apagar = (k) => { gravar(k, '', 0); for (let i = 0; i < 24; i++) gravar(`${k}.${i}`, '', 0) }
+  return {
+    getItem(k) {
+      const inteiro = ler(k)
+      if (inteiro != null && inteiro !== '') return decodeURIComponent(inteiro)
+      const partes = []
+      for (let i = 0; i < 24; i++) { const p = ler(`${k}.${i}`); if (p == null || p === '') break; partes.push(p) }
+      if (partes.length) return decodeURIComponent(partes.join(''))
+      try { return localStorage.getItem(k) } catch { return null }
+    },
+    setItem(k, v) {
+      apagar(k)
+      const cod = encodeURIComponent(v)
+      if (cod.length <= PEDACO) gravar(k, cod, ANO)
+      else for (let i = 0; i * PEDACO < cod.length; i++) gravar(`${k}.${i}`, cod.slice(i * PEDACO, (i + 1) * PEDACO), ANO)
+      try { localStorage.removeItem(k) } catch { /* nada */ }
+    },
+    removeItem(k) { apagar(k); try { localStorage.removeItem(k) } catch { /* nada */ } },
+  }
+}
+const dominio = dominioDaSessao()
+const armazem = dominio ? armazemEmCookie(dominio) : undefined
+
 export const supabase = isDemo
   ? (await import('./demo.js')).demo
   : isSupabaseConfigured
@@ -117,5 +161,5 @@ export const supabase = isDemo
     // traz a sessão na própria URL e entra sozinho em qualquer navegador. No
     // PKCE (padrão) o link só funcionava no navegador que fez o cadastro; aberto
     // pelo celular, caía na tela de login.
-    ? (cliente = createClient(supabaseUrl, supabaseAnonKey, { global: { fetch: fetchResiliente }, auth: { flowType: 'implicit', detectSessionInUrl: true } }))
+    ? (cliente = createClient(supabaseUrl, supabaseAnonKey, { global: { fetch: fetchResiliente }, auth: { flowType: 'implicit', detectSessionInUrl: true, persistSession: true, ...(armazem ? { storage: armazem } : {}) } }))
     : null

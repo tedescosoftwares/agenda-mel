@@ -4,7 +4,7 @@ import {
   Hand, Scissors, Palette, Eye, Flower2, LayoutGrid, UserRound, PauseCircle, CalendarPlus,
 } from 'lucide-react'
 import { useSeo } from '../../lib/seo'
-import { NavSite, PeSite, Foto, Coracao, MarcaCartaz, Cabeca, useRevelar, comecarEm } from '../../components/site/Pecas'
+import { NavSite, PeSite, Foto, Coracao, MarcaCartaz, Cabeca, useRevelar, comecarEm, useQuemLogada } from '../../components/site/Pecas'
 import { PalcoCelular, MockDesktop, MockProfissional, MockRetorno, MockEspera, MockWhats, MockPagamento, MockQr, VINCULOS } from '../../components/site/Mocks'
 import { RotinaCartas, Historias, AntesDepois, ProdutoReal, Tamanhos, Simulador, CapturaLead, Confianca, PorQue } from '../../components/site/Secoes'
 import '../../landing.css'
@@ -79,6 +79,7 @@ const JSON_LD = {
 export default function Landing() {
   const raiz = useRevelar()
   const comecar = comecarEm
+  const logada = useQuemLogada()
   useSeo({ titulo: TITULO, descricao: DESCRICAO, caminho: '/', jsonLd: JSON_LD })
 
   return (
@@ -96,7 +97,7 @@ export default function Landing() {
               <p className="ld-lead">A MIMO conecta agenda, clientes, equipe, WhatsApp, retorno e pagamentos numa experiência feita para a rotina real de quem trabalha com beleza.</p>
               <p className="ld-lead ld-lead-2">Menos conversa perdida. Menos horário vazio. Mais clareza para trabalhar.</p>
               <div className="ld-hero-cta">
-                <a className="ld-btn ld-primario ld-grande" href={comecar()}>Começar agora <ArrowRight size={18} /></a>
+                {logada ? (logada.externo ? <a className="ld-btn ld-primario ld-grande" href={logada.destino}>{logada.acao} <ArrowRight size={18} /></a> : <Link className="ld-btn ld-primario ld-grande" to={logada.destino}>{logada.acao} <ArrowRight size={18} /></Link>) : <a className="ld-btn ld-primario ld-grande" href={comecar()}>Começar agora <ArrowRight size={18} /></a>}
                 <a className="ld-btn ld-fantasma ld-grande" href="#como-funciona">Ver como funciona</a>
                 <span className="ld-bilhete ld-bilhete-hero">sua cliente marca sozinha <i>♥</i></span>
               </div>

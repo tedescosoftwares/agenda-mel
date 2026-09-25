@@ -926,3 +926,21 @@
 .sm-faixas span.on { background: var(--ld-rosa); border-color: var(--ld-rosa); color: #fff; }
 .sm-conta > div > span small { display: block; font-size: 0.72rem; color: var(--ld-cinza); font-weight: 400; }
 @media (max-width: 1040px) { .ld-planos-3 { grid-template-columns: 1fr; max-width: 560px; margin: 0 auto; } }
+
+/* ---- quem está logada vê a landing como casa (2.60) ---- */
+.ld-conta-chip { display: inline-flex; align-items: center; gap: 10px; min-height: 48px; padding: 4px 12px 4px 4px; border-radius: 999px; border: 1.5px solid var(--ld-fio); background: #fff; font: inherit; color: var(--ld-ameixa); cursor: pointer; transition: border-color 0.18s ease, box-shadow 0.18s ease; }
+.ld-conta-chip:hover { border-color: var(--ld-rosa-2); box-shadow: 0 10px 24px rgba(255, 45, 122, 0.12); }
+.ld-conta-chip .avatar-iniciais { width: 38px; height: 38px; font-size: 0.8rem; }
+.ld-conta-texto { display: grid; text-align: left; line-height: 1.15; }
+.ld-conta-texto b { font-size: 0.9rem; font-weight: 600; max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ld-conta-texto small { font-size: 0.7rem; color: var(--ld-cinza); }
+.ld-conta-menu { min-width: 280px; }
+.ld-conta-menu a, .ld-conta-menu button { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 12px; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; width: 100%; }
+.ld-conta-menu a:hover, .ld-conta-menu button:hover { background: var(--ld-lilas); }
+.ld-conta-menu svg { color: var(--ld-rosa); flex: none; }
+.ld-conta-menu span { display: grid; } .ld-conta-menu b { font-weight: 600; } .ld-conta-menu small { color: var(--ld-cinza); font-size: 0.76rem; }
+.ld-menu-conta { display: grid; gap: 8px; }
+.ld-menu-conta-quem { display: flex; align-items: center; gap: 10px; padding: 6px 0 4px; }
+.ld-menu-conta-quem .avatar-iniciais { width: 40px; height: 40px; }
+.ld-menu-conta-quem > span { display: grid; } .ld-menu-conta-quem b { font-weight: 600; text-transform: none; letter-spacing: 0; font-size: 0.95rem; } .ld-menu-conta-quem small { color: var(--ld-cinza); font-size: 0.76rem; text-transform: none; letter-spacing: 0; }
+@media (max-width: 700px) { .ld-acoes .ld-conta { display: none; } }

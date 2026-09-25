@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ChevronDown, Menu, X } from 'lucide-react'
+import { ChevronDown, Menu, X, LogOut, ArrowRight } from 'lucide-react'
 import { MarcaIcon } from '../icons'
 import { urlDoAmbiente } from '../../lib/ambiente'
+import { useAuth } from '../../context/AuthContext'
+import Avatar from '../Avatar'
 
 // As peças do site público (mimo.com.vc): barra, rodapé, fotos, logo,
 // coração de pincel e o "aparece ao rolar". A landing e as páginas de
@@ -10,6 +12,19 @@ import { urlDoAmbiente } from '../../lib/ambiente'
 
 export const comecarEm = (tipo) => urlDoAmbiente('pro', tipo ? `/comecar?tipo=${tipo}` : '/comecar')
 export const entrarEm = () => urlDoAmbiente('pro', '/pro/entrar')
+
+// Quem está logada, do jeito que o site mostra (2.60): nome, foto, o que
+// ela é e para onde vai o botão. A landing não redireciona: vira a casa.
+export function useQuemLogada() {
+  const { user, role, profile, salao, negocio, professional, loading, signOut } = useAuth()
+  if (loading || !user) return null
+  const casa = negocio ?? salao
+  const nomePessoa = profile?.full_name || user.email || 'Você'
+  if (role === 'admin') return { nome: casa?.name || nomePessoa, sub: 'Salão · MIMO Pro', foto: casa?.logo_url || null, destino: urlDoAmbiente('pro', '/admin'), acao: 'Abrir meu painel', externo: true, signOut }
+  if (role === 'profissional') return { nome: professional?.name || nomePessoa, sub: casa?.tipo === 'autonoma' ? 'Autônoma · MIMO Pro' : 'Profissional · MIMO Pro', foto: professional?.photo_url || null, destino: urlDoAmbiente('pro', '/pro/agenda'), acao: 'Abrir minha agenda', externo: true, signOut }
+  if (role === 'plataforma') return { nome: nomePessoa, sub: 'Plataforma', foto: null, destino: '/plataforma', acao: 'Abrir a plataforma', externo: false, signOut }
+  return { nome: nomePessoa, sub: 'Cliente · MIMO', foto: null, destino: '/cliente/home', acao: 'Abrir minha agenda', externo: false, signOut }
+}
 
 export function Coracao({ className }) {
   return (
@@ -95,6 +110,7 @@ export function NavSite() {
   const [menu, setMenu] = useState(false)
   const [entrarAberto, setEntrarAberto] = useState(false)
   const entrarRef = useRef(null)
+  const logada = useQuemLogada()
   const comecar = comecarEm
   const entrar = entrarEm()
 
@@ -114,28 +130,56 @@ export function NavSite() {
           <Link to="/" className="ld-logo" aria-label="MIMO, início"><Logo altura={52} /></Link>
           <nav className="ld-links" aria-label="Seções">{links.map(([h, t]) => (h.startsWith('/#') ? <a key={h} href={h}>{t}</a> : <Link key={h} to={h}>{t}</Link>))}</nav>
           <div className="ld-acoes">
-            <div className="ld-entrar" ref={entrarRef}>
-              <button className="ld-btn ld-fantasma" aria-haspopup="menu" aria-expanded={entrarAberto} onClick={() => setEntrarAberto((a) => !a)}>Entrar <ChevronDown size={16} /></button>
-              {entrarAberto && (
-                <div className="ld-entrar-menu" role="menu">
-                  <a role="menuitem" href={entrar}><MarcaIcon width={22} height={19} id="ld-en-pro" /><span><b>MIMO Pro</b><small>Salão e profissional · pro.mimo.com.vc</small></span></a>
-                  <Link role="menuitem" to="/entrar"><MarcaIcon width={22} height={19} id="ld-en-cli" /><span><b>MIMO</b><small>Cliente: entrar com o código · mimo.com.vc</small></span></Link>
+            {logada ? (
+              <div className="ld-entrar ld-conta" ref={entrarRef}>
+                <button className="ld-conta-chip" aria-haspopup="menu" aria-expanded={entrarAberto} onClick={() => setEntrarAberto((a) => !a)}>
+                  <Avatar nome={logada.nome} foto={logada.foto} />
+                  <span className="ld-conta-texto"><b>{logada.nome}</b><small>{logada.sub}</small></span>
+                  <ChevronDown size={16} />
+                </button>
+                {entrarAberto && (
+                  <div className="ld-entrar-menu ld-conta-menu" role="menu">
+                    {logada.externo ? <a role="menuitem" href={logada.destino}><ArrowRight size={18} /><span><b>{logada.acao}</b><small>{logada.sub}</small></span></a> : <Link role="menuitem" to={logada.destino}><ArrowRight size={18} /><span><b>{logada.acao}</b><small>{logada.sub}</small></span></Link>}
+                    <button role="menuitem" type="button" onClick={() => { setEntrarAberto(false); logada.signOut() }}><LogOut size={18} /><span><b>Sair</b><small>desta conta, nos dois endereços</small></span></button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
+                <div className="ld-entrar" ref={entrarRef}>
+                  <button className="ld-btn ld-fantasma" aria-haspopup="menu" aria-expanded={entrarAberto} onClick={() => setEntrarAberto((a) => !a)}>Entrar <ChevronDown size={16} /></button>
+                  {entrarAberto && (
+                    <div className="ld-entrar-menu" role="menu">
+                      <a role="menuitem" href={entrar}><MarcaIcon width={22} height={19} id="ld-en-pro" /><span><b>MIMO Pro</b><small>Salão e profissional · pro.mimo.com.vc</small></span></a>
+                      <Link role="menuitem" to="/entrar"><MarcaIcon width={22} height={19} id="ld-en-cli" /><span><b>MIMO</b><small>Cliente: entrar com o código · mimo.com.vc</small></span></Link>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-            <a className="ld-btn ld-primario" href={comecar()}>Começar agora</a>
+                <a className="ld-btn ld-primario" href={comecar()}>Começar agora</a>
+              </>
+            )}
             <button className="ld-menu-btn" aria-label={menu ? 'Fechar menu' : 'Abrir menu'} aria-expanded={menu} onClick={() => setMenu((m) => !m)}>{menu ? <X size={22} /> : <Menu size={22} />}</button>
           </div>
         </div>
         {menu && (
           <div className="ld-menu" onClick={() => setMenu(false)}>
             {links.map(([h, t]) => (h.startsWith('/#') ? <a key={h} href={h}>{t}</a> : <Link key={h} to={h}>{t}</Link>))}
-            <a className="ld-btn ld-primario" href={comecar()}>Começar agora</a>
-            <div className="ld-menu-entrar">
-              <span>Entrar</span>
-              <a href={entrar}><b>MIMO Pro</b><small>salão e profissional</small></a>
-              <Link to="/entrar"><b>MIMO</b><small>cliente, com o código</small></Link>
-            </div>
+            {logada ? (
+              <div className="ld-menu-entrar ld-menu-conta">
+                <span className="ld-menu-conta-quem"><Avatar nome={logada.nome} foto={logada.foto} /><span><b>{logada.nome}</b><small>{logada.sub}</small></span></span>
+                {logada.externo ? <a className="ld-btn ld-primario" href={logada.destino}>{logada.acao}</a> : <Link className="ld-btn ld-primario" to={logada.destino}>{logada.acao}</Link>}
+                <button type="button" className="ld-btn ld-fantasma" onClick={() => logada.signOut()}><LogOut size={16} /> Sair</button>
+              </div>
+            ) : (
+              <>
+                <a className="ld-btn ld-primario" href={comecar()}>Começar agora</a>
+                <div className="ld-menu-entrar">
+                  <span>Entrar</span>
+                  <a href={entrar}><b>MIMO Pro</b><small>salão e profissional</small></a>
+                  <Link to="/entrar"><b>MIMO</b><small>cliente, com o código</small></Link>
+                </div>
+              </>
+            )}
           </div>
         )}
       </header>

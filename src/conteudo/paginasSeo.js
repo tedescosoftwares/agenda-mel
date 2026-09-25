@@ -221,7 +221,10 @@ export const PAGINAS_INSTITUCIONAIS = [
   { rota: '/sobre', tipo: 'institucional', titulo: 'Sobre a MIMO', seo_title: 'Sobre a MIMO | Beleza, organização e relacionamento', meta_description: 'A MIMO é um sistema de agenda e relacionamento para salões e profissionais de beleza, construído junto à rotina real de quem vive da beleza.' },
   { rota: '/contato', tipo: 'institucional', titulo: 'Contato', seo_title: 'Contato | MIMO', meta_description: 'Fale com a equipe da MIMO: dúvidas sobre o sistema para salão, a conta de autônoma ou parcerias.' },
   { rota: '/blog', tipo: 'blog', titulo: 'Blog', seo_title: 'Blog da MIMO | Agenda, clientes e gestão de salão', meta_description: 'Guias curtos e práticos para quem vive da beleza: agenda, clientes, equipe, WhatsApp e financeiro do salão.' },
-  { rota: '/termos', tipo: 'institucional', titulo: 'Termos de uso', seo_title: 'Termos de uso | MIMO', meta_description: 'Termos de uso da MIMO.' },
+  { rota: '/termos', tipo: 'institucional', titulo: 'Termos e privacidade', seo_title: 'Termos de uso e privacidade | MIMO', meta_description: 'Os termos de uso da MIMO para clientes, profissionais e salões, e a Política de privacidade, com versão e data.' },
+  { rota: '/termos/cliente', tipo: 'institucional', titulo: 'Termos de uso para clientes', seo_title: 'Termos de uso para clientes | MIMO', meta_description: 'Termos de uso da MIMO para quem marca horário pela plataforma.' },
+  { rota: '/termos/profissional', tipo: 'institucional', titulo: 'Termos de uso para profissionais', seo_title: 'Termos de uso para profissionais | MIMO', meta_description: 'Termos de uso da MIMO para autônomas e profissionais de salão.' },
+  { rota: '/termos/salao', tipo: 'institucional', titulo: 'Termos de uso para salões', seo_title: 'Termos de uso para salões e estabelecimentos | MIMO', meta_description: 'Termos de uso da MIMO para salões, estúdios e estabelecimentos.' },
   { rota: '/privacidade', tipo: 'institucional', titulo: 'Privacidade', seo_title: 'Política de privacidade | MIMO', meta_description: 'Política de privacidade da MIMO, pensada para a LGPD.' },
 ]
 

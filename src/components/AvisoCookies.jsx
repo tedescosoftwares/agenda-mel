@@ -15,7 +15,7 @@ export default function AvisoCookies() {
     try { setVisivel(!localStorage.getItem(CHAVE)) } catch { setVisivel(false) }
   }, [])
 
-  if (!visivel || pathname === '/privacidade' || pathname === '/termos' || pathname.startsWith('/plataforma')) return null
+  if (!visivel || pathname === '/privacidade' || pathname.startsWith('/termos') || pathname.startsWith('/plataforma')) return null
 
   function ok() {
     try { localStorage.setItem(CHAVE, new Date().toISOString()) } catch { /* sem storage */ }

@@ -3,7 +3,8 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { homeDoPapel } from '../lib/roles'
-import { TERMOS_VERSAO } from '../lib/termos'
+import { FraseDeAceite } from '../components/LinkLegal'
+import { useDocumentosLegais, aceitesPara, precisaAceitar as precisaAceitarDocs } from '../lib/legal'
 import AvisosNoCelular from '../components/AvisosNoCelular'
 import { MarcaIcon, Wordmark, CameraIcon, PinoIcon, EscudoIcon } from '../components/icons'
 
@@ -15,7 +16,8 @@ import { MarcaIcon, Wordmark, CameraIcon, PinoIcon, EscudoIcon } from '../compon
 export default function BemVinda() {
   const { profile, role, recarregarPerfil } = useAuth()
   const navigate = useNavigate()
-  const precisaAceitar = !profile?.aceitou_termos_em || profile?.termos_versao !== TERMOS_VERSAO
+  const docs = useDocumentosLegais()
+  const precisaAceitar = !profile?.aceitou_termos_em || precisaAceitarDocs(profile, docs)
   const [aceito, setAceito] = useState(!precisaAceitar)
   const [indo, setIndo] = useState(false)
   const [erro, setErro] = useState('')
@@ -24,7 +26,7 @@ export default function BemVinda() {
   async function comecar() {
     setIndo(true); setErro('')
     if (precisaAceitar) {
-      const { error } = await supabase.rpc('aceitar_termos', { versao: TERMOS_VERSAO })
+      const { error } = await supabase.rpc('aceitar_documentos', { aceites: aceitesPara(role, docs), contexto: 'primeiro_acesso' })
       if (error) { setErro(error.message); setIndo(false); return }
     }
     const { error } = await supabase.rpc('concluir_primeiro_acesso')
@@ -69,7 +71,7 @@ export default function BemVinda() {
         {precisaAceitar && (
           <label className="aceite-termos">
             <input type="checkbox" checked={aceito} onChange={(e) => setAceito(e.target.checked)} />
-            <span>Li e aceito os <Link to="/termos" target="_blank">Termos de uso</Link> e a <Link to="/privacidade" target="_blank">Política de privacidade</Link>.</span>
+            <span><FraseDeAceite papel={role} /></span>
           </label>
         )}
         {erro && <div className="alert alert-error">{erro}</div>}

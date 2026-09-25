@@ -5,7 +5,8 @@ import { homeDoPapel } from '../../lib/roles'
 import { supabase } from '../../lib/supabase'
 import { extrairCodigo, guardarConvite } from '../../lib/convite'
 import { formatarFone, foneValido } from '../../lib/fone'
-import { TERMOS_VERSAO } from '../../lib/termos'
+import { FraseDeAceite } from '../../components/LinkLegal'
+import { useDocumentosLegais, aceitesPara, versaoMaior } from '../../lib/legal'
 import { iniciais } from '../../lib/booking'
 import CampoSenha from '../../components/CampoSenha'
 import RodapeSocial from '../../components/RodapeSocial'
@@ -29,6 +30,7 @@ export default function CadastroCliente() {
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
   const [termos, setTermos] = useState(false)
+  const docs = useDocumentosLegais()
   const [erro, setErro] = useState('')
   const [enviando, setEnviando] = useState(false)
   const [pronto, setPronto] = useState(false)
@@ -68,7 +70,8 @@ export default function CadastroCliente() {
     e.preventDefault(); setErro('')
     if (!termos) { setErro('Para criar a conta, é preciso aceitar os Termos e a Política de privacidade.'); return }
     setEnviando(true)
-    const extra = { codigo_convite: convite, termos: TERMOS_VERSAO }
+    const aceites = aceitesPara('cliente', docs)
+    const extra = { codigo_convite: convite, termos: versaoMaior(aceites), aceites }
     if (nasc) extra.nascimento = nasc
     const { error } = await signUp(email.trim(), senha, nome.trim(), formatarFone(fone), extra)
     setEnviando(false)
@@ -147,7 +150,7 @@ export default function CadastroCliente() {
                 <CampoSenha valor={senha} onChange={(e) => setSenha(e.target.value)} placeholder="Pelo menos 6 caracteres" />
                 <label className="aceite-termos">
                   <input type="checkbox" checked={termos} onChange={(e) => setTermos(e.target.checked)} />
-                  <span>Li e aceito os <Link to="/termos" target="_blank">Termos de uso</Link> e a <Link to="/privacidade" target="_blank">Política de privacidade</Link>.</span>
+                  <span><FraseDeAceite papel="cliente" /></span>
                 </label>
                 {erro && <div className="alert alert-error">{erro}</div>}
                 <button type="submit" className="btn btn-primary btn-block" disabled={enviando || !termos || senha.length < 6}>{enviando ? 'Criando…' : 'Criar minha conta'}</button>

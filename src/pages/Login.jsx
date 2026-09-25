@@ -4,7 +4,8 @@ import { useAuth } from '../context/AuthContext'
 import { homeDoPapel } from '../lib/roles'
 import { isSupabaseConfigured, supabase } from '../lib/supabase'
 import RodapeSocial from '../components/RodapeSocial'
-import { TERMOS_VERSAO } from '../lib/termos'
+import { FraseDeAceite } from '../components/LinkLegal'
+import { useDocumentosLegais, aceitesPara, versaoMaior } from '../lib/legal'
 import { VERSAO } from '../lib/versao'
 import { MarcaIcon, Wordmark } from '../components/icons'
 import { extrairCodigo, guardarConvite } from '../lib/convite'
@@ -47,6 +48,8 @@ export default function Login({ ambiente = AMBIENTE }) {
   const [enviando, setEnviando] = useState(false)
   const [quemConvidou, setQuemConvidou] = useState(null)
   const [conferindoConta, setConferindoConta] = useState(false)
+  const docs = useDocumentosLegais()
+  const papelDoAceite = papel || 'cliente'
   const [contaErrada, setContaErrada] = useState(null) // 'pro' | 'cliente'
 
   useEffect(() => {
@@ -97,7 +100,8 @@ export default function Login({ ambiente = AMBIENTE }) {
         // um WhatsApp, uma conta (067)
         const { data: livre } = await supabase.rpc('telefone_disponivel', { fone: fone.trim() })
         if (livre && livre.disponivel === false) { setErro(livre.email ? `Esse WhatsApp já tem conta, no e-mail ${livre.email}. Entre com ela ou use "Esqueci a senha".` : (livre.motivo || 'Confere o WhatsApp.')); return }
-        const extra = { termos: TERMOS_VERSAO }
+        const aceites = aceitesPara(papelDoAceite, docs)
+        const extra = { termos: versaoMaior(aceites), aceites }
         if (convite) extra.codigo_convite = convite
         if (papel === 'ativar' && ativar) extra.ativar_token = ativar
         else if (papel === 'equipe' && equipe) extra.equipe_codigo = equipe
@@ -186,7 +190,7 @@ export default function Login({ ambiente = AMBIENTE }) {
           {modo === 'cadastro' && (
             <label className="aceite-termos">
               <input type="checkbox" checked={termos} onChange={(e) => setTermos(e.target.checked)} />
-              <span>Li e aceito os <Link to="/termos" target="_blank">Termos de uso</Link> e a <Link to="/privacidade" target="_blank">Política de privacidade</Link>.</span>
+              <span><FraseDeAceite papel={papelDoAceite} /></span>
             </label>
           )}
 

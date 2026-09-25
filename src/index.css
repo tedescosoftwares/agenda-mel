@@ -7199,3 +7199,24 @@ button.quadro-col-cabeca:hover strong { color: var(--rosa); }
 .prof-selos { display: flex; gap: 0.35rem; flex-wrap: wrap; margin-top: 0.2rem; }
 .prof-acoes { display: flex; gap: 0.35rem; flex-wrap: wrap; margin-top: 0.35rem; } .prof-acoes .btn-mini { text-decoration: none; }
 .prof-acao { align-self: flex-start; margin-top: 0.35rem; }
+
+/* ---- termos e privacidade na plataforma (120) ---- */
+.lg-tipos { display: grid; gap: 0.9rem; }
+.lg-tipo { display: grid; gap: 0.7rem; }
+.lg-tipo-topo { display: flex; align-items: center; gap: 0.7rem; }
+.lg-tipo-topo .btn { white-space: nowrap; }
+.lg-vigente { margin: 0; font-size: 0.88rem; color: var(--texto-2); display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+.lg-historico td { font-size: 0.86rem; }
+.lg-historico-acoes { display: flex; gap: 0.35rem; justify-content: flex-end; flex-wrap: wrap; }
+.lg-editor { display: grid; gap: 0.8rem; }
+.lg-editor-topo { display: flex; justify-content: space-between; gap: 0.8rem; align-items: flex-start; flex-wrap: wrap; }
+.lg-editor-topo h3 { margin: 0.1rem 0 0; }
+.lg-editor-acoes { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+.lg-editor-campos { display: grid; grid-template-columns: 1fr 180px; gap: 0.6rem; }
+.lg-editor-campos label { display: grid; gap: 0.25rem; font-size: 0.78rem; font-weight: 600; color: var(--texto-2); }
+.lg-editor-campos input { font: inherit; padding: 0.55rem 0.7rem; border: 1px solid var(--fio); border-radius: 10px; }
+.lg-campo-largo { grid-column: 1 / -1; }
+.lg-textarea { width: 100%; min-height: 60vh; font: 0.88rem/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; padding: 0.9rem; border: 1px solid var(--fio); border-radius: 12px; resize: vertical; }
+.lg-previa { border: 1px solid var(--fio); border-radius: 12px; padding: 1.2rem 1.4rem; max-height: 70vh; overflow: auto; background: #fff; }
+.lg-dica { margin: 0; font-size: 0.78rem; } .lg-dica code { background: var(--cinza-1); padding: 0 0.3rem; border-radius: 4px; }
+@media (max-width: 700px) { .lg-editor-campos { grid-template-columns: 1fr; } .lg-tipo-topo { flex-wrap: wrap; } }

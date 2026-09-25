@@ -58,7 +58,8 @@ import Metricas from "./pages/plataforma/Metricas";
 import Configuracoes from "./pages/plataforma/Configuracoes";
 import PlataformaRecados from "./pages/plataforma/Recados";
 import PlataformaMensagens from "./pages/plataforma/Mensagens";
-import { Termos, Privacidade } from "./pages/publico/Legal";
+import { Termos, Privacidade, PaginaLegal } from "./pages/publico/Legal";
+import PlataformaTermos from "./pages/plataforma/Termos";
 import BemVinda from "./pages/BemVinda";
 import CadastroCliente from "./pages/cliente/CadastroCliente";
 import AvisoCookies from "./components/AvisoCookies";
@@ -122,6 +123,9 @@ export default function App() {
             <Route path="/entrar" element={<ComCodigo />} />
             <Route path="/cadastro" element={<CadastroCliente />} />
             <Route path="/termos" element={<Termos />} />
+            <Route path="/termos/cliente" element={<PaginaLegal tipo="cliente" />} />
+            <Route path="/termos/profissional" element={<PaginaLegal tipo="profissional" />} />
+            <Route path="/termos/salao" element={<PaginaLegal tipo="salao" />} />
             <Route path="/privacidade" element={<Privacidade />} />
             <Route path="/bem-vinda" element={<ProtectedRoute permitirSemVinculo permitirPrimeiroAcesso><BemVinda /></ProtectedRoute>} />
             <Route
@@ -384,6 +388,7 @@ export default function App() {
             <Route path="/plataforma/metricas" element={<ProtectedRoute requireRole="plataforma"><Metricas /></ProtectedRoute>} />
             <Route path="/plataforma/configuracoes" element={<ProtectedRoute requireRole="plataforma"><Configuracoes /></ProtectedRoute>} />
             <Route path="/plataforma/seo" element={<ProtectedRoute requireRole="plataforma"><PlataformaSeo /></ProtectedRoute>} />
+            <Route path="/plataforma/termos" element={<ProtectedRoute requireRole="plataforma"><PlataformaTermos /></ProtectedRoute>} />
 
             {/* área do salão */}
             <Route

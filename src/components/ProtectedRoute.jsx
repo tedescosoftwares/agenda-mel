@@ -4,6 +4,7 @@ import { homeDoPapel } from '../lib/roles'
 import { AMBIENTE, ambienteDoPapel } from '../lib/ambiente'
 import AmbienteErrado from './AmbienteErrado'
 import Aguardando from '../pages/pro/Aguardando'
+import AceiteGate from './AceiteGate'
 
 // permitirSemVinculo: a tela "Entrar numa agenda" é a única que uma
 // cliente sem vínculo pode ver. Todas as outras mandam para lá.
@@ -63,5 +64,6 @@ export default function ProtectedRoute({ children, requireRole, permitirSemVincu
     return <Navigate to="/cliente/entrar" replace />
   }
 
-  return children
+  // termos novos publicados pela plataforma (120): aceita antes de seguir
+  return <AceiteGate>{children}</AceiteGate>
 }

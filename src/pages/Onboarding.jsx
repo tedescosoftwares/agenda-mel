@@ -14,7 +14,8 @@ import { urlDoAmbiente } from '../lib/ambiente'
 import { formatPreco } from '../lib/format'
 import { sugestoesPara, primeiroNome } from '../lib/equipe'
 import ProfissionalDrawer, { CartaoProfissional } from '../components/ProfissionalDrawer'
-import { TERMOS_VERSAO } from '../lib/termos'
+import { FraseDeAceite } from '../components/LinkLegal'
+import { useDocumentosLegais, aceitesPara, versaoMaior } from '../lib/legal'
 import RodapeSocial from '../components/RodapeSocial'
 
 // O onboarding do salão (114, 119): do cadastro à agenda em seis passos, o
@@ -91,6 +92,7 @@ export default function Onboarding({ publico = false }) {
   const [pronto, setPronto] = useState(false)
   const [retomado, setRetomado] = useState(false)
   const [estadoAuto, setEstadoAuto] = useState('')
+  const docsLegais = useDocumentosLegais()
 
   useEffect(() => {
     if (!salao || publico) return
@@ -155,7 +157,7 @@ export default function Onboarding({ publico = false }) {
     if (error) { setErro(error.message); return }
     setPronto(true)
     // o onboarding já apresentou o app: conta como primeiro acesso feito (e os termos aceitos no cadastro)
-    try { await supabase.rpc('aceitar_termos', { versao: TERMOS_VERSAO }) } catch { /* já aceitos */ }
+    try { await supabase.rpc('aceitar_documentos', { aceites: aceitesPara(autonoma ? 'profissional' : 'salao', docsLegais), contexto: 'onboarding' }) } catch { /* já aceitos */ }
     try { await supabase.rpc('concluir_primeiro_acesso') } catch { /* segue */ }
     await recarregarPerfil?.()
     navigate(autonoma ? '/pro/agenda' : '/admin', { replace: true })
@@ -170,7 +172,7 @@ export default function Onboarding({ publico = false }) {
   if (publico && !loading && user && salao) return <Navigate to="/onboarding" replace />
   if (!s) return <div className="page-center"><p className="muted">Carregando…</p></div>
 
-  const props = { s, setS, salvando, erro, setErro, seguir, voltar, gravar, gravarQuieto, setEstadoAuto, user, role, autonoma, concluir, pronto, publico, recarregarPerfil, navigate, irPara: (n) => { setPasso(n); window.scrollTo({ top: 0 }) } }
+  const props = { s, setS, salvando, erro, setErro, seguir, voltar, gravar, gravarQuieto, setEstadoAuto, user, role, autonoma, docsLegais, concluir, pronto, publico, recarregarPerfil, navigate, irPara: (n) => { setPasso(n); window.scrollTo({ top: 0 }) } }
   const atual = passos[idx] ?? passos[0]
   const plano = planoDoNegocio(s.tipo, s.equipe_prevista)
   const sairLink = publico ? <Link className="ob-sair" to="/pro/entrar"><LogOut size={14} /> Já tenho conta</Link> : <button type="button" className="ob-sair" onClick={sair}><LogOut size={14} /> Sair do cadastro</button>
@@ -271,7 +273,7 @@ function PassoTipo({ s, setS, seguir, salvando, erro, setErro }) {
 }
 
 // ---------- 2 · Dados do salão -----------------------------------------------------
-function PassoDados({ s, seguir, voltar, salvando, erro, setErro, user, autonoma, publico, recarregarPerfil, navigate, gravarQuieto, setEstadoAuto }) {
+function PassoDados({ s, seguir, voltar, salvando, erro, setErro, user, autonoma, publico, recarregarPerfil, navigate, gravarQuieto, setEstadoAuto, docsLegais }) {
   const { signUp } = useAuth()
   const [conta, setConta] = useState({ senha: '', termos: false })
   const [criada, setCriada] = useState(false)
@@ -327,8 +329,9 @@ function PassoDados({ s, seguir, voltar, salvando, erro, setErro, user, autonoma
         navigate('/onboarding', { replace: true })
         return
       }
+      const aceites = aceitesPara(s.tipo, docsLegais)
       const { error } = await signUp(f.email.trim(), conta.senha, f.responsavel_nome.trim(), f.whatsapp.trim(),
-        { termos: TERMOS_VERSAO, papel_desejado: s.tipo, nome_negocio: f.name.trim() || null, cidade: f.city.trim() || null, salao: dadosSalao })
+        { termos: versaoMaior(aceites), aceites, papel_desejado: s.tipo, nome_negocio: f.name.trim() || null, cidade: f.city.trim() || null, salao: dadosSalao })
       if (error) { setErro(traduzErro(error.message)); return }
       const { data: sess } = await supabase.auth.getSession()
       if (sess?.session) { await recarregarPerfil?.(); navigate('/onboarding', { replace: true }); return }
@@ -384,7 +387,7 @@ function PassoDados({ s, seguir, voltar, salvando, erro, setErro, user, autonoma
           {publico && !user && (
             <>
               <label>Senha <b>*</b><input type="password" value={conta.senha} onChange={(e) => setConta((x) => ({ ...x, senha: e.target.value }))} placeholder="mínimo 6 caracteres" autoComplete="new-password" /></label>
-              <label className="ob-termos"><input type="checkbox" checked={conta.termos} onChange={(e) => setConta((x) => ({ ...x, termos: e.target.checked }))} /><span>Li e aceito os <Link to="/termos" target="_blank">Termos de uso</Link> e a <Link to="/privacidade" target="_blank">Política de privacidade</Link>.</span></label>
+              <label className="ob-termos"><input type="checkbox" checked={conta.termos} onChange={(e) => setConta((x) => ({ ...x, termos: e.target.checked }))} /><span><FraseDeAceite papel={s.tipo} /></span></label>
             </>
           )}
         </div>

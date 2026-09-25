@@ -289,7 +289,6 @@
   .ob-conteudo { padding: 26px 40px 32px; }
 }
 @media (max-height: 740px) and (min-width: 901px) {
-  .ob-painel-foto { display: none; }
   .ob-painel-texto p { display: none; }
   .ob-ajuda small { display: none; }
 }
@@ -411,9 +410,11 @@
 .ob-plano-painel b { color: var(--ob-ameixa); }
 .ob-plano-painel b small, .ob-plano-painel span { color: var(--ob-cinza); }
 .ob-ajuda { color: var(--ob-ameixa); } .ob-ajuda small { color: var(--ob-cinza); }
-@media (max-height: 740px) and (min-width: 901px) { .ob-painel-foto { display: none; } }
+@media (max-height: 880px) and (min-width: 901px) { .ob-painel-foto { padding: 8px; border-radius: 20px; } .ob-painel-foto img { aspect-ratio: 16 / 8; border-radius: 14px; } .ob-painel-bilhete { font-size: 1.15rem; left: 18px; bottom: 16px; } }
+@media (max-height: 740px) and (min-width: 901px) { .ob-painel { gap: 10px; padding: 14px 18px; } .ob-painel-foto img { aspect-ratio: 21 / 8; } .ob-painel-texto h2 { font-size: 1.15rem; } .ob-passos button { padding: 4px 8px; font-size: 0.8rem; } .ob-plano-painel { padding: 8px 12px; } .ob-plano-painel b { font-size: 1.3rem; } }
 
 .ob-aviso-sinal { display: block; padding: 8px 10px; border-radius: 10px; background: #fff7ed; border: 1px solid #fed7aa; color: #9a3412; font-size: 0.76rem; line-height: 1.4; }
 
-.ob-tipo-promais { margin: 0 20px; font-size: 0.74rem; line-height: 1.4; color: var(--ob-cinza); }
-@media (max-height: 740px) and (min-width: 901px) { .ob-tipo-promais { display: none; } }
+.ob-tipo-promais { margin: 0 20px; padding: 9px 12px; border-radius: 12px; background: #fff6fa; border: 1px solid #ffc2d8; font-size: 0.78rem; line-height: 1.45; color: var(--ob-ameixa); }
+.ob-tipo-promais b { color: var(--ob-rosa); font-weight: 700; } .ob-tipo-promais strong { font-weight: 700; }
+

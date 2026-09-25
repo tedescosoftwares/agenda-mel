@@ -418,3 +418,13 @@
 .ob-tipo-promais { margin: 0 20px; padding: 9px 12px; border-radius: 12px; background: #fff6fa; border: 1px solid #ffc2d8; font-size: 0.78rem; line-height: 1.45; color: var(--ob-ameixa); }
 .ob-tipo-promais b { color: var(--ob-rosa); font-weight: 700; } .ob-tipo-promais strong { font-weight: 700; }
 
+
+/* ---- tela grande de notebook/monitor comum (até 1080 de altura): o passo 1 cabe sem rolar ---- */
+@media (max-height: 1080px) and (min-height: 881px) and (min-width: 901px) {
+  .ob-conteudo { padding-top: 26px; gap: 14px; }
+  .ob-tipo-foto { aspect-ratio: 2 / 1; }
+  .ob-tipo { gap: 8px; padding-bottom: 16px; }
+  .ob-tipo ul { gap: 4px; }
+  .ob-tipo-destaque { padding: 7px 10px; }
+  .ob-tipo-promais { padding: 8px 12px; }
+}

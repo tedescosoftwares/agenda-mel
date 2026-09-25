@@ -27391,6 +27391,7 @@ insert into public.migracoes_aplicadas (arquivo) values ('121_onboarding_razao_s
 -- contatos a mais (telefones e e-mails além do principal). O logo e as
 -- fotos do espaço passam a ser gravados pelo mesmo caminho (passo 3).
 alter table public.salons add column if not exists documento_tipo text not null default 'cnpj';
+alter table public.salons add column if not exists nome_fantasia text;
 alter table public.salons add column if not exists endereco_fiscal jsonb;
 alter table public.salons add column if not exists endereco_igual boolean not null default true;
 alter table public.salons add column if not exists contatos jsonb not null default '[]'::jsonb;
@@ -27402,8 +27403,8 @@ update public.salons set cnpj = nullif(regexp_replace(cnpj, '\D', '', 'g'), '') 
 -- quem já tinha CNPJ e endereço: o endereço cadastrado passa a ser também o fiscal
 update public.salons set endereco_fiscal = jsonb_build_object('address', coalesce(address, ''), 'bairro', coalesce(bairro, ''), 'city', coalesce(city, ''), 'uf', coalesce(uf, ''), 'cep', coalesce(cep, ''))
  where cnpj is not null and endereco_fiscal is null and (address is not null or city is not null);
-grant select (documento_tipo, endereco_fiscal, endereco_igual, contatos) on public.salons to authenticated;
-grant update (documento_tipo, endereco_fiscal, endereco_igual, contatos) on public.salons to authenticated;
+grant select (documento_tipo, nome_fantasia, endereco_fiscal, endereco_igual, contatos) on public.salons to authenticated;
+grant update (documento_tipo, nome_fantasia, endereco_fiscal, endereco_igual, contatos) on public.salons to authenticated;
 
 create or replace function public.onboarding_salvar_interno(salao uuid, dados jsonb, passo integer default null)
 returns jsonb
@@ -27418,6 +27419,7 @@ begin
     cnpj = case when dados ? 'cnpj' then nullif(regexp_replace(coalesce(dados ->> 'cnpj', ''), '\D', '', 'g'), '') else cnpj end,
     responsavel_cpf = case when dados ? 'responsavel_cpf' then nullif(regexp_replace(coalesce(dados ->> 'responsavel_cpf', ''), '\D', '', 'g'), '') else responsavel_cpf end,
     razao_social = case when dados ? 'razao_social' then nullif(btrim(dados ->> 'razao_social'), '') else razao_social end,
+    nome_fantasia = case when dados ? 'nome_fantasia' then nullif(btrim(dados ->> 'nome_fantasia'), '') else nome_fantasia end,
     endereco_fiscal = case when jsonb_typeof(dados -> 'endereco_fiscal') = 'object' then dados -> 'endereco_fiscal' when dados ? 'endereco_fiscal' then null else endereco_fiscal end,
     endereco_igual = coalesce((dados ->> 'endereco_igual')::boolean, endereco_igual),
     contatos = case when jsonb_typeof(dados -> 'contatos') = 'array' then dados -> 'contatos' else contatos end,

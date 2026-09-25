@@ -7220,3 +7220,18 @@ button.quadro-col-cabeca:hover strong { color: var(--rosa); }
 .lg-previa { border: 1px solid var(--fio); border-radius: 12px; padding: 1.2rem 1.4rem; max-height: 70vh; overflow: auto; background: #fff; }
 .lg-dica { margin: 0; font-size: 0.78rem; } .lg-dica code { background: var(--cinza-1); padding: 0 0.3rem; border-radius: 4px; }
 @media (max-width: 700px) { .lg-editor-campos { grid-template-columns: 1fr; } .lg-tipo-topo { flex-wrap: wrap; } }
+
+/* ---- senha nova (cadastro do salão): olho, barrinha de força e confirmação ---- */
+.sn-caixa { position: relative; display: flex; width: 100%; }
+.sn-caixa input { width: 100%; padding-right: 2.6rem !important; }
+.sn-olho, .sn-ok { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 30px; height: 30px; border: 0; border-radius: 8px; background: none; color: var(--cinza-3, #6b7280); display: grid; place-items: center; cursor: pointer; padding: 0; }
+.sn-olho:hover { color: var(--rosa); background: #fff0f5; } .sn-ok { color: #067647; cursor: default; }
+.sn-forca { display: grid; gap: 4px; width: 100%; margin-top: 2px; }
+.sn-barra { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+.sn-barra i { display: block; height: 5px; border-radius: 999px; background: var(--fio, #ece7ee); transition: background .2s ease; }
+.sn-forca small { font-size: 0.72rem; font-weight: 500; color: var(--cinza-3, #6b7280); display: inline-flex; align-items: center; gap: 3px; }
+.sn-forca.nivel-1 i:nth-child(-n+1) { background: #d92d20; } .sn-forca.nivel-1 small { color: #b42318; }
+.sn-forca.nivel-2 i:nth-child(-n+2) { background: #f79009; } .sn-forca.nivel-2 small { color: #b54708; }
+.sn-forca.nivel-3 i:nth-child(-n+3) { background: #eab308; } .sn-forca.nivel-3 small { color: #854d0e; }
+.sn-forca.nivel-4 i { background: #12b76a; } .sn-forca.nivel-4 small { color: #067647; }
+.sn-erro { font-size: 0.72rem; font-weight: 500; color: #b42318; }

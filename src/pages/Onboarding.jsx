@@ -11,6 +11,8 @@ import { buscarCep, formatarCep, limparCep, minhaPosicao, geocodificar, temPino,
 import { formatarFone } from '../lib/fone'
 import { formatarCnpj, cnpjValido, buscarCnpj, formatarCpf, cpfValido, soDigitos } from '../lib/cnpj'
 import Mapa from '../components/Mapa'
+import SenhaNova from '../components/SenhaNova'
+import { forcaDaSenha } from '../lib/senha'
 import { linkDoCodigo } from '../lib/convite'
 import { urlDoAmbiente } from '../lib/ambiente'
 import { formatPreco } from '../lib/format'
@@ -297,11 +299,11 @@ function BlocoEndereco({ valor, onChange, obrigatorio, aoAchar, autoCompleteRua 
 
 function PassoDados({ s, seguir, voltar, salvando, erro, setErro, user, autonoma, publico, recarregarPerfil, navigate, gravarQuieto, setEstadoAuto, docsLegais }) {
   const { signUp } = useAuth()
-  const [conta, setConta] = useState({ senha: '', termos: false })
+  const [conta, setConta] = useState({ senha: '', confirma: '', termos: false })
   const [criada, setCriada] = useState(false)
   const [criando, setCriando] = useState(false)
   const [f, setF] = useState({
-    name: s.name ?? '', documento_tipo: s.documento_tipo === 'cpf' ? 'cpf' : 'cnpj', cnpj: soDigitos(s.cnpj), cpf: soDigitos(s.responsavel_cpf), razao_social: s.razao_social ?? '',
+    documento_tipo: s.documento_tipo === 'cpf' ? 'cpf' : 'cnpj', cnpj: soDigitos(s.cnpj), cpf: soDigitos(s.responsavel_cpf), razao_social: s.razao_social ?? '', nome_fantasia: s.nome_fantasia ?? '',
     fiscal: enderecoDe(s.endereco_fiscal ?? (s.endereco_igual !== false ? s : null)), endereco_igual: s.endereco_igual !== false,
     whatsapp: s.whatsapp ?? s.phone ?? '', email: s.email ?? '', responsavel_nome: s.responsavel_nome ?? '',
     ...enderecoDe(s), lat: s.lat ?? null, lng: s.lng ?? null,
@@ -324,7 +326,7 @@ function PassoDados({ s, seguir, voltar, salvando, erro, setErro, user, autonoma
   function dadosDe(x) {
     const l = x.documento_tipo === 'cnpj' && x.endereco_igual ? x.fiscal : x
     const d = {
-      name: x.name, documento_tipo: x.documento_tipo,
+      documento_tipo: x.documento_tipo, nome_fantasia: x.nome_fantasia,
       cnpj: x.documento_tipo === 'cnpj' ? x.cnpj : '', responsavel_cpf: x.documento_tipo === 'cpf' ? x.cpf : '',
       razao_social: x.documento_tipo === 'cnpj' ? x.razao_social : '',
       endereco_fiscal: x.documento_tipo === 'cnpj' ? { ...x.fiscal, cep: limparCep(x.fiscal.cep) } : null,
@@ -346,7 +348,7 @@ function PassoDados({ s, seguir, voltar, salvando, erro, setErro, user, autonoma
     setCnpjInfo('buscando')
     try {
       const r = await buscarCnpj(d)
-      setF((x) => ({ ...x, razao_social: r.razao_social, name: x.name || r.nome_fantasia || r.razao_social, email: x.email || r.email, fiscal: { address: r.address, bairro: r.bairro, city: r.city, uf: r.uf, cep: r.cep } }))
+      setF((x) => ({ ...x, razao_social: r.razao_social, nome_fantasia: x.nome_fantasia || r.nome_fantasia, email: x.email || r.email, fiscal: { address: r.address, bairro: r.bairro, city: r.city, uf: r.uf, cep: r.cep } }))
       setCnpjInfo(`ok:${r.razao_social}${r.situacao && r.situacao.toUpperCase() !== 'ATIVA' ? ` · situação na Receita: ${r.situacao}` : ''}`)
       // sem pino ainda: tenta colocar pelo endereço da Receita
       if (!temPino(f.lat, f.lng) && r.address && r.city) {
@@ -363,7 +365,9 @@ function PassoDados({ s, seguir, voltar, salvando, erro, setErro, user, autonoma
       return y
     })
   }
-  // autosave dos campos de texto e do pino (a foto vai no Continuar)
+  // quem já tinha o CNPJ gravado sem razão social: consulta a Receita ao abrir
+  useEffect(() => { if (comCnpj && cnpjValido(f.cnpj) && !f.razao_social) porCnpj(f.cnpj) }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  // autosave dos campos de texto e do pino (o pino também)
   const estado = useAutosave(() => gravarQuieto(dadosDe(f)), f, { ativo: Boolean(s.id) && !publico })
   useEffect(() => { setEstadoAuto(estado); return () => setEstadoAuto('') }, [estado, setEstadoAuto])
 
@@ -397,9 +401,9 @@ function PassoDados({ s, seguir, voltar, salvando, erro, setErro, user, autonoma
 
   // o que precisa estar certo antes de seguir (ou de criar a conta)
   function conferir() {
-    if (!f.name.trim()) return autonoma ? 'Diga o nome da sua agenda.' : 'Diga o nome do salão.'
     if (comCnpj && !cnpjValido(f.cnpj)) return f.cnpj ? 'Confere o CNPJ: os dígitos não batem.' : 'Informe o CNPJ. Se ainda não tem, marque "Ainda não tenho CNPJ" e use o seu CPF.'
     if (!comCnpj && !cpfValido(f.cpf)) return f.cpf ? 'Confere o CPF: os dígitos não batem.' : 'Informe o seu CPF.'
+    if (comCnpj && !f.razao_social.trim()) return 'Diga a razão social (a consulta do CNPJ preenche sozinha).'
     for (const t of f.telefones) if (t.trim() && soDigitos(t).length < 10) return `Confere o telefone ${formatarFone(t)}: faltam dígitos.`
     for (const e of f.emails) if (e.trim() && !emailOk(e)) return `Confere o e-mail ${e.trim()}.`
     return ''
@@ -409,17 +413,19 @@ function PassoDados({ s, seguir, voltar, salvando, erro, setErro, user, autonoma
     if (!f.responsavel_nome.trim()) { setErro('Diga o seu nome.'); return }
     if (!f.whatsapp.trim()) { setErro('Precisamos do WhatsApp: é por ele que os avisos chegam.'); return }
     if (!f.email.trim()) { setErro('Diga o seu e-mail: é com ele que você entra.'); return }
-    if (conta.senha.length < 6) { setErro('A senha precisa ter pelo menos 6 caracteres.'); return }
+    if (!forcaDaSenha(conta.senha).ok) { setErro('A senha precisa ser forte: pelo menos 8 caracteres, com maiúscula, minúscula, número e símbolo.'); return }
+    if (conta.confirma !== conta.senha) { setErro('As senhas não são iguais. Confira a confirmação.'); return }
     if (!conta.termos) { setErro('Para criar a conta, é preciso aceitar os Termos e a Política de privacidade.'); return }
     setCriando(true); setErro('')
     try {
       const { data: livre } = await supabase.rpc('telefone_disponivel', { fone: f.whatsapp.trim() })
       if (livre && livre.disponivel === false) { setErro(livre.email ? `Esse WhatsApp já tem conta, no e-mail ${livre.email}. Entre com ela.` : (livre.motivo || 'Confere o WhatsApp.')); return }
-      const { name: _nome, ...dadosSalao } = dadosDe(f) // eslint-disable-line no-unused-vars
+      const dadosSalao = dadosDe(f)
+      const nomeInicial = f.nome_fantasia.trim() || f.razao_social.trim()   // o nome que a cliente vê se acerta no passo 3
       dadosSalao.email = f.email.trim(); dadosSalao.whatsapp = f.whatsapp.trim(); dadosSalao.responsavel_nome = f.responsavel_nome.trim()
       if (user) {
         // já logada como cliente, sem negócio: abre agora e segue
-        const { data, error } = await supabase.rpc('abrir_negocio', { tipo: s.tipo, nome_negocio: f.name.trim() || null, cidade: local.city.trim() || null })
+        const { data, error } = await supabase.rpc('abrir_negocio', { tipo: s.tipo, nome_negocio: nomeInicial || null, cidade: local.city.trim() || null })
         if (error) throw new Error(error.message)
         await supabase.rpc('onboarding_salvar', { salao: data.salao_id, dados: dadosSalao, passo: 3 })
         await recarregarPerfil?.()
@@ -428,7 +434,7 @@ function PassoDados({ s, seguir, voltar, salvando, erro, setErro, user, autonoma
       }
       const aceites = aceitesPara(s.tipo, docsLegais)
       const { error } = await signUp(f.email.trim(), conta.senha, f.responsavel_nome.trim(), f.whatsapp.trim(),
-        { termos: versaoMaior(aceites), aceites, papel_desejado: s.tipo, nome_negocio: f.name.trim() || null, cidade: local.city.trim() || null, salao: dadosSalao })
+        { termos: versaoMaior(aceites), aceites, papel_desejado: s.tipo, nome_negocio: nomeInicial || null, cidade: local.city.trim() || null, salao: dadosSalao })
       if (error) { setErro(traduzErro(error.message)); return }
       const { data: sess } = await supabase.auth.getSession()
       if (sess?.session) { await recarregarPerfil?.(); navigate('/onboarding', { replace: true }); return }
@@ -481,11 +487,16 @@ function PassoDados({ s, seguir, voltar, salvando, erro, setErro, user, autonoma
           <div className="ob-bloco">
             <span className="ob-bloco-titulo">Identificação fiscal <small>fica só com a MIMO</small></span>
             {comCnpj ? (
-              <label>CNPJ <b>*</b><span className="muted">(preenche o endereço fiscal sozinho)</span><input value={formatarCnpj(f.cnpj)} onChange={(e) => porCnpj(e.target.value)} placeholder="12.345.678/0001-90" inputMode="numeric" autoComplete="off" autoFocus={!f.cnpj} />{cnpjInfo === 'buscando' ? <small className="muted">consultando a Receita…</small> : cnpjInfo.startsWith('ok:') ? <small className="ob-cnpj-ok">✓ {cnpjInfo.slice(3)}</small> : cnpjInfo.startsWith('erro:') ? <small className="ob-cnpj-erro">{cnpjInfo.slice(5)}</small> : f.razao_social ? <small className="muted">{f.razao_social}</small> : null}</label>
+              <>
+              <label>CNPJ <b>*</b><span className="muted">(preenche o endereço fiscal sozinho)</span><input value={formatarCnpj(f.cnpj)} onChange={(e) => porCnpj(e.target.value)} placeholder="12.345.678/0001-90" inputMode="numeric" autoComplete="off" autoFocus={!f.cnpj} />{cnpjInfo === 'buscando' ? <small className="muted">consultando a Receita…</small> : cnpjInfo.startsWith('ok:') ? <small className="ob-cnpj-ok">✓ {cnpjInfo.slice(3)}</small> : cnpjInfo.startsWith('erro:') ? <small className="ob-cnpj-erro">{cnpjInfo.slice(5)}</small> : null}</label>
+                <label>Razão social <b>*</b><input value={f.razao_social} onChange={m('razao_social')} placeholder="Essenza Cabeleireiros Ltda" autoComplete="organization" /></label>
+                <label>Nome fantasia <span className="muted">(como está na Receita)</span><input value={f.nome_fantasia} onChange={m('nome_fantasia')} placeholder="Essenza Hair" /></label>
+              </>
             ) : (
               <>
                 <p className="ob-humor">Sem CNPJ por enquanto? Tranquilo, muita gente boa começou assim. 😉 Nos conta o seu CPF que a gente segue. Quando o CNPJ sair, é só voltar aqui e trocar.</p>
                 <label>CPF <b>*</b><input value={formatarCpf(f.cpf)} onChange={(e) => setF((x) => ({ ...x, cpf: soDigitos(e.target.value).slice(0, 11) }))} placeholder="123.456.789-09" inputMode="numeric" autoComplete="off" />{f.cpf.length === 11 && !cpfValido(f.cpf) && <small className="ob-cnpj-erro">Confere o CPF: os dígitos não batem.</small>}</label>
+                <label>Nome fantasia <span className="muted">(como chamam o seu negócio · opcional)</span><input value={f.nome_fantasia} onChange={m('nome_fantasia')} placeholder="Essenza Hair" /></label>
               </>
             )}
             <label className="ob-termos ob-informal"><input type="checkbox" checked={!comCnpj} onChange={(e) => trocarDocumento(e.target.checked)} /><span>Ainda não tenho CNPJ e trabalho informalmente</span></label>
@@ -522,7 +533,6 @@ function PassoDados({ s, seguir, voltar, salvando, erro, setErro, user, autonoma
         </div>
         <div className="ob-form">
           <span className="ob-grupo-selo"><Selo publico /></span>
-          <label>{autonoma ? 'Nome da agenda' : 'Nome do salão'} <b>*</b><input value={f.name} onChange={m('name')} placeholder="Studio Essenza Hair" /></label>
           <label>WhatsApp {autonoma ? 'de contato' : 'comercial'} <b>*</b><span className="ob-fone"><span className="ob-ddi">🇧🇷 +55</span><input type="tel" inputMode="numeric" value={f.whatsapp} onChange={(e) => setF((x) => ({ ...x, whatsapp: formatarFone(e.target.value) }))} placeholder="(11) 91234-5678" autoComplete="tel" /></span></label>
           <label>Telefone <span className="muted">(fixo ou celular · opcional)</span>{f.telefones.map((_, i) => campoTel('telefones', i, 'telefone'))}</label>
           <span className="ob-grupo-selo ob-grupo-selo-2"><Selo /></span>
@@ -530,7 +540,7 @@ function PassoDados({ s, seguir, voltar, salvando, erro, setErro, user, autonoma
           <label>{publico ? 'Seu nome completo' : 'Nome da responsável'} <b>*</b><input value={f.responsavel_nome} onChange={m('responsavel_nome')} placeholder="Juliana Lima" autoComplete="name" /></label>
           {publico && !user && (
             <>
-              <label>Senha <b>*</b><input type="password" value={conta.senha} onChange={(e) => setConta((x) => ({ ...x, senha: e.target.value }))} placeholder="mínimo 6 caracteres" autoComplete="new-password" /></label>
+              <SenhaNova valor={conta} onChange={(v) => setConta((x) => ({ ...x, ...v }))} />
               <label className="ob-termos"><input type="checkbox" checked={conta.termos} onChange={(e) => setConta((x) => ({ ...x, termos: e.target.checked }))} /><span><FraseDeAceite papel={s.tipo} /></span></label>
             </>
           )}
@@ -556,6 +566,7 @@ function traduzErro(msg) {
 function PassoEstrutura({ s, seguir, voltar, salvando, erro, setErro, autonoma, gravarQuieto, setEstadoAuto }) {
   const [horas, setHoras] = useState(null)
   // a cara do negócio: o logo e as fotos do espaço sobem na hora e ficam gravadas
+  const [nome, setNome] = useState(s.name || s.nome_fantasia || s.razao_social || '')   // o nome que a cliente vê
   const [logo, setLogo] = useState(s.logo_url ?? null)
   const [fotos, setFotos] = useState(Array.isArray(s.fotos) ? s.fotos : [])
   const [subindo, setSubindo] = useState('')   // '' | 'logo' | 'fotos'
@@ -596,7 +607,7 @@ function PassoEstrutura({ s, seguir, voltar, salvando, erro, setErro, autonoma, 
   const [pol, setPol] = useState({ antecedencia_min_minutos: s.antecedencia_min_minutos ?? 60, politica_cancelamento: s.politica_cancelamento ?? 'moderada', permite_remarcar: s.permite_remarcar ?? true, sinal_ligado: (s.pagamento_modo ?? 'nao') !== 'nao', sinal_modo: s.sinal_modo ?? 'fixo', sinal_fixo: emReais(s.sinal_fixo_cents ?? 5000), sinal_pct: s.sinal_pct ?? 50, equipe_prevista: s.equipe_prevista ?? 4, aceite_modo: s.aceite_modo ?? 'casa', minutos_para_aceitar: s.minutos_para_aceitar ?? 120 })
   const p = (k) => (v) => setPol((x) => ({ ...x, [k]: v }))
   // pagamento_modo é o mesmo de Ajustes › Receber pelo app: desligar aqui desliga lá. Só vai no pacote se ela tocou no botão.
-  const dadosDaPolitica = () => ({ antecedencia_min_minutos: Number(pol.antecedencia_min_minutos), politica_cancelamento: pol.politica_cancelamento, permite_remarcar: pol.permite_remarcar,
+  const dadosDaPolitica = () => ({ ...(nome.trim() ? { name: nome.trim() } : {}), antecedencia_min_minutos: Number(pol.antecedencia_min_minutos), politica_cancelamento: pol.politica_cancelamento, permite_remarcar: pol.permite_remarcar,
     ...(tocouSinal ? { pagamento_modo: pol.sinal_ligado ? (s.pagamento_modo && s.pagamento_modo !== 'nao' ? s.pagamento_modo : 'opcional') : 'nao' } : {}), sinal_modo: pol.sinal_modo, sinal_fixo_cents: reais(pol.sinal_fixo), sinal_pct: Number(pol.sinal_pct),
     equipe_prevista: Number(pol.equipe_prevista) || null, aceite_modo: pol.aceite_modo, minutos_para_aceitar: Number(pol.minutos_para_aceitar) })
   // autosave: as regras vão pelo onboarding_salvar; os horários, pelo onboarding_horarios
@@ -605,7 +616,7 @@ function PassoEstrutura({ s, seguir, voltar, salvando, erro, setErro, autonoma, 
     if (!horas || horas.some((h) => h.open && h.start_time >= h.end_time)) return ok
     const { error } = await supabase.rpc('onboarding_horarios', { salao: s.id, horarios: horas })
     return ok && !error
-  }, { pol, horas }, { ativo: Boolean(s.id) && horas != null })
+  }, { pol, horas, nome }, { ativo: Boolean(s.id) && horas != null })
   useEffect(() => { setEstadoAuto(estado); return () => setEstadoAuto('') }, [estado, setEstadoAuto])
 
   useEffect(() => {
@@ -638,6 +649,7 @@ function PassoEstrutura({ s, seguir, voltar, salvando, erro, setErro, autonoma, 
   const recomendadoAtivo = Number(pol.antecedencia_min_minutos) === RECOMENDADO.antecedencia_min_minutos && pol.politica_cancelamento === RECOMENDADO.politica_cancelamento && pol.permite_remarcar === RECOMENDADO.permite_remarcar && pol.sinal_ligado === RECOMENDADO.sinal_ligado
 
   async function avancar() {
+    if (!nome.trim()) { setErro(autonoma ? 'Diga o nome da sua agenda: é o que a cliente vê.' : 'Diga o nome do salão: é o que a cliente vê.'); return }
     for (const h of horas ?? []) if (h.open && h.start_time >= h.end_time) { setErro(`${DIAS[h.weekday]}: o fim precisa ser depois do início.`); return }
     const { error } = await supabase.rpc('onboarding_horarios', { salao: s.id, horarios: horas })
     if (error) { setErro(error.message); return }
@@ -653,11 +665,13 @@ function PassoEstrutura({ s, seguir, voltar, salvando, erro, setErro, autonoma, 
           <strong className="ob-card-titulo">{autonoma ? 'Sua foto e o seu espaço' : 'A cara do salão'}</strong>
           <span className="muted">{autonoma ? 'A foto aparece ao lado do seu nome. As fotos do espaço são a capa da sua página: a primeira é a que abre.' : 'O logo aparece pequeno, ao lado do nome. As fotos são do espaço: fachada, recepção, cadeiras. A primeira vira a capa; horizontais ficam melhores.'}</span>
           <div className="ob-cara">
+            <div className="ob-cara-esq">
+            <label className="ob-cara-nome">{autonoma ? 'Nome da agenda' : 'Nome do salão'} <b>*</b><span className="muted">(como aparece para a cliente)</span><input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Studio Essenza Hair" maxLength={60} /></label>
             <div className="ob-cara-imagens">
               <div className="ob-logo-campo">
                 <span className="ob-rotulo">{autonoma ? 'Sua foto ou logo' : 'Logo'}</span>
                 <button type="button" className={'ob-logo ob-logo-mini' + (logo ? ' com' : '')} onClick={() => arqLogo.current?.click()} disabled={subindo === 'logo'}>
-                  {logo ? <img src={logo} alt="" /> : <span className="ob-logo-vazio"><span className="ob-logo-iniciais">{iniciaisDe(s.name)}</span></span>}
+                  {logo ? <img src={logo} alt="" /> : <span className="ob-logo-vazio"><span className="ob-logo-iniciais">{iniciaisDe(nome)}</span></span>}
                   <span className="ob-logo-cam"><Camera size={13} /></span>
                 </button>
                 <input ref={arqLogo} type="file" accept="image/*" hidden onChange={trocarLogo} />
@@ -682,6 +696,7 @@ function PassoEstrutura({ s, seguir, voltar, salvando, erro, setErro, autonoma, 
                 </div>
               </div>
             </div>
+            </div>
             {/* como a cliente vai ver a página: capa, logo, nome e onde fica */}
             <div className="ob-previa">
               <small><Eye size={11} /> Como sua cliente verá</small>
@@ -689,10 +704,10 @@ function PassoEstrutura({ s, seguir, voltar, salvando, erro, setErro, autonoma, 
                 <div className="ob-previa-capa">
                   {fotos[0] ? <img src={fotos[0]} alt="" /> : <span className="ob-previa-capa-vazia"><ImagePlus size={20} /><span>{autonoma ? 'A foto do seu espaço vira a capa' : 'A primeira foto vira a capa'}</span></span>}
                   {fotos.length > 1 && <span className="ob-previa-contador">1/{fotos.length}</span>}
-                  <span className="ob-previa-logo">{logo ? <img src={logo} alt="" /> : iniciaisDe(s.name)}</span>
+                  <span className="ob-previa-logo">{logo ? <img src={logo} alt="" /> : iniciaisDe(nome)}</span>
                 </div>
                 <div className="ob-previa-corpo">
-                  <strong>{s.name || (autonoma ? 'Sua agenda' : 'Seu salão')}</strong>
+                  <strong>{nome || (autonoma ? 'Sua agenda' : 'Seu salão')}</strong>
                   <span>{[s.bairro, s.city].filter(Boolean).join(' • ') || 'Bairro • Cidade'}</span>
                   <div className="ob-previa-botoes"><span className="ob-preview-botao">Ver serviços</span><span className="ob-previa-botao-2"><MapPin size={11} /> Como chegar</span></div>
                 </div>

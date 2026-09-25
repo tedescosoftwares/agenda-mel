@@ -498,3 +498,9 @@
 .ob-previa-botao-2 { display: inline-flex; align-items: center; gap: 3px; font-size: 0.72rem; font-weight: 700; color: var(--ob-ameixa); background: var(--ob-lilas); padding: 6px 10px; border-radius: 999px; white-space: nowrap; }
 @media (max-width: 900px) { .ob-cara { grid-template-columns: 1fr; } }
 @media (max-width: 520px) { .ob-cara-imagens { grid-template-columns: 1fr; } }
+.ob-cara-esq { display: flex; flex-direction: column; gap: 0.8rem; min-width: 0; }
+.ob-cara-nome { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem; font-size: 0.76rem; font-weight: 700; color: var(--cinza-3, #6b7280); }
+.ob-cara-nome b { color: var(--rosa); } .ob-cara-nome .muted { font-weight: 500; }
+.ob-cara-nome input { flex: 0 0 100%; width: 100%; min-width: 0; box-sizing: border-box; font: inherit; font-size: 0.95rem; font-weight: 600; color: var(--grafite, #1f2026); padding: 0.55rem 0.7rem; border: 1px solid var(--fio); border-radius: 10px; background: #fff; }
+.ob-cara-nome input:focus { outline: 2px solid #ffc2d8; border-color: var(--rosa); }
+.ob-form .sn-caixa { flex: 0 0 100%; }

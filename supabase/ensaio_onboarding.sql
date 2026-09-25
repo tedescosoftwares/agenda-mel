@@ -32,10 +32,10 @@ begin
   -- 2b. identificação fiscal (122): CNPJ só dígitos, endereço fiscal, contatos a mais; depois vira CPF
   perform set_config('request.jwt.claim.sub', dona::text, false);
   set role authenticated;
-  r := public.onboarding_salvar(sal, jsonb_build_object('documento_tipo', 'cnpj', 'cnpj', '69.089.327/0001-88', 'razao_social', 'Mimo Ltda', 'endereco_fiscal', jsonb_build_object('address', 'Rua Pais Leme, 215', 'city', 'São Paulo', 'uf', 'SP', 'cep', '05424150'), 'endereco_igual', false, 'contatos', jsonb_build_array(jsonb_build_object('tipo', 'telefone', 'valor', '1134567890'), jsonb_build_object('tipo', 'email', 'valor', 'financeiro@ensaio.com')), 'fotos', jsonb_build_array('https://x/a.jpg', 'https://x/b.jpg'), 'logo_url', 'https://x/logo.jpg'));
+  r := public.onboarding_salvar(sal, jsonb_build_object('documento_tipo', 'cnpj', 'cnpj', '69.089.327/0001-88', 'razao_social', 'Mimo Ltda', 'nome_fantasia', 'MIMO', 'endereco_fiscal', jsonb_build_object('address', 'Rua Pais Leme, 215', 'city', 'São Paulo', 'uf', 'SP', 'cep', '05424150'), 'endereco_igual', false, 'contatos', jsonb_build_array(jsonb_build_object('tipo', 'telefone', 'valor', '1134567890'), jsonb_build_object('tipo', 'email', 'valor', 'financeiro@ensaio.com')), 'fotos', jsonb_build_array('https://x/a.jpg', 'https://x/b.jpg'), 'logo_url', 'https://x/logo.jpg'));
   reset role;
   select * into s from public.salons where id = sal;
-  if s.documento_tipo <> 'cnpj' or s.cnpj <> '69089327000188' or s.razao_social <> 'Mimo Ltda' or s.endereco_fiscal ->> 'city' <> 'São Paulo' or s.endereco_igual or jsonb_array_length(s.contatos) <> 2 or s.city <> 'Santos' or array_length(s.fotos, 1) <> 2 or s.fotos[1] <> 'https://x/a.jpg' or s.logo_url <> 'https://x/logo.jpg' then
+  if s.documento_tipo <> 'cnpj' or s.cnpj <> '69089327000188' or s.razao_social <> 'Mimo Ltda' or s.nome_fantasia <> 'MIMO' or s.endereco_fiscal ->> 'city' <> 'São Paulo' or s.endereco_igual or jsonb_array_length(s.contatos) <> 2 or s.city <> 'Santos' or array_length(s.fotos, 1) <> 2 or s.fotos[1] <> 'https://x/a.jpg' or s.logo_url <> 'https://x/logo.jpg' then
     raise exception '2b: fiscal errado: % % % % %', s.documento_tipo, s.cnpj, s.endereco_fiscal, s.endereco_igual, s.contatos; end if;
   perform set_config('request.jwt.claim.sub', dona::text, false);
   set role authenticated;

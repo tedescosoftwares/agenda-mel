@@ -414,3 +414,6 @@
 @media (max-height: 740px) and (min-width: 901px) { .ob-painel-foto { display: none; } }
 
 .ob-aviso-sinal { display: block; padding: 8px 10px; border-radius: 10px; background: #fff7ed; border: 1px solid #fed7aa; color: #9a3412; font-size: 0.76rem; line-height: 1.4; }
+
+.ob-tipo-promais { margin: 0 20px; font-size: 0.74rem; line-height: 1.4; color: var(--ob-cinza); }
+@media (max-height: 740px) and (min-width: 901px) { .ob-tipo-promais { display: none; } }

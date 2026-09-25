@@ -430,3 +430,31 @@
 }
 
 .ob-cnpj-ok { flex: 0 0 100%; font-weight: 500; color: #067647; } .ob-cnpj-erro { flex: 0 0 100%; font-weight: 500; color: #b42318; }
+
+/* ---- 2 · identificação fiscal, endereços, pino e contatos (122) ---- */
+.ob-bloco { display: flex; flex-direction: column; gap: 0.6rem; padding: 0.8rem 0.85rem; border: 1px solid var(--fio); border-radius: 14px; background: #fcfbfc; }
+.ob-bloco-titulo { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.35rem; font-size: 0.82rem; font-weight: 700; color: var(--grafite, #1f2026); }
+.ob-bloco-titulo small { font-weight: 500; color: var(--cinza-3, #6b7280); }
+.ob-humor { margin: 0; font-size: 0.8rem; font-weight: 500; line-height: 1.45; color: #6d28d9; background: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 12px; padding: 0.6rem 0.75rem; }
+.ob-informal { margin-top: 0.1rem; }
+.ob-mapa-campo { display: flex; flex-direction: column; gap: 0.4rem; }
+.ob-mapa-campo .ob-rotulo .muted { font-weight: 500; }
+.ob-mapa { border-radius: 16px; overflow: hidden; border: 1px solid var(--fio); }
+.ob-sem-pino { display: flex; flex-direction: column; align-items: center; gap: 0.25rem; text-align: center; padding: 1.1rem 1rem; border: 2px dashed #ffc2d8; border-radius: 16px; background: #fff8fb; color: var(--rosa); font-size: 0.82rem; }
+.ob-sem-pino .muted { font-weight: 500; font-size: 0.76rem; }
+.ob-mapa-acoes { display: flex; flex-wrap: wrap; gap: 0.35rem 1rem; }
+.ob-geo:disabled { opacity: 0.55; cursor: default; }
+.ob-geo-neutro { color: var(--cinza-3, #6b7280); }
+.ob-mapa-nota { font-size: 0.74rem; font-weight: 500; color: var(--cinza-3, #6b7280); }
+.ob-contatos { display: flex; flex-direction: column; gap: 0.45rem; }
+.ob-contatos .ob-rotulo .muted { font-weight: 500; }
+.ob-contato { display: grid; grid-template-columns: 96px minmax(0, 1.4fr) minmax(0, 1fr) 28px; gap: 0.4rem; align-items: center; }
+.ob-contato select, .ob-contato input { width: 100%; min-width: 0; box-sizing: border-box; font: inherit; font-size: 0.85rem; font-weight: 500; color: var(--grafite, #1f2026); padding: 0.45rem 0.6rem; border: 1px solid var(--fio); border-radius: 10px; background: #fff; }
+.ob-contato input:focus, .ob-contato select:focus { outline: 2px solid #ffc2d8; border-color: var(--rosa); }
+.ob-contato-x { border: 0; background: none; color: var(--cinza-3, #6b7280); cursor: pointer; display: grid; place-items: center; padding: 4px; border-radius: 8px; }
+.ob-contato-x:hover { background: #fff0f5; color: var(--rosa); }
+.ob-contato-add { display: flex; gap: 1rem; }
+@media (max-width: 640px) {
+  .ob-contato { grid-template-columns: 90px minmax(0, 1fr) 28px; }
+  .ob-contato input[aria-label="Rótulo"] { grid-column: 1 / 3; }
+}

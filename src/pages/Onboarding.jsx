@@ -1,15 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import QRCode from 'qrcode'
-import { Check, ArrowLeft, ArrowRight, LogOut, Camera, MapPin, Plus, X, Copy, Download, MoreHorizontal, Link2, Info, Sparkles, MessageCircle, Users, Minus, Eye, Lock, Wand2, CalendarCheck, QrCode, Send, Home } from 'lucide-react'
+import { Check, ArrowLeft, ArrowRight, LogOut, Camera, MapPin, Plus, X, Copy, Download, MoreHorizontal, Link2, Info, Sparkles, MessageCircle, Users, Minus, Eye, Lock, Wand2, CalendarCheck, QrCode, Send, Home, MapPinOff, Search } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { planoDoNegocio, reais as emDinheiro, PLANOS } from '../lib/planos'
 import '../onboarding.css'
 import { reduzirFoto } from '../lib/imagem'
-import { buscarCep, formatarCep, minhaPosicao, geocodificar } from '../lib/geo'
+import { buscarCep, formatarCep, limparCep, minhaPosicao, geocodificar, temPino, arredondar } from '../lib/geo'
 import { formatarFone } from '../lib/fone'
-import { formatarCnpj, cnpjValido, buscarCnpj } from '../lib/cnpj'
+import { formatarCnpj, cnpjValido, buscarCnpj, formatarCpf, cpfValido, soDigitos } from '../lib/cnpj'
+import Mapa from '../components/Mapa'
 import { linkDoCodigo } from '../lib/convite'
 import { urlDoAmbiente } from '../lib/ambiente'
 import { formatPreco } from '../lib/format'
@@ -274,21 +275,88 @@ function PassoTipo({ s, setS, seguir, salvando, erro, setErro }) {
 }
 
 // ---------- 2 · Dados do salão -----------------------------------------------------
+// ---- passo 2: os dados do negócio ----
+// A identificação fiscal (122): CNPJ obrigatório, ou CPF de quem ainda
+// trabalha informalmente. Com CNPJ, o endereço fiscal vem da Receita e o
+// endereço do salão pode ser outro. Telefones e e-mails a mais, e o pino
+// no mapa, que a dona arrasta até a porta.
+const enderecoDe = (o) => ({ address: o?.address ?? '', bairro: o?.bairro ?? '', city: o?.city ?? '', uf: o?.uf ?? '', cep: limparCep(o?.cep) })
+const emailOk = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v ?? '').trim())
+
+// CEP, rua, bairro, cidade e UF; o CEP preenche o resto
+function BlocoEndereco({ valor, onChange, obrigatorio, aoAchar, autoCompleteRua }) {
+  const [buscando, setBuscando] = useState(false)
+  const [erro, setErro] = useState('')
+  const set = (p) => onChange((x) => ({ ...x, ...p }))
+  async function porCep(v) {
+    const d = limparCep(v)
+    set({ cep: d }); setErro('')
+    if (d.length !== 8) return
+    setBuscando(true)
+    try {
+      const r = await buscarCep(d)
+      onChange((x) => ({ ...x, address: x.address || r.rua, bairro: x.bairro || r.bairro, city: r.cidade || x.city, uf: r.uf || x.uf }))
+      aoAchar?.(r)
+    } catch (e) { setErro(e.message) } finally { setBuscando(false) }
+  }
+  return (
+    <>
+      <label>CEP<input value={formatarCep(valor.cep)} onChange={(e) => porCep(e.target.value)} placeholder="11060-300" inputMode="numeric" autoComplete="postal-code" maxLength={9} />{buscando ? <small className="muted">buscando…</small> : erro ? <small className="ob-cnpj-erro">{erro}</small> : null}</label>
+      <label>Endereço {obrigatorio && <b>*</b>}<input value={valor.address} onChange={(e) => set({ address: e.target.value })} placeholder="Rua das Flores, 123" autoComplete={autoCompleteRua ? 'street-address' : 'off'} /></label>
+      <label>Bairro<input value={valor.bairro} onChange={(e) => set({ bairro: e.target.value })} placeholder="Jardim Paulista" /></label>
+      <div className="ob-linha-2">
+        <label>Cidade {obrigatorio && <b>*</b>}<input value={valor.city} onChange={(e) => set({ city: e.target.value })} placeholder="São Paulo" autoComplete="address-level2" /></label>
+        <label>UF<select value={valor.uf} onChange={(e) => set({ uf: e.target.value })}><option value="">—</option>{UFS.map((u) => <option key={u} value={u}>{u}</option>)}</select></label>
+      </div>
+    </>
+  )
+}
+
 function PassoDados({ s, seguir, voltar, salvando, erro, setErro, user, autonoma, publico, recarregarPerfil, navigate, gravarQuieto, setEstadoAuto, docsLegais }) {
   const { signUp } = useAuth()
   const [conta, setConta] = useState({ senha: '', termos: false })
   const [criada, setCriada] = useState(false)
   const [criando, setCriando] = useState(false)
-  const [f, setF] = useState({ name: s.name ?? '', cnpj: s.cnpj ?? '', razao_social: s.razao_social ?? '', whatsapp: s.whatsapp ?? s.phone ?? '', email: s.email ?? '', responsavel_nome: s.responsavel_nome ?? '', address: s.address ?? '', bairro: s.bairro ?? '', city: s.city ?? '', uf: s.uf ?? '', cep: s.cep ?? '', lat: s.lat ?? null, lng: s.lng ?? null })
+  const [f, setF] = useState({
+    name: s.name ?? '', documento_tipo: s.documento_tipo === 'cpf' ? 'cpf' : 'cnpj', cnpj: soDigitos(s.cnpj), cpf: soDigitos(s.responsavel_cpf), razao_social: s.razao_social ?? '',
+    fiscal: enderecoDe(s.endereco_fiscal), endereco_igual: s.endereco_igual !== false,
+    whatsapp: s.whatsapp ?? s.phone ?? '', email: s.email ?? '', responsavel_nome: s.responsavel_nome ?? '',
+    ...enderecoDe(s), lat: s.lat ?? null, lng: s.lng ?? null,
+    contatos: Array.isArray(s.contatos) ? s.contatos.map((c) => ({ tipo: c.tipo === 'email' ? 'email' : 'telefone', valor: String(c.valor ?? ''), rotulo: String(c.rotulo ?? '') })) : [],
+  })
   const [logo, setLogo] = useState(s.logo_url ? { url: s.logo_url } : null)
-  const [geo, setGeo] = useState('')
-  const [buscandoCep, setBuscandoCep] = useState(false)
+  const [geo, setGeo] = useState('')          // o que aconteceu com o pino
+  const [ocupado, setOcupado] = useState('')  // 'gps' | 'endereco'
   const [cnpjInfo, setCnpjInfo] = useState('')   // o que a Receita disse do CNPJ
   const arq = useRef(null)
   const m = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.value }))
-  // CNPJ: máscara e, com os 14 dígitos certos, busca na Receita e preenche o que estiver vazio
+  const comCnpj = f.documento_tipo === 'cnpj'
+  const usaFiscal = comCnpj && f.endereco_igual
+  // o endereço que vale pro salão: o fiscal, quando é o mesmo, ou o próprio
+  const local = usaFiscal ? f.fiscal : { address: f.address, bairro: f.bairro, city: f.city, uf: f.uf, cep: f.cep }
+  const pino = temPino(f.lat, f.lng)
+  const setFiscal = (fn) => setF((x) => ({ ...x, fiscal: fn(x.fiscal) }))
+  const setLocal = (fn) => setF((x) => ({ ...x, ...fn({ address: x.address, bairro: x.bairro, city: x.city, uf: x.uf, cep: x.cep }) }))
+
+  // o que vai pro banco (onboarding_salvar), em qualquer dos jeitos de gravar
+  function dadosDe(x) {
+    const l = x.documento_tipo === 'cnpj' && x.endereco_igual ? x.fiscal : x
+    const d = {
+      name: x.name, documento_tipo: x.documento_tipo,
+      cnpj: x.documento_tipo === 'cnpj' ? x.cnpj : '', responsavel_cpf: x.documento_tipo === 'cpf' ? x.cpf : '',
+      razao_social: x.documento_tipo === 'cnpj' ? x.razao_social : '',
+      endereco_fiscal: x.documento_tipo === 'cnpj' ? { ...x.fiscal, cep: limparCep(x.fiscal.cep) } : null,
+      endereco_igual: x.documento_tipo === 'cnpj' ? x.endereco_igual : true,
+      contatos: x.contatos.filter((c) => c.valor.trim()).map((c) => ({ tipo: c.tipo, valor: c.tipo === 'telefone' ? soDigitos(c.valor) : c.valor.trim().toLowerCase(), rotulo: c.rotulo.trim() })),
+      whatsapp: x.whatsapp, email: x.email, responsavel_nome: x.responsavel_nome,
+      address: l.address, bairro: l.bairro, city: l.city, uf: l.uf, cep: limparCep(l.cep),
+    }
+    if (temPino(x.lat, x.lng)) { d.lat = x.lat; d.lng = x.lng }
+    return d
+  }
+  // CNPJ: máscara e, com os 14 dígitos certos, busca na Receita e preenche o endereço fiscal
   async function porCnpj(v) {
-    const d = v.replace(/\D/g, '').slice(0, 14)
+    const d = soDigitos(v).slice(0, 14)
     setF((x) => ({ ...x, cnpj: d }))
     setCnpjInfo('')
     if (d.length < 14) return
@@ -296,12 +364,25 @@ function PassoDados({ s, seguir, voltar, salvando, erro, setErro, user, autonoma
     setCnpjInfo('buscando')
     try {
       const r = await buscarCnpj(d)
-      setF((x) => ({ ...x, razao_social: r.razao_social, name: x.name || r.nome_fantasia || r.razao_social, address: x.address || r.address, bairro: x.bairro || r.bairro, city: x.city || r.city, uf: x.uf || r.uf, cep: x.cep || r.cep, email: x.email || r.email }))
+      setF((x) => ({ ...x, razao_social: r.razao_social, name: x.name || r.nome_fantasia || r.razao_social, email: x.email || r.email, fiscal: { address: r.address, bairro: r.bairro, city: r.city, uf: r.uf, cep: r.cep } }))
       setCnpjInfo(`ok:${r.razao_social}${r.situacao && r.situacao.toUpperCase() !== 'ATIVA' ? ` · situação na Receita: ${r.situacao}` : ''}`)
+      // sem pino ainda: tenta colocar pelo endereço da Receita
+      if (!temPino(f.lat, f.lng) && r.address && r.city) {
+        try { const g = await geocodificar(`${r.address}, ${r.bairro ? r.bairro + ', ' : ''}${r.city} ${r.uf}`); if (g) { setF((x) => (temPino(x.lat, x.lng) ? x : { ...x, lat: g.lat, lng: g.lng })); setGeo('pino sugerido pelo endereço da Receita: confira e arraste até a porta') } } catch { /* sem pino agora */ }
+      }
     } catch (err) { setCnpjInfo('erro:' + err.message) }
   }
-  // autosave dos campos de texto (a foto e o pino vão no Continuar)
-  const estado = useAutosave(() => gravarQuieto({ name: f.name, cnpj: f.cnpj, razao_social: f.razao_social, whatsapp: f.whatsapp, email: f.email, responsavel_nome: f.responsavel_nome, address: f.address, bairro: f.bairro, city: f.city, uf: f.uf, cep: f.cep.replace(/\D/g, '') }), f, { ativo: Boolean(s.id) && !publico })
+  function trocarDocumento(informal) {
+    setCnpjInfo('')
+    setF((x) => {
+      const y = { ...x, documento_tipo: informal ? 'cpf' : 'cnpj' }
+      // ao virar CPF, o endereço do salão que era o fiscal continua valendo
+      if (informal && x.endereco_igual && !x.address && !x.city) Object.assign(y, x.fiscal)
+      return y
+    })
+  }
+  // autosave dos campos de texto e do pino (a foto vai no Continuar)
+  const estado = useAutosave(() => gravarQuieto(dadosDe(f)), f, { ativo: Boolean(s.id) && !publico })
   useEffect(() => { setEstadoAuto(estado); return () => setEstadoAuto('') }, [estado, setEstadoAuto])
 
   useEffect(() => { if (!f.responsavel_nome && user && !publico) supabase.from('profiles').select('full_name, email').eq('id', user.id).maybeSingle().then(({ data }) => { if (data) setF((x) => ({ ...x, responsavel_nome: x.responsavel_nome || data.full_name || '', email: x.email || data.email || '' })) }) }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -312,15 +393,42 @@ function PassoDados({ s, seguir, voltar, salvando, erro, setErro, user, autonoma
     if (file.size > 5 * 1024 * 1024) { setErro('A imagem passa de 5 MB.'); return }
     try { setLogo(await reduzirFoto(file, { max: 512, quadrado: true })) } catch (err) { setErro(err.message) }
   }
-  async function porCep(v) {
-    setF((x) => ({ ...x, cep: v }))
-    if (v.replace(/\D/g, '').length !== 8) return
-    setBuscandoCep(true)
-    try { const r = await buscarCep(v); setF((x) => ({ ...x, address: x.address || r.rua, bairro: x.bairro || r.bairro, city: r.cidade || x.city, uf: r.uf || x.uf, lat: r.lat ?? x.lat, lng: r.lng ?? x.lng })) } catch (err) { setErro(err.message) } finally { setBuscandoCep(false) }
+  // o CEP do endereço do salão sugere o pino, quando ainda não há um
+  function pinoDoCep(r) {
+    if (r.lat == null) return
+    setF((x) => (temPino(x.lat, x.lng) ? x : { ...x, lat: r.lat, lng: r.lng }))
+    setGeo('pino sugerido pelo CEP: confira e arraste até a porta')
   }
   async function usarLocalizacao() {
-    setGeo('achando…'); setErro('')
-    try { const p = await minhaPosicao(); setF((x) => ({ ...x, lat: p.lat, lng: p.lng })); setGeo(`pino marcado (precisão ${p.precisao} m)`) } catch (err) { setGeo(''); setErro(err.message) }
+    setOcupado('gps'); setErro('')
+    try { const p = await minhaPosicao(); setF((x) => ({ ...x, lat: p.lat, lng: p.lng })); setGeo(p.precisao > 60 ? `pino na sua posição, mas o sinal está fraco (uns ${p.precisao} m): confira e arraste` : `pino na sua posição (precisão de uns ${p.precisao || 10} m)`) } catch (err) { setErro(err.message) } finally { setOcupado('') }
+  }
+  async function acharPeloEndereco() {
+    setOcupado('endereco'); setErro('')
+    try {
+      const g = await geocodificar([local.address, local.bairro, local.city, local.uf, 'Brasil'].filter(Boolean).join(', '))
+      if (g) { setF((x) => ({ ...x, lat: g.lat, lng: g.lng })); setGeo('pino colocado pelo endereço: confira e arraste até a porta'); return }
+      const c = local.city.trim() ? await geocodificar(`${local.city} ${local.uf}, Brasil`) : null
+      if (c) { setF((x) => ({ ...x, lat: c.lat, lng: c.lng })); setGeo(`não achamos a rua, então o pino ficou no centro de ${local.city.trim()}: arraste até o salão`); return }
+      setErro('Não achamos esse endereço. Confira a rua e a cidade, ou use a sua localização estando no salão.')
+    } catch (err) { setErro(err.message) } finally { setOcupado('') }
+  }
+  function moverPino(lat, lng) { setF((x) => ({ ...x, lat: arredondar(lat), lng: arredondar(lng) })); setGeo('pino ajustado') }
+  const contato = (i, p) => setF((x) => ({ ...x, contatos: x.contatos.map((c, j) => (j === i ? { ...c, ...p } : c)) }))
+  const addContato = (tipo) => setF((x) => ({ ...x, contatos: [...x.contatos, { tipo, valor: '', rotulo: '' }] }))
+  const tirarContato = (i) => setF((x) => ({ ...x, contatos: x.contatos.filter((_, j) => j !== i) }))
+
+  // o que precisa estar certo antes de seguir (ou de criar a conta)
+  function conferir() {
+    if (!f.name.trim()) return autonoma ? 'Diga o nome da sua agenda.' : 'Diga o nome do salão.'
+    if (comCnpj && !cnpjValido(f.cnpj)) return f.cnpj ? 'Confere o CNPJ: os dígitos não batem.' : 'Informe o CNPJ. Se ainda não tem, marque "Ainda não tenho CNPJ" e use o seu CPF.'
+    if (!comCnpj && !cpfValido(f.cpf)) return f.cpf ? 'Confere o CPF: os dígitos não batem.' : 'Informe o seu CPF.'
+    for (const c of f.contatos) {
+      if (!c.valor.trim()) continue
+      if (c.tipo === 'telefone' && soDigitos(c.valor).length < 10) return `Confere o telefone ${formatarFone(c.valor)}: faltam dígitos.`
+      if (c.tipo === 'email' && !emailOk(c.valor)) return `Confere o e-mail ${c.valor.trim()}.`
+    }
+    return ''
   }
   // no público: cria a conta com tudo isso nos metadados; o servidor abre o negócio e grava os dados
   async function criarConta() {
@@ -333,12 +441,13 @@ function PassoDados({ s, seguir, voltar, salvando, erro, setErro, user, autonoma
     try {
       const { data: livre } = await supabase.rpc('telefone_disponivel', { fone: f.whatsapp.trim() })
       if (livre && livre.disponivel === false) { setErro(livre.email ? `Esse WhatsApp já tem conta, no e-mail ${livre.email}. Entre com ela.` : (livre.motivo || 'Confere o WhatsApp.')); return }
-      const dadosSalao = { cnpj: f.cnpj, razao_social: f.razao_social, email: f.email.trim(), whatsapp: f.whatsapp.trim(), responsavel_nome: f.responsavel_nome.trim(), address: f.address, bairro: f.bairro, city: f.city, uf: f.uf, cep: f.cep.replace(/\D/g, '') }
+      const { name: _nome, ...dadosSalao } = dadosDe(f) // eslint-disable-line no-unused-vars
+      dadosSalao.email = f.email.trim(); dadosSalao.whatsapp = f.whatsapp.trim(); dadosSalao.responsavel_nome = f.responsavel_nome.trim()
       // a foto espera no navegador e sobe assim que a conta entrar no onboarding
       try { if (logo?.blob) localStorage.setItem(CHAVE_LOGO, await blobParaDataUrl(logo.blob)); else localStorage.removeItem(CHAVE_LOGO) } catch { /* sem storage: a foto fica pra depois */ }
       if (user) {
         // já logada como cliente, sem negócio: abre agora e segue
-        const { data, error } = await supabase.rpc('abrir_negocio', { tipo: s.tipo, nome_negocio: f.name.trim() || null, cidade: f.city.trim() || null })
+        const { data, error } = await supabase.rpc('abrir_negocio', { tipo: s.tipo, nome_negocio: f.name.trim() || null, cidade: local.city.trim() || null })
         if (error) throw new Error(error.message)
         await supabase.rpc('onboarding_salvar', { salao: data.salao_id, dados: dadosSalao, passo: 3 })
         await recarregarPerfil?.()
@@ -347,7 +456,7 @@ function PassoDados({ s, seguir, voltar, salvando, erro, setErro, user, autonoma
       }
       const aceites = aceitesPara(s.tipo, docsLegais)
       const { error } = await signUp(f.email.trim(), conta.senha, f.responsavel_nome.trim(), f.whatsapp.trim(),
-        { termos: versaoMaior(aceites), aceites, papel_desejado: s.tipo, nome_negocio: f.name.trim() || null, cidade: f.city.trim() || null, salao: dadosSalao })
+        { termos: versaoMaior(aceites), aceites, papel_desejado: s.tipo, nome_negocio: f.name.trim() || null, cidade: local.city.trim() || null, salao: dadosSalao })
       if (error) { setErro(traduzErro(error.message)); return }
       const { data: sess } = await supabase.auth.getSession()
       if (sess?.session) { await recarregarPerfil?.(); navigate('/onboarding', { replace: true }); return }
@@ -355,11 +464,12 @@ function PassoDados({ s, seguir, voltar, salvando, erro, setErro, user, autonoma
     } catch (err) { setErro(err.message) } finally { setCriando(false) }
   }
   async function avancar() {
-    if (!f.name.trim()) { setErro(autonoma ? 'Diga o nome da sua agenda.' : 'Diga o nome do salão.'); return }
+    const falta = conferir()
+    if (falta) { setErro(falta); return }
     if (publico) { await criarConta(); return }
     if (!f.whatsapp.trim()) { setErro('Precisamos do WhatsApp: é por ele que as clientes falam com vocês.'); return }
     if (!f.email.trim()) { setErro('Diga um e-mail de contato.'); return }
-    if (!f.city.trim()) { setErro('Diga a cidade.'); return }
+    if (!local.city.trim()) { setErro(usaFiscal ? 'Diga a cidade do endereço fiscal.' : 'Diga a cidade.'); return }
     let logo_url = logo?.url ?? null
     if (logo?.blob) {
       const path = `${s.id}/logo/${crypto.randomUUID()}.jpg`
@@ -367,12 +477,10 @@ function PassoDados({ s, seguir, voltar, salvando, erro, setErro, user, autonoma
       if (error) { setErro('Não deu para subir o logo: ' + error.message); return }
       logo_url = supabase.storage.from('saloes').getPublicUrl(path).data.publicUrl
     }
-    let lat = f.lat, lng = f.lng
-    if ((lat == null || lng == null) && f.address.trim() && f.city.trim()) {
-      try { const g = await geocodificar(`${f.address}, ${f.bairro ? f.bairro + ', ' : ''}${f.city} ${f.uf}`); if (g) { lat = g.lat; lng = g.lng } } catch { /* sem pino agora, ajusta depois em Ajustes */ }
+    const dados = { ...dadosDe(f), logo_url }
+    if (!pino && local.address.trim() && local.city.trim()) {
+      try { const g = await geocodificar(`${local.address}, ${local.bairro ? local.bairro + ', ' : ''}${local.city} ${local.uf}`); if (g) { dados.lat = g.lat; dados.lng = g.lng } } catch { /* sem pino agora, ajusta depois em Ajustes */ }
     }
-    const dados = { ...f, logo_url, cep: f.cep.replace(/\D/g, '') }
-    if (lat != null && lng != null) { dados.lat = lat; dados.lng = lng } else { delete dados.lat; delete dados.lng }
     seguir(dados)
   }
   if (criada) {
@@ -386,6 +494,7 @@ function PassoDados({ s, seguir, voltar, salvando, erro, setErro, user, autonoma
     )
   }
   const iniciais = (f.name || 'ES').split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase()
+  const ondeFica = autonoma ? 'Onde você atende' : 'Endereço do salão'
   return (
     <>
       <h1 className="ob-titulo">{autonoma ? 'Seus dados' : 'A cara do salão'}</h1>
@@ -396,8 +505,6 @@ function PassoDados({ s, seguir, voltar, salvando, erro, setErro, user, autonoma
           <span className="ob-grupo-selo"><Selo publico /></span>
           <label>{autonoma ? 'Nome da agenda' : 'Nome do salão'} <b>*</b><input value={f.name} onChange={m('name')} placeholder="Studio Essenza Hair" /></label>
           <label>WhatsApp {autonoma ? 'de contato' : 'comercial'} <b>*</b><span className="ob-fone"><span className="ob-ddi">🇧🇷 +55</span><input type="tel" inputMode="numeric" value={f.whatsapp} onChange={(e) => setF((x) => ({ ...x, whatsapp: formatarFone(e.target.value) }))} placeholder="(11) 91234-5678" autoComplete="tel" /></span></label>
-          <span className="ob-grupo-selo ob-grupo-selo-2"><Selo /></span>
-          {!autonoma && <label>CNPJ <span className="muted">(opcional · preenche o endereço sozinho)</span><input value={formatarCnpj(f.cnpj)} onChange={(e) => porCnpj(e.target.value)} placeholder="12.345.678/0001-90" inputMode="numeric" autoComplete="off" />{cnpjInfo === 'buscando' ? <small className="muted">consultando a Receita…</small> : cnpjInfo.startsWith('ok:') ? <small className="ob-cnpj-ok">✓ {cnpjInfo.slice(3)}</small> : cnpjInfo.startsWith('erro:') ? <small className="ob-cnpj-erro">{cnpjInfo.slice(5)}</small> : f.razao_social ? <small className="muted">{f.razao_social}</small> : null}</label>}
           <label>E-mail da conta <b>*</b>{publico && <span className="muted">(é com ele que você entra)</span>}<input type="email" value={f.email} onChange={m('email')} placeholder="contato@essenzahair.com.br" autoComplete="email" /></label>
           <label>{publico ? 'Seu nome completo' : 'Nome da responsável'} <b>*</b><input value={f.responsavel_nome} onChange={m('responsavel_nome')} placeholder="Juliana Lima" autoComplete="name" /></label>
           {publico && !user && (
@@ -405,6 +512,27 @@ function PassoDados({ s, seguir, voltar, salvando, erro, setErro, user, autonoma
               <label>Senha <b>*</b><input type="password" value={conta.senha} onChange={(e) => setConta((x) => ({ ...x, senha: e.target.value }))} placeholder="mínimo 6 caracteres" autoComplete="new-password" /></label>
               <label className="ob-termos"><input type="checkbox" checked={conta.termos} onChange={(e) => setConta((x) => ({ ...x, termos: e.target.checked }))} /><span><FraseDeAceite papel={s.tipo} /></span></label>
             </>
+          )}
+          {/* a identificação fiscal: só a MIMO vê */}
+          <span className="ob-grupo-selo ob-grupo-selo-2"><Selo /></span>
+          <div className="ob-bloco">
+            <span className="ob-bloco-titulo">Identificação fiscal <small>fica só com a MIMO</small></span>
+            {comCnpj ? (
+              <label>CNPJ <b>*</b><span className="muted">(preenche o endereço fiscal sozinho)</span><input value={formatarCnpj(f.cnpj)} onChange={(e) => porCnpj(e.target.value)} placeholder="12.345.678/0001-90" inputMode="numeric" autoComplete="off" />{cnpjInfo === 'buscando' ? <small className="muted">consultando a Receita…</small> : cnpjInfo.startsWith('ok:') ? <small className="ob-cnpj-ok">✓ {cnpjInfo.slice(3)}</small> : cnpjInfo.startsWith('erro:') ? <small className="ob-cnpj-erro">{cnpjInfo.slice(5)}</small> : f.razao_social ? <small className="muted">{f.razao_social}</small> : null}</label>
+            ) : (
+              <>
+                <p className="ob-humor">Sem CNPJ por enquanto? Tranquilo, muita gente boa começou assim. 😉 Nos conta o seu CPF que a gente segue. Quando o CNPJ sair, é só voltar aqui e trocar.</p>
+                <label>CPF <b>*</b><input value={formatarCpf(f.cpf)} onChange={(e) => setF((x) => ({ ...x, cpf: soDigitos(e.target.value).slice(0, 11) }))} placeholder="123.456.789-09" inputMode="numeric" autoComplete="off" />{f.cpf.length === 11 && !cpfValido(f.cpf) && <small className="ob-cnpj-erro">Confere o CPF: os dígitos não batem.</small>}</label>
+              </>
+            )}
+            <label className="ob-termos ob-informal"><input type="checkbox" checked={!comCnpj} onChange={(e) => trocarDocumento(e.target.checked)} /><span>Ainda não tenho CNPJ e trabalho informalmente</span></label>
+          </div>
+          {comCnpj && (
+            <div className="ob-bloco">
+              <span className="ob-bloco-titulo">Endereço fiscal <small>o que está na Receita</small></span>
+              <BlocoEndereco valor={f.fiscal} onChange={setFiscal} obrigatorio={usaFiscal} aoAchar={usaFiscal ? pinoDoCep : undefined} />
+              <label>{ondeFica}<select value={f.endereco_igual ? 'igual' : 'outro'} onChange={(e) => setF((x) => ({ ...x, endereco_igual: e.target.value === 'igual' }))}><option value="igual">{autonoma ? 'Atendo no endereço fiscal' : 'É o mesmo endereço fiscal'}</option><option value="outro">{autonoma ? 'Atendo em outro endereço' : 'O salão fica em outro endereço'}</option></select></label>
+            </div>
           )}
         </div>
         <div className="ob-form">
@@ -419,20 +547,49 @@ function PassoDados({ s, seguir, voltar, salvando, erro, setErro, user, autonoma
             <small className="muted">JPG ou PNG. Tamanho máximo de 5 MB.</small>
             {logo && <button type="button" className="link-ver" onClick={() => setLogo(null)}>Remover</button>}
           </div>
-          <label>CEP<input value={formatarCep(f.cep)} onChange={(e) => porCep(e.target.value)} placeholder="11060-300" inputMode="numeric" />{buscandoCep && <small className="muted">buscando…</small>}</label>
-          <label>Endereço <b>*</b><input value={f.address} onChange={m('address')} placeholder="Rua das Flores, 123" /></label>
-          <label>Bairro<input value={f.bairro} onChange={m('bairro')} placeholder="Jardim Paulista" /></label>
-          <div className="ob-linha-2">
-            <label>Cidade <b>*</b><input value={f.city} onChange={m('city')} placeholder="São Paulo" /></label>
-            <label>UF<select value={f.uf} onChange={m('uf')}><option value="">—</option>{UFS.map((u) => <option key={u} value={u}>{u}</option>)}</select></label>
+          {!usaFiscal && (
+            <div className="ob-bloco">
+              <span className="ob-bloco-titulo">{ondeFica} <small>{comCnpj ? 'diferente do fiscal' : 'é o que a cliente vê'}</small></span>
+              <BlocoEndereco valor={local} onChange={setLocal} obrigatorio aoAchar={pinoDoCep} autoCompleteRua />
+            </div>
+          )}
+          {/* o pino: é ele que a cliente vê no "Como chegar" */}
+          <div className="ob-mapa-campo">
+            <span className="ob-rotulo">No mapa {pino ? <span className="muted">· arraste o pino até a porta, ou toque no lugar certo</span> : <span className="muted">· ainda sem pino</span>}</span>
+            {pino
+              ? <div className="ob-mapa"><Mapa lat={Number(f.lat)} lng={Number(f.lng)} zoom={17} arrastavel altura={210} onMover={moverPino} /></div>
+              : <div className="ob-sem-pino"><MapPinOff size={22} /><strong>Ainda sem pino no mapa</strong><span className="muted">Preencha o CEP ou o endereço, use a sua localização, ou ache pelo endereço.</span></div>}
+            <div className="ob-mapa-acoes">
+              <button type="button" className="ob-geo" onClick={usarLocalizacao} disabled={Boolean(ocupado)}><MapPin size={14} /> {ocupado === 'gps' ? 'Achando você…' : 'Usar minha localização'}</button>
+              <button type="button" className="ob-geo" onClick={acharPeloEndereco} disabled={Boolean(ocupado) || !(local.address.trim() || local.city.trim())}><Search size={14} /> {ocupado === 'endereco' ? 'Procurando…' : 'Achar pelo endereço'}</button>
+              {pino && <button type="button" className="ob-geo ob-geo-neutro" onClick={() => { setF((x) => ({ ...x, lat: null, lng: null })); setGeo('') }}>Tirar o pino</button>}
+            </div>
+            {geo && <small className="ob-mapa-nota">{geo}</small>}
           </div>
-          <button type="button" className="ob-geo" onClick={usarLocalizacao}><MapPin size={14} /> Usar minha localização atual{geo ? <small className="muted"> · {geo}</small> : f.lat != null ? <small className="muted"> · pino marcado</small> : null}</button>
+          {/* telefones e e-mails além dos principais */}
+          <div className="ob-contatos">
+            <span className="ob-rotulo">Outros contatos <span className="muted">(opcional: fixo, financeiro, recepção…)</span></span>
+            {f.contatos.map((c, i) => (
+              <div key={i} className="ob-contato">
+                <select value={c.tipo} onChange={(e) => contato(i, { tipo: e.target.value, valor: '' })} aria-label="Tipo"><option value="telefone">Telefone</option><option value="email">E-mail</option></select>
+                {c.tipo === 'telefone'
+                  ? <input type="tel" inputMode="numeric" value={formatarFone(c.valor)} onChange={(e) => contato(i, { valor: soDigitos(e.target.value).slice(0, 11) })} placeholder="(11) 3456-7890" aria-label="Telefone" />
+                  : <input type="email" value={c.valor} onChange={(e) => contato(i, { valor: e.target.value })} placeholder="financeiro@essenzahair.com.br" aria-label="E-mail" />}
+                <input value={c.rotulo} onChange={(e) => contato(i, { rotulo: e.target.value })} placeholder="rótulo (ex.: fixo)" maxLength={30} aria-label="Rótulo" />
+                <button type="button" className="ob-contato-x" onClick={() => tirarContato(i)} aria-label="Tirar"><X size={15} /></button>
+              </div>
+            ))}
+            <div className="ob-contato-add">
+              <button type="button" className="ob-geo" onClick={() => addContato('telefone')}><Plus size={14} /> Telefone</button>
+              <button type="button" className="ob-geo" onClick={() => addContato('email')}><Plus size={14} /> E-mail</button>
+            </div>
+          </div>
           {/* como a cliente vai ver: atualiza ao vivo */}
           <div className="ob-preview">
             <small><Eye size={11} /> Como sua cliente verá</small>
             <div className="ob-preview-cartao">
               <span className="ob-preview-logo">{logo ? <img src={logo.preview ?? logo.url} alt="" /> : iniciais}</span>
-              <span className="ob-preview-texto"><strong>{f.name || (autonoma ? 'Sua agenda' : 'Seu salão')}</strong><span>{[f.bairro, f.city].filter(Boolean).join(' • ') || 'Bairro • Cidade'}</span></span>
+              <span className="ob-preview-texto"><strong>{f.name || (autonoma ? 'Sua agenda' : 'Seu salão')}</strong><span>{[local.bairro, local.city].filter(Boolean).join(' • ') || 'Bairro • Cidade'}</span></span>
               <span className="ob-preview-botao">Ver serviços</span>
             </div>
           </div>

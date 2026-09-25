@@ -29,6 +29,29 @@ begin
     raise exception '2: salvar errado: % % % % % %', s.name, s.email, s.uf, s.antecedencia_min_minutos, s.sinal_modo, s.onboarding_passo; end if;
   raise notice '2 salvar passos ok';
 
+  -- 2b. identificação fiscal (122): CNPJ só dígitos, endereço fiscal, contatos a mais; depois vira CPF
+  perform set_config('request.jwt.claim.sub', dona::text, false);
+  set role authenticated;
+  r := public.onboarding_salvar(sal, jsonb_build_object('documento_tipo', 'cnpj', 'cnpj', '69.089.327/0001-88', 'razao_social', 'Mimo Ltda', 'endereco_fiscal', jsonb_build_object('address', 'Rua Pais Leme, 215', 'city', 'São Paulo', 'uf', 'SP', 'cep', '05424150'), 'endereco_igual', false, 'contatos', jsonb_build_array(jsonb_build_object('tipo', 'telefone', 'valor', '1134567890', 'rotulo', 'fixo'), jsonb_build_object('tipo', 'email', 'valor', 'financeiro@ensaio.com', 'rotulo', ''))));
+  reset role;
+  select * into s from public.salons where id = sal;
+  if s.documento_tipo <> 'cnpj' or s.cnpj <> '69089327000188' or s.razao_social <> 'Mimo Ltda' or s.endereco_fiscal ->> 'city' <> 'São Paulo' or s.endereco_igual or jsonb_array_length(s.contatos) <> 2 or s.city <> 'Santos' then
+    raise exception '2b: fiscal errado: % % % % %', s.documento_tipo, s.cnpj, s.endereco_fiscal, s.endereco_igual, s.contatos; end if;
+  perform set_config('request.jwt.claim.sub', dona::text, false);
+  set role authenticated;
+  r := public.onboarding_salvar(sal, jsonb_build_object('documento_tipo', 'cpf', 'cnpj', '', 'responsavel_cpf', '123.456.789-09', 'razao_social', '', 'endereco_fiscal', null, 'endereco_igual', true));
+  reset role;
+  select * into s from public.salons where id = sal;
+  if s.documento_tipo <> 'cpf' or s.cnpj is not null or s.responsavel_cpf <> '12345678909' or s.razao_social is not null or s.endereco_fiscal is not null or not s.endereco_igual then
+    raise exception '2b: virar cpf errado: % % % %', s.documento_tipo, s.cnpj, s.responsavel_cpf, s.endereco_fiscal; end if;
+  perform set_config('request.jwt.claim.sub', dona::text, false);
+  set role authenticated;
+  r := public.onboarding_salvar(sal, jsonb_build_object('documento_tipo', 'outro'));
+  reset role;
+  select * into s from public.salons where id = sal;
+  if s.documento_tipo <> 'cpf' then raise exception '2b: tipo desconhecido passou'; end if;
+  raise notice '2b identificacao fiscal ok';
+
   -- 3. regras do salão contam reagendar e antecedência
   r := public.pagamento_do_salao(sal);
   if (r ->> 'permite_remarcar')::boolean or (r ->> 'antecedencia_min')::int <> 180 then raise exception '3: regras erradas: %', r; end if;

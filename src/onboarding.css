@@ -412,3 +412,5 @@
 .ob-plano-painel b small, .ob-plano-painel span { color: var(--ob-cinza); }
 .ob-ajuda { color: var(--ob-ameixa); } .ob-ajuda small { color: var(--ob-cinza); }
 @media (max-height: 740px) and (min-width: 901px) { .ob-painel-foto { display: none; } }
+
+.ob-aviso-sinal { display: block; padding: 8px 10px; border-radius: 10px; background: #fff7ed; border: 1px solid #fed7aa; color: #9a3412; font-size: 0.76rem; line-height: 1.4; }

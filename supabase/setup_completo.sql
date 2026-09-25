@@ -32645,7 +32645,8 @@ insert into public.migracoes_aplicadas (arquivo) values ('121_onboarding_razao_s
 -- 122: a identificação fiscal do negócio no cadastro. CNPJ obrigatório,
 -- ou CPF de quem ainda trabalha informalmente; o endereço fiscal (o da
 -- Receita) separado do endereço do salão, que pode ser outro; e os
--- contatos a mais (telefones e e-mails além do principal).
+-- contatos a mais (telefones e e-mails além do principal). O logo e as
+-- fotos do espaço passam a ser gravados pelo mesmo caminho (passo 3).
 alter table public.salons add column if not exists documento_tipo text not null default 'cnpj';
 alter table public.salons add column if not exists endereco_fiscal jsonb;
 alter table public.salons add column if not exists endereco_igual boolean not null default true;
@@ -32655,6 +32656,9 @@ do $$ begin
 exception when duplicate_object then null; end $$;
 -- quem já cadastrou o CNPJ formatado passa a guardar só dígitos
 update public.salons set cnpj = nullif(regexp_replace(cnpj, '\D', '', 'g'), '') where cnpj is not null and cnpj ~ '\D';
+-- quem já tinha CNPJ e endereço: o endereço cadastrado passa a ser também o fiscal
+update public.salons set endereco_fiscal = jsonb_build_object('address', coalesce(address, ''), 'bairro', coalesce(bairro, ''), 'city', coalesce(city, ''), 'uf', coalesce(uf, ''), 'cep', coalesce(cep, ''))
+ where cnpj is not null and endereco_fiscal is null and (address is not null or city is not null);
 grant select (documento_tipo, endereco_fiscal, endereco_igual, contatos) on public.salons to authenticated;
 grant update (documento_tipo, endereco_fiscal, endereco_igual, contatos) on public.salons to authenticated;
 
@@ -32679,6 +32683,8 @@ begin
     email = case when dados ? 'email' then nullif(lower(btrim(dados ->> 'email')), '') else email end,
     responsavel_nome = case when dados ? 'responsavel_nome' then nullif(btrim(dados ->> 'responsavel_nome'), '') else responsavel_nome end,
     logo_url = case when dados ? 'logo_url' then nullif(dados ->> 'logo_url', '') else logo_url end,
+    fotos = case when jsonb_typeof(dados -> 'fotos') = 'array' then coalesce((select array_agg(x) from jsonb_array_elements_text(dados -> 'fotos') x), '{}'::text[]) else fotos end,
+    descricao = case when dados ? 'descricao' then left(nullif(btrim(dados ->> 'descricao'), ''), 800) else descricao end,
     address = case when dados ? 'address' then nullif(btrim(dados ->> 'address'), '') else address end,
     bairro = case when dados ? 'bairro' then nullif(btrim(dados ->> 'bairro'), '') else bairro end,
     city = case when dados ? 'city' then nullif(btrim(dados ->> 'city'), '') else city end,

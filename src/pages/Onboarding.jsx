@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import QRCode from 'qrcode'
-import { Check, ArrowLeft, ArrowRight, LogOut, Camera, MapPin, Plus, X, Copy, Download, MoreHorizontal, Link2, Info, Sparkles, MessageCircle, Users, Minus, Eye, Lock, Wand2, CalendarCheck, QrCode, Send, Home, MapPinOff, Search } from 'lucide-react'
+import { Check, ArrowLeft, ArrowRight, LogOut, Camera, MapPin, Plus, X, Copy, Download, MoreHorizontal, Link2, Info, Sparkles, MessageCircle, Users, Minus, Eye, Lock, Wand2, CalendarCheck, QrCode, Send, Home, MapPinOff, Search, ImagePlus } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { planoDoNegocio, reais as emDinheiro, PLANOS } from '../lib/planos'
@@ -28,14 +28,16 @@ import RodapeSocial from '../components/RodapeSocial'
 // cada passo tem a foto, o bilhete e a frase do painel da esquerda
 const PASSOS = [
   { id: 1, rotulo: 'Tipo de conta', foto: 'profissional', bilhete: 'bem-vinda', titulo: 'Sua rotina no lugar.', texto: 'Escolha como você trabalha. Autônoma é grátis; salão paga só pelas agendas que usa.' },
-  { id: 2, rotulo: 'Dados do salão', foto: 'salao', bilhete: 'é a cara da casa', titulo: 'O que a cliente vê.', texto: 'Nome, foto, WhatsApp e endereço aparecem na página do seu negócio e no app da cliente.' },
-  { id: 3, rotulo: 'Estrutura e operação', foto: 'agenda-celular', bilhete: 'do seu jeito', titulo: 'Como o dia funciona.', texto: 'Horário, regras de agendamento e quantas agendas. Tudo muda depois em Ajustes.' },
+  { id: 2, rotulo: 'Dados do negócio', foto: 'agenda-celular', bilhete: 'tudo em ordem', titulo: 'Quem é o negócio.', texto: 'CNPJ (ou CPF), endereço e contatos. O que é fiscal fica só com a MIMO; nome, WhatsApp e endereço aparecem para a cliente.' },
+  { id: 3, rotulo: 'Cara e operação', foto: 'salao', bilhete: 'é a cara da casa', titulo: 'O que a cliente vê.', texto: 'Logo, fotos do espaço, horário e regras de agendamento. Tudo muda depois em Ajustes.' },
   { id: 4, rotulo: 'Serviços', foto: 'lifestyle', bilhete: 'o que você faz', titulo: 'O cardápio da casa.', texto: 'Nome, duração real e preço. A duração é o que a agenda usa pra achar horário livre.' },
   { id: 5, rotulo: 'Equipe', foto: 'equipe', bilhete: 'quem atende', titulo: 'Monte sua operação.', texto: 'Você configura cada profissional. Ela recebe um link e entra com a agenda pronta.' },
   { id: 6, rotulo: 'Clientes e ativação', foto: 'qr', bilhete: 'do balcão pra agenda', titulo: 'Pronta pra receber.', texto: 'Imprima o QR, coloque no balcão e na bio. A cliente escaneia e marca sozinha.' },
 ]
 const DIAS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
 const ORDEM_DIAS = [1, 2, 3, 4, 5, 6, 0]
+const MAX_FOTOS = 8
+const iniciaisDe = (nome) => (nome || 'ES').split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase()
 const UFS = ['AC', 'AL', 'AM', 'AP', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MG', 'MS', 'MT', 'PA', 'PB', 'PE', 'PI', 'PR', 'RJ', 'RN', 'RO', 'RR', 'RS', 'SC', 'SE', 'SP', 'TO']
 const ANTECEDENCIAS = [[0, 'Sem antecedência'], [30, '30 minutos'], [60, '1 hora'], [120, '2 horas'], [240, '4 horas'], [720, '12 horas'], [1440, '24 horas'], [2880, '48 horas']]
 const CANCELAMENTO = [['flexivel', '6 horas'], ['moderada', '12 horas'], ['rigorosa', '24 horas']]
@@ -43,9 +45,6 @@ const CATEGORIAS_SUGERIDAS = ['Cabelo', 'Unhas', 'Estética', 'Massagem', 'Sobra
 // a política que a maioria dos salões usa pra começar; muda depois em Ajustes
 const RECOMENDADO = { antecedencia_min_minutos: 60, politica_cancelamento: 'moderada', permite_remarcar: true, sinal_ligado: false }
 const SUPORTE = import.meta.env.VITE_SUPORTE_WHATS || ''
-const CHAVE_LOGO = 'mimo-onboarding-logo'   // a foto escolhida antes de existir conta espera aqui e sobe no primeiro acesso
-const blobParaDataUrl = (blob) => new Promise((ok, erro) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = erro; r.readAsDataURL(blob) })
-const dataUrlParaBlob = async (u) => (await fetch(u)).blob()
 const reais = (t) => { const n = Number(String(t ?? '').replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.')); return Number.isFinite(n) ? Math.round(n * 100) : 0 }
 const emReais = (c) => (Number(c ?? 0) / 100).toFixed(2).replace('.', ',')
 
@@ -99,22 +98,6 @@ export default function Onboarding({ publico = false }) {
   useEffect(() => {
     if (!salao || publico) return
     setS((x) => x ?? { ...salao })
-    // a foto escolhida no cadastro (antes da conta existir) sobe agora
-    let guardada = null
-    try { guardada = localStorage.getItem(CHAVE_LOGO) } catch { /* sem storage */ }
-    if (guardada && !salao.logo_url) {
-      ;(async () => {
-        try {
-          const blob = await dataUrlParaBlob(guardada)
-          const path = `${salao.id}/logo/${crypto.randomUUID()}.jpg`
-          const { error } = await supabase.storage.from('saloes').upload(path, blob, { contentType: 'image/jpeg', cacheControl: '31536000' })
-          if (error) return
-          const logo_url = supabase.storage.from('saloes').getPublicUrl(path).data.publicUrl
-          await supabase.rpc('onboarding_salvar', { salao: salao.id, dados: { logo_url } })
-          setS((x) => (x ? { ...x, logo_url } : x))
-        } finally { try { localStorage.removeItem(CHAVE_LOGO) } catch { /* nada */ } }
-      })()
-    }
     // retoma de onde parou; quem já concluiu e abriu de novo começa do 1 (revisão)
     setPasso((p) => {
       if (p === 1 && !salao.onboarding_concluido_em && salao.onboarding_passo > 2) { setRetomado(true); return Math.min(6, salao.onboarding_passo) }
@@ -319,16 +302,15 @@ function PassoDados({ s, seguir, voltar, salvando, erro, setErro, user, autonoma
   const [criando, setCriando] = useState(false)
   const [f, setF] = useState({
     name: s.name ?? '', documento_tipo: s.documento_tipo === 'cpf' ? 'cpf' : 'cnpj', cnpj: soDigitos(s.cnpj), cpf: soDigitos(s.responsavel_cpf), razao_social: s.razao_social ?? '',
-    fiscal: enderecoDe(s.endereco_fiscal), endereco_igual: s.endereco_igual !== false,
+    fiscal: enderecoDe(s.endereco_fiscal ?? (s.endereco_igual !== false ? s : null)), endereco_igual: s.endereco_igual !== false,
     whatsapp: s.whatsapp ?? s.phone ?? '', email: s.email ?? '', responsavel_nome: s.responsavel_nome ?? '',
     ...enderecoDe(s), lat: s.lat ?? null, lng: s.lng ?? null,
-    contatos: Array.isArray(s.contatos) ? s.contatos.map((c) => ({ tipo: c.tipo === 'email' ? 'email' : 'telefone', valor: String(c.valor ?? ''), rotulo: String(c.rotulo ?? '') })) : [],
+    telefones: (Array.isArray(s.contatos) ? s.contatos.filter((c) => c.tipo === 'telefone').map((c) => soDigitos(c.valor).slice(0, 11)) : []).concat(['']).slice(0, Math.max(1, (s.contatos ?? []).filter((c) => c.tipo === 'telefone').length)),
+    emails: Array.isArray(s.contatos) ? s.contatos.filter((c) => c.tipo === 'email').map((c) => String(c.valor ?? '')) : [],
   })
-  const [logo, setLogo] = useState(s.logo_url ? { url: s.logo_url } : null)
   const [geo, setGeo] = useState('')          // o que aconteceu com o pino
   const [ocupado, setOcupado] = useState('')  // 'gps' | 'endereco'
   const [cnpjInfo, setCnpjInfo] = useState('')   // o que a Receita disse do CNPJ
-  const arq = useRef(null)
   const m = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.value }))
   const comCnpj = f.documento_tipo === 'cnpj'
   const usaFiscal = comCnpj && f.endereco_igual
@@ -347,7 +329,7 @@ function PassoDados({ s, seguir, voltar, salvando, erro, setErro, user, autonoma
       razao_social: x.documento_tipo === 'cnpj' ? x.razao_social : '',
       endereco_fiscal: x.documento_tipo === 'cnpj' ? { ...x.fiscal, cep: limparCep(x.fiscal.cep) } : null,
       endereco_igual: x.documento_tipo === 'cnpj' ? x.endereco_igual : true,
-      contatos: x.contatos.filter((c) => c.valor.trim()).map((c) => ({ tipo: c.tipo, valor: c.tipo === 'telefone' ? soDigitos(c.valor) : c.valor.trim().toLowerCase(), rotulo: c.rotulo.trim() })),
+      contatos: [...x.telefones.filter((t) => t.trim()).map((t) => ({ tipo: 'telefone', valor: soDigitos(t).slice(0, 11) })), ...x.emails.filter((e) => e.trim()).map((e) => ({ tipo: 'email', valor: e.trim().toLowerCase() }))],
       whatsapp: x.whatsapp, email: x.email, responsavel_nome: x.responsavel_nome,
       address: l.address, bairro: l.bairro, city: l.city, uf: l.uf, cep: limparCep(l.cep),
     }
@@ -387,12 +369,6 @@ function PassoDados({ s, seguir, voltar, salvando, erro, setErro, user, autonoma
 
   useEffect(() => { if (!f.responsavel_nome && user && !publico) supabase.from('profiles').select('full_name, email').eq('id', user.id).maybeSingle().then(({ data }) => { if (data) setF((x) => ({ ...x, responsavel_nome: x.responsavel_nome || data.full_name || '', email: x.email || data.email || '' })) }) }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function trocarLogo(e) {
-    const file = e.target.files?.[0]; e.target.value = ''
-    if (!file) return
-    if (file.size > 5 * 1024 * 1024) { setErro('A imagem passa de 5 MB.'); return }
-    try { setLogo(await reduzirFoto(file, { max: 512, quadrado: true })) } catch (err) { setErro(err.message) }
-  }
   // o CEP do endereço do salão sugere o pino, quando ainda não há um
   function pinoDoCep(r) {
     if (r.lat == null) return
@@ -414,20 +390,18 @@ function PassoDados({ s, seguir, voltar, salvando, erro, setErro, user, autonoma
     } catch (err) { setErro(err.message) } finally { setOcupado('') }
   }
   function moverPino(lat, lng) { setF((x) => ({ ...x, lat: arredondar(lat), lng: arredondar(lng) })); setGeo('pino ajustado') }
-  const contato = (i, p) => setF((x) => ({ ...x, contatos: x.contatos.map((c, j) => (j === i ? { ...c, ...p } : c)) }))
-  const addContato = (tipo) => setF((x) => ({ ...x, contatos: [...x.contatos, { tipo, valor: '', rotulo: '' }] }))
-  const tirarContato = (i) => setF((x) => ({ ...x, contatos: x.contatos.filter((_, j) => j !== i) }))
+  // telefones e e-mails: um campo pra cada, e o + abre outro
+  const lista = (k, i, v) => setF((x) => ({ ...x, [k]: x[k].map((y, j) => (j === i ? v : y)) }))
+  const maisNa = (k) => setF((x) => ({ ...x, [k]: [...x[k], ''] }))
+  const tirarDa = (k, i) => setF((x) => ({ ...x, [k]: x[k].filter((_, j) => j !== i) }))
 
   // o que precisa estar certo antes de seguir (ou de criar a conta)
   function conferir() {
     if (!f.name.trim()) return autonoma ? 'Diga o nome da sua agenda.' : 'Diga o nome do salão.'
     if (comCnpj && !cnpjValido(f.cnpj)) return f.cnpj ? 'Confere o CNPJ: os dígitos não batem.' : 'Informe o CNPJ. Se ainda não tem, marque "Ainda não tenho CNPJ" e use o seu CPF.'
     if (!comCnpj && !cpfValido(f.cpf)) return f.cpf ? 'Confere o CPF: os dígitos não batem.' : 'Informe o seu CPF.'
-    for (const c of f.contatos) {
-      if (!c.valor.trim()) continue
-      if (c.tipo === 'telefone' && soDigitos(c.valor).length < 10) return `Confere o telefone ${formatarFone(c.valor)}: faltam dígitos.`
-      if (c.tipo === 'email' && !emailOk(c.valor)) return `Confere o e-mail ${c.valor.trim()}.`
-    }
+    for (const t of f.telefones) if (t.trim() && soDigitos(t).length < 10) return `Confere o telefone ${formatarFone(t)}: faltam dígitos.`
+    for (const e of f.emails) if (e.trim() && !emailOk(e)) return `Confere o e-mail ${e.trim()}.`
     return ''
   }
   // no público: cria a conta com tudo isso nos metadados; o servidor abre o negócio e grava os dados
@@ -443,8 +417,6 @@ function PassoDados({ s, seguir, voltar, salvando, erro, setErro, user, autonoma
       if (livre && livre.disponivel === false) { setErro(livre.email ? `Esse WhatsApp já tem conta, no e-mail ${livre.email}. Entre com ela.` : (livre.motivo || 'Confere o WhatsApp.')); return }
       const { name: _nome, ...dadosSalao } = dadosDe(f) // eslint-disable-line no-unused-vars
       dadosSalao.email = f.email.trim(); dadosSalao.whatsapp = f.whatsapp.trim(); dadosSalao.responsavel_nome = f.responsavel_nome.trim()
-      // a foto espera no navegador e sobe assim que a conta entrar no onboarding
-      try { if (logo?.blob) localStorage.setItem(CHAVE_LOGO, await blobParaDataUrl(logo.blob)); else localStorage.removeItem(CHAVE_LOGO) } catch { /* sem storage: a foto fica pra depois */ }
       if (user) {
         // já logada como cliente, sem negócio: abre agora e segue
         const { data, error } = await supabase.rpc('abrir_negocio', { tipo: s.tipo, nome_negocio: f.name.trim() || null, cidade: local.city.trim() || null })
@@ -470,14 +442,7 @@ function PassoDados({ s, seguir, voltar, salvando, erro, setErro, user, autonoma
     if (!f.whatsapp.trim()) { setErro('Precisamos do WhatsApp: é por ele que as clientes falam com vocês.'); return }
     if (!f.email.trim()) { setErro('Diga um e-mail de contato.'); return }
     if (!local.city.trim()) { setErro(usaFiscal ? 'Diga a cidade do endereço fiscal.' : 'Diga a cidade.'); return }
-    let logo_url = logo?.url ?? null
-    if (logo?.blob) {
-      const path = `${s.id}/logo/${crypto.randomUUID()}.jpg`
-      const { error } = await supabase.storage.from('saloes').upload(path, logo.blob, { contentType: 'image/jpeg', cacheControl: '31536000' })
-      if (error) { setErro('Não deu para subir o logo: ' + error.message); return }
-      logo_url = supabase.storage.from('saloes').getPublicUrl(path).data.publicUrl
-    }
-    const dados = { ...dadosDe(f), logo_url }
+    const dados = dadosDe(f)
     if (!pino && local.address.trim() && local.city.trim()) {
       try { const g = await geocodificar(`${local.address}, ${local.bairro ? local.bairro + ', ' : ''}${local.city} ${local.uf}`); if (g) { dados.lat = g.lat; dados.lng = g.lng } } catch { /* sem pino agora, ajusta depois em Ajustes */ }
     }
@@ -488,37 +453,35 @@ function PassoDados({ s, seguir, voltar, salvando, erro, setErro, user, autonoma
       <>
         <h1 className="ob-titulo">Conta criada!</h1>
         <p className="ob-sub">Falta só confirmar o e-mail</p>
-        <div className="ob-pronto"><span className="ob-pronto-check"><Check size={18} /></span><span><strong>Mandamos um link para {f.email.trim()}</strong><small>Toque no link do e-mail e você volta pra cá já dentro do cadastro, no passo 3, sem precisar entrar de novo. Tudo o que preencheu está guardado{logo ? ' (a foto sobe quando abrir por este mesmo navegador)' : ''}.</small></span></div>
+        <div className="ob-pronto"><span className="ob-pronto-check"><Check size={18} /></span><span><strong>Mandamos um link para {f.email.trim()}</strong><small>Toque no link do e-mail e você volta pra cá já dentro do cadastro, no passo 3, sem precisar entrar de novo. Tudo o que preencheu está guardado.</small></span></div>
         <div className="ob-rodape"><span /><Link to="/pro/entrar" className="btn btn-ghost ob-continuar">Abri o link e não entrou? Entrar <ArrowRight size={16} /></Link></div>
       </>
     )
   }
-  const iniciais = (f.name || 'ES').split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase()
   const ondeFica = autonoma ? 'Onde você atende' : 'Endereço do salão'
+  const campoTel = (k, i, tipo) => (
+    <span key={i} className="ob-fone">
+      {tipo === 'telefone' ? <span className="ob-ddi">🇧🇷 +55</span> : null}
+      {tipo === 'telefone'
+        ? <input type="tel" inputMode="numeric" value={formatarFone(f[k][i])} onChange={(e) => lista(k, i, soDigitos(e.target.value).slice(0, 11))} placeholder={i === 0 ? '(11) 3456-7890' : 'outro telefone'} autoComplete="off" />
+        : <input type="email" value={f[k][i]} onChange={(e) => lista(k, i, e.target.value)} placeholder="financeiro@essenzahair.com.br" autoComplete="off" />}
+      {(i > 0 || tipo === 'email') && <button type="button" className="ob-menos" onClick={() => tirarDa(k, i)} aria-label="Tirar"><X size={14} /></button>}
+      {i === f[k].length - 1 && <button type="button" className="ob-mais" onClick={() => maisNa(k)} aria-label={tipo === 'telefone' ? 'Mais um telefone' : 'Mais um e-mail'}><Plus size={14} /></button>}
+    </span>
+  )
   return (
     <>
-      <h1 className="ob-titulo">{autonoma ? 'Seus dados' : 'A cara do salão'}</h1>
-      <p className="ob-sub">{publico ? 'Essas informações formam a identidade do seu negócio na MIMO. Preencha e crie o seu acesso.' : autonoma ? 'Essas informações formam a sua identidade na MIMO: é o que as clientes veem.' : 'Essas informações formam a identidade do seu salão na MIMO.'}</p>
+      <h1 className="ob-titulo">Dados do negócio</h1>
+      <p className="ob-sub">{publico ? 'Os dados cadastrais e fiscais do seu negócio. O que é fiscal fica só com a MIMO. Preencha e crie o seu acesso.' : 'Os dados cadastrais e fiscais do seu negócio. O que é fiscal fica só com a MIMO; nome, WhatsApp e endereço aparecem para a cliente.'}</p>
       {erro && <div className="alert alert-error">{erro}</div>}
       <div className="ob-dados">
         <div className="ob-form">
-          <span className="ob-grupo-selo"><Selo publico /></span>
-          <label>{autonoma ? 'Nome da agenda' : 'Nome do salão'} <b>*</b><input value={f.name} onChange={m('name')} placeholder="Studio Essenza Hair" /></label>
-          <label>WhatsApp {autonoma ? 'de contato' : 'comercial'} <b>*</b><span className="ob-fone"><span className="ob-ddi">🇧🇷 +55</span><input type="tel" inputMode="numeric" value={f.whatsapp} onChange={(e) => setF((x) => ({ ...x, whatsapp: formatarFone(e.target.value) }))} placeholder="(11) 91234-5678" autoComplete="tel" /></span></label>
-          <label>E-mail da conta <b>*</b>{publico && <span className="muted">(é com ele que você entra)</span>}<input type="email" value={f.email} onChange={m('email')} placeholder="contato@essenzahair.com.br" autoComplete="email" /></label>
-          <label>{publico ? 'Seu nome completo' : 'Nome da responsável'} <b>*</b><input value={f.responsavel_nome} onChange={m('responsavel_nome')} placeholder="Juliana Lima" autoComplete="name" /></label>
-          {publico && !user && (
-            <>
-              <label>Senha <b>*</b><input type="password" value={conta.senha} onChange={(e) => setConta((x) => ({ ...x, senha: e.target.value }))} placeholder="mínimo 6 caracteres" autoComplete="new-password" /></label>
-              <label className="ob-termos"><input type="checkbox" checked={conta.termos} onChange={(e) => setConta((x) => ({ ...x, termos: e.target.checked }))} /><span><FraseDeAceite papel={s.tipo} /></span></label>
-            </>
-          )}
-          {/* a identificação fiscal: só a MIMO vê */}
-          <span className="ob-grupo-selo ob-grupo-selo-2"><Selo /></span>
+          {/* a identificação fiscal vem primeiro: é por ela que o cadastro começa */}
+          <span className="ob-grupo-selo"><Selo /></span>
           <div className="ob-bloco">
             <span className="ob-bloco-titulo">Identificação fiscal <small>fica só com a MIMO</small></span>
             {comCnpj ? (
-              <label>CNPJ <b>*</b><span className="muted">(preenche o endereço fiscal sozinho)</span><input value={formatarCnpj(f.cnpj)} onChange={(e) => porCnpj(e.target.value)} placeholder="12.345.678/0001-90" inputMode="numeric" autoComplete="off" />{cnpjInfo === 'buscando' ? <small className="muted">consultando a Receita…</small> : cnpjInfo.startsWith('ok:') ? <small className="ob-cnpj-ok">✓ {cnpjInfo.slice(3)}</small> : cnpjInfo.startsWith('erro:') ? <small className="ob-cnpj-erro">{cnpjInfo.slice(5)}</small> : f.razao_social ? <small className="muted">{f.razao_social}</small> : null}</label>
+              <label>CNPJ <b>*</b><span className="muted">(preenche o endereço fiscal sozinho)</span><input value={formatarCnpj(f.cnpj)} onChange={(e) => porCnpj(e.target.value)} placeholder="12.345.678/0001-90" inputMode="numeric" autoComplete="off" autoFocus={!f.cnpj} />{cnpjInfo === 'buscando' ? <small className="muted">consultando a Receita…</small> : cnpjInfo.startsWith('ok:') ? <small className="ob-cnpj-ok">✓ {cnpjInfo.slice(3)}</small> : cnpjInfo.startsWith('erro:') ? <small className="ob-cnpj-erro">{cnpjInfo.slice(5)}</small> : f.razao_social ? <small className="muted">{f.razao_social}</small> : null}</label>
             ) : (
               <>
                 <p className="ob-humor">Sem CNPJ por enquanto? Tranquilo, muita gente boa começou assim. 😉 Nos conta o seu CPF que a gente segue. Quando o CNPJ sair, é só voltar aqui e trocar.</p>
@@ -534,24 +497,14 @@ function PassoDados({ s, seguir, voltar, salvando, erro, setErro, user, autonoma
               <label>{ondeFica}<select value={f.endereco_igual ? 'igual' : 'outro'} onChange={(e) => setF((x) => ({ ...x, endereco_igual: e.target.value === 'igual' }))}><option value="igual">{autonoma ? 'Atendo no endereço fiscal' : 'É o mesmo endereço fiscal'}</option><option value="outro">{autonoma ? 'Atendo em outro endereço' : 'O salão fica em outro endereço'}</option></select></label>
             </div>
           )}
-        </div>
-        <div className="ob-form">
-          <span className="ob-grupo-selo"><Selo publico /></span>
-          <div className="ob-logo-campo">
-            <span className="ob-rotulo">{autonoma ? 'Sua foto ou logo' : 'Logo ou foto do salão'}</span>
-            <button type="button" className={'ob-logo' + (logo ? ' com' : '')} onClick={() => arq.current?.click()}>
-              {logo ? <img src={logo.preview ?? logo.url} alt="" /> : <span className="ob-logo-vazio"><span className="ob-logo-iniciais">{iniciais}</span><span>{f.name || 'Seu salão'}</span></span>}
-              <span className="ob-logo-cam"><Camera size={15} /></span>
-            </button>
-            <input ref={arq} type="file" accept="image/*" hidden onChange={trocarLogo} />
-            <small className="muted">JPG ou PNG. Tamanho máximo de 5 MB.</small>
-            {logo && <button type="button" className="link-ver" onClick={() => setLogo(null)}>Remover</button>}
-          </div>
           {!usaFiscal && (
-            <div className="ob-bloco">
-              <span className="ob-bloco-titulo">{ondeFica} <small>{comCnpj ? 'diferente do fiscal' : 'é o que a cliente vê'}</small></span>
-              <BlocoEndereco valor={local} onChange={setLocal} obrigatorio aoAchar={pinoDoCep} autoCompleteRua />
-            </div>
+            <>
+              <span className="ob-grupo-selo ob-grupo-selo-2"><Selo publico /></span>
+              <div className="ob-bloco">
+                <span className="ob-bloco-titulo">{ondeFica} <small>{comCnpj ? 'diferente do fiscal' : 'é o que a cliente vê'}</small></span>
+                <BlocoEndereco valor={local} onChange={setLocal} obrigatorio aoAchar={pinoDoCep} autoCompleteRua />
+              </div>
+            </>
           )}
           {/* o pino: é ele que a cliente vê no "Como chegar" */}
           <div className="ob-mapa-campo">
@@ -566,33 +519,21 @@ function PassoDados({ s, seguir, voltar, salvando, erro, setErro, user, autonoma
             </div>
             {geo && <small className="ob-mapa-nota">{geo}</small>}
           </div>
-          {/* telefones e e-mails além dos principais */}
-          <div className="ob-contatos">
-            <span className="ob-rotulo">Outros contatos <span className="muted">(opcional: fixo, financeiro, recepção…)</span></span>
-            {f.contatos.map((c, i) => (
-              <div key={i} className="ob-contato">
-                <select value={c.tipo} onChange={(e) => contato(i, { tipo: e.target.value, valor: '' })} aria-label="Tipo"><option value="telefone">Telefone</option><option value="email">E-mail</option></select>
-                {c.tipo === 'telefone'
-                  ? <input type="tel" inputMode="numeric" value={formatarFone(c.valor)} onChange={(e) => contato(i, { valor: soDigitos(e.target.value).slice(0, 11) })} placeholder="(11) 3456-7890" aria-label="Telefone" />
-                  : <input type="email" value={c.valor} onChange={(e) => contato(i, { valor: e.target.value })} placeholder="financeiro@essenzahair.com.br" aria-label="E-mail" />}
-                <input value={c.rotulo} onChange={(e) => contato(i, { rotulo: e.target.value })} placeholder="rótulo (ex.: fixo)" maxLength={30} aria-label="Rótulo" />
-                <button type="button" className="ob-contato-x" onClick={() => tirarContato(i)} aria-label="Tirar"><X size={15} /></button>
-              </div>
-            ))}
-            <div className="ob-contato-add">
-              <button type="button" className="ob-geo" onClick={() => addContato('telefone')}><Plus size={14} /> Telefone</button>
-              <button type="button" className="ob-geo" onClick={() => addContato('email')}><Plus size={14} /> E-mail</button>
-            </div>
-          </div>
-          {/* como a cliente vai ver: atualiza ao vivo */}
-          <div className="ob-preview">
-            <small><Eye size={11} /> Como sua cliente verá</small>
-            <div className="ob-preview-cartao">
-              <span className="ob-preview-logo">{logo ? <img src={logo.preview ?? logo.url} alt="" /> : iniciais}</span>
-              <span className="ob-preview-texto"><strong>{f.name || (autonoma ? 'Sua agenda' : 'Seu salão')}</strong><span>{[local.bairro, local.city].filter(Boolean).join(' • ') || 'Bairro • Cidade'}</span></span>
-              <span className="ob-preview-botao">Ver serviços</span>
-            </div>
-          </div>
+        </div>
+        <div className="ob-form">
+          <span className="ob-grupo-selo"><Selo publico /></span>
+          <label>{autonoma ? 'Nome da agenda' : 'Nome do salão'} <b>*</b><input value={f.name} onChange={m('name')} placeholder="Studio Essenza Hair" /></label>
+          <label>WhatsApp {autonoma ? 'de contato' : 'comercial'} <b>*</b><span className="ob-fone"><span className="ob-ddi">🇧🇷 +55</span><input type="tel" inputMode="numeric" value={f.whatsapp} onChange={(e) => setF((x) => ({ ...x, whatsapp: formatarFone(e.target.value) }))} placeholder="(11) 91234-5678" autoComplete="tel" /></span></label>
+          <label>Telefone <span className="muted">(fixo ou celular · opcional)</span>{f.telefones.map((_, i) => campoTel('telefones', i, 'telefone'))}</label>
+          <span className="ob-grupo-selo ob-grupo-selo-2"><Selo /></span>
+          <label>E-mail da conta <b>*</b>{publico && <span className="muted">(é com ele que você entra)</span>}<span className="ob-fone"><input type="email" value={f.email} onChange={m('email')} placeholder="contato@essenzahair.com.br" autoComplete="email" />{f.emails.length === 0 && <button type="button" className="ob-mais" onClick={() => maisNa('emails')} aria-label="Mais um e-mail"><Plus size={14} /></button>}</span>{f.emails.map((_, i) => campoTel('emails', i, 'email'))}</label>
+          <label>{publico ? 'Seu nome completo' : 'Nome da responsável'} <b>*</b><input value={f.responsavel_nome} onChange={m('responsavel_nome')} placeholder="Juliana Lima" autoComplete="name" /></label>
+          {publico && !user && (
+            <>
+              <label>Senha <b>*</b><input type="password" value={conta.senha} onChange={(e) => setConta((x) => ({ ...x, senha: e.target.value }))} placeholder="mínimo 6 caracteres" autoComplete="new-password" /></label>
+              <label className="ob-termos"><input type="checkbox" checked={conta.termos} onChange={(e) => setConta((x) => ({ ...x, termos: e.target.checked }))} /><span><FraseDeAceite papel={s.tipo} /></span></label>
+            </>
+          )}
         </div>
       </div>
       <Rodape voltar={voltar} avancar={avancar} salvando={salvando || criando} rotulo={publico ? (user ? 'Abrir minha agenda' : 'Criar conta e continuar') : 'Continuar'} />
@@ -614,6 +555,40 @@ function traduzErro(msg) {
 // ---------- 3 · Estrutura e operação ------------------------------------------------
 function PassoEstrutura({ s, seguir, voltar, salvando, erro, setErro, autonoma, gravarQuieto, setEstadoAuto }) {
   const [horas, setHoras] = useState(null)
+  // a cara do negócio: o logo e as fotos do espaço sobem na hora e ficam gravadas
+  const [logo, setLogo] = useState(s.logo_url ?? null)
+  const [fotos, setFotos] = useState(Array.isArray(s.fotos) ? s.fotos : [])
+  const [subindo, setSubindo] = useState('')   // '' | 'logo' | 'fotos'
+  const arqLogo = useRef(null)
+  const arqFotos = useRef(null)
+  async function subirImagem(blob, pasta) {
+    const path = `${s.id}/${pasta}/${crypto.randomUUID()}.jpg`
+    const { error } = await supabase.storage.from('saloes').upload(path, blob, { contentType: 'image/jpeg', cacheControl: '31536000' })
+    if (error) throw new Error('Não deu para subir a imagem: ' + error.message)
+    return supabase.storage.from('saloes').getPublicUrl(path).data.publicUrl
+  }
+  async function trocarLogo(e) {
+    const file = e.target.files?.[0]; e.target.value = ''
+    if (!file) return
+    if (file.size > 5 * 1024 * 1024) { setErro('A imagem passa de 5 MB.'); return }
+    setSubindo('logo'); setErro('')
+    try { const r = await reduzirFoto(file, { max: 512, quadrado: true }); const url = await subirImagem(r.blob, 'logo'); setLogo(url); await gravarQuieto({ logo_url: url }) } catch (err) { setErro(err.message) } finally { setSubindo('') }
+  }
+  async function tirarLogo() { setLogo(null); await gravarQuieto({ logo_url: '' }) }
+  async function addFotos(e) {
+    const files = Array.from(e.target.files ?? []); e.target.value = ''
+    if (!files.length) return
+    const espaco = MAX_FOTOS - fotos.length
+    if (files.length > espaco) setErro(`No máximo ${MAX_FOTOS} fotos.`); else setErro('')
+    setSubindo('fotos')
+    const novas = []
+    try {
+      for (const file of files.slice(0, espaco)) { const r = await reduzirFoto(file, { max: 1600 }); novas.push(await subirImagem(r.blob, 'fotos')) }
+    } catch (err) { setErro(err.message) } finally { setSubindo('') }
+    if (novas.length) { const lista = [...fotos, ...novas]; setFotos(lista); await gravarQuieto({ fotos: lista }) }
+  }
+  async function mexerFotos(lista) { setFotos(lista); await gravarQuieto({ fotos: lista }) }
+  const moverFoto = (i, dir) => { const n = [...fotos]; const j = i + dir; if (j < 0 || j >= n.length) return; [n[i], n[j]] = [n[j], n[i]]; mexerFotos(n) }
   const [cats, setCats] = useState([])
   const [novaCat, setNovaCat] = useState('')
   const [copiar, setCopiar] = useState(null)   // null | { dias: Set }
@@ -670,10 +645,61 @@ function PassoEstrutura({ s, seguir, voltar, salvando, erro, setErro, autonoma, 
   }
   return (
     <>
-      <h1 className="ob-titulo">Como o dia funciona</h1>
-      <p className="ob-sub">{autonoma ? 'Defina como você atende no dia a dia. Tudo pode mudar depois em Ajustes.' : 'Defina como seu salão funciona no dia a dia. Tudo pode mudar depois em Ajustes.'}</p>
+      <h1 className="ob-titulo">{autonoma ? 'Sua cara e o seu dia a dia' : 'A cara do salão e o dia a dia'}</h1>
+      <p className="ob-sub">{autonoma ? 'Sua foto, o seu espaço e como você atende. Tudo pode mudar depois em Ajustes.' : 'Logo, fotos do espaço e como o salão funciona. Tudo pode mudar depois em Ajustes.'}</p>
       {erro && <div className="alert alert-error">{erro}</div>}
       <div className="ob-estrutura">
+        <div className="ob-card ob-card-largo">
+          <strong className="ob-card-titulo">{autonoma ? 'Sua foto e o seu espaço' : 'A cara do salão'}</strong>
+          <span className="muted">{autonoma ? 'A foto aparece ao lado do seu nome. As fotos do espaço são a capa da sua página: a primeira é a que abre.' : 'O logo aparece pequeno, ao lado do nome. As fotos são do espaço: fachada, recepção, cadeiras. A primeira vira a capa; horizontais ficam melhores.'}</span>
+          <div className="ob-cara">
+            <div className="ob-cara-imagens">
+              <div className="ob-logo-campo">
+                <span className="ob-rotulo">{autonoma ? 'Sua foto ou logo' : 'Logo'}</span>
+                <button type="button" className={'ob-logo ob-logo-mini' + (logo ? ' com' : '')} onClick={() => arqLogo.current?.click()} disabled={subindo === 'logo'}>
+                  {logo ? <img src={logo} alt="" /> : <span className="ob-logo-vazio"><span className="ob-logo-iniciais">{iniciaisDe(s.name)}</span></span>}
+                  <span className="ob-logo-cam"><Camera size={13} /></span>
+                </button>
+                <input ref={arqLogo} type="file" accept="image/*" hidden onChange={trocarLogo} />
+                {subindo === 'logo' ? <small className="muted">subindo…</small> : logo ? <button type="button" className="link-ver" onClick={tirarLogo}>Remover</button> : <small className="muted">JPG ou PNG</small>}
+              </div>
+              <div className="ob-fotos-campo">
+                <span className="ob-rotulo">{autonoma ? 'Fotos do espaço' : 'Fotos do salão'} <span className="muted">· {fotos.length}/{MAX_FOTOS}</span></span>
+                <div className="ob-fotos">
+                  {fotos.map((u, i) => (
+                    <div key={u} className={'ob-foto' + (i === 0 ? ' capa' : '')}>
+                      <img src={u} alt="" />
+                      {i === 0 && <span className="ob-foto-capa">capa</span>}
+                      <div className="ob-foto-acoes">
+                        <button type="button" onClick={() => moverFoto(i, -1)} disabled={i === 0} aria-label="Mover para antes">‹</button>
+                        <button type="button" onClick={() => moverFoto(i, 1)} disabled={i === fotos.length - 1} aria-label="Mover para depois">›</button>
+                        <button type="button" className="perigo" onClick={() => mexerFotos(fotos.filter((_, k) => k !== i))} aria-label="Tirar foto">×</button>
+                      </div>
+                    </div>
+                  ))}
+                  {fotos.length < MAX_FOTOS && <button type="button" className="ob-foto ob-foto-add" onClick={() => arqFotos.current?.click()} disabled={subindo === 'fotos'}><ImagePlus size={18} /><span>{subindo === 'fotos' ? 'subindo…' : 'Adicionar'}</span></button>}
+                  <input ref={arqFotos} type="file" accept="image/*" multiple hidden onChange={addFotos} />
+                </div>
+              </div>
+            </div>
+            {/* como a cliente vai ver a página: capa, logo, nome e onde fica */}
+            <div className="ob-previa">
+              <small><Eye size={11} /> Como sua cliente verá</small>
+              <div className="ob-previa-tela">
+                <div className="ob-previa-capa">
+                  {fotos[0] ? <img src={fotos[0]} alt="" /> : <span className="ob-previa-capa-vazia"><ImagePlus size={20} /><span>{autonoma ? 'A foto do seu espaço vira a capa' : 'A primeira foto vira a capa'}</span></span>}
+                  {fotos.length > 1 && <span className="ob-previa-contador">1/{fotos.length}</span>}
+                  <span className="ob-previa-logo">{logo ? <img src={logo} alt="" /> : iniciaisDe(s.name)}</span>
+                </div>
+                <div className="ob-previa-corpo">
+                  <strong>{s.name || (autonoma ? 'Sua agenda' : 'Seu salão')}</strong>
+                  <span>{[s.bairro, s.city].filter(Boolean).join(' • ') || 'Bairro • Cidade'}</span>
+                  <div className="ob-previa-botoes"><span className="ob-preview-botao">Ver serviços</span><span className="ob-previa-botao-2"><MapPin size={11} /> Como chegar</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
         <div className="ob-card">
           <strong className="ob-card-titulo">Horário de funcionamento</strong>
           <span className="muted">{autonoma ? 'O horário padrão da sua agenda. Folgas e feriados você marca depois, em Bloqueios.' : 'Defina o horário padrão do salão. Depois você personaliza os dias e horários de cada profissional.'}</span>

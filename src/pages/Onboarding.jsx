@@ -9,6 +9,7 @@ import '../onboarding.css'
 import { reduzirFoto } from '../lib/imagem'
 import { buscarCep, formatarCep, minhaPosicao, geocodificar } from '../lib/geo'
 import { formatarFone } from '../lib/fone'
+import { formatarCnpj, cnpjValido, buscarCnpj } from '../lib/cnpj'
 import { linkDoCodigo } from '../lib/convite'
 import { urlDoAmbiente } from '../lib/ambiente'
 import { formatPreco } from '../lib/format'
@@ -278,14 +279,29 @@ function PassoDados({ s, seguir, voltar, salvando, erro, setErro, user, autonoma
   const [conta, setConta] = useState({ senha: '', termos: false })
   const [criada, setCriada] = useState(false)
   const [criando, setCriando] = useState(false)
-  const [f, setF] = useState({ name: s.name ?? '', cnpj: s.cnpj ?? '', whatsapp: s.whatsapp ?? s.phone ?? '', email: s.email ?? '', responsavel_nome: s.responsavel_nome ?? '', address: s.address ?? '', bairro: s.bairro ?? '', city: s.city ?? '', uf: s.uf ?? '', cep: s.cep ?? '', lat: s.lat ?? null, lng: s.lng ?? null })
+  const [f, setF] = useState({ name: s.name ?? '', cnpj: s.cnpj ?? '', razao_social: s.razao_social ?? '', whatsapp: s.whatsapp ?? s.phone ?? '', email: s.email ?? '', responsavel_nome: s.responsavel_nome ?? '', address: s.address ?? '', bairro: s.bairro ?? '', city: s.city ?? '', uf: s.uf ?? '', cep: s.cep ?? '', lat: s.lat ?? null, lng: s.lng ?? null })
   const [logo, setLogo] = useState(s.logo_url ? { url: s.logo_url } : null)
   const [geo, setGeo] = useState('')
   const [buscandoCep, setBuscandoCep] = useState(false)
+  const [cnpjInfo, setCnpjInfo] = useState('')   // o que a Receita disse do CNPJ
   const arq = useRef(null)
   const m = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.value }))
+  // CNPJ: máscara e, com os 14 dígitos certos, busca na Receita e preenche o que estiver vazio
+  async function porCnpj(v) {
+    const d = v.replace(/\D/g, '').slice(0, 14)
+    setF((x) => ({ ...x, cnpj: d }))
+    setCnpjInfo('')
+    if (d.length < 14) return
+    if (!cnpjValido(d)) { setCnpjInfo('erro:Confere o CNPJ: os dígitos não batem.'); return }
+    setCnpjInfo('buscando')
+    try {
+      const r = await buscarCnpj(d)
+      setF((x) => ({ ...x, razao_social: r.razao_social, name: x.name || r.nome_fantasia || r.razao_social, address: x.address || r.address, bairro: x.bairro || r.bairro, city: x.city || r.city, uf: x.uf || r.uf, cep: x.cep || r.cep, email: x.email || r.email }))
+      setCnpjInfo(`ok:${r.razao_social}${r.situacao && r.situacao.toUpperCase() !== 'ATIVA' ? ` · situação na Receita: ${r.situacao}` : ''}`)
+    } catch (err) { setCnpjInfo('erro:' + err.message) }
+  }
   // autosave dos campos de texto (a foto e o pino vão no Continuar)
-  const estado = useAutosave(() => gravarQuieto({ name: f.name, cnpj: f.cnpj, whatsapp: f.whatsapp, email: f.email, responsavel_nome: f.responsavel_nome, address: f.address, bairro: f.bairro, city: f.city, uf: f.uf, cep: f.cep.replace(/\D/g, '') }), f, { ativo: Boolean(s.id) && !publico })
+  const estado = useAutosave(() => gravarQuieto({ name: f.name, cnpj: f.cnpj, razao_social: f.razao_social, whatsapp: f.whatsapp, email: f.email, responsavel_nome: f.responsavel_nome, address: f.address, bairro: f.bairro, city: f.city, uf: f.uf, cep: f.cep.replace(/\D/g, '') }), f, { ativo: Boolean(s.id) && !publico })
   useEffect(() => { setEstadoAuto(estado); return () => setEstadoAuto('') }, [estado, setEstadoAuto])
 
   useEffect(() => { if (!f.responsavel_nome && user && !publico) supabase.from('profiles').select('full_name, email').eq('id', user.id).maybeSingle().then(({ data }) => { if (data) setF((x) => ({ ...x, responsavel_nome: x.responsavel_nome || data.full_name || '', email: x.email || data.email || '' })) }) }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -317,7 +333,7 @@ function PassoDados({ s, seguir, voltar, salvando, erro, setErro, user, autonoma
     try {
       const { data: livre } = await supabase.rpc('telefone_disponivel', { fone: f.whatsapp.trim() })
       if (livre && livre.disponivel === false) { setErro(livre.email ? `Esse WhatsApp já tem conta, no e-mail ${livre.email}. Entre com ela.` : (livre.motivo || 'Confere o WhatsApp.')); return }
-      const dadosSalao = { cnpj: f.cnpj, email: f.email.trim(), whatsapp: f.whatsapp.trim(), responsavel_nome: f.responsavel_nome.trim(), address: f.address, bairro: f.bairro, city: f.city, uf: f.uf, cep: f.cep.replace(/\D/g, '') }
+      const dadosSalao = { cnpj: f.cnpj, razao_social: f.razao_social, email: f.email.trim(), whatsapp: f.whatsapp.trim(), responsavel_nome: f.responsavel_nome.trim(), address: f.address, bairro: f.bairro, city: f.city, uf: f.uf, cep: f.cep.replace(/\D/g, '') }
       // a foto espera no navegador e sobe assim que a conta entrar no onboarding
       try { if (logo?.blob) localStorage.setItem(CHAVE_LOGO, await blobParaDataUrl(logo.blob)); else localStorage.removeItem(CHAVE_LOGO) } catch { /* sem storage: a foto fica pra depois */ }
       if (user) {
@@ -381,7 +397,7 @@ function PassoDados({ s, seguir, voltar, salvando, erro, setErro, user, autonoma
           <label>{autonoma ? 'Nome da agenda' : 'Nome do salão'} <b>*</b><input value={f.name} onChange={m('name')} placeholder="Studio Essenza Hair" /></label>
           <label>WhatsApp {autonoma ? 'de contato' : 'comercial'} <b>*</b><span className="ob-fone"><span className="ob-ddi">🇧🇷 +55</span><input type="tel" inputMode="numeric" value={f.whatsapp} onChange={(e) => setF((x) => ({ ...x, whatsapp: formatarFone(e.target.value) }))} placeholder="(11) 91234-5678" autoComplete="tel" /></span></label>
           <span className="ob-grupo-selo ob-grupo-selo-2"><Selo /></span>
-          {!autonoma && <label>CNPJ <span className="muted">(opcional)</span><input value={f.cnpj} onChange={m('cnpj')} placeholder="12.345.678/0001-90" inputMode="numeric" /></label>}
+          {!autonoma && <label>CNPJ <span className="muted">(opcional · preenche o endereço sozinho)</span><input value={formatarCnpj(f.cnpj)} onChange={(e) => porCnpj(e.target.value)} placeholder="12.345.678/0001-90" inputMode="numeric" autoComplete="off" />{cnpjInfo === 'buscando' ? <small className="muted">consultando a Receita…</small> : cnpjInfo.startsWith('ok:') ? <small className="ob-cnpj-ok">✓ {cnpjInfo.slice(3)}</small> : cnpjInfo.startsWith('erro:') ? <small className="ob-cnpj-erro">{cnpjInfo.slice(5)}</small> : f.razao_social ? <small className="muted">{f.razao_social}</small> : null}</label>}
           <label>E-mail da conta <b>*</b>{publico && <span className="muted">(é com ele que você entra)</span>}<input type="email" value={f.email} onChange={m('email')} placeholder="contato@essenzahair.com.br" autoComplete="email" /></label>
           <label>{publico ? 'Seu nome completo' : 'Nome da responsável'} <b>*</b><input value={f.responsavel_nome} onChange={m('responsavel_nome')} placeholder="Juliana Lima" autoComplete="name" /></label>
           {publico && !user && (

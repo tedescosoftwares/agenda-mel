@@ -428,3 +428,5 @@
   .ob-tipo-destaque { padding: 7px 10px; }
   .ob-tipo-promais { padding: 8px 12px; }
 }
+
+.ob-cnpj-ok { flex: 0 0 100%; font-weight: 500; color: #067647; } .ob-cnpj-erro { flex: 0 0 100%; font-weight: 500; color: #b42318; }

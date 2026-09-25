@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import QRCode from 'qrcode'
-import { Check, ArrowLeft, ArrowRight, LogOut, Camera, MapPin, Plus, X, Copy, Download, MoreHorizontal, Link2, Info, Crown, Sparkles, MessageCircle, Users, Minus, Eye, Lock, Wand2, CalendarCheck, QrCode, Send, Home } from 'lucide-react'
+import { Check, ArrowLeft, ArrowRight, LogOut, Camera, MapPin, Plus, X, Copy, Download, MoreHorizontal, Link2, Info, Sparkles, MessageCircle, Users, Minus, Eye, Lock, Wand2, CalendarCheck, QrCode, Send, Home } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { planoDoNegocio, reais as emDinheiro, PLANOS } from '../lib/planos'
@@ -267,7 +267,6 @@ function PassoTipo({ s, setS, seguir, salvando, erro, setErro }) {
           </button>
         ))}
       </div>
-      <div className="ob-nota"><span className="ob-nota-icone"><Crown size={16} /></span><span><strong>Nenhuma cobrança neste cadastro</strong><small>A mensalidade do salão é combinada depois, direto com a MIMO. Autônoma não paga nada.</small></span></div>
       <Rodape primeiro avancar={avancar} salvando={salvando} />
     </>
   )
@@ -558,7 +557,7 @@ function PassoEstrutura({ s, seguir, voltar, salvando, erro, setErro, autonoma, 
             <span className="muted">Quantas pessoas atendem clientes e precisam de agenda própria? Recepção, administração e pessoas sem agenda não contam.</span>
             <div className="ob-contador"><button type="button" onClick={() => p('equipe_prevista')(Math.max(1, Number(pol.equipe_prevista) - 1))} aria-label="Menos"><Minus size={14} /></button><strong>{pol.equipe_prevista}</strong><button type="button" onClick={() => p('equipe_prevista')(Number(pol.equipe_prevista) + 1)} aria-label="Mais"><Plus size={14} /></button></div>
             {(() => { const c = planoDoNegocio('salao', pol.equipe_prevista); return (
-              <div className="ob-preco-vivo"><small>{c.nome}</small><b>{emDinheiro(c.total)}<small> /mês</small></b><span>{c.extras === 0 ? `Até ${c.plano === 'pro' ? PLANOS.pro.inclusas : PLANOS.promais.inclusas} agendas inclusas.` : `${c.plano === 'pro' ? PLANOS.pro.inclusas : PLANOS.promais.inclusas} inclusas + ${c.extras} × ${emDinheiro(c.valorExtra)}.`} Nenhuma cobrança agora.</span></div>
+              <div className="ob-preco-vivo"><small>{c.nome}</small><b>{emDinheiro(c.total)}<small> /mês</small></b><span>{c.extras === 0 ? `Até ${c.plano === 'pro' ? PLANOS.pro.inclusas : PLANOS.promais.inclusas} agendas inclusas.` : `${c.plano === 'pro' ? PLANOS.pro.inclusas : PLANOS.promais.inclusas} inclusas + ${c.extras} × ${emDinheiro(c.valorExtra)}.`}</span></div>
             ) })()}
           </div>
         )}
@@ -873,7 +872,7 @@ function PassoAtivacao({ s, voltar, salvando, erro, concluir, pronto, autonoma, 
       </div>
       {(() => { const c = planoDoNegocio(s.tipo, s.equipe_prevista); return (
         <div className="ob-resumo-plano">
-          <div><small>Seu plano</small><strong>{c.nome}</strong><p>{autonoma ? 'Uma agenda, sem mensalidade, sem cartão.' : `${s.equipe_prevista || 1} ${(s.equipe_prevista || 1) === 1 ? 'agenda' : 'agendas'} · ${c.extras === 0 ? 'todas inclusas' : `${c.extras} além das inclusas`}. Nenhuma cobrança agora: a mensalidade é combinada com a MIMO.`}</p></div>
+          <div><small>Seu plano</small><strong>{c.nome}</strong><p>{autonoma ? 'Uma agenda, sem mensalidade, sem cartão.' : `${s.equipe_prevista || 1} ${(s.equipe_prevista || 1) === 1 ? 'agenda' : 'agendas'} · ${c.extras === 0 ? 'todas inclusas' : `${c.extras} além das inclusas`}.`}</p></div>
           <b>{c.total === 0 ? 'Grátis' : <>{emDinheiro(c.total)}<small> /mês</small></>}</b>
         </div>
       ) })()}

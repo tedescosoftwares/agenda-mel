@@ -30,12 +30,63 @@ import RodapeSocial from '../components/RodapeSocial'
 // passa por cinco: não tem o passo da equipe.
 // cada passo tem a foto, o bilhete e a frase do painel da esquerda
 const PASSOS = [
-  { id: 1, rotulo: 'Tipo de conta', foto: 'profissional', bilhete: 'bem-vinda', titulo: 'Sua rotina no lugar.', texto: 'Escolha como você trabalha. Autônoma é grátis; salão paga só pelas agendas que usa.', roteiro: ['Escolha autônoma ou salão', 'Confira o plano'] },
-  { id: 2, rotulo: 'Dados do negócio', foto: 'agenda-celular', bilhete: 'tudo em ordem', titulo: 'Quem é o negócio.', texto: 'CNPJ (ou CPF), endereço fiscal e o seu acesso. Fica só com a MIMO; o salão em si vem no passo 3.', roteiro: ['CNPJ ou CPF', 'Endereço fiscal', 'E-mail, WhatsApp e senha'] },
-  { id: 3, rotulo: 'Seu salão', foto: 'salao', bilhete: 'do seu jeito', titulo: 'Monte o seu salão.', texto: 'O que a cliente vê e como o dia funciona: nome, fotos, contatos, endereço, horário e regras. Tudo muda depois em Ajustes.', roteiro: ['Nome, logo e fotos', 'Contatos e endereço', 'Horário e regras'] },
-  { id: 4, rotulo: 'Serviços', foto: 'lifestyle', bilhete: 'o que você faz', titulo: 'O cardápio da casa.', texto: 'Nome, duração real e preço. A duração é o que a agenda usa pra achar horário livre.', roteiro: ['Adicione pelo menos um serviço', 'Preço e duração de cada um'] },
-  { id: 5, rotulo: 'Equipe', foto: 'equipe', bilhete: 'quem atende', titulo: 'Monte sua operação.', texto: 'Você configura cada profissional. Ela recebe um link e entra com a agenda pronta.', roteiro: ['Cadastre quem atende', 'Configure cada uma', 'Mande o link de acesso'] },
-  { id: 6, rotulo: 'Clientes e ativação', foto: 'qr', bilhete: 'do balcão pra agenda', titulo: 'Pronta pra receber.', texto: 'Imprima o QR, coloque no balcão e na bio. A cliente escaneia e marca sozinha.', roteiro: ['Checklist completo', 'Link da agenda criado', 'Entre no painel'] },
+  {
+    id: 1,
+    rotulo: 'Tipo de conta',
+    foto: 'profissional',
+    bilhete: 'começa por aqui',
+    titulo: 'Como você trabalha?',
+    texto: 'Escolha a opção que combina com a sua rotina. Se isso mudar depois, você pode ajustar sem perder seus dados.',
+    roteiro: ['Escolha seu tipo de conta', 'Confira o plano']
+  },
+
+  {
+    id: 2,
+    rotulo: 'Seus dados',
+    foto: 'agenda-celular',
+    bilhete: 'rapidinho',
+    titulo: 'Agora, seus dados.',
+    texto: 'Precisamos de algumas informações para criar sua conta e identificar o negócio. A parte visível para clientes vem depois.',
+    roteiro: ['CPF ou CNPJ', 'Endereço de cadastro', 'E-mail, WhatsApp e senha']
+  },
+ 
+   {
+    id: 3,
+    rotulo: 'Seu espaço',
+    foto: 'salao',
+    bilhete: 'com a sua cara',
+    titulo: 'Mostre seu espaço.',
+    texto: 'Escolha o nome, adicione fotos, contatos, endereço e defina como sua agenda funciona.',
+    roteiro: ['Nome e fotos', 'Contatos e localização', 'Horários e regras']
+  },
+ 
+   {
+    id: 4,
+    rotulo: 'Serviços',
+    foto: 'lifestyle',
+    bilhete: 'seu cardápio',
+    titulo: 'O que suas clientes podem agendar?',
+    texto: 'Cadastre seus principais serviços com preço e duração. Você pode completar a lista depois.',
+    roteiro: ['Cadastre seus serviços', 'Defina preço e duração']
+  },
+  {
+    id: 5,
+    rotulo: 'Equipe',
+    foto: 'equipe',
+    bilhete: 'quem atende',
+    titulo: 'Agora, sua equipe.',
+    texto: 'Configure cada profissional e deixe a agenda pronta antes de enviar o acesso.',
+    roteiro: ['Adicione as profissionais', 'Configure agendas e serviços', 'Envie os acessos']
+  },
+  {
+    id: 6,
+    rotulo: 'Ativação',
+    foto: 'qr',
+    bilhete: 'tudo pronto',
+    titulo: 'Hora de colocar a agenda pra rodar.',
+    texto: 'Confira se está tudo certo, teste a experiência da cliente e compartilhe seu link ou QR Code.',
+    roteiro: ['Confira o cadastro', 'Teste sua agenda', 'Compartilhe com clientes']
+  },
 ]
 const DIAS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
 const ORDEM_DIAS = [1, 2, 3, 4, 5, 6, 0]

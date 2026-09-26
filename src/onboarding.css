@@ -515,3 +515,10 @@
 .ob-cnpj-nota strong { color: var(--ob-rosa, #ff2d7a); }
 .ob-marketing { margin-top: -0.2rem; }
 .ob-linha-meio { grid-template-columns: 1fr 1fr; }
+
+/* ---- o modalzinho de erro ---- */
+.ob-modal-erro { max-width: 420px; align-items: center; text-align: center; }
+.ob-modal-erro h3 { font-size: 1.15rem; }
+.ob-erro-icone { width: 48px; height: 48px; border-radius: 16px; background: #fff0f6; color: var(--ob-rosa, #ff2d7a); display: grid; place-items: center; }
+.ob-erro-texto { margin: 0; font-size: 0.9rem; line-height: 1.5; color: var(--ob-ameixa, #3d0c4e); }
+.ob-modal-erro .ob-modal-acoes { justify-content: center; width: 100%; }

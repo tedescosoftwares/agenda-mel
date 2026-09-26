@@ -198,6 +198,7 @@ export default function Onboarding({ publico = false }) {
         </div>
         <div className="ob-conteudo-linha"><span className="ob-conteudo-num">Passo {idx + 1} de {total} · {atual.rotulo}</span><EstadoSalvo estado={estadoAuto} /></div>
         {retomado && <div className="ob-retomada"><Wand2 size={15} /><span><strong>Continuando de onde você parou.</strong> O que você já preencheu está guardado; os passos anteriores ficam no menu ao lado.</span><button type="button" onClick={() => setRetomado(false)} aria-label="Fechar"><X size={14} /></button></div>}
+        {erro && <ModalErro texto={erro} onFechar={() => setErro('')} />}
         {passo === 1 && <PassoTipo {...props} />}
         {passo === 2 && <PassoDados {...props} />}
         {passo === 3 && <PassoEstrutura {...props} />}
@@ -222,7 +223,7 @@ const Selo = ({ publico }) => publico
   : <span className="ob-selo interno" title="Só você e a MIMO veem"><Lock size={11} /> Uso administrativo</span>
 
 // ---------- 1 · Tipo de conta ------------------------------------------------------
-function PassoTipo({ s, setS, seguir, salvando, erro, setErro }) {
+function PassoTipo({ s, setS, seguir, salvando, setErro }) {
   const [tipo, setTipo] = useState(s.tipo ?? 'salao')
   async function avancar() {
     if (tipo !== s.tipo && !s.id) { setS((x) => ({ ...x, tipo })); seguir({}); return }
@@ -238,7 +239,6 @@ function PassoTipo({ s, setS, seguir, salvando, erro, setErro }) {
     <>
       <h1 className="ob-titulo">Como você trabalha?</h1>
       <p className="ob-sub">Escolha o tipo de conta. Você poderá mudar depois, sem perder seus dados.</p>
-      {erro && <div className="alert alert-error">{erro}</div>}
       <div className="ob-tipos">
         {[
           { id: 'salao', foto: 'equipe', pilula: 'Salão · MIMO Pro', titulo: 'Tenho salão, com equipe', texto: 'Para salões com duas ou mais profissionais.', bloco: 'Você controla a operação', itens: ['cadastra sua equipe', 'define serviços e horários', 'organiza agendas', 'configura permissões', 'acompanha a operação do salão'], destaque: 'Você configura tudo primeiro. Cada profissional recebe o acesso depois, com a agenda pronta.', preco: emDinheiro(pro.base), sub: `/mês até ${pro.inclusas} profissionais · ${emDinheiro(pro.extra)} por agenda a mais`, promais: <><b>{PLANOS.promais.nome}</b> a partir de {PLANOS.promais.inclusas} profissionais: <strong>{emDinheiro(PLANOS.promais.base)}/mês</strong> + {emDinheiro(PLANOS.promais.extra)} por profissional a partir da {PLANOS.promais.inclusas + 1}ª. O plano se ajusta sozinho pelo número de agendas, no passo 3.</> },
@@ -299,6 +299,27 @@ function BlocoEndereco({ valor, onChange, obrigatorio, aoAchar, autoCompleteRua 
   )
 }
 
+// Qualquer erro dos passos aparece num modalzinho, em vez da faixa
+// vermelha no meio do formulário. Quando o recado é "já tem conta",
+// o botão leva pra entrar.
+function ModalErro({ texto, onFechar }) {
+  const jaTemConta = /já tem conta/i.test(texto)
+  return (
+    <div className="modal-fundo ob-modal-fundo" onClick={onFechar}>
+      <div className="modal-caixa ob-modal ob-modal-erro" role="alertdialog" aria-live="assertive" onClick={(e) => e.stopPropagation()}>
+        <button type="button" className="modal-fechar" onClick={onFechar} aria-label="Fechar"><X size={18} /></button>
+        <span className="ob-erro-icone"><Info size={22} /></span>
+        <h3>{jaTemConta ? 'Esse WhatsApp já é de casa' : 'Opa, falta um detalhe'}</h3>
+        <p className="ob-erro-texto">{texto}</p>
+        <div className="ob-modal-acoes">
+          {jaTemConta && <Link to="/pro/entrar" className="btn btn-ghost">Entrar com ela</Link>}
+          <button type="button" className="btn btn-primary" onClick={onFechar} autoFocus>{jaTemConta ? 'Usar outro número' : 'Entendi'}</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // Depois da consulta do CNPJ: mostra o que a Receita devolveu e explica
 // que o nome fantasia fica no cadastro; o nome que a cliente vê é o do passo 3.
 function ModalCnpj({ dados, onFechar }) {
@@ -323,7 +344,7 @@ function ModalCnpj({ dados, onFechar }) {
   )
 }
 
-function PassoDados({ s, seguir, voltar, salvando, erro, setErro, user, autonoma, publico, recarregarPerfil, navigate, gravarQuieto, setEstadoAuto, docsLegais }) {
+function PassoDados({ s, seguir, voltar, salvando, setErro, user, autonoma, publico, recarregarPerfil, navigate, gravarQuieto, setEstadoAuto, docsLegais }) {
   const { signUp } = useAuth()
   const [conta, setConta] = useState({ senha: '', confirma: '', termos: false, marketing: false })
   const [criada, setCriada] = useState(false)
@@ -519,7 +540,6 @@ function PassoDados({ s, seguir, voltar, salvando, erro, setErro, user, autonoma
     <>
       <h1 className="ob-titulo">Dados do negócio</h1>
       <p className="ob-sub">{publico ? 'Os dados cadastrais e fiscais do seu negócio. O que é fiscal fica só com a MIMO. Preencha e crie o seu acesso.' : 'Os dados cadastrais e fiscais do seu negócio. O que é fiscal fica só com a MIMO; nome, WhatsApp e endereço aparecem para a cliente.'}</p>
-      {erro && <div className="alert alert-error">{erro}</div>}
       <div className="ob-dados">
         <div className="ob-form">
           {/* a identificação fiscal vem primeiro: é por ela que o cadastro começa */}
@@ -610,7 +630,7 @@ function traduzErro(msg) {
 }
 
 // ---------- 3 · Estrutura e operação ------------------------------------------------
-function PassoEstrutura({ s, seguir, voltar, salvando, erro, setErro, autonoma, gravarQuieto, setEstadoAuto }) {
+function PassoEstrutura({ s, seguir, voltar, salvando, setErro, autonoma, gravarQuieto, setEstadoAuto }) {
   const [horas, setHoras] = useState(null)
   // a cara do negócio: o logo e as fotos do espaço sobem na hora e ficam gravadas
   const [nome, setNome] = useState(s.name || s.nome_fantasia || s.razao_social || '')   // o nome que a cliente vê
@@ -706,7 +726,6 @@ function PassoEstrutura({ s, seguir, voltar, salvando, erro, setErro, autonoma, 
     <>
       <h1 className="ob-titulo">{autonoma ? 'Sua cara e o seu dia a dia' : 'A cara do salão e o dia a dia'}</h1>
       <p className="ob-sub">{autonoma ? 'Sua foto, o seu espaço e como você atende. Tudo pode mudar depois em Ajustes.' : 'Logo, fotos do espaço e como o salão funciona. Tudo pode mudar depois em Ajustes.'}</p>
-      {erro && <div className="alert alert-error">{erro}</div>}
       <div className="ob-estrutura">
         <div className="ob-card ob-card-largo">
           <strong className="ob-card-titulo">{autonoma ? 'Sua foto e o seu espaço' : 'A cara do salão'}</strong>
@@ -839,7 +858,7 @@ function PassoEstrutura({ s, seguir, voltar, salvando, erro, setErro, autonoma, 
 }
 
 // ---------- 4 · Serviços -----------------------------------------------------------
-function PassoServicos({ s, seguir, voltar, salvando, erro, setErro, autonoma }) {
+function PassoServicos({ s, seguir, voltar, salvando, setErro, autonoma }) {
   const [servicos, setServicos] = useState(null)
   const [cats, setCats] = useState([])
   const [profs, setProfs] = useState([])
@@ -884,7 +903,6 @@ function PassoServicos({ s, seguir, voltar, salvando, erro, setErro, autonoma })
         <div><h1 className="ob-titulo">{vazio ? 'Comece pelos serviços mais importantes' : autonoma ? 'Seus serviços' : 'O que o salão oferece'}</h1><p className="ob-sub">{vazio ? 'Você não precisa cadastrar tudo agora. Adicione de 3 a 5 serviços principais para começar a usar a agenda.' : 'Nome, duração real e preço. A duração é o que a agenda usa pra achar horário livre.'}</p></div>
         {!vazio && <button type="button" className="btn btn-secondary ob-add" onClick={() => setModal('novo')}><Plus size={15} /> Adicionar serviço</button>}
       </div>
-      {erro && <div className="alert alert-error">{erro}</div>}
       {!vazio && (
         <div className="chips ob-chips">
           <button type="button" className={'chip' + (!filtro ? ' active' : '')} onClick={() => setFiltro('')}>Todos</button>
@@ -1002,7 +1020,7 @@ function ModalServico({ salaoId, servico, sugestao, cats, profs, quem, onFechar,
 // ---------- 5 · Equipe --------------------------------------------------------------
 // O salão configura a profissional; ela só ativa o acesso. A lista vem da
 // equipe_da_casa (situação, serviços, dias, token); a gaveta salva tudo.
-function PassoEquipe({ s, seguir, voltar, salvando, erro, setErro }) {
+function PassoEquipe({ s, seguir, voltar, salvando, setErro }) {
   const [equipe, setEquipe] = useState(null)
   const [servicos, setServicos] = useState([])
   const [cats, setCats] = useState([])
@@ -1042,7 +1060,6 @@ function PassoEquipe({ s, seguir, voltar, salvando, erro, setErro }) {
         <div><h1 className="ob-titulo">Monte sua equipe</h1><p className="ob-sub">Você configura cada profissional. Depois ela recebe um link e entra com a agenda pronta.</p></div>
         <button type="button" className="btn btn-primary ob-add" onClick={() => setGaveta('nova')}><Plus size={15} /> Adicionar profissional</button>
       </div>
-      {erro && <div className="alert alert-error">{erro}</div>}
       {aviso && <div className="alert alert-info">{aviso}</div>}
       <div className="eq-bloco">
         <span className="eq-bloco-icone"><Home size={17} /></span>
@@ -1072,7 +1089,7 @@ function PassoEquipe({ s, seguir, voltar, salvando, erro, setErro }) {
 }
 
 // ---------- 6 · Clientes e ativação --------------------------------------------------
-function PassoAtivacao({ s, voltar, salvando, erro, concluir, pronto, autonoma, irPara }) {
+function PassoAtivacao({ s, voltar, salvando, concluir, pronto, autonoma, irPara }) {
   const [copiado, setCopiado] = useState(false)
   const [resumo, setResumo] = useState(null)
   const qr = useRef(null)
@@ -1098,7 +1115,6 @@ function PassoAtivacao({ s, voltar, salvando, erro, concluir, pronto, autonoma, 
     <>
       <h1 className="ob-titulo">Pronta pra receber</h1>
       <p className="ob-sub">{autonoma ? 'Sua agenda está montada. Agora é divulgar e começar a receber agendamentos.' : 'Seu salão está montado. Agora é divulgar e começar a receber agendamentos.'}</p>
-      {erro && <div className="alert alert-error">{erro}</div>}
       <div className="ob-duas ob-duas-final">
         <div className="ob-card ob-checklist">
           <strong className="ob-card-titulo">O que já está pronto</strong>

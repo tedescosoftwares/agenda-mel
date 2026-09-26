@@ -52,7 +52,7 @@ export default function AdminServices() {
   const [capas, setCapas] = useState({})               // categoria_id → url (087): a do salão, senão a padrão
   const [capasDoSalao, setCapasDoSalao] = useState({}) // só as que o salão subiu
   const [subindoCapa, setSubindoCapa] = useState('')
-  const cats = categoriasDoSalao([...catsTodas.filter((c) => !catsExtra.some((e) => e.id === c.id)), ...catsExtra].filter((c) => !c.apagada), salao?.id)
+  const cats = categoriasDoSalao([...catsTodas.filter((c) => !catsExtra.some((e) => e.id === c.id)), ...catsExtra].filter((c) => !c.apagada), salao?.id, salao?.categorias_escolhidas)
 
   useEffect(() => {
     fetchServices()

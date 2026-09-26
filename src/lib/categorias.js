@@ -15,9 +15,11 @@ export function useCategorias() {
   return cats
 }
 
-// as que um salão pode usar: as da plataforma mais as dele
-export function categoriasDoSalao(cats, salaoId) {
-  return cats.filter((c) => !c.salon_id || c.salon_id === salaoId)
+// as que um salão pode usar: as da plataforma que ele escolheu (124;
+// sem escolha, todas) mais as dele
+export function categoriasDoSalao(cats, salaoId, escolhidas) {
+  const marcadas = Array.isArray(escolhidas) && escolhidas.length ? new Set(escolhidas) : null
+  return cats.filter((c) => (c.salon_id ? c.salon_id === salaoId : !marcadas || marcadas.has(c.id)))
 }
 
 // [{ id, nome, ordem, itens }] na ordem das categorias; "Outros" por último

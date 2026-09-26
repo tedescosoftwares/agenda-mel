@@ -29,7 +29,9 @@ export default function ProServicos() {
   const [novaCat, setNovaCat] = useState('')
   const profId = professional?.id
   const salaoId = professional?.salon_id
-  const cats = categoriasDoSalao([...catsTodas, ...catsNovas], salaoId)
+  const [escolhidas, setEscolhidas] = useState(null)   // as categorias da plataforma que o salão escolheu (124)
+  useEffect(() => { if (!salaoId) return; supabase.from('salons').select('categorias_escolhidas').eq('id', salaoId).maybeSingle().then(({ data }) => setEscolhidas(data?.categorias_escolhidas ?? [])) }, [salaoId])
+  const cats = categoriasDoSalao([...catsTodas, ...catsNovas], salaoId, escolhidas)
 
   // a dona muda a categoria de um serviço que já existe, sem recriar
   async function mudarCategoria(s, categoriaId) {

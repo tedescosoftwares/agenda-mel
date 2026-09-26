@@ -17,6 +17,7 @@ import { linkDoCodigo } from '../lib/convite'
 import { urlDoAmbiente } from '../lib/ambiente'
 import { formatPreco } from '../lib/format'
 import { sugestoesPara, primeiroNome } from '../lib/equipe'
+import { categoriasDoSalao } from '../lib/categorias'
 import ProfissionalDrawer, { CartaoProfissional } from '../components/ProfissionalDrawer'
 import { FraseDeAceite } from '../components/LinkLegal'
 import { useDocumentosLegais, aceitesPara, versaoMaior } from '../lib/legal'
@@ -695,12 +696,15 @@ function PassoEstrutura({ s, seguir, voltar, salvando, setErro, autonoma, gravar
   const [cats, setCats] = useState([])
   const [novaCat, setNovaCat] = useState('')
   const [verMaisCats, setVerMaisCats] = useState(false)
+  const [escolhidas, setEscolhidas] = useState(Array.isArray(s.categorias_escolhidas) ? s.categorias_escolhidas : [])   // as da plataforma que o salão usa
+  const escolher = (id) => setEscolhidas((x) => (x.includes(id) ? x : [...x, id]))
+  const desescolher = (id) => setEscolhidas((x) => x.filter((y) => y !== id))
   const [copiar, setCopiar] = useState(null)   // null | { dias: Set }
   const [tocouSinal, setTocouSinal] = useState(false)   // o recebimento pelo app só muda se a pessoa mexer no botão
   const [pol, setPol] = useState({ antecedencia_min_minutos: s.antecedencia_min_minutos ?? 60, politica_cancelamento: s.politica_cancelamento ?? 'moderada', permite_remarcar: s.permite_remarcar ?? true, sinal_ligado: (s.pagamento_modo ?? 'nao') !== 'nao', sinal_modo: s.sinal_modo ?? 'fixo', sinal_fixo: emReais(s.sinal_fixo_cents ?? 5000), sinal_pct: s.sinal_pct ?? 50, equipe_prevista: s.equipe_prevista ?? 4, aceite_modo: s.aceite_modo ?? 'casa', minutos_para_aceitar: s.minutos_para_aceitar ?? 120 })
   const p = (k) => (v) => setPol((x) => ({ ...x, [k]: v }))
   // pagamento_modo é o mesmo de Ajustes › Receber pelo app: desligar aqui desliga lá. Só vai no pacote se ela tocou no botão.
-  const dadosDaPolitica = () => ({ ...(nome.trim() ? { name: nome.trim() } : {}), ...dadosDoLocal(), antecedencia_min_minutos: Number(pol.antecedencia_min_minutos), politica_cancelamento: pol.politica_cancelamento, permite_remarcar: pol.permite_remarcar,
+  const dadosDaPolitica = () => ({ ...(nome.trim() ? { name: nome.trim() } : {}), ...dadosDoLocal(), categorias_escolhidas: escolhidas, antecedencia_min_minutos: Number(pol.antecedencia_min_minutos), politica_cancelamento: pol.politica_cancelamento, permite_remarcar: pol.permite_remarcar,
     ...(tocouSinal ? { pagamento_modo: pol.sinal_ligado ? (s.pagamento_modo && s.pagamento_modo !== 'nao' ? s.pagamento_modo : 'opcional') : 'nao' } : {}), sinal_modo: pol.sinal_modo, sinal_fixo_cents: reais(pol.sinal_fixo), sinal_pct: Number(pol.sinal_pct),
     equipe_prevista: Number(pol.equipe_prevista) || null, aceite_modo: pol.aceite_modo, minutos_para_aceitar: Number(pol.minutos_para_aceitar) })
   // autosave: as regras vão pelo onboarding_salvar; os horários, pelo onboarding_horarios
@@ -709,7 +713,7 @@ function PassoEstrutura({ s, seguir, voltar, salvando, setErro, autonoma, gravar
     if (!horas || horas.some((h) => h.open && h.start_time >= h.end_time)) return ok
     const { error } = await supabase.rpc('onboarding_horarios', { salao: s.id, horarios: horas })
     return ok && !error
-  }, { pol, horas, nome, loc }, { ativo: Boolean(s.id) && horas != null })
+  }, { pol, horas, nome, loc, escolhidas }, { ativo: Boolean(s.id) && horas != null })
   useEffect(() => { setEstadoAuto(estado); return () => setEstadoAuto('') }, [estado, setEstadoAuto])
 
   useEffect(() => {
@@ -912,39 +916,38 @@ function PassoEstrutura({ s, seguir, voltar, salvando, setErro, autonoma, gravar
             const igual = (a, b) => a.trim().toLowerCase() === b.trim().toLowerCase()
             const existente = busca ? cats.find((c) => igual(c.nome, busca)) : null
             const padrao = cats.filter((c) => !c.salon_id)
-            const livres = CATEGORIAS_SUGERIDAS.filter((n) => !cats.some((c) => igual(c.nome, n)))
-            const filtradas = busca ? livres.filter((n) => n.toLowerCase().includes(busca.toLowerCase())) : livres
+            const usadas = padrao.filter((c) => escolhidas.includes(c.id))
+            // sugestões: as da plataforma ainda não escolhidas e os nomes da lista que não existem
+            const sugeridas = [
+              ...padrao.filter((c) => !escolhidas.includes(c.id)).map((c) => ({ chave: c.id, nome: c.nome, escolherId: c.id })),
+              ...CATEGORIAS_SUGERIDAS.filter((n) => !cats.some((c) => igual(c.nome, n))).map((n) => ({ chave: 'nova:' + n, nome: n })),
+            ]
+            const filtradas = busca ? sugeridas.filter((x) => x.nome.toLowerCase().includes(busca.toLowerCase())) : sugeridas
             const visiveis = busca || verMaisCats ? filtradas : filtradas.slice(0, SUGESTOES_A_MOSTRA)
             const escondidas = filtradas.length - visiveis.length
+            const jaEsta = existente && (existente.salon_id || escolhidas.includes(existente.id))
             return (
               <>
                 <div className="ob-cat-grupo">
                   <small className="ob-cat-rotulo">Suas categorias</small>
                   <div className="ob-cats">
+                    {usadas.map((c) => <span key={c.id} className={'ob-cat' + (existente?.id === c.id ? ' realce' : '')}>{c.nome}<button type="button" onClick={() => desescolher(c.id)} aria-label={`Tirar ${c.nome}`}><X size={12} /></button></span>)}
                     {minhasCats.map((c) => <span key={c.id} className={'ob-cat' + (existente?.id === c.id ? ' realce' : '')}>{c.nome}<button type="button" onClick={() => tirarCat(c)} aria-label={`Tirar ${c.nome}`}><X size={12} /></button></span>)}
                   </div>
                 </div>
-                {padrao.length > 0 && (
-                  <div className="ob-cat-grupo">
-                    <small className="ob-cat-rotulo">Já incluídas <span className="ob-cat-padrao-tag">padrão MIMO</span></small>
-                    <div className="ob-cats ob-cats-padrao">
-                      {padrao.map((c) => <span key={c.id} className={'ob-cat padrao' + (existente?.id === c.id ? ' realce' : '')} title="Categoria padrão da MIMO: vale pra todo mundo">{c.nome}</span>)}
-                    </div>
-                  </div>
-                )}
                 <div className="ob-cat-grupo">
                   <small className="ob-cat-rotulo">Adicionar categorias</small>
                   <div className="ob-cats">
-                    {visiveis.map((n) => <button key={n} type="button" className="ob-cat sugerida" onClick={() => { addCat(n); setNovaCat('') }}><Plus size={12} /> {n}</button>)}
+                    {visiveis.map((x) => <button key={x.chave} type="button" className="ob-cat sugerida" onClick={() => { if (x.escolherId) escolher(x.escolherId); else addCat(x.nome); setNovaCat('') }}><Plus size={12} /> {x.nome}</button>)}
                     {escondidas > 0 && <button type="button" className="ob-cat mais" onClick={() => setVerMaisCats(true)}>Ver mais ({escondidas})</button>}
-                    {busca && !visiveis.length && existente && <small className="muted">“{existente.nome}” já está na lista.</small>}
+                    {busca && !visiveis.length && jaEsta && <small className="muted">“{existente.nome}” já está nas suas.</small>}
                   </div>
                 </div>
                 <div className="ob-add-cat">
-                  <input value={novaCat} onChange={(e) => setNovaCat(e.target.value)} placeholder="Buscar ou criar categoria…" maxLength={40} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (busca && !existente) addCat(busca) } }} />
-                  {busca && !existente && <button type="button" className="btn-mini" onClick={() => addCat(busca)}><Plus size={12} /> Criar “{busca}”</button>}
+                  <input value={novaCat} onChange={(e) => setNovaCat(e.target.value)} placeholder="Buscar ou criar categoria…" maxLength={40} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (!busca || jaEsta) return; if (existente) escolher(existente.id); else addCat(busca); setNovaCat('') } }} />
+                  {busca && !jaEsta && <button type="button" className="btn-mini" onClick={() => { if (existente) escolher(existente.id); else addCat(busca); setNovaCat('') }}><Plus size={12} /> {existente ? `Adicionar “${existente.nome}”` : `Criar “${busca}”`}</button>}
                 </div>
-                <small className="muted">Não encontrou a sua? Digite e dê Enter pra criar. Pode seguir sem escolher nenhuma: as padrão já organizam o básico.</small>
+                <small className="muted">Não encontrou a sua? Digite e dê Enter pra criar. Pode seguir sem escolher nenhuma.</small>
               </>
             )
           })()}
@@ -973,7 +976,7 @@ function PassoServicos({ s, seguir, voltar, salvando, setErro }) {
       supabase.from('professionals').select('id, name, user_id').eq('salon_id', s.id).eq('active', true).order('name'),
       supabase.from('professional_services').select('professional_id, service_id'),
     ])
-    setServicos(sv.data ?? []); setCats(ct.data ?? []); setProfs(pr.data ?? [])
+    setServicos(sv.data ?? []); setCats(categoriasDoSalao(ct.data ?? [], s.id, s.categorias_escolhidas)); setProfs(pr.data ?? [])
     const q = {}; for (const x of ps.data ?? []) { (q[x.service_id] ??= []).push(x.professional_id) }
     setQuem(q)
   }, [s.id])

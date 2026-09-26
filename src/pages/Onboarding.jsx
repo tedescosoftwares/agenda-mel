@@ -269,6 +269,12 @@ function PassoTipo({ s, setS, seguir, salvando, setErro }) {
 // endereço do salão pode ser outro. Telefones e e-mails a mais, e o pino
 // no mapa, que a dona arrasta até a porta.
 const enderecoDe = (o) => ({ address: o?.address ?? '', bairro: o?.bairro ?? '', city: o?.city ?? '', uf: o?.uf ?? '', cep: limparCep(o?.cep) })
+// os contatos guardam de onde vieram: os do cadastro (passo 2) e os do salão (passo 3) não se pisam
+const escopoDe = (c) => (c?.escopo === 'cadastro' ? 'cadastro' : 'salao')
+const contatosDe = (lista, escopo) => (Array.isArray(lista) ? lista.filter((c) => escopoDe(c) === escopo) : [])
+const telefonesDe = (lista, escopo) => { const t = contatosDe(lista, escopo).filter((c) => c.tipo === 'telefone').map((c) => soDigitos(c.valor).slice(0, 11)); return t.length ? t : [''] }
+const emailsDe = (lista, escopo) => contatosDe(lista, escopo).filter((c) => c.tipo === 'email').map((c) => String(c.valor ?? ''))
+const montarContatos = (telefones, emails, escopo) => [...telefones.filter((t) => t.trim()).map((t) => ({ tipo: 'telefone', valor: soDigitos(t).slice(0, 11), escopo })), ...emails.filter((e) => e.trim()).map((e) => ({ tipo: 'email', valor: e.trim().toLowerCase(), escopo }))]
 const emailOk = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v ?? '').trim())
 
 // CEP, rua, bairro, cidade e UF; o CEP preenche o resto
@@ -354,6 +360,7 @@ function PassoDados({ s, seguir, voltar, salvando, setErro, user, autonoma, publ
     documento_tipo: s.documento_tipo === 'cpf' ? 'cpf' : 'cnpj', cnpj: soDigitos(s.cnpj), cpf: soDigitos(s.responsavel_cpf), razao_social: s.razao_social ?? '', nome_fantasia: s.nome_fantasia ?? '', responsavel_nascimento: s.responsavel_nascimento ?? '', responsavel_rg: s.responsavel_rg ?? '', socios: [],
     fiscal: enderecoDe(s.endereco_fiscal ?? (s.endereco_igual !== false ? s : null)),
     whatsapp: s.whatsapp ?? s.phone ?? '', email: s.email ?? '', responsavel_nome: s.responsavel_nome ?? '',
+    telefones: telefonesDe(s.contatos, 'cadastro'), emails: emailsDe(s.contatos, 'cadastro'),
   })
   const [cnpjInfo, setCnpjInfo] = useState('')   // o que a Receita disse do CNPJ
   const [cnpjSituacao, setCnpjSituacao] = useState('')   // 'ATIVA', 'BAIXADA'… conferida nesta sessão
@@ -370,10 +377,25 @@ function PassoDados({ s, seguir, voltar, salvando, setErro, user, autonoma, publ
       cnpj: x.documento_tipo === 'cnpj' ? x.cnpj : '', responsavel_cpf: x.documento_tipo === 'cpf' ? x.cpf : '',
       razao_social: x.documento_tipo === 'cnpj' ? x.razao_social : '',
       responsavel_nascimento: x.documento_tipo === 'cpf' ? x.responsavel_nascimento : '', responsavel_rg: x.documento_tipo === 'cpf' ? x.responsavel_rg : '',
-      endereco_fiscal: x.documento_tipo === 'cnpj' ? { ...x.fiscal, cep: limparCep(x.fiscal.cep) } : null,
+      endereco_fiscal: { ...x.fiscal, cep: limparCep(x.fiscal.cep) },   // no CPF, o endereço da pessoa
       whatsapp: x.whatsapp, email: x.email, responsavel_nome: x.responsavel_nome,
+      contatos: [...contatosDe(s.contatos, 'salao'), ...montarContatos(x.telefones, x.emails, 'cadastro')],
     }
   }
+  // telefones e e-mails a mais do cadastro: um campo pra cada, e o + abre outro
+  const lista = (k, i, v) => setF((x) => ({ ...x, [k]: x[k].map((y, j) => (j === i ? v : y)) }))
+  const maisNa = (k) => setF((x) => ({ ...x, [k]: [...x[k], ''] }))
+  const tirarDa = (k, i) => setF((x) => ({ ...x, [k]: x[k].filter((_, j) => j !== i) }))
+  const campoContato = (k, i, tipo) => (
+    <span key={i} className="ob-fone">
+      {tipo === 'telefone' ? <span className="ob-ddi">🇧🇷 +55</span> : null}
+      {tipo === 'telefone'
+        ? <input type="tel" inputMode="numeric" value={formatarFone(f[k][i])} onChange={(e) => lista(k, i, soDigitos(e.target.value).slice(0, 11))} placeholder={i === 0 ? '(11) 3456-7890' : 'outro telefone'} autoComplete="off" />
+        : <input type="email" value={f[k][i]} onChange={(e) => lista(k, i, e.target.value)} placeholder="financeiro@essenzahair.com.br" autoComplete="off" />}
+      {(i > 0 || tipo === 'email') && <button type="button" className="ob-menos" onClick={() => tirarDa(k, i)} aria-label="Tirar"><X size={14} /></button>}
+      {i === f[k].length - 1 && <button type="button" className="ob-mais" onClick={() => maisNa(k)} aria-label={tipo === 'telefone' ? 'Mais um telefone' : 'Mais um e-mail'}><Plus size={14} /></button>}
+    </span>
+  )
   // CNPJ: máscara e, com os 14 dígitos certos, busca na Receita e preenche o endereço fiscal
   async function porCnpj(v) {
     const d = soDigitos(v).slice(0, 14)
@@ -416,6 +438,8 @@ function PassoDados({ s, seguir, voltar, salvando, setErro, user, autonoma, publ
       if (!f.responsavel_nascimento) return 'Diga a sua data de nascimento.'
       if (idadeEm(f.responsavel_nascimento) < 18) return 'Para responder pelo negócio é preciso ter 18 anos ou mais.'
     }
+    for (const t of f.telefones) if (t.trim() && soDigitos(t).length < 10) return `Confere o telefone ${formatarFone(t)}: faltam dígitos.`
+    for (const e of f.emails) if (e.trim() && !emailOk(e)) return `Confere o e-mail ${e.trim()}.`
     return ''
   }
   // no público: cria a conta com tudo isso nos metadados; o servidor abre o negócio e grava os dados
@@ -501,12 +525,10 @@ function PassoDados({ s, seguir, voltar, salvando, setErro, user, autonoma, publ
             )}
             {!(comCnpj && cnpjSituacao === 'ATIVA') && <label className="ob-termos ob-informal"><input type="checkbox" checked={!comCnpj} onChange={(e) => trocarDocumento(e.target.checked)} /><span>Ainda não tenho CNPJ e trabalho informalmente</span></label>}
           </div>
-          {comCnpj && (
-            <div className="ob-bloco">
-              <span className="ob-bloco-titulo">Endereço fiscal <small>o que está na Receita</small></span>
-              <BlocoEndereco valor={f.fiscal} onChange={setFiscal} />
-            </div>
-          )}
+          <div className="ob-bloco">
+            <span className="ob-bloco-titulo">{comCnpj ? 'Endereço fiscal' : 'Seu endereço'} <small>{comCnpj ? 'o que está na Receita' : 'o do cadastro; onde atende vem na próxima etapa'}</small></span>
+            <BlocoEndereco valor={f.fiscal} onChange={setFiscal} autoCompleteRua={!comCnpj} />
+          </div>
         </div>
         <div className="ob-form">
           <span className="ob-grupo-selo"><Selo /></span>
@@ -514,6 +536,8 @@ function PassoDados({ s, seguir, voltar, salvando, setErro, user, autonoma, publ
             <span className="ob-bloco-titulo">Seu acesso <small>{publico ? 'é com isso que você entra' : 'a conta que administra o negócio'}</small></span>
             <label>E-mail da conta <b>*</b><input type="email" value={f.email} onChange={m('email')} placeholder="contato@essenzahair.com.br" autoComplete="email" /></label>
             <label>Seu WhatsApp <b>*</b><span className="muted">(os avisos chegam por ele)</span><span className="ob-fone"><span className="ob-ddi">🇧🇷 +55</span><input type="tel" inputMode="numeric" value={f.whatsapp} onChange={(e) => setF((x) => ({ ...x, whatsapp: formatarFone(e.target.value) }))} placeholder="(11) 91234-5678" autoComplete="tel" /></span></label>
+            <label>Outro telefone <span className="muted">(opcional)</span>{f.telefones.map((_, i) => campoContato('telefones', i, 'telefone'))}</label>
+            <label>Outro e-mail <span className="muted">(opcional)</span>{f.emails.length === 0 ? <span className="ob-fone"><button type="button" className="ob-geo" onClick={() => maisNa('emails')}><Plus size={14} /> Adicionar e-mail</button></span> : f.emails.map((_, i) => campoContato('emails', i, 'email'))}</label>
             {publico && !user && (
               <>
                 <SenhaNova valor={conta} onChange={(v) => setConta((x) => ({ ...x, ...v }))} />
@@ -554,22 +578,21 @@ function PassoEstrutura({ s, seguir, voltar, salvando, setErro, autonoma, gravar
   const fiscal = enderecoDe(s.endereco_fiscal)
   const [loc, setLoc] = useState({
     whatsapp: s.whatsapp ?? s.phone ?? '',
-    telefones: (Array.isArray(s.contatos) ? s.contatos.filter((c) => c.tipo === 'telefone').map((c) => soDigitos(c.valor).slice(0, 11)) : []).concat(['']).slice(0, Math.max(1, (s.contatos ?? []).filter((c) => c.tipo === 'telefone').length)),
-    emails: Array.isArray(s.contatos) ? s.contatos.filter((c) => c.tipo === 'email').map((c) => String(c.valor ?? '')) : [],
+    telefones: telefonesDe(s.contatos, 'salao'), emails: emailsDe(s.contatos, 'salao'),
     endereco_igual: s.endereco_igual !== false,
     ...enderecoDe(s), lat: s.lat ?? null, lng: s.lng ?? null,
   })
   const [geo, setGeo] = useState('')          // o que aconteceu com o pino
   const [ocupado, setOcupado] = useState('')  // 'gps' | 'endereco'
-  const usaFiscal = comCnpj && loc.endereco_igual
+  const usaFiscal = loc.endereco_igual   // o endereço do passo 2 (fiscal, ou o da pessoa no CPF)
   // o endereço que vale pro salão: o fiscal, quando é o mesmo, ou o próprio
   const local = usaFiscal ? fiscal : { address: loc.address, bairro: loc.bairro, city: loc.city, uf: loc.uf, cep: loc.cep }
   const pino = temPino(loc.lat, loc.lng)
   const setLocal = (fn) => setLoc((x) => ({ ...x, ...fn({ address: x.address, bairro: x.bairro, city: x.city, uf: x.uf, cep: x.cep }) }))
   const dadosDoLocal = () => {
     const d = {
-      whatsapp: loc.whatsapp, endereco_igual: comCnpj ? loc.endereco_igual : true,
-      contatos: [...loc.telefones.filter((t) => t.trim()).map((t) => ({ tipo: 'telefone', valor: soDigitos(t).slice(0, 11) })), ...loc.emails.filter((e) => e.trim()).map((e) => ({ tipo: 'email', valor: e.trim().toLowerCase() }))],
+      whatsapp: loc.whatsapp, endereco_igual: loc.endereco_igual,
+      contatos: [...contatosDe(s.contatos, 'cadastro'), ...montarContatos(loc.telefones, loc.emails, 'salao')],
       address: local.address, bairro: local.bairro, city: local.city, uf: local.uf, cep: limparCep(local.cep),
     }
     if (pino) { d.lat = loc.lat; d.lng = loc.lng }
@@ -693,7 +716,7 @@ function PassoEstrutura({ s, seguir, voltar, salvando, setErro, autonoma, gravar
     if (!loc.whatsapp.trim()) { setErro('Precisamos do WhatsApp comercial: é por ele que as clientes falam com vocês.'); return }
     for (const t of loc.telefones) if (t.trim() && soDigitos(t).length < 10) { setErro(`Confere o telefone ${formatarFone(t)}: faltam dígitos.`); return }
     for (const e of loc.emails) if (e.trim() && !emailOk(e)) { setErro(`Confere o e-mail ${e.trim()}.`); return }
-    if (!local.city.trim()) { setErro(usaFiscal ? 'Diga a cidade do endereço fiscal (no passo anterior).' : 'Diga a cidade.'); return }
+    if (!local.city.trim()) { setErro(usaFiscal ? 'Diga a cidade do endereço no passo anterior, ou escolha outro endereço aqui.' : 'Diga a cidade.'); return }
     for (const h of horas ?? []) if (h.open && h.start_time >= h.end_time) { setErro(`${DIAS[h.weekday]}: o fim precisa ser depois do início.`); return }
     const { error } = await supabase.rpc('onboarding_horarios', { salao: s.id, horarios: horas })
     if (error) { setErro(error.message); return }
@@ -772,7 +795,7 @@ function PassoEstrutura({ s, seguir, voltar, salvando, setErro, autonoma, gravar
               <label>E-mail de contato <span className="muted">(opcional)</span>{loc.emails.length === 0 ? <span className="ob-fone"><button type="button" className="ob-geo" onClick={() => maisNa('emails')}><Plus size={14} /> Adicionar e-mail</button></span> : loc.emails.map((_, i) => campoContato('emails', i, 'email'))}</label>
             </div>
             <div className="ob-form">
-              {comCnpj && <label>{autonoma ? 'Onde você atende' : 'Endereço do salão'}<select value={loc.endereco_igual ? 'igual' : 'outro'} onChange={(e) => setLoc((x) => ({ ...x, endereco_igual: e.target.value === 'igual' }))}><option value="igual">{autonoma ? 'Atendo no endereço fiscal' : 'É o mesmo endereço fiscal'}</option><option value="outro">{autonoma ? 'Atendo em outro endereço' : 'O salão fica em outro endereço'}</option></select>{usaFiscal && <small className="muted">{[fiscal.address, fiscal.bairro, [fiscal.city, fiscal.uf].filter(Boolean).join('/')].filter(Boolean).join(' · ') || 'o endereço fiscal está vazio: volte ao passo 2 ou escolha outro endereço'}</small>}</label>}
+              <label>{autonoma ? 'Onde você atende' : 'Endereço do salão'}<select value={loc.endereco_igual ? 'igual' : 'outro'} onChange={(e) => setLoc((x) => ({ ...x, endereco_igual: e.target.value === 'igual' }))}><option value="igual">{comCnpj ? (autonoma ? 'Atendo no endereço fiscal' : 'É o mesmo endereço fiscal') : (autonoma ? 'Atendo no meu endereço' : 'É o mesmo endereço do cadastro')}</option><option value="outro">{autonoma ? 'Atendo em outro endereço' : 'O salão fica em outro endereço'}</option></select>{usaFiscal && <small className="muted">{[fiscal.address, fiscal.bairro, [fiscal.city, fiscal.uf].filter(Boolean).join('/')].filter(Boolean).join(' · ') || 'o endereço do passo 2 está vazio: volte lá ou escolha outro endereço'}</small>}</label>
               {!usaFiscal && <BlocoEndereco valor={local} onChange={setLocal} obrigatorio aoAchar={pinoDoCep} autoCompleteRua />}
               {/* o pino: é ele que a cliente vê no "Como chegar" */}
               <div className="ob-mapa-campo">

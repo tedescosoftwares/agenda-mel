@@ -52,6 +52,22 @@ begin
   if s.documento_tipo <> 'cpf' then raise exception '2b: tipo desconhecido passou'; end if;
   raise notice '2b identificacao fiscal ok';
 
+  -- 2c. o "quero receber novidades": pelo cadastro (meta.marketing) e pela preferência depois
+  perform set_config('request.jwt.claim.sub', dona::text, false);
+  set role authenticated;
+  r := public.preferir_marketing(true);
+  reset role;
+  if not (select marketing_ok from public.profiles where id = dona) then raise exception '2c: preferir_marketing não gravou'; end if;
+  perform set_config('request.jwt.claim.sub', dona::text, false);
+  set role authenticated;
+  r := public.preferir_marketing(false);
+  reset role;
+  if (select marketing_ok from public.profiles where id = dona) then raise exception '2c: preferir_marketing não desligou'; end if;
+  sv := gen_random_uuid();
+  insert into auth.users (id, email, raw_user_meta_data) values (sv, 'mkt.ensaio@mimo.test', jsonb_build_object('full_name', 'Bia Novidades', 'phone', '(11) 90000-0122', 'termos', '2026-09-24', 'marketing', true));
+  if not (select marketing_ok from public.profiles where id = sv) or (select marketing_em from public.profiles where id = sv) is null then raise exception '2c: marketing do cadastro não gravou'; end if;
+  raise notice '2c marketing ok';
+
   -- 3. regras do salão contam reagendar e antecedência
   r := public.pagamento_do_salao(sal);
   if (r ->> 'permite_remarcar')::boolean or (r ->> 'antecedencia_min')::int <> 180 then raise exception '3: regras erradas: %', r; end if;

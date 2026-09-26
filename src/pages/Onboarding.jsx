@@ -9,7 +9,7 @@ import '../onboarding.css'
 import { reduzirFoto } from '../lib/imagem'
 import { buscarCep, formatarCep, limparCep, minhaPosicao, geocodificar, temPino, arredondar } from '../lib/geo'
 import { formatarFone } from '../lib/fone'
-import { formatarCnpj, cnpjValido, buscarCnpj, formatarCpf, cpfValido, soDigitos } from '../lib/cnpj'
+import { formatarCnpj, cnpjValido, buscarCnpj, formatarCpf, cpfValido, soDigitos, nomeProprio } from '../lib/cnpj'
 import Mapa from '../components/Mapa'
 import SenhaNova from '../components/SenhaNova'
 import { forcaDaSenha } from '../lib/senha'
@@ -297,9 +297,32 @@ function BlocoEndereco({ valor, onChange, obrigatorio, aoAchar, autoCompleteRua 
   )
 }
 
+// Depois da consulta do CNPJ: mostra o que a Receita devolveu e explica
+// que o nome fantasia fica no cadastro; o nome que a cliente vê é o do passo 3.
+function ModalCnpj({ dados, onFechar }) {
+  const endereco = [dados.address, dados.bairro, [dados.city, dados.uf].filter(Boolean).join('/')].filter(Boolean).join(' · ')
+  return (
+    <div className="modal-fundo ob-modal-fundo" onClick={onFechar}>
+      <div className="modal-caixa ob-modal ob-modal-cnpj" onClick={(e) => e.stopPropagation()}>
+        <button type="button" className="modal-fechar" onClick={onFechar} aria-label="Fechar"><X size={18} /></button>
+        <span className="ob-cnpj-selo"><Check size={14} /> CNPJ ativo na Receita</span>
+        <h3>Achamos o seu CNPJ 💗</h3>
+        <p className="muted">Já preenchemos o que a Receita nos contou. Dá uma conferida:</p>
+        <dl className="ob-cnpj-lista">
+          <div><dt>Razão social</dt><dd>{dados.razao_social}</dd></div>
+          <div><dt>Nome fantasia</dt><dd>{dados.nome_fantasia || <span className="muted">sem nome fantasia na Receita</span>}</dd></div>
+          {endereco && <div><dt>Endereço fiscal</dt><dd>{endereco}</dd></div>}
+        </dl>
+        <p className="ob-cnpj-nota">Só um detalhe: o nome fantasia é o que está na Receita e fica guardado aqui, no cadastro. <strong>O nome que a cliente vê você escolhe no próximo passo</strong>, quando for montar a cara do seu espaço. Pode ser esse mesmo ou outro, do seu jeito.</p>
+        <div className="ob-modal-acoes"><button type="button" className="btn btn-primary" onClick={onFechar}>Entendi, vamos seguir <ArrowRight size={16} /></button></div>
+      </div>
+    </div>
+  )
+}
+
 function PassoDados({ s, seguir, voltar, salvando, erro, setErro, user, autonoma, publico, recarregarPerfil, navigate, gravarQuieto, setEstadoAuto, docsLegais }) {
   const { signUp } = useAuth()
-  const [conta, setConta] = useState({ senha: '', confirma: '', termos: false })
+  const [conta, setConta] = useState({ senha: '', confirma: '', termos: false, marketing: false })
   const [criada, setCriada] = useState(false)
   const [criando, setCriando] = useState(false)
   const [f, setF] = useState({
@@ -313,6 +336,8 @@ function PassoDados({ s, seguir, voltar, salvando, erro, setErro, user, autonoma
   const [geo, setGeo] = useState('')          // o que aconteceu com o pino
   const [ocupado, setOcupado] = useState('')  // 'gps' | 'endereco'
   const [cnpjInfo, setCnpjInfo] = useState('')   // o que a Receita disse do CNPJ
+  const [cnpjSituacao, setCnpjSituacao] = useState('')   // 'ATIVA', 'BAIXADA'… conferida nesta sessão
+  const [modalCnpj, setModalCnpj] = useState(null)   // os dados achados, pra explicar o que vale onde
   const m = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.value }))
   const comCnpj = f.documento_tipo === 'cnpj'
   const usaFiscal = comCnpj && f.endereco_igual
@@ -342,14 +367,19 @@ function PassoDados({ s, seguir, voltar, salvando, erro, setErro, user, autonoma
   async function porCnpj(v) {
     const d = soDigitos(v).slice(0, 14)
     setF((x) => ({ ...x, cnpj: d }))
-    setCnpjInfo('')
+    setCnpjInfo(''); setCnpjSituacao('')
     if (d.length < 14) return
     if (!cnpjValido(d)) { setCnpjInfo('erro:Confere o CNPJ: os dígitos não batem.'); return }
     setCnpjInfo('buscando')
     try {
       const r = await buscarCnpj(d)
+      const situacao = String(r.situacao || '').toUpperCase() || 'ATIVA'
+      setCnpjSituacao(situacao)
+      // só CNPJ ativo entra: baixado, suspenso, inapto ou nulo não dá
+      if (situacao !== 'ATIVA') { setCnpjInfo(`erro:Esse CNPJ consta como ${nomeProprio(situacao)} na Receita, e só dá pra cadastrar com CNPJ ativo. Se for engano, confira os números. Se ainda não tem CNPJ, use o seu CPF.`); return }
       setF((x) => ({ ...x, razao_social: r.razao_social, nome_fantasia: x.nome_fantasia || r.nome_fantasia, email: x.email || r.email, fiscal: { address: r.address, bairro: r.bairro, city: r.city, uf: r.uf, cep: r.cep } }))
-      setCnpjInfo(`ok:${r.razao_social}${r.situacao && r.situacao.toUpperCase() !== 'ATIVA' ? ` · situação na Receita: ${r.situacao}` : ''}`)
+      setCnpjInfo(`ok:${r.razao_social}`)
+      setModalCnpj(r)
       // sem pino ainda: tenta colocar pelo endereço da Receita
       if (!temPino(f.lat, f.lng) && r.address && r.city) {
         try { const g = await geocodificar(`${r.address}, ${r.bairro ? r.bairro + ', ' : ''}${r.city} ${r.uf}`); if (g) { setF((x) => (temPino(x.lat, x.lng) ? x : { ...x, lat: g.lat, lng: g.lng })); setGeo('pino sugerido pelo endereço da Receita: confira e arraste até a porta') } } catch { /* sem pino agora */ }
@@ -357,7 +387,7 @@ function PassoDados({ s, seguir, voltar, salvando, erro, setErro, user, autonoma
     } catch (err) { setCnpjInfo('erro:' + err.message) }
   }
   function trocarDocumento(informal) {
-    setCnpjInfo('')
+    setCnpjInfo(''); setCnpjSituacao('')
     setF((x) => {
       const y = { ...x, documento_tipo: informal ? 'cpf' : 'cnpj' }
       // ao virar CPF, o endereço do salão que era o fiscal continua valendo
@@ -403,6 +433,7 @@ function PassoDados({ s, seguir, voltar, salvando, erro, setErro, user, autonoma
   function conferir() {
     if (comCnpj && !cnpjValido(f.cnpj)) return f.cnpj ? 'Confere o CNPJ: os dígitos não batem.' : 'Informe o CNPJ. Se ainda não tem, marque "Ainda não tenho CNPJ" e use o seu CPF.'
     if (!comCnpj && !cpfValido(f.cpf)) return f.cpf ? 'Confere o CPF: os dígitos não batem.' : 'Informe o seu CPF.'
+    if (comCnpj && cnpjSituacao && cnpjSituacao !== 'ATIVA') return `Esse CNPJ está ${nomeProprio(cnpjSituacao)} na Receita. Só dá pra cadastrar com CNPJ ativo; sem CNPJ, use o seu CPF.`
     if (comCnpj && !f.razao_social.trim()) return 'Diga a razão social (a consulta do CNPJ preenche sozinha).'
     for (const t of f.telefones) if (t.trim() && soDigitos(t).length < 10) return `Confere o telefone ${formatarFone(t)}: faltam dígitos.`
     for (const e of f.emails) if (e.trim() && !emailOk(e)) return `Confere o e-mail ${e.trim()}.`
@@ -428,13 +459,14 @@ function PassoDados({ s, seguir, voltar, salvando, erro, setErro, user, autonoma
         const { data, error } = await supabase.rpc('abrir_negocio', { tipo: s.tipo, nome_negocio: nomeInicial || null, cidade: local.city.trim() || null })
         if (error) throw new Error(error.message)
         await supabase.rpc('onboarding_salvar', { salao: data.salao_id, dados: dadosSalao, passo: 3 })
+        await supabase.rpc('preferir_marketing', { ok: conta.marketing })
         await recarregarPerfil?.()
         navigate('/onboarding', { replace: true })
         return
       }
       const aceites = aceitesPara(s.tipo, docsLegais)
       const { error } = await signUp(f.email.trim(), conta.senha, f.responsavel_nome.trim(), f.whatsapp.trim(),
-        { termos: versaoMaior(aceites), aceites, papel_desejado: s.tipo, nome_negocio: nomeInicial || null, cidade: local.city.trim() || null, salao: dadosSalao })
+        { termos: versaoMaior(aceites), aceites, marketing: conta.marketing, papel_desejado: s.tipo, nome_negocio: nomeInicial || null, cidade: local.city.trim() || null, salao: dadosSalao })
       if (error) { setErro(traduzErro(error.message)); return }
       const { data: sess } = await supabase.auth.getSession()
       if (sess?.session) { await recarregarPerfil?.(); navigate('/onboarding', { replace: true }); return }
@@ -494,12 +526,12 @@ function PassoDados({ s, seguir, voltar, salvando, erro, setErro, user, autonoma
               </>
             ) : (
               <>
-                <p className="ob-humor">Sem CNPJ por enquanto? Tranquilo, muita gente boa começou assim. 😉 Nos conta o seu CPF que a gente segue. Quando o CNPJ sair, é só voltar aqui e trocar.</p>
+                <p className="ob-humor"><strong>Ainda não tem CNPJ? Tudo certo 💗</strong>Use seu CPF para continuar. Quando seu CNPJ estiver pronto, é só atualizar seus dados por aqui.</p>
                 <label>CPF <b>*</b><input value={formatarCpf(f.cpf)} onChange={(e) => setF((x) => ({ ...x, cpf: soDigitos(e.target.value).slice(0, 11) }))} placeholder="123.456.789-09" inputMode="numeric" autoComplete="off" />{f.cpf.length === 11 && !cpfValido(f.cpf) && <small className="ob-cnpj-erro">Confere o CPF: os dígitos não batem.</small>}</label>
                 <label>Nome fantasia <span className="muted">(como chamam o seu negócio · opcional)</span><input value={f.nome_fantasia} onChange={m('nome_fantasia')} placeholder="Essenza Hair" /></label>
               </>
             )}
-            <label className="ob-termos ob-informal"><input type="checkbox" checked={!comCnpj} onChange={(e) => trocarDocumento(e.target.checked)} /><span>Ainda não tenho CNPJ e trabalho informalmente</span></label>
+            {!(comCnpj && cnpjSituacao === 'ATIVA') && <label className="ob-termos ob-informal"><input type="checkbox" checked={!comCnpj} onChange={(e) => trocarDocumento(e.target.checked)} /><span>Ainda não tenho CNPJ e trabalho informalmente</span></label>}
           </div>
           {comCnpj && (
             <div className="ob-bloco">
@@ -542,10 +574,12 @@ function PassoDados({ s, seguir, voltar, salvando, erro, setErro, user, autonoma
             <>
               <SenhaNova valor={conta} onChange={(v) => setConta((x) => ({ ...x, ...v }))} />
               <label className="ob-termos"><input type="checkbox" checked={conta.termos} onChange={(e) => setConta((x) => ({ ...x, termos: e.target.checked }))} /><span><FraseDeAceite papel={s.tipo} /></span></label>
+              <label className="ob-termos ob-marketing"><input type="checkbox" checked={conta.marketing} onChange={(e) => setConta((x) => ({ ...x, marketing: e.target.checked }))} /><span>Quero receber novidades, ofertas e dicas da MIMO por e-mail e WhatsApp. Dá pra cancelar quando quiser.</span></label>
             </>
           )}
         </div>
       </div>
+      {modalCnpj && <ModalCnpj dados={modalCnpj} onFechar={() => setModalCnpj(null)} />}
       <Rodape voltar={voltar} avancar={avancar} salvando={salvando || criando} rotulo={publico ? (user ? 'Abrir minha agenda' : 'Criar conta e continuar') : 'Continuar'} />
       {publico && <RodapeSocial />}
     </>

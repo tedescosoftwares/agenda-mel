@@ -27456,6 +27456,64 @@ end;
 $$;
 revoke execute on function public.onboarding_salvar_interno(uuid, jsonb, integer) from public, anon, authenticated;
 
+-- ---- o consentimento de marketing (novidades, ofertas e dicas) ----
+-- Vem marcado (ou não) no cadastro, e a pessoa muda quando quiser.
+alter table public.profiles add column if not exists marketing_ok boolean not null default false;
+alter table public.profiles add column if not exists marketing_em timestamptz;
+grant select (marketing_ok, marketing_em) on public.profiles to authenticated;
+
+create or replace function public.preferir_marketing(ok boolean)
+returns jsonb
+language plpgsql
+security definer set search_path = public
+as $$
+begin
+  if auth.uid() is null then raise exception 'sem sessão'; end if;
+  update public.profiles set marketing_ok = coalesce(ok, false), marketing_em = now() where id = auth.uid();
+  return jsonb_build_object('ok', true, 'marketing_ok', coalesce(ok, false));
+end;
+$$;
+revoke execute on function public.preferir_marketing(boolean) from public, anon;
+grant execute on function public.preferir_marketing(boolean) to authenticated;
+
+-- o cadastro traz também o "quero receber novidades" (meta.marketing)
+create or replace function public.termos_do_cadastro()
+returns trigger
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  meta jsonb := coalesce(new.raw_user_meta_data, '{}'::jsonb);
+  v text := nullif(btrim(coalesce(meta ->> 'termos', '')), '');
+  nasc date;
+  mkt boolean;
+begin
+  begin
+    nasc := nullif(meta ->> 'nascimento', '')::date;
+  exception when others then nasc := null;
+  end;
+  begin
+    mkt := (meta ->> 'marketing')::boolean;
+  exception when others then mkt := null;
+  end;
+  update public.profiles
+     set aceitou_termos_em = case when v is not null then now() else aceitou_termos_em end,
+         termos_versao = coalesce(v, termos_versao),
+         nascimento = coalesce(nasc, nascimento),
+         marketing_ok = coalesce(mkt, marketing_ok),
+         marketing_em = case when mkt is not null then now() else marketing_em end
+   where id = new.id;
+  if jsonb_typeof(meta -> 'aceites') = 'object' then
+    begin
+      perform public.aceitar_documentos_interno(new.id, meta -> 'aceites', 'cadastro');
+    exception when others then
+      raise notice 'aceites de % não gravados: %', new.id, sqlerrm;
+    end;
+  end if;
+  return new;
+end;
+$$;
+
 insert into public.migracoes_aplicadas (arquivo) values ('122_salao_fiscal.sql') on conflict (arquivo) do nothing;
 
 insert into public.migracoes_aplicadas (arquivo) values ('122_salao_fiscal.sql') on conflict (arquivo) do nothing;

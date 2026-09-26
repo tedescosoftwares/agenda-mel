@@ -435,7 +435,8 @@
 .ob-bloco { display: flex; flex-direction: column; gap: 0.6rem; padding: 0.8rem 0.85rem; border: 1px solid var(--fio); border-radius: 14px; background: #fcfbfc; }
 .ob-bloco-titulo { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.35rem; font-size: 0.82rem; font-weight: 700; color: var(--grafite, #1f2026); }
 .ob-bloco-titulo small { font-weight: 500; color: var(--cinza-3, #6b7280); }
-.ob-humor { margin: 0; font-size: 0.8rem; font-weight: 500; line-height: 1.45; color: #6d28d9; background: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 12px; padding: 0.6rem 0.75rem; }
+.ob-humor { margin: 0; display: grid; gap: 2px; font-size: 0.8rem; font-weight: 500; line-height: 1.45; color: var(--ob-ameixa, #3d0c4e); background: linear-gradient(135deg, #fff0f6, #fdf6fb); border: 1px solid #ffc2d8; border-radius: 14px; padding: 0.7rem 0.85rem; }
+.ob-humor strong { font-size: 0.86rem; color: var(--ob-rosa, #ff2d7a); }
 .ob-informal { margin-top: 0.1rem; }
 .ob-mapa-campo { display: flex; flex-direction: column; gap: 0.4rem; }
 .ob-mapa-campo .ob-rotulo .muted { font-weight: 500; }
@@ -504,3 +505,12 @@
 .ob-cara-nome input { flex: 0 0 100%; width: 100%; min-width: 0; box-sizing: border-box; font: inherit; font-size: 0.95rem; font-weight: 600; color: var(--grafite, #1f2026); padding: 0.55rem 0.7rem; border: 1px solid var(--fio); border-radius: 10px; background: #fff; }
 .ob-cara-nome input:focus { outline: 2px solid #ffc2d8; border-color: var(--rosa); }
 .ob-form .sn-caixa { flex: 0 0 100%; }
+
+/* ---- 2 · o modal do CNPJ e o "quero novidades" ---- */
+.ob-modal-cnpj { max-width: 480px; }
+.ob-cnpj-selo { align-self: flex-start; display: inline-flex; align-items: center; gap: 4px; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #067647; background: #ecfdf3; border: 1px solid #abefc6; padding: 3px 9px; border-radius: 999px; }
+.ob-cnpj-lista { margin: 0; display: grid; gap: 0.55rem; padding: 0.8rem 0.9rem; border-radius: 14px; background: var(--ob-lilas, #fbf6fb); border: 1px solid var(--ob-fio, #ece7ee); }
+.ob-cnpj-lista > div { display: grid; gap: 1px; } .ob-cnpj-lista dt { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ob-cinza, #6b7280); } .ob-cnpj-lista dd { margin: 0; font-size: 0.9rem; font-weight: 600; color: var(--grafite, #1f2026); }
+.ob-cnpj-nota { margin: 0; font-size: 0.84rem; line-height: 1.5; color: var(--ob-ameixa, #3d0c4e); background: #fff0f6; border: 1px solid #ffc2d8; border-radius: 12px; padding: 0.65rem 0.8rem; }
+.ob-cnpj-nota strong { color: var(--ob-rosa, #ff2d7a); }
+.ob-marketing { margin-top: -0.2rem; }

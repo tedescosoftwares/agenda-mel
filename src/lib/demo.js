@@ -301,6 +301,7 @@ const RPC = {
   pdv_estornar: () => ({ ok: true }),
   onboarding_salvar: ({ passo }) => ({ ok: true, passo: passo ?? 1 }),
   abrir_negocio: ({ tipo }) => ({ ok: true, salao_id: SALAO, tipo }),
+  preferir_marketing: ({ ok }) => ({ ok: true, marketing_ok: Boolean(ok) }),
   onboarding_concluir: () => ({ ok: true }),
   onboarding_horarios: ({ horarios }) => ({ ok: true, dias: (horarios ?? []).length }),
   trocar_tipo_negocio: ({ novo }) => ({ ok: true, tipo: novo }),

@@ -522,3 +522,9 @@
 .ob-erro-icone { width: 48px; height: 48px; border-radius: 16px; background: #fff0f6; color: var(--ob-rosa, #ff2d7a); display: grid; place-items: center; }
 .ob-erro-texto { margin: 0; font-size: 0.9rem; line-height: 1.5; color: var(--ob-ameixa, #3d0c4e); }
 .ob-modal-erro .ob-modal-acoes { justify-content: center; width: 100%; }
+
+/* ---- 2 · o aviso de etapa ---- */
+.ob-aviso-etapa { display: flex; gap: 0.6rem; align-items: flex-start; margin: 0 0 0.9rem; padding: 0.7rem 0.85rem; border-radius: 14px; background: var(--ob-lilas, #fbf6fb); border: 1px solid var(--ob-fio, #ece7ee); font-size: 0.84rem; line-height: 1.45; color: var(--ob-ameixa, #3d0c4e); }
+.ob-aviso-etapa-icone { flex: none; width: 28px; height: 28px; border-radius: 9px; background: #fff0f6; color: var(--ob-rosa, #ff2d7a); display: grid; place-items: center; }
+.ob-aviso-etapa strong { color: var(--ob-rosa, #ff2d7a); }
+.ob-card .ob-form label > select { flex: 0 0 100%; }

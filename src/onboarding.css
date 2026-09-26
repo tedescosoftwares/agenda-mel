@@ -562,3 +562,17 @@
 .ob-checklist li.ok span { background: var(--ob-rosa, #ff2d7a); color: #fff; animation: ob-check-pop .28s cubic-bezier(.2,.8,.2,1); }
 .ob-checklist li.ok { color: var(--ob-cinza, #6b7280); text-decoration: line-through; text-decoration-color: #ffc2d8; }
 @media (prefers-reduced-motion: reduce) { .ob-passos li.feito .ob-passo-num, .ob-checklist li.ok span { animation: none; } }
+
+/* ---- selects com a nossa cara: sem a seta do sistema, chevron rosa, foco rosa ---- */
+.ob select, .ob-modal select, .ob-contato select {
+  appearance: none; -webkit-appearance: none; cursor: pointer;
+  background-color: #fff;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23ff2d7a' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>");
+  background-repeat: no-repeat; background-position: right 12px center; background-size: 14px;
+  padding-right: 38px !important; text-overflow: ellipsis;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.ob select:hover, .ob-modal select:hover { border-color: #ffc2d8; }
+.ob select:focus, .ob-modal select:focus { outline: none; border-color: var(--ob-rosa, #ff2d7a); box-shadow: 0 0 0 3px #ffe0eb; }
+.ob select:disabled { opacity: 0.6; cursor: default; }
+.ob select option { color: var(--grafite, #1f2026); }

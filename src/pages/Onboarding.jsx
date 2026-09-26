@@ -30,63 +30,12 @@ import RodapeSocial from '../components/RodapeSocial'
 // passa por cinco: não tem o passo da equipe.
 // cada passo tem a foto, o bilhete e a frase do painel da esquerda
 const PASSOS = [
-  {
-    id: 1,
-    rotulo: 'Tipo de conta',
-    foto: 'profissional',
-    bilhete: 'começa por aqui',
-    titulo: 'Como você trabalha?',
-    texto: 'Escolha a opção que combina com a sua rotina. Se isso mudar depois, você pode ajustar sem perder seus dados.',
-    roteiro: ['Escolha seu tipo de conta', 'Confira o plano']
-  },
-
-  {
-    id: 2,
-    rotulo: 'Seus dados',
-    foto: 'agenda-celular',
-    bilhete: 'rapidinho',
-    titulo: 'Agora, seus dados.',
-    texto: 'Precisamos de algumas informações para criar sua conta e identificar o negócio. A parte visível para clientes vem depois.',
-    roteiro: ['CPF ou CNPJ', 'Endereço de cadastro', 'E-mail, WhatsApp e senha']
-  },
- 
-   {
-    id: 3,
-    rotulo: 'Seu espaço',
-    foto: 'salao',
-    bilhete: 'com a sua cara',
-    titulo: 'Mostre seu espaço.',
-    texto: 'Escolha o nome, adicione fotos, contatos, endereço e defina como sua agenda funciona.',
-    roteiro: ['Nome e fotos', 'Contatos e localização', 'Horários e regras']
-  },
- 
-   {
-    id: 4,
-    rotulo: 'Serviços',
-    foto: 'lifestyle',
-    bilhete: 'seu cardápio',
-    titulo: 'O que suas clientes podem agendar?',
-    texto: 'Cadastre seus principais serviços com preço e duração. Você pode completar a lista depois.',
-    roteiro: ['Cadastre seus serviços', 'Defina preço e duração']
-  },
-  {
-    id: 5,
-    rotulo: 'Equipe',
-    foto: 'equipe',
-    bilhete: 'quem atende',
-    titulo: 'Agora, sua equipe.',
-    texto: 'Configure cada profissional e deixe a agenda pronta antes de enviar o acesso.',
-    roteiro: ['Adicione as profissionais', 'Configure agendas e serviços', 'Envie os acessos']
-  },
-  {
-    id: 6,
-    rotulo: 'Ativação',
-    foto: 'qr',
-    bilhete: 'tudo pronto',
-    titulo: 'Hora de colocar a agenda pra rodar.',
-    texto: 'Confira se está tudo certo, teste a experiência da cliente e compartilhe seu link ou QR Code.',
-    roteiro: ['Confira o cadastro', 'Teste sua agenda', 'Compartilhe com clientes']
-  },
+  { id: 1, rotulo: 'Tipo de conta', foto: 'profissional', bilhete: 'começa por aqui', titulo: 'Como você trabalha?', texto: 'Escolha a opção que mais combina com a sua rotina. Se isso mudar depois, você pode ajustar sem perder seus dados.', roteiro: ['Escolha seu tipo de conta', 'Confira o plano'] },
+  { id: 2, rotulo: 'Seus dados', foto: 'agenda-celular', bilhete: 'rapidinho', titulo: 'Agora, seus dados.', texto: 'Precisamos de algumas informações para criar sua conta e identificar o negócio. O que as clientes veem você configura no próximo passo.', roteiro: ['CPF ou CNPJ', 'Endereço de cadastro', 'E-mail, WhatsApp e senha'] },
+  { id: 3, rotulo: 'Seu espaço', foto: 'salao', bilhete: 'com a sua cara', titulo: 'Mostre seu espaço.', texto: 'Escolha o nome, adicione fotos, contatos, localização e defina como sua agenda funciona.', roteiro: ['Nome e fotos', 'Contatos e localização', 'Horários e regras'] },
+  { id: 4, rotulo: 'Serviços', foto: 'lifestyle', bilhete: 'seu cardápio', titulo: 'O que suas clientes podem agendar?', texto: 'Cadastre seus principais serviços com preço e duração. Você pode completar a lista depois.', roteiro: ['Cadastre seus serviços', 'Defina preço e duração'] },
+  { id: 5, rotulo: 'Equipe', foto: 'equipe', bilhete: 'quem atende', titulo: 'Agora, sua equipe.', texto: 'Configure cada profissional e deixe a agenda pronta antes de enviar o acesso.', roteiro: ['Adicione as profissionais', 'Configure agendas e serviços', 'Envie os acessos'] },
+  { id: 6, rotulo: 'Ativação', foto: 'qr', bilhete: 'tudo pronto', titulo: 'Hora de colocar a agenda pra rodar.', texto: 'Confira se está tudo certo, faça um teste e compartilhe seu link ou QR Code com as clientes.', roteiro: ['Confira o cadastro', 'Teste sua agenda', 'Compartilhe com clientes'] },
 ]
 const DIAS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
 const ORDEM_DIAS = [1, 2, 3, 4, 5, 6, 0]
@@ -312,12 +261,12 @@ function PassoTipo({ s, setS, seguir, salvando, setErro }) {
   const pro = PLANOS.pro
   return (
     <>
-      <h1 className="ob-titulo">Como você trabalha?</h1>
-      <p className="ob-sub">Escolha o tipo de conta. Você poderá mudar depois, sem perder seus dados.</p>
+      <h1 className="ob-titulo">Como você trabalha hoje?</h1>
+      <p className="ob-sub">Escolha a opção que mais combina com a sua rotina. Se isso mudar, você pode ajustar depois.</p>
       <div className="ob-tipos">
         {[
-          { id: 'salao', foto: 'equipe', pilula: 'Salão · MIMO Pro', titulo: 'Tenho salão, com equipe', texto: 'Para salões com duas ou mais profissionais.', bloco: 'Você controla a operação', itens: ['cadastra sua equipe', 'define serviços e horários', 'organiza agendas', 'configura permissões', 'acompanha a operação do salão'], destaque: 'Você configura tudo primeiro. Cada profissional recebe o acesso depois, com a agenda pronta.', preco: emDinheiro(pro.base), sub: `/mês até ${pro.inclusas} profissionais · ${emDinheiro(pro.extra)} por agenda a mais`, promais: <><b>{PLANOS.promais.nome}</b> a partir de {PLANOS.promais.inclusas} profissionais: <strong>{emDinheiro(PLANOS.promais.base)}/mês</strong> + {emDinheiro(PLANOS.promais.extra)} por profissional a partir da {PLANOS.promais.inclusas + 1}ª. O plano se ajusta sozinho pelo número de agendas, no passo 3.</> },
-          { id: 'autonoma', foto: 'profissional', pilula: 'Autônoma · grátis', titulo: 'Trabalho sozinha', texto: 'Para quem atende por conta própria.', bloco: 'Tudo seu, sem equipe', itens: ['sua agenda', 'seus serviços', 'seus horários', 'seus clientes', 'seu QR e link'], destaque: 'Sem menus ou configurações de equipe.', preco: 'R$ 0', sub: '/mês, sem cartão' },
+          { id: 'salao', foto: 'equipe', pilula: 'Salão · MIMO Pro', titulo: 'Tenho salão e equipe', texto: 'Para quem organiza a agenda de duas ou mais profissionais.', bloco: 'Tudo em um só lugar', itens: ['equipe e agendas', 'serviços e horários', 'clientes', 'permissões', 'rotina do salão'], destaque: 'Você configura tudo primeiro e depois envia o acesso de cada profissional já com a agenda pronta.', preco: emDinheiro(pro.base), sub: `/mês até ${pro.inclusas} profissionais · ${emDinheiro(pro.extra)} por agenda a mais`, promais: <><b>{PLANOS.promais.nome}</b> a partir de {PLANOS.promais.inclusas} profissionais: <strong>{emDinheiro(PLANOS.promais.base)}/mês</strong> + {emDinheiro(PLANOS.promais.extra)} por profissional a partir da {PLANOS.promais.inclusas + 1}ª. O plano se ajusta sozinho pelo número de agendas, no passo 3.</> },
+          { id: 'autonoma', foto: 'profissional', pilula: 'Autônoma · grátis', titulo: 'Trabalho por conta própria', texto: 'Uma agenda completa para quem atende sozinha.', bloco: 'Sua rotina, sem complicação', itens: ['sua agenda', 'seus serviços', 'seus horários', 'seus clientes', 'seu link e QR Code'], destaque: 'Sem configurações de equipe. Só o que você realmente precisa.', preco: 'R$ 0', sub: '/mês, sem cartão' },
         ].map((o) => (
           <button key={o.id} type="button" className={'ob-tipo' + (tipo === o.id ? ' ativo' : '')} onClick={() => setTipo(o.id)} aria-pressed={tipo === o.id}>
             <span className="ob-tipo-foto"><img src={`/imagens/${o.foto}-720.webp`} alt="" /><span className="ob-pilula">{o.pilula}</span></span>
@@ -390,10 +339,10 @@ function ModalErro({ texto, onFechar }) {
       <div className="modal-caixa ob-modal ob-modal-erro" role="alertdialog" aria-live="assertive" onClick={(e) => e.stopPropagation()}>
         <button type="button" className="modal-fechar" onClick={onFechar} aria-label="Fechar"><X size={18} /></button>
         <span className="ob-erro-icone"><Info size={22} /></span>
-        <h3>{emUso ? 'Esse WhatsApp já está em uso' : 'Opa, falta um detalhe'}</h3>
+        <h3>{emUso ? 'Esse WhatsApp já está cadastrado' : 'Falta só um detalhe'}</h3>
         <p className="ob-erro-texto">{texto}</p>
         <div className="ob-modal-acoes">
-          {emUso && <a href={`mailto:${EMAIL_CONTATO}?subject=${encodeURIComponent('Meu WhatsApp já está em uso na MIMO')}`} className="btn btn-ghost">Falar com o suporte</a>}
+          {emUso && <a href={`mailto:${EMAIL_CONTATO}?subject=${encodeURIComponent('Meu WhatsApp já está cadastrado na MIMO')}`} className="btn btn-ghost">Falar com o suporte</a>}
           <button type="button" className="btn btn-primary" onClick={onFechar} autoFocus>{emUso ? 'Usar outro número' : 'Entendi'}</button>
         </div>
       </div>
@@ -523,15 +472,15 @@ function PassoDados({ s, seguir, voltar, salvando, setErro, user, autonoma, publ
   ])
   // no público: cria a conta com tudo isso nos metadados; o servidor abre o negócio e grava os dados
   async function criarConta() {
-    if (!f.whatsapp.trim()) { setErro('Precisamos do WhatsApp: é por ele que os avisos chegam.'); return }
-    if (!f.email.trim()) { setErro('Diga o seu e-mail: é com ele que você entra.'); return }
+    if (!f.whatsapp.trim()) { setErro('Informe seu WhatsApp para receber avisos importantes da conta.'); return }
+    if (!f.email.trim()) { setErro('Informe seu e-mail. Ele será usado para entrar na MIMO.'); return }
     if (!forcaDaSenha(conta.senha).ok) { setErro('A senha precisa ser forte: pelo menos 8 caracteres, com maiúscula, minúscula, número e símbolo.'); return }
     if (conta.confirma !== conta.senha) { setErro('As senhas não são iguais. Confira a confirmação.'); return }
     if (!conta.termos) { setErro('Para criar a conta, é preciso aceitar os Termos e a Política de privacidade.'); return }
     setCriando(true); setErro('')
     try {
       const { data: livre } = await supabase.rpc('telefone_disponivel', { fone: f.whatsapp.trim() })
-      if (livre && livre.disponivel === false) { setErro(livre.em_uso || livre.email ? 'Esse WhatsApp já está em uso e não dá pra cadastrar de novo. Se o número é seu, fale com o suporte.' : (livre.motivo || 'Confere o WhatsApp.')); return }
+      if (livre && livre.disponivel === false) { setErro(livre.em_uso || livre.email ? 'Esse WhatsApp já está cadastrado na MIMO. Se o número é seu, fale com o suporte para recuperar o acesso.' : (livre.motivo || 'Confira o WhatsApp informado.')); return }
       const dadosSalao = dadosDe(f)
       const nomeInicial = f.nome_fantasia.trim() || f.razao_social.trim()   // o nome que a cliente vê se acerta no passo 3
       dadosSalao.email = f.email.trim(); dadosSalao.whatsapp = f.whatsapp.trim(); dadosSalao.responsavel_nome = f.responsavel_nome.trim()
@@ -559,41 +508,41 @@ function PassoDados({ s, seguir, voltar, salvando, setErro, user, autonoma, publ
     if (falta) { setErro(falta); return }
     if (publico) { await criarConta(); return }
     if (!f.whatsapp.trim()) { setErro('Precisamos do seu WhatsApp: é por ele que os avisos chegam.'); return }
-    if (!f.email.trim()) { setErro('Diga o e-mail da conta.'); return }
+    if (!f.email.trim()) { setErro('Informe o e-mail da conta.'); return }
     seguir(dadosDe(f))
   }
   if (criada) {
     return (
       <>
         <h1 className="ob-titulo">Conta criada!</h1>
-        <p className="ob-sub">Falta só confirmar o e-mail</p>
-        <div className="ob-pronto"><span className="ob-pronto-check"><Check size={18} /></span><span><strong>Mandamos um link para {f.email.trim()}</strong><small>Toque no link do e-mail e você volta pra cá já dentro do cadastro, no passo 3, sem precisar entrar de novo. Tudo o que preencheu está guardado.</small></span></div>
-        <div className="ob-rodape"><span /><Link to="/pro/entrar" className="btn btn-ghost ob-continuar">Abri o link e não entrou? Entrar <ArrowRight size={16} /></Link></div>
+        <p className="ob-sub">Agora confirme seu e-mail para continuar.</p>
+        <div className="ob-pronto"><span className="ob-pronto-check"><Check size={18} /></span><span><strong>Enviamos um link para {f.email.trim()}</strong><small>Abra o e-mail e toque no link de confirmação. Depois você volta direto para continuar o cadastro, com tudo o que já preencheu salvo.</small></span></div>
+        <div className="ob-rodape"><span /><Link to="/pro/entrar" className="btn btn-ghost ob-continuar">Já confirmei meu e-mail <ArrowRight size={16} /></Link></div>
       </>
     )
   }
   return (
     <>
-      <h1 className="ob-titulo">Dados do negócio</h1>
-      <p className="ob-sub">{publico ? 'O cadastral e o fiscal do seu negócio, que ficam só com a MIMO, e o seu acesso.' : 'O cadastral e o fiscal do seu negócio. Fica só com a MIMO.'}</p>
-      <div className="ob-aviso-etapa"><span className="ob-aviso-etapa-icone"><Info size={16} /></span><span><strong>Aqui são só as informações cadastrais e fiscais.</strong> {autonoma ? 'Nome, contatos, endereço e fotos da sua agenda' : 'Nome, contatos, endereço e fotos do salão'} você configura na próxima etapa.</span></div>
+      <h1 className="ob-titulo">Seus dados</h1>
+      <p className="ob-sub">{publico ? 'Essas informações identificam sua conta e ficam protegidas na MIMO.' : 'Essas informações identificam seu negócio e ficam protegidas na MIMO.'}</p>
+      <div className="ob-aviso-etapa"><span className="ob-aviso-etapa-icone"><Info size={16} /></span><span><strong>Aqui ficam apenas os dados de cadastro.</strong> {autonoma ? 'Foto, contatos, localização e o que aparece na sua agenda' : 'Nome, fotos, contatos, localização e o que aparece para as clientes'} você configura na próxima etapa.</span></div>
       <div className="ob-dados">
         <div className="ob-form">
           {/* a identificação fiscal vem primeiro: é por ela que o cadastro começa */}
           <span className="ob-grupo-selo"><Selo /></span>
           <div className="ob-bloco">
-            <span className="ob-bloco-titulo">Identificação fiscal <small>fica só com a MIMO</small></span>
+            <span className="ob-bloco-titulo">Identificação do negócio <small>não aparece para clientes</small></span>
             {comCnpj ? (
               <>
-              <label>CNPJ <b>*</b><span className="muted">(preenche o endereço fiscal sozinho)</span><input value={formatarCnpj(f.cnpj)} onChange={(e) => porCnpj(e.target.value)} placeholder="12.345.678/0001-90" inputMode="numeric" autoComplete="off" autoFocus={!f.cnpj} />{cnpjInfo === 'buscando' ? <small className="muted">consultando a Receita…</small> : cnpjInfo.startsWith('ok:') ? <small className="ob-cnpj-ok">✓ {cnpjInfo.slice(3)}</small> : cnpjInfo.startsWith('erro:') ? <small className="ob-cnpj-erro">{cnpjInfo.slice(5)}</small> : null}</label>
+              <label>CNPJ <b>*</b><span className="muted">(buscamos os dados automaticamente)</span><input value={formatarCnpj(f.cnpj)} onChange={(e) => porCnpj(e.target.value)} placeholder="12.345.678/0001-90" inputMode="numeric" autoComplete="off" autoFocus={!f.cnpj} />{cnpjInfo === 'buscando' ? <small className="muted">consultando a Receita…</small> : cnpjInfo.startsWith('ok:') ? <small className="ob-cnpj-ok">✓ {cnpjInfo.slice(3)}</small> : cnpjInfo.startsWith('erro:') ? <small className="ob-cnpj-erro">{cnpjInfo.slice(5)}</small> : null}</label>
                 <label>Razão social <b>*</b><input value={f.razao_social} onChange={m('razao_social')} placeholder="Essenza Cabeleireiros Ltda" autoComplete="organization" /></label>
                 <label>Nome fantasia <span className="muted">(como está na Receita)</span><input value={f.nome_fantasia} onChange={m('nome_fantasia')} placeholder="Essenza Hair" /></label>
-                <label>Nome do sócio responsável <b>*</b><input value={f.responsavel_nome} onChange={m('responsavel_nome')} placeholder="Juliana Lima" autoComplete="name" list={f.socios.length ? 'ob-socios' : undefined} />{f.socios.length > 1 && <small className="muted">no quadro da Receita: {f.socios.join(', ')}</small>}</label>
+                <label>Responsável pelo negócio <b>*</b><input value={f.responsavel_nome} onChange={m('responsavel_nome')} placeholder="Juliana Lima" autoComplete="name" list={f.socios.length ? 'ob-socios' : undefined} />{f.socios.length > 1 && <small className="muted">no quadro da Receita: {f.socios.join(', ')}</small>}</label>
                 {f.socios.length > 0 && <datalist id="ob-socios">{f.socios.map((n) => <option key={n} value={n} />)}</datalist>}
               </>
             ) : (
               <>
-                <p className="ob-humor"><strong>Ainda não tem CNPJ? Tudo certo 💗</strong>Use seu CPF para continuar. Quando seu CNPJ estiver pronto, é só atualizar seus dados por aqui.</p>
+                <p className="ob-humor"><strong>Ainda não tem CNPJ? Tudo bem.</strong>Use seu CPF para continuar. Quando tiver CNPJ, você pode atualizar seus dados por aqui.</p>
                 <label>CPF <b>*</b><input value={formatarCpf(f.cpf)} onChange={(e) => setF((x) => ({ ...x, cpf: soDigitos(e.target.value).slice(0, 11) }))} placeholder="123.456.789-09" inputMode="numeric" autoComplete="off" />{f.cpf.length === 11 && !cpfValido(f.cpf) && <small className="ob-cnpj-erro">Confere o CPF: os dígitos não batem.</small>}</label>
                 <label>Seu nome completo <b>*</b><input value={f.responsavel_nome} onChange={m('responsavel_nome')} placeholder="Juliana Lima" autoComplete="name" /></label>
                 <div className="ob-linha-2 ob-linha-meio">
@@ -602,7 +551,7 @@ function PassoDados({ s, seguir, voltar, salvando, setErro, user, autonoma, publ
                 </div>
               </>
             )}
-            {!(comCnpj && cnpjSituacao === 'ATIVA') && <label className="ob-termos ob-informal"><input type="checkbox" checked={!comCnpj} onChange={(e) => trocarDocumento(e.target.checked)} /><span>Ainda não tenho CNPJ e trabalho informalmente</span></label>}
+            {!(comCnpj && cnpjSituacao === 'ATIVA') && <label className="ob-termos ob-informal"><input type="checkbox" checked={!comCnpj} onChange={(e) => trocarDocumento(e.target.checked)} /><span>Ainda não tenho CNPJ</span></label>}
           </div>
           <div className="ob-bloco">
             <span className="ob-bloco-titulo">{comCnpj ? 'Endereço fiscal' : 'Seu endereço'} <small>{comCnpj ? 'o que está na Receita' : 'o do cadastro; onde atende vem na próxima etapa'}</small></span>
@@ -639,7 +588,7 @@ function traduzErro(msg) {
     'User already registered': 'Este e-mail já tem conta. Entre com a senha, ou use "Esqueci a senha".',
     'Password should be at least 6 characters': 'A senha precisa ter pelo menos 6 caracteres.',
     'Failed to fetch': 'Não foi possível conectar. Confira sua internet.',
-    'Database error saving new user': 'Não deu para criar a conta: esse WhatsApp já está em uso ou algum dado veio errado.',
+    'Database error saving new user': 'Não foi possível criar a conta. Confira os dados informados ou fale com o suporte.',
   }
   return mapa[msg] || msg
 }
@@ -792,8 +741,8 @@ function PassoEstrutura({ s, seguir, voltar, salvando, setErro, autonoma, gravar
   const recomendadoAtivo = Number(pol.antecedencia_min_minutos) === RECOMENDADO.antecedencia_min_minutos && pol.politica_cancelamento === RECOMENDADO.politica_cancelamento && pol.permite_remarcar === RECOMENDADO.permite_remarcar && pol.sinal_ligado === RECOMENDADO.sinal_ligado
 
   async function avancar() {
-    if (!nome.trim()) { setErro(autonoma ? 'Diga o nome da sua agenda: é o que a cliente vê.' : 'Diga o nome do salão: é o que a cliente vê.'); return }
-    if (!loc.whatsapp.trim()) { setErro('Precisamos do WhatsApp comercial: é por ele que as clientes falam com vocês.'); return }
+    if (!nome.trim()) { setErro(autonoma ? 'Informe o nome da sua agenda. É esse nome que suas clientes verão.' : 'Informe o nome do salão. É esse nome que suas clientes verão.'); return }
+    if (!loc.whatsapp.trim()) { setErro('Informe o WhatsApp comercial que suas clientes poderão usar para falar com o salão.'); return }
     for (const t of loc.telefones) if (t.trim() && soDigitos(t).length < 10) { setErro(`Confere o telefone ${formatarFone(t)}: faltam dígitos.`); return }
     for (const e of loc.emails) if (e.trim() && !emailOk(e)) { setErro(`Confere o e-mail ${e.trim()}.`); return }
     if (!local.city.trim()) { setErro(usaFiscal ? 'Diga a cidade do endereço no passo anterior, ou escolha outro endereço aqui.' : 'Diga a cidade.'); return }
@@ -808,12 +757,12 @@ function PassoEstrutura({ s, seguir, voltar, salvando, setErro, autonoma, gravar
   }
   return (
     <>
-      <h1 className="ob-titulo">{autonoma ? 'Monte a sua agenda' : 'Monte o seu salão'}</h1>
-      <p className="ob-sub">{autonoma ? 'É aqui que a sua agenda ganha cara: foto, contatos, onde e como você atende. Tudo pode mudar depois em Ajustes.' : 'É aqui que o salão ganha cara na MIMO: nome, fotos, contatos, endereço e como o dia funciona. Tudo pode mudar depois em Ajustes.'}</p>
+      <h1 className="ob-titulo">{autonoma ? 'Agora dê cara à sua agenda' : 'Agora dê cara ao seu salão'}</h1>
+      <p className="ob-sub">{autonoma ? 'Adicione sua foto, contatos e onde você atende. É isso que suas clientes vão encontrar na MIMO.' : 'Adicione nome, fotos, contatos e localização. É isso que suas clientes vão encontrar na MIMO.'}</p>
       <div className="ob-estrutura">
         <div className="ob-card ob-card-largo">
-          <strong className="ob-card-titulo">{autonoma ? 'Nome, foto e espaço' : 'Nome, logo e fotos'}</strong>
-          <span className="muted">{autonoma ? 'A foto aparece ao lado do seu nome. As fotos do espaço são a capa da sua página: a primeira é a que abre.' : 'O logo aparece pequeno, ao lado do nome. As fotos são do espaço: fachada, recepção, cadeiras. A primeira vira a capa; horizontais ficam melhores.'}</span>
+          <strong className="ob-card-titulo">{autonoma ? 'Sua imagem e seu espaço' : 'Nome e fotos'}</strong>
+          <span className="muted">{autonoma ? 'Sua foto aparece junto ao nome. Adicione também fotos do espaço onde você atende; a primeira será a capa.' : 'Seu logo aparece junto ao nome. Use fotos reais do espaço, como fachada, recepção e ambiente; a primeira será a capa.'}</span>
           <div className="ob-cara">
             <div className="ob-cara-esq">
             <label className="ob-cara-nome">{autonoma ? 'Nome da agenda' : 'Nome do salão'} <b>*</b><span className="muted">(como aparece para a cliente)</span><input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Studio Essenza Hair" maxLength={60} /></label>
@@ -849,7 +798,7 @@ function PassoEstrutura({ s, seguir, voltar, salvando, setErro, autonoma, gravar
             </div>
             {/* como a cliente vai ver a página: capa, logo, nome e onde fica */}
             <div className="ob-previa">
-              <small><Eye size={11} /> Como sua cliente verá</small>
+              <small><Eye size={11} /> Assim suas clientes vão ver</small>
               <div className="ob-previa-tela">
                 <div className="ob-previa-capa">
                   {fotos[0] ? <img src={fotos[0]} alt="" /> : <span className="ob-previa-capa-vazia"><ImagePlus size={20} /><span>{autonoma ? 'A foto do seu espaço vira a capa' : 'A primeira foto vira a capa'}</span></span>}
@@ -919,34 +868,34 @@ function PassoEstrutura({ s, seguir, voltar, salvando, setErro, autonoma, gravar
           )}
         </div>
         <div className="ob-card">
-          <span className="ob-card-linha"><strong className="ob-card-titulo">Política de agendamento e cancelamento</strong>{recomendadoAtivo && <em className="ob-badge">Recomendado para começar</em>}</span>
+          <span className="ob-card-linha"><strong className="ob-card-titulo">Regras da agenda</strong>{recomendadoAtivo && <em className="ob-badge">Recomendado para começar</em>}</span>
           {!recomendadoAtivo && (
             <div className="ob-recomendado">
-              <small><Wand2 size={12} /> Configuração recomendada</small>
-              <span className="muted">Antecedência mínima 1 hora · cancelamento até 12 h antes · reagendamento permitido · sinal desligado · confirmação como está.</span>
+              <small><Wand2 size={12} /> Configuração sugerida para começar</small>
+              <span className="muted">Agendamento até 1 hora antes · cancelamento grátis até 12 horas antes · reagendamento permitido · sinal desligado.</span>
               <button type="button" className="btn-mini" onClick={() => setPol((x) => ({ ...x, ...RECOMENDADO }))}>Usar recomendado</button>
             </div>
           )}
-          <label className="ob-campo">Antecedência mínima<select value={pol.antecedencia_min_minutos} onChange={(e) => p('antecedencia_min_minutos')(e.target.value)}>{ANTECEDENCIAS.map(([v, r]) => <option key={v} value={v}>{r}</option>)}</select><small className="muted">Quanto antes do horário a cliente ainda consegue marcar.</small></label>
-          <label className="ob-campo">Cancelamento gratuito até<select value={pol.politica_cancelamento} onChange={(e) => p('politica_cancelamento')(e.target.value)}>{CANCELAMENTO.map(([v, r]) => <option key={v} value={v}>{r} antes</option>)}</select></label>
+          <label className="ob-campo">Até quanto tempo antes a cliente pode agendar?<select value={pol.antecedencia_min_minutos} onChange={(e) => p('antecedencia_min_minutos')(e.target.value)}>{ANTECEDENCIAS.map(([v, r]) => <option key={v} value={v}>{r}</option>)}</select><small className="muted">Ex.: com 1 hora, um horário das 15h pode ser marcado até as 14h.</small></label>
+          <label className="ob-campo">Cancelamento sem cobrança até<select value={pol.politica_cancelamento} onChange={(e) => p('politica_cancelamento')(e.target.value)}>{CANCELAMENTO.map(([v, r]) => <option key={v} value={v}>{r} antes</option>)}</select></label>
           <div className="ob-toggle"><span>Permitir reagendamento</span><label className="switch"><input type="checkbox" checked={pol.permite_remarcar} onChange={(e) => p('permite_remarcar')(e.target.checked)} /><span></span></label></div>
-          <div className="ob-toggle"><span>Sinal pelo app <span className="muted">(opcional)</span></span><label className="switch"><input type="checkbox" checked={pol.sinal_ligado} onChange={(e) => { setTocouSinal(true); p('sinal_ligado')(e.target.checked) }} /><span></span></label></div>
+          <div className="ob-toggle"><span>Cobrar sinal pelo app <span className="muted">(opcional)</span></span><label className="switch"><input type="checkbox" checked={pol.sinal_ligado} onChange={(e) => { setTocouSinal(true); p('sinal_ligado')(e.target.checked) }} /><span></span></label></div>
           {tocouSinal && !pol.sinal_ligado && (s.pagamento_modo ?? 'nao') !== 'nao' && <small className="ob-aviso-sinal">Desligar aqui desliga o recebimento pelo app do salão inteiro (sinal e pagamento), o mesmo de Ajustes › Receber pelo app.</small>}
           {pol.sinal_ligado && (
             <div className="ob-sinal">
               <div className="chips"><button type="button" className={'chip' + (pol.sinal_modo === 'fixo' ? ' active' : '')} onClick={() => p('sinal_modo')('fixo')}>Valor fixo</button><button type="button" className={'chip' + (pol.sinal_modo === 'pct' ? ' active' : '')} onClick={() => p('sinal_modo')('pct')}>% do serviço</button></div>
               {pol.sinal_modo === 'fixo' ? <label className="ob-campo ob-campo-reais"><span>R$</span><input value={pol.sinal_fixo} onChange={(e) => p('sinal_fixo')(e.target.value)} inputMode="decimal" /></label>
                 : <div className="chips">{[30, 50, 100].map((v) => <button key={v} type="button" className={'chip' + (Number(pol.sinal_pct) === v ? ' active' : '')} onClick={() => p('sinal_pct')(v)}>{v}%</button>)}</div>}
-              <small className="muted">Valor cobrado no momento do agendamento (pode ser abatido do valor final). Só funciona depois de ligar o recebimento pelo app em Ajustes.</small>
+              <small className="muted">O sinal é cobrado no momento da reserva e pode ser abatido do valor final do atendimento.</small>
             </div>
           )}
-          <label className="ob-campo">Quem confirma o horário<select value={pol.aceite_modo} onChange={(e) => p('aceite_modo')(e.target.value)}><option value="automatico">Entra confirmado na hora</option><option value="casa">A casa confirma{pol.aceite_modo === 'casa' ? ` (até ${pol.minutos_para_aceitar} min)` : ''}</option><option value="profissional">Cada profissional decide</option></select></label>
+          <label className="ob-campo">Como os agendamentos são confirmados?<select value={pol.aceite_modo} onChange={(e) => p('aceite_modo')(e.target.value)}><option value="automatico">Confirmar automaticamente</option><option value="casa">O salão confirma{pol.aceite_modo === 'casa' ? ` (até ${pol.minutos_para_aceitar} min)` : ''}</option><option value="profissional">Cada profissional confirma os próprios horários</option></select></label>
           <small className="muted">Você poderá mudar essas regras a qualquer momento em Ajustes.</small>
         </div>
         {!autonoma && (
           <div className="ob-card">
-            <strong className="ob-card-titulo">Profissionais com agenda</strong>
-            <span className="muted">Quantas pessoas atendem clientes e precisam de agenda própria? Recepção, administração e pessoas sem agenda não contam.</span>
+            <strong className="ob-card-titulo">Profissionais com agenda própria</strong>
+            <span className="muted">Quantas profissionais atendem clientes e precisam de agenda própria? Recepção, administração e pessoas sem agenda não entram nessa conta.</span>
             <div className="ob-contador"><button type="button" onClick={() => p('equipe_prevista')(Math.max(1, Number(pol.equipe_prevista) - 1))} aria-label="Menos"><Minus size={14} /></button><strong>{pol.equipe_prevista}</strong><button type="button" onClick={() => p('equipe_prevista')(Number(pol.equipe_prevista) + 1)} aria-label="Mais"><Plus size={14} /></button></div>
             {(() => { const c = planoDoNegocio('salao', pol.equipe_prevista); return (
               <div className="ob-preco-vivo"><small>{c.nome}</small><b>{emDinheiro(c.total)}<small> /mês</small></b><span>{c.extras === 0 ? `Até ${c.plano === 'pro' ? PLANOS.pro.inclusas : PLANOS.promais.inclusas} agendas inclusas.` : `${c.plano === 'pro' ? PLANOS.pro.inclusas : PLANOS.promais.inclusas} inclusas + ${c.extras} × ${emDinheiro(c.valorExtra)}.`}</span></div>
@@ -954,8 +903,8 @@ function PassoEstrutura({ s, seguir, voltar, salvando, setErro, autonoma, gravar
           </div>
         )}
         <div className="ob-card">
-          <strong className="ob-card-titulo">Categorias de serviços</strong>
-          <span className="muted">Escolha apenas as categorias que fazem sentido para {autonoma ? 'você' : 'o salão'}. Elas organizam o cadastro dos serviços no próximo passo.</span>
+          <strong className="ob-card-titulo">Categorias dos serviços</strong>
+          <span className="muted">Escolha as categorias que fazem sentido para {autonoma ? 'o seu trabalho' : 'o salão'}. Elas ajudam a organizar os serviços no próximo passo.</span>
           <div className="ob-cats">
             {minhasCats.map((c) => <span key={c.id} className="ob-cat">{c.nome}<button type="button" onClick={() => tirarCat(c)} aria-label={`Tirar ${c.nome}`}><X size={12} /></button></span>)}
             {CATEGORIAS_SUGERIDAS.filter((n) => !cats.some((c) => c.nome.toLowerCase() === n.toLowerCase())).map((n) => <button key={n} type="button" className="ob-cat sugerida" onClick={() => addCat(n)}><Plus size={12} /> {n}</button>)}
@@ -1013,7 +962,7 @@ function PassoServicos({ s, seguir, voltar, salvando, setErro, autonoma }) {
   return (
     <>
       <div className="ob-titulo-linha">
-        <div><h1 className="ob-titulo">{vazio ? 'Comece pelos serviços mais importantes' : autonoma ? 'Seus serviços' : 'O que o salão oferece'}</h1><p className="ob-sub">{vazio ? 'Você não precisa cadastrar tudo agora. Adicione de 3 a 5 serviços principais para começar a usar a agenda.' : 'Nome, duração real e preço. A duração é o que a agenda usa pra achar horário livre.'}</p></div>
+        <div><h1 className="ob-titulo">{vazio ? 'Cadastre seus primeiros serviços' : 'Seus serviços'}</h1><p className="ob-sub">{vazio ? 'Comece com os 3 a 5 serviços mais procurados. Depois você pode adicionar quantos quiser.' : 'Defina preço e duração para a MIMO mostrar os horários disponíveis corretamente.'}</p></div>
         {!vazio && <button type="button" className="btn btn-secondary ob-add" onClick={() => setModal('novo')}><Plus size={15} /> Adicionar serviço</button>}
       </div>
       {!vazio && (
@@ -1053,7 +1002,7 @@ function PassoServicos({ s, seguir, voltar, salvando, setErro, autonoma }) {
       </div>
       {sugestoes.length > 0 && (exemplos || !vazio) && (
         <div className="ob-sugestoes">
-          <small><Sparkles size={12} /> Sugestões rápidas pelas suas categorias · toque pra preencher nome e categoria; o preço é seu</small>
+          <small><Sparkles size={12} /> Sugestões pelas suas categorias · toque para preencher nome e categoria; você define o preço</small>
           <div className="chips">{sugestoes.map((x) => <button key={x.nome} type="button" className="chip" onClick={() => setModal({ sugestao: x })}><Plus size={12} /> {x.nome}</button>)}</div>
         </div>
       )}
@@ -1073,9 +1022,9 @@ function ModalServico({ salaoId, servico, sugestao, cats, profs, quem, onFechar,
   const m = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.value }))
   async function trocarFoto(e) { const file = e.target.files?.[0]; e.target.value = ''; if (!file) return; try { setFoto(await reduzirFoto(file, { max: 1200 })) } catch (err) { setErro(err.message) } }
   async function salvar() {
-    if (!f.name.trim()) { setErro('Diga o nome do serviço.'); return }
+    if (!f.name.trim()) { setErro('Informe o nome do serviço.'); return }
     const preco = reais(f.price) / 100
-    if (!(preco > 0)) { setErro('Diga o preço.'); return }
+    if (!(preco > 0)) { setErro('Informe o preço do serviço.'); return }
     setSalvando(true); setErro('')
     try {
       let images = foto?.url ? [foto.url] : []
@@ -1102,7 +1051,7 @@ function ModalServico({ salaoId, servico, sugestao, cats, profs, quem, onFechar,
       <div className="modal-caixa ob-modal" onClick={(e) => e.stopPropagation()}>
         <button type="button" className="modal-fechar" onClick={onFechar} aria-label="Fechar"><X size={18} /></button>
         <h3>{servico ? 'Editar serviço' : 'Adicionar serviço'}</h3>
-        {sugestao && <p className="muted">Nome e categoria já preenchidos. A duração é só uma referência; confira, e o preço é o seu.</p>}
+        {sugestao && <p className="muted">Nome e categoria já preenchidos. Confira a duração sugerida e defina o seu preço.</p>}
         {erro && <div className="alert alert-error">{erro}</div>}
         <div className="ob-modal-corpo">
           <button type="button" className={'ob-foto-serv' + (foto ? ' com' : '')} onClick={() => arq.current?.click()}>{foto ? <img src={foto.preview ?? foto.url} alt="" /> : <><Camera size={18} /><span>Foto</span></>}</button>
@@ -1118,8 +1067,8 @@ function ModalServico({ salaoId, servico, sugestao, cats, profs, quem, onFechar,
             <label>Descrição para a cliente <span className="muted">(opcional)</span><input value={f.description} onChange={m('description')} placeholder="inclui lavagem e finalização" /></label>
             {profs.length > 1 && (
               <div className="ob-quem">
-                <span className="ob-rotulo">Quem faz</span>
-                <div className="chips"><button type="button" className={'chip' + (sel.length === 0 ? ' active' : '')} onClick={() => setSel([])}>Qualquer</button>{profs.map((p) => <button key={p.id} type="button" className={'chip' + (sel.includes(p.id) ? ' active' : '')} onClick={() => setSel((x) => (x.includes(p.id) ? x.filter((y) => y !== p.id) : [...x, p.id]))}>{p.name.split(' ')[0]}</button>)}</div>
+                <span className="ob-rotulo">Quem realiza este serviço?</span>
+                <div className="chips"><button type="button" className={'chip' + (sel.length === 0 ? ' active' : '')} onClick={() => setSel([])}>Toda a equipe</button>{profs.map((p) => <button key={p.id} type="button" className={'chip' + (sel.includes(p.id) ? ' active' : '')} onClick={() => setSel((x) => (x.includes(p.id) ? x.filter((y) => y !== p.id) : [...x, p.id]))}>{p.name.split(' ')[0]}</button>)}</div>
               </div>
             )}
           </div>
@@ -1171,27 +1120,27 @@ function PassoEquipe({ s, seguir, voltar, salvando, setErro }) {
   return (
     <>
       <div className="ob-titulo-linha">
-        <div><h1 className="ob-titulo">Monte sua equipe</h1><p className="ob-sub">Você configura cada profissional. Depois ela recebe um link e entra com a agenda pronta.</p></div>
+        <div><h1 className="ob-titulo">Configure sua equipe</h1><p className="ob-sub">Adicione cada profissional e deixe serviços, horários e repasses preparados antes de enviar o acesso.</p></div>
         <button type="button" className="btn btn-primary ob-add" onClick={() => setGaveta('nova')}><Plus size={15} /> Adicionar profissional</button>
       </div>
       {aviso && <div className="alert alert-info">{aviso}</div>}
       <div className="eq-bloco">
         <span className="eq-bloco-icone"><Home size={17} /></span>
         <div>
-          <strong>Tudo continua dentro do salão</strong>
-          <p>Cada profissional tem a própria agenda, mas continua vinculada ao salão. Você define como ela trabalha, quais serviços faz, horários, repasse e permissões. Depois ela recebe apenas o acesso.</p>
+          <strong>Cada profissional tem sua própria agenda</strong>
+          <p>Ela continua vinculada ao salão, enquanto você define serviços, horários, repasses e permissões. Quando estiver tudo pronto, é só enviar o acesso.</p>
         </div>
       </div>
       <div className="eq-lista">
         {!equipe ? <p className="muted">Carregando…</p> : lista.length === 0 ? (
-          <div className="ob-vazio"><Users size={22} /><strong>Ninguém na equipe ainda</strong><span className="muted">Adicione a primeira profissional: leva um minuto e ela já entra com tudo pronto.</span><button type="button" className="btn btn-primary" onClick={() => setGaveta('nova')}><Plus size={15} /> Adicionar profissional</button></div>
+          <div className="ob-vazio"><Users size={22} /><strong>Sua equipe ainda está vazia</strong><span className="muted">Adicione a primeira profissional e configure a agenda dela.</span><button type="button" className="btn btn-primary" onClick={() => setGaveta('nova')}><Plus size={15} /> Adicionar profissional</button></div>
         ) : lista.map((p) => <CartaoProfissional key={p.id} p={p} salao={s} onConfigurar={(x) => setGaveta(x)} onAcao={acao} menuAberto={menu} setMenu={setMenu} />)}
       </div>
       {pendentes.length > 0 && <p className="ob-dica"><Info size={13} /> {pendentes.length === 1 ? `${primeiroNome(pendentes[0].name)} ainda não ativou o acesso.` : `${pendentes.length} profissionais ainda não ativaram o acesso.`} Mande o link pelo WhatsApp: ela confirma o número, cria a senha e entra.</p>}
       <div className="eq-coletar">
         <div>
-          <strong><Link2 size={14} /> Coletar dados da equipe por link</strong>
-          <p>Salão grande? Compartilhe este link para a profissional informar nome e WhatsApp. Você conclui a configuração dela antes de liberar o acesso.</p>
+          <strong><Link2 size={14} /> Deixe a profissional preencher os dados básicos</strong>
+          <p>Compartilhe este link para ela informar nome e WhatsApp. Depois você revisa os dados, configura a agenda e libera o acesso.</p>
           {coletar ? <div className="ob-link"><input readOnly value={link} onFocus={(e) => e.target.select()} /><button type="button" className="btn-mini" onClick={copiar}><Copy size={12} /> {copiado ? 'Copiado!' : 'Copiar link'}</button></div> : <button type="button" className="btn-mini btn-mini-neutro" onClick={() => setColetar(true)}>Mostrar link</button>}
         </div>
         {coletar && <div className="eq-coletar-qr"><canvas ref={qr} /><span>ou o QR</span></div>}
@@ -1228,8 +1177,8 @@ function PassoAtivacao({ s, voltar, salvando, concluir, pronto, autonoma, irPara
   const pendentes = n('equipe_pendente')
   return (
     <>
-      <h1 className="ob-titulo">Pronta pra receber</h1>
-      <p className="ob-sub">{autonoma ? 'Sua agenda está montada. Agora é divulgar e começar a receber agendamentos.' : 'Seu salão está montado. Agora é divulgar e começar a receber agendamentos.'}</p>
+      <h1 className="ob-titulo">Sua agenda está pronta 🎉</h1>
+      <p className="ob-sub">{autonoma ? 'Sua agenda já pode receber agendamentos. Faça um teste e depois compartilhe seu link ou QR Code.' : 'Seu salão já pode receber agendamentos. Faça um teste e depois compartilhe o link ou QR Code com suas clientes.'}</p>
       <div className="ob-duas ob-duas-final">
         <div className="ob-card ob-checklist">
           <strong className="ob-card-titulo">O que já está pronto</strong>
@@ -1238,7 +1187,7 @@ function PassoAtivacao({ s, voltar, salvando, concluir, pronto, autonoma, irPara
         <div className="ob-card ob-ativacao">
           <div>
             <strong className="ob-card-titulo">Link e QR Code {autonoma ? 'da sua agenda' : 'do salão'}</strong>
-            <span className="muted">Compartilhe com as clientes: elas veem {autonoma ? 'sua agenda' : 'o salão, os serviços e a equipe'} e marcam sozinhas.</span>
+            <span className="muted">Compartilhe com suas clientes. Elas abrem {autonoma ? 'sua agenda' : 'a página do salão'}, escolhem o serviço e encontram um horário disponível.</span>
             <div className="ob-link"><input readOnly value={link} onFocus={(e) => e.target.select()} /><button type="button" className="btn-mini" onClick={copiar}><Copy size={12} /> {copiado ? 'Copiado!' : 'Copiar link'}</button></div>
             <span className="muted ob-codigo">Ou o código <b>{s.codigo}</b>, digitado no app.</span>
           </div>
@@ -1247,10 +1196,10 @@ function PassoAtivacao({ s, voltar, salvando, concluir, pronto, autonoma, irPara
       </div>
       <strong className="ob-secao">Próximos passos</strong>
       <div className="ob-proximos">
-        <div className="ob-proximo"><span className="ob-proximo-icone"><CalendarCheck size={18} /></span><strong>Faça um agendamento de teste</strong><p>Veja exatamente como sua cliente vai enxergar {autonoma ? 'sua agenda' : 'o salão e a disponibilidade da equipe'}.</p><button type="button" className="btn-mini" onClick={testar}>{resumo?.feitos?.agendamento_teste ? <><Check size={12} /> Página aberta</> : 'Fazer agendamento teste'}</button></div>
-        <div className="ob-proximo"><span className="ob-proximo-icone"><QrCode size={18} /></span><strong>Coloque o QR no salão</strong><p>Imprima o QR e coloque no balcão, no espelho ou na recepção. Na bio do Instagram vai o link.</p><button type="button" className="btn-mini" onClick={baixar}>{resumo?.feitos?.qr_baixado ? <><Check size={12} /> QR baixado</> : <><Download size={12} /> Baixar QR Code</>}</button></div>
+        <div className="ob-proximo"><span className="ob-proximo-icone"><CalendarCheck size={18} /></span><strong>Faça um agendamento de teste</strong><p>Abra sua página como cliente e confira serviços, horários e disponibilidade antes de divulgar.</p><button type="button" className="btn-mini" onClick={testar}>{resumo?.feitos?.agendamento_teste ? <><Check size={12} /> Página aberta</> : 'Fazer agendamento teste'}</button></div>
+        <div className="ob-proximo"><span className="ob-proximo-icone"><QrCode size={18} /></span><strong>Divulgue seu QR Code</strong><p>Coloque no balcão, espelho ou recepção. No Instagram e no WhatsApp, compartilhe o link.</p><button type="button" className="btn-mini" onClick={baixar}>{resumo?.feitos?.qr_baixado ? <><Check size={12} /> QR baixado</> : <><Download size={12} /> Baixar QR Code</>}</button></div>
         {!autonoma && (
-          <div className="ob-proximo"><span className="ob-proximo-icone"><Send size={18} /></span><strong>Ative sua equipe</strong>
+          <div className="ob-proximo"><span className="ob-proximo-icone"><Send size={18} /></span><strong>Envie o acesso da equipe</strong>
             {pendentes > 0 ? <><p>{pendentes === 1 ? '1 profissional ainda não ativou o acesso.' : `${pendentes} profissionais ainda não ativaram o acesso.`}</p><button type="button" className="btn-mini" onClick={() => irPara(5)}>Enviar acessos</button></>
               : n('equipe') > 0 ? <p className="ob-proximo-ok"><Check size={13} /> Sua equipe está ativa.</p>
               : <><p>Ninguém na equipe ainda. Dá pra adicionar agora ou depois, em Equipe.</p><button type="button" className="btn-mini" onClick={() => irPara(5)}>Adicionar profissional</button></>}
@@ -1258,8 +1207,8 @@ function PassoAtivacao({ s, voltar, salvando, concluir, pronto, autonoma, irPara
         )}
       </div>
       <div className="ob-card ob-importante">
-        <strong className="ob-card-titulo"><Info size={15} /> Importante</strong>
-        <span className="muted">Clientes que entrarem pelo link ou QR {autonoma ? 'da sua agenda' : 'do salão'} passam a ter relacionamento com {autonoma ? 'você' : 'esse salão'} na MIMO e podem agendar os serviços e profissionais vinculados a ele. Quem vem pelo link de uma profissional fica ligada ao salão e a ela.</span>
+        <strong className="ob-card-titulo"><Info size={15} /> Como as clientes ficam vinculadas</strong>
+        <span className="muted">Quem entrar pelo link ou QR {autonoma ? 'da sua agenda' : 'do salão'} poderá voltar depois para agendar com {autonoma ? 'você' : 'esse salão'}. Se a cliente entrar pelo link de uma profissional, ela também ficará vinculada a essa profissional dentro do salão.</span>
         <span className="ob-importante-icone"><Users size={34} /></span>
       </div>
       {(() => { const c = planoDoNegocio(s.tipo, s.equipe_prevista); return (

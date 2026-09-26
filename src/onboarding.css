@@ -532,12 +532,16 @@
 
 /* ---- entre os passos: roteiro, "depois vem", e as entradas animadas ---- */
 .ob-painel-vivo { display: contents; }
-.ob-painel-roteiro { margin: 6px 0 0; padding: 0; list-style: none; display: grid; gap: 4px; counter-reset: roteiro; }
-.ob-painel-roteiro li { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--ob-ameixa, #3d0c4e); counter-increment: roteiro; }
-.ob-painel-roteiro li::before { content: counter(roteiro); flex: none; width: 18px; height: 18px; border-radius: 999px; background: #fff; border: 1.5px solid #ffc2d8; color: var(--ob-rosa, #ff2d7a); font-size: 0.66rem; font-weight: 800; display: inline-grid; place-items: center; }
+.ob-painel-roteiro { margin: 6px 0 0; padding: 0; list-style: none; display: grid; gap: 4px; }
+.ob-painel-roteiro li { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--ob-ameixa, #3d0c4e); transition: color .2s ease; }
+.ob-painel-roteiro li i, .ob-roteiro-m li b { flex: none; width: 18px; height: 18px; border-radius: 999px; background: #fff; border: 1.5px solid #ffc2d8; color: var(--ob-rosa, #ff2d7a); font-size: 0.66rem; font-weight: 800; font-style: normal; display: inline-grid; place-items: center; transition: background .2s ease, color .2s ease, border-color .2s ease; }
+.ob-painel-roteiro li.feito i, .ob-roteiro-m li.feito b { background: var(--ob-rosa, #ff2d7a); border-color: var(--ob-rosa, #ff2d7a); color: #fff; animation: ob-check-pop .28s cubic-bezier(.2,.8,.2,1); }
+.ob-painel-roteiro li.feito { color: var(--ob-cinza, #6b7280); text-decoration: line-through; text-decoration-color: #ffc2d8; }
+.ob-roteiro-m li.feito { color: var(--ob-cinza, #6b7280); }
+@keyframes ob-check-pop { from { transform: scale(0.6); } 60% { transform: scale(1.15); } to { transform: scale(1); } }
 .ob-roteiro-m { display: none; margin: -8px 0 0; padding: 0; list-style: none; gap: 6px; flex-wrap: wrap; }
 .ob-roteiro-m li { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 600; color: var(--ob-ameixa, #3d0c4e); background: var(--ob-lilas, #fbf6fb); border: 1px solid var(--ob-fio, #ece7ee); border-radius: 999px; padding: 3px 9px 3px 4px; }
-.ob-roteiro-m li b { width: 16px; height: 16px; border-radius: 999px; background: #fff; border: 1.5px solid #ffc2d8; color: var(--ob-rosa, #ff2d7a); font-size: 0.62rem; display: inline-grid; place-items: center; }
+.ob-roteiro-m li b { width: 16px; height: 16px; font-size: 0.62rem; }
 .ob-depois { flex: 1; text-align: center; font-size: 0.76rem; color: var(--ob-cinza, #6b7280); }
 .ob-depois b { color: var(--ob-ameixa, #3d0c4e); font-weight: 700; }
 .ob-passo-corpo { display: contents; }
@@ -550,4 +554,4 @@
 .ob-painel-vivo > * { animation: ob-painel-entra .35s ease both; }
 .ob-modal-fundo { animation: ob-fundo-entra .18s ease both; } .ob-modal { animation: ob-modal-entra .22s cubic-bezier(.2,.8,.2,1) both; }
 @media (max-width: 900px) { .ob-roteiro-m { display: flex; } .ob-depois { display: none; } }
-@media (prefers-reduced-motion: reduce) { .ob-passo-corpo > *, .ob-painel-vivo > *, .ob-modal-fundo, .ob-modal { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .ob-passo-corpo > *, .ob-painel-vivo > *, .ob-modal-fundo, .ob-modal, .ob-painel-roteiro li.feito i, .ob-roteiro-m li.feito b { animation: none; } }

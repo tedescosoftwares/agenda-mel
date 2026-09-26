@@ -30,12 +30,12 @@ import RodapeSocial from '../components/RodapeSocial'
 // passa por cinco: não tem o passo da equipe.
 // cada passo tem a foto, o bilhete e a frase do painel da esquerda
 const PASSOS = [
-  { id: 1, rotulo: 'Tipo de conta', foto: 'profissional', bilhete: 'bem-vinda', titulo: 'Sua rotina no lugar.', texto: 'Escolha como você trabalha. Autônoma é grátis; salão paga só pelas agendas que usa.', roteiro: ['Autônoma ou salão', 'Veja o plano', 'Dá pra trocar depois'] },
+  { id: 1, rotulo: 'Tipo de conta', foto: 'profissional', bilhete: 'bem-vinda', titulo: 'Sua rotina no lugar.', texto: 'Escolha como você trabalha. Autônoma é grátis; salão paga só pelas agendas que usa.', roteiro: ['Escolha autônoma ou salão', 'Confira o plano'] },
   { id: 2, rotulo: 'Dados do negócio', foto: 'agenda-celular', bilhete: 'tudo em ordem', titulo: 'Quem é o negócio.', texto: 'CNPJ (ou CPF), endereço fiscal e o seu acesso. Fica só com a MIMO; o salão em si vem no passo 3.', roteiro: ['CNPJ ou CPF', 'Endereço fiscal', 'E-mail, WhatsApp e senha'] },
   { id: 3, rotulo: 'Seu salão', foto: 'salao', bilhete: 'do seu jeito', titulo: 'Monte o seu salão.', texto: 'O que a cliente vê e como o dia funciona: nome, fotos, contatos, endereço, horário e regras. Tudo muda depois em Ajustes.', roteiro: ['Nome, logo e fotos', 'Contatos e endereço', 'Horário e regras'] },
-  { id: 4, rotulo: 'Serviços', foto: 'lifestyle', bilhete: 'o que você faz', titulo: 'O cardápio da casa.', texto: 'Nome, duração real e preço. A duração é o que a agenda usa pra achar horário livre.', roteiro: ['Use as sugestões', 'Ajuste preço e duração', 'Foto é opcional'] },
-  { id: 5, rotulo: 'Equipe', foto: 'equipe', bilhete: 'quem atende', titulo: 'Monte sua operação.', texto: 'Você configura cada profissional. Ela recebe um link e entra com a agenda pronta.', roteiro: ['Cadastre quem atende', 'Serviços e horários de cada uma', 'Mande o link de acesso'] },
-  { id: 6, rotulo: 'Clientes e ativação', foto: 'qr', bilhete: 'do balcão pra agenda', titulo: 'Pronta pra receber.', texto: 'Imprima o QR, coloque no balcão e na bio. A cliente escaneia e marca sozinha.', roteiro: ['Confira o checklist', 'Baixe o QR e o link', 'Entre no painel'] },
+  { id: 4, rotulo: 'Serviços', foto: 'lifestyle', bilhete: 'o que você faz', titulo: 'O cardápio da casa.', texto: 'Nome, duração real e preço. A duração é o que a agenda usa pra achar horário livre.', roteiro: ['Adicione pelo menos um serviço', 'Preço e duração de cada um'] },
+  { id: 5, rotulo: 'Equipe', foto: 'equipe', bilhete: 'quem atende', titulo: 'Monte sua operação.', texto: 'Você configura cada profissional. Ela recebe um link e entra com a agenda pronta.', roteiro: ['Cadastre quem atende', 'Configure cada uma', 'Mande o link de acesso'] },
+  { id: 6, rotulo: 'Clientes e ativação', foto: 'qr', bilhete: 'do balcão pra agenda', titulo: 'Pronta pra receber.', texto: 'Imprima o QR, coloque no balcão e na bio. A cliente escaneia e marca sozinha.', roteiro: ['Checklist completo', 'Link da agenda criado', 'Entre no painel'] },
 ]
 const DIAS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
 const ORDEM_DIAS = [1, 2, 3, 4, 5, 6, 0]
@@ -98,6 +98,8 @@ export default function Onboarding({ publico = false }) {
   const [pronto, setPronto] = useState(false)
   const [retomado, setRetomado] = useState(false)
   const [estadoAuto, setEstadoAuto] = useState('')
+  const [feitos, setFeitos] = useState([])   // os checks do roteiro do passo atual
+  useEffect(() => { setFeitos([]) }, [passo])
   const docsLegais = useDocumentosLegais()
 
   useEffect(() => {
@@ -173,7 +175,7 @@ export default function Onboarding({ publico = false }) {
         <div key={atual.id} className="ob-painel-vivo">
           <div className="ob-painel-foto"><img src={`/imagens/${atual.foto}-720.webp`} alt="" /><span className="ob-painel-bilhete">{atual.bilhete} <i>♥</i></span></div>
           <div className="ob-painel-texto"><small>Passo {idx + 1} de {total}</small><h2>{atual.titulo}</h2><p>{atual.texto}</p>
-            {atual.roteiro && <ol className="ob-painel-roteiro">{atual.roteiro.map((r) => <li key={r}>{r}</li>)}</ol>}
+            {atual.roteiro && <ol className="ob-painel-roteiro">{atual.roteiro.map((r, i) => <li key={r} className={feitos[i] ? 'feito' : ''}><i>{feitos[i] ? <Check size={11} /> : i + 1}</i>{r}</li>)}</ol>}
           </div>
         </div>
         <ol className="ob-passos">
@@ -203,9 +205,10 @@ export default function Onboarding({ publico = false }) {
         </div>
         <div className="ob-conteudo-linha"><span className="ob-conteudo-num">Passo {idx + 1} de {total} · {atual.rotulo}</span><EstadoSalvo estado={estadoAuto} /></div>
         {retomado && <div className="ob-retomada"><Wand2 size={15} /><span><strong>Continuando de onde você parou.</strong> O que você já preencheu está guardado; os passos anteriores ficam no menu ao lado.</span><button type="button" onClick={() => setRetomado(false)} aria-label="Fechar"><X size={14} /></button></div>}
-        {atual.roteiro && <ol className="ob-roteiro-m" aria-label="Neste passo">{atual.roteiro.map((r, i) => <li key={r}><b>{i + 1}</b>{r}</li>)}</ol>}
+        {atual.roteiro && <ol className="ob-roteiro-m" aria-label="Neste passo">{atual.roteiro.map((r, i) => <li key={r} className={feitos[i] ? 'feito' : ''}><b>{feitos[i] ? <Check size={10} /> : i + 1}</b>{r}</li>)}</ol>}
         {erro && <ModalErro texto={erro} onFechar={() => setErro('')} />}
         <ProximoCtx.Provider value={passos[idx + 1]?.rotulo ?? ''}>
+          <RoteiroCtx.Provider value={setFeitos}>
           <div key={passo} className="ob-passo-corpo">
             {passo === 1 && <PassoTipo {...props} />}
             {passo === 2 && <PassoDados {...props} />}
@@ -214,6 +217,7 @@ export default function Onboarding({ publico = false }) {
             {passo === 5 && <PassoEquipe {...props} />}
             {passo === 6 && <PassoAtivacao {...props} />}
           </div>
+          </RoteiroCtx.Provider>
         </ProximoCtx.Provider>
       </main>
     </div>
@@ -221,6 +225,12 @@ export default function Onboarding({ publico = false }) {
 }
 
 const ProximoCtx = createContext('')   // o rótulo do próximo passo, pro rodapé dizer o que vem depois
+const RoteiroCtx = createContext(() => {})   // o passo conta ao painel quais itens do roteiro já estão feitos
+function useRoteiro(feitos) {
+  const marcar = useContext(RoteiroCtx)
+  const chave = JSON.stringify(feitos.map(Boolean))
+  useEffect(() => { marcar(JSON.parse(chave)) }, [chave, marcar])
+}
 function Rodape({ voltar, avancar, rotulo = 'Continuar', salvando, primeiro = false, icone = <ArrowRight size={16} /> }) {
   const proximo = useContext(ProximoCtx)
   return (
@@ -238,6 +248,7 @@ const Selo = ({ publico }) => publico
 // ---------- 1 · Tipo de conta ------------------------------------------------------
 function PassoTipo({ s, setS, seguir, salvando, setErro }) {
   const [tipo, setTipo] = useState(s.tipo ?? 'salao')
+  useRoteiro([Boolean(tipo), Boolean(tipo)])
   async function avancar() {
     if (tipo !== s.tipo && !s.id) { setS((x) => ({ ...x, tipo })); seguir({}); return }
     if (tipo !== s.tipo) {
@@ -454,6 +465,11 @@ function PassoDados({ s, seguir, voltar, salvando, setErro, user, autonoma, publ
     for (const e of f.emails) if (e.trim() && !emailOk(e)) return `Confere o e-mail ${e.trim()}.`
     return ''
   }
+  useRoteiro([
+    comCnpj ? cnpjValido(f.cnpj) && f.razao_social.trim() && f.responsavel_nome.trim() : cpfValido(f.cpf) && f.responsavel_nome.trim() && f.responsavel_nascimento && idadeEm(f.responsavel_nascimento) >= 18,
+    f.fiscal.address.trim() && f.fiscal.city.trim(),
+    f.email.trim() && f.whatsapp.trim() && (publico && !user ? forcaDaSenha(conta.senha).ok && conta.confirma === conta.senha && conta.termos : true),
+  ])
   // no público: cria a conta com tudo isso nos metadados; o servidor abre o negócio e grava os dados
   async function criarConta() {
     if (!f.whatsapp.trim()) { setErro('Precisamos do WhatsApp: é por ele que os avisos chegam.'); return }
@@ -721,6 +737,7 @@ function PassoEstrutura({ s, seguir, voltar, salvando, setErro, autonoma, gravar
     setHoras((x) => x.map((h) => (copiar.dias.has(h.weekday) ? { ...h, open: seg.open, start_time: seg.start_time, end_time: seg.end_time } : h)))
     setCopiar(null)
   }
+  useRoteiro([nome.trim() && (logo || fotos.length > 0), loc.whatsapp.trim() && local.city.trim() && pino, horas != null && horas.some((h) => h.open)])
   const recomendadoAtivo = Number(pol.antecedencia_min_minutos) === RECOMENDADO.antecedencia_min_minutos && pol.politica_cancelamento === RECOMENDADO.politica_cancelamento && pol.permite_remarcar === RECOMENDADO.permite_remarcar && pol.sinal_ligado === RECOMENDADO.sinal_ligado
 
   async function avancar() {
@@ -924,6 +941,7 @@ function PassoServicos({ s, seguir, voltar, salvando, setErro, autonoma }) {
     setQuem(q)
   }, [s.id])
   useEffect(() => { carregar() }, [carregar])
+  useRoteiro([(servicos?.length ?? 0) > 0, (servicos?.length ?? 0) > 0 && servicos.every((x) => Number(x.price) > 0 && Number(x.duration_minutes) > 0)])
 
   const nomeCat = (id) => cats.find((c) => c.id === id)?.nome ?? 'Outros'
   const lista = (servicos ?? []).filter((x) => !filtro || x.categoria_id === filtro)
@@ -1097,6 +1115,7 @@ function PassoEquipe({ s, seguir, voltar, salvando, setErro }) {
     carregar()
   }
   const pendentes = (equipe ?? []).filter((p) => p.situacao === 'configurada' && !p.user_id)
+  useRoteiro([(equipe?.length ?? 0) > 0, (equipe?.length ?? 0) > 0 && equipe.every((p) => p.situacao !== 'rascunho'), (equipe?.length ?? 0) > 0 && equipe.every((p) => p.user_id || p.situacao === 'ativa' || p.enviado_em || p.acesso_enviado_em)])
   const lista = equipe ?? []
   return (
     <>
@@ -1154,6 +1173,7 @@ function PassoAtivacao({ s, voltar, salvando, concluir, pronto, autonoma, irPara
     ...(!autonoma ? [{ ok: n('equipe') > 0, texto: n('equipe') > 0 ? `${n('equipe')} ${n('equipe') === 1 ? 'profissional configurada' : 'profissionais configuradas'}` : 'Equipe ainda vazia' }] : []),
     { ok: Boolean(s.codigo), texto: `Link ${autonoma ? 'da agenda' : 'do salão'} criado` },
   ]
+  useRoteiro([resumo != null && checklist.every((c) => c.ok), Boolean(s.codigo), false])
   const pendentes = n('equipe_pendente')
   return (
     <>

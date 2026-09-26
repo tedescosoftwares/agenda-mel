@@ -20216,6 +20216,9 @@ insert into public.migracoes_aplicadas (arquivo) values ('121_onboarding_razao_s
 -- fotos do espaço passam a ser gravados pelo mesmo caminho (passo 3).
 alter table public.salons add column if not exists documento_tipo text not null default 'cnpj';
 alter table public.salons add column if not exists nome_fantasia text;
+-- quem responde pelo negócio: no CPF, a própria pessoa (nascimento e RG); no CNPJ, o sócio responsável
+alter table public.salons add column if not exists responsavel_nascimento date;
+alter table public.salons add column if not exists responsavel_rg text;
 alter table public.salons add column if not exists endereco_fiscal jsonb;
 alter table public.salons add column if not exists endereco_igual boolean not null default true;
 alter table public.salons add column if not exists contatos jsonb not null default '[]'::jsonb;
@@ -20227,8 +20230,8 @@ update public.salons set cnpj = nullif(regexp_replace(cnpj, '\D', '', 'g'), '') 
 -- quem já tinha CNPJ e endereço: o endereço cadastrado passa a ser também o fiscal
 update public.salons set endereco_fiscal = jsonb_build_object('address', coalesce(address, ''), 'bairro', coalesce(bairro, ''), 'city', coalesce(city, ''), 'uf', coalesce(uf, ''), 'cep', coalesce(cep, ''))
  where cnpj is not null and endereco_fiscal is null and (address is not null or city is not null);
-grant select (documento_tipo, nome_fantasia, endereco_fiscal, endereco_igual, contatos) on public.salons to authenticated;
-grant update (documento_tipo, nome_fantasia, endereco_fiscal, endereco_igual, contatos) on public.salons to authenticated;
+grant select (documento_tipo, nome_fantasia, responsavel_nascimento, responsavel_rg, endereco_fiscal, endereco_igual, contatos) on public.salons to authenticated;
+grant update (documento_tipo, nome_fantasia, responsavel_nascimento, responsavel_rg, endereco_fiscal, endereco_igual, contatos) on public.salons to authenticated;
 
 create or replace function public.onboarding_salvar_interno(salao uuid, dados jsonb, passo integer default null)
 returns jsonb
@@ -20251,6 +20254,8 @@ begin
     phone = case when dados ? 'whatsapp' then coalesce(nullif(btrim(dados ->> 'whatsapp'), ''), phone) else phone end,
     email = case when dados ? 'email' then nullif(lower(btrim(dados ->> 'email')), '') else email end,
     responsavel_nome = case when dados ? 'responsavel_nome' then nullif(btrim(dados ->> 'responsavel_nome'), '') else responsavel_nome end,
+    responsavel_nascimento = case when dados ? 'responsavel_nascimento' then nullif(dados ->> 'responsavel_nascimento', '')::date else responsavel_nascimento end,
+    responsavel_rg = case when dados ? 'responsavel_rg' then left(nullif(btrim(dados ->> 'responsavel_rg'), ''), 20) else responsavel_rg end,
     logo_url = case when dados ? 'logo_url' then nullif(dados ->> 'logo_url', '') else logo_url end,
     fotos = case when jsonb_typeof(dados -> 'fotos') = 'array' then coalesce((select array_agg(x) from jsonb_array_elements_text(dados -> 'fotos') x), '{}'::text[]) else fotos end,
     descricao = case when dados ? 'descricao' then left(nullif(btrim(dados ->> 'descricao'), ''), 800) else descricao end,

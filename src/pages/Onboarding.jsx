@@ -39,6 +39,8 @@ const PASSOS = [
 const DIAS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
 const ORDEM_DIAS = [1, 2, 3, 4, 5, 6, 0]
 const MAX_FOTOS = 8
+const hojeIso = () => new Date().toISOString().slice(0, 10)
+const idadeEm = (iso) => { const n = new Date(iso + 'T12:00:00'); if (Number.isNaN(n.getTime())) return 0; const h = new Date(); let i = h.getFullYear() - n.getFullYear(); if (h.getMonth() < n.getMonth() || (h.getMonth() === n.getMonth() && h.getDate() < n.getDate())) i--; return i }
 const iniciaisDe = (nome) => (nome || 'ES').split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase()
 const UFS = ['AC', 'AL', 'AM', 'AP', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MG', 'MS', 'MT', 'PA', 'PB', 'PE', 'PI', 'PR', 'RJ', 'RN', 'RO', 'RR', 'RS', 'SC', 'SE', 'SP', 'TO']
 const ANTECEDENCIAS = [[0, 'Sem antecedência'], [30, '30 minutos'], [60, '1 hora'], [120, '2 horas'], [240, '4 horas'], [720, '12 horas'], [1440, '24 horas'], [2880, '48 horas']]
@@ -312,6 +314,7 @@ function ModalCnpj({ dados, onFechar }) {
           <div><dt>Razão social</dt><dd>{dados.razao_social}</dd></div>
           <div><dt>Nome fantasia</dt><dd>{dados.nome_fantasia || <span className="muted">sem nome fantasia na Receita</span>}</dd></div>
           {endereco && <div><dt>Endereço fiscal</dt><dd>{endereco}</dd></div>}
+          {dados.socios?.length > 0 && <div><dt>{dados.socios.length === 1 ? 'Sócia responsável' : 'Quadro de sócios'}</dt><dd>{dados.socios.join(', ')}</dd></div>}
         </dl>
         <p className="ob-cnpj-nota">Só um detalhe: o nome fantasia é o que está na Receita e fica guardado aqui, no cadastro. <strong>O nome que a cliente vê você escolhe no próximo passo</strong>, quando for montar a cara do seu espaço. Pode ser esse mesmo ou outro, do seu jeito.</p>
         <div className="ob-modal-acoes"><button type="button" className="btn btn-primary" onClick={onFechar}>Entendi, vamos seguir <ArrowRight size={16} /></button></div>
@@ -326,7 +329,7 @@ function PassoDados({ s, seguir, voltar, salvando, erro, setErro, user, autonoma
   const [criada, setCriada] = useState(false)
   const [criando, setCriando] = useState(false)
   const [f, setF] = useState({
-    documento_tipo: s.documento_tipo === 'cpf' ? 'cpf' : 'cnpj', cnpj: soDigitos(s.cnpj), cpf: soDigitos(s.responsavel_cpf), razao_social: s.razao_social ?? '', nome_fantasia: s.nome_fantasia ?? '',
+    documento_tipo: s.documento_tipo === 'cpf' ? 'cpf' : 'cnpj', cnpj: soDigitos(s.cnpj), cpf: soDigitos(s.responsavel_cpf), razao_social: s.razao_social ?? '', nome_fantasia: s.nome_fantasia ?? '', responsavel_nascimento: s.responsavel_nascimento ?? '', responsavel_rg: s.responsavel_rg ?? '', socios: [],
     fiscal: enderecoDe(s.endereco_fiscal ?? (s.endereco_igual !== false ? s : null)), endereco_igual: s.endereco_igual !== false,
     whatsapp: s.whatsapp ?? s.phone ?? '', email: s.email ?? '', responsavel_nome: s.responsavel_nome ?? '',
     ...enderecoDe(s), lat: s.lat ?? null, lng: s.lng ?? null,
@@ -354,6 +357,7 @@ function PassoDados({ s, seguir, voltar, salvando, erro, setErro, user, autonoma
       documento_tipo: x.documento_tipo, nome_fantasia: x.nome_fantasia,
       cnpj: x.documento_tipo === 'cnpj' ? x.cnpj : '', responsavel_cpf: x.documento_tipo === 'cpf' ? x.cpf : '',
       razao_social: x.documento_tipo === 'cnpj' ? x.razao_social : '',
+      responsavel_nascimento: x.documento_tipo === 'cpf' ? x.responsavel_nascimento : '', responsavel_rg: x.documento_tipo === 'cpf' ? x.responsavel_rg : '',
       endereco_fiscal: x.documento_tipo === 'cnpj' ? { ...x.fiscal, cep: limparCep(x.fiscal.cep) } : null,
       endereco_igual: x.documento_tipo === 'cnpj' ? x.endereco_igual : true,
       contatos: [...x.telefones.filter((t) => t.trim()).map((t) => ({ tipo: 'telefone', valor: soDigitos(t).slice(0, 11) })), ...x.emails.filter((e) => e.trim()).map((e) => ({ tipo: 'email', valor: e.trim().toLowerCase() }))],
@@ -377,7 +381,7 @@ function PassoDados({ s, seguir, voltar, salvando, erro, setErro, user, autonoma
       setCnpjSituacao(situacao)
       // só CNPJ ativo entra: baixado, suspenso, inapto ou nulo não dá
       if (situacao !== 'ATIVA') { setCnpjInfo(`erro:Esse CNPJ consta como ${nomeProprio(situacao)} na Receita, e só dá pra cadastrar com CNPJ ativo. Se for engano, confira os números. Se ainda não tem CNPJ, use o seu CPF.`); return }
-      setF((x) => ({ ...x, razao_social: r.razao_social, nome_fantasia: x.nome_fantasia || r.nome_fantasia, email: x.email || r.email, fiscal: { address: r.address, bairro: r.bairro, city: r.city, uf: r.uf, cep: r.cep } }))
+      setF((x) => ({ ...x, razao_social: r.razao_social, nome_fantasia: x.nome_fantasia || r.nome_fantasia, responsavel_nome: x.responsavel_nome || r.socios[0] || '', socios: r.socios, email: x.email || r.email, fiscal: { address: r.address, bairro: r.bairro, city: r.city, uf: r.uf, cep: r.cep } }))
       setCnpjInfo(`ok:${r.razao_social}`)
       setModalCnpj(r)
       // sem pino ainda: tenta colocar pelo endereço da Receita
@@ -435,13 +439,17 @@ function PassoDados({ s, seguir, voltar, salvando, erro, setErro, user, autonoma
     if (!comCnpj && !cpfValido(f.cpf)) return f.cpf ? 'Confere o CPF: os dígitos não batem.' : 'Informe o seu CPF.'
     if (comCnpj && cnpjSituacao && cnpjSituacao !== 'ATIVA') return `Esse CNPJ está ${nomeProprio(cnpjSituacao)} na Receita. Só dá pra cadastrar com CNPJ ativo; sem CNPJ, use o seu CPF.`
     if (comCnpj && !f.razao_social.trim()) return 'Diga a razão social (a consulta do CNPJ preenche sozinha).'
+    if (!f.responsavel_nome.trim()) return comCnpj ? 'Diga o nome do sócio responsável.' : 'Diga o seu nome completo.'
+    if (!comCnpj) {
+      if (!f.responsavel_nascimento) return 'Diga a sua data de nascimento.'
+      if (idadeEm(f.responsavel_nascimento) < 18) return 'Para responder pelo negócio é preciso ter 18 anos ou mais.'
+    }
     for (const t of f.telefones) if (t.trim() && soDigitos(t).length < 10) return `Confere o telefone ${formatarFone(t)}: faltam dígitos.`
     for (const e of f.emails) if (e.trim() && !emailOk(e)) return `Confere o e-mail ${e.trim()}.`
     return ''
   }
   // no público: cria a conta com tudo isso nos metadados; o servidor abre o negócio e grava os dados
   async function criarConta() {
-    if (!f.responsavel_nome.trim()) { setErro('Diga o seu nome.'); return }
     if (!f.whatsapp.trim()) { setErro('Precisamos do WhatsApp: é por ele que os avisos chegam.'); return }
     if (!f.email.trim()) { setErro('Diga o seu e-mail: é com ele que você entra.'); return }
     if (!forcaDaSenha(conta.senha).ok) { setErro('A senha precisa ser forte: pelo menos 8 caracteres, com maiúscula, minúscula, número e símbolo.'); return }
@@ -466,7 +474,7 @@ function PassoDados({ s, seguir, voltar, salvando, erro, setErro, user, autonoma
       }
       const aceites = aceitesPara(s.tipo, docsLegais)
       const { error } = await signUp(f.email.trim(), conta.senha, f.responsavel_nome.trim(), f.whatsapp.trim(),
-        { termos: versaoMaior(aceites), aceites, marketing: conta.marketing, papel_desejado: s.tipo, nome_negocio: nomeInicial || null, cidade: local.city.trim() || null, salao: dadosSalao })
+        { termos: versaoMaior(aceites), aceites, marketing: conta.marketing, ...(!comCnpj && f.responsavel_nascimento ? { nascimento: f.responsavel_nascimento } : {}), papel_desejado: s.tipo, nome_negocio: nomeInicial || null, cidade: local.city.trim() || null, salao: dadosSalao })
       if (error) { setErro(traduzErro(error.message)); return }
       const { data: sess } = await supabase.auth.getSession()
       if (sess?.session) { await recarregarPerfil?.(); navigate('/onboarding', { replace: true }); return }
@@ -523,12 +531,18 @@ function PassoDados({ s, seguir, voltar, salvando, erro, setErro, user, autonoma
               <label>CNPJ <b>*</b><span className="muted">(preenche o endereço fiscal sozinho)</span><input value={formatarCnpj(f.cnpj)} onChange={(e) => porCnpj(e.target.value)} placeholder="12.345.678/0001-90" inputMode="numeric" autoComplete="off" autoFocus={!f.cnpj} />{cnpjInfo === 'buscando' ? <small className="muted">consultando a Receita…</small> : cnpjInfo.startsWith('ok:') ? <small className="ob-cnpj-ok">✓ {cnpjInfo.slice(3)}</small> : cnpjInfo.startsWith('erro:') ? <small className="ob-cnpj-erro">{cnpjInfo.slice(5)}</small> : null}</label>
                 <label>Razão social <b>*</b><input value={f.razao_social} onChange={m('razao_social')} placeholder="Essenza Cabeleireiros Ltda" autoComplete="organization" /></label>
                 <label>Nome fantasia <span className="muted">(como está na Receita)</span><input value={f.nome_fantasia} onChange={m('nome_fantasia')} placeholder="Essenza Hair" /></label>
+                <label>Nome do sócio responsável <b>*</b><input value={f.responsavel_nome} onChange={m('responsavel_nome')} placeholder="Juliana Lima" autoComplete="name" list={f.socios.length ? 'ob-socios' : undefined} />{f.socios.length > 1 && <small className="muted">no quadro da Receita: {f.socios.join(', ')}</small>}</label>
+                {f.socios.length > 0 && <datalist id="ob-socios">{f.socios.map((n) => <option key={n} value={n} />)}</datalist>}
               </>
             ) : (
               <>
                 <p className="ob-humor"><strong>Ainda não tem CNPJ? Tudo certo 💗</strong>Use seu CPF para continuar. Quando seu CNPJ estiver pronto, é só atualizar seus dados por aqui.</p>
                 <label>CPF <b>*</b><input value={formatarCpf(f.cpf)} onChange={(e) => setF((x) => ({ ...x, cpf: soDigitos(e.target.value).slice(0, 11) }))} placeholder="123.456.789-09" inputMode="numeric" autoComplete="off" />{f.cpf.length === 11 && !cpfValido(f.cpf) && <small className="ob-cnpj-erro">Confere o CPF: os dígitos não batem.</small>}</label>
-                <label>Nome fantasia <span className="muted">(como chamam o seu negócio · opcional)</span><input value={f.nome_fantasia} onChange={m('nome_fantasia')} placeholder="Essenza Hair" /></label>
+                <label>Seu nome completo <b>*</b><input value={f.responsavel_nome} onChange={m('responsavel_nome')} placeholder="Juliana Lima" autoComplete="name" /></label>
+                <div className="ob-linha-2 ob-linha-meio">
+                  <label>Data de nascimento <b>*</b><input type="date" value={f.responsavel_nascimento} onChange={m('responsavel_nascimento')} max={hojeIso()} autoComplete="bday" /></label>
+                  <label>RG <span className="muted">(opcional)</span><input value={f.responsavel_rg} onChange={(e) => setF((x) => ({ ...x, responsavel_rg: e.target.value.replace(/[^0-9A-Za-z.-]/g, '').slice(0, 20) }))} placeholder="12.345.678-9" inputMode="numeric" autoComplete="off" /></label>
+                </div>
               </>
             )}
             {!(comCnpj && cnpjSituacao === 'ATIVA') && <label className="ob-termos ob-informal"><input type="checkbox" checked={!comCnpj} onChange={(e) => trocarDocumento(e.target.checked)} /><span>Ainda não tenho CNPJ e trabalho informalmente</span></label>}
@@ -569,7 +583,6 @@ function PassoDados({ s, seguir, voltar, salvando, erro, setErro, user, autonoma
           <label>Telefone <span className="muted">(fixo ou celular · opcional)</span>{f.telefones.map((_, i) => campoTel('telefones', i, 'telefone'))}</label>
           <span className="ob-grupo-selo ob-grupo-selo-2"><Selo /></span>
           <label>E-mail da conta <b>*</b>{publico && <span className="muted">(é com ele que você entra)</span>}<span className="ob-fone"><input type="email" value={f.email} onChange={m('email')} placeholder="contato@essenzahair.com.br" autoComplete="email" />{f.emails.length === 0 && <button type="button" className="ob-mais" onClick={() => maisNa('emails')} aria-label="Mais um e-mail"><Plus size={14} /></button>}</span>{f.emails.map((_, i) => campoTel('emails', i, 'email'))}</label>
-          <label>{publico ? 'Seu nome completo' : 'Nome da responsável'} <b>*</b><input value={f.responsavel_nome} onChange={m('responsavel_nome')} placeholder="Juliana Lima" autoComplete="name" /></label>
           {publico && !user && (
             <>
               <SenhaNova valor={conta} onChange={(v) => setConta((x) => ({ ...x, ...v }))} />

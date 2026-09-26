@@ -514,3 +514,4 @@
 .ob-cnpj-nota { margin: 0; font-size: 0.84rem; line-height: 1.5; color: var(--ob-ameixa, #3d0c4e); background: #fff0f6; border: 1px solid #ffc2d8; border-radius: 12px; padding: 0.65rem 0.8rem; }
 .ob-cnpj-nota strong { color: var(--ob-rosa, #ff2d7a); }
 .ob-marketing { margin-top: -0.2rem; }
+.ob-linha-meio { grid-template-columns: 1fr 1fr; }

@@ -31,7 +31,7 @@ export function nomeProprio(t) {
     .join(' ')
 }
 
-// devolve { razao_social, nome_fantasia, address, bairro, city, uf, cep, telefone, email, situacao } ou lança
+// devolve { razao_social, nome_fantasia, address, bairro, city, uf, cep, telefone, email, situacao, socios } ou lança
 export async function buscarCnpj(v) {
   const d = String(v ?? '').replace(/\D/g, '')
   if (!cnpjValido(d)) throw new Error('Confere o CNPJ: os dígitos não batem.')
@@ -52,6 +52,7 @@ export async function buscarCnpj(v) {
     address, bairro: nomeProprio(j.bairro), city: nomeProprio(j.municipio), uf: String(j.uf ?? '').toUpperCase(), cep: String(j.cep ?? '').replace(/\D/g, ''),
     telefone: tel.length >= 10 ? tel : '', email: j.email ? String(j.email).toLowerCase() : '',
     situacao: j.descricao_situacao_cadastral ?? '',
+    socios: (Array.isArray(j.qsa) ? j.qsa : []).map((q) => nomeProprio(q.nome_socio)).filter(Boolean),
   }
 }
 

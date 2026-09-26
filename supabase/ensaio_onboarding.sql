@@ -39,10 +39,10 @@ begin
     raise exception '2b: fiscal errado: % % % % %', s.documento_tipo, s.cnpj, s.endereco_fiscal, s.endereco_igual, s.contatos; end if;
   perform set_config('request.jwt.claim.sub', dona::text, false);
   set role authenticated;
-  r := public.onboarding_salvar(sal, jsonb_build_object('documento_tipo', 'cpf', 'cnpj', '', 'responsavel_cpf', '123.456.789-09', 'razao_social', '', 'endereco_fiscal', null, 'endereco_igual', true));
+  r := public.onboarding_salvar(sal, jsonb_build_object('documento_tipo', 'cpf', 'cnpj', '', 'responsavel_cpf', '123.456.789-09', 'responsavel_nome', 'Bia Informal', 'responsavel_nascimento', '1990-05-20', 'responsavel_rg', '12.345.678-9', 'razao_social', '', 'endereco_fiscal', null, 'endereco_igual', true));
   reset role;
   select * into s from public.salons where id = sal;
-  if s.documento_tipo <> 'cpf' or s.cnpj is not null or s.responsavel_cpf <> '12345678909' or s.razao_social is not null or s.endereco_fiscal is not null or not s.endereco_igual then
+  if s.documento_tipo <> 'cpf' or s.cnpj is not null or s.responsavel_cpf <> '12345678909' or s.razao_social is not null or s.endereco_fiscal is not null or not s.endereco_igual or s.responsavel_nascimento <> date '1990-05-20' or s.responsavel_rg <> '12.345.678-9' then
     raise exception '2b: virar cpf errado: % % % %', s.documento_tipo, s.cnpj, s.responsavel_cpf, s.endereco_fiscal; end if;
   perform set_config('request.jwt.claim.sub', dona::text, false);
   set role authenticated;

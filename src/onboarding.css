@@ -528,3 +528,4 @@
 .ob-aviso-etapa-icone { flex: none; width: 28px; height: 28px; border-radius: 9px; background: #fff0f6; color: var(--ob-rosa, #ff2d7a); display: grid; place-items: center; }
 .ob-aviso-etapa strong { color: var(--ob-rosa, #ff2d7a); }
 .ob-card .ob-form label > select { flex: 0 0 100%; }
+.ob-modal-erro .ob-modal-acoes > .btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem; min-height: 46px; box-sizing: border-box; line-height: 1.2; text-decoration: none; }

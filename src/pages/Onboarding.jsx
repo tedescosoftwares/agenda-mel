@@ -20,6 +20,7 @@ import { sugestoesPara, primeiroNome } from '../lib/equipe'
 import ProfissionalDrawer, { CartaoProfissional } from '../components/ProfissionalDrawer'
 import { FraseDeAceite } from '../components/LinkLegal'
 import { useDocumentosLegais, aceitesPara, versaoMaior } from '../lib/legal'
+import { EMAIL_CONTATO } from '../conteudo/legal'
 import RodapeSocial from '../components/RodapeSocial'
 
 // O onboarding do salão (114, 119): do cadastro à agenda em seis passos, o
@@ -303,17 +304,17 @@ function BlocoEndereco({ valor, onChange, obrigatorio, aoAchar, autoCompleteRua 
 // vermelha no meio do formulário. Quando o recado é "já tem conta",
 // o botão leva pra entrar.
 function ModalErro({ texto, onFechar }) {
-  const jaTemConta = /já tem conta/i.test(texto)
+  const emUso = /já está em uso/i.test(texto)
   return (
     <div className="modal-fundo ob-modal-fundo" onClick={onFechar}>
       <div className="modal-caixa ob-modal ob-modal-erro" role="alertdialog" aria-live="assertive" onClick={(e) => e.stopPropagation()}>
         <button type="button" className="modal-fechar" onClick={onFechar} aria-label="Fechar"><X size={18} /></button>
         <span className="ob-erro-icone"><Info size={22} /></span>
-        <h3>{jaTemConta ? 'Esse WhatsApp já é de casa' : 'Opa, falta um detalhe'}</h3>
+        <h3>{emUso ? 'Esse WhatsApp já está em uso' : 'Opa, falta um detalhe'}</h3>
         <p className="ob-erro-texto">{texto}</p>
         <div className="ob-modal-acoes">
-          {jaTemConta && <Link to="/pro/entrar" className="btn btn-ghost">Entrar com ela</Link>}
-          <button type="button" className="btn btn-primary" onClick={onFechar} autoFocus>{jaTemConta ? 'Usar outro número' : 'Entendi'}</button>
+          {emUso && <a href={`mailto:${EMAIL_CONTATO}?subject=${encodeURIComponent('Meu WhatsApp já está em uso na MIMO')}`} className="btn btn-ghost">Falar com o suporte</a>}
+          <button type="button" className="btn btn-primary" onClick={onFechar} autoFocus>{emUso ? 'Usar outro número' : 'Entendi'}</button>
         </div>
       </div>
     </div>
@@ -479,7 +480,7 @@ function PassoDados({ s, seguir, voltar, salvando, setErro, user, autonoma, publ
     setCriando(true); setErro('')
     try {
       const { data: livre } = await supabase.rpc('telefone_disponivel', { fone: f.whatsapp.trim() })
-      if (livre && livre.disponivel === false) { setErro(livre.email ? `Esse WhatsApp já tem conta, no e-mail ${livre.email}. Entre com ela.` : (livre.motivo || 'Confere o WhatsApp.')); return }
+      if (livre && livre.disponivel === false) { setErro(livre.em_uso || livre.email ? 'Esse WhatsApp já está em uso e não dá pra cadastrar de novo. Se o número é seu, fale com o suporte.' : (livre.motivo || 'Confere o WhatsApp.')); return }
       const dadosSalao = dadosDe(f)
       const nomeInicial = f.nome_fantasia.trim() || f.razao_social.trim()   // o nome que a cliente vê se acerta no passo 3
       dadosSalao.email = f.email.trim(); dadosSalao.whatsapp = f.whatsapp.trim(); dadosSalao.responsavel_nome = f.responsavel_nome.trim()

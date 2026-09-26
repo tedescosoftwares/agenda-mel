@@ -9,6 +9,7 @@ import { FraseDeAceite } from '../../components/LinkLegal'
 import { useDocumentosLegais, aceitesPara, versaoMaior } from '../../lib/legal'
 import { iniciais } from '../../lib/booking'
 import CampoSenha from '../../components/CampoSenha'
+import { EMAIL_CONTATO } from '../../conteudo/legal'
 import RodapeSocial from '../../components/RodapeSocial'
 import { MarcaIcon, Wordmark } from '../../components/icons'
 import { MailCheck } from 'lucide-react'
@@ -59,7 +60,7 @@ export default function CadastroCliente() {
     setConferindo(false)
     if (error) { setErro('Não consegui conferir o WhatsApp agora. Tenta de novo.'); return }
     if (data && data.disponivel === false) {
-      if (data.email) setJaTem(data.email)
+      if (data.em_uso || data.email) setJaTem(true)
       else setErro(data.motivo || 'Esse WhatsApp não serve.')
       return
     }
@@ -134,10 +135,10 @@ export default function CadastroCliente() {
                 {erro && <div className="alert alert-error">{erro}</div>}
                 {jaTem && (
                   <div className="alert alert-info ja-tem">
-                    <strong>Esse WhatsApp já tem conta</strong>, no e-mail <strong>{jaTem}</strong>. É você? Então é só entrar; o convite continua valendo.
+                    <strong>Esse WhatsApp já está em uso</strong> e não dá pra cadastrar de novo. Se a conta é sua, é só entrar; o convite continua valendo. Se o número é seu e você não tem conta, fale com o suporte.
                     <div className="ja-tem-acoes">
                       <Link to={`/login?convite=${convite}`} className="btn btn-primary">Entrar</Link>
-                      <Link to={`/login?convite=${convite}&modo=esqueci`} className="btn btn-ghost">Esqueci a senha</Link>
+                      <a href={`mailto:${EMAIL_CONTATO}?subject=${encodeURIComponent('Meu WhatsApp já está em uso na MIMO')}`} className="btn btn-ghost">Falar com o suporte</a>
                     </div>
                   </div>
                 )}

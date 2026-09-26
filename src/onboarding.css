@@ -555,3 +555,10 @@
 .ob-modal-fundo { animation: ob-fundo-entra .18s ease both; } .ob-modal { animation: ob-modal-entra .22s cubic-bezier(.2,.8,.2,1) both; }
 @media (max-width: 900px) { .ob-roteiro-m { display: flex; } .ob-depois { display: none; } }
 @media (prefers-reduced-motion: reduce) { .ob-passo-corpo > *, .ob-painel-vivo > *, .ob-modal-fundo, .ob-modal, .ob-painel-roteiro li.feito i, .ob-roteiro-m li.feito b { animation: none; } }
+
+/* ---- os checks do onboarding, todos do mesmo jeito: rosa, com o pulo ---- */
+.ob-passos li.feito .ob-passo-num { background: var(--ob-rosa, #ff2d7a); border-color: var(--ob-rosa, #ff2d7a); color: #fff; animation: ob-check-pop .28s cubic-bezier(.2,.8,.2,1); }
+.ob-passos li.feito button { color: var(--ob-cinza, #6b7280); }
+.ob-checklist li.ok span { background: var(--ob-rosa, #ff2d7a); color: #fff; animation: ob-check-pop .28s cubic-bezier(.2,.8,.2,1); }
+.ob-checklist li.ok { color: var(--ob-cinza, #6b7280); text-decoration: line-through; text-decoration-color: #ffc2d8; }
+@media (prefers-reduced-motion: reduce) { .ob-passos li.feito .ob-passo-num, .ob-checklist li.ok span { animation: none; } }

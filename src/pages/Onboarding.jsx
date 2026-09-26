@@ -868,7 +868,7 @@ function PassoEstrutura({ s, seguir, voltar, salvando, setErro, autonoma, gravar
           )}
         </div>
         <div className="ob-card">
-          <span className="ob-card-linha"><strong className="ob-card-titulo">Política de agendamento</strong>{recomendadoAtivo && <em className="ob-badge">Recomendado para começar</em>}</span>
+          <span className="ob-card-linha"><strong className="ob-card-titulo">Política de agendamento e cancelamento</strong>{recomendadoAtivo && <em className="ob-badge">Recomendado para começar</em>}</span>
           {!recomendadoAtivo && (
             <div className="ob-recomendado">
               <small><Wand2 size={12} /> Configuração recomendada</small>

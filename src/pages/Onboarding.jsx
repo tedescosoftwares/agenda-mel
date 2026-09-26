@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import QRCode from 'qrcode'
 import { Check, ArrowLeft, ArrowRight, LogOut, Camera, MapPin, Plus, X, Copy, Download, MoreHorizontal, Link2, Info, Sparkles, MessageCircle, Users, Minus, Eye, Lock, Wand2, CalendarCheck, QrCode, Send, Home, MapPinOff, Search, ImagePlus } from 'lucide-react'
@@ -30,12 +30,12 @@ import RodapeSocial from '../components/RodapeSocial'
 // passa por cinco: não tem o passo da equipe.
 // cada passo tem a foto, o bilhete e a frase do painel da esquerda
 const PASSOS = [
-  { id: 1, rotulo: 'Tipo de conta', foto: 'profissional', bilhete: 'bem-vinda', titulo: 'Sua rotina no lugar.', texto: 'Escolha como você trabalha. Autônoma é grátis; salão paga só pelas agendas que usa.' },
-  { id: 2, rotulo: 'Dados do negócio', foto: 'agenda-celular', bilhete: 'tudo em ordem', titulo: 'Quem é o negócio.', texto: 'CNPJ (ou CPF), endereço fiscal e o seu acesso. Fica só com a MIMO; o salão em si vem no passo 3.' },
-  { id: 3, rotulo: 'Cara e operação', foto: 'salao', bilhete: 'é a cara da casa', titulo: 'O que a cliente vê.', texto: 'Nome, logo, fotos, contatos, endereço, horário e regras. Tudo muda depois em Ajustes.' },
-  { id: 4, rotulo: 'Serviços', foto: 'lifestyle', bilhete: 'o que você faz', titulo: 'O cardápio da casa.', texto: 'Nome, duração real e preço. A duração é o que a agenda usa pra achar horário livre.' },
-  { id: 5, rotulo: 'Equipe', foto: 'equipe', bilhete: 'quem atende', titulo: 'Monte sua operação.', texto: 'Você configura cada profissional. Ela recebe um link e entra com a agenda pronta.' },
-  { id: 6, rotulo: 'Clientes e ativação', foto: 'qr', bilhete: 'do balcão pra agenda', titulo: 'Pronta pra receber.', texto: 'Imprima o QR, coloque no balcão e na bio. A cliente escaneia e marca sozinha.' },
+  { id: 1, rotulo: 'Tipo de conta', foto: 'profissional', bilhete: 'bem-vinda', titulo: 'Sua rotina no lugar.', texto: 'Escolha como você trabalha. Autônoma é grátis; salão paga só pelas agendas que usa.', roteiro: ['Autônoma ou salão', 'Veja o plano', 'Dá pra trocar depois'] },
+  { id: 2, rotulo: 'Dados do negócio', foto: 'agenda-celular', bilhete: 'tudo em ordem', titulo: 'Quem é o negócio.', texto: 'CNPJ (ou CPF), endereço fiscal e o seu acesso. Fica só com a MIMO; o salão em si vem no passo 3.', roteiro: ['CNPJ ou CPF', 'Endereço fiscal', 'E-mail, WhatsApp e senha'] },
+  { id: 3, rotulo: 'Seu salão', foto: 'salao', bilhete: 'do seu jeito', titulo: 'Monte o seu salão.', texto: 'O que a cliente vê e como o dia funciona: nome, fotos, contatos, endereço, horário e regras. Tudo muda depois em Ajustes.', roteiro: ['Nome, logo e fotos', 'Contatos e endereço', 'Horário e regras'] },
+  { id: 4, rotulo: 'Serviços', foto: 'lifestyle', bilhete: 'o que você faz', titulo: 'O cardápio da casa.', texto: 'Nome, duração real e preço. A duração é o que a agenda usa pra achar horário livre.', roteiro: ['Use as sugestões', 'Ajuste preço e duração', 'Foto é opcional'] },
+  { id: 5, rotulo: 'Equipe', foto: 'equipe', bilhete: 'quem atende', titulo: 'Monte sua operação.', texto: 'Você configura cada profissional. Ela recebe um link e entra com a agenda pronta.', roteiro: ['Cadastre quem atende', 'Serviços e horários de cada uma', 'Mande o link de acesso'] },
+  { id: 6, rotulo: 'Clientes e ativação', foto: 'qr', bilhete: 'do balcão pra agenda', titulo: 'Pronta pra receber.', texto: 'Imprima o QR, coloque no balcão e na bio. A cliente escaneia e marca sozinha.', roteiro: ['Confira o checklist', 'Baixe o QR e o link', 'Entre no painel'] },
 ]
 const DIAS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
 const ORDEM_DIAS = [1, 2, 3, 4, 5, 6, 0]
@@ -170,8 +170,12 @@ export default function Onboarding({ publico = false }) {
     <div className="ob">
       <aside className="ob-painel">
         <div className="ob-painel-topo"><img src="/mimo-logo.svg" alt="MIMO" />{sairLink}</div>
-        <div className="ob-painel-foto"><img src={`/imagens/${atual.foto}-720.webp`} alt="" /><span className="ob-painel-bilhete">{atual.bilhete} <i>♥</i></span></div>
-        <div className="ob-painel-texto"><small>Passo {idx + 1} de {total}</small><h2>{atual.titulo}</h2><p>{atual.texto}</p></div>
+        <div key={atual.id} className="ob-painel-vivo">
+          <div className="ob-painel-foto"><img src={`/imagens/${atual.foto}-720.webp`} alt="" /><span className="ob-painel-bilhete">{atual.bilhete} <i>♥</i></span></div>
+          <div className="ob-painel-texto"><small>Passo {idx + 1} de {total}</small><h2>{atual.titulo}</h2><p>{atual.texto}</p>
+            {atual.roteiro && <ol className="ob-painel-roteiro">{atual.roteiro.map((r) => <li key={r}>{r}</li>)}</ol>}
+          </div>
+        </div>
         <ol className="ob-passos">
           {passos.map((p, i) => (
             <li key={p.id} className={i < idx ? 'feito' : i === idx ? 'atual' : ''}>
@@ -199,22 +203,30 @@ export default function Onboarding({ publico = false }) {
         </div>
         <div className="ob-conteudo-linha"><span className="ob-conteudo-num">Passo {idx + 1} de {total} · {atual.rotulo}</span><EstadoSalvo estado={estadoAuto} /></div>
         {retomado && <div className="ob-retomada"><Wand2 size={15} /><span><strong>Continuando de onde você parou.</strong> O que você já preencheu está guardado; os passos anteriores ficam no menu ao lado.</span><button type="button" onClick={() => setRetomado(false)} aria-label="Fechar"><X size={14} /></button></div>}
+        {atual.roteiro && <ol className="ob-roteiro-m" aria-label="Neste passo">{atual.roteiro.map((r, i) => <li key={r}><b>{i + 1}</b>{r}</li>)}</ol>}
         {erro && <ModalErro texto={erro} onFechar={() => setErro('')} />}
-        {passo === 1 && <PassoTipo {...props} />}
-        {passo === 2 && <PassoDados {...props} />}
-        {passo === 3 && <PassoEstrutura {...props} />}
-        {passo === 4 && <PassoServicos {...props} />}
-        {passo === 5 && <PassoEquipe {...props} />}
-        {passo === 6 && <PassoAtivacao {...props} />}
+        <ProximoCtx.Provider value={passos[idx + 1]?.rotulo ?? ''}>
+          <div key={passo} className="ob-passo-corpo">
+            {passo === 1 && <PassoTipo {...props} />}
+            {passo === 2 && <PassoDados {...props} />}
+            {passo === 3 && <PassoEstrutura {...props} />}
+            {passo === 4 && <PassoServicos {...props} />}
+            {passo === 5 && <PassoEquipe {...props} />}
+            {passo === 6 && <PassoAtivacao {...props} />}
+          </div>
+        </ProximoCtx.Provider>
       </main>
     </div>
   )
 }
 
+const ProximoCtx = createContext('')   // o rótulo do próximo passo, pro rodapé dizer o que vem depois
 function Rodape({ voltar, avancar, rotulo = 'Continuar', salvando, primeiro = false, icone = <ArrowRight size={16} /> }) {
+  const proximo = useContext(ProximoCtx)
   return (
     <div className="ob-rodape">
       {!primeiro ? <button type="button" className="btn btn-ghost" onClick={voltar} disabled={salvando}><ArrowLeft size={16} /> Voltar</button> : <span />}
+      {proximo && <small className="ob-depois">Depois: <b>{proximo}</b></small>}
       <button type="button" className="btn btn-primary ob-continuar" onClick={avancar} disabled={salvando}>{salvando ? 'Salvando…' : rotulo} {!salvando && icone}</button>
     </div>
   )
@@ -728,11 +740,11 @@ function PassoEstrutura({ s, seguir, voltar, salvando, setErro, autonoma, gravar
   }
   return (
     <>
-      <h1 className="ob-titulo">{autonoma ? 'Sua cara e o seu dia a dia' : 'A cara do salão e o dia a dia'}</h1>
-      <p className="ob-sub">{autonoma ? 'Sua foto, seus contatos, onde você atende e como atende. Tudo pode mudar depois em Ajustes.' : 'Logo, fotos, contatos, endereço e como o salão funciona. Tudo pode mudar depois em Ajustes.'}</p>
+      <h1 className="ob-titulo">{autonoma ? 'Monte a sua agenda' : 'Monte o seu salão'}</h1>
+      <p className="ob-sub">{autonoma ? 'É aqui que a sua agenda ganha cara: foto, contatos, onde e como você atende. Tudo pode mudar depois em Ajustes.' : 'É aqui que o salão ganha cara na MIMO: nome, fotos, contatos, endereço e como o dia funciona. Tudo pode mudar depois em Ajustes.'}</p>
       <div className="ob-estrutura">
         <div className="ob-card ob-card-largo">
-          <strong className="ob-card-titulo">{autonoma ? 'Sua foto e o seu espaço' : 'A cara do salão'}</strong>
+          <strong className="ob-card-titulo">{autonoma ? 'Nome, foto e espaço' : 'Nome, logo e fotos'}</strong>
           <span className="muted">{autonoma ? 'A foto aparece ao lado do seu nome. As fotos do espaço são a capa da sua página: a primeira é a que abre.' : 'O logo aparece pequeno, ao lado do nome. As fotos são do espaço: fachada, recepção, cadeiras. A primeira vira a capa; horizontais ficam melhores.'}</span>
           <div className="ob-cara">
             <div className="ob-cara-esq">

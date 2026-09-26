@@ -46,7 +46,8 @@ const iniciaisDe = (nome) => (nome || 'ES').split(' ').map((p) => p[0]).join('')
 const UFS = ['AC', 'AL', 'AM', 'AP', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MG', 'MS', 'MT', 'PA', 'PB', 'PE', 'PI', 'PR', 'RJ', 'RN', 'RO', 'RR', 'RS', 'SC', 'SE', 'SP', 'TO']
 const ANTECEDENCIAS = [[0, 'Sem antecedência'], [30, '30 minutos'], [60, '1 hora'], [120, '2 horas'], [240, '4 horas'], [720, '12 horas'], [1440, '24 horas'], [2880, '48 horas']]
 const CANCELAMENTO = [['flexivel', '6 horas'], ['moderada', '12 horas'], ['rigorosa', '24 horas']]
-const CATEGORIAS_SUGERIDAS = ['Cabelo', 'Unhas', 'Estética', 'Massagem', 'Sobrancelhas', 'Maquiagem', 'Depilação', 'Barba']
+const CATEGORIAS_SUGERIDAS = ['Cabelo', 'Unhas', 'Estética', 'Massagem', 'Sobrancelhas', 'Maquiagem', 'Depilação', 'Barba', 'Cílios', 'Podologia', 'Noivas', 'Coloração', 'Tranças', 'Micropigmentação', 'Bronzeamento', 'Spa e terapias', 'Estética corporal', 'Infantil']
+const SUGESTOES_A_MOSTRA = 6   // as primeiras; o resto fica atrás do "Ver mais"
 // a política que a maioria dos salões usa pra começar; muda depois em Ajustes
 const RECOMENDADO = { antecedencia_min_minutos: 60, politica_cancelamento: 'moderada', permite_remarcar: true, sinal_ligado: false }
 const SUPORTE = import.meta.env.VITE_SUPORTE_WHATS || ''
@@ -693,6 +694,7 @@ function PassoEstrutura({ s, seguir, voltar, salvando, setErro, autonoma, gravar
   const moverFoto = (i, dir) => { const n = [...fotos]; const j = i + dir; if (j < 0 || j >= n.length) return; [n[i], n[j]] = [n[j], n[i]]; mexerFotos(n) }
   const [cats, setCats] = useState([])
   const [novaCat, setNovaCat] = useState('')
+  const [verMaisCats, setVerMaisCats] = useState(false)
   const [copiar, setCopiar] = useState(null)   // null | { dias: Set }
   const [tocouSinal, setTocouSinal] = useState(false)   // o recebimento pelo app só muda se a pessoa mexer no botão
   const [pol, setPol] = useState({ antecedencia_min_minutos: s.antecedencia_min_minutos ?? 60, politica_cancelamento: s.politica_cancelamento ?? 'moderada', permite_remarcar: s.permite_remarcar ?? true, sinal_ligado: (s.pagamento_modo ?? 'nao') !== 'nao', sinal_modo: s.sinal_modo ?? 'fixo', sinal_fixo: emReais(s.sinal_fixo_cents ?? 5000), sinal_pct: s.sinal_pct ?? 50, equipe_prevista: s.equipe_prevista ?? 4, aceite_modo: s.aceite_modo ?? 'casa', minutos_para_aceitar: s.minutos_para_aceitar ?? 120 })
@@ -721,7 +723,7 @@ function PassoEstrutura({ s, seguir, voltar, salvando, setErro, autonoma, gravar
   const minhasCats = cats.filter((c) => c.salon_id === s.id)
   async function addCat(nome) {
     const n = nome.trim(); if (!n) return
-    if (cats.some((c) => c.nome.toLowerCase() === n.toLowerCase() && c.salon_id === s.id)) { setNovaCat(''); return }
+    if (cats.some((c) => c.nome.toLowerCase() === n.toLowerCase())) { setNovaCat(''); return }
     const { data, error } = await supabase.from('categorias_de_servico').insert({ salon_id: s.id, nome: n, ordem: 500 }).select('id, salon_id, nome, ordem').maybeSingle()
     if (error) { setErro(error.message); return }
     setCats((x) => [...x, data]); setNovaCat('')
@@ -904,13 +906,48 @@ function PassoEstrutura({ s, seguir, voltar, salvando, setErro, autonoma, gravar
         )}
         <div className="ob-card">
           <strong className="ob-card-titulo">Categorias dos serviços</strong>
-          <span className="muted">Escolha as categorias que fazem sentido para {autonoma ? 'o seu trabalho' : 'o salão'}. Elas ajudam a organizar os serviços no próximo passo.</span>
-          <div className="ob-cats">
-            {minhasCats.map((c) => <span key={c.id} className="ob-cat">{c.nome}<button type="button" onClick={() => tirarCat(c)} aria-label={`Tirar ${c.nome}`}><X size={12} /></button></span>)}
-            {CATEGORIAS_SUGERIDAS.filter((n) => !cats.some((c) => c.nome.toLowerCase() === n.toLowerCase())).map((n) => <button key={n} type="button" className="ob-cat sugerida" onClick={() => addCat(n)}><Plus size={12} /> {n}</button>)}
-          </div>
-          <div className="ob-add-cat"><input value={novaCat} onChange={(e) => setNovaCat(e.target.value)} placeholder="Adicionar categoria" onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addCat(novaCat) } }} /><button type="button" className="btn-mini" onClick={() => addCat(novaCat)}><Plus size={12} /> Adicionar categoria</button></div>
-          {cats.some((c) => !c.salon_id) && <small className="muted">As categorias gerais do MIMO ({cats.filter((c) => !c.salon_id).map((c) => c.nome).join(', ')}) já valem pra todo mundo.</small>}
+          <span className="muted">Escolha as áreas que fazem parte {autonoma ? 'do seu trabalho' : 'do seu salão'}. Isso ajuda a organizar os serviços no próximo passo.</span>
+          {(() => {
+            const busca = novaCat.trim()
+            const igual = (a, b) => a.trim().toLowerCase() === b.trim().toLowerCase()
+            const existente = busca ? cats.find((c) => igual(c.nome, busca)) : null
+            const padrao = cats.filter((c) => !c.salon_id)
+            const livres = CATEGORIAS_SUGERIDAS.filter((n) => !cats.some((c) => igual(c.nome, n)))
+            const filtradas = busca ? livres.filter((n) => n.toLowerCase().includes(busca.toLowerCase())) : livres
+            const visiveis = busca || verMaisCats ? filtradas : filtradas.slice(0, SUGESTOES_A_MOSTRA)
+            const escondidas = filtradas.length - visiveis.length
+            return (
+              <>
+                <div className="ob-cat-grupo">
+                  <small className="ob-cat-rotulo">Suas categorias</small>
+                  <div className="ob-cats">
+                    {minhasCats.map((c) => <span key={c.id} className={'ob-cat' + (existente?.id === c.id ? ' realce' : '')}>{c.nome}<button type="button" onClick={() => tirarCat(c)} aria-label={`Tirar ${c.nome}`}><X size={12} /></button></span>)}
+                  </div>
+                </div>
+                {padrao.length > 0 && (
+                  <div className="ob-cat-grupo">
+                    <small className="ob-cat-rotulo">Já incluídas <span className="ob-cat-padrao-tag">padrão MIMO</span></small>
+                    <div className="ob-cats ob-cats-padrao">
+                      {padrao.map((c) => <span key={c.id} className={'ob-cat padrao' + (existente?.id === c.id ? ' realce' : '')} title="Categoria padrão da MIMO: vale pra todo mundo">{c.nome}</span>)}
+                    </div>
+                  </div>
+                )}
+                <div className="ob-cat-grupo">
+                  <small className="ob-cat-rotulo">Adicionar categorias</small>
+                  <div className="ob-cats">
+                    {visiveis.map((n) => <button key={n} type="button" className="ob-cat sugerida" onClick={() => { addCat(n); setNovaCat('') }}><Plus size={12} /> {n}</button>)}
+                    {escondidas > 0 && <button type="button" className="ob-cat mais" onClick={() => setVerMaisCats(true)}>Ver mais ({escondidas})</button>}
+                    {busca && !visiveis.length && existente && <small className="muted">“{existente.nome}” já está na lista.</small>}
+                  </div>
+                </div>
+                <div className="ob-add-cat">
+                  <input value={novaCat} onChange={(e) => setNovaCat(e.target.value)} placeholder="Buscar ou criar categoria…" maxLength={40} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (busca && !existente) addCat(busca) } }} />
+                  {busca && !existente && <button type="button" className="btn-mini" onClick={() => addCat(busca)}><Plus size={12} /> Criar “{busca}”</button>}
+                </div>
+                <small className="muted">Não encontrou a sua? Digite e dê Enter pra criar. Pode seguir sem escolher nenhuma: as padrão já organizam o básico.</small>
+              </>
+            )
+          })()}
         </div>
       </div>
       <Rodape voltar={voltar} avancar={avancar} salvando={salvando} />
@@ -919,7 +956,7 @@ function PassoEstrutura({ s, seguir, voltar, salvando, setErro, autonoma, gravar
 }
 
 // ---------- 4 · Serviços -----------------------------------------------------------
-function PassoServicos({ s, seguir, voltar, salvando, setErro, autonoma }) {
+function PassoServicos({ s, seguir, voltar, salvando, setErro }) {
   const [servicos, setServicos] = useState(null)
   const [cats, setCats] = useState([])
   const [profs, setProfs] = useState([])

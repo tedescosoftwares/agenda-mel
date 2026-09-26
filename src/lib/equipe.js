@@ -96,6 +96,15 @@ export const SUGESTOES_DE_SERVICO = {
   depilacao: [['Depilação com cera', 40], ['Depilação a laser', 30]],
   barba: [['Barba', 30], ['Corte e barba', 60]],
   corpo: [['Drenagem linfática', 60], ['Massagem modeladora', 60]],
+  cilios: [['Extensão de cílios', 120], ['Manutenção de cílios', 60], ['Lash lifting', 60]],
+  podologia: [['Podologia completa', 60], ['Cutilagem dos pés', 40], ['Tratamento de unha encravada', 45]],
+  noivas: [['Penteado de noiva', 90], ['Maquiagem para noiva', 120], ['Dia da noiva', 240]],
+  coloracao: [['Coloração', 120], ['Mechas', 180], ['Retoque de raiz', 90], ['Tonalização', 60]],
+  trancas: [['Tranças box braids', 240], ['Tranças nagô', 120], ['Manutenção de tranças', 90]],
+  micropigmentacao: [['Micropigmentação de sobrancelhas', 120], ['Micropigmentação labial', 120]],
+  bronzeamento: [['Bronzeamento artificial', 40], ['Bronze natural com marquinha', 90]],
+  spa: [['Massagem relaxante', 60], ['Day spa', 180], ['Reflexologia', 45]],
+  infantil: [['Corte infantil', 30], ['Penteado infantil', 30]],
 }
 const semAcento = (t) => String(t ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
 export function sugestoesPara(nomeCategoria) {

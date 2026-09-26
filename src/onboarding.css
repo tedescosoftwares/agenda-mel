@@ -576,3 +576,14 @@
 .ob select:focus, .ob-modal select:focus { outline: none; border-color: var(--ob-rosa, #ff2d7a); box-shadow: 0 0 0 3px #ffe0eb; }
 .ob select:disabled { opacity: 0.6; cursor: default; }
 .ob select option { color: var(--grafite, #1f2026); }
+
+/* ---- categorias: selecionadas, sugestões e criar ---- */
+.ob-cat-grupo { display: grid; gap: 0.35rem; }
+.ob-cat-rotulo { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ob-cinza, #6b7280); }
+.ob-cat.padrao { background: #fff; color: var(--ob-cinza, #6b7280); border: 1px solid var(--ob-fio, #ece7ee); font-size: 0.72rem; font-weight: 600; padding: 0.2rem 0.55rem; }
+.ob-cats-padrao { gap: 0.3rem; }
+.ob-cat-padrao-tag { margin-left: 6px; font-size: 0.6rem; letter-spacing: 0.06em; color: var(--ob-ameixa, #3d0c4e); background: var(--ob-lilas, #fbf6fb); border: 1px solid var(--ob-fio, #ece7ee); border-radius: 999px; padding: 1px 7px; }
+.ob-cat.mais { background: #fff; color: var(--ob-ameixa, #3d0c4e); border: 1px solid var(--ob-fio, #ece7ee); cursor: pointer; font: inherit; font-size: 0.78rem; font-weight: 700; }
+.ob-cat.mais:hover { border-color: #ffc2d8; color: var(--rosa); }
+.ob-cat.realce { box-shadow: 0 0 0 3px #ffe0eb; border-color: var(--rosa); }
+.ob-cats:empty::after { content: 'Nenhuma ainda'; font-size: 0.78rem; color: var(--ob-cinza, #6b7280); }

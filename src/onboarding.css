@@ -617,7 +617,7 @@
 /* ---- 3 · contatos e "onde fica" em coluna; endereço em segmento; mapa com ações em pílula ---- */
 .ob-coluna { display: flex; flex-direction: column; gap: 0.9rem; min-width: 0; }
 .ob-card .ob-form { gap: 0.6rem; }
-.ob-mais-link { align-self: flex-start; display: inline-flex; align-items: center; gap: 0.3rem; margin-top: 0.15rem; padding: 0; border: 0; background: none; font: inherit; font-size: 0.78rem; font-weight: 700; color: var(--ob-rosa, #ff2d7a); cursor: pointer; }
+.ob-mais-link { flex: 0 0 100%; justify-content: flex-start; align-self: flex-start; display: inline-flex; align-items: center; gap: 0.3rem; margin-top: 0.15rem; padding: 0; border: 0; background: none; font: inherit; font-size: 0.78rem; font-weight: 700; color: var(--ob-rosa, #ff2d7a); cursor: pointer; }
 .ob-mais-link:hover { text-decoration: underline; }
 .ob-seg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 12px; background: var(--ob-lilas, #fbf6fb); border: 1px solid var(--ob-fio, #ece7ee); }
 .ob-seg button { border: 0; border-radius: 9px; padding: 0.5rem 0.6rem; font: inherit; font-size: 0.8rem; font-weight: 700; color: var(--ob-cinza, #6b7280); background: transparent; cursor: pointer; transition: background .15s ease, color .15s ease, box-shadow .15s ease; }
@@ -654,3 +654,33 @@
 .ob-rede-chip.cheia svg:last-child { color: #067647; }
 .ob-rede-campo { animation: ob-passo-entra .22s ease both; }
 .ob-rede-prefixo { gap: 4px; color: var(--ob-ameixa, #3d0c4e); }
+
+/* ---- 3 · acabamento: hierarquia, alinhamento dos horários, blocos mais leves ---- */
+.ob-estrutura .ob-card { gap: 0.55rem; padding: 0.95rem 1.05rem; }
+.ob-estrutura .ob-card-titulo { font-size: 0.94rem; }
+.ob-estrutura .ob-card > .muted { font-size: 0.78rem; line-height: 1.4; margin-top: -0.25rem; }
+.ob-estrutura .ob-form label { gap: 0.2rem 0.3rem; }
+.ob-estrutura .ob-form label > .muted { font-size: 0.72rem; }
+.ob-hora { grid-template-columns: 74px minmax(0, 1fr) 14px minmax(0, 1fr) 46px; gap: 0.45rem; }
+.ob-hora > .muted { text-align: center; }
+.ob-hora .switch { justify-self: end; }
+.ob-hora.fechado .ob-hora-fechado { grid-column: 2 / 5; }
+.ob-zap-principal { gap: 0.4rem; padding: 0.65rem 0.75rem; background: #fff; border: 1px solid #ffc2d8; }
+.ob-zap-nota { font-size: 0.74rem; line-height: 1.4; }
+.ob-zap-selo { font-size: 0.6rem; padding: 2px 7px; }
+.ob-redes { gap: 0.4rem; margin-top: 0.1rem; }
+.ob-rede-chip { padding: 0.32rem 0.6rem; font-size: 0.74rem; }
+.ob-ponte { padding: 0.7rem 0.9rem; font-size: 0.86rem; line-height: 1.45; }
+.ob-seg button { padding: 0.45rem 0.6rem; font-size: 0.78rem; }
+.ob-endereco-fixo { font-size: 0.82rem; padding: 0.6rem 0.75rem; }
+.ob-mapa-campo { gap: 0.35rem; }
+.ob-mapa-acoes { gap: 0.35rem 0.5rem; }
+.ob-recomendado { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem 0.6rem; padding: 0.55rem 0.75rem; }
+.ob-recomendado small { width: 100%; }
+.ob-recomendado .muted { flex: 1 1 200px; font-size: 0.75rem; }
+.ob-recomendado .btn-mini { flex: none; }
+.ob-toggle { font-size: 0.84rem; padding: 0.15rem 0; }
+.ob-toggle .muted { font-weight: 500; }
+.ob-campo > small.muted { font-size: 0.72rem; line-height: 1.35; }
+.ob-sinal { padding: 0.55rem 0.65rem; gap: 0.45rem; }
+@media (max-width: 480px) { .ob-hora { grid-template-columns: 62px minmax(0, 1fr) 10px minmax(0, 1fr) 46px; gap: 0.3rem; } }

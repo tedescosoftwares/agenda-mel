@@ -613,3 +613,21 @@
 .ob-plano-opcao.ativa { border-color: var(--ob-rosa, #ff2d7a); box-shadow: 0 0 0 3px #ffe0eb; }
 .ob-card-cats { margin-bottom: 0.2rem; }
 @media (max-width: 900px) { .ob-plano-grade { grid-template-columns: 1fr; } .ob-plano-comparar { grid-template-columns: 1fr; } }
+
+/* ---- 3 · contatos e "onde fica" em coluna; endereço em segmento; mapa com ações em pílula ---- */
+.ob-coluna { display: flex; flex-direction: column; gap: 0.9rem; min-width: 0; }
+.ob-card .ob-form { gap: 0.6rem; }
+.ob-mais-link { align-self: flex-start; display: inline-flex; align-items: center; gap: 0.3rem; margin-top: 0.15rem; padding: 0; border: 0; background: none; font: inherit; font-size: 0.78rem; font-weight: 700; color: var(--ob-rosa, #ff2d7a); cursor: pointer; }
+.ob-mais-link:hover { text-decoration: underline; }
+.ob-seg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 12px; background: var(--ob-lilas, #fbf6fb); border: 1px solid var(--ob-fio, #ece7ee); }
+.ob-seg button { border: 0; border-radius: 9px; padding: 0.5rem 0.6rem; font: inherit; font-size: 0.8rem; font-weight: 700; color: var(--ob-cinza, #6b7280); background: transparent; cursor: pointer; transition: background .15s ease, color .15s ease, box-shadow .15s ease; }
+.ob-seg button.ativa { background: #fff; color: var(--ob-ameixa, #3d0c4e); box-shadow: 0 2px 8px rgba(61, 12, 78, 0.12); }
+.ob-endereco-fixo { display: flex; gap: 0.6rem; align-items: flex-start; padding: 0.7rem 0.8rem; border-radius: 12px; background: #fff; border: 1px dashed #ffc2d8; font-size: 0.84rem; line-height: 1.45; color: var(--grafite, #1f2026); }
+.ob-endereco-fixo svg { flex: none; color: var(--ob-rosa, #ff2d7a); margin-top: 2px; }
+.ob-endereco-fixo small { display: block; margin-top: 4px; font-size: 0.72rem; color: var(--ob-cinza, #6b7280); }
+.ob-mapa-titulo { display: flex; align-items: center; gap: 0.5rem; }
+.ob-pino-ok, .ob-pino-nao { font-style: normal; display: inline-flex; align-items: center; gap: 3px; font-size: 0.66rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; }
+.ob-pino-ok { color: #067647; background: #ecfdf3; } .ob-pino-nao { color: #b54708; background: #fff6ed; }
+.ob-acao-mini { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.4rem 0.7rem; border-radius: 999px; border: 1px solid #ffc2d8; background: #fff; color: var(--ob-rosa, #ff2d7a); font: inherit; font-size: 0.76rem; font-weight: 700; cursor: pointer; transition: background .15s ease; }
+.ob-acao-mini:hover { background: #fff0f6; } .ob-acao-mini:disabled { opacity: 0.55; cursor: default; }
+.ob-acao-mini.neutro { color: var(--ob-cinza, #6b7280); border-color: var(--ob-fio, #ece7ee); }

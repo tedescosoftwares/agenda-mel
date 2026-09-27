@@ -682,9 +682,9 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
         ? <input type="tel" inputMode="numeric" value={formatarFone(loc[k][i])} onChange={(e) => lista(k, i, soDigitos(e.target.value).slice(0, 11))} placeholder={i === 0 ? '(11) 3456-7890' : 'outro telefone'} autoComplete="off" />
         : <input type="email" value={loc[k][i]} onChange={(e) => lista(k, i, e.target.value)} placeholder="financeiro@essenzahair.com.br" autoComplete="off" />}
       {(i > 0 || tipo === 'email') && <button type="button" className="ob-menos" onClick={() => tirarDa(k, i)} aria-label="Tirar"><X size={14} /></button>}
-      {i === loc[k].length - 1 && <button type="button" className="ob-mais" onClick={() => maisNa(k)} aria-label={tipo === 'telefone' ? 'Mais um telefone' : 'Mais um e-mail'}><Plus size={14} /></button>}
     </span>
   )
+  const maisLink = (k, rotulo) => <button type="button" className="ob-mais-link" onClick={() => maisNa(k)}><Plus size={13} /> {rotulo}</button>
   const arqLogo = useRef(null)
   const arqFotos = useRef(null)
   async function subirImagem(blob, pasta) {
@@ -831,34 +831,49 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
             </div>
           </div>
         </div>
-        <div className="ob-card ob-card-largo">
-          <strong className="ob-card-titulo">{autonoma ? 'Contatos e onde você atende' : 'Contatos e endereço do salão'}</strong>
-          <span className="muted">É o que a cliente vê na sua página e usa pra falar com {autonoma ? 'você' : 'vocês'} e chegar até {autonoma ? 'você' : 'o salão'}.</span>
-          <div className="ob-cara">
+        <div className="ob-coluna">
+          <div className="ob-card">
+            <strong className="ob-card-titulo">{autonoma ? 'Seus contatos' : 'Contatos do salão'}</strong>
+            <span className="muted">É por aqui que a cliente fala com {autonoma ? 'você' : 'vocês'}. O WhatsApp aparece na sua página com o botão de conversar.</span>
             <div className="ob-form">
               <label>WhatsApp {autonoma ? 'de contato' : 'comercial'} <b>*</b><span className="ob-fone"><span className="ob-ddi">🇧🇷 +55</span><input type="tel" inputMode="numeric" value={loc.whatsapp} onChange={(e) => setLoc((x) => ({ ...x, whatsapp: formatarFone(e.target.value) }))} placeholder="(11) 91234-5678" autoComplete="tel" /></span></label>
-              <label>Telefone <span className="muted">(fixo ou celular · opcional)</span>{loc.telefones.map((_, i) => campoContato('telefones', i, 'telefone'))}</label>
-              <label>E-mail de contato <span className="muted">(opcional)</span>{loc.emails.length === 0 ? <span className="ob-fone"><button type="button" className="ob-geo" onClick={() => maisNa('emails')}><Plus size={14} /> Adicionar e-mail</button></span> : loc.emails.map((_, i) => campoContato('emails', i, 'email'))}</label>
+              <label>Telefone <span className="muted">(fixo ou celular · opcional)</span>{loc.telefones.map((_, i) => campoContato('telefones', i, 'telefone'))}{maisLink('telefones', 'Adicionar outro telefone')}</label>
+              <label>E-mail de contato <span className="muted">(opcional)</span>{loc.emails.map((_, i) => campoContato('emails', i, 'email'))}{maisLink('emails', loc.emails.length ? 'Adicionar outro e-mail' : 'Adicionar e-mail')}</label>
             </div>
-            <div className="ob-form">
-              <label>{autonoma ? 'Onde você atende' : 'Endereço do salão'}<select value={loc.endereco_igual ? 'igual' : 'outro'} onChange={(e) => setLoc((x) => ({ ...x, endereco_igual: e.target.value === 'igual' }))}><option value="igual">{comCnpj ? (autonoma ? 'Atendo no endereço fiscal' : 'É o mesmo endereço fiscal') : (autonoma ? 'Atendo no meu endereço' : 'É o mesmo endereço do cadastro')}</option><option value="outro">{autonoma ? 'Atendo em outro endereço' : 'O salão fica em outro endereço'}</option></select>{usaFiscal && <small className="muted">{[fiscal.address, fiscal.bairro, [fiscal.city, fiscal.uf].filter(Boolean).join('/')].filter(Boolean).join(' · ') || 'o endereço do passo 2 está vazio: volte lá ou escolha outro endereço'}</small>}</label>
-              {!usaFiscal && <BlocoEndereco valor={local} onChange={setLocal} obrigatorio aoAchar={pinoDoCep} autoCompleteRua />}
-              {/* o pino: é ele que a cliente vê no "Como chegar" */}
-              <div className="ob-mapa-campo">
-                <span className="ob-rotulo">No mapa {pino ? <span className="muted">· arraste o pino até a porta, ou toque no lugar certo</span> : <span className="muted">· ainda sem pino</span>}</span>
-                {pino
-                  ? <div className="ob-mapa"><Mapa lat={Number(loc.lat)} lng={Number(loc.lng)} zoom={17} arrastavel altura={200} onMover={moverPino} /></div>
-                  : <div className="ob-sem-pino"><MapPinOff size={22} /><strong>Ainda sem pino no mapa</strong><span className="muted">Preencha o CEP ou o endereço, use a sua localização, ou ache pelo endereço.</span></div>}
-                <div className="ob-mapa-acoes">
-                  <button type="button" className="ob-geo" onClick={usarLocalizacao} disabled={Boolean(ocupado)}><MapPin size={14} /> {ocupado === 'gps' ? 'Achando você…' : 'Usar minha localização'}</button>
-                  <button type="button" className="ob-geo" onClick={acharPeloEndereco} disabled={Boolean(ocupado) || !(local.address.trim() || local.city.trim())}><Search size={14} /> {ocupado === 'endereco' ? 'Procurando…' : 'Achar pelo endereço'}</button>
-                  {pino && <button type="button" className="ob-geo ob-geo-neutro" onClick={() => { setLoc((x) => ({ ...x, lat: null, lng: null })); setGeo('') }}>Tirar o pino</button>}
-                </div>
-                {geo && <small className="ob-mapa-nota">{geo}</small>}
+          </div>
+          <div className="ob-card">
+            <strong className="ob-card-titulo">{autonoma ? 'Onde você atende' : 'Onde fica o salão'}</strong>
+            <span className="muted">O endereço e o pino que a cliente usa no “Como chegar”.</span>
+            <div className="ob-seg" role="radiogroup" aria-label="Qual endereço">
+              <button type="button" role="radio" aria-checked={loc.endereco_igual} className={loc.endereco_igual ? 'ativa' : ''} onClick={() => setLoc((x) => ({ ...x, endereco_igual: true }))}>{comCnpj ? 'Mesmo endereço fiscal' : 'Mesmo endereço do cadastro'}</button>
+              <button type="button" role="radio" aria-checked={!loc.endereco_igual} className={!loc.endereco_igual ? 'ativa' : ''} onClick={() => setLoc((x) => ({ ...x, endereco_igual: false }))}>Outro endereço</button>
+            </div>
+            {usaFiscal ? (
+              <div className="ob-endereco-fixo">
+                <MapPin size={15} />
+                {fiscal.address.trim() || fiscal.city.trim()
+                  ? <span><strong>{fiscal.address}</strong>{fiscal.bairro && <>, {fiscal.bairro}</>}<br />{[fiscal.city, fiscal.uf].filter(Boolean).join(' / ')}{fiscal.cep && <> · CEP {formatarCep(fiscal.cep)}</>}<small>Veio do passo 2. Pra mudar, volte lá ou escolha “Outro endereço”.</small></span>
+                  : <span><strong>O endereço do passo 2 está vazio.</strong><small>Volte lá e preencha, ou escolha “Outro endereço” aqui.</small></span>}
+              </div>
+            ) : (
+              <div className="ob-form"><BlocoEndereco valor={local} onChange={setLocal} obrigatorio aoAchar={pinoDoCep} autoCompleteRua /></div>
+            )}
+            {/* o pino: é ele que a cliente vê no "Como chegar" */}
+            <div className="ob-mapa-campo">
+              <span className="ob-rotulo ob-mapa-titulo">No mapa {pino ? <em className="ob-pino-ok"><Check size={11} /> pino marcado</em> : <em className="ob-pino-nao">sem pino</em>}</span>
+              {pino
+                ? <div className="ob-mapa"><Mapa lat={Number(loc.lat)} lng={Number(loc.lng)} zoom={17} arrastavel altura={220} onMover={moverPino} /></div>
+                : <div className="ob-sem-pino"><MapPinOff size={22} /><strong>Ainda sem pino no mapa</strong><span className="muted">Preencha o CEP ou o endereço, ou use um dos botões abaixo.</span></div>}
+              {pino && <small className="ob-mapa-nota">Arraste o pino até a porta, ou toque no mapa no lugar certo.{geo ? ` ${geo.charAt(0).toUpperCase()}${geo.slice(1)}.` : ''}</small>}
+              <div className="ob-mapa-acoes">
+                <button type="button" className="ob-acao-mini" onClick={usarLocalizacao} disabled={Boolean(ocupado)}><MapPin size={13} /> {ocupado === 'gps' ? 'Achando você…' : 'Usar minha localização'}</button>
+                <button type="button" className="ob-acao-mini" onClick={acharPeloEndereco} disabled={Boolean(ocupado) || !(local.address.trim() || local.city.trim())}><Search size={13} /> {ocupado === 'endereco' ? 'Procurando…' : 'Achar pelo endereço'}</button>
+                {pino && <button type="button" className="ob-acao-mini neutro" onClick={() => { setLoc((x) => ({ ...x, lat: null, lng: null })); setGeo('') }}><X size={13} /> Tirar o pino</button>}
               </div>
             </div>
           </div>
         </div>
+        <div className="ob-coluna">
         <div className="ob-card">
           <strong className="ob-card-titulo">Horário de funcionamento</strong>
           <span className="muted">{autonoma ? 'O horário padrão da sua agenda. Folgas e feriados você marca depois, em Bloqueios.' : 'Defina o horário padrão do salão. Depois você personaliza os dias e horários de cada profissional.'}</span>
@@ -908,6 +923,7 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
           )}
           <label className="ob-campo">Como os agendamentos são confirmados?<select value={pol.aceite_modo} onChange={(e) => p('aceite_modo')(e.target.value)}><option value="automatico">Confirmar automaticamente</option><option value="casa">O salão confirma{pol.aceite_modo === 'casa' ? ` (até ${pol.minutos_para_aceitar} min)` : ''}</option><option value="profissional">Cada profissional confirma os próprios horários</option></select></label>
           <small className="muted">Você poderá mudar essas regras a qualquer momento em Ajustes.</small>
+        </div>
         </div>
         {!autonoma && (() => {
           const n = Math.max(1, Number(pol.equipe_prevista) || 1)

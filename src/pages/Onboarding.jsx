@@ -596,7 +596,7 @@ function traduzErro(msg) {
 }
 
 // ---------- 3 · Estrutura e operação ------------------------------------------------
-function PassoEstrutura({ s, seguir, voltar, salvando, setErro, autonoma, gravarQuieto, setEstadoAuto }) {
+function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, gravarQuieto, setEstadoAuto }) {
   const [horas, setHoras] = useState(null)
   // a cara do negócio: o logo e as fotos do espaço sobem na hora e ficam gravadas
   const [nome, setNome] = useState(s.name || s.nome_fantasia || s.razao_social || '')   // o nome que a cliente vê
@@ -676,9 +676,19 @@ function PassoEstrutura({ s, seguir, voltar, salvando, setErro, autonoma, gravar
     if (!file) return
     if (file.size > 5 * 1024 * 1024) { setErro('A imagem passa de 5 MB.'); return }
     setSubindo('logo'); setErro('')
-    try { const r = await reduzirFoto(file, { max: 512, quadrado: true }); const url = await subirImagem(r.blob, 'logo'); setLogo(url); await gravarQuieto({ logo_url: url }) } catch (err) { setErro(err.message) } finally { setSubindo('') }
+    try { const r = await reduzirFoto(file, { max: 512, quadrado: true }); const url = await subirImagem(r.blob, 'logo'); setLogo(url); await guardarImagens({ logo_url: url }) } catch (err) { setErro(err.message) } finally { setSubindo('') }
   }
-  async function tirarLogo() { setLogo(null); await gravarQuieto({ logo_url: '' }) }
+  async function tirarLogo() { setLogo(null); await guardarImagens({ logo_url: null }) }
+  // logo e fotos gravam na hora. Se o onboarding_salvar não gravar (banco
+  // atrasado, por exemplo), escreve direto na tabela; e um erro aparece,
+  // em vez de a foto sumir calada quando a pessoa volta ao passo.
+  async function guardarImagens(campos) {
+    const ok = await gravarQuieto({ ...campos, ...(campos.logo_url === null ? { logo_url: '' } : {}) })
+    if (ok) return
+    const { error } = await supabase.from('salons').update(campos).eq('id', s.id)
+    if (error) { setErro('Não deu para guardar a imagem: ' + error.message); return }
+    setS?.((x) => ({ ...x, ...campos }))
+  }
   async function addFotos(e) {
     const files = Array.from(e.target.files ?? []); e.target.value = ''
     if (!files.length) return
@@ -689,9 +699,9 @@ function PassoEstrutura({ s, seguir, voltar, salvando, setErro, autonoma, gravar
     try {
       for (const file of files.slice(0, espaco)) { const r = await reduzirFoto(file, { max: 1600 }); novas.push(await subirImagem(r.blob, 'fotos')) }
     } catch (err) { setErro(err.message) } finally { setSubindo('') }
-    if (novas.length) { const lista = [...fotos, ...novas]; setFotos(lista); await gravarQuieto({ fotos: lista }) }
+    if (novas.length) { const lista = [...fotos, ...novas]; setFotos(lista); await guardarImagens({ fotos: lista }) }
   }
-  async function mexerFotos(lista) { setFotos(lista); await gravarQuieto({ fotos: lista }) }
+  async function mexerFotos(lista) { setFotos(lista); await guardarImagens({ fotos: lista }) }
   const moverFoto = (i, dir) => { const n = [...fotos]; const j = i + dir; if (j < 0 || j >= n.length) return; [n[i], n[j]] = [n[j], n[i]]; mexerFotos(n) }
   const [cats, setCats] = useState([])
   const [novaCat, setNovaCat] = useState('')

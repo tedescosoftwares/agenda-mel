@@ -56,6 +56,12 @@ begin
   reset role;
   select * into s from public.salons where id = sal;
   if coalesce(array_length(s.categorias_escolhidas, 1), 0) <> 2 then raise exception '2b: categorias escolhidas não gravaram: %', s.categorias_escolhidas; end if;
+  perform set_config('request.jwt.claim.sub', dona::text, false);
+  set role authenticated;
+  r := public.onboarding_salvar(sal, jsonb_build_object('redes', jsonb_build_object('instagram', 'studioensaio', 'tiktok', 'studioensaio'), 'instagram', 'studioensaio'));
+  reset role;
+  select * into s from public.salons where id = sal;
+  if s.redes ->> 'tiktok' <> 'studioensaio' or s.instagram <> 'studioensaio' then raise exception '2b: redes não gravaram: % %', s.redes, s.instagram; end if;
   raise notice '2b identificacao fiscal ok';
 
   -- 2c. o "quero receber novidades": pelo cadastro (meta.marketing) e pela preferência depois

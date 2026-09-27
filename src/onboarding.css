@@ -642,3 +642,15 @@
 .ob-zap-selo { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; font-style: normal; font-size: 0.62rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #fff; background: var(--ob-rosa, #ff2d7a); padding: 3px 8px; border-radius: 999px; }
 .ob-zap-nota { margin: 0; font-size: 0.76rem; line-height: 1.45; color: var(--ob-cinza, #6b7280); }
 .ob-zap-nota strong { color: var(--ob-ameixa, #3d0c4e); }
+
+/* ---- 3 · redes sociais ---- */
+.ob-redes { display: flex; flex-direction: column; gap: 0.45rem; margin-top: 0.2rem; }
+.ob-redes .ob-rotulo .muted { font-weight: 500; }
+.ob-redes-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.ob-rede-chip { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.38rem 0.7rem; border-radius: 999px; border: 1px dashed #d1d5db; background: #fff; color: var(--cinza-3, #6b7280); font: inherit; font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: all .15s ease; }
+.ob-rede-chip:hover { color: var(--ob-rosa, #ff2d7a); border-color: #ffc2d8; }
+.ob-rede-chip.aberta { border-style: solid; border-color: var(--ob-rosa, #ff2d7a); color: var(--ob-rosa, #ff2d7a); box-shadow: 0 0 0 3px #ffe0eb; }
+.ob-rede-chip.cheia { border-style: solid; background: #fff0f5; border-color: #ffc2d8; color: var(--ob-rosa, #ff2d7a); }
+.ob-rede-chip.cheia svg:last-child { color: #067647; }
+.ob-rede-campo { animation: ob-passo-entra .22s ease both; }
+.ob-rede-prefixo { gap: 4px; color: var(--ob-ameixa, #3d0c4e); }

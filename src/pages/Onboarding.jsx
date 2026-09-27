@@ -18,6 +18,7 @@ import { urlDoAmbiente } from '../lib/ambiente'
 import { formatPreco } from '../lib/format'
 import { sugestoesPara, primeiroNome } from '../lib/equipe'
 import { categoriasDoSalao } from '../lib/categorias'
+import { REDES, limparRede } from '../components/IconesSociais'
 import ProfissionalDrawer, { CartaoProfissional } from '../components/ProfissionalDrawer'
 import { FraseDeAceite } from '../components/LinkLegal'
 import { useDocumentosLegais, aceitesPara, versaoMaior } from '../lib/legal'
@@ -633,7 +634,9 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
     telefones: telefonesDe(s.contatos, 'salao'), emails: emailsDe(s.contatos, 'salao'),
     endereco_igual: s.endereco_igual !== false,
     ...enderecoDe(s), lat: s.lat ?? null, lng: s.lng ?? null,
+    redes: Object.fromEntries(REDES.map((r) => [r.chave, String((s.redes && s.redes[r.chave]) ?? (r.chave === 'instagram' ? s.instagram ?? '' : '') ?? '')])),
   })
+  const [redeAberta, setRedeAberta] = useState(null)   // qual rede está com o campo aberto
   const [geo, setGeo] = useState('')          // o que aconteceu com o pino
   const [ocupado, setOcupado] = useState('')  // 'gps' | 'endereco'
   const usaFiscal = loc.endereco_igual   // o endereço do passo 2 (fiscal, ou o da pessoa no CPF)
@@ -646,6 +649,7 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
       whatsapp: loc.whatsapp, endereco_igual: loc.endereco_igual,
       contatos: [...contatosDe(s.contatos, 'cadastro'), ...montarContatos(loc.telefones, loc.emails, 'salao')],
       address: local.address, bairro: local.bairro, city: local.city, uf: local.uf, cep: limparCep(local.cep),
+      redes: Object.fromEntries(REDES.map((r) => [r.chave, limparRede(r.chave, loc.redes[r.chave])]).filter(([, v]) => v)), instagram: limparRede('instagram', loc.redes.instagram),
     }
     if (pino) { d.lat = loc.lat; d.lng = loc.lng }
     return d
@@ -846,6 +850,20 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
               </div>
               <label>Telefone <span className="muted">(fixo ou celular · opcional)</span>{loc.telefones.map((_, i) => campoContato('telefones', i, 'telefone'))}{maisLink('telefones', 'Adicionar outro telefone')}</label>
               <label>E-mail de contato <span className="muted">(opcional)</span>{loc.emails.map((_, i) => campoContato('emails', i, 'email'))}{maisLink('emails', loc.emails.length ? 'Adicionar outro e-mail' : 'Adicionar e-mail')}</label>
+              {/* redes sociais: um chip por rede; toca, abre o campo; preenchida, fica rosa */}
+              <div className="ob-redes">
+                <span className="ob-rotulo">Redes sociais <span className="muted">(opcional · aparecem na sua página)</span></span>
+                <div className="ob-redes-chips">
+                  {REDES.map((r) => { const cheia = Boolean(limparRede(r.chave, loc.redes[r.chave])); const aberta = redeAberta === r.chave; return (
+                    <button key={r.chave} type="button" className={'ob-rede-chip' + (cheia ? ' cheia' : '') + (aberta ? ' aberta' : '')} onClick={() => setRedeAberta(aberta ? null : r.chave)} aria-pressed={aberta}><r.Icone size={14} /> {r.nome}{cheia && <Check size={12} />}</button>
+                  ) })}
+                </div>
+                {redeAberta && (() => { const r = REDES.find((x) => x.chave === redeAberta); return (
+                  <label className="ob-rede-campo">{r.nome} <span className="muted">({r.dica})</span>
+                    <span className="ob-fone"><span className="ob-ddi ob-rede-prefixo"><r.Icone size={13} /> {r.prefixo}</span><input value={loc.redes[r.chave]} onChange={(e) => setLoc((x) => ({ ...x, redes: { ...x.redes, [r.chave]: e.target.value } }))} onBlur={(e) => setLoc((x) => ({ ...x, redes: { ...x.redes, [r.chave]: limparRede(r.chave, e.target.value) } }))} placeholder={r.placeholder} autoComplete="off" autoFocus />{loc.redes[r.chave] && <button type="button" className="ob-menos" onClick={() => setLoc((x) => ({ ...x, redes: { ...x.redes, [r.chave]: '' } }))} aria-label="Tirar"><X size={14} /></button>}</span>
+                  </label>
+                ) })()}
+              </div>
             </div>
           </div>
           <div className="ob-card">

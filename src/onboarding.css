@@ -587,3 +587,29 @@
 .ob-cat.mais:hover { border-color: #ffc2d8; color: var(--rosa); }
 .ob-cat.realce { box-shadow: 0 0 0 3px #ffe0eb; border-color: var(--rosa); }
 .ob-cats:empty::after { content: 'Nenhuma ainda'; font-size: 0.78rem; color: var(--ob-cinza, #6b7280); }
+
+/* ---- 3 · o cartão do plano ---- */
+.ob-plano-grade { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 1rem 1.6rem; align-items: start; }
+.ob-plano-esq, .ob-plano-dir { display: flex; flex-direction: column; gap: 0.6rem; min-width: 0; }
+.ob-contador-grande button { width: 44px; height: 44px; }
+.ob-contador-grande strong { min-width: 72px; font-size: 1.6rem; padding: 0.35rem 0.6rem; }
+.ob-plano-agendas { font-size: 0.82rem; font-weight: 600; color: var(--ob-ameixa, #3d0c4e); }
+.ob-plano-barra { display: flex; flex-wrap: wrap; gap: 4px; }
+.ob-plano-barra i { width: 18px; height: 8px; border-radius: 999px; background: var(--ob-fio, #ece7ee); transition: background .2s ease; }
+.ob-plano-barra i.inclusa { background: var(--ob-rosa, #ff2d7a); } .ob-plano-barra i.extra { background: #ffb3cd; }
+.ob-plano-resumo { display: grid; gap: 2px; padding: 12px 14px; border-radius: 14px; background: linear-gradient(135deg, #fff0f6, #fdf6fb); border: 1px solid #ffc2d8; }
+.ob-plano-resumo small { text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.66rem; color: var(--ob-cinza, #6b7280); font-weight: 700; }
+.ob-plano-resumo strong { font-size: 1rem; color: var(--ob-ameixa, #3d0c4e); }
+.ob-plano-resumo b { font-size: 1.7rem; font-weight: 700; letter-spacing: -0.05em; color: var(--ob-rosa, #ff2d7a); line-height: 1.1; }
+.ob-plano-resumo b small { text-transform: none; letter-spacing: 0; font-size: 0.8rem; font-weight: 500; }
+.ob-plano-resumo > span { font-size: 0.78rem; color: var(--ob-cinza, #6b7280); }
+.ob-plano-beneficios { margin: 0; padding: 0; list-style: none; display: grid; gap: 0.3rem; }
+.ob-plano-beneficios li { display: flex; align-items: center; gap: 0.45rem; font-size: 0.8rem; color: var(--grafite, #1f2026); }
+.ob-plano-beneficios li svg { flex: none; color: var(--ob-rosa, #ff2d7a); }
+.ob-plano-comparar { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+.ob-plano-opcao { display: grid; gap: 2px; text-align: left; padding: 0.6rem 0.75rem; border-radius: 12px; border: 1.5px solid var(--ob-fio, #ece7ee); background: #fff; font: inherit; cursor: pointer; color: var(--grafite, #1f2026); transition: border-color .15s ease, box-shadow .15s ease; }
+.ob-plano-opcao strong { font-size: 0.86rem; } .ob-plano-opcao span { font-size: 0.72rem; color: var(--ob-cinza, #6b7280); } .ob-plano-opcao em { font-style: normal; font-size: 0.7rem; color: var(--ob-ameixa, #3d0c4e); }
+.ob-plano-opcao:hover { border-color: #ffc2d8; }
+.ob-plano-opcao.ativa { border-color: var(--ob-rosa, #ff2d7a); box-shadow: 0 0 0 3px #ffe0eb; }
+.ob-card-cats { margin-bottom: 0.2rem; }
+@media (max-width: 900px) { .ob-plano-grade { grid-template-columns: 1fr; } .ob-plano-comparar { grid-template-columns: 1fr; } }

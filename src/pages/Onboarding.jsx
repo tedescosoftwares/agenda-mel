@@ -34,7 +34,7 @@ const PASSOS = [
   { id: 1, rotulo: 'Tipo de conta', foto: 'profissional', bilhete: 'começa por aqui', titulo: 'Como você trabalha?', texto: 'Escolha a opção que mais combina com a sua rotina. Se isso mudar depois, você pode ajustar sem perder seus dados.', roteiro: ['Escolha seu tipo de conta', 'Confira o plano'] },
   { id: 2, rotulo: 'Seus dados', foto: 'agenda-celular', bilhete: 'rapidinho', titulo: 'Agora, seus dados.', texto: 'Precisamos de algumas informações para criar sua conta e identificar o negócio. O que as clientes veem você configura no próximo passo.', roteiro: ['CPF ou CNPJ', 'Endereço de cadastro', 'E-mail, WhatsApp e senha'] },
   { id: 3, rotulo: 'Seu espaço', foto: 'salao', bilhete: 'com a sua cara', titulo: 'Mostre seu espaço.', texto: 'Escolha o nome, adicione fotos, contatos, localização e defina como sua agenda funciona.', roteiro: ['Nome e fotos', 'Contatos e localização', 'Horários e regras'] },
-  { id: 4, rotulo: 'Serviços', foto: 'lifestyle', bilhete: 'seu cardápio', titulo: 'O que suas clientes podem agendar?', texto: 'Cadastre seus principais serviços com preço e duração. Você pode completar a lista depois.', roteiro: ['Cadastre seus serviços', 'Defina preço e duração'] },
+  { id: 4, rotulo: 'Serviços', foto: 'lifestyle', bilhete: 'seu cardápio', titulo: 'O que suas clientes podem agendar?', texto: 'Cadastre seus principais serviços com preço e duração. Você pode completar a lista depois.', roteiro: ['Escolha as categorias', 'Cadastre seus serviços', 'Defina preço e duração'] },
   { id: 5, rotulo: 'Equipe', foto: 'equipe', bilhete: 'quem atende', titulo: 'Agora, sua equipe.', texto: 'Configure cada profissional e deixe a agenda pronta antes de enviar o acesso.', roteiro: ['Adicione as profissionais', 'Configure agendas e serviços', 'Envie os acessos'] },
   { id: 6, rotulo: 'Ativação', foto: 'qr', bilhete: 'tudo pronto', titulo: 'Hora de colocar a agenda pra rodar.', texto: 'Confira se está tudo certo, faça um teste e compartilhe seu link ou QR Code com as clientes.', roteiro: ['Confira o cadastro', 'Teste sua agenda', 'Compartilhe com clientes'] },
 ]
@@ -90,7 +90,7 @@ function EstadoSalvo({ estado }) {
 }
 
 export default function Onboarding({ publico = false }) {
-  const { user, role, salao: salaoAdmin, negocio, recarregarPerfil, loading } = useAuth()
+  const { user, role, salao: salaoAdmin, negocio, recarregarPerfil, loading, signOut } = useAuth()
   const salao = negocio ?? salaoAdmin   // a autônoma não tem 'salao' de admin; o negócio que ela é dona vale pros dois
   const navigate = useNavigate()
   const [s, setS] = useState(publico ? { id: null, tipo: tipoDaURL(), publico: true } : null)   // o salão, como está no banco (com o que a tela mudou por cima)
@@ -156,11 +156,14 @@ export default function Onboarding({ publico = false }) {
     await recarregarPerfil?.()
     navigate(autonoma ? '/pro/agenda' : '/admin', { replace: true })
   }
-  async function sair() {
-    // grava onde parou e vai pro painel (ele volta pra cá enquanto não concluir)
-    await gravar({}, passo)
-    await recarregarPerfil?.()
-    navigate(autonoma ? '/pro/agenda' : '/admin')
+  const [querSair, setQuerSair] = useState(false)
+  function sair() { setQuerSair(true) }
+  // grava onde parou e sai da conta; ao entrar de novo, o cadastro continua daqui
+  async function sairMesmo() {
+    setQuerSair(false)
+    try { await gravar({}, passo) } catch { /* o que deu pra guardar já está guardado */ }
+    await signOut?.()
+    navigate('/pro/entrar', { replace: true })
   }
 
   if (publico && !loading && user && salao) return <Navigate to="/onboarding" replace />
@@ -209,6 +212,7 @@ export default function Onboarding({ publico = false }) {
         {retomado && <div className="ob-retomada"><Wand2 size={15} /><span><strong>Continuando de onde você parou.</strong> O que você já preencheu está guardado; os passos anteriores ficam no menu ao lado.</span><button type="button" onClick={() => setRetomado(false)} aria-label="Fechar"><X size={14} /></button></div>}
         {atual.roteiro && <ol className="ob-roteiro-m" aria-label="Neste passo">{atual.roteiro.map((r, i) => <li key={r} className={feitos[i] ? 'feito' : ''}><b>{feitos[i] ? <Check size={10} /> : i + 1}</b>{r}</li>)}</ol>}
         {erro && <ModalErro texto={erro} onFechar={() => setErro('')} />}
+        {querSair && <ModalSair passo={idx + 1} onFicar={() => setQuerSair(false)} onSair={sairMesmo} />}
         <ProximoCtx.Provider value={passos[idx + 1]?.rotulo ?? ''}>
           <RoteiroCtx.Provider value={setFeitos}>
           <div key={passo} className="ob-passo-corpo">
@@ -328,6 +332,24 @@ function BlocoEndereco({ valor, onChange, obrigatorio, aoAchar, autoCompleteRua 
         <label>UF<select value={valor.uf} onChange={(e) => set({ uf: e.target.value })}><option value="">—</option>{UFS.map((u) => <option key={u} value={u}>{u}</option>)}</select></label>
       </div>
     </>
+  )
+}
+
+// "Sair do cadastro": confirma, lembra que está tudo guardado e sai da conta.
+function ModalSair({ passo, onFicar, onSair }) {
+  return (
+    <div className="modal-fundo ob-modal-fundo" onClick={onFicar}>
+      <div className="modal-caixa ob-modal ob-modal-erro ob-modal-sair" role="dialog" onClick={(e) => e.stopPropagation()}>
+        <button type="button" className="modal-fechar" onClick={onFicar} aria-label="Fechar"><X size={18} /></button>
+        <span className="ob-erro-icone"><LogOut size={22} /></span>
+        <h3>Quer continuar em outro momento?</h3>
+        <p className="ob-erro-texto">Tudo o que você preencheu até o passo {passo} fica guardado. Quando entrar de novo, a gente continua exatamente de onde parou.</p>
+        <div className="ob-modal-acoes">
+          <button type="button" className="btn btn-ghost" onClick={onSair}>Sair por agora</button>
+          <button type="button" className="btn btn-primary" onClick={onFicar} autoFocus>Continuar o cadastro</button>
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -703,18 +725,12 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
   }
   async function mexerFotos(lista) { setFotos(lista); await guardarImagens({ fotos: lista }) }
   const moverFoto = (i, dir) => { const n = [...fotos]; const j = i + dir; if (j < 0 || j >= n.length) return; [n[i], n[j]] = [n[j], n[i]]; mexerFotos(n) }
-  const [cats, setCats] = useState([])
-  const [novaCat, setNovaCat] = useState('')
-  const [verMaisCats, setVerMaisCats] = useState(false)
-  const [escolhidas, setEscolhidas] = useState(Array.isArray(s.categorias_escolhidas) ? s.categorias_escolhidas : [])   // as da plataforma que o salão usa
-  const escolher = (id) => setEscolhidas((x) => (x.includes(id) ? x : [...x, id]))
-  const desescolher = (id) => setEscolhidas((x) => x.filter((y) => y !== id))
   const [copiar, setCopiar] = useState(null)   // null | { dias: Set }
   const [tocouSinal, setTocouSinal] = useState(false)   // o recebimento pelo app só muda se a pessoa mexer no botão
   const [pol, setPol] = useState({ antecedencia_min_minutos: s.antecedencia_min_minutos ?? 60, politica_cancelamento: s.politica_cancelamento ?? 'moderada', permite_remarcar: s.permite_remarcar ?? true, sinal_ligado: (s.pagamento_modo ?? 'nao') !== 'nao', sinal_modo: s.sinal_modo ?? 'fixo', sinal_fixo: emReais(s.sinal_fixo_cents ?? 5000), sinal_pct: s.sinal_pct ?? 50, equipe_prevista: s.equipe_prevista ?? 4, aceite_modo: s.aceite_modo ?? 'casa', minutos_para_aceitar: s.minutos_para_aceitar ?? 120 })
   const p = (k) => (v) => setPol((x) => ({ ...x, [k]: v }))
   // pagamento_modo é o mesmo de Ajustes › Receber pelo app: desligar aqui desliga lá. Só vai no pacote se ela tocou no botão.
-  const dadosDaPolitica = () => ({ ...(nome.trim() ? { name: nome.trim() } : {}), ...dadosDoLocal(), categorias_escolhidas: escolhidas, antecedencia_min_minutos: Number(pol.antecedencia_min_minutos), politica_cancelamento: pol.politica_cancelamento, permite_remarcar: pol.permite_remarcar,
+  const dadosDaPolitica = () => ({ ...(nome.trim() ? { name: nome.trim() } : {}), ...dadosDoLocal(), antecedencia_min_minutos: Number(pol.antecedencia_min_minutos), politica_cancelamento: pol.politica_cancelamento, permite_remarcar: pol.permite_remarcar,
     ...(tocouSinal ? { pagamento_modo: pol.sinal_ligado ? (s.pagamento_modo && s.pagamento_modo !== 'nao' ? s.pagamento_modo : 'opcional') : 'nao' } : {}), sinal_modo: pol.sinal_modo, sinal_fixo_cents: reais(pol.sinal_fixo), sinal_pct: Number(pol.sinal_pct),
     equipe_prevista: Number(pol.equipe_prevista) || null, aceite_modo: pol.aceite_modo, minutos_para_aceitar: Number(pol.minutos_para_aceitar) })
   // autosave: as regras vão pelo onboarding_salvar; os horários, pelo onboarding_horarios
@@ -723,7 +739,7 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
     if (!horas || horas.some((h) => h.open && h.start_time >= h.end_time)) return ok
     const { error } = await supabase.rpc('onboarding_horarios', { salao: s.id, horarios: horas })
     return ok && !error
-  }, { pol, horas, nome, loc, escolhidas }, { ativo: Boolean(s.id) && horas != null })
+  }, { pol, horas, nome, loc }, { ativo: Boolean(s.id) && horas != null })
   useEffect(() => { setEstadoAuto(estado); return () => setEstadoAuto('') }, [estado, setEstadoAuto])
 
   useEffect(() => {
@@ -731,22 +747,7 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
       const base = ORDEM_DIAS.map((d) => { const h = (data ?? []).find((x) => x.weekday === d); return h ? { ...h, start_time: String(h.start_time).slice(0, 5), end_time: String(h.end_time).slice(0, 5) } : { weekday: d, open: d >= 1 && d <= 5, start_time: '08:00', end_time: d === 6 ? '18:00' : '19:00' } })
       setHoras(base)
     })
-    supabase.from('categorias_de_servico').select('id, salon_id, nome, ordem').or(`salon_id.eq.${s.id},salon_id.is.null`).order('ordem').then(({ data }) => setCats(data ?? []))
   }, [s.id])
-
-  const minhasCats = cats.filter((c) => c.salon_id === s.id)
-  async function addCat(nome) {
-    const n = nome.trim(); if (!n) return
-    if (cats.some((c) => c.nome.toLowerCase() === n.toLowerCase())) { setNovaCat(''); return }
-    const { data, error } = await supabase.from('categorias_de_servico').insert({ salon_id: s.id, nome: n, ordem: 500 }).select('id, salon_id, nome, ordem').maybeSingle()
-    if (error) { setErro(error.message); return }
-    setCats((x) => [...x, data]); setNovaCat('')
-  }
-  async function tirarCat(c) {
-    const { error } = await supabase.from('categorias_de_servico').delete().eq('id', c.id)
-    if (error) { setErro('Essa categoria tem serviço: tire os serviços dela primeiro.'); return }
-    setCats((x) => x.filter((y) => y.id !== c.id))
-  }
   const mudaHora = (d, k, v) => setHoras((x) => x.map((h) => (h.weekday === d ? { ...h, [k]: v } : h)))
   function aplicarSegunda() {
     const seg = horas.find((h) => h.weekday === 1)
@@ -908,29 +909,135 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
           <label className="ob-campo">Como os agendamentos são confirmados?<select value={pol.aceite_modo} onChange={(e) => p('aceite_modo')(e.target.value)}><option value="automatico">Confirmar automaticamente</option><option value="casa">O salão confirma{pol.aceite_modo === 'casa' ? ` (até ${pol.minutos_para_aceitar} min)` : ''}</option><option value="profissional">Cada profissional confirma os próprios horários</option></select></label>
           <small className="muted">Você poderá mudar essas regras a qualquer momento em Ajustes.</small>
         </div>
-        {!autonoma && (
-          <div className="ob-card">
-            <strong className="ob-card-titulo">Profissionais com agenda própria</strong>
-            <span className="muted">Quantas profissionais atendem clientes e precisam de agenda própria? Recepção, administração e pessoas sem agenda não entram nessa conta.</span>
-            <div className="ob-contador"><button type="button" onClick={() => p('equipe_prevista')(Math.max(1, Number(pol.equipe_prevista) - 1))} aria-label="Menos"><Minus size={14} /></button><strong>{pol.equipe_prevista}</strong><button type="button" onClick={() => p('equipe_prevista')(Number(pol.equipe_prevista) + 1)} aria-label="Mais"><Plus size={14} /></button></div>
-            {(() => { const c = planoDoNegocio('salao', pol.equipe_prevista); return (
-              <div className="ob-preco-vivo"><small>{c.nome}</small><b>{emDinheiro(c.total)}<small> /mês</small></b><span>{c.extras === 0 ? `Até ${c.plano === 'pro' ? PLANOS.pro.inclusas : PLANOS.promais.inclusas} agendas inclusas.` : `${c.plano === 'pro' ? PLANOS.pro.inclusas : PLANOS.promais.inclusas} inclusas + ${c.extras} × ${emDinheiro(c.valorExtra)}.`}</span></div>
-            ) })()}
-          </div>
-        )}
-        <div className="ob-card">
+        {!autonoma && (() => {
+          const n = Math.max(1, Number(pol.equipe_prevista) || 1)
+          const c = planoDoNegocio('salao', n)
+          const inclusas = c.plano === 'pro' ? PLANOS.pro.inclusas : PLANOS.promais.inclusas
+          const setN = (v) => p('equipe_prevista')(Math.max(1, Math.round(v)))
+          return (
+            <div className="ob-card ob-card-largo ob-plano-card">
+              <div className="ob-plano-grade">
+                <div className="ob-plano-esq">
+                  <strong className="ob-card-titulo">Profissionais com agenda própria</strong>
+                  <span className="muted">Quantas profissionais atendem clientes e precisam de agenda própria? Recepção, administração e quem não atende não entram na conta.</span>
+                  <div className="ob-contador ob-contador-grande"><button type="button" onClick={() => setN(n - 1)} aria-label="Menos"><Minus size={16} /></button><strong>{n}</strong><button type="button" onClick={() => setN(n + 1)} aria-label="Mais"><Plus size={16} /></button></div>
+                  <span className="ob-plano-agendas">{n === 1 ? '1 agenda' : `${n} agendas`} · {c.extras === 0 ? `dentro das ${inclusas} inclusas` : `${inclusas} inclusas + ${c.extras} ${c.extras === 1 ? 'extra' : 'extras'}`}</span>
+                  <div className="ob-plano-barra" aria-hidden="true">{Array.from({ length: Math.max(n, inclusas) }, (_, i) => <i key={i} className={i < n ? (i < inclusas ? 'inclusa' : 'extra') : ''} />)}</div>
+                  <small className="muted">É só uma previsão: você cadastra a equipe no passo 5 e o plano acompanha as agendas ativas. Sem fidelidade.</small>
+                </div>
+                <div className="ob-plano-dir">
+                  <div className="ob-plano-resumo">
+                    <small>Seu plano</small>
+                    <strong>{c.nome}</strong>
+                    <b>{emDinheiro(c.total)}<small> /mês</small></b>
+                    <span>{emDinheiro(c.base)} com {inclusas} agendas inclusas{c.extras > 0 && ` + ${c.extras} × ${emDinheiro(c.valorExtra)}`}</span>
+                  </div>
+                  <ul className="ob-plano-beneficios">
+                    <li><Check size={13} /> Agenda online 24h, com link e QR do salão</li>
+                    <li><Check size={13} /> Uma agenda pra cada profissional, com permissões</li>
+                    <li><Check size={13} /> Lista de espera, confirmações e lembretes pelo WhatsApp</li>
+                    <li><Check size={13} /> Sinal, comanda e repasses</li>
+                  </ul>
+                  <div className="ob-plano-comparar">
+                    <button type="button" className={'ob-plano-opcao' + (c.plano === 'pro' ? ' ativa' : '')} onClick={() => { if (n > PLANOS.pro.ate) setN(PLANOS.pro.ate) }}>
+                      <strong>MIMO Pro</strong><span>até {PLANOS.pro.ate} agendas</span><em>{emDinheiro(PLANOS.pro.base)} com {PLANOS.pro.inclusas} inclusas · {emDinheiro(PLANOS.pro.extra)} por extra</em>
+                    </button>
+                    <button type="button" className={'ob-plano-opcao' + (c.plano === 'promais' ? ' ativa' : '')} onClick={() => { if (n <= PLANOS.pro.ate) setN(PLANOS.promais.inclusas) }}>
+                      <strong>MIMO Pro+</strong><span>{PLANOS.pro.ate + 1} agendas ou mais, sem limite</span><em>{emDinheiro(PLANOS.promais.base)} com {PLANOS.promais.inclusas} inclusas · {emDinheiro(PLANOS.promais.extra)} por extra</em>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )
+        })()}
+      </div>
+      <Rodape voltar={voltar} avancar={avancar} salvando={salvando} />
+    </>
+  )
+}
+
+// ---------- 4 · Serviços -----------------------------------------------------------
+function PassoServicos({ s, seguir, voltar, salvando, setErro, autonoma, gravarQuieto }) {
+  const [servicos, setServicos] = useState(null)
+  const [catsTodas, setCatsTodas] = useState([])   // as da plataforma e as do salão
+  const [novaCat, setNovaCat] = useState('')
+  const [verMaisCats, setVerMaisCats] = useState(false)
+  const [escolhidas, setEscolhidas] = useState(Array.isArray(s.categorias_escolhidas) ? s.categorias_escolhidas : [])   // as da plataforma que o salão usa
+  const escolher = (id) => setEscolhidas((x) => (x.includes(id) ? x : [...x, id]))
+  const desescolher = (id) => setEscolhidas((x) => x.filter((y) => y !== id))
+  const cats = useMemo(() => categoriasDoSalao(catsTodas, s.id, escolhidas), [catsTodas, s.id, escolhidas])
+  // as escolhidas gravam sozinhas
+  const primeiraEscolha = useRef(true)
+  useEffect(() => { if (primeiraEscolha.current) { primeiraEscolha.current = false; return } gravarQuieto?.({ categorias_escolhidas: escolhidas }) }, [escolhidas]) // eslint-disable-line react-hooks/exhaustive-deps
+  const [profs, setProfs] = useState([])
+  const [quem, setQuem] = useState({})     // service_id → [professional_id]
+  const [filtro, setFiltro] = useState('')
+  const [modal, setModal] = useState(null) // null | 'novo' | serviço | { sugestao }
+  const [menu, setMenu] = useState(null)
+  const [exemplos, setExemplos] = useState(false)
+
+  const carregar = useCallback(async () => {
+    const [sv, ct, pr, ps] = await Promise.all([
+      supabase.from('services').select('id, name, description, duration_minutes, price, a_partir, images, categoria_id, active').eq('salon_id', s.id).eq('active', true).order('name'),
+      supabase.from('categorias_de_servico').select('id, salon_id, nome, ordem').or(`salon_id.eq.${s.id},salon_id.is.null`).order('ordem'),
+      supabase.from('professionals').select('id, name, user_id').eq('salon_id', s.id).eq('active', true).order('name'),
+      supabase.from('professional_services').select('professional_id, service_id'),
+    ])
+    setServicos(sv.data ?? []); setCatsTodas(ct.data ?? []); setProfs(pr.data ?? [])
+    const q = {}; for (const x of ps.data ?? []) { (q[x.service_id] ??= []).push(x.professional_id) }
+    setQuem(q)
+  }, [s.id])
+  useEffect(() => { carregar() }, [carregar])
+  const minhasCats = catsTodas.filter((c) => c.salon_id === s.id)
+  useRoteiro([escolhidas.length > 0 || minhasCats.length > 0, (servicos?.length ?? 0) > 0, (servicos?.length ?? 0) > 0 && servicos.every((x) => Number(x.price) > 0 && Number(x.duration_minutes) > 0)])
+  async function addCat(nome) {
+    const n = nome.trim(); if (!n) return
+    if (catsTodas.some((c) => c.nome.toLowerCase() === n.toLowerCase())) { setNovaCat(''); return }
+    const { data, error } = await supabase.from('categorias_de_servico').insert({ salon_id: s.id, nome: n, ordem: 500 }).select('id, salon_id, nome, ordem').maybeSingle()
+    if (error) { setErro(error.message); return }
+    setCatsTodas((x) => [...x, data]); setNovaCat('')
+  }
+  async function tirarCat(c) {
+    const { error } = await supabase.from('categorias_de_servico').delete().eq('id', c.id)
+    if (error) { setErro('Essa categoria tem serviço: tire os serviços dela primeiro.'); return }
+    setCatsTodas((x) => x.filter((y) => y.id !== c.id))
+  }
+
+  const nomeCat = (id) => cats.find((c) => c.id === id)?.nome ?? 'Outros'
+  const lista = (servicos ?? []).filter((x) => !filtro || x.categoria_id === filtro)
+  // sugestões rápidas pelas categorias do salão (nome + duração de referência; preço nunca é inventado)
+  const sugestoes = useMemo(() => {
+    const vistos = new Set((servicos ?? []).map((x) => x.name.toLowerCase()))
+    const out = []
+    for (const c of (minhasCats.length ? minhasCats : cats)) for (const [nome, min] of sugestoesPara(c.nome)) if (!vistos.has(nome.toLowerCase()) && !out.some((o) => o.nome === nome)) out.push({ nome, min, categoria_id: c.id })
+    return out.slice(0, 14)
+  }, [cats, minhasCats, servicos])
+  async function remover(sv) {
+    const { error } = await supabase.from('services').update({ active: false }).eq('id', sv.id)
+    if (error) { setErro(error.message); return }
+    setMenu(null); carregar()
+  }
+  const vazio = (servicos ?? []).length === 0
+  return (
+    <>
+      <div className="ob-titulo-linha">
+        <div><h1 className="ob-titulo">{vazio ? 'Cadastre seus primeiros serviços' : 'Seus serviços'}</h1><p className="ob-sub">{vazio ? 'Comece com os 3 a 5 serviços mais procurados. Depois você pode adicionar quantos quiser.' : 'Defina preço e duração para a MIMO mostrar os horários disponíveis corretamente.'}</p></div>
+        {!vazio && <button type="button" className="btn btn-secondary ob-add" onClick={() => setModal('novo')}><Plus size={15} /> Adicionar serviço</button>}
+      </div>
+      <div className="ob-card ob-card-cats">
           <strong className="ob-card-titulo">Categorias dos serviços</strong>
-          <span className="muted">Escolha as áreas que fazem parte {autonoma ? 'do seu trabalho' : 'do seu salão'}. Isso ajuda a organizar os serviços no próximo passo.</span>
+          <span className="muted">Escolha as áreas que fazem parte {autonoma ? 'do seu trabalho' : 'do seu salão'}. As sugestões de serviço abaixo seguem o que você escolher aqui.</span>
           {(() => {
             const busca = novaCat.trim()
             const igual = (a, b) => a.trim().toLowerCase() === b.trim().toLowerCase()
-            const existente = busca ? cats.find((c) => igual(c.nome, busca)) : null
-            const padrao = cats.filter((c) => !c.salon_id)
+            const existente = busca ? catsTodas.find((c) => igual(c.nome, busca)) : null
+            const padrao = catsTodas.filter((c) => !c.salon_id)
             const usadas = padrao.filter((c) => escolhidas.includes(c.id))
             // sugestões: as da plataforma ainda não escolhidas e os nomes da lista que não existem
             const sugeridas = [
               ...padrao.filter((c) => !escolhidas.includes(c.id)).map((c) => ({ chave: c.id, nome: c.nome, escolherId: c.id })),
-              ...CATEGORIAS_SUGERIDAS.filter((n) => !cats.some((c) => igual(c.nome, n))).map((n) => ({ chave: 'nova:' + n, nome: n })),
+              ...CATEGORIAS_SUGERIDAS.filter((n) => !catsTodas.some((c) => igual(c.nome, n))).map((n) => ({ chave: 'nova:' + n, nome: n })),
             ]
             const filtradas = busca ? sugeridas.filter((x) => x.nome.toLowerCase().includes(busca.toLowerCase())) : sugeridas
             const visiveis = busca || verMaisCats ? filtradas : filtradas.slice(0, SUGESTOES_A_MOSTRA)
@@ -962,59 +1069,6 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
             )
           })()}
         </div>
-      </div>
-      <Rodape voltar={voltar} avancar={avancar} salvando={salvando} />
-    </>
-  )
-}
-
-// ---------- 4 · Serviços -----------------------------------------------------------
-function PassoServicos({ s, seguir, voltar, salvando, setErro }) {
-  const [servicos, setServicos] = useState(null)
-  const [cats, setCats] = useState([])
-  const [profs, setProfs] = useState([])
-  const [quem, setQuem] = useState({})     // service_id → [professional_id]
-  const [filtro, setFiltro] = useState('')
-  const [modal, setModal] = useState(null) // null | 'novo' | serviço | { sugestao }
-  const [menu, setMenu] = useState(null)
-  const [exemplos, setExemplos] = useState(false)
-
-  const carregar = useCallback(async () => {
-    const [sv, ct, pr, ps] = await Promise.all([
-      supabase.from('services').select('id, name, description, duration_minutes, price, a_partir, images, categoria_id, active').eq('salon_id', s.id).eq('active', true).order('name'),
-      supabase.from('categorias_de_servico').select('id, salon_id, nome, ordem').or(`salon_id.eq.${s.id},salon_id.is.null`).order('ordem'),
-      supabase.from('professionals').select('id, name, user_id').eq('salon_id', s.id).eq('active', true).order('name'),
-      supabase.from('professional_services').select('professional_id, service_id'),
-    ])
-    setServicos(sv.data ?? []); setCats(categoriasDoSalao(ct.data ?? [], s.id, s.categorias_escolhidas)); setProfs(pr.data ?? [])
-    const q = {}; for (const x of ps.data ?? []) { (q[x.service_id] ??= []).push(x.professional_id) }
-    setQuem(q)
-  }, [s.id])
-  useEffect(() => { carregar() }, [carregar])
-  useRoteiro([(servicos?.length ?? 0) > 0, (servicos?.length ?? 0) > 0 && servicos.every((x) => Number(x.price) > 0 && Number(x.duration_minutes) > 0)])
-
-  const nomeCat = (id) => cats.find((c) => c.id === id)?.nome ?? 'Outros'
-  const lista = (servicos ?? []).filter((x) => !filtro || x.categoria_id === filtro)
-  // sugestões rápidas pelas categorias do salão (nome + duração de referência; preço nunca é inventado)
-  const minhasCats = cats.filter((c) => c.salon_id === s.id)
-  const sugestoes = useMemo(() => {
-    const vistos = new Set((servicos ?? []).map((x) => x.name.toLowerCase()))
-    const out = []
-    for (const c of (minhasCats.length ? minhasCats : cats)) for (const [nome, min] of sugestoesPara(c.nome)) if (!vistos.has(nome.toLowerCase()) && !out.some((o) => o.nome === nome)) out.push({ nome, min, categoria_id: c.id })
-    return out.slice(0, 14)
-  }, [cats, minhasCats, servicos])
-  async function remover(sv) {
-    const { error } = await supabase.from('services').update({ active: false }).eq('id', sv.id)
-    if (error) { setErro(error.message); return }
-    setMenu(null); carregar()
-  }
-  const vazio = (servicos ?? []).length === 0
-  return (
-    <>
-      <div className="ob-titulo-linha">
-        <div><h1 className="ob-titulo">{vazio ? 'Cadastre seus primeiros serviços' : 'Seus serviços'}</h1><p className="ob-sub">{vazio ? 'Comece com os 3 a 5 serviços mais procurados. Depois você pode adicionar quantos quiser.' : 'Defina preço e duração para a MIMO mostrar os horários disponíveis corretamente.'}</p></div>
-        {!vazio && <button type="button" className="btn btn-secondary ob-add" onClick={() => setModal('novo')}><Plus size={15} /> Adicionar serviço</button>}
-      </div>
       {!vazio && (
         <div className="chips ob-chips">
           <button type="button" className={'chip' + (!filtro ? ' active' : '')} onClick={() => setFiltro('')}>Todos</button>

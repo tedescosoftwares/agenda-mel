@@ -831,12 +831,19 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
             </div>
           </div>
         </div>
+        <div className="ob-ponte">
+          <span className="ob-ponte-icone"><Sparkles size={16} /></span>
+          <span><strong>{nome.trim() ? `${nome.trim()} já tem cara.` : 'Nome e fotos prontos?'}</strong> Agora vamos ao que faz a cliente chegar até {autonoma ? 'você' : 'vocês'}: contatos, endereço e horário de funcionamento. Depois, as regras da agenda{autonoma ? '.' : ' e o tamanho da equipe.'}</span>
+        </div>
         <div className="ob-coluna">
           <div className="ob-card">
             <strong className="ob-card-titulo">{autonoma ? 'Seus contatos' : 'Contatos do salão'}</strong>
-            <span className="muted">É por aqui que a cliente fala com {autonoma ? 'você' : 'vocês'}. O WhatsApp aparece na sua página com o botão de conversar.</span>
+            <span className="muted">É por aqui que a cliente fala com {autonoma ? 'você' : 'vocês'}.</span>
             <div className="ob-form">
-              <label>WhatsApp {autonoma ? 'de contato' : 'comercial'} <b>*</b><span className="ob-fone"><span className="ob-ddi">🇧🇷 +55</span><input type="tel" inputMode="numeric" value={loc.whatsapp} onChange={(e) => setLoc((x) => ({ ...x, whatsapp: formatarFone(e.target.value) }))} placeholder="(11) 91234-5678" autoComplete="tel" /></span></label>
+              <div className="ob-zap-principal">
+                <label>WhatsApp {autonoma ? 'de contato' : 'comercial'} <b>*</b><em className="ob-zap-selo"><MessageCircle size={11} /> Número da assistente</em><span className="ob-fone"><span className="ob-ddi">🇧🇷 +55</span><input type="tel" inputMode="numeric" value={loc.whatsapp} onChange={(e) => setLoc((x) => ({ ...x, whatsapp: formatarFone(e.target.value) }))} placeholder="(11) 91234-5678" autoComplete="tel" /></span></label>
+                <p className="ob-zap-nota"><strong>Esse é o número principal.</strong> É nele que a MIMO liga o atendimento automático pelo WhatsApp: confirmações, lembretes e a assistente que responde as clientes. Ele também aparece na sua página com o botão de conversar. Dá pra trocar depois, em Ajustes. Recepção, fixo e outros números vão nos campos abaixo.</p>
+              </div>
               <label>Telefone <span className="muted">(fixo ou celular · opcional)</span>{loc.telefones.map((_, i) => campoContato('telefones', i, 'telefone'))}{maisLink('telefones', 'Adicionar outro telefone')}</label>
               <label>E-mail de contato <span className="muted">(opcional)</span>{loc.emails.map((_, i) => campoContato('emails', i, 'email'))}{maisLink('emails', loc.emails.length ? 'Adicionar outro e-mail' : 'Adicionar e-mail')}</label>
             </div>

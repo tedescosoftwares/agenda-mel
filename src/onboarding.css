@@ -631,3 +631,14 @@
 .ob-acao-mini { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.4rem 0.7rem; border-radius: 999px; border: 1px solid #ffc2d8; background: #fff; color: var(--ob-rosa, #ff2d7a); font: inherit; font-size: 0.76rem; font-weight: 700; cursor: pointer; transition: background .15s ease; }
 .ob-acao-mini:hover { background: #fff0f6; } .ob-acao-mini:disabled { opacity: 0.55; cursor: default; }
 .ob-acao-mini.neutro { color: var(--ob-cinza, #6b7280); border-color: var(--ob-fio, #ece7ee); }
+
+/* ---- 3 · a ponte entre os blocos e o WhatsApp principal em destaque ---- */
+.ob-ponte { grid-column: 1 / -1; display: flex; gap: 0.7rem; align-items: flex-start; padding: 0.8rem 1rem; border-radius: 16px; background: linear-gradient(135deg, #fff0f6, #fdf6fb); border: 1px solid #ffc2d8; font-size: 0.9rem; line-height: 1.5; color: var(--ob-ameixa, #3d0c4e); }
+.ob-ponte-icone { flex: none; width: 30px; height: 30px; border-radius: 10px; background: #fff; color: var(--ob-rosa, #ff2d7a); display: grid; place-items: center; box-shadow: 0 4px 12px rgba(255, 45, 122, 0.18); }
+.ob-ponte strong { color: var(--ob-rosa, #ff2d7a); }
+.ob-zap-principal { display: flex; flex-direction: column; gap: 0.5rem; padding: 0.75rem 0.8rem; border-radius: 14px; background: var(--ob-lilas, #fbf6fb); border: 1.5px solid #ffc2d8; }
+.ob-zap-principal label { color: var(--ob-ameixa, #3d0c4e); }
+.ob-zap-principal .ob-fone input { border-color: #ffc2d8; }
+.ob-zap-selo { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; font-style: normal; font-size: 0.62rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #fff; background: var(--ob-rosa, #ff2d7a); padding: 3px 8px; border-radius: 999px; }
+.ob-zap-nota { margin: 0; font-size: 0.76rem; line-height: 1.45; color: var(--ob-cinza, #6b7280); }
+.ob-zap-nota strong { color: var(--ob-ameixa, #3d0c4e); }

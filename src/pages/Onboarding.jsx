@@ -16,7 +16,7 @@ import { forcaDaSenha } from '../lib/senha'
 import { linkDoCodigo } from '../lib/convite'
 import { urlDoAmbiente } from '../lib/ambiente'
 import { formatPreco } from '../lib/format'
-import { sugestoesPara, primeiroNome } from '../lib/equipe'
+import { sugestoesPara, primeiroNome, enviarAcesso } from '../lib/equipe'
 import { categoriasDoSalao } from '../lib/categorias'
 import { REDES, limparRede } from '../components/IconesSociais'
 import ProfissionalDrawer, { CartaoProfissional } from '../components/ProfissionalDrawer'
@@ -1279,6 +1279,11 @@ function PassoEquipe({ s, seguir, voltar, salvando, setErro }) {
   async function acao(qual, p) {
     setErro(''); setAviso('')
     if (qual === 'enviado') { try { await supabase.rpc('equipe_acesso_enviado', { prof: p.id }) } catch { /* segue */ } carregar(); return }
+    if (qual === 'enviar') {
+      if (!p.email) { setAviso(`Cadastre o e-mail de ${primeiroNome(p.name)}: é por ele que o acesso chega.`); setGaveta(p); return }
+      try { const r = await enviarAcesso(supabase, p); setAviso(`Acesso enviado para ${r.email}. Se quiser, avisa no WhatsApp pra ela olhar o e-mail.`) } catch (e) { setErro(e.message) }
+      carregar(); return
+    }
     if (qual === 'copiado') { setAviso(`Link de acesso de ${primeiroNome(p.name)} copiado.`); try { await supabase.rpc('equipe_acesso_enviado', { prof: p.id }) } catch { /* segue */ } carregar(); return }
     if (qual === 'remover' && !window.confirm(`Remover ${p.name} do salão? O histórico de atendimentos dela fica guardado.`)) return
     const { error } = await supabase.rpc('equipe_situacao', { prof: p.id, acao: qual })

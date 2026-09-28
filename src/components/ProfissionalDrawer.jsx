@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { X, Check, ArrowRight, ArrowLeft, Camera, Copy, MessageCircle, Info, Sparkles, Clock, Percent, ShieldCheck, UserRound, Store, Link2 } from 'lucide-react'
+import { X, Check, ArrowRight, ArrowLeft, Camera, Copy, MessageCircle, Mail, Info, Sparkles, Clock, Percent, ShieldCheck, UserRound, Store, Link2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { reduzirFoto } from '../lib/imagem'
 import { formatarFone } from '../lib/fone'
 import { formatPreco, formatDuracao } from '../lib/format'
 import { urlDoAmbiente } from '../lib/ambiente'
-import { VINCULOS, AVISO_VINCULO, PERMISSOES, PERMISSOES_RECOMENDADAS, presetDoVinculo, vinculoPor, FUNCOES, resumoDias, mensagemDeAcesso, primeiroNome, situacaoDe } from '../lib/equipe'
+import { VINCULOS, AVISO_VINCULO, PERMISSOES, PERMISSOES_RECOMENDADAS, presetDoVinculo, vinculoPor, FUNCOES, resumoDias, mensagemDeAcesso, primeiroNome, situacaoDe, enviarAcesso, linkWhats } from '../lib/equipe'
 import Avatar from './Avatar'
 import '../equipe.css'
 
@@ -58,7 +58,8 @@ export default function ProfissionalDrawer({ salao, profissional = null, servico
 
   function validar(ate) {
     if (ate >= 1 && !f.name.trim()) { setAba(1); setErro('Diga o nome completo dela.'); return false }
-    if (ate >= 1 && f.phone.replace(/\D/g, '').length < 10) { setAba(1); setErro('Diga o WhatsApp: é por ele que ela ativa o acesso.'); return false }
+    if (ate >= 1 && f.phone.replace(/\D/g, '').length < 10) { setAba(1); setErro('Diga o WhatsApp: é por ele que chegam os avisos.'); return false }
+    if (ate >= 1 && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(f.email.trim())) { setAba(1); setErro('Diga o e-mail: é por ele que ela recebe o acesso.'); return false }
     if (ate >= 4 && !f.usa_horario_salao) for (const h of f.horarios ?? []) if (h.open && h.start_time >= h.end_time) { setAba(4); setErro(`${DIAS[h.weekday]}: o fim precisa ser depois do início.`); return false }
     if (ate >= 5 && f.repasse !== 'nao') { const c = Number(f.cota_pct); if (!(c >= 0 && c <= 100)) { setAba(5); setErro('O percentual vai de 0 a 100.'); return false } }
     setErro(''); return true
@@ -109,7 +110,15 @@ export default function ProfissionalDrawer({ salao, profissional = null, servico
   }
   async function marcarEnviado() { if (salva?.id) try { await supabase.rpc('equipe_acesso_enviado', { prof: salva.id }) } catch { /* segue */ } }
   function copiar() { navigator.clipboard?.writeText(link); setCopiado(true); setTimeout(() => setCopiado(false), 2000); marcarEnviado() }
-  const whats = link ? `https://wa.me/55${f.phone.replace(/\D/g, '')}?text=${encodeURIComponent(mensagemDeAcesso({ salao: salao.name, profissional: f.name, link }))}` : ''
+  // o acesso vai por e-mail (129); depois dá pra avisar no WhatsApp
+  const [enviadoPara, setEnviadoPara] = useState('')
+  const [enviando, setEnviando] = useState(false)
+  async function enviarEmail() {
+    if (!salva?.id) return
+    setEnviando(true); setErro('')
+    try { const r = await enviarAcesso(supabase, { id: salva.id }, f.email.trim()); setEnviadoPara(r.email) } catch (e) { setErro(e.message) } finally { setEnviando(false) }
+  }
+  const whats = link ? linkWhats(f.phone, mensagemDeAcesso({ salao: salao.name, profissional: f.name, link, email: enviadoPara || f.email.trim() })) : ''
 
   return (
     <div className="gv-fundo" onClick={onFechar}>
@@ -140,7 +149,7 @@ export default function ProfissionalDrawer({ salao, profissional = null, servico
                 </div>
               </div>
               <div className="gv-form gv-form-2">
-                <label>E-mail <span className="muted">(opcional)</span><input type="email" value={f.email} onChange={m('email')} placeholder="carla@exemplo.com" /></label>
+                <label>E-mail <span className="muted">(o acesso chega por ele)</span><input type="email" value={f.email} onChange={m('email')} placeholder="carla@exemplo.com" /></label>
                 <label>Função <span className="muted">(opcional)</span><input value={f.especialidade} onChange={m('especialidade')} placeholder="Cabeleireira" list="gv-funcoes" /><datalist id="gv-funcoes">{FUNCOES.map((x) => <option key={x} value={x} />)}</datalist></label>
               </div>
               <label className="gv-form gv-bio">Apresentação <span className="muted">(opcional, aparece na página dela)</span><textarea rows={2} value={f.bio} onChange={m('bio')} placeholder="Especialista em loiros e cortes modernos…" /></label>
@@ -265,8 +274,11 @@ export default function ProfissionalDrawer({ salao, profissional = null, servico
                   {salva.situacao === 'configurada' && link ? (
                     <div className="gv-acesso">
                       <strong>Agora é só mandar o acesso</strong>
-                      <p className="muted">Ela abre o link, confirma o WhatsApp, cria a senha e entra com a agenda pronta. Não precisa escolher serviço, preço, vínculo nem horário.</p>
-                      <a className="btn btn-primary btn-block" href={whats} target="_blank" rel="noreferrer" onClick={marcarEnviado}><MessageCircle size={16} /> Enviar acesso pelo WhatsApp</a>
+                      <p className="muted">O acesso vai por e-mail pra <b>{f.email.trim()}</b>: ela abre o link, cria a senha e entra com a agenda pronta. Não precisa escolher serviço, preço, vínculo nem horário.</p>
+                      {enviadoPara
+                        ? <div className="alert alert-info">Enviado para {enviadoPara}. Se quiser, avisa no WhatsApp pra ela olhar o e-mail.</div>
+                        : <button type="button" className="btn btn-primary btn-block" onClick={enviarEmail} disabled={enviando}><Mail size={16} /> {enviando ? 'Enviando…' : 'Enviar acesso por e-mail'}</button>}
+                      {enviadoPara && <a className="btn btn-ghost btn-block" href={whats} target="_blank" rel="noreferrer"><MessageCircle size={16} /> Avisar no WhatsApp</a>}
                       <div className="gv-link"><input readOnly value={link} onFocus={(e) => e.target.select()} /><button type="button" className="btn-mini" onClick={copiar}><Copy size={12} /> {copiado ? 'Copiado!' : 'Copiar link'}</button></div>
                     </div>
                   ) : salva.situacao === 'ativa' ? (
@@ -338,8 +350,8 @@ export function CartaoProfissional({ p, salao, onConfigurar, onAcao, menuAberto,
   const sit = situacaoDe(p)
   const n = (p.servicos ?? []).length
   const link = p.token ? urlDoAmbiente('pro', `/ativar/${p.token}`) : ''
-  const whats = link ? `https://wa.me/55${String(p.phone ?? '').replace(/\D/g, '')}?text=${encodeURIComponent(mensagemDeAcesso({ salao: salao?.name, profissional: p.name, link }))}` : ''
   const pendente = p.situacao === 'configurada' && !p.user_id
+  const whats = pendente && link && p.acesso_enviado_em ? linkWhats(p.phone, mensagemDeAcesso({ salao: salao?.name, profissional: p.name, link, email: p.email })) : ''
   return (
     <div className={'eq-cartao' + (p.situacao === 'inativa' ? ' inativa' : '')}>
       <Avatar nome={p.name} foto={p.photo_url} />
@@ -351,14 +363,15 @@ export function CartaoProfissional({ p, salao, onConfigurar, onAcao, menuAberto,
       <div className="eq-cartao-lado">
         <span className={'gv-situacao ' + sit.cor}>{sit.rotulo}</span>
         {p.situacao === 'rascunho' && <button type="button" className="btn-mini" onClick={() => onConfigurar(p)}>Configurar profissional</button>}
-        {pendente && whats && <a className="btn-mini" href={whats} target="_blank" rel="noreferrer" onClick={() => onAcao('enviado', p)}><MessageCircle size={12} /> Enviar acesso</a>}
+        {pendente && <button type="button" className="btn-mini" onClick={() => onAcao('enviar', p)}><Mail size={12} /> {p.acesso_enviado_em ? 'Reenviar acesso' : 'Enviar acesso'}</button>}
+        {whats && <a className="btn-mini btn-mini-neutro" href={whats} target="_blank" rel="noreferrer" onClick={() => onAcao('enviado', p)}><MessageCircle size={12} /> Avisar no WhatsApp</a>}
       </div>
       <span className="ob-td-menu eq-cartao-menu">
         <button type="button" className="ob-menu-btn" onClick={() => setMenu(menuAberto === p.id ? null : p.id)} aria-label="Opções">•••</button>
         {menuAberto === p.id && (
           <span className="ob-menu">
             {!p.dona && <button type="button" onClick={() => { setMenu(null); onConfigurar(p) }}>Editar configuração</button>}
-            {pendente && link && <button type="button" onClick={() => { setMenu(null); window.open(whats, '_blank'); onAcao('enviado', p) }}>Reenviar acesso</button>}
+            {pendente && <button type="button" onClick={() => { setMenu(null); onAcao('enviar', p) }}>Reenviar acesso por e-mail</button>}
             {pendente && link && <button type="button" onClick={() => { setMenu(null); navigator.clipboard?.writeText(link); onAcao('copiado', p) }}>Copiar link</button>}
             {p.slug && <button type="button" onClick={() => { setMenu(null); window.open(urlDoAmbiente('cliente', `/p/${p.slug}`), '_blank') }}>Ver link dela</button>}
             {!p.dona && p.situacao !== 'inativa' && p.situacao !== 'rascunho' && <button type="button" onClick={() => { setMenu(null); onAcao('desativar', p) }}>Desativar</button>}

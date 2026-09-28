@@ -79,9 +79,19 @@ export function resumoDias(horarios) {
 export const primeiroNome = (nome) => String(nome ?? '').trim().split(/\s+/)[0] || 'ela'
 
 // o link de acesso que a profissional recebe, e a mensagem de WhatsApp pronta
-export function mensagemDeAcesso({ salao, profissional, link }) {
-  return `Oi, ${primeiroNome(profissional)}! Sua agenda no ${salao} já está pronta na MIMO. Ative seu acesso por aqui: ${link}`
+export function mensagemDeAcesso({ salao, profissional, link, email }) {
+  return email
+    ? `Oi, ${primeiroNome(profissional)}! Te mandei o acesso da sua agenda no ${salao} por e-mail (${email}). Dá uma olhada lá, é só abrir o link e criar a senha 💗 Se não achar, confere o spam. Se preferir, é este link: ${link}`
+    : `Oi, ${primeiroNome(profissional)}! Sua agenda no ${salao} já está pronta na MIMO. Ative seu acesso por aqui: ${link}`
 }
+
+// manda o e-mail de acesso (129) e devolve { email, link, whats }
+export async function enviarAcesso(supabase, p, email) {
+  const { data, error } = await supabase.rpc('acesso_enviar', { prof: p.id, email_: email ?? null, base: window.location.origin })
+  if (error) throw new Error(error.message)
+  return data
+}
+export const linkWhats = (fone, texto) => `https://wa.me/55${String(fone ?? '').replace(/\D/g, '')}?text=${encodeURIComponent(texto)}`
 
 // ---- serviços sugeridos por categoria (passo 4) ------------------------------------
 // só nome e uma duração de referência: preço nunca é inventado

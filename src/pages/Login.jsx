@@ -35,7 +35,7 @@ export default function Login({ ambiente = AMBIENTE }) {
   // o link de acesso que o salão mandou (119): a conta nasce ligada à ficha já configurada
   const ativar = (q.get('ativar') || '').toLowerCase().replace(/[^a-f0-9]/g, '').slice(0, 16)
   const [modo, setModo] = useState(q.get('modo') === 'cadastro' ? 'cadastro' : q.get('modo') === 'esqueci' ? 'esqueci' : 'login') // login | cadastro | esqueci
-  const [email, setEmail] = useState('')
+  const [email, setEmail] = useState(q.get('email') || '')
   const [senha, setSenha] = useState('')
   const [nome, setNome] = useState('')
   const [fone, setFone] = useState(q.get('fone') || '')
@@ -140,7 +140,7 @@ export default function Login({ ambiente = AMBIENTE }) {
   const sub = modo === 'login' ? (pro ? 'Entre para ver os horários de hoje' : 'Entre para continuar')
     : modo === 'esqueci' ? 'Mandamos um link para o seu e-mail'
     : papel === 'equipe' ? 'Crie a conta e você já entra na equipe do salão, com a sua agenda.'
-    : papel === 'ativar' ? 'Crie a senha e você entra com a agenda que o salão já configurou.'
+    : papel === 'ativar' ? 'Crie a senha e você entra com a agenda que o salão já configurou. Use o e-mail em que o acesso chegou.'
     : papel ? 'Leva um minuto. Depois é só compartilhar seu código com as clientes.'
     : 'Leva menos de um minuto'
 

@@ -4,42 +4,38 @@ import { Store, Check, Sparkles, CalendarDays, ShieldCheck } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { MarcaIcon, Wordmark } from '../../components/icons'
-import { formatarFone } from '../../lib/fone'
 import { resumoDias, primeiroNome } from '../../lib/equipe'
 
-// O link de acesso que o salão manda (119). A profissional abre, vê que o
-// salão já deixou a agenda pronta, confirma o WhatsApp e cria a senha
-// (ou entra, se já tem conta). Nada de escolher vínculo, serviço, preço
-// ou horário: isso o salão já configurou.
+// O link de acesso que chega por e-mail (119, 129). A profissional abre,
+// vê que o salão já deixou a agenda pronta e cria a senha (ou entra, se
+// já tem conta). O link é o segredo: nada de conferir telefone. Nada de
+// escolher vínculo, serviço, preço ou horário: isso o salão já configurou.
 export default function AtivarAcesso() {
   const { token } = useParams()
   const { user, role, loading, recarregarPerfil } = useAuth()
   const navigate = useNavigate()
   const [acesso, setAcesso] = useState(undefined)
-  const [etapa, setEtapa] = useState(1)   // 1 boas-vindas · 2 confirmar telefone
-  const [fone, setFone] = useState('')
   const [erro, setErro] = useState('')
   const [indo, setIndo] = useState(false)
   const [pronta, setPronta] = useState(null)
 
   useEffect(() => { supabase.rpc('acesso_por_token', { token }).then(({ data }) => setAcesso(data ?? null)) }, [token])
 
-  // já logada: confirma o telefone e ativa na hora
+  // já logada: ativa na hora
   async function ativar() {
-    if (fone.replace(/\D/g, '').length < 10) { setErro('Digite o seu WhatsApp, com DDD.'); return }
     setIndo(true); setErro('')
-    const { data, error } = await supabase.rpc('ativar_acesso', { token, fone })
+    const { data, error } = await supabase.rpc('ativar_acesso', { token })
     setIndo(false)
     if (error) { setErro(error.message); return }
     setPronta(data)
     await recarregarPerfil?.()
   }
-  // sem conta: confere o telefone aqui (o final tem que bater) e manda pro cadastro com o token
+  // sem conta: cria a senha com o e-mail e o WhatsApp que o salão cadastrou já preenchidos
   function seguirParaCadastro() {
-    const d = fone.replace(/\D/g, '')
-    if (d.length < 10) { setErro('Digite o seu WhatsApp, com DDD.'); return }
-    if (acesso?.profissional?.telefone_final && !d.endsWith(acesso.profissional.telefone_final)) { setErro('Esse número não é o que o salão cadastrou. Confere com quem te mandou o link.'); return }
-    navigate(`/pro/entrar?modo=cadastro&papel=ativar&ativar=${token}&fone=${encodeURIComponent(fone)}`)
+    const q = new URLSearchParams({ modo: 'cadastro', papel: 'ativar', ativar: token })
+    if (acesso?.profissional?.email) q.set('email', acesso.profissional.email)
+    if (acesso?.profissional?.telefone) q.set('fone', acesso.profissional.telefone)
+    navigate(`/pro/entrar?${q.toString()}`)
   }
 
   if (loading || acesso === undefined) return <div className="page-center"><p className="muted">Carregando…</p></div>
@@ -80,26 +76,18 @@ export default function AtivarAcesso() {
             <SalaoCabeca acesso={acesso} />
             <div className="alert alert-info">Esta conta já é dona de um negócio. Pra entrar numa equipe, saia e use outra conta.</div>
           </>
-        ) : etapa === 1 ? (
+        ) : (
           <>
             <SalaoCabeca acesso={acesso} />
             <h2 className="login-titulo">Você foi adicionada ao {acesso.salao.nome}</h2>
-            <p className="ativar-nome"><strong>{p.nome}</strong>{p.especialidade && <span className="muted">{` · ${p.especialidade}`}</span>}<small className="muted">{`WhatsApp final ${p.telefone_final}`}</small></p>
+            <p className="ativar-nome"><strong>{p.nome}</strong>{p.especialidade && <span className="muted">{` · ${p.especialidade}`}</span>}{p.email && <small className="muted">{p.email}</small>}</p>
             <p className="muted login-sub">O salão já configurou sua agenda. Você não precisa escolher serviço, preço, vínculo nem horário.</p>
             <ul className="pronto-lista convite-lista ativar-lista">
               <li><Sparkles size={14} /><span>{`${p.servicos} ${p.servicos === 1 ? 'serviço configurado' : 'serviços configurados'}`}</span></li>
               <li><CalendarDays size={14} /><span>{`Atende ${resumoDias((p.dias ?? []).map((d) => ({ weekday: d, open: true })))}`}</span></li>
               <li><ShieldCheck size={14} /><span>Sua agenda, seu link e suas clientes, dentro do salão</span></li>
             </ul>
-            <button type="button" className="btn btn-primary btn-block" onClick={() => setEtapa(2)}>Continuar</button>
-          </>
-        ) : (
-          <>
-            <SalaoCabeca acesso={acesso} />
-            <h2 className="login-titulo">Confirme o seu WhatsApp</h2>
-            <p className="muted login-sub">O número que o salão cadastrou termina em <b>{p.telefone_final}</b>. Digite o seu, com DDD, pra confirmar que é você.</p>
             {erro && <div className="alert alert-error">{erro}</div>}
-            <label className="ativar-fone">WhatsApp<input type="tel" inputMode="numeric" value={fone} onChange={(e) => setFone(formatarFone(e.target.value))} placeholder="(11) 98765-4321" autoFocus /></label>
             {user
               ? <button type="button" className="btn btn-primary btn-block" onClick={ativar} disabled={indo}>{indo ? 'Ativando…' : 'Ativar meu acesso'}</button>
               : <>

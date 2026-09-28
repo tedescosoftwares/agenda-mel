@@ -1,4 +1,5 @@
 import { Sparkles, BookOpen, Clock } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { avisoDoAcesso } from '../lib/acesso'
 
@@ -16,7 +17,12 @@ export default function AcessoAviso({ para = 'admin' }) {
         <strong>{a.titulo}</strong>
         <span className="muted">{a.texto}</span>
       </div>
-      {a.acao && <a className="btn btn-primary acesso-aviso-botao" href={a.acao.href}>{a.acao.rotulo}</a>}
+      {a.acao && (
+        <div className="acesso-aviso-acoes">
+          <a className="btn btn-primary acesso-aviso-botao" href={a.acao.href}>{a.acao.rotulo}</a>
+          <Link to="/admin/assinatura" className="btn btn-ghost btn-mini">Como funciona</Link>
+        </div>
+      )}
     </div>
   )
 }

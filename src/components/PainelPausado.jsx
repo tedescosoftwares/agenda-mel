@@ -1,4 +1,5 @@
 import { PauseCircle, LogOut } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { LINK_ASSINAR, dataCurta } from '../lib/acesso'
 
@@ -17,7 +18,7 @@ export default function PainelPausado({ para = 'admin' }) {
           {' '}Nada foi apagado: serviços, equipe, clientes e histórico continuam guardados.
         </p>
         {dona
-          ? <><p>Assine pra reabrir o painel e voltar a receber agendamentos na hora.</p><a className="btn btn-primary" href={LINK_ASSINAR}>Assinar a MIMO</a></>
+          ? <><p>Assine pra reabrir o painel e voltar a receber agendamentos na hora.</p><a className="btn btn-primary" href={LINK_ASSINAR}>Assinar a MIMO</a><Link to="/admin/assinatura" className="btn btn-ghost btn-mini">Ver plano e valores</Link></>
           : <p>Fale com a dona do salão: assim que a assinatura estiver em dia, sua agenda volta sozinha.</p>}
         <button type="button" className="btn btn-ghost btn-mini" onClick={signOut}><LogOut size={14} /> Sair da conta</button>
       </div>

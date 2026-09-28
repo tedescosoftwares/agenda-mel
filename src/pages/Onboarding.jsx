@@ -986,6 +986,10 @@ function PassoQuaseLa({ s, voltar, salvando, concluir, pronto, autonoma, gravarQ
                     <b>{emDinheiro(c.total)}<small> /mês</small></b>
                     <span>{emDinheiro(c.base)} com {inclusas} agendas inclusas{c.extras > 0 && ` + ${c.extras} × ${emDinheiro(c.valorExtra)}`}</span>
                   </div>
+                  <div className="ob-plano-gratis">
+                    <strong>7 dias grátis, sem cartão</strong>
+                    <span>Você não paga nada agora. O teste começa quando você ativar o link e o QR no painel. Depois, {emDinheiro(c.total)}/mês, sem fidelidade.</span>
+                  </div>
                   <ul className="ob-plano-beneficios">
                     <li><Check size={13} /> Agenda online 24h, com link e QR do salão</li>
                     <li><Check size={13} /> Uma agenda pra cada profissional, com permissões</li>
@@ -1011,7 +1015,7 @@ function PassoQuaseLa({ s, voltar, salvando, concluir, pronto, autonoma, gravarQ
           <div className="ob-depois-lista">
             <div className="ob-depois-item"><span className="ob-depois-icone"><Sparkles size={18} /></span><strong>Serviços</strong><small>Nome, duração e preço. Com sugestões por categoria pra ir rápido.</small></div>
             {!autonoma && <div className="ob-depois-item"><span className="ob-depois-icone"><Users size={18} /></span><strong>Equipe</strong><small>Cada profissional com os seus serviços e horários. Ela recebe um link e entra com tudo pronto.</small></div>}
-            <div className="ob-depois-item apagado"><span className="ob-depois-icone"><QrCode size={18} /></span><strong>Link e QR Code</strong><small>Aparecem assim que {autonoma ? 'os serviços estiverem' : 'serviços e equipe estiverem'} prontos. Aí é só divulgar.</small></div>
+            <div className="ob-depois-item apagado"><span className="ob-depois-icone"><QrCode size={18} /></span><strong>Link e QR Code</strong><small>Aparecem assim que {autonoma ? 'os serviços estiverem prontos. Sua agenda é grátis, sem prazo.' : 'serviços e equipe estiverem prontos. Ativar libera o link e começa seus 7 dias grátis.'}</small></div>
           </div>
         </div>
       </div>

@@ -6,6 +6,8 @@ import { supabase } from '../lib/supabase'
 import { urlDoAmbiente } from '../lib/ambiente'
 import { ativarPush } from '../lib/push'
 import { useAuth } from '../context/AuthContext'
+import { REGRAS } from '../lib/acesso'
+import AtivarSalao from './AtivarSalao'
 
 // O onboarding não morre no botão de finalizar (119): o painel mostra os
 // primeiros passos até o salão rodar de verdade, a equipe que ainda não
@@ -24,14 +26,12 @@ export default function PrimeirosPassos({ salao, para = 'admin' }) {
     setR(data ?? null)
   }, [salao?.id])
   useEffect(() => { carregar() }, [carregar])
-  // já está configurado e o QR aparece aqui, mas nunca foi ativado (veio antes da 126): ativa agora
-  const configuradoSemAtivar = Boolean(r) && !salao?.ativado_em && Number(r.servicos ?? 0) > 0 && (r.tipo === 'autonoma' || Number(r.equipe ?? 0) > 0)
+  // autônoma já configurada e ainda sem link liberado: libera sozinha (não tem teste nem cobrança)
+  const autonomaSemLink = Boolean(r) && r.tipo === 'autonoma' && !salao?.ativado_em && Number(r.servicos ?? 0) > 0
   useEffect(() => {
-    if (!configuradoSemAtivar || !salao?.id) return
+    if (!autonomaSemLink || !salao?.id) return
     supabase.rpc('salao_ativar', { salao: salao.id }).then(({ error }) => { if (!error) { recarregarAcesso?.(); recarregarPerfil?.() } })
-  }, [configuradoSemAtivar, salao?.id]) // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { if (qr.current && link) QRCode.toCanvas(qr.current, link, { width: 72, margin: 1, color: { dark: '#1f2026', light: '#ffffff' } }).catch(() => {}) }, [link, r])
-
+  }, [autonomaSemLink, salao?.id]) // eslint-disable-line react-hooks/exhaustive-deps
   if (!r) return null
   const autonoma = r.tipo === 'autonoma'
   const n = (k) => Number(r[k] ?? 0)
@@ -51,15 +51,23 @@ export default function PrimeirosPassos({ salao, para = 'admin' }) {
           <div className="pp-concluir-texto">
             <span className="pp-concluir-selo"><Sparkles size={12} /> Estamos quase lá</span>
             <strong>Conclua a configuração {autonoma ? 'da sua agenda' : 'do seu salão'}</strong>
-            <span className="muted">{autonoma ? 'Falta cadastrar os serviços. Depois disso o link e o QR Code aparecem aqui.' : `${falta}. Depois disso o link e o QR Code aparecem aqui, prontos pra divulgar.`}</span>
+            <span className="muted">{autonoma ? 'Falta cadastrar os serviços. Depois disso o link e o QR Code aparecem aqui.' : `${falta}. Depois você ativa o salão: o link e o QR Code aparecem aqui e começam seus ${REGRAS.testeDias} dias grátis, sem cartão.`}</span>
             <ul className="pp-concluir-etapas">
               <li className={n('servicos') > 0 ? 'ok' : ''}><span className="pp-check">{n('servicos') > 0 ? <Check size={12} /> : <Circle size={12} />}</span>Serviços</li>
               {!autonoma && <li className={n('equipe') > 0 ? 'ok' : ''}><span className="pp-check">{n('equipe') > 0 ? <Check size={12} /> : <Circle size={12} />}</span>Equipe</li>}
-              <li className="trava"><span className="pp-check"><Circle size={12} /></span>Ativação com link e QR</li>
+              <li className="trava"><span className="pp-check"><Circle size={12} /></span>{autonoma ? 'Liberar o link e o QR' : `Ativação: link, QR e ${REGRAS.testeDias} dias grátis`}</li>
             </ul>
           </div>
           <Link to={para === 'admin' ? '/admin/configurar' : '/pro/configurar'} className="btn btn-primary pp-concluir-botao">Continuar configuração</Link>
         </div>
+        <EquipePendente r={r} />
+      </>
+    )
+  }
+  if (!autonoma && !salao?.ativado_em) {
+    return (
+      <>
+        <AtivarSalao s={{ ...salao, tipo: r.tipo }} onAtivado={() => carregar()} />
         <EquipePendente r={r} />
       </>
     )

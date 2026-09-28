@@ -2,6 +2,18 @@ import { EMAIL_CONTATO } from './termos'
 
 // O acesso do salão (126): o que `acesso_do_salao` devolve, em palavras.
 //   gratis · configurando · teste · ativa · leitura · bloqueado
+// as regras (126): iguais às do banco, regras_da_assinatura()
+export const REGRAS = { testeDias: 7, toleranciaDias: 5, prazoAtivacaoDias: 30 }
+
+// a linha do tempo do teste, pra explicar em qualquer tela
+export const LINHA_DO_TESTE = [
+  { quando: 'Hoje', titulo: 'Você ativa o salão', texto: 'Link e QR Code passam a receber agendamentos. Sem cartão, sem cobrança.' },
+  { quando: `${REGRAS.testeDias} dias`, titulo: 'Tudo liberado, grátis', texto: 'Agenda, equipe, WhatsApp, comanda: o painel inteiro, de verdade, com clientes de verdade.' },
+  { quando: 'Dia 5', titulo: 'A gente lembra', texto: 'Um aviso no app, no push e no WhatsApp, com o link pra assinar. Sem surpresa.' },
+  { quando: `Dia ${REGRAS.testeDias}`, titulo: 'Acabou o teste?', texto: `Se ainda não assinou, o salão fica ${REGRAS.toleranciaDias} dias em modo leitura: os horários marcados continuam valendo, mas o link não recebe agendamento novo.` },
+  { quando: `Dia ${REGRAS.testeDias + REGRAS.toleranciaDias}`, titulo: 'Painel pausado', texto: 'Nada é apagado. Assinou, voltou tudo na hora.' },
+]
+
 export const LINK_ASSINAR = `mailto:${EMAIL_CONTATO}?subject=${encodeURIComponent('Quero assinar a MIMO')}`
 
 export const dataCurta = (v) => (v ? new Date(v).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : '')

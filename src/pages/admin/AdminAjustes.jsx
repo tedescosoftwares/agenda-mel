@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Store, Wallet, Users, Sparkles, Clock, BadgePercent, Megaphone, MessageCircle, BarChart3, QrCode, ChevronRight, Monitor, HandCoins } from 'lucide-react'
+import { Store, CreditCard, Wallet, Users, Sparkles, Clock, BadgePercent, Megaphone, MessageCircle, BarChart3, QrCode, ChevronRight, Monitor, HandCoins } from 'lucide-react'
 import AdminShell from '../../components/AdminShell'
 import { useAuth } from '../../context/AuthContext'
 import { useDialogo } from '../../context/DialogoContext'
@@ -17,7 +17,7 @@ import { MODOS } from '../../lib/pagamento'
 const DIAS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb']
 
 export default function AdminAjustes() {
-  const { salao, saloes, trocarSalao } = useAuth()
+  const { salao, saloes, trocarSalao, acesso } = useAuth()
   const { confirmar } = useDialogo()
   const [codigo, setCodigo] = useState(salao?.codigo ?? null)
   const [qr, setQr] = useState(false)
@@ -126,6 +126,18 @@ export default function AdminAjustes() {
           </div>
         )}
       </div>
+
+      {/* plano e assinatura (126) */}
+      {salao?.tipo !== 'autonoma' && (
+        <Link to="/admin/assinatura" className="card aj-salao aj-link">
+          <span className="aj-salao-logo"><CreditCard size={22} /></span>
+          <div className="aj-salao-quem">
+            <strong>Plano e assinatura</strong>
+            <span className="muted">{acesso?.fase === 'teste' ? `Teste grátis: faltam ${acesso.dias} dias` : acesso?.fase === 'leitura' ? 'Modo leitura: assine pra voltar a receber' : acesso?.fase === 'ativa' ? 'Assinatura em dia' : 'Valores, teste grátis e como funciona'}</span>
+          </div>
+          <span className="icon-btn" aria-hidden="true"><ChevronRight size={18} /></span>
+        </Link>
+      )}
 
       {/* o código do balcão, compacto */}
       <div className="card aj-codigo">

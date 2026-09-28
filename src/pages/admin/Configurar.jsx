@@ -1,22 +1,25 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Check, Lock, Sparkles, Users, QrCode } from 'lucide-react'
 import AdminShell from '../../components/AdminShell'
 import ProShell from '../../components/ProShell'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
+import AtivarSalao from '../../components/AtivarSalao'
+import { dataCurta } from '../../lib/acesso'
 import { PassoServicos, PassoEquipe, PassoAtivacao, ModalErro, EstadoSalvo } from '../Onboarding'
 
 // Conclua a configuração (painel): o que saiu do cadastro vem pra cá,
 // guiado do mesmo jeito. Serviços → Equipe (salão) → Ativação com o link
 // e o QR, que só abre quando serviços e equipe estão prontos.
 export default function Configurar({ para = 'admin' }) {
-  const { salao: salaoAdmin, negocio, recarregarPerfil, recarregarAcesso } = useAuth()
+  const { salao: salaoAdmin, negocio, recarregarPerfil, acesso } = useAuth()
+  const [busca] = useSearchParams()
   const base = para === 'admin' ? (salaoAdmin ?? negocio) : (negocio ?? salaoAdmin)
   const autonoma = base?.tipo === 'autonoma'
   const navigate = useNavigate()
   const [s, setS] = useState(null)
-  const [passo, setPasso] = useState(1)   // 1 serviços · 2 equipe (só salão) · 3 ativação
+  const [passo, setPasso] = useState(busca.get('etapa') === 'ativacao' ? 3 : 1)   // 1 serviços · 2 equipe (só salão) · 3 ativação
   const [erro, setErro] = useState('')
   const [salvando, setSalvando] = useState(false)
   const [pronto, setPronto] = useState(false)
@@ -32,15 +35,6 @@ export default function Configurar({ para = 'admin' }) {
     return data ?? {}
   }, [s?.id])
   useEffect(() => { carregarResumo() }, [carregarResumo, passo])
-  // chegou na Ativação: o link e o QR estão liberados, e o teste grátis começa a contar (126)
-  useEffect(() => {
-    if (passo !== 3 || !s?.id || s.ativado_em) return
-    supabase.rpc('salao_ativar', { salao: s.id }).then(({ data, error }) => {
-      if (error) return
-      setS((x) => ({ ...x, ativado_em: new Date().toISOString(), acesso: data }))
-      recarregarAcesso?.()
-    })
-  }, [passo, s?.id, s?.ativado_em]) // eslint-disable-line react-hooks/exhaustive-deps
   const n = (k, r = resumo) => Number(r?.[k] ?? 0)
   const prontoParaAtivar = (r = resumo) => Boolean(r) && n('servicos', r) > 0 && (autonoma || n('equipe', r) > 0)
 
@@ -99,7 +93,13 @@ export default function Configurar({ para = 'admin' }) {
           <div key={passo} className="ob-passo-corpo">
             {passo === 1 && <PassoServicos {...props} />}
             {passo === 2 && <PassoEquipe {...props} />}
-            {passo === 3 && <PassoAtivacao {...props} />}
+            {passo === 3 && !s.ativado_em && <AtivarSalao s={s} embutido onErro={setErro} onAtivado={() => setS((x) => ({ ...x, ativado_em: new Date().toISOString() }))} />}
+            {passo === 3 && s.ativado_em && (
+              <>
+                {acesso?.fase === 'teste' && <p className="cfg-teste"><Sparkles size={13} /> Seu teste grátis vai até {dataCurta(acesso.ate)}. <a href="/admin/assinatura">Como funciona</a></p>}
+                <PassoAtivacao {...props} />
+              </>
+            )}
           </div>
         )}
       </div>

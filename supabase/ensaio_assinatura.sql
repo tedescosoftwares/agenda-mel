@@ -8,6 +8,7 @@ begin
   select ps.service_id into serv from public.professional_services ps where ps.professional_id = prof limit 1;
   select p.id into cli from public.profiles p where p.role = 'cliente' limit 1;
   delete from public.assinaturas where salon_id = sid;
+  delete from public.notifications where user_id = dona and kind = 'teste_comecou';
   update public.salons set ativado_em = null, onboarding_concluido_em = now() where id = sid;
 
   -- 1. sem ativação: configurando, aceita agendamento
@@ -21,6 +22,7 @@ begin
   ac := public.salao_ativar(sid);
   if ac ->> 'fase' <> 'teste' or (ac ->> 'dias')::int <> 7 then raise exception '2: %', ac; end if;
   if (select ativado_em from public.salons where id = sid) is null then raise exception '2b: ativado_em'; end if;
+  if (select count(*) from public.notifications where user_id = dona and kind = 'teste_comecou') <> 1 then raise exception '2d: sem aviso de início'; end if;
   ac := public.salao_ativar(sid);   -- de novo não reinicia
   if (ac ->> 'dias')::int <> 7 then raise exception '2c: %', ac; end if;
   raise notice '2 teste: % dias até %', ac ->> 'dias', ac ->> 'ate';

@@ -21,6 +21,7 @@ import ClienteSalao from "./pages/cliente/ClienteSalao";
 import ClienteCategoria from "./pages/cliente/ClienteCategoria";
 import AdminSalao from "./pages/admin/AdminSalao";
 import Configurar from "./pages/admin/Configurar";
+import AdminAssinatura from "./pages/admin/AdminAssinatura";
 import ProFecharDia from "./pages/pro/ProFecharDia";
 import AdminFecharDia from "./pages/admin/AdminFecharDia";
 import ClientePerfil from "./pages/cliente/ClientePerfil";
@@ -275,6 +276,7 @@ export default function App() {
             <Route path="/cliente/salao/:id/categoria/:cat" element={<ProtectedRoute requireRole="cliente"><ClienteCategoria /></ProtectedRoute>} />
             <Route path="/admin/salao" element={<ProtectedRoute requireRole="admin"><AdminSalao /></ProtectedRoute>} />
             <Route path="/admin/configurar" element={<ProtectedRoute requireRole="admin"><Configurar para="admin" /></ProtectedRoute>} />
+            <Route path="/admin/assinatura" element={<ProtectedRoute requireRole="admin"><AdminAssinatura /></ProtectedRoute>} />
             <Route path="/cliente/servico/:id" element={<ProtectedRoute requireRole="cliente"><ClienteServico /></ProtectedRoute>} />
             <Route path="/pro/promocoes" element={<ProtectedRoute requireRole="profissional"><ProPromocoes /></ProtectedRoute>} />
             <Route path="/admin/promocoes" element={<ProtectedRoute requireRole="admin"><AdminPromocoes /></ProtectedRoute>} />

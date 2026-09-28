@@ -107,6 +107,8 @@ echo    %B%%L%B%X%  atualizar o BANCO         %D%(aplicar.sh - so o que falta)%X
 echo    %B%%L%9%X%  publicar as FUNCOES       %D%(publicar.sh - Supabase)%X%
 echo    %B%%L%P%X%  configurar push + e-mail  %D%(configurar-push.sh)%X%
 echo    %B%%L%N%X%  trocar o NUMERO do Whats  %D%(trocar-numero.sh)%X%
+echo    %B%%L%V%X%  VER outra branch no ar    %D%(so o site; pra experimentar)%X%
+echo    %B%%L%R%X%  voltar pra branch principal
 echo    %B%%L%0%X%  sair
 echo.
 set /p "OP=%L% > %X%"
@@ -124,6 +126,8 @@ if /i "%OP%"=="P" goto push
 if /i "%OP%"=="N" goto numero
 if /i "%OP%"=="W" goto religar
 if /i "%OP%"=="B" goto banco
+if /i "%OP%"=="V" goto verbranch
+if /i "%OP%"=="R" goto voltarbranch
 if "%OP%"=="0" exit /b 0
 echo  %A%opcao invalida%X%
 timeout /t 2 >nul
@@ -146,7 +150,7 @@ if /i not "%OK%"=="SIM" (
   goto fim
 )
 echo.
-%SSH% "cd %PROJETO% && git pull --ff-only origin %BRANCH% && ./supabase/aplicar.sh --se-configurado && cd evolution && ./publicar-site.sh"
+%SSH% "cd %PROJETO% && git checkout -q %BRANCH% && git pull --ff-only origin %BRANCH% && ./supabase/aplicar.sh --se-configurado && cd evolution && ./publicar-site.sh"
 if errorlevel 1 (
   echo.
   echo  %R%[X] a publicacao falhou. Leia o erro acima.%X%
@@ -186,17 +190,48 @@ goto fim
 
 :banco
 echo.
-%SSH% "cd %PROJETO% && git pull --ff-only origin %BRANCH% && ./supabase/aplicar.sh"
+%SSH% "cd %PROJETO% && git checkout -q %BRANCH% && git pull --ff-only origin %BRANCH% && ./supabase/aplicar.sh"
 goto fim
 
 :funcoes
 echo.
-%SSH% "cd %PROJETO% && git pull --ff-only origin %BRANCH% && ./supabase/publicar.sh"
+%SSH% "cd %PROJETO% && git checkout -q %BRANCH% && git pull --ff-only origin %BRANCH% && ./supabase/publicar.sh"
+goto fim
+
+:verbranch
+echo.
+echo  %A%[!] Isto troca o SITE no ar por outra branch, so pra ver.%X%
+echo      O banco e as funcoes nao mudam. Pra voltar, use a opcao %L%R%X%.
+echo.
+set "OUTRA=chatgpt/lapida-visual-mimo"
+set /p "OUTRA=%L%  branch (Enter = %OUTRA%): %X%"
+if "%OUTRA%"=="" set "OUTRA=chatgpt/lapida-visual-mimo"
+echo.
+%SSH% "cd %PROJETO% && git fetch -q origin %OUTRA% && git checkout -q -B %OUTRA% origin/%OUTRA% && cd evolution && ./publicar-site.sh --so-build"
+if errorlevel 1 (
+  echo.
+  echo  %R%[X] nao deu. Leia o erro acima; a opcao %L%R%X% volta pra branch principal.%X%
+) else (
+  echo.
+  echo  %P%[ok]%X% %L%%OUTRA%%X% no ar em %L%%SITE%%X%  %D%(lembre de voltar com R)%X%
+)
+goto fim
+
+:voltarbranch
+echo.
+%SSH% "cd %PROJETO% && git checkout -q %BRANCH% && git pull --ff-only origin %BRANCH% && cd evolution && ./publicar-site.sh --so-build"
+if errorlevel 1 (
+  echo.
+  echo  %R%[X] nao deu. Leia o erro acima.%X%
+) else (
+  echo.
+  echo  %P%[ok]%X% de volta em %L%%BRANCH%%X%
+)
 goto fim
 
 :push
 echo.
-%SSH% "cd %PROJETO% && git pull --ff-only origin %BRANCH% && ./supabase/configurar-push.sh"
+%SSH% "cd %PROJETO% && git checkout -q %BRANCH% && git pull --ff-only origin %BRANCH% && ./supabase/configurar-push.sh"
 goto fim
 
 :numero

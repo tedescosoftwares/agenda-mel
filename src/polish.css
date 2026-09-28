@@ -172,3 +172,458 @@ body {
     transition: none !important;
   }
 }
+
+
+/* ==========================================================
+   PASSADA 2 — lapidação visual perceptível
+   ========================================================== */
+
+.content {
+  padding-top: 1.25rem;
+}
+
+.miolo {
+  padding-bottom: .5rem;
+}
+
+/* Cabeçalho de página vira um bloco visual, não só uma linha */
+.page-head {
+  margin: 0 0 1.15rem;
+  padding: 1.05rem 1.1rem;
+  border: 1px solid rgba(255, 45, 122, .10);
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.98), rgba(255,247,251,.96)),
+    var(--superficie);
+  box-shadow: 0 8px 26px rgba(62, 12, 78, .055);
+}
+
+.page-head h2 {
+  font-size: 1.65rem;
+  letter-spacing: -.035em;
+}
+
+.page-head p,
+.titulo-dia {
+  margin-top: .18rem;
+  color: #7b7e88;
+}
+
+/* Cards mais claros e com hierarquia melhor */
+.card {
+  border-radius: 18px;
+  border-color: rgba(228, 225, 231, .9);
+  background: rgba(255,255,255,.98);
+}
+
+.card + .card {
+  margin-top: .72rem;
+}
+
+.cliente-list,
+.envio-list,
+.barra-list {
+  gap: .75rem;
+}
+
+.cliente-row,
+.prof-row,
+.retorno-row,
+.envio-card,
+.aviso-row {
+  transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+}
+
+.cliente-row,
+.prof-row,
+.retorno-row {
+  min-height: 74px;
+  align-items: center;
+}
+
+.cliente-info {
+  min-width: 0;
+}
+
+.cliente-nome,
+.barra-nome,
+.envio-cliente {
+  font-weight: 650;
+  color: #26232a;
+}
+
+.cliente-meta,
+.barra-nota,
+.numero-nota,
+.aviso-quando {
+  color: #8b8e97 !important;
+}
+
+/* Avatares ficam com cara de produto */
+.avatar-iniciais {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  font-weight: 700;
+  background: linear-gradient(135deg, rgba(255,45,122,.12), rgba(170,76,255,.12));
+  color: var(--ameixa);
+  border: 1px solid rgba(170,76,255,.10);
+}
+
+/* Busca */
+.search-box {
+  min-height: 50px;
+  border-radius: 16px;
+  background: #fff;
+  border: 1px solid rgba(214,217,224,.9);
+  box-shadow: 0 5px 18px rgba(31,32,38,.045);
+  margin-bottom: 1rem;
+}
+
+.search-box:focus-within {
+  border-color: rgba(255,45,122,.55);
+  box-shadow: 0 0 0 4px rgba(255,45,122,.07), 0 7px 20px rgba(31,32,38,.05);
+}
+
+.search-box input {
+  font-size: .95rem;
+}
+
+/* Chips / filtros */
+.filtro-chips {
+  gap: .5rem;
+  margin: 0 0 1rem;
+  padding-bottom: .1rem;
+}
+
+.chip {
+  min-height: 38px;
+  padding: .52rem .9rem;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid rgba(214,217,224,.95);
+  color: #6f727d;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(31,32,38,.035);
+}
+
+.chip.active {
+  color: #fff;
+  border-color: transparent;
+  background: var(--gradiente);
+  box-shadow: 0 5px 14px rgba(255,45,122,.20);
+}
+
+/* Abas Dia/Semana */
+.abas {
+  padding: 3px;
+  border-radius: 13px;
+  background: #f2f1f4;
+  border: 1px solid #ece9ef;
+}
+
+.aba {
+  min-height: 34px;
+  border-radius: 10px;
+  padding: .4rem .7rem;
+}
+
+.aba.active {
+  background: #fff;
+  color: var(--rosa);
+  box-shadow: 0 2px 8px rgba(31,32,38,.07);
+}
+
+/* Métricas e números ganham presença */
+.painel-agora {
+  gap: .75rem;
+  margin-bottom: 1rem;
+}
+
+.painel-tile {
+  padding: 1rem;
+  background:
+    linear-gradient(145deg, rgba(255,255,255,1), rgba(255,247,251,.92));
+  border-color: rgba(255,45,122,.10);
+}
+
+.painel-tile strong {
+  font-size: 1.85rem;
+  line-height: 1;
+  color: var(--ameixa);
+  letter-spacing: -.04em;
+}
+
+.numero-heroi {
+  position: relative;
+  overflow: hidden;
+  padding: 1.3rem;
+  background:
+    radial-gradient(18rem 9rem at 105% -10%, rgba(255,45,122,.16), transparent 66%),
+    linear-gradient(145deg, #fff, #fff9fc);
+  border-color: rgba(255,45,122,.14);
+}
+
+.numero-heroi::after {
+  content: '';
+  position: absolute;
+  width: 86px;
+  height: 86px;
+  right: -28px;
+  bottom: -34px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(255,45,122,.09), rgba(170,76,255,.08));
+}
+
+.numero-grande {
+  font-size: clamp(2rem, 8vw, 3rem);
+  letter-spacing: -.055em;
+  color: var(--ameixa);
+}
+
+.numero-rotulo {
+  color: #8a758e;
+  font-weight: 600;
+}
+
+.grade-numeros {
+  gap: .75rem;
+}
+
+.numero-cartao {
+  padding: 1rem;
+}
+
+/* Barras de desempenho */
+.barra-list {
+  background: #fff;
+  border: 1px solid rgba(228,225,231,.9);
+  border-radius: 18px;
+  padding: 1rem;
+  box-shadow: var(--sombra);
+}
+
+.barra-item + .barra-item {
+  border-top: 1px solid rgba(228,225,231,.72);
+  padding-top: .9rem;
+}
+
+.barra-trilho {
+  height: 7px;
+  border-radius: 999px;
+  background: #f0edf2;
+  overflow: hidden;
+}
+
+.barra-preenche {
+  border-radius: inherit;
+  background: linear-gradient(90deg, #ff2d7a, #ff78aa);
+}
+
+/* Botões mais premium */
+.btn {
+  border-radius: 14px;
+  font-weight: 650;
+}
+
+.btn-primary {
+  background: linear-gradient(100deg, #ff2d7a 0%, #ff5e97 55%, #ff79aa 100%);
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: translateY(1px) scale(.995);
+}
+
+.btn-ghost {
+  border-color: rgba(255,45,122,.24);
+  background: rgba(255,255,255,.96);
+}
+
+.btn-mini {
+  border-radius: 10px;
+  padding: .42rem .68rem;
+}
+
+/* Alertas mais organizados */
+.alert {
+  border-radius: 14px;
+  padding: .85rem 1rem;
+  margin-bottom: .85rem;
+}
+
+/* Agenda: blocos mais fáceis de escanear */
+.agenda-dia,
+.agenda-list,
+.agenda-semana {
+  gap: .7rem;
+}
+
+.atendimento-card,
+.agenda-card,
+.horario-card,
+.appointment-card {
+  border-radius: 18px;
+}
+
+.rodape-fixo {
+  background: linear-gradient(to top, rgba(248,247,250,1) 68%, rgba(248,247,250,0));
+  padding-top: 1.2rem;
+}
+
+/* Topbar e navegação */
+.brand-inline {
+  gap: .35rem;
+}
+
+.bottom-nav-inner {
+  padding: .28rem .35rem .32rem;
+  gap: .18rem;
+}
+
+.nav-item {
+  margin: .2rem 0;
+  border-radius: 13px;
+}
+
+.nav-item.active {
+  background: linear-gradient(180deg, rgba(255,45,122,.075), rgba(255,45,122,.025));
+}
+
+.nav-item span {
+  font-size: .66rem;
+}
+
+.nav-mais {
+  transform: translateY(-9px);
+  border: 4px solid var(--tinta);
+}
+
+/* Login vira uma tela de produto */
+.login-bg {
+  background:
+    radial-gradient(42rem 26rem at 50% -4rem, rgba(255,45,122,.12), transparent 64%),
+    radial-gradient(28rem 22rem at 90% 110%, rgba(170,76,255,.09), transparent 70%),
+    #f8f7fa;
+}
+
+.login-card {
+  max-width: 410px;
+  padding: 2rem 1.65rem 1.45rem;
+  border-radius: 24px;
+  border-color: rgba(255,45,122,.10);
+  box-shadow: 0 24px 70px rgba(61,12,78,.11), 0 5px 18px rgba(31,32,38,.05);
+}
+
+.brand {
+  margin-bottom: 1.4rem;
+}
+
+.login-titulo {
+  font-size: 1.55rem;
+  letter-spacing: -.035em;
+}
+
+.login-sub {
+  margin-top: -.1rem;
+  margin-bottom: 1.1rem;
+}
+
+.login-card .form {
+  gap: .9rem;
+}
+
+.login-card .form input,
+.login-card .form textarea,
+.login-card .form select {
+  min-height: 48px;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.convite-faixa {
+  border-radius: 14px;
+  border: 1px solid rgba(255,45,122,.12);
+  background: linear-gradient(135deg, rgba(255,45,122,.07), rgba(170,76,255,.05));
+}
+
+/* Vitrine / cliente */
+.prof-capa,
+.vit-capa {
+  border-radius: 22px;
+  overflow: hidden;
+}
+
+.vit-galeria img,
+.service-photo,
+.servico-imagem {
+  border-radius: 16px;
+}
+
+.aviso-enviar {
+  text-decoration: none;
+  border-color: rgba(18,160,106,.16);
+  background: linear-gradient(135deg, #fff, rgba(18,160,106,.045));
+}
+
+/* Desktop pequeno/tablet: dá mais respiro sem perder mobile-first */
+@media (min-width: 700px) {
+  :root {
+    --largura: 720px;
+  }
+
+  .content {
+    padding-top: 1.6rem;
+  }
+
+  .page-head {
+    padding: 1.2rem 1.3rem;
+  }
+
+  .card {
+    padding: 1.2rem 1.25rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .page-head {
+    padding: .95rem 1rem;
+    border-radius: 16px;
+  }
+
+  .page-head h2 {
+    font-size: 1.5rem;
+  }
+
+  .numero-heroi {
+    padding: 1.15rem;
+  }
+
+  .login-card {
+    border-radius: 22px;
+  }
+
+  .bottom-nav-inner {
+    padding-left: .18rem;
+    padding-right: .18rem;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .cliente-row:hover,
+  .prof-row:hover,
+  .retorno-row:hover,
+  .envio-card:hover,
+  .aviso-row:hover {
+    transform: translateY(-1px);
+    border-color: rgba(255,45,122,.16);
+    box-shadow: 0 10px 28px rgba(31,32,38,.07);
+  }
+
+  .chip:hover {
+    border-color: rgba(255,45,122,.24);
+  }
+}

@@ -7370,3 +7370,6 @@ label.switch:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
 .assin-st { font-size: 0.7rem; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; background: #f3eef3; color: var(--cinza-3, #6b7280); white-space: nowrap; }
 .assin-st.pago { background: #e8f7ee; color: #15803d; } .assin-st.aguardando, .assin-st.a_criar { background: #fff6e8; color: #b45309; } .assin-st.falhou { background: #fff0f0; color: #b91c1c; }
 .assin-preco s { font-size: 0.9rem; font-weight: 600; color: var(--cinza-3, #6b7280); margin-right: 4px; }
+
+.fp-escolhas { display: grid; gap: 0.5rem; }
+.assin-acoes { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }

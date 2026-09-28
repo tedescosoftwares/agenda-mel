@@ -302,9 +302,11 @@ export async function cobrarPixMimo(p: { customer: string; valorCents: number; d
 }
 
 // ---- Pix Automático (contrato a confirmar na sondagem) ----
-function corpoAutorizacao(p: { customer: string; descricao: string; inicio: string; tetoCents: number; ref: string }) {
+function corpoAutorizacao(p: { customer: string; descricao: string; inicio: string; tetoCents: number; ref: string; contrato: string }) {
   return {
     customer: p.customer,
+    // o identificador do contrato entre a MIMO e o salão (idContrato do BCB: até 35 caracteres)
+    contractId: p.contrato.replace(/[^A-Za-z0-9]/g, '').slice(0, 35),
     description: p.descricao.slice(0, 100),
     paymentCreationMode: 'MANUAL',      // a MIMO calcula o valor de cada mês e cria cada cobrança
     frequency: 'MONTHLY',
@@ -325,7 +327,7 @@ function lerAutorizacao(r: any) {
   }
 }
 
-export async function criarAutorizacaoPixAutomatico(p: { customer: string; descricao: string; inicio: string; tetoCents: number; ref: string }) {
+export async function criarAutorizacaoPixAutomatico(p: { customer: string; descricao: string; inicio: string; tetoCents: number; ref: string; contrato: string }) {
   const r = await asaas(chavePai(), 'POST', '/pix/automatic/authorizations', corpoAutorizacao(p))
   const a = lerAutorizacao(r)
   // algumas respostas devolvem o QR só na consulta

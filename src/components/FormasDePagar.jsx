@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import QRCode from 'qrcode'
-import { X, CreditCard, Copy, Check, ShieldCheck, Smartphone, RefreshCw } from 'lucide-react'
+import { X, CreditCard, Copy, Check, ShieldCheck, Smartphone, RefreshCw, Receipt } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { isDemo } from '../lib/supabase'
 import { reais } from '../lib/planos'
@@ -8,13 +8,16 @@ import { REGRAS, dataCurta } from '../lib/acesso'
 import { METODOS, assinatura, mascaraCartao, mascaraValidade, cartaoValido, autorizado } from '../lib/assinatura'
 
 // O modal de pagar a MIMO (128). `modo`:
+//   'escolher'        a lista das três formas, pra trocar
 //   'cartao'          vincula o cartão (cobrarAgora: paga o primeiro mês já)
 //   'pix_automatico'  cria a autorização e mostra o QR pra autorizar no banco
 //   'pix_avista'      abre o Pix do primeiro mês e mostra o copia e cola
 // `valores` = mensalidade_do_salao; `acesso` = acesso_do_salao. Ao terminar,
 // chama onFeito(acesso novo).
-export default function FormasDePagar({ salao, modo, cobrarAgora = false, valores, acesso, onFechar, onFeito }) {
+export default function FormasDePagar({ salao, modo: modoInicial, cobrarAgora: cobrarInicial = false, valores, acesso, onFechar, onFeito, permitirAvista = true }) {
   const { recarregarAcesso } = useAuth()
+  const [modo, setModo] = useState(modoInicial)
+  const [cobrarAgora, setCobrarAgora] = useState(cobrarInicial)
   const [erro, setErro] = useState('')
   const [indo, setIndo] = useState(false)
   const [resultado, setResultado] = useState(null)   // o que a função devolveu
@@ -32,6 +35,27 @@ export default function FormasDePagar({ salao, modo, cobrarAgora = false, valore
     <div className="modal-fundo" onClick={fechar}>
       <div className="modal-caixa fp-caixa" role="dialog" onClick={(e) => e.stopPropagation()}>
         <button type="button" className="modal-fechar" onClick={fechar} aria-label="Fechar"><X size={18} /></button>
+
+        {modo === 'escolher' && (
+          <div className="fp-form">
+            <span className="fp-selo"><CreditCard size={12} /> Forma de pagamento</span>
+            <h3>Como você prefere pagar?</h3>
+            <p className="muted fp-explica">{acesso?.metodo && !acesso.cancelada ? `Hoje: ${acesso.metodo === 'cartao' ? `cartão final ${acesso.cartao_final}` : acesso.metodo === 'pix_automatico' ? 'Pix Automático' : 'Pix à vista'}. Escolha outra e a anterior deixa de valer.` : 'Escolha uma. Dá pra trocar quando quiser.'}</p>
+            <div className="fp-escolhas">
+              <button type="button" className="assin-opcao" onClick={() => setModo('pix_automatico')}>
+                <Smartphone size={16} /><span><b>Pix Automático</b><em>{reais(comDescontoPix / 100)}/mês · {REGRAS.descontoPixAutomaticoPct}% off</em><small>Autoriza uma vez no app do banco; o débito cai sozinho todo mês.</small></span>
+              </button>
+              <button type="button" className="assin-opcao" onClick={() => { setCobrarAgora(permitirAvista && acesso?.fase !== 'ativa'); setModo('cartao') }}>
+                <CreditCard size={16} /><span><b>Cartão de crédito</b><em>{reais(cheio / 100)}/mês</em><small>Cobrado todo mês no cartão. O número não fica guardado na MIMO.</small></span>
+              </button>
+              {permitirAvista && (
+                <button type="button" className="assin-opcao" onClick={() => { setCobrarAgora(true); setModo('pix_avista') }}>
+                  <Receipt size={16} /><span><b>Pix à vista</b><em>{reais(cheio / 100)} agora{bonus ? ` · ${REGRAS.periodoDias + bonus} dias` : ''}</em><small>Paga pelo QR Code hoje. Todo mês a gente manda o Pix do mês seguinte.</small></span>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         {modo === 'cartao' && !resultado && (
           <Cartao salao={salao} cobrarAgora={cobrarAgora} total={total} bonus={bonus} cobrarEm={cobrarEm} indo={indo} erro={erro}

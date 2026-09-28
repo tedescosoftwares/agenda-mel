@@ -78,6 +78,7 @@ function demoFuncao(nome, corpo) {
     if (corpo?.acao === 'conferir') return { ok: true, acesso: { ...acesso, metodo: 'pix_automatico', autorizacao_status: 'ACTIVE' } }
     if (corpo?.acao === 'simular') return { ok: true, acesso: { ...acesso, fase: 'ativa', ate: new Date(Date.now() + 37 * 86400e3).toISOString(), metodo: 'pix', pendente: null } }
     if (corpo?.acao === 'cancelar') return { ok: true, acesso: { ...acesso, metodo: null } }
+    if (corpo?.acao === 'descartar_pix') return { ok: true, descartados: 1, acesso: { ...acesso, pendente: null } }
   }
   return { ok: true }
 }

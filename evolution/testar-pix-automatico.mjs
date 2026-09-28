@@ -10,9 +10,9 @@
 //         2) acha ou cria um cliente de teste; 3) tenta criar uma
 //         autorização com paymentCreationMode MANUAL (a MIMO calcula o
 //         valor de cada mês e cria cada cobrança).
-const KEY = process.env.ASAAS_API_KEY
-if (!KEY) { console.error('Falta ASAAS_API_KEY no ambiente (não cole a chave em lugar nenhum: exporte a variável).'); process.exit(2) }
-const BASE = (process.env.ASAAS_AMBIENTE ?? 'sandbox').toLowerCase() === 'producao' ? 'https://api.asaas.com/v3' : 'https://api-sandbox.asaas.com/v3'
+const KEY = globalThis.process.env.ASAAS_API_KEY
+if (!KEY) { console.error('Falta ASAAS_API_KEY no ambiente (não cole a chave em lugar nenhum: exporte a variável).'); globalThis.process.exit(2) }
+const BASE = (globalThis.process.env.ASAAS_AMBIENTE ?? 'sandbox').toLowerCase() === 'producao' ? 'https://api.asaas.com/v3' : 'https://api-sandbox.asaas.com/v3'
 const H = { 'access_token': KEY, 'Content-Type': 'application/json', 'User-Agent': 'mimo-sondagem' }
 
 async function chamar(metodo, caminho, corpo) {
@@ -28,7 +28,7 @@ const hoje = new Date(); const d = (n) => new Date(hoje.getTime() + n * 86400000
 
 // 1. o recurso existe pra esta conta?
 const lista = await chamar('GET', '/pix/automatic/authorizations?limit=5')
-if (lista.status === 404 || lista.status === 403) { console.log('\n>> Pix Automático não disponível pra esta conta/ambiente.'); process.exit(1) }
+if (lista.status === 404 || lista.status === 403) { console.log('\n>> Pix Automático não disponível pra esta conta/ambiente.'); globalThis.process.exit(1) }
 
 // 2. um cliente de teste
 let cliente = null
@@ -38,18 +38,19 @@ else {
   const novo = await chamar('POST', '/customers', { name: 'Sondagem MIMO', cpfCnpj: '24971563792', email: 'sondagem@mimo.com.vc', mobilePhone: '11999999999', externalReference: 'sondagem-pix-automatico' })
   cliente = novo.json?.id ? novo.json : null
 }
-if (!cliente) { console.log('\n>> Não consegui um cliente de teste; veja a resposta acima.'); process.exit(1) }
+if (!cliente) { console.log('\n>> Não consegui um cliente de teste; veja a resposta acima.'); globalThis.process.exit(1) }
 console.log('\ncliente:', cliente.id)
 
 // 3. a autorização, em modo MANUAL. Se a Asaas reclamar de campo, ela
 //    lista os que faltam: é isso que a gente quer descobrir.
+const contractId = 'MIMOSONDAGEM' + Date.now().toString(36).toUpperCase()   // idContrato: até 35 caracteres
 const tentativas = [
-  { customer: cliente.id, paymentCreationMode: 'MANUAL', description: 'MIMO Pro · mensalidade', frequency: 'MONTHLY', startDate: d(8), value: 49.90, externalReference: 'sondagem-1' },
-  { customer: cliente.id, paymentCreationMode: 'MANUAL', description: 'MIMO Pro · mensalidade', frequency: 'MONTHLY', startDate: d(8), maxValue: 300, externalReference: 'sondagem-2' },
-  { customer: cliente.id, paymentCreationMode: 'MANUAL', description: 'MIMO Pro · mensalidade', frequency: 'MONTHLY', startDate: d(8), externalReference: 'sondagem-3' },
+  { customer: cliente.id, contractId, paymentCreationMode: 'MANUAL', description: 'MIMO Pro · mensalidade', frequency: 'MONTHLY', startDate: d(8), value: 49.90, externalReference: 'sondagem-1' },
+  { customer: cliente.id, contractId, paymentCreationMode: 'MANUAL', description: 'MIMO Pro · mensalidade', frequency: 'MONTHLY', startDate: d(8), maxValue: 300, externalReference: 'sondagem-2' },
+  { customer: cliente.id, contractId, paymentCreationMode: 'MANUAL', description: 'MIMO Pro · mensalidade', frequency: 'MONTHLY', startDate: d(8), externalReference: 'sondagem-3' },
 ]
 for (const corpo of tentativas) {
   const r = await chamar('POST', '/pix/automatic/authorizations', corpo)
-  if (r.status >= 200 && r.status < 300) { console.log('\n>> Autorização criada. Campos devolvidos acima (QR, status, id) são o que a tela vai usar.'); process.exit(0) }
+  if (r.status >= 200 && r.status < 300) { console.log('\n>> Autorização criada. Campos devolvidos acima (QR, status, id) são o que a tela vai usar.'); globalThis.process.exit(0) }
 }
 console.log('\n>> Nenhuma tentativa passou. As mensagens de erro acima dizem os campos esperados.')

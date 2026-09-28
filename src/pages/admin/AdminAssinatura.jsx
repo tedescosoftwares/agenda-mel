@@ -48,6 +48,12 @@ export default function AdminAssinatura() {
     setIndo(true); setErro('')
     try { await assinatura('cancelar', salao.id); await recarregarAcesso?.() } catch (e) { setErro(e.message) } finally { setIndo(false) }
   }
+  async function descartarPix() {
+    const ok = await confirmar({ titulo: 'Cancelar este Pix?', texto: 'O QR Code deixa de valer e nada é cobrado. Você pode gerar outro ou escolher outra forma de pagamento quando quiser.', ok: 'Cancelar o Pix', perigo: true })
+    if (!ok) return
+    setIndo(true); setErro('')
+    try { await assinatura('descartar_pix', salao.id); await recarregarAcesso?.(); await carregar() } catch (e) { setErro(e.message) } finally { setIndo(false) }
+  }
   async function conferir() { setIndo(true); setErro(''); try { await assinatura('conferir', salao.id); await recarregarAcesso?.(); await carregar() } catch (e) { setErro(e.message) } finally { setIndo(false) } }
   const ST = { a_criar: 'gerando', aguardando: 'aguardando', pago: 'pago', falhou: 'não passou', cancelado: 'cancelado', expirado: 'venceu' }
 
@@ -69,8 +75,11 @@ export default function AdminAssinatura() {
         <div className="card assin-pendente">
           <div className="assin-pendente-topo"><Smartphone size={16} /><strong>Pix de {reais(pend.total_cents / 100)}</strong><span className="muted">vence {dataCurta(pend.vencimento)} · vale até {dataCurta(pend.periodo_fim)}</span></div>
           <QrPix payload={pend.copia_cola} />
+          <p className="muted assin-nota">Pagou? Toque em "Já paguei". Mudou de ideia? Dá pra trocar a forma de pagamento ou cancelar este Pix: nada foi cobrado.</p>
           <div className="assin-acoes">
             <button type="button" className="btn btn-primary" onClick={conferir} disabled={indo}>{indo ? 'Conferindo…' : 'Já paguei'}</button>
+            <button type="button" className="btn btn-ghost btn-mini" onClick={() => setModal({ modo: 'escolher' })} disabled={indo}>Trocar forma de pagamento</button>
+            <button type="button" className="btn btn-ghost btn-mini" onClick={descartarPix} disabled={indo}>Cancelar este Pix</button>
             {acesso?.sandbox !== false && <button type="button" className="btn btn-ghost btn-mini" onClick={async () => { setIndo(true); try { await assinatura('simular', salao.id); await recarregarAcesso?.(); await carregar() } catch (e) { setErro(e.message) } finally { setIndo(false) } }}>Simular pagamento (sandbox)</button>}
           </div>
         </div>
@@ -89,12 +98,13 @@ export default function AdminAssinatura() {
               </div>
               <div className="assin-metodo-acoes">
                 {acesso.metodo === 'pix_automatico' && !autorizado(acesso) && <button type="button" className="btn btn-primary btn-mini" onClick={() => setModal({ modo: 'pix_automatico' })}>Autorizar</button>}
-                <button type="button" className="btn btn-ghost btn-mini" onClick={() => setModal({ modo: acesso.metodo === 'cartao' ? 'pix_automatico' : 'cartao' })}>Trocar</button>
+                <button type="button" className="btn btn-ghost btn-mini" onClick={() => setModal({ modo: 'escolher' })}>Trocar</button>
               </div>
             </div>
           ) : (
             <p className="muted">Nenhuma forma de pagamento vinculada. {fase === 'teste' ? 'Deixe uma pronta e o teste vira assinatura sem pausa; nada é cobrado antes do fim do teste.' : 'Escolha como pagar pra continuar recebendo agendamentos.'}</p>
           )}
+          {!(acesso?.metodo && !acesso.cancelada) && (
           <div className="assin-opcoes">
             <button type="button" className="assin-opcao" onClick={() => setModal({ modo: 'pix_automatico' })}>
               <Smartphone size={16} /><span><b>Pix Automático</b><em>{reais(comDesconto(m?.valor_cents ?? 4990, REGRAS.descontoPixAutomaticoPct) / 100)}/mês · {REGRAS.descontoPixAutomaticoPct}% off</em><small>{METODOS.pix_automatico.explica}</small></span>
@@ -108,6 +118,7 @@ export default function AdminAssinatura() {
               </button>
             )}
           </div>
+          )}
           {(acesso?.metodo || fase === 'ativa') && !acesso?.cancelada && !acesso?.sem_prazo && (
             <button type="button" className="btn btn-ghost btn-mini assin-cancelar" onClick={cancelar} disabled={indo}>Cancelar assinatura</button>
           )}
@@ -165,7 +176,7 @@ export default function AdminAssinatura() {
         </div>
       )}
 
-      {modal && <FormasDePagar salao={salao.id} modo={modal.modo} cobrarAgora={Boolean(modal.cobrarAgora)} valores={m} acesso={acesso} onFechar={() => setModal(null)} onFeito={() => { recarregarAcesso?.(); carregar() }} />}
+      {modal && <FormasDePagar salao={salao.id} modo={modal.modo} cobrarAgora={Boolean(modal.cobrarAgora)} valores={m} acesso={acesso} permitirAvista={Boolean(pagarAgora)} onFechar={() => { setModal(null); recarregarAcesso?.(); carregar() }} onFeito={() => { recarregarAcesso?.(); carregar() }} />}
     </AdminShell>
   )
 }

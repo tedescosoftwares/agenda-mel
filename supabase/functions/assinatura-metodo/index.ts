@@ -8,6 +8,7 @@
 //     pix_automatico  cria a autorização (modo MANUAL) e devolve o QR pra autorizar no banco
 //     pix_avista      abre a cobrança do primeiro mês por Pix e devolve o copia e cola
 //     conferir        relê a autorização do Pix Automático / a cobrança Pix pendente
+//     descartar_pix   apaga o Pix à vista que ficou aguardando (ela mudou de ideia)
 //     cancelar        cancela a autorização no Asaas e a assinatura (usa até o fim do pago)
 //     simular         só no sandbox: dá baixa na cobrança Pix pendente como se tivesse pago
 //
@@ -41,12 +42,22 @@ Deno.serve(async (req) => {
   if (ePrep) return json({ erro: ePrep.message }, 403)
   const salao: string = prep.salon_id
   const acesso = () => servico.rpc('acesso_do_salao', { salao }).then((r) => r.data)
+  // um Pix à vista aguardando não faz sentido junto com outro método: some
+  async function descartarPixPendente() {
+    const { data: pend } = await servico.from('cobrancas_mimo').select('id, cobranca_id').eq('salon_id', salao).eq('metodo', 'pix').in('status', ['a_criar', 'aguardando', 'falhou'])
+    for (const c of pend ?? []) {
+      if (c.cobranca_id) await apagarCobrancaMimo(c.cobranca_id).catch(() => {})
+      await servico.rpc('cobranca_mimo_atualizar', { cobranca: c.id, dados: { status: 'cancelado', erro: 'trocou a forma de pagamento' } })
+    }
+    return (pend ?? []).length
+  }
 
   try {
     if (corpo.acao === 'cartao') {
       const c = corpo.cartao ?? {}; const t = corpo.titular ?? {}
       if (!c.numero || !c.nome || !c.mes || !c.ano || !c.cvv) return json({ erro: 'Preencha os dados do cartão.' }, 400)
       const customer = prep.customer_id || await garantirClienteMimo({ nome: prep.razao_social, documento: prep.documento, telefone: prep.telefone, email: prep.email, ref: `salao:${salao}` })
+      await descartarPixPendente()
       const tk = await tokenizarCartao(customer, c, { nome: c.nome, email: prep.email, documento: t.documento || prep.documento, cep: t.cep || prep.cep || '', numero: t.numero || prep.numero || '', telefone: prep.telefone }, ip)
       if (!tk.token) return json({ erro: 'O Asaas não devolveu o token do cartão.' }, 502)
       await servico.rpc('assinatura_metodo_definir', { salao, metodo_: 'cartao', dados: { customer_id: customer, cartao_token: tk.token, cartao_final: tk.final, cartao_bandeira: tk.bandeira } })
@@ -64,6 +75,7 @@ Deno.serve(async (req) => {
 
     if (corpo.acao === 'pix_automatico') {
       const customer = prep.customer_id || await garantirClienteMimo({ nome: prep.razao_social, documento: prep.documento, telefone: prep.telefone, email: prep.email, ref: `salao:${salao}` })
+      await descartarPixPendente()
       // já tem uma autorização em pé? devolve ela
       if (prep.autorizacao_id && prep.metodo === 'pix_automatico') {
         const s = await situacaoAutorizacaoPixAutomatico(prep.autorizacao_id).catch(() => null)
@@ -75,7 +87,7 @@ Deno.serve(async (req) => {
       const cobrarEm = prep.acesso?.cobrar_em ?? prep.acesso?.ate
       const inicio = (cobrarEm ? new Date(cobrarEm) : new Date(Date.now() + 8 * 86400e3)).toISOString().slice(0, 10)
       const teto = Math.max(Number(prep.mensalidade?.total_cents ?? 4490) * 2, 20000)   // folga pro plano crescer
-      const a = await criarAutorizacaoPixAutomatico({ customer, descricao: `MIMO · ${prep.nome}`, inicio, tetoCents: teto, ref: `salao:${salao}` })
+      const a = await criarAutorizacaoPixAutomatico({ customer, descricao: `MIMO · ${prep.nome}`, inicio, tetoCents: teto, ref: `salao:${salao}`, contrato: `MIMO${String(salao).replace(/-/g, '')}` })
       await servico.rpc('assinatura_metodo_definir', { salao, metodo_: 'pix_automatico', dados: { customer_id: customer, autorizacao_id: a.id, autorizacao_status: a.status, autorizacao_qr: a.copiaCola, autorizacao_imagem: a.imagem } })
       return json({ ok: true, autorizacao: a, existente: false, acesso: await acesso() })
     }
@@ -110,6 +122,11 @@ Deno.serve(async (req) => {
         if (PAGO.has(st) && (st !== 'RECEIVED_IN_CASH' || sandbox)) await servico.rpc('cobranca_mimo_confirmar', { cobranca: pend.id, cobranca_asaas: pend.cobranca_id, quando: real?.paymentDate ? new Date(real.paymentDate + 'T12:00:00-03:00').toISOString() : new Date().toISOString() })
       }
       return json({ ok: true, acesso: await acesso() })
+    }
+
+    if (corpo.acao === 'descartar_pix') {
+      const n = await descartarPixPendente()
+      return json({ ok: true, descartados: n, acesso: await acesso() })
     }
 
     if (corpo.acao === 'cancelar') {

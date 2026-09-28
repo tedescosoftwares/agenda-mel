@@ -1,0 +1,174 @@
+/*
+  MIMO - lapidacao visual conservadora
+  Esta folha entra depois de index.css e melhora acabamento sem alterar
+  estrutura, fluxo, componentes ou regras de negocio.
+*/
+
+:root {
+  --sombra: 0 1px 2px rgba(31, 32, 38, 0.035), 0 7px 22px rgba(31, 32, 38, 0.055);
+  --sombra-alta: 0 8px 24px rgba(31, 32, 38, 0.08), 0 18px 48px rgba(31, 32, 38, 0.08);
+  --sombra-rosa: 0 7px 20px rgba(255, 45, 122, 0.22);
+}
+
+body {
+  background:
+    radial-gradient(48rem 22rem at 50% -12rem, rgba(255, 45, 122, 0.055), transparent 72%),
+    var(--tinta);
+}
+
+.topbar,
+.topbar-admin {
+  border-bottom-color: rgba(214, 217, 224, 0.72);
+  box-shadow: 0 1px 12px rgba(31, 32, 38, 0.035);
+}
+
+.bottom-nav {
+  border-top-color: rgba(214, 217, 224, 0.72);
+  box-shadow: 0 -5px 24px rgba(31, 32, 38, 0.055);
+}
+
+.card {
+  border-color: rgba(214, 217, 224, 0.78);
+  box-shadow: var(--sombra);
+}
+
+.page-head {
+  border-bottom-color: rgba(214, 217, 224, 0.74);
+}
+
+.page-head h2 {
+  color: var(--preto);
+}
+
+.secao-titulo {
+  color: #818590;
+  border-bottom-color: rgba(214, 217, 224, 0.7);
+}
+
+.btn,
+.btn-mini,
+.icon-btn,
+.nav-item {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn {
+  min-height: 44px;
+}
+
+.btn-primary {
+  border-color: rgba(224, 21, 95, 0.08);
+  box-shadow: var(--sombra-rosa);
+}
+
+.btn-ghost {
+  box-shadow: 0 1px 2px rgba(31, 32, 38, 0.025);
+}
+
+.btn-small,
+.btn-mini {
+  box-shadow: 0 1px 2px rgba(31, 32, 38, 0.025);
+}
+
+.form input,
+.form textarea,
+.form select {
+  box-shadow: 0 1px 2px rgba(31, 32, 38, 0.02);
+}
+
+.form input:focus,
+.form textarea:focus,
+.form select:focus {
+  border-color: var(--rosa);
+  box-shadow: 0 0 0 3px rgba(255, 45, 122, 0.09);
+}
+
+.nav-item {
+  transition:
+    color 0.16s ease,
+    background-color 0.16s ease,
+    transform 0.16s ease;
+}
+
+.nav-item.active {
+  color: var(--rosa);
+}
+
+.nav-item.active svg {
+  filter: drop-shadow(0 2px 4px rgba(255, 45, 122, 0.16));
+}
+
+.icon-btn {
+  transition:
+    color 0.16s ease,
+    background-color 0.16s ease,
+    transform 0.16s ease;
+}
+
+.fab,
+.nav-mais {
+  box-shadow: 0 8px 22px rgba(255, 45, 122, 0.24);
+}
+
+.badge {
+  letter-spacing: 0;
+}
+
+.empty-state {
+  border-style: dashed;
+  border-color: rgba(154, 158, 168, 0.42);
+  box-shadow: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .btn:not(:disabled):hover {
+    transform: translateY(-1px);
+  }
+
+  .btn-primary:not(:disabled):hover {
+    box-shadow: 0 9px 24px rgba(255, 45, 122, 0.26);
+  }
+
+  .btn-ghost:hover,
+  .btn-small:hover,
+  .btn-mini:hover:not(:disabled) {
+    box-shadow: 0 4px 12px rgba(31, 32, 38, 0.055);
+  }
+
+  .icon-btn:hover {
+    transform: translateY(-1px);
+  }
+
+  .nav-item:hover {
+    background: rgba(255, 45, 122, 0.035);
+  }
+}
+
+@media (max-width: 480px) {
+  .content {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .topbar {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .card {
+    padding: 1rem;
+  }
+
+  .page-head {
+    margin-bottom: 1.1rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn,
+  .btn-mini,
+  .icon-btn,
+  .nav-item {
+    transition: none !important;
+  }
+}

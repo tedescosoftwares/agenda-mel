@@ -154,6 +154,7 @@ function traduzErro(msg) {
       'Este e-mail já está cadastrado — use a aba "Já tenho conta".',
     'Password should be at least 6 characters':
       'A senha precisa ter pelo menos 6 caracteres.',
+    'email rate limit exceeded': 'Muitos e-mails de confirmação em pouco tempo. Espere uns minutos e tente de novo (ou fale com o suporte).',
     'Failed to fetch':
       'Não foi possível conectar ao servidor. Verifique sua internet.',
   }

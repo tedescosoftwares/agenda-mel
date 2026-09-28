@@ -178,6 +178,7 @@ function traduz(msg) {
     'User already registered': 'Este e-mail já tem conta. Entre com a senha, ou use "Esqueci a senha".',
     'Password should be at least 6 characters': 'A senha precisa ter pelo menos 6 caracteres.',
     'Failed to fetch': 'Não foi possível conectar. Confira sua internet.',
+    'email rate limit exceeded': 'Muitos e-mails de confirmação em pouco tempo. Espere uns minutos e tente de novo (ou fale com o suporte).',
     'Load failed': 'Não foi possível conectar. Confira sua internet e tente de novo.',
     'Signup requires a valid password': 'A senha precisa ter pelo menos 6 caracteres.',
     'Database error saving new user': 'Não deu para criar a conta: esse WhatsApp já está em uso ou algum dado veio errado.',

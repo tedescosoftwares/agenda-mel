@@ -608,6 +608,7 @@ function traduzErro(msg) {
   const mapa = {
     'User already registered': 'Este e-mail já tem conta. Entre com a senha, ou use "Esqueci a senha".',
     'Password should be at least 6 characters': 'A senha precisa ter pelo menos 6 caracteres.',
+    'email rate limit exceeded': 'Muitos e-mails de confirmação em pouco tempo. Espere uns minutos e tente de novo (ou fale com o suporte).',
     'Failed to fetch': 'Não foi possível conectar. Confira sua internet.',
     'Database error saving new user': 'Não foi possível criar a conta. Confira os dados informados ou fale com o suporte.',
   }

@@ -68,10 +68,10 @@ export default function AdminDashboard() {
   return (
     <AdminShell>
       <div className="page-head"><div><h2>{salao?.name ?? 'Meu salão'}</h2><p className="muted titulo-dia">{new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</p></div></div>
+      <PrimeirosPassos salao={salao} />
       <AvisosNovos />
       <PendenciasBaixa para="/admin/fechar-dia" />
       <LigarAvisos texto="Pedidos, cancelamentos e clientes chamando no WhatsApp chegam na hora, mesmo com o app fechado." />
-      <PrimeirosPassos salao={salao} />
 
       {semContrato.length > 0 && (
         <Link to="/admin/equipe" className="card fin-alerta parceria-alerta">

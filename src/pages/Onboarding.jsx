@@ -28,16 +28,14 @@ import RodapeSocial from '../components/RodapeSocial'
 // O onboarding do salão (114, 119): do cadastro à agenda em seis passos, o
 // mesmo fluxo no computador e no celular. Cada passo explica por que
 // pergunta, mostra o efeito da escolha, grava sozinho (autosave) e a
-// conta lembra onde parou; quem sair volta pro mesmo lugar. A autônoma
-// passa por cinco: não tem o passo da equipe.
+// conta lembra onde parou; quem sair volta pro mesmo lugar. Serviços,
+// equipe e a ativação com o QR ficam pra dentro do painel (Configurar).
 // cada passo tem a foto, o bilhete e a frase do painel da esquerda
 const PASSOS = [
   { id: 1, rotulo: 'Tipo de conta', foto: 'profissional', bilhete: 'começa por aqui', titulo: 'Como você trabalha?', texto: 'Escolha a opção que mais combina com a sua rotina. Se isso mudar depois, você pode ajustar sem perder seus dados.', roteiro: ['Escolha seu tipo de conta', 'Confira o plano'] },
   { id: 2, rotulo: 'Seus dados', foto: 'agenda-celular', bilhete: 'rapidinho', titulo: 'Agora, seus dados.', texto: 'Precisamos de algumas informações para criar sua conta e identificar o negócio. O que as clientes veem você configura no próximo passo.', roteiro: ['CPF ou CNPJ', 'Endereço de cadastro', 'E-mail, WhatsApp e senha'] },
   { id: 3, rotulo: 'Seu espaço', foto: 'salao', bilhete: 'com a sua cara', titulo: 'Dê cara ao seu salão.', texto: 'Nome, fotos, contatos, endereço e horários. É o que a cliente vê.', roteiro: ['Nome e fotos', 'Contatos e localização', 'Horários e regras'] },
-  { id: 4, rotulo: 'Serviços', foto: 'lifestyle', bilhete: 'seu cardápio', titulo: 'O que suas clientes podem agendar?', texto: 'Cadastre seus principais serviços com preço e duração. Você pode completar a lista depois.', roteiro: ['Escolha as categorias', 'Cadastre seus serviços', 'Defina preço e duração'] },
-  { id: 5, rotulo: 'Equipe', foto: 'equipe', bilhete: 'quem atende', titulo: 'Agora, sua equipe.', texto: 'Configure cada profissional e deixe a agenda pronta antes de enviar o acesso.', roteiro: ['Adicione as profissionais', 'Configure agendas e serviços', 'Envie os acessos'] },
-  { id: 6, rotulo: 'Ativação', foto: 'qr', bilhete: 'tudo pronto', titulo: 'Hora de colocar a agenda pra rodar.', texto: 'Confira se está tudo certo, faça um teste e compartilhe seu link ou QR Code com as clientes.', roteiro: ['Confira o cadastro', 'Teste sua agenda', 'Compartilhe com clientes'] },
+  { id: 4, rotulo: 'Quase lá', foto: 'equipe', bilhete: 'falta pouco', titulo: 'Quase lá.', texto: 'Diga quantas profissionais vão ter agenda. Serviços e equipe você configura já dentro do painel.', roteiro: ['Profissionais com agenda', 'Entrar no painel'] },
 ]
 const DIAS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
 const ORDEM_DIAS = [1, 2, 3, 4, 5, 6, 0]
@@ -110,13 +108,13 @@ export default function Onboarding({ publico = false }) {
     setS((x) => x ?? { ...salao })
     // retoma de onde parou; quem já concluiu e abriu de novo começa do 1 (revisão)
     setPasso((p) => {
-      if (p === 1 && !salao.onboarding_concluido_em && salao.onboarding_passo > 2) { setRetomado(true); return Math.min(6, salao.onboarding_passo) }
+      if (p === 1 && !salao.onboarding_concluido_em && salao.onboarding_passo > 2) { setRetomado(true); return Math.min(4, salao.onboarding_passo) }
       return p
     })
   }, [salao])
 
   const autonoma = s?.tipo === 'autonoma'
-  const passos = useMemo(() => PASSOS.filter((p) => !(autonoma && p.id === 5)), [autonoma])
+  const passos = PASSOS
   const idx = passos.findIndex((p) => p.id === passo)
   const total = passos.length
   const pular = (n) => { const k = passos.findIndex((p) => p.id === n); return passos[Math.min(passos.length - 1, k + 1)]?.id ?? n }
@@ -198,7 +196,7 @@ export default function Onboarding({ publico = false }) {
           <small>Seu plano</small>
           <strong>{plano.nome}</strong>
           <b>{plano.total === 0 ? 'Grátis' : emDinheiro(plano.total)}{plano.total > 0 && <small> /mês</small>}</b>
-          <span>{autonoma ? 'Uma agenda, sem mensalidade.' : `${s.equipe_prevista || 1} ${(s.equipe_prevista || 1) === 1 ? 'agenda' : 'agendas'} · ajuste no passo 3`}</span>
+          <span>{autonoma ? 'Uma agenda, sem mensalidade.' : `${s.equipe_prevista || 1} ${(s.equipe_prevista || 1) === 1 ? 'agenda' : 'agendas'} · ajuste no passo 4`}</span>
         </div>
         {SUPORTE && <a className="ob-ajuda" href={`https://wa.me/${SUPORTE.replace(/\D/g, '')}?text=${encodeURIComponent('Oi! Estou fazendo o cadastro do meu salão no MIMO e preciso de ajuda.')}`} target="_blank" rel="noreferrer"><MessageCircle size={18} /><span><strong>Precisa de ajuda?</strong><small>Fale com a gente pelo WhatsApp</small></span></a>}
       </aside>
@@ -207,7 +205,7 @@ export default function Onboarding({ publico = false }) {
         <div className="ob-topo-m">
           <button type="button" onClick={() => (idx === 0 ? sair() : voltar())} aria-label="Voltar"><ArrowLeft size={20} /></button>
           <div className="ob-barra" aria-label={`Passo ${idx + 1} de ${total}`}><i style={{ width: `${((idx + 1) / total) * 100}%` }} /></div>
-          {!(publico && passo === 2) ? <button type="button" onClick={() => (passo === 6 ? concluir() : seguir({}))}>{passo === 6 ? 'Concluir' : 'Pular'}</button> : <span />}
+          {!(publico && passo === 2) ? <button type="button" onClick={() => (passo === 4 ? concluir() : seguir({}))}>{passo === 4 ? 'Concluir' : 'Pular'}</button> : <span />}
         </div>
         <div className="ob-conteudo-linha"><span className="ob-conteudo-num">Passo {idx + 1} de {total} · {atual.rotulo}</span><EstadoSalvo estado={estadoAuto} /></div>
         {retomado && <div className="ob-retomada"><Wand2 size={15} /><span><strong>Continuando de onde você parou.</strong> O que você já preencheu está guardado; os passos anteriores ficam no menu ao lado.</span><button type="button" onClick={() => setRetomado(false)} aria-label="Fechar"><X size={14} /></button></div>}
@@ -220,9 +218,7 @@ export default function Onboarding({ publico = false }) {
             {passo === 1 && <PassoTipo {...props} />}
             {passo === 2 && <PassoDados {...props} />}
             {passo === 3 && <PassoEstrutura {...props} />}
-            {passo === 4 && <PassoServicos {...props} />}
-            {passo === 5 && <PassoEquipe {...props} />}
-            {passo === 6 && <PassoAtivacao {...props} />}
+            {passo === 4 && <PassoQuaseLa {...props} />}
           </div>
           </RoteiroCtx.Provider>
         </ProximoCtx.Provider>
@@ -731,12 +727,12 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
   const moverFoto = (i, dir) => { const n = [...fotos]; const j = i + dir; if (j < 0 || j >= n.length) return; [n[i], n[j]] = [n[j], n[i]]; mexerFotos(n) }
   const [copiar, setCopiar] = useState(null)   // null | { dias: Set }
   const [tocouSinal, setTocouSinal] = useState(false)   // o recebimento pelo app só muda se a pessoa mexer no botão
-  const [pol, setPol] = useState({ antecedencia_min_minutos: s.antecedencia_min_minutos ?? 60, politica_cancelamento: s.politica_cancelamento ?? 'moderada', permite_remarcar: s.permite_remarcar ?? true, sinal_ligado: (s.pagamento_modo ?? 'nao') !== 'nao', sinal_modo: s.sinal_modo ?? 'fixo', sinal_fixo: emReais(s.sinal_fixo_cents ?? 5000), sinal_pct: s.sinal_pct ?? 50, equipe_prevista: s.equipe_prevista ?? 4, aceite_modo: s.aceite_modo ?? 'casa', minutos_para_aceitar: s.minutos_para_aceitar ?? 120 })
+  const [pol, setPol] = useState({ antecedencia_min_minutos: s.antecedencia_min_minutos ?? 60, politica_cancelamento: s.politica_cancelamento ?? 'moderada', permite_remarcar: s.permite_remarcar ?? true, sinal_ligado: (s.pagamento_modo ?? 'nao') !== 'nao', sinal_modo: s.sinal_modo ?? 'fixo', sinal_fixo: emReais(s.sinal_fixo_cents ?? 5000), sinal_pct: s.sinal_pct ?? 50, aceite_modo: s.aceite_modo ?? 'casa', minutos_para_aceitar: s.minutos_para_aceitar ?? 120 })
   const p = (k) => (v) => setPol((x) => ({ ...x, [k]: v }))
   // pagamento_modo é o mesmo de Ajustes › Receber pelo app: desligar aqui desliga lá. Só vai no pacote se ela tocou no botão.
   const dadosDaPolitica = () => ({ ...(nome.trim() ? { name: nome.trim() } : {}), ...dadosDoLocal(), antecedencia_min_minutos: Number(pol.antecedencia_min_minutos), politica_cancelamento: pol.politica_cancelamento, permite_remarcar: pol.permite_remarcar,
     ...(tocouSinal ? { pagamento_modo: pol.sinal_ligado ? (s.pagamento_modo && s.pagamento_modo !== 'nao' ? s.pagamento_modo : 'opcional') : 'nao' } : {}), sinal_modo: pol.sinal_modo, sinal_fixo_cents: reais(pol.sinal_fixo), sinal_pct: Number(pol.sinal_pct),
-    equipe_prevista: Number(pol.equipe_prevista) || null, aceite_modo: pol.aceite_modo, minutos_para_aceitar: Number(pol.minutos_para_aceitar) })
+    aceite_modo: pol.aceite_modo, minutos_para_aceitar: Number(pol.minutos_para_aceitar) })
   // autosave: as regras vão pelo onboarding_salvar; os horários, pelo onboarding_horarios
   const estado = useAutosave(async () => {
     const ok = await gravarQuieto(dadosDaPolitica())
@@ -949,12 +945,30 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
           <small className="muted">Tudo isso pode mudar depois, em Ajustes.</small>
         </div>
         </div>
-        {!autonoma && (() => {
-          const n = Math.max(1, Number(pol.equipe_prevista) || 1)
-          const c = planoDoNegocio('salao', n)
-          const inclusas = c.plano === 'pro' ? PLANOS.pro.inclusas : PLANOS.promais.inclusas
-          const setN = (v) => p('equipe_prevista')(Math.max(1, Math.round(v)))
-          return (
+      </div>
+      <Rodape voltar={voltar} avancar={avancar} salvando={salvando} />
+    </>
+  )
+}
+
+
+// ---------- 4 · Quase lá ------------------------------------------------------------
+// O cadastro termina aqui: quantas agendas (define o plano) e o aviso de que
+// serviços, equipe e o QR vêm no painel, guiados.
+function PassoQuaseLa({ s, voltar, salvando, concluir, pronto, autonoma, gravarQuieto, setEstadoAuto }) {
+  const [n, setNum] = useState(Math.max(1, Number(s.equipe_prevista) || 4))
+  const setN = (v) => setNum(Math.max(1, Math.round(v)))
+  const c = planoDoNegocio(autonoma ? 'autonoma' : 'salao', n)
+  const inclusas = c.plano === 'pro' ? PLANOS.pro.inclusas : PLANOS.promais.inclusas
+  const estado = useAutosave(() => gravarQuieto({ equipe_prevista: n }), { n }, { ativo: Boolean(s.id) && !autonoma })
+  useEffect(() => { setEstadoAuto(estado); return () => setEstadoAuto('') }, [estado, setEstadoAuto])
+  useRoteiro([autonoma || n >= 1, false])
+  return (
+    <>
+      <h1 className="ob-titulo">Quase lá</h1>
+      <p className="ob-sub">{autonoma ? 'Sua agenda já tem cara. Falta só entrar no painel e montar os serviços.' : 'Seu salão já tem cara. Falta dizer quantas agendas e entrar no painel.'}</p>
+      <div className="ob-estrutura">
+        {!autonoma && (
             <div className="ob-card ob-card-largo ob-plano-card">
               <div className="ob-plano-grade">
                 <div className="ob-plano-esq">
@@ -963,7 +977,7 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
                   <div className="ob-contador ob-contador-grande"><button type="button" onClick={() => setN(n - 1)} aria-label="Menos"><Minus size={16} /></button><strong>{n}</strong><button type="button" onClick={() => setN(n + 1)} aria-label="Mais"><Plus size={16} /></button></div>
                   <span className="ob-plano-agendas">{n === 1 ? '1 agenda' : `${n} agendas`} · {c.extras === 0 ? `dentro das ${inclusas} inclusas` : `${inclusas} inclusas + ${c.extras} ${c.extras === 1 ? 'extra' : 'extras'}`}</span>
                   <div className="ob-plano-barra" aria-hidden="true">{Array.from({ length: Math.max(n, inclusas) }, (_, i) => <i key={i} className={i < n ? (i < inclusas ? 'inclusa' : 'extra') : ''} />)}</div>
-                  <small className="muted">É uma previsão. A equipe entra no passo 5 e o plano acompanha as agendas ativas. Sem fidelidade.</small>
+                  <small className="muted">É uma previsão. A equipe você monta no painel, e o plano acompanha as agendas ativas. Sem fidelidade.</small>
                 </div>
                 <div className="ob-plano-dir">
                   <div className="ob-plano-resumo">
@@ -989,15 +1003,24 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
                 </div>
               </div>
             </div>
-          )
-        })()}
+        )}
+        <div className="ob-card ob-card-largo ob-depois-painel">
+          <span className="ob-depois-selo"><Sparkles size={13} /> Continua no painel</span>
+          <strong className="ob-card-titulo">{autonoma ? 'Os serviços você monta já dentro do painel' : 'Serviços e equipe você monta já dentro do painel'}</strong>
+          <span className="muted">Com calma, do seu jeito, e com a gente guiando. O painel abre com a configuração pronta pra continuar.</span>
+          <div className="ob-depois-lista">
+            <div className="ob-depois-item"><span className="ob-depois-icone"><Sparkles size={18} /></span><strong>Serviços</strong><small>Nome, duração e preço. Com sugestões por categoria pra ir rápido.</small></div>
+            {!autonoma && <div className="ob-depois-item"><span className="ob-depois-icone"><Users size={18} /></span><strong>Equipe</strong><small>Cada profissional com os seus serviços e horários. Ela recebe um link e entra com tudo pronto.</small></div>}
+            <div className="ob-depois-item apagado"><span className="ob-depois-icone"><QrCode size={18} /></span><strong>Link e QR Code</strong><small>Aparecem assim que {autonoma ? 'os serviços estiverem' : 'serviços e equipe estiverem'} prontos. Aí é só divulgar.</small></div>
+          </div>
+        </div>
       </div>
-      <Rodape voltar={voltar} avancar={avancar} salvando={salvando} />
+      <Rodape voltar={voltar} avancar={concluir} salvando={salvando || pronto} rotulo="Entrar no painel" icone={<ArrowRight size={16} />} />
     </>
   )
 }
 
-// ---------- 4 · Serviços -----------------------------------------------------------
+// ---------- Serviços, equipe e ativação: vivem no painel, em Configurar ----------
 function PassoServicos({ s, seguir, voltar, salvando, setErro, autonoma, gravarQuieto }) {
   const [servicos, setServicos] = useState(null)
   const [catsTodas, setCatsTodas] = useState([])   // as da plataforma e as do salão
@@ -1365,3 +1388,5 @@ function PassoAtivacao({ s, voltar, salvando, concluir, pronto, autonoma, irPara
     </>
   )
 }
+
+export { PassoServicos, PassoEquipe, PassoAtivacao, ModalErro, useAutosave, EstadoSalvo }

@@ -10,11 +10,12 @@ import PendenciasBaixa from '../../components/PendenciasBaixa'
 import SemFicha from './SemFicha'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
+import PrimeirosPassos from '../../components/PrimeirosPassos'
 
 // Agenda do dia (tela 15): os pedidos esperando no topo, o dia com
 // status por atendimento, e o botão de encaixe fixo no pé.
 export default function ProAgenda() {
-  const { professional } = useAuth()
+  const { professional, negocio } = useAuth()
   const [vista, setVista] = useState('dia')
   const [paraEnviar, setParaEnviar] = useState(0)
   const profId = professional?.id
@@ -30,6 +31,7 @@ export default function ProAgenda() {
 
   return (
     <ProShell>
+      {negocio?.tipo === 'autonoma' && negocio?.onboarding_concluido_em && <PrimeirosPassos salao={negocio} para="pro" />}
       <div className="page-head">
         <div>
           <h2>Agenda</h2>

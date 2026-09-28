@@ -684,3 +684,29 @@
 .ob-campo > small.muted { font-size: 0.72rem; line-height: 1.35; }
 .ob-sinal { padding: 0.55rem 0.65rem; gap: 0.45rem; }
 @media (max-width: 480px) { .ob-hora { grid-template-columns: 62px minmax(0, 1fr) 10px minmax(0, 1fr) 46px; gap: 0.3rem; } }
+
+/* ---- 4 · quase lá ---- */
+.ob-depois-painel { position: relative; gap: 0.5rem; }
+.ob-depois-selo { align-self: flex-start; display: inline-flex; align-items: center; gap: 4px; font-size: 0.64rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ob-rosa, #ff2d7a); background: #fff0f6; border: 1px solid #ffc2d8; padding: 3px 9px; border-radius: 999px; }
+.ob-depois-lista { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.6rem; margin-top: 0.2rem; }
+.ob-depois-item { display: grid; gap: 4px; padding: 0.8rem 0.85rem; border-radius: 14px; background: var(--ob-lilas, #fbf6fb); border: 1px solid var(--ob-fio, #ece7ee); }
+.ob-depois-item strong { font-size: 0.88rem; color: var(--ob-ameixa, #3d0c4e); } .ob-depois-item small { font-size: 0.75rem; line-height: 1.4; color: var(--ob-cinza, #6b7280); }
+.ob-depois-icone { width: 34px; height: 34px; border-radius: 10px; background: #fff; color: var(--ob-rosa, #ff2d7a); display: grid; place-items: center; border: 1px solid #ffc2d8; }
+.ob-depois-item.apagado { border-style: dashed; background: #fff; } .ob-depois-item.apagado .ob-depois-icone { color: var(--ob-cinza, #6b7280); border-color: var(--ob-fio, #ece7ee); }
+
+/* ---- Configurar (painel): os passos do cadastro dentro do shell ---- */
+.ob.ob-embutido { display: flex; flex-direction: column; gap: 14px; min-height: 0; background: transparent; }
+.ob-embutido .ob-titulo { font-size: 1.35rem; }
+.ob-embutido .ob-sub { font-size: 0.9rem; }
+.ob-embutido .ob-rodape, .ob-embutido .ob-rodape.ob-rodape { position: static; margin: 4px 0 0; padding: 14px 0 0; background: transparent; backdrop-filter: none; border-top: 1px solid var(--ob-fio, #ece7ee); }
+.ob-embutido .ob-passo-corpo { display: flex; flex-direction: column; gap: 14px; }
+@media (max-width: 900px) { .ob-embutido .ob-rodape .btn-ghost { display: inline-flex; } .ob-embutido .ob-continuar { width: auto; } }
+.cfg-topo { display: flex; justify-content: space-between; align-items: flex-end; gap: 8px; }
+.cfg-titulo { margin: 2px 0 0; font-size: 1.5rem; color: var(--ob-ameixa, #3d0c4e); }
+.cfg-etapas { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.cfg-etapas button { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px 6px 6px; border-radius: 999px; border: 1px solid var(--ob-fio, #ece7ee); background: #fff; font: inherit; font-size: 0.8rem; font-weight: 700; color: var(--ob-cinza, #6b7280); cursor: pointer; }
+.cfg-etapas button i { width: 20px; height: 20px; border-radius: 999px; display: inline-grid; place-items: center; font-style: normal; font-size: 0.68rem; background: var(--ob-lilas, #fbf6fb); color: var(--ob-ameixa, #3d0c4e); }
+.cfg-etapas li.atual button { border-color: var(--ob-rosa, #ff2d7a); color: var(--ob-ameixa, #3d0c4e); box-shadow: 0 0 0 3px #ffe0eb; }
+.cfg-etapas li.atual button i { background: var(--ob-rosa, #ff2d7a); color: #fff; }
+.cfg-etapas li.feita button i { background: var(--ob-rosa, #ff2d7a); color: #fff; }
+.cfg-etapas li.travada button { opacity: 0.6; cursor: not-allowed; }

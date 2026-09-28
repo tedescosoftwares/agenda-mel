@@ -7245,3 +7245,16 @@ label.switch input:checked + span { background: var(--rosa, #ff2d7a); }
 label.switch input:checked + span::after { left: 23px; background: #fff; }
 label.switch input:focus-visible + span { outline: 2px solid #ffc2d8; outline-offset: 2px; }
 label.switch:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
+
+/* ---- painel: conclua a configuração (antes do QR) ---- */
+.pp-concluir { display: flex; flex-wrap: wrap; align-items: center; gap: 0.9rem 1.2rem; background: linear-gradient(135deg, #fff0f6, #fdf6fb); border: 1px solid #ffc2d8; }
+.pp-concluir-texto { flex: 1 1 260px; display: grid; gap: 4px; }
+.pp-concluir-texto strong { font-size: 1.02rem; color: var(--ameixa, #3d0c4e); }
+.pp-concluir-texto > .muted { font-size: 0.84rem; line-height: 1.45; }
+.pp-concluir-selo { display: inline-flex; align-items: center; gap: 4px; justify-self: start; font-size: 0.64rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--rosa, #ff2d7a); }
+.pp-concluir-etapas { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; font-size: 0.82rem; color: var(--texto, #1f2026); }
+.pp-concluir-etapas li { display: inline-flex; align-items: center; gap: 6px; }
+.pp-concluir-etapas li.ok { color: var(--cinza-3, #6b7280); text-decoration: line-through; text-decoration-color: #ffc2d8; }
+.pp-concluir-etapas li.ok .pp-check { background: var(--rosa, #ff2d7a); color: #fff; }
+.pp-concluir-etapas li.trava { color: var(--cinza-3, #6b7280); }
+.pp-concluir-botao { flex: none; white-space: nowrap; }

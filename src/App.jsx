@@ -20,6 +20,7 @@ import ClienteServico from "./pages/cliente/ClienteServico";
 import ClienteSalao from "./pages/cliente/ClienteSalao";
 import ClienteCategoria from "./pages/cliente/ClienteCategoria";
 import AdminSalao from "./pages/admin/AdminSalao";
+import Configurar from "./pages/admin/Configurar";
 import ProFecharDia from "./pages/pro/ProFecharDia";
 import AdminFecharDia from "./pages/admin/AdminFecharDia";
 import ClientePerfil from "./pages/cliente/ClientePerfil";
@@ -273,12 +274,14 @@ export default function App() {
             <Route path="/cliente/salao/:id" element={<ProtectedRoute requireRole="cliente"><ClienteSalao /></ProtectedRoute>} />
             <Route path="/cliente/salao/:id/categoria/:cat" element={<ProtectedRoute requireRole="cliente"><ClienteCategoria /></ProtectedRoute>} />
             <Route path="/admin/salao" element={<ProtectedRoute requireRole="admin"><AdminSalao /></ProtectedRoute>} />
+            <Route path="/admin/configurar" element={<ProtectedRoute requireRole="admin"><Configurar para="admin" /></ProtectedRoute>} />
             <Route path="/cliente/servico/:id" element={<ProtectedRoute requireRole="cliente"><ClienteServico /></ProtectedRoute>} />
             <Route path="/pro/promocoes" element={<ProtectedRoute requireRole="profissional"><ProPromocoes /></ProtectedRoute>} />
             <Route path="/admin/promocoes" element={<ProtectedRoute requireRole="admin"><AdminPromocoes /></ProtectedRoute>} />
             <Route path="/admin/receber" element={<ProtectedRoute requireRole="admin"><AdminReceber /></ProtectedRoute>} />
             <Route path="/pro/receber" element={<ProtectedRoute requireRole="profissional"><ProReceber /></ProtectedRoute>} />
             <Route path="/pro/local" element={<ProtectedRoute requireRole="profissional"><ProLocal /></ProtectedRoute>} />
+            <Route path="/pro/configurar" element={<ProtectedRoute requireRole="profissional"><Configurar para="pro" /></ProtectedRoute>} />
             <Route path="/pro/contrato" element={<ProtectedRoute requireRole="profissional"><ProContrato /></ProtectedRoute>} />
             <Route path="/admin/equipe/:id/parceria" element={<ProtectedRoute requireRole="admin"><AdminParceria /></ProtectedRoute>} />
             <Route path="/admin/pdv" element={<ProtectedRoute requireRole="admin"><AdminPdv /></ProtectedRoute>} />

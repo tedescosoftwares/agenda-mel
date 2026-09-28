@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import PainelPausado from './PainelPausado'
 import SinoAvisos from './SinoAvisos'
 import MenuDaConta, { ITENS_ADMIN } from './MenuDaConta'
 import { MarcaIcon, Wordmark } from './icons'
@@ -29,7 +30,7 @@ export default function AdminShell({ children }) {
   const miolo = useRef(null)
   const { pathname } = useLocation()
   useEffect(() => { miolo.current?.scrollTo({ top: 0 }) }, [pathname])
-  const { salao } = useAuth()
+  const { salao, acesso } = useAuth()
   const navigate = useNavigate()
 
   return (
@@ -45,7 +46,7 @@ export default function AdminShell({ children }) {
         </div>
       </header>
 
-      <main className="content admin-content" ref={miolo}><div className="miolo">{children}</div></main>
+      <main className="content admin-content" ref={miolo}><div className="miolo">{acesso?.fase === 'bloqueado' ? <PainelPausado para="admin" /> : children}</div></main>
 
       <nav className="bottom-nav">
         <div className="bottom-nav-inner">

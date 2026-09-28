@@ -7258,3 +7258,20 @@ label.switch:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
 .pp-concluir-etapas li.ok .pp-check { background: var(--rosa, #ff2d7a); color: #fff; }
 .pp-concluir-etapas li.trava { color: var(--cinza-3, #6b7280); }
 .pp-concluir-botao { flex: none; white-space: nowrap; }
+
+/* ---- acesso do salão (126): teste grátis, modo leitura, painel pausado ---- */
+.acesso-aviso { display: flex; flex-wrap: wrap; align-items: center; gap: 0.8rem 1.2rem; border: 1px solid #ffc2d8; background: linear-gradient(135deg, #fff0f6, #fdf6fb); }
+.acesso-aviso.atencao { border-color: #ffd9a8; background: linear-gradient(135deg, #fff6e8, #fffaf3); }
+.acesso-aviso.alerta { border-color: #ffb3b3; background: linear-gradient(135deg, #fff0f0, #fff7f7); }
+.acesso-aviso-texto { flex: 1 1 260px; display: grid; gap: 3px; }
+.acesso-aviso-texto strong { font-size: 1rem; color: var(--ameixa, #3d0c4e); }
+.acesso-aviso-texto > .muted { font-size: 0.84rem; line-height: 1.45; }
+.acesso-selo { display: inline-flex; align-items: center; gap: 4px; justify-self: start; font-size: 0.64rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--rosa, #ff2d7a); }
+.acesso-aviso.atencao .acesso-selo { color: #b45309; } .acesso-aviso.alerta .acesso-selo { color: #b91c1c; }
+.acesso-aviso-botao { flex: none; white-space: nowrap; }
+.painel-pausado { display: grid; place-items: center; padding: 1.5rem 0; }
+.painel-pausado-card { max-width: 460px; text-align: center; display: grid; gap: 0.7rem; justify-items: center; padding: 1.6rem 1.4rem; }
+.painel-pausado-card h2 { margin: 0; color: var(--ameixa, #3d0c4e); }
+.painel-pausado-card p { margin: 0; line-height: 1.5; }
+.painel-pausado-icone { width: 56px; height: 56px; border-radius: 999px; display: grid; place-items: center; background: #fff0f6; color: var(--rosa, #ff2d7a); }
+.salao-pausado { margin: 0.4rem 0 0; padding: 0.6rem 0.8rem; border-radius: 12px; background: #fff0f0; border: 1px solid #ffb3b3; color: #7f1d1d; font-size: 0.86rem; line-height: 1.45; }

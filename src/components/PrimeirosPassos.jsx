@@ -13,7 +13,7 @@ import { useAuth } from '../context/AuthContext'
 // feito (depois de comemorar uma vez).
 const CHAVE_FESTA = 'mimo-primeiros-passos-festa'
 export default function PrimeirosPassos({ salao, para = 'admin' }) {
-  const { user } = useAuth()
+  const { user, recarregarAcesso, recarregarPerfil } = useAuth()
   const [r, setR] = useState(null)
   const [festa, setFesta] = useState(false)
   const qr = useRef(null)
@@ -24,6 +24,12 @@ export default function PrimeirosPassos({ salao, para = 'admin' }) {
     setR(data ?? null)
   }, [salao?.id])
   useEffect(() => { carregar() }, [carregar])
+  // já está configurado e o QR aparece aqui, mas nunca foi ativado (veio antes da 126): ativa agora
+  const configuradoSemAtivar = Boolean(r) && !salao?.ativado_em && Number(r.servicos ?? 0) > 0 && (r.tipo === 'autonoma' || Number(r.equipe ?? 0) > 0)
+  useEffect(() => {
+    if (!configuradoSemAtivar || !salao?.id) return
+    supabase.rpc('salao_ativar', { salao: salao.id }).then(({ error }) => { if (!error) { recarregarAcesso?.(); recarregarPerfil?.() } })
+  }, [configuradoSemAtivar, salao?.id]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (qr.current && link) QRCode.toCanvas(qr.current, link, { width: 72, margin: 1, color: { dark: '#1f2026', light: '#ffffff' } }).catch(() => {}) }, [link, r])
 
   if (!r) return null

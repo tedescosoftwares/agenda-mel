@@ -15,6 +15,7 @@ export function AuthProvider({ children }) {
   // as agendas em que a cliente entrou (053). Sem nenhuma, não há app.
   // null = ainda não sei (carregando ou a rede falhou); [] = sei que não tem
   const [vinculos, setVinculos] = useState(null)
+  const [acesso, setAcesso] = useState(null)   // teste grátis / modo leitura do salão em que ela está (126)
   const [erroRede, setErroRede] = useState('')
   const [loading, setLoading] = useState(isSupabaseConfigured)
 
@@ -36,6 +37,7 @@ export function AuthProvider({ children }) {
         setSalao(null)
         setNegocio(null)
         setVinculos(null)
+        setAcesso(null)
         setLoading(false)
       }
     })
@@ -71,7 +73,10 @@ export function AuthProvider({ children }) {
         let preferido = null
         try { preferido = localStorage.getItem('mimo-salao-admin') } catch { /* sem armazenamento */ }
         setSaloes(lista)
-        setSalao(lista.find((x) => x.id === preferido) ?? lista[0] ?? null)
+        const atual = lista.find((x) => x.id === preferido) ?? lista[0] ?? null
+        setSalao(atual)
+        await carregarAcesso(atual?.id)
+        if (cancelled) return
       } else {
         setSaloes([])
         setSalao(null)
@@ -86,6 +91,8 @@ export function AuthProvider({ children }) {
           .maybeSingle()
         if (cancelled) return
         setProfessional(ficha ?? null)
+        await carregarAcesso(ficha?.salon_id)
+        if (cancelled) return
       } else {
         setProfessional(null)
       }
@@ -137,6 +144,15 @@ export function AuthProvider({ children }) {
       .maybeSingle()
     if (data) setProfile(data)
     await carregarNegocio(session.user.id)
+    await carregarAcesso(salao?.id ?? professional?.salon_id)
+  }
+
+  // em que pé está o acesso do salão (126): dias de teste, modo leitura, pausado
+  async function carregarAcesso(salaoId) {
+    if (!salaoId) { setAcesso(null); return null }
+    const { data } = await supabase.rpc('acesso_do_salao', { salao: salaoId })
+    setAcesso(data ?? null)
+    return data ?? null
   }
 
   // o negócio que a conta é dona (114): é por ele que o onboarding sabe onde está
@@ -213,6 +229,7 @@ export function AuthProvider({ children }) {
     if (!alvo) return
     try { localStorage.setItem('mimo-salao-admin', id) } catch { /* sem armazenamento */ }
     setSalao(alvo)
+    carregarAcesso(alvo.id)
   }
 
   const value = {
@@ -229,6 +246,8 @@ export function AuthProvider({ children }) {
     erroRede,
     recarregarVinculos,
     recarregarPerfil,
+    acesso,
+    recarregarAcesso: () => carregarAcesso(salao?.id ?? professional?.salon_id),
     recarregarProfessional,
     role: profile?.role ?? null,
     loading,

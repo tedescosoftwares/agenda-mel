@@ -83,6 +83,7 @@ export default function ClienteSalao() {
 
       <div className="perfil-cabeca">
         <h2>{s.nome}</h2>
+        {s.aceita === false && <p className="salao-pausado">Este salão não está recebendo agendamentos novos pelo app no momento. Os horários já marcados continuam valendo.</p>}
         {/* a pílula fica só com o rótulo; a explicação vai em linha própria */}
         {s.pagamento?.modo && s.pagamento.modo !== 'nao' && (
           <>

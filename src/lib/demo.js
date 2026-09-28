@@ -142,6 +142,13 @@ const promocoes = [
 // só pra demonstrar: ?demo com localStorage mimo-demo-passo=4 abre o cadastro nesse passo; mimo-demo-vazio=1 mostra o painel antes de serviços e equipe
 const DEMO_PASSO = (typeof localStorage !== 'undefined' && Number(localStorage.getItem('mimo-demo-passo'))) || null
 const DEMO_VAZIO = typeof localStorage !== 'undefined' && localStorage.getItem('mimo-demo-vazio') === '1'
+// mimo-demo-acesso = teste | leitura | bloqueado | ativa (126)
+const DEMO_ACESSO = (typeof localStorage !== 'undefined' && localStorage.getItem('mimo-demo-acesso')) || 'teste'
+const diasDepois = (n) => new Date(Date.now() + n * 86400000).toISOString()
+const acessoDemo = () => DEMO_ACESSO === 'leitura' ? { fase: 'leitura', tipo: 'salao', situacao: 'teste', teste: true, ate: diasDepois(-1), tolerancia_ate: diasDepois(4), dias: 0, dias_tolerancia: 4 }
+  : DEMO_ACESSO === 'bloqueado' ? { fase: 'bloqueado', tipo: 'salao', situacao: 'teste', teste: true, ate: diasDepois(-6), tolerancia_ate: diasDepois(-1), dias: 0, dias_tolerancia: 0 }
+  : DEMO_ACESSO === 'ativa' ? { fase: 'ativa', tipo: 'salao', situacao: 'ativa', metodo: 'cortesia', sem_prazo: true }
+  : { fase: 'teste', tipo: 'salao', situacao: 'teste', teste: true, ate: diasDepois(5), tolerancia_ate: diasDepois(10), dias: 5, dias_tolerancia: 10 }
 const TABELAS = {
   pagamentos: [
     { id: 'pg5', appointment_id: 'apdev', client_id: 'c1', salon_id: SALAO, status: 'estornado', valor_cents: 3000, total_cents: 6000, sinal_pct: 50, liquido_cents: 2801, estorno_cents: 2801, pago_em: mais(-3) + 'T10:12:00', estornado_em: mais(-1) + 'T18:25:00', motivo_estorno: 'cancelado pela casa', cobranca_id: 'pay_demo_2k9x1', termos_aceitos_em: mais(-3) + 'T10:10:00', criado_em: mais(-3) },
@@ -198,6 +205,8 @@ const RPC = {
   equipe_informar_dados: () => ({ ok: true, ja: false, salao: 'Studio Mel' }),
   primeiros_passos: () => ({ tipo: 'salao', codigo: 'MEL2K5', nome: 'Studio Mel', dados: true, horarios: true, servicos: DEMO_VAZIO ? 0 : servicos.length, equipe: DEMO_VAZIO ? 0 : profissionais.length, equipe_pendente: 1, equipe_rascunho: 0, agendamentos: 0, avisos: false, feitos: {}, onboarding_concluido_em: '2025-01-10' }),
   primeiro_passo_feito: () => ({}),
+  acesso_do_salao: () => acessoDemo(),
+  salao_ativar: () => acessoDemo(),
   promocoes_para_mim: () => promocoes.filter((p) => p.ativa && p.aprovacao !== 'pendente' && (!p.fim || p.fim >= mais(0))).map((p) => ({ ...p, desconto_pct: p.desconto_pct ?? null, preco_de: servicos.find((s) => s.id === p.service_id)?.price ?? null, preco_por: p.desconto_pct ? Math.round(servicos.find((s) => s.id === p.service_id)?.price * (100 - p.desconto_pct)) / 100 : null, salao: p.salon_id ? 'Studio Mel' : null, profissional: p.professional_id ? profissionais.find((x) => x.id === p.professional_id)?.name : null, professional_id: p.professional_id ?? (p.service_id ? 'pr1' : null), servico: servicos.find((s) => s.id === p.service_id)?.name ?? null })),
   promocao_vista: () => null,
   capas_do_salao: () => [{ categoria_id: 'ct2', imagens: [PROMO_IMG('#FF2D7A', '#AA4CFF', ''), PROMO_IMG('#AA4CFF', '#FF7BAA', '')] }],
@@ -217,7 +226,7 @@ const RPC = {
     ] }),
   pagamento_dos_saloes: ({ ids }) => (ids ?? []).map((id) => ({ salon_id: id, modo: 'opcional', sinal_pct: 50 })),
   pagina_do_salao: () => ({
-    salao: { id: SALAO, nome: 'Studio Mel', pagamento: { modo: 'opcional', sinal_pct: 50, politica: 'moderada', estorno_horas: 12 }, tipo: 'salao', descricao: 'Um cantinho no Gonzaga para você se cuidar com calma: café, música baixa e uma equipe que capricha em cada detalhe.', fotos: [PROMO_IMG('#FF7BAA', '#AA4CFF', ''), PROMO_IMG('#FFC2D8', '#FF2D7A', '')], logo_url: null, endereco: 'Rua das Flores, 120 · Gonzaga', cidade: 'Santos', cep: '11060300', lat: -23.9668, lng: -46.3325, telefone: '(13) 3333-0000', whatsapp: '(13) 99120-3410', instagram: 'studiomel' },
+    salao: { id: SALAO, nome: 'Studio Mel', aceita: !['leitura', 'bloqueado'].includes(DEMO_ACESSO), pagamento: { modo: 'opcional', sinal_pct: 50, politica: 'moderada', estorno_horas: 12 }, tipo: 'salao', descricao: 'Um cantinho no Gonzaga para você se cuidar com calma: café, música baixa e uma equipe que capricha em cada detalhe.', fotos: [PROMO_IMG('#FF7BAA', '#AA4CFF', ''), PROMO_IMG('#FFC2D8', '#FF2D7A', '')], logo_url: null, endereco: 'Rua das Flores, 120 · Gonzaga', cidade: 'Santos', cep: '11060300', lat: -23.9668, lng: -46.3325, telefone: '(13) 3333-0000', whatsapp: '(13) 99120-3410', instagram: 'studiomel' },
     horarios: [0, 1, 2, 3, 4, 5, 6].map((weekday) => ({ weekday, open: weekday > 0, start_time: '09:00:00', end_time: weekday === 6 ? '14:00:00' : '18:00:00' })),
     nota: { media: 4.8, quantas: 212 },
     equipe: profissionais.filter((p) => p.active).map((p) => ({ id: p.id, nome: p.name, foto: p.photo_url, bio: p.bio, nota: 4.9, faz: vinculos.filter((v) => v.professional_id === p.id).map((v) => servicos.find((s) => s.id === v.service_id)?.name).filter(Boolean) })),

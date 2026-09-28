@@ -11,7 +11,7 @@ import { PassoServicos, PassoEquipe, PassoAtivacao, ModalErro, EstadoSalvo } fro
 // guiado do mesmo jeito. Serviços → Equipe (salão) → Ativação com o link
 // e o QR, que só abre quando serviços e equipe estão prontos.
 export default function Configurar({ para = 'admin' }) {
-  const { salao: salaoAdmin, negocio, recarregarPerfil } = useAuth()
+  const { salao: salaoAdmin, negocio, recarregarPerfil, recarregarAcesso } = useAuth()
   const base = para === 'admin' ? (salaoAdmin ?? negocio) : (negocio ?? salaoAdmin)
   const autonoma = base?.tipo === 'autonoma'
   const navigate = useNavigate()
@@ -32,6 +32,15 @@ export default function Configurar({ para = 'admin' }) {
     return data ?? {}
   }, [s?.id])
   useEffect(() => { carregarResumo() }, [carregarResumo, passo])
+  // chegou na Ativação: o link e o QR estão liberados, e o teste grátis começa a contar (126)
+  useEffect(() => {
+    if (passo !== 3 || !s?.id || s.ativado_em) return
+    supabase.rpc('salao_ativar', { salao: s.id }).then(({ data, error }) => {
+      if (error) return
+      setS((x) => ({ ...x, ativado_em: new Date().toISOString(), acesso: data }))
+      recarregarAcesso?.()
+    })
+  }, [passo, s?.id, s?.ativado_em]) // eslint-disable-line react-hooks/exhaustive-deps
   const n = (k, r = resumo) => Number(r?.[k] ?? 0)
   const prontoParaAtivar = (r = resumo) => Boolean(r) && n('servicos', r) > 0 && (autonoma || n('equipe', r) > 0)
 

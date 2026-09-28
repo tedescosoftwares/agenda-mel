@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import PainelPausado from './PainelPausado'
 import SinoAvisos from './SinoAvisos'
 import MenuDaConta, { ITENS_PRO } from './MenuDaConta'
 import {
@@ -27,7 +28,7 @@ export default function ProShell({ children, titulo, voltar }) {
   const miolo = useRef(null)
   const { pathname } = useLocation()
   useEffect(() => { miolo.current?.scrollTo({ top: 0 }) }, [pathname])
-  const { professional } = useAuth()
+  const { professional, acesso } = useAuth()
 
   return (
     <div className="admin-shell">
@@ -47,7 +48,7 @@ export default function ProShell({ children, titulo, voltar }) {
         </div>
       </header>
 
-      <main className="content admin-content" ref={miolo}><div className="miolo">{children}</div></main>
+      <main className="content admin-content" ref={miolo}><div className="miolo">{acesso?.fase === 'bloqueado' ? <PainelPausado para="pro" /> : children}</div></main>
 
       <nav className="bottom-nav">
         <div className="bottom-nav-inner">

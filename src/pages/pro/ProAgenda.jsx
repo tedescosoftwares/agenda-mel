@@ -11,6 +11,7 @@ import SemFicha from './SemFicha'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import PrimeirosPassos from '../../components/PrimeirosPassos'
+import AcessoAviso from '../../components/AcessoAviso'
 
 // Agenda do dia (tela 15): os pedidos esperando no topo, o dia com
 // status por atendimento, e o botão de encaixe fixo no pé.
@@ -31,6 +32,7 @@ export default function ProAgenda() {
 
   return (
     <ProShell>
+      <AcessoAviso para="pro" />
       {negocio?.tipo === 'autonoma' && negocio?.onboarding_concluido_em && <PrimeirosPassos salao={negocio} para="pro" />}
       <div className="page-head">
         <div>

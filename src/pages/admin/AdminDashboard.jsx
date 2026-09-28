@@ -5,6 +5,7 @@ import AvisosNovos from '../../components/AvisosNovos'
 import LigarAvisos from '../../components/LigarAvisos'
 import PendenciasBaixa from '../../components/PendenciasBaixa'
 import PrimeirosPassos from '../../components/PrimeirosPassos'
+import AcessoAviso from '../../components/AcessoAviso'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { formatarCents, formatarReaisCurto, formatarPct, mesAtual, nomeDoMes } from '../../lib/numeros'
@@ -68,6 +69,7 @@ export default function AdminDashboard() {
   return (
     <AdminShell>
       <div className="page-head"><div><h2>{salao?.name ?? 'Meu salão'}</h2><p className="muted titulo-dia">{new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</p></div></div>
+      <AcessoAviso />
       <PrimeirosPassos salao={salao} />
       <AvisosNovos />
       <PendenciasBaixa para="/admin/fechar-dia" />

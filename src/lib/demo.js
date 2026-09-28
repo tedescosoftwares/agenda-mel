@@ -142,15 +142,18 @@ const promocoes = [
 // só pra demonstrar: ?demo com localStorage mimo-demo-passo=4 abre o cadastro nesse passo; mimo-demo-vazio=1 mostra o painel antes de serviços e equipe
 const DEMO_PASSO = (typeof localStorage !== 'undefined' && Number(localStorage.getItem('mimo-demo-passo'))) || null
 const DEMO_VAZIO = typeof localStorage !== 'undefined' && localStorage.getItem('mimo-demo-vazio') === '1'
-// mimo-demo-acesso = teste | leitura | bloqueado | ativa (126)
+// mimo-demo-acesso = teste | leitura | bloqueado | ativa (126); mimo-demo-metodo = cartao | pix_automatico | pix (128)
+const DEMO_METODO = (typeof localStorage !== 'undefined' && localStorage.getItem('mimo-demo-metodo')) || null
 // mimo-demo-ativar=1: o salão ainda não foi ativado (mostra o cartão de ativar)
 const DEMO_ATIVADO = !(typeof localStorage !== 'undefined' && localStorage.getItem('mimo-demo-ativar') === '1')
 const DEMO_ACESSO = (typeof localStorage !== 'undefined' && localStorage.getItem('mimo-demo-acesso')) || 'teste'
 const diasDepois = (n) => new Date(Date.now() + n * 86400000).toISOString()
-const acessoDemo = () => DEMO_ACESSO === 'leitura' ? { fase: 'leitura', tipo: 'salao', situacao: 'teste', teste: true, ate: diasDepois(-1), tolerancia_ate: diasDepois(4), dias: 0, dias_tolerancia: 4 }
-  : DEMO_ACESSO === 'bloqueado' ? { fase: 'bloqueado', tipo: 'salao', situacao: 'teste', teste: true, ate: diasDepois(-6), tolerancia_ate: diasDepois(-1), dias: 0, dias_tolerancia: 0 }
-  : DEMO_ACESSO === 'ativa' ? { fase: 'ativa', tipo: 'salao', situacao: 'ativa', metodo: 'cortesia', sem_prazo: true }
-  : { fase: 'teste', tipo: 'salao', situacao: 'teste', teste: true, ate: diasDepois(5), tolerancia_ate: diasDepois(10), dias: 5, dias_tolerancia: 10 }
+const mensalidadeDemo = () => ({ agendas: 5, plano: 'pro', valor_cents: 6970, desconto_cents: DEMO_METODO === 'pix_automatico' ? 700 : 0, total_cents: DEMO_METODO === 'pix_automatico' ? 6270 : 6970, desconto_pct: DEMO_METODO === 'pix_automatico' ? 10 : 0 })
+const extraDemo = () => ({ metodo: DEMO_METODO, desconto_pct: DEMO_METODO === 'pix_automatico' ? 10 : 0, cartao_final: DEMO_METODO === 'cartao' ? '4242' : null, cartao_bandeira: DEMO_METODO === 'cartao' ? 'VISA' : null, autorizacao_status: DEMO_METODO === 'pix_automatico' ? 'ACTIVE' : null, bonus_usado: false, cancelada: false, mensalidade: mensalidadeDemo(), pendente: null, cobrar_em: ['cartao', 'pix_automatico'].includes(DEMO_METODO) ? diasDepois(5) : null })
+const acessoDemo = () => DEMO_ACESSO === 'leitura' ? { fase: 'leitura', tipo: 'salao', situacao: 'teste', teste: true, ate: diasDepois(-1), tolerancia_ate: diasDepois(6), dias: 0, dias_tolerancia: 6, ...extraDemo() }
+  : DEMO_ACESSO === 'bloqueado' ? { fase: 'bloqueado', tipo: 'salao', situacao: 'teste', teste: true, ate: diasDepois(-8), tolerancia_ate: diasDepois(-1), dias: 0, dias_tolerancia: 0, ...extraDemo() }
+  : DEMO_ACESSO === 'ativa' ? { fase: 'ativa', tipo: 'salao', situacao: 'ativa', ate: diasDepois(20), dias: 20, ...extraDemo() }
+  : { fase: 'teste', tipo: 'salao', situacao: 'teste', teste: true, ate: diasDepois(5), tolerancia_ate: diasDepois(12), dias: 5, dias_tolerancia: 12, ...extraDemo() }
 const TABELAS = {
   pagamentos: [
     { id: 'pg5', appointment_id: 'apdev', client_id: 'c1', salon_id: SALAO, status: 'estornado', valor_cents: 3000, total_cents: 6000, sinal_pct: 50, liquido_cents: 2801, estorno_cents: 2801, pago_em: mais(-3) + 'T10:12:00', estornado_em: mais(-1) + 'T18:25:00', motivo_estorno: 'cancelado pela casa', cobranca_id: 'pay_demo_2k9x1', termos_aceitos_em: mais(-3) + 'T10:10:00', criado_em: mais(-3) },
@@ -170,6 +173,7 @@ const TABELAS = {
   waitlist_entries: fila,
   waitlist_offers: [],
   notifications: avisos,
+  cobrancas_mimo: [{ id: 'cm1', salon_id: SALAO, tipo: 'primeira', periodo_inicio: '2026-08-28', periodo_fim: '2026-09-27', total_cents: 6970, desconto_cents: 0, metodo: 'cartao', status: 'pago', vencimento: '2026-08-28', pago_em: '2026-08-28T12:00:00Z', criado_em: '2026-08-28T12:00:00Z' }],
   credit_transactions: [
     { id: 't1', client_id: 'c1', amount_cents: 2000, kind: 'indicacao', description: 'Carla agendou pela sua indicação', created_at: mais(-5) },
     { id: 't2', client_id: 'c1', amount_cents: 1000, kind: 'boas_vindas', description: 'Crédito de boas-vindas', created_at: mais(-40) },
@@ -208,6 +212,8 @@ const RPC = {
   primeiros_passos: () => ({ tipo: 'salao', codigo: 'MEL2K5', nome: 'Studio Mel', dados: true, horarios: true, servicos: DEMO_VAZIO ? 0 : servicos.length, equipe: DEMO_VAZIO ? 0 : profissionais.length, equipe_pendente: 1, equipe_rascunho: 0, agendamentos: 0, avisos: false, feitos: {}, onboarding_concluido_em: '2025-01-10' }),
   primeiro_passo_feito: () => ({}),
   acesso_do_salao: () => acessoDemo(),
+  mensalidade_do_salao: () => mensalidadeDemo(),
+  assinatura_cancelar: () => acessoDemo(),
   salao_ativar: () => acessoDemo(),
   promocoes_para_mim: () => promocoes.filter((p) => p.ativa && p.aprovacao !== 'pendente' && (!p.fim || p.fim >= mais(0))).map((p) => ({ ...p, desconto_pct: p.desconto_pct ?? null, preco_de: servicos.find((s) => s.id === p.service_id)?.price ?? null, preco_por: p.desconto_pct ? Math.round(servicos.find((s) => s.id === p.service_id)?.price * (100 - p.desconto_pct)) / 100 : null, salao: p.salon_id ? 'Studio Mel' : null, profissional: p.professional_id ? profissionais.find((x) => x.id === p.professional_id)?.name : null, professional_id: p.professional_id ?? (p.service_id ? 'pr1' : null), servico: servicos.find((s) => s.id === p.service_id)?.name ?? null })),
   promocao_vista: () => null,

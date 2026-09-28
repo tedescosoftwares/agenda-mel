@@ -239,3 +239,132 @@ export function preflight(req: Request): Response | null {
   if (req.method === 'OPTIONS') return json({ ok: true })
   return null
 }
+
+// ---- a assinatura da MIMO (128): cobrada na conta-pai ---------------------------
+//
+// A dona do salão é cliente da MIMO no Asaas. Três jeitos de pagar:
+//   cartão          tokenizado uma vez (o número passa por aqui e não fica
+//                   guardado; só o token, os 4 finais e a bandeira), e a
+//                   MIMO cobra cada mês pelo token
+//   pix_automatico  uma autorização em modo MANUAL: a dona autoriza no app
+//                   do banco e a MIMO cria cada cobrança do mês
+//   pix             uma cobrança Pix por mês, com QR, paga na mão
+//
+// ATENÇÃO · Pix Automático: os endpoints /pix/automatic/* foram escritos a
+// partir da documentação da Asaas e ainda não passaram pela sondagem
+// (evolution/testar-pix-automatico.mjs). Se a Asaas devolver 400 listando
+// campos, é aqui que se ajusta: `corpoAutorizacao` e `cobrarPixAutomatico`.
+
+export async function garantirClienteMimo(c: { nome: string; documento: string; telefone?: string | null; email?: string | null; ref: string }) {
+  const doc = soDigitos(c.documento)
+  if (!doc) throw new ErroAsaas(400, 'Sem CPF ou CNPJ no cadastro do salão: complete os dados fiscais antes.')
+  const achados = await asaas(chavePai(), 'GET', `/customers?cpfCnpj=${doc}&limit=1`)
+  const existente = achados?.data?.[0]
+  if (existente?.id) return String(existente.id)
+  const novo = await asaas(chavePai(), 'POST', '/customers', {
+    name: c.nome, cpfCnpj: doc, mobilePhone: celular(c.telefone), email: c.email || undefined,
+    externalReference: c.ref, notificationDisabled: true,
+  })
+  return String(novo.id)
+}
+
+export type CartaoEntrada = { nome: string; numero: string; mes: string; ano: string; cvv: string }
+export type TitularEntrada = { nome: string; email?: string | null; documento: string; cep: string; numero: string; telefone?: string | null }
+
+// o token do cartão: o número entra aqui e sai só o token
+export async function tokenizarCartao(customer: string, cartao: CartaoEntrada, titular: TitularEntrada, ip: string) {
+  const r = await asaas(chavePai(), 'POST', '/creditCard/tokenizeCreditCard', {
+    customer,
+    creditCard: { holderName: cartao.nome, number: soDigitos(cartao.numero), expiryMonth: cartao.mes.padStart(2, '0'), expiryYear: cartao.ano.length === 2 ? '20' + cartao.ano : cartao.ano, ccv: soDigitos(cartao.cvv) },
+    creditCardHolderInfo: { name: titular.nome, email: titular.email || undefined, cpfCnpj: soDigitos(titular.documento), postalCode: soDigitos(titular.cep), addressNumber: titular.numero || 'S/N', phone: celular(titular.telefone), mobilePhone: celular(titular.telefone) },
+    remoteIp: ip,
+  })
+  return { token: String(r.creditCardToken ?? ''), final: String(r.creditCardNumber ?? '').slice(-4), bandeira: String(r.creditCardBrand ?? '') }
+}
+
+// cobra o mês no cartão tokenizado (o Asaas cobra na hora)
+export async function cobrarCartao(p: { customer: string; token: string; valorCents: number; descricao: string; ref: string; vencimento: string; ip?: string }) {
+  const r = await asaas(chavePai(), 'POST', '/payments', {
+    customer: p.customer, billingType: 'CREDIT_CARD', value: Math.round(p.valorCents) / 100, dueDate: p.vencimento,
+    description: p.descricao.slice(0, 500), externalReference: p.ref, creditCardToken: p.token, remoteIp: p.ip,
+  })
+  return { id: String(r.id), status: String(r.status), link: r.invoiceUrl ?? null }
+}
+
+// a cobrança Pix avulsa da MIMO (conta-pai, sem split)
+export async function cobrarPixMimo(p: { customer: string; valorCents: number; descricao: string; ref: string; vencimento: string }) {
+  const cobranca = await asaas(chavePai(), 'POST', '/payments', {
+    customer: p.customer, billingType: 'PIX', value: Math.round(p.valorCents) / 100, dueDate: p.vencimento,
+    description: p.descricao.slice(0, 500), externalReference: p.ref,
+  })
+  const qr = await asaas(chavePai(), 'GET', `/payments/${cobranca.id}/pixQrCode`)
+  return { id: String(cobranca.id), status: String(cobranca.status), link: cobranca.invoiceUrl ?? null, copiaCola: String(qr.payload ?? ''), imagem: qr.encodedImage ?? null, expira: qr.expirationDate ?? null }
+}
+
+// ---- Pix Automático (contrato a confirmar na sondagem) ----
+function corpoAutorizacao(p: { customer: string; descricao: string; inicio: string; tetoCents: number; ref: string }) {
+  return {
+    customer: p.customer,
+    description: p.descricao.slice(0, 100),
+    paymentCreationMode: 'MANUAL',      // a MIMO calcula o valor de cada mês e cria cada cobrança
+    frequency: 'MONTHLY',
+    startDate: p.inicio,
+    maxValue: Math.round(p.tetoCents) / 100,   // o teto que a dona autoriza no banco (o plano pode crescer)
+    externalReference: p.ref,
+  }
+}
+
+// deno-lint-ignore no-explicit-any
+function lerAutorizacao(r: any) {
+  const qr = r?.qrCode ?? r?.pixQrCode ?? {}
+  return {
+    id: String(r?.id ?? ''),
+    status: String(r?.status ?? 'PENDING'),
+    copiaCola: String(r?.payload ?? qr?.payload ?? r?.qrCodePayload ?? ''),
+    imagem: (r?.encodedImage ?? qr?.encodedImage ?? null) as string | null,
+  }
+}
+
+export async function criarAutorizacaoPixAutomatico(p: { customer: string; descricao: string; inicio: string; tetoCents: number; ref: string }) {
+  const r = await asaas(chavePai(), 'POST', '/pix/automatic/authorizations', corpoAutorizacao(p))
+  const a = lerAutorizacao(r)
+  // algumas respostas devolvem o QR só na consulta
+  if (!a.copiaCola && a.id) {
+    try { const d = await asaas(chavePai(), 'GET', `/pix/automatic/authorizations/${a.id}`); const b = lerAutorizacao(d); if (b.copiaCola) return { ...a, ...b } } catch (_) { /* fica sem QR */ }
+  }
+  return a
+}
+
+export async function situacaoAutorizacaoPixAutomatico(id: string) {
+  return lerAutorizacao(await asaas(chavePai(), 'GET', `/pix/automatic/authorizations/${id}`))
+}
+
+export async function cancelarAutorizacaoPixAutomatico(id: string) {
+  try { await asaas(chavePai(), 'POST', `/pix/automatic/authorizations/${id}/cancel`) } catch (e) {
+    if (e instanceof ErroAsaas && (e.status === 404 || e.status === 405)) { await asaas(chavePai(), 'DELETE', `/pix/automatic/authorizations/${id}`); return }
+    throw e
+  }
+}
+
+// cobra o mês pela autorização (modo MANUAL). Primeiro o endpoint próprio;
+// se não existir, a cobrança comum apontando pra autorização.
+export async function cobrarPixAutomatico(p: { customer: string; autorizacao: string; valorCents: number; descricao: string; ref: string; vencimento: string }) {
+  const comum = { value: Math.round(p.valorCents) / 100, dueDate: p.vencimento, description: p.descricao.slice(0, 500), externalReference: p.ref }
+  try {
+    const r = await asaas(chavePai(), 'POST', '/pix/automatic/payments', { authorization: p.autorizacao, ...comum })
+    return { id: String(r.id), status: String(r.status ?? 'PENDING') }
+  } catch (e) {
+    if (!(e instanceof ErroAsaas && (e.status === 404 || e.status === 405))) throw e
+    const r = await asaas(chavePai(), 'POST', '/payments', { customer: p.customer, billingType: 'PIX', pixAutomaticAuthorizationId: p.autorizacao, ...comum })
+    return { id: String(r.id), status: String(r.status ?? 'PENDING') }
+  }
+}
+
+export const obterCobrancaMimo = (id: string) => asaas(chavePai(), 'GET', `/payments/${id}`)
+export const apagarCobrancaMimo = (id: string) => asaas(chavePai(), 'DELETE', `/payments/${id}`)
+// só no sandbox: a conta-pai dá baixa na própria cobrança, como se a dona tivesse pago
+export const baixarCobrancaMimoSandbox = (id: string, valorCents: number) =>
+  asaas(chavePai(), 'POST', `/payments/${id}/receiveInCash`, { paymentDate: new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10), value: Math.round(valorCents) / 100, notifyCustomer: false })
+
+export const PAGO = new Set(['RECEIVED', 'CONFIRMED', 'RECEIVED_IN_CASH'])
+export const NAO_VAI_PAGAR = new Set(['OVERDUE', 'REFUNDED', 'REFUND_REQUESTED', 'CHARGEBACK_REQUESTED', 'CHARGEBACK_DISPUTE', 'DELETED'])

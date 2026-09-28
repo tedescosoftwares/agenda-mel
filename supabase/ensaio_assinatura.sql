@@ -36,7 +36,7 @@ begin
   -- 4. teste vencido: modo leitura, ninguém marca; o que existe continua
   update public.assinaturas set teste_ate = now() - interval '1 day' where salon_id = sid;
   ac := public.acesso_do_salao(sid);
-  if ac ->> 'fase' <> 'leitura' or (ac ->> 'dias_tolerancia')::int <> 4 then raise exception '4: %', ac; end if;
+  if ac ->> 'fase' <> 'leitura' or (ac ->> 'dias_tolerancia')::int <> (public.regras_da_assinatura() ->> 'tolerancia_dias')::int - 1 then raise exception '4: %', ac; end if;
   begin
     insert into public.appointments (client_id, professional_id, service_id, date, start_time, end_time, status)
     values (cli, prof, serv, current_date + 40, '10:00', '10:30', 'pendente');
@@ -49,7 +49,7 @@ begin
   raise notice '4 leitura: barra o novo, mantém o existente, página avisa';
 
   -- 5. tolerância vencida: bloqueado
-  update public.assinaturas set teste_ate = now() - interval '6 days' where salon_id = sid;
+  update public.assinaturas set teste_ate = now() - make_interval(days => (public.regras_da_assinatura() ->> 'tolerancia_dias')::int + 1) where salon_id = sid;
   ac := public.acesso_do_salao(sid);
   if ac ->> 'fase' <> 'bloqueado' then raise exception '5: %', ac; end if;
   begin

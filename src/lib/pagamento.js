@@ -69,5 +69,15 @@ function demoFuncao(nome, corpo) {
   if (nome === 'conta-recebimento') {
     return { ok: true, conta_id: 'acc_demo', status: corpo?.acao === 'criar' ? 'aguardando' : 'aprovada', documentos: corpo?.acao === 'criar' ? [{ id: 'd1', status: 'NOT_SENT', titulo: 'Documento de identificação', link: 'https://exemplo.local/onboarding' }] : [] }
   }
+  if (nome === 'assinatura-metodo') {
+    const acesso = { fase: 'teste', tipo: 'salao', situacao: 'teste', teste: true, dias: 5, ate: new Date(Date.now() + 5 * 86400e3).toISOString(), cobrar_em: new Date(Date.now() + 5 * 86400e3).toISOString(), mensalidade: { agendas: 5, plano: 'pro', valor_cents: 6970, desconto_cents: 0, total_cents: 6970 }, bonus_usado: false }
+    const qr = '00020126580014br.gov.bcb.pix0136demo-mimo-assinatura5204000053039865406069.705802BR5904MIMO6006Santos62070503***6304ABCD'
+    if (corpo?.acao === 'cartao') return { ok: true, cartao: { final: '4242', bandeira: 'VISA' }, cobranca: corpo.cobrar_agora ? { ok: true, status: 'pago' } : null, acesso: corpo.cobrar_agora ? { ...acesso, fase: 'ativa', ate: new Date(Date.now() + 37 * 86400e3).toISOString(), metodo: 'cartao', cartao_final: '4242' } : { ...acesso, metodo: 'cartao', cartao_final: '4242' } }
+    if (corpo?.acao === 'pix_automatico') return { ok: true, autorizacao: { id: 'aut_demo', status: 'PENDING', copiaCola: qr, imagem: null }, acesso: { ...acesso, metodo: 'pix_automatico', desconto_pct: 10, autorizacao_status: 'PENDING', autorizacao_qr: qr } }
+    if (corpo?.acao === 'pix_avista') return { ok: true, cobranca: { ok: true, id: 'cm-demo', status: 'aguardando', copia_cola: qr, total_cents: 6970, vencimento: new Date().toISOString().slice(0, 10), sandbox: true }, acesso: { ...acesso, metodo: 'pix', pendente: { id: 'cm-demo', status: 'aguardando', metodo: 'pix', copia_cola: qr, total_cents: 6970 } } }
+    if (corpo?.acao === 'conferir') return { ok: true, acesso: { ...acesso, metodo: 'pix_automatico', autorizacao_status: 'ACTIVE' } }
+    if (corpo?.acao === 'simular') return { ok: true, acesso: { ...acesso, fase: 'ativa', ate: new Date(Date.now() + 37 * 86400e3).toISOString(), metodo: 'pix', pendente: null } }
+    if (corpo?.acao === 'cancelar') return { ok: true, acesso: { ...acesso, metodo: null } }
+  }
   return { ok: true }
 }

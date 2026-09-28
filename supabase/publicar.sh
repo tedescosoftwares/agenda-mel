@@ -115,6 +115,14 @@ echo 'pagamento-cuidar (estornos e baixas)...'
 supabase functions deploy pagamento-cuidar --project-ref "$PROJECT_REF" >/dev/null
 verde '  no ar'
 
+echo 'assinatura-metodo (cartão, Pix Automático, Pix à vista)...'
+supabase functions deploy assinatura-metodo --project-ref "$PROJECT_REF" >/dev/null
+verde '  no ar'
+
+echo 'assinatura-cuidar (cobranças da MIMO)...'
+supabase functions deploy assinatura-cuidar --project-ref "$PROJECT_REF" >/dev/null
+verde '  no ar'
+
 echo 'pagina-publica (prévia do link, com --no-verify-jwt)...'
 supabase functions deploy pagina-publica --project-ref "$PROJECT_REF" --no-verify-jwt >/dev/null
 verde '  no ar'

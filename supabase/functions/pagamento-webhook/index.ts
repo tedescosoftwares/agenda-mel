@@ -9,7 +9,7 @@
 // (banco fora) responde 500 e o Asaas tenta de novo.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { obterCobranca, situacaoDaSubconta, AMBIENTE, json } from '../_shared/asaas.ts'
+import { obterCobranca, obterCobrancaMimo, situacaoDaSubconta, AMBIENTE, PAGO, NAO_VAI_PAGAR, json } from '../_shared/asaas.ts'
 
 const servico = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '', { auth: { persistSession: false } })
 
@@ -28,6 +28,26 @@ Deno.serve(async (req) => {
     const pay = ev.payment ?? {}
     const ref = String(pay.externalReference ?? '')
     const cobranca = String(pay.id ?? '')
+    // a mensalidade da MIMO (128): cobrada na conta-pai, referência mimo:<id>
+    if (ref.startsWith('mimo:')) {
+      const id = ref.slice(5)
+      const { data: linha } = await servico.from('cobrancas_mimo').select('id, status, metodo').eq('id', id).maybeSingle()
+      if (!linha) return json({ ok: true, ignorado: 'cobrança da MIMO desconhecida' })
+      let real
+      try { real = await obterCobrancaMimo(cobranca) } catch (e) { return json({ erro: 'não deu para conferir: ' + String(e) }, 500) }
+      const st = String(real?.status ?? '')
+      if (PAGO.has(st) && (st !== 'RECEIVED_IN_CASH' || AMBIENTE !== 'producao')) {
+        const quando = real?.paymentDate ? new Date(real.paymentDate + 'T12:00:00-03:00').toISOString() : new Date().toISOString()
+        const { data: r, error } = await servico.rpc('cobranca_mimo_confirmar', { cobranca: linha.id, cobranca_asaas: cobranca, quando })
+        if (error) return json({ erro: error.message }, 500)
+        return json({ ok: true, mimo: r })
+      }
+      if (NAO_VAI_PAGAR.has(st) && linha.status !== 'pago') {
+        if (linha.metodo === 'pix') await servico.rpc('cobranca_mimo_atualizar', { cobranca: linha.id, dados: { status: 'expirado', erro: 'não pago (' + st + ')' } })
+        else await servico.rpc('cobranca_mimo_falhou', { cobranca: linha.id, motivo: 'não pago (' + st + ')' })
+      }
+      return json({ ok: true, mimo: st })
+    }
     // a nossa linha: pela referência (o id do pagamento) ou pelo id da cobrança
     let linha = null
     if (/^[0-9a-f-]{36}$/i.test(ref)) {

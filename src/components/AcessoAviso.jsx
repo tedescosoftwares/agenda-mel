@@ -19,8 +19,8 @@ export default function AcessoAviso({ para = 'admin' }) {
       </div>
       {a.acao && (
         <div className="acesso-aviso-acoes">
-          <a className="btn btn-primary acesso-aviso-botao" href={a.acao.href}>{a.acao.rotulo}</a>
-          <Link to="/admin/assinatura" className="btn btn-ghost btn-mini">Como funciona</Link>
+          {a.acao.to ? <Link className="btn btn-primary acesso-aviso-botao" to={a.acao.to}>{a.acao.rotulo}</Link> : <a className="btn btn-primary acesso-aviso-botao" href={a.acao.href}>{a.acao.rotulo}</a>}
+          {a.acao.to !== '/admin/assinatura' && <Link to="/admin/assinatura" className="btn btn-ghost btn-mini">Como funciona</Link>}
         </div>
       )}
     </div>

@@ -28,7 +28,7 @@ export async function criarNoAsaas(db: SupabaseClient, c: Lote, ip = '127.0.0.1'
     if (c.metodo === 'pix_automatico') {
       if (!c.autorizacao_id) throw new ErroAsaas(409, 'sem autorização de Pix Automático')
       const r = await cobrarPixAutomatico({ customer, autorizacao: c.autorizacao_id, valorCents: c.total_cents, descricao: c.descricao, ref, vencimento })
-      await db.rpc('cobranca_mimo_atualizar', { cobranca: c.id, dados: { status: 'aguardando', cobranca_id: r.id, customer_id: customer, tentativa: true } })
+      await db.rpc('cobranca_mimo_atualizar', { cobranca: c.id, dados: { status: 'aguardando', cobranca_id: r.id, link_url: r.link, customer_id: customer, tentativa: true } })
       if (PAGO.has(r.status)) await db.rpc('cobranca_mimo_confirmar', { cobranca: c.id, cobranca_asaas: r.id, quando: new Date().toISOString() })
       return { ok: true, status: PAGO.has(r.status) ? 'pago' : 'aguardando', cobranca_id: r.id }
     }

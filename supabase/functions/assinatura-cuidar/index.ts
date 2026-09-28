@@ -8,7 +8,7 @@
 //   curl -X POST .../functions/v1/assinatura-cuidar -H "Authorization: Bearer $SERVICE_ROLE_KEY"
 
 import { clienteDoChamador, naoAutorizado, semPermissao } from '../_shared/porteiro.ts'
-import { obterCobrancaMimo, situacaoAutorizacaoPixAutomatico, AMBIENTE, PAGO, NAO_VAI_PAGAR, json, ErroAsaas } from '../_shared/asaas.ts'
+import { obterCobrancaMimo, situacaoAutorizacaoPixAutomatico, AMBIENTE, PAGO, NAO_VAI_PAGAR, AUTORIZADA, AUTORIZACAO_MORTA, json, ErroAsaas } from '../_shared/asaas.ts'
 import { criarNoAsaas } from '../_shared/cobranca_mimo.ts'
 
 Deno.serve(async (req) => {
@@ -25,16 +25,26 @@ Deno.serve(async (req) => {
     try {
       if (c.status === 'a_criar') {
         // Pix Automático ainda não autorizado no banco: espera (a rotina volta a chamar)
-        if (c.metodo === 'pix_automatico' && c.autorizacao_id && !/ACTIVE|APPROVED|AUTHORIZED/i.test(String(c.autorizacao_status ?? ''))) {
+        if (c.metodo === 'pix_automatico' && c.autorizacao_id && !AUTORIZADA.test(String(c.autorizacao_status ?? ''))) {
           const s = await situacaoAutorizacaoPixAutomatico(c.autorizacao_id).catch(() => null)
           if (s) await db.rpc('cobranca_mimo_atualizar', { cobranca: c.id, dados: { autorizacao_status: s.status } })
-          if (!s || !/ACTIVE|APPROVED|AUTHORIZED/i.test(s.status)) {
+          if (!s || !AUTORIZADA.test(s.status)) {
             if (String(c.vencimento) < hoje) { await db.rpc('cobranca_mimo_falhou', { cobranca: c.id, motivo: 'Pix Automático ainda não autorizado no banco' }); falhas++ }
             continue
           }
         }
         const r = await criarNoAsaas(db, c)
         if (r.ok) { criadas++; if (r.status === 'pago') pagas++ } else falhas++
+        continue
+      }
+      // o primeiro mês do Pix Automático: é o QR da autorização, sem cobrança própria.
+      // Pagou = autorização ACTIVE; expirou/recusou = a cobrança morre.
+      if (!c.cobranca_id && c.metodo === 'pix_automatico' && c.autorizacao_id) {
+        conferidas++
+        const s = await situacaoAutorizacaoPixAutomatico(c.autorizacao_id)
+        await db.rpc('cobranca_mimo_atualizar', { cobranca: c.id, dados: { autorizacao_status: s.status } })
+        if (AUTORIZADA.test(s.status)) { await db.rpc('cobranca_mimo_confirmar', { cobranca: c.id, cobranca_asaas: null, quando: new Date().toISOString() }); pagas++ }
+        else if (AUTORIZACAO_MORTA.test(s.status)) { await db.rpc('cobranca_mimo_atualizar', { cobranca: c.id, dados: { status: 'expirado', erro: 'autorização ' + s.status } }); expiradas++ }
         continue
       }
       // aguardando: confere na fonte

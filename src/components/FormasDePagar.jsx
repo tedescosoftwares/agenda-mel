@@ -10,7 +10,8 @@ import { METODOS, assinatura, mascaraCartao, mascaraValidade, cartaoValido, auto
 // O modal de pagar a MIMO (128). `modo`:
 //   'escolher'        a lista das três formas, pra trocar
 //   'cartao'          vincula o cartão (cobrarAgora: paga o primeiro mês já)
-//   'pix_automatico'  cria a autorização e mostra o QR pra autorizar no banco
+//   'pix_automatico'  abre o primeiro mês (30 + 7 de bônus, 10% off): o QR paga esse mês e
+//                     autoriza os próximos no banco (jornada 3 da Asaas)
 //   'pix_avista'      abre o Pix do primeiro mês e mostra o copia e cola
 // `valores` = mensalidade_do_salao; `acesso` = acesso_do_salao. Ao terminar,
 // chama onFeito(acesso novo).
@@ -42,8 +43,8 @@ export default function FormasDePagar({ salao, modo: modoInicial, cobrarAgora: c
             <h3>Como você prefere pagar?</h3>
             <p className="muted fp-explica">{acesso?.metodo && !acesso.cancelada ? `Hoje: ${acesso.metodo === 'cartao' ? `cartão final ${acesso.cartao_final}` : acesso.metodo === 'pix_automatico' ? 'Pix Automático' : 'Pix à vista'}. Escolha outra e a anterior deixa de valer.` : 'Escolha uma. Dá pra trocar quando quiser.'}</p>
             <div className="fp-escolhas">
-              <button type="button" className="assin-opcao" onClick={() => setModo('pix_automatico')}>
-                <Smartphone size={16} /><span><b>Pix Automático</b><em>{reais(comDescontoPix / 100)}/mês · {REGRAS.descontoPixAutomaticoPct}% off</em><small>Autoriza uma vez no app do banco; o débito cai sozinho todo mês.</small></span>
+              <button type="button" className="assin-opcao" onClick={() => { setCobrarAgora(true); setModo('pix_automatico') }}>
+                <Smartphone size={16} /><span><b>Pix Automático</b><em>{reais(comDescontoPix / 100)} agora{bonus ? ` · ${REGRAS.periodoDias + bonus} dias` : ''} · {REGRAS.descontoPixAutomaticoPct}% off todo mês</em><small>Paga o primeiro mês pelo QR e autoriza os próximos no banco; depois cai sozinho.</small></span>
               </button>
               <button type="button" className="assin-opcao" onClick={() => { setCobrarAgora(permitirAvista && acesso?.fase !== 'ativa'); setModo('cartao') }}>
                 <CreditCard size={16} /><span><b>Cartão de crédito</b><em>{reais(cheio / 100)}/mês</em><small>Cobrado todo mês no cartão. O número não fica guardado na MIMO.</small></span>
@@ -70,9 +71,9 @@ export default function FormasDePagar({ salao, modo: modoInicial, cobrarAgora: c
         )}
 
         {modo === 'pix_automatico' && (
-          <PixAutomatico salao={salao} total={comDescontoPix} cheio={cheio} cobrarEm={cobrarEm} indo={indo} erro={erro} resultado={resultado} acesso={acesso}
+          <PixAutomatico salao={salao} total={comDescontoPix} cheio={cheio} bonus={bonus} indo={indo} erro={erro} resultado={resultado} acesso={acesso}
             onCriar={() => rodar(async () => terminar(await assinatura('pix_automatico', salao)))}
-            onConferir={() => rodar(async () => { const r = await assinatura('conferir', salao); setResultado((x) => ({ ...(x ?? {}), acesso: r.acesso, autorizacao: { ...(x?.autorizacao ?? {}), status: r.acesso?.autorizacao_status } })); await recarregarAcesso?.() })}
+            onConferir={(como) => rodar(async () => { const r = await assinatura(como === 'simular' ? 'simular' : 'conferir', salao); setResultado((x) => ({ ...(x ?? {}), acesso: r.acesso, pago: r.acesso?.fase === 'ativa' && r.acesso?.metodo === 'pix_automatico' && !r.acesso?.pendente, autorizacao: { ...(x?.autorizacao ?? {}), status: r.acesso?.autorizacao_status } })); await recarregarAcesso?.() })}
             onOk={() => concluir(resultado)} />
         )}
 
@@ -130,39 +131,41 @@ function Cartao({ cobrarAgora, total, bonus, cobrarEm, indo, erro, onEnviar }) {
   )
 }
 
-function PixAutomatico({ total, cheio, cobrarEm, indo, erro, resultado, acesso, onCriar, onConferir, onOk }) {
-  const aut = resultado?.autorizacao ?? (acesso?.autorizacao_qr ? { copiaCola: acesso.autorizacao_qr, imagem: acesso.autorizacao_imagem, status: acesso.autorizacao_status } : null)
-  const ok = autorizado({ autorizacao_status: aut?.status })
+function PixAutomatico({ total, cheio, bonus, indo, erro, resultado, acesso, onCriar, onConferir, onOk }) {
+  const aut = resultado?.autorizacao ?? (acesso?.autorizacao_qr && acesso?.metodo === 'pix_automatico' ? { copiaCola: acesso.autorizacao_qr, imagem: acesso.autorizacao_imagem, status: acesso.autorizacao_status } : null)
+  const valor = Number(resultado?.cobranca?.total_cents ?? acesso?.pendente?.total_cents ?? total)
+  const ok = autorizado({ autorizacao_status: aut?.status }) || resultado?.pago
   const criou = useRef(false)
   useEffect(() => { if (!aut && !criou.current) { criou.current = true; onCriar() } }, []) // eslint-disable-line react-hooks/exhaustive-deps
   if (ok) {
     return (
-      <Pronto titulo="Pix Automático autorizado" onOk={onOk}>
-        Nada é cobrado hoje. No dia {dataCurta(cobrarEm)} debitamos {reais(total / 100)} (com {REGRAS.descontoPixAutomaticoPct}% de desconto) e nada para. Cancela antes, não paga nada.
+      <Pronto titulo="Pago e ativo, com Pix Automático" onOk={onOk}>
+        Recebemos {reais(valor / 100)}. Seu salão está ativo até {dataCurta(resultado?.acesso?.ate ?? acesso?.ate)}: 30 dias{bonus ? ` + ${bonus} de bônus` : ''}. Os próximos meses caem sozinhos no seu banco, com {REGRAS.descontoPixAutomaticoPct}% de desconto, e a gente avisa antes de cada um.
       </Pronto>
     )
   }
   return (
     <div className="fp-form">
       <span className="fp-selo"><Smartphone size={12} /> Pix Automático · {REGRAS.descontoPixAutomaticoPct}% de desconto</span>
-      <h3>Autorize no app do seu banco</h3>
-      <p className="muted fp-explica">Você autoriza uma vez e o débito de <strong>{reais(total / 100)}/mês</strong> <s>{reais(cheio / 100)}</s> cai sozinho. Nada é cobrado hoje: a primeira vem no dia {dataCurta(cobrarEm)}.</p>
-      {!aut && !erro && <p className="muted">Gerando a autorização…</p>}
+      <h3>Pagar {reais(valor / 100)} e autorizar os próximos</h3>
+      <p className="muted fp-explica">Este QR paga o primeiro mês <strong>{reais(valor / 100)}</strong> <s>{reais(cheio / 100)}</s> e, no mesmo passo, autoriza os próximos no app do seu banco. Seu salão fica ativo por 30 dias{bonus ? <> <strong>+ {bonus} de bônus</strong></> : null}; depois, o débito cai sozinho todo mês.</p>
+      {!aut && !erro && <p className="muted">Gerando o QR Code…</p>}
       {aut && <QrPix payload={aut.copiaCola} imagem={aut.imagem} />}
       {aut && (
         <ol className="fp-passos">
-          <li>Abra o app do seu banco e vá em Pix › Pix Automático (ou leia o QR).</li>
-          <li>Confira o valor máximo e autorize.</li>
-          <li>Volte aqui e toque em "Já autorizei".</li>
+          <li>Abra o app do seu banco e leia o QR (ou cole o código em Pix › Pagar).</li>
+          <li>Confira o valor de hoje e a autorização mensal, e confirme.</li>
+          <li>Volte aqui e toque em "Já paguei".</li>
         </ol>
       )}
       {erro && <div className="alert alert-error">{erro}</div>}
       <div className="fp-acoes">
-        {aut && <button type="button" className="btn btn-primary btn-block" onClick={onConferir} disabled={indo}><RefreshCw size={14} /> {indo ? 'Conferindo…' : 'Já autorizei'}</button>}
+        {aut && <button type="button" className="btn btn-primary btn-block" onClick={onConferir} disabled={indo}><RefreshCw size={14} /> {indo ? 'Conferindo…' : 'Já paguei'}</button>}
+        {aut && (isDemo || acesso?.sandbox !== false) && <button type="button" className="btn btn-ghost btn-mini" onClick={() => onConferir('simular')} disabled={indo}>Simular pagamento (sandbox)</button>}
         {!aut && erro && <button type="button" className="btn btn-primary btn-block" onClick={onCriar} disabled={indo}>Tentar de novo</button>}
-        {aut && <button type="button" className="btn btn-ghost btn-block" onClick={onOk}>Autorizo depois</button>}
+        {aut && <button type="button" className="btn btn-ghost btn-block" onClick={onOk}>Pago depois</button>}
       </div>
-      {aut && <p className="muted fp-garantia">Enquanto o banco não confirmar, seu teste continua normal. Se no dia da cobrança ainda não estiver autorizado, a gente avisa.</p>}
+      {aut && <p className="muted fp-garantia">O QR vale por 3 dias e fica em Plano e assinatura. Enquanto isso o teste continua normal. Nada é cobrado sem você confirmar no banco.</p>}
     </div>
   )
 }

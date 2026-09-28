@@ -4,7 +4,7 @@ import { REGRAS } from './acesso'
 // A assinatura paga (128): rótulos e a conversa com a Edge Function
 // assinatura-metodo. Regra fica no banco; aqui é transporte e texto.
 export const METODOS = {
-  pix_automatico: { rotulo: 'Pix Automático', curto: 'Pix Automático', desconto: REGRAS.descontoPixAutomaticoPct, explica: 'Você autoriza uma vez no app do seu banco e o débito cai sozinho todo mês. Sem cartão, sem esquecer.' },
+  pix_automatico: { rotulo: 'Pix Automático', curto: 'Pix Automático', desconto: REGRAS.descontoPixAutomaticoPct, explica: 'Você paga o primeiro mês pelo QR Code e, no mesmo passo, autoriza os próximos no app do seu banco. Depois o débito cai sozinho, com 10% de desconto.' },
   cartao: { rotulo: 'Cartão de crédito', curto: 'cartão', desconto: 0, explica: 'Cobrado automaticamente todo mês no cartão. O número não fica guardado na MIMO.' },
   pix: { rotulo: 'Pix à vista', curto: 'Pix', desconto: 0, explica: 'Paga hoje pelo QR Code. Todo mês a gente manda o Pix do mês seguinte pra você pagar.' },
 }
@@ -14,7 +14,7 @@ export const comDesconto = (cents, pct) => Math.floor((cents * (100 - pct)) / 10
 export function rotuloDoMetodo(acesso) {
   if (!acesso?.metodo) return null
   if (acesso.metodo === 'cartao') return `Cartão ${acesso.cartao_bandeira ? acesso.cartao_bandeira + ' ' : ''}final ${acesso.cartao_final ?? '····'}`
-  if (acesso.metodo === 'pix_automatico') return 'Pix Automático' + (autorizado(acesso) ? '' : ' (aguardando a autorização no banco)')
+  if (acesso.metodo === 'pix_automatico') return 'Pix Automático' + (autorizado(acesso) ? '' : ' (aguardando o pagamento do QR Code)')
   return 'Pix à vista, mês a mês'
 }
 

@@ -5,7 +5,8 @@
 //     cartao          { cartao: {nome, numero, mes, ano, cvv}, titular: {cep, numero}, cobrar_agora }
 //                     tokeniza (o número não fica guardado), vincula; com cobrar_agora paga o
 //                     primeiro mês na hora (30 + 7 dias de bônus)
-//     pix_automatico  cria a autorização (modo MANUAL) e devolve o QR pra autorizar no banco
+//     pix_automatico  abre a cobrança do primeiro mês (30 + 7 de bônus, 10% off) e cria a
+//                     autorização: o QR paga esse mês e autoriza os próximos (jornada 3)
 //     pix_avista      abre a cobrança do primeiro mês por Pix e devolve o copia e cola
 //     conferir        relê a autorização do Pix Automático / a cobrança Pix pendente
 //     descartar_pix   apaga o Pix à vista que ficou aguardando (ela mudou de ideia)
@@ -16,7 +17,7 @@
 // com o Asaas, na conta-pai.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { garantirClienteMimo, tokenizarCartao, criarAutorizacaoPixAutomatico, situacaoAutorizacaoPixAutomatico, cancelarAutorizacaoPixAutomatico, obterCobrancaMimo, baixarCobrancaMimoSandbox, apagarCobrancaMimo, AMBIENTE, PAGO, json, preflight, ErroAsaas } from '../_shared/asaas.ts'
+import { garantirClienteMimo, tokenizarCartao, criarAutorizacaoPixAutomatico, situacaoAutorizacaoPixAutomatico, cancelarAutorizacaoPixAutomatico, obterCobrancaMimo, baixarCobrancaMimoSandbox, apagarCobrancaMimo, AMBIENTE, PAGO, AUTORIZADA, AUTORIZACAO_MORTA, json, preflight, ErroAsaas } from '../_shared/asaas.ts'
 import { criarNoAsaas } from '../_shared/cobranca_mimo.ts'
 
 const URL_SUPABASE = Deno.env.get('SUPABASE_URL') ?? ''
@@ -44,10 +45,14 @@ Deno.serve(async (req) => {
   const acesso = () => servico.rpc('acesso_do_salao', { salao }).then((r) => r.data)
   // um Pix à vista aguardando não faz sentido junto com outro método: some
   async function descartarPixPendente() {
-    const { data: pend } = await servico.from('cobrancas_mimo').select('id, cobranca_id').eq('salon_id', salao).eq('metodo', 'pix').in('status', ['a_criar', 'aguardando', 'falhou'])
+    const { data: pend } = await servico.from('cobrancas_mimo').select('id, cobranca_id, metodo').eq('salon_id', salao).in('metodo', ['pix', 'pix_automatico']).eq('tipo', 'avista').in('status', ['a_criar', 'aguardando', 'falhou'])
     for (const c of pend ?? []) {
       if (c.cobranca_id) await apagarCobrancaMimo(c.cobranca_id).catch(() => {})
       await servico.rpc('cobranca_mimo_atualizar', { cobranca: c.id, dados: { status: 'cancelado', erro: 'trocou a forma de pagamento' } })
+    }
+    // uma autorização de Pix Automático que nunca foi paga também cai
+    if (prep.autorizacao_id && prep.metodo === 'pix_automatico' && !AUTORIZADA.test(String(prep.autorizacao_status ?? ''))) {
+      await cancelarAutorizacaoPixAutomatico(prep.autorizacao_id).catch(() => {})
     }
     return (pend ?? []).length
   }
@@ -75,21 +80,33 @@ Deno.serve(async (req) => {
 
     if (corpo.acao === 'pix_automatico') {
       const customer = prep.customer_id || await garantirClienteMimo({ nome: prep.razao_social, documento: prep.documento, telefone: prep.telefone, email: prep.email, ref: `salao:${salao}` })
-      await descartarPixPendente()
-      // já tem uma autorização em pé? devolve ela
+      // já tem uma autorização viva com QR pra pagar? devolve ela
       if (prep.autorizacao_id && prep.metodo === 'pix_automatico') {
-        const s = await situacaoAutorizacaoPixAutomatico(prep.autorizacao_id).catch(() => null)
-        if (s && !/CANCEL|EXPIRED|REJECT/i.test(s.status)) {
-          await servico.rpc('assinatura_metodo_definir', { salao, metodo_: 'pix_automatico', dados: { autorizacao_status: s.status, autorizacao_qr: s.copiaCola || undefined, autorizacao_imagem: s.imagem || undefined } })
-          return json({ ok: true, autorizacao: s, existente: true, acesso: await acesso() })
+        const st = await situacaoAutorizacaoPixAutomatico(prep.autorizacao_id).catch(() => null)
+        if (st && !AUTORIZACAO_MORTA.test(st.status)) {
+          await servico.rpc('assinatura_metodo_definir', { salao, metodo_: 'pix_automatico', dados: { autorizacao_status: st.status, autorizacao_qr: st.copiaCola || undefined, autorizacao_imagem: st.imagem || undefined } })
+          const { data: cob } = await servico.from('cobrancas_mimo').select('id, total_cents, periodo_fim, status').eq('salon_id', salao).eq('metodo', 'pix_automatico').in('status', ['aguardando', 'a_criar']).order('criado_em', { ascending: false }).limit(1).maybeSingle()
+          return json({ ok: true, autorizacao: st, cobranca: cob, existente: true, acesso: await acesso() })
         }
       }
-      const cobrarEm = prep.acesso?.cobrar_em ?? prep.acesso?.ate
-      const inicio = (cobrarEm ? new Date(cobrarEm) : new Date(Date.now() + 8 * 86400e3)).toISOString().slice(0, 10)
-      const teto = Math.max(Number(prep.mensalidade?.total_cents ?? 4490) * 2, 20000)   // folga pro plano crescer
-      const a = await criarAutorizacaoPixAutomatico({ customer, descricao: `MIMO · ${prep.nome}`, inicio, tetoCents: teto, ref: `salao:${salao}`, contrato: `MIMO${String(salao).replace(/-/g, '')}` })
+      await descartarPixPendente()
+      // o primeiro mês (com o desconto do Pix Automático) é o QR da autorização
+      await servico.rpc('assinatura_metodo_definir', { salao, metodo_: 'pix_automatico', dados: { customer_id: customer } })
+      const { data: ab, error } = await servico.rpc('cobranca_mimo_abrir', { salao, tipo_: 'avista', metodo_: 'pix_automatico' })
+      if (error) return json({ erro: error.message }, 400)
+      const { data: cob } = await servico.from('cobrancas_mimo').select('id, total_cents, periodo_inicio, periodo_fim, status').eq('id', ab.id).maybeSingle()
+      if (!cob) return json({ erro: 'cobrança não encontrada' }, 500)
+      const hoje = new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10)
+      let a
+      try {
+        a = await criarAutorizacaoPixAutomatico({ customer, contrato: `MIMO${String(salao).replace(/-/g, '')}`, descricao: `MIMO ${prep.nome}`, primeiroCents: cob.total_cents, inicio: hoje })
+      } catch (e) {
+        await servico.rpc('cobranca_mimo_falhou', { cobranca: cob.id, motivo: e instanceof ErroAsaas ? e.message : String(e) })
+        throw e
+      }
+      await servico.rpc('cobranca_mimo_atualizar', { cobranca: cob.id, dados: { status: 'aguardando', copia_cola: a.copiaCola, tentativa: true } })
       await servico.rpc('assinatura_metodo_definir', { salao, metodo_: 'pix_automatico', dados: { customer_id: customer, autorizacao_id: a.id, autorizacao_status: a.status, autorizacao_qr: a.copiaCola, autorizacao_imagem: a.imagem } })
-      return json({ ok: true, autorizacao: a, existente: false, acesso: await acesso() })
+      return json({ ok: true, autorizacao: a, cobranca: cob, existente: false, acesso: await acesso() })
     }
 
     if (corpo.acao === 'pix_avista') {
@@ -111,11 +128,14 @@ Deno.serve(async (req) => {
 
     if (corpo.acao === 'conferir') {
       if (prep.metodo === 'pix_automatico' && prep.autorizacao_id) {
-        const s = await situacaoAutorizacaoPixAutomatico(prep.autorizacao_id)
-        await servico.rpc('assinatura_metodo_definir', { salao, metodo_: 'pix_automatico', dados: { autorizacao_status: s.status, autorizacao_qr: s.copiaCola || undefined, autorizacao_imagem: s.imagem || undefined } })
+        const st = await situacaoAutorizacaoPixAutomatico(prep.autorizacao_id)
+        await servico.rpc('assinatura_metodo_definir', { salao, metodo_: 'pix_automatico', dados: { autorizacao_status: st.status } })
+        const { data: cob } = await servico.from('cobrancas_mimo').select('id').eq('salon_id', salao).eq('metodo', 'pix_automatico').eq('tipo', 'avista').eq('status', 'aguardando').order('criado_em', { ascending: false }).limit(1).maybeSingle()
+        if (cob && AUTORIZADA.test(st.status)) await servico.rpc('cobranca_mimo_confirmar', { cobranca: cob.id, cobranca_asaas: null, quando: new Date().toISOString() })
+        if (cob && AUTORIZACAO_MORTA.test(st.status)) await servico.rpc('cobranca_mimo_atualizar', { cobranca: cob.id, dados: { status: 'expirado', erro: 'autorização ' + st.status } })
       }
-      // a cobrança Pix pendente: caiu?
-      const { data: pend } = await servico.from('cobrancas_mimo').select('id, cobranca_id, status').eq('salon_id', salao).eq('status', 'aguardando').order('criado_em', { ascending: false }).limit(1).maybeSingle()
+      // a cobrança Pix (avulsa ou recorrente) pendente: caiu?
+      const { data: pend } = await servico.from('cobrancas_mimo').select('id, cobranca_id, status').eq('salon_id', salao).eq('status', 'aguardando').not('cobranca_id', 'is', null).order('criado_em', { ascending: false }).limit(1).maybeSingle()
       if (pend?.cobranca_id) {
         const real = await obterCobrancaMimo(pend.cobranca_id).catch(() => null)
         const st = String(real?.status ?? '')
@@ -140,9 +160,11 @@ Deno.serve(async (req) => {
 
     if (corpo.acao === 'simular') {
       if (!sandbox) return json({ erro: 'simulação só existe no sandbox' }, 403)
-      const { data: pend } = await servico.from('cobrancas_mimo').select('id, cobranca_id, total_cents').eq('salon_id', salao).eq('status', 'aguardando').order('criado_em', { ascending: false }).limit(1).maybeSingle()
-      if (!pend?.cobranca_id) return json({ erro: 'não há cobrança aguardando' }, 404)
-      await baixarCobrancaMimoSandbox(pend.cobranca_id, pend.total_cents)
+      const { data: pend } = await servico.from('cobrancas_mimo').select('id, cobranca_id, total_cents, metodo').eq('salon_id', salao).eq('status', 'aguardando').order('criado_em', { ascending: false }).limit(1).maybeSingle()
+      if (!pend) return json({ erro: 'não há cobrança aguardando' }, 404)
+      if (pend.cobranca_id) await baixarCobrancaMimoSandbox(pend.cobranca_id, pend.total_cents)
+      else if (pend.metodo === 'pix_automatico') await servico.rpc('assinatura_metodo_definir', { salao, metodo_: 'pix_automatico', dados: { autorizacao_status: 'ACTIVE' } })   // como se o banco tivesse confirmado
+      else return json({ erro: 'cobrança sem id no Asaas' }, 409)
       await servico.rpc('cobranca_mimo_confirmar', { cobranca: pend.id, cobranca_asaas: pend.cobranca_id, quando: new Date().toISOString() })
       return json({ ok: true, acesso: await acesso() })
     }

@@ -301,65 +301,58 @@ export async function cobrarPixMimo(p: { customer: string; valorCents: number; d
   return { id: String(cobranca.id), status: String(cobranca.status), link: cobranca.invoiceUrl ?? null, copiaCola: String(qr.payload ?? ''), imagem: qr.encodedImage ?? null, expira: qr.expirationDate ?? null }
 }
 
-// ---- Pix Automático (contrato a confirmar na sondagem) ----
-function corpoAutorizacao(p: { customer: string; descricao: string; inicio: string; tetoCents: number; ref: string; contrato: string }) {
-  return {
-    customer: p.customer,
-    // o identificador do contrato entre a MIMO e o salão (idContrato do BCB: até 35 caracteres)
-    contractId: p.contrato.replace(/[^A-Za-z0-9]/g, '').slice(0, 35),
-    description: p.descricao.slice(0, 100),
-    paymentCreationMode: 'MANUAL',      // a MIMO calcula o valor de cada mês e cria cada cobrança
-    frequency: 'MONTHLY',
-    startDate: p.inicio,
-    maxValue: Math.round(p.tetoCents) / 100,   // o teto que a dona autoriza no banco (o plano pode crescer)
-    externalReference: p.ref,
-  }
-}
+// ---- Pix Automático (docs.asaas.com › Pix Automático, jornada 3) ----
+//
+// POST /v3/pix/automatic/authorizations cria a autorização E o QR Code do
+// primeiro pagamento (immediateQrCode). A dona paga esse QR no app do
+// banco e, no mesmo ato, autoriza a recorrência: a autorização passa de
+// CREATED para ACTIVE. Em modo MANUAL a MIMO cria cada mês seguinte com
+// POST /v3/payments { billingType: 'PIX', pixAutomaticAuthorizationId },
+// entre 2 e 10 dias úteis antes do vencimento. retryPolicy
+// ALLOW_THREE_IN_SEVEN_DAYS: a instituição tenta de novo por 7 dias.
+export type Autorizacao = { id: string; status: string; copiaCola: string; imagem: string | null; expira: string | null }
 
 // deno-lint-ignore no-explicit-any
-function lerAutorizacao(r: any) {
-  const qr = r?.qrCode ?? r?.pixQrCode ?? {}
+function lerAutorizacao(r: any): Autorizacao {
   return {
     id: String(r?.id ?? ''),
-    status: String(r?.status ?? 'PENDING'),
-    copiaCola: String(r?.payload ?? qr?.payload ?? r?.qrCodePayload ?? ''),
-    imagem: (r?.encodedImage ?? qr?.encodedImage ?? null) as string | null,
+    status: String(r?.status ?? 'CREATED'),
+    copiaCola: String(r?.payload ?? ''),
+    imagem: (r?.encodedImage ?? null) as string | null,
+    expira: (r?.immediateQrCode?.expirationDate ?? null) as string | null,
   }
 }
 
-export async function criarAutorizacaoPixAutomatico(p: { customer: string; descricao: string; inicio: string; tetoCents: number; ref: string; contrato: string }) {
-  const r = await asaas(chavePai(), 'POST', '/pix/automatic/authorizations', corpoAutorizacao(p))
-  const a = lerAutorizacao(r)
-  // algumas respostas devolvem o QR só na consulta
-  if (!a.copiaCola && a.id) {
-    try { const d = await asaas(chavePai(), 'GET', `/pix/automatic/authorizations/${a.id}`); const b = lerAutorizacao(d); if (b.copiaCola) return { ...a, ...b } } catch (_) { /* fica sem QR */ }
-  }
-  return a
+export async function criarAutorizacaoPixAutomatico(p: { customer: string; contrato: string; descricao: string; primeiroCents: number; inicio: string }): Promise<Autorizacao> {
+  const r = await asaas(chavePai(), 'POST', '/pix/automatic/authorizations', {
+    customerId: p.customer,
+    contractId: p.contrato.replace(/[^A-Za-z0-9]/g, '').slice(0, 35),   // idContrato (BCB): até 35 caracteres
+    frequency: 'MONTHLY',
+    startDate: p.inicio,
+    description: p.descricao.slice(0, 35),
+    paymentCreationMode: 'MANUAL',              // a MIMO calcula e cria cada mês (valor acompanha as agendas)
+    retryPolicy: 'ALLOW_THREE_IN_SEVEN_DAYS',
+    immediateQrCode: {
+      originalValue: Math.round(p.primeiroCents) / 100,   // o primeiro mês, pago junto com a autorização
+      expirationSeconds: 3 * 24 * 3600,
+      description: p.descricao.slice(0, 35),
+    },
+  })
+  return lerAutorizacao(r)
 }
 
-export async function situacaoAutorizacaoPixAutomatico(id: string) {
-  return lerAutorizacao(await asaas(chavePai(), 'GET', `/pix/automatic/authorizations/${id}`))
-}
+export const situacaoAutorizacaoPixAutomatico = async (id: string) => lerAutorizacao(await asaas(chavePai(), 'GET', `/pix/automatic/authorizations/${id}`))
+export const cancelarAutorizacaoPixAutomatico = (id: string) => asaas(chavePai(), 'DELETE', `/pix/automatic/authorizations/${id}`)
+export const AUTORIZADA = /^ACTIVE$/i
+export const AUTORIZACAO_MORTA = /CANCELLED|REFUSED|EXPIRED/i
 
-export async function cancelarAutorizacaoPixAutomatico(id: string) {
-  try { await asaas(chavePai(), 'POST', `/pix/automatic/authorizations/${id}/cancel`) } catch (e) {
-    if (e instanceof ErroAsaas && (e.status === 404 || e.status === 405)) { await asaas(chavePai(), 'DELETE', `/pix/automatic/authorizations/${id}`); return }
-    throw e
-  }
-}
-
-// cobra o mês pela autorização (modo MANUAL). Primeiro o endpoint próprio;
-// se não existir, a cobrança comum apontando pra autorização.
+// o mês seguinte, pela autorização ativa (modo MANUAL)
 export async function cobrarPixAutomatico(p: { customer: string; autorizacao: string; valorCents: number; descricao: string; ref: string; vencimento: string }) {
-  const comum = { value: Math.round(p.valorCents) / 100, dueDate: p.vencimento, description: p.descricao.slice(0, 500), externalReference: p.ref }
-  try {
-    const r = await asaas(chavePai(), 'POST', '/pix/automatic/payments', { authorization: p.autorizacao, ...comum })
-    return { id: String(r.id), status: String(r.status ?? 'PENDING') }
-  } catch (e) {
-    if (!(e instanceof ErroAsaas && (e.status === 404 || e.status === 405))) throw e
-    const r = await asaas(chavePai(), 'POST', '/payments', { customer: p.customer, billingType: 'PIX', pixAutomaticAuthorizationId: p.autorizacao, ...comum })
-    return { id: String(r.id), status: String(r.status ?? 'PENDING') }
-  }
+  const r = await asaas(chavePai(), 'POST', '/payments', {
+    customer: p.customer, billingType: 'PIX', value: Math.round(p.valorCents) / 100, dueDate: p.vencimento,
+    description: p.descricao.slice(0, 500), externalReference: p.ref, pixAutomaticAuthorizationId: p.autorizacao,
+  })
+  return { id: String(r.id), status: String(r.status ?? 'PENDING'), link: (r.invoiceUrl ?? null) as string | null }
 }
 
 export const obterCobrancaMimo = (id: string) => asaas(chavePai(), 'GET', `/payments/${id}`)

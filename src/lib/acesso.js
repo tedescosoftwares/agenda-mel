@@ -9,8 +9,8 @@ export const REGRAS = { testeDias: 7, toleranciaDias: 7, prazoAtivacaoDias: 30, 
 export const LINHA_DO_TESTE = [
   { quando: 'Hoje', titulo: 'Você ativa o salão', texto: 'Link e QR Code passam a receber agendamentos. Nada é cobrado hoje, mesmo que você já deixe uma forma de pagamento.' },
   { quando: `${REGRAS.testeDias} dias`, titulo: 'Tudo liberado, grátis', texto: 'Agenda, equipe, WhatsApp, comanda: o painel inteiro, de verdade, com clientes de verdade.' },
-  { quando: 'Dia 5', titulo: 'A gente lembra', texto: 'Um aviso no app, no push e no WhatsApp: se você vinculou Pix Automático ou cartão, dizendo o valor e o dia da cobrança; se não, com o link pra assinar.' },
-  { quando: `Dia ${REGRAS.testeDias + 1}`, titulo: 'Acabou o teste', texto: `Com Pix Automático ou cartão vinculado, a primeira mensalidade é cobrada e nada para. Sem assinatura, o salão fica ${REGRAS.toleranciaDias} dias em modo leitura: os horários marcados continuam valendo, mas o link não recebe agendamento novo.` },
+  { quando: 'Dia 5', titulo: 'A gente lembra', texto: 'Um aviso no app, no push e no WhatsApp: se você vinculou o cartão, dizendo o valor e o dia da cobrança; se não, com o link pra assinar.' },
+  { quando: `Dia ${REGRAS.testeDias + 1}`, titulo: 'Acabou o teste', texto: `Com cartão vinculado, a primeira mensalidade é cobrada e nada para. Sem assinatura, o salão fica ${REGRAS.toleranciaDias} dias em modo leitura: os horários marcados continuam valendo, mas o link não recebe agendamento novo.` },
   { quando: `Dia ${REGRAS.testeDias + REGRAS.toleranciaDias + 1}`, titulo: 'Painel pausado', texto: 'Só sem assinatura. Nada é apagado: assinou, voltou tudo na hora.' },
 ]
 
@@ -26,7 +26,7 @@ export function podeAgendar(acesso) {
 export function avisoDoAcesso(acesso, { dona = true } = {}) {
   if (!acesso) return null
   const dias = Number(acesso.dias ?? 0)
-  const vinculado = ['cartao', 'pix_automatico'].includes(acesso.metodo) && !acesso.cancelada
+  const vinculado = acesso.metodo === 'cartao' && !acesso.cancelada
   const valor = acesso.mensalidade?.total_cents != null ? (acesso.mensalidade.total_cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : ''
   const como = acesso.metodo === 'cartao' ? `no cartão final ${acesso.cartao_final ?? '····'}` : acesso.metodo === 'pix_automatico' ? 'por Pix Automático' : ''
   if (acesso.fase === 'teste') {

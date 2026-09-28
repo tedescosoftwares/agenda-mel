@@ -44,10 +44,10 @@ console.log('\ncliente:', cliente.id)
 // 3. a autorização, em modo MANUAL. Se a Asaas reclamar de campo, ela
 //    lista os que faltam: é isso que a gente quer descobrir.
 const contractId = 'MIMOSONDAGEM' + Date.now().toString(36).toUpperCase()   // idContrato: até 35 caracteres
+// o formato documentado (docs.asaas.com › Criar uma autorização): o QR já é o primeiro pagamento
 const tentativas = [
-  { customer: cliente.id, contractId, paymentCreationMode: 'MANUAL', description: 'MIMO Pro · mensalidade', frequency: 'MONTHLY', startDate: d(8), value: 49.90, externalReference: 'sondagem-1' },
-  { customer: cliente.id, contractId, paymentCreationMode: 'MANUAL', description: 'MIMO Pro · mensalidade', frequency: 'MONTHLY', startDate: d(8), maxValue: 300, externalReference: 'sondagem-2' },
-  { customer: cliente.id, contractId, paymentCreationMode: 'MANUAL', description: 'MIMO Pro · mensalidade', frequency: 'MONTHLY', startDate: d(8), externalReference: 'sondagem-3' },
+  { customerId: cliente.id, contractId, frequency: 'MONTHLY', startDate: d(0), description: 'MIMO Pro mensalidade', paymentCreationMode: 'MANUAL', retryPolicy: 'ALLOW_THREE_IN_SEVEN_DAYS',
+    immediateQrCode: { originalValue: 44.90, expirationSeconds: 259200, description: 'MIMO Pro 1o mes' } },
 ]
 for (const corpo of tentativas) {
   const r = await chamar('POST', '/pix/automatic/authorizations', corpo)

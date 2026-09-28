@@ -10,17 +10,17 @@ import FormasDePagar from './FormasDePagar'
 
 // Ativar (126 + 128): o último passo da configuração, com três caminhos.
 //   Só testar        7 dias grátis, sem nada.
-//   Assinar já       Pix Automático (10% off) ou cartão; o teste vale igual
-//                    e a primeira cobrança sai quando ele acaba.
-//   Pagar agora      Pix ou cartão à vista: 30 + 7 dias de bônus.
+//   Assinar já       deixa o cartão vinculado; o teste vale igual e a
+//                    primeira cobrança sai quando ele acaba.
+//   Pagar agora      Pix Automático (10% off e os próximos caem sozinhos),
+//                    Pix ou cartão à vista: 30 + 7 dias de bônus.
 // A autônoma só libera o link. `onAtivado(acesso)` recebe o que o banco devolveu.
 export default function AtivarSalao({ s, onAtivado, onErro, embutido = false }) {
   const { recarregarAcesso, recarregarPerfil, acesso } = useAuth()
   const [indo, setIndo] = useState(false)
   const [valores, setValores] = useState(null)
   const [modal, setModal] = useState(null)   // { modo, cobrarAgora }
-  const [recorrente, setRecorrente] = useState('pix_automatico')
-  const [avista, setAvista] = useState('pix_avista')
+  const [avista, setAvista] = useState('pix_automatico')
   const autonoma = s?.tipo === 'autonoma'
   useEffect(() => { if (s?.id && !autonoma) supabase.rpc('mensalidade_do_salao', { salao: s.id }).then(({ data }) => setValores(data ?? null)) }, [s?.id, autonoma])
   const cheio = Number(valores?.valor_cents ?? 4990)
@@ -61,30 +61,23 @@ export default function AtivarSalao({ s, onAtivado, onErro, embutido = false }) 
           <button type="button" className="btn btn-ghost" onClick={() => ativar(null)} disabled={indo}>{indo ? 'Ativando…' : 'Ativar e só testar'}</button>
         </div>
 
-        <div className="ativar-caminho destaque">
+        <div className="ativar-caminho">
           <span className="ativar-caminho-selo"><Gift size={12} /> Assinar já</span>
-          <strong>Deixa vinculado, cobra só depois do teste</strong>
-          <small className="muted">Os {REGRAS.testeDias} dias valem igual. A primeira cobrança sai no dia {dataCurta(cobrarEm)} e nada para. Cancela antes, não paga.</small>
-          <div className="ativar-opcoes">
-            <button type="button" className={'ativar-opcao' + (recorrente === 'pix_automatico' ? ' ativa' : '')} onClick={() => setRecorrente('pix_automatico')}>
-              <Smartphone size={15} /><span><b>Pix Automático</b><em>{reais(pix / 100)}/mês · {REGRAS.descontoPixAutomaticoPct}% off</em></span>
-            </button>
-            <button type="button" className={'ativar-opcao' + (recorrente === 'cartao' ? ' ativa' : '')} onClick={() => setRecorrente('cartao')}>
-              <CreditCard size={15} /><span><b>Cartão</b><em>{reais(cheio / 100)}/mês</em></span>
-            </button>
-          </div>
-          <button type="button" className="btn btn-primary" onClick={() => ativar({ modo: recorrente, cobrarAgora: false })} disabled={indo}>{indo ? 'Ativando…' : recorrente === 'pix_automatico' ? 'Ativar com Pix Automático' : 'Ativar com cartão'}</button>
+          <strong>Deixa o cartão, cobra só depois do teste</strong>
+          <small className="muted">Os {REGRAS.testeDias} dias valem igual. No dia {dataCurta(cobrarEm)} cobramos {reais(cheio / 100)} no cartão e nada para. Cancela antes, não paga.</small>
+          <button type="button" className="btn btn-ghost" onClick={() => ativar({ modo: 'cartao', cobrarAgora: false })} disabled={indo}>{indo ? 'Ativando…' : 'Ativar com cartão'}</button>
         </div>
 
-        <div className="ativar-caminho">
+        <div className="ativar-caminho destaque">
           <span className="ativar-caminho-selo"><ShieldCheck size={12} /> Pagar agora</span>
           <strong>30 dias{bonus ? ` + ${bonus} de bônus` : ''}</strong>
-          <small className="muted">Paga hoje {reais(cheio / 100)} e já entra ativo{bonus ? ` por ${REGRAS.periodoDias + bonus} dias` : ''}. Sem recorrência: todo mês vem o Pix do mês seguinte.</small>
-          <div className="ativar-opcoes">
-            <button type="button" className={'ativar-opcao' + (avista === 'pix_avista' ? ' ativa' : '')} onClick={() => setAvista('pix_avista')}><Smartphone size={15} /><span><b>Pix</b><em>QR na hora</em></span></button>
-            <button type="button" className={'ativar-opcao' + (avista === 'cartao' ? ' ativa' : '')} onClick={() => setAvista('cartao')}><CreditCard size={15} /><span><b>Cartão</b><em>à vista</em></span></button>
+          <small className="muted">Paga hoje e já entra ativo{bonus ? ` por ${REGRAS.periodoDias + bonus} dias` : ''}. No Pix Automático os próximos meses caem sozinhos, com {REGRAS.descontoPixAutomaticoPct}% de desconto.</small>
+          <div className="ativar-opcoes tres">
+            <button type="button" className={'ativar-opcao' + (avista === 'pix_automatico' ? ' ativa' : '')} onClick={() => setAvista('pix_automatico')}><Smartphone size={15} /><span><b>Pix Automático</b><em>{reais(pix / 100)} · {REGRAS.descontoPixAutomaticoPct}% off</em></span></button>
+            <button type="button" className={'ativar-opcao' + (avista === 'pix_avista' ? ' ativa' : '')} onClick={() => setAvista('pix_avista')}><Smartphone size={15} /><span><b>Pix</b><em>{reais(cheio / 100)} à vista</em></span></button>
+            <button type="button" className={'ativar-opcao' + (avista === 'cartao' ? ' ativa' : '')} onClick={() => setAvista('cartao')}><CreditCard size={15} /><span><b>Cartão</b><em>{reais(cheio / 100)} à vista</em></span></button>
           </div>
-          <button type="button" className="btn btn-ghost" onClick={() => ativar({ modo: avista, cobrarAgora: true })} disabled={indo}>{indo ? 'Ativando…' : `Ativar e pagar ${reais(cheio / 100)}`}</button>
+          <button type="button" className="btn btn-primary" onClick={() => ativar({ modo: avista, cobrarAgora: true })} disabled={indo}>{indo ? 'Ativando…' : `Ativar e pagar ${reais((avista === 'pix_automatico' ? pix : cheio) / 100)}`}</button>
         </div>
       </div>
 

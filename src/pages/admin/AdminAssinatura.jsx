@@ -71,9 +71,9 @@ export default function AdminAssinatura() {
       )}
 
       {/* o Pix pendente */}
-      {!autonoma && pend?.metodo === 'pix' && pend.status === 'aguardando' && pend.copia_cola && (
+      {!autonoma && ['pix', 'pix_automatico'].includes(pend?.metodo) && pend.status === 'aguardando' && pend.copia_cola && (
         <div className="card assin-pendente">
-          <div className="assin-pendente-topo"><Smartphone size={16} /><strong>Pix de {reais(pend.total_cents / 100)}</strong><span className="muted">vence {dataCurta(pend.vencimento)} · vale até {dataCurta(pend.periodo_fim)}</span></div>
+          <div className="assin-pendente-topo"><Smartphone size={16} /><strong>{pend.metodo === 'pix_automatico' ? 'Pix Automático' : 'Pix'} de {reais(pend.total_cents / 100)}</strong><span className="muted">vence {dataCurta(pend.vencimento)} · vale até {dataCurta(pend.periodo_fim)}</span></div>
           <QrPix payload={pend.copia_cola} />
           <p className="muted assin-nota">Pagou? Toque em "Já paguei". Mudou de ideia? Dá pra trocar a forma de pagamento ou cancelar este Pix: nada foi cobrado.</p>
           <div className="assin-acoes">
@@ -94,10 +94,10 @@ export default function AdminAssinatura() {
               <span className="assin-icone">{acesso.metodo === 'cartao' ? <CreditCard size={18} /> : <Smartphone size={18} />}</span>
               <div>
                 <strong>{rotuloDoMetodo(acesso)}</strong>
-                <span className="muted">{acesso.metodo === 'pix_automatico' ? (autorizado(acesso) ? `${REGRAS.descontoPixAutomaticoPct}% de desconto enquanto pagar por aqui.` : 'Falta autorizar no app do seu banco. Toque em "Autorizar" pra ver o QR de novo.') : METODOS[acesso.metodo].explica}</span>
+                <span className="muted">{acesso.metodo === 'pix_automatico' ? (autorizado(acesso) ? `${REGRAS.descontoPixAutomaticoPct}% de desconto enquanto pagar por aqui. Os próximos meses caem sozinhos.` : 'Falta pagar o QR Code no app do seu banco. Toque em "Ver QR" pra abrir de novo.') : METODOS[acesso.metodo].explica}</span>
               </div>
               <div className="assin-metodo-acoes">
-                {acesso.metodo === 'pix_automatico' && !autorizado(acesso) && <button type="button" className="btn btn-primary btn-mini" onClick={() => setModal({ modo: 'pix_automatico' })}>Autorizar</button>}
+                {acesso.metodo === 'pix_automatico' && !autorizado(acesso) && <button type="button" className="btn btn-primary btn-mini" onClick={() => setModal({ modo: 'pix_automatico', cobrarAgora: true })}>Ver QR</button>}
                 <button type="button" className="btn btn-ghost btn-mini" onClick={() => setModal({ modo: 'escolher' })}>Trocar</button>
               </div>
             </div>
@@ -106,8 +106,8 @@ export default function AdminAssinatura() {
           )}
           {!(acesso?.metodo && !acesso.cancelada) && (
           <div className="assin-opcoes">
-            <button type="button" className="assin-opcao" onClick={() => setModal({ modo: 'pix_automatico' })}>
-              <Smartphone size={16} /><span><b>Pix Automático</b><em>{reais(comDesconto(m?.valor_cents ?? 4990, REGRAS.descontoPixAutomaticoPct) / 100)}/mês · {REGRAS.descontoPixAutomaticoPct}% off</em><small>{METODOS.pix_automatico.explica}</small></span>
+            <button type="button" className="assin-opcao" onClick={() => setModal({ modo: 'pix_automatico', cobrarAgora: true })}>
+              <Smartphone size={16} /><span><b>Pix Automático</b><em>{reais(comDesconto(m?.valor_cents ?? 4990, REGRAS.descontoPixAutomaticoPct) / 100)} agora · {REGRAS.descontoPixAutomaticoPct}% off todo mês</em><small>{METODOS.pix_automatico.explica}</small></span>
             </button>
             <button type="button" className="assin-opcao" onClick={() => setModal({ modo: 'cartao', cobrarAgora: pagarAgora && !vinculado })}>
               <CreditCard size={16} /><span><b>Cartão</b><em>{reais((m?.valor_cents ?? 4990) / 100)}/mês</em><small>{pagarAgora && !vinculado ? 'Paga o primeiro mês agora e segue automático.' : METODOS.cartao.explica}</small></span>

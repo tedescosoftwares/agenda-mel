@@ -45,8 +45,16 @@ begin
   if not (c ->> 'repetido')::boolean then raise exception '4c'; end if;
   raise notice '4 paga: ativa até %', ac ->> 'ate';
 
-  -- 5. faltam 3 dias: a renovação abre; falhou → tenta de novo depois de 1 dia, até 3 vezes
-  update public.assinaturas set pago_ate = now() + interval '2 days' where salon_id = sid;
+  -- 5. faltam 3 dias: a renovação abre; no cartão, falhou → tenta de novo depois de 1 dia, até 3 vezes
+  --    (no Pix Automático a renovação abre 7 dias antes e quem tenta de novo é o banco da pagadora)
+  update public.assinaturas set pago_ate = now() + interval '8 days' where salon_id = sid;
+  perform public.cuidar_das_assinaturas();
+  if exists (select 1 from public.cobrancas_mimo where salon_id = sid and tipo = 'renovacao') then raise exception '5-pre: pix automático abriu cedo demais'; end if;
+  update public.assinaturas set pago_ate = now() + interval '6 days' where salon_id = sid;
+  perform public.cuidar_das_assinaturas();
+  if not exists (select 1 from public.cobrancas_mimo where salon_id = sid and tipo = 'renovacao' and metodo = 'pix_automatico') then raise exception '5-pre2: pix automático devia abrir 7 dias antes'; end if;
+  delete from public.cobrancas_mimo where salon_id = sid and tipo = 'renovacao';
+  update public.assinaturas set metodo = 'cartao', desconto_pct = 0, cartao_final = '4242', pago_ate = now() + interval '2 days' where salon_id = sid;
   perform public.cuidar_das_assinaturas();
   select * into r from public.cobrancas_mimo where salon_id = sid and tipo = 'renovacao';
   if r.id is null or r.periodo_inicio <> (select (pago_ate at time zone 'America/Sao_Paulo')::date from public.assinaturas where salon_id = sid) then raise exception '5: %', r; end if;
@@ -67,7 +75,7 @@ begin
   update public.assinaturas set avisos = '{}', pago_ate = now() + interval '1 day' where salon_id = sid;
   perform public.cuidar_das_assinaturas();
   select body into r from public.notifications where user_id = dona and kind = 'teste_acabando' order by created_at desc limit 1;
-  if r.body not like '%vamos cobrar R$%Pix Automático%' then raise exception '6: %', r.body; end if;
+  if r.body not like '%vamos cobrar R$%no cartão final 4242%' then raise exception '6: %', r.body; end if;
   raise notice '6 aviso: %', left(r.body, 90);
 
   -- 7. cancelar: usa até o fim do que pagou, sem método, e as cobranças abertas somem

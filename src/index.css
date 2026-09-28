@@ -7373,3 +7373,6 @@ label.switch:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
 
 .fp-escolhas { display: grid; gap: 0.5rem; }
 .assin-acoes { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+
+.ativar-opcoes.tres { grid-template-columns: 1fr 1fr 1fr; }
+@media (max-width: 480px) { .ativar-opcoes.tres { grid-template-columns: 1fr; } }

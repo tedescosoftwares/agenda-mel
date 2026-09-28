@@ -90,6 +90,25 @@ Deno.serve(async (req) => {
     return json({ ok: true, ignorado: tipo })
   }
 
+  // Pix Automático (128/130): a autorização ativou = o primeiro mês foi pago; recusou/expirou = morreu
+  if (tipo.startsWith('PIX_AUTOMATIC_RECURRING_AUTHORIZATION_')) {
+    const aut = ev.authorization ?? {}
+    const id = String(aut.id ?? '')
+    if (!id) return json({ ok: true, ignorado: 'sem autorização' })
+    const { data: a } = await servico.from('assinaturas').select('salon_id').eq('autorizacao_id', id).maybeSingle()
+    if (!a) return json({ ok: true, ignorado: 'autorização desconhecida' })
+    const status = String(aut.status ?? (tipo.endsWith('ACTIVATED') ? 'ACTIVE' : tipo.endsWith('CANCELLED') ? 'CANCELLED' : tipo.endsWith('REFUSED') ? 'REFUSED' : tipo.endsWith('EXPIRED') ? 'EXPIRED' : 'CREATED'))
+    await servico.from('assinaturas').update({ autorizacao_status: status, atualizado_em: new Date().toISOString() }).eq('salon_id', a.salon_id)
+    const { data: cob } = await servico.from('cobrancas_mimo').select('id').eq('salon_id', a.salon_id).eq('metodo', 'pix_automatico').eq('tipo', 'avista').eq('status', 'aguardando').order('criado_em', { ascending: false }).limit(1).maybeSingle()
+    if (cob && status === 'ACTIVE') {
+      const { data: r, error } = await servico.rpc('cobranca_mimo_confirmar', { cobranca: cob.id, cobranca_asaas: null, quando: new Date().toISOString() })
+      if (error) return json({ erro: error.message }, 500)
+      return json({ ok: true, mimo: r })
+    }
+    if (cob && /CANCELLED|REFUSED|EXPIRED/.test(status)) await servico.rpc('cobranca_mimo_atualizar', { cobranca: cob.id, dados: { status: 'expirado', erro: 'autorização ' + status } })
+    return json({ ok: true, autorizacao: status })
+  }
+
   if (tipo.startsWith('ACCOUNT_STATUS_')) {
     // a subconta mudou de situação: relê tudo com a chave dela
     const contaId = String(ev.account?.id ?? ev.accountStatus?.id ?? '')

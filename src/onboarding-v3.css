@@ -1,0 +1,646 @@
+/* ============================================================
+   MIMO ONBOARDING V3
+   Continuação visual direta da landing.
+   Fundo claro, rosa como ação, ameixa como texto/acento.
+   Fluxo central, sem sidebar escura permanente.
+   ============================================================ */
+
+.ob-v3 {
+  --o-rosa:#ff2d7a;
+  --o-rosa2:#ff7baa;
+  --o-ameixa:#3d0c4e;
+  --o-ameixa2:#2a0736;
+  --o-lilas:#fbf6fb;
+  --o-papel:#fffdfd;
+  --o-tinta:#1f2026;
+  --o-cinza:#6b6f7a;
+  --o-fio:#ece7ee;
+  --o-sombra:0 18px 54px rgba(61,12,78,.10);
+  --o-sombra2:0 8px 28px rgba(61,12,78,.065);
+
+  display:grid;
+  grid-template-columns:1fr;
+  min-height:100dvh;
+  background:
+    radial-gradient(58rem 30rem at 90% -8%, rgba(255,123,170,.14), transparent 62%),
+    radial-gradient(36rem 24rem at 0% 100%, rgba(170,76,255,.06), transparent 64%),
+    var(--o-papel);
+  color:var(--o-tinta);
+}
+
+/* A antiga sidebar vira uma barra de jornada clara, igual à landing. */
+.ob-v3 .ob-painel {
+  position:sticky;
+  top:0;
+  z-index:20;
+  width:100%;
+  height:auto;
+  min-height:76px;
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr) auto;
+  align-items:center;
+  gap:24px;
+  padding:12px max(24px, calc((100vw - 1180px)/2));
+  color:var(--o-tinta);
+  background:rgba(255,253,253,.91);
+  border-bottom:1px solid rgba(236,231,238,.92);
+  box-shadow:0 8px 30px rgba(61,12,78,.045);
+  backdrop-filter:blur(18px);
+  -webkit-backdrop-filter:blur(18px);
+  overflow:visible;
+}
+
+.ob-v3 .ob-painel::after,
+.ob-v3 .ob-painel-vivo,
+.ob-v3 .ob-plano-painel,
+.ob-v3 .ob-ajuda,
+.ob-v3 .ob-painel-espaco {
+  display:none !important;
+}
+
+.ob-v3 .ob-painel-topo {
+  display:flex;
+  align-items:center;
+  gap:14px;
+}
+.ob-v3 .ob-painel-topo img {
+  width:auto;
+  height:38px;
+  filter:none;
+}
+.ob-v3 .ob-sair {
+  position:fixed;
+  right:max(24px, calc((100vw - 1180px)/2));
+  top:18px;
+  min-height:40px;
+  padding:0 14px;
+  color:var(--o-ameixa);
+  background:#fff;
+  border:1.5px solid var(--o-fio);
+  border-radius:14px;
+  box-shadow:none;
+}
+.ob-v3 .ob-sair:hover {
+  background:#fff7fa;
+  border-color:#ffc2d8;
+}
+
+/* Jornada horizontal */
+.ob-v3 .ob-passos {
+  grid-column:2;
+  margin:0;
+  padding:0 150px 0 0;
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:8px;
+  max-width:760px;
+  width:100%;
+  justify-self:center;
+}
+.ob-v3 .ob-passos li {
+  position:relative;
+}
+.ob-v3 .ob-passos li:not(:last-child)::after {
+  content:'';
+  position:absolute;
+  left:calc(50% + 20px);
+  right:calc(-50% + 20px);
+  top:19px;
+  height:2px;
+  background:#eee8f0;
+  z-index:0;
+}
+.ob-v3 .ob-passos li.feito:not(:last-child)::after {
+  background:linear-gradient(90deg,var(--o-rosa),#ffc2d8);
+}
+.ob-v3 .ob-passos button {
+  position:relative;
+  z-index:1;
+  width:100%;
+  min-height:46px;
+  padding:3px 4px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  gap:4px;
+  border:0;
+  border-radius:0;
+  background:transparent !important;
+  color:#96909a;
+  font-size:.68rem;
+  font-weight:600;
+  text-align:center;
+}
+.ob-v3 .ob-passo-num {
+  width:28px;
+  height:28px;
+  border-radius:999px;
+  border:2px solid #e4dde7;
+  background:#fff;
+  color:#8f8792;
+  box-shadow:0 0 0 4px rgba(255,253,253,.96);
+}
+.ob-v3 .ob-passos li.atual button { color:var(--o-ameixa); }
+.ob-v3 .ob-passos li.atual .ob-passo-num {
+  background:var(--o-rosa);
+  border-color:var(--o-rosa);
+  color:#fff;
+  box-shadow:0 0 0 5px #fff0f6, 0 6px 15px rgba(255,45,122,.24);
+}
+.ob-v3 .ob-passos li.feito button { color:#716a74; }
+.ob-v3 .ob-passos li.feito .ob-passo-num {
+  background:#fff0f6;
+  border-color:#ffc2d8;
+  color:var(--o-rosa);
+  box-shadow:0 0 0 4px rgba(255,253,253,.96);
+}
+
+/* Corpo: uma coluna central de produto, não dashboard. */
+.ob-v3 .ob-conteudo {
+  width:min(calc(100% - 40px),920px);
+  max-width:none;
+  margin:0 auto;
+  padding:58px 0 54px;
+  gap:18px;
+}
+.ob-v3 .ob-conteudo-linha {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+.ob-v3 .ob-conteudo-num {
+  display:inline-flex;
+  width:fit-content;
+  padding:6px 11px;
+  border-radius:999px;
+  border:1px solid #ffd2e1;
+  background:#fff5f8;
+  color:var(--o-rosa);
+  font-size:.66rem;
+  font-weight:700;
+  letter-spacing:.10em;
+}
+.ob-v3 .ob-titulo {
+  margin:0;
+  max-width:720px;
+  font-family:var(--corpo);
+  font-weight:750;
+  text-transform:none;
+  font-size:clamp(2.1rem,4vw,3.35rem);
+  line-height:1.01;
+  letter-spacing:-.06em;
+  color:var(--o-tinta);
+}
+.ob-v3 .ob-sub {
+  margin:-4px 0 10px;
+  max-width:700px;
+  color:var(--o-cinza);
+  font-size:1rem;
+  line-height:1.6;
+}
+.ob-v3 .ob-titulo-linha {
+  align-items:flex-end;
+  gap:18px;
+}
+.ob-v3 .ob-titulo-linha .ob-titulo { max-width:700px; }
+
+/* Roteiro visível como microchecklist, logo abaixo da introdução. */
+.ob-v3 .ob-roteiro-m {
+  display:flex;
+  margin:-2px 0 4px;
+  gap:7px;
+  flex-wrap:wrap;
+}
+.ob-v3 .ob-roteiro-m li {
+  padding:5px 10px 5px 5px;
+  color:#655d68;
+  background:#fff;
+  border:1px solid var(--o-fio);
+  border-radius:999px;
+  font-size:.72rem;
+  box-shadow:0 3px 12px rgba(61,12,78,.025);
+}
+.ob-v3 .ob-roteiro-m li b {
+  width:19px;
+  height:19px;
+  border-color:#ffd0df;
+  color:var(--o-rosa);
+}
+.ob-v3 .ob-roteiro-m li.feito b {
+  background:var(--o-rosa);
+  border-color:var(--o-rosa);
+}
+
+/* Cartões */
+.ob-v3 .ob-card {
+  padding:22px;
+  border:1px solid var(--o-fio);
+  border-radius:24px;
+  background:#fff;
+  box-shadow:var(--o-sombra2);
+}
+.ob-v3 .ob-card-titulo {
+  color:var(--o-ameixa);
+  font-size:1rem;
+}
+.ob-v3 .ob-card > .muted {
+  color:var(--o-cinza);
+  line-height:1.5;
+}
+
+/* Formulário, alinhamento de verdade */
+.ob-v3 .ob-form {
+  gap:15px;
+}
+.ob-v3 .ob-form label,
+.ob-v3 .ob-campo,
+.ob-v3 .ob-rotulo {
+  color:#5f5861;
+  font-size:.76rem;
+  font-weight:650;
+}
+.ob-v3 .ob-form input,
+.ob-v3 .ob-form select,
+.ob-v3 .ob-campo input,
+.ob-v3 .ob-campo select,
+.ob-v3 .ob-add-cat input,
+.ob-v3 .ob-link input {
+  width:100%;
+  min-height:50px;
+  padding:12px 14px;
+  border:1.5px solid #e9e2eb;
+  border-radius:15px;
+  background:#fff;
+  color:var(--o-tinta);
+  font-size:.94rem;
+  box-shadow:none;
+  transition:border-color .16s ease, box-shadow .16s ease;
+}
+.ob-v3 .ob-form input:hover,
+.ob-v3 .ob-form select:hover,
+.ob-v3 .ob-campo input:hover,
+.ob-v3 .ob-campo select:hover {
+  border-color:#f5b9cf;
+}
+.ob-v3 .ob-form input:focus,
+.ob-v3 .ob-form select:focus,
+.ob-v3 .ob-campo input:focus,
+.ob-v3 .ob-campo select:focus {
+  outline:none;
+  border-color:var(--o-rosa);
+  box-shadow:0 0 0 4px rgba(255,45,122,.08);
+}
+.ob-v3 .ob-ddi {
+  min-height:50px;
+  border:1.5px solid #e9e2eb;
+  border-radius:15px;
+  background:#faf8fa;
+}
+
+/* Botões iguais à landing */
+.ob-v3 .btn {
+  min-height:50px;
+  padding:0 20px;
+  border-radius:16px;
+  font-weight:650;
+}
+.ob-v3 .btn-primary {
+  border:0;
+  color:#fff;
+  background:linear-gradient(120deg,#ff2d7a,#ff5f9a);
+  box-shadow:0 14px 30px rgba(255,45,122,.25);
+}
+.ob-v3 .btn-primary:hover:not(:disabled) {
+  transform:translateY(-1px);
+  box-shadow:0 17px 34px rgba(255,45,122,.31);
+}
+.ob-v3 .btn-ghost {
+  border:1.5px solid var(--o-fio);
+  color:var(--o-ameixa);
+  background:#fff;
+}
+.ob-v3 .btn-ghost:hover { border-color:#ffc2d8; }
+
+/* Rodapé não flutua deslocado: segue a mesma largura do conteúdo */
+.ob-v3 .ob-rodape {
+  position:sticky;
+  bottom:0;
+  z-index:10;
+  margin:18px -18px -20px;
+  padding:16px 18px calc(16px + env(safe-area-inset-bottom));
+  border-top:1px solid rgba(236,231,238,.9);
+  background:rgba(255,253,253,.94);
+  backdrop-filter:blur(18px);
+  box-shadow:0 -12px 34px rgba(61,12,78,.05);
+}
+.ob-v3 .ob-continuar { min-width:190px; }
+.ob-v3 .ob-depois { color:#8a838c; }
+
+/* PASSO 1 */
+.ob-v3.ob-step-1 .ob-conteudo { width:min(calc(100% - 40px),1040px); }
+.ob-v3 .ob-tipos {
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:20px;
+}
+.ob-v3 .ob-tipo {
+  gap:11px;
+  padding:0 0 20px;
+  border:1.5px solid var(--o-fio);
+  border-radius:28px;
+  box-shadow:0 10px 30px rgba(61,12,78,.05);
+}
+.ob-v3 .ob-tipo:hover {
+  transform:translateY(-3px);
+  border-color:#ffc2d8;
+  box-shadow:var(--o-sombra);
+}
+.ob-v3 .ob-tipo.ativo {
+  border-color:var(--o-rosa);
+  box-shadow:0 0 0 4px #fff0f6, var(--o-sombra);
+}
+.ob-v3 .ob-tipo-foto {
+  aspect-ratio:16/8.5;
+}
+.ob-v3 .ob-tipo-foto::after {
+  content:'';
+  position:absolute;
+  inset:0;
+  background:linear-gradient(to top,rgba(40,4,43,.28),transparent 52%);
+}
+.ob-v3 .ob-tipo-foto .ob-pilula { z-index:1; }
+.ob-v3 .ob-pilula {
+  border:1px solid rgba(255,255,255,.65);
+  background:rgba(255,255,255,.92);
+  backdrop-filter:blur(10px);
+}
+.ob-v3 .ob-tipo > strong {
+  font-family:var(--corpo);
+  font-size:1.28rem;
+  font-weight:750;
+  text-transform:none;
+  letter-spacing:-.035em;
+  color:var(--o-tinta);
+}
+.ob-v3 .ob-tipo-bloco {
+  padding:13px;
+  border:1px solid #f0ebf1;
+  border-radius:16px;
+  background:#fcfafc;
+}
+.ob-v3 .ob-tipo-destaque {
+  color:#665f68;
+  line-height:1.5;
+}
+.ob-v3 .ob-tipo-preco {
+  padding-top:12px;
+  border-top:1px solid #f1ebf2;
+}
+.ob-v3 .ob-tipo-preco b {
+  font-family:var(--corpo);
+  font-size:1.65rem;
+  font-weight:750;
+  letter-spacing:-.055em;
+}
+
+/* PASSO 2
+   Um formulário cadastral comprido funciona melhor em uma coluna.
+   As duas colunas antigas geravam exatamente o desalinhamento do print. */
+.ob-v3.ob-step-2 .ob-conteudo {
+  width:min(calc(100% - 40px),760px);
+}
+.ob-v3.ob-step-2 .ob-dados {
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+}
+.ob-v3.ob-step-2 .ob-dados > * {
+  width:100%;
+}
+.ob-v3.ob-step-2 .ob-card {
+  padding:24px;
+}
+.ob-v3 .ob-aviso-etapa {
+  padding:13px 15px;
+  border:1px solid #f0eaf1;
+  border-radius:18px;
+  background:#fff;
+  box-shadow:0 6px 20px rgba(61,12,78,.035);
+}
+.ob-v3 .ob-aviso-etapa-icone {
+  background:#fff0f6;
+  color:var(--o-rosa);
+}
+.ob-v3 .ob-nota {
+  border-radius:17px;
+  border-color:#eee7ef;
+  background:#fcfafc;
+}
+.ob-v3 .ob-nota-roxa {
+  border-color:#ffd2e1;
+  background:#fff5f8;
+}
+
+/* PASSO 3
+   O espaço é configurado em blocos sequenciais, não em mosaico. */
+.ob-v3.ob-step-3 .ob-conteudo {
+  width:min(calc(100% - 40px),820px);
+}
+.ob-v3.ob-step-3 .ob-estrutura {
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+}
+.ob-v3.ob-step-3 .ob-card-largo,
+.ob-v3.ob-step-3 .ob-ponte {
+  width:100%;
+}
+.ob-v3 .ob-logo {
+  height:160px;
+  border-radius:20px;
+  border-color:#ffc2d8;
+  background:#fff8fb;
+}
+.ob-v3 .ob-zap-principal {
+  padding:13px;
+  border-radius:17px;
+  border-color:#ffd0df;
+  background:#fff8fb;
+}
+.ob-v3 .ob-seg {
+  padding:4px;
+  border-radius:15px;
+  border-color:#eee7ef;
+  background:#f7f3f7;
+}
+.ob-v3 .ob-seg button { border-radius:11px; }
+.ob-v3 .ob-ponte {
+  padding:14px 16px;
+  border-radius:18px;
+  border-color:#ffd2e1;
+  background:linear-gradient(135deg,#fff4f8,#fff);
+}
+.ob-v3 .ob-endereco-fixo {
+  border-radius:15px;
+  border-color:#ffd2e1;
+  background:#fff9fb;
+}
+.ob-v3 .ob-hora {
+  min-height:44px;
+  padding:6px 0;
+}
+.ob-v3 .ob-hora + .ob-hora {
+  border-top:1px solid #f2edf3;
+}
+
+/* PASSO 4
+   Reduz ruído sem mudar cálculo/estado. O preço é a informação principal. */
+.ob-v3.ob-step-4 .ob-conteudo {
+  width:min(calc(100% - 40px),880px);
+}
+.ob-v3.ob-step-4 .ob-estrutura {
+  display:flex;
+  flex-direction:column;
+  gap:18px;
+}
+.ob-v3.ob-step-4 .ob-plano-card {
+  padding:28px;
+  border-color:#f1e8f0;
+}
+.ob-v3.ob-step-4 .ob-plano-grade {
+  grid-template-columns:minmax(0,.9fr) minmax(320px,1.1fr);
+  gap:28px;
+}
+.ob-v3 .ob-plano-resumo {
+  padding:18px;
+  border-radius:20px;
+  border:1px solid #ffd0df;
+  background:
+    radial-gradient(18rem 9rem at 110% -30%,rgba(255,45,122,.14),transparent 72%),
+    #fff7fa;
+}
+.ob-v3 .ob-plano-resumo b {
+  font-family:var(--corpo);
+  font-size:2rem;
+  font-weight:760;
+  letter-spacing:-.06em;
+}
+.ob-v3 .ob-plano-gratis {
+  border:0;
+  border-radius:16px;
+  background:#fff0f6;
+}
+.ob-v3 .ob-plano-beneficios {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px 16px;
+}
+.ob-v3 .ob-plano-beneficios li {
+  margin:0;
+  font-size:.78rem;
+}
+.ob-v3 .ob-plano-comparar {
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+}
+.ob-v3 .ob-plano-opcao {
+  min-height:76px;
+  border-radius:15px;
+  border-color:#eee7ef;
+}
+.ob-v3 .ob-plano-opcao.ativa {
+  border-color:#ffc2d8;
+  box-shadow:0 0 0 3px #fff0f6;
+}
+.ob-v3 .ob-depois-painel {
+  padding:24px !important;
+  border-color:#f0e9f1;
+}
+.ob-v3 .ob-depois-lista {
+  grid-template-columns:repeat(3,1fr);
+  gap:12px;
+}
+.ob-v3 .ob-depois-item {
+  min-height:130px;
+  padding:16px;
+  border-radius:18px;
+  border-color:#eee8ef;
+  background:#fcfafc;
+}
+
+/* Retomada/modal */
+.ob-v3 .ob-retomada {
+  border-radius:16px;
+  box-shadow:0 6px 20px rgba(61,12,78,.04);
+}
+.ob-v3 .ob-modal-fundo {
+  background:rgba(31,20,34,.38);
+  backdrop-filter:blur(7px);
+}
+.ob-v3 .ob-modal {
+  border-radius:24px;
+  box-shadow:0 28px 80px rgba(31,10,38,.20);
+}
+
+/* mobile */
+@media (max-width:900px) {
+  .ob-v3 .ob-painel { display:none; }
+  .ob-v3 .ob-topo-m {
+    display:grid;
+    grid-template-columns:42px minmax(0,1fr) auto;
+    min-height:60px;
+    padding:9px 14px;
+    position:sticky;
+    top:0;
+    z-index:20;
+    background:rgba(255,253,253,.94);
+    border-bottom:1px solid rgba(236,231,238,.9);
+    box-shadow:0 6px 22px rgba(61,12,78,.04);
+    backdrop-filter:blur(16px);
+  }
+  .ob-v3 .ob-topo-m > button:first-child {
+    width:40px;height:40px;
+    border-radius:13px;
+    background:#fff;
+    border:1px solid var(--o-fio);
+  }
+  .ob-v3 .ob-barra {
+    height:5px;
+    background:#eee8f0;
+  }
+  .ob-v3 .ob-conteudo,
+  .ob-v3.ob-step-1 .ob-conteudo,
+  .ob-v3.ob-step-2 .ob-conteudo,
+  .ob-v3.ob-step-3 .ob-conteudo,
+  .ob-v3.ob-step-4 .ob-conteudo {
+    width:100%;
+    padding:24px 16px 34px;
+  }
+  .ob-v3 .ob-titulo {
+    font-size:2rem;
+  }
+  .ob-v3 .ob-tipos,
+  .ob-v3 .ob-plano-grade,
+  .ob-v3 .ob-depois-lista,
+  .ob-v3 .ob-plano-beneficios,
+  .ob-v3 .ob-plano-comparar {
+    grid-template-columns:1fr;
+  }
+  .ob-v3 .ob-tipo-foto { aspect-ratio:16/7.3; }
+  .ob-v3 .ob-rodape {
+    margin:8px -16px -34px;
+    padding:12px 16px calc(12px + env(safe-area-inset-bottom));
+  }
+  .ob-v3 .ob-rodape .btn-ghost { display:none; }
+  .ob-v3 .ob-continuar { width:100%; }
+}
+
+@media (max-width:520px) {
+  .ob-v3 .ob-titulo { font-size:1.78rem; }
+  .ob-v3 .ob-card { padding:18px; border-radius:20px; }
+  .ob-v3 .ob-linha-2 { grid-template-columns:1fr; }
+  .ob-v3 .ob-hora {
+    grid-template-columns:58px minmax(0,1fr) 9px minmax(0,1fr) 42px;
+  }
+}

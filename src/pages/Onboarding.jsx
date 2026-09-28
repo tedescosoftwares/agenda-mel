@@ -7,6 +7,7 @@ import { supabase } from '../lib/supabase'
 import { planoDoNegocio, reais as emDinheiro, PLANOS } from '../lib/planos'
 import '../onboarding.css'
 import '../onboarding-v2.css'
+import '../onboarding-v3.css'
 import { reduzirFoto } from '../lib/imagem'
 import { buscarCep, formatarCep, limparCep, minhaPosicao, geocodificar, temPino, arredondar } from '../lib/geo'
 import { formatarFone } from '../lib/fone'
@@ -174,7 +175,7 @@ export default function Onboarding({ publico = false }) {
   const plano = planoDoNegocio(s.tipo, s.equipe_prevista)
   const sairLink = publico ? <Link className="ob-sair" to="/pro/entrar"><LogOut size={14} /> Já tenho conta</Link> : <button type="button" className="ob-sair" onClick={sair}><LogOut size={14} /> Sair do cadastro</button>
   return (
-    <div className={"ob ob-v2 ob-step-" + passo}>
+    <div className={"ob ob-v2 ob-v3 ob-step-" + passo}>
       <aside className="ob-painel">
         <div className="ob-painel-topo"><img src="/mimo-logo.svg" alt="MIMO" />{sairLink}</div>
         <div key={atual.id} className="ob-painel-vivo">

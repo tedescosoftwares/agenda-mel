@@ -6486,7 +6486,6 @@ label.check input { margin-top: 3px; }
 .ep { display: flex; flex-direction: column; gap: 0.7rem; }
 .ep-topo { display: grid; grid-template-columns: auto 1fr; gap: 0.7rem; align-items: start; }
 .ep-icone { width: 40px; height: 40px; border-radius: 12px; background: var(--latao-veu); color: var(--rosa); display: grid; place-items: center; }
-.ep-teaser .ep-icone { background: linear-gradient(135deg, #ff5c8a, #c94cff); color: #fff; }
 .ep-texto { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
 .ep-texto .muted { font-size: 0.78rem; line-height: 1.35; }
 .ep-texto .muted b { color: var(--ameixa); font-weight: 700; }
@@ -7337,6 +7336,12 @@ label.switch:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
 .aj-link { text-decoration: none; color: inherit; }
 
 /* ---- ativar: os três caminhos (128) ---- */
+/* o endereço próprio, escolhido na ativação (132) */
+.ativar-endereco { display: grid; gap: 0.55rem; padding: 0.9rem; border-radius: 16px; border: 1px solid #ece7ee; background: #fff; margin-bottom: 0.7rem; }
+.ativar-endereco-topo { display: grid; grid-template-columns: auto 1fr; gap: 0.6rem; align-items: start; }
+.ativar-endereco-topo .ep-icone { width: 36px; height: 36px; }
+.ativar-endereco-topo div { display: flex; flex-direction: column; gap: 0.1rem; }
+.ativar-endereco-topo small { font-size: 0.78rem; line-height: 1.3; }
 .ativar-caminhos { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 0.7rem; }
 .ativar-caminho { display: grid; gap: 0.5rem; align-content: start; padding: 0.9rem; border-radius: 16px; border: 1px solid #ece7ee; background: #fff; }
 .ativar-caminho.destaque { border-color: var(--rosa, #ff2d7a); box-shadow: 0 0 0 3px #ffe0eb; background: linear-gradient(160deg, #fff7fa, #fff); }

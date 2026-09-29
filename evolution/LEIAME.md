@@ -563,8 +563,9 @@ no editor, diga até onde: `./supabase/aplicar.sh --ja-rodei 079`.
 
 ## Endereço próprio por salão (2.80): studiomel.mimo.com.vc
 
-O salão assinante escolhe o nome em Ajustes → Endereço do salão. Para
-isso funcionar, uma vez só:
+O salão escolhe o nome na ativação (ou em Ajustes → Endereço do salão);
+faz parte do teste e só pausa se a assinatura parar. Para isso
+funcionar, uma vez só:
 
 1. **Cloudflare → DNS**: registro `A`, nome `*`, conteúdo = IP desta
    máquina, mesmo modo de proxy dos registros `mimo.com.vc` e `pro`.
@@ -576,7 +577,7 @@ isso funcionar, uma vez só:
 4. Rode a opção **2** do Conectar_MIMO_VPS.bat: o publicar-site.sh compila o
    Caddy com o plugin da Cloudflare (a primeira vez demora uns minutos) e
    o certificado curinga `*.mimo.com.vc` sai sozinho. Depois **B**
-   (migração 131) e **9** (a edge function pagina-publica mudou).
+   (migrações 131 e 132) e **9** (a edge function pagina-publica mudou).
 
 Conferir: `docker compose logs caddy --tail 30` deve mostrar o
 certificado de `*.mimo.com.vc` obtido. Sem o token, o resto do site

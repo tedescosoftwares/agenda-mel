@@ -1,6 +1,6 @@
 // O link de entrada de um salão e de uma profissional (2.80).
 //
-// Salão assinante tem endereço próprio: studiomel.mimo.com.vc, e cada
+// Salão tem endereço próprio (escolhido na ativação, vale no teste): studiomel.mimo.com.vc, e cada
 // profissional da casa vira studiomel.mimo.com.vc/ana-oliveira. Sem
 // endereço próprio (teste, autônoma), vale o de sempre: /v/CÓDIGO para
 // o salão e /p/<slug> para a profissional. Os antigos continuam

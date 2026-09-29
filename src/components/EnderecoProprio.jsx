@@ -1,41 +1,65 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { Globe, Check, X, Sparkles } from 'lucide-react'
+import { Globe, Check, X } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import CodigoQr from './CodigoQr'
 import { enderecoEscrito, limparEndereco, linkDoSalao } from '../lib/endereco'
 
 // O endereço próprio do salão (2.80): studiomel.mimo.com.vc.
 //
-// Faz parte da assinatura. Três estados:
-//   assinante sem endereço   escolhe o nome, vê se está livre, salva
-//   assinante com endereço   vê o link, copia, imprime o QR, pode trocar
-//   em teste / leitura       vê o que ganha ao assinar
-// A autônoma não passa por aqui: o link dela é mimo.com.vc/p/<slug>.
-export default function EnderecoProprio({ salao, acesso, endereco, onMudou }) {
-  const atual = endereco ?? salao?.subdominio ?? null
-  const ativa = acesso?.fase === 'ativa'
-  const [editando, setEditando] = useState(false)
-  const [nome, setNome] = useState(() => atual ?? limparEndereco(salao?.name))
-  const [chk, setChk] = useState(null)      // { ok, nome, motivo }
-  const [salvando, setSalvando] = useState(false)
-  const [erro, setErro] = useState('')
-  const [copiado, setCopiado] = useState(false)
-  const [qr, setQr] = useState(false)
-  const timer = useRef(null)
+// Faz parte do teste, não do pagamento (132): o salão escolhe na
+// ativação (AtivarSalao) ou aqui em Ajustes, imprime o QR com ele e só
+// perde se a assinatura parar de vez. A autônoma não passa por aqui: o
+// link dela é mimo.com.vc/p/<slug>.
 
+// confere ao vivo se o nome está livre; devolve { limpo, chk }
+export function useChecagemEndereco(nome, salaoId, atual) {
+  const [chk, setChk] = useState(null)      // { ok, nome, motivo, mesmo }
+  const timer = useRef(null)
   const limpo = limparEndereco(nome)
   useEffect(() => {
-    if (!editando && atual) return
-    if (!limpo || limpo === atual) { setChk(limpo === atual && atual ? { ok: true, nome: atual, mesmo: true } : null); return }
+    if (!limpo) { setChk(null); return }
+    if (atual && limpo === atual) { setChk({ ok: true, nome: atual, mesmo: true }); return }
+    setChk(null)
     clearTimeout(timer.current)
     timer.current = setTimeout(async () => {
-      const { data, error } = await supabase.rpc('subdominio_disponivel', { nome: limpo, salao: salao.id })
+      const { data, error } = await supabase.rpc('subdominio_disponivel', { nome: limpo, salao: salaoId ?? null })
       if (error) { setChk({ ok: false, nome: limpo, motivo: error.message }); return }
       setChk(data ?? null)
     }, 350)
     return () => clearTimeout(timer.current)
-  }, [limpo, atual, editando, salao?.id])
+  }, [limpo, atual, salaoId])
+  return { limpo, chk }
+}
+
+// o campo com o sufixo .mimo.com.vc e a linha de checagem
+export function CampoEndereco({ nome, onNome, limpo, chk, autoFocus = false }) {
+  return (
+    <>
+      <label className="ep-campo">
+        <input type="text" value={nome} onChange={(e) => onNome(e.target.value)} placeholder="seusalao" autoCapitalize="none" autoCorrect="off" spellCheck={false} maxLength={48} autoFocus={autoFocus} />
+        <span className="ep-sufixo">.{enderecoEscrito('').slice(1)}</span>
+      </label>
+      <p className={'ep-checagem' + (chk ? (chk.ok ? ' ok' : ' nao') : '')}>
+        {!limpo ? 'Digite o nome do salão.'
+          : chk?.mesmo ? 'Esse já é o seu endereço.'
+          : chk == null ? `Conferindo ${enderecoEscrito(limpo)}…`
+          : chk.ok ? <><Check size={14} /> {enderecoEscrito(chk.nome)} está livre</>
+          : <><X size={14} /> {chk.motivo}</>}
+      </p>
+    </>
+  )
+}
+
+export default function EnderecoProprio({ salao, acesso, endereco, onMudou }) {
+  const atual = endereco ?? salao?.subdominio ?? null
+  const bloqueado = acesso?.fase === 'bloqueado'
+  const [editando, setEditando] = useState(false)
+  const [nome, setNome] = useState(() => atual ?? limparEndereco(salao?.name))
+  const { limpo, chk } = useChecagemEndereco((!atual || editando) ? nome : '', salao?.id, atual)
+  const [salvando, setSalvando] = useState(false)
+  const [erro, setErro] = useState('')
+  const [copiado, setCopiado] = useState(false)
+  const [qr, setQr] = useState(false)
 
   if (!salao || salao.tipo === 'autonoma') return null
 
@@ -45,7 +69,7 @@ export default function EnderecoProprio({ salao, acesso, endereco, onMudou }) {
     const { data, error } = await supabase.rpc('subdominio_definir', { salao: salao.id, nome: limpo })
     setSalvando(false)
     if (error) { setErro(error.message); return }
-    setEditando(false); setChk(null)
+    setEditando(false)
     onMudou?.(data?.subdominio ?? limpo)
   }
   function copiar() {
@@ -53,27 +77,9 @@ export default function EnderecoProprio({ salao, acesso, endereco, onMudou }) {
     setCopiado(true); setTimeout(() => setCopiado(false), 2000)
   }
 
-  // ---- em teste / leitura: o que ganha ao assinar ----
-  if (!ativa && !atual) {
-    return (
-      <div className="card ep ep-teaser">
-        <div className="ep-topo">
-          <span className="ep-icone"><Sparkles size={20} /></span>
-          <div className="ep-texto">
-            <strong>Endereço próprio do salão</strong>
-            <span className="muted">Na assinatura, o link do salão vira <b>{enderecoEscrito(limparEndereco(salao.name) || 'seusalao')}</b> e cada profissional ganha o dela dentro dele. Mais fácil de falar, de imprimir e de colocar na bio.</span>
-          </div>
-        </div>
-        <div className="ep-acoes">
-          <Link to="/admin/assinatura" className="btn btn-primary btn-mini">Ver a assinatura</Link>
-        </div>
-      </div>
-    )
-  }
-
   // ---- escolhendo (primeira vez ou trocando) ----
   if (!atual || editando) {
-    const pode = chk?.ok && !chk.mesmo && !salvando
+    const pode = chk?.ok && !chk.mesmo && !salvando && !bloqueado
     return (
       <div className="card ep">
         <div className="ep-topo">
@@ -83,17 +89,8 @@ export default function EnderecoProprio({ salao, acesso, endereco, onMudou }) {
             <span className="muted">{atual ? 'O antigo continua abrindo e leva para o novo. QR já impresso não morre.' : 'É o link que você fala, imprime e coloca na bio. Só letras, números e hífen.'}</span>
           </div>
         </div>
-        <label className="ep-campo">
-          <input type="text" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="seusalao" autoCapitalize="none" autoCorrect="off" spellCheck={false} maxLength={48} />
-          <span className="ep-sufixo">.{enderecoEscrito('').slice(1)}</span>
-        </label>
-        <p className={'ep-checagem' + (chk ? (chk.ok ? ' ok' : ' nao') : '')}>
-          {!limpo ? 'Digite o nome do salão.'
-            : chk?.mesmo ? 'Esse já é o seu endereço.'
-            : chk == null ? `Conferindo ${enderecoEscrito(limpo)}…`
-            : chk.ok ? <><Check size={14} /> {enderecoEscrito(chk.nome)} está livre</>
-            : <><X size={14} /> {chk.motivo}</>}
-        </p>
+        <CampoEndereco nome={nome} onNome={setNome} limpo={limpo} chk={chk} />
+        {bloqueado && <div className="alert alert-info">A assinatura está parada. Regularize para mexer no endereço.</div>}
         {erro && <div className="alert alert-error">{erro}</div>}
         <div className="ep-acoes">
           {atual && <button type="button" className="btn btn-ghost btn-mini" onClick={() => { setEditando(false); setNome(atual); setErro('') }}>Cancelar</button>}
@@ -111,14 +108,14 @@ export default function EnderecoProprio({ salao, acesso, endereco, onMudou }) {
         <span className="ep-icone"><Globe size={20} /></span>
         <div className="ep-texto">
           <strong>Endereço do salão</strong>
-          <span className="muted">O QR do balcão e o link de cada profissional já usam este endereço.{acesso?.fase === 'leitura' ? ' Em modo leitura ele continua abrindo; pausado, não.' : ''}</span>
+          <span className="muted">O QR do balcão e o link de cada profissional já usam este endereço.{acesso?.fase === 'leitura' ? ' Em modo leitura ele continua abrindo.' : bloqueado ? ' Com a assinatura parada ele fica pausado; volta quando regularizar.' : ''}</span>
         </div>
       </div>
       <a className="ep-link" href={link} target="_blank" rel="noreferrer">{enderecoEscrito(atual)}</a>
       <div className="ep-acoes">
         <button type="button" className="btn btn-ghost btn-mini" onClick={copiar}>{copiado ? 'Copiado!' : 'Copiar link'}</button>
         <button type="button" className={'btn btn-mini ' + (qr ? 'btn-ghost' : 'btn-primary')} onClick={() => setQr((v) => !v)}>{qr ? 'Fechar o QR' : 'QR e link'}</button>
-        {ativa && <button type="button" className="btn btn-ghost btn-mini" onClick={() => { setEditando(true); setNome(atual) }}>Trocar</button>}
+        {!bloqueado && <button type="button" className="btn btn-ghost btn-mini" onClick={() => { setEditando(true); setNome(atual) }}>Trocar</button>}
       </div>
       {qr && (
         <div className="aj-codigo-qr">

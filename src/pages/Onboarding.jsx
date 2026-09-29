@@ -595,7 +595,7 @@ function PassoDados({ s, seguir, voltar, salvando, setErro, user, autonoma, publ
                 </div>
               </>
             )}
-            {!(comCnpj && cnpjSituacao === 'ATIVA') && <label className="ob-termos ob-informal"><input type="checkbox" checked={!comCnpj} onChange={(e) => trocarDocumento(e.target.checked)} /><span>Ainda não tenho CNPJ</span></label>}
+            {(!comCnpj || !cnpjValido(f.cnpj)) && <label className="ob-termos ob-informal"><input type="checkbox" checked={!comCnpj} onChange={(e) => trocarDocumento(e.target.checked)} /><span>Ainda não tenho CNPJ</span></label>}
           </div>
           <div className="ob-bloco">
             <span className="ob-bloco-titulo">{comCnpj ? 'Endereço fiscal' : 'Seu endereço'} <small>{comCnpj ? 'o que está na Receita' : 'o do cadastro; onde atende vem na próxima etapa'}</small></span>
@@ -777,7 +777,20 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
     setHoras((x) => x.map((h) => (copiar.dias.has(h.weekday) ? { ...h, open: seg.open, start_time: seg.start_time, end_time: seg.end_time } : h)))
     setCopiar(null)
   }
-  useRoteiro([nome.trim() && (logo || fotos.length > 0), loc.whatsapp.trim() && local.city.trim() && pino, horas != null && horas.some((h) => h.open)])
+  const identidadeOk = Boolean(nome.trim() && (logo || fotos.length > 0))
+  const contatoOk = Boolean(loc.whatsapp.trim())
+  const localizacaoOk = Boolean(local.city.trim() && pino)
+  const horariosOk = Boolean(horas?.some((h) => h.open) && horas.every((h) => !h.open || h.start_time < h.end_time))
+  const [blocoAberto, setBlocoAberto] = useState(() => identidadeOk ? (contatoOk ? (localizacaoOk ? 'horarios' : 'localizacao') : 'contato') : 'identidade')
+
+  // Cada etapa abre a próxima quando fica pronta. Reabrir uma etapa concluída
+  // continua possível, sem o efeito empurrar a pessoa de volta automaticamente.
+  useEffect(() => { if (identidadeOk) setBlocoAberto((x) => x === 'identidade' ? 'contato' : x) }, [identidadeOk])
+  useEffect(() => { if (contatoOk) setBlocoAberto((x) => x === 'contato' ? 'localizacao' : x) }, [contatoOk])
+  useEffect(() => { if (localizacaoOk) setBlocoAberto((x) => x === 'localizacao' ? 'horarios' : x) }, [localizacaoOk])
+  useEffect(() => { if (horariosOk) setBlocoAberto((x) => x === 'horarios' ? 'regras' : x) }, [horariosOk])
+
+  useRoteiro([identidadeOk, contatoOk && localizacaoOk, horariosOk])
   const recomendadoAtivo = Number(pol.antecedencia_min_minutos) === RECOMENDADO.antecedencia_min_minutos && pol.politica_cancelamento === RECOMENDADO.politica_cancelamento && pol.permite_remarcar === RECOMENDADO.permite_remarcar && pol.sinal_ligado === RECOMENDADO.sinal_ligado
 
   async function avancar() {
@@ -808,7 +821,11 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
         </GuiaContexto>
       </div>
       <div className="ob-estrutura">
-        <div className="ob-card ob-card-largo">
+        <div
+          className={'ob-card ob-card-largo ob-fluxo-card ' + (blocoAberto === 'identidade' ? 'aberto' : 'fechado') + (identidadeOk ? ' feito' : '')}
+          data-etapa="1"
+          onClick={() => blocoAberto !== 'identidade' && setBlocoAberto('identidade')}
+        >
           <strong className="ob-card-titulo">{autonoma ? 'Sua imagem e seu espaço' : 'Nome e fotos'}</strong>
           <span className="muted">{autonoma ? 'Sua foto aparece ao lado do nome. As fotos do espaço viram a capa da sua página.' : 'O logo aparece ao lado do nome. As fotos mostram o espaço; a primeira vira a capa.'}</span>
           <div className="ob-cara">
@@ -867,7 +884,11 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
           <span><strong>{nome.trim() ? `${nome.trim()} já tem cara.` : 'Nome e fotos prontos?'}</strong> Agora, como as clientes chegam até {autonoma ? 'você' : 'vocês'}: contatos, endereço e horários.</span>
         </div>
         <div className="ob-coluna">
-          <div className="ob-card">
+          <div
+            className={'ob-card ob-fluxo-card ' + (blocoAberto === 'contato' ? 'aberto' : 'fechado') + (contatoOk ? ' feito' : '') + (!identidadeOk ? ' travado' : '')}
+            data-etapa="2"
+            onClick={() => identidadeOk && blocoAberto !== 'contato' && setBlocoAberto('contato')}
+          >
             <strong className="ob-card-titulo">{autonoma ? 'Como as clientes falam com você' : 'Como as clientes falam com vocês'}</strong>
             <div className="ob-form">
               <div className="ob-zap-principal">
@@ -892,7 +913,11 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
               </div>
             </div>
           </div>
-          <div className="ob-card">
+          <div
+            className={'ob-card ob-fluxo-card ' + (blocoAberto === 'localizacao' ? 'aberto' : 'fechado') + (localizacaoOk ? ' feito' : '') + (!(identidadeOk && contatoOk) ? ' travado' : '')}
+            data-etapa="3"
+            onClick={() => identidadeOk && contatoOk && blocoAberto !== 'localizacao' && setBlocoAberto('localizacao')}
+          >
             <strong className="ob-card-titulo">{autonoma ? 'Onde você atende' : 'Localização do salão'}</strong>
             <span className="muted">É o endereço que a cliente usa no “Como chegar”.</span>
             <div className="ob-inline-explica"><MapPin size={14} /><span><strong>O pino é importante.</strong> Ele evita mandar a cliente para o número errado ou para o centro da cidade quando ela abrir o mapa.</span></div>
@@ -926,7 +951,11 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
           </div>
         </div>
         <div className="ob-coluna">
-        <div className="ob-card">
+        <div
+          className={'ob-card ob-fluxo-card ' + (blocoAberto === 'horarios' ? 'aberto' : 'fechado') + (horariosOk ? ' feito' : '') + (!localizacaoOk ? ' travado' : '')}
+          data-etapa="4"
+          onClick={() => localizacaoOk && blocoAberto !== 'horarios' && setBlocoAberto('horarios')}
+        >
           <strong className="ob-card-titulo">Horário de funcionamento</strong>
           <span className="muted">{autonoma ? 'Horário padrão da sua agenda. Folgas você marca depois, em Bloqueios.' : 'Horário geral da casa. Ele não obriga toda a equipe a trabalhar igual: depois cada profissional pode ter dias e horários diferentes.'}</span>
           {!horas ? <p className="muted">Carregando…</p> : (
@@ -951,7 +980,11 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
             </div>
           )}
         </div>
-        <div className="ob-card">
+        <div
+          className={'ob-card ob-fluxo-card ' + (blocoAberto === 'regras' ? 'aberto' : 'fechado') + (!horariosOk ? ' travado' : '')}
+          data-etapa="5"
+          onClick={() => horariosOk && blocoAberto !== 'regras' && setBlocoAberto('regras')}
+        >
           <span className="ob-card-linha"><strong className="ob-card-titulo">Regras da agenda</strong>{recomendadoAtivo && <em className="ob-badge">Configuração recomendada</em>}</span>
           <div className="ob-inline-explica"><CalendarCheck size={14} /><span><strong>Isso controla o que a cliente consegue fazer sozinha.</strong> Antecedência, cancelamento, reagendamento e confirmação viram regras automáticas no agendamento.</span></div>
           {!recomendadoAtivo && (

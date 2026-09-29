@@ -1301,3 +1301,160 @@
     animation:none !important;
   }
 }
+
+
+/* ---------- wizard assistido: usuário controla o ritmo ---------- */
+.ob-v3 .ob-subpasso-rodape {
+  position:sticky;
+  bottom:14px;
+  z-index:25;
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr) auto;
+  align-items:center;
+  gap:12px;
+  margin-top:16px;
+  padding:12px;
+  border:1px solid #ece6ee;
+  border-radius:18px;
+  background:rgba(255,255,255,.94);
+  box-shadow:0 14px 38px rgba(61,12,78,.10);
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+}
+.ob-v3 .ob-subpasso-status {
+  min-width:0;
+  display:flex;
+  align-items:flex-start;
+  gap:8px;
+  color:#7e7680;
+  font-size:.74rem;
+  line-height:1.45;
+}
+.ob-v3 .ob-subpasso-status svg {
+  flex:none;
+  margin-top:1px;
+}
+.ob-v3 .ob-subpasso-status strong {
+  color:var(--o-ameixa);
+}
+.ob-v3 .ob-subpasso-rodape.pronto {
+  border-color:#d7eee2;
+  background:rgba(252,255,253,.96);
+}
+.ob-v3 .ob-subpasso-rodape.pronto .ob-subpasso-status svg {
+  color:#0c8a5b;
+}
+.ob-v3 .ob-subpasso-rodape.pendente .ob-subpasso-status svg {
+  color:var(--o-rosa);
+}
+.ob-v3 .ob-subpasso-proximo:disabled {
+  opacity:.48;
+  box-shadow:none;
+  cursor:not-allowed;
+}
+
+/* feedback continua bonito, mas deixa de parecer um bloqueio de tela dramático */
+.ob-v3 .ob-momento-ok-leve {
+  background:rgba(255,253,253,.38);
+  backdrop-filter:blur(3px);
+  -webkit-backdrop-filter:blur(3px);
+  pointer-events:none;
+}
+.ob-v3 .ob-momento-ok-leve .ob-momento-ok-card {
+  width:min(100%,330px);
+  padding:22px 22px 20px;
+  box-shadow:0 18px 48px rgba(61,12,78,.13);
+}
+.ob-v3 .ob-momento-ok-leve .ob-momento-ok-check {
+  width:46px;
+  height:46px;
+}
+
+/* localização vira uma etapa realmente orientada */
+.ob-v3 .ob-mapa-campo {
+  margin-top:10px;
+  padding:14px;
+  border:1px solid #efe7f0;
+  border-radius:17px;
+  background:#fcfafc;
+}
+.ob-v3 .ob-sem-pino {
+  padding:18px 16px;
+  border:1.5px dashed #ffb7d1;
+  background:linear-gradient(135deg,#fff7fa,#fff);
+  color:var(--o-ameixa);
+}
+.ob-v3 .ob-sem-pino svg {
+  color:var(--o-rosa);
+}
+.ob-v3 .ob-sem-pino strong {
+  color:var(--o-ameixa);
+  font-size:.9rem;
+}
+.ob-v3 .ob-mapa-acoes {
+  margin-top:6px;
+  gap:8px;
+}
+.ob-v3 .ob-acao-mini.ob-pino-principal {
+  min-height:38px;
+  padding:8px 12px;
+  border-color:#ffb8d0;
+  background:#fff0f6;
+  color:#b51655;
+  font-weight:700;
+  box-shadow:0 4px 12px rgba(255,45,122,.08);
+}
+.ob-v3 .ob-acao-mini.ob-pino-principal:hover:not(:disabled) {
+  background:#ffe6ef;
+  border-color:#ff8fb8;
+}
+.ob-v3 .ob-acao-mini.ob-pino-principal:disabled {
+  opacity:.5;
+  background:#f4f1f4;
+  color:#a79faa;
+  border-color:#e5dfe6;
+  box-shadow:none;
+}
+.ob-v3 .ob-acao-mini.ob-pino-secundario {
+  min-height:38px;
+  padding:8px 12px;
+  background:#fff;
+  color:#716875;
+}
+.ob-v3 .ob-mapa-nota-forte {
+  display:flex;
+  align-items:flex-start;
+  gap:7px;
+  padding:9px 10px;
+  border-radius:12px;
+  background:#f1fbf6;
+  border:1px solid #d5ecdf;
+  color:#4d6f5c;
+}
+.ob-v3 .ob-mapa-nota-forte svg {
+  flex:none;
+  margin-top:2px;
+  color:#0c8a5b;
+}
+.ob-v3 .ob-mapa-nota-forte strong {
+  color:#17633f;
+}
+
+/* pré-preenchido é "pronto para revisar", não "já concluído" */
+.ob-v3 .ob-subfluxo-itens button.atual:not(.feito) .ob-subfluxo-num {
+  box-shadow:0 0 0 4px rgba(255,45,122,.08);
+}
+
+@media (max-width:720px) {
+  .ob-v3 .ob-subpasso-rodape {
+    position:static;
+    grid-template-columns:1fr;
+  }
+  .ob-v3 .ob-subpasso-rodape > .btn {
+    width:100%;
+    justify-content:center;
+  }
+  .ob-v3 .ob-subpasso-status {
+    order:-1;
+  }
+}

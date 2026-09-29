@@ -2,7 +2,6 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import QRCode from 'qrcode'
 import ConfirmarEmail from '../components/ConfirmarEmail'
-import MontandoSalao from '../components/MontandoSalao'
 import { Check, ArrowLeft, ArrowRight, LogOut, Camera, MapPin, Plus, X, Copy, Download, MoreHorizontal, Link2, Info, Sparkles, MessageCircle, Users, Minus, Eye, Lock, Wand2, CalendarCheck, QrCode, Send, Home, MapPinOff, Search, ImagePlus, HelpCircle } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
@@ -149,22 +148,20 @@ export default function Onboarding({ publico = false }) {
     if (ok) { setPasso(proximo); setRetomado(false); window.scrollTo({ top: 0, behavior: 'smooth' }) }
   }
   function voltar() { setPasso(voltarDe(passo)); setRetomado(false); window.scrollTo({ top: 0 }) }
-  // "Entrar no painel": a tela "Montando o seu salão" cobre a espera (uns 9 s,
-  // ou mais se o banco demorar) e só então o painel abre
-  const [montando, setMontando] = useState(false)
-  const [montado, setMontado] = useState(false)
+  // Concluir o cadastro não coloca o salão no ar. Depois daqui vem a
+  // configuração operacional (serviços/equipe); a animação final e a escolha
+  // comercial acontecem só quando realmente estiver tudo pronto para ativar.
   async function concluir() {
-    setSalvando(true); setErro(''); setMontando(true); setMontado(false)
+    setSalvando(true); setErro('')
     const { error } = await supabase.rpc('onboarding_concluir', { salao: s.id })
-    if (error) { setSalvando(false); setMontando(false); setErro(error.message); return }
+    if (error) { setSalvando(false); setErro(error.message); return }
     setPronto(true)
-    // o onboarding já apresentou o app: conta como primeiro acesso feito (e os termos aceitos no cadastro)
     try { await supabase.rpc('aceitar_documentos', { aceites: aceitesPara(autonoma ? 'profissional' : 'salao', docsLegais), contexto: 'onboarding' }) } catch { /* já aceitos */ }
     try { await supabase.rpc('concluir_primeiro_acesso') } catch { /* segue */ }
     await recarregarPerfil?.()
-    setSalvando(false); setMontado(true)
+    setSalvando(false)
+    navigate(autonoma ? '/pro/configurar' : '/admin/configurar', { replace: true })
   }
-  function abrirPainel() { navigate(autonoma ? '/pro/agenda' : '/admin', { replace: true }) }
   const [querSair, setQuerSair] = useState(false)
   function sair() { setQuerSair(true) }
   // grava onde parou e sai da conta; ao entrar de novo, o cadastro continua daqui
@@ -242,7 +239,6 @@ export default function Onboarding({ publico = false }) {
         <div className="ob-conteudo-linha"><span className="ob-conteudo-num">Passo {idx + 1} de {total} · {atual.rotulo}</span><EstadoSalvo estado={estadoAuto} /></div>
         {retomado && <div className="ob-retomada"><Wand2 size={15} /><span><strong>Continuando de onde você parou.</strong> O que você já preencheu está guardado; os passos anteriores ficam no menu ao lado.</span><button type="button" onClick={() => setRetomado(false)} aria-label="Fechar"><X size={14} /></button></div>}
         {atual.roteiro && <ol className="ob-roteiro-m" aria-label="Neste passo">{atual.roteiro.map((r, i) => <li key={r} className={feitos[i] ? 'feito' : ''}><b>{feitos[i] ? <Check size={10} /> : i + 1}</b>{r}</li>)}</ol>}
-        {montando && <MontandoSalao nome={s.name} autonoma={autonoma} pronto={montado} erro={Boolean(erro)} onFim={abrirPainel} />}
         {erro && <ModalErro texto={erro} onFechar={() => setErro('')} />}
         {querSair && <ModalSair passo={idx + 1} onFicar={() => setQuerSair(false)} onSair={sairMesmo} />}
         <ProximoCtx.Provider value={passos[idx + 1]?.rotulo ?? ''}>

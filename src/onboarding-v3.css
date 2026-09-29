@@ -1103,3 +1103,64 @@
     min-height:56px;
   }
 }
+
+
+/* bloqueio explícito: o card não parece "concluído apagado" */
+.ob-v3 .ob-fluxo-card.travado {
+  position:relative;
+  min-height:92px;
+  opacity:1;
+  background:#fbfafb;
+  border-style:dashed;
+  border-color:#e5dfe7;
+}
+.ob-v3 .ob-fluxo-card.travado .ob-card-titulo,
+.ob-v3 .ob-fluxo-card.travado .ob-card-linha .ob-card-titulo {
+  color:#9a929d;
+}
+.ob-v3 .ob-fluxo-card.travado > .muted {
+  display:none !important;
+}
+.ob-v3 .ob-fluxo-card.travado::after {
+  content:attr(data-bloqueio);
+  position:absolute;
+  left:18px;
+  bottom:16px;
+  right:54px;
+  color:#a59da8;
+  font-size:.72rem;
+  font-weight:600;
+}
+.ob-v3 .ob-fluxo-card.travado::before {
+  content:'🔒';
+  color:#9d95a0;
+  background:#f4f1f5;
+  border-color:#e4dee6;
+}
+
+/* concluídos ficam compactos de verdade e não fingem ser o foco atual */
+.ob-v3 .ob-fluxo-card.feito.fechado {
+  min-height:70px;
+  padding-top:16px;
+  padding-bottom:16px;
+  background:#fcfffd;
+  border-color:#dcefe5;
+}
+.ob-v3 .ob-fluxo-card.feito.fechado > .muted {
+  display:none !important;
+}
+
+/* etapa liberada, mas ainda não aberta: visual neutro */
+.ob-v3 .ob-fluxo-card.fechado:not(.feito):not(.travado) {
+  border-color:#eee7ef;
+  background:#fff;
+}
+.ob-v3 .ob-fluxo-card.fechado:not(.feito):not(.travado)::after {
+  content:'Liberado · clique para continuar';
+  position:absolute;
+  right:54px;
+  top:23px;
+  color:var(--o-rosa);
+  font-size:.64rem;
+  font-weight:700;
+}

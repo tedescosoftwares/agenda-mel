@@ -172,7 +172,68 @@ Deno.serve(async (req) => {
       return json({ ok: true, estado: (await quem.rpc('ativacao_inicial_estado', { salao })).data, acesso: await acesso() })
     }
 
-    if (corpo.acao === 'cartao') {
+    if (corpo.acao === 'renovar_pix') {
+      const { data: ab, error } = await quem.rpc('cobranca_manual_abrir', { salao, metodo_: 'pix' })
+      if (error) return json({ erro: error.message }, 400)
+      if (ab?.cobranca_id && ab?.copia_cola) return json({ ok: true, cobranca: ab, acesso: await acesso() })
+
+      const customer = prep.customer_id || await garantirClienteMimo({
+        nome: prep.razao_social, documento: prep.documento, telefone: prep.telefone,
+        email: prep.email, ref: `salao:${salao}`,
+      })
+      const hoje = new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10)
+      const r = await cobrarPixMimo({
+        customer,
+        valorCents: Number(ab.total_cents),
+        descricao: `Mensalidade MIMO · ${prep.nome}`,
+        ref: `mimo:${ab.id}`,
+        vencimento: hoje,
+      })
+      await servico.rpc('cobranca_mimo_atualizar', {
+        cobranca: ab.id,
+        dados: { status: 'aguardando', cobranca_id: r.id, copia_cola: r.copiaCola, link_url: r.link, customer_id: customer, tentativa: true },
+      })
+      return json({ ok: true, cobranca: { ...ab, status: 'aguardando', cobranca_id: r.id, copia_cola: r.copiaCola, imagem: r.imagem, link_url: r.link, sandbox }, acesso: await acesso() })
+    }
+
+    if (corpo.acao === 'renovar_cartao') {
+      const c = corpo.cartao ?? {}; const t = corpo.titular ?? {}
+      if (!c.numero || !c.nome || !c.mes || !c.ano || !c.cvv) return json({ erro: 'Preencha os dados do cartão.' }, 400)
+      const { data: ab, error } = await quem.rpc('cobranca_manual_abrir', { salao, metodo_: 'cartao' })
+      if (error) return json({ erro: error.message }, 400)
+
+      const customer = prep.customer_id || await garantirClienteMimo({
+        nome: prep.razao_social, documento: prep.documento, telefone: prep.telefone,
+        email: prep.email, ref: `salao:${salao}`,
+      })
+      const hoje = new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10)
+      const r = await cobrarCartaoAvulso({
+        customer,
+        cartao: c,
+        titular: {
+          nome: c.nome, email: prep.email, documento: t.documento || prep.documento,
+          cep: t.cep || prep.cep || '', numero: t.numero || prep.numero || '', telefone: prep.telefone,
+        },
+        valorCents: Number(ab.total_cents),
+        descricao: `Mensalidade MIMO · ${prep.nome}`,
+        ref: `mimo:${ab.id}`,
+        vencimento: hoje,
+        ip,
+      })
+      await servico.rpc('cobranca_mimo_atualizar', {
+        cobranca: ab.id,
+        dados: { status: 'aguardando', cobranca_id: r.id, link_url: r.link, customer_id: customer, tentativa: true },
+      })
+      if (PAGO.has(r.status)) {
+        await servico.rpc('cobranca_mimo_confirmar', { cobranca: ab.id, cobranca_asaas: r.id, quando: new Date().toISOString() })
+      } else if (!['PENDING', 'AWAITING_RISK_ANALYSIS'].includes(r.status)) {
+        await servico.rpc('cobranca_mimo_falhou', { cobranca: ab.id, motivo: 'cartão não autorizado (' + r.status + ')' })
+        return json({ erro: 'O cartão não foi autorizado. Tente outro cartão ou use Pix.', status: r.status }, 402)
+      }
+      return json({ ok: true, cobranca: { ...ab, status: r.status, cobranca_id: r.id }, cartao: { final: r.final, bandeira: r.bandeira }, acesso: await acesso() })
+    }
+
+        if (corpo.acao === 'cartao') {
       const c = corpo.cartao ?? {}; const t = corpo.titular ?? {}
       if (!c.numero || !c.nome || !c.mes || !c.ano || !c.cvv) return json({ erro: 'Preencha os dados do cartão.' }, 400)
       const customer = prep.customer_id || await garantirClienteMimo({ nome: prep.razao_social, documento: prep.documento, telefone: prep.telefone, email: prep.email, ref: `salao:${salao}` })

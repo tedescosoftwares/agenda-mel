@@ -271,6 +271,77 @@ function AjudaCampo({ titulo, children }) {
   )
 }
 
+
+function PreviewFinalMimo({ nome, logo, fotos = [], endereco, whatsapp, instagram, horario, autonoma }) {
+  const servicos = autonoma
+    ? [
+        { nome: 'Escova', tempo: '45 min', preco: 'R$ 70' },
+        { nome: 'Hidratação', tempo: '50 min', preco: 'R$ 80' },
+        { nome: 'Finalização', tempo: '40 min', preco: 'R$ 60' },
+      ]
+    : [
+        { nome: 'Corte + escova', tempo: '1 h', preco: 'R$ 120' },
+        { nome: 'Manicure', tempo: '50 min', preco: 'R$ 45' },
+        { nome: 'Design de sobrancelhas', tempo: '30 min', preco: 'R$ 55' },
+      ]
+  const profissionais = autonoma
+    ? [{ nome: 'Você', especialidade: 'Sua agenda' }]
+    : [
+        { nome: 'Ana', especialidade: 'Cabelo' },
+        { nome: 'Marina', especialidade: 'Unhas' },
+        { nome: 'Júlia', especialidade: 'Estética' },
+      ]
+
+  return (
+    <div className="ob-preview-final">
+      <div className="ob-preview-final-capa">
+        {fotos[0]
+          ? <img src={fotos[0]} alt="" />
+          : <div className="ob-preview-final-capa-vazia"><ImagePlus size={24} /><span>Sua foto de capa aparece aqui</span></div>}
+        <div className="ob-preview-final-overlay"></div>
+        <div className="ob-preview-final-identidade">
+          <span className="ob-preview-final-logo">{logo ? <img src={logo} alt="" /> : iniciaisDe(nome)}</span>
+          <span><strong>{nome || (autonoma ? 'Sua agenda' : 'Seu salão')}</strong><small>{autonoma ? 'Agenda profissional' : 'Salão de beleza'}</small></span>
+        </div>
+      </div>
+
+      <div className="ob-preview-final-corpo">
+        <div className="ob-preview-final-info">
+          <span><MapPin size={14} /><span><strong>Onde encontrar</strong><small>{endereco || 'Endereço configurado'}</small></span></span>
+          <span><MessageCircle size={14} /><span><strong>Contato</strong><small>{whatsapp ? `+55 ${formatarFone(whatsapp)}` : 'WhatsApp configurado'}</small></span></span>
+          <span><CalendarCheck size={14} /><span><strong>Atendimento</strong><small>{horario || 'Horários configurados'}</small></span></span>
+          {instagram && <span><Sparkles size={14} /><span><strong>Instagram</strong><small>@{String(instagram).replace(/^@/,'')}</small></span></span>}
+        </div>
+
+        <div className="ob-preview-final-bloco">
+          <div className="ob-preview-final-titulo"><span><strong>Serviços</strong><small>exemplos</small></span><button type="button" tabIndex="-1">Ver todos</button></div>
+          <div className="ob-preview-servicos">
+            {servicos.map((item) => <div key={item.nome} className="ob-preview-servico"><span><strong>{item.nome}</strong><small>{item.tempo}</small></span><b>{item.preco}</b></div>)}
+          </div>
+        </div>
+
+        <div className="ob-preview-final-bloco">
+          <div className="ob-preview-final-titulo"><span><strong>{autonoma ? 'Profissional' : 'Profissionais'}</strong><small>exemplo visual</small></span></div>
+          <div className="ob-preview-profissionais">
+            {profissionais.map((prof, i) => (
+              <div key={prof.nome} className="ob-preview-profissional">
+                <span className="ob-preview-avatar">{prof.nome.slice(0,1)}</span>
+                <span><strong>{prof.nome}</strong><small>{prof.especialidade}</small></span>
+                <em>{i === 0 ? 'Disponível hoje' : 'Ver agenda'}</em>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="ob-preview-final-cta">
+          <span><strong>Escolha um serviço e encontre seu horário</strong><small>É daqui que a cliente começa.</small></span>
+          <button type="button" tabIndex="-1">Agendar horário <ArrowRight size={15} /></button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ---------- 1 · Tipo de conta ------------------------------------------------------
 function PassoTipo({ s, setS, seguir, salvando, setErro }) {
   const [tipo, setTipo] = useState(s.tipo ?? 'salao')
@@ -953,6 +1024,7 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
   const [celebradas, setCelebradas] = useState(celebradasInicial)
   const [conquista, setConquista] = useState(null)
   const [subfluxoConcluido, setSubfluxoConcluido] = useState(() => celebradasInicial.includes('regras'))
+  const [finaleAberto, setFinaleAberto] = useState(false)
   const sugeriuPino = useRef(false)
 
   const prontoPorEtapa = {
@@ -1015,8 +1087,15 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
     if (!etapaProntaAtual || conquista) return
     setErro('')
     const id = blocoAberto
-    setConquista({ id, ...textoSucesso[id] })
     setCelebradas((atuais) => atuais.includes(id) ? atuais : [...atuais, id])
+
+    if (id === 'regras') {
+      setSubfluxoConcluido(true)
+      setFinaleAberto(true)
+      return
+    }
+
+    setConquista({ id, ...textoSucesso[id] })
   }
 
   // A confirmação só acontece depois de um clique consciente no botão.
@@ -1075,6 +1154,13 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
     }
     seguir(dados)
   }
+  const primeiroHorarioFinale = horas?.find((h) => h.open)
+  const horarioFinale = primeiroHorarioFinale
+    ? `${String(primeiroHorarioFinale.start_time).slice(0,5)} às ${String(primeiroHorarioFinale.end_time).slice(0,5)}`
+    : 'Horários configurados'
+  const enderecoFinale = [local.address, local.bairro, local.city, local.uf].filter(Boolean).join(' · ')
+  const instagramFinale = loc.redes?.instagram || ''
+
   return (
     <>
       <h1 className="ob-titulo">{autonoma ? 'Dê cara à sua agenda' : 'Dê cara ao seu salão'}</h1>
@@ -1350,8 +1436,39 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
           </button>
         </div>
       ) : (
-        <Rodape voltar={voltarNoSubfluxo} avancar={avancar} salvando={salvando} rotulo="Continuar" />
+        <Rodape voltar={voltarNoSubfluxo} avancar={avancar} salvando={salvando} rotulo="Ir para o último passo" />
       )}
+      {finaleAberto && (
+        <div className="ob-finale-modal" role="dialog" aria-modal="true" aria-labelledby="ob-finale-titulo">
+          <div className="ob-finale-modal-card">
+            <button type="button" className="ob-finale-fechar" onClick={() => setFinaleAberto(false)} aria-label="Fechar"><X size={18} /></button>
+            <div className="ob-finale-estouro" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+            <div className="ob-finale-modal-cabeca">
+              <span className="ob-finale-modal-icone"><Sparkles size={24} /></span>
+              <span className="ob-finale-selo">Seu espaço está pronto</span>
+              <h2 id="ob-finale-titulo">Até aqui eram campos.<br /><strong>Agora olha o que você construiu.</strong></h2>
+              <p>Seu espaço já tem identidade, contato, localização, horários e regras. É assim que a experiência começa a ganhar forma para sua cliente.</p>
+            </div>
+
+            <PreviewFinalMimo
+              nome={nome}
+              logo={logo}
+              fotos={fotos}
+              endereco={enderecoFinale}
+              whatsapp={loc.whatsapp}
+              instagram={instagramFinale}
+              horario={horarioFinale}
+              autonoma={autonoma}
+            />
+
+            <div className="ob-finale-ultimo">
+              <span><Check size={16} /><span><strong>Essa parte acabou.</strong><small>Antes de acessar seu painel, falta só um último passo.</small></span></span>
+              <button type="button" className="btn btn-primary" onClick={() => setFinaleAberto(false)}>Entendi <Check size={15} /></button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {conquista && (
         <div className="ob-momento-ok ob-momento-ok-leve" role="status" aria-live="polite">
           <div className="ob-momento-ok-card">
@@ -1375,108 +1492,10 @@ function PassoQuaseLa({ s, voltar, salvando, concluir, pronto, autonoma, gravarQ
   const c = planoDoNegocio(autonoma ? 'autonoma' : 'salao', n)
   const inclusas = c.plano === 'pro' ? PLANOS.pro.inclusas : PLANOS.promais.inclusas
   const estado = useAutosave(() => gravarQuieto({ equipe_prevista: n }), { n }, { ativo: Boolean(s.id) && !autonoma })
-  const [horariosPreview, setHorariosPreview] = useState([])
-  useEffect(() => {
-    if (!s.id) return
-    supabase.from('business_hours').select('weekday, open, start_time, end_time').eq('salon_id', s.id).then(({ data }) => setHorariosPreview(data ?? []))
-  }, [s.id])
-
-  const nomePreview = s.name || s.nome_fantasia || s.razao_social || (autonoma ? 'Sua agenda' : 'Seu salão')
-  const fotosPreview = Array.isArray(s.fotos) ? s.fotos : []
-  const logoPreview = s.logo_url || null
-  const enderecoPreview = [s.address, s.bairro, s.city, s.uf].filter(Boolean).join(' · ')
-  const whatsappPreview = s.whatsapp || s.phone || ''
-  const instagramPreview = s.redes?.instagram || s.instagram || ''
-  const hojeAberto = horariosPreview.find((h) => h.open)
-  const horarioPreview = hojeAberto
-    ? `${String(hojeAberto.start_time).slice(0,5)} às ${String(hojeAberto.end_time).slice(0,5)}`
-    : 'Horários configurados'
-  const servicosMock = autonoma
-    ? [
-        { nome: 'Escova', tempo: '45 min', preco: 'R$ 70' },
-        { nome: 'Hidratação', tempo: '50 min', preco: 'R$ 80' },
-        { nome: 'Finalização', tempo: '40 min', preco: 'R$ 60' },
-      ]
-    : [
-        { nome: 'Corte + escova', tempo: '1 h', preco: 'R$ 120' },
-        { nome: 'Manicure', tempo: '50 min', preco: 'R$ 45' },
-        { nome: 'Design de sobrancelhas', tempo: '30 min', preco: 'R$ 55' },
-      ]
-  const profissionaisMock = autonoma
-    ? [{ nome: primeiroNome(s.responsavel_nome || nomePreview) || 'Você', especialidade: 'Sua agenda' }]
-    : [
-        { nome: 'Ana', especialidade: 'Cabelo' },
-        { nome: 'Marina', especialidade: 'Unhas' },
-        { nome: 'Júlia', especialidade: 'Estética' },
-      ]
   useEffect(() => { setEstadoAuto(estado); return () => setEstadoAuto('') }, [estado, setEstadoAuto])
   useRoteiro([autonoma || n >= 1, false])
   return (
     <>
-      <section className="ob-finale">
-        <span className="ob-finale-selo"><Sparkles size={13} /> Seu espaço ganhou vida</span>
-        <h1 className="ob-finale-frase">Até aqui você preencheu dados.<br /><strong>Agora olha o que você construiu.</strong></h1>
-        <p>Essa é uma prévia de como sua presença na MIMO começa a tomar forma. Serviços e profissionais abaixo são exemplos até você cadastrar os seus no painel.</p>
-
-        <div className="ob-preview-final">
-          <div className="ob-preview-final-capa">
-            {fotosPreview[0]
-              ? <img src={fotosPreview[0]} alt="" />
-              : <div className="ob-preview-final-capa-vazia"><ImagePlus size={24} /><span>Sua foto de capa aparece aqui</span></div>}
-            <div className="ob-preview-final-overlay"></div>
-            <div className="ob-preview-final-identidade">
-              <span className="ob-preview-final-logo">
-                {logoPreview ? <img src={logoPreview} alt="" /> : iniciaisDe(nomePreview)}
-              </span>
-              <span><strong>{nomePreview}</strong><small>{autonoma ? 'Agenda profissional' : 'Salão de beleza'}</small></span>
-            </div>
-          </div>
-
-          <div className="ob-preview-final-corpo">
-            <div className="ob-preview-final-info">
-              <span><MapPin size={14} /><span><strong>Onde encontrar</strong><small>{enderecoPreview || 'Seu endereço aparecerá aqui'}</small></span></span>
-              <span><MessageCircle size={14} /><span><strong>Contato</strong><small>{whatsappPreview ? `+55 ${formatarFone(whatsappPreview)}` : 'WhatsApp configurado'}</small></span></span>
-              <span><CalendarCheck size={14} /><span><strong>Atendimento</strong><small>{horarioPreview}</small></span></span>
-              {instagramPreview && <span><Sparkles size={14} /><span><strong>Instagram</strong><small>@{String(instagramPreview).replace(/^@/,'')}</small></span></span>}
-            </div>
-
-            <div className="ob-preview-final-bloco">
-              <div className="ob-preview-final-titulo"><span><strong>Serviços</strong><small>exemplos</small></span><button type="button" tabIndex="-1">Ver todos</button></div>
-              <div className="ob-preview-servicos">
-                {servicosMock.map((item) => (
-                  <div key={item.nome} className="ob-preview-servico">
-                    <span><strong>{item.nome}</strong><small>{item.tempo}</small></span>
-                    <b>{item.preco}</b>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="ob-preview-final-bloco">
-              <div className="ob-preview-final-titulo"><span><strong>{autonoma ? 'Profissional' : 'Profissionais'}</strong><small>exemplo visual</small></span></div>
-              <div className="ob-preview-profissionais">
-                {profissionaisMock.map((prof, i) => (
-                  <div key={prof.nome} className="ob-preview-profissional">
-                    <span className="ob-preview-avatar">{prof.nome.slice(0,1)}</span>
-                    <span><strong>{prof.nome}</strong><small>{prof.especialidade}</small></span>
-                    <em>{i === 0 ? 'Disponível hoje' : 'Ver agenda'}</em>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="ob-preview-final-cta">
-              <span><strong>Escolha um serviço e encontre seu horário</strong><small>É daqui que a cliente começa.</small></span>
-              <button type="button" tabIndex="-1">Agendar horário <ArrowRight size={15} /></button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <div className="ob-finale-divisor">
-        <span></span><b>Agora falta bem pouco</b><span></span>
-      </div>
-
       <h1 className="ob-titulo">Quase lá</h1>
       <p className="ob-sub">{autonoma ? 'Sua agenda já tem cara. Falta só entrar no painel e montar os serviços.' : 'Seu salão já tem cara. Falta dizer quantas agendas e entrar no painel.'}</p>
       <GuiaContexto Icone={Check} titulo={autonoma ? 'Você não tem mensalidade' : 'Você ainda não está contratando nada agora'} tom="rosa">

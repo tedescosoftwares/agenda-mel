@@ -33,6 +33,14 @@ export default function AdminShell({ children, amplo = false }) {
   const { salao, acesso } = useAuth()
   const navigate = useNavigate()
 
+  // Chegou à decisão final de ativação? Daqui pra frente o fluxo é preso.
+  // Mesmo se atualizar a página ou digitar outra rota, volta para a escolha.
+  useEffect(() => {
+    if (acesso?.ativacao_pendente && pathname !== '/admin/configurar') {
+      navigate('/admin/configurar?etapa=ativacao', { replace: true })
+    }
+  }, [acesso?.ativacao_pendente, pathname, navigate])
+
   return (
     <div className={'admin-shell' + (amplo ? ' admin-shell-amplo' : '')}>
       <header className="topbar topbar-admin">

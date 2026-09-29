@@ -1458,3 +1458,55 @@
     order:-1;
   }
 }
+
+
+/* ---------- refinamento do feedback entre subpassos ---------- */
+.ob-v3 .ob-momento-ok-leve {
+  animation:ob-v3-feedback-fundo .24s ease-out both;
+}
+.ob-v3 .ob-momento-ok-leve .ob-momento-ok-card {
+  overflow:hidden;
+  animation:ob-v3-feedback-card .44s cubic-bezier(.22,.8,.24,1) both;
+}
+.ob-v3 .ob-momento-ok-leve .ob-momento-ok-check {
+  animation:ob-v3-feedback-check .48s .10s cubic-bezier(.2,.9,.28,1.15) both;
+}
+.ob-v3 .ob-momento-ok-leve .ob-momento-ok-card strong {
+  opacity:0;
+  animation:ob-v3-feedback-texto .26s .20s ease-out forwards;
+}
+.ob-v3 .ob-momento-ok-leve .ob-momento-ok-card small {
+  opacity:0;
+  animation:ob-v3-feedback-texto .3s .29s ease-out forwards;
+}
+
+@keyframes ob-v3-feedback-fundo {
+  from { opacity:0; }
+  to { opacity:1; }
+}
+@keyframes ob-v3-feedback-card {
+  from { opacity:0; transform:translateY(18px) scale(.97); }
+  65% { opacity:1; transform:translateY(-2px) scale(1.003); }
+  to { opacity:1; transform:none; }
+}
+@keyframes ob-v3-feedback-check {
+  from { opacity:0; transform:scale(.72) rotate(-7deg); }
+  to { opacity:1; transform:none; }
+}
+@keyframes ob-v3-feedback-texto {
+  from { opacity:0; transform:translateY(5px); }
+  to { opacity:1; transform:none; }
+}
+
+/* a troca entre subpassos fica mais macia e menos "slide de powerpoint" */
+.ob-v3.ob-step-3 .ob-fluxo-card.aberto {
+  animation-duration:.42s;
+}
+@keyframes ob-v3-entra-frente {
+  from { opacity:0; transform:translateX(18px) translateY(8px) scale(.99); }
+  to   { opacity:1; transform:none; }
+}
+@keyframes ob-v3-entra-volta {
+  from { opacity:0; transform:translateX(-18px) translateY(8px) scale(.99); }
+  to   { opacity:1; transform:none; }
+}

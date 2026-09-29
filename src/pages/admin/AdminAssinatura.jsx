@@ -120,7 +120,7 @@ export default function AdminAssinatura() {
         <div className="card assin-situacao calmo">
           <span className="assin-icone">{fase === 'configurando' ? <Wrench size={20} /> : fase === 'teste' ? <Sparkles size={20} /> : <Check size={20} />}</span>
           <div><strong>{situacao.titulo}</strong><span className="muted">{situacao.texto}</span></div>
-          {!autonoma && fase === 'configurando' && <Link className="btn btn-primary" to="/admin/configurar?etapa=ativacao">Continuar configuração</Link>}
+          {!autonoma && fase === 'configurando' && <Link className="btn btn-primary" to="/admin/configurar">Continuar configuração</Link>}
         </div>
       )}
 

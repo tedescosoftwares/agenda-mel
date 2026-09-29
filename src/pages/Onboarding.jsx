@@ -236,13 +236,13 @@ function useRoteiro(feitos) {
   const chave = JSON.stringify(feitos.map(Boolean))
   useEffect(() => { marcar(JSON.parse(chave)) }, [chave, marcar])
 }
-function Rodape({ voltar, avancar, rotulo = 'Continuar', salvando, primeiro = false, icone = <ArrowRight size={16} /> }) {
+function Rodape({ voltar, avancar, rotulo = 'Continuar', salvando, bloqueado = false, primeiro = false, icone = <ArrowRight size={16} /> }) {
   const proximo = useContext(ProximoCtx)
   return (
     <div className="ob-rodape">
       {!primeiro ? <button type="button" className="btn btn-ghost" onClick={voltar} disabled={salvando}><ArrowLeft size={16} /> Voltar</button> : <span />}
       {proximo && <small className="ob-depois">Depois: <b>{proximo}</b></small>}
-      <button type="button" className="btn btn-primary ob-continuar" onClick={avancar} disabled={salvando}>{salvando ? 'Salvando…' : rotulo} {!salvando && icone}</button>
+      <button type="button" className="btn btn-primary ob-continuar" onClick={avancar} disabled={salvando || bloqueado}>{salvando ? 'Salvando…' : rotulo} {!salvando && !bloqueado && icone}</button>
     </div>
   )
 }
@@ -777,24 +777,37 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
     setHoras((x) => x.map((h) => (copiar.dias.has(h.weekday) ? { ...h, open: seg.open, start_time: seg.start_time, end_time: seg.end_time } : h)))
     setCopiar(null)
   }
-  // "Tem dado" e "concluiu a etapa" são coisas diferentes.
-  // WhatsApp pode vir do cadastro e horários podem vir com padrão; isso não
-  // deve fazer o fluxo pular sozinho. A pessoa precisa chegar em cada bloco.
+  // Wizard interno de "Seu espaço": um subpasso por vez.
+  // Dado pré-preenchido pode deixar um passo válido, mas a transição só acontece
+  // quando esse passo chega à vez. A pequena confirmação aparece uma única vez.
   const identidadePreenchida = Boolean(nome.trim() && (logo || fotos.length > 0))
-  const contatoPreenchido = Boolean(loc.whatsapp.trim())
+  const contatoPreenchido = Boolean(soDigitos(loc.whatsapp).length >= 10)
   const localizacaoPreenchida = Boolean(local.city.trim() && pino)
   const horariosPreenchidos = Boolean(horas?.some((h) => h.open) && horas.every((h) => !h.open || h.start_time < h.end_time))
 
   const idsSubEtapa = ['identidade', 'contato', 'localizacao', 'horarios', 'regras']
   const chaveSubfluxo = `mimo:onboarding:espaco:${s.id || 'novo'}`
+  const chaveCelebradas = `${chaveSubfluxo}:ok`
   const nivelInicial = (() => {
     try {
       const salvo = Number(sessionStorage.getItem(chaveSubfluxo))
       return Number.isFinite(salvo) ? Math.min(5, Math.max(1, salvo)) : 1
     } catch { return 1 }
   })()
+  const celebradasInicial = (() => {
+    try {
+      const salvo = JSON.parse(sessionStorage.getItem(chaveCelebradas) || '[]')
+      return Array.isArray(salvo) ? salvo.filter((x) => idsSubEtapa.includes(x)) : []
+    } catch { return [] }
+  })()
+
   const [nivelLiberado, setNivelLiberado] = useState(nivelInicial)
   const [blocoAberto, setBlocoAberto] = useState(() => idsSubEtapa[nivelInicial - 1] || 'identidade')
+  const [direcaoBloco, setDirecaoBloco] = useState('frente')
+  const [celebradas, setCelebradas] = useState(celebradasInicial)
+  const [interagidas, setInteragidas] = useState([])
+  const [conquista, setConquista] = useState(null)
+  const [subfluxoConcluido, setSubfluxoConcluido] = useState(() => celebradasInicial.includes('regras'))
 
   const prontoPorEtapa = {
     identidade: identidadePreenchida,
@@ -804,19 +817,22 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
     regras: true,
   }
   const numeroPorEtapa = { identidade: 1, contato: 2, localizacao: 3, horarios: 4, regras: 5 }
+  const textoSucesso = {
+    identidade: { titulo: 'Identidade pronta', texto: 'Agora vamos conectar suas clientes a você.' },
+    contato: { titulo: 'Contato pronto', texto: 'Perfeito. Agora vamos colocar seu espaço no mapa.' },
+    localizacao: { titulo: 'Localização pronta', texto: 'Endereço certo. Agora vamos organizar seus horários.' },
+    horarios: { titulo: 'Horários prontos', texto: 'Falta só definir como a agenda deve se comportar.' },
+    regras: { titulo: 'Seu espaço está pronto', texto: 'Tudo certo para seguir para a última etapa.' },
+  }
 
-  // O bloco atual libera o próximo quando fica válido, mas NÃO pula para ele.
-  // Assim a pessoa vê claramente que concluiu e escolhe continuar.
-  useEffect(() => {
-    const numero = numeroPorEtapa[blocoAberto] || 1
-    if (numero < 5 && nivelLiberado === numero && prontoPorEtapa[blocoAberto]) {
-      setNivelLiberado(numero + 1)
-    }
-  }, [blocoAberto, nivelLiberado, identidadePreenchida, contatoPreenchido, localizacaoPreenchida, horariosPreenchidos])
-
-  useEffect(() => {
-    try { sessionStorage.setItem(chaveSubfluxo, String(nivelLiberado)) } catch { /* navegador sem storage */ }
-  }, [chaveSubfluxo, nivelLiberado])
+  const marcarInteracao = (id) => setInteragidas((x) => x.includes(id) ? x : [...x, id])
+  const irParaSubEtapa = (id) => {
+    const alvo = numeroPorEtapa[id]
+    const atual = numeroPorEtapa[blocoAberto]
+    if (!alvo || alvo > nivelLiberado) return
+    setDirecaoBloco(alvo < atual ? 'volta' : 'frente')
+    setBlocoAberto(id)
+  }
 
   const subEtapasEspaco = [
     { id: 'identidade', numero: 1, titulo: 'Identidade', detalhe: autonoma ? 'nome, foto e capa' : 'nome, logo e fotos' },
@@ -826,12 +842,56 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
     { id: 'regras', numero: 5, titulo: 'Regras', detalhe: 'como a agenda funciona' },
   ].map((etapa) => ({
     ...etapa,
-    feito: nivelLiberado > etapa.numero,
+    feito: celebradas.includes(etapa.id) && prontoPorEtapa[etapa.id],
     liberado: nivelLiberado >= etapa.numero,
   }))
-  const indiceSubEtapa = nivelLiberado - 1
+  const indiceSubEtapa = numeroPorEtapa[blocoAberto] - 1
+  const etapaProntaAtual = Boolean(prontoPorEtapa[blocoAberto])
+  const etapaJaCelebrada = celebradas.includes(blocoAberto)
+  const etapaInteragida = interagidas.includes(blocoAberto)
 
-  useRoteiro([nivelLiberado >= 2, nivelLiberado >= 4, nivelLiberado >= 5])
+  // Se a etapa já veio preenchida (WhatsApp/horários, por exemplo), damos
+  // tempo para a pessoa enxergar/revisar antes de seguir. Se ela acabou de
+  // preencher, a resposta é mais rápida.
+  useEffect(() => {
+    if (!etapaProntaAtual || etapaJaCelebrada || conquista) return
+    const espera = etapaInteragida ? 520 : 1650
+    const timer = setTimeout(() => setConquista({ id: blocoAberto, ...textoSucesso[blocoAberto] }), espera)
+    return () => clearTimeout(timer)
+  }, [blocoAberto, etapaProntaAtual, etapaJaCelebrada, etapaInteragida, conquista])
+
+  // Confirma uma vez, então conduz para o próximo subpasso automaticamente.
+  useEffect(() => {
+    if (!conquista) return
+    const timer = setTimeout(() => {
+      const id = conquista.id
+      const numero = numeroPorEtapa[id]
+      setCelebradas((atuais) => atuais.includes(id) ? atuais : [...atuais, id])
+      if (numero < 5) {
+        const proximo = idsSubEtapa[numero]
+        setNivelLiberado((x) => Math.max(x, numero + 1))
+        setDirecaoBloco('frente')
+        setBlocoAberto(proximo)
+      } else {
+        setSubfluxoConcluido(true)
+      }
+      setConquista(null)
+    }, 820)
+    return () => clearTimeout(timer)
+  }, [conquista])
+
+  useEffect(() => {
+    try { sessionStorage.setItem(chaveSubfluxo, String(nivelLiberado)) } catch { /* navegador sem storage */ }
+  }, [chaveSubfluxo, nivelLiberado])
+  useEffect(() => {
+    try { sessionStorage.setItem(chaveCelebradas, JSON.stringify(celebradas)) } catch { /* navegador sem storage */ }
+  }, [chaveCelebradas, celebradas])
+
+  useRoteiro([
+    celebradas.includes('identidade'),
+    celebradas.includes('contato') && celebradas.includes('localizacao'),
+    celebradas.includes('horarios') && subfluxoConcluido,
+  ])
   const recomendadoAtivo = Number(pol.antecedencia_min_minutos) === RECOMENDADO.antecedencia_min_minutos && pol.politica_cancelamento === RECOMENDADO.politica_cancelamento && pol.permite_remarcar === RECOMENDADO.permite_remarcar && pol.sinal_ligado === RECOMENDADO.sinal_ligado
 
   async function avancar() {
@@ -864,7 +924,7 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
       <div className="ob-subfluxo" aria-label="Etapas de configuração do seu espaço">
         <div className="ob-subfluxo-topo">
           <span><strong>Seu espaço</strong> · 5 passos rápidos</span>
-          <small>Passo {indiceSubEtapa + 1} de 5</small>
+          <small>{subfluxoConcluido ? '5 de 5 · pronto' : `Passo ${indiceSubEtapa + 1} de 5`}</small>
         </div>
         <div className="ob-subfluxo-progresso" aria-hidden="true"><i style={{ width: `${((indiceSubEtapa + 1) / 5) * 100}%` }} /></div>
         <div className="ob-subfluxo-itens">
@@ -876,7 +936,7 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
                 type="button"
                 className={(atual ? 'atual ' : '') + (etapa.feito ? 'feito ' : '') + (!etapa.liberado ? 'travado' : '')}
                 disabled={!etapa.liberado}
-                onClick={() => etapa.liberado && setBlocoAberto(etapa.id)}
+                onClick={() => etapa.liberado && irParaSubEtapa(etapa.id)}
               >
                 <span className="ob-subfluxo-num">{etapa.feito ? <Check size={13} /> : etapa.numero}</span>
                 <span><strong>{etapa.titulo}</strong><small>{etapa.detalhe}</small></span>
@@ -886,14 +946,15 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
         </div>
         <p className="ob-subfluxo-aviso">
           <Info size={14} />
-          <span>{nivelLiberado < 5 ? 'Preencha o bloco atual. Quando estiver pronto, o próximo é liberado — sem pular etapas.' : 'Todos os subpassos foram liberados. Você ainda pode voltar e revisar qualquer um.'}</span>
+          <span>{subfluxoConcluido ? 'Tudo pronto. Se quiser revisar, toque em qualquer etapa acima.' : 'Preencha normalmente. Quando este bloco estiver pronto, a MIMO confirma e traz o próximo automaticamente.'}</span>
         </p>
       </div>
       <div className="ob-estrutura">
         <div
-          className={'ob-card ob-card-largo ob-fluxo-card ' + (blocoAberto === 'identidade' ? 'aberto' : 'fechado') + (nivelLiberado > 1 ? ' feito' : '')}
+          className={'ob-card ob-card-largo ob-fluxo-card ' + (blocoAberto === 'identidade' ? `aberto ob-anima-${direcaoBloco}` : 'fechado') + (celebradas.includes('identidade') ? ' feito' : '')}
           data-etapa="1"
-          onClick={() => blocoAberto !== 'identidade' && setBlocoAberto('identidade')}
+          onChangeCapture={() => marcarInteracao('identidade')}
+          onClickCapture={() => blocoAberto === 'identidade' && marcarInteracao('identidade')}
         >
           <strong className="ob-card-titulo">{autonoma ? 'Sua imagem e seu espaço' : 'Nome e fotos'}</strong>
           <span className="muted">{autonoma ? 'Sua foto aparece ao lado do nome. As fotos do espaço viram a capa da sua página.' : 'O logo aparece ao lado do nome. As fotos mostram o espaço; a primeira vira a capa.'}</span>
@@ -950,10 +1011,10 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
         </div>
         <div className="ob-coluna">
           <div
-            className={'ob-card ob-fluxo-card ' + (blocoAberto === 'contato' ? 'aberto' : 'fechado') + (nivelLiberado > 2 ? ' feito' : '') + (nivelLiberado < 2 ? ' travado' : '')}
+            className={'ob-card ob-fluxo-card ' + (blocoAberto === 'contato' ? `aberto ob-anima-${direcaoBloco}` : 'fechado') + (celebradas.includes('contato') ? ' feito' : '')}
             data-etapa="2"
-            data-bloqueio="Conclua Identidade para liberar"
-            onClick={() => nivelLiberado >= 2 && blocoAberto !== 'contato' && setBlocoAberto('contato')}
+            onChangeCapture={() => marcarInteracao('contato')}
+            onClickCapture={() => blocoAberto === 'contato' && marcarInteracao('contato')}
           >
             <strong className="ob-card-titulo">{autonoma ? 'Como as clientes falam com você' : 'Como as clientes falam com vocês'}</strong>
             <div className="ob-form">
@@ -980,10 +1041,10 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
             </div>
           </div>
           <div
-            className={'ob-card ob-fluxo-card ' + (blocoAberto === 'localizacao' ? 'aberto' : 'fechado') + (nivelLiberado > 3 ? ' feito' : '') + (nivelLiberado < 3 ? ' travado' : '')}
+            className={'ob-card ob-fluxo-card ' + (blocoAberto === 'localizacao' ? `aberto ob-anima-${direcaoBloco}` : 'fechado') + (celebradas.includes('localizacao') ? ' feito' : '')}
             data-etapa="3"
-            data-bloqueio="Conclua Contato para liberar"
-            onClick={() => nivelLiberado >= 3 && blocoAberto !== 'localizacao' && setBlocoAberto('localizacao')}
+            onChangeCapture={() => marcarInteracao('localizacao')}
+            onClickCapture={() => blocoAberto === 'localizacao' && marcarInteracao('localizacao')}
           >
             <strong className="ob-card-titulo">{autonoma ? 'Onde você atende' : 'Localização do salão'}</strong>
             <span className="muted">É o endereço que a cliente usa no “Como chegar”.</span>
@@ -1019,10 +1080,10 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
         </div>
         <div className="ob-coluna">
         <div
-          className={'ob-card ob-fluxo-card ' + (blocoAberto === 'horarios' ? 'aberto' : 'fechado') + (nivelLiberado > 4 ? ' feito' : '') + (nivelLiberado < 4 ? ' travado' : '')}
+          className={'ob-card ob-fluxo-card ' + (blocoAberto === 'horarios' ? `aberto ob-anima-${direcaoBloco}` : 'fechado') + (celebradas.includes('horarios') ? ' feito' : '')}
           data-etapa="4"
-          data-bloqueio="Conclua Localização para liberar"
-          onClick={() => nivelLiberado >= 4 && blocoAberto !== 'horarios' && setBlocoAberto('horarios')}
+          onChangeCapture={() => marcarInteracao('horarios')}
+          onClickCapture={() => blocoAberto === 'horarios' && marcarInteracao('horarios')}
         >
           <strong className="ob-card-titulo">Horário de funcionamento</strong>
           <span className="muted">{autonoma ? 'Horário padrão da sua agenda. Folgas você marca depois, em Bloqueios.' : 'Horário geral da casa. Ele não obriga toda a equipe a trabalhar igual: depois cada profissional pode ter dias e horários diferentes.'}</span>
@@ -1049,10 +1110,10 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
           )}
         </div>
         <div
-          className={'ob-card ob-fluxo-card ' + (blocoAberto === 'regras' ? 'aberto' : 'fechado') + (nivelLiberado < 5 ? ' travado' : '')}
+          className={'ob-card ob-fluxo-card ' + (blocoAberto === 'regras' ? `aberto ob-anima-${direcaoBloco}` : 'fechado') + (celebradas.includes('regras') ? ' feito' : '')}
           data-etapa="5"
-          data-bloqueio="Conclua Horários para liberar"
-          onClick={() => nivelLiberado >= 5 && blocoAberto !== 'regras' && setBlocoAberto('regras')}
+          onChangeCapture={() => marcarInteracao('regras')}
+          onClickCapture={() => blocoAberto === 'regras' && marcarInteracao('regras')}
         >
           <span className="ob-card-linha"><strong className="ob-card-titulo">Regras da agenda</strong>{recomendadoAtivo && <em className="ob-badge">Configuração recomendada</em>}</span>
           <div className="ob-inline-explica"><CalendarCheck size={14} /><span><strong>Isso controla o que a cliente consegue fazer sozinha.</strong> Antecedência, cancelamento, reagendamento e confirmação viram regras automáticas no agendamento.</span></div>
@@ -1081,7 +1142,16 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
         </div>
         </div>
       </div>
-      <Rodape voltar={voltar} avancar={avancar} salvando={salvando} />
+      {conquista && (
+        <div className="ob-momento-ok" role="status" aria-live="polite">
+          <div className="ob-momento-ok-card">
+            <span className="ob-momento-ok-check"><Check size={24} /></span>
+            <strong>{conquista.titulo}</strong>
+            <small>{conquista.texto}</small>
+          </div>
+        </div>
+      )}
+      <Rodape voltar={voltar} avancar={avancar} salvando={salvando} bloqueado={!subfluxoConcluido} rotulo={subfluxoConcluido ? 'Continuar' : 'Complete seu espaço'} />
     </>
   )
 }

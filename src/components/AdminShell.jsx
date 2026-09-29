@@ -25,7 +25,7 @@ const TABS = [
   { to: '/admin/ajustes', label: 'Ajustes', Icon: ClockIcon },
 ]
 
-export default function AdminShell({ children }) {
+export default function AdminShell({ children, amplo = false }) {
   // só o miolo rola: ao trocar de página, volta para o topo dele
   const miolo = useRef(null)
   const { pathname } = useLocation()
@@ -34,7 +34,7 @@ export default function AdminShell({ children }) {
   const navigate = useNavigate()
 
   return (
-    <div className="admin-shell">
+    <div className={'admin-shell' + (amplo ? ' admin-shell-amplo' : '')}>
       <header className="topbar topbar-admin">
         <span className="brand-inline">
           <MarcaIcon className="marca" id="topo" />

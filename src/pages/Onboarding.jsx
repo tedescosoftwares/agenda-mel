@@ -777,16 +777,15 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
     setHoras((x) => x.map((h) => (copiar.dias.has(h.weekday) ? { ...h, open: seg.open, start_time: seg.start_time, end_time: seg.end_time } : h)))
     setCopiar(null)
   }
-  // Wizard interno de "Seu espaço": um subpasso por vez.
-  // Dado pré-preenchido pode deixar um passo válido, mas a transição só acontece
-  // quando esse passo chega à vez. A pequena confirmação aparece uma única vez.
+  // Wizard interno de "Seu espaço": a MIMO percebe quando um bloco está
+  // válido, mas a pessoa decide quando avançar. Nada de empurrar tela.
   const identidadePreenchida = Boolean(nome.trim() && (logo || fotos.length > 0))
   const contatoPreenchido = Boolean(soDigitos(loc.whatsapp).length >= 10)
   const localizacaoPreenchida = Boolean(local.city.trim() && pino)
   const horariosPreenchidos = Boolean(horas?.some((h) => h.open) && horas.every((h) => !h.open || h.start_time < h.end_time))
 
   const idsSubEtapa = ['identidade', 'contato', 'localizacao', 'horarios', 'regras']
-  const chaveSubfluxo = `mimo:onboarding:espaco:${s.id || 'novo'}`
+  const chaveSubfluxo = `mimo:onboarding:espaco:v2:${s.id || 'novo'}`
   const chaveCelebradas = `${chaveSubfluxo}:ok`
   const nivelInicial = (() => {
     try {
@@ -805,9 +804,9 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
   const [blocoAberto, setBlocoAberto] = useState(() => idsSubEtapa[nivelInicial - 1] || 'identidade')
   const [direcaoBloco, setDirecaoBloco] = useState('frente')
   const [celebradas, setCelebradas] = useState(celebradasInicial)
-  const [interagidas, setInteragidas] = useState([])
   const [conquista, setConquista] = useState(null)
   const [subfluxoConcluido, setSubfluxoConcluido] = useState(() => celebradasInicial.includes('regras'))
+  const sugeriuPino = useRef(false)
 
   const prontoPorEtapa = {
     identidade: identidadePreenchida,
@@ -818,27 +817,34 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
   }
   const numeroPorEtapa = { identidade: 1, contato: 2, localizacao: 3, horarios: 4, regras: 5 }
   const textoSucesso = {
-    identidade: { titulo: 'Identidade pronta', texto: 'Agora vamos conectar suas clientes a você.' },
-    contato: { titulo: 'Contato pronto', texto: 'Perfeito. Agora vamos colocar seu espaço no mapa.' },
-    localizacao: { titulo: 'Localização pronta', texto: 'Endereço certo. Agora vamos organizar seus horários.' },
-    horarios: { titulo: 'Horários prontos', texto: 'Falta só definir como a agenda deve se comportar.' },
-    regras: { titulo: 'Seu espaço está pronto', texto: 'Tudo certo para seguir para a última etapa.' },
+    identidade: { titulo: 'Identidade pronta', texto: 'Boa. Agora vamos deixar seus contatos certinhos.' },
+    contato: { titulo: 'Contato pronto', texto: 'Perfeito. Agora confira onde suas clientes vão encontrar você.' },
+    localizacao: { titulo: 'Localização pronta', texto: 'Pino conferido. Vamos para os horários.' },
+    horarios: { titulo: 'Horários prontos', texto: 'Tudo certo. Falta só revisar as regras da agenda.' },
+    regras: { titulo: 'Seu espaço está pronto', texto: 'Pronto. Agora você decide quando seguir para a última etapa.' },
+  }
+  const pendenciaPorEtapa = {
+    identidade: autonoma ? 'Informe seu nome e adicione uma foto ou logo.' : 'Informe o nome do salão e adicione pelo menos uma foto ou logo.',
+    contato: 'Confira o WhatsApp principal para continuar.',
+    localizacao: 'Confira o endereço e marque o pino no mapa.',
+    horarios: 'Confira se há pelo menos um dia aberto e se os horários estão corretos.',
+    regras: 'Revise as regras. Quando estiver de acordo, conclua este espaço.',
   }
 
-  const marcarInteracao = (id) => setInteragidas((x) => x.includes(id) ? x : [...x, id])
   const irParaSubEtapa = (id) => {
     const alvo = numeroPorEtapa[id]
     const atual = numeroPorEtapa[blocoAberto]
     if (!alvo || alvo > nivelLiberado) return
+    setConquista(null)
     setDirecaoBloco(alvo < atual ? 'volta' : 'frente')
     setBlocoAberto(id)
   }
 
   const voltarNoSubfluxo = () => {
     const atual = numeroPorEtapa[blocoAberto] || 1
+    setConquista(null)
     if (atual <= 1) { voltar(); return }
     setDirecaoBloco('volta')
-    setConquista(null)
     setBlocoAberto(idsSubEtapa[atual - 2])
   }
 
@@ -850,43 +856,48 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
     { id: 'regras', numero: 5, titulo: 'Regras', detalhe: 'como a agenda funciona' },
   ].map((etapa) => ({
     ...etapa,
-    feito: celebradas.includes(etapa.id) && prontoPorEtapa[etapa.id],
+    feito: celebradas.includes(etapa.id),
     liberado: nivelLiberado >= etapa.numero,
   }))
+
   const indiceSubEtapa = numeroPorEtapa[blocoAberto] - 1
   const etapaProntaAtual = Boolean(prontoPorEtapa[blocoAberto])
-  const etapaJaCelebrada = celebradas.includes(blocoAberto)
-  const etapaInteragida = interagidas.includes(blocoAberto)
+  const proximaEtapa = indiceSubEtapa < 4 ? subEtapasEspaco[indiceSubEtapa + 1] : null
 
-  // Se a etapa já veio preenchida (WhatsApp/horários, por exemplo), damos
-  // tempo para a pessoa enxergar/revisar antes de seguir. Se ela acabou de
-  // preencher, a resposta é mais rápida.
-  useEffect(() => {
-    if (!etapaProntaAtual || etapaJaCelebrada || conquista) return
-    const espera = etapaInteragida ? 520 : 1650
-    const timer = setTimeout(() => setConquista({ id: blocoAberto, ...textoSucesso[blocoAberto] }), espera)
-    return () => clearTimeout(timer)
-  }, [blocoAberto, etapaProntaAtual, etapaJaCelebrada, etapaInteragida, conquista])
+  function confirmarSubEtapa() {
+    if (!etapaProntaAtual || conquista) return
+    setErro('')
+    const id = blocoAberto
+    setConquista({ id, ...textoSucesso[id] })
+    setCelebradas((atuais) => atuais.includes(id) ? atuais : [...atuais, id])
+  }
 
-  // Confirma uma vez, então conduz para o próximo subpasso automaticamente.
+  // A confirmação só acontece depois de um clique consciente no botão.
+  // O feedback dura um instante e então a próxima seção entra animada.
   useEffect(() => {
     if (!conquista) return
     const timer = setTimeout(() => {
-      const id = conquista.id
-      const numero = numeroPorEtapa[id]
-      setCelebradas((atuais) => atuais.includes(id) ? atuais : [...atuais, id])
+      const numero = numeroPorEtapa[conquista.id]
       if (numero < 5) {
-        const proximo = idsSubEtapa[numero]
         setNivelLiberado((x) => Math.max(x, numero + 1))
         setDirecaoBloco('frente')
-        setBlocoAberto(proximo)
+        setBlocoAberto(idsSubEtapa[numero])
       } else {
         setSubfluxoConcluido(true)
       }
       setConquista(null)
-    }, 820)
+    }, 650)
     return () => clearTimeout(timer)
   }, [conquista])
+
+  // Ao chegar em Localização, se já houver um endereço completo, a MIMO
+  // sugere o pino uma vez. A pessoa continua na tela para conferir/arrastar.
+  useEffect(() => {
+    if (blocoAberto !== 'localizacao' || pino || sugeriuPino.current) return
+    if (!local.address.trim() || !local.city.trim()) return
+    sugeriuPino.current = true
+    acharPeloEndereco()
+  }, [blocoAberto, pino, local.address, local.city])
 
   useEffect(() => {
     try { sessionStorage.setItem(chaveSubfluxo, String(nivelLiberado)) } catch { /* navegador sem storage */ }
@@ -954,15 +965,13 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
         </div>
         <p className="ob-subfluxo-aviso">
           <Info size={14} />
-          <span>{subfluxoConcluido ? 'Tudo pronto. Se quiser revisar, toque em qualquer etapa acima.' : 'Preencha normalmente. Quando este bloco estiver pronto, a MIMO confirma e traz o próximo automaticamente.'}</span>
+          <span>{subfluxoConcluido ? 'Tudo pronto. Se quiser revisar, toque em qualquer etapa acima.' : 'Preencha normalmente. Quando estiver tudo certo, o botão de continuar é liberado. Você decide quando avançar.'}</span>
         </p>
       </div>
       <div className="ob-estrutura">
         <div
           className={'ob-card ob-card-largo ob-fluxo-card ' + (blocoAberto === 'identidade' ? `aberto ob-anima-${direcaoBloco}` : 'fechado') + (celebradas.includes('identidade') ? ' feito' : '')}
           data-etapa="1"
-          onChangeCapture={() => marcarInteracao('identidade')}
-          onClickCapture={() => blocoAberto === 'identidade' && marcarInteracao('identidade')}
         >
           <strong className="ob-card-titulo">{autonoma ? 'Sua imagem e seu espaço' : 'Nome e fotos'}</strong>
           <span className="muted">{autonoma ? 'Sua foto aparece ao lado do nome. As fotos do espaço viram a capa da sua página.' : 'O logo aparece ao lado do nome. As fotos mostram o espaço; a primeira vira a capa.'}</span>
@@ -1021,8 +1030,6 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
           <div
             className={'ob-card ob-fluxo-card ' + (blocoAberto === 'contato' ? `aberto ob-anima-${direcaoBloco}` : 'fechado') + (celebradas.includes('contato') ? ' feito' : '')}
             data-etapa="2"
-            onChangeCapture={() => marcarInteracao('contato')}
-            onClickCapture={() => blocoAberto === 'contato' && marcarInteracao('contato')}
           >
             <strong className="ob-card-titulo">{autonoma ? 'Como as clientes falam com você' : 'Como as clientes falam com vocês'}</strong>
             <div className="ob-form">
@@ -1051,8 +1058,6 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
           <div
             className={'ob-card ob-fluxo-card ' + (blocoAberto === 'localizacao' ? `aberto ob-anima-${direcaoBloco}` : 'fechado') + (celebradas.includes('localizacao') ? ' feito' : '')}
             data-etapa="3"
-            onChangeCapture={() => marcarInteracao('localizacao')}
-            onClickCapture={() => blocoAberto === 'localizacao' && marcarInteracao('localizacao')}
           >
             <strong className="ob-card-titulo">{autonoma ? 'Onde você atende' : 'Localização do salão'}</strong>
             <span className="muted">É o endereço que a cliente usa no “Como chegar”.</span>
@@ -1076,11 +1081,11 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
               <span className="ob-rotulo ob-mapa-titulo">Pino no mapa {pino ? <em className="ob-pino-ok"><Check size={11} /> pino marcado</em> : <em className="ob-pino-nao">sem pino</em>}</span>
               {pino
                 ? <div className="ob-mapa"><Mapa lat={Number(loc.lat)} lng={Number(loc.lng)} zoom={17} arrastavel altura={220} onMover={moverPino} /></div>
-                : <div className="ob-sem-pino"><MapPinOff size={22} /><strong>Ainda sem pino no mapa</strong><span className="muted">Preencha o endereço ou use os botões abaixo.</span></div>}
-              {pino && <small className="ob-mapa-nota">Arraste o pino até a porta ou toque no lugar certo.{geo ? ` ${geo.charAt(0).toUpperCase()}${geo.slice(1)}.` : ''}</small>}
+                : <div className="ob-sem-pino"><MapPinOff size={24} /><strong>Vamos marcar a porta do seu espaço</strong><span className="muted">{local.address.trim() && local.city.trim() ? 'A MIMO pode sugerir o ponto pelo endereço. Depois você confere e ajusta no mapa.' : 'Complete o endereço acima para sugerirmos o ponto certo no mapa.'}</span></div>}
+              {pino && <small className="ob-mapa-nota ob-mapa-nota-forte"><Check size={12} /> <span><strong>Pino marcado.</strong> Confira se ele está exatamente na porta e arraste se precisar.{geo ? ` ${geo.charAt(0).toUpperCase()}${geo.slice(1)}.` : ''}</span></small>}
               <div className="ob-mapa-acoes">
-                <button type="button" className="ob-acao-mini" onClick={usarLocalizacao} disabled={Boolean(ocupado)}><MapPin size={13} /> {ocupado === 'gps' ? 'Achando você…' : 'Usar minha localização'}</button>
-                <button type="button" className="ob-acao-mini" onClick={acharPeloEndereco} disabled={Boolean(ocupado) || !(local.address.trim() || local.city.trim())}><Search size={13} /> {ocupado === 'endereco' ? 'Procurando…' : 'Achar pelo endereço'}</button>
+                <button type="button" className="ob-acao-mini ob-pino-principal" onClick={acharPeloEndereco} disabled={Boolean(ocupado) || !(local.address.trim() && local.city.trim())}><MapPin size={14} /> {ocupado === 'endereco' ? 'Sugerindo o pino…' : (pino ? 'Reposicionar pelo endereço' : 'Sugerir pino pelo endereço')}</button>
+                <button type="button" className="ob-acao-mini ob-pino-secundario" onClick={usarLocalizacao} disabled={Boolean(ocupado)}><Search size={13} /> {ocupado === 'gps' ? 'Achando você…' : 'Usar minha localização atual'}</button>
                 {pino && <button type="button" className="ob-acao-mini neutro" onClick={() => { setLoc((x) => ({ ...x, lat: null, lng: null })); setGeo('') }}><X size={13} /> Tirar o pino</button>}
               </div>
             </div>
@@ -1090,8 +1095,6 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
         <div
           className={'ob-card ob-fluxo-card ' + (blocoAberto === 'horarios' ? `aberto ob-anima-${direcaoBloco}` : 'fechado') + (celebradas.includes('horarios') ? ' feito' : '')}
           data-etapa="4"
-          onChangeCapture={() => marcarInteracao('horarios')}
-          onClickCapture={() => blocoAberto === 'horarios' && marcarInteracao('horarios')}
         >
           <strong className="ob-card-titulo">Horário de funcionamento</strong>
           <span className="muted">{autonoma ? 'Horário padrão da sua agenda. Folgas você marca depois, em Bloqueios.' : 'Horário geral da casa. Ele não obriga toda a equipe a trabalhar igual: depois cada profissional pode ter dias e horários diferentes.'}</span>
@@ -1120,8 +1123,6 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
         <div
           className={'ob-card ob-fluxo-card ' + (blocoAberto === 'regras' ? `aberto ob-anima-${direcaoBloco}` : 'fechado') + (celebradas.includes('regras') ? ' feito' : '')}
           data-etapa="5"
-          onChangeCapture={() => marcarInteracao('regras')}
-          onClickCapture={() => blocoAberto === 'regras' && marcarInteracao('regras')}
         >
           <span className="ob-card-linha"><strong className="ob-card-titulo">Regras da agenda</strong>{recomendadoAtivo && <em className="ob-badge">Configuração recomendada</em>}</span>
           <div className="ob-inline-explica"><CalendarCheck size={14} /><span><strong>Isso controla o que a cliente consegue fazer sozinha.</strong> Antecedência, cancelamento, reagendamento e confirmação viram regras automáticas no agendamento.</span></div>
@@ -1150,8 +1151,21 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
         </div>
         </div>
       </div>
+      {!subfluxoConcluido ? (
+        <div className={'ob-subpasso-rodape ' + (etapaProntaAtual ? 'pronto' : 'pendente')}>
+          <button type="button" className="btn btn-ghost" onClick={voltarNoSubfluxo} disabled={salvando || Boolean(conquista)}><ArrowLeft size={16} /> Voltar</button>
+          <span className="ob-subpasso-status">
+            {etapaProntaAtual ? <><Check size={15} /><span><strong>Tudo certo por aqui.</strong> Revise com calma e avance quando quiser.</span></> : <><Info size={15} /><span>{pendenciaPorEtapa[blocoAberto]}</span></>}
+          </span>
+          <button type="button" className="btn btn-primary ob-subpasso-proximo" onClick={confirmarSubEtapa} disabled={!etapaProntaAtual || salvando || Boolean(conquista)}>
+            {blocoAberto === 'regras' ? 'Concluir meu espaço' : `Continuar para ${proximaEtapa?.titulo || 'próximo'}`} <ArrowRight size={16} />
+          </button>
+        </div>
+      ) : (
+        <Rodape voltar={voltarNoSubfluxo} avancar={avancar} salvando={salvando} rotulo="Continuar" />
+      )}
       {conquista && (
-        <div className="ob-momento-ok" role="status" aria-live="polite">
+        <div className="ob-momento-ok ob-momento-ok-leve" role="status" aria-live="polite">
           <div className="ob-momento-ok-card">
             <span className="ob-momento-ok-check"><Check size={24} /></span>
             <strong>{conquista.titulo}</strong>
@@ -1159,7 +1173,6 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
           </div>
         </div>
       )}
-      <Rodape voltar={voltarNoSubfluxo} avancar={avancar} salvando={salvando} bloqueado={!subfluxoConcluido} rotulo={subfluxoConcluido ? 'Continuar' : 'Complete seu espaço'} />
     </>
   )
 }

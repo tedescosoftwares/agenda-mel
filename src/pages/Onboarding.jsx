@@ -1,11 +1,13 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import QRCode from 'qrcode'
-import { Check, ArrowLeft, ArrowRight, LogOut, Camera, MapPin, Plus, X, Copy, Download, MoreHorizontal, Link2, Info, Sparkles, MessageCircle, Users, Minus, Eye, Lock, Wand2, CalendarCheck, QrCode, Send, Home, MapPinOff, Search, ImagePlus } from 'lucide-react'
+import { Check, ArrowLeft, ArrowRight, LogOut, Camera, MapPin, Plus, X, Copy, Download, MoreHorizontal, Link2, Info, Sparkles, MessageCircle, Users, Minus, Eye, Lock, Wand2, CalendarCheck, QrCode, Send, Home, MapPinOff, Search, ImagePlus, HelpCircle } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { planoDoNegocio, reais as emDinheiro, PLANOS } from '../lib/planos'
 import '../onboarding.css'
+import '../onboarding-v2.css'
+import '../onboarding-v3.css'
 import { reduzirFoto } from '../lib/imagem'
 import { buscarCep, formatarCep, limparCep, minhaPosicao, geocodificar, temPino, arredondar } from '../lib/geo'
 import { formatarFone } from '../lib/fone'
@@ -173,7 +175,7 @@ export default function Onboarding({ publico = false }) {
   const plano = planoDoNegocio(s.tipo, s.equipe_prevista)
   const sairLink = publico ? <Link className="ob-sair" to="/pro/entrar"><LogOut size={14} /> Já tenho conta</Link> : <button type="button" className="ob-sair" onClick={sair}><LogOut size={14} /> Sair do cadastro</button>
   return (
-    <div className="ob">
+    <div className={"ob ob-v2 ob-v3 ob-step-" + passo}>
       <aside className="ob-painel">
         <div className="ob-painel-topo"><img src="/mimo-logo.svg" alt="MIMO" />{sairLink}</div>
         <div key={atual.id} className="ob-painel-vivo">
@@ -234,19 +236,111 @@ function useRoteiro(feitos) {
   const chave = JSON.stringify(feitos.map(Boolean))
   useEffect(() => { marcar(JSON.parse(chave)) }, [chave, marcar])
 }
-function Rodape({ voltar, avancar, rotulo = 'Continuar', salvando, primeiro = false, icone = <ArrowRight size={16} /> }) {
+function Rodape({ voltar, avancar, rotulo = 'Continuar', salvando, bloqueado = false, primeiro = false, icone = <ArrowRight size={16} /> }) {
   const proximo = useContext(ProximoCtx)
   return (
     <div className="ob-rodape">
       {!primeiro ? <button type="button" className="btn btn-ghost" onClick={voltar} disabled={salvando}><ArrowLeft size={16} /> Voltar</button> : <span />}
       {proximo && <small className="ob-depois">Depois: <b>{proximo}</b></small>}
-      <button type="button" className="btn btn-primary ob-continuar" onClick={avancar} disabled={salvando}>{salvando ? 'Salvando…' : rotulo} {!salvando && icone}</button>
+      <button type="button" className="btn btn-primary ob-continuar" onClick={avancar} disabled={salvando || bloqueado}>{salvando ? 'Salvando…' : rotulo} {!salvando && !bloqueado && icone}</button>
     </div>
   )
 }
 const Selo = ({ publico }) => publico
   ? <span className="ob-selo publico" title="Aparece na página do salão e no app da cliente"><Eye size={11} /> Visível para clientes</span>
   : <span className="ob-selo interno" title="Só você e a MIMO veem"><Lock size={11} /> Uso administrativo</span>
+
+function GuiaContexto({ Icone = Info, titulo, children, tom = '' }) {
+  return (
+    <div className={'ob-guia' + (tom ? ' ' + tom : '')}>
+      <span className="ob-guia-icone"><Icone size={16} /></span>
+      <span><strong>{titulo}</strong><small>{children}</small></span>
+    </div>
+  )
+}
+
+function AjudaCampo({ titulo, children }) {
+  return (
+    <details className="ob-ajuda-popover">
+      <summary aria-label={'Ajuda: ' + titulo} title="Entenda melhor"><HelpCircle size={15} /></summary>
+      <div className="ob-ajuda-popover-caixa">
+        <strong>{titulo}</strong>
+        <span>{children}</span>
+      </div>
+    </details>
+  )
+}
+
+
+function PreviewFinalMimo({ nome, logo, fotos = [], endereco, whatsapp, instagram, horario, autonoma }) {
+  const servicos = autonoma
+    ? [
+        { nome: 'Escova', tempo: '45 min', preco: 'R$ 70' },
+        { nome: 'Hidratação', tempo: '50 min', preco: 'R$ 80' },
+        { nome: 'Finalização', tempo: '40 min', preco: 'R$ 60' },
+      ]
+    : [
+        { nome: 'Corte + escova', tempo: '1 h', preco: 'R$ 120' },
+        { nome: 'Manicure', tempo: '50 min', preco: 'R$ 45' },
+        { nome: 'Design de sobrancelhas', tempo: '30 min', preco: 'R$ 55' },
+      ]
+  const profissionais = autonoma
+    ? [{ nome: 'Você', especialidade: 'Sua agenda' }]
+    : [
+        { nome: 'Ana', especialidade: 'Cabelo' },
+        { nome: 'Marina', especialidade: 'Unhas' },
+        { nome: 'Júlia', especialidade: 'Estética' },
+      ]
+
+  return (
+    <div className="ob-preview-final">
+      <div className="ob-preview-final-capa">
+        {fotos[0]
+          ? <img src={fotos[0]} alt="" />
+          : <div className="ob-preview-final-capa-vazia"><ImagePlus size={24} /><span>Sua foto de capa aparece aqui</span></div>}
+        <div className="ob-preview-final-overlay"></div>
+        <div className="ob-preview-final-identidade">
+          <span className="ob-preview-final-logo">{logo ? <img src={logo} alt="" /> : iniciaisDe(nome)}</span>
+          <span><strong>{nome || (autonoma ? 'Sua agenda' : 'Seu salão')}</strong><small>{autonoma ? 'Agenda profissional' : 'Salão de beleza'}</small></span>
+        </div>
+      </div>
+
+      <div className="ob-preview-final-corpo">
+        <div className="ob-preview-final-info">
+          <span><MapPin size={14} /><span><strong>Onde encontrar</strong><small>{endereco || 'Endereço configurado'}</small></span></span>
+          <span><MessageCircle size={14} /><span><strong>Contato</strong><small>{whatsapp ? `+55 ${formatarFone(whatsapp)}` : 'WhatsApp configurado'}</small></span></span>
+          <span><CalendarCheck size={14} /><span><strong>Atendimento</strong><small>{horario || 'Horários configurados'}</small></span></span>
+          {instagram && <span><Sparkles size={14} /><span><strong>Instagram</strong><small>@{String(instagram).replace(/^@/,'')}</small></span></span>}
+        </div>
+
+        <div className="ob-preview-final-bloco">
+          <div className="ob-preview-final-titulo"><span><strong>Serviços</strong><small>exemplos</small></span><button type="button" tabIndex="-1">Ver todos</button></div>
+          <div className="ob-preview-servicos">
+            {servicos.map((item) => <div key={item.nome} className="ob-preview-servico"><span><strong>{item.nome}</strong><small>{item.tempo}</small></span><b>{item.preco}</b></div>)}
+          </div>
+        </div>
+
+        <div className="ob-preview-final-bloco">
+          <div className="ob-preview-final-titulo"><span><strong>{autonoma ? 'Profissional' : 'Profissionais'}</strong><small>exemplo visual</small></span></div>
+          <div className="ob-preview-profissionais">
+            {profissionais.map((prof, i) => (
+              <div key={prof.nome} className="ob-preview-profissional">
+                <span className="ob-preview-avatar">{prof.nome.slice(0,1)}</span>
+                <span><strong>{prof.nome}</strong><small>{prof.especialidade}</small></span>
+                <em>{i === 0 ? 'Disponível hoje' : 'Ver agenda'}</em>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="ob-preview-final-cta">
+          <span><strong>Escolha um serviço e encontre seu horário</strong><small>É daqui que a cliente começa.</small></span>
+          <button type="button" tabIndex="-1">Agendar horário <ArrowRight size={15} /></button>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 // ---------- 1 · Tipo de conta ------------------------------------------------------
 function PassoTipo({ s, setS, seguir, salvando, setErro }) {
@@ -266,6 +360,9 @@ function PassoTipo({ s, setS, seguir, salvando, setErro }) {
     <>
       <h1 className="ob-titulo">Como você trabalha hoje?</h1>
       <p className="ob-sub">Escolha a opção que mais combina com a sua rotina. Se isso mudar, você pode ajustar depois.</p>
+      <GuiaContexto Icone={Users} titulo="Essa escolha muda só a forma de administrar">
+        No salão, você controla várias agendas e envia o acesso da equipe. Na autônoma, a MIMO fica enxuta e mostra apenas a sua agenda.
+      </GuiaContexto>
       <div className="ob-tipos">
         {[
           { id: 'salao', foto: 'equipe', pilula: 'Salão · MIMO Pro', titulo: 'Tenho salão e equipe', texto: 'Para quem organiza a agenda de duas ou mais profissionais.', bloco: 'Tudo em um só lugar', itens: ['equipe e agendas', 'serviços e horários', 'clientes', 'permissões', 'rotina do salão'], destaque: 'Você configura tudo primeiro e depois envia o acesso de cada profissional já com a agenda pronta.', preco: emDinheiro(pro.base), sub: `/mês até ${pro.inclusas} profissionais · ${emDinheiro(pro.extra)} por agenda a mais`, promais: <><b>{PLANOS.promais.nome}</b> a partir de {PLANOS.promais.inclusas} profissionais: <strong>{emDinheiro(PLANOS.promais.base)}/mês</strong> + {emDinheiro(PLANOS.promais.extra)} por profissional a partir da {PLANOS.promais.inclusas + 1}ª. O plano se ajusta sozinho pelo número de agendas, no passo 3.</> },
@@ -532,6 +629,89 @@ function PassoDados({ s, seguir, voltar, salvando, setErro, user, autonoma, publ
     if (!f.email.trim()) { setErro('Informe o e-mail da conta.'); return }
     seguir(dadosDe(f))
   }
+  const idsDados = ['identificacao', 'endereco', 'acesso']
+  const chaveDados = `mimo:onboarding:dados:v1:${s.id || user?.id || 'novo'}`
+  const nivelDadosInicial = (() => {
+    try {
+      const salvo = Number(sessionStorage.getItem(chaveDados))
+      return Number.isFinite(salvo) ? Math.min(3, Math.max(1, salvo)) : 1
+    } catch { return 1 }
+  })()
+  const [nivelDados, setNivelDados] = useState(nivelDadosInicial)
+  const [blocoDados, setBlocoDados] = useState(() => idsDados[nivelDadosInicial - 1] || 'identificacao')
+  const [direcaoDados, setDirecaoDados] = useState('frente')
+
+  const identificacaoOk = Boolean(
+    comCnpj
+      ? cnpjValido(f.cnpj) && f.razao_social.trim() && f.responsavel_nome.trim() && (!cnpjSituacao || cnpjSituacao === 'ATIVA')
+      : cpfValido(f.cpf) && f.responsavel_nome.trim() && f.responsavel_nascimento && idadeEm(f.responsavel_nascimento) >= 18
+  )
+  const enderecoOk = Boolean(f.fiscal.address.trim() && f.fiscal.city.trim())
+  const acessoOk = Boolean(
+    f.email.trim() &&
+    emailOk(f.email.trim()) &&
+    soDigitos(f.whatsapp).length >= 10 &&
+    (publico && !user ? forcaDaSenha(conta.senha).ok && conta.confirma === conta.senha && conta.termos : true)
+  )
+  const prontoDados = { identificacao: identificacaoOk, endereco: enderecoOk, acesso: acessoOk }
+  const numeroDados = { identificacao: 1, endereco: 2, acesso: 3 }
+  const etapasDados = [
+    { id:'identificacao', numero:1, titulo:'Identificação', detalhe: comCnpj ? 'CNPJ e responsável' : 'CPF e responsável' },
+    { id:'endereco', numero:2, titulo:'Endereço', detalhe: comCnpj ? 'endereço fiscal' : 'endereço de cadastro' },
+    { id:'acesso', numero:3, titulo:'Acesso', detalhe:'e-mail, WhatsApp e senha' },
+  ].map((etapa) => ({ ...etapa, liberado: nivelDados >= etapa.numero, feito: nivelDados > etapa.numero }))
+  const indiceDados = numeroDados[blocoDados] - 1
+  const proximaDados = indiceDados < 2 ? etapasDados[indiceDados + 1] : null
+
+  useEffect(() => {
+    try { sessionStorage.setItem(chaveDados, String(nivelDados)) } catch { /* navegador sem storage */ }
+  }, [chaveDados, nivelDados])
+
+  function erroDaEtapaDados(id) {
+    if (id === 'identificacao') {
+      if (comCnpj && !cnpjValido(f.cnpj)) return f.cnpj ? 'Confira o CNPJ: os dígitos não batem.' : 'Informe o CNPJ ou escolha seguir com CPF.'
+      if (!comCnpj && !cpfValido(f.cpf)) return f.cpf ? 'Confira o CPF: os dígitos não batem.' : 'Informe o seu CPF.'
+      if (comCnpj && cnpjSituacao && cnpjSituacao !== 'ATIVA') return `Esse CNPJ consta como ${nomeProprio(cnpjSituacao)} na Receita.`
+      if (comCnpj && !f.razao_social.trim()) return 'A razão social precisa estar preenchida.'
+      if (!f.responsavel_nome.trim()) return comCnpj ? 'Informe quem responde pelo negócio.' : 'Informe seu nome completo.'
+      if (!comCnpj && !f.responsavel_nascimento) return 'Informe sua data de nascimento.'
+      if (!comCnpj && idadeEm(f.responsavel_nascimento) < 18) return 'Para responder pelo negócio é preciso ter 18 anos ou mais.'
+    }
+    if (id === 'endereco') {
+      if (!f.fiscal.address.trim()) return 'Informe o endereço de cadastro.'
+      if (!f.fiscal.city.trim()) return 'Informe a cidade.'
+    }
+    if (id === 'acesso') {
+      if (!f.email.trim() || !emailOk(f.email.trim())) return 'Informe um e-mail válido para acessar a MIMO.'
+      if (soDigitos(f.whatsapp).length < 10) return 'Confira seu WhatsApp.'
+      if (publico && !user && !forcaDaSenha(conta.senha).ok) return 'Crie uma senha forte para continuar.'
+      if (publico && !user && conta.confirma !== conta.senha) return 'As senhas não são iguais.'
+      if (publico && !user && !conta.termos) return 'Aceite os Termos e a Política de privacidade para criar a conta.'
+    }
+    return ''
+  }
+
+  function continuarDados() {
+    const erro = erroDaEtapaDados(blocoDados)
+    if (erro) { setErro(erro); return }
+    setErro('')
+    const numero = numeroDados[blocoDados]
+    if (numero < 3) {
+      setNivelDados((x) => Math.max(x, numero + 1))
+      setDirecaoDados('frente')
+      setBlocoDados(idsDados[numero])
+      return
+    }
+    avancar()
+  }
+
+  function voltarDados() {
+    const atual = numeroDados[blocoDados]
+    if (atual <= 1) { voltar(); return }
+    setDirecaoDados('volta')
+    setBlocoDados(idsDados[atual - 2])
+  }
+
   if (criada) {
     return (
       <>
@@ -545,60 +725,121 @@ function PassoDados({ s, seguir, voltar, salvando, setErro, user, autonoma, publ
   return (
     <>
       <h1 className="ob-titulo">Seus dados</h1>
-      <p className="ob-sub">{publico ? 'Essas informações identificam sua conta e ficam protegidas na MIMO.' : 'Essas informações identificam seu negócio e ficam protegidas na MIMO.'}</p>
-      <div className="ob-aviso-etapa"><span className="ob-aviso-etapa-icone"><Info size={16} /></span><span><strong>Aqui ficam apenas os dados de cadastro.</strong> {autonoma ? 'Foto, contatos, localização e o que aparece na sua agenda' : 'Nome, fotos, contatos, localização e o que aparece para as clientes'} você configura na próxima etapa.</span></div>
-      <div className="ob-dados">
-        <div className="ob-form">
-          {/* a identificação fiscal vem primeiro: é por ela que o cadastro começa */}
-          <span className="ob-grupo-selo"><Selo /></span>
-          <div className="ob-bloco">
-            <span className="ob-bloco-titulo">Identificação do negócio <small>não aparece para clientes</small></span>
-            {comCnpj ? (
-              <>
-              <label>CNPJ <b>*</b><span className="muted">(buscamos os dados automaticamente)</span><input value={formatarCnpj(f.cnpj)} onChange={(e) => porCnpj(e.target.value)} placeholder="12.345.678/0001-90" inputMode="numeric" autoComplete="off" autoFocus={!f.cnpj} />{cnpjInfo === 'buscando' ? <small className="muted">consultando a Receita…</small> : cnpjInfo.startsWith('ok:') ? <small className="ob-cnpj-ok">✓ {cnpjInfo.slice(3)}</small> : cnpjInfo.startsWith('erro:') ? <small className="ob-cnpj-erro">{cnpjInfo.slice(5)}</small> : null}</label>
-                <label>Razão social <b>*</b><input value={f.razao_social} onChange={m('razao_social')} placeholder="Essenza Cabeleireiros Ltda" autoComplete="organization" /></label>
-                <label>Nome fantasia <span className="muted">(como está na Receita)</span><input value={f.nome_fantasia} onChange={m('nome_fantasia')} placeholder="Essenza Hair" /></label>
-                <label>Responsável pelo negócio <b>*</b><input value={f.responsavel_nome} onChange={m('responsavel_nome')} placeholder="Juliana Lima" autoComplete="name" list={f.socios.length ? 'ob-socios' : undefined} />{f.socios.length > 1 && <small className="muted">no quadro da Receita: {f.socios.join(', ')}</small>}</label>
-                {f.socios.length > 0 && <datalist id="ob-socios">{f.socios.map((n) => <option key={n} value={n} />)}</datalist>}
-              </>
-            ) : (
-              <>
-                <p className="ob-humor"><strong>Ainda não tem CNPJ? Tudo bem.</strong>Use seu CPF para continuar. Quando tiver CNPJ, você pode atualizar seus dados por aqui.</p>
-                <label>CPF <b>*</b><input value={formatarCpf(f.cpf)} onChange={(e) => setF((x) => ({ ...x, cpf: soDigitos(e.target.value).slice(0, 11) }))} placeholder="123.456.789-09" inputMode="numeric" autoComplete="off" />{f.cpf.length === 11 && !cpfValido(f.cpf) && <small className="ob-cnpj-erro">Confere o CPF: os dígitos não batem.</small>}</label>
-                <label>Seu nome completo <b>*</b><input value={f.responsavel_nome} onChange={m('responsavel_nome')} placeholder="Juliana Lima" autoComplete="name" /></label>
-                <div className="ob-linha-2 ob-linha-meio">
-                  <label>Data de nascimento <b>*</b><input type="date" value={f.responsavel_nascimento} onChange={m('responsavel_nascimento')} max={hojeIso()} autoComplete="bday" /></label>
-                  <label>RG <span className="muted">(opcional)</span><input value={f.responsavel_rg} onChange={(e) => setF((x) => ({ ...x, responsavel_rg: e.target.value.replace(/[^0-9A-Za-z.-]/g, '').slice(0, 20) }))} placeholder="12.345.678-9" inputMode="numeric" autoComplete="off" /></label>
-                </div>
-              </>
-            )}
-            {!(comCnpj && cnpjSituacao === 'ATIVA') && <label className="ob-termos ob-informal"><input type="checkbox" checked={!comCnpj} onChange={(e) => trocarDocumento(e.target.checked)} /><span>Ainda não tenho CNPJ</span></label>}
-          </div>
-          <div className="ob-bloco">
-            <span className="ob-bloco-titulo">{comCnpj ? 'Endereço fiscal' : 'Seu endereço'} <small>{comCnpj ? 'o que está na Receita' : 'o do cadastro; onde atende vem na próxima etapa'}</small></span>
-            <BlocoEndereco valor={f.fiscal} onChange={setFiscal} autoCompleteRua={!comCnpj} />
-          </div>
+      <p className="ob-sub">Vamos por partes. Aqui entram apenas os dados de cadastro e acesso. O que a cliente vê você monta no próximo passo.</p>
+
+      <div className="ob-subfluxo ob-subfluxo-dados" aria-label="Etapas dos seus dados">
+        <div className="ob-subfluxo-topo">
+          <span><strong>Seus dados</strong> · 3 passos rápidos</span>
+          <small>Passo {indiceDados + 1} de 3</small>
         </div>
-        <div className="ob-form">
-          <span className="ob-grupo-selo"><Selo /></span>
-          <div className="ob-bloco">
-            <span className="ob-bloco-titulo">Seu acesso <small>{publico ? 'é com isso que você entra' : 'a conta que administra o negócio'}</small></span>
-            <label>E-mail da conta <b>*</b><input type="email" value={f.email} onChange={m('email')} placeholder="contato@essenzahair.com.br" autoComplete="email" /></label>
-            <label>Seu WhatsApp <b>*</b><span className="muted">(os avisos chegam por ele)</span><span className="ob-fone"><span className="ob-ddi">🇧🇷 +55</span><input type="tel" inputMode="numeric" value={f.whatsapp} onChange={(e) => setF((x) => ({ ...x, whatsapp: formatarFone(e.target.value) }))} placeholder="(11) 91234-5678" autoComplete="tel" /></span></label>
-            <label>Outro telefone <span className="muted">(opcional)</span>{f.telefones.map((_, i) => campoContato('telefones', i, 'telefone'))}</label>
-            <label>Outro e-mail <span className="muted">(opcional)</span>{f.emails.length === 0 ? <span className="ob-fone"><button type="button" className="ob-geo" onClick={() => maisNa('emails')}><Plus size={14} /> Adicionar e-mail</button></span> : f.emails.map((_, i) => campoContato('emails', i, 'email'))}</label>
-            {publico && !user && (
-              <>
-                <SenhaNova valor={conta} onChange={(v) => setConta((x) => ({ ...x, ...v }))} />
-                <label className="ob-termos"><input type="checkbox" checked={conta.termos} onChange={(e) => setConta((x) => ({ ...x, termos: e.target.checked }))} /><span><FraseDeAceite papel={s.tipo} /></span></label>
-                <label className="ob-termos ob-marketing"><input type="checkbox" checked={conta.marketing} onChange={(e) => setConta((x) => ({ ...x, marketing: e.target.checked }))} /><span>Quero receber novidades, ofertas e dicas da MIMO por e-mail e WhatsApp. Dá pra cancelar quando quiser.</span></label>
-              </>
-            )}
-          </div>
+        <div className="ob-subfluxo-progresso" aria-hidden="true"><i style={{ width: `${((indiceDados + 1) / 3) * 100}%` }} /></div>
+        <div className="ob-subfluxo-itens ob-subfluxo-itens-3">
+          {etapasDados.map((etapa) => (
+            <button
+              key={etapa.id}
+              type="button"
+              disabled={!etapa.liberado}
+              className={(blocoDados === etapa.id ? 'atual ' : '') + (etapa.feito ? 'feito ' : '') + (!etapa.liberado ? 'travado' : '')}
+              onClick={() => {
+                if (!etapa.liberado) return
+                setDirecaoDados(etapa.numero < numeroDados[blocoDados] ? 'volta' : 'frente')
+                setBlocoDados(etapa.id)
+              }}
+            >
+              <span className="ob-subfluxo-num">{etapa.feito ? <Check size={13} /> : etapa.numero}</span>
+              <span><strong>{etapa.titulo}</strong><small>{etapa.detalhe}</small></span>
+            </button>
+          ))}
         </div>
       </div>
+
+      <div className="ob-dados-wizard">
+        {blocoDados === 'identificacao' && (
+          <div className={`ob-card ob-dado-etapa aberto ob-anima-${direcaoDados}`}>
+            <div className="ob-dado-cabecalho">
+              <span><strong className="ob-card-titulo">Identificação do negócio</strong><small>Esses dados ficam no cadastro da MIMO e não viram sua vitrine.</small></span>
+              <AjudaCampo titulo="Por que pedimos isso?">Usamos esses dados para identificar corretamente quem administra a conta. CNPJ, CPF, razão social e endereço fiscal não aparecem automaticamente para clientes.</AjudaCampo>
+            </div>
+
+            <div className="ob-form">
+              <p className="ob-bloco-ajuda">{comCnpj ? 'Digite o CNPJ e a MIMO tenta preencher os dados oficiais para você.' : 'Ainda não tem CNPJ? Use seu CPF agora. Você pode atualizar o cadastro depois.'}</p>
+              {comCnpj ? (
+                <>
+                  <label>CNPJ <b>*</b><input value={formatarCnpj(f.cnpj)} onChange={(e) => porCnpj(e.target.value)} placeholder="12.345.678/0001-90" inputMode="numeric" autoComplete="off" autoFocus={!f.cnpj} />{cnpjInfo === 'buscando' ? <small className="muted">Consultando os dados…</small> : cnpjInfo.startsWith('ok:') ? <small className="ob-cnpj-ok">✓ {cnpjInfo.slice(3)}</small> : cnpjInfo.startsWith('erro:') ? <small className="ob-cnpj-erro">{cnpjInfo.slice(5)}</small> : null}</label>
+                  <label>Razão social <b>*</b><input value={f.razao_social} onChange={m('razao_social')} placeholder="Essenza Cabeleireiros Ltda" autoComplete="organization" /></label>
+                  <label>Nome fantasia <span className="muted">(opcional)</span><input value={f.nome_fantasia} onChange={m('nome_fantasia')} placeholder="Essenza Hair" /></label>
+                  <label>Responsável pelo negócio <b>*</b><input value={f.responsavel_nome} onChange={m('responsavel_nome')} placeholder="Juliana Lima" autoComplete="name" list={f.socios.length ? 'ob-socios' : undefined} />{f.socios.length > 1 && <small className="muted">Encontrados no cadastro: {f.socios.join(', ')}</small>}</label>
+                  {f.socios.length > 0 && <datalist id="ob-socios">{f.socios.map((n) => <option key={n} value={n} />)}</datalist>}
+                </>
+              ) : (
+                <>
+                  <label>CPF <b>*</b><input value={formatarCpf(f.cpf)} onChange={(e) => setF((x) => ({ ...x, cpf: soDigitos(e.target.value).slice(0, 11) }))} placeholder="123.456.789-09" inputMode="numeric" autoComplete="off" />{f.cpf.length === 11 && !cpfValido(f.cpf) && <small className="ob-cnpj-erro">Confira o CPF: os dígitos não batem.</small>}</label>
+                  <label>Seu nome completo <b>*</b><input value={f.responsavel_nome} onChange={m('responsavel_nome')} placeholder="Juliana Lima" autoComplete="name" /></label>
+                  <div className="ob-linha-2 ob-linha-meio">
+                    <label>Data de nascimento <b>*</b><input type="date" value={f.responsavel_nascimento} onChange={m('responsavel_nascimento')} max={hojeIso()} autoComplete="bday" /></label>
+                    <label>RG <span className="muted">(opcional)</span><input value={f.responsavel_rg} onChange={(e) => setF((x) => ({ ...x, responsavel_rg: e.target.value.replace(/[^0-9A-Za-z.-]/g, '').slice(0, 20) }))} placeholder="12.345.678-9" inputMode="numeric" autoComplete="off" /></label>
+                  </div>
+                </>
+              )}
+              {(!comCnpj || !cnpjValido(f.cnpj)) && <label className="ob-termos ob-informal"><input type="checkbox" checked={!comCnpj} onChange={(e) => trocarDocumento(e.target.checked)} /><span>Ainda não tenho CNPJ</span></label>}
+            </div>
+          </div>
+        )}
+
+        {blocoDados === 'endereco' && (
+          <div className={`ob-card ob-dado-etapa aberto ob-anima-${direcaoDados}`}>
+            <div className="ob-dado-cabecalho">
+              <span><strong className="ob-card-titulo">{comCnpj ? 'Endereço fiscal' : 'Endereço de cadastro'}</strong><small>{comCnpj ? 'É o endereço ligado ao seu cadastro empresarial.' : 'É seu endereço cadastral. Onde você atende será configurado depois.'}</small></span>
+              <AjudaCampo titulo="Esse endereço fica público?">Não. Este endereço serve para o cadastro. No próximo passo você escolhe qual endereço suas clientes verão e ainda confere o pino no mapa.</AjudaCampo>
+            </div>
+            <div className="ob-form"><BlocoEndereco valor={f.fiscal} onChange={setFiscal} autoCompleteRua={!comCnpj} /></div>
+          </div>
+        )}
+
+        {blocoDados === 'acesso' && (
+          <div className={`ob-card ob-dado-etapa aberto ob-anima-${direcaoDados}`}>
+            <div className="ob-dado-cabecalho">
+              <span><strong className="ob-card-titulo">Seu acesso à MIMO</strong><small>Agora definimos como você entra na conta e recebe avisos importantes.</small></span>
+              <AjudaCampo titulo="E-mail ou WhatsApp?">O e-mail é usado para acessar e recuperar a conta. O WhatsApp recebe avisos importantes do cadastro. O número comercial mostrado para clientes pode ser definido no próximo passo.</AjudaCampo>
+            </div>
+
+            <div className="ob-form">
+              <label>E-mail da conta <b>*</b><input type="email" value={f.email} onChange={m('email')} placeholder="contato@essenzahair.com.br" autoComplete="email" /></label>
+              <label>Seu WhatsApp <b>*</b><span className="ob-fone"><span className="ob-ddi">🇧🇷 +55</span><input type="tel" inputMode="numeric" value={f.whatsapp} onChange={(e) => setF((x) => ({ ...x, whatsapp: formatarFone(e.target.value) }))} placeholder="(11) 91234-5678" autoComplete="tel" /></span></label>
+
+              <details className="ob-dados-opcionais">
+                <summary>Adicionar outros contatos <Plus size={14} /></summary>
+                <div>
+                  <label>Outro telefone <span className="muted">(opcional)</span>{f.telefones.map((_, i) => campoContato('telefones', i, 'telefone'))}</label>
+                  <label>Outro e-mail <span className="muted">(opcional)</span>{f.emails.length === 0 ? <span className="ob-fone"><button type="button" className="ob-geo" onClick={() => maisNa('emails')}><Plus size={14} /> Adicionar e-mail</button></span> : f.emails.map((_, i) => campoContato('emails', i, 'email'))}</label>
+                </div>
+              </details>
+
+              {publico && !user && (
+                <>
+                  <SenhaNova valor={conta} onChange={(v) => setConta((x) => ({ ...x, ...v }))} />
+                  <label className="ob-termos"><input type="checkbox" checked={conta.termos} onChange={(e) => setConta((x) => ({ ...x, termos: e.target.checked }))} /><span><FraseDeAceite papel={s.tipo} /></span></label>
+                  <label className="ob-termos ob-marketing"><input type="checkbox" checked={conta.marketing} onChange={(e) => setConta((x) => ({ ...x, marketing: e.target.checked }))} /><span>Quero receber novidades, ofertas e dicas da MIMO. Posso cancelar quando quiser.</span></label>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
       {modalCnpj && <ModalCnpj dados={modalCnpj} onFechar={() => setModalCnpj(null)} />}
-      <Rodape voltar={voltar} avancar={avancar} salvando={salvando || criando} rotulo={publico ? (user ? 'Abrir minha agenda' : 'Criar conta e continuar') : 'Continuar'} />
+
+      <div className={'ob-subpasso-rodape ' + (prontoDados[blocoDados] ? 'pronto' : 'pendente')}>
+        <button type="button" className="btn btn-ghost" onClick={voltarDados} disabled={salvando || criando}><ArrowLeft size={16} /> Voltar</button>
+        <span className="ob-subpasso-status">
+          {prontoDados[blocoDados]
+            ? <><Check size={15} /><span><strong>Tudo certo por aqui.</strong> Revise e avance quando quiser.</span></>
+            : <><Info size={15} /><span>{blocoDados === 'identificacao' ? 'Complete sua identificação para continuar.' : blocoDados === 'endereco' ? 'Complete o endereço de cadastro.' : 'Confira seus dados de acesso.'}</span></>}
+        </span>
+        <button type="button" className="btn btn-primary ob-subpasso-proximo" onClick={continuarDados} disabled={!prontoDados[blocoDados] || salvando || criando}>
+          {blocoDados === 'acesso' ? (publico ? (user ? 'Abrir minha agenda' : 'Criar conta e continuar') : 'Continuar') : `Continuar para ${proximaDados?.titulo}`} <ArrowRight size={16} />
+        </button>
+      </div>
       {publico && <RodapeSocial />}
     </>
   )
@@ -755,7 +996,148 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
     setHoras((x) => x.map((h) => (copiar.dias.has(h.weekday) ? { ...h, open: seg.open, start_time: seg.start_time, end_time: seg.end_time } : h)))
     setCopiar(null)
   }
-  useRoteiro([nome.trim() && (logo || fotos.length > 0), loc.whatsapp.trim() && local.city.trim() && pino, horas != null && horas.some((h) => h.open)])
+  // Wizard interno de "Seu espaço": a MIMO percebe quando um bloco está
+  // válido, mas a pessoa decide quando avançar. Nada de empurrar tela.
+  const identidadePreenchida = Boolean(nome.trim() && (logo || fotos.length > 0))
+  const contatoPreenchido = Boolean(soDigitos(loc.whatsapp).length >= 10)
+  const localizacaoPreenchida = Boolean(local.city.trim() && pino)
+  const horariosPreenchidos = Boolean(horas?.some((h) => h.open) && horas.every((h) => !h.open || h.start_time < h.end_time))
+
+  const idsSubEtapa = ['identidade', 'contato', 'localizacao', 'horarios', 'regras']
+  const chaveSubfluxo = `mimo:onboarding:espaco:v2:${s.id || 'novo'}`
+  const chaveCelebradas = `${chaveSubfluxo}:ok`
+  const nivelInicial = (() => {
+    try {
+      const salvo = Number(sessionStorage.getItem(chaveSubfluxo))
+      return Number.isFinite(salvo) ? Math.min(5, Math.max(1, salvo)) : 1
+    } catch { return 1 }
+  })()
+  const celebradasInicial = (() => {
+    try {
+      const salvo = JSON.parse(sessionStorage.getItem(chaveCelebradas) || '[]')
+      return Array.isArray(salvo) ? salvo.filter((x) => idsSubEtapa.includes(x)) : []
+    } catch { return [] }
+  })()
+
+  const [nivelLiberado, setNivelLiberado] = useState(nivelInicial)
+  const [blocoAberto, setBlocoAberto] = useState(() => idsSubEtapa[nivelInicial - 1] || 'identidade')
+  const [direcaoBloco, setDirecaoBloco] = useState('frente')
+  const [celebradas, setCelebradas] = useState(celebradasInicial)
+  const [conquista, setConquista] = useState(null)
+  const [subfluxoConcluido, setSubfluxoConcluido] = useState(() => celebradasInicial.includes('regras'))
+  const [finaleAberto, setFinaleAberto] = useState(false)
+  const sugeriuPino = useRef(false)
+
+  const prontoPorEtapa = {
+    identidade: identidadePreenchida,
+    contato: contatoPreenchido,
+    localizacao: localizacaoPreenchida,
+    horarios: horariosPreenchidos,
+    regras: true,
+  }
+  const numeroPorEtapa = { identidade: 1, contato: 2, localizacao: 3, horarios: 4, regras: 5 }
+  const textoSucesso = {
+    identidade: { titulo: 'Identidade pronta', texto: 'Boa. Agora vamos deixar seus contatos certinhos.' },
+    contato: { titulo: 'Contato pronto', texto: 'Perfeito. Agora confira onde suas clientes vão encontrar você.' },
+    localizacao: { titulo: 'Localização pronta', texto: 'Pino conferido. Vamos para os horários.' },
+    horarios: { titulo: 'Horários prontos', texto: 'Tudo certo. Falta só revisar as regras da agenda.' },
+    regras: { titulo: 'Seu espaço está pronto', texto: 'Pronto. Agora você decide quando seguir para a última etapa.' },
+  }
+  const pendenciaPorEtapa = {
+    identidade: autonoma ? 'Informe seu nome e adicione uma foto ou logo.' : 'Informe o nome do salão e adicione pelo menos uma foto ou logo.',
+    contato: 'Confira o WhatsApp principal para continuar.',
+    localizacao: 'Confira o endereço e marque o pino no mapa.',
+    horarios: 'Confira se há pelo menos um dia aberto e se os horários estão corretos.',
+    regras: 'Revise as regras. Quando estiver de acordo, conclua este espaço.',
+  }
+
+  const irParaSubEtapa = (id) => {
+    const alvo = numeroPorEtapa[id]
+    const atual = numeroPorEtapa[blocoAberto]
+    if (!alvo || alvo > nivelLiberado) return
+    setConquista(null)
+    setDirecaoBloco(alvo < atual ? 'volta' : 'frente')
+    setBlocoAberto(id)
+  }
+
+  const voltarNoSubfluxo = () => {
+    const atual = numeroPorEtapa[blocoAberto] || 1
+    setConquista(null)
+    if (atual <= 1) { voltar(); return }
+    setDirecaoBloco('volta')
+    setBlocoAberto(idsSubEtapa[atual - 2])
+  }
+
+  const subEtapasEspaco = [
+    { id: 'identidade', numero: 1, titulo: 'Identidade', detalhe: autonoma ? 'nome, foto e capa' : 'nome, logo e fotos' },
+    { id: 'contato', numero: 2, titulo: 'Contato', detalhe: 'WhatsApp e redes' },
+    { id: 'localizacao', numero: 3, titulo: 'Localização', detalhe: 'endereço e mapa' },
+    { id: 'horarios', numero: 4, titulo: 'Horários', detalhe: 'quando atende' },
+    { id: 'regras', numero: 5, titulo: 'Regras', detalhe: 'como a agenda funciona' },
+  ].map((etapa) => ({
+    ...etapa,
+    feito: celebradas.includes(etapa.id),
+    liberado: nivelLiberado >= etapa.numero,
+  }))
+
+  const indiceSubEtapa = numeroPorEtapa[blocoAberto] - 1
+  const etapaProntaAtual = Boolean(prontoPorEtapa[blocoAberto])
+  const proximaEtapa = indiceSubEtapa < 4 ? subEtapasEspaco[indiceSubEtapa + 1] : null
+
+  function confirmarSubEtapa() {
+    if (!etapaProntaAtual || conquista) return
+    setErro('')
+    const id = blocoAberto
+    setCelebradas((atuais) => atuais.includes(id) ? atuais : [...atuais, id])
+
+    if (id === 'regras') {
+      setSubfluxoConcluido(true)
+      setFinaleAberto(true)
+      return
+    }
+
+    setConquista({ id, ...textoSucesso[id] })
+  }
+
+  // A confirmação só acontece depois de um clique consciente no botão.
+  // O feedback dura um instante e então a próxima seção entra animada.
+  useEffect(() => {
+    if (!conquista) return
+    const timer = setTimeout(() => {
+      const numero = numeroPorEtapa[conquista.id]
+      if (numero < 5) {
+        setNivelLiberado((x) => Math.max(x, numero + 1))
+        setDirecaoBloco('frente')
+        setBlocoAberto(idsSubEtapa[numero])
+      } else {
+        setSubfluxoConcluido(true)
+      }
+      setConquista(null)
+    }, 3500)
+    return () => clearTimeout(timer)
+  }, [conquista])
+
+  // Ao chegar em Localização, se já houver um endereço completo, a MIMO
+  // sugere o pino uma vez. A pessoa continua na tela para conferir/arrastar.
+  useEffect(() => {
+    if (blocoAberto !== 'localizacao' || pino || sugeriuPino.current) return
+    if (!local.address.trim() || !local.city.trim()) return
+    sugeriuPino.current = true
+    acharPeloEndereco()
+  }, [blocoAberto, pino, local.address, local.city])
+
+  useEffect(() => {
+    try { sessionStorage.setItem(chaveSubfluxo, String(nivelLiberado)) } catch { /* navegador sem storage */ }
+  }, [chaveSubfluxo, nivelLiberado])
+  useEffect(() => {
+    try { sessionStorage.setItem(chaveCelebradas, JSON.stringify(celebradas)) } catch { /* navegador sem storage */ }
+  }, [chaveCelebradas, celebradas])
+
+  useRoteiro([
+    celebradas.includes('identidade'),
+    celebradas.includes('contato') && celebradas.includes('localizacao'),
+    celebradas.includes('horarios') && subfluxoConcluido,
+  ])
   const recomendadoAtivo = Number(pol.antecedencia_min_minutos) === RECOMENDADO.antecedencia_min_minutos && pol.politica_cancelamento === RECOMENDADO.politica_cancelamento && pol.permite_remarcar === RECOMENDADO.permite_remarcar && pol.sinal_ligado === RECOMENDADO.sinal_ligado
 
   async function avancar() {
@@ -773,12 +1155,58 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
     }
     seguir(dados)
   }
+  const primeiroHorarioFinale = horas?.find((h) => h.open)
+  const horarioFinale = primeiroHorarioFinale
+    ? `${String(primeiroHorarioFinale.start_time).slice(0,5)} às ${String(primeiroHorarioFinale.end_time).slice(0,5)}`
+    : 'Horários configurados'
+  const enderecoFinale = [local.address, local.bairro, local.city, local.uf].filter(Boolean).join(' · ')
+  const instagramFinale = loc.redes?.instagram || ''
+
   return (
     <>
       <h1 className="ob-titulo">{autonoma ? 'Dê cara à sua agenda' : 'Dê cara ao seu salão'}</h1>
       <p className="ob-sub">{autonoma ? 'Sua foto, contatos e onde você atende: é o que suas clientes vão encontrar na MIMO.' : 'Nome, fotos, contatos e endereço: é o que suas clientes vão encontrar na MIMO.'}</p>
+      <div className="ob-guia-grade ob-guia-grade-3">
+        <GuiaContexto Icone={Eye} titulo="Agora estamos montando sua vitrine" tom="rosa">
+          Tudo que você preencher aqui ajuda a formar a página que a cliente abre antes de escolher serviço e horário. A prévia muda junto com você.
+        </GuiaContexto>
+        <GuiaContexto Icone={Wand2} titulo="Não precisa acertar tudo de primeira">
+          Fotos, contatos, localização, horários e regras podem ser ajustados depois em Ajustes. Aqui a ideia é deixar uma boa base pronta.
+        </GuiaContexto>
+      </div>
+      <div className="ob-subfluxo" aria-label="Etapas de configuração do seu espaço">
+        <div className="ob-subfluxo-topo">
+          <span><strong>Seu espaço</strong> · 5 passos rápidos</span>
+          <small>{subfluxoConcluido ? '5 de 5 · pronto' : `Passo ${indiceSubEtapa + 1} de 5`}</small>
+        </div>
+        <div className="ob-subfluxo-progresso" aria-hidden="true"><i style={{ width: `${((indiceSubEtapa + 1) / 5) * 100}%` }} /></div>
+        <div className="ob-subfluxo-itens">
+          {subEtapasEspaco.map((etapa) => {
+            const atual = blocoAberto === etapa.id
+            return (
+              <button
+                key={etapa.id}
+                type="button"
+                className={(atual ? 'atual ' : '') + (etapa.feito ? 'feito ' : '') + (!etapa.liberado ? 'travado' : '')}
+                disabled={!etapa.liberado}
+                onClick={() => etapa.liberado && irParaSubEtapa(etapa.id)}
+              >
+                <span className="ob-subfluxo-num">{etapa.feito ? <Check size={13} /> : etapa.numero}</span>
+                <span><strong>{etapa.titulo}</strong><small>{etapa.detalhe}</small></span>
+              </button>
+            )
+          })}
+        </div>
+        <p className="ob-subfluxo-aviso">
+          <Info size={14} />
+          <span>{subfluxoConcluido ? 'Tudo pronto. Se quiser revisar, toque em qualquer etapa acima.' : 'Preencha normalmente. Quando estiver tudo certo, o botão de continuar é liberado. Você decide quando avançar.'}</span>
+        </p>
+      </div>
       <div className="ob-estrutura">
-        <div className="ob-card ob-card-largo">
+        <div
+          className={'ob-card ob-card-largo ob-fluxo-card ' + (blocoAberto === 'identidade' ? `aberto ob-anima-${direcaoBloco}` : 'fechado') + (celebradas.includes('identidade') ? ' feito' : '')}
+          data-etapa="1"
+        >
           <strong className="ob-card-titulo">{autonoma ? 'Sua imagem e seu espaço' : 'Nome e fotos'}</strong>
           <span className="muted">{autonoma ? 'Sua foto aparece ao lado do nome. As fotos do espaço viram a capa da sua página.' : 'O logo aparece ao lado do nome. As fotos mostram o espaço; a primeira vira a capa.'}</span>
           <div className="ob-cara">
@@ -825,19 +1253,18 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
                 </div>
                 <div className="ob-previa-corpo">
                   <strong>{nome || (autonoma ? 'Sua agenda' : 'Seu salão')}</strong>
-                  <span>{[s.bairro, s.city].filter(Boolean).join(' • ') || 'Bairro • Cidade'}</span>
+                  <span>{[local.bairro, local.city].filter(Boolean).join(' • ') || 'Bairro • Cidade'}</span>
                   <div className="ob-previa-botoes"><span className="ob-preview-botao">Ver serviços</span><span className="ob-previa-botao-2"><MapPin size={11} /> Como chegar</span></div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-        <div className="ob-ponte">
-          <span className="ob-ponte-icone"><Sparkles size={16} /></span>
-          <span><strong>{nome.trim() ? `${nome.trim()} já tem cara.` : 'Nome e fotos prontos?'}</strong> Agora, como as clientes chegam até {autonoma ? 'você' : 'vocês'}: contatos, endereço e horários.</span>
-        </div>
         <div className="ob-coluna">
-          <div className="ob-card">
+          <div
+            className={'ob-card ob-fluxo-card ' + (blocoAberto === 'contato' ? `aberto ob-anima-${direcaoBloco}` : 'fechado') + (celebradas.includes('contato') ? ' feito' : '')}
+            data-etapa="2"
+          >
             <strong className="ob-card-titulo">{autonoma ? 'Como as clientes falam com você' : 'Como as clientes falam com vocês'}</strong>
             <div className="ob-form">
               <div className="ob-zap-principal">
@@ -862,9 +1289,13 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
               </div>
             </div>
           </div>
-          <div className="ob-card">
+          <div
+            className={'ob-card ob-fluxo-card ' + (blocoAberto === 'localizacao' ? `aberto ob-anima-${direcaoBloco}` : 'fechado') + (celebradas.includes('localizacao') ? ' feito' : '')}
+            data-etapa="3"
+          >
             <strong className="ob-card-titulo">{autonoma ? 'Onde você atende' : 'Localização do salão'}</strong>
             <span className="muted">É o endereço que a cliente usa no “Como chegar”.</span>
+            <div className="ob-inline-explica"><MapPin size={14} /><span><strong>O pino é importante.</strong> Ele evita mandar a cliente para o número errado ou para o centro da cidade quando ela abrir o mapa.</span></div>
             <div className="ob-seg" role="radiogroup" aria-label="Qual endereço">
               <button type="button" role="radio" aria-checked={loc.endereco_igual} className={loc.endereco_igual ? 'ativa' : ''} onClick={() => setLoc((x) => ({ ...x, endereco_igual: true }))}>{comCnpj ? 'Usar o endereço fiscal' : 'Usar o endereço do cadastro'}</button>
               <button type="button" role="radio" aria-checked={!loc.endereco_igual} className={!loc.endereco_igual ? 'ativa' : ''} onClick={() => setLoc((x) => ({ ...x, endereco_igual: false }))}>Outro endereço</button>
@@ -884,20 +1315,23 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
               <span className="ob-rotulo ob-mapa-titulo">Pino no mapa {pino ? <em className="ob-pino-ok"><Check size={11} /> pino marcado</em> : <em className="ob-pino-nao">sem pino</em>}</span>
               {pino
                 ? <div className="ob-mapa"><Mapa lat={Number(loc.lat)} lng={Number(loc.lng)} zoom={17} arrastavel altura={220} onMover={moverPino} /></div>
-                : <div className="ob-sem-pino"><MapPinOff size={22} /><strong>Ainda sem pino no mapa</strong><span className="muted">Preencha o endereço ou use os botões abaixo.</span></div>}
-              {pino && <small className="ob-mapa-nota">Arraste o pino até a porta ou toque no lugar certo.{geo ? ` ${geo.charAt(0).toUpperCase()}${geo.slice(1)}.` : ''}</small>}
+                : <div className="ob-sem-pino"><MapPinOff size={24} /><strong>Vamos marcar a porta do seu espaço</strong><span className="muted">{local.address.trim() && local.city.trim() ? 'A MIMO pode sugerir o ponto pelo endereço. Depois você confere e ajusta no mapa.' : 'Complete o endereço acima para sugerirmos o ponto certo no mapa.'}</span></div>}
+              {pino && <small className="ob-mapa-nota ob-mapa-nota-forte"><Check size={12} /> <span><strong>Pino marcado.</strong> Confira se ele está exatamente na porta e arraste se precisar.{geo ? ` ${geo.charAt(0).toUpperCase()}${geo.slice(1)}.` : ''}</span></small>}
               <div className="ob-mapa-acoes">
-                <button type="button" className="ob-acao-mini" onClick={usarLocalizacao} disabled={Boolean(ocupado)}><MapPin size={13} /> {ocupado === 'gps' ? 'Achando você…' : 'Usar minha localização'}</button>
-                <button type="button" className="ob-acao-mini" onClick={acharPeloEndereco} disabled={Boolean(ocupado) || !(local.address.trim() || local.city.trim())}><Search size={13} /> {ocupado === 'endereco' ? 'Procurando…' : 'Achar pelo endereço'}</button>
+                <button type="button" className="ob-acao-mini ob-pino-principal" onClick={acharPeloEndereco} disabled={Boolean(ocupado) || !(local.address.trim() && local.city.trim())}><MapPin size={14} /> {ocupado === 'endereco' ? 'Sugerindo o pino…' : (pino ? 'Reposicionar pelo endereço' : 'Sugerir pino pelo endereço')}</button>
+                <button type="button" className="ob-acao-mini ob-pino-secundario" onClick={usarLocalizacao} disabled={Boolean(ocupado)}><Search size={13} /> {ocupado === 'gps' ? 'Achando você…' : 'Usar minha localização atual'}</button>
                 {pino && <button type="button" className="ob-acao-mini neutro" onClick={() => { setLoc((x) => ({ ...x, lat: null, lng: null })); setGeo('') }}><X size={13} /> Tirar o pino</button>}
               </div>
             </div>
           </div>
         </div>
         <div className="ob-coluna">
-        <div className="ob-card">
+        <div
+          className={'ob-card ob-fluxo-card ' + (blocoAberto === 'horarios' ? `aberto ob-anima-${direcaoBloco}` : 'fechado') + (celebradas.includes('horarios') ? ' feito' : '')}
+          data-etapa="4"
+        >
           <strong className="ob-card-titulo">Horário de funcionamento</strong>
-          <span className="muted">{autonoma ? 'Horário padrão da sua agenda. Folgas você marca depois, em Bloqueios.' : 'Horário padrão do salão. Depois você ajusta por profissional.'}</span>
+          <span className="muted">{autonoma ? 'Horário padrão da sua agenda. Folgas você marca depois, em Bloqueios.' : 'Horário geral da casa. Ele não obriga toda a equipe a trabalhar igual: depois cada profissional pode ter dias e horários diferentes.'}</span>
           {!horas ? <p className="muted">Carregando…</p> : (
             <div className="ob-horas">
               {horas.map((h) => (
@@ -920,19 +1354,54 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
             </div>
           )}
         </div>
-        <div className="ob-card">
-          <span className="ob-card-linha"><strong className="ob-card-titulo">Regras da agenda</strong>{recomendadoAtivo && <em className="ob-badge">Configuração recomendada</em>}</span>
+        <div
+          className={'ob-card ob-fluxo-card ' + (blocoAberto === 'regras' ? `aberto ob-anima-${direcaoBloco}` : 'fechado') + (celebradas.includes('regras') ? ' feito' : '')}
+          data-etapa="5"
+        >
+          <span className="ob-card-linha ob-regras-cabecalho">
+            <span><strong className="ob-card-titulo">Regras da agenda</strong><small>Defina o básico agora. Você pode mudar tudo depois.</small></span>
+            {recomendadoAtivo && <em className="ob-badge">Configuração recomendada</em>}
+          </span>
+
           {!recomendadoAtivo && (
             <div className="ob-recomendado">
-              <small><Wand2 size={12} /> Sugestão para começar</small>
-              <span className="muted">Agendar até 1 h antes · cancelar grátis até 12 h antes · reagendar liberado · sem sinal.</span>
-              <button type="button" className="btn-mini" onClick={() => setPol((x) => ({ ...x, ...RECOMENDADO }))}>Usar essa</button>
+              <span><small><Wand2 size={12} /> Sugestão para começar</small><span className="muted">1 h de antecedência · cancelar até 12 h antes · reagendamento liberado · sem sinal.</span></span>
+              <button type="button" className="btn-mini" onClick={() => setPol((x) => ({ ...x, ...RECOMENDADO }))}>Usar recomendada</button>
             </div>
           )}
-          <label className="ob-campo">Com quanto tempo de antecedência a cliente pode agendar?<select value={pol.antecedencia_min_minutos} onChange={(e) => p('antecedencia_min_minutos')(e.target.value)}>{ANTECEDENCIAS.map(([v, r]) => <option key={v} value={v}>{r}</option>)}</select><small className="muted">Com 1 hora, um horário das 15h pode ser marcado até as 14h.</small></label>
-          <label className="ob-campo">Cancelamento gratuito até<select value={pol.politica_cancelamento} onChange={(e) => p('politica_cancelamento')(e.target.value)}>{CANCELAMENTO.map(([v, r]) => <option key={v} value={v}>{r} antes</option>)}</select></label>
-          <div className="ob-toggle"><span>Permitir que a cliente reagende</span><label className="switch"><input type="checkbox" checked={pol.permite_remarcar} onChange={(e) => p('permite_remarcar')(e.target.checked)} /><span></span></label></div>
-          <div className="ob-toggle"><span>Cobrar sinal na reserva <span className="muted">(opcional)</span></span><label className="switch"><input type="checkbox" checked={pol.sinal_ligado} onChange={(e) => { setTocouSinal(true); p('sinal_ligado')(e.target.checked) }} /><span></span></label></div>
+
+          <div className="ob-regras-grupo">
+            <div className="ob-regras-rotulo">
+              <span><strong>Antecedência mínima</strong><small>Até quando uma cliente pode pegar um horário que ainda está livre.</small></span>
+              <AjudaCampo titulo="Antecedência mínima">Exemplo: com 1 hora, um horário das 15h pode ser reservado até as 14h. Depois disso ele deixa de aparecer para novas reservas.</AjudaCampo>
+            </div>
+            <div className="ob-opcoes-tempo" role="radiogroup" aria-label="Antecedência mínima">
+              {ANTECEDENCIAS.map(([v, r]) => <button key={v} type="button" role="radio" aria-checked={Number(pol.antecedencia_min_minutos) === Number(v)} className={Number(pol.antecedencia_min_minutos) === Number(v) ? 'ativa' : ''} onClick={() => p('antecedencia_min_minutos')(v)}>{r}</button>)}
+            </div>
+          </div>
+
+          <div className="ob-regras-grupo">
+            <div className="ob-regras-rotulo">
+              <span><strong>Cancelamento gratuito</strong><small>Escolha até quanto tempo antes a cliente pode cancelar sem restrição.</small></span>
+              <AjudaCampo titulo="Cancelamento">Essa regra organiza o que a cliente consegue fazer sozinha. Políticas e cobranças mais avançadas podem ser ajustadas depois.</AjudaCampo>
+            </div>
+            <div className="ob-opcoes-cancelamento" role="radiogroup" aria-label="Cancelamento gratuito">
+              {CANCELAMENTO.map(([v, r]) => <button key={v} type="button" role="radio" aria-checked={pol.politica_cancelamento === v} className={pol.politica_cancelamento === v ? 'ativa' : ''} onClick={() => p('politica_cancelamento')(v)}><strong>{r}</strong><small>antes</small></button>)}
+            </div>
+          </div>
+
+          <div className="ob-regras-linhas">
+            <div className="ob-regra-toggle">
+              <span><strong>Permitir reagendamento</strong><small>A cliente pode trocar o próprio horário sem precisar chamar o salão.</small></span>
+              <span className="ob-regra-acao"><AjudaCampo titulo="Reagendamento">Quando ligado, a cliente pode mover um agendamento respeitando seus horários e regras. Você continua vendo a alteração na agenda.</AjudaCampo><label className="switch"><input type="checkbox" checked={pol.permite_remarcar} onChange={(e) => p('permite_remarcar')(e.target.checked)} /><span></span></label></span>
+            </div>
+
+            <div className="ob-regra-toggle">
+              <span><strong>Cobrar sinal na reserva</strong><small>Opcional. Pode deixar desligado agora e configurar depois.</small></span>
+              <span className="ob-regra-acao"><AjudaCampo titulo="Sinal na reserva">É um valor pago no momento do agendamento e abatido do serviço depois. Ajuda a reduzir faltas, mas não precisa ser ativado agora.</AjudaCampo><label className="switch"><input type="checkbox" checked={pol.sinal_ligado} onChange={(e) => { setTocouSinal(true); p('sinal_ligado')(e.target.checked) }} /><span></span></label></span>
+            </div>
+          </div>
+
           {tocouSinal && !pol.sinal_ligado && (s.pagamento_modo ?? 'nao') !== 'nao' && <small className="ob-aviso-sinal">Desligar aqui desliga o recebimento pelo app do salão inteiro, o mesmo de Ajustes › Receber pelo app.</small>}
           {pol.sinal_ligado && (
             <div className="ob-sinal">
@@ -942,12 +1411,74 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
               <small className="muted">Cobrado na reserva e abatido do valor final.</small>
             </div>
           )}
-          <label className="ob-campo">Como os agendamentos serão confirmados?<select value={pol.aceite_modo} onChange={(e) => p('aceite_modo')(e.target.value)}><option value="automatico">Confirmar automaticamente</option><option value="casa">O salão confirma{pol.aceite_modo === 'casa' ? ` (até ${pol.minutos_para_aceitar} min)` : ''}</option><option value="profissional">Cada profissional confirma</option></select></label>
-          <small className="muted">Tudo isso pode mudar depois, em Ajustes.</small>
+
+          <div className="ob-regras-grupo">
+            <div className="ob-regras-rotulo">
+              <span><strong>Quem confirma o agendamento?</strong><small>Escolha o que acontece depois que a cliente pede um horário.</small></span>
+              <AjudaCampo titulo="Confirmação do agendamento">Automática confirma na hora. “Salão confirma” centraliza a decisão. “Profissional confirma” deixa cada pessoa responsável pelos próprios pedidos.</AjudaCampo>
+            </div>
+            <div className="ob-confirmacao-opcoes" role="radiogroup" aria-label="Confirmação do agendamento">
+              <button type="button" role="radio" aria-checked={pol.aceite_modo === 'automatico'} className={pol.aceite_modo === 'automatico' ? 'ativa' : ''} onClick={() => p('aceite_modo')('automatico')}><span className="ob-radio-visual"></span><strong>Automática</strong><small>Entrou na agenda na hora.</small></button>
+              <button type="button" role="radio" aria-checked={pol.aceite_modo === 'casa'} className={pol.aceite_modo === 'casa' ? 'ativa' : ''} onClick={() => p('aceite_modo')('casa')}><span className="ob-radio-visual"></span><strong>O salão confirma</strong><small>Você aprova os pedidos{pol.aceite_modo === 'casa' ? ` em até ${pol.minutos_para_aceitar} min` : ''}.</small></button>
+              <button type="button" role="radio" aria-checked={pol.aceite_modo === 'profissional'} className={pol.aceite_modo === 'profissional' ? 'ativa' : ''} onClick={() => p('aceite_modo')('profissional')}><span className="ob-radio-visual"></span><strong>Cada profissional</strong><small>Cada uma confirma a própria agenda.</small></button>
+            </div>
+          </div>
         </div>
         </div>
       </div>
-      <Rodape voltar={voltar} avancar={avancar} salvando={salvando} />
+      {!subfluxoConcluido ? (
+        <div className={'ob-subpasso-rodape ' + (etapaProntaAtual ? 'pronto' : 'pendente')}>
+          <button type="button" className="btn btn-ghost" onClick={voltarNoSubfluxo} disabled={salvando || Boolean(conquista)}><ArrowLeft size={16} /> Voltar</button>
+          <span className="ob-subpasso-status">
+            {etapaProntaAtual ? <><Check size={15} /><span><strong>Tudo certo por aqui.</strong> Revise com calma e avance quando quiser.</span></> : <><Info size={15} /><span>{pendenciaPorEtapa[blocoAberto]}</span></>}
+          </span>
+          <button type="button" className="btn btn-primary ob-subpasso-proximo" onClick={confirmarSubEtapa} disabled={!etapaProntaAtual || salvando || Boolean(conquista)}>
+            {blocoAberto === 'regras' ? 'Concluir meu espaço' : `Continuar para ${proximaEtapa?.titulo || 'próximo'}`} <ArrowRight size={16} />
+          </button>
+        </div>
+      ) : (
+        <Rodape voltar={voltarNoSubfluxo} avancar={avancar} salvando={salvando} rotulo="Ir para o último passo" />
+      )}
+      {finaleAberto && (
+        <div className="ob-finale-modal" role="dialog" aria-modal="true" aria-labelledby="ob-finale-titulo">
+          <div className="ob-finale-modal-card">
+            <button type="button" className="ob-finale-fechar" onClick={() => setFinaleAberto(false)} aria-label="Fechar"><X size={18} /></button>
+            <div className="ob-finale-estouro" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+            <div className="ob-finale-modal-cabeca">
+              <span className="ob-finale-modal-icone"><Sparkles size={24} /></span>
+              <span className="ob-finale-selo">Seu espaço está pronto</span>
+              <h2 id="ob-finale-titulo">Até aqui eram campos.<br /><strong>Agora olha o que você construiu.</strong></h2>
+              <p>Seu espaço já tem identidade, contato, localização, horários e regras. É assim que a experiência começa a ganhar forma para sua cliente.</p>
+            </div>
+
+            <PreviewFinalMimo
+              nome={nome}
+              logo={logo}
+              fotos={fotos}
+              endereco={enderecoFinale}
+              whatsapp={loc.whatsapp}
+              instagram={instagramFinale}
+              horario={horarioFinale}
+              autonoma={autonoma}
+            />
+
+            <div className="ob-finale-ultimo">
+              <span><Check size={16} /><span><strong>Essa parte acabou.</strong><small>Antes de acessar seu painel, falta só um último passo.</small></span></span>
+              <button type="button" className="btn btn-primary" onClick={() => setFinaleAberto(false)}>Entendi <Check size={15} /></button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {conquista && (
+        <div className="ob-momento-ok ob-momento-ok-leve" role="status" aria-live="polite">
+          <div className="ob-momento-ok-card">
+            <span className="ob-momento-ok-check"><Check size={24} /></span>
+            <strong>{conquista.titulo}</strong>
+            <small>{conquista.texto}</small>
+          </div>
+        </div>
+      )}
     </>
   )
 }
@@ -957,7 +1488,7 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
 // O cadastro termina aqui: quantas agendas (define o plano) e o aviso de que
 // serviços, equipe e o QR vêm no painel, guiados.
 function PassoQuaseLa({ s, voltar, salvando, concluir, pronto, autonoma, gravarQuieto, setEstadoAuto }) {
-  const [n, setNum] = useState(Math.max(1, Number(s.equipe_prevista) || 4))
+  const [n, setNum] = useState(Math.max(1, Number(s.equipe_prevista) || 1))
   const setN = (v) => setNum(Math.max(1, Math.round(v)))
   const c = planoDoNegocio(autonoma ? 'autonoma' : 'salao', n)
   const inclusas = c.plano === 'pro' ? PLANOS.pro.inclusas : PLANOS.promais.inclusas
@@ -968,51 +1499,58 @@ function PassoQuaseLa({ s, voltar, salvando, concluir, pronto, autonoma, gravarQ
     <>
       <h1 className="ob-titulo">Quase lá</h1>
       <p className="ob-sub">{autonoma ? 'Sua agenda já tem cara. Falta só entrar no painel e montar os serviços.' : 'Seu salão já tem cara. Falta dizer quantas agendas e entrar no painel.'}</p>
+      <GuiaContexto Icone={Check} titulo={autonoma ? 'Você não tem mensalidade' : 'Você ainda não está contratando nada agora'} tom="rosa">
+        {autonoma
+          ? 'Sua agenda individual é gratuita. Você entra no painel, cadastra os serviços e libera o link.'
+          : 'A quantidade abaixo serve para estimar o plano. O teste só começa quando você ativar o link e o QR no painel, e as agendas podem ser ajustadas depois.'}
+      </GuiaContexto>
       <div className="ob-estrutura">
         {!autonoma && (
-            <div className="ob-card ob-card-largo ob-plano-card">
-              <div className="ob-plano-grade">
-                <div className="ob-plano-esq">
-                  <strong className="ob-card-titulo">Profissionais com agenda própria</strong>
-                  <span className="muted">Conte só quem atende clientes e precisa de agenda própria.</span>
-                  <div className="ob-contador ob-contador-grande"><button type="button" onClick={() => setN(n - 1)} aria-label="Menos"><Minus size={16} /></button><strong>{n}</strong><button type="button" onClick={() => setN(n + 1)} aria-label="Mais"><Plus size={16} /></button></div>
-                  <span className="ob-plano-agendas">{n === 1 ? '1 agenda' : `${n} agendas`} · {c.extras === 0 ? `dentro das ${inclusas} inclusas` : `${inclusas} inclusas + ${c.extras} ${c.extras === 1 ? 'extra' : 'extras'}`}</span>
-                  <div className="ob-plano-barra" aria-hidden="true">{Array.from({ length: Math.max(n, inclusas) }, (_, i) => <i key={i} className={i < n ? (i < inclusas ? 'inclusa' : 'extra') : ''} />)}</div>
-                  <small className="muted">É uma previsão. A equipe você monta no painel, e o plano acompanha as agendas ativas. Sem fidelidade.</small>
+          <div className="ob-card ob-card-largo ob-plano-simples">
+            <div className="ob-plano-simples-cabeca">
+              <span>
+                <em className="ob-etapa-mini">Só falta dimensionar sua equipe</em>
+                <strong className="ob-card-titulo">Quantas pessoas terão agenda própria na MIMO?</strong>
+                <small>Comece com quem realmente atende clientes. Recepção, administrativo e pessoas sem agenda própria não entram nessa conta.</small>
+              </span>
+              <AjudaCampo titulo="O que conta como uma agenda?">Cada profissional que recebe horários próprios na MIMO usa uma agenda. Se duas pessoas atendem clientes em horários separados, são duas agendas. Você pode adicionar ou remover profissionais depois.</AjudaCampo>
+            </div>
+
+            <div className="ob-plano-simples-miolo">
+              <div className="ob-plano-escolha">
+                <span className="ob-plano-pergunta">Quantas agendas você quer começar usando?</span>
+                <div className="ob-contador ob-contador-grande">
+                  <button type="button" onClick={() => setN(n - 1)} aria-label="Diminuir agendas" disabled={n <= 1}><Minus size={17} /></button>
+                  <strong>{n}</strong>
+                  <button type="button" onClick={() => setN(n + 1)} aria-label="Aumentar agendas"><Plus size={17} /></button>
                 </div>
-                <div className="ob-plano-dir">
-                  <div className="ob-plano-resumo">
-                    <small>Seu plano</small>
-                    <strong>{c.nome}</strong>
-                    <b>{emDinheiro(c.total)}<small> /mês</small></b>
-                    <span>{emDinheiro(c.base)} com {inclusas} agendas inclusas{c.extras > 0 && ` + ${c.extras} × ${emDinheiro(c.valorExtra)}`}</span>
-                  </div>
-                  <div className="ob-plano-gratis">
-                    <strong>7 dias grátis, sem cartão</strong>
-                    <span>Você não paga nada agora. O teste começa quando você ativar o link e o QR no painel. Depois, {emDinheiro(c.total)}/mês, sem fidelidade.</span>
-                  </div>
-                  <ul className="ob-plano-beneficios">
-                    <li><Check size={13} /> Agenda online 24h, com link e QR do salão</li>
-                    <li><Check size={13} /> Uma agenda pra cada profissional, com permissões</li>
-                    <li><Check size={13} /> Lista de espera, confirmações e lembretes pelo WhatsApp</li>
-                    <li><Check size={13} /> Sinal, comanda e repasses</li>
-                  </ul>
-                  <div className="ob-plano-comparar">
-                    <button type="button" className={'ob-plano-opcao' + (c.plano === 'pro' ? ' ativa' : '')} onClick={() => { if (n > PLANOS.pro.ate) setN(PLANOS.pro.ate) }}>
-                      <strong>MIMO Pro</strong><span>até {PLANOS.pro.ate} agendas</span><em>{emDinheiro(PLANOS.pro.base)} com {PLANOS.pro.inclusas} inclusas · {emDinheiro(PLANOS.pro.extra)} por extra</em>
-                    </button>
-                    <button type="button" className={'ob-plano-opcao' + (c.plano === 'promais' ? ' ativa' : '')} onClick={() => { if (n <= PLANOS.pro.ate) setN(PLANOS.promais.inclusas) }}>
-                      <strong>MIMO Pro+</strong><span>{PLANOS.pro.ate + 1} agendas ou mais, sem limite</span><em>{emDinheiro(PLANOS.promais.base)} com {PLANOS.promais.inclusas} inclusas · {emDinheiro(PLANOS.promais.extra)} por extra</em>
-                    </button>
-                  </div>
-                </div>
+                <span className="ob-plano-agendas">{n === 1 ? '1 profissional com agenda própria' : `${n} profissionais com agenda própria`}</span>
+              </div>
+
+              <div className="ob-plano-resultado">
+                <small>Com essa equipe, você começa no</small>
+                <strong>{c.nome}</strong>
+                <div className="ob-plano-preco"><b>{emDinheiro(c.total)}</b><span>/mês</span></div>
+                <span>{c.extras === 0 ? `${n} de ${inclusas} agendas inclusas` : `${inclusas} inclusas + ${c.extras} ${c.extras === 1 ? 'agenda extra' : 'agendas extras'}`}</span>
               </div>
             </div>
+
+            <div className="ob-plano-simples-rodape">
+              <span className="ob-plano-teste"><Sparkles size={15} /><span><strong>7 dias grátis, sem cartão.</strong><small>O teste começa só quando você ativar seu link e QR no painel.</small></span></span>
+              <AjudaCampo titulo="E se minha equipe mudar?">Sem problema. O valor acompanha as agendas ativas. Você ajusta a equipe quando quiser e a MIMO mostra o impacto antes de qualquer mudança.</AjudaCampo>
+            </div>
+          </div>
         )}
         <div className="ob-card ob-card-largo ob-depois-painel">
           <span className="ob-depois-selo"><Sparkles size={13} /> Continua no painel</span>
           <strong className="ob-card-titulo">{autonoma ? 'Os serviços você monta já dentro do painel' : 'Serviços e equipe você monta já dentro do painel'}</strong>
           <span className="muted">Com calma, do seu jeito, e com a gente guiando. O painel abre com a configuração pronta pra continuar.</span>
+          <div className="ob-fluxo-depois" aria-label="O que acontece depois">
+            <span><b>1</b> Entrar no painel</span><i>→</i>
+            <span><b>2</b> Cadastrar serviços</span><i>→</i>
+            {!autonoma && <><span><b>3</b> Montar equipe</span><i>→</i></>}
+            <span><b>{autonoma ? '3' : '4'}</b> Liberar link e QR</span>
+          </div>
           <div className="ob-depois-lista">
             <div className="ob-depois-item"><span className="ob-depois-icone"><Sparkles size={18} /></span><strong>Serviços</strong><small>Nome, duração e preço. Com sugestões por categoria pra ir rápido.</small></div>
             {!autonoma && <div className="ob-depois-item"><span className="ob-depois-icone"><Users size={18} /></span><strong>Equipe</strong><small>Cada profissional com os seus serviços e horários. Ela recebe um link e entra com tudo pronto.</small></div>}

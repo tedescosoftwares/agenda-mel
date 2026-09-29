@@ -35,6 +35,7 @@ import AdminWhatsapp from "./pages/admin/AdminWhatsapp";
 import AdminBancada from "./pages/admin/AdminBancada";
 import AdminAjustes from "./pages/admin/AdminAjustes";
 import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminGuia from "./pages/admin/AdminGuia";
 import ProAgenda from "./pages/pro/ProAgenda";
 import ProServicos from "./pages/pro/ProServicos";
 import ProHorarios from "./pages/pro/ProHorarios";
@@ -405,6 +406,14 @@ export default function App() {
               }
             />
             <Route path="/admin/dashboard" element={<Navigate to="/admin" replace />} />
+            <Route
+              path="/admin/guia"
+              element={
+                <ProtectedRoute requireRole="admin">
+                  <AdminGuia />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/admin/agenda"
               element={

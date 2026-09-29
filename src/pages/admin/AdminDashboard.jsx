@@ -11,13 +11,13 @@ import { useAuth } from '../../context/AuthContext'
 import { formatarCents, formatarReaisCurto, formatarPct, mesAtual, nomeDoMes } from '../../lib/numeros'
 import GraficoLinha from '../../components/GraficoLinha'
 import { toISODate } from '../../lib/format'
-import { CalendarPlus, Users, Sparkles, MessageCircle, FileSignature } from 'lucide-react'
+import { CalendarPlus, Users, Sparkles, MessageCircle, FileSignature, ArrowRight, CalendarDays, TrendingUp, Clock3, QrCode, Settings2, X, PlayCircle, ChevronRight, Activity, CircleDot, Rocket, BellRing, BookOpen } from 'lucide-react'
 
 // Dashboard do salão (tela 23): o dia de hoje em quatro números, o
 // faturamento do mês dia a dia, o que está esperando resposta, e os
 // atalhos para o que se faz todo dia.
 export default function AdminDashboard() {
-  const { salao } = useAuth()
+  const { salao, profile } = useAuth()
   const [hoje, setHoje] = useState({ atendimentos: 0, faturamento: 0 })
   const [pendentes, setPendentes] = useState(0)
   const [naFila, setNaFila] = useState(0)
@@ -66,53 +66,306 @@ export default function AdminDashboard() {
   const ocup = linhas.length ? Math.round(linhas.reduce((s, l) => s + Number(l.ocupacao_bps ?? 0), 0) / linhas.length) : 0
   const maior = Math.max(1, ...linhas.map((l) => Number(l.faturamento_cents ?? 0)))
 
+  const nomeSalao = salao?.name ?? 'Meu salão'
+  const primeiraPalavra = nomeSalao.split(' ')[0]
+  const hojeTexto = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })
+  const temMovimento = hoje.atendimentos > 0 || totalMes > 0 || pendentes > 0 || naFila > 0
+
+  const salaoAtivo = Boolean(salao?.ativado_em)
+  const fotosSalao = Array.isArray(salao?.fotos) ? salao.fotos : []
+  const capaSalao = fotosSalao[0] || salao?.cover_url || salao?.foto_capa_url || ''
+  const logoSalao = salao?.logo_url || ''
+  const iniciaisSalao = nomeSalao.split(/\s+/).filter(Boolean).slice(0,2).map((x) => x[0]).join('').toUpperCase()
+  const nomePessoa = profile?.full_name?.split(' ')?.[0] || ''
+  const horaAgora = new Date().getHours()
+  const saudacao = horaAgora < 12 ? 'Bom dia' : horaAgora < 18 ? 'Boa tarde' : 'Boa noite'
+
+  const agoraMimo = pendentes > 0
+    ? {
+        icone: <BellRing size={19} />,
+        selo: 'Precisa da sua atenção',
+        titulo: pendentes === 1 ? 'Tem 1 pedido esperando confirmação.' : `Tem ${pendentes} pedidos esperando confirmação.`,
+        texto: 'Responder rápido deixa a agenda redonda e a cliente segura de que está tudo certo.',
+        acao: 'Ver pedidos na agenda',
+        para: '/admin/agenda',
+      }
+    : naFila > 0
+      ? {
+          icone: <Users size={19} />,
+          selo: 'Oportunidade agora',
+          titulo: naFila === 1 ? 'Tem 1 cliente esperando uma vaga.' : `Tem ${naFila} clientes esperando uma vaga.`,
+          texto: 'Se algum horário abrir, sua fila já te mostra quem pode ocupar esse espaço.',
+          acao: 'Abrir agenda',
+          para: '/admin/agenda',
+        }
+      : hoje.atendimentos > 0
+        ? {
+            icone: <Activity size={19} />,
+            selo: 'Seu salão está em movimento',
+            titulo: hoje.atendimentos === 1 ? 'Você tem 1 atendimento hoje.' : `Você tem ${hoje.atendimentos} atendimentos hoje.`,
+            texto: `${formatarCents(hoje.faturamento)} em serviços já estão na agenda de hoje.`,
+            acao: 'Acompanhar meu dia',
+            para: '/admin/agenda',
+          }
+        : salaoAtivo
+          ? {
+              icone: <Sparkles size={19} />,
+              selo: 'Tudo tranquilo por aqui',
+              titulo: 'Sua agenda está pronta para receber clientes.',
+              texto: 'Hoje ainda está livre. É um bom momento para compartilhar seu link ou revisar seus serviços.',
+              acao: 'Ver meu salão',
+              para: '/admin/salao',
+            }
+          : {
+              icone: <Rocket size={19} />,
+              selo: 'Sua MIMO está tomando forma',
+              titulo: 'A base está pronta. Agora vamos colocar seu salão para rodar.',
+              texto: 'Cadastre serviços, organize sua equipe e então libere o link e o QR Code para as clientes.',
+              acao: 'Continuar configuração',
+              para: '/admin/configurar',
+            }
+
   return (
-    <AdminShell>
-      <div className="page-head"><div><h2>{salao?.name ?? 'Meu salão'}</h2><p className="muted titulo-dia">{new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</p></div></div>
-      <AcessoAviso />
-      <PrimeirosPassos salao={salao} />
-      <AvisosNovos />
-      <PendenciasBaixa para="/admin/fechar-dia" />
-      <LigarAvisos texto="Pedidos, cancelamentos e clientes chamando no WhatsApp chegam na hora, mesmo com o app fechado." />
+    <AdminShell amplo>
+      <div className="admin-home">
+        <TutorialPainel />
 
-      {semContrato.length > 0 && (
-        <Link to="/admin/equipe" className="card fin-alerta parceria-alerta">
-          <FileSignature size={18} />
-          <span><strong>Parceria ainda não formalizada.</strong> {semContrato.length === 1 ? `${semContrato[0].nome} está configurada como parceira na MIMO, mas não há contrato registrado.` : `${semContrato.length} profissionais estão configuradas como parceiras na MIMO, mas não há contrato registrado.`} Confira se a formalização da relação está adequada ao modelo adotado pelo salão. <u>Ver orientação</u></span>
-        </Link>
-      )}
-
-      <div className="kpis">
-        <div className="card kpi"><span className="muted">Hoje</span><strong>{hoje.atendimentos}</strong><span className="kpi-nota">atendimentos · {formatarCents(hoje.faturamento)}</span></div>
-        <div className="card kpi"><span className="muted">{nomeDoMes(mesAtual()).split(' ')[0]}</span><strong>{formatarReaisCurto(totalMes)}</strong><span className="kpi-nota">{atendMes} atendimentos</span></div>
-        <Link to="/admin/agenda" className="card kpi kpi-link"><span className="muted">Esperando aceite</span><strong>{pendentes}</strong><span className="kpi-nota">pedidos pendentes</span></Link>
-        <div className="card kpi"><span className="muted">Fila de espera</span><strong>{naFila}</strong><span className="kpi-nota">ocupação {formatarPct(ocup)}</span></div>
-      </div>
-
-      <div className="card">
-        <div className="secao-cabeca" style={{ margin: '0 0 0.4rem' }}><h3>Faturamento do mês</h3></div>
-        {porDia.length ? <GraficoLinha pontos={porDia} /> : <p className="muted">Nada concluído neste mês ainda.</p>}
-      </div>
-
-      <h3 className="secao-titulo">Por profissional</h3>
-      <div className="card barra-list">
-        {linhas.map((l) => (
-          <div key={l.professional_id} className="barra-item">
-            <div className="barra-topo"><span className="barra-nome">{l.nome}</span><span className="barra-valor">{formatarCents(l.faturamento_cents)}</span></div>
-            <div className="barra-trilho"><span className="barra-preenche" style={{ width: `${Math.max(2, (Number(l.faturamento_cents) * 100) / maior)}%` }} /></div>
-            <span className="barra-nota">{l.atendimentos}× · {formatarPct(l.ocupacao_bps)} ocupada</span>
+        <section className="admin-home-hero" data-tour="inicio">
+          <div className="admin-home-hero-copy">
+            <span className="admin-home-eyebrow"><Sparkles size={13} /> {saudacao}{nomePessoa ? `, ${nomePessoa}` : ''}</span>
+            <h1>{temMovimento ? <>Tudo acontecendo em <strong>{primeiraPalavra}</strong>, num só lugar.</> : <>Seu salão ganhou um <strong>centro de comando.</strong></>}</h1>
+            <p>{temMovimento
+              ? 'Agenda, equipe, clientes e números organizados para você bater o olho e saber o que precisa de atenção.'
+              : 'Você já montou a base. Agora faltam poucos passos para começar a receber agendamentos de verdade.'}</p>
+            <div className="admin-home-status">
+              <span className={salaoAtivo ? 'online' : 'configurando'}><i></i>{salaoAtivo ? 'Agenda ativa' : 'Em configuração'}</span>
+              <span><CalendarDays size={12} /> {hoje.atendimentos} {hoje.atendimentos === 1 ? 'horário hoje' : 'horários hoje'}</span>
+              <span><QrCode size={12} /> {salaoAtivo ? 'Link disponível' : 'Link após ativação'}</span>
+            </div>
+            <div className="admin-home-hero-acoes">
+              <Link to="/admin/agenda" className="btn btn-primary"><CalendarDays size={16} /> Abrir agenda</Link>
+              <Link to="/admin/configurar" className="btn btn-ghost"><Settings2 size={16} /> Continuar configuração</Link>
+            </div>
           </div>
-        ))}
-        {linhas.length === 0 && <p className="muted" style={{ margin: 0 }}>Sem números neste mês.</p>}
-      </div>
 
-      <h3 className="secao-titulo">Atalhos</h3>
-      <div className="atalhos">
-        <Link to="/admin/agenda?encaixe=1" className="card atalho"><span><CalendarPlus /></span>Novo encaixe</Link>
-        <Link to="/admin/equipe" className="card atalho"><span><Users /></span>Equipe</Link>
-        <Link to="/admin/servicos" className="card atalho"><span><Sparkles /></span>Serviços</Link>
-        <Link to="/admin/whatsapp" className="card atalho"><span><MessageCircle /></span>WhatsApp</Link>
+          <div className="admin-home-hoje">
+            <div className="admin-home-negocio-mini">
+              <span className="admin-home-negocio-avatar">
+                {logoSalao ? <img src={logoSalao} alt="" /> : <b>{iniciaisSalao || 'M'}</b>}
+              </span>
+              <span><small>Você está vendo</small><strong>{nomeSalao}</strong></span>
+              <i className={salaoAtivo ? 'ativo' : ''}></i>
+            </div>
+            {capaSalao && <div className="admin-home-capa-mini" style={{ backgroundImage:`linear-gradient(180deg,rgba(45,8,57,.08),rgba(45,8,57,.58)),url("${capaSalao}")` }} />}
+            <div className="admin-home-hoje-topo">
+              <span>Hoje</span>
+              <small>{hojeTexto}</small>
+            </div>
+            <div className="admin-home-hoje-numero"><strong>{hoje.atendimentos}</strong><span>{hoje.atendimentos === 1 ? 'atendimento' : 'atendimentos'}</span></div>
+            <div className="admin-home-hoje-linha">
+              <span><TrendingUp size={14} /> previsto hoje</span>
+              <strong>{formatarCents(hoje.faturamento)}</strong>
+            </div>
+            <Link to="/admin/agenda" className="admin-home-hoje-link">Ver agenda de hoje <ArrowRight size={14} /></Link>
+          </div>
+        </section>
+
+        <section className="admin-home-pulso">
+          <div className="admin-home-pulso-principal">
+            <span className="admin-home-pulso-icone">{agoraMimo.icone}<i></i></span>
+            <div>
+              <span className="admin-home-pulso-selo"><CircleDot size={11} /> Agora na MIMO</span>
+              <small>{agoraMimo.selo}</small>
+              <strong>{agoraMimo.titulo}</strong>
+              <p>{agoraMimo.texto}</p>
+            </div>
+            <Link to={agoraMimo.para} className="admin-home-pulso-acao">{agoraMimo.acao} <ArrowRight size={14} /></Link>
+          </div>
+          <div className="admin-home-pulso-trilha" aria-label="Estado atual do salão">
+            <span className={salaoAtivo ? 'feito' : 'atual'}><i></i><span><strong>{salaoAtivo ? 'Salão online' : 'Preparando salão'}</strong><small>{salaoAtivo ? 'Clientes já podem entrar pelo seu link.' : 'Finalize os pontos essenciais para liberar sua vitrine.'}</small></span></span>
+            <span className={pendentes > 0 ? 'atual' : ''}><i></i><span><strong>{pendentes > 0 ? `${pendentes} ${pendentes === 1 ? 'pedido pendente' : 'pedidos pendentes'}` : 'Pedidos em dia'}</strong><small>{pendentes > 0 ? 'Tem cliente esperando sua confirmação.' : 'Nada esperando resposta agora.'}</small></span></span>
+            <span className={naFila > 0 ? 'atual' : ''}><i></i><span><strong>{naFila > 0 ? `${naFila} na fila de espera` : 'Fila tranquila'}</strong><small>{naFila > 0 ? 'Há clientes de olho numa oportunidade.' : 'Nenhuma cliente aguardando vaga.'}</small></span></span>
+          </div>
+        </section>
+
+        <div className="admin-home-alertas" data-tour="primeiros-passos">
+          <AcessoAviso />
+          <PrimeirosPassos salao={salao} />
+          <AvisosNovos />
+          <PendenciasBaixa para="/admin/fechar-dia" />
+          <LigarAvisos texto="Pedidos, cancelamentos e clientes chamando no WhatsApp chegam na hora, mesmo com o app fechado." />
+          {semContrato.length > 0 && (
+            <Link to="/admin/equipe" className="card fin-alerta parceria-alerta">
+              <FileSignature size={18} />
+              <span><strong>Parceria ainda não formalizada.</strong> {semContrato.length === 1 ? `${semContrato[0].nome} está configurada como parceira na MIMO, mas não há contrato registrado.` : `${semContrato.length} profissionais estão configuradas como parceiras na MIMO, mas não há contrato registrado.`} Confira se a formalização da relação está adequada ao modelo adotado pelo salão. <u>Ver orientação</u></span>
+            </Link>
+          )}
+        </div>
+
+        <section className="admin-home-resumo" data-tour="numeros">
+          <div className="admin-home-secao-topo">
+            <div><span className="admin-home-label">Visão rápida</span><h2>Seu negócio hoje</h2></div>
+            <span className="admin-home-data">{hojeTexto}</span>
+          </div>
+
+          <div className="admin-home-kpis">
+            <div className="admin-home-kpi destaque">
+              <span className="admin-home-kpi-icone"><CalendarDays size={18} /></span>
+              <span className="admin-home-kpi-label">Atendimentos hoje</span>
+              <strong>{hoje.atendimentos}</strong>
+              <small>{formatarCents(hoje.faturamento)} em serviços agendados</small>
+            </div>
+            <div className="admin-home-kpi">
+              <span className="admin-home-kpi-icone"><TrendingUp size={18} /></span>
+              <span className="admin-home-kpi-label">{nomeDoMes(mesAtual()).split(' ')[0]}</span>
+              <strong>{formatarReaisCurto(totalMes)}</strong>
+              <small>{atendMes} {atendMes === 1 ? 'atendimento concluído' : 'atendimentos concluídos'}</small>
+            </div>
+            <Link to="/admin/agenda" className="admin-home-kpi admin-home-kpi-link">
+              <span className="admin-home-kpi-icone"><Clock3 size={18} /></span>
+              <span className="admin-home-kpi-label">Esperando confirmação</span>
+              <strong>{pendentes}</strong>
+              <small>{pendentes === 1 ? 'pedido precisa de resposta' : 'pedidos precisam de resposta'}</small>
+            </Link>
+            <div className="admin-home-kpi">
+              <span className="admin-home-kpi-icone"><Users size={18} /></span>
+              <span className="admin-home-kpi-label">Fila de espera</span>
+              <strong>{naFila}</strong>
+              <small>ocupação média de {formatarPct(ocup)}</small>
+            </div>
+          </div>
+        </section>
+
+        <div className="admin-home-grade">
+          <section className="card admin-home-grafico">
+            <div className="admin-home-secao-topo compacto">
+              <div><span className="admin-home-label">Movimento</span><h2>Faturamento do mês</h2></div>
+              <span className="admin-home-total">{formatarReaisCurto(totalMes)}</span>
+            </div>
+            {porDia.length
+              ? <GraficoLinha pontos={porDia} />
+              : <div className="admin-home-vazio"><TrendingUp size={22} /><strong>Os números começam aqui.</strong><span>Quando os primeiros atendimentos forem concluídos, o movimento do mês aparece neste gráfico.</span></div>}
+          </section>
+
+          <aside className="admin-home-lateral" data-tour="atalhos">
+            <section className="card admin-home-acoes">
+              <div className="admin-home-secao-topo compacto">
+                <div><span className="admin-home-label">Acesso rápido</span><h2>O que você pode fazer agora</h2></div>
+              </div>
+              <div className="admin-home-atalhos">
+                <Link to="/admin/agenda?encaixe=1"><span><CalendarPlus size={18} /></span><strong>Novo encaixe</strong><small>Adicionar um atendimento manualmente</small><ArrowRight size={14} /></Link>
+                <Link to="/admin/equipe"><span><Users size={18} /></span><strong>Equipe</strong><small>Profissionais e agendas</small><ArrowRight size={14} /></Link>
+                <Link to="/admin/servicos"><span><Sparkles size={18} /></span><strong>Serviços</strong><small>Preços, duração e categorias</small><ArrowRight size={14} /></Link>
+                <Link to="/admin/whatsapp"><span><MessageCircle size={18} /></span><strong>WhatsApp</strong><small>Mensagens e automações</small><ArrowRight size={14} /></Link>
+                <Link to="/admin/guia"><span><BookOpen size={18} /></span><strong>Guia MIMO</strong><small>Vídeos rápidos para aprender o sistema</small><ArrowRight size={14} /></Link>
+              </div>
+            </section>
+
+            <section className="card admin-home-profissionais">
+              <div className="admin-home-secao-topo compacto">
+                <div><span className="admin-home-label">Equipe</span><h2>Por profissional</h2></div>
+                <Link to="/admin/equipe">Ver equipe</Link>
+              </div>
+              <div className="barra-list">
+                {linhas.slice(0, 5).map((l) => (
+                  <div key={l.professional_id} className="barra-item">
+                    <div className="barra-topo"><span className="barra-nome">{l.nome}</span><span className="barra-valor">{formatarCents(l.faturamento_cents)}</span></div>
+                    <div className="barra-trilho"><span className="barra-preenche" style={{ width: `${Math.max(2, (Number(l.faturamento_cents) * 100) / maior)}%` }} /></div>
+                    <span className="barra-nota">{l.atendimentos}× · {formatarPct(l.ocupacao_bps)} ocupada</span>
+                  </div>
+                ))}
+                {linhas.length === 0 && <div className="admin-home-vazio mini"><Users size={19} /><strong>Sua equipe vai aparecer aqui.</strong><span>Adicione profissionais para acompanhar o movimento de cada agenda.</span></div>}
+              </div>
+            </section>
+          </aside>
+        </div>
+
+        <section className="admin-home-link card" data-tour="link">
+          <div>
+            <span className="admin-home-link-icone"><QrCode size={20} /></span>
+            <span><strong>Seu salão também vive fora deste painel.</strong><small>Quando serviços e equipe estiverem prontos, seu link e QR Code viram a porta de entrada das clientes.</small></span>
+          </div>
+          <Link to="/admin/configurar" className="btn btn-ghost">Preparar meu link <ArrowRight size={15} /></Link>
+        </section>
       </div>
     </AdminShell>
+  )
+}
+
+const PASSOS_TOUR = [
+  { alvo:'[data-tour="inicio"]', titulo:'Esse é o centro do seu salão', texto:'Aqui você enxerga o dia, abre sua agenda e continua qualquer configuração que ainda faltar.' },
+  { alvo:'[data-tour="primeiros-passos"]', titulo:'A MIMO te mostra o que falta', texto:'Enquanto o salão ainda estiver sendo preparado, esta área te conduz por serviços, equipe, ativação, link e QR.' },
+  { alvo:'[data-tour="numeros"]', titulo:'Os números aparecem sem você caçar', texto:'Atendimentos, movimento do mês, pedidos pendentes e fila de espera ficam resumidos aqui.' },
+  { alvo:'[data-tour="atalhos"]', titulo:'As ações do dia a dia ficam perto', texto:'Equipe, serviços, encaixes e WhatsApp estão a um toque. Você não precisa decorar menus.' },
+  { alvo:'[data-tour="link"]', titulo:'E daqui seu salão vai para a rua', texto:'O link e o QR Code são a porta de entrada das clientes. Quando a configuração estiver pronta, é isso que você compartilha.' },
+]
+
+function TutorialPainel() {
+  const [convite, setConvite] = useState(() => {
+    try { return localStorage.getItem('mimo-tour-painel-concluido') !== '1' && sessionStorage.getItem('mimo-tour-painel-depois') !== '1' }
+    catch { return true }
+  })
+  const [passo, setPasso] = useState(-1)
+  const [rect, setRect] = useState(null)
+
+  const ativo = passo >= 0
+  const atual = PASSOS_TOUR[passo]
+
+  useEffect(() => {
+    if (!ativo || !atual) return
+    const atualizar = () => {
+      const el = document.querySelector(atual.alvo)
+      if (!el) { setRect(null); return }
+      el.scrollIntoView({ behavior:'smooth', block:'center' })
+      setTimeout(() => {
+        const r = el.getBoundingClientRect()
+        setRect({ top:r.top, left:r.left, width:r.width, height:r.height })
+      }, 300)
+    }
+    atualizar()
+    window.addEventListener('resize', atualizar)
+    return () => window.removeEventListener('resize', atualizar)
+  }, [ativo, atual])
+
+  function depois() {
+    try { sessionStorage.setItem('mimo-tour-painel-depois', '1') } catch { /* segue */ }
+    setConvite(false)
+  }
+  function iniciar() { setConvite(false); setPasso(0) }
+  function fechar() { setPasso(-1) }
+  function proximo() {
+    if (passo >= PASSOS_TOUR.length - 1) {
+      try { localStorage.setItem('mimo-tour-painel-concluido', '1') } catch { /* segue */ }
+      setPasso(-1)
+      return
+    }
+    setPasso((x) => x + 1)
+  }
+
+  return (
+    <>
+      {convite && (
+        <div className="admin-tour-convite">
+          <span className="admin-tour-convite-icone"><PlayCircle size={21} /></span>
+          <span><strong>Primeira vez por aqui?</strong><small>A MIMO pode te mostrar o básico deste painel em menos de 1 minuto.</small></span>
+          <div><button type="button" className="btn btn-ghost" onClick={depois}>Agora não</button><button type="button" className="btn btn-primary" onClick={iniciar}>Me mostra <ArrowRight size={15} /></button></div>
+        </div>
+      )}
+
+      {ativo && atual && (
+        <div className="admin-tour-overlay">
+          {rect && <div className="admin-tour-foco" style={{ top:rect.top - 8, left:rect.left - 8, width:rect.width + 16, height:rect.height + 16 }} />}
+          <div className="admin-tour-card">
+            <div className="admin-tour-card-topo"><span>{passo + 1} de {PASSOS_TOUR.length}</span><button type="button" onClick={fechar} aria-label="Fechar tutorial"><X size={17} /></button></div>
+            <strong>{atual.titulo}</strong>
+            <p>{atual.texto}</p>
+            <div className="admin-tour-card-acoes">
+              <button type="button" className="btn btn-ghost" onClick={fechar}>Sair do tour</button>
+              <button type="button" className="btn btn-primary" onClick={proximo}>{passo === PASSOS_TOUR.length - 1 ? 'Pronto' : 'Próximo'} <ChevronRight size={15} /></button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   )
 }

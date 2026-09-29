@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import QRCode from 'qrcode'
-import { Check, ArrowLeft, ArrowRight, LogOut, Camera, MapPin, Plus, X, Copy, Download, MoreHorizontal, Link2, Info, Sparkles, MessageCircle, Users, Minus, Eye, Lock, Wand2, CalendarCheck, QrCode, Send, Home, MapPinOff, Search, ImagePlus } from 'lucide-react'
+import { Check, ArrowLeft, ArrowRight, LogOut, Camera, MapPin, Plus, X, Copy, Download, MoreHorizontal, Link2, Info, Sparkles, MessageCircle, Users, Minus, Eye, Lock, Wand2, CalendarCheck, QrCode, Send, Home, MapPinOff, Search, ImagePlus, HelpCircle } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { planoDoNegocio, reais as emDinheiro, PLANOS } from '../lib/planos'
@@ -256,6 +256,18 @@ function GuiaContexto({ Icone = Info, titulo, children, tom = '' }) {
       <span className="ob-guia-icone"><Icone size={16} /></span>
       <span><strong>{titulo}</strong><small>{children}</small></span>
     </div>
+  )
+}
+
+function AjudaCampo({ titulo, children }) {
+  return (
+    <details className="ob-ajuda-popover">
+      <summary aria-label={'Ajuda: ' + titulo} title="Entenda melhor"><HelpCircle size={15} /></summary>
+      <div className="ob-ajuda-popover-caixa">
+        <strong>{titulo}</strong>
+        <span>{children}</span>
+      </div>
+    </details>
   )
 }
 
@@ -1124,19 +1136,50 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
           className={'ob-card ob-fluxo-card ' + (blocoAberto === 'regras' ? `aberto ob-anima-${direcaoBloco}` : 'fechado') + (celebradas.includes('regras') ? ' feito' : '')}
           data-etapa="5"
         >
-          <span className="ob-card-linha"><strong className="ob-card-titulo">Regras da agenda</strong>{recomendadoAtivo && <em className="ob-badge">Configuração recomendada</em>}</span>
-          <div className="ob-inline-explica"><CalendarCheck size={14} /><span><strong>Isso controla o que a cliente consegue fazer sozinha.</strong> Antecedência, cancelamento, reagendamento e confirmação viram regras automáticas no agendamento.</span></div>
+          <span className="ob-card-linha ob-regras-cabecalho">
+            <span><strong className="ob-card-titulo">Regras da agenda</strong><small>Defina o básico agora. Você pode mudar tudo depois.</small></span>
+            {recomendadoAtivo && <em className="ob-badge">Configuração recomendada</em>}
+          </span>
+
           {!recomendadoAtivo && (
             <div className="ob-recomendado">
-              <small><Wand2 size={12} /> Sugestão para começar</small>
-              <span className="muted">Agendar até 1 h antes · cancelar grátis até 12 h antes · reagendar liberado · sem sinal.</span>
-              <button type="button" className="btn-mini" onClick={() => setPol((x) => ({ ...x, ...RECOMENDADO }))}>Usar essa</button>
+              <span><small><Wand2 size={12} /> Sugestão para começar</small><span className="muted">1 h de antecedência · cancelar até 12 h antes · reagendamento liberado · sem sinal.</span></span>
+              <button type="button" className="btn-mini" onClick={() => setPol((x) => ({ ...x, ...RECOMENDADO }))}>Usar recomendada</button>
             </div>
           )}
-          <label className="ob-campo">Com quanto tempo de antecedência a cliente pode agendar?<select value={pol.antecedencia_min_minutos} onChange={(e) => p('antecedencia_min_minutos')(e.target.value)}>{ANTECEDENCIAS.map(([v, r]) => <option key={v} value={v}>{r}</option>)}</select><small className="muted">Com 1 hora, um horário das 15h pode ser marcado até as 14h.</small></label>
-          <label className="ob-campo">Cancelamento gratuito até<select value={pol.politica_cancelamento} onChange={(e) => p('politica_cancelamento')(e.target.value)}>{CANCELAMENTO.map(([v, r]) => <option key={v} value={v}>{r} antes</option>)}</select></label>
-          <div className="ob-toggle"><span>Permitir que a cliente reagende</span><label className="switch"><input type="checkbox" checked={pol.permite_remarcar} onChange={(e) => p('permite_remarcar')(e.target.checked)} /><span></span></label></div>
-          <div className="ob-toggle"><span>Cobrar sinal na reserva <span className="muted">(opcional · pode deixar desligado agora)</span></span><label className="switch"><input type="checkbox" checked={pol.sinal_ligado} onChange={(e) => { setTocouSinal(true); p('sinal_ligado')(e.target.checked) }} /><span></span></label></div>
+
+          <div className="ob-regras-grupo">
+            <div className="ob-regras-rotulo">
+              <span><strong>Antecedência mínima</strong><small>Até quando uma cliente pode pegar um horário que ainda está livre.</small></span>
+              <AjudaCampo titulo="Antecedência mínima">Exemplo: com 1 hora, um horário das 15h pode ser reservado até as 14h. Depois disso ele deixa de aparecer para novas reservas.</AjudaCampo>
+            </div>
+            <div className="ob-opcoes-tempo" role="radiogroup" aria-label="Antecedência mínima">
+              {ANTECEDENCIAS.map(([v, r]) => <button key={v} type="button" role="radio" aria-checked={Number(pol.antecedencia_min_minutos) === Number(v)} className={Number(pol.antecedencia_min_minutos) === Number(v) ? 'ativa' : ''} onClick={() => p('antecedencia_min_minutos')(v)}>{r}</button>)}
+            </div>
+          </div>
+
+          <div className="ob-regras-grupo">
+            <div className="ob-regras-rotulo">
+              <span><strong>Cancelamento gratuito</strong><small>Escolha até quanto tempo antes a cliente pode cancelar sem restrição.</small></span>
+              <AjudaCampo titulo="Cancelamento">Essa regra organiza o que a cliente consegue fazer sozinha. Políticas e cobranças mais avançadas podem ser ajustadas depois.</AjudaCampo>
+            </div>
+            <div className="ob-opcoes-cancelamento" role="radiogroup" aria-label="Cancelamento gratuito">
+              {CANCELAMENTO.map(([v, r]) => <button key={v} type="button" role="radio" aria-checked={pol.politica_cancelamento === v} className={pol.politica_cancelamento === v ? 'ativa' : ''} onClick={() => p('politica_cancelamento')(v)}><strong>{r}</strong><small>antes</small></button>)}
+            </div>
+          </div>
+
+          <div className="ob-regras-linhas">
+            <div className="ob-regra-toggle">
+              <span><strong>Permitir reagendamento</strong><small>A cliente pode trocar o próprio horário sem precisar chamar o salão.</small></span>
+              <span className="ob-regra-acao"><AjudaCampo titulo="Reagendamento">Quando ligado, a cliente pode mover um agendamento respeitando seus horários e regras. Você continua vendo a alteração na agenda.</AjudaCampo><label className="switch"><input type="checkbox" checked={pol.permite_remarcar} onChange={(e) => p('permite_remarcar')(e.target.checked)} /><span></span></label></span>
+            </div>
+
+            <div className="ob-regra-toggle">
+              <span><strong>Cobrar sinal na reserva</strong><small>Opcional. Pode deixar desligado agora e configurar depois.</small></span>
+              <span className="ob-regra-acao"><AjudaCampo titulo="Sinal na reserva">É um valor pago no momento do agendamento e abatido do serviço depois. Ajuda a reduzir faltas, mas não precisa ser ativado agora.</AjudaCampo><label className="switch"><input type="checkbox" checked={pol.sinal_ligado} onChange={(e) => { setTocouSinal(true); p('sinal_ligado')(e.target.checked) }} /><span></span></label></span>
+            </div>
+          </div>
+
           {tocouSinal && !pol.sinal_ligado && (s.pagamento_modo ?? 'nao') !== 'nao' && <small className="ob-aviso-sinal">Desligar aqui desliga o recebimento pelo app do salão inteiro, o mesmo de Ajustes › Receber pelo app.</small>}
           {pol.sinal_ligado && (
             <div className="ob-sinal">
@@ -1146,8 +1189,18 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
               <small className="muted">Cobrado na reserva e abatido do valor final.</small>
             </div>
           )}
-          <label className="ob-campo">Como os agendamentos serão confirmados?<select value={pol.aceite_modo} onChange={(e) => p('aceite_modo')(e.target.value)}><option value="automatico">Confirmar automaticamente</option><option value="casa">O salão confirma{pol.aceite_modo === 'casa' ? ` (até ${pol.minutos_para_aceitar} min)` : ''}</option><option value="profissional">Cada profissional confirma</option></select></label>
-          <small className="muted">Tudo isso pode mudar depois, em Ajustes.</small>
+
+          <div className="ob-regras-grupo">
+            <div className="ob-regras-rotulo">
+              <span><strong>Quem confirma o agendamento?</strong><small>Escolha o que acontece depois que a cliente pede um horário.</small></span>
+              <AjudaCampo titulo="Confirmação do agendamento">Automática confirma na hora. “Salão confirma” centraliza a decisão. “Profissional confirma” deixa cada pessoa responsável pelos próprios pedidos.</AjudaCampo>
+            </div>
+            <div className="ob-confirmacao-opcoes" role="radiogroup" aria-label="Confirmação do agendamento">
+              <button type="button" role="radio" aria-checked={pol.aceite_modo === 'automatico'} className={pol.aceite_modo === 'automatico' ? 'ativa' : ''} onClick={() => p('aceite_modo')('automatico')}><span className="ob-radio-visual"></span><strong>Automática</strong><small>Entrou na agenda na hora.</small></button>
+              <button type="button" role="radio" aria-checked={pol.aceite_modo === 'casa'} className={pol.aceite_modo === 'casa' ? 'ativa' : ''} onClick={() => p('aceite_modo')('casa')}><span className="ob-radio-visual"></span><strong>O salão confirma</strong><small>Você aprova os pedidos{pol.aceite_modo === 'casa' ? ` em até ${pol.minutos_para_aceitar} min` : ''}.</small></button>
+              <button type="button" role="radio" aria-checked={pol.aceite_modo === 'profissional'} className={pol.aceite_modo === 'profissional' ? 'ativa' : ''} onClick={() => p('aceite_modo')('profissional')}><span className="ob-radio-visual"></span><strong>Cada profissional</strong><small>Cada uma confirma a própria agenda.</small></button>
+            </div>
+          </div>
         </div>
         </div>
       </div>

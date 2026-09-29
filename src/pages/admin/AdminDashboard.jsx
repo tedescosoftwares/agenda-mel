@@ -38,7 +38,7 @@ export default function AdminDashboard() {
     const [ag, pend, fila, res, mesAg] = await Promise.all([
       supabase.from('appointments').select('price_cents, status').eq('salon_id', salaoId).eq('date', d).neq('status', 'cancelado'),
       supabase.from('appointments').select('id', { count: 'exact', head: true }).eq('salon_id', salaoId).eq('status', 'pendente').gte('date', d),
-      supabase.from('waitlist_entries').select('id', { count: 'exact', head: true }).eq('status', 'aguardando'),
+      supabase.from('waitlist_entries').select('id, professionals!inner(salon_id)', { count: 'exact', head: true }).eq('professionals.salon_id', salaoId).eq('status', 'aguardando'),
       supabase.rpc('resumo_do_salao', { salao: salaoId, mes }),
       supabase.from('appointments').select('date, price_cents').eq('salon_id', salaoId).eq('status', 'concluido').gte('date', mes),
     ])

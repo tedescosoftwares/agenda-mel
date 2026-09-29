@@ -43,7 +43,7 @@ export default function ProServicos() {
   const carregar = useCallback(async () => {
     if (!profId) return
     const [s, v] = await Promise.all([
-      supabase.from('services').select('*').eq('active', true).order('name'),
+      supabase.from('services').select('*').eq('salon_id', professional.salon_id).eq('active', true).order('name'),
       supabase.from('professional_services').select('service_id').eq('professional_id', profId),
     ])
     setServicos(s.data ?? [])
@@ -51,7 +51,7 @@ export default function ProServicos() {
     const ids = (s.data ?? []).map((x) => x.id)
     const j = ids.length ? await supabase.from('servicos_juntos').select('service_id, sugerido_id').in('service_id', ids) : { data: [] }
     setJuntos(j.data ?? [])
-  }, [profId])
+  }, [profId, professional?.salon_id])
   useEffect(() => { carregar() }, [carregar])
 
   // autônoma: ela é a dona do próprio "salão de uma", então cria os serviços aqui mesmo

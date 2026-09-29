@@ -52,7 +52,8 @@ export default function AdminNumeros() {
         .gte('date', hoje),
       supabase
         .from('waitlist_entries')
-        .select('id', { count: 'exact', head: true })
+        .select('id, professionals!inner(salon_id)', { count: 'exact', head: true })
+        .eq('professionals.salon_id', salaoId)
         .eq('status', 'aguardando'),
     ])
     setPendentes(pend.count ?? 0)

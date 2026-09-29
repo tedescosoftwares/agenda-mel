@@ -17,6 +17,7 @@ const STATUS_LABEL = {
 // filtrada) e pela própria profissional (só a agenda dela).
 export default function AgendaDia({
   professionalId = null,
+  salonId = null,          // a agenda da casa inteira: só os horários deste salão
   mostrarProfissional = false,
   diaInicial = null,
   // Quando quem hospeda a agenda já tem um botão "+" (a barra de baixo
@@ -64,6 +65,7 @@ export default function AgendaDia({
 
 
     if (professionalId) query = query.eq('professional_id', professionalId)
+    if (salonId) query = query.eq('salon_id', salonId)
 
     const { data, error } = await query
     if (error) {
@@ -73,7 +75,7 @@ export default function AgendaDia({
       setError('')
     }
     setLoading(false)
-  }, [dataSel, professionalId])
+  }, [dataSel, professionalId, salonId])
 
   useEffect(() => {
     setLoading(true)

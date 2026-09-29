@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import AdminShell from '../../components/AdminShell'
 import AgendaDia from '../../components/AgendaDia'
 import { supabase } from '../../lib/supabase'
+import { useAuth } from '../../context/AuthContext'
 import { toISODate } from '../../lib/format'
 
 export default function AdminAgenda() {
@@ -23,14 +24,17 @@ export default function AdminAgenda() {
 
   const [precisaEscolher, setPrecisaEscolher] = useState(false)
 
+  const { salao } = useAuth()
   useEffect(() => {
+    if (!salao?.id) return
     supabase
       .from('professionals')
       .select('id, name')
+      .eq('salon_id', salao.id)     // só a equipe desta casa (as ativas são públicas pra cliente marcar)
       .eq('active', true)
       .order('name')
       .then(({ data }) => setProfissionais(data ?? []))
-  }, [])
+  }, [salao?.id])
 
   const tituloDia = new Date(toISODate(new Date()) + 'T12:00:00').toLocaleDateString(
     'pt-BR',
@@ -76,8 +80,9 @@ export default function AdminAgenda() {
       )}
 
       <AgendaDia
-        key={filtro}
+        key={filtro + (salao?.id ?? '')}
         professionalId={filtro || null}
+        salonId={salao?.id ?? null}
         mostrarProfissional={filtro === ''}
         pedidoDeEncaixe={pedidoDeEncaixe}
         semFab

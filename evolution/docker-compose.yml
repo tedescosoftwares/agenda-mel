@@ -107,7 +107,9 @@ services:
       - '11434'
 
   caddy:
-    image: caddy:2-alpine
+    # o Caddy oficial + plugin de DNS da Cloudflare (ver ./caddy/Dockerfile)
+    build: ./caddy
+    image: mimo/caddy-cloudflare
     container_name: evolution_caddy
     restart: always
     depends_on:
@@ -122,6 +124,9 @@ services:
       IA_TOKEN: ${IA_TOKEN:-}
       # o domínio do SITE; vazio = o site não sobe (ver ./publicar-site.sh)
       DOMINIO_SITE: ${DOMINIO_SITE:-}
+      # token da Cloudflare (Editar DNS da zona) para o certificado curinga
+      # dos endereços por salão (<salao>.mimo.com.vc); vazio = sem curinga
+      CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN:-}
       # o endereço de antes (DuckDNS), que passa a redirecionar para o novo
       DOMINIO_SITE_ANTIGO: ${DOMINIO_SITE_ANTIGO:-}
       # ref do projeto Supabase (o pedaço antes de .supabase.co), para a

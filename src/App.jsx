@@ -94,6 +94,8 @@ import ClientePagamento from "./pages/cliente/ClientePagamento";
 import ClienteComanda from "./pages/cliente/ClienteComanda";
 import PlataformaPromocoes from "./pages/plataforma/Promocoes";
 import { guardarCodigoDaURL } from "./lib/indicacao";
+import { SUBDOMINIO } from "./lib/ambiente";
+import { NoEndereco } from "./pages/publico/EnderecoDoSalao";
 
 export default function App() {
   // o convite chega como /?indique=CODIGO — guardamos antes de qualquer rota
@@ -106,6 +108,8 @@ export default function App() {
       <AuthProvider>
         <NotificacoesProvider>
           <DialogoProvider>
+          {/* studiomel.mimo.com.vc: só a página do salão e a da profissional (2.80) */}
+          {SUBDOMINIO ? <NoEndereco /> : (
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/pro/entrar" element={<Login ambiente="pro" />} />
@@ -508,6 +512,7 @@ export default function App() {
 
             <Route path="*" element={<NaoEncontrada />} />
           </Routes>
+          )}
           <AvisoCookies />
           <AvisoAoVivo />
           </DialogoProvider>

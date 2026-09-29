@@ -6482,6 +6482,25 @@ label.check input { margin-top: 3px; }
 .aj-codigo-qr { border-top: 1px solid var(--fio); padding-top: 0.8rem; }
 .aj-codigo-dica { font-size: 0.8rem; margin: 0.6rem 0 0; }
 
+/* o endereço próprio do salão, studiomel.mimo.com.vc (2.80) */
+.ep { display: flex; flex-direction: column; gap: 0.7rem; }
+.ep-topo { display: grid; grid-template-columns: auto 1fr; gap: 0.7rem; align-items: start; }
+.ep-icone { width: 40px; height: 40px; border-radius: 12px; background: var(--latao-veu); color: var(--rosa); display: grid; place-items: center; }
+.ep-teaser .ep-icone { background: linear-gradient(135deg, #ff5c8a, #c94cff); color: #fff; }
+.ep-texto { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
+.ep-texto .muted { font-size: 0.78rem; line-height: 1.35; }
+.ep-texto .muted b { color: var(--ameixa); font-weight: 700; }
+.ep-link { display: block; font-family: var(--condensada); font-weight: 800; font-size: 1.2rem; letter-spacing: 0.01em; color: var(--ameixa); padding: 0.55rem 0.8rem; border-radius: 12px; background: #fff0f5; text-decoration: none; overflow-wrap: anywhere; }
+.ep-campo { display: flex; align-items: center; border: 1.5px solid var(--fio); border-radius: 12px; background: #fff; overflow: hidden; }
+.ep-campo:focus-within { border-color: var(--rosa); }
+.ep-campo input { flex: 1; min-width: 0; border: 0; outline: 0; padding: 0.65rem 0.4rem 0.65rem 0.8rem; font: inherit; font-weight: 700; color: var(--ameixa); background: transparent; }
+.ep-sufixo { padding: 0.65rem 0.8rem 0.65rem 0; color: var(--cinza); font-size: 0.9rem; white-space: nowrap; }
+.ep-checagem { margin: 0; font-size: 0.8rem; color: var(--cinza); display: flex; align-items: center; gap: 0.3rem; min-height: 1.2em; }
+.ep-checagem.ok { color: #1f9d55; }
+.ep-checagem.nao { color: #c62839; }
+.ep-acoes { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.ep-acoes .btn { flex: 1; }
+
 .aj-secao { margin-top: 1.2rem; }
 .aj-grade { display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; }
 .aj-cartao { position: relative; display: flex; flex-direction: column; gap: 0.35rem; padding: 0.95rem 0.9rem 0.85rem; text-decoration: none; color: inherit; min-height: 150px; transition: transform .18s cubic-bezier(.2,.8,.2,1), box-shadow .18s ease; overflow: hidden; }

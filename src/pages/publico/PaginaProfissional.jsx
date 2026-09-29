@@ -3,6 +3,7 @@ import ComoChegar from '../../components/ComoChegar'
 import { temPino, linksDeRota } from '../../lib/geo'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
+import { SUBDOMINIO } from '../../lib/ambiente'
 import { useAuth } from '../../context/AuthContext'
 import AuthModal from '../../components/AuthModal'
 import ListaEsperaForm from '../../components/ListaEsperaForm'
@@ -29,8 +30,10 @@ import { useCategorias, agruparPorCategoria } from '../../lib/categorias'
 
 const DIAS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb']
 
-export default function PaginaProfissional() {
-  const { slug } = useParams()
+// No endereço próprio do salão (studiomel.mimo.com.vc/ana, 2.80) o slug vem por prop.
+export default function PaginaProfissional({ slug: slugPronto }) {
+  const { slug: slugRota } = useParams()
+  const slug = slugPronto ?? slugRota
   const [q] = useSearchParams()
   const { user, role, loading: authLoading } = useAuth()
 
@@ -230,7 +233,7 @@ export default function PaginaProfissional() {
   }
 
   function compartilhar() {
-    const url = window.location.origin + '/p/' + prof.slug
+    const url = window.location.origin + (SUBDOMINIO ? '/' : '/p/') + prof.slug
     const texto = `Agende com ${prof.name} por aqui: ${url}`
     if (navigator.share) {
       navigator.share({ title: prof.name, text: texto, url }).catch(() => {})

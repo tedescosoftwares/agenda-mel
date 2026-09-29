@@ -123,6 +123,10 @@ cd "$AQUI"
 
 # 5. Caddy --------------------------------------------------------------------
 azul '== 5/6  Caddy =='
+# o Caddy daqui é o oficial + plugin de DNS da Cloudflare (caddy/Dockerfile,
+# 2.80). A primeira compilação demora uns minutos; depois fica em cache.
+echo '  conferindo o Caddy (a primeira vez compila e demora uns minutos)…'
+docker compose build --quiet caddy
 # up -d recria só o caddy se algo mudou (a variável nova, a pasta nova)
 docker compose up -d caddy >/dev/null
 # o Caddyfile é montado de fora: mudou o arquivo, o container continua o

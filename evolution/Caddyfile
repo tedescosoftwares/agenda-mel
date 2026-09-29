@@ -105,6 +105,53 @@
 }
 
 
+# ---------------------------------------------------------------
+# O ENDEREÇO PRÓPRIO DE CADA SALÃO (2.80): studiomel.mimo.com.vc
+#
+# Mesmo app, mesma pasta. O app olha o hostname, vê que não é o site
+# nem o painel, e pergunta ao banco de quem é aquele nome. Só a raiz
+# (a página do salão) e /<profissional> vivem aqui; qualquer outro
+# caminho o app manda de volta para o domínio principal.
+#
+# O certificado é curinga (*.mimo.com.vc) e sai pelo desafio DNS-01
+# na Cloudflare: precisa do CLOUDFLARE_API_TOKEN no .env e de um
+# registro A curinga (*) apontando para esta máquina. Sem o token, este
+# bloco não consegue certificado e o resto do site segue normal.
+# ---------------------------------------------------------------
+*.{$DOMINIO_SITE:localhost} {
+	tls {$EMAIL} {
+		dns cloudflare {$CLOUDFLARE_API_TOKEN}
+	}
+	root * /srv/site
+	encode gzip
+
+	@sw path /sw.js
+	header @sw Cache-Control "no-cache, must-revalidate"
+	@assets path /assets/*
+	header @assets Cache-Control "public, max-age=31536000, immutable"
+
+	# prévia no WhatsApp/Instagram: a raiz (o salão) e /<profissional>
+	@robos_no_endereco {
+		path_regexp ^/[a-z0-9-]*/?$
+		header_regexp User-Agent (?i)(whatsapp|facebookexternalhit|facebot|twitterbot|telegrambot|linkedinbot|slackbot|discordbot|pinterest|skypeuripreview|iframely|embedly|googlebot|bingbot)
+	}
+	route {
+		handle @robos_no_endereco {
+			# {labels.3} é o primeiro pedaço do host (studiomel de studiomel.mimo.com.vc)
+			rewrite * /functions/v1/pagina-publica/s/{http.request.host.labels.3}{path}
+			reverse_proxy https://{$SUPABASE_REF:nenhum}.supabase.co
+		}
+		try_files {path} /index.html
+		file_server
+	}
+
+	log {
+		output file /data/site.log
+		format json
+	}
+}
+
+
 # www vai para o endereço sem www, e o domínio antigo (o DuckDNS de
 # antes do mimo.com.vc) vai para o novo. Os dois só existem se as
 # variáveis estiverem no .env; sem elas, respondem em "localhost", ou

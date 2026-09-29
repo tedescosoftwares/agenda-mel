@@ -559,3 +559,25 @@ botão **Connect** → **Session pooler** → copie a URI, troque
 `[YOUR-PASSWORD]` pela senha do banco. Fica em `evolution/.env` como
 `SUPABASE_DB_URL`. Se você já tinha colado o `atualizacao_040_em_diante.sql`
 no editor, diga até onde: `./supabase/aplicar.sh --ja-rodei 079`.
+
+
+## Endereço próprio por salão (2.80): studiomel.mimo.com.vc
+
+O salão assinante escolhe o nome em Ajustes → Endereço do salão. Para
+isso funcionar, uma vez só:
+
+1. **Cloudflare → DNS**: registro `A`, nome `*`, conteúdo = IP desta
+   máquina, mesmo modo de proxy dos registros `mimo.com.vc` e `pro`.
+2. **Cloudflare → Meu perfil → Tokens de API → Criar token**, modelo
+   "Editar DNS da zona", só na zona mimo.com.vc. Copie o token e, na VPS:
+   `nano evolution/.env` → `CLOUDFLARE_API_TOKEN=...` (nunca cole em chat).
+3. **Supabase → Authentication → URL Configuration → Redirect URLs**:
+   adicione `https://*.mimo.com.vc/**`.
+4. Rode a opção **2** do Conectar_MIMO_VPS.bat: o publicar-site.sh compila o
+   Caddy com o plugin da Cloudflare (a primeira vez demora uns minutos) e
+   o certificado curinga `*.mimo.com.vc` sai sozinho. Depois **B**
+   (migração 131) e **9** (a edge function pagina-publica mudou).
+
+Conferir: `docker compose logs caddy --tail 30` deve mostrar o
+certificado de `*.mimo.com.vc` obtido. Sem o token, o resto do site
+segue normal e só os endereços por salão ficam sem certificado.

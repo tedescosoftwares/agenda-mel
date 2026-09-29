@@ -13,20 +13,24 @@ import { iniciais } from '../../lib/booking'
 //   sem conta            -> guarda o código e manda criar conta (o
 //                           código vai junto no cadastro e o vínculo
 //                           nasce no servidor) ou entrar
-export default function EntrarPorCodigo() {
+//
+// No endereço próprio do salão (studiomel.mimo.com.vc, 2.80) chega com o
+// código e o alvo já resolvidos, por props.
+export default function EntrarPorCodigo({ codigo: codigoPronto, alvo: alvoPronto }) {
   const { codigo: bruto } = useParams()
   const navigate = useNavigate()
   const { user, role, loading, recarregarVinculos } = useAuth()
-  const codigo = extrairCodigo(bruto)
-  const [alvo, setAlvo] = useState(undefined)
+  const codigo = codigoPronto ?? extrairCodigo(bruto)
+  const [alvo, setAlvo] = useState(alvoPronto ?? undefined)
   const [erro, setErro] = useState('')
   const [entrando, setEntrando] = useState(false)
 
   useEffect(() => {
     if (!codigo) { setAlvo(null); return }
     guardarConvite(codigo)
+    if (alvoPronto) { setAlvo(alvoPronto); return }
     supabase.rpc('resolver_codigo', { chave: codigo }).then(({ data }) => setAlvo(data ?? null))
-  }, [codigo])
+  }, [codigo, alvoPronto])
 
   async function entrar() {
     setEntrando(true); setErro('')

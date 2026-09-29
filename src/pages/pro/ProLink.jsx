@@ -4,6 +4,7 @@ import SemFicha from './SemFicha'
 import FotoUpload from '../../components/FotoUpload'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
+import { linkDaProfissional } from '../../lib/endereco'
 import { CopiarIcon, CompartilharIcon } from '../../components/icons'
 import CodigoQr from '../../components/CodigoQr'
 import { useDialogo } from '../../context/DialogoContext'
@@ -26,7 +27,16 @@ export default function ProLink() {
     supabase.rpc('minhas_trazidas').then(({ data }) => setTrazidas(data ?? []))
   }, [professional])
 
-  const url = professional ? `${window.location.origin}/p/${professional.slug}` : ''
+  // a casa (salão) pode ter endereço próprio: studiomel.mimo.com.vc/ana (2.80)
+  const [casa, setCasa] = useState(null)
+  useEffect(() => {
+    if (!professional?.salon_id) return
+    let vivo = true
+    Promise.resolve(supabase.from('salons').select('subdominio, tipo').eq('id', professional.salon_id).maybeSingle())
+      .then(({ data }) => { if (vivo) setCasa(data ?? null) }).catch(() => {})
+    return () => { vivo = false }
+  }, [professional?.salon_id])
+  const url = professional ? linkDaProfissional(professional, casa) : ''
 
   if (!professional) return <SemFicha />
 

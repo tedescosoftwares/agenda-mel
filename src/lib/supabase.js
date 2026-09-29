@@ -1,3 +1,4 @@
+import { DOMINIO_RAIZ } from './ambiente'
 import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
@@ -123,7 +124,9 @@ function dominioDaSessao() {
   if (typeof window === 'undefined') return null
   const h = window.location.hostname
   if (!h.includes('.') || h === 'localhost' || /^\d+\.\d+\.\d+\.\d+$/.test(h) || window.location.protocol !== 'https:') return null
-  return '.' + h.replace(/^pro\./, '')
+  // sempre a raiz (.mimo.com.vc): vale no site, no painel e no endereço
+  // próprio de cada salão (studiomel.mimo.com.vc, 2.80)
+  return '.' + DOMINIO_RAIZ
 }
 function armazemEmCookie(dominio) {
   const ler = (nome) => {

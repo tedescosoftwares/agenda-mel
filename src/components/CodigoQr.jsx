@@ -7,10 +7,12 @@ import { linkDoCodigo } from '../lib/convite'
 // para a cliente: o QR grande, as seis letras embaixo para quem prefere
 // digitar, e os botões de copiar/compartilhar o link. `onNovo` troca o
 // código (o antigo morre na hora).
-export default function CodigoQr({ codigo, nome, onNovo, mensagem }) {
+// `link` troca o /v/CÓDIGO pelo endereço próprio do salão (2.80); as
+// seis letras continuam valendo para quem digita.
+export default function CodigoQr({ codigo, nome, onNovo, mensagem, link }) {
   const canvas = useRef(null)
   const [copiado, setCopiado] = useState(false)
-  const url = codigo ? linkDoCodigo(codigo) : ''
+  const url = link || (codigo ? linkDoCodigo(codigo) : '')
 
   useEffect(() => {
     if (!canvas.current || !url) return

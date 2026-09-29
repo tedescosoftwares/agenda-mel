@@ -6,6 +6,8 @@ import { useAuth } from '../../context/AuthContext'
 import { useDialogo } from '../../context/DialogoContext'
 import { supabase } from '../../lib/supabase'
 import CodigoQr from '../../components/CodigoQr'
+import EnderecoProprio from '../../components/EnderecoProprio'
+import { linkDoSalao } from '../../lib/endereco'
 import AvisosNoCelular from '../../components/AvisosNoCelular'
 import AvisosPorEmail from '../../components/AvisosPorEmail'
 import { MODOS } from '../../lib/pagamento'
@@ -17,9 +19,10 @@ import { MODOS } from '../../lib/pagamento'
 const DIAS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb']
 
 export default function AdminAjustes() {
-  const { salao, saloes, trocarSalao, acesso } = useAuth()
+  const { salao, saloes, trocarSalao, acesso, recarregarPerfil } = useAuth()
   const { confirmar } = useDialogo()
   const [codigo, setCodigo] = useState(salao?.codigo ?? null)
+  const [endereco, setEndereco] = useState(salao?.subdominio ?? null)   // o endereço próprio (2.80)
   const [qr, setQr] = useState(false)
   const [erro, setErro] = useState('')
   const [st, setSt] = useState(null)   // a situação de cada área
@@ -76,11 +79,12 @@ export default function AdminAjustes() {
     if (error) setErro(error.message); else setCodigo(data)
   }
   async function copiarLink() {
-    try { await navigator.clipboard.writeText(`${window.location.origin}/v/${codigo ?? salao?.codigo}`); setErro('') } catch { setErro('Não deu para copiar. Toque em "QR e link" e copie por lá.') }
+    try { await navigator.clipboard.writeText(linkSalao); setErro('') } catch { setErro('Não deu para copiar. Toque em "QR e link" e copie por lá.') }
   }
 
   const s = st?.salao ?? {}
   const cod = codigo ?? salao?.codigo
+  const linkSalao = linkDoSalao({ ...salao, codigo: cod, subdominio: endereco })
   const pag = s.pagamento_modo && s.pagamento_modo !== 'nao'
   const fotos = (s.fotos ?? []).length
   const pino = Number.isFinite(Number(s.lat)) && s.lat != null
@@ -155,12 +159,15 @@ export default function AdminAjustes() {
         </div>
         {qr && (
           <div className="aj-codigo-qr">
-            <CodigoQr codigo={cod} nome={salao?.name} onNovo={salao ? novoCodigo : undefined}
-              mensagem={`Entra na agenda do ${salao?.name ?? 'salão'} pelo MIMO: ${window.location.origin}/v/${cod}\nOu digita o código ${cod} no app.`} />
+            <CodigoQr codigo={cod} nome={salao?.name} onNovo={salao ? novoCodigo : undefined} link={linkSalao}
+              mensagem={`Entra na agenda do ${salao?.name ?? 'salão'} pelo MIMO: ${linkSalao}\nOu digita o código ${cod} no app.`} />
             <p className="muted aj-codigo-dica">Imprima e deixe no balcão. Quem entra por aqui vê todas as profissionais da casa. Cada profissional tem o código dela em Meu link, e a cliente que entra por ele fica registrada como trazida por ela.</p>
           </div>
         )}
       </div>
+
+      {/* o endereço próprio, studiomel.mimo.com.vc (2.80) */}
+      <EnderecoProprio salao={salao} acesso={acesso} endereco={endereco} onMudou={(n) => { setEndereco(n); recarregarPerfil?.() }} />
 
       {AREAS.map((a) => (
         <section key={a.titulo} className="secao aj-secao">

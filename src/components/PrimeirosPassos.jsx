@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import QRCode from 'qrcode'
 import { Check, Circle, PartyPopper, Users, QrCode, Download, X, Sparkles } from 'lucide-react'
 import { supabase } from '../lib/supabase'
-import { urlDoAmbiente } from '../lib/ambiente'
+import { linkDoSalao } from '../lib/endereco'
 import { ativarPush } from '../lib/push'
 import { useAuth } from '../context/AuthContext'
 import { REGRAS } from '../lib/acesso'
@@ -19,7 +19,7 @@ export default function PrimeirosPassos({ salao, para = 'admin' }) {
   const [r, setR] = useState(null)
   const [festa, setFesta] = useState(false)
   const qr = useRef(null)
-  const link = salao?.codigo ? urlDoAmbiente('cliente', `/v/${salao.codigo}`) : ''
+  const link = linkDoSalao(salao)
   const carregar = useCallback(async () => {
     if (!salao?.id) return
     const { data } = await supabase.rpc('primeiros_passos', { salao: salao.id })

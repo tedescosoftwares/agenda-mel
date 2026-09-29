@@ -8318,3 +8318,108 @@ label.switch:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
   .guia-modal { grid-template-columns:1fr; }
   .guia-video-placeholder { min-height:240px; }
 }
+
+
+/* home admin: identidade do negócio e presença visual */
+.admin-home-negocio-mini {
+  position:relative;
+  z-index:2;
+  display:grid;
+  grid-template-columns:44px minmax(0,1fr) auto;
+  align-items:center;
+  gap:10px;
+  padding-bottom:12px;
+  border-bottom:1px solid rgba(255,255,255,.12);
+}
+.admin-home-negocio-avatar {
+  width:44px;
+  height:44px;
+  display:grid;
+  place-items:center;
+  overflow:hidden;
+  border-radius:14px;
+  background:rgba(255,255,255,.12);
+  border:1px solid rgba(255,255,255,.18);
+  color:#fff;
+}
+.admin-home-negocio-avatar img {
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+.admin-home-negocio-avatar b {
+  font-size:.8rem;
+  letter-spacing:.02em;
+}
+.admin-home-negocio-mini > span:nth-child(2) {
+  min-width:0;
+  display:grid;
+  gap:1px;
+}
+.admin-home-negocio-mini small {
+  color:rgba(255,255,255,.58);
+  font-size:.58rem;
+  text-transform:uppercase;
+  letter-spacing:.07em;
+}
+.admin-home-negocio-mini strong {
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  color:#fff;
+  font-size:.8rem;
+}
+.admin-home-negocio-mini > i {
+  width:9px;
+  height:9px;
+  border-radius:50%;
+  background:rgba(255,255,255,.35);
+}
+.admin-home-negocio-mini > i.ativo {
+  background:#ff6da3;
+  box-shadow:0 0 0 5px rgba(255,109,163,.12);
+}
+.admin-home-capa-mini {
+  position:absolute;
+  inset:0;
+  z-index:0;
+  background-size:cover;
+  background-position:center;
+  opacity:.28;
+}
+.admin-home-hoje > *:not(.admin-home-capa-mini) {
+  position:relative;
+  z-index:1;
+}
+
+/* dá mais vida à home nova sem transformar tudo em carnaval */
+.admin-home-hero,
+.admin-home-pulso,
+.admin-home-kpi,
+.admin-home-grafico,
+.admin-home-acoes,
+.admin-home-profissionais,
+.admin-home-link {
+  transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+@media (hover:hover) and (pointer:fine) {
+  .admin-home-hero:hover {
+    transform:translateY(-2px);
+    box-shadow:0 28px 72px rgba(61,12,78,.11);
+  }
+  .admin-home-pulso:hover,
+  .admin-home-link:hover {
+    transform:translateY(-1px);
+    box-shadow:0 16px 38px rgba(61,12,78,.07);
+  }
+}
+
+@media (max-width:620px) {
+  .admin-home-negocio-mini {
+    grid-template-columns:40px minmax(0,1fr) auto;
+  }
+  .admin-home-negocio-avatar {
+    width:40px;
+    height:40px;
+  }
+}

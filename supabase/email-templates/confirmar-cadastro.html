@@ -4,7 +4,9 @@
 <div style="font-size:30px;font-weight:800;letter-spacing:-.02em;color:#aa4cff;margin-bottom:6px">mimo</div>
 <div style="font-size:13px;color:#ff2d7a;margin-bottom:22px">beleza na palma da mão</div>
 <p style="font-size:18px;margin:0 0 12px"><strong>{{ if .Data.full_name }}{{ .Data.full_name }}{{ else }}Oi{{ end }},</strong></p>
-<p style="font-size:17px;font-weight:700;margin:0 0 10px">Falta só confirmar o seu e-mail</p><p style="font-size:15px;line-height:1.55;margin:0 0 24px;color:#3d3d44">Sua conta na MIMO está quase pronta. Toque no botão pra confirmar que este e-mail é seu e entrar. O link vale por 24 horas.</p>
+<p style="font-size:17px;font-weight:700;margin:0 0 10px">Falta só confirmar o seu e-mail</p><p style="font-size:15px;line-height:1.55;margin:0 0 18px;color:#3d3d44">Sua conta na MIMO está quase pronta. Toque no botão pra confirmar que este e-mail é seu: você entra direto, sem digitar senha de novo.</p>
+<p style="font-size:13px;color:#8a8a94;margin:0 0 6px">Está com o cadastro aberto em outro aparelho? Digite lá este código:</p>
+<p style="font-size:30px;font-weight:800;letter-spacing:.28em;color:#3d0c4e;margin:0 0 22px">{{ .Token }}</p>
 <a href="{{ .ConfirmationURL }}" style="display:inline-block;background:linear-gradient(90deg,#ff2d7a,#ff7baa);color:#fff;text-decoration:none;font-weight:700;padding:14px 26px;border-radius:14px">Confirmar meu e-mail</a>
 <p style="font-size:12px;color:#8a8a94;margin:28px 0 0">Se você não criou uma conta na MIMO, pode ignorar este e-mail: nada acontece sem a confirmação.</p>
 </div>

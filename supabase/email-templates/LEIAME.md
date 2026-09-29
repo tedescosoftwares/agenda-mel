@@ -14,6 +14,11 @@ cole o assunto no campo *Subject heading* e o HTML inteiro do arquivo no *Messag
 | Change Email Address | `trocar-email.html` | Confirme o novo e-mail da sua conta MIMO |
 | Invite user | `convite.html` | Você foi convidada pra MIMO 💗 |
 
+O de confirmação traz também o código de 6 números (`{{ .Token }}`): a dona pode digitar no
+cadastro em vez de tocar no link. Pra isso funcionar, em **Authentication › Providers › Email**
+deixe ligado "Confirm email" e, em **URL Configuration › Redirect URLs**, adicione
+`https://pro.mimo.com.vc/**` e `https://mimo.com.vc/**`.
+
 As variáveis entre chaves (`{{ .ConfirmationURL }}`, `{{ .Email }}`, `{{ .NewEmail }}`,
 `{{ .Data.full_name }}`) são do Supabase e ele preenche na hora de mandar. Não mude.
 

@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { lerCodigoGuardado, limparCodigoGuardado } from '../lib/indicacao'
 import { lerConvite, limparConvite } from '../lib/convite'
+import { urlDoAmbiente } from '../lib/ambiente'
 
 const AuthContext = createContext(null)
 
@@ -188,7 +189,8 @@ export function AuthProvider({ children }) {
       options: {
         data: { full_name: fullName, phone, ...extra },
         // o link de confirmação volta pro lugar certo: quem abre negócio cai no onboarding, quem entra numa equipe no convite
-        emailRedirectTo: window.location.origin + (extra.papel_desejado ? '/onboarding' : extra.ativar_token ? '/pro/agenda' : extra.equipe_codigo ? `/equipe/${extra.equipe_codigo}` : '/'),
+        // quem abre negócio ou entra numa equipe volta pro app da profissional (pro.), logada, no lugar certo
+        emailRedirectTo: extra.papel_desejado ? urlDoAmbiente('pro', '/onboarding') : extra.ativar_token ? urlDoAmbiente('pro', '/pro/agenda') : extra.equipe_codigo ? urlDoAmbiente('pro', `/equipe/${extra.equipe_codigo}`) : window.location.origin + '/',
       },
     })
     // Com "confirmar e-mail" ligado, o Supabase NÃO dá erro para e-mail

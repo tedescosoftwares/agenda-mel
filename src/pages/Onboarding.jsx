@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import QRCode from 'qrcode'
+import ConfirmarEmail from '../components/ConfirmarEmail'
 import { Check, ArrowLeft, ArrowRight, LogOut, Camera, MapPin, Plus, X, Copy, Download, MoreHorizontal, Link2, Info, Sparkles, MessageCircle, Users, Minus, Eye, Lock, Wand2, CalendarCheck, QrCode, Send, Home, MapPinOff, Search, ImagePlus, HelpCircle } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
@@ -714,12 +715,8 @@ function PassoDados({ s, seguir, voltar, salvando, setErro, user, autonoma, publ
 
   if (criada) {
     return (
-      <>
-        <h1 className="ob-titulo">Conta criada!</h1>
-        <p className="ob-sub">Agora confirme seu e-mail para continuar.</p>
-        <div className="ob-pronto"><span className="ob-pronto-check"><Check size={18} /></span><span><strong>Enviamos um link para {f.email.trim()}</strong><small>Abra o e-mail e toque no link de confirmação. Depois você volta direto para continuar o cadastro, com tudo o que já preencheu salvo.</small></span></div>
-        <div className="ob-rodape"><span /><Link to="/pro/entrar" className="btn btn-ghost ob-continuar">Já confirmei meu e-mail <ArrowRight size={16} /></Link></div>
-      </>
+      <ConfirmarEmail email={f.email.trim()} senha={conta.senha} redirecionar={urlDoAmbiente('pro', '/onboarding')}
+        onPronto={async () => { await recarregarPerfil?.(); navigate('/onboarding', { replace: true }) }} />
     )
   }
   return (

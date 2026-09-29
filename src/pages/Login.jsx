@@ -43,7 +43,17 @@ export default function Login({ ambiente = AMBIENTE }) {
   const [cidade, setCidade] = useState(q.get('cidade') || '')
   const [manter, setManter] = useState(true)
   const [termos, setTermos] = useState(false)
-  const [erro, setErro] = useState('')
+  // o link do e-mail pode chegar aqui com erro no hash (já usado, vencido, ou "lido" antes pelo antispam do e-mail)
+  const [erro, setErro] = useState(() => {
+    try {
+      const h = new URLSearchParams(window.location.hash.replace(/^#/, ''))
+      const cod = h.get('error_code') || ''; const desc = h.get('error_description') || ''
+      if (!cod && !desc) return ''
+      window.history.replaceState(null, '', window.location.pathname + window.location.search)
+      if (/otp_expired|expired|invalid/i.test(cod + desc)) return 'Esse link de confirmação já foi usado ou venceu. Se você já confirmou, é só entrar com e-mail e senha. Se não, peça um novo link em "Esqueci a senha".'
+      return decodeURIComponent(desc.replace(/\+/g, ' '))
+    } catch { return '' }
+  })
   const [info, setInfo] = useState('')
   const [enviando, setEnviando] = useState(false)
   const [quemConvidou, setQuemConvidou] = useState(null)

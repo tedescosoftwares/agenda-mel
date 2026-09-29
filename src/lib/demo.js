@@ -529,7 +529,9 @@ export const demo = {
   auth: {
     getSession: async () => ({ data: { session: sessao } }),
     onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } }),
-    signInWithPassword: async () => ({ error: null }),
+    signInWithPassword: async () => ({ data: { session: sessao }, error: null }),
+    verifyOtp: async () => ({ data: { session: sessao }, error: null }),
+    resend: async () => ({ error: null }),
     signUp: async () => ({ error: null }),
     signOut: async () => { try { localStorage.removeItem('mimo-demo-papel') } catch {} ; window.location.href = '/login'; return {} },
     resetPasswordForEmail: async () => ({ error: null }),

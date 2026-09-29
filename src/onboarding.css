@@ -1574,3 +1574,16 @@
     padding-right: 64px;
   }
 }
+
+/* ---- confirmar o e-mail sem fricção (131) ---- */
+.ce-caixa { display: grid; gap: 0.7rem; justify-items: start; max-width: 520px; }
+.ce-icone, .ce-check { width: 48px; height: 48px; border-radius: 14px; display: grid; place-items: center; background: #fff0f6; color: var(--ob-rosa, #ff2d7a); border: 1px solid #ffc2d8; }
+.ce-check { background: var(--ob-rosa, #ff2d7a); color: #fff; }
+.ce-codigo { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: flex-end; width: 100%; }
+.ce-codigo label { display: grid; gap: 4px; font-size: 0.8rem; font-weight: 700; color: var(--ob-cinza, #6b7280); }
+.ce-codigo label svg { vertical-align: -2px; margin-right: 3px; }
+.ce-codigo input { width: 180px; font-size: 1.4rem; letter-spacing: 0.3em; text-align: center; font-weight: 800; }
+.ce-espera { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 0.82rem; }
+.ce-gira { animation: ce-gira 2.4s linear infinite; color: var(--ob-rosa, #ff2d7a); }
+@keyframes ce-gira { to { transform: rotate(360deg); } }
+.ce-acoes { display: flex; flex-wrap: wrap; gap: 0.5rem; }

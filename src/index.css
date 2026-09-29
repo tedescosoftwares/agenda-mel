@@ -8423,3 +8423,22 @@ label.switch:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
     height:40px;
   }
 }
+
+/* ---- agenda ainda vazia (132) ---- */
+.agv { display: grid; gap: 1rem; border: 1px solid #ffc2d8; background: linear-gradient(160deg, #fff7fa, #fff); }
+.agv-topo { display: flex; gap: 0.8rem; align-items: flex-start; }
+.agv-topo > div { display: grid; gap: 3px; } .agv-topo strong { font-size: 1.05rem; color: var(--ameixa, #3d0c4e); } .agv-topo .muted { font-size: 0.86rem; line-height: 1.45; }
+.agv-icone { width: 44px; height: 44px; flex: none; border-radius: 13px; display: grid; place-items: center; background: #fff0f6; color: var(--rosa, #ff2d7a); border: 1px solid #ffc2d8; }
+.agv-passos { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.6rem; }
+.agv-passos li { display: flex; gap: 0.7rem; align-items: flex-start; padding: 0.85rem 0.9rem; border-radius: 14px; background: #fff; border: 1px solid #ece7ee; }
+.agv-passos li.ok { background: #fbf6fb; }
+.agv-num { width: 24px; height: 24px; flex: none; border-radius: 999px; display: grid; place-items: center; font-size: 0.72rem; font-weight: 800; background: var(--rosa, #ff2d7a); color: #fff; }
+.agv-passos li.ok .agv-num { background: #e8f7ee; color: #15803d; }
+.agv-passo-icone { width: 34px; height: 34px; flex: none; border-radius: 10px; display: grid; place-items: center; background: #fff0f6; color: var(--rosa, #ff2d7a); }
+.agv-passo-texto { flex: 1; display: grid; gap: 3px; min-width: 0; } .agv-passo-texto strong { color: var(--ameixa, #3d0c4e); } .agv-passo-texto small { font-size: 0.8rem; line-height: 1.45; }
+.agv-passo-acoes { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.9rem; margin-top: 6px; }
+.agv-guia { display: inline-flex; align-items: center; gap: 5px; font-size: 0.8rem; font-weight: 700; color: var(--rosa, #ff2d7a); text-decoration: none; }
+.agv-guia:hover { text-decoration: underline; }
+.agv-check { flex: none; color: #15803d; margin-top: 4px; } .agv-check.apagado { color: #d9d4dc; }
+.agv-rodape { margin: 0; font-size: 0.8rem; } .agv-rodape a { color: var(--rosa, #ff2d7a); font-weight: 700; }
+@media (max-width: 480px) { .agv-passos li { flex-wrap: wrap; } .agv-passo-icone { display: none; } }

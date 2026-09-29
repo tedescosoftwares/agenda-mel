@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { BookOpen, Search, PlayCircle, Clock3, ChevronRight, Sparkles, CalendarDays, Users, Scissors, QrCode, MessageCircle, CreditCard, Settings2 } from 'lucide-react'
 import AdminShell from '../../components/AdminShell'
 
@@ -20,7 +20,9 @@ const CATEGORIAS = ['Todos','Comece por aqui','Agenda','Serviços','Equipe','Lin
 export default function AdminGuia() {
   const [busca, setBusca] = useState('')
   const [categoria, setCategoria] = useState('Todos')
-  const [aberto, setAberto] = useState(null)
+  // /admin/guia?guia=servico abre direto aquele tutorial (a agenda vazia manda pra cá)
+  const [busca_] = useSearchParams()
+  const [aberto, setAberto] = useState(() => GUIAS.find((g) => g.id === busca_.get('guia')) ?? null)
 
   const filtrados = useMemo(() => {
     const q = busca.trim().toLowerCase()

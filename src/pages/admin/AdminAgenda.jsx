@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import AdminShell from '../../components/AdminShell'
 import AgendaDia from '../../components/AgendaDia'
+import AgendaVazia from '../../components/AgendaVazia'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { toISODate } from '../../lib/format'
@@ -25,6 +26,13 @@ export default function AdminAgenda() {
   const [precisaEscolher, setPrecisaEscolher] = useState(false)
 
   const { salao } = useAuth()
+  // sem serviço ou sem profissional configurada não há o que marcar: mostra o caminho
+  const [resumo, setResumo] = useState(undefined)
+  useEffect(() => {
+    if (!salao?.id) return
+    supabase.rpc('primeiros_passos', { salao: salao.id }).then(({ data }) => setResumo(data ?? null))
+  }, [salao?.id])
+  const semAgenda = resumo && (Number(resumo.servicos ?? 0) === 0 || (resumo.tipo !== 'autonoma' && Number(resumo.equipe ?? 0) === 0))
   useEffect(() => {
     if (!salao?.id) return
     supabase
@@ -50,6 +58,7 @@ export default function AdminAgenda() {
         </div>
       </div>
 
+      {semAgenda ? <AgendaVazia r={resumo} /> : (<>
       {profissionais.length > 0 && (
         <div className="filtro-chips">
           <button
@@ -87,6 +96,7 @@ export default function AdminAgenda() {
         pedidoDeEncaixe={pedidoDeEncaixe}
         semFab
       />
+      </>)}
     </AdminShell>
   )
 }

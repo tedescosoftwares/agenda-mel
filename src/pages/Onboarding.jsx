@@ -558,6 +558,89 @@ function PassoDados({ s, seguir, voltar, salvando, setErro, user, autonoma, publ
     if (!f.email.trim()) { setErro('Informe o e-mail da conta.'); return }
     seguir(dadosDe(f))
   }
+  const idsDados = ['identificacao', 'endereco', 'acesso']
+  const chaveDados = `mimo:onboarding:dados:v1:${s.id || user?.id || 'novo'}`
+  const nivelDadosInicial = (() => {
+    try {
+      const salvo = Number(sessionStorage.getItem(chaveDados))
+      return Number.isFinite(salvo) ? Math.min(3, Math.max(1, salvo)) : 1
+    } catch { return 1 }
+  })()
+  const [nivelDados, setNivelDados] = useState(nivelDadosInicial)
+  const [blocoDados, setBlocoDados] = useState(() => idsDados[nivelDadosInicial - 1] || 'identificacao')
+  const [direcaoDados, setDirecaoDados] = useState('frente')
+
+  const identificacaoOk = Boolean(
+    comCnpj
+      ? cnpjValido(f.cnpj) && f.razao_social.trim() && f.responsavel_nome.trim() && (!cnpjSituacao || cnpjSituacao === 'ATIVA')
+      : cpfValido(f.cpf) && f.responsavel_nome.trim() && f.responsavel_nascimento && idadeEm(f.responsavel_nascimento) >= 18
+  )
+  const enderecoOk = Boolean(f.fiscal.address.trim() && f.fiscal.city.trim())
+  const acessoOk = Boolean(
+    f.email.trim() &&
+    emailOk(f.email.trim()) &&
+    soDigitos(f.whatsapp).length >= 10 &&
+    (publico && !user ? forcaDaSenha(conta.senha).ok && conta.confirma === conta.senha && conta.termos : true)
+  )
+  const prontoDados = { identificacao: identificacaoOk, endereco: enderecoOk, acesso: acessoOk }
+  const numeroDados = { identificacao: 1, endereco: 2, acesso: 3 }
+  const etapasDados = [
+    { id:'identificacao', numero:1, titulo:'Identificação', detalhe: comCnpj ? 'CNPJ e responsável' : 'CPF e responsável' },
+    { id:'endereco', numero:2, titulo:'Endereço', detalhe: comCnpj ? 'endereço fiscal' : 'endereço de cadastro' },
+    { id:'acesso', numero:3, titulo:'Acesso', detalhe:'e-mail, WhatsApp e senha' },
+  ].map((etapa) => ({ ...etapa, liberado: nivelDados >= etapa.numero, feito: nivelDados > etapa.numero }))
+  const indiceDados = numeroDados[blocoDados] - 1
+  const proximaDados = indiceDados < 2 ? etapasDados[indiceDados + 1] : null
+
+  useEffect(() => {
+    try { sessionStorage.setItem(chaveDados, String(nivelDados)) } catch { /* navegador sem storage */ }
+  }, [chaveDados, nivelDados])
+
+  function erroDaEtapaDados(id) {
+    if (id === 'identificacao') {
+      if (comCnpj && !cnpjValido(f.cnpj)) return f.cnpj ? 'Confira o CNPJ: os dígitos não batem.' : 'Informe o CNPJ ou escolha seguir com CPF.'
+      if (!comCnpj && !cpfValido(f.cpf)) return f.cpf ? 'Confira o CPF: os dígitos não batem.' : 'Informe o seu CPF.'
+      if (comCnpj && cnpjSituacao && cnpjSituacao !== 'ATIVA') return `Esse CNPJ consta como ${nomeProprio(cnpjSituacao)} na Receita.`
+      if (comCnpj && !f.razao_social.trim()) return 'A razão social precisa estar preenchida.'
+      if (!f.responsavel_nome.trim()) return comCnpj ? 'Informe quem responde pelo negócio.' : 'Informe seu nome completo.'
+      if (!comCnpj && !f.responsavel_nascimento) return 'Informe sua data de nascimento.'
+      if (!comCnpj && idadeEm(f.responsavel_nascimento) < 18) return 'Para responder pelo negócio é preciso ter 18 anos ou mais.'
+    }
+    if (id === 'endereco') {
+      if (!f.fiscal.address.trim()) return 'Informe o endereço de cadastro.'
+      if (!f.fiscal.city.trim()) return 'Informe a cidade.'
+    }
+    if (id === 'acesso') {
+      if (!f.email.trim() || !emailOk(f.email.trim())) return 'Informe um e-mail válido para acessar a MIMO.'
+      if (soDigitos(f.whatsapp).length < 10) return 'Confira seu WhatsApp.'
+      if (publico && !user && !forcaDaSenha(conta.senha).ok) return 'Crie uma senha forte para continuar.'
+      if (publico && !user && conta.confirma !== conta.senha) return 'As senhas não são iguais.'
+      if (publico && !user && !conta.termos) return 'Aceite os Termos e a Política de privacidade para criar a conta.'
+    }
+    return ''
+  }
+
+  function continuarDados() {
+    const erro = erroDaEtapaDados(blocoDados)
+    if (erro) { setErro(erro); return }
+    setErro('')
+    const numero = numeroDados[blocoDados]
+    if (numero < 3) {
+      setNivelDados((x) => Math.max(x, numero + 1))
+      setDirecaoDados('frente')
+      setBlocoDados(idsDados[numero])
+      return
+    }
+    avancar()
+  }
+
+  function voltarDados() {
+    const atual = numeroDados[blocoDados]
+    if (atual <= 1) { voltar(); return }
+    setDirecaoDados('volta')
+    setBlocoDados(idsDados[atual - 2])
+  }
+
   if (criada) {
     return (
       <>
@@ -571,69 +654,121 @@ function PassoDados({ s, seguir, voltar, salvando, setErro, user, autonoma, publ
   return (
     <>
       <h1 className="ob-titulo">Seus dados</h1>
-      <p className="ob-sub">{publico ? 'Essas informações identificam sua conta e ficam protegidas na MIMO.' : 'Essas informações identificam seu negócio e ficam protegidas na MIMO.'}</p>
-      <div className="ob-guia-grade">
-        <GuiaContexto Icone={Lock} titulo="Isso não vira sua vitrine">
-          CNPJ, razão social, CPF e endereço fiscal servem para cadastro e administração. No próximo passo você escolhe o nome, fotos, contato e endereço que a cliente verá.
-        </GuiaContexto>
-        <GuiaContexto Icone={MessageCircle} titulo="E-mail e WhatsApp têm funções diferentes" tom="rosa">
-          O e-mail é o acesso à conta. O WhatsApp recebe avisos importantes e pode ser diferente do número comercial que aparecerá para suas clientes.
-        </GuiaContexto>
+      <p className="ob-sub">Vamos por partes. Aqui entram apenas os dados de cadastro e acesso. O que a cliente vê você monta no próximo passo.</p>
+
+      <div className="ob-subfluxo ob-subfluxo-dados" aria-label="Etapas dos seus dados">
+        <div className="ob-subfluxo-topo">
+          <span><strong>Seus dados</strong> · 3 passos rápidos</span>
+          <small>Passo {indiceDados + 1} de 3</small>
+        </div>
+        <div className="ob-subfluxo-progresso" aria-hidden="true"><i style={{ width: `${((indiceDados + 1) / 3) * 100}%` }} /></div>
+        <div className="ob-subfluxo-itens ob-subfluxo-itens-3">
+          {etapasDados.map((etapa) => (
+            <button
+              key={etapa.id}
+              type="button"
+              disabled={!etapa.liberado}
+              className={(blocoDados === etapa.id ? 'atual ' : '') + (etapa.feito ? 'feito ' : '') + (!etapa.liberado ? 'travado' : '')}
+              onClick={() => {
+                if (!etapa.liberado) return
+                setDirecaoDados(etapa.numero < numeroDados[blocoDados] ? 'volta' : 'frente')
+                setBlocoDados(etapa.id)
+              }}
+            >
+              <span className="ob-subfluxo-num">{etapa.feito ? <Check size={13} /> : etapa.numero}</span>
+              <span><strong>{etapa.titulo}</strong><small>{etapa.detalhe}</small></span>
+            </button>
+          ))}
+        </div>
       </div>
-      <div className="ob-aviso-etapa"><span className="ob-aviso-etapa-icone"><Info size={16} /></span><span><strong>Aqui ficam apenas os dados de cadastro.</strong> {autonoma ? 'Foto, contatos, localização e o que aparece na sua agenda' : 'Nome, fotos, contatos, localização e o que aparece para as clientes'} você configura na próxima etapa.</span></div>
-      <div className="ob-dados">
-        <div className="ob-form">
-          {/* a identificação fiscal vem primeiro: é por ela que o cadastro começa */}
-          <span className="ob-grupo-selo"><Selo /></span>
-          <div className="ob-bloco">
-            <span className="ob-bloco-titulo">Identificação do negócio <small>não aparece para clientes</small></span>
-            <p className="ob-bloco-ajuda">{comCnpj ? 'Digite o CNPJ e a MIMO tenta preencher os dados da Receita para você.' : 'Ainda trabalha como pessoa física? Sem problema: use seu CPF agora e atualize para CNPJ quando quiser.'}</p>
-            {comCnpj ? (
-              <>
-              <label>CNPJ <b>*</b><span className="muted">(buscamos os dados automaticamente)</span><input value={formatarCnpj(f.cnpj)} onChange={(e) => porCnpj(e.target.value)} placeholder="12.345.678/0001-90" inputMode="numeric" autoComplete="off" autoFocus={!f.cnpj} />{cnpjInfo === 'buscando' ? <small className="muted">consultando a Receita…</small> : cnpjInfo.startsWith('ok:') ? <small className="ob-cnpj-ok">✓ {cnpjInfo.slice(3)}</small> : cnpjInfo.startsWith('erro:') ? <small className="ob-cnpj-erro">{cnpjInfo.slice(5)}</small> : null}</label>
-                <label>Razão social <b>*</b><input value={f.razao_social} onChange={m('razao_social')} placeholder="Essenza Cabeleireiros Ltda" autoComplete="organization" /></label>
-                <label>Nome fantasia <span className="muted">(como está na Receita)</span><input value={f.nome_fantasia} onChange={m('nome_fantasia')} placeholder="Essenza Hair" /></label>
-                <label>Responsável pelo negócio <b>*</b><input value={f.responsavel_nome} onChange={m('responsavel_nome')} placeholder="Juliana Lima" autoComplete="name" list={f.socios.length ? 'ob-socios' : undefined} />{f.socios.length > 1 && <small className="muted">no quadro da Receita: {f.socios.join(', ')}</small>}</label>
-                {f.socios.length > 0 && <datalist id="ob-socios">{f.socios.map((n) => <option key={n} value={n} />)}</datalist>}
-              </>
-            ) : (
-              <>
-                <p className="ob-humor"><strong>Ainda não tem CNPJ? Tudo bem.</strong>Use seu CPF para continuar. Quando tiver CNPJ, você pode atualizar seus dados por aqui.</p>
-                <label>CPF <b>*</b><input value={formatarCpf(f.cpf)} onChange={(e) => setF((x) => ({ ...x, cpf: soDigitos(e.target.value).slice(0, 11) }))} placeholder="123.456.789-09" inputMode="numeric" autoComplete="off" />{f.cpf.length === 11 && !cpfValido(f.cpf) && <small className="ob-cnpj-erro">Confere o CPF: os dígitos não batem.</small>}</label>
-                <label>Seu nome completo <b>*</b><input value={f.responsavel_nome} onChange={m('responsavel_nome')} placeholder="Juliana Lima" autoComplete="name" /></label>
-                <div className="ob-linha-2 ob-linha-meio">
-                  <label>Data de nascimento <b>*</b><input type="date" value={f.responsavel_nascimento} onChange={m('responsavel_nascimento')} max={hojeIso()} autoComplete="bday" /></label>
-                  <label>RG <span className="muted">(opcional)</span><input value={f.responsavel_rg} onChange={(e) => setF((x) => ({ ...x, responsavel_rg: e.target.value.replace(/[^0-9A-Za-z.-]/g, '').slice(0, 20) }))} placeholder="12.345.678-9" inputMode="numeric" autoComplete="off" /></label>
+
+      <div className="ob-dados-wizard">
+        {blocoDados === 'identificacao' && (
+          <div className={`ob-card ob-dado-etapa aberto ob-anima-${direcaoDados}`}>
+            <div className="ob-dado-cabecalho">
+              <span><strong className="ob-card-titulo">Identificação do negócio</strong><small>Esses dados ficam no cadastro da MIMO e não viram sua vitrine.</small></span>
+              <AjudaCampo titulo="Por que pedimos isso?">Usamos esses dados para identificar corretamente quem administra a conta. CNPJ, CPF, razão social e endereço fiscal não aparecem automaticamente para clientes.</AjudaCampo>
+            </div>
+
+            <div className="ob-form">
+              <p className="ob-bloco-ajuda">{comCnpj ? 'Digite o CNPJ e a MIMO tenta preencher os dados oficiais para você.' : 'Ainda não tem CNPJ? Use seu CPF agora. Você pode atualizar o cadastro depois.'}</p>
+              {comCnpj ? (
+                <>
+                  <label>CNPJ <b>*</b><input value={formatarCnpj(f.cnpj)} onChange={(e) => porCnpj(e.target.value)} placeholder="12.345.678/0001-90" inputMode="numeric" autoComplete="off" autoFocus={!f.cnpj} />{cnpjInfo === 'buscando' ? <small className="muted">Consultando os dados…</small> : cnpjInfo.startsWith('ok:') ? <small className="ob-cnpj-ok">✓ {cnpjInfo.slice(3)}</small> : cnpjInfo.startsWith('erro:') ? <small className="ob-cnpj-erro">{cnpjInfo.slice(5)}</small> : null}</label>
+                  <label>Razão social <b>*</b><input value={f.razao_social} onChange={m('razao_social')} placeholder="Essenza Cabeleireiros Ltda" autoComplete="organization" /></label>
+                  <label>Nome fantasia <span className="muted">(opcional)</span><input value={f.nome_fantasia} onChange={m('nome_fantasia')} placeholder="Essenza Hair" /></label>
+                  <label>Responsável pelo negócio <b>*</b><input value={f.responsavel_nome} onChange={m('responsavel_nome')} placeholder="Juliana Lima" autoComplete="name" list={f.socios.length ? 'ob-socios' : undefined} />{f.socios.length > 1 && <small className="muted">Encontrados no cadastro: {f.socios.join(', ')}</small>}</label>
+                  {f.socios.length > 0 && <datalist id="ob-socios">{f.socios.map((n) => <option key={n} value={n} />)}</datalist>}
+                </>
+              ) : (
+                <>
+                  <label>CPF <b>*</b><input value={formatarCpf(f.cpf)} onChange={(e) => setF((x) => ({ ...x, cpf: soDigitos(e.target.value).slice(0, 11) }))} placeholder="123.456.789-09" inputMode="numeric" autoComplete="off" />{f.cpf.length === 11 && !cpfValido(f.cpf) && <small className="ob-cnpj-erro">Confira o CPF: os dígitos não batem.</small>}</label>
+                  <label>Seu nome completo <b>*</b><input value={f.responsavel_nome} onChange={m('responsavel_nome')} placeholder="Juliana Lima" autoComplete="name" /></label>
+                  <div className="ob-linha-2 ob-linha-meio">
+                    <label>Data de nascimento <b>*</b><input type="date" value={f.responsavel_nascimento} onChange={m('responsavel_nascimento')} max={hojeIso()} autoComplete="bday" /></label>
+                    <label>RG <span className="muted">(opcional)</span><input value={f.responsavel_rg} onChange={(e) => setF((x) => ({ ...x, responsavel_rg: e.target.value.replace(/[^0-9A-Za-z.-]/g, '').slice(0, 20) }))} placeholder="12.345.678-9" inputMode="numeric" autoComplete="off" /></label>
+                  </div>
+                </>
+              )}
+              {(!comCnpj || !cnpjValido(f.cnpj)) && <label className="ob-termos ob-informal"><input type="checkbox" checked={!comCnpj} onChange={(e) => trocarDocumento(e.target.checked)} /><span>Ainda não tenho CNPJ</span></label>}
+            </div>
+          </div>
+        )}
+
+        {blocoDados === 'endereco' && (
+          <div className={`ob-card ob-dado-etapa aberto ob-anima-${direcaoDados}`}>
+            <div className="ob-dado-cabecalho">
+              <span><strong className="ob-card-titulo">{comCnpj ? 'Endereço fiscal' : 'Endereço de cadastro'}</strong><small>{comCnpj ? 'É o endereço ligado ao seu cadastro empresarial.' : 'É seu endereço cadastral. Onde você atende será configurado depois.'}</small></span>
+              <AjudaCampo titulo="Esse endereço fica público?">Não. Este endereço serve para o cadastro. No próximo passo você escolhe qual endereço suas clientes verão e ainda confere o pino no mapa.</AjudaCampo>
+            </div>
+            <div className="ob-form"><BlocoEndereco valor={f.fiscal} onChange={setFiscal} autoCompleteRua={!comCnpj} /></div>
+          </div>
+        )}
+
+        {blocoDados === 'acesso' && (
+          <div className={`ob-card ob-dado-etapa aberto ob-anima-${direcaoDados}`}>
+            <div className="ob-dado-cabecalho">
+              <span><strong className="ob-card-titulo">Seu acesso à MIMO</strong><small>Agora definimos como você entra na conta e recebe avisos importantes.</small></span>
+              <AjudaCampo titulo="E-mail ou WhatsApp?">O e-mail é usado para acessar e recuperar a conta. O WhatsApp recebe avisos importantes do cadastro. O número comercial mostrado para clientes pode ser definido no próximo passo.</AjudaCampo>
+            </div>
+
+            <div className="ob-form">
+              <label>E-mail da conta <b>*</b><input type="email" value={f.email} onChange={m('email')} placeholder="contato@essenzahair.com.br" autoComplete="email" /></label>
+              <label>Seu WhatsApp <b>*</b><span className="ob-fone"><span className="ob-ddi">🇧🇷 +55</span><input type="tel" inputMode="numeric" value={f.whatsapp} onChange={(e) => setF((x) => ({ ...x, whatsapp: formatarFone(e.target.value) }))} placeholder="(11) 91234-5678" autoComplete="tel" /></span></label>
+
+              <details className="ob-dados-opcionais">
+                <summary>Adicionar outros contatos <Plus size={14} /></summary>
+                <div>
+                  <label>Outro telefone <span className="muted">(opcional)</span>{f.telefones.map((_, i) => campoContato('telefones', i, 'telefone'))}</label>
+                  <label>Outro e-mail <span className="muted">(opcional)</span>{f.emails.length === 0 ? <span className="ob-fone"><button type="button" className="ob-geo" onClick={() => maisNa('emails')}><Plus size={14} /> Adicionar e-mail</button></span> : f.emails.map((_, i) => campoContato('emails', i, 'email'))}</label>
                 </div>
-              </>
-            )}
-            {(!comCnpj || !cnpjValido(f.cnpj)) && <label className="ob-termos ob-informal"><input type="checkbox" checked={!comCnpj} onChange={(e) => trocarDocumento(e.target.checked)} /><span>Ainda não tenho CNPJ</span></label>}
+              </details>
+
+              {publico && !user && (
+                <>
+                  <SenhaNova valor={conta} onChange={(v) => setConta((x) => ({ ...x, ...v }))} />
+                  <label className="ob-termos"><input type="checkbox" checked={conta.termos} onChange={(e) => setConta((x) => ({ ...x, termos: e.target.checked }))} /><span><FraseDeAceite papel={s.tipo} /></span></label>
+                  <label className="ob-termos ob-marketing"><input type="checkbox" checked={conta.marketing} onChange={(e) => setConta((x) => ({ ...x, marketing: e.target.checked }))} /><span>Quero receber novidades, ofertas e dicas da MIMO. Posso cancelar quando quiser.</span></label>
+                </>
+              )}
+            </div>
           </div>
-          <div className="ob-bloco">
-            <span className="ob-bloco-titulo">{comCnpj ? 'Endereço fiscal' : 'Seu endereço'} <small>{comCnpj ? 'o que está na Receita' : 'o do cadastro; onde atende vem na próxima etapa'}</small></span>
-            <BlocoEndereco valor={f.fiscal} onChange={setFiscal} autoCompleteRua={!comCnpj} />
-          </div>
-        </div>
-        <div className="ob-form">
-          <span className="ob-grupo-selo"><Selo /></span>
-          <div className="ob-bloco">
-            <span className="ob-bloco-titulo">Seu acesso <small>{publico ? 'é com isso que você entra' : 'a conta que administra o negócio'}</small></span>
-            <label>E-mail da conta <b>*</b><input type="email" value={f.email} onChange={m('email')} placeholder="contato@essenzahair.com.br" autoComplete="email" /></label>
-            <label>Seu WhatsApp <b>*</b><span className="muted">(os avisos chegam por ele)</span><span className="ob-fone"><span className="ob-ddi">🇧🇷 +55</span><input type="tel" inputMode="numeric" value={f.whatsapp} onChange={(e) => setF((x) => ({ ...x, whatsapp: formatarFone(e.target.value) }))} placeholder="(11) 91234-5678" autoComplete="tel" /></span></label>
-            <label>Outro telefone <span className="muted">(opcional)</span>{f.telefones.map((_, i) => campoContato('telefones', i, 'telefone'))}</label>
-            <label>Outro e-mail <span className="muted">(opcional)</span>{f.emails.length === 0 ? <span className="ob-fone"><button type="button" className="ob-geo" onClick={() => maisNa('emails')}><Plus size={14} /> Adicionar e-mail</button></span> : f.emails.map((_, i) => campoContato('emails', i, 'email'))}</label>
-            {publico && !user && (
-              <>
-                <SenhaNova valor={conta} onChange={(v) => setConta((x) => ({ ...x, ...v }))} />
-                <label className="ob-termos"><input type="checkbox" checked={conta.termos} onChange={(e) => setConta((x) => ({ ...x, termos: e.target.checked }))} /><span><FraseDeAceite papel={s.tipo} /></span></label>
-                <label className="ob-termos ob-marketing"><input type="checkbox" checked={conta.marketing} onChange={(e) => setConta((x) => ({ ...x, marketing: e.target.checked }))} /><span>Quero receber novidades, ofertas e dicas da MIMO por e-mail e WhatsApp. Dá pra cancelar quando quiser.</span></label>
-              </>
-            )}
-          </div>
-        </div>
+        )}
       </div>
+
       {modalCnpj && <ModalCnpj dados={modalCnpj} onFechar={() => setModalCnpj(null)} />}
-      <Rodape voltar={voltar} avancar={avancar} salvando={salvando || criando} rotulo={publico ? (user ? 'Abrir minha agenda' : 'Criar conta e continuar') : 'Continuar'} />
+
+      <div className={'ob-subpasso-rodape ' + (prontoDados[blocoDados] ? 'pronto' : 'pendente')}>
+        <button type="button" className="btn btn-ghost" onClick={voltarDados} disabled={salvando || criando}><ArrowLeft size={16} /> Voltar</button>
+        <span className="ob-subpasso-status">
+          {prontoDados[blocoDados]
+            ? <><Check size={15} /><span><strong>Tudo certo por aqui.</strong> Revise e avance quando quiser.</span></>
+            : <><Info size={15} /><span>{blocoDados === 'identificacao' ? 'Complete sua identificação para continuar.' : blocoDados === 'endereco' ? 'Complete o endereço de cadastro.' : 'Confira seus dados de acesso.'}</span></>}
+        </span>
+        <button type="button" className="btn btn-primary ob-subpasso-proximo" onClick={continuarDados} disabled={!prontoDados[blocoDados] || salvando || criando}>
+          {blocoDados === 'acesso' ? (publico ? (user ? 'Abrir minha agenda' : 'Criar conta e continuar') : 'Continuar') : `Continuar para ${proximaDados?.titulo}`} <ArrowRight size={16} />
+        </button>
+      </div>
       {publico && <RodapeSocial />}
     </>
   )

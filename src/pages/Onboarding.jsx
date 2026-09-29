@@ -886,7 +886,7 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
         setSubfluxoConcluido(true)
       }
       setConquista(null)
-    }, 650)
+    }, 1500)
     return () => clearTimeout(timer)
   }, [conquista])
 

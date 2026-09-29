@@ -563,8 +563,9 @@ no editor, diga até onde: `./supabase/aplicar.sh --ja-rodei 079`.
 
 ## Endereço próprio por salão (2.80): studiomel.mimo.com.vc
 
-O salão escolhe o nome na ativação (ou em Ajustes → Endereço do salão);
-faz parte do teste e só pausa se a assinatura parar. Para isso
+O salão escolhe o nome no onboarding, junto com o nome do salão (e
+troca em Ajustes → Endereço do salão); não depende de ativar e só
+pausa se a assinatura parar. Para isso
 funcionar, uma vez só:
 
 1. **Cloudflare → DNS**: registro `A`, nome `*`, conteúdo = IP desta

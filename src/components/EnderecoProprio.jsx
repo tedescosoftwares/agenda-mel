@@ -6,9 +6,9 @@ import { enderecoEscrito, limparEndereco, linkDoSalao } from '../lib/endereco'
 
 // O endereço próprio do salão (2.80): studiomel.mimo.com.vc.
 //
-// Faz parte do teste, não do pagamento (132): o salão escolhe na
-// ativação (AtivarSalao) ou aqui em Ajustes, imprime o QR com ele e só
-// perde se a assinatura parar de vez. A autônoma não passa por aqui: o
+// Não depende de ativar nem de pagar (132): o salão escolhe no
+// onboarding, junto com o nome, ou aqui em Ajustes; imprime o QR com ele
+// e só perde se a assinatura parar de vez. A autônoma não passa por aqui: o
 // link dela é mimo.com.vc/p/<slug>.
 
 // confere ao vivo se o nome está livre; devolve { limpo, chk }

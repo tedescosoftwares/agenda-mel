@@ -1622,3 +1622,10 @@
 @keyframes ms-pulsa { 0%, 100% { transform: scale(1); } 50% { transform: scale(0.92); } }
 @keyframes ms-ponto { 0%, 100% { transform: translateY(0); opacity: .5; } 50% { transform: translateY(-4px); opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .ms-orbita::before, .ms-orbita::after, .ms-pontos i { animation: none; } }
+
+/* o endereço próprio do salão, em "Nome e fotos" (2.80) */
+.ob-cara-endereco { display: grid; gap: 0.35rem; margin-top: 0.7rem; }
+.ob-cara-endereco .ob-rotulo b { color: var(--rosa, #ff2d7a); }
+.ob-cara-endereco .ep-campo { background: #fff; }
+.ob-cara-endereco small { font-size: 0.76rem; line-height: 1.35; }
+.ob-cara-endereco small b { color: var(--ameixa, #3d0c4e); font-weight: 700; }

@@ -28,6 +28,8 @@ import { FraseDeAceite } from '../components/LinkLegal'
 import { useDocumentosLegais, aceitesPara, versaoMaior } from '../lib/legal'
 import { EMAIL_CONTATO } from '../conteudo/legal'
 import RodapeSocial from '../components/RodapeSocial'
+import { CampoEndereco, useChecagemEndereco } from '../components/EnderecoProprio'
+import { limparEndereco, enderecoEscrito } from '../lib/endereco'
 
 // O onboarding do salão (114, 119): do cadastro à agenda em seis passos, o
 // mesmo fluxo no computador e no celular. Cada passo explica por que
@@ -886,6 +888,13 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
   const [horas, setHoras] = useState(null)
   // a cara do negócio: o logo e as fotos do espaço sobem na hora e ficam gravadas
   const [nome, setNome] = useState(s.name || s.nome_fantasia || s.razao_social || '')   // o nome que a cliente vê
+  // o endereço próprio (studiomel.mimo.com.vc, 2.80): nasce aqui, junto com o
+  // nome, e não depende de ativar. Sugerido a partir do nome até ela mexer.
+  const [endereco, setEndereco] = useState(s.subdominio ?? '')
+  const [enderecoMexido, setEnderecoMexido] = useState(Boolean(s.subdominio))
+  const enderecoDigitado = enderecoMexido ? endereco : limparEndereco(nome)
+  const { limpo: enderecoLimpo, chk: enderecoChk } = useChecagemEndereco(autonoma ? '' : enderecoDigitado, s.id, s.subdominio ?? null)
+  const enderecoOk = autonoma || Boolean(enderecoChk?.ok)
   const [logo, setLogo] = useState(s.logo_url ?? null)
   const [fotos, setFotos] = useState(Array.isArray(s.fotos) ? s.fotos : [])
   const [subindo, setSubindo] = useState('')   // '' | 'logo' | 'fotos'
@@ -1023,7 +1032,7 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
   }
   // Wizard interno de "Seu espaço": a MIMO percebe quando um bloco está
   // válido, mas a pessoa decide quando avançar. Nada de empurrar tela.
-  const identidadePreenchida = Boolean(nome.trim() && (logo || fotos.length > 0))
+  const identidadePreenchida = Boolean(nome.trim() && (logo || fotos.length > 0) && enderecoOk)
   const contatoPreenchido = Boolean(soDigitos(loc.whatsapp).length >= 10)
   const localizacaoPreenchida = Boolean(local.city.trim() && pino)
   const horariosPreenchidos = Boolean(horas?.some((h) => h.open) && horas.every((h) => !h.open || h.start_time < h.end_time))
@@ -1109,10 +1118,17 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
   const etapaProntaAtual = Boolean(prontoPorEtapa[blocoAberto])
   const proximaEtapa = indiceSubEtapa < 4 ? subEtapasEspaco[indiceSubEtapa + 1] : null
 
-  function confirmarSubEtapa() {
+  async function confirmarSubEtapa() {
     if (!etapaProntaAtual || conquista) return
     setErro('')
     const id = blocoAberto
+    // o endereço próprio vai para o banco ao confirmar a identidade (salão)
+    if (id === 'identidade' && !autonoma && enderecoChk?.ok && !enderecoChk.mesmo) {
+      const { data, error } = await supabase.rpc('subdominio_definir', { salao: s.id, nome: enderecoLimpo })
+      if (error) { setErro('Não deu para guardar o endereço: ' + error.message); return }
+      setS((x) => ({ ...x, subdominio: data?.subdominio ?? enderecoLimpo }))
+      setEndereco(data?.subdominio ?? enderecoLimpo); setEnderecoMexido(true)
+    }
     setCelebradas((atuais) => atuais.includes(id) ? atuais : [...atuais, id])
 
     if (id === 'regras') {
@@ -1237,6 +1253,13 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
           <div className="ob-cara">
             <div className="ob-cara-esq">
             <label className="ob-cara-nome">{autonoma ? 'Nome da agenda' : 'Nome do salão'} <b>*</b><span className="muted">(como as clientes vão ver)</span><input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Studio Essenza Hair" maxLength={60} /></label>
+            {!autonoma && (
+              <div className="ob-cara-endereco">
+                <span className="ob-rotulo">Endereço do salão na MIMO <b>*</b><span className="muted"> (o link do QR, da bio e do WhatsApp)</span></span>
+                <CampoEndereco nome={enderecoDigitado} onNome={(v) => { setEndereco(v); setEnderecoMexido(true) }} limpo={enderecoLimpo} chk={enderecoChk} />
+                <small className="muted">Só letras, números e hífen. Ex.: <b>{enderecoEscrito(limparEndereco(nome) || 'seusalao')}</b>. Dá pra trocar depois em Ajustes; o antigo continua abrindo.</small>
+              </div>
+            )}
             <div className="ob-cara-imagens">
               <div className="ob-logo-campo">
                 <span className="ob-rotulo">{autonoma ? 'Sua foto ou logo' : 'Logo'}</span>

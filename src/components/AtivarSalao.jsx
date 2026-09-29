@@ -1,14 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Rocket, ShieldCheck, Sparkles, Smartphone, CreditCard, Gift, Globe } from 'lucide-react'
+import { Rocket, ShieldCheck, Sparkles, Smartphone, CreditCard, Gift } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { reais } from '../lib/planos'
 import { LINHA_DO_TESTE, REGRAS, dataCurta } from '../lib/acesso'
 import { comDesconto } from '../lib/assinatura'
 import FormasDePagar from './FormasDePagar'
-import { CampoEndereco, useChecagemEndereco } from './EnderecoProprio'
-import { limparEndereco } from '../lib/endereco'
 
 // Ativar (126 + 128): o último passo da configuração, com três caminhos.
 //   Só testar        7 dias grátis, sem nada.
@@ -17,16 +15,11 @@ import { limparEndereco } from '../lib/endereco'
 //   Pagar agora      Pix Automático (10% off e os próximos caem sozinhos),
 //                    Pix ou cartão à vista: 30 + 7 dias de bônus.
 // A autônoma só libera o link. `onAtivado(acesso)` recebe o que o banco devolveu.
-//
-// Antes dos três caminhos, o salão escolhe o endereço próprio
-// (studiomel.mimo.com.vc, 132): faz parte do teste, e é guardado junto
-// com a ativação. Sem um nome livre, os botões de ativar ficam presos.
+// (O endereço próprio do salão não passa por aqui: nasce no onboarding, em
+// "Nome e fotos", e se muda em Ajustes.)
 export default function AtivarSalao({ s, onAtivado, onErro, embutido = false }) {
   const { recarregarAcesso, recarregarPerfil, acesso } = useAuth()
   const [indo, setIndo] = useState(false)
-  const [endereco, setEndereco] = useState(() => s?.subdominio ?? limparEndereco(s?.name))
-  const { limpo, chk } = useChecagemEndereco(endereco, s?.id, s?.subdominio ?? null)
-  const enderecoOk = Boolean(chk?.ok)
   const [valores, setValores] = useState(null)
   const [modal, setModal] = useState(null)   // { modo, cobrarAgora }
   const [avista, setAvista] = useState('pix_automatico')
@@ -39,11 +32,6 @@ export default function AtivarSalao({ s, onAtivado, onErro, embutido = false }) 
 
   async function ativar(depois) {
     setIndo(true)
-    // o endereço vai junto (salão): só grava se mudou
-    if (!autonoma && enderecoOk && !chk.mesmo) {
-      const { error: e1 } = await supabase.rpc('subdominio_definir', { salao: s.id, nome: limpo })
-      if (e1) { setIndo(false); onErro?.('Não deu para guardar o endereço: ' + e1.message); return }
-    }
     const { data, error } = await supabase.rpc('salao_ativar', { salao: s.id })
     setIndo(false)
     if (error) { onErro?.('Não deu para ativar agora: ' + error.message); return }
@@ -67,30 +55,19 @@ export default function AtivarSalao({ s, onAtivado, onErro, embutido = false }) 
       <h3>Ativar o salão e liberar o link</h3>
       <p className="muted">A partir daqui suas clientes marcam pelo link e pelo QR Code, e a assistente do WhatsApp começa a atender. Você entra com <strong>{REGRAS.testeDias} dias grátis</strong> em qualquer caminho, e nada é cobrado hoje a não ser que você escolha pagar agora.</p>
 
-      <div className="ativar-endereco">
-        <div className="ativar-endereco-topo">
-          <span className="ep-icone"><Globe size={18} /></span>
-          <div>
-            <strong>O endereço do seu salão</strong>
-            <small className="muted">É o link que vai no QR, na bio e no WhatsApp. Só letras, números e hífen; dá pra trocar depois em Ajustes.</small>
-          </div>
-        </div>
-        <CampoEndereco nome={endereco} onNome={setEndereco} limpo={limpo} chk={chk} />
-      </div>
-
       <div className="ativar-caminhos">
         <div className="ativar-caminho">
           <span className="ativar-caminho-selo"><Sparkles size={12} /> Só testar</span>
           <strong>{REGRAS.testeDias} dias grátis, sem nada</strong>
           <small className="muted">Sem cartão, sem Pix. No dia {dataCurta(cobrarEm)} você decide. Depois, {reais(cheio / 100)}/mês.</small>
-          <button type="button" className="btn btn-ghost" onClick={() => ativar(null)} disabled={indo || !enderecoOk}>{indo ? 'Ativando…' : 'Ativar e só testar'}</button>
+          <button type="button" className="btn btn-ghost" onClick={() => ativar(null)} disabled={indo}>{indo ? 'Ativando…' : 'Ativar e só testar'}</button>
         </div>
 
         <div className="ativar-caminho">
           <span className="ativar-caminho-selo"><Gift size={12} /> Assinar já</span>
           <strong>Deixa o cartão, cobra só depois do teste</strong>
           <small className="muted">Os {REGRAS.testeDias} dias valem igual. No dia {dataCurta(cobrarEm)} cobramos {reais(cheio / 100)} no cartão e nada para. Cancela antes, não paga.</small>
-          <button type="button" className="btn btn-ghost" onClick={() => ativar({ modo: 'cartao', cobrarAgora: false })} disabled={indo || !enderecoOk}>{indo ? 'Ativando…' : 'Ativar com cartão'}</button>
+          <button type="button" className="btn btn-ghost" onClick={() => ativar({ modo: 'cartao', cobrarAgora: false })} disabled={indo}>{indo ? 'Ativando…' : 'Ativar com cartão'}</button>
         </div>
 
         <div className="ativar-caminho destaque">
@@ -102,7 +79,7 @@ export default function AtivarSalao({ s, onAtivado, onErro, embutido = false }) 
             <button type="button" className={'ativar-opcao' + (avista === 'pix_avista' ? ' ativa' : '')} onClick={() => setAvista('pix_avista')}><Smartphone size={15} /><span><b>Pix</b><em>{reais(cheio / 100)} à vista</em></span></button>
             <button type="button" className={'ativar-opcao' + (avista === 'cartao' ? ' ativa' : '')} onClick={() => setAvista('cartao')}><CreditCard size={15} /><span><b>Cartão</b><em>{reais(cheio / 100)} à vista</em></span></button>
           </div>
-          <button type="button" className="btn btn-primary" onClick={() => ativar({ modo: avista, cobrarAgora: true })} disabled={indo || !enderecoOk}>{indo ? 'Ativando…' : `Ativar e pagar ${reais((avista === 'pix_automatico' ? pix : cheio) / 100)}`}</button>
+          <button type="button" className="btn btn-primary" onClick={() => ativar({ modo: avista, cobrarAgora: true })} disabled={indo}>{indo ? 'Ativando…' : `Ativar e pagar ${reais((avista === 'pix_automatico' ? pix : cheio) / 100)}`}</button>
         </div>
       </div>
 

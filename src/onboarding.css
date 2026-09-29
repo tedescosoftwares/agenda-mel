@@ -1587,3 +1587,8 @@
 .ce-gira { animation: ce-gira 2.4s linear infinite; color: var(--ob-rosa, #ff2d7a); }
 @keyframes ce-gira { to { transform: rotate(360deg); } }
 .ce-acoes { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+
+/* ---- /comecar com sessão aberta (131) ---- */
+.ob-ja-logada { max-width: 560px; display: grid; gap: 0.8rem; }
+.ob-ja-logada-acoes { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+.ob-ja-logada-nota { font-size: 0.82rem; margin: 0; }

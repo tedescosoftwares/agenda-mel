@@ -92,7 +92,7 @@ function EstadoSalvo({ estado }) {
 }
 
 export default function Onboarding({ publico = false }) {
-  const { user, role, salao: salaoAdmin, negocio, recarregarPerfil, loading, signOut } = useAuth()
+  const { user, role, salao: salaoAdmin, negocio, recarregarPerfil, loading, signOut, profile } = useAuth()
   const salao = negocio ?? salaoAdmin   // a autônoma não tem 'salao' de admin; o negócio que ela é dona vale pros dois
   const navigate = useNavigate()
   const [s, setS] = useState(publico ? { id: null, tipo: tipoDaURL(), publico: true } : null)   // o salão, como está no banco (com o que a tela mudou por cima)
@@ -168,7 +168,29 @@ export default function Onboarding({ publico = false }) {
     navigate('/pro/entrar', { replace: true })
   }
 
-  if (publico && !loading && user && salao) return <Navigate to="/onboarding" replace />
+  // /comecar com uma sessão aberta de quem já tem negócio: nunca cai no salão
+  // existente por engano (a sessão é compartilhada entre mimo.com.vc e pro.).
+  // Ela escolhe: ir pro painel dela, ou sair e criar outra conta.
+  if (publico && !loading && user && (salao || negocio)) {
+    const meuNome = (profile?.full_name || user.email || '').split(' ')[0]
+    const meuSalao = (salao ?? negocio)?.name
+    return (
+      <div className="ob ob-v2 ob-v3 ob-step-1">
+        <main className="ob-conteudo">
+          <div className="ob-passo-corpo ob-ja-logada">
+            <span className="ob-conteudo-num">Você já tem conta</span>
+            <h1 className="ob-titulo">Oi de novo, {meuNome}</h1>
+            <p className="ob-sub">Este navegador já está entrando na sua conta{meuSalao ? <>, dona do <strong>{meuSalao}</strong></> : null}. Pra não misturar nada, escolha o que quer fazer.</p>
+            <div className="ob-ja-logada-acoes">
+              <button type="button" className="btn btn-primary" onClick={() => { window.location.href = urlDoAmbiente('pro', role === 'profissional' ? '/pro/agenda' : '/admin') }}>Ir pro meu painel</button>
+              <button type="button" className="btn btn-ghost" onClick={async () => { await signOut?.(); }}>Sair e criar outra conta</button>
+            </div>
+            <p className="muted ob-ja-logada-nota">Cada conta tem um e-mail e um WhatsApp próprios. Se a ideia é um segundo salão na mesma conta, fale com a gente.</p>
+          </div>
+        </main>
+      </div>
+    )
+  }
   if (!s) return <div className="page-center"><p className="muted">Carregando…</p></div>
 
   const props = { s, setS, salvando, erro, setErro, seguir, voltar, gravar, gravarQuieto, setEstadoAuto, user, role, autonoma, docsLegais, concluir, pronto, publico, recarregarPerfil, navigate, irPara: (n) => { setPasso(n); window.scrollTo({ top: 0 }) } }

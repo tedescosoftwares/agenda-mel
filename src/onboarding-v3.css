@@ -1580,3 +1580,349 @@
     padding-right:44px;
   }
 }
+
+
+/* ---------- mais respiro no passo Seu espaço ---------- */
+.ob-v3.ob-step-3 .ob-estrutura {
+  gap:22px;
+}
+.ob-v3.ob-step-3 .ob-fluxo-card.aberto {
+  padding:24px !important;
+}
+.ob-v3.ob-step-3 .ob-card-titulo {
+  line-height:1.25;
+}
+.ob-v3.ob-step-3 .ob-form,
+.ob-v3.ob-step-3 .ob-coluna {
+  gap:16px;
+}
+
+/* ---------- ajuda contextual ? ---------- */
+.ob-v3 .ob-ajuda-popover {
+  position:relative;
+  flex:none;
+}
+.ob-v3 .ob-ajuda-popover summary {
+  list-style:none;
+  width:28px;
+  height:28px;
+  display:grid;
+  place-items:center;
+  border-radius:999px;
+  border:1px solid #eadfea;
+  background:#fff;
+  color:#8e8291;
+  cursor:pointer;
+  transition:border-color .15s ease, color .15s ease, background .15s ease, transform .15s ease;
+}
+.ob-v3 .ob-ajuda-popover summary::-webkit-details-marker {
+  display:none;
+}
+.ob-v3 .ob-ajuda-popover summary:hover,
+.ob-v3 .ob-ajuda-popover[open] summary {
+  color:var(--o-rosa);
+  border-color:#ffc2d8;
+  background:#fff5f9;
+  transform:translateY(-1px);
+}
+.ob-v3 .ob-ajuda-popover-caixa {
+  position:absolute;
+  z-index:40;
+  top:36px;
+  right:0;
+  width:min(290px,74vw);
+  display:grid;
+  gap:5px;
+  padding:12px 13px;
+  border:1px solid #eadfea;
+  border-radius:14px;
+  background:#fff;
+  box-shadow:0 16px 38px rgba(61,12,78,.14);
+}
+.ob-v3 .ob-ajuda-popover-caixa::before {
+  content:'';
+  position:absolute;
+  top:-6px;
+  right:9px;
+  width:11px;
+  height:11px;
+  background:#fff;
+  border-left:1px solid #eadfea;
+  border-top:1px solid #eadfea;
+  transform:rotate(45deg);
+}
+.ob-v3 .ob-ajuda-popover-caixa strong {
+  color:var(--o-ameixa);
+  font-size:.78rem;
+}
+.ob-v3 .ob-ajuda-popover-caixa span {
+  color:#746b77;
+  font-size:.72rem;
+  line-height:1.5;
+}
+
+/* ---------- regras da agenda redesenhadas ---------- */
+.ob-v3 .ob-regras-cabecalho {
+  align-items:flex-start;
+  margin-bottom:2px;
+}
+.ob-v3 .ob-regras-cabecalho > span:first-child {
+  display:grid;
+  gap:3px;
+}
+.ob-v3 .ob-regras-cabecalho > span:first-child small {
+  color:#8b828e;
+  font-size:.72rem;
+  font-weight:500;
+}
+
+.ob-v3 .ob-recomendado {
+  justify-content:space-between;
+  gap:12px;
+  margin:6px 0 2px;
+  padding:13px 14px;
+  border-radius:15px;
+  border:1px solid #ffd8e6;
+  background:#fff8fb;
+}
+.ob-v3 .ob-recomendado > span:first-child {
+  display:grid;
+  gap:4px;
+  min-width:0;
+}
+.ob-v3 .ob-recomendado small {
+  display:flex;
+  align-items:center;
+  gap:5px;
+  width:auto;
+  color:var(--o-rosa);
+  font-weight:800;
+}
+.ob-v3 .ob-recomendado .muted {
+  font-size:.73rem;
+  line-height:1.45;
+}
+
+.ob-v3 .ob-regras-grupo {
+  display:grid;
+  gap:11px;
+  padding:18px 0;
+  border-top:1px solid #f1ebf2;
+}
+.ob-v3 .ob-regras-grupo:first-of-type {
+  border-top:0;
+}
+.ob-v3 .ob-regras-rotulo {
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:16px;
+}
+.ob-v3 .ob-regras-rotulo > span:first-child {
+  display:grid;
+  gap:3px;
+}
+.ob-v3 .ob-regras-rotulo strong,
+.ob-v3 .ob-regra-toggle strong {
+  color:#322535;
+  font-size:.86rem;
+}
+.ob-v3 .ob-regras-rotulo small,
+.ob-v3 .ob-regra-toggle small {
+  color:#8d8490;
+  font-size:.72rem;
+  line-height:1.45;
+}
+
+/* escolhas de tempo viram pills de verdade */
+.ob-v3 .ob-opcoes-tempo {
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+.ob-v3 .ob-opcoes-tempo button {
+  min-height:38px;
+  padding:8px 12px;
+  border:1px solid #e8e0e9;
+  border-radius:12px;
+  background:#fff;
+  color:#665d68;
+  font:inherit;
+  font-size:.76rem;
+  font-weight:650;
+  cursor:pointer;
+  transition:.15s ease;
+}
+.ob-v3 .ob-opcoes-tempo button:hover {
+  border-color:#ffc2d8;
+  background:#fff8fb;
+}
+.ob-v3 .ob-opcoes-tempo button.ativa {
+  color:#b51b57;
+  border-color:#ff9fc0;
+  background:#fff0f6;
+  box-shadow:0 0 0 3px rgba(255,45,122,.07);
+}
+
+/* cancelamento em 3 opções claras */
+.ob-v3 .ob-opcoes-cancelamento {
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:9px;
+}
+.ob-v3 .ob-opcoes-cancelamento button {
+  min-height:62px;
+  display:grid;
+  place-items:center;
+  gap:2px;
+  padding:9px 10px;
+  border:1px solid #e8e0e9;
+  border-radius:14px;
+  background:#fff;
+  color:#6d636f;
+  font:inherit;
+  cursor:pointer;
+  transition:.15s ease;
+}
+.ob-v3 .ob-opcoes-cancelamento button strong {
+  font-size:.86rem;
+}
+.ob-v3 .ob-opcoes-cancelamento button small {
+  color:#9b929d;
+  font-size:.64rem;
+}
+.ob-v3 .ob-opcoes-cancelamento button.ativa {
+  border-color:#ff9fc0;
+  background:#fff0f6;
+  color:#b51b57;
+  box-shadow:0 0 0 3px rgba(255,45,122,.07);
+}
+
+/* switches ganham uma linha própria */
+.ob-v3 .ob-regras-linhas {
+  display:grid;
+  border-top:1px solid #f1ebf2;
+  border-bottom:1px solid #f1ebf2;
+}
+.ob-v3 .ob-regra-toggle {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  padding:16px 0;
+}
+.ob-v3 .ob-regra-toggle + .ob-regra-toggle {
+  border-top:1px solid #f1ebf2;
+}
+.ob-v3 .ob-regra-toggle > span:first-child {
+  display:grid;
+  gap:3px;
+}
+.ob-v3 .ob-regra-acao {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex:none;
+}
+
+/* confirmação em cards em vez de select */
+.ob-v3 .ob-confirmacao-opcoes {
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:9px;
+}
+.ob-v3 .ob-confirmacao-opcoes button {
+  min-height:104px;
+  display:grid;
+  grid-template-columns:auto 1fr;
+  grid-template-rows:auto auto;
+  align-content:start;
+  gap:4px 8px;
+  padding:13px;
+  text-align:left;
+  border:1px solid #e8e0e9;
+  border-radius:15px;
+  background:#fff;
+  color:#5f5662;
+  font:inherit;
+  cursor:pointer;
+  transition:.15s ease;
+}
+.ob-v3 .ob-confirmacao-opcoes button:hover {
+  border-color:#ffc2d8;
+  background:#fffafd;
+}
+.ob-v3 .ob-confirmacao-opcoes button.ativa {
+  border-color:#ff9fc0;
+  background:#fff0f6;
+  box-shadow:0 0 0 3px rgba(255,45,122,.07);
+}
+.ob-v3 .ob-radio-visual {
+  grid-row:1 / 3;
+  width:17px;
+  height:17px;
+  margin-top:1px;
+  border:1.5px solid #cfc5d1;
+  border-radius:999px;
+  background:#fff;
+  position:relative;
+}
+.ob-v3 .ob-confirmacao-opcoes button.ativa .ob-radio-visual {
+  border-color:var(--o-rosa);
+}
+.ob-v3 .ob-confirmacao-opcoes button.ativa .ob-radio-visual::after {
+  content:'';
+  position:absolute;
+  inset:3px;
+  border-radius:999px;
+  background:var(--o-rosa);
+}
+.ob-v3 .ob-confirmacao-opcoes strong {
+  color:var(--o-ameixa);
+  font-size:.79rem;
+}
+.ob-v3 .ob-confirmacao-opcoes small {
+  color:#918793;
+  font-size:.68rem;
+  line-height:1.4;
+}
+
+/* sinal segue a nova cadência visual */
+.ob-v3 .ob-sinal {
+  margin:14px 0 4px;
+  padding:14px;
+  border-radius:15px;
+  border:1px solid #eee5ef;
+  background:#fcfafc;
+}
+
+@media (max-width:780px) {
+  .ob-v3 .ob-confirmacao-opcoes,
+  .ob-v3 .ob-opcoes-cancelamento {
+    grid-template-columns:1fr;
+  }
+  .ob-v3 .ob-confirmacao-opcoes button {
+    min-height:auto;
+  }
+}
+
+@media (max-width:520px) {
+  .ob-v3.ob-step-3 .ob-fluxo-card.aberto {
+    padding:18px !important;
+  }
+  .ob-v3 .ob-regras-rotulo,
+  .ob-v3 .ob-regra-toggle {
+    gap:10px;
+  }
+  .ob-v3 .ob-ajuda-popover-caixa {
+    position:fixed;
+    top:auto;
+    left:16px;
+    right:16px;
+    bottom:18px;
+    width:auto;
+  }
+  .ob-v3 .ob-ajuda-popover-caixa::before {
+    display:none;
+  }
+}

@@ -834,6 +834,14 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
     setBlocoAberto(id)
   }
 
+  const voltarNoSubfluxo = () => {
+    const atual = numeroPorEtapa[blocoAberto] || 1
+    if (atual <= 1) { voltar(); return }
+    setDirecaoBloco('volta')
+    setConquista(null)
+    setBlocoAberto(idsSubEtapa[atual - 2])
+  }
+
   const subEtapasEspaco = [
     { id: 'identidade', numero: 1, titulo: 'Identidade', detalhe: autonoma ? 'nome, foto e capa' : 'nome, logo e fotos' },
     { id: 'contato', numero: 2, titulo: 'Contato', detalhe: 'WhatsApp e redes' },
@@ -1151,7 +1159,7 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
           </div>
         </div>
       )}
-      <Rodape voltar={voltar} avancar={avancar} salvando={salvando} bloqueado={!subfluxoConcluido} rotulo={subfluxoConcluido ? 'Continuar' : 'Complete seu espaço'} />
+      <Rodape voltar={voltarNoSubfluxo} avancar={avancar} salvando={salvando} bloqueado={!subfluxoConcluido} rotulo={subfluxoConcluido ? 'Continuar' : 'Complete seu espaço'} />
     </>
   )
 }

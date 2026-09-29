@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { UserRound, LogOut, Bell, ChevronRight, Store, CreditCard } from 'lucide-react'
+import { UserRound, LogOut, Bell, ChevronRight, Store, CreditCard, BookOpen } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useDialogo } from '../context/DialogoContext'
 import { supabase } from '../lib/supabase'
@@ -105,6 +105,7 @@ function MinhaConta({ fechar, profile, user, recarregar }) {
 }
 
 export const ITENS_ADMIN = [
+  { to: '/admin/guia', rotulo: 'Guia MIMO', Icon: BookOpen },
   { to: '/admin/salao', rotulo: 'Página do salão', Icon: Store },
   { to: '/admin/assinatura', rotulo: 'Plano e assinatura', Icon: CreditCard },
   { to: '/avisos', rotulo: 'Avisos', Icon: Bell },

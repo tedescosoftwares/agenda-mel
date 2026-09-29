@@ -1,16 +1,16 @@
 import { useEffect, useState } from 'react'
 import { Check, Sparkles, CalendarDays, QrCode, MessageCircle, Store, Heart } from 'lucide-react'
 
-// Entre o "Quase lá" e o painel (132): enquanto o banco conclui o cadastro,
-// a tela conta o que está sendo montado, passo a passo. Dura pelo menos
-// `minimo` ms mesmo que o banco responda na hora, pra não ficar chapado;
-// e se o banco demorar, segue no último passo até `pronto` virar true.
+// Fechamento da configuração: depois de serviços/equipe, esta tela prepara
+// a estrutura final antes da escolha de ativação. Nada é liberado ainda.
+// Dura pelo menos `minimo` ms mesmo que o banco responda na hora; se o banco
+// demorar, fica no último passo até `pronto` virar true.
 const PASSOS_SALAO = [
-  { Icone: Store, texto: 'Guardando os dados do salão' },
-  { Icone: CalendarDays, texto: 'Montando a agenda e os horários' },
-  { Icone: QrCode, texto: 'Preparando o link e o QR Code' },
-  { Icone: MessageCircle, texto: 'Ligando a assistente do WhatsApp' },
-  { Icone: Sparkles, texto: 'Deixando tudo com a sua cara' },
+  { Icone: Store, texto: 'Conferindo a identidade do salão' },
+  { Icone: CalendarDays, texto: 'Organizando serviços, agendas e horários' },
+  { Icone: QrCode, texto: 'Preparando a estrutura do link e do QR Code' },
+  { Icone: MessageCircle, texto: 'Preparando a assistente da MIMO' },
+  { Icone: Sparkles, texto: 'Fazendo os últimos ajustes' },
 ]
 const PASSOS_AUTONOMA = [
   { Icone: Heart, texto: 'Guardando os seus dados' },
@@ -44,8 +44,8 @@ export default function MontandoSalao({ nome, autonoma = false, pronto = false, 
       <div className="ms-card">
         <div className="ms-topo">
           <span className={'ms-orbita' + (terminou ? ' pronta' : '')}><span className="ms-nucleo">{terminou ? <Check size={26} /> : <Sparkles size={24} />}</span></span>
-          <h1>{terminou ? (autonoma ? 'Sua agenda está pronta' : 'Seu salão está pronto') : (autonoma ? 'Montando a sua agenda' : `Montando o ${nome || 'seu salão'}`)}</h1>
-          <p className="muted">{terminou ? 'Abrindo o seu painel…' : 'Leva só um instante. Estamos deixando tudo no lugar pra você entrar e usar.'}</p>
+          <h1>{terminou ? (autonoma ? 'Tudo preparado' : 'Tudo preparado para começar') : (autonoma ? 'Montando a sua agenda' : `Configurando ${nome || 'seu salão'}`)}</h1>
+          <p className="muted">{terminou ? (autonoma ? 'Só falta liberar sua agenda.' : 'Agora falta só escolher como você quer começar.') : 'Leva só um instante. Estamos encaixando as últimas peças.'}</p>
         </div>
         <ol className="ms-passos">
           {passos.map((p, i) => {

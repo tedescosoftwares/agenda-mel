@@ -58,6 +58,12 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Fluxos recorrentes antigos ficam no código só como referência para uma
+    // evolução futura, mas não podem ser acionados nesta versão.
+    if (['cartao', 'pix_automatico', 'pix_avista'].includes(String(corpo.acao))) {
+      return json({ erro: 'Recorrência desativada nesta versão. Use pagamento avulso por Pix ou cartão.' }, 410)
+    }
+
     // 2.81: ativação inicial sem recorrência. O banco calcula os 20% e
     // reserva a cobrança; esta função só conversa com o Asaas.
     if (corpo.acao === 'inicio_pix') {

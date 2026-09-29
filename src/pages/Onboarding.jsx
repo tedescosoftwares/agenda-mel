@@ -1235,7 +1235,7 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
 // O cadastro termina aqui: quantas agendas (define o plano) e o aviso de que
 // serviços, equipe e o QR vêm no painel, guiados.
 function PassoQuaseLa({ s, voltar, salvando, concluir, pronto, autonoma, gravarQuieto, setEstadoAuto }) {
-  const [n, setNum] = useState(Math.max(1, Number(s.equipe_prevista) || 4))
+  const [n, setNum] = useState(Math.max(1, Number(s.equipe_prevista) || 1))
   const setN = (v) => setNum(Math.max(1, Math.round(v)))
   const c = planoDoNegocio(autonoma ? 'autonoma' : 'salao', n)
   const inclusas = c.plano === 'pro' ? PLANOS.pro.inclusas : PLANOS.promais.inclusas
@@ -1351,44 +1351,40 @@ function PassoQuaseLa({ s, voltar, salvando, concluir, pronto, autonoma, gravarQ
       </GuiaContexto>
       <div className="ob-estrutura">
         {!autonoma && (
-            <div className="ob-card ob-card-largo ob-plano-card">
-              <div className="ob-plano-grade">
-                <div className="ob-plano-esq">
-                  <strong className="ob-card-titulo">Profissionais com agenda própria</strong>
-                  <span className="muted">Conte só quem atende clientes e precisa de agenda própria.</span>
-                  <div className="ob-contador ob-contador-grande"><button type="button" onClick={() => setN(n - 1)} aria-label="Menos"><Minus size={16} /></button><strong>{n}</strong><button type="button" onClick={() => setN(n + 1)} aria-label="Mais"><Plus size={16} /></button></div>
-                  <span className="ob-plano-agendas">{n === 1 ? '1 agenda' : `${n} agendas`} · {c.extras === 0 ? `dentro das ${inclusas} inclusas` : `${inclusas} inclusas + ${c.extras} ${c.extras === 1 ? 'extra' : 'extras'}`}</span>
-                  <div className="ob-plano-barra" aria-hidden="true">{Array.from({ length: Math.max(n, inclusas) }, (_, i) => <i key={i} className={i < n ? (i < inclusas ? 'inclusa' : 'extra') : ''} />)}</div>
-                  <small className="muted">É uma previsão. A equipe você monta no painel, e o plano acompanha as agendas ativas. Sem fidelidade.</small>
+          <div className="ob-card ob-card-largo ob-plano-simples">
+            <div className="ob-plano-simples-cabeca">
+              <span>
+                <em className="ob-etapa-mini">Só falta dimensionar sua equipe</em>
+                <strong className="ob-card-titulo">Quantas pessoas terão agenda própria na MIMO?</strong>
+                <small>Comece com quem realmente atende clientes. Recepção, administrativo e pessoas sem agenda própria não entram nessa conta.</small>
+              </span>
+              <AjudaCampo titulo="O que conta como uma agenda?">Cada profissional que recebe horários próprios na MIMO usa uma agenda. Se duas pessoas atendem clientes em horários separados, são duas agendas. Você pode adicionar ou remover profissionais depois.</AjudaCampo>
+            </div>
+
+            <div className="ob-plano-simples-miolo">
+              <div className="ob-plano-escolha">
+                <span className="ob-plano-pergunta">Quantas agendas você quer começar usando?</span>
+                <div className="ob-contador ob-contador-grande">
+                  <button type="button" onClick={() => setN(n - 1)} aria-label="Diminuir agendas" disabled={n <= 1}><Minus size={17} /></button>
+                  <strong>{n}</strong>
+                  <button type="button" onClick={() => setN(n + 1)} aria-label="Aumentar agendas"><Plus size={17} /></button>
                 </div>
-                <div className="ob-plano-dir">
-                  <div className="ob-plano-resumo">
-                    <small>Seu plano</small>
-                    <strong>{c.nome}</strong>
-                    <b>{emDinheiro(c.total)}<small> /mês</small></b>
-                    <span>{emDinheiro(c.base)} com {inclusas} agendas inclusas{c.extras > 0 && ` + ${c.extras} × ${emDinheiro(c.valorExtra)}`}</span>
-                  </div>
-                  <div className="ob-plano-gratis">
-                    <strong>7 dias grátis, sem cartão</strong>
-                    <span>Você não paga nada agora. O teste começa quando você ativar o link e o QR no painel. Depois, {emDinheiro(c.total)}/mês, sem fidelidade.</span>
-                  </div>
-                  <ul className="ob-plano-beneficios">
-                    <li><Check size={13} /> Agenda online 24h, com link e QR do salão</li>
-                    <li><Check size={13} /> Uma agenda pra cada profissional, com permissões</li>
-                    <li><Check size={13} /> Lista de espera, confirmações e lembretes pelo WhatsApp</li>
-                    <li><Check size={13} /> Sinal, comanda e repasses</li>
-                  </ul>
-                  <div className="ob-plano-comparar">
-                    <button type="button" className={'ob-plano-opcao' + (c.plano === 'pro' ? ' ativa' : '')} onClick={() => { if (n > PLANOS.pro.ate) setN(PLANOS.pro.ate) }}>
-                      <strong>MIMO Pro</strong><span>até {PLANOS.pro.ate} agendas</span><em>{emDinheiro(PLANOS.pro.base)} com {PLANOS.pro.inclusas} inclusas · {emDinheiro(PLANOS.pro.extra)} por extra</em>
-                    </button>
-                    <button type="button" className={'ob-plano-opcao' + (c.plano === 'promais' ? ' ativa' : '')} onClick={() => { if (n <= PLANOS.pro.ate) setN(PLANOS.promais.inclusas) }}>
-                      <strong>MIMO Pro+</strong><span>{PLANOS.pro.ate + 1} agendas ou mais, sem limite</span><em>{emDinheiro(PLANOS.promais.base)} com {PLANOS.promais.inclusas} inclusas · {emDinheiro(PLANOS.promais.extra)} por extra</em>
-                    </button>
-                  </div>
-                </div>
+                <span className="ob-plano-agendas">{n === 1 ? '1 profissional com agenda própria' : `${n} profissionais com agenda própria`}</span>
+              </div>
+
+              <div className="ob-plano-resultado">
+                <small>Com essa equipe, você começa no</small>
+                <strong>{c.nome}</strong>
+                <div className="ob-plano-preco"><b>{emDinheiro(c.total)}</b><span>/mês</span></div>
+                <span>{c.extras === 0 ? `${n} de ${inclusas} agendas inclusas` : `${inclusas} inclusas + ${c.extras} ${c.extras === 1 ? 'agenda extra' : 'agendas extras'}`}</span>
               </div>
             </div>
+
+            <div className="ob-plano-simples-rodape">
+              <span className="ob-plano-teste"><Sparkles size={15} /><span><strong>7 dias grátis, sem cartão.</strong><small>O teste começa só quando você ativar seu link e QR no painel.</small></span></span>
+              <AjudaCampo titulo="E se minha equipe mudar?">Sem problema. O valor acompanha as agendas ativas. Você ajusta a equipe quando quiser e a MIMO mostra o impacto antes de qualquer mudança.</AjudaCampo>
+            </div>
+          </div>
         )}
         <div className="ob-card ob-card-largo ob-depois-painel">
           <span className="ob-depois-selo"><Sparkles size={13} /> Continua no painel</span>

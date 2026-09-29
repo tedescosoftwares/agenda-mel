@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { Check, Lock, Sparkles, Users, QrCode } from 'lucide-react'
 import AdminShell from '../../components/AdminShell'
 import ProShell from '../../components/ProShell'
@@ -15,12 +15,11 @@ import { PassoServicos, PassoEquipe, ModalErro, EstadoSalvo } from '../Onboardin
 // e prende o fluxo na decisão inicial: 7 dias grátis OU primeira mensalidade.
 export default function Configurar({ para = 'admin' }) {
   const { salao: salaoAdmin, negocio, recarregarPerfil, recarregarAcesso, acesso } = useAuth()
-  const [busca] = useSearchParams()
   const base = para === 'admin' ? (salaoAdmin ?? negocio) : (negocio ?? salaoAdmin)
   const autonoma = base?.tipo === 'autonoma'
   const navigate = useNavigate()
   const [s, setS] = useState(null)
-  const [passo, setPasso] = useState(busca.get('etapa') === 'ativacao' ? 3 : 1)
+  const [passo, setPasso] = useState(1)
   const [erro, setErro] = useState('')
   const [salvando, setSalvando] = useState(false)
   const [pronto, setPronto] = useState(false)

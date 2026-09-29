@@ -5194,6 +5194,8 @@ a, button { -webkit-tap-highlight-color: transparent; }
 .pendencias-baixa { display: flex; align-items: center; gap: 0.8rem; text-decoration: none; color: inherit; margin-bottom: 0.9rem; border-left: 4px solid var(--rosa); }
 .pendencias-icone { width: 40px; height: 40px; border-radius: 12px; background: #ffe6ef; color: var(--rosa); display: grid; place-items: center; flex: none; }
 .pendencias-baixa > svg { color: var(--texto-3); flex: none; }
+/* a frase de baixo quebra linha no celular; com nowrap ela esticava o cartão (e o painel inteiro) além da tela */
+.pendencias-baixa .cliente-meta { white-space: normal; }
 .ficha-bloco { display: flex; flex-direction: column; gap: 0.15rem; }
 .ficha-rotulo { font-size: 0.72rem; align-self: center; }
 .ficha-outras { font-size: 0.75rem; line-height: 1.3; }

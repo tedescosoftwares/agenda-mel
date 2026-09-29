@@ -282,6 +282,52 @@ export async function tokenizarCartao(customer: string, cartao: CartaoEntrada, t
   return { token: String(r.creditCardToken ?? ''), final: String(r.creditCardNumber ?? '').slice(-4), bandeira: String(r.creditCardBrand ?? '') }
 }
 
+// cobrança avulsa no cartão: usada na ativação inicial. O cartão vai direto
+// ao Asaas nesta chamada e não é tokenizado nem guardado pela MIMO.
+export async function cobrarCartaoAvulso(p: {
+  customer: string
+  cartao: CartaoEntrada
+  titular: TitularEntrada
+  valorCents: number
+  descricao: string
+  ref: string
+  vencimento: string
+  ip: string
+}) {
+  const r = await asaas(chavePai(), 'POST', '/payments', {
+    customer: p.customer,
+    billingType: 'CREDIT_CARD',
+    value: Math.round(p.valorCents) / 100,
+    dueDate: p.vencimento,
+    description: p.descricao.slice(0, 500),
+    externalReference: p.ref,
+    remoteIp: p.ip,
+    creditCard: {
+      holderName: p.cartao.nome,
+      number: soDigitos(p.cartao.numero),
+      expiryMonth: p.cartao.mes.padStart(2, '0'),
+      expiryYear: p.cartao.ano.length === 2 ? '20' + p.cartao.ano : p.cartao.ano,
+      ccv: soDigitos(p.cartao.cvv),
+    },
+    creditCardHolderInfo: {
+      name: p.titular.nome,
+      email: p.titular.email || undefined,
+      cpfCnpj: soDigitos(p.titular.documento),
+      postalCode: soDigitos(p.titular.cep),
+      addressNumber: p.titular.numero || 'S/N',
+      phone: celular(p.titular.telefone),
+      mobilePhone: celular(p.titular.telefone),
+    },
+  })
+  return {
+    id: String(r.id),
+    status: String(r.status ?? 'PENDING'),
+    link: (r.invoiceUrl ?? null) as string | null,
+    final: soDigitos(p.cartao.numero).slice(-4),
+    bandeira: String(r.creditCard?.creditCardBrand ?? r.creditCardBrand ?? ''),
+  }
+}
+
 // cobra o mês no cartão tokenizado (o Asaas cobra na hora)
 export async function cobrarCartao(p: { customer: string; token: string; valorCents: number; descricao: string; ref: string; vencimento: string; ip?: string }) {
   const r = await asaas(chavePai(), 'POST', '/payments', {

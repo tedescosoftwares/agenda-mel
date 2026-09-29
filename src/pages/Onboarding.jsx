@@ -777,29 +777,61 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
     setHoras((x) => x.map((h) => (copiar.dias.has(h.weekday) ? { ...h, open: seg.open, start_time: seg.start_time, end_time: seg.end_time } : h)))
     setCopiar(null)
   }
-  const identidadeOk = Boolean(nome.trim() && (logo || fotos.length > 0))
-  const contatoOk = Boolean(loc.whatsapp.trim())
-  const localizacaoOk = Boolean(local.city.trim() && pino)
-  const horariosOk = Boolean(horas?.some((h) => h.open) && horas.every((h) => !h.open || h.start_time < h.end_time))
-  const [blocoAberto, setBlocoAberto] = useState(() => identidadeOk ? (contatoOk ? (localizacaoOk ? 'horarios' : 'localizacao') : 'contato') : 'identidade')
+  // "Tem dado" e "concluiu a etapa" são coisas diferentes.
+  // WhatsApp pode vir do cadastro e horários podem vir com padrão; isso não
+  // deve fazer o fluxo pular sozinho. A pessoa precisa chegar em cada bloco.
+  const identidadePreenchida = Boolean(nome.trim() && (logo || fotos.length > 0))
+  const contatoPreenchido = Boolean(loc.whatsapp.trim())
+  const localizacaoPreenchida = Boolean(local.city.trim() && pino)
+  const horariosPreenchidos = Boolean(horas?.some((h) => h.open) && horas.every((h) => !h.open || h.start_time < h.end_time))
+
+  const idsSubEtapa = ['identidade', 'contato', 'localizacao', 'horarios', 'regras']
+  const chaveSubfluxo = `mimo:onboarding:espaco:${s.id || 'novo'}`
+  const nivelInicial = (() => {
+    try {
+      const salvo = Number(sessionStorage.getItem(chaveSubfluxo))
+      return Number.isFinite(salvo) ? Math.min(5, Math.max(1, salvo)) : 1
+    } catch { return 1 }
+  })()
+  const [nivelLiberado, setNivelLiberado] = useState(nivelInicial)
+  const [blocoAberto, setBlocoAberto] = useState(() => idsSubEtapa[nivelInicial - 1] || 'identidade')
+
+  const prontoPorEtapa = {
+    identidade: identidadePreenchida,
+    contato: contatoPreenchido,
+    localizacao: localizacaoPreenchida,
+    horarios: horariosPreenchidos,
+    regras: true,
+  }
+  const numeroPorEtapa = { identidade: 1, contato: 2, localizacao: 3, horarios: 4, regras: 5 }
+
+  // O bloco atual libera o próximo quando fica válido, mas NÃO pula para ele.
+  // Assim a pessoa vê claramente que concluiu e escolhe continuar.
+  useEffect(() => {
+    const numero = numeroPorEtapa[blocoAberto] || 1
+    if (numero < 5 && nivelLiberado === numero && prontoPorEtapa[blocoAberto]) {
+      setNivelLiberado(numero + 1)
+    }
+  }, [blocoAberto, nivelLiberado, identidadePreenchida, contatoPreenchido, localizacaoPreenchida, horariosPreenchidos])
+
+  useEffect(() => {
+    try { sessionStorage.setItem(chaveSubfluxo, String(nivelLiberado)) } catch { /* navegador sem storage */ }
+  }, [chaveSubfluxo, nivelLiberado])
 
   const subEtapasEspaco = [
-    { id: 'identidade', numero: 1, titulo: 'Identidade', detalhe: autonoma ? 'nome, foto e capa' : 'nome, logo e fotos', feito: identidadeOk, liberado: true },
-    { id: 'contato', numero: 2, titulo: 'Contato', detalhe: 'WhatsApp e redes', feito: contatoOk, liberado: identidadeOk },
-    { id: 'localizacao', numero: 3, titulo: 'Localização', detalhe: 'endereço e mapa', feito: localizacaoOk, liberado: identidadeOk && contatoOk },
-    { id: 'horarios', numero: 4, titulo: 'Horários', detalhe: 'quando atende', feito: horariosOk, liberado: localizacaoOk },
-    { id: 'regras', numero: 5, titulo: 'Regras', detalhe: 'como a agenda funciona', feito: false, liberado: horariosOk },
-  ]
-  const indiceSubEtapa = Math.max(0, subEtapasEspaco.findIndex((x) => x.id === blocoAberto))
+    { id: 'identidade', numero: 1, titulo: 'Identidade', detalhe: autonoma ? 'nome, foto e capa' : 'nome, logo e fotos' },
+    { id: 'contato', numero: 2, titulo: 'Contato', detalhe: 'WhatsApp e redes' },
+    { id: 'localizacao', numero: 3, titulo: 'Localização', detalhe: 'endereço e mapa' },
+    { id: 'horarios', numero: 4, titulo: 'Horários', detalhe: 'quando atende' },
+    { id: 'regras', numero: 5, titulo: 'Regras', detalhe: 'como a agenda funciona' },
+  ].map((etapa) => ({
+    ...etapa,
+    feito: nivelLiberado > etapa.numero,
+    liberado: nivelLiberado >= etapa.numero,
+  }))
+  const indiceSubEtapa = nivelLiberado - 1
 
-  // Cada etapa abre a próxima quando fica pronta. Reabrir uma etapa concluída
-  // continua possível, sem o efeito empurrar a pessoa de volta automaticamente.
-  useEffect(() => { if (identidadeOk) setBlocoAberto((x) => x === 'identidade' ? 'contato' : x) }, [identidadeOk])
-  useEffect(() => { if (contatoOk) setBlocoAberto((x) => x === 'contato' ? 'localizacao' : x) }, [contatoOk])
-  useEffect(() => { if (localizacaoOk) setBlocoAberto((x) => x === 'localizacao' ? 'horarios' : x) }, [localizacaoOk])
-  useEffect(() => { if (horariosOk) setBlocoAberto((x) => x === 'horarios' ? 'regras' : x) }, [horariosOk])
-
-  useRoteiro([identidadeOk, contatoOk && localizacaoOk, horariosOk])
+  useRoteiro([nivelLiberado >= 2, nivelLiberado >= 4, nivelLiberado >= 5])
   const recomendadoAtivo = Number(pol.antecedencia_min_minutos) === RECOMENDADO.antecedencia_min_minutos && pol.politica_cancelamento === RECOMENDADO.politica_cancelamento && pol.permite_remarcar === RECOMENDADO.permite_remarcar && pol.sinal_ligado === RECOMENDADO.sinal_ligado
 
   async function avancar() {
@@ -854,12 +886,12 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
         </div>
         <p className="ob-subfluxo-aviso">
           <Info size={14} />
-          <span>Conclua o bloco atual para liberar o próximo. Os anteriores continuam abertos para você revisar quando quiser.</span>
+          <span>{nivelLiberado < 5 ? 'Preencha o bloco atual. Quando estiver pronto, o próximo é liberado — sem pular etapas.' : 'Todos os subpassos foram liberados. Você ainda pode voltar e revisar qualquer um.'}</span>
         </p>
       </div>
       <div className="ob-estrutura">
         <div
-          className={'ob-card ob-card-largo ob-fluxo-card ' + (blocoAberto === 'identidade' ? 'aberto' : 'fechado') + (identidadeOk ? ' feito' : '')}
+          className={'ob-card ob-card-largo ob-fluxo-card ' + (blocoAberto === 'identidade' ? 'aberto' : 'fechado') + (nivelLiberado > 1 ? ' feito' : '')}
           data-etapa="1"
           onClick={() => blocoAberto !== 'identidade' && setBlocoAberto('identidade')}
         >
@@ -918,9 +950,10 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
         </div>
         <div className="ob-coluna">
           <div
-            className={'ob-card ob-fluxo-card ' + (blocoAberto === 'contato' ? 'aberto' : 'fechado') + (contatoOk ? ' feito' : '') + (!identidadeOk ? ' travado' : '')}
+            className={'ob-card ob-fluxo-card ' + (blocoAberto === 'contato' ? 'aberto' : 'fechado') + (nivelLiberado > 2 ? ' feito' : '') + (nivelLiberado < 2 ? ' travado' : '')}
             data-etapa="2"
-            onClick={() => identidadeOk && blocoAberto !== 'contato' && setBlocoAberto('contato')}
+            data-bloqueio="Conclua Identidade para liberar"
+            onClick={() => nivelLiberado >= 2 && blocoAberto !== 'contato' && setBlocoAberto('contato')}
           >
             <strong className="ob-card-titulo">{autonoma ? 'Como as clientes falam com você' : 'Como as clientes falam com vocês'}</strong>
             <div className="ob-form">
@@ -947,9 +980,10 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
             </div>
           </div>
           <div
-            className={'ob-card ob-fluxo-card ' + (blocoAberto === 'localizacao' ? 'aberto' : 'fechado') + (localizacaoOk ? ' feito' : '') + (!(identidadeOk && contatoOk) ? ' travado' : '')}
+            className={'ob-card ob-fluxo-card ' + (blocoAberto === 'localizacao' ? 'aberto' : 'fechado') + (nivelLiberado > 3 ? ' feito' : '') + (nivelLiberado < 3 ? ' travado' : '')}
             data-etapa="3"
-            onClick={() => identidadeOk && contatoOk && blocoAberto !== 'localizacao' && setBlocoAberto('localizacao')}
+            data-bloqueio="Conclua Contato para liberar"
+            onClick={() => nivelLiberado >= 3 && blocoAberto !== 'localizacao' && setBlocoAberto('localizacao')}
           >
             <strong className="ob-card-titulo">{autonoma ? 'Onde você atende' : 'Localização do salão'}</strong>
             <span className="muted">É o endereço que a cliente usa no “Como chegar”.</span>
@@ -985,9 +1019,10 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
         </div>
         <div className="ob-coluna">
         <div
-          className={'ob-card ob-fluxo-card ' + (blocoAberto === 'horarios' ? 'aberto' : 'fechado') + (horariosOk ? ' feito' : '') + (!localizacaoOk ? ' travado' : '')}
+          className={'ob-card ob-fluxo-card ' + (blocoAberto === 'horarios' ? 'aberto' : 'fechado') + (nivelLiberado > 4 ? ' feito' : '') + (nivelLiberado < 4 ? ' travado' : '')}
           data-etapa="4"
-          onClick={() => localizacaoOk && blocoAberto !== 'horarios' && setBlocoAberto('horarios')}
+          data-bloqueio="Conclua Localização para liberar"
+          onClick={() => nivelLiberado >= 4 && blocoAberto !== 'horarios' && setBlocoAberto('horarios')}
         >
           <strong className="ob-card-titulo">Horário de funcionamento</strong>
           <span className="muted">{autonoma ? 'Horário padrão da sua agenda. Folgas você marca depois, em Bloqueios.' : 'Horário geral da casa. Ele não obriga toda a equipe a trabalhar igual: depois cada profissional pode ter dias e horários diferentes.'}</span>
@@ -1014,9 +1049,10 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
           )}
         </div>
         <div
-          className={'ob-card ob-fluxo-card ' + (blocoAberto === 'regras' ? 'aberto' : 'fechado') + (!horariosOk ? ' travado' : '')}
+          className={'ob-card ob-fluxo-card ' + (blocoAberto === 'regras' ? 'aberto' : 'fechado') + (nivelLiberado < 5 ? ' travado' : '')}
           data-etapa="5"
-          onClick={() => horariosOk && blocoAberto !== 'regras' && setBlocoAberto('regras')}
+          data-bloqueio="Conclua Horários para liberar"
+          onClick={() => nivelLiberado >= 5 && blocoAberto !== 'regras' && setBlocoAberto('regras')}
         >
           <span className="ob-card-linha"><strong className="ob-card-titulo">Regras da agenda</strong>{recomendadoAtivo && <em className="ob-badge">Configuração recomendada</em>}</span>
           <div className="ob-inline-explica"><CalendarCheck size={14} /><span><strong>Isso controla o que a cliente consegue fazer sozinha.</strong> Antecedência, cancelamento, reagendamento e confirmação viram regras automáticas no agendamento.</span></div>

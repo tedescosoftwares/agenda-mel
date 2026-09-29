@@ -783,6 +783,15 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
   const horariosOk = Boolean(horas?.some((h) => h.open) && horas.every((h) => !h.open || h.start_time < h.end_time))
   const [blocoAberto, setBlocoAberto] = useState(() => identidadeOk ? (contatoOk ? (localizacaoOk ? 'horarios' : 'localizacao') : 'contato') : 'identidade')
 
+  const subEtapasEspaco = [
+    { id: 'identidade', numero: 1, titulo: 'Identidade', detalhe: autonoma ? 'nome, foto e capa' : 'nome, logo e fotos', feito: identidadeOk, liberado: true },
+    { id: 'contato', numero: 2, titulo: 'Contato', detalhe: 'WhatsApp e redes', feito: contatoOk, liberado: identidadeOk },
+    { id: 'localizacao', numero: 3, titulo: 'Localização', detalhe: 'endereço e mapa', feito: localizacaoOk, liberado: identidadeOk && contatoOk },
+    { id: 'horarios', numero: 4, titulo: 'Horários', detalhe: 'quando atende', feito: horariosOk, liberado: localizacaoOk },
+    { id: 'regras', numero: 5, titulo: 'Regras', detalhe: 'como a agenda funciona', feito: false, liberado: horariosOk },
+  ]
+  const indiceSubEtapa = Math.max(0, subEtapasEspaco.findIndex((x) => x.id === blocoAberto))
+
   // Cada etapa abre a próxima quando fica pronta. Reabrir uma etapa concluída
   // continua possível, sem o efeito empurrar a pessoa de volta automaticamente.
   useEffect(() => { if (identidadeOk) setBlocoAberto((x) => x === 'identidade' ? 'contato' : x) }, [identidadeOk])
@@ -819,6 +828,34 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
         <GuiaContexto Icone={Wand2} titulo="Não precisa acertar tudo de primeira">
           Fotos, contatos, localização, horários e regras podem ser ajustados depois em Ajustes. Aqui a ideia é deixar uma boa base pronta.
         </GuiaContexto>
+      </div>
+      <div className="ob-subfluxo" aria-label="Etapas de configuração do seu espaço">
+        <div className="ob-subfluxo-topo">
+          <span><strong>Seu espaço</strong> · 5 passos rápidos</span>
+          <small>Passo {indiceSubEtapa + 1} de 5</small>
+        </div>
+        <div className="ob-subfluxo-progresso" aria-hidden="true"><i style={{ width: `${((indiceSubEtapa + 1) / 5) * 100}%` }} /></div>
+        <div className="ob-subfluxo-itens">
+          {subEtapasEspaco.map((etapa) => {
+            const atual = blocoAberto === etapa.id
+            return (
+              <button
+                key={etapa.id}
+                type="button"
+                className={(atual ? 'atual ' : '') + (etapa.feito ? 'feito ' : '') + (!etapa.liberado ? 'travado' : '')}
+                disabled={!etapa.liberado}
+                onClick={() => etapa.liberado && setBlocoAberto(etapa.id)}
+              >
+                <span className="ob-subfluxo-num">{etapa.feito ? <Check size={13} /> : etapa.numero}</span>
+                <span><strong>{etapa.titulo}</strong><small>{etapa.detalhe}</small></span>
+              </button>
+            )
+          })}
+        </div>
+        <p className="ob-subfluxo-aviso">
+          <Info size={14} />
+          <span>Conclua o bloco atual para liberar o próximo. Os anteriores continuam abertos para você revisar quando quiser.</span>
+        </p>
       </div>
       <div className="ob-estrutura">
         <div
@@ -878,10 +915,6 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
               </div>
             </div>
           </div>
-        </div>
-        <div className="ob-ponte">
-          <span className="ob-ponte-icone"><Sparkles size={16} /></span>
-          <span><strong>{nome.trim() ? `${nome.trim()} já tem cara.` : 'Nome e fotos prontos?'}</strong> Agora, como as clientes chegam até {autonoma ? 'você' : 'vocês'}: contatos, endereço e horários.</span>
         </div>
         <div className="ob-coluna">
           <div

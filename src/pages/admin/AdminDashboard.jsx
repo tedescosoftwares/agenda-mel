@@ -11,13 +11,13 @@ import { useAuth } from '../../context/AuthContext'
 import { formatarCents, formatarReaisCurto, formatarPct, mesAtual, nomeDoMes } from '../../lib/numeros'
 import GraficoLinha from '../../components/GraficoLinha'
 import { toISODate } from '../../lib/format'
-import { CalendarPlus, Users, Sparkles, MessageCircle, FileSignature, ArrowRight, CalendarDays, TrendingUp, Clock3, QrCode, Settings2, X, PlayCircle, ChevronRight } from 'lucide-react'
+import { CalendarPlus, Users, Sparkles, MessageCircle, FileSignature, ArrowRight, CalendarDays, TrendingUp, Clock3, QrCode, Settings2, X, PlayCircle, ChevronRight, Activity, CircleDot, Rocket, BellRing, BookOpen } from 'lucide-react'
 
 // Dashboard do salão (tela 23): o dia de hoje em quatro números, o
 // faturamento do mês dia a dia, o que está esperando resposta, e os
 // atalhos para o que se faz todo dia.
 export default function AdminDashboard() {
-  const { salao } = useAuth()
+  const { salao, profile } = useAuth()
   const [hoje, setHoje] = useState({ atendimentos: 0, faturamento: 0 })
   const [pendentes, setPendentes] = useState(0)
   const [naFila, setNaFila] = useState(0)
@@ -71,6 +71,60 @@ export default function AdminDashboard() {
   const hojeTexto = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })
   const temMovimento = hoje.atendimentos > 0 || totalMes > 0 || pendentes > 0 || naFila > 0
 
+  const salaoAtivo = Boolean(salao?.ativado_em)
+  const fotosSalao = Array.isArray(salao?.fotos) ? salao.fotos : []
+  const capaSalao = fotosSalao[0] || salao?.cover_url || salao?.foto_capa_url || ''
+  const logoSalao = salao?.logo_url || ''
+  const iniciaisSalao = nomeSalao.split(/\s+/).filter(Boolean).slice(0,2).map((x) => x[0]).join('').toUpperCase()
+  const nomePessoa = profile?.full_name?.split(' ')?.[0] || ''
+  const horaAgora = new Date().getHours()
+  const saudacao = horaAgora < 12 ? 'Bom dia' : horaAgora < 18 ? 'Boa tarde' : 'Boa noite'
+
+  const agoraMimo = pendentes > 0
+    ? {
+        icone: <BellRing size={19} />,
+        selo: 'Precisa da sua atenção',
+        titulo: pendentes === 1 ? 'Tem 1 pedido esperando confirmação.' : `Tem ${pendentes} pedidos esperando confirmação.`,
+        texto: 'Responder rápido deixa a agenda redonda e a cliente segura de que está tudo certo.',
+        acao: 'Ver pedidos na agenda',
+        para: '/admin/agenda',
+      }
+    : naFila > 0
+      ? {
+          icone: <Users size={19} />,
+          selo: 'Oportunidade agora',
+          titulo: naFila === 1 ? 'Tem 1 cliente esperando uma vaga.' : `Tem ${naFila} clientes esperando uma vaga.`,
+          texto: 'Se algum horário abrir, sua fila já te mostra quem pode ocupar esse espaço.',
+          acao: 'Abrir agenda',
+          para: '/admin/agenda',
+        }
+      : hoje.atendimentos > 0
+        ? {
+            icone: <Activity size={19} />,
+            selo: 'Seu salão está em movimento',
+            titulo: hoje.atendimentos === 1 ? 'Você tem 1 atendimento hoje.' : `Você tem ${hoje.atendimentos} atendimentos hoje.`,
+            texto: `${formatarCents(hoje.faturamento)} em serviços já estão na agenda de hoje.`,
+            acao: 'Acompanhar meu dia',
+            para: '/admin/agenda',
+          }
+        : salaoAtivo
+          ? {
+              icone: <Sparkles size={19} />,
+              selo: 'Tudo tranquilo por aqui',
+              titulo: 'Sua agenda está pronta para receber clientes.',
+              texto: 'Hoje ainda está livre. É um bom momento para compartilhar seu link ou revisar seus serviços.',
+              acao: 'Ver meu salão',
+              para: '/admin/salao',
+            }
+          : {
+              icone: <Rocket size={19} />,
+              selo: 'Sua MIMO está tomando forma',
+              titulo: 'A base está pronta. Agora vamos colocar seu salão para rodar.',
+              texto: 'Cadastre serviços, organize sua equipe e então libere o link e o QR Code para as clientes.',
+              acao: 'Continuar configuração',
+              para: '/admin/configurar',
+            }
+
   return (
     <AdminShell amplo>
       <div className="admin-home">
@@ -78,11 +132,16 @@ export default function AdminDashboard() {
 
         <section className="admin-home-hero" data-tour="inicio">
           <div className="admin-home-hero-copy">
-            <span className="admin-home-eyebrow"><Sparkles size={13} /> Seu salão na MIMO</span>
+            <span className="admin-home-eyebrow"><Sparkles size={13} /> {saudacao}{nomePessoa ? `, ${nomePessoa}` : ''}</span>
             <h1>{temMovimento ? <>Tudo acontecendo em <strong>{primeiraPalavra}</strong>, num só lugar.</> : <>Seu salão ganhou um <strong>centro de comando.</strong></>}</h1>
             <p>{temMovimento
               ? 'Agenda, equipe, clientes e números organizados para você bater o olho e saber o que precisa de atenção.'
               : 'Você já montou a base. Agora faltam poucos passos para começar a receber agendamentos de verdade.'}</p>
+            <div className="admin-home-status">
+              <span className={salaoAtivo ? 'online' : 'configurando'}><i></i>{salaoAtivo ? 'Agenda ativa' : 'Em configuração'}</span>
+              <span><CalendarDays size={12} /> {hoje.atendimentos} {hoje.atendimentos === 1 ? 'horário hoje' : 'horários hoje'}</span>
+              <span><QrCode size={12} /> {salaoAtivo ? 'Link disponível' : 'Link após ativação'}</span>
+            </div>
             <div className="admin-home-hero-acoes">
               <Link to="/admin/agenda" className="btn btn-primary"><CalendarDays size={16} /> Abrir agenda</Link>
               <Link to="/admin/configurar" className="btn btn-ghost"><Settings2 size={16} /> Continuar configuração</Link>
@@ -90,6 +149,14 @@ export default function AdminDashboard() {
           </div>
 
           <div className="admin-home-hoje">
+            <div className="admin-home-negocio-mini">
+              <span className="admin-home-negocio-avatar">
+                {logoSalao ? <img src={logoSalao} alt="" /> : <b>{iniciaisSalao || 'M'}</b>}
+              </span>
+              <span><small>Você está vendo</small><strong>{nomeSalao}</strong></span>
+              <i className={salaoAtivo ? 'ativo' : ''}></i>
+            </div>
+            {capaSalao && <div className="admin-home-capa-mini" style={{ backgroundImage:`linear-gradient(180deg,rgba(45,8,57,.08),rgba(45,8,57,.58)),url("${capaSalao}")` }} />}
             <div className="admin-home-hoje-topo">
               <span>Hoje</span>
               <small>{hojeTexto}</small>
@@ -100,6 +167,24 @@ export default function AdminDashboard() {
               <strong>{formatarCents(hoje.faturamento)}</strong>
             </div>
             <Link to="/admin/agenda" className="admin-home-hoje-link">Ver agenda de hoje <ArrowRight size={14} /></Link>
+          </div>
+        </section>
+
+        <section className="admin-home-pulso">
+          <div className="admin-home-pulso-principal">
+            <span className="admin-home-pulso-icone">{agoraMimo.icone}<i></i></span>
+            <div>
+              <span className="admin-home-pulso-selo"><CircleDot size={11} /> Agora na MIMO</span>
+              <small>{agoraMimo.selo}</small>
+              <strong>{agoraMimo.titulo}</strong>
+              <p>{agoraMimo.texto}</p>
+            </div>
+            <Link to={agoraMimo.para} className="admin-home-pulso-acao">{agoraMimo.acao} <ArrowRight size={14} /></Link>
+          </div>
+          <div className="admin-home-pulso-trilha" aria-label="Estado atual do salão">
+            <span className={salaoAtivo ? 'feito' : 'atual'}><i></i><span><strong>{salaoAtivo ? 'Salão online' : 'Preparando salão'}</strong><small>{salaoAtivo ? 'Clientes já podem entrar pelo seu link.' : 'Finalize os pontos essenciais para liberar sua vitrine.'}</small></span></span>
+            <span className={pendentes > 0 ? 'atual' : ''}><i></i><span><strong>{pendentes > 0 ? `${pendentes} ${pendentes === 1 ? 'pedido pendente' : 'pedidos pendentes'}` : 'Pedidos em dia'}</strong><small>{pendentes > 0 ? 'Tem cliente esperando sua confirmação.' : 'Nada esperando resposta agora.'}</small></span></span>
+            <span className={naFila > 0 ? 'atual' : ''}><i></i><span><strong>{naFila > 0 ? `${naFila} na fila de espera` : 'Fila tranquila'}</strong><small>{naFila > 0 ? 'Há clientes de olho numa oportunidade.' : 'Nenhuma cliente aguardando vaga.'}</small></span></span>
           </div>
         </section>
 
@@ -172,6 +257,7 @@ export default function AdminDashboard() {
                 <Link to="/admin/equipe"><span><Users size={18} /></span><strong>Equipe</strong><small>Profissionais e agendas</small><ArrowRight size={14} /></Link>
                 <Link to="/admin/servicos"><span><Sparkles size={18} /></span><strong>Serviços</strong><small>Preços, duração e categorias</small><ArrowRight size={14} /></Link>
                 <Link to="/admin/whatsapp"><span><MessageCircle size={18} /></span><strong>WhatsApp</strong><small>Mensagens e automações</small><ArrowRight size={14} /></Link>
+                <Link to="/admin/guia"><span><BookOpen size={18} /></span><strong>Guia MIMO</strong><small>Vídeos rápidos para aprender o sistema</small><ArrowRight size={14} /></Link>
               </div>
             </section>
 

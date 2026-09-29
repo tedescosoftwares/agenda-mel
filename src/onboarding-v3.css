@@ -806,3 +806,142 @@
     grid-template-columns:1fr;
   }
 }
+
+
+/* ---------- Seu espaço como fluxo progressivo ---------- */
+.ob-v3 .ob-fluxo-card {
+  position:relative;
+  overflow:hidden;
+  transition:
+    opacity .18s ease,
+    transform .18s ease,
+    border-color .18s ease,
+    box-shadow .18s ease,
+    background .18s ease,
+    max-height .28s ease;
+}
+
+.ob-v3 .ob-fluxo-card::before {
+  content:attr(data-etapa);
+  position:absolute;
+  top:18px;
+  right:18px;
+  width:28px;
+  height:28px;
+  display:grid;
+  place-items:center;
+  border-radius:999px;
+  background:#fff0f6;
+  color:var(--o-rosa);
+  font-size:.68rem;
+  font-weight:800;
+  border:1px solid #ffd3e2;
+  z-index:2;
+}
+
+.ob-v3 .ob-fluxo-card.feito::before {
+  content:'✓';
+  background:#ecfdf3;
+  color:#0c7a50;
+  border-color:#c9f2de;
+}
+
+.ob-v3 .ob-fluxo-card.fechado:not(.travado) {
+  cursor:pointer;
+  padding-top:20px;
+  padding-bottom:20px;
+  box-shadow:none;
+  background:#fff;
+}
+
+.ob-v3 .ob-fluxo-card.fechado:not(.travado):hover {
+  border-color:#ffc2d8;
+  box-shadow:0 8px 24px rgba(61,12,78,.05);
+  transform:translateY(-1px);
+}
+
+/* No fechado mostramos só o cabeçalho + primeira linha explicativa */
+.ob-v3 .ob-fluxo-card.fechado > *:not(.ob-card-titulo):not(.ob-card-linha):not(.muted) {
+  display:none !important;
+}
+.ob-v3 .ob-fluxo-card.fechado > .muted {
+  display:block !important;
+  max-width:72ch;
+  margin-top:4px;
+  padding-right:54px;
+}
+.ob-v3 .ob-fluxo-card.fechado .ob-card-linha > *:not(.ob-card-titulo) {
+  display:none !important;
+}
+.ob-v3 .ob-fluxo-card.fechado .ob-card-titulo {
+  padding-right:54px;
+}
+
+.ob-v3 .ob-fluxo-card.aberto {
+  border-color:#ffd3e2;
+  box-shadow:0 16px 38px rgba(61,12,78,.075);
+  background:linear-gradient(180deg,#fff 0%,#fffdfd 100%);
+}
+
+.ob-v3 .ob-fluxo-card.aberto::after {
+  content:'Agora';
+  position:absolute;
+  top:23px;
+  right:54px;
+  color:var(--o-rosa);
+  font-size:.62rem;
+  font-weight:800;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+
+.ob-v3 .ob-fluxo-card.travado {
+  opacity:.46;
+  box-shadow:none;
+  background:#fbf9fb;
+  cursor:not-allowed;
+}
+.ob-v3 .ob-fluxo-card.travado::before {
+  background:#f4f1f5;
+  color:#aaa2ad;
+  border-color:#e8e1ea;
+}
+
+.ob-v3 .ob-fluxo-card.travado > *:not(.ob-card-titulo):not(.ob-card-linha):not(.muted) {
+  display:none !important;
+}
+.ob-v3 .ob-fluxo-card.travado > .muted {
+  display:block !important;
+  margin-top:4px;
+  padding-right:54px;
+}
+.ob-v3 .ob-fluxo-card.travado .ob-card-linha > *:not(.ob-card-titulo) {
+  display:none !important;
+}
+
+.ob-v3.ob-step-3 .ob-ponte {
+  margin:2px 0;
+}
+
+/* ao concluir uma etapa, a ponte entre identidade e contato deixa de competir */
+.ob-v3.ob-step-3 .ob-fluxo-card.feito.fechado {
+  border-color:#dff3e9;
+  background:#fff;
+}
+
+@media (max-width:520px) {
+  .ob-v3 .ob-fluxo-card::before {
+    top:15px;
+    right:15px;
+    width:26px;
+    height:26px;
+  }
+  .ob-v3 .ob-fluxo-card.aberto::after {
+    display:none;
+  }
+  .ob-v3 .ob-fluxo-card.fechado > .muted,
+  .ob-v3 .ob-fluxo-card.travado > .muted,
+  .ob-v3 .ob-fluxo-card.fechado .ob-card-titulo {
+    padding-right:44px;
+  }
+}

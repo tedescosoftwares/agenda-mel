@@ -184,7 +184,7 @@ export default function Configurar({ para = 'admin' }) {
             {passo === 1 && <PassoServicos {...props} />}
             {passo === 2 && <PassoEquipe {...props} />}
             {passo === 3 && !montando && mostrarEscolha && !s.ativado_em && (
-              <AtivarSalao s={s} embutido onErro={setErro} onAtivado={ativado} />
+              <AtivarSalao s={s} embutido onAtivado={ativado} />
             )}
             {passo === 3 && s.ativado_em && (
               <div className="cfg-ja-ativo">

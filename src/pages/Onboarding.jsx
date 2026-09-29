@@ -250,6 +250,15 @@ const Selo = ({ publico }) => publico
   ? <span className="ob-selo publico" title="Aparece na página do salão e no app da cliente"><Eye size={11} /> Visível para clientes</span>
   : <span className="ob-selo interno" title="Só você e a MIMO veem"><Lock size={11} /> Uso administrativo</span>
 
+function GuiaContexto({ Icone = Info, titulo, children, tom = '' }) {
+  return (
+    <div className={'ob-guia' + (tom ? ' ' + tom : '')}>
+      <span className="ob-guia-icone"><Icone size={16} /></span>
+      <span><strong>{titulo}</strong><small>{children}</small></span>
+    </div>
+  )
+}
+
 // ---------- 1 · Tipo de conta ------------------------------------------------------
 function PassoTipo({ s, setS, seguir, salvando, setErro }) {
   const [tipo, setTipo] = useState(s.tipo ?? 'salao')
@@ -268,6 +277,9 @@ function PassoTipo({ s, setS, seguir, salvando, setErro }) {
     <>
       <h1 className="ob-titulo">Como você trabalha hoje?</h1>
       <p className="ob-sub">Escolha a opção que mais combina com a sua rotina. Se isso mudar, você pode ajustar depois.</p>
+      <GuiaContexto Icone={Users} titulo="Essa escolha muda só a forma de administrar">
+        No salão, você controla várias agendas e envia o acesso da equipe. Na autônoma, a MIMO fica enxuta e mostra apenas a sua agenda.
+      </GuiaContexto>
       <div className="ob-tipos">
         {[
           { id: 'salao', foto: 'equipe', pilula: 'Salão · MIMO Pro', titulo: 'Tenho salão e equipe', texto: 'Para quem organiza a agenda de duas ou mais profissionais.', bloco: 'Tudo em um só lugar', itens: ['equipe e agendas', 'serviços e horários', 'clientes', 'permissões', 'rotina do salão'], destaque: 'Você configura tudo primeiro e depois envia o acesso de cada profissional já com a agenda pronta.', preco: emDinheiro(pro.base), sub: `/mês até ${pro.inclusas} profissionais · ${emDinheiro(pro.extra)} por agenda a mais`, promais: <><b>{PLANOS.promais.nome}</b> a partir de {PLANOS.promais.inclusas} profissionais: <strong>{emDinheiro(PLANOS.promais.base)}/mês</strong> + {emDinheiro(PLANOS.promais.extra)} por profissional a partir da {PLANOS.promais.inclusas + 1}ª. O plano se ajusta sozinho pelo número de agendas, no passo 3.</> },
@@ -548,6 +560,14 @@ function PassoDados({ s, seguir, voltar, salvando, setErro, user, autonoma, publ
     <>
       <h1 className="ob-titulo">Seus dados</h1>
       <p className="ob-sub">{publico ? 'Essas informações identificam sua conta e ficam protegidas na MIMO.' : 'Essas informações identificam seu negócio e ficam protegidas na MIMO.'}</p>
+      <div className="ob-guia-grade">
+        <GuiaContexto Icone={Lock} titulo="Isso não vira sua vitrine">
+          CNPJ, razão social, CPF e endereço fiscal servem para cadastro e administração. No próximo passo você escolhe o nome, fotos, contato e endereço que a cliente verá.
+        </GuiaContexto>
+        <GuiaContexto Icone={MessageCircle} titulo="E-mail e WhatsApp têm funções diferentes" tom="rosa">
+          O e-mail é o acesso à conta. O WhatsApp recebe avisos importantes e pode ser diferente do número comercial que aparecerá para suas clientes.
+        </GuiaContexto>
+      </div>
       <div className="ob-aviso-etapa"><span className="ob-aviso-etapa-icone"><Info size={16} /></span><span><strong>Aqui ficam apenas os dados de cadastro.</strong> {autonoma ? 'Foto, contatos, localização e o que aparece na sua agenda' : 'Nome, fotos, contatos, localização e o que aparece para as clientes'} você configura na próxima etapa.</span></div>
       <div className="ob-dados">
         <div className="ob-form">
@@ -555,6 +575,7 @@ function PassoDados({ s, seguir, voltar, salvando, setErro, user, autonoma, publ
           <span className="ob-grupo-selo"><Selo /></span>
           <div className="ob-bloco">
             <span className="ob-bloco-titulo">Identificação do negócio <small>não aparece para clientes</small></span>
+            <p className="ob-bloco-ajuda">{comCnpj ? 'Digite o CNPJ e a MIMO tenta preencher os dados da Receita para você.' : 'Ainda trabalha como pessoa física? Sem problema: use seu CPF agora e atualize para CNPJ quando quiser.'}</p>
             {comCnpj ? (
               <>
               <label>CNPJ <b>*</b><span className="muted">(buscamos os dados automaticamente)</span><input value={formatarCnpj(f.cnpj)} onChange={(e) => porCnpj(e.target.value)} placeholder="12.345.678/0001-90" inputMode="numeric" autoComplete="off" autoFocus={!f.cnpj} />{cnpjInfo === 'buscando' ? <small className="muted">consultando a Receita…</small> : cnpjInfo.startsWith('ok:') ? <small className="ob-cnpj-ok">✓ {cnpjInfo.slice(3)}</small> : cnpjInfo.startsWith('erro:') ? <small className="ob-cnpj-erro">{cnpjInfo.slice(5)}</small> : null}</label>
@@ -778,6 +799,14 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
     <>
       <h1 className="ob-titulo">{autonoma ? 'Dê cara à sua agenda' : 'Dê cara ao seu salão'}</h1>
       <p className="ob-sub">{autonoma ? 'Sua foto, contatos e onde você atende: é o que suas clientes vão encontrar na MIMO.' : 'Nome, fotos, contatos e endereço: é o que suas clientes vão encontrar na MIMO.'}</p>
+      <div className="ob-guia-grade ob-guia-grade-3">
+        <GuiaContexto Icone={Eye} titulo="Agora estamos montando sua vitrine" tom="rosa">
+          Tudo que você preencher aqui ajuda a formar a página que a cliente abre antes de escolher serviço e horário. A prévia muda junto com você.
+        </GuiaContexto>
+        <GuiaContexto Icone={Wand2} titulo="Não precisa acertar tudo de primeira">
+          Fotos, contatos, localização, horários e regras podem ser ajustados depois em Ajustes. Aqui a ideia é deixar uma boa base pronta.
+        </GuiaContexto>
+      </div>
       <div className="ob-estrutura">
         <div className="ob-card ob-card-largo">
           <strong className="ob-card-titulo">{autonoma ? 'Sua imagem e seu espaço' : 'Nome e fotos'}</strong>
@@ -826,7 +855,7 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
                 </div>
                 <div className="ob-previa-corpo">
                   <strong>{nome || (autonoma ? 'Sua agenda' : 'Seu salão')}</strong>
-                  <span>{[s.bairro, s.city].filter(Boolean).join(' • ') || 'Bairro • Cidade'}</span>
+                  <span>{[local.bairro, local.city].filter(Boolean).join(' • ') || 'Bairro • Cidade'}</span>
                   <div className="ob-previa-botoes"><span className="ob-preview-botao">Ver serviços</span><span className="ob-previa-botao-2"><MapPin size={11} /> Como chegar</span></div>
                 </div>
               </div>
@@ -866,6 +895,7 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
           <div className="ob-card">
             <strong className="ob-card-titulo">{autonoma ? 'Onde você atende' : 'Localização do salão'}</strong>
             <span className="muted">É o endereço que a cliente usa no “Como chegar”.</span>
+            <div className="ob-inline-explica"><MapPin size={14} /><span><strong>O pino é importante.</strong> Ele evita mandar a cliente para o número errado ou para o centro da cidade quando ela abrir o mapa.</span></div>
             <div className="ob-seg" role="radiogroup" aria-label="Qual endereço">
               <button type="button" role="radio" aria-checked={loc.endereco_igual} className={loc.endereco_igual ? 'ativa' : ''} onClick={() => setLoc((x) => ({ ...x, endereco_igual: true }))}>{comCnpj ? 'Usar o endereço fiscal' : 'Usar o endereço do cadastro'}</button>
               <button type="button" role="radio" aria-checked={!loc.endereco_igual} className={!loc.endereco_igual ? 'ativa' : ''} onClick={() => setLoc((x) => ({ ...x, endereco_igual: false }))}>Outro endereço</button>
@@ -898,7 +928,7 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
         <div className="ob-coluna">
         <div className="ob-card">
           <strong className="ob-card-titulo">Horário de funcionamento</strong>
-          <span className="muted">{autonoma ? 'Horário padrão da sua agenda. Folgas você marca depois, em Bloqueios.' : 'Horário padrão do salão. Depois você ajusta por profissional.'}</span>
+          <span className="muted">{autonoma ? 'Horário padrão da sua agenda. Folgas você marca depois, em Bloqueios.' : 'Horário geral da casa. Ele não obriga toda a equipe a trabalhar igual: depois cada profissional pode ter dias e horários diferentes.'}</span>
           {!horas ? <p className="muted">Carregando…</p> : (
             <div className="ob-horas">
               {horas.map((h) => (
@@ -923,6 +953,7 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
         </div>
         <div className="ob-card">
           <span className="ob-card-linha"><strong className="ob-card-titulo">Regras da agenda</strong>{recomendadoAtivo && <em className="ob-badge">Configuração recomendada</em>}</span>
+          <div className="ob-inline-explica"><CalendarCheck size={14} /><span><strong>Isso controla o que a cliente consegue fazer sozinha.</strong> Antecedência, cancelamento, reagendamento e confirmação viram regras automáticas no agendamento.</span></div>
           {!recomendadoAtivo && (
             <div className="ob-recomendado">
               <small><Wand2 size={12} /> Sugestão para começar</small>
@@ -933,7 +964,7 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
           <label className="ob-campo">Com quanto tempo de antecedência a cliente pode agendar?<select value={pol.antecedencia_min_minutos} onChange={(e) => p('antecedencia_min_minutos')(e.target.value)}>{ANTECEDENCIAS.map(([v, r]) => <option key={v} value={v}>{r}</option>)}</select><small className="muted">Com 1 hora, um horário das 15h pode ser marcado até as 14h.</small></label>
           <label className="ob-campo">Cancelamento gratuito até<select value={pol.politica_cancelamento} onChange={(e) => p('politica_cancelamento')(e.target.value)}>{CANCELAMENTO.map(([v, r]) => <option key={v} value={v}>{r} antes</option>)}</select></label>
           <div className="ob-toggle"><span>Permitir que a cliente reagende</span><label className="switch"><input type="checkbox" checked={pol.permite_remarcar} onChange={(e) => p('permite_remarcar')(e.target.checked)} /><span></span></label></div>
-          <div className="ob-toggle"><span>Cobrar sinal na reserva <span className="muted">(opcional)</span></span><label className="switch"><input type="checkbox" checked={pol.sinal_ligado} onChange={(e) => { setTocouSinal(true); p('sinal_ligado')(e.target.checked) }} /><span></span></label></div>
+          <div className="ob-toggle"><span>Cobrar sinal na reserva <span className="muted">(opcional · pode deixar desligado agora)</span></span><label className="switch"><input type="checkbox" checked={pol.sinal_ligado} onChange={(e) => { setTocouSinal(true); p('sinal_ligado')(e.target.checked) }} /><span></span></label></div>
           {tocouSinal && !pol.sinal_ligado && (s.pagamento_modo ?? 'nao') !== 'nao' && <small className="ob-aviso-sinal">Desligar aqui desliga o recebimento pelo app do salão inteiro, o mesmo de Ajustes › Receber pelo app.</small>}
           {pol.sinal_ligado && (
             <div className="ob-sinal">
@@ -969,6 +1000,11 @@ function PassoQuaseLa({ s, voltar, salvando, concluir, pronto, autonoma, gravarQ
     <>
       <h1 className="ob-titulo">Quase lá</h1>
       <p className="ob-sub">{autonoma ? 'Sua agenda já tem cara. Falta só entrar no painel e montar os serviços.' : 'Seu salão já tem cara. Falta dizer quantas agendas e entrar no painel.'}</p>
+      <GuiaContexto Icone={Check} titulo={autonoma ? 'Você não tem mensalidade' : 'Você ainda não está contratando nada agora'} tom="rosa">
+        {autonoma
+          ? 'Sua agenda individual é gratuita. Você entra no painel, cadastra os serviços e libera o link.'
+          : 'A quantidade abaixo serve para estimar o plano. O teste só começa quando você ativar o link e o QR no painel, e as agendas podem ser ajustadas depois.'}
+      </GuiaContexto>
       <div className="ob-estrutura">
         {!autonoma && (
             <div className="ob-card ob-card-largo ob-plano-card">
@@ -1014,6 +1050,12 @@ function PassoQuaseLa({ s, voltar, salvando, concluir, pronto, autonoma, gravarQ
           <span className="ob-depois-selo"><Sparkles size={13} /> Continua no painel</span>
           <strong className="ob-card-titulo">{autonoma ? 'Os serviços você monta já dentro do painel' : 'Serviços e equipe você monta já dentro do painel'}</strong>
           <span className="muted">Com calma, do seu jeito, e com a gente guiando. O painel abre com a configuração pronta pra continuar.</span>
+          <div className="ob-fluxo-depois" aria-label="O que acontece depois">
+            <span><b>1</b> Entrar no painel</span><i>→</i>
+            <span><b>2</b> Cadastrar serviços</span><i>→</i>
+            {!autonoma && <><span><b>3</b> Montar equipe</span><i>→</i></>}
+            <span><b>{autonoma ? '3' : '4'}</b> Liberar link e QR</span>
+          </div>
           <div className="ob-depois-lista">
             <div className="ob-depois-item"><span className="ob-depois-icone"><Sparkles size={18} /></span><strong>Serviços</strong><small>Nome, duração e preço. Com sugestões por categoria pra ir rápido.</small></div>
             {!autonoma && <div className="ob-depois-item"><span className="ob-depois-icone"><Users size={18} /></span><strong>Equipe</strong><small>Cada profissional com os seus serviços e horários. Ela recebe um link e entra com tudo pronto.</small></div>}

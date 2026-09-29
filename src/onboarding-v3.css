@@ -1510,3 +1510,73 @@
   from { opacity:0; transform:translateX(-18px) translateY(8px) scale(.99); }
   to   { opacity:1; transform:none; }
 }
+
+
+/* ---------- acabamento visual dos estados do subfluxo ---------- */
+/* O card atual já se destaca pela borda/sombra. Removemos o selo "AGORA",
+   que competia com títulos longos e com o número da etapa. */
+.ob-v3 .ob-fluxo-card.aberto::after {
+  content:none !important;
+}
+
+/* Reserva espaço suficiente para o número/check do canto sem encostar no título. */
+.ob-v3 .ob-fluxo-card.aberto > .ob-card-titulo,
+.ob-v3 .ob-fluxo-card.aberto > .ob-card-linha {
+  padding-right:54px;
+}
+.ob-v3 .ob-fluxo-card.aberto > .muted {
+  padding-right:54px;
+}
+
+/* Conclusão segue a paleta MIMO, sem verde solto. */
+.ob-v3 .ob-fluxo-card.feito::before {
+  background:#fff0f6;
+  color:var(--o-rosa);
+  border-color:#ffc2d8;
+}
+.ob-v3.ob-step-3 .ob-fluxo-card.feito.fechado {
+  border-color:#ffd8e6;
+  background:#fffafd;
+}
+
+.ob-v3 .ob-subfluxo-itens button.feito {
+  background:#fffafd;
+  border-color:#ffd8e6;
+}
+.ob-v3 .ob-subfluxo-itens button.feito .ob-subfluxo-num {
+  color:var(--o-rosa);
+  background:#fff0f6;
+  border-color:#ffc2d8;
+}
+.ob-v3 .ob-subfluxo-itens button.feito:not(.atual):hover {
+  border-color:#ffb5d0;
+  background:#fff5f9;
+}
+
+.ob-v3 .ob-subpasso-rodape.pronto {
+  border-color:#ffd8e6;
+  background:rgba(255,250,253,.96);
+}
+.ob-v3 .ob-subpasso-rodape.pronto .ob-subpasso-status svg {
+  color:var(--o-rosa);
+}
+
+.ob-v3 .ob-mapa-nota-forte {
+  background:#fff5f9;
+  border-color:#ffd8e6;
+  color:#7a5666;
+}
+.ob-v3 .ob-mapa-nota-forte svg {
+  color:var(--o-rosa);
+}
+.ob-v3 .ob-mapa-nota-forte strong {
+  color:var(--o-ameixa);
+}
+
+@media (max-width:520px) {
+  .ob-v3 .ob-fluxo-card.aberto > .ob-card-titulo,
+  .ob-v3 .ob-fluxo-card.aberto > .ob-card-linha,
+  .ob-v3 .ob-fluxo-card.aberto > .muted {
+    padding-right:44px;
+  }
+}

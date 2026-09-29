@@ -172,8 +172,25 @@ Deno.serve(async (req) => {
 
     if (corpo.acao === 'inicio_cancelar') {
       const { data: estado } = await quem.rpc('ativacao_inicial_estado', { salao })
-      const id = estado?.cobranca?.cobranca_id
-      if (id) await apagarCobrancaMimo(id).catch(() => {})
+      const cob = estado?.cobranca
+      const id = cob?.cobranca_id
+
+      // Pode ter pago no exato instante em que tocou "trocar opção".
+      // Nesse caso o pagamento vence a corrida: confirma e não cancela.
+      if (id) {
+        const real = await obterCobrancaMimo(id).catch(() => null)
+        const st = String(real?.status ?? '')
+        if (PAGO.has(st) && (st !== 'RECEIVED_IN_CASH' || sandbox)) {
+          await servico.rpc('cobranca_mimo_confirmar', {
+            cobranca: cob.id,
+            cobranca_asaas: id,
+            quando: real?.paymentDate ? new Date(real.paymentDate + 'T12:00:00-03:00').toISOString() : new Date().toISOString(),
+          })
+          return json({ erro: 'O pagamento acabou de ser confirmado. Seu salão já está ativo.', acesso: await acesso() }, 409)
+        }
+        await apagarCobrancaMimo(id).catch(() => {})
+      }
+
       await quem.rpc('cobranca_inicial_cancelar', { salao })
       return json({ ok: true, estado: (await quem.rpc('ativacao_inicial_estado', { salao })).data, acesso: await acesso() })
     }

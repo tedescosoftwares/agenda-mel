@@ -1,4 +1,4 @@
-import { Navigate } from 'react-router-dom'
+import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { homeDoPapel } from '../lib/roles'
 import { AMBIENTE, ambienteDoPapel } from '../lib/ambiente'
@@ -9,7 +9,8 @@ import AceiteGate from './AceiteGate'
 // permitirSemVinculo: a tela "Entrar numa agenda" é a única que uma
 // cliente sem vínculo pode ver. Todas as outras mandam para lá.
 export default function ProtectedRoute({ children, requireRole, permitirSemVinculo = false, permitirPrimeiroAcesso = false, permitirOnboarding = false }) {
-  const { user, role, loading, vinculos, profile, erroRede, recarregarVinculos, salao, negocio, professional } = useAuth()
+  const { user, role, loading, vinculos, profile, erroRede, recarregarVinculos, salao, negocio, professional, acesso } = useAuth()
+  const { pathname } = useLocation()
 
   if (loading) {
     return (
@@ -37,6 +38,13 @@ export default function ProtectedRoute({ children, requireRole, permitirSemVincu
   const meu = negocio ?? salao
   if (!permitirOnboarding && meu && !meu.onboarding_concluido_em && meu.owner_id === user.id && (role === 'admin' || role === 'profissional')) {
     return <Navigate to="/onboarding" replace />
+  }
+
+  // 2.81: depois que serviços/equipe ficaram prontos e a dona chegou à
+  // decisão final, o fluxo é preso. Refresh, botão voltar ou URL digitada
+  // voltam para a tela de ativação até escolher teste ou confirmar pagamento.
+  if (role === 'admin' && acesso?.ativacao_pendente && pathname !== '/admin/configurar') {
+    return <Navigate to="/admin/configurar?etapa=ativacao" replace />
   }
 
   // a profissional cuja agenda o salão ainda não liberou (rascunho) ou desativou (119)

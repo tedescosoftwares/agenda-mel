@@ -1592,3 +1592,33 @@
 .ob-ja-logada { max-width: 560px; display: grid; gap: 0.8rem; }
 .ob-ja-logada-acoes { display: flex; flex-wrap: wrap; gap: 0.6rem; }
 .ob-ja-logada-nota { font-size: 0.82rem; margin: 0; }
+
+/* ---- montando o salão (132): entre o Quase lá e o painel ---- */
+.ms-fundo { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: 20px; background: radial-gradient(60rem 30rem at 50% -10rem, rgba(255, 45, 122, 0.16), transparent 70%), linear-gradient(160deg, #fff7fa, #fbf6fb 60%, #f3ecf7); animation: ob-fundo-entra .35s ease both; }
+.ms-card { width: min(520px, 100%); background: #fff; border: 1px solid #ffc2d8; border-radius: 24px; padding: 2rem 1.6rem; box-shadow: 0 24px 60px rgba(61, 12, 78, 0.14); display: grid; gap: 1.2rem; animation: ob-modal-entra .4s ease both; }
+.ms-topo { display: grid; justify-items: center; text-align: center; gap: 0.4rem; }
+.ms-topo h1 { margin: 0.4rem 0 0; font-size: 1.5rem; color: var(--ob-ameixa, #3d0c4e); letter-spacing: -0.01em; }
+.ms-topo .muted { margin: 0; font-size: 0.9rem; line-height: 1.5; max-width: 380px; }
+.ms-orbita { position: relative; width: 84px; height: 84px; border-radius: 999px; display: grid; place-items: center; }
+.ms-orbita::before { content: ''; position: absolute; inset: 0; border-radius: 999px; border: 3px solid transparent; border-top-color: var(--ob-rosa, #ff2d7a); border-right-color: #ffc2d8; animation: ms-gira 1.4s linear infinite; }
+.ms-orbita::after { content: ''; position: absolute; inset: 8px; border-radius: 999px; background: #fff0f6; animation: ms-pulsa 1.6s ease-in-out infinite; }
+.ms-orbita.pronta::before { border-color: var(--ob-rosa, #ff2d7a); animation: none; }
+.ms-orbita.pronta::after { animation: none; background: var(--ob-rosa, #ff2d7a); }
+.ms-nucleo { position: relative; z-index: 1; color: var(--ob-rosa, #ff2d7a); display: grid; place-items: center; }
+.ms-orbita.pronta .ms-nucleo { color: #fff; animation: ob-check-pop .45s ease both; }
+.ms-passos { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
+.ms-passos li { display: flex; align-items: center; gap: 0.7rem; padding: 0.65rem 0.8rem; border-radius: 14px; border: 1px solid #ece7ee; background: #fff; color: var(--ob-cinza, #6b7280); font-size: 0.9rem; transition: background .3s ease, border-color .3s ease, color .3s ease; animation: ob-passo-entra .45s ease both; }
+.ms-passos li.agora { border-color: var(--ob-rosa, #ff2d7a); background: #fff7fa; color: var(--ob-ameixa, #3d0c4e); font-weight: 700; }
+.ms-passos li.feito { background: #fbf6fb; color: var(--ob-ameixa, #3d0c4e); }
+.ms-passos li.depois { opacity: 0.55; }
+.ms-passo-icone { width: 30px; height: 30px; flex: none; border-radius: 9px; display: grid; place-items: center; background: #fff0f6; color: var(--ob-rosa, #ff2d7a); }
+.ms-passos li.feito .ms-passo-icone { background: var(--ob-rosa, #ff2d7a); color: #fff; animation: ob-check-pop .4s ease both; }
+.ms-passo-texto { flex: 1; }
+.ms-pontos { display: inline-flex; gap: 4px; } .ms-pontos i { width: 6px; height: 6px; border-radius: 999px; background: var(--ob-rosa, #ff2d7a); animation: ms-ponto 1s ease-in-out infinite; }
+.ms-pontos i:nth-child(2) { animation-delay: .15s; } .ms-pontos i:nth-child(3) { animation-delay: .3s; }
+.ms-barra { height: 6px; border-radius: 999px; background: #f3eef3; overflow: hidden; }
+.ms-barra i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #ff2d7a, #ff7baa); transition: width .9s ease; }
+@keyframes ms-gira { to { transform: rotate(360deg); } }
+@keyframes ms-pulsa { 0%, 100% { transform: scale(1); } 50% { transform: scale(0.92); } }
+@keyframes ms-ponto { 0%, 100% { transform: translateY(0); opacity: .5; } 50% { transform: translateY(-4px); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .ms-orbita::before, .ms-orbita::after, .ms-pontos i { animation: none; } }

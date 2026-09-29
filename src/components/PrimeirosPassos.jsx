@@ -51,11 +51,11 @@ export default function PrimeirosPassos({ salao, para = 'admin' }) {
           <div className="pp-concluir-texto">
             <span className="pp-concluir-selo"><Sparkles size={12} /> Estamos quase lá</span>
             <strong>Conclua a configuração {autonoma ? 'da sua agenda' : 'do seu salão'}</strong>
-            <span className="muted">{autonoma ? 'Falta cadastrar os serviços. Depois disso o link e o QR Code aparecem aqui.' : `${falta}. Depois você ativa o salão: o link e o QR Code aparecem aqui e começam seus ${REGRAS.testeDias} dias grátis, sem cartão.`}</span>
+            <span className="muted">{autonoma ? 'Falta cadastrar os serviços. Depois disso o link e o QR Code aparecem aqui.' : `${falta}. Depois você ativa o salão: escolhe entre ${REGRAS.testeDias} dias grátis ou pagar a primeira mensalidade com ${REGRAS.descontoInicialPct}% de desconto. Só então link e QR ficam públicos.`}</span>
             <ul className="pp-concluir-etapas">
               <li className={n('servicos') > 0 ? 'ok' : ''}><span className="pp-check">{n('servicos') > 0 ? <Check size={12} /> : <Circle size={12} />}</span>Serviços</li>
               {!autonoma && <li className={n('equipe') > 0 ? 'ok' : ''}><span className="pp-check">{n('equipe') > 0 ? <Check size={12} /> : <Circle size={12} />}</span>Equipe</li>}
-              <li className="trava"><span className="pp-check"><Circle size={12} /></span>{autonoma ? 'Liberar o link e o QR' : `Ativação: link, QR e ${REGRAS.testeDias} dias grátis`}</li>
+              <li className="trava"><span className="pp-check"><Circle size={12} /></span>{autonoma ? 'Liberar o link e o QR' : `Ativação: teste grátis ou ${REGRAS.descontoInicialPct}% OFF agora`}</li>
             </ul>
           </div>
           <Link to={para === 'admin' ? '/admin/configurar' : '/pro/configurar'} className="btn btn-primary pp-concluir-botao">Continuar configuração</Link>

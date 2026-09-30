@@ -8767,3 +8767,204 @@ label.switch:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
   .ai-gira { animation: none; }
   .ai-pagar-botoes button { transition: none; }
 }
+
+
+/* ==========================================================================
+   ATIVAÇÃO · ESCOLHA MAIS COMPACTA + CTA FORTE
+   Refinamento visual da tela inicial de ativação. Sem mudança de regra.
+   ========================================================================== */
+@media (min-width:761px) {
+  .ai-corpo:not(.ai-pagamento):not(.ai-sucesso) {
+    max-width:1040px;
+  }
+
+  .ai-corpo:not(.ai-pagamento):not(.ai-sucesso) .ai-hero {
+    display:grid;
+    grid-template-columns:auto minmax(0,1fr);
+    grid-template-areas:
+      "icone kicker"
+      "icone titulo"
+      ". texto";
+    column-gap:12px;
+    row-gap:1px;
+    max-width:780px;
+    margin:0 auto .55rem;
+    text-align:left;
+  }
+
+  .ai-corpo:not(.ai-pagamento):not(.ai-sucesso) .ai-hero .ai-icone {
+    grid-area:icone;
+    align-self:center;
+    margin:0;
+  }
+
+  .ai-corpo:not(.ai-pagamento):not(.ai-sucesso) .ai-hero .ai-kicker {
+    grid-area:kicker;
+    align-self:end;
+    margin:0 0 1px;
+  }
+
+  .ai-corpo:not(.ai-pagamento):not(.ai-sucesso) .ai-hero h1 {
+    grid-area:titulo;
+    font-size:clamp(1.65rem,2.4vw,2.15rem);
+    line-height:1;
+  }
+
+  .ai-corpo:not(.ai-pagamento):not(.ai-sucesso) .ai-hero p {
+    grid-area:texto;
+    margin:.28rem 0 0;
+    font-size:.80rem;
+    line-height:1.35;
+  }
+
+  .ai-corpo:not(.ai-pagamento):not(.ai-sucesso) .ai-resumo {
+    margin:.45rem auto .55rem;
+  }
+
+  .ai-corpo:not(.ai-pagamento):not(.ai-sucesso) .ai-opcao {
+    min-height:0;
+  }
+
+  .ai-cta {
+    width:100%;
+    min-height:44px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:7px;
+    border-radius:13px;
+    font:inherit;
+    font-size:.78rem;
+    font-weight:850;
+    cursor:pointer;
+  }
+
+  .ai-cta-teste {
+    margin-top:auto;
+    color:#b51655;
+    background:#fff0f6;
+    border:1px solid #ffb9d2;
+    box-shadow:0 8px 18px rgba(255,45,122,.08);
+  }
+
+  .ai-cta-teste:hover:not(:disabled) {
+    background:#ffe6ef;
+    border-color:#ff8fb8;
+    transform:translateY(-1px);
+  }
+
+  .ai-escolha-pagamento {
+    margin-top:auto;
+    color:#d71862;
+    font-size:.68rem;
+    font-weight:800;
+  }
+
+  .ai-pagar-botoes {
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+
+  .ai-pagar-botoes .ai-cta-pagamento {
+    min-height:46px;
+    border-color:#ffb9d2;
+    background:#fff;
+    box-shadow:0 6px 16px rgba(255,45,122,.06);
+  }
+
+  .ai-pagar-botoes .ai-cta-pagamento:first-child {
+    color:#fff;
+    background:linear-gradient(135deg,#ff2d7a,#ff5f98);
+    border-color:#ff2d7a;
+    box-shadow:0 10px 22px rgba(255,45,122,.18);
+  }
+
+  .ai-pagar-botoes .ai-cta-pagamento:first-child small {
+    color:rgba(255,255,255,.82);
+  }
+}
+
+@media (min-width:761px) and (max-height:960px) {
+  .ai-fundo {
+    padding-top:12px;
+  }
+
+  .ai-shell {
+    min-height:auto;
+  }
+
+  .ai-topo {
+    margin-bottom:2px;
+  }
+
+  .ai-corpo:not(.ai-pagamento):not(.ai-sucesso) {
+    padding-bottom:4px;
+  }
+
+  .ai-corpo:not(.ai-pagamento):not(.ai-sucesso) .ai-hero {
+    margin-bottom:.35rem;
+  }
+
+  .ai-corpo:not(.ai-pagamento):not(.ai-sucesso) .ai-hero .ai-icone {
+    width:36px;
+    height:36px;
+    border-radius:12px;
+  }
+
+  .ai-corpo:not(.ai-pagamento):not(.ai-sucesso) .ai-hero .ai-icone svg {
+    width:18px;
+    height:18px;
+  }
+
+  .ai-corpo:not(.ai-pagamento):not(.ai-sucesso) .ai-hero h1 {
+    font-size:1.82rem;
+  }
+
+  .ai-corpo:not(.ai-pagamento):not(.ai-sucesso) .ai-hero p {
+    font-size:.75rem;
+  }
+
+  .ai-corpo:not(.ai-pagamento):not(.ai-sucesso) .ai-resumo {
+    margin:.3rem auto .45rem;
+    padding:.32rem .58rem;
+  }
+
+  .ai-corpo:not(.ai-pagamento):not(.ai-sucesso) .ai-opcao {
+    padding:14px 16px;
+    gap:.38rem;
+    border-radius:17px;
+  }
+
+  .ai-corpo:not(.ai-pagamento):not(.ai-sucesso) .ai-opcao h2 {
+    font-size:1rem;
+  }
+
+  .ai-corpo:not(.ai-pagamento):not(.ai-sucesso) .ai-opcao p {
+    font-size:.72rem;
+  }
+
+  .ai-corpo:not(.ai-pagamento):not(.ai-sucesso) .ai-opcao li {
+    font-size:.68rem;
+  }
+
+  .ai-corpo:not(.ai-pagamento):not(.ai-sucesso) .ai-opcao > small {
+    font-size:.60rem;
+  }
+
+  .ai-corpo:not(.ai-pagamento):not(.ai-sucesso) .ai-preco b {
+    font-size:1.42rem;
+  }
+
+  .ai-cta {
+    min-height:40px;
+    font-size:.72rem;
+  }
+
+  .ai-pagar-botoes .ai-cta-pagamento {
+    min-height:42px;
+    padding:.48rem .6rem;
+  }
+
+  .ai-rodape {
+    margin:.3rem 0 0;
+  }
+}

@@ -27,6 +27,7 @@ export default function AtivarSalao({ s, onAtivado, onErro }) {
   const oferta = Number(estado?.oferta_cents ?? Math.floor(cheio * 0.8))
   const descontoPct = Number(estado?.desconto_pct ?? REGRAS.descontoInicialPct ?? 20)
   const agendas = Number(estado?.mensalidade?.agendas ?? s?.equipe_prevista ?? 1)
+  const economia = Math.max(0, cheio - oferta)
 
   async function carregar() {
     if (!s?.id || autonoma) return null
@@ -175,13 +176,13 @@ export default function AtivarSalao({ s, onAtivado, onErro }) {
           <span><ShieldCheck size={14} /> Sua configuração está salva</span>
         </header>
 
-        {modo === 'escolha' && (
-          <div className="ai-corpo">
-            <div className="ai-hero">
+        {modo !== 'sucesso' && (
+          <div className="ai-corpo ai-escolha-corpo">
+            <div className="ai-hero ai-hero-escolha">
               <span className="ai-icone"><Sparkles size={25} /></span>
               <span className="ai-kicker">Tudo pronto para começar</span>
-              <h1>{s?.name || 'Seu salão'} está pronto para começar.</h1>
-              <p>Escolha uma opção. Sem cobrança automática e sem cartão obrigatório para testar.</p>
+              <h1>{s?.name || 'Seu salão'} está pronto para entrar no ar.</h1>
+              <p>Você escolhe como começar. Sem cobrança automática e sem cartão obrigatório no teste.</p>
             </div>
 
             <div className="ai-resumo">
@@ -190,90 +191,132 @@ export default function AtivarSalao({ s, onAtivado, onErro }) {
               <span>mensalidade atual <strong>{cheio ? reais(cheio / 100) : 'calculando…'}</strong></span>
             </div>
 
-            <div className="ai-escolhas">
-              <section className="ai-opcao ai-teste">
-                <span className="ai-opcao-selo"><Sparkles size={13} /> Quero conhecer primeiro</span>
-                <h2>{REGRAS.testeDias} dias grátis</h2>
-                <p>Use a MIMO completa com clientes reais. Sem cartão, sem Pix e sem cobrança automática.</p>
-                <ul>
+            <div className="ai-escolhas ai-escolhas-premium">
+              <section className="ai-opcao ai-teste ai-opcao-nova">
+                <div className="ai-opcao-cabeca">
+                  <span className="ai-opcao-selo"><Sparkles size={13} /> Quero conhecer primeiro</span>
+                  <span className="ai-opcao-tag-neutra">sem compromisso</span>
+                </div>
+
+                <div className="ai-opcao-principal">
+                  <span className="ai-opcao-supra">Teste completo</span>
+                  <h2>{REGRAS.testeDias} dias grátis</h2>
+                  <p>Conheça a MIMO funcionando de verdade antes de decidir se quer continuar.</p>
+                </div>
+
+                <ul className="ai-beneficios">
                   <li><Check size={14} /> Link e QR liberados</li>
                   <li><Check size={14} /> Painel completo</li>
-                  <li><Check size={14} /> Você decide depois se continua</li>
+                  <li><Check size={14} /> Sem cartão e sem Pix</li>
                 </ul>
-                <button type="button" className="btn ai-cta ai-cta-teste" onClick={comecarTeste} disabled={indo}>
-                  <Sparkles size={16} /> {indo ? 'Ativando…' : `Começar ${REGRAS.testeDias} dias grátis`}
-                </button>
-                <small>Ao escolher o teste, a oferta de 20% da primeira mensalidade não fica reservada.</small>
+
+                <div className="ai-opcao-acao">
+                  <button type="button" className="btn ai-cta ai-cta-teste" onClick={comecarTeste} disabled={indo}>
+                    <Sparkles size={16} /> {indo ? 'Ativando…' : `Começar ${REGRAS.testeDias} dias grátis`}
+                  </button>
+                  <small>Ao escolher o teste, a oferta de {descontoPct}% da primeira mensalidade deixa de ficar disponível.</small>
+                </div>
               </section>
 
-              <section className="ai-opcao ai-pagar">
-                <span className="ai-opcao-selo destaque"><Gift size={13} /> Oferta de boas-vindas</span>
-                <div className="ai-preco">
-                  <span><s>{cheio ? reais(cheio / 100) : '...'}</s><b>{oferta ? reais(oferta / 100) : '...'}</b></span>
-                  <em>{descontoPct}% OFF</em>
+              <section className="ai-opcao ai-pagar ai-opcao-nova ai-opcao-destaque">
+                <div className="ai-opcao-cabeca">
+                  <span className="ai-opcao-selo destaque"><Gift size={13} /> Oferta de boas-vindas</span>
+                  <span className="ai-opcao-tag-oferta">{descontoPct}% OFF hoje</span>
                 </div>
-                <h2>Já quero começar pagando</h2>
-                <p>Você abre mão do teste grátis e ativa 30 dias agora. A primeira mensalidade tem {descontoPct}% de desconto.</p>
-                <span className="ai-escolha-pagamento">Quero aproveitar os {descontoPct}% agora</span>
-                <div className="ai-pagar-botoes">
-                  <button type="button" className="ai-cta-pagamento" onClick={abrirPix} disabled={indo || !oferta}>
-                    <Smartphone size={18} /><span><strong>Pagar com Pix</strong><small>QR Code na hora</small></span>
-                  </button>
-                  <button type="button" className="ai-cta-pagamento" onClick={() => setModo('cartao')} disabled={indo || !oferta}>
-                    <CreditCard size={18} /><span><strong>Pagar com cartão</strong><small>Pagamento único</small></span>
-                  </button>
+
+                <div className="ai-opcao-principal ai-opcao-principal-pago">
+                  <span className="ai-opcao-supra">Primeiros 30 dias</span>
+                  <div className="ai-preco-novo">
+                    <s>{cheio ? reais(cheio / 100) : '...'}</s>
+                    <strong>{oferta ? reais(oferta / 100) : '...'}</strong>
+                    {economia > 0 && <span>economize {reais(economia / 100)}</span>}
+                  </div>
+                  <h2>Começar pagando agora</h2>
+                  <p>Ative 30 dias imediatamente e aproveite o desconto da primeira mensalidade.</p>
                 </div>
-                <small><ShieldCheck size={12} /> Sem recorrência. No cartão, os dados são enviados ao Asaas somente para esta cobrança.</small>
+
+                <div className="ai-beneficios ai-beneficios-pago">
+                  <span><Check size={13} /> 30 dias liberados</span>
+                  <span><Check size={13} /> Sem recorrência</span>
+                  <span><Check size={13} /> Pix ou cartão</span>
+                </div>
+
+                <div className="ai-opcao-acao">
+                  <div className="ai-pagar-botoes ai-pagar-botoes-novos">
+                    <button type="button" className="ai-cta-pagamento" onClick={abrirPix} disabled={indo || !oferta}>
+                      <Smartphone size={18} /><span><strong>Pagar com Pix</strong><small>QR Code na hora</small></span>
+                    </button>
+                    <button type="button" className="ai-cta-pagamento ai-cta-cartao" onClick={() => setModo('cartao')} disabled={indo || !oferta}>
+                      <CreditCard size={18} /><span><strong>Pagar com cartão</strong><small>Pagamento único</small></span>
+                    </button>
+                  </div>
+                  <small><ShieldCheck size={12} /> Pagamento único. Nenhuma renovação automática é criada.</small>
+                </div>
               </section>
             </div>
 
-            {erro && <div className="ai-erro">{erro}</div>}
-            <p className="ai-rodape">Depois desta escolha, seu salão entra no ar e você segue para o painel.</p>
+            {erro && modo === 'escolha' && <div className="ai-erro">{erro}</div>}
+            <p className="ai-rodape">Depois da escolha, seu salão entra no ar e você segue para o painel.</p>
           </div>
         )}
 
         {modo === 'pix' && (
-          <div className="ai-corpo ai-pagamento">
-            <div className="ai-hero compacto">
-              <span className="ai-icone"><Smartphone size={24} /></span>
-              <span className="ai-kicker">Primeira mensalidade · {descontoPct}% OFF</span>
-              <h1>Falta só confirmar o Pix.</h1>
-              <p>Pague <strong>{reais(Number(pix?.total_cents ?? oferta) / 100)}</strong>. Quando o Asaas confirmar, a MIMO libera seus 30 dias automaticamente.</p>
+          <div className="ai-modal-fundo" role="dialog" aria-modal="true" aria-label="Pagamento por Pix">
+            <div className="ai-modal-card ai-modal-pix">
+              <div className="ai-modal-topo">
+                <span className="ai-modal-icone"><Smartphone size={20} /></span>
+                <div>
+                  <span className="ai-kicker">Primeira mensalidade · {descontoPct}% OFF</span>
+                  <h2>Finalize pelo Pix</h2>
+                </div>
+              </div>
+
+              <p className="ai-modal-texto">Pague <strong>{reais(Number(pix?.total_cents ?? oferta) / 100)}</strong>. Assim que o Asaas confirmar, seus 30 dias são liberados.</p>
+
+              <div className="ai-pix-box ai-pix-modal">
+                {pix?.copia_cola ? <QrPix payload={pix.copia_cola} imagem={pix.imagem} /> : <p><LoaderCircle className="ai-gira" size={18} /> Gerando seu Pix…</p>}
+              </div>
+
+              {erro && <div className="ai-erro">{erro}</div>}
+
+              <div className="ai-modal-acoes">
+                <button type="button" className="btn btn-primary ai-botao-grande" onClick={() => conferir(true)} disabled={indo || !pix?.copia_cola}>
+                  {indo ? 'Conferindo…' : 'Já paguei, conferir'}
+                </button>
+                <button type="button" className="btn btn-ghost" onClick={trocarOpcao} disabled={indo}>Voltar às opções</button>
+              </div>
+
+              <small className="ai-seguranca"><ShieldCheck size={12} /> Sem débito automático e sem renovação recorrente.</small>
             </div>
-            <div className="ai-pix-box">
-              {pix?.copia_cola ? <QrPix payload={pix.copia_cola} imagem={pix.imagem} /> : <p><LoaderCircle className="ai-gira" size={18} /> Gerando seu Pix…</p>}
-            </div>
-            {erro && <div className="ai-erro">{erro}</div>}
-            <div className="ai-acoes">
-              <button type="button" className="btn btn-primary ai-botao-grande" onClick={() => conferir(true)} disabled={indo || !pix?.copia_cola}>{indo ? 'Conferindo…' : 'Já paguei, conferir'}</button>
-              <button type="button" className="btn btn-ghost" onClick={trocarOpcao} disabled={indo}>Escolher outra opção</button>
-            </div>
-            <small className="ai-seguranca"><ShieldCheck size={12} /> Este pagamento não cria débito automático nem renovação recorrente.</small>
           </div>
         )}
 
         {modo === 'cartao' && (
-          <CartaoInicial
-            total={oferta}
-            desconto={descontoPct}
-            indo={indo}
-            erro={erro}
-            onEnviar={pagarCartao}
-            onVoltar={() => { setErro(''); setModo('escolha') }}
-          />
+          <div className="ai-modal-fundo" role="dialog" aria-modal="true" aria-label="Pagamento com cartão">
+            <CartaoInicial
+              total={oferta}
+              desconto={descontoPct}
+              indo={indo}
+              erro={erro}
+              onEnviar={pagarCartao}
+              onVoltar={() => { setErro(''); setModo('escolha') }}
+            />
+          </div>
         )}
 
         {modo === 'analise' && (
-          <div className="ai-corpo ai-pagamento">
-            <div className="ai-hero compacto">
-              <span className="ai-icone"><LoaderCircle className="ai-gira" size={24} /></span>
+          <div className="ai-modal-fundo" role="dialog" aria-modal="true" aria-label="Confirmação do pagamento">
+            <div className="ai-modal-card ai-modal-analise">
+              <span className="ai-modal-loader"><LoaderCircle className="ai-gira" size={24} /></span>
               <span className="ai-kicker">Pagamento enviado</span>
-              <h1>O cartão está sendo confirmado.</h1>
-              <p>Algumas transações levam alguns instantes para o Asaas concluir. Pode deixar esta tela aberta, a MIMO confere sozinha.</p>
+              <h2>Estamos confirmando seu cartão</h2>
+              <p>Algumas transações levam alguns instantes. A MIMO continua conferindo automaticamente.</p>
+              {erro && <div className="ai-erro">{erro}</div>}
+              <div className="ai-modal-acoes">
+                <button type="button" className="btn btn-primary ai-botao-grande" onClick={() => conferir(true)} disabled={indo}>{indo ? 'Conferindo…' : 'Conferir agora'}</button>
+                <button type="button" className="btn btn-ghost" onClick={trocarOpcao} disabled={indo}>Tentar outra forma</button>
+              </div>
             </div>
-            {erro && <div className="ai-erro">{erro}</div>}
-            <button type="button" className="btn btn-primary ai-botao-grande" onClick={() => conferir(true)} disabled={indo}>{indo ? 'Conferindo…' : 'Conferir agora'}</button>
-            <button type="button" className="btn btn-ghost" onClick={trocarOpcao} disabled={indo}>Tentar outra forma</button>
           </div>
         )}
 
@@ -317,7 +360,7 @@ function CartaoInicial({ total, desconto, indo, erro, onEnviar, onVoltar }) {
 
   return (
     <form
-      className="ai-corpo ai-pagamento ai-cartao"
+      className="ai-modal-card ai-modal-cartao"
       onSubmit={(e) => {
         e.preventDefault()
         if (!ok) return
@@ -327,12 +370,14 @@ function CartaoInicial({ total, desconto, indo, erro, onEnviar, onVoltar }) {
         )
       }}
     >
-      <div className="ai-hero compacto">
-        <span className="ai-icone"><CreditCard size={24} /></span>
-        <span className="ai-kicker">Primeira mensalidade · {desconto}% OFF</span>
-        <h1>Pagar {reais(Number(total || 0) / 100)} no cartão</h1>
-        <p>É uma cobrança única. O cartão não fica vinculado e não existe renovação automática.</p>
+      <div className="ai-modal-topo">
+        <span className="ai-modal-icone"><CreditCard size={20} /></span>
+        <div>
+          <span className="ai-kicker">Primeira mensalidade · {desconto}% OFF</span>
+          <h2>Pagar {reais(Number(total || 0) / 100)} no cartão</h2>
+        </div>
       </div>
+      <p className="ai-modal-texto">Cobrança única. O cartão não fica vinculado e não existe renovação automática.</p>
 
       <div className="ai-cartao-grade">
         <label className="ai-campo inteiro">Nome como está no cartão

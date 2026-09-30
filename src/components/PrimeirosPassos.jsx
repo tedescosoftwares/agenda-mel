@@ -6,7 +6,6 @@ import { supabase } from '../lib/supabase'
 import { linkDoSalao } from '../lib/endereco'
 import { ativarPush } from '../lib/push'
 import { useAuth } from '../context/AuthContext'
-import { REGRAS } from '../lib/acesso'
 import AtivarSalao from './AtivarSalao'
 
 // O onboarding não morre no botão de finalizar (119): o painel mostra os

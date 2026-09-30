@@ -180,8 +180,8 @@ export default function AtivarSalao({ s, onAtivado, onErro }) {
             <div className="ai-hero">
               <span className="ai-icone"><Sparkles size={25} /></span>
               <span className="ai-kicker">Tudo pronto para começar</span>
-              <h1>{s?.name || 'Seu salão'} está a uma escolha de ficar no ar.</h1>
-              <p>Escolha como quer começar. Nada será cobrado automaticamente e você não precisa cadastrar cartão para testar.</p>
+              <h1>{s?.name || 'Seu salão'} está pronto para começar.</h1>
+              <p>Escolha uma opção. Sem cobrança automática e sem cartão obrigatório para testar.</p>
             </div>
 
             <div className="ai-resumo">
@@ -200,8 +200,8 @@ export default function AtivarSalao({ s, onAtivado, onErro }) {
                   <li><Check size={14} /> Painel completo</li>
                   <li><Check size={14} /> Você decide depois se continua</li>
                 </ul>
-                <button type="button" className="btn btn-ghost ai-botao-grande" onClick={comecarTeste} disabled={indo}>
-                  {indo ? 'Ativando…' : `Começar meus ${REGRAS.testeDias} dias grátis`}
+                <button type="button" className="btn ai-cta ai-cta-teste" onClick={comecarTeste} disabled={indo}>
+                  <Sparkles size={16} /> {indo ? 'Ativando…' : `Começar ${REGRAS.testeDias} dias grátis`}
                 </button>
                 <small>Ao escolher o teste, a oferta de 20% da primeira mensalidade não fica reservada.</small>
               </section>
@@ -214,12 +214,13 @@ export default function AtivarSalao({ s, onAtivado, onErro }) {
                 </div>
                 <h2>Já quero começar pagando</h2>
                 <p>Você abre mão do teste grátis e ativa 30 dias agora. A primeira mensalidade tem {descontoPct}% de desconto.</p>
+                <span className="ai-escolha-pagamento">Quero aproveitar os {descontoPct}% agora</span>
                 <div className="ai-pagar-botoes">
-                  <button type="button" onClick={abrirPix} disabled={indo || !oferta}>
-                    <Smartphone size={19} /><span><strong>Pix</strong><small>QR Code na hora</small></span>
+                  <button type="button" className="ai-cta-pagamento" onClick={abrirPix} disabled={indo || !oferta}>
+                    <Smartphone size={18} /><span><strong>Pagar com Pix</strong><small>QR Code na hora</small></span>
                   </button>
-                  <button type="button" onClick={() => setModo('cartao')} disabled={indo || !oferta}>
-                    <CreditCard size={19} /><span><strong>Cartão</strong><small>Pagamento único</small></span>
+                  <button type="button" className="ai-cta-pagamento" onClick={() => setModo('cartao')} disabled={indo || !oferta}>
+                    <CreditCard size={18} /><span><strong>Pagar com cartão</strong><small>Pagamento único</small></span>
                   </button>
                 </div>
                 <small><ShieldCheck size={12} /> Sem recorrência. No cartão, os dados são enviados ao Asaas somente para esta cobrança.</small>

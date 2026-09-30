@@ -218,6 +218,11 @@ const RPC = {
   mensalidade_do_salao: () => mensalidadeDemo(),
   assinatura_cancelar: () => acessoDemo(),
   salao_ativar: () => acessoDemo(),
+  // a ativação inicial do GPT (133): 7 dias grátis ou 20% na primeira mensalidade
+  ativacao_inicial_estado: () => ({ salao: SALAO, ativado: DEMO_ATIVADO, pendente_desde: DEMO_ATIVADO ? null : mais(0), escolha: null, oferta_usada: false, desconto_pct: 20, valor_cents: 6970, oferta_cents: 5576, mensalidade: mensalidadeDemo(), cobranca: null }),
+  ativacao_inicial_preparar: () => RPC.ativacao_inicial_estado(),
+  ativacao_inicial_teste: () => { try { localStorage.removeItem('mimo-demo-ativar') } catch { /* nada */ } const q = new Date().toISOString(); TABELAS.salons[0].ativado_em = q; TABELAS.salon_members[0].salons.ativado_em = q; return { ...acessoDemo(), fase: 'teste', ativacao_pendente: false } },
+  cobranca_inicial_cancelar: () => null,
   promocoes_para_mim: () => promocoes.filter((p) => p.ativa && p.aprovacao !== 'pendente' && (!p.fim || p.fim >= mais(0))).map((p) => ({ ...p, desconto_pct: p.desconto_pct ?? null, preco_de: servicos.find((s) => s.id === p.service_id)?.price ?? null, preco_por: p.desconto_pct ? Math.round(servicos.find((s) => s.id === p.service_id)?.price * (100 - p.desconto_pct)) / 100 : null, salao: p.salon_id ? 'Studio Mel' : null, profissional: p.professional_id ? profissionais.find((x) => x.id === p.professional_id)?.name : null, professional_id: p.professional_id ?? (p.service_id ? 'pr1' : null), servico: servicos.find((s) => s.id === p.service_id)?.name ?? null })),
   promocao_vista: () => null,
   capas_do_salao: () => [{ categoria_id: 'ct2', imagens: [PROMO_IMG('#FF2D7A', '#AA4CFF', ''), PROMO_IMG('#AA4CFF', '#FF7BAA', '')] }],
@@ -342,7 +347,8 @@ const RPC = {
   onboarding_salvar: ({ passo }) => ({ ok: true, passo: passo ?? 1 }),
   abrir_negocio: ({ tipo }) => ({ ok: true, salao_id: SALAO, tipo }),
   preferir_marketing: ({ ok }) => ({ ok: true, marketing_ok: Boolean(ok) }),
-  onboarding_concluir: () => ({ ok: true }),
+  // concluir o onboarding e ativar mudam o salão do demo na hora, como no banco
+  onboarding_concluir: () => { try { localStorage.removeItem('mimo-demo-onboarding') } catch { /* nada */ } const q = new Date().toISOString(); TABELAS.salons[0].onboarding_concluido_em = q; TABELAS.salon_members[0].salons.onboarding_concluido_em = q; return { ok: true } },
   onboarding_horarios: ({ horarios }) => ({ ok: true, dias: (horarios ?? []).length }),
   trocar_tipo_negocio: ({ novo }) => ({ ok: true, tipo: novo }),
   equipe_por_codigo: () => ({ id: SALAO, nome: 'Studio Mel', cidade: 'Santos', logo_url: null, tipo: 'salao', quantas: 4 }),

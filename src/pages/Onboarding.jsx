@@ -253,7 +253,7 @@ export default function Onboarding({ publico = false }) {
         <div className="ob-conteudo-linha"><span className="ob-conteudo-num">Passo {idx + 1} de {total} · {atual.rotulo}</span><EstadoSalvo estado={estadoAuto} /></div>
         {retomado && <div className="ob-retomada"><Wand2 size={15} /><span><strong>Continuando de onde você parou.</strong> O que você já preencheu está guardado; os passos anteriores ficam no menu ao lado.</span><button type="button" onClick={() => setRetomado(false)} aria-label="Fechar"><X size={14} /></button></div>}
         {atual.roteiro && <ol className="ob-roteiro-m" aria-label="Neste passo">{atual.roteiro.map((r, i) => <li key={r} className={feitos[i] ? 'feito' : ''}><b>{feitos[i] ? <Check size={10} /> : i + 1}</b>{r}</li>)}</ol>}
-        {montando && <MontandoSalao nome={s.name} autonoma={autonoma} pronto={montado} erro={Boolean(erro)} minimo={9000} onFim={depoisDaAnimacao} />}
+        {montando && <MontandoSalao nome={s.name} autonoma={autonoma} pronto={montado} erro={Boolean(erro)} minimo={12000} onFim={depoisDaAnimacao} />}
         {ativando && <AtivarSalao s={s} onAtivado={entrouNoPainel} />}
         {erro && <ModalErro texto={erro} onFechar={() => setErro('')} />}
         {querSair && <ModalSair passo={idx + 1} onFicar={() => setQuerSair(false)} onSair={sairMesmo} />}
@@ -757,7 +757,7 @@ function PassoDados({ s, seguir, voltar, salvando, setErro, user, autonoma, publ
 
   if (criada) {
     return (
-      <ConfirmarEmail email={f.email.trim()} senha={conta.senha} redirecionar={urlDoAmbiente('pro', '/onboarding')}
+      <ConfirmarEmail email={f.email.trim()} senha={conta.senha} redirecionar={urlDoAmbiente('pro', '/email-confirmado')}
         onPronto={async () => { await recarregarPerfil?.(); navigate('/onboarding', { replace: true }) }} />
     )
   }
@@ -1604,21 +1604,22 @@ function PassoQuaseLa({ s, voltar, salvando, concluir, pronto, autonoma, gravarQ
         <div className="ob-card ob-card-largo ob-depois-painel">
           <span className="ob-depois-selo"><Sparkles size={13} /> Continua no painel</span>
           <strong className="ob-card-titulo">{autonoma ? 'Os serviços você monta já dentro do painel' : 'Serviços e equipe você monta já dentro do painel'}</strong>
-          <span className="muted">Com calma, do seu jeito, e com a gente guiando. O painel abre com a configuração pronta pra continuar.</span>
+          <span className="muted">Com calma, do seu jeito, e com a gente guiando. {autonoma ? 'O painel abre com a configuração pronta pra continuar.' : 'Antes, você escolhe como quer começar: 7 dias grátis ou a primeira mensalidade com desconto.'}</span>
           <div className="ob-fluxo-depois" aria-label="O que acontece depois">
-            <span><b>1</b> Entrar no painel</span><i>→</i>
-            <span><b>2</b> Cadastrar serviços</span><i>→</i>
-            {!autonoma && <><span><b>3</b> Montar equipe</span><i>→</i></>}
-            <span><b>{autonoma ? '3' : '4'}</b> Liberar link e QR</span>
+            {!autonoma && <><span><b>1</b> Ativar o salão</span><i>→</i></>}
+            <span><b>{autonoma ? '1' : '2'}</b> Entrar no painel</span><i>→</i>
+            <span><b>{autonoma ? '2' : '3'}</b> Cadastrar serviços</span><i>→</i>
+            {!autonoma && <><span><b>4</b> Montar equipe</span></>}
+            {autonoma && <span><b>3</b> Liberar link e QR</span>}
           </div>
           <div className="ob-depois-lista">
             <div className="ob-depois-item"><span className="ob-depois-icone"><Sparkles size={18} /></span><strong>Serviços</strong><small>Nome, duração e preço. Com sugestões por categoria pra ir rápido.</small></div>
             {!autonoma && <div className="ob-depois-item"><span className="ob-depois-icone"><Users size={18} /></span><strong>Equipe</strong><small>Cada profissional com os seus serviços e horários. Ela recebe um link e entra com tudo pronto.</small></div>}
-            <div className="ob-depois-item apagado"><span className="ob-depois-icone"><QrCode size={18} /></span><strong>Link e QR Code</strong><small>Aparecem assim que {autonoma ? 'os serviços estiverem prontos. Sua agenda é grátis, sem prazo.' : 'serviços e equipe estiverem prontos. Ativar libera o link e começa seus 7 dias grátis.'}</small></div>
+            <div className="ob-depois-item apagado"><span className="ob-depois-icone"><QrCode size={18} /></span><strong>Link e QR Code</strong><small>{autonoma ? 'Aparecem assim que os serviços estiverem prontos. Sua agenda é grátis, sem prazo.' : 'Liberados na ativação. Recebem clientes de verdade quando serviços e equipe estiverem prontos.'}</small></div>
           </div>
         </div>
       </div>
-      <Rodape voltar={voltar} avancar={concluir} salvando={salvando || pronto} rotulo="Entrar no painel" icone={<ArrowRight size={16} />} />
+      <Rodape voltar={voltar} avancar={concluir} salvando={salvando || pronto} rotulo={autonoma ? 'Entrar no painel' : 'Concluir e ativar'} icone={<ArrowRight size={16} />} />
     </>
   )
 }

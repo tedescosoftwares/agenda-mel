@@ -82,6 +82,7 @@ import Onboarding from "./pages/Onboarding";
 import RedeDeProtecao from "./components/RedeDeProtecao";
 import ConviteEquipe from "./pages/publico/ConviteEquipe";
 import AtivarAcesso from "./pages/publico/AtivarAcesso";
+import EmailConfirmado from "./pages/publico/EmailConfirmado";
 import Landing from "./pages/publico/Landing";
 import PaginaSeo from "./pages/publico/PaginaSeo";
 import Blog from "./pages/publico/Blog";
@@ -126,6 +127,7 @@ export default function App() {
             <Route path="/comecar" element={<RedeDeProtecao><Onboarding publico /></RedeDeProtecao>} />
             <Route path="/equipe/:codigo" element={<ConviteEquipe />} />
             <Route path="/ativar/:token" element={<AtivarAcesso />} />
+            <Route path="/email-confirmado" element={<EmailConfirmado />} />
             <Route path="/onboarding" element={<ProtectedRoute permitirSemVinculo permitirOnboarding permitirPrimeiroAcesso><RedeDeProtecao><Onboarding /></RedeDeProtecao></ProtectedRoute>} />
             <Route path="/entrar" element={<ComCodigo />} />
             <Route path="/cadastro" element={<CadastroCliente />} />

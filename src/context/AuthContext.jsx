@@ -190,7 +190,7 @@ export function AuthProvider({ children }) {
         data: { full_name: fullName, phone, ...extra },
         // o link de confirmação volta pro lugar certo: quem abre negócio cai no onboarding, quem entra numa equipe no convite
         // quem abre negócio ou entra numa equipe volta pro app da profissional (pro.), logada, no lugar certo
-        emailRedirectTo: extra.papel_desejado ? urlDoAmbiente('pro', '/onboarding') : extra.ativar_token ? urlDoAmbiente('pro', '/pro/agenda') : extra.equipe_codigo ? urlDoAmbiente('pro', `/equipe/${extra.equipe_codigo}`) : window.location.origin + '/',
+        emailRedirectTo: extra.papel_desejado ? urlDoAmbiente('pro', '/email-confirmado') : extra.ativar_token ? urlDoAmbiente('pro', '/pro/agenda') : extra.equipe_codigo ? urlDoAmbiente('pro', `/equipe/${extra.equipe_codigo}`) : window.location.origin + '/',
       },
     })
     // Com "confirmar e-mail" ligado, o Supabase NÃO dá erro para e-mail

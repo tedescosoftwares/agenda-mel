@@ -43,7 +43,9 @@ export default function ProtectedRoute({ children, requireRole, permitirSemVincu
   // 2.81: depois que serviços/equipe ficaram prontos e a dona chegou à
   // decisão final, o fluxo é preso. Refresh, botão voltar ou URL digitada
   // voltam para a tela de ativação até escolher teste ou confirmar pagamento.
-  if (role === 'admin' && acesso?.ativacao_pendente && pathname !== '/admin/configurar') {
+  // (o /onboarding fica de fora: é lá que a animação roda e a ativação aparece;
+  //  derrubar a página no meio cortava a animação em 2 s e mandava pra Configurar)
+  if (role === 'admin' && acesso?.ativacao_pendente && pathname !== '/admin/configurar' && !pathname.startsWith('/onboarding')) {
     return <Navigate to="/admin/configurar?etapa=ativacao" replace />
   }
 

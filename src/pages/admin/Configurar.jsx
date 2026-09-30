@@ -14,7 +14,7 @@ import { PassoServicos, PassoEquipe, PassoAtivacao, ModalErro, EstadoSalvo } fro
 // e o QR, que só abre quando serviços e equipe estão prontos.
 export default function Configurar({ para = 'admin' }) {
   const { salao: salaoAdmin, negocio, recarregarPerfil, acesso } = useAuth()
-    const base = para === 'admin' ? (salaoAdmin ?? negocio) : (negocio ?? salaoAdmin)
+  const base = para === 'admin' ? (salaoAdmin ?? negocio) : (negocio ?? salaoAdmin)
   const autonoma = base?.tipo === 'autonoma'
   const navigate = useNavigate()
   const [s, setS] = useState(null)

@@ -6,11 +6,11 @@ import { Check, Sparkles, CalendarDays, QrCode, MessageCircle, Store, Heart } fr
 // Dura pelo menos `minimo` ms mesmo que o banco responda na hora; se o banco
 // demorar, fica no último passo até `pronto` virar true.
 const PASSOS_SALAO = [
-  { Icone: Store, texto: 'Conferindo a identidade do salão' },
-  { Icone: CalendarDays, texto: 'Organizando serviços, agendas e horários' },
-  { Icone: QrCode, texto: 'Preparando a estrutura do link e do QR Code' },
-  { Icone: MessageCircle, texto: 'Preparando a assistente da MIMO' },
-  { Icone: Sparkles, texto: 'Fazendo os últimos ajustes' },
+  { Icone: Store, texto: 'Salvando a identidade do seu salão' },
+  { Icone: CalendarDays, texto: 'Preparando a estrutura da sua agenda' },
+  { Icone: QrCode, texto: 'Criando o endereço do seu espaço na MIMO' },
+  { Icone: MessageCircle, texto: 'Conectando os recursos do seu painel' },
+  { Icone: Sparkles, texto: 'Deixando tudo pronto para você começar' },
 ]
 const PASSOS_AUTONOMA = [
   { Icone: Heart, texto: 'Guardando os seus dados' },
@@ -44,8 +44,8 @@ export default function MontandoSalao({ nome, autonoma = false, pronto = false, 
       <div className="ms-card">
         <div className="ms-topo">
           <span className={'ms-orbita' + (terminou ? ' pronta' : '')}><span className="ms-nucleo">{terminou ? <Check size={26} /> : <Sparkles size={24} />}</span></span>
-          <h1>{terminou ? (autonoma ? 'Tudo preparado' : 'Tudo preparado para começar') : (autonoma ? 'Montando a sua agenda' : `Configurando ${nome || 'seu salão'}`)}</h1>
-          <p className="muted">{terminou ? (autonoma ? 'Só falta liberar sua agenda.' : 'Agora falta só escolher como você quer começar.') : 'Leva só um instante. Estamos encaixando as últimas peças.'}</p>
+          <h1>{terminou ? (autonoma ? 'Tudo preparado' : 'Seu espaço está preparado') : (autonoma ? 'Montando a sua agenda' : `Preparando ${nome || 'seu salão'}`)}</h1>
+          <p className="muted">{terminou ? (autonoma ? 'Só falta liberar sua agenda.' : 'Perfeito. Agora escolha como quer começar na MIMO.') : 'Pode deixar com a gente por alguns segundos. Estamos organizando seu espaço.'}</p>
         </div>
         <ol className="ms-passos">
           {passos.map((p, i) => {

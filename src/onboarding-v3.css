@@ -3918,3 +3918,320 @@
     display:none;
   }
 }
+
+
+/* ==========================================================================
+   PASSO 4 · QUASE LÁ / PLANO · NOTEBOOK / 1080p
+   Mesma régua visual dos passos anteriores: mantém toda a informação,
+   mas reduz gordura vertical para a decisão caber melhor na viewport.
+   ========================================================================== */
+@media (min-width:901px) and (max-height:960px) {
+  .ob-v3.ob-step-4 .ob-painel {
+    min-height:64px;
+    padding-top:8px;
+    padding-bottom:8px;
+  }
+
+  .ob-v3.ob-step-4 .ob-painel-topo img {
+    height:32px;
+  }
+
+  .ob-v3.ob-step-4 .ob-sair {
+    top:12px;
+    min-height:36px;
+    padding:0 12px;
+    border-radius:12px;
+    font-size:.72rem;
+  }
+
+  .ob-v3.ob-step-4 .ob-passos {
+    max-width:720px;
+  }
+
+  .ob-v3.ob-step-4 .ob-passos button {
+    min-height:40px;
+    gap:3px;
+    font-size:.64rem;
+  }
+
+  .ob-v3.ob-step-4 .ob-passo-num {
+    width:25px;
+    height:25px;
+    font-size:.66rem;
+  }
+
+  .ob-v3.ob-step-4 .ob-passos li:not(:last-child)::after {
+    top:17px;
+  }
+
+  .ob-v3.ob-step-4 .ob-conteudo {
+    width:min(calc(100% - 40px),920px);
+    padding:22px 0 18px;
+    gap:9px;
+  }
+
+  .ob-v3.ob-step-4 .ob-conteudo-num {
+    padding:4px 9px;
+    font-size:.61rem;
+  }
+
+  .ob-v3.ob-step-4 .ob-roteiro-m {
+    margin:-1px 0 0;
+    gap:5px;
+  }
+
+  .ob-v3.ob-step-4 .ob-roteiro-m li {
+    padding:4px 9px 4px 4px;
+    font-size:.68rem;
+  }
+
+  .ob-v3.ob-step-4 .ob-roteiro-m li b {
+    width:18px;
+    height:18px;
+  }
+
+  .ob-v3.ob-step-4 .ob-titulo {
+    max-width:none;
+    font-size:2.35rem;
+    line-height:1;
+  }
+
+  .ob-v3.ob-step-4 .ob-sub {
+    margin:-2px 0 1px;
+    font-size:.87rem;
+    line-height:1.4;
+  }
+
+  .ob-v3.ob-step-4 .ob-guia {
+    gap:9px;
+    padding:9px 11px;
+    border-radius:14px;
+  }
+
+  .ob-v3.ob-step-4 .ob-guia-icone {
+    width:28px;
+    height:28px;
+    border-radius:9px;
+  }
+
+  .ob-v3.ob-step-4 .ob-guia strong {
+    font-size:.78rem;
+  }
+
+  .ob-v3.ob-step-4 .ob-guia small {
+    font-size:.69rem;
+    line-height:1.35;
+  }
+
+  .ob-v3.ob-step-4 .ob-estrutura {
+    gap:11px;
+  }
+
+  /* card principal do plano */
+  .ob-v3.ob-step-4 .ob-plano-simples {
+    gap:13px;
+    padding:17px 18px !important;
+    border-radius:19px;
+  }
+
+  .ob-v3.ob-step-4 .ob-plano-simples-cabeca {
+    gap:12px;
+    padding-bottom:11px;
+  }
+
+  .ob-v3.ob-step-4 .ob-plano-simples-cabeca > span:first-child {
+    gap:3px;
+  }
+
+  .ob-v3.ob-step-4 .ob-etapa-mini {
+    font-size:.58rem;
+  }
+
+  .ob-v3.ob-step-4 .ob-plano-simples-cabeca .ob-card-titulo {
+    font-size:.92rem;
+    line-height:1.2;
+  }
+
+  .ob-v3.ob-step-4 .ob-plano-simples-cabeca small {
+    font-size:.68rem;
+    line-height:1.4;
+  }
+
+  .ob-v3.ob-step-4 .ob-plano-simples-miolo {
+    grid-template-columns:minmax(0,1.1fr) minmax(240px,.9fr);
+    gap:11px;
+  }
+
+  .ob-v3.ob-step-4 .ob-plano-escolha,
+  .ob-v3.ob-step-4 .ob-plano-resultado {
+    min-height:132px;
+    padding:13px 14px;
+    border-radius:14px;
+  }
+
+  .ob-v3.ob-step-4 .ob-plano-escolha {
+    gap:8px;
+  }
+
+  .ob-v3.ob-step-4 .ob-plano-pergunta {
+    font-size:.70rem;
+  }
+
+  .ob-v3.ob-step-4 .ob-plano-escolha .ob-contador-grande button {
+    width:40px;
+    height:40px;
+    border-radius:11px;
+  }
+
+  .ob-v3.ob-step-4 .ob-plano-escolha .ob-contador-grande strong {
+    min-width:58px;
+    height:40px;
+    border-radius:11px;
+    font-size:1.18rem;
+  }
+
+  .ob-v3.ob-step-4 .ob-plano-escolha .ob-plano-agendas {
+    font-size:.70rem;
+  }
+
+  .ob-v3.ob-step-4 .ob-plano-resultado {
+    gap:3px;
+  }
+
+  .ob-v3.ob-step-4 .ob-plano-resultado > small {
+    font-size:.64rem;
+  }
+
+  .ob-v3.ob-step-4 .ob-plano-resultado > strong {
+    font-size:.94rem;
+  }
+
+  .ob-v3.ob-step-4 .ob-plano-preco {
+    margin:2px 0;
+  }
+
+  .ob-v3.ob-step-4 .ob-plano-preco b {
+    font-size:1.62rem;
+  }
+
+  .ob-v3.ob-step-4 .ob-plano-preco span,
+  .ob-v3.ob-step-4 .ob-plano-resultado > span:last-child {
+    font-size:.67rem;
+  }
+
+  .ob-v3.ob-step-4 .ob-plano-simples-rodape {
+    gap:12px;
+    padding-top:0;
+  }
+
+  .ob-v3.ob-step-4 .ob-plano-teste {
+    gap:7px;
+  }
+
+  .ob-v3.ob-step-4 .ob-plano-teste strong {
+    font-size:.72rem;
+  }
+
+  .ob-v3.ob-step-4 .ob-plano-teste small {
+    font-size:.64rem;
+    line-height:1.35;
+  }
+
+  /* o bloco "continua no painel" vira um resumo, não outra página inteira */
+  .ob-v3.ob-step-4 .ob-depois-painel {
+    margin-top:0;
+    padding:14px 16px !important;
+    border-radius:17px;
+  }
+
+  .ob-v3.ob-step-4 .ob-depois-selo {
+    font-size:.61rem;
+    padding:4px 8px;
+  }
+
+  .ob-v3.ob-step-4 .ob-depois-painel > .ob-card-titulo {
+    font-size:.88rem;
+    line-height:1.2;
+  }
+
+  .ob-v3.ob-step-4 .ob-depois-painel > .muted {
+    font-size:.68rem;
+    line-height:1.38;
+  }
+
+  .ob-v3.ob-step-4 .ob-fluxo-depois {
+    gap:5px;
+    margin-top:2px;
+  }
+
+  .ob-v3.ob-step-4 .ob-fluxo-depois span {
+    min-height:31px;
+    padding:5px 8px;
+    border-radius:10px;
+    font-size:.65rem;
+  }
+
+  .ob-v3.ob-step-4 .ob-fluxo-depois span b {
+    width:18px;
+    height:18px;
+    font-size:.58rem;
+  }
+
+  .ob-v3.ob-step-4 .ob-fluxo-depois i {
+    font-size:.68rem;
+  }
+
+  /* CTA final segue a mesma densidade das telas anteriores */
+  .ob-v3.ob-step-4 .ob-rodape {
+    margin:8px -10px -18px;
+    padding:10px 10px calc(10px + env(safe-area-inset-bottom));
+  }
+
+  .ob-v3.ob-step-4 .ob-continuar {
+    min-width:190px;
+    min-height:44px;
+    border-radius:14px;
+  }
+
+  .ob-v3.ob-step-4 .ob-depois {
+    font-size:.68rem;
+  }
+}
+
+@media (min-width:901px) and (max-height:800px) {
+  .ob-v3.ob-step-4 .ob-conteudo {
+    padding-top:14px;
+    gap:7px;
+  }
+
+  .ob-v3.ob-step-4 .ob-titulo {
+    font-size:2rem;
+  }
+
+  .ob-v3.ob-step-4 .ob-guia {
+    padding:7px 9px;
+  }
+
+  .ob-v3.ob-step-4 .ob-plano-simples {
+    gap:10px;
+    padding:14px 16px !important;
+  }
+
+  .ob-v3.ob-step-4 .ob-plano-escolha,
+  .ob-v3.ob-step-4 .ob-plano-resultado {
+    min-height:112px;
+    padding:11px 12px;
+  }
+
+  .ob-v3.ob-step-4 .ob-plano-simples-rodape {
+    align-items:center;
+  }
+
+  .ob-v3.ob-step-4 .ob-depois-painel {
+    padding:11px 13px !important;
+  }
+
+  .ob-v3.ob-step-4 .ob-depois-painel > .muted {
+    display:none;
+  }
+}

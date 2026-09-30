@@ -3356,12 +3356,20 @@
   line-height:1.35;
 }
 
-.ob-v3.ob-step-2 .ob-acesso-consentimentos .ob-termos input {
-  margin-top:.1rem;
+.ob-v3.ob-step-2 .ob-acesso-consentimentos .ob-termos input[type="checkbox"] {
+  width:15px !important;
+  height:15px !important;
+  min-height:0 !important;
+  padding:0 !important;
+  margin-top:2px;
+}
+
+.ob-v3.ob-step-2 .ob-acesso-consentimentos .ob-termos + .ob-termos {
+  margin-top:1px;
 }
 
 .ob-v3.ob-step-2 .ob-acesso-form > .ob-dados-opcionais {
-  order:4;
+  order:1;
 }
 
 .ob-v3.ob-step-2 .ob-acesso-senhas {

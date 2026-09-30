@@ -96,7 +96,7 @@ function EstadoSalvo({ estado }) {
 }
 
 export default function Onboarding({ publico = false }) {
-  const { user, role, salao: salaoAdmin, negocio, recarregarPerfil, loading, signOut, profile } = useAuth()
+  const { user, role, salao: salaoAdmin, negocio, recarregarPerfil, loading, signOut, profile, acesso } = useAuth()
   const salao = negocio ?? salaoAdmin   // a autônoma não tem 'salao' de admin; o negócio que ela é dona vale pros dois
   const navigate = useNavigate()
   const [s, setS] = useState(publico ? { id: null, tipo: tipoDaURL(), publico: true } : null)   // o salão, como está no banco (com o que a tela mudou por cima)
@@ -156,6 +156,10 @@ export default function Onboarding({ publico = false }) {
   const [montando, setMontando] = useState(false)
   const [montado, setMontado] = useState(false)
   const [ativando, setAtivando] = useState(false)
+  // Saiu (ou deu F5) na tela de ativação? Volta exatamente pra ela: o cadastro
+  // já está concluído e o salão ainda não foi ativado. Nem passo 1, nem painel.
+  const ativacaoPendente = Boolean(!publico && salao && salao.onboarding_concluido_em && !salao.ativado_em && salao.tipo !== 'autonoma' && (acesso?.ativacao_pendente || acesso?.fase === 'configurando'))
+  useEffect(() => { if (ativacaoPendente && !montando) setAtivando(true) }, [ativacaoPendente]) // eslint-disable-line react-hooks/exhaustive-deps
   async function concluir() {
     setSalvando(true); setErro(''); setMontando(true); setMontado(false); setAtivando(false)
     const { error } = await supabase.rpc('onboarding_concluir', { salao: s.id })
@@ -210,6 +214,7 @@ export default function Onboarding({ publico = false }) {
     )
   }
   if (!s) return <div className="page-center"><p className="muted">Carregando…</p></div>
+  if (ativando && !montando) return <AtivarSalao s={s} onAtivado={entrouNoPainel} />
 
   const props = { s, setS, salvando, erro, setErro, seguir, voltar, gravar, gravarQuieto, setEstadoAuto, user, role, autonoma, docsLegais, concluir, pronto, publico, recarregarPerfil, navigate, irPara: (n) => { setPasso(n); window.scrollTo({ top: 0 }) } }
   const atual = passos[idx] ?? passos[0]
@@ -254,7 +259,6 @@ export default function Onboarding({ publico = false }) {
         {retomado && <div className="ob-retomada"><Wand2 size={15} /><span><strong>Continuando de onde você parou.</strong> O que você já preencheu está guardado; os passos anteriores ficam no menu ao lado.</span><button type="button" onClick={() => setRetomado(false)} aria-label="Fechar"><X size={14} /></button></div>}
         {atual.roteiro && <ol className="ob-roteiro-m" aria-label="Neste passo">{atual.roteiro.map((r, i) => <li key={r} className={feitos[i] ? 'feito' : ''}><b>{feitos[i] ? <Check size={10} /> : i + 1}</b>{r}</li>)}</ol>}
         {montando && <MontandoSalao nome={s.name} autonoma={autonoma} pronto={montado} erro={Boolean(erro)} minimo={12000} onFim={depoisDaAnimacao} />}
-        {ativando && <AtivarSalao s={s} onAtivado={entrouNoPainel} />}
         {erro && <ModalErro texto={erro} onFechar={() => setErro('')} />}
         {querSair && <ModalSair passo={idx + 1} onFicar={() => setQuerSair(false)} onSair={sairMesmo} />}
         <ProximoCtx.Provider value={passos[idx + 1]?.rotulo ?? ''}>

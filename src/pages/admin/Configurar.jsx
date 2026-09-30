@@ -24,6 +24,7 @@ export default function Configurar({ para = 'admin' }) {
   const [pronto, setPronto] = useState(false)
   const [estadoAuto, setEstadoAuto] = useState('')
   const [resumo, setResumo] = useState(null)
+  const [ativandoAqui, setAtivandoAqui] = useState(false)   // a tela de ativação, presa até mandar pro painel
   useEffect(() => { if (base && !s) setS({ ...base }) }, [base]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const etapas = [{ id: 1, rotulo: 'Serviços', Icone: Sparkles }, ...(!autonoma ? [{ id: 2, rotulo: 'Equipe', Icone: Users }] : []), { id: 3, rotulo: 'Pronto', Icone: QrCode }]
@@ -66,8 +67,11 @@ export default function Configurar({ para = 'admin' }) {
   const feitos = { 1: n('servicos') > 0, 2: n('equipe') > 0, 3: prontoParaAtivar() }
 
   // Se a pessoa fechou a ativação e voltou, não mostramos serviços/equipe antes
-  // da escolha comercial. É só a tela de ativação, em fullscreen.
-  if (!autonoma && acesso?.ativacao_pendente && !base?.ativado_em) {
+  // da escolha comercial. É só a tela de ativação, em fullscreen. Ela fica
+  // até mandar pro painel: o acesso muda no meio (deixa de estar pendente)
+  // e, sem segurar, a tela sumia antes do "sucesso" e caía nos serviços.
+  if (!autonoma && acesso?.ativacao_pendente && !base?.ativado_em && !ativandoAqui) setAtivandoAqui(true)
+  if (ativandoAqui) {
     return <AtivarSalao s={base} onAtivado={async () => { await recarregarPerfil?.(); navigate('/admin', { replace: true }) }} />
   }
 

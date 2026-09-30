@@ -108,6 +108,10 @@ export default function Onboarding({ publico = false }) {
   const [estadoAuto, setEstadoAuto] = useState('')
   const [feitos, setFeitos] = useState([])   // os checks do roteiro do passo atual
   useEffect(() => { setFeitos([]) }, [passo])
+  useEffect(() => {
+    const id = requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'smooth' }))
+    return () => cancelAnimationFrame(id)
+  }, [passo])
   const docsLegais = useDocumentosLegais()
 
   useEffect(() => {
@@ -147,9 +151,9 @@ export default function Onboarding({ publico = false }) {
   async function seguir(dados = {}) {
     const proximo = pular(passo)
     const ok = await gravar(dados, proximo)
-    if (ok) { setPasso(proximo); setRetomado(false); window.scrollTo({ top: 0, behavior: 'smooth' }) }
+    if (ok) { setPasso(proximo); setRetomado(false) }
   }
-  function voltar() { setPasso(voltarDe(passo)); setRetomado(false); window.scrollTo({ top: 0 }) }
+  function voltar() { setPasso(voltarDe(passo)); setRetomado(false) }
   // Final do cadastro: primeiro a animação acontece de verdade. Para salão,
   // ela desemboca direto na decisão comercial, antes de qualquer serviço/equipe.
   // Só depois da escolha a pessoa entra no painel e é guiada na configuração.
@@ -216,7 +220,7 @@ export default function Onboarding({ publico = false }) {
   if (!s) return <div className="page-center"><p className="muted">Carregando…</p></div>
   if (ativando && !montando) return <AtivarSalao s={s} onAtivado={entrouNoPainel} />
 
-  const props = { s, setS, salvando, erro, setErro, seguir, voltar, gravar, gravarQuieto, setEstadoAuto, user, role, autonoma, docsLegais, concluir, pronto, publico, recarregarPerfil, navigate, irPara: (n) => { setPasso(n); window.scrollTo({ top: 0 }) } }
+  const props = { s, setS, salvando, erro, setErro, seguir, voltar, gravar, gravarQuieto, setEstadoAuto, user, role, autonoma, docsLegais, concluir, pronto, publico, recarregarPerfil, navigate, irPara: (n) => { setPasso(n) } }
   const atual = passos[idx] ?? passos[0]
   const plano = planoDoNegocio(s.tipo, s.equipe_prevista)
   const sairLink = publico ? <Link className="ob-sair" to="/pro/entrar"><LogOut size={14} /> Já tenho conta</Link> : <button type="button" className="ob-sair" onClick={sair}><LogOut size={14} /> Sair do cadastro</button>
@@ -714,6 +718,11 @@ function PassoDados({ s, seguir, voltar, salvando, setErro, user, autonoma, publ
     try { sessionStorage.setItem(chaveDados, String(nivelDados)) } catch { /* navegador sem storage */ }
   }, [chaveDados, nivelDados])
 
+  useEffect(() => {
+    const id = requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'smooth' }))
+    return () => cancelAnimationFrame(id)
+  }, [blocoDados])
+
   function erroDaEtapaDados(id) {
     if (id === 'identificacao') {
       if (comCnpj && !cnpjValido(f.cnpj)) return f.cnpj ? 'Confira o CNPJ: os dígitos não batem.' : 'Informe o CNPJ ou escolha seguir com CPF.'
@@ -846,9 +855,23 @@ function PassoDados({ s, seguir, voltar, salvando, setErro, user, autonoma, publ
               <AjudaCampo titulo="E-mail ou WhatsApp?">O e-mail é usado para acessar e recuperar a conta. O WhatsApp recebe avisos importantes do cadastro. O número comercial mostrado para clientes pode ser definido no próximo passo.</AjudaCampo>
             </div>
 
-            <div className="ob-form">
-              <label>E-mail da conta <b>*</b><input type="email" value={f.email} onChange={m('email')} placeholder="contato@essenzahair.com.br" autoComplete="email" /></label>
-              <label>Seu WhatsApp <b>*</b><span className="ob-fone"><span className="ob-ddi">🇧🇷 +55</span><input type="tel" inputMode="numeric" value={f.whatsapp} onChange={(e) => setF((x) => ({ ...x, whatsapp: formatarFone(e.target.value) }))} placeholder="(11) 91234-5678" autoComplete="tel" /></span></label>
+            <div className="ob-form ob-acesso-form">
+              <div className="ob-acesso-grade">
+                <label>E-mail da conta <b>*</b><input type="email" value={f.email} onChange={m('email')} placeholder="contato@essenzahair.com.br" autoComplete="email" /></label>
+                <label>Seu WhatsApp <b>*</b><span className="ob-fone"><span className="ob-ddi">🇧🇷 +55</span><input type="tel" inputMode="numeric" value={f.whatsapp} onChange={(e) => setF((x) => ({ ...x, whatsapp: formatarFone(e.target.value) }))} placeholder="(11) 91234-5678" autoComplete="tel" /></span></label>
+              </div>
+
+              {publico && !user && (
+                <>
+                  <div className="ob-acesso-senhas">
+                    <SenhaNova valor={conta} onChange={(v) => setConta((x) => ({ ...x, ...v }))} />
+                  </div>
+                  <div className="ob-acesso-consentimentos">
+                    <label className="ob-termos"><input type="checkbox" checked={conta.termos} onChange={(e) => setConta((x) => ({ ...x, termos: e.target.checked }))} /><span><FraseDeAceite papel={s.tipo} /></span></label>
+                    <label className="ob-termos ob-marketing"><input type="checkbox" checked={conta.marketing} onChange={(e) => setConta((x) => ({ ...x, marketing: e.target.checked }))} /><span>Quero receber novidades, ofertas e dicas da MIMO. Posso cancelar quando quiser.</span></label>
+                  </div>
+                </>
+              )}
 
               <details className="ob-dados-opcionais">
                 <summary>Adicionar outros contatos <Plus size={14} /></summary>
@@ -857,14 +880,6 @@ function PassoDados({ s, seguir, voltar, salvando, setErro, user, autonoma, publ
                   <label>Outro e-mail <span className="muted">(opcional)</span>{f.emails.length === 0 ? <span className="ob-fone"><button type="button" className="ob-geo" onClick={() => maisNa('emails')}><Plus size={14} /> Adicionar e-mail</button></span> : f.emails.map((_, i) => campoContato('emails', i, 'email'))}</label>
                 </div>
               </details>
-
-              {publico && !user && (
-                <>
-                  <SenhaNova valor={conta} onChange={(v) => setConta((x) => ({ ...x, ...v }))} />
-                  <label className="ob-termos"><input type="checkbox" checked={conta.termos} onChange={(e) => setConta((x) => ({ ...x, termos: e.target.checked }))} /><span><FraseDeAceite papel={s.tipo} /></span></label>
-                  <label className="ob-termos ob-marketing"><input type="checkbox" checked={conta.marketing} onChange={(e) => setConta((x) => ({ ...x, marketing: e.target.checked }))} /><span>Quero receber novidades, ofertas e dicas da MIMO. Posso cancelar quando quiser.</span></label>
-                </>
-              )}
             </div>
           </div>
         )}
@@ -1189,6 +1204,11 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
   useEffect(() => {
     try { sessionStorage.setItem(chaveCelebradas, JSON.stringify(celebradas)) } catch { /* navegador sem storage */ }
   }, [chaveCelebradas, celebradas])
+
+  useEffect(() => {
+    const id = requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'smooth' }))
+    return () => cancelAnimationFrame(id)
+  }, [blocoAberto])
 
   useRoteiro([
     celebradas.includes('identidade'),

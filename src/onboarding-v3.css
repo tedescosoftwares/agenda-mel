@@ -20,6 +20,7 @@
 
   display:grid;
   grid-template-columns:1fr;
+  grid-template-rows:auto minmax(0,1fr);
   min-height:100dvh;
   background:
     radial-gradient(58rem 30rem at 90% -8%, rgba(255,123,170,.14), transparent 62%),
@@ -2781,5 +2782,1456 @@
   .ob-v3 .ob-finale-modal-icone,
   .ob-v3 .ob-finale-estouro i {
     animation:none !important;
+  }
+}
+
+
+/* ==========================================================================
+   PASSO 1 · DESKTOP / NOTEBOOK COM ALTURA MENOR
+   Ajuste puramente visual. Em 1920x1080 e notebooks, a decisão principal
+   precisa caber na viewport sem parecer que o navegador está com zoom.
+   Não altera fluxo, estado, navegação ou regra de negócio.
+   ========================================================================== */
+@media (min-width:901px) and (max-height:960px) {
+  .ob-v3.ob-step-1 .ob-painel {
+    min-height:64px;
+    padding-top:8px;
+    padding-bottom:8px;
+  }
+
+  .ob-v3.ob-step-1 .ob-painel-topo img {
+    height:32px;
+  }
+
+  .ob-v3.ob-step-1 .ob-sair {
+    top:12px;
+    min-height:36px;
+    padding:0 12px;
+    border-radius:12px;
+    font-size:.72rem;
+  }
+
+  .ob-v3.ob-step-1 .ob-passos {
+    max-width:720px;
+  }
+
+  .ob-v3.ob-step-1 .ob-passos button {
+    min-height:40px;
+    gap:3px;
+    font-size:.64rem;
+  }
+
+  .ob-v3.ob-step-1 .ob-passo-num {
+    width:25px;
+    height:25px;
+    font-size:.66rem;
+  }
+
+  .ob-v3.ob-step-1 .ob-passos li:not(:last-child)::after {
+    top:17px;
+  }
+
+  .ob-v3.ob-step-1 .ob-conteudo {
+    width:min(calc(100% - 40px),1080px);
+    padding:24px 0 18px;
+    gap:10px;
+  }
+
+  .ob-v3.ob-step-1 .ob-conteudo-num {
+    padding:4px 9px;
+    font-size:.61rem;
+  }
+
+  .ob-v3.ob-step-1 .ob-roteiro-m {
+    margin:-1px 0 1px;
+    gap:5px;
+  }
+
+  .ob-v3.ob-step-1 .ob-roteiro-m li {
+    padding:4px 9px 4px 4px;
+    font-size:.68rem;
+  }
+
+  .ob-v3.ob-step-1 .ob-roteiro-m li b {
+    width:18px;
+    height:18px;
+  }
+
+  .ob-v3.ob-step-1 .ob-titulo {
+    max-width:none;
+    font-size:clamp(2.15rem,3vw,2.65rem);
+    line-height:1;
+  }
+
+  .ob-v3.ob-step-1 .ob-sub {
+    margin:-2px 0 2px;
+    font-size:.89rem;
+    line-height:1.42;
+  }
+
+  .ob-v3.ob-step-1 .ob-guia {
+    gap:9px;
+    padding:9px 11px;
+    border-radius:14px;
+  }
+
+  .ob-v3.ob-step-1 .ob-guia-icone {
+    width:28px;
+    height:28px;
+    border-radius:9px;
+  }
+
+  .ob-v3.ob-step-1 .ob-guia strong {
+    font-size:.78rem;
+  }
+
+  .ob-v3.ob-step-1 .ob-guia small {
+    font-size:.70rem;
+    line-height:1.35;
+  }
+
+  .ob-v3.ob-step-1 .ob-tipos {
+    gap:14px;
+  }
+
+  .ob-v3.ob-step-1 .ob-tipo {
+    gap:7px;
+    padding-bottom:13px;
+    border-radius:22px;
+  }
+
+  .ob-v3.ob-step-1 .ob-tipo-foto {
+    aspect-ratio:16/5.9;
+  }
+
+  .ob-v3.ob-step-1 .ob-tipo-foto .ob-pilula {
+    left:12px;
+    bottom:9px;
+  }
+
+  .ob-v3.ob-step-1 .ob-pilula {
+    padding:5px 9px;
+    font-size:.62rem;
+  }
+
+  .ob-v3.ob-step-1 .ob-tipo-check {
+    width:28px;
+    height:28px;
+    top:10px;
+    right:10px;
+  }
+
+  .ob-v3.ob-step-1 .ob-tipo > strong,
+  .ob-v3.ob-step-1 .ob-tipo > .muted,
+  .ob-v3.ob-step-1 .ob-tipo > ul,
+  .ob-v3.ob-step-1 .ob-tipo > .ob-tipo-preco,
+  .ob-v3.ob-step-1 .ob-tipo > .ob-tipo-bloco,
+  .ob-v3.ob-step-1 .ob-tipo > .ob-tipo-destaque,
+  .ob-v3.ob-step-1 .ob-tipo > .ob-tipo-promais {
+    margin-left:15px;
+    margin-right:15px;
+  }
+
+  .ob-v3.ob-step-1 .ob-tipo > strong {
+    margin-top:3px;
+    font-size:1.12rem;
+    line-height:1.12;
+  }
+
+  .ob-v3.ob-step-1 .ob-tipo > .muted {
+    min-height:0;
+    font-size:.77rem;
+    line-height:1.35;
+  }
+
+  .ob-v3.ob-step-1 .ob-tipo-bloco {
+    padding:8px 10px;
+    border-radius:12px;
+  }
+
+  .ob-v3.ob-step-1 .ob-tipo-bloco small {
+    font-size:.64rem;
+  }
+
+  .ob-v3.ob-step-1 .ob-tipo-bloco ul {
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:3px 10px;
+    margin-top:3px;
+    font-size:.70rem;
+  }
+
+  .ob-v3.ob-step-1 .ob-tipo li {
+    gap:4px;
+  }
+
+  .ob-v3.ob-step-1 .ob-tipo li svg {
+    width:12px;
+    height:12px;
+  }
+
+  .ob-v3.ob-step-1 .ob-tipo-destaque {
+    padding:6px 9px;
+    border-radius:9px;
+    font-size:.71rem;
+    line-height:1.32;
+  }
+
+  .ob-v3.ob-step-1 .ob-tipo-preco {
+    padding-top:7px;
+    gap:6px;
+  }
+
+  .ob-v3.ob-step-1 .ob-tipo-preco b {
+    font-size:1.42rem;
+  }
+
+  .ob-v3.ob-step-1 .ob-tipo-preco small {
+    font-size:.71rem;
+    line-height:1.25;
+  }
+
+  .ob-v3.ob-step-1 .ob-tipo-promais {
+    padding:6px 9px;
+    border-radius:10px;
+    font-size:.66rem;
+    line-height:1.3;
+  }
+
+  .ob-v3.ob-step-1 .ob-rodape {
+    margin:8px -10px -18px;
+    padding:10px 10px calc(10px + env(safe-area-inset-bottom));
+  }
+
+  .ob-v3.ob-step-1 .ob-continuar {
+    min-width:180px;
+    min-height:44px;
+    border-radius:14px;
+  }
+
+  .ob-v3.ob-step-1 .ob-depois {
+    font-size:.68rem;
+  }
+}
+
+/* Altura realmente apertada: mantém a mesma linguagem sem virar miniatura. */
+@media (min-width:901px) and (max-height:800px) {
+  .ob-v3.ob-step-1 .ob-conteudo {
+    padding-top:16px;
+    gap:8px;
+  }
+
+  .ob-v3.ob-step-1 .ob-titulo {
+    font-size:2rem;
+  }
+
+  .ob-v3.ob-step-1 .ob-guia {
+    padding:7px 10px;
+  }
+
+  .ob-v3.ob-step-1 .ob-tipo-foto {
+    aspect-ratio:16/5.1;
+  }
+
+  .ob-v3.ob-step-1 .ob-tipo-bloco ul {
+    display:none;
+  }
+
+  .ob-v3.ob-step-1 .ob-tipo-promais {
+    font-size:.62rem;
+  }
+}
+
+
+/* ==========================================================================
+   PASSO 2 · SEUS DADOS · NOTEBOOK / 1080p
+   Mesma régua compacta aprovada no passo 1. Só densidade visual.
+   Mantém os 3 subpassos, campos, validações e comportamento intactos.
+   ========================================================================== */
+@media (min-width:901px) and (max-height:960px) {
+  .ob-v3.ob-step-2 .ob-painel {
+    min-height:64px;
+    padding-top:8px;
+    padding-bottom:8px;
+  }
+
+  .ob-v3.ob-step-2 .ob-painel-topo img {
+    height:32px;
+  }
+
+  .ob-v3.ob-step-2 .ob-sair {
+    top:12px;
+    min-height:36px;
+    padding:0 12px;
+    border-radius:12px;
+    font-size:.72rem;
+  }
+
+  .ob-v3.ob-step-2 .ob-passos {
+    max-width:720px;
+  }
+
+  .ob-v3.ob-step-2 .ob-passos button {
+    min-height:40px;
+    gap:3px;
+    font-size:.64rem;
+  }
+
+  .ob-v3.ob-step-2 .ob-passo-num {
+    width:25px;
+    height:25px;
+    font-size:.66rem;
+  }
+
+  .ob-v3.ob-step-2 .ob-passos li:not(:last-child)::after {
+    top:17px;
+  }
+
+  .ob-v3.ob-step-2 .ob-conteudo {
+    width:min(calc(100% - 40px),820px);
+    padding:22px 0 18px;
+    gap:9px;
+  }
+
+  .ob-v3.ob-step-2 .ob-conteudo-num {
+    padding:4px 9px;
+    font-size:.61rem;
+  }
+
+  .ob-v3.ob-step-2 .ob-roteiro-m {
+    margin:-1px 0 0;
+    gap:5px;
+  }
+
+  .ob-v3.ob-step-2 .ob-roteiro-m li {
+    padding:4px 9px 4px 4px;
+    font-size:.68rem;
+  }
+
+  .ob-v3.ob-step-2 .ob-roteiro-m li b {
+    width:18px;
+    height:18px;
+  }
+
+  .ob-v3.ob-step-2 .ob-titulo {
+    max-width:none;
+    font-size:2.35rem;
+    line-height:1;
+  }
+
+  .ob-v3.ob-step-2 .ob-sub {
+    margin:-2px 0 1px;
+    font-size:.87rem;
+    line-height:1.4;
+  }
+
+  /* trilha interna: continua didática, mas deixa de ocupar um bloco enorme */
+  .ob-v3.ob-step-2 .ob-subfluxo-dados {
+    gap:8px;
+    margin:0 0 6px;
+    padding:11px 12px;
+    border-radius:16px;
+  }
+
+  .ob-v3.ob-step-2 .ob-subfluxo-topo {
+    font-size:.70rem;
+  }
+
+  .ob-v3.ob-step-2 .ob-subfluxo-topo strong {
+    font-size:.82rem;
+  }
+
+  .ob-v3.ob-step-2 .ob-subfluxo-progresso {
+    height:4px;
+  }
+
+  .ob-v3.ob-step-2 .ob-subfluxo-itens {
+    gap:6px;
+  }
+
+  .ob-v3.ob-step-2 .ob-subfluxo-itens button {
+    min-height:52px;
+    grid-template-columns:24px minmax(0,1fr);
+    gap:7px;
+    padding:6px 8px;
+    border-radius:12px;
+  }
+
+  .ob-v3.ob-step-2 .ob-subfluxo-num {
+    width:23px;
+    height:23px;
+    font-size:.63rem;
+  }
+
+  .ob-v3.ob-step-2 .ob-subfluxo-itens strong {
+    font-size:.70rem;
+  }
+
+  .ob-v3.ob-step-2 .ob-subfluxo-itens small {
+    font-size:.57rem;
+  }
+
+  .ob-v3.ob-step-2 .ob-dados-wizard {
+    gap:10px;
+    margin-top:0;
+  }
+
+  .ob-v3.ob-step-2 .ob-dado-etapa {
+    padding:17px 18px !important;
+    border-radius:19px;
+  }
+
+  .ob-v3.ob-step-2 .ob-dado-cabecalho {
+    gap:12px;
+    padding-bottom:10px;
+    margin-bottom:10px;
+  }
+
+  .ob-v3.ob-step-2 .ob-dado-cabecalho > span:first-child {
+    gap:2px;
+  }
+
+  .ob-v3.ob-step-2 .ob-dado-cabecalho .ob-card-titulo {
+    font-size:.91rem;
+  }
+
+  .ob-v3.ob-step-2 .ob-dado-cabecalho small {
+    font-size:.68rem;
+    line-height:1.35;
+  }
+
+  .ob-v3.ob-step-2 .ob-dado-etapa .ob-form {
+    gap:9px;
+    max-width:none;
+  }
+
+  .ob-v3.ob-step-2 .ob-dado-etapa .ob-bloco-ajuda {
+    margin:0;
+    padding:7px 9px;
+    border-radius:10px;
+    font-size:.68rem;
+    line-height:1.3;
+  }
+
+  .ob-v3.ob-step-2 .ob-dado-etapa label {
+    gap:4px;
+    font-size:.70rem;
+  }
+
+  .ob-v3.ob-step-2 .ob-dado-etapa input,
+  .ob-v3.ob-step-2 .ob-dado-etapa select {
+    min-height:40px;
+    padding:8px 10px;
+    border-radius:11px;
+    font-size:.84rem;
+  }
+
+  .ob-v3.ob-step-2 .ob-ddi {
+    min-height:40px;
+    padding:0 .55rem;
+    border-radius:11px;
+    font-size:.72rem;
+  }
+
+  .ob-v3.ob-step-2 .ob-linha-2 {
+    gap:.5rem;
+  }
+
+  .ob-v3.ob-step-2 .ob-termos.ob-informal {
+    margin-top:1px;
+    min-height:auto;
+  }
+
+  .ob-v3.ob-step-2 .ob-dados-opcionais {
+    border-radius:12px;
+  }
+
+  .ob-v3.ob-step-2 .ob-dados-opcionais summary {
+    min-height:38px;
+    padding:7px 10px;
+    font-size:.70rem;
+  }
+
+  .ob-v3.ob-step-2 .ob-dados-opcionais > div {
+    gap:9px;
+    padding:10px;
+  }
+
+  /* rodapé do subpasso: menos parede branca, mesma clareza */
+  .ob-v3.ob-step-2 .ob-subpasso-rodape {
+    bottom:8px;
+    gap:9px;
+    margin-top:9px;
+    padding:8px 9px;
+    border-radius:15px;
+  }
+
+  .ob-v3.ob-step-2 .ob-subpasso-status {
+    gap:6px;
+    font-size:.67rem;
+    line-height:1.3;
+  }
+
+  .ob-v3.ob-step-2 .ob-subpasso-rodape > .btn {
+    min-height:40px;
+    padding-left:14px;
+    padding-right:14px;
+    border-radius:12px;
+    font-size:.76rem;
+  }
+}
+
+@media (min-width:901px) and (max-height:800px) {
+  .ob-v3.ob-step-2 .ob-conteudo {
+    padding-top:14px;
+    gap:7px;
+  }
+
+  .ob-v3.ob-step-2 .ob-titulo {
+    font-size:2rem;
+  }
+
+  .ob-v3.ob-step-2 .ob-subfluxo-dados {
+    padding:8px 10px;
+  }
+
+  .ob-v3.ob-step-2 .ob-subfluxo-topo {
+    display:none;
+  }
+
+  .ob-v3.ob-step-2 .ob-subfluxo-itens button {
+    min-height:44px;
+  }
+
+  .ob-v3.ob-step-2 .ob-dado-etapa {
+    padding:14px 16px !important;
+  }
+
+  .ob-v3.ob-step-2 .ob-dado-cabecalho {
+    padding-bottom:8px;
+    margin-bottom:8px;
+  }
+
+  .ob-v3.ob-step-2 .ob-dado-etapa .ob-form {
+    gap:7px;
+  }
+
+  .ob-v3.ob-step-2 .ob-subpasso-status {
+    display:none;
+  }
+
+  .ob-v3.ob-step-2 .ob-subpasso-rodape {
+    grid-template-columns:auto 1fr auto;
+  }
+}
+
+
+/* ==========================================================================
+   PASSO 2 · ACESSO + CONFIRMAÇÃO DE E-MAIL
+   Aproveita melhor a largura e remove o vazio visual do fim do formulário.
+   ========================================================================== */
+.ob-v3.ob-step-2 .ob-acesso-grade,
+.ob-v3.ob-step-2 .ob-acesso-senhas {
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px 12px;
+}
+
+.ob-v3.ob-step-2 .ob-acesso-grade > label,
+.ob-v3.ob-step-2 .ob-acesso-senhas > label {
+  min-width:0;
+}
+
+/* O campo da esquerda ganha a barra de força abaixo da senha.
+   Sem isto, o flex do label estica as linhas e empurra "Confirmar senha"
+   alguns pixels para baixo. Os dois inputs começam exatamente na mesma altura. */
+.ob-v3.ob-step-2 .ob-acesso-senhas > label {
+  align-self:start;
+  align-content:flex-start;
+}
+
+.ob-v3.ob-step-2 .ob-acesso-consentimentos {
+  display:grid;
+  grid-template-columns:1fr;
+  gap:7px;
+  padding:10px 12px;
+  border:1px solid #eee7ef;
+  border-radius:12px;
+  background:#fcfafc;
+}
+
+.ob-v3.ob-step-2 .ob-acesso-consentimentos .ob-termos {
+  margin:0;
+  font-size:.72rem !important;
+  line-height:1.35;
+}
+
+.ob-v3.ob-step-2 .ob-acesso-consentimentos .ob-termos input[type="checkbox"] {
+  width:15px !important;
+  height:15px !important;
+  min-height:0 !important;
+  padding:0 !important;
+  margin-top:2px;
+}
+
+.ob-v3.ob-step-2 .ob-acesso-consentimentos .ob-termos + .ob-termos {
+  margin-top:1px;
+}
+
+.ob-v3.ob-step-2 .ob-acesso-form > .ob-dados-opcionais {
+  order:1;
+}
+
+.ob-v3.ob-step-2 .ob-acesso-senhas {
+  order:2;
+}
+
+.ob-v3.ob-step-2 .ob-acesso-consentimentos {
+  order:3;
+}
+
+/* confirmação de e-mail aparece dentro do mesmo palco do onboarding,
+   não como um bloquinho solto perdido no canto esquerdo */
+.ob-v3.ob-step-2 .ce-caixa {
+  width:min(100%,680px);
+  margin:clamp(14px,5vh,48px) auto 0;
+  padding:28px 30px;
+  display:grid;
+  gap:16px;
+  justify-items:stretch;
+  border:1px solid #eee5ef;
+  border-radius:26px;
+  background:
+    radial-gradient(26rem 14rem at 100% 0%,rgba(255,45,122,.08),transparent 66%),
+    #fff;
+  box-shadow:0 22px 60px rgba(61,12,78,.08);
+}
+
+.ob-v3.ob-step-2 .ce-cabeca {
+  display:flex;
+  align-items:center;
+  gap:14px;
+}
+
+.ob-v3.ob-step-2 .ce-cabeca > div {
+  min-width:0;
+}
+
+.ob-v3.ob-step-2 .ce-icone,
+.ob-v3.ob-step-2 .ce-check {
+  width:52px;
+  height:52px;
+  border-radius:16px;
+  flex:none;
+}
+
+.ob-v3.ob-step-2 .ce-kicker {
+  display:block;
+  margin-bottom:3px;
+  color:var(--o-rosa);
+  font-size:.68rem;
+  font-weight:800;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+
+.ob-v3.ob-step-2 .ce-caixa .ob-titulo {
+  max-width:none;
+  font-size:2.15rem;
+  line-height:1.02;
+}
+
+.ob-v3.ob-step-2 .ce-texto {
+  max-width:60ch;
+  margin:0;
+  font-size:.92rem;
+  line-height:1.5;
+}
+
+.ob-v3.ob-step-2 .ce-status {
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+  padding:12px 14px;
+  border:1px solid #f0e8f1;
+  border-radius:15px;
+  background:#fcfafc;
+  color:#716975;
+}
+
+.ob-v3.ob-step-2 .ce-status > svg {
+  flex:none;
+  margin-top:2px;
+  color:var(--o-rosa);
+}
+
+.ob-v3.ob-step-2 .ce-status > span {
+  display:grid;
+  gap:2px;
+}
+
+.ob-v3.ob-step-2 .ce-status strong {
+  color:var(--o-ameixa);
+  font-size:.79rem;
+}
+
+.ob-v3.ob-step-2 .ce-status small {
+  color:#8e8691;
+  font-size:.72rem;
+  line-height:1.4;
+}
+
+.ob-v3.ob-step-2 .ce-acoes {
+  display:flex;
+  justify-content:flex-start;
+  gap:9px;
+}
+
+.ob-v3.ob-step-2 .ce-acoes .btn {
+  min-height:44px;
+  padding:0 18px;
+  border-radius:13px;
+}
+
+.ob-v3.ob-step-2 .ce-caixa-pronta {
+  max-width:540px;
+  justify-items:center;
+  text-align:center;
+}
+
+@media (min-width:901px) and (max-height:960px) {
+  .ob-v3.ob-step-2 .ce-caixa {
+    margin-top:16px;
+    padding:22px 24px;
+    gap:12px;
+  }
+
+  .ob-v3.ob-step-2 .ce-caixa .ob-titulo {
+    font-size:1.95rem;
+  }
+
+  .ob-v3.ob-step-2 .ce-texto {
+    font-size:.84rem;
+  }
+
+  .ob-v3.ob-step-2 .ce-status {
+    padding:10px 12px;
+  }
+}
+
+@media (max-width:700px) {
+  .ob-v3.ob-step-2 .ob-acesso-grade,
+  .ob-v3.ob-step-2 .ob-acesso-senhas {
+    grid-template-columns:1fr;
+  }
+
+  .ob-v3.ob-step-2 .ce-caixa {
+    margin-top:8px;
+    padding:20px 18px;
+    border-radius:20px;
+  }
+
+  .ob-v3.ob-step-2 .ce-cabeca {
+    align-items:flex-start;
+  }
+
+  .ob-v3.ob-step-2 .ce-caixa .ob-titulo {
+    font-size:1.75rem;
+  }
+
+  .ob-v3.ob-step-2 .ce-acoes {
+    display:grid;
+    grid-template-columns:1fr;
+  }
+
+  .ob-v3.ob-step-2 .ce-acoes .btn {
+    width:100%;
+  }
+}
+
+
+/* ==========================================================================
+   PASSO 3 · SEU ESPAÇO · NOTEBOOK / 1080p
+   Mesma escala aprovada nos passos 1 e 2: menos gordura vertical sem
+   transformar o wizard em miniatura. Não altera campos, fluxo ou regras.
+   ========================================================================== */
+@media (min-width:901px) and (max-height:960px) {
+  .ob-v3.ob-step-3 .ob-painel {
+    min-height:64px;
+    padding-top:8px;
+    padding-bottom:8px;
+  }
+
+  .ob-v3.ob-step-3 .ob-painel-topo img {
+    height:32px;
+  }
+
+  .ob-v3.ob-step-3 .ob-sair {
+    top:12px;
+    min-height:36px;
+    padding:0 12px;
+    border-radius:12px;
+    font-size:.72rem;
+  }
+
+  .ob-v3.ob-step-3 .ob-passos {
+    max-width:720px;
+  }
+
+  .ob-v3.ob-step-3 .ob-passos button {
+    min-height:40px;
+    gap:3px;
+    font-size:.64rem;
+  }
+
+  .ob-v3.ob-step-3 .ob-passo-num {
+    width:25px;
+    height:25px;
+    font-size:.66rem;
+  }
+
+  .ob-v3.ob-step-3 .ob-passos li:not(:last-child)::after {
+    top:17px;
+  }
+
+  .ob-v3.ob-step-3 .ob-conteudo {
+    width:min(calc(100% - 40px),900px);
+    padding:22px 0 18px;
+    gap:9px;
+  }
+
+  .ob-v3.ob-step-3 .ob-conteudo-num {
+    padding:4px 9px;
+    font-size:.61rem;
+  }
+
+  .ob-v3.ob-step-3 .ob-roteiro-m {
+    margin:-1px 0 0;
+    gap:5px;
+  }
+
+  .ob-v3.ob-step-3 .ob-roteiro-m li {
+    padding:4px 9px 4px 4px;
+    font-size:.68rem;
+  }
+
+  .ob-v3.ob-step-3 .ob-roteiro-m li b {
+    width:18px;
+    height:18px;
+  }
+
+  .ob-v3.ob-step-3 .ob-titulo {
+    max-width:none;
+    font-size:2.35rem;
+    line-height:1;
+  }
+
+  .ob-v3.ob-step-3 .ob-sub {
+    margin:-2px 0 1px;
+    font-size:.87rem;
+    line-height:1.4;
+  }
+
+  /* mapa dos 5 subpassos */
+  .ob-v3.ob-step-3 .ob-subfluxo {
+    gap:7px;
+    margin:0 0 5px;
+    padding:10px 11px;
+    border-radius:16px;
+  }
+
+  .ob-v3.ob-step-3 .ob-subfluxo-topo {
+    font-size:.69rem;
+  }
+
+  .ob-v3.ob-step-3 .ob-subfluxo-topo strong {
+    font-size:.80rem;
+  }
+
+  .ob-v3.ob-step-3 .ob-subfluxo-progresso {
+    height:4px;
+  }
+
+  .ob-v3.ob-step-3 .ob-subfluxo-itens {
+    gap:5px;
+  }
+
+  .ob-v3.ob-step-3 .ob-subfluxo-itens button {
+    min-height:48px;
+    grid-template-columns:22px minmax(0,1fr);
+    gap:6px;
+    padding:5px 7px;
+    border-radius:11px;
+  }
+
+  .ob-v3.ob-step-3 .ob-subfluxo-num {
+    width:21px;
+    height:21px;
+    font-size:.58rem;
+  }
+
+  .ob-v3.ob-step-3 .ob-subfluxo-itens strong {
+    font-size:.66rem;
+  }
+
+  .ob-v3.ob-step-3 .ob-subfluxo-itens small {
+    font-size:.54rem;
+  }
+
+  .ob-v3.ob-step-3 .ob-subfluxo-aviso {
+    gap:5px;
+    font-size:.64rem;
+    line-height:1.3;
+  }
+
+  /* card da etapa atual */
+  .ob-v3.ob-step-3 .ob-estrutura {
+    gap:10px;
+  }
+
+  .ob-v3.ob-step-3 .ob-fluxo-card.aberto {
+    padding:17px 18px !important;
+    border-radius:19px;
+  }
+
+  .ob-v3.ob-step-3 .ob-fluxo-card.aberto > .ob-card-titulo,
+  .ob-v3.ob-step-3 .ob-fluxo-card.aberto > .ob-card-linha,
+  .ob-v3.ob-step-3 .ob-fluxo-card.aberto > .muted {
+    padding-right:44px;
+  }
+
+  .ob-v3.ob-step-3 .ob-card-titulo {
+    font-size:.92rem;
+    line-height:1.2;
+  }
+
+  .ob-v3.ob-step-3 .ob-card > .muted {
+    font-size:.70rem;
+    line-height:1.38;
+  }
+
+  .ob-v3.ob-step-3 .ob-form,
+  .ob-v3.ob-step-3 .ob-coluna {
+    gap:10px;
+  }
+
+  .ob-v3.ob-step-3 .ob-form label,
+  .ob-v3.ob-step-3 .ob-campo,
+  .ob-v3.ob-step-3 .ob-rotulo {
+    font-size:.70rem;
+  }
+
+  .ob-v3.ob-step-3 .ob-form input,
+  .ob-v3.ob-step-3 .ob-form select,
+  .ob-v3.ob-step-3 .ob-campo input,
+  .ob-v3.ob-step-3 .ob-campo select {
+    min-height:40px;
+    padding:8px 10px;
+    border-radius:11px;
+    font-size:.84rem;
+  }
+
+  /* identidade / fotos */
+  .ob-v3.ob-step-3 .ob-logo {
+    height:118px;
+    border-radius:16px;
+  }
+
+  .ob-v3.ob-step-3 .ob-ponte {
+    padding:9px 11px;
+    border-radius:13px;
+    font-size:.70rem;
+    line-height:1.35;
+  }
+
+  /* contatos */
+  .ob-v3.ob-step-3 .ob-zap-principal {
+    padding:9px 10px;
+    border-radius:13px;
+  }
+
+  .ob-v3.ob-step-3 .ob-seg {
+    padding:3px;
+    border-radius:12px;
+  }
+
+  /* localização */
+  .ob-v3.ob-step-3 .ob-mapa-campo {
+    margin-top:6px;
+    padding:10px;
+    border-radius:13px;
+  }
+
+  .ob-v3.ob-step-3 .ob-sem-pino {
+    padding:12px;
+  }
+
+  .ob-v3.ob-step-3 .ob-mapa-acoes {
+    margin-top:4px;
+    gap:6px;
+  }
+
+  .ob-v3.ob-step-3 .ob-mapa-nota-forte {
+    padding:7px 9px;
+    font-size:.68rem;
+    line-height:1.35;
+  }
+
+  /* horários */
+  .ob-v3.ob-step-3 .ob-hora {
+    min-height:38px;
+    padding:4px 0;
+    font-size:.72rem;
+  }
+
+  .ob-v3.ob-step-3 .ob-hora input[type="time"] {
+    min-height:34px;
+    padding:5px 6px;
+    font-size:.75rem;
+  }
+
+  /* regras */
+  .ob-v3.ob-step-3 .ob-recomendado {
+    gap:9px;
+    margin:3px 0 1px;
+    padding:9px 10px;
+    border-radius:12px;
+  }
+
+  .ob-v3.ob-step-3 .ob-regras-grupo {
+    gap:8px;
+    padding:11px 0;
+  }
+
+  .ob-v3.ob-step-3 .ob-regras-rotulo {
+    gap:10px;
+  }
+
+  .ob-v3.ob-step-3 .ob-regras-rotulo strong,
+  .ob-v3.ob-step-3 .ob-regra-toggle strong {
+    font-size:.78rem;
+  }
+
+  .ob-v3.ob-step-3 .ob-regras-rotulo small,
+  .ob-v3.ob-step-3 .ob-regra-toggle small {
+    font-size:.66rem;
+    line-height:1.35;
+  }
+
+  .ob-v3.ob-step-3 .ob-opcoes-tempo {
+    gap:5px;
+  }
+
+  .ob-v3.ob-step-3 .ob-opcoes-tempo button {
+    min-height:32px;
+    padding:6px 9px;
+    border-radius:10px;
+    font-size:.69rem;
+  }
+
+  .ob-v3.ob-step-3 .ob-opcoes-cancelamento {
+    gap:6px;
+  }
+
+  .ob-v3.ob-step-3 .ob-opcoes-cancelamento button {
+    min-height:52px;
+    padding:7px 8px;
+    border-radius:11px;
+  }
+
+  .ob-v3.ob-step-3 .ob-regra-toggle {
+    padding:10px 0;
+  }
+
+  .ob-v3.ob-step-3 .ob-confirmacao-opcoes {
+    gap:6px;
+  }
+
+  .ob-v3.ob-step-3 .ob-confirmacao-opcoes button {
+    min-height:78px;
+    padding:9px 10px;
+    border-radius:12px;
+  }
+
+  .ob-v3.ob-step-3 .ob-sinal {
+    margin:8px 0 2px;
+    padding:10px;
+    border-radius:12px;
+  }
+
+  /* CTA preso embaixo, mas sem virar uma faixa enorme */
+  .ob-v3.ob-step-3 .ob-subpasso-rodape {
+    bottom:8px;
+    gap:9px;
+    margin-top:9px;
+    padding:8px 9px;
+    border-radius:15px;
+  }
+
+  .ob-v3.ob-step-3 .ob-subpasso-status {
+    gap:6px;
+    font-size:.67rem;
+    line-height:1.3;
+  }
+
+  .ob-v3.ob-step-3 .ob-subpasso-rodape > .btn {
+    min-height:40px;
+    padding-left:14px;
+    padding-right:14px;
+    border-radius:12px;
+    font-size:.76rem;
+  }
+}
+
+@media (min-width:901px) and (max-height:800px) {
+  .ob-v3.ob-step-3 .ob-conteudo {
+    padding-top:14px;
+    gap:7px;
+  }
+
+  .ob-v3.ob-step-3 .ob-titulo {
+    font-size:2rem;
+  }
+
+  .ob-v3.ob-step-3 .ob-subfluxo {
+    padding:8px 9px;
+  }
+
+  .ob-v3.ob-step-3 .ob-subfluxo-topo,
+  .ob-v3.ob-step-3 .ob-subfluxo-aviso {
+    display:none;
+  }
+
+  .ob-v3.ob-step-3 .ob-subfluxo-itens button {
+    min-height:42px;
+  }
+
+  .ob-v3.ob-step-3 .ob-fluxo-card.aberto {
+    padding:14px 16px !important;
+  }
+
+  .ob-v3.ob-step-3 .ob-form,
+  .ob-v3.ob-step-3 .ob-coluna {
+    gap:8px;
+  }
+
+  .ob-v3.ob-step-3 .ob-subpasso-status {
+    display:none;
+  }
+}
+
+
+/* ==========================================================================
+   PASSO 4 · QUASE LÁ / PLANO · NOTEBOOK / 1080p
+   Mesma régua visual dos passos anteriores: mantém toda a informação,
+   mas reduz gordura vertical para a decisão caber melhor na viewport.
+   ========================================================================== */
+@media (min-width:901px) and (max-height:960px) {
+  .ob-v3.ob-step-4 .ob-painel {
+    min-height:64px;
+    padding-top:8px;
+    padding-bottom:8px;
+  }
+
+  .ob-v3.ob-step-4 .ob-painel-topo img {
+    height:32px;
+  }
+
+  .ob-v3.ob-step-4 .ob-sair {
+    top:12px;
+    min-height:36px;
+    padding:0 12px;
+    border-radius:12px;
+    font-size:.72rem;
+  }
+
+  .ob-v3.ob-step-4 .ob-passos {
+    max-width:720px;
+  }
+
+  .ob-v3.ob-step-4 .ob-passos button {
+    min-height:40px;
+    gap:3px;
+    font-size:.64rem;
+  }
+
+  .ob-v3.ob-step-4 .ob-passo-num {
+    width:25px;
+    height:25px;
+    font-size:.66rem;
+  }
+
+  .ob-v3.ob-step-4 .ob-passos li:not(:last-child)::after {
+    top:17px;
+  }
+
+  .ob-v3.ob-step-4 .ob-conteudo {
+    width:min(calc(100% - 40px),920px);
+    padding:22px 0 18px;
+    gap:9px;
+  }
+
+  .ob-v3.ob-step-4 .ob-conteudo-num {
+    padding:4px 9px;
+    font-size:.61rem;
+  }
+
+  .ob-v3.ob-step-4 .ob-roteiro-m {
+    margin:-1px 0 0;
+    gap:5px;
+  }
+
+  .ob-v3.ob-step-4 .ob-roteiro-m li {
+    padding:4px 9px 4px 4px;
+    font-size:.68rem;
+  }
+
+  .ob-v3.ob-step-4 .ob-roteiro-m li b {
+    width:18px;
+    height:18px;
+  }
+
+  .ob-v3.ob-step-4 .ob-titulo {
+    max-width:none;
+    font-size:2.35rem;
+    line-height:1;
+  }
+
+  .ob-v3.ob-step-4 .ob-sub {
+    margin:-2px 0 1px;
+    font-size:.87rem;
+    line-height:1.4;
+  }
+
+  .ob-v3.ob-step-4 .ob-guia {
+    gap:9px;
+    padding:9px 11px;
+    border-radius:14px;
+  }
+
+  .ob-v3.ob-step-4 .ob-guia-icone {
+    width:28px;
+    height:28px;
+    border-radius:9px;
+  }
+
+  .ob-v3.ob-step-4 .ob-guia strong {
+    font-size:.78rem;
+  }
+
+  .ob-v3.ob-step-4 .ob-guia small {
+    font-size:.69rem;
+    line-height:1.35;
+  }
+
+  .ob-v3.ob-step-4 .ob-estrutura {
+    gap:11px;
+  }
+
+  /* card principal do plano */
+  .ob-v3.ob-step-4 .ob-plano-simples {
+    gap:13px;
+    padding:17px 18px !important;
+    border-radius:19px;
+  }
+
+  .ob-v3.ob-step-4 .ob-plano-simples-cabeca {
+    gap:12px;
+    padding-bottom:11px;
+  }
+
+  .ob-v3.ob-step-4 .ob-plano-simples-cabeca > span:first-child {
+    gap:3px;
+  }
+
+  .ob-v3.ob-step-4 .ob-etapa-mini {
+    font-size:.58rem;
+  }
+
+  .ob-v3.ob-step-4 .ob-plano-simples-cabeca .ob-card-titulo {
+    font-size:.92rem;
+    line-height:1.2;
+  }
+
+  .ob-v3.ob-step-4 .ob-plano-simples-cabeca small {
+    font-size:.68rem;
+    line-height:1.4;
+  }
+
+  .ob-v3.ob-step-4 .ob-plano-simples-miolo {
+    grid-template-columns:minmax(0,1.1fr) minmax(240px,.9fr);
+    gap:11px;
+  }
+
+  .ob-v3.ob-step-4 .ob-plano-escolha,
+  .ob-v3.ob-step-4 .ob-plano-resultado {
+    min-height:132px;
+    padding:13px 14px;
+    border-radius:14px;
+  }
+
+  .ob-v3.ob-step-4 .ob-plano-escolha {
+    gap:8px;
+  }
+
+  .ob-v3.ob-step-4 .ob-plano-pergunta {
+    font-size:.70rem;
+  }
+
+  .ob-v3.ob-step-4 .ob-plano-escolha .ob-contador-grande button {
+    width:40px;
+    height:40px;
+    border-radius:11px;
+  }
+
+  .ob-v3.ob-step-4 .ob-plano-escolha .ob-contador-grande strong {
+    min-width:58px;
+    height:40px;
+    border-radius:11px;
+    font-size:1.18rem;
+  }
+
+  .ob-v3.ob-step-4 .ob-plano-escolha .ob-plano-agendas {
+    font-size:.70rem;
+  }
+
+  .ob-v3.ob-step-4 .ob-plano-resultado {
+    gap:3px;
+  }
+
+  .ob-v3.ob-step-4 .ob-plano-resultado > small {
+    font-size:.64rem;
+  }
+
+  .ob-v3.ob-step-4 .ob-plano-resultado > strong {
+    font-size:.94rem;
+  }
+
+  .ob-v3.ob-step-4 .ob-plano-preco {
+    margin:2px 0;
+  }
+
+  .ob-v3.ob-step-4 .ob-plano-preco b {
+    font-size:1.62rem;
+  }
+
+  .ob-v3.ob-step-4 .ob-plano-preco span,
+  .ob-v3.ob-step-4 .ob-plano-resultado > span:last-child {
+    font-size:.67rem;
+  }
+
+  .ob-v3.ob-step-4 .ob-plano-simples-rodape {
+    gap:12px;
+    padding-top:0;
+  }
+
+  .ob-v3.ob-step-4 .ob-plano-teste {
+    gap:7px;
+  }
+
+  .ob-v3.ob-step-4 .ob-plano-teste strong {
+    font-size:.72rem;
+  }
+
+  .ob-v3.ob-step-4 .ob-plano-teste small {
+    font-size:.64rem;
+    line-height:1.35;
+  }
+
+  /* o bloco "continua no painel" vira um resumo, não outra página inteira */
+  .ob-v3.ob-step-4 .ob-depois-painel {
+    margin-top:0;
+    padding:14px 16px !important;
+    border-radius:17px;
+  }
+
+  .ob-v3.ob-step-4 .ob-depois-selo {
+    font-size:.61rem;
+    padding:4px 8px;
+  }
+
+  .ob-v3.ob-step-4 .ob-depois-painel > .ob-card-titulo {
+    font-size:.88rem;
+    line-height:1.2;
+  }
+
+  .ob-v3.ob-step-4 .ob-depois-painel > .muted {
+    font-size:.68rem;
+    line-height:1.38;
+  }
+
+  .ob-v3.ob-step-4 .ob-fluxo-depois {
+    gap:5px;
+    margin-top:2px;
+  }
+
+  .ob-v3.ob-step-4 .ob-fluxo-depois span {
+    min-height:31px;
+    padding:5px 8px;
+    border-radius:10px;
+    font-size:.65rem;
+  }
+
+  .ob-v3.ob-step-4 .ob-fluxo-depois span b {
+    width:18px;
+    height:18px;
+    font-size:.58rem;
+  }
+
+  .ob-v3.ob-step-4 .ob-fluxo-depois i {
+    font-size:.68rem;
+  }
+
+  /* CTA final segue a mesma densidade das telas anteriores */
+  .ob-v3.ob-step-4 .ob-rodape {
+    margin:8px -10px -18px;
+    padding:10px 10px calc(10px + env(safe-area-inset-bottom));
+  }
+
+  .ob-v3.ob-step-4 .ob-continuar {
+    min-width:190px;
+    min-height:44px;
+    border-radius:14px;
+  }
+
+  .ob-v3.ob-step-4 .ob-depois {
+    font-size:.68rem;
+  }
+}
+
+@media (min-width:901px) and (max-height:800px) {
+  .ob-v3.ob-step-4 .ob-conteudo {
+    padding-top:14px;
+    gap:7px;
+  }
+
+  .ob-v3.ob-step-4 .ob-titulo {
+    font-size:2rem;
+  }
+
+  .ob-v3.ob-step-4 .ob-guia {
+    padding:7px 9px;
+  }
+
+  .ob-v3.ob-step-4 .ob-plano-simples {
+    gap:10px;
+    padding:14px 16px !important;
+  }
+
+  .ob-v3.ob-step-4 .ob-plano-escolha,
+  .ob-v3.ob-step-4 .ob-plano-resultado {
+    min-height:112px;
+    padding:11px 12px;
+  }
+
+  .ob-v3.ob-step-4 .ob-plano-simples-rodape {
+    align-items:center;
+  }
+
+  .ob-v3.ob-step-4 .ob-depois-painel {
+    padding:11px 13px !important;
+  }
+
+  .ob-v3.ob-step-4 .ob-depois-painel > .muted {
+    display:none;
   }
 }

@@ -41,20 +41,33 @@ export default function ConfirmarEmail({ email, senha, onPronto, redirecionar })
 
   if (pronta) {
     return (
-      <div className="ce-caixa">
-        <span className="ce-check"><Check size={20} /></span>
+      <div className="ce-caixa ce-caixa-pronta">
+        <span className="ce-check"><Check size={22} /></span>
+        <span className="ce-kicker">Tudo certo</span>
         <h1 className="ob-titulo">E-mail confirmado</h1>
-        <p className="ob-sub">Entrando…</p>
+        <p className="ob-sub">Sua conta está pronta. Estamos abrindo o próximo passo…</p>
       </div>
     )
   }
   return (
     <div className="ce-caixa">
-      <span className="ce-icone"><Mail size={22} /></span>
-      <h1 className="ob-titulo">Confira seu e-mail</h1>
-      <p className="ob-sub">Mandamos um link pra <strong>{email}</strong>. Toque em <strong>"Confirmar meu e-mail"</strong>, em qualquer aparelho. Assim que confirmar, esta tela segue sozinha.</p>
+      <div className="ce-cabeca">
+        <span className="ce-icone"><Mail size={24} /></span>
+        <div>
+          <span className="ce-kicker">Último detalhe desta etapa</span>
+          <h1 className="ob-titulo">Confira seu e-mail</h1>
+        </div>
+      </div>
+
+      <p className="ob-sub ce-texto">Enviamos o link de confirmação para <strong>{email}</strong>. Abra o e-mail e toque em <strong>“Confirmar meu e-mail”</strong>. Pode ser neste ou em outro aparelho.</p>
+
+      <div className="ce-status">
+        <RefreshCw size={14} className="ce-gira" />
+        <span><strong>Estamos aguardando a confirmação.</strong><small>Quando você confirmar, esta tela continua sozinha. Se não encontrar a mensagem, confira o spam.</small></span>
+      </div>
+
       {erro && <div className="alert alert-error">{erro}</div>}
-      <p className="muted ce-espera"><RefreshCw size={13} className="ce-gira" /> Esperando a confirmação… Não achou o e-mail? Olhe o spam.</p>
+
       <div className="ce-acoes">
         <button type="button" className="btn btn-ghost btn-mini" onClick={reenviar} disabled={reenviado > 0}>{reenviado > 0 ? `Reenviar em ${reenviado}s` : 'Reenviar e-mail'}</button>
         <button type="button" className="btn btn-primary btn-mini" onClick={jaConfirmei} disabled={conferindo}>{conferindo ? 'Conferindo…' : 'Já confirmei'}</button>

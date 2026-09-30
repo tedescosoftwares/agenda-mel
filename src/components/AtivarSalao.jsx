@@ -271,10 +271,25 @@ export default function AtivarSalao({ s, onAtivado, onErro }) {
                 </div>
               </div>
 
-              <p className="ai-modal-texto">Pague <strong>{reais(Number(pix?.total_cents ?? oferta) / 100)}</strong>. Assim que o Asaas confirmar, seus 30 dias são liberados.</p>
+              <div className="ai-pix-resumo">
+                <div>
+                  <span>Valor do pagamento</span>
+                  <strong>{reais(Number(pix?.total_cents ?? oferta) / 100)}</strong>
+                </div>
+                <span className="ai-pix-status"><ShieldCheck size={14} /> cobrança única</span>
+              </div>
+
+              <p className="ai-modal-texto">Escaneie o QR Code ou copie o código Pix. Assim que o Asaas confirmar o pagamento, seus 30 dias são liberados.</p>
 
               <div className="ai-pix-box ai-pix-modal">
+                <span className="ai-pix-selo"><Smartphone size={14} /> Pix copia e cola</span>
                 {pix?.copia_cola ? <QrPix payload={pix.copia_cola} imagem={pix.imagem} /> : <p><LoaderCircle className="ai-gira" size={18} /> Gerando seu Pix…</p>}
+              </div>
+
+              <div className="ai-pix-passos">
+                <span><b>1</b><small>Abra o app do banco</small></span>
+                <span><b>2</b><small>Escaneie ou copie o Pix</small></span>
+                <span><b>3</b><small>Confirme e volte aqui</small></span>
               </div>
 
               {erro && <div className="ai-erro">{erro}</div>}
@@ -286,7 +301,10 @@ export default function AtivarSalao({ s, onAtivado, onErro }) {
                 <button type="button" className="btn btn-ghost" onClick={trocarOpcao} disabled={indo}>Voltar às opções</button>
               </div>
 
-              <small className="ai-seguranca"><ShieldCheck size={12} /> Sem débito automático e sem renovação recorrente.</small>
+              <div className="ai-checkout-seguranca">
+                <ShieldCheck size={14} />
+                <span><strong>Pagamento protegido</strong><small>Processado via Asaas. Sem débito automático e sem renovação recorrente.</small></span>
+              </div>
             </div>
           </div>
         )}
@@ -379,31 +397,66 @@ function CartaoInicial({ total, desconto, indo, erro, onEnviar, onVoltar }) {
       </div>
       <p className="ai-modal-texto">Cobrança única. O cartão não fica vinculado e não existe renovação automática.</p>
 
-      <div className="ai-cartao-grade">
-        <label className="ai-campo inteiro">Nome como está no cartão
-          <input value={c.nome} onChange={set('nome')} autoComplete="cc-name" required />
-        </label>
-        <label className="ai-campo inteiro">Número do cartão
-          <input value={c.numero} onChange={(e) => setC((x) => ({ ...x, numero: mascaraCartao(e.target.value) }))} inputMode="numeric" autoComplete="cc-number" placeholder="0000 0000 0000 0000" required />
-        </label>
-        <label className="ai-campo">Validade
-          <input value={c.validade} onChange={(e) => setC((x) => ({ ...x, validade: mascaraValidade(e.target.value) }))} inputMode="numeric" autoComplete="cc-exp" placeholder="MM/AA" required />
-        </label>
-        <label className="ai-campo">CVV
-          <input value={c.cvv} onChange={set('cvv')} inputMode="numeric" autoComplete="cc-csc" maxLength={4} placeholder="123" required />
-        </label>
-        <label className="ai-campo">CEP da fatura
-          <input value={c.cep} onChange={set('cep')} inputMode="numeric" autoComplete="postal-code" placeholder="00000-000" required />
-        </label>
-        <label className="ai-campo">Número
-          <input value={c.numeroEnd} onChange={set('numeroEnd')} inputMode="numeric" placeholder="120" required />
-        </label>
+      <div className="ai-cartao-preview">
+        <div className="ai-cartao-preview-topo">
+          <span>MIMO</span>
+          <CreditCard size={22} />
+        </div>
+        <div className="ai-cartao-chip" aria-hidden="true"><i /><i /><i /></div>
+        <strong className="ai-cartao-numero">
+          {c.numero ? mascaraCartao(c.numero).padEnd(19, '•') : '•••• •••• •••• ••••'}
+        </strong>
+        <div className="ai-cartao-preview-rodape">
+          <span><small>Titular</small><b>{c.nome.trim() || 'NOME NO CARTÃO'}</b></span>
+          <span><small>Validade</small><b>{c.validade || 'MM/AA'}</b></span>
+        </div>
+      </div>
+
+      <div className="ai-cartao-selos">
+        <span><ShieldCheck size={13} /> Ambiente protegido</span>
+        <span><Check size={13} /> Cobrança única</span>
+        <span><Check size={13} /> Cartão não armazenado</span>
+      </div>
+
+      <div className="ai-cartao-secao">
+        <span className="ai-cartao-secao-titulo">Dados do cartão</span>
+        <div className="ai-cartao-grade">
+          <label className="ai-campo inteiro">Nome como está no cartão
+            <input value={c.nome} onChange={set('nome')} autoComplete="cc-name" required />
+          </label>
+          <label className="ai-campo inteiro">Número do cartão
+            <input value={c.numero} onChange={(e) => setC((x) => ({ ...x, numero: mascaraCartao(e.target.value) }))} inputMode="numeric" autoComplete="cc-number" placeholder="0000 0000 0000 0000" required />
+          </label>
+          <label className="ai-campo">Validade
+            <input value={c.validade} onChange={(e) => setC((x) => ({ ...x, validade: mascaraValidade(e.target.value) }))} inputMode="numeric" autoComplete="cc-exp" placeholder="MM/AA" required />
+          </label>
+          <label className="ai-campo">CVV
+            <input value={c.cvv} onChange={set('cvv')} inputMode="numeric" autoComplete="cc-csc" maxLength={4} placeholder="123" required />
+          </label>
+        </div>
+      </div>
+
+      <div className="ai-cartao-secao">
+        <span className="ai-cartao-secao-titulo">Endereço da cobrança</span>
+        <div className="ai-cartao-grade ai-cartao-grade-endereco">
+          <label className="ai-campo">CEP da fatura
+            <input value={c.cep} onChange={set('cep')} inputMode="numeric" autoComplete="postal-code" placeholder="00000-000" required />
+          </label>
+          <label className="ai-campo">Número
+            <input value={c.numeroEnd} onChange={set('numeroEnd')} inputMode="numeric" placeholder="120" required />
+          </label>
+        </div>
       </div>
 
       {erro && <div className="ai-erro">{erro}</div>}
-      <button type="submit" className="btn btn-primary ai-botao-grande" disabled={!ok || indo}>{indo ? 'Processando…' : `Pagar ${reais(Number(total || 0) / 100)}`}</button>
+      <button type="submit" className="btn btn-primary ai-botao-grande ai-cartao-pagar" disabled={!ok || indo}>
+        <ShieldCheck size={16} /> {indo ? 'Processando…' : `Pagar ${reais(Number(total || 0) / 100)} com segurança`}
+      </button>
       <button type="button" className="btn btn-ghost" onClick={onVoltar} disabled={indo}>Voltar às opções</button>
-      <small className="ai-seguranca"><ShieldCheck size={12} /> A MIMO não armazena número nem CVV. Os dados desta cobrança são enviados ao Asaas.</small>
+      <div className="ai-checkout-seguranca">
+        <ShieldCheck size={14} />
+        <span><strong>Seus dados ficam protegidos</strong><small>A MIMO não armazena número nem CVV. Os dados desta cobrança são enviados ao Asaas.</small></span>
+      </div>
     </form>
   )
 }

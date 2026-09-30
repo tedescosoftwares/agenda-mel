@@ -3340,6 +3340,14 @@
   min-width:0;
 }
 
+/* O campo da esquerda ganha a barra de força abaixo da senha.
+   Sem isto, o flex do label estica as linhas e empurra "Confirmar senha"
+   alguns pixels para baixo. Os dois inputs começam exatamente na mesma altura. */
+.ob-v3.ob-step-2 .ob-acesso-senhas > label {
+  align-self:start;
+  align-content:flex-start;
+}
+
 .ob-v3.ob-step-2 .ob-acesso-consentimentos {
   display:grid;
   grid-template-columns:1fr;

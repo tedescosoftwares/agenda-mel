@@ -1201,6 +1201,11 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
     try { sessionStorage.setItem(chaveCelebradas, JSON.stringify(celebradas)) } catch { /* navegador sem storage */ }
   }, [chaveCelebradas, celebradas])
 
+  useEffect(() => {
+    const id = requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'smooth' }))
+    return () => cancelAnimationFrame(id)
+  }, [blocoAberto])
+
   useRoteiro([
     celebradas.includes('identidade'),
     celebradas.includes('contato') && celebradas.includes('localizacao'),

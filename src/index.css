@@ -8968,3 +8968,59 @@ label.switch:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
     margin:.3rem 0 0;
   }
 }
+
+
+/* ==========================================================================
+   ATIVAÇÃO · RESPIRAÇÃO FLUIDA EM DESKTOP
+   Meio-termo entre a versão grandona e a compacta: usa melhor a altura
+   disponível sem voltar a empurrar conteúdo para fora da viewport.
+   ========================================================================== */
+@media (min-width:1000px) and (min-height:801px) {
+  .ai-corpo:not(.ai-pagamento):not(.ai-sucesso) {
+    width:min(1120px,100%);
+  }
+
+  .ai-corpo:not(.ai-pagamento):not(.ai-sucesso) .ai-escolhas {
+    min-height:clamp(315px,35vh,370px);
+  }
+
+  .ai-corpo:not(.ai-pagamento):not(.ai-sucesso) .ai-opcao {
+    padding:clamp(18px,1.5vw,22px);
+    gap:.52rem;
+  }
+
+  .ai-corpo:not(.ai-pagamento):not(.ai-sucesso) .ai-opcao h2 {
+    font-size:1.08rem;
+  }
+
+  .ai-corpo:not(.ai-pagamento):not(.ai-sucesso) .ai-opcao p {
+    font-size:.76rem;
+    line-height:1.4;
+  }
+
+  .ai-corpo:not(.ai-pagamento):not(.ai-sucesso) .ai-opcao ul {
+    gap:.34rem;
+    margin:.12rem 0 .32rem;
+  }
+
+  .ai-corpo:not(.ai-pagamento):not(.ai-sucesso) .ai-opcao li {
+    font-size:.72rem;
+  }
+
+  .ai-corpo:not(.ai-pagamento):not(.ai-sucesso) .ai-opcao > small {
+    font-size:.63rem;
+    line-height:1.35;
+  }
+
+  .ai-corpo:not(.ai-pagamento):not(.ai-sucesso) .ai-cta {
+    min-height:44px;
+  }
+
+  .ai-corpo:not(.ai-pagamento):not(.ai-sucesso) .ai-pagar-botoes .ai-cta-pagamento {
+    min-height:46px;
+  }
+
+  .ai-corpo:not(.ai-pagamento):not(.ai-sucesso) .ai-rodape {
+    margin-top:.5rem;
+  }
+}

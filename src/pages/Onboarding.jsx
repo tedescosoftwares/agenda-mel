@@ -1529,10 +1529,10 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
             <button type="button" className="ob-finale-fechar" onClick={() => setFinaleAberto(false)} aria-label="Fechar"><X size={18} /></button>
             <div className="ob-finale-estouro" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
             <div className="ob-finale-modal-cabeca">
-              <span className="ob-finale-modal-icone"><Sparkles size={24} /></span>
+              <img className="ob-finale-modal-logo" src="/mimo-logo.svg" alt="MIMO" />
               <span className="ob-finale-selo">Seu espaço está pronto</span>
-              <h2 id="ob-finale-titulo">Até aqui eram campos.<br /><strong>Agora olha o que você construiu.</strong></h2>
-              <p>Seu espaço já tem identidade, contato, localização, horários e regras. É assim que a experiência começa a ganhar forma para sua cliente.</p>
+              <h2 id="ob-finale-titulo">Seu salão ganhou forma.<br /><strong>Agora veja como sua cliente vai encontrar você.</strong></h2>
+              <p>Nome, fotos, contato, localização, horários e regras já estão organizados. Abaixo está a prévia do espaço que você acabou de montar.</p>
             </div>
 
             <PreviewFinalMimo

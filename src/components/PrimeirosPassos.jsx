@@ -41,7 +41,8 @@ export default function PrimeirosPassos({ salao, para = 'admin' }) {
     try { const url = await QRCode.toDataURL(link, { width: 720, margin: 2 }); const a = document.createElement('a'); a.href = url; a.download = `qr-${salao.codigo}.png`; a.click(); feito('qr_baixado') } catch { /* nada */ }
   }
   async function ligarAvisos() { try { if (user?.id) await ativarPush(user.id) } catch { /* a pessoa decide */ } feito('avisos') }
-  // serviços (e equipe, no salão) primeiro: até lá, o painel guia pra Configurar e ainda não mostra QR nem link
+  // A escolha comercial já aconteceu antes de entrar no painel.
+  // Aqui o papel é outro: guiar a dona na montagem operacional do salão.
   const configurado = n('servicos') > 0 && (autonoma || n('equipe') > 0)
   if (!configurado) {
     const falta = n('servicos') === 0 && !autonoma && n('equipe') === 0 ? 'Faltam os serviços e a equipe' : n('servicos') === 0 ? 'Faltam os serviços' : 'Falta a equipe'
@@ -49,13 +50,12 @@ export default function PrimeirosPassos({ salao, para = 'admin' }) {
       <>
         <div className="card pp-concluir">
           <div className="pp-concluir-texto">
-            <span className="pp-concluir-selo"><Sparkles size={12} /> Estamos quase lá</span>
-            <strong>Conclua a configuração {autonoma ? 'da sua agenda' : 'do seu salão'}</strong>
-            <span className="muted">{autonoma ? 'Falta cadastrar os serviços. Depois disso o link e o QR Code aparecem aqui.' : `${falta}. Depois você ativa o salão: o link e o QR Code aparecem aqui e começam seus ${REGRAS.testeDias} dias grátis, sem cartão.`}</span>
+            <span className="pp-concluir-selo"><Sparkles size={12} /> Seu espaço já está ativo</span>
+            <strong>Agora vamos montar {autonoma ? 'a sua agenda' : 'o seu salão'}</strong>
+            <span className="muted">{autonoma ? 'Comece cadastrando seus serviços. A MIMO vai guiando você por aqui.' : `${falta}. Vamos fazer isso por etapas dentro do painel, sem misturar com cadastro ou pagamento.`}</span>
             <ul className="pp-concluir-etapas">
-              <li className={n('servicos') > 0 ? 'ok' : ''}><span className="pp-check">{n('servicos') > 0 ? <Check size={12} /> : <Circle size={12} />}</span>Serviços</li>
-              {!autonoma && <li className={n('equipe') > 0 ? 'ok' : ''}><span className="pp-check">{n('equipe') > 0 ? <Check size={12} /> : <Circle size={12} />}</span>Equipe</li>}
-              <li className="trava"><span className="pp-check"><Circle size={12} /></span>{autonoma ? 'Liberar o link e o QR' : `Ativação: link, QR e ${REGRAS.testeDias} dias grátis`}</li>
+              <li className={n('servicos') > 0 ? 'ok' : ''}><span className="pp-check">{n('servicos') > 0 ? <Check size={12} /> : <Circle size={12} />}</span>Cadastrar serviços</li>
+              {!autonoma && <li className={n('equipe') > 0 ? 'ok' : ''}><span className="pp-check">{n('equipe') > 0 ? <Check size={12} /> : <Circle size={12} />}</span>Configurar profissionais</li>}
             </ul>
           </div>
           <Link to={para === 'admin' ? '/admin/configurar' : '/pro/configurar'} className="btn btn-primary pp-concluir-botao">Continuar configuração</Link>

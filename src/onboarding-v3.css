@@ -2643,15 +2643,12 @@
   padding:8px 54px 0;
   text-align:center;
 }
-.ob-v3 .ob-finale-modal-icone {
-  width:58px;
-  height:58px;
-  display:grid;
-  place-items:center;
-  border-radius:20px;
-  color:#fff;
-  background:linear-gradient(135deg,#ff2d7a,#ff77aa);
-  box-shadow:0 14px 30px rgba(255,45,122,.24);
+.ob-v3 .ob-finale-modal-logo {
+  width:104px;
+  height:auto;
+  display:block;
+  margin:0 auto 2px;
+  filter:drop-shadow(0 8px 18px rgba(61,12,78,.08));
   animation:ob-finale-icon .6s .12s cubic-bezier(.2,.9,.2,1.15) both;
 }
 .ob-v3 .ob-finale-modal-cabeca h2 {

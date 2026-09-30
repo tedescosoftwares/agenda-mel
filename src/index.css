@@ -9024,3 +9024,58 @@ label.switch:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
     margin-top:.5rem;
   }
 }
+
+
+/* ==========================================================================
+   ATIVAÇÃO · AJUSTE PARA VIEWPORT REAL DE NOTEBOOK
+   O Chrome em 1920x1080 deixa menos de 800px úteis de altura, então a regra
+   anterior (min-height:801px) não entrava. Esta é a faixa que realmente vale.
+   ========================================================================== */
+@media (min-width:1000px) and (min-height:680px) and (max-height:960px) {
+  .ai-corpo:not(.ai-pagamento):not(.ai-sucesso) {
+    width:min(1120px,100%);
+  }
+
+  .ai-corpo:not(.ai-pagamento):not(.ai-sucesso) .ai-escolhas {
+    min-height:clamp(380px,calc(100vh - 370px),440px);
+  }
+
+  .ai-corpo:not(.ai-pagamento):not(.ai-sucesso) .ai-opcao {
+    padding:20px 22px;
+    gap:.58rem;
+  }
+
+  .ai-corpo:not(.ai-pagamento):not(.ai-sucesso) .ai-opcao h2 {
+    font-size:1.12rem;
+  }
+
+  .ai-corpo:not(.ai-pagamento):not(.ai-sucesso) .ai-opcao p {
+    font-size:.78rem;
+    line-height:1.42;
+  }
+
+  .ai-corpo:not(.ai-pagamento):not(.ai-sucesso) .ai-opcao ul {
+    gap:.38rem;
+    margin:.14rem 0 .38rem;
+  }
+
+  .ai-corpo:not(.ai-pagamento):not(.ai-sucesso) .ai-opcao li {
+    font-size:.74rem;
+  }
+
+  .ai-corpo:not(.ai-pagamento):not(.ai-sucesso) .ai-opcao > small {
+    font-size:.64rem;
+  }
+
+  .ai-corpo:not(.ai-pagamento):not(.ai-sucesso) .ai-cta {
+    min-height:46px;
+  }
+
+  .ai-corpo:not(.ai-pagamento):not(.ai-sucesso) .ai-pagar-botoes .ai-cta-pagamento {
+    min-height:48px;
+  }
+
+  .ai-corpo:not(.ai-pagamento):not(.ai-sucesso) .ai-rodape {
+    margin-top:.55rem;
+  }
+}

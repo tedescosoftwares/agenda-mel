@@ -142,7 +142,12 @@
   color:#8f8792;
   box-shadow:0 0 0 4px rgba(255,253,253,.96);
 }
-.ob-v3 .ob-passos li.atual button { color:var(--o-ameixa); }
+.ob-v3 .ob-passos li.atual button {
+  color:var(--o-ameixa);
+  border:0;
+  box-shadow:none;
+  background:transparent !important;
+}
 .ob-v3 .ob-passos li.atual .ob-passo-num {
   background:var(--o-rosa);
   border-color:var(--o-rosa);

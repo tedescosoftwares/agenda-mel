@@ -10093,3 +10093,591 @@ label.switch:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
     min-width:0;
   }
 }
+
+
+/* ==========================================================================
+   ADMIN SHELL DESKTOP + HOME PRIMEIRO ACESSO (2.83)
+   Desktop ganha sidebar; mobile preserva a navegação inferior.
+   ========================================================================== */
+.admin-desktop-sidebar,
+.admin-topbar-salao { display:none; }
+
+@media (min-width: 960px) {
+  .admin-shell {
+    padding-left:220px;
+  }
+
+  .admin-desktop-sidebar {
+    position:fixed;
+    inset:0 auto 0 0;
+    z-index:45;
+    width:220px;
+    display:flex;
+    flex-direction:column;
+    padding:16px 12px 14px;
+    border-right:1px solid var(--fio);
+    background:rgba(255,255,255,.96);
+    backdrop-filter:blur(18px);
+    -webkit-backdrop-filter:blur(18px);
+  }
+
+  .admin-sidebar-marca {
+    min-height:54px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding:0 8px 10px;
+    color:var(--ameixa);
+  }
+
+  .admin-sidebar-marca > span {
+    display:flex;
+    align-items:center;
+    gap:4px;
+  }
+
+  .admin-sidebar-marca > svg { color:var(--texto-3); }
+
+  .admin-sidebar-nav {
+    display:grid;
+    gap:4px;
+    margin-top:8px;
+  }
+
+  .admin-sidebar-item {
+    min-height:44px;
+    display:flex;
+    align-items:center;
+    gap:11px;
+    padding:0 12px;
+    border-radius:12px;
+    color:var(--texto-2);
+    text-decoration:none;
+    font-size:.82rem;
+    font-weight:650;
+    transition:background .15s ease,color .15s ease,transform .15s ease;
+  }
+
+  .admin-sidebar-item:hover {
+    background:var(--cinza-1);
+    color:var(--texto);
+  }
+
+  .admin-sidebar-item.ativo {
+    color:var(--rosa);
+    background:#fff2f7;
+  }
+
+  .admin-sidebar-item.ativo svg { color:var(--rosa); }
+
+  .admin-sidebar-rodape {
+    margin-top:auto;
+    padding-top:12px;
+    border-top:1px solid var(--fio);
+  }
+
+  .admin-sidebar-plano {
+    display:grid;
+    grid-template-columns:34px minmax(0,1fr);
+    gap:9px;
+    align-items:center;
+    padding:10px;
+    border-radius:13px;
+    color:inherit;
+    text-decoration:none;
+    background:#fbf8fb;
+    border:1px solid #eee6ef;
+  }
+
+  .admin-sidebar-plano-icone {
+    width:34px;
+    height:34px;
+    display:grid;
+    place-items:center;
+    border-radius:10px;
+    color:var(--rosa);
+    background:#fff0f5;
+  }
+
+  .admin-sidebar-plano > span:last-child {
+    min-width:0;
+    display:grid;
+    gap:1px;
+  }
+
+  .admin-sidebar-plano strong {
+    color:var(--texto);
+    font-size:.72rem;
+  }
+
+  .admin-sidebar-plano small {
+    color:var(--texto-3);
+    font-size:.61rem;
+  }
+
+  .topbar-admin {
+    min-height:58px;
+    padding:.7rem 1.4rem;
+  }
+
+  .topbar-admin .brand-inline { display:none; }
+
+  .topbar-admin-esquerda {
+    display:flex;
+    align-items:center;
+    min-width:0;
+  }
+
+  .admin-topbar-salao {
+    display:grid;
+    gap:1px;
+  }
+
+  .admin-topbar-salao strong {
+    color:var(--texto);
+    font-size:.8rem;
+  }
+
+  .admin-topbar-salao small {
+    display:flex;
+    align-items:center;
+    gap:5px;
+    color:var(--texto-3);
+    font-size:.61rem;
+  }
+
+  .admin-topbar-salao small i {
+    width:7px;
+    height:7px;
+    border-radius:50%;
+    background:#21b36b;
+    box-shadow:0 0 0 4px rgba(33,179,107,.08);
+  }
+
+  .admin-shell .bottom-nav { display:none; }
+
+  .admin-shell .content {
+    padding-bottom:3rem;
+  }
+
+  .admin-shell-amplo .miolo {
+    width:min(100%,1180px);
+    max-width:1180px;
+  }
+}
+
+/* primeiro acesso: explica o painel sem repetir o onboarding */
+.admin-home-primeiro {
+  display:grid;
+  gap:14px;
+}
+
+.admin-home-primeiro-config,
+.admin-home-primeiro-explica {
+  border:1px solid #eadfea;
+  border-radius:20px;
+  background:#fff;
+  box-shadow:0 10px 30px rgba(61,12,78,.045);
+}
+
+.admin-home-primeiro-config {
+  padding:18px;
+}
+
+.admin-home-primeiro-topo {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(180px,.34fr);
+  gap:18px;
+  align-items:end;
+}
+
+.admin-home-primeiro-topo h2 {
+  margin:4px 0 3px;
+  color:var(--ameixa);
+  font-size:1.08rem;
+  letter-spacing:-.02em;
+}
+
+.admin-home-primeiro-topo p {
+  margin:0;
+  max-width:64ch;
+  color:var(--texto-2);
+  font-size:.76rem;
+  line-height:1.5;
+}
+
+.admin-home-primeiro-progresso {
+  display:grid;
+  gap:6px;
+  justify-items:end;
+}
+
+.admin-home-primeiro-progresso strong {
+  color:var(--texto-2);
+  font-size:.7rem;
+}
+
+.admin-home-primeiro-progresso > span {
+  width:100%;
+  height:6px;
+  overflow:hidden;
+  border-radius:999px;
+  background:#f0eaf1;
+}
+
+.admin-home-primeiro-progresso i {
+  display:block;
+  height:100%;
+  border-radius:inherit;
+  background:var(--rosa);
+}
+
+.admin-home-primeiro-etapas {
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:8px;
+  margin-top:14px;
+}
+
+.admin-home-primeiro-etapas a {
+  min-width:0;
+  display:grid;
+  grid-template-columns:30px minmax(0,1fr);
+  gap:8px;
+  align-items:center;
+  padding:10px;
+  border:1px solid #eee7ef;
+  border-radius:13px;
+  color:inherit;
+  text-decoration:none;
+  background:#fcfbfc;
+}
+
+.admin-home-primeiro-etapas a.atual {
+  border-color:#ffc3da;
+  background:#fff7fa;
+}
+
+.admin-home-primeiro-etapas a.feito {
+  background:#fbfdfc;
+}
+
+.admin-home-primeiro-etapas b {
+  width:30px;
+  height:30px;
+  display:grid;
+  place-items:center;
+  border-radius:50%;
+  color:var(--texto-3);
+  background:#f2eef3;
+  font-size:.68rem;
+}
+
+.admin-home-primeiro-etapas .atual b {
+  color:#fff;
+  background:var(--rosa);
+}
+
+.admin-home-primeiro-etapas .feito b {
+  color:#168657;
+  background:#e7f7ef;
+}
+
+.admin-home-primeiro-etapas a > span {
+  min-width:0;
+  display:grid;
+  gap:1px;
+}
+
+.admin-home-primeiro-etapas strong {
+  color:var(--texto);
+  font-size:.72rem;
+}
+
+.admin-home-primeiro-etapas small {
+  color:var(--texto-3);
+  font-size:.61rem;
+  line-height:1.3;
+}
+
+.admin-home-primeiro-acoes {
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-top:14px;
+}
+
+.admin-home-primeiro-acoes .btn {
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+}
+
+.admin-home-primeiro-explica {
+  padding:16px;
+}
+
+.admin-home-primeiro-explica-topo {
+  display:flex;
+  gap:10px;
+  align-items:flex-start;
+}
+
+.admin-home-primeiro-explica-icone {
+  width:36px;
+  height:36px;
+  flex:none;
+  display:grid;
+  place-items:center;
+  border-radius:11px;
+  color:var(--rosa);
+  background:#fff0f5;
+}
+
+.admin-home-primeiro-explica-topo > div {
+  display:grid;
+  gap:2px;
+}
+
+.admin-home-primeiro-explica-topo strong {
+  color:var(--ameixa);
+  font-size:.86rem;
+}
+
+.admin-home-primeiro-explica-topo small {
+  color:var(--texto-3);
+  font-size:.68rem;
+  line-height:1.4;
+}
+
+.admin-home-primeiro-beneficios {
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:8px;
+  margin-top:12px;
+}
+
+.admin-home-primeiro-beneficios article {
+  display:grid;
+  grid-template-columns:32px minmax(0,1fr);
+  grid-template-areas:
+    "icone titulo"
+    "icone texto";
+  column-gap:8px;
+  padding:10px;
+  border:1px solid #efe8f0;
+  border-radius:13px;
+  background:#fcfbfc;
+}
+
+.admin-home-primeiro-beneficios article > span {
+  grid-area:icone;
+  width:32px;
+  height:32px;
+  display:grid;
+  place-items:center;
+  border-radius:10px;
+  color:var(--rosa);
+  background:#fff1f6;
+}
+
+.admin-home-primeiro-beneficios article > strong {
+  grid-area:titulo;
+  align-self:end;
+  color:var(--texto);
+  font-size:.69rem;
+}
+
+.admin-home-primeiro-beneficios article > small {
+  grid-area:texto;
+  color:var(--texto-3);
+  font-size:.59rem;
+  line-height:1.35;
+}
+
+.admin-home-primeiro-operacao {
+  display:grid;
+  grid-template-columns:minmax(0,1.35fr) minmax(300px,.65fr);
+  gap:14px;
+}
+
+.admin-home-primeiro-agenda,
+.admin-home-acoes-primeiro,
+.admin-home-primeiro-ajuda {
+  border-color:#eadfea;
+  box-shadow:0 10px 30px rgba(61,12,78,.04);
+}
+
+.admin-home-primeiro-vazio {
+  min-height:220px;
+  display:grid;
+  justify-items:center;
+  align-content:center;
+  gap:8px;
+  padding:24px;
+  text-align:center;
+}
+
+.admin-home-primeiro-vazio > span {
+  width:48px;
+  height:48px;
+  display:grid;
+  place-items:center;
+  border-radius:15px;
+  color:var(--rosa);
+  background:#fff0f5;
+}
+
+.admin-home-primeiro-vazio > strong {
+  color:var(--ameixa);
+  font-size:.9rem;
+}
+
+.admin-home-primeiro-vazio p {
+  max-width:48ch;
+  margin:0;
+  color:var(--texto-3);
+  font-size:.7rem;
+  line-height:1.5;
+}
+
+.admin-home-primeiro-vazio .btn {
+  margin-top:4px;
+}
+
+.admin-home-primeiro-lateral {
+  display:grid;
+  gap:10px;
+  align-content:start;
+}
+
+.admin-home-acoes-primeiro .admin-home-atalhos {
+  grid-template-columns:1fr 1fr;
+}
+
+.admin-home-primeiro-ajuda {
+  display:grid;
+  grid-template-columns:34px minmax(0,1fr) auto;
+  gap:9px;
+  align-items:center;
+  padding:13px;
+}
+
+.admin-home-primeiro-ajuda > span {
+  width:34px;
+  height:34px;
+  display:grid;
+  place-items:center;
+  border-radius:10px;
+  color:var(--rosa);
+  background:#fff0f5;
+}
+
+.admin-home-primeiro-ajuda > div {
+  display:grid;
+  gap:2px;
+}
+
+.admin-home-primeiro-ajuda strong {
+  color:var(--texto);
+  font-size:.73rem;
+}
+
+.admin-home-primeiro-ajuda small {
+  color:var(--texto-3);
+  font-size:.61rem;
+  line-height:1.35;
+}
+
+.admin-home-primeiro-ajuda a {
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  color:var(--rosa);
+  text-decoration:none;
+  font-size:.66rem;
+  font-weight:750;
+}
+
+.admin-home-pulso.primeiro-acesso {
+  background:#fff;
+}
+
+/* mobile = a mesma Home, reorganizada. Nada de novo onboarding. */
+@media (max-width: 959px) {
+  .admin-home-primeiro-topo {
+    grid-template-columns:1fr;
+    gap:10px;
+  }
+
+  .admin-home-primeiro-progresso {
+    justify-items:stretch;
+  }
+
+  .admin-home-primeiro-etapas {
+    grid-template-columns:1fr;
+  }
+
+  .admin-home-primeiro-etapas a {
+    min-height:58px;
+  }
+
+  .admin-home-primeiro-acoes {
+    display:grid;
+    grid-template-columns:1fr;
+  }
+
+  .admin-home-primeiro-acoes .btn {
+    justify-content:center;
+  }
+
+  .admin-home-primeiro-beneficios {
+    grid-template-columns:1fr 1fr;
+  }
+
+  .admin-home-primeiro-operacao {
+    grid-template-columns:1fr;
+  }
+
+  .admin-home-primeiro-vazio {
+    min-height:210px;
+  }
+}
+
+@media (max-width: 620px) {
+  .admin-home-primeiro-config,
+  .admin-home-primeiro-explica {
+    border-radius:18px;
+    padding:14px;
+  }
+
+  .admin-home-primeiro-beneficios {
+    grid-template-columns:1fr;
+  }
+
+  .admin-home-primeiro-beneficios article {
+    min-height:64px;
+  }
+
+  .admin-home-acoes-primeiro .admin-home-atalhos {
+    grid-template-columns:1fr 1fr;
+  }
+
+  .admin-home-primeiro-ajuda {
+    grid-template-columns:34px minmax(0,1fr);
+  }
+
+  .admin-home-primeiro-ajuda a {
+    grid-column:1 / -1;
+    justify-content:center;
+    min-height:38px;
+    border:1px solid #eadfea;
+    border-radius:10px;
+    background:#fff;
+  }
+
+  .admin-home-pulso.primeiro-acesso .admin-home-pulso-trilha {
+    grid-template-columns:1fr;
+  }
+}

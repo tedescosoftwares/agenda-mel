@@ -4907,30 +4907,48 @@
 }
 
 
-/* STEP BADGE · área segura global
-   O número/check fica absoluto no canto, então o primeiro bloco de conteúdo
-   precisa reservar essa faixa. Vale para todos os subpassos atuais e futuros. */
-.ob-v3 .ob-fluxo-card {
-  --ob-step-badge-safe:54px;
+/* STEP BADGE · linha própria no cabeçalho
+   O badge deixa de flutuar sobre o conteúdo quando o subpasso está aberto.
+   Ele passa a ocupar a segunda coluna da primeira linha; todo o restante
+   começa abaixo e usa a largura inteira do card. */
+.ob-v3 .ob-fluxo-card.aberto {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  column-gap:12px;
+  align-items:start;
+}
+
+.ob-v3 .ob-fluxo-card.aberto::before {
+  position:static;
+  grid-column:2;
+  grid-row:1;
+  align-self:start;
+  justify-self:end;
 }
 
 .ob-v3 .ob-fluxo-card.aberto > :first-child {
+  grid-column:1;
+  grid-row:1;
+  min-width:0;
   box-sizing:border-box;
-  padding-right:var(--ob-step-badge-safe);
+  padding-right:0;
 }
 
-/* O cabeçalho de identidade é um flex próprio e antes escapava da regra
-   antiga, fazendo "Visível para clientes" entrar embaixo do badge. */
-.ob-v3 .ob-fluxo-card.aberto > .ob-identidade-cabecalho {
+.ob-v3 .ob-fluxo-card.aberto > :not(:first-child) {
+  grid-column:1 / -1;
   min-width:0;
 }
 
+/* O cabeçalho de identidade tem selo próprio ("Visível para clientes").
+   Como ele fica na primeira coluna, o selo nunca invade a coluna do badge. */
+.ob-v3 .ob-identidade-cabecalho,
 .ob-v3 .ob-identidade-cabecalho > * {
   min-width:0;
 }
 
 @media (max-width:520px) {
-  .ob-v3 .ob-fluxo-card {
-    --ob-step-badge-safe:44px;
+  .ob-v3 .ob-fluxo-card.aberto {
+    column-gap:9px;
   }
 }
+

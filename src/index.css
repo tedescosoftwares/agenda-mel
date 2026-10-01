@@ -9819,3 +9819,110 @@ label.switch:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
     align-items:flex-start;
   }
 }
+
+
+/* ---- acabamento premium do mapa Google / editor do pino (2.82.2) ---- */
+.mapa-experiencia {
+  position:relative;
+  width:100%;
+  overflow:hidden;
+  border:1px solid rgba(112,83,112,.12);
+  border-radius:18px;
+  background:#f8f5f8;
+  box-shadow:0 10px 28px rgba(54,28,61,.07);
+}
+.mapa-experiencia .mapa-caixa {
+  border-radius:0;
+}
+.mapa-experiencia-editavel {
+  border-color:rgba(255,45,122,.22);
+  box-shadow:0 14px 34px rgba(116,35,78,.10);
+}
+.mapa-experiencia-editavel::after {
+  content:'';
+  position:absolute;
+  inset:0;
+  z-index:3;
+  pointer-events:none;
+  border:1px solid rgba(255,255,255,.68);
+  border-radius:inherit;
+  box-shadow:inset 0 0 0 1px rgba(255,45,122,.04);
+}
+.mapa-dica-flutuante {
+  position:absolute;
+  top:10px;
+  left:10px;
+  z-index:4;
+  pointer-events:none;
+  max-width:min(310px,calc(100% - 64px));
+  display:flex;
+  align-items:center;
+  gap:9px;
+  padding:8px 11px 8px 8px;
+  border:1px solid rgba(255,255,255,.88);
+  border-radius:14px;
+  background:rgba(255,255,255,.93);
+  color:#5b3150;
+  box-shadow:0 8px 24px rgba(49,25,57,.12);
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+}
+.mapa-dica-icone {
+  width:30px;
+  height:30px;
+  flex:none;
+  display:grid;
+  place-items:center;
+  border-radius:10px;
+  background:#fff0f6;
+  color:#ff2d7a;
+  font-size:1rem;
+  font-weight:900;
+  box-shadow:inset 0 0 0 1px #ffd1e2;
+}
+.mapa-dica-flutuante > span:last-child {
+  min-width:0;
+  display:grid;
+  gap:1px;
+}
+.mapa-dica-flutuante strong {
+  color:#4a173c;
+  font-size:.74rem;
+  line-height:1.2;
+}
+.mapa-dica-flutuante small {
+  overflow:hidden;
+  color:#817483;
+  font-size:.65rem;
+  line-height:1.25;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.mapa-experiencia-google .mapa-google {
+  filter:saturate(.92) contrast(.99);
+}
+.mapa-falhou {
+  min-height:150px;
+  padding:20px;
+  text-align:center;
+  border:1px dashed #ffc4d9;
+  background:linear-gradient(135deg,#fff8fb,#fff);
+}
+@media (max-width:560px) {
+  .mapa-experiencia {
+    border-radius:16px;
+  }
+  .mapa-dica-flutuante {
+    top:8px;
+    left:8px;
+    max-width:calc(100% - 54px);
+    padding:7px 9px 7px 7px;
+  }
+  .mapa-dica-icone {
+    width:27px;
+    height:27px;
+  }
+  .mapa-dica-flutuante small {
+    font-size:.61rem;
+  }
+}

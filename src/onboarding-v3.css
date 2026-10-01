@@ -142,7 +142,12 @@
   color:#8f8792;
   box-shadow:0 0 0 4px rgba(255,253,253,.96);
 }
-.ob-v3 .ob-passos li.atual button { color:var(--o-ameixa); }
+.ob-v3 .ob-passos li.atual button {
+  color:var(--o-ameixa);
+  border:0;
+  box-shadow:none;
+  background:transparent !important;
+}
 .ob-v3 .ob-passos li.atual .ob-passo-num {
   background:var(--o-rosa);
   border-color:var(--o-rosa);
@@ -2638,15 +2643,12 @@
   padding:8px 54px 0;
   text-align:center;
 }
-.ob-v3 .ob-finale-modal-icone {
-  width:58px;
-  height:58px;
-  display:grid;
-  place-items:center;
-  border-radius:20px;
-  color:#fff;
-  background:linear-gradient(135deg,#ff2d7a,#ff77aa);
-  box-shadow:0 14px 30px rgba(255,45,122,.24);
+.ob-v3 .ob-finale-modal-logo {
+  width:104px;
+  height:auto;
+  display:block;
+  margin:0 auto 2px;
+  filter:drop-shadow(0 8px 18px rgba(61,12,78,.08));
   animation:ob-finale-icon .6s .12s cubic-bezier(.2,.9,.2,1.15) both;
 }
 .ob-v3 .ob-finale-modal-cabeca h2 {
@@ -4235,3 +4237,718 @@
     display:none;
   }
 }
+
+
+/* ==========================================================================
+   IDENTIDADE · CLAREZA DO LINK + UPLOADS
+   Visual apenas: deixa a etapa mais didática e profissional.
+   ========================================================================== */
+.ob-v3 .ob-rotulo-com-ajuda,
+.ob-v3 .ob-upload-cabecalho {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+
+.ob-v3 .ob-rotulo-com-ajuda .ob-ajuda-popover,
+.ob-v3 .ob-upload-cabecalho .ob-ajuda-popover {
+  margin-left:auto;
+}
+
+.ob-v3 .ob-link-explica {
+  display:flex;
+  align-items:flex-start;
+  gap:8px;
+  margin-top:2px;
+  padding:9px 10px;
+  border:1px solid #eee7ef;
+  border-radius:12px;
+  background:#fcfafc;
+}
+
+.ob-v3 .ob-link-explica > svg {
+  flex:none;
+  margin-top:2px;
+  color:var(--o-rosa);
+}
+
+.ob-v3 .ob-link-explica > span {
+  display:grid;
+  gap:1px;
+}
+
+.ob-v3 .ob-link-explica strong {
+  color:var(--o-ameixa);
+  font-size:.72rem;
+}
+
+.ob-v3 .ob-link-explica small {
+  color:#837985;
+  font-size:.66rem;
+  line-height:1.35;
+}
+
+.ob-v3 .ob-cara-imagens {
+  grid-template-columns:128px minmax(0,1fr);
+  gap:14px;
+  align-items:start;
+  margin-top:3px;
+}
+
+.ob-v3 .ob-logo-campo,
+.ob-v3 .ob-fotos-campo {
+  min-width:0;
+}
+
+.ob-v3 .ob-logo.ob-logo-mini {
+  width:128px;
+  height:128px;
+  border-radius:18px;
+  border:1.5px dashed #ffb9d2;
+  background:
+    radial-gradient(circle at 50% 0%,rgba(255,45,122,.06),transparent 58%),
+    #fffafd;
+  transition:border-color .15s ease,background .15s ease,transform .15s ease,box-shadow .15s ease;
+}
+
+.ob-v3 .ob-logo.ob-logo-mini:hover:not(:disabled) {
+  transform:translateY(-1px);
+  border-color:#ff7cac;
+  background:#fff5f9;
+  box-shadow:0 10px 24px rgba(255,45,122,.08);
+}
+
+.ob-v3 .ob-logo-vazio {
+  gap:5px;
+}
+
+.ob-v3 .ob-logo-iniciais {
+  font-size:1.45rem;
+  letter-spacing:.08em;
+}
+
+.ob-v3 .ob-logo-vazio small {
+  color:#a67b8e;
+  font-size:.60rem;
+  font-weight:750;
+  letter-spacing:0;
+  text-transform:none;
+}
+
+.ob-v3 .ob-upload-formato,
+.ob-v3 .ob-upload-dica {
+  color:#8b818e;
+  font-size:.63rem;
+  line-height:1.35;
+}
+
+.ob-v3 .ob-upload-dica {
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  margin-top:5px;
+}
+
+.ob-v3 .ob-upload-dica svg {
+  color:var(--o-rosa);
+}
+
+.ob-v3 .ob-fotos {
+  grid-template-columns:repeat(auto-fill,minmax(104px,1fr));
+  gap:8px;
+}
+
+.ob-v3 .ob-foto {
+  min-height:104px;
+  border-radius:15px;
+}
+
+.ob-v3 .ob-foto-add {
+  min-height:104px;
+  gap:5px;
+  padding:9px;
+  border:1.5px dashed #ffb8d1;
+  border-radius:15px;
+  background:
+    radial-gradient(circle at 50% 20%,rgba(255,45,122,.07),transparent 55%),
+    #fffafd;
+  color:var(--o-rosa);
+  transition:border-color .15s ease,background .15s ease,transform .15s ease,box-shadow .15s ease;
+}
+
+.ob-v3 .ob-foto-add:hover:not(:disabled) {
+  transform:translateY(-1px);
+  border-color:#ff78aa;
+  background:#fff4f8;
+  box-shadow:0 10px 22px rgba(255,45,122,.07);
+}
+
+.ob-v3 .ob-foto-add-icone {
+  width:34px;
+  height:34px;
+  display:grid;
+  place-items:center;
+  border-radius:11px;
+  background:#fff0f6;
+  border:1px solid #ffd1e1;
+}
+
+.ob-v3 .ob-foto-add > span:not(.ob-foto-add-icone) {
+  font-size:.68rem;
+  font-weight:800;
+}
+
+.ob-v3 .ob-foto-add > small {
+  color:#a58f9a;
+  font-size:.56rem;
+  font-weight:650;
+}
+
+.ob-v3 .ob-previa > small {
+  display:flex;
+  align-items:center;
+  gap:5px;
+}
+
+@media (max-width:700px) {
+  .ob-v3 .ob-cara-imagens {
+    grid-template-columns:1fr;
+  }
+
+  .ob-v3 .ob-logo.ob-logo-mini {
+    width:112px;
+    height:112px;
+  }
+
+  .ob-v3 .ob-upload-cabecalho,
+  .ob-v3 .ob-rotulo-com-ajuda {
+    align-items:flex-start;
+  }
+}
+
+
+/* ==========================================================================
+   IDENTIDADE · RECONSTRUÇÃO VISUAL
+   Ajuda inline para não ser cortada pelo card + uploads mais guiados.
+   ========================================================================== */
+.ob-v3 .ob-identidade-cabecalho {
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:16px;
+  margin-bottom:14px;
+}
+
+.ob-v3 .ob-identidade-cabecalho > span:first-child {
+  display:grid;
+  gap:3px;
+}
+
+.ob-v3 .ob-identidade-cabecalho > span:first-child small {
+  color:#817783;
+  font-size:.72rem;
+  line-height:1.4;
+}
+
+.ob-v3 .ob-identidade-selo {
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  padding:5px 9px;
+  border-radius:999px;
+  background:#fff3f8;
+  border:1px solid #ffd5e4;
+  color:#d61d61;
+  font-size:.62rem;
+  font-weight:800;
+  white-space:nowrap;
+}
+
+.ob-v3 .ob-identidade-bloco {
+  display:grid;
+  gap:12px;
+  padding:14px;
+  border:1px solid #eee7ef;
+  border-radius:16px;
+  background:#fff;
+}
+
+.ob-v3 .ob-identidade-bloco + .ob-identidade-bloco {
+  margin-top:12px;
+}
+
+.ob-v3 .ob-identidade-bloco-topo {
+  display:flex;
+  align-items:center;
+  gap:9px;
+}
+
+.ob-v3 .ob-identidade-bloco-topo > span:last-child {
+  display:grid;
+  gap:1px;
+}
+
+.ob-v3 .ob-identidade-bloco-topo strong {
+  color:var(--o-ameixa);
+  font-size:.78rem;
+}
+
+.ob-v3 .ob-identidade-bloco-topo small {
+  color:#8a808c;
+  font-size:.64rem;
+}
+
+.ob-v3 .ob-identidade-numero {
+  width:24px;
+  height:24px;
+  display:grid;
+  place-items:center;
+  border-radius:50%;
+  color:#fff;
+  background:linear-gradient(135deg,#ff2d7a,#ff6b9f);
+  font-size:.62rem;
+  font-weight:850;
+  flex:none;
+}
+
+.ob-v3 .ob-ajuda-inline {
+  border:1px solid #eee7ef;
+  border-radius:12px;
+  background:#fcfafc;
+  overflow:hidden;
+}
+
+.ob-v3 .ob-ajuda-inline summary {
+  list-style:none;
+  min-height:36px;
+  display:flex;
+  align-items:center;
+  gap:7px;
+  padding:8px 10px;
+  cursor:pointer;
+  color:#66586a;
+  font-size:.68rem;
+  font-weight:750;
+}
+
+.ob-v3 .ob-ajuda-inline summary::-webkit-details-marker {
+  display:none;
+}
+
+.ob-v3 .ob-ajuda-inline summary svg {
+  color:var(--o-rosa);
+  flex:none;
+}
+
+.ob-v3 .ob-ajuda-inline[open] summary {
+  color:var(--o-ameixa);
+  background:#fff7fa;
+}
+
+.ob-v3 .ob-ajuda-inline > div {
+  padding:0 10px 10px 31px;
+}
+
+.ob-v3 .ob-ajuda-inline > div span {
+  display:block;
+  color:#7c727f;
+  font-size:.66rem;
+  line-height:1.45;
+}
+
+.ob-v3 .ob-cara-endereco {
+  gap:7px;
+  margin-top:0;
+}
+
+.ob-v3 .ob-link-explica {
+  margin-top:0;
+  background:#fff8fb;
+  border-color:#ffd8e6;
+}
+
+.ob-v3 .ob-cara-imagens {
+  grid-template-columns:150px minmax(0,1fr);
+  gap:16px;
+  margin-top:0;
+}
+
+.ob-v3 .ob-logo-campo {
+  display:grid;
+  gap:7px;
+}
+
+.ob-v3 .ob-logo.ob-logo-mini {
+  width:150px;
+  height:150px;
+}
+
+.ob-v3 .ob-logo-vazio strong {
+  color:var(--o-ameixa);
+  font-size:.68rem;
+  text-transform:none;
+  letter-spacing:0;
+}
+
+.ob-v3 .ob-logo-vazio small {
+  max-width:12ch;
+  text-align:center;
+}
+
+.ob-v3 .ob-fotos-campo {
+  display:grid;
+  gap:8px;
+}
+
+.ob-v3 .ob-fotos-campo-topo {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+
+.ob-v3 .ob-fotos-campo-topo > span:first-child {
+  display:grid;
+  gap:1px;
+}
+
+.ob-v3 .ob-fotos-campo-topo strong {
+  color:#5f5263;
+  font-size:.70rem;
+}
+
+.ob-v3 .ob-fotos-campo-topo small {
+  color:#938894;
+  font-size:.61rem;
+}
+
+.ob-v3 .ob-capa-status {
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  padding:4px 7px;
+  border-radius:999px;
+  color:#c51b59;
+  background:#fff2f7;
+  border:1px solid #ffd3e2;
+  font-size:.58rem;
+  font-weight:800;
+}
+
+.ob-v3 .ob-galeria-vazia {
+  width:100%;
+  min-height:150px;
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr) auto;
+  align-items:center;
+  gap:12px;
+  padding:16px;
+  text-align:left;
+  border:1.5px dashed #ffb8d1;
+  border-radius:16px;
+  background:
+    radial-gradient(circle at 90% 10%, rgba(255,45,122,.07), transparent 28%),
+    #fffafd;
+  color:inherit;
+  font:inherit;
+  cursor:pointer;
+  transition:transform .15s ease,border-color .15s ease,box-shadow .15s ease,background .15s ease;
+}
+
+.ob-v3 .ob-galeria-vazia:hover:not(:disabled) {
+  transform:translateY(-1px);
+  border-color:#ff74a7;
+  background:#fff5f9;
+  box-shadow:0 12px 28px rgba(255,45,122,.08);
+}
+
+.ob-v3 .ob-galeria-vazia-icone {
+  width:44px;
+  height:44px;
+  display:grid;
+  place-items:center;
+  border-radius:14px;
+  background:#fff0f6;
+  border:1px solid #ffd2e1;
+  color:var(--o-rosa);
+}
+
+.ob-v3 .ob-galeria-vazia > span:nth-child(2) {
+  display:grid;
+  gap:3px;
+}
+
+.ob-v3 .ob-galeria-vazia strong {
+  color:var(--o-ameixa);
+  font-size:.76rem;
+}
+
+.ob-v3 .ob-galeria-vazia small {
+  max-width:44ch;
+  color:#827785;
+  font-size:.65rem;
+  line-height:1.4;
+}
+
+.ob-v3 .ob-galeria-vazia em {
+  padding:7px 10px;
+  border-radius:10px;
+  color:#fff;
+  background:linear-gradient(135deg,#ff2d7a,#ff6199);
+  font-size:.64rem;
+  font-weight:800;
+  font-style:normal;
+  white-space:nowrap;
+}
+
+.ob-v3 .ob-identidade-bloco-imagens .ob-fotos {
+  grid-template-columns:repeat(auto-fill,minmax(110px,1fr));
+}
+
+@media (max-width:900px) {
+  .ob-v3 .ob-identidade-cabecalho {
+    flex-direction:column;
+    align-items:flex-start;
+  }
+
+  .ob-v3 .ob-cara-imagens {
+    grid-template-columns:1fr;
+  }
+
+  .ob-v3 .ob-logo.ob-logo-mini {
+    width:128px;
+    height:128px;
+  }
+}
+
+@media (max-width:620px) {
+  .ob-v3 .ob-identidade-bloco {
+    padding:12px;
+  }
+
+  .ob-v3 .ob-galeria-vazia {
+    grid-template-columns:auto minmax(0,1fr);
+  }
+
+  .ob-v3 .ob-galeria-vazia em {
+    grid-column:1 / -1;
+    justify-self:stretch;
+    text-align:center;
+  }
+}
+
+
+/* ==========================================================================
+   IDENTIDADE · COMPOSIÇÃO FINAL DE LOGO + FOTOS
+   Alinhamento visual da etapa sem alterar uploads ou regras.
+   ========================================================================== */
+.ob-v3 .ob-identidade-bloco-imagens .ob-cara-imagens {
+  grid-template-columns:160px minmax(0,1fr);
+  gap:20px;
+  align-items:start;
+}
+
+.ob-v3 .ob-logo-campo,
+.ob-v3 .ob-fotos-campo {
+  align-content:start;
+}
+
+.ob-v3 .ob-logo-campo > .ob-rotulo,
+.ob-v3 .ob-fotos-campo-topo {
+  min-height:34px;
+}
+
+.ob-v3 .ob-logo-campo > .ob-rotulo {
+  display:flex;
+  align-items:flex-start;
+  padding-top:1px;
+}
+
+.ob-v3 .ob-logo.ob-logo-mini {
+  width:160px;
+  height:160px;
+}
+
+.ob-v3 .ob-logo-acoes {
+  min-height:24px;
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+
+.ob-v3 .ob-logo-acoes button {
+  padding:0;
+  border:0;
+  background:transparent;
+  color:var(--o-rosa);
+  font:inherit;
+  font-size:.64rem;
+  font-weight:800;
+  cursor:pointer;
+}
+
+.ob-v3 .ob-logo-acoes button.perigo {
+  color:#bb385e;
+}
+
+.ob-v3 .ob-logo-acoes > span {
+  color:#c8bec9;
+  font-size:.64rem;
+}
+
+.ob-v3 .ob-logo-acoes small {
+  font-size:.61rem;
+}
+
+.ob-v3 .ob-fotos-campo-topo {
+  align-items:flex-start;
+}
+
+.ob-v3 .ob-fotos-campo-acoes {
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:6px;
+  flex-wrap:wrap;
+}
+
+.ob-v3 .ob-adicionar-fotos-topo {
+  min-height:27px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:4px;
+  padding:0 8px;
+  border:1px solid #ffd0e0;
+  border-radius:999px;
+  background:#fff;
+  color:var(--o-rosa);
+  font:inherit;
+  font-size:.59rem;
+  font-weight:800;
+  cursor:pointer;
+}
+
+.ob-v3 .ob-adicionar-fotos-topo:hover:not(:disabled) {
+  background:#fff3f8;
+  border-color:#ffafd0;
+}
+
+.ob-v3 .ob-identidade-bloco-imagens .ob-fotos {
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:8px;
+  align-items:start;
+}
+
+.ob-v3 .ob-identidade-bloco-imagens .ob-foto {
+  width:100%;
+  aspect-ratio:4/3;
+  min-height:0;
+}
+
+.ob-v3 .ob-fotos-ordem {
+  min-height:24px;
+  display:flex;
+  align-items:center;
+  gap:5px;
+  color:#8c818f;
+  font-size:.61rem;
+  line-height:1.3;
+}
+
+.ob-v3 .ob-fotos-ordem svg {
+  flex:none;
+  color:var(--o-rosa);
+}
+
+.ob-v3 .ob-identidade-bloco-imagens .ob-logo-campo > .ob-ajuda-inline,
+.ob-v3 .ob-identidade-bloco-imagens .ob-fotos-campo > .ob-ajuda-inline {
+  margin-top:0;
+}
+
+.ob-v3 .ob-identidade-bloco-imagens .ob-logo-campo > .ob-ajuda-inline {
+  width:160px;
+}
+
+.ob-v3 .ob-identidade-bloco-imagens .ob-fotos-campo > .ob-ajuda-inline {
+  width:100%;
+}
+
+@media (min-width:901px) and (max-width:1160px) {
+  .ob-v3 .ob-identidade-bloco-imagens .ob-fotos {
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+}
+
+@media (max-width:900px) {
+  .ob-v3 .ob-identidade-bloco-imagens .ob-cara-imagens {
+    grid-template-columns:1fr;
+  }
+
+  .ob-v3 .ob-identidade-bloco-imagens .ob-logo-campo > .ob-ajuda-inline {
+    width:100%;
+  }
+
+  .ob-v3 .ob-identidade-bloco-imagens .ob-fotos {
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+}
+
+@media (max-width:560px) {
+  .ob-v3 .ob-fotos-campo-topo {
+    display:grid;
+    gap:7px;
+  }
+
+  .ob-v3 .ob-fotos-campo-acoes {
+    justify-content:flex-start;
+  }
+}
+
+
+/* STEP BADGE · linha própria no cabeçalho
+   O badge deixa de flutuar sobre o conteúdo quando o subpasso está aberto.
+   Ele passa a ocupar a segunda coluna da primeira linha; todo o restante
+   começa abaixo e usa a largura inteira do card. */
+.ob-v3 .ob-fluxo-card.aberto {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  column-gap:12px;
+  align-items:start;
+}
+
+.ob-v3 .ob-fluxo-card.aberto::before {
+  position:static;
+  grid-column:2;
+  grid-row:1;
+  align-self:start;
+  justify-self:end;
+}
+
+.ob-v3 .ob-fluxo-card.aberto > :first-child {
+  grid-column:1;
+  grid-row:1;
+  min-width:0;
+  box-sizing:border-box;
+  padding-right:0;
+}
+
+.ob-v3 .ob-fluxo-card.aberto > :not(:first-child) {
+  grid-column:1 / -1;
+  min-width:0;
+}
+
+/* O cabeçalho de identidade tem selo próprio ("Visível para clientes").
+   Como ele fica na primeira coluna, o selo nunca invade a coluna do badge. */
+.ob-v3 .ob-identidade-cabecalho,
+.ob-v3 .ob-identidade-cabecalho > * {
+  min-width:0;
+}
+
+@media (max-width:520px) {
+  .ob-v3 .ob-fluxo-card.aberto {
+    column-gap:9px;
+  }
+}
+

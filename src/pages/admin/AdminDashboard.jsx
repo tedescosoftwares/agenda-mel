@@ -11,7 +11,7 @@ import { useAuth } from '../../context/AuthContext'
 import { formatarCents, formatarReaisCurto, formatarPct, mesAtual, nomeDoMes } from '../../lib/numeros'
 import GraficoLinha from '../../components/GraficoLinha'
 import { toISODate } from '../../lib/format'
-import { CalendarPlus, Users, Sparkles, MessageCircle, FileSignature, ArrowRight, CalendarDays, TrendingUp, Clock3, QrCode, Settings2, X, PlayCircle, ChevronRight, Activity, CircleDot, Rocket, BellRing, BookOpen } from 'lucide-react'
+import { CalendarPlus, Users, Sparkles, MessageCircle, FileSignature, ArrowRight, CalendarDays, TrendingUp, Clock3, QrCode, Settings2, X, PlayCircle, ChevronRight, Activity, CircleDot, Rocket, BellRing, BookOpen, Scissors, Link2, Headphones, LayoutDashboard, BadgeCheck } from 'lucide-react'
 
 // Dashboard do salão (tela 23): o dia de hoje em quatro números, o
 // faturamento do mês dia a dia, o que está esperando resposta, e os
@@ -24,6 +24,7 @@ export default function AdminDashboard() {
   const [linhas, setLinhas] = useState([])
   const [porDia, setPorDia] = useState([])
   const [semContrato, setSemContrato] = useState([])
+  const [primeiros, setPrimeiros] = useState(null)
   const navigate = useNavigate()
   useEffect(() => {
     try {
@@ -35,12 +36,13 @@ export default function AdminDashboard() {
   const carregar = useCallback(async () => {
     if (!salaoId) return
     const d = toISODate(new Date()), mes = mesAtual()
-    const [ag, pend, fila, res, mesAg] = await Promise.all([
+    const [ag, pend, fila, res, mesAg, pp] = await Promise.all([
       supabase.from('appointments').select('price_cents, status').eq('salon_id', salaoId).eq('date', d).neq('status', 'cancelado'),
       supabase.from('appointments').select('id', { count: 'exact', head: true }).eq('salon_id', salaoId).eq('status', 'pendente').gte('date', d),
       supabase.from('waitlist_entries').select('id, professionals!inner(salon_id)', { count: 'exact', head: true }).eq('professionals.salon_id', salaoId).eq('status', 'aguardando'),
       supabase.rpc('resumo_do_salao', { salao: salaoId, mes }),
       supabase.from('appointments').select('date, price_cents').eq('salon_id', salaoId).eq('status', 'concluido').gte('date', mes),
+      supabase.rpc('primeiros_passos', { salao: salaoId }),
     ])
     const lista = ag.data ?? []
     setHoje({ atendimentos: lista.length, faturamento: lista.reduce((s, a) => s + (a.price_cents ?? 0), 0) })
@@ -50,6 +52,7 @@ export default function AdminDashboard() {
     const soma = {}
     for (const a of mesAg.data ?? []) soma[a.date] = (soma[a.date] ?? 0) + (a.price_cents ?? 0)
     setPorDia(Object.entries(soma).sort().map(([k, v]) => ({ x: k.slice(8, 10), y: v / 100 })))
+    setPrimeiros(pp.data ?? null)
   }, [salaoId])
   useEffect(() => { carregar() }, [carregar])
   useEffect(() => {
@@ -70,6 +73,13 @@ export default function AdminDashboard() {
   const primeiraPalavra = nomeSalao.split(' ')[0]
   const hojeTexto = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })
   const temMovimento = hoje.atendimentos > 0 || totalMes > 0 || pendentes > 0 || naFila > 0
+  const servicosProntos = Number(primeiros?.servicos ?? 0) > 0
+  const equipePronta = salao?.tipo === 'autonoma' || Number(primeiros?.equipe ?? 0) > 0
+  const categoriasProntas = Array.isArray(salao?.categorias_escolhidas) && salao.categorias_escolhidas.length > 0
+  const linkPronto = Boolean(salao?.ativado_em)
+  const progressoConfig = [categoriasProntas, servicosProntos, equipePronta, linkPronto]
+  const feitosConfig = progressoConfig.filter(Boolean).length
+  const primeiroAcesso = primeiros !== null && (!servicosProntos || !equipePronta || !temMovimento)
 
   const salaoAtivo = Boolean(salao?.ativado_em)
   const fotosSalao = Array.isArray(salao?.fotos) ? salao.fotos : []
@@ -170,7 +180,96 @@ export default function AdminDashboard() {
           </div>
         </section>
 
-        <section className="admin-home-pulso">
+        {primeiroAcesso && (
+          <section className="admin-home-primeiro" aria-label="Primeiros passos no painel">
+            <div className="admin-home-primeiro-config" data-tour="primeiros-passos">
+              <div className="admin-home-primeiro-topo">
+                <div>
+                  <span className="admin-home-label"><Sparkles size={13} /> Comece por aqui</span>
+                  <h2>Deixe seu painel pronto para o primeiro agendamento.</h2>
+                  <p>Seu espaço já está criado. Agora falta montar a operação do salão para a MIMO começar a trabalhar com você.</p>
+                </div>
+                <div className="admin-home-primeiro-progresso">
+                  <strong>{feitosConfig} de 4</strong>
+                  <span><i style={{ width:`${(feitosConfig / 4) * 100}%` }} /></span>
+                </div>
+              </div>
+
+              <div className="admin-home-primeiro-etapas">
+                <Link to="/admin/configurar" className={categoriasProntas ? 'feito' : 'atual'}>
+                  <b>{categoriasProntas ? <BadgeCheck size={16} /> : '1'}</b>
+                  <span><strong>Categorias</strong><small>Organize os tipos de serviço.</small></span>
+                </Link>
+                <Link to="/admin/configurar" className={servicosProntos ? 'feito' : (!categoriasProntas ? '' : 'atual')}>
+                  <b>{servicosProntos ? <BadgeCheck size={16} /> : '2'}</b>
+                  <span><strong>Serviços</strong><small>Cadastre duração, preço e detalhes.</small></span>
+                </Link>
+                <Link to="/admin/equipe" className={equipePronta ? 'feito' : (servicosProntos ? 'atual' : '')}>
+                  <b>{equipePronta ? <BadgeCheck size={16} /> : '3'}</b>
+                  <span><strong>Profissionais</strong><small>Monte a equipe e as agendas.</small></span>
+                </Link>
+                <Link to="/admin/salao" className={linkPronto ? 'feito' : (equipePronta ? 'atual' : '')}>
+                  <b>{linkPronto ? <BadgeCheck size={16} /> : '4'}</b>
+                  <span><strong>Compartilhar agenda</strong><small>Prepare o link e o QR do salão.</small></span>
+                </Link>
+              </div>
+
+              <div className="admin-home-primeiro-acoes">
+                <Link to="/admin/configurar" className="btn btn-primary">Continuar configuração <ArrowRight size={15} /></Link>
+                <button type="button" className="btn btn-ghost" onClick={() => window.dispatchEvent(new CustomEvent('mimo:abrir-tour-painel'))}><PlayCircle size={15} /> Fazer tour guiado</button>
+              </div>
+            </div>
+
+            <div className="admin-home-primeiro-explica">
+              <div className="admin-home-primeiro-explica-topo">
+                <span className="admin-home-primeiro-explica-icone"><LayoutDashboard size={19} /></span>
+                <div><strong>O que vai aparecer aqui quando tudo estiver pronto</strong><small>A Home muda junto com o seu salão. Você não vai ficar preso em telas de configuração para sempre.</small></div>
+              </div>
+              <div className="admin-home-primeiro-beneficios">
+                <article><span><CalendarDays size={17} /></span><strong>Agenda organizada</strong><small>Veja o dia e quem vai atender.</small></article>
+                <article><span><BellRing size={17} /></span><strong>Pedidos de clientes</strong><small>Confirme solicitações e mudanças.</small></article>
+                <article><span><Users size={17} /></span><strong>Equipe em um só lugar</strong><small>Serviços, horários e agenda de cada profissional.</small></article>
+                <article><span><Link2 size={17} /></span><strong>Seu salão para compartilhar</strong><small>Link e QR para clientes marcarem sozinhos.</small></article>
+              </div>
+            </div>
+
+            <div className="admin-home-primeiro-operacao">
+              <section className="card admin-home-primeiro-agenda">
+                <div className="admin-home-secao-topo compacto">
+                  <div><span className="admin-home-label">Seu dia</span><h2>Agenda de hoje</h2></div>
+                  <Link to="/admin/agenda">Abrir agenda</Link>
+                </div>
+                <div className="admin-home-primeiro-vazio">
+                  <span><CalendarPlus size={22} /></span>
+                  <strong>Ainda não há atendimentos para hoje.</strong>
+                  <p>Quando os primeiros clientes agendarem, eles aparecem aqui com horário, serviço e profissional.</p>
+                  <Link to="/admin/agenda?encaixe=1" className="btn btn-primary">Fazer um agendamento teste</Link>
+                </div>
+              </section>
+
+              <aside className="admin-home-primeiro-lateral">
+                <section className="card admin-home-acoes admin-home-acoes-primeiro" data-tour="atalhos">
+                  <div className="admin-home-secao-topo compacto">
+                    <div><span className="admin-home-label">Acesso rápido</span><h2>Faça o próximo passo daqui</h2></div>
+                  </div>
+                  <div className="admin-home-atalhos">
+                    <Link to="/admin/servicos"><span><Scissors size={18} /></span><strong>Cadastrar serviço</strong><small>Adicione o que seu salão oferece</small><ArrowRight size={14} /></Link>
+                    <Link to="/admin/equipe"><span><Users size={18} /></span><strong>Adicionar profissional</strong><small>Monte a equipe e os horários</small><ArrowRight size={14} /></Link>
+                    <Link to="/admin/salao"><span><QrCode size={18} /></span><strong>Ver meu salão</strong><small>Confira como clientes vão enxergar</small><ArrowRight size={14} /></Link>
+                    <Link to="/admin/salao"><span><Link2 size={18} /></span><strong>Compartilhar link</strong><small>Leve sua agenda para os clientes</small><ArrowRight size={14} /></Link>
+                  </div>
+                </section>
+                <section className="card admin-home-primeiro-ajuda">
+                  <span><Headphones size={18} /></span>
+                  <div><strong>Precisa de ajuda?</strong><small>O Guia MIMO mostra cada parte do sistema em vídeos curtos.</small></div>
+                  <Link to="/admin/guia">Abrir guia <ArrowRight size={13} /></Link>
+                </section>
+              </aside>
+            </div>
+          </section>
+        )}
+
+                <section className="admin-home-pulso">
           <div className="admin-home-pulso-principal">
             <span className="admin-home-pulso-icone">{agoraMimo.icone}<i></i></span>
             <div>
@@ -202,7 +301,7 @@ export default function AdminDashboard() {
           )}
         </div>
 
-        <section className="admin-home-resumo" data-tour="numeros">
+        {!primeiroAcesso && <section className="admin-home-resumo" data-tour="numeros">
           <div className="admin-home-secao-topo">
             <div><span className="admin-home-label">Visão rápida</span><h2>Seu negócio hoje</h2></div>
             <span className="admin-home-data">{hojeTexto}</span>
@@ -234,9 +333,9 @@ export default function AdminDashboard() {
               <small>ocupação média de {formatarPct(ocup)}</small>
             </div>
           </div>
-        </section>
+        </section>}
 
-        <div className="admin-home-grade">
+        {!primeiroAcesso && <div className="admin-home-grade">
           <section className="card admin-home-grafico">
             <div className="admin-home-secao-topo compacto">
               <div><span className="admin-home-label">Movimento</span><h2>Faturamento do mês</h2></div>
@@ -278,15 +377,15 @@ export default function AdminDashboard() {
               </div>
             </section>
           </aside>
-        </div>
+        </div>}
 
-        <section className="admin-home-link card" data-tour="link">
+        {!primeiroAcesso && <section className="admin-home-link card" data-tour="link">
           <div>
             <span className="admin-home-link-icone"><QrCode size={20} /></span>
             <span><strong>Seu salão também vive fora deste painel.</strong><small>Quando serviços e equipe estiverem prontos, seu link e QR Code viram a porta de entrada das clientes.</small></span>
           </div>
           <Link to="/admin/configurar" className="btn btn-ghost">Preparar meu link <ArrowRight size={15} /></Link>
-        </section>
+        </section>}
       </div>
     </AdminShell>
   )
@@ -310,6 +409,12 @@ function TutorialPainel() {
 
   const ativo = passo >= 0
   const atual = PASSOS_TOUR[passo]
+
+  useEffect(() => {
+    const abrir = () => iniciar()
+    window.addEventListener('mimo:abrir-tour-painel', abrir)
+    return () => window.removeEventListener('mimo:abrir-tour-painel', abrir)
+  }, [])
 
   useEffect(() => {
     if (!ativo || !atual) return

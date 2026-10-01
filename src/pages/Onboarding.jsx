@@ -1284,30 +1284,52 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
           className={'ob-card ob-card-largo ob-fluxo-card ' + (blocoAberto === 'identidade' ? `aberto ob-anima-${direcaoBloco}` : 'fechado') + (celebradas.includes('identidade') ? ' feito' : '')}
           data-etapa="1"
         >
-          <strong className="ob-card-titulo">{autonoma ? 'Sua imagem e seu espaço' : 'Nome e fotos'}</strong>
-          <span className="muted">{autonoma ? 'Sua foto aparece ao lado do nome. As fotos do espaço viram a capa da sua página.' : 'O logo aparece ao lado do nome. As fotos mostram o espaço; a primeira vira a capa.'}</span>
+          <strong className="ob-card-titulo">{autonoma ? 'Nome, foto e capa' : 'Nome, link e fotos'}</strong>
+          <span className="muted">{autonoma ? 'Aqui você define como sua agenda aparece para as clientes.' : 'Aqui você monta a identidade pública do salão: nome, endereço na MIMO, logo e fotos.'}</span>
           <div className="ob-cara">
             <div className="ob-cara-esq">
             <label className="ob-cara-nome">{autonoma ? 'Nome da agenda' : 'Nome do salão'} <b>*</b><span className="muted">(como as clientes vão ver)</span><input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Studio Essenza Hair" maxLength={60} /></label>
             {!autonoma && (
               <div className="ob-cara-endereco">
-                <span className="ob-rotulo">Endereço do salão na MIMO <b>*</b><span className="muted"> (o link do QR, da bio e do WhatsApp)</span></span>
+                <div className="ob-rotulo-com-ajuda">
+                  <span className="ob-rotulo">Seu endereço na MIMO <b>*</b></span>
+                  <AjudaCampo titulo="O que é esse endereço?">
+                    Não é o endereço físico do salão. É o link público da sua página na MIMO, usado no QR Code, na bio do Instagram e no WhatsApp. Ex.: mimo.com.vc/jacques-janine.
+                  </AjudaCampo>
+                </div>
                 <CampoEndereco nome={enderecoDigitado} onNome={(v) => { setEndereco(v); setEnderecoMexido(true) }} limpo={enderecoLimpo} chk={enderecoChk} />
-                <small className="muted">Só letras, números e hífen. Ex.: <b>{enderecoEscrito(limparEndereco(nome) || 'seusalao')}</b>. Dá pra trocar depois em Ajustes; o antigo continua abrindo.</small>
+                <div className="ob-link-explica">
+                  <Link2 size={14} />
+                  <span><strong>Esse será o link do seu salão.</strong><small>Prefira algo curto e fácil de lembrar. Você pode trocar depois em Ajustes; o endereço antigo continua funcionando.</small></span>
+                </div>
               </div>
             )}
             <div className="ob-cara-imagens">
               <div className="ob-logo-campo">
-                <span className="ob-rotulo">{autonoma ? 'Sua foto ou logo' : 'Logo'}</span>
+                <div className="ob-upload-cabecalho">
+                  <span className="ob-rotulo">{autonoma ? 'Sua foto ou logo' : 'Logo'}</span>
+                  <AjudaCampo titulo={autonoma ? 'Qual imagem usar aqui?' : 'Qual logo fica melhor?'}>
+                    {autonoma
+                      ? 'Use uma foto sua ou um logo em formato quadrado, com boa luz e sem muito texto. Essa imagem aparece pequena ao lado do nome.'
+                      : 'Prefira o logo em formato quadrado, com fundo limpo e boa leitura mesmo em tamanho pequeno. Ele aparece ao lado do nome do salão.'}
+                  </AjudaCampo>
+                </div>
                 <button type="button" className={'ob-logo ob-logo-mini' + (logo ? ' com' : '')} onClick={() => arqLogo.current?.click()} disabled={subindo === 'logo'}>
-                  {logo ? <img src={logo} alt="" /> : <span className="ob-logo-vazio"><span className="ob-logo-iniciais">{iniciaisDe(nome)}</span></span>}
+                  {logo ? <img src={logo} alt="" /> : <span className="ob-logo-vazio"><span className="ob-logo-iniciais">{iniciaisDe(nome)}</span><small>Adicionar logo</small></span>}
                   <span className="ob-logo-cam"><Camera size={13} /></span>
                 </button>
                 <input ref={arqLogo} type="file" accept="image/*" hidden onChange={trocarLogo} />
-                {subindo === 'logo' ? <small className="muted">subindo…</small> : logo ? <button type="button" className="link-ver" onClick={tirarLogo}>Remover</button> : <small className="muted">JPG ou PNG</small>}
+                {subindo === 'logo' ? <small className="muted">subindo…</small> : logo ? <button type="button" className="link-ver" onClick={tirarLogo}>Remover</button> : <small className="ob-upload-formato">JPG ou PNG · imagem quadrada</small>}
               </div>
+
               <div className="ob-fotos-campo">
-                <span className="ob-rotulo">{autonoma ? 'Fotos do espaço' : 'Fotos do salão'} <span className="muted">· {fotos.length}/{MAX_FOTOS}</span></span>
+                <div className="ob-upload-cabecalho">
+                  <span className="ob-rotulo">{autonoma ? 'Fotos do espaço' : 'Fotos do salão'} <span className="muted">· {fotos.length}/{MAX_FOTOS}</span></span>
+                  <AjudaCampo titulo="Quais fotos devo colocar?">
+                    Comece por uma foto horizontal, clara e bonita do ambiente: ela será a capa. Depois adicione recepção, espaços de atendimento e detalhes que ajudem a cliente a reconhecer o lugar.
+                  </AjudaCampo>
+                </div>
+
                 <div className="ob-fotos">
                   {fotos.map((u, i) => (
                     <div key={u} className={'ob-foto' + (i === 0 ? ' capa' : '')}>
@@ -1320,15 +1342,23 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
                       </div>
                     </div>
                   ))}
-                  {fotos.length < MAX_FOTOS && <button type="button" className="ob-foto ob-foto-add" onClick={() => arqFotos.current?.click()} disabled={subindo === 'fotos'}><ImagePlus size={18} /><span>{subindo === 'fotos' ? 'subindo…' : 'Adicionar'}</span></button>}
+                  {fotos.length < MAX_FOTOS && (
+                    <button type="button" className="ob-foto ob-foto-add" onClick={() => arqFotos.current?.click()} disabled={subindo === 'fotos'}>
+                      <span className="ob-foto-add-icone"><ImagePlus size={18} /></span>
+                      <span>{subindo === 'fotos' ? 'subindo…' : 'Adicionar fotos'}</span>
+                      <small>JPG ou PNG</small>
+                    </button>
+                  )}
                   <input ref={arqFotos} type="file" accept="image/*" multiple hidden onChange={addFotos} />
                 </div>
+
+                <small className="ob-upload-dica"><Sparkles size={12} /> A primeira foto vira a capa. Use as setas para mudar a ordem.</small>
               </div>
             </div>
             </div>
             {/* como a cliente vai ver a página: capa, logo, nome e onde fica */}
             <div className="ob-previa">
-              <small><Eye size={11} /> Assim suas clientes vão ver</small>
+              <small><Eye size={11} /> Prévia para suas clientes</small>
               <div className="ob-previa-tela">
                 <div className="ob-previa-capa">
                   {fotos[0] ? <img src={fotos[0]} alt="" /> : <span className="ob-previa-capa-vazia"><ImagePlus size={20} /><span>{autonoma ? 'A foto do seu espaço vira a capa' : 'A primeira foto vira a capa'}</span></span>}

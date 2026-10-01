@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import PainelPausado from './PainelPausado'
@@ -12,7 +12,7 @@ import {
   MaisIcon,
   HomeIcon,
 } from './icons'
-import { Sparkles, UserRound, WalletCards, Megaphone, BookOpen, Settings2, ChevronLeft, CreditCard } from 'lucide-react'
+import { Sparkles, UserRound, WalletCards, Megaphone, Settings2, ChevronLeft, CreditCard, BarChart3, Search, Crown, Store, ChevronDown } from 'lucide-react'
 
 // Cinco abas, não seis. Numa barra de celular, seis alvos dão 60px
 // cada e o polegar erra. O mês, Serviços e WhatsApp foram para dentro
@@ -32,10 +32,10 @@ const DESKTOP_NAV = [
   { to: '/admin/clientes', label: 'Clientes', Icon: UsersIcon },
   { to: '/admin/servicos', label: 'Serviços', Icon: Sparkles },
   { to: '/admin/equipe', label: 'Profissionais', Icon: UserRound },
-  { to: '/admin/numeros', label: 'Financeiro', Icon: WalletCards },
+  { to: '/admin/receber', label: 'Financeiro', Icon: WalletCards },
   { to: '/admin/promocoes', label: 'Marketing', Icon: Megaphone },
-  { to: '/admin/guia', label: 'Guia', Icon: BookOpen },
-  { to: '/admin/ajustes', label: 'Ajustes', Icon: Settings2 },
+  { to: '/admin/numeros', label: 'Relatórios', Icon: BarChart3 },
+  { to: '/admin/ajustes', label: 'Configurações', Icon: Settings2 },
 ]
 
 export default function AdminShell({ children, amplo = false }) {
@@ -43,14 +43,34 @@ export default function AdminShell({ children, amplo = false }) {
   const miolo = useRef(null)
   const { pathname } = useLocation()
   useEffect(() => { miolo.current?.scrollTo({ top: 0 }) }, [pathname])
-  const { salao, acesso } = useAuth()
+  const { salao, acesso, profile, saloes, trocarSalao } = useAuth()
   const navigate = useNavigate()
+  const [busca, setBusca] = useState('')
+  const [trocaAberta, setTrocaAberta] = useState(false)
+  const nomePessoa = profile?.full_name || 'Conta MIMO'
+  const primeiroNome = nomePessoa.split(' ')[0] || 'Conta'
+  const fotos = Array.isArray(salao?.fotos) ? salao.fotos : []
+  const thumbSalao = salao?.logo_url || fotos[0] || salao?.cover_url || salao?.foto_capa_url || ''
+  const plano = acesso?.fase === 'teste'
+    ? { titulo:'Teste gratuito', texto: acesso?.aguardando_configuracao ? 'Começa quando a agenda estiver pronta' : `${Math.max(0, Number(acesso?.dias ?? 0))} dias restantes` }
+    : acesso?.fase === 'ativa'
+      ? { titulo:'Plano ativo', texto:'Acesso liberado' }
+      : acesso?.fase === 'configurando'
+        ? { titulo:'Teste gratuito', texto:'Ainda não começou' }
+        : { titulo:'Plano e assinatura', texto:'Ver acesso e cobrança' }
+
+  function buscar(e) {
+    e.preventDefault()
+    const q = busca.trim()
+    if (!q) return
+    navigate('/admin/clientes?busca=' + encodeURIComponent(q))
+  }
 
   return (
     <div className={'admin-shell' + (amplo ? ' admin-shell-amplo' : '')}>
       <aside className="admin-desktop-sidebar" aria-label="Navegação principal">
         <div className="admin-sidebar-marca">
-          <span><MarcaIcon className="marca" id="lateral" /><Wordmark tamanho={1.55} /></span>
+          <span><MarcaIcon className="marca" id="lateral" /><Wordmark tamanho={1.7} /></span>
           <ChevronLeft size={17} />
         </div>
         <nav className="admin-sidebar-nav">
@@ -67,7 +87,25 @@ export default function AdminShell({ children, amplo = false }) {
           ))}
         </nav>
         <div className="admin-sidebar-rodape">
-          <LinkAssinatura />
+          <NavLink to="/admin/assinatura" className="admin-sidebar-plano">
+            <span className="admin-sidebar-plano-icone"><Crown size={17} /></span>
+            <span><strong>{plano.titulo}</strong><small>{plano.texto}</small></span>
+            <span className="admin-sidebar-plano-cta">Ver planos</span>
+          </NavLink>
+          <button type="button" className="admin-sidebar-salao" onClick={() => setTrocaAberta((v) => !v)}>
+            <span className="admin-sidebar-salao-avatar">{thumbSalao ? <img src={thumbSalao} alt="" /> : <Store size={17} />}</span>
+            <span><strong>{salao?.name || 'Meu salão'}</strong><small>{saloes?.length > 1 ? 'Trocar salão' : 'Meu salão'}</small></span>
+            {saloes?.length > 1 && <ChevronDown size={14} />}
+          </button>
+          {trocaAberta && saloes?.length > 1 && (
+            <div className="admin-sidebar-troca">
+              {saloes.map((item) => (
+                <button key={item.id} type="button" className={item.id === salao?.id ? 'ativo' : ''} onClick={() => { trocarSalao(item.id); setTrocaAberta(false) }}>
+                  {item.name}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </aside>
 
@@ -77,14 +115,26 @@ export default function AdminShell({ children, amplo = false }) {
             <MarcaIcon className="marca" id="topo" />
             <Wordmark tamanho={1.35} />
           </span>
-          <span className="admin-topbar-salao">
-            <strong>{salao?.name || 'Meu salão'}</strong>
-            <small><i></i> Painel do salão</small>
-          </span>
+          <button type="button" className="admin-topbar-negocio" onClick={() => saloes?.length > 1 && setTrocaAberta((v) => !v)}>
+            <span className="admin-topbar-negocio-avatar">{thumbSalao ? <img src={thumbSalao} alt="" /> : <Store size={16} />}</span>
+            <span><strong>{salao?.name || 'Meu salão'}</strong></span>
+            {saloes?.length > 1 && <ChevronDown size={14} />}
+          </button>
+          <span className="admin-topbar-online"><i></i> Online</span>
         </div>
+
+        <form className="admin-topbar-busca" onSubmit={buscar}>
+          <Search size={16} />
+          <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar cliente, serviço ou agendamento..." aria-label="Buscar no painel" />
+          <kbd>Ctrl + K</kbd>
+        </form>
+
         <div className="topbar-acoes">
           <SinoAvisos />
-          <MenuDaConta itens={ITENS_ADMIN} papel={salao?.name ? `Administração · ${salao.name}` : 'Administração do salão'} />
+          <div className="admin-topbar-user">
+            <MenuDaConta itens={ITENS_ADMIN} papel={salao?.name ? `Administração · ${salao.name}` : 'Administração do salão'} />
+            <span><strong>{primeiroNome}</strong><small>Proprietário</small></span>
+          </div>
         </div>
       </header>
 
@@ -122,11 +172,3 @@ export default function AdminShell({ children, amplo = false }) {
   )
 }
 
-function LinkAssinatura() {
-  return (
-    <NavLink to="/admin/assinatura" className="admin-sidebar-plano">
-      <span className="admin-sidebar-plano-icone"><CreditCard size={16} /></span>
-      <span><strong>Plano e assinatura</strong><small>Ver acesso e cobrança</small></span>
-    </NavLink>
-  )
-}

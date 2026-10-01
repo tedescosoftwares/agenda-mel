@@ -79,7 +79,7 @@ export default function AdminDashboard() {
   const linkPronto = Boolean(salao?.ativado_em)
   const progressoConfig = [categoriasProntas, servicosProntos, equipePronta, linkPronto]
   const feitosConfig = progressoConfig.filter(Boolean).length
-  const primeiroAcesso = primeiros !== null && (!servicosProntos || !equipePronta || !temMovimento)
+  const primeiroAcesso = primeiros !== null && (!servicosProntos || !equipePronta || !linkPronto)
 
   const salaoAtivo = Boolean(salao?.ativado_em)
   const fotosSalao = Array.isArray(salao?.fotos) ? salao.fotos : []
@@ -90,7 +90,16 @@ export default function AdminDashboard() {
   const horaAgora = new Date().getHours()
   const saudacao = horaAgora < 12 ? 'Bom dia' : horaAgora < 18 ? 'Boa tarde' : 'Boa noite'
 
-  const agoraMimo = pendentes > 0
+  const agoraMimo = primeiroAcesso
+    ? {
+        icone: <Rocket size={19} />,
+        selo: 'Próximo passo',
+        titulo: 'Termine a configuração para começar a receber agendamentos.',
+        texto: 'Serviços, profissionais e o link do salão ficam prontos por aqui, sem voltar para o onboarding.',
+        acao: 'Continuar configuração',
+        para: '/admin/configurar',
+      }
+    : pendentes > 0
     ? {
         icone: <BellRing size={19} />,
         selo: 'Precisa da sua atenção',
@@ -269,7 +278,7 @@ export default function AdminDashboard() {
           </section>
         )}
 
-                <section className="admin-home-pulso">
+                <section className={'admin-home-pulso' + (primeiroAcesso ? ' primeiro-acesso' : '')}>
           <div className="admin-home-pulso-principal">
             <span className="admin-home-pulso-icone">{agoraMimo.icone}<i></i></span>
             <div>
@@ -281,13 +290,23 @@ export default function AdminDashboard() {
             <Link to={agoraMimo.para} className="admin-home-pulso-acao">{agoraMimo.acao} <ArrowRight size={14} /></Link>
           </div>
           <div className="admin-home-pulso-trilha" aria-label="Estado atual do salão">
-            <span className={salaoAtivo ? 'feito' : 'atual'}><i></i><span><strong>{salaoAtivo ? 'Salão online' : 'Preparando salão'}</strong><small>{salaoAtivo ? 'Clientes já podem entrar pelo seu link.' : 'Finalize os pontos essenciais para liberar sua vitrine.'}</small></span></span>
-            <span className={pendentes > 0 ? 'atual' : ''}><i></i><span><strong>{pendentes > 0 ? `${pendentes} ${pendentes === 1 ? 'pedido pendente' : 'pedidos pendentes'}` : 'Pedidos em dia'}</strong><small>{pendentes > 0 ? 'Tem cliente esperando sua confirmação.' : 'Nada esperando resposta agora.'}</small></span></span>
-            <span className={naFila > 0 ? 'atual' : ''}><i></i><span><strong>{naFila > 0 ? `${naFila} na fila de espera` : 'Fila tranquila'}</strong><small>{naFila > 0 ? 'Há clientes de olho numa oportunidade.' : 'Nenhuma cliente aguardando vaga.'}</small></span></span>
+            {primeiroAcesso ? (
+              <>
+                <span className={salaoAtivo ? 'feito' : 'atual'}><i></i><span><strong>{salaoAtivo ? 'Salão online' : 'Espaço criado'}</strong><small>{salaoAtivo ? 'Seu endereço na MIMO já está liberado.' : 'A estrutura principal já está salva.'}</small></span></span>
+                <span className={servicosProntos ? 'feito' : 'atual'}><i></i><span><strong>{servicosProntos ? 'Serviços cadastrados' : 'Serviços pendentes'}</strong><small>{servicosProntos ? 'Sua vitrine já sabe o que você oferece.' : 'Cadastre pelo menos um serviço para montar a agenda.'}</small></span></span>
+                <span className={equipePronta ? 'feito' : 'atual'}><i></i><span><strong>{equipePronta ? 'Equipe configurada' : 'Equipe pendente'}</strong><small>{equipePronta ? 'As agendas profissionais já podem ser usadas.' : 'Adicione quem atende e os horários.'}</small></span></span>
+              </>
+            ) : (
+              <>
+                <span className={salaoAtivo ? 'feito' : 'atual'}><i></i><span><strong>{salaoAtivo ? 'Salão online' : 'Preparando salão'}</strong><small>{salaoAtivo ? 'Clientes já podem entrar pelo seu link.' : 'Finalize os pontos essenciais para liberar sua vitrine.'}</small></span></span>
+                <span className={pendentes > 0 ? 'atual' : ''}><i></i><span><strong>{pendentes > 0 ? `${pendentes} ${pendentes === 1 ? 'pedido pendente' : 'pedidos pendentes'}` : 'Pedidos em dia'}</strong><small>{pendentes > 0 ? 'Tem cliente esperando sua confirmação.' : 'Nada esperando resposta agora.'}</small></span></span>
+                <span className={naFila > 0 ? 'atual' : ''}><i></i><span><strong>{naFila > 0 ? `${naFila} na fila de espera` : 'Fila tranquila'}</strong><small>{naFila > 0 ? 'Há clientes de olho numa oportunidade.' : 'Nenhuma cliente aguardando vaga.'}</small></span></span>
+              </>
+            )}
           </div>
         </section>
 
-        <div className="admin-home-alertas" data-tour="primeiros-passos">
+        {!primeiroAcesso && <div className="admin-home-alertas" data-tour="primeiros-passos">
           <AcessoAviso />
           <PrimeirosPassos salao={salao} />
           <AvisosNovos />
@@ -299,7 +318,7 @@ export default function AdminDashboard() {
               <span><strong>Parceria ainda não formalizada.</strong> {semContrato.length === 1 ? `${semContrato[0].nome} está configurada como parceira na MIMO, mas não há contrato registrado.` : `${semContrato.length} profissionais estão configuradas como parceiras na MIMO, mas não há contrato registrado.`} Confira se a formalização da relação está adequada ao modelo adotado pelo salão. <u>Ver orientação</u></span>
             </Link>
           )}
-        </div>
+        </div>}
 
         {!primeiroAcesso && <section className="admin-home-resumo" data-tour="numeros">
           <div className="admin-home-secao-topo">

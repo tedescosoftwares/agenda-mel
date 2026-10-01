@@ -56,7 +56,7 @@ const CANCELAMENTO = [['flexivel', '6 horas'], ['moderada', '12 horas'], ['rigor
 const CATEGORIAS_SUGERIDAS = ['Cabelo', 'Unhas', 'Estética', 'Massagem', 'Sobrancelhas', 'Maquiagem', 'Depilação', 'Barba', 'Cílios', 'Podologia', 'Noivas', 'Coloração', 'Tranças', 'Micropigmentação', 'Bronzeamento', 'Spa e terapias', 'Estética corporal', 'Infantil']
 const SUGESTOES_A_MOSTRA = 6   // as primeiras; o resto fica atrás do "Ver mais"
 // a política que a maioria dos salões usa pra começar; muda depois em Ajustes
-const RECOMENDADO = { antecedencia_min_minutos: 60, politica_cancelamento: 'moderada', permite_remarcar: true, sinal_ligado: false }
+const RECOMENDADO = { antecedencia_min_minutos: 60, politica_cancelamento: 'moderada', permite_remarcar: true, sinal_ligado: false, aceite_modo: 'casa', minutos_para_aceitar: 120 }
 const SUPORTE = import.meta.env.VITE_SUPORTE_WHATS || ''
 const reais = (t) => { const n = Number(String(t ?? '').replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.')); return Number.isFinite(n) ? Math.round(n * 100) : 0 }
 const emReais = (c) => (Number(c ?? 0) / 100).toFixed(2).replace('.', ',')
@@ -1235,7 +1235,7 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
     celebradas.includes('contato') && celebradas.includes('localizacao'),
     celebradas.includes('horarios') && subfluxoConcluido,
   ])
-  const recomendadoAtivo = Number(pol.antecedencia_min_minutos) === RECOMENDADO.antecedencia_min_minutos && pol.politica_cancelamento === RECOMENDADO.politica_cancelamento && pol.permite_remarcar === RECOMENDADO.permite_remarcar && pol.sinal_ligado === RECOMENDADO.sinal_ligado
+  const recomendadoAtivo = Number(pol.antecedencia_min_minutos) === RECOMENDADO.antecedencia_min_minutos && pol.politica_cancelamento === RECOMENDADO.politica_cancelamento && pol.permite_remarcar === RECOMENDADO.permite_remarcar && pol.sinal_ligado === RECOMENDADO.sinal_ligado && pol.aceite_modo === RECOMENDADO.aceite_modo && Number(pol.minutos_para_aceitar) === RECOMENDADO.minutos_para_aceitar
 
   async function avancar() {
     if (!nome.trim()) { setErro(autonoma ? 'Informe o nome da sua agenda. É esse nome que suas clientes verão.' : 'Informe o nome do salão. É esse nome que suas clientes verão.'); return }
@@ -1552,7 +1552,7 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
 
           {!recomendadoAtivo && (
             <div className="ob-recomendado">
-              <span><small><Wand2 size={12} /> Sugestão para começar</small><span className="muted">1 h de antecedência · cancelar até 12 h antes · reagendamento liberado · sem sinal.</span></span>
+              <span><small><Wand2 size={12} /> Sugestão para começar</small><span className="muted">1 h de antecedência · cancelar até 12 h antes · reagendamento liberado · sem sinal · salão confirma em até 2 h.</span></span>
               <button type="button" className="btn-mini" onClick={() => setPol((x) => ({ ...x, ...RECOMENDADO }))}>Usar recomendada</button>
             </div>
           )}
@@ -1601,13 +1601,13 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
 
           <div className="ob-regras-grupo">
             <div className="ob-regras-rotulo">
-              <span><strong>Quem confirma o agendamento?</strong><small>Escolha o que acontece depois que a cliente pede um horário.</small></span>
-              <AjudaCampo titulo="Confirmação do agendamento">Automática confirma na hora. “Salão confirma” centraliza a decisão. “Profissional confirma” deixa cada pessoa responsável pelos próprios pedidos.</AjudaCampo>
+              <span><strong>Quem confirma o agendamento?</strong><small>Escolha o que acontece depois que alguém pede um horário.</small></span>
+              <AjudaCampo titulo="Confirmação do agendamento">Automática confirma na hora. “O salão confirma” centraliza a decisão e é a configuração recomendada para começar. “Cada profissional” deixa cada pessoa responsável pelos próprios pedidos.</AjudaCampo>
             </div>
             <div className="ob-confirmacao-opcoes" role="radiogroup" aria-label="Confirmação do agendamento">
               <button type="button" role="radio" aria-checked={pol.aceite_modo === 'automatico'} className={pol.aceite_modo === 'automatico' ? 'ativa' : ''} onClick={() => p('aceite_modo')('automatico')}><span className="ob-radio-visual"></span><strong>Automática</strong><small>Entrou na agenda na hora.</small></button>
-              <button type="button" role="radio" aria-checked={pol.aceite_modo === 'casa'} className={pol.aceite_modo === 'casa' ? 'ativa' : ''} onClick={() => p('aceite_modo')('casa')}><span className="ob-radio-visual"></span><strong>O salão confirma</strong><small>Você aprova os pedidos{pol.aceite_modo === 'casa' ? ` em até ${pol.minutos_para_aceitar} min` : ''}.</small></button>
-              <button type="button" role="radio" aria-checked={pol.aceite_modo === 'profissional'} className={pol.aceite_modo === 'profissional' ? 'ativa' : ''} onClick={() => p('aceite_modo')('profissional')}><span className="ob-radio-visual"></span><strong>Cada profissional</strong><small>Cada uma confirma a própria agenda.</small></button>
+              <button type="button" role="radio" aria-checked={pol.aceite_modo === 'casa'} className={pol.aceite_modo === 'casa' ? 'ativa recomendada' : 'recomendada'} onClick={() => p('aceite_modo')('casa')}><span className="ob-radio-visual"></span><span className="ob-confirmacao-titulo"><strong>O salão confirma</strong><em>Recomendado</em></span><small>Você aprova os pedidos{pol.aceite_modo === 'casa' ? ` em até ${pol.minutos_para_aceitar} min` : ''}.</small></button>
+              <button type="button" role="radio" aria-checked={pol.aceite_modo === 'profissional'} className={pol.aceite_modo === 'profissional' ? 'ativa' : ''} onClick={() => p('aceite_modo')('profissional')}><span className="ob-radio-visual"></span><strong>Cada profissional</strong><small>Cada profissional confirma a própria agenda.</small></button>
             </div>
           </div>
         </div>

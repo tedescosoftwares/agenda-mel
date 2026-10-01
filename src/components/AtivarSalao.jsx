@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Check, CreditCard, Gift, LoaderCircle, Rocket, ShieldCheck, Smartphone, Sparkles } from 'lucide-react'
+import { Check, CreditCard, Gift, LoaderCircle, Rocket, ShieldCheck, Smartphone, Sparkles, Tags, Scissors, UsersRound, Route } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { reais } from '../lib/planos'
@@ -339,7 +339,7 @@ export default function AtivarSalao({ s, onAtivado, onErro }) {
         )}
 
         {modo === 'sucesso' && (
-          <div className="ai-corpo ai-sucesso">
+          <div className="ai-corpo ai-sucesso ai-sucesso-guiado">
             <span className="ai-sucesso-check"><Check size={30} /></span>
             <span className="ai-kicker">{sucesso?.fase === 'teste' ? 'Teste iniciado' : 'Pagamento confirmado'}</span>
             <h1>Agora sim. Seu salão está no ar. 🎉</h1>
@@ -347,15 +347,38 @@ export default function AtivarSalao({ s, onAtivado, onErro }) {
               {sucesso?.fase === 'teste'
                 ? (sucesso?.ate
                   ? `Seus ${REGRAS.testeDias} dias grátis começaram agora. Você pode usar tudo até ${dataCurta(sucesso.ate)}.`
-                  : `Seus ${REGRAS.testeDias} dias grátis começam a contar assim que a agenda estiver configurada: serviços e profissionais. Até lá, nada conta.`)
+                  : `Seu teste está liberado. Os ${REGRAS.testeDias} dias só começam a contar quando a agenda estiver pronta. Até lá, configure tudo com calma.`)
                 : `Sua primeira mensalidade está paga e a MIMO está liberada até ${dataCurta(sucesso?.ate)}.`}
             </p>
+
             <div className="ai-sucesso-itens">
               <span><Check size={14} /> Link do salão liberado</span>
               <span><Check size={14} /> QR Code pronto</span>
-              <span><Check size={14} /> Clientes podem agendar</span>
+              <span><Check size={14} /> Painel liberado</span>
             </div>
-            <button type="button" className="btn btn-primary ai-botao-grande" onClick={entrar}>Entrar no meu painel <Rocket size={17} /></button>
+
+            <section className="ai-proximo-passo">
+              <div className="ai-proximo-topo">
+                <span className="ai-proximo-icone"><Route size={18} /></span>
+                <span>
+                  <strong>Quando entrar, a gente te guia.</strong>
+                  <small>O painel tem um tour rápido para deixar sua agenda pronta sem você precisar descobrir tudo sozinho.</small>
+                </span>
+              </div>
+
+              <div className="ai-proximo-etapas" aria-label="Próximos passos no painel">
+                <span><i><Tags size={15} /></i><b>1</b><em><strong>Categorias</strong><small>Organize o que seu salão oferece.</small></em></span>
+                <span><i><Scissors size={15} /></i><b>2</b><em><strong>Serviços</strong><small>Cadastre preço, duração e detalhes.</small></em></span>
+                <span><i><UsersRound size={15} /></i><b>3</b><em><strong>Profissionais</strong><small>Monte a equipe e as agendas.</small></em></span>
+              </div>
+
+              <p><Sparkles size={14} /> Você pode seguir o tour inteiro ou configurar no seu ritmo. Tudo fica salvo.</p>
+            </section>
+
+            <button type="button" className="btn btn-primary ai-botao-grande ai-entrar-tour" onClick={entrar}>
+              Entrar no painel e começar <Rocket size={17} />
+            </button>
+            <small className="ai-sucesso-ajuda">Primeira vez na MIMO? Procure o guia de configuração no painel.</small>
           </div>
         )}
       </div>

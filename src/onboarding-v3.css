@@ -4952,3 +4952,36 @@
   }
 }
 
+
+/* confirmação recomendada */
+.ob-v3 .ob-confirmacao-titulo {
+  display:flex;
+  align-items:center;
+  gap:6px;
+  min-width:0;
+}
+.ob-v3 .ob-confirmacao-titulo em {
+  display:inline-flex;
+  align-items:center;
+  min-height:18px;
+  padding:2px 7px;
+  border:1px solid #ffc2d8;
+  border-radius:999px;
+  background:#fff;
+  color:#b51655;
+  font-size:.58rem;
+  line-height:1;
+  font-style:normal;
+  font-weight:800;
+  letter-spacing:.02em;
+  white-space:nowrap;
+}
+.ob-v3 .ob-confirmacao-opcoes button.recomendada:not(.ativa) {
+  border-color:#f3c9d8;
+  background:#fffdfd;
+}
+@media (max-width:780px) {
+  .ob-v3 .ob-confirmacao-titulo {
+    flex-wrap:wrap;
+  }
+}

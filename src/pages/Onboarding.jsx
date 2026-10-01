@@ -12,7 +12,7 @@ import '../onboarding.css'
 import '../onboarding-v2.css'
 import '../onboarding-v3.css'
 import { reduzirFoto } from '../lib/imagem'
-import { buscarCep, formatarCep, limparCep, minhaPosicao, geocodificar, temPino, arredondar } from '../lib/geo'
+import { buscarCep, formatarCep, limparCep, minhaPosicao, geocodificar, geocodificarEndereco, temPino, arredondar } from '../lib/geo'
 import { formatarFone } from '../lib/fone'
 import { formatarCnpj, cnpjValido, buscarCnpj, formatarCpf, cpfValido, soDigitos, nomeProprio } from '../lib/cnpj'
 import Mapa from '../components/Mapa'
@@ -966,11 +966,14 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
     if (pino) { d.lat = loc.lat; d.lng = loc.lng }
     return d
   }
-  // o CEP do endereço sugere o pino, quando ainda não há um
+  // O CEP sozinho costuma apontar para o centro da rua/CEP, não para a porta.
+  // Ele ajuda a preencher o endereço, mas o pino final vem do endereço completo
+  // (com número) ou do GPS. Assim não "carimbamos" uma coordenada aproximada
+  // como se estivesse certa.
   function pinoDoCep(r) {
     if (r.lat == null) return
-    setLoc((x) => (temPino(x.lat, x.lng) ? x : { ...x, lat: r.lat, lng: r.lng }))
-    setGeo('pino sugerido pelo CEP: confira e arraste até a porta')
+    setLoc((x) => ({ ...x, lat: null, lng: null }))
+    setGeo('CEP encontrado. Confira o número e use “Sugerir pino pelo endereço”.')
   }
   async function usarLocalizacao() {
     setOcupado('gps'); setErro('')
@@ -979,8 +982,13 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
   async function acharPeloEndereco() {
     setOcupado('endereco'); setErro('')
     try {
-      const g = await geocodificar([local.address, local.bairro, local.city, local.uf, 'Brasil'].filter(Boolean).join(', '))
-      if (g) { setLoc((x) => ({ ...x, lat: g.lat, lng: g.lng })); setGeo('pino colocado pelo endereço: confira e arraste até a porta'); return }
+      const g = await geocodificarEndereco(local)
+      if (g) {
+        setLoc((x) => ({ ...x, lat: g.lat, lng: g.lng }))
+        const aproximado = g.parcial || ['APPROXIMATE', 'GEOMETRIC_CENTER'].includes(g.precisao)
+        setGeo(aproximado ? 'o Google encontrou a região do endereço; confira o pino e ajuste até a porta' : 'endereço localizado pelo Google; confira se o pino está exatamente na entrada')
+        return
+      }
       const c = local.city.trim() ? await geocodificar(`${local.city} ${local.uf}, Brasil`) : null
       if (c) { setLoc((x) => ({ ...x, lat: c.lat, lng: c.lng })); setGeo(`não achamos a rua, então o pino ficou no centro de ${local.city.trim()}: arraste até o salão`); return }
       setErro('Não achamos esse endereço. Confira a rua e a cidade, ou use a sua localização estando no salão.')
@@ -1237,7 +1245,7 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
     if (error) { setErro(error.message); return }
     const dados = dadosDaPolitica()
     if (!pino && local.address.trim() && local.city.trim()) {
-      try { const g = await geocodificar(`${local.address}, ${local.bairro ? local.bairro + ', ' : ''}${local.city} ${local.uf}`); if (g) { dados.lat = g.lat; dados.lng = g.lng } } catch { /* sem pino agora, ajusta depois em Ajustes */ }
+      try { const g = await geocodificarEndereco(local); if (g) { dados.lat = g.lat; dados.lng = g.lng } } catch { /* sem pino agora, ajusta depois em Ajustes */ }
     }
     seguir(dados)
   }

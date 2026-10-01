@@ -4905,3 +4905,32 @@
     justify-content:flex-start;
   }
 }
+
+
+/* STEP BADGE · área segura global
+   O número/check fica absoluto no canto, então o primeiro bloco de conteúdo
+   precisa reservar essa faixa. Vale para todos os subpassos atuais e futuros. */
+.ob-v3 .ob-fluxo-card {
+  --ob-step-badge-safe:54px;
+}
+
+.ob-v3 .ob-fluxo-card.aberto > :first-child {
+  box-sizing:border-box;
+  padding-right:var(--ob-step-badge-safe);
+}
+
+/* O cabeçalho de identidade é um flex próprio e antes escapava da regra
+   antiga, fazendo "Visível para clientes" entrar embaixo do badge. */
+.ob-v3 .ob-fluxo-card.aberto > .ob-identidade-cabecalho {
+  min-width:0;
+}
+
+.ob-v3 .ob-identidade-cabecalho > * {
+  min-width:0;
+}
+
+@media (max-width:520px) {
+  .ob-v3 .ob-fluxo-card {
+    --ob-step-badge-safe:44px;
+  }
+}

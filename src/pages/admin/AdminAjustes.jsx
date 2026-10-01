@@ -60,7 +60,7 @@ export default function AdminAjustes() {
       const comContrato = (parc.data ?? []).filter((l) => l.status === 'vigente' || l.status === 'assinado').length
       const ex = abertos.length ? faixa(abertos) : ''
       const h0 = (horas.data ?? []).find((h) => h.open)
-      setAceite({ modo: s.data?.aceite_modo ?? 'profissional', minutos: s.data?.minutos_para_aceitar ?? 120, no_silencio: s.data?.ao_expirar ?? 'confirma' })
+      setAceite({ modo: s.data?.aceite_modo ?? 'casa', minutos: s.data?.minutos_para_aceitar ?? 120, no_silencio: s.data?.ao_expirar ?? 'confirma' })
       setSt({
         salao: s.data ?? {},
         profissionais: ativosP, comContrato, semContrato: (parc.data ?? []).filter((l) => l.status === 'sem_contrato').length,

@@ -12649,3 +12649,454 @@ label.switch:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
     min-height:86px;
   }
 }
+
+
+/* ==========================================================================
+   HOME DESKTOP POLISH 2.83.7
+   Fecha composição do primeiro acesso e aproxima o painel do mock aprovado.
+   ========================================================================== */
+@media (min-width:1100px) {
+  /* HERO: foto vira atmosfera, não conteúdo */
+  .admin-home-hero.primeiro-acesso {
+    position:relative;
+    min-height:248px;
+    overflow:hidden;
+    border:1px solid rgba(90,55,95,.07);
+    background:
+      radial-gradient(520px 240px at 28% 35%, rgba(255,255,255,.98), rgba(255,255,255,.90) 54%, transparent 76%),
+      linear-gradient(125deg,#fff 0%,#fff8fb 52%,#fceff5 100%);
+    box-shadow:
+      0 14px 38px rgba(64,35,72,.055),
+      inset 0 1px 0 rgba(255,255,255,.92);
+  }
+
+  .admin-home-hero.primeiro-acesso.tem-capa::before {
+    opacity:.52;
+    filter:saturate(.62) brightness(1.06) contrast(.82);
+    transform:scale(1.02);
+    background:
+      linear-gradient(90deg,
+        rgba(255,255,255,1) 0%,
+        rgba(255,255,255,.99) 24%,
+        rgba(255,255,255,.93) 42%,
+        rgba(255,246,250,.74) 66%,
+        rgba(255,240,247,.54) 100%),
+      var(--home-hero-capa) center 52% / cover no-repeat;
+  }
+
+  .admin-home-hero.primeiro-acesso::after {
+    content:'';
+    position:absolute;
+    inset:auto -90px -170px auto;
+    width:420px;
+    height:320px;
+    border-radius:50%;
+    background:radial-gradient(circle,rgba(255,45,122,.10),rgba(255,45,122,0) 70%);
+    pointer-events:none;
+  }
+
+  .admin-home-hero.primeiro-acesso .admin-home-hero-copy {
+    position:relative;
+    z-index:2;
+    max-width:600px;
+  }
+
+  .admin-home-hero.primeiro-acesso .admin-home-eyebrow {
+    margin-bottom:5px;
+    font-size:.61rem;
+    letter-spacing:.075em;
+  }
+
+  .admin-home-hero.primeiro-acesso h1 {
+    max-width:600px;
+    font-size:clamp(2.35rem,3.18vw,3.28rem);
+    line-height:.965;
+    letter-spacing:-.056em;
+  }
+
+  .admin-home-hero.primeiro-acesso .admin-home-hero-copy > p {
+    max-width:49ch;
+    margin-top:10px;
+    color:#736a76;
+    font-size:.76rem;
+    line-height:1.52;
+  }
+
+  .admin-home-hero.primeiro-acesso .admin-home-hero-acoes {
+    margin-top:14px;
+  }
+
+  .admin-home-hero.primeiro-acesso .admin-home-hero-acoes .btn {
+    min-height:40px;
+    padding:.58rem .92rem;
+    border-radius:12px;
+  }
+
+  .admin-home-hero.primeiro-acesso .admin-home-hoje.primeiro {
+    position:relative;
+    z-index:2;
+    width:100%;
+    max-width:390px;
+    padding:11px;
+    border:1px solid rgba(255,255,255,.90);
+    border-radius:18px;
+    background:rgba(255,255,255,.86);
+    box-shadow:
+      0 16px 36px rgba(60,34,66,.10),
+      inset 0 1px 0 rgba(255,255,255,.96);
+    backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);
+  }
+
+  .admin-home-hero.primeiro-acesso .admin-home-negocio-mini {
+    grid-template-columns:66px minmax(0,1fr) auto auto;
+    gap:9px;
+  }
+
+  .admin-home-hero.primeiro-acesso .admin-home-negocio-avatar {
+    width:66px;
+    height:47px;
+    border-radius:10px;
+  }
+
+  .admin-home-hero.primeiro-acesso .admin-home-hoje-metricas {
+    margin-top:9px;
+  }
+
+  .admin-home-hero.primeiro-acesso .admin-home-hoje-metricas > span {
+    min-height:76px;
+    padding:9px 10px;
+  }
+
+  /* PRIMEIROS PASSOS: mais editorial, menos formulário */
+  .admin-home-primeiro-config {
+    padding:12px 14px 13px;
+    border-radius:18px;
+    background:
+      radial-gradient(250px 110px at 100% 0%,rgba(255,45,122,.035),transparent 75%),
+      rgba(255,255,255,.96);
+    box-shadow:0 10px 28px rgba(56,31,62,.035);
+  }
+
+  .admin-home-primeiro-topo {
+    grid-template-columns:minmax(0,1.18fr) minmax(210px,.46fr) minmax(178px,.34fr);
+    gap:13px;
+  }
+
+  .admin-home-primeiro-intro {
+    min-width:0;
+    display:grid;
+    grid-template-columns:38px minmax(0,1fr);
+    gap:10px;
+    align-items:center;
+  }
+
+  .admin-home-primeiro-icone {
+    width:38px;
+    height:38px;
+    display:grid;
+    place-items:center;
+    border-radius:12px;
+    color:#ff2d7a;
+    background:linear-gradient(145deg,#fff1f6,#ffe7f0);
+    box-shadow:0 7px 18px rgba(255,45,122,.08);
+  }
+
+  .admin-home-primeiro-intro h2 {
+    margin:2px 0 1px;
+    font-size:.98rem;
+    letter-spacing:-.025em;
+  }
+
+  .admin-home-primeiro-intro p {
+    margin:0;
+    font-size:.60rem;
+    line-height:1.38;
+  }
+
+  .admin-home-primeiro-progresso {
+    align-self:center;
+  }
+
+  .admin-home-primeiro-falta {
+    min-height:46px;
+    padding:7px 9px;
+    border:1px solid rgba(255,45,122,.055);
+    border-radius:12px;
+    background:linear-gradient(145deg,#fff8fb,#fff1f6);
+  }
+
+  .admin-home-primeiro-etapas {
+    gap:7px;
+    margin-top:10px;
+  }
+
+  .admin-home-primeiro-etapas a {
+    min-height:54px;
+    padding:7px 9px;
+    border-color:rgba(83,52,88,.075);
+    background:#fdfcfd;
+  }
+
+  .admin-home-primeiro-etapas a.atual {
+    background:linear-gradient(180deg,#fffafd,#fff4f8);
+    box-shadow:0 6px 14px rgba(255,45,122,.045);
+  }
+
+  /* GRID INFERIOR: todas as colunas fecham na mesma altura */
+  .admin-home-primeiro-grade {
+    grid-template-columns:minmax(0,1.12fr) minmax(0,1fr) minmax(300px,.83fr);
+    gap:10px;
+    align-items:stretch;
+  }
+
+  .admin-home-primeiro-grade > .admin-home-primeiro-agenda,
+  .admin-home-primeiro-centro,
+  .admin-home-primeiro-lateral {
+    height:342px;
+    min-height:342px;
+  }
+
+  .admin-home-primeiro-agenda {
+    display:flex;
+    flex-direction:column;
+    height:342px;
+    min-height:342px;
+    padding:12px 14px;
+  }
+
+  .admin-home-primeiro-vazio {
+    flex:1;
+    height:auto;
+    min-height:0;
+    padding:6px 18px 10px;
+    align-content:center;
+    gap:4px;
+  }
+
+  .admin-home-agenda-art {
+    width:152px;
+    max-height:112px;
+    margin:-1px auto 3px;
+    border-radius:16px;
+  }
+
+  .admin-home-primeiro-vazio > strong {
+    font-size:.74rem;
+  }
+
+  .admin-home-primeiro-vazio p {
+    max-width:38ch;
+    font-size:.56rem;
+    line-height:1.42;
+  }
+
+  .admin-home-primeiro-vazio .btn {
+    min-height:35px;
+    padding:.48rem .76rem;
+    font-size:.60rem;
+  }
+
+  .admin-home-primeiro-centro {
+    display:grid;
+    grid-template-rows:198px 134px;
+    gap:10px;
+  }
+
+  .admin-home-agora-primeiro,
+  .admin-home-primeiro-explica {
+    min-height:0;
+    height:100%;
+  }
+
+  .admin-home-agora-primeiro {
+    padding:11px 12px;
+  }
+
+  .admin-home-primeiro-explica {
+    padding:10px 11px;
+  }
+
+  .admin-home-agora-lista {
+    gap:4px;
+  }
+
+  .admin-home-agora-lista > span,
+  .admin-home-agora-lista > a,
+  .admin-home-agora-lista > button {
+    min-height:42px;
+    padding:5px 7px;
+  }
+
+  .admin-home-primeiro-beneficios {
+    margin-top:7px;
+    gap:5px;
+  }
+
+  .admin-home-primeiro-beneficios article {
+    min-height:49px;
+    padding:6px 7px;
+  }
+
+  .admin-home-primeiro-lateral {
+    display:grid;
+    grid-template-rows:137px 111px 74px;
+    gap:10px;
+  }
+
+  .admin-home-acoes-primeiro,
+  .admin-home-compartilhar,
+  .admin-home-primeiro-ajuda {
+    min-height:0;
+    height:100%;
+  }
+
+  .admin-home-acoes-primeiro {
+    padding:10px 11px;
+  }
+
+  .admin-home-acoes-primeiro .admin-home-atalhos {
+    gap:5px;
+  }
+
+  .admin-home-acoes-primeiro .admin-home-atalhos a {
+    min-height:50px;
+    padding:6px 7px;
+  }
+
+  .admin-home-compartilhar {
+    padding:10px 11px;
+  }
+
+  .admin-home-compartilhar > div:first-child > strong {
+    font-size:.59rem;
+  }
+
+  .admin-home-compartilhar > div:first-child > small {
+    font-size:.48rem;
+  }
+
+  .admin-home-compartilhar-corpo {
+    grid-template-columns:minmax(0,1fr) 54px;
+    gap:6px;
+    margin-top:5px;
+  }
+
+  .admin-home-qr {
+    width:52px !important;
+    height:52px !important;
+  }
+
+  .admin-home-compartilhar-acoes {
+    margin-top:4px;
+  }
+
+  .admin-home-compartilhar-acoes button,
+  .admin-home-compartilhar-acoes a {
+    min-height:25px;
+    padding:0 7px;
+    font-size:.47rem;
+  }
+
+  /* MEL: personagem integrada no card, não imagem colada */
+  .admin-home-primeiro-ajuda {
+    position:relative;
+    display:grid;
+    grid-template-columns:28px minmax(0,1fr);
+    grid-template-rows:auto auto;
+    padding:8px 91px 8px 10px;
+    overflow:hidden;
+    background:
+      radial-gradient(115px 90px at 100% 100%,rgba(255,45,122,.10),transparent 72%),
+      linear-gradient(145deg,#fff 0%,#fff8fb 100%) !important;
+  }
+
+  .admin-home-primeiro-ajuda > span:first-child {
+    width:28px;
+    height:28px;
+  }
+
+  .admin-home-primeiro-ajuda strong {
+    font-size:.57rem;
+  }
+
+  .admin-home-primeiro-ajuda small {
+    font-size:.47rem;
+  }
+
+  .admin-home-primeiro-ajuda a {
+    grid-column:2;
+    min-height:25px;
+    margin-top:2px;
+    padding:0 7px;
+    font-size:.47rem;
+  }
+
+  .admin-home-mel {
+    right:0;
+    bottom:-1px;
+    width:88px;
+    height:74px;
+    object-fit:cover;
+    object-position:78% 66%;
+    border-radius:18px 0 15px 0;
+    filter:saturate(.98) contrast(.98);
+  }
+
+  .admin-home-mel-balao {
+    right:70px;
+    top:5px;
+    z-index:3;
+    max-width:60px;
+    padding:4px 5px;
+    font-size:.39rem;
+    line-height:1.15;
+  }
+
+  /* cards parecem uma família só */
+  .admin-home-primeiro-grade .card {
+    border-color:rgba(82,50,88,.065);
+    box-shadow:
+      0 8px 20px rgba(55,31,61,.032),
+      inset 0 1px 0 rgba(255,255,255,.92);
+  }
+
+  .admin-home-secao-topo.compacto {
+    padding-bottom:7px;
+  }
+
+  .admin-home-secao-topo.compacto h2 {
+    font-size:.72rem;
+  }
+
+  .admin-home-label {
+    letter-spacing:.06em;
+  }
+}
+
+@media (min-width:1100px) and (max-height:780px) {
+  .admin-home-hero.primeiro-acesso {
+    min-height:214px;
+  }
+
+  .admin-home-primeiro-grade > .admin-home-primeiro-agenda,
+  .admin-home-primeiro-centro,
+  .admin-home-primeiro-lateral,
+  .admin-home-primeiro-agenda {
+    height:318px;
+    min-height:318px;
+  }
+
+  .admin-home-primeiro-centro {
+    grid-template-rows:184px 124px;
+  }
+
+  .admin-home-primeiro-lateral {
+    grid-template-rows:127px 101px 70px;
+  }
+
+  .admin-home-agenda-art {
+    width:138px;
+    max-height:100px;
+  }
+}

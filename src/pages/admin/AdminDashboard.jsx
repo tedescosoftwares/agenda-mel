@@ -27,6 +27,7 @@ export default function AdminDashboard() {
   const [porDia, setPorDia] = useState([])
   const [semContrato, setSemContrato] = useState([])
   const [primeiros, setPrimeiros] = useState(null)
+  const [clientesCount, setClientesCount] = useState(0)
   const navigate = useNavigate()
   useEffect(() => {
     try {
@@ -38,13 +39,14 @@ export default function AdminDashboard() {
   const carregar = useCallback(async () => {
     if (!salaoId) return
     const d = toISODate(new Date()), mes = mesAtual()
-    const [ag, pend, fila, res, mesAg, pp] = await Promise.all([
+    const [ag, pend, fila, res, mesAg, pp, clientes] = await Promise.all([
       supabase.from('appointments').select('price_cents, status').eq('salon_id', salaoId).eq('date', d).neq('status', 'cancelado'),
       supabase.from('appointments').select('id', { count: 'exact', head: true }).eq('salon_id', salaoId).eq('status', 'pendente').gte('date', d),
       supabase.from('waitlist_entries').select('id, professionals!inner(salon_id)', { count: 'exact', head: true }).eq('professionals.salon_id', salaoId).eq('status', 'aguardando'),
       supabase.rpc('resumo_do_salao', { salao: salaoId, mes }),
       supabase.from('appointments').select('date, price_cents').eq('salon_id', salaoId).eq('status', 'concluido').gte('date', mes),
       supabase.rpc('primeiros_passos', { salao: salaoId }),
+      supabase.rpc('clientes_do_salao', { salao: salaoId }),
     ])
     const lista = ag.data ?? []
     setHoje({ atendimentos: lista.length, faturamento: lista.reduce((s, a) => s + (a.price_cents ?? 0), 0) })
@@ -55,6 +57,7 @@ export default function AdminDashboard() {
     for (const a of mesAg.data ?? []) soma[a.date] = (soma[a.date] ?? 0) + (a.price_cents ?? 0)
     setPorDia(Object.entries(soma).sort().map(([k, v]) => ({ x: k.slice(8, 10), y: v / 100 })))
     setPrimeiros(pp.data ?? null)
+    setClientesCount(Array.isArray(clientes.data) ? clientes.data.length : 0)
   }, [salaoId])
   useEffect(() => { carregar() }, [carregar])
   useEffect(() => {
@@ -159,36 +162,52 @@ export default function AdminDashboard() {
             <p>{temMovimento
               ? 'Agenda, equipe, clientes e números organizados para você bater o olho e saber o que precisa de atenção.'
               : 'Você já montou a base. Agora faltam poucos passos para começar a receber agendamentos de verdade.'}</p>
-            <div className="admin-home-status">
-              <span className={salaoAtivo ? 'online' : 'configurando'}><i></i>{salaoAtivo ? 'Agenda ativa' : 'Em configuração'}</span>
-              <span><CalendarDays size={12} /> {hoje.atendimentos} {hoje.atendimentos === 1 ? 'horário hoje' : 'horários hoje'}</span>
-              <span><QrCode size={12} /> {salaoAtivo ? 'Link disponível' : 'Link após ativação'}</span>
-            </div>
+            {!primeiroAcesso && (
+              <div className="admin-home-status">
+                <span className={salaoAtivo ? 'online' : 'configurando'}><i></i>{salaoAtivo ? 'Agenda ativa' : 'Em configuração'}</span>
+                <span><CalendarDays size={12} /> {hoje.atendimentos} {hoje.atendimentos === 1 ? 'horário hoje' : 'horários hoje'}</span>
+                <span><QrCode size={12} /> {salaoAtivo ? 'Link disponível' : 'Link após ativação'}</span>
+              </div>
+            )}
             <div className="admin-home-hero-acoes">
-              <Link to="/admin/agenda" className="btn btn-primary"><CalendarDays size={16} /> Abrir agenda</Link>
-              <Link to="/admin/configurar" className="btn btn-ghost"><Settings2 size={16} /> Continuar configuração</Link>
+              {primeiroAcesso ? (
+                <>
+                  <Link to="/admin/configurar" className="btn btn-primary"><Settings2 size={16} /> Continuar configuração <ArrowRight size={15} /></Link>
+                  <button type="button" className="btn btn-ghost admin-home-tour-btn" onClick={() => window.dispatchEvent(new CustomEvent('mimo:abrir-tour-painel'))}><PlayCircle size={16} /> Fazer tour guiado <small>1 min</small></button>
+                </>
+              ) : (
+                <>
+                  <Link to="/admin/agenda" className="btn btn-primary"><CalendarDays size={16} /> Abrir agenda</Link>
+                  <Link to="/admin/configurar" className="btn btn-ghost"><Settings2 size={16} /> Configurar salão</Link>
+                </>
+              )}
             </div>
           </div>
 
-          <div className="admin-home-hoje">
+          <div className={'admin-home-hoje' + (primeiroAcesso ? ' primeiro' : '')}>
             <div className="admin-home-negocio-mini">
               <span className="admin-home-negocio-avatar">
-                {logoSalao ? <img src={logoSalao} alt="" /> : <b>{iniciaisSalao || 'M'}</b>}
+                {logoSalao ? <img src={logoSalao} alt="" /> : capaSalao ? <img src={capaSalao} alt="" /> : <b>{iniciaisSalao || 'M'}</b>}
               </span>
-              <span><small>Você está vendo</small><strong>{nomeSalao}</strong></span>
-              <i className={salaoAtivo ? 'ativo' : ''}></i>
+              <span><small>Seu salão</small><strong>{nomeSalao}</strong></span>
+              <span className="admin-home-online"><i></i> Online</span>
+              <ChevronRight size={16} />
             </div>
-            {capaSalao && <div className="admin-home-capa-mini" style={{ backgroundImage:`linear-gradient(180deg,rgba(45,8,57,.08),rgba(45,8,57,.58)),url("${capaSalao}")` }} />}
-            <div className="admin-home-hoje-topo">
-              <span>Hoje</span>
-              <small>{hojeTexto}</small>
-            </div>
-            <div className="admin-home-hoje-numero"><strong>{hoje.atendimentos}</strong><span>{hoje.atendimentos === 1 ? 'atendimento' : 'atendimentos'}</span></div>
-            <div className="admin-home-hoje-linha">
-              <span><TrendingUp size={14} /> previsto hoje</span>
-              <strong>{formatarCents(hoje.faturamento)}</strong>
-            </div>
-            <Link to="/admin/agenda" className="admin-home-hoje-link">Ver agenda de hoje <ArrowRight size={14} /></Link>
+            {primeiroAcesso ? (
+              <div className="admin-home-hoje-metricas">
+                <span><small>Hoje</small><strong>{hoje.atendimentos}</strong><em>{hoje.atendimentos === 1 ? 'atendimento' : 'atendimentos'}</em></span>
+                <span><small>Faturamento hoje</small><strong>{formatarCents(hoje.faturamento)}</strong></span>
+                <span><small>Novos clientes</small><strong>{clientesCount}</strong></span>
+              </div>
+            ) : (
+              <>
+                {capaSalao && <div className="admin-home-capa-mini" style={{ backgroundImage:`linear-gradient(180deg,rgba(45,8,57,.08),rgba(45,8,57,.58)),url("${capaSalao}")` }} />}
+                <div className="admin-home-hoje-topo"><span>Hoje</span><small>{hojeTexto}</small></div>
+                <div className="admin-home-hoje-numero"><strong>{hoje.atendimentos}</strong><span>{hoje.atendimentos === 1 ? 'atendimento' : 'atendimentos'}</span></div>
+                <div className="admin-home-hoje-linha"><span><TrendingUp size={14} /> previsto hoje</span><strong>{formatarCents(hoje.faturamento)}</strong></div>
+                <Link to="/admin/agenda" className="admin-home-hoje-link">Ver agenda de hoje <ArrowRight size={14} /></Link>
+              </>
+            )}
           </div>
         </section>
 
@@ -304,8 +323,9 @@ export default function AdminDashboard() {
 
                 <section className="card admin-home-primeiro-ajuda">
                   <span><Headphones size={18} /></span>
-                  <div><strong>Precisa de ajuda?</strong><small>Veja os tutoriais da MIMO ou faça o tour guiado.</small></div>
-                  <Link to="/admin/guia">Abrir guia <ArrowRight size={13} /></Link>
+                  <div><strong>Precisa de ajuda?</strong><small>Acesse os tutoriais ou fale com o suporte da MIMO.</small></div>
+                  <Link to="/admin/guia">Acessar central de ajuda <ArrowRight size={13} /></Link>
+                  <span className="admin-home-ajuda-mascote" aria-hidden="true">M</span>
                 </section>
               </aside>
             </div>

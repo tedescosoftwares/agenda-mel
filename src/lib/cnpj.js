@@ -31,18 +31,7 @@ export function nomeProprio(t) {
     .join(' ')
 }
 
-// devolve { razao_social, nome_fantasia, address, bairro, city, uf, cep, telefone, email, situacao, socios } ou lança
-export async function buscarCnpj(v) {
-  const d = String(v ?? '').replace(/\D/g, '')
-  if (!cnpjValido(d)) throw new Error('Confere o CNPJ: os dígitos não batem.')
-  const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 12000)
-  let r
-  try {
-    r = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${d}`, { signal: ctrl.signal, headers: { accept: 'application/json' } })
-  } catch { throw new Error('Não deu para consultar o CNPJ agora. Preencha à mão ou tente de novo.') } finally { clearTimeout(t) }
-  if (r.status === 404) throw new Error('CNPJ não encontrado na Receita.')
-  if (!r.ok) throw new Error('A consulta do CNPJ falhou. Preencha à mão ou tente de novo.')
-  const j = await r.json()
+function normalizarRespostaCnpj(j) {
   const rua = [j.descricao_tipo_de_logradouro, j.logradouro].filter(Boolean).map(nomeProprio).join(' ')
   const address = [rua, j.numero ? String(j.numero).replace(/^S\/N$/i, 's/n') : '', j.complemento ? nomeProprio(j.complemento) : ''].filter(Boolean).join(', ')
   const tel = String(j.ddd_telefone_1 ?? '').replace(/\D/g, '')
@@ -54,6 +43,49 @@ export async function buscarCnpj(v) {
     situacao: j.descricao_situacao_cadastral ?? '',
     socios: (Array.isArray(j.qsa) ? j.qsa : []).map((q) => nomeProprio(q.nome_socio)).filter(Boolean),
   }
+}
+
+async function consultarCnpjEm(url, timeout = 12000) {
+  const ctrl = new AbortController()
+  const t = setTimeout(() => ctrl.abort(), timeout)
+  try {
+    const r = await fetch(url, { signal: ctrl.signal, headers: { accept: 'application/json' } })
+    if (r.status === 404) return { encontrado: false }
+    if (!r.ok) throw new Error(`HTTP ${r.status}`)
+    return { encontrado: true, dados: await r.json() }
+  } finally {
+    clearTimeout(t)
+  }
+}
+
+// devolve { razao_social, nome_fantasia, address, bairro, city, uf, cep, telefone, email, situacao, socios } ou lança.
+// A BrasilAPI é a primeira fonte, mas pode aplicar mitigação/rate-limit. Se ela
+// falhar, a MIMO tenta diretamente o Minha Receita, que usa o mesmo formato-base
+// dos dados públicos de CNPJ. Assim uma indisponibilidade externa não quebra o cadastro.
+export async function buscarCnpj(v) {
+  const d = String(v ?? '').replace(/\D/g, '')
+  if (!cnpjValido(d)) throw new Error('Confere o CNPJ: os dígitos não batem.')
+
+  let naoEncontrado = false
+
+  try {
+    const primeira = await consultarCnpjEm(`https://brasilapi.com.br/api/cnpj/v1/${d}`)
+    if (primeira.encontrado) return normalizarRespostaCnpj(primeira.dados)
+    naoEncontrado = true
+  } catch {
+    // tenta a fonte abaixo
+  }
+
+  try {
+    const segunda = await consultarCnpjEm(`https://minhareceita.org/${d}`)
+    if (segunda.encontrado) return normalizarRespostaCnpj(segunda.dados)
+    naoEncontrado = true
+  } catch {
+    // as duas fontes externas falharam
+  }
+
+  if (naoEncontrado) throw new Error('CNPJ não encontrado na base pública da Receita.')
+  throw new Error('Não deu para consultar o CNPJ agora. Você pode tentar de novo ou preencher os dados à mão.')
 }
 
 // ---- CPF, para quem ainda não tem CNPJ ----

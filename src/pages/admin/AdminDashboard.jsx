@@ -13,6 +13,7 @@ import GraficoLinha from '../../components/GraficoLinha'
 import { toISODate } from '../../lib/format'
 import { linkDoSalao } from '../../lib/endereco'
 import QRCode from 'qrcode'
+import { MEL_ASSISTENTE, AGENDA_VAZIA_ART } from '../../assets/homeArt'
 import { CalendarPlus, Users, Sparkles, MessageCircle, FileSignature, ArrowRight, CalendarDays, TrendingUp, Clock3, QrCode, Settings2, X, PlayCircle, ChevronRight, Activity, CircleDot, Rocket, BellRing, BookOpen, Scissors, Link2, Headphones, LayoutDashboard, BadgeCheck, Copy, ExternalLink } from 'lucide-react'
 
 // Dashboard do salão (tela 23): o dia de hoje em quatro números, o
@@ -257,7 +258,7 @@ export default function AdminDashboard() {
                   <Link to="/admin/agenda">Ver agenda completa <ArrowRight size={13} /></Link>
                 </div>
                 <div className="admin-home-primeiro-vazio">
-                  <span><CalendarPlus size={24} /></span>
+                  <img className="admin-home-agenda-art" src={AGENDA_VAZIA_ART} alt="" />
                   <strong>Ainda não há agendamentos para hoje.</strong>
                   <p>Quando os primeiros clientes agendarem, eles aparecerão aqui com horário, serviço e profissional.</p>
                   <Link to="/admin/agenda?encaixe=1" className="btn btn-primary">Fazer um agendamento teste</Link>
@@ -323,9 +324,13 @@ export default function AdminDashboard() {
 
                 <section className="card admin-home-primeiro-ajuda">
                   <span><Headphones size={18} /></span>
-                  <div><strong>Precisa de ajuda?</strong><small>Acesse os tutoriais ou fale com o suporte da MIMO.</small></div>
+                  <div>
+                    <strong>Precisa de ajuda?</strong>
+                    <small>Acesse os tutoriais ou fale com o suporte da MIMO.</small>
+                  </div>
+                  <span className="admin-home-mel-balao">Oi! Eu sou a <b>Mel</b> 💗</span>
                   <Link to="/admin/guia">Acessar central de ajuda <ArrowRight size={13} /></Link>
-                  <span className="admin-home-ajuda-mascote" aria-hidden="true">M</span>
+                  <img className="admin-home-mel" src={MEL_ASSISTENTE} alt="Mel, assistente virtual da MIMO" />
                 </section>
               </aside>
             </div>

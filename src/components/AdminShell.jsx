@@ -12,6 +12,7 @@ import {
   MaisIcon,
   HomeIcon,
 } from './icons'
+import { Sparkles, UserRound, WalletCards, Megaphone, BookOpen, Settings2, ChevronLeft, CreditCard } from 'lucide-react'
 
 // Cinco abas, não seis. Numa barra de celular, seis alvos dão 60px
 // cada e o polegar erra. O mês, Serviços e WhatsApp foram para dentro
@@ -25,6 +26,18 @@ const TABS = [
   { to: '/admin/ajustes', label: 'Ajustes', Icon: ClockIcon },
 ]
 
+const DESKTOP_NAV = [
+  { to: '/admin', end: true, label: 'Início', Icon: HomeIcon },
+  { to: '/admin/agenda', label: 'Agenda', Icon: CalendarIcon },
+  { to: '/admin/clientes', label: 'Clientes', Icon: UsersIcon },
+  { to: '/admin/servicos', label: 'Serviços', Icon: Sparkles },
+  { to: '/admin/equipe', label: 'Profissionais', Icon: UserRound },
+  { to: '/admin/numeros', label: 'Financeiro', Icon: WalletCards },
+  { to: '/admin/promocoes', label: 'Marketing', Icon: Megaphone },
+  { to: '/admin/guia', label: 'Guia', Icon: BookOpen },
+  { to: '/admin/ajustes', label: 'Ajustes', Icon: Settings2 },
+]
+
 export default function AdminShell({ children, amplo = false }) {
   // só o miolo rola: ao trocar de página, volta para o topo dele
   const miolo = useRef(null)
@@ -35,14 +48,43 @@ export default function AdminShell({ children, amplo = false }) {
 
   return (
     <div className={'admin-shell' + (amplo ? ' admin-shell-amplo' : '')}>
+      <aside className="admin-desktop-sidebar" aria-label="Navegação principal">
+        <div className="admin-sidebar-marca">
+          <span><MarcaIcon className="marca" id="lateral" /><Wordmark tamanho={1.55} /></span>
+          <ChevronLeft size={17} />
+        </div>
+        <nav className="admin-sidebar-nav">
+          {DESKTOP_NAV.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.end}
+              className={({ isActive }) => isActive ? 'admin-sidebar-item ativo' : 'admin-sidebar-item'}
+            >
+              <item.Icon size={18} />
+              <span>{item.label}</span>
+            </NavLink>
+          ))}
+        </nav>
+        <div className="admin-sidebar-rodape">
+          <LinkAssinatura />
+        </div>
+      </aside>
+
       <header className="topbar topbar-admin">
-        <span className="brand-inline">
-          <MarcaIcon className="marca" id="topo" />
-          <Wordmark tamanho={1.35} />
-        </span>
+        <div className="topbar-admin-esquerda">
+          <span className="brand-inline">
+            <MarcaIcon className="marca" id="topo" />
+            <Wordmark tamanho={1.35} />
+          </span>
+          <span className="admin-topbar-salao">
+            <strong>{salao?.name || 'Meu salão'}</strong>
+            <small><i></i> Painel do salão</small>
+          </span>
+        </div>
         <div className="topbar-acoes">
           <SinoAvisos />
-          <MenuDaConta itens={ITENS_ADMIN} papel={salao?.name ? `Dona · ${salao.name}` : 'Dona do salão'} />
+          <MenuDaConta itens={ITENS_ADMIN} papel={salao?.name ? `Administração · ${salao.name}` : 'Administração do salão'} />
         </div>
       </header>
 
@@ -77,5 +119,14 @@ export default function AdminShell({ children, amplo = false }) {
         </div>
       </nav>
     </div>
+  )
+}
+
+function LinkAssinatura() {
+  return (
+    <NavLink to="/admin/assinatura" className="admin-sidebar-plano">
+      <span className="admin-sidebar-plano-icone"><CreditCard size={16} /></span>
+      <span><strong>Plano e assinatura</strong><small>Ver acesso e cobrança</small></span>
+    </NavLink>
   )
 }

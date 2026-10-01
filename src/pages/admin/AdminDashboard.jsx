@@ -175,7 +175,7 @@ export default function AdminDashboard() {
       <div className="admin-home">
         <TutorialPainel primeiroAcesso={primeiroAcesso} />
 
-        <section className={'admin-home-hero' + (capaSalao ? ' tem-capa' : '')} data-tour="inicio" style={capaSalao ? { '--home-hero-capa': `url("${capaSalao}")` } : undefined}>
+        <section className={'admin-home-hero' + (capaSalao ? ' tem-capa' : '') + (primeiroAcesso ? ' primeiro-acesso' : '')} data-tour="inicio" style={capaSalao ? { '--home-hero-capa': `url("${capaSalao}")` } : undefined}>
           <div className="admin-home-hero-copy">
             <span className="admin-home-eyebrow"><Sparkles size={13} /> {saudacao}{nomePessoa ? `, ${nomePessoa}` : ''}</span>
             <h1>{temMovimento ? <>Tudo acontecendo em <strong>{primeiraPalavra}</strong>, num só lugar.</> : <>Seu salão ganhou um <strong>centro de comando.</strong></>}</h1>
@@ -235,10 +235,13 @@ export default function AdminDashboard() {
           <section className="admin-home-primeiro" aria-label="Primeiros passos no painel">
             <div className="admin-home-primeiro-config" data-tour="primeiros-passos">
               <div className="admin-home-primeiro-topo">
-                <div>
-                  <span className="admin-home-label"><Sparkles size={13} /> Primeiros passos</span>
-                  <h2>Deixe seu salão pronto para receber clientes.</h2>
-                  <p>Complete o essencial abaixo para liberar a agenda e começar a receber agendamentos de verdade.</p>
+                <div className="admin-home-primeiro-intro">
+                  <span className="admin-home-primeiro-icone"><Sparkles size={18} /></span>
+                  <div>
+                    <span className="admin-home-label">Primeiros passos</span>
+                    <h2>Deixe seu salão pronto para receber clientes.</h2>
+                    <p>Complete o essencial abaixo para liberar a agenda e começar a receber agendamentos de verdade.</p>
+                  </div>
                 </div>
                 <div className="admin-home-primeiro-progresso">
                   <strong>{feitosConfig} de 4 concluídos</strong>

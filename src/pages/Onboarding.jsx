@@ -1488,11 +1488,11 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
             )}
             {/* o pino: é ele que a cliente vê no "Como chegar" */}
             <div className="ob-mapa-campo">
-              <span className="ob-rotulo ob-mapa-titulo">Pino no mapa {pino ? <em className="ob-pino-ok"><Check size={11} /> pino marcado</em> : <em className="ob-pino-nao">sem pino</em>}</span>
+              <span className="ob-rotulo ob-mapa-titulo"><span>Confirme a entrada do seu espaço</span> {pino ? <em className="ob-pino-ok"><Check size={11} /> pino marcado</em> : <em className="ob-pino-nao">sem pino</em>}</span>
               {pino
-                ? <div className="ob-mapa"><Mapa lat={Number(loc.lat)} lng={Number(loc.lng)} zoom={17} arrastavel altura={220} onMover={moverPino} /></div>
+                ? <div className="ob-mapa"><Mapa lat={Number(loc.lat)} lng={Number(loc.lng)} zoom={17} arrastavel altura={250} onMover={moverPino} /></div>
                 : <div className="ob-sem-pino"><MapPinOff size={24} /><strong>Vamos marcar a porta do seu espaço</strong><span className="muted">{local.address.trim() && local.city.trim() ? 'A MIMO pode sugerir o ponto pelo endereço. Depois você confere e ajusta no mapa.' : 'Complete o endereço acima para sugerirmos o ponto certo no mapa.'}</span></div>}
-              {pino && <small className="ob-mapa-nota ob-mapa-nota-forte"><Check size={12} /> <span><strong>Pino marcado.</strong> Confira se ele está exatamente na porta e arraste se precisar.{geo ? ` ${geo.charAt(0).toUpperCase()}${geo.slice(1)}.` : ''}</span></small>}
+              {pino && <small className="ob-mapa-nota ob-mapa-nota-forte"><Check size={12} /> <span><strong>É aqui mesmo?</strong> Ajuste o pino até a entrada exata. É esse ponto que a cliente vai usar no “Como chegar”.{geo ? ` ${geo.charAt(0).toUpperCase()}${geo.slice(1)}.` : ''}</span></small>}
               <div className="ob-mapa-acoes">
                 <button type="button" className="ob-acao-mini ob-pino-principal" onClick={acharPeloEndereco} disabled={Boolean(ocupado) || !(local.address.trim() && local.city.trim())}><MapPin size={14} /> {ocupado === 'endereco' ? 'Sugerindo o pino…' : (pino ? 'Reposicionar pelo endereço' : 'Sugerir pino pelo endereço')}</button>
                 <button type="button" className="ob-acao-mini ob-pino-secundario" onClick={usarLocalizacao} disabled={Boolean(ocupado)}><Search size={13} /> {ocupado === 'gps' ? 'Achando você…' : 'Usar minha localização atual'}</button>

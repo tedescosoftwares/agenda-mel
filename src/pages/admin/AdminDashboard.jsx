@@ -312,7 +312,23 @@ export default function AdminDashboard() {
           </section>
         )}
 
-        {!primeiroAcesso && <section className="admin-home-pulso">        </section>}
+        {!primeiroAcesso && <section className="admin-home-pulso">
+          <div className="admin-home-pulso-principal">
+            <span className="admin-home-pulso-icone">{agoraMimo.icone}<i></i></span>
+            <div>
+              <span className="admin-home-pulso-selo"><CircleDot size={11} /> Agora na MIMO</span>
+              <small>{agoraMimo.selo}</small>
+              <strong>{agoraMimo.titulo}</strong>
+              <p>{agoraMimo.texto}</p>
+            </div>
+            <Link to={agoraMimo.para} className="admin-home-pulso-acao">{agoraMimo.acao} <ArrowRight size={14} /></Link>
+          </div>
+          <div className="admin-home-pulso-trilha" aria-label="Estado atual do salão">
+            <span className={salaoAtivo ? 'feito' : 'atual'}><i></i><span><strong>{salaoAtivo ? 'Salão online' : 'Preparando salão'}</strong><small>{salaoAtivo ? 'Clientes já podem entrar pelo seu link.' : 'Finalize os pontos essenciais para liberar sua vitrine.'}</small></span></span>
+            <span className={pendentes > 0 ? 'atual' : ''}><i></i><span><strong>{pendentes > 0 ? `${pendentes} ${pendentes === 1 ? 'pedido pendente' : 'pedidos pendentes'}` : 'Pedidos em dia'}</strong><small>{pendentes > 0 ? 'Tem cliente esperando sua confirmação.' : 'Nada esperando resposta agora.'}</small></span></span>
+            <span className={naFila > 0 ? 'atual' : ''}><i></i><span><strong>{naFila > 0 ? `${naFila} na fila de espera` : 'Fila tranquila'}</strong><small>{naFila > 0 ? 'Há clientes de olho numa oportunidade.' : 'Nenhuma cliente aguardando vaga.'}</small></span></span>
+          </div>
+        </section>}
 
         {!primeiroAcesso && <div className="admin-home-alertas" data-tour="primeiros-passos">
           <AcessoAviso />

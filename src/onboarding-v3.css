@@ -4737,3 +4737,171 @@
     text-align:center;
   }
 }
+
+
+/* ==========================================================================
+   IDENTIDADE · COMPOSIÇÃO FINAL DE LOGO + FOTOS
+   Alinhamento visual da etapa sem alterar uploads ou regras.
+   ========================================================================== */
+.ob-v3 .ob-identidade-bloco-imagens .ob-cara-imagens {
+  grid-template-columns:160px minmax(0,1fr);
+  gap:20px;
+  align-items:start;
+}
+
+.ob-v3 .ob-logo-campo,
+.ob-v3 .ob-fotos-campo {
+  align-content:start;
+}
+
+.ob-v3 .ob-logo-campo > .ob-rotulo,
+.ob-v3 .ob-fotos-campo-topo {
+  min-height:34px;
+}
+
+.ob-v3 .ob-logo-campo > .ob-rotulo {
+  display:flex;
+  align-items:flex-start;
+  padding-top:1px;
+}
+
+.ob-v3 .ob-logo.ob-logo-mini {
+  width:160px;
+  height:160px;
+}
+
+.ob-v3 .ob-logo-acoes {
+  min-height:24px;
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+
+.ob-v3 .ob-logo-acoes button {
+  padding:0;
+  border:0;
+  background:transparent;
+  color:var(--o-rosa);
+  font:inherit;
+  font-size:.64rem;
+  font-weight:800;
+  cursor:pointer;
+}
+
+.ob-v3 .ob-logo-acoes button.perigo {
+  color:#bb385e;
+}
+
+.ob-v3 .ob-logo-acoes > span {
+  color:#c8bec9;
+  font-size:.64rem;
+}
+
+.ob-v3 .ob-logo-acoes small {
+  font-size:.61rem;
+}
+
+.ob-v3 .ob-fotos-campo-topo {
+  align-items:flex-start;
+}
+
+.ob-v3 .ob-fotos-campo-acoes {
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:6px;
+  flex-wrap:wrap;
+}
+
+.ob-v3 .ob-adicionar-fotos-topo {
+  min-height:27px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:4px;
+  padding:0 8px;
+  border:1px solid #ffd0e0;
+  border-radius:999px;
+  background:#fff;
+  color:var(--o-rosa);
+  font:inherit;
+  font-size:.59rem;
+  font-weight:800;
+  cursor:pointer;
+}
+
+.ob-v3 .ob-adicionar-fotos-topo:hover:not(:disabled) {
+  background:#fff3f8;
+  border-color:#ffafd0;
+}
+
+.ob-v3 .ob-identidade-bloco-imagens .ob-fotos {
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:8px;
+  align-items:start;
+}
+
+.ob-v3 .ob-identidade-bloco-imagens .ob-foto {
+  width:100%;
+  aspect-ratio:4/3;
+  min-height:0;
+}
+
+.ob-v3 .ob-fotos-ordem {
+  min-height:24px;
+  display:flex;
+  align-items:center;
+  gap:5px;
+  color:#8c818f;
+  font-size:.61rem;
+  line-height:1.3;
+}
+
+.ob-v3 .ob-fotos-ordem svg {
+  flex:none;
+  color:var(--o-rosa);
+}
+
+.ob-v3 .ob-identidade-bloco-imagens .ob-logo-campo > .ob-ajuda-inline,
+.ob-v3 .ob-identidade-bloco-imagens .ob-fotos-campo > .ob-ajuda-inline {
+  margin-top:0;
+}
+
+.ob-v3 .ob-identidade-bloco-imagens .ob-logo-campo > .ob-ajuda-inline {
+  width:160px;
+}
+
+.ob-v3 .ob-identidade-bloco-imagens .ob-fotos-campo > .ob-ajuda-inline {
+  width:100%;
+}
+
+@media (min-width:901px) and (max-width:1160px) {
+  .ob-v3 .ob-identidade-bloco-imagens .ob-fotos {
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+}
+
+@media (max-width:900px) {
+  .ob-v3 .ob-identidade-bloco-imagens .ob-cara-imagens {
+    grid-template-columns:1fr;
+  }
+
+  .ob-v3 .ob-identidade-bloco-imagens .ob-logo-campo > .ob-ajuda-inline {
+    width:100%;
+  }
+
+  .ob-v3 .ob-identidade-bloco-imagens .ob-fotos {
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+}
+
+@media (max-width:560px) {
+  .ob-v3 .ob-fotos-campo-topo {
+    display:grid;
+    gap:7px;
+  }
+
+  .ob-v3 .ob-fotos-campo-acoes {
+    justify-content:flex-start;
+  }
+}

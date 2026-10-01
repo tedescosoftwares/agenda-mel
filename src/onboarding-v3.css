@@ -4237,3 +4237,192 @@
     display:none;
   }
 }
+
+
+/* ==========================================================================
+   IDENTIDADE · CLAREZA DO LINK + UPLOADS
+   Visual apenas: deixa a etapa mais didática e profissional.
+   ========================================================================== */
+.ob-v3 .ob-rotulo-com-ajuda,
+.ob-v3 .ob-upload-cabecalho {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+
+.ob-v3 .ob-rotulo-com-ajuda .ob-ajuda-popover,
+.ob-v3 .ob-upload-cabecalho .ob-ajuda-popover {
+  margin-left:auto;
+}
+
+.ob-v3 .ob-link-explica {
+  display:flex;
+  align-items:flex-start;
+  gap:8px;
+  margin-top:2px;
+  padding:9px 10px;
+  border:1px solid #eee7ef;
+  border-radius:12px;
+  background:#fcfafc;
+}
+
+.ob-v3 .ob-link-explica > svg {
+  flex:none;
+  margin-top:2px;
+  color:var(--o-rosa);
+}
+
+.ob-v3 .ob-link-explica > span {
+  display:grid;
+  gap:1px;
+}
+
+.ob-v3 .ob-link-explica strong {
+  color:var(--o-ameixa);
+  font-size:.72rem;
+}
+
+.ob-v3 .ob-link-explica small {
+  color:#837985;
+  font-size:.66rem;
+  line-height:1.35;
+}
+
+.ob-v3 .ob-cara-imagens {
+  grid-template-columns:128px minmax(0,1fr);
+  gap:14px;
+  align-items:start;
+  margin-top:3px;
+}
+
+.ob-v3 .ob-logo-campo,
+.ob-v3 .ob-fotos-campo {
+  min-width:0;
+}
+
+.ob-v3 .ob-logo.ob-logo-mini {
+  width:128px;
+  height:128px;
+  border-radius:18px;
+  border:1.5px dashed #ffb9d2;
+  background:
+    radial-gradient(circle at 50% 0%,rgba(255,45,122,.06),transparent 58%),
+    #fffafd;
+  transition:border-color .15s ease,background .15s ease,transform .15s ease,box-shadow .15s ease;
+}
+
+.ob-v3 .ob-logo.ob-logo-mini:hover:not(:disabled) {
+  transform:translateY(-1px);
+  border-color:#ff7cac;
+  background:#fff5f9;
+  box-shadow:0 10px 24px rgba(255,45,122,.08);
+}
+
+.ob-v3 .ob-logo-vazio {
+  gap:5px;
+}
+
+.ob-v3 .ob-logo-iniciais {
+  font-size:1.45rem;
+  letter-spacing:.08em;
+}
+
+.ob-v3 .ob-logo-vazio small {
+  color:#a67b8e;
+  font-size:.60rem;
+  font-weight:750;
+  letter-spacing:0;
+  text-transform:none;
+}
+
+.ob-v3 .ob-upload-formato,
+.ob-v3 .ob-upload-dica {
+  color:#8b818e;
+  font-size:.63rem;
+  line-height:1.35;
+}
+
+.ob-v3 .ob-upload-dica {
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  margin-top:5px;
+}
+
+.ob-v3 .ob-upload-dica svg {
+  color:var(--o-rosa);
+}
+
+.ob-v3 .ob-fotos {
+  grid-template-columns:repeat(auto-fill,minmax(104px,1fr));
+  gap:8px;
+}
+
+.ob-v3 .ob-foto {
+  min-height:104px;
+  border-radius:15px;
+}
+
+.ob-v3 .ob-foto-add {
+  min-height:104px;
+  gap:5px;
+  padding:9px;
+  border:1.5px dashed #ffb8d1;
+  border-radius:15px;
+  background:
+    radial-gradient(circle at 50% 20%,rgba(255,45,122,.07),transparent 55%),
+    #fffafd;
+  color:var(--o-rosa);
+  transition:border-color .15s ease,background .15s ease,transform .15s ease,box-shadow .15s ease;
+}
+
+.ob-v3 .ob-foto-add:hover:not(:disabled) {
+  transform:translateY(-1px);
+  border-color:#ff78aa;
+  background:#fff4f8;
+  box-shadow:0 10px 22px rgba(255,45,122,.07);
+}
+
+.ob-v3 .ob-foto-add-icone {
+  width:34px;
+  height:34px;
+  display:grid;
+  place-items:center;
+  border-radius:11px;
+  background:#fff0f6;
+  border:1px solid #ffd1e1;
+}
+
+.ob-v3 .ob-foto-add > span:not(.ob-foto-add-icone) {
+  font-size:.68rem;
+  font-weight:800;
+}
+
+.ob-v3 .ob-foto-add > small {
+  color:#a58f9a;
+  font-size:.56rem;
+  font-weight:650;
+}
+
+.ob-v3 .ob-previa > small {
+  display:flex;
+  align-items:center;
+  gap:5px;
+}
+
+@media (max-width:700px) {
+  .ob-v3 .ob-cara-imagens {
+    grid-template-columns:1fr;
+  }
+
+  .ob-v3 .ob-logo.ob-logo-mini {
+    width:112px;
+    height:112px;
+  }
+
+  .ob-v3 .ob-upload-cabecalho,
+  .ob-v3 .ob-rotulo-com-ajuda {
+    align-items:flex-start;
+  }
+}

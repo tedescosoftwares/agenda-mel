@@ -1347,11 +1347,18 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
                       <span className="ob-logo-cam"><Camera size={13} /></span>
                     </button>
                     <input ref={arqLogo} type="file" accept="image/*" hidden onChange={trocarLogo} />
-                    {subindo === 'logo'
-                      ? <small className="muted">subindo…</small>
-                      : logo
-                        ? <button type="button" className="link-ver" onClick={tirarLogo}>Trocar ou remover</button>
-                        : <small className="ob-upload-formato">JPG ou PNG</small>}
+
+                    <div className="ob-logo-acoes">
+                      {subindo === 'logo'
+                        ? <small className="muted">Enviando…</small>
+                        : logo
+                          ? <>
+                              <button type="button" onClick={() => arqLogo.current?.click()}>Alterar</button>
+                              <span>·</span>
+                              <button type="button" className="perigo" onClick={tirarLogo}>Remover</button>
+                            </>
+                          : <small className="ob-upload-formato">JPG ou PNG · prefira quadrado</small>}
+                    </div>
 
                     <AjudaInline titulo="Dica para o logo">
                       Use uma imagem quadrada, com fundo limpo e boa leitura em tamanho pequeno. Evite logo muito comprido ou cheio de texto.
@@ -1364,7 +1371,14 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
                         <strong>{autonoma ? 'Fotos do espaço' : 'Fotos do salão'}</strong>
                         <small>{fotos.length}/{MAX_FOTOS} adicionadas</small>
                       </span>
-                      {fotos.length > 0 && <span className="ob-capa-status"><ImagePlus size={12} /> A primeira é a capa</span>}
+                      <span className="ob-fotos-campo-acoes">
+                        {fotos.length > 0 && <span className="ob-capa-status"><ImagePlus size={12} /> A primeira é a capa</span>}
+                        {fotos.length > 0 && fotos.length < MAX_FOTOS && (
+                          <button type="button" className="ob-adicionar-fotos-topo" onClick={() => arqFotos.current?.click()} disabled={subindo === 'fotos'}>
+                            <Plus size={13} /> {subindo === 'fotos' ? 'Enviando…' : 'Adicionar'}
+                          </button>
+                        )}
+                      </span>
                     </div>
 
                     {fotos.length === 0 ? (
@@ -1389,15 +1403,13 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
                             </div>
                           </div>
                         ))}
-                        {fotos.length < MAX_FOTOS && (
-                          <button type="button" className="ob-foto ob-foto-add" onClick={() => arqFotos.current?.click()} disabled={subindo === 'fotos'}>
-                            <span className="ob-foto-add-icone"><Plus size={17} /></span>
-                            <span>{subindo === 'fotos' ? 'subindo…' : 'Mais fotos'}</span>
-                          </button>
-                        )}
                       </div>
                     )}
                     <input ref={arqFotos} type="file" accept="image/*" multiple hidden onChange={addFotos} />
+
+                    <small className="ob-fotos-ordem">
+                      <Sparkles size={12} /> Use as setas para mudar a ordem. A primeira foto vira a capa.
+                    </small>
 
                     <AjudaInline titulo="Quais fotos ficam melhores?">
                       Mostre o ambiente de verdade. Uma boa sequência é: fachada ou entrada, recepção, espaço de atendimento e detalhes bonitos do salão. Evite prints, artes com texto e fotos muito escuras.

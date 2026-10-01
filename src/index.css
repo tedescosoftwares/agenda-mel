@@ -6346,6 +6346,9 @@ button.link-ver.pag-desistir { color: var(--texto-3); }
 .mapa-caixa .leaflet-control-attribution a { color: var(--cinza-3, #6b7280); }
 .mapa-caixa .leaflet-bar { border: none; box-shadow: 0 4px 12px rgba(31, 32, 38, 0.16); border-radius: 10px; overflow: hidden; }
 .mapa-caixa .leaflet-bar a { width: 32px; height: 32px; line-height: 32px; color: var(--grafite, #1f2026); border-color: var(--fio); }
+.mapa-caixa.mapa-google { font: inherit; }
+.mapa-caixa.mapa-google .gm-style-cc, .mapa-caixa.mapa-google .gmnoprint a, .mapa-caixa.mapa-google .gm-style a img { font-size: 9px; }
+.mapa-falhou { display: grid; place-items: center; font-size: 0.85rem; }
 .mapa-pino { background: none; border: 0; filter: drop-shadow(0 5px 6px rgba(0, 0, 0, 0.28)); transition: transform .15s ease; }
 .mapa-pino svg { display: block; width: 34px; height: 44px; }
 .leaflet-marker-draggable.mapa-pino { cursor: grab; }

@@ -4,6 +4,18 @@
 // do aparelho quando a dona está no salão. Os links de rota abrem o app
 // de mapas que a pessoa tiver.
 
+import { temGoogleMaps, carregarGoogleMaps } from './googleMaps'
+
+async function geocodificarGoogle(q) {
+  const g = await carregarGoogleMaps()
+  const geo = new g.Geocoder()
+  const { results } = await geo.geocode({ address: q, region: 'br', componentRestrictions: { country: 'BR' }, language: 'pt-BR' })
+  const h = results?.[0]
+  if (!h) return null
+  const ll = h.geometry.location
+  return { lat: arredondar(ll.lat()), lng: arredondar(ll.lng()), rotulo: h.formatted_address ?? '' }
+}
+
 export const limparCep = (t) => String(t ?? '').replace(/\D/g, '').slice(0, 8)
 export const formatarCep = (t) => { const d = limparCep(t); return d.length > 5 ? d.slice(0, 5) + '-' + d.slice(5) : d }
 export const temPino = (lat, lng) => Number.isFinite(Number(lat)) && Number.isFinite(Number(lng)) && !(Number(lat) === 0 && Number(lng) === 0)
@@ -28,9 +40,14 @@ export async function buscarCep(cep) {
 
 // acha uma coordenada pelo texto (rua, número, bairro, cidade). Devolve
 // null quando não encontra; quem chama decide o que tentar depois.
+// Com chave do Google (2.82.1) usa o Geocoding dele, que acerta muito mais
+// endereço no Brasil; sem chave, o Nominatim de sempre.
 export async function geocodificar(texto) {
   const q = String(texto ?? '').replace(/\s+/g, ' ').trim()
   if (!q) return null
+  if (temGoogleMaps()) {
+    try { return await geocodificarGoogle(q) } catch (e) { if (e?.status === 'ZERO_RESULTS') return null; /* cai no Nominatim */ }
+  }
   let r
   try {
     r = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=br&accept-language=pt-BR&q=${encodeURIComponent(q)}`, { headers: { Accept: 'application/json' } })

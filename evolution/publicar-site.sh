@@ -89,6 +89,13 @@ case "$VITE_SUPABASE_ANON_KEY" in
 esac
 export VITE_SUPABASE_URL VITE_SUPABASE_ANON_KEY
 verde '  chaves do app encontradas'
+# o Google Maps (2.82.1) é opcional: sem a chave, o mapa cai no OpenStreetMap
+if [ -n "${VITE_GOOGLE_MAPS_KEY:-}" ]; then
+  export VITE_GOOGLE_MAPS_KEY
+  verde '  Google Maps ligado'
+else
+  amarelo '  Sem VITE_GOOGLE_MAPS_KEY: o mapa usa OpenStreetMap. Para o Google, ponha a chave no .env.'
+fi
 
 # o Caddy precisa do ref do projeto para a prévia do link (/p/<slug>
 # vista pelo robô do WhatsApp). Sai da própria URL: https://REF.supabase.co

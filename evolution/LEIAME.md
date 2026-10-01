@@ -583,3 +583,14 @@ funcionar, uma vez só:
 Conferir: `docker compose logs caddy --tail 30` deve mostrar o
 certificado de `*.mimo.com.vc` obtido. Sem o token, o resto do site
 segue normal e só os endereços por salão ficam sem certificado.
+
+
+## Google Maps (2.82.1): o pino e a busca de endereço
+
+Opcional. Sem a chave o app usa OpenStreetMap. Para ligar:
+
+1. Google Cloud → APIs ativadas: **Maps JavaScript API** e **Geocoding API**.
+2. Credenciais → chave de API restrita por **site** (`mimo.com.vc/*`,
+   `pro.mimo.com.vc/*`, `*.mimo.com.vc/*`) e por **API** (só as duas acima).
+3. Na VPS: `nano evolution/.env` → `VITE_GOOGLE_MAPS_KEY=...` (nunca cole em chat).
+4. Opção **2** do bat: o build passa a usar o Google.

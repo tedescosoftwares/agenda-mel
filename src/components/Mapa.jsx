@@ -9,10 +9,25 @@ const MapaLeaflet = lazy(() => import('./MapaLeaflet'))
 const MapaGoogle = lazy(() => import('./MapaGoogle'))
 
 export default function Mapa(props) {
-  const Qual = temGoogleMaps() ? MapaGoogle : MapaLeaflet
+  const google = temGoogleMaps()
+  const Qual = google ? MapaGoogle : MapaLeaflet
+  const editavel = Boolean(props.arrastavel)
+
   return (
-    <Suspense fallback={<div className="mapa-caixa mapa-carregando" style={{ height: props.altura ?? 200 }} aria-hidden="true" />}>
-      <Qual {...props} />
-    </Suspense>
+    <div className={'mapa-experiencia' + (editavel ? ' mapa-experiencia-editavel' : '') + (google ? ' mapa-experiencia-google' : '')}>
+      <Suspense fallback={<div className="mapa-caixa mapa-carregando" style={{ height: props.altura ?? 200 }} aria-hidden="true" />}>
+        <Qual {...props} />
+      </Suspense>
+
+      {editavel && (
+        <div className="mapa-dica-flutuante" aria-hidden="true">
+          <span className="mapa-dica-icone">⌖</span>
+          <span>
+            <strong>Ajuste o pino</strong>
+            <small>Arraste ou toque no ponto exato da entrada</small>
+          </span>
+        </div>
+      )}
+    </div>
   )
 }

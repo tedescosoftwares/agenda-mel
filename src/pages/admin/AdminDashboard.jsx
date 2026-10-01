@@ -13,6 +13,7 @@ import GraficoLinha from '../../components/GraficoLinha'
 import { toISODate } from '../../lib/format'
 import { linkDoSalao } from '../../lib/endereco'
 import QRCode from 'qrcode'
+import { MOCK_AGENDA_ART, MOCK_MEL_ART } from '../../assets/mockArt'
 import { CalendarPlus, Users, Sparkles, MessageCircle, FileSignature, ArrowRight, CalendarDays, TrendingUp, Clock3, QrCode, Settings2, X, PlayCircle, ChevronRight, Activity, CircleDot, Rocket, BellRing, BookOpen, Scissors, Link2, Headphones, LayoutDashboard, BadgeCheck, Copy, ExternalLink } from 'lucide-react'
 
 // Dashboard do salão (tela 23): o dia de hoje em quatro números, o
@@ -280,7 +281,7 @@ export default function AdminDashboard() {
                   <Link to="/admin/agenda">Ver agenda completa <ArrowRight size={13} /></Link>
                 </div>
                 <div className="admin-home-primeiro-vazio">
-                  <AgendaVaziaIlustracao />
+                  <img className="admin-home-agenda-art" src={MOCK_AGENDA_ART} alt="" />
                   <strong>Ainda não há agendamentos para hoje.</strong>
                   <p>Quando os primeiros clientes agendarem, eles aparecerão aqui com horário, serviço e profissional.</p>
                   <Link to="/admin/agenda?encaixe=1" className="btn btn-primary">Fazer um agendamento teste</Link>
@@ -352,7 +353,7 @@ export default function AdminDashboard() {
                   </div>
                   <span className="admin-home-mel-balao">Oi! Eu sou a <b>Mel</b> 💗</span>
                   <Link to="/admin/guia">Acessar central de ajuda <ArrowRight size={13} /></Link>
-                  <MelAssistenteIlustracao />
+                  <img className="admin-home-mel" src={MOCK_MEL_ART} alt="Mel, assistente virtual da MIMO" />
                 </section>
               </aside>
             </div>
@@ -574,81 +575,6 @@ function TutorialPainel({ primeiroAcesso = false }) {
   )
 }
 
-
-function AgendaVaziaIlustracao() {
-  return (
-    <svg className="admin-home-agenda-art" viewBox="0 0 220 150" role="img" aria-label="Agenda sem agendamentos">
-      <defs>
-        <linearGradient id="agenda-papel" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#fff9fb" />
-          <stop offset="100%" stopColor="#ffeaf2" />
-        </linearGradient>
-        <linearGradient id="agenda-rosa" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#ff5f98" />
-          <stop offset="100%" stopColor="#ff2d7a" />
-        </linearGradient>
-        <filter id="agenda-shadow" x="-30%" y="-30%" width="160%" height="170%">
-          <feDropShadow dx="0" dy="10" stdDeviation="9" floodColor="#d65b89" floodOpacity=".18"/>
-        </filter>
-      </defs>
-      <g opacity=".22">
-        <path d="M29 68 8 58M39 47 25 27M181 65l24-12M170 43l14-20M36 105 14 117M178 103l23 14" stroke="#ff2d7a" strokeWidth="3" strokeLinecap="round"/>
-        <circle cx="20" cy="82" r="3" fill="#ff2d7a"/><circle cx="194" cy="88" r="3" fill="#aa4cff"/>
-      </g>
-      <g filter="url(#agenda-shadow)" transform="rotate(-5 105 80)">
-        <rect x="52" y="27" width="105" height="95" rx="17" fill="url(#agenda-papel)" stroke="#ffd0df" strokeWidth="2"/>
-        <path d="M52 45c0-10 8-18 18-18h69c10 0 18 8 18 18v14H52Z" fill="url(#agenda-rosa)"/>
-        <rect x="71" y="18" width="9" height="28" rx="5" fill="#ff8fb7"/>
-        <rect x="128" y="18" width="9" height="28" rx="5" fill="#ff8fb7"/>
-        <g fill="#ffd8e5">
-          <rect x="69" y="70" width="17" height="13" rx="4"/><rect x="95" y="70" width="17" height="13" rx="4"/><rect x="121" y="70" width="17" height="13" rx="4"/>
-          <rect x="69" y="92" width="17" height="13" rx="4"/><rect x="95" y="92" width="17" height="13" rx="4"/><rect x="121" y="92" width="17" height="13" rx="4"/>
-        </g>
-      </g>
-      <g filter="url(#agenda-shadow)">
-        <circle cx="158" cy="106" r="30" fill="#fff" stroke="#ff82ad" strokeWidth="5"/>
-        <circle cx="158" cy="106" r="24" fill="#fff7fa"/>
-        <path d="M158 90v17l12 8" fill="none" stroke="#ff2d7a" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round"/>
-        <circle cx="158" cy="106" r="4" fill="#aa4cff"/>
-      </g>
-    </svg>
-  )
-}
-
-function MelAssistenteIlustracao() {
-  return (
-    <svg className="admin-home-mel" viewBox="0 0 150 130" role="img" aria-label="Mel, assistente virtual da MIMO">
-      <defs>
-        <linearGradient id="mel-cabelo" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#1c1720"/><stop offset="100%" stopColor="#3a2738"/>
-        </linearGradient>
-        <linearGradient id="mel-blusa" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#eee7ea"/><stop offset="100%" stopColor="#d9cfd5"/>
-        </linearGradient>
-        <linearGradient id="mel-pele" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#d79669"/><stop offset="55%" stopColor="#bb7657"/><stop offset="100%" stopColor="#a85f48"/>
-        </linearGradient>
-      </defs>
-      <path d="M42 128c2-32 12-52 33-57 25-6 52 9 61 57Z" fill="url(#mel-blusa)"/>
-      <path d="M49 86c-8-24-1-60 25-71 25-11 55 5 63 31 7 24-1 57-7 76l-25 2-46-7Z" fill="url(#mel-cabelo)"/>
-      <ellipse cx="89" cy="57" rx="30" ry="37" fill="url(#mel-pele)"/>
-      <path d="M60 48c3-22 17-35 35-35 20 0 35 14 39 36-9-9-20-15-31-17-13-2-27 3-43 16Z" fill="url(#mel-cabelo)"/>
-      <path d="M55 47c-3 22-2 47 8 68l10-4c-5-22-3-48 3-71Z" fill="url(#mel-cabelo)"/>
-      <path d="M122 42c10 23 8 49 2 77l12 2c9-29 11-61 0-83Z" fill="url(#mel-cabelo)"/>
-      <path d="M69 50c6-5 13-6 20-2" stroke="#34212b" strokeWidth="3" strokeLinecap="round"/>
-      <path d="M99 47c6-3 12-2 17 2" stroke="#34212b" strokeWidth="3" strokeLinecap="round"/>
-      <ellipse cx="81" cy="57" rx="2.2" ry="2.8" fill="#2e2228"/><ellipse cx="108" cy="56" rx="2.2" ry="2.8" fill="#2e2228"/>
-      <path d="M96 59c-2 5-3 9-1 12" fill="none" stroke="#9c5844" strokeWidth="1.5" strokeLinecap="round"/>
-      <path d="M84 78c8 5 17 5 24-1" fill="none" stroke="#7d3f42" strokeWidth="2" strokeLinecap="round"/>
-      <circle cx="117" cy="67" r="2.6" fill="none" stroke="#eee" strokeWidth="1.4"/>
-      <path d="M53 129c5-19 14-29 27-34 3 8 10 13 18 13 8 0 15-4 19-12 12 6 20 17 24 33Z" fill="url(#mel-blusa)"/>
-      <path d="M126 102c11-4 16-14 12-21-3-5-8-4-10 0 2-9-4-12-7-8-4 5 2 14 5 29Z" fill="url(#mel-pele)"/>
-      <path d="M128 91c2-9 3-17 1-25" fill="none" stroke="#a85f48" strokeWidth="3" strokeLinecap="round"/>
-      <path d="M128 66c0-5 2-8 4-10" fill="none" stroke="#a85f48" strokeWidth="3" strokeLinecap="round"/>
-      <circle cx="135" cy="35" r="6" fill="#ffeff5"/><path d="M135 31c3-5 9-1 6 3l-6 7-6-7c-3-4 3-8 6-3Z" fill="#ff2d7a"/>
-    </svg>
-  )
-}
 
 function HomeQr({ texto }) {
   const ref = useRef(null)

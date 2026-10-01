@@ -243,6 +243,10 @@ export default function AdminDashboard() {
                   <strong>{feitosConfig} de 4 concluídos</strong>
                   <span><i style={{ width:`${(feitosConfig / 4) * 100}%` }} /></span>
                 </div>
+                <div className="admin-home-primeiro-falta">
+                  <Sparkles size={15} />
+                  <span><strong>{feitosConfig >= 3 ? 'Quase lá!' : 'Falta pouco!'}</strong><small>Seu salão já está quase pronto.</small></span>
+                </div>
               </div>
 
               <div className="admin-home-primeiro-etapas">

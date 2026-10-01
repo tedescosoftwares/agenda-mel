@@ -13,7 +13,7 @@ import GraficoLinha from '../../components/GraficoLinha'
 import { toISODate } from '../../lib/format'
 import { linkDoSalao } from '../../lib/endereco'
 import QRCode from 'qrcode'
-import { MOCK_AGENDA_ART, MOCK_MEL_ART } from '../../assets/mockArt'
+import { AGENDA_ART_EXACT, MEL_ART_EXACT } from '../../assets/mockArtExact'
 import { CalendarPlus, Users, Sparkles, MessageCircle, FileSignature, ArrowRight, CalendarDays, TrendingUp, Clock3, QrCode, Settings2, X, PlayCircle, ChevronRight, Activity, CircleDot, Rocket, BellRing, BookOpen, Scissors, Link2, Headphones, LayoutDashboard, BadgeCheck, Copy, ExternalLink } from 'lucide-react'
 
 // Dashboard do salão (tela 23): o dia de hoje em quatro números, o
@@ -281,7 +281,7 @@ export default function AdminDashboard() {
                   <Link to="/admin/agenda">Ver agenda completa <ArrowRight size={13} /></Link>
                 </div>
                 <div className="admin-home-primeiro-vazio">
-                  <img className="admin-home-agenda-art" src={MOCK_AGENDA_ART} alt="" />
+                  <img className="admin-home-agenda-art" src={AGENDA_ART_EXACT} alt="" />
                   <strong>Ainda não há agendamentos para hoje.</strong>
                   <p>Quando os primeiros clientes agendarem, eles aparecerão aqui com horário, serviço e profissional.</p>
                   <Link to="/admin/agenda?encaixe=1" className="btn btn-primary">Fazer um agendamento teste</Link>
@@ -353,7 +353,7 @@ export default function AdminDashboard() {
                   </div>
                   <span className="admin-home-mel-balao">Oi! Eu sou a <b>Mel</b> 💗</span>
                   <Link to="/admin/guia">Acessar central de ajuda <ArrowRight size={13} /></Link>
-                  <img className="admin-home-mel" src={MOCK_MEL_ART} alt="Mel, assistente virtual da MIMO" />
+                  <img className="admin-home-mel" src={MEL_ART_EXACT} alt="Mel, assistente virtual da MIMO" />
                 </section>
               </aside>
             </div>

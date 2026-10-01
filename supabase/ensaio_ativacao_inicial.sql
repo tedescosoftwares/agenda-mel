@@ -1,4 +1,4 @@
--- Ensaio da 133–136 (2.81): ativação inicial simples. Desfaz no fim.
+-- Ensaio da 133–137 (2.81/2.82): ativação inicial simples e e-mails. Desfaz no fim.
 --   7 dias grátis OU 20% na primeira mensalidade; sem recorrência.
 begin;
 do $$
@@ -11,6 +11,7 @@ begin
   delete from public.cobrancas_mimo where salon_id = sid;
   delete from public.assinaturas where salon_id = sid;
   delete from public.notifications where user_id = dona and kind in ('teste_comecou', 'cobranca_paga', 'teste_acabando', 'modo_leitura', 'painel_bloqueado');
+  delete from public.email_outbox where user_id = dona and kind in ('ativacao', 'recibo');
   update public.salons set ativado_em = null, ativacao_pendente_em = null, onboarding_concluido_em = now(), equipe_prevista = 3 where id = sid;
   perform set_config('request.jwt.claim.sub', dona::text, true);
 
@@ -40,9 +41,19 @@ begin
   if cob ->> 'metodo' <> 'cartao' then raise exception '3c: %', cob; end if;
   raise notice '3 cobrança inicial: pix → cancelou → cartão %', cob ->> 'id';
 
-  -- 4. testar com cobrança sem id no Asaas: cancela sozinho e começa o teste
+  -- 4. testar com cobrança sem id no Asaas: cancela sozinho e começa o teste.
+  --    Sem serviço ativo o relógio fica parado (137); ao ativar um serviço, começa.
+  update public.services set active = false where salon_id = sid;
   ac := public.ativacao_inicial_teste(sid);
   if ac ->> 'fase' <> 'teste' or (ac ->> 'dias')::int <> 7 or (ac ->> 'oferta_inicial_usada')::boolean is distinct from true then raise exception '4: %', ac; end if;
+  if not (ac ->> 'aguardando_configuracao')::boolean or ac ->> 'ate' is not null then raise exception '4x: relógio devia estar parado: %', ac; end if;
+  if (select count(*) from public.email_outbox where user_id = dona and kind = 'ativacao' and assunto like 'Parabéns%') <> 1 then raise exception '4y: e-mail do teste'; end if;
+  update public.services set active = true where salon_id = sid;
+  ac := public.acesso_do_salao(sid);
+  if (ac ->> 'aguardando_configuracao')::boolean is not distinct from true or ac ->> 'ate' is null or (ac ->> 'dias')::int <> 7 then raise exception '4z: relógio devia ter começado: %', ac; end if;
+  if (select teste_comecou_em from public.assinaturas where salon_id = sid) is null then raise exception '4w'; end if;
+  if (select count(*) from public.notifications where user_id = dona and kind = 'teste_comecou') <> 1 then raise exception '4v: aviso teste_comecou'; end if;
+  raise notice '4a relógio parado até a agenda ficar pronta, e-mail de parabéns na fila';
   if (select ativado_em from public.salons where id = sid) is null or (select ativacao_pendente_em from public.salons where id = sid) is not null then raise exception '4b'; end if;
   if (select count(*) from public.cobrancas_mimo where salon_id = sid and status = 'cancelado') <> 2 then raise exception '4c'; end if;
   if not public.aceita_agendamentos(sid) then raise exception '4d: teste devia aceitar'; end if;
@@ -65,6 +76,7 @@ begin
   ac := public.acesso_do_salao(sid);
   if ac ->> 'fase' <> 'ativa' or ac ->> 'situacao' <> 'ativa' or (ac ->> 'dias')::int < 29 or (ac ->> 'recorrente')::boolean then raise exception '6c: %', ac; end if;
   if (select count(*) from public.notifications where user_id = dona and kind = 'cobranca_paga') <> 1 then raise exception '6d'; end if;
+  if (select count(*) from public.email_outbox where user_id = dona and kind = 'recibo') <> 1 then raise exception '6e: recibo'; end if;
   raise notice '6 renovação paga: ativa por % dias, sem recorrência', ac ->> 'dias';
 
   -- 7. renovar de novo com período vigente: começa no fim do pago, e a baixa prolonga
@@ -112,6 +124,8 @@ begin
   ac := public.acesso_do_salao(sid);
   if ac ->> 'fase' <> 'ativa' or ac ->> 'escolha_inicial' <> 'pago' or (ac ->> 'dias')::int < 29 then raise exception '10: %', ac; end if;
   if (select ativado_em from public.salons where id = sid) is null then raise exception '10b'; end if;
+  if (select count(*) from public.email_outbox where user_id = dona and kind = 'ativacao' and assunto like 'Obrigada%') <> 1 then raise exception '10x: e-mail do pago'; end if;
+  if (select count(*) from public.email_outbox where user_id = dona and kind = 'recibo') <> 3 then raise exception '10y: recibos %', (select count(*) from public.email_outbox where user_id = dona and kind = 'recibo'); end if;
   perform set_config('request.jwt.claim.sub', dona::text, true);
   begin
     perform public.ativacao_inicial_teste(sid);

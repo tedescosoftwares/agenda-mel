@@ -283,7 +283,9 @@ export default function AtivarSalao({ s, onAtivado, onErro }) {
             <h1>Agora sim. Seu salão está no ar. 🎉</h1>
             <p>
               {sucesso?.fase === 'teste'
-                ? `Seus ${REGRAS.testeDias} dias grátis começaram agora. Você pode usar tudo até ${dataCurta(sucesso?.ate)}.`
+                ? (sucesso?.ate
+                  ? `Seus ${REGRAS.testeDias} dias grátis começaram agora. Você pode usar tudo até ${dataCurta(sucesso.ate)}.`
+                  : `Seus ${REGRAS.testeDias} dias grátis começam a contar assim que a agenda estiver configurada: serviços e profissionais. Até lá, nada conta.`)
                 : `Sua primeira mensalidade está paga e a MIMO está liberada até ${dataCurta(sucesso?.ate)}.`}
             </p>
             <div className="ai-sucesso-itens">

@@ -105,7 +105,7 @@ export default function Configurar({ para = 'admin' }) {
             {passo === 2 && <PassoEquipe {...props} />}
             {passo === 3 && (
               <>
-                {acesso?.fase === 'teste' && <p className="cfg-teste"><Sparkles size={13} /> Seu teste grátis vai até {dataCurta(acesso.ate)}. <a href="/admin/assinatura">Como funciona</a></p>}
+                {acesso?.fase === 'teste' && <p className="cfg-teste"><Sparkles size={13} /> {acesso.aguardando_configuracao ? 'Seus 7 dias grátis começam a contar quando serviços e equipe estiverem prontos.' : `Seu teste grátis vai até ${dataCurta(acesso.ate)}.`} <a href="/admin/assinatura">Como funciona</a></p>}
                 <PassoAtivacao {...props} />
               </>
             )}

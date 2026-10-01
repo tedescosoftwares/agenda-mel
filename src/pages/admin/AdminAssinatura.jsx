@@ -96,7 +96,9 @@ export default function AdminAssinatura() {
     : fase === 'configurando'
       ? { titulo: 'Falta ativar o salão', texto: 'Termine serviços e equipe e escolha como começar. Nada está sendo cobrado.' }
       : fase === 'teste'
-        ? { titulo: `Teste grátis: ${acesso.dias <= 1 ? 'acaba hoje' : `faltam ${acesso.dias} dias`}`, texto: `Tudo liberado até ${dataCurta(acesso.ate)}. Não existe cartão vinculado nem cobrança automática.` }
+        ? (acesso.aguardando_configuracao
+          ? { titulo: `Teste grátis: ${acesso.dias} dias, ainda sem contar`, texto: 'O relógio começa quando a agenda estiver pronta (serviços e profissionais). Não existe cartão vinculado nem cobrança automática.' }
+          : { titulo: `Teste grátis: ${acesso.dias <= 1 ? 'acaba hoje' : `faltam ${acesso.dias} dias`}`, texto: `Tudo liberado até ${dataCurta(acesso.ate)}. Não existe cartão vinculado nem cobrança automática.` })
         : fase === 'ativa'
           ? { titulo: 'Mensalidade em dia', texto: acesso.sem_prazo ? 'Acesso sem prazo.' : `Seu período vai até ${dataCurta(acesso.ate)}. Não haverá renovação automática.` }
           : fase === 'leitura'

@@ -13,7 +13,7 @@ export const REGRAS = {
 }
 
 export const LINHA_DO_TESTE = [
-  { quando: 'Hoje', titulo: 'Você começa sem cartão', texto: 'Escolheu testar? São 7 dias completos sem cadastrar forma de pagamento e sem cobrança automática.' },
+  { quando: 'Hoje', titulo: 'Você começa sem cartão', texto: 'Escolheu testar? São 7 dias completos sem cadastrar forma de pagamento e sem cobrança automática. O relógio só começa quando serviços e equipe estiverem cadastrados.' },
   { quando: `${REGRAS.testeDias} dias`, titulo: 'Tudo liberado', texto: 'Agenda, equipe, WhatsApp, comanda e link funcionando de verdade para você avaliar.' },
   { quando: '2 dias antes', titulo: 'A MIMO lembra você', texto: 'A gente avisa que o período está acabando. Nenhuma cobrança é feita sozinha.' },
   { quando: `Dia ${REGRAS.testeDias + 1}`, titulo: 'Fim do teste', texto: `Sem renovação, o salão entra por ${REGRAS.toleranciaDias} dias em modo leitura: os horários marcados continuam valendo, mas o link não recebe novos agendamentos.` },
@@ -32,6 +32,17 @@ export function avisoDoAcesso(acesso, { dona = true } = {}) {
   if (!acesso) return null
   const dias = Number(acesso.dias ?? 0)
 
+  if (acesso.fase === 'teste' && acesso.aguardando_configuracao) {
+    return {
+      tom: 'calmo',
+      selo: 'Teste grátis',
+      titulo: `Seus ${REGRAS.testeDias} dias grátis começam quando a agenda estiver pronta`,
+      texto: dona
+        ? 'Cadastre os serviços e as profissionais: o relógio só começa a contar depois disso. Até lá, nada conta e nada é cobrado.'
+        : 'O salão ainda está montando a agenda.',
+      acao: dona ? { rotulo: 'Configurar a agenda', to: '/admin/configurar' } : null,
+    }
+  }
   if (acesso.fase === 'teste') {
     return {
       tom: dias <= 2 ? 'atencao' : 'calmo',

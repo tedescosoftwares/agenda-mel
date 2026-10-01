@@ -137,7 +137,7 @@ export default function AdminAjustes() {
           <span className="aj-salao-logo"><CreditCard size={22} /></span>
           <div className="aj-salao-quem">
             <strong>Plano e assinatura</strong>
-            <span className="muted">{acesso?.fase === 'teste' ? `Teste grátis: faltam ${acesso.dias} dias` : acesso?.fase === 'leitura' ? 'Modo leitura: assine pra voltar a receber' : acesso?.fase === 'ativa' ? 'Assinatura em dia' : 'Valores, teste grátis e como funciona'}</span>
+            <span className="muted">{acesso?.fase === 'teste' ? (acesso.aguardando_configuracao ? 'Teste grátis: começa com a agenda pronta' : `Teste grátis: faltam ${acesso.dias} dias`) : acesso?.fase === 'leitura' ? 'Modo leitura: assine pra voltar a receber' : acesso?.fase === 'ativa' ? 'Assinatura em dia' : 'Valores, teste grátis e como funciona'}</span>
           </div>
           <span className="icon-btn" aria-hidden="true"><ChevronRight size={18} /></span>
         </Link>

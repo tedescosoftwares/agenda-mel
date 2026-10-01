@@ -536,16 +536,19 @@ function ModalCnpj({ dados, onFechar }) {
     <div className="modal-fundo ob-modal-fundo" onClick={onFechar}>
       <div className="modal-caixa ob-modal ob-modal-cnpj" onClick={(e) => e.stopPropagation()}>
         <button type="button" className="modal-fechar" onClick={onFechar} aria-label="Fechar"><X size={18} /></button>
-        <span className="ob-cnpj-selo"><Check size={14} /> CNPJ ativo na Receita</span>
+        <div className="ob-cnpj-status" role="status">
+          <span className="ob-cnpj-status-icone"><Check size={15} /></span>
+          <span><strong>CNPJ verificado</strong><small>Situação ativa na Receita Federal</small></span>
+        </div>
         <h3>Achamos o seu CNPJ 💗</h3>
-        <p className="muted">Já preenchemos o que a Receita nos contou. Dá uma conferida:</p>
+        <p className="muted">Já preenchemos os dados públicos encontrados. Dá uma conferida:</p>
         <dl className="ob-cnpj-lista">
           <div><dt>Razão social</dt><dd>{dados.razao_social}</dd></div>
           <div><dt>Nome fantasia</dt><dd>{dados.nome_fantasia || <span className="muted">sem nome fantasia na Receita</span>}</dd></div>
           {endereco && <div><dt>Endereço fiscal</dt><dd>{endereco}</dd></div>}
-          {dados.socios?.length > 0 && <div><dt>{dados.socios.length === 1 ? 'Sócia responsável' : 'Quadro de sócios'}</dt><dd>{dados.socios.join(', ')}</dd></div>}
+          {dados.socios?.length > 0 && <div><dt>Quadro societário</dt><dd>{dados.socios.join(', ')}</dd></div>}
         </dl>
-        <p className="ob-cnpj-nota">Só um detalhe: o nome fantasia é o que está na Receita e fica guardado aqui, no cadastro. <strong>O nome que a cliente vê você escolhe no próximo passo</strong>, quando for montar a cara do seu espaço. Pode ser esse mesmo ou outro, do seu jeito.</p>
+        <p className="ob-cnpj-nota">Só um detalhe: o nome fantasia é o que está na Receita e fica guardado aqui, no cadastro. <strong>O nome exibido para seus clientes você escolhe no próximo passo</strong>, quando for montar a identidade do seu espaço. Pode ser esse mesmo ou outro, do seu jeito.</p>
         <div className="ob-modal-acoes"><button type="button" className="btn btn-primary" onClick={onFechar}>Entendi, vamos seguir <ArrowRight size={16} /></button></div>
       </div>
     </div>

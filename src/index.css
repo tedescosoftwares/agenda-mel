@@ -12253,3 +12253,168 @@ label.switch:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
     display:none;
   }
 }
+
+
+/* ==========================================================================
+   HOME MOCK FIT 2.83.4
+   Corrige proporções vistas no print real e aproxima o desktop do mock.
+   ========================================================================== */
+@media (min-width:1100px) {
+  .admin-home-primeiro-topo {
+    grid-template-columns:minmax(0,1.25fr) minmax(220px,.52fr) minmax(190px,.38fr);
+    gap:14px;
+  }
+
+  .admin-home-primeiro-falta {
+    min-height:50px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:8px 10px;
+    border-radius:12px;
+    color:#ff2d7a;
+    background:linear-gradient(145deg,#fff5f9,#fff0f6);
+  }
+
+  .admin-home-primeiro-falta > span {
+    min-width:0;
+    display:grid;
+    gap:1px;
+  }
+
+  .admin-home-primeiro-falta strong {
+    font-size:.61rem;
+  }
+
+  .admin-home-primeiro-falta small {
+    color:#9a8591;
+    font-size:.49rem;
+  }
+
+  .admin-home-primeiro-grade {
+    align-items:start;
+  }
+
+  .admin-home-primeiro-agenda {
+    min-height:0;
+    height:348px;
+  }
+
+  .admin-home-primeiro-vazio {
+    min-height:0;
+    height:270px;
+    align-content:center;
+  }
+
+  .admin-home-agenda-art {
+    width:155px;
+    max-height:118px;
+    margin-bottom:0;
+  }
+
+  .admin-home-primeiro-centro,
+  .admin-home-primeiro-lateral {
+    align-self:start;
+  }
+
+  .admin-home-agora-primeiro {
+    min-height:0;
+  }
+
+  .admin-home-primeiro-explica {
+    min-height:0;
+  }
+
+  .admin-home-acoes-primeiro {
+    min-height:0;
+  }
+
+  .admin-home-compartilhar {
+    min-height:0;
+  }
+
+  .admin-home-primeiro-ajuda {
+    min-height:98px;
+    padding-right:96px;
+  }
+
+  .admin-home-mel {
+    right:3px;
+    bottom:0;
+    width:92px;
+    height:88px;
+  }
+
+  .admin-home-mel-balao {
+    right:70px;
+    top:7px;
+  }
+
+  .admin-sidebar-plano {
+    grid-template-columns:36px minmax(0,1fr);
+  }
+
+  .admin-sidebar-plano > span:nth-child(2) {
+    min-width:0;
+    display:grid;
+    gap:1px;
+  }
+
+  .admin-sidebar-plano strong,
+  .admin-sidebar-plano small {
+    display:block;
+  }
+
+  .admin-sidebar-plano small {
+    margin-top:2px;
+  }
+
+  .admin-home-primeiro-grade {
+    grid-auto-rows:auto;
+  }
+}
+
+.admin-home-loading {
+  gap:12px;
+}
+
+.admin-home-skeleton {
+  position:relative;
+  overflow:hidden;
+  border:1px solid #eee7ef;
+  border-radius:22px;
+  background:#fff;
+}
+
+.admin-home-skeleton::after {
+  content:'';
+  position:absolute;
+  inset:0;
+  transform:translateX(-100%);
+  background:linear-gradient(90deg,transparent,rgba(255,45,122,.055),transparent);
+  animation:mimo-home-skeleton 1.1s ease-in-out infinite;
+}
+
+.admin-home-skeleton.hero { height:280px; }
+.admin-home-skeleton.passos { height:168px; }
+.admin-home-skeleton-grid {
+  display:grid;
+  grid-template-columns:minmax(0,1.15fr) minmax(330px,.95fr) minmax(285px,.72fr);
+  gap:10px;
+}
+.admin-home-skeleton.agenda,
+.admin-home-skeleton.centro,
+.admin-home-skeleton.lateral { height:340px; }
+
+@keyframes mimo-home-skeleton {
+  to { transform:translateX(100%); }
+}
+
+@media (max-width:1099px) {
+  .admin-home-skeleton.hero { height:230px; }
+  .admin-home-skeleton.passos { height:160px; }
+  .admin-home-skeleton-grid { grid-template-columns:1fr; }
+  .admin-home-skeleton.agenda,
+  .admin-home-skeleton.centro,
+  .admin-home-skeleton.lateral { height:180px; }
+}

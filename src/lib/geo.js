@@ -6,14 +6,26 @@
 
 import { temGoogleMaps, carregarGoogleMaps } from './googleMaps'
 
-async function geocodificarGoogle(q) {
+async function geocodificarGoogle(q, restricoes = {}) {
   const g = await carregarGoogleMaps()
-  const geo = new g.Geocoder()
-  const { results } = await geo.geocode({ address: q, region: 'br', componentRestrictions: { country: 'BR' }, language: 'pt-BR' })
+  const geocoder = new g.Geocoder()
+  const { results } = await geocoder.geocode({
+    address: q,
+    region: 'br',
+    language: 'pt-BR',
+    componentRestrictions: { country: 'BR', ...restricoes },
+  })
   const h = results?.[0]
   if (!h) return null
   const ll = h.geometry.location
-  return { lat: arredondar(ll.lat()), lng: arredondar(ll.lng()), rotulo: h.formatted_address ?? '' }
+  return {
+    lat: arredondar(ll.lat()),
+    lng: arredondar(ll.lng()),
+    rotulo: h.formatted_address ?? '',
+    precisao: h.geometry?.location_type ?? '',
+    parcial: Boolean(h.partial_match),
+    placeId: h.place_id ?? '',
+  }
 }
 
 export const limparCep = (t) => String(t ?? '').replace(/\D/g, '').slice(0, 8)
@@ -57,6 +69,36 @@ export async function geocodificar(texto) {
   const h = Array.isArray(j) ? j[0] : null
   if (!h) return null
   return { lat: arredondar(h.lat), lng: arredondar(h.lon), rotulo: h.display_name ?? '' }
+}
+
+// endereço estruturado do salão. Quando há Google, o CEP entra também como
+// restrição na primeira tentativa: evita homônimos de rua/bairro e melhora muito
+// a chance de cair no número certo. Se o CEP da base estiver inconsistente,
+// tentamos de novo sem ele em vez de mandar a pessoa para o centro da cidade.
+export async function geocodificarEndereco({ address = '', bairro = '', city = '', uf = '', cep = '' } = {}) {
+  const rua = String(address ?? '').replace(/\s+/g, ' ').trim()
+  const bairroLimpo = String(bairro ?? '').replace(/\s+/g, ' ').trim()
+  const cidade = String(city ?? '').replace(/\s+/g, ' ').trim()
+  const estado = String(uf ?? '').replace(/\s+/g, ' ').trim().toUpperCase()
+  const postal = limparCep(cep)
+  if (!rua && !cidade && postal.length !== 8) return null
+
+  const consulta = [rua, bairroLimpo, cidade, estado, postal.length === 8 ? postal : '', 'Brasil'].filter(Boolean).join(', ')
+
+  if (temGoogleMaps()) {
+    if (postal.length === 8) {
+      try {
+        const exato = await geocodificarGoogle(consulta, { postalCode: postal })
+        if (exato) return exato
+      } catch { /* CEP pode estar inconsistente; tenta a consulta normal abaixo */ }
+    }
+    try {
+      const normal = await geocodificarGoogle(consulta)
+      if (normal) return normal
+    } catch { /* cai no provedor de fallback */ }
+  }
+
+  return geocodificar(consulta)
 }
 
 // a posição do aparelho, uma vez. Pede permissão na hora do toque.

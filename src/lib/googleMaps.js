@@ -33,4 +33,10 @@ export const PINO_SVG = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xm
 export const ESTILO_MAPA = [
   { featureType: 'poi', elementType: 'labels', stylers: [{ visibility: 'off' }] },
   { featureType: 'transit', elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
+  { featureType: 'landscape', elementType: 'geometry', stylers: [{ color: '#faf8fb' }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#ffffff' }] },
+  { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#ece7ee' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#eaf4f7' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#655b68' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#ffffff' }] },
 ]

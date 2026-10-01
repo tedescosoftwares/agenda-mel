@@ -8,7 +8,8 @@
 -- continua o mesmo. E a casa pode decidir pelo quadro, na hora.
 
 -- 1. A regra do salão ---------------------------------------------------------
-alter table public.salons add column if not exists aceite_modo text not null default 'profissional';
+alter table public.salons add column if not exists aceite_modo text not null default 'casa';
+alter table public.salons alter column aceite_modo set default 'casa';
 alter table public.salons add column if not exists minutos_para_aceitar integer not null default 120;
 alter table public.salons add column if not exists ao_expirar text not null default 'confirma';
 do $$ begin

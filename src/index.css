@@ -9926,3 +9926,170 @@ label.switch:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
     font-size:.61rem;
   }
 }
+
+
+/* ==========================================================================
+   ATIVAÇÃO · SUCESSO COM PRÓXIMO PASSO
+   O salão entra no ar, mas a tela já prepara a pessoa para configurar a agenda.
+   ========================================================================== */
+.ai-sucesso-guiado {
+  max-width:760px;
+  min-height:auto;
+  padding:18px 0 34px;
+}
+.ai-sucesso-guiado .ai-sucesso-check {
+  width:68px;
+  height:68px;
+  margin-bottom:.8rem;
+  border-radius:22px;
+}
+.ai-sucesso-guiado h1 {
+  max-width:650px;
+  font-size:clamp(2rem,4.6vw,3.1rem);
+}
+.ai-sucesso-guiado > p {
+  margin:.35rem auto 0;
+}
+.ai-sucesso-guiado .ai-sucesso-itens {
+  margin:.85rem 0 1rem;
+}
+.ai-proximo-passo {
+  width:min(720px,100%);
+  margin:.15rem auto 1.05rem;
+  padding:18px;
+  border:1px solid rgba(92,59,101,.10);
+  border-radius:20px;
+  background:rgba(255,255,255,.80);
+  box-shadow:0 16px 44px rgba(72,42,80,.07);
+  text-align:left;
+}
+.ai-proximo-topo {
+  display:flex;
+  align-items:flex-start;
+  gap:11px;
+  padding-bottom:14px;
+  border-bottom:1px solid #f0e9f1;
+}
+.ai-proximo-icone {
+  width:36px;
+  height:36px;
+  flex:none;
+  display:grid;
+  place-items:center;
+  border-radius:11px;
+  color:#ff2d7a;
+  background:#fff0f6;
+  border:1px solid #ffd2e2;
+}
+.ai-proximo-topo > span:last-child {
+  display:grid;
+  gap:3px;
+}
+.ai-proximo-topo strong {
+  color:#332638;
+  font-size:.92rem;
+}
+.ai-proximo-topo small {
+  color:#7b7080;
+  font-size:.76rem;
+  line-height:1.45;
+}
+.ai-proximo-etapas {
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:9px;
+  margin-top:12px;
+}
+.ai-proximo-etapas > span {
+  position:relative;
+  min-width:0;
+  display:grid;
+  grid-template-columns:auto 1fr;
+  grid-template-areas:
+    "icone conteudo"
+    "numero conteudo";
+  column-gap:9px;
+  row-gap:4px;
+  align-items:start;
+  padding:12px;
+  border:1px solid #eee7ef;
+  border-radius:14px;
+  background:#fff;
+}
+.ai-proximo-etapas i {
+  grid-area:icone;
+  width:28px;
+  height:28px;
+  display:grid;
+  place-items:center;
+  border-radius:9px;
+  background:#fff4f8;
+  color:#ff2d7a;
+  font-style:normal;
+}
+.ai-proximo-etapas b {
+  grid-area:numero;
+  width:28px;
+  color:#b6aab9;
+  font-size:.62rem;
+  text-align:center;
+  font-weight:800;
+}
+.ai-proximo-etapas em {
+  grid-area:conteudo;
+  min-width:0;
+  display:grid;
+  gap:2px;
+  font-style:normal;
+}
+.ai-proximo-etapas em strong {
+  color:#3e3043;
+  font-size:.78rem;
+}
+.ai-proximo-etapas em small {
+  color:#8b808f;
+  font-size:.67rem;
+  line-height:1.35;
+}
+.ai-proximo-passo > p {
+  margin:12px 2px 0;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  color:#6f6274;
+  font-size:.72rem;
+}
+.ai-proximo-passo > p svg { color:#ff2d7a; flex:none; }
+.ai-entrar-tour {
+  min-width:300px;
+}
+.ai-sucesso-ajuda {
+  margin-top:.55rem;
+  color:#9a8fa0;
+  font-size:.68rem;
+}
+@media (max-width:760px) {
+  .ai-sucesso-guiado {
+    min-height:auto;
+    padding-bottom:24px;
+  }
+  .ai-proximo-passo {
+    padding:14px;
+    border-radius:17px;
+  }
+  .ai-proximo-etapas {
+    grid-template-columns:1fr;
+  }
+  .ai-proximo-etapas > span {
+    grid-template-columns:auto auto 1fr;
+    grid-template-areas:"numero icone conteudo";
+    align-items:center;
+  }
+  .ai-proximo-etapas b {
+    width:20px;
+  }
+  .ai-entrar-tour {
+    width:100%;
+    min-width:0;
+  }
+}

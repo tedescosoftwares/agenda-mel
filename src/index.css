@@ -12126,3 +12126,130 @@ label.switch:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
     min-height:245px;
   }
 }
+
+
+/* ==========================================================================
+   MEL + AGENDA ART 2.83.3
+   Acabamento visual do primeiro acesso inspirado no mock aprovado.
+   ========================================================================== */
+@media (min-width:1100px) {
+  .admin-home-primeiro-vazio {
+    position:relative;
+    padding-top:12px;
+  }
+
+  .admin-home-agenda-art {
+    display:block;
+    width:178px;
+    height:auto;
+    margin:0 auto 2px;
+    object-fit:contain;
+    filter:drop-shadow(0 12px 18px rgba(255,45,122,.08));
+    mix-blend-mode:multiply;
+  }
+
+  .admin-home-primeiro-vazio > strong {
+    margin-top:0;
+  }
+
+  .admin-home-primeiro-ajuda {
+    min-height:112px;
+    padding:12px 102px 12px 12px;
+    grid-template-columns:30px minmax(0,1fr);
+    grid-template-rows:auto auto;
+    align-items:start;
+    background:
+      radial-gradient(210px 130px at 100% 100%,rgba(255,45,122,.10),transparent 72%),
+      linear-gradient(145deg,#fff 0%,#fff9fc 100%) !important;
+  }
+
+  .admin-home-primeiro-ajuda > div {
+    padding-right:2px;
+  }
+
+  .admin-home-primeiro-ajuda a {
+    grid-column:2;
+    margin-top:4px;
+    width:max-content;
+    min-height:30px;
+    padding:0 9px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    border:1px solid #f0dce5;
+    border-radius:9px;
+    background:#fff;
+  }
+
+  .admin-home-mel {
+    position:absolute;
+    right:0;
+    bottom:0;
+    width:98px;
+    height:84px;
+    object-fit:cover;
+    object-position:center 28%;
+    border-radius:18px 18px 16px 16px;
+    filter:saturate(.98) contrast(.98);
+    box-shadow:-10px -8px 24px rgba(61,12,78,.04);
+  }
+
+  .admin-home-mel-balao {
+    position:absolute;
+    right:76px;
+    top:8px;
+    z-index:2;
+    max-width:78px;
+    padding:5px 7px;
+    border:1px solid #f2dce5;
+    border-radius:999px 999px 6px 999px;
+    background:#fff;
+    color:#7a3b63;
+    font-size:.47rem;
+    line-height:1.25;
+    text-align:center;
+    box-shadow:0 6px 16px rgba(61,12,78,.06);
+  }
+
+  .admin-home-mel-balao b {
+    color:#ff2d7a;
+  }
+
+  .admin-home-primeiro-grade {
+    align-items:stretch;
+  }
+
+  .admin-home-primeiro-lateral {
+    align-self:stretch;
+  }
+
+  .admin-home-compartilhar {
+    min-height:126px;
+  }
+
+  .admin-home-acoes-primeiro {
+    min-height:118px;
+  }
+}
+
+@media (max-width:1099px) {
+  .admin-home-agenda-art {
+    display:block;
+    width:min(190px,62vw);
+    height:auto;
+    margin:0 auto 4px;
+    object-fit:contain;
+  }
+
+  .admin-home-mel {
+    width:84px;
+    height:72px;
+    object-fit:cover;
+    object-position:center 28%;
+    border-radius:16px;
+  }
+
+  .admin-home-mel-balao {
+    display:none;
+  }
+}

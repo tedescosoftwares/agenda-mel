@@ -14,14 +14,15 @@ let guardado = null   // { salao, em, dados }: só na memória, para atualizar a
 export async function pedirMel(salaoId, { forcar = false } = {}) {
   if (!salaoId) return null
   if (isDemo) return demoMel()
-  if (!forcar && guardado && guardado.salao === salaoId && Date.now() - guardado.em < VALIDADE) return guardado.dados
+  const tela = window.location.pathname
+  if (!forcar && guardado && guardado.salao === salaoId && guardado.tela === tela && Date.now() - guardado.em < VALIDADE) return guardado.dados
   if (emVoo) return emVoo
   emVoo = (async () => {
     try {
       let tourFeito = false
       try { tourFeito = localStorage.getItem('mimo-tour-painel-concluido') === '1' } catch { /* nada */ }
-      const dados = await chamar('mel', { salao: salaoId, tour_feito: tourFeito })
-      guardado = { salao: salaoId, em: Date.now(), dados }
+      const dados = await chamar('mel', { salao: salaoId, tour_feito: tourFeito, tela })
+      guardado = { salao: salaoId, tela, em: Date.now(), dados }
       try { localStorage.removeItem(CHAVE + '-erro') } catch { /* nada */ }
       if (!dados?.bubble) console.info('[mel] motor respondeu sem fala: nenhuma frase serviu para os momentos de agora', dados)
       return dados
@@ -48,6 +49,16 @@ export async function marcarMel(exibicao, evento, por = null) {
 }
 
 // ---- as ações semânticas → o que o app faz ----
+// o mini guia do que falta (2.90): a chave que o motor devolve → rótulo e tela
+export const PENDENCIAS = {
+  servicos: { rotulo: 'Serviços', rota: '/admin/servicos' },
+  equipe: { rotulo: 'Profissionais', rota: '/admin/equipe' },
+  acesso_equipe: { rotulo: 'Acesso da equipe', rota: '/admin/equipe' },
+  horarios: { rotulo: 'Horários', rota: '/admin/horarios' },
+  agendamento: { rotulo: 'Agendamento de teste', rota: '/admin/agenda?encaixe=1' },
+  avisos: { rotulo: 'Avisos no celular', rota: '/admin/ajustes' },
+}
+
 export const ROTULO_ACAO = {
   VER_PEDIDOS: 'Ver pedidos', ABRIR_AGENDA: 'Abrir agenda', VER_AMANHA: 'Ver amanhã', DIVULGAR_VAGA: 'Divulgar horário',
   OFERTAR_VAGA_LISTA: 'Oferecer à lista de espera', PEDIR_CONFIRMACAO: 'Confirmar horários', ENCAIXAR: 'Encaixar',
@@ -130,10 +141,14 @@ function demoMel() {
     dia_fechado: { texto: 'Sete atendidas hoje. Dia encerrado.', tom: 'comemorando', nivel: 'dispensavel', categoria: 'marco', acao: { type: 'VER_AMANHA', payload: { dia: new Date(Date.now() + 864e5).toISOString().slice(0, 10) } } },
     calor_extremo: { texto: '35 graus e secador ligado. Você é forte.', tom: 'cansada', nivel: 'dispensavel', categoria: 'clima', acao: null },
     contexto_comum: { texto: 'Sexta à tarde e a agenda andando.', tom: 'feliz', nivel: 'dispensavel', categoria: 'clima', acao: null },
+    guia_servicos: { texto: 'Você está em Serviços: cadastra o que faz, com nome, duração e preço. Ainda falta: serviços e profissionais.', tom: 'atenta', nivel: 'importante', categoria: 'configuracao', acao: null },
     configurar_servicos: { texto: 'Sem serviço cadastrado a agenda não abre. Vamos nessa?', tom: 'atenta', nivel: 'importante', categoria: 'configuracao', acao: { type: 'IR_CONFIGURAR', payload: { passo: 'servicos' } } },
     tour_pendente: { texto: 'Quer que eu te mostre o painel? Leva 1 minuto.', tom: 'feliz', nivel: 'dispensavel', categoria: 'configuracao', acao: { type: 'FAZER_TOUR', payload: {} } },
     configuracao_concluida: { texto: 'Salão montado! Agora é só deixar a agenda rodar.', tom: 'comemorando', nivel: 'dispensavel', categoria: 'configuracao', acao: null },
   }
+  // no demo, na tela de serviços o guia da tela assume
+  if (window.location.pathname === '/admin/servicos' && chave.startsWith('configurar')) chave = 'guia_servicos'
   const m = todos[chave] ?? todos.proxima_cliente_em_breve
-  return { bubble: { exibicao: 'demo', chave, ...m, avatar_key: `${clima}_${m.tom}` }, card: { exibicao: 'demo', chave: 'contexto_comum', texto: 'Céu cinza, mas a sua cliente vai sair daqui colorida.' }, clima: null }
+  const pend = m.categoria === 'configuracao' && chave !== 'configuracao_concluida' ? ['servicos', 'equipe', 'agendamento'] : undefined
+  return { bubble: { exibicao: 'demo', chave, ...m, pendencias: pend, avatar_key: `${clima}_${m.tom}` }, card: { exibicao: 'demo', chave: 'contexto_comum', texto: 'Céu cinza, mas a sua cliente vai sair daqui colorida.' }, clima: null }
 }

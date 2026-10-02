@@ -15597,3 +15597,12 @@ label.switch:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
 .guia-mel img { width: 92px; height: 92px; border-radius: 50%; object-fit: cover; object-position: 50% 12%; box-shadow: 0 0 0 4px #fff, 0 12px 28px rgba(255, 45, 122, .22); }
 .guia-mel-balao { max-width: 240px; padding: 8px 14px; border-radius: 16px 16px 4px 16px; background: #fff; color: #ff2d7a; font-size: .8rem; font-weight: 700; line-height: 1.25; box-shadow: 0 8px 20px rgba(85, 35, 79, .14); margin-bottom: 44px; }
 @media (max-width: 640px) { .guia-mel { min-height: 0; } .guia-mel img { width: 64px; height: 64px; } .guia-mel-balao { margin-bottom: 24px; } }
+
+/* o mini guia do que falta, dentro do cartão da Mel (2.90) */
+.fa-mel-pendencias { list-style: none; margin: 2px 0 0; padding: 0; display: grid; gap: 4px; }
+.fa-mel-pendencias li { display: flex; align-items: center; gap: 8px; font-size: .78rem; }
+.fa-mel-pendencias li::before { content: ''; width: 8px; height: 8px; border-radius: 50%; border: 2px solid #ffb3cf; flex: none; }
+.fa-mel-pendencias li.aqui::before { background: #ff2d7a; border-color: #ff2d7a; }
+.fa-mel-pendencias a { color: #5b4566; text-decoration: none; font-weight: 600; }
+.fa-mel-pendencias a:hover { color: #ff2d7a; }
+.fa-mel-pendencias small { color: #ff2d7a; font-size: .68rem; font-weight: 700; }

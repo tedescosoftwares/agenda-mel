@@ -6,7 +6,7 @@
 //         → avatar_key + ação semântica
 //           → registra em mel_exibicoes (snapshot do template)
 //
-// Chamada pelo app logado: POST { salao: uuid, tour_feito?: boolean }. Resposta:
+// Chamada pelo app logado: POST { salao: uuid, tour_feito?: boolean, tela?: '/admin/servicos' }. Resposta:
 //   { bubble: { exibicao, chave, categoria, nivel, texto, tom, avatar_key, acao } | null,
 //     card:   { exibicao, chave, texto } | null,
 //     clima:  o que está no cache (a função clima enche) }
@@ -15,7 +15,7 @@
 // de sempre.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { avaliar, type Ctx, type Vencedor } from './momentos.ts'
+import { avaliar, pendencias, type Ctx, type Vencedor } from './momentos.ts'
 
 const URL_SUPABASE = Deno.env.get('SUPABASE_URL') ?? ''
 const CHAVE_ANON = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return json({ ok: true })
   const auth = req.headers.get('Authorization') ?? ''
   if (!auth) return json({ erro: 'não autorizado' }, 401)
-  let corpo: { salao?: string; tour_feito?: boolean } = {}
+  let corpo: { salao?: string; tour_feito?: boolean; tela?: string } = {}
   try { corpo = await req.json() } catch { /* vazio */ }
   const salao = String(corpo.salao ?? '')
   if (!salao) return json({ erro: 'salao obrigatório' }, 400)
@@ -75,7 +75,7 @@ Deno.serve(async (req) => {
   const quem = createClient(URL_SUPABASE, CHAVE_ANON, { global: { headers: { Authorization: auth } }, auth: { persistSession: false } })
   const [{ data: ctx, error }, { data: passos }] = await Promise.all([quem.rpc('mel_contexto', { salao }), quem.rpc('primeiros_passos', { salao })])
   if (error) return json({ erro: error.message }, 400)
-  const c = { ...(ctx as Ctx), configuracao: passos ?? null, extra: { tour_feito: corpo.tour_feito } } as Ctx
+  const c = { ...(ctx as Ctx), configuracao: passos ?? null, extra: { tour_feito: corpo.tour_feito, tela: String(corpo.tela ?? '').split('?')[0] } } as Ctx
 
   // a biblioteca (o motor lê tudo; RLS é para a Plataforma)
   const servico = createClient(URL_SUPABASE, CHAVE_SERVICO, { auth: { persistSession: false } })
@@ -99,7 +99,7 @@ Deno.serve(async (req) => {
       frase_id: f.id, texto_template_snapshot: f.texto, avatar_key: avatarKey(c, v.tom), acao: v.acao,
     }
     registros.push(registro)
-    const saida = { chave: v.momento.chave, categoria: v.momento.categoria, nivel: v.momento.nivel, texto, tom: v.tom, avatar_key: registro.avatar_key, acao: v.acao, pontos: v.pontos }
+    const saida = { chave: v.momento.chave, categoria: v.momento.categoria, nivel: v.momento.nivel, texto, tom: v.tom, avatar_key: registro.avatar_key, acao: v.acao, pontos: v.pontos, pendencias: v.momento.categoria === 'configuracao' ? pendencias(c) : undefined }
     if (superficie === 'mel_bubble') resposta.bubble = saida; else resposta.card = { chave: saida.chave, texto }
   }
   if (registros.length) {

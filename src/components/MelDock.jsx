@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import { supabase, isDemo } from '../lib/supabase'
 import { climaDoSalao, fraseDoTempo } from '../lib/clima'
 import { avatarDaMel, imagemDaMel, MEL_PADRAO } from '../lib/mel'
-import { pedirMel, marcarMel, executarAcao, esquecerMel, ROTULO_ACAO } from '../lib/melMotor'
+import { pedirMel, marcarMel, executarAcao, esquecerMel, ROTULO_ACAO, PENDENCIAS } from '../lib/melMotor'
 
 // A Mel no canto (2.88): fechada é só o recorte dela com um "oi" curto.
 // Passou o mouse (ou tocou), expande no cartão com a fala do momento, o
@@ -93,6 +93,13 @@ export default function MelDock({ escopo = 'tudo' }) {
       <div className="fa-mel-dock-copy">
         <div className="fa-mel-titulo"><i><Sparkles size={17} /></i><h3>{fala?.acao ? 'A Mel sugere' : 'A Mel por aqui'}</h3></div>
         {fala?.texto && <p className="fa-mel-fala">{fala.texto}</p>}
+        {fala?.pendencias?.length > 0 && (
+          <ul className="fa-mel-pendencias" aria-label="O que ainda falta">
+            {fala.pendencias.map((k) => { const p = PENDENCIAS[k]; if (!p) return null; const aqui = pathname === p.rota.split('?')[0]; return (
+              <li key={k} className={aqui ? 'aqui' : ''}><Link to={p.rota} onClick={(e) => e.stopPropagation()}>{p.rotulo}</Link>{aqui && <small>você está aqui</small>}</li>
+            ) })}
+          </ul>
+        )}
         {retorno ? <p className="fa-mel-retorno">{retorno}</p> : fala?.acao && <button type="button" className="fa-mel-acao" onClick={agir} disabled={rodando}>{rodando ? 'Um instante…' : (ROTULO_ACAO[fala.acao.type] ?? 'Ver')}</button>}
         <Link to="/admin/guia" className="fa-mel-ajuda" onClick={(e) => e.stopPropagation()}><Headphones size={13} /> Central de ajuda <ExternalLink size={12} /></Link>
       </div>

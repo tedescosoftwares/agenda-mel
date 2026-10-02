@@ -22,8 +22,8 @@ export type Ctx = {
   historico: { primeira_vez: boolean; recentes: Array<{ chave: string; identidade: string | null; superficie: string; frase_id: string | null; mostrada_em: string; dispensada_em: string | null; clicada_em: string | null; concluida_em: string | null }> }
   // primeiros_passos() (só a dona recebe): servicos, equipe, equipe_pendente, agendamentos, avisos, horarios, dados, onboarding_concluido_em
   configuracao?: Record<string, any> | null
-  // o que só o app sabe (vem no corpo da chamada): tour_feito
-  extra?: { tour_feito?: boolean } | null
+  // o que só o app sabe (vem no corpo da chamada): tour_feito e a tela aberta
+  extra?: { tour_feito?: boolean; tela?: string } | null
 }
 
 export type Dados = Record<string, string | number | boolean | null | undefined>
@@ -50,6 +50,32 @@ const fimDeSemana = (c: Ctx) => c.agora.dia_semana === 5 || c.agora.dia_semana =
 const semanaNome = (dow: number) => ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'][dow] ?? ''
 const reais = (cents: unknown) => 'R$ ' + Math.round(n(cents) / 100).toLocaleString('pt-BR')
 const horaCurta = (h: string | null | undefined) => (h ? h.replace(':00', 'h').replace(':', 'h') : '')
+
+// o que ainda falta na configuração, na ordem dos passos (chaves que o app
+// sabe transformar em tela) e por extenso para a frase
+export function pendencias(c: Ctx): string[] {
+  const k = c.configuracao
+  if (!k) return []
+  const lista: string[] = []
+  if (n(k.servicos) === 0) lista.push('servicos')
+  if (c.salao.tipo === 'salao' && n(k.equipe) === 0) lista.push('equipe')
+  if (c.salao.tipo === 'salao' && n(k.equipe) > 0 && n(k.equipe_pendente) > 0) lista.push('acesso_equipe')
+  if (k.horarios === false) lista.push('horarios')
+  if (n(k.agendamentos) === 0 && n(k.servicos) > 0 && (c.salao.tipo !== 'salao' || n(k.equipe) > 0)) lista.push('agendamento')
+  if (k.avisos === false) lista.push('avisos')
+  return lista
+}
+const NOME_PENDENCIA: Record<string, string> = { servicos: 'serviços', equipe: 'profissionais', acesso_equipe: 'acesso da equipe', horarios: 'horários', agendamento: 'agendamento de teste', avisos: 'avisos no celular' }
+export function porExtenso(lista: string[]): string {
+  const nomes = lista.map((x) => NOME_PENDENCIA[x] ?? x)
+  if (nomes.length <= 1) return nomes[0] ?? ''
+  return nomes.slice(0, -1).join(', ') + ' e ' + nomes[nomes.length - 1]
+}
+// os placeholders comuns a todo momento de configuração
+function dadosConfig(c: Ctx, extra: Dados = {}): Dados {
+  const lista = pendencias(c)
+  return { nome: c.pessoa.nome ?? '', faltam: lista.length, faltam_lista: porExtenso(lista), ...extra }
+}
 
 export const MOMENTOS: Momento[] = [
   // ------------------------------------------------------------ operacional
@@ -359,31 +385,31 @@ export const MOMENTOS: Momento[] = [
   // ------------------------------------------------------------ configuração inicial (só a dona vê)
   {
     chave: 'configurar_servicos', categoria: 'configuracao', nivel: 'importante', base: 75, superficies: ['mel_bubble'], tom: 'atenta', cooldownMin: 0,
-    detectar: (c) => (c.configuracao && n(c.configuracao.servicos) === 0 ? { nome: c.pessoa.nome ?? '' } : null),
+    detectar: (c) => (c.configuracao && n(c.configuracao.servicos) === 0 ? dadosConfig(c) : null),
     identidade: (_d, c) => c.agora.data,
     acao: () => ({ type: 'IR_CONFIGURAR', payload: { passo: 'servicos' } }),
   },
   {
     chave: 'configurar_equipe', categoria: 'configuracao', nivel: 'importante', base: 72, superficies: ['mel_bubble'], tom: 'atenta', cooldownMin: 0,
-    detectar: (c) => (c.configuracao && c.salao.tipo === 'salao' && n(c.configuracao.servicos) > 0 && n(c.configuracao.equipe) === 0 ? { nome: c.pessoa.nome ?? '', n_servicos: c.configuracao.servicos } : null),
+    detectar: (c) => (c.configuracao && c.salao.tipo === 'salao' && n(c.configuracao.servicos) > 0 && n(c.configuracao.equipe) === 0 ? dadosConfig(c, { n_servicos: c.configuracao.servicos }) : null),
     identidade: (_d, c) => c.agora.data,
     acao: () => ({ type: 'IR_CONFIGURAR', payload: { passo: 'equipe' } }),
   },
   {
     chave: 'equipe_sem_acesso', categoria: 'configuracao', nivel: 'dispensavel', base: 55, superficies: ['mel_bubble'], tom: 'atenta', cooldownMin: 0,
-    detectar: (c) => (c.configuracao && n(c.configuracao.equipe_pendente) > 0 ? { n: c.configuracao.equipe_pendente, profissional: '' } : null),
+    detectar: (c) => (c.configuracao && n(c.configuracao.equipe_pendente) > 0 ? dadosConfig(c, { n: c.configuracao.equipe_pendente, profissional: '' }) : null),
     identidade: (d, c) => `${c.agora.data}-${d.n}`,
     acao: () => ({ type: 'IR_CONFIGURAR', payload: { passo: 'equipe' } }),
   },
   {
     chave: 'agendamento_teste', categoria: 'configuracao', nivel: 'dispensavel', base: 60, superficies: ['mel_bubble'], tom: 'feliz', cooldownMin: 0,
-    detectar: (c) => (c.configuracao && n(c.configuracao.servicos) > 0 && (c.salao.tipo !== 'salao' || n(c.configuracao.equipe) > 0) && n(c.configuracao.agendamentos) === 0 ? { nome: c.pessoa.nome ?? '' } : null),
+    detectar: (c) => (c.configuracao && n(c.configuracao.servicos) > 0 && (c.salao.tipo !== 'salao' || n(c.configuracao.equipe) > 0) && n(c.configuracao.agendamentos) === 0 ? dadosConfig(c) : null),
     identidade: (_d, c) => c.agora.data,
     acao: () => ({ type: 'ENCAIXAR', payload: {} }),
   },
   {
     chave: 'ligar_avisos', categoria: 'configuracao', nivel: 'dispensavel', base: 45, superficies: ['mel_bubble'], tom: 'atenta', cooldownMin: 0,
-    detectar: (c) => (c.configuracao && c.configuracao.avisos === false && n(c.configuracao.agendamentos) > 0 ? { nome: c.pessoa.nome ?? '' } : null),
+    detectar: (c) => (c.configuracao && c.configuracao.avisos === false && n(c.configuracao.agendamentos) > 0 ? dadosConfig(c) : null),
     identidade: (_d, c) => c.agora.data,
     acao: () => ({ type: 'LIGAR_AVISOS', payload: {} }),
   },
@@ -402,6 +428,41 @@ export const MOMENTOS: Momento[] = [
       return { nome: c.pessoa.nome ?? '', n_servicos: k.servicos, n_equipe: k.equipe }
     },
     identidade: (_d, c) => c.salao.id,   // uma vez só, para sempre
+  },
+
+  // ------------------------------------------------------------ guia por tela (2.90): na tela do passo, instrução fixa
+  {
+    chave: 'guia_servicos', categoria: 'configuracao', nivel: 'importante', base: 95, superficies: ['mel_bubble'], tom: 'atenta', cooldownMin: 0,
+    detectar: (c) => (c.extra?.tela === '/admin/servicos' && c.configuracao && n(c.configuracao.servicos) === 0 ? dadosConfig(c) : null),
+    identidade: (_d, c) => c.agora.data,
+  },
+  {
+    chave: 'guia_equipe', categoria: 'configuracao', nivel: 'importante', base: 95, superficies: ['mel_bubble'], tom: 'atenta', cooldownMin: 0,
+    detectar: (c) => (c.extra?.tela === '/admin/equipe' && c.configuracao && c.salao.tipo === 'salao' && (n(c.configuracao.equipe) === 0 || n(c.configuracao.equipe_pendente) > 0) ? dadosConfig(c, { n_pendentes: c.configuracao.equipe_pendente ?? 0 }) : null),
+    identidade: (_d, c) => c.agora.data,
+  },
+  {
+    chave: 'guia_horarios', categoria: 'configuracao', nivel: 'importante', base: 95, superficies: ['mel_bubble'], tom: 'atenta', cooldownMin: 0,
+    detectar: (c) => (c.extra?.tela === '/admin/horarios' && c.configuracao && c.configuracao.horarios === false ? dadosConfig(c) : null),
+    identidade: (_d, c) => c.agora.data,
+  },
+  {
+    chave: 'guia_agenda', categoria: 'configuracao', nivel: 'importante', base: 95, superficies: ['mel_bubble'], tom: 'atenta', cooldownMin: 0,
+    detectar: (c) => (c.extra?.tela === '/admin/agenda' && c.configuracao && n(c.configuracao.servicos) > 0 && (c.salao.tipo !== 'salao' || n(c.configuracao.equipe) > 0) && n(c.configuracao.agendamentos) === 0 ? dadosConfig(c) : null),
+    identidade: (_d, c) => c.agora.data,
+  },
+  {
+    chave: 'guia_ajustes', categoria: 'configuracao', nivel: 'importante', base: 95, superficies: ['mel_bubble'], tom: 'atenta', cooldownMin: 0,
+    detectar: (c) => (c.extra?.tela === '/admin/ajustes' && c.configuracao && c.configuracao.avisos === false ? dadosConfig(c) : null),
+    identidade: (_d, c) => c.agora.data,
+  },
+  {
+    chave: 'guia_configurar', categoria: 'configuracao', nivel: 'importante', base: 95, superficies: ['mel_bubble'], tom: 'atenta', cooldownMin: 0,
+    detectar: (c) => {
+      if (c.extra?.tela !== '/admin/configurar' || !c.configuracao) return null
+      return pendencias(c).length > 0 ? dadosConfig(c) : null
+    },
+    identidade: (_d, c) => c.agora.data,
   },
 
   // ------------------------------------------------------------ o dia a dia e o primeiro oi

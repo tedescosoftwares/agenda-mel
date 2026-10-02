@@ -1,6 +1,6 @@
 // deno test supabase/functions/mel/momentos_test.ts
 import { assertEquals, assert } from 'https://deno.land/std@0.224.0/assert/mod.ts'
-import { avaliar, type Ctx } from './momentos.ts'
+import { avaliar, pendencias, porExtenso, type Ctx } from './momentos.ts'
 
 function ctx(extra: Partial<Ctx> & { hoje?: Record<string, unknown>; operacional?: Record<string, unknown>; amanha?: Record<string, unknown> } = {}): Ctx {
   const base: Ctx = {
@@ -111,4 +111,23 @@ Deno.test('configuração é persistente: volta mesmo mostrada há pouco e mesmo
   const fila = avaliar(ctx({ configuracao: { servicos: 0, equipe: 0, equipe_pendente: 0, agendamentos: 0, avisos: false }, extra: { tour_feito: false }, historico: { primeira_vez: false, recentes } }), 'mel_bubble')
   assertEquals(fila[0].momento.chave, 'configurar_servicos')
   assert(fila.some((v) => v.momento.chave === 'tour_pendente'))
+})
+
+Deno.test('guia por tela: na tela de serviços sem serviço, o guia vence; na agenda com tudo pronto e sem agendamento também', () => {
+  const cfg = { servicos: 0, equipe: 0, equipe_pendente: 0, agendamentos: 0, avisos: false, horarios: true }
+  const a = avaliar(ctx({ configuracao: cfg, extra: { tour_feito: true, tela: '/admin/servicos' } }), 'mel_bubble')
+  assertEquals(a[0].momento.chave, 'guia_servicos')
+  const b = avaliar(ctx({ configuracao: cfg, extra: { tour_feito: true, tela: '/admin/agenda' } }), 'mel_bubble')
+  assert(!b.some((v) => v.momento.chave.startsWith('guia_')))
+  assertEquals(b[0].momento.chave, 'configurar_servicos')
+  const c = avaliar(ctx({ configuracao: { ...cfg, servicos: 4, equipe: 2 }, extra: { tour_feito: true, tela: '/admin/agenda' } }), 'mel_bubble')
+  assertEquals(c[0].momento.chave, 'guia_agenda')
+})
+
+Deno.test('o que falta: lista na ordem dos passos e por extenso', () => {
+  const c = ctx({ configuracao: { servicos: 0, equipe: 0, equipe_pendente: 0, agendamentos: 0, avisos: false, horarios: false } })
+  assertEquals(pendencias(c), ['servicos', 'equipe', 'horarios', 'avisos'])
+  assertEquals(porExtenso(pendencias(c)), 'serviços, profissionais, horários e avisos no celular')
+  const g = avaliar(ctx({ configuracao: { servicos: 0, equipe: 0, equipe_pendente: 0, agendamentos: 0, avisos: true, horarios: true }, extra: { tour_feito: true, tela: '/admin/servicos' } }), 'mel_bubble')[0]
+  assertEquals(g.dados.faltam_lista, 'serviços e profissionais')
 })

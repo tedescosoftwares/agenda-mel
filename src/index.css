@@ -14865,3 +14865,194 @@ label.switch:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
     grid-template-rows:160px 130px 60px;
   }
 }
+
+
+/* ==========================================================================
+   FIRST ACCESS WORKSPACE 2.84.3
+   Header e conteúdo passam a compartilhar a mesma composição.
+   ========================================================================== */
+@media (min-width:1100px) {
+  .admin-shell-primeiro-acesso {
+    padding-left:220px;
+    background:
+      radial-gradient(900px 360px at 72% -100px,rgba(255,45,122,.08),transparent 72%),
+      linear-gradient(180deg,#fbf8fb 0%,#f7f4f8 100%);
+  }
+
+  .admin-first-workspace {
+    position:relative;
+    flex:1;
+    min-height:0;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+    background:
+      radial-gradient(820px 340px at 68% 0%,rgba(255,45,122,.055),transparent 72%),
+      linear-gradient(180deg,#fbf8fb 0%,#f8f5f9 100%);
+  }
+
+  .admin-first-workspace .topbar-admin-primeiro {
+    position:absolute;
+    top:14px;
+    left:18px;
+    right:18px;
+    z-index:50;
+    margin:0;
+    min-height:62px;
+    padding:8px 18px;
+    border:1px solid rgba(255,255,255,.72);
+    border-radius:18px;
+    background:rgba(255,255,255,.60);
+    box-shadow:
+      0 14px 34px rgba(58,34,65,.065),
+      inset 0 1px 0 rgba(255,255,255,.94);
+    backdrop-filter:blur(24px) saturate(1.16);
+    -webkit-backdrop-filter:blur(24px) saturate(1.16);
+  }
+
+  .admin-first-workspace .admin-content-primeiro {
+    flex:1;
+    min-height:0;
+    padding:92px 18px 26px !important;
+    background:transparent !important;
+  }
+
+  .admin-first-workspace .admin-content-primeiro .miolo {
+    max-width:1440px !important;
+  }
+
+  .admin-first-workspace .mimo-first {
+    gap:14px;
+  }
+
+  .admin-first-workspace .mimo-first-hero {
+    min-height:300px;
+    padding:32px 36px;
+    border-radius:28px;
+  }
+
+  .admin-first-workspace .mimo-first-hero h1 {
+    max-width:680px;
+    font-size:clamp(3.15rem,4vw,4.35rem);
+  }
+
+  .admin-first-workspace .mimo-first-hero-copy > p {
+    font-size:.94rem;
+  }
+
+  .admin-first-workspace .mimo-first-salon-card {
+    max-width:450px;
+  }
+
+  .admin-first-workspace .mimo-first-setup {
+    padding:17px 19px;
+  }
+
+  .admin-first-workspace .mimo-first-board {
+    grid-template-columns:minmax(0,1.10fr) minmax(0,1fr) minmax(325px,.82fr);
+    gap:14px;
+  }
+
+  .admin-first-workspace .mimo-first-agenda,
+  .admin-first-workspace .mimo-first-middle,
+  .admin-first-workspace .mimo-first-side {
+    height:410px;
+  }
+
+  .admin-first-workspace .mimo-first-middle {
+    grid-template-rows:238px 158px;
+    gap:14px;
+  }
+
+  .admin-first-workspace .mimo-first-side {
+    grid-template-rows:168px 126px 102px;
+    gap:14px;
+  }
+
+  .admin-first-workspace .mimo-first-help {
+    display:grid;
+    grid-template-columns:minmax(0,1fr) 132px;
+    gap:8px;
+    align-items:stretch;
+    padding:0;
+    overflow:hidden;
+    background:
+      radial-gradient(170px 110px at 100% 100%,rgba(255,45,122,.14),transparent 72%),
+      linear-gradient(145deg,#fff 0%,#fff8fb 100%);
+  }
+
+  .admin-first-workspace .mimo-first-help-copy {
+    display:grid;
+    grid-template-columns:34px minmax(0,1fr);
+    grid-template-areas:
+      "icon text"
+      "icon cta";
+    align-content:center;
+    gap:3px 9px;
+    padding:12px 0 12px 13px;
+  }
+
+  .admin-first-workspace .mimo-first-help-copy > i {
+    grid-area:icon;
+    width:34px;
+    height:34px;
+  }
+
+  .admin-first-workspace .mimo-first-help-copy > div {
+    grid-area:text;
+  }
+
+  .admin-first-workspace .mimo-first-help-copy > a {
+    grid-area:cta;
+    margin:2px 0 0;
+    justify-self:start;
+    color:#ff2d7a;
+    font-size:.48rem;
+    font-weight:800;
+    text-decoration:none;
+  }
+
+  .admin-first-workspace .mimo-first-help-copy strong {
+    font-size:.66rem;
+  }
+
+  .admin-first-workspace .mimo-first-help-copy small {
+    font-size:.49rem;
+  }
+
+  .admin-first-workspace .mimo-first-mel-stage {
+    position:relative;
+    overflow:hidden;
+    min-width:0;
+  }
+
+  .admin-first-workspace .mimo-first-mel-stage::before {
+    content:'';
+    position:absolute;
+    inset:0;
+    background:radial-gradient(circle at 65% 70%,rgba(255,45,122,.09),transparent 64%);
+    pointer-events:none;
+  }
+
+  .admin-first-workspace .mimo-first-mel-stage img {
+    position:absolute;
+    right:-4px;
+    bottom:-5px;
+    width:142px;
+    height:112px;
+    object-fit:cover;
+    object-position:76% 58%;
+    border-radius:22px 0 18px 0;
+    transform:scale(1.06);
+  }
+
+  .admin-first-workspace .mimo-first-help-bubble {
+    position:absolute;
+    right:96px;
+    top:9px;
+    z-index:3;
+    max-width:72px;
+    padding:5px 6px;
+    font-size:.40rem;
+  }
+}

@@ -9,23 +9,20 @@ import { linkDoSalao } from './endereco'
 const CHAVE = 'mimo-mel-v1'
 const VALIDADE = 3 * 60e3
 let emVoo = null   // uma chamada por vez: MelDock e ClimaTopo dividem a resposta
+let guardado = null   // { salao, em, dados }: só na memória, para atualizar a página trazer outra fala
 
 export async function pedirMel(salaoId, { forcar = false } = {}) {
   if (!salaoId) return null
   if (isDemo) return demoMel()
-  if (!forcar) {
-    try {
-      const g = JSON.parse(localStorage.getItem(CHAVE) || 'null')
-      if (g && g.salao === salaoId && Date.now() - g.em < VALIDADE) return g.dados
-    } catch { /* nada */ }
-  }
+  if (!forcar && guardado && guardado.salao === salaoId && Date.now() - guardado.em < VALIDADE) return guardado.dados
   if (emVoo) return emVoo
   emVoo = (async () => {
     try {
       let tourFeito = false
       try { tourFeito = localStorage.getItem('mimo-tour-painel-concluido') === '1' } catch { /* nada */ }
       const dados = await chamar('mel', { salao: salaoId, tour_feito: tourFeito })
-      try { localStorage.setItem(CHAVE, JSON.stringify({ salao: salaoId, em: Date.now(), dados })); localStorage.removeItem(CHAVE + '-erro') } catch { /* nada */ }
+      guardado = { salao: salaoId, em: Date.now(), dados }
+      try { localStorage.removeItem(CHAVE + '-erro') } catch { /* nada */ }
       if (!dados?.bubble) console.info('[mel] motor respondeu sem fala: nenhuma frase serviu para os momentos de agora', dados)
       return dados
     } catch (e) {
@@ -40,6 +37,7 @@ export async function pedirMel(salaoId, { forcar = false } = {}) {
 }
 
 export function esquecerMel() {
+  guardado = null
   try { localStorage.removeItem(CHAVE) } catch { /* nada */ }
 }
 

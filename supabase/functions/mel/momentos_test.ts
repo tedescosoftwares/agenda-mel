@@ -102,3 +102,13 @@ Deno.test('configuração inicial: sem serviço pede serviços; tudo pronto come
   assertEquals(tour.acao?.type, 'FAZER_TOUR')
   assert(!avaliar(ctx({ extra: { tour_feito: true } }), 'mel_bubble').some((v) => v.momento.chave === 'tour_pendente'))
 })
+
+Deno.test('configuração é persistente: volta mesmo mostrada há pouco e mesmo dispensada', () => {
+  const recentes = [
+    { chave: 'configurar_servicos', identidade: '2026-10-02', superficie: 'mel_bubble', frase_id: 'f1', mostrada_em: '2026-10-02T13:58:00Z', dispensada_em: '2026-10-02T13:59:00Z', clicada_em: null, concluida_em: null },
+    { chave: 'tour_pendente', identidade: '2026-10-02', superficie: 'mel_bubble', frase_id: 'f2', mostrada_em: '2026-10-02T13:58:00Z', dispensada_em: '2026-10-02T13:59:00Z', clicada_em: null, concluida_em: null },
+  ]
+  const fila = avaliar(ctx({ configuracao: { servicos: 0, equipe: 0, equipe_pendente: 0, agendamentos: 0, avisos: false }, extra: { tour_feito: false }, historico: { primeira_vez: false, recentes } }), 'mel_bubble')
+  assertEquals(fila[0].momento.chave, 'configurar_servicos')
+  assert(fila.some((v) => v.momento.chave === 'tour_pendente'))
+})

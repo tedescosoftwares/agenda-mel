@@ -36,7 +36,7 @@ export type Momento = {
   base: number
   superficies: Array<'mel_bubble' | 'weather_card'>
   tom: string
-  cooldownMin: number | null          // null = vale enquanto a identidade for a mesma
+  cooldownMin: number | null          // null = vale enquanto a identidade for a mesma; 0 = persistente (volta a cada atualização, mesmo fechado)
   detectar: (c: Ctx) => Dados | null
   identidade: (d: Dados, c: Ctx) => string
   modificadores?: (d: Dados, c: Ctx) => number
@@ -358,37 +358,37 @@ export const MOMENTOS: Momento[] = [
 
   // ------------------------------------------------------------ configuração inicial (só a dona vê)
   {
-    chave: 'configurar_servicos', categoria: 'configuracao', nivel: 'importante', base: 75, superficies: ['mel_bubble'], tom: 'atenta', cooldownMin: 240,
+    chave: 'configurar_servicos', categoria: 'configuracao', nivel: 'importante', base: 75, superficies: ['mel_bubble'], tom: 'atenta', cooldownMin: 0,
     detectar: (c) => (c.configuracao && n(c.configuracao.servicos) === 0 ? { nome: c.pessoa.nome ?? '' } : null),
     identidade: (_d, c) => c.agora.data,
     acao: () => ({ type: 'IR_CONFIGURAR', payload: { passo: 'servicos' } }),
   },
   {
-    chave: 'configurar_equipe', categoria: 'configuracao', nivel: 'importante', base: 72, superficies: ['mel_bubble'], tom: 'atenta', cooldownMin: 240,
+    chave: 'configurar_equipe', categoria: 'configuracao', nivel: 'importante', base: 72, superficies: ['mel_bubble'], tom: 'atenta', cooldownMin: 0,
     detectar: (c) => (c.configuracao && c.salao.tipo === 'salao' && n(c.configuracao.servicos) > 0 && n(c.configuracao.equipe) === 0 ? { nome: c.pessoa.nome ?? '', n_servicos: c.configuracao.servicos } : null),
     identidade: (_d, c) => c.agora.data,
     acao: () => ({ type: 'IR_CONFIGURAR', payload: { passo: 'equipe' } }),
   },
   {
-    chave: 'equipe_sem_acesso', categoria: 'configuracao', nivel: 'dispensavel', base: 55, superficies: ['mel_bubble'], tom: 'atenta', cooldownMin: DIA,
+    chave: 'equipe_sem_acesso', categoria: 'configuracao', nivel: 'dispensavel', base: 55, superficies: ['mel_bubble'], tom: 'atenta', cooldownMin: 0,
     detectar: (c) => (c.configuracao && n(c.configuracao.equipe_pendente) > 0 ? { n: c.configuracao.equipe_pendente, profissional: '' } : null),
     identidade: (d, c) => `${c.agora.data}-${d.n}`,
     acao: () => ({ type: 'IR_CONFIGURAR', payload: { passo: 'equipe' } }),
   },
   {
-    chave: 'agendamento_teste', categoria: 'configuracao', nivel: 'dispensavel', base: 60, superficies: ['mel_bubble'], tom: 'feliz', cooldownMin: DIA,
+    chave: 'agendamento_teste', categoria: 'configuracao', nivel: 'dispensavel', base: 60, superficies: ['mel_bubble'], tom: 'feliz', cooldownMin: 0,
     detectar: (c) => (c.configuracao && n(c.configuracao.servicos) > 0 && (c.salao.tipo !== 'salao' || n(c.configuracao.equipe) > 0) && n(c.configuracao.agendamentos) === 0 ? { nome: c.pessoa.nome ?? '' } : null),
     identidade: (_d, c) => c.agora.data,
     acao: () => ({ type: 'ENCAIXAR', payload: {} }),
   },
   {
-    chave: 'ligar_avisos', categoria: 'configuracao', nivel: 'dispensavel', base: 45, superficies: ['mel_bubble'], tom: 'atenta', cooldownMin: 3 * DIA,
+    chave: 'ligar_avisos', categoria: 'configuracao', nivel: 'dispensavel', base: 45, superficies: ['mel_bubble'], tom: 'atenta', cooldownMin: 0,
     detectar: (c) => (c.configuracao && c.configuracao.avisos === false && n(c.configuracao.agendamentos) > 0 ? { nome: c.pessoa.nome ?? '' } : null),
     identidade: (_d, c) => c.agora.data,
     acao: () => ({ type: 'LIGAR_AVISOS', payload: {} }),
   },
   {
-    chave: 'tour_pendente', categoria: 'configuracao', nivel: 'dispensavel', base: 42, superficies: ['mel_bubble'], tom: 'feliz', cooldownMin: 2 * DIA,
+    chave: 'tour_pendente', categoria: 'configuracao', nivel: 'dispensavel', base: 42, superficies: ['mel_bubble'], tom: 'feliz', cooldownMin: 0,
     detectar: (c) => (c.extra && c.extra.tour_feito === false && !c.historico.primeira_vez ? { nome: c.pessoa.nome ?? '' } : null),
     identidade: (_d, c) => c.agora.data,
     acao: () => ({ type: 'FAZER_TOUR', payload: {} }),
@@ -425,6 +425,7 @@ const DISPENSA_IMPORTANTE_MIN = 120
 
 // cooldown e dispensa, pelo histórico desta pessoa
 function bloqueado(m: Momento, identidade: string, superficie: string, c: Ctx, agora: Date): boolean {
+  if (m.cooldownMin === 0) return false   // persistente: enquanto o fato existir, ela insiste (com outra frase)
   for (const r of c.historico.recentes) {
     if (r.chave !== m.chave) continue
     const mostradaHa = (agora.getTime() - new Date(r.mostrada_em).getTime()) / 60000

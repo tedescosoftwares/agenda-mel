@@ -6,7 +6,7 @@ import {
   Headphones, HelpCircle, Link2, PlayCircle, QrCode, Scissors, Settings2, Sparkles, Store,
   Sun, Trophy, Users, Zap,
 } from 'lucide-react'
-import { AGENDA_ART_EXACT, MEL_ART_EXACT } from '../../assets/mockArtExact'
+import { AGENDA_ART_EXACT } from '../../assets/mockArtExact'
 import './PrimeiroAcessoHome.css'
 
 // A home do primeiro acesso (2.85): o salão existe, falta montar a agenda.
@@ -17,14 +17,10 @@ import './PrimeiroAcessoHome.css'
 // nenhuma foto entra a de estoque
 const FUNDO_PADRAO = '/imagens/salao-1400.webp'
 
-// A Mel: o recorte sem fundo (public/imagens/mel.png) sai pra fora do cartão,
-// como no mock. Enquanto o PNG não existe, a foto antiga com as bordas
-// esmaecidas por máscara, pra não parecer um retângulo colado.
-const MEL_PNG = '/imagens/mel.png'
+// A Mel: o recorte sem fundo (public/imagens/mel.webp).
+const MEL = '/imagens/mel.webp'
 function MelRecorte() {
-  const [semPng, setSemPng] = useState(false)
-  if (semPng) return <img className="fa-mel-foto" src={MEL_ART_EXACT} alt="Mel, assistente da MIMO" />
-  return <img className="fa-mel-png" src={MEL_PNG} alt="Mel, assistente da MIMO" onError={() => setSemPng(true)} />
+  return <img className="fa-mel-png" src={MEL} alt="Mel, assistente da MIMO" />
 }
 
 function money(cents = 0) {
@@ -212,9 +208,9 @@ export default function PrimeiroAcessoHome({
   )
 }
 
-// A Mel no canto (2.85.3): um botão pequeno grudado embaixo à direita.
-// Passou o mouse (ou tocou), expande no cartão de ajuda; o X fecha e ela
-// some até a próxima visita.
+// A Mel no canto (2.85.6): fechada é só a imagem dela com um "Quer ajuda?".
+// Passou o mouse (ou tocou), expande no cartão de ajuda; saiu, volta a ser
+// só a imagem; o X fecha e ela some até a próxima visita.
 function MelDock() {
   const [aberta, setAberta] = useState(false)
   const [fechada, setFechada] = useState(() => { try { return sessionStorage.getItem('mimo-mel-fechada') === '1' } catch { return false } })
@@ -229,7 +225,7 @@ function MelDock() {
         <Link to="/admin/guia" className="fa-help-link">Acessar central de ajuda <ExternalLink size={14} /></Link>
       </div>
       <div className="fa-mel">
-        <span className="fa-mel-balao">Oi! Eu sou a <b>Mel!</b> 💗</span>
+        <span className="fa-mel-balao">{aberta ? <>Oi! Eu sou a <b>Mel!</b> 💗</> : <>Quer ajuda? 💗</>}</span>
         <MelRecorte />
       </div>
     </div>

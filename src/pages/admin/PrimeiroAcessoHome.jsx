@@ -297,19 +297,24 @@ export default function PrimeiroAcessoHome({
             </div>
           </article>
 
-          <article className="fa-card fa-help-card">
-            <div className="fa-help-copy">
-              <span className="fa-help-icon"><Headphones size={19} /></span>
-              <div><strong>Precisa de ajuda?</strong><small>Acesse os tutoriais ou fale com o suporte da MIMO.</small></div>
-              <Link to="/admin/guia">Acessar central de ajuda <ArrowRight size={13} /></Link>
-            </div>
-            <div className="fa-mel">
-              <span>Oi! Eu sou a <b>Mel</b> 💗</span>
-              <img src={MEL_ART_EXACT} alt="Mel, assistente virtual da MIMO" />
-            </div>
-          </article>
+
         </aside>
       </section>
+
+      <aside className="fa-mel-dock" aria-label="Ajuda da MIMO">
+        <div className="fa-mel-dock-copy">
+          <span className="fa-help-icon"><Headphones size={20} /></span>
+          <div>
+            <strong>Precisa de ajuda?</strong>
+            <small>Tutoriais e suporte sempre à mão.</small>
+          </div>
+          <Link to="/admin/guia">Central de ajuda <ArrowRight size={13} /></Link>
+        </div>
+        <div className="fa-mel-dock-stage">
+          <span>Oi! Eu sou a <b>Mel</b> 💗</span>
+          <img src={MEL_ART_EXACT} alt="Mel, assistente virtual da MIMO" />
+        </div>
+      </aside>
     </div>
   )
 }

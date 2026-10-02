@@ -14,7 +14,7 @@ import { toISODate } from '../../lib/format'
 import { linkDoSalao } from '../../lib/endereco'
 import QRCode from 'qrcode'
 import { AGENDA_ART_EXACT, MEL_ART_EXACT } from '../../assets/mockArtExact'
-import { CalendarPlus, Users, Sparkles, MessageCircle, FileSignature, ArrowRight, CalendarDays, TrendingUp, Clock3, QrCode, Settings2, X, PlayCircle, ChevronRight, Activity, CircleDot, Rocket, BellRing, BookOpen, Scissors, Link2, Headphones, LayoutDashboard, BadgeCheck, Copy, ExternalLink } from 'lucide-react'
+import { CalendarPlus, Users, Sparkles, MessageCircle, FileSignature, ArrowRight, CalendarDays, TrendingUp, Clock3, QrCode, Settings2, X, PlayCircle, ChevronRight, Activity, CircleDot, Rocket, BellRing, BookOpen, Scissors, Link2, Headphones, Trophy, BadgeCheck, Copy, ExternalLink } from 'lucide-react'
 
 // Dashboard do salão (tela 23): o dia de hoje em quatro números, o
 // faturamento do mês dia a dia, o que está esperando resposta, e os
@@ -634,7 +634,7 @@ function PrimeiroAcessoHome({
           </article>
 
           <article className="mimo-first-panel mimo-first-benefits">
-            <div className="mimo-first-benefits-head"><span><LayoutDashboard size={17} /></span><div><strong>O que você vai conquistar</strong><small>Quando a configuração terminar, essa Home vira o centro da operação.</small></div></div>
+            <div className="mimo-first-benefits-head"><span><Trophy size={17} /></span><div><strong>O que você vai conquistar</strong><small>Quando a configuração terminar, essa Home vira o centro da operação.</small></div></div>
             <div className="mimo-first-benefits-grid">
               <span><i><CalendarDays size={15} /></i><b>Agenda organizada</b><small>Veja todos os atendimentos do dia.</small></span>
               <span><i><Users size={15} /></i><b>Equipe em um só lugar</b><small>Serviços, horários e agenda de cada profissional.</small></span>

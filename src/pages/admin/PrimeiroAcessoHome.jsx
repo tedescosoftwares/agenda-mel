@@ -202,19 +202,34 @@ export default function PrimeiroAcessoHome({
             </div>
           </article>
 
-          <article className="fa-card fa-help-card">
-            <div className="fa-help-copy">
-              <div className="fa-card-titulo"><span className="fa-icon-badge"><Headphones size={20} /></span><h3>Precisa de ajuda?</h3></div>
-              <small>Tutoriais e suporte à mão.</small>
-              <Link to="/admin/guia" className="fa-help-link">Acessar central de ajuda <ExternalLink size={14} /></Link>
-            </div>
-            <div className="fa-mel">
-              <span>Oi! Eu sou a <b>Mel!</b> 💗</span>
-              <MelRecorte />
-            </div>
-          </article>
         </aside>
       </section>
+
+      <MelDock />
+    </div>
+  )
+}
+
+// A Mel no canto (2.85.3): um botão pequeno grudado embaixo à direita.
+// Passou o mouse (ou tocou), expande no cartão de ajuda; o X fecha e ela
+// some até a próxima visita.
+function MelDock() {
+  const [aberta, setAberta] = useState(false)
+  const [fechada, setFechada] = useState(() => { try { return sessionStorage.getItem('mimo-mel-fechada') === '1' } catch { return false } })
+  if (fechada) return null
+  function fechar(e) { e.stopPropagation(); setFechada(true); try { sessionStorage.setItem('mimo-mel-fechada', '1') } catch { /* nada */ } }
+  return (
+    <div className={'fa-mel-dock' + (aberta ? ' aberta' : '')} onMouseEnter={() => setAberta(true)} onMouseLeave={() => setAberta(false)} onClick={() => setAberta(true)} role="complementary" aria-label="Ajuda da MIMO">
+      <button type="button" className="fa-mel-x" onClick={fechar} aria-label="Fechar"><span aria-hidden="true">×</span></button>
+      <div className="fa-mel-dock-copy">
+        <div className="fa-card-titulo"><span className="fa-icon-badge"><Headphones size={18} /></span><h3>Precisa de ajuda?</h3></div>
+        <small>Acesse nossos tutoriais ou fale com o suporte da MIMO.</small>
+        <Link to="/admin/guia" className="fa-help-link">Acessar central de ajuda <ExternalLink size={14} /></Link>
+      </div>
+      <div className="fa-mel">
+        <span className="fa-mel-balao">Oi! Eu sou a <b>Mel!</b> 💗</span>
+        <MelRecorte />
+      </div>
     </div>
   )
 }

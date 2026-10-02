@@ -2,9 +2,9 @@
    Escala: 1600–1700 de largura é a referência; de 1100 a 1400 encolhe um
    pouco; abaixo de 1100 empilha. */
 .fa-home {
-  --fa-ink: #2c1636;
-  --fa-texto: #5f5365;
-  --fa-muted: #8e8392;
+  --fa-ink: #3b2a44;
+  --fa-texto: #6f6474;
+  --fa-muted: #978c9b;
   --fa-pink: #ff2d7a;
   --fa-pink-2: #ff5f9e;
   --fa-purple: #7f52db;
@@ -12,7 +12,7 @@
   --fa-raio: 22px;
   display: grid;
   gap: 12px;
-  padding-bottom: 0;
+  padding: 0 18px 0;
   line-height: 1.3;
 }
 .fa-home a { color: inherit; }
@@ -25,12 +25,13 @@
   grid-template-columns: minmax(0, 1fr) minmax(380px, 440px);
   align-items: center;
   gap: 28px;
-  padding: 12px 30px 12px 34px;
-  border-radius: 26px;
+  margin: 0 -18px;
+  padding: 96px 36px 26px 40px;
+  border-radius: 0;
   overflow: hidden;
   isolation: isolate;
   background: #fff2f7;
-  box-shadow: 0 22px 54px rgba(86, 42, 92, .12);
+  box-shadow: 0 18px 44px rgba(86, 42, 92, .08);
 }
 .fa-hero::before {
   content: '';
@@ -45,7 +46,7 @@
   position: absolute;
   inset: 0;
   z-index: -1;
-  background: linear-gradient(90deg, rgba(255, 246, 250, .98) 0%, rgba(255, 246, 250, .96) 30%, rgba(255, 246, 250, .78) 44%, rgba(255, 246, 250, .22) 60%, rgba(255, 246, 250, 0) 72%);
+  background: linear-gradient(90deg, rgba(255, 246, 250, .97) 0%, rgba(255, 246, 250, .94) 28%, rgba(255, 246, 250, .74) 42%, rgba(255, 246, 250, .18) 58%, rgba(255, 246, 250, 0) 70%), linear-gradient(180deg, rgba(255, 246, 250, .35) 0%, rgba(255, 246, 250, 0) 30%);
 }
 .fa-hero-copy { max-width: 620px; }
 .fa-eyebrow {
@@ -58,18 +59,18 @@
   letter-spacing: .04em;
   text-transform: uppercase;
 }
-.fa-hero .fa-eyebrow { color: #5a3c64; text-transform: none; letter-spacing: 0; font-size: .86rem; }
+.fa-hero .fa-eyebrow { color: #6b5473; text-transform: none; letter-spacing: 0; font-size: .82rem; font-weight: 700; }
 .fa-hero .fa-eyebrow svg { color: #f3b640; }
 .fa-hero h1 {
   margin: 4px 0 0;
   color: var(--fa-ink);
-  font-size: clamp(1.9rem, 2.55vw, 2.75rem);
-  line-height: 1.06;
-  letter-spacing: -.035em;
-  font-weight: 800;
+  font-size: clamp(1.7rem, 2.25vw, 2.4rem);
+  line-height: 1.08;
+  letter-spacing: -.03em;
+  font-weight: 700;
 }
 .fa-hero h1 em { font-style: normal; color: var(--fa-pink); }
-.fa-hero-copy > p { max-width: 46ch; margin: 8px 0 0; color: var(--fa-texto); font-size: .95rem; line-height: 1.45; }
+.fa-hero-copy > p { max-width: 46ch; margin: 8px 0 0; color: var(--fa-texto); font-size: .9rem; line-height: 1.45; font-weight: 400; }
 .fa-hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 14px; }
 
 .fa-btn {
@@ -83,8 +84,8 @@
   border-radius: 13px;
   text-decoration: none;
   font: inherit;
-  font-size: .9rem;
-  font-weight: 800;
+  font-size: .86rem;
+  font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
 }
@@ -108,14 +109,14 @@
 .fa-salon-photo { width: 108px; height: 68px; overflow: hidden; border-radius: 14px; background: #f4eef5; display: grid; place-items: center; color: var(--fa-pink); font-size: 1.4rem; font-weight: 800; }
 .fa-salon-photo img { width: 100%; height: 100%; object-fit: cover; }
 .fa-salon-title { display: grid; gap: 4px; min-width: 0; justify-items: start; }
-.fa-salon-title strong { overflow: hidden; color: var(--fa-ink); font-size: 1.3rem; letter-spacing: -.02em; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.fa-salon-title strong { overflow: hidden; color: var(--fa-ink); font-size: 1.2rem; letter-spacing: -.02em; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
 .fa-online { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: #e3f8ec; color: #148454; font-size: .74rem; font-weight: 800; }
 .fa-online i { width: 7px; height: 7px; border-radius: 50%; background: #17b66a; }
 .fa-salon-go { display: grid; place-items: center; width: 32px; height: 32px; color: #8a7e8d; }
 .fa-salon-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
 .fa-salon-metrics > div { min-height: 62px; display: grid; align-content: center; gap: 1px; padding: 8px 11px; border: 1px solid var(--fa-fio); border-radius: 14px; background: #fff; }
 .fa-salon-metrics small, .fa-salon-metrics span { color: var(--fa-muted); font-size: .74rem; }
-.fa-salon-metrics strong { color: var(--fa-ink); font-size: 1.3rem; line-height: 1.1; letter-spacing: -.02em; }
+.fa-salon-metrics strong { color: var(--fa-ink); font-size: 1.25rem; line-height: 1.1; letter-spacing: -.02em; font-weight: 700; }
 
 /* ---- primeiros passos --------------------------------------------- */
 .fa-setup { padding: 12px 18px 12px; border-radius: var(--fa-raio); background: #fff; box-shadow: 0 14px 34px rgba(73, 34, 82, .07); }
@@ -123,7 +124,7 @@
 .fa-setup-title { display: grid; grid-template-columns: 46px minmax(0, 1fr); gap: 12px; align-items: center; }
 .fa-icon-badge { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 13px; background: #ffe9f1; color: var(--fa-pink); flex: none; }
 .fa-setup-title .fa-icon-badge { width: 46px; height: 46px; border-radius: 14px; }
-.fa-setup-title h2 { margin: 1px 0 1px; color: var(--fa-ink); font-size: 1.06rem; letter-spacing: -.02em; }
+.fa-setup-title h2 { margin: 1px 0 1px; color: var(--fa-ink); font-size: 1.02rem; font-weight: 700; letter-spacing: -.02em; }
 .fa-setup-title p { margin: 0; color: var(--fa-muted); font-size: .8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .fa-progress-wrap { display: grid; gap: 8px; }
 .fa-progress { height: 8px; overflow: hidden; border-radius: 999px; background: #ece6ed; }
@@ -143,7 +144,7 @@
 .fa-step.is-current .fa-step-number { background: #fff; color: var(--fa-pink); box-shadow: inset 0 0 0 2px var(--fa-pink); }
 .fa-step.is-done .fa-step-number { background: linear-gradient(145deg, #ff216f, #ff5d9e); color: #fff; box-shadow: 0 6px 14px rgba(255, 45, 122, .3); }
 .fa-step-copy { display: grid; gap: 2px; min-width: 0; }
-.fa-step-copy strong { color: var(--fa-ink); font-size: .88rem; }
+.fa-step-copy strong { color: var(--fa-ink); font-size: .86rem; font-weight: 600; }
 .fa-step-copy small { color: var(--fa-muted); font-size: .72rem; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* ---- a grade de baixo ---------------------------------------------- */
@@ -152,7 +153,7 @@
 .fa-card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .fa-card-titulo { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .fa-card-titulo .fa-icon-badge { width: 36px; height: 36px; border-radius: 11px; }
-.fa-card-titulo h3 { margin: 0; color: var(--fa-ink); font-size: 1rem; letter-spacing: -.02em; }
+.fa-card-titulo h3 { margin: 0; color: var(--fa-ink); font-size: .96rem; font-weight: 700; letter-spacing: -.02em; }
 .fa-card-head > a { display: inline-flex; align-items: center; gap: 4px; color: var(--fa-pink); font-size: .84rem; font-weight: 700; text-decoration: none; white-space: nowrap; }
 
 .fa-agenda-card { display: flex; flex-direction: column; padding: 12px 16px; }
@@ -160,7 +161,7 @@
 .fa-empty { flex: 1; display: grid; align-content: center; justify-items: center; gap: 6px; padding: 8px 10px 2px; text-align: center; }
 .fa-agenda-art { width: 170px; height: 118px; }
 .fa-agenda-art img { width: 100%; height: 100%; object-fit: contain; }
-.fa-empty > strong { color: var(--fa-ink); font-size: 1rem; }
+.fa-empty > strong { color: var(--fa-ink); font-size: .96rem; font-weight: 600; }
 .fa-empty > p { max-width: 36ch; margin: 0; color: var(--fa-texto); font-size: .84rem; line-height: 1.45; }
 .fa-empty > .fa-btn { margin-top: 8px; width: min(100%, 320px); min-height: 42px; }
 .fa-empty > button:not(.fa-btn) { display: inline-flex; align-items: center; gap: 6px; border: 0; background: transparent; color: var(--fa-texto); font: inherit; font-size: .84rem; font-weight: 600; cursor: pointer; }
@@ -175,7 +176,7 @@
 .fa-now-list .is-tour i { background: var(--fa-purple); box-shadow: none; }
 .fa-now-list > * > svg { color: var(--fa-pink); }
 .fa-now-list span { display: grid; gap: 1px; min-width: 0; }
-.fa-now-list strong { color: var(--fa-ink); font-size: .82rem; }
+.fa-now-list strong { color: var(--fa-ink); font-size: .82rem; font-weight: 600; }
 .fa-now-list small { color: var(--fa-muted); font-size: .7rem; }
 
 .fa-icon-badge.trophy { width: 36px; height: 36px; background: #fff3e0; color: #f0a020; }
@@ -183,18 +184,18 @@
 .fa-win-grid > div { display: grid; grid-template-columns: 32px 1fr; gap: 8px; align-items: center; padding: 5px 8px; border-radius: 13px; background: #faf7fb; }
 .fa-win-grid i { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 11px; background: #fff; color: var(--fa-pink); font-style: normal; box-shadow: 0 2px 8px rgba(62, 29, 69, .06); }
 .fa-win-grid span { display: grid; gap: 1px; min-width: 0; }
-.fa-win-grid strong { color: var(--fa-ink); font-size: .78rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fa-win-grid strong { color: var(--fa-ink); font-size: .78rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .fa-win-grid small { color: var(--fa-muted); font-size: .68rem; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .fa-quick-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px; }
-.fa-quick-action { min-height: 40px; font-size: .8rem; line-height: 1.15; white-space: nowrap; display: flex; align-items: center; gap: 8px; padding: 5px 8px; border: 0; border-radius: 13px; background: #fff0f5; color: var(--fa-ink); text-decoration: none; font: inherit; font-size: .84rem; font-weight: 700; text-align: left; cursor: pointer; }
+.fa-quick-action { min-height: 40px; font-size: .8rem; line-height: 1.15; white-space: nowrap; font-weight: 600; display: flex; align-items: center; gap: 8px; padding: 5px 8px; border: 0; border-radius: 13px; background: #fff0f5; color: var(--fa-ink); text-decoration: none; font: inherit; font-size: .84rem; font-weight: 700; text-align: left; cursor: pointer; }
 .fa-quick-action i { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 11px; background: #fff; color: var(--fa-pink); font-style: normal; flex: none; }
 .fa-quick-action:hover { background: #ffe6ef; }
 
 .fa-share-card { display: grid; grid-template-columns: minmax(0, 1fr) 84px; gap: 10px; align-items: center; padding: 10px 14px; }
 .fa-share-copy { display: grid; gap: 3px; min-width: 0; }
 .fa-share-copy > small { color: var(--fa-muted); font-size: .76rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.fa-link-box { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px; align-items: center; margin-top: 2px; padding: 7px 10px; border: 1px solid var(--fa-fio); border-radius: 12px; background: #fff; color: var(--fa-ink); font: inherit; font-size: .86rem; font-weight: 700; text-align: left; cursor: pointer; }
+.fa-link-box { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px; align-items: center; margin-top: 2px; padding: 7px 10px; border: 1px solid var(--fa-fio); border-radius: 12px; background: #fff; color: var(--fa-ink); font: inherit; font-size: .84rem; font-weight: 600; text-align: left; cursor: pointer; }
 .fa-link-box svg { color: var(--fa-pink); }
 .fa-link-box span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fa-share-qr { display: grid; justify-items: center; gap: 4px; }
@@ -202,22 +203,30 @@
 .fa-qr-vazio { display: block; background: #f4eef5; }
 .fa-share-qr small { color: var(--fa-muted); font-size: .64rem; white-space: nowrap; }
 
-.fa-help-card { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 150px; overflow: visible; min-height: 124px; background: radial-gradient(240px 160px at 100% 100%, rgba(255, 45, 122, .16), transparent 70%), linear-gradient(135deg, #fff, #fff1f7); }
-.fa-help-copy { display: grid; gap: 3px; padding: 8px 0 8px 14px; min-width: 0; align-content: center; }
-.fa-help-copy > small { color: var(--fa-muted); font-size: .76rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.fa-help-link { display: inline-flex; align-items: center; justify-content: center; gap: 6px; margin-top: 2px; min-height: 34px; padding: 0 14px; border: 1.5px solid #ffb6cf; border-radius: 12px; background: #fff; color: var(--fa-pink); font-size: .84rem; font-weight: 800; text-decoration: none; }
-.fa-mel { position: relative; min-height: 124px; }
-/* o recorte sem fundo: maior que o cartão, a cabeça sai por cima da borda */
-.fa-mel-png { position: absolute; right: 0; bottom: 0; width: 190px; max-width: none; height: 190px; object-fit: contain; object-position: bottom center; filter: drop-shadow(0 10px 18px rgba(85, 35, 79, .22)); pointer-events: none; }
-/* enquanto não tem o PNG: a foto com as bordas esmaecidas */
-.fa-mel-foto { position: absolute; right: 0; bottom: 0; width: 150px; height: 124px; object-fit: cover; object-position: 60% 20%; border-radius: 0 var(--fa-raio) var(--fa-raio) 0; -webkit-mask-image: radial-gradient(90% 100% at 60% 70%, #000 55%, transparent 100%); mask-image: radial-gradient(90% 100% at 60% 70%, #000 55%, transparent 100%); }
-.fa-mel > span { position: absolute; left: -36px; top: 18px; z-index: 2; padding: 6px 11px; border-radius: 999px 999px 4px 999px; background: #fff; color: var(--fa-pink); font-size: .76rem; font-weight: 700; white-space: nowrap; box-shadow: 0 8px 20px rgba(85, 35, 79, .14); }
-.fa-mel b { font-weight: 900; }
+.fa-help-link { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 36px; padding: 0 14px; border: 1.5px solid #ffb6cf; border-radius: 12px; background: #fff; color: var(--fa-pink); font-size: .82rem; font-weight: 700; text-decoration: none; }
+
+/* A Mel no canto: fechada é só o rosto + balão; aberta vira o cartão de ajuda */
+.fa-mel-dock { position: fixed; right: 18px; bottom: 18px; z-index: 60; display: grid; grid-template-columns: 0fr 92px; align-items: end; width: max-content; max-width: 380px; border-radius: 22px; background: linear-gradient(135deg, #fff, #fff1f7); box-shadow: 0 16px 40px rgba(73, 31, 78, .18); transition: grid-template-columns .25s ease, box-shadow .25s ease; cursor: pointer; }
+.fa-mel-dock.aberta { grid-template-columns: 1fr 150px; box-shadow: 0 22px 56px rgba(73, 31, 78, .24); }
+.fa-mel-dock-copy { display: grid; gap: 4px; min-width: 0; overflow: hidden; padding: 0; opacity: 0; transition: opacity .2s ease; }
+.fa-mel-dock.aberta .fa-mel-dock-copy { padding: 14px 4px 14px 16px; opacity: 1; }
+.fa-mel-dock-copy > small { color: var(--fa-muted); font-size: .76rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fa-mel-dock-copy .fa-help-link { margin-top: 4px; white-space: nowrap; }
+.fa-mel-x { position: absolute; top: -8px; left: -8px; z-index: 3; width: 26px; height: 26px; display: none; place-items: center; border: 1px solid var(--fa-fio); border-radius: 50%; background: #fff; color: #7a6f7e; font-size: 1rem; line-height: 1; cursor: pointer; box-shadow: 0 4px 12px rgba(73, 31, 78, .14); }
+.fa-mel-dock.aberta .fa-mel-x { display: grid; }
+.fa-mel { position: relative; width: 92px; height: 92px; transition: width .25s ease, height .25s ease; }
+.fa-mel-dock.aberta .fa-mel { width: 150px; height: 150px; }
+.fa-mel-png { position: absolute; right: 2px; bottom: 0; width: 100%; height: 118%; object-fit: contain; object-position: bottom center; filter: drop-shadow(0 8px 14px rgba(85, 35, 79, .22)); pointer-events: none; }
+.fa-mel-foto { position: absolute; right: 8px; bottom: 8px; width: calc(100% - 16px); height: calc(100% - 16px); border-radius: 50%; object-fit: cover; object-position: 60% 20%; border: 3px solid #fff; box-shadow: 0 6px 16px rgba(85, 35, 79, .2); }
+.fa-mel-dock.aberta .fa-mel-foto { right: 0; bottom: 0; width: 150px; height: 150px; border-radius: 0 22px 22px 0; border: 0; box-shadow: none; -webkit-mask-image: linear-gradient(90deg, transparent, #000 22%); mask-image: linear-gradient(90deg, transparent, #000 22%); }
+.fa-mel-balao { position: absolute; right: 78px; top: 14px; z-index: 2; padding: 5px 10px; border-radius: 999px 999px 4px 999px; background: #fff; color: var(--fa-pink); font-size: .72rem; font-weight: 700; white-space: nowrap; box-shadow: 0 8px 20px rgba(85, 35, 79, .14); }
+.fa-mel-dock.aberta .fa-mel-balao { right: auto; left: -24px; top: 10px; }
+.fa-mel b { font-weight: 800; }
 
 /* ---- 1100–1440: encolhe sem quebrar -------------------------------- */
 @media (max-width: 1440px) and (min-width: 1100px) {
   .fa-home { gap: 12px; }
-  .fa-hero { min-height: 240px; grid-template-columns: minmax(0, 1fr) minmax(330px, 380px); padding: 22px 24px 22px 28px; }
+  .fa-hero { grid-template-columns: minmax(0, 1fr) minmax(330px, 380px); padding: 92px 24px 22px 28px; }
   .fa-hero h1 { font-size: clamp(1.7rem, 2.3vw, 2.3rem); }
   .fa-hero-copy > p { font-size: .92rem; }
   .fa-btn { min-height: 42px; font-size: .84rem; padding: 0 16px; }
@@ -238,14 +247,13 @@
   .fa-now-list > div, .fa-now-list > a, .fa-now-list > button { min-height: 48px; }
   .fa-win-grid small { display: none; }
   .fa-quick-action { font-size: .78rem; }
-  .fa-help-card { grid-template-columns: minmax(0, 1fr) 124px; }
-  .fa-mel-png { width: 160px; height: 160px; }
-  .fa-mel-foto { width: 124px; }
+
 }
 
 /* ---- celular e tablet: empilha ------------------------------------- */
 @media (max-width: 1099px) {
-  .fa-hero { grid-template-columns: 1fr; padding: 22px 20px; min-height: 0; }
+  .fa-home { padding: 0 12px; }
+  .fa-hero { grid-template-columns: 1fr; padding: 22px 20px; margin: 0; border-radius: 22px; }
   .fa-hero::after { background: linear-gradient(180deg, rgba(255, 246, 250, .97) 0%, rgba(255, 246, 250, .94) 100%); }
   .fa-hero h1 { font-size: clamp(1.7rem, 6vw, 2.3rem); }
   .fa-salon-card { justify-self: stretch; }
@@ -266,8 +274,7 @@
   .fa-win-grid { grid-template-columns: 1fr; }
   .fa-share-card { grid-template-columns: 1fr; }
   .fa-share-qr { justify-items: start; }
-  .fa-help-card { grid-template-columns: minmax(0, 1fr) 110px; }
-  .fa-mel-png { width: 140px; height: 140px; }
-  .fa-mel-foto { width: 110px; }
-  .fa-mel > span { left: -40px; }
+  .fa-mel-dock { right: 10px; bottom: 76px; }
+  .fa-mel-dock.aberta { grid-template-columns: 1fr 110px; max-width: calc(100vw - 20px); }
+  .fa-mel-dock.aberta .fa-mel, .fa-mel-dock.aberta .fa-mel-foto { width: 110px; height: 110px; }
 }

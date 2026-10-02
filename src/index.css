@@ -15056,3 +15056,371 @@ label.switch:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
     font-size:.40rem;
   }
 }
+
+
+/* ==========================================================================
+   MOCK FIDELITY PASS 2.84.4
+   Mais cor, profundidade e escala; responsividade desktop intermediária.
+   ========================================================================== */
+@media (min-width:1100px) {
+  .admin-first-workspace {
+    background:
+      radial-gradient(860px 360px at 66% -60px,rgba(255,95,151,.16),transparent 72%),
+      radial-gradient(700px 340px at 96% 10%,rgba(124,78,216,.09),transparent 72%),
+      linear-gradient(180deg,#fff8fb 0%,#f9f3f8 42%,#f6f3f8 100%);
+  }
+
+  .admin-first-workspace .topbar-admin-primeiro {
+    background:rgba(255,255,255,.52);
+    border-color:rgba(255,255,255,.84);
+    box-shadow:
+      0 16px 42px rgba(77,34,79,.10),
+      inset 0 1px 0 rgba(255,255,255,.96);
+  }
+
+  .admin-first-workspace .admin-topbar-busca {
+    background:rgba(255,255,255,.70);
+    border-color:rgba(88,47,98,.10);
+  }
+
+  .admin-first-workspace .mimo-first-hero {
+    position:relative;
+    isolation:isolate;
+    background:
+      linear-gradient(120deg,#fff9fc 0%,#fff3f8 54%,#ffe9f3 100%);
+    border-color:rgba(255,115,165,.18);
+    box-shadow:
+      0 20px 50px rgba(108,40,92,.10),
+      inset 0 1px 0 rgba(255,255,255,.94);
+  }
+
+  .admin-first-workspace .mimo-first-hero-bg {
+    z-index:-4;
+    opacity:.48;
+    filter:saturate(.82) brightness(1.08) contrast(.84);
+    background:
+      linear-gradient(90deg,
+        rgba(255,255,255,.995) 0%,
+        rgba(255,255,255,.97) 27%,
+        rgba(255,246,251,.78) 52%,
+        rgba(255,228,240,.42) 100%),
+      var(--mimo-first-cover) center 52% / cover no-repeat;
+  }
+
+  .mimo-first-hero-glow,
+  .mimo-first-hero-ribbon {
+    position:absolute;
+    pointer-events:none;
+    z-index:-2;
+  }
+
+  .mimo-first-hero-glow-a {
+    width:420px;
+    height:260px;
+    right:20%;
+    top:-90px;
+    border-radius:50%;
+    background:radial-gradient(circle,rgba(255,57,130,.24),rgba(255,57,130,0) 68%);
+    filter:blur(8px);
+  }
+
+  .mimo-first-hero-glow-b {
+    width:300px;
+    height:300px;
+    right:-80px;
+    bottom:-130px;
+    border-radius:50%;
+    background:radial-gradient(circle,rgba(117,72,210,.16),rgba(117,72,210,0) 68%);
+  }
+
+  .mimo-first-hero-ribbon {
+    width:380px;
+    height:120px;
+    right:23%;
+    bottom:-52px;
+    border-radius:999px;
+    transform:rotate(-8deg);
+    background:linear-gradient(90deg,rgba(255,80,145,.08),rgba(255,165,190,.20),rgba(124,78,216,.08));
+    filter:blur(10px);
+  }
+
+  .admin-first-workspace .mimo-first-kicker {
+    color:#ff2d7a;
+    font-size:.68rem;
+  }
+
+  .admin-first-workspace .mimo-first-hero h1 {
+    color:#35153f;
+    text-shadow:0 1px 0 rgba(255,255,255,.55);
+  }
+
+  .admin-first-workspace .mimo-first-hero h1 strong {
+    background:linear-gradient(92deg,#ff216f 0%,#ff4e98 60%,#ff6ca7 100%);
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+  }
+
+  .admin-first-workspace .mimo-first-primary {
+    background:linear-gradient(135deg,#ff246f 0%,#ff4d91 62%,#ff6aa5 100%);
+    border-color:#ff2a76;
+    box-shadow:0 12px 28px rgba(255,45,122,.24);
+  }
+
+  .admin-first-workspace .mimo-first-secondary {
+    background:rgba(255,255,255,.78);
+    border-color:rgba(255,76,143,.24);
+    box-shadow:0 8px 20px rgba(76,39,86,.06);
+  }
+
+  .admin-first-workspace .mimo-first-salon-card {
+    background:rgba(255,255,255,.82);
+    border-color:rgba(255,255,255,.92);
+    box-shadow:
+      0 22px 48px rgba(78,35,83,.14),
+      inset 0 1px 0 rgba(255,255,255,.96);
+    backdrop-filter:blur(18px) saturate(1.10);
+  }
+
+  .admin-first-workspace .mimo-first-setup {
+    position:relative;
+    overflow:hidden;
+    background:
+      linear-gradient(180deg,rgba(255,255,255,.98),rgba(255,250,252,.98));
+    border-color:rgba(255,110,159,.14);
+    box-shadow:0 14px 34px rgba(73,34,82,.07);
+  }
+
+  .mimo-first-setup-wash {
+    position:absolute;
+    inset:-90px -100px auto auto;
+    width:380px;
+    height:210px;
+    border-radius:50%;
+    background:radial-gradient(circle,rgba(255,69,135,.10),rgba(255,69,135,0) 70%);
+    pointer-events:none;
+  }
+
+  .admin-first-workspace .mimo-first-setup > *:not(.mimo-first-setup-wash) {
+    position:relative;
+    z-index:1;
+  }
+
+  .admin-first-workspace .mimo-first-setup-icon,
+  .admin-first-workspace .mimo-first-benefits-head > span,
+  .admin-first-workspace .mimo-first-actions-grid i,
+  .admin-first-workspace .mimo-first-status-list .current i {
+    background:linear-gradient(145deg,#fff0f5,#ffe4ee);
+    color:#ff2d7a;
+    box-shadow:0 8px 18px rgba(255,45,122,.10);
+  }
+
+  .admin-first-workspace .mimo-first-steps a.current {
+    border-color:#ffadca;
+    background:linear-gradient(180deg,#fff8fb 0%,#ffeff5 100%);
+    box-shadow:0 8px 20px rgba(255,45,122,.07);
+  }
+
+  .admin-first-workspace .mimo-first-steps a.current > b {
+    background:linear-gradient(145deg,#ff216f,#ff5d9e);
+    box-shadow:0 8px 18px rgba(255,45,122,.18);
+  }
+
+  .admin-first-workspace .mimo-first-panel {
+    border-color:rgba(95,55,102,.08);
+    box-shadow:0 14px 32px rgba(65,31,72,.065);
+  }
+
+  .admin-first-workspace .mimo-first-agenda {
+    background:
+      radial-gradient(240px 180px at 50% 48%,rgba(255,69,135,.055),transparent 72%),
+      #fff;
+  }
+
+  .admin-first-workspace .mimo-first-status-list > span,
+  .admin-first-workspace .mimo-first-status-list > a,
+  .admin-first-workspace .mimo-first-status-list > button,
+  .admin-first-workspace .mimo-first-benefits-grid > span {
+    background:linear-gradient(180deg,#fcfafd,#faf7fb);
+  }
+
+  .admin-first-workspace .mimo-first-actions-grid a {
+    background:linear-gradient(180deg,#fff,#fff9fc);
+    border-color:#f3e2ea;
+  }
+
+  .admin-first-workspace .mimo-first-actions-grid a:hover {
+    border-color:#ffc0d7;
+    background:#fff4f8;
+  }
+
+  .admin-first-workspace .mimo-first-share {
+    background:
+      radial-gradient(180px 120px at 100% 0%,rgba(124,78,216,.06),transparent 70%),
+      linear-gradient(180deg,#fff,#fff9fc);
+  }
+
+  .admin-first-workspace .mimo-first-help {
+    background:
+      radial-gradient(190px 120px at 100% 100%,rgba(255,45,122,.20),transparent 72%),
+      linear-gradient(135deg,#fff 0%,#fff2f7 100%);
+  }
+
+  .admin-first-workspace .mimo-first-mel-stage img {
+    width:154px;
+    height:122px;
+    right:-2px;
+    bottom:-7px;
+  }
+
+  .admin-first-workspace .mimo-first-help-bubble {
+    background:rgba(255,255,255,.92);
+    box-shadow:0 8px 20px rgba(85,35,79,.10);
+  }
+
+  /* trava importante: avatars nunca podem crescer por herança/overflow */
+  .admin-first-workspace .admin-topbar-negocio-avatar,
+  .admin-first-workspace .admin-topbar-negocio-avatar img {
+    width:38px !important;
+    height:38px !important;
+    min-width:38px !important;
+    min-height:38px !important;
+    max-width:38px !important;
+    max-height:38px !important;
+    object-fit:cover !important;
+  }
+
+  .admin-first-workspace .mimo-first-salon-photo,
+  .admin-first-workspace .mimo-first-salon-photo img {
+    width:78px !important;
+    height:56px !important;
+    min-width:78px !important;
+    min-height:56px !important;
+    max-width:78px !important;
+    max-height:56px !important;
+    object-fit:cover !important;
+  }
+}
+
+/* desktop menor / notebook grande */
+@media (min-width:1100px) and (max-width:1399px) {
+  .admin-shell-primeiro-acesso {
+    padding-left:205px;
+  }
+
+  .admin-shell-primeiro-acesso .admin-desktop-sidebar {
+    width:205px;
+  }
+
+  .admin-first-workspace .topbar-admin-primeiro {
+    left:14px;
+    right:14px;
+  }
+
+  .admin-first-workspace .admin-content-primeiro {
+    padding:88px 14px 24px !important;
+  }
+
+  .admin-first-workspace .admin-content-primeiro .miolo {
+    max-width:1180px !important;
+  }
+
+  .admin-first-workspace .mimo-first {
+    gap:12px;
+  }
+
+  .admin-first-workspace .mimo-first-hero {
+    min-height:272px;
+    grid-template-columns:minmax(0,1.16fr) minmax(330px,.84fr);
+    gap:20px;
+    padding:26px 28px;
+  }
+
+  .admin-first-workspace .mimo-first-hero h1 {
+    max-width:560px;
+    font-size:clamp(2.55rem,3.55vw,3.4rem);
+  }
+
+  .admin-first-workspace .mimo-first-hero-copy > p {
+    font-size:.82rem;
+  }
+
+  .admin-first-workspace .mimo-first-salon-card {
+    width:100%;
+    max-width:360px;
+  }
+
+  .admin-first-workspace .mimo-first-setup {
+    padding:14px 15px;
+  }
+
+  .admin-first-workspace .mimo-first-setup-head {
+    grid-template-columns:minmax(0,1.05fr) minmax(330px,.95fr);
+  }
+
+  .admin-first-workspace .mimo-first-board {
+    grid-template-columns:minmax(0,1.06fr) minmax(0,.98fr) minmax(280px,.78fr);
+    gap:10px;
+  }
+
+  .admin-first-workspace .mimo-first-agenda,
+  .admin-first-workspace .mimo-first-middle,
+  .admin-first-workspace .mimo-first-side {
+    height:380px;
+  }
+
+  .admin-first-workspace .mimo-first-middle {
+    grid-template-rows:222px 148px;
+    gap:10px;
+  }
+
+  .admin-first-workspace .mimo-first-side {
+    grid-template-rows:154px 122px 84px;
+    gap:10px;
+  }
+
+  .admin-first-workspace .mimo-first-help {
+    grid-template-columns:minmax(0,1fr) 118px;
+  }
+
+  .admin-first-workspace .mimo-first-mel-stage img {
+    width:132px;
+    height:104px;
+  }
+
+  .admin-first-workspace .mimo-first-help-bubble {
+    right:88px;
+  }
+}
+
+/* protege janela desktop estreita sem desmontar a página */
+@media (min-width:1100px) and (max-width:1220px) {
+  .admin-shell-primeiro-acesso {
+    padding-left:190px;
+  }
+
+  .admin-shell-primeiro-acesso .admin-desktop-sidebar {
+    width:190px;
+  }
+
+  .admin-first-workspace .admin-content-primeiro .miolo {
+    max-width:100% !important;
+  }
+
+  .admin-first-workspace .mimo-first-hero {
+    grid-template-columns:minmax(0,1fr) 315px;
+    padding:24px;
+  }
+
+  .admin-first-workspace .mimo-first-hero h1 {
+    font-size:2.7rem;
+  }
+
+  .admin-first-workspace .mimo-first-board {
+    grid-template-columns:minmax(0,1fr) minmax(0,.95fr) 265px;
+  }
+
+  .admin-first-workspace .mimo-first-salon-card {
+    max-width:315px;
+  }
+}

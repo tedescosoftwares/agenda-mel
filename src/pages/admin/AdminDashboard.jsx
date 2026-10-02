@@ -14,6 +14,7 @@ import { toISODate } from '../../lib/format'
 import { linkDoSalao } from '../../lib/endereco'
 import QRCode from 'qrcode'
 import { AGENDA_ART_EXACT, MEL_ART_EXACT } from '../../assets/mockArtExact'
+import PrimeiroAcessoHome from './PrimeiroAcessoHome'
 import { CalendarPlus, Users, Sparkles, MessageCircle, FileSignature, ArrowRight, CalendarDays, TrendingUp, Clock3, QrCode, Settings2, X, PlayCircle, ChevronRight, Activity, CircleDot, Rocket, BellRing, BookOpen, Scissors, Link2, Headphones, Trophy, BadgeCheck, Copy, ExternalLink } from 'lucide-react'
 
 // Dashboard do salão (tela 23): o dia de hoje em quatro números, o
@@ -173,26 +174,23 @@ export default function AdminDashboard() {
   if (primeiroAcesso) {
     return (
       <AdminShell amplo primeiroAcesso>
-        <div className="mimo-first">
-          <TutorialPainel primeiroAcesso />
-          <PrimeiroAcessoHome
-            saudacao={saudacao}
-            nomePessoa={nomePessoa}
-            capaSalao={capaSalao}
-            logoSalao={logoSalao}
-            iniciaisSalao={iniciaisSalao}
-            nomeSalao={nomeSalao}
-            hoje={hoje}
-            clientesCount={clientesCount}
-            feitosConfig={feitosConfig}
-            categoriasProntas={categoriasProntas}
-            servicosProntos={servicosProntos}
-            equipePronta={equipePronta}
-            linkPronto={linkPronto}
-            salaoAtivo={salaoAtivo}
-            linkSalao={linkSalao}
-          />
-        </div>
+        <TutorialPainel primeiroAcesso />
+        <PrimeiroAcessoHome
+          saudacao={saudacao}
+          nomePessoa={nomePessoa}
+          capaSalao={capaSalao}
+          logoSalao={logoSalao}
+          iniciaisSalao={iniciaisSalao}
+          nomeSalao={nomeSalao}
+          hoje={hoje}
+          clientesCount={clientesCount}
+          feitosConfig={feitosConfig}
+          categoriasProntas={categoriasProntas}
+          servicosProntos={servicosProntos}
+          equipePronta={equipePronta}
+          linkPronto={linkPronto}
+          linkSalao={linkSalao}
+        />
       </AdminShell>
     )
   }
@@ -509,189 +507,6 @@ export default function AdminDashboard() {
         </section>}
       </div>
     </AdminShell>
-  )
-}
-
-function PrimeiroAcessoHome({
-  saudacao,
-  nomePessoa,
-  capaSalao,
-  logoSalao,
-  iniciaisSalao,
-  nomeSalao,
-  hoje,
-  clientesCount,
-  feitosConfig,
-  categoriasProntas,
-  servicosProntos,
-  equipePronta,
-  linkPronto,
-  salaoAtivo,
-  linkSalao,
-}) {
-  const progresso = Math.max(0, Math.min(100, (feitosConfig / 4) * 100))
-  const abrirTour = () => window.dispatchEvent(new CustomEvent('mimo:abrir-tour-painel'))
-
-  return (
-    <>
-      <section
-        className="mimo-first-hero"
-        data-tour="inicio"
-        style={capaSalao ? { '--mimo-first-cover': `url("${capaSalao}")` } : undefined}
-      >
-        <div className="mimo-first-hero-bg" aria-hidden="true" />
-        <div className="mimo-first-hero-glow mimo-first-hero-glow-a" aria-hidden="true" />
-        <div className="mimo-first-hero-glow mimo-first-hero-glow-b" aria-hidden="true" />
-        <div className="mimo-first-hero-ribbon" aria-hidden="true" />
-        <div className="mimo-first-hero-copy">
-          <span className="mimo-first-kicker"><Sparkles size={13} /> {saudacao}{nomePessoa ? `, ${nomePessoa}` : ''}</span>
-          <h1>Seu salão ganhou um <strong>centro de comando.</strong></h1>
-          <p>Organize sua agenda, sua equipe e receba mais clientes de forma simples, tudo em um só lugar.</p>
-          <div className="mimo-first-hero-actions">
-            <Link to="/admin/configurar" className="mimo-first-primary"><Settings2 size={16} /> Continuar configuração <ArrowRight size={15} /></Link>
-            <button type="button" className="mimo-first-secondary" onClick={abrirTour}><PlayCircle size={16} /> Fazer tour guiado <span>1 min</span></button>
-          </div>
-        </div>
-
-        <div className="mimo-first-salon-card">
-          <div className="mimo-first-salon-head">
-            <span className="mimo-first-salon-photo">
-              {logoSalao ? <img src={logoSalao} alt="" /> : capaSalao ? <img src={capaSalao} alt="" /> : <b>{iniciaisSalao || 'M'}</b>}
-            </span>
-            <span className="mimo-first-salon-name"><small>Seu salão</small><strong>{nomeSalao}</strong></span>
-            <span className="mimo-first-online"><i /> Online</span>
-            <ChevronRight size={16} />
-          </div>
-          <div className="mimo-first-metrics">
-            <span><small>Hoje</small><strong>{hoje.atendimentos}</strong><em>{hoje.atendimentos === 1 ? 'atendimento' : 'atendimentos'}</em></span>
-            <span><small>Faturamento hoje</small><strong>{formatarCents(hoje.faturamento)}</strong></span>
-            <span><small>Novos clientes</small><strong>{clientesCount}</strong></span>
-          </div>
-        </div>
-      </section>
-
-      <section className="mimo-first-setup" data-tour="primeiros-passos">
-        <div className="mimo-first-setup-wash" aria-hidden="true" />
-        <div className="mimo-first-setup-head">
-          <div className="mimo-first-setup-title">
-            <span className="mimo-first-setup-icon"><Sparkles size={18} /></span>
-            <div>
-              <span className="mimo-first-kicker">Primeiros passos</span>
-              <h2>Deixe seu salão pronto para receber clientes</h2>
-              <p>Complete as etapas abaixo para liberar sua agenda e começar a receber agendamentos de verdade.</p>
-            </div>
-          </div>
-          <div className="mimo-first-progress">
-            <div><strong>{feitosConfig} de 4 concluídos</strong><span><i style={{ width:`${progresso}%` }} /></span></div>
-            <aside><Sparkles size={14} /><span><b>{feitosConfig >= 3 ? 'Quase lá!' : 'Falta pouco!'}</b><small>Seu salão já está quase pronto.</small></span></aside>
-          </div>
-        </div>
-
-        <div className="mimo-first-steps">
-          <Link to="/admin/configurar" className={categoriasProntas ? 'done' : 'current'}>
-            <b>{categoriasProntas ? <BadgeCheck size={15} /> : '1'}</b>
-            <span><strong>Categorias de serviços</strong><small>Crie as categorias: cabelo, unha, estética...</small></span>
-            <ChevronRight size={14} />
-          </Link>
-          <Link to="/admin/configurar" className={servicosProntos ? 'done' : (categoriasProntas ? 'current' : '')}>
-            <b>{servicosProntos ? <BadgeCheck size={15} /> : '2'}</b>
-            <span><strong>Serviços</strong><small>Cadastre seus serviços, duração e preços.</small></span>
-            <ChevronRight size={14} />
-          </Link>
-          <Link to="/admin/equipe" className={equipePronta ? 'done' : (servicosProntos ? 'current' : '')}>
-            <b>{equipePronta ? <BadgeCheck size={15} /> : '3'}</b>
-            <span><strong>Profissionais</strong><small>Adicione sua equipe e defina as agendas.</small></span>
-            <ChevronRight size={14} />
-          </Link>
-          <Link to="/admin/salao" className={linkPronto ? 'done' : (equipePronta ? 'current' : '')}>
-            <b>{linkPronto ? <BadgeCheck size={15} /> : '4'}</b>
-            <span><strong>Compartilhar link</strong><small>Divulgue seu link para receber clientes.</small></span>
-            <ChevronRight size={14} />
-          </Link>
-        </div>
-      </section>
-
-      <section className="mimo-first-board" data-tour="primeiro-operacao">
-        <article className="mimo-first-panel mimo-first-agenda">
-          <header>
-            <div><span className="mimo-first-kicker">Seu dia</span><h3>Agenda de hoje</h3></div>
-            <Link to="/admin/agenda">Ver agenda completa <ArrowRight size={13} /></Link>
-          </header>
-          <div className="mimo-first-agenda-empty">
-            <img src={AGENDA_ART_EXACT} alt="" />
-            <strong>Ainda não há agendamentos para hoje.</strong>
-            <p>Quando os primeiros clientes agendarem, eles aparecerão aqui com horário, serviço e profissional.</p>
-            <Link to="/admin/agenda?encaixe=1" className="mimo-first-primary small"><CalendarPlus size={14} /> Fazer um agendamento teste</Link>
-            <button type="button" onClick={abrirTour}>Como funciona?</button>
-          </div>
-        </article>
-
-        <div className="mimo-first-middle">
-          <article className="mimo-first-panel mimo-first-status">
-            <header><div><span className="mimo-first-kicker">Agora na MIMO</span><h3>Seu salão está tomando forma</h3></div></header>
-            <div className="mimo-first-status-list">
-              <span className="ok"><i><BadgeCheck size={14} /></i><b>Seu salão está online</b><small>Clientes já podem acessar seu link.</small></span>
-              <span className={categoriasProntas ? 'ok' : ''}><i>{categoriasProntas ? <BadgeCheck size={14} /> : <CircleDot size={13} />}</i><b>{categoriasProntas ? 'Categorias criadas' : 'Crie suas categorias'}</b><small>Organize o que você oferece.</small></span>
-              <Link to="/admin/servicos" className={servicosProntos ? 'ok' : 'current'}><i>{servicosProntos ? <BadgeCheck size={14} /> : <Scissors size={13} />}</i><b>{servicosProntos ? 'Serviços cadastrados' : 'Cadastre seus serviços'}</b><small>{servicosProntos ? 'Sua vitrine já sabe o que você oferece.' : 'Falta esse passo para montar a agenda.'}</small><ChevronRight size={13} /></Link>
-              <button type="button" className="tour" onClick={abrirTour}><i><PlayCircle size={14} /></i><b>Aprenda com o tour</b><small>Veja o painel em menos de 1 minuto.</small><ChevronRight size={13} /></button>
-            </div>
-          </article>
-
-          <article className="mimo-first-panel mimo-first-benefits">
-            <div className="mimo-first-benefits-head"><span><Trophy size={17} /></span><div><strong>O que você vai conquistar</strong><small>Quando a configuração terminar, essa Home vira o centro da operação.</small></div></div>
-            <div className="mimo-first-benefits-grid">
-              <span><i><CalendarDays size={15} /></i><b>Agenda organizada</b><small>Veja todos os atendimentos do dia.</small></span>
-              <span><i><Users size={15} /></i><b>Equipe em um só lugar</b><small>Serviços, horários e agenda de cada profissional.</small></span>
-              <span><i><BellRing size={15} /></i><b>Pedidos de clientes</b><small>Receba e confirme solicitações.</small></span>
-              <span><i><Link2 size={15} /></i><b>Seu salão para compartilhar</b><small>Link e QR para marcarem sozinhos.</small></span>
-            </div>
-          </article>
-        </div>
-
-        <aside className="mimo-first-side">
-          <article className="mimo-first-panel mimo-first-actions" data-tour="atalhos">
-            <header><div><span className="mimo-first-kicker">Acesso rápido</span><h3>Ações rápidas</h3></div></header>
-            <div className="mimo-first-actions-grid">
-              <Link to="/admin/servicos"><i><Scissors size={17} /></i><b>Cadastrar serviço</b><small>Adicione o que seu salão oferece</small></Link>
-              <Link to="/admin/equipe"><i><Users size={17} /></i><b>Adicionar profissional</b><small>Monte a equipe e os horários</small></Link>
-              <Link to="/admin/salao"><i><QrCode size={17} /></i><b>Ver meu salão</b><small>Confira sua página pública</small></Link>
-              <Link to="/admin/salao"><i><Link2 size={17} /></i><b>Compartilhar link</b><small>Leve a agenda aos clientes</small></Link>
-            </div>
-          </article>
-
-          <article className="mimo-first-panel mimo-first-share" data-tour="link">
-            <div>
-              <span className="mimo-first-kicker">Divulgue seu salão</span>
-              <strong>Seu link já pode morar no Instagram, WhatsApp e balcão.</strong>
-              <small>{linkPronto ? 'Copie o link ou use o QR Code.' : 'Assim que a configuração terminar, este é o endereço que você compartilha.'}</small>
-            </div>
-            <div className="mimo-first-share-body">
-              <span>{linkSalao || 'seusalao.mimo.com.vc'}</span>
-              {linkSalao && <HomeQr texto={linkSalao} />}
-            </div>
-            <div className="mimo-first-share-actions">
-              {linkSalao && <button type="button" onClick={() => navigator.clipboard?.writeText(linkSalao)}><Copy size={12} /> Copiar link</button>}
-              {linkSalao && <a href={linkSalao} target="_blank" rel="noreferrer"><ExternalLink size={12} /> Abrir</a>}
-            </div>
-          </article>
-
-          <article className="mimo-first-panel mimo-first-help">
-            <div className="mimo-first-help-copy">
-              <i><Headphones size={18} /></i>
-              <div>
-                <strong>Precisa de ajuda?</strong>
-                <small>Acesse os tutoriais ou fale com o suporte da MIMO.</small>
-              </div>
-              <Link to="/admin/guia">Acessar central de ajuda <ArrowRight size={12} /></Link>
-            </div>
-            <div className="mimo-first-mel-stage" aria-hidden="true">
-              <span className="mimo-first-help-bubble">Oi! Eu sou a <b>Mel</b> 💗</span>
-              <img src={MEL_ART_EXACT} alt="" />
-            </div>
-          </article>
-        </aside>
-      </section>
-    </>
   )
 }
 

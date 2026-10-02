@@ -7,21 +7,29 @@ import { climaDoSalao, CONDICOES } from '../lib/clima'
 export default function ClimaTopo() {
   const { salao } = useAuth()
   const [clima, setClima] = useState(null)
+  const [aberto, setAberto] = useState(false)   // no celular, a previsão abre no toque
   useEffect(() => {
     let vivo = true
     climaDoSalao(salao?.id).then((c) => { if (vivo) setClima(c) })
     return () => { vivo = false }
   }, [salao?.id])
+  useEffect(() => {
+    if (!aberto) return
+    const fechar = (e) => { if (!e.target.closest?.('.admin-topbar-clima-caixa')) setAberto(false) }
+    document.addEventListener('click', fechar)
+    return () => document.removeEventListener('click', fechar)
+  }, [aberto])
   if (!clima?.condicao) return null
   const c = CONDICOES[clima.condicao] ?? CONDICOES.ensolarado
   const pv = clima.previsao
   const Dia = CONDICOES[pv?.condicao_dia]?.Icone, Noite = CONDICOES[pv?.condicao_noite]?.Icone
   return (
-    <span className="admin-topbar-clima-caixa">
-      <span className="admin-topbar-clima" aria-label={`${clima.cidade || ''}: ${clima.descricao || c.rotulo}, ${clima.temperatura}°`}>
+    <span className={'admin-topbar-clima-caixa' + (aberto ? ' aberta' : '')}>
+      <button type="button" className="admin-topbar-clima" onClick={() => setAberto((v) => !v)} aria-label={`${clima.cidade || ''}: ${clima.descricao || c.rotulo}, ${clima.temperatura}°`} aria-expanded={aberto}>
         <c.Icone size={16} style={{ color: c.cor }} />
-        <span>{[clima.cidade, clima.temperatura != null ? `${clima.temperatura}°` : null].filter(Boolean).join(' · ')}</span>
-      </span>
+        {clima.cidade && <span className="admin-clima-cidade">{clima.cidade} · </span>}
+        {clima.temperatura != null && <span>{clima.temperatura}°</span>}
+      </button>
       {/* a previsão de hoje, no passar do mouse */}
       <span className="admin-clima-previsao" role="tooltip">
         <span className="admin-clima-agora">

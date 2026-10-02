@@ -68,7 +68,8 @@ Deno.serve(async (req) => {
   const servico = createClient(URL_SUPABASE, CHAVE_SERVICO, { auth: { persistSession: false } })
   const celula = `${(Math.round(lat / 0.05) * 0.05).toFixed(2)},${(Math.round(lng / 0.05) * 0.05).toFixed(2)}`
   const { data: cache } = await servico.from('clima_cache').select('dados, atualizado_em').eq('celula', celula).maybeSingle()
-  if (cache && Date.now() - new Date(cache.atualizado_em).getTime() < VALIDADE_MIN * 60e3) {
+  // cache válido = recente E já com a previsão do dia (o de antes da 2.86.2 não tinha)
+  if (cache && 'previsao' in (cache.dados ?? {}) && cache.dados.previsao && Date.now() - new Date(cache.atualizado_em).getTime() < VALIDADE_MIN * 60e3) {
     return json({ ...cache.dados, cidade: base.cidade, atualizado_em: cache.atualizado_em, cache: true })
   }
 

@@ -216,10 +216,11 @@
 .fa-mel-x { position: absolute; top: -8px; left: -8px; z-index: 3; width: 26px; height: 26px; display: none; place-items: center; border: 1px solid var(--fa-fio); border-radius: 50%; background: #fff; color: #7a6f7e; font-size: 1rem; line-height: 1; cursor: pointer; box-shadow: 0 4px 12px rgba(73, 31, 78, .14); }
 .fa-mel-dock.aberta .fa-mel-x { display: grid; }
 .fa-mel { position: relative; width: 150px; height: 150px; border-radius: 50%; overflow: hidden; background: radial-gradient(circle at 50% 35%, #fff, #ffe3ee 70%, #ffd0e2); box-shadow: 0 14px 34px rgba(255, 45, 122, .22), inset 0 0 0 4px #fff; transition: width .25s ease, height .25s ease, border-radius .25s ease, box-shadow .25s ease; }
-.fa-mel-dock.aberta .fa-mel { width: 190px; height: 190px; border-radius: 0 22px 22px 0; background: transparent; box-shadow: none; overflow: visible; }
-.fa-mel-png { position: absolute; left: 50%; bottom: -4%; width: 118%; height: 118%; transform: translateX(-50%); object-fit: contain; object-position: bottom center; pointer-events: none; transition: transform .25s ease; }
-.fa-mel-dock.aberta .fa-mel-png { left: auto; right: 0; bottom: 0; width: 100%; height: 100%; transform: none; filter: drop-shadow(0 8px 14px rgba(85, 35, 79, .22)); }
-.fa-mel-dock:not(.aberta):hover .fa-mel-png { transform: translateX(-50%) translateY(-3px); }
+.fa-mel-dock.aberta .fa-mel { width: 190px; height: 190px; border-radius: 0 22px 22px 0; background: linear-gradient(180deg, #fff6fa, #ffe3ee); box-shadow: none; overflow: hidden; }
+/* a imagem preenche o círculo (ou a coluna) inteiro, alinhada pelo topo: nunca sobra borda nem vaza */
+.fa-mel-png { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 12%; pointer-events: none; transition: transform .25s ease; }
+.fa-mel-dock.aberta .fa-mel-png { object-position: 50% 8%; }
+.fa-mel-dock:not(.aberta):hover .fa-mel-png { transform: scale(1.04); }
 .fa-mel-balao { position: absolute; right: 118px; top: 4px; z-index: 2; padding: 5px 10px; border-radius: 999px 999px 4px 999px; background: #fff; color: var(--fa-pink); font-size: .72rem; font-weight: 700; white-space: nowrap; box-shadow: 0 8px 20px rgba(85, 35, 79, .14); }
 .fa-mel-dock.aberta .fa-mel-balao { right: 6px; left: auto; top: auto; bottom: calc(100% + 10px); max-width: 250px; white-space: normal; text-align: center; line-height: 1.25; padding: 8px 14px; font-size: .8rem; border-radius: 16px 16px 4px 16px; }
 .fa-mel b { font-weight: 800; }

@@ -25,9 +25,16 @@ export async function pedirMel(salaoId, { forcar = false } = {}) {
       let tourFeito = false
       try { tourFeito = localStorage.getItem('mimo-tour-painel-concluido') === '1' } catch { /* nada */ }
       const dados = await chamar('mel', { salao: salaoId, tour_feito: tourFeito })
-      try { localStorage.setItem(CHAVE, JSON.stringify({ salao: salaoId, em: Date.now(), dados })) } catch { /* nada */ }
+      try { localStorage.setItem(CHAVE, JSON.stringify({ salao: salaoId, em: Date.now(), dados })); localStorage.removeItem(CHAVE + '-erro') } catch { /* nada */ }
+      if (!dados?.bubble) console.info('[mel] motor respondeu sem fala: nenhuma frase serviu para os momentos de agora', dados)
       return dados
-    } catch { return null } finally { emVoo = null }
+    } catch (e) {
+      // o erro fica visível no console e em localStorage (mimo-mel-v1-erro) para diagnosticar:
+      // 404 = função não publicada (bat 9); "mel_contexto" na mensagem = migração 140 faltando (bat B)
+      console.warn('[mel] motor indisponível:', e?.message || e)
+      try { localStorage.setItem(CHAVE + '-erro', JSON.stringify({ em: Date.now(), erro: String(e?.message || e) })) } catch { /* nada */ }
+      return null
+    } finally { emVoo = null }
   })()
   return emVoo
 }

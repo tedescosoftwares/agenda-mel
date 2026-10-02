@@ -109,6 +109,7 @@ export default function AdminShell({ children, amplo = false, primeiroAcesso = f
         </div>
       </aside>
 
+      <div className={primeiroAcesso ? 'admin-first-workspace' : 'admin-shell-workspace'}>
       <header className={'topbar topbar-admin' + (primeiroAcesso ? ' topbar-admin-primeiro' : '')}>
         <div className="topbar-admin-esquerda">
           <span className="brand-inline">
@@ -139,6 +140,7 @@ export default function AdminShell({ children, amplo = false, primeiroAcesso = f
       </header>
 
       <main className={'content admin-content' + (primeiroAcesso ? ' admin-content-primeiro' : '')} ref={miolo}><div className="miolo">{acesso?.fase === 'bloqueado' ? <PainelPausado para="admin" /> : children}</div></main>
+      </div>
 
       <nav className="bottom-nav">
         <div className="bottom-nav-inner">

@@ -20,6 +20,10 @@ export type Ctx = {
   calendario: { feriado_hoje: string | null; feriado_amanha: string | null; data_comercial: { nome: string; data: string; dias: number } | null }
   clima: Record<string, any> | null
   historico: { primeira_vez: boolean; recentes: Array<{ chave: string; identidade: string | null; superficie: string; frase_id: string | null; mostrada_em: string; dispensada_em: string | null; clicada_em: string | null; concluida_em: string | null }> }
+  // primeiros_passos() (só a dona recebe): servicos, equipe, equipe_pendente, agendamentos, avisos, horarios, dados, onboarding_concluido_em
+  configuracao?: Record<string, any> | null
+  // o que só o app sabe (vem no corpo da chamada): tour_feito
+  extra?: { tour_feito?: boolean } | null
 }
 
 export type Dados = Record<string, string | number | boolean | null | undefined>
@@ -27,7 +31,7 @@ export type Acao = { type: string; payload: Record<string, unknown> } | null
 export type Nivel = 'reforco' | 'importante' | 'dispensavel'
 export type Momento = {
   chave: string
-  categoria: 'agenda' | 'oportunidade' | 'marco' | 'clima' | 'calendario' | 'operacional' | 'geral'
+  categoria: 'agenda' | 'oportunidade' | 'marco' | 'clima' | 'calendario' | 'operacional' | 'geral' | 'configuracao'
   nivel: Nivel
   base: number
   superficies: Array<'mel_bubble' | 'weather_card'>
@@ -352,6 +356,54 @@ export const MOMENTOS: Momento[] = [
     acao: (d) => (n(d.semana_pct) < 85 ? { type: 'CRIAR_PROMOCAO', payload: { data_comercial: d.data } } : null),
   },
 
+  // ------------------------------------------------------------ configuração inicial (só a dona vê)
+  {
+    chave: 'configurar_servicos', categoria: 'configuracao', nivel: 'importante', base: 75, superficies: ['mel_bubble'], tom: 'atenta', cooldownMin: 240,
+    detectar: (c) => (c.configuracao && n(c.configuracao.servicos) === 0 ? { nome: c.pessoa.nome ?? '' } : null),
+    identidade: (_d, c) => c.agora.data,
+    acao: () => ({ type: 'IR_CONFIGURAR', payload: { passo: 'servicos' } }),
+  },
+  {
+    chave: 'configurar_equipe', categoria: 'configuracao', nivel: 'importante', base: 72, superficies: ['mel_bubble'], tom: 'atenta', cooldownMin: 240,
+    detectar: (c) => (c.configuracao && c.salao.tipo === 'salao' && n(c.configuracao.servicos) > 0 && n(c.configuracao.equipe) === 0 ? { nome: c.pessoa.nome ?? '', n_servicos: c.configuracao.servicos } : null),
+    identidade: (_d, c) => c.agora.data,
+    acao: () => ({ type: 'IR_CONFIGURAR', payload: { passo: 'equipe' } }),
+  },
+  {
+    chave: 'equipe_sem_acesso', categoria: 'configuracao', nivel: 'dispensavel', base: 55, superficies: ['mel_bubble'], tom: 'atenta', cooldownMin: DIA,
+    detectar: (c) => (c.configuracao && n(c.configuracao.equipe_pendente) > 0 ? { n: c.configuracao.equipe_pendente, profissional: '' } : null),
+    identidade: (d, c) => `${c.agora.data}-${d.n}`,
+    acao: () => ({ type: 'IR_CONFIGURAR', payload: { passo: 'equipe' } }),
+  },
+  {
+    chave: 'agendamento_teste', categoria: 'configuracao', nivel: 'dispensavel', base: 60, superficies: ['mel_bubble'], tom: 'feliz', cooldownMin: DIA,
+    detectar: (c) => (c.configuracao && n(c.configuracao.servicos) > 0 && (c.salao.tipo !== 'salao' || n(c.configuracao.equipe) > 0) && n(c.configuracao.agendamentos) === 0 ? { nome: c.pessoa.nome ?? '' } : null),
+    identidade: (_d, c) => c.agora.data,
+    acao: () => ({ type: 'ENCAIXAR', payload: {} }),
+  },
+  {
+    chave: 'ligar_avisos', categoria: 'configuracao', nivel: 'dispensavel', base: 45, superficies: ['mel_bubble'], tom: 'atenta', cooldownMin: 3 * DIA,
+    detectar: (c) => (c.configuracao && c.configuracao.avisos === false && n(c.configuracao.agendamentos) > 0 ? { nome: c.pessoa.nome ?? '' } : null),
+    identidade: (_d, c) => c.agora.data,
+    acao: () => ({ type: 'LIGAR_AVISOS', payload: {} }),
+  },
+  {
+    chave: 'tour_pendente', categoria: 'configuracao', nivel: 'dispensavel', base: 42, superficies: ['mel_bubble'], tom: 'feliz', cooldownMin: 2 * DIA,
+    detectar: (c) => (c.extra && c.extra.tour_feito === false && !c.historico.primeira_vez ? { nome: c.pessoa.nome ?? '' } : null),
+    identidade: (_d, c) => c.agora.data,
+    acao: () => ({ type: 'FAZER_TOUR', payload: {} }),
+  },
+  {
+    chave: 'configuracao_concluida', categoria: 'configuracao', nivel: 'dispensavel', base: 80, superficies: ['mel_bubble', 'weather_card'], tom: 'comemorando', cooldownMin: null,
+    detectar: (c) => {
+      const k = c.configuracao
+      if (!k || n(k.servicos) === 0 || (c.salao.tipo === 'salao' && n(k.equipe) === 0) || n(k.agendamentos) === 0) return null
+      if (c.salao.dias_desde_criacao > 30) return null   // salão antigo não "acabou de montar"
+      return { nome: c.pessoa.nome ?? '', n_servicos: k.servicos, n_equipe: k.equipe }
+    },
+    identidade: (_d, c) => c.salao.id,   // uma vez só, para sempre
+  },
+
   // ------------------------------------------------------------ o dia a dia e o primeiro oi
   {
     chave: 'contexto_comum', categoria: 'clima', nivel: 'dispensavel', base: 20, superficies: ['mel_bubble', 'weather_card'], tom: 'neutra', cooldownMin: 180,
@@ -400,7 +452,7 @@ export function avaliar(c: Ctx, superficie: 'mel_bubble' | 'weather_card', agora
     let pontos = m.base + (m.modificadores?.(dados, c) ?? 0)
     const acao = m.acao?.(dados, c) ?? null
     if (acao) pontos += 5
-    if (!c.hoje.abre && m.categoria !== 'operacional' && m.chave !== 'primeiro_contato') pontos -= 20
+    if (!c.hoje.abre && !['operacional', 'configuracao'].includes(m.categoria) && m.chave !== 'primeiro_contato') pontos -= 20
     if (!c.pessoa.dona && m.categoria === 'operacional' && ['baixas_pendentes', 'mensagens_na_fila'].includes(m.chave) === false) { /* a profissional vê o que é dela: nada a anular aqui */ }
     lista.push({ momento: m, dados, pontos, acao, tom: m.tomDe?.(dados, c) ?? m.tom, identidade })
   }

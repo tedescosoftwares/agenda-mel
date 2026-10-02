@@ -13,7 +13,7 @@ begin
 
   -- 1. o catálogo veio semeado
   select count(*) into n from public.mel_momentos;
-  if n <> 27 then raise exception '1: esperava 27 momentos, veio %', n; end if;
+  if n <> 34 then raise exception '1: esperava 34 momentos, veio %', n; end if;
   if (select placeholders from public.mel_momentos where chave = 'proxima_cliente_em_breve') <> '{cliente,hora,servico,minutos,profissional}' then raise exception '1b'; end if;
   raise notice '1 catálogo: % momentos', n;
 
@@ -143,7 +143,7 @@ begin
     reset role;
     perform set_config('request.jwt.claim.sub', plat::text, true);
     set local role authenticated;
-    select count(*) into n from public.mel_momentos; if n <> 27 then raise exception '9d: plataforma leu % momentos', n; end if;
+    select count(*) into n from public.mel_momentos; if n <> 34 then raise exception '9d: plataforma leu % momentos', n; end if;
     select count(*) into n from public.mel_frases; if n < 5 then raise exception '9e: plataforma leu % frases', n; end if;
     insert into public.mel_frases (chave, superficie, texto) values ('dia_cheio', 'mel_bubble', 'Agenda cheia hoje. Eu fico de olho.');
     reset role;

@@ -15585,3 +15585,15 @@ label.switch:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
   .fa-mel-dock.aberta { grid-template-columns: minmax(0, 1fr) 130px; max-width: calc(100vw - 16px); }
   .fa-mel-dock.aberta .fa-mel { width: 130px; height: 130px; }
 }
+
+
+/* A Mel guia o tour e mora no Guia (2.89) */
+.admin-tour-mel { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; object-position: 50% 12%; box-shadow: 0 0 0 3px #fff, 0 6px 16px rgba(255, 45, 122, .22); }
+.admin-tour-card.com-mel { padding-top: 22px; }
+.admin-tour-card .admin-tour-mel.grande { position: absolute; top: -34px; left: 18px; width: 64px; height: 64px; }
+.admin-tour-card.com-mel .admin-tour-card-topo { padding-left: 72px; min-height: 30px; }
+.guia-lado { display: grid; gap: 10px; }
+.guia-mel { position: relative; display: flex; justify-content: flex-end; align-items: flex-end; gap: 10px; min-height: 96px; }
+.guia-mel img { width: 92px; height: 92px; border-radius: 50%; object-fit: cover; object-position: 50% 12%; box-shadow: 0 0 0 4px #fff, 0 12px 28px rgba(255, 45, 122, .22); }
+.guia-mel-balao { max-width: 240px; padding: 8px 14px; border-radius: 16px 16px 4px 16px; background: #fff; color: #ff2d7a; font-size: .8rem; font-weight: 700; line-height: 1.25; box-shadow: 0 8px 20px rgba(85, 35, 79, .14); margin-bottom: 44px; }
+@media (max-width: 640px) { .guia-mel { min-height: 0; } .guia-mel img { width: 64px; height: 64px; } .guia-mel-balao { margin-bottom: 24px; } }

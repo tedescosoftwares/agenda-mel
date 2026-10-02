@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { BookOpen, Search, PlayCircle, Clock3, ChevronRight, Sparkles, CalendarDays, Users, Scissors, QrCode, MessageCircle, CreditCard, Settings2 } from 'lucide-react'
 import AdminShell from '../../components/AdminShell'
+import { MEL_PADRAO } from '../../lib/mel'
 
 const GUIAS = [
   { id:'visao-geral', titulo:'Conheça o painel da MIMO', categoria:'Comece por aqui', duracao:'1:20', descricao:'Entenda onde ficam agenda, clientes, equipe, serviços e configurações.', Icon:Sparkles, destaque:true, passos:['Veja a visão geral do painel','Entenda os atalhos principais','Saiba onde continuar a configuração'] },
@@ -40,9 +41,15 @@ export default function AdminGuia() {
             <h1>Aprenda quando precisar.<br/><strong>Sem depender de ninguém.</strong></h1>
             <p>Vídeos rápidos, gravados dentro da própria MIMO, para você resolver uma dúvida e voltar ao trabalho.</p>
           </div>
-          <div className="guia-busca">
-            <Search size={18}/>
-            <input value={busca} onChange={(e)=>setBusca(e.target.value)} placeholder="O que você quer aprender?" />
+          <div className="guia-lado">
+            <div className="guia-mel">
+              <span className="guia-mel-balao">Oi! Me diz o que você quer fazer que eu acho o guia. 💗</span>
+              <img src={MEL_PADRAO} alt="Mel, assistente da MIMO" />
+            </div>
+            <div className="guia-busca">
+              <Search size={18}/>
+              <input value={busca} onChange={(e)=>setBusca(e.target.value)} placeholder="O que você quer aprender?" />
+            </div>
           </div>
         </section>
 

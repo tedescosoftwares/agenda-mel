@@ -22,7 +22,9 @@ export async function pedirMel(salaoId, { forcar = false } = {}) {
   if (emVoo) return emVoo
   emVoo = (async () => {
     try {
-      const dados = await chamar('mel', { salao: salaoId })
+      let tourFeito = false
+      try { tourFeito = localStorage.getItem('mimo-tour-painel-concluido') === '1' } catch { /* nada */ }
+      const dados = await chamar('mel', { salao: salaoId, tour_feito: tourFeito })
       try { localStorage.setItem(CHAVE, JSON.stringify({ salao: salaoId, em: Date.now(), dados })) } catch { /* nada */ }
       return dados
     } catch { return null } finally { emVoo = null }
@@ -45,6 +47,7 @@ export const ROTULO_ACAO = {
   VER_PEDIDOS: 'Ver pedidos', ABRIR_AGENDA: 'Abrir agenda', VER_AMANHA: 'Ver amanhã', DIVULGAR_VAGA: 'Divulgar horário',
   OFERTAR_VAGA_LISTA: 'Oferecer à lista de espera', PEDIR_CONFIRMACAO: 'Confirmar horários', ENCAIXAR: 'Encaixar',
   FECHAR_DIA: 'Fechar o dia', VER_FILA_WHATSAPP: 'Ver mensagens', CRIAR_PROMOCAO: 'Criar promoção', VER_PLANO: 'Ver plano',
+  IR_CONFIGURAR: 'Continuar configuração', LIGAR_AVISOS: 'Ligar avisos', FAZER_TOUR: 'Fazer o tour',
 }
 
 export function rotaDaAcao(acao) {
@@ -58,6 +61,8 @@ export function rotaDaAcao(acao) {
     case 'VER_FILA_WHATSAPP': return '/admin/whatsapp'
     case 'CRIAR_PROMOCAO': return '/admin/promocoes?nova=1'
     case 'VER_PLANO': return '/admin/assinatura'
+    case 'IR_CONFIGURAR': return p.passo === 'servicos' ? '/admin/servicos' : p.passo === 'equipe' ? '/admin/equipe' : '/admin/configurar'
+    case 'LIGAR_AVISOS': return '/admin/ajustes'
     default: return null
   }
 }
@@ -95,6 +100,11 @@ export async function executarAcao(acao, { exibicao, salao, salaoId }) {
       const n = data?.enviadas ?? 0
       return { concluida: n > 0, mensagem: n > 0 ? `Lembrete pedindo confirmação enviado para ${n} ${n === 1 ? 'cliente' : 'clientes'}.` : 'Todo mundo desse dia já recebeu o lembrete.' }
     }
+    case 'FAZER_TOUR': {
+      // o tour mora na home; se já está nela, abre na hora
+      if (window.location.pathname === '/admin') { window.dispatchEvent(new Event('mimo:abrir-tour-painel')); return { concluida: false } }
+      return { concluida: false, navegar: '/admin?tour=1' }
+    }
     default:
       return { concluida: false, navegar: rotaDaAcao(acao) }
   }
@@ -115,6 +125,9 @@ function demoMel() {
     dia_fechado: { texto: 'Sete atendidas hoje. Dia encerrado.', tom: 'comemorando', nivel: 'dispensavel', categoria: 'marco', acao: { type: 'VER_AMANHA', payload: { dia: new Date(Date.now() + 864e5).toISOString().slice(0, 10) } } },
     calor_extremo: { texto: '35 graus e secador ligado. Você é forte.', tom: 'cansada', nivel: 'dispensavel', categoria: 'clima', acao: null },
     contexto_comum: { texto: 'Sexta à tarde e a agenda andando.', tom: 'feliz', nivel: 'dispensavel', categoria: 'clima', acao: null },
+    configurar_servicos: { texto: 'Sem serviço cadastrado a agenda não abre. Vamos nessa?', tom: 'atenta', nivel: 'importante', categoria: 'configuracao', acao: { type: 'IR_CONFIGURAR', payload: { passo: 'servicos' } } },
+    tour_pendente: { texto: 'Quer que eu te mostre o painel? Leva 1 minuto.', tom: 'feliz', nivel: 'dispensavel', categoria: 'configuracao', acao: { type: 'FAZER_TOUR', payload: {} } },
+    configuracao_concluida: { texto: 'Salão montado! Agora é só deixar a agenda rodar.', tom: 'comemorando', nivel: 'dispensavel', categoria: 'configuracao', acao: null },
   }
   const m = todos[chave] ?? todos.proxima_cliente_em_breve
   return { bubble: { exibicao: 'demo', chave, ...m, avatar_key: `${clima}_${m.tom}` }, card: { exibicao: 'demo', chave: 'contexto_comum', texto: 'Céu cinza, mas a sua cliente vai sair daqui colorida.' }, clima: null }

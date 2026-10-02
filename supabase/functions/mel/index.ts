@@ -6,7 +6,7 @@
 //         → avatar_key + ação semântica
 //           → registra em mel_exibicoes (snapshot do template)
 //
-// Chamada pelo app logado: POST { salao: uuid }. Resposta:
+// Chamada pelo app logado: POST { salao: uuid, tour_feito?: boolean }. Resposta:
 //   { bubble: { exibicao, chave, categoria, nivel, texto, tom, avatar_key, acao } | null,
 //     card:   { exibicao, chave, texto } | null,
 //     clima:  o que está no cache (a função clima enche) }
@@ -66,16 +66,16 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return json({ ok: true })
   const auth = req.headers.get('Authorization') ?? ''
   if (!auth) return json({ erro: 'não autorizado' }, 401)
-  let corpo: { salao?: string } = {}
+  let corpo: { salao?: string; tour_feito?: boolean } = {}
   try { corpo = await req.json() } catch { /* vazio */ }
   const salao = String(corpo.salao ?? '')
   if (!salao) return json({ erro: 'salao obrigatório' }, 400)
 
   // os fatos, como a pessoa logada (a RPC filtra pelo papel dela)
   const quem = createClient(URL_SUPABASE, CHAVE_ANON, { global: { headers: { Authorization: auth } }, auth: { persistSession: false } })
-  const { data: ctx, error } = await quem.rpc('mel_contexto', { salao })
+  const [{ data: ctx, error }, { data: passos }] = await Promise.all([quem.rpc('mel_contexto', { salao }), quem.rpc('primeiros_passos', { salao })])
   if (error) return json({ erro: error.message }, 400)
-  const c = ctx as Ctx
+  const c = { ...(ctx as Ctx), configuracao: passos ?? null, extra: { tour_feito: corpo.tour_feito } } as Ctx
 
   // a biblioteca (o motor lê tudo; RLS é para a Plataforma)
   const servico = createClient(URL_SUPABASE, CHAVE_SERVICO, { auth: { persistSession: false } })

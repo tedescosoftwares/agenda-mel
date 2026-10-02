@@ -5,6 +5,7 @@ import AvisosNovos from '../../components/AvisosNovos'
 import LigarAvisos from '../../components/LigarAvisos'
 import PendenciasBaixa from '../../components/PendenciasBaixa'
 import MelDock from '../../components/MelDock'
+import { MEL_PADRAO } from '../../lib/mel'
 import PrimeirosPassos from '../../components/PrimeirosPassos'
 import AcessoAviso from '../../components/AcessoAviso'
 import { supabase } from '../../lib/supabase'
@@ -543,6 +544,8 @@ function TutorialPainel({ primeiroAcesso = false }) {
   useEffect(() => {
     const abrir = () => iniciar()
     window.addEventListener('mimo:abrir-tour-painel', abrir)
+    // a Mel manda para cá com ?tour=1 (2.89)
+    if (new URLSearchParams(window.location.search).get('tour') === '1') { window.history.replaceState({}, '', '/admin'); setTimeout(abrir, 400) }
     return () => window.removeEventListener('mimo:abrir-tour-painel', abrir)
   }, [])
 
@@ -581,8 +584,8 @@ function TutorialPainel({ primeiroAcesso = false }) {
     <>
       {convite && (
         <div className="admin-tour-convite">
-          <span className="admin-tour-convite-icone"><PlayCircle size={21} /></span>
-          <span><strong>Primeira vez por aqui?</strong><small>A MIMO pode te mostrar o básico deste painel em menos de 1 minuto.</small></span>
+          <img className="admin-tour-mel" src={MEL_PADRAO} alt="" />
+          <span><strong>Primeira vez por aqui?</strong><small>Eu sou a Mel. Te mostro o básico deste painel em menos de 1 minuto.</small></span>
           <div><button type="button" className="btn btn-ghost" onClick={depois}>Agora não</button><button type="button" className="btn btn-primary" onClick={iniciar}>Me mostra <ArrowRight size={15} /></button></div>
         </div>
       )}
@@ -590,8 +593,9 @@ function TutorialPainel({ primeiroAcesso = false }) {
       {ativo && atual && (
         <div className="admin-tour-overlay">
           {rect && <div className="admin-tour-foco" style={{ top:rect.top - 8, left:rect.left - 8, width:rect.width + 16, height:rect.height + 16 }} />}
-          <div className="admin-tour-card">
-            <div className="admin-tour-card-topo"><span>{passo + 1} de {passos.length}</span><button type="button" onClick={fechar} aria-label="Fechar tutorial"><X size={17} /></button></div>
+          <div className="admin-tour-card com-mel">
+            <img className="admin-tour-mel grande" src={MEL_PADRAO} alt="Mel" />
+            <div className="admin-tour-card-topo"><span>Mel · {passo + 1} de {passos.length}</span><button type="button" onClick={fechar} aria-label="Fechar tutorial"><X size={17} /></button></div>
             <strong>{atual.titulo}</strong>
             <p>{atual.texto}</p>
             <div className="admin-tour-card-acoes">

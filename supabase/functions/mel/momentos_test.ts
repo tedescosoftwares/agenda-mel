@@ -88,3 +88,17 @@ Deno.test('dia fechado à noite com pendência pede fechar o dia; véspera de fe
   assertEquals(v.acao?.type, 'VER_AMANHA')
   assertEquals(v.dados.feriado, 'Tiradentes')
 })
+
+Deno.test('configuração inicial: sem serviço pede serviços; tudo pronto comemora uma vez; tour pendente sugere o tour', () => {
+  const semServico = avaliar(ctx({ configuracao: { servicos: 0, equipe: 0, equipe_pendente: 0, agendamentos: 0, avisos: false }, salao: { ...ctx().salao, dias_desde_criacao: 2 } }), 'mel_bubble')
+  assertEquals(semServico[0].momento.chave, 'configurar_servicos')
+  assertEquals(semServico[0].acao?.type, 'IR_CONFIGURAR')
+  const pronto = avaliar(ctx({ configuracao: { servicos: 6, equipe: 3, equipe_pendente: 0, agendamentos: 1, avisos: true }, salao: { ...ctx().salao, dias_desde_criacao: 2 } }), 'mel_bubble')
+  assertEquals(pronto[0].momento.chave, 'configuracao_concluida')
+  const jaViu = [{ chave: 'configuracao_concluida', identidade: 's1', superficie: 'mel_bubble', frase_id: 'f', mostrada_em: '2026-09-01T10:00:00Z', dispensada_em: null, clicada_em: null, concluida_em: null }]
+  const depois = avaliar(ctx({ configuracao: { servicos: 6, equipe: 3, equipe_pendente: 0, agendamentos: 1, avisos: true }, salao: { ...ctx().salao, dias_desde_criacao: 2 }, historico: { primeira_vez: false, recentes: jaViu } }), 'mel_bubble')
+  assert(!depois.some((v) => v.momento.chave === 'configuracao_concluida'))
+  const tour = avaliar(ctx({ extra: { tour_feito: false } }), 'mel_bubble').find((v) => v.momento.chave === 'tour_pendente')!
+  assertEquals(tour.acao?.type, 'FAZER_TOUR')
+  assert(!avaliar(ctx({ extra: { tour_feito: true } }), 'mel_bubble').some((v) => v.momento.chave === 'tour_pendente'))
+})

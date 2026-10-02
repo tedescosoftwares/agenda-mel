@@ -226,6 +226,11 @@ dispensa vêm de `mel_marcar`; "concluída" vem da operação real
 (`mel_pedir_confirmacao`, `mel_ofertar_vaga`, ou `mel_conciliar` a cada 5
 min pelo cron `mimo-mel`).
 
+A configuração inicial (2.89, migração 141) entra como categoria
+`configuracao`: sem serviços, sem equipe, equipe sem acesso, agendamento
+de teste, avisos desligados, tour pendente (o app manda `tour_feito` no
+corpo) e a comemoração quando o salão fica montado.
+
 Teste do catálogo: `deno test supabase/functions/mel/momentos_test.ts`.
 Sem frase cadastrada para o momento vencedor, o próximo da fila assume;
 sem frase nenhuma, o app mostra a frase do tempo de sempre.

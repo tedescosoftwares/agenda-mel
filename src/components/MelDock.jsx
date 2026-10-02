@@ -61,6 +61,14 @@ export default function MelDock({ escopo = 'tudo' }) {
     return () => { clearTimeout(timer.current); supabase.removeChannel(canal) }
   }, [salao?.id, carregar])
 
+  // tocou fora: recolhe (no celular não existe "sair com o mouse")
+  useEffect(() => {
+    if (!aberta) return
+    const fora = (e) => { if (!e.target.closest?.('.fa-mel-dock')) setAberta(false) }
+    document.addEventListener('pointerdown', fora)
+    return () => document.removeEventListener('pointerdown', fora)
+  }, [aberta])
+
   if (fechada) return null
   if (escopo === 'configuracao' && fala?.categoria !== 'configuracao') return null
   const reforco = fala?.nivel === 'reforco'

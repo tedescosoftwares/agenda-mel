@@ -11,6 +11,7 @@
 // Chamada pelo app logado: POST { salao: uuid }. Resposta:
 //   { condicao: 'ensolarado'|'nublado'|'chuva'|'trovoada'|'noite'|'frio'|'calor',
 //     temperatura: 24, sensacao: 26, dia: true, descricao: 'Parcialmente nublado',
+//     previsao: { max, min, chuva_pct, condicao_dia, condicao_noite, descricao_dia, descricao_noite, umidade, uv, nascer, por },
 //     cidade: 'Santos', atualizado_em: '...' }
 // Sem pino, sem chave ou sem resposta do Google: { condicao: null }.
 
@@ -71,10 +72,12 @@ Deno.serve(async (req) => {
     return json({ ...cache.dados, cidade: base.cidade, atualizado_em: cache.atualizado_em, cache: true })
   }
 
-  // o Google
-  const url = `https://weather.googleapis.com/v1/currentConditions:lookup?key=${encodeURIComponent(CHAVE_GOOGLE)}&location.latitude=${lat}&location.longitude=${lng}&unitsSystem=METRIC&languageCode=pt-BR`
+  // o Google: as condições de agora e a previsão de hoje
+  const loc = `location.latitude=${lat}&location.longitude=${lng}&unitsSystem=METRIC&languageCode=pt-BR`
+  const urlAgora = `https://weather.googleapis.com/v1/currentConditions:lookup?key=${encodeURIComponent(CHAVE_GOOGLE)}&${loc}`
+  const urlDia = `https://weather.googleapis.com/v1/forecast/days:lookup?key=${encodeURIComponent(CHAVE_GOOGLE)}&${loc}&days=1`
   let r: Response
-  try { r = await fetch(url) } catch (e) { return json({ ...(cache?.dados ?? { condicao: null }), cidade: base.cidade, motivo: 'sem resposta do Google: ' + String(e) }) }
+  try { r = await fetch(urlAgora) } catch (e) { return json({ ...(cache?.dados ?? { condicao: null }), cidade: base.cidade, motivo: 'sem resposta do Google: ' + String(e) }) }
   if (!r.ok) {
     const texto = await r.text().catch(() => '')
     console.error('weather', r.status, texto.slice(0, 300))
@@ -83,13 +86,40 @@ Deno.serve(async (req) => {
   const g = await r.json()
   const tipo = String(g?.weatherCondition?.type ?? '')
   const dia = g?.isDaytime !== false
-  const temperatura = Number.isFinite(Number(g?.temperature?.degrees)) ? Math.round(Number(g.temperature.degrees)) : null
-  const sensacao = Number.isFinite(Number(g?.feelsLikeTemperature?.degrees)) ? Math.round(Number(g.feelsLikeTemperature.degrees)) : temperatura
+  const num = (v: unknown) => (Number.isFinite(Number(v)) ? Math.round(Number(v)) : null)
+  const temperatura = num(g?.temperature?.degrees)
+  const sensacao = num(g?.feelsLikeTemperature?.degrees) ?? temperatura
+  // a previsão do dia: se falhar, segue só com o agora
+  let previsao: Record<string, unknown> | null = null
+  try {
+    const rd = await fetch(urlDia)
+    if (rd.ok) {
+      const d = (await rd.json())?.forecastDays?.[0]
+      if (d) {
+        const hora = (iso: unknown) => { if (!iso) return null; const t = new Date(String(iso)); return Number.isNaN(t.getTime()) ? null : t.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }) }
+        const tipoDia = String(d?.daytimeForecast?.weatherCondition?.type ?? '')
+        const tipoNoite = String(d?.nighttimeForecast?.weatherCondition?.type ?? '')
+        previsao = {
+          max: num(d?.maxTemperature?.degrees), min: num(d?.minTemperature?.degrees),
+          chuva_pct: num(d?.daytimeForecast?.precipitation?.probability?.percent),
+          chuva_noite_pct: num(d?.nighttimeForecast?.precipitation?.probability?.percent),
+          condicao_dia: condicaoDe(tipoDia, true, num(d?.maxTemperature?.degrees)),
+          condicao_noite: condicaoDe(tipoNoite, false, num(d?.minTemperature?.degrees)),
+          descricao_dia: String(d?.daytimeForecast?.weatherCondition?.description?.text ?? ''),
+          descricao_noite: String(d?.nighttimeForecast?.weatherCondition?.description?.text ?? ''),
+          umidade: num(d?.daytimeForecast?.relativeHumidity),
+          uv: num(d?.daytimeForecast?.uvIndex),
+          nascer: hora(d?.sunEvents?.sunriseTime), por: hora(d?.sunEvents?.sunsetTime),
+        }
+      }
+    } else console.error('forecast', rd.status, (await rd.text().catch(() => '')).slice(0, 200))
+  } catch (e) { console.error('forecast', String(e)) }
   const dados = {
     condicao: condicaoDe(tipo, dia, temperatura),
     tipo_google: tipo,
     temperatura, sensacao, dia,
     descricao: String(g?.weatherCondition?.description?.text ?? ''),
+    previsao,
   }
   await servico.from('clima_cache').upsert({ celula, dados, atualizado_em: new Date().toISOString() })
   return json({ ...dados, cidade: base.cidade, atualizado_em: new Date().toISOString(), cache: false })

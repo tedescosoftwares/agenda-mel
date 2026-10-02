@@ -213,16 +213,16 @@ export default function PrimeiroAcessoHome({
 
 // A Mel no canto (2.85.6): fechada é só a imagem dela com um "Quer ajuda?".
 // Passou o mouse (ou tocou), expande no cartão de ajuda; saiu, volta a ser
-// só a imagem; o X fecha e ela some até a próxima visita.
+// só a imagem; o X esconde até a próxima atualização da página.
 function MelDock() {
   const { salao } = useAuth()
   const [aberta, setAberta] = useState(false)
   // o tempo no salão: troca a imagem e o balão (uma frase sorteada por visita)
   const [tempo, setTempo] = useState(null)
   useEffect(() => { let vivo = true; climaDoSalao(salao?.id).then((c) => { if (vivo && c?.condicao) setTempo({ condicao: c.condicao, frase: fraseDoTempo(c.condicao), imagem: imagemDaMel(c.condicao) }) }); return () => { vivo = false } }, [salao?.id])
-  const [fechada, setFechada] = useState(() => { try { return sessionStorage.getItem('mimo-mel-fechada') === '1' } catch { return false } })
+  const [fechada, setFechada] = useState(false)   // o X some com ela só nesta tela; ao atualizar, volta
   if (fechada) return null
-  function fechar(e) { e.stopPropagation(); setFechada(true); try { sessionStorage.setItem('mimo-mel-fechada', '1') } catch { /* nada */ } }
+  function fechar(e) { e.stopPropagation(); setFechada(true) }
   return (
     <div className={'fa-mel-dock' + (aberta ? ' aberta' : '')} onMouseEnter={() => setAberta(true)} onMouseLeave={() => setAberta(false)} onClick={() => setAberta(true)} role="complementary" aria-label="Ajuda da MIMO">
       <button type="button" className="fa-mel-x" onClick={fechar} aria-label="Fechar"><span aria-hidden="true">×</span></button>

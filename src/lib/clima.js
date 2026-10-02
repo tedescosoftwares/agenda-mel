@@ -27,7 +27,7 @@ export const FRASES_DO_TEMPO = {
   calor: ['Calorão! Hidrata e segue o dia.', 'Sol forte hoje. A agenda tá na sombra, pode confiar.'],
 }
 
-const CHAVE = 'mimo-clima'
+const CHAVE = 'mimo-clima-v2'
 const VALIDADE = 30 * 60e3
 
 export async function climaDoSalao(salaoId) {
@@ -36,7 +36,9 @@ export async function climaDoSalao(salaoId) {
     let cond = 'ensolarado'
     try { cond = localStorage.getItem('mimo-demo-clima') || 'ensolarado' } catch { /* nada */ }
     const hora = new Date().getHours()
-    return { condicao: cond, temperatura: cond === 'frio' ? 12 : cond === 'calor' ? 34 : 26, sensacao: 27, dia: hora >= 6 && hora < 18, descricao: CONDICOES[cond]?.rotulo ?? '', cidade: 'Santos', atualizado_em: new Date().toISOString() }
+    const t = cond === 'frio' ? 12 : cond === 'calor' ? 34 : 26
+    return { condicao: cond, temperatura: t, sensacao: t + 1, dia: hora >= 6 && hora < 18, descricao: CONDICOES[cond]?.rotulo ?? '', cidade: 'Santos', atualizado_em: new Date().toISOString(),
+      previsao: { max: t + 3, min: t - 6, chuva_pct: cond === 'chuva' ? 80 : cond === 'trovoada' ? 90 : 10, chuva_noite_pct: cond === 'chuva' ? 60 : 15, condicao_dia: cond === 'noite' ? 'ensolarado' : cond, condicao_noite: cond === 'chuva' ? 'chuva' : 'noite', descricao_dia: cond === 'chuva' ? 'Chuva ao longo do dia' : 'Parcialmente nublado', descricao_noite: cond === 'chuva' ? 'Chuva fraca' : 'Céu limpo', umidade: 72, uv: 7, nascer: '06:12', por: '18:03' } }
   }
   try {
     const g = JSON.parse(localStorage.getItem(CHAVE) || 'null')

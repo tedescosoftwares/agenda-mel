@@ -13100,3 +13100,444 @@ label.switch:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
     max-height:100px;
   }
 }
+
+
+/* ==========================================================================
+   MOCK GEOMETRY PASS 2.83.8
+   Ajuste agressivo de proporção para aproximar o desktop do mock.
+   ========================================================================== */
+@media (min-width:1100px) {
+  /* sidebar mais próxima da referência */
+  .admin-shell {
+    padding-left:220px;
+  }
+
+  .admin-desktop-sidebar {
+    width:220px;
+    padding:15px 12px 13px;
+  }
+
+  .admin-sidebar-marca {
+    min-height:48px;
+    padding:0 8px 10px;
+  }
+
+  .admin-sidebar-nav {
+    gap:3px;
+    margin-top:6px;
+  }
+
+  .admin-sidebar-item {
+    min-height:43px;
+    padding:0 12px;
+    border-radius:12px;
+    font-size:.75rem;
+  }
+
+  .admin-sidebar-item svg {
+    width:17px;
+    height:17px;
+  }
+
+  .admin-sidebar-rodape {
+    gap:8px;
+    padding-top:10px;
+  }
+
+  .admin-sidebar-plano {
+    padding:10px 9px 39px;
+    border-radius:13px;
+  }
+
+  .admin-sidebar-salao {
+    padding:6px 5px;
+  }
+
+  /* topo */
+  .topbar-admin {
+    min-height:58px;
+    grid-template-columns:minmax(190px,1fr) minmax(300px,420px) minmax(180px,1fr);
+    padding:7px 18px;
+  }
+
+  .admin-shell-amplo .admin-content {
+    padding:8px 15px 22px;
+  }
+
+  .admin-shell-amplo .miolo {
+    width:min(100%,1360px);
+    max-width:1360px;
+  }
+
+  .admin-home {
+    gap:8px;
+  }
+
+  /* hero mais curto, mais editorial */
+  .admin-home-hero.primeiro-acesso {
+    min-height:216px;
+    padding:18px 24px;
+    gap:22px;
+    grid-template-columns:minmax(0,1.35fr) minmax(350px,.65fr);
+    border-radius:21px;
+  }
+
+  .admin-home-hero.primeiro-acesso.tem-capa::before {
+    opacity:.28;
+    filter:saturate(.48) brightness(1.12) contrast(.72);
+    background:
+      linear-gradient(90deg,
+        rgba(255,255,255,1) 0%,
+        rgba(255,255,255,.995) 28%,
+        rgba(255,255,255,.97) 48%,
+        rgba(255,248,251,.88) 68%,
+        rgba(255,240,247,.72) 100%),
+      var(--home-hero-capa) center 50% / cover no-repeat;
+  }
+
+  .admin-home-hero.primeiro-acesso h1 {
+    max-width:590px;
+    font-size:clamp(2.15rem,2.85vw,3.0rem);
+    line-height:.96;
+  }
+
+  .admin-home-hero.primeiro-acesso .admin-home-eyebrow {
+    font-size:.58rem;
+  }
+
+  .admin-home-hero.primeiro-acesso .admin-home-hero-copy > p {
+    max-width:46ch;
+    margin-top:7px;
+    font-size:.70rem;
+    line-height:1.45;
+  }
+
+  .admin-home-hero.primeiro-acesso .admin-home-hero-acoes {
+    margin-top:10px;
+  }
+
+  .admin-home-hero.primeiro-acesso .admin-home-hero-acoes .btn {
+    min-height:37px;
+    padding:.52rem .82rem;
+    font-size:.64rem;
+  }
+
+  .admin-home-hero.primeiro-acesso .admin-home-hoje.primeiro {
+    max-width:385px;
+    padding:9px;
+    border-radius:16px;
+  }
+
+  .admin-home-hero.primeiro-acesso .admin-home-negocio-mini {
+    grid-template-columns:60px minmax(0,1fr) auto auto;
+    gap:8px;
+    padding-bottom:8px;
+  }
+
+  .admin-home-hero.primeiro-acesso .admin-home-negocio-avatar {
+    width:60px;
+    height:42px;
+  }
+
+  .admin-home-hero.primeiro-acesso .admin-home-hoje-metricas {
+    margin-top:7px;
+  }
+
+  .admin-home-hero.primeiro-acesso .admin-home-hoje-metricas > span {
+    min-height:66px;
+    padding:7px 8px;
+  }
+
+  .admin-home-hero.primeiro-acesso .admin-home-hoje-metricas strong {
+    font-size:1rem;
+  }
+
+  /* primeiros passos mais compacto */
+  .admin-home-primeiro-config {
+    padding:10px 12px 11px;
+    border-radius:16px;
+  }
+
+  .admin-home-primeiro-topo {
+    grid-template-columns:minmax(0,1.2fr) minmax(200px,.45fr) minmax(165px,.32fr);
+    gap:11px;
+  }
+
+  .admin-home-primeiro-intro {
+    grid-template-columns:34px minmax(0,1fr);
+    gap:8px;
+  }
+
+  .admin-home-primeiro-icone {
+    width:34px;
+    height:34px;
+    border-radius:10px;
+  }
+
+  .admin-home-primeiro-intro h2 {
+    font-size:.90rem;
+  }
+
+  .admin-home-primeiro-intro p {
+    font-size:.56rem;
+  }
+
+  .admin-home-primeiro-falta {
+    min-height:40px;
+    padding:6px 8px;
+  }
+
+  .admin-home-primeiro-etapas {
+    margin-top:8px;
+    gap:6px;
+  }
+
+  .admin-home-primeiro-etapas a {
+    min-height:48px;
+    padding:6px 8px;
+    border-radius:11px;
+  }
+
+  .admin-home-primeiro-etapas b {
+    width:27px;
+    height:27px;
+    font-size:.55rem;
+  }
+
+  .admin-home-primeiro-etapas strong {
+    font-size:.58rem;
+  }
+
+  .admin-home-primeiro-etapas small {
+    font-size:.48rem;
+  }
+
+  /* a grade precisa entrar quase toda no primeiro viewport */
+  .admin-home-primeiro-grade {
+    grid-template-columns:minmax(0,1.10fr) minmax(0,1fr) minmax(280px,.80fr);
+    gap:8px;
+  }
+
+  .admin-home-primeiro-grade > .admin-home-primeiro-agenda,
+  .admin-home-primeiro-centro,
+  .admin-home-primeiro-lateral,
+  .admin-home-primeiro-agenda {
+    height:300px;
+    min-height:300px;
+  }
+
+  .admin-home-primeiro-agenda {
+    padding:10px 12px;
+  }
+
+  .admin-home-primeiro-vazio {
+    padding:2px 14px 6px;
+    gap:3px;
+  }
+
+  .admin-home-agenda-art {
+    width:132px;
+    max-height:92px;
+    margin:0 auto 1px;
+  }
+
+  .admin-home-primeiro-vazio > strong {
+    font-size:.67rem;
+  }
+
+  .admin-home-primeiro-vazio p {
+    max-width:34ch;
+    font-size:.51rem;
+    line-height:1.35;
+  }
+
+  .admin-home-primeiro-vazio .btn {
+    min-height:31px;
+    padding:.42rem .66rem;
+    font-size:.55rem;
+  }
+
+  .admin-home-como {
+    font-size:.50rem;
+  }
+
+  .admin-home-primeiro-centro {
+    grid-template-rows:176px 116px;
+    gap:8px;
+  }
+
+  .admin-home-primeiro-lateral {
+    grid-template-rows:120px 96px 68px;
+    gap:8px;
+  }
+
+  .admin-home-agora-primeiro,
+  .admin-home-primeiro-explica,
+  .admin-home-acoes-primeiro,
+  .admin-home-compartilhar,
+  .admin-home-primeiro-ajuda {
+    padding:9px 10px;
+  }
+
+  .admin-home-secao-topo.compacto {
+    padding-bottom:5px;
+  }
+
+  .admin-home-secao-topo.compacto h2 {
+    font-size:.67rem;
+  }
+
+  .admin-home-agora-lista {
+    gap:3px;
+  }
+
+  .admin-home-agora-lista > span,
+  .admin-home-agora-lista > a,
+  .admin-home-agora-lista > button {
+    min-height:36px;
+    grid-template-columns:24px minmax(0,1fr) auto;
+    padding:4px 6px;
+    border-radius:9px;
+  }
+
+  .admin-home-agora-lista i {
+    width:24px;
+    height:24px;
+  }
+
+  .admin-home-agora-lista b {
+    font-size:.54rem;
+  }
+
+  .admin-home-agora-lista small {
+    font-size:.45rem;
+  }
+
+  .admin-home-primeiro-explica-topo strong {
+    font-size:.61rem;
+  }
+
+  .admin-home-primeiro-explica-topo small {
+    font-size:.48rem;
+  }
+
+  .admin-home-primeiro-beneficios {
+    gap:4px;
+    margin-top:5px;
+  }
+
+  .admin-home-primeiro-beneficios article {
+    min-height:43px;
+    grid-template-columns:24px minmax(0,1fr);
+    padding:5px 6px;
+    border-radius:9px;
+  }
+
+  .admin-home-primeiro-beneficios article > span {
+    width:24px;
+    height:24px;
+  }
+
+  .admin-home-primeiro-beneficios article > strong {
+    font-size:.50rem;
+  }
+
+  .admin-home-primeiro-beneficios article > small {
+    font-size:.43rem;
+  }
+
+  .admin-home-acoes-primeiro .admin-home-atalhos {
+    gap:4px;
+  }
+
+  .admin-home-acoes-primeiro .admin-home-atalhos a {
+    min-height:43px;
+    padding:5px 6px;
+    border-radius:9px;
+  }
+
+  .admin-home-acoes-primeiro .admin-home-atalhos strong {
+    font-size:.51rem;
+  }
+
+  .admin-home-acoes-primeiro .admin-home-atalhos small {
+    font-size:.42rem;
+  }
+
+  .admin-home-compartilhar > div:first-child > strong {
+    font-size:.54rem;
+  }
+
+  .admin-home-compartilhar > div:first-child > small {
+    font-size:.44rem;
+  }
+
+  .admin-home-compartilhar-corpo {
+    grid-template-columns:minmax(0,1fr) 46px;
+    gap:5px;
+    margin-top:4px;
+  }
+
+  .admin-home-link-mini {
+    padding:5px 6px;
+    font-size:.43rem;
+  }
+
+  .admin-home-qr {
+    width:44px !important;
+    height:44px !important;
+  }
+
+  .admin-home-compartilhar-acoes {
+    margin-top:3px;
+  }
+
+  .admin-home-compartilhar-acoes button,
+  .admin-home-compartilhar-acoes a {
+    min-height:22px;
+    padding:0 6px;
+    font-size:.42rem;
+  }
+
+  .admin-home-primeiro-ajuda {
+    grid-template-columns:25px minmax(0,1fr);
+    padding:7px 82px 7px 9px;
+  }
+
+  .admin-home-primeiro-ajuda > span:first-child {
+    width:25px;
+    height:25px;
+  }
+
+  .admin-home-primeiro-ajuda strong {
+    font-size:.52rem;
+  }
+
+  .admin-home-primeiro-ajuda small {
+    font-size:.42rem;
+  }
+
+  .admin-home-primeiro-ajuda a {
+    min-height:22px;
+    padding:0 6px;
+    font-size:.41rem;
+  }
+
+  .admin-home-mel {
+    width:80px;
+    height:68px;
+    object-position:78% 66%;
+  }
+
+  .admin-home-mel-balao {
+    right:62px;
+    top:4px;
+    max-width:54px;
+    padding:3px 4px;
+    font-size:.35rem;
+  }
+
+  .admin-home-primeiro-grade .card {
+    border-radius:14px;
+  }
+}

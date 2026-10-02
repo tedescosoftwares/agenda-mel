@@ -673,12 +673,17 @@ function PrimeiroAcessoHome({
 
           <article className="mimo-first-panel mimo-first-help">
             <div className="mimo-first-help-copy">
-              <i><Headphones size={17} /></i>
-              <div><strong>Precisa de ajuda?</strong><small>Acesse os tutoriais ou fale com o suporte da MIMO.</small></div>
+              <i><Headphones size={18} /></i>
+              <div>
+                <strong>Precisa de ajuda?</strong>
+                <small>Acesse os tutoriais ou fale com o suporte da MIMO.</small>
+              </div>
+              <Link to="/admin/guia">Acessar central de ajuda <ArrowRight size={12} /></Link>
             </div>
-            <Link to="/admin/guia">Acessar central de ajuda <ArrowRight size={12} /></Link>
-            <span className="mimo-first-help-bubble">Oi! Eu sou a <b>Mel</b> 💗</span>
-            <img src={MEL_ART_EXACT} alt="Mel, assistente virtual da MIMO" />
+            <div className="mimo-first-mel-stage" aria-hidden="true">
+              <span className="mimo-first-help-bubble">Oi! Eu sou a <b>Mel</b> 💗</span>
+              <img src={MEL_ART_EXACT} alt="" />
+            </div>
           </article>
         </aside>
       </section>

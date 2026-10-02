@@ -59,6 +59,16 @@ export const PENDENCIAS = {
   avisos: { rotulo: 'Avisos no celular', rota: '/admin/ajustes' },
 }
 
+// o passo a passo de cada tela da configuração (2.90.1): instrução de
+// interface, por isso vive aqui e não na biblioteca de frases
+export const COMO_FAZER = {
+  '/admin/servicos': { titulo: 'Como cadastrar um serviço', passos: ['Toque no + no canto da tela.', 'Dê um nome (ex.: Corte feminino) e escolha a categoria.', 'Informe a duração em minutos e o preço.', 'Salve. Repita para cada serviço; depois vem a equipe.'] },
+  '/admin/equipe': { titulo: 'Como cadastrar uma profissional', passos: ['Toque em Adicionar profissional.', 'Nome completo e o WhatsApp dela: é por ele que ela ativa o acesso.', 'Marque os serviços que ela faz e os horários.', 'Salve e envie o acesso por e-mail ou WhatsApp.'] },
+  '/admin/horarios': { titulo: 'Como definir os horários', passos: ['Ligue a chave de cada dia em que o salão abre.', 'Ajuste a hora de abrir e a de fechar.', 'Toque em Salvar horários.'] },
+  '/admin/agenda': { titulo: 'Como fazer um agendamento de teste', passos: ['Toque no + da agenda.', 'Escolha a profissional, o serviço e um horário.', 'Use o seu nome como cliente: é só um teste.', 'Pronto: assim vai ficar o seu dia a dia.'] },
+  '/admin/ajustes': { titulo: 'Como ligar os avisos no celular', passos: ['Procure "Avisos no celular" nesta tela.', 'Ligue a chave e aceite a permissão do navegador.', 'No iPhone, antes instale a MIMO na tela inicial.'] },
+}
+
 export const ROTULO_ACAO = {
   VER_PEDIDOS: 'Ver pedidos', ABRIR_AGENDA: 'Abrir agenda', VER_AMANHA: 'Ver amanhã', DIVULGAR_VAGA: 'Divulgar horário',
   OFERTAR_VAGA_LISTA: 'Oferecer à lista de espera', PEDIR_CONFIRMACAO: 'Confirmar horários', ENCAIXAR: 'Encaixar',

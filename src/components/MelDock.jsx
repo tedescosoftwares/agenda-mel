@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import { supabase, isDemo } from '../lib/supabase'
 import { climaDoSalao, fraseDoTempo } from '../lib/clima'
 import { avatarDaMel, imagemDaMel, MEL_PADRAO } from '../lib/mel'
-import { pedirMel, marcarMel, executarAcao, esquecerMel, ROTULO_ACAO, PENDENCIAS } from '../lib/melMotor'
+import { pedirMel, marcarMel, executarAcao, esquecerMel, rotaDaAcao, ROTULO_ACAO, PENDENCIAS, COMO_FAZER } from '../lib/melMotor'
 
 // A Mel no canto (2.88): fechada é só o recorte dela com um "oi" curto.
 // Passou o mouse (ou tocou), expande no cartão com a fala do momento, o
@@ -84,15 +84,24 @@ export default function MelDock({ escopo = 'tudo' }) {
   }
 
   const nome = profile?.full_name?.split(' ')[0]
+  // na tela do passo: o passo a passo; e o botão some quando levaria para esta mesma tela
+  const comoFazer = fala?.categoria === 'configuracao' ? COMO_FAZER[pathname] : null
+  const acaoVisivel = fala?.acao && (rotaDaAcao(fala.acao) ?? '').split('?')[0] !== pathname
   return (
-    <div className={'fa-mel-dock' + (aberta ? ' aberta' : '')} onMouseEnter={() => setAberta(true)} onMouseLeave={() => setAberta(false)} onClick={() => setAberta(true)} role="complementary" aria-label="Mel, assistente da MIMO" data-momento={fala?.chave || ''}>
+    <div className={'fa-mel-dock' + (aberta ? ' aberta' : '') + (comoFazer ? ' com-guia' : '')} onMouseEnter={() => setAberta(true)} onMouseLeave={() => setAberta(false)} onClick={() => setAberta(true)} role="complementary" aria-label="Mel, assistente da MIMO" data-momento={fala?.chave || ''}>
       {!reforco && <button type="button" className="fa-mel-x" onClick={fechar} aria-label="Fechar"><span aria-hidden="true">×</span></button>}
       {/* o balão fica fora do círculo (que recorta a foto), senão some */}
       {/* a fala do momento já aparece fechada; sem fala, o "oi" de sempre */}
       <span className={'fa-mel-balao' + (fala?.texto ? ' com-fala' : '')}>{fala?.texto || (aberta ? <>Oi{nome ? `, ${nome}` : ''}! Eu sou a <b>Mel</b> 💗</> : <>Quer ajuda? 💗</>)}</span>
       <div className="fa-mel-dock-copy">
-        <div className="fa-mel-titulo"><i><Sparkles size={17} /></i><h3>{fala?.acao ? 'A Mel sugere' : 'A Mel por aqui'}</h3></div>
+        <div className="fa-mel-titulo"><i><Sparkles size={17} /></i><h3>{comoFazer ? 'A Mel te guia' : fala?.acao ? 'A Mel sugere' : 'A Mel por aqui'}</h3></div>
         {fala?.texto && <p className="fa-mel-fala">{fala.texto}</p>}
+        {comoFazer && (
+          <div className="fa-mel-como">
+            <strong>{comoFazer.titulo}</strong>
+            <ol>{comoFazer.passos.map((t) => <li key={t}>{t}</li>)}</ol>
+          </div>
+        )}
         {fala?.pendencias?.length > 0 && (
           <ul className="fa-mel-pendencias" aria-label="O que ainda falta">
             {fala.pendencias.map((k) => { const p = PENDENCIAS[k]; if (!p) return null; const aqui = pathname === p.rota.split('?')[0]; return (
@@ -100,7 +109,7 @@ export default function MelDock({ escopo = 'tudo' }) {
             ) })}
           </ul>
         )}
-        {retorno ? <p className="fa-mel-retorno">{retorno}</p> : fala?.acao && <button type="button" className="fa-mel-acao" onClick={agir} disabled={rodando}>{rodando ? 'Um instante…' : (ROTULO_ACAO[fala.acao.type] ?? 'Ver')}</button>}
+        {retorno ? <p className="fa-mel-retorno">{retorno}</p> : acaoVisivel && <button type="button" className="fa-mel-acao" onClick={agir} disabled={rodando}>{rodando ? 'Um instante…' : (ROTULO_ACAO[fala.acao.type] ?? 'Ver')}</button>}
         <Link to="/admin/guia" className="fa-mel-ajuda" onClick={(e) => e.stopPropagation()}><Headphones size={13} /> Central de ajuda <ExternalLink size={12} /></Link>
       </div>
       <div className="fa-mel"><Recorte src={imagem} /></div>

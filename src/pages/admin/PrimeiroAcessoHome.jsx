@@ -7,7 +7,6 @@ import {
   Sun, Trophy, Users, Zap,
 } from 'lucide-react'
 import { AGENDA_ART_EXACT } from '../../assets/mockArtExact'
-import MelDock from '../../components/MelDock'
 import './PrimeiroAcessoHome.css'
 
 // A home do primeiro acesso (2.85): o salão existe, falta montar a agenda.
@@ -198,7 +197,6 @@ export default function PrimeiroAcessoHome({
         </aside>
       </section>
 
-      <MelDock />
     </div>
   )
 }

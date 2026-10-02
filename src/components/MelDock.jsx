@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { ExternalLink, Headphones, Sparkles } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { supabase, isDemo } from '../lib/supabase'
@@ -20,9 +20,11 @@ function Recorte({ src }) {
   return <img className="fa-mel-png" src={falhou ? MEL_PADRAO : src} alt="Mel, assistente da MIMO" onError={() => setFalhou(true)} />
 }
 
-export default function MelDock() {
+// escopo: 'tudo' (a home) ou 'configuracao' (as outras telas: só aparece enquanto o salão estiver montando)
+export default function MelDock({ escopo = 'tudo' }) {
   const { salao, profile } = useAuth()
   const navigate = useNavigate()
+  const { pathname } = useLocation()
   const [aberta, setAberta] = useState(false)
   const [fechada, setFechada] = useState(false)      // o X some com ela nesta tela; ao atualizar, volta
   const [fala, setFala] = useState(null)             // { exibicao, chave, nivel, texto, avatar_key, acao } ou a frase do tempo
@@ -39,6 +41,13 @@ export default function MelDock() {
     setFala(c?.condicao ? { chave: 'tempo', nivel: 'dispensavel', texto: fraseDoTempo(c.condicao), avatar_key: null, imagem: imagemDaMel(c.condicao), acao: null } : { chave: 'nada', nivel: 'dispensavel', texto: '', acao: null })
   }, [salao?.id])
   useEffect(() => { carregar() }, [carregar])
+  // mudou de tela durante a configuração: o passo pode ter mudado (cadastrou serviço, agora é a equipe)
+  const ultimaRota = useRef(pathname)
+  useEffect(() => {
+    if (ultimaRota.current === pathname) return
+    ultimaRota.current = pathname
+    if (fala?.categoria === 'configuracao' || escopo === 'configuracao') { esquecerMel(); carregar(true) }
+  }, [pathname, fala?.categoria, escopo, carregar])
 
   // a agenda mudou: o momento pode ter mudado (2 s de folga para o banco assentar)
   useEffect(() => {
@@ -53,6 +62,7 @@ export default function MelDock() {
   }, [salao?.id, carregar])
 
   if (fechada) return null
+  if (escopo === 'configuracao' && fala?.categoria !== 'configuracao') return null
   const reforco = fala?.nivel === 'reforco'
   const imagem = fala?.imagem || (fala?.avatar_key ? avatarDaMel(fala.avatar_key) : MEL_PADRAO)
 

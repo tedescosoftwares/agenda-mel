@@ -5,6 +5,7 @@ import PainelPausado from './PainelPausado'
 import SinoAvisos from './SinoAvisos'
 import MenuDaConta, { ITENS_ADMIN } from './MenuDaConta'
 import ClimaTopo from './ClimaTopo'
+import MelDock from './MelDock'
 import { MarcaIcon, Wordmark } from './icons'
 import {
   CalendarIcon,
@@ -69,6 +70,8 @@ export default function AdminShell({ children, amplo = false, primeiroAcesso = f
 
   return (
     <div className={'admin-shell' + (amplo ? ' admin-shell-amplo' : '') + (primeiroAcesso ? ' admin-shell-primeiro-acesso' : '')}>
+      {/* a Mel (2.89.4): na home fala de tudo; nas outras telas acompanha só a configuração inicial */}
+      <MelDock escopo={pathname === '/admin' ? 'tudo' : 'configuracao'} />
       <aside className="admin-desktop-sidebar" aria-label="Navegação principal">
         <div className="admin-sidebar-marca">
           <span><MarcaIcon className="marca" id="lateral" /><Wordmark tamanho={1.7} /></span>

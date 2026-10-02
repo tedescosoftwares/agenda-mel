@@ -4,7 +4,6 @@ import AdminShell from '../../components/AdminShell'
 import AvisosNovos from '../../components/AvisosNovos'
 import LigarAvisos from '../../components/LigarAvisos'
 import PendenciasBaixa from '../../components/PendenciasBaixa'
-import MelDock from '../../components/MelDock'
 import { MEL_PADRAO } from '../../lib/mel'
 import PrimeirosPassos from '../../components/PrimeirosPassos'
 import AcessoAviso from '../../components/AcessoAviso'
@@ -199,7 +198,6 @@ export default function AdminDashboard() {
 
   return (
     <AdminShell amplo>
-      <MelDock />
       <div className="admin-home">
         <TutorialPainel primeiroAcesso={primeiroAcesso} />
 

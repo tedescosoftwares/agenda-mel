@@ -15459,6 +15459,7 @@ label.switch:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
 .admin-clima-agora > span { display: grid; }
 .admin-clima-agora strong { font-size: 1.5rem; line-height: 1; letter-spacing: -.02em; }
 .admin-clima-agora small { color: #978c9b; font-size: .76rem; }
+.admin-clima-frase { padding: 8px 12px; border-radius: 12px; background: linear-gradient(135deg, #fff1f7, #fff7fb); color: #7a3a5c; font-size: .78rem; font-style: italic; line-height: 1.35; }
 .admin-clima-titulo { font-size: .7rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: #ff2d7a; }
 .admin-clima-grade { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; }
 .admin-clima-grade > span { display: grid; gap: 1px; min-width: 0; }

@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { climaDoSalao, CONDICOES } from '../lib/clima'
+import { climaDoSalao, CONDICOES, fraseDoDia } from '../lib/clima'
 
 // O tempo no cabeçalho do painel (2.86): ícone + cidade + temperatura.
 // Some quando o salão não tem pino ou o tempo não veio.
@@ -19,6 +19,7 @@ export default function ClimaTopo() {
     document.addEventListener('click', fechar)
     return () => document.removeEventListener('click', fechar)
   }, [aberto])
+  const frase = useMemo(() => fraseDoDia(clima?.condicao), [clima?.condicao])
   if (!clima?.condicao) return null
   const c = CONDICOES[clima.condicao] ?? CONDICOES.ensolarado
   const pv = clima.previsao
@@ -36,6 +37,7 @@ export default function ClimaTopo() {
           <c.Icone size={30} style={{ color: c.cor }} />
           <span><strong>{clima.temperatura}°</strong><small>{clima.descricao || c.rotulo}{clima.sensacao != null && clima.sensacao !== clima.temperatura ? ` · sensação ${clima.sensacao}°` : ''}</small></span>
         </span>
+        {frase && <span className="admin-clima-frase">{frase}</span>}
         <span className="admin-clima-titulo">Hoje em {clima.cidade || 'sua cidade'}</span>
         {pv ? (
           <span className="admin-clima-grade">

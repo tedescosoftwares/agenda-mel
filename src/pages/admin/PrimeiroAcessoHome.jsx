@@ -226,13 +226,14 @@ function MelDock() {
   return (
     <div className={'fa-mel-dock' + (aberta ? ' aberta' : '')} onMouseEnter={() => setAberta(true)} onMouseLeave={() => setAberta(false)} onClick={() => setAberta(true)} role="complementary" aria-label="Ajuda da MIMO">
       <button type="button" className="fa-mel-x" onClick={fechar} aria-label="Fechar"><span aria-hidden="true">×</span></button>
+      {/* o balão fica fora do círculo (que recorta a foto), senão some */}
+      <span className="fa-mel-balao">{aberta ? (tempo?.frase || <>Oi! Eu sou a <b>Mel!</b> 💗</>) : <>Quer ajuda? 💗</>}</span>
       <div className="fa-mel-dock-copy">
         <div className="fa-card-titulo"><span className="fa-icon-badge"><Headphones size={18} /></span><h3>Precisa de ajuda?</h3></div>
         <small>Acesse nossos tutoriais ou fale com o suporte da MIMO.</small>
         <Link to="/admin/guia" className="fa-help-link">Acessar central de ajuda <ExternalLink size={14} /></Link>
       </div>
       <div className="fa-mel">
-        <span className="fa-mel-balao">{aberta ? (tempo?.frase || <>Oi! Eu sou a <b>Mel!</b> 💗</>) : <>Quer ajuda? 💗</>}</span>
         <MelRecorte src={tempo?.imagem || '/imagens/mel.webp'} />
       </div>
     </div>

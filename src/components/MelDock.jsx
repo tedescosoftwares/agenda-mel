@@ -78,7 +78,8 @@ export default function MelDock() {
     <div className={'fa-mel-dock' + (aberta ? ' aberta' : '')} onMouseEnter={() => setAberta(true)} onMouseLeave={() => setAberta(false)} onClick={() => setAberta(true)} role="complementary" aria-label="Mel, assistente da MIMO" data-momento={fala?.chave || ''}>
       {!reforco && <button type="button" className="fa-mel-x" onClick={fechar} aria-label="Fechar"><span aria-hidden="true">×</span></button>}
       {/* o balão fica fora do círculo (que recorta a foto), senão some */}
-      <span className="fa-mel-balao">{aberta ? (fala?.texto || <>Oi{nome ? `, ${nome}` : ''}! Eu sou a <b>Mel</b> 💗</>) : (reforco ? <>Psiu! 👀</> : <>Quer ajuda? 💗</>)}</span>
+      {/* a fala do momento já aparece fechada; sem fala, o "oi" de sempre */}
+      <span className={'fa-mel-balao' + (fala?.texto ? ' com-fala' : '')}>{fala?.texto || (aberta ? <>Oi{nome ? `, ${nome}` : ''}! Eu sou a <b>Mel</b> 💗</> : <>Quer ajuda? 💗</>)}</span>
       <div className="fa-mel-dock-copy">
         <div className="fa-mel-titulo"><i><Sparkles size={17} /></i><h3>{fala?.acao ? 'A Mel sugere' : 'A Mel por aqui'}</h3></div>
         {fala?.texto && <p className="fa-mel-fala">{fala.texto}</p>}

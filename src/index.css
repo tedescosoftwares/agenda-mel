@@ -15566,6 +15566,7 @@ label.switch:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
 .fa-mel-balao { position: absolute; right: 118px; top: 4px; z-index: 3; padding: 5px 10px; border-radius: 999px 999px 4px 999px; background: #fff; color: #ff2d7a; font-size: .72rem; font-weight: 700; white-space: nowrap; box-shadow: 0 8px 20px rgba(85, 35, 79, .14); }
 .fa-mel-dock.aberta .fa-mel-balao { right: 6px; left: auto; top: auto; bottom: calc(100% + 10px); max-width: 250px; white-space: normal; text-align: center; line-height: 1.25; padding: 8px 14px; font-size: .8rem; border-radius: 16px 16px 4px 16px; }
 .fa-mel-balao b { font-weight: 800; }
+.fa-mel-dock:not(.aberta) .fa-mel-balao.com-fala { width: max-content; max-width: 240px; white-space: normal; text-align: right; line-height: 1.25; padding: 7px 12px; border-radius: 16px 16px 4px 16px; top: 0; }
 
 .fa-mel-dock .fa-mel-titulo { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .fa-mel-dock .fa-mel-titulo i { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 11px; background: #ffe9f1; color: #ff2d7a; flex: none; font-style: normal; }
@@ -15580,6 +15581,7 @@ label.switch:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
   .fa-mel-dock { right: 10px; bottom: 76px; grid-template-columns: 0fr 104px; }
   .fa-mel { width: 104px; height: 104px; }
   .fa-mel-balao { right: 84px; }
+  .fa-mel-dock:not(.aberta) .fa-mel-balao.com-fala { max-width: calc(100vw - 130px); }
   .fa-mel-dock.aberta { grid-template-columns: minmax(0, 1fr) 130px; max-width: calc(100vw - 16px); }
   .fa-mel-dock.aberta .fa-mel { width: 130px; height: 130px; }
 }

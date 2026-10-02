@@ -66,6 +66,8 @@ function Frases({ editando, setEditando }) {
   useEffect(() => { if (!menu) return; const fechar = () => setMenu(null); document.addEventListener('click', fechar); return () => document.removeEventListener('click', fechar) }, [menu])
 
   const porChave = useMemo(() => Object.fromEntries(momentos.map((m) => [m.chave, m])), [momentos])
+  // categoria nova no banco que o app ainda não rotulou aparece mesmo assim
+  const categorias = useMemo(() => { const c = { ...CATEGORIAS }; for (const m of momentos) if (!c[m.categoria]) c[m.categoria] = m.categoria; return c }, [momentos])
   const lista = useMemo(() => (linhas ?? []).filter((l) =>
     (!f.chave || l.chave === f.chave) && (!f.superficie || l.superficie === f.superficie) &&
     (!f.ramo || (f.ramo === 'generica' ? !l.ramos?.length : l.ramos?.includes(f.ramo))) &&
@@ -127,7 +129,7 @@ function Frases({ editando, setEditando }) {
         {erro && <div className="alert alert-error">{erro}</div>}
         <div className="seo-filtros plat-mel-filtros">
           <label className="seo-busca"><Search size={15} /><input value={f.busca} onChange={(e) => filtrar('busca', e.target.value)} placeholder="Buscar no texto…" /></label>
-          <select value={f.chave} onChange={(e) => filtrar('chave', e.target.value)}><option value="">Todos os momentos</option>{Object.entries(CATEGORIAS).map(([c, rot]) => <optgroup key={c} label={rot}>{momentos.filter((m) => m.categoria === c).map((m) => <option key={m.chave} value={m.chave}>{m.rotulo}</option>)}</optgroup>)}</select>
+          <select value={f.chave} onChange={(e) => filtrar('chave', e.target.value)}><option value="">Todos os momentos</option>{Object.entries(categorias).map(([c, rot]) => <optgroup key={c} label={rot}>{momentos.filter((m) => m.categoria === c).map((m) => <option key={m.chave} value={m.chave}>{m.rotulo}</option>)}</optgroup>)}</select>
           <select value={f.superficie} onChange={(e) => filtrar('superficie', e.target.value)}><option value="">Toda superfície</option>{Object.entries(SUPERFICIES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
           <select value={f.ramo} onChange={(e) => filtrar('ramo', e.target.value)}><option value="">Todo ramo</option><option value="generica">Só genéricas</option>{Object.entries(RAMOS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
           <select value={f.tipo} onChange={(e) => filtrar('tipo', e.target.value)}><option value="">Todo tipo</option><option value="ambos">Salão e autônoma</option>{Object.entries(TIPOS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
@@ -182,7 +184,7 @@ function Frases({ editando, setEditando }) {
         {paginas > 1 && <div className="plat-paginacao"><span className="muted">{lista.length} frases · página {pagina + 1} de {paginas}</span><div><button className="btn btn-ghost btn-mini" disabled={pagina === 0} onClick={() => setPagina((p) => p - 1)}>Anterior</button><button className="btn btn-ghost btn-mini" disabled={pagina >= paginas - 1} onClick={() => setPagina((p) => p + 1)}>Próxima</button></div></div>}
       </Painel>
 
-      {editando && <Editor frase={editando} momentos={momentos} fechar={() => setEditando(null)} salvou={(nova, eraNova) => { setEditando(null); if (eraNova) setLinhas((ls) => [...(ls ?? []), (ls ?? []).some((x) => x.id === nova.id) ? { ...nova, id: 'nova-' + Date.now() } : nova]); else setLinhas((ls) => ls.map((x) => (x.id === nova.id ? nova : x))) }} />}
+      {editando && <Editor frase={editando} momentos={momentos} categorias={categorias} fechar={() => setEditando(null)} salvou={(nova, eraNova) => { setEditando(null); if (eraNova) setLinhas((ls) => [...(ls ?? []), (ls ?? []).some((x) => x.id === nova.id) ? { ...nova, id: 'nova-' + Date.now() } : nova]); else setLinhas((ls) => ls.map((x) => (x.id === nova.id ? nova : x))) }} />}
       {importando && <Importar momentos={momentos} fechar={() => setImportando(false)} importou={() => { setImportando(false); carregar() }} />}
     </>
   )
@@ -195,7 +197,7 @@ function Texto({ texto }) {
 }
 
 // ---------- criar / editar ----------
-function Editor({ frase, momentos, fechar, salvou }) {
+function Editor({ frase, momentos, categorias = CATEGORIAS, fechar, salvou }) {
   const [v, setV] = useState(frase)
   const [erro, setErro] = useState('')
   const [salvando, setSalvando] = useState(false)
@@ -248,7 +250,7 @@ function Editor({ frase, momentos, fechar, salvou }) {
         <div className="plat-mel-editor">
           <div className="form">
             <div className="plat-mel-duas">
-              <label>Moment<select value={v.chave} onChange={(e) => escolherMomento(e.target.value)}><option value="">Escolha…</option>{Object.entries(CATEGORIAS).map(([c, rot]) => <optgroup key={c} label={rot}>{momentos.filter((x) => x.categoria === c).map((x) => <option key={x.chave} value={x.chave}>{x.rotulo}</option>)}</optgroup>)}</select></label>
+              <label>Moment<select value={v.chave} onChange={(e) => escolherMomento(e.target.value)}><option value="">Escolha…</option>{Object.entries(categorias).map(([c, rot]) => <optgroup key={c} label={rot}>{momentos.filter((x) => x.categoria === c).map((x) => <option key={x.chave} value={x.chave}>{x.rotulo}</option>)}</optgroup>)}</select></label>
               <label>Superfície<div className="plat-chips">{Object.entries(SUPERFICIES).map(([k, rot]) => <button type="button" key={k} className={'plat-chip' + (v.superficie === k ? ' ativo' : '')} disabled={m && !(m.superficies ?? []).includes(k)} onClick={() => set('superficie', k)}>{rot}</button>)}</div></label>
             </div>
             {m && <p className="muted plat-mel-descricao">{m.descricao}</p>}

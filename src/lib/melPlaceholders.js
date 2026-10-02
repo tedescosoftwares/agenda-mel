@@ -14,7 +14,7 @@ export const TIPOS = { salao: 'Salão', autonoma: 'Autônoma' }
 export const CONTEXTOS_CLIMA = { ensolarado: 'Ensolarado', nublado: 'Nublado', chuva: 'Chuva', trovoada: 'Trovoada', frio: 'Frio', calor: 'Calor' }
 export const PERIODOS = { manha: 'Manhã', tarde: 'Tarde', noite: 'Noite' }
 export const TONS = { feliz: 'Feliz', atenta: 'Atenta', alerta: 'Alerta', comemorando: 'Comemorando', cansada: 'Cansada', neutra: 'Neutra' }
-export const CATEGORIAS = { agenda: 'Agenda', oportunidade: 'Oportunidade', marco: 'Marco do dia', clima: 'Clima', calendario: 'Calendário', operacional: 'Operacional', geral: 'Geral' }
+export const CATEGORIAS = { agenda: 'Agenda', oportunidade: 'Oportunidade', marco: 'Marco do dia', clima: 'Clima', calendario: 'Calendário', operacional: 'Operacional', configuracao: 'Configuração inicial', geral: 'Geral' }
 
 // tudo que está entre chaves, na ordem em que aparece
 export function encontrarPlaceholders(texto) {

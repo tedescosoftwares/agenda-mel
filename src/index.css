@@ -15476,3 +15476,72 @@ label.switch:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
   .topbar-admin .admin-clima-cidade { display: none; }
   .admin-clima-previsao { position: fixed; top: 64px; left: 12px; right: 12px; width: auto; }
 }
+
+
+/* Personalidade da Mel na Plataforma (2.87): a biblioteca de frases */
+.plat-mel-avatar-cabecalho { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; object-position: 50% 12%; box-shadow: 0 8px 22px rgba(255, 45, 122, .22), 0 0 0 3px #fff; }
+.plat-mel-filtros select { max-width: 190px; }
+.plat-mel-filtros .seo-busca { flex: 1 1 220px; min-width: 220px; max-width: 320px; }
+.plat-mel-copiar { padding: 0.45rem 0.6rem; }
+.plat-mel-lote { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; margin: 0.6rem 0 0.2rem; padding: 0.55rem 0.9rem; border-radius: 12px; background: #fff0f5; border: 1px solid #ffc2d8; font-size: 0.86rem; }
+.plat-mel-lote strong { color: var(--rosa); }
+.plat-mel-lote-peso { display: inline-flex; align-items: center; gap: 0.4rem; color: var(--texto-2); }
+.plat-mel-lote-peso select { font: inherit; border: 1px solid var(--fio); border-radius: 8px; padding: 0.25rem 0.4rem; background: #fff; }
+.plat-mel-tabela td { vertical-align: top; }
+.plat-mel-tabela th, .plat-mel-tabela td { padding-left: 0.55rem; padding-right: 0.55rem; }
+.plat-mel-tabela .plat-mel-acoes .plat-link { font-size: 0.82rem; }
+.plat-mel-uso { white-space: nowrap; color: var(--texto-2); }
+@media (max-width: 1540px) { .plat-mel-tabela td .mono { display: none; } }
+.plat-mel-tabela tr.plat-mel-inativa td { color: var(--texto-3); }
+.plat-mel-tabela tr.plat-mel-inativa .plat-mel-ph { opacity: .6; }
+.plat-mel-tabela tr.selecionada td { background: #fff7fa; }
+.plat-mel-texto { min-width: 220px; max-width: 320px; }
+.plat-mel-tabela .mono { font-size: 0.74rem; }
+.plat-mel-texto small { display: block; margin-top: 0.15rem; }
+.plat-mel-ph { display: inline-block; padding: 0 0.3rem; border-radius: 6px; background: #f3e8ff; color: #7a2fd1; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.8em; }
+.plat-mel-ph-btn { border: 1px solid #e3cffb; cursor: pointer; padding: 0.2rem 0.5rem; font-size: 0.78rem; }
+.plat-mel-ph-btn:hover { background: #ead7ff; }
+.plat-mel-acoes { white-space: nowrap; }
+.plat-mel-acoes .plat-link { padding: 0 0.35rem 0 0; }
+.plat-mel-mais { position: relative; display: inline-block; }
+.plat-mel-menu { right: 0; left: auto; top: 100%; min-width: 150px; }
+.plat-mel-menu button { color: var(--carmim); }
+.plat-mel-modal { max-width: 920px; width: calc(100vw - 32px); max-height: calc(100vh - 32px); overflow: auto; }
+.plat-mel-modal h3 { display: flex; align-items: center; gap: 0.5rem; }
+.plat-mel-modal h3 svg { color: var(--rosa); }
+.plat-mel-editor { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 1.2rem; align-items: start; margin-top: 0.6rem; }
+.plat-mel-editor .form { gap: 0.7rem; }
+.plat-mel-editor .form label { gap: 0.35rem; }
+.plat-mel-editor .form textarea { font: inherit; border: 1px solid var(--fio); border-radius: 12px; padding: 0.6rem 0.8rem; resize: vertical; }
+.plat-mel-editor .form select, .plat-mel-editor .form input[type="number"] { font: inherit; border: 1px solid var(--fio); border-radius: 12px; padding: 0.55rem 0.8rem; background: #fff; }
+.plat-mel-editor textarea.plat-mel-com-erro { border-color: var(--carmim); background: #fff6f6; }
+.plat-mel-duas { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; }
+.plat-mel-tres { display: grid; grid-template-columns: 1fr 100px auto; gap: 0.8rem; align-items: end; }
+.plat-mel-check { flex-direction: row !important; align-items: center; gap: 0.4rem !important; padding-bottom: 0.6rem; }
+.plat-mel-descricao { font-size: 0.82rem; margin: -0.2rem 0 0; }
+.plat-mel-vars { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; }
+.plat-mel-previa { display: grid; gap: 0.5rem; position: sticky; top: 0; }
+.plat-mel-previa-balao-area { position: relative; display: flex; justify-content: flex-end; align-items: flex-end; min-height: 230px; padding: 16px 0 0; border-radius: 18px; background: linear-gradient(160deg, #fff6fa, #ffe9f1); }
+.plat-mel-previa-mel { width: 130px; height: 130px; border-radius: 50%; object-fit: cover; object-position: 50% 12%; box-shadow: 0 14px 34px rgba(255, 45, 122, .22), inset 0 0 0 4px #fff; margin: 0 14px 14px 0; }
+.plat-mel-previa-balao { position: absolute; right: 24px; top: 18px; max-width: 230px; padding: 8px 14px; border-radius: 16px 16px 4px 16px; background: #fff; color: #ff2d7a; font-size: .8rem; font-weight: 700; line-height: 1.25; text-align: center; box-shadow: 0 8px 20px rgba(85, 35, 79, .14); overflow-wrap: anywhere; }
+.plat-mel-previa-card { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border-radius: 18px; background: #fff; color: #5b4566; box-shadow: 0 18px 44px rgba(73, 31, 78, .18); font-size: .8rem; line-height: 1.3; }
+.plat-mel-previa-agora { display: flex; align-items: center; gap: 10px; }
+.plat-mel-previa-agora svg { color: #f3b640; }
+.plat-mel-previa-agora > span { display: grid; }
+.plat-mel-previa-agora strong { font-size: 1.5rem; line-height: 1; letter-spacing: -.02em; }
+.plat-mel-previa-agora small { color: #978c9b; font-size: .76rem; }
+.plat-mel-previa-frase { padding: 8px 12px; border-radius: 12px; background: linear-gradient(135deg, #fff1f7, #fff7fb); color: #7a3a5c; font-size: .78rem; font-style: italic; line-height: 1.35; overflow-wrap: anywhere; }
+.plat-mel-previa-titulo { font-size: .7rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: #ff2d7a; }
+.plat-mel-json { width: 100%; font-size: 0.8rem; border: 1px solid var(--fio); border-radius: 12px; padding: 0.7rem 0.9rem; margin-top: 0.4rem; resize: vertical; }
+.plat-mel-relatorio { margin-top: 0.8rem; display: grid; gap: 0.6rem; }
+.plat-mel-relatorio-nums { display: flex; flex-wrap: wrap; gap: 1rem; font-size: 0.9rem; }
+.plat-mel-relatorio-nums span { display: inline-flex; align-items: center; gap: 0.3rem; }
+.plat-mel-relatorio-nums .ok { color: var(--menta); }
+.plat-mel-relatorio-nums .ruim { color: var(--carmim); }
+.plat-mel-problemas { margin: 0; padding: 0.6rem 0.9rem 0.6rem 1.6rem; border-radius: 12px; background: #fff6f6; border: 1px solid #ffd3d3; font-size: 0.84rem; max-height: 220px; overflow: auto; }
+.plat-mel-problemas li { margin: 0.15rem 0; }
+.plat-mel-modal code { font-size: 0.85em; background: var(--cinza-1); padding: 0 0.3rem; border-radius: 5px; }
+@media (max-width: 760px) {
+  .plat-mel-editor { grid-template-columns: 1fr; }
+  .plat-mel-duas, .plat-mel-tres { grid-template-columns: 1fr; }
+}

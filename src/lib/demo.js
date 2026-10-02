@@ -498,6 +498,25 @@ const RPC = {
   marcar_avisos_lidos: () => null,
   avancar_ofertas_expiradas: () => 0,
   enviar_lembretes: () => 0,
+  // a Mel (2.87): estatísticas zeradas (uma frase com uso, para a lista ter número) e importação com a mesma validação do banco, resumida
+  mel_frases_estatisticas: () => CONTEUDO.mel_frases.map((f, i) => ({ frase_id: f.id, exibicoes: i === 0 ? 14 : 0, cliques: i === 0 ? 3 : 0, dispensas: i === 0 ? 1 : 0, concluidas: 0 })),
+  mel_frases_importar: ({ itens, aplicar }) => {
+    const problemas = []; let validas = 0
+    ;(itens ?? []).forEach((it, i) => {
+      const m = CONTEUDO.mel_momentos.find((x) => x.chave === it?.chave)
+      let erro = null
+      if (!it || typeof it !== 'object') erro = 'não é um objeto'
+      else if (!m) erro = `moment "${it.chave}" não existe`
+      else if (!['mel_bubble', 'weather_card'].includes(it.superficie)) erro = `superfície "${it.superficie}" inválida`
+      else if (!m.superficies.includes(it.superficie)) erro = `o moment ${it.chave} não usa a superfície ${it.superficie}`
+      else if (!String(it.texto ?? '').trim()) erro = 'texto vazio'
+      else { const ph = [...String(it.texto).matchAll(/\{([^{}]*)\}/g)].map((x) => x[1]).find((x) => !m.placeholders.includes(x)); if (ph != null) erro = `placeholder {${ph}} não permitido em ${it.chave}` }
+      if (!erro && it.id && !CONTEUDO.mel_frases.some((f) => f.id === it.id)) erro = `id ${it.id} não existe`
+      if (!erro && !it.id && CONTEUDO.mel_frases.some((f) => f.chave === it.chave && f.superficie === it.superficie && f.texto.trim().toLowerCase() === String(it.texto).trim().toLowerCase())) erro = 'já existe'
+      if (erro) problemas.push({ indice: i + 1, erro, texto: String(it?.texto ?? '').slice(0, 80) }); else validas++
+    })
+    return { total: (itens ?? []).length, validas, invalidas: problemas.length, problemas, aplicado: !!aplicar, ...(aplicar ? { inseridas: validas, atualizadas: 0 } : {}) }
+  },
   resumo_da_ia: () => [{ hoje: 12, teto: 200 }],
 }
 
@@ -547,6 +566,41 @@ const CONTEUDO = {
   seo_pages: [...PAGINAS_INSTITUCIONAIS.map((p, i) => ({ id: 'sp' + i, route: p.rota, page_type: p.tipo === 'home' ? 'HOME' : p.tipo === 'blog' ? 'BLOG_INDEX' : 'INSTITUTIONAL', title: p.titulo, slug: p.rota === '/' ? 'home' : p.rota.slice(1), seo_title: p.seo_title, meta_description: p.meta_description, og_title: p.seo_title, og_description: p.meta_description, og_image_url: 'https://mimo.com.vc/og-mimo.png', robots_index: true, robots_follow: true, status: 'published', updated_at: '2026-09-20T12:00:00-03:00' })), ...PAGINAS_SEO.map((p, i) => ({ id: 'sq' + i, route: p.rota, page_type: 'SEO_LANDING', title: p.h1.join(' '), slug: p.rota.slice(1), seo_title: p.seo_title, meta_description: p.meta_description, og_title: p.seo_title, og_description: p.meta_description, og_image_url: `https://mimo.com.vc/imagens/${p.foto}-1400.webp`, robots_index: true, robots_follow: true, status: 'published', updated_at: '2026-09-22T12:00:00-03:00' }))],
   documentos_legais: [{ id: 'dl1', tipo: 'cliente', versao: '2026-09-24', titulo: 'Termos de Uso para Clientes', resumo: 'Primeira versão publicada pela plataforma.', status: 'publicado', publicado_em: '2026-09-24T12:00:00-03:00', atualizado_em: '2026-09-24T12:00:00-03:00', conteudo: '## 1. Sobre a MIMO\n\nTexto de demonstração.' }, { id: 'dl2', tipo: 'privacidade', versao: '2026-09-24', titulo: 'Política de Privacidade', resumo: 'Primeira versão publicada pela plataforma.', status: 'publicado', publicado_em: '2026-09-24T12:00:00-03:00', atualizado_em: '2026-09-24T12:00:00-03:00', conteudo: '## 1. Sobre esta Política\n\nTexto de demonstração.' }, { id: 'dl3', tipo: 'salao', versao: '2026-09-30', titulo: 'Termos de Uso para Salões e Estabelecimentos', resumo: 'Item sobre pagamentos pelo app.', status: 'rascunho', publicado_em: null, atualizado_em: '2026-09-25T12:00:00-03:00', conteudo: '## 1. Sobre estes Termos\n\nRascunho de demonstração.' }],
   landing_leads: [{ id: 'll1', salon_name: 'Espaço Bela Vista', professionals_count: '4-6', whatsapp: '13998710010', utm_source: 'instagram', utm_medium: 'bio', created_at: new Date(Date.now() - 3600e3).toISOString(), atendido_em: null }, { id: 'll2', salon_name: 'Nail Studio da Lu', professionals_count: '1', whatsapp: '13998710011', origem: '/agenda-para-manicure', created_at: new Date(Date.now() - 26 * 3600e3).toISOString(), atendido_em: new Date().toISOString() }],
+  // a personalidade da Mel (2.87): catálogo e algumas frases para a tela da plataforma
+  mel_momentos: [
+    ['pedido_esperando_aceite', 'operacional', 'Pedido esperando aceite', 'Há pedido de horário aguardando a casa aceitar.', ['mel_bubble'], ['n', 'cliente', 'hora'], { n: '2', cliente: 'Bia', hora: '16h' }],
+    ['proxima_cliente_em_breve', 'agenda', 'Próxima cliente em breve', 'Próximo atendimento confirmado começa em 10 a 45 minutos.', ['mel_bubble'], ['cliente', 'hora', 'servico', 'minutos', 'profissional'], { cliente: 'Carla', hora: '14h30', servico: 'escova', minutos: '20', profissional: 'Ana' }],
+    ['dia_cheio', 'agenda', 'Dia cheio', 'Ocupação de hoje acima de 85%.', ['mel_bubble', 'weather_card'], ['n', 'temperatura'], { n: '8', temperatura: '31' }],
+    ['dia_vazio', 'agenda', 'Dia vazio', 'Dia de expediente sem nenhum atendimento, antes das 14h.', ['mel_bubble'], ['dia_semana'], { dia_semana: 'terça' }],
+    ['vaga_hoje', 'oportunidade', 'Vaga hoje', 'Buraco de pelo menos uma hora entre atendimentos de hoje.', ['mel_bubble'], ['hora', 'hora_fim', 'minutos', 'profissional', 'n_espera'], { hora: '15h30', hora_fim: '16h30', minutos: '60', profissional: 'Ana', n_espera: '2' }],
+    ['dia_fechado', 'marco', 'Dia fechado', 'Todos os atendimentos de hoje concluídos.', ['mel_bubble', 'weather_card'], ['n', 'faltas', 'faturamento'], { n: '7', faltas: '0', faturamento: 'R$ 640' }],
+    ['chuva_antes_dos_horarios', 'clima', 'Chuva antes dos horários', 'Chuva prevista nas próximas horas e há atendimentos depois dela.', ['mel_bubble', 'weather_card'], ['hora_chuva', 'chuva_pct', 'n_depois', 'sem_confirmar'], { hora_chuva: '18h', chuva_pct: '80', n_depois: '2', sem_confirmar: '1' }],
+    ['calor_extremo', 'clima', 'Calor extremo', 'Temperatura de 33° ou mais entre 10h e 18h.', ['mel_bubble', 'weather_card'], ['temperatura', 'sensacao', 'n'], { temperatura: '35', sensacao: '38', n: '4' }],
+    ['frio_forte', 'clima', 'Frio forte', 'Temperatura de 13° ou menos durante o expediente.', ['mel_bubble', 'weather_card'], ['temperatura', 'minima'], { temperatura: '12', minima: '9' }],
+    ['contexto_comum', 'clima', 'Contexto comum', 'O dia a dia, quando nada mais se destacou. Use os filtros de clima e período.', ['mel_bubble', 'weather_card'], ['temperatura', 'cidade', 'dia_semana', 'periodo'], { temperatura: '26', cidade: 'Santos', dia_semana: 'quarta', periodo: 'tarde' }],
+    ['vespera_feriado', 'calendario', 'Véspera de feriado', 'Amanhã é feriado.', ['mel_bubble', 'weather_card'], ['feriado', 'n'], { feriado: 'Tiradentes', n: '3' }],
+    ['primeiro_contato', 'geral', 'Primeiro contato', 'Uma única vez por pessoa.', ['mel_bubble'], ['nome'], { nome: 'Carla' }],
+  ].map(([chave, categoria, rotulo, descricao, superficies, placeholders, exemplo], i) => ({ chave, categoria, rotulo, descricao, superficies, placeholders, exemplo, ordem: (i + 1) * 10 })),
+  mel_frases: [
+    ['proxima_cliente_em_breve', 'mel_bubble', '{cliente} chega às {hora}. Dá tempo de um café.', null, 'feliz', 1, true],
+    ['proxima_cliente_em_breve', 'mel_bubble', '{minutos} min pra {cliente}. Já deixo o ar ligado?', null, 'atenta', 1, true],
+    ['dia_cheio', 'mel_bubble', 'Agenda cheia hoje. Eu fico de olho nos horários.', null, 'comemorando', 2, true],
+    ['dia_cheio', 'weather_card', 'Dia cheio e {temperatura} graus: hidrata que a agenda não dá trégua.', null, 'atenta', 1, true],
+    ['dia_vazio', 'mel_bubble', 'Hoje tá quieto. Dá pra divulgar o link, se quiser.', null, 'neutra', 1, true],
+    ['vaga_hoje', 'mel_bubble', 'Liberou {hora}. Quer colocar essa vaga pra jogo?', null, 'feliz', 1, true],
+    ['calor_extremo', 'mel_bubble', '{temperatura} graus e secador ligado. Você é forte.', ['cabelo', 'beleza'], 'cansada', 1, true],
+    ['calor_extremo', 'mel_bubble', '{temperatura} graus e a máquina esquentando junto. Água por perto.', ['barbearia'], 'cansada', 1, true],
+    ['calor_extremo', 'mel_bubble', '{temperatura} graus e esmalte secando antes da hora.', ['unhas'], 'atenta', 1, true],
+    ['calor_extremo', 'mel_bubble', 'Hoje até o café está pedindo gelo.', null, 'feliz', 2, true],
+    ['calor_extremo', 'weather_card', 'Sensação de {sensacao} graus. Água pra cliente, água pra você, ar no máximo.', null, 'neutra', 1, true],
+    ['frio_forte', 'weather_card', '{temperatura} graus. Cliente chega de gorro e sai de escova feita.', ['cabelo'], 'feliz', 1, true],
+    ['frio_forte', 'weather_card', '{temperatura} graus. Barba cheia hoje vale como cachecol.', ['barbearia'], 'feliz', 1, true],
+    ['contexto_comum', 'mel_bubble', 'Céu fechado, agenda aberta.', null, 'neutra', 1, true],
+    ['contexto_comum', 'weather_card', 'Céu cinza, mas a sua cliente vai sair daqui colorida.', null, 'feliz', 1, true],
+    ['contexto_comum', 'mel_bubble', 'Boa noite! Amanhã já tá se organizando.', null, 'cansada', 1, false],
+    ['dia_fechado', 'mel_bubble', '{n} atendidas hoje. Dia encerrado.', null, 'comemorando', 1, true],
+    ['primeiro_contato', 'mel_bubble', 'Oi, {nome}! Eu sou a Mel. Vou comentar o dia por aqui.', null, 'feliz', 1, true],
+  ].map(([chave, superficie, texto, ramos, tom, peso, ativa], i) => ({ id: 'mf' + (i + 1), chave, superficie, texto, ramos, tipos: null, contextos_clima: chave === 'contexto_comum' ? (i === 13 || i === 14 ? ['nublado'] : null) : null, periodos: i === 15 ? ['noite'] : null, tom, peso, ativa, created_at: '2026-10-01T12:00:00-03:00', updated_at: '2026-10-01T12:00:00-03:00' })),
   redirects: [{ id: 'rd1', from_path: '/cadastro-antigo', to_path: '/comecar', http_status: 301, active: true, created_at: '2026-09-01T12:00:00-03:00' }],
 }
 

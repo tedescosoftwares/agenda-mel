@@ -94,6 +94,7 @@ import { PAGINAS_SEO } from "./conteudo/paginasSeo";
 import ClientePagamento from "./pages/cliente/ClientePagamento";
 import ClienteComanda from "./pages/cliente/ClienteComanda";
 import PlataformaPromocoes from "./pages/plataforma/Promocoes";
+import PlataformaMel from "./pages/plataforma/Mel";
 import { guardarCodigoDaURL } from "./lib/indicacao";
 import { SUBDOMINIO } from "./lib/ambiente";
 import { NoEndereco } from "./pages/publico/EnderecoDoSalao";
@@ -401,6 +402,7 @@ export default function App() {
             <Route path="/plataforma/configuracoes" element={<ProtectedRoute requireRole="plataforma"><Configuracoes /></ProtectedRoute>} />
             <Route path="/plataforma/seo" element={<ProtectedRoute requireRole="plataforma"><PlataformaSeo /></ProtectedRoute>} />
             <Route path="/plataforma/termos" element={<ProtectedRoute requireRole="plataforma"><PlataformaTermos /></ProtectedRoute>} />
+            <Route path="/plataforma/mel" element={<ProtectedRoute requireRole="plataforma"><PlataformaMel /></ProtectedRoute>} />
 
             {/* área do salão */}
             <Route

@@ -12,6 +12,7 @@
 //   { condicao: 'ensolarado'|'nublado'|'chuva'|'trovoada'|'noite'|'frio'|'calor',
 //     temperatura: 24, sensacao: 26, dia: true, descricao: 'Parcialmente nublado',
 //     previsao: { max, min, chuva_pct, condicao_dia, condicao_noite, descricao_dia, descricao_noite, umidade, uv, nascer, por },
+//     horas: [{ hora: '18:00', condicao, chuva_pct, temperatura }]   (as próximas 6, para a Mel)
 //     cidade: 'Santos', atualizado_em: '...' }
 // Sem pino, sem chave ou sem resposta do Google: { condicao: null }.
 
@@ -68,8 +69,8 @@ Deno.serve(async (req) => {
   const servico = createClient(URL_SUPABASE, CHAVE_SERVICO, { auth: { persistSession: false } })
   const celula = `${(Math.round(lat / 0.05) * 0.05).toFixed(2)},${(Math.round(lng / 0.05) * 0.05).toFixed(2)}`
   const { data: cache } = await servico.from('clima_cache').select('dados, atualizado_em').eq('celula', celula).maybeSingle()
-  // cache válido = recente E já com a previsão do dia (o de antes da 2.86.2 não tinha)
-  if (cache && 'previsao' in (cache.dados ?? {}) && cache.dados.previsao && Date.now() - new Date(cache.atualizado_em).getTime() < VALIDADE_MIN * 60e3) {
+  // cache válido = recente E já com a previsão do dia e por hora (versões antigas não tinham)
+  if (cache && cache.dados?.previsao && Array.isArray(cache.dados?.horas) && Date.now() - new Date(cache.atualizado_em).getTime() < VALIDADE_MIN * 60e3) {
     return json({ ...cache.dados, cidade: base.cidade, atualizado_em: cache.atualizado_em, cache: true })
   }
 
@@ -77,6 +78,7 @@ Deno.serve(async (req) => {
   const loc = `location.latitude=${lat}&location.longitude=${lng}&unitsSystem=METRIC&languageCode=pt-BR`
   const urlAgora = `https://weather.googleapis.com/v1/currentConditions:lookup?key=${encodeURIComponent(CHAVE_GOOGLE)}&${loc}`
   const urlDia = `https://weather.googleapis.com/v1/forecast/days:lookup?key=${encodeURIComponent(CHAVE_GOOGLE)}&${loc}&days=1`
+  const urlHoras = `https://weather.googleapis.com/v1/forecast/hours:lookup?key=${encodeURIComponent(CHAVE_GOOGLE)}&${loc}&hours=6`
   let r: Response
   try { r = await fetch(urlAgora) } catch (e) { return json({ ...(cache?.dados ?? { condicao: null }), cidade: base.cidade, motivo: 'sem resposta do Google: ' + String(e) }) }
   if (!r.ok) {
@@ -115,12 +117,32 @@ Deno.serve(async (req) => {
       }
     } else console.error('forecast', rd.status, (await rd.text().catch(() => '')).slice(0, 200))
   } catch (e) { console.error('forecast', String(e)) }
+  // as próximas horas (2.88): a Mel avisa "chuva às 18h" e confirma quem vem depois
+  let horas: Array<Record<string, unknown>> = []
+  try {
+    const rh = await fetch(urlHoras)
+    if (rh.ok) {
+      const lista = (await rh.json())?.forecastHours ?? []
+      horas = lista.slice(0, 6).map((h: Record<string, unknown>) => {
+        const ini = (h?.interval as Record<string, unknown>)?.startTime
+        const t = ini ? new Date(String(ini)) : null
+        const temp = num((h?.temperature as Record<string, unknown>)?.degrees)
+        return {
+          hora: t && !Number.isNaN(t.getTime()) ? t.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }) : null,
+          condicao: condicaoDe(String((h?.weatherCondition as Record<string, unknown>)?.type ?? ''), h?.isDaytime !== false, temp),
+          chuva_pct: num(((h?.precipitation as Record<string, unknown>)?.probability as Record<string, unknown>)?.percent),
+          temperatura: temp,
+        }
+      })
+    } else console.error('hours', rh.status, (await rh.text().catch(() => '')).slice(0, 200))
+  } catch (e) { console.error('hours', String(e)) }
   const dados = {
     condicao: condicaoDe(tipo, dia, temperatura),
     tipo_google: tipo,
     temperatura, sensacao, dia,
     descricao: String(g?.weatherCondition?.description?.text ?? ''),
     previsao,
+    horas,
   }
   await servico.from('clima_cache').upsert({ celula, dados, atualizado_em: new Date().toISOString() })
   return json({ ...dados, cidade: base.cidade, atualizado_em: new Date().toISOString(), cache: false })

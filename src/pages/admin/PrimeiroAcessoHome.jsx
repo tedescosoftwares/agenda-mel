@@ -2,14 +2,12 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import QRCode from 'qrcode'
 import {
-  ArrowRight, BellRing, CalendarDays, CalendarPlus, Check, ChevronRight, Copy, ExternalLink,
-  Headphones, HelpCircle, Link2, PlayCircle, QrCode, Scissors, Settings2, Sparkles, Store,
+  ArrowRight, BellRing, CalendarDays, CalendarPlus, Check, ChevronRight, Copy,
+  HelpCircle, Link2, PlayCircle, QrCode, Scissors, Settings2, Sparkles, Store,
   Sun, Trophy, Users, Zap,
 } from 'lucide-react'
 import { AGENDA_ART_EXACT } from '../../assets/mockArtExact'
-import { useAuth } from '../../context/AuthContext'
-import { climaDoSalao, fraseDoTempo } from '../../lib/clima'
-import { imagemDaMel } from '../../lib/mel'
+import MelDock from '../../components/MelDock'
 import './PrimeiroAcessoHome.css'
 
 // A home do primeiro acesso (2.85): o salão existe, falta montar a agenda.
@@ -19,12 +17,6 @@ import './PrimeiroAcessoHome.css'
 // a foto do hero é a capa que o salão subiu (fotos do espaço); só sem
 // nenhuma foto entra a de estoque
 const FUNDO_PADRAO = '/imagens/salao-1400.webp'
-
-// A Mel: o recorte sem fundo. Com o tempo do salão, a roupa muda (lib/mel).
-function MelRecorte({ src }) {
-  const [falhou, setFalhou] = useState(false)
-  return <img className="fa-mel-png" src={falhou ? '/imagens/mel.webp' : src} alt="Mel, assistente da MIMO" onError={() => setFalhou(true)} />
-}
 
 function money(cents = 0) {
   return (Number(cents || 0) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -207,35 +199,6 @@ export default function PrimeiroAcessoHome({
       </section>
 
       <MelDock />
-    </div>
-  )
-}
-
-// A Mel no canto (2.85.6): fechada é só a imagem dela com um "Quer ajuda?".
-// Passou o mouse (ou tocou), expande no cartão de ajuda; saiu, volta a ser
-// só a imagem; o X esconde até a próxima atualização da página.
-function MelDock() {
-  const { salao } = useAuth()
-  const [aberta, setAberta] = useState(false)
-  // o tempo no salão: troca a imagem e o balão (uma frase sorteada por visita)
-  const [tempo, setTempo] = useState(null)
-  useEffect(() => { let vivo = true; climaDoSalao(salao?.id).then((c) => { if (vivo && c?.condicao) setTempo({ condicao: c.condicao, frase: fraseDoTempo(c.condicao), imagem: imagemDaMel(c.condicao) }) }); return () => { vivo = false } }, [salao?.id])
-  const [fechada, setFechada] = useState(false)   // o X some com ela só nesta tela; ao atualizar, volta
-  if (fechada) return null
-  function fechar(e) { e.stopPropagation(); setFechada(true) }
-  return (
-    <div className={'fa-mel-dock' + (aberta ? ' aberta' : '')} onMouseEnter={() => setAberta(true)} onMouseLeave={() => setAberta(false)} onClick={() => setAberta(true)} role="complementary" aria-label="Ajuda da MIMO">
-      <button type="button" className="fa-mel-x" onClick={fechar} aria-label="Fechar"><span aria-hidden="true">×</span></button>
-      {/* o balão fica fora do círculo (que recorta a foto), senão some */}
-      <span className="fa-mel-balao">{aberta ? (tempo?.frase || <>Oi! Eu sou a <b>Mel!</b> 💗</>) : <>Quer ajuda? 💗</>}</span>
-      <div className="fa-mel-dock-copy">
-        <div className="fa-card-titulo"><span className="fa-icon-badge"><Headphones size={18} /></span><h3>Precisa de ajuda?</h3></div>
-        <small>Acesse nossos tutoriais ou fale com o suporte da MIMO.</small>
-        <Link to="/admin/guia" className="fa-help-link">Acessar central de ajuda <ExternalLink size={14} /></Link>
-      </div>
-      <div className="fa-mel">
-        <MelRecorte src={tempo?.imagem || '/imagens/mel.webp'} />
-      </div>
     </div>
   )
 }

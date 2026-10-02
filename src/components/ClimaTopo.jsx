@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { climaDoSalao, CONDICOES, fraseDoDia } from '../lib/clima'
+import { pedirMel } from '../lib/melMotor'
 
 // O tempo no cabeçalho do painel (2.86): ícone + cidade + temperatura.
 // Some quando o salão não tem pino ou o tempo não veio.
@@ -8,9 +9,11 @@ export default function ClimaTopo() {
   const { salao } = useAuth()
   const [clima, setClima] = useState(null)
   const [aberto, setAberto] = useState(false)   // no celular, a previsão abre no toque
+  const [card, setCard] = useState(null)   // a frase editorial do motor da Mel (2.88)
   useEffect(() => {
     let vivo = true
     climaDoSalao(salao?.id).then((c) => { if (vivo) setClima(c) })
+    pedirMel(salao?.id).then((r) => { if (vivo && r?.card?.texto) setCard(r.card.texto) })
     return () => { vivo = false }
   }, [salao?.id])
   useEffect(() => {
@@ -19,7 +22,8 @@ export default function ClimaTopo() {
     document.addEventListener('click', fechar)
     return () => document.removeEventListener('click', fechar)
   }, [aberto])
-  const frase = useMemo(() => fraseDoDia(clima?.condicao), [clima?.condicao])
+  const fraseDeSempre = useMemo(() => fraseDoDia(clima?.condicao), [clima?.condicao])
+  const frase = card || fraseDeSempre
   if (!clima?.condicao) return null
   const c = CONDICOES[clima.condicao] ?? CONDICOES.ensolarado
   const pv = clima.previsao

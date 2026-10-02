@@ -89,7 +89,8 @@ export default function AdminAgenda() {
       )}
 
       <AgendaDia
-        key={filtro + (salao?.id ?? '')}
+        key={filtro + (salao?.id ?? '') + (params.get('dia') ?? '')}
+        diaInicial={/^\d{4}-\d{2}-\d{2}$/.test(params.get('dia') ?? '') ? params.get('dia') : null}
         professionalId={filtro || null}
         salonId={salao?.id ?? null}
         mostrarProfissional={filtro === ''}

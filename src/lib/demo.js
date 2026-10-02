@@ -499,6 +499,10 @@ const RPC = {
   avancar_ofertas_expiradas: () => 0,
   enviar_lembretes: () => 0,
   // a Mel (2.87): estatísticas zeradas (uma frase com uso, para a lista ter número) e importação com a mesma validação do banco, resumida
+  mel_marcar: () => ({ ok: true }),
+  mel_pedir_confirmacao: () => ({ enviadas: 2 }),
+  mel_ofertar_vaga: () => ({ ok: true, oferta: 'of-demo' }),
+  mel_contexto: () => ({}),
   mel_frases_estatisticas: () => CONTEUDO.mel_frases.map((f, i) => ({ frase_id: f.id, exibicoes: i === 0 ? 14 : 0, cliques: i === 0 ? 3 : 0, dispensas: i === 0 ? 1 : 0, concluidas: 0 })),
   mel_frases_importar: ({ itens, aplicar }) => {
     const problemas = []; let validas = 0

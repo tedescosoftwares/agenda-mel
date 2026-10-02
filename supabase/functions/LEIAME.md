@@ -205,3 +205,30 @@ No app: ícone + cidade + temperatura no cabeçalho, e a Mel troca de
 roupa conforme o tempo (public/imagens/mel/<condicao>-<n>.webp, contagem
 em src/lib/mel.js). Condições: ensolarado, nublado, chuva, trovoada,
 noite, frio, calor.
+
+## mel (2.88): o que a Mel fala
+
+O motor de contexto da Mel. O app chama `POST { salao }` e recebe o que
+ela diz agora para quem está logado:
+
+    { bubble: { exibicao, chave, nivel, texto, tom, avatar_key, acao }, card: { exibicao, chave, texto }, clima }
+
+Como decide: a RPC `mel_contexto(salao)` (migração 140) entrega os fatos
+(agenda de hoje e amanhã, vagas, cancelamentos, pendências, fila de
+WhatsApp, feriados, data comercial, clima do cache, histórico da pessoa);
+`momentos.ts` detecta os 27 momentos, pontua (base + urgência), aplica
+cooldown e dispensa; a frase vem de `mel_frases` (Plataforma → Mel),
+preferindo o ramo do salão e evitando as últimas usadas; `avatar_key` é
+`<clima>_<tom>`; a ação é semântica (`DIVULGAR_VAGA`, `PEDIR_CONFIRMACAO`,
+`OFERTAR_VAGA_LISTA`, `VER_PEDIDOS`…) e o app decide o que fazer com ela.
+Cada exibição vai para `mel_exibicoes` com o template da hora; clique e
+dispensa vêm de `mel_marcar`; "concluída" vem da operação real
+(`mel_pedir_confirmacao`, `mel_ofertar_vaga`, ou `mel_conciliar` a cada 5
+min pelo cron `mimo-mel`).
+
+Teste do catálogo: `deno test supabase/functions/mel/momentos_test.ts`.
+Sem frase cadastrada para o momento vencedor, o próximo da fila assume;
+sem frase nenhuma, o app mostra a frase do tempo de sempre.
+
+A função `clima` passou a guardar também as próximas 6 horas (`horas`),
+que é o que permite "chuva chegando às 18h".

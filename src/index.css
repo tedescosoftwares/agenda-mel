@@ -15545,3 +15545,41 @@ label.switch:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
   .plat-mel-editor { grid-template-columns: 1fr; }
   .plat-mel-duas, .plat-mel-tres { grid-template-columns: 1fr; }
 }
+
+
+/* A Mel no canto (2.85.6 → 2.88, global: vive nas duas homes). Fechada é só o
+   recorte dela com o balão; aberta vira o cartão com a fala, a ação e a ajuda. */
+.fa-mel-dock { position: fixed; right: 18px; bottom: 16px; z-index: 60; display: grid; grid-template-columns: 0fr 150px; align-items: end; width: max-content; max-width: 400px; border-radius: 22px; background: transparent; box-shadow: none; transition: grid-template-columns .25s ease, background .25s ease, box-shadow .25s ease; cursor: pointer; }
+.fa-mel-dock.aberta { grid-template-columns: minmax(230px, 1fr) 190px; max-width: 470px; align-items: center; background: linear-gradient(135deg, #fff, #fff1f7); box-shadow: 0 22px 56px rgba(73, 31, 78, .24); }
+.fa-mel-dock-copy { display: grid; gap: 4px; min-width: 0; overflow: hidden; padding: 0; opacity: 0; transition: opacity .2s ease; }
+.fa-mel-dock.aberta .fa-mel-dock-copy { padding: 14px 10px 14px 16px; opacity: 1; }
+.fa-mel-dock-copy > small { color: #a399a8; font-size: .76rem; line-height: 1.3; }
+.fa-mel-dock-copy .fa-help-link { margin-top: 4px; white-space: nowrap; }
+.fa-mel-x { position: absolute; top: -8px; left: -8px; z-index: 3; width: 26px; height: 26px; display: none; place-items: center; border: 1px solid #efe6ee; border-radius: 50%; background: #fff; color: #7a6f7e; font-size: 1rem; line-height: 1; cursor: pointer; box-shadow: 0 4px 12px rgba(73, 31, 78, .14); }
+.fa-mel-dock.aberta .fa-mel-x { display: grid; }
+.fa-mel { position: relative; width: 150px; height: 150px; border-radius: 50%; overflow: hidden; background: radial-gradient(circle at 50% 35%, #fff, #ffe3ee 70%, #ffd0e2); box-shadow: 0 14px 34px rgba(255, 45, 122, .22), inset 0 0 0 4px #fff; transition: width .25s ease, height .25s ease, border-radius .25s ease, box-shadow .25s ease; }
+.fa-mel-dock.aberta .fa-mel { width: 190px; height: 190px; border-radius: 0 22px 22px 0; background: linear-gradient(180deg, #fff6fa, #ffe3ee); box-shadow: none; overflow: hidden; }
+/* a imagem preenche o círculo (ou a coluna) inteiro, alinhada pelo topo: nunca sobra borda nem vaza */
+.fa-mel-png { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 12%; pointer-events: none; transition: transform .25s ease; }
+.fa-mel-dock.aberta .fa-mel-png { object-position: 50% 8%; }
+.fa-mel-dock:not(.aberta):hover .fa-mel-png { transform: scale(1.04); }
+.fa-mel-balao { position: absolute; right: 118px; top: 4px; z-index: 3; padding: 5px 10px; border-radius: 999px 999px 4px 999px; background: #fff; color: #ff2d7a; font-size: .72rem; font-weight: 700; white-space: nowrap; box-shadow: 0 8px 20px rgba(85, 35, 79, .14); }
+.fa-mel-dock.aberta .fa-mel-balao { right: 6px; left: auto; top: auto; bottom: calc(100% + 10px); max-width: 250px; white-space: normal; text-align: center; line-height: 1.25; padding: 8px 14px; font-size: .8rem; border-radius: 16px 16px 4px 16px; }
+.fa-mel-balao b { font-weight: 800; }
+
+.fa-mel-dock .fa-mel-titulo { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.fa-mel-dock .fa-mel-titulo i { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 11px; background: #ffe9f1; color: #ff2d7a; flex: none; font-style: normal; }
+.fa-mel-dock .fa-mel-titulo h3 { margin: 0; color: #5b4566; font-size: .92rem; font-weight: 600; letter-spacing: -.02em; }
+.fa-mel-fala { margin: 0; color: #5b4566; font-size: .84rem; line-height: 1.35; }
+.fa-mel-acao { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 36px; padding: 0 14px; border: 0; border-radius: 999px; background: linear-gradient(135deg, #ff2d7a, #ff5f9e); color: #fff; font: inherit; font-size: .8rem; font-weight: 700; cursor: pointer; box-shadow: 0 8px 18px rgba(255, 45, 122, .25); white-space: nowrap; }
+.fa-mel-acao:disabled { opacity: .6; cursor: default; }
+.fa-mel-ajuda { display: inline-flex; align-items: center; gap: 6px; color: #8a7f90; font-size: .76rem; text-decoration: none; }
+.fa-mel-ajuda:hover { color: #ff2d7a; }
+.fa-mel-retorno { margin: 0; color: #12a06a; font-size: .78rem; font-weight: 600; }
+@media (max-width: 640px) {
+  .fa-mel-dock { right: 10px; bottom: 76px; grid-template-columns: 0fr 104px; }
+  .fa-mel { width: 104px; height: 104px; }
+  .fa-mel-balao { right: 84px; }
+  .fa-mel-dock.aberta { grid-template-columns: minmax(0, 1fr) 130px; max-width: calc(100vw - 16px); }
+  .fa-mel-dock.aberta .fa-mel { width: 130px; height: 130px; }
+}

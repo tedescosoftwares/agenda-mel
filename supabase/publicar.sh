@@ -125,6 +125,9 @@ verde '  no ar'
 
 echo 'clima (o tempo no painel)...'
 supabase functions deploy clima --project-ref "$PROJECT_REF" >/dev/null
+
+echo 'mel (o que a Mel fala)...'
+supabase functions deploy mel --project-ref "$PROJECT_REF" >/dev/null
 verde '  no ar'
 
 echo 'pagina-publica (prévia do link, com --no-verify-jwt)...'

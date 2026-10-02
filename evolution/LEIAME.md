@@ -594,3 +594,13 @@ Opcional. Sem a chave o app usa OpenStreetMap. Para ligar:
    `pro.mimo.com.vc/*`, `*.mimo.com.vc/*`) e por **API** (só as duas acima).
 3. Na VPS: `nano evolution/.env` → `VITE_GOOGLE_MAPS_KEY=...` (nunca cole em chat).
 4. Opção **2** do bat: o build passa a usar o Google.
+
+## A Mel (2.87 e 2.88)
+
+- Migrações 139 e 140 (bat **B**): biblioteca de frases, catálogo de
+  momentos, fatos do salão, feriados, datas comerciais, ações e conciliação.
+- Edge Functions `mel` e `clima` (bat **9**).
+- Na Plataforma, menu **Mel**: importe as frases por JSON. Sem frases a Mel
+  continua falando só do tempo.
+- O ramo do salão (barbearia, unhas, estética…) é deduzido das categorias;
+  a dona pode fixar com `salao_definir_ramo`.

@@ -14893,19 +14893,17 @@ label.switch:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
 
   .admin-first-workspace .topbar-admin-primeiro {
     position:absolute;
-    top:10px;
-    left:18px;
-    right:18px;
+    top:0;
+    left:0;
+    right:0;
     z-index:50;
     margin:0;
     min-height:62px;
     padding:8px 18px;
-    border:1px solid rgba(255,255,255,.72);
-    border-radius:18px;
-    background:rgba(255,255,255,.60);
-    box-shadow:
-      0 14px 34px rgba(58,34,65,.065),
-      inset 0 1px 0 rgba(255,255,255,.94);
+    border:0;
+    border-radius:0;
+    background:rgba(255,255,255,.42);
+    box-shadow:none;
     backdrop-filter:blur(24px) saturate(1.16);
     -webkit-backdrop-filter:blur(24px) saturate(1.16);
   }

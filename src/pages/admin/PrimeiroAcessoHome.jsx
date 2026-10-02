@@ -7,6 +7,9 @@ import {
   Sun, Trophy, Users, Zap,
 } from 'lucide-react'
 import { AGENDA_ART_EXACT } from '../../assets/mockArtExact'
+import { useAuth } from '../../context/AuthContext'
+import { climaDoSalao, fraseDoTempo } from '../../lib/clima'
+import { imagemDaMel } from '../../lib/mel'
 import './PrimeiroAcessoHome.css'
 
 // A home do primeiro acesso (2.85): o salão existe, falta montar a agenda.
@@ -17,10 +20,10 @@ import './PrimeiroAcessoHome.css'
 // nenhuma foto entra a de estoque
 const FUNDO_PADRAO = '/imagens/salao-1400.webp'
 
-// A Mel: o recorte sem fundo (public/imagens/mel.webp).
-const MEL = '/imagens/mel.webp'
-function MelRecorte() {
-  return <img className="fa-mel-png" src={MEL} alt="Mel, assistente da MIMO" />
+// A Mel: o recorte sem fundo. Com o tempo do salão, a roupa muda (lib/mel).
+function MelRecorte({ src }) {
+  const [falhou, setFalhou] = useState(false)
+  return <img className="fa-mel-png" src={falhou ? '/imagens/mel.webp' : src} alt="Mel, assistente da MIMO" onError={() => setFalhou(true)} />
 }
 
 function money(cents = 0) {
@@ -212,7 +215,11 @@ export default function PrimeiroAcessoHome({
 // Passou o mouse (ou tocou), expande no cartão de ajuda; saiu, volta a ser
 // só a imagem; o X fecha e ela some até a próxima visita.
 function MelDock() {
+  const { salao } = useAuth()
   const [aberta, setAberta] = useState(false)
+  // o tempo no salão: troca a imagem e o balão (uma frase sorteada por visita)
+  const [tempo, setTempo] = useState(null)
+  useEffect(() => { let vivo = true; climaDoSalao(salao?.id).then((c) => { if (vivo && c?.condicao) setTempo({ condicao: c.condicao, frase: fraseDoTempo(c.condicao), imagem: imagemDaMel(c.condicao) }) }); return () => { vivo = false } }, [salao?.id])
   const [fechada, setFechada] = useState(() => { try { return sessionStorage.getItem('mimo-mel-fechada') === '1' } catch { return false } })
   if (fechada) return null
   function fechar(e) { e.stopPropagation(); setFechada(true); try { sessionStorage.setItem('mimo-mel-fechada', '1') } catch { /* nada */ } }
@@ -225,8 +232,8 @@ function MelDock() {
         <Link to="/admin/guia" className="fa-help-link">Acessar central de ajuda <ExternalLink size={14} /></Link>
       </div>
       <div className="fa-mel">
-        <span className="fa-mel-balao">{aberta ? <>Oi! Eu sou a <b>Mel!</b> 💗</> : <>Quer ajuda? 💗</>}</span>
-        <MelRecorte />
+        <span className="fa-mel-balao">{aberta ? (tempo?.frase || <>Oi! Eu sou a <b>Mel!</b> 💗</>) : <>Quer ajuda? 💗</>}</span>
+        <MelRecorte src={tempo?.imagem || '/imagens/mel.webp'} />
       </div>
     </div>
   )

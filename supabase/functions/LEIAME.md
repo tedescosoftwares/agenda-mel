@@ -191,3 +191,17 @@ pelo `ASAAS_WEBHOOK_TOKEN` no header `asaas-access-token`.
 
 No sandbox, o PIX se paga sozinho pelo simulador do Asaas
 (`POST /v3/pix/qrCodes/pay` com o copia e cola) ou pelo painel.
+
+
+## clima (2.86): o tempo no painel
+
+Consulta a Weather API do Google com o pino do salão e guarda por uma
+hora (tabela clima_cache, migração 138). Precisa de uma chave de
+SERVIDOR do Google (não a do mapa, que é restrita a sites):
+
+    supabase secrets set GOOGLE_WEATHER_KEY=...
+
+No app: ícone + cidade + temperatura no cabeçalho, e a Mel troca de
+roupa conforme o tempo (public/imagens/mel/<condicao>-<n>.webp, contagem
+em src/lib/mel.js). Condições: ensolarado, nublado, chuva, trovoada,
+noite, frio, calor.

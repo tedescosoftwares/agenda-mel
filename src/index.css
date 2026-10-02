@@ -15443,3 +15443,8 @@ label.switch:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
 @media (min-width: 1100px) {
   .admin-first-workspace .admin-content-primeiro .miolo { max-width: none !important; width: 100% !important; margin: 0 !important; }
 }
+
+
+/* o tempo no cabeçalho do painel (2.86) */
+.admin-topbar-clima { display: inline-flex; align-items: center; gap: 6px; margin-left: 8px; padding: 5px 10px; border-radius: 999px; background: rgba(255, 255, 255, .7); color: #6b5473; font-size: .78rem; font-weight: 600; white-space: nowrap; }
+@media (max-width: 1099px) { .topbar-admin .admin-topbar-clima { display: none !important; } }

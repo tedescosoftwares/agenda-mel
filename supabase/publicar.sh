@@ -123,6 +123,10 @@ echo 'assinatura-cuidar (cobranças da MIMO)...'
 supabase functions deploy assinatura-cuidar --project-ref "$PROJECT_REF" >/dev/null
 verde '  no ar'
 
+echo 'clima (o tempo no painel)...'
+supabase functions deploy clima --project-ref "$PROJECT_REF" >/dev/null
+verde '  no ar'
+
 echo 'pagina-publica (prévia do link, com --no-verify-jwt)...'
 supabase functions deploy pagina-publica --project-ref "$PROJECT_REF" --no-verify-jwt >/dev/null
 verde '  no ar'

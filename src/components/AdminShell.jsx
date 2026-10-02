@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import PainelPausado from './PainelPausado'
 import SinoAvisos from './SinoAvisos'
 import MenuDaConta, { ITENS_ADMIN } from './MenuDaConta'
+import ClimaTopo from './ClimaTopo'
 import { MarcaIcon, Wordmark } from './icons'
 import {
   CalendarIcon,
@@ -122,6 +123,7 @@ export default function AdminShell({ children, amplo = false, primeiroAcesso = f
             {saloes?.length > 1 && <ChevronDown size={14} />}
           </button>
           <span className="admin-topbar-online"><i></i> Online</span>
+          <ClimaTopo />
         </div>
 
         <form className="admin-topbar-busca" onSubmit={buscar}>

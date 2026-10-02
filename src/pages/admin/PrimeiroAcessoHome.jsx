@@ -13,7 +13,9 @@ import './PrimeiroAcessoHome.css'
 // Uma tela só, sem rolar no desktop: hero com a foto do salão, os quatro
 // primeiros passos, e embaixo agenda de hoje · agora na MIMO · ações
 // rápidas + divulgar + ajuda com a Mel.
-const FUNDO_HERO = '/imagens/salao-1400.webp'
+// a foto do hero é a capa que o salão subiu (fotos do espaço); só sem
+// nenhuma foto entra a de estoque
+const FUNDO_PADRAO = '/imagens/salao-1400.webp'
 
 // A Mel: o recorte sem fundo (public/imagens/mel.png) sai pra fora do cartão,
 // como no mock. Enquanto o PNG não existe, a foto antiga com as bordas
@@ -71,7 +73,7 @@ export default function PrimeiroAcessoHome({
 
   return (
     <div className="fa-home">
-      <section className="fa-hero" style={{ '--fa-fundo': `url("${FUNDO_HERO}")` }} data-tour="inicio">
+      <section className="fa-hero" style={{ '--fa-fundo': `url("${capaSalao || FUNDO_PADRAO}")` }} data-tour="inicio">
         <div className="fa-hero-copy">
           <span className="fa-eyebrow"><Sun size={14} /> {saudacao}{nomePessoa ? `, ${nomePessoa}` : ''} <Sun size={14} /></span>
           <h1>Seu salão ganhou<br />um <em>centro de comando.</em></h1>
@@ -85,7 +87,7 @@ export default function PrimeiroAcessoHome({
         <div className="fa-salon-card">
           <div className="fa-salon-head">
             <div className="fa-salon-photo">
-              {capaSalao ? <img src={capaSalao} alt="" /> : logoSalao ? <img src={logoSalao} alt="" /> : <b>{iniciaisSalao || 'M'}</b>}
+              {logoSalao ? <img src={logoSalao} alt="" /> : capaSalao ? <img src={capaSalao} alt="" /> : <b>{iniciaisSalao || 'M'}</b>}
             </div>
             <div className="fa-salon-title">
               <span className="fa-online"><i /> Online</span>

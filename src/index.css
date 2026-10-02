@@ -14913,12 +14913,12 @@ label.switch:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
   .admin-first-workspace .admin-content-primeiro {
     flex:1;
     min-height:0;
-    padding:92px 18px 26px !important;
+    padding:82px 18px 8px !important;
     background:transparent !important;
   }
 
   .admin-first-workspace .admin-content-primeiro .miolo {
-    max-width:1440px !important;
+    max-width:1600px !important;
   }
 
   .admin-first-workspace .mimo-first {
@@ -15423,4 +15423,17 @@ label.switch:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
   .admin-first-workspace .mimo-first-salon-card {
     max-width:315px;
   }
+}
+
+
+/* O cabeçalho do painel no celular (2.85.2): os itens de desktop (salão,
+   Online, busca, nome) ficam só no desktop; aqui sobram a marca, o sino
+   e o avatar, como antes. */
+@media (max-width: 1099px) {
+  .topbar-admin .admin-topbar-negocio,
+  .topbar-admin .admin-topbar-online,
+  .topbar-admin .admin-topbar-busca,
+  .topbar-admin .admin-topbar-user > span { display: none !important; }
+  .topbar-admin .topbar-admin-esquerda { display: flex; align-items: center; min-width: 0; }
+  .topbar-admin .admin-topbar-user { display: flex; align-items: center; }
 }

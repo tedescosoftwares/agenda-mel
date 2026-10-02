@@ -540,6 +540,9 @@ function PrimeiroAcessoHome({
         style={capaSalao ? { '--mimo-first-cover': `url("${capaSalao}")` } : undefined}
       >
         <div className="mimo-first-hero-bg" aria-hidden="true" />
+        <div className="mimo-first-hero-glow mimo-first-hero-glow-a" aria-hidden="true" />
+        <div className="mimo-first-hero-glow mimo-first-hero-glow-b" aria-hidden="true" />
+        <div className="mimo-first-hero-ribbon" aria-hidden="true" />
         <div className="mimo-first-hero-copy">
           <span className="mimo-first-kicker"><Sparkles size={13} /> {saudacao}{nomePessoa ? `, ${nomePessoa}` : ''}</span>
           <h1>Seu salão ganhou um <strong>centro de comando.</strong></h1>
@@ -568,6 +571,7 @@ function PrimeiroAcessoHome({
       </section>
 
       <section className="mimo-first-setup" data-tour="primeiros-passos">
+        <div className="mimo-first-setup-wash" aria-hidden="true" />
         <div className="mimo-first-setup-head">
           <div className="mimo-first-setup-title">
             <span className="mimo-first-setup-icon"><Sparkles size={18} /></span>

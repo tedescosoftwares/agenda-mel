@@ -1,4 +1,4 @@
 // Marca visível para saber, de bate-pronto, se a máquina está com o
 // código novo. Suba este número a cada entrega grande.
-export const VERSAO = '2.84.3-mimo'
-export const ENTREGA = 'Primeiro acesso com workspace integrado, header flutuante e Mel ampliada'
+export const VERSAO = '2.84.4-mimo'
+export const ENTREGA = 'Fidelidade visual do mock: cores vivas, profundidade e desktop menor corrigido'

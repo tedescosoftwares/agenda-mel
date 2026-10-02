@@ -38,7 +38,7 @@ const DESKTOP_NAV = [
   { to: '/admin/ajustes', label: 'Configurações', Icon: Settings2 },
 ]
 
-export default function AdminShell({ children, amplo = false }) {
+export default function AdminShell({ children, amplo = false, primeiroAcesso = false }) {
   // só o miolo rola: ao trocar de página, volta para o topo dele
   const miolo = useRef(null)
   const { pathname } = useLocation()
@@ -67,7 +67,7 @@ export default function AdminShell({ children, amplo = false }) {
   }
 
   return (
-    <div className={'admin-shell' + (amplo ? ' admin-shell-amplo' : '')}>
+    <div className={'admin-shell' + (amplo ? ' admin-shell-amplo' : '') + (primeiroAcesso ? ' admin-shell-primeiro-acesso' : '')}>
       <aside className="admin-desktop-sidebar" aria-label="Navegação principal">
         <div className="admin-sidebar-marca">
           <span><MarcaIcon className="marca" id="lateral" /><Wordmark tamanho={1.7} /></span>
@@ -109,7 +109,7 @@ export default function AdminShell({ children, amplo = false }) {
         </div>
       </aside>
 
-      <header className="topbar topbar-admin">
+      <header className={'topbar topbar-admin' + (primeiroAcesso ? ' topbar-admin-primeiro' : '')}>
         <div className="topbar-admin-esquerda">
           <span className="brand-inline">
             <MarcaIcon className="marca" id="topo" />
@@ -138,7 +138,7 @@ export default function AdminShell({ children, amplo = false }) {
         </div>
       </header>
 
-      <main className="content admin-content" ref={miolo}><div className="miolo">{acesso?.fase === 'bloqueado' ? <PainelPausado para="admin" /> : children}</div></main>
+      <main className={'content admin-content' + (primeiroAcesso ? ' admin-content-primeiro' : '')} ref={miolo}><div className="miolo">{acesso?.fase === 'bloqueado' ? <PainelPausado para="admin" /> : children}</div></main>
 
       <nav className="bottom-nav">
         <div className="bottom-nav-inner">

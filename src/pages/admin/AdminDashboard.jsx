@@ -172,7 +172,7 @@ export default function AdminDashboard() {
 
   if (primeiroAcesso) {
     return (
-      <AdminShell amplo>
+      <AdminShell amplo primeiroAcesso>
         <div className="mimo-first">
           <TutorialPainel primeiroAcesso />
           <PrimeiroAcessoHome

@@ -134,14 +134,14 @@ export function arvoreParaLinhas(arvore, categorias) {
     for (const fam of cat.familias ?? []) {
       if (fam.ativa === false) continue
       const fid = `ci-${cat.slug}-${fam.slug}`
-      linhas.push({ id: fid, tipo: 'familia', categoria_id: c.id, pai_id: null, nome: fam.nome, slug: fam.slug, descricao: fam.descricao ?? null, aliases: fam.aliases ?? [], tags: [], duracao_sugerida: null, imagem_url: null, ordem: fam.ordem ?? 0, prioridade_sugestao: 0, familia_id: fid, servico_id: null, nivel: 1, caminho_slugs: [cat.slug, fam.slug], caminho: [c.nome, fam.nome] })
+      linhas.push({ id: fid, tipo: 'familia', categoria_id: c.id, pai_id: null, nome: fam.nome, slug: fam.slug, ativa: true, descricao: fam.descricao ?? null, aliases: fam.aliases ?? [], tags: [], duracao_sugerida: null, imagem_url: null, ordem: fam.ordem ?? 0, prioridade_sugestao: 0, familia_id: fid, servico_id: null, nivel: 1, caminho_slugs: [cat.slug, fam.slug], caminho: [c.nome, fam.nome] })
       for (const sv of fam.servicos ?? []) {
         if (sv.ativa === false) continue
         const sid = `${fid}-${sv.slug}`
-        linhas.push({ id: sid, tipo: 'servico', categoria_id: c.id, pai_id: fid, nome: sv.nome, slug: sv.slug, descricao: sv.descricao ?? null, aliases: sv.aliases ?? [], tags: sv.tags ?? [], duracao_sugerida: sv.duracao_sugerida ?? null, imagem_url: null, ordem: sv.ordem ?? 0, prioridade_sugestao: sv.prioridade_sugestao ?? 0, familia_id: fid, servico_id: sid, nivel: 2, caminho_slugs: [cat.slug, fam.slug, sv.slug], caminho: [c.nome, fam.nome, sv.nome] })
+        linhas.push({ id: sid, tipo: 'servico', categoria_id: c.id, pai_id: fid, nome: sv.nome, slug: sv.slug, ativa: true, descricao: sv.descricao ?? null, aliases: sv.aliases ?? [], tags: sv.tags ?? [], duracao_sugerida: sv.duracao_sugerida ?? null, imagem_url: null, ordem: sv.ordem ?? 0, prioridade_sugestao: sv.prioridade_sugestao ?? 0, familia_id: fid, servico_id: sid, nivel: 2, caminho_slugs: [cat.slug, fam.slug, sv.slug], caminho: [c.nome, fam.nome, sv.nome] })
         for (const tc of sv.tecnicas ?? []) {
           if (tc.ativa === false) continue
-          linhas.push({ id: `${sid}-${tc.slug}`, tipo: 'tecnica', categoria_id: c.id, pai_id: sid, nome: tc.nome, slug: tc.slug, descricao: null, aliases: tc.aliases ?? [], tags: [], duracao_sugerida: tc.duracao_sugerida ?? null, imagem_url: null, ordem: tc.ordem ?? 0, prioridade_sugestao: 0, familia_id: fid, servico_id: sid, nivel: 3, caminho_slugs: [cat.slug, fam.slug, sv.slug, tc.slug], caminho: [c.nome, fam.nome, sv.nome, tc.nome] })
+          linhas.push({ id: `${sid}-${tc.slug}`, tipo: 'tecnica', categoria_id: c.id, pai_id: sid, nome: tc.nome, slug: tc.slug, ativa: true, descricao: null, aliases: tc.aliases ?? [], tags: [], duracao_sugerida: tc.duracao_sugerida ?? null, imagem_url: null, ordem: tc.ordem ?? 0, prioridade_sugestao: 0, familia_id: fid, servico_id: sid, nivel: 3, caminho_slugs: [cat.slug, fam.slug, sv.slug, tc.slug], caminho: [c.nome, fam.nome, sv.nome, tc.nome] })
         }
       }
     }

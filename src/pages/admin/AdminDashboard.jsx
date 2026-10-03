@@ -30,6 +30,7 @@ export default function AdminDashboard() {
   const [porDia, setPorDia] = useState([])
   const [semContrato, setSemContrato] = useState([])
   const [primeiros, setPrimeiros] = useState(null)
+  const [cobertura, setCobertura] = useState(null)   // quem atende o quê, por categoria (2.94)
   const [clientesCount, setClientesCount] = useState(0)
   const [homeCarregada, setHomeCarregada] = useState(false)
   const navigate = useNavigate()
@@ -44,7 +45,7 @@ export default function AdminDashboard() {
     if (!salaoId) return
     setHomeCarregada(false)
     const d = toISODate(new Date()), mes = mesAtual()
-    const [ag, pend, fila, res, mesAg, pp, clientes] = await Promise.all([
+    const [ag, pend, fila, res, mesAg, pp, clientes, cb] = await Promise.all([
       supabase.from('appointments').select('price_cents, status').eq('salon_id', salaoId).eq('date', d).neq('status', 'cancelado'),
       supabase.from('appointments').select('id', { count: 'exact', head: true }).eq('salon_id', salaoId).eq('status', 'pendente').gte('date', d),
       supabase.from('waitlist_entries').select('id, professionals!inner(salon_id)', { count: 'exact', head: true }).eq('professionals.salon_id', salaoId).eq('status', 'aguardando'),
@@ -52,6 +53,7 @@ export default function AdminDashboard() {
       supabase.from('appointments').select('date, price_cents').eq('salon_id', salaoId).eq('status', 'concluido').gte('date', mes),
       supabase.rpc('primeiros_passos', { salao: salaoId }),
       supabase.rpc('clientes_do_salao', { salao: salaoId }),
+      supabase.rpc('cobertura_por_categoria', { salao: salaoId }),
     ])
     const lista = ag.data ?? []
     setHoje({ atendimentos: lista.length, faturamento: lista.reduce((s, a) => s + (a.price_cents ?? 0), 0) })
@@ -62,6 +64,7 @@ export default function AdminDashboard() {
     for (const a of mesAg.data ?? []) soma[a.date] = (soma[a.date] ?? 0) + (a.price_cents ?? 0)
     setPorDia(Object.entries(soma).sort().map(([k, v]) => ({ x: k.slice(8, 10), y: v / 100 })))
     setPrimeiros(pp.data ?? null)
+    setCobertura(Array.isArray(cb.data) ? cb.data : [])
     setClientesCount(Array.isArray(clientes.data) ? clientes.data.length : 0)
     setHomeCarregada(true)
   }, [salaoId])
@@ -89,9 +92,12 @@ export default function AdminDashboard() {
   const equipePronta = salao?.tipo === 'autonoma' || Number(primeiros?.equipe ?? 0) > 0
   const categoriasProntas = Array.isArray(salao?.categorias_escolhidas) && salao.categorias_escolhidas.length > 0
   const linkPronto = Boolean(salao?.ativado_em)
-  const progressoConfig = [categoriasProntas, servicosProntos, equipePronta, linkPronto]
+  // quem faz o quê (2.94): todo serviço ativo com pelo menos uma profissional (autônoma: automático)
+  const vinculosProntos = salao?.tipo === 'autonoma' ? servicosProntos : (servicosProntos && cobertura !== null && cobertura.length > 0 && cobertura.every((c) => Number(c.sem_profissional ?? 0) === 0))
+  const configConcluida = Boolean(primeiros?.feitos?.configuracao)
+  const progressoConfig = [categoriasProntas, servicosProntos, equipePronta, vinculosProntos]
   const feitosConfig = progressoConfig.filter(Boolean).length
-  const primeiroAcesso = primeiros !== null && (!servicosProntos || !equipePronta || !linkPronto)
+  const primeiroAcesso = primeiros !== null && !configConcluida && (!servicosProntos || !equipePronta || !linkPronto || !vinculosProntos)
 
   const salaoAtivo = Boolean(salao?.ativado_em)
   const fotosSalao = Array.isArray(salao?.fotos) ? salao.fotos : []
@@ -189,6 +195,7 @@ export default function AdminDashboard() {
           categoriasProntas={categoriasProntas}
           servicosProntos={servicosProntos}
           equipePronta={equipePronta}
+          vinculosProntos={vinculosProntos}
           linkPronto={linkPronto}
           linkSalao={linkSalao}
         />

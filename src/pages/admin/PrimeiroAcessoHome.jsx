@@ -45,7 +45,7 @@ function StepCard({ number, title, text, to, done, current }) {
 
 export default function PrimeiroAcessoHome({
   saudacao, nomePessoa, capaSalao, logoSalao, iniciaisSalao, nomeSalao, hoje, clientesCount,
-  feitosConfig, categoriasProntas, servicosProntos, equipePronta, linkPronto, linkSalao,
+  feitosConfig, categoriasProntas, servicosProntos, equipePronta, vinculosProntos = false, linkSalao,
 }) {
   const progresso = Math.max(0, Math.min(100, (Number(feitosConfig || 0) / 4) * 100))
   const abrirTour = () => window.dispatchEvent(new CustomEvent('mimo:abrir-tour-painel'))
@@ -56,10 +56,10 @@ export default function PrimeiroAcessoHome({
 
   const steps = useMemo(() => ([
     { number: 1, title: 'Categorias de serviços', text: 'Ex: Cabelo, Unha, Estética.', to: '/admin/configurar', done: categoriasProntas, current: !categoriasProntas },
-    { number: 2, title: 'Serviços', text: 'Nome, duração e preço.', to: '/admin/servicos', done: servicosProntos, current: categoriasProntas && !servicosProntos },
-    { number: 3, title: 'Profissionais', text: 'Sua equipe e as agendas.', to: '/admin/equipe', done: equipePronta, current: servicosProntos && !equipePronta },
-    { number: 4, title: 'Compartilhar link', text: 'Divulgue e receba clientes.', to: '/admin/salao', done: linkPronto, current: equipePronta && !linkPronto },
-  ]), [categoriasProntas, servicosProntos, equipePronta, linkPronto])
+    { number: 2, title: 'Serviços', text: 'Nome, duração e preço.', to: '/admin/configurar', done: servicosProntos, current: categoriasProntas && !servicosProntos },
+    { number: 3, title: 'Profissionais', text: 'Quem vai aparecer na agenda.', to: '/admin/configurar', done: equipePronta, current: servicosProntos && !equipePronta },
+    { number: 4, title: 'Quem faz o quê', text: 'Ligue cada serviço a quem atende.', to: '/admin/configurar', done: vinculosProntos, current: equipePronta && !vinculosProntos },
+  ]), [categoriasProntas, servicosProntos, equipePronta, vinculosProntos])
 
   return (
     <div className="fa-home">

@@ -15559,8 +15559,9 @@ label.switch:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
 
 /* A Mel no canto (2.85.6 → 2.88, global: vive nas duas homes). Fechada é só o
    recorte dela com o balão; aberta vira o cartão com a fala, a ação e a ajuda. */
-.fa-mel-dock { position: fixed; right: 18px; bottom: 16px; z-index: 60; display: grid; grid-template-columns: 150px; align-items: end; width: max-content; border-radius: 22px; background: transparent; box-shadow: none; transition: background .25s ease, box-shadow .25s ease; cursor: pointer; }
-.fa-mel-dock.aberta { grid-template-columns: minmax(230px, 1fr) 190px; max-width: 470px; align-items: center; background: linear-gradient(135deg, #fff, #fff1f7); box-shadow: 0 22px 56px rgba(73, 31, 78, .24); }
+.fa-mel-dock { position: fixed; right: 18px; bottom: calc(16px + var(--rodape-fixo, 0px)); z-index: 60; display: grid; grid-template-columns: minmax(0, max-content) 150px; column-gap: 10px; align-items: end; width: max-content; border-radius: 22px; background: transparent; box-shadow: none; transition: background .25s ease, box-shadow .25s ease, bottom .2s ease; cursor: pointer; animation: fa-mel-nasce .4s cubic-bezier(.2, .8, .3, 1); }
+@keyframes fa-mel-nasce { from { opacity: 0; transform: translateY(18px) } to { opacity: 1; transform: none } }
+.fa-mel-dock.aberta { grid-template-columns: minmax(230px, 1fr) 190px; column-gap: 0; max-width: 470px; align-items: center; background: linear-gradient(135deg, #fff, #fff1f7); box-shadow: 0 22px 56px rgba(73, 31, 78, .24); }
 .fa-mel-dock:not(.aberta) .fa-mel-dock-copy { display: none; }
 .fa-mel-dock-copy { display: grid; gap: 4px; min-width: 0; overflow: hidden; padding: 0; }
 .fa-mel-dock.aberta .fa-mel-dock-copy { padding: 14px 10px 14px 16px; animation: fa-mel-surge .2s ease; }
@@ -15578,7 +15579,12 @@ label.switch:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
 .fa-mel-balao { position: absolute; right: 118px; top: 4px; z-index: 3; padding: 5px 10px; border-radius: 999px 999px 4px 999px; background: #fff; color: #ff2d7a; font-size: .72rem; font-weight: 700; white-space: nowrap; box-shadow: 0 8px 20px rgba(85, 35, 79, .14); }
 .fa-mel-dock.aberta .fa-mel-balao { right: 6px; left: auto; top: auto; bottom: calc(100% + 10px); max-width: 250px; white-space: normal; text-align: center; line-height: 1.25; padding: 8px 14px; font-size: .8rem; border-radius: 16px 16px 4px 16px; }
 .fa-mel-balao b { font-weight: 800; }
-.fa-mel-dock:not(.aberta) .fa-mel-balao.com-fala { width: max-content; max-width: 240px; white-space: normal; text-align: right; line-height: 1.25; padding: 7px 12px; border-radius: 16px 16px 4px 16px; top: 0; }
+/* fechada, a fala é um balão de conversa ao lado dela: "Mel" em cima, texto
+   normal, rabinho apontando para a foto; nunca por cima de nada (2.95.1) */
+.fa-mel-dock:not(.aberta) .fa-mel-balao { position: relative; right: auto; top: auto; justify-self: end; margin-bottom: 28px; max-width: 280px; padding: 9px 14px 10px; border: 1px solid #ffe1ec; border-radius: 18px 18px 4px 18px; background: #fff; color: #3b2d44; font-size: .84rem; font-weight: 500; line-height: 1.38; white-space: normal; text-align: left; box-shadow: 0 12px 28px rgba(85, 35, 79, .16); }
+.fa-mel-dock:not(.aberta) .fa-mel-balao::before { content: 'Mel'; display: block; margin-bottom: 2px; color: #ff2d7a; font-size: .66rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.fa-mel-dock:not(.aberta) .fa-mel-balao::after { content: ''; position: absolute; right: -6px; bottom: 12px; width: 11px; height: 11px; background: #fff; border-right: 1px solid #ffe1ec; border-bottom: 1px solid #ffe1ec; border-radius: 2px; transform: rotate(-45deg); }
+.fa-mel-dock.aberta .fa-mel-balao.com-fala { display: none; }
 
 .fa-mel-dock .fa-mel-titulo { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .fa-mel-dock .fa-mel-titulo i { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 11px; background: #ffe9f1; color: #ff2d7a; flex: none; font-style: normal; }
@@ -15590,10 +15596,9 @@ label.switch:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
 .fa-mel-ajuda:hover { color: #ff2d7a; }
 .fa-mel-retorno { margin: 0; color: #12a06a; font-size: .78rem; font-weight: 600; }
 @media (max-width: 640px) {
-  .fa-mel-dock { right: 10px; bottom: 76px; grid-template-columns: 104px; }
+  .fa-mel-dock { right: 10px; bottom: calc(76px + var(--rodape-fixo, 0px)); grid-template-columns: minmax(0, max-content) 104px; column-gap: 8px; }
   .fa-mel { width: 104px; height: 104px; }
-  .fa-mel-balao { right: 84px; }
-  .fa-mel-dock:not(.aberta) .fa-mel-balao.com-fala { max-width: calc(100vw - 130px); }
+  .fa-mel-dock:not(.aberta) .fa-mel-balao { max-width: calc(100vw - 150px); margin-bottom: 18px; font-size: .8rem; }
   .fa-mel-dock.aberta { left: 10px; width: auto; max-width: none; grid-template-columns: minmax(0, 1fr) 130px; }
   .fa-mel-dock.aberta .fa-mel { width: 130px; height: 130px; }
 }
@@ -15746,12 +15751,14 @@ label.switch:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
 .escolha-cats-topo strong { font-size: 1.02rem; }
 .escolha-cats-topo .muted { font-size: 0.88rem; }
 .escolha-cats-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.7rem; }
-.escolha-cat { position: relative; text-align: left; border: 2px solid var(--fio); background: var(--branco); border-radius: 18px; overflow: hidden; padding: 0; cursor: pointer; display: grid; grid-template-rows: 104px auto; animation: cardapio-entra 0.4s ease both; animation-delay: var(--cat-atraso, 0ms); transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease; }
+.escolha-cat { position: relative; min-width: 0; text-align: left; border: 2px solid var(--fio); background: var(--branco); border-radius: 18px; overflow: hidden; padding: 0; cursor: pointer; display: grid; grid-template-rows: 104px auto; animation: cardapio-entra 0.4s ease both; animation-delay: var(--cat-atraso, 0ms); transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease; }
 .escolha-cat:hover { transform: translateY(-2px); box-shadow: 0 10px 26px rgba(31, 32, 38, 0.09); }
 .escolha-cat.marcada { border-color: var(--rosa); box-shadow: 0 0 0 3px var(--latao-veu); }
 .escolha-cat.antiga { opacity: 0.75; }
-.escolha-cat-txt { display: grid; gap: 0.12rem; padding: 0.65rem 0.8rem 0.75rem; }
-.escolha-cat-txt strong { font-family: inherit; font-size: 0.98rem; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--texto); }
+.escolha-cat-txt { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; gap: 0.12rem; padding: 0.65rem 0.8rem 0.75rem; }
+/* nome e descrição nunca estouram o cartão: quebram (com hífen) dentro da coluna */
+.escolha-cat-txt strong { font-family: inherit; font-size: 0.98rem; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--texto); line-height: 1.2; overflow-wrap: anywhere; hyphens: auto; }
+.escolha-cat-txt small, .escolha-cat-txt em { overflow-wrap: anywhere; min-width: 0; }
 .escolha-cat-txt small { font-family: inherit; font-size: 0.8rem; letter-spacing: 0; text-transform: none; color: var(--texto-2); line-height: 1.3; }
 .escolha-cat-txt em { font-family: inherit; font-style: normal; font-size: 0.72rem; letter-spacing: 0; text-transform: none; color: var(--texto-3); margin-top: 0.15rem; min-height: 1em; }
 .escolha-cat-check { position: absolute; top: 10px; right: 10px; width: 26px; height: 26px; border-radius: 50%; background: var(--branco); color: var(--rosa); display: grid; place-items: center; opacity: 0; transform: scale(0.6); transition: opacity 0.15s ease, transform 0.15s ease; z-index: 2; box-shadow: 0 2px 8px rgba(31, 32, 38, 0.18); }

@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { Check, Lock, Sparkles, Users, LayoutGrid, Link2, ArrowLeft, ArrowRight, Save, LogOut } from 'lucide-react'
 import AdminShell from '../../components/AdminShell'
@@ -44,6 +45,26 @@ export default function Configurar({ para = 'admin' }) {
   const [feitas, setFeitas] = useState({})
   const [ativandoAqui, setAtivandoAqui] = useState(false)
   const compacto = useCompacto()
+  // o rodapé é fixo, colado no fim do miolo que rola (largura e posição
+  // medidas do <main>), e publica a própria altura em --rodape-fixo para
+  // a Mel nascer em cima dele, nunca por cima
+  const [caixa, setCaixa] = useState(null)
+  const rodapeRef = useRef(null)
+  useEffect(() => {
+    const main = document.querySelector('main.admin-content')
+    if (!main) return
+    const medir = () => {
+      const r = main.getBoundingClientRect(); const cs = getComputedStyle(main)
+      setCaixa({ left: Math.round(r.left), width: Math.round(r.width), bottom: Math.max(0, Math.round(window.innerHeight - r.bottom)), paddingLeft: cs.paddingLeft, paddingRight: cs.paddingRight })
+    }
+    medir()
+    const altura = () => document.documentElement.style.setProperty('--rodape-fixo', `${rodapeRef.current?.offsetHeight ?? 0}px`)
+    altura()
+    const ro = new ResizeObserver(medir); ro.observe(main)
+    const ro2 = new ResizeObserver(altura); if (rodapeRef.current) ro2.observe(rodapeRef.current)
+    window.addEventListener('resize', medir)
+    return () => { ro.disconnect(); ro2.disconnect(); window.removeEventListener('resize', medir); document.documentElement.style.removeProperty('--rodape-fixo') }
+  }, [])
   const etapas = useMemo(() => (autonoma ? ETAPAS.filter((e) => e.id !== 'vinculos').map((e) => (e.id === 'profissionais' ? { ...e, rotulo: 'Sua agenda' } : e)) : ETAPAS), [autonoma])
   const chaveLocal = base?.id ? `mimo-config-passo-${base.id}` : null
 
@@ -166,17 +187,20 @@ export default function Configurar({ para = 'admin' }) {
           </div>
         )}
 
-        <footer className="cfg-rodape">
-          {estado.acaoRodape
-            ? <button type="button" className={'cfg-rodape-acao' + (estado.aviso ? ' aviso' : '')} onClick={estado.acaoRodape.onClick}>{estado.acaoRodape.icone}{estado.acaoRodape.rotulo}</button>
-            : <span className={'cfg-rodape-info' + (estado.aviso ? ' aviso' : '')}>{estado.rodape}</span>}
-          <div className="cfg-rodape-acoes">
-            {indice > 0 && !compacto && <button type="button" className="btn btn-ghost" onClick={voltar} disabled={salvando}><ArrowLeft size={16} /> Voltar</button>}
-            {passo === REVISAO
-              ? <button type="button" className="btn btn-primary cfg-continuar" onClick={concluir} disabled={!estado.podeContinuar || salvando}>{salvando ? 'Concluindo…' : 'Concluir configuração'} <Check size={16} /></button>
-              : <button type="button" className="btn btn-primary cfg-continuar" onClick={continuar} disabled={!estado.podeContinuar || salvando}>{salvando ? 'Salvando…' : ultimaEtapa ? 'Revisar' : 'Continuar'} <ArrowRight size={16} /></button>}
-          </div>
-        </footer>
+        {createPortal(
+          <footer ref={rodapeRef} className={'cfg-rodape' + (compacto ? ' compacta' : '')} style={caixa ? { left: caixa.left, width: caixa.width, bottom: caixa.bottom, paddingLeft: caixa.paddingLeft, paddingRight: caixa.paddingRight } : undefined}>
+            <div className="cfg-rodape-miolo">
+              {estado.acaoRodape
+                ? <button type="button" className={'cfg-rodape-acao' + (estado.aviso ? ' aviso' : '')} onClick={estado.acaoRodape.onClick}>{estado.acaoRodape.icone}{estado.acaoRodape.rotulo}</button>
+                : <span className={'cfg-rodape-info' + (estado.aviso ? ' aviso' : '')}>{estado.rodape}</span>}
+              <div className="cfg-rodape-acoes">
+                {indice > 0 && !compacto && <button type="button" className="btn btn-ghost" onClick={voltar} disabled={salvando}><ArrowLeft size={16} /> Voltar</button>}
+                {passo === REVISAO
+                  ? <button type="button" className="btn btn-primary cfg-continuar" onClick={concluir} disabled={!estado.podeContinuar || salvando}>{salvando ? 'Concluindo…' : 'Concluir configuração'} <Check size={16} /></button>
+                  : <button type="button" className="btn btn-primary cfg-continuar" onClick={continuar} disabled={!estado.podeContinuar || salvando}>{salvando ? 'Salvando…' : ultimaEtapa ? 'Revisar' : 'Continuar'} <ArrowRight size={16} /></button>}
+              </div>
+            </div>
+          </footer>, document.body)}
       </div>
     </Shell>
   )

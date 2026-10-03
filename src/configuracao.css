@@ -24,7 +24,13 @@
 .cfg-etapa { display: grid; gap: 16px; }
 .cfg-etapa-topo h2 { margin: 0; font-size: 1.35rem; color: var(--ameixa, #3d0c4e); }
 .cfg-etapa-topo p { margin: 4px 0 0; color: var(--texto-2, #6b7280); max-width: 720px; }
-.cfg-rodape { position: sticky; bottom: 0; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); margin: 8px -16px 0; border-top: 1px solid var(--cfg-fio); background: rgba(248, 247, 250, 0.96); backdrop-filter: blur(6px); box-shadow: 0 -10px 24px rgba(31, 32, 38, 0.06); z-index: 5; flex-wrap: wrap; }
+/* rodapé fixo, colado no fim do miolo (posição e largura medidas no Configurar);
+   a Mel usa --rodape-fixo para nascer em cima dele */
+.cfg-rodape { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; padding: 10px 16px; border-top: 1px solid #ece7ee; background: rgba(255, 255, 255, 0.94); backdrop-filter: blur(8px); box-shadow: 0 -8px 24px rgba(31, 32, 38, 0.07); box-sizing: border-box; }
+.cfg-rodape-miolo { max-width: 1240px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.cfg-rodape.compacta { padding: 10px 14px calc(10px + env(safe-area-inset-bottom)); }
+.cfg { padding-bottom: calc(var(--rodape-fixo, 72px) + 8px); }
+.admin-content:has(.cfg) { padding-bottom: 1rem; }
 .cfg-corpo { padding-bottom: 8px; }
 .cfg-rodape-info { font-size: 0.88rem; color: var(--texto-2, #6b7280); }
 .cfg-rodape-info.aviso { color: #9a6400; }

@@ -15585,6 +15585,13 @@ label.switch:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
 .fa-mel-dock:not(.aberta) .fa-mel-balao::before { content: 'Mel'; display: block; margin-bottom: 2px; color: #ff2d7a; font-size: .66rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
 .fa-mel-dock:not(.aberta) .fa-mel-balao::after { content: ''; position: absolute; right: -6px; bottom: 12px; width: 11px; height: 11px; background: #fff; border-right: 1px solid #ffe1ec; border-bottom: 1px solid #ffe1ec; border-radius: 2px; transform: rotate(-45deg); }
 .fa-mel-dock.aberta .fa-mel-balao.com-fala { display: none; }
+/* recolhida (tem conteúdo embaixo dela): só a bolinha com a foto, pontinho se tem recado */
+.fa-mel-dock.recolhida { grid-template-columns: 64px; column-gap: 0; }
+.fa-mel-dock.recolhida .fa-mel-balao { display: none; }
+.fa-mel-dock.recolhida .fa-mel { width: 64px; height: 64px; box-shadow: 0 10px 24px rgba(255, 45, 122, .28), inset 0 0 0 3px #fff; }
+.fa-mel-dock.recolhida.com-recado .fa-mel::after { content: ''; position: absolute; top: 5px; right: 5px; width: 12px; height: 12px; border-radius: 50%; background: #ff2d7a; box-shadow: 0 0 0 2px #fff; animation: fa-mel-pulsa 1.6s ease-in-out infinite; }
+@keyframes fa-mel-pulsa { 0%, 100% { transform: scale(1) } 50% { transform: scale(1.25) } }
+.fa-mel-dock.recolhida .fa-mel-x { display: none; }
 
 .fa-mel-dock .fa-mel-titulo { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .fa-mel-dock .fa-mel-titulo i { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 11px; background: #ffe9f1; color: #ff2d7a; flex: none; font-style: normal; }
@@ -15599,6 +15606,8 @@ label.switch:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
   .fa-mel-dock { right: 10px; bottom: calc(76px + var(--rodape-fixo, 0px)); grid-template-columns: minmax(0, max-content) 104px; column-gap: 8px; }
   .fa-mel { width: 104px; height: 104px; }
   .fa-mel-dock:not(.aberta) .fa-mel-balao { max-width: calc(100vw - 150px); margin-bottom: 18px; font-size: .8rem; }
+  .fa-mel-dock.recolhida { grid-template-columns: 56px; }
+  .fa-mel-dock.recolhida .fa-mel { width: 56px; height: 56px; }
   .fa-mel-dock.aberta { left: 10px; width: auto; max-width: none; grid-template-columns: minmax(0, 1fr) 130px; }
   .fa-mel-dock.aberta .fa-mel { width: 130px; height: 130px; }
 }
@@ -15873,3 +15882,7 @@ label.switch:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
   .plat-cat-numeros { grid-template-columns: 1fr; }
   .plat-no-acoes .plat-link span { display: none; }
 }
+
+/* o fim de toda página do painel sobra para a Mel voltar inteira (2.95.2); --mel-reserva vem do MelDock */
+.admin-shell main.admin-content { padding-bottom: calc(max(5.5rem, var(--mel-reserva, 0px)) + 1rem + env(safe-area-inset-bottom)); }
+.admin-shell .admin-content-primeiro { padding-bottom: calc(max(5.5rem, var(--mel-reserva, 0px)) + 1rem + env(safe-area-inset-bottom)) !important; }

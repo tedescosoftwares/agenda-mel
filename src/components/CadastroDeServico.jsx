@@ -44,6 +44,25 @@ export function MelFala({ fala, className = '' }) {
   )
 }
 
+// a imagem de família ou serviço: imagem_url do catálogo, senão a convenção
+// /imagens/catalogo/<categoria>/<familia>[/<servico>].webp; sem arquivo, nada
+export function imagemDoItem(item) {
+  if (!item) return null
+  return item.imagem_url || (item.caminho_slugs?.length ? `/imagens/catalogo/${item.caminho_slugs.join('/')}.webp` : null)
+}
+// miniatura que some quando o arquivo não existe; avisa o pai (onEstado) para o layout se ajustar
+function Miniatura({ item, onEstado }) {
+  const [ok, setOk] = useState(null)   // null = ainda não sabe; false = sem arquivo
+  const src = imagemDoItem(item)
+  if (!src || ok === false) return null
+  return <span className="cardapio-mini" aria-hidden="true"><img src={src} alt="" loading="lazy" onLoad={() => { setOk(true); onEstado?.(true) }} onError={() => { setOk(false); onEstado?.(false) }} /></span>
+}
+function useMiniaturas() {
+  const [temMini, setTemMini] = useState({})
+  const marcar = (id, ok) => setTemMini((m) => (m[id] === ok ? m : { ...m, [id]: ok }))
+  return [temMini, marcar]
+}
+
 export default function CadastroDeServico({ salaoId, categoriasEscolhidas = [], nServicos = 0, onEscolher, onPersonalizado, onFechar, titulo = 'Adicionar serviço' }) {
   const indice = useCatalogo()
   const [etapa, setEtapa] = useState('inicio')   // inicio | categoria | familia | servico
@@ -54,6 +73,7 @@ export default function CadastroDeServico({ salaoId, categoriasEscolhidas = [], 
   const [verTodos, setVerTodos] = useState(false)
   const [verSug, setVerSug] = useState(false)
   const campo = useRef(null)
+  const [temMini, marcarMini] = useMiniaturas()
 
   const resultados = useMemo(() => (indice && busca.trim().length >= 2 ? buscar(indice, busca) : null), [indice, busca])
   const sug = useMemo(() => (indice ? sugestoes(indice, { categoriasEscolhidas, limite: verSug ? 16 : 8 }) : []), [indice, categoriasEscolhidas, verSug])
@@ -180,7 +200,8 @@ export default function CadastroDeServico({ salaoId, categoriasEscolhidas = [], 
                 {familias.map((f) => {
                   const n = quantosServicos(indice, f.id)
                   return (
-                    <button key={f.id} type="button" className="cardapio-fam" onClick={() => abrirFamilia(f)}>
+                    <button key={f.id} type="button" className={'cardapio-fam' + (temMini[f.id] ? '' : ' sem-mini')} onClick={() => abrirFamilia(f)}>
+                      <Miniatura item={f} onEstado={(ok) => marcarMini(f.id, ok)} />
                       <strong>{f.nome}</strong>
                       <span>{n} {n === 1 ? 'serviço' : 'serviços'}</span>
                       <ChevronRight size={16} />
@@ -191,7 +212,7 @@ export default function CadastroDeServico({ salaoId, categoriasEscolhidas = [], 
             </section>
           </>
         ) : etapa === 'familia' ? (
-          <ListaDeServicos servicos={servicos} indice={indice} verTodos={verTodos} setVerTodos={setVerTodos} onAbrir={abrirServico} />
+          <ListaDeServicos servicos={servicos} indice={indice} verTodos={verTodos} setVerTodos={setVerTodos} onAbrir={abrirServico} temMini={temMini} marcarMini={marcarMini} />
         ) : (
           <section className="cardapio-secao">
             <h4>{sv.nome}</h4>
@@ -240,7 +261,7 @@ function CartaoCategoria({ cat, indice, posicao, onAbrir }) {
 const TONS = [['#ff2d7a', '#aa4cff'], ['#aa4cff', '#ff7baa'], ['#ff7baa', '#ff9a6c'], ['#7c5cff', '#ff2d7a'], ['#ff5c8a', '#c86bff'], ['#f26b8a', '#8a5cff'], ['#3d0c4e', '#ff2d7a'], ['#ff9a6c', '#ff2d7a'], ['#6c4cff', '#ff7baa'], ['#1f2026', '#aa4cff']]
 
 // os serviços de uma família: primeiro os de maior prioridade, depois "Ver todos"
-function ListaDeServicos({ servicos, indice, verTodos, setVerTodos, onAbrir }) {
+function ListaDeServicos({ servicos, indice, verTodos, setVerTodos, onAbrir, temMini, marcarMini }) {
   const principais = servicos.filter((s) => s.prioridade_sugestao > 0).sort((a, b) => b.prioridade_sugestao - a.prioridade_sugestao)
   const resumido = !verTodos && principais.length >= 3 && principais.length < servicos.length
   const lista = resumido ? principais.slice(0, 8) : servicos
@@ -251,7 +272,8 @@ function ListaDeServicos({ servicos, indice, verTodos, setVerTodos, onAbrir }) {
         {lista.map((s) => {
           const n = indice.filhos(s.id).length
           return (
-            <button key={s.id} type="button" className="cardapio-linha" onClick={() => onAbrir(s)}>
+            <button key={s.id} type="button" className={'cardapio-linha' + (temMini[s.id] ? ' com-mini' : '')} onClick={() => onAbrir(s)}>
+              <Miniatura item={s} onEstado={(ok) => marcarMini(s.id, ok)} />
               <span className="cardapio-linha-nome">{s.nome}</span>
               <span className="cardapio-linha-meta">
                 {s.duracao_sugerida && <><Clock size={13} /> {formatDuracao(s.duracao_sugerida)}</>}

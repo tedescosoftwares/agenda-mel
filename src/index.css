@@ -269,6 +269,16 @@ a {
   overflow: hidden;
 }
 
+/* o invólucro de cabeçalho + miolo (primeiro acesso agrupou os dois):
+   precisa repassar a altura, senão o miolo cresce e nada rola (2.91.2) */
+.admin-shell-workspace {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+}
+
 .content {
   flex: 1;
   min-height: 0;
@@ -15779,3 +15789,18 @@ label.switch:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
   .escolha-cat-txt small { display: none; }
   .svc-cat { width: 132px; }
 }
+
+/* miniaturas de família e serviço no cadastro (2.91.2): só quando o arquivo existe */
+.cardapio-mini { flex: none; width: 56px; height: 56px; border-radius: 12px; overflow: hidden; background: var(--cinza-1); display: block; }
+.cardapio-mini img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cardapio-fam { grid-template-columns: auto 1fr auto; }
+.cardapio-fam .cardapio-mini { grid-row: 1 / span 2; margin-right: 0.25rem; }
+.cardapio-fam strong, .cardapio-fam span { grid-column: 2; }
+.cardapio-fam svg { grid-column: 3; }
+.cardapio-fam.sem-mini { grid-template-columns: 1fr auto; }
+.cardapio-fam.sem-mini strong, .cardapio-fam.sem-mini span { grid-column: 1; }
+.cardapio-fam.sem-mini svg { grid-column: 2; }
+.cardapio-linha .cardapio-mini { width: 44px; height: 44px; border-radius: 10px; }
+.cardapio-linha.com-mini { grid-template-columns: auto 1fr auto auto; }
+.cardapio-linha.com-mini.com-caminho .cardapio-caminho { grid-column: 2 / -1; }
+.cardapio-linha.com-mini .cardapio-mini { grid-row: 1 / span 2; }

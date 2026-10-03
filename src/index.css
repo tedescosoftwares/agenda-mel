@@ -15845,9 +15845,10 @@ label.switch:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
 .plat-cat-caminho strong { color: var(--texto); }
 .plat-cat-editor { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 1.2rem; align-items: start; margin-top: 0.4rem; }
 .plat-cat-editor.sem-imagem { grid-template-columns: 1fr; }
-.plat-cat-campos { display: grid; gap: 0.7rem; }
+.plat-cat-campos { display: grid; gap: 0.7rem; min-width: 0; }
 .plat-cat-campos label { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.85rem; color: var(--texto-2); }
-.plat-cat-campos input, .plat-cat-campos textarea { font: inherit; border: 1px solid var(--fio); border-radius: 12px; padding: 0.55rem 0.8rem; background: #fff; }
+.plat-cat-campos input, .plat-cat-campos textarea { font: inherit; border: 1px solid var(--fio); border-radius: 12px; padding: 0.55rem 0.8rem; background: #fff; width: 100%; min-width: 0; box-sizing: border-box; }
+.plat-cat-campos input[type="checkbox"] { width: auto; }
 .plat-cat-campos input.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.88rem; }
 .plat-cat-campos textarea { resize: vertical; }
 .plat-cat-numeros { display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; align-items: end; }

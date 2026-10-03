@@ -21,11 +21,10 @@ CATALOGO = [
   # =====================================================================
   ('Cabelo', 'Corte, cor, escova, tratamentos e mais', ['cabeleireiro', 'cabeleireira', 'hair', 'salão de cabelo'], [
     ('Corte', ['cortes', 'cortar o cabelo'], [
-      sv('Corte feminino', 60, ['corte de cabelo feminino', 'corte de cabelo', 'corte'], ['corte'], [
+      sv('Corte de cabelo', 60, ['corte', 'corte feminino', 'cortar o cabelo'], ['corte'], [
         tec('Reto'), tec('Em camadas', ['camadas', 'repicado em camadas']), tec('Repicado'), tec('Bob', ['chanel', 'chanel de bico', 'corte chanel']),
         tec('Long bob', ['lob']), tec('Pixie', ['curtinho', 'joãozinho']), tec('Curly cut', ['corte para cachos', 'corte de cachos', 'corte seco']),
         tec('Com franja', ['franja']), tec('Shag', ['wolf cut', 'mullet'])]),
-      sv('Corte masculino', 30, ['corte de cabelo masculino', 'corte homem'], ['corte', 'masculino']),
       sv('Corte infantil', 30, ['corte criança', 'corte kids'], ['corte', 'infantil']),
       sv('Corte de franja', 20, ['franja', 'aparar franja'], ['corte']),
       sv('Corte com lavagem e finalização', 90, ['corte completo', 'corte lavagem e escova'], ['corte', 'combo']),
@@ -124,49 +123,6 @@ CATALOGO = [
     ]),
   ]),
   # =====================================================================
-  ('Barbearia', 'Corte, barba, pigmentação e cuidados masculinos', ['barbeiro', 'barber', 'masculino'], [
-    ('Corte masculino', ['cortes masculinos', 'corte homem'], [
-      sv('Corte masculino', 30, ['corte', 'corte de cabelo', 'cortar', 'corte social'], ['corte', 'masculino'], [
-        tec('Degradê', ['fade', 'degrade', 'disfarçado']), tec('Low fade', ['degradê baixo']), tec('Mid fade', ['degradê médio']), tec('High fade', ['degradê alto']),
-        tec('Skin fade', ['navalhado', 'zero', 'na navalha']), tec('Taper', ['taper fade']), tec('Social', ['corte social', 'clássico']),
-        tec('Americano', ['corte americano']), tec('Undercut'), tec('Moicano', ['moicano', 'mohawk']), tec('Na tesoura', ['tesoura']), tec('Na máquina', ['máquina', 'raspado'])]),
-      sv('Corte infantil masculino', 30, ['corte criança', 'corte kids', 'corte de menino'], ['corte', 'infantil']),
-      sv('Acabamento', 15, ['pezinho', 'contorno', 'pé do cabelo', 'acabamento de corte'], ['corte']),
-      sv('Corte e barba', 60, ['corte + barba', 'combo', 'cabelo e barba'], ['corte', 'barba', 'combo']),
-      sv('Corte com lavagem', 45, ['corte e lavagem', 'lavagem'], ['corte']),
-    ]),
-    ('Barba', ['barbas', 'fazer a barba'], [
-      sv('Barba', 30, ['barba completa', 'fazer a barba', 'barbear', 'aparar a barba'], ['barba'], [
-        tec('Com navalha', ['navalha', 'navalhada']), tec('Com toalha quente', ['toalha quente']), tec('Desenhada', ['desenho de barba', 'barba desenhada']),
-        tec('Degradê na barba', ['barba degradê', 'barba fade']), tec('Na máquina', ['aparada na máquina'])]),
-      sv('Barboterapia', 45, ['barba terapia', 'barbaterapia', 'ritual de barba', 'toalha quente'], ['barba']),
-      sv('Aparar barba', 20, ['acabamento de barba', 'retoque de barba', 'alinhar barba'], ['barba']),
-      sv('Bigode', 15, ['aparar bigode', 'bigode desenhado'], ['barba']),
-      sv('Hidratação de barba', 30, ['tratamento de barba', 'óleo para barba'], ['barba', 'tratamento']),
-      sv('Coloração de barba', 30, ['pintar a barba', 'tintura de barba', 'cobrir brancos na barba'], ['barba', 'cor']),
-    ]),
-    ('Pigmentação e cor', ['pigmentação', 'cor masculina'], [
-      sv('Pigmentação capilar', 45, ['pigmentação', 'camuflagem de falhas', 'disfarce de falhas', 'hair stroke'], ['cor', 'masculino']),
-      sv('Platinado', 180, ['platinado masculino', 'nevou', 'descoloração masculina', 'descolorir'], ['cor', 'loiro', 'masculino']),
-      sv('Luzes masculinas', 120, ['mechas masculinas', 'luzes'], ['cor', 'masculino']),
-      sv('Coloração masculina', 60, ['pintar o cabelo', 'tintura masculina', 'cobrir brancos'], ['cor', 'masculino']),
-      sv('Camuflagem de fios brancos', 30, ['camuflagem de grisalhos', 'disfarce de brancos', 'tom sobre tom masculino'], ['cor', 'masculino']),
-    ]),
-    ('Alisamento masculino', ['progressiva masculina', 'relaxamento masculino'], [
-      sv('Progressiva masculina', 90, ['progressiva', 'alisamento masculino'], ['alisamento', 'masculino']),
-      sv('Relaxamento masculino', 60, ['relaxamento', 'relaxar o cabelo'], ['alisamento', 'masculino']),
-      sv('Permanente masculino', 90, ['permanente', 'cachos masculinos', 'texturização masculina'], ['cachos', 'masculino']),
-    ]),
-    ('Sobrancelha e cuidados', ['sobrancelha masculina', 'cuidados masculinos'], [
-      sv('Sobrancelha masculina', 15, ['sobrancelha na navalha', 'sobrancelha', 'limpeza de sobrancelha masculina'], ['sobrancelha', 'masculino']),
-      sv('Limpeza de pele masculina', 45, ['limpeza de pele', 'skincare masculino'], ['pele', 'masculino']),
-      sv('Depilação de nariz e orelha', 15, ['cera no nariz', 'cera na orelha', 'depilação nasal'], ['depilacao', 'masculino']),
-      sv('Hidratação masculina', 30, ['hidratação capilar masculina', 'tratamento'], ['tratamento', 'masculino']),
-      sv('Lavagem e massagem', 20, ['lavagem', 'massagem no couro cabeludo', 'lavagem relaxante'], ['masculino']),
-      sv('Máscara facial masculina', 20, ['máscara preta', 'máscara facial'], ['pele', 'masculino']),
-    ]),
-  ]),
-  # =====================================================================
   ('Unhas', 'Manicure, gel, alongamento e nail art', ['unha', 'manicure', 'nail', 'nail designer', 'esmalteria'], [
     ('Manicure', ['mão', 'mãos', 'unha da mão'], [
       sv('Manicure', 45, ['mão', 'mãos', 'unha da mão', 'fazer a mão', 'cutilagem e esmaltação'], ['manicure'], [
@@ -174,15 +130,12 @@ CATALOGO = [
       sv('Manicure e pedicure', 90, ['pé e mão', 'mão e pé', 'mãos e pés', 'manicure + pedicure'], ['manicure', 'pedicure', 'combo']),
       sv('Cutilagem', 20, ['tirar cutícula', 'cutícula'], ['manicure']),
       sv('Spa das mãos', 45, ['hidratação das mãos', 'spa de mãos'], ['manicure', 'spa']),
-      sv('Manicure masculina', 30, ['mão masculina', 'unha masculina'], ['manicure', 'masculino']),
     ]),
     ('Pedicure', ['pé', 'pés', 'unha do pé'], [
       sv('Pedicure', 45, ['pé', 'pés', 'unha do pé', 'fazer o pé'], ['pedicure'], [
         tec('Tradicional'), tec('Russa', ['pedicure russa', 'com broca']), tec('Com esfoliação', ['com lixa nos pés'])]),
       sv('Spa dos pés', 60, ['spa pés', 'hidratação dos pés', 'spa de pés', 'escalda-pés com pedicure'], ['pedicure', 'spa']),
       sv('Cuidado com calos', 30, ['calo', 'calos', 'remoção de calos', 'calosidade'], ['pedicure', 'podologia']),
-      sv('Tratamento de unha encravada', 45, ['unha encravada', 'encravada'], ['pedicure', 'podologia']),
-      sv('Pedicure masculina', 40, ['pé masculino'], ['pedicure', 'masculino']),
     ]),
     ('Esmaltação', ['esmalte', 'esmaltar', 'pintar as unhas'], [
       sv('Esmaltação comum', 20, ['esmaltação simples', 'esmaltação tradicional', 'esmalte comum', 'só esmaltar'], ['esmaltacao']),
@@ -257,16 +210,15 @@ CATALOGO = [
     ]),
   ]),
   # =====================================================================
-  ('Sobrancelhas', 'Design, henna, lamination e micropigmentação', ['sobrancelha', 'brow', 'designer de sobrancelhas', 'sobrancelhas'], [
+  ('Sobrancelhas', 'Design, henna, tintura, lamination e cuidados', ['sobrancelha', 'brow', 'designer de sobrancelhas', 'sobrancelhas'], [
     ('Design', ['design de sobrancelha', 'fazer a sobrancelha', 'limpeza de sobrancelha'], [
       sv('Design de sobrancelhas', 30, ['sobrancelha', 'design', 'fazer sobrancelha', 'limpeza de sobrancelha', 'design com pinça'], ['design'], [
         tec('Com pinça', ['pinça']), tec('Com linha', ['linha', 'egípcia', 'epilação egípcia', 'threading']), tec('Com cera', ['cera']), tec('Com navalha', ['navalha']),
-        tec('Com paquímetro', ['paquímetro', 'visagismo', 'simetria']), tec('Com henna', ['design e henna'])]),
+        tec('Com paquímetro', ['paquímetro', 'visagismo', 'simetria'])]),
       sv('Manutenção de design', 15, ['manutenção de sobrancelha', 'retoque de sobrancelha', 'limpeza'], ['design', 'manutencao']),
-      sv('Design de sobrancelhas masculino', 20, ['sobrancelha masculina'], ['design', 'masculino']),
     ]),
-    ('Henna e coloração', ['henna', 'tintura de sobrancelha', 'colorir sobrancelha'], [
-      sv('Design com henna', 40, ['henna', 'sobrancelha de henna', 'henna na sobrancelha', 'aplicação de henna'], ['henna', 'design']),
+    ('Henna e tintura', ['henna', 'tintura de sobrancelha', 'colorir sobrancelha'], [
+      sv('Design com henna', 40, ['henna', 'sobrancelha de henna', 'henna na sobrancelha', 'aplicação de henna', 'design e henna'], ['henna', 'design']),
       sv('Tintura de sobrancelha', 30, ['coloração de sobrancelha', 'tingimento de sobrancelha', 'pintar a sobrancelha', 'tintura'], ['cor']),
       sv('Retoque de henna', 20, ['só a henna', 'reaplicação de henna'], ['henna', 'manutencao']),
     ]),
@@ -275,18 +227,9 @@ CATALOGO = [
         tec('Com tintura', ['com coloração']), tec('Com henna'), tec('Com nutrição', ['com botox de sobrancelha']), tec('Natural')]),
       sv('Botox de sobrancelha', 30, ['nutrição de sobrancelha', 'tratamento de sobrancelha', 'brow botox'], ['lamination', 'tratamento']),
     ]),
-    ('Micropigmentação', ['micro', 'microblading', 'micropigmentar', 'tatuagem de sobrancelha'], [
-      sv('Micropigmentação de sobrancelhas', 150, ['micro', 'micropigmentação', 'sobrancelha definitiva', 'tatuagem de sobrancelha'], ['micropigmentacao'], [
-        tec('Fio a fio', ['microblading', 'fio a fio', 'nanoblading', 'nano', 'fios realistas']), tec('Shadow', ['esfumada', 'sombreada', 'powder brows', 'ombré brows', 'shadow']),
-        tec('Híbrida', ['hibrida', 'fio e shadow', 'combinada']), tec('Dermopigmentação', ['dermo'])]),
-      sv('Retoque de micropigmentação', 90, ['retoque de micro', 'retoque'], ['micropigmentacao', 'manutencao']),
-      sv('Remoção de micropigmentação', 60, ['remoção de micro', 'despigmentação', 'remoção de pigmento'], ['micropigmentacao', 'remocao']),
-      sv('Micropigmentação labial', 120, ['micro labial', 'lábios', 'lip blush', 'revitalização labial'], ['micropigmentacao', 'labios']),
-      sv('Micropigmentação de olhos', 90, ['delineado definitivo', 'micro de olhos', 'eyeliner definitivo'], ['micropigmentacao', 'olhos']),
-    ]),
-    ('Cuidados', ['tratamento de sobrancelha', 'reconstrução'], [
-      sv('Reconstrução de sobrancelhas', 45, ['reconstrução', 'sobrancelha com falhas', 'preenchimento de falhas'], ['tratamento']),
-      sv('Hidratação de sobrancelhas', 15, ['nutrição', 'hidratação'], ['tratamento']),
+    ('Reconstrução e cuidados', ['reconstrução', 'tratamento de sobrancelha', 'hidratação de sobrancelha'], [
+      sv('Reconstrução de sobrancelhas', 45, ['reconstrução', 'sobrancelha com falhas', 'preenchimento de falhas', 'sobrancelha falhada'], ['tratamento']),
+      sv('Hidratação de sobrancelhas', 15, ['nutrição', 'hidratação', 'cuidados'], ['tratamento']),
     ]),
   ]),
   # =====================================================================
@@ -302,7 +245,6 @@ CATALOGO = [
       sv('Maquiagem para debutante', 90, ['15 anos', 'debutante', 'make 15 anos'], ['maquiagem']),
       sv('Maquiagem artística', 90, ['carnaval', 'fantasia', 'caracterização', 'halloween', 'make artística'], ['maquiagem']),
       sv('Maquiagem infantil', 30, ['make infantil', 'maquiagem criança'], ['maquiagem', 'infantil']),
-      sv('Maquiagem masculina', 30, ['make masculina', 'maquiagem para homem', 'pele masculina'], ['maquiagem', 'masculino']),
       sv('Teste de maquiagem', 60, ['prova de make', 'teste de make'], ['maquiagem', 'noivas']),
       sv('Maquiagem express', 30, ['make rápida', 'retoque de make', 'express'], ['maquiagem']),
     ]),
@@ -332,8 +274,6 @@ CATALOGO = [
       sv('Peito e abdômen', 30, ['peito', 'abdômen', 'barriga', 'tórax'], ['cera']),
       sv('Glúteos', 20, ['bumbum', 'nádegas', 'glúteo'], ['cera']),
       sv('Corpo inteiro', 120, ['depilação completa', 'corpo todo', 'completa'], ['cera', 'combo']),
-      sv('Depilação masculina', 45, ['depilação masculina', 'cera masculina', 'homem'], ['cera', 'masculino'], [
-        tec('Costas'), tec('Peito'), tec('Virilha masculina', ['íntima masculina']), tec('Perna'), tec('Corpo inteiro')]),
     ]),
     ('Linha', ['depilação com linha', 'egípcia', 'threading'], [
       sv('Depilação com linha', 20, ['linha', 'egípcia', 'epilação egípcia', 'threading'], ['linha']),
@@ -440,16 +380,45 @@ CATALOGO = [
       sv('Protocolo corporal completo', 90, ['pacote corporal', 'protocolo', 'sessão completa'], ['protocolo', 'combo']),
     ]),
     ('Bronzeamento', ['bronze', 'bronzeado', 'bronzear'], [
-      sv('Bronzeamento artificial', 40, ['bronze artificial', 'bronzeamento a jato', 'spray tan', 'bronze de spray', 'jato'], ['bronze'], [
-        tec('Jato', ['spray', 'airbrush']), tec('Cabine', ['cabine de bronzeamento', 'câmara']), tec('Com marquinha', ['marquinha artificial'])]),
-      sv('Bronze natural com marquinha', 90, ['marquinha', 'fita', 'bronze de fita', 'bronzeamento natural', 'bronze na laje', 'marquinha de biquíni'], ['bronze']),
-      sv('Esfoliação pré-bronze', 20, ['esfoliação', 'preparação para bronze'], ['bronze']),
+      sv('Bronzeamento a jato', 40, ['spray tan', 'bronze de spray', 'jato', 'airbrush', 'bronze artificial a jato', 'bronzeamento a jato'], ['bronze'], [
+        tec('Corpo inteiro'), tec('Meio corpo', ['pernas', 'só as pernas']), tec('Com marquinha', ['marquinha artificial', 'marquinha desenhada'])]),
+      sv('Bronze natural com marquinha', 90, ['marquinha', 'fita', 'bronze de fita', 'bronzeamento natural', 'bronze na laje', 'marquinha de biquíni', 'bronze natural'], ['bronze']),
+      sv('Preparação pré-bronze', 20, ['preparação para bronze', 'pré-bronze', 'hidratação pré-bronze'], ['bronze']),
+      sv('Esfoliação pré-bronze', 20, ['esfoliação', 'esfoliar antes do bronze'], ['bronze']),
+      sv('Cuidados pós-bronze', 30, ['pós-bronze', 'hidratação pós-bronze', 'prolongar o bronze'], ['bronze']),
     ]),
     ('Cuidados com a pele do corpo', ['peeling corporal', 'hidratação corporal', 'esfoliação'], [
       sv('Peeling corporal', 45, ['peeling de corpo', 'peeling nas costas', 'peeling de axila', 'clareamento'], ['pele']),
       sv('Hidratação corporal', 45, ['hidratação do corpo', 'hidratar'], ['pele']),
       sv('Esfoliação corporal', 30, ['esfoliação', 'esfoliar o corpo'], ['pele']),
       sv('Tratamento para foliculite corporal', 30, ['foliculite', 'pelos encravados'], ['pele']),
+    ]),
+  ]),
+  # =====================================================================
+  ('Micropigmentação', 'Sobrancelhas, lábios, olhos, retoques e remoção', ['micro', 'micropigmentadora', 'micropigmentar', 'dermopigmentação', 'tatuagem estética', 'maquiagem definitiva'], [
+    ('Sobrancelhas', ['micro de sobrancelha', 'sobrancelha definitiva', 'microblading'], [
+      sv('Micropigmentação de sobrancelhas', 150, ['micro', 'micropigmentação', 'sobrancelha definitiva', 'tatuagem de sobrancelha', 'micro de sobrancelha'], ['micropigmentacao', 'sobrancelha'], [
+        tec('Microblading', ['microblading', 'tebori', 'lâmina']), tec('Fio a fio', ['fio a fio', 'nanoblading', 'nano', 'fios realistas', 'fio realista']),
+        tec('Shadow', ['esfumada', 'sombreada', 'shadow', 'soft shadow']), tec('Ombré', ['ombré brows', 'ombre brows', 'degradê']),
+        tec('Powder brows', ['powder', 'efeito pó', 'pó compacto']), tec('Técnica híbrida', ['híbrida', 'hibrida', 'fio e shadow', 'combinada', 'combo brows'])]),
+    ]),
+    ('Lábios', ['micro labial', 'lábios', 'boca', 'lip blush'], [
+      sv('Micropigmentação labial', 120, ['micro labial', 'micro de boca', 'lábios definitivos', 'lip blush', 'aquarela labial', 'micro nos lábios'], ['micropigmentacao', 'labios'], [
+        tec('Revitalização labial', ['revitalização', 'revitalizar os lábios', 'lábios pálidos']), tec('Neutralização labial', ['neutralização', 'lábios escuros', 'clarear os lábios']),
+        tec('Efeito batom', ['batom', 'batom definitivo', 'lábios de batom']), tec('Contorno labial', ['contorno', 'contorno dos lábios'])]),
+    ]),
+    ('Olhos', ['micro de olhos', 'delineado definitivo', 'olhos'], [
+      sv('Micropigmentação de olhos', 90, ['delineado definitivo', 'micro de olhos', 'eyeliner definitivo', 'micro nos olhos'], ['micropigmentacao', 'olhos'], [
+        tec('Delineado', ['delineado clássico', 'delineado fino', 'eyeliner']), tec('Lash line', ['lash line', 'linha dos cílios', 'entre cílios', 'efeito rímel']),
+        tec('Delineado esfumado', ['esfumado', 'delineado difuso', 'smokey'])]),
+    ]),
+    ('Retoques, correções e remoção', ['retoque', 'correção', 'remoção', 'tirar micro'], [
+      sv('Retoque de micropigmentação', 90, ['retoque', 'retoque de micro', 'segunda sessão', 'manutenção de micro'], ['micropigmentacao', 'manutencao'], [
+        tec('Retoque de 30 a 45 dias', ['primeiro retoque', 'retoque de cicatrização']), tec('Retoque anual', ['manutenção anual', 'refresh'])]),
+      sv('Correção de cor', 120, ['correção de micro', 'micro avermelhada', 'micro azulada', 'corrigir a cor', 'correção'], ['micropigmentacao', 'correcao']),
+      sv('Neutralização', 90, ['neutralização de pigmento', 'neutralizar', 'camuflagem de micro antiga'], ['micropigmentacao', 'correcao']),
+      sv('Remoção de micropigmentação', 60, ['remoção de micro', 'despigmentação', 'remoção de pigmento', 'tirar micro', 'apagar micro'], ['micropigmentacao', 'remocao'], [
+        tec('A laser', ['laser', 'remoção a laser']), tec('Química', ['despigmentante', 'remoção química', 'removedor'])]),
     ]),
   ]),
   # =====================================================================
@@ -490,6 +459,41 @@ CATALOGO = [
   ]),
 ]
 
+# prioridade_sugestao: separado de ordem. Quem tem número aparece primeiro em
+# "Sugestões para você" (maior = antes); sem número (0) só em "Ver todos".
+# Itens com tag 'habilitacao' nunca entram nas sugestões genéricas.
+PRIORIDADE = {
+  'cabelo': { 'corte-de-cabelo': 100, 'escova': 95, 'hidratacao': 90, 'coloracao-global': 85, 'mechas': 80, 'progressiva': 75, 'retoque-de-raiz': 70, 'penteado': 65 },
+  'unhas': { 'manicure': 100, 'pedicure': 95, 'manicure-e-pedicure': 90, 'esmaltacao-em-gel': 85, 'alongamento-de-unhas': 80, 'blindagem': 75, 'manutencao-de-gel': 70, 'nail-art': 65 },
+  'cilios': { 'extensao-de-cilios': 100, 'manutencao-de-cilios': 95, 'lash-lifting': 90, 'remocao-de-extensao': 85, 'botox-de-cilios': 80, 'tintura-de-cilios': 75 },
+  'sobrancelhas': { 'design-de-sobrancelhas': 100, 'design-com-henna': 95, 'brow-lamination': 90, 'tintura-de-sobrancelha': 85, 'manutencao-de-design': 80, 'reconstrucao-de-sobrancelhas': 75 },
+  'maquiagem': { 'maquiagem-social': 100, 'maquiagem-para-noiva': 95, 'maquiagem-para-madrinhas': 90, 'maquiagem-para-formatura': 85, 'teste-de-maquiagem': 80, 'curso-de-automaquiagem': 75 },
+  'depilacao': { 'depilacao-com-cera': 100, 'virilha-completa': 95, 'perna-completa': 90, 'axila': 85, 'buco': 80, 'meia-perna': 75, 'depilacao-com-linha': 70, 'depilacao-a-laser': 65 },
+  'estetica-facial': { 'limpeza-de-pele': 100, 'peeling-quimico': 95, 'hidratacao-facial': 90, 'microagulhamento': 85, 'tratamento-para-acne': 80, 'tratamento-para-manchas': 75, 'radiofrequencia-facial': 70, 'dermaplaning': 65 },
+  'estetica-corporal': { 'drenagem-linfatica': 100, 'massagem-modeladora': 95, 'criolipolise': 90, 'radiofrequencia-corporal': 85, 'lipocavitacao': 80, 'bronzeamento-a-jato': 75, 'tratamento-para-celulite': 70, 'bronze-natural-com-marquinha': 65 },
+  'micropigmentacao': { 'micropigmentacao-de-sobrancelhas': 100, 'micropigmentacao-labial': 95, 'retoque-de-micropigmentacao': 90, 'micropigmentacao-de-olhos': 85, 'remocao-de-micropigmentacao': 80 },
+  'bem-estar-e-spa': { 'massagem-relaxante': 100, 'massagem-terapeutica': 95, 'quick-massage': 90, 'reflexologia': 85, 'ventosaterapia': 80, 'day-spa': 75, 'escalda-pes': 70 },
+}
+
+# tags de variação (ainda sem implementar variações; só metadado)
+#   comprimento: o preço muda com o tamanho do cabelo
+#   volume:      muda com a quantidade/densidade (cabelo, tranças, cílios)
+#   tecnica:     muda conforme a técnica escolhida
+# Entrada 'categoria/slug' quando o slug do serviço se repete em outra categoria.
+VARIACOES = {
+  'variavel_por_comprimento': ['progressiva', 'botox-capilar', 'escova', 'mechas', 'coloracao-global', 'hidratacao', 'nutricao', 'reconstrucao', 'cronograma-capilar',
+    'selagem', 'realinhamento', 'relaxamento', 'escova-definitiva', 'alisamento-com-queratina', 'descoloracao-global', 'coloracao-fantasia', 'cabelo/correcao-de-cor', 'banho-de-brilho',
+    'cauterizacao', 'plastica-dos-fios', 'umectacao', 'babyliss', 'chapinha', 'tonalizacao', 'matizacao', 'penteado', 'hidratacao-para-cachos', 'finalizacao-de-cachos',
+    'corte-de-cabelo', 'texturizacao', 'permanente-afro', 'retirada-de-mega-hair', 'hidratacao-de-mega-hair'],
+  'variavel_por_volume': ['progressiva', 'botox-capilar', 'escova', 'mechas', 'coloracao-global', 'hidratacao', 'aplicacao-de-mega-hair', 'manutencao-de-mega-hair',
+    'box-braids', 'knotless-braids', 'nago', 'twist', 'fulani', 'goddess-braids', 'crochet-braids', 'dreads', 'manutencao-de-trancas', 'retirada-de-trancas',
+    'extensao-de-cilios', 'manutencao-de-cilios', 'descoloracao-global', 'relaxamento', 'permanente-afro'],
+  'variavel_por_tecnica': ['mechas', 'progressiva', 'aplicacao-de-mega-hair', 'coloracao-global', 'escova', 'penteado', 'alongamento-de-unhas', 'blindagem', 'esmaltacao-em-gel',
+    'nail-art', 'manicure', 'pedicure', 'extensao-de-cilios', 'lash-lifting', 'design-de-sobrancelhas', 'brow-lamination', 'depilacao-com-cera', 'depilacao-a-laser',
+    'maquiagem-social', 'limpeza-de-pele', 'peeling-quimico', 'drenagem-linfatica', 'bronzeamento-a-jato', 'massagem-relaxante',
+    'micropigmentacao-de-sobrancelhas', 'micropigmentacao-labial', 'micropigmentacao-de-olhos', 'remocao-de-micropigmentacao'],
+}
+
 def montar():
   saida = { 'versao': 1, 'gerado_por': 'supabase/catalogo/gerar_catalogo.py', 'categorias': [] }
   tot = { 'categorias': 0, 'familias': 0, 'servicos': 0, 'tecnicas': 0 }
@@ -500,7 +504,10 @@ def montar():
       fam = { 'slug': slug(fnome), 'nome': fnome, 'aliases': faliases, 'ordem': (fi + 1) * 10, 'ativa': True, 'servicos': [] }
       tot['familias'] += 1
       for si, (snome, dur, saliases, stags, tecnicas) in enumerate(servicos):
-        s = { 'slug': slug(snome), 'nome': snome, 'duracao_sugerida': dur, 'aliases': saliases, 'tags': stags, 'ordem': (si + 1) * 10, 'ativa': True, 'tecnicas': [] }
+        sslug = slug(snome)
+        tags = list(stags) + [t for t, lista in VARIACOES.items() if sslug in lista or f"{cat['slug']}/{sslug}" in lista]
+        prioridade = 0 if 'habilitacao' in tags else PRIORIDADE.get(cat['slug'], {}).get(sslug, 0)
+        s = { 'slug': sslug, 'nome': snome, 'duracao_sugerida': dur, 'aliases': saliases, 'tags': tags, 'ordem': (si + 1) * 10, 'prioridade_sugestao': prioridade, 'ativa': True, 'tecnicas': [] }
         tot['servicos'] += 1
         for ti, (tnome, taliases, tdur) in enumerate(tecnicas):
           s['tecnicas'].append({ 'slug': slug(tnome), 'nome': tnome, 'aliases': taliases, 'duracao_sugerida': tdur, 'ordem': (ti + 1) * 10, 'ativa': True })
@@ -517,6 +524,12 @@ if __name__ == '__main__':
   with open(os.path.join(aqui, 'catalogo_v1.json'), 'w', encoding='utf-8') as f:
     json.dump(dados, f, ensure_ascii=False, indent=2)
   print(dados['totais'])
+  existentes = {(c['slug'], s['slug']) for c in dados['categorias'] for f in c['familias'] for s in f['servicos']}
+  so_servicos = {s for _, s in existentes}
+  for cat, m in PRIORIDADE.items():
+    for sl in m: assert (cat, sl) in existentes, ('prioridade sem serviço', cat, sl)
+  for t, lista in VARIACOES.items():
+    for sl in lista: assert (sl in so_servicos if '/' not in sl else tuple(sl.split('/')) in existentes), ('variação sem serviço', t, sl)
   # slugs repetidos dentro da mesma família denunciam duplicata
   vistos = set()
   for c in dados['categorias']:

@@ -3,6 +3,16 @@
 Estado: **proposta para revisão**. Nada disto está em migration ainda. A semente
 (`catalogo_v1.json`) só vira migration depois de aprovada.
 
+## 0. Posicionamento
+
+A MIMO é focada em beleza e estética. O catálogo sugerido tem dez categorias:
+Cabelo, Unhas, Cílios, Sobrancelhas, Maquiagem, Depilação, Estética facial,
+Estética corporal, Micropigmentação e Bem-estar e spa. **Não há Barbearia** e
+não há serviços explicitamente masculinos nas sugestões. Isso é posicionamento,
+não restrição técnica: "Criar meu próprio serviço" aceita qualquer nome (corte
+masculino, barba, manicure masculina…), sem bloqueio por palavra. `Outros`
+continua existindo para o personalizado, como hoje.
+
 ## 1. Modelo de dados
 
 ### 1.1 `categorias_de_servico` (existente, ganha colunas)
@@ -20,11 +30,22 @@ Renomeações (IDs preservados, agendamentos e capas intactos):
 
 | hoje                    | V1                 |
 |-------------------------|--------------------|
-| Barba                   | Barbearia          |
 | Rosto                   | Estética facial    |
 | Corpo                   | Estética corporal  |
 | Massagem e bem-estar    | Bem-estar e spa    |
-| Sobrancelhas e cílios   | Sobrancelhas (mesmo id) + **Cílios** (nova, ordem 35) |
+| Sobrancelhas e cílios   | Sobrancelhas (mesmo id) + **Cílios** (nova) |
+| —                       | **Micropigmentação** (nova) |
+| Barba                   | fica como está, `ativa = false` |
+
+Ordem das categorias da plataforma na V1: Cabelo 10, Unhas 20, Cílios 30,
+Sobrancelhas 40, Maquiagem 50, Depilação 60, Estética facial 70, Estética
+corporal 80, Micropigmentação 90, Bem-estar e spa 100, Outros 999.
+
+"Barba" não é apagada nem renomeada: os salões que a escolheram e os serviços
+que apontam para ela seguem funcionando. Ela só não aparece mais na lista de
+categorias sugeridas (`ativa = false`) e não ganha itens de catálogo.
+Micropigmentação nasce como categoria da plataforma; serviços antigos de
+micro continuam onde estão (sem migração agressiva).
 
 Divisão "Sobrancelhas e cílios": serviços existentes migram para **Cílios** só
 quando o nome bate, sem acento e sem caixa, com uma destas expressões:
@@ -49,11 +70,12 @@ create table public.catalogo_itens (
   nome          text not null,
   slug          text not null,                 -- único por (categoria, pai)
   descricao     text,
-  aliases       text[] not null default '{}',  -- termos de busca ('luzes', 'balaiagem')
-  tags          text[] not null default '{}',  -- facetas ('cor','loiro','habilitacao','combo','noivas','masculino','infantil')
+  aliases       text[] not null default '{}',  -- termos de busca ('luzes', 'balaiagem'); não são únicos
+  tags          text[] not null default '{}',  -- facetas ('cor','loiro','habilitacao','combo','noivas','infantil','variavel_por_*')
   duracao_sugerida int,                        -- minutos; técnica herda do serviço quando null
   imagem_url    text,                          -- null → /imagens/catalogo/<categoria>/<slug>.webp → capa da categoria
-  ordem         int not null default 0,
+  ordem         int not null default 0,        -- organiza o catálogo (listas completas)
+  prioridade_sugestao int not null default 0,  -- o que aparece primeiro em "Sugestões" (maior = antes; 0 = só em "Ver todos")
   ativa         boolean not null default true,
   created_at    timestamptz not null default now(),
   updated_at    timestamptz not null default now(),
@@ -68,6 +90,7 @@ Validação de hierarquia (trigger `catalogo_itens_checar`, before insert/update
 - `tecnica` → pai obrigatório, `tipo = 'servico'`, mesma `categoria_id`.
 - `categoria_id` precisa ser da plataforma (`salon_id is null`).
 - Combinação inválida levanta exceção com mensagem em português.
+- `prioridade_sugestao` só faz sentido em `servico`; o trigger zera nos outros tipos.
 - Não deixa desativar um serviço sem desativar as técnicas (ou avisa). Simples:
   `ativa = false` em um item esconde a subárvore nas consultas (filtro no app).
 
@@ -95,7 +118,15 @@ Regras:
   `preco_cents`, `ordem`; o `appointment_services` já tira snapshot, então o
   vínculo futuro é só um `variacao_id` opcional no snapshot.
 
-### 1.4 Semente
+### 1.4 Tags com significado para o app
+
+| tag | uso |
+|---|---|
+| `habilitacao` | procedimento que exige habilitação profissional (injetáveis, enzimas, acupuntura). Só metadado por enquanto. **Nunca entra em "Sugestões para você"**; aparece em "Ver todos" e na busca. |
+| `variavel_por_comprimento`, `variavel_por_volume`, `variavel_por_tecnica` | serviços cujo preço varia (cabelo por tamanho/volume, tranças e cílios por volume, qualquer um com técnica). Variações **não** são implementadas na V1; a tag marca onde elas vão entrar. |
+| `combo`, `noivas`, `infantil`, `cor`, `loiro`, `gel`, … | facetas livres para filtros e sugestões. |
+
+### 1.5 Semente
 
 `catalogo_v1.json` → migration `143_catalogo.sql` gerada por script
 (`gerar_catalogo.py --sql`), inserindo por slug com `on conflict (categoria_id,
@@ -125,7 +156,7 @@ cache (uma leitura de `catalogo_itens` ativa por sessão, ~500 linhas, ~60 KB):
 4. Ambiguidades conhecidas no JSON (a busca mostra os dois, é desejado):
    `queratina` (reconstrução × alisamento), `unha de gel` (esmaltação em gel ×
    alongamento), `gel na unha natural`, `lábios`/`olheiras` (tratamento ×
-   injetável), `esfoliação` (pré-bronze × corporal), `lavagem` (barbearia).
+   injetável), `esfoliação` (pré-bronze × corporal).
 
 Quando o volume crescer (ou quiser busca no cliente final), a mesma função
 vira `catalogo_buscar(texto)` em SQL com `pg_trgm` — a estrutura não muda.
@@ -144,8 +175,12 @@ Experiência contínua, um único componente `CadastroDeServico` com estados:
 - Desktop: modal largo trocando o conteúdo por estado. Celular: folha quase
   tela cheia, lista rolável, breadcrumb fixo no topo.
 - "Sugestões para você" na V1: por `salons.ramo` + `categorias_escolhidas`,
-  pegando os serviços com tag `combo` ou os 6 primeiros por `ordem` das
-  famílias principais do ramo. Dados reais ("mais usados") depois.
+  os serviços com `prioridade_sugestao > 0` ordenados por ela (desc), sem os
+  de tag `habilitacao`, limitados a 6–8, e depois `Ver todos` (aí vale `ordem`).
+  Dados reais ("mais usados") depois.
+- Busca: aliases não são únicos. "gel" devolve vários caminhos completos
+  (`Unhas › Esmaltação › Esmaltação em gel`, `Unhas › Alongamento › Soft gel`,
+  `Unhas › Blindagem e banho de gel › Banho de gel`) e é isso mesmo.
 - Ao salvar com `catalogo_item_id`: nome = nome do item (ou "Serviço — Técnica"
   quando técnica escolhida), `duration_minutes` = `duracao_sugerida` da técnica
   ou do serviço, `categoria_id` = do item.
@@ -180,7 +215,22 @@ Nenhum texto fixo no app: sem frase cadastrada, o componente simplesmente não
 mostra a Mel naquele passo. As frases entram pela Plataforma → Mel (ou por
 importação JSON), com o briefing para o GPT igual ao dos momentos anteriores.
 
-## 5. Ordem de entrega sugerida
+## 5. Decisões editoriais já aplicadas no JSON
+
+- Barbearia removida inteira. Itens masculinos removidos das outras
+  categorias (corte, manicure, pedicure, design de sobrancelha, maquiagem,
+  depilação e suas técnicas). "Corte feminino" virou "Corte de cabelo".
+- Micropigmentação é categoria própria: Sobrancelhas (microblading, fio a fio,
+  shadow, ombré, powder brows, híbrida), Lábios (revitalização, neutralização,
+  efeito batom, contorno), Olhos (delineado, lash line, esfumado) e Retoques,
+  correções e remoção. Sobrancelhas ficou com design, henna e tintura, brow
+  lamination, reconstrução e cuidados.
+- Bronzeamento sem UV: jato/spray tan, bronze natural com marquinha,
+  preparação e esfoliação pré-bronze, cuidados pós-bronze. Nada de cabine.
+- Podologia fora: "Tratamento de unha encravada" saiu da semente (sem
+  categoria Podologia por enquanto). "Cuidado com calos" ficou em Pedicure.
+
+## 6. Ordem de entrega sugerida
 
 1. Migration 143: colunas em categorias, renomeações, divisão Cílios,
    `catalogo_itens` + triggers + RLS, `services.catalogo_item_id`. (**sem semente**)

@@ -27,18 +27,20 @@
           "ativa": true,
           "servicos": [
             {
-              "slug": "corte-feminino",
-              "nome": "Corte feminino",
+              "slug": "corte-de-cabelo",
+              "nome": "Corte de cabelo",
               "duracao_sugerida": 60,
               "aliases": [
-                "corte de cabelo feminino",
-                "corte de cabelo",
-                "corte"
+                "corte",
+                "corte feminino",
+                "cortar o cabelo"
               ],
               "tags": [
-                "corte"
+                "corte",
+                "variavel_por_comprimento"
               ],
               "ordem": 10,
+              "prioridade_sugestao": 100,
               "ativa": true,
               "tecnicas": [
                 {
@@ -137,22 +139,6 @@
               ]
             },
             {
-              "slug": "corte-masculino",
-              "nome": "Corte masculino",
-              "duracao_sugerida": 30,
-              "aliases": [
-                "corte de cabelo masculino",
-                "corte homem"
-              ],
-              "tags": [
-                "corte",
-                "masculino"
-              ],
-              "ordem": 20,
-              "ativa": true,
-              "tecnicas": []
-            },
-            {
               "slug": "corte-infantil",
               "nome": "Corte infantil",
               "duracao_sugerida": 30,
@@ -164,7 +150,8 @@
                 "corte",
                 "infantil"
               ],
-              "ordem": 30,
+              "ordem": 20,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -179,7 +166,8 @@
               "tags": [
                 "corte"
               ],
-              "ordem": 40,
+              "ordem": 30,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -195,7 +183,8 @@
                 "corte",
                 "combo"
               ],
-              "ordem": 50,
+              "ordem": 40,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             }
@@ -222,9 +211,13 @@
                 "secar o cabelo"
               ],
               "tags": [
-                "escova"
+                "escova",
+                "variavel_por_comprimento",
+                "variavel_por_volume",
+                "variavel_por_tecnica"
               ],
               "ordem": 10,
+              "prioridade_sugestao": 95,
               "ativa": true,
               "tecnicas": [
                 {
@@ -269,9 +262,11 @@
                 "ondulado"
               ],
               "tags": [
-                "finalizacao"
+                "finalizacao",
+                "variavel_por_comprimento"
               ],
               "ordem": 20,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -284,9 +279,11 @@
                 "alisar com chapinha"
               ],
               "tags": [
-                "finalizacao"
+                "finalizacao",
+                "variavel_por_comprimento"
               ],
               "ordem": 30,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -303,6 +300,7 @@
                 "finalizacao"
               ],
               "ordem": 40,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -318,6 +316,7 @@
                 "finalizacao"
               ],
               "ordem": 50,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             }
@@ -348,9 +347,13 @@
                 "cobertura de brancos"
               ],
               "tags": [
-                "cor"
+                "cor",
+                "variavel_por_comprimento",
+                "variavel_por_volume",
+                "variavel_por_tecnica"
               ],
               "ordem": 10,
+              "prioridade_sugestao": 85,
               "ativa": true,
               "tecnicas": [
                 {
@@ -408,6 +411,7 @@
                 "cor"
               ],
               "ordem": 20,
+              "prioridade_sugestao": 70,
               "ativa": true,
               "tecnicas": []
             },
@@ -420,9 +424,11 @@
                 "tonalizar"
               ],
               "tags": [
-                "cor"
+                "cor",
+                "variavel_por_comprimento"
               ],
               "ordem": 30,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -438,9 +444,11 @@
               ],
               "tags": [
                 "cor",
-                "loiro"
+                "loiro",
+                "variavel_por_comprimento"
               ],
               "ordem": 40,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -454,9 +462,11 @@
                 "cor errada"
               ],
               "tags": [
-                "cor"
+                "cor",
+                "variavel_por_comprimento"
               ],
               "ordem": 50,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -473,9 +483,12 @@
               ],
               "tags": [
                 "cor",
-                "loiro"
+                "loiro",
+                "variavel_por_comprimento",
+                "variavel_por_volume"
               ],
               "ordem": 60,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -491,9 +504,11 @@
                 "cor vibrante"
               ],
               "tags": [
-                "cor"
+                "cor",
+                "variavel_por_comprimento"
               ],
               "ordem": 70,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -508,9 +523,11 @@
               ],
               "tags": [
                 "cor",
-                "tratamento"
+                "tratamento",
+                "variavel_por_comprimento"
               ],
               "ordem": 80,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             }
@@ -540,9 +557,13 @@
               ],
               "tags": [
                 "cor",
-                "loiro"
+                "loiro",
+                "variavel_por_comprimento",
+                "variavel_por_volume",
+                "variavel_por_tecnica"
               ],
               "ordem": 10,
+              "prioridade_sugestao": 80,
               "ativa": true,
               "tecnicas": [
                 {
@@ -676,6 +697,7 @@
                 "combo"
               ],
               "ordem": 20,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             }
@@ -704,9 +726,13 @@
                 "progressiva de chocolate"
               ],
               "tags": [
-                "alisamento"
+                "alisamento",
+                "variavel_por_comprimento",
+                "variavel_por_volume",
+                "variavel_por_tecnica"
               ],
               "ordem": 10,
+              "prioridade_sugestao": 75,
               "ativa": true,
               "tecnicas": [
                 {
@@ -771,9 +797,12 @@
               ],
               "tags": [
                 "alisamento",
-                "tratamento"
+                "tratamento",
+                "variavel_por_comprimento",
+                "variavel_por_volume"
               ],
               "ordem": 20,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -787,9 +816,11 @@
               ],
               "tags": [
                 "alisamento",
-                "tratamento"
+                "tratamento",
+                "variavel_por_comprimento"
               ],
               "ordem": 30,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -803,9 +834,11 @@
                 "alinhamento"
               ],
               "tags": [
-                "alisamento"
+                "alisamento",
+                "variavel_por_comprimento"
               ],
               "ordem": 40,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -820,9 +853,12 @@
                 "relaxar"
               ],
               "tags": [
-                "alisamento"
+                "alisamento",
+                "variavel_por_comprimento",
+                "variavel_por_volume"
               ],
               "ordem": 50,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -836,9 +872,11 @@
                 "definitiva japonesa"
               ],
               "tags": [
-                "alisamento"
+                "alisamento",
+                "variavel_por_comprimento"
               ],
               "ordem": 60,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -852,9 +890,11 @@
                 "alisamento de queratina"
               ],
               "tags": [
-                "alisamento"
+                "alisamento",
+                "variavel_por_comprimento"
               ],
               "ordem": 70,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             }
@@ -881,9 +921,12 @@
                 "máscara"
               ],
               "tags": [
-                "tratamento"
+                "tratamento",
+                "variavel_por_comprimento",
+                "variavel_por_volume"
               ],
               "ordem": 10,
+              "prioridade_sugestao": 90,
               "ativa": true,
               "tecnicas": []
             },
@@ -896,9 +939,11 @@
                 "nutrir"
               ],
               "tags": [
-                "tratamento"
+                "tratamento",
+                "variavel_por_comprimento"
               ],
               "ordem": 20,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -912,9 +957,11 @@
                 "reconstrução com queratina"
               ],
               "tags": [
-                "tratamento"
+                "tratamento",
+                "variavel_por_comprimento"
               ],
               "ordem": 30,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -926,9 +973,11 @@
                 "cronograma"
               ],
               "tags": [
-                "tratamento"
+                "tratamento",
+                "variavel_por_comprimento"
               ],
               "ordem": 40,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -941,9 +990,11 @@
                 "cauterizar"
               ],
               "tags": [
-                "tratamento"
+                "tratamento",
+                "variavel_por_comprimento"
               ],
               "ordem": 50,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -956,9 +1007,11 @@
                 "plástica"
               ],
               "tags": [
-                "tratamento"
+                "tratamento",
+                "variavel_por_comprimento"
               ],
               "ordem": 60,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -972,9 +1025,11 @@
                 "óleo"
               ],
               "tags": [
-                "tratamento"
+                "tratamento",
+                "variavel_por_comprimento"
               ],
               "ordem": 70,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -992,6 +1047,7 @@
                 "couro cabeludo"
               ],
               "ordem": 80,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -1010,6 +1066,7 @@
                 "couro cabeludo"
               ],
               "ordem": 90,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -1025,6 +1082,7 @@
                 "tratamento"
               ],
               "ordem": 100,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -1041,6 +1099,7 @@
                 "couro cabeludo"
               ],
               "ordem": 110,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             }
@@ -1067,9 +1126,12 @@
                 "arrumar para festa"
               ],
               "tags": [
-                "penteado"
+                "penteado",
+                "variavel_por_comprimento",
+                "variavel_por_tecnica"
               ],
               "ordem": 10,
+              "prioridade_sugestao": 65,
               "ativa": true,
               "tecnicas": [
                 {
@@ -1148,6 +1210,7 @@
                 "noivas"
               ],
               "ordem": 20,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -1164,6 +1227,7 @@
                 "infantil"
               ],
               "ordem": 30,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -1179,6 +1243,7 @@
                 "noivas"
               ],
               "ordem": 40,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -1198,6 +1263,7 @@
                 "combo"
               ],
               "ordem": 50,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             }
@@ -1224,9 +1290,11 @@
                 "tranças soltas"
               ],
               "tags": [
-                "trancas"
+                "trancas",
+                "variavel_por_volume"
               ],
               "ordem": 10,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -1239,9 +1307,11 @@
                 "tranças sem nó"
               ],
               "tags": [
-                "trancas"
+                "trancas",
+                "variavel_por_volume"
               ],
               "ordem": 20,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -1256,9 +1326,11 @@
                 "trança rente"
               ],
               "tags": [
-                "trancas"
+                "trancas",
+                "variavel_por_volume"
               ],
               "ordem": 30,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -1273,9 +1345,11 @@
                 "twist senegalês"
               ],
               "tags": [
-                "trancas"
+                "trancas",
+                "variavel_por_volume"
               ],
               "ordem": 40,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -1288,9 +1362,11 @@
                 "tranças fulani"
               ],
               "tags": [
-                "trancas"
+                "trancas",
+                "variavel_por_volume"
               ],
               "ordem": 50,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -1304,9 +1380,11 @@
                 "boho braids"
               ],
               "tags": [
-                "trancas"
+                "trancas",
+                "variavel_por_volume"
               ],
               "ordem": 60,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -1320,9 +1398,11 @@
                 "entrelace"
               ],
               "tags": [
-                "trancas"
+                "trancas",
+                "variavel_por_volume"
               ],
               "ordem": 70,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -1340,6 +1420,7 @@
                 "penteado"
               ],
               "ordem": 80,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -1356,6 +1437,7 @@
                 "penteado"
               ],
               "ordem": 90,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -1368,9 +1450,11 @@
                 "retoque de tranças"
               ],
               "tags": [
-                "trancas"
+                "trancas",
+                "variavel_por_volume"
               ],
               "ordem": 100,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -1383,9 +1467,11 @@
                 "desmanchar tranças"
               ],
               "tags": [
-                "trancas"
+                "trancas",
+                "variavel_por_volume"
               ],
               "ordem": 110,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -1400,9 +1486,11 @@
                 "locs"
               ],
               "tags": [
-                "trancas"
+                "trancas",
+                "variavel_por_volume"
               ],
               "ordem": 120,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -1418,6 +1506,7 @@
                 "trancas"
               ],
               "ordem": 130,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             }
@@ -1448,9 +1537,12 @@
                 "colocar mega"
               ],
               "tags": [
-                "mega"
+                "mega",
+                "variavel_por_volume",
+                "variavel_por_tecnica"
               ],
               "ordem": 10,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": [
                 {
@@ -1542,9 +1634,11 @@
                 "retoque de mega"
               ],
               "tags": [
-                "mega"
+                "mega",
+                "variavel_por_volume"
               ],
               "ordem": 20,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -1557,9 +1651,11 @@
                 "remoção de mega hair"
               ],
               "tags": [
-                "mega"
+                "mega",
+                "variavel_por_comprimento"
               ],
               "ordem": 30,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -1577,6 +1673,7 @@
                 "penteado"
               ],
               "ordem": 40,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -1589,9 +1686,11 @@
               ],
               "tags": [
                 "mega",
-                "tratamento"
+                "tratamento",
+                "variavel_por_comprimento"
               ],
               "ordem": 50,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             }
@@ -1623,6 +1722,7 @@
                 "corte"
               ],
               "ordem": 10,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -1639,9 +1739,11 @@
               ],
               "tags": [
                 "cachos",
-                "finalizacao"
+                "finalizacao",
+                "variavel_por_comprimento"
               ],
               "ordem": 20,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -1655,9 +1757,11 @@
               ],
               "tags": [
                 "cachos",
-                "tratamento"
+                "tratamento",
+                "variavel_por_comprimento"
               ],
               "ordem": 30,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -1674,6 +1778,7 @@
                 "cachos"
               ],
               "ordem": 40,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -1687,9 +1792,12 @@
                 "cachos de permanente"
               ],
               "tags": [
-                "cachos"
+                "cachos",
+                "variavel_por_comprimento",
+                "variavel_por_volume"
               ],
               "ordem": 50,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -1703,9 +1811,11 @@
                 "texturização capilar"
               ],
               "tags": [
-                "cachos"
+                "cachos",
+                "variavel_por_comprimento"
               ],
               "ordem": 60,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -1723,678 +1833,7 @@
                 "penteado"
               ],
               "ordem": 70,
-              "ativa": true,
-              "tecnicas": []
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "slug": "barbearia",
-      "nome": "Barbearia",
-      "descricao": "Corte, barba, pigmentação e cuidados masculinos",
-      "aliases": [
-        "barbeiro",
-        "barber",
-        "masculino"
-      ],
-      "imagem": "/imagens/catalogo/barbearia.webp",
-      "ordem": 20,
-      "ativa": true,
-      "familias": [
-        {
-          "slug": "corte-masculino",
-          "nome": "Corte masculino",
-          "aliases": [
-            "cortes masculinos",
-            "corte homem"
-          ],
-          "ordem": 10,
-          "ativa": true,
-          "servicos": [
-            {
-              "slug": "corte-masculino",
-              "nome": "Corte masculino",
-              "duracao_sugerida": 30,
-              "aliases": [
-                "corte",
-                "corte de cabelo",
-                "cortar",
-                "corte social"
-              ],
-              "tags": [
-                "corte",
-                "masculino"
-              ],
-              "ordem": 10,
-              "ativa": true,
-              "tecnicas": [
-                {
-                  "slug": "degrade",
-                  "nome": "Degradê",
-                  "aliases": [
-                    "fade",
-                    "degrade",
-                    "disfarçado"
-                  ],
-                  "duracao_sugerida": null,
-                  "ordem": 10,
-                  "ativa": true
-                },
-                {
-                  "slug": "low-fade",
-                  "nome": "Low fade",
-                  "aliases": [
-                    "degradê baixo"
-                  ],
-                  "duracao_sugerida": null,
-                  "ordem": 20,
-                  "ativa": true
-                },
-                {
-                  "slug": "mid-fade",
-                  "nome": "Mid fade",
-                  "aliases": [
-                    "degradê médio"
-                  ],
-                  "duracao_sugerida": null,
-                  "ordem": 30,
-                  "ativa": true
-                },
-                {
-                  "slug": "high-fade",
-                  "nome": "High fade",
-                  "aliases": [
-                    "degradê alto"
-                  ],
-                  "duracao_sugerida": null,
-                  "ordem": 40,
-                  "ativa": true
-                },
-                {
-                  "slug": "skin-fade",
-                  "nome": "Skin fade",
-                  "aliases": [
-                    "navalhado",
-                    "zero",
-                    "na navalha"
-                  ],
-                  "duracao_sugerida": null,
-                  "ordem": 50,
-                  "ativa": true
-                },
-                {
-                  "slug": "taper",
-                  "nome": "Taper",
-                  "aliases": [
-                    "taper fade"
-                  ],
-                  "duracao_sugerida": null,
-                  "ordem": 60,
-                  "ativa": true
-                },
-                {
-                  "slug": "social",
-                  "nome": "Social",
-                  "aliases": [
-                    "corte social",
-                    "clássico"
-                  ],
-                  "duracao_sugerida": null,
-                  "ordem": 70,
-                  "ativa": true
-                },
-                {
-                  "slug": "americano",
-                  "nome": "Americano",
-                  "aliases": [
-                    "corte americano"
-                  ],
-                  "duracao_sugerida": null,
-                  "ordem": 80,
-                  "ativa": true
-                },
-                {
-                  "slug": "undercut",
-                  "nome": "Undercut",
-                  "aliases": [],
-                  "duracao_sugerida": null,
-                  "ordem": 90,
-                  "ativa": true
-                },
-                {
-                  "slug": "moicano",
-                  "nome": "Moicano",
-                  "aliases": [
-                    "moicano",
-                    "mohawk"
-                  ],
-                  "duracao_sugerida": null,
-                  "ordem": 100,
-                  "ativa": true
-                },
-                {
-                  "slug": "na-tesoura",
-                  "nome": "Na tesoura",
-                  "aliases": [
-                    "tesoura"
-                  ],
-                  "duracao_sugerida": null,
-                  "ordem": 110,
-                  "ativa": true
-                },
-                {
-                  "slug": "na-maquina",
-                  "nome": "Na máquina",
-                  "aliases": [
-                    "máquina",
-                    "raspado"
-                  ],
-                  "duracao_sugerida": null,
-                  "ordem": 120,
-                  "ativa": true
-                }
-              ]
-            },
-            {
-              "slug": "corte-infantil-masculino",
-              "nome": "Corte infantil masculino",
-              "duracao_sugerida": 30,
-              "aliases": [
-                "corte criança",
-                "corte kids",
-                "corte de menino"
-              ],
-              "tags": [
-                "corte",
-                "infantil"
-              ],
-              "ordem": 20,
-              "ativa": true,
-              "tecnicas": []
-            },
-            {
-              "slug": "acabamento",
-              "nome": "Acabamento",
-              "duracao_sugerida": 15,
-              "aliases": [
-                "pezinho",
-                "contorno",
-                "pé do cabelo",
-                "acabamento de corte"
-              ],
-              "tags": [
-                "corte"
-              ],
-              "ordem": 30,
-              "ativa": true,
-              "tecnicas": []
-            },
-            {
-              "slug": "corte-e-barba",
-              "nome": "Corte e barba",
-              "duracao_sugerida": 60,
-              "aliases": [
-                "corte + barba",
-                "combo",
-                "cabelo e barba"
-              ],
-              "tags": [
-                "corte",
-                "barba",
-                "combo"
-              ],
-              "ordem": 40,
-              "ativa": true,
-              "tecnicas": []
-            },
-            {
-              "slug": "corte-com-lavagem",
-              "nome": "Corte com lavagem",
-              "duracao_sugerida": 45,
-              "aliases": [
-                "corte e lavagem",
-                "lavagem"
-              ],
-              "tags": [
-                "corte"
-              ],
-              "ordem": 50,
-              "ativa": true,
-              "tecnicas": []
-            }
-          ]
-        },
-        {
-          "slug": "barba",
-          "nome": "Barba",
-          "aliases": [
-            "barbas",
-            "fazer a barba"
-          ],
-          "ordem": 20,
-          "ativa": true,
-          "servicos": [
-            {
-              "slug": "barba",
-              "nome": "Barba",
-              "duracao_sugerida": 30,
-              "aliases": [
-                "barba completa",
-                "fazer a barba",
-                "barbear",
-                "aparar a barba"
-              ],
-              "tags": [
-                "barba"
-              ],
-              "ordem": 10,
-              "ativa": true,
-              "tecnicas": [
-                {
-                  "slug": "com-navalha",
-                  "nome": "Com navalha",
-                  "aliases": [
-                    "navalha",
-                    "navalhada"
-                  ],
-                  "duracao_sugerida": null,
-                  "ordem": 10,
-                  "ativa": true
-                },
-                {
-                  "slug": "com-toalha-quente",
-                  "nome": "Com toalha quente",
-                  "aliases": [
-                    "toalha quente"
-                  ],
-                  "duracao_sugerida": null,
-                  "ordem": 20,
-                  "ativa": true
-                },
-                {
-                  "slug": "desenhada",
-                  "nome": "Desenhada",
-                  "aliases": [
-                    "desenho de barba",
-                    "barba desenhada"
-                  ],
-                  "duracao_sugerida": null,
-                  "ordem": 30,
-                  "ativa": true
-                },
-                {
-                  "slug": "degrade-na-barba",
-                  "nome": "Degradê na barba",
-                  "aliases": [
-                    "barba degradê",
-                    "barba fade"
-                  ],
-                  "duracao_sugerida": null,
-                  "ordem": 40,
-                  "ativa": true
-                },
-                {
-                  "slug": "na-maquina",
-                  "nome": "Na máquina",
-                  "aliases": [
-                    "aparada na máquina"
-                  ],
-                  "duracao_sugerida": null,
-                  "ordem": 50,
-                  "ativa": true
-                }
-              ]
-            },
-            {
-              "slug": "barboterapia",
-              "nome": "Barboterapia",
-              "duracao_sugerida": 45,
-              "aliases": [
-                "barba terapia",
-                "barbaterapia",
-                "ritual de barba",
-                "toalha quente"
-              ],
-              "tags": [
-                "barba"
-              ],
-              "ordem": 20,
-              "ativa": true,
-              "tecnicas": []
-            },
-            {
-              "slug": "aparar-barba",
-              "nome": "Aparar barba",
-              "duracao_sugerida": 20,
-              "aliases": [
-                "acabamento de barba",
-                "retoque de barba",
-                "alinhar barba"
-              ],
-              "tags": [
-                "barba"
-              ],
-              "ordem": 30,
-              "ativa": true,
-              "tecnicas": []
-            },
-            {
-              "slug": "bigode",
-              "nome": "Bigode",
-              "duracao_sugerida": 15,
-              "aliases": [
-                "aparar bigode",
-                "bigode desenhado"
-              ],
-              "tags": [
-                "barba"
-              ],
-              "ordem": 40,
-              "ativa": true,
-              "tecnicas": []
-            },
-            {
-              "slug": "hidratacao-de-barba",
-              "nome": "Hidratação de barba",
-              "duracao_sugerida": 30,
-              "aliases": [
-                "tratamento de barba",
-                "óleo para barba"
-              ],
-              "tags": [
-                "barba",
-                "tratamento"
-              ],
-              "ordem": 50,
-              "ativa": true,
-              "tecnicas": []
-            },
-            {
-              "slug": "coloracao-de-barba",
-              "nome": "Coloração de barba",
-              "duracao_sugerida": 30,
-              "aliases": [
-                "pintar a barba",
-                "tintura de barba",
-                "cobrir brancos na barba"
-              ],
-              "tags": [
-                "barba",
-                "cor"
-              ],
-              "ordem": 60,
-              "ativa": true,
-              "tecnicas": []
-            }
-          ]
-        },
-        {
-          "slug": "pigmentacao-e-cor",
-          "nome": "Pigmentação e cor",
-          "aliases": [
-            "pigmentação",
-            "cor masculina"
-          ],
-          "ordem": 30,
-          "ativa": true,
-          "servicos": [
-            {
-              "slug": "pigmentacao-capilar",
-              "nome": "Pigmentação capilar",
-              "duracao_sugerida": 45,
-              "aliases": [
-                "pigmentação",
-                "camuflagem de falhas",
-                "disfarce de falhas",
-                "hair stroke"
-              ],
-              "tags": [
-                "cor",
-                "masculino"
-              ],
-              "ordem": 10,
-              "ativa": true,
-              "tecnicas": []
-            },
-            {
-              "slug": "platinado",
-              "nome": "Platinado",
-              "duracao_sugerida": 180,
-              "aliases": [
-                "platinado masculino",
-                "nevou",
-                "descoloração masculina",
-                "descolorir"
-              ],
-              "tags": [
-                "cor",
-                "loiro",
-                "masculino"
-              ],
-              "ordem": 20,
-              "ativa": true,
-              "tecnicas": []
-            },
-            {
-              "slug": "luzes-masculinas",
-              "nome": "Luzes masculinas",
-              "duracao_sugerida": 120,
-              "aliases": [
-                "mechas masculinas",
-                "luzes"
-              ],
-              "tags": [
-                "cor",
-                "masculino"
-              ],
-              "ordem": 30,
-              "ativa": true,
-              "tecnicas": []
-            },
-            {
-              "slug": "coloracao-masculina",
-              "nome": "Coloração masculina",
-              "duracao_sugerida": 60,
-              "aliases": [
-                "pintar o cabelo",
-                "tintura masculina",
-                "cobrir brancos"
-              ],
-              "tags": [
-                "cor",
-                "masculino"
-              ],
-              "ordem": 40,
-              "ativa": true,
-              "tecnicas": []
-            },
-            {
-              "slug": "camuflagem-de-fios-brancos",
-              "nome": "Camuflagem de fios brancos",
-              "duracao_sugerida": 30,
-              "aliases": [
-                "camuflagem de grisalhos",
-                "disfarce de brancos",
-                "tom sobre tom masculino"
-              ],
-              "tags": [
-                "cor",
-                "masculino"
-              ],
-              "ordem": 50,
-              "ativa": true,
-              "tecnicas": []
-            }
-          ]
-        },
-        {
-          "slug": "alisamento-masculino",
-          "nome": "Alisamento masculino",
-          "aliases": [
-            "progressiva masculina",
-            "relaxamento masculino"
-          ],
-          "ordem": 40,
-          "ativa": true,
-          "servicos": [
-            {
-              "slug": "progressiva-masculina",
-              "nome": "Progressiva masculina",
-              "duracao_sugerida": 90,
-              "aliases": [
-                "progressiva",
-                "alisamento masculino"
-              ],
-              "tags": [
-                "alisamento",
-                "masculino"
-              ],
-              "ordem": 10,
-              "ativa": true,
-              "tecnicas": []
-            },
-            {
-              "slug": "relaxamento-masculino",
-              "nome": "Relaxamento masculino",
-              "duracao_sugerida": 60,
-              "aliases": [
-                "relaxamento",
-                "relaxar o cabelo"
-              ],
-              "tags": [
-                "alisamento",
-                "masculino"
-              ],
-              "ordem": 20,
-              "ativa": true,
-              "tecnicas": []
-            },
-            {
-              "slug": "permanente-masculino",
-              "nome": "Permanente masculino",
-              "duracao_sugerida": 90,
-              "aliases": [
-                "permanente",
-                "cachos masculinos",
-                "texturização masculina"
-              ],
-              "tags": [
-                "cachos",
-                "masculino"
-              ],
-              "ordem": 30,
-              "ativa": true,
-              "tecnicas": []
-            }
-          ]
-        },
-        {
-          "slug": "sobrancelha-e-cuidados",
-          "nome": "Sobrancelha e cuidados",
-          "aliases": [
-            "sobrancelha masculina",
-            "cuidados masculinos"
-          ],
-          "ordem": 50,
-          "ativa": true,
-          "servicos": [
-            {
-              "slug": "sobrancelha-masculina",
-              "nome": "Sobrancelha masculina",
-              "duracao_sugerida": 15,
-              "aliases": [
-                "sobrancelha na navalha",
-                "sobrancelha",
-                "limpeza de sobrancelha masculina"
-              ],
-              "tags": [
-                "sobrancelha",
-                "masculino"
-              ],
-              "ordem": 10,
-              "ativa": true,
-              "tecnicas": []
-            },
-            {
-              "slug": "limpeza-de-pele-masculina",
-              "nome": "Limpeza de pele masculina",
-              "duracao_sugerida": 45,
-              "aliases": [
-                "limpeza de pele",
-                "skincare masculino"
-              ],
-              "tags": [
-                "pele",
-                "masculino"
-              ],
-              "ordem": 20,
-              "ativa": true,
-              "tecnicas": []
-            },
-            {
-              "slug": "depilacao-de-nariz-e-orelha",
-              "nome": "Depilação de nariz e orelha",
-              "duracao_sugerida": 15,
-              "aliases": [
-                "cera no nariz",
-                "cera na orelha",
-                "depilação nasal"
-              ],
-              "tags": [
-                "depilacao",
-                "masculino"
-              ],
-              "ordem": 30,
-              "ativa": true,
-              "tecnicas": []
-            },
-            {
-              "slug": "hidratacao-masculina",
-              "nome": "Hidratação masculina",
-              "duracao_sugerida": 30,
-              "aliases": [
-                "hidratação capilar masculina",
-                "tratamento"
-              ],
-              "tags": [
-                "tratamento",
-                "masculino"
-              ],
-              "ordem": 40,
-              "ativa": true,
-              "tecnicas": []
-            },
-            {
-              "slug": "lavagem-e-massagem",
-              "nome": "Lavagem e massagem",
-              "duracao_sugerida": 20,
-              "aliases": [
-                "lavagem",
-                "massagem no couro cabeludo",
-                "lavagem relaxante"
-              ],
-              "tags": [
-                "masculino"
-              ],
-              "ordem": 50,
-              "ativa": true,
-              "tecnicas": []
-            },
-            {
-              "slug": "mascara-facial-masculina",
-              "nome": "Máscara facial masculina",
-              "duracao_sugerida": 20,
-              "aliases": [
-                "máscara preta",
-                "máscara facial"
-              ],
-              "tags": [
-                "pele",
-                "masculino"
-              ],
-              "ordem": 60,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             }
@@ -2414,7 +1853,7 @@
         "esmalteria"
       ],
       "imagem": "/imagens/catalogo/unhas.webp",
-      "ordem": 30,
+      "ordem": 20,
       "ativa": true,
       "familias": [
         {
@@ -2440,9 +1879,11 @@
                 "cutilagem e esmaltação"
               ],
               "tags": [
-                "manicure"
+                "manicure",
+                "variavel_por_tecnica"
               ],
               "ordem": 10,
+              "prioridade_sugestao": 100,
               "ativa": true,
               "tecnicas": [
                 {
@@ -2497,6 +1938,7 @@
                 "combo"
               ],
               "ordem": 20,
+              "prioridade_sugestao": 90,
               "ativa": true,
               "tecnicas": []
             },
@@ -2512,6 +1954,7 @@
                 "manicure"
               ],
               "ordem": 30,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -2528,22 +1971,7 @@
                 "spa"
               ],
               "ordem": 40,
-              "ativa": true,
-              "tecnicas": []
-            },
-            {
-              "slug": "manicure-masculina",
-              "nome": "Manicure masculina",
-              "duracao_sugerida": 30,
-              "aliases": [
-                "mão masculina",
-                "unha masculina"
-              ],
-              "tags": [
-                "manicure",
-                "masculino"
-              ],
-              "ordem": 50,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             }
@@ -2571,9 +1999,11 @@
                 "fazer o pé"
               ],
               "tags": [
-                "pedicure"
+                "pedicure",
+                "variavel_por_tecnica"
               ],
               "ordem": 10,
+              "prioridade_sugestao": 95,
               "ativa": true,
               "tecnicas": [
                 {
@@ -2622,6 +2052,7 @@
                 "spa"
               ],
               "ordem": 20,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -2640,37 +2071,7 @@
                 "podologia"
               ],
               "ordem": 30,
-              "ativa": true,
-              "tecnicas": []
-            },
-            {
-              "slug": "tratamento-de-unha-encravada",
-              "nome": "Tratamento de unha encravada",
-              "duracao_sugerida": 45,
-              "aliases": [
-                "unha encravada",
-                "encravada"
-              ],
-              "tags": [
-                "pedicure",
-                "podologia"
-              ],
-              "ordem": 40,
-              "ativa": true,
-              "tecnicas": []
-            },
-            {
-              "slug": "pedicure-masculina",
-              "nome": "Pedicure masculina",
-              "duracao_sugerida": 40,
-              "aliases": [
-                "pé masculino"
-              ],
-              "tags": [
-                "pedicure",
-                "masculino"
-              ],
-              "ordem": 50,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             }
@@ -2701,6 +2102,7 @@
                 "esmaltacao"
               ],
               "ordem": 10,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -2717,9 +2119,11 @@
               ],
               "tags": [
                 "esmaltacao",
-                "gel"
+                "gel",
+                "variavel_por_tecnica"
               ],
               "ordem": 20,
+              "prioridade_sugestao": 85,
               "ativa": true,
               "tecnicas": [
                 {
@@ -2785,6 +2189,7 @@
                 "esmaltacao"
               ],
               "ordem": 30,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -2800,6 +2205,7 @@
                 "esmaltacao"
               ],
               "ordem": 40,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -2817,6 +2223,7 @@
                 "pedicure"
               ],
               "ordem": 50,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             }
@@ -2847,9 +2254,11 @@
               ],
               "tags": [
                 "alongamento",
-                "gel"
+                "gel",
+                "variavel_por_tecnica"
               ],
               "ordem": 10,
+              "prioridade_sugestao": 80,
               "ativa": true,
               "tecnicas": [
                 {
@@ -2960,6 +2369,7 @@
                 "alongamento"
               ],
               "ordem": 20,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -2975,6 +2385,7 @@
                 "alongamento"
               ],
               "ordem": 30,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             }
@@ -3002,9 +2413,11 @@
                 "unha blindada"
               ],
               "tags": [
-                "gel"
+                "gel",
+                "variavel_por_tecnica"
               ],
               "ordem": 10,
+              "prioridade_sugestao": 75,
               "ativa": true,
               "tecnicas": [
                 {
@@ -3051,6 +2464,7 @@
                 "gel"
               ],
               "ordem": 20,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -3066,6 +2480,7 @@
                 "manutencao"
               ],
               "ordem": 30,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             }
@@ -3096,6 +2511,7 @@
                 "manutencao"
               ],
               "ordem": 10,
+              "prioridade_sugestao": 70,
               "ativa": true,
               "tecnicas": []
             },
@@ -3113,6 +2529,7 @@
                 "manutencao"
               ],
               "ordem": 20,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -3131,6 +2548,7 @@
                 "remocao"
               ],
               "ordem": 30,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -3149,6 +2567,7 @@
                 "remocao"
               ],
               "ordem": 40,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -3164,6 +2583,7 @@
                 "manutencao"
               ],
               "ordem": 50,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             }
@@ -3193,9 +2613,11 @@
                 "adesivo"
               ],
               "tags": [
-                "nail art"
+                "nail art",
+                "variavel_por_tecnica"
               ],
               "ordem": 10,
+              "prioridade_sugestao": 65,
               "ativa": true,
               "tecnicas": [
                 {
@@ -3324,6 +2746,7 @@
                 "nail art"
               ],
               "ordem": 20,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -3341,6 +2764,7 @@
                 "noivas"
               ],
               "ordem": 30,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             }
@@ -3370,6 +2794,7 @@
                 "spa"
               ],
               "ordem": 10,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -3385,6 +2810,7 @@
                 "spa"
               ],
               "ordem": 20,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -3401,6 +2827,7 @@
                 "tratamento"
               ],
               "ordem": 30,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             }
@@ -3420,7 +2847,7 @@
         "cílios"
       ],
       "imagem": "/imagens/catalogo/cilios.webp",
-      "ordem": 40,
+      "ordem": 30,
       "ativa": true,
       "familias": [
         {
@@ -3446,9 +2873,12 @@
                 "extensão"
               ],
               "tags": [
-                "extensao"
+                "extensao",
+                "variavel_por_volume",
+                "variavel_por_tecnica"
               ],
               "ordem": 10,
+              "prioridade_sugestao": 100,
               "ativa": true,
               "tecnicas": [
                 {
@@ -3651,6 +3081,7 @@
                 "extensao"
               ],
               "ordem": 20,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             }
@@ -3679,9 +3110,11 @@
               ],
               "tags": [
                 "extensao",
-                "manutencao"
+                "manutencao",
+                "variavel_por_volume"
               ],
               "ordem": 10,
+              "prioridade_sugestao": 95,
               "ativa": true,
               "tecnicas": [
                 {
@@ -3743,6 +3176,7 @@
                 "remocao"
               ],
               "ordem": 10,
+              "prioridade_sugestao": 85,
               "ativa": true,
               "tecnicas": []
             }
@@ -3772,9 +3206,11 @@
                 "permanente de cílios"
               ],
               "tags": [
-                "lifting"
+                "lifting",
+                "variavel_por_tecnica"
               ],
               "ordem": 10,
+              "prioridade_sugestao": 90,
               "ativa": true,
               "tecnicas": [
                 {
@@ -3822,6 +3258,7 @@
                 "tratamento"
               ],
               "ordem": 20,
+              "prioridade_sugestao": 80,
               "ativa": true,
               "tecnicas": []
             },
@@ -3839,6 +3276,7 @@
                 "sobrancelha"
               ],
               "ordem": 30,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             }
@@ -3867,6 +3305,7 @@
                 "cor"
               ],
               "ordem": 10,
+              "prioridade_sugestao": 75,
               "ativa": true,
               "tecnicas": []
             },
@@ -3886,6 +3325,7 @@
                 "maquiagem"
               ],
               "ordem": 20,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             }
@@ -3896,7 +3336,7 @@
     {
       "slug": "sobrancelhas",
       "nome": "Sobrancelhas",
-      "descricao": "Design, henna, lamination e micropigmentação",
+      "descricao": "Design, henna, tintura, lamination e cuidados",
       "aliases": [
         "sobrancelha",
         "brow",
@@ -3904,7 +3344,7 @@
         "sobrancelhas"
       ],
       "imagem": "/imagens/catalogo/sobrancelhas.webp",
-      "ordem": 50,
+      "ordem": 40,
       "ativa": true,
       "familias": [
         {
@@ -3930,9 +3370,11 @@
                 "design com pinça"
               ],
               "tags": [
-                "design"
+                "design",
+                "variavel_por_tecnica"
               ],
               "ordem": 10,
+              "prioridade_sugestao": 100,
               "ativa": true,
               "tecnicas": [
                 {
@@ -3989,16 +3431,6 @@
                   "duracao_sugerida": null,
                   "ordem": 50,
                   "ativa": true
-                },
-                {
-                  "slug": "com-henna",
-                  "nome": "Com henna",
-                  "aliases": [
-                    "design e henna"
-                  ],
-                  "duracao_sugerida": null,
-                  "ordem": 60,
-                  "ativa": true
                 }
               ]
             },
@@ -4016,29 +3448,15 @@
                 "manutencao"
               ],
               "ordem": 20,
-              "ativa": true,
-              "tecnicas": []
-            },
-            {
-              "slug": "design-de-sobrancelhas-masculino",
-              "nome": "Design de sobrancelhas masculino",
-              "duracao_sugerida": 20,
-              "aliases": [
-                "sobrancelha masculina"
-              ],
-              "tags": [
-                "design",
-                "masculino"
-              ],
-              "ordem": 30,
+              "prioridade_sugestao": 80,
               "ativa": true,
               "tecnicas": []
             }
           ]
         },
         {
-          "slug": "henna-e-coloracao",
-          "nome": "Henna e coloração",
+          "slug": "henna-e-tintura",
+          "nome": "Henna e tintura",
           "aliases": [
             "henna",
             "tintura de sobrancelha",
@@ -4055,13 +3473,15 @@
                 "henna",
                 "sobrancelha de henna",
                 "henna na sobrancelha",
-                "aplicação de henna"
+                "aplicação de henna",
+                "design e henna"
               ],
               "tags": [
                 "henna",
                 "design"
               ],
               "ordem": 10,
+              "prioridade_sugestao": 95,
               "ativa": true,
               "tecnicas": []
             },
@@ -4079,6 +3499,7 @@
                 "cor"
               ],
               "ordem": 20,
+              "prioridade_sugestao": 85,
               "ativa": true,
               "tecnicas": []
             },
@@ -4095,6 +3516,7 @@
                 "manutencao"
               ],
               "ordem": 30,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             }
@@ -4123,9 +3545,11 @@
                 "alinhamento de sobrancelha"
               ],
               "tags": [
-                "lamination"
+                "lamination",
+                "variavel_por_tecnica"
               ],
               "ordem": 10,
+              "prioridade_sugestao": 90,
               "ativa": true,
               "tecnicas": [
                 {
@@ -4180,169 +3604,21 @@
                 "tratamento"
               ],
               "ordem": 20,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             }
           ]
         },
         {
-          "slug": "micropigmentacao",
-          "nome": "Micropigmentação",
+          "slug": "reconstrucao-e-cuidados",
+          "nome": "Reconstrução e cuidados",
           "aliases": [
-            "micro",
-            "microblading",
-            "micropigmentar",
-            "tatuagem de sobrancelha"
+            "reconstrução",
+            "tratamento de sobrancelha",
+            "hidratação de sobrancelha"
           ],
           "ordem": 40,
-          "ativa": true,
-          "servicos": [
-            {
-              "slug": "micropigmentacao-de-sobrancelhas",
-              "nome": "Micropigmentação de sobrancelhas",
-              "duracao_sugerida": 150,
-              "aliases": [
-                "micro",
-                "micropigmentação",
-                "sobrancelha definitiva",
-                "tatuagem de sobrancelha"
-              ],
-              "tags": [
-                "micropigmentacao"
-              ],
-              "ordem": 10,
-              "ativa": true,
-              "tecnicas": [
-                {
-                  "slug": "fio-a-fio",
-                  "nome": "Fio a fio",
-                  "aliases": [
-                    "microblading",
-                    "fio a fio",
-                    "nanoblading",
-                    "nano",
-                    "fios realistas"
-                  ],
-                  "duracao_sugerida": null,
-                  "ordem": 10,
-                  "ativa": true
-                },
-                {
-                  "slug": "shadow",
-                  "nome": "Shadow",
-                  "aliases": [
-                    "esfumada",
-                    "sombreada",
-                    "powder brows",
-                    "ombré brows",
-                    "shadow"
-                  ],
-                  "duracao_sugerida": null,
-                  "ordem": 20,
-                  "ativa": true
-                },
-                {
-                  "slug": "hibrida",
-                  "nome": "Híbrida",
-                  "aliases": [
-                    "hibrida",
-                    "fio e shadow",
-                    "combinada"
-                  ],
-                  "duracao_sugerida": null,
-                  "ordem": 30,
-                  "ativa": true
-                },
-                {
-                  "slug": "dermopigmentacao",
-                  "nome": "Dermopigmentação",
-                  "aliases": [
-                    "dermo"
-                  ],
-                  "duracao_sugerida": null,
-                  "ordem": 40,
-                  "ativa": true
-                }
-              ]
-            },
-            {
-              "slug": "retoque-de-micropigmentacao",
-              "nome": "Retoque de micropigmentação",
-              "duracao_sugerida": 90,
-              "aliases": [
-                "retoque de micro",
-                "retoque"
-              ],
-              "tags": [
-                "micropigmentacao",
-                "manutencao"
-              ],
-              "ordem": 20,
-              "ativa": true,
-              "tecnicas": []
-            },
-            {
-              "slug": "remocao-de-micropigmentacao",
-              "nome": "Remoção de micropigmentação",
-              "duracao_sugerida": 60,
-              "aliases": [
-                "remoção de micro",
-                "despigmentação",
-                "remoção de pigmento"
-              ],
-              "tags": [
-                "micropigmentacao",
-                "remocao"
-              ],
-              "ordem": 30,
-              "ativa": true,
-              "tecnicas": []
-            },
-            {
-              "slug": "micropigmentacao-labial",
-              "nome": "Micropigmentação labial",
-              "duracao_sugerida": 120,
-              "aliases": [
-                "micro labial",
-                "lábios",
-                "lip blush",
-                "revitalização labial"
-              ],
-              "tags": [
-                "micropigmentacao",
-                "labios"
-              ],
-              "ordem": 40,
-              "ativa": true,
-              "tecnicas": []
-            },
-            {
-              "slug": "micropigmentacao-de-olhos",
-              "nome": "Micropigmentação de olhos",
-              "duracao_sugerida": 90,
-              "aliases": [
-                "delineado definitivo",
-                "micro de olhos",
-                "eyeliner definitivo"
-              ],
-              "tags": [
-                "micropigmentacao",
-                "olhos"
-              ],
-              "ordem": 50,
-              "ativa": true,
-              "tecnicas": []
-            }
-          ]
-        },
-        {
-          "slug": "cuidados",
-          "nome": "Cuidados",
-          "aliases": [
-            "tratamento de sobrancelha",
-            "reconstrução"
-          ],
-          "ordem": 50,
           "ativa": true,
           "servicos": [
             {
@@ -4352,12 +3628,14 @@
               "aliases": [
                 "reconstrução",
                 "sobrancelha com falhas",
-                "preenchimento de falhas"
+                "preenchimento de falhas",
+                "sobrancelha falhada"
               ],
               "tags": [
                 "tratamento"
               ],
               "ordem": 10,
+              "prioridade_sugestao": 75,
               "ativa": true,
               "tecnicas": []
             },
@@ -4367,12 +3645,14 @@
               "duracao_sugerida": 15,
               "aliases": [
                 "nutrição",
-                "hidratação"
+                "hidratação",
+                "cuidados"
               ],
               "tags": [
                 "tratamento"
               ],
               "ordem": 20,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             }
@@ -4391,7 +3671,7 @@
         "makeup"
       ],
       "imagem": "/imagens/catalogo/maquiagem.webp",
-      "ordem": 60,
+      "ordem": 50,
       "ativa": true,
       "familias": [
         {
@@ -4416,9 +3696,11 @@
                 "maquiagem para evento"
               ],
               "tags": [
-                "maquiagem"
+                "maquiagem",
+                "variavel_por_tecnica"
               ],
               "ordem": 10,
+              "prioridade_sugestao": 100,
               "ativa": true,
               "tecnicas": [
                 {
@@ -4500,6 +3782,7 @@
                 "noivas"
               ],
               "ordem": 20,
+              "prioridade_sugestao": 95,
               "ativa": true,
               "tecnicas": []
             },
@@ -4516,6 +3799,7 @@
                 "noivas"
               ],
               "ordem": 30,
+              "prioridade_sugestao": 90,
               "ativa": true,
               "tecnicas": []
             },
@@ -4531,6 +3815,7 @@
                 "maquiagem"
               ],
               "ordem": 40,
+              "prioridade_sugestao": 85,
               "ativa": true,
               "tecnicas": []
             },
@@ -4547,6 +3832,7 @@
                 "maquiagem"
               ],
               "ordem": 50,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -4563,6 +3849,7 @@
                 "maquiagem"
               ],
               "ordem": 60,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -4581,6 +3868,7 @@
                 "maquiagem"
               ],
               "ordem": 70,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -4597,23 +3885,7 @@
                 "infantil"
               ],
               "ordem": 80,
-              "ativa": true,
-              "tecnicas": []
-            },
-            {
-              "slug": "maquiagem-masculina",
-              "nome": "Maquiagem masculina",
-              "duracao_sugerida": 30,
-              "aliases": [
-                "make masculina",
-                "maquiagem para homem",
-                "pele masculina"
-              ],
-              "tags": [
-                "maquiagem",
-                "masculino"
-              ],
-              "ordem": 90,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -4629,7 +3901,8 @@
                 "maquiagem",
                 "noivas"
               ],
-              "ordem": 100,
+              "ordem": 90,
+              "prioridade_sugestao": 80,
               "ativa": true,
               "tecnicas": []
             },
@@ -4645,7 +3918,8 @@
               "tags": [
                 "maquiagem"
               ],
-              "ordem": 110,
+              "ordem": 100,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             }
@@ -4675,6 +3949,7 @@
                 "pele"
               ],
               "ordem": 10,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -4690,6 +3965,7 @@
                 "pele"
               ],
               "ordem": 20,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             }
@@ -4721,6 +3997,7 @@
                 "curso"
               ],
               "ordem": 10,
+              "prioridade_sugestao": 75,
               "ativa": true,
               "tecnicas": []
             },
@@ -4737,6 +4014,7 @@
                 "curso"
               ],
               "ordem": 20,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             }
@@ -4755,7 +4033,7 @@
         "tirar pelo"
       ],
       "imagem": "/imagens/catalogo/depilacao.webp",
-      "ordem": 70,
+      "ordem": 60,
       "ativa": true,
       "familias": [
         {
@@ -4780,9 +4058,11 @@
                 "depilar"
               ],
               "tags": [
-                "cera"
+                "cera",
+                "variavel_por_tecnica"
               ],
               "ordem": 10,
+              "prioridade_sugestao": 100,
               "ativa": true,
               "tecnicas": [
                 {
@@ -4845,6 +4125,7 @@
                 "virilha"
               ],
               "ordem": 20,
+              "prioridade_sugestao": 95,
               "ativa": true,
               "tecnicas": []
             },
@@ -4862,6 +4143,7 @@
                 "virilha"
               ],
               "ordem": 30,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -4879,6 +4161,7 @@
                 "perna"
               ],
               "ordem": 40,
+              "prioridade_sugestao": 90,
               "ativa": true,
               "tecnicas": []
             },
@@ -4895,6 +4178,7 @@
                 "perna"
               ],
               "ordem": 50,
+              "prioridade_sugestao": 75,
               "ativa": true,
               "tecnicas": []
             },
@@ -4910,6 +4194,7 @@
                 "cera"
               ],
               "ordem": 60,
+              "prioridade_sugestao": 85,
               "ativa": true,
               "tecnicas": []
             },
@@ -4927,6 +4212,7 @@
                 "rosto"
               ],
               "ordem": 70,
+              "prioridade_sugestao": 80,
               "ativa": true,
               "tecnicas": []
             },
@@ -4944,6 +4230,7 @@
                 "rosto"
               ],
               "ordem": 80,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -4959,6 +4246,7 @@
                 "cera"
               ],
               "ordem": 90,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -4974,6 +4262,7 @@
                 "cera"
               ],
               "ordem": 100,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -4991,6 +4280,7 @@
                 "cera"
               ],
               "ordem": 110,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -5007,6 +4297,7 @@
                 "cera"
               ],
               "ordem": 120,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -5024,68 +4315,9 @@
                 "combo"
               ],
               "ordem": 130,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
-            },
-            {
-              "slug": "depilacao-masculina",
-              "nome": "Depilação masculina",
-              "duracao_sugerida": 45,
-              "aliases": [
-                "depilação masculina",
-                "cera masculina",
-                "homem"
-              ],
-              "tags": [
-                "cera",
-                "masculino"
-              ],
-              "ordem": 140,
-              "ativa": true,
-              "tecnicas": [
-                {
-                  "slug": "costas",
-                  "nome": "Costas",
-                  "aliases": [],
-                  "duracao_sugerida": null,
-                  "ordem": 10,
-                  "ativa": true
-                },
-                {
-                  "slug": "peito",
-                  "nome": "Peito",
-                  "aliases": [],
-                  "duracao_sugerida": null,
-                  "ordem": 20,
-                  "ativa": true
-                },
-                {
-                  "slug": "virilha-masculina",
-                  "nome": "Virilha masculina",
-                  "aliases": [
-                    "íntima masculina"
-                  ],
-                  "duracao_sugerida": null,
-                  "ordem": 30,
-                  "ativa": true
-                },
-                {
-                  "slug": "perna",
-                  "nome": "Perna",
-                  "aliases": [],
-                  "duracao_sugerida": null,
-                  "ordem": 40,
-                  "ativa": true
-                },
-                {
-                  "slug": "corpo-inteiro",
-                  "nome": "Corpo inteiro",
-                  "aliases": [],
-                  "duracao_sugerida": null,
-                  "ordem": 50,
-                  "ativa": true
-                }
-              ]
             }
           ]
         },
@@ -5114,6 +4346,7 @@
                 "linha"
               ],
               "ordem": 10,
+              "prioridade_sugestao": 70,
               "ativa": true,
               "tecnicas": []
             },
@@ -5129,6 +4362,7 @@
                 "rosto"
               ],
               "ordem": 20,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -5145,6 +4379,7 @@
                 "rosto"
               ],
               "ordem": 30,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             }
@@ -5175,9 +4410,11 @@
                 "a laser"
               ],
               "tags": [
-                "laser"
+                "laser",
+                "variavel_por_tecnica"
               ],
               "ordem": 10,
+              "prioridade_sugestao": 65,
               "ativa": true,
               "tecnicas": [
                 {
@@ -5224,6 +4461,7 @@
                 "laser"
               ],
               "ordem": 20,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -5240,6 +4478,7 @@
                 "virilha"
               ],
               "ordem": 30,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -5255,6 +4494,7 @@
                 "perna"
               ],
               "ordem": 40,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -5271,6 +4511,7 @@
                 "rosto"
               ],
               "ordem": 50,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -5287,6 +4528,7 @@
                 "combo"
               ],
               "ordem": 60,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -5303,6 +4545,7 @@
                 "laser"
               ],
               "ordem": 70,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             }
@@ -5331,6 +4574,7 @@
                 "cuidados"
               ],
               "ordem": 10,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -5347,6 +4591,7 @@
                 "cuidados"
               ],
               "ordem": 20,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -5363,6 +4608,7 @@
                 "cuidados"
               ],
               "ordem": 30,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             }
@@ -5382,7 +4628,7 @@
         "pele"
       ],
       "imagem": "/imagens/catalogo/estetica-facial.webp",
-      "ordem": 80,
+      "ordem": 70,
       "ativa": true,
       "familias": [
         {
@@ -5407,9 +4653,11 @@
                 "limpeza"
               ],
               "tags": [
-                "pele"
+                "pele",
+                "variavel_por_tecnica"
               ],
               "ordem": 10,
+              "prioridade_sugestao": 100,
               "ativa": true,
               "tecnicas": [
                 {
@@ -5481,6 +4729,7 @@
                 "tecnologia"
               ],
               "ordem": 20,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -5497,6 +4746,7 @@
                 "combo"
               ],
               "ordem": 30,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -5513,6 +4763,7 @@
                 "acne"
               ],
               "ordem": 40,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             }
@@ -5539,9 +4790,11 @@
                 "ácido"
               ],
               "tags": [
-                "peeling"
+                "peeling",
+                "variavel_por_tecnica"
               ],
               "ordem": 10,
+              "prioridade_sugestao": 95,
               "ativa": true,
               "tecnicas": [
                 {
@@ -5621,6 +4874,7 @@
                 "peeling"
               ],
               "ordem": 20,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -5636,6 +4890,7 @@
                 "peeling"
               ],
               "ordem": 30,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -5651,6 +4906,7 @@
                 "peeling"
               ],
               "ordem": 40,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -5668,6 +4924,7 @@
                 "peeling"
               ],
               "ordem": 50,
+              "prioridade_sugestao": 65,
               "ativa": true,
               "tecnicas": []
             }
@@ -5696,6 +4953,7 @@
                 "tratamento"
               ],
               "ordem": 10,
+              "prioridade_sugestao": 90,
               "ativa": true,
               "tecnicas": []
             },
@@ -5712,6 +4970,7 @@
                 "tratamento"
               ],
               "ordem": 20,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -5730,6 +4989,7 @@
                 "acne"
               ],
               "ordem": 30,
+              "prioridade_sugestao": 80,
               "ativa": true,
               "tecnicas": []
             },
@@ -5748,6 +5008,7 @@
                 "manchas"
               ],
               "ordem": 40,
+              "prioridade_sugestao": 75,
               "ativa": true,
               "tecnicas": []
             },
@@ -5767,6 +5028,7 @@
                 "anti-idade"
               ],
               "ordem": 50,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -5784,6 +5046,7 @@
                 "olhos"
               ],
               "ordem": 60,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -5801,6 +5064,7 @@
                 "tratamento"
               ],
               "ordem": 70,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -5817,6 +5081,7 @@
                 "tratamento"
               ],
               "ordem": 80,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -5835,6 +5100,7 @@
                 "tratamento"
               ],
               "ordem": 90,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -5854,6 +5120,7 @@
                 "labios"
               ],
               "ordem": 100,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             }
@@ -5884,6 +5151,7 @@
                 "tecnologia"
               ],
               "ordem": 10,
+              "prioridade_sugestao": 85,
               "ativa": true,
               "tecnicas": []
             },
@@ -5900,6 +5168,7 @@
                 "tecnologia"
               ],
               "ordem": 20,
+              "prioridade_sugestao": 70,
               "ativa": true,
               "tecnicas": []
             },
@@ -5916,6 +5185,7 @@
                 "tecnologia"
               ],
               "ordem": 30,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -5933,6 +5203,7 @@
                 "tecnologia"
               ],
               "ordem": 40,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -5948,6 +5219,7 @@
                 "tecnologia"
               ],
               "ordem": 50,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -5964,6 +5236,7 @@
                 "tecnologia"
               ],
               "ordem": 60,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -5979,6 +5252,7 @@
                 "tecnologia"
               ],
               "ordem": 70,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -5995,6 +5269,7 @@
                 "tecnologia"
               ],
               "ordem": 80,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -6011,6 +5286,7 @@
                 "tecnologia"
               ],
               "ordem": 90,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             }
@@ -6043,6 +5319,7 @@
                 "habilitacao"
               ],
               "ordem": 10,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -6062,6 +5339,7 @@
                 "habilitacao"
               ],
               "ordem": 20,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -6080,6 +5358,7 @@
                 "habilitacao"
               ],
               "ordem": 30,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -6096,6 +5375,7 @@
                 "habilitacao"
               ],
               "ordem": 40,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -6113,6 +5393,7 @@
                 "habilitacao"
               ],
               "ordem": 50,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -6130,6 +5411,7 @@
                 "habilitacao"
               ],
               "ordem": 60,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -6148,6 +5430,7 @@
                 "combo"
               ],
               "ordem": 70,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             }
@@ -6166,7 +5449,7 @@
         "emagrecimento"
       ],
       "imagem": "/imagens/catalogo/estetica-corporal.webp",
-      "ordem": 90,
+      "ordem": 80,
       "ativa": true,
       "familias": [
         {
@@ -6191,9 +5474,11 @@
                 "retenção de líquido"
               ],
               "tags": [
-                "massagem"
+                "massagem",
+                "variavel_por_tecnica"
               ],
               "ordem": 10,
+              "prioridade_sugestao": 100,
               "ativa": true,
               "tecnicas": [
                 {
@@ -6246,6 +5531,7 @@
                 "massagem"
               ],
               "ordem": 20,
+              "prioridade_sugestao": 95,
               "ativa": true,
               "tecnicas": []
             },
@@ -6262,6 +5548,7 @@
                 "combo"
               ],
               "ordem": 30,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -6280,6 +5567,7 @@
                 "pos-operatorio"
               ],
               "ordem": 40,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -6295,6 +5583,7 @@
                 "massagem"
               ],
               "ordem": 50,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             }
@@ -6326,6 +5615,7 @@
                 "gordura"
               ],
               "ordem": 10,
+              "prioridade_sugestao": 90,
               "ativa": true,
               "tecnicas": []
             },
@@ -6343,6 +5633,7 @@
                 "gordura"
               ],
               "ordem": 20,
+              "prioridade_sugestao": 80,
               "ativa": true,
               "tecnicas": []
             },
@@ -6360,6 +5651,7 @@
                 "flacidez"
               ],
               "ordem": 30,
+              "prioridade_sugestao": 85,
               "ativa": true,
               "tecnicas": []
             },
@@ -6376,6 +5668,7 @@
                 "tecnologia"
               ],
               "ordem": 40,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -6392,6 +5685,7 @@
                 "gordura"
               ],
               "ordem": 50,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -6411,6 +5705,7 @@
                 "celulite"
               ],
               "ordem": 60,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -6428,6 +5723,7 @@
                 "flacidez"
               ],
               "ordem": 70,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -6448,6 +5744,7 @@
                 "gordura"
               ],
               "ordem": 80,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -6464,6 +5761,7 @@
                 "gordura"
               ],
               "ordem": 90,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -6481,6 +5779,7 @@
                 "gordura"
               ],
               "ordem": 100,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -6498,6 +5797,7 @@
                 "gordura"
               ],
               "ordem": 110,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             }
@@ -6529,6 +5829,7 @@
                 "celulite"
               ],
               "ordem": 10,
+              "prioridade_sugestao": 70,
               "ativa": true,
               "tecnicas": []
             },
@@ -6546,6 +5847,7 @@
                 "flacidez"
               ],
               "ordem": 20,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -6562,6 +5864,7 @@
                 "protocolo"
               ],
               "ordem": 30,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -6577,6 +5880,7 @@
                 "tecnologia"
               ],
               "ordem": 40,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -6596,6 +5900,7 @@
                 "gluteos"
               ],
               "ordem": 50,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -6613,6 +5918,7 @@
                 "combo"
               ],
               "ordem": 60,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             }
@@ -6630,39 +5936,39 @@
           "ativa": true,
           "servicos": [
             {
-              "slug": "bronzeamento-artificial",
-              "nome": "Bronzeamento artificial",
+              "slug": "bronzeamento-a-jato",
+              "nome": "Bronzeamento a jato",
               "duracao_sugerida": 40,
               "aliases": [
-                "bronze artificial",
-                "bronzeamento a jato",
                 "spray tan",
                 "bronze de spray",
-                "jato"
+                "jato",
+                "airbrush",
+                "bronze artificial a jato",
+                "bronzeamento a jato"
               ],
               "tags": [
-                "bronze"
+                "bronze",
+                "variavel_por_tecnica"
               ],
               "ordem": 10,
+              "prioridade_sugestao": 75,
               "ativa": true,
               "tecnicas": [
                 {
-                  "slug": "jato",
-                  "nome": "Jato",
-                  "aliases": [
-                    "spray",
-                    "airbrush"
-                  ],
+                  "slug": "corpo-inteiro",
+                  "nome": "Corpo inteiro",
+                  "aliases": [],
                   "duracao_sugerida": null,
                   "ordem": 10,
                   "ativa": true
                 },
                 {
-                  "slug": "cabine",
-                  "nome": "Cabine",
+                  "slug": "meio-corpo",
+                  "nome": "Meio corpo",
                   "aliases": [
-                    "cabine de bronzeamento",
-                    "câmara"
+                    "pernas",
+                    "só as pernas"
                   ],
                   "duracao_sugerida": null,
                   "ordem": 20,
@@ -6672,7 +5978,8 @@
                   "slug": "com-marquinha",
                   "nome": "Com marquinha",
                   "aliases": [
-                    "marquinha artificial"
+                    "marquinha artificial",
+                    "marquinha desenhada"
                   ],
                   "duracao_sugerida": null,
                   "ordem": 30,
@@ -6690,12 +5997,31 @@
                 "bronze de fita",
                 "bronzeamento natural",
                 "bronze na laje",
-                "marquinha de biquíni"
+                "marquinha de biquíni",
+                "bronze natural"
               ],
               "tags": [
                 "bronze"
               ],
               "ordem": 20,
+              "prioridade_sugestao": 65,
+              "ativa": true,
+              "tecnicas": []
+            },
+            {
+              "slug": "preparacao-pre-bronze",
+              "nome": "Preparação pré-bronze",
+              "duracao_sugerida": 20,
+              "aliases": [
+                "preparação para bronze",
+                "pré-bronze",
+                "hidratação pré-bronze"
+              ],
+              "tags": [
+                "bronze"
+              ],
+              "ordem": 30,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -6705,12 +6031,30 @@
               "duracao_sugerida": 20,
               "aliases": [
                 "esfoliação",
-                "preparação para bronze"
+                "esfoliar antes do bronze"
               ],
               "tags": [
                 "bronze"
               ],
-              "ordem": 30,
+              "ordem": 40,
+              "prioridade_sugestao": 0,
+              "ativa": true,
+              "tecnicas": []
+            },
+            {
+              "slug": "cuidados-pos-bronze",
+              "nome": "Cuidados pós-bronze",
+              "duracao_sugerida": 30,
+              "aliases": [
+                "pós-bronze",
+                "hidratação pós-bronze",
+                "prolongar o bronze"
+              ],
+              "tags": [
+                "bronze"
+              ],
+              "ordem": 50,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             }
@@ -6741,6 +6085,7 @@
                 "pele"
               ],
               "ordem": 10,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -6756,6 +6101,7 @@
                 "pele"
               ],
               "ordem": 20,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -6771,6 +6117,7 @@
                 "pele"
               ],
               "ordem": 30,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -6786,8 +6133,433 @@
                 "pele"
               ],
               "ordem": 40,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "micropigmentacao",
+      "nome": "Micropigmentação",
+      "descricao": "Sobrancelhas, lábios, olhos, retoques e remoção",
+      "aliases": [
+        "micro",
+        "micropigmentadora",
+        "micropigmentar",
+        "dermopigmentação",
+        "tatuagem estética",
+        "maquiagem definitiva"
+      ],
+      "imagem": "/imagens/catalogo/micropigmentacao.webp",
+      "ordem": 90,
+      "ativa": true,
+      "familias": [
+        {
+          "slug": "sobrancelhas",
+          "nome": "Sobrancelhas",
+          "aliases": [
+            "micro de sobrancelha",
+            "sobrancelha definitiva",
+            "microblading"
+          ],
+          "ordem": 10,
+          "ativa": true,
+          "servicos": [
+            {
+              "slug": "micropigmentacao-de-sobrancelhas",
+              "nome": "Micropigmentação de sobrancelhas",
+              "duracao_sugerida": 150,
+              "aliases": [
+                "micro",
+                "micropigmentação",
+                "sobrancelha definitiva",
+                "tatuagem de sobrancelha",
+                "micro de sobrancelha"
+              ],
+              "tags": [
+                "micropigmentacao",
+                "sobrancelha",
+                "variavel_por_tecnica"
+              ],
+              "ordem": 10,
+              "prioridade_sugestao": 100,
+              "ativa": true,
+              "tecnicas": [
+                {
+                  "slug": "microblading",
+                  "nome": "Microblading",
+                  "aliases": [
+                    "microblading",
+                    "tebori",
+                    "lâmina"
+                  ],
+                  "duracao_sugerida": null,
+                  "ordem": 10,
+                  "ativa": true
+                },
+                {
+                  "slug": "fio-a-fio",
+                  "nome": "Fio a fio",
+                  "aliases": [
+                    "fio a fio",
+                    "nanoblading",
+                    "nano",
+                    "fios realistas",
+                    "fio realista"
+                  ],
+                  "duracao_sugerida": null,
+                  "ordem": 20,
+                  "ativa": true
+                },
+                {
+                  "slug": "shadow",
+                  "nome": "Shadow",
+                  "aliases": [
+                    "esfumada",
+                    "sombreada",
+                    "shadow",
+                    "soft shadow"
+                  ],
+                  "duracao_sugerida": null,
+                  "ordem": 30,
+                  "ativa": true
+                },
+                {
+                  "slug": "ombre",
+                  "nome": "Ombré",
+                  "aliases": [
+                    "ombré brows",
+                    "ombre brows",
+                    "degradê"
+                  ],
+                  "duracao_sugerida": null,
+                  "ordem": 40,
+                  "ativa": true
+                },
+                {
+                  "slug": "powder-brows",
+                  "nome": "Powder brows",
+                  "aliases": [
+                    "powder",
+                    "efeito pó",
+                    "pó compacto"
+                  ],
+                  "duracao_sugerida": null,
+                  "ordem": 50,
+                  "ativa": true
+                },
+                {
+                  "slug": "tecnica-hibrida",
+                  "nome": "Técnica híbrida",
+                  "aliases": [
+                    "híbrida",
+                    "hibrida",
+                    "fio e shadow",
+                    "combinada",
+                    "combo brows"
+                  ],
+                  "duracao_sugerida": null,
+                  "ordem": 60,
+                  "ativa": true
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "slug": "labios",
+          "nome": "Lábios",
+          "aliases": [
+            "micro labial",
+            "lábios",
+            "boca",
+            "lip blush"
+          ],
+          "ordem": 20,
+          "ativa": true,
+          "servicos": [
+            {
+              "slug": "micropigmentacao-labial",
+              "nome": "Micropigmentação labial",
+              "duracao_sugerida": 120,
+              "aliases": [
+                "micro labial",
+                "micro de boca",
+                "lábios definitivos",
+                "lip blush",
+                "aquarela labial",
+                "micro nos lábios"
+              ],
+              "tags": [
+                "micropigmentacao",
+                "labios",
+                "variavel_por_tecnica"
+              ],
+              "ordem": 10,
+              "prioridade_sugestao": 95,
+              "ativa": true,
+              "tecnicas": [
+                {
+                  "slug": "revitalizacao-labial",
+                  "nome": "Revitalização labial",
+                  "aliases": [
+                    "revitalização",
+                    "revitalizar os lábios",
+                    "lábios pálidos"
+                  ],
+                  "duracao_sugerida": null,
+                  "ordem": 10,
+                  "ativa": true
+                },
+                {
+                  "slug": "neutralizacao-labial",
+                  "nome": "Neutralização labial",
+                  "aliases": [
+                    "neutralização",
+                    "lábios escuros",
+                    "clarear os lábios"
+                  ],
+                  "duracao_sugerida": null,
+                  "ordem": 20,
+                  "ativa": true
+                },
+                {
+                  "slug": "efeito-batom",
+                  "nome": "Efeito batom",
+                  "aliases": [
+                    "batom",
+                    "batom definitivo",
+                    "lábios de batom"
+                  ],
+                  "duracao_sugerida": null,
+                  "ordem": 30,
+                  "ativa": true
+                },
+                {
+                  "slug": "contorno-labial",
+                  "nome": "Contorno labial",
+                  "aliases": [
+                    "contorno",
+                    "contorno dos lábios"
+                  ],
+                  "duracao_sugerida": null,
+                  "ordem": 40,
+                  "ativa": true
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "slug": "olhos",
+          "nome": "Olhos",
+          "aliases": [
+            "micro de olhos",
+            "delineado definitivo",
+            "olhos"
+          ],
+          "ordem": 30,
+          "ativa": true,
+          "servicos": [
+            {
+              "slug": "micropigmentacao-de-olhos",
+              "nome": "Micropigmentação de olhos",
+              "duracao_sugerida": 90,
+              "aliases": [
+                "delineado definitivo",
+                "micro de olhos",
+                "eyeliner definitivo",
+                "micro nos olhos"
+              ],
+              "tags": [
+                "micropigmentacao",
+                "olhos",
+                "variavel_por_tecnica"
+              ],
+              "ordem": 10,
+              "prioridade_sugestao": 85,
+              "ativa": true,
+              "tecnicas": [
+                {
+                  "slug": "delineado",
+                  "nome": "Delineado",
+                  "aliases": [
+                    "delineado clássico",
+                    "delineado fino",
+                    "eyeliner"
+                  ],
+                  "duracao_sugerida": null,
+                  "ordem": 10,
+                  "ativa": true
+                },
+                {
+                  "slug": "lash-line",
+                  "nome": "Lash line",
+                  "aliases": [
+                    "lash line",
+                    "linha dos cílios",
+                    "entre cílios",
+                    "efeito rímel"
+                  ],
+                  "duracao_sugerida": null,
+                  "ordem": 20,
+                  "ativa": true
+                },
+                {
+                  "slug": "delineado-esfumado",
+                  "nome": "Delineado esfumado",
+                  "aliases": [
+                    "esfumado",
+                    "delineado difuso",
+                    "smokey"
+                  ],
+                  "duracao_sugerida": null,
+                  "ordem": 30,
+                  "ativa": true
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "slug": "retoques-correcoes-e-remocao",
+          "nome": "Retoques, correções e remoção",
+          "aliases": [
+            "retoque",
+            "correção",
+            "remoção",
+            "tirar micro"
+          ],
+          "ordem": 40,
+          "ativa": true,
+          "servicos": [
+            {
+              "slug": "retoque-de-micropigmentacao",
+              "nome": "Retoque de micropigmentação",
+              "duracao_sugerida": 90,
+              "aliases": [
+                "retoque",
+                "retoque de micro",
+                "segunda sessão",
+                "manutenção de micro"
+              ],
+              "tags": [
+                "micropigmentacao",
+                "manutencao"
+              ],
+              "ordem": 10,
+              "prioridade_sugestao": 90,
+              "ativa": true,
+              "tecnicas": [
+                {
+                  "slug": "retoque-de-30-a-45-dias",
+                  "nome": "Retoque de 30 a 45 dias",
+                  "aliases": [
+                    "primeiro retoque",
+                    "retoque de cicatrização"
+                  ],
+                  "duracao_sugerida": null,
+                  "ordem": 10,
+                  "ativa": true
+                },
+                {
+                  "slug": "retoque-anual",
+                  "nome": "Retoque anual",
+                  "aliases": [
+                    "manutenção anual",
+                    "refresh"
+                  ],
+                  "duracao_sugerida": null,
+                  "ordem": 20,
+                  "ativa": true
+                }
+              ]
+            },
+            {
+              "slug": "correcao-de-cor",
+              "nome": "Correção de cor",
+              "duracao_sugerida": 120,
+              "aliases": [
+                "correção de micro",
+                "micro avermelhada",
+                "micro azulada",
+                "corrigir a cor",
+                "correção"
+              ],
+              "tags": [
+                "micropigmentacao",
+                "correcao"
+              ],
+              "ordem": 20,
+              "prioridade_sugestao": 0,
+              "ativa": true,
+              "tecnicas": []
+            },
+            {
+              "slug": "neutralizacao",
+              "nome": "Neutralização",
+              "duracao_sugerida": 90,
+              "aliases": [
+                "neutralização de pigmento",
+                "neutralizar",
+                "camuflagem de micro antiga"
+              ],
+              "tags": [
+                "micropigmentacao",
+                "correcao"
+              ],
+              "ordem": 30,
+              "prioridade_sugestao": 0,
+              "ativa": true,
+              "tecnicas": []
+            },
+            {
+              "slug": "remocao-de-micropigmentacao",
+              "nome": "Remoção de micropigmentação",
+              "duracao_sugerida": 60,
+              "aliases": [
+                "remoção de micro",
+                "despigmentação",
+                "remoção de pigmento",
+                "tirar micro",
+                "apagar micro"
+              ],
+              "tags": [
+                "micropigmentacao",
+                "remocao",
+                "variavel_por_tecnica"
+              ],
+              "ordem": 40,
+              "prioridade_sugestao": 80,
+              "ativa": true,
+              "tecnicas": [
+                {
+                  "slug": "a-laser",
+                  "nome": "A laser",
+                  "aliases": [
+                    "laser",
+                    "remoção a laser"
+                  ],
+                  "duracao_sugerida": null,
+                  "ordem": 10,
+                  "ativa": true
+                },
+                {
+                  "slug": "quimica",
+                  "nome": "Química",
+                  "aliases": [
+                    "despigmentante",
+                    "remoção química",
+                    "removedor"
+                  ],
+                  "duracao_sugerida": null,
+                  "ordem": 20,
+                  "ativa": true
+                }
+              ]
             }
           ]
         }
@@ -6830,9 +6602,11 @@
                 "massagem de relaxamento"
               ],
               "tags": [
-                "massagem"
+                "massagem",
+                "variavel_por_tecnica"
               ],
               "ordem": 10,
+              "prioridade_sugestao": 100,
               "ativa": true,
               "tecnicas": [
                 {
@@ -6916,6 +6690,7 @@
                 "massagem"
               ],
               "ordem": 20,
+              "prioridade_sugestao": 95,
               "ativa": true,
               "tecnicas": []
             },
@@ -6932,6 +6707,7 @@
                 "massagem"
               ],
               "ordem": 30,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -6948,6 +6724,7 @@
                 "massagem"
               ],
               "ordem": 40,
+              "prioridade_sugestao": 90,
               "ativa": true,
               "tecnicas": []
             },
@@ -6964,6 +6741,7 @@
                 "massagem"
               ],
               "ordem": 50,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -6980,6 +6758,7 @@
                 "massagem"
               ],
               "ordem": 60,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -6995,6 +6774,7 @@
                 "massagem"
               ],
               "ordem": 70,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -7011,6 +6791,7 @@
                 "massagem"
               ],
               "ordem": 80,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -7026,6 +6807,7 @@
                 "massagem"
               ],
               "ordem": 90,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -7042,6 +6824,7 @@
                 "combo"
               ],
               "ordem": 100,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             }
@@ -7071,6 +6854,7 @@
                 "terapia"
               ],
               "ordem": 10,
+              "prioridade_sugestao": 85,
               "ativa": true,
               "tecnicas": []
             },
@@ -7087,6 +6871,7 @@
                 "terapia"
               ],
               "ordem": 20,
+              "prioridade_sugestao": 80,
               "ativa": true,
               "tecnicas": []
             },
@@ -7103,6 +6888,7 @@
                 "terapia"
               ],
               "ordem": 30,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -7119,6 +6905,7 @@
                 "habilitacao"
               ],
               "ordem": 40,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -7134,6 +6921,7 @@
                 "terapia"
               ],
               "ordem": 50,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -7150,6 +6938,7 @@
                 "terapia"
               ],
               "ordem": 60,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -7165,6 +6954,7 @@
                 "terapia"
               ],
               "ordem": 70,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -7180,6 +6970,7 @@
                 "terapia"
               ],
               "ordem": 80,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             }
@@ -7211,6 +7002,7 @@
                 "combo"
               ],
               "ordem": 10,
+              "prioridade_sugestao": 75,
               "ativa": true,
               "tecnicas": []
             },
@@ -7228,6 +7020,7 @@
                 "combo"
               ],
               "ordem": 20,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -7244,6 +7037,7 @@
                 "spa"
               ],
               "ordem": 30,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -7259,6 +7053,7 @@
                 "spa"
               ],
               "ordem": 40,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -7275,6 +7070,7 @@
                 "spa"
               ],
               "ordem": 50,
+              "prioridade_sugestao": 70,
               "ativa": true,
               "tecnicas": []
             },
@@ -7290,6 +7086,7 @@
                 "spa"
               ],
               "ordem": 60,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             },
@@ -7307,6 +7104,7 @@
                 "combo"
               ],
               "ordem": 70,
+              "prioridade_sugestao": 0,
               "ativa": true,
               "tecnicas": []
             }
@@ -7317,8 +7115,8 @@
   ],
   "totais": {
     "categorias": 10,
-    "familias": 53,
-    "servicos": 280,
-    "tecnicas": 171
+    "familias": 51,
+    "servicos": 252,
+    "tecnicas": 161
   }
 }

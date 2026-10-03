@@ -3,11 +3,12 @@
 # aprovada, o mesmo JSON alimenta a semente da migração. Autoria compacta
 # aqui, JSON completo lá.
 #
-#   python3 supabase/catalogo/gerar_catalogo.py
+#   python3 supabase/catalogo/gerar_catalogo.py          só o JSON
+#   python3 supabase/catalogo/gerar_catalogo.py --sql    JSON + supabase/144_catalogo_seed.sql
 #
 # Formato de cada serviço: (nome, duracao_min, aliases, tags, tecnicas)
 # e de cada técnica: (nome, aliases, duracao_min ou None).
-import json, re, unicodedata, os
+import json, re, unicodedata, os, sys
 
 def slug(t):
     t = unicodedata.normalize('NFD', t).encode('ascii', 'ignore').decode().lower()
@@ -530,6 +531,33 @@ if __name__ == '__main__':
     for sl in m: assert (cat, sl) in existentes, ('prioridade sem serviço', cat, sl)
   for t, lista in VARIACOES.items():
     for sl in lista: assert (sl in so_servicos if '/' not in sl else tuple(sl.split('/')) in existentes), ('variação sem serviço', t, sl)
+  if '--sql' in sys.argv:
+    # a migration da semente: o JSON inteiro passa por catalogo_semear (143),
+    # que faz upsert pelo caminho de slugs. Rodar de novo não duplica nada.
+    t = dados['totais']
+    compacto = json.dumps(dados, ensure_ascii=False, separators=(',', ':'))
+    assert '$catalogo$' not in compacto
+    sql = f'''-- 144: Catálogo de serviços (2.91) — a semente
+-- Agenda Mel — 144: semente do catálogo de serviços ({t['familias']} famílias, {t['servicos']} serviços, {t['tecnicas']} técnicas em {t['categorias']} categorias), gerada de catalogo_v1.json
+--
+-- GERADO por supabase/catalogo/gerar_catalogo.py --sql a partir de
+-- supabase/catalogo/catalogo_v1.json. Não edite aqui: edite o JSON (ou o
+-- gerador) e gere de novo. A função catalogo_semear (143) faz upsert pelo
+-- caminho de slugs: reaplicar é seguro, e ativa/imagem_url que a
+-- Plataforma mudou ficam como estão.
+do $$
+declare r jsonb;
+begin
+  r := public.catalogo_semear($catalogo${compacto}$catalogo$::jsonb);
+  if (r ->> 'familias')::integer <> {t['familias']} or (r ->> 'servicos')::integer <> {t['servicos']} or (r ->> 'tecnicas')::integer <> {t['tecnicas']} then
+    raise exception '144: totais inesperados: % (esperava {t['familias']}/{t['servicos']}/{t['tecnicas']})', r;
+  end if;
+  raise notice '144: catálogo semeado: %', r;
+end $$;
+'''
+    destino = os.path.join(aqui, '..', '144_catalogo_seed.sql')
+    with open(destino, 'w', encoding='utf-8') as f: f.write(sql)
+    print('gerado', os.path.relpath(destino), os.path.getsize(destino) // 1024, 'KB')
   # slugs repetidos dentro da mesma família denunciam duplicata
   vistos = set()
   for c in dados['categorias']:

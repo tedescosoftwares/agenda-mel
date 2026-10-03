@@ -94,9 +94,10 @@ export async function enviarAcesso(supabase, p, email) {
 export const linkWhats = (fone, texto) => `https://wa.me/55${String(fone ?? '').replace(/\D/g, '')}?text=${encodeURIComponent(texto)}`
 
 // ---- serviços sugeridos por categoria (passo 4) ------------------------------------
-// só nome e uma duração de referência: preço nunca é inventado
+// só nome e uma duração de referência: preço nunca é inventado. Desde a 2.91
+// é só o plano B de quando o catálogo (catalogo_itens) não carregou.
 export const SUGESTOES_DE_SERVICO = {
-  cabelo: [['Corte feminino', 60], ['Escova', 45], ['Hidratação', 60], ['Progressiva', 180], ['Coloração', 120], ['Corte masculino', 30]],
+  cabelo: [['Corte de cabelo', 60], ['Escova', 45], ['Hidratação', 60], ['Progressiva', 180], ['Coloração', 120], ['Mechas', 180]],
   unhas: [['Manicure', 45], ['Pedicure', 45], ['Manutenção em gel', 60], ['Alongamento', 120], ['Esmaltação em gel', 60]],
   sobrancelhas: [['Design de sobrancelhas', 30], ['Henna', 40], ['Extensão de cílios', 120]],
   estetica: [['Limpeza de pele', 60], ['Peeling', 45], ['Drenagem linfática', 60]],
@@ -104,15 +105,13 @@ export const SUGESTOES_DE_SERVICO = {
   massagem: [['Massagem relaxante', 60], ['Drenagem linfática', 60]],
   maquiagem: [['Maquiagem social', 60], ['Maquiagem para noiva', 120]],
   depilacao: [['Depilação com cera', 40], ['Depilação a laser', 30]],
-  barba: [['Barba', 30], ['Corte e barba', 60]],
   corpo: [['Drenagem linfática', 60], ['Massagem modeladora', 60]],
   cilios: [['Extensão de cílios', 120], ['Manutenção de cílios', 60], ['Lash lifting', 60]],
-  podologia: [['Podologia completa', 60], ['Cutilagem dos pés', 40], ['Tratamento de unha encravada', 45]],
   noivas: [['Penteado de noiva', 90], ['Maquiagem para noiva', 120], ['Dia da noiva', 240]],
   coloracao: [['Coloração', 120], ['Mechas', 180], ['Retoque de raiz', 90], ['Tonalização', 60]],
   trancas: [['Tranças box braids', 240], ['Tranças nagô', 120], ['Manutenção de tranças', 90]],
   micropigmentacao: [['Micropigmentação de sobrancelhas', 120], ['Micropigmentação labial', 120]],
-  bronzeamento: [['Bronzeamento artificial', 40], ['Bronze natural com marquinha', 90]],
+  bronzeamento: [['Bronzeamento a jato', 40], ['Bronze natural com marquinha', 90]],
   spa: [['Massagem relaxante', 60], ['Day spa', 180], ['Reflexologia', 45]],
   infantil: [['Corte infantil', 30], ['Penteado infantil', 30]],
 }

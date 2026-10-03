@@ -37,6 +37,19 @@ export async function pedirMel(salaoId, { forcar = false } = {}) {
   return emVoo
 }
 
+// A fala direta (2.91): um momento que o app já sabe que está acontecendo
+// (os passos do cadastro de serviço, cardapio_*). Não disputa prioridade
+// com o motor; a função escolhe a frase na biblioteca e registra a exibição.
+// Sem frase cadastrada vem null e a Mel não aparece naquele passo.
+export async function falaDaMel(salaoId, momento, dados = {}) {
+  if (!salaoId || !momento) return null
+  try {
+    if (isDemo) { const { data } = await supabase.rpc('mel_fala_direta', { momento, dados }); return data ?? null }
+    const r = await chamar('mel', { salao: salaoId, momento, dados })
+    return r?.bubble ?? null
+  } catch (e) { console.info('[mel] fala direta indisponível:', e?.message || e); return null }
+}
+
 export function esquecerMel() {
   guardado = null
   try { localStorage.removeItem(CHAVE) } catch { /* nada */ }

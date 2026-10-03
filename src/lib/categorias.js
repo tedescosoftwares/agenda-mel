@@ -3,12 +3,14 @@ import { supabase } from './supabase'
 
 // Categorias de serviço (082): as da plataforma (salon_id nulo) e as de
 // cada salão. Todo mundo lê; quem não tem categoria cai em "Outros".
+// Desde a 143 as da plataforma têm slug, descrição e `ativa`: uma inativa
+// (Barba) continua valendo para quem já a usa, só não é oferecida.
 
 export function useCategorias() {
   const [cats, setCats] = useState([])
   useEffect(() => {
     let vivo = true
-    supabase.from('categorias_de_servico').select('id, salon_id, nome, ordem').order('ordem').order('nome')
+    supabase.from('categorias_de_servico').select('id, salon_id, nome, ordem, slug, descricao, ativa').order('ordem').order('nome')
       .then(({ data }) => { if (vivo) setCats(data ?? []) })
     return () => { vivo = false }
   }, [])
@@ -16,10 +18,16 @@ export function useCategorias() {
 }
 
 // as que um salão pode usar: as da plataforma que ele escolheu (124;
-// sem escolha, todas) mais as dele
+// sem escolha, todas as ativas) mais as dele. Uma da plataforma inativa só
+// entra se o salão já a tinha escolhido.
 export function categoriasDoSalao(cats, salaoId, escolhidas) {
   const marcadas = Array.isArray(escolhidas) && escolhidas.length ? new Set(escolhidas) : null
-  return cats.filter((c) => (c.salon_id ? c.salon_id === salaoId : !marcadas || marcadas.has(c.id)))
+  return cats.filter((c) => (c.salon_id ? c.salon_id === salaoId : marcadas ? marcadas.has(c.id) : c.ativa !== false))
+}
+
+// as da plataforma que dá para escolher hoje (as ativas)
+export function categoriasOferecidas(cats) {
+  return cats.filter((c) => !c.salon_id && c.ativa !== false)
 }
 
 // [{ id, nome, ordem, itens }] na ordem das categorias; "Outros" por último

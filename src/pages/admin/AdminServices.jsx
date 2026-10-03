@@ -9,6 +9,9 @@ import { formatPreco, formatDuracao, labelDuracao } from '../../lib/format'
 import { useCategorias, categoriasDoSalao, agruparPorCategoria, bate, capaPadrao } from '../../lib/categorias'
 import { ajustarCriativo } from '../../lib/imagem'
 import Portal from '../../components/Portal'
+import CadastroDeServico, { MelFala, useFalaDaMel } from '../../components/CadastroDeServico'
+import { useCatalogo } from '../../lib/catalogo'
+import { falaDaMel } from '../../lib/melMotor'
 
 const FORM_VAZIO = {
   name: '',
@@ -17,6 +20,7 @@ const FORM_VAZIO = {
   price: '',
   is_combo: false,
   categoria_id: '',   // vazio = o app chuta pelo nome
+  catalogo_item_id: '',   // o item do catálogo (2.91); vazio = serviço personalizado
 }
 const NOVA = '__nova__'
 
@@ -32,8 +36,12 @@ export default function AdminServices() {
   const [quem, setQuem] = useState([])                 // no formulário: quem faz este serviço
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [editing, setEditing] = useState(null) // null | 'new' | id do serviço
+  const [editing, setEditing] = useState(null) // null | 'escolher' (o catálogo) | 'new' | id do serviço
   const [form, setForm] = useState(FORM_VAZIO)
+  // de onde veio no catálogo (2.91): ['Cabelo', 'Alisamento e alinhamento', 'Progressiva', 'Orgânica'] ou null
+  const [origem, setOrigem] = useState(null)
+  const catalogo = useCatalogo()
+  const [falaSalvo, setFalaSalvo] = useState(null)
   // cada item: { url } (já salva) ou { file, preview } (nova)
   const [imagens, setImagens] = useState([])
   const [comboIds, setComboIds] = useState([])
@@ -135,15 +143,30 @@ export default function AdminServices() {
     setLoading(false)
   }
 
+  // "Adicionar serviço" abre o catálogo assistido; dele sai pré-preenchido
+  // (escolherDoCatalogo) ou em branco (personalizado), no mesmo painel
   function startNew() {
     setForm(FORM_VAZIO)
+    setOrigem(null)
     setImagens([])
     setComboIds([])
     setJuntos([])
     setQuem(profs.length === 1 ? [profs[0].id] : [])   // só uma na casa? já é ela
-    setEditing('new')
+    setEditing('escolher')
     setError('')
   }
+  function escolherDoCatalogo(e) {
+    setForm({ ...FORM_VAZIO, name: e.nome, duration_minutes: e.duracao ?? 60, categoria_id: e.categoria_id ?? '', catalogo_item_id: e.item?.id ?? '' })
+    setOrigem(e.caminho ?? null)
+    setEditing('new')
+  }
+  function personalizado({ categoria_id, nome } = {}) {
+    setForm({ ...FORM_VAZIO, name: nome ?? '', categoria_id: categoria_id ?? '' })
+    setOrigem(null)
+    setEditing('new')
+  }
+  const nServicosDoCatalogo = services.filter((x) => x.catalogo_item_id).length
+  const falaForma = useFalaDaMel(salao?.id, editing === 'new' && origem ? 'cardapio_forma' : null, origem ? { categoria: origem[0], familia: origem[1], servico: origem[2] } : null)
 
   function startEdit(service) {
     setForm({
@@ -153,7 +176,9 @@ export default function AdminServices() {
       price: String(service.price),
       is_combo: Boolean(service.is_combo),
       categoria_id: service.categoria_id ?? '',
+      catalogo_item_id: service.catalogo_item_id ?? '',
     })
+    setOrigem(service.catalogo_item_id ? (catalogo?.porId.get(service.catalogo_item_id)?.caminho ?? null) : null)
     setImagens((service.images ?? []).map((url) => ({ url })))
     setComboIds(service.combo_service_ids ?? [])
     setJuntos(juntosTodos.filter((j) => j.service_id === service.id).map((j) => j.sugerido_id))
@@ -166,6 +191,7 @@ export default function AdminServices() {
     imagens.forEach((img) => img.preview && URL.revokeObjectURL(img.preview))
     setEditing(null)
     setForm(FORM_VAZIO)
+    setOrigem(null)
     setImagens([])
     setComboIds([])
     setJuntos([])
@@ -313,6 +339,7 @@ export default function AdminServices() {
         is_combo: form.is_combo,
         combo_service_ids: form.is_combo ? comboIds : [],
         categoria_id: form.categoria_id || null,
+        catalogo_item_id: form.catalogo_item_id || null,
       }
 
       const antigas =
@@ -353,8 +380,12 @@ export default function AdminServices() {
       }
 
       await limparImagensRemovidas(antigas, images)
+      const veioDoCatalogo = editing === 'new' && Boolean(form.catalogo_item_id)
+      const nomeSalvo = payload.name
       cancelEdit()
       fetchServices()
+      // a Mel comemora o serviço que veio do catálogo (frase da biblioteca; sem frase, nada)
+      if (veioDoCatalogo) falaDaMel(salao?.id, 'cardapio_salvo', { servico: nomeSalvo, n: nServicosDoCatalogo + 1 }).then((f) => { if (f) { setFalaSalvo(f); setTimeout(() => setFalaSalvo(null), 9000) } })
     } catch (err) {
       setError(err.message)
     } finally {
@@ -413,19 +444,36 @@ export default function AdminServices() {
             {services.some((s) => s.destaque) ? ` · ${services.filter((s) => s.destaque).length} em destaque na home` : ' · toque na ★ para destacar na home das clientes'}
           </p>
         </div>
+        {editing === null && <button type="button" className="btn btn-primary cardapio-abrir" onClick={startNew}>+ Adicionar serviço</button>}
       </div>
 
       {error && editing === null && <div className="alert alert-error">{error}</div>}
+      <MelFala fala={falaSalvo} className="cardapio-mel-pagina" />
 
-      {editing !== null && (
+      {editing === 'escolher' && (
+        <Portal><div className="modal-fundo" onClick={cancelEdit}>
+          <div className="card modal-caixa cardapio-caixa" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Adicionar serviço">
+            <CadastroDeServico salaoId={salao?.id} categoriasEscolhidas={salao?.categorias_escolhidas ?? []} nServicos={services.length} onEscolher={escolherDoCatalogo} onPersonalizado={personalizado} onFechar={cancelEdit} />
+          </div>
+        </div></Portal>
+      )}
+      {editing !== null && editing !== 'escolher' && (
         <Portal><div className="modal-fundo" onClick={cancelEdit}>
         <form className="card modal-caixa modal-form form service-form" onSubmit={handleSave} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={editing === 'new' ? 'Novo serviço' : 'Editar serviço'}>
           <button type="button" className="modal-fechar" onClick={cancelEdit} aria-label="Fechar">×</button>
-          <h3>{editing === 'new' ? 'Novo serviço' : 'Editar serviço'}</h3>
+          <h3>{editing === 'new' ? (origem ? 'Quase lá' : 'Novo serviço') : 'Editar serviço'}</h3>
+          {origem && (
+            <div className="cardapio-origem">
+              <span>{origem.map((p, i) => <span key={i}>{i > 0 && <ChevronIcon />}{p}</span>)}</span>
+              {editing === 'new' && <button type="button" className="plat-link" onClick={() => setEditing('escolher')}>Trocar</button>}
+            </div>
+          )}
+          {editing === 'new' && origem && <p className="muted cardapio-forma-dica">Nome e duração já vieram do catálogo. Ajuste do seu jeito e coloque o preço.</p>}
+          <MelFala fala={falaForma} />
           {error && <div className="alert alert-error">{error}</div>}
 
           <label>
-            Nome
+            Nome que suas clientes verão
             <input
               type="text"
               value={form.name}
@@ -445,7 +493,7 @@ export default function AdminServices() {
             />
           </label>
 
-          <label>
+          {!(editing === 'new' && origem) && <label>
             Categoria
             <select
               value={form.categoria_id}
@@ -456,7 +504,7 @@ export default function AdminServices() {
                 <option key={c.id} value={c.id}>{c.nome}{c.salon_id ? ' · do salão' : ''}</option>
               ))}
             </select>
-          </label>
+          </label>}
           <div className="campo-quem-faz">
             <span className="campo-quem-faz-rotulo">Quem faz</span>
             {profs.length === 0 ? (
@@ -471,7 +519,7 @@ export default function AdminServices() {
             )}
             {profs.length > 0 && quem.length === 0 && <span className="campo-dica campo-dica-alerta">Sem ninguém marcado, o serviço fica só aqui: não entra na categoria nem no marcar da cliente.</span>}
           </div>
-          <div className="cat-nova">
+          {!(editing === 'new' && origem) && <div className="cat-nova">
             <input
               value={novaCat}
               onChange={(e) => setNovaCat(e.target.value)}
@@ -480,7 +528,7 @@ export default function AdminServices() {
               onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); criarCategoria() } }}
             />
             <button type="button" className="btn btn-ghost btn-mini" onClick={criarCategoria} disabled={!novaCat.trim()}>+ Criar</button>
-          </div>
+          </div>}
 
           <div className="combo-toggle">
             <label className="switch">
@@ -635,11 +683,11 @@ export default function AdminServices() {
       ) : services.length === 0 ? (
         <div className="card empty-state">
           <p>Nenhum serviço cadastrado ainda.</p>
-          <p className="muted">Toque no botão + para começar.</p>
+          <p className="muted">Toque em “Adicionar serviço”: a MIMO sugere o que você oferece e você só ajusta nome, duração e preço.</p>
         </div>
       ) : (
         <div className="service-list">
-          {agruparPorCategoria(services, cats).map((g, _, todos) => (
+          {agruparPorCategoria(services, [...catsTodas, ...catsExtra.filter((c) => !c.apagada)]).map((g, _, todos) => (
           <section key={g.id || 'outros'} className="cat-grupo">
           {todos.length > 1 && <h3 className="cat-titulo">{g.nome} <span className="muted">{g.itens.length}</span></h3>}
           {g.itens.map((s) => (
@@ -658,6 +706,7 @@ export default function AdminServices() {
                 <span className="service-nome">
                   <span className="nome-txt">{s.name}</span>
                   {s.is_combo && <span className="badge badge-combo">combo</span>}
+                  {s.catalogo_item_id && catalogo?.porId.get(s.catalogo_item_id) && <span className="badge badge-catalogo" title={catalogo.porId.get(s.catalogo_item_id).caminho.join(' › ')}>{catalogo.porId.get(s.catalogo_item_id).caminho.slice(1).join(' › ')}</span>}
                 </span>
                 <span className="muted service-meta">
                   {labelDuracao(s)} · {formatPreco(s.price)}

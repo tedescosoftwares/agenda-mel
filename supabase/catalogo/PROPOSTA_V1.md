@@ -1,7 +1,28 @@
 # Catálogo de Serviços — proposta técnica da V1
 
-Estado: **proposta para revisão**. Nada disto está em migration ainda. A semente
-(`catalogo_v1.json`) só vira migration depois de aprovada.
+Estado: **implementado na 2.91** (migrations 143 e 144, `CadastroDeServico`,
+busca no app, Mel no cadastro). Este texto é a proposta aprovada; o que
+mudou na implementação está marcado em "Como ficou".
+
+## Como ficou (2.91)
+
+- `supabase/143_catalogo.sql`: estrutura (categorias com slug/descrição/
+  aliases/ativa, renomeações, Cílios e Micropigmentação, Barba inativa,
+  divisão segura, `catalogo_itens` com dois índices parciais de slug,
+  trigger de hierarquia, proteção contra apagar item usado, RLS, view
+  `catalogo_visivel` com visibilidade efetiva, `catalogo_semear(jsonb)`,
+  `services.catalogo_item_id` com `on delete restrict`, 7 momentos da Mel).
+- `supabase/144_catalogo_seed.sql`: gerada por `gerar_catalogo.py --sql`
+  (10/51/252/161), idempotente, preserva `ativa` e `imagem_url` editados.
+- `supabase/ensaio_catalogo.sql`: os testes da seção 52 da spec.
+- App: `src/lib/catalogoBusca.js` (índice, busca, sugestões; puro),
+  `src/lib/catalogo.js` (cache por sessão), `src/components/CadastroDeServico.jsx`
+  (inicio → categoria → família → serviço → técnica opcional → formulário de
+  sempre, pré-preenchido; personalizado sempre à mão), usado em Serviços e no
+  passo de serviços do onboarding.
+- Mel: a função `mel` ganhou o modo direto `{ salao, momento, dados }`.
+- Fica para depois (seção 50 da spec): variações, "Ligar ao catálogo",
+  ranking por uso, pg_trgm, tela da Plataforma, imagens por item.
 
 ## 0. Posicionamento
 

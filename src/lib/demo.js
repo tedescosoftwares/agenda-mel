@@ -12,6 +12,8 @@
 
 import { ARTIGOS, CATEGORIAS as CATS_BLOG, minutosDeLeitura } from '../conteudo/artigos'
 import { PAGINAS_SEO, PAGINAS_INSTITUCIONAIS } from '../conteudo/paginasSeo'
+import CATALOGO_V1 from '../../supabase/catalogo/catalogo_v1.json'
+import { arvoreParaLinhas } from './catalogoBusca'
 
 const hoje = new Date()
 const iso = (d) => d.toISOString().slice(0, 10)
@@ -57,14 +59,15 @@ const profissionais = [
   { id: 'pr5', user_id: null, name: 'Carla Mendes', slug: 'carla-mendes', phone: '(11) 98765-4321', especialidade: 'Cabeleireira', photo_url: null, active: true, salon_id: SALAO, aceite_manual: true, vinculo: 'parceira', situacao: 'configurada', cota_pct: 30, permissoes: { confirmar: true, bloquear: true, clientes: 'proprias', servicos: false, ver_repasse: true }, token: 'demo0123456789ab' },
 ].map((p) => ({ situacao: p.user_id ? 'ativa' : 'configurada', vinculo: 'funcionaria', permissoes: { confirmar: true, bloquear: true, clientes: 'salao', servicos: true, ver_repasse: true }, usa_horario_salao: true, ...p }))
 
+// as categorias da plataforma como ficam depois da 143 (slug, descrição, ativa; Barba inativa) e uma do salão
 const CATS = [
-  { id: 'ct1', salon_id: null, nome: 'Cabelo', ordem: 10 }, { id: 'ct2', salon_id: null, nome: 'Unhas', ordem: 20 },
-  { id: 'ct3', salon_id: null, nome: 'Sobrancelhas e cílios', ordem: 30 }, { id: 'ct4', salon_id: null, nome: 'Rosto', ordem: 40 },
-  { id: 'ct5', salon_id: null, nome: 'Corpo', ordem: 50 }, { id: 'ct6', salon_id: null, nome: 'Depilação', ordem: 60 },
-  { id: 'ct7', salon_id: null, nome: 'Maquiagem', ordem: 70 }, { id: 'ct8', salon_id: null, nome: 'Massagem e bem-estar', ordem: 80 },
-  { id: 'ct9', salon_id: null, nome: 'Barba', ordem: 90 }, { id: 'ct10', salon_id: null, nome: 'Outros', ordem: 999 },
+  ...CATALOGO_V1.categorias.map((c, i) => ({ id: 'ct' + (i + 1), salon_id: null, nome: c.nome, slug: c.slug, descricao: c.descricao, aliases: c.aliases, ordem: c.ordem, ativa: true })),
+  { id: 'ct98', salon_id: null, nome: 'Barba', slug: 'barba', descricao: null, aliases: [], ordem: 900, ativa: false },
+  { id: 'ct99', salon_id: null, nome: 'Outros', slug: 'outros', descricao: null, aliases: [], ordem: 999, ativa: true },
   { id: 'ct11', salon_id: SALAO, nome: 'Noivas', ordem: 500 },
 ]
+// a árvore do catálogo (catalogo_visivel) montada do mesmo JSON que semeia o banco
+const CATALOGO_LINHAS = arvoreParaLinhas(CATALOGO_V1, CATS)
 const servicos = [
   { id: 'sv1', name: 'Manicure', description: 'Cutilagem, lixamento e esmaltação.', duration_minutes: 45, price: 35, categoria_id: 'ct2', active: true, images: [], salon_id: SALAO, is_combo: false, return_days: 15 },
   { id: 'sv2', name: 'Manicure + Pedicure', description: 'O combo completo.', duration_minutes: 90, price: 85, categoria_id: 'ct2', destaque: true, active: true, images: [], salon_id: SALAO, is_combo: true, combo_service_ids: ['sv1', 'sv3'], return_days: 15 },
@@ -73,7 +76,7 @@ const servicos = [
   { id: 'sv5', name: 'Esmaltação em gel', description: 'Dura até 3 semanas.', duration_minutes: 60, price: 75, categoria_id: 'ct2', destaque: true, active: true, images: [], salon_id: SALAO, is_combo: false, return_days: 21 },
   { id: 'sv6', name: 'Corte feminino', description: '', duration_minutes: 60, price: 80, categoria_id: 'ct1', active: true, images: [], salon_id: SALAO, is_combo: false, return_days: 45 },
   { id: 'sv7', name: 'Escova', description: '', duration_minutes: 45, price: 60, categoria_id: 'ct1', active: true, images: [], salon_id: SALAO, is_combo: false, return_days: 10 },
-  { id: 'sv8', name: 'Design de sobrancelhas', description: '', duration_minutes: 30, price: 45, categoria_id: 'ct3', destaque: true, active: true, images: [], salon_id: SALAO, is_combo: false, return_days: 20 },
+  { id: 'sv8', name: 'Design de sobrancelhas', description: '', duration_minutes: 30, price: 45, categoria_id: 'ct4', catalogo_item_id: 'ci-sobrancelhas-design-design-de-sobrancelhas', destaque: true, active: true, images: [], salon_id: SALAO, is_combo: false, return_days: 20 },
 ]
 
 const vinculos = [
@@ -168,6 +171,8 @@ const TABELAS = {
   profiles: clientes,
   professionals: profissionais,
   services: servicos,
+  catalogo_visivel: CATALOGO_LINHAS,
+  catalogo_itens: CATALOGO_LINHAS,
   // a página do serviço pede `professionals (…)` aninhado; sem isso "Quem faz" saía vazio na demo
   professional_services: vinculos.map((v) => ({ ...v, services: servicos.find((s) => s.id === v.service_id), professionals: profissionais.find((p) => p.id === v.professional_id) })),
   professional_hours: [1, 2, 3, 4, 5, 6].map((weekday) => ({ professional_id: 'pr1', weekday, open: weekday !== 6 || true, start_time: '09:00:00', end_time: weekday === 6 ? '14:00:00' : '18:00:00' })).concat([{ professional_id: 'pr1', weekday: 0, open: false, start_time: '09:00:00', end_time: '18:00:00' }]),
@@ -192,7 +197,7 @@ const TABELAS = {
   servicos_juntos: [{ service_id: 'sv1', sugerido_id: 'sv3' }],
   parcerias: [],
   comandas: [{ id: 'cmv', appointment_id: 'ap3', appointment_ids: ['ap3'], status: 'fechada' }],
-  salons: [{ id: SALAO, name: 'Studio Mel', slug: 'studio-mel', subdominio: DEMO_ENDERECO, aceite_modo: 'casa', minutos_para_aceitar: 60, ao_expirar: 'confirma', ativado_em: DEMO_ATIVADO ? '2025-01-10' : null, onboarding_passo: DEMO_PASSO ?? 1, onboarding_concluido_em: (typeof localStorage !== 'undefined' && localStorage.getItem('mimo-demo-onboarding') === '1') ? null : '2025-01-10', codigo_equipe: 'EQ7P2M', owner_id: 'a1', email: 'contato@studiomel.com.br', uf: 'SP', bairro: 'Gonzaga', cnpj: '12.345.678/0001-95', responsavel_nome: 'Mel Tedesco', antecedencia_min_minutos: 60, permite_remarcar: true, sinal_modo: 'fixo', sinal_fixo_cents: 5000, equipe_prevista: 4, pagamento_modo: 'opcional', sinal_pct: 50, politica_cancelamento: 'moderada', app_url: 'https://mimo.app', city: 'Santos', address: 'Rua das Flores, 120 · Gonzaga', cep: '11060300', lat: -23.9668, lng: -46.3325, codigo: 'MEL2K5', tipo: 'salao', descricao: 'Um cantinho no Gonzaga para você se cuidar com calma: café, música baixa e uma equipe que capricha em cada detalhe.', fotos: [PROMO_IMG('#FF7BAA', '#AA4CFF', ''), PROMO_IMG('#FFC2D8', '#FF2D7A', '')], logo_url: null, phone: '(13) 3333-0000', whatsapp: '(13) 99120-3410', instagram: 'studiomel' }],
+  salons: [{ id: SALAO, name: 'Studio Mel', slug: 'studio-mel', subdominio: DEMO_ENDERECO, aceite_modo: 'casa', minutos_para_aceitar: 60, ao_expirar: 'confirma', ativado_em: DEMO_ATIVADO ? '2025-01-10' : null, onboarding_passo: DEMO_PASSO ?? 1, onboarding_concluido_em: (typeof localStorage !== 'undefined' && localStorage.getItem('mimo-demo-onboarding') === '1') ? null : '2025-01-10', codigo_equipe: 'EQ7P2M', owner_id: 'a1', email: 'contato@studiomel.com.br', uf: 'SP', bairro: 'Gonzaga', cnpj: '12.345.678/0001-95', responsavel_nome: 'Mel Tedesco', antecedencia_min_minutos: 60, permite_remarcar: true, sinal_modo: 'fixo', sinal_fixo_cents: 5000, equipe_prevista: 4, pagamento_modo: 'opcional', sinal_pct: 50, politica_cancelamento: 'moderada', app_url: 'https://mimo.app', city: 'Santos', address: 'Rua das Flores, 120 · Gonzaga', cep: '11060300', lat: -23.9668, lng: -46.3325, codigo: 'MEL2K5', tipo: 'salao', categorias_escolhidas: ['ct1', 'ct2', 'ct4'], descricao: 'Um cantinho no Gonzaga para você se cuidar com calma: café, música baixa e uma equipe que capricha em cada detalhe.', fotos: [PROMO_IMG('#FF7BAA', '#AA4CFF', ''), PROMO_IMG('#FFC2D8', '#FF2D7A', '')], logo_url: null, phone: '(13) 3333-0000', whatsapp: '(13) 99120-3410', instagram: 'studiomel' }],
   salon_members: [{ salon_id: SALAO, user_id: 'a1', papel: 'admin', salons: { id: SALAO, name: 'Studio Mel', slug: 'studio-mel', subdominio: DEMO_ENDERECO, codigo: 'MEL2K5', tipo: 'salao', city: 'Santos', owner_id: 'a1', ativado_em: DEMO_ATIVADO ? '2025-01-10' : null, onboarding_passo: DEMO_PASSO ?? 3, onboarding_concluido_em: (typeof localStorage !== 'undefined' && localStorage.getItem('mimo-demo-onboarding') === '1') ? null : '2025-01-10', codigo_equipe: 'EQ7P2M' } }],
   whatsapp_channels: [{ salon_id: SALAO, canal: 'evolution', identificador: '11', ativo: true, usa_ia: true, usa_bot: true, silencio_inicio: '21:00', silencio_fim: '08:00', teto_diario: 300 }],
   affiliate_settings: [{ id: true, ativo: true, platform_fee_bps: 300, affiliate_share_bps: 50 }],
@@ -500,6 +505,13 @@ const RPC = {
   enviar_lembretes: () => 0,
   // a Mel (2.87): estatísticas zeradas (uma frase com uso, para a lista ter número) e importação com a mesma validação do banco, resumida
   mel_marcar: () => ({ ok: true }),
+  // a fala direta do cadastro (2.91): a frase do momento, com os dados no lugar
+  mel_fala_direta: ({ momento, dados }) => {
+    const f = CONTEUDO.mel_frases.find((x) => x.chave === momento && x.ativa)
+    if (!f) return null
+    const texto = f.texto.replace(/\{([^{}]*)\}/g, (_t, k) => (k === 'nome' ? 'Mel' : dados?.[k] != null ? String(dados[k]) : '')).replace(/\s{2,}/g, ' ').trim()
+    return { exibicao: 'demo', chave: momento, categoria: 'configuracao', nivel: 'dispensavel', texto, tom: f.tom, avatar_key: `ensolarado_${f.tom}`, acao: null }
+  },
   mel_pedir_confirmacao: () => ({ enviadas: 2 }),
   mel_ofertar_vaga: () => ({ ok: true, oferta: 'of-demo' }),
   mel_contexto: () => ({}),
@@ -584,6 +596,13 @@ const CONTEUDO = {
     ['contexto_comum', 'clima', 'Contexto comum', 'O dia a dia, quando nada mais se destacou. Use os filtros de clima e período.', ['mel_bubble', 'weather_card'], ['temperatura', 'cidade', 'dia_semana', 'periodo'], { temperatura: '26', cidade: 'Santos', dia_semana: 'quarta', periodo: 'tarde' }],
     ['vespera_feriado', 'calendario', 'Véspera de feriado', 'Amanhã é feriado.', ['mel_bubble', 'weather_card'], ['feriado', 'n'], { feriado: 'Tiradentes', n: '3' }],
     ['primeiro_contato', 'geral', 'Primeiro contato', 'Uma única vez por pessoa.', ['mel_bubble'], ['nome'], { nome: 'Carla' }],
+    ['cardapio_inicio', 'configuracao', 'Cardápio: abriu o cadastro', 'A pessoa abriu "Adicionar serviço".', ['mel_bubble'], ['nome', 'n'], { nome: 'Carla', n: '0' }],
+    ['cardapio_categoria', 'configuracao', 'Cardápio: escolheu a categoria', 'A pessoa escolheu uma categoria.', ['mel_bubble'], ['nome', 'categoria', 'n'], { nome: 'Carla', categoria: 'Cabelo', n: '10' }],
+    ['cardapio_familia', 'configuracao', 'Cardápio: escolheu a família', 'A pessoa escolheu uma família.', ['mel_bubble'], ['nome', 'categoria', 'familia', 'n'], { nome: 'Carla', categoria: 'Cabelo', familia: 'Alisamento e alinhamento', n: '7' }],
+    ['cardapio_sugestoes', 'configuracao', 'Cardápio: olhando as sugestões', 'A pessoa abriu mais sugestões.', ['mel_bubble'], ['nome', 'n'], { nome: 'Carla', n: '8' }],
+    ['cardapio_nao_achou', 'configuracao', 'Cardápio: busca sem resultado', 'A busca não achou nada.', ['mel_bubble'], ['nome', 'servico'], { nome: 'Carla', servico: 'banho de lua' }],
+    ['cardapio_forma', 'configuracao', 'Cardápio: chegou no formulário', 'Serviço escolhido; agora o formulário.', ['mel_bubble'], ['nome', 'categoria', 'familia', 'servico'], { nome: 'Carla', categoria: 'Cabelo', familia: 'Alisamento e alinhamento', servico: 'Progressiva' }],
+    ['cardapio_salvo', 'configuracao', 'Cardápio: serviço salvo', 'Acabou de salvar um serviço do catálogo.', ['mel_bubble'], ['nome', 'servico', 'n'], { nome: 'Carla', servico: 'Progressiva', n: '1' }],
   ].map(([chave, categoria, rotulo, descricao, superficies, placeholders, exemplo], i) => ({ chave, categoria, rotulo, descricao, superficies, placeholders, exemplo, ordem: (i + 1) * 10 })),
   mel_frases: [
     ['proxima_cliente_em_breve', 'mel_bubble', '{cliente} chega às {hora}. Dá tempo de um café.', null, 'feliz', 1, true],
@@ -604,6 +623,13 @@ const CONTEUDO = {
     ['contexto_comum', 'mel_bubble', 'Boa noite! Amanhã já tá se organizando.', null, 'cansada', 1, false],
     ['dia_fechado', 'mel_bubble', '{n} atendidas hoje. Dia encerrado.', null, 'comemorando', 1, true],
     ['primeiro_contato', 'mel_bubble', 'Oi, {nome}! Eu sou a Mel. Vou comentar o dia por aqui.', null, 'feliz', 1, true],
+    ['cardapio_inicio', 'mel_bubble', 'Vamos montar seu cardápio? Eu te ajudo por aqui.', null, 'feliz', 1, true],
+    ['cardapio_categoria', 'mel_bubble', '{categoria} tem bastante coisa. Vamos por partes.', null, 'atenta', 1, true],
+    ['cardapio_familia', 'mel_bubble', 'Separei os serviços de {familia} pra ficar mais fácil.', null, 'feliz', 1, true],
+    ['cardapio_sugestoes', 'mel_bubble', 'Essas são as que mais aparecem por aí. Escolhe o que é seu.', null, 'neutra', 1, true],
+    ['cardapio_nao_achou', 'mel_bubble', 'Não achou? Cria do seu jeito. Eu não vou te prender.', null, 'feliz', 1, true],
+    ['cardapio_forma', 'mel_bubble', 'Agora só falta deixar {servico} com a cara do seu salão.', null, 'feliz', 1, true],
+    ['cardapio_salvo', 'mel_bubble', '{servico} no lugar. A casa tá ganhando forma.', null, 'comemorando', 1, true],
   ].map(([chave, superficie, texto, ramos, tom, peso, ativa], i) => ({ id: 'mf' + (i + 1), chave, superficie, texto, ramos, tipos: null, contextos_clima: chave === 'contexto_comum' ? (i === 13 || i === 14 ? ['nublado'] : null) : null, periodos: i === 15 ? ['noite'] : null, tom, peso, ativa, created_at: '2026-10-01T12:00:00-03:00', updated_at: '2026-10-01T12:00:00-03:00' })),
   redirects: [{ id: 'rd1', from_path: '/cadastro-antigo', to_path: '/comecar', http_status: 301, active: true, created_at: '2026-09-01T12:00:00-03:00' }],
 }

@@ -23,6 +23,9 @@ import { urlDoAmbiente } from '../lib/ambiente'
 import { formatPreco } from '../lib/format'
 import { sugestoesPara, primeiroNome, enviarAcesso } from '../lib/equipe'
 import { categoriasDoSalao } from '../lib/categorias'
+import CadastroDeServico from '../components/CadastroDeServico'
+import { useCatalogo } from '../lib/catalogo'
+import { sugestoes as sugestoesDoCatalogo } from '../lib/catalogoBusca'
 import { REDES, limparRede } from '../components/IconesSociais'
 import ProfissionalDrawer, { CartaoProfissional } from '../components/ProfissionalDrawer'
 import { FraseDeAceite } from '../components/LinkLegal'
@@ -53,7 +56,7 @@ const iniciaisDe = (nome) => (nome || 'ES').split(' ').map((p) => p[0]).join('')
 const UFS = ['AC', 'AL', 'AM', 'AP', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MG', 'MS', 'MT', 'PA', 'PB', 'PE', 'PI', 'PR', 'RJ', 'RN', 'RO', 'RR', 'RS', 'SC', 'SE', 'SP', 'TO']
 const ANTECEDENCIAS = [[0, 'Sem antecedência'], [30, '30 minutos'], [60, '1 hora'], [120, '2 horas'], [240, '4 horas'], [720, '12 horas'], [1440, '24 horas'], [2880, '48 horas']]
 const CANCELAMENTO = [['flexivel', '6 horas'], ['moderada', '12 horas'], ['rigorosa', '24 horas']]
-const CATEGORIAS_SUGERIDAS = ['Cabelo', 'Unhas', 'Estética', 'Massagem', 'Sobrancelhas', 'Maquiagem', 'Depilação', 'Barba', 'Cílios', 'Podologia', 'Noivas', 'Coloração', 'Tranças', 'Micropigmentação', 'Bronzeamento', 'Spa e terapias', 'Estética corporal', 'Infantil']
+const CATEGORIAS_SUGERIDAS = ['Cabelo', 'Unhas', 'Cílios', 'Sobrancelhas', 'Maquiagem', 'Depilação', 'Estética facial', 'Estética corporal', 'Micropigmentação', 'Bem-estar e spa', 'Noivas', 'Tranças', 'Bronzeamento', 'Infantil']
 const SUGESTOES_A_MOSTRA = 6   // as primeiras; o resto fica atrás do "Ver mais"
 // a política que a maioria dos salões usa pra começar; muda depois em Ajustes
 const RECOMENDADO = { antecedencia_min_minutos: 60, politica_cancelamento: 'moderada', permite_remarcar: true, sinal_ligado: false, aceite_modo: 'casa', minutos_para_aceitar: 120 }
@@ -1767,14 +1770,15 @@ function PassoServicos({ s, seguir, voltar, salvando, setErro, autonoma, gravarQ
   const [profs, setProfs] = useState([])
   const [quem, setQuem] = useState({})     // service_id → [professional_id]
   const [filtro, setFiltro] = useState('')
-  const [modal, setModal] = useState(null) // null | 'novo' | serviço | { sugestao }
+  const [modal, setModal] = useState(null) // null | 'catalogo' | serviço | { sugestao }
   const [menu, setMenu] = useState(null)
   const [exemplos, setExemplos] = useState(false)
+  const catalogo = useCatalogo()   // o catálogo assistido (2.91): sugestões e o fluxo "Adicionar serviço"
 
   const carregar = useCallback(async () => {
     const [sv, ct, pr, ps] = await Promise.all([
-      supabase.from('services').select('id, name, description, duration_minutes, price, a_partir, images, categoria_id, active').eq('salon_id', s.id).eq('active', true).order('name'),
-      supabase.from('categorias_de_servico').select('id, salon_id, nome, ordem').or(`salon_id.eq.${s.id},salon_id.is.null`).order('ordem'),
+      supabase.from('services').select('id, name, description, duration_minutes, price, a_partir, images, categoria_id, active, catalogo_item_id').eq('salon_id', s.id).eq('active', true).order('name'),
+      supabase.from('categorias_de_servico').select('id, salon_id, nome, ordem, slug, ativa').or(`salon_id.eq.${s.id},salon_id.is.null`).order('ordem'),
       supabase.from('professionals').select('id, name, user_id').eq('salon_id', s.id).eq('active', true).order('name'),
       supabase.from('professional_services').select('professional_id, service_id'),
     ])
@@ -1800,13 +1804,21 @@ function PassoServicos({ s, seguir, voltar, salvando, setErro, autonoma, gravarQ
 
   const nomeCat = (id) => cats.find((c) => c.id === id)?.nome ?? 'Outros'
   const lista = (servicos ?? []).filter((x) => !filtro || x.categoria_id === filtro)
-  // sugestões rápidas pelas categorias do salão (nome + duração de referência; preço nunca é inventado)
+  // sugestões rápidas: do catálogo (prioridade, sem habilitação, pelas categorias
+  // escolhidas); sem catálogo, a lista antiga por nome. Preço nunca é inventado.
   const sugestoes = useMemo(() => {
     const vistos = new Set((servicos ?? []).map((x) => x.name.toLowerCase()))
+    if (catalogo && catalogo.categorias.length) {
+      return sugestoesDoCatalogo(catalogo, { categoriasEscolhidas: escolhidas, limite: 14 }).filter((x) => !vistos.has(x.nome.toLowerCase()))
+        .map((x) => ({ nome: x.nome, min: x.duracao_sugerida ?? 60, categoria_id: x.categoria_id, catalogo_item_id: x.id, caminho: x.caminho }))
+    }
     const out = []
     for (const c of (minhasCats.length ? minhasCats : cats)) for (const [nome, min] of sugestoesPara(c.nome)) if (!vistos.has(nome.toLowerCase()) && !out.some((o) => o.nome === nome)) out.push({ nome, min, categoria_id: c.id })
     return out.slice(0, 14)
-  }, [cats, minhasCats, servicos])
+  }, [cats, minhasCats, servicos, catalogo, escolhidas])
+  // do catálogo assistido para o formulário: nome, duração e categoria já no lugar
+  function escolherDoCatalogo(e) { setModal({ sugestao: { nome: e.nome, min: e.duracao ?? 60, categoria_id: e.categoria_id ?? '', catalogo_item_id: e.item?.id ?? null, caminho: e.caminho } }) }
+  function personalizado({ categoria_id, nome } = {}) { setModal({ sugestao: { nome: nome ?? '', min: 60, categoria_id: categoria_id ?? '', catalogo_item_id: null, personalizado: true } }) }
   async function remover(sv) {
     const { error } = await supabase.from('services').update({ active: false }).eq('id', sv.id)
     if (error) { setErro(error.message); return }
@@ -1817,7 +1829,7 @@ function PassoServicos({ s, seguir, voltar, salvando, setErro, autonoma, gravarQ
     <>
       <div className="ob-titulo-linha">
         <div><h1 className="ob-titulo">{vazio ? 'Cadastre seus primeiros serviços' : 'Seus serviços'}</h1><p className="ob-sub">{vazio ? 'Comece com os 3 a 5 serviços mais procurados. Depois você pode adicionar quantos quiser.' : 'Defina preço e duração para a MIMO mostrar os horários disponíveis corretamente.'}</p></div>
-        {!vazio && <button type="button" className="btn btn-secondary ob-add" onClick={() => setModal('novo')}><Plus size={15} /> Adicionar serviço</button>}
+        {!vazio && <button type="button" className="btn btn-secondary ob-add" onClick={() => setModal('catalogo')}><Plus size={15} /> Adicionar serviço</button>}
       </div>
       <div className="ob-card ob-card-cats">
           <strong className="ob-card-titulo">Categorias dos serviços</strong>
@@ -1826,7 +1838,7 @@ function PassoServicos({ s, seguir, voltar, salvando, setErro, autonoma, gravarQ
             const busca = novaCat.trim()
             const igual = (a, b) => a.trim().toLowerCase() === b.trim().toLowerCase()
             const existente = busca ? catsTodas.find((c) => igual(c.nome, busca)) : null
-            const padrao = catsTodas.filter((c) => !c.salon_id)
+            const padrao = catsTodas.filter((c) => !c.salon_id && (c.ativa !== false || escolhidas.includes(c.id)))
             const usadas = padrao.filter((c) => escolhidas.includes(c.id))
             // sugestões: as da plataforma ainda não escolhidas e os nomes da lista que não existem
             const sugeridas = [
@@ -1871,7 +1883,7 @@ function PassoServicos({ s, seguir, voltar, salvando, setErro, autonoma, gravarQ
       )}
       <div className="ob-card ob-tabela-card">
         {!servicos ? <p className="muted">Carregando…</p> : lista.length === 0 ? (
-          <div className="ob-vazio"><Sparkles size={22} /><strong>{vazio ? 'Nenhum serviço ainda' : 'Nada nessa categoria'}</strong><span className="muted">Nome, duração e preço. Dá pra mudar depois, e a cliente só vê o que está aqui.</span><span className="ob-vazio-acoes"><button type="button" className="btn btn-primary" onClick={() => setModal('novo')}><Plus size={15} /> Adicionar serviço</button>{sugestoes.length > 0 && <button type="button" className="btn btn-ghost" onClick={() => setExemplos((x) => !x)}>{exemplos ? 'Esconder exemplos' : 'Ver exemplos'}</button>}</span></div>
+          <div className="ob-vazio"><Sparkles size={22} /><strong>{vazio ? 'Nenhum serviço ainda' : 'Nada nessa categoria'}</strong><span className="muted">Nome, duração e preço. Dá pra mudar depois, e a cliente só vê o que está aqui.</span><span className="ob-vazio-acoes"><button type="button" className="btn btn-primary" onClick={() => setModal('catalogo')}><Plus size={15} /> Adicionar serviço</button>{sugestoes.length > 0 && <button type="button" className="btn btn-ghost" onClick={() => setExemplos((x) => !x)}>{exemplos ? 'Esconder exemplos' : 'Ver exemplos'}</button>}</span></div>
         ) : (
           <table className="ob-tabela">
             <thead><tr><th></th><th>Serviço</th><th>Categoria</th><th>Duração</th><th>Preço</th><th>Profissional</th><th></th></tr></thead>
@@ -1904,7 +1916,14 @@ function PassoServicos({ s, seguir, voltar, salvando, setErro, autonoma, gravarQ
           <div className="chips">{sugestoes.map((x) => <button key={x.nome} type="button" className="chip" onClick={() => setModal({ sugestao: x })}><Plus size={12} /> {x.nome}</button>)}</div>
         </div>
       )}
-      {modal && <ModalServico salaoId={s.id} servico={modal === 'novo' || modal.sugestao ? null : modal} sugestao={modal.sugestao} cats={cats} profs={profs} quem={modal === 'novo' || modal.sugestao ? [] : (quem[modal.id] ?? [])} onFechar={() => setModal(null)} onSalvo={() => { setModal(null); carregar() }} />}
+      {modal === 'catalogo' && (
+        <div className="modal-fundo ob-modal-fundo" onClick={() => setModal(null)}>
+          <div className="modal-caixa ob-modal cardapio-caixa" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Adicionar serviço">
+            <CadastroDeServico salaoId={s.id} categoriasEscolhidas={escolhidas} nServicos={(servicos ?? []).length} onEscolher={escolherDoCatalogo} onPersonalizado={personalizado} onFechar={() => setModal(null)} />
+          </div>
+        </div>
+      )}
+      {modal && modal !== 'catalogo' && <ModalServico salaoId={s.id} servico={modal.sugestao ? null : modal} sugestao={modal.sugestao} cats={cats} profs={profs} quem={modal.sugestao ? [] : (quem[modal.id] ?? [])} onFechar={() => setModal(null)} onSalvo={() => { setModal(null); carregar() }} />}
       <Rodape voltar={voltar} avancar={() => seguir({})} salvando={salvando} />
     </>
   )
@@ -1932,7 +1951,7 @@ function ModalServico({ salaoId, servico, sugestao, cats, profs, quem, onFechar,
         if (error) throw new Error('Não deu para subir a foto: ' + error.message)
         images = [supabase.storage.from('service-images').getPublicUrl(path).data.publicUrl]
       }
-      const payload = { name: f.name.trim(), duration_minutes: Number(f.duration_minutes) || 30, price: preco, images, categoria_id: f.categoria_id || null, a_partir: f.a_partir, description: f.description.trim() || null }
+      const payload = { name: f.name.trim(), duration_minutes: Number(f.duration_minutes) || 30, price: preco, images, categoria_id: f.categoria_id || null, a_partir: f.a_partir, description: f.description.trim() || null, catalogo_item_id: servico ? (servico.catalogo_item_id ?? null) : (sugestao?.catalogo_item_id ?? null) }
       const q = servico ? supabase.from('services').update(payload).eq('id', servico.id).select('id').maybeSingle() : supabase.from('services').insert({ ...payload, salon_id: salaoId }).select('id').maybeSingle()
       const { data, error } = await q
       if (error) throw new Error(error.message)
@@ -1949,13 +1968,14 @@ function ModalServico({ salaoId, servico, sugestao, cats, profs, quem, onFechar,
       <div className="modal-caixa ob-modal" onClick={(e) => e.stopPropagation()}>
         <button type="button" className="modal-fechar" onClick={onFechar} aria-label="Fechar"><X size={18} /></button>
         <h3>{servico ? 'Editar serviço' : 'Adicionar serviço'}</h3>
-        {sugestao && <p className="muted">Nome e categoria já preenchidos. Confira a duração sugerida e defina o seu preço.</p>}
+        {sugestao?.caminho && <div className="cardapio-origem"><span>{sugestao.caminho.map((p, i) => <span key={i}>{i > 0 && ' › '}{p}</span>)}</span></div>}
+        {sugestao && !sugestao.personalizado && <p className="muted">Nome, categoria e duração já vieram do catálogo. Ajuste do seu jeito e defina o seu preço.</p>}
         {erro && <div className="alert alert-error">{erro}</div>}
         <div className="ob-modal-corpo">
           <button type="button" className={'ob-foto-serv' + (foto ? ' com' : '')} onClick={() => arq.current?.click()}>{foto ? <img src={foto.preview ?? foto.url} alt="" /> : <><Camera size={18} /><span>Foto</span></>}</button>
           <input ref={arq} type="file" accept="image/*" hidden onChange={trocarFoto} />
           <div className="ob-form">
-            <label>Nome do serviço<input value={f.name} onChange={m('name')} placeholder="Corte feminino" autoFocus /></label>
+            <label>Nome do serviço<input value={f.name} onChange={m('name')} placeholder="Progressiva" autoFocus /></label>
             <label>Categoria<select value={f.categoria_id} onChange={m('categoria_id')}><option value="">Outros</option>{cats.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}</select></label>
             <div className="ob-linha-2">
               <label>Duração (min)<input type="number" min="5" step="5" value={f.duration_minutes} onChange={m('duration_minutes')} /><small className="muted">A agenda usa a duração para calcular os horários disponíveis.</small></label>

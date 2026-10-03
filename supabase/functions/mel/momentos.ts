@@ -77,6 +77,27 @@ function dadosConfig(c: Ctx, extra: Dados = {}): Dados {
   return { nome: c.pessoa.nome ?? '', faltam: lista.length, faltam_lista: porExtenso(lista), ...extra }
 }
 
+// Momentos diretos (2.91): o app já sabe o que está acontecendo (os passos
+// do cadastro de serviço) e pede a fala pelo nome. Não passam por avaliar():
+// só pela escolha da frase na biblioteca. Aqui, quais existem e que dados
+// cada um aceita (o resto é descartado; tudo vira texto curto).
+export const MOMENTOS_DIRETOS: Record<string, string[]> = {
+  cardapio_inicio: ['n'],
+  cardapio_categoria: ['categoria', 'n'],
+  cardapio_familia: ['categoria', 'familia', 'n'],
+  cardapio_sugestoes: ['n'],
+  cardapio_nao_achou: ['servico'],
+  cardapio_forma: ['categoria', 'familia', 'servico'],
+  cardapio_salvo: ['servico', 'n'],
+}
+export function dadosDiretos(momento: string, dados: unknown): Record<string, string> {
+  const permitidos = MOMENTOS_DIRETOS[momento] ?? []
+  const out: Record<string, string> = {}
+  const d = (dados && typeof dados === 'object' ? dados : {}) as Record<string, unknown>
+  for (const k of permitidos) if (d[k] != null && d[k] !== '') out[k] = String(d[k]).slice(0, 80)
+  return out
+}
+
 export const MOMENTOS: Momento[] = [
   // ------------------------------------------------------------ operacional
   {

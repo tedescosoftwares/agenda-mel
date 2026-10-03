@@ -6,6 +6,10 @@
 //         → avatar_key + ação semântica
 //           → registra em mel_exibicoes (snapshot do template)
 //
+// Modo direto (2.91): POST { salao, momento: 'cardapio_categoria', dados: { categoria: 'Cabelo' } }
+// → { bubble } com a frase daquele momento (mesma escolha, mesmo registro),
+// sem disputar prioridade com o resto. Sem frase cadastrada, bubble é null.
+//
 // Chamada pelo app logado: POST { salao: uuid, tour_feito?: boolean, tela?: '/admin/servicos' }. Resposta:
 //   { bubble: { exibicao, chave, categoria, nivel, texto, tom, avatar_key, acao } | null,
 //     card:   { exibicao, chave, texto } | null,
@@ -15,7 +19,7 @@
 // de sempre.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { avaliar, pendencias, type Ctx, type Vencedor } from './momentos.ts'
+import { avaliar, pendencias, MOMENTOS_DIRETOS, dadosDiretos, type Ctx, type Vencedor } from './momentos.ts'
 
 const URL_SUPABASE = Deno.env.get('SUPABASE_URL') ?? ''
 const CHAVE_ANON = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
@@ -66,19 +70,42 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return json({ ok: true })
   const auth = req.headers.get('Authorization') ?? ''
   if (!auth) return json({ erro: 'não autorizado' }, 401)
-  let corpo: { salao?: string; tour_feito?: boolean; tela?: string } = {}
+  let corpo: { salao?: string; tour_feito?: boolean; tela?: string; momento?: string; dados?: unknown } = {}
   try { corpo = await req.json() } catch { /* vazio */ }
   const salao = String(corpo.salao ?? '')
   if (!salao) return json({ erro: 'salao obrigatório' }, 400)
 
   // os fatos, como a pessoa logada (a RPC filtra pelo papel dela)
   const quem = createClient(URL_SUPABASE, CHAVE_ANON, { global: { headers: { Authorization: auth } }, auth: { persistSession: false } })
+  const servico = createClient(URL_SUPABASE, CHAVE_SERVICO, { auth: { persistSession: false } })
+
+  // ---- modo direto: o app nomeia o momento ----
+  if (corpo.momento) {
+    const momento = String(corpo.momento)
+    if (!MOMENTOS_DIRETOS[momento]) return json({ erro: 'momento desconhecido' }, 400)
+    const [{ data: ctx, error }, { data: frases }] = await Promise.all([
+      quem.rpc('mel_contexto', { salao }),
+      servico.from('mel_frases').select('id, chave, superficie, texto, ramos, tipos, contextos_clima, periodos, tom, peso').eq('ativa', true).eq('chave', momento).eq('superficie', 'mel_bubble'),
+    ])
+    if (error) return json({ erro: error.message }, 400)
+    const c = ctx as Ctx
+    const f = escolherFrase((frases ?? []) as Frase[], momento, 'mel_bubble', c)
+    if (!f) return json({ bubble: null })
+    const dados = dadosDiretos(momento, corpo.dados)
+    const texto = preencher(f.texto, { ...dados, nome: c.pessoa.nome ?? '' })
+    const registro = {
+      salon_id: salao, user_id: c.pessoa.user_id, chave: momento, identidade: [momento, dados.categoria, dados.familia, dados.servico].filter(Boolean).join(':').slice(0, 160),
+      superficie: 'mel_bubble', frase_id: f.id, texto_template_snapshot: f.texto, avatar_key: avatarKey(c, f.tom), acao: null,
+    }
+    const { data: gravado } = await servico.from('mel_exibicoes').insert(registro).select('id').maybeSingle()
+    return json({ bubble: { exibicao: gravado?.id ?? null, chave: momento, categoria: 'configuracao', nivel: 'dispensavel', texto, tom: f.tom, avatar_key: registro.avatar_key, acao: null } })
+  }
+
   const [{ data: ctx, error }, { data: passos }] = await Promise.all([quem.rpc('mel_contexto', { salao }), quem.rpc('primeiros_passos', { salao })])
   if (error) return json({ erro: error.message }, 400)
   const c = { ...(ctx as Ctx), configuracao: passos ?? null, extra: { tour_feito: corpo.tour_feito, tela: String(corpo.tela ?? '').split('?')[0] } } as Ctx
 
   // a biblioteca (o motor lê tudo; RLS é para a Plataforma)
-  const servico = createClient(URL_SUPABASE, CHAVE_SERVICO, { auth: { persistSession: false } })
   const { data: frases } = await servico.from('mel_frases').select('id, chave, superficie, texto, ramos, tipos, contextos_clima, periodos, tom, peso').eq('ativa', true)
   const biblioteca = (frases ?? []) as Frase[]
 

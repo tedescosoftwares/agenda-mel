@@ -1,6 +1,6 @@
 // deno test supabase/functions/mel/momentos_test.ts
 import { assertEquals, assert } from 'https://deno.land/std@0.224.0/assert/mod.ts'
-import { avaliar, pendencias, porExtenso, type Ctx } from './momentos.ts'
+import { avaliar, pendencias, porExtenso, MOMENTOS, MOMENTOS_DIRETOS, dadosDiretos, type Ctx } from './momentos.ts'
 
 function ctx(extra: Partial<Ctx> & { hoje?: Record<string, unknown>; operacional?: Record<string, unknown>; amanha?: Record<string, unknown> } = {}): Ctx {
   const base: Ctx = {
@@ -130,4 +130,16 @@ Deno.test('o que falta: lista na ordem dos passos e por extenso', () => {
   assertEquals(porExtenso(pendencias(c)), 'serviços, profissionais, horários e avisos no celular')
   const g = avaliar(ctx({ configuracao: { servicos: 0, equipe: 0, equipe_pendente: 0, agendamentos: 0, avisos: true, horarios: true }, extra: { tour_feito: true, tela: '/admin/servicos' } }), 'mel_bubble')[0]
   assertEquals(g.dados.faltam_lista, 'serviços e profissionais')
+})
+
+Deno.test('momentos diretos do cardápio: sete, fora do motor, com dados filtrados e curtos', () => {
+  const chaves = Object.keys(MOMENTOS_DIRETOS)
+  assertEquals(chaves.length, 7)
+  assert(chaves.every((k) => k.startsWith('cardapio_')))
+  assert(chaves.every((k) => !MOMENTOS.some((m) => m.chave === k)), 'momento direto não pode estar no motor')
+  const d = dadosDiretos('cardapio_familia', { categoria: 'Cabelo', familia: 'x'.repeat(200), servico: 'não vale aqui', n: 7, lixo: { a: 1 } })
+  assertEquals(Object.keys(d).sort(), ['categoria', 'familia', 'n'])
+  assertEquals(d.familia.length, 80)
+  assertEquals(d.n, '7')
+  assertEquals(dadosDiretos('nao_existe', { n: 1 }), {})
 })

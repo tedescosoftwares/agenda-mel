@@ -10,7 +10,7 @@ export function useCategorias() {
   const [cats, setCats] = useState([])
   useEffect(() => {
     let vivo = true
-    supabase.from('categorias_de_servico').select('id, salon_id, nome, ordem, slug, descricao, ativa').order('ordem').order('nome')
+    supabase.from('categorias_de_servico').select('id, salon_id, nome, ordem, slug, descricao, ativa, imagem_url').order('ordem').order('nome')
       .then(({ data }) => { if (vivo) setCats(data ?? []) })
     return () => { vivo = false }
   }, [])

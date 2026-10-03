@@ -505,6 +505,7 @@ const RPC = {
   enviar_lembretes: () => 0,
   // a Mel (2.87): estatísticas zeradas (uma frase com uso, para a lista ter número) e importação com a mesma validação do banco, resumida
   mel_marcar: () => ({ ok: true }),
+  catalogo_uso: () => [{ item_id: 'ci-sobrancelhas-design-design-de-sobrancelhas', categoria_id: 'ct4', n: 1 }, { item_id: null, categoria_id: 'ct1', n: 2 }, { item_id: null, categoria_id: 'ct2', n: 5 }],
   // a fala direta do cadastro (2.91): a frase do momento, com os dados no lugar
   mel_fala_direta: ({ momento, dados }) => {
     const f = CONTEUDO.mel_frases.find((x) => x.chave === momento && x.ativa)

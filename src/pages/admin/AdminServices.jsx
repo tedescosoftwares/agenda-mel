@@ -4,12 +4,13 @@ import AdminShell from '../../components/AdminShell'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { ChevronIcon, SparkleIcon } from '../../components/icons'
-import { Star } from 'lucide-react'
+import { Star, Plus, LayoutGrid } from 'lucide-react'
 import { formatPreco, formatDuracao, labelDuracao } from '../../lib/format'
 import { useCategorias, categoriasDoSalao, agruparPorCategoria, bate, capaPadrao } from '../../lib/categorias'
 import { ajustarCriativo } from '../../lib/imagem'
 import Portal from '../../components/Portal'
 import CadastroDeServico, { MelFala, useFalaDaMel } from '../../components/CadastroDeServico'
+import EscolhaDeCategorias, { ImagemCategoria, tonsDaCategoria } from '../../components/EscolhaDeCategorias'
 import { useCatalogo } from '../../lib/catalogo'
 import { falaDaMel } from '../../lib/melMotor'
 
@@ -29,7 +30,7 @@ const MAX_TAMANHO_MB = 5
 
 export default function AdminServices() {
   const { confirmar } = useDialogo()
-  const { salao } = useAuth()
+  const { salao, recarregarNegocio } = useAuth()
   const [services, setServices] = useState([])
   const [profs, setProfs] = useState([])               // a equipe do salão (para "quem faz")
   const [quemFaz, setQuemFaz] = useState({})           // service_id → [professional_id]: sem ninguém, a cliente não vê
@@ -60,7 +61,23 @@ export default function AdminServices() {
   const [capas, setCapas] = useState({})               // categoria_id → url (087): a do salão, senão a padrão
   const [capasDoSalao, setCapasDoSalao] = useState({}) // só as que o salão subiu
   const [subindoCapa, setSubindoCapa] = useState('')
-  const cats = categoriasDoSalao([...catsTodas.filter((c) => !catsExtra.some((e) => e.id === c.id)), ...catsExtra].filter((c) => !c.apagada), salao?.id, salao?.categorias_escolhidas)
+  // as categorias escolhidas (2.91): vivem em salons.categorias_escolhidas; aqui a cópia local muda na hora
+  const [escolhidas, setEscolhidas] = useState(() => (Array.isArray(salao?.categorias_escolhidas) ? salao.categorias_escolhidas : []))
+  useEffect(() => { setEscolhidas(Array.isArray(salao?.categorias_escolhidas) ? salao.categorias_escolhidas : []) }, [salao?.categorias_escolhidas])
+  const [escolhendoCats, setEscolhendoCats] = useState(false)
+  const [filtroCat, setFiltroCat] = useState('')
+  const catsVivas = [...catsTodas.filter((c) => !catsExtra.some((e) => e.id === c.id)), ...catsExtra].filter((c) => !c.apagada)
+  const cats = categoriasDoSalao(catsVivas, salao?.id, escolhidas)
+  const contagens = {}
+  for (const x of services) if (x.categoria_id) contagens[x.categoria_id] = (contagens[x.categoria_id] ?? 0) + 1
+  async function alternarCategoria(id) {
+    const prox = escolhidas.includes(id) ? escolhidas.filter((x) => x !== id) : [...escolhidas, id]
+    setEscolhidas(prox)
+    if (filtroCat === id && !prox.includes(id)) setFiltroCat('')
+    const { error } = await supabase.from('salons').update({ categorias_escolhidas: prox }).eq('id', salao?.id)
+    if (error) { setError('Não deu para guardar as categorias: ' + error.message); return }
+    recarregarNegocio?.()
+  }
 
   useEffect(() => {
     fetchServices()
@@ -197,16 +214,19 @@ export default function AdminServices() {
     setJuntos([])
   }
 
-  // cria a categoria do salão na hora, dentro do formulário do serviço
+  // cria a categoria do salão na hora: no escolhedor de categorias ou dentro do formulário do serviço
+  async function criarCategoriaNome(nome) {
+    const { data, error } = await supabase.from('categorias_de_servico').insert({ salon_id: salao?.id, nome, ordem: 500 }).select('id, salon_id, nome, ordem').maybeSingle()
+    if (error) { setError(error.message.includes('duplicate') ? 'Já existe uma categoria com esse nome.' : 'Não deu para criar a categoria: ' + error.message); return null }
+    const criada = data ?? { id: crypto.randomUUID(), salon_id: salao?.id, nome, ordem: 500 }
+    setCatsExtra((l) => [...l, criada])
+    return criada
+  }
   async function criarCategoria() {
     const nome = novaCat.trim()
     if (!nome) return
-    const { data, error } = await supabase.from('categorias_de_servico').insert({ salon_id: salao?.id, nome, ordem: 500 }).select('id, salon_id, nome, ordem').maybeSingle()
-    if (error) { setError(error.message.includes('duplicate') ? 'Já existe uma categoria com esse nome.' : 'Não deu para criar a categoria: ' + error.message); return }
-    const criada = data ?? { id: crypto.randomUUID(), salon_id: salao?.id, nome, ordem: 500 }
-    setCatsExtra((l) => [...l, criada])
-    setForm((f) => ({ ...f, categoria_id: criada.id }))
-    setNovaCat('')
+    const criada = await criarCategoriaNome(nome)
+    if (criada) { setForm((f) => ({ ...f, categoria_id: criada.id })); setNovaCat('') }
   }
   async function renomearCategoria() {
     const nome = catEdit?.nome?.trim()
@@ -450,10 +470,50 @@ export default function AdminServices() {
       {error && editing === null && <div className="alert alert-error">{error}</div>}
       <MelFala fala={falaSalvo} className="cardapio-mel-pagina" />
 
+      {!loading && (
+        <section className="svc-cats" aria-label="Suas categorias">
+          <div className="svc-cats-rolo">
+            <button type="button" className="svc-cat svc-cat-mais" onClick={() => setEscolhendoCats(true)}>
+              <span className="svc-cat-mais-icone">{cats.length ? <LayoutGrid size={18} /> : <Plus size={18} />}</span>
+              <span className="svc-cat-txt"><strong>{cats.length ? 'Escolher categorias' : 'Escolha suas categorias'}</strong><small>{cats.length ? `${cats.filter((c) => c.slug !== 'outros').length} escolhidas` : 'as áreas do seu trabalho'}</small></span>
+            </button>
+            {cats.filter((c) => c.slug !== 'outros' || contagens[c.id]).map((c, i) => {
+              const nome = c.nome
+              const n = contagens[c.id] ?? 0
+              const [a, b] = tonsDaCategoria(i)
+              return (
+                <button key={c.id} type="button" className={'svc-cat' + (filtroCat === c.id ? ' ativa' : '') + (c.salon_id ? ' do-salao' : '')} onClick={() => setFiltroCat(filtroCat === c.id ? '' : c.id)} aria-pressed={filtroCat === c.id} style={{ '--cat-a': a, '--cat-b': b }}>
+                  <ImagemCategoria cat={c} className="svc-cat-img" />
+                  <span className="svc-cat-txt"><strong>{nome}</strong><small>{n ? `${n} ${n === 1 ? 'serviço' : 'serviços'}` : 'sem serviço ainda'}</small></span>
+                </button>
+              )
+            })}
+          </div>
+          {filtroCat && <p className="muted svc-cats-filtro">Mostrando só <strong>{cats.find((c) => c.id === filtroCat)?.nome}</strong>. <button type="button" className="plat-link" onClick={() => setFiltroCat('')}>Ver todos</button></p>}
+        </section>
+      )}
+
+      {escolhendoCats && (
+        <Portal><div className="modal-fundo" onClick={() => setEscolhendoCats(false)}>
+          <div className="card modal-caixa cardapio-caixa" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Suas categorias">
+            <div className="cardapio">
+              <header className="cardapio-topo">
+                <div className="cardapio-titulos"><h3>Suas categorias</h3><p>As áreas do seu trabalho. Elas organizam seus serviços, as sugestões e a página do salão.</p></div>
+                <button type="button" className="modal-fechar" onClick={() => setEscolhendoCats(false)} aria-label="Fechar">×</button>
+              </header>
+              <div className="cardapio-corpo">
+                <EscolhaDeCategorias categorias={catsVivas} escolhidas={escolhidas} onAlternar={alternarCategoria} minhas={catsVivas.filter((c) => c.salon_id === salao?.id)} onCriar={criarCategoriaNome} onTirar={apagarCategoria} contagens={contagens} />
+              </div>
+              <footer className="cardapio-rodape"><button type="button" className="btn btn-primary cardapio-seguir" onClick={() => setEscolhendoCats(false)}>Pronto</button></footer>
+            </div>
+          </div>
+        </div></Portal>
+      )}
+
       {editing === 'escolher' && (
         <Portal><div className="modal-fundo" onClick={cancelEdit}>
           <div className="card modal-caixa cardapio-caixa" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Adicionar serviço">
-            <CadastroDeServico salaoId={salao?.id} categoriasEscolhidas={salao?.categorias_escolhidas ?? []} nServicos={services.length} onEscolher={escolherDoCatalogo} onPersonalizado={personalizado} onFechar={cancelEdit} />
+            <CadastroDeServico salaoId={salao?.id} categoriasEscolhidas={escolhidas} nServicos={services.length} onEscolher={escolherDoCatalogo} onPersonalizado={personalizado} onFechar={cancelEdit} />
           </div>
         </div></Portal>
       )}
@@ -687,7 +747,7 @@ export default function AdminServices() {
         </div>
       ) : (
         <div className="service-list">
-          {agruparPorCategoria(services, [...catsTodas, ...catsExtra.filter((c) => !c.apagada)]).map((g, _, todos) => (
+          {agruparPorCategoria(services.filter((x) => !filtroCat || x.categoria_id === filtroCat), [...catsTodas, ...catsExtra.filter((c) => !c.apagada)]).map((g, _, todos) => (
           <section key={g.id || 'outros'} className="cat-grupo">
           {todos.length > 1 && <h3 className="cat-titulo">{g.nome} <span className="muted">{g.itens.length}</span></h3>}
           {g.itens.map((s) => (
@@ -755,12 +815,12 @@ export default function AdminServices() {
       {!loading && editing === null && (
         <section className="card cat-gestao">
           <button type="button" className="cat-gestao-topo" onClick={() => setGerindo((v) => !v)} aria-expanded={gerindo}>
-            <span><strong>Categorias do salão</strong><span className="muted"> · {cats.filter((c) => c.salon_id).length} suas, {cats.filter((c) => !c.salon_id).length} da plataforma</span></span>
+            <span><strong>Capas das categorias</strong><span className="muted"> · as imagens dos cartões na página do salão</span></span>
             <ChevronIcon />
           </button>
           {gerindo && (
             <div className="cat-gestao-corpo">
-              <p className="muted">As da plataforma valem para todo mundo. As suas aparecem só para o seu salão. Para criar uma nova, abra um serviço.</p>
+              <p className="muted">Para escolher ou criar categorias, use “Escolher categorias” lá em cima. Aqui dá para renomear as suas e cuidar das capas.</p>
               <ul className="cat-gestao-lista">
                 {cats.filter((c) => c.salon_id).map((c) => (
                   <li key={c.id}>
@@ -781,9 +841,7 @@ export default function AdminServices() {
                 ))}
                 {cats.filter((c) => c.salon_id).length === 0 && <li className="muted">Nenhuma categoria sua ainda.</li>}
               </ul>
-              <p className="muted cat-gestao-pre">Da plataforma: {cats.filter((c) => !c.salon_id).map((c) => c.nome).join(', ')}.</p>
-
-              <h4 className="cat-capas-titulo">Capas das categorias</h4>
+              <h4 className="cat-capas-titulo">Capas</h4>
               <p className="muted">São as imagens do cartão de cada categoria na página do salão: até {MAX_CAPAS} por categoria, rodando sozinhas. Escolha fotos que representem o tipo de trabalho, como um close de unhas para Unhas ou um cabelo finalizado para Cabelo. Não precisa ser do seu salão, mas evite texto e logos: o nome da categoria já vai escrito por cima. Formato recomendado: <strong>1200×400 (3:1)</strong>, na horizontal; a gente ajusta e corta pelo centro. Sem imagem, o app usa um fundo da marca. Só aparecem as categorias com serviço.</p>
               <div className="cat-capas">
                 {agruparPorCategoria(services.filter((s) => s.active), cats).filter((g) => g.id).map((g) => {

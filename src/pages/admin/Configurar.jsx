@@ -1,33 +1,34 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Check, Lock, Sparkles, Users, QrCode } from 'lucide-react'
+import { Check, Lock, Sparkles, Users, QrCode, LayoutGrid } from 'lucide-react'
 import AdminShell from '../../components/AdminShell'
 import ProShell from '../../components/ProShell'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import AtivarSalao from '../../components/AtivarSalao'
 import { dataCurta } from '../../lib/acesso'
-import { PassoServicos, PassoEquipe, PassoAtivacao, ModalErro, EstadoSalvo } from '../Onboarding'
+import { PassoCategorias, PassoServicos, PassoEquipe, PassoAtivacao, ModalErro, EstadoSalvo } from '../Onboarding'
 
 // Conclua a configuração (painel): o que saiu do cadastro vem pra cá,
-// guiado do mesmo jeito. Serviços → Equipe (salão) → Ativação com o link
-// e o QR, que só abre quando serviços e equipe estão prontos.
+// guiado do mesmo jeito. Categorias → Serviços → Equipe (salão) → Ativação
+// com o link e o QR, que só abre quando serviços e equipe estão prontos.
+// Quem ainda não escolheu categoria começa nelas; quem já tem cai nos serviços.
 export default function Configurar({ para = 'admin' }) {
   const { salao: salaoAdmin, negocio, recarregarPerfil, acesso } = useAuth()
   const base = para === 'admin' ? (salaoAdmin ?? negocio) : (negocio ?? salaoAdmin)
   const autonoma = base?.tipo === 'autonoma'
   const navigate = useNavigate()
   const [s, setS] = useState(null)
-  const [passo, setPasso] = useState(1)   // pós-ativação: 1 serviços · 2 equipe · 3 revisão/link
+  const [passo, setPasso] = useState(1)   // 0 categorias · 1 serviços · 2 equipe · 3 revisão/link
   const [erro, setErro] = useState('')
   const [salvando, setSalvando] = useState(false)
   const [pronto, setPronto] = useState(false)
   const [estadoAuto, setEstadoAuto] = useState('')
   const [resumo, setResumo] = useState(null)
   const [ativandoAqui, setAtivandoAqui] = useState(false)   // a tela de ativação, presa até mandar pro painel
-  useEffect(() => { if (base && !s) setS({ ...base }) }, [base]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (base && !s) { setS({ ...base }); if (!(Array.isArray(base.categorias_escolhidas) && base.categorias_escolhidas.length)) setPasso(0) } }, [base]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const etapas = [{ id: 1, rotulo: 'Serviços', Icone: Sparkles }, ...(!autonoma ? [{ id: 2, rotulo: 'Equipe', Icone: Users }] : []), { id: 3, rotulo: 'Pronto', Icone: QrCode }]
+  const etapas = [{ id: 0, rotulo: 'Categorias', Icone: LayoutGrid }, { id: 1, rotulo: 'Serviços', Icone: Sparkles }, ...(!autonoma ? [{ id: 2, rotulo: 'Equipe', Icone: Users }] : []), { id: 3, rotulo: 'Pronto', Icone: QrCode }]
   const carregarResumo = useCallback(async () => {
     if (!s?.id) return null
     const { data } = await supabase.rpc('primeiros_passos', { salao: s.id })
@@ -64,7 +65,7 @@ export default function Configurar({ para = 'admin' }) {
   }
   const props = { s, setS, seguir, voltar, salvando, setErro, autonoma, gravarQuieto, setEstadoAuto, concluir, pronto, irPara }
   const Shell = para === 'admin' ? AdminShell : ProShell
-  const feitos = { 1: n('servicos') > 0, 2: n('equipe') > 0, 3: prontoParaAtivar() }
+  const feitos = { 0: (Array.isArray(s?.categorias_escolhidas) && s.categorias_escolhidas.length > 0) || n('servicos') > 0, 1: n('servicos') > 0, 2: n('equipe') > 0, 3: prontoParaAtivar() }
 
   // Se a pessoa fechou a ativação e voltou, não mostramos serviços/equipe antes
   // da escolha comercial. É só a tela de ativação, em fullscreen. Ela fica
@@ -101,6 +102,7 @@ export default function Configurar({ para = 'admin' }) {
         {erro && <ModalErro texto={erro} onFechar={() => setErro('')} />}
         {!s ? <p className="muted">Carregando…</p> : (
           <div key={passo} className="ob-passo-corpo">
+            {passo === 0 && <PassoCategorias {...props} />}
             {passo === 1 && <PassoServicos {...props} />}
             {passo === 2 && <PassoEquipe {...props} />}
             {passo === 3 && (

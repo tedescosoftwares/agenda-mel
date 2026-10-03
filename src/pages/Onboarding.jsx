@@ -24,6 +24,7 @@ import { formatPreco } from '../lib/format'
 import { sugestoesPara, primeiroNome, enviarAcesso } from '../lib/equipe'
 import { categoriasDoSalao } from '../lib/categorias'
 import CadastroDeServico from '../components/CadastroDeServico'
+import EscolhaDeCategorias from '../components/EscolhaDeCategorias'
 import { useCatalogo } from '../lib/catalogo'
 import { sugestoes as sugestoesDoCatalogo } from '../lib/catalogoBusca'
 import { REDES, limparRede } from '../components/IconesSociais'
@@ -56,8 +57,6 @@ const iniciaisDe = (nome) => (nome || 'ES').split(' ').map((p) => p[0]).join('')
 const UFS = ['AC', 'AL', 'AM', 'AP', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MG', 'MS', 'MT', 'PA', 'PB', 'PE', 'PI', 'PR', 'RJ', 'RN', 'RO', 'RR', 'RS', 'SC', 'SE', 'SP', 'TO']
 const ANTECEDENCIAS = [[0, 'Sem antecedência'], [30, '30 minutos'], [60, '1 hora'], [120, '2 horas'], [240, '4 horas'], [720, '12 horas'], [1440, '24 horas'], [2880, '48 horas']]
 const CANCELAMENTO = [['flexivel', '6 horas'], ['moderada', '12 horas'], ['rigorosa', '24 horas']]
-const CATEGORIAS_SUGERIDAS = ['Cabelo', 'Unhas', 'Cílios', 'Sobrancelhas', 'Maquiagem', 'Depilação', 'Estética facial', 'Estética corporal', 'Micropigmentação', 'Bem-estar e spa', 'Noivas', 'Tranças', 'Bronzeamento', 'Infantil']
-const SUGESTOES_A_MOSTRA = 6   // as primeiras; o resto fica atrás do "Ver mais"
 // a política que a maioria dos salões usa pra começar; muda depois em Ajustes
 const RECOMENDADO = { antecedencia_min_minutos: 60, politica_cancelamento: 'moderada', permite_remarcar: true, sinal_ligado: false, aceite_modo: 'casa', minutos_para_aceitar: 120 }
 const SUPORTE = import.meta.env.VITE_SUPORTE_WHATS || ''
@@ -1754,19 +1753,57 @@ function PassoQuaseLa({ s, voltar, salvando, concluir, pronto, autonoma, gravarQ
   )
 }
 
-// ---------- Serviços, equipe e ativação: vivem no painel, em Configurar ----------
-function PassoServicos({ s, seguir, voltar, salvando, setErro, autonoma, gravarQuieto }) {
-  const [servicos, setServicos] = useState(null)
-  const [catsTodas, setCatsTodas] = useState([])   // as da plataforma e as do salão
-  const [novaCat, setNovaCat] = useState('')
-  const [verMaisCats, setVerMaisCats] = useState(false)
-  const [escolhidas, setEscolhidas] = useState(Array.isArray(s.categorias_escolhidas) ? s.categorias_escolhidas : [])   // as da plataforma que o salão usa
-  const escolher = (id) => setEscolhidas((x) => (x.includes(id) ? x : [...x, id]))
-  const desescolher = (id) => setEscolhidas((x) => x.filter((y) => y !== id))
-  const cats = useMemo(() => categoriasDoSalao(catsTodas, s.id, escolhidas), [catsTodas, s.id, escolhidas])
-  // as escolhidas gravam sozinhas
+// ---------- Categorias, serviços, equipe e ativação: vivem no painel, em Configurar ----------
+// O passo Categorias (2.91): as áreas do salão como cartões visuais, antes
+// dos serviços. A escolha grava sozinha em salons.categorias_escolhidas.
+function PassoCategorias({ s, seguir, voltar, salvando, setErro, autonoma, gravarQuieto, primeiro = true }) {
+  const [catsTodas, setCatsTodas] = useState([])
+  const [contagens, setContagens] = useState({})
+  const [escolhidas, setEscolhidas] = useState(Array.isArray(s.categorias_escolhidas) ? s.categorias_escolhidas : [])
   const primeiraEscolha = useRef(true)
   useEffect(() => { if (primeiraEscolha.current) { primeiraEscolha.current = false; return } gravarQuieto?.({ categorias_escolhidas: escolhidas }) }, [escolhidas]) // eslint-disable-line react-hooks/exhaustive-deps
+  const carregar = useCallback(async () => {
+    const [ct, sv] = await Promise.all([
+      supabase.from('categorias_de_servico').select('id, salon_id, nome, ordem, slug, descricao, ativa').or(`salon_id.eq.${s.id},salon_id.is.null`).order('ordem'),
+      supabase.from('services').select('categoria_id').eq('salon_id', s.id).eq('active', true),
+    ])
+    setCatsTodas(ct.data ?? [])
+    const m = {}; for (const x of sv.data ?? []) m[x.categoria_id] = (m[x.categoria_id] ?? 0) + 1
+    setContagens(m)
+  }, [s.id])
+  useEffect(() => { carregar() }, [carregar])
+  const minhas = catsTodas.filter((c) => c.salon_id === s.id)
+  useRoteiro([escolhidas.length > 0 || minhas.length > 0])
+  async function criar(nome) {
+    if (catsTodas.some((c) => c.nome.toLowerCase() === nome.toLowerCase())) return
+    const { data, error } = await supabase.from('categorias_de_servico').insert({ salon_id: s.id, nome, ordem: 500 }).select('id, salon_id, nome, ordem').maybeSingle()
+    if (error) { setErro(error.message); return }
+    setCatsTodas((x) => [...x, data ?? { id: crypto.randomUUID(), salon_id: s.id, nome, ordem: 500 }])
+  }
+  async function tirar(c) {
+    const { error } = await supabase.from('categorias_de_servico').delete().eq('id', c.id)
+    if (error) { setErro('Essa categoria tem serviço: tire os serviços dela primeiro.'); return }
+    setCatsTodas((x) => x.filter((y) => y.id !== c.id))
+  }
+  const n = escolhidas.length + minhas.length
+  return (
+    <>
+      <div className="ob-titulo-linha">
+        <div><h1 className="ob-titulo">{autonoma ? 'O que você faz?' : 'O que o salão oferece?'}</h1><p className="ob-sub">Marque as áreas do seu trabalho. É daqui que saem as sugestões de serviço e as seções da sua página. Dá para mudar quando quiser.</p></div>
+      </div>
+      <div className="ob-card ob-card-escolha">
+        <EscolhaDeCategorias categorias={catsTodas} escolhidas={escolhidas} onAlternar={(id) => setEscolhidas((x) => (x.includes(id) ? x.filter((y) => y !== id) : [...x, id]))} minhas={minhas} onCriar={criar} onTirar={tirar} contagens={contagens} />
+      </div>
+      <Rodape voltar={voltar} avancar={() => seguir({})} salvando={salvando} primeiro={primeiro} rotulo={n ? 'Continuar para os serviços' : 'Continuar sem escolher'} />
+    </>
+  )
+}
+
+function PassoServicos({ s, seguir, voltar, salvando, setErro, autonoma, irPara }) {
+  const [servicos, setServicos] = useState(null)
+  const [catsTodas, setCatsTodas] = useState([])   // as da plataforma e as do salão
+  const escolhidas = useMemo(() => (Array.isArray(s.categorias_escolhidas) ? s.categorias_escolhidas : []), [s.categorias_escolhidas])   // as da plataforma que o salão usa (passo Categorias)
+  const cats = useMemo(() => categoriasDoSalao(catsTodas, s.id, escolhidas), [catsTodas, s.id, escolhidas])
   const [profs, setProfs] = useState([])
   const [quem, setQuem] = useState({})     // service_id → [professional_id]
   const [filtro, setFiltro] = useState('')
@@ -1788,19 +1825,7 @@ function PassoServicos({ s, seguir, voltar, salvando, setErro, autonoma, gravarQ
   }, [s.id])
   useEffect(() => { carregar() }, [carregar])
   const minhasCats = catsTodas.filter((c) => c.salon_id === s.id)
-  useRoteiro([escolhidas.length > 0 || minhasCats.length > 0, (servicos?.length ?? 0) > 0, (servicos?.length ?? 0) > 0 && servicos.every((x) => Number(x.price) > 0 && Number(x.duration_minutes) > 0)])
-  async function addCat(nome) {
-    const n = nome.trim(); if (!n) return
-    if (catsTodas.some((c) => c.nome.toLowerCase() === n.toLowerCase())) { setNovaCat(''); return }
-    const { data, error } = await supabase.from('categorias_de_servico').insert({ salon_id: s.id, nome: n, ordem: 500 }).select('id, salon_id, nome, ordem').maybeSingle()
-    if (error) { setErro(error.message); return }
-    setCatsTodas((x) => [...x, data]); setNovaCat('')
-  }
-  async function tirarCat(c) {
-    const { error } = await supabase.from('categorias_de_servico').delete().eq('id', c.id)
-    if (error) { setErro('Essa categoria tem serviço: tire os serviços dela primeiro.'); return }
-    setCatsTodas((x) => x.filter((y) => y.id !== c.id))
-  }
+  useRoteiro([(servicos?.length ?? 0) > 0, (servicos?.length ?? 0) > 0 && servicos.every((x) => Number(x.price) > 0 && Number(x.duration_minutes) > 0)])
 
   const nomeCat = (id) => cats.find((c) => c.id === id)?.nome ?? 'Outros'
   const lista = (servicos ?? []).filter((x) => !filtro || x.categoria_id === filtro)
@@ -1831,50 +1856,14 @@ function PassoServicos({ s, seguir, voltar, salvando, setErro, autonoma, gravarQ
         <div><h1 className="ob-titulo">{vazio ? 'Cadastre seus primeiros serviços' : 'Seus serviços'}</h1><p className="ob-sub">{vazio ? 'Comece com os 3 a 5 serviços mais procurados. Depois você pode adicionar quantos quiser.' : 'Defina preço e duração para a MIMO mostrar os horários disponíveis corretamente.'}</p></div>
         {!vazio && <button type="button" className="btn btn-secondary ob-add" onClick={() => setModal('catalogo')}><Plus size={15} /> Adicionar serviço</button>}
       </div>
-      <div className="ob-card ob-card-cats">
-          <strong className="ob-card-titulo">Categorias dos serviços</strong>
-          <span className="muted">Escolha as áreas que fazem parte {autonoma ? 'do seu trabalho' : 'do seu salão'}. As sugestões de serviço abaixo seguem o que você escolher aqui.</span>
-          {(() => {
-            const busca = novaCat.trim()
-            const igual = (a, b) => a.trim().toLowerCase() === b.trim().toLowerCase()
-            const existente = busca ? catsTodas.find((c) => igual(c.nome, busca)) : null
-            const padrao = catsTodas.filter((c) => !c.salon_id && (c.ativa !== false || escolhidas.includes(c.id)))
-            const usadas = padrao.filter((c) => escolhidas.includes(c.id))
-            // sugestões: as da plataforma ainda não escolhidas e os nomes da lista que não existem
-            const sugeridas = [
-              ...padrao.filter((c) => !escolhidas.includes(c.id)).map((c) => ({ chave: c.id, nome: c.nome, escolherId: c.id })),
-              ...CATEGORIAS_SUGERIDAS.filter((n) => !catsTodas.some((c) => igual(c.nome, n))).map((n) => ({ chave: 'nova:' + n, nome: n })),
-            ]
-            const filtradas = busca ? sugeridas.filter((x) => x.nome.toLowerCase().includes(busca.toLowerCase())) : sugeridas
-            const visiveis = busca || verMaisCats ? filtradas : filtradas.slice(0, SUGESTOES_A_MOSTRA)
-            const escondidas = filtradas.length - visiveis.length
-            const jaEsta = existente && (existente.salon_id || escolhidas.includes(existente.id))
-            return (
-              <>
-                <div className="ob-cat-grupo">
-                  <small className="ob-cat-rotulo">Suas categorias</small>
-                  <div className="ob-cats">
-                    {usadas.map((c) => <span key={c.id} className={'ob-cat' + (existente?.id === c.id ? ' realce' : '')}>{c.nome}<button type="button" onClick={() => desescolher(c.id)} aria-label={`Tirar ${c.nome}`}><X size={12} /></button></span>)}
-                    {minhasCats.map((c) => <span key={c.id} className={'ob-cat' + (existente?.id === c.id ? ' realce' : '')}>{c.nome}<button type="button" onClick={() => tirarCat(c)} aria-label={`Tirar ${c.nome}`}><X size={12} /></button></span>)}
-                  </div>
-                </div>
-                <div className="ob-cat-grupo">
-                  <small className="ob-cat-rotulo">Adicionar categorias</small>
-                  <div className="ob-cats">
-                    {visiveis.map((x) => <button key={x.chave} type="button" className="ob-cat sugerida" onClick={() => { if (x.escolherId) escolher(x.escolherId); else addCat(x.nome); setNovaCat('') }}><Plus size={12} /> {x.nome}</button>)}
-                    {escondidas > 0 && <button type="button" className="ob-cat mais" onClick={() => setVerMaisCats(true)}>Ver mais ({escondidas})</button>}
-                    {busca && !visiveis.length && jaEsta && <small className="muted">“{existente.nome}” já está nas suas.</small>}
-                  </div>
-                </div>
-                <div className="ob-add-cat">
-                  <input value={novaCat} onChange={(e) => setNovaCat(e.target.value)} placeholder="Buscar ou criar categoria…" maxLength={40} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (!busca || jaEsta) return; if (existente) escolher(existente.id); else addCat(busca); setNovaCat('') } }} />
-                  {busca && !jaEsta && <button type="button" className="btn-mini" onClick={() => { if (existente) escolher(existente.id); else addCat(busca); setNovaCat('') }}><Plus size={12} /> {existente ? `Adicionar “${existente.nome}”` : `Criar “${busca}”`}</button>}
-                </div>
-                <small className="muted">Não encontrou a sua? Digite e dê Enter pra criar. Pode seguir sem escolher nenhuma.</small>
-              </>
-            )
-          })()}
+      <div className="ob-cats-faixa">
+        <small className="ob-cat-rotulo">Suas categorias</small>
+        <div className="ob-cats">
+          {[...catsTodas.filter((c) => !c.salon_id && escolhidas.includes(c.id)), ...minhasCats].map((c) => <span key={c.id} className="ob-cat">{c.nome}</span>)}
+          {escolhidas.length === 0 && minhasCats.length === 0 && <span className="muted">Nenhuma escolhida: as sugestões abaixo são gerais.</span>}
+          {irPara && <button type="button" className="ob-cat sugerida" onClick={() => irPara(0)}><Plus size={12} /> Mudar categorias</button>}
         </div>
+      </div>
       {!vazio && (
         <div className="chips ob-chips">
           <button type="button" className={'chip' + (!filtro ? ' active' : '')} onClick={() => setFiltro('')}>Todos</button>
@@ -2145,4 +2134,4 @@ function PassoAtivacao({ s, voltar, salvando, concluir, pronto, autonoma, irPara
   )
 }
 
-export { PassoServicos, PassoEquipe, PassoAtivacao, ModalErro, useAutosave, EstadoSalvo }
+export { PassoCategorias, PassoServicos, PassoEquipe, PassoAtivacao, ModalErro, useAutosave, EstadoSalvo }

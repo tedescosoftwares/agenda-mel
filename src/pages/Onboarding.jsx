@@ -2106,7 +2106,7 @@ function PassoAtivacao({ s, voltar, salvando, concluir, pronto, autonoma, irPara
               <ul>{cobertura.map((c) => (
                 <li key={c.categoria_id} className={c.sem_profissional > 0 ? 'falta' : ''}>
                   <strong>{c.nome}</strong>
-                  <span className="muted">{c.servicos} {c.servicos === 1 ? 'serviço' : 'serviços'}{c.profissionais?.length ? ` · ${c.profissionais.join(', ')}` : ''}</span>
+                  <small>{c.servicos} {c.servicos === 1 ? 'serviço' : 'serviços'}{c.profissionais?.length ? ` · ${c.profissionais.join(', ')}` : ''}</small>
                   {c.sem_profissional > 0 && <em>{c.sem_profissional === c.servicos ? 'ninguém atende ainda' : `${c.sem_profissional} sem profissional`}</em>}
                 </li>
               ))}</ul>

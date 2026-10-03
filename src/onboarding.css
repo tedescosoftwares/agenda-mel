@@ -1638,7 +1638,8 @@
 /* quem atende o quê (2.93) */
 .ob-cobertura { display: grid; gap: 6px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--ob-fio, #eee); }
 .ob-cobertura > ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
-.ob-cobertura > ul > li { display: grid; gap: 1px; padding: 6px 8px; border-radius: 10px; font-size: 0.86rem; }
+.ob-checklist .ob-cobertura > ul > li { display: grid; gap: 1px; padding: 6px 8px; border-radius: 10px; font-size: 0.86rem; color: #1f2026; text-decoration: none; }
+.ob-checklist .ob-cobertura > ul > li small { font-size: 0.8rem; color: var(--ob-cinza, #6b7280); }
 .ob-cobertura > ul > li.falta { background: #fff3d6; }
 .ob-cobertura > ul > li strong { font-weight: 600; }
 .ob-cobertura > ul > li em { font-style: normal; font-size: 0.78rem; color: #9a6400; }

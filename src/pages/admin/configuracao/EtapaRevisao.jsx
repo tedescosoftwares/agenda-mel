@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Check, Minus, AlertTriangle, Copy, Pencil } from 'lucide-react'
+import { Check, Minus, AlertTriangle, Copy, Pencil, CalendarPlus } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../../lib/supabase'
 import { useCategorias, categoriasDoSalao } from '../../../lib/categorias'
 import { urlDoAmbiente } from '../../../lib/ambiente'
@@ -8,6 +9,7 @@ import { urlDoAmbiente } from '../../../lib/ambiente'
 // (cards e listas) à esquerda, o status e o botão de concluir à direita.
 // Serviço sem profissional bloqueia; serviço sem preço só avisa.
 export default function EtapaRevisao({ s, autonoma, irPara, onEstado }) {
+  const navigate = useNavigate()
   const catsTodas = useCategorias()
   const [resumo, setResumo] = useState(null)
   const [servicos, setServicos] = useState([])
@@ -73,6 +75,11 @@ export default function EtapaRevisao({ s, autonoma, irPara, onEstado }) {
               {bloqueios.map((b) => <p key={b.texto}><AlertTriangle size={14} /> {b.texto} <button type="button" className="plat-link" onClick={() => irPara(b.ir)}><Pencil size={12} /> Resolver</button></p>)}
             </div>
           )}
+          <div className="cfg-revisao-teste">
+            <strong>Depois de concluir</strong>
+            <p className="muted">Faça um agendamento de teste pelo próprio painel: na agenda, o “+” abre o encaixe e você digita o nome da cliente, sem precisar de conta.</p>
+            <button type="button" className="btn btn-ghost btn-mini" onClick={async () => { try { await supabase.rpc('primeiro_passo_feito', { salao: s.id, chave: 'agendamento_teste' }) } catch { /* segue */ } navigate('/admin/agenda?encaixe=1') }}><CalendarPlus size={13} /> Abrir a agenda para testar</button>
+          </div>
           {pendencias.length > 0 && (
             <div className="cfg-revisao-pendencia">
               {pendencias.map((p) => <p key={p.texto}>{p.texto}. <button type="button" className="plat-link" onClick={() => irPara(p.ir)}>Ajustar</button></p>)}

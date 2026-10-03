@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Search, Plus, Check, Trash2, ChevronRight, X, Sparkles, Clock, Pencil } from 'lucide-react'
+import { Search, Plus, Check, Trash2, ChevronRight, X, Sparkles, Clock, Pencil, ClipboardList } from 'lucide-react'
 import Portal from '../../../components/Portal'
 import { supabase } from '../../../lib/supabase'
 import { useCatalogo } from '../../../lib/catalogo'
@@ -17,7 +17,7 @@ import { formatDuracao } from '../../../lib/format'
 const reais = (t) => { const n = Number(String(t ?? '').replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.')); return Number.isFinite(n) && n >= 0 ? n : null }
 const emReais = (v) => (Number(v) > 0 ? Number(v).toFixed(2).replace('.', ',') : '')
 
-export default function EtapaServicos({ s, setErro, onEstado }) {
+export default function EtapaServicos({ s, setErro, onEstado, compacto = false }) {
   const catalogo = useCatalogo()
   const catsTodas = useCategorias()
   const [servicos, setServicos] = useState(null)
@@ -27,6 +27,7 @@ export default function EtapaServicos({ s, setErro, onEstado }) {
   const [familia, setFamilia] = useState(null)
   const [personalizado, setPersonalizado] = useState(false)
   const [editando, setEditando] = useState(null)
+  const [folha, setFolha] = useState(false)   // no celular: "Meu cardápio" numa folha
   const campo = useRef(null)
   const escolhidas = useMemo(() => (Array.isArray(s.categorias_escolhidas) ? s.categorias_escolhidas : []), [s.categorias_escolhidas])
   const cats = useMemo(() => categoriasDoSalao(catsTodas, s.id, escolhidas).filter((c) => c.slug !== 'outros' || (servicos ?? []).some((x) => x.categoria_id === c.id)), [catsTodas, s.id, escolhidas, servicos])
@@ -47,7 +48,10 @@ export default function EtapaServicos({ s, setErro, onEstado }) {
   }, [s.id])
   useEffect(() => { carregar() }, [carregar])
   const n = (servicos ?? []).length
-  useEffect(() => { onEstado({ podeContinuar: n > 0, rodape: n === 0 ? 'Adicione pelo menos um serviço' : `${n} ${n === 1 ? 'serviço' : 'serviços'} no cardápio` }) }, [n]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const rodape = n === 0 ? 'Adicione pelo menos um serviço' : `${n} ${n === 1 ? 'serviço' : 'serviços'} no cardápio`
+    onEstado({ podeContinuar: n > 0, rodape, acaoRodape: compacto ? { rotulo: `Meu cardápio · ${n}`, icone: <ClipboardList size={16} />, onClick: () => setFolha(true) } : null })
+  }, [n, compacto]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---- adicionar / mudar / tirar ----
   async function adicionar(item, tecnica = null) {
@@ -90,6 +94,18 @@ export default function EtapaServicos({ s, setErro, onEstado }) {
   function trocarTab(id) { setTab(id); setVerTodos(false); setFamilia(null); setBusca('') }
 
   const carregando = !catalogo || servicos === null
+  const painel = (
+    <>
+      <header><h3>Meu cardápio</h3><span className="muted">{n} {n === 1 ? 'serviço' : 'serviços'}</span></header>
+      {servicos === null ? <p className="muted">Carregando…</p> : n === 0 ? (
+        <p className="muted cfg-cardapio-vazio">Ainda vazio. Toque em “+ Adicionar” nas sugestões{compacto ? '' : ' ao lado'}.</p>
+      ) : (
+        <ul className="cfg-cardapio-lista">
+          {[...servicos].reverse().map((sv) => <CartaoCardapio key={sv.id} sv={sv} catalogo={catalogo} cats={cats} aberto={editando === sv.id} onAbrir={() => setEditando(editando === sv.id ? null : sv.id)} onMudar={(campos) => atualizar(sv.id, campos)} onTirar={() => tirar(sv)} />)}
+        </ul>
+      )}
+    </>
+  )
   return (
     <section className="cfg-etapa cfg-etapa-servicos">
       <header className="cfg-etapa-topo">
@@ -137,7 +153,9 @@ export default function EtapaServicos({ s, setErro, onEstado }) {
               {sug.length > 0 && (
                 <div className="cfg-secao">
                   <h3><Sparkles size={15} /> Sugestões para {categoria.nome}</h3>
-                  <div className="cfg-sug-grade">{sug.map((it) => <CartaoSugestao key={it.id} item={it} catalogo={catalogo} adicionado={adicionados.has(it.id)} onAdicionar={() => adicionar(it)} />)}</div>
+                  {compacto
+                    ? <div className="cfg-lista">{sug.map((it) => <LinhaItem key={it.id} item={it} catalogo={catalogo} adicionado={adicionados.has(it.id)} onAdicionar={() => adicionar(it)} />)}</div>
+                    : <div className="cfg-sug-grade">{sug.map((it) => <CartaoSugestao key={it.id} item={it} catalogo={catalogo} adicionado={adicionados.has(it.id)} onAdicionar={() => adicionar(it)} />)}</div>}
                 </div>
               )}
               <div className="cfg-secao">
@@ -153,19 +171,22 @@ export default function EtapaServicos({ s, setErro, onEstado }) {
           <div className="cfg-personalizado"><span className="muted">Não encontrou?</span><button type="button" className="btn btn-ghost" onClick={() => setPersonalizado('')}><Plus size={15} /> Criar serviço personalizado</button></div>
         </div>
 
-        <aside className="cfg-cardapio" aria-label="Meu cardápio">
-          <div className="cfg-cardapio-caixa">
-            <header><h3>Meu cardápio</h3><span className="muted">{n} {n === 1 ? 'serviço' : 'serviços'}</span></header>
-            {servicos === null ? <p className="muted">Carregando…</p> : n === 0 ? (
-              <p className="muted cfg-cardapio-vazio">Ainda vazio. Toque em “+ Adicionar” nas sugestões ao lado.</p>
-            ) : (
-              <ul className="cfg-cardapio-lista">
-                {[...servicos].reverse().map((sv) => <CartaoCardapio key={sv.id} sv={sv} catalogo={catalogo} cats={cats} aberto={editando === sv.id} onAbrir={() => setEditando(editando === sv.id ? null : sv.id)} onMudar={(campos) => atualizar(sv.id, campos)} onTirar={() => tirar(sv)} />)}
-              </ul>
-            )}
-          </div>
-        </aside>
+        {!compacto && (
+          <aside className="cfg-cardapio" aria-label="Meu cardápio">
+            <div className="cfg-cardapio-caixa">{painel}</div>
+          </aside>
+        )}
       </div>
+      {compacto && folha && (
+        <Portal><div className="modal-fundo cfg-folha-fundo" onClick={() => setFolha(false)}>
+          <div className="cfg-folha" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Meu cardápio">
+            <span className="cfg-folha-puxador" aria-hidden="true" />
+            <button type="button" className="modal-fechar" onClick={() => setFolha(false)} aria-label="Fechar">×</button>
+            <div className="cfg-cardapio-caixa">{painel}</div>
+            <div className="cfg-folha-pe"><button type="button" className="btn btn-primary" onClick={() => setFolha(false)}>Continuar escolhendo</button></div>
+          </div>
+        </div></Portal>
+      )}
 
       {personalizado !== false && <ServicoQuickForm cats={cats.length ? cats : catsTodas.filter((c) => !c.salon_id && c.ativa !== false)} categoriaInicial={categoria?.id ?? ''} nomeInicial={typeof personalizado === 'string' ? personalizado : ''} onFechar={() => setPersonalizado(false)} onSalvar={async (d) => { const ok = await criarPersonalizado(d); if (ok) { setPersonalizado(false); setBusca('') } }} />}
     </section>

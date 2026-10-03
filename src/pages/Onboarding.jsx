@@ -2066,6 +2066,7 @@ function PassoEquipe({ s, seguir, voltar, salvando, setErro }) {
 
 // ---------- 6 · Clientes e ativação --------------------------------------------------
 function PassoAtivacao({ s, voltar, salvando, concluir, pronto, autonoma, irPara }) {
+  const navigate = useNavigate()
   const [copiado, setCopiado] = useState(false)
   const [resumo, setResumo] = useState(null)
   const qr = useRef(null)
@@ -2081,7 +2082,8 @@ function PassoAtivacao({ s, voltar, salvando, concluir, pronto, autonoma, irPara
   async function baixar() {
     try { const url = await QRCode.toDataURL(link, { width: 720, margin: 2 }); const a = document.createElement('a'); a.href = url; a.download = `qr-${s.codigo}.png`; a.click(); feito('qr_baixado') } catch { /* nada */ }
   }
-  function testar() { window.open(link, '_blank', 'noopener'); feito('agendamento_teste') }
+  // o teste é feito pelo próprio salão, como encaixe na agenda (nome digitado, sem conta de cliente)
+  function testar() { feito('agendamento_teste'); navigate(autonoma ? '/pro/encaixe' : '/admin/agenda?encaixe=1') }
   const n = (k) => Number(resumo?.[k] ?? 0)
   const checklist = [
     { ok: Boolean(resumo?.dados), texto: autonoma ? 'Seus dados' : 'Dados do salão' },
@@ -2126,7 +2128,7 @@ function PassoAtivacao({ s, voltar, salvando, concluir, pronto, autonoma, irPara
       </div>
       <strong className="ob-secao">Próximos passos</strong>
       <div className="ob-proximos">
-        <div className="ob-proximo"><span className="ob-proximo-icone"><CalendarCheck size={18} /></span><strong>Faça um agendamento de teste</strong><p>Abra sua página como cliente e confira serviços, horários e disponibilidade antes de divulgar.</p><button type="button" className="btn-mini" onClick={testar}>{resumo?.feitos?.agendamento_teste ? <><Check size={12} /> Página aberta</> : 'Fazer agendamento teste'}</button></div>
+        <div className="ob-proximo"><span className="ob-proximo-icone"><CalendarCheck size={18} /></span><strong>Faça um agendamento de teste</strong><p>Pela sua agenda mesmo: o “+” abre o encaixe, você digita o nome da cliente e confere horários e serviços, sem precisar de conta.</p><button type="button" className="btn-mini" onClick={testar}>{resumo?.feitos?.agendamento_teste ? <><Check size={12} /> Teste feito</> : 'Fazer agendamento teste'}</button></div>
         <div className="ob-proximo"><span className="ob-proximo-icone"><QrCode size={18} /></span><strong>Divulgue seu QR Code</strong><p>Coloque no balcão, espelho ou recepção. No Instagram e no WhatsApp, compartilhe o link.</p><button type="button" className="btn-mini" onClick={baixar}>{resumo?.feitos?.qr_baixado ? <><Check size={12} /> QR baixado</> : <><Download size={12} /> Baixar QR Code</>}</button></div>
         {!autonoma && (
           <div className="ob-proximo"><span className="ob-proximo-icone"><Send size={18} /></span><strong>Envie o acesso da equipe</strong>

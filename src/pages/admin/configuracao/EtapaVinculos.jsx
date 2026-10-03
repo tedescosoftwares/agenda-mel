@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Check, ChevronDown, AlertTriangle } from 'lucide-react'
+import { Check, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react'
 import Avatar from '../../../components/Avatar'
 import { supabase } from '../../../lib/supabase'
 import { useCategorias } from '../../../lib/categorias'
@@ -11,7 +11,7 @@ import { primeiroNome } from '../../../lib/equipe'
 // massa por profissional, destaque de linha e coluna, aviso suave de quem
 // ficou sem ninguém. Ao continuar, as categorias que cada uma atende são
 // deduzidas dos serviços marcados (equipe_definir_categorias).
-export default function EtapaVinculos({ s, setErro, onEstado }) {
+export default function EtapaVinculos({ s, setErro, onEstado, compacto = false }) {
   const catsTodas = useCategorias()
   const [servicos, setServicos] = useState(null)
   const [equipe, setEquipe] = useState(null)
@@ -19,6 +19,7 @@ export default function EtapaVinculos({ s, setErro, onEstado }) {
   const [filtro, setFiltro] = useState('')
   const [hoverCol, setHoverCol] = useState(null)
   const [menu, setMenu] = useState(null)
+  const [aberto, setAberto] = useState(null)   // no celular: a profissional expandida
   const carregar = useCallback(async () => {
     const [sv, eq] = await Promise.all([
       supabase.from('services').select('id, name, categoria_id, duration_minutes').eq('salon_id', s.id).eq('active', true).order('name'),
@@ -85,6 +86,44 @@ export default function EtapaVinculos({ s, setErro, onEstado }) {
       </header>
       {equipe.length === 0 || servicos.length === 0 ? (
         <p className="muted cfg-carregando">{equipe.length === 0 ? 'Sem profissionais ainda: volte uma etapa e adicione quem atende.' : 'Sem serviços ainda: volte e monte o cardápio.'}</p>
+      ) : compacto ? (
+        <>
+          <span className={'cfg-vinc-aviso' + (descobertos.length ? ' falta' : ' ok')}>{descobertos.length ? <><AlertTriangle size={14} /> {descobertos.length} {descobertos.length === 1 ? 'serviço sem profissional' : 'serviços sem profissional'}</> : <><Check size={14} /> Todos os serviços têm profissional</>}</span>
+          <div className="cfg-vinc-lista">
+            {equipe.map((p) => {
+              const marcados = servicos.filter((sv) => tem(p.id, sv.id)).length
+              const ab = aberto === p.id || (aberto === null && equipe.length === 1)
+              return (
+                <div key={p.id} className={'cfg-vinc-prof' + (ab ? ' aberta' : '')}>
+                  <button type="button" className="cfg-vinc-prof-topo" onClick={() => setAberto(ab ? '' : p.id)} aria-expanded={ab}>
+                    <Avatar nome={p.name} foto={p.photo_url} />
+                    <span className="cfg-vinc-prof-txt"><strong>{p.name}</strong><small>{marcados} de {servicos.length} {servicos.length === 1 ? 'serviço' : 'serviços'}</small></span>
+                    {ab ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                  </button>
+                  {ab && (
+                    <div className="cfg-vinc-prof-corpo">
+                      <div className="cfg-vinc-massa">
+                        <button type="button" className="btn-mini" onClick={() => emMassa(p.id, 'ligar', servicos)}>Selecionar todos</button>
+                        <button type="button" className="btn-mini btn-mini-neutro" onClick={() => emMassa(p.id, 'desligar', servicos)}>Limpar</button>
+                      </div>
+                      {porCat.map((g) => (
+                        <div key={g.id || 'o'} className="cfg-vinc-grupo">
+                          <div className="cfg-vinc-grupo-topo"><span>{g.nome}</span><button type="button" className="plat-link" onClick={() => emMassa(p.id, 'ligar', g.lista)}>Tudo de {g.nome}</button></div>
+                          {g.lista.map((sv) => (
+                            <label key={sv.id} className={'cfg-vinc-linha' + (tem(p.id, sv.id) ? ' on' : '') + (descobertos.some((d) => d.id === sv.id) ? ' sem-ninguem' : '')}>
+                              <span>{sv.name}{descobertos.some((d) => d.id === sv.id) && <small>sem profissional</small>}</span>
+                              <span className="switch"><input type="checkbox" checked={tem(p.id, sv.id)} onChange={() => alternar(p.id, sv.id)} /><span /></span>
+                            </label>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </>
       ) : (
         <>
           <div className="cfg-vinc-topo">

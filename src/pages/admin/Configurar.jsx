@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Check, Lock, Sparkles, Users, LayoutGrid, Link2, ArrowLeft, ArrowRight, Save } from 'lucide-react'
+import { Check, Lock, Sparkles, Users, LayoutGrid, Link2, ArrowLeft, ArrowRight, Save, LogOut } from 'lucide-react'
 import AdminShell from '../../components/AdminShell'
 import ProShell from '../../components/ProShell'
 import { useAuth } from '../../context/AuthContext'
@@ -12,6 +12,7 @@ import EtapaServicos from './configuracao/EtapaServicos'
 import EtapaProfissionais from './configuracao/EtapaProfissionais'
 import EtapaVinculos from './configuracao/EtapaVinculos'
 import EtapaRevisao from './configuracao/EtapaRevisao'
+import useCompacto from './configuracao/useCompacto'
 import '../../configuracao.css'
 
 // Configuração inicial (2.94): Categorias → Serviços → Profissionais →
@@ -42,6 +43,7 @@ export default function Configurar({ para = 'admin' }) {
   const [estado, setEstado] = useState({ podeContinuar: false, rodape: '' })
   const [feitas, setFeitas] = useState({})
   const [ativandoAqui, setAtivandoAqui] = useState(false)
+  const compacto = useCompacto()
   const etapas = useMemo(() => (autonoma ? ETAPAS.filter((e) => e.id !== 'vinculos').map((e) => (e.id === 'profissionais' ? { ...e, rotulo: 'Sua agenda' } : e)) : ETAPAS), [autonoma])
   const chaveLocal = base?.id ? `mimo-config-passo-${base.id}` : null
 
@@ -100,7 +102,7 @@ export default function Configurar({ para = 'admin' }) {
     setSalvando(false)
     navigate(para === 'admin' ? '/admin' : '/pro/agenda', { replace: true })
   }
-  const onEstado = useCallback((e) => setEstado((atual) => ({ ...atual, aoContinuar: null, aviso: false, ...e })), [])
+  const onEstado = useCallback((e) => setEstado((atual) => ({ ...atual, aoContinuar: null, aviso: false, acaoRodape: null, ...e })), [])
   const Shell = para === 'admin' ? AdminShell : ProShell
 
   // ativação pendente: a tela de ativação fica até mandar pro painel (como antes)
@@ -109,10 +111,21 @@ export default function Configurar({ para = 'admin' }) {
 
   const total = etapas.length
   const progresso = passo === REVISAO ? 100 : Math.round(((indice + 1) / (total + 1)) * 100)
-  const props = { s, setS, gravarQuieto, setErro, autonoma, onEstado, irPara: ir }
+  const props = { s, setS, gravarQuieto, setErro, autonoma, onEstado, irPara: ir, compacto }
+  const rotuloAtual = passo === REVISAO ? 'Revisão' : etapas[indice]?.rotulo
   return (
     <Shell>
-      <div className="cfg">
+      <div className={'cfg' + (compacto ? ' cfg-compacta' : '')}>
+        {compacto ? (
+          <header className="cfg-cabecalho-mini">
+            <button type="button" className="cfg-mini-voltar" onClick={() => (indice > 0 ? voltar() : navigate(para === 'admin' ? '/admin' : '/pro/agenda'))} aria-label={indice > 0 ? 'Voltar' : 'Sair da configuração'}><ArrowLeft size={18} /></button>
+            <div className="cfg-mini-meio">
+              <div className="cfg-progresso" role="progressbar" aria-valuenow={progresso} aria-valuemin={0} aria-valuemax={100}><span style={{ width: `${progresso}%` }} /></div>
+              <span className="cfg-mini-rotulo"><b>{rotuloAtual}</b> · {passo === REVISAO ? total + 1 : indice + 1}/{total + 1}</span>
+            </div>
+            <button type="button" className="cfg-mini-sair" onClick={() => navigate(para === 'admin' ? '/admin' : '/pro/agenda')} aria-label="Salvar e continuar depois" title="Salvar e continuar depois"><LogOut size={17} /></button>
+          </header>
+        ) : (
         <header className="cfg-cabecalho">
           <div className="cfg-cabecalho-linha">
             <div>
@@ -140,6 +153,7 @@ export default function Configurar({ para = 'admin' }) {
           </ol>
           <div className="cfg-progresso" role="progressbar" aria-valuenow={progresso} aria-valuemin={0} aria-valuemax={100}><span style={{ width: `${progresso}%` }} /></div>
         </header>
+        )}
 
         {erro && <ModalErro texto={erro} onFechar={() => setErro('')} />}
         {!s || !passo ? <p className="muted">Carregando…</p> : (
@@ -153,9 +167,11 @@ export default function Configurar({ para = 'admin' }) {
         )}
 
         <footer className="cfg-rodape">
-          <span className={'cfg-rodape-info' + (estado.aviso ? ' aviso' : '')}>{estado.rodape}</span>
+          {estado.acaoRodape
+            ? <button type="button" className={'cfg-rodape-acao' + (estado.aviso ? ' aviso' : '')} onClick={estado.acaoRodape.onClick}>{estado.acaoRodape.icone}{estado.acaoRodape.rotulo}</button>
+            : <span className={'cfg-rodape-info' + (estado.aviso ? ' aviso' : '')}>{estado.rodape}</span>}
           <div className="cfg-rodape-acoes">
-            {indice > 0 && <button type="button" className="btn btn-ghost" onClick={voltar} disabled={salvando}><ArrowLeft size={16} /> Voltar</button>}
+            {indice > 0 && !compacto && <button type="button" className="btn btn-ghost" onClick={voltar} disabled={salvando}><ArrowLeft size={16} /> Voltar</button>}
             {passo === REVISAO
               ? <button type="button" className="btn btn-primary cfg-continuar" onClick={concluir} disabled={!estado.podeContinuar || salvando}>{salvando ? 'Concluindo…' : 'Concluir configuração'} <Check size={16} /></button>
               : <button type="button" className="btn btn-primary cfg-continuar" onClick={continuar} disabled={!estado.podeContinuar || salvando}>{salvando ? 'Salvando…' : ultimaEtapa ? 'Revisar' : 'Continuar'} <ArrowRight size={16} /></button>}

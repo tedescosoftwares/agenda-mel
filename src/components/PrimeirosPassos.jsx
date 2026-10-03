@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import QRCode from 'qrcode'
 import { Check, Circle, PartyPopper, Users, QrCode, Download, X, Sparkles } from 'lucide-react'
 import { supabase } from '../lib/supabase'
@@ -14,6 +14,7 @@ import AtivarSalao from './AtivarSalao'
 // feito (depois de comemorar uma vez).
 const CHAVE_FESTA = 'mimo-primeiros-passos-festa'
 export default function PrimeirosPassos({ salao, para = 'admin' }) {
+  const navigate = useNavigate()
   const { user, recarregarAcesso, recarregarPerfil } = useAuth()
   const [r, setR] = useState(null)
   const [festa, setFesta] = useState(false)
@@ -75,7 +76,8 @@ export default function PrimeirosPassos({ salao, para = 'admin' }) {
     { id: 'salao', ok: Boolean(r.dados), texto: autonoma ? 'Configurar sua agenda' : 'Configurar salão', para: para === 'admin' ? '/admin/salao' : '/pro/ajustes' },
     { id: 'servicos', ok: n('servicos') > 0, texto: 'Cadastrar serviços', para: para === 'admin' ? '/admin/servicos' : '/pro/servicos' },
     ...(!autonoma ? [{ id: 'equipe', ok: n('equipe') > 0, texto: 'Adicionar equipe', para: '/admin/equipe' }] : []),
-    { id: 'teste', ok: n('agendamentos') > 0 || Boolean(feitos.agendamento_teste), texto: 'Fazer agendamento teste', acao: () => { window.open(link, '_blank', 'noopener'); feito('agendamento_teste') } },
+    // o teste é o próprio salão encaixando um atendimento (nome digitado, sem conta de cliente)
+    { id: 'teste', ok: n('agendamentos') > 0 || Boolean(feitos.agendamento_teste), texto: 'Fazer agendamento teste', acao: () => { feito('agendamento_teste'); navigate(para === 'admin' ? '/admin/agenda?encaixe=1' : '/pro/encaixe') } },
     { id: 'qr', ok: Boolean(feitos.qr_baixado), texto: 'Baixar QR', acao: baixar },
     { id: 'avisos', ok: Boolean(r.avisos) || Boolean(feitos.avisos), texto: 'Ativar notificações', acao: ligarAvisos },
   ]

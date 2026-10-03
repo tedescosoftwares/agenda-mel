@@ -6,6 +6,7 @@ import { formatarFone } from '../lib/fone'
 import { formatPreco, formatDuracao } from '../lib/format'
 import { urlDoAmbiente } from '../lib/ambiente'
 import { VINCULOS, AVISO_VINCULO, PERMISSOES, PERMISSOES_RECOMENDADAS, presetDoVinculo, vinculoPor, FUNCOES, resumoDias, mensagemDeAcesso, primeiroNome, situacaoDe, enviarAcesso, linkWhats } from '../lib/equipe'
+import { categoriasDoSalao } from '../lib/categorias'
 import Avatar from './Avatar'
 import '../equipe.css'
 
@@ -53,6 +54,21 @@ export default function ProfissionalDrawer({ salao, profissional = null, servico
   const nome = primeiroNome(f.name)
   const escolhidos = servicos.filter((sv) => f.servicos[sv.id]?.on)
   const nomeCat = (id) => cats.find((c) => c.id === id)?.nome ?? 'Outros'
+  // as categorias que ela pode atender (2.93): as do salão com serviço, mais as escolhidas pelo salão
+  const comServico = new Set(servicos.map((sv) => sv.categoria_id).filter(Boolean))
+  const catsAtende = categoriasDoSalao(cats, salao.id, salao.categorias_escolhidas).filter((c) => comServico.has(c.id) || c.salon_id || (salao.categorias_escolhidas ?? []).includes(c.id) || (f.categorias ?? []).includes(c.id)).filter((c) => c.slug !== 'outros' || comServico.has(c.id))
+  // marcar a categoria pré-marca os serviços dela; desmarcar tira só os dela. A lista é a verdade.
+  function alternarCategoria(id) {
+    setF((x) => {
+      const tem = (x.categorias ?? []).includes(id)
+      const categorias = tem ? x.categorias.filter((c) => c !== id) : [...(x.categorias ?? []), id]
+      const s = { ...x.servicos }
+      for (const sv of servicos) if ((sv.categoria_id ?? null) === id) s[sv.id] = { ...(s[sv.id] ?? {}), on: !tem }
+      return { ...x, categorias, servicos: s }
+    })
+  }
+  // serviços agrupados por categoria, na ordem das categorias
+  const grupos = (() => { const m = new Map(); for (const sv of servicos) { const k = sv.categoria_id ?? ''; if (!m.has(k)) m.set(k, []); m.get(k).push(sv) } return [...m.entries()].sort((a, b) => (cats.find((c) => c.id === a[0])?.ordem ?? 999) - (cats.find((c) => c.id === b[0])?.ordem ?? 999)) })()
   const link = salva?.token ? urlDoAmbiente('pro', `/ativar/${salva.token}`) : ''
   const situacao = salva ? situacaoDe({ situacao: salva.situacao }) : null
 
@@ -103,6 +119,8 @@ export default function ProfissionalDrawer({ salao, profissional = null, servico
       }
       const { data, error } = await supabase.rpc('equipe_salvar_profissional', { salao: salao.id, dados })
       if (error) throw new Error(error.message)
+      const idSalvo = data?.id ?? profissional?.id
+      if (idSalvo) { const r2 = await supabase.rpc('equipe_definir_categorias', { prof: idSalvo, categorias: f.categorias ?? [] }); if (r2.error) throw new Error(r2.error.message) }
       setSalva({ id: data?.id ?? profissional?.id, situacao: data?.situacao ?? (profissional?.user_id ? 'ativa' : 'configurada'), token: data?.token ?? profissional?.token ?? null })
       setAba(7)
       onSalvo?.(data)
@@ -176,12 +194,20 @@ export default function ProfissionalDrawer({ salao, profissional = null, servico
 
           {aba === 3 && (
             <section className="gv-secao">
-              <div className="gv-secao-linha"><div><h3>O que {nome} atende?</h3><p className="muted">Por padrão vale o preço e a duração do salão. Personalize só o que for diferente com ela.</p></div>
-                {servicos.length > 0 && <button type="button" className="btn-mini btn-mini-neutro" onClick={() => setF((x) => { const todos = escolhidos.length === servicos.length; const s = { ...x.servicos }; for (const sv of servicos) s[sv.id] = { ...(s[sv.id] ?? {}), on: !todos }; return { ...x, servicos: s } })}>{escolhidos.length === servicos.length ? 'Desmarcar todos' : 'Selecionar todos'}</button>}
+              <div className="gv-secao-linha"><div><h3>O que {nome} atende?</h3><p className="muted">Marque as categorias: os serviços delas entram pré-marcados. Depois tire o que {nome} não faz. A lista de serviços é o que vale na agenda.</p></div>
+                {servicos.length > 0 && <button type="button" className="btn-mini btn-mini-neutro" onClick={() => setF((x) => { const todos = escolhidos.length === servicos.length; const s = { ...x.servicos }; for (const sv of servicos) s[sv.id] = { ...(s[sv.id] ?? {}), on: !todos }; return { ...x, servicos: s, categorias: todos ? [] : catsAtende.map((c) => c.id) } })}>{escolhidos.length === servicos.length ? 'Desmarcar todos' : 'Selecionar todos'}</button>}
               </div>
-              {servicos.length === 0 ? <p className="gv-vazio">Nenhum serviço cadastrado ainda. Cadastre no passo Serviços; dá pra voltar aqui depois.</p> : (
+              {catsAtende.length > 0 && (
+                <div className="gv-cats">
+                  <small className="gv-cats-rotulo">Categorias que {nome} atende</small>
+                  <div className="chips gv-chips">{catsAtende.map((c) => { const on = (f.categorias ?? []).includes(c.id); const n = servicos.filter((sv) => sv.categoria_id === c.id).length; return <button key={c.id} type="button" className={'chip' + (on ? ' active' : '')} aria-pressed={on} onClick={() => alternarCategoria(c.id)}>{c.nome}{n ? ` · ${n}` : ''}</button> })}</div>
+                </div>
+              )}
+              {servicos.length === 0 ? <p className="gv-vazio">Nenhum serviço cadastrado ainda. Cadastre no passo Serviços; dá pra voltar aqui depois. As categorias marcadas já ficam guardadas.</p> : (
                 <ul className="gv-servicos">
-                  {servicos.map((sv) => { const c = f.servicos[sv.id] ?? {}; return (
+                  {grupos.map(([catId, lista]) => [
+                    <li key={'cat-' + catId} className="gv-servicos-cat"><span>{catId ? nomeCat(catId) : 'Outros'}</span><small className="muted">{lista.filter((sv) => f.servicos[sv.id]?.on).length} de {lista.length}</small></li>,
+                    ...lista.map((sv) => { const c = f.servicos[sv.id] ?? {}; return (
                     <li key={sv.id} className={c.on ? 'on' : ''}>
                       <label className="gv-servico">
                         <input type="checkbox" checked={Boolean(c.on)} onChange={(e) => mudaServico(sv.id, 'on', e.target.checked)} />
@@ -195,7 +221,7 @@ export default function ProfissionalDrawer({ salao, profissional = null, servico
                         </div>
                       )}
                     </li>
-                  ) })}
+                  ) })])}
                 </ul>
               )}
             </section>
@@ -330,12 +356,15 @@ function inicial(p, servicos) {
   const sel = {}
   for (const x of p?.servicos ?? []) sel[x.service_id] = { on: true, personalizar: x.preco_cents != null || x.duracao_minutos != null, preco: emReais(x.preco_cents), duracao: x.duracao_minutos ?? '' }
   if (!p) for (const sv of servicos) sel[sv.id] = { on: true }
+  // as categorias que ela atende (2.93): as gravadas; quem é antiga sem nada deduz dos serviços; nova começa com todas que têm serviço
+  const categorias = p?.categorias?.length ? [...p.categorias] : [...new Set((p ? servicos.filter((sv) => sel[sv.id]?.on) : servicos).map((sv) => sv.categoria_id).filter(Boolean))]
   const exc = {}
   for (const e of p?.cota_excecoes ?? []) exc[e.service_id] = e.cota_pct
   const horarios = p?.horarios?.length ? ORDEM_DIAS.map((d) => { const h = p.horarios.find((x) => x.weekday === d); return h ? { ...h, start_time: hhmm(h.start_time), end_time: hhmm(h.end_time) } : { weekday: d, open: false, start_time: '09:00', end_time: '18:00' } }) : null
   return {
     name: p?.name ?? '', phone: p?.phone ?? '', email: p?.email ?? '', especialidade: p?.especialidade ?? '', photo_url: p?.photo_url ?? null, fotoNova: null, bio: p?.bio ?? '', slug: p?.slug ?? '',
     vinculo: p?.vinculo ?? '',
+    categorias,
     servicos: sel,
     usa_horario_salao: p ? Boolean(p.usa_horario_salao) : true,
     horarios,

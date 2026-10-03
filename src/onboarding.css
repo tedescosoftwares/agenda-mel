@@ -1634,3 +1634,12 @@
 .ob-cara-endereco .ep-campo { background: #fff; }
 .ob-cara-endereco small { font-size: 0.76rem; line-height: 1.35; }
 .ob-cara-endereco small b { color: var(--ameixa, #3d0c4e); font-weight: 700; }
+
+/* quem atende o quê (2.93) */
+.ob-cobertura { display: grid; gap: 6px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--ob-fio, #eee); }
+.ob-cobertura > ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.ob-cobertura > ul > li { display: grid; gap: 1px; padding: 6px 8px; border-radius: 10px; font-size: 0.86rem; }
+.ob-cobertura > ul > li.falta { background: #fff3d6; }
+.ob-cobertura > ul > li strong { font-weight: 600; }
+.ob-cobertura > ul > li em { font-style: normal; font-size: 0.78rem; color: #9a6400; }
+.ob-cobertura .btn-mini { justify-self: start; }

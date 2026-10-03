@@ -1816,7 +1816,7 @@ function PassoServicos({ s, seguir, voltar, salvando, setErro, autonoma, irPara 
     const [sv, ct, pr, ps] = await Promise.all([
       supabase.from('services').select('id, name, description, duration_minutes, price, a_partir, images, categoria_id, active, catalogo_item_id').eq('salon_id', s.id).eq('active', true).order('name'),
       supabase.from('categorias_de_servico').select('id, salon_id, nome, ordem, slug, ativa').or(`salon_id.eq.${s.id},salon_id.is.null`).order('ordem'),
-      supabase.from('professionals').select('id, name, user_id').eq('salon_id', s.id).eq('active', true).order('name'),
+      supabase.from('professionals').select('id, name, user_id, categorias').eq('salon_id', s.id).eq('active', true).order('name'),
       supabase.from('professional_services').select('professional_id, service_id'),
     ])
     setServicos(sv.data ?? []); setCatsTodas(ct.data ?? []); setProfs(pr.data ?? [])
@@ -1920,7 +1920,8 @@ function PassoServicos({ s, seguir, voltar, salvando, setErro, autonoma, irPara 
 
 function ModalServico({ salaoId, servico, sugestao, cats, profs, quem, onFechar, onSalvo }) {
   const [f, setF] = useState({ name: servico?.name ?? sugestao?.nome ?? '', categoria_id: servico?.categoria_id ?? sugestao?.categoria_id ?? '', duration_minutes: servico?.duration_minutes ?? sugestao?.min ?? 60, price: servico ? String(Number(servico.price).toFixed(2)).replace('.', ',') : '', a_partir: Boolean(servico?.a_partir), description: servico?.description ?? '' })
-  const [sel, setSel] = useState(quem.length ? quem : [])   // vazio = qualquer
+  // quem faz (2.93): no serviço novo, quem atende a categoria vem pré-marcada; vazio = toda a equipe
+  const [sel, setSel] = useState(() => { if (quem.length) return quem; const cat = servico?.categoria_id ?? sugestao?.categoria_id; const atendem = cat ? profs.filter((p) => (p.categorias ?? []).includes(cat)).map((p) => p.id) : []; return atendem.length && atendem.length < profs.length ? atendem : [] })
   const [foto, setFoto] = useState(servico?.images?.[0] ? { url: servico.images[0] } : null)
   const [erro, setErro] = useState('')
   const [salvando, setSalvando] = useState(false)
@@ -2071,6 +2072,10 @@ function PassoAtivacao({ s, voltar, salvando, concluir, pronto, autonoma, irPara
   const link = s.codigo ? urlDoAmbiente('cliente', `/v/${s.codigo}`) : linkDoCodigo('')
   useEffect(() => { if (qr.current && s.codigo) QRCode.toCanvas(qr.current, link, { width: 120, margin: 1, color: { dark: '#1f2026', light: '#ffffff' } }).catch(() => {}) }, [link, s.codigo])
   useEffect(() => { supabase.rpc('primeiros_passos', { salao: s.id }).then(({ data }) => setResumo(data ?? {})) }, [s.id])
+  // a cobertura (2.93): por categoria, quantos serviços e quem atende; categoria sem ninguém é aviso
+  const [cobertura, setCobertura] = useState([])
+  useEffect(() => { if (autonoma) return; supabase.rpc('cobertura_por_categoria', { salao: s.id }).then(({ data }) => setCobertura(Array.isArray(data) ? data : [])) }, [s.id, autonoma])
+  const descobertas = cobertura.filter((c) => c.sem_profissional > 0)
   function copiar() { navigator.clipboard?.writeText(link); setCopiado(true); setTimeout(() => setCopiado(false), 2000) }
   async function feito(chave) { try { await supabase.rpc('primeiro_passo_feito', { salao: s.id, chave }); setResumo((r) => ({ ...r, feitos: { ...(r?.feitos ?? {}), [chave]: new Date().toISOString() } })) } catch { /* segue */ } }
   async function baixar() {
@@ -2095,6 +2100,19 @@ function PassoAtivacao({ s, voltar, salvando, concluir, pronto, autonoma, irPara
         <div className="ob-card ob-checklist">
           <strong className="ob-card-titulo">O que já está pronto</strong>
           <ul>{checklist.map((c) => <li key={c.texto} className={c.ok ? 'ok' : ''}><span>{c.ok ? <Check size={13} /> : <Minus size={13} />}</span>{c.texto}</li>)}</ul>
+          {cobertura.length > 0 && (
+            <div className="ob-cobertura">
+              <small className="ob-cat-rotulo">Quem atende o quê</small>
+              <ul>{cobertura.map((c) => (
+                <li key={c.categoria_id} className={c.sem_profissional > 0 ? 'falta' : ''}>
+                  <strong>{c.nome}</strong>
+                  <span className="muted">{c.servicos} {c.servicos === 1 ? 'serviço' : 'serviços'}{c.profissionais?.length ? ` · ${c.profissionais.join(', ')}` : ''}</span>
+                  {c.sem_profissional > 0 && <em>{c.sem_profissional === c.servicos ? 'ninguém atende ainda' : `${c.sem_profissional} sem profissional`}</em>}
+                </li>
+              ))}</ul>
+              {descobertas.length > 0 && <button type="button" className="btn-mini" onClick={() => irPara(5)}>Ajustar na equipe</button>}
+            </div>
+          )}
         </div>
         <div className="ob-card ob-ativacao">
           <div>

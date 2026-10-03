@@ -149,7 +149,7 @@ export default function AdminServices() {
       const [{ data: j }, { data: v }, { data: pr }] = await Promise.all([
         ids.length ? supabase.from('servicos_juntos').select('service_id, sugerido_id').in('service_id', ids) : { data: [] },
         ids.length ? supabase.from('professional_services').select('professional_id, service_id').in('service_id', ids) : { data: [] },
-        salao?.id ? supabase.from('professionals').select('id, name').eq('salon_id', salao.id).eq('active', true).order('name') : { data: [] },
+        salao?.id ? supabase.from('professionals').select('id, name, categorias').eq('salon_id', salao.id).eq('active', true).order('name') : { data: [] },
       ])
       setJuntosTodos(j ?? [])
       const mapa = {}
@@ -172,14 +172,23 @@ export default function AdminServices() {
     setEditing('escolher')
     setError('')
   }
+  // quem faz, pré-marcado pela categoria (2.93): quem atende a categoria; sem ninguém marcado para ela, a única da casa
+  const [quemMexido, setQuemMexido] = useState(false)
+  function quemPorCategoria(categoriaId) {
+    const atendem = categoriaId ? profs.filter((p) => (p.categorias ?? []).includes(categoriaId)).map((p) => p.id) : []
+    if (atendem.length) return atendem
+    return profs.length === 1 ? [profs[0].id] : []
+  }
   function escolherDoCatalogo(e) {
     setForm({ ...FORM_VAZIO, name: e.nome, duration_minutes: e.duracao ?? 60, categoria_id: e.categoria_id ?? '', catalogo_item_id: e.item?.id ?? '' })
     setOrigem(e.caminho ?? null)
+    setQuem(quemPorCategoria(e.categoria_id)); setQuemMexido(false)
     setEditing('new')
   }
   function personalizado({ categoria_id, nome } = {}) {
     setForm({ ...FORM_VAZIO, name: nome ?? '', categoria_id: categoria_id ?? '' })
     setOrigem(null)
+    setQuem(quemPorCategoria(categoria_id)); setQuemMexido(false)
     setEditing('new')
   }
   const nServicosDoCatalogo = services.filter((x) => x.catalogo_item_id).length
@@ -557,7 +566,7 @@ export default function AdminServices() {
             Categoria
             <select
               value={form.categoria_id}
-              onChange={(e) => setForm({ ...form, categoria_id: e.target.value === NOVA ? '' : e.target.value })}
+              onChange={(e) => { const id = e.target.value === NOVA ? '' : e.target.value; setForm({ ...form, categoria_id: id }); if (editing === 'new' && !quemMexido) setQuem(quemPorCategoria(id)) }}
             >
               <option value="">Deixar o app escolher pelo nome</option>
               {cats.map((c) => (
@@ -573,11 +582,12 @@ export default function AdminServices() {
               <div className="filtro-chips">
                 {profs.map((p) => {
                   const on = quem.includes(p.id)
-                  return <button key={p.id} type="button" className={on ? 'chip active' : 'chip'} onClick={() => setQuem((q) => (on ? q.filter((x) => x !== p.id) : [...q, p.id]))}>{p.name}</button>
+                  return <button key={p.id} type="button" className={on ? 'chip active' : 'chip'} onClick={() => { setQuemMexido(true); setQuem((q) => (on ? q.filter((x) => x !== p.id) : [...q, p.id])) }}>{p.name}</button>
                 })}
               </div>
             )}
             {profs.length > 0 && quem.length === 0 && <span className="campo-dica campo-dica-alerta">Sem ninguém marcado, o serviço fica só aqui: não entra na categoria nem no marcar da cliente.</span>}
+            {profs.length > 1 && editing === 'new' && quem.length > 0 && !quemMexido && <span className="campo-dica">Pré-marcadas pelas categorias que cada uma atende. Ajuste se for diferente.</span>}
           </div>
           {!(editing === 'new' && origem) && <div className="cat-nova">
             <input

@@ -52,10 +52,10 @@ const FOTO = (n) => {
 }
 
 const profissionais = [
-  { id: 'pr1', user_id: 'p1', codigo: 'ANA7K2', name: 'Ana Oliveira', slug: 'ana-oliveira', bio: 'Especialista em unhas decoradas e cuidados completos. Atendo com hora marcada, num cantinho tranquilo no Gonzaga — café, música baixa e capricho em cada detalhe.', especialidade: 'Nail designer · gel e decoradas', instagram: 'ana.oliveira.nails', whatsapp_publico: '5513998710002', photo_url: FOTO(47), active: true, salon_id: SALAO, aceite_manual: true, minutos_para_aceitar: 120, ao_expirar: 'confirma', buffer_minutes: 0, reminder_hours_before: 24, followup_active: true, winback_after_days: 45, winback_cooldown_days: 45, no_show_tolerance_minutes: 15, phone: '(13) 99871-0002' },
-  { id: 'pr2', user_id: 'p2', codigo: 'CAM3XR', name: 'Camila Rocha', slug: 'camila-rocha', bio: 'Cabeleireira e colorista.', photo_url: FOTO(32), active: true, salon_id: SALAO, aceite_manual: true, minutos_para_aceitar: 120, ao_expirar: 'confirma' },
-  { id: 'pr3', user_id: 'p3', name: 'Fernanda Lima', slug: 'fernanda-lima', bio: 'Esteticista facial e corporal.', photo_url: FOTO(44), active: true, salon_id: SALAO, aceite_manual: false },
-  { id: 'pr4', user_id: 'p4', name: 'Roberta Souza', slug: 'roberta-souza', bio: 'Maquiagem e sobrancelhas.', photo_url: FOTO(20), active: true, salon_id: SALAO, aceite_manual: true },
+  { id: 'pr1', user_id: 'p1', codigo: 'ANA7K2', categorias: ['ct2'], name: 'Ana Oliveira', slug: 'ana-oliveira', bio: 'Especialista em unhas decoradas e cuidados completos. Atendo com hora marcada, num cantinho tranquilo no Gonzaga — café, música baixa e capricho em cada detalhe.', especialidade: 'Nail designer · gel e decoradas', instagram: 'ana.oliveira.nails', whatsapp_publico: '5513998710002', photo_url: FOTO(47), active: true, salon_id: SALAO, aceite_manual: true, minutos_para_aceitar: 120, ao_expirar: 'confirma', buffer_minutes: 0, reminder_hours_before: 24, followup_active: true, winback_after_days: 45, winback_cooldown_days: 45, no_show_tolerance_minutes: 15, phone: '(13) 99871-0002' },
+  { id: 'pr2', user_id: 'p2', codigo: 'CAM3XR', categorias: ['ct1'], name: 'Camila Rocha', slug: 'camila-rocha', bio: 'Cabeleireira e colorista.', photo_url: FOTO(32), active: true, salon_id: SALAO, aceite_manual: true, minutos_para_aceitar: 120, ao_expirar: 'confirma' },
+  { id: 'pr3', user_id: 'p3', categorias: ['ct7', 'ct8'], name: 'Fernanda Lima', slug: 'fernanda-lima', bio: 'Esteticista facial e corporal.', photo_url: FOTO(44), active: true, salon_id: SALAO, aceite_manual: false },
+  { id: 'pr4', user_id: 'p4', categorias: ['ct5', 'ct4'], name: 'Roberta Souza', slug: 'roberta-souza', bio: 'Maquiagem e sobrancelhas.', photo_url: FOTO(20), active: true, salon_id: SALAO, aceite_manual: true },
   { id: 'pr5', user_id: null, name: 'Carla Mendes', slug: 'carla-mendes', phone: '(11) 98765-4321', especialidade: 'Cabeleireira', photo_url: null, active: true, salon_id: SALAO, aceite_manual: true, vinculo: 'parceira', situacao: 'configurada', cota_pct: 30, permissoes: { confirmar: true, bloquear: true, clientes: 'proprias', servicos: false, ver_repasse: true }, token: 'demo0123456789ab' },
 ].map((p) => ({ situacao: p.user_id ? 'ativa' : 'configurada', vinculo: 'funcionaria', permissoes: { confirmar: true, bloquear: true, clientes: 'salao', servicos: true, ver_repasse: true }, usa_horario_salao: true, ...p }))
 
@@ -505,6 +505,8 @@ const RPC = {
   enviar_lembretes: () => 0,
   // a Mel (2.87): estatísticas zeradas (uma frase com uso, para a lista ter número) e importação com a mesma validação do banco, resumida
   mel_marcar: () => ({ ok: true }),
+  equipe_definir_categorias: ({ categorias }) => ({ ok: true, categorias }),
+  cobertura_por_categoria: () => [{ categoria_id: 'ct1', nome: 'Cabelo', ordem: 10, servicos: 2, sem_profissional: 0, profissionais: ['Camila Rocha', 'Carla Mendes'] }, { categoria_id: 'ct2', nome: 'Unhas', ordem: 20, servicos: 5, sem_profissional: 0, profissionais: ['Ana Oliveira'] }, { categoria_id: 'ct4', nome: 'Sobrancelhas', ordem: 40, servicos: 1, sem_profissional: 1, profissionais: [] }],
   catalogo_uso: () => [{ item_id: 'ci-sobrancelhas-design-design-de-sobrancelhas', categoria_id: 'ct4', n: 1 }, { item_id: null, categoria_id: 'ct1', n: 2 }, { item_id: null, categoria_id: 'ct2', n: 5 }],
   // a fala direta do cadastro (2.91): a frase do momento, com os dados no lugar
   mel_fala_direta: ({ momento, dados }) => {

@@ -173,3 +173,11 @@ body.com-gaveta { overflow: hidden; }
 
 /* revisão de layout (2.59.1): título da gaveta em Poppins, como o resto */
 .gv-topo-texto strong { font-family: inherit; font-weight: 700; text-transform: none; letter-spacing: -0.03em; font-size: 1.35rem; line-height: 1.2; }
+
+/* categorias que atende (2.93) */
+.gv-cats { display: grid; gap: 6px; margin: 2px 0 10px; padding: 10px 12px; border-radius: 14px; background: #fff6fa; border: 1px solid #ffe3ee; }
+.gv-cats-rotulo { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: #9a9ea8; }
+.gv-cats .gv-chips { margin-top: 0; }
+.gv-servicos li.gv-servicos-cat { border: 0; padding: 10px 4px 2px; display: flex; justify-content: space-between; align-items: baseline; background: none; }
+.gv-servicos li.gv-servicos-cat span { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #6b6f7a; }
+.gv-servicos li.gv-servicos-cat small { font-size: 0.74rem; }

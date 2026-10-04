@@ -7,6 +7,7 @@ import { buscar, sugestoes, duracaoDe, nomeSugerido, quantosServicos } from '../
 import { imagemDoItem } from '../../../components/CadastroDeServico'
 import { categoriasDoSalao, useCategorias } from '../../../lib/categorias'
 import { formatDuracao } from '../../../lib/format'
+import { Trava } from './Manual'
 
 // Etapa 2 da configuração inicial (2.94): "Monte seu cardápio" em duas
 // colunas. À esquerda o catálogo (tabs das categorias escolhidas, busca,
@@ -17,7 +18,7 @@ import { formatDuracao } from '../../../lib/format'
 const reais = (t) => { const n = Number(String(t ?? '').replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.')); return Number.isFinite(n) && n >= 0 ? n : null }
 const emReais = (v) => (Number(v) > 0 ? Number(v).toFixed(2).replace('.', ',') : '')
 
-export default function EtapaServicos({ s, setErro, onEstado, compacto = false }) {
+export default function EtapaServicos({ s, setErro, onEstado, compacto = false, irPara, abrirManual }) {
   const catalogo = useCatalogo()
   const catsTodas = useCategorias()
   const [servicos, setServicos] = useState(null)
@@ -48,10 +49,13 @@ export default function EtapaServicos({ s, setErro, onEstado, compacto = false }
   }, [s.id])
   useEffect(() => { carregar() }, [carregar])
   const n = (servicos ?? []).length
+  // sem categoria não tem sugestão nem cardápio: a etapa fica travada
+  const semCategoria = escolhidas.length === 0 && !catsTodas.some((c) => c.salon_id === s.id)
   useEffect(() => {
+    if (semCategoria) { onEstado({ podeContinuar: false, rodape: 'Escolha as categorias primeiro', aviso: true }); return }
     const rodape = n === 0 ? 'Adicione pelo menos um serviço' : `${n} ${n === 1 ? 'serviço' : 'serviços'} no cardápio`
     onEstado({ podeContinuar: n > 0, rodape, acaoRodape: compacto ? { rotulo: `Meu cardápio · ${n}`, icone: <ClipboardList size={16} />, onClick: () => setFolha(true) } : null })
-  }, [n, compacto]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [n, compacto, semCategoria]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---- adicionar / mudar / tirar ----
   async function adicionar(item, tecnica = null) {
@@ -112,6 +116,9 @@ export default function EtapaServicos({ s, setErro, onEstado, compacto = false }
         <h2>Monte seu cardápio</h2>
         <p>Toque em “Adicionar” no que você faz. Preço e duração ficam ao lado, do seu jeito. Dá para ajustar tudo depois em Serviços.</p>
       </header>
+      {semCategoria ? (
+        <Trava titulo="Primeiro, as categorias" texto="As sugestões de serviço vêm das categorias que você marca. Sem nenhuma, não tem o que sugerir nem onde guardar o serviço. Escolha pelo menos uma e volte aqui." acao="Escolher categorias" onAcao={() => irPara?.('categorias')} onManual={abrirManual} />
+      ) : (
       <div className="cfg-servicos">
         <div className="cfg-catalogo">
           {cats.length > 0 && (
@@ -177,6 +184,7 @@ export default function EtapaServicos({ s, setErro, onEstado, compacto = false }
           </aside>
         )}
       </div>
+      )}
       {compacto && folha && (
         <Portal><div className="modal-fundo cfg-folha-fundo" onClick={() => setFolha(false)}>
           <div className="cfg-folha" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Meu cardápio">
@@ -205,10 +213,12 @@ function CartaoSugestao({ item, catalogo, adicionado, onAdicionar }) {
   return (
     <div className={'cfg-sug' + (adicionado ? ' adicionado' : '')}>
       <Mini item={item} />
-      <strong>{item.nome}</strong>
-      <small>{fam?.nome ?? ''}</small>
-      <span className="cfg-sug-dur"><Clock size={12} /> {item.duracao_sugerida ? formatDuracao(item.duracao_sugerida) : '—'}</span>
-      <button type="button" className={'cfg-add' + (adicionado ? ' feito' : '')} onClick={onAdicionar} disabled={adicionado}>{adicionado ? <><Check size={14} /> Adicionado</> : <><Plus size={14} /> Adicionar</>}</button>
+      <div className="cfg-sug-txt">
+        <small>{fam?.nome ?? ''}</small>
+        <strong>{item.nome}</strong>
+        <span className="cfg-sug-dur"><Clock size={12} /> {item.duracao_sugerida ? formatDuracao(item.duracao_sugerida) : 'duração livre'}</span>
+      </div>
+      <button type="button" className={'cfg-add' + (adicionado ? ' feito' : '')} onClick={onAdicionar} disabled={adicionado}>{adicionado ? <><Check size={14} /> No cardápio</> : <><Plus size={14} /> Adicionar</>}</button>
     </div>
   )
 }

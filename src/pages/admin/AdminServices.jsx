@@ -4,7 +4,7 @@ import AdminShell from '../../components/AdminShell'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { ChevronIcon, SparkleIcon } from '../../components/icons'
-import { Star, Plus, LayoutGrid } from 'lucide-react'
+import { Star, Plus, LayoutGrid, Lock } from 'lucide-react'
 import { formatPreco, formatDuracao, labelDuracao } from '../../lib/format'
 import { useCategorias, categoriasDoSalao, agruparPorCategoria, bate, capaPadrao } from '../../lib/categorias'
 import { ajustarCriativo } from '../../lib/imagem'
@@ -65,9 +65,11 @@ export default function AdminServices() {
   const [escolhidas, setEscolhidas] = useState(() => (Array.isArray(salao?.categorias_escolhidas) ? salao.categorias_escolhidas : []))
   useEffect(() => { setEscolhidas(Array.isArray(salao?.categorias_escolhidas) ? salao.categorias_escolhidas : []) }, [salao?.categorias_escolhidas])
   const [escolhendoCats, setEscolhendoCats] = useState(false)
+  const [avisoCats, setAvisoCats] = useState(false)   // tentou cadastrar serviço sem categoria
   const [filtroCat, setFiltroCat] = useState('')
   const catsVivas = [...catsTodas.filter((c) => !catsExtra.some((e) => e.id === c.id)), ...catsExtra].filter((c) => !c.apagada)
   const cats = categoriasDoSalao(catsVivas, salao?.id, escolhidas)
+  const semCategoria = escolhidas.length === 0 && !catsVivas.some((c) => c.salon_id === salao?.id)
   const contagens = {}
   for (const x of services) if (x.categoria_id) contagens[x.categoria_id] = (contagens[x.categoria_id] ?? 0) + 1
   async function alternarCategoria(id) {
@@ -163,6 +165,8 @@ export default function AdminServices() {
   // "Adicionar serviço" abre o catálogo assistido; dele sai pré-preenchido
   // (escolherDoCatalogo) ou em branco (personalizado), no mesmo painel
   function startNew() {
+    // sem categoria não tem onde guardar o serviço nem o que sugerir: escolhe primeiro
+    if (semCategoria) { setAvisoCats(true); setEscolhendoCats(true); return }
     setForm(FORM_VAZIO)
     setOrigem(null)
     setImagens([])
@@ -508,12 +512,13 @@ export default function AdminServices() {
             <div className="cardapio">
               <header className="cardapio-topo">
                 <div className="cardapio-titulos"><h3>Suas categorias</h3><p>As áreas do seu trabalho. Elas organizam seus serviços, as sugestões e a página do salão.</p></div>
-                <button type="button" className="modal-fechar" onClick={() => setEscolhendoCats(false)} aria-label="Fechar">×</button>
+                <button type="button" className="modal-fechar" onClick={() => { setEscolhendoCats(false); setAvisoCats(false) }} aria-label="Fechar">×</button>
               </header>
+              {avisoCats && <p className="svc-cats-aviso"><Lock size={14} /> Antes de cadastrar um serviço, marque pelo menos uma categoria: é nela que o serviço vai morar e de onde vêm as sugestões.</p>}
               <div className="cardapio-corpo">
                 <EscolhaDeCategorias categorias={catsVivas} escolhidas={escolhidas} onAlternar={alternarCategoria} minhas={catsVivas.filter((c) => c.salon_id === salao?.id)} onCriar={criarCategoriaNome} onTirar={apagarCategoria} contagens={contagens} />
               </div>
-              <footer className="cardapio-rodape"><button type="button" className="btn btn-primary cardapio-seguir" onClick={() => setEscolhendoCats(false)}>Pronto</button></footer>
+              <footer className="cardapio-rodape"><button type="button" className="btn btn-primary cardapio-seguir" onClick={() => { setEscolhendoCats(false); if (avisoCats && !semCategoria) { setAvisoCats(false); startNew() } else setAvisoCats(false) }}>{avisoCats ? 'Pronto, cadastrar serviço' : 'Pronto'}</button></footer>
             </div>
           </div>
         </div></Portal>

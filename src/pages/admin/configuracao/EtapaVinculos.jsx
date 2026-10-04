@@ -4,6 +4,7 @@ import Avatar from '../../../components/Avatar'
 import { supabase } from '../../../lib/supabase'
 import { useCategorias } from '../../../lib/categorias'
 import { primeiroNome } from '../../../lib/equipe'
+import { Trava } from './Manual'
 
 // Etapa 4 da configuração inicial (2.94): "Quem faz cada serviço?" — a
 // matriz serviços × profissionais. Cada célula é uma linha de
@@ -11,7 +12,7 @@ import { primeiroNome } from '../../../lib/equipe'
 // massa por profissional, destaque de linha e coluna, aviso suave de quem
 // ficou sem ninguém. Ao continuar, as categorias que cada uma atende são
 // deduzidas dos serviços marcados (equipe_definir_categorias).
-export default function EtapaVinculos({ s, setErro, onEstado, compacto = false }) {
+export default function EtapaVinculos({ s, setErro, onEstado, compacto = false, irPara, abrirManual }) {
   const catsTodas = useCategorias()
   const [servicos, setServicos] = useState(null)
   const [equipe, setEquipe] = useState(null)
@@ -48,6 +49,7 @@ export default function EtapaVinculos({ s, setErro, onEstado, compacto = false }
 
   useEffect(() => {
     if (!servicos || !equipe) return
+    if (equipe.length === 0 || servicos.length === 0) { onEstado({ podeContinuar: false, rodape: equipe.length === 0 ? 'Cadastre as profissionais primeiro' : 'Monte o cardápio primeiro', aviso: true }); return }
     onEstado({
       podeContinuar: true,
       rodape: descobertos.length === 0 ? 'Todos os serviços têm profissional' : `${descobertos.length} ${descobertos.length === 1 ? 'serviço ainda está' : 'serviços ainda estão'} sem profissional`,
@@ -84,8 +86,10 @@ export default function EtapaVinculos({ s, setErro, onEstado, compacto = false }
         <h2>Quem faz cada serviço?</h2>
         <p>Ligue os serviços às profissionais. Assim a MIMO sabe em qual agenda cada atendimento pode entrar.</p>
       </header>
-      {equipe.length === 0 || servicos.length === 0 ? (
-        <p className="muted cfg-carregando">{equipe.length === 0 ? 'Sem profissionais ainda: volte uma etapa e adicione quem atende.' : 'Sem serviços ainda: volte e monte o cardápio.'}</p>
+      {servicos.length === 0 ? (
+        <Trava titulo="Primeiro, o cardápio" texto="Não tem serviço para ligar a ninguém ainda. Monte o cardápio na etapa Serviços e volte aqui." acao="Montar o cardápio" onAcao={() => irPara?.('servicos')} onManual={abrirManual} />
+      ) : equipe.length === 0 ? (
+        <Trava titulo="Primeiro, as profissionais" texto="Sem ninguém cadastrado, não dá para dizer quem faz o quê. Adicione pelo menos uma profissional e volte aqui." acao="Cadastrar profissionais" onAcao={() => irPara?.('profissionais')} onManual={abrirManual} />
       ) : compacto ? (
         <>
           <span className={'cfg-vinc-aviso' + (descobertos.length ? ' falta' : ' ok')}>{descobertos.length ? <><AlertTriangle size={14} /> {descobertos.length} {descobertos.length === 1 ? 'serviço sem profissional' : 'serviços sem profissional'}</> : <><Check size={14} /> Todos os serviços têm profissional</>}</span>

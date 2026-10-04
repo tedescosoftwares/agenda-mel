@@ -285,3 +285,68 @@
 .cfg-revisao-teste { display: grid; gap: 4px; justify-items: start; border-top: 1px solid #ffd6e4; padding-top: 10px; }
 .cfg-revisao-teste strong { font-size: 0.86rem; }
 .cfg-revisao-teste p { margin: 0; font-size: 0.84rem; }
+
+/* ---- travas, manual e cartões de sugestão (2.96) ---- */
+.cfg-cabecalho-acoes { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+.cfg-stepper li.travada button { opacity: 0.55; cursor: not-allowed; }
+.cfg-trava { display: flex; gap: 16px; align-items: flex-start; padding: 22px 24px; border-radius: 20px; border: 1px solid #ffd6e4; background: linear-gradient(135deg, #fff5f8, #fdf3fb); max-width: 720px; }
+.cfg-trava-icone { flex: none; width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; background: #fff; color: var(--cfg-rosa); box-shadow: 0 6px 16px rgba(255, 45, 122, 0.14); }
+.cfg-trava-txt { display: grid; gap: 6px; min-width: 0; }
+.cfg-trava-txt strong { font-size: 1.05rem; color: var(--ameixa, #3d0c4e); }
+.cfg-trava-txt p { margin: 0; color: var(--texto-2, #6b7280); font-size: 0.92rem; line-height: 1.45; }
+.cfg-trava-acoes { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+.cfg-manual-fundo { align-items: center; }
+.cfg-manual { position: relative; width: min(560px, calc(100vw - 32px)); max-height: 88dvh; overflow-y: auto; background: #fff; border-radius: 22px; padding: 22px 24px 24px; display: grid; gap: 16px; }
+.cfg-manual .modal-fechar { top: 12px; right: 12px; }
+.cfg-manual-topo { display: grid; gap: 4px; padding-right: 32px; }
+.cfg-manual-topo h3 { margin: 2px 0 0; font-size: 1.25rem; color: var(--ameixa, #3d0c4e); }
+.cfg-manual-topo p { margin: 0; color: var(--texto-2, #6b7280); font-size: 0.9rem; line-height: 1.45; }
+.cfg-manual-lista { list-style: none; margin: 0; padding: 0; display: grid; }
+.cfg-manual-lista li { position: relative; display: grid; grid-template-columns: 30px 1fr; gap: 12px; padding: 12px 0 14px; }
+.cfg-manual-lista li + li { border-top: 1px solid var(--cfg-fio); }
+.cfg-manual-num { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-size: 0.8rem; font-weight: 700; border: 1.5px solid var(--cfg-fio); color: var(--texto-2, #6b7280); background: #fff; }
+.cfg-manual-lista li.atual .cfg-manual-num { border-color: var(--cfg-rosa); color: var(--cfg-rosa); box-shadow: 0 0 0 3px rgba(255, 45, 122, 0.12); }
+.cfg-manual-lista li.feita .cfg-manual-num { background: var(--cfg-rosa); border-color: var(--cfg-rosa); color: #fff; }
+.cfg-manual-lista li.travada .cfg-manual-num { background: #f4f1f6; color: #a39aa8; }
+.cfg-manual-txt { display: grid; gap: 5px; min-width: 0; }
+.cfg-manual-txt strong { display: flex; align-items: center; gap: 7px; font-size: 0.98rem; color: var(--texto, #1f2026); }
+.cfg-manual-txt strong svg { color: var(--cfg-rosa); }
+.cfg-manual-txt strong em { font-style: normal; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--cfg-rosa); background: #fff0f6; border-radius: 999px; padding: 2px 8px; }
+.cfg-manual-txt p { margin: 0; font-size: 0.88rem; color: var(--texto-2, #6b7280); line-height: 1.42; }
+.cfg-manual-txt dl { margin: 2px 0 0; display: grid; gap: 2px; font-size: 0.8rem; }
+.cfg-manual-txt dl div { display: flex; gap: 6px; }
+.cfg-manual-txt dt { color: var(--texto-3, #9a9ea8); flex: none; width: 76px; }
+.cfg-manual-txt dd { margin: 0; color: var(--texto, #1f2026); }
+.cfg-manual-falta { display: inline-flex; align-items: center; gap: 5px; font-size: 0.76rem; color: #9a6400; background: #fff8e8; border-radius: 999px; padding: 3px 10px; justify-self: start; }
+.cfg-manual-txt .plat-link { justify-self: start; font-size: 0.82rem; display: inline-flex; align-items: center; gap: 4px; }
+.cfg-compacta .cfg-manual-fundo { align-items: flex-end; padding: 0; }
+.cfg-compacta .cfg-manual { width: 100%; border-radius: 22px 22px 0 0; max-height: 90dvh; }
+.cfg-compacta .cfg-trava { flex-direction: column; gap: 12px; padding: 18px; }
+
+/* cartão de sugestão: foto, família em cima do nome, duração, barra "Adicionar" */
+.cfg-sug-grade { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; align-items: stretch; }
+.cfg-sug { grid-template-rows: auto 1fr auto; gap: 0; padding: 0; overflow: hidden; border-radius: 18px; box-shadow: 0 1px 2px rgba(31, 32, 38, 0.04); transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease; }
+.cfg-sug:hover { transform: translateY(-2px); border-color: #ffc2d8; box-shadow: 0 14px 30px rgba(61, 12, 78, 0.1); }
+.cfg-sug .cfg-mini { border-radius: 0; aspect-ratio: 14 / 9; }
+.cfg-sug .cfg-mini img { transition: transform 0.6s cubic-bezier(0.2, 0.7, 0.2, 1); }
+.cfg-sug:hover .cfg-mini img { transform: scale(1.05); }
+.cfg-sug .cfg-mini.vazia { background: linear-gradient(135deg, #ffe4ef 0%, #f3e6fb 55%, #fde9f1 100%); position: relative; }
+.cfg-sug .cfg-mini.vazia::after { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.7), transparent 45%); }
+.cfg-sug-txt { display: grid; gap: 3px; padding: 11px 14px 10px; align-content: start; min-width: 0; }
+.cfg-sug-txt small { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--cfg-rosa); min-height: 1em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cfg-sug-txt strong { margin: 0; font-size: 0.98rem; font-weight: 600; line-height: 1.25; color: var(--texto, #1f2026); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 2.5em; overflow-wrap: anywhere; }
+.cfg-sug-txt .cfg-sug-dur { font-size: 0.78rem; color: var(--texto-2, #6b7280); }
+.cfg-sug .cfg-add { margin: 0; justify-self: stretch; justify-content: center; border: 0; border-top: 1px solid var(--cfg-fio); border-radius: 0; padding: 10px 12px; font-size: 0.86rem; background: #fff7fa; }
+.cfg-sug .cfg-add:hover { background: #ffe9f1; }
+.cfg-sug.adicionado { border-color: #c6ecd8; background: #fff; }
+.cfg-sug .cfg-add.feito { background: #e9f8ef; border-top-color: #c6ecd8; }
+/* linhas da lista (famílias, resultados, celular): mais ar e hierarquia */
+.cfg-linha { padding: 12px 14px; gap: 14px; }
+.cfg-linha-txt { gap: 2px; }
+.cfg-linha-txt strong { font-weight: 600; }
+.cfg-linha-txt strong em { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--texto-3, #9a9ea8); background: var(--tinta, #f8f7fa); border-radius: 999px; padding: 1px 7px; margin-left: 8px; vertical-align: middle; }
+.cfg-linha:hover { background: #fffafc; }
+.cfg-compacta .cfg-sug-grade { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+/* o manual e o rodapé saem do .cfg (portal): repetem as variáveis */
+.cfg-manual, .cfg-rodape, .cfg-folha { --cfg-fio: #ece7ee; --cfg-lilas: #fbf6fb; --cfg-rosa: var(--rosa, #ff2d7a); }
+.cfg-mini-botoes { display: flex; gap: 6px; }

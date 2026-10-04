@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
-import { Check, Lock, Sparkles, Users, LayoutGrid, Link2, ArrowLeft, ArrowRight, Save, LogOut } from 'lucide-react'
+import { Check, Lock, Sparkles, Users, LayoutGrid, Link2, ArrowLeft, ArrowRight, Save, LogOut, HelpCircle } from 'lucide-react'
 import AdminShell from '../../components/AdminShell'
 import ProShell from '../../components/ProShell'
 import { useAuth } from '../../context/AuthContext'
@@ -14,6 +14,7 @@ import EtapaProfissionais from './configuracao/EtapaProfissionais'
 import EtapaVinculos from './configuracao/EtapaVinculos'
 import EtapaRevisao from './configuracao/EtapaRevisao'
 import useCompacto from './configuracao/useCompacto'
+import { ManualDaConfiguracao, dependenciasOk, oQueFalta } from './configuracao/Manual'
 import '../../configuracao.css'
 
 // Configuração inicial (2.94): Categorias → Serviços → Profissionais →
@@ -44,6 +45,7 @@ export default function Configurar({ para = 'admin' }) {
   const [estado, setEstado] = useState({ podeContinuar: false, rodape: '' })
   const [feitas, setFeitas] = useState({})
   const [ativandoAqui, setAtivandoAqui] = useState(false)
+  const [manual, setManual] = useState(false)
   const compacto = useCompacto()
   // o rodapé é fixo, colado no fim do miolo que rola (largura e posição
   // medidas do <main>), e publica a própria altura em --rodape-fixo para
@@ -89,13 +91,13 @@ export default function Configurar({ para = 'admin' }) {
     derivar(base).then((f) => {
       let guardado = null
       try { guardado = chaveLocal ? localStorage.getItem(chaveLocal) : null } catch { /* nada */ }
-      const valido = guardado && (guardado === REVISAO || etapas.some((e) => e.id === guardado))
+      const valido = guardado && (guardado === REVISAO || etapas.some((e) => e.id === guardado)) && dependenciasOk(guardado, f)
       const primeira = etapas.find((e) => !f[e.id])?.id ?? REVISAO
       setPasso(valido ? guardado : primeira)
     })
   }, [base]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (passo && chaveLocal) { try { localStorage.setItem(chaveLocal, passo) } catch { /* nada */ } } }, [passo, chaveLocal])
-  useEffect(() => { setEstado({ podeContinuar: false, rodape: '' }); if (s) derivar(s) }, [passo]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (s) derivar(s) }, [passo]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function gravarQuieto(dados) {
     const { error } = await supabase.rpc('onboarding_salvar', { salao: s.id, dados })
@@ -103,9 +105,11 @@ export default function Configurar({ para = 'admin' }) {
     setS((x) => ({ ...x, ...dados }))
     return true
   }
+  const feitasAgora = { ...feitas, categorias: Boolean(feitas.categorias) || (Array.isArray(s?.categorias_escolhidas) && s.categorias_escolhidas.length > 0) }
+  const liberada = (id) => dependenciasOk(id, feitasAgora)
   const indice = passo === REVISAO ? etapas.length : etapas.findIndex((e) => e.id === passo)
   const ultimaEtapa = indice === etapas.length - 1
-  function ir(id) { setPasso(id); window.scrollTo({ top: 0, behavior: 'smooth' }) }
+  function ir(id) { if (!liberada(id)) { setManual(true); return } setEstado({ podeContinuar: false, rodape: '' }); setPasso(id); document.querySelector('main.admin-content')?.scrollTo({ top: 0, behavior: 'smooth' }) }
   async function continuar() {
     if (!estado.podeContinuar) return
     setSalvando(true)
@@ -132,7 +136,7 @@ export default function Configurar({ para = 'admin' }) {
 
   const total = etapas.length
   const progresso = passo === REVISAO ? 100 : Math.round(((indice + 1) / (total + 1)) * 100)
-  const props = { s, setS, gravarQuieto, setErro, autonoma, onEstado, irPara: ir, compacto }
+  const props = { s, setS, gravarQuieto, setErro, autonoma, onEstado, irPara: ir, compacto, abrirManual: () => setManual(true) }
   const rotuloAtual = passo === REVISAO ? 'Revisão' : etapas[indice]?.rotulo
   return (
     <Shell amplo>
@@ -144,7 +148,10 @@ export default function Configurar({ para = 'admin' }) {
               <div className="cfg-progresso" role="progressbar" aria-valuenow={progresso} aria-valuemin={0} aria-valuemax={100}><span style={{ width: `${progresso}%` }} /></div>
               <span className="cfg-mini-rotulo"><b>{rotuloAtual}</b> · {passo === REVISAO ? total + 1 : indice + 1}/{total + 1}</span>
             </div>
-            <button type="button" className="cfg-mini-sair" onClick={() => navigate(para === 'admin' ? '/admin' : '/pro/agenda')} aria-label="Salvar e continuar depois" title="Salvar e continuar depois"><LogOut size={17} /></button>
+            <span className="cfg-mini-botoes">
+              <button type="button" className="cfg-mini-sair" onClick={() => setManual(true)} aria-label="Como funciona" title="Como funciona"><HelpCircle size={17} /></button>
+              <button type="button" className="cfg-mini-sair" onClick={() => navigate(para === 'admin' ? '/admin' : '/pro/agenda')} aria-label="Salvar e continuar depois" title="Salvar e continuar depois"><LogOut size={17} /></button>
+            </span>
           </header>
         ) : (
         <header className="cfg-cabecalho">
@@ -153,17 +160,21 @@ export default function Configurar({ para = 'admin' }) {
               <span className="cfg-eyebrow">Configuração inicial</span>
               <h1>{passo === REVISAO ? 'Revisão' : `Etapa ${indice + 1} de ${total}`}</h1>
             </div>
-            <button type="button" className="btn btn-ghost cfg-depois" onClick={() => navigate(para === 'admin' ? '/admin' : '/pro/agenda')}><Save size={15} /> Salvar e continuar depois</button>
+            <div className="cfg-cabecalho-acoes">
+              <button type="button" className="btn btn-ghost cfg-manual-btn" onClick={() => setManual(true)}><HelpCircle size={15} /> Como funciona</button>
+              <button type="button" className="btn btn-ghost cfg-depois" onClick={() => navigate(para === 'admin' ? '/admin' : '/pro/agenda')}><Save size={15} /> Salvar e continuar depois</button>
+            </div>
           </div>
           <ol className="cfg-stepper">
             {etapas.map((e, i) => {
               const atual = e.id === passo
               const feita = Boolean(feitas[e.id])
-              const liberada = feita || i <= indice || Object.values(feitas).filter(Boolean).length >= i
+              const livre = liberada(e.id)
+              const falta = livre ? '' : `Precisa de: ${oQueFalta(e.id, feitasAgora, autonoma).join(' e ')}`
               return (
-                <li key={e.id} className={(atual ? 'atual' : '') + (feita ? ' feita' : '') + (!liberada ? ' travada' : '')}>
-                  <button type="button" onClick={() => liberada && ir(e.id)} disabled={!liberada} aria-current={atual ? 'step' : undefined}>
-                    <i>{feita && !atual ? <Check size={12} strokeWidth={3} /> : !liberada ? <Lock size={10} /> : i + 1}</i>
+                <li key={e.id} className={(atual ? 'atual' : '') + (feita ? ' feita' : '') + (!livre ? ' travada' : '')}>
+                  <button type="button" onClick={() => ir(e.id)} aria-disabled={!livre} title={falta || undefined} aria-current={atual ? 'step' : undefined}>
+                    <i>{feita && !atual ? <Check size={12} strokeWidth={3} /> : !livre ? <Lock size={10} /> : i + 1}</i>
                     <span>{e.rotulo}</span>
                   </button>
                   {i < etapas.length - 1 && <em aria-hidden="true" />}
@@ -177,6 +188,7 @@ export default function Configurar({ para = 'admin' }) {
         )}
 
         {erro && <ModalErro texto={erro} onFechar={() => setErro('')} />}
+        {manual && <ManualDaConfiguracao atual={passo} feitas={feitasAgora} autonoma={autonoma} onFechar={() => setManual(false)} onIr={ir} />}
         {!s || !passo ? <p className="muted">Carregando…</p> : (
           <div key={passo} className="cfg-corpo">
             {passo === 'categorias' && <EtapaCategorias {...props} />}

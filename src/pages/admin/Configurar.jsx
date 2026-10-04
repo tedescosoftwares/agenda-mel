@@ -74,7 +74,7 @@ export default function Configurar({ para = 'admin' }) {
 
   // o progresso vem dos dados: primeira etapa não feita é onde a pessoa entra
   const derivar = useCallback(async (salao) => {
-    const [r, cb, ct] = await Promise.all([supabase.rpc('primeiros_passos', { salao: salao.id }), autonoma ? Promise.resolve({ data: [] }) : supabase.rpc('cobertura_por_categoria', { salao: salao.id }), supabase.from('categorias_de_servico').select('id, salon_id').or(`salon_id.eq.${salao.id},salon_id.is.null`)])
+    const [r, cb, ct] = await Promise.all([supabase.rpc('primeiros_passos', { salao: salao.id }), autonoma ? Promise.resolve({ data: [] }) : supabase.rpc('cobertura_por_categoria', { salao: salao.id }), supabase.from('categorias_de_servico').select('id, salon_id, slug').or(`salon_id.eq.${salao.id},salon_id.is.null`)])
     const cats = ct.data ?? []
     setCatsBase(cats)
     const n = (k) => Number(r.data?.[k] ?? 0)

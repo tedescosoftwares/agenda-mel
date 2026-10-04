@@ -26,10 +26,11 @@ export function categoriasDoSalao(cats, salaoId, escolhidas) {
 }
 
 // só os ids escolhidos que existem de verdade (2.96.1): um id de categoria
-// que sumiu não conta como "escolhida" nem libera etapa nenhuma
+// que sumiu não conta como "escolhida" nem libera etapa nenhuma. "Outros"
+// também não: é só o lugar de quem não tem categoria, nunca aparece na grade
 export function escolhidasValidas(cats, escolhidas) {
   if (!Array.isArray(escolhidas) || !escolhidas.length) return []
-  const ids = new Set(cats.filter((c) => !c.salon_id).map((c) => c.id))
+  const ids = new Set(cats.filter((c) => !c.salon_id && c.slug !== 'outros').map((c) => c.id))
   return escolhidas.filter((id) => ids.has(id))
 }
 // o salão tem alguma categoria de verdade (da plataforma escolhida, ou sua)?

@@ -24,7 +24,9 @@ export function ImagemCategoria({ cat, className = '' }) {
   )
 }
 
-export default function EscolhaDeCategorias({ categorias, escolhidas = [], onAlternar, minhas = [], onCriar, onTirar, contagens = {} }) {
+// galeria (2.95.3): o modo editorial da configuração inicial — foto grande com
+// o nome sobre um degradê, descrição em duas linhas, selo de escolha na foto
+export default function EscolhaDeCategorias({ categorias, escolhidas = [], onAlternar, minhas = [], onCriar, onTirar, contagens = {}, galeria = false }) {
   const catalogo = useCatalogo()
   const [nova, setNova] = useState('')
   const plataforma = categorias.filter((c) => !c.salon_id && c.slug !== 'outros' && (c.ativa !== false || escolhidas.includes(c.id)))
@@ -36,7 +38,7 @@ export default function EscolhaDeCategorias({ categorias, escolhidas = [], onAlt
     onCriar(n); setNova('')
   }
   return (
-    <div className="escolha-cats">
+    <div className={'escolha-cats' + (galeria ? ' escolha-cats-galeria' : '')}>
       <div className="escolha-cats-topo">
         <strong>{marcadas + minhas.length === 0 ? 'Toque nas áreas que fazem parte do seu trabalho' : `${marcadas + minhas.length} ${marcadas + minhas.length === 1 ? 'categoria escolhida' : 'categorias escolhidas'}`}</strong>
         <span className="muted">As sugestões de serviço e a sua página seguem o que estiver marcado aqui.</span>
@@ -49,11 +51,13 @@ export default function EscolhaDeCategorias({ categorias, escolhidas = [], onAlt
           const [a, b] = tonsDaCategoria(i)
           return (
             <button key={c.id} type="button" className={'escolha-cat' + (marcada ? ' marcada' : '') + (c.ativa === false ? ' antiga' : '')} onClick={() => onAlternar(c.id)} aria-pressed={marcada} style={{ '--cat-a': a, '--cat-b': b, '--cat-atraso': `${Math.min(i, 9) * 40}ms` }}>
-              <ImagemCategoria cat={c} className="escolha-cat-img" />
+              {galeria ? (
+                <span className="escolha-cat-capa"><ImagemCategoria cat={c} className="escolha-cat-img" /><span className="escolha-cat-nome">{c.nome}</span></span>
+              ) : <ImagemCategoria cat={c} className="escolha-cat-img" />}
               <span className="escolha-cat-txt">
-                <strong>{c.nome}</strong>
+                {!galeria && <strong>{c.nome}</strong>}
                 {c.descricao && <small>{c.descricao}</small>}
-                <em>{nSv > 0 ? `${nSv} ${nSv === 1 ? 'serviço seu' : 'serviços seus'}` : nCat > 0 ? `${nCat} sugestões no catálogo` : c.ativa === false ? 'categoria antiga' : ''}</em>
+                <em className={nSv > 0 ? 'seus' : ''}>{nSv > 0 ? `${nSv} ${nSv === 1 ? 'serviço seu' : 'serviços seus'}` : nCat > 0 ? (galeria ? `${nCat} sugestões` : `${nCat} sugestões no catálogo`) : c.ativa === false ? 'categoria antiga' : ''}</em>
               </span>
               <span className="escolha-cat-check"><Check size={14} strokeWidth={3} /></span>
             </button>

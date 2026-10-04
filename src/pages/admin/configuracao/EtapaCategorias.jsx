@@ -41,7 +41,7 @@ export default function EtapaCategorias({ s, gravarQuieto, setErro, autonoma, on
         <h2>O que você oferece?</h2>
         <p>Escolha tudo que faz parte do seu {autonoma ? 'trabalho' : 'espaço'}. Depois eu te ajudo a montar os serviços.</p>
       </header>
-      <EscolhaDeCategorias categorias={catsTodas} escolhidas={escolhidas} onAlternar={(id) => setEscolhidas((x) => (x.includes(id) ? x.filter((y) => y !== id) : [...x, id]))} minhas={minhas} onCriar={criar} onTirar={tirar} contagens={contagens} />
+      <EscolhaDeCategorias categorias={catsTodas} escolhidas={escolhidas} onAlternar={(id) => setEscolhidas((x) => (x.includes(id) ? x.filter((y) => y !== id) : [...x, id]))} minhas={minhas} onCriar={criar} onTirar={tirar} contagens={contagens} galeria />
     </section>
   )
 }

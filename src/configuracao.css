@@ -42,10 +42,10 @@
 
 /* etapa 1: a grade de categorias já é a EscolhaDeCategorias; aqui só cresce */
 .cfg-etapa-categorias .escolha-cats-grade { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; }
-.cfg-etapa-categorias .escolha-cat { grid-template-rows: 132px auto; }
+.cfg-etapa-categorias .escolha-cat { grid-template-rows: auto 1fr; }
 .cfg-etapa-categorias .escolha-cats-topo { display: none; }
-@media (max-width: 1240px) { .cfg-etapa-categorias .escolha-cats-grade { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
-@media (max-width: 900px) { .cfg-etapa-categorias .escolha-cats-grade { grid-template-columns: repeat(3, minmax(0, 1fr)); } .cfg-etapa-categorias .escolha-cat { grid-template-rows: 100px auto; } }
+@media (max-width: 1300px) { .cfg-etapa-categorias .escolha-cats-grade { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (max-width: 900px) { .cfg-etapa-categorias .escolha-cats-grade { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 640px) { .cfg-etapa-categorias .escolha-cats-grade { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 /* etapa 2: catálogo (70) + meu cardápio (30, sticky) */
@@ -237,12 +237,14 @@
 .cfg-compacta .cfg-etapa-topo h2 { font-size: 1.25rem; }
 .cfg-compacta .cfg-etapa-topo p { font-size: 0.9rem; }
 .cfg-compacta .cfg-etapa-categorias .escolha-cats-grade { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-.cfg-compacta .cfg-etapa-categorias .escolha-cat { grid-template-rows: 72px auto; border-radius: 14px; }
-.cfg-compacta .cfg-etapa-categorias .escolha-cat-txt { padding: 6px 8px 8px; }
-.cfg-compacta .cfg-etapa-categorias .escolha-cat-txt strong { font-size: 0.82rem; line-height: 1.2; }
+.cfg-compacta .cfg-etapa-categorias .escolha-cat { grid-template-rows: auto 1fr; border-radius: 16px; }
+.cfg-compacta .cfg-etapa-categorias .escolha-cat-capa { aspect-ratio: 1 / 1.05; }
+.cfg-compacta .cfg-etapa-categorias .escolha-cat-nome { left: 9px; right: 9px; bottom: 8px; font-size: 0.8rem; }
+.cfg-compacta .cfg-etapa-categorias .escolha-cat-txt { padding: 7px 9px 8px; }
 .cfg-compacta .cfg-etapa-categorias .escolha-cat-txt small { display: none; }
-.cfg-compacta .cfg-etapa-categorias .escolha-cat-txt em { font-size: 0.66rem; }
-.cfg-compacta .cfg-etapa-categorias .escolha-cat-check { top: 6px; right: 6px; width: 22px; height: 22px; }
+.cfg-compacta .cfg-etapa-categorias .escolha-cat-txt em { font-size: 0.64rem; }
+.cfg-compacta .cfg-etapa-categorias .escolha-cat-check { top: 7px; right: 7px; width: 22px; height: 22px; }
+.cfg-compacta .cfg-etapa-categorias .escolha-cats-minhas { padding: 14px; border-radius: 16px; }
 .cfg-compacta .cfg-tabs { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
 .cfg-compacta .cfg-tab { flex: none; }
 .cfg-compacta .cfg-busca { height: 48px; }

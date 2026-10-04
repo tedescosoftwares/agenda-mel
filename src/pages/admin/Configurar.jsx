@@ -135,7 +135,7 @@ export default function Configurar({ para = 'admin' }) {
   const props = { s, setS, gravarQuieto, setErro, autonoma, onEstado, irPara: ir, compacto }
   const rotuloAtual = passo === REVISAO ? 'Revisão' : etapas[indice]?.rotulo
   return (
-    <Shell>
+    <Shell amplo>
       <div className={'cfg' + (compacto ? ' cfg-compacta' : '')}>
         {compacto ? (
           <header className="cfg-cabecalho-mini">

@@ -6,6 +6,7 @@ import AdminShell from '../../components/AdminShell'
 import ProShell from '../../components/ProShell'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
+import { temCategoria } from '../../lib/categorias'
 import AtivarSalao from '../../components/AtivarSalao'
 import { ModalErro } from '../Onboarding'
 import EtapaCategorias from './configuracao/EtapaCategorias'
@@ -46,6 +47,7 @@ export default function Configurar({ para = 'admin' }) {
   const [feitas, setFeitas] = useState({})
   const [ativandoAqui, setAtivandoAqui] = useState(false)
   const [manual, setManual] = useState(false)
+  const [catsBase, setCatsBase] = useState(null)   // as categorias reais, para validar os ids escolhidos
   const compacto = useCompacto()
   // o rodapé é fixo, colado no fim do miolo que rola (largura e posição
   // medidas do <main>), e publica a própria altura em --rodape-fixo para
@@ -72,11 +74,13 @@ export default function Configurar({ para = 'admin' }) {
 
   // o progresso vem dos dados: primeira etapa não feita é onde a pessoa entra
   const derivar = useCallback(async (salao) => {
-    const [r, cb] = await Promise.all([supabase.rpc('primeiros_passos', { salao: salao.id }), autonoma ? Promise.resolve({ data: [] }) : supabase.rpc('cobertura_por_categoria', { salao: salao.id })])
+    const [r, cb, ct] = await Promise.all([supabase.rpc('primeiros_passos', { salao: salao.id }), autonoma ? Promise.resolve({ data: [] }) : supabase.rpc('cobertura_por_categoria', { salao: salao.id }), supabase.from('categorias_de_servico').select('id, salon_id').or(`salon_id.eq.${salao.id},salon_id.is.null`)])
+    const cats = ct.data ?? []
+    setCatsBase(cats)
     const n = (k) => Number(r.data?.[k] ?? 0)
     const cobertura = Array.isArray(cb.data) ? cb.data : []
     const f = {
-      categorias: (Array.isArray(salao.categorias_escolhidas) && salao.categorias_escolhidas.length > 0) || n('servicos') > 0,
+      categorias: temCategoria(cats, salao.id, salao.categorias_escolhidas),   // ids fantasmas não contam; ter serviço também não
       servicos: n('servicos') > 0,
       profissionais: autonoma || n('equipe') > 0,
       vinculos: n('servicos') > 0 && (autonoma || (cobertura.length > 0 && cobertura.every((c) => Number(c.sem_profissional ?? 0) === 0))),
@@ -105,7 +109,7 @@ export default function Configurar({ para = 'admin' }) {
     setS((x) => ({ ...x, ...dados }))
     return true
   }
-  const feitasAgora = { ...feitas, categorias: Boolean(feitas.categorias) || (Array.isArray(s?.categorias_escolhidas) && s.categorias_escolhidas.length > 0) }
+  const feitasAgora = { ...feitas, categorias: catsBase && s ? temCategoria(catsBase, s.id, s.categorias_escolhidas) : Boolean(feitas.categorias) }
   const liberada = (id) => dependenciasOk(id, feitasAgora)
   const indice = passo === REVISAO ? etapas.length : etapas.findIndex((e) => e.id === passo)
   const ultimaEtapa = indice === etapas.length - 1

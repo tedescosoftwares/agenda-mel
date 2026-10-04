@@ -6,7 +6,7 @@ import { useAuth } from '../../context/AuthContext'
 import { ChevronIcon, SparkleIcon } from '../../components/icons'
 import { Star, Plus, LayoutGrid, Lock } from 'lucide-react'
 import { formatPreco, formatDuracao, labelDuracao } from '../../lib/format'
-import { useCategorias, categoriasDoSalao, agruparPorCategoria, bate, capaPadrao } from '../../lib/categorias'
+import { useCategorias, categoriasDoSalao, agruparPorCategoria, bate, capaPadrao, temCategoria } from '../../lib/categorias'
 import { ajustarCriativo } from '../../lib/imagem'
 import Portal from '../../components/Portal'
 import CadastroDeServico, { MelFala, useFalaDaMel } from '../../components/CadastroDeServico'
@@ -69,7 +69,7 @@ export default function AdminServices() {
   const [filtroCat, setFiltroCat] = useState('')
   const catsVivas = [...catsTodas.filter((c) => !catsExtra.some((e) => e.id === c.id)), ...catsExtra].filter((c) => !c.apagada)
   const cats = categoriasDoSalao(catsVivas, salao?.id, escolhidas)
-  const semCategoria = escolhidas.length === 0 && !catsVivas.some((c) => c.salon_id === salao?.id)
+  const semCategoria = catsVivas.length > 0 && !temCategoria(catsVivas, salao?.id, escolhidas)
   const contagens = {}
   for (const x of services) if (x.categoria_id) contagens[x.categoria_id] = (contagens[x.categoria_id] ?? 0) + 1
   async function alternarCategoria(id) {

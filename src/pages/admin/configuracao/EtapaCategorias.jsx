@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../../../lib/supabase'
 import EscolhaDeCategorias from '../../../components/EscolhaDeCategorias'
+import { escolhidasValidas } from '../../../lib/categorias'
 
 // Etapa 1 da configuração inicial (2.94): "O que você oferece?" — a grade
 // visual das categorias. A escolha grava sozinha em salons.categorias_escolhidas.
@@ -15,14 +16,23 @@ export default function EtapaCategorias({ s, gravarQuieto, setErro, autonoma, on
       supabase.from('categorias_de_servico').select('id, salon_id, nome, ordem, slug, descricao, ativa, imagem_url').or(`salon_id.eq.${s.id},salon_id.is.null`).order('ordem'),
       supabase.from('services').select('categoria_id').eq('salon_id', s.id).eq('active', true),
     ])
-    setCatsTodas(ct.data ?? [])
+    const lista = ct.data ?? []
+    setCatsTodas(lista)
+    // id fantasma (categoria que não existe mais) sai da escolha e do banco
+    setEscolhidas((x) => { const v = escolhidasValidas(lista, x); return v.length === x.length ? x : v })
     const m = {}; for (const x of sv.data ?? []) m[x.categoria_id] = (m[x.categoria_id] ?? 0) + 1
     setContagens(m)
   }, [s.id])
   useEffect(() => { carregar() }, [carregar])
   const minhas = catsTodas.filter((c) => c.salon_id === s.id)
-  const n = escolhidas.length + minhas.length
-  useEffect(() => { onEstado({ podeContinuar: n > 0, rodape: n === 0 ? 'Escolha pelo menos uma categoria' : `${n} ${n === 1 ? 'categoria selecionada' : 'categorias selecionadas'}` }) }, [n]) // eslint-disable-line react-hooks/exhaustive-deps
+  const nSel = (catsTodas.length ? escolhidasValidas(catsTodas, escolhidas) : escolhidas).length
+  const nMinhas = minhas.length
+  const n = nSel + nMinhas
+  useEffect(() => {
+    const sel = nSel === 0 ? 'Nenhuma selecionada' : `${nSel} ${nSel === 1 ? 'selecionada' : 'selecionadas'}`
+    const suas = nMinhas ? ` · ${nMinhas} ${nMinhas === 1 ? 'sua' : 'suas'}` : ''
+    onEstado({ podeContinuar: n > 0, rodape: n === 0 ? 'Escolha pelo menos uma categoria' : sel + suas, aviso: nSel === 0 })
+  }, [nSel, nMinhas]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function criar(nome) {
     if (catsTodas.some((c) => c.nome.toLowerCase() === nome.toLowerCase())) return

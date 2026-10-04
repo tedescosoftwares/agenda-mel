@@ -25,6 +25,18 @@ export function categoriasDoSalao(cats, salaoId, escolhidas) {
   return cats.filter((c) => (c.salon_id ? c.salon_id === salaoId : marcadas ? marcadas.has(c.id) : c.ativa !== false))
 }
 
+// só os ids escolhidos que existem de verdade (2.96.1): um id de categoria
+// que sumiu não conta como "escolhida" nem libera etapa nenhuma
+export function escolhidasValidas(cats, escolhidas) {
+  if (!Array.isArray(escolhidas) || !escolhidas.length) return []
+  const ids = new Set(cats.filter((c) => !c.salon_id).map((c) => c.id))
+  return escolhidas.filter((id) => ids.has(id))
+}
+// o salão tem alguma categoria de verdade (da plataforma escolhida, ou sua)?
+export function temCategoria(cats, salaoId, escolhidas) {
+  return escolhidasValidas(cats, escolhidas).length > 0 || cats.some((c) => c.salon_id && c.salon_id === salaoId)
+}
+
 // as da plataforma que dá para escolher hoje (as ativas)
 export function categoriasOferecidas(cats) {
   return cats.filter((c) => !c.salon_id && c.ativa !== false)

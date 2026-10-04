@@ -8,6 +8,7 @@ import { MEL_PADRAO } from '../../lib/mel'
 import PrimeirosPassos from '../../components/PrimeirosPassos'
 import AcessoAviso from '../../components/AcessoAviso'
 import { supabase } from '../../lib/supabase'
+import { useCategorias, temCategoria } from '../../lib/categorias'
 import { useAuth } from '../../context/AuthContext'
 import { formatarCents, formatarReaisCurto, formatarPct, mesAtual, nomeDoMes } from '../../lib/numeros'
 import GraficoLinha from '../../components/GraficoLinha'
@@ -90,7 +91,9 @@ export default function AdminDashboard() {
   const temMovimento = hoje.atendimentos > 0 || totalMes > 0 || pendentes > 0 || naFila > 0
   const servicosProntos = Number(primeiros?.servicos ?? 0) > 0
   const equipePronta = salao?.tipo === 'autonoma' || Number(primeiros?.equipe ?? 0) > 0
-  const categoriasProntas = Array.isArray(salao?.categorias_escolhidas) && salao.categorias_escolhidas.length > 0
+  const catsReais = useCategorias()
+  // ids fantasmas não contam (2.96.1): só categoria que existe, ou uma sua
+  const categoriasProntas = catsReais.length ? temCategoria(catsReais, salao?.id, salao?.categorias_escolhidas) : (Array.isArray(salao?.categorias_escolhidas) && salao.categorias_escolhidas.length > 0)
   const linkPronto = Boolean(salao?.ativado_em)
   // quem faz o quê (2.94): todo serviço ativo com pelo menos uma profissional (autônoma: automático)
   const vinculosProntos = salao?.tipo === 'autonoma' ? servicosProntos : (servicosProntos && cobertura !== null && cobertura.length > 0 && cobertura.every((c) => Number(c.sem_profissional ?? 0) === 0))

@@ -5,7 +5,7 @@ import { supabase } from '../../../lib/supabase'
 import { useCatalogo } from '../../../lib/catalogo'
 import { buscar, sugestoes, duracaoDe, nomeSugerido, quantosServicos } from '../../../lib/catalogoBusca'
 import { imagemDoItem } from '../../../components/CadastroDeServico'
-import { categoriasDoSalao, useCategorias } from '../../../lib/categorias'
+import { categoriasDoSalao, useCategorias, temCategoria } from '../../../lib/categorias'
 import { formatDuracao } from '../../../lib/format'
 import { Trava } from './Manual'
 
@@ -50,7 +50,7 @@ export default function EtapaServicos({ s, setErro, onEstado, compacto = false, 
   useEffect(() => { carregar() }, [carregar])
   const n = (servicos ?? []).length
   // sem categoria não tem sugestão nem cardápio: a etapa fica travada
-  const semCategoria = escolhidas.length === 0 && !catsTodas.some((c) => c.salon_id === s.id)
+  const semCategoria = catsTodas.length > 0 && !temCategoria(catsTodas, s.id, escolhidas)
   useEffect(() => {
     if (semCategoria) { onEstado({ podeContinuar: false, rodape: 'Escolha as categorias primeiro', aviso: true }); return }
     const rodape = n === 0 ? 'Adicione pelo menos um serviço' : `${n} ${n === 1 ? 'serviço' : 'serviços'} no cardápio`

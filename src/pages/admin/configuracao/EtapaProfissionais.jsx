@@ -36,6 +36,7 @@ export default function EtapaProfissionais({ s, autonoma, setErro, onEstado }) {
     onEstado({
       podeContinuar: autonoma || ativas.length > 0,
       rodape: autonoma ? 'Sua agenda é só sua' : ativas.length === 0 ? 'Adicione pelo menos uma profissional' : `${ativas.length} ${ativas.length === 1 ? 'profissional' : 'profissionais'}`,
+      motivo: { titulo: 'Cadastre ao menos uma profissional', texto: 'A agenda precisa de alguém atendendo. Nome e WhatsApp bastam para começar; foto, horários e o resto dá para completar depois. Se é só você, cadastre a si mesma.' },
       aoContinuar: autonoma && dona ? async () => {
         const ligados = new Set((dona.servicos ?? []).map((x) => x.service_id))
         const faltam = servicos.filter((sv) => !ligados.has(sv.id)).map((sv) => ({ professional_id: dona.id, service_id: sv.id }))

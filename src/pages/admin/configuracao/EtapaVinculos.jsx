@@ -49,7 +49,7 @@ export default function EtapaVinculos({ s, setErro, onEstado, compacto = false, 
 
   useEffect(() => {
     if (!servicos || !equipe) return
-    if (equipe.length === 0 || servicos.length === 0) { onEstado({ podeContinuar: false, rodape: equipe.length === 0 ? 'Cadastre as profissionais primeiro' : 'Monte o cardápio primeiro', aviso: true }); return }
+    if (equipe.length === 0 || servicos.length === 0) { onEstado({ podeContinuar: false, rodape: equipe.length === 0 ? 'Cadastre as profissionais primeiro' : 'Monte o cardápio primeiro', aviso: true, motivo: equipe.length === 0 ? { titulo: 'Primeiro, as profissionais', texto: 'Sem ninguém cadastrado não dá para dizer quem faz o quê. Adicione pelo menos uma profissional e volte aqui.', ir: 'profissionais', acao: 'Cadastrar profissionais' } : { titulo: 'Primeiro, o cardápio', texto: 'Não tem serviço para ligar a ninguém ainda. Monte o cardápio na etapa Serviços e volte aqui.', ir: 'servicos', acao: 'Montar o cardápio' } }); return }
     onEstado({
       podeContinuar: true,
       rodape: descobertos.length === 0 ? 'Todos os serviços têm profissional' : `${descobertos.length} ${descobertos.length === 1 ? 'serviço ainda está' : 'serviços ainda estão'} sem profissional`,

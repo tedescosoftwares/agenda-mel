@@ -350,3 +350,17 @@
 /* o manual e o rodapé saem do .cfg (portal): repetem as variáveis */
 .cfg-manual, .cfg-rodape, .cfg-folha { --cfg-fio: #ece7ee; --cfg-lilas: #fbf6fb; --cfg-rosa: var(--rosa, #ff2d7a); }
 .cfg-mini-botoes { display: flex; gap: 6px; }
+/* Continuar sem poder: fica mais claro, mas clica e explica o que falta */
+.cfg-continuar.trancado { opacity: 0.55; box-shadow: none; }
+.cfg-continuar.trancado:hover { opacity: 0.7; }
+.cfg-aviso-fundo { align-items: center; padding: 16px; }
+.cfg-aviso { --cfg-rosa: var(--rosa, #ff2d7a); position: relative; width: min(440px, 100%); background: #fff; border-radius: 22px; padding: 26px 26px 22px; display: grid; gap: 8px; justify-items: start; box-shadow: 0 24px 60px rgba(61, 12, 78, 0.22); animation: cfg-aviso-entra 0.2s ease; }
+@keyframes cfg-aviso-entra { from { opacity: 0; transform: translateY(10px) scale(0.98) } to { opacity: 1; transform: none } }
+.cfg-aviso-icone { width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; background: #fff0f6; color: var(--cfg-rosa); margin-bottom: 4px; }
+.cfg-aviso h3 { margin: 0; font-size: 1.15rem; color: var(--ameixa, #3d0c4e); }
+.cfg-aviso p { margin: 0; color: var(--texto-2, #6b7280); font-size: 0.93rem; line-height: 1.5; }
+.cfg-aviso ul { margin: 2px 0 0; padding-left: 18px; color: var(--carmim, #b3123c); font-size: 0.9rem; display: grid; gap: 3px; }
+.cfg-aviso-acoes { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; width: 100%; }
+.cfg-aviso-manual { margin-left: auto; font-size: 0.82rem; display: inline-flex; align-items: center; gap: 4px; }
+.cfg-compacta .cfg-aviso-fundo { align-items: flex-end; padding: 0; }
+.cfg-compacta .cfg-aviso { width: 100%; border-radius: 22px 22px 0 0; padding-bottom: calc(22px + env(safe-area-inset-bottom)); }

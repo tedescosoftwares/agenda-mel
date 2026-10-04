@@ -38,7 +38,7 @@ export default function EtapaRevisao({ s, autonoma, irPara, onEstado }) {
     ...(semProf > 0 ? [{ texto: `${semProf} ${semProf === 1 ? 'serviço não possui profissional' : 'serviços não possuem profissional'}`, ir: 'vinculos' }] : []),
   ]
   const pendencias = [...(semPreco.length ? [{ texto: `${semPreco.length} ${semPreco.length === 1 ? 'serviço está sem preço' : 'serviços estão sem preço'}`, ir: 'servicos' }] : [])]
-  useEffect(() => { if (resumo) onEstado({ podeContinuar: bloqueios.length === 0, rodape: bloqueios.length ? 'Resolva o que está bloqueando para concluir' : 'Tudo certo para concluir' }) }, [resumo, bloqueios.length]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (resumo) onEstado({ podeContinuar: bloqueios.length === 0, rodape: bloqueios.length ? 'Resolva o que está bloqueando para concluir' : 'Tudo certo para concluir', motivo: { titulo: 'Falta pouco para concluir', texto: 'Ainda tem o que resolver antes de abrir seu salão na MIMO:', lista: bloqueios.map((b) => b.texto), ir: bloqueios[0]?.ir, acao: 'Resolver' } }) }, [resumo, bloqueios.length]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const link = s.codigo ? urlDoAmbiente('cliente', `/v/${s.codigo}`) : ''
   function copiar() { if (!link) return; navigator.clipboard?.writeText(link); setCopiado(true); setTimeout(() => setCopiado(false), 2000) }

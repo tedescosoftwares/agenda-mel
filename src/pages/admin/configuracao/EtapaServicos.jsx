@@ -52,9 +52,9 @@ export default function EtapaServicos({ s, setErro, onEstado, compacto = false, 
   // sem categoria não tem sugestão nem cardápio: a etapa fica travada
   const semCategoria = catsTodas.length > 0 && !temCategoria(catsTodas, s.id, escolhidas)
   useEffect(() => {
-    if (semCategoria) { onEstado({ podeContinuar: false, rodape: 'Escolha as categorias primeiro', aviso: true }); return }
+    if (semCategoria) { onEstado({ podeContinuar: false, rodape: 'Escolha as categorias primeiro', aviso: true, motivo: { titulo: 'Primeiro, as categorias', texto: 'Sem nenhuma categoria marcada não tem o que sugerir nem onde guardar o serviço. Volte uma etapa e escolha pelo menos uma.', ir: 'categorias', acao: 'Escolher categorias' } }); return }
     const rodape = n === 0 ? 'Adicione pelo menos um serviço' : `${n} ${n === 1 ? 'serviço' : 'serviços'} no cardápio`
-    onEstado({ podeContinuar: n > 0, rodape, acaoRodape: compacto ? { rotulo: `Meu cardápio · ${n}`, icone: <ClipboardList size={16} />, onClick: () => setFolha(true) } : null })
+    onEstado({ podeContinuar: n > 0, rodape, acaoRodape: compacto ? { rotulo: `Meu cardápio · ${n}`, icone: <ClipboardList size={16} />, onClick: () => setFolha(true) } : null, motivo: { titulo: 'Adicione ao menos um serviço', texto: 'Seu cardápio ainda está vazio. Toque em “Adicionar” numa sugestão, busque pelo nome ou crie um serviço do seu jeito. Preço e duração você ajusta na hora ou depois.' } })
   }, [n, compacto, semCategoria]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---- adicionar / mudar / tirar ----

@@ -47,6 +47,7 @@ export default function Configurar({ para = 'admin' }) {
   const [feitas, setFeitas] = useState({})
   const [ativandoAqui, setAtivandoAqui] = useState(false)
   const [manual, setManual] = useState(false)
+  const [aviso, setAviso] = useState(null)   // o modal do "por que não dá para continuar"
   const [catsBase, setCatsBase] = useState(null)   // as categorias reais, para validar os ids escolhidos
   const compacto = useCompacto()
   // o rodapé é fixo, colado no fim do miolo que rola (largura e posição
@@ -114,8 +115,9 @@ export default function Configurar({ para = 'admin' }) {
   const indice = passo === REVISAO ? etapas.length : etapas.findIndex((e) => e.id === passo)
   const ultimaEtapa = indice === etapas.length - 1
   function ir(id) { if (!liberada(id)) { setManual(true); return } setEstado({ podeContinuar: false, rodape: '' }); setPasso(id); document.querySelector('main.admin-content')?.scrollTo({ top: 0, behavior: 'smooth' }) }
+  const MOTIVO_PADRAO = { titulo: 'Ainda falta algo nesta etapa', texto: estado.rodape || 'Complete a etapa para seguir.' }
   async function continuar() {
-    if (!estado.podeContinuar) return
+    if (!estado.podeContinuar) { setAviso(estado.motivo ?? MOTIVO_PADRAO); return }
     setSalvando(true)
     try { if (estado.aoContinuar) await estado.aoContinuar() } catch (e) { setErro(e?.message || 'Não deu para salvar agora. Tente de novo.'); setSalvando(false); return }
     setSalvando(false)
@@ -123,7 +125,7 @@ export default function Configurar({ para = 'admin' }) {
   }
   function voltar() { ir(passo === REVISAO ? etapas[etapas.length - 1].id : etapas[Math.max(0, indice - 1)].id) }
   async function concluir() {
-    if (!estado.podeContinuar) return
+    if (!estado.podeContinuar) { setAviso(estado.motivo ?? MOTIVO_PADRAO); return }
     setSalvando(true)
     try { await supabase.rpc('primeiro_passo_feito', { salao: s.id, chave: 'configuracao' }) } catch { /* segue */ }
     try { localStorage.removeItem(chaveLocal) } catch { /* nada */ }
@@ -131,7 +133,7 @@ export default function Configurar({ para = 'admin' }) {
     setSalvando(false)
     navigate(para === 'admin' ? '/admin' : '/pro/agenda', { replace: true })
   }
-  const onEstado = useCallback((e) => setEstado((atual) => ({ ...atual, aoContinuar: null, aviso: false, acaoRodape: null, ...e })), [])
+  const onEstado = useCallback((e) => setEstado((atual) => ({ ...atual, aoContinuar: null, aviso: false, acaoRodape: null, motivo: null, ...e })), [])
   const Shell = para === 'admin' ? AdminShell : ProShell
 
   // ativação pendente: a tela de ativação fica até mandar pro painel (como antes)
@@ -193,6 +195,20 @@ export default function Configurar({ para = 'admin' }) {
 
         {erro && <ModalErro texto={erro} onFechar={() => setErro('')} />}
         {manual && <ManualDaConfiguracao atual={passo} feitas={feitasAgora} autonoma={autonoma} onFechar={() => setManual(false)} onIr={ir} />}
+        {aviso && createPortal(
+          <div className="modal-fundo cfg-aviso-fundo" onClick={() => setAviso(null)} role="presentation">
+            <div className="cfg-aviso" role="alertdialog" aria-modal="true" aria-labelledby="cfg-aviso-titulo" onClick={(e) => e.stopPropagation()}>
+              <span className="cfg-aviso-icone"><Lock size={20} /></span>
+              <h3 id="cfg-aviso-titulo">{aviso.titulo}</h3>
+              <p>{aviso.texto}</p>
+              {aviso.lista?.length > 0 && <ul>{aviso.lista.map((t) => <li key={t}>{t}</li>)}</ul>}
+              <div className="cfg-aviso-acoes">
+                {aviso.ir && <button type="button" className="btn btn-primary" onClick={() => { setAviso(null); ir(aviso.ir) }}>{aviso.acao ?? 'Resolver'} <ArrowRight size={15} /></button>}
+                <button type="button" className={'btn ' + (aviso.ir ? 'btn-ghost' : 'btn-primary')} onClick={() => setAviso(null)} autoFocus>{aviso.ir ? 'Fechar' : 'Entendi'}</button>
+                <button type="button" className="plat-link cfg-aviso-manual" onClick={() => { setAviso(null); setManual(true) }}><HelpCircle size={13} /> Como funciona</button>
+              </div>
+            </div>
+          </div>, document.body)}
         {!s || !passo ? <p className="muted">Carregando…</p> : (
           <div key={passo} className="cfg-corpo">
             {passo === 'categorias' && <EtapaCategorias {...props} />}
@@ -212,8 +228,8 @@ export default function Configurar({ para = 'admin' }) {
               <div className="cfg-rodape-acoes">
                 {indice > 0 && !compacto && <button type="button" className="btn btn-ghost" onClick={voltar} disabled={salvando}><ArrowLeft size={16} /> Voltar</button>}
                 {passo === REVISAO
-                  ? <button type="button" className="btn btn-primary cfg-continuar" onClick={concluir} disabled={!estado.podeContinuar || salvando}>{salvando ? 'Concluindo…' : 'Concluir configuração'} <Check size={16} /></button>
-                  : <button type="button" className="btn btn-primary cfg-continuar" onClick={continuar} disabled={!estado.podeContinuar || salvando}>{salvando ? 'Salvando…' : ultimaEtapa ? 'Revisar' : 'Continuar'} <ArrowRight size={16} /></button>}
+                  ? <button type="button" className={'btn btn-primary cfg-continuar' + (!estado.podeContinuar ? ' trancado' : '')} onClick={concluir} aria-disabled={!estado.podeContinuar} disabled={salvando}>{salvando ? 'Concluindo…' : 'Concluir configuração'} <Check size={16} /></button>
+                  : <button type="button" className={'btn btn-primary cfg-continuar' + (!estado.podeContinuar ? ' trancado' : '')} onClick={continuar} aria-disabled={!estado.podeContinuar} disabled={salvando}>{salvando ? 'Salvando…' : ultimaEtapa ? 'Revisar' : 'Continuar'} <ArrowRight size={16} /></button>}
               </div>
             </div>
           </footer>, document.body)}

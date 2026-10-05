@@ -1,10 +1,11 @@
 import { useDialogo } from '../../context/DialogoContext'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import ProShell from '../../components/ProShell'
 import SemFicha from './SemFicha'
 import { useAuth } from '../../context/AuthContext'
 import { ClockIcon, LinkIcon, ChevronIcon, BellIcon, MegafoneIcon } from '../../components/icons'
-import { BadgePercent, Wallet, MapPin, FileSignature } from 'lucide-react'
+import { BadgePercent, Wallet, MapPin, FileSignature, Building2 } from 'lucide-react'
+import { supabase } from '../../lib/supabase'
 import AvisosNoCelular from '../../components/AvisosNoCelular'
 import AvisosPorEmail from '../../components/AvisosPorEmail'
 
@@ -12,7 +13,17 @@ import AvisosPorEmail from '../../components/AvisosPorEmail'
 // sua própria tela — aqui é só a porta de entrada.
 export default function ProAjustes() {
   const { confirmar } = useDialogo()
-  const { professional, signOut } = useAuth()
+  const { professional, signOut, negocio, recarregarPerfil } = useAuth()
+  const navigate = useNavigate()
+  // o caminho inverso (2.99.1): a autônoma que cresce vira salão sem refazer nada
+  async function virarSalao() {
+    const ok = await confirmar({ titulo: 'Virar salão?', texto: 'Você ganha o painel completo, equipe com agenda própria e a sua agenda continua igual, com o mesmo login. O plano só começa quando você ativar o salão.', ok: 'Virar salão', cancelar: 'Agora não' })
+    if (!ok) return
+    const { error } = await supabase.rpc('virar_salao', { salao: negocio?.id })
+    if (error) { await confirmar({ titulo: 'Não deu', texto: error.message, ok: 'Entendi', cancelar: '' }); return }
+    await recarregarPerfil?.()
+    navigate('/admin', { replace: true })
+  }
 
   if (!professional) return <SemFicha />
 
@@ -177,6 +188,17 @@ export default function ProAjustes() {
           <ChevronIcon />
         </Link>
       </div>
+
+      {negocio?.tipo === 'autonoma' && (
+        <button type="button" className="card prof-row prof-row-virar" onClick={virarSalao}>
+          <span className="ajuste-icone"><Building2 size={20} /></span>
+          <div className="cliente-info">
+            <span className="cliente-nome"><span className="nome-txt">Crescendo? Vire salão</span></span>
+            <span className="muted cliente-meta">Equipe com agenda própria e painel completo. Sua agenda continua a mesma.</span>
+          </div>
+          <ChevronIcon />
+        </button>
+      )}
 
       <button
         className="btn btn-ghost btn-largo sair-conta"

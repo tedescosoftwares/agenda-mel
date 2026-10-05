@@ -360,6 +360,7 @@ const RPC = {
   onboarding_concluir: () => { try { localStorage.removeItem('mimo-demo-onboarding') } catch { /* nada */ } const q = new Date().toISOString(); TABELAS.salons[0].onboarding_concluido_em = q; TABELAS.salon_members[0].salons.onboarding_concluido_em = q; return { ok: true } },
   onboarding_horarios: ({ horarios }) => ({ ok: true, dias: (horarios ?? []).length }),
   trocar_tipo_negocio: ({ novo }) => ({ ok: true, tipo: novo }),
+  virar_salao: () => { TABELAS.salons[0].tipo = 'salao'; TABELAS.salons[0].dona_atende = true; return { ok: true, tipo: 'salao' } },
   equipe_por_codigo: () => ({ id: SALAO, nome: 'Studio Mel', cidade: 'Santos', logo_url: null, tipo: 'salao', quantas: 4 }),
   entrar_na_equipe: () => ({ ok: true, salao: 'Studio Mel' }),
   avaliacoes_do_periodo: ({ de, ate }) => {

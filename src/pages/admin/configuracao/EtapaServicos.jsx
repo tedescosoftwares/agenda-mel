@@ -27,7 +27,6 @@ export default function EtapaServicos({ s, setErro, onEstado, compacto = false, 
   const [servicos, setServicos] = useState(null)
   const [tab, setTab] = useState(null)
   const [busca, setBusca] = useState('')
-  const [verTodos, setVerTodos] = useState(false)
   const [familia, setFamilia] = useState(null)
   const [assistente, setAssistente] = useState(null)   // { item, tecnica } do catálogo, ou { item: null, nomeInicial } para o personalizado
   const [editando, setEditando] = useState(null)
@@ -111,8 +110,21 @@ export default function EtapaServicos({ s, setErro, onEstado, compacto = false, 
   const resultados = useMemo(() => (catalogo && busca.trim().length >= 2 ? buscar(catalogo, busca, { limite: 30 }) : null), [catalogo, busca])
   const sug = useMemo(() => (catalogo && categoria ? sugestoes(catalogo, { categoriaId: categoria.id, limite: 8 }) : []), [catalogo, categoria])
   const familias = useMemo(() => (catalogo && categoria ? catalogo.familiasDe(categoria.id) : []), [catalogo, categoria])
-  const daFamilia = useMemo(() => (catalogo && familia ? catalogo.filhos(familia.id).filter((i) => i.tipo === 'servico') : []), [catalogo, familia])
-  function trocarTab(id) { setTab(id); setVerTodos(false); setFamilia(null); setBusca('') }
+  // a família aberta: a escolhida, ou a primeira da categoria (a lista nunca fica vazia)
+  const familiaAtiva = useMemo(() => (familia && familias.some((f) => f.id === familia.id) ? familia : (familias[0] ?? null)), [familia, familias])
+  const daFamilia = useMemo(() => (catalogo && familiaAtiva ? catalogo.filhos(familiaAtiva.id).filter((i) => i.tipo === 'servico') : []), [catalogo, familiaAtiva])
+  // quantos do menu caem em cada família (técnica conta na família do serviço-pai)
+  const noMenuPorFamilia = useMemo(() => {
+    const m = {}
+    if (!catalogo) return m
+    for (const sv of servicos ?? []) {
+      let it = sv.catalogo_item_id ? catalogo.porId.get(sv.catalogo_item_id) : null
+      if (it?.tipo === 'tecnica') it = catalogo.porId.get(it.pai_id)
+      if (it?.tipo === 'servico' && it.pai_id) m[it.pai_id] = (m[it.pai_id] ?? 0) + 1
+    }
+    return m
+  }, [servicos, catalogo])
+  function trocarTab(id) { setTab(id); setFamilia(null); setBusca('') }
 
   const carregando = !catalogo || servicos === null
   const catsMenu = cats.filter((c) => c.slug !== 'outros')
@@ -195,34 +207,33 @@ export default function EtapaServicos({ s, setErro, onEstado, compacto = false, 
               <div className="cfg-secao">
                 <h3>{resultados.length} {resultados.length === 1 ? 'resultado' : 'resultados'}</h3>
                 <div className="cfg-lista">
-                  {resultados.map((r) => <LinhaItem key={r.item.id} item={r.item} catalogo={catalogo} adicionado={adicionados.has(r.item.id)} comCaminho onAdicionar={() => (r.item.tipo === 'familia' ? (setBusca(''), setVerTodos(true), setFamilia(r.item), setTab(r.item.categoria_id)) : adicionar(r.item))} />)}
+                  {resultados.map((r) => <LinhaItem key={r.item.id} item={r.item} catalogo={catalogo} adicionado={adicionados.has(r.item.id)} comCaminho onAdicionar={() => (r.item.tipo === 'familia' ? (setBusca(''), setFamilia(r.item), setTab(r.item.categoria_id)) : adicionar(r.item))} />)}
                 </div>
               </div>
             )
           ) : !categoria ? <p className="muted cfg-carregando">Escolha uma categoria na etapa anterior para ver sugestões, ou busque acima.</p>
-          : familia ? (
-            <div className="cfg-secao">
-              <nav className="cfg-trilha"><button type="button" onClick={() => setFamilia(null)}>{categoria.nome}</button><ChevronRight size={14} /><strong>{familia.nome}</strong></nav>
-              <div className="cfg-lista">{daFamilia.map((it) => <LinhaItem key={it.id} item={it} catalogo={catalogo} adicionado={adicionados.has(it.id)} onAdicionar={() => adicionar(it)} />)}</div>
-            </div>
-          ) : (
+          : (
             <>
               {sug.length > 0 && (
-                <div className="cfg-secao">
-                  <h3><Sparkles size={15} /> Sugestões para {categoria.nome}</h3>
-                  {compacto
-                    ? <div className="cfg-lista">{sug.map((it) => <LinhaItem key={it.id} item={it} catalogo={catalogo} adicionado={adicionados.has(it.id)} onAdicionar={() => adicionar(it)} />)}</div>
-                    : <div className="cfg-sug-grade">{sug.map((it) => <CartaoSugestao key={it.id} item={it} catalogo={catalogo} adicionado={adicionados.has(it.id)} onAdicionar={() => adicionar(it)} />)}</div>}
+                <div className="cfg-secao cfg-mais-pedidos">
+                  <h3><Sparkles size={15} /> Mais pedidos em {categoria.nome}</h3>
+                  <div className="cfg-chips-sug">
+                    {sug.map((it) => { const ok = adicionados.has(it.id); return <button key={it.id} type="button" className={'chip' + (ok ? ' active' : '')} onClick={() => adicionar(it)} disabled={ok} title={ok ? 'Já está no menu' : 'Adicionar ao menu'}>{ok ? <Check size={12} strokeWidth={3} /> : <Plus size={12} strokeWidth={3} />} {it.nome}</button> })}
+                  </div>
                 </div>
               )}
               <div className="cfg-secao">
-                {!verTodos ? <button type="button" className="cfg-ver-todos" onClick={() => setVerTodos(true)}>Ver todos de {categoria.nome} <ChevronRight size={15} /></button> : (
-                  <>
-                    <h3>Tudo de {categoria.nome}</h3>
-                    <div className="cfg-fam-chips">{familias.map((f) => <button key={f.id} type="button" className="chip" onClick={() => setFamilia(f)}>{f.nome} <b>{quantosServicos(catalogo, f.id)}</b></button>)}</div>
-                  </>
-                )}
+                <h3>Famílias de {categoria.nome} <small>{familias.length}</small></h3>
+                <div className="cfg-fams">
+                  {familias.map((f) => <FamiliaCard key={f.id} f={f} ativa={f.id === familiaAtiva?.id} total={quantosServicos(catalogo, f.id)} noMenu={noMenuPorFamilia[f.id] ?? 0} onAbrir={() => setFamilia(f)} />)}
+                </div>
               </div>
+              {familiaAtiva && (
+                <div className="cfg-secao cfg-secao-familia">
+                  <nav className="cfg-trilha"><span>{categoria.nome}</span><ChevronRight size={14} /><strong>{familiaAtiva.nome}</strong><small>{daFamilia.length} {daFamilia.length === 1 ? 'serviço' : 'serviços'}{noMenuPorFamilia[familiaAtiva.id] ? ` · ${noMenuPorFamilia[familiaAtiva.id]} no menu` : ''}</small></nav>
+                  <div className="cfg-lista">{daFamilia.map((it) => <LinhaItem key={it.id} item={it} catalogo={catalogo} adicionado={adicionados.has(it.id)} onAdicionar={() => adicionar(it)} />)}</div>
+                </div>
+              )}
             </>
           )}
           <div className="cfg-personalizado"><span className="muted">Não encontrou?</span><button type="button" className="btn btn-ghost" onClick={() => setAssistente({ item: null, nomeInicial: '' })}><Plus size={15} /> Criar serviço personalizado</button></div>
@@ -258,18 +269,17 @@ function Mini({ item }) {
   return <span className="cfg-mini"><img src={src} alt="" loading="lazy" onError={() => setOk(false)} /></span>
 }
 
-function CartaoSugestao({ item, catalogo, adicionado, onAdicionar }) {
-  const fam = item.pai_id ? catalogo.porId.get(item.pai_id) : null
+// o cartão de família (2.99.1): foto, nome, quantos serviços e quantos já estão no menu
+function FamiliaCard({ f, ativa, total, noMenu, onAbrir }) {
+  const [ok, setOk] = useState(true)
+  const src = imagemDoItem(f)
   return (
-    <div className={'cfg-sug' + (adicionado ? ' adicionado' : '')}>
-      <Mini item={item} />
-      <div className="cfg-sug-txt">
-        <small>{fam?.nome ?? ''}</small>
-        <strong>{item.nome}</strong>
-        <span className="cfg-sug-dur"><Clock size={12} /> {item.duracao_sugerida ? formatDuracao(item.duracao_sugerida) : 'duração livre'}</span>
-      </div>
-      <button type="button" className={'cfg-add' + (adicionado ? ' feito' : '')} onClick={onAdicionar} disabled={adicionado}>{adicionado ? <><Check size={14} /> No menu</> : <><Plus size={14} /> Adicionar</>}</button>
-    </div>
+    <button type="button" className={'cfg-fam' + (ativa ? ' ativa' : '') + (noMenu ? ' com-menu' : '')} onClick={onAbrir} aria-pressed={ativa}>
+      <span className="cfg-fam-img">{src && ok && <img src={src} alt="" loading="lazy" onError={() => setOk(false)} />}</span>
+      <strong>{f.nome}</strong>
+      <small>{total} {total === 1 ? 'serviço' : 'serviços'}</small>
+      {noMenu > 0 && <em className="cfg-fam-badge"><Check size={10} strokeWidth={3} /> {noMenu} no menu</em>}
+    </button>
   )
 }
 

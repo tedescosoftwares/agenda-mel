@@ -1644,3 +1644,8 @@
 .ob-cobertura > ul > li strong { font-weight: 600; }
 .ob-cobertura > ul > li em { font-style: normal; font-size: 0.78rem; color: #9a6400; }
 .ob-cobertura .btn-mini { justify-self: start; }
+/* "Você também atende?" no Quase lá (2.99) */
+.ob-dona-atende { grid-column: 1 / -1; display: grid; gap: 6px; padding: 12px 14px; border: 1px dashed #ffc2d8; border-radius: 14px; background: #fff7fa; }
+.ob-dona-atende strong { font-size: 0.95rem; }
+.ob-dona-atende small { font-size: 0.8rem; line-height: 1.4; }
+.ob-dona-opcoes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 2px; }

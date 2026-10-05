@@ -78,6 +78,12 @@ export function AuthProvider({ children }) {
         setSalao(atual)
         await carregarAcesso(atual?.id)
         if (cancelled) return
+        // a dona que também atende (2.99): a ficha dela no salão, ativa, vira a "Minha agenda"
+        if (atual?.id) {
+          const { data: ficha } = await supabase.from('professionals').select('*').eq('user_id', session.user.id).eq('salon_id', atual.id).maybeSingle()
+          if (cancelled) return
+          setProfessional(ficha && ficha.situacao !== 'inativa' ? ficha : null)
+        } else setProfessional(null)
       } else {
         setSaloes([])
         setSalao(null)
@@ -94,7 +100,7 @@ export function AuthProvider({ children }) {
         setProfessional(ficha ?? null)
         await carregarAcesso(ficha?.salon_id)
         if (cancelled) return
-      } else {
+      } else if (perfil?.role !== 'admin') {
         setProfessional(null)
       }
 

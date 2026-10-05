@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { UserRound, LogOut, Bell, ChevronRight, Store, CreditCard, BookOpen } from 'lucide-react'
+import { UserRound, LogOut, Bell, ChevronRight, Store, CreditCard, BookOpen, LayoutDashboard } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useDialogo } from '../context/DialogoContext'
 import { supabase } from '../lib/supabase'
@@ -57,7 +57,7 @@ export default function MenuDaConta({ itens = [], papel, foto }) {
             </div>
           )}
           <button type="button" role="menuitem" className="conta-item" onClick={() => { setAberto(false); setConta(true) }}><UserRound size={17} /><span>Minha conta</span><ChevronRight size={15} className="conta-seta" /></button>
-          {itens.map((i) => (
+          {(profile?.role === 'admin' && itens === ITENS_PRO ? [{ to: '/admin', rotulo: 'Painel do salão', Icon: LayoutDashboard }, ...itens] : itens).map((i) => (
             <Link key={i.to} to={i.to} role="menuitem" className="conta-item" onClick={() => setAberto(false)}><i.Icon size={17} /><span>{i.rotulo}</span><ChevronRight size={15} className="conta-seta" /></Link>
           ))}
           <button type="button" role="menuitem" className="conta-item conta-sair" onClick={sair}><LogOut size={17} /><span>Sair da conta</span></button>

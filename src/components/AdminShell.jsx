@@ -14,7 +14,7 @@ import {
   MaisIcon,
   HomeIcon,
 } from './icons'
-import { Sparkles, UserRound, WalletCards, Megaphone, Settings2, ChevronLeft, CreditCard, BarChart3, Search, Crown, Store, ChevronDown } from 'lucide-react'
+import { Sparkles, UserRound, WalletCards, Megaphone, Settings2, ChevronLeft, CreditCard, BarChart3, Search, Crown, Store, ChevronDown, CalendarHeart } from 'lucide-react'
 
 // Cinco abas, não seis. Numa barra de celular, seis alvos dão 60px
 // cada e o polegar erra. O mês, Serviços e WhatsApp foram para dentro
@@ -45,7 +45,10 @@ export default function AdminShell({ children, amplo = false, primeiroAcesso = f
   const miolo = useRef(null)
   const { pathname } = useLocation()
   useEffect(() => { miolo.current?.scrollTo({ top: 0 }) }, [pathname])
-  const { salao, acesso, profile, saloes, trocarSalao } = useAuth()
+  const { salao, acesso, profile, saloes, trocarSalao, professional } = useAuth()
+  // a dona que também atende (2.99) vê a própria agenda no menu
+  const donaAtende = Boolean(professional && professional.salon_id === salao?.id)
+  const nav = donaAtende ? [...DESKTOP_NAV.slice(0, 2), { to: '/pro/agenda', label: 'Minha agenda', Icon: CalendarHeart }, ...DESKTOP_NAV.slice(2)] : DESKTOP_NAV
   const navigate = useNavigate()
   const [busca, setBusca] = useState('')
   const [trocaAberta, setTrocaAberta] = useState(false)
@@ -78,7 +81,7 @@ export default function AdminShell({ children, amplo = false, primeiroAcesso = f
           <ChevronLeft size={17} />
         </div>
         <nav className="admin-sidebar-nav">
-          {DESKTOP_NAV.map((item) => (
+          {nav.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}

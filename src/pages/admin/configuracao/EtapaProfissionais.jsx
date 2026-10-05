@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Plus, Pencil, Camera, Check } from 'lucide-react'
+import { Plus, Pencil, Camera, Check, CalendarHeart } from 'lucide-react'
 import Portal from '../../../components/Portal'
 import Avatar from '../../../components/Avatar'
 import ProfissionalDrawer from '../../../components/ProfissionalDrawer'
@@ -13,7 +13,8 @@ import { useAuth } from '../../../context/AuthContext'
 // equipe em cartões. Cadastro rápido (nome, WhatsApp, cargo, foto) pela
 // mesma RPC da gaveta; editar abre a gaveta completa. Autônoma vê "Você".
 export default function EtapaProfissionais({ s, autonoma, setErro, onEstado }) {
-  const { profile } = useAuth()
+  const { profile, recarregarPerfil } = useAuth()
+  const [mudandoDona, setMudandoDona] = useState(false)
   const [equipe, setEquipe] = useState(null)
   const [servicos, setServicos] = useState([])
   const [cats, setCats] = useState([])
@@ -30,6 +31,14 @@ export default function EtapaProfissionais({ s, autonoma, setErro, onEstado }) {
   useEffect(() => { carregar() }, [carregar])
   const ativas = (equipe ?? []).filter((p) => p.situacao !== 'inativa')
   const dona = ativas.find((p) => p.dona) ?? null
+  // a dona que também atende (2.99): liga ou desliga a própria agenda aqui mesmo
+  async function donaAtender(atende) {
+    setMudandoDona(true)
+    const { error } = await supabase.rpc('dona_atender', { salao: s.id, atende })
+    setMudandoDona(false)
+    if (error) { setErro(error.message); return }
+    await carregar(); recarregarPerfil?.()
+  }
 
   // autônoma: tudo é dela; ao continuar, os serviços sem vínculo entram na agenda dela
   useEffect(() => {
@@ -61,13 +70,24 @@ export default function EtapaProfissionais({ s, autonoma, setErro, onEstado }) {
               <span className="cfg-prof-ok"><Check size={13} /> Já adicionada</span>
             </div>
           )}
-          {!autonoma && ativas.map((p) => (
+          {!autonoma && !dona && (
+            <div className="cfg-prof voce cfg-prof-dona">
+              <Avatar nome={profile?.full_name ?? 'Você'} foto={profile?.avatar_url} grande />
+              <strong>{profile?.full_name ?? 'Você'}</strong>
+              <small>Você também atende?</small>
+              <span className="muted cfg-prof-dona-txt">Ganha a sua própria agenda, com o mesmo login. Conta como uma agenda do plano.</span>
+              <button type="button" className="btn btn-primary btn-mini" onClick={() => donaAtender(true)} disabled={mudandoDona}><CalendarHeart size={13} /> {mudandoDona ? 'Criando…' : 'Sim, criar minha agenda'}</button>
+            </div>
+          )}
+          {!autonoma && [...ativas].sort((a, b) => Number(Boolean(b.dona)) - Number(Boolean(a.dona))).map((p) => (
             <div key={p.id} className={'cfg-prof' + (p.dona ? ' voce' : '')}>
               <Avatar nome={p.name} foto={p.photo_url} grande />
               <strong>{p.name}</strong>
-              <small>{p.dona ? 'Você' : (p.especialidade || 'Profissional')}</small>
+              <small>{p.dona ? 'Você · sua agenda' : (p.especialidade || 'Profissional')}</small>
               <span className="muted">{(p.servicos ?? []).length} {(p.servicos ?? []).length === 1 ? 'serviço' : 'serviços'}</span>
-              {!p.dona && <button type="button" className="btn btn-ghost btn-mini" onClick={() => setGaveta(p)}><Pencil size={13} /> Editar</button>}
+              {p.dona
+                ? <button type="button" className="plat-link cfg-prof-dona-sair" onClick={() => donaAtender(false)} disabled={mudandoDona}>Não atendo mais</button>
+                : <button type="button" className="btn btn-ghost btn-mini" onClick={() => setGaveta(p)}><Pencil size={13} /> Editar</button>}
             </div>
           ))}
           {!autonoma && (

@@ -1684,6 +1684,16 @@ function PassoQuaseLa({ s, voltar, salvando, concluir, pronto, autonoma, gravarQ
   const estado = useAutosave(() => gravarQuieto({ equipe_prevista: n }), { n }, { ativo: Boolean(s.id) && !autonoma })
   useEffect(() => { setEstadoAuto(estado); return () => setEstadoAuto('') }, [estado, setEstadoAuto])
   useRoteiro([autonoma || n >= 1, false])
+  // a dona que também atende (2.99): responde aqui e a ficha dela nasce na hora
+  const [respondendo, setRespondendo] = useState(false)
+  async function responderDona(atende) {
+    setRespondendo(true)
+    const { error } = await supabase.rpc('dona_atender', { salao: s.id, atende })
+    setRespondendo(false)
+    if (error) { setEstadoAuto('erro'); return }
+    setEstadoAuto('salvo'); setTimeout(() => setEstadoAuto(''), 1500)
+    s.dona_atende = atende; setNum((x) => x)   // reflete sem esperar o perfil recarregar
+  }
   return (
     <>
       <h1 className="ob-titulo">Quase lá</h1>
@@ -1714,6 +1724,15 @@ function PassoQuaseLa({ s, voltar, salvando, concluir, pronto, autonoma, gravarQ
                   <button type="button" onClick={() => setN(n + 1)} aria-label="Aumentar agendas"><Plus size={17} /></button>
                 </div>
                 <span className="ob-plano-agendas">{n === 1 ? '1 profissional com agenda própria' : `${n} profissionais com agenda própria`}</span>
+              </div>
+
+              <div className="ob-dona-atende" role="group" aria-label="Você também atende?">
+                <strong>Você também atende clientes?</strong>
+                <small className="muted">Se sim, você ganha a sua própria agenda, com o mesmo login. Ela conta como uma das {n} {n === 1 ? 'agenda' : 'agendas'}.</small>
+                <div className="ob-dona-opcoes">
+                  <button type="button" className={'chip' + (s.dona_atende === true ? ' active' : '')} onClick={() => responderDona(true)} disabled={respondendo}>Sim, tenho minha agenda</button>
+                  <button type="button" className={'chip' + (s.dona_atende === false ? ' active' : '')} onClick={() => responderDona(false)} disabled={respondendo}>Não, só administro</button>
+                </div>
               </div>
 
               <div className="ob-plano-resultado">

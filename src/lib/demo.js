@@ -145,6 +145,7 @@ const promocoes = [
 // só pra demonstrar: ?demo com localStorage mimo-demo-passo=4 abre o cadastro nesse passo; mimo-demo-vazio=1 mostra o painel antes de serviços e equipe
 const DEMO_PASSO = (typeof localStorage !== 'undefined' && Number(localStorage.getItem('mimo-demo-passo'))) || null
 const DEMO_VAZIO = typeof localStorage !== 'undefined' && localStorage.getItem('mimo-demo-vazio') === '1'
+let DEMO_DONA_ATENDE = false   // a dona que também atende (2.99), só enquanto a página vive
 // mimo-demo-acesso = teste | leitura | bloqueado | ativa (126); mimo-demo-metodo = cartao | pix_automatico | pix (128)
 const DEMO_METODO = (typeof localStorage !== 'undefined' && localStorage.getItem('mimo-demo-metodo')) || null
 // mimo-demo-ativar=1: o salão ainda não foi ativado (mostra o cartão de ativar)
@@ -211,7 +212,8 @@ const RPC = {
   aceitar_documentos: () => ({ ok: true }),
   aceites_por_versao: () => [{ tipo: 'cliente', versao: '2026-09-24', pessoas: 128, ultimo: new Date().toISOString() }, { tipo: 'privacidade', versao: '2026-09-24', pessoas: 140, ultimo: new Date().toISOString() }],
   // a equipe configurada pelo salão (119)
-  equipe_da_casa: () => profissionais.map((p, i) => ({ ...p, dona: false, servicos: vinculos.filter((v) => v.professional_id === p.id).map((v) => ({ service_id: v.service_id, preco_cents: p.id === 'pr5' && v.service_id === 'sv7' ? 7000 : null, duracao_minutos: null })).concat(p.id === 'pr5' ? [{ service_id: 'sv6', preco_cents: null, duracao_minutos: 50 }, { service_id: 'sv7', preco_cents: 7000, duracao_minutos: null }] : []), horarios: HORAS, token: p.token ?? null, acesso_enviado_em: i === 4 ? null : undefined, parceria: i === 0 ? 'vigente' : null, tem_historico: i < 4, created_at: '2025-0' + (i + 1) + '-01' })),
+  dona_atender: ({ atende }) => { DEMO_DONA_ATENDE = atende; TABELAS.salons[0].dona_atende = atende; return { ok: true, professional_id: atende ? 'pr-dona' : null, atende } },
+  equipe_da_casa: () => [...(DEMO_DONA_ATENDE ? [{ id: 'pr-dona', user_id: 'a1', name: 'Mel Tedesco', slug: 'mel', phone: '(13) 99120-3410', photo_url: null, active: true, salon_id: SALAO, situacao: 'ativa', vinculo: null, categorias: [], dona: true, servicos: [] }] : []), ...profissionais].map((p, i) => ({ ...p, dona: Boolean(p.dona), servicos: vinculos.filter((v) => v.professional_id === p.id).map((v) => ({ service_id: v.service_id, preco_cents: p.id === 'pr5' && v.service_id === 'sv7' ? 7000 : null, duracao_minutos: null })).concat(p.id === 'pr5' ? [{ service_id: 'sv6', preco_cents: null, duracao_minutos: 50 }, { service_id: 'sv7', preco_cents: 7000, duracao_minutos: null }] : []), horarios: HORAS, token: p.token ?? null, acesso_enviado_em: i === 4 ? null : undefined, parceria: i === 0 ? 'vigente' : null, tem_historico: i < 4, created_at: '2025-0' + (i + 1) + '-01' })),
   equipe_salvar_profissional: ({ dados }) => ({ ok: true, id: dados?.id ?? 'pr9', situacao: 'configurada', slug: 'nova', token: 'demo0123456789ab' }),
   equipe_acesso_enviado: () => ({ ok: true }),
   equipe_situacao: ({ acao }) => ({ ok: true, acao }),

@@ -452,3 +452,8 @@
 .cfg-mel-destaque-x:hover { background: var(--cfg-rosa); color: #fff; }
 /* enquanto ela fala aqui, a Mel do canto se recolhe */
 .mel-em-destaque .fa-mel-dock { opacity: 0; pointer-events: none; transform: translateY(24px) scale(0.9); transition: opacity 0.25s ease, transform 0.25s ease; }
+/* a dona que também atende (2.99) */
+.cfg-prof-dona { border-style: dashed; }
+.cfg-prof-dona-txt { font-size: 0.76rem; line-height: 1.35; max-width: 220px; }
+.cfg-prof-dona .btn { margin-top: 4px; }
+.cfg-prof-dona-sair { font-size: 0.76rem; }

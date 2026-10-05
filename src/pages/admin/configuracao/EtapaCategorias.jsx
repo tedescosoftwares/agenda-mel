@@ -31,7 +31,7 @@ export default function EtapaCategorias({ s, gravarQuieto, setErro, autonoma, on
   useEffect(() => {
     const sel = nSel === 0 ? 'Nenhuma selecionada' : `${nSel} ${nSel === 1 ? 'selecionada' : 'selecionadas'}`
     const suas = nMinhas ? ` · ${nMinhas} ${nMinhas === 1 ? 'sua' : 'suas'}` : ''
-    onEstado({ podeContinuar: n > 0, rodape: n === 0 ? 'Escolha pelo menos uma categoria' : sel + suas, aviso: nSel === 0, motivo: { titulo: 'Escolha ao menos uma categoria', texto: 'Marque as áreas em que você oferece serviços: cabelo, unhas, cílios… É a partir delas que eu sugiro o cardápio e organizo a sua página. Dá para mudar depois.' } })
+    onEstado({ podeContinuar: n > 0, rodape: n === 0 ? 'Escolha pelo menos uma categoria' : sel + suas, aviso: nSel === 0, motivo: { titulo: 'Escolha ao menos uma categoria', texto: 'Marque as áreas em que você oferece serviços: cabelo, unhas, cílios… É a partir delas que eu sugiro os serviços e organizo a sua página. Dá para mudar depois.' } })
   }, [nSel, nMinhas]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function criar(nome) {

@@ -4,16 +4,16 @@ import Portal from '../../../components/Portal'
 import { supabase } from '../../../lib/supabase'
 import { useCatalogo } from '../../../lib/catalogo'
 import { buscar, sugestoes, duracaoDe, nomeSugerido, quantosServicos } from '../../../lib/catalogoBusca'
-import { imagemDoItem } from '../../../components/CadastroDeServico'
+import { imagemDoItem, MelFala } from '../../../components/CadastroDeServico'
 import { categoriasDoSalao, useCategorias, temCategoria } from '../../../lib/categorias'
 import { formatDuracao } from '../../../lib/format'
 import { Trava } from './Manual'
 import AssistenteDeServico from './AssistenteDeServico'
 import { ajustarCriativo } from '../../../lib/imagem'
 
-// Etapa 2 da configuração inicial (2.94): "Monte seu cardápio" em duas
+// Etapa 2 da configuração inicial (2.94): "Monte seu menu de serviços" em duas
 // colunas. À esquerda o catálogo (tabs das categorias escolhidas, busca,
-// sugestões, "Ver todos" por família); à direita, sticky, "Meu cardápio"
+// sugestões, "Ver todos" por família); à direita, sticky, "Menu de serviços"
 // com preço e duração inline. Cada "+ Adicionar" já grava em services
 // (sem preço; a pessoa coloca quando quiser). Técnica é opcional.
 
@@ -30,7 +30,7 @@ export default function EtapaServicos({ s, setErro, onEstado, compacto = false, 
   const [familia, setFamilia] = useState(null)
   const [assistente, setAssistente] = useState(null)   // { item, tecnica } do catálogo, ou { item: null, nomeInicial } para o personalizado
   const [editando, setEditando] = useState(null)
-  const [folha, setFolha] = useState(false)   // no celular: "Meu cardápio" numa folha
+  const [folha, setFolha] = useState(false)   // no celular: "Menu de serviços" numa folha
   const campo = useRef(null)
   const escolhidas = useMemo(() => (Array.isArray(s.categorias_escolhidas) ? s.categorias_escolhidas : []), [s.categorias_escolhidas])
   const cats = useMemo(() => categoriasDoSalao(catsTodas, s.id, escolhidas).filter((c) => c.slug !== 'outros' || (servicos ?? []).some((x) => x.categoria_id === c.id)), [catsTodas, s.id, escolhidas, servicos])
@@ -38,7 +38,7 @@ export default function EtapaServicos({ s, setErro, onEstado, compacto = false, 
   const tabAtiva = tab && cats.some((c) => c.id === tab) ? tab : (cats[0]?.id ?? null)
   const categoria = cats.find((c) => c.id === tabAtiva) ?? null
 
-  // o que já está no cardápio: o item do catálogo e, para técnica, o serviço-pai também
+  // o que já está no menu de serviços: o item do catálogo e, para técnica, o serviço-pai também
   const adicionados = useMemo(() => {
     const set = new Set()
     for (const x of servicos ?? []) if (x.catalogo_item_id) { set.add(x.catalogo_item_id); const it = catalogo?.porId.get(x.catalogo_item_id); if (it?.tipo === 'tecnica') set.add(it.pai_id) }
@@ -51,16 +51,16 @@ export default function EtapaServicos({ s, setErro, onEstado, compacto = false, 
   }, [s.id])
   useEffect(() => { carregar() }, [carregar])
   const n = (servicos ?? []).length
-  // sem categoria não tem sugestão nem cardápio: a etapa fica travada
+  // sem categoria não tem sugestão nem menu de serviços: a etapa fica travada
   const semCategoria = catsTodas.length > 0 && !temCategoria(catsTodas, s.id, escolhidas)
   useEffect(() => {
     if (semCategoria) { onEstado({ podeContinuar: false, rodape: 'Escolha as categorias primeiro', aviso: true, motivo: { titulo: 'Primeiro, as categorias', texto: 'Sem nenhuma categoria marcada não tem o que sugerir nem onde guardar o serviço. Volte uma etapa e escolha pelo menos uma.', ir: 'categorias', acao: 'Escolher categorias' } }); return }
-    const rodape = n === 0 ? 'Adicione pelo menos um serviço' : `${n} ${n === 1 ? 'serviço' : 'serviços'} no cardápio`
-    onEstado({ podeContinuar: n > 0, rodape, acaoRodape: compacto ? { rotulo: `Meu cardápio · ${n}`, icone: <ClipboardList size={16} />, onClick: () => setFolha(true) } : null, motivo: { titulo: 'Adicione ao menos um serviço', texto: 'Seu cardápio ainda está vazio. Toque em “Adicionar” numa sugestão, busque pelo nome ou crie um serviço do seu jeito. Preço e duração você ajusta na hora ou depois.' } })
+    const rodape = n === 0 ? 'Adicione pelo menos um serviço' : `${n} ${n === 1 ? 'serviço' : 'serviços'} no menu`
+    onEstado({ podeContinuar: n > 0, rodape, acaoRodape: compacto ? { rotulo: `Menu de serviços · ${n}`, icone: <ClipboardList size={16} />, onClick: () => setFolha(true) } : null, motivo: { titulo: 'Adicione ao menos um serviço', texto: 'Seu menu de serviços ainda está vazio. Toque em “Adicionar” numa sugestão, busque pelo nome ou crie um serviço do seu jeito. Preço e duração você ajusta na hora ou depois.' } })
   }, [n, compacto, semCategoria]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---- adicionar / mudar / tirar ----
-  // escolher um serviço abre o assistente (2.98): duração e preço, foto, "vai junto"; só então entra no cardápio
+  // escolher um serviço abre o assistente (2.98): duração e preço, foto, "vai junto"; só então entra no menu de serviços
   function adicionar(item, tecnica = null) {
     if (!catalogo) return
     const base = item.tipo === 'tecnica' ? catalogo.porId.get(item.pai_id) : item
@@ -113,9 +113,27 @@ export default function EtapaServicos({ s, setErro, onEstado, compacto = false, 
   function trocarTab(id) { setTab(id); setVerTodos(false); setFamilia(null); setBusca('') }
 
   const carregando = !catalogo || servicos === null
+  const catsMenu = cats.filter((c) => c.slug !== 'outros')
+  const semServico = catsMenu.filter((c) => !(porCat[c.id] > 0))
   const painel = (
     <>
-      <header><h3>Meu cardápio</h3><span className="muted">{n} {n === 1 ? 'serviço' : 'serviços'}</span></header>
+      <header><h3>Menu de serviços</h3><span className="muted">{n} {n === 1 ? 'serviço' : 'serviços'}</span></header>
+      {catsMenu.length > 1 && (
+        <div className="cfg-menu-cobertura">
+          <MelFala className="cfg-mel-nota" fala={{ texto: semServico.length
+            ? `Você atende ${catsMenu.length} categorias. Coloca os serviços de todas agora: é chato, eu sei, mas é trabalho de uma vez só. Com o menu completo, sua rotina já nasce organizada, da agenda à sua página. É assim que a gente pensa no que ninguém pensa. 💗`
+            : 'Todas as suas categorias têm serviço. Menu redondo: sua rotina já nasce organizada desde o primeiro dia. 💗' }} />
+          <ul className="cfg-menu-cats" aria-label="Serviços por categoria">
+            {catsMenu.map((c) => { const q = porCat[c.id] ?? 0; return (
+              <li key={c.id} className={q ? 'ok' : 'falta'}>
+                <button type="button" onClick={() => { trocarTab(c.id); setFolha(false) }} title={q ? `Ver sugestões de ${c.nome}` : `Adicionar serviços de ${c.nome}`}>
+                  {q ? <Check size={11} strokeWidth={3} /> : <Plus size={11} strokeWidth={3} />}{c.nome}<small>{q ? `${q} ${q === 1 ? 'serviço' : 'serviços'}` : 'falta'}</small>
+                </button>
+              </li>
+            ) })}
+          </ul>
+        </div>
+      )}
       {servicos === null ? <p className="muted">Carregando…</p> : n === 0 ? (
         <p className="muted cfg-cardapio-vazio">Ainda vazio. Toque em “+ Adicionar” nas sugestões{compacto ? '' : ' ao lado'}.</p>
       ) : (
@@ -128,7 +146,7 @@ export default function EtapaServicos({ s, setErro, onEstado, compacto = false, 
   return (
     <section className="cfg-etapa cfg-etapa-servicos">
       <header className="cfg-etapa-topo">
-        <h2>Monte seu cardápio</h2>
+        <h2>Monte seu menu de serviços</h2>
         <p>Toque em “Adicionar” no que você faz. Preço e duração ficam ao lado, do seu jeito. Dá para ajustar tudo depois em Serviços.</p>
       </header>
       {semCategoria ? (
@@ -194,7 +212,7 @@ export default function EtapaServicos({ s, setErro, onEstado, compacto = false, 
         </div>
 
         {!compacto && (
-          <aside className="cfg-cardapio" aria-label="Meu cardápio">
+          <aside className="cfg-cardapio" aria-label="Menu de serviços">
             <div className="cfg-cardapio-caixa">{painel}</div>
           </aside>
         )}
@@ -202,7 +220,7 @@ export default function EtapaServicos({ s, setErro, onEstado, compacto = false, 
       )}
       {compacto && folha && (
         <Portal><div className="modal-fundo cfg-folha-fundo" onClick={() => setFolha(false)}>
-          <div className="cfg-folha" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Meu cardápio">
+          <div className="cfg-folha" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Menu de serviços">
             <span className="cfg-folha-puxador" aria-hidden="true" />
             <button type="button" className="modal-fechar" onClick={() => setFolha(false)} aria-label="Fechar">×</button>
             <div className="cfg-cardapio-caixa">{painel}</div>
@@ -233,7 +251,7 @@ function CartaoSugestao({ item, catalogo, adicionado, onAdicionar }) {
         <strong>{item.nome}</strong>
         <span className="cfg-sug-dur"><Clock size={12} /> {item.duracao_sugerida ? formatDuracao(item.duracao_sugerida) : 'duração livre'}</span>
       </div>
-      <button type="button" className={'cfg-add' + (adicionado ? ' feito' : '')} onClick={onAdicionar} disabled={adicionado}>{adicionado ? <><Check size={14} /> No cardápio</> : <><Plus size={14} /> Adicionar</>}</button>
+      <button type="button" className={'cfg-add' + (adicionado ? ' feito' : '')} onClick={onAdicionar} disabled={adicionado}>{adicionado ? <><Check size={14} /> No menu</> : <><Plus size={14} /> Adicionar</>}</button>
     </div>
   )
 }

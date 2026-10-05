@@ -8,7 +8,7 @@ import { formatDuracao, formatPreco } from '../../../lib/format'
 // O assistente de serviço (2.98): ao escolher um serviço na configuração,
 // a pessoa é levada passo a passo na mesma tela — (1) duração e preço,
 // (2) foto (a padrão da MIMO ou a sua), (3) se combina com outros serviços
-// do cardápio, mesmo de outra categoria — e só então entra no cardápio.
+// do menu de serviços, mesmo de outra categoria — e só então entra no menu de serviços.
 // Serviço personalizado ganha um passo antes: nome e categoria.
 
 export const paraReais = (t) => { const n = Number(String(t ?? '').replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.')); return Number.isFinite(n) && n >= 0 ? n : null }
@@ -168,7 +168,7 @@ export default function AssistenteDeServico({ catalogo, cats, item = null, tecni
           <div className="cfg-assist-corpo">
             <p className="muted cfg-assist-dica"><Link2 size={13} /> Quando a cliente marcar <strong>{v.nome || 'este serviço'}</strong>, o app oferece os marcados aqui na sequência, mesmo de outra categoria ou com outra profissional. Não é combo: cada um mantém preço e agenda.</p>
             {outros.length === 0 ? (
-              <p className="muted cfg-assist-vazio">Você ainda não tem outros serviços no cardápio. Dá para marcar depois, em Serviços.</p>
+              <p className="muted cfg-assist-vazio">Você ainda não tem outros serviços no menu. Dá para marcar depois, em Serviços.</p>
             ) : (
               <div className="cfg-juntos">
                 {porCat.map((g) => (
@@ -192,7 +192,7 @@ export default function AssistenteDeServico({ catalogo, cats, item = null, tecni
           <div className="cfg-assist-pe-dir">
             {(passo === 'foto' || passo === 'juntos') && !ultimo && <button type="button" className="plat-link" onClick={() => { setErro(''); setI(i + 1) }}>Pular</button>}
             <button type="button" className="btn btn-primary" onClick={continuar} disabled={salvando}>
-              {salvando ? 'Adicionando…' : ultimo ? <><Check size={15} /> Adicionar ao cardápio</> : <>Continuar <ArrowRight size={15} /></>}
+              {salvando ? 'Adicionando…' : ultimo ? <><Check size={15} /> Adicionar ao menu</> : <>Continuar <ArrowRight size={15} /></>}
             </button>
           </div>
         </footer>

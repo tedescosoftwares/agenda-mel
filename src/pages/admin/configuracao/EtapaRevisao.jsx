@@ -33,7 +33,7 @@ export default function EtapaRevisao({ s, autonoma, irPara, onEstado }) {
   const vinculados = nServicos - semProf
   const bloqueios = [
     ...(escolhidas.length === 0 ? [{ texto: 'Nenhuma categoria escolhida', ir: 'categorias' }] : []),
-    ...(nServicos === 0 ? [{ texto: 'Nenhum serviço no cardápio', ir: 'servicos' }] : []),
+    ...(nServicos === 0 ? [{ texto: 'Nenhum serviço no menu', ir: 'servicos' }] : []),
     ...(!autonoma && nEquipe === 0 ? [{ texto: 'Nenhuma profissional cadastrada', ir: 'profissionais' }] : []),
     ...(semProf > 0 ? [{ texto: `${semProf} ${semProf === 1 ? 'serviço não possui profissional' : 'serviços não possuem profissional'}`, ir: 'vinculos' }] : []),
   ]

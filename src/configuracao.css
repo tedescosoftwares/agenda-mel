@@ -412,3 +412,14 @@
 .cfg-compacta .cfg-foto-opcoes { grid-template-columns: 1fr 1fr; }
 .cfg-compacta .cfg-foto-opcao-sem { grid-column: 1 / -1; grid-template-columns: 44px 1fr; align-items: center; column-gap: 10px; }
 .cfg-compacta .cfg-foto-opcao-sem .cfg-foto-previa { width: 44px; aspect-ratio: 1; grid-row: 1 / 3; margin: 0; }
+/* cobertura do menu por categoria (2.98.1), com a fala da Mel */
+.cfg-menu-cobertura { display: grid; gap: 8px; padding: 10px 12px 12px; border-bottom: 1px solid var(--cfg-fio); background: #fffafc; }
+.cfg-menu-cobertura .cfg-mel-nota { margin: 0; padding: 8px 12px 8px 8px; border-radius: 16px; background: #fff; border: 1px solid #ffd6e4; }
+.cfg-menu-cobertura .cfg-mel-nota img { width: 36px; height: 36px; }
+.cfg-menu-cobertura .cfg-mel-nota p { font-size: 0.8rem; line-height: 1.4; }
+.cfg-menu-cats { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.cfg-menu-cats button { display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; padding: 4px 10px 4px 8px; font: inherit; font-size: 0.76rem; font-weight: 600; cursor: pointer; border: 1px solid; }
+.cfg-menu-cats button small { font-weight: 500; opacity: 0.8; }
+.cfg-menu-cats li.ok button { background: #e9f8ef; border-color: #c6ecd8; color: #067647; }
+.cfg-menu-cats li.falta button { background: #fff8e8; border-color: #f3d58a; color: #9a6400; }
+.cfg-menu-cats li.falta button:hover { background: #ffefc2; }

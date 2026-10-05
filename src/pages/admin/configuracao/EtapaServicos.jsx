@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Search, Plus, Check, Trash2, ChevronRight, X, Sparkles, Clock, Pencil, ClipboardList } from 'lucide-react'
+import { Search, Plus, Check, Trash2, ChevronRight, X, Sparkles, Clock, Pencil, ClipboardList, Heart } from 'lucide-react'
 import Portal from '../../../components/Portal'
 import { supabase } from '../../../lib/supabase'
 import { useCatalogo } from '../../../lib/catalogo'
 import { buscar, sugestoes, duracaoDe, nomeSugerido, quantosServicos } from '../../../lib/catalogoBusca'
-import { imagemDoItem, MelFala } from '../../../components/CadastroDeServico'
+import { imagemDoItem } from '../../../components/CadastroDeServico'
+import { MEL_PADRAO } from '../../../lib/mel'
 import { categoriasDoSalao, useCategorias, temCategoria } from '../../../lib/categorias'
 import { formatDuracao } from '../../../lib/format'
 import { Trava } from './Manual'
@@ -31,6 +32,7 @@ export default function EtapaServicos({ s, setErro, onEstado, compacto = false, 
   const [assistente, setAssistente] = useState(null)   // { item, tecnica } do catálogo, ou { item: null, nomeInicial } para o personalizado
   const [editando, setEditando] = useState(null)
   const [folha, setFolha] = useState(false)   // no celular: "Menu de serviços" numa folha
+  const [melFechada, setMelFechada] = useState(false)   // o balão suspenso da Mel no menu
   const campo = useRef(null)
   const escolhidas = useMemo(() => (Array.isArray(s.categorias_escolhidas) ? s.categorias_escolhidas : []), [s.categorias_escolhidas])
   const cats = useMemo(() => categoriasDoSalao(catsTodas, s.id, escolhidas).filter((c) => c.slug !== 'outros' || (servicos ?? []).some((x) => x.categoria_id === c.id)), [catsTodas, s.id, escolhidas, servicos])
@@ -114,15 +116,23 @@ export default function EtapaServicos({ s, setErro, onEstado, compacto = false, 
 
   const carregando = !catalogo || servicos === null
   const catsMenu = cats.filter((c) => c.slug !== 'outros')
+  // o menu agrupado por categoria (na ordem das abas), o mais novo no fim de cada grupo
+  const gruposDoMenu = useMemo(() => {
+    const lista = servicos ?? []
+    const grupos = cats.map((c) => ({ id: c.id, nome: c.nome, lista: lista.filter((x) => x.categoria_id === c.id) })).filter((g) => g.lista.length)
+    const soltos = lista.filter((x) => !cats.some((c) => c.id === x.categoria_id))
+    if (soltos.length) grupos.push({ id: '', nome: 'Outros', lista: soltos })
+    return grupos
+  }, [servicos, cats])
   const semServico = catsMenu.filter((c) => !(porCat[c.id] > 0))
   const painel = (
     <>
       <header><h3>Menu de serviços</h3><span className="muted">{n} {n === 1 ? 'serviço' : 'serviços'}</span></header>
       {catsMenu.length > 1 && (
         <div className="cfg-menu-cobertura">
-          <MelFala className="cfg-mel-nota" fala={{ texto: semServico.length
+          {!melFechada && <MelDestaque onFechar={() => setMelFechada(true)} texto={semServico.length
             ? `Você atende ${catsMenu.length} categorias. Coloca os serviços de todas agora: é chato, eu sei, mas é trabalho de uma vez só. Com o menu completo, sua rotina já nasce organizada, da agenda à sua página. É assim que a gente pensa no que ninguém pensa. 💗`
-            : 'Todas as suas categorias têm serviço. Menu redondo: sua rotina já nasce organizada desde o primeiro dia. 💗' }} />
+            : 'Todas as suas categorias têm serviço. Menu redondo: sua rotina já nasce organizada desde o primeiro dia. 💗'} />}
           <ul className="cfg-menu-cats" aria-label="Serviços por categoria">
             {catsMenu.map((c) => { const q = porCat[c.id] ?? 0; return (
               <li key={c.id} className={q ? 'ok' : 'falta'}>
@@ -138,7 +148,14 @@ export default function EtapaServicos({ s, setErro, onEstado, compacto = false, 
         <p className="muted cfg-cardapio-vazio">Ainda vazio. Toque em “+ Adicionar” nas sugestões{compacto ? '' : ' ao lado'}.</p>
       ) : (
         <ul className="cfg-cardapio-lista">
-          {[...servicos].reverse().map((sv) => <CartaoCardapio key={sv.id} sv={sv} catalogo={catalogo} cats={cats} aberto={editando === sv.id} onAbrir={() => setEditando(editando === sv.id ? null : sv.id)} onMudar={(campos) => atualizar(sv.id, campos)} onTirar={() => tirar(sv)} />)}
+          {gruposDoMenu.map((g) => (
+            <li key={g.id || 'o'} className="cfg-lista-grupo">
+              <span className="cfg-lista-grupo-titulo">{g.nome} <em>{g.lista.length}</em></span>
+              <ul>
+                {g.lista.map((sv) => <CartaoCardapio key={sv.id} sv={sv} catalogo={catalogo} cats={cats} aberto={editando === sv.id} onAbrir={() => setEditando(editando === sv.id ? null : sv.id)} onMudar={(campos) => atualizar(sv.id, campos)} onTirar={() => tirar(sv)} />)}
+              </ul>
+            </li>
+          ))}
         </ul>
       )}
     </>
@@ -275,7 +292,7 @@ function LinhaItem({ item, catalogo, adicionado, comCaminho = false, onAdicionar
 }
 
 // um serviço no painel: preço e duração inline; "editar" abre nome e descrição; técnica opcional
-function CartaoCardapio({ sv, catalogo, cats, aberto, onAbrir, onMudar, onTirar }) {
+function CartaoCardapio({ sv, catalogo, aberto, onAbrir, onMudar, onTirar }) {
   const [preco, setPreco] = useState(emReais(sv.price))
   const [dur, setDur] = useState(sv.duration_minutes ?? '')
   const [nome, setNome] = useState(sv.name)
@@ -285,7 +302,6 @@ function CartaoCardapio({ sv, catalogo, cats, aberto, onAbrir, onMudar, onTirar 
   const servicoBase = item ? (item.tipo === 'tecnica' ? catalogo.porId.get(item.pai_id) : item) : null
   const tecnicas = servicoBase ? catalogo.filhos(servicoBase.id) : []
   const tecnicaAtual = item?.tipo === 'tecnica' ? item.id : ''
-  const catNome = cats.find((c) => c.id === sv.categoria_id)?.nome
   function escolherTecnica(id) {
     const tec = id ? catalogo.porId.get(id) : null
     const nomeAuto = nomeSugerido(servicoBase, item?.tipo === 'tecnica' ? item : null)
@@ -297,15 +313,18 @@ function CartaoCardapio({ sv, catalogo, cats, aberto, onAbrir, onMudar, onTirar 
   return (
     <li className={'cfg-item' + (aberto ? ' aberto' : '') + (!(Number(sv.price) > 0) ? ' sem-preco' : '')}>
       <div className="cfg-item-topo">
-        <div className="cfg-item-nome"><strong>{sv.name}</strong><small>{catNome ?? ''}{sv.catalogo_item_id ? '' : ' · personalizado'}</small></div>
-        <button type="button" className="cfg-item-btn" onClick={onAbrir} aria-label="Editar"><Pencil size={14} /></button>
+        <button type="button" className="cfg-item-nome" onClick={onAbrir} aria-expanded={aberto}>
+          <strong>{sv.name}</strong>
+          <small>{[formatDuracao(sv.duration_minutes), Number(sv.price) > 0 ? emReais(sv.price) && `R$ ${emReais(sv.price)}` : null].filter(Boolean).join(' · ')}{!(Number(sv.price) > 0) && <em className="cfg-item-sem-preco">sem preço</em>}{sv.catalogo_item_id ? '' : ' · personalizado'}</small>
+        </button>
+        <button type="button" className={'cfg-item-btn' + (aberto ? ' ativo' : '')} onClick={onAbrir} aria-label={aberto ? 'Fechar' : 'Editar'}>{aberto ? <Check size={14} /> : <Pencil size={14} />}</button>
         <button type="button" className="cfg-item-btn perigo" onClick={onTirar} aria-label="Remover"><Trash2 size={14} /></button>
       </div>
-      <div className="cfg-item-campos">
+      {aberto && <div className="cfg-item-campos">
         <label>Duração<span className="cfg-min"><input type="number" min="5" step="5" value={dur} onChange={(e) => setDur(e.target.value)} onBlur={() => { const v = Number(dur); if (v > 0 && v !== sv.duration_minutes) onMudar({ duration_minutes: v }) }} /><i>min</i></span></label>
         <label>Preço<span className="cfg-reais"><i>R$</i><input value={preco} inputMode="decimal" placeholder="______" onChange={(e) => setPreco(e.target.value)} onBlur={() => { const v = reais(preco); if (v != null && v !== Number(sv.price)) onMudar({ price: v }) }} /></span></label>
-      </div>
-      {tecnicas.length > 0 && (
+      </div>}
+      {aberto && tecnicas.length > 0 && (
         <label className="cfg-item-tecnica">Técnica <small className="muted">(opcional)</small>
           <select value={tecnicaAtual} onChange={(e) => escolherTecnica(e.target.value)}><option value="">Não definir agora</option>{tecnicas.map((t) => <option key={t.id} value={t.id}>{t.nome}</option>)}</select>
         </label>
@@ -321,3 +340,24 @@ function CartaoCardapio({ sv, catalogo, cats, aberto, onAbrir, onMudar, onTirar 
 }
 
 // o serviço personalizado: drawer com o essencial
+
+
+// A Mel em destaque (2.98.2): foto grande num balão suspenso dentro do
+// menu; enquanto ele está na tela, a Mel do canto se recolhe (classe
+// mel-em-destaque no <html>), para não falar duas vezes
+function MelDestaque({ texto, onFechar }) {
+  useEffect(() => {
+    document.documentElement.classList.add('mel-em-destaque')
+    return () => document.documentElement.classList.remove('mel-em-destaque')
+  }, [])
+  return (
+    <div className="cfg-mel-destaque" role="status">
+      <img src={MEL_PADRAO} alt="Mel" />
+      <div className="cfg-mel-destaque-balao">
+        <span className="cfg-mel-destaque-nome"><Heart size={11} /> Mel</span>
+        <p>{texto}</p>
+        <button type="button" className="cfg-mel-destaque-x" onClick={onFechar} aria-label="Fechar"><X size={14} /></button>
+      </div>
+    </div>
+  )
+}

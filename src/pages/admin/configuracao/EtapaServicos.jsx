@@ -8,6 +8,8 @@ import { imagemDoItem } from '../../../components/CadastroDeServico'
 import { categoriasDoSalao, useCategorias, temCategoria } from '../../../lib/categorias'
 import { formatDuracao } from '../../../lib/format'
 import { Trava } from './Manual'
+import AssistenteDeServico from './AssistenteDeServico'
+import { ajustarCriativo } from '../../../lib/imagem'
 
 // Etapa 2 da configuração inicial (2.94): "Monte seu cardápio" em duas
 // colunas. À esquerda o catálogo (tabs das categorias escolhidas, busca,
@@ -26,7 +28,7 @@ export default function EtapaServicos({ s, setErro, onEstado, compacto = false, 
   const [busca, setBusca] = useState('')
   const [verTodos, setVerTodos] = useState(false)
   const [familia, setFamilia] = useState(null)
-  const [personalizado, setPersonalizado] = useState(false)
+  const [assistente, setAssistente] = useState(null)   // { item, tecnica } do catálogo, ou { item: null, nomeInicial } para o personalizado
   const [editando, setEditando] = useState(null)
   const [folha, setFolha] = useState(false)   // no celular: "Meu cardápio" numa folha
   const campo = useRef(null)
@@ -44,7 +46,7 @@ export default function EtapaServicos({ s, setErro, onEstado, compacto = false, 
   }, [servicos, catalogo])
 
   const carregar = useCallback(async () => {
-    const { data } = await supabase.from('services').select('id, name, description, duration_minutes, price, categoria_id, catalogo_item_id, active, created_at').eq('salon_id', s.id).eq('active', true).order('created_at')
+    const { data } = await supabase.from('services').select('id, name, description, duration_minutes, price, categoria_id, catalogo_item_id, active, created_at, images').eq('salon_id', s.id).eq('active', true).order('created_at')
     setServicos((atual) => { const vindos = data ?? []; const locais = (atual ?? []).filter((x) => x._local && !vindos.some((v) => v.id === x.id)); return [...vindos, ...locais] })
   }, [s.id])
   useEffect(() => { carregar() }, [carregar])
@@ -58,17 +60,38 @@ export default function EtapaServicos({ s, setErro, onEstado, compacto = false, 
   }, [n, compacto, semCategoria]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---- adicionar / mudar / tirar ----
-  async function adicionar(item, tecnica = null) {
+  // escolher um serviço abre o assistente (2.98): duração e preço, foto, "vai junto"; só então entra no cardápio
+  function adicionar(item, tecnica = null) {
     if (!catalogo) return
     const base = item.tipo === 'tecnica' ? catalogo.porId.get(item.pai_id) : item
     const alvo = tecnica ?? (item.tipo === 'tecnica' ? item : null)
     if (!base || base.tipo !== 'servico') return
-    const payload = { salon_id: s.id, name: nomeSugerido(base, alvo), duration_minutes: duracaoDe(catalogo, alvo ?? base) ?? 60, price: 0, categoria_id: base.categoria_id, catalogo_item_id: (alvo ?? base).id, active: true }
-    const { data, error } = await supabase.from('services').insert(payload).select('id').maybeSingle()
-    if (error) { setErro('Não deu para adicionar: ' + error.message); return }
-    const novo = { ...payload, id: data?.id ?? 'local-' + crypto.randomUUID(), _local: !data?.id, description: null, created_at: new Date().toISOString() }
+    setAssistente({ item: base, tecnica: alvo })
+  }
+  async function concluirAssistente(d) {
+    const payload = { salon_id: s.id, name: d.nome, duration_minutes: d.duracao, price: d.preco, categoria_id: d.categoria_id, catalogo_item_id: d.catalogo_item_id, description: d.descricao, active: true, images: d.foto.tipo === 'mimo' && d.foto.url ? [d.foto.url] : [] }
+    const { data, error } = await supabase.from('services').insert(payload).select('id, categoria_id').maybeSingle()
+    if (error) throw new Error('Não deu para adicionar: ' + error.message)
+    const id = data?.id ?? 'local-' + crypto.randomUUID()
+    let images = payload.images
+    if (data?.id && d.foto.tipo === 'minha' && d.foto.file) {
+      try {
+        const { blob } = await ajustarCriativo(d.foto.file, { largura: 1200, altura: 900 })
+        const path = `${crypto.randomUUID()}.jpg`
+        const { error: eu } = await supabase.storage.from('service-images').upload(path, blob, { contentType: 'image/jpeg', cacheControl: '31536000' })
+        if (eu) throw new Error(eu.message)
+        images = [supabase.storage.from('service-images').getPublicUrl(path).data.publicUrl]
+        await supabase.from('services').update({ images }).eq('id', data.id)
+      } catch (err) { setErro('O serviço entrou, mas a foto não subiu: ' + (err?.message || '')) }
+    }
+    if (data?.id && d.juntos.length) {
+      const { error: ej } = await supabase.rpc('salvar_servicos_juntos', { servico: data.id, sugeridos: d.juntos })
+      if (ej) setErro('O serviço entrou, mas o "vai junto" não gravou: ' + ej.message)
+    }
+    const novo = { ...payload, images, categoria_id: data?.categoria_id ?? payload.categoria_id, id, _local: !data?.id, created_at: new Date().toISOString() }
     setServicos((l) => [...(l ?? []), novo])
-    if (categoria && base.categoria_id !== categoria.id && cats.some((c) => c.id === base.categoria_id)) setTab(base.categoria_id)
+    setAssistente(null)
+    if (categoria && novo.categoria_id && novo.categoria_id !== categoria.id && cats.some((c) => c.id === novo.categoria_id)) setTab(novo.categoria_id)
   }
   async function atualizar(id, campos) {
     setServicos((l) => (l ?? []).map((x) => (x.id === id ? { ...x, ...campos } : x)))
@@ -82,14 +105,6 @@ export default function EtapaServicos({ s, setErro, onEstado, compacto = false, 
     const { error } = await supabase.from('services').delete().eq('id', sv.id)
     if (error) { await supabase.from('services').update({ active: false }).eq('id', sv.id) }   // já tem agendamento: só desativa
   }
-  async function criarPersonalizado(dados) {
-    const payload = { salon_id: s.id, name: dados.nome.trim(), duration_minutes: Number(dados.duracao) || 60, price: reais(dados.preco) ?? 0, categoria_id: dados.categoria_id || null, description: dados.descricao?.trim() || null, active: true }
-    const { data, error } = await supabase.from('services').insert(payload).select('id, categoria_id').maybeSingle()
-    if (error) { setErro('Não deu para criar: ' + error.message); return false }
-    setServicos((l) => [...(l ?? []), { ...payload, categoria_id: data?.categoria_id ?? payload.categoria_id, id: data?.id ?? 'local-' + crypto.randomUUID(), _local: !data?.id, catalogo_item_id: null, created_at: new Date().toISOString() }])
-    return true
-  }
-
   // ---- o que a coluna esquerda mostra ----
   const resultados = useMemo(() => (catalogo && busca.trim().length >= 2 ? buscar(catalogo, busca, { limite: 30 }) : null), [catalogo, busca])
   const sug = useMemo(() => (catalogo && categoria ? sugestoes(catalogo, { categoriaId: categoria.id, limite: 8 }) : []), [catalogo, categoria])
@@ -139,7 +154,7 @@ export default function EtapaServicos({ s, setErro, onEstado, compacto = false, 
               <div className="cfg-vazio">
                 <strong>Nada com “{busca.trim()}” no catálogo.</strong>
                 <p className="muted">Não encontrou? Cria do seu jeito.</p>
-                <button type="button" className="btn btn-primary" onClick={() => setPersonalizado(busca.trim())}><Plus size={15} /> Criar serviço personalizado</button>
+                <button type="button" className="btn btn-primary" onClick={() => setAssistente({ item: null, nomeInicial: busca.trim() })}><Plus size={15} /> Criar serviço personalizado</button>
               </div>
             ) : (
               <div className="cfg-secao">
@@ -175,7 +190,7 @@ export default function EtapaServicos({ s, setErro, onEstado, compacto = false, 
               </div>
             </>
           )}
-          <div className="cfg-personalizado"><span className="muted">Não encontrou?</span><button type="button" className="btn btn-ghost" onClick={() => setPersonalizado('')}><Plus size={15} /> Criar serviço personalizado</button></div>
+          <div className="cfg-personalizado"><span className="muted">Não encontrou?</span><button type="button" className="btn btn-ghost" onClick={() => setAssistente({ item: null, nomeInicial: '' })}><Plus size={15} /> Criar serviço personalizado</button></div>
         </div>
 
         {!compacto && (
@@ -196,7 +211,7 @@ export default function EtapaServicos({ s, setErro, onEstado, compacto = false, 
         </div></Portal>
       )}
 
-      {personalizado !== false && <ServicoQuickForm cats={cats.length ? cats : catsTodas.filter((c) => !c.salon_id && c.ativa !== false)} categoriaInicial={categoria?.id ?? ''} nomeInicial={typeof personalizado === 'string' ? personalizado : ''} onFechar={() => setPersonalizado(false)} onSalvar={async (d) => { const ok = await criarPersonalizado(d); if (ok) { setPersonalizado(false); setBusca('') } }} />}
+      {assistente && <AssistenteDeServico catalogo={catalogo} cats={cats.length ? cats : catsTodas.filter((c) => !c.salon_id && c.ativa !== false)} item={assistente.item} tecnica={assistente.tecnica ?? null} nomeInicial={assistente.nomeInicial ?? ''} categoriaInicial={categoria?.id ?? ''} servicos={servicos ?? []} compacto={compacto} onFechar={() => setAssistente(null)} onConcluir={concluirAssistente} />}
     </section>
   )
 }
@@ -288,35 +303,3 @@ function CartaoCardapio({ sv, catalogo, cats, aberto, onAbrir, onMudar, onTirar 
 }
 
 // o serviço personalizado: drawer com o essencial
-function ServicoQuickForm({ cats, categoriaInicial, nomeInicial, onFechar, onSalvar }) {
-  const [v, setV] = useState({ nome: nomeInicial ?? '', categoria_id: categoriaInicial ?? '', duracao: 60, preco: '', descricao: '' })
-  const [salvando, setSalvando] = useState(false)
-  const [erro, setErro] = useState('')
-  const set = (k) => (e) => setV((x) => ({ ...x, [k]: e.target.value }))
-  async function salvar(e) {
-    e.preventDefault()
-    if (!v.nome.trim()) { setErro('Dê um nome ao serviço.'); return }
-    if (!v.categoria_id) { setErro('Escolha a categoria.'); return }
-    setSalvando(true); setErro('')
-    await onSalvar(v)
-    setSalvando(false)
-  }
-  return (
-    <Portal><div className="modal-fundo cfg-drawer-fundo" onClick={onFechar}>
-      <form className="cfg-drawer" onClick={(e) => e.stopPropagation()} onSubmit={salvar} role="dialog" aria-modal="true" aria-label="Serviço personalizado">
-        <button type="button" className="modal-fechar" onClick={onFechar} aria-label="Fechar">×</button>
-        <h3>Serviço personalizado</h3>
-        <p className="muted">Do seu jeito, com o nome que você usa. Entra direto no cardápio.</p>
-        {erro && <div className="alert alert-error">{erro}</div>}
-        <label>Nome<input value={v.nome} onChange={set('nome')} placeholder="Ex.: Banho de lua" autoFocus /></label>
-        <label>Categoria<select value={v.categoria_id} onChange={set('categoria_id')}><option value="">Escolha…</option>{cats.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}</select></label>
-        <div className="cfg-drawer-duas">
-          <label>Duração (min)<input type="number" min="5" step="5" value={v.duracao} onChange={set('duracao')} /></label>
-          <label>Preço (R$)<input value={v.preco} onChange={set('preco')} inputMode="decimal" placeholder="opcional" /></label>
-        </div>
-        <label>Descrição <small className="muted">(opcional)</small><input value={v.descricao} onChange={set('descricao')} /></label>
-        <div className="modal-acoes"><button type="button" className="btn btn-ghost" onClick={onFechar}>Cancelar</button><button type="submit" className="btn btn-primary" disabled={salvando}>{salvando ? 'Salvando…' : 'Adicionar ao cardápio'}</button></div>
-      </form>
-    </div></Portal>
-  )
-}

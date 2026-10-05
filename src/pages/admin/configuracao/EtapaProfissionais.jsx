@@ -31,6 +31,7 @@ export default function EtapaProfissionais({ s, autonoma, setErro, onEstado }) {
   useEffect(() => { carregar() }, [carregar])
   const ativas = (equipe ?? []).filter((p) => p.situacao !== 'inativa')
   const dona = ativas.find((p) => p.dona) ?? null
+  const vagas = Math.max(0, Number(s.equipe_prevista) || 0)   // as agendas do plano: um teto, não uma meta
   // a dona que também atende (2.99): liga ou desliga a própria agenda aqui mesmo
   async function donaAtender(atende) {
     setMudandoDona(true)
@@ -44,8 +45,8 @@ export default function EtapaProfissionais({ s, autonoma, setErro, onEstado }) {
   useEffect(() => {
     onEstado({
       podeContinuar: autonoma || ativas.length > 0,
-      rodape: autonoma ? 'Sua agenda é só sua' : ativas.length === 0 ? 'Adicione pelo menos uma profissional' : `${ativas.length} ${ativas.length === 1 ? 'profissional' : 'profissionais'}`,
-      motivo: { titulo: 'Cadastre ao menos uma profissional', texto: 'A agenda precisa de alguém atendendo. Nome e WhatsApp bastam para começar; foto, horários e o resto dá para completar depois. Se é só você, cadastre a si mesma.' },
+      rodape: autonoma ? 'Sua agenda é só sua' : ativas.length === 0 ? 'Cadastre ao menos uma profissional para seguir' : `${ativas.length} ${ativas.length === 1 ? 'profissional' : 'profissionais'}${vagas > ativas.length ? ` · ${vagas - ativas.length} ${vagas - ativas.length === 1 ? 'agenda do plano fica' : 'agendas do plano ficam'} para depois` : ''}`,
+      motivo: { titulo: 'Cadastre ao menos uma profissional', texto: 'Só uma já basta para seguir: quem já está pronta para receber horário. Nome e WhatsApp bastam. As outras agendas do seu plano ficam guardadas e você completa quando quiser, em Profissionais.' },
       aoContinuar: autonoma && dona ? async () => {
         const ligados = new Set((dona.servicos ?? []).map((x) => x.service_id))
         const faltam = servicos.filter((sv) => !ligados.has(sv.id)).map((sv) => ({ professional_id: dona.id, service_id: sv.id }))
@@ -58,7 +59,8 @@ export default function EtapaProfissionais({ s, autonoma, setErro, onEstado }) {
     <section className="cfg-etapa cfg-etapa-equipe">
       <header className="cfg-etapa-topo">
         <h2>{autonoma ? 'Sua agenda' : 'Quem atende por aí?'}</h2>
-        <p>{autonoma ? 'Você é a profissional da sua agenda. Todos os serviços entram nela.' : 'Adicione quem vai aparecer na agenda. Depois ligamos cada pessoa aos serviços.'}</p>
+        <p>{autonoma ? 'Você é a profissional da sua agenda. Todos os serviços entram nela.' : 'Comece com pelo menos uma: quem já está pronta para receber horário. As outras você adiciona quando quiser, sem pressa. Depois ligamos cada pessoa aos serviços.'}</p>
+        {!autonoma && vagas > 0 && <span className={'cfg-vagas' + (ativas.length >= vagas ? ' cheias' : '')}>{ativas.length > vagas ? `${ativas.length} profissionais com agenda · o plano previa ${vagas}; o valor acompanha as agendas ativas (veja em Assinatura)` : ativas.length === vagas ? `${ativas.length} de ${vagas} agendas do plano em uso. Precisa de mais? Dá para ampliar em Assinatura.` : `${ativas.length} de ${vagas} agendas do plano em uso · as demais ficam guardadas para quando precisar`}</span>}
       </header>
       {equipe === null ? <p className="muted">Carregando…</p> : (
         <div className="cfg-equipe-grade">
@@ -93,8 +95,8 @@ export default function EtapaProfissionais({ s, autonoma, setErro, onEstado }) {
           {!autonoma && (
             <button type="button" className="cfg-prof cfg-prof-mais" onClick={() => setNovo(true)}>
               <span className="cfg-prof-mais-icone"><Plus size={22} /></span>
-              <strong>{ativas.length ? 'Adicionar profissional' : 'Adicionar primeira profissional'}</strong>
-              <small>{ativas.length ? '' : 'Quem trabalha com você?'}</small>
+              <strong>{ativas.length ? 'Adicionar outra' : 'Adicionar a primeira'}</strong>
+              <small>{ativas.length ? 'Só se já estiver pronta para atender' : 'Quem já atende com você?'}</small>
             </button>
           )}
         </div>

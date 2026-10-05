@@ -475,3 +475,6 @@
 .cfg-compacta .cfg-fams { display: flex; overflow-x: auto; gap: 8px; padding-bottom: 4px; scrollbar-width: none; }
 .cfg-compacta .cfg-fam { flex: none; width: 132px; }
 .cfg-compacta .cfg-fam-img { aspect-ratio: 14 / 8; }
+/* as agendas do plano são teto, não meta (2.99.2) */
+.cfg-vagas { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; padding: 5px 12px; border-radius: 999px; background: #e9f8ef; color: #067647; font-size: 0.8rem; font-weight: 600; justify-self: start; }
+.cfg-vagas.cheias { background: #fff8e8; color: #9a6400; }

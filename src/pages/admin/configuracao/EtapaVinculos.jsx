@@ -89,7 +89,7 @@ export default function EtapaVinculos({ s, setErro, onEstado, compacto = false, 
       {servicos.length === 0 ? (
         <Trava titulo="Primeiro, o menu de serviços" texto="Não tem serviço para ligar a ninguém ainda. Monte o menu de serviços na etapa Serviços e volte aqui." acao="Montar o menu de serviços" onAcao={() => irPara?.('servicos')} onManual={abrirManual} />
       ) : equipe.length === 0 ? (
-        <Trava titulo="Primeiro, as profissionais" texto="Sem ninguém cadastrado, não dá para dizer quem faz o quê. Adicione pelo menos uma profissional e volte aqui." acao="Cadastrar profissionais" onAcao={() => irPara?.('profissionais')} onManual={abrirManual} />
+        <Trava titulo="Primeiro, as profissionais" texto="Sem ninguém cadastrado, não dá para dizer quem faz o quê. Cadastre ao menos uma profissional (só uma já basta) e volte aqui." acao="Cadastrar profissionais" onAcao={() => irPara?.('profissionais')} onManual={abrirManual} />
       ) : compacto ? (
         <>
           <span className={'cfg-vinc-aviso' + (descobertos.length ? ' falta' : ' ok')}>{descobertos.length ? <><AlertTriangle size={14} /> {descobertos.length} {descobertos.length === 1 ? 'serviço sem profissional' : 'serviços sem profissional'}</> : <><Check size={14} /> Todos os serviços têm profissional</>}</span>

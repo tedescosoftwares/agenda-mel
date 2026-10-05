@@ -8,7 +8,7 @@ import Portal from '../../../components/Portal'
 export const PASSOS = [
   { id: 'categorias', rotulo: 'Categorias', Icone: LayoutGrid, titulo: 'O que você oferece', oque: 'Marque as áreas do seu espaço: cabelo, unhas, cílios… É o mapa de tudo que vem depois.', precisa: null, libera: 'as sugestões de serviço' },
   { id: 'servicos', rotulo: 'Serviços', Icone: Sparkles, titulo: 'Monte seu menu de serviços', oque: 'Adicione do catálogo com um toque ou crie o seu. Preço e duração ficam do seu jeito.', precisa: 'pelo menos uma categoria', libera: 'o “Quem faz o quê”', depende: ['categorias'] },
-  { id: 'profissionais', rotulo: 'Profissionais', Icone: Users, titulo: 'Quem atende', oque: 'Cadastre quem trabalha com você. Nome e WhatsApp bastam; o resto dá para completar depois.', precisa: null, libera: 'o “Quem faz o quê”' },
+  { id: 'profissionais', rotulo: 'Profissionais', Icone: Users, titulo: 'Quem atende', oque: 'Cadastre quem já atende com você. Uma só já basta para seguir; as outras agendas do plano ficam guardadas para quando precisar. Nome e WhatsApp bastam.', precisa: null, libera: 'o “Quem faz o quê”' },
   { id: 'vinculos', rotulo: 'Quem faz o quê', Icone: Link2, titulo: 'Ligue serviço a profissional', oque: 'Marque quem faz cada serviço. É assim que a MIMO sabe em qual agenda o atendimento pode entrar.', precisa: 'serviços e profissionais cadastrados', libera: 'a revisão sem bloqueios', depende: ['servicos', 'profissionais'] },
   { id: 'revisao', rotulo: 'Revisão', Icone: ClipboardCheck, titulo: 'Tudo pronto?', oque: 'Confira o resumo, resolva o que estiver bloqueando e conclua. Depois, faça um agendamento de teste pela agenda.', precisa: null, libera: 'seu salão na MIMO' },
 ]

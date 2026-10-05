@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowLeft, ChevronRight, Clock, Plus, Search, Sparkles, X } from 'lucide-react'
+import { ArrowLeft, ChevronRight, Clock, Plus, Search, Sparkles, X, Layers } from 'lucide-react'
 import { useCatalogo, imagemDaCategoria } from '../lib/catalogo'
 import { buscar, sugestoes, duracaoDe, nomeSugerido, quantosServicos, cadeia } from '../lib/catalogoBusca'
 import { formatDuracao } from '../lib/format'
@@ -63,7 +63,7 @@ function useMiniaturas() {
   return [temMini, marcar]
 }
 
-export default function CadastroDeServico({ salaoId, categoriasEscolhidas = [], nServicos = 0, onEscolher, onPersonalizado, onFechar, titulo = 'Adicionar serviço' }) {
+export default function CadastroDeServico({ salaoId, categoriasEscolhidas = [], nServicos = 0, onEscolher, onPersonalizado, onCombo = null, podeCombo = false, onFechar, titulo = 'Adicionar serviço' }) {
   const indice = useCatalogo()
   const [etapa, setEtapa] = useState('inicio')   // inicio | categoria | familia | servico
   const [cat, setCat] = useState(null)
@@ -231,10 +231,15 @@ export default function CadastroDeServico({ salaoId, categoriasEscolhidas = [], 
         )}
       </div>
 
-      <footer className="cardapio-rodape">
+      <footer className={'cardapio-rodape' + (onCombo ? ' cardapio-rodape-duplo' : '')}>
         <button type="button" className="cardapio-personalizado" onClick={personalizado}>
           <Plus size={16} /> Não encontrou? <strong>Criar meu próprio serviço</strong>
         </button>
+        {onCombo && (
+          <button type="button" className="cardapio-personalizado cardapio-combo" onClick={onCombo} disabled={!podeCombo} title={podeCombo ? undefined : 'Cadastre pelo menos 2 serviços antes de montar um combo'}>
+            <Layers size={16} /> {podeCombo ? <>Pacote? <strong>Montar um combo</strong></> : <>Combo: <strong>precisa de 2 serviços</strong></>}
+          </button>
+        )}
       </footer>
     </div>
   )

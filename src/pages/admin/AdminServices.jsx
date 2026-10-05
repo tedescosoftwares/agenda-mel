@@ -4,7 +4,7 @@ import AdminShell from '../../components/AdminShell'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { ChevronIcon, SparkleIcon } from '../../components/icons'
-import { Star, Plus, LayoutGrid, Lock } from 'lucide-react'
+import { Star, Plus, LayoutGrid, Lock, Layers, Clock } from 'lucide-react'
 import { formatPreco, formatDuracao, labelDuracao } from '../../lib/format'
 import { useCategorias, categoriasDoSalao, agruparPorCategoria, bate, capaPadrao, temCategoria } from '../../lib/categorias'
 import { ajustarCriativo } from '../../lib/imagem'
@@ -183,6 +183,14 @@ export default function AdminServices() {
     if (atendem.length) return atendem
     return profs.length === 1 ? [profs[0].id] : []
   }
+  // combo (2.97): entrada própria; começa já no editor de combo, sem catálogo
+  const candidatosCombo = services.filter((s) => !s.is_combo && s.id !== editing)
+  function startCombo() {
+    if (semCategoria) { setAvisoCats(true); setEscolhendoCats(true); return }
+    setForm({ ...FORM_VAZIO, is_combo: true })
+    setOrigem(null); setImagens([]); setComboIds([]); setJuntos([]); setQuem([]); setQuemMexido(false)
+    setEditing('new'); setError('')
+  }
   function escolherDoCatalogo(e) {
     setForm({ ...FORM_VAZIO, name: e.nome, duration_minutes: e.duracao ?? 60, categoria_id: e.categoria_id ?? '', catalogo_item_id: e.item?.id ?? '' })
     setOrigem(e.caminho ?? null)
@@ -266,15 +274,16 @@ export default function AdminServices() {
   const candidatosJuntos = services.filter((s) => s.active && s.id !== editing)
 
   function toggleComboId(id) {
-    setComboIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
-    )
+    const prox = comboIds.includes(id) ? comboIds.filter((x) => x !== id) : [...comboIds, id]
+    setComboIds(prox)
+    // a categoria do combo é a da primeira parte; quem faz é quem faz todas as partes
+    const partes = prox.map((x) => services.find((s) => s.id === x)).filter(Boolean)
+    if (editing === 'new' && !form.categoria_id && partes[0]?.categoria_id) setForm((f) => ({ ...f, categoria_id: partes[0].categoria_id }))
+    if (!quemMexido && prox.length) {
+      const todas = profs.filter((p) => prox.every((x) => (quemFaz[x] ?? []).includes(p.id))).map((p) => p.id)
+      setQuem(todas.length ? todas : profs.length === 1 ? [profs[0].id] : [])
+    }
   }
-
-  // serviços que podem entrar num combo: não-combos, exceto o próprio
-  const candidatosCombo = services.filter(
-    (s) => !s.is_combo && s.id !== editing,
-  )
 
   const somaCombo = comboIds.reduce((soma, id) => {
     const s = services.find((x) => x.id === id)
@@ -477,7 +486,10 @@ export default function AdminServices() {
             {services.some((s) => s.destaque) ? ` · ${services.filter((s) => s.destaque).length} em destaque na home` : ' · toque na ★ para destacar na home das clientes'}
           </p>
         </div>
-        {editing === null && <button type="button" className="btn btn-primary cardapio-abrir" onClick={startNew}>+ Adicionar serviço</button>}
+        {editing === null && <div className="page-head-acoes">
+          {candidatosCombo.length >= 2 && <button type="button" className="btn btn-ghost cardapio-abrir" onClick={startCombo}><Layers size={15} /> Montar combo</button>}
+          <button type="button" className="btn btn-primary cardapio-abrir" onClick={startNew}>+ Adicionar serviço</button>
+        </div>}
       </div>
 
       {error && editing === null && <div className="alert alert-error">{error}</div>}
@@ -527,7 +539,7 @@ export default function AdminServices() {
       {editing === 'escolher' && (
         <Portal><div className="modal-fundo" onClick={cancelEdit}>
           <div className="card modal-caixa cardapio-caixa" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Adicionar serviço">
-            <CadastroDeServico salaoId={salao?.id} categoriasEscolhidas={escolhidas} nServicos={services.length} onEscolher={escolherDoCatalogo} onPersonalizado={personalizado} onFechar={cancelEdit} />
+            <CadastroDeServico salaoId={salao?.id} categoriasEscolhidas={escolhidas} nServicos={services.length} onEscolher={escolherDoCatalogo} onPersonalizado={personalizado} onCombo={startCombo} podeCombo={candidatosCombo.length >= 2} onFechar={cancelEdit} />
           </div>
         </div></Portal>
       )}
@@ -535,7 +547,8 @@ export default function AdminServices() {
         <Portal><div className="modal-fundo" onClick={cancelEdit}>
         <form className="card modal-caixa modal-form form service-form" onSubmit={handleSave} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={editing === 'new' ? 'Novo serviço' : 'Editar serviço'}>
           <button type="button" className="modal-fechar" onClick={cancelEdit} aria-label="Fechar">×</button>
-          <h3>{editing === 'new' ? (origem ? 'Quase lá' : 'Novo serviço') : 'Editar serviço'}</h3>
+          <h3>{form.is_combo ? (editing === 'new' ? 'Novo combo' : 'Editar combo') : editing === 'new' ? (origem ? 'Quase lá' : 'Novo serviço') : 'Editar serviço'}</h3>
+          {form.is_combo && editing === 'new' && <p className="muted cardapio-forma-dica">Um combo junta serviços que você já tem num pacote com preço fechado. A cliente marca tudo de uma vez e a agenda reserva o tempo somado.</p>}
           {origem && (
             <div className="cardapio-origem">
               <span>{origem.map((p, i) => <span key={i}>{i > 0 && <ChevronIcon />}{p}</span>)}</span>
@@ -546,13 +559,17 @@ export default function AdminServices() {
           <MelFala fala={falaForma} />
           {error && <div className="alert alert-error">{error}</div>}
 
+          {form.is_combo && (
+            <ComboEditor services={services} candidatos={candidatosCombo} cats={cats} comboIds={comboIds} onToggle={toggleComboId} form={form} setForm={setForm} busca={buscaPicker} setBusca={setBuscaPicker} />
+          )}
+
           <label>
-            Nome que suas clientes verão
+            {form.is_combo ? 'Nome do combo' : 'Nome que suas clientes verão'}
             <input
               type="text"
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
-              placeholder="Ex.: Limpeza de pele"
+              placeholder={form.is_combo ? 'Ex.: Manicure + Pedicure' : 'Ex.: Limpeza de pele'}
               required
             />
           </label>
@@ -605,51 +622,22 @@ export default function AdminServices() {
             <button type="button" className="btn btn-ghost btn-mini" onClick={criarCategoria} disabled={!novaCat.trim()}>+ Criar</button>
           </div>}
 
-          <div className="combo-toggle">
-            <label className="switch">
-              <input
-                type="checkbox"
-                checked={form.is_combo}
-                onChange={(e) => setForm({ ...form, is_combo: e.target.checked })}
-              />
-              <span></span>
-            </label>
-            <div className="combo-toggle-texto">
-              <span>Combo de serviços</span>
-              <span className="muted">
-                Junta serviços num pacote — a duração é a soma e aparece para
-                a cliente como tempo médio
-              </span>
+          {!form.is_combo ? (
+            <div className="combo-toggle">
+              <label className="switch">
+                <input type="checkbox" checked={false} onChange={() => { if (candidatosCombo.length < 2) { setError('Cadastre pelo menos 2 serviços comuns antes de montar um combo.'); return } setForm({ ...form, is_combo: true }) }} />
+                <span></span>
+              </label>
+              <div className="combo-toggle-texto">
+                <span><Layers size={13} /> É um combo (pacote de serviços)</span>
+                <span className="muted">Junta serviços que você já tem num preço fechado. Ligue para escolher as partes.</span>
+              </div>
             </div>
-          </div>
-
-          {form.is_combo && (
-            <div className="combo-picker">
-              <span className="img-field-label">Serviços do combo</span>
-              {candidatosCombo.length < 2 ? (
-                <p className="muted combo-aviso">
-                  Cadastre pelo menos 2 serviços comuns antes de criar um combo.
-                </p>
-              ) : (
-                <ListaPorCategoria
-                  itens={candidatosCombo}
-                  cats={cats}
-                  marcados={comboIds}
-                  onToggle={toggleComboId}
-                  busca={buscaPicker}
-                  setBusca={setBuscaPicker}
-                />
-              )}
-              {comboIds.length > 0 && (
-                <p className="muted combo-soma">
-                  Duração somada: <strong>{formatDuracao(somaCombo)}</strong> —
-                  exibida como tempo médio ~{formatDuracao(somaCombo)}
-                </p>
-              )}
-            </div>
+          ) : (
+            <button type="button" className="plat-link combo-desfazer" onClick={() => { setForm({ ...form, is_combo: false }); setComboIds([]) }}>Não é combo? Voltar para serviço simples</button>
           )}
 
-          {candidatosJuntos.length > 0 && (
+          {!form.is_combo && candidatosJuntos.length > 0 && (
             <div className="combo-picker juntos-picker">
               <span className="img-field-label">Costuma ir junto</span>
               <p className="muted combo-aviso">
@@ -668,7 +656,7 @@ export default function AdminServices() {
             </div>
           )}
 
-          <div className="form-row">
+          {!form.is_combo && <div className="form-row">
             {!form.is_combo && (
               <label>
                 Duração (minutos)
@@ -696,7 +684,7 @@ export default function AdminServices() {
                 required
               />
             </label>
-          </div>
+          </div>}
 
           <div className="img-field">
             <span className="img-field-label">
@@ -781,6 +769,7 @@ export default function AdminServices() {
                 <span className="service-nome">
                   <span className="nome-txt">{s.name}</span>
                   {s.is_combo && <span className="badge badge-combo">combo</span>}
+                  {s.is_combo && (s.combo_service_ids ?? []).length > 0 && <span className="muted service-meta service-combo-partes">Inclui: {(s.combo_service_ids ?? []).map((id) => services.find((x) => x.id === id)?.name).filter(Boolean).join(' + ')}</span>}
                   {s.catalogo_item_id && catalogo?.porId.get(s.catalogo_item_id) && <span className="badge badge-catalogo" title={catalogo.porId.get(s.catalogo_item_id).caminho.join(' › ')}>{catalogo.porId.get(s.catalogo_item_id).caminho.slice(1).join(' › ')}</span>}
                 </span>
                 <span className="muted service-meta">
@@ -897,6 +886,66 @@ export default function AdminServices() {
         </button>
       )}
     </AdminShell>
+  )
+}
+
+// o editor de combo (2.97): partes em chips, resumo somado, preço com desconto e nome sugerido
+function precoNumero(txt) { const n = Number(String(txt ?? '').replace(/\./g, '').replace(',', '.')); return Number.isFinite(n) ? n : 0 }
+function ComboEditor({ services, candidatos, cats, comboIds, onToggle, form, setForm, busca, setBusca }) {
+  const partes = comboIds.map((id) => services.find((s) => s.id === id)).filter(Boolean)
+  const somaMin = partes.reduce((t, s) => t + Number(s.duration_minutes || 0), 0)
+  const somaPreco = partes.reduce((t, s) => t + Number(s.price || 0), 0)
+  const preco = precoNumero(form.price)
+  const desconto = somaPreco - preco
+  const pct = somaPreco > 0 ? Math.round((desconto / somaPreco) * 100) : 0
+  const sugestaoNome = partes.map((s) => s.name).join(' + ')
+  const aplicar = (fator) => setForm({ ...form, price: (Math.round(somaPreco * fator * 2) / 2).toFixed(2).replace('.', ',') })
+  return (
+    <div className="combo-editor">
+      <div className="combo-passo">
+        <span className="combo-num">1</span>
+        <div><strong>Quais serviços entram?</strong><p className="muted">Escolha 2 ou mais dos que você já tem.</p></div>
+      </div>
+      {partes.length > 0 && (
+        <div className="combo-chips">
+          {partes.map((s) => <span key={s.id} className="combo-chip">{s.name}<small>{formatDuracao(s.duration_minutes)} · {formatPreco(s.price)}</small><button type="button" onClick={() => onToggle(s.id)} aria-label={`Tirar ${s.name}`}>×</button></span>)}
+        </div>
+      )}
+      {candidatos.length < 2 ? (
+        <p className="muted combo-aviso">Cadastre pelo menos 2 serviços comuns antes de montar um combo.</p>
+      ) : (
+        <ListaPorCategoria itens={candidatos} cats={cats} marcados={comboIds} onToggle={onToggle} busca={busca} setBusca={setBusca} />
+      )}
+      {partes.length >= 2 && (
+        <>
+          <div className="combo-passo">
+            <span className="combo-num">2</span>
+            <div><strong>Preço do pacote</strong><p className="muted">Separados, esses serviços somam {formatPreco(somaPreco)} e {formatDuracao(somaMin)}.</p></div>
+          </div>
+          <div className="combo-resumo">
+            {partes.map((s) => <div key={s.id} className="combo-resumo-linha"><span>{s.name}</span><em>{formatDuracao(s.duration_minutes)}</em><b>{formatPreco(s.price)}</b></div>)}
+            <div className="combo-resumo-linha combo-resumo-total"><span>Separados</span><em>{formatDuracao(somaMin)}</em><b>{formatPreco(somaPreco)}</b></div>
+          </div>
+          <div className="combo-preco">
+            <label>
+              Preço do combo (R$)
+              <input type="text" inputMode="decimal" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder={`Ex.: ${(somaPreco * 0.9).toFixed(2).replace('.', ',')}`} required />
+            </label>
+            <div className="combo-atalhos" aria-label="Atalhos de preço">
+              <button type="button" className="btn-mini" onClick={() => aplicar(0.9)}>10% off</button>
+              <button type="button" className="btn-mini" onClick={() => aplicar(0.85)}>15% off</button>
+              <button type="button" className="btn-mini" onClick={() => aplicar(0.8)}>20% off</button>
+              <button type="button" className="btn-mini btn-mini-neutro" onClick={() => aplicar(1)}>Mesmo preço</button>
+            </div>
+            <p className={'combo-preco-dica' + (preco > somaPreco ? ' alerta' : desconto > 0 ? ' bom' : '')}>
+              {!preco ? 'Combo com desconto vende mais que os serviços separados.' : preco > somaPreco ? `Fica ${formatPreco(preco - somaPreco)} mais caro que separado. Tem certeza?` : desconto > 0 ? `A cliente economiza ${formatPreco(desconto)} (${pct}% off).` : 'Mesmo preço dos serviços separados.'}
+            </p>
+          </div>
+          <p className="muted combo-soma"><Clock size={12} /> Duração: {formatDuracao(somaMin)}, a soma das partes. Para a cliente aparece como “tempo médio”.</p>
+          {sugestaoNome && form.name !== sugestaoNome && <button type="button" className="plat-link combo-nome-sug" onClick={() => setForm({ ...form, name: sugestaoNome })}>Chamar de “{sugestaoNome}”</button>}
+        </>
+      )}
+    </div>
   )
 }
 

@@ -28,3 +28,20 @@ dist-ssr
 
 # sites de parceiros: configuracao vive so na VPS
 evolution/sites/*.caddy
+
+# Android (TWA): o projeto gerado pelo Bubblewrap e, principalmente, o keystore ficam fora
+android/**/*.keystore
+android/**/*.jks
+android/**/app/
+android/**/build/
+android/**/.gradle/
+android/**/gradle/
+android/**/gradlew*
+android/**/*.aab
+android/**/*.apk
+android/**/*.idsig
+android/**/store_icon.png
+android/**/build.gradle
+android/**/settings.gradle
+android/**/gradle.properties
+android/**/manifest-checksum.txt

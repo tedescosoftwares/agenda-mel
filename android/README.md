@@ -1,26 +1,46 @@
 # MIMO no Android (Play Store)
 
 A MIMO continua sendo uma só: o site/PWA que já roda em `pro.mimo.com.vc` e `mimo.com.vc`.
-O app Android é um **Trusted Web Activity (TWA)**: um pacote nativo, assinado, publicado na
-Play Store, que abre a PWA em tela cheia (sem barra de endereço), com ícone, splash,
-atalhos e os avisos push que já existem. Nenhuma tela é reescrita; cada deploy do site
-(bat 2) já atualiza o app, sem passar pela loja.
+Cada app Android é um **Trusted Web Activity (TWA)**: um pacote nativo, assinado, publicado na
+Play Store, que abre a PWA em tela cheia (sem barra de endereço), com ícone, splash, atalhos e
+os avisos push que já existem. Nenhuma tela é reescrita; cada deploy do site (bat 2) já atualiza
+os apps, sem passar pela loja.
 
-Primeiro app: **MIMO Pro** (`vc.com.mimo.pro`), o das profissionais e donas de salão.
-As clientes seguem pelo link do salão (instalar app atrapalha a conversão de agendamento);
-se um dia fizer sentido, um segundo TWA `vc.com.mimo` para `mimo.com.vc` é só repetir
-esta pasta.
+## A premissa
+
+A **web continua sendo a porta de entrada** e o **desktop continua sendo a casa da gestão do
+salão** (80% ou mais do uso administrativo). Os apps da loja são mais um jeito de chegar na
+mesma MIMO: mesmo código, mesmo deploy, mesmas telas. Nada do que está feito muda de lugar, e o
+desenvolvimento segue exatamente como está; a loja só ganha carona.
+
+## O ecossistema: dois apps, não três
+
+| App na loja | Pacote | Abre | Quem usa |
+|---|---|---|---|
+| **MIMO Pro** | `vc.com.mimo.pro` | `pro.mimo.com.vc` | Donas de salão **e** profissionais. É o mesmo login e o mesmo endereço: o app mostra o painel ou a agenda conforme o papel, e a dona que atende troca entre os dois. |
+| **MIMO** | `vc.com.mimo` | `mimo.com.vc` | Clientes: encontram o salão, agendam, veem seus horários, recebem lembretes. |
+
+Salão e profissional **não** viram dois apps: seria o mesmo site duas vezes (a Play Store barra
+apps duplicados) e obrigaria a dona que atende a instalar dois. Salão e profissional convivem
+no MIMO Pro; a cliente tem o dela.
+
+> **Play Console: o nome do pacote não se define ao criar o app.** Ao "criar app" você escolhe
+> nome, idioma e se é gratuito; o pacote (`vc.com.mimo.pro`) fica definido pelo **primeiro
+> `.aab` que você sobe**, e aí não muda mais. Então o app que você já criou serve: se o nome
+> for "MIMO Pro", suba o `.aab` do `android/mimo-pro`; se for "MIMO", o do `android/mimo-cliente`.
+> O nome exibido dá para trocar depois na ficha; o pacote, não.
 
 ## O que está neste repo
 
 | Caminho | O que é |
 |---|---|
-| `android/mimo-pro/twa-manifest.json` | A receita do app (Bubblewrap): pacote, cores, ícones, atalhos, versão. |
-| `android/publicar-android.sh` | Gera o `.aab` para subir no Play Console (`--subir` incrementa a versão). |
-| `public/.well-known/assetlinks.json` | Prova para o Android de que o app e o site são da mesma dona. **Precisa das impressões SHA-256** (abaixo). |
+| `android/mimo-pro/twa-manifest.json` | A receita do MIMO Pro (Bubblewrap): pacote, cores, ícones, atalhos Agenda e Encaixe, versão. |
+| `android/mimo-cliente/twa-manifest.json` | A receita do MIMO (clientes): atalhos Meus agendamentos e Entrar num salão. |
+| `android/publicar-android.sh pro\|cliente` | Gera o `.aab` para subir no Play Console (`--subir` incrementa a versão). |
+| `public/.well-known/assetlinks.json` | Prova para o Android de que cada app e o site são da mesma dona. **Precisa das impressões SHA-256** dos dois apps (abaixo). |
 
-O projeto Android gerado (`android/mimo-pro/app/`, gradle etc.) e o **keystore** ficam
-fora do git (`.gitignore`). O keystore é a identidade do app na loja: perder ele é perder
+O projeto Android gerado (`app/`, gradle etc.) e os **keystores** ficam fora do git
+(`.gitignore`). Cada app tem o seu keystore; ele é a identidade do app na loja: perder é perder
 o app. Guarde em dois lugares seguros (gerenciador de senhas + backup offline).
 
 ## Passo a passo (uma vez)
@@ -31,26 +51,27 @@ o app. Guarde em dois lugares seguros (gerenciador de senhas + backup offline).
    ```
    Na primeira execução o Bubblewrap pergunta se pode baixar o JDK 17 e o Android SDK. Diga sim.
 
-2. **Keystore** (dentro de `android/mimo-pro/`). Anote as duas senhas num lugar seguro.
+2. **Keystore**, um por app, dentro da pasta do app. Anote as senhas num lugar seguro.
    ```bash
-   keytool -genkeypair -v -keystore mimo-pro.keystore -alias mimo-pro -keyalg RSA -keysize 2048 -validity 10000
+   cd android/mimo-pro     && keytool -genkeypair -v -keystore mimo-pro.keystore     -alias mimo-pro     -keyalg RSA -keysize 2048 -validity 10000
+   cd android/mimo-cliente && keytool -genkeypair -v -keystore mimo-cliente.keystore -alias mimo-cliente -keyalg RSA -keysize 2048 -validity 10000
    ```
 
-3. **Gerar o projeto e o pacote**:
+3. **Gerar o projeto e o pacote** (comece pelo Pro):
    ```bash
-   ./android/publicar-android.sh
+   ./android/publicar-android.sh pro
+   ./android/publicar-android.sh cliente
    ```
-   Sai `android/mimo-pro/app-release-bundle.aab` (para a loja) e um `.apk` (para instalar no seu
-   celular e testar: `adb install app-release-signed.apk`).
+   Sai `android/mimo-<app>/app-release-bundle.aab` (para a loja) e um `.apk` (para instalar no
+   seu celular e testar: `adb install app-release-signed.apk`).
 
-4. **Play Console → Criar app**: nome "MIMO Pro", idioma português (Brasil), app, gratuito.
-   Em **Teste interno**, suba o `.aab`. Adicione seu e-mail como testador e instale pelo link.
+4. **Play Console**: no app que você já criou (ou num novo), em **Teste interno**, suba o `.aab`. Adicione seu e-mail como testador e instale pelo link.
 
 5. **Assinatura pelo Google (Play App Signing)**: ao subir o primeiro `.aab`, o Google passa a
    assinar o app com uma chave dele. Em **Configuração do app → Integridade do app**, copie a
    impressão **SHA-256 do certificado de assinatura do app** e também a da **chave de upload**.
 
-6. **assetlinks.json**: cole as duas impressões em `public/.well-known/assetlinks.json`
+6. **assetlinks.json**: cole as impressões de cada app em `public/.well-known/assetlinks.json`
    (formato `AA:BB:CC:…`), faça o deploy do site (bat 2) e confira em
    `https://pro.mimo.com.vc/.well-known/assetlinks.json`. Sem isso o app abre com a barra de
    endereço do Chrome (é o sinal de que a verificação falhou).
@@ -71,9 +92,22 @@ o app. Guarde em dois lugares seguros (gerenciador de senhas + backup offline).
 Só precisa de uma versão nova na loja quando mudar algo do **pacote** (ícone, cores, atalhos,
 nome). Mudança de tela é deploy do site, como sempre.
 ```bash
-./android/publicar-android.sh --subir     # versionCode +1, versionName = src/lib/versao.js
+./android/publicar-android.sh pro --subir       # versionCode +1, versionName = src/lib/versao.js
+./android/publicar-android.sh cliente --subir
 ```
 Suba o `.aab` novo no Play Console.
+
+## O app da cliente: o que vale saber
+
+- **O link do salão abre dentro do app.** Com o app instalado, `mimo.com.vc/v/CODIGO` (QR, link
+  no WhatsApp, Instagram) abre direto no MIMO, sem navegador. É assim que "todo mundo entra no
+  ecossistema": a profissional divulga o link de sempre e a cliente que tem o app cai nele.
+- **Endereço próprio do salão** (`studiomel.mimo.com.vc`): o Android só reconhece como "do app"
+  os domínios listados; subdomínios não aceitam curinga. Esses links abrem no app, mas numa aba
+  do Chrome com a barra de endereço. Para a divulgação que mira o app, prefira `mimo.com.vc/v/CODIGO`
+  (o QR já usa esse formato).
+- **Avisos**: lembrete de véspera, confirmação e "sua vez" chegam pelo push que já existe, agora
+  com o ícone do app.
 
 ## Perguntas que vão aparecer
 

@@ -5,8 +5,19 @@
       "namespace": "android_app",
       "package_name": "vc.com.mimo.pro",
       "sha256_cert_fingerprints": [
-        "COLE_AQUI_A_IMPRESSAO_SHA256_DA_CHAVE_DE_ASSINATURA_DO_PLAY",
-        "COLE_AQUI_A_IMPRESSAO_SHA256_DA_SUA_CHAVE_DE_UPLOAD"
+        "COLE_AQUI_A_IMPRESSAO_SHA256_DA_CHAVE_DE_ASSINATURA_DO_PLAY_DO_MIMO_PRO",
+        "COLE_AQUI_A_IMPRESSAO_SHA256_DA_CHAVE_DE_UPLOAD_DO_MIMO_PRO"
+      ]
+    }
+  },
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "vc.com.mimo",
+      "sha256_cert_fingerprints": [
+        "COLE_AQUI_A_IMPRESSAO_SHA256_DA_CHAVE_DE_ASSINATURA_DO_PLAY_DO_MIMO",
+        "COLE_AQUI_A_IMPRESSAO_SHA256_DA_CHAVE_DE_UPLOAD_DO_MIMO"
       ]
     }
   }

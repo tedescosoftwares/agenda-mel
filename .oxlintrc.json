@@ -18,5 +18,8 @@
     ],
     "no-undef": "error",
     "no-unused-vars": "warn"
-  }
+  },
+  "ignorePatterns": [
+    "apps/**"
+  ]
 }

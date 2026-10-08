@@ -1,0 +1,9 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      { "appID": "TEAMID.vc.com.mimo", "paths": ["/v/*", "/p/*", "/cliente/*"] },
+      { "appID": "TEAMID.vc.com.mimo.pro", "paths": ["/pro/*", "/admin/*"] }
+    ]
+  }
+}

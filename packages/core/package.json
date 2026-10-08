@@ -1,0 +1,17 @@
+{
+  "name": "@mimo/core",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A lógica da MIMO que não depende de tela: catálogo, formatação, planos, telefone. Usada pela web (src/lib) e pelo app (apps/mobile).",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./catalogoBusca": "./catalogoBusca.js",
+    "./format": "./format.js",
+    "./planos": "./planos.js",
+    "./fone": "./fone.js",
+    "./booking": "./booking.js"
+  },
+  "sideEffects": false
+}

@@ -5,6 +5,7 @@ import { NotificacoesProvider } from "./context/NotificacoesContext";
 import { DialogoProvider } from "./context/DialogoContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Login from "./pages/Login";
+import SessaoApp from "./pages/SessaoApp";
 import Splash from "./pages/Splash";
 import Avisos from "./pages/Avisos";
 import PaginaProfissional from "./pages/publico/PaginaProfissional";
@@ -115,6 +116,8 @@ export default function App() {
           {SUBDOMINIO ? <NoEndereco /> : (
           <Routes>
             <Route path="/login" element={<Login />} />
+            {/* o app da loja (apps/mobile) entra por aqui, com a sessão dele */}
+            <Route path="/sessao-app" element={<SessaoApp />} />
             <Route path="/pro/entrar" element={<Login ambiente="pro" />} />
             <Route path="/splash" element={<Splash />} />
 

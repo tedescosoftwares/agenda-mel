@@ -1,0 +1,24 @@
+{
+  "expo": {
+    "name": "MIMO",
+    "slug": "mimo",
+    "version": "3.0.0",
+    "orientation": "portrait",
+    "scheme": "mimo",
+    "userInterfaceStyle": "automatic",
+    "icon": "./assets/images/cliente/icone.png",
+    "ios": {
+      "supportsTablet": false
+    },
+    "android": {
+      "predictiveBackGestureEnabled": false
+    },
+    "plugins": [
+      "expo-router"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}

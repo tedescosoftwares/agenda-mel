@@ -94,6 +94,9 @@
 		# e Open Graph daquela página: o robô do Google e o do WhatsApp
 		# leem o certo sem rodar JavaScript. Por isso {path}/index.html
 		# vem antes do fallback para o app.
+		# links que abrem no app (apps/mobile): o arquivo do iPhone não tem extensão
+		# e precisa sair como JSON; o assetlinks.json do Android já sai certo pela extensão
+		header /.well-known/apple-app-site-association Content-Type application/json
 		try_files {path} {path}/index.html /index.html
 		file_server
 	}

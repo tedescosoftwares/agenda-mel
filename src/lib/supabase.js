@@ -11,6 +11,12 @@ export const isDemo = import.meta.env.VITE_DEMO === '1'
 
 export const isSupabaseConfigured = isDemo || Boolean(supabaseUrl && supabaseAnonKey)
 
+// Dentro do app da loja (apps/mobile) a web roda numa WebView e a sessão é
+// do app, que empurra o token para cá (src/lib/app.js). Por isso a web não
+// renova o token sozinha: dois clientes disputando o mesmo refresh_token
+// derrubariam a sessão dos dois.
+export const dentroDoApp = typeof window !== 'undefined' && Boolean(window.ReactNativeWebView)
+
 // ---- A rede do celular não é a do PC ---------------------------------------
 // Três coisas que o iPhone faz com um app instalado e que deixavam a
 // tela "sem carregar nada":
@@ -164,5 +170,5 @@ export const supabase = isDemo
     // traz a sessão na própria URL e entra sozinho em qualquer navegador. No
     // PKCE (padrão) o link só funcionava no navegador que fez o cadastro; aberto
     // pelo celular, caía na tela de login.
-    ? (cliente = createClient(supabaseUrl, supabaseAnonKey, { global: { fetch: fetchResiliente }, auth: { flowType: 'implicit', detectSessionInUrl: true, persistSession: true, ...(armazem ? { storage: armazem } : {}) } }))
+    ? (cliente = createClient(supabaseUrl, supabaseAnonKey, { global: { fetch: fetchResiliente }, auth: { flowType: 'implicit', detectSessionInUrl: true, persistSession: true, autoRefreshToken: !dentroDoApp, ...(armazem ? { storage: armazem } : {}) } }))
     : null

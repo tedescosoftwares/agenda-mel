@@ -119,6 +119,19 @@ O envio de WhatsApp **não depende disso**. Quem manda é a Edge Function
 no Supabase, então o lembrete das 19h sai mesmo com o app rodando só na
 sua máquina — ou fechado.
 
+## O app da loja (Expo)
+
+A MIMO também vai para a Play Store como app de verdade, em `apps/mobile`:
+uma casca nativa (Expo/React Native) com as telas da cliente que mais importam
+no celular e uma **ponte** que abre o resto da web dentro do app, com a mesma
+sessão. A web continua sendo a porta de entrada e o desktop a casa da gestão do
+salão; tudo o que está aqui permanece e segue evoluindo. Como rodar, publicar e
+o que vem depois: [`apps/mobile/README.md`](apps/mobile/README.md).
+
+A lógica que não depende de tela (catálogo, formatação, planos, telefone,
+horários) mora em `packages/core` (`@mimo/core`) e é compartilhada pelos dois:
+a web importa pelos arquivos de `src/lib/*.js`, que só reexportam.
+
 ## Estrutura
 
 ```

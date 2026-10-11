@@ -4,6 +4,10 @@
     "slug": "mimo",
     "version": "3.0.0",
     "orientation": "portrait",
+    "platforms": [
+      "android",
+      "ios"
+    ],
     "scheme": "mimo",
     "userInterfaceStyle": "automatic",
     "icon": "./assets/images/cliente/icone.png",

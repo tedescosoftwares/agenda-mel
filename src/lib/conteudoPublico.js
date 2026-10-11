@@ -1,5 +1,6 @@
 import { supabase } from './supabase'
-import { ARTIGOS, CATEGORIAS, minutosDeLeitura } from '../conteudo/artigos'
+// os artigos do código são a reserva: carregados só quando o banco não responde (são 70 KB de texto)
+const reserva = () => import('../conteudo/artigos')
 import { PAGINAS_SEO, PAGINAS_INSTITUCIONAIS } from '../conteudo/paginasSeo'
 
 // O conteúdo público lê o banco primeiro (o que a plataforma editou) e
@@ -9,7 +10,7 @@ import { PAGINAS_SEO, PAGINAS_INSTITUCIONAIS } from '../conteudo/paginasSeo'
 
 const SITE = 'https://mimo.com.vc'
 
-function artigoDoCodigo(a) {
+function artigoDoCodigo(a, { CATEGORIAS, minutosDeLeitura }) {
   const c = CATEGORIAS.find((x) => x.slug === a.categoria)
   return {
     id: 'codigo-' + a.slug, slug: a.slug, title: a.titulo, excerpt: a.resumo, content: a.conteudo,
@@ -30,7 +31,8 @@ export async function artigosPublicados() {
     const { data, error } = await supabase.from('blog_posts').select(SEL).eq('status', 'published').order('published_at', { ascending: false })
     if (!error && data?.length) return data.map(artigoDoBanco)
   } catch { /* cai no código */ }
-  return ARTIGOS.map(artigoDoCodigo)
+  const m = await reserva()
+  return m.ARTIGOS.map((a) => artigoDoCodigo(a, m))
 }
 
 export async function artigoPorSlug(slug) {
@@ -38,8 +40,9 @@ export async function artigoPorSlug(slug) {
     const { data } = await supabase.from('blog_posts').select(SEL).eq('slug', slug).eq('status', 'published').maybeSingle()
     if (data) return artigoDoBanco(data)
   } catch { /* cai no código */ }
-  const a = ARTIGOS.find((x) => x.slug === slug)
-  return a ? artigoDoCodigo(a) : null
+  const m = await reserva()
+  const a = m.ARTIGOS.find((x) => x.slug === slug)
+  return a ? artigoDoCodigo(a, m) : null
 }
 
 export async function categoriasDoBlog() {
@@ -47,7 +50,7 @@ export async function categoriasDoBlog() {
     const { data } = await supabase.from('blog_categories').select('slug, name, description, ordem').order('ordem')
     if (data?.length) return data.map((c) => ({ slug: c.slug, nome: c.name, descricao: c.description }))
   } catch { /* cai no código */ }
-  return CATEGORIAS
+  return (await reserva()).CATEGORIAS
 }
 
 // os metadados de uma rota: o banco pode ter sobrescrito title/description/OG

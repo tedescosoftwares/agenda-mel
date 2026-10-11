@@ -132,6 +132,28 @@ A lógica que não depende de tela (catálogo, formatação, planos, telefone,
 horários) mora em `packages/core` (`@mimo/core`) e é compartilhada pelos dois:
 a web importa pelos arquivos de `src/lib/*.js`, que só reexportam.
 
+## Site público e app: separados no carregamento (3.2)
+
+O site (home, páginas por intenção de busca, blog, planos, sobre, contato,
+termos) e o app (cliente, pro, admin, plataforma, telas de entrada) saem do
+mesmo `npm run build`, mas o navegador só baixa o que a URL pede:
+
+| Quem | CSS | JS |
+|---|---|---|
+| Site público | `src/base.css` (tokens, reset, botões, marca, avisos) + `src/landing.css` | o pacote de entrada, com as páginas públicas |
+| App | `src/app.css` (o antigo `index.css`) + `src/polish.css`, puxados pelos pedaços do app | `src/rotas/entrada.jsx` (login, convites, código, cadastro, onboarding) e `src/rotas/RotasCliente.jsx`, `RotasPro.jsx`, `RotasAdmin.jsx`, `RotasPlataforma.jsx`, carregados com `React.lazy` quando a rota abre |
+
+Regras para não desfazer a separação:
+
+- CSS de tela do app vai em `app.css`; CSS do site vai em `landing.css`; só o
+  que os dois usam entra em `base.css` (e, se mudar lá, muda nos dois).
+- Rota nova do app entra no grupo dela em `src/rotas/`, não no `App.jsx`.
+  Rota pública nova entra no `App.jsx` (ou em `paginasSeo.js`, se for página SEO).
+- Nenhum componente do site público pode importar nada de `pages/cliente`,
+  `pages/pro`, `pages/admin` ou `pages/plataforma`: isso arrastaria o app
+  inteiro de volta para a entrada. Conferir com `npm run build` e olhar o
+  tamanho de `dist/assets/index-*.js` (deve ficar perto de 400 KB, não de 2 MB).
+
 ## SEO: onde mora e como chega no Google
 
 - **Conteúdo** em `src/conteudo/`: `paginasSeo.js` (uma página por intenção

@@ -14,7 +14,7 @@ export default function NaoEncontrada() {
   const [destino, setDestino] = useState(undefined)
   useEffect(() => {
     let vivo = true
-    Promise.resolve(supabase.from('redirects').select('to_path').eq('from_path', pathname).eq('active', true).maybeSingle())
+    Promise.resolve(supabase?.from('redirects').select('to_path').eq('from_path', pathname).eq('active', true).maybeSingle())
       .then(({ data }) => vivo && setDestino(data?.to_path || null)).catch(() => vivo && setDestino(null))
     return () => { vivo = false }
   }, [pathname])

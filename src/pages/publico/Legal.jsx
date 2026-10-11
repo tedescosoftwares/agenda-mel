@@ -1,4 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
+import '../../landing.css'
 import { ArrowRight, FileText, ShieldCheck, Store, Sparkles, UserRound } from 'lucide-react'
 import { NavSite, PeSite, useRevelar } from '../../components/site/Pecas'
 import { Markdown, titulosDe } from '../../lib/markdown.jsx'

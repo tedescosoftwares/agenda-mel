@@ -1,7 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import './index.css'
-import './polish.css'
+// só a base: o CSS do app (app.css + polish.css) entra por rota, junto com as telas
+import './base.css'
 import App from './App.jsx'
 import { ligarMedidor } from './lib/medir.js'
 import { ehPro } from './lib/ambiente.js'

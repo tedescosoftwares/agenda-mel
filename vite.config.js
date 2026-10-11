@@ -23,6 +23,9 @@ export default defineConfig({
       includeAssets: ['favicon.svg', 'fontes/*.woff2'],
       // o service worker é nosso (src/sw.js): cache do app + push
       strategies: 'injectManifest',
+      // o registro do SW não entra mais no index.html: é o app que registra (src/lib/sw.js),
+      // para o site público não baixar o app inteiro em segundo plano (3.2)
+      injectRegister: null,
       srcDir: 'src',
       filename: 'sw.js',
       injectManifest: {

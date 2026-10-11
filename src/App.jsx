@@ -1,104 +1,55 @@
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { NotificacoesProvider } from "./context/NotificacoesContext";
 import { DialogoProvider } from "./context/DialogoContext";
-import ProtectedRoute from "./components/ProtectedRoute";
-import Login from "./pages/Login";
 import SessaoApp from "./pages/SessaoApp";
 import Splash from "./pages/Splash";
-import Avisos from "./pages/Avisos";
-import PaginaProfissional from "./pages/publico/PaginaProfissional";
-import Convite from "./pages/publico/Convite";
-import Estilo from "./pages/Estilo";
-import ClienteHome from "./pages/cliente/ClienteHome";
-import ClienteProfissionais from "./pages/cliente/ClienteProfissionais";
-import ClienteProfissional from "./pages/cliente/ClienteProfissional";
-import { AgendarServicos, AgendarData, AgendarHora, AgendarConfirmar, AgendarSucesso } from "./pages/cliente/Agendar";
-import ClienteAgenda from "./pages/cliente/ClienteAgenda";
-import ClienteAgendamento from "./pages/cliente/ClienteAgendamento";
-import ClienteServico from "./pages/cliente/ClienteServico";
-import ClienteSalao from "./pages/cliente/ClienteSalao";
-import ClienteCategoria from "./pages/cliente/ClienteCategoria";
-import AdminSalao from "./pages/admin/AdminSalao";
-import Configurar from "./pages/admin/Configurar";
-import AdminAssinatura from "./pages/admin/AdminAssinatura";
-import ProFecharDia from "./pages/pro/ProFecharDia";
-import AdminFecharDia from "./pages/admin/AdminFecharDia";
-import ClientePerfil from "./pages/cliente/ClientePerfil";
-import AdminAgenda from "./pages/admin/AdminAgenda";
-import AdminProfissionais from "./pages/admin/AdminProfissionais";
-import AdminServices from "./pages/admin/AdminServices";
-import AdminHours from "./pages/admin/AdminHours";
-import AdminClientes from "./pages/admin/AdminClientes";
-import AdminNumeros from "./pages/admin/AdminNumeros";
-import AdminWhatsapp from "./pages/admin/AdminWhatsapp";
-import AdminBancada from "./pages/admin/AdminBancada";
-import AdminAjustes from "./pages/admin/AdminAjustes";
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import AdminGuia from "./pages/admin/AdminGuia";
-import ProAgenda from "./pages/pro/ProAgenda";
-import ProServicos from "./pages/pro/ProServicos";
-import ProHorarios from "./pages/pro/ProHorarios";
-import ProLink from "./pages/pro/ProLink";
-import ProNumeros from "./pages/pro/ProNumeros";
-import ProRetorno from "./pages/pro/ProRetorno";
-import ProAjustes from "./pages/pro/ProAjustes";
-import ProPedidos from "./pages/pro/ProPedidos";
-import ProEncaixe from "./pages/pro/ProEncaixe";
-import ProEnviar from "./pages/pro/ProEnviar";
-import Indicacao from "./pages/cliente/Indicacao";
-import Notificacoes from "./pages/cliente/Notificacoes";
-import FilaEspera from "./pages/cliente/FilaEspera";
-import Entrar from "./pages/cliente/Entrar";
-import EntrarPorCodigo from "./pages/publico/EntrarPorCodigo";
-import ComCodigo from "./pages/publico/ComCodigo";
-import Visao from "./pages/plataforma/Visao";
-import Saloes, { Salao } from "./pages/plataforma/Saloes";
-import Pessoas from "./pages/plataforma/Pessoas";
-import Vinculos from "./pages/plataforma/Vinculos";
-import Filas from "./pages/plataforma/Filas";
-import Metricas from "./pages/plataforma/Metricas";
-import Configuracoes from "./pages/plataforma/Configuracoes";
-import PlataformaRecados from "./pages/plataforma/Recados";
-import PlataformaMensagens from "./pages/plataforma/Mensagens";
-import { Termos, Privacidade, PaginaLegal } from "./pages/publico/Legal";
-import PlataformaTermos from "./pages/plataforma/Termos";
-import BemVinda from "./pages/BemVinda";
-import CadastroCliente from "./pages/cliente/CadastroCliente";
 import AvisoCookies from "./components/AvisoCookies";
 import AvisoAoVivo from "./components/AvisoAoVivo";
-import ProRecados from "./pages/pro/ProRecados";
-import AdminRecados from "./pages/admin/AdminRecados";
-import AdminPromocoes from "./pages/admin/AdminPromocoes";
-import ProPromocoes from "./pages/pro/ProPromocoes";
-import AdminReceber from "./pages/admin/AdminReceber";
-import ProReceber from "./pages/pro/ProReceber";
-import ProLocal from "./pages/pro/ProLocal";
-import ProContrato from "./pages/pro/ProContrato";
-import AdminParceria from "./pages/admin/AdminParceria";
-import AdminPdv from "./pages/admin/AdminPdv";
-import AdminRepasses from "./pages/admin/AdminRepasses";
-import Onboarding from "./pages/Onboarding";
-import RedeDeProtecao from "./components/RedeDeProtecao";
-import ConviteEquipe from "./pages/publico/ConviteEquipe";
-import AtivarAcesso from "./pages/publico/AtivarAcesso";
-import EmailConfirmado from "./pages/publico/EmailConfirmado";
 import PaginaSeo from "./pages/publico/PaginaSeo";
 import Blog from "./pages/publico/Blog";
 import Artigo from "./pages/publico/Artigo";
 import NaoEncontrada from "./pages/publico/NaoEncontrada";
 import { Planos, Sobre, Contato } from "./pages/publico/Institucional";
-import PlataformaSeo from "./pages/plataforma/Seo";
 import { PAGINAS_SEO } from "./conteudo/paginasSeo";
-import ClientePagamento from "./pages/cliente/ClientePagamento";
-import ClienteComanda from "./pages/cliente/ClienteComanda";
-import PlataformaPromocoes from "./pages/plataforma/Promocoes";
-import PlataformaMel from "./pages/plataforma/Mel";
-import PlataformaCatalogo from "./pages/plataforma/Catalogo";
 import { guardarCodigoDaURL } from "./lib/indicacao";
 import { SUBDOMINIO } from "./lib/ambiente";
-import { NoEndereco } from "./pages/publico/EnderecoDoSalao";
+import Carregando from "./rotas/Carregando";
+
+// O site público (home, páginas SEO, blog, institucionais) é o que entra
+// de primeira: leve, só com base.css e landing.css. O app chega por
+// área, quando a pessoa abre uma rota dele (3.2): as telas de entrada
+// (login, convite, código, cadastro, onboarding), /cliente, /pro, /admin
+// e /plataforma são pedaços carregados sob demanda, e é com eles que o
+// CSS do app (app.css) entra.
+const entrada = () => import("./rotas/entrada");
+const pegar = (nome) => lazy(() => entrada().then((m) => ({ default: m[nome] })));
+const Login = pegar("Login");
+const PaginaProfissional = pegar("PaginaProfissional");
+const Convite = pegar("Convite");
+const EntrarPorCodigo = pegar("EntrarPorCodigo");
+const ComCodigo = pegar("ComCodigo");
+const ConviteEquipe = pegar("ConviteEquipe");
+const AtivarAcesso = pegar("AtivarAcesso");
+const EmailConfirmado = pegar("EmailConfirmado");
+const CadastroCliente = pegar("CadastroCliente");
+const BemVinda = pegar("BemVinda");
+const Estilo = pegar("Estilo");
+const Avisos = pegar("Avisos");
+const Onboarding = pegar("Onboarding");
+const RedeDeProtecao = pegar("RedeDeProtecao");
+const ProtectedRoute = pegar("ProtectedRoute");
+const NoEndereco = pegar("NoEndereco");
+// os termos (46 KB de texto) também só chegam quando alguém abre /termos ou /privacidade
+const legal = () => import("./pages/publico/Legal");
+const Termos = lazy(() => legal().then((m) => ({ default: m.Termos })));
+const Privacidade = lazy(() => legal().then((m) => ({ default: m.Privacidade })));
+const PaginaLegal = lazy(() => legal().then((m) => ({ default: m.PaginaLegal })));
+const RotasCliente = lazy(() => import("./rotas/RotasCliente"));
+const RotasPro = lazy(() => import("./rotas/RotasPro"));
+const RotasAdmin = lazy(() => import("./rotas/RotasAdmin"));
+const RotasPlataforma = lazy(() => import("./rotas/RotasPlataforma"));
 
 export default function App() {
   // o convite chega como /?indique=CODIGO — guardamos antes de qualquer rota
@@ -111,6 +62,7 @@ export default function App() {
       <AuthProvider>
         <NotificacoesProvider>
           <DialogoProvider>
+          <Suspense fallback={<Carregando />}>
           {/* studiomel.mimo.com.vc: só a página do salão e a da profissional (2.80) */}
           {SUBDOMINIO ? <NoEndereco /> : (
           <Routes>
@@ -141,14 +93,7 @@ export default function App() {
             <Route path="/termos/salao" element={<PaginaLegal tipo="salao" />} />
             <Route path="/privacidade" element={<Privacidade />} />
             <Route path="/bem-vinda" element={<ProtectedRoute permitirSemVinculo permitirPrimeiroAcesso><BemVinda /></ProtectedRoute>} />
-            <Route
-              path="/cliente/entrar"
-              element={
-                <ProtectedRoute requireRole="cliente" permitirSemVinculo>
-                  <Entrar />
-                </ProtectedRoute>
-              }
-            />
+            <Route path="/avisos" element={<ProtectedRoute><Avisos /></ProtectedRoute>} />
 
             {/* mostruário do sistema visual */}
             <Route path="/estilo" element={<Estilo />} />
@@ -162,364 +107,22 @@ export default function App() {
             <Route path="/planos" element={<Planos />} />
             <Route path="/sobre" element={<Sobre />} />
             <Route path="/contato" element={<Contato />} />
-            <Route
-              path="/cliente/home"
-              element={
-                <ProtectedRoute requireRole="cliente">
-                  <ClienteHome />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/cliente/profissionais"
-              element={
-                <ProtectedRoute requireRole="cliente">
-                  <ClienteProfissionais />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/cliente/profissional/:id"
-              element={
-                <ProtectedRoute requireRole="cliente">
-                  <ClienteProfissional />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/cliente/profissional/:id/servicos"
-              element={
-                <ProtectedRoute requireRole="cliente">
-                  <AgendarServicos />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/cliente/agendamento/data"
-              element={
-                <ProtectedRoute requireRole="cliente">
-                  <AgendarData />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/cliente/agendamento/hora"
-              element={
-                <ProtectedRoute requireRole="cliente">
-                  <AgendarHora />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/cliente/agendamento/confirmar"
-              element={
-                <ProtectedRoute requireRole="cliente">
-                  <AgendarConfirmar />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/cliente/agendamento/sucesso/:id"
-              element={
-                <ProtectedRoute requireRole="cliente">
-                  <AgendarSucesso />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/cliente/agendamento/:id"
-              element={
-                <ProtectedRoute requireRole="cliente">
-                  <ClienteAgendamento />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/cliente/meus-agendamentos"
-              element={
-                <ProtectedRoute requireRole="cliente">
-                  <ClienteAgenda />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/cliente/fila-espera"
-              element={
-                <ProtectedRoute requireRole="cliente">
-                  <FilaEspera />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/cliente/perfil"
-              element={
-                <ProtectedRoute requireRole="cliente">
-                  <ClientePerfil />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/cliente/indicacao"
-              element={
-                <ProtectedRoute requireRole="cliente">
-                  <Indicacao />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/cliente/notificacoes"
-              element={
-                <ProtectedRoute requireRole="cliente">
-                  <Notificacoes />
-                </ProtectedRoute>
-              }
-            />
+
+            {/* atalhos antigos da cliente */}
             <Route path="/agenda" element={<Navigate to="/cliente/meus-agendamentos" replace />} />
             <Route path="/perfil" element={<Navigate to="/cliente/perfil" replace />} />
             <Route path="/indique" element={<Navigate to="/cliente/indicacao" replace />} />
 
-
-            {/* área da profissional */}
-            <Route path="/pro" element={<Navigate to="/pro/agenda" replace />} />
-            <Route path="/pro/fechar-dia" element={<ProtectedRoute requireRole="profissional"><ProFecharDia /></ProtectedRoute>} />
-            <Route path="/cliente/salao/:id" element={<ProtectedRoute requireRole="cliente"><ClienteSalao /></ProtectedRoute>} />
-            <Route path="/cliente/salao/:id/categoria/:cat" element={<ProtectedRoute requireRole="cliente"><ClienteCategoria /></ProtectedRoute>} />
-            <Route path="/admin/salao" element={<ProtectedRoute requireRole="admin"><AdminSalao /></ProtectedRoute>} />
-            <Route path="/admin/configurar" element={<ProtectedRoute requireRole="admin"><Configurar para="admin" /></ProtectedRoute>} />
-            <Route path="/admin/assinatura" element={<ProtectedRoute requireRole="admin"><AdminAssinatura /></ProtectedRoute>} />
-            <Route path="/cliente/servico/:id" element={<ProtectedRoute requireRole="cliente"><ClienteServico /></ProtectedRoute>} />
-            <Route path="/pro/promocoes" element={<ProtectedRoute requireRole="profissional"><ProPromocoes /></ProtectedRoute>} />
-            <Route path="/admin/promocoes" element={<ProtectedRoute requireRole="admin"><AdminPromocoes /></ProtectedRoute>} />
-            <Route path="/admin/receber" element={<ProtectedRoute requireRole="admin"><AdminReceber /></ProtectedRoute>} />
-            <Route path="/pro/receber" element={<ProtectedRoute requireRole="profissional"><ProReceber /></ProtectedRoute>} />
-            <Route path="/pro/local" element={<ProtectedRoute requireRole="profissional"><ProLocal /></ProtectedRoute>} />
-            <Route path="/pro/configurar" element={<ProtectedRoute requireRole="profissional"><Configurar para="pro" /></ProtectedRoute>} />
-            <Route path="/pro/contrato" element={<ProtectedRoute requireRole="profissional"><ProContrato /></ProtectedRoute>} />
-            <Route path="/admin/equipe/:id/parceria" element={<ProtectedRoute requireRole="admin"><AdminParceria /></ProtectedRoute>} />
-            <Route path="/admin/pdv" element={<ProtectedRoute requireRole="admin"><AdminPdv /></ProtectedRoute>} />
-            <Route path="/admin/repasses" element={<ProtectedRoute requireRole="admin"><AdminRepasses /></ProtectedRoute>} />
-            <Route path="/cliente/pagamento/:appt" element={<ProtectedRoute requireRole="cliente"><ClientePagamento /></ProtectedRoute>} />
-            <Route path="/cliente/comanda/:id" element={<ProtectedRoute requireRole="cliente"><ClienteComanda /></ProtectedRoute>} />
-            <Route path="/admin/fechar-dia" element={<ProtectedRoute requireRole="admin"><AdminFecharDia /></ProtectedRoute>} />
-            <Route
-              path="/pro/agenda"
-              element={
-                <ProtectedRoute requireRole="profissional">
-                  <ProAgenda />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/pro/encaixe"
-              element={
-                <ProtectedRoute requireRole="profissional">
-                  <ProEncaixe />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/pro/servicos"
-              element={
-                <ProtectedRoute requireRole="profissional">
-                  <ProServicos />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/pro/horarios"
-              element={
-                <ProtectedRoute requireRole="profissional">
-                  <ProHorarios />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/pro/link"
-              element={
-                <ProtectedRoute requireRole="profissional">
-                  <ProLink />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/pro/numeros"
-              element={
-                <ProtectedRoute requireRole="profissional">
-                  <ProNumeros />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/pro/retorno"
-              element={
-                <ProtectedRoute requireRole="profissional">
-                  <ProRetorno />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/pro/ajustes"
-              element={
-                <ProtectedRoute requireRole="profissional">
-                  <ProAjustes />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/pro/pedidos"
-              element={
-                <ProtectedRoute requireRole="profissional">
-                  <ProPedidos />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/pro/enviar"
-              element={
-                <ProtectedRoute requireRole="profissional">
-                  <ProEnviar />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/pro/recados"
-              element={
-                <ProtectedRoute requireRole="profissional">
-                  <ProRecados />
-                </ProtectedRoute>
-              }
-            />
-
-            {/* a plataforma: o olho que tudo vê (055) */}
-            <Route path="/plataforma" element={<ProtectedRoute requireRole="plataforma"><Visao /></ProtectedRoute>} />
-            <Route path="/plataforma/saloes" element={<ProtectedRoute requireRole="plataforma"><Saloes /></ProtectedRoute>} />
-            <Route path="/plataforma/saloes/:id" element={<ProtectedRoute requireRole="plataforma"><Salao /></ProtectedRoute>} />
-            <Route path="/plataforma/pessoas" element={<ProtectedRoute requireRole="plataforma"><Pessoas /></ProtectedRoute>} />
-            <Route path="/plataforma/vinculos" element={<ProtectedRoute requireRole="plataforma"><Vinculos /></ProtectedRoute>} />
-            <Route path="/plataforma/filas" element={<ProtectedRoute requireRole="plataforma"><Filas /></ProtectedRoute>} />
-            <Route path="/plataforma/mensagens" element={<ProtectedRoute requireRole="plataforma"><PlataformaMensagens /></ProtectedRoute>} />
-            <Route path="/plataforma/recados" element={<ProtectedRoute requireRole="plataforma"><PlataformaRecados /></ProtectedRoute>} />
-            <Route path="/plataforma/promocoes" element={<ProtectedRoute requireRole="plataforma"><PlataformaPromocoes /></ProtectedRoute>} />
-            <Route path="/plataforma/metricas" element={<ProtectedRoute requireRole="plataforma"><Metricas /></ProtectedRoute>} />
-            <Route path="/plataforma/configuracoes" element={<ProtectedRoute requireRole="plataforma"><Configuracoes /></ProtectedRoute>} />
-            <Route path="/plataforma/seo" element={<ProtectedRoute requireRole="plataforma"><PlataformaSeo /></ProtectedRoute>} />
-            <Route path="/plataforma/termos" element={<ProtectedRoute requireRole="plataforma"><PlataformaTermos /></ProtectedRoute>} />
-            <Route path="/plataforma/mel" element={<ProtectedRoute requireRole="plataforma"><PlataformaMel /></ProtectedRoute>} />
-            <Route path="/plataforma/catalogo" element={<ProtectedRoute requireRole="plataforma"><PlataformaCatalogo /></ProtectedRoute>} />
-
-            {/* área do salão */}
-            <Route
-              path="/admin"
-              element={
-                <ProtectedRoute requireRole="admin">
-                  <AdminDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route path="/admin/dashboard" element={<Navigate to="/admin" replace />} />
-            <Route
-              path="/admin/guia"
-              element={
-                <ProtectedRoute requireRole="admin">
-                  <AdminGuia />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/agenda"
-              element={
-                <ProtectedRoute requireRole="admin">
-                  <AdminAgenda />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/equipe"
-              element={
-                <ProtectedRoute requireRole="admin">
-                  <AdminProfissionais />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/servicos"
-              element={
-                <ProtectedRoute requireRole="admin">
-                  <AdminServices />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/horarios"
-              element={
-                <ProtectedRoute requireRole="admin">
-                  <AdminHours />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/clientes"
-              element={
-                <ProtectedRoute requireRole="admin">
-                  <AdminClientes />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/numeros"
-              element={
-                <ProtectedRoute requireRole="admin">
-                  <AdminNumeros />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/whatsapp"
-              element={
-                <ProtectedRoute requireRole="admin">
-                  <AdminWhatsapp />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/recados"
-              element={
-                <ProtectedRoute requireRole="admin">
-                  <AdminRecados />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/ajustes"
-              element={
-                <ProtectedRoute requireRole="admin">
-                  <AdminAjustes />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/bancada"
-              element={
-                <ProtectedRoute requireRole="admin">
-                  <AdminBancada />
-                </ProtectedRoute>
-              }
-            />
-
-
-
-            <Route
-              path="/avisos"
-              element={
-                <ProtectedRoute>
-                  <Avisos />
-                </ProtectedRoute>
-              }
-            />
+            {/* o app, por área: cada pedaço chega quando é aberto */}
+            <Route path="/cliente/*" element={<RotasCliente />} />
+            <Route path="/pro/*" element={<RotasPro />} />
+            <Route path="/admin/*" element={<RotasAdmin />} />
+            <Route path="/plataforma/*" element={<RotasPlataforma />} />
 
             <Route path="*" element={<NaoEncontrada />} />
           </Routes>
           )}
+          </Suspense>
           <AvisoCookies />
           <AvisoAoVivo />
           </DialogoProvider>

@@ -27,6 +27,13 @@ export default defineConfig({
       filename: 'sw.js',
       injectManifest: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        // O bundle principal passou de 2 MiB (o limite padrão do Workbox). Acima
+        // do limite o plugin ABORTA o build no closeBundle, depois de já ter
+        // escrito o sw.js sem o app no precache: foi assim que a VPS ficou meses
+        // publicando "meio build" (sem as páginas estáticas e sem o sitemap) e
+        // o erro só aparecia como "hook: closeBundle". 4 MiB dá folga; o remédio
+        // de verdade é separar o site público do app (ver README, SEO).
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
       },
       manifest: {
         name: 'MIMO — Agenda Mel',

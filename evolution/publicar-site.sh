@@ -110,12 +110,27 @@ fi
 
 # 4. Build ----------------------------------------------------------------------
 azul '== 4/6  Build =='
+# npm ci reinstala o node_modules inteiro e o build escreve o dist: sem folga
+# no disco o build morre no fim (service worker) com um erro que parece outra coisa
+LIVRE_MB=$(df -Pm "$RAIZ" | awk 'NR==2 {print $4}')
+if [ "${LIVRE_MB:-0}" -lt 1024 ]; then
+  amarelo "  ATENÇÃO: só ${LIVRE_MB} MB livres no disco. O build precisa de folga; veja ./crescer-disco.sh ou limpe (docker system prune, npm cache clean --force)."
+fi
 cd "$RAIZ"
 if [ "${1:-}" != '--so-build' ]; then
   git pull --ff-only
 fi
 npm ci --no-audit --no-fund >/dev/null
-npm run build 2>&1 | tail -3
+# o build inteiro vai para um log; na tela só o fim. Se falhar, as últimas
+# 40 linhas aparecem aqui mesmo (o erro do vite vem antes do "closeBundle")
+LOG_BUILD=/tmp/mimo-build.log
+if ! npm run build > "$LOG_BUILD" 2>&1; then
+  echo; tail -40 "$LOG_BUILD"; echo
+  vermelho "O build falhou. Acima, o fim do log; o log inteiro está em $LOG_BUILD"
+  vermelho "Antes de tentar de novo, confira espaço em disco (df -h /) e memória (free -m)."
+  exit 1
+fi
+tail -3 "$LOG_BUILD"
 [ -f dist/index.html ] || { vermelho 'O build não gerou dist/index.html.'; exit 1; }
 # As páginas estáticas e o sitemap são o que o Google lê (scripts/paginas-estaticas.mjs):
 # um index.html por rota com título, descrição e canonical próprios. Sem elas o site

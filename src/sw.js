@@ -16,9 +16,16 @@ precacheAndRoute(self.__WB_MANIFEST)
 cleanupOutdatedCaches()
 
 // qualquer rota do app (/cliente/home, /p/ana…) abre com o index.html
-// do cache; a API e as funções não passam por aqui
+// do cache; a API e as funções não passam por aqui. Nem os arquivos que
+// são arquivos mesmo: sitemap.xml, robots.txt, .well-known e qualquer
+// caminho com extensão. Sem isto, abrir mimo.com.vc/sitemap.xml no
+// navegador com o app instalado mostrava a página 404 do app, e o
+// sitemap de verdade só aparecia para o robô.
 registerRoute(new NavigationRoute(createHandlerBoundToURL('/index.html'), {
-  denylist: [/^\/functions\//, /^\/rest\//, /^\/auth\//, /^\/storage\//],
+  denylist: [
+    /^\/functions\//, /^\/rest\//, /^\/auth\//, /^\/storage\//,
+    /^\/sitemap\.xml$/, /^\/robots\.txt$/, /^\/\.well-known\//, /\.(xml|txt|json|webmanifest|pdf|png|jpg|webp|svg)$/,
+  ],
 }))
 
 // ---- push ---------------------------------------------------------------

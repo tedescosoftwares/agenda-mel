@@ -52,7 +52,7 @@ export function Planos() {
           <a className="ld-btn ld-fantasma" href={comecarEm('salao')}>Criar meu salão</a>
         </article>
       </div>
-      <p className="sp-nota">Exemplos: 3 profissionais, R$ 49,90. 6 profissionais, R$ 79,60. 10 profissionais, R$ 119,20. 15 profissionais, R$ 181,50. Sem fidelidade. A autônoma que abrir um salão passa para o MIMO Pro com a mesma conta, sem perder clientes nem histórico.</p>
+      <p className="sp-nota">Exemplos: 3 profissionais, R$ 49,90. 6 profissionais, R$ 79,60. 10 profissionais, R$ 119,20. 15 profissionais, R$ 181,50. Sem fidelidade. A autônoma que abrir um salão passa para o MIMO Pro com a mesma conta, sem perder clientes nem histórico. Comparando com outro sistema? <Link to="/alternativa-ao-trinks">Veja a MIMO lado a lado com o Trinks</Link>.</p>
     </Pagina>
   )
 }

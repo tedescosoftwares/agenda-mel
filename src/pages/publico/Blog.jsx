@@ -37,7 +37,8 @@ export default function Blog() {
             <Cabeca como="h1" kicker={slug ? 'Categoria' : 'Blog MIMO'} titulo={slug ? [categoria?.nome || 'Categoria'] : ['O que a dona do salão', 'já está perguntando.']}>{slug ? (categoria?.descricao || '') : 'Guias curtos, ligados à rotina. Úteis mesmo para quem ainda não usa a MIMO.'}</Cabeca>
             <div className="sp-categorias">
               <Link to="/blog" className={'ld-chip' + (!slug ? ' on' : '')}>Todos</Link>
-              {categorias.map((c) => <Link key={c.slug} to={`/blog/categoria/${c.slug}`} className={'ld-chip' + (slug === c.slug ? ' on' : '')}>{c.nome}</Link>)}
+              {/* só categoria com guia publicado vira link: categoria vazia não tem página estática nem conteúdo para o Google */}
+              {categorias.filter((c) => (artigos || []).some((a) => a.categoria?.slug === c.slug)).map((c) => <Link key={c.slug} to={`/blog/categoria/${c.slug}`} className={'ld-chip' + (slug === c.slug ? ' on' : '')}>{c.nome}</Link>)}
             </div>
           </div>
         </section>

@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { useSeo } from '../../lib/seo'
 import { NavSite, PeSite } from '../../components/site/Pecas'
 import '../../landing.css'
+import { BotaoWhats } from '../../components/site/Whats'
 
 // Rota que não existe: antes de desistir, olha a tabela de
 // redirecionamentos da plataforma (uma URL antiga pode ter virado outra).
@@ -24,7 +25,7 @@ export default function NaoEncontrada() {
   return (
     <div className="ld sp">
       <NavSite />
-      <main><section><div className="ld-wrap sp-404"><span className="ld-kicker">404</span><h1>Essa página não existe.</h1><p className="ld-lead">Pode ter mudado de endereço ou o link veio errado. Os caminhos mais úteis:</p><div className="sp-404-links"><Link className="ld-btn ld-primario" to="/">Início</Link><Link className="ld-btn ld-fantasma" to="/blog">Blog</Link><Link className="ld-btn ld-fantasma" to="/sistema-para-salao-de-beleza">Sistema para salão</Link></div></div></section></main>
+      <main><section><div className="ld-wrap sp-404"><span className="ld-kicker">404</span><h1>Essa página não existe.</h1><p className="ld-lead">Pode ter mudado de endereço ou o link veio errado. Os caminhos mais úteis:</p><div className="sp-404-links"><Link className="ld-btn ld-primario" to="/">Início</Link><Link className="ld-btn ld-fantasma" to="/blog">Blog</Link><Link className="ld-btn ld-fantasma" to="/sistema-para-salao-de-beleza">Sistema para salão</Link><BotaoWhats chamada="perdido" extra={pathname} /></div></div></section></main>
       <PeSite />
     </div>
   )

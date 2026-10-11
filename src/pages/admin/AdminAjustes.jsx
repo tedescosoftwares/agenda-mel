@@ -10,6 +10,7 @@ import EnderecoProprio from '../../components/EnderecoProprio'
 import { linkDoSalao } from '../../lib/endereco'
 import AvisosNoCelular from '../../components/AvisosNoCelular'
 import AvisosPorEmail from '../../components/AvisosPorEmail'
+import LinkSuporte from '../../components/LinkSuporte'
 import { MODOS } from '../../lib/pagamento'
 
 // Ajustes do salão: o hub. Cada área é um cartão que diz o que faz e em
@@ -142,6 +143,16 @@ export default function AdminAjustes() {
           <span className="icon-btn" aria-hidden="true"><ChevronRight size={18} /></span>
         </Link>
       )}
+
+      {/* o WhatsApp da MIMO (3.2) */}
+      <LinkSuporte className="card aj-salao aj-link">
+        <span className="aj-salao-logo"><MessageCircle size={22} /></span>
+        <div className="aj-salao-quem">
+          <strong>Falar com a MIMO</strong>
+          <span className="muted">Dúvida, problema ou sugestão: a gente responde no WhatsApp</span>
+        </div>
+        <span className="icon-btn" aria-hidden="true"><ChevronRight size={18} /></span>
+      </LinkSuporte>
 
       {/* o código do balcão, compacto */}
       <div className="card aj-codigo">

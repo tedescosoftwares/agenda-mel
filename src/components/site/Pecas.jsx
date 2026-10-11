@@ -5,6 +5,7 @@ import { MarcaIcon } from '../icons'
 import { urlDoAmbiente } from '../../lib/ambiente'
 import { useAuth } from '../../context/AuthContext'
 import Avatar from '../Avatar'
+import { useWhats } from './Whats'
 
 // As peças do site público (mimo.com.vc): barra, rodapé, fotos, logo,
 // coração de pincel e o "aparece ao rolar". A landing e as páginas de
@@ -213,6 +214,7 @@ const PROFISSIONAIS = [
 
 export function PeSite() {
   const entrar = entrarEm()
+  const zap = useWhats('contato')
   return (
       <footer className="ld-pe">
         <div className="ld-wrap ld-pe-in">
@@ -235,6 +237,7 @@ export function PeSite() {
               <Link to="/sobre">Sobre</Link>
               <Link to="/blog">Blog</Link>
               <Link to="/contato">Contato</Link>
+              <a href={zap.href} target="_blank" rel="noopener noreferrer">WhatsApp {zap.bonito}</a>
               <Link to="/termos">Termos de uso</Link>
               <Link to="/privacidade">Privacidade</Link>
               <Link to="/entrar">Sou cliente</Link>

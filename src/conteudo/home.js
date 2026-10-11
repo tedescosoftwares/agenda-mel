@@ -1,3 +1,4 @@
+import { TELEFONE_LD } from '../lib/contato.js'
 // O SEO da home, num lugar só: a Landing usa no navegador e o build usa
 // para gerar o HTML estático de "/" (dist/_home.html). Sem tela aqui.
 export const SITE = 'https://mimo.com.vc'
@@ -16,7 +17,7 @@ export const FAQ = [
 export const JSON_LD = {
   '@context': 'https://schema.org',
   '@graph': [
-    { '@type': 'Organization', '@id': `${SITE}/#organization`, name: 'MIMO', url: `${SITE}/`, logo: `${SITE}/mimo-logo.svg`, description: 'Plataforma de agenda, operação e relacionamento para negócios de beleza.' },
+    { '@type': 'Organization', '@id': `${SITE}/#organization`, name: 'MIMO', url: `${SITE}/`, logo: `${SITE}/mimo-logo.svg`, description: 'Plataforma de agenda, operação e relacionamento para negócios de beleza.', contactPoint: [{ '@type': 'ContactPoint', telephone: TELEFONE_LD, contactType: 'customer service', availableLanguage: 'pt-BR' }] },
     { '@type': 'WebSite', '@id': `${SITE}/#website`, url: `${SITE}/`, name: 'MIMO', publisher: { '@id': `${SITE}/#organization` }, inLanguage: 'pt-BR' },
     {
       '@type': 'SoftwareApplication', '@id': `${SITE}/#software`, name: 'MIMO', url: `${SITE}/`,

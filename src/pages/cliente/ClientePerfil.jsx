@@ -14,6 +14,7 @@ import { useConfig } from '../../lib/config'
 import CampoSenha from '../../components/CampoSenha'
 import { Plus, Gift, Hourglass, MessageCircle, ShieldCheck, Lock, Store } from 'lucide-react'
 import Portal from '../../components/Portal'
+import { numeroWhats, linkWhats, chamada } from '../../lib/contato'
 
 // Perfil da cliente (065): foto, nome, desde quando, os números dela
 // (atendimentos, próximos, agendas, créditos), dados editáveis na
@@ -25,7 +26,7 @@ export default function ClientePerfil() {
   const [erro, setErro] = useState('')
   const [resumo, setResumo] = useState(null)
   const cfg = useConfig()
-  const zapSuporte = (cfg.whatsapp_suporte || '5513991719086').replace(/\D/g, '')
+  const zapSuporte = linkWhats(numeroWhats(cfg), chamada('suporte', profile?.full_name).texto)
   // o que está aberto embaixo: 'nasc' | 'fone' | 'email' | null
   const [folha, setFolha] = useState(null)
   const [nasc, setNasc] = useState('')
@@ -236,7 +237,7 @@ export default function ClientePerfil() {
           <span className="cliente-info"><span className="cliente-nome"><span className="nome-txt">Fila de espera</span></span><span className="muted cliente-meta">Onde você está esperando vaga</span></span>
           <ChevronIcon />
         </Link>
-        <a href={`https://wa.me/${zapSuporte}`} className="card prof-row" target="_blank" rel="noreferrer">
+        <a href={zapSuporte} className="card prof-row" target="_blank" rel="noreferrer">
           <span className="ajuste-icone"><MessageCircle /></span>
           <span className="cliente-info"><span className="cliente-nome"><span className="nome-txt">Contato e ajuda</span></span><span className="muted cliente-meta">Fale com o MIMO pelo WhatsApp</span></span>
           <ChevronIcon />

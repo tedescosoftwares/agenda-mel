@@ -6,6 +6,7 @@ import { artigoPorSlug, artigosPublicados } from '../../lib/conteudoPublico'
 import { Markdown, titulosDe } from '../../lib/markdown'
 import { NavSite, PeSite, useRevelar, comecarEm } from '../../components/site/Pecas'
 import { CartaoArtigo } from './PaginaSeo'
+import { BotaoWhats } from '../../components/site/Whats'
 import NaoEncontrada from './NaoEncontrada'
 import '../../landing.css'
 
@@ -71,7 +72,7 @@ export default function Artigo() {
             {a.caixa && <aside className="sp-caixa"><strong>{a.caixa.titulo}</strong><p>{a.caixa.texto}</p></aside>}
             <aside className="sp-chamada">
               <div><strong>{a.produto_rotulo || 'Conheça a MIMO'}</strong><span>Agenda, equipe, clientes, WhatsApp e pagamentos num só lugar. Autônoma grátis.</span></div>
-              <div className="sp-chamada-botoes">{a.produto_url && <Link className="ld-btn ld-fantasma" to={a.produto_url}>Ver a solução</Link>}<a className="ld-btn ld-primario" href={comecarEm()}>Começar agora <ArrowRight size={16} /></a></div>
+              <div className="sp-chamada-botoes">{a.produto_url && <Link className="ld-btn ld-fantasma" to={a.produto_url}>Ver a solução</Link>}<a className="ld-btn ld-primario" href={comecarEm()}>Começar agora <ArrowRight size={16} /></a><BotaoWhats chamada="artigo" extra={a.title} /></div>
             </aside>
             {a.faq?.length > 0 && (
               <section className="sp-faq"><h2>Perguntas frequentes</h2><div className="ld-faq">{a.faq.map(([q, r]) => <details key={q}><summary>{q}<ChevronDown size={18} /></summary><p>{r}</p></details>)}</div></section>

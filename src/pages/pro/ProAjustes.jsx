@@ -4,7 +4,8 @@ import ProShell from '../../components/ProShell'
 import SemFicha from './SemFicha'
 import { useAuth } from '../../context/AuthContext'
 import { ClockIcon, LinkIcon, ChevronIcon, BellIcon, MegafoneIcon } from '../../components/icons'
-import { BadgePercent, Wallet, MapPin, FileSignature, Building2 } from 'lucide-react'
+import { BadgePercent, Wallet, MapPin, FileSignature, Building2, MessageCircle } from 'lucide-react'
+import LinkSuporte from '../../components/LinkSuporte'
 import { supabase } from '../../lib/supabase'
 import AvisosNoCelular from '../../components/AvisosNoCelular'
 import AvisosPorEmail from '../../components/AvisosPorEmail'
@@ -187,6 +188,18 @@ export default function ProAjustes() {
           </div>
           <ChevronIcon />
         </Link>
+      </div>
+
+      {/* o WhatsApp da MIMO (3.2) */}
+      <div className="cliente-list">
+        <LinkSuporte className="card prof-row">
+          <span className="ajuste-icone"><MessageCircle size={20} /></span>
+          <div className="cliente-info">
+            <span className="cliente-nome"><span className="nome-txt">Falar com a MIMO</span></span>
+            <span className="muted cliente-meta">Dúvida, problema ou sugestão: WhatsApp da MIMO</span>
+          </div>
+          <ChevronIcon />
+        </LinkSuporte>
       </div>
 
       {negocio?.tipo === 'autonoma' && (

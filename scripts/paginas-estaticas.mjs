@@ -29,7 +29,8 @@ const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;'
 const dia = (v) => (v ? String(v).slice(0, 10) : undefined)
 
 // ---- dados estruturados, no formato que o Google lê ----------------------
-const ORG = { '@type': 'Organization', '@id': `${SITE}/#organization`, name: 'MIMO', url: `${SITE}/`, logo: `${SITE}/mimo-logo.svg` }
+const { TELEFONE_LD } = await import('../src/lib/contato.js')
+const ORG = { '@type': 'Organization', '@id': `${SITE}/#organization`, name: 'MIMO', url: `${SITE}/`, logo: `${SITE}/mimo-logo.svg`, contactPoint: [{ '@type': 'ContactPoint', telephone: TELEFONE_LD, contactType: 'customer service', availableLanguage: 'pt-BR' }] }
 const migalhas = (itens) => ({ '@type': 'BreadcrumbList', itemListElement: itens.map(([nome, caminho], i) => ({ '@type': 'ListItem', position: i + 1, name: nome, item: SITE + caminho })) })
 const faqLd = (faq) => ({ '@type': 'FAQPage', mainEntity: faq.map(([q, a]) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } })) })
 const webPage = (p) => ({ '@type': 'WebPage', '@id': `${SITE}${p.caminho}`, url: `${SITE}${p.caminho}`, name: p.titulo, description: p.descricao, isPartOf: { '@id': `${SITE}/#website` }, inLanguage: 'pt-BR', ...(p.imagem ? { primaryImageOfPage: p.imagem } : {}), ...(p.atualizado ? { dateModified: p.atualizado } : {}) })

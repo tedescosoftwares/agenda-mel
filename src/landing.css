@@ -1046,3 +1046,28 @@
 .ld-cabeca h1 { font-family: var(--ld-cartaz); font-weight: 400; text-transform: uppercase; font-size: clamp(2.3rem, 4.2vw, 3.9rem); line-height: 0.98; letter-spacing: 0.01em; color: var(--ld-ameixa); margin-bottom: 16px; }
 .ld-cabeca h1 span { display: block; color: inherit; }
 .ld-cabeca h1 span::after { display: none; }
+
+/* ---- WhatsApp da MIMO (3.2): botão, faixa e o flutuante ---- */
+.ws-botao { gap: 8px; }
+.ws-botao svg { flex: none; }
+.ws-faixa { display: flex; align-items: center; justify-content: space-between; gap: 18px; flex-wrap: wrap; margin: 28px auto 0; max-width: 900px; padding: 20px 24px; background: #fff; border: 1px solid var(--ld-fio); border-radius: 22px; box-shadow: var(--ld-sombra-2); }
+.ws-faixa > div { display: grid; gap: 4px; min-width: 240px; flex: 1; }
+.ws-faixa strong { color: var(--ld-ameixa); font-size: 1.05rem; }
+.ws-faixa span { color: var(--ld-cinza); font-size: 0.92rem; }
+.ws-faixa .ld-btn { flex: none; }
+.ld-cta .ws-botao.ld-fantasma, .sp-chamada .ws-botao.ld-fantasma { background: transparent; color: #fff; border-color: rgba(255, 255, 255, 0.45); }
+.ld-centro-botao { gap: 12px; flex-wrap: wrap; }
+.sp-contato { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); max-width: 1000px; }
+.ws-flutuante { position: fixed; left: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); z-index: 55; display: inline-flex; align-items: center; gap: 8px; min-height: 50px; padding: 0 20px 0 16px; border-radius: 999px; background: #25d366; color: #fff; font-weight: 600; font-size: 0.95rem; text-decoration: none; box-shadow: 0 12px 28px rgba(37, 211, 102, 0.35); transition: transform 0.15s ease; }
+.ws-flutuante:hover { transform: translateY(-2px); color: #fff; }
+html.mimo-app .ws-flutuante { display: none; }
+@media (max-width: 720px) {
+  .ws-flutuante { padding: 0; width: 54px; height: 54px; justify-content: center; }
+  .ws-flutuante span { display: none; }
+  /* enquanto o aviso de cookies está na tela, o flutuante espera (os dois moram embaixo) */
+  body:has(.aviso-cookies) .ws-flutuante { display: none; }
+}
+/* a chamada do artigo com três botões: o texto fica inteiro e os botões descem quando não cabem */
+.sp-chamada { display: flex; flex-wrap: wrap; align-items: center; gap: 18px; }
+.sp-chamada > div:first-child { flex: 1 1 260px; }
+.sp-chamada-botoes { flex: 0 1 auto; }

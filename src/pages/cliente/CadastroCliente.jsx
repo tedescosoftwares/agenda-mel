@@ -9,8 +9,8 @@ import { FraseDeAceite } from '../../components/LinkLegal'
 import { useDocumentosLegais, aceitesPara, versaoMaior } from '../../lib/legal'
 import { iniciais } from '../../lib/booking'
 import CampoSenha from '../../components/CampoSenha'
-import { EMAIL_CONTATO } from '../../conteudo/legal'
 import RodapeSocial from '../../components/RodapeSocial'
+import LinkSuporte from '../../components/LinkSuporte'
 import { MarcaIcon, Wordmark } from '../../components/icons'
 import { MailCheck } from 'lucide-react'
 
@@ -138,7 +138,7 @@ export default function CadastroCliente() {
                     <strong>Esse WhatsApp já está em uso</strong> e não dá pra cadastrar de novo. Se a conta é sua, é só entrar; o convite continua valendo. Se o número é seu e você não tem conta, fale com o suporte.
                     <div className="ja-tem-acoes">
                       <Link to={`/login?convite=${convite}`} className="btn btn-primary">Entrar</Link>
-                      <a href={`mailto:${EMAIL_CONTATO}?subject=${encodeURIComponent('Meu WhatsApp já está em uso na MIMO')}`} className="btn btn-ghost">Falar com o suporte</a>
+                      <LinkSuporte chamada="whatsEmUso" className="btn btn-ghost">Falar com o suporte</LinkSuporte>
                     </div>
                   </div>
                 )}

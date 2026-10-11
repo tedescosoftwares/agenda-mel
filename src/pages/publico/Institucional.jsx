@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, Mail, MessageCircle } from 'lucide-react'
+import { ArrowRight, Mail } from 'lucide-react'
+import { BotaoWhats, FaixaWhats, CartaoWhats } from '../../components/site/Whats'
 import { useSeo, migalhasLd, ORGANIZACAO_LD } from '../../lib/seo'
 import { EMAIL_CONTATO } from '../../lib/termos'
 import { NavSite, PeSite, Cabeca, Foto, useRevelar, comecarEm } from '../../components/site/Pecas'
@@ -53,6 +54,7 @@ export function Planos() {
         </article>
       </div>
       <p className="sp-nota">Exemplos: 3 profissionais, R$ 49,90. 6 profissionais, R$ 79,60. 10 profissionais, R$ 119,20. 15 profissionais, R$ 181,50. Sem fidelidade. A autônoma que abrir um salão passa para o MIMO Pro com a mesma conta, sem perder clientes nem histórico. Comparando com outro sistema? <Link to="/alternativa-ao-trinks">Veja a MIMO lado a lado com o Trinks</Link>.</p>
+      <FaixaWhats chamada="planos" />
     </Pagina>
   )
 }
@@ -69,7 +71,7 @@ export function Sobre() {
           <p><strong>Bonita, mas não fútil. Simples, mas não rasa.</strong> A MIMO fala a língua do salão: cadeira vazia, encaixe, retorno, comanda. Nada de dashboard decorativo.</p>
           <p><strong>Tecnologia que não parece software de contador.</strong> A dona abre e sabe o que fazer agora. A profissional vê só a agenda dela. A cliente marca sozinha.</p>
           <p>A MIMO é desenvolvida pela <strong>MIMO Desenvolvimento Ltda</strong>, no litoral de São Paulo. Começou em Itanhaém, Peruíbe e Mongaguá e cresce salão a salão.</p>
-          <a className="ld-btn ld-primario" href={comecarEm()}>Começar agora <ArrowRight size={16} /></a>
+          <div className="ld-cta-lado"><a className="ld-btn ld-primario" href={comecarEm()}>Começar agora <ArrowRight size={16} /></a><BotaoWhats chamada="conversar" /></div>
         </div>
       </div>
     </Pagina>
@@ -81,8 +83,9 @@ export function Contato() {
     <Pagina caminho="/contato" migalha="Contato" titulo="Contato | MIMO" descricao="Fale com a equipe da MIMO: dúvidas sobre o sistema para salão, a conta de autônoma ou parcerias.">
       <Cabeca como="h1" kicker="Contato" titulo={['Fala com a gente.']}>Dúvida sobre o sistema, sobre a conta de autônoma ou vontade de trazer a MIMO para o seu salão. Respondemos gente, não robô.</Cabeca>
       <div className="sp-contato ld-rv">
+        <CartaoWhats />
         <a className="sp-contato-carta" href={`mailto:${EMAIL_CONTATO}`}><Mail size={22} /><strong>E-mail</strong><span>{EMAIL_CONTATO}</span></a>
-        <a className="sp-contato-carta" href={comecarEm()}><MessageCircle size={22} /><strong>Quero começar</strong><span>Crie a conta e fale com a gente de dentro do app</span></a>
+        <a className="sp-contato-carta" href={comecarEm()}><ArrowRight size={22} /><strong>Quero começar</strong><span>Crie a conta e fale com a gente de dentro do app</span></a>
       </div>
       <p className="sp-nota">Suporte pelo app: quem já usa a MIMO encontra o canal de ajuda dentro do painel. <Link to="/privacidade">Privacidade</Link> · <Link to="/termos">Termos de uso</Link>.</p>
     </Pagina>

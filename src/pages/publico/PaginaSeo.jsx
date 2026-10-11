@@ -9,6 +9,7 @@ import { REGRAS } from '../../lib/acesso'
 import { NavSite, PeSite, Foto, Coracao, Cabeca, useRevelar, comecarEm } from '../../components/site/Pecas'
 import { MockDesktop, PalcoCelular, MockProfissional, MockRetorno, MockEspera, MockWhats, MockPagamento, MockQr } from '../../components/site/Mocks'
 import '../../landing.css'
+import { BotaoWhats, FaixaWhats } from '../../components/site/Whats'
 
 // Uma página por intenção de busca. A estrutura é a mesma: herói com
 // foto, a rotina real (cenas do salão e como a MIMO resolve), o produto
@@ -58,6 +59,7 @@ export default function PaginaSeo() {
   const relacionadas = (pagina.relacionadas || []).map(paginaSeoPorRota).filter(Boolean)
   const cta = comecarEm(pagina.cta.tipo)
   const autonoma = pagina.tipo === 'profissao' || pagina.cta.tipo === 'autonoma'
+  const faixa = autonoma ? 'autonoma' : pagina.tipo === 'comparativo' ? 'migrar' : 'duvida'
 
   return (
     <div className="ld sp" ref={raiz}>
@@ -158,6 +160,7 @@ export default function PaginaSeo() {
             <div className="ld-faq">
               {pagina.faq.map(([q, a], i) => <details className="ld-rv" key={q} style={{ transitionDelay: `${i * 40}ms` }}><summary>{q}<ChevronDown size={18} /></summary><p>{a}</p></details>)}
             </div>
+            <FaixaWhats chamada={faixa} />
           </div>
         </section>
 
@@ -193,7 +196,7 @@ export default function PaginaSeo() {
               <div>
                 <h2>{autonoma ? 'Sua agenda pronta hoje.' : 'Comece hoje mesmo.'}</h2>
                 <p>{autonoma ? 'Crie sua conta grátis, cadastre seus serviços e compartilhe seu link. Sua cliente marca sozinha.' : `Cadastre o salão, monte a equipe e coloque o link no ar. Os primeiros ${REGRAS.testeDias} dias são grátis, sem cartão.`}</p>
-                <div className="ld-cta-lado"><a className="ld-btn ld-branco ld-grande" href={cta}>{pagina.cta.rotulo} <ArrowRight size={18} /></a></div>
+                <div className="ld-cta-lado"><a className="ld-btn ld-branco ld-grande" href={cta}>{pagina.cta.rotulo} <ArrowRight size={18} /></a><BotaoWhats chamada={autonoma ? 'autonoma' : 'demonstracao'} classe="ld-btn ld-fantasma ld-grande" /></div>
               </div>
             </div>
           </div>
@@ -266,7 +269,7 @@ function Planos() {
           <article className="sp-plano sp-plano-destaque ld-rv"><span className="ld-pilula">{pro.nome}</span><strong>{reais(pro.base)}</strong><small>por mês · salão até {pro.ate} agendas</small><p>{pro.inclusas} profissionais inclusas e {reais(pro.extra)} por cada uma a mais. {REGRAS.testeDias} dias grátis, sem cartão.</p></article>
           <article className="sp-plano ld-rv"><span className="ld-pilula">{promais.nome}</span><strong>{reais(promais.base)}</strong><small>por mês · 11 agendas ou mais</small><p>{promais.inclusas} profissionais inclusas e {reais(promais.extra)} por cada adicional, sem limite.</p></article>
         </div>
-        <div className="ld-centro-botao ld-rv"><Link className="ld-btn ld-fantasma" to="/planos">Ver os planos em detalhe <ArrowRight size={16} /></Link></div>
+        <div className="ld-centro-botao ld-rv"><Link className="ld-btn ld-fantasma" to="/planos">Ver os planos em detalhe <ArrowRight size={16} /></Link><BotaoWhats chamada="planos" /></div>
       </div>
     </section>
   )

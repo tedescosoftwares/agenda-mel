@@ -154,6 +154,16 @@ Regras para não desfazer a separação:
   inteiro de volta para a entrada. Conferir com `npm run build` e olhar o
   tamanho de `dist/assets/index-*.js` (deve ficar perto de 400 KB, não de 2 MB).
 
+## WhatsApp da MIMO: um número, várias chamadas
+
+O número de reserva mora em `src/lib/contato.js` (`WHATSAPP_MIMO`), junto
+com as chamadas: cada canto do site chama com uma frase diferente e a
+conversa já chega escrita (planos, dúvida, autônoma, migrar, artigo, 404,
+suporte dentro do app). A Plataforma troca o número sem publicar, em
+Configurações (vira `config_publica.whatsapp_suporte`); o site e o app leem
+de lá primeiro. No site: `src/components/site/Whats.jsx` (botão, faixa,
+cartão do contato e o flutuante); no app: `src/components/LinkSuporte.jsx`.
+
 ## SEO: onde mora e como chega no Google
 
 - **Conteúdo** em `src/conteudo/`: `paginasSeo.js` (uma página por intenção

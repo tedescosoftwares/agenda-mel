@@ -6,7 +6,7 @@ import { supabase } from './supabase'
 let promessa = null
 export function carregarConfig() {
   if (!promessa) {
-    promessa = supabase.rpc('config_publica').then(({ data }) => data ?? {}).catch(() => ({}))
+    promessa = supabase ? supabase.rpc('config_publica').then(({ data }) => data ?? {}).catch(() => ({})) : Promise.resolve({})
   }
   return promessa
 }

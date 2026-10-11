@@ -18,6 +18,7 @@ import QRCode from 'qrcode'
 import { AGENDA_ART_EXACT, MEL_ART_EXACT } from '../../assets/mockArtExact'
 import PrimeiroAcessoHome from './PrimeiroAcessoHome'
 import { CalendarPlus, Users, Sparkles, MessageCircle, FileSignature, ArrowRight, CalendarDays, TrendingUp, Clock3, QrCode, Settings2, X, PlayCircle, ChevronRight, Activity, CircleDot, Rocket, BellRing, BookOpen, Scissors, Link2, Headphones, Trophy, BadgeCheck, Copy, ExternalLink, LayoutDashboard } from 'lucide-react'
+import LinkSuporte from '../../components/LinkSuporte'
 
 // Dashboard do salão (tela 23): o dia de hoje em quatro números, o
 // faturamento do mês dia a dia, o que está esperando resposta, e os
@@ -391,7 +392,7 @@ export default function AdminDashboard() {
                     <small>Acesse os tutoriais ou fale com o suporte da MIMO.</small>
                   </div>
                   <span className="admin-home-mel-balao">Oi! Eu sou a <b>Mel</b> 💗</span>
-                  <Link to="/admin/guia">Acessar central de ajuda <ArrowRight size={13} /></Link>
+                  <div className="admin-home-ajuda-links"><Link to="/admin/guia">Acessar central de ajuda <ArrowRight size={13} /></Link><LinkSuporte>WhatsApp da MIMO <MessageCircle size={13} /></LinkSuporte></div>
                   <img className="admin-home-mel" src={MEL_ART_EXACT} alt="Mel, assistente virtual da MIMO" />
                 </section>
               </aside>

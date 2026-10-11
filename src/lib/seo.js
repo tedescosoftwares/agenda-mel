@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { TELEFONE_LD } from './contato'
 
 // O SEO por rota, do lado do navegador: title, description, canonical,
 // Open Graph, Twitter, robots e JSON-LD. O build também grava essas
@@ -59,4 +60,4 @@ export function migalhasLd(itens) {
   }
 }
 
-export const ORGANIZACAO_LD = { '@type': 'Organization', '@id': `${SITE}/#organization`, name: 'MIMO', url: `${SITE}/`, logo: `${SITE}/mimo-logo.svg` }
+export const ORGANIZACAO_LD = { '@type': 'Organization', '@id': `${SITE}/#organization`, name: 'MIMO', url: `${SITE}/`, logo: `${SITE}/mimo-logo.svg`, contactPoint: [{ '@type': 'ContactPoint', telephone: TELEFONE_LD, contactType: 'customer service', availableLanguage: 'pt-BR' }] }

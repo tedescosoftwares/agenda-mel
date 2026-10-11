@@ -7,6 +7,7 @@ import SessaoApp from "./pages/SessaoApp";
 import Splash from "./pages/Splash";
 import AvisoCookies from "./components/AvisoCookies";
 import AvisoAoVivo from "./components/AvisoAoVivo";
+import { WhatsFlutuante } from "./components/site/Whats";
 import PaginaSeo from "./pages/publico/PaginaSeo";
 import Blog from "./pages/publico/Blog";
 import Artigo from "./pages/publico/Artigo";
@@ -125,6 +126,7 @@ export default function App() {
           </Suspense>
           <AvisoCookies />
           <AvisoAoVivo />
+          <WhatsFlutuante />
           </DialogoProvider>
         </NotificacoesProvider>
       </AuthProvider>

@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import { useDialogo } from '../context/DialogoContext'
 import { supabase } from '../lib/supabase'
 import Avatar from './Avatar'
+import LinkSuporte from './LinkSuporte'
 
 // O menu da conta na barra de cima (admin e pro): toca no avatar e abre
 // um cartãozinho com quem está logada, os atalhos e o "Sair". "Minha
@@ -93,7 +94,7 @@ function MinhaConta({ fechar, profile, user, recarregar }) {
         <div className="form">
           <label>Nome<input value={nome} onChange={(e) => setNome(e.target.value)} required maxLength={80} /></label>
           <label>Telefone<input value={fone} onChange={(e) => setFone(e.target.value)} inputMode="tel" placeholder="(13) 99999-0000" /></label>
-          <label>E-mail<input value={user?.email ?? ''} readOnly disabled /><span className="muted salao-dica">O e-mail é o seu login. Para trocar, fale com o suporte.</span></label>
+          <label>E-mail<input value={user?.email ?? ''} readOnly disabled /><span className="muted salao-dica">O e-mail é o seu login. Para trocar, <LinkSuporte chamada="email">fale com o suporte</LinkSuporte>.</span></label>
         </div>
         <div className="form-actions">
           <button type="button" className="btn btn-ghost" onClick={fechar}>Cancelar</button>

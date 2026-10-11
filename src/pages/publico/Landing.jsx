@@ -8,6 +8,7 @@ import { NavSite, PeSite, Foto, Coracao, MarcaCartaz, Cabeca, useRevelar, comeca
 import { PalcoCelular, MockDesktop, MockProfissional, MockRetorno, MockEspera, MockWhats, MockPagamento, MockQr, VINCULOS } from '../../components/site/Mocks'
 import { RotinaCartas, Historias, AntesDepois, ProdutoReal, Tamanhos, Simulador, CapturaLead, Confianca, PorQue } from '../../components/site/Secoes'
 import '../../landing.css'
+import { FaixaWhats } from '../../components/site/Whats'
 import { TITULO, DESCRICAO, FAQ, JSON_LD } from '../../conteudo/home'
 
 // A porta da rua: mimo.com.vc para quem ainda não é de casa. Fala com a
@@ -340,6 +341,7 @@ export default function Landing() {
                 <a className="ld-btn ld-fantasma" href={comecar('salao')}>Criar meu salão</a>
               </article>
             </div>
+            <FaixaWhats chamada="planos" />
           </div>
         </section>
 
@@ -391,6 +393,7 @@ export default function Landing() {
                 </details>
               ))}
             </div>
+            <FaixaWhats chamada="duvida" />
           </div>
         </section>
 

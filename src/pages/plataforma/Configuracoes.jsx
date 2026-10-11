@@ -5,6 +5,9 @@ import { supabase } from '../../lib/supabase'
 import { useDialogo } from '../../context/DialogoContext'
 import { VERSAO, ENTREGA } from '../../lib/versao'
 import { EngrenagemIcon, ClockIcon, UsersIcon } from '../../components/icons'
+import { MessageCircle } from 'lucide-react'
+import { carregarConfig } from '../../lib/config'
+import { WHATSAPP_MIMO, bonito, numeroWhats } from '../../lib/contato'
 
 // Configurações da plataforma: o relógio, a versão, e quem mais cuida.
 export default function Configuracoes() {
@@ -12,7 +15,17 @@ export default function Configuracoes() {
   const [relogio, setRelogio] = useState(null)
   const [email, setEmail] = useState('')
   const [erro, setErro] = useState('')
+  const [zap, setZap] = useState('')
+  const [zapSalvo, setZapSalvo] = useState('')
   useEffect(() => { supabase.rpc('relogio_status').then(({ data }) => setRelogio(data)) }, [])
+  useEffect(() => { carregarConfig().then((c) => { const v = String(c?.whatsapp_suporte || ''); setZap(v); setZapSalvo(v) }) }, [])
+
+  // o WhatsApp da MIMO que o site e o app mostram (reserva: lib/contato.js)
+  async function salvarZap() {
+    const digitos = zap.replace(/\D/g, '')
+    const { error } = await supabase.rpc('definir_config_publica', { chave_: 'whatsapp_suporte', valor_: digitos })
+    if (error) setErro(error.message); else { setZapSalvo(digitos); setZap(digitos); await avisar({ titulo: 'Feito', texto: digitos ? `O site e o app passam a chamar ${bonito(numeroWhats({ whatsapp_suporte: digitos }))}.` : `Sem número salvo: vale a reserva do código, ${bonito(WHATSAPP_MIMO)}.` }) }
+  }
 
   async function promover() {
     if (!email.trim()) return
@@ -37,6 +50,13 @@ export default function Configuracoes() {
             <button className="btn btn-primary" onClick={promover} disabled={!email.trim()}>Promover a plataforma</button>
           </div>
           <p className="muted plat-nota">Use com quem cuida do MIMO, não com dona de salão. Tirar o papel é pelo SQL Editor.</p>
+        </Painel>
+        <Painel Icon={MessageCircle} titulo="WhatsApp da MIMO" sub="O número que o site e o app chamam, com a conversa já começada.">
+          <div className="form">
+            <label>Número com DDD<input type="tel" value={zap} onChange={(e) => setZap(e.target.value)} placeholder={WHATSAPP_MIMO.slice(2)} /></label>
+            <button className="btn btn-primary" onClick={salvarZap} disabled={zap.replace(/\D/g, '') === zapSalvo}>Salvar número</button>
+          </div>
+          <p className="muted plat-nota">Hoje: <strong>{bonito(numeroWhats({ whatsapp_suporte: zapSalvo }))}</strong>{zapSalvo ? '' : ' (a reserva do código)'}. Só números; o 55 entra sozinho. Vale na hora, sem publicar.</p>
         </Painel>
         <Painel Icon={EngrenagemIcon} titulo="Versão">
           <div className="dado-linha"><span className="muted">App</span><strong>v{VERSAO}</strong></div>

@@ -4,7 +4,7 @@ import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Aviso, Botao } from '@/components/ui'
 import { useSessao } from '@/context/sessao'
-import { CONFIGURADO, NOME_DO_APP, VARIANTE, VERSAO } from '@/lib/config'
+import { CONFIGURADO, NOME_DO_APP, SUPABASE_URL, VARIANTE, VERSAO } from '@/lib/config'
 import { useAbrirWeb } from '@/lib/ponte'
 import { ESPACO, useTema } from '@/lib/tema'
 import iconeCliente from '../../assets/images/cliente/icone.png'
@@ -85,12 +85,17 @@ export default function Entrar() {
             <Botao titulo="Criar conta" tipo="fantasma" icone="sparkles-outline" onPress={() => abrir('/cadastro', 'Criar conta')} />
           </View>
           <Text style={[e.versao, { color: t.texto3 }]}>
-            {NOME_DO_APP} {VERSAO}
+            {NOME_DO_APP} {VERSAO} · {CONFIGURADO ? hostDe(SUPABASE_URL) : 'Supabase não configurado'}
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   )
+}
+
+// só o host (abcd.supabase.co): mostra qual projeto o app está usando sem expor nada
+function hostDe(url: string) {
+  return url.replace(/^https?:\/\//, '').replace(/\/.*$/, '')
 }
 
 const e = StyleSheet.create({

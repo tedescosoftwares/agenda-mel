@@ -101,9 +101,15 @@ async function buscarPerfil(uid: string): Promise<Perfil | null> {
 }
 
 function traduzir(m: string): string {
-  if (/invalid login credentials/i.test(m)) return 'E-mail ou senha não conferem.'
-  if (/email not confirmed/i.test(m)) return 'Confirma seu e-mail antes de entrar (olha a caixa de entrada).'
-  if (/rate limit|too many/i.test(m)) return 'Muitas tentativas. Espera um minuto e tenta de novo.'
-  if (/network|fetch|failed/i.test(m)) return 'Sem conexão agora. Tenta de novo.'
-  return m
+  const texto = /invalid login credentials/i.test(m)
+    ? 'E-mail ou senha não conferem.'
+    : /email not confirmed/i.test(m)
+      ? 'Confirma seu e-mail antes de entrar (olha a caixa de entrada).'
+      : /rate limit|too many/i.test(m)
+        ? 'Muitas tentativas. Espera um minuto e tenta de novo.'
+        : /network|fetch|failed/i.test(m)
+          ? 'Sem conexão com o Supabase. Confere a internet do celular e o .env do app.'
+          : m
+  // em desenvolvimento o erro original ajuda a achar a causa
+  return __DEV__ && texto !== m ? `${texto} (${m})` : texto
 }

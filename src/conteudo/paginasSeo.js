@@ -3,63 +3,103 @@
 // estrutura vive aqui; o title, a description e o Open Graph podem ser
 // sobrescritos pela plataforma (tabela seo_pages, 116).
 //
-// Campos: rota, tipo ('principal' | 'profissao'), kicker, h1 (linhas),
-// sub, provas (3 chips), foto + alt + bilhete, mock ('desktop' |
-// 'celular' | null), blocos [{titulo, texto, itens[]}], funcoes
-// [{icone, titulo, texto}] (ícone por nome, resolvido na tela), faixa
-// {titulo, texto, foto}, faq [[p, r]], artigos (slugs), cta {rotulo,
-// tipo}, seo_title, meta_description.
+// Campos: rota, tipo ('principal' | 'profissao' | 'problema'), kicker,
+// h1 (linhas), sub, provas (3 chips), foto + alt + bilhete, mock
+// ('desktop' | 'celular' | null), seo_title, meta_description, faq
+// [[p, r]], artigos (slugs), cta {rotulo, tipo}, pai (rota do hub, para
+// o rastro de migalhas), relacionadas (rotas do "veja também"),
+// atualizado_em (lastmod do sitemap). Seções opcionais, cada uma só
+// aparece se existir: rotina [{titulo, cena, resolve, ancora}] (a cena
+// real do salão e como a MIMO resolve), modulos [{id, kicker, titulo,
+// texto, itens[], mock | foto+alt, links [[rota, rotulo]]}] (o produto,
+// módulo a módulo, com o mock de verdade), sinonimos {titulo, texto},
+// planos (true: a faixa de preços), blocos [{titulo, texto, itens[]}],
+// funcoes [[icone, titulo, texto]], faixa {titulo, texto, foto, bilhete}.
 
 export const PAGINAS_SEO = [
   {
     rota: '/sistema-para-salao-de-beleza', tipo: 'principal', kicker: 'Sistema para salão de beleza',
-    h1: ['Toda a operação', 'do seu salão', 'em um só lugar.'],
-    sub: 'Agenda, equipe, clientes, WhatsApp, retorno e pagamentos organizados em uma experiência feita para a rotina de quem vive da beleza.',
-    provas: ['Múltiplas profissionais', 'Funciona no celular', 'Comece hoje mesmo'],
-    foto: 'profissional', alt: 'profissional de beleza sorrindo no salão, com o app MIMO aberto no celular', bilhete: 'mais organização pro seu dia a dia',
-    mock: 'desktop', mockTitulo: 'Uma visão completa do seu salão.', mockTexto: 'Veja a agenda de todas as profissionais, gerencie serviços, bloqueios, encaixes e acompanhe a operação em tempo real.',
-    seo_title: 'Sistema para Salão de Beleza | MIMO',
-    meta_description: 'Sistema para salão de beleza com agenda multi-profissional, equipe, clientes, WhatsApp, lista de espera, sinal e comanda. Organize a operação inteira com a MIMO.',
-    blocos: [
-      { titulo: 'Agenda multi-profissional', texto: 'Cada profissional numa coluna, cada horário num cartão. A disponibilidade considera serviço, duração, bloqueios e pausas, então o salão nunca oferece um horário que não existe.', itens: ['Agenda geral e por profissional', 'Bloqueios, folgas e pausas', 'Encaixes sem bagunçar o dia', 'Vários serviços num horário só'] },
-      { titulo: 'Serviços e equipe', texto: 'Serviços com preço, duração e quem executa. A profissional entra pelo link da equipe e encontra a própria agenda pronta, com o vínculo e as permissões que o salão definiu.', itens: ['Duração real por serviço', 'Vínculo como configuração inicial', 'Permissões por profissional', 'App próprio para cada uma'] },
-      { titulo: 'Clientes e retorno', texto: 'Histórico por serviço e por profissional. Quem deveria voltar, quem sumiu e quem tem manutenção vencendo aparecem como ação, não como relatório.', itens: ['Histórico e preferências', 'Retorno no prazo certo', 'Origem da cliente preservada', 'Avaliação depois do atendimento'] },
-      { titulo: 'WhatsApp, lista de espera e pagamentos', texto: 'Confirmação, lembrete e remarcação ligados ao horário. Cancelou, a vaga vai para quem estava esperando. Sinal por Pix e comanda que fecha com o repasse separado.', itens: ['Confirmação e lembrete pelo WhatsApp', 'Lista de espera por serviço e período', 'Sinal fixo ou porcentagem', 'Comanda com repasse por profissional'] },
+    h1: ['Sistema para salão de beleza', 'que organiza o dia inteiro:', 'agenda, equipe e clientes.'],
+    sub: 'A MIMO é o sistema de gestão do salão: agenda por profissional, cliente marcando sozinha pelo link, confirmação no WhatsApp, sinal por Pix, lista de espera e comanda. Feito para a rotina de quem atende, não para quem gosta de menu.',
+    provas: ['Uma agenda por profissional', 'No celular e no computador', '7 dias grátis, sem cartão'],
+    foto: 'salao', alt: 'recepção de salão de beleza com cadeiras e espelhos iluminados', bilhete: 'o dia inteiro num lugar só',
+    mock: 'desktop', mockTitulo: 'O salão inteiro numa tela.', mockTexto: 'Uma coluna por profissional, um cartão por horário. Quem confirmou, quem falta confirmar, vaga aberta e encaixe, sem abrir conversa de WhatsApp.',
+    seo_title: 'Sistema para Salão de Beleza: agenda, equipe e clientes | MIMO',
+    meta_description: 'Sistema para salão de beleza com agenda por profissional, agendamento online pela cliente, confirmação no WhatsApp, sinal por Pix, lista de espera e comanda. 7 dias grátis, sem cartão.',
+    atualizado_em: '2026-10-11',
+    pai: null,
+    rotina: [
+      { titulo: 'A cliente chama no WhatsApp no meio do atendimento', cena: 'A profissional está com as mãos na cliente e o celular vibra: "tem horário sábado?". Ela responde depois, esquece, e a cliente marca em outro lugar.', resolve: 'A cliente abre o link do salão, vê os horários livres de verdade e marca sozinha. A profissional só recebe o aviso.', ancora: 'agendamento-online' },
+      { titulo: 'O horário está em três lugares', cena: 'Metade no caderno da recepção, metade no WhatsApp da profissional, o resto na cabeça de alguém. Dois horários no mesmo lugar não é azar: é consequência.', resolve: 'Uma agenda só, com uma coluna por profissional. O encaixe feito no balcão e o horário marcado pela cliente caem no mesmo quadro.', ancora: 'agenda' },
+      { titulo: 'Profissional marcando por fora', cena: 'A cliente combinou direto com a profissional, o salão não ficou sabendo, e a sala estava reservada para outra pessoa.', resolve: 'Cada profissional tem a própria agenda dentro da estrutura do salão. O que ela marca aparece para a recepção, e o que a recepção marca aparece para ela.', ancora: 'profissionais' },
+      { titulo: 'Remarcação em cadeia', cena: 'Uma cliente pede para mudar e começa a dança: liga para a próxima, que pede outro horário, e o dia inteiro muda de lugar.', resolve: 'Remarcar é arrastar o cartão. A cliente pede a troca pelo app ou pelo WhatsApp, o salão aceita, e a agenda muda sozinha.', ancora: 'comunicacao' },
+      { titulo: 'Falta sem aviso', cena: 'Duas horas de progressiva reservadas, material separado, e a cliente não aparece. A cadeira ficou vazia e ninguém foi chamado.', resolve: 'Confirmação na véspera pelo WhatsApp, sinal por Pix nos serviços longos e lista de espera para preencher a vaga que abriu.', ancora: 'sinal' },
+      { titulo: '"Tem vaga quinta?"', cena: 'Para responder, alguém precisa olhar a agenda de cada profissional, lembrar da folga da Bia e calcular se a química cabe antes do almoço.', resolve: 'A disponibilidade é calculada: expediente do salão, horário de cada profissional, duração do serviço, bloqueios e intervalo. Só aparece horário que existe.', ancora: 'disponibilidade' },
     ],
-    funcoes: [['CalendarDays', 'Agenda', 'Múltiplas profissionais, bloqueios, encaixes e vários serviços.'], ['Users', 'Equipe', 'Vínculos, horários, serviços e permissões por profissional.'], ['Heart', 'Clientes', 'Histórico, preferências e retornos.'], ['MessageCircle', 'WhatsApp', 'Confirmações, lembretes e comunicação no contexto da agenda.'], ['Clock', 'Lista de espera', 'A vaga que abriu vai para quem combina com ela.'], ['Wallet', 'Pagamentos', 'Sinal, comanda e repasse ligados ao atendimento.']],
-    faixa: { titulo: 'Feito para salões reais. Como o seu.', texto: 'A MIMO foi criada com base na rotina de salões de beleza, com linguagem simples e funcionalidades que realmente fazem diferença no dia a dia.', foto: 'equipe', bilhete: 'menos bagunça, mais tempo pro que importa' },
+    modulos: [
+      { id: 'agenda', kicker: 'Agenda', titulo: 'Uma coluna por profissional. Um cartão por horário.', texto: 'A recepção enxerga o salão inteiro: quem está atendendo, quem confirmou, onde sobrou espaço. Bloqueio de almoço, folga e curso ficam na agenda certa. Encaixe entra onde cabe de verdade, sem empurrar atraso para a próxima.', itens: ['Agenda geral e agenda de cada profissional', 'Bloqueios, pausas e folgas por pessoa', 'Encaixe pelo balcão ou pelo app da profissional', 'Remarcar arrastando o cartão'], mock: 'desktop', links: [['/agenda-para-salao-de-beleza', 'A agenda em detalhes'], ['/agenda-multi-profissional', 'Agenda multi-profissional']] },
+      { id: 'profissionais', kicker: 'Profissionais e equipe', titulo: 'Cada uma trabalha de um jeito. A MIMO acompanha.', texto: 'O salão cadastra a profissional uma vez: vínculo, serviços que ela faz, horários, permissões e regra de repasse. Ela entra pelo link da equipe e encontra a própria agenda pronta no celular. A dona que também atende tem a dela.', itens: ['Vínculo: parceira, funcionária, autônoma vinculada, aluguel de espaço', 'Serviços e tempo de cada profissional', 'Permissões: cada uma vê o que precisa', 'Repasse e comissão calculados na comanda'], mock: 'profissional', links: [['/agenda-multi-profissional', 'Como funciona com várias profissionais'], ['/sistema-de-comissao-para-salao', 'Comissão e repasse']] },
+      { id: 'clientes', kicker: 'Clientes', titulo: 'Quem veio, quem voltou, quem sumiu.', texto: 'Cada atendimento fica no histórico da cliente: serviço, profissional, valor, observação. Quem passou do prazo de retorno aparece como ação, com o botão de chamar. A origem fica registrada: pelo QR do balcão, pelo link da Ana ou por indicação.', itens: ['Histórico por serviço e por profissional', 'Lista de quem deveria voltar', 'Origem da cliente e vínculo preservado', 'Avaliação depois do atendimento'], mock: 'retorno', links: [['/controle-de-clientes-para-salao', 'Controle de clientes']] },
+      { id: 'servicos', kicker: 'Serviços', titulo: 'Catálogo pronto, com foto, tempo e preço.', texto: 'A MIMO vem com um catálogo de serviços de beleza organizado por categoria, com foto. O salão escolhe o que faz, ajusta preço e duração, e monta combos. Serviço que costuma ir junto, como corte e escova, a cliente marca num horário só.', itens: ['Catálogo com foto, por categoria', 'Duração e preço por serviço, ajustável por profissional', 'Combos com preço fechado', 'Serviços que vão juntos no mesmo horário'], foto: 'lifestyle', alt: 'bancada de beleza com produtos e o app MIMO no celular', links: [] },
+      { id: 'agendamento-online', kicker: 'Agendamento online', titulo: 'A cliente marca sozinha, no link do salão.', texto: 'QR no balcão, link na bio, código de seis letras. A cliente entra, cria a conta em um minuto e marca entre os horários livres. Não precisa instalar nada: abre no navegador e pode ir para a tela inicial como um app.', itens: ['Página do salão e de cada profissional', 'Só horários que existem de verdade', 'Aceite automático, pela casa ou pela profissional', 'Sem marketplace: a cliente é sua'], mock: 'celular', links: [['/agendamento-online', 'Agendamento online'], ['/qr-code-para-salao-de-beleza', 'QR Code no balcão']] },
+      { id: 'sinal', kicker: 'Sinal', titulo: 'Sinal por Pix. Horário reservado. Regra clara.', texto: 'O salão escolhe: valor fixo, porcentagem ou pagamento completo, em todos os serviços ou só nos longos. A cliente vê a regra antes de pagar. Pagou, o horário fica reservado; não pagou no prazo, a vaga volta para a agenda sozinha.', itens: ['Pix gerado na hora de marcar', 'Fixo ou porcentagem, por salão', 'Vaga liberada se o prazo vencer', 'Restante fecha na comanda'], mock: 'pagamento', links: [['/sinal-para-agendamento', 'Sinal para agendamento']] },
+      { id: 'disponibilidade', kicker: 'Disponibilidade', titulo: 'Só aparece horário que existe.', texto: 'Quando a cliente escolhe escova com a Ana na quinta, a MIMO cruza o expediente do salão, o horário da Ana, os 45 minutos da escova, o almoço bloqueado, o intervalo entre atendimentos e a antecedência mínima. O que sobra é o que ela vê. Conflito de horário deixa de ser possível.', itens: ['Expediente do salão e de cada profissional', 'Duração real de cada serviço', 'Bloqueios, intervalos e antecedência mínima', 'A mesma regra para o balcão e para a cliente'], foto: 'agenda-celular', alt: 'a agenda da MIMO no celular mostrando os horários livres do dia', links: [['/sistema-de-agendamento', 'As regras do agendamento']] },
+      { id: 'espera', kicker: 'Lista de espera', titulo: 'Cancelou às 14:07? Às 14:20 a vaga já tem dona.', texto: 'A lista guarda serviço, profissional preferida e período. Quando um horário cancela, o salão vê na hora quem combina com aquela vaga e chama pelo WhatsApp. A cliente também entra na lista sozinha, pelo app, quando o horário que queria está cheio.', itens: ['Por serviço, profissional e período', 'Vaga cancelada aparece no quadro com quem cabe nela', 'Chamada pelo WhatsApp com o horário certo', 'A cliente vê a posição dela'], mock: 'espera', links: [['/lista-de-espera-para-salao', 'Lista de espera']] },
+      { id: 'comunicacao', kicker: 'Comunicação e confirmações', titulo: 'O WhatsApp continua sendo WhatsApp. Só deixa de ser bagunça.', texto: 'O salão conecta o próprio número. A confirmação sai na véspera com serviço, profissional e hora. A cliente responde "confirmar" ou "reagendar" e o cartão muda na agenda. Lembrete, aviso de cancelamento e mensagem de retorno saem do mesmo fio.', itens: ['Confirmação e lembrete ligados ao horário', 'A resposta da cliente cai na agenda', 'Modelos de mensagem editáveis pelo salão', 'Histórico da conversa junto do atendimento'], mock: 'whats', links: [['/confirmacao-de-agendamento-whatsapp', 'Confirmação pelo WhatsApp']] },
+      { id: 'fechamento', kicker: 'Comanda e repasse', titulo: 'O dia fecha com o que é de quem.', texto: 'A comanda puxa o horário da cliente, soma o que ela fez, desconta o sinal e fecha. Cada item sabe a profissional que executou, e o repasse do período sai calculado por pessoa, sem planilha.', itens: ['PDV do balcão, no computador', 'Sinal pago pelo app já descontado', 'Repasse por profissional e por período', 'Os números do mês do salão'], foto: 'painel', alt: 'painel do salão no notebook com a comanda do dia', links: [['/sistema-de-comissao-para-salao', 'Comissão para salão']] },
+    ],
+    sinonimos: { titulo: 'Sistema, software ou programa para salão?', texto: 'É a mesma coisa com três nomes. O que importa é se ele representa a sua rotina: horário por profissional, duração real, cliente marcando sozinha e WhatsApp ligado à agenda. A MIMO roda no navegador: a gestão no computador da recepção, a profissional e a cliente no celular. Nada para instalar, nada para atualizar, e a agenda de papel pode ficar do lado enquanto você migra.' },
+    planos: true,
     faq: [
-      ['Serve para salão com várias profissionais?', 'Sim. Cada profissional tem a própria agenda dentro da estrutura do salão, e o salão enxerga todas juntas na agenda geral.'],
-      ['Quem configura a agenda da profissional?', 'O salão: vínculo, serviços, horários e permissões. A profissional entra pelo link da equipe e já encontra tudo pronto.'],
-      ['A cliente precisa de aplicativo na loja?', 'Não. Ela entra pelo seu QR, código ou link, no navegador, e pode adicionar à tela inicial como um app.'],
-      ['Quanto custa?', 'Autônoma é grátis. Salão até 10 agendas: MIMO Pro, R$ 49,90 por mês com 3 profissionais inclusas e R$ 9,90 por cada uma a mais. Com 11 ou mais: MIMO Pro+, R$ 149,90 com 11 inclusas e R$ 7,90 por cada uma a mais.'],
+      ['Como funciona um sistema para salão de beleza?', 'Ele guarda num lugar só o que hoje fica espalhado: a agenda de cada profissional, os serviços com duração e preço, o histórico de cada cliente, as confirmações e os pagamentos. Na MIMO, a cliente marca pelo link do salão, a recepção vê tudo na agenda geral, o WhatsApp confirma e a comanda fecha o atendimento.'],
+      ['Cada profissional pode ter sua própria agenda?', 'Pode, e é assim que a MIMO funciona. O salão cadastra a profissional com os serviços, os horários e as permissões dela. Ela entra pelo link da equipe e vê a própria agenda no celular; o salão vê todas juntas, uma coluna por pessoa.'],
+      ['O cliente precisa instalar aplicativo?', 'Não. A cliente abre o link ou escaneia o QR, cria a conta em um minuto e marca pelo navegador. Se quiser, adiciona a MIMO à tela inicial do celular e ela funciona como um app, com aviso de confirmação e lembrete.'],
+      ['Funciona no celular?', 'Funciona no celular e no computador, sem instalar nada. A profissional usa a agenda dela no celular; a recepção prefere a agenda geral e a comanda no computador. É a mesma MIMO, com a tela certa para cada uso.'],
+      ['Consigo organizar vários profissionais?', 'Sim. O MIMO Pro atende salões de até 10 agendas e o MIMO Pro+ a partir de 11, sem limite. Cada profissional tem horário, serviços, bloqueios e regra de repasse próprios, e o salão enxerga o conjunto numa tela.'],
+      ['Posso cobrar sinal?', 'Pode. O salão habilita o sinal por Pix com valor fixo ou porcentagem, em todos os serviços ou só nos longos. A cliente vê a regra antes de pagar, o horário fica reservado quando o Pix entra, e o restante fecha na comanda.'],
+      ['Como evitar conflito de horários?', 'A MIMO só oferece horários que cabem: ela cruza o expediente do salão, o horário da profissional, a duração do serviço, os bloqueios e o intervalo entre atendimentos. Encaixe pelo balcão e agendamento pela cliente entram na mesma agenda, então não existe dois horários no mesmo lugar.'],
+      ['Quanto custa?', 'Autônoma é grátis. Salão até 10 agendas: MIMO Pro, R$ 49,90 por mês com 3 profissionais inclusas e R$ 9,90 por cada uma a mais. Com 11 ou mais: MIMO Pro+, R$ 149,90 com 11 inclusas e R$ 7,90 por cada adicional. O salão começa com 7 dias grátis, sem cartão.'],
+      ['O que preciso para começar?', 'O nome do salão, os serviços que você faz e quem atende. A configuração inicial da MIMO guia esses passos, puxa os serviços do catálogo com foto e deixa o link do salão pronto no mesmo dia. Dá para migrar aos poucos, com a agenda de papel ao lado.'],
     ],
-    artigos: ['como-organizar-agenda-salao-de-beleza', 'agenda-multi-profissional-salao', 'como-escolher-sistema-para-salao-de-beleza'],
+    relacionadas: ['/agenda-para-salao-de-beleza', '/sistema-de-agendamento', '/agendamento-online', '/agenda-multi-profissional', '/lista-de-espera-para-salao', '/confirmacao-de-agendamento-whatsapp', '/sinal-para-agendamento', '/sistema-de-comissao-para-salao', '/controle-de-clientes-para-salao', '/qr-code-para-salao-de-beleza'],
+    artigos: ['como-escolher-sistema-para-salao-de-beleza', 'como-organizar-agenda-salao-de-beleza', 'agenda-multi-profissional-salao'],
     cta: { rotulo: 'Criar meu salão', tipo: 'salao' },
   },
   {
-    rota: '/agenda-online-para-salao-de-beleza', tipo: 'principal', kicker: 'Agenda online para salão',
-    h1: ['Uma agenda que entende', 'como o salão', 'realmente funciona.'],
-    sub: 'Horários por profissional, duração de serviço, bloqueios, encaixes, remarcação, lista de espera e confirmação. Tudo o que a agenda de papel não consegue segurar.',
-    provas: ['Cliente marca sozinha', 'Confirmação pelo WhatsApp', 'Vaga cancelada não morre'],
-    foto: 'agenda-celular', alt: 'dois celulares com a agenda do dia e a lista de serviços da MIMO', bilhete: 'sua cliente marca sozinha',
-    mock: 'desktop', mockTitulo: 'O dia inteiro numa tela.', mockTexto: 'Colunas por profissional, cartões por horário, pedidos para confirmar e vagas abertas. Arraste para remarcar.',
-    seo_title: 'Agenda Online para Salão de Beleza | MIMO',
-    meta_description: 'Agenda online para salão de beleza: a cliente marca pelo seu QR ou link, o salão vê todas as profissionais, confirma pelo WhatsApp e preenche vagas com a lista de espera.',
-    blocos: [
-      { titulo: 'Horários que respeitam a duração', texto: 'Escova de 45 minutos ocupa 45 minutos. Progressiva de três horas ocupa três horas. A agenda só oferece um horário que cabe no serviço escolhido, com a profissional escolhida.', itens: ['Duração por serviço e por profissional', 'Intervalo mínimo entre atendimentos', 'Antecedência mínima para marcar', 'Horário de cada profissional, não só do salão'] },
-      { titulo: 'Bloqueios, pausas e encaixes', texto: 'Almoço, folga, curso e compromisso ficam bloqueados na agenda certa. Encaixe entra onde sobra espaço real, sem empurrar atraso para a próxima cliente.', itens: ['Bloqueio individual por profissional', 'Pausas recorrentes', 'Encaixe pelo balcão ou pelo app da profissional', 'Remarcar arrastando o cartão'] },
-      { titulo: 'Confirmação e lista de espera', texto: 'O pedido de horário pode ser aceito na hora, pela casa ou pela profissional, com prazo. Na véspera sai a confirmação pelo WhatsApp. Cancelou, a vaga aparece para quem estava esperando aquele serviço.', itens: ['Aceite automático, pela casa ou pela profissional', 'Confirmação e lembrete no WhatsApp', 'Lista de espera por serviço, profissional e período', 'Remarcação sem conversa perdida'] },
+    rota: '/agenda-para-salao-de-beleza', tipo: 'principal', kicker: 'Agenda para salão de beleza',
+    h1: ['Uma agenda para salão', 'que entende como', 'o salão funciona.'],
+    sub: 'Horário por profissional, duração real de cada serviço, bloqueios, encaixe, remarcação arrastando e confirmação pelo WhatsApp. Tudo o que o caderno e o grupo da equipe não seguram.',
+    provas: ['Uma coluna por profissional', 'Cliente marca sozinha', 'Confirmação no WhatsApp'],
+    foto: 'agenda-celular', alt: 'dois celulares com a agenda do dia e a lista de serviços da MIMO', bilhete: 'o dia inteiro, sem caça ao tesouro',
+    mock: 'desktop', mockTitulo: 'O dia inteiro numa tela.', mockTexto: 'Colunas por profissional, cartões por horário, pedidos para aceitar e vagas abertas. Arraste para remarcar.',
+    seo_title: 'Agenda para Salão de Beleza: online e por profissional | MIMO',
+    meta_description: 'Agenda para salão de beleza online: uma coluna por profissional, duração real por serviço, bloqueios e encaixes, cliente marcando pelo link, confirmação no WhatsApp e lista de espera. 7 dias grátis.',
+    atualizado_em: '2026-10-11',
+    rotina: [
+      { titulo: 'Agenda de papel, caneta e borracha', cena: 'Funciona até a segunda profissional. Depois vira rasura, horário em cima de horário e "quem anotou isso?".', resolve: 'Uma agenda com uma coluna por pessoa. Cada mudança fica registrada: quem marcou, quando e por onde.', ancora: 'agenda' },
+      { titulo: 'O grupo da equipe no WhatsApp', cena: '"Alguém tem 15h livre?" vira dez mensagens, duas respostas erradas e uma cliente esperando no balcão.', resolve: 'A recepção vê a disponibilidade de todas na mesma tela. A pergunta deixa de existir.', ancora: 'disponibilidade' },
+      { titulo: 'A química que não cabia', cena: 'Marcaram coloração às 17h numa agenda que fecha às 18h. A profissional descobre na hora, com a cliente sentada.', resolve: 'A agenda só oferece horário em que o serviço inteiro cabe, com o tempo daquela profissional.', ancora: 'duracao' },
+      { titulo: 'Remarcação de última hora', cena: 'A cliente pede outro dia, a recepção apaga, reescreve, avisa a profissional e esquece de avisar a cliente.', resolve: 'Arrasta o cartão. A cliente recebe o aviso. Pedido de troca pelo app entra como pedido, não como bagunça.', ancora: 'remarcar' },
     ],
-    funcoes: [['CalendarDays', 'Agenda geral', 'Todas as profissionais numa tela só.'], ['UserRound', 'Agenda por profissional', 'Cada uma com os próprios horários no app.'], ['PauseCircle', 'Bloqueios e pausas', 'Almoço, folga, férias, indisponível.'], ['CalendarPlus', 'Encaixes', 'Aproveite o espaço que sobrou.'], ['Clock', 'Lista de espera', 'Vaga cancelada vai para quem combina.'], ['MessageCircle', 'Confirmação', 'Pelo WhatsApp, ligada ao horário.']],
-    faixa: { titulo: 'Da agenda ao relacionamento.', texto: 'A agenda é onde tudo começa. A MIMO liga o horário ao histórico da cliente, à profissional que atendeu e ao pagamento.', foto: 'cliente', bilhete: 'rotina no lugar' },
+    modulos: [
+      { id: 'agenda', kicker: 'Duas visões', titulo: 'Agenda geral para a recepção, agenda própria para cada profissional.', texto: 'A recepção procura vaga na visão geral, com todas as colunas lado a lado. A profissional abre o app e vê só o dia dela, com os pedidos para aceitar e os avisos. As duas olham a mesma agenda, por isso nunca existem duas versões do mesmo dia.', itens: ['Colunas por profissional, cartões por horário', 'App da profissional com a própria agenda', 'Pedidos de horário por profissional ou pela casa', 'A dona que atende tem a agenda dela'], mock: 'desktop', links: [['/agenda-multi-profissional', 'Agenda multi-profissional em detalhes']] },
+      { id: 'duracao', kicker: 'Duração real', titulo: 'Escova de 45 minutos ocupa 45 minutos.', texto: 'Progressiva de três horas ocupa três. Cada serviço tem um tempo padrão, e cada profissional pode ter o seu. A cliente que escolhe corte e escova reserva o tempo somado, num horário só.', itens: ['Tempo por serviço', 'Tempo diferente por profissional', 'Vários serviços somados num horário', 'Intervalo entre atendimentos, se você quiser'], foto: 'cliente', alt: 'cliente marcando o próximo horário no celular com a profissional', links: [] },
+      { id: 'bloqueios', kicker: 'Bloqueios e encaixes', titulo: 'Almoço, folga e curso na agenda certa.', texto: 'Bloqueio individual por profissional e por período. Pausa recorrente para o almoço de cada uma. Encaixe entra onde sobra espaço real, pelo balcão ou pelo app da profissional, respeitando o tempo do serviço.', itens: ['Bloqueio por profissional e por período', 'Pausas recorrentes', 'Encaixe onde cabe, sem conflito', 'Horário de cada profissional, não só do salão'], foto: 'equipe', alt: 'dona do salão e duas profissionais olhando a agenda no tablet', links: [] },
+      { id: 'disponibilidade', kicker: 'Disponibilidade', titulo: 'Só aparece horário que existe.', texto: 'Para cada pedido, a MIMO cruza o expediente do salão, o horário da profissional, a duração do serviço, os bloqueios, o intervalo entre atendimentos e a antecedência mínima. A recepção e a cliente veem a mesma resposta.', itens: ['Expediente do salão e de cada profissional', 'Duração e intervalo considerados', 'Antecedência mínima para marcar', 'A mesma regra no balcão e no link da cliente'], mock: 'celular', links: [['/sistema-de-agendamento', 'As regras do agendamento']] },
+      { id: 'remarcar', kicker: 'Remarcar, confirmar, esperar', titulo: 'Arraste para remarcar. O resto a MIMO avisa.', texto: 'A confirmação sai na véspera pelo WhatsApp, e a resposta da cliente muda o cartão. Cancelou, a vaga aparece no quadro junto com as clientes da lista de espera que combinam com aquele serviço e horário.', itens: ['Remarcar arrastando o cartão', 'Confirmação e lembrete no WhatsApp', 'Pedido de troca pelo app da cliente', 'Lista de espera por serviço, profissional e período'], mock: 'whats', links: [['/confirmacao-de-agendamento-whatsapp', 'Confirmação pelo WhatsApp'], ['/lista-de-espera-para-salao', 'Lista de espera']] },
+      { id: 'cliente', kicker: 'A cliente marca sozinha', titulo: 'QR no balcão, link na bio, horário na agenda.', texto: 'A cliente entra pelo QR ou pelo link, escolhe serviço, profissional, dia e hora entre o que está livre, e pronto. O horário cai na mesma agenda que a recepção usa, com a origem registrada.', itens: ['Página do salão e de cada profissional', 'Aceite automático ou aprovação, como o salão preferir', 'Sem app para instalar', 'Sem marketplace: a cliente é sua'], mock: 'qr', links: [['/agendamento-online', 'Agendamento online']] },
+    ],
     faq: [
-      ['A cliente marca sozinha?', 'Sim. Ela entra pelo seu QR ou link, escolhe serviço, profissional, dia e horário entre os que estão livres de verdade.'],
-      ['Posso aprovar antes de confirmar?', 'Pode. O salão escolhe: confirmação automática, aprovação pela casa com prazo, ou cada profissional decide os próprios pedidos.'],
-      ['E quando a cliente cancela?', 'A vaga aparece no quadro do salão junto com as clientes da lista de espera que combinam com aquele serviço e horário.'],
-      ['Funciona com agenda de papel junto?', 'Funciona, mas o ganho vem de tirar a informação da cabeça e do papel. Encaixes feitos pelo balcão entram na mesma agenda que a cliente vê.'],
+      ['Funciona com a agenda de papel junto?', 'Funciona, e muitos salões começam assim. O ganho aparece quando o encaixe feito no balcão e o horário marcado pela cliente entram na mesma agenda; aí o papel vira cópia e some sozinho.'],
+      ['Como a agenda evita conflito de horário?', 'Ela cruza o expediente do salão, o horário de cada profissional, a duração do serviço, os bloqueios e o intervalo entre atendimentos. Só oferece horário em que o serviço cabe inteiro, para a recepção e para a cliente.'],
+      ['Quantas profissionais cabem na agenda?', 'Quantas o salão tiver. Até 10 agendas é o MIMO Pro; a partir de 11, o MIMO Pro+, sem limite. Cada uma com horário, serviços e bloqueios próprios.'],
+      ['A cliente vê a agenda do salão?', 'Ela vê só os horários livres do serviço e da profissional que escolheu. Nunca vê a agenda inteira nem o nome de outras clientes.'],
+      ['A profissional vê a agenda das colegas?', 'Só se o salão permitir. Por padrão cada uma vê a própria.'],
+      ['Dá para aprovar o horário antes de confirmar?', 'Dá. O salão escolhe: confirmação automática, aprovação pela casa com prazo, ou cada profissional decide os próprios pedidos.'],
+      ['Posso usar a agenda no celular?', 'Sim. A profissional usa a dela no celular; a recepção prefere a agenda geral no computador. É a mesma agenda, com a tela certa para cada uso.'],
     ],
-    artigos: ['como-organizar-agenda-salao-de-beleza', 'como-reduzir-horarios-vagos-salao', 'agenda-multi-profissional-salao'],
+    relacionadas: ['/sistema-para-salao-de-beleza', '/agenda-multi-profissional', '/lista-de-espera-para-salao', '/confirmacao-de-agendamento-whatsapp', '/agendamento-online', '/sinal-para-agendamento'],
+    artigos: ['como-organizar-agenda-salao-de-beleza', 'agenda-multi-profissional-salao', 'como-reduzir-horarios-vagos-salao'],
     cta: { rotulo: 'Começar agora', tipo: 'salao' },
   },
   {
@@ -410,3 +450,92 @@ PAGINAS_SEO.push(
     cta: { rotulo: 'Começar agora', tipo: null },
   },
 )
+
+// ---- as páginas de agendamento (3.1): o sistema e o canal da cliente ----
+PAGINAS_SEO.push(
+  {
+    rota: '/sistema-de-agendamento', tipo: 'principal', kicker: 'Sistema de agendamento',
+    h1: ['Sistema de agendamento', 'para salão, estúdio', 'e clínica de estética.'],
+    sub: 'Regras de agendamento que valem para a recepção e para a cliente: quem atende o quê, com que antecedência, com confirmação de quem, com sinal ou sem. A MIMO faz a agenda obedecer à operação.',
+    provas: ['Regras por serviço e profissional', 'Confirmação pelo WhatsApp', 'Sinal por Pix, se você quiser'],
+    foto: 'painel', alt: 'painel da MIMO no notebook com a agenda do salão e o app da cliente no celular', bilhete: 'a agenda obedece à operação',
+    mock: 'desktop', mockTitulo: 'O pedido chega. A regra decide.', mockTexto: 'Aceite automático, pela casa com prazo, ou pela profissional. Cada pedido mostra quem, o quê, com quem e quando.',
+    seo_title: 'Sistema de Agendamento Online para Salão e Estúdio de Beleza | MIMO',
+    meta_description: 'Sistema de agendamento para salão de beleza, estúdio, barbearia e clínica de estética: regras por serviço e profissional, antecedência e intervalo, aceite automático ou aprovação, confirmação no WhatsApp e sinal por Pix.',
+    atualizado_em: '2026-10-11',
+    rotina: [
+      { titulo: 'Marcaram sem perguntar para a profissional', cena: 'A recepção encaixou uma química às 17h. A profissional só faz química até as 15h, porque depois tem corte marcado em cima.', resolve: 'Cada serviço sabe quem executa e em que horário. O sistema não oferece o que a profissional não faz nem quando ela não pode.', ancora: 'regras' },
+      { titulo: 'A cliente marcou às 7h para as 8h', cena: 'Ninguém viu a mensagem. A cliente chegou, a profissional não.', resolve: 'Antecedência mínima por salão. Quem marca em cima da hora recebe o próximo horário possível, não um que já passou.', ancora: 'regras' },
+      { titulo: 'Confirmação na mão', cena: 'Alguém passa a tarde mandando "confirma seu horário?" e anotando as respostas num papel.', resolve: 'A confirmação sai sozinha na véspera, com serviço, profissional e hora. A resposta muda o cartão na agenda.', ancora: 'confirmacao' },
+      { titulo: 'Serviço longo que não aparece', cena: 'Duas horas reservadas, cadeira vazia, e nenhuma forma de cobrar o compromisso.', resolve: 'Sinal por Pix nos serviços em que faz sentido. O horário só segura quando o pagamento entra.', ancora: 'sinal' },
+    ],
+    modulos: [
+      { id: 'regras', kicker: 'As regras', titulo: 'Quem atende o quê, quando, com quanto tempo.', texto: 'Serviço com duração real e com a lista de quem executa. Horário por profissional, não só do salão. Intervalo entre atendimentos e antecedência mínima para marcar. A agenda só oferece o que respeita tudo isso, para a recepção e para a cliente.', itens: ['Serviço ligado a quem faz', 'Horário e bloqueios por profissional', 'Antecedência mínima e intervalo', 'Duração que pode variar por profissional'], mock: 'desktop', links: [['/agenda-para-salao-de-beleza', 'A agenda para salão']] },
+      { id: 'aceite', kicker: 'Aceite', titulo: 'Automático, pela casa ou pela profissional.', texto: 'O salão decide como um pedido vira horário confirmado: na hora, com aprovação da recepção dentro de um prazo, ou com cada profissional aceitando os próprios pedidos no app. Pedido sem resposta no prazo libera a vaga.', itens: ['Confirmação automática', 'Aprovação pela casa, com prazo', 'Cada profissional decide os dela', 'Pedido vencido não segura horário'], mock: 'profissional', links: [] },
+      { id: 'confirmacao', kicker: 'Confirmação', titulo: 'A véspera é da MIMO.', texto: 'A confirmação sai pelo número de WhatsApp do próprio salão, com serviço, profissional e hora. "Confirmar" muda o cartão; "reagendar" vira pedido. Lembrete perto do horário e aviso de cancelamento usam o mesmo fio.', itens: ['Mensagem com o contexto do atendimento', 'Resposta cai na agenda', 'Lembrete no prazo que o salão definir', 'Modelos editáveis'], mock: 'whats', links: [['/confirmacao-de-agendamento-whatsapp', 'Confirmação pelo WhatsApp']] },
+      { id: 'sinal', kicker: 'Sinal', titulo: 'Compromisso dos dois lados.', texto: 'Valor fixo ou porcentagem, cobrado por Pix na hora de marcar, em todos os serviços ou só nos longos. A regra de remarcação aparece antes do pagamento e fica registrada no atendimento. Não pagou no prazo, a vaga volta.', itens: ['Pix na hora de marcar', 'Fixo ou porcentagem', 'Política visível antes de pagar', 'Restante fecha na comanda'], mock: 'pagamento', links: [['/sinal-para-agendamento', 'Sinal para agendamento']] },
+      { id: 'cliente', kicker: 'A cliente', titulo: 'Entra pelo seu link. Marca sozinha. Sem app.', texto: 'QR no balcão, link na bio, código de seis letras. A cliente cria a conta em um minuto, vê os horários livres do serviço e da profissional que escolheu e marca. Remarca e cancela dentro da política do salão, sem ligar.', itens: ['Página do salão e da profissional', 'Horários livres de verdade', 'Remarcação pela cliente, dentro da regra', 'Histórico e avaliações no app dela'], mock: 'celular', links: [['/agendamento-online', 'Agendamento online']] },
+      { id: 'ramos', kicker: 'Para quem', titulo: 'Salão, barbearia, estúdio, clínica de estética, autônoma.', texto: 'A mesma regra serve para quem atende cabelo, unhas, cílios, sobrancelhas, estética e barba. Autônoma usa de graça com a própria agenda. Salão e clínica entram no MIMO Pro, com várias profissionais e a visão geral da recepção.', itens: ['Autônoma: grátis, agenda e link próprios', 'Salão até 10 agendas: MIMO Pro', 'Clínica ou salão maior: MIMO Pro+', 'Cílios e sobrancelhas com retorno por ciclo'], foto: 'equipe', alt: 'equipe de salão reunida olhando a agenda no tablet', links: [['/app-para-profissional-de-beleza', 'App para autônoma']] },
+    ],
+    planos: true,
+    faq: [
+      ['Serve para barbearia, clínica de estética ou estúdio?', 'Serve. A MIMO foi feita para beleza em geral: cabelo, unhas, cílios, sobrancelhas, estética e barba. O que muda é o catálogo de serviços e o ritmo de retorno de cada um.'],
+      ['Preciso de app para a cliente?', 'Não. A cliente marca pelo navegador, no link ou no QR do salão. Se quiser, adiciona a MIMO à tela inicial do celular e ela funciona como um app.'],
+      ['Posso aprovar antes de confirmar?', 'Pode. O salão escolhe entre confirmação automática, aprovação pela casa com prazo, ou cada profissional decidindo os próprios pedidos.'],
+      ['E se a cliente cancelar em cima da hora?', 'A vaga aparece no quadro do salão com as clientes da lista de espera que combinam com aquele serviço e horário. Se houver sinal, vale a política que a cliente viu antes de pagar.'],
+      ['Dá para limitar a antecedência?', 'Dá. Antecedência mínima para marcar e, se quiser, um prazo para o salão responder os pedidos.'],
+      ['Funciona para várias profissionais?', 'Sim. Cada uma com horário, serviços e bloqueios próprios; o salão vê todas numa tela. Até 10 agendas é o MIMO Pro; a partir de 11, o MIMO Pro+.'],
+      ['Quanto custa?', 'Autônoma é grátis. MIMO Pro: R$ 49,90 por mês com 3 profissionais inclusas e R$ 9,90 por cada uma a mais, até 10. MIMO Pro+: R$ 149,90 com 11 inclusas e R$ 7,90 por cada adicional. O salão começa com 7 dias grátis, sem cartão.'],
+    ],
+    relacionadas: ['/sistema-para-salao-de-beleza', '/agenda-para-salao-de-beleza', '/agendamento-online', '/confirmacao-de-agendamento-whatsapp', '/sinal-para-agendamento', '/lista-de-espera-para-salao'],
+    artigos: ['como-escolher-sistema-para-salao-de-beleza', 'como-reduzir-horarios-vagos-salao', 'sinal-no-agendamento-salao'],
+    cta: { rotulo: 'Começar agora', tipo: null },
+  },
+  {
+    rota: '/agendamento-online', tipo: 'principal', kicker: 'Agendamento online',
+    h1: ['Agendamento online:', 'a cliente marca sozinha', 'enquanto você atende.'],
+    sub: 'Link do salão, QR no balcão, página de cada profissional. A cliente escolhe serviço, profissional, dia e hora entre o que está livre de verdade, recebe a confirmação no WhatsApp e remarca sem ligar.',
+    provas: ['A qualquer hora, até às 23h', 'Sem app para instalar', 'Só horários que existem'],
+    foto: 'qr', alt: 'cliente apontando a câmera do celular para a plaquinha com o QR da MIMO no balcão', bilhete: 'escaneou, marcou',
+    mock: 'celular', mockTitulo: 'O que a cliente vê.', mockTexto: 'Serviços com foto e preço, a profissional, o dia e os horários livres. Três toques e está marcado.',
+    seo_title: 'Agendamento Online para Salão de Beleza: a cliente marca sozinha | MIMO',
+    meta_description: 'Agendamento online para salão de beleza e profissionais: a cliente marca pelo link ou QR, só vê horários livres, confirma pelo WhatsApp, remarca pelo app e paga sinal por Pix se o salão pedir. Sem instalar nada.',
+    atualizado_em: '2026-10-11',
+    rotina: [
+      { titulo: 'Pergunta às 22h, resposta no dia seguinte', cena: 'A cliente lembra do cabelo à noite, manda mensagem, e de manhã já marcou em outro lugar.', resolve: 'O link do salão responde na hora: ela vê os horários livres e marca às 22h, sem ninguém acordar.', ancora: 'horarios' },
+      { titulo: 'Oferecer um horário que já foi', cena: '"Tem 15h." A cliente aceita. Aí a recepção descobre que a profissional tinha bloqueado a tarde.', resolve: 'A cliente só vê o que está livre de verdade para aquela profissional e aquele serviço.', ancora: 'horarios' },
+      { titulo: 'O Instagram que virou caixa de entrada', cena: 'Direct, comentário, story: todo lugar vira pedido de horário, e nenhum deles é a agenda.', resolve: 'Link na bio. Quem chega por ali cai na página do salão e marca sozinha. O direct volta a ser conversa.', ancora: 'porta' },
+      { titulo: 'Remarcar depende de alguém atender', cena: 'A cliente quer trocar o dia, manda mensagem, a mensagem fica para depois, e o horário antigo continua ocupado.', resolve: 'Ela remarca pelo app dentro da política do salão. O horário antigo libera, o novo entra, a profissional é avisada.', ancora: 'cliente' },
+    ],
+    modulos: [
+      { id: 'porta', kicker: 'A porta de entrada', titulo: 'Link, QR ou código. Sempre o seu.', texto: 'Cada salão tem uma página própria, e cada profissional também. O QR vai no balcão e no espelho; o link vai na bio e no WhatsApp; o código de seis letras vai no cartão. A cliente entra pelo caminho de quem a chamou e fica vinculada ao seu salão, não a uma vitrine com concorrente ao lado.', itens: ['Página do salão com serviços e profissionais', 'Página de cada profissional', 'QR pronto para imprimir', 'Origem da cliente registrada'], mock: 'qr', links: [['/qr-code-para-salao-de-beleza', 'QR Code para salão']] },
+      { id: 'horarios', kicker: 'Horários', titulo: 'Só o que está livre de verdade.', texto: 'A cliente escolhe o serviço e a profissional. A MIMO cruza o horário dela, a duração do serviço, os bloqueios e o intervalo, e mostra o que sobrou. Corte e escova juntos reservam o tempo somado. Nada de horário que já foi.', itens: ['Serviço com foto, preço e duração', 'Profissional ou qualquer uma', 'Dia e hora entre os livres', 'Vários serviços num horário'], mock: 'celular', links: [['/agenda-para-salao-de-beleza', 'Como a agenda calcula']] },
+      { id: 'confirmacao', kicker: 'Confirmação', titulo: 'Marcou, recebeu no WhatsApp.', texto: 'O salão escolhe se o horário confirma na hora ou se passa por aprovação. Na véspera a confirmação sai pelo WhatsApp do salão, com serviço, profissional e hora; a resposta da cliente muda a agenda. Lembrete perto do horário.', itens: ['Aceite automático ou com aprovação', 'Confirmação na véspera', 'Lembrete no prazo do salão', 'Resposta cai na agenda'], mock: 'whats', links: [['/confirmacao-de-agendamento-whatsapp', 'Confirmação pelo WhatsApp']] },
+      { id: 'cliente', kicker: 'O app da cliente', titulo: 'Histórico, remarcação e fila de espera no celular dela.', texto: 'Depois de marcar, a cliente vê os próximos horários, o histórico, os comprovantes e as avaliações que deu. Remarca e cancela dentro da política do salão. Horário cheio? Entra na lista de espera e vê a posição.', itens: ['Próximos horários e histórico', 'Remarcar dentro da regra do salão', 'Lista de espera com posição', 'Avaliação depois do atendimento'], foto: 'cliente', alt: 'cliente conferindo o próximo horário no celular', links: [['/lista-de-espera-para-salao', 'Lista de espera']] },
+      { id: 'sinal', kicker: 'Sinal', titulo: 'Se o salão pedir, o Pix vem junto.', texto: 'Para serviços longos ou disputados, o salão pode exigir sinal. A cliente vê o valor, o restante e a regra antes de pagar; o horário fica reservado quando o Pix entra.', itens: ['Pix na hora de marcar', 'Fixo ou porcentagem', 'Regra clara antes de pagar', 'Vaga liberada se vencer'], mock: 'pagamento', links: [['/sinal-para-agendamento', 'Sinal para agendamento']] },
+      { id: 'origem', kicker: 'Sem marketplace', titulo: 'A cliente é sua. A MIMO só organiza.', texto: 'Ninguém entra na MIMO do nada: a cliente chega pelo seu QR, pelo seu link ou por indicação. Ela não vê outros salões, e a profissional que a trouxe mantém o vínculo. O que o salão ganha é dado para saber de onde vem a agenda.', itens: ['Sem busca de salões concorrentes', 'Vínculo com quem trouxe', 'Uma cliente, vários negócios, sem misturar', 'Dados do seu salão são seus'], foto: 'profissional', alt: 'profissional de beleza no salão com o celular na mão', links: [['/controle-de-clientes-para-salao', 'Controle de clientes']] },
+    ],
+    faq: [
+      ['A cliente pode marcar a qualquer hora?', 'Pode. O link funciona o dia inteiro. O salão define a antecedência mínima, então o que aparece para ela sempre respeita o tempo de preparo.'],
+      ['Precisa instalar aplicativo?', 'Não. Abre no navegador, cria a conta em um minuto e marca. Se quiser, adiciona à tela inicial do celular e vira um app, com aviso de confirmação e lembrete.'],
+      ['E se ela marcar errado?', 'Ela remarca ou cancela pelo app, dentro da política do salão. O salão também pode mover o horário arrastando o cartão, e ela recebe o aviso.'],
+      ['Como ela encontra o meu salão?', 'Pelo seu QR, pelo seu link ou por indicação. A MIMO não é marketplace: a cliente vê só a agenda de quem a chamou.'],
+      ['Posso limitar quando ela pode marcar?', 'Pode: antecedência mínima, horário de cada profissional, bloqueios e, se quiser, aprovação antes de confirmar.'],
+      ['Ela pode remarcar ou cancelar sozinha?', 'Pode, dentro da regra que o salão definiu. Pedido de troca entra como pedido; o horário antigo só libera quando o novo é aceito.'],
+      ['Quem já está no meu WhatsApp precisa se cadastrar?', 'Precisa criar a conta uma vez, pelo seu link. Dali em diante o salão fica salvo no celular dela e marcar é um toque.'],
+    ],
+    relacionadas: ['/sistema-para-salao-de-beleza', '/sistema-de-agendamento', '/agenda-para-salao-de-beleza', '/qr-code-para-salao-de-beleza', '/confirmacao-de-agendamento-whatsapp', '/sinal-para-agendamento'],
+    artigos: ['como-reduzir-horarios-vagos-salao', 'como-fazer-clientes-voltarem-salao', 'sinal-no-agendamento-salao'],
+    cta: { rotulo: 'Começar agora', tipo: null },
+  },
+)
+
+// ---- o que toda página tem, mesmo sem dizer: pai (para o rastro de
+// migalhas), páginas relacionadas (o "veja também") e data ----
+const HUB = '/sistema-para-salao-de-beleza'
+const HUB_AUTONOMA = '/app-para-profissional-de-beleza'
+for (const p of PAGINAS_SEO) {
+  if (!('pai' in p)) p.pai = p.rota === HUB || p.rota === HUB_AUTONOMA ? null : p.tipo === 'profissao' ? HUB_AUTONOMA : HUB
+  if (!p.relacionadas) p.relacionadas = (p.tipo === 'profissao' ? [HUB_AUTONOMA, '/agenda-para-salao-de-beleza', '/agendamento-online', '/sinal-para-agendamento'] : [HUB, '/agenda-para-salao-de-beleza', '/agendamento-online', '/lista-de-espera-para-salao']).filter((r) => r !== p.rota)
+  if (!p.atualizado_em) p.atualizado_em = '2026-09-23'
+}

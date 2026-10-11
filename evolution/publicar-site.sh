@@ -115,8 +115,17 @@ if [ "${1:-}" != '--so-build' ]; then
   git pull --ff-only
 fi
 npm ci --no-audit --no-fund >/dev/null
-npm run build 2>&1 | tail -2
+npm run build 2>&1 | tail -3
 [ -f dist/index.html ] || { vermelho 'O build não gerou dist/index.html.'; exit 1; }
+# As páginas estáticas e o sitemap são o que o Google lê (scripts/paginas-estaticas.mjs):
+# um index.html por rota com título, descrição e canonical próprios. Sem elas o site
+# abre, mas toda rota entrega o título da home. Não se publica pela metade.
+if [ ! -f dist/sitemap.xml ]; then
+  amarelo '  o build não deixou dist/sitemap.xml: gerando as páginas estáticas de novo…'
+  node scripts/paginas-estaticas.mjs
+fi
+[ -f dist/sitemap.xml ] && [ -f dist/_home.html ] || { vermelho 'Sem as páginas estáticas (dist/sitemap.xml, dist/_home.html). Rode: node scripts/paginas-estaticas.mjs'; exit 1; }
+verde "  SEO: $(grep -c '<loc>' dist/sitemap.xml) URLs no sitemap, páginas estáticas no lugar"
 # para não restar dúvida sobre O QUE foi publicado
 verde "  publicado o commit $(git rev-parse --short HEAD) — $(git log -1 --format=%s | cut -c1-60)"
 verde "  versão do app: $(grep -o "VERSAO = '[^']*'" src/lib/versao.js | cut -d"'" -f2)"
@@ -151,7 +160,13 @@ for i in 1 2 3 4 5 6; do
   sleep 5
 done
 case "$CODIGO" in
-  200) verde "  https://${DOMINIO_SITE} está no ar." ;;
+  200) verde "  https://${DOMINIO_SITE} está no ar."
+       # o sitemap tem de sair como XML; se vier HTML, o Caddy está devolvendo o index.html no lugar
+       TIPO=$(curl -s -o /dev/null -w '%{content_type}' -m 10 "https://${DOMINIO_SITE}/sitemap.xml" || true)
+       case "$TIPO" in
+         *xml*) verde '  sitemap.xml no ar' ;;
+         *) amarelo "  sitemap.xml respondeu '$TIPO' (esperava xml): confira dist/sitemap.xml e o Caddy" ;;
+       esac ;;
   000) amarelo '  Ainda não respondeu. Se o DNS acabou de mudar, espere um minuto e abra no navegador.'
        echo '  Log:  docker compose logs caddy --tail 30' ;;
   *)   amarelo "  Respondeu $CODIGO. Veja:  docker compose logs caddy --tail 30" ;;

@@ -8,6 +8,7 @@ import { NavSite, PeSite, Foto, Coracao, MarcaCartaz, Cabeca, useRevelar, comeca
 import { PalcoCelular, MockDesktop, MockProfissional, MockRetorno, MockEspera, MockWhats, MockPagamento, MockQr, VINCULOS } from '../../components/site/Mocks'
 import { RotinaCartas, Historias, AntesDepois, ProdutoReal, Tamanhos, Simulador, CapturaLead, Confianca, PorQue } from '../../components/site/Secoes'
 import '../../landing.css'
+import { TITULO, DESCRICAO, FAQ, JSON_LD } from '../../conteudo/home'
 
 // A porta da rua: mimo.com.vc para quem ainda não é de casa. Fala com a
 // dona do salão e com a profissional autônoma; a cliente entra pelo
@@ -18,17 +19,7 @@ import '../../landing.css'
 // preço → ação. Os mocks são o produto de verdade, em HTML e CSS.
 // O logo é sempre /mimo-logo.svg: trocou o arquivo, trocou em tudo.
 
-const TITULO = 'MIMO | Sistema para Salão de Beleza e Agenda Online'
-const DESCRICAO = 'Organize agenda, clientes, equipe, WhatsApp, retorno e pagamentos com a MIMO. Sistema para salão de beleza e profissional autônoma. Plano grátis para autônomas.'
-
-const FAQ = [
-  ['A MIMO serve para salão com várias profissionais?', 'Sim. O salão cadastra as profissionais, define serviços, horários e agendas individuais, e enxerga tudo numa tela só. Cada profissional tem o app dela para ver os próprios horários.'],
-  ['A profissional autônoma paga mensalidade?', 'Não. A conta de autônoma é gratuita: uma agenda, serviços, horários, clientes, QR e link próprios.'],
-  ['Quem configura a agenda da profissional que trabalha no salão?', 'O próprio salão. Ele define vínculo, serviços, horários e permissões. A profissional entra pelo link da equipe e já encontra tudo pronto.'],
-  ['A cliente precisa procurar meu salão num marketplace?', 'Não. Ninguém entra na MIMO do nada: a cliente chega pelo seu QR, código, link ou convite, e passa a ver só a agenda de quem a chamou.'],
-  ['Dá para cobrar sinal no agendamento?', 'Dá, quando o salão habilita. Você escolhe sinal fixo ou porcentagem do serviço, ou pagamento completo. O status financeiro fica ligado ao próprio atendimento.'],
-  ['Precisa baixar aplicativo na loja?', 'Não. A MIMO funciona pelo navegador e pode ser adicionada à tela inicial do celular, com aviso e tudo, como um aplicativo instalado.'],
-]
+// title, description, FAQ e dados estruturados da home: src/conteudo/home.js
 
 const PROFISSOES = ['manicure', 'cabeleireira', 'lash designer', 'designer de sobrancelhas', 'maquiadora', 'barbeira', 'esteticista', 'nail designer', 'trancista', 'depiladora', 'colorista', 'massoterapeuta']
 const CATEGORIAS = [[Hand, 'unhas'], [Scissors, 'cabelo'], [Palette, 'make'], [Eye, 'sobrancelha'], [Flower2, 'estética']]
@@ -43,11 +34,11 @@ const CARTAZES = [
 ]
 
 const GRUPOS = [
-  { Icone: CalendarDays, nome: 'Agenda', itens: ['Agenda geral', 'Agenda por profissional', 'Bloqueios', 'Pausas', 'Encaixes', 'Múltiplos serviços', 'Lista de espera'] },
-  { Icone: Heart, nome: 'Clientes', itens: ['Histórico', 'Origem', 'Retorno', 'Preferências', 'Avaliações'] },
-  { Icone: Users, nome: 'Equipe', itens: ['Vínculos', 'Serviços', 'Horários', 'Permissões', 'Comissões'] },
-  { Icone: MessageCircle, nome: 'Comunicação', itens: ['WhatsApp', 'Confirmação', 'Lembrete', 'Reagendamento', 'Pós-atendimento', 'Retorno'] },
-  { Icone: Wallet, nome: 'Financeiro', itens: ['Sinal', 'Pagamentos', 'Comanda', 'Caixa', 'Comissões'] },
+  { Icone: CalendarDays, nome: 'Agenda', rota: '/agenda-para-salao-de-beleza', itens: ['Agenda geral', 'Agenda por profissional', 'Bloqueios', 'Pausas', 'Encaixes', 'Múltiplos serviços', 'Lista de espera'] },
+  { Icone: Heart, nome: 'Clientes', rota: '/controle-de-clientes-para-salao', itens: ['Histórico', 'Origem', 'Retorno', 'Preferências', 'Avaliações'] },
+  { Icone: Users, nome: 'Equipe', rota: '/agenda-multi-profissional', itens: ['Vínculos', 'Serviços', 'Horários', 'Permissões', 'Comissões'] },
+  { Icone: MessageCircle, nome: 'Comunicação', rota: '/confirmacao-de-agendamento-whatsapp', itens: ['WhatsApp', 'Confirmação', 'Lembrete', 'Reagendamento', 'Pós-atendimento', 'Retorno'] },
+  { Icone: Wallet, nome: 'Financeiro', rota: '/sistema-de-comissao-para-salao', itens: ['Sinal', 'Pagamentos', 'Comanda', 'Caixa', 'Comissões'] },
 ]
 
 const ARTIGOS = [
@@ -55,25 +46,6 @@ const ARTIGOS = [
   ['Gestão', 'Como reduzir horários vagos no salão', 'Cancelamento, lista de espera, retorno e ocupação: onde o salão perde agenda sem perceber.', 'como-reduzir-horarios-vagos-salao'],
   ['Clientes', 'Como fazer clientes voltarem ao salão', 'Retorno, manutenção e relacionamento sem depender da memória da profissional.', 'como-fazer-clientes-voltarem-salao'],
 ]
-
-const JSON_LD = {
-  '@context': 'https://schema.org',
-  '@graph': [
-    { '@type': 'Organization', '@id': 'https://mimo.com.vc/#organization', name: 'MIMO', url: 'https://mimo.com.vc/', logo: 'https://mimo.com.vc/mimo-logo.svg', description: 'Plataforma de agenda, operação e relacionamento para negócios de beleza.' },
-    { '@type': 'WebSite', '@id': 'https://mimo.com.vc/#website', url: 'https://mimo.com.vc/', name: 'MIMO', publisher: { '@id': 'https://mimo.com.vc/#organization' }, inLanguage: 'pt-BR' },
-    {
-      '@type': 'SoftwareApplication', '@id': 'https://mimo.com.vc/#software', name: 'MIMO', url: 'https://mimo.com.vc/',
-      applicationCategory: 'BusinessApplication', operatingSystem: 'Web, iOS, Android', inLanguage: 'pt-BR', description: DESCRICAO,
-      offers: [
-        { '@type': 'Offer', name: 'MIMO Autônoma', price: '0', priceCurrency: 'BRL' },
-        { '@type': 'Offer', name: 'MIMO Pro', price: '49.90', priceCurrency: 'BRL', description: 'Salão com até 10 agendas: até 3 profissionais inclusas, mais R$ 9,90 por profissional adicional.' },
-        { '@type': 'Offer', name: 'MIMO Pro+', price: '149.90', priceCurrency: 'BRL', description: 'Salão com 11 ou mais agendas: até 11 profissionais inclusas, mais R$ 7,90 por profissional a partir da 12ª, sem limite.' },
-      ],
-      publisher: { '@id': 'https://mimo.com.vc/#organization' },
-    },
-    { '@type': 'FAQPage', '@id': 'https://mimo.com.vc/#faq', mainEntity: FAQ.map(([q, a]) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } })) },
-  ],
-}
 
 // coração de pincel, como nos cartazes da marca
 export default function Landing() {
@@ -164,7 +136,7 @@ export default function Landing() {
           <div className="ld-wrap">
             <Cabeca kicker="Para salões" titulo={['O salão vê a operação inteira.', 'Cada profissional vê o que precisa.']}>
               O salão configura equipe, serviços, horários, vínculos e regras. Cada profissional pode ter sua própria agenda dentro da estrutura do salão, sem perder a visão geral da operação.
-            </Cabeca>
+             <Link className="ld-link" to="/sistema-para-salao-de-beleza">Conhecer o sistema para salão →</Link></Cabeca>
             <div className="ld-rv"><MockDesktop /></div>
             <div className="ld-quatro">
               {[[LayoutGrid, 'Agenda geral', 'Veja todo o salão em uma única tela.'], [UserRound, 'Agenda por profissional', 'Cada pessoa com seus próprios horários e serviços.'], [PauseCircle, 'Bloqueios e pausas', 'Almoço, folga, férias ou horário indisponível.'], [CalendarPlus, 'Encaixes', 'Aproveite horários livres sem bagunçar a agenda.']].map(([Ic, t, d], i) => (
@@ -180,7 +152,7 @@ export default function Landing() {
             <div>
               <Cabeca kicker="Equipe e vínculos" titulo={['Cada profissional trabalha de um jeito.', 'A MIMO acompanha isso.']}>
                 O salão cadastra a profissional e define como ela trabalha dentro da operação. Serviços, horários, agenda, acesso e permissões são configurados pelo próprio salão.
-              </Cabeca>
+               <Link className="ld-link" to="/agenda-multi-profissional">Ver a agenda multi-profissional →</Link></Cabeca>
               <div className="ld-vinculos ld-rv">
                 {VINCULOS.map((v) => <span className="ld-chip" key={v}>{v}</span>)}
               </div>
@@ -197,7 +169,7 @@ export default function Landing() {
             <div>
               <Cabeca kicker="Clientes e retorno" titulo={['A agenda termina.', 'O relacionamento continua.']}>
                 A MIMO ajuda o salão a lembrar quem deveria voltar, quem está há muito tempo sem atendimento e quem possui histórico com determinada profissional.
-              </Cabeca>
+               <Link className="ld-link" to="/controle-de-clientes-para-salao">Como funciona o controle de clientes →</Link></Cabeca>
               <ul className="ld-checks ld-rv"><li>Manutenção no prazo certo</li><li>Recorrência sem depender da memória</li><li>Histórico por profissional e por serviço</li><li>Encontre quem deveria voltar, sem procurar conversa antiga</li></ul>
             </div>
           </div>
@@ -209,7 +181,7 @@ export default function Landing() {
             <div>
               <Cabeca kicker="Lista de espera" titulo={['Cancelou?', 'A vaga não precisa morrer junto.']}>
                 Quando um horário fica livre, a MIMO ajuda o salão a encontrar clientes da lista de espera compatíveis com aquele serviço, profissional e período.
-              </Cabeca>
+               <Link className="ld-link" to="/lista-de-espera-para-salao">A lista de espera em detalhes →</Link></Cabeca>
             </div>
             <div className="ld-rv"><MockEspera /></div>
           </div>
@@ -222,7 +194,7 @@ export default function Landing() {
             <div>
               <Cabeca kicker="WhatsApp" titulo={['O WhatsApp continua sendo WhatsApp.', 'Só deixa de ser bagunça.']}>
                 Confirmação, lembrete, cancelamento, reagendamento e retorno acompanham o contexto real da agenda. Confirme um horário sem procurar conversa antiga.
-              </Cabeca>
+               <Link className="ld-link" to="/confirmacao-de-agendamento-whatsapp">Confirmação pelo WhatsApp, passo a passo →</Link></Cabeca>
             </div>
           </div>
         </section>
@@ -233,7 +205,7 @@ export default function Landing() {
             <div>
               <Cabeca kicker="Pagamentos" titulo={['Agenda e pagamento', 'falando a mesma língua.']}>
                 Quando habilitado pelo salão, o agendamento pode trabalhar com sinal ou pagamento completo. O status financeiro acompanha o próprio atendimento.
-              </Cabeca>
+               <Link className="ld-link" to="/sinal-para-agendamento">Como funciona o sinal por Pix →</Link></Cabeca>
             </div>
             <div className="ld-rv"><MockPagamento /></div>
           </div>
@@ -246,7 +218,7 @@ export default function Landing() {
             <div>
               <Cabeca kicker="QR Code" titulo={['Do balcão para a agenda', 'em segundos.']}>
                 Coloque o QR da MIMO no balcão, espelho, cartão, panfleto ou Instagram. A cliente escaneia, entra no ambiente do salão e começa o agendamento.
-              </Cabeca>
+               <Link className="ld-link" to="/qr-code-para-salao-de-beleza">O QR Code para salão →</Link></Cabeca>
               <div className="ld-categorias ld-categorias-esq ld-rv" aria-hidden="true">
                 {CATEGORIAS.map(([Ic, n]) => <span key={n}><i><Ic size={24} /></i>{n}</span>)}
               </div>
@@ -308,7 +280,7 @@ export default function Landing() {
             <div>
               <Cabeca kicker="Para autônomas" titulo={['Trabalha sozinha?', 'Você não precisa de um sistema gigante.']}>
                 A profissional autônoma encontra na MIMO o essencial para organizar serviços, horários e clientes. Sem menus de equipe que ela não usa. Sem pagar por estrutura que não precisa.
-              </Cabeca>
+               <Link className="ld-link" to="/app-para-profissional-de-beleza">O app para autônoma →</Link></Cabeca>
               <div className="ld-profissoes ld-rv" aria-label="Para quem é">
                 <span className="ld-profissoes-titulo">Feita para</span>
                 {PROFISSOES.map((p) => <span className="ld-chip" key={p}>{p}</span>)}
@@ -384,9 +356,9 @@ export default function Landing() {
           <div className="ld-wrap">
             <Cabeca kicker="Funcionalidades" titulo={['Tudo o que a rotina pede,', 'agrupado do jeito que ela acontece.']} centro />
             <div className="ld-grupos">
-              {GRUPOS.map(({ Icone, nome, itens }, i) => (
+              {GRUPOS.map(({ Icone, nome, itens, rota }, i) => (
                 <article className="ld-grupo ld-rv" key={nome} style={{ transitionDelay: `${i * 50}ms` }}>
-                  <div className="ld-grupo-topo"><div className="ld-ico"><Icone size={20} /></div><h3>{nome}</h3></div>
+                  <div className="ld-grupo-topo"><div className="ld-ico"><Icone size={20} /></div><h3>{rota ? <Link to={rota}>{nome}</Link> : nome}</h3></div>
                   <ul>{itens.map((it) => <li key={it}>{it}</li>)}</ul>
                 </article>
               ))}

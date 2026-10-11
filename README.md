@@ -132,6 +132,29 @@ A lógica que não depende de tela (catálogo, formatação, planos, telefone,
 horários) mora em `packages/core` (`@mimo/core`) e é compartilhada pelos dois:
 a web importa pelos arquivos de `src/lib/*.js`, que só reexportam.
 
+## SEO: onde mora e como chega no Google
+
+- **Conteúdo** em `src/conteudo/`: `paginasSeo.js` (uma página por intenção
+  de busca: hub `/sistema-para-salao-de-beleza`, agenda, sistema de
+  agendamento, agendamento online, páginas por problema e por profissão),
+  `artigos.js` (o blog) e `home.js` (title, description e dados
+  estruturados da home). A **Plataforma** edita title, description, capa e
+  os artigos nas tabelas `seo_pages` e `blog_posts`; o banco vale, o código
+  é a reserva.
+- **O que o robô lê**: `npm run build` roda `scripts/paginas-estaticas.mjs`,
+  que grava um `dist/<rota>/index.html` por página (title, description,
+  canonical, Open Graph e JSON-LD), `dist/_home.html` (a home com canonical,
+  servida pelo Caddy em `/`) e `dist/sitemap.xml`. O `publicar-site.sh` não
+  publica sem esses arquivos. Confira no ar: `curl -sI https://mimo.com.vc/sitemap.xml`.
+- **Endereço único por intenção**: os antigos viram 301 no Caddy
+  (`evolution/Caddyfile`, bloco "SEO"); `pro.mimo.com.vc` sai do índice
+  (`X-Robots-Tag` e `robots-pro.txt`).
+- **Malha interna**: rodapé com todas as soluções, landing linkando cada
+  hub, páginas com "veja também", artigos com links no texto. Mudança de
+  texto de artigo ou de título de página vai para o banco por migração de
+  dados (ex.: `supabase/149_seo_malha.sql`), que só atualiza o que ainda
+  está igual à semente: o que a Plataforma editou fica.
+
 ## Estrutura
 
 ```

@@ -91,11 +91,12 @@ export function useRevelar(chave = true) {
   return ref
 }
 
-export function Cabeca({ kicker, titulo, children, centro = false, claro = false }) {
+// como='h1' quando o cabeçalho é o título da página (blog, planos, sobre): toda página precisa de um H1
+export function Cabeca({ kicker, titulo, children, centro = false, claro = false, como: Tag = 'h2' }) {
   return (
     <div className={'ld-cabeca ld-rv' + (centro ? ' ld-centro' : '') + (claro ? ' ld-cabeca-clara' : '')}>
       <span className="ld-kicker">{kicker}</span>
-      <h2>{titulo.map((l, i) => <span key={i}>{l}</span>)}</h2>
+      <Tag>{titulo.map((l, i) => <span key={i}>{l}</span>)}</Tag>
       {children && <p>{children}</p>}
     </div>
   )
@@ -186,6 +187,30 @@ export function NavSite() {
   )
 }
 
+// as soluções e as páginas por profissão, no rodapé de todas as páginas:
+// é por aqui que o Google (e a dona do salão) chegam em cada uma
+const SOLUCOES = [
+  ['/sistema-para-salao-de-beleza', 'Sistema para salão de beleza'],
+  ['/agenda-para-salao-de-beleza', 'Agenda para salão'],
+  ['/sistema-de-agendamento', 'Sistema de agendamento'],
+  ['/agendamento-online', 'Agendamento online'],
+  ['/agenda-multi-profissional', 'Agenda multi-profissional'],
+  ['/lista-de-espera-para-salao', 'Lista de espera'],
+  ['/confirmacao-de-agendamento-whatsapp', 'Confirmação pelo WhatsApp'],
+  ['/sinal-para-agendamento', 'Sinal por Pix'],
+  ['/sistema-de-comissao-para-salao', 'Comissão e repasse'],
+  ['/controle-de-clientes-para-salao', 'Controle de clientes'],
+  ['/qr-code-para-salao-de-beleza', 'QR Code no balcão'],
+]
+const PROFISSIONAIS = [
+  ['/app-para-profissional-de-beleza', 'App para autônoma'],
+  ['/agenda-para-manicure', 'Agenda para manicure'],
+  ['/agenda-para-cabeleireira', 'Agenda para cabeleireira'],
+  ['/agenda-para-lash-designer', 'Agenda para lash designer'],
+  ['/agenda-para-designer-de-sobrancelhas', 'Agenda para designer de sobrancelhas'],
+  ['/agenda-para-esteticista', 'Agenda para esteticista'],
+]
+
 export function PeSite() {
   const entrar = entrarEm()
   return (
@@ -195,14 +220,26 @@ export function PeSite() {
             <Logo altura={44} />
             <p>Beleza, organização e relacionamento.</p>
           </div>
-          <nav className="ld-pe-links" aria-label="Rodapé">
-            <Link to="/termos">Termos de uso</Link>
-            <Link to="/privacidade">Privacidade</Link>
-            <Link to="/contato">Contato</Link>
-            <Link to="/sobre">Sobre</Link>
-            <Link to="/blog">Blog</Link>
-            <Link to="/entrar">Sou cliente</Link>
-            <a href={entrar}>Sou profissional</a>
+          <nav className="ld-pe-colunas" aria-label="Rodapé">
+            <div>
+              <strong>Soluções</strong>
+              {SOLUCOES.map(([rota, nome]) => <Link key={rota} to={rota}>{nome}</Link>)}
+            </div>
+            <div>
+              <strong>Para profissionais</strong>
+              {PROFISSIONAIS.map(([rota, nome]) => <Link key={rota} to={rota}>{nome}</Link>)}
+            </div>
+            <div>
+              <strong>MIMO</strong>
+              <Link to="/planos">Planos</Link>
+              <Link to="/sobre">Sobre</Link>
+              <Link to="/blog">Blog</Link>
+              <Link to="/contato">Contato</Link>
+              <Link to="/termos">Termos de uso</Link>
+              <Link to="/privacidade">Privacidade</Link>
+              <Link to="/entrar">Sou cliente</Link>
+              <a href={entrar}>Sou profissional</a>
+            </div>
           </nav>
           <div className="ld-pe-fim">mimo.com.vc<br />© {new Date().getFullYear()} MIMO Desenvolvimento Ltda</div>
         </div>

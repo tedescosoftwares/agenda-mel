@@ -22,7 +22,7 @@ export default function SessaoApp() {
       if (vivo) navigate(ir, { replace: true })
     })()
     return () => { vivo = false }
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps -- roda uma vez, na chegada
 
   return (
     <div className="page-center">

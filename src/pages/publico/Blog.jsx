@@ -34,7 +34,7 @@ export default function Blog() {
         <section className="sp-topo">
           <div className="ld-wrap">
             <nav className="sp-migalhas" aria-label="Você está em"><Link to="/">Início</Link><span>›</span>{slug ? <><Link to="/blog">Blog</Link><span>›</span><b>{categoria?.nome || slug}</b></> : <b>Blog</b>}</nav>
-            <Cabeca kicker={slug ? 'Categoria' : 'Blog MIMO'} titulo={slug ? [categoria?.nome || 'Categoria'] : ['O que a dona do salão', 'já está perguntando.']}>{slug ? (categoria?.descricao || '') : 'Guias curtos, ligados à rotina. Úteis mesmo para quem ainda não usa a MIMO.'}</Cabeca>
+            <Cabeca como="h1" kicker={slug ? 'Categoria' : 'Blog MIMO'} titulo={slug ? [categoria?.nome || 'Categoria'] : ['O que a dona do salão', 'já está perguntando.']}>{slug ? (categoria?.descricao || '') : 'Guias curtos, ligados à rotina. Úteis mesmo para quem ainda não usa a MIMO.'}</Cabeca>
             <div className="sp-categorias">
               <Link to="/blog" className={'ld-chip' + (!slug ? ' on' : '')}>Todos</Link>
               {categorias.map((c) => <Link key={c.slug} to={`/blog/categoria/${c.slug}`} className={'ld-chip' + (slug === c.slug ? ' on' : '')}>{c.nome}</Link>)}

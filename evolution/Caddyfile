@@ -72,6 +72,31 @@
 	@assets path /assets/*
 	header @assets Cache-Control "public, max-age=31536000, immutable"
 
+	# ---- SEO (3.1) ----
+	# um endereço só por intenção de busca: os antigos e os atalhos viram 301
+	redir /agenda-online-para-salao-de-beleza /agenda-para-salao-de-beleza permanent
+	redir /software-para-salao-de-beleza /sistema-para-salao-de-beleza permanent
+	redir /landing / permanent
+
+	# a home tem um index.html próprio (dist/_home.html, gerado no build) com
+	# canonical e dados estruturados; o index.html comum continua sendo o do
+	# app, que atende qualquer outra rota
+	@home {
+		host {$DOMINIO_SITE:localhost}
+		path /
+	}
+	rewrite @home /_home.html
+
+	# pro.mimo.com.vc é a porta de quem atende; o site público mora em
+	# mimo.com.vc. Sem isto o robô veria o site inteiro duplicado aqui.
+	@pro host pro.{$DOMINIO_SITE:localhost}
+	header @pro X-Robots-Tag "noindex, nofollow"
+	@pro_robots {
+		host pro.{$DOMINIO_SITE:localhost}
+		path /robots.txt
+	}
+	rewrite @pro_robots /robots-pro.txt
+
 	# Prévia bonita no WhatsApp e no Instagram. Os robôs que montam a
 	# prévia de um link não rodam JavaScript: para eles, /p/<slug> vai
 	# buscar numa função do Supabase um HTML pequeno com a foto, o nome

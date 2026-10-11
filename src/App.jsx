@@ -84,7 +84,6 @@ import RedeDeProtecao from "./components/RedeDeProtecao";
 import ConviteEquipe from "./pages/publico/ConviteEquipe";
 import AtivarAcesso from "./pages/publico/AtivarAcesso";
 import EmailConfirmado from "./pages/publico/EmailConfirmado";
-import Landing from "./pages/publico/Landing";
 import PaginaSeo from "./pages/publico/PaginaSeo";
 import Blog from "./pages/publico/Blog";
 import Artigo from "./pages/publico/Artigo";
@@ -155,7 +154,6 @@ export default function App() {
             <Route path="/estilo" element={<Estilo />} />
 
             <Route path="/" element={<Splash />} />
-            <Route path="/landing" element={<Landing />} />
             {/* o site público: páginas por intenção de busca, blog e institucionais (116) */}
             {PAGINAS_SEO.map((p) => <Route key={p.rota} path={p.rota} element={<PaginaSeo />} />)}
             <Route path="/blog" element={<Blog />} />

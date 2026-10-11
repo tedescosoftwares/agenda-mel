@@ -24,7 +24,7 @@ function Pagina({ caminho, titulo, descricao, migalha, children }) {
 export function Planos() {
   return (
     <Pagina caminho="/planos" migalha="Planos" titulo="Planos e preços | MIMO" descricao="Autônoma grátis. MIMO Pro por R$ 49,90/mês até 3 profissionais, mais R$ 9,90 por profissional até 10. MIMO Pro+ por R$ 149,90/mês para 11 ou mais, mais R$ 7,90 por profissional.">
-      <Cabeca kicker="Planos" titulo={['Preço que o salão entende', 'sem pedir orçamento.']}>Três planos, uma regra: você paga pelas agendas profissionais que realmente utiliza. Recepção, gerente e conta administrativa não contam como agenda.</Cabeca>
+      <Cabeca como="h1" kicker="Planos" titulo={['Preço que o salão entende', 'sem pedir orçamento.']}>Três planos, uma regra: você paga pelas agendas profissionais que realmente utiliza. Recepção, gerente e conta administrativa não contam como agenda.</Cabeca>
       <div className="ld-planos ld-planos-3">
         <article className="ld-plano ld-rv">
           <span className="ld-pilula">Autônoma</span>
@@ -60,7 +60,7 @@ export function Planos() {
 export function Sobre() {
   return (
     <Pagina caminho="/sobre" migalha="Sobre" titulo="Sobre a MIMO | Beleza, organização e relacionamento" descricao="A MIMO é um sistema de agenda e relacionamento para salões e profissionais de beleza, construído junto à rotina real de quem vive da beleza.">
-      <Cabeca kicker="Sobre a MIMO" titulo={['Feita com salão de verdade,', 'para salão de verdade.']}>A MIMO nasceu dentro de um salão, com a agenda de papel do lado. Cada função entrou porque alguém precisou dela numa terça-feira cheia, não porque estava na lista de um concorrente.</Cabeca>
+      <Cabeca como="h1" kicker="Sobre a MIMO" titulo={['Feita com salão de verdade,', 'para salão de verdade.']}>A MIMO nasceu dentro de um salão, com a agenda de papel do lado. Cada função entrou porque alguém precisou dela numa terça-feira cheia, não porque estava na lista de um concorrente.</Cabeca>
       <div className="sp-sobre ld-rv">
         <div className="sp-sobre-foto"><Foto nome="equipe" alt="Dona do salão e duas profissionais olhando a agenda no tablet" /></div>
         <div className="sp-sobre-texto">
@@ -79,7 +79,7 @@ export function Sobre() {
 export function Contato() {
   return (
     <Pagina caminho="/contato" migalha="Contato" titulo="Contato | MIMO" descricao="Fale com a equipe da MIMO: dúvidas sobre o sistema para salão, a conta de autônoma ou parcerias.">
-      <Cabeca kicker="Contato" titulo={['Fala com a gente.']}>Dúvida sobre o sistema, sobre a conta de autônoma ou vontade de trazer a MIMO para o seu salão. Respondemos gente, não robô.</Cabeca>
+      <Cabeca como="h1" kicker="Contato" titulo={['Fala com a gente.']}>Dúvida sobre o sistema, sobre a conta de autônoma ou vontade de trazer a MIMO para o seu salão. Respondemos gente, não robô.</Cabeca>
       <div className="sp-contato ld-rv">
         <a className="sp-contato-carta" href={`mailto:${EMAIL_CONTATO}`}><Mail size={22} /><strong>E-mail</strong><span>{EMAIL_CONTATO}</span></a>
         <a className="sp-contato-carta" href={comecarEm()}><MessageCircle size={22} /><strong>Quero começar</strong><span>Crie a conta e fale com a gente de dentro do app</span></a>

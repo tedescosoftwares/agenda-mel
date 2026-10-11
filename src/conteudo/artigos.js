@@ -15,14 +15,14 @@ export const ARTIGOS = [
     alt: "profissional de beleza organizando horários em um tablet no salão",
     autor: 'Equipe MIMO',
     publicado_em: "2026-09-10",
-    produto: "/agenda-online-para-salao-de-beleza",
+    produto: "/agenda-para-salao-de-beleza",
     produto_rotulo: "Conheça a agenda da MIMO para salões",
     relacionados: ["como-reduzir-horarios-vagos-salao", "agenda-multi-profissional-salao"],
     caixa: {"titulo": "Na prática", "texto": "Cadastre primeiro o horário padrão do salão, depois ajuste só quem trabalha diferente. Duração real em cada serviço e bloqueio para tudo que não é atendimento."},
     faq: [],
     conteudo: `Uma agenda de salão parece simples enquanto existem poucos horários para controlar.
 
-O problema começa quando entram várias profissionais, serviços com durações diferentes, pausas, encaixes, clientes que atrasam, cancelamentos e mensagens chegando ao mesmo tempo pelo WhatsApp.
+O problema começa quando entram [várias profissionais](/agenda-multi-profissional), serviços com durações diferentes, pausas, encaixes, clientes que atrasam, cancelamentos e mensagens chegando ao mesmo tempo pelo WhatsApp.
 
 Nessa hora, a agenda deixa de ser apenas uma lista de nomes e passa a ser parte da operação do salão.
 
@@ -45,7 +45,7 @@ Cada profissional pode ter:
 - bloqueios;
 - serviços específicos.
 
-Por isso, a agenda precisa nascer da disponibilidade real de cada pessoa.
+Por isso, a agenda precisa nascer da disponibilidade real de cada pessoa. Uma [agenda para salão de beleza](/agenda-para-salao-de-beleza) feita para isso parte do horário de cada profissional, não do horário da porta.
 
 Uma forma simples é cadastrar primeiro o horário padrão do salão e depois ajustar apenas as profissionais que fogem desse padrão.
 
@@ -117,7 +117,7 @@ O melhor encaixe é aquele que ocupa um espaço real sem empurrar atraso para as
 
 Quando alguém cancela, aparece um novo problema: um horário que estava vendido agora está vazio.
 
-Se o salão possui lista de espera, essa vaga pode voltar a ser útil.
+Se o salão possui [lista de espera](/lista-de-espera-para-salao), essa vaga pode voltar a ser útil.
 
 Uma boa lista de espera registra:
 
@@ -140,7 +140,7 @@ O pior cenário é este:
 
 O objetivo de um sistema não deveria ser apenas digitalizar o caderno.
 
-Ele deveria conectar essas informações.
+Ele deveria conectar essas informações. É o que separa um caderno digital de um [sistema para salão de beleza](/sistema-para-salao-de-beleza).
 
 Quando a cliente agenda, o salão já deveria saber:
 
@@ -192,7 +192,7 @@ A MIMO foi construída exatamente em torno dessa lógica: a agenda é o ponto de
     alt: "agenda do salão no celular com um horário livre destacado",
     autor: 'Equipe MIMO',
     publicado_em: "2026-09-12",
-    produto: "/agenda-online-para-salao-de-beleza",
+    produto: "/lista-de-espera-para-salao",
     produto_rotulo: "Veja como a lista de espera funciona na MIMO",
     relacionados: ["como-fazer-clientes-voltarem-salao", "sinal-no-agendamento-salao"],
     caixa: {"titulo": "Na prática", "texto": "Confirme na véspera, registre serviço e período na lista de espera e olhe primeiro quem já deveria ter voltado. Desconto é o último recurso."},
@@ -232,7 +232,7 @@ Sem isso, o salão tenta resolver tudo com promoção.
 
 Muita falta acontece porque o compromisso simplesmente saiu da cabeça da cliente.
 
-Uma confirmação próxima ao atendimento reduz esse risco e ainda abre tempo para agir caso ela precise cancelar.
+Uma [confirmação pelo WhatsApp](/confirmacao-de-agendamento-whatsapp) próxima ao atendimento reduz esse risco e ainda abre tempo para agir caso ela precise cancelar.
 
 A mensagem deve ser curta.
 
@@ -244,7 +244,7 @@ Se a cliente disser que não consegue ir, o salão ganha algumas horas para proc
 
 ## 3. Crie uma lista de espera útil
 
-Uma lista com apenas nomes não resolve muita coisa.
+Uma [lista de espera](/lista-de-espera-para-salao) com apenas nomes não resolve muita coisa.
 
 Registre também:
 
@@ -281,7 +281,7 @@ Cancelar e remarcar são coisas diferentes.
 
 Se remarcar for difícil, a cliente cancela e “depois vê”.
 
-Se houver uma forma simples de escolher outro horário, aumenta a chance de o atendimento continuar dentro da agenda.
+Se houver uma forma simples de escolher outro horário, aumenta a chance de o atendimento continuar dentro da agenda. É para isso que serve o [agendamento online](/agendamento-online): a cliente remarca sozinha, no link do salão.
 
 ## 6. Evite criar buracos impossíveis
 
@@ -295,7 +295,7 @@ Sempre que possível, priorize combinações que preservem blocos utilizáveis.
 
 ## 7. Use sinal quando fizer sentido
 
-Para serviços mais longos ou horários muito disputados, um sinal pode aumentar o compromisso da reserva.
+Para serviços mais longos ou horários muito disputados, um [sinal no agendamento](/sinal-para-agendamento) pode aumentar o compromisso da reserva.
 
 A política precisa estar clara antes do pagamento.
 
@@ -344,7 +344,7 @@ A MIMO conecta essas partes para que uma vaga liberada não seja apenas um burac
     alt: "cliente sorrindo enquanto marca o próximo horário com a profissional no balcão",
     autor: 'Equipe MIMO',
     publicado_em: "2026-09-14",
-    produto: "/sistema-para-salao-de-beleza",
+    produto: "/controle-de-clientes-para-salao",
     produto_rotulo: "Veja o retorno de clientes na MIMO",
     relacionados: ["como-organizar-agenda-salao-de-beleza", "como-reduzir-horarios-vagos-salao"],
     caixa: {"titulo": "Na prática", "texto": "Registre data, serviço e profissional de cada atendimento. Quando a janela de retorno chegar, mande uma mensagem com contexto e um caminho fácil para marcar."},
@@ -380,7 +380,7 @@ O mínimo necessário:
 - profissional;
 - observações relevantes.
 
-Com isso, já é possível identificar clientes que estão chegando na época de voltar.
+Com isso, já é possível identificar clientes que estão chegando na época de voltar. Um [controle de clientes para salão](/controle-de-clientes-para-salao) faz essa conta sozinho, serviço por serviço.
 
 ## 3. Faça contato com contexto
 
@@ -428,7 +428,7 @@ Por exemplo:
 - resposta pelo WhatsApp;
 - opções de horários.
 
-Quanto mais etapas, maior a chance de a cliente deixar para depois.
+Quanto mais etapas, maior a chance de a cliente deixar para depois. Com [agendamento online](/agendamento-online), o próximo passo é um toque: ela abre o link e marca.
 
 ## 7. Observe quem realmente voltou
 
@@ -463,7 +463,7 @@ A MIMO organiza histórico e retorno justamente para transformar uma informaçã
     alt: "dona do salão e duas profissionais olhando a agenda no tablet",
     autor: 'Equipe MIMO',
     publicado_em: "2026-09-16",
-    produto: "/sistema-para-salao-de-beleza",
+    produto: "/agenda-multi-profissional",
     produto_rotulo: "Veja a agenda geral e por profissional na MIMO",
     relacionados: ["como-organizar-agenda-salao-de-beleza", "como-escolher-sistema-para-salao-de-beleza"],
     caixa: {"titulo": "Na prática", "texto": "Uma agenda por profissional, uma visão para o salão. Horário do salão como base, ajuste individual só para quem foge dele, bloqueio na agenda certa."},
@@ -480,7 +480,7 @@ O salão precisa enxergar o todo sem apagar a individualidade de cada profission
 
 Cada profissional precisa ter seu calendário.
 
-Ao mesmo tempo, a gestão precisa enxergar todas elas juntas.
+Ao mesmo tempo, a gestão precisa enxergar todas elas juntas. É o que uma [agenda multi-profissional](/agenda-multi-profissional) faz: uma coluna por pessoa, uma tela para o salão.
 
 São duas visões da mesma operação:
 
@@ -497,7 +497,7 @@ Nem todas fazem tudo.
 
 Ao cadastrar um serviço, relacione quem pode executá-lo.
 
-Isso evita oferecer manicure para uma profissional de cabelo ou colocar uma química com alguém que não realiza aquele procedimento.
+Isso evita oferecer manicure para uma profissional de cabelo ou colocar uma química com alguém que não realiza aquele procedimento. Num [sistema para salão de beleza](/sistema-para-salao-de-beleza), serviço e profissional andam juntos desde o cadastro.
 
 ## 3. Permita tempo individual por serviço
 
@@ -591,7 +591,7 @@ A gestão ganha visão geral e cada profissional continua com uma rotina clara.`
     alt: "painel do salão no notebook mostrando um atendimento com sinal pago",
     autor: 'Equipe MIMO',
     publicado_em: "2026-09-18",
-    produto: "/sistema-para-salao-de-beleza",
+    produto: "/sinal-para-agendamento",
     produto_rotulo: "Veja sinal e pagamento ligados ao atendimento na MIMO",
     relacionados: ["como-reduzir-horarios-vagos-salao", "como-escolher-sistema-para-salao-de-beleza"],
     caixa: {"titulo": "Na prática", "texto": "Serviço R$ 180, sinal R$ 50, restante R$ 130 no salão. Regra de reagendamento escrita antes do pagamento, e tudo registrado no próprio atendimento."},
@@ -602,7 +602,7 @@ Mas, se for aplicado sem clareza, também pode criar desconforto.
 
 O segredo está menos no valor e mais na regra.
 
-A cliente precisa entender o que está pagando e o que acontece se precisar mudar o horário.
+A cliente precisa entender o que está pagando e o que acontece se precisar mudar o horário. Na MIMO, o [sinal por Pix](/sinal-para-agendamento) mostra valor, restante e regra antes de a cliente pagar.
 
 ## 1. Quando o sinal faz mais sentido
 
@@ -657,7 +657,7 @@ O atendimento deveria mostrar:
 - pagamento;
 - eventual estorno ou crédito.
 
-Assim a recepção não precisa reconstruir a história pelo WhatsApp.
+Assim a recepção não precisa reconstruir a história pelo WhatsApp. Quando o sinal nasce dentro do [agendamento online](/agendamento-online), isso vem de graça.
 
 ## 6. Valide sua política
 
@@ -709,7 +709,7 @@ Veja se é possível configurar:
 - encaixes;
 - reagendamento.
 
-Se a agenda não representa a rotina real, o salão volta para o WhatsApp.
+Se a agenda não representa a rotina real, o salão volta para o WhatsApp. Veja o que uma [agenda para salão de beleza](/agenda-para-salao-de-beleza) precisa ter antes de qualquer outro módulo.
 
 ## 2. A recepção enxerga o salão inteiro?
 
@@ -740,7 +740,7 @@ Pergunte se o sistema ajuda a entender:
 
 ## 4. WhatsApp está ligado à agenda?
 
-Lembrete isolado é útil.
+Lembrete isolado é útil, e [confirmação pelo WhatsApp ligada à agenda](/confirmacao-de-agendamento-whatsapp) é melhor ainda.
 
 Mas é melhor quando comunicação acompanha eventos reais:
 
@@ -772,7 +772,7 @@ Mas pode precisar de:
 - caixa;
 - comissão.
 
-Escolha profundidade compatível com a operação.
+Escolha profundidade compatível com a operação. Sinal e [comissão por profissional](/sistema-de-comissao-para-salao) costumam ser o primeiro degrau.
 
 ## 7. O preço é fácil de entender?
 
@@ -824,7 +824,7 @@ Reagende.
 
 Bloqueie um almoço.
 
-Veja se a ferramenta continua simples quando a rotina fica menos perfeita.
+Veja se a ferramenta continua simples quando a rotina fica menos perfeita. É exatamente o teste que vale fazer com um [sistema de agendamento](/sistema-de-agendamento) antes de assinar.
 
 ## Conclusão
 

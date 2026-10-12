@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useSeo, migalhasLd, ORGANIZACAO_LD } from '../../lib/seo'
-import { artigosPublicados, categoriasDoBlog, seoDaRota } from '../../lib/conteudoPublico'
+import { artigosResumidos, categoriasDoBlog, seoDaRota } from '../../lib/conteudoPublico'
 import { PAGINAS_INSTITUCIONAIS } from '../../conteudo/paginasSeo'
 import { linhas } from '../../lib/paginas'
 import { NavSite, PeSite, Cabeca, useRevelar } from '../../components/site/Pecas'
@@ -20,7 +20,7 @@ export default function Blog() {
   useEffect(() => { window.scrollTo(0, 0) }, [slug])
   useEffect(() => {
     let vivo = true
-    artigosPublicados().then((a) => vivo && setArtigos(a))
+    artigosResumidos().then((a) => vivo && setArtigos(a))
     categoriasDoBlog().then((c) => vivo && setCategorias(c))
     return () => { vivo = false }
   }, [])

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { ArrowRight, Check, ChevronDown, CalendarDays, Users, Heart, MessageCircle, Clock, Wallet, UserRound, PauseCircle, CalendarPlus, Scissors, QrCode, RotateCcw, Bell, Hand, Eye, Flower2, Receipt, LayoutGrid, Star } from 'lucide-react'
 import { useSeo, migalhasLd, ORGANIZACAO_LD, SITE } from '../../lib/seo'
-import { seoDaRota, artigosPublicados, paginasPublicas } from '../../lib/conteudoPublico'
+import { seoDaRota, artigosResumidos, paginasPublicas } from '../../lib/conteudoPublico'
 import { paginaSeoPorRota } from '../../conteudo/paginasSeo'
 import { normalizarPagina } from '../../lib/paginas'
 import { PLANOS, reais } from '../../lib/planos'
@@ -41,7 +41,7 @@ export default function PaginaSeo() {
     setPagina(c ? normalizarPagina(c) : null)
     seoDaRota(pathname).then((s) => { if (vivo && s && s.h1) setPagina(s) })
     paginasPublicas().then((t) => vivo && setTodas(t))
-    artigosPublicados().then((as) => vivo && setArtigos(as))
+    artigosResumidos().then((as) => vivo && setArtigos(as))
     return () => { vivo = false }
   }, [pathname])
 

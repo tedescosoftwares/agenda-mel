@@ -26,7 +26,27 @@ function artigoDoBanco(p) {
 }
 
 const SEL = '*, blog_categories(slug, name)'
+// a lista sem o texto dos artigos: é o que cartões, "guias ligados" e o índice do blog precisam
+const SEL_LEVE = 'slug, title, excerpt, cover_image_url, cover_alt, published_at, updated_at, reading_time_minutes, produto_url, relacionados, robots_index, blog_categories(slug, name)'
 
+// os artigos para listas (cartões): sem o texto, lidos uma vez por sessão.
+// Egresso do Supabase: ~6 KB em vez de ~70 KB a cada página aberta.
+let promessaArtigos = null
+export function artigosResumidos() {
+  if (!promessaArtigos) {
+    promessaArtigos = (async () => {
+      try {
+        const { data, error } = await supabase.from('blog_posts').select(SEL_LEVE).eq('status', 'published').order('published_at', { ascending: false })
+        if (!error && data?.length) return data.map(artigoDoBanco)
+      } catch { /* cai no código */ }
+      const m = await reserva()
+      return m.ARTIGOS.map((a) => artigoDoCodigo(a, m))
+    })()
+  }
+  return promessaArtigos
+}
+
+// a lista completa, com o texto: só para quem precisa do conteúdo inteiro
 export async function artigosPublicados() {
   try {
     const { data, error } = await supabase.from('blog_posts').select(SEL).eq('status', 'published').order('published_at', { ascending: false })
@@ -77,16 +97,23 @@ export async function seoDaRota(rota) {
 }
 
 // tudo que existe de página SEO: as do código (normalizadas) e as do banco por
-// cima, inclusive as criadas na Plataforma. Uma leitura por sessão.
+// cima, inclusive as criadas na Plataforma. Uma leitura por sessão, e leve: do
+// miolo só vêm os campos que rodapé, migalhas e "veja também" usam (chapéu,
+// tipo, rodapé, ordem, pai, título); o miolo inteiro só é lido na própria página.
+const COLS_LEVES = 'route,page_type,status,seo_title,meta_description,og_image_url,robots_index,updated_at,kicker:conteudo->>kicker,tipo:conteudo->>tipo,rodape:conteudo->>rodape,rodapeMostrar:conteudo->rodapeMostrar,ordem:conteudo->ordem,pai:conteudo->>pai,h1:conteudo->h1'
 let promessaPaginas = null
 export function paginasPublicas() {
   if (!promessaPaginas) {
     promessaPaginas = (async () => {
       const porRota = new Map(PAGINAS_SEO.map((p) => [p.rota, normalizarPagina(p)]))
       try {
-        const { data } = await supabase.from('seo_pages').select(COLS).eq('page_type', 'SEO_LANDING').eq('status', 'published')
+        const { data } = await supabase.from('seo_pages').select(COLS_LEVES).eq('page_type', 'SEO_LANDING').eq('status', 'published')
         for (const l of data || []) {
-          const pg = mesclarPagina(PAGINAS_SEO.find((p) => p.rota === l.route) || null, l)
+          const editada = l.h1 != null || l.kicker != null
+          const curto = editada ? Object.fromEntries(Object.entries({ kicker: l.kicker, tipo: l.tipo, rodape: l.rodape, rodapeMostrar: l.rodapeMostrar, ordem: l.ordem, pai: l.pai, h1: l.h1 }).filter(([, v]) => v !== null && v !== undefined)) : null
+          // (no demo a consulta devolve a linha inteira; o miolo vem em `conteudo`)
+          const conteudo = curto || (l.conteudo && typeof l.conteudo === 'object' ? l.conteudo : null)
+          const pg = mesclarPagina(PAGINAS_SEO.find((p) => p.rota === l.route) || null, { ...l, conteudo })
           if (pg) porRota.set(l.route, pg)
         }
       } catch { /* fica só o código */ }

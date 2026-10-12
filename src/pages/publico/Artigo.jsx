@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ArrowRight, CalendarDays, ChevronDown, Clock, UserRound } from 'lucide-react'
 import { useSeo, migalhasLd, ORGANIZACAO_LD, SITE } from '../../lib/seo'
-import { artigoPorSlug, artigosPublicados } from '../../lib/conteudoPublico'
+import { artigoPorSlug, artigosResumidos } from '../../lib/conteudoPublico'
 import { Markdown, titulosDe } from '../../lib/markdown'
 import { NavSite, PeSite, useRevelar, comecarEm } from '../../components/site/Pecas'
 import { CartaoArtigo } from './PaginaSeo'
@@ -23,7 +23,7 @@ export default function Artigo() {
     let vivo = true
     setArtigo(undefined)
     artigoPorSlug(slug).then((a) => vivo && setArtigo(a))
-    artigosPublicados().then((as) => vivo && setTodos(as))
+    artigosResumidos().then((as) => vivo && setTodos(as))
     return () => { vivo = false }
   }, [slug])
 

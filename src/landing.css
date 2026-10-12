@@ -1058,15 +1058,15 @@
 .ld-cta .ws-botao.ld-fantasma, .sp-chamada .ws-botao.ld-fantasma { background: transparent; color: #fff; border-color: rgba(255, 255, 255, 0.45); }
 .ld-centro-botao { gap: 12px; flex-wrap: wrap; }
 .sp-contato { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); max-width: 1000px; }
-.ws-flutuante { position: fixed; left: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); z-index: 55; display: inline-flex; align-items: center; gap: 8px; min-height: 50px; padding: 0 20px 0 16px; border-radius: 999px; background: #25d366; color: #fff; font-weight: 600; font-size: 0.95rem; text-decoration: none; box-shadow: 0 12px 28px rgba(37, 211, 102, 0.35); transition: transform 0.15s ease; }
+.ws-flutuante { position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); z-index: 55; display: inline-flex; align-items: center; gap: 8px; min-height: 50px; padding: 0 20px 0 16px; border-radius: 999px; background: #25d366; color: #fff; font-weight: 600; font-size: 0.95rem; text-decoration: none; box-shadow: 0 12px 28px rgba(37, 211, 102, 0.35); transition: transform 0.15s ease; }
 .ws-flutuante:hover { transform: translateY(-2px); color: #fff; }
 html.mimo-app .ws-flutuante { display: none; }
 @media (max-width: 720px) {
   .ws-flutuante { padding: 0; width: 54px; height: 54px; justify-content: center; }
   .ws-flutuante span { display: none; }
-  /* enquanto o aviso de cookies está na tela, o flutuante espera (os dois moram embaixo) */
-  body:has(.aviso-cookies) .ws-flutuante { display: none; }
 }
+/* enquanto o aviso de cookies está na tela, o flutuante espera: os dois moram no canto de baixo à direita */
+body:has(.aviso-cookies) .ws-flutuante { display: none; }
 /* a chamada do artigo com três botões: o texto fica inteiro e os botões descem quando não cabem */
 .sp-chamada { display: flex; flex-wrap: wrap; align-items: center; gap: 18px; }
 .sp-chamada > div:first-child { flex: 1 1 260px; }

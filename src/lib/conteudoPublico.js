@@ -2,6 +2,7 @@ import { supabase } from './supabase'
 // os artigos do código são a reserva: carregados só quando o banco não responde (são 70 KB de texto)
 const reserva = () => import('../conteudo/artigos')
 import { PAGINAS_SEO, PAGINAS_INSTITUCIONAIS } from '../conteudo/paginasSeo'
+import { mesclarPagina, mesclarConteudo, normalizarPagina } from './paginas'
 
 // O conteúdo público lê o banco primeiro (o que a plataforma editou) e
 // cai no código quando o banco não tem a linha ou não responde. Assim
@@ -53,12 +54,47 @@ export async function categoriasDoBlog() {
   return (await reserva()).CATEGORIAS
 }
 
-// os metadados de uma rota: o banco pode ter sobrescrito title/description/OG
+// a página de uma rota: o código por baixo, o banco (editado na Plataforma) por cima.
+// Página SEO volta normalizada (h1, módulos, FAQ…); home, institucionais e blog
+// voltam com as metas e o `conteudo` mesclado; rota desconhecida volta null.
+const COLS = 'route, page_type, seo_title, meta_description, canonical_url, og_title, og_description, og_image_url, robots_index, status, conteudo, updated_at'
 export async function seoDaRota(rota) {
-  const codigo = PAGINAS_SEO.find((p) => p.rota === rota) || PAGINAS_INSTITUCIONAIS.find((p) => p.rota === rota) || null
+  const codigoSeo = PAGINAS_SEO.find((p) => p.rota === rota) || null
+  const codigo = codigoSeo || PAGINAS_INSTITUCIONAIS.find((p) => p.rota === rota) || null
+  let linha = null
   try {
-    const { data } = await supabase.from('seo_pages').select('seo_title, meta_description, canonical_url, og_title, og_description, og_image_url, robots_index, status').eq('route', rota).maybeSingle()
-    if (data && data.status === 'published') return { ...codigo, seo_title: data.seo_title || codigo?.seo_title, meta_description: data.meta_description || codigo?.meta_description, og_image_url: data.og_image_url, canonical_url: data.canonical_url, noindex: data.robots_index === false }
+    const { data } = await supabase.from('seo_pages').select(COLS).eq('route', rota).maybeSingle()
+    if (data && data.status === 'published') linha = data
   } catch { /* cai no código */ }
-  return codigo
+  if (!linha && !codigo) return null
+  if (codigoSeo || (!codigo && linha?.page_type === 'SEO_LANDING')) return mesclarPagina(codigoSeo, linha)
+  return {
+    ...codigo,
+    seo_title: linha?.seo_title || codigo?.seo_title, meta_description: linha?.meta_description || codigo?.meta_description,
+    og_image_url: linha?.og_image_url || codigo?.og_image_url, canonical_url: linha?.canonical_url, noindex: linha?.robots_index === false,
+    conteudo: mesclarConteudo(codigo?.conteudo, linha),
+  }
+}
+
+// tudo que existe de página SEO: as do código (normalizadas) e as do banco por
+// cima, inclusive as criadas na Plataforma. Uma leitura por sessão.
+let promessaPaginas = null
+export function paginasPublicas() {
+  if (!promessaPaginas) {
+    promessaPaginas = (async () => {
+      const porRota = new Map(PAGINAS_SEO.map((p) => [p.rota, normalizarPagina(p)]))
+      try {
+        const { data } = await supabase.from('seo_pages').select(COLS).eq('page_type', 'SEO_LANDING').eq('status', 'published')
+        for (const l of data || []) {
+          const pg = mesclarPagina(PAGINAS_SEO.find((p) => p.rota === l.route) || null, l)
+          if (pg) porRota.set(l.route, pg)
+        }
+      } catch { /* fica só o código */ }
+      return [...porRota.values()]
+    })()
+  }
+  return promessaPaginas
+}
+export async function paginaPublicaPorRota(rota) {
+  return (await paginasPublicas()).find((p) => p.rota === rota) || null
 }

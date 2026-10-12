@@ -5,6 +5,10 @@ import { Cabecalho, Painel, Pilula, Vazio } from '../../components/plataforma/Pe
 import { supabase } from '../../lib/supabase'
 import { useDialogo } from '../../context/DialogoContext'
 import { Globe, FileText, Newspaper, Tags, Wrench, ArrowRightLeft, ExternalLink, Plus, Search, Inbox, MessageCircle } from 'lucide-react'
+import FormularioConteudo from '../../components/plataforma/FormularioConteudo'
+import { esquemaDe } from '../../conteudo/esquemas'
+import { PAGINAS_SEO, PAGINAS_INSTITUCIONAIS } from '../../conteudo/paginasSeo'
+import { normalizarPagina, modeloDePagina } from '../../lib/paginas'
 
 // SEO e Conteúdo (116): o site público, cuidado daqui. Páginas com
 // title/description/OG e prévia do Google, artigos do blog com editor
@@ -15,6 +19,13 @@ const SITE = 'https://mimo.com.vc'
 const ABAS = [['paginas', 'Páginas', FileText], ['artigos', 'Artigos', Newspaper], ['categorias', 'Categorias', Tags], ['tecnico', 'SEO Técnico', Wrench], ['redirects', 'Redirecionamentos', ArrowRightLeft], ['leads', 'Leads', Inbox]]
 const TIPO = { HOME: 'home', INSTITUTIONAL: 'institucional', SEO_LANDING: 'SEO', BLOG_INDEX: 'blog', OTHER: 'outra' }
 const dataBr = (iso) => (iso ? new Date(iso).toLocaleDateString('pt-BR') : '—')
+// rotas do app e das telas fixas: uma página SEO não pode morar nelas
+const RESERVADAS = ['/login', '/cadastro', '/entrar', '/comecar', '/onboarding', '/pro', '/admin', '/cliente', '/plataforma', '/blog', '/v', '/p', '/convite', '/equipe', '/ativar', '/sessao-app', '/avisos', '/estilo', '/termos', '/privacidade', '/planos', '/sobre', '/contato', '/splash', '/bem-vinda', '/email-confirmado']
+// o miolo que o código tem para uma rota (a reserva): página SEO normalizada, ou o conteúdo da institucional
+function mioloDoCodigo(route, tipo) {
+  if (tipo === 'SEO_LANDING') { const c = PAGINAS_SEO.find((p) => p.rota === route); return c ? normalizarPagina(c) : null }
+  return PAGINAS_INSTITUCIONAIS.find((p) => p.rota === route)?.conteudo || null
+}
 
 export default function Seo() {
   const [aba, setAba] = useState('paginas')
@@ -86,8 +97,12 @@ function Paginas() {
   const [tipo, setTipo] = useState('')
   const [editando, setEditando] = useState(null)
   const [erro, setErro] = useState('')
+  const [artigosOpc, setArtigosOpc] = useState([])
   const carregar = () => supabase.from('seo_pages').select('*').order('page_type').order('route').then(({ data }) => setLinhas(data ?? []))
   useEffect(() => { carregar() }, [])
+  useEffect(() => { supabase.from('blog_posts').select('slug, title').eq('status', 'published').order('published_at', { ascending: false }).then(({ data }) => setArtigosOpc((data ?? []).map((a) => [a.slug, a.title]))) }, [])
+  // o cardápio de rotas para "pai" e "veja também": as do código e as do banco
+  const rotasOpc = useMemo(() => { const m = new Map(PAGINAS_SEO.map((p) => [p.rota, p.kicker])); for (const l of linhas ?? []) if (l.page_type === 'SEO_LANDING' && !m.has(l.route)) m.set(l.route, l.conteudo?.kicker || l.title || l.route); return [...m.entries()] }, [linhas])
   const lista = useMemo(() => (linhas ?? []).filter((l) => (!tipo || l.page_type === tipo) && (!busca || (l.title + l.route + (l.seo_title || '')).toLowerCase().includes(busca.toLowerCase()))), [linhas, tipo, busca])
   const set = (k, v) => setEditando((e) => ({ ...e, [k]: v }))
 
@@ -97,16 +112,23 @@ function Paginas() {
     const { id, created_at, updated_at, ...campos } = editando
     if (!campos.route?.startsWith('/')) { setErro('A rota começa com /'); return }
     if (!campos.slug) campos.slug = campos.route === '/' ? 'home' : campos.route.slice(1).replace(/\//g, '-')
+    if (campos.page_type === 'SEO_LANDING' && (/\s/.test(campos.route) || RESERVADAS.some((r) => campos.route === r || campos.route.startsWith(r + '/')))) { setErro('Essa rota é do app ou de uma tela fixa; escolha outra, tipo /agenda-para-barbearia.'); return }
+    if (campos.conteudo && typeof campos.conteudo === 'object') {
+      // o que é meta vive nas colunas, não no miolo
+      // eslint-disable-next-line no-unused-vars
+      const { seo_title, meta_description, og_image_url, canonical_url, noindex, doBanco, rota, ...miolo } = campos.conteudo
+      campos.conteudo = miolo
+    }
     const r = id ? await supabase.from('seo_pages').update(campos).eq('id', id) : await supabase.from('seo_pages').insert(campos)
     if (r.error) { setErro(r.error.message); return }
-    setEditando(null); carregar(); await avisar({ titulo: 'Salvo', texto: 'As metas valem no próximo build do site (o app já usa na hora).' })
+    setEditando(null); carregar(); await avisar({ titulo: 'Salvo', texto: 'Valeu na hora no site. Página nova entra no sitemap e no HTML estático no próximo publicar.' })
   }
   async function despublicar(l) {
     await supabase.from('seo_pages').update({ status: l.status === 'published' ? 'draft' : 'published' }).eq('id', l.id); carregar()
   }
 
   if (editando) return (
-    <Painel Icon={FileText} titulo={editando.id ? 'Editar página' : 'Nova página'} sub="Configure as informações de SEO e como esta página aparece no Google." direita={<div className="seo-acoes"><a className="btn btn-ghost" href={SITE + (editando.route || '/')} target="_blank" rel="noopener noreferrer">Ver página</a><button className="btn btn-ghost" onClick={() => setEditando(null)}>Voltar</button><button className="btn btn-primary" onClick={salvar}>Salvar alterações</button></div>}>
+    <Painel Icon={FileText} titulo={editando.id ? 'Editar página' : 'Nova página'} sub="As metas (como aparece no Google e no WhatsApp) e, abaixo, o conteúdo inteiro da página." direita={<div className="seo-acoes"><a className="btn btn-ghost" href={SITE + (editando.route || '/')} target="_blank" rel="noopener noreferrer">Ver página</a><button className="btn btn-ghost" onClick={() => setEditando(null)}>Voltar</button><button className="btn btn-primary" onClick={salvar}>Salvar alterações</button></div>}>
       {erro && <div className="alert alert-error">{erro}</div>}
       <div className="form seo-linha-3">
         <label>Nome<input value={editando.title || ''} onChange={(e) => set('title', e.target.value)} /></label>
@@ -114,6 +136,23 @@ function Paginas() {
         <label>Tipo<select value={editando.page_type || 'SEO_LANDING'} onChange={(e) => set('page_type', e.target.value)}>{Object.entries(TIPO).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
       </div>
       <CamposSeo v={editando} set={set} caminho={editando.route || '/'} />
+      {(() => {
+        const esquema = esquemaDe(editando.page_type, editando.route)
+        if (!esquema) return null
+        const codigo = mioloDoCodigo(editando.route, editando.page_type)
+        const base = editando.conteudo || codigo || (editando.page_type === 'SEO_LANDING' ? modeloDePagina(editando.route || '') : {})
+        return (
+          <details className="seo-avancado" open>
+            <summary>Conteúdo da página</summary>
+            <div className="cont-estado">
+              {editando.conteudo ? <Pilula tom="menta">miolo próprio (editado aqui)</Pilula> : codigo ? <Pilula tom="cinza">miolo do código</Pilula> : <Pilula tom="ambar">página nova: comece pelo modelo</Pilula>}
+              {editando.conteudo && codigo && <button type="button" className="btn btn-ghost" onClick={() => set('conteudo', null)}>Voltar para o do código</button>}
+              <small className="muted">Mexeu em qualquer campo, o miolo passa a ser seu e o código vira reserva. Salvou, valeu na hora no site.</small>
+            </div>
+            <FormularioConteudo esquema={esquema} valor={base} onChange={(v) => set('conteudo', v)} opcoes={{ rotas: rotasOpc.filter(([r]) => r !== editando.route), artigos: artigosOpc }} />
+          </details>
+        )
+      })()}
       <details className="seo-avancado"><summary>Avançado</summary>
         <div className="form seo-linha-3">
           <label>Schema principal<input value={editando.schema_type || ''} onChange={(e) => set('schema_type', e.target.value)} placeholder="WebPage, SoftwareApplication…" /></label>
@@ -126,11 +165,11 @@ function Paginas() {
   )
 
   return (
-    <Painel Icon={FileText} titulo="Páginas" sub="Home, institucionais e páginas SEO: title, description e slug de cada uma." direita={<button className="btn btn-primary" onClick={() => setEditando({ page_type: 'SEO_LANDING', status: 'published', robots_index: true, robots_follow: true })}><Plus size={16} /> Nova página</button>}>
+    <Painel Icon={FileText} titulo="Páginas" sub="Tudo que o site tem, metas e miolo de cada página. O código é a reserva; o que você salva aqui manda." direita={<button className="btn btn-primary" onClick={() => setEditando({ page_type: 'SEO_LANDING', status: 'published', robots_index: true, robots_follow: true, conteudo: modeloDePagina('') })}><Plus size={16} /> Nova página</button>}>
       <div className="seo-filtros"><label className="seo-busca"><Search size={15} /><input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar página…" /></label><select value={tipo} onChange={(e) => setTipo(e.target.value)}><option value="">Todas as páginas</option>{Object.entries(TIPO).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
       {linhas === null ? <Vazio>Carregando…</Vazio> : lista.length === 0 ? <Vazio>Nenhuma página. A migração 116 semeia as primeiras.</Vazio> : (
         <table className="plat-tabela"><thead><tr><th>Página</th><th>Slug</th><th>Title SEO</th><th>Status</th><th>Atualização</th><th /></tr></thead><tbody>
-          {lista.map((l) => <tr key={l.id}><td><strong>{l.title}</strong><br /><small className="muted">{TIPO[l.page_type]}</small></td><td className="mono">{l.route}</td><td className="seo-corta">{l.seo_title || <span className="muted">sem title</span>}</td><td><Pilula tom={l.status === 'published' ? (l.robots_index ? 'menta' : 'ambar') : 'cinza'}>{l.status === 'published' ? (l.robots_index ? 'indexável' : 'noindex') : 'rascunho'}</Pilula></td><td>{dataBr(l.updated_at)}</td><td className="seo-acoes"><button className="plat-link" onClick={() => setEditando(l)}>Editar SEO</button><a className="plat-link" href={SITE + l.route} target="_blank" rel="noopener noreferrer">Abrir</a><button className="plat-link" onClick={() => despublicar(l)}>{l.status === 'published' ? 'Despublicar' : 'Publicar'}</button></td></tr>)}
+          {lista.map((l) => <tr key={l.id}><td><strong>{l.title}</strong><br /><small className="muted">{TIPO[l.page_type]}</small></td><td className="mono">{l.route}</td><td className="seo-corta">{l.seo_title || <span className="muted">sem title</span>}</td><td><Pilula tom={l.status === 'published' ? (l.robots_index ? 'menta' : 'ambar') : 'cinza'}>{l.status === 'published' ? (l.robots_index ? 'indexável' : 'noindex') : 'rascunho'}</Pilula>{esquemaDe(l.page_type, l.route) && <> <Pilula tom={l.conteudo ? 'menta' : 'cinza'}>{l.conteudo ? 'miolo próprio' : 'miolo do código'}</Pilula></>}</td><td>{dataBr(l.updated_at)}</td><td className="seo-acoes"><button className="plat-link" onClick={() => setEditando(l)}>Editar</button><a className="plat-link" href={SITE + l.route} target="_blank" rel="noopener noreferrer">Abrir</a><button className="plat-link" onClick={() => despublicar(l)}>{l.status === 'published' ? 'Despublicar' : 'Publicar'}</button></td></tr>)}
         </tbody></table>
       )}
     </Painel>

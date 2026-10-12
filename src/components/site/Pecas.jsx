@@ -6,6 +6,9 @@ import { urlDoAmbiente } from '../../lib/ambiente'
 import { useAuth } from '../../context/AuthContext'
 import Avatar from '../Avatar'
 import { useWhats } from './Whats'
+import { PAGINAS_SEO } from '../../conteudo/paginasSeo'
+import { paginasPublicas } from '../../lib/conteudoPublico'
+import { normalizarPagina, rotuloRodape, HUB_AUTONOMA } from '../../lib/paginas'
 
 // As peças do site público (mimo.com.vc): barra, rodapé, fotos, logo,
 // coração de pincel e o "aparece ao rolar". A landing e as páginas de
@@ -190,31 +193,15 @@ export function NavSite() {
 
 // as soluções e as páginas por profissão, no rodapé de todas as páginas:
 // é por aqui que o Google (e a dona do salão) chegam em cada uma
-const SOLUCOES = [
-  ['/sistema-para-salao-de-beleza', 'Sistema para salão de beleza'],
-  ['/agenda-para-salao-de-beleza', 'Agenda para salão'],
-  ['/sistema-de-agendamento', 'Sistema de agendamento'],
-  ['/agendamento-online', 'Agendamento online'],
-  ['/agenda-multi-profissional', 'Agenda multi-profissional'],
-  ['/lista-de-espera-para-salao', 'Lista de espera'],
-  ['/confirmacao-de-agendamento-whatsapp', 'Confirmação pelo WhatsApp'],
-  ['/sinal-para-agendamento', 'Sinal por Pix'],
-  ['/sistema-de-comissao-para-salao', 'Comissão e repasse'],
-  ['/controle-de-clientes-para-salao', 'Controle de clientes'],
-  ['/qr-code-para-salao-de-beleza', 'QR Code no balcão'],
-]
-const PROFISSIONAIS = [
-  ['/app-para-profissional-de-beleza', 'App para autônoma'],
-  ['/agenda-para-manicure', 'Agenda para manicure'],
-  ['/agenda-para-cabeleireira', 'Agenda para cabeleireira'],
-  ['/agenda-para-lash-designer', 'Agenda para lash designer'],
-  ['/agenda-para-designer-de-sobrancelhas', 'Agenda para designer de sobrancelhas'],
-  ['/agenda-para-esteticista', 'Agenda para esteticista'],
-]
-
 export function PeSite() {
   const entrar = entrarEm()
   const zap = useWhats('contato')
+  // o rodapé lista tudo que existe: as páginas do código abrem na hora, as da Plataforma chegam logo depois
+  const [todas, setTodas] = useState(() => PAGINAS_SEO.map(normalizarPagina))
+  useEffect(() => { let vivo = true; paginasPublicas().then((t) => vivo && setTodas(t)); return () => { vivo = false } }, [])
+  const ordenar = (l) => [...l].sort((a, b) => a.ordem - b.ordem)
+  const solucoes = ordenar(todas.filter((p) => p.rodapeMostrar && p.tipo !== 'profissao' && p.rota !== HUB_AUTONOMA))
+  const profissionais = ordenar(todas.filter((p) => p.rodapeMostrar && (p.tipo === 'profissao' || p.rota === HUB_AUTONOMA)))
   return (
       <footer className="ld-pe">
         <div className="ld-wrap ld-pe-in">
@@ -225,11 +212,11 @@ export function PeSite() {
           <nav className="ld-pe-colunas" aria-label="Rodapé">
             <div>
               <strong>Soluções</strong>
-              {SOLUCOES.map(([rota, nome]) => <Link key={rota} to={rota}>{nome}</Link>)}
+              {solucoes.map((p) => <Link key={p.rota} to={p.rota}>{rotuloRodape(p)}</Link>)}
             </div>
             <div>
               <strong>Para profissionais</strong>
-              {PROFISSIONAIS.map(([rota, nome]) => <Link key={rota} to={rota}>{nome}</Link>)}
+              {profissionais.map((p) => <Link key={p.rota} to={p.rota}>{rotuloRodape(p)}</Link>)}
             </div>
             <div>
               <strong>MIMO</strong>

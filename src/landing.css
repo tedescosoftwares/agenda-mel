@@ -1071,3 +1071,6 @@ body:has(.aviso-cookies) .ws-flutuante { display: none; }
 .sp-chamada { display: flex; flex-wrap: wrap; align-items: center; gap: 18px; }
 .sp-chamada > div:first-child { flex: 1 1 260px; }
 .sp-chamada-botoes { flex: 0 1 auto; }
+/* notas em Markdown (planos, contato): o parágrafo dentro da nota não ganha margem extra */
+.sp-nota p { margin: 0 0 0.4em; }
+.sp-nota p:last-child { margin-bottom: 0; }

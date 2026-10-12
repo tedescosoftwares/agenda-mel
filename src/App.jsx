@@ -12,6 +12,7 @@ import PaginaSeo from "./pages/publico/PaginaSeo";
 import Blog from "./pages/publico/Blog";
 import Artigo from "./pages/publico/Artigo";
 import NaoEncontrada from "./pages/publico/NaoEncontrada";
+import PaginaOu404 from "./pages/publico/PaginaOu404";
 import { Planos, Sobre, Contato } from "./pages/publico/Institucional";
 import { PAGINAS_SEO } from "./conteudo/paginasSeo";
 import { guardarCodigoDaURL } from "./lib/indicacao";
@@ -120,7 +121,8 @@ export default function App() {
             <Route path="/admin/*" element={<RotasAdmin />} />
             <Route path="/plataforma/*" element={<RotasPlataforma />} />
 
-            <Route path="*" element={<NaoEncontrada />} />
+            {/* rota que o código não conhece: página criada na Plataforma, ou 404 */}
+            <Route path="*" element={<PaginaOu404 />} />
           </Routes>
           )}
           </Suspense>

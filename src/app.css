@@ -15960,3 +15960,41 @@ label.switch:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
 .combo-toggle-texto > span:first-child { display: inline-flex; align-items: center; gap: 5px; }
 .service-combo-partes { display: block; }
 @media (max-width: 640px) { .cardapio-rodape-duplo { grid-template-columns: 1fr; } }
+
+/* ---- editor de conteúdo das páginas públicas (Plataforma > SEO, 3.3) ---- */
+.cont-form { display: grid; gap: 10px; }
+.cont-secao { margin: 14px 0 0; padding-top: 12px; border-top: 1px solid var(--fio, #eee); font-size: .8rem; letter-spacing: .04em; text-transform: uppercase; color: var(--texto-3, #777); }
+.cont-campo { display: grid; gap: 4px; }
+.cont-campo > span { font-size: .8rem; font-weight: 600; color: var(--texto-2, #444); }
+.cont-campo > span em { font-weight: 400; font-style: normal; color: var(--texto-3, #777); }
+.cont-campo input, .cont-campo textarea, .cont-campo select { width: 100%; }
+.cont-curto { max-width: 420px; }
+.cont-sim { display: flex; align-items: center; gap: 8px; }
+.cont-sim input { width: auto; }
+.cont-dica { color: var(--texto-3, #777); font-size: .74rem; }
+.cont-grupo { border: 1px solid var(--fio, #eee); border-radius: 12px; padding: 10px 12px 12px; display: grid; gap: 8px; }
+.cont-grupo legend { font-size: .8rem; font-weight: 700; color: var(--texto-2, #444); padding: 0 4px; }
+.cont-lista { display: grid; gap: 8px; }
+.cont-lista-cabeca { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.cont-lista-cabeca > span { font-size: .8rem; font-weight: 600; color: var(--texto-2, #444); }
+.cont-item { border: 1px solid var(--fio, #eee); border-radius: 12px; padding: 10px 12px 12px; display: grid; gap: 8px; background: #fffafc; }
+.cont-item-cabeca { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.cont-item-cabeca strong { font-size: .82rem; }
+.cont-botoes { display: inline-flex; gap: 2px; flex: none; }
+.cont-botoes .icon-btn { width: 28px; height: 28px; }
+.cont-tirar { color: #c0392b; }
+.cont-par { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: end; }
+.cont-par label { display: grid; gap: 3px; font-size: .78rem; font-weight: 600; color: var(--texto-2, #444); }
+.cont-par input, .cont-par textarea { width: 100%; }
+.cont-chave { grid-template-columns: 1fr auto; align-items: center; padding: 6px 10px; border: 1px solid var(--fio, #eee); border-radius: 10px; font-size: .85rem; }
+.cont-mais { justify-self: start; }
+select.cont-mais { max-width: 420px; }
+.cont-estado { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 4px 0 10px; font-size: .85rem; }
+@media (max-width: 640px) { .cont-par { grid-template-columns: 1fr; } }
+
+.cont-chamadas { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 10px; }
+/* os campos do editor com a mesma cara dos formulários da Plataforma (fonte do corpo, não a do navegador) */
+.cont-form input, .cont-form textarea, .cont-form select { font-family: var(--corpo); font-size: .92rem; color: var(--texto); background: var(--branco); border: 1px solid var(--fio-forte); border-radius: var(--r-controle); padding: .6rem .75rem; outline: none; letter-spacing: 0; transition: border-color .14s ease, box-shadow .14s ease; }
+.cont-form textarea { resize: vertical; line-height: 1.45; }
+.cont-form input:focus, .cont-form textarea:focus, .cont-form select:focus { border-color: var(--rosa); box-shadow: 0 0 0 3px var(--latao-veu); }
+.cont-form input[type='checkbox'] { width: 18px; height: 18px; padding: 0; }

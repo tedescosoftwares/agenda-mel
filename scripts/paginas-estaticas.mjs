@@ -19,7 +19,8 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { ARTIGOS, CATEGORIAS } from '../src/conteudo/artigos.js'
 import { PAGINAS_SEO, PAGINAS_INSTITUCIONAIS } from '../src/conteudo/paginasSeo.js'
-import { TITULO as TITULO_HOME, DESCRICAO as DESCRICAO_HOME, JSON_LD as HOME_LD } from '../src/conteudo/home.js'
+import { TITULO as TITULO_HOME, DESCRICAO as DESCRICAO_HOME, jsonLdDaHome } from '../src/conteudo/home.js'
+import { mesclarPagina } from '../src/lib/paginas.js'
 
 const SITE = 'https://mimo.com.vc'
 const DIST = path.resolve('dist')
@@ -35,8 +36,10 @@ const migalhas = (itens) => ({ '@type': 'BreadcrumbList', itemListElement: itens
 const faqLd = (faq) => ({ '@type': 'FAQPage', mainEntity: faq.map(([q, a]) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } })) })
 const webPage = (p) => ({ '@type': 'WebPage', '@id': `${SITE}${p.caminho}`, url: `${SITE}${p.caminho}`, name: p.titulo, description: p.descricao, isPartOf: { '@id': `${SITE}/#website` }, inLanguage: 'pt-BR', ...(p.imagem ? { primaryImageOfPage: p.imagem } : {}), ...(p.atualizado ? { dateModified: p.atualizado } : {}) })
 
+// todas as páginas SEO por rota (as do código e, depois da leitura do banco, as da Plataforma): o pai das migalhas sai daqui
+const seoPorRota = new Map(PAGINAS_SEO.map((p) => [p.rota, p]))
 function ldDaPaginaSeo(p, pagina) {
-  const pai = pagina.pai ? PAGINAS_SEO.find((x) => x.rota === pagina.pai) : null
+  const pai = pagina.pai ? seoPorRota.get(pagina.pai) : null
   const trilha = [['Início', '/'], ...(pai ? [[pai.kicker, pai.rota]] : []), [pagina.kicker, pagina.rota]]
   return { '@context': 'https://schema.org', '@graph': [ORG, migalhas(trilha), webPage(p), ...(pagina.faq?.length ? [faqLd(pagina.faq)] : [])] }
 }
@@ -110,6 +113,7 @@ for (const a of ARTIGOS) {
 
 // ---- 2. do banco, quando dá ----------------------------------------------
 const URL = globalThis.process.env.VITE_SUPABASE_URL, CHAVE = globalThis.process.env.VITE_SUPABASE_ANON_KEY
+let homeDoBanco = null // a linha '/' de seo_pages: metas e, se editado, as perguntas da home
 if (URL && CHAVE && !globalThis.process.env.VITE_DEMO) {
   const pegar = async (q) => {
     const r = await fetch(`${URL}/rest/v1/${q}`, { headers: { apikey: CHAVE, Authorization: `Bearer ${CHAVE}` } })
@@ -120,15 +124,25 @@ if (URL && CHAVE && !globalThis.process.env.VITE_DEMO) {
   }
   try {
     const [pags, posts, cats] = await Promise.all([
-      pegar('seo_pages?select=route,seo_title,meta_description,og_image_url,robots_index,updated_at&status=eq.published'),
+      pegar('seo_pages?select=route,page_type,title,seo_title,meta_description,og_image_url,robots_index,updated_at,conteudo&status=eq.published'),
       pegar('blog_posts?select=slug,seo_title,title,meta_description,excerpt,og_image_url,cover_image_url,robots_index,published_at,updated_at,author_name,faq,blog_categories(slug,name)&status=eq.published'),
       pegar('blog_categories?select=slug,name'),
     ])
     for (const c of cats) if (c?.slug) categorias.set(c.slug, c.name || c.slug)
-    let ignoradas = 0
+    let ignoradas = 0, novas = 0
     for (const p of pags) {
-      const pg = conhecida.get(p.route)
-      if (!pg) { ignoradas++; continue } // rota sem tela no app: viraria 404
+      if (p.route === '/') { homeDoBanco = p; continue }
+      let pg = conhecida.get(p.route)
+      if (!pg) {
+        // rota que o código não conhece: página criada na Plataforma (vira página) ou sobra (ignora)
+        const nova = p.page_type === 'SEO_LANDING' ? mesclarPagina(null, p) : null
+        if (!nova) { ignoradas++; continue }
+        pg = { caminho: p.route, titulo: nova.seo_title || p.title || nova.h1.join(' '), descricao: nova.meta_description || '', imagem: nova.og_image_url || `${SITE}/imagens/${nova.foto}-1400.webp`, atualizado: dia(p.updated_at) || nova.atualizado_em || DATA_PADRAO, seo: nova }
+        registrar(pg); novas++
+      } else if (pg.seo) {
+        pg.seo = mesclarPagina(pg.seo, p) // as metas e, se a Plataforma editou, o miolo (FAQ, pai, chapéu)
+      }
+      if (pg.seo) seoPorRota.set(pg.caminho, pg.seo)
       pg.titulo = p.seo_title || pg.titulo
       pg.descricao = p.meta_description || pg.descricao
       pg.imagem = p.og_image_url || pg.imagem
@@ -148,7 +162,9 @@ if (URL && CHAVE && !globalThis.process.env.VITE_DEMO) {
       if (i >= 0) paginas[i] = pg; else registrar(pg)
       if (cat && !categorias.has(cat.slug)) categorias.set(cat.slug, cat.nome)
     }
-    console.log(`paginas-estaticas: ${pags.length} páginas e ${posts.length} artigos lidos do banco${ignoradas ? ` (${ignoradas} rota(s) do banco sem tela, ignoradas)` : ''}`)
+    // com todas as páginas na mesa (inclusive as da Plataforma), o pai das migalhas fecha
+    for (const pg of paginas) if (pg.seo) pg.jsonLd = ldDaPaginaSeo(pg, pg.seo)
+    console.log(`paginas-estaticas: ${pags.length} páginas e ${posts.length} artigos lidos do banco${novas ? `, ${novas} página(s) criada(s) na Plataforma` : ''}${ignoradas ? ` (${ignoradas} rota(s) do banco sem tela, ignoradas)` : ''}`)
   } catch (e) {
     console.log('paginas-estaticas: banco indisponível (' + e.message + '), seguindo só com o código')
   }
@@ -176,7 +192,7 @@ for (const p of paginas) {
   }
 }
 // a home: canonical e dados estruturados só para "/", num arquivo próprio
-fs.writeFileSync(path.join(DIST, '_home.html'), html({ caminho: '/', titulo: TITULO_HOME, descricao: DESCRICAO_HOME, atualizado: DATA_PADRAO, jsonLd: HOME_LD }))
+fs.writeFileSync(path.join(DIST, '_home.html'), html({ caminho: '/', titulo: homeDoBanco?.seo_title || TITULO_HOME, descricao: homeDoBanco?.meta_description || DESCRICAO_HOME, imagem: homeDoBanco?.og_image_url, atualizado: dia(homeDoBanco?.updated_at) || DATA_PADRAO, jsonLd: jsonLdDaHome(homeDoBanco?.conteudo?.faq) }))
 
 const urls = [{ caminho: '/', atualizado: DATA_PADRAO, prioridade: '1.0', freq: 'weekly' }, ...paginas.filter((p) => !p.noindex)]
   .map((p) => `  <url><loc>${SITE}${p.caminho}</loc>${p.atualizado ? `<lastmod>${p.atualizado}</lastmod>` : ''}<changefreq>${p.freq || (p.tipo === 'article' ? 'monthly' : 'weekly')}</changefreq><priority>${p.prioridade || (p.seo ? '0.9' : p.tipo === 'article' ? '0.7' : '0.5')}</priority></url>`)

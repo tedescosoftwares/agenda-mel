@@ -36,17 +36,42 @@ export const CHAMADAS = {
   comecar: { rotulo: 'Me ajuda a começar', texto: 'Oi! Quero começar na MIMO e preciso de uma mão pra configurar.' },
   autonoma: { rotulo: 'Sou autônoma, me conta mais', texto: 'Oi! Sou autônoma e quero saber como a MIMO funciona pra mim.' },
   migrar: { rotulo: 'Vou trocar de sistema', texto: 'Oi! Uso outro sistema hoje e quero ver como passar pra MIMO.' },
-  artigo: { rotulo: 'Falar sobre isso com a MIMO', texto: (titulo) => `Oi! Li "${titulo}" no blog da MIMO e quero ver como fica no meu salão.` },
+  artigo: { rotulo: 'Falar sobre isso com a MIMO', texto: 'Oi! Li "{extra}" no blog da MIMO e quero ver como fica no meu salão.' },
   contato: { rotulo: 'Chamar no WhatsApp', texto: 'Oi, MIMO!' },
   conversar: { rotulo: 'Conversar com quem faz a MIMO', texto: 'Oi! Vi a página Sobre e quero conversar com vocês.' },
-  perdido: { rotulo: 'Pedir ajuda no WhatsApp', texto: (url) => `Oi! Cheguei numa página que não existe mais (${url}). Pode me ajudar?` },
+  perdido: { rotulo: 'Pedir ajuda no WhatsApp', texto: 'Oi! Cheguei numa página que não existe mais ({extra}). Pode me ajudar?' },
   flutuante: { rotulo: 'Fala com a gente', texto: 'Oi, MIMO! Vim pelo site e quero conversar.' },
-  suporte: { rotulo: 'Falar com a MIMO', texto: (quem) => `Oi! ${quem ? `Sou ${quem} e ` : ''}preciso de ajuda com a MIMO: ` },
-  email: { rotulo: 'Falar com o suporte', texto: (quem) => `Oi! ${quem ? `Sou ${quem} e ` : ''}quero trocar o e-mail de login da minha conta na MIMO.` },
+  suporte: { rotulo: 'Falar com a MIMO', texto: 'Oi! {quem}preciso de ajuda com a MIMO: ' },
+  email: { rotulo: 'Falar com o suporte', texto: 'Oi! {quem}quero trocar o e-mail de login da minha conta na MIMO.' },
   whatsEmUso: { rotulo: 'Falar com o suporte', texto: 'Oi! Meu WhatsApp já está em uso na MIMO e não consigo me cadastrar.' },
 }
 
-export function chamada(nome, extra) {
-  const c = CHAMADAS[nome] || CHAMADAS.duvida
-  return { rotulo: c.rotulo, texto: typeof c.texto === 'function' ? c.texto(extra) : c.texto }
+// onde cada chamada aparece (para a Plataforma explicar o que está editando)
+export const ONDE = {
+  duvida: 'Depois das perguntas frequentes (home e páginas)', planos: 'Junto dos planos (home, página de planos e páginas com preço)',
+  demonstracao: 'Chamada final das páginas de salão', comecar: 'Reserva: pedido de ajuda para começar', autonoma: 'Páginas de autônoma (FAQ e chamada final)',
+  migrar: 'Página de comparação (depois do FAQ)', artigo: 'Fim de cada artigo do blog ({extra} = título do artigo)', contato: 'Página de contato e rodapé',
+  conversar: 'Página Sobre', perdido: 'Página não encontrada ({extra} = endereço)', flutuante: 'Botão flutuante do site',
+  suporte: 'Dentro do app: ajustes, perfil e painel ({quem} = nome e salão)', email: 'Dentro do app: trocar e-mail de login', whatsEmUso: 'Cadastro da cliente: WhatsApp já em uso',
+}
+
+// as chamadas que a Plataforma salvou (config_publica.whatsapp_chamadas, JSON nome → { rotulo, texto })
+export function lerChamadas(cfg) {
+  try {
+    const v = cfg?.whatsapp_chamadas
+    if (!v) return {}
+    const o = typeof v === 'string' ? JSON.parse(v) : v
+    return o && typeof o === 'object' && !Array.isArray(o) ? o : {}
+  } catch { return {} }
+}
+
+// rótulo e texto de uma chamada: o da Plataforma, senão o do código.
+// {extra} vira o que a tela passou (título do artigo, endereço);
+// {quem} vira "Sou Fulana, do Salão X e " quando há alguém logado.
+export function chamada(nome, extra, cfg) {
+  const base = CHAMADAS[nome] || CHAMADAS.duvida
+  const sobre = lerChamadas(cfg)[nome] || {}
+  const x = extra == null ? '' : String(extra)
+  const texto = (String(sobre.texto || '').trim() || base.texto).replace(/\{extra\}/g, x).replace(/\{quem\}/g, x ? `Sou ${x} e ` : '')
+  return { rotulo: String(sobre.rotulo || '').trim() || base.rotulo, texto }
 }

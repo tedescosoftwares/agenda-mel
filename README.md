@@ -166,6 +166,34 @@ cartão do contato e o flutuante); no app: `src/components/LinkSuporte.jsx`.
 
 ## SEO: onde mora e como chega no Google
 
+### A regra da casa (3.3): tudo que é página pública se edita na Plataforma
+
+O código é a reserva e o modelo; o banco manda. Em Plataforma → SEO e
+Conteúdo → Páginas, cada linha de `seo_pages` tem as metas (title,
+description, OG, robots) **e o miolo** (`conteudo` jsonb): herói, rotina,
+módulos, FAQ, "veja também", guias ligados, chamada. Enquanto `conteudo`
+está vazio, vale o que está em `src/conteudo/paginasSeo.js` (o editor já
+abre pré-preenchido com isso); "Voltar para o do código" limpa a coluna.
+Home, planos, sobre, contato e a cabeça do blog seguem a mesma regra
+(`conteudo` com os campos de cada uma; reserva em `home.js` e
+`paginasSeo.js`). Artigos e termos já eram 100% do banco.
+
+- **Página nova pelo código**: entra em `PAGINAS_SEO` **e** numa migração
+  de dados que insere a linha em `seo_pages` (`on conflict (route) do
+  nothing`), como a 151 fez para todas as existentes. Sem a linha, a página
+  não aparece na Plataforma, e isso é bug.
+- **Página nova pela Plataforma**: "Nova página" com rota `/alguma-coisa`
+  e tipo SEO; abre no site na hora (`PaginaOu404` resolve a rota) e entra
+  no sitemap e no HTML estático no próximo publicar (o build lê o banco).
+- **Rodapé e "veja também"** listam tudo que existe, do código e do banco,
+  pelo nome curto (`rodape`) e pela `ordem`; "Mostrar no rodapé" tira uma
+  página de lá sem apagar.
+- **Campo novo no miolo**: uma linha em `src/conteudo/esquemas.js` e o uso
+  dele na tela pública. O formulário se monta sozinho
+  (`src/components/plataforma/FormularioConteudo.jsx`).
+- **WhatsApp**: número e as frases de cada chamada em Plataforma →
+  Configurações (`config_publica.whatsapp_suporte` e `whatsapp_chamadas`).
+
 - **Conteúdo** em `src/conteudo/`: `paginasSeo.js` (uma página por intenção
   de busca: hub `/sistema-para-salao-de-beleza`, agenda, sistema de
   agendamento, agendamento online, páginas por problema e por profissão),

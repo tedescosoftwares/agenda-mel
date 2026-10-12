@@ -10,5 +10,5 @@ export default function LinkSuporte({ chamada: nome = 'suporte', className, chil
   const cfg = useConfig()
   const { profile, salao } = useAuth()
   const quem = profile?.full_name ? profile.full_name + (salao?.name ? `, do ${salao.name}` : '') : ''
-  return <a href={linkWhats(numeroWhats(cfg), chamada(nome, quem).texto)} target="_blank" rel="noopener noreferrer" className={className} {...resto}>{children}</a>
+  return <a href={linkWhats(numeroWhats(cfg), chamada(nome, quem, cfg).texto)} target="_blank" rel="noopener noreferrer" className={className} {...resto}>{children}</a>
 }

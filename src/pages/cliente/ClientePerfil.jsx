@@ -26,7 +26,7 @@ export default function ClientePerfil() {
   const [erro, setErro] = useState('')
   const [resumo, setResumo] = useState(null)
   const cfg = useConfig()
-  const zapSuporte = linkWhats(numeroWhats(cfg), chamada('suporte', profile?.full_name).texto)
+  const zapSuporte = linkWhats(numeroWhats(cfg), chamada('suporte', profile?.full_name, cfg).texto)
   // o que está aberto embaixo: 'nasc' | 'fone' | 'email' | null
   const [folha, setFolha] = useState(null)
   const [nasc, setNasc] = useState('')

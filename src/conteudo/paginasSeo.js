@@ -1,3 +1,4 @@
+import { CONTEUDO as HOME_CONTEUDO } from './home.js'
 // As páginas SEO: uma rota por intenção de busca, cada uma com texto,
 // exemplos, funcionalidades e perguntas da rotina daquela busca. A
 // estrutura vive aqui; o title, a description e o Open Graph podem ser
@@ -270,12 +271,42 @@ export const PAGINAS_SEO = [
 ]
 
 // as páginas institucionais também têm SEO próprio e entram no sitemap
+// o miolo editável das páginas institucionais (Plataforma > SEO > Páginas);
+// o que está aqui é a reserva: vale quando o banco não tem o campo
+export const CONTEUDO_PLANOS = {
+  kicker: 'Planos', h1: ['Preço que o salão entende', 'sem pedir orçamento.'],
+  intro: 'Três planos, uma regra: você paga pelas agendas profissionais que realmente utiliza. Recepção, gerente e conta administrativa não contam como agenda.',
+  autonomaItens: ['1 agenda profissional', 'Serviços e horários', 'Clientes e histórico', 'QR e link próprios', 'Retorno de clientes'],
+  proItens: ['Equipe e várias agendas', 'Agenda geral, comanda e repasses', 'Lista de espera e WhatsApp', 'Sinal e pagamentos', 'Avaliações e projeção da semana'],
+  promaisItens: ['Tudo do MIMO Pro', 'Profissionais sem limite', 'Permissões por profissional', 'Comissões e relatórios', 'Operação mais estruturada'],
+  nota: 'Exemplos: 3 profissionais, R$ 49,90. 6 profissionais, R$ 79,60. 10 profissionais, R$ 119,20. 15 profissionais, R$ 181,50. Sem fidelidade. A autônoma que abrir um salão passa para o MIMO Pro com a mesma conta, sem perder clientes nem histórico. Comparando com outro sistema? [Veja a MIMO lado a lado com o Trinks](/alternativa-ao-trinks).',
+}
+export const CONTEUDO_SOBRE = {
+  kicker: 'Sobre a MIMO', h1: ['Feita com salão de verdade,', 'para salão de verdade.'],
+  intro: 'A MIMO nasceu dentro de um salão, com a agenda de papel do lado. Cada função entrou porque alguém precisou dela numa terça-feira cheia, não porque estava na lista de um concorrente.',
+  texto: `## O que a gente acredita
+
+**Clientes não são propriedade de uma plataforma.** A cliente chega pelo seu QR, pelo seu link ou por uma profissional da sua equipe, e essa origem fica registrada. Não existe vitrine genérica com o concorrente ao lado.
+
+**Bonita, mas não fútil. Simples, mas não rasa.** A MIMO fala a língua do salão: cadeira vazia, encaixe, retorno, comanda. Nada de dashboard decorativo.
+
+**Tecnologia que não parece software de contador.** A dona abre e sabe o que fazer agora. A profissional vê só a agenda dela. A cliente marca sozinha.
+
+A MIMO é desenvolvida pela **MIMO Desenvolvimento Ltda**, no litoral de São Paulo. Começou em Itanhaém, Peruíbe e Mongaguá e cresce salão a salão.`,
+}
+export const CONTEUDO_CONTATO = {
+  kicker: 'Contato', h1: ['Fala com a gente.'],
+  intro: 'Dúvida sobre o sistema, sobre a conta de autônoma ou vontade de trazer a MIMO para o seu salão. Respondemos gente, não robô.',
+  nota: 'Suporte pelo app: quem já usa a MIMO encontra o canal de ajuda dentro do painel. [Privacidade](/privacidade) · [Termos de uso](/termos).',
+}
+export const CONTEUDO_BLOG = { kicker: 'Blog MIMO', h1: ['O que a dona do salão', 'já está perguntando.'], intro: 'Guias curtos, ligados à rotina. Úteis mesmo para quem ainda não usa a MIMO.' }
+
 export const PAGINAS_INSTITUCIONAIS = [
-  { rota: '/', tipo: 'home', titulo: 'Home', seo_title: 'MIMO | Sistema para Salão de Beleza e Agenda Online', meta_description: 'Organize agenda, clientes, equipe, WhatsApp, retorno e pagamentos com a MIMO. Sistema para salão de beleza e profissional autônoma. Plano grátis para autônomas.' },
-  { rota: '/planos', tipo: 'institucional', titulo: 'Planos', seo_title: 'Planos e preços | MIMO', meta_description: 'Autônoma grátis. MIMO Pro por R$ 49,90/mês até 3 profissionais, mais R$ 9,90 por profissional até 10. MIMO Pro+ por R$ 149,90/mês para 11 ou mais.' },
-  { rota: '/sobre', tipo: 'institucional', titulo: 'Sobre a MIMO', seo_title: 'Sobre a MIMO | Beleza, organização e relacionamento', meta_description: 'A MIMO é um sistema de agenda e relacionamento para salões e profissionais de beleza, construído junto à rotina real de quem vive da beleza.' },
-  { rota: '/contato', tipo: 'institucional', titulo: 'Contato', seo_title: 'Contato | MIMO', meta_description: 'Fale com a equipe da MIMO: dúvidas sobre o sistema para salão, a conta de autônoma ou parcerias.' },
-  { rota: '/blog', tipo: 'blog', titulo: 'Blog', seo_title: 'Blog da MIMO | Agenda, clientes e gestão de salão', meta_description: 'Guias curtos e práticos para quem vive da beleza: agenda, clientes, equipe, WhatsApp e financeiro do salão.' },
+  { rota: '/', tipo: 'home', titulo: 'Home', conteudo: HOME_CONTEUDO, seo_title: 'MIMO | Sistema para Salão de Beleza e Agenda Online', meta_description: 'Organize agenda, clientes, equipe, WhatsApp, retorno e pagamentos com a MIMO. Sistema para salão de beleza e profissional autônoma. Plano grátis para autônomas.' },
+  { rota: '/planos', tipo: 'institucional', titulo: 'Planos', conteudo: CONTEUDO_PLANOS, seo_title: 'Planos e preços | MIMO', meta_description: 'Autônoma grátis. MIMO Pro por R$ 49,90/mês até 3 profissionais, mais R$ 9,90 por profissional até 10. MIMO Pro+ por R$ 149,90/mês para 11 ou mais.' },
+  { rota: '/sobre', tipo: 'institucional', titulo: 'Sobre a MIMO', conteudo: CONTEUDO_SOBRE, seo_title: 'Sobre a MIMO | Beleza, organização e relacionamento', meta_description: 'A MIMO é um sistema de agenda e relacionamento para salões e profissionais de beleza, construído junto à rotina real de quem vive da beleza.' },
+  { rota: '/contato', tipo: 'institucional', titulo: 'Contato', conteudo: CONTEUDO_CONTATO, seo_title: 'Contato | MIMO', meta_description: 'Fale com a equipe da MIMO: dúvidas sobre o sistema para salão, a conta de autônoma ou parcerias.' },
+  { rota: '/blog', tipo: 'blog', titulo: 'Blog', conteudo: CONTEUDO_BLOG, seo_title: 'Blog da MIMO | Agenda, clientes e gestão de salão', meta_description: 'Guias curtos e práticos para quem vive da beleza: agenda, clientes, equipe, WhatsApp e financeiro do salão.' },
   { rota: '/termos', tipo: 'institucional', titulo: 'Termos e privacidade', seo_title: 'Termos de uso e privacidade | MIMO', meta_description: 'Os termos de uso da MIMO para clientes, profissionais e salões, e a Política de privacidade, com versão e data.' },
   { rota: '/termos/cliente', tipo: 'institucional', titulo: 'Termos de uso para clientes', seo_title: 'Termos de uso para clientes | MIMO', meta_description: 'Termos de uso da MIMO para quem marca horário pela plataforma.' },
   { rota: '/termos/profissional', tipo: 'institucional', titulo: 'Termos de uso para profissionais', seo_title: 'Termos de uso para profissionais | MIMO', meta_description: 'Termos de uso da MIMO para autônomas e profissionais de salão.' },
@@ -549,7 +580,7 @@ PAGINAS_SEO.push(
 // escolhendo sistema; a página fala com essa pessoa e aponta para o hub ----
 PAGINAS_SEO.push(
   {
-    rota: '/alternativa-ao-trinks', tipo: 'comparativo', kicker: 'Alternativa ao Trinks',
+    rota: '/alternativa-ao-trinks', tipo: 'comparativo', kicker: 'Alternativa ao Trinks', rodapeMostrar: false,
     h1: ['Alternativa ao Trinks', 'para salão e autônoma:', 'o que muda na MIMO.'],
     sub: 'Comparação feita com o que o site do Trinks mostra em outubro de 2026: preço, marketplace, WhatsApp, conta de autônoma e o que cada um faz melhor. Com o lado de lá incluído.',
     provas: ['Preço público: de R$ 0 a R$ 49,90', 'Sem marketplace: a cliente é sua', '7 dias grátis, sem cartão'],
@@ -589,7 +620,17 @@ PAGINAS_SEO.push(
 // migalhas), páginas relacionadas (o "veja também") e data ----
 const HUB = '/sistema-para-salao-de-beleza'
 const HUB_AUTONOMA = '/app-para-profissional-de-beleza'
+// o rodapé do site lista tudo que existe: nome curto e ordem de cada página
+// (página sem entrada aqui aparece com o chapéu, depois das outras)
+const RODAPE = {
+  [HUB]: ['Sistema para salão de beleza', 10], '/agenda-para-salao-de-beleza': ['Agenda para salão', 20], '/sistema-de-agendamento': ['Sistema de agendamento', 30], '/agendamento-online': ['Agendamento online', 40],
+  '/agenda-multi-profissional': ['Agenda multi-profissional', 50], '/lista-de-espera-para-salao': ['Lista de espera', 60], '/confirmacao-de-agendamento-whatsapp': ['Confirmação pelo WhatsApp', 70], '/sinal-para-agendamento': ['Sinal por Pix', 80],
+  '/sistema-de-comissao-para-salao': ['Comissão e repasse', 90], '/controle-de-clientes-para-salao': ['Controle de clientes', 100], '/qr-code-para-salao-de-beleza': ['QR Code no balcão', 110],
+  [HUB_AUTONOMA]: ['App para autônoma', 10], '/agenda-para-manicure': ['Agenda para manicure', 20], '/agenda-para-cabeleireira': ['Agenda para cabeleireira', 30], '/agenda-para-lash-designer': ['Agenda para lash designer', 40], '/agenda-para-designer-de-sobrancelhas': ['Agenda para designer de sobrancelhas', 50], '/agenda-para-esteticista': ['Agenda para esteticista', 60],
+}
 for (const p of PAGINAS_SEO) {
+  const r = RODAPE[p.rota]
+  if (r) { if (!p.rodape) p.rodape = r[0]; if (p.ordem == null) p.ordem = r[1] }
   if (!('pai' in p)) p.pai = p.rota === HUB || p.rota === HUB_AUTONOMA ? null : p.tipo === 'profissao' ? HUB_AUTONOMA : HUB
   if (!p.relacionadas) p.relacionadas = (p.tipo === 'profissao' ? [HUB_AUTONOMA, '/agenda-para-salao-de-beleza', '/agendamento-online', '/sinal-para-agendamento'] : [HUB, '/agenda-para-salao-de-beleza', '/agendamento-online', '/lista-de-espera-para-salao']).filter((r) => r !== p.rota)
   if (!p.atualizado_em) p.atualizado_em = '2026-09-23'

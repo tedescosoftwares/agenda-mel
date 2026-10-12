@@ -7,7 +7,7 @@ import { VERSAO, ENTREGA } from '../../lib/versao'
 import { EngrenagemIcon, ClockIcon, UsersIcon } from '../../components/icons'
 import { MessageCircle } from 'lucide-react'
 import { carregarConfig } from '../../lib/config'
-import { WHATSAPP_MIMO, bonito, numeroWhats } from '../../lib/contato'
+import { WHATSAPP_MIMO, bonito, numeroWhats, CHAMADAS, ONDE, lerChamadas } from '../../lib/contato'
 
 // Configurações da plataforma: o relógio, a versão, e quem mais cuida.
 export default function Configuracoes() {
@@ -18,7 +18,24 @@ export default function Configuracoes() {
   const [zap, setZap] = useState('')
   const [zapSalvo, setZapSalvo] = useState('')
   useEffect(() => { supabase.rpc('relogio_status').then(({ data }) => setRelogio(data)) }, [])
-  useEffect(() => { carregarConfig().then((c) => { const v = String(c?.whatsapp_suporte || ''); setZap(v); setZapSalvo(v) }) }, [])
+  const [cham, setCham] = useState({})
+  useEffect(() => { carregarConfig().then((c) => { const v = String(c?.whatsapp_suporte || ''); setZap(v); setZapSalvo(v); setCham(lerChamadas(c)) }) }, [])
+
+  // as chamadas do WhatsApp: só o que difere do código vai para o banco
+  const chamadaAtual = (nome, campo) => cham[nome]?.[campo] ?? CHAMADAS[nome][campo]
+  const mudarChamada = (nome, campo, v) => setCham((c) => ({ ...c, [nome]: { ...(c[nome] || {}), [campo]: v } }))
+  async function salvarChamadas() {
+    const limpo = {}
+    for (const nome of Object.keys(CHAMADAS)) {
+      const r = String(cham[nome]?.rotulo ?? '').trim(), x = String(cham[nome]?.texto ?? '').trim()
+      const d = {}
+      if (r && r !== CHAMADAS[nome].rotulo) d.rotulo = r
+      if (x && x !== CHAMADAS[nome].texto) d.texto = x
+      if (Object.keys(d).length) limpo[nome] = d
+    }
+    const { error } = await supabase.rpc('definir_config_publica', { chave_: 'whatsapp_chamadas', valor_: JSON.stringify(limpo) })
+    if (error) setErro(error.message); else { setCham(limpo); await avisar({ titulo: 'Feito', texto: Object.keys(limpo).length ? `${Object.keys(limpo).length} chamada(s) com texto seu; as outras seguem o código.` : 'Todas as chamadas voltaram ao texto do código.' }) }
+  }
 
   // o WhatsApp da MIMO que o site e o app mostram (reserva: lib/contato.js)
   async function salvarZap() {
@@ -65,6 +82,18 @@ export default function Configuracoes() {
           <p className="muted plat-nota">Publicar: opção 2 do Conectar_MIMO_VPS.bat. Banco: atualizacao_040_em_diante.sql no SQL Editor.</p>
         </Painel>
       </div>
+      <Painel Icon={MessageCircle} titulo="Chamadas do WhatsApp" sub="O texto de cada botão e a mensagem que já chega escrita. {extra} vira o título do artigo ou o endereço; {quem} vira “Sou Fulana, do Salão X e ”." direita={<button className="btn btn-primary" onClick={salvarChamadas}>Salvar chamadas</button>}>
+        <div className="cont-form cont-chamadas">
+          {Object.keys(CHAMADAS).map((nome) => (
+            <div className="cont-item" key={nome}>
+              <div className="cont-item-cabeca"><strong>{nome}</strong><small className="muted">{ONDE[nome]}</small></div>
+              <label className="cont-campo"><span>Texto do botão</span><input value={chamadaAtual(nome, 'rotulo')} onChange={(e) => mudarChamada(nome, 'rotulo', e.target.value)} /></label>
+              <label className="cont-campo"><span>Mensagem que chega escrita</span><textarea rows={2} value={chamadaAtual(nome, 'texto')} onChange={(e) => mudarChamada(nome, 'texto', e.target.value)} /></label>
+              {cham[nome] && (cham[nome].rotulo || cham[nome].texto) && <button type="button" className="plat-link" onClick={() => setCham((c) => { const n = { ...c }; delete n[nome]; return n })}>Voltar ao texto do código</button>}
+            </div>
+          ))}
+        </div>
+      </Painel>
     </Shell>
   )
 }

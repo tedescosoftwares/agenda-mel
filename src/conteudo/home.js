@@ -32,3 +32,19 @@ export const JSON_LD = {
     { '@type': 'FAQPage', '@id': `${SITE}/#faq`, mainEntity: FAQ.map(([q, a]) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } })) },
   ],
 }
+
+// o miolo editável da home (Plataforma > SEO > Páginas > /): herói e perguntas
+export const CONTEUDO = {
+  kicker: 'Feita para quem vive da beleza',
+  h1: ['Sua rotina no lugar.', 'Seus clientes mais perto.'],
+  lead: 'A MIMO conecta agenda, clientes, equipe, WhatsApp, retorno e pagamentos numa experiência feita para a rotina real de quem trabalha com beleza.',
+  lead2: 'Menos conversa perdida. Menos horário vazio. Mais clareza para trabalhar.',
+  provas: ['Profissional autônoma grátis', 'Salões com múltiplas agendas', 'Funciona no celular'],
+  faq: FAQ,
+}
+
+// os dados estruturados da home com as perguntas que valem (do banco ou do código)
+export function jsonLdDaHome(faq = FAQ) {
+  const lista = Array.isArray(faq) ? faq.filter((p) => Array.isArray(p) && p[0] && p[1]) : FAQ
+  return { ...JSON_LD, '@graph': JSON_LD['@graph'].map((g) => (g['@type'] === 'FAQPage' ? { ...g, mainEntity: lista.map(([q, a]) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } })) } : g)) }
+}

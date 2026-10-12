@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   CalendarDays, Users, Heart, MessageCircle, Wallet, Check, ArrowRight, ChevronDown,
@@ -9,7 +10,9 @@ import { PalcoCelular, MockDesktop, MockProfissional, MockRetorno, MockEspera, M
 import { RotinaCartas, Historias, AntesDepois, ProdutoReal, Tamanhos, Simulador, CapturaLead, Confianca, PorQue } from '../../components/site/Secoes'
 import '../../landing.css'
 import { FaixaWhats } from '../../components/site/Whats'
-import { TITULO, DESCRICAO, FAQ, JSON_LD } from '../../conteudo/home'
+import { TITULO, DESCRICAO, CONTEUDO, jsonLdDaHome } from '../../conteudo/home'
+import { seoDaRota } from '../../lib/conteudoPublico'
+import { linhas, pares } from '../../lib/paginas'
 
 // A porta da rua: mimo.com.vc para quem ainda não é de casa. Fala com a
 // dona do salão e com a profissional autônoma; a cliente entra pelo
@@ -53,7 +56,15 @@ export default function Landing() {
   const raiz = useRevelar()
   const comecar = comecarEm
   const logada = useQuemLogada()
-  useSeo({ titulo: TITULO, descricao: DESCRICAO, caminho: '/', jsonLd: JSON_LD })
+  // o miolo da home (herói e perguntas) e as metas: do código, com o banco (Plataforma) por cima
+  const [home, setHome] = useState({ seo_title: TITULO, meta_description: DESCRICAO, ...CONTEUDO })
+  useEffect(() => {
+    let vivo = true
+    seoDaRota('/').then((s) => { if (vivo && s) setHome({ seo_title: s.seo_title || TITULO, meta_description: s.meta_description || DESCRICAO, ...CONTEUDO, ...(s.conteudo || {}) }) })
+    return () => { vivo = false }
+  }, [])
+  const h1 = linhas(home.h1), provas = linhas(home.provas), faq = pares(home.faq)
+  useSeo({ titulo: home.seo_title, descricao: home.meta_description, caminho: '/', jsonLd: jsonLdDaHome(faq) })
 
   return (
     <div className="ld" ref={raiz}>
@@ -64,20 +75,18 @@ export default function Landing() {
         <section className="ld-hero">
           <div className="ld-wrap ld-hero-grade">
             <div className="ld-hero-texto">
-              <span className="ld-kicker">Feita para quem vive da beleza</span>
-              <h1>Sua rotina no lugar.<span>Seus clientes mais perto.</span></h1>
+              <span className="ld-kicker">{home.kicker}</span>
+              <h1>{h1[0]}{h1.slice(1).map((l) => <span key={l}>{l}</span>)}</h1>
               <Coracao className="ld-hero-coracao" />
-              <p className="ld-lead">A MIMO conecta agenda, clientes, equipe, WhatsApp, retorno e pagamentos numa experiência feita para a rotina real de quem trabalha com beleza.</p>
-              <p className="ld-lead ld-lead-2">Menos conversa perdida. Menos horário vazio. Mais clareza para trabalhar.</p>
+              <p className="ld-lead">{home.lead}</p>
+              {home.lead2 && <p className="ld-lead ld-lead-2">{home.lead2}</p>}
               <div className="ld-hero-cta">
                 {logada ? (logada.externo ? <a className="ld-btn ld-primario ld-grande" href={logada.destino}>{logada.acao} <ArrowRight size={18} /></a> : <Link className="ld-btn ld-primario ld-grande" to={logada.destino}>{logada.acao} <ArrowRight size={18} /></Link>) : <a className="ld-btn ld-primario ld-grande" href={comecar()}>Começar agora <ArrowRight size={18} /></a>}
                 <a className="ld-btn ld-fantasma ld-grande" href="#como-funciona">Ver como funciona</a>
                 <span className="ld-bilhete ld-bilhete-hero">sua cliente marca sozinha <i>♥</i></span>
               </div>
               <ul className="ld-prova">
-                <li><i><Check size={12} /></i> Profissional autônoma grátis</li>
-                <li><i><Check size={12} /></i> Salões com múltiplas agendas</li>
-                <li><i><Check size={12} /></i> Funciona no celular</li>
+                {provas.map((p) => <li key={p}><i><Check size={12} /></i> {p}</li>)}
               </ul>
             </div>
             <PalcoCelular />
@@ -386,7 +395,7 @@ export default function Landing() {
           <div className="ld-wrap">
             <Cabeca kicker="Perguntas frequentes" titulo={['Dúvidas sobre a MIMO']} centro />
             <div className="ld-faq">
-              {FAQ.map(([q, a], i) => (
+              {faq.map(([q, a], i) => (
                 <details className="ld-rv" key={q} style={{ transitionDelay: `${i * 40}ms` }}>
                   <summary>{q}<ChevronDown size={18} /></summary>
                   <p>{a}</p>

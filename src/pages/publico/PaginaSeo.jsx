@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { ArrowRight, Check, ChevronDown, CalendarDays, Users, Heart, MessageCircle, Clock, Wallet, UserRound, PauseCircle, CalendarPlus, Scissors, QrCode, RotateCcw, Bell, Hand, Eye, Flower2, Receipt, LayoutGrid, Star } from 'lucide-react'
 import { useSeo, migalhasLd, ORGANIZACAO_LD, SITE } from '../../lib/seo'
-import { seoDaRota, artigosPublicados } from '../../lib/conteudoPublico'
+import { seoDaRota, artigosPublicados, paginasPublicas } from '../../lib/conteudoPublico'
 import { paginaSeoPorRota } from '../../conteudo/paginasSeo'
+import { normalizarPagina } from '../../lib/paginas'
 import { PLANOS, reais } from '../../lib/planos'
 import { REGRAS } from '../../lib/acesso'
 import { NavSite, PeSite, Foto, Coracao, Cabeca, useRevelar, comecarEm } from '../../components/site/Pecas'
@@ -26,22 +27,29 @@ const faqLd = (faq) => ({ '@type': 'FAQPage', mainEntity: faq.map(([q, a]) => ({
 
 export default function PaginaSeo() {
   const { pathname } = useLocation()
-  const pagina = paginaSeoPorRota(pathname)
+  // o código abre a página na hora; o banco (editado na Plataforma) chega logo
+  // depois e manda. Página que só existe no banco começa vazia e aparece quando chega.
+  const [pagina, setPagina] = useState(() => { const c = paginaSeoPorRota(pathname); return c ? normalizarPagina(c) : null })
   const raiz = useRevelar()
-  const [seo, setSeo] = useState(null)
+  const [todas, setTodas] = useState([])
   const [artigos, setArtigos] = useState([])
 
   useEffect(() => { window.scrollTo(0, 0) }, [pathname])
   useEffect(() => {
     let vivo = true
-    seoDaRota(pathname).then((s) => vivo && setSeo(s))
+    const c = paginaSeoPorRota(pathname)
+    setPagina(c ? normalizarPagina(c) : null)
+    seoDaRota(pathname).then((s) => { if (vivo && s && s.h1) setPagina(s) })
+    paginasPublicas().then((t) => vivo && setTodas(t))
     artigosPublicados().then((as) => vivo && setArtigos(as))
     return () => { vivo = false }
   }, [pathname])
 
-  const titulo = seo?.seo_title || pagina?.seo_title || 'MIMO'
-  const descricao = seo?.meta_description || pagina?.meta_description || ''
-  const pai = pagina?.pai ? paginaSeoPorRota(pagina.pai) : null
+  // outra página pelo caminho: entre tudo que existe (código e Plataforma)
+  const porRota = (r) => todas.find((p) => p.rota === r) || (paginaSeoPorRota(r) ? normalizarPagina(paginaSeoPorRota(r)) : null)
+  const titulo = pagina?.seo_title || 'MIMO'
+  const descricao = pagina?.meta_description || ''
+  const pai = pagina?.pai ? porRota(pagina.pai) : null
   const trilha = pagina ? [['Início', '/'], ...(pai ? [[pai.kicker, pai.rota]] : []), [pagina.kicker, pagina.rota]] : []
   const jsonLd = pagina ? {
     '@context': 'https://schema.org',
@@ -52,11 +60,11 @@ export default function PaginaSeo() {
       ...(pagina.faq?.length ? [faqLd(pagina.faq)] : []),
     ],
   } : null
-  useSeo({ titulo, descricao, caminho: pathname, imagem: seo?.og_image_url || (pagina ? `${SITE}/imagens/${pagina.foto}-1400.webp` : undefined), jsonLd, noindex: !!seo?.noindex })
+  useSeo({ titulo, descricao, caminho: pathname, imagem: pagina?.og_image_url || (pagina ? `${SITE}/imagens/${pagina.foto}-1400.webp` : undefined), jsonLd, noindex: !!pagina?.noindex })
 
   if (!pagina) return null
   const relacionados = pagina.artigos.map((s) => artigos.find((a) => a.slug === s)).filter(Boolean)
-  const relacionadas = (pagina.relacionadas || []).map(paginaSeoPorRota).filter(Boolean)
+  const relacionadas = (pagina.relacionadas || []).map(porRota).filter(Boolean)
   const cta = comecarEm(pagina.cta.tipo)
   const autonoma = pagina.tipo === 'profissao' || pagina.cta.tipo === 'autonoma'
   const faixa = autonoma ? 'autonoma' : pagina.tipo === 'comparativo' ? 'migrar' : 'duvida'
@@ -123,7 +131,7 @@ export default function PaginaSeo() {
             <div className="ld-wrap">
               <Cabeca kicker="Funcionalidades" titulo={['Funcionalidades que fazem sentido', 'para a sua rotina.']} centro />
               <div className="sp-funcoes">
-                {pagina.funcoes.map(([ic, t, d], i) => { const Ic = ICONES[ic] || CalendarDays; return <article className="ld-mini ld-rv" key={t} style={{ transitionDelay: `${i * 50}ms` }}><Ic size={20} /><h3>{t}</h3><p>{d}</p></article> })}
+                {pagina.funcoes.map((f, i) => { const Ic = ICONES[f.icone] || CalendarDays; return <article className="ld-mini ld-rv" key={f.titulo} style={{ transitionDelay: `${i * 50}ms` }}><Ic size={20} /><h3>{f.titulo}</h3><p>{f.texto}</p></article> })}
               </div>
             </div>
           </section>
@@ -156,10 +164,12 @@ export default function PaginaSeo() {
 
         <section className="ld-alt" id="perguntas">
           <div className="ld-wrap">
-            <Cabeca kicker="Perguntas frequentes" titulo={[pagina.faqTitulo || (pagina.modulos ? 'O que perguntam antes de começar' : 'Dúvidas de quem está começando')]} centro />
-            <div className="ld-faq">
-              {pagina.faq.map(([q, a], i) => <details className="ld-rv" key={q} style={{ transitionDelay: `${i * 40}ms` }}><summary>{q}<ChevronDown size={18} /></summary><p>{a}</p></details>)}
-            </div>
+            {pagina.faq.length > 0 && <Cabeca kicker="Perguntas frequentes" titulo={[pagina.faqTitulo || (pagina.modulos ? 'O que perguntam antes de começar' : 'Dúvidas de quem está começando')]} centro />}
+            {pagina.faq.length > 0 && (
+              <div className="ld-faq">
+                {pagina.faq.map(([q, a], i) => <details className="ld-rv" key={q} style={{ transitionDelay: `${i * 40}ms` }}><summary>{q}<ChevronDown size={18} /></summary><p>{a}</p></details>)}
+              </div>
+            )}
             <FaixaWhats chamada={faixa} />
           </div>
         </section>
@@ -247,7 +257,7 @@ function Modulos({ itens, titulo, texto }) {
                   <ul className="ld-checks">{m.itens.map((it) => <li key={it}>{it}</li>)}</ul>
                   {m.links?.length > 0 && <div className="sp-modulo-links">{m.links.map(([rota, rotulo]) => <Link className="ld-link" to={rota} key={rota}>{rotulo} →</Link>)}</div>}
                 </div>
-                <div className="sp-modulo-mock">{Mock ? <Mock /> : <Foto nome={m.foto} alt={m.alt || ''} />}</div>
+                <div className="sp-modulo-mock">{Mock ? <Mock /> : m.foto ? <Foto nome={m.foto} alt={m.alt || ''} /> : null}</div>
               </article>
             )
           })}

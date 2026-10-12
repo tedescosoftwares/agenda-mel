@@ -9,7 +9,7 @@ import { PAGINAS_SEO } from '../../conteudo/paginasSeo'
 export function useWhats(nome, extra) {
   const cfg = useConfig()
   const numero = numeroWhats(cfg)
-  const c = chamada(nome, extra)
+  const c = chamada(nome, extra, cfg)
   return { href: linkWhats(numero, c.texto), rotulo: c.rotulo, numero, bonito: bonito(numero) }
 }
 

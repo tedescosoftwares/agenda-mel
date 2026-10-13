@@ -215,7 +215,7 @@ export default function Horarios() {
 function Segmento({ ativo, texto, onPress }: { ativo: boolean; texto: string; onPress: () => void }) {
   const t = useTema()
   return (
-    <Pressable onPress={onPress} style={[e.segmento, ativo && { backgroundColor: t.superficie, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 1 }]}>
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityState={{ selected: ativo }} style={[e.segmento, ativo && { backgroundColor: t.superficie, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 1 }]}>
       <Text style={[e.segmentoTexto, { color: ativo ? t.texto : t.texto2 }]}>{texto}</Text>
     </Pressable>
   )

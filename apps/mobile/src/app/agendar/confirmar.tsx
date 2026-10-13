@@ -9,7 +9,6 @@ import { Trilha } from '@/components/Trilha'
 import { Aviso, Botao, Caixa, Cartao, Entrada, Selo } from '@/components/ui'
 import { capitalizar, curta, diffMin, escreverExtras, lerExtras, somarMin, useContexto, useEscolhas, useOrigem, type Servico } from '@/lib/agendar'
 import { dataCurta, formatDuracao, formatPreco } from '@/lib/formato'
-import { useAbrirWeb } from '@/lib/ponte'
 import { supabase } from '@/lib/supabase'
 import { MARCA, useTema } from '@/lib/tema'
 
@@ -28,7 +27,6 @@ type Resposta = { ok?: boolean; appointment_id?: string; motivo?: string; pagar?
 export default function Confirmar() {
   const t = useTema()
   const router = useRouter()
-  const abrir = useAbrirWeb()
   const esc = useEscolhas()
   const { prof, servico } = useContexto(esc.prof, esc.servico)
   const remarcando = Boolean(esc.remarcar)
@@ -250,9 +248,9 @@ export default function Confirmar() {
       return
     }
     if (r?.pagar && r.appointment_id) {
-      // o PIX do sinal ainda é na web: a ponte abre a tela de pagar com a sessão do app
+      // reserva com pagamento: o PIX do sinal, nativo
       router.dismissTo('/')
-      abrir(`/cliente/pagamento/${r.appointment_id}`, 'Pagar pelo app')
+      router.push({ pathname: '/pagamento/[id]', params: { id: r.appointment_id } })
       return
     }
     terminar(r?.appointment_id ?? 'novo')

@@ -3,7 +3,6 @@ import { useCallback, useState } from 'react'
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Avatar, Aviso, Botao, Cabecalho, Cartao, Carregando, Vazio } from '@/components/ui'
-import { useAbrirWeb } from '@/lib/ponte'
 import { supabase } from '@/lib/supabase'
 import { ESPACO, useTema } from '@/lib/tema'
 
@@ -19,7 +18,6 @@ type Agenda = {
 export default function Saloes() {
   const t = useTema()
   const router = useRouter()
-  const abrir = useAbrirWeb()
   const [agendas, setAgendas] = useState<Agenda[] | null>(null)
   const [erro, setErro] = useState<string | null>(null)
   const [atualizando, setAtualizando] = useState(false)
@@ -96,7 +94,7 @@ export default function Saloes() {
             key={ag.salao.id}
             ag={ag}
             onAgendar={() => router.push({ pathname: '/agendar/profissional', params: { salao: ag.salao.id } })}
-            onProfissional={(id, nome) => abrir(`/cliente/profissional/${id}`, nome)}
+            onProfissional={(id) => router.push({ pathname: '/profissional/[id]', params: { id } })}
           />
         ))}
       </ScrollView>

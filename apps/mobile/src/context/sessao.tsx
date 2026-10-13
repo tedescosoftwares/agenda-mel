@@ -11,6 +11,9 @@ export type Perfil = {
   phone: string | null
   avatar_url: string | null
   role: string | null
+  nascimento: string | null
+  accepts_reminders: boolean | null
+  aceita_email: boolean | null
 }
 
 type Valor = {
@@ -103,7 +106,7 @@ export function useSessao(): Valor {
 }
 
 async function buscarPerfil(uid: string): Promise<Perfil | null> {
-  const { data } = await supabase.from('profiles').select('id, full_name, phone, avatar_url, role').eq('id', uid).maybeSingle()
+  const { data } = await supabase.from('profiles').select('id, full_name, phone, avatar_url, role, nascimento, accepts_reminders, aceita_email').eq('id', uid).maybeSingle()
   return (data as Perfil | null) ?? null
 }
 

@@ -56,7 +56,7 @@ const S1 = 's1' // Studio Mel (salão)
 const S2 = 's2' // Bia Lash (autônoma)
 
 const perfis: Linha[] = [
-  { id: 'c1', full_name: 'Juliana Silva', phone: '(13) 99879-0115', avatar_url: null, role: 'cliente', accepts_reminders: true, referral_code: 'JULIANA10', nascimento: '1994-08-23', created_at: '2025-01-10T12:00:00Z' },
+  { id: 'c1', full_name: 'Juliana Silva', phone: '(13) 99879-0115', avatar_url: null, role: 'cliente', accepts_reminders: true, aceita_email: true, referral_code: 'JULIANA10', nascimento: '1994-08-23', created_at: '2025-01-10T12:00:00Z' },
 ]
 
 const saloes: Linha[] = [
@@ -101,6 +101,8 @@ const vinculosProf: Linha[] = [
   ['pr2', 'sv6'], ['pr2', 'sv7'], ['pr3', 'sv4'], ['pr4', 'sv8'], ['pr6', 'sv9'], ['pr6', 'sv10'],
 ].map(([professional_id, service_id]) => ({ professional_id, service_id }))
 
+// a página da profissional pede `salons (name, tipo)` aninhado
+for (const p of profissionais) p.salons = { name: saloes.find((s) => s.id === p.salon_id)?.name ?? null, tipo: saloes.find((s) => s.id === p.salon_id)?.tipo ?? null }
 const prof = (id: string) => profissionais.find((p) => p.id === id)
 const serv = (id: string) => servicos.find((s) => s.id === id)
 const salao = (id: string) => saloes.find((s) => s.id === id)
@@ -177,8 +179,11 @@ const TABELAS: Record<string, Linha[]> = {
     { id: 't2', client_id: 'c1', amount_cents: 1000, kind: 'boas_vindas', description: 'Crédito de boas-vindas', created_at: mais(-40) },
   ],
   pagamentos: [
-    { id: 'pg1', appointment_id: 'ap2', client_id: 'c1', salon_id: S1, status: 'pago', valor_cents: 3000, total_cents: 6000, sinal_pct: 50, pago_em: horasAtras(28), criado_em: horasAtras(29) },
+    { id: 'pg1', appointment_id: 'ap2', client_id: 'c1', salon_id: S1, status: 'pago', valor_cents: 3000, total_cents: 6000, sinal_pct: 50, pago_em: horasAtras(28), cobranca_id: 'pay_demo_2k9f1', termos_aceitos_em: horasAtras(28), criado_em: horasAtras(29) },
+    // o sinal do horário que o salão cancelou: devolvido, menos a taxa do PIX
+    { id: 'pg2', appointment_id: 'apdev', client_id: 'c1', salon_id: S1, status: 'estornado', valor_cents: 3000, total_cents: 6000, sinal_pct: 50, pago_em: horasAtras(70), cobranca_id: 'pay_demo_7h3dv', termos_aceitos_em: horasAtras(70), estorno_cents: 2801, estornado_em: mais(-1) + 'T18:40:00', motivo_estorno: 'cancelado pelo salão', tentativas_estorno: 1, criado_em: horasAtras(71) },
   ],
+  profissional_preferida: [{ client_id: 'c1', salon_id: S1, professional_id: 'pr1' }],
   reviews: [{ id: 'rv1', appointment_id: 'ap4', client_id: 'c1', professional_id: 'pr3', nota: 5, comentario: 'Saí renovada!', created_at: mais(-29) }],
   push_tokens_app: [],
   // quem atende em que dia (domingo fechado, sábado até as 14h)
@@ -262,6 +267,54 @@ const RPC: Record<string, (args?: Linha) => unknown> = {
     const p2 = (n: number) => String(n).padStart(2, '0')
     const limiteIso = `${limite.getFullYear()}-${p2(limite.getMonth() + 1)}-${p2(limite.getDate())}T${p2(limite.getHours())}:${p2(limite.getMinutes())}:00`
     return { politica: 'moderada', horas: 12, credito_dias: 30, limite: limiteIso, dentro_do_prazo: true, pago_cents: a.pago_cents ?? 0, taxa_cents: 199, volta_cents: Math.max(0, (a.pago_cents ?? 0) - 199), credito_ate: null, credito_ate_se_cancelar: mais(30), salao: salao(a.salon_id)?.name ?? null, salon_id: a.salon_id }
+  },
+  pagina_do_salao: (args) => {
+    const s = salao(String(args?.salao ?? ''))
+    if (!s) return null
+    const equipe = profissionais.filter((p) => p.salon_id === s.id && p.active)
+    const notas = (n: number) => (n === 1 ? 5 : 4.8)
+    return {
+      salao: {
+        id: s.id, nome: s.name, tipo: s.tipo, descricao: s.descricao, fotos: s.fotos, logo_url: s.logo_url, endereco: s.address, cidade: s.city, cep: s.cep ?? null, lat: s.lat ?? null, lng: s.lng ?? null,
+        telefone: s.phone, whatsapp: s.whatsapp ?? s.phone, instagram: s.instagram, pagamento: RPC.pagamento_do_salao!({ salao: s.id }), aceita: true,
+      },
+      horarios: s.tipo === 'salao' ? [0, 1, 2, 3, 4, 5, 6].map((weekday) => ({ weekday, open: weekday !== 0, start_time: '09:00:00', end_time: weekday === 6 ? '14:00:00' : '19:00:00' })) : [],
+      nota: s.id === S1 ? { media: 4.9, quantas: 37 } : { media: 5, quantas: 12 },
+      equipe: equipe.map((p, i) => ({ id: p.id, nome: p.name, foto: p.photo_url, bio: p.bio, faz: vinculosProf.filter((v) => v.professional_id === p.id).map((v) => serv(v.service_id)?.name ?? '').sort(), nota: notas(i) })),
+      servicos: servicos
+        .filter((x) => x.salon_id === s.id && x.active)
+        .map((x) => ({ ...x, quem: vinculosProf.filter((v) => v.service_id === x.id).map((v) => ({ id: v.professional_id, nome: prof(v.professional_id)?.name, foto: prof(v.professional_id)?.photo_url, preco_cents: null, duracao_minutos: null })) })),
+      capas: s.id === S1 ? { ct2: [CAPA('#ff2d7a', '#ff7baa')], ct1: [CAPA('#aa4cff', '#ff7baa')] } : {},
+      preferida: s.id === S1 ? 'pr1' : null,
+      promocoes: promocoes.filter((p) => p.salon_id === s.id).map((p) => ({ id: p.id, titulo: p.titulo, texto: p.texto, imagem_url: p.imagem_url, service_id: p.service_id, professional_id: p.professional_id, desconto_pct: p.desconto_pct, fim: p.fim })),
+    }
+  },
+  escolher_preferida: () => null,
+  avaliacao_da_profissional: (args) => (args?.prof === 'pr1' ? [{ media: 4.9, quantas: 23 }] : args?.prof === 'pr6' ? [{ media: 5, quantas: 12 }] : []),
+  avaliacoes_da_profissional: (args) =>
+    args?.prof === 'pr1' || args?.prof === 'pr6'
+      ? [
+          { nota: 5, comentario: 'Atendimento impecável, saí renovada!', quem: 'Carla', quando: mais(-3) + 'T12:00:00Z' },
+          { nota: 5, comentario: 'Super atenciosa e caprichosa.', quem: 'Mariana', quando: mais(-9) + 'T12:00:00Z' },
+          { nota: 4, comentario: 'Ficou lindo, só atrasou um pouquinho.', quem: 'Beatriz', quando: mais(-20) + 'T12:00:00Z' },
+        ]
+      : [],
+  servicos_sugeridos_para: (args) => TABELAS.servicos_juntos!.filter((j) => ((args?.servicos as string[] | undefined) ?? []).includes(j.service_id)).map((j) => ({ sugerido_id: j.sugerido_id })),
+  config_publica: () => ({ whatsapp_suporte: '5513991151099', instagram: 'mimo.com.vc' }),
+  pedir_troca_whatsapp: (args) => ({ via: 'whatsapp', para: String(args?.novo ?? ''), expira_em: horasAtras(-0.17) }),
+  confirmar_troca_whatsapp: () => ({ ok: true, phone: '(13) 99999-0000' }),
+  sair_da_agenda: () => null,
+  comprovante_da_comanda: (args) => {
+    if (args?.comanda !== 'cmv') return null
+    const s = salao(S1)!
+    return {
+      id: 'cmv', fechada_em: mais(-12) + 'T11:02:00', status: 'fechada',
+      itens: [{ nome: 'Manicure', qtd: 1, preco_cents: 3500 }, { nome: 'Esmaltação em gel', qtd: 1, preco_cents: 7500 }],
+      subtotal_cents: 11000, desconto_cents: 0, total_cents: 11000, sinal_app_cents: 0,
+      pagamentos: [{ forma: 'pix', valor_cents: 11000, parcelas: null, detalhe: null, recebido_cents: null, troco_cents: null }],
+      atendida_por: 'Ana Oliveira', observacao: null, appointment_id: 'ap3', dia: mais(-12), hora: '09:00:00',
+      salao: { id: s.id, nome: s.name, tipo: s.tipo, endereco: s.address, cidade: s.city, cnpj: '12.345.678/0001-95', logo_url: s.logo_url }, cliente: 'Juliana Silva',
+    }
   },
   meu_resumo_indicacoes: () => [{ codigo: 'JULIANA10', saldo_cents: 3000, indicadas_total: 2, indicadas_creditadas: 1, premio_indicou_cents: 2000, premio_indicada_cents: 1500 }],
   sair_lista_espera: () => null,
@@ -438,7 +491,34 @@ export const demo = {
       remove: async () => ({ data: [], error: null }),
     }),
   },
-  functions: { invoke: async () => ({ data: null, error: null }) },
+  // as Edge Functions: "dão certo" com dados fictícios
+  functions: {
+    invoke: async (nome: string, opts?: { body?: Linha }) => {
+      const corpo = opts?.body ?? {}
+      if (nome === 'pagamento-criar') {
+        if (corpo.simular) return { data: { ok: true, jeito: 'pix', pendente: false }, error: null }
+        const appt = agendamentos.find((a) => a.id === corpo.appointment_id)
+        const total = appt?.price_cents ?? 8500
+        const valor = Math.max(100, Math.round(total * 0.5))
+        const existente = TABELAS.pagamentos!.find((p) => p.id === 'pg-demo')
+        const pg = existente ?? { id: 'pg-demo', appointment_id: corpo.appointment_id, client_id: DEMO_UID, salon_id: S1, status: 'aguardando', valor_cents: valor, total_cents: total, sinal_pct: 50, pago_em: null, cobranca_id: 'pay_demo_8f3k2', termos_aceitos_em: new Date().toISOString(), criado_em: new Date().toISOString() }
+        if (!existente) {
+          TABELAS.pagamentos!.push(pg)
+          // o PIX "cai" sozinho depois de um tempo, para a tela mostrar o comprovante
+          setTimeout(() => {
+            pg.status = 'pago'
+            pg.pago_em = new Date().toISOString()
+            if (appt) appt.pago_cents = valor
+          }, 15000)
+        }
+        return {
+          data: { ok: true, pagamento_id: pg.id, valor_cents: pg.valor_cents, sinal_pct: 50, sandbox: true, expira_em: new Date(Date.now() + 14 * 60e3).toISOString(), existente: Boolean(existente), copia_cola: '00020126580014br.gov.bcb.pix0136demo-mimo-' + String(corpo.appointment_id ?? 'x') + '5204000053039865406042.505802BR5904MIMO6006Santos62070503***6304ABCD' },
+          error: null,
+        }
+      }
+      return { data: null, error: null }
+    },
+  },
   channel: () => {
     const c: any = { on: () => c, subscribe: () => c, unsubscribe: async () => 'ok' }
     return c

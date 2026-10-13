@@ -46,20 +46,31 @@ apps/mobile/
     (tabs)/index.tsx   Início: próximo horário, atalhos, novidades, promoções, salões, profissionais e destaques
     (tabs)/horarios.tsx Horários: próximos e histórico por mês (as regras da web, ClienteAgenda)
     (tabs)/saloes.tsx  Salões onde ela tem agenda + entrar por código
-    (tabs)/perfil.tsx  Perfil, resumo e atalhos
+    (tabs)/perfil.tsx  Perfil: foto, dados (WhatsApp, e-mail, aniversário), agendas, como ser avisada, ajuda
     agendar/           o fluxo de marcar, nativo: com quem → serviços → data → hora → confirmar → sucesso
                        (remarcar entra pela data; as regras são as da web, src/pages/cliente/Agendar.jsx)
     agendamento/[id]   a página de um horário (as regras da web, ClienteAgendamento)
+    salao/[id]         a página do salão: capas, pagamento, endereço, serviços por categoria, equipe, sobre
+    categoria.tsx      os serviços de uma categoria do salão, com quem faz (?salao=&cat=)
+    profissional/[id]  a página da profissional: serviços, avaliações, sobre
+    servico/[id]       a página de um serviço: fotos, preço, quem faz, o que costuma ir junto
+    pagamento/[id]     o PIX do sinal (condições, CPF, QR e copia e cola, comprovante, devolução)
+    comanda/[id]       o comprovante do atendimento fechado no balcão
+    avisos.tsx         a central de avisos
+    fila.tsx           a fila de espera (onde ela está esperando vaga)
+    indicacao.tsx      indique e ganhe: código, link, QR e créditos
     web.tsx            a ponte: a web dentro do app, com a sessão do app
     v/[codigo].tsx     mimo.com.vc/v/CODIGO (QR e link do WhatsApp) cai aqui
     +not-found.tsx     outros links do site abrem na ponte
   src/context/sessao.tsx   a sessão (Supabase + AsyncStorage)
   src/components/ui.tsx    botão, cartão, avatar, selo, chip, caixa, entrada, estado vazio com a Mel…
   src/components/          Tela (moldura das telas empilhadas), Trilha (passos), Calendario (mês),
-                           Folha (a folha que sobe de baixo, e a Confirmacao), Avaliar, Convites
+                           Folha (a folha que sobe de baixo, e a Confirmacao), Avaliar, Convites,
+                           Ciencia (o aviso que ela precisa ler antes de seguir)
   src/lib/             config (variante, env), supabase, tema (claro/escuro), formato, ponte, agendar
                        (parâmetros e regras do fluxo), notificacoes (ícone e destino de cada aviso),
-                       avisos (push), demo (dados fictícios)
+                       avisos (push), configPublica (o WhatsApp da MIMO e afins), funcoes (chamar uma
+                       Edge Function), demo (dados fictícios)
 ```
 
 E fora daqui:
@@ -222,12 +233,16 @@ marcar inteiro (com quem, serviços, data, hora, confirmar com descontos,
 pelo app e crédito; e remarcar, que é um pedido de troca), a página do horário
 (estado, o que aconteceu com o sinal, onde e como chegar, serviços, partes da
 visita, cancelar com a política do sinal, avaliar com estrelas, marcar de
-novo), os convites (vir mais cedo, vaga da fila) e os avisos push. Um aviso
-ou link com o caminho da web cai na tela nativa quando ela existe
-(`rotaNativa`, em `src/lib/ponte.ts`). Na ponte, por enquanto: a página do
-salão, da profissional e do serviço, a central de avisos, a fila de espera, a
-indicação, editar o perfil, pagar o sinal e o comprovante (o PIX abre na
-ponte logo depois de confirmar), a comanda, criar conta e recuperar senha.
+novo), os convites (vir mais cedo, vaga da fila), a vitrine (a página do
+salão com serviços por categoria, equipe e sobre; a categoria; a profissional;
+o serviço), a central de avisos, a fila de espera, a indicação, o perfil
+(foto, WhatsApp com código, e-mail, aniversário, sair de uma agenda, como ser
+avisada), o PIX do sinal (condições, CPF, QR e copia e cola, o relógio da
+reserva, comprovante e devolução), a comanda e os avisos push. Um aviso ou
+link com o caminho da web cai na tela nativa quando ela existe (`rotaNativa`,
+em `src/lib/ponte.ts`). Termos e privacidade abrem no navegador do sistema.
+Na ponte, por enquanto: criar conta, recuperar senha e entrar numa agenda pelo
+link `/v/CODIGO`.
 
 ## O que vem depois
 

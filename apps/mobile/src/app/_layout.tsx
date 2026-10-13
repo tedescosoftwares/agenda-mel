@@ -52,6 +52,12 @@ function Navegacao() {
           <Stack.Screen name="avisos" options={{ animation: 'slide_from_right' }} />
           <Stack.Screen name="fila" options={{ animation: 'slide_from_right' }} />
           <Stack.Screen name="indicacao" options={{ animation: 'slide_from_right' }} />
+          <Stack.Screen name="salao/[id]" options={{ animation: 'slide_from_right' }} />
+          <Stack.Screen name="categoria" options={{ animation: 'slide_from_right' }} />
+          <Stack.Screen name="profissional/[id]" options={{ animation: 'slide_from_right' }} />
+          <Stack.Screen name="servico/[id]" options={{ animation: 'slide_from_right' }} />
+          <Stack.Screen name="pagamento/[id]" options={{ animation: 'slide_from_right' }} />
+          <Stack.Screen name="comanda/[id]" options={{ animation: 'slide_from_right' }} />
         </Stack.Protected>
         <Stack.Protected guard={!logada}>
           <Stack.Screen name="entrar" />

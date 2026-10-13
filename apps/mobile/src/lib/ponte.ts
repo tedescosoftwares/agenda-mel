@@ -37,6 +37,18 @@ export function rotaNativa(caminho: string): Href | null {
   if (rota === '/cliente/home' || rota === '/') return '/'
   const sv = (rota ?? '').match(/^\/cliente\/profissional\/([^/]+)\/servicos$/)
   if (sv) return { pathname: '/agendar/servicos', params: { prof: sv[1]!, ...(q.get('servico') ? { servico: q.get('servico')! } : {}) } }
+  const pr = (rota ?? '').match(/^\/cliente\/profissional\/([^/]+)$/)
+  if (pr) return { pathname: '/profissional/[id]', params: { id: pr[1]! } }
+  const cat = (rota ?? '').match(/^\/cliente\/salao\/([^/]+)\/categoria\/([^/]+)$/)
+  if (cat) return { pathname: '/categoria', params: { salao: cat[1]!, cat: cat[2]! } }
+  const sl = (rota ?? '').match(/^\/cliente\/salao\/([^/]+)$/)
+  if (sl) return { pathname: '/salao/[id]', params: { id: sl[1]! } }
+  const pg = (rota ?? '').match(/^\/cliente\/pagamento\/([^/]+)$/)
+  if (pg) return { pathname: '/pagamento/[id]', params: { id: pg[1]! } }
+  const cmd = (rota ?? '').match(/^\/cliente\/comanda\/([^/]+)$/)
+  if (cmd) return { pathname: '/comanda/[id]', params: { id: cmd[1]!, ...(q.get('de') ? { de: q.get('de')! } : {}) } }
+  const se = (rota ?? '').match(/^\/cliente\/servico\/([^/]+)$/)
+  if (se) return { pathname: '/servico/[id]', params: { id: se[1]!, ...(q.get('prof') ? { prof: q.get('prof')! } : {}), ...(q.get('sel') ? { sel: q.get('sel')! } : {}) } }
   return null
 }
 

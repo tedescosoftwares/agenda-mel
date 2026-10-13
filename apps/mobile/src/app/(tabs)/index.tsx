@@ -9,7 +9,7 @@ import { Avatar, Aviso, Cartao, Selo, type Icone } from '@/components/ui'
 import { useSessao } from '@/context/sessao'
 import { dataCurta, diaNumero, diaSemana, emQuanto, formatDuracao, formatPreco, hora, mesCurto, primeiroNome, saudacao, toISODate } from '@/lib/formato'
 import { destinoDoAviso, iconeDoAviso, relativo, type Aviso as AvisoRow } from '@/lib/notificacoes'
-import { useAbrirWeb, useIr } from '@/lib/ponte'
+import { useIr } from '@/lib/ponte'
 import { supabase } from '@/lib/supabase'
 import { ESPACO, MARCA, useTema } from '@/lib/tema'
 
@@ -69,7 +69,6 @@ const TONS: [string, string][] = [
 export default function Inicio() {
   const t = useTema()
   const router = useRouter()
-  const abrir = useAbrirWeb()
   const ir = useIr()
   const { usuario, perfil } = useSessao()
   const [proximo, setProximo] = useState<Proximo | null | undefined>(undefined)
@@ -147,8 +146,8 @@ export default function Inicio() {
   }
   function abrirAgenda(ag: Agenda) {
     const p = ag.profissionais?.[0]
-    if (ag.salao.tipo === 'autonoma' && p) return abrir(`/cliente/profissional/${p.id}`, p.nome)
-    abrir(`/cliente/salao/${ag.salao.id}`, ag.salao.nome)
+    if (ag.salao.tipo === 'autonoma' && p) return router.push({ pathname: '/profissional/[id]', params: { id: p.id } })
+    router.push({ pathname: '/salao/[id]', params: { id: ag.salao.id } })
   }
   function abrirAviso(a: AvisoRow) {
     setAvisos((xs) => xs.filter((x) => x.id !== a.id))
@@ -164,9 +163,9 @@ export default function Inicio() {
   // promoção de um serviço abre a página dele; de uma profissional, o perfil; do salão, a página do salão
   function abrirPromo(p: Promo) {
     supabase.rpc('promocao_clicada', { promo: p.id }).then(() => {})
-    if (p.service_id) return abrir(`/cliente/servico/${p.service_id}?${p.professional_id ? `prof=${p.professional_id}&` : ''}de=home`, p.servico ?? p.titulo)
-    if (p.professional_id) return abrir(`/cliente/profissional/${p.professional_id}`, p.profissional ?? p.titulo)
-    if (p.salon_id) return abrir(`/cliente/salao/${p.salon_id}`, p.salao ?? p.titulo)
+    if (p.service_id) return router.push({ pathname: '/servico/[id]', params: { id: p.service_id, ...(p.professional_id ? { prof: p.professional_id } : {}) } })
+    if (p.professional_id) return router.push({ pathname: '/profissional/[id]', params: { id: p.professional_id } })
+    if (p.salon_id) return router.push({ pathname: '/salao/[id]', params: { id: p.salon_id } })
     router.push('/indicacao')
   }
 
@@ -304,7 +303,7 @@ export default function Inicio() {
             <Secao titulo="Profissionais" />
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={e.sangria} contentContainerStyle={e.fileira}>
               {profissionais.map((p) => (
-                <Pressable key={p.id} onPress={() => abrir(`/cliente/profissional/${p.id}`, p.nome)} style={({ pressed }) => [e.bolha, { opacity: pressed ? 0.7 : 1 }]}>
+                <Pressable key={p.id} onPress={() => router.push({ pathname: '/profissional/[id]', params: { id: p.id } })} style={({ pressed }) => [e.bolha, { opacity: pressed ? 0.7 : 1 }]}>
                   <Avatar url={p.foto} nome={p.nome} tamanho={64} />
                   <Text style={[e.bolhaNome, { color: t.texto }]} numberOfLines={1}>
                     {primeiroNome(p.nome)}
@@ -329,7 +328,7 @@ export default function Inicio() {
                   desconto={descontos[d.id]}
                   tom={TONS[i % TONS.length]!}
                   mostrarSalao={(agendas?.length ?? 0) > 1}
-                  onPress={() => abrir(`/cliente/servico/${d.id}?${d.quem?.length === 1 ? `prof=${d.quem[0]!.id}&` : ''}de=home`, d.name)}
+                  onPress={() => router.push({ pathname: '/servico/[id]', params: { id: d.id, ...(d.quem?.length === 1 ? { prof: d.quem[0]!.id } : {}) } })}
                 />
               ))}
             </ScrollView>

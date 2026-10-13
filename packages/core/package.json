@@ -15,7 +15,8 @@
     "./avisos": "./avisos.js",
     "./categorias": "./categorias.js",
     "./pagamento": "./pagamento.js",
-    "./geo": "./geo.js"
+    "./geo": "./geo.js",
+    "./contato": "./contato.js"
   },
   "sideEffects": false
 }

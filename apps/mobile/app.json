@@ -19,7 +19,13 @@
       "predictiveBackGestureEnabled": false
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "A MIMO usa suas fotos só para a foto do seu perfil."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

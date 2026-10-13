@@ -10,7 +10,6 @@ import { Avatar, Aviso, Botao, Cartao, Carregando, Chip, Selo, Vazio, type Icone
 import { useSessao } from '@/context/sessao'
 import { capitalizar } from '@/lib/agendar'
 import { dataCurta, formatDuracao, formatPreco, hora, primeiroNome } from '@/lib/formato'
-import { useAbrirWeb } from '@/lib/ponte'
 import { supabase } from '@/lib/supabase'
 import { useTema } from '@/lib/tema'
 
@@ -75,7 +74,6 @@ function quando(ts: string | null): string {
 export default function Agendamento() {
   const t = useTema()
   const router = useRouter()
-  const abrir = useAbrirWeb()
   const { usuario } = useSessao()
   const { id, avaliar } = useLocalSearchParams<{ id: string; avaliar?: string }>()
   const [a, setA] = useState<Appt | null | undefined>(undefined)
@@ -264,15 +262,15 @@ export default function Agendamento() {
           </View>
           {cartaoPagamento.texto ? <Text style={{ color: t.texto2, fontSize: 13.5, lineHeight: 19 }}>{cartaoPagamento.texto}</Text> : null}
           <View style={e.chips}>
-            {a.status === 'aguardando_pagamento' ? <Chip texto="Pagar" ativo onPress={() => abrir(`/cliente/pagamento/${a.id}`, 'Pagar pelo app')} /> : null}
+            {a.status === 'aguardando_pagamento' ? <Chip texto="Pagar" ativo onPress={() => router.push({ pathname: '/pagamento/[id]', params: { id: a.id } })} /> : null}
             {pagamento?.status === 'credito' && a.professionals && a.service_id ? <Chip texto="Usar o crédito" ativo onPress={() => deNovo()} /> : null}
-            {temComprovante ? <Chip texto="Comprovante" onPress={() => abrir(`/cliente/pagamento/${a.id}`, 'Comprovante')} /> : null}
+            {temComprovante ? <Chip texto="Comprovante" onPress={() => router.push({ pathname: '/pagamento/[id]', params: { id: a.id } })} /> : null}
           </View>
         </Cartao>
       ) : null}
 
       {a.professionals ? (
-        <Cartao onPress={() => abrir(`/cliente/profissional/${a.professionals!.id}`, a.professionals!.name)} estilo={e.linha}>
+        <Cartao onPress={() => router.push({ pathname: '/profissional/[id]', params: { id: a.professionals!.id } })} estilo={e.linha}>
           <Avatar url={a.professionals.photo_url} nome={a.professionals.name} tamanho={44} />
           <View style={{ flex: 1 }}>
             <Text style={[e.rotulo, { color: t.texto2 }]}>Com</Text>
@@ -287,7 +285,7 @@ export default function Agendamento() {
           <Dado icone="location-outline">
             <Text style={[e.rotulo, { color: t.texto2 }]}>Onde</Text>
             {salao.tipo === 'salao' ? (
-              <Pressable onPress={() => abrir(`/cliente/salao/${salao.id}`, salao.name)} hitSlop={4}>
+              <Pressable onPress={() => router.push({ pathname: '/salao/[id]', params: { id: salao.id } })} hitSlop={4}>
                 <Text style={[e.forte, { color: t.acento }]}>{salao.name}</Text>
               </Pressable>
             ) : (
@@ -308,7 +306,7 @@ export default function Agendamento() {
             <Text style={[e.rotulo, { color: t.texto2 }]}>Comprovante</Text>
             <Text style={[e.forte, { color: t.texto }]}>Atendimento fechado no balcão</Text>
             {comanda.quantos > 1 ? <Text style={{ color: t.texto2, fontSize: 13.5 }}>Um comprovante só, com os {comanda.quantos} horários dessa visita.</Text> : null}
-            <Pressable onPress={() => abrir(`/cliente/comanda/${comanda.id}?de=${a.id}`, 'Comprovante')} hitSlop={4}>
+            <Pressable onPress={() => router.push({ pathname: '/comanda/[id]', params: { id: comanda.id, de: a.id } })} hitSlop={4}>
               <Text style={[e.link, { color: t.acento }]}>Ver o comprovante</Text>
             </Pressable>
           </Dado>
@@ -401,7 +399,7 @@ export default function Agendamento() {
       ) : null}
 
       <View style={{ gap: 10 }}>
-        {podeMexer && regras && regras.modo !== 'nao' && pago === 0 && a.status !== 'aguardando_pagamento' ? <Botao titulo="Pagar agora pelo app" icone="wallet-outline" onPress={() => abrir(`/cliente/pagamento/${a.id}`, 'Pagar pelo app')} /> : null}
+        {podeMexer && regras && regras.modo !== 'nao' && pago === 0 && a.status !== 'aguardando_pagamento' ? <Botao titulo="Pagar agora pelo app" icone="wallet-outline" onPress={() => router.push({ pathname: '/pagamento/[id]', params: { id: a.id } })} /> : null}
         {podeMexer && !troca && a.service_id && regras?.permite_remarcar !== false ? (
           <Botao titulo="Remarcar" icone="repeat-outline" tipo={regras && regras.modo !== 'nao' && pago === 0 ? 'fantasma' : 'primario'} onPress={remarcar} />
         ) : null}

@@ -1,27 +1,26 @@
 import { useRouter, type Href } from 'expo-router'
+import * as WebBrowser from 'expo-web-browser'
 import { useCallback } from 'react'
+import { WEB_URL } from './config'
 
-// Caminhos da web que o app abre na ponte (src/app/web.tsx). Só caminhos
-// relativos da própria MIMO: nada de //outro-site.
+// Caminhos da web que chegam ao app por um aviso push, por um link ou por um
+// botão com o caminho antigo. Só caminhos relativos da própria MIMO: nada de
+// //outro-site.
 export function caminhoSeguro(v: unknown): string {
   if (typeof v !== 'string' || !v.startsWith('/') || v.startsWith('//') || v.startsWith('/\\')) return '/'
   return v
 }
 
-// abrir('/cliente/home', 'Agendar') empilha a ponte por cima da tela atual
+// Um caminho da web sem tela no app abre no navegador do sistema. Sem WebView:
+// a sessão do app não sai do app; a página pede login se precisar.
 export function useAbrirWeb() {
-  const router = useRouter()
-  return useCallback(
-    (ir: string, titulo?: string) => {
-      router.push({ pathname: '/web', params: titulo ? { ir, titulo } : { ir } })
-    },
-    [router],
-  )
+  return useCallback((ir: string) => {
+    WebBrowser.openBrowserAsync(`${WEB_URL}${caminhoSeguro(ir)}`).catch(() => {})
+  }, [])
 }
 
-// Caminhos da web que já têm tela nativa: um aviso, um link ou um botão com
-// o caminho antigo cai na tela do app, não na ponte. Conforme as telas vão
-// virando nativas, esta lista cresce; quando a ponte sumir, ela some junto.
+// Caminhos da web que têm tela nativa: um aviso, um link ou um botão com o
+// caminho antigo cai na tela do app.
 const RESERVADAS = new Set(['data', 'hora', 'confirmar', 'sucesso'])
 export function rotaNativa(caminho: string): Href | null {
   const [rota, busca = ''] = caminho.split('?')
@@ -35,6 +34,12 @@ export function rotaNativa(caminho: string): Href | null {
   if (rota === '/cliente/fila-espera') return '/fila'
   if (rota === '/cliente/indicacao' || rota === '/indique') return '/indicacao'
   if (rota === '/cliente/home' || rota === '/') return '/'
+  if (rota === '/cliente/perfil') return '/perfil'
+  if (rota === '/cliente/saloes' || rota === '/entrar') return '/saloes'
+  if (rota === '/cadastro') return { pathname: '/cadastro', params: q.get('convite') ? { convite: q.get('convite')! } : {} }
+  if (rota === '/login') return { pathname: '/entrar', params: q.get('convite') ? { convite: q.get('convite')! } : {} }
+  const v = (rota ?? '').match(/^\/v\/([^/]+)$/)
+  if (v) return { pathname: '/v/[codigo]', params: { codigo: v[1]! } }
   const sv = (rota ?? '').match(/^\/cliente\/profissional\/([^/]+)\/servicos$/)
   if (sv) return { pathname: '/agendar/servicos', params: { prof: sv[1]!, ...(q.get('servico') ? { servico: q.get('servico')! } : {}) } }
   const pr = (rota ?? '').match(/^\/cliente\/profissional\/([^/]+)$/)
@@ -52,15 +57,15 @@ export function rotaNativa(caminho: string): Href | null {
   return null
 }
 
-// ir('/cliente/agendamento/abc', 'Agendamento'): nativo se já existe, senão a ponte
+// ir('/cliente/agendamento/abc'): a tela nativa; sem tela, o navegador
 export function useIr() {
   const router = useRouter()
   const abrir = useAbrirWeb()
   return useCallback(
-    (caminho: string, titulo?: string) => {
+    (caminho: string) => {
       const nativa = rotaNativa(caminhoSeguro(caminho))
       if (nativa) router.push(nativa)
-      else abrir(caminho, titulo)
+      else abrir(caminho)
     },
     [router, abrir],
   )

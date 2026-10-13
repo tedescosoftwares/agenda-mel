@@ -16,7 +16,9 @@
     "./categorias": "./categorias.js",
     "./pagamento": "./pagamento.js",
     "./geo": "./geo.js",
-    "./contato": "./contato.js"
+    "./contato": "./contato.js",
+    "./convite": "./convite.js",
+    "./legal": "./legal.js"
   },
   "sideEffects": false
 }

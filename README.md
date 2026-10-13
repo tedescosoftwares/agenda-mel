@@ -124,11 +124,11 @@ sua máquina — ou fechado.
 Avisos nativos (3.3): o app registra o aparelho em `push_tokens_app` e a `enviar-push` manda também pelo Expo Push; detalhes em `apps/mobile/README.md`.
 
 A MIMO também vai para a Play Store como app de verdade, em `apps/mobile`:
-uma casca nativa (Expo/React Native) com as telas da cliente que mais importam
-no celular e uma **ponte** que abre o resto da web dentro do app, com a mesma
-sessão. A web continua sendo a porta de entrada e o desktop a casa da gestão do
-salão; tudo o que está aqui permanece e segue evoluindo. Como rodar, publicar e
-o que vem depois: [`apps/mobile/README.md`](apps/mobile/README.md).
+nativo (Expo/React Native) de ponta a ponta para a cliente, falando com o
+mesmo Supabase da web, sem WebView. A web continua sendo a porta de entrada e
+o desktop a casa da gestão do salão; tudo o que está aqui permanece e segue
+evoluindo. Como rodar, publicar e o que vem depois:
+[`apps/mobile/README.md`](apps/mobile/README.md).
 
 A lógica que não depende de tela (catálogo, formatação, planos, telefone,
 horários) mora em `packages/core` (`@mimo/core`) e é compartilhada pelos dois:

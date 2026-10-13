@@ -2,9 +2,10 @@ import type { Session, User } from '@supabase/supabase-js'
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { supabase } from '@/lib/supabase'
 import { ligarAvisos, desligarAvisos } from '@/lib/avisos'
+import { lerConvite, limparConvite } from '@/lib/convite'
 
-// A sessão do app: a mesma conta do site, guardada no aparelho. As telas
-// nativas usam o que está aqui; a ponte (web.tsx) empresta a sessão para a web.
+// A sessão do app: a mesma conta do site, guardada no aparelho. Todas as
+// telas usam o que está aqui.
 export type Perfil = {
   id: string
   full_name: string | null
@@ -63,8 +64,17 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!uid) return
     let vivo = true
-    buscarPerfil(uid).then((p) => {
-      if (vivo) setCarregado({ uid, perfil: p })
+    buscarPerfil(uid).then(async (p) => {
+      if (!vivo) return
+      setCarregado({ uid, perfil: p })
+      // entrou por um link /v/<código> antes de entrar na conta? entra na agenda agora
+      // (quem se cadastrou já entrou pelo servidor; aqui é quem já tinha conta)
+      if (p?.role === 'cliente') {
+        const convite = await lerConvite()
+        if (!convite) return
+        const { error } = await supabase.rpc('vincular', { codigo: convite, jeito: 'link' })
+        if (!error) await limparConvite()
+      }
     })
     return () => {
       vivo = false

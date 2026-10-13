@@ -1,6 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
-import { avisarSessao, ouvirApp } from '../lib/app'
 import { lerCodigoGuardado, limparCodigoGuardado } from '../lib/indicacao'
 import { lerConvite, limparConvite } from '../lib/convite'
 import { urlDoAmbiente } from '../lib/ambiente'
@@ -32,7 +31,6 @@ export function AuthProvider({ children }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((evento, session) => {
-      avisarSessao(evento, session)   // dentro do app da loja: o app acompanha
       setSession(session)
       if (!session) {
         setProfile(null)
@@ -47,9 +45,6 @@ export function AuthProvider({ children }) {
 
     return () => subscription.unsubscribe()
   }, [])
-
-  // o app da loja empurra a sessão dele para a web (src/lib/app.js)
-  useEffect(() => ouvirApp(), [])
 
   useEffect(() => {
     if (!session?.user) return

@@ -1,20 +1,19 @@
 # MIMO no celular (Expo / React Native)
 
-O app da MIMO na loja. Uma casca nativa (Expo + expo-router) com as telas que
-mais importam no celular e uma **ponte** para a web: tudo o que já existe em
-`mimo.com.vc` abre dentro do app, com a sessão do app. Nada da web foi
-reescrito; o app é mais um jeito de chegar na mesma MIMO.
+O app da MIMO na loja. Nativo (Expo + expo-router) de ponta a ponta: as telas
+da cliente são todas do app, falando direto com o mesmo Supabase da web. Nada
+da web foi reescrito por cima: o banco, as funções Edge e as regras são os
+mesmos, e a lógica que não depende de tela é compartilhada (`packages/core`).
 
 ## A premissa
 
 - A **web continua sendo a porta de entrada** e o **desktop continua sendo a
   casa da gestão do salão** (80% ou mais do uso administrativo).
 - Tudo o que está feito **permanece** e o desenvolvimento segue como está. O
-  app pega carona: cada deploy da web (bat 2) já muda o que o app mostra na ponte.
-- As telas nativas crescem aos poucos, começando pelo que a cliente faz no
-  celular todo dia: o início (a vitrine), os horários, os salões, o perfil.
-  A meta é a cliente não cair na ponte em nada do dia a dia; a ponte fica
-  como reserva até zerar.
+  app e a web dividem o banco, as funções Edge e `packages/core`: uma regra
+  nova nasce no banco ou no core e vale nos dois.
+- O app não tem WebView: o que a cliente faz é tela nativa. Só os termos, a
+  política de privacidade e o link de redefinir senha abrem no navegador.
 
 ## Dois apps, um código
 
@@ -42,7 +41,9 @@ apps/mobile/
   assets/images/       ícones (cliente/ e pro/) e a Mel
   src/app/             as rotas (expo-router)
     _layout.tsx        com sessão → abas; sem sessão → entrar
-    entrar.tsx         e-mail e senha (criar conta e recuperar senha abrem na web)
+    entrar.tsx         e-mail e senha; esqueci a senha (o link chega por e-mail)
+    cadastro.tsx       criar conta pelo convite: quem é você (WhatsApp único), como você entra, confira o e-mail
+    ler-qr.tsx         a câmera lê o QR da profissional ou do salão
     (tabs)/index.tsx   Início: próximo horário, atalhos, novidades, promoções, salões, profissionais e destaques
     (tabs)/horarios.tsx Horários: próximos e histórico por mês (as regras da web, ClienteAgenda)
     (tabs)/saloes.tsx  Salões onde ela tem agenda + entrar por código
@@ -59,9 +60,8 @@ apps/mobile/
     avisos.tsx         a central de avisos
     fila.tsx           a fila de espera (onde ela está esperando vaga)
     indicacao.tsx      indique e ganhe: código, link, QR e créditos
-    web.tsx            a ponte: a web dentro do app, com a sessão do app
-    v/[codigo].tsx     mimo.com.vc/v/CODIGO (QR e link do WhatsApp) cai aqui
-    +not-found.tsx     outros links do site abrem na ponte
+    v/[codigo].tsx     mimo.com.vc/v/CODIGO (QR, link do WhatsApp ou código digitado): quem convidou, entrar na agenda
+    +not-found.tsx     um link do site com caminho antigo cai na tela nativa; sem tela, abre no navegador
   src/context/sessao.tsx   a sessão (Supabase + AsyncStorage)
   src/components/ui.tsx    botão, cartão, avatar, selo, chip, caixa, entrada, estado vazio com a Mel…
   src/components/          Tela (moldura das telas empilhadas), Trilha (passos), Calendario (mês),
@@ -70,7 +70,7 @@ apps/mobile/
   src/lib/             config (variante, env), supabase, tema (claro/escuro), formato, ponte, agendar
                        (parâmetros e regras do fluxo), notificacoes (ícone e destino de cada aviso),
                        avisos (push), configPublica (o WhatsApp da MIMO e afins), funcoes (chamar uma
-                       Edge Function), demo (dados fictícios)
+                       Edge Function), convite (o código guardado), legal (aceites), datas, demo (dados fictícios)
 ```
 
 E fora daqui:
@@ -78,7 +78,6 @@ E fora daqui:
 - `packages/core` (`@mimo/core`): a lógica que não depende de tela (catálogo,
   formatação, planos, telefone, horários). A web importa pelos arquivos de
   `src/lib/*.js`, que só reexportam; o app importa `@mimo/core`.
-- `src/pages/SessaoApp.jsx` e `src/lib/app.js` (na web): a outra ponta da ponte.
 - `public/.well-known/assetlinks.json` e `apple-app-site-association`: a prova
   de que o app e o site são da mesma dona (links que abrem no app).
 
@@ -88,9 +87,10 @@ E fora daqui:
    `.env` e preencha com os mesmos valores do `.env` da web.
 2. `npx expo start` abre um QR. No celular, o app **Expo Go** (Play Store) lê o
    QR e roda a MIMO na hora, sem build. Tudo o que o app usa roda no Expo Go.
-3. A ponte abre a web publicada (`EXPO_PUBLIC_WEB_URL`, padrão `https://mimo.com.vc`).
-   Para ver a web local dentro do app: na raiz do repo `npm run dev -- --host`,
-   e no `.env` do app `EXPO_PUBLIC_WEB_URL=http://IP-DO-SEU-PC:5173` (mesma rede Wi-Fi).
+3. Termos, privacidade e o link de redefinir senha abrem no navegador, na web
+   publicada (`EXPO_PUBLIC_WEB_URL`, padrão `https://mimo.com.vc`). Para apontar
+   para a web local: na raiz do repo `npm run dev -- --host`, e no `.env` do app
+   `EXPO_PUBLIC_WEB_URL=http://IP-DO-SEU-PC:5173` (mesma rede Wi-Fi).
 4. Variante pro: `APP_VARIANT=pro npx expo start` (no PowerShell:
    `$env:APP_VARIANT='pro'; npx expo start`).
 
@@ -110,8 +110,9 @@ $env:EXPO_PUBLIC_DEMO='1'; npx expo start           # ou no Expo Go
 ```
 
 O valor escolhe o cenário: `1` (a Juliana com tudo: horários, novidades,
-promoções), `vazia` (sem nada marcado e sem aviso novo) e `nova` (acabou de
-criar a conta, ainda sem agenda). Ao trocar o cenário (ou desligar a demo)
+promoções), `vazia` (sem nada marcado e sem aviso novo), `nova` (acabou de
+criar a conta, ainda sem agenda) e `fora` (sem sessão: entrar, criar conta e o
+convite). Ao trocar o cenário (ou desligar a demo)
 acrescente `--clear`: o Metro guarda o valor anterior no cache e, sem isso,
 continua mostrando o cenário de antes. Os dados moram em `src/lib/demo.ts`, uma
 imitação do cliente do Supabase igual à da web (`src/lib/demo.js`): quando uma
@@ -181,9 +182,9 @@ contato, política de privacidade `https://mimo.com.vc/privacidade`, termos
 Com sessão, o app pede permissão, pega um token do **Expo Push** e registra em
 `push_tokens_app` (migração 152, `registrar_token_app`). A função Edge
 `enviar-push` manda cada aviso da fila (`notifications`) pelo Web Push do PWA
-**e** pelo Expo Push dos aparelhos do app; tocou no aviso, o app abre o caminho
-dele (`action_url`) na ponte. Ao sair da conta o token é removido. Dentro do app
-a web não tenta ligar o Web Push: o cartão "Avisos no celular" só explica.
+**e** pelo Expo Push dos aparelhos do app; tocou no aviso, o app abre a tela
+do caminho dele (`action_url`, traduzido por `rotaNativa`). Ao sair da conta o
+token é removido.
 
 Uma vez só, depois do `eas init` (o token precisa do `projectId` em `app.json`):
 
@@ -205,48 +206,33 @@ gere um aviso (uma confirmação de horário, por exemplo), ou mande um de teste
 desenvolvimento (`avisos: token do aparelho`). O ícone da barra é
 `assets/images/*/aviso.png` (o coração, branco sobre transparente, 96×96).
 
-## Como a ponte funciona (para quem for mexer)
+## Tudo nativo
 
-`src/app/web.tsx` abre `WEB_URL/sessao-app?ir=/cliente/home` injetando
-`window.__mimoSessao` (access + refresh token) antes de a página carregar.
-A web (`src/pages/SessaoApp.jsx`) assume a sessão e segue para o caminho.
-Dali em diante:
+O app da cliente não tem WebView: entrar, criar conta (pelo convite de uma
+profissional, com WhatsApp único e aceite dos termos), esqueci a senha, entrar
+numa agenda (QR pela câmera, código digitado ou o link `/v/CODIGO`), as quatro
+abas (início, horários, salões, perfil), o fluxo de marcar inteiro (com quem,
+serviços, data, hora, confirmar com descontos, "quer aproveitar e adicionar?",
+a visita com outras profissionais, pagamento pelo app e crédito; e remarcar,
+que é um pedido de troca), a página do horário (estado, o que aconteceu com o
+sinal, onde e como chegar, serviços, partes da visita, cancelar com a política
+do sinal, avaliar com estrelas, marcar de novo), os convites (vir mais cedo,
+vaga da fila), a vitrine (a página do salão com serviços por categoria, equipe
+e sobre; a categoria; a profissional; o serviço), a central de avisos, a fila
+de espera, a indicação, o perfil (foto, WhatsApp com código, e-mail,
+aniversário, sair de uma agenda, como ser avisada), o PIX do sinal (condições,
+CPF, QR e copia e cola, o relógio da reserva, comprovante e devolução), a
+comanda e os avisos push.
 
-- **app → web**: o app renovou o token → `injectJavaScript` atualiza
-  `window.__mimoSessao` e dispara o evento `mimo:sessao`; a web chama `setSession`.
-- **web → app**: `postMessage` em JSON: `{ tipo: 'sessao', access_token, refresh_token }`
-  (login feito na web, como no cadastro), `{ tipo: 'sair' }`, `{ tipo: 'fechar' }`,
-  `{ tipo: 'abrir', url }`, `{ tipo: 'titulo', texto }`.
-- Dentro do app a web **não renova o token sozinha** (`autoRefreshToken` desligado
-  em `src/lib/supabase.js` quando existe `window.ReactNativeWebView`): quem renova
-  é o app. Dois clientes disputando o mesmo refresh token derrubariam a sessão dos dois.
-- A WebView só navega dentro de `WEB_URL`; WhatsApp, mapa, telefone e outros
-  sites vão para o sistema. O token nunca é injetado fora da MIMO.
-- A web sabe que está no app: `html.mimo-app` no CSS, `window.__mimoApp`
-  (`{ variante, versao, plataforma }`) e `MIMOApp/<versão>` no User-Agent.
-
-## O que já é nativo e o que ainda abre na ponte
-
-Nativo: entrar, as quatro abas (início, horários, salões, perfil), o fluxo de
-marcar inteiro (com quem, serviços, data, hora, confirmar com descontos,
-"quer aproveitar e adicionar?", a visita com outras profissionais, pagamento
-pelo app e crédito; e remarcar, que é um pedido de troca), a página do horário
-(estado, o que aconteceu com o sinal, onde e como chegar, serviços, partes da
-visita, cancelar com a política do sinal, avaliar com estrelas, marcar de
-novo), os convites (vir mais cedo, vaga da fila), a vitrine (a página do
-salão com serviços por categoria, equipe e sobre; a categoria; a profissional;
-o serviço), a central de avisos, a fila de espera, a indicação, o perfil
-(foto, WhatsApp com código, e-mail, aniversário, sair de uma agenda, como ser
-avisada), o PIX do sinal (condições, CPF, QR e copia e cola, o relógio da
-reserva, comprovante e devolução), a comanda e os avisos push. Um aviso ou
-link com o caminho da web cai na tela nativa quando ela existe (`rotaNativa`,
-em `src/lib/ponte.ts`). Termos e privacidade abrem no navegador do sistema.
-Na ponte, por enquanto: criar conta, recuperar senha e entrar numa agenda pelo
-link `/v/CODIGO`.
+No navegador do sistema, fora do app: os termos, a política de privacidade e
+o link de redefinir senha que chega por e-mail (a senha nova vale no app). Um
+aviso push ou um link com o caminho da web cai na tela nativa dele
+(`rotaNativa`, em `src/lib/ponte.ts`); um caminho sem tela abre no navegador.
 
 ## O que vem depois
 
-1. Tirar a ponte da cliente, uma área por vez (a lista acima), até sobrar nada.
+1. **Entrar com Google/Apple** no app (hoje é e-mail e senha; na web a opção
+   aparece quando o provedor está ligado).
 2. **MIMO Pro**: a variante já existe; faltam as abas de quem atende (agenda do
    dia, encaixe, pedidos).
 3. **iPhone**: mesma base. Precisa da conta Apple Developer (US$ 99/ano); a build

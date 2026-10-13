@@ -7,8 +7,8 @@ import { supabase } from '@/lib/supabase'
 import { ESPACO, useTema } from '@/lib/tema'
 
 // Os salões (e autônomas) onde ela já tem agenda: a RPC minhas_agendas, a
-// mesma da web. Entrar numa agenda nova é pelo código de seis letras (ou pelo
-// QR, que abre mimo.com.vc/v/CODIGO direto no app).
+// mesma da web. Entrar numa agenda nova é pelo código de seis letras ou pelo
+// QR, lido pela câmera (ler-qr.tsx); os dois caem em v/[codigo].tsx.
 type Agenda = {
   salao: { id: string; nome: string; tipo: string | null; cidade: string | null; logo: string | null; codigo: string | null }
   entrou_em: string | null
@@ -49,7 +49,7 @@ export default function Saloes() {
     const limpo = codigo.trim().toUpperCase()
     if (!limpo) return
     setCodigo('')
-    router.push({ pathname: '/v/[codigo]', params: { codigo: limpo } })
+    router.push({ pathname: '/v/[codigo]', params: { codigo: limpo, jeito: 'codigo' } })
   }
 
   return (
@@ -79,6 +79,7 @@ export default function Saloes() {
             />
             <Botao titulo="Entrar" onPress={entrarComCodigo} desabilitado={!codigo.trim()} />
           </View>
+          <Botao titulo="Ler o QR com a câmera" icone="qr-code-outline" tipo="fantasma" onPress={() => router.push('/ler-qr')} />
         </Cartao>
 
         {erro ? <Aviso tom="erro" texto={erro} /> : null}

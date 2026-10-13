@@ -13,10 +13,11 @@ export const VERSAO = extra.versao ?? Constants.expoConfig?.version ?? '0.0.0'
 export const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? ''
 export const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? ''
 // demonstração: dados fictícios, sem banco (src/lib/demo.ts). O valor escolhe
-// o cenário: 1 (a Juliana, com tudo), vazia (sem horário marcado), nova (sem agenda)
+// o cenário: 1 (a Juliana, com tudo), vazia (sem horário marcado), nova (sem
+// agenda), fora (sem sessão: entrar, criar conta, o convite)
 export const DEMO = Boolean(process.env.EXPO_PUBLIC_DEMO)
 export const CONFIGURADO = DEMO || Boolean(SUPABASE_URL && SUPABASE_ANON_KEY)
 
-// onde a web mora: a ponte (src/app/web.tsx) abre as telas daqui
+// onde a web mora: termos, privacidade e o que mais abrir no navegador vêm daqui
 const hostPadrao = extra.host ?? (VARIANTE === 'pro' ? 'pro.mimo.com.vc' : 'mimo.com.vc')
 export const WEB_URL = (process.env.EXPO_PUBLIC_WEB_URL || `https://${hostPadrao}`).replace(/\/+$/, '')

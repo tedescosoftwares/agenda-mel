@@ -25,6 +25,12 @@
         {
           "photosPermission": "A MIMO usa suas fotos só para a foto do seu perfil."
         }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "A MIMO usa a câmera só para ler o QR da sua profissional."
+        }
       ]
     ],
     "experiments": {

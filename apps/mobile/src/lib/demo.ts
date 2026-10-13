@@ -76,7 +76,7 @@ const saloes: Linha[] = [
 ]
 
 const profissionais: Linha[] = [
-  { id: 'pr1', user_id: 'p1', salon_id: S1, name: 'Ana Oliveira', slug: 'ana-oliveira', bio: 'Especialista em unhas decoradas e cuidados completos. Atendo com hora marcada, num cantinho tranquilo no Gonzaga.', especialidade: 'Nail designer · gel e decoradas', instagram: 'ana.oliveira.nails', photo_url: FOTO(0), active: true, aceite_manual: true, minutos_para_aceitar: 120, buffer_minutes: 0 },
+  { id: 'pr1', user_id: 'p1', salon_id: S1, name: 'Ana Oliveira', codigo: 'ANA7K2', slug: 'ana-oliveira', bio: 'Especialista em unhas decoradas e cuidados completos. Atendo com hora marcada, num cantinho tranquilo no Gonzaga.', especialidade: 'Nail designer · gel e decoradas', instagram: 'ana.oliveira.nails', photo_url: FOTO(0), active: true, aceite_manual: true, minutos_para_aceitar: 120, buffer_minutes: 0 },
   { id: 'pr2', user_id: 'p2', salon_id: S1, name: 'Camila Rocha', slug: 'camila-rocha', bio: 'Cabeleireira e colorista.', especialidade: 'Cabelo e coloração', photo_url: FOTO(1), active: true, aceite_manual: false },
   { id: 'pr3', user_id: 'p3', salon_id: S1, name: 'Fernanda Lima', slug: 'fernanda-lima', bio: 'Esteticista facial e corporal.', especialidade: 'Estética', photo_url: FOTO(2), active: true, aceite_manual: false },
   { id: 'pr4', user_id: 'p4', salon_id: S1, name: 'Roberta Souza', slug: 'roberta-souza', bio: 'Maquiagem e sobrancelhas.', especialidade: 'Sobrancelhas e make', photo_url: FOTO(3), active: true, aceite_manual: true },
@@ -246,10 +246,27 @@ const RPC: Record<string, (args?: Linha) => unknown> = {
   horarios_livres: () => ['09:00', '09:30', '10:00', '10:30', '11:00', '14:00', '14:30', '15:00', '16:00', '17:00'].map((hora) => ({ hora })),
   dias_com_vaga: () => [mais(1), mais(2), mais(3), mais(5), mais(6)].map((dia) => ({ dia, vagas: 6 })),
   posicao_na_fila: () => [{ posicao: 2, na_frente: 1, janela: 'entre 15:00 e 18:00, até ' + mais(7).slice(8, 10) + '/' + mais(7).slice(5, 7) }],
+  // o código de seis letras de uma profissional ou de um salão (a forma da web)
   resolver_codigo: (args) => {
-    const s = saloes.find((x) => x.codigo === String(args?.chave ?? '').toUpperCase())
-    return s ? { tipo: s.tipo, salao: { id: s.id, nome: s.name, cidade: s.city } } : null
+    const chave = String(args?.chave ?? '').trim().toUpperCase()
+    const p = profissionais.find((x) => x.codigo === chave)
+    if (p) {
+      const s = salao(p.salon_id)!
+      return { tipo: 'profissional', codigo: p.codigo, nome: p.name, foto: p.photo_url ?? null, especialidade: p.especialidade ?? null, profissional_id: p.id, salao: { id: s.id, nome: s.name, cidade: s.city, tipo: s.tipo, logo: s.logo_url ?? null } }
+    }
+    const s = saloes.find((x) => x.codigo === chave)
+    return s ? { tipo: 'salao', codigo: s.codigo, nome: s.name, foto: s.logo_url ?? null, especialidade: null, profissional_id: null, salao: { id: s.id, nome: s.name, cidade: s.city, tipo: s.tipo, logo: s.logo_url ?? null } } : null
   },
+  // entrar numa agenda: na demo, o vínculo nasce na hora
+  vincular: (args) => {
+    const alvo = RPC.resolver_codigo!({ chave: args?.codigo }) as Linha | null
+    if (!alvo) return { ok: false, motivo: 'código não encontrado. Confere as seis letras?' }
+    const existente = TABELAS.vinculos!.find((v) => v.client_id === DEMO_UID && v.salon_id === alvo.salao.id && !v.saiu_em)
+    if (!existente) TABELAS.vinculos!.push({ id: 'vc-' + alvo.salao.id, client_id: DEMO_UID, salon_id: alvo.salao.id, saiu_em: null, trazida_por: alvo.profissional_id, como: args?.jeito ?? 'codigo', criado_em: mais(0) })
+    return { ok: true, novo: !existente, salao: alvo.salao, trazida_por: alvo.profissional_id ? (prof(alvo.profissional_id)?.name ?? null) : null, tipo: alvo.tipo }
+  },
+  telefone_disponivel: () => ({ disponivel: true }),
+  documentos_vigentes: () => ({}),
   // o fluxo de marcar: as regras de verdade são do banco; aqui só a forma da resposta
   pagamento_do_salao: (args) => {
     const s = salao(String(args?.salao ?? ''))
@@ -442,7 +459,8 @@ const criarSessao = () =>
     user: { id: DEMO_UID, email: 'juliana@mimo.demo', aud: 'authenticated', role: 'authenticated', app_metadata: {}, user_metadata: { full_name: 'Juliana Silva' }, created_at: '2025-01-10T12:00:00Z' },
   }) as any
 
-let sessao: any = criarSessao()
+// no cenário "fora" o app abre sem sessão: entrar, criar conta e o convite
+let sessao: any = CENARIO === 'fora' ? null : criarSessao()
 const ouvintes = new Set<(evento: string, s: any) => void>()
 const avisar = (evento: string) => ouvintes.forEach((f) => f(evento, sessao))
 
@@ -468,7 +486,9 @@ export const demo = {
     refreshSession: async () => ({ data: { session: sessao, user: sessao?.user ?? null }, error: null }),
     updateUser: async () => ({ data: { user: sessao?.user ?? null }, error: null }),
     resetPasswordForEmail: async () => ({ data: {}, error: null }),
-    signUp: async () => ({ data: { session: sessao, user: sessao?.user ?? null }, error: null }),
+    // criar conta: a demo "manda o e-mail" (um usuário com identidade, não o fantasma do e-mail repetido)
+    signUp: async (c: { email: string }) => ({ data: { session: null, user: { id: 'nova', email: c.email, identities: [{ id: 'nova' }] } }, error: null }),
+    resend: async () => ({ data: {}, error: null }),
     startAutoRefresh: async () => {},
     stopAutoRefresh: async () => {},
   },

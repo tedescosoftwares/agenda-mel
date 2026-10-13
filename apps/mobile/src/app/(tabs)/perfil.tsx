@@ -12,6 +12,7 @@ import { Avatar, Aviso, Botao, Cabecalho, Cartao, Chip, Entrada, Linha } from '@
 import { useSessao } from '@/context/sessao'
 import { NOME_DO_APP, VARIANTE, VERSAO, WEB_URL } from '@/lib/config'
 import { useConfig } from '@/lib/configPublica'
+import { deIso, mascaraData, paraIso } from '@/lib/datas'
 import { formatPreco } from '@/lib/formato'
 import { supabase } from '@/lib/supabase'
 import { ESPACO, useTema } from '@/lib/tema'
@@ -25,20 +26,6 @@ type Folhas = 'nasc' | 'fone' | 'email' | null
 const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
 const MESES_LONGOS = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']
 
-// "23/08/1994" ↔ "1994-08-23"
-const mascaraData = (v: string) => {
-  const d = v.replace(/\D/g, '').slice(0, 8)
-  return d.length > 4 ? `${d.slice(0, 2)}/${d.slice(2, 4)}/${d.slice(4)}` : d.length > 2 ? `${d.slice(0, 2)}/${d.slice(2)}` : d
-}
-const paraIso = (v: string) => {
-  const m = v.match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
-  if (!m) return null
-  const [, d, mes, a] = m
-  const dt = new Date(Number(a), Number(mes) - 1, Number(d))
-  if (dt.getFullYear() !== Number(a) || dt.getMonth() !== Number(mes) - 1 || dt.getDate() !== Number(d)) return null
-  return `${a}-${mes}-${d}`
-}
-const deIso = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`
 const aniversario = (iso: string) => `${iso.slice(8, 10)} de ${MESES_LONGOS[Number(iso.slice(5, 7)) - 1]}`
 
 export default function Perfil() {

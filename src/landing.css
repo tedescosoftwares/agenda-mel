@@ -1060,7 +1060,6 @@
 .sp-contato { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); max-width: 1000px; }
 .ws-flutuante { position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); z-index: 55; display: inline-flex; align-items: center; gap: 8px; min-height: 50px; padding: 0 20px 0 16px; border-radius: 999px; background: #25d366; color: #fff; font-weight: 600; font-size: 0.95rem; text-decoration: none; box-shadow: 0 12px 28px rgba(37, 211, 102, 0.35); transition: transform 0.15s ease; }
 .ws-flutuante:hover { transform: translateY(-2px); color: #fff; }
-html.mimo-app .ws-flutuante { display: none; }
 @media (max-width: 720px) {
   .ws-flutuante { padding: 0; width: 54px; height: 54px; justify-content: center; }
   .ws-flutuante span { display: none; }

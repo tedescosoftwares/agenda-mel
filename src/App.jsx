@@ -3,7 +3,6 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { NotificacoesProvider } from "./context/NotificacoesContext";
 import { DialogoProvider } from "./context/DialogoContext";
-import SessaoApp from "./pages/SessaoApp";
 import Splash from "./pages/Splash";
 import AvisoCookies from "./components/AvisoCookies";
 import AvisoAoVivo from "./components/AvisoAoVivo";
@@ -70,7 +69,6 @@ export default function App() {
           <Routes>
             <Route path="/login" element={<Login />} />
             {/* o app da loja (apps/mobile) entra por aqui, com a sessão dele */}
-            <Route path="/sessao-app" element={<SessaoApp />} />
             <Route path="/pro/entrar" element={<Login ambiente="pro" />} />
             <Route path="/splash" element={<Splash />} />
 

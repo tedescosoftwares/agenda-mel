@@ -153,7 +153,7 @@ export default function Inicio() {
     setAvisos((xs) => xs.filter((x) => x.id !== a.id))
     setNaoLidos((n) => Math.max(0, n - 1))
     supabase.from('notifications').update({ read_at: new Date().toISOString() }).eq('id', a.id).then(() => {})
-    ir(destinoDoAviso(a, 'cliente'), a.title)
+    ir(destinoDoAviso(a, 'cliente'))
   }
   function marcarLidas() {
     setAvisos([])

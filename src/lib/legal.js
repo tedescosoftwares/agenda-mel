@@ -37,14 +37,9 @@ export function useDocumentosLegais() {
   return docs
 }
 
-// { cliente: '2026-09-24', privacidade: '2026-09-24' } — o que a pessoa aceita num cadastro ou papel
-export function aceitesPara(papel, docs) {
-  const out = {}
-  for (const t of tiposDoPapel(papel)) out[t] = docs?.[t]?.versao ?? DOCUMENTOS_LEGAIS[t].versao
-  return out
-}
-// a maior versão entre as aceitas: é o que profiles.termos_versao guarda
-export const versaoMaior = (aceites) => Object.values(aceites ?? {}).sort().at(-1) ?? null
+// { cliente: '2026-09-24', privacidade: '2026-09-24' } — o que a pessoa aceita num
+// cadastro ou papel, e a maior versão entre elas: vivem em packages/core (o app usa igual)
+export { aceitesPara, versaoMaior } from '../../packages/core/legal.js'
 
 // a pessoa precisa aceitar de novo? só quando existe versão publicada mais nova que a dela
 export function precisaAceitar(profile, docs) {

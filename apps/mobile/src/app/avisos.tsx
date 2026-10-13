@@ -49,7 +49,7 @@ export default function Avisos() {
       {avisos === null && !erro ? <Carregando /> : null}
       {avisos && avisos.length === 0 ? <Vazio mostrarMel={false} titulo="Nenhum aviso por enquanto." texto="Confirmações, lembretes e novidades das suas agendas aparecem aqui." /> : null}
       {avisos?.map((a) => (
-        <Cartao key={a.id} onPress={() => ir(destinoDoAviso(a, 'cliente'), a.title)} estilo={[e.linha, !a.read_at ? { borderColor: t.acento } : null]}>
+        <Cartao key={a.id} onPress={() => ir(destinoDoAviso(a, 'cliente'))} estilo={[e.linha, !a.read_at ? { borderColor: t.acento } : null]}>
           <View style={[e.icone, { backgroundColor: a.read_at ? t.superficie2 : t.veu }]}>
             <Ionicons name={iconeDoAviso(a.kind)} size={18} color={a.read_at ? t.texto2 : t.acento} />
           </View>

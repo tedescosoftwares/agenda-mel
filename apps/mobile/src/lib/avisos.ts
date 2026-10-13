@@ -10,7 +10,7 @@ import { caminhoSeguro, useIr } from './ponte'
 // Avisos nativos: o aparelho pede permissão, ganha um token do Expo Push e o
 // registra no banco (push_tokens_app, migração 152). A função enviar-push manda
 // por aqui os mesmos avisos que já vão pelo Web Push do PWA. Tocou no aviso,
-// o app abre o caminho dele (data.url) na ponte.
+// o app abre o caminho dele (data.url) na tela certa.
 //
 // No Expo Go (SDK 53+) não chega aviso remoto: precisa de uma build de
 // desenvolvimento ou preview (eas build). E o token só existe com o
@@ -73,7 +73,7 @@ export async function desligarAvisos(): Promise<void> {
   }
 }
 
-// tocou num aviso (com o app fechado ou aberto): abre o caminho dele, nativo ou na ponte
+// tocou num aviso (com o app fechado ou aberto): abre o caminho dele
 export function useAbrirAvisoTocado(pronto: boolean) {
   const abrir = useIr()
   const ultimo = useRef<string | null>(null)

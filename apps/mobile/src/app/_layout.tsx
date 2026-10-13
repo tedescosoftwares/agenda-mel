@@ -20,8 +20,8 @@ export default function Raiz() {
   )
 }
 
-// Com sessão: abas. Sem sessão: entrar. A ponte (web), o link de código e a
-// página não encontrada ficam fora da trava: servem logada ou não.
+// Com sessão: abas. Sem sessão: entrar e criar conta. O link de código, a
+// leitura do QR e a página não encontrada ficam fora da trava: servem logada ou não.
 function Navegacao() {
   const { sessao, carregando } = useSessao()
   const t = useTema()
@@ -61,9 +61,10 @@ function Navegacao() {
         </Stack.Protected>
         <Stack.Protected guard={!logada}>
           <Stack.Screen name="entrar" />
+          <Stack.Screen name="cadastro" options={{ animation: 'slide_from_right' }} />
         </Stack.Protected>
-        <Stack.Screen name="web" options={{ animation: 'slide_from_right' }} />
-        <Stack.Screen name="v/[codigo]" />
+        <Stack.Screen name="v/[codigo]" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="ler-qr" options={{ animation: 'slide_from_bottom' }} />
         <Stack.Screen name="+not-found" />
       </Stack>
     </ThemeProvider>

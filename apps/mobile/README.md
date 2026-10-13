@@ -133,6 +133,35 @@ contato, política de privacidade `https://mimo.com.vc/privacidade`, termos
 `https://mimo.com.vc/termos/cliente`, questionário de segurança de dados
 (coletamos nome, telefone, e-mail e agenda; não vendemos dados) e classificação etária.
 
+## Avisos nativos (push)
+
+Com sessão, o app pede permissão, pega um token do **Expo Push** e registra em
+`push_tokens_app` (migração 152, `registrar_token_app`). A função Edge
+`enviar-push` manda cada aviso da fila (`notifications`) pelo Web Push do PWA
+**e** pelo Expo Push dos aparelhos do app; tocou no aviso, o app abre o caminho
+dele (`action_url`) na ponte. Ao sair da conta o token é removido. Dentro do app
+a web não tenta ligar o Web Push: o cartão "Avisos no celular" só explica.
+
+Uma vez só, depois do `eas init` (o token precisa do `projectId` em `app.json`):
+
+1. **Android (FCM)**: no [console do Firebase](https://console.firebase.google.com)
+   crie um projeto (não precisa adicionar app), vá em *Configurações do projeto →
+   Contas de serviço → Gerar nova chave privada* e guarde o JSON fora do git. Depois
+   `eas credentials -p android` → *Push Notifications: Upload a service account key*
+   (FCM V1) e aponte o JSON.
+2. **iPhone (APNs)**: `eas credentials -p ios` → *Push Notifications* → deixe o EAS
+   gerar a chave na sua conta Apple Developer.
+3. Opcional, recomendado: em expo.dev → *Access tokens* crie um token e grave no
+   Supabase (`supabase secrets set EXPO_ACCESS_TOKEN=...`): só a MIMO consegue mandar
+   pelos tokens dela.
+
+Testar: **não funciona no Expo Go** (desde o SDK 53 ele não recebe aviso remoto).
+Use `eas build -p android --profile preview`, instale o .apk, entre na conta e
+gere um aviso (uma confirmação de horário, por exemplo), ou mande um de teste em
+<https://expo.dev/notifications> com o token que aparece no log do app em
+desenvolvimento (`avisos: token do aparelho`). O ícone da barra é
+`assets/images/*/aviso.png` (o coração, branco sobre transparente, 96×96).
+
 ## Como a ponte funciona (para quem for mexer)
 
 `src/app/web.tsx` abre `WEB_URL/sessao-app?ir=/cliente/home` injetando
@@ -155,11 +184,8 @@ Dali em diante:
 
 ## O que vem depois
 
-1. **Avisos nativos** (FCM): `expo-notifications`, uma tabela de tokens do app e a
-   `enviar-push` mandando também pelo Expo Push. Até lá os lembretes seguem
-   chegando pelo WhatsApp e pelo push da web (PWA).
-2. **MIMO Pro**: a variante já existe; faltam as abas de quem atende (agenda do
+1. **MIMO Pro**: a variante já existe; faltam as abas de quem atende (agenda do
    dia, encaixe, pedidos). O resto abre na ponte, como aqui.
-3. Mais telas nativas na cliente (agendar sem sair do app) conforme o uso mostrar.
-4. **iPhone**: mesma base. Precisa da conta Apple Developer (US$ 99/ano); a build
+2. Mais telas nativas na cliente (agendar sem sair do app) conforme o uso mostrar.
+3. **iPhone**: mesma base. Precisa da conta Apple Developer (US$ 99/ano); a build
    é na nuvem do EAS, sem Mac.

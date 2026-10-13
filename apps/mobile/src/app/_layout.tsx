@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar'
 import { useEffect } from 'react'
 import { SessaoProvider, useSessao } from '@/context/sessao'
 import { useTema } from '@/lib/tema'
+import { useAbrirAvisoTocado } from '@/lib/avisos'
 
 // A tela de abertura fica até sabermos se há sessão guardada no aparelho
 SplashScreen.preventAutoHideAsync().catch(() => {})
@@ -28,6 +29,8 @@ function Navegacao() {
   useEffect(() => {
     if (!carregando) SplashScreen.hideAsync().catch(() => {})
   }, [carregando])
+  // tocou num aviso: abre o caminho dele assim que as abas estiverem de pé
+  useAbrirAvisoTocado(!carregando && Boolean(sessao))
 
   if (carregando) return null
 

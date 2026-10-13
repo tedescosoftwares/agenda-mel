@@ -1,6 +1,7 @@
 import type { Session, User } from '@supabase/supabase-js'
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { supabase } from '@/lib/supabase'
+import { ligarAvisos, desligarAvisos } from '@/lib/avisos'
 
 // A sessão do app: a mesma conta do site, guardada no aparelho. As telas
 // nativas usam o que está aqui; a ponte (web.tsx) empresta a sessão para a web.
@@ -67,6 +68,11 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
     }
   }, [uid])
 
+  // com sessão, o aparelho passa a receber os avisos (token do Expo Push no banco)
+  useEffect(() => {
+    if (uid) ligarAvisos().catch(() => {})
+  }, [uid])
+
   const recarregarPerfil = useCallback(async () => {
     if (!uid) return
     const p = await buscarPerfil(uid)
@@ -79,6 +85,7 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const sair = useCallback(async () => {
+    await desligarAvisos()
     await supabase.auth.signOut()
   }, [])
 

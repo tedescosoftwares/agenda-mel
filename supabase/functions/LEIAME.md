@@ -237,3 +237,11 @@ sem frase nenhuma, o app mostra a frase do tempo de sempre.
 
 A função `clima` passou a guardar também as próximas 6 horas (`horas`),
 que é o que permite "chuva chegando às 18h".
+
+## enviar-push: dois caminhos (152)
+
+Além do Web Push do PWA (VAPID), a função manda cada aviso pelo **Expo Push**
+para os aparelhos do app da loja (`push_tokens_app`, registrados pelo app em
+`apps/mobile`). Segredo opcional `EXPO_ACCESS_TOKEN` (expo.dev → Access tokens):
+com ele, só a MIMO consegue mandar pelos tokens dela. Aparelho desinstalado
+(`DeviceNotRegistered`) é apagado sozinho. Publicar: bat 9, como sempre.

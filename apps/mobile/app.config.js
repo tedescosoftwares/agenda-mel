@@ -83,6 +83,8 @@ module.exports = ({ config }) => {
           dark: { backgroundColor: '#1f2026' },
         },
       ],
+      // avisos nativos (152): o ícone branco da barra, a cor e o canal padrão
+      ['expo-notifications', { icon: `${imagens}/aviso.png`, color: '#ff2d7a', defaultChannel: 'avisos' }],
     ],
     extra: {
       ...config.extra,

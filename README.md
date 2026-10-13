@@ -121,6 +121,8 @@ sua máquina — ou fechado.
 
 ## O app da loja (Expo)
 
+Avisos nativos (3.3): o app registra o aparelho em `push_tokens_app` e a `enviar-push` manda também pelo Expo Push; detalhes em `apps/mobile/README.md`.
+
 A MIMO também vai para a Play Store como app de verdade, em `apps/mobile`:
 uma casca nativa (Expo/React Native) com as telas da cliente que mais importam
 no celular e uma **ponte** que abre o resto da web dentro do app, com a mesma

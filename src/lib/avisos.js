@@ -12,36 +12,5 @@ export const ICONE_AVISO = {
   pedido_enviado: Hourglass, fechar_dia: ClipboardCheck, veio: ClipboardCheck, contestacao: MessageSquareWarning, troca_vencida: CalendarX, parte_recusada: TriangleAlert, visita_em_espera: Users, promocao_pendente: BadgePercent, promocao_aprovada: BadgePercent, promocao_recusada: BadgePercent, avaliar_atendimento: Star, pagamento_confirmado: Wallet, reserva_expirada: TriangleAlert, estorno_a_caminho: Wallet, sinal_retido: Wallet, estorno_sem_saldo: TriangleAlert, estorno_atrasado: Hourglass, sinal_em_credito: Wallet, credito_vencido: Wallet, agendamento_pago: Wallet, teste: Bell, teste_push: Bell,
 }
 
-const DESTINO_CLIENTE = {
-  agendamento_confirmado: '/cliente/meus-agendamentos', pedido_aceito: '/cliente/meus-agendamentos',
-  pedido_recusado: '/cliente/home', lembrete_agendamento: '/cliente/meus-agendamentos',
-  vaga_disponivel: '/cliente/meus-agendamentos', indicacao_creditada: '/cliente/indicacao',
-  remarcacao_aceita: '/cliente/meus-agendamentos', remarcacao_recusada: '/cliente/meus-agendamentos',
-  profissional_cancelou: '/cliente/meus-agendamentos', agenda_adiantada: '/cliente/meus-agendamentos',
-}
-
-export function destinoDoAviso(aviso, role) {
-  // aviso de um horário leva ao próprio horário
-  const appt = aviso.data?.appointment_id
-  if (role === 'cliente' && appt && aviso.kind === 'avaliar_atendimento') return `/cliente/agendamento/${appt}?avaliar=1`
-  if (role === 'cliente' && appt && aviso.kind !== 'remarcacao_recusada') return `/cliente/agendamento/${appt}`
-  if (role === 'cliente' && DESTINO_CLIENTE[aviso.kind]) return DESTINO_CLIENTE[aviso.kind]
-  if (aviso.action_url && aviso.action_url !== '/') return aviso.action_url
-  if (role === 'cliente') return '/cliente/notificacoes'
-  return '/avisos'
-}
-
-export function centralDoPapel(role) {
-  return role === 'cliente' ? '/cliente/notificacoes' : '/avisos'
-}
-
-export function relativo(iso) {
-  const min = Math.round((Date.now() - new Date(iso)) / 60000)
-  if (min < 1) return 'agora'
-  if (min < 60) return `há ${min} min`
-  const h = Math.round(min / 60)
-  if (h < 24) return `há ${h}h`
-  const d = Math.round(h / 24)
-  if (d === 1) return 'ontem'
-  return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
-}
+// para onde cada aviso leva e o "há 5 min" vivem em packages/core (compartilhado com o app)
+export { destinoDoAviso, centralDoPapel, relativo } from '../../packages/core/avisos.js'

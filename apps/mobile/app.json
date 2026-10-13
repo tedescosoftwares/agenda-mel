@@ -6,7 +6,8 @@
     "orientation": "portrait",
     "platforms": [
       "android",
-      "ios"
+      "ios",
+      "web"
     ],
     "scheme": "mimo",
     "userInterfaceStyle": "automatic",
@@ -23,6 +24,11 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/images/cliente/icone.png"
     }
   }
 }

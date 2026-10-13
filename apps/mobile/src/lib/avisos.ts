@@ -16,14 +16,19 @@ import { caminhoSeguro, useAbrirWeb } from './ponte'
 // desenvolvimento ou preview (eas build). E o token só existe com o
 // projectId do EAS em app.json (extra.eas.projectId).
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({ shouldShowBanner: true, shouldShowList: true, shouldPlaySound: true, shouldSetBadge: true }),
-})
+// no navegador (demonstração) não existe aviso nativo: tudo aqui vira nada
+const NATIVO = Platform.OS !== 'web'
+
+if (NATIVO) {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({ shouldShowBanner: true, shouldShowList: true, shouldPlaySound: true, shouldSetBadge: true }),
+  })
+}
 
 let tokenAtual: string | null = null
 
 export async function ligarAvisos(): Promise<string | null> {
-  if (!Device.isDevice) return null
+  if (!NATIVO || !Device.isDevice) return null
   try {
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync('avisos', {
@@ -73,7 +78,7 @@ export function useAbrirAvisoTocado(pronto: boolean) {
   const abrir = useAbrirWeb()
   const ultimo = useRef<string | null>(null)
   useEffect(() => {
-    if (!pronto) return
+    if (!pronto || !NATIVO) return
     const tratar = (r: Notifications.NotificationResponse | null) => {
       if (!r || r.notification.request.identifier === ultimo.current) return
       ultimo.current = r.notification.request.identifier

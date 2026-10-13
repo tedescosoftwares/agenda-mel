@@ -1,8 +1,17 @@
 import { Ionicons } from '@expo/vector-icons'
 import { Tabs } from 'expo-router'
+import type { Icone } from '@/components/ui'
 import { useTema } from '@/lib/tema'
 
-// As três abas da cliente: horários, salões, perfil. O resto da MIMO abre na ponte.
+// As quatro abas da cliente: início (a vitrine), horários, salões, perfil.
+// O que ainda não é nativo abre na ponte, por cima das abas.
+const ABAS: { nome: string; titulo: string; icone: Icone; cheio: Icone }[] = [
+  { nome: 'index', titulo: 'Início', icone: 'home-outline', cheio: 'home' },
+  { nome: 'horarios', titulo: 'Horários', icone: 'calendar-outline', cheio: 'calendar' },
+  { nome: 'saloes', titulo: 'Salões', icone: 'storefront-outline', cheio: 'storefront' },
+  { nome: 'perfil', titulo: 'Perfil', icone: 'person-circle-outline', cheio: 'person-circle' },
+]
+
 export default function Abas() {
   const t = useTema()
   return (
@@ -16,18 +25,16 @@ export default function Abas() {
         sceneStyle: { backgroundColor: t.fundo },
       }}
     >
-      <Tabs.Screen
-        name="index"
-        options={{ title: 'Horários', tabBarIcon: ({ color, size }) => <Ionicons name="calendar-outline" color={color} size={size} /> }}
-      />
-      <Tabs.Screen
-        name="saloes"
-        options={{ title: 'Salões', tabBarIcon: ({ color, size }) => <Ionicons name="storefront-outline" color={color} size={size} /> }}
-      />
-      <Tabs.Screen
-        name="perfil"
-        options={{ title: 'Perfil', tabBarIcon: ({ color, size }) => <Ionicons name="person-circle-outline" color={color} size={size} /> }}
-      />
+      {ABAS.map((a) => (
+        <Tabs.Screen
+          key={a.nome}
+          name={a.nome}
+          options={{
+            title: a.titulo,
+            tabBarIcon: ({ color, size, focused }) => <Ionicons name={focused ? a.cheio : a.icone} color={color} size={size} />,
+          }}
+        />
+      ))}
     </Tabs>
   )
 }

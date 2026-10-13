@@ -12,7 +12,9 @@ reescrito; o app é mais um jeito de chegar na mesma MIMO.
 - Tudo o que está feito **permanece** e o desenvolvimento segue como está. O
   app pega carona: cada deploy da web (bat 2) já muda o que o app mostra na ponte.
 - As telas nativas crescem aos poucos, começando pelo que a cliente faz no
-  celular todo dia: ver os horários, os salões, o perfil.
+  celular todo dia: o início (a vitrine), os horários, os salões, o perfil.
+  A meta é a cliente não cair na ponte em nada do dia a dia; a ponte fica
+  como reserva até zerar.
 
 ## Dois apps, um código
 
@@ -41,7 +43,8 @@ apps/mobile/
   src/app/             as rotas (expo-router)
     _layout.tsx        com sessão → abas; sem sessão → entrar
     entrar.tsx         e-mail e senha (criar conta e recuperar senha abrem na web)
-    (tabs)/index.tsx   Horários: a mesma consulta da web, em tela nativa
+    (tabs)/index.tsx   Início: próximo horário, atalhos, novidades, promoções, salões, profissionais e destaques
+    (tabs)/horarios.tsx Horários: próximos e histórico por mês (as regras da web, ClienteAgenda)
     (tabs)/saloes.tsx  Salões onde ela tem agenda + entrar por código
     (tabs)/perfil.tsx  Perfil, resumo e atalhos
     web.tsx            a ponte: a web dentro do app, com a sessão do app
@@ -49,7 +52,8 @@ apps/mobile/
     +not-found.tsx     outros links do site abrem na ponte
   src/context/sessao.tsx   a sessão (Supabase + AsyncStorage)
   src/components/ui.tsx    botão, cartão, avatar, selo, estado vazio com a Mel…
-  src/lib/             config (variante, env), supabase, tema (claro/escuro), formato, ponte
+  src/lib/             config (variante, env), supabase, tema (claro/escuro), formato, ponte,
+                       notificacoes (ícone e destino de cada aviso), avisos (push), demo (dados fictícios)
 ```
 
 E fora daqui:
@@ -75,6 +79,28 @@ E fora daqui:
 
 Antes de subir código: `npm run tipos` (TypeScript), `npm run lint`,
 `npm run doctor` e `npm run empacotar` (empacota como na loja, em `dist/`).
+
+### Ver as telas sem banco (modo demonstração)
+
+Com `EXPO_PUBLIC_DEMO` o app roda inteiro com dados fictícios, sem Supabase e
+sem conta: a Juliana, cliente do Studio Mel (salão) e da Bia (autônoma). Serve
+para olhar e fotografar qualquer tela, mostrar o app para alguém, e testar no
+navegador sem aparelho (`react-native-web` está instalado):
+
+```powershell
+$env:EXPO_PUBLIC_DEMO='1'; npx expo start --web     # abre no navegador, em F12 escolha um celular
+$env:EXPO_PUBLIC_DEMO='1'; npx expo start           # ou no Expo Go
+```
+
+O valor escolhe o cenário: `1` (a Juliana com tudo: horários, novidades,
+promoções), `vazia` (sem nada marcado e sem aviso novo) e `nova` (acabou de
+criar a conta, ainda sem agenda). Ao trocar o cenário (ou desligar a demo)
+acrescente `--clear`: o Metro guarda o valor anterior no cache e, sem isso,
+continua mostrando o cenário de antes. Os dados moram em `src/lib/demo.ts`, uma
+imitação do cliente do Supabase igual à da web (`src/lib/demo.js`): quando uma
+tela nova usar uma tabela ou função que não está lá, acrescente. Nada disso
+entra no pacote da loja: sem a variável, `src/lib/supabase.ts` nem carrega o
+arquivo.
 
 ## Publicar na Play Store (EAS)
 
@@ -182,10 +208,19 @@ Dali em diante:
 - A web sabe que está no app: `html.mimo-app` no CSS, `window.__mimoApp`
   (`{ variante, versao, plataforma }`) e `MIMOApp/<versão>` no User-Agent.
 
+## O que já é nativo e o que ainda abre na ponte
+
+Nativo: entrar, as quatro abas (início, horários, salões, perfil) e os avisos
+push. Na ponte, por enquanto: agendar (serviços → data → hora → confirmar), o
+detalhe do horário (remarcar, cancelar, avaliar, responder proposta), a página
+do salão, da profissional e do serviço, a central de avisos, a fila de espera,
+a indicação, editar o perfil, pagar o sinal, a comanda, criar conta e recuperar
+senha. A ordem de saída da ponte é essa, a do uso: agendar primeiro.
+
 ## O que vem depois
 
-1. **MIMO Pro**: a variante já existe; faltam as abas de quem atende (agenda do
-   dia, encaixe, pedidos). O resto abre na ponte, como aqui.
-2. Mais telas nativas na cliente (agendar sem sair do app) conforme o uso mostrar.
+1. Tirar a ponte da cliente, uma área por vez (a lista acima), até sobrar nada.
+2. **MIMO Pro**: a variante já existe; faltam as abas de quem atende (agenda do
+   dia, encaixe, pedidos).
 3. **iPhone**: mesma base. Precisa da conta Apple Developer (US$ 99/ano); a build
    é na nuvem do EAS, sem Mac.

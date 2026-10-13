@@ -11,7 +11,8 @@
     "./format": "./format.js",
     "./planos": "./planos.js",
     "./fone": "./fone.js",
-    "./booking": "./booking.js"
+    "./booking": "./booking.js",
+    "./avisos": "./avisos.js"
   },
   "sideEffects": false
 }

@@ -9,7 +9,7 @@ import { Avatar, Aviso, Cartao, Selo, type Icone } from '@/components/ui'
 import { useSessao } from '@/context/sessao'
 import { dataCurta, diaNumero, diaSemana, emQuanto, formatDuracao, formatPreco, hora, mesCurto, primeiroNome, saudacao, toISODate } from '@/lib/formato'
 import { destinoDoAviso, iconeDoAviso, relativo, type Aviso as AvisoRow } from '@/lib/notificacoes'
-import { useAbrirWeb } from '@/lib/ponte'
+import { useAbrirWeb, useIr } from '@/lib/ponte'
 import { supabase } from '@/lib/supabase'
 import { ESPACO, MARCA, useTema } from '@/lib/tema'
 
@@ -70,6 +70,7 @@ export default function Inicio() {
   const t = useTema()
   const router = useRouter()
   const abrir = useAbrirWeb()
+  const ir = useIr()
   const { usuario, perfil } = useSessao()
   const [proximo, setProximo] = useState<Proximo | null | undefined>(undefined)
   const [agendas, setAgendas] = useState<Agenda[] | null>(null)
@@ -153,7 +154,7 @@ export default function Inicio() {
     setAvisos((xs) => xs.filter((x) => x.id !== a.id))
     setNaoLidos((n) => Math.max(0, n - 1))
     supabase.from('notifications').update({ read_at: new Date().toISOString() }).eq('id', a.id).then(() => {})
-    abrir(destinoDoAviso(a, 'cliente'), a.title)
+    ir(destinoDoAviso(a, 'cliente'), a.title)
   }
   function marcarLidas() {
     setAvisos([])
@@ -200,7 +201,7 @@ export default function Inicio() {
             <ActivityIndicator color="#fff" style={{ paddingVertical: 28 }} />
           </Heroi>
         ) : proximo ? (
-          <Heroi onPress={() => abrir(`/cliente/agendamento/${proximo.id}`, 'Agendamento')}>
+          <Heroi onPress={() => router.push({ pathname: '/agendamento/[id]', params: { id: proximo.id } })}>
             <View style={e.entreLinhas}>
               <Text style={e.heroiKicker}>{proximo.status === 'pendente' ? 'Aguardando confirmação' : 'Seu próximo horário'}</Text>
               <View style={e.heroiPilula}>

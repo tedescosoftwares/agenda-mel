@@ -3,16 +3,16 @@ import { useFocusEffect, useRouter } from 'expo-router'
 import { useCallback, useMemo, useState } from 'react'
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { ConviteAdiantar, OfertaVaga, type Vaga } from '@/components/Convites'
 import { Avatar, Aviso, Botao, Cabecalho, Cartao, Carregando, Chip, Selo, Vazio } from '@/components/ui'
 import { useSessao } from '@/context/sessao'
 import { dataCurta, diaNumero, diaSemana, emQuanto, formatDuracao, formatPreco, hora, mesCurto, toISODate } from '@/lib/formato'
-import { useAbrirWeb } from '@/lib/ponte'
 import { supabase } from '@/lib/supabase'
 import { ESPACO, useTema } from '@/lib/tema'
 
 // Meus horários: as mesmas consultas e regras da web (ClienteAgenda), em tela
-// nativa. Próximos e histórico por mês; o detalhe (remarcar, cancelar, avaliar,
-// responder proposta) ainda abre na ponte.
+// nativa. Próximos e histórico por mês, os convites (vir mais cedo, a vaga da
+// fila) e o caminho para o detalhe, remarcar e marcar de novo.
 export type Agendamento = {
   id: string
   date: string
@@ -57,8 +57,6 @@ export const ehPedidoDeTroca = (a: Agendamento) => Boolean(a.remarca_de) && a.st
 const jaFoi = (a: Agendamento, agora: Date) => new Date(`${a.date}T${a.end_time || a.start_time}`) <= agora
 const podeCancelar = (a: Agendamento) => (a.status === 'pendente' || a.status === 'confirmado') && new Date(`${a.date}T${a.start_time}`) > new Date()
 const podeRemarcar = (a: Agendamento) => podeCancelar(a) && Boolean(a.service_id) && !ehPedidoDeTroca(a)
-export const temProposta = (a: Agendamento, agora = new Date()) =>
-  (a.appointment_offers ?? []).some((o) => o.status === 'pendente' && (!o.expires_at || new Date(o.expires_at) > agora))
 
 function quemCancelou(a: Agendamento): string | null {
   if (a.status !== 'cancelado') return null
@@ -71,12 +69,9 @@ function quemCancelou(a: Agendamento): string | null {
   return a.salons?.tipo === 'salao' ? 'Cancelado pelo salão' : 'Cancelado pela profissional'
 }
 
-type Vaga = { id: string; expires_at: string | null; waitlist_entries: { services: { name: string } | null; professionals: { name: string } | null } | null }
-
 export default function Horarios() {
   const t = useTema()
   const router = useRouter()
-  const abrir = useAbrirWeb()
   const { usuario } = useSessao()
   const [aba, setAba] = useState<'proximos' | 'historico'>('proximos')
   const [proximos, setProximos] = useState<Agendamento[] | null>(null)
@@ -95,7 +90,7 @@ export default function Horarios() {
       // cancelado com data ainda por vir: não é "próximo", mas faz parte da história
       supabase.from('appointments').select(SELECAO).eq('client_id', usuario.id).gte('date', hoje).eq('status', 'cancelado').order('date', { ascending: false }).limit(20),
       supabase.from('reviews').select('appointment_id, nota').eq('client_id', usuario.id),
-      supabase.from('waitlist_offers').select('id, expires_at, waitlist_entries (id, services (name), professionals (name))').eq('status', 'pendente').gt('expires_at', new Date().toISOString()),
+      supabase.from('waitlist_offers').select('id, date, start_time, expires_at, waitlist_entries (id, services (name), professionals (name))').eq('status', 'pendente').gt('expires_at', new Date().toISOString()),
     ])
     if (px.error) {
       setErro('Não deu para carregar seus horários. Puxa para baixo para tentar de novo.')
@@ -133,7 +128,9 @@ export default function Horarios() {
   }
 
   const agora = new Date()
-  const propostas = (proximos ?? []).filter((a) => temProposta(a, agora))
+  // os convites para vir mais cedo, um por proposta aberta
+  const convites = (proximos ?? []).flatMap((a) => (a.appointment_offers ?? []).filter((o) => o.status === 'pendente' && (!o.expires_at || new Date(o.expires_at) > agora)).map((oferta) => ({ a, oferta })))
+  const abrirDetalhe = (a: Agendamento) => router.push({ pathname: '/agendamento/[id]', params: { id: a.id } })
   // o destaque: o primeiro horário de verdade (não um pedido de troca)
   const destaque = (proximos ?? []).find((a) => !ehPedidoDeTroca(a)) ?? null
   const restantes = (proximos ?? []).filter((a) => a !== destaque)
@@ -163,24 +160,11 @@ export default function Horarios() {
         {aba === 'proximos' && proximos ? (
           <>
             {vagas.map((v) => (
-              <Cartao key={v.id} tom="acento">
-                <Text style={[e.forte, { color: t.texto }]}>Abriu uma vaga para você</Text>
-                <Text style={{ color: t.texto2 }}>
-                  {v.waitlist_entries?.services?.name ?? 'Seu serviço'}
-                  {v.waitlist_entries?.professionals?.name ? ` com ${v.waitlist_entries.professionals.name}` : ''}. Responde antes que passe para a próxima da fila.
-                </Text>
-                <Botao titulo="Ver a vaga" icone="flash-outline" onPress={() => abrir('/cliente/meus-agendamentos', 'Meus agendamentos')} />
-              </Cartao>
+              <OfertaVaga key={v.id} oferta={v} onRespondido={carregar} />
             ))}
-            {propostas.length > 0 ? (
-              <Cartao tom="acento">
-                <Text style={[e.forte, { color: t.texto }]}>A profissional sugeriu um horário novo</Text>
-                <Text style={{ color: t.texto2 }}>
-                  {propostas.length === 1 ? 'Tem uma proposta esperando a sua resposta.' : `Tem ${propostas.length} propostas esperando a sua resposta.`}
-                </Text>
-                <Botao titulo="Responder" icone="swap-horizontal-outline" onPress={() => abrir('/cliente/meus-agendamentos', 'Meus agendamentos')} />
-              </Cartao>
-            ) : null}
+            {convites.map(({ a, oferta }) => (
+              <ConviteAdiantar key={oferta.id} oferta={oferta} servico={nomeDoServico(a)} profissional={a.professionals?.name} onRespondido={carregar} />
+            ))}
 
             {proximos.length === 0 ? (
               <Vazio titulo="Nada marcado por enquanto" texto="Escolha uma profissional e um horário. Leva menos de um minuto.">
@@ -189,14 +173,14 @@ export default function Horarios() {
             ) : null}
 
             {destaque ? (
-              <Destaque a={destaque} troca={trocaAberta(destaque)} onPress={() => abrir(`/cliente/agendamento/${destaque.id}`, 'Agendamento')} onRemarcar={podeRemarcar(destaque) && !trocaAberta(destaque) ? () => remarcar(destaque) : undefined} />
+              <Destaque a={destaque} troca={trocaAberta(destaque)} onPress={() => abrirDetalhe(destaque)} onRemarcar={podeRemarcar(destaque) && !trocaAberta(destaque) ? () => remarcar(destaque) : undefined} />
             ) : null}
 
             {restantes.length > 0 ? (
               <View style={{ gap: 10 }}>
                 <Text style={[e.secao, { color: t.texto2 }]}>Depois</Text>
                 {restantes.map((a) => (
-                  <Linha key={a.id} a={a} troca={trocaAberta(a)} onPress={() => abrir(`/cliente/agendamento/${a.id}`, 'Agendamento')} onRemarcar={podeRemarcar(a) && !trocaAberta(a) ? () => remarcar(a) : undefined} />
+                  <Linha key={a.id} a={a} troca={trocaAberta(a)} onPress={() => abrirDetalhe(a)} onRemarcar={podeRemarcar(a) && !trocaAberta(a) ? () => remarcar(a) : undefined} />
                 ))}
               </View>
             ) : null}
@@ -216,7 +200,7 @@ export default function Horarios() {
                     {n ? ` · ${n} ${n === 1 ? 'atendimento' : 'atendimentos'}` : ''}
                   </Text>
                   {itens.map((a) => (
-                    <Linha key={a.id} a={a} historico nota={notas.get(a.id)} onPress={() => abrir(`/cliente/agendamento/${a.id}`, 'Agendamento')} onDeNovo={a.professionals && a.service_id ? () => deNovo(a) : undefined} />
+                    <Linha key={a.id} a={a} historico nota={notas.get(a.id)} onPress={() => abrirDetalhe(a)} onDeNovo={a.professionals && a.service_id ? () => deNovo(a) : undefined} />
                   ))}
                 </View>
               )

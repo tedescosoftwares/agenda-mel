@@ -106,7 +106,7 @@ const serv = (id: string) => servicos.find((s) => s.id === id)
 const salao = (id: string) => saloes.find((s) => s.id === id)
 const resumoProf = (p?: Linha) => (p ? { id: p.id, name: p.name, photo_url: p.photo_url } : null)
 const resumoServ = (s?: Linha) => (s ? { name: s.name, price: s.price, duration_minutes: s.duration_minutes } : null)
-const resumoSalao = (s?: Linha) => (s ? { name: s.name, city: s.city, tipo: s.tipo } : null)
+const resumoSalao = (s?: Linha) => (s ? { id: s.id, name: s.name, city: s.city, tipo: s.tipo, address: s.address, phone: s.phone, lat: s.lat ?? null, lng: s.lng ?? null } : null)
 
 const agendamentos: Linha[] = [
   { id: 'ap1', client_id: 'c1', professional_id: 'pr1', service_id: 'sv2', salon_id: S1, date: mais(2), start_time: '14:00:00', end_time: '15:30:00', status: 'pendente', price_cents: 8500, created_at: horasAtras(3) },
@@ -126,7 +126,8 @@ const agendamentos: Linha[] = [
     services: resumoServ(serv(a.service_id)),
     professionals: resumoProf(prof(a.professional_id)),
     salons: resumoSalao(salao(a.salon_id)),
-    appointment_offers: [],
+    // a Bia propôs adiantar a extensão de cílios: um convite esperando resposta
+    appointment_offers: a.id === 'ap10' ? [{ id: 'of1', status: 'pendente', proposed_start_time: '08:00:00', previous_start_time: '09:00:00', expires_at: horasAtras(-48) }] : [],
   }))
 
 const avisos: Linha[] = (NOVA ? [] : [
@@ -159,7 +160,11 @@ const TABELAS: Record<string, Linha[]> = {
   ],
   notifications: avisos,
   waitlist_entries: fila,
-  waitlist_offers: [],
+  waitlist_offers:
+    NOVA || VAZIA
+      ? []
+      : [{ id: 'wo1', entry_id: 'w1', date: mais(1), start_time: '15:00:00', end_time: '16:00:00', status: 'pendente', expires_at: horasAtras(-0.7), waitlist_entries: { id: 'w1', services: { name: 'Esmaltação em gel' }, professionals: { name: 'Ana Oliveira' } } }],
+  comandas: [{ id: 'cmv', appointment_id: 'ap3', appointment_ids: ['ap3'], client_id: 'c1', salon_id: S1, status: 'fechada', fechada_em: mais(-12) + 'T11:02:00' }],
   vinculos: NOVA
     ? []
     : [
@@ -174,7 +179,7 @@ const TABELAS: Record<string, Linha[]> = {
   pagamentos: [
     { id: 'pg1', appointment_id: 'ap2', client_id: 'c1', salon_id: S1, status: 'pago', valor_cents: 3000, total_cents: 6000, sinal_pct: 50, pago_em: horasAtras(28), criado_em: horasAtras(29) },
   ],
-  reviews: [],
+  reviews: [{ id: 'rv1', appointment_id: 'ap4', client_id: 'c1', professional_id: 'pr3', nota: 5, comentario: 'Saí renovada!', created_at: mais(-29) }],
   push_tokens_app: [],
   // quem atende em que dia (domingo fechado, sábado até as 14h)
   professional_hours: profissionais.flatMap((p) =>
@@ -248,6 +253,18 @@ const RPC: Record<string, (args?: Linha) => unknown> = {
       : null
   },
   meu_credito: () => null,
+  regras_do_agendamento: (args) => {
+    const a = agendamentos.find((x) => x.id === args?.appt)
+    if (!a) return null
+    // o prazo de devolução: 12 h antes do horário (um timestamp sem fuso, como o banco devolve)
+    const inicio = new Date(`${a.date}T${a.start_time}`)
+    const limite = new Date(inicio.getTime() - 12 * 3600e3)
+    const p2 = (n: number) => String(n).padStart(2, '0')
+    const limiteIso = `${limite.getFullYear()}-${p2(limite.getMonth() + 1)}-${p2(limite.getDate())}T${p2(limite.getHours())}:${p2(limite.getMinutes())}:00`
+    return { politica: 'moderada', horas: 12, credito_dias: 30, limite: limiteIso, dentro_do_prazo: true, pago_cents: a.pago_cents ?? 0, taxa_cents: 199, volta_cents: Math.max(0, (a.pago_cents ?? 0) - 199), credito_ate: null, credito_ate_se_cancelar: mais(30), salao: salao(a.salon_id)?.name ?? null, salon_id: a.salon_id }
+  },
+  responder_antecipacao: () => 'aceita',
+  responder_vaga: () => 'aceita',
   sugestoes_de_visita: (args) => {
     const p = prof(String(args?.prof ?? ''))
     if (p?.salon_id !== S1) return []
@@ -316,7 +333,27 @@ function consulta(linhas: Linha[]) {
       if (op === 'is' && v === null) filtros.push((r) => r[c] != null)
       return q
     },
-    or: () => q,
+    // "a.eq.1,b.is.null,c.cs.{x}": basta uma parte bater
+    or: (expr: string) => {
+      filtros.push((r) =>
+        expr.split(',').some((parte) => {
+          const [col = '', op = '', ...resto] = parte.split('.')
+          const v = resto.join('.')
+          const x = r[col]
+          if (op === 'eq') return String(x) === v
+          if (op === 'neq') return String(x) !== v
+          if (op === 'is') return v === 'null' ? x == null : String(x) === v
+          if (op === 'gt') return x != null && String(x) > v
+          if (op === 'gte') return x != null && String(x) >= v
+          if (op === 'lt') return x != null && String(x) < v
+          if (op === 'lte') return x != null && String(x) <= v
+          if (op === 'cs') return Array.isArray(x) && v.replace(/^\{|\}$/g, '').split(',').filter(Boolean).every((i) => x.includes(i))
+          if (op === 'in') return v.replace(/^\(|\)$/g, '').split(',').includes(String(x))
+          return true
+        }),
+      )
+      return q
+    },
     ilike: (c: string, v: string) => {
       const t = String(v).replace(/%/g, '').toLowerCase()
       filtros.push((r) => String(r[c] ?? '').toLowerCase().includes(t))

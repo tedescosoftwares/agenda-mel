@@ -14,7 +14,8 @@
     "./booking": "./booking.js",
     "./avisos": "./avisos.js",
     "./categorias": "./categorias.js",
-    "./pagamento": "./pagamento.js"
+    "./pagamento": "./pagamento.js",
+    "./geo": "./geo.js"
   },
   "sideEffects": false
 }

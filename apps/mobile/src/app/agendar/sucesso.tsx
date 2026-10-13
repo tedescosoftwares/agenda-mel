@@ -6,7 +6,6 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { formatDataLonga } from '@mimo/core'
 import { Botao, Cartao } from '@/components/ui'
 import { capitalizar } from '@/lib/agendar'
-import { useAbrirWeb } from '@/lib/ponte'
 import { supabase } from '@/lib/supabase'
 import { ESPACO, useTema } from '@/lib/tema'
 
@@ -18,7 +17,6 @@ type Parte = { appointment_id: string; servico: string; profissional: string; in
 export default function Sucesso() {
   const t = useTema()
   const router = useRouter()
-  const abrir = useAbrirWeb()
   const { id } = useLocalSearchParams<{ id?: string }>()
   const [appt, setAppt] = useState<Appt | null>(null)
   const [partes, setPartes] = useState<Parte[]>([])
@@ -89,7 +87,7 @@ export default function Sucesso() {
         ) : null}
         <View style={{ alignSelf: 'stretch', gap: 10, marginTop: 8 }}>
           {appt ? (
-            <Botao titulo="Ver este agendamento" icone="calendar-outline" onPress={() => abrir(`/cliente/agendamento/${appt.id}`, 'Agendamento')} />
+            <Botao titulo="Ver este agendamento" icone="calendar-outline" onPress={() => router.replace({ pathname: '/agendamento/[id]', params: { id: appt.id } })} />
           ) : (
             <Botao titulo="Ver meus agendamentos" icone="calendar-outline" onPress={() => router.dismissTo('/horarios')} />
           )}

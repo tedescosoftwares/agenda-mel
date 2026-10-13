@@ -30,9 +30,10 @@ async function geocodificarGoogle(q, restricoes = {}) {
 
 export const limparCep = (t) => String(t ?? '').replace(/\D/g, '').slice(0, 8)
 export const formatarCep = (t) => { const d = limparCep(t); return d.length > 5 ? d.slice(0, 5) + '-' + d.slice(5) : d }
-export const temPino = (lat, lng) => Number.isFinite(Number(lat)) && Number.isFinite(Number(lng)) && !(Number(lat) === 0 && Number(lng) === 0)
+// pino, arredondar e links de rota vivem em packages/core (compartilhado com o app)
+export { temPino, arredondar, linksDeRota } from '../../packages/core/geo.js'
+import { temPino, arredondar } from '../../packages/core/geo.js'
 // seis casas ≈ 10 cm; mais que isso é ruído
-export const arredondar = (n) => Math.round(Number(n) * 1e6) / 1e6
 
 export async function buscarCep(cep) {
   const d = limparCep(cep)
@@ -117,26 +118,6 @@ export function minhaPosicao() {
 }
 
 export const ehIos = () => typeof navigator !== 'undefined' && /iPhone|iPad|iPod/i.test(navigator.userAgent)
-
-// links de rota: com pino, vão direto na coordenada; sem pino, buscam
-// pelo texto (o Google resolve; o Waze também aceita).
-export function linksDeRota({ lat, lng, nome, endereco, cidade }) {
-  if (temPino(lat, lng)) {
-    const ll = `${Number(lat)},${Number(lng)}`
-    return {
-      google: `https://www.google.com/maps/dir/?api=1&destination=${ll}`,
-      waze: `https://waze.com/ul?ll=${ll}&navigate=yes`,
-      apple: `https://maps.apple.com/?daddr=${ll}&q=${encodeURIComponent(nome || 'Destino')}`,
-    }
-  }
-  const texto = [nome, endereco, cidade].filter(Boolean).join(', ')
-  if (!texto) return null
-  return {
-    google: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(texto)}`,
-    waze: `https://waze.com/ul?q=${encodeURIComponent(texto)}&navigate=yes`,
-    apple: null,
-  }
-}
 
 // distância em linha reta, em km (haversine). Para o "perto de você".
 export function distanciaKm(a, b) {

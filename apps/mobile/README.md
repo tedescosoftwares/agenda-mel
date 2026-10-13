@@ -49,12 +49,14 @@ apps/mobile/
     (tabs)/perfil.tsx  Perfil, resumo e atalhos
     agendar/           o fluxo de marcar, nativo: com quem → serviços → data → hora → confirmar → sucesso
                        (remarcar entra pela data; as regras são as da web, src/pages/cliente/Agendar.jsx)
+    agendamento/[id]   a página de um horário (as regras da web, ClienteAgendamento)
     web.tsx            a ponte: a web dentro do app, com a sessão do app
     v/[codigo].tsx     mimo.com.vc/v/CODIGO (QR e link do WhatsApp) cai aqui
     +not-found.tsx     outros links do site abrem na ponte
   src/context/sessao.tsx   a sessão (Supabase + AsyncStorage)
   src/components/ui.tsx    botão, cartão, avatar, selo, chip, caixa, entrada, estado vazio com a Mel…
-  src/components/          Tela (moldura das telas empilhadas), Trilha (passos), Calendario (mês)
+  src/components/          Tela (moldura das telas empilhadas), Trilha (passos), Calendario (mês),
+                           Folha (a folha que sobe de baixo, e a Confirmacao), Avaliar, Convites
   src/lib/             config (variante, env), supabase, tema (claro/escuro), formato, ponte, agendar
                        (parâmetros e regras do fluxo), notificacoes (ícone e destino de cada aviso),
                        avisos (push), demo (dados fictícios)
@@ -217,12 +219,15 @@ Dali em diante:
 Nativo: entrar, as quatro abas (início, horários, salões, perfil), o fluxo de
 marcar inteiro (com quem, serviços, data, hora, confirmar com descontos,
 "quer aproveitar e adicionar?", a visita com outras profissionais, pagamento
-pelo app e crédito; e remarcar, que é um pedido de troca) e os avisos push.
-Na ponte, por enquanto: o detalhe do horário (cancelar, avaliar, responder
-proposta), a página do salão, da profissional e do serviço, a central de
-avisos, a fila de espera, a indicação, editar o perfil, pagar o sinal (o PIX
-abre na ponte logo depois de confirmar), a comanda, criar conta e recuperar
-senha. A ordem de saída da ponte é a do uso: o detalhe do horário é o próximo.
+pelo app e crédito; e remarcar, que é um pedido de troca), a página do horário
+(estado, o que aconteceu com o sinal, onde e como chegar, serviços, partes da
+visita, cancelar com a política do sinal, avaliar com estrelas, marcar de
+novo), os convites (vir mais cedo, vaga da fila) e os avisos push. Um aviso
+ou link com o caminho da web cai na tela nativa quando ela existe
+(`rotaNativa`, em `src/lib/ponte.ts`). Na ponte, por enquanto: a página do
+salão, da profissional e do serviço, a central de avisos, a fila de espera, a
+indicação, editar o perfil, pagar o sinal e o comprovante (o PIX abre na
+ponte logo depois de confirmar), a comanda, criar conta e recuperar senha.
 
 ## O que vem depois
 

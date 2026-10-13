@@ -5,7 +5,7 @@ import * as Device from 'expo-device'
 import Constants from 'expo-constants'
 import { supabase } from './supabase'
 import { VARIANTE } from './config'
-import { caminhoSeguro, useAbrirWeb } from './ponte'
+import { caminhoSeguro, useIr } from './ponte'
 
 // Avisos nativos: o aparelho pede permissão, ganha um token do Expo Push e o
 // registra no banco (push_tokens_app, migração 152). A função enviar-push manda
@@ -73,9 +73,9 @@ export async function desligarAvisos(): Promise<void> {
   }
 }
 
-// tocou num aviso (com o app fechado ou aberto): abre o caminho dele na ponte
+// tocou num aviso (com o app fechado ou aberto): abre o caminho dele, nativo ou na ponte
 export function useAbrirAvisoTocado(pronto: boolean) {
-  const abrir = useAbrirWeb()
+  const abrir = useIr()
   const ultimo = useRef<string | null>(null)
   useEffect(() => {
     if (!pronto || !NATIVO) return

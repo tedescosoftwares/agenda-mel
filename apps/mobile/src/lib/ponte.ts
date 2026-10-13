@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router'
+import { useRouter, type Href } from 'expo-router'
 import { useCallback } from 'react'
 
 // Caminhos da web que o app abre na ponte (src/app/web.tsx). Só caminhos
@@ -16,5 +16,37 @@ export function useAbrirWeb() {
       router.push({ pathname: '/web', params: titulo ? { ir, titulo } : { ir } })
     },
     [router],
+  )
+}
+
+// Caminhos da web que já têm tela nativa: um aviso, um link ou um botão com
+// o caminho antigo cai na tela do app, não na ponte. Conforme as telas vão
+// virando nativas, esta lista cresce; quando a ponte sumir, ela some junto.
+const RESERVADAS = new Set(['data', 'hora', 'confirmar', 'sucesso'])
+export function rotaNativa(caminho: string): Href | null {
+  const [rota, busca = ''] = caminho.split('?')
+  const q = new URLSearchParams(busca)
+  const parametros = Object.fromEntries(q.entries())
+  const m = (rota ?? '').match(/^\/cliente\/agendamento\/([^/]+)$/)
+  if (m && !RESERVADAS.has(m[1]!)) return { pathname: '/agendamento/[id]', params: { id: m[1]!, ...(q.get('avaliar') === '1' ? { avaliar: '1' } : {}) } }
+  if (rota === '/cliente/agendamento/data') return { pathname: '/agendar/data', params: parametros }
+  if (rota === '/cliente/meus-agendamentos') return '/horarios'
+  if (rota === '/cliente/home' || rota === '/') return '/'
+  const sv = (rota ?? '').match(/^\/cliente\/profissional\/([^/]+)\/servicos$/)
+  if (sv) return { pathname: '/agendar/servicos', params: { prof: sv[1]!, ...(q.get('servico') ? { servico: q.get('servico')! } : {}) } }
+  return null
+}
+
+// ir('/cliente/agendamento/abc', 'Agendamento'): nativo se já existe, senão a ponte
+export function useIr() {
+  const router = useRouter()
+  const abrir = useAbrirWeb()
+  return useCallback(
+    (caminho: string, titulo?: string) => {
+      const nativa = rotaNativa(caminhoSeguro(caminho))
+      if (nativa) router.push(nativa)
+      else abrir(caminho, titulo)
+    },
+    [router, abrir],
   )
 }

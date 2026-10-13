@@ -18,7 +18,8 @@
     "./geo": "./geo.js",
     "./contato": "./contato.js",
     "./convite": "./convite.js",
-    "./legal": "./legal.js"
+    "./legal": "./legal.js",
+    "./guia": "./guia.js"
   },
   "sideEffects": false
 }

@@ -31,6 +31,9 @@ export function rotaNativa(caminho: string): Href | null {
   if (m && !RESERVADAS.has(m[1]!)) return { pathname: '/agendamento/[id]', params: { id: m[1]!, ...(q.get('avaliar') === '1' ? { avaliar: '1' } : {}) } }
   if (rota === '/cliente/agendamento/data') return { pathname: '/agendar/data', params: parametros }
   if (rota === '/cliente/meus-agendamentos') return '/horarios'
+  if (rota === '/cliente/notificacoes') return '/avisos'
+  if (rota === '/cliente/fila-espera') return '/fila'
+  if (rota === '/cliente/indicacao' || rota === '/indique') return '/indicacao'
   if (rota === '/cliente/home' || rota === '/') return '/'
   const sv = (rota ?? '').match(/^\/cliente\/profissional\/([^/]+)\/servicos$/)
   if (sv) return { pathname: '/agendar/servicos', params: { prof: sv[1]!, ...(q.get('servico') ? { servico: q.get('servico')! } : {}) } }

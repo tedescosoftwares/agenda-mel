@@ -263,6 +263,11 @@ const RPC: Record<string, (args?: Linha) => unknown> = {
     const limiteIso = `${limite.getFullYear()}-${p2(limite.getMonth() + 1)}-${p2(limite.getDate())}T${p2(limite.getHours())}:${p2(limite.getMinutes())}:00`
     return { politica: 'moderada', horas: 12, credito_dias: 30, limite: limiteIso, dentro_do_prazo: true, pago_cents: a.pago_cents ?? 0, taxa_cents: 199, volta_cents: Math.max(0, (a.pago_cents ?? 0) - 199), credito_ate: null, credito_ate_se_cancelar: mais(30), salao: salao(a.salon_id)?.name ?? null, salon_id: a.salon_id }
   },
+  meu_resumo_indicacoes: () => [{ codigo: 'JULIANA10', saldo_cents: 3000, indicadas_total: 2, indicadas_creditadas: 1, premio_indicou_cents: 2000, premio_indicada_cents: 1500 }],
+  sair_lista_espera: () => null,
+  minhas_ciencias: () => [],
+  aceitar_ciencia: () => null,
+  contestar_falta: () => null,
   responder_antecipacao: () => 'aceita',
   responder_vaga: () => 'aceita',
   sugestoes_de_visita: (args) => {

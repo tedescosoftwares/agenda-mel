@@ -1,4 +1,4 @@
-import { useFocusEffect } from 'expo-router'
+import { useFocusEffect, useRouter } from 'expo-router'
 import * as WebBrowser from 'expo-web-browser'
 import { useCallback, useState } from 'react'
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native'
@@ -17,6 +17,7 @@ type Resumo = { desde: string | null; atendimentos: number; proximos: number; ag
 
 export default function Perfil() {
   const t = useTema()
+  const router = useRouter()
   const abrir = useAbrirWeb()
   const { usuario, perfil, sair, recarregarPerfil } = useSessao()
   const [resumo, setResumo] = useState<Resumo | null>(null)
@@ -69,9 +70,9 @@ export default function Perfil() {
 
         <Cartao estilo={{ paddingVertical: 4, gap: 0 }}>
           <Linha icone="create-outline" titulo="Editar perfil" sub="Nome, telefone, foto e aniversário" onPress={() => abrir('/cliente/perfil', 'Editar perfil')} />
-          <Linha icone="notifications-outline" titulo="Avisos e lembretes" sub="Como e quando a MIMO te avisa" onPress={() => abrir('/cliente/notificacoes', 'Avisos')} />
-          <Linha icone="gift-outline" titulo="Indicar amigas" sub="Seu link de indicação" onPress={() => abrir('/cliente/indicacao', 'Indicar amigas')} />
-          <Linha icone="hourglass-outline" titulo="Fila de espera" sub="Horários que você está esperando" onPress={() => abrir('/cliente/fila-espera', 'Fila de espera')} />
+          <Linha icone="notifications-outline" titulo="Avisos" sub="Confirmações, lembretes e novidades" onPress={() => router.push('/avisos')} />
+          <Linha icone="gift-outline" titulo="Indicar amigas" sub="Seu código e seus créditos" onPress={() => router.push('/indicacao')} />
+          <Linha icone="hourglass-outline" titulo="Fila de espera" sub="Horários que você está esperando" onPress={() => router.push('/fila')} />
           <Linha icone="document-text-outline" titulo="Termos de uso" onPress={() => void WebBrowser.openBrowserAsync(`${WEB_URL}/termos/cliente`)} />
           <Linha icone="shield-checkmark-outline" titulo="Privacidade" onPress={() => void WebBrowser.openBrowserAsync(`${WEB_URL}/privacidade`)} />
           <Linha icone="log-out-outline" titulo="Sair da conta" cor={t.erro} onPress={confirmarSaida} semSeta />

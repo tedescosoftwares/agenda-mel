@@ -49,6 +49,9 @@ function Navegacao() {
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="agendar" options={{ animation: 'slide_from_right' }} />
           <Stack.Screen name="agendamento/[id]" options={{ animation: 'slide_from_right' }} />
+          <Stack.Screen name="avisos" options={{ animation: 'slide_from_right' }} />
+          <Stack.Screen name="fila" options={{ animation: 'slide_from_right' }} />
+          <Stack.Screen name="indicacao" options={{ animation: 'slide_from_right' }} />
         </Stack.Protected>
         <Stack.Protected guard={!logada}>
           <Stack.Screen name="entrar" />

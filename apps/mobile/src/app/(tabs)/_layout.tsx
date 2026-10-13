@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons'
 import { Tabs } from 'expo-router'
+import { Ciencia } from '@/components/Ciencia'
 import type { Icone } from '@/components/ui'
 import { useTema } from '@/lib/tema'
 
@@ -15,26 +16,29 @@ const ABAS: { nome: string; titulo: string; icone: Icone; cheio: Icone }[] = [
 export default function Abas() {
   const t = useTema()
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: t.acento,
-        tabBarInactiveTintColor: t.texto3,
-        tabBarStyle: { backgroundColor: t.superficie, borderTopColor: t.fio },
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
-        sceneStyle: { backgroundColor: t.fundo },
-      }}
-    >
-      {ABAS.map((a) => (
-        <Tabs.Screen
-          key={a.nome}
-          name={a.nome}
-          options={{
-            title: a.titulo,
-            tabBarIcon: ({ color, size, focused }) => <Ionicons name={focused ? a.cheio : a.icone} color={color} size={size} />,
-          }}
-        />
-      ))}
-    </Tabs>
+    <>
+      <Ciencia ativa />
+      <Tabs
+        screenOptions={{
+          headerShown: false,
+          tabBarActiveTintColor: t.acento,
+          tabBarInactiveTintColor: t.texto3,
+          tabBarStyle: { backgroundColor: t.superficie, borderTopColor: t.fio },
+          tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+          sceneStyle: { backgroundColor: t.fundo },
+        }}
+      >
+        {ABAS.map((a) => (
+          <Tabs.Screen
+            key={a.nome}
+            name={a.nome}
+            options={{
+              title: a.titulo,
+              tabBarIcon: ({ color, size, focused }) => <Ionicons name={focused ? a.cheio : a.icone} color={color} size={size} />,
+            }}
+          />
+        ))}
+      </Tabs>
+    </>
   )
 }

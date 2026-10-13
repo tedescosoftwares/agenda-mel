@@ -167,7 +167,7 @@ export default function Inicio() {
     if (p.service_id) return abrir(`/cliente/servico/${p.service_id}?${p.professional_id ? `prof=${p.professional_id}&` : ''}de=home`, p.servico ?? p.titulo)
     if (p.professional_id) return abrir(`/cliente/profissional/${p.professional_id}`, p.profissional ?? p.titulo)
     if (p.salon_id) return abrir(`/cliente/salao/${p.salon_id}`, p.salao ?? p.titulo)
-    abrir('/cliente/indicacao', p.titulo)
+    router.push('/indicacao')
   }
 
   const nome = primeiroNome(perfil?.full_name)
@@ -191,7 +191,7 @@ export default function Inicio() {
               {nome || 'que bom te ver'}
             </Text>
           </View>
-          <Sino n={naoLidos} onPress={() => abrir('/cliente/notificacoes', 'Avisos')} />
+          <Sino n={naoLidos} onPress={() => router.push('/avisos')} />
         </View>
 
         {erro ? <Aviso tom="erro" texto={erro} /> : null}
@@ -257,7 +257,7 @@ export default function Inicio() {
           <Atalho icone="add-circle-outline" rotulo="Agendar" onPress={agendar} />
           <Atalho icone="calendar-outline" rotulo="Horários" onPress={() => router.push('/horarios')} />
           <Atalho icone="qr-code-outline" rotulo="Entrar num salão" onPress={() => router.push('/saloes')} />
-          <Atalho icone="gift-outline" rotulo="Indicar amigas" onPress={() => abrir('/cliente/indicacao', 'Indicar amigas')} />
+          <Atalho icone="gift-outline" rotulo="Indicar amigas" onPress={() => router.push('/indicacao')} />
         </View>
 
         {avisos.length > 0 ? (

@@ -139,12 +139,10 @@ export default function Inicio() {
     setAtualizando(false)
   }
 
-  // "Agendar" leva para onde ela tem agenda: a profissional, o salão, ou a lista
+  // "Agendar" abre o fluxo nativo: com quem (se houver mais de uma), serviços, data, hora
   function agendar() {
-    const lista = agendas ?? []
-    if (lista.length === 0) return router.push('/saloes')
-    if (lista.length === 1) return abrirAgenda(lista[0]!)
-    abrir('/cliente/home', 'Agendar')
+    if (agendas && agendas.length === 0) return router.push('/saloes')
+    router.push('/agendar/profissional')
   }
   function abrirAgenda(ag: Agenda) {
     const p = ag.profissionais?.[0]

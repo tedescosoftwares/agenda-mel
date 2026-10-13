@@ -47,13 +47,17 @@ apps/mobile/
     (tabs)/horarios.tsx Horários: próximos e histórico por mês (as regras da web, ClienteAgenda)
     (tabs)/saloes.tsx  Salões onde ela tem agenda + entrar por código
     (tabs)/perfil.tsx  Perfil, resumo e atalhos
+    agendar/           o fluxo de marcar, nativo: com quem → serviços → data → hora → confirmar → sucesso
+                       (remarcar entra pela data; as regras são as da web, src/pages/cliente/Agendar.jsx)
     web.tsx            a ponte: a web dentro do app, com a sessão do app
     v/[codigo].tsx     mimo.com.vc/v/CODIGO (QR e link do WhatsApp) cai aqui
     +not-found.tsx     outros links do site abrem na ponte
   src/context/sessao.tsx   a sessão (Supabase + AsyncStorage)
-  src/components/ui.tsx    botão, cartão, avatar, selo, estado vazio com a Mel…
-  src/lib/             config (variante, env), supabase, tema (claro/escuro), formato, ponte,
-                       notificacoes (ícone e destino de cada aviso), avisos (push), demo (dados fictícios)
+  src/components/ui.tsx    botão, cartão, avatar, selo, chip, caixa, entrada, estado vazio com a Mel…
+  src/components/          Tela (moldura das telas empilhadas), Trilha (passos), Calendario (mês)
+  src/lib/             config (variante, env), supabase, tema (claro/escuro), formato, ponte, agendar
+                       (parâmetros e regras do fluxo), notificacoes (ícone e destino de cada aviso),
+                       avisos (push), demo (dados fictícios)
 ```
 
 E fora daqui:
@@ -210,12 +214,15 @@ Dali em diante:
 
 ## O que já é nativo e o que ainda abre na ponte
 
-Nativo: entrar, as quatro abas (início, horários, salões, perfil) e os avisos
-push. Na ponte, por enquanto: agendar (serviços → data → hora → confirmar), o
-detalhe do horário (remarcar, cancelar, avaliar, responder proposta), a página
-do salão, da profissional e do serviço, a central de avisos, a fila de espera,
-a indicação, editar o perfil, pagar o sinal, a comanda, criar conta e recuperar
-senha. A ordem de saída da ponte é essa, a do uso: agendar primeiro.
+Nativo: entrar, as quatro abas (início, horários, salões, perfil), o fluxo de
+marcar inteiro (com quem, serviços, data, hora, confirmar com descontos,
+"quer aproveitar e adicionar?", a visita com outras profissionais, pagamento
+pelo app e crédito; e remarcar, que é um pedido de troca) e os avisos push.
+Na ponte, por enquanto: o detalhe do horário (cancelar, avaliar, responder
+proposta), a página do salão, da profissional e do serviço, a central de
+avisos, a fila de espera, a indicação, editar o perfil, pagar o sinal (o PIX
+abre na ponte logo depois de confirmar), a comanda, criar conta e recuperar
+senha. A ordem de saída da ponte é a do uso: o detalhe do horário é o próximo.
 
 ## O que vem depois
 

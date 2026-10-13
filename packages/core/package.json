@@ -12,7 +12,9 @@
     "./planos": "./planos.js",
     "./fone": "./fone.js",
     "./booking": "./booking.js",
-    "./avisos": "./avisos.js"
+    "./avisos": "./avisos.js",
+    "./categorias": "./categorias.js",
+    "./pagamento": "./pagamento.js"
   },
   "sideEffects": false
 }

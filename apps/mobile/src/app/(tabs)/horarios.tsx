@@ -1,9 +1,9 @@
 import { Ionicons } from '@expo/vector-icons'
-import { useFocusEffect } from 'expo-router'
+import { useFocusEffect, useRouter } from 'expo-router'
 import { useCallback, useMemo, useState } from 'react'
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { Avatar, Aviso, Botao, Cabecalho, Cartao, Carregando, Selo, Vazio } from '@/components/ui'
+import { Avatar, Aviso, Botao, Cabecalho, Cartao, Carregando, Chip, Selo, Vazio } from '@/components/ui'
 import { useSessao } from '@/context/sessao'
 import { dataCurta, diaNumero, diaSemana, emQuanto, formatDuracao, formatPreco, hora, mesCurto, toISODate } from '@/lib/formato'
 import { useAbrirWeb } from '@/lib/ponte'
@@ -55,6 +55,8 @@ export function minutosDe(a: Agendamento): number | null {
 export const precoDe = (a: Agendamento) => (a.price_cents != null ? a.price_cents / 100 : a.services?.price)
 export const ehPedidoDeTroca = (a: Agendamento) => Boolean(a.remarca_de) && a.status === 'pendente'
 const jaFoi = (a: Agendamento, agora: Date) => new Date(`${a.date}T${a.end_time || a.start_time}`) <= agora
+const podeCancelar = (a: Agendamento) => (a.status === 'pendente' || a.status === 'confirmado') && new Date(`${a.date}T${a.start_time}`) > new Date()
+const podeRemarcar = (a: Agendamento) => podeCancelar(a) && Boolean(a.service_id) && !ehPedidoDeTroca(a)
 export const temProposta = (a: Agendamento, agora = new Date()) =>
   (a.appointment_offers ?? []).some((o) => o.status === 'pendente' && (!o.expires_at || new Date(o.expires_at) > agora))
 
@@ -73,6 +75,7 @@ type Vaga = { id: string; expires_at: string | null; waitlist_entries: { service
 
 export default function Horarios() {
   const t = useTema()
+  const router = useRouter()
   const abrir = useAbrirWeb()
   const { usuario } = useSessao()
   const [aba, setAba] = useState<'proximos' | 'historico'>('proximos')
@@ -137,6 +140,9 @@ export default function Horarios() {
   const trocaAberta = (a: Agendamento) => (proximos ?? []).find((p) => p.remarca_de === a.id && p.status === 'pendente')
   const meses = useMemo(() => agruparPorMes(historico), [historico])
   const feitos = historico.filter((a) => a.status === 'concluido').length
+  // remarcar é um pedido de troca: o fluxo de marcar, a partir da data (sem o passo do serviço)
+  const remarcar = (a: Agendamento) => router.push({ pathname: '/agendar/data', params: { prof: a.professional_id ?? '', servico: a.service_id ?? '', remarcar: a.id } })
+  const deNovo = (a: Agendamento) => router.push({ pathname: '/agendar/servicos', params: { prof: a.professionals?.id ?? '', servico: a.service_id ?? '' } })
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.fundo }} edges={['top']}>
@@ -178,17 +184,19 @@ export default function Horarios() {
 
             {proximos.length === 0 ? (
               <Vazio titulo="Nada marcado por enquanto" texto="Escolha uma profissional e um horário. Leva menos de um minuto.">
-                <Botao titulo="Marcar um horário" icone="add-circle-outline" onPress={() => abrir('/cliente/home', 'Agendar')} />
+                <Botao titulo="Marcar um horário" icone="add-circle-outline" onPress={() => router.push('/agendar/profissional')} />
               </Vazio>
             ) : null}
 
-            {destaque ? <Destaque a={destaque} troca={trocaAberta(destaque)} onPress={() => abrir(`/cliente/agendamento/${destaque.id}`, 'Agendamento')} /> : null}
+            {destaque ? (
+              <Destaque a={destaque} troca={trocaAberta(destaque)} onPress={() => abrir(`/cliente/agendamento/${destaque.id}`, 'Agendamento')} onRemarcar={podeRemarcar(destaque) && !trocaAberta(destaque) ? () => remarcar(destaque) : undefined} />
+            ) : null}
 
             {restantes.length > 0 ? (
               <View style={{ gap: 10 }}>
                 <Text style={[e.secao, { color: t.texto2 }]}>Depois</Text>
                 {restantes.map((a) => (
-                  <Linha key={a.id} a={a} troca={trocaAberta(a)} onPress={() => abrir(`/cliente/agendamento/${a.id}`, 'Agendamento')} />
+                  <Linha key={a.id} a={a} troca={trocaAberta(a)} onPress={() => abrir(`/cliente/agendamento/${a.id}`, 'Agendamento')} onRemarcar={podeRemarcar(a) && !trocaAberta(a) ? () => remarcar(a) : undefined} />
                 ))}
               </View>
             ) : null}
@@ -208,7 +216,7 @@ export default function Horarios() {
                     {n ? ` · ${n} ${n === 1 ? 'atendimento' : 'atendimentos'}` : ''}
                   </Text>
                   {itens.map((a) => (
-                    <Linha key={a.id} a={a} historico nota={notas.get(a.id)} onPress={() => abrir(`/cliente/agendamento/${a.id}`, 'Agendamento')} />
+                    <Linha key={a.id} a={a} historico nota={notas.get(a.id)} onPress={() => abrir(`/cliente/agendamento/${a.id}`, 'Agendamento')} onDeNovo={a.professionals && a.service_id ? () => deNovo(a) : undefined} />
                   ))}
                 </View>
               )
@@ -230,7 +238,7 @@ function Segmento({ ativo, texto, onPress }: { ativo: boolean; texto: string; on
 }
 
 // o próximo horário, grande, com o que ela precisa saber de bate-pronto
-function Destaque({ a, troca, onPress }: { a: Agendamento; troca?: Agendamento; onPress: () => void }) {
+function Destaque({ a, troca, onPress, onRemarcar }: { a: Agendamento; troca?: Agendamento; onPress: () => void; onRemarcar?: () => void }) {
   const t = useTema()
   const preco = precoDe(a)
   const min = minutosDe(a)
@@ -271,11 +279,15 @@ function Destaque({ a, troca, onPress }: { a: Agendamento; troca?: Agendamento; 
         {preco != null ? <Text style={[e.preco, { color: t.texto }]}>{formatPreco(preco)}</Text> : null}
       </View>
       {troca ? <Nota icone="repeat-outline" texto={`Você pediu para mudar para ${dataCurta(troca.date)} às ${hora(troca.start_time)}. Aguardando a profissional.`} /> : null}
+      <View style={e.acoes}>
+        <Botao titulo="Ver detalhes" onPress={onPress} estilo={e.acao} />
+        {onRemarcar ? <Botao titulo="Remarcar" tipo="fantasma" icone="repeat-outline" onPress={onRemarcar} estilo={e.acao} /> : null}
+      </View>
     </Cartao>
   )
 }
 
-function Linha({ a, troca, historico = false, nota, onPress }: { a: Agendamento; troca?: Agendamento; historico?: boolean; nota?: number; onPress: () => void }) {
+function Linha({ a, troca, historico = false, nota, onPress, onRemarcar, onDeNovo }: { a: Agendamento; troca?: Agendamento; historico?: boolean; nota?: number; onPress: () => void; onRemarcar?: () => void; onDeNovo?: () => void }) {
   const t = useTema()
   const troca_ = ehPedidoDeTroca(a)
   const min = minutosDe(a)
@@ -315,6 +327,12 @@ function Linha({ a, troca, historico = false, nota, onPress }: { a: Agendamento;
         {historico && a.status === 'concluido' && nota ? <Estrelas nota={nota} /> : null}
         {troca_ && a.origem ? <Nota icone="repeat-outline" texto={`No lugar de ${dataCurta(a.origem.date)} às ${hora(a.origem.start_time)}. Até ela responder, o de antes continua valendo.`} /> : null}
         {troca ? <Nota icone="repeat-outline" texto={`Você pediu para mudar para ${dataCurta(troca.date)} às ${hora(troca.start_time)}. Aguardando a profissional.`} /> : null}
+        {onRemarcar || onDeNovo ? (
+          <View style={e.chips}>
+            {onRemarcar ? <Chip texto="Remarcar" onPress={onRemarcar} /> : null}
+            {onDeNovo ? <Chip texto="Marcar de novo" onPress={onDeNovo} /> : null}
+          </View>
+        ) : null}
       </View>
     </Cartao>
   )
@@ -376,4 +394,7 @@ const e = StyleSheet.create({
   dataMiniMes: { fontSize: 11, fontWeight: '700', textTransform: 'uppercase' },
   linhaServico: { fontSize: 15.5, fontWeight: '700' },
   nota: { flexDirection: 'row', gap: 5, alignItems: 'flex-start', marginTop: 2 },
+  acoes: { flexDirection: 'row', gap: 8, marginTop: 2 },
+  acao: { flex: 1, minHeight: 42 },
+  chips: { flexDirection: 'row', gap: 8, marginTop: 6 },
 })

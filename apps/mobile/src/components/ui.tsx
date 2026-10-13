@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons'
 import { Image } from 'expo-image'
 import type { ComponentProps, ReactNode } from 'react'
-import { ActivityIndicator, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native'
+import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View, type StyleProp, type TextInputProps, type ViewStyle } from 'react-native'
 import { iniciais } from '@/lib/formato'
 import { RAIO, useTema } from '@/lib/tema'
 import mel from '../../assets/images/mel.webp'
@@ -187,6 +187,57 @@ export function Carregando({ texto }: { texto?: string }) {
   )
 }
 
+// pílula de filtro ou de escolha (categoria, data sugerida, horário)
+export function Chip({ texto, ativo = false, onPress, desabilitado = false, estilo }: { texto: string; ativo?: boolean; onPress?: () => void; desabilitado?: boolean; estilo?: StyleProp<ViewStyle> }) {
+  const t = useTema()
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={desabilitado}
+      accessibilityRole="button"
+      accessibilityState={{ selected: ativo }}
+      style={({ pressed }) => [
+        e.chip,
+        { backgroundColor: ativo ? t.acento : t.superficie, borderColor: ativo ? t.acento : t.fio, opacity: desabilitado ? 0.5 : pressed ? 0.8 : 1 },
+        estilo,
+      ]}
+    >
+      <Text style={[e.chipTexto, { color: ativo ? t.acentoTexto : t.texto }]}>{texto}</Text>
+    </Pressable>
+  )
+}
+
+// caixa de marcar com título e explicação
+export function Caixa({ marcado, onPress, titulo, sub }: { marcado: boolean; onPress: () => void; titulo: string; sub?: string }) {
+  const t = useTema()
+  return (
+    <Pressable onPress={onPress} accessibilityRole="checkbox" accessibilityState={{ checked: marcado }} style={({ pressed }) => [e.caixa, { opacity: pressed ? 0.7 : 1 }]}>
+      <View style={[e.caixaQuadrado, { backgroundColor: marcado ? t.acento : t.superficie, borderColor: marcado ? t.acento : t.texto3 }]}>
+        {marcado ? <Ionicons name="checkmark" size={14} color={t.acentoTexto} /> : null}
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={[e.caixaTitulo, { color: t.texto }]}>{titulo}</Text>
+        {sub ? <Text style={[e.caixaSub, { color: t.texto2 }]}>{sub}</Text> : null}
+      </View>
+    </Pressable>
+  )
+}
+
+// campo de texto com rótulo
+export function Entrada({ rotulo, estilo, ...props }: TextInputProps & { rotulo?: string; estilo?: StyleProp<ViewStyle> }) {
+  const t = useTema()
+  return (
+    <View style={[{ gap: 6 }, estilo]}>
+      {rotulo ? <Text style={[e.rotulo, { color: t.texto2 }]}>{rotulo}</Text> : null}
+      <TextInput
+        placeholderTextColor={t.texto3}
+        {...props}
+        style={[e.entrada, { backgroundColor: t.superficie, borderColor: t.fio, color: t.texto }, props.multiline ? e.entradaAlta : null, props.style]}
+      />
+    </View>
+  )
+}
+
 const e = StyleSheet.create({
   botao: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 48, paddingHorizontal: 18, borderRadius: 14, borderWidth: 1 },
   botaoTexto: { fontSize: 15, fontWeight: '700' },
@@ -209,4 +260,13 @@ const e = StyleSheet.create({
   vazioTexto: { fontSize: 14, lineHeight: 20, textAlign: 'center' },
   vazioAcoes: { gap: 10, marginTop: 10, alignSelf: 'stretch' },
   carregando: { alignItems: 'center', paddingVertical: 40 },
+  chip: { paddingHorizontal: 14, minHeight: 36, borderRadius: 999, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  chipTexto: { fontSize: 13.5, fontWeight: '600' },
+  caixa: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  caixaQuadrado: { width: 22, height: 22, borderRadius: 7, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
+  caixaTitulo: { fontSize: 15, fontWeight: '700' },
+  caixaSub: { fontSize: 13, lineHeight: 18, marginTop: 2 },
+  rotulo: { fontSize: 13, fontWeight: '600' },
+  entrada: { minHeight: 48, borderRadius: 14, borderWidth: 1, paddingHorizontal: 14, fontSize: 15.5 },
+  entradaAlta: { minHeight: 90, paddingTop: 12, textAlignVertical: 'top' },
 })

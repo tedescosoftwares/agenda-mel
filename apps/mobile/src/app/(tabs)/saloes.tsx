@@ -95,7 +95,7 @@ export default function Saloes() {
           <CartaoSalao
             key={ag.salao.id}
             ag={ag}
-            onAgendar={() => abrir(`/cliente/salao/${ag.salao.id}`, ag.salao.nome)}
+            onAgendar={() => router.push({ pathname: '/agendar/profissional', params: { salao: ag.salao.id } })}
             onProfissional={(id, nome) => abrir(`/cliente/profissional/${id}`, nome)}
           />
         ))}

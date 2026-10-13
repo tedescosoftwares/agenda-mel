@@ -84,16 +84,16 @@ const profissionais: Linha[] = [
 ]
 
 const servicos: Linha[] = [
-  { id: 'sv1', salon_id: S1, name: 'Manicure', description: 'Cutilagem, lixamento e esmaltação.', duration_minutes: 45, price: 35, active: true, destaque: false, images: [], is_combo: false, return_days: 15 },
-  { id: 'sv2', salon_id: S1, name: 'Manicure + Pedicure', description: 'O combo completo.', duration_minutes: 90, price: 85, active: true, destaque: true, images: [CAPA('#ff2d7a', '#ffb27a')], is_combo: true, return_days: 15 },
-  { id: 'sv3', salon_id: S1, name: 'Pedicure', description: '', duration_minutes: 45, price: 40, active: true, destaque: false, images: [], is_combo: false, return_days: 20 },
-  { id: 'sv4', salon_id: S1, name: 'Spa dos pés', description: 'Hidratação profunda e massagem.', duration_minutes: 60, price: 65, active: true, destaque: false, images: [], is_combo: false, return_days: 30 },
-  { id: 'sv5', salon_id: S1, name: 'Esmaltação em gel', description: 'Dura até 3 semanas.', duration_minutes: 60, price: 75, active: true, destaque: true, images: [], is_combo: false, return_days: 21 },
-  { id: 'sv6', salon_id: S1, name: 'Corte feminino', description: '', duration_minutes: 60, price: 80, active: true, destaque: false, images: [], is_combo: false, return_days: 45 },
-  { id: 'sv7', salon_id: S1, name: 'Escova', description: '', duration_minutes: 45, price: 60, active: true, destaque: false, images: [], is_combo: false, return_days: 10 },
-  { id: 'sv8', salon_id: S1, name: 'Design de sobrancelhas', description: '', duration_minutes: 30, price: 45, active: true, destaque: true, images: [], is_combo: false, return_days: 20 },
-  { id: 'sv9', salon_id: S2, name: 'Extensão de cílios', description: 'Fio a fio ou volume brasileiro.', duration_minutes: 120, price: 180, active: true, destaque: true, images: [CAPA('#aa4cff', '#3d0c4e')], is_combo: false, return_days: 21 },
-  { id: 'sv10', salon_id: S2, name: 'Manutenção de cílios', description: '', duration_minutes: 75, price: 110, active: true, destaque: false, images: [], is_combo: false, return_days: 21 },
+  { id: 'sv1', categoria_id: 'ct2', salon_id: S1, name: 'Manicure', description: 'Cutilagem, lixamento e esmaltação.', duration_minutes: 45, price: 35, active: true, destaque: false, images: [], is_combo: false, return_days: 15 },
+  { id: 'sv2', categoria_id: 'ct2', salon_id: S1, name: 'Manicure + Pedicure', description: 'O combo completo.', duration_minutes: 90, price: 85, active: true, destaque: true, images: [CAPA('#ff2d7a', '#ffb27a')], is_combo: true, return_days: 15 },
+  { id: 'sv3', categoria_id: 'ct2', salon_id: S1, name: 'Pedicure', description: '', duration_minutes: 45, price: 40, active: true, destaque: false, images: [], is_combo: false, return_days: 20 },
+  { id: 'sv4', categoria_id: 'ct10', salon_id: S1, name: 'Spa dos pés', description: 'Hidratação profunda e massagem.', duration_minutes: 60, price: 65, active: true, destaque: false, images: [], is_combo: false, return_days: 30 },
+  { id: 'sv5', categoria_id: 'ct2', salon_id: S1, name: 'Esmaltação em gel', description: 'Dura até 3 semanas.', duration_minutes: 60, price: 75, active: true, destaque: true, images: [], is_combo: false, return_days: 21 },
+  { id: 'sv6', categoria_id: 'ct1', salon_id: S1, name: 'Corte feminino', description: '', duration_minutes: 60, price: 80, active: true, destaque: false, images: [], is_combo: false, return_days: 45 },
+  { id: 'sv7', categoria_id: 'ct1', salon_id: S1, name: 'Escova', description: '', duration_minutes: 45, price: 60, active: true, destaque: false, images: [], is_combo: false, return_days: 10 },
+  { id: 'sv8', categoria_id: 'ct4', salon_id: S1, name: 'Design de sobrancelhas', description: '', duration_minutes: 30, price: 45, active: true, destaque: true, images: [], is_combo: false, return_days: 20 },
+  { id: 'sv9', categoria_id: 'ct3', salon_id: S2, name: 'Extensão de cílios', description: 'Fio a fio ou volume brasileiro.', duration_minutes: 120, price: 180, active: true, destaque: true, images: [CAPA('#aa4cff', '#3d0c4e')], is_combo: false, return_days: 21 },
+  { id: 'sv10', categoria_id: 'ct3', salon_id: S2, name: 'Manutenção de cílios', description: '', duration_minutes: 75, price: 110, active: true, destaque: false, images: [], is_combo: false, return_days: 21 },
 ]
 
 const vinculosProf: Linha[] = [
@@ -176,6 +176,29 @@ const TABELAS: Record<string, Linha[]> = {
   ],
   reviews: [],
   push_tokens_app: [],
+  // quem atende em que dia (domingo fechado, sábado até as 14h)
+  professional_hours: profissionais.flatMap((p) =>
+    [0, 1, 2, 3, 4, 5, 6].map((weekday) => ({ professional_id: p.id, weekday, open: weekday !== 0, start_time: '09:00:00', end_time: weekday === 6 ? '14:00:00' : '18:00:00' })),
+  ),
+  categorias_de_servico: [
+    ['ct1', 'Cabelo', 'cabelo', 10],
+    ['ct2', 'Unhas', 'unhas', 20],
+    ['ct3', 'Cílios', 'cilios', 30],
+    ['ct4', 'Sobrancelhas', 'sobrancelhas', 40],
+    ['ct7', 'Estética facial', 'estetica-facial', 70],
+    ['ct10', 'Bem-estar e spa', 'bem-estar-e-spa', 100],
+  ].map(([id, nome, slug, ordem]) => ({ id, salon_id: null, nome, slug, ordem, ativa: true, descricao: null, imagem_url: null })),
+  servicos_juntos: [
+    { service_id: 'sv1', sugerido_id: 'sv3' },
+    { service_id: 'sv2', sugerido_id: 'sv5' },
+    { service_id: 'sv6', sugerido_id: 'sv7' },
+  ],
+}
+
+const somar = (hora: string, min: number) => {
+  const [h, m] = String(hora).split(':').map(Number)
+  const tot = (h ?? 0) * 60 + (m ?? 0) + min
+  return `${String(Math.floor(tot / 60) % 24).padStart(2, '0')}:${String(tot % 60).padStart(2, '0')}`
 }
 
 const agendaDe = (s: Linha, vinculo: Linha) => ({
@@ -217,6 +240,35 @@ const RPC: Record<string, (args?: Linha) => unknown> = {
     const s = saloes.find((x) => x.codigo === String(args?.chave ?? '').toUpperCase())
     return s ? { tipo: s.tipo, salao: { id: s.id, nome: s.name, cidade: s.city } } : null
   },
+  // o fluxo de marcar: as regras de verdade são do banco; aqui só a forma da resposta
+  pagamento_do_salao: (args) => {
+    const s = salao(String(args?.salao ?? ''))
+    return s
+      ? { modo: s.pagamento_modo, sinal_pct: s.sinal_pct, politica: s.politica_cancelamento, estorno_horas: 24, credito_dias: 30, carencia_min: 60, permite_remarcar: s.permite_remarcar, antecedencia_min: s.antecedencia_min_minutos, sinal_modo: 'percentual', sinal_fixo_cents: null }
+      : null
+  },
+  meu_credito: () => null,
+  sugestoes_de_visita: (args) => {
+    const p = prof(String(args?.prof ?? ''))
+    if (p?.salon_id !== S1) return []
+    const dur = ((args?.servicos as string[] | undefined) ?? []).reduce((a, id) => a + (serv(id)?.duration_minutes ?? 0), 0)
+    const fim = somar(String(args?.apos ?? args?.hora ?? '09:00'), args?.apos ? 0 : dur)
+    const outras = profissionais.filter((x) => x.salon_id === S1 && x.id !== p.id)
+    const lista = [
+      { service_id: 'sv8', professional_id: 'pr4', hora_sugerida: fim + ':00', modo: 'logo_depois' },
+      { service_id: 'sv4', professional_id: 'pr3', hora_sugerida: somar(fim, 60) + ':00', modo: 'com_espera' },
+      { service_id: 'sv7', professional_id: 'pr2', hora_sugerida: somar(fim, 90) + ':00', modo: 'com_espera' },
+    ].filter((x) => outras.some((o) => o.id === x.professional_id) && (args?.com_espera || x.modo === 'logo_depois'))
+    return lista.map((x) => {
+      const sv = serv(x.service_id)!
+      const pr = prof(x.professional_id)!
+      return { ...x, service_name: sv.name, price: sv.price, duration_minutes: sv.duration_minutes, professional_name: pr.name, photo_url: pr.photo_url }
+    })
+  },
+  marcar_servicos: (args) => ({ ok: true, appointment_id: 'ap1', servicos: ((args?.servicos as string[] | undefined) ?? []).length, minutos: 90, cents: 8500, desconto_cents: 0, pagar: Boolean(args?.pagar), credito_usado: 0 }),
+  marcar_visita: () => ({ ok: true, appointment_id: 'ap1', visita_id: 'v1', partes: ['ap1'], confirmada: false }),
+  pedir_remarcacao: () => ({ ok: true, appointment_id: 'ap2', pendente: true, minutos: 45 }),
+  partes_da_visita: () => [],
   registrar_token_app: () => null,
   remover_token_app: () => null,
   avancar_ofertas_expiradas: () => null,

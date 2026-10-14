@@ -122,6 +122,7 @@ export function jsonLdDoLugar(l, conteudo, faq = []) {
       ...(l.cep ? { postalCode: l.cep } : {}),
       addressCountry: 'BR',
     },
+    ...(l.latitude != null && l.longitude != null ? { geo: { '@type': 'GeoCoordinates', latitude: Number(l.latitude), longitude: Number(l.longitude) } } : {}),
     ...(l.telefone ? { telephone: l.telefone } : {}),
     ...(horarioSchema(l.horarios) ? { openingHoursSpecification: horarioSchema(l.horarios) } : {}),
     ...(sameAs.length ? { sameAs } : {}),

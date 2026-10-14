@@ -416,6 +416,7 @@ export function montarColecao(col, lugares) {
     return {
       slug: l.slug, nome: l.nome, categoria: l.categoria, servicos: (l.servicos ?? []).slice(0, 4), selecao: !!l.selecao, na_mimo: !!l.na_mimo,
       bairro: bairroLimpo(l.bairro) || null,
+      latitude: l.latitude ?? null, longitude: l.longitude ?? null, // a distância é calculada no aparelho (3.13)
       // na página de horário, a linha do cartão é o horário que interessa; no bairro, o resumo do salão
       resumo: col.tipo === 'horario' && h && p ? h.linha(p) : (l.resumo ?? l.conteudo?.resumo ?? null),
     }

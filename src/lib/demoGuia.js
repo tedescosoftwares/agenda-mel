@@ -7,7 +7,7 @@
 import { categoriaDoGuia, slugificar, conteudoSeguro, horariosEmUmaLinha } from './guia.js'
 import { montarConteudo } from './guiaTexto.js'
 import { chaveDoBairro } from './guiaColecoes.js'
-import { demoDesempenho, demoEvento as gravarEventoDemo } from './demoMetricas.js'
+import { demoDesempenho, demoMapaAcessos, demoEvento as gravarEventoDemo } from './demoMetricas.js'
 
 const agora = Date.now()
 const dias = (n) => new Date(agora - n * 86400e3).toISOString()
@@ -268,10 +268,11 @@ function publico(l) {
     endereco: l.endereco, cep: l.cep, telefone: l.telefone, whatsapp: l.whatsapp, instagram: l.instagram, site: l.site, horarios: l.horarios,
     servicos: l.servicos ?? [], atributos: l.atributos ?? {}, selecao: l.selecao, validado_receita: l.validado_receita, na_mimo: !!l.salon_id,
     mimo: l.salon_id ? { salao_id: l.salon_id, nome: 'Studio Mel', slug: 'studio-mel', subdominio: 'studiomel' } : null,
+    latitude: l.latitude ?? null, longitude: l.longitude ?? null,
     conteudo: l.conteudo, publicado_em: l.publicado_em, atualizado_em: l.atualizado_em,
   }
 }
-const cartao = (l) => ({ slug: l.slug, nome: l.nome, bairro: l.bairro, categoria: l.categoria, resumo: l.conteudo?.resumo ?? null, servicos: (l.servicos ?? []).slice(0, 4), selecao: l.selecao, na_mimo: !!l.salon_id })
+const cartao = (l) => ({ slug: l.slug, nome: l.nome, bairro: l.bairro, categoria: l.categoria, resumo: l.conteudo?.resumo ?? null, servicos: (l.servicos ?? []).slice(0, 4), selecao: l.selecao, na_mimo: !!l.salon_id, latitude: l.latitude ?? null, longitude: l.longitude ?? null })
 const ordemLista = (a, b) => (a.salon_id ? 0 : 1) - (b.salon_id ? 0 : 1) || (b.selecao ? 1 : 0) - (a.selecao ? 1 : 0) || a.nome.localeCompare(b.nome, 'pt-BR')
 function vizinhos(l, quantos = 6) {
   const d = (o) => (l.latitude != null && o.latitude != null ? (o.latitude - l.latitude) ** 2 + ((o.longitude - l.longitude) * Math.cos((l.latitude * Math.PI) / 180)) ** 2 : o.bairro === l.bairro ? 0 : 1e9)
@@ -297,6 +298,7 @@ export const demoEvento = (corpo) => gravarEventoDemo(corpo, GUIA_LUGARES)
 
 export const GUIA_RPC = {
   guia_desempenho: (a) => demoDesempenho(a ?? {}, GUIA_LUGARES, GUIA_INTERESSES),
+  guia_mapa_acessos: (a) => demoMapaAcessos(a ?? {}, GUIA_LUGARES),
   guia_cidades: () => cidades(),
   guia_cidade: (a) => {
     const c = String(a?.cidade_ ?? '').toLowerCase()
@@ -333,6 +335,7 @@ export const GUIA_RPC = {
       lugares: [...daCidade].sort(ordemLista).map((l) => ({
         slug: l.slug, nome: l.nome, cidade: l.cidade, cidade_slug: l.cidade_slug, uf: l.uf, bairro: l.bairro, endereco: l.endereco, categoria: l.categoria,
         horarios: l.horarios, servicos: l.servicos ?? [], atributos: l.atributos ?? {}, resumo: l.conteudo?.resumo ?? null, selecao: l.selecao, na_mimo: !!l.salon_id, atualizado_em: l.atualizado_em,
+        latitude: l.latitude ?? null, longitude: l.longitude ?? null,
       })),
     }
   },

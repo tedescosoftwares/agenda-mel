@@ -232,3 +232,11 @@
   .pg-des-celbarra { display: block; }
   .pg-des-celbarra-trilho { display: none; }
 }
+
+/* ---- 3.13: o mapa de acessos (MapaAcessos.jsx) ---- */
+.pg-des-mapa-resumo { margin: 0 0 0.6rem; font-size: 0.9rem; color: var(--texto-2); }
+.pg-des-mapa-resumo b { color: var(--texto); font-size: 1.05rem; }
+.pg-des-mapa { border-radius: 12px; overflow: hidden; border: 1px solid var(--borda); }
+.pg-des-mapa.mapa-carregando { background: var(--fundo-2, #f5f3f6); }
+.pg-des-mapa-bairros { margin-top: 0.9rem; }
+.pg-des-mapa-bairros h4 { margin: 0 0 0.4rem; font-size: 0.86rem; color: var(--texto-2); font-weight: 600; }

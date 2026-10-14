@@ -4,6 +4,8 @@ import { Link, useLocation } from 'react-router-dom'
 // O aviso de armazenamento. O MIMO não usa cookie de rastreio nem
 // anúncio: guarda no aparelho só a sessão (para não pedir senha toda
 // hora), preferências de tela e o cache do app para abrir sem sinal.
+// A localização, só quando a pessoa ativa no guia de salões (3.13), e
+// com o aviso dizendo que o ponto fica guardado.
 // Um "Entendi" basta, e não volta mais neste aparelho.
 const CHAVE = 'mimo-armazenamento-ok'
 
@@ -24,7 +26,7 @@ export default function AvisoCookies() {
 
   return (
     <div className="aviso-cookies" role="dialog" aria-live="polite" aria-label="Aviso sobre armazenamento">
-      <p>O MIMO guarda no seu aparelho só o necessário: sua sessão, suas preferências e o cache do app. Sem rastreio, sem anúncio. <Link to="/privacidade">Saiba mais</Link></p>
+      <p>O MIMO guarda no seu aparelho só o necessário: sua sessão, suas preferências e o cache do app. Sem rastreio, sem anúncio. A localização, só se você ativar no guia de salões. <Link to="/privacidade">Saiba mais</Link></p>
       <button className="btn btn-primary" onClick={ok}>Entendi</button>
     </div>
   )

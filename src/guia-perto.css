@@ -1,0 +1,28 @@
+/* ---- 3.13: "Perto de você" (PertoDeVoce.jsx) e a distância nos cartões ----
+   Prefixo gd-perto / gd-km; usa os botões da landing (ld-btn). */
+.gd-perto { display: flex; gap: 14px; align-items: flex-start; margin: 0 0 16px; padding: 16px 18px; border-radius: 16px; background: linear-gradient(135deg, #fff5f9, #fff); border: 1px solid var(--ld-fio); }
+.gd-perto > svg { flex: none; color: var(--ld-rosa); margin-top: 2px; }
+.gd-perto-texto { display: grid; gap: 8px; min-width: 0; }
+.gd-perto-texto strong { font-size: 1.02rem; color: var(--ld-ameixa); }
+.gd-perto-texto p { margin: 0; font-size: 0.9rem; line-height: 1.5; color: var(--ld-cinza); }
+.gd-perto-texto p a { color: var(--ld-ameixa); text-decoration: underline; }
+.gd-perto-erro { color: #b4233f; }
+.gd-perto-botoes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.gd-perto-botoes .ld-btn { display: inline-flex; align-items: center; gap: 6px; }
+.gd-perto-gira { animation: gd-perto-girar 0.9s linear infinite; }
+@keyframes gd-perto-girar { to { transform: rotate(360deg); } }
+
+.gd-perto-ok { align-items: center; padding: 10px 14px; font-size: 0.9rem; color: var(--ld-ameixa); background: #f3fbf7; border-color: #cfead9; }
+.gd-perto-ok > svg { margin: 0; color: #1f9d5f; }
+.gd-perto-ok > span { flex: 1; min-width: 0; }
+.gd-perto-link { border: none; background: none; padding: 0; font: inherit; font-weight: 600; color: var(--ld-ameixa); text-decoration: underline; cursor: pointer; white-space: nowrap; }
+
+.gd-cartao-km { color: var(--ld-ameixa); font-weight: 600; white-space: nowrap; }
+.gd-fato-km { display: inline-flex; align-items: center; gap: 5px; color: var(--ld-ameixa); font-weight: 600; }
+.gd-fato-km svg { color: #1f9d5f; }
+
+@media (max-width: 600px) {
+  .gd-perto { padding: 14px; gap: 10px; }
+  .gd-perto-botoes .ld-btn { flex: 1 1 auto; justify-content: center; }
+  .gd-perto-ok { flex-wrap: wrap; }
+}

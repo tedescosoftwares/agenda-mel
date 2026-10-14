@@ -9,6 +9,7 @@ import Funil from './desempenho/Funil'
 import Destaques from './desempenho/Destaques'
 import { Barras, Divisao } from './desempenho/Barras'
 import TabelaPaginas from './desempenho/TabelaPaginas'
+import MapaAcessos from './desempenho/MapaAcessos'
 import ModalDono from './desempenho/ModalDono'
 import BuscasGoogle from './BuscasGoogle'
 import { Search, MessageCircle, MousePointerClick, Info, BarChart3, RotateCcw, LoaderCircle, Smartphone, Monitor } from 'lucide-react'
@@ -124,6 +125,9 @@ export default function Desempenho({ g }) {
                 total={(dados.areas ?? []).reduce((s, x) => s + n0(x.contatos), 0)} />
             </Painel>
           </div>
+
+          {/* onde estava quem ativou a localização no guia (163) */}
+          <MapaAcessos dias={dados.dias} visitantes={dados.visitantes} />
         </>
       )}
 

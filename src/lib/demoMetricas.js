@@ -2,12 +2,14 @@
 // cliques de mentira, sempre os mesmos (sorteio com semente), e o mesmo
 // formato que guia_desempenho() devolve no banco (migrações 156 e 161). O
 // que a pessoa clicar nas páginas do demo entra aqui na hora (demoEvento).
+import { chaveDoBairro } from './guiaColecoes.js'
 
 const TIPOS = [
   ['visita', 'Visitas', 'visita'], ['whatsapp', 'WhatsApp', 'contato'], ['ligar', 'Ligar', 'contato'],
   ['agendar_mimo', 'Agendar pela MIMO', 'contato'], ['mapa', 'Como chegar', 'contato'], ['instagram', 'Instagram', 'contato'],
   ['site', 'Site', 'contato'], ['email', 'E-mail', 'contato'], ['quero_marcar', 'Quero marcar', 'interesse'], ['sou_dono', 'É o dono', 'interesse'],
   ['criar_agenda', 'Criar agenda', 'interesse'], ['compartilhar', 'Compartilhar', 'outro'], ['corrigir', 'Corrigir dados', 'outro'],
+  ['localizacao', 'Localização ativada', 'outro'],
 ].map(([tipo, rotulo, grupo]) => ({ tipo, rotulo, grupo }))
 const GRUPO = Object.fromEntries(TIPOS.map((t) => [t.tipo, t.grupo]))
 const CATS = ['beleza', 'cabelo', 'unhas', 'cilios', 'sobrancelhas', 'estetica', 'maquiagem']
@@ -21,6 +23,12 @@ const escolher = (r, pesos) => { let x = r() * pesos.reduce((s, [, p]) => s + p,
 
 // o dia no fuso de São Paulo, como o banco faz
 const diaSP = (d) => new Date(new Date(d).getTime() - 3 * 3600e3).toISOString().slice(0, 10)
+// distância em km (haversine), para o salão mais perto de cada ponto
+function km(a, b) {
+  const R = 6371, rad = (g) => (g * Math.PI) / 180
+  const h = Math.sin(rad(b.lat - a.lat) / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(rad(b.lng - a.lng) / 2) ** 2
+  return 2 * R * Math.asin(Math.sqrt(h))
+}
 
 let EVENTOS = null
 function gerar(lugares) {
@@ -47,6 +55,11 @@ function gerar(lugares) {
         const origem = volta ? 'interno' : escolher(r, [['google', 55], ['direto', 18], ['interno', 15], ['instagram', 8], ['whatsapp', 4]])
         const comum = { em, pagina: p.pagina, lugar_id: p.lugar?.id ?? null, cidade_slug: 'itanhaem', categoria: p.lugar?.categoria ?? (CATS.includes(p.pagina.split('/')[3]) ? p.pagina.split('/')[3] : null), visitante: quem.visitante, origem, aparelho: quem.aparelho }
         ev.push({ ...comum, tipo: 'visita', area: null })
+        // 3.13: uma parte de quem chega nas listas ativa a localização; o ponto cai perto de um salão da cidade
+        if (!volta && !p.lugar && r() < 0.3) {
+          const ref = noAr[Math.floor(r() * noAr.length)]
+          if (ref?.latitude != null) ev.push({ ...comum, tipo: 'localizacao', area: null, dados: { lat: ref.latitude + (r() - 0.5) * 0.014, lng: ref.longitude + (r() - 0.5) * 0.014, prec: Math.round(20 + r() * 80) } })
+        }
         const l = p.lugar
         if (!l) continue
         // salão sem Instagram e fora da MIMO recebe menos contato no demo: é o caso
@@ -76,11 +89,54 @@ export function demoEvento(corpo, lugares) {
   // como o banco: o mesmo evento na mesma página em 30 minutos conta uma vez
   const meiaHora = Date.now() - 30 * 60e3
   if (eventos(lugares).some((e) => e.visitante === 'demo-voce' && e.pagina === pagina && e.tipo === corpo.tipo_ && new Date(e.em).getTime() > meiaHora)) return
+  // o gatilho da 163: o ponto só entra com lat e lng válidos, e só com lat, lng e prec
+  let dados = null
+  if (corpo.tipo_ === 'localizacao') {
+    const lat = Number(corpo.dados_?.lat), lng = Number(corpo.dados_?.lng)
+    if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180 || (lat === 0 && lng === 0)) return
+    dados = { lat, lng, prec: Math.max(0, Math.round(Number(corpo.dados_?.prec) || 0)) }
+  }
   eventos(lugares).push({
     em: new Date().toISOString(), tipo: corpo.tipo_, pagina, lugar_id: l?.id ?? null, cidade_slug: raiz === 'saloes' ? cidade ?? null : null,
     categoria: l?.categoria ?? (CATS.includes(item) ? item : null), visitante: 'demo-voce', origem: corpo.origem_ || 'direto',
-    aparelho: corpo.aparelho_ ?? null, area: corpo.area_ ?? null,
+    aparelho: corpo.aparelho_ ?? null, area: corpo.area_ ?? null, dados,
   })
+}
+
+// o mesmo formato de guia_mapa_acessos() (163): um ponto por pessoa e dia, o salão
+// no ar mais perto de cada um e a conta por bairro (a mais de 8 km, "fora da cidade")
+export function demoMapaAcessos({ dias = 30 } = {}, lugares) {
+  const n = Math.max(1, Math.min(Number(dias) || 30, 400))
+  const hoje = diaSP(Date.now())
+  const de = diaSP(new Date(`${hoje}T15:00:00Z`).getTime() - (n - 1) * 86400e3)
+  const noAr = lugares.filter((l) => l.status === 'publicado' && l.latitude != null && l.longitude != null)
+  const vistos = new Set()
+  const pontos = []
+  for (const e of [...eventos(lugares)].sort((a, b) => a.em.localeCompare(b.em))) {
+    if (e.tipo !== 'localizacao' || !e.dados || diaSP(e.em) < de) continue
+    const chave = `${e.visitante}|${diaSP(e.em)}`
+    if (vistos.has(chave)) continue
+    vistos.add(chave)
+    let perto = null
+    for (const l of noAr) {
+      const d = km(e.dados, { lat: l.latitude, lng: l.longitude })
+      if (!perto || d < perto.km) perto = { lugar_id: l.id, lugar: l.nome, bairro: l.bairro, km: d }
+    }
+    pontos.push({ em: e.em, lat: e.dados.lat, lng: e.dados.lng, prec: e.dados.prec, pagina: e.pagina, aparelho: e.aparelho, origem: e.origem,
+      lugar_id: perto?.lugar_id ?? null, lugar: perto?.lugar ?? null, bairro: perto?.bairro ?? null, km: perto ? Math.round(perto.km * 100) / 100 : null })
+  }
+  pontos.sort((a, b) => b.em.localeCompare(a.em))
+  const porBairro = new Map()
+  for (const p of pontos) {
+    const chave = p.km == null ? '_sem' : p.km > 8 ? '_fora' : chaveDoBairro(p.bairro, 'itanhaem') || '_sem'
+    const antes = porBairro.get(chave)?.bairro
+    const nome = chave === '_sem' ? 'Sem salão de referência' : chave === '_fora' ? 'Fora da cidade' : (antes && antes.length <= (p.bairro ?? '').length ? antes : p.bairro)
+    porBairro.set(chave, { chave, bairro: nome, n: (porBairro.get(chave)?.n ?? 0) + 1 })
+  }
+  return {
+    dias: n, de, ate: hoje, total: pontos.length, pontos: pontos.slice(0, 5000),
+    por_bairro: [...porBairro.values()].sort((a, b) => b.n - a.n || a.bairro.localeCompare(b.bairro, 'pt-BR')),
+  }
 }
 
 // o mesmo formato de guia_desempenho() (156, com o que a 161 acrescentou)

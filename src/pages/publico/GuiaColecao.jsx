@@ -10,6 +10,8 @@ import { aoClicarNaPagina } from '../../lib/eventos'
 import { useVisita } from '../../lib/useVisita'
 import { NavSite, PeSite, useRevelar } from '../../components/site/Pecas'
 import { CartaoLugar, IconeCategoria } from '../../components/guia/PaginaDoLugar'
+import PertoDeVoce from '../../components/guia/PertoDeVoce'
+import { useMinhaPosicao, comDistancia } from '../../lib/guiaPerto'
 import { Migalhas, Falhou, Perguntas, ChamadaSalao } from './GuiaCidade'
 import { Esqueleto } from './GuiaLugar'
 import NaoEncontrada from './NaoEncontrada'
@@ -88,6 +90,9 @@ function Colecao({ m }) {
   // filtro novo começa a lista do começo
   const setFiltro = (f) => { setFiltroCru(f); setLimite(POR_VEZ) }
   const setBusca = (q) => { setBuscaCru(q); setLimite(POR_VEZ) }
+  // "perto de você" (3.13): com a posição, cada cartão ganha a distância e a lista vem do mais perto
+  const { posicao } = useMinhaPosicao()
+  const [porDistancia, setPorDistancia] = useState(true)
 
   // o filtro por categoria (quando a lista tem mais de uma)
   const categorias = useMemo(() => {
@@ -97,12 +102,12 @@ function Colecao({ m }) {
   }, [m.cartoes])
   const filtrados = useMemo(() => {
     const q = semAcento(busca).toLowerCase().trim()
-    return m.cartoes.filter((c) => {
+    return comDistancia(m.cartoes.filter((c) => {
       if (filtro && c.categoria !== filtro) return false
       if (!q) return true
       return semAcento([c.nome, c.bairro, ...(c.servicos ?? [])].join(' ')).toLowerCase().includes(q)
-    })
-  }, [m.cartoes, filtro, busca])
+    }), posicao, porDistancia)
+  }, [m.cartoes, filtro, busca, posicao, porDistancia])
   const limpar = () => { setFiltro(''); setBusca('') }
 
   const kicker = m.tipo === 'bairro' ? `Guia de salões · ${m.cidade} · por bairro` : `Guia de salões · ${m.cidade} · por horário`
@@ -150,6 +155,7 @@ function Colecao({ m }) {
             )}
           </div>
 
+          <PertoDeVoce ordenado={porDistancia} onOrdenar={setPorDistancia} />
           <div className="gd-lista-topo" aria-live="polite">
             <span><b>{plural(filtrados.length, 'lugar', 'lugares')}</b>{filtro ? ` em ${categoriaDoGuia(filtro).rotulo.toLowerCase()}` : ''}{busca.trim() ? ` para “${busca.trim()}”` : ''}</span>
             {(filtro || busca) && <button type="button" className="gd-chip-filtro" onClick={limpar}><X size={14} /> Limpar filtros</button>}

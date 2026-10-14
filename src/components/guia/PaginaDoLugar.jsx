@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import {
   MapPin, Clock, Phone, MessageCircle, Globe, Navigation, Share2, Check, Award, CalendarCheck, Info, ChevronDown,
   ArrowRight, Lightbulb, Sparkles, Scissors, Hand, Eye, ScanFace, Flower2, Brush, Store, CreditCard, Accessibility, SquareParking, Baby, Bath,
+  LocateFixed,
 } from 'lucide-react'
 import { IconeInstagram } from '../IconesSociais'
 import { Coracao, comecarEm } from '../site/Pecas'
@@ -12,10 +13,12 @@ import {
 } from '../../lib/guia'
 import { trilhaDoLugar } from '../../lib/guiaSeo'
 import { linkDoBairro } from '../../lib/guiaColecoes'
+import { useMinhaPosicao, distanciaKm, kmTexto } from '../../lib/guiaPerto'
 import { urlDoEndereco, urlDoAmbiente } from '../../lib/ambiente'
 import { REGRAS } from '../../lib/acesso'
 import '../../landing.css'
 import '../../guia.css'
+import '../../guia-perto.css'
 
 // pagamento, acessibilidade, estacionamento, crianças, banheiro (3.10)
 const ICONE_ATRIBUTO = { pagamento: CreditCard, acessibilidade: Accessibility, estacionamento: SquareParking, criancas: Baby, banheiro: Bath }
@@ -91,6 +94,7 @@ export default function PaginaDoLugar({ lugar, conteudo, vizinhos = [], mesmaCat
   const [barra, setBarra] = useState(false)
   const [copiado, setCopiado] = useState(false)
   const temLugar = !!lugar
+  const { posicao } = useMinhaPosicao({ olhar: !previa }) // a posição, se a pessoa ativou numa lista do guia (3.13)
 
   // a barra de baixo (celular) aparece quando o botão do herói sai da tela
   useEffect(() => {
@@ -133,6 +137,8 @@ export default function PaginaDoLugar({ lugar, conteudo, vizinhos = [], mesmaCat
   const atualizado = l.atualizado_em ? new Date(l.atualizado_em).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric', timeZone: 'America/Sao_Paulo' }) : ''
   const enderecoCompleto = [l.endereco, l.bairro, l.cidade && `${l.cidade}${l.uf ? ` - ${l.uf}` : ''}`].filter(Boolean).join(', ')
   const mapa = linkMapa(l.nome, enderecoCompleto)
+  // "a 1,2 km de você" (3.13): só quando a pessoa já ativou a localização numa lista do guia (nunca na prévia)
+  const km = !previa && posicao && l.latitude != null && l.longitude != null ? distanciaKm(posicao, { lat: Number(l.latitude), lng: Number(l.longitude) }) : null
   const msgZap = 'Olá! Vi a página de vocês no guia da MIMO e queria saber sobre horários.'
   const zap = l.whatsapp ? linkWhatsDoTel(l.whatsapp, msgZap) : null
   const telMesmoDoZap = l.telefone && l.whatsapp && soDigitosTel(l.telefone) === soDigitosTel(l.whatsapp)
@@ -237,6 +243,7 @@ export default function PaginaDoLugar({ lugar, conteudo, vizinhos = [], mesmaCat
                           {l.endereco && <span className="gd-fato-forte">{l.endereco}</span>}
                           <span>{[l.bairro, `${l.cidade}${l.uf ? ` - ${l.uf}` : ''}`].filter(Boolean).join(', ')}</span>
                           {l.cep && <span>CEP {l.cep}</span>}
+                          {km != null && <span className="gd-fato-km"><LocateFixed size={14} aria-hidden="true" /> a {kmTexto(km)} de você</span>}
                         </>
                       ) : <span>Endereço não informado. Confirme com o salão.</span>}
                       <a className="gd-fato-link" href={mapa} target="_blank" rel="noopener noreferrer">Abrir no mapa <ArrowRight size={14} /></a>
@@ -444,7 +451,7 @@ export function CartaoLugar({ lugar, cidadeSlug, cidade, previa = false }) {
           {lugar.na_mimo && <span className="gd-selo gd-selo-mimo gd-selo-mini"><CalendarCheck size={13} /> Na MIMO</span>}
         </span>
         <strong className="gd-cartao-nome">{lugar.nome}</strong>
-        <span className="gd-cartao-onde"><MapPin size={14} /> {lugar.bairro || cidade} · {cat.curto}</span>
+        <span className="gd-cartao-onde"><MapPin size={14} /> {lugar.bairro || cidade} · {cat.curto}{lugar.distancia != null && <span className="gd-cartao-km"> · a {kmTexto(lugar.distancia)}</span>}</span>
         {lugar.resumo && <span className="gd-cartao-resumo">{lugar.resumo}</span>}
         {servicos.length > 0 && <span className="gd-chips gd-chips-mini">{servicos.map((s) => <span key={s}>{s}</span>)}</span>}
         <span className="gd-cartao-ver">Ver a página <ArrowRight size={15} /></span>

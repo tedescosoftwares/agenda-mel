@@ -12,6 +12,8 @@ import { useVisita } from '../../lib/useVisita'
 import { NavSite, PeSite, useRevelar, comecarEm } from '../../components/site/Pecas'
 import { REGRAS } from '../../lib/acesso'
 import { CartaoLugar, IconeCategoria } from '../../components/guia/PaginaDoLugar'
+import PertoDeVoce from '../../components/guia/PertoDeVoce'
+import { useMinhaPosicao, comDistancia } from '../../lib/guiaPerto'
 import GuiaLugar, { Esqueleto } from './GuiaLugar'
 import NaoEncontrada from './NaoEncontrada'
 import '../../landing.css'
@@ -144,16 +146,19 @@ function Cidade({ dados }) {
   // filtro novo começa a lista do começo
   const setBairro = (b) => { setBairroCru(b); setLimite(POR_VEZ) }
   const setBusca = (q) => { setBuscaCru(q); setLimite(POR_VEZ) }
+  // "perto de você" (3.13): com a posição, cada cartão ganha a distância e a lista vem do mais perto
+  const { posicao } = useMinhaPosicao()
+  const [porDistancia, setPorDistancia] = useState(true)
 
   // filtro na hora, no navegador: o banco já mandou a lista inteira da cidade
   const filtrados = useMemo(() => {
     const q = semAcento(busca).toLowerCase().trim()
-    return lugares.filter((l) => {
+    return comDistancia(lugares.filter((l) => {
       if (bairro && l.bairro !== bairro) return false
       if (!q) return true
       return semAcento([l.nome, l.bairro, ...(l.servicos ?? [])].join(' ')).toLowerCase().includes(q)
-    })
-  }, [lugares, bairro, busca])
+    }), posicao, porDistancia)
+  }, [lugares, bairro, busca, posicao, porDistancia])
 
   const trilha = trilhaDaCidade(cidade, cslug, categoria)
   const lead = pagina?.chamada || seoPadraoDaCidade(cidade, categoria).meta_description
@@ -236,6 +241,7 @@ function Cidade({ dados }) {
             )}
           </div>
 
+          <PertoDeVoce ordenado={porDistancia} onOrdenar={setPorDistancia} />
           <div className="gd-lista-topo" aria-live="polite">
             <span><b>{plural(filtrados.length, 'lugar', 'lugares')}</b>{bairro ? ` no bairro ${bairro}` : ''}{busca.trim() ? ` para “${busca.trim()}”` : ''}</span>
             {(bairro || busca) && <button type="button" className="gd-chip-filtro" onClick={() => { setBairro(''); setBusca('') }}><X size={14} /> Limpar filtros</button>}

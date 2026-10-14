@@ -65,7 +65,7 @@ export function seoDaCidade(cidade, cidadeSlug, categoria = '', pagina = null) {
 }
 export const seoDoIndice = () => ({
   titulo: 'Guia de salões de beleza por cidade | MIMO',
-  descricao: 'Salões de beleza, manicures, barbearias, cílios e estética por cidade: endereço, horário e serviços de cada um, num guia feito pela MIMO.',
+  descricao: 'Salões de beleza, manicures, cílios, sobrancelha e estética por cidade: endereço, horário e serviços de cada um, num guia feito pela MIMO.',
   caminho: rotaDoGuia(),
 })
 

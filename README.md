@@ -146,6 +146,8 @@ salão?"; os dois pedidos aparecem na Plataforma.
   e no sitemap, depois do próximo bat 2.
 - Toda página de salão fora da MIMO diz que é informativa e tem o caminho
   para o dono corrigir ou pedir a remoção; removido nunca volta pela importação.
+- Barbearia não entra no guia (migração 154): a importação deixa de fora, e
+  o CSV da Receita só confirma e completa quem veio do CSV do Google.
 
 A MIMO também vai para a Play Store como app de verdade, em `apps/mobile`:
 nativo (Expo/React Native) de ponta a ponta para a cliente, falando com o

@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react'
 import { useDialogo } from '../../../context/DialogoContext'
 import { Painel, Pilula, Vazio } from '../Pecas'
-import { lerCsv, detectarFormato, normalizarLinha, avisosDoItem, slugificar, categoriaDoGuia } from '../../../lib/guia'
+import { lerCsv, detectarFormato, normalizarLinha, avisosDoItem, slugificar, categoriaDoGuia, ehBarbearia } from '../../../lib/guia'
 import { Upload, FileSpreadsheet, X, ListChecks, CloudUpload, LoaderCircle, Star, Info, CircleCheck, TriangleAlert } from 'lucide-react'
 
 // Importar os CSVs do guia: o do Google Places (cria os salões, com nome,
@@ -67,7 +67,8 @@ export default function Importar({ g }) {
         const item = normalizarLinha(a.formato, linha, a.formato === 'receita' ? '' : cidade)
         if (!item.cidade) item.cidade = cidade
         let fora = null
-        if (soCidade && alvo && slugificar(item.cidade) !== alvo) fora = `fora de ${cidade}`
+        if (ehBarbearia(item)) fora = 'barbearia (não entra no guia)'
+        else if (soCidade && alvo && slugificar(item.cidade) !== alvo) fora = `fora de ${cidade}`
         else if (a.formato === 'google') {
           if (pularFechados && item.situacao && /CLOSED/i.test(item.situacao)) fora = 'fechado no Google'
           else if (nMin != null && (item.nota ?? 0) < nMin) fora = `nota abaixo de ${String(nMin).replace('.', ',')}`
@@ -263,8 +264,8 @@ function Relatorio({ relatorio, g, avisoReceita }) {
           {relatorio.arquivos.map((a) => <li key={a.nome}><b>{FORMATO[a.formato]}</b>: {a.novos} novos, {a.atualizados} atualizados, {a.ignorados} ignorados{a.problemas.length ? `, ${a.problemas.length} com problema` : ''}</li>)}
         </ul>
       )}
-      {avisoReceita && <p className="pg-nota"><Info size={13} /> Na conferência, o da Receita ainda não enxerga os salões do Google (eles entram na mesma rodada, antes): por isso podem aparecer como novos.</p>}
-      <p className="pg-nota">Ignorados são linhas repetidas no arquivo ou salões removidos a pedido do dono.</p>
+      {avisoReceita && <p className="pg-nota"><Info size={13} /> Na conferência, o da Receita ainda não enxerga os salões do Google (eles entram na mesma rodada, antes): por isso aparecem como ignorados. Na importação de verdade eles casam.</p>}
+      <p className="pg-nota">Ignorados são linhas repetidas no arquivo, salões removidos a pedido do dono, barbearias e linhas da Receita sem o salão do Google correspondente (a Receita só confirma e completa, não cria salão).</p>
       {problemas.length > 0 && (
         <ul className="pg-problemas">
           {problemas.slice(0, 30).map((p, i) => <li key={i}><TriangleAlert size={13} /> {p.arquivo}, linha {p.linha}: {p.nome || 'sem nome'} · {p.erro}</li>)}

@@ -20,11 +20,22 @@ export const GUIA_CATEGORIAS = [
   { slug: 'unhas', rotulo: 'Manicure e unhas', curto: 'Unhas', singular: 'manicure', plural: 'manicures e esmalterias', artigo: 'As', busca: 'manicure', schema: 'NailSalon' },
   { slug: 'cilios', rotulo: 'Cílios', curto: 'Cílios', singular: 'lash designer', plural: 'estúdios de cílios', artigo: 'Os', busca: 'extensão de cílios', schema: 'BeautySalon' },
   { slug: 'sobrancelhas', rotulo: 'Sobrancelhas', curto: 'Sobrancelhas', singular: 'designer de sobrancelha', plural: 'estúdios de sobrancelha', artigo: 'Os', busca: 'design de sobrancelha', schema: 'BeautySalon' },
-  { slug: 'barbearia', rotulo: 'Barbearias', curto: 'Barbearia', singular: 'barbearia', plural: 'barbearias', artigo: 'As', busca: 'barbearia', schema: 'HairSalon' },
   { slug: 'estetica', rotulo: 'Estética', curto: 'Estética', singular: 'estética', plural: 'clínicas de estética', artigo: 'As', busca: 'estética', schema: 'BeautySalon' },
   { slug: 'maquiagem', rotulo: 'Maquiagem', curto: 'Maquiagem', singular: 'maquiadora', plural: 'maquiadoras', artigo: 'As', busca: 'maquiadora', schema: 'BeautySalon' },
 ]
 export const SLUGS_CATEGORIA = GUIA_CATEGORIAS.map((c) => c.slug)
+
+// barbearia não entra no guia: o guia é de salão de beleza (decisão da casa).
+// O CSV traz barbearia ("BARBEARIA", "barber_shop", "Barbearia do Zé"): a
+// importação deixa de fora. Salão misto ("Salão e Barbearia") fica, como salão.
+const NOME_DE_SALAO = /sal[aã]o|beleza|unha|nail|c[ií]lio|lash|sobrancelha|brow|est[eé]tic|esmalt|spa|cabeleireir[ao]|hair/i
+export function ehBarbearia(item) {
+  if (!item) return false
+  const tipo = String(item.bruto?.tipo_principal ?? '').toLowerCase()
+  const nome = String(item.nome_original || item.nome || '')
+  if (NOME_DE_SALAO.test(nome)) return item.categoria === 'barbearia' && !/sal[aã]o/i.test(nome)
+  return item.categoria === 'barbearia' || tipo === 'barber_shop' || /barb(earia|eiro|er)|barber/i.test(nome)
+}
 export const categoriaDoGuia = (slug) => GUIA_CATEGORIAS.find((c) => c.slug === slug) ?? GUIA_CATEGORIAS[0]
 
 // 'UNHAS' | 'CÍLIOS' | 'Estética' (a coluna categoria_mimo do CSV) -> slug
@@ -311,13 +322,17 @@ export function normalizarGoogle(r, cidadePadrao = '') {
   const canais = canaisDoSite(pega(r, 'site'))
   const cidade = end.cidade || cidadePadrao
   const tel = pega(r, 'telefone')
+  const nomeOriginal = pega(r, 'nome')
+  let categoria = categoriaDoCsv(pega(r, 'categoria_mimo') || pega(r, 'tipo_principal'))
+  // "Salão Tesoura de Ouro" marcado como barbearia no CSV: é salão (misto), entra como salão de beleza
+  if (categoria === 'barbearia' && /sal[aã]o/i.test(nomeOriginal)) categoria = 'beleza'
   return {
     origem: 'google',
     place_id: pega(r, 'place_id') || null,
     cnpj: null,
     nome: nomeLimpo(pega(r, 'nome'), cidade),
     nome_original: pega(r, 'nome'),
-    categoria: categoriaDoCsv(pega(r, 'categoria_mimo') || pega(r, 'tipo_principal')),
+    categoria,
     cidade,
     uf: end.uf || 'SP',
     bairro: end.bairro,
@@ -498,5 +513,5 @@ export function seoPadraoDaCidade(cidade, categoria = '') {
   const cat = categoria ? categoriaDoGuia(categoria) : null
   return cat
     ? { seo_title: `${cat.rotulo} em ${cidade}: endereços e horários | MIMO`, h1: `${cat.rotulo} em ${cidade}`, meta_description: `${cat.artigo} ${cat.plural} de ${cidade} num lugar só: endereço, bairro, horário e serviços de cada um. Escolha e marque.` }
-    : { seo_title: `Salões de beleza em ${cidade}: guia por bairro e serviço | MIMO`, h1: `Salões de beleza em ${cidade}`, meta_description: `Guia dos salões de beleza, manicures, barbearias, cílios e estética de ${cidade}: endereço, horário e serviços de cada um.` }
+    : { seo_title: `Salões de beleza em ${cidade}: guia por bairro e serviço | MIMO`, h1: `Salões de beleza em ${cidade}`, meta_description: `Guia dos salões de beleza, manicures, cílios, sobrancelha e estética de ${cidade}: endereço, horário e serviços de cada um.` }
 }

@@ -151,7 +151,7 @@ function Cidade({ dados }) {
   const trilha = trilhaDaCidade(cidade, cslug, categoria)
   const lead = pagina?.chamada || seoPadraoDaCidade(cidade, categoria).meta_description
   const intro = pagina?.intro?.length ? pagina.intro : [
-    `O guia reúne ${cat ? `${cat.plural} de ${cidade}` : `salões de beleza, manicures, barbearias, cílios e estética de ${cidade}`} com o endereço, o bairro, o horário e os serviços de cada um. ` +
+    `O guia reúne ${cat ? `${cat.plural} de ${cidade}` : `salões de beleza, manicures, cílios, sobrancelha e estética de ${cidade}`} com o endereço, o bairro, o horário e os serviços de cada um. ` +
       'As informações vêm de dados públicos dos estabelecimentos; quem já agenda pela MIMO aparece com o selo Na MIMO.',
   ]
   const totalAqui = cat ? lugares.length : dados.total

@@ -45,33 +45,6 @@ const TEXTO = {
       { pergunta: 'Preciso levar meu esmalte?', resposta: 'Não é preciso. Se você tem uma cor muito específica em mente, vale levar uma foto ou o vidrinho para comparar.' },
     ],
   },
-  porto: {
-    seo_title: 'Barbearia do Porto Velho: barbeiro na Boca da Barra, Itanhaém',
-    meta_description: 'Barbearia do Porto Velho, na Boca da Barra em Itanhaém: corte masculino e barba. Endereço, horário de funcionamento e como marcar.',
-    chamada: 'Corte e barba perto da foz do rio, na Boca da Barra.',
-    resumo: 'Corte masculino e barba na Boca da Barra. Abre de segunda a sábado.',
-    sobre: [
-      'A Barbearia do Porto Velho fica na Boca da Barra, um dos bairros mais conhecidos de Itanhaém, perto do encontro do rio com o mar. Para quem mora na região ou passa por ali na volta da praia, é uma opção à mão para manter o corte em dia sem atravessar a cidade.',
-      'Os serviços divulgados são corte masculino e barba. Corte degradê e barba desenhada pedem manutenção frequente, a cada duas ou três semanas, para o contorno não perder a forma. Quem prefere um corte mais clássico pode espaçar um pouco mais.',
-    ],
-    destaques: [
-      { titulo: 'Boca da Barra', texto: 'No bairro da foz do rio Itanhaém, a poucos minutos da praia.' },
-      { titulo: 'Segunda a sábado', texto: 'Abre seis dias por semana, inclusive segunda, quando muita barbearia fecha.' },
-      { titulo: 'Corte e barba', texto: 'Dá para fazer os dois na mesma visita e sair com o visual acertado.' },
-    ],
-    dicas: {
-      titulo: 'Para o corte sair do jeito que você quer',
-      itens: [
-        'Mostre uma foto do corte: "baixo" e "médio" mudam de barbeiro para barbeiro.',
-        'Diga como você penteia o cabelo no dia a dia.',
-        'Para a barba, chegue com ela sem aparar por pelo menos uma semana.',
-      ],
-    },
-    faq: [
-      { pergunta: 'De quanto em quanto tempo devo cortar o cabelo?', resposta: 'Cortes curtos e degradês ficam bem com manutenção a cada duas ou três semanas; cortes mais longos aguentam de quatro a seis.' },
-      { pergunta: 'Barba precisa de cuidado entre as visitas?', resposta: 'Lavar com sabonete próprio e hidratar com óleo ou balm deixa os fios macios e evita coceira, principalmente no sol e na maresia.' },
-    ],
-  },
   atelie: {
     seo_title: 'Ateliê Cabelo & Arte: cabeleireiro em Belas Artes, Itanhaém',
     meta_description: 'Ateliê Cabelo & Arte, cabeleireiro no bairro Belas Artes em Itanhaém: corte, coloração e escova. Endereço, horário e como pedir para marcar.',
@@ -211,14 +184,12 @@ const base = (o) => ({
 
 export const GUIA_LUGARES = [
   base({ id: 'gl1', slug: 'studio-lirio', categoria: 'unhas', nome: 'Studio Lírio', bairro: 'Centro', endereco: 'Rua das Acácias, 120', telefone: '(13) 99000-1101', whatsapp: '(13) 99000-1101', instagram: 'studiolirio.demo', horarios: H(2, 6), servicos: ['Manicure', 'Pedicure', 'Unhas em gel'], latitude: -24.183, longitude: -46.788, place_id: 'demo-pl-1', cnpj: '00000000000101', validado_receita: true, selecao: true, nota: 4.9, avaliacoes: 212, conteudo: { ...TEXTO.lirio, _meta: meta('o bairro e a praticidade', 3) }, status: 'publicado', gerado_em: dias(3), publicado_em: dias(3) }),
-  base({ id: 'gl2', slug: 'barbearia-do-porto-velho', categoria: 'barbearia', nome: 'Barbearia do Porto Velho', bairro: 'Boca da Barra', endereco: 'Av. Beira Rio, 455', telefone: '(13) 3400-1102', horarios: H(1, 6, '09:00', '20:00'), servicos: ['Barba e cabelo'], latitude: -24.192, longitude: -46.781, place_id: 'demo-pl-2', selecao: true, nota: 4.8, avaliacoes: 154, conteudo: { ...TEXTO.porto, _meta: meta('para quem é', 4) }, status: 'publicado', gerado_em: dias(4), publicado_em: dias(4) }),
   base({ id: 'gl3', slug: 'atelie-cabelo-e-arte', categoria: 'cabelo', nome: 'Ateliê Cabelo & Arte', bairro: 'Belas Artes', endereco: 'Rua Pintor Almeida, 78', telefone: '(13) 99000-1103', whatsapp: '(13) 99000-1103', site: 'https://exemplo.com/atelie', horarios: [...H(2, 5), { dia: 6, faixas: [['09:00', '15:00']] }], servicos: ['Cabelo', 'Química e coloração'], latitude: -24.205, longitude: -46.812, place_id: 'demo-pl-3', nota: 4.7, avaliacoes: 61, conteudo: { ...TEXTO.atelie, _meta: meta('como é a primeira visita', 5) }, status: 'publicado', gerado_em: dias(5), publicado_em: dias(5) }),
   base({ id: 'gl4', slug: 'olhar-lash-studio', categoria: 'cilios', nome: 'Olhar Lash Studio', bairro: 'Gaivota', endereco: 'Rua das Gaivotas, 1020', telefone: '(13) 99000-1104', whatsapp: '(13) 99000-1104', instagram: 'olharlash.demo', horarios: H(1, 5, '10:00', '18:00'), servicos: ['Cílios', 'Sobrancelha'], latitude: -24.232, longitude: -46.845, place_id: 'demo-pl-4', cnpj: '00000000000104', validado_receita: true, nota: 5, avaliacoes: 88, conteudo: { ...TEXTO.olhar, _meta: meta('o serviço principal em detalhe', 6) }, rascunho: RASCUNHO_OLHAR, status: 'publicado', gerado_em: dias(0.1), publicado_em: dias(6) }),
   base({ id: 'gl5', slug: 'studio-mel', categoria: 'beleza', nome: 'Studio Mel', bairro: 'Centro', endereco: 'Av. Condessa de Vimieiros, 900', telefone: '(13) 3333-0000', whatsapp: '(13) 99120-3410', instagram: 'studiomel', horarios: H(1, 6, '09:00', '18:00'), servicos: ['Cabelo', 'Manicure', 'Sobrancelha', 'Estética'], latitude: -24.184, longitude: -46.786, place_id: 'demo-pl-5', selecao: true, nota: 4.9, avaliacoes: 37, conteudo: { ...TEXTO.mel, _meta: meta('a agenda online', 2) }, status: 'publicado', salon_id: 's1', gerado_em: dias(2), publicado_em: dias(2) }),
   base({ id: 'gl6', slug: 'sobrancelha-da-re', categoria: 'sobrancelhas', nome: 'Sobrancelha da Rê', bairro: 'Suarão', endereco: 'Rua Beira-Mar, 33', telefone: '(13) 99000-1106', whatsapp: '(13) 99000-1106', horarios: H(2, 6, '09:00', '18:00'), servicos: ['Sobrancelha'], latitude: -24.165, longitude: -46.735, place_id: 'demo-pl-6', cnpj: '00000000000106', validado_receita: true, nota: 5, avaliacoes: 42, rascunho: RASCUNHOS.re, status: 'gerado', gerado_em: dias(0.2) }),
   base({ id: 'gl7', slug: 'unhas-da-praia', categoria: 'unhas', nome: 'Unhas da Praia', bairro: 'Cibratel', endereco: 'Av. Washington Luís, 2400', telefone: '(13) 99000-1107', whatsapp: '(13) 99000-1107', horarios: H(2, 6), servicos: ['Manicure', 'Pedicure', 'Unhas em gel'], latitude: -24.214, longitude: -46.822, place_id: 'demo-pl-7', nota: 4.8, avaliacoes: 29, rascunho: RASCUNHOS.praia, status: 'gerado', gerado_em: dias(0.3) }),
   base({ id: 'gl8', slug: 'salao-bem-me-quer', categoria: 'beleza', nome: 'Salão Bem-Me-Quer', bairro: 'Jardim Umuarama', endereco: 'Rua dos Ipês, 210', telefone: '(13) 3400-1108', horarios: H(2, 6), servicos: ['Cabelo', 'Manicure', 'Depilação'], latitude: -24.176, longitude: -46.776, place_id: 'demo-pl-8', nota: 4.6, avaliacoes: 73, status: 'importado' }),
-  base({ id: 'gl9', slug: 'corte-fino-barbearia', categoria: 'barbearia', nome: 'Corte Fino Barbearia', bairro: 'Centro', endereco: 'Rua João Mariano, 51', telefone: '(13) 99000-1109', whatsapp: '(13) 99000-1109', horarios: H(2, 6, '10:00', '20:00'), servicos: ['Barba e cabelo'], latitude: -24.182, longitude: -46.79, place_id: 'demo-pl-9', cnpj: '00000000000109', validado_receita: true, selecao: true, nota: 4.9, avaliacoes: 96, status: 'importado' }),
   base({ id: 'gl10', slug: 'make-by-duda', categoria: 'maquiagem', nome: 'Make by Duda', bairro: 'Satélite', endereco: 'Rua Netuno, 88', telefone: '(13) 99000-1110', whatsapp: '(13) 99000-1110', instagram: 'makebyduda.demo', horarios: null, servicos: ['Maquiagem'], latitude: -24.221, longitude: -46.83, place_id: 'demo-pl-10', nota: 5, avaliacoes: 12, status: 'importado' }),
   base({ id: 'gl11', slug: 'estetica-venus', categoria: 'estetica', nome: 'Estética Vênus', bairro: 'Centro', endereco: 'Rua Cunha Moreira, 300', telefone: '(13) 3400-1111', horarios: H(1, 5), servicos: ['Estética', 'Limpeza de pele'], latitude: -24.185, longitude: -46.787, place_id: 'demo-pl-11', nota: 4.4, avaliacoes: 18, status: 'descartado', motivo: 'Fechou, segundo o Instagram.' }),
 ]
@@ -228,11 +199,11 @@ export const GUIA_PAGINAS = [
     id: 'gp1', cidade: 'Itanhaém', cidade_slug: 'itanhaem', uf: 'SP', categoria: '', status: 'publicado', gerado_em: dias(2), publicado_em: dias(2), criado_em: dias(6), atualizado_em: dias(2), rascunho: null,
     conteudo: {
       seo_title: 'Salões de beleza em Itanhaém: guia por bairro e serviço',
-      meta_description: 'Salões de beleza, manicures, barbearias, cílios e sobrancelha em Itanhaém: endereço, horário e serviços de cada um, do Centro ao Gaivota.',
+      meta_description: 'Salões de beleza, manicures, cílios, sobrancelha e estética em Itanhaém: endereço, horário e serviços de cada um, do Centro ao Gaivota.',
       chamada: 'Do Centro à orla sul: onde cuidar do cabelo, das unhas e da sobrancelha em Itanhaém.',
       intro: [
         'Itanhaém é comprida: vai da Boca da Barra até o Gaivota e o Suarão, com muito bairro no meio. Por isso, o melhor salão costuma ser o que está perto de você e abre no horário que você consegue ir.',
-        'Este guia junta os salões, manicures, barbearias e estúdios de cílios e sobrancelha da cidade, com endereço, horário e serviços de cada um. Onde aparece "Na MIMO", dá para marcar pelo app.',
+        'Este guia junta os salões, manicures e estúdios de cílios, sobrancelha e estética da cidade, com endereço, horário e serviços de cada um. Onde aparece "Na MIMO", dá para marcar pelo app.',
       ],
       como_escolher: {
         titulo: 'Como escolher onde marcar',
@@ -263,7 +234,6 @@ export const GUIA_PAGINAS = [
     },
   },
   { id: 'gp3', cidade: 'Itanhaém', cidade_slug: 'itanhaem', uf: 'SP', categoria: 'cabelo', status: 'rascunho', conteudo: null, rascunho: null, gerado_em: null, publicado_em: null, criado_em: dias(6), atualizado_em: dias(6) },
-  { id: 'gp4', cidade: 'Itanhaém', cidade_slug: 'itanhaem', uf: 'SP', categoria: 'barbearia', status: 'rascunho', conteudo: null, rascunho: null, gerado_em: null, publicado_em: null, criado_em: dias(6), atualizado_em: dias(6) },
   { id: 'gp5', cidade: 'Itanhaém', cidade_slug: 'itanhaem', uf: 'SP', categoria: 'cilios', status: 'rascunho', conteudo: null, rascunho: null, gerado_em: null, publicado_em: null, criado_em: dias(6), atualizado_em: dias(6) },
 ]
 
@@ -271,7 +241,7 @@ export const GUIA_INTERESSES = [
   { id: 'gi1', lugar_id: 'gl1', tipo: 'quero_marcar', nome: 'Carla', contato: '(13) 99812-0001', mensagem: null, criado_em: dias(0.2), atendido_em: null, atendido_por: null },
   { id: 'gi2', lugar_id: 'gl1', tipo: 'quero_marcar', nome: null, contato: null, mensagem: null, criado_em: dias(1), atendido_em: null, atendido_por: null },
   { id: 'gi3', lugar_id: 'gl1', tipo: 'quero_marcar', nome: 'Bia', contato: '(13) 99812-0003', mensagem: null, criado_em: dias(2), atendido_em: null, atendido_por: null },
-  { id: 'gi4', lugar_id: 'gl2', tipo: 'sou_dono', nome: 'Marcos', contato: '(13) 99812-0004', mensagem: 'Quero colocar a agenda da barbearia no app.', criado_em: dias(0.5), atendido_em: null, atendido_por: null },
+  { id: 'gi4', lugar_id: 'gl3', tipo: 'sou_dono', nome: 'Marta', contato: '(13) 99812-0004', mensagem: 'Sou a dona do ateliê e quero colocar a agenda no app.', criado_em: dias(0.5), atendido_em: null, atendido_por: null },
   { id: 'gi5', lugar_id: 'gl3', tipo: 'corrigir', nome: 'Paula', contato: 'paula@exemplo.com', mensagem: 'Agora abrimos também na segunda.', criado_em: dias(3), atendido_em: dias(2), atendido_por: 'pl1' },
   { id: 'gi6', lugar_id: 'gl4', tipo: 'quero_marcar', nome: 'Lu', contato: '(13) 99812-0006', mensagem: null, criado_em: dias(0.1), atendido_em: null, atendido_por: null },
 ]
@@ -353,6 +323,7 @@ export const GUIA_RPC = {
     itens.forEach((it, i) => {
       if (!it?.nome) { problemas.push({ indice: i + 1, nome: null, erro: 'sem nome' }); return }
       if (!it?.cidade) { problemas.push({ indice: i + 1, nome: it.nome, erro: 'sem cidade' }); return }
+      if (it.categoria === 'barbearia') { ignorados++; return } // barbearia não entra no guia
       const cslug = slugificar(it.cidade)
       const chave = it.place_id || it.cnpj || `${cslug}/${slugificar(it.nome)}`
       if (vistos.has(chave)) { ignorados++; return }
@@ -360,6 +331,7 @@ export const GUIA_RPC = {
       validos++
       const ex = GUIA_LUGARES.find((l) => (it.place_id && l.place_id === it.place_id) || (it.cnpj && l.cnpj === it.cnpj) || (l.cidade_slug === cslug && l.slug === slugificar(it.nome)))
       if (ex?.status === 'removido') { ignorados++; return }
+      if (!ex && it.origem === 'receita') { ignorados++; return } // a Receita só completa quem veio do Google
       if (ex) { atualizados++; if (aplicar && it.origem === 'receita') { ex.validado_receita = true; ex.cnpj = ex.cnpj || it.cnpj } return }
       novos++
       if (aplicar) {

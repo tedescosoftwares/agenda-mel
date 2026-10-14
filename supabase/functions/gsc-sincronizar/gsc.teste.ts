@@ -297,12 +297,34 @@ await caso('busca as janelas, grava em pedaços e manda os dias inteiros no últ
     conta, propriedade: PROP, dias: 45, hoje: '2026-10-14', fetcher: g.fetcher, limite: 2, pedaco: 2,
     gravar: async (linhas, dias) => { gravados.push({ linhas, dias }) },
   })
-  assert.deepEqual(resumo, { de: '2026-08-31', ate: '2026-10-14', dias: 45, linhas: 5, janelas: 2, pedidos: 4, descartadas: 1, parcial: false })
-  // janela nova: 4 linhas do site em 2 pedaços, dias só no último; janela velha: 1 linha
+  assert.deepEqual(resumo, { de: '2026-08-31', ate: '2026-10-14', dias: 45, linhas: 5, janelas: 2, pedidos: 4, descartadas: 1, parcial: false, cobriu_de: '2026-08-31' })
+  // janela nova: 4 linhas do site em 2 pedaços, dias só no último; janela velha: 1 linha (gravadas nessa ordem, mesmo pedidas juntas)
   assert.deepEqual(gravados.map((x) => [x.linhas.length, x.dias]), [[2, null], [2, ['2026-10-10', '2026-10-11']], [1, ['2026-08-31']]])
   assert.equal(g.pedidos[0].url, URL_TOKEN)
-  assert.deepEqual(g.pedidos.slice(1).map((p) => [(p.corpo as Record<string, unknown>).startDate, (p.corpo as Record<string, unknown>).endDate, (p.corpo as Record<string, unknown>).startRow]),
-    [['2026-09-15', '2026-10-14', 0], ['2026-09-15', '2026-10-14', 2], ['2026-09-15', '2026-10-14', 4], ['2026-08-31', '2026-09-14', 0]])
+  // as duas janelas vão ao Google no mesmo lote: os pedidos se entrelaçam, então a conferência é por janela e página
+  const pedidos = g.pedidos.slice(1).map((p) => [(p.corpo as Record<string, unknown>).startDate, (p.corpo as Record<string, unknown>).endDate, (p.corpo as Record<string, unknown>).startRow] as [string, string, number])
+  pedidos.sort((a, b) => b[0].localeCompare(a[0]) || a[2] - b[2])
+  assert.deepEqual(pedidos, [['2026-09-15', '2026-10-14', 0], ['2026-09-15', '2026-10-14', 2], ['2026-09-15', '2026-10-14', 4], ['2026-08-31', '2026-09-14', 0]])
+})
+await caso('lotes em paralelo: o prazo entre lotes devolve parcial com cobriu_de, e a continuação fecha o resto', async () => {
+  let relogio = 0
+  const g = googleCompleto((de) => { relogio += 30000; return [linha(de, 'https://mimo.com.vc/', `q-${de}`)] }) // 30 s por pedido, uma página por janela
+  const gravados: Array<string[] | null> = []
+  // 240 dias = 8 janelas; lote de 4; prazo 100 s: o 1º lote leva 120 s, então o 2º nem começa
+  const r = await sincronizar({ conta, propriedade: PROP, dias: 240, hoje: '2026-10-14', fetcher: g.fetcher, prazoMs: 100000, agora: () => relogio, gravar: async (_l, d) => { gravados.push(d) } })
+  assert.equal(r.parcial, true)
+  assert.equal(r.janelas, 4)
+  assert.equal(r.pedidos, 4)
+  assert.equal(r.linhas, 4)
+  assert.equal(r.cobriu_de, '2026-06-17', 'o começo da 4ª janela (a mais antiga inteira)')
+  assert.equal(r.de, '2026-02-17')
+  assert.deepEqual(gravados, [['2026-09-15'], ['2026-08-16'], ['2026-07-17'], ['2026-06-17']], 'as quatro inteiras, cada uma com o seu dia')
+  // a tela continua: dias = o que falta (de até o dia anterior a cobriu_de), ate = o dia anterior a cobriu_de
+  const faltam = diasEntre(r.de, r.cobriu_de as string)
+  assert.equal(faltam, 120)
+  relogio = 0
+  const r2 = await sincronizar({ conta, propriedade: PROP, dias: faltam, hoje: somarDias(r.cobriu_de as string, -1), fetcher: g.fetcher, prazoMs: 100000, agora: () => relogio, gravar: async () => {} })
+  assert.deepEqual([r2.de, r2.ate, r2.parcial, r2.janelas, r2.cobriu_de], ['2026-02-17', '2026-06-16', false, 4, '2026-02-17'], 'fechou o histórico até o começo')
 })
 await caso('sem nenhuma linha, nada é gravado nem apagado', async () => {
   const g = googleCompleto(() => [])
@@ -319,7 +341,7 @@ await caso('o prazo acaba: para entre janelas, devolve parcial e não limpa a ja
   })
   const gravados: Array<string[] | null> = []
   const r = await sincronizar({
-    conta, propriedade: PROP, dias: 120, hoje: '2026-10-14', fetcher: g.fetcher, limite: 2, prazoMs: 100000, agora: () => relogio,
+    conta, propriedade: PROP, dias: 120, hoje: '2026-10-14', fetcher: g.fetcher, limite: 2, prazoMs: 100000, agora: () => relogio, lote: 1,
     gravar: async (_l, d) => { gravados.push(d) },
   })
   // janela 1: pedido 1 (1 min), pedido 2 (2 min, passou do prazo) -> para incompleta e não segue
@@ -327,6 +349,7 @@ await caso('o prazo acaba: para entre janelas, devolve parcial e não limpa a ja
   assert.equal(r.janelas, 1)
   assert.equal(r.pedidos, 2)
   assert.equal(r.linhas, 4)
+  assert.equal(r.cobriu_de, null, 'nenhuma janela ficou inteira')
   assert.deepEqual(gravados, [null], 'gravou o que veio, sem apagar nada')
 })
 await caso('erro do banco ao gravar sobe (a função anota e responde ok:false)', async () => {

@@ -207,7 +207,7 @@ salão?"; os dois pedidos aparecem na Plataforma.
   - as oportunidades: posição entre 4 e 15, ou topo com pouco clique;
   - as buscas de cada página.
 
-  Os dados vêm do Google Search Console, que é grátis. A Edge Function `gsc-sincronizar` busca esses dados com uma conta de serviço (JWT assinado no Deno, sem SDK) e grava em `site_buscas` (migração 160). Só ficam os números que o Search Console devolve, sem nada de quem buscou, e o histórico continua além dos 16 meses que o Google guarda.
+  Os dados vêm do Google Search Console, que é grátis. A Edge Function `gsc-sincronizar` busca esses dados com uma conta de serviço (JWT assinado no Deno, sem SDK) e grava em `site_buscas` (migração 160). As janelas de 30 dias vão ao Google em lotes de 4, e a função responde em menos de um minuto (o caminho entre o navegador e a função corta antes dos 150 s dela): o que não coube volta como parcial, com até onde chegou, e a tela pede o resto sozinha, de trás para a frente, até fechar os 16 meses. Só ficam os números que o Search Console devolve, sem nada de quem buscou, e o histórico continua além dos 16 meses que o Google guarda.
 
   Para ligar:
   1. Crie uma conta de serviço no Google Cloud, com a Search Console API ativada e uma chave JSON.

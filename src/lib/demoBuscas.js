@@ -207,18 +207,19 @@ export function demoBuscas(args = {}) {
 
 // a função gsc-sincronizar no demo: espera um pouco e "traz" os dias que faltam;
 // desligado, "liga" (como se o dono tivesse acabado de gravar os segredos)
-export async function demoGscSincronizar() {
+export async function demoGscSincronizar(corpo = {}) {
   lerModo()
   await new Promise((ok) => setTimeout(ok, 900))
   const primeira = !ligado
   ligado = true
   comErro = false
   const ultimo = somarDias(hojeSP(), -ATRASO)
-  const dias = primeira ? 480 : 8
+  const ate = /^\d{4}-\d{2}-\d{2}$/.test(String(corpo.ate ?? '')) && corpo.ate < hojeSP() ? corpo.ate : hojeSP()
+  const dias = Math.max(1, Math.min(480, Number(corpo.dias) || (primeira ? 480 : 8)))
   const linhas = vazio ? 0 : primeira ? linhasDemo().length : linhasDemo().filter((l) => l.dia > somarDias(ultimo, -dias)).length
-  const de = somarDias(hojeSP(), -(dias - 1))
-  execucao = { em: new Date().toISOString(), origem: 'plataforma', ok: true, de, ate: hojeSP(), linhas, parcial: false, erro: null }
-  return { ok: true, de, ate: hojeSP(), dias, linhas, janelas: Math.ceil(dias / 30), pedidos: Math.ceil(dias / 30), descartadas: 0, parcial: false }
+  const de = somarDias(ate, -(dias - 1))
+  execucao = { em: new Date().toISOString(), origem: 'plataforma', ok: true, de, ate, linhas, parcial: false, erro: null }
+  return { ok: true, de, ate, dias, linhas, janelas: Math.ceil(dias / 30), pedidos: Math.ceil(dias / 30), descartadas: 0, parcial: false, cobriu_de: de, faltam_dias: 0 }
 }
 
 export const BUSCAS_RPC = {

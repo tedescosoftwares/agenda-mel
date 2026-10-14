@@ -38,6 +38,7 @@ export type Gravar = (linhas: LinhaSite[], diasInteiros: string[] | null) => Pro
 export type Resumo = {
   de: string; ate: string; dias: number; linhas: number; janelas: number; pedidos: number
   descartadas: number; parcial: boolean
+  cobriu_de: string | null // o começo da janela mais antiga que ficou inteira (de, quando terminou)
 }
 
 // erro com um código que a tela entende (sem_segredos, chave_invalida, token_recusado, sem_acesso...)
@@ -280,33 +281,51 @@ export async function consultarJanela(o: {
 }
 
 // ---- a sincronização inteira -----------------------------------------------------------
-// gravar recebe pedaços de até PEDACO linhas; no último pedaço de cada janela
-// completa vão também os dias que o Google devolveu (o banco limpa o que sobrou
-// de antes nesses dias). Se o prazo acabar, para entre janelas e devolve parcial.
+// As janelas vão ao Google em lotes (LOTE_JANELAS de uma vez: a API demora
+// segundos por pedido, e em série a primeira carga passava de um minuto e a
+// resposta não chegava ao navegador). gravar recebe pedaços de até PEDACO
+// linhas; no último pedaço de cada janela completa vão também os dias que o
+// Google devolveu (o banco limpa o que sobrou de antes nesses dias). O prazo
+// (PRAZO_PADRAO_MS, bem abaixo do que o caminho até o navegador aguenta) é
+// conferido entre lotes: se passou, para e devolve parcial com cobriu_de, o
+// começo da janela mais antiga que ficou inteira. Quem chama continua dali
+// (dias = o que falta, ate = o dia anterior a cobriu_de).
+export const LOTE_JANELAS = 4
+export const PRAZO_PADRAO_MS = 45000
 export async function sincronizar(o: {
   conta: ContaServico; propriedade: string; dias: number; hoje: string; fetcher: Fetcher; gravar: Gravar
-  prazoMs?: number; agora?: () => number; limite?: number; pedaco?: number
+  prazoMs?: number; agora?: () => number; limite?: number; pedaco?: number; lote?: number
 }): Promise<Resumo> {
   const agora = o.agora ?? Date.now
   const inicio = agora()
-  const passou = () => agora() - inicio > (o.prazoMs ?? 100000)
+  const passou = () => agora() - inicio > (o.prazoMs ?? PRAZO_PADRAO_MS)
   const token = await pedirToken(o.conta, o.fetcher, Math.floor(inicio / 1000))
   const hosts = hostsDaPropriedade(o.propriedade)
   const dias = Math.max(1, Math.min(DIAS_MAX, Math.floor(o.dias) || 1))
   const de = somarDias(o.hoje, -(dias - 1))
-  const resumo: Resumo = { de, ate: o.hoje, dias, linhas: 0, janelas: 0, pedidos: 0, descartadas: 0, parcial: false }
-  for (const [jde, jate] of janelas(de, o.hoje)) {
-    if (resumo.janelas > 0 && passou()) { resumo.parcial = true; break }
-    const r = await consultarJanela({ token, propriedade: o.propriedade, de: jde, ate: jate, fetcher: o.fetcher, email: o.conta.client_email, limite: o.limite, deveParar: passou })
-    const { linhas, descartadas } = converterLinhas(r.linhas, hosts)
-    const diasInteiros = r.completo ? [...new Set(linhas.map((l) => l.dia))].sort() : null
-    const pedacos = emPedacos(linhas, o.pedaco ?? PEDACO)
-    for (let i = 0; i < pedacos.length; i++) await o.gravar(pedacos[i], i === pedacos.length - 1 ? diasInteiros : null)
-    resumo.linhas += linhas.length
-    resumo.descartadas += descartadas
-    resumo.pedidos += r.pedidos
-    resumo.janelas++
-    if (!r.completo) { resumo.parcial = true; break }
+  const resumo: Resumo = { de, ate: o.hoje, dias, linhas: 0, janelas: 0, pedidos: 0, descartadas: 0, parcial: false, cobriu_de: null }
+  const todas = janelas(de, o.hoje)
+  const lote = Math.max(1, Math.floor(o.lote ?? LOTE_JANELAS))
+  for (let i = 0; i < todas.length; i += lote) {
+    if (i > 0 && passou()) { resumo.parcial = true; break }
+    const respostas = await Promise.all(todas.slice(i, i + lote).map(([jde, jate]) =>
+      consultarJanela({ token, propriedade: o.propriedade, de: jde, ate: jate, fetcher: o.fetcher, email: o.conta.client_email, limite: o.limite, deveParar: passou })))
+    resumo.pedidos += respostas.reduce((n, r) => n + r.pedidos, 0)
+    // grava na ordem, da mais nova para a mais velha; uma janela cortada encerra
+    // (o que veio depois dela não conta como coberto e será pedido de novo)
+    for (let k = 0; k < respostas.length; k++) {
+      const r = respostas[k]
+      const { linhas, descartadas } = converterLinhas(r.linhas, hosts)
+      const diasInteiros = r.completo ? [...new Set(linhas.map((l) => l.dia))].sort() : null
+      const pedacos = emPedacos(linhas, o.pedaco ?? PEDACO)
+      for (let p = 0; p < pedacos.length; p++) await o.gravar(pedacos[p], p === pedacos.length - 1 ? diasInteiros : null)
+      resumo.linhas += linhas.length
+      resumo.descartadas += descartadas
+      resumo.janelas++
+      if (!r.completo) { resumo.parcial = true; break }
+      resumo.cobriu_de = todas[i + k][0]
+    }
+    if (resumo.parcial) break
   }
   return resumo
 }

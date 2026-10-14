@@ -14,14 +14,17 @@
 //
 //   supabase secrets set --project-ref SEU_REF GSC_CONTA_SERVICO="$(cat chave.json)" GSC_PROPRIEDADE=sc-domain:mimo.com.vc
 //
-// POST { dias?: 1..480 } com o Authorization de:
+// POST { dias?: 1..480, ate?: 'AAAA-MM-DD' } com o Authorization de:
 //   - alguém da Plataforma logado (botão "Atualizar agora" na aba Desempenho), ou
 //   - a chave de serviço (o relógio: chutar_gsc() da 160, pelo pg_cron).
 // Sem dias: busca o que falta desde o último dia gravado, com 5 dias de folga;
-// na primeira vez, os 16 meses que o Google guarda.
+// na primeira vez, os 16 meses que o Google guarda. A resposta sai em menos
+// de um minuto (o caminho até o navegador corta antes dos 150 s da função):
+// o que não coube volta como parcial, com cobriu_de e faltam_dias, e a tela
+// pede o resto com { dias: faltam_dias, ate: o dia anterior a cobriu_de }.
 //
 // Respostas:
-//   200 { ok: true, de, ate, dias, linhas, janelas, pedidos, descartadas, parcial }
+//   200 { ok: true, de, ate, dias, linhas, janelas, pedidos, descartadas, parcial, cobriu_de, faltam_dias }
 //   200 { ok: false, codigo, erro }   ainda não ligado (sem_segredos, chave_invalida)
 //                                     ou o Google recusou (sem_acesso, api_desligada...)
 //   401/403/405/500 { erro }          pedido, permissão ou banco
@@ -34,13 +37,14 @@
 
 import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { clienteDoChamador, semPermissao } from '../_shared/porteiro.ts'
-import { ErroGsc, lerContaServico, normalizarPropriedade, diasParaBuscar, sincronizar, type ContaServico, type Fetcher, type LinhaSite } from './gsc.ts'
+import { ErroGsc, lerContaServico, normalizarPropriedade, diasParaBuscar, sincronizar, somarDias, diasEntre, DIAS_MAX, PRAZO_PADRAO_MS, type ContaServico, type Fetcher, type LinhaSite } from './gsc.ts'
 
 const URL_SUPABASE = Deno.env.get('SUPABASE_URL') ?? ''
 const CHAVE_ANON = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
 const CHAVE_SERVICO = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-// a função tem até 150 s; para entre janelas antes disso e devolve "parcial"
-const PRAZO_MS = 100000
+// a função tem até 150 s, mas a resposta precisa chegar ao navegador bem antes: o prazo é conferido
+// entre lotes de janelas, e o que não coube volta como parcial (gsc.ts)
+const PRAZO_MS = PRAZO_PADRAO_MS
 
 function json(corpo: unknown, status = 200) {
   return new Response(JSON.stringify(corpo), {
@@ -85,7 +89,7 @@ Deno.serve(async (req) => {
   if (req.method !== 'POST') return json({ erro: 'use POST' }, 405)
   const auth = req.headers.get('Authorization') ?? ''
   if (!auth) return json({ erro: 'não autorizado' }, 401)
-  let corpo: { dias?: unknown } = {}
+  let corpo: { dias?: unknown; ate?: unknown } = {}
   try { corpo = await req.json() } catch { /* vazio */ }
 
   const quem = await quemChama(req, auth)
@@ -112,11 +116,13 @@ Deno.serve(async (req) => {
     return json({ ok: false, codigo: err.codigo, erro: err.message })
   }
 
-  // quantos dias: o que falta desde o último dia gravado (mais a folga), ou o pedido
+  // quantos dias: o que falta desde o último dia gravado (mais a folga), ou o pedido;
+  // até que dia: hoje, ou o que o pedido disser (a continuação de um histórico parcial), dentro dos 16 meses
   const hoje = new Date().toISOString().slice(0, 10)
+  const ate = typeof corpo.ate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(corpo.ate) && corpo.ate < hoje && diasEntre(corpo.ate, hoje) < DIAS_MAX ? corpo.ate : hoje
   const { data: ultimo, error: erroUltimo } = await db.from('site_buscas').select('dia').order('dia', { ascending: false }).limit(1).maybeSingle()
   if (erroUltimo) return json({ erro: /site_buscas|schema cache/i.test(erroUltimo.message) ? 'rode antes a migração 160 (supabase/160_buscas_do_google.sql)' : erroUltimo.message }, 500)
-  const dias = diasParaBuscar((ultimo as { dia?: string } | null)?.dia ?? null, hoje, corpo.dias)
+  const dias = Math.min(diasParaBuscar((ultimo as { dia?: string } | null)?.dia ?? null, ate, corpo.dias), diasEntre(somarDias(hoje, -(DIAS_MAX - 1)), ate) + 1)
 
   const lote = crypto.randomUUID()
   const gravar = async (linhas: LinhaSite[], diasInteiros: string[] | null) => {
@@ -124,9 +130,11 @@ Deno.serve(async (req) => {
     if (error) throw new ErroGsc('banco', `não deu para gravar no banco: ${error.message.slice(0, 200)}`)
   }
   try {
-    const resumo = await sincronizar({ conta, propriedade, dias, hoje, fetcher: buscar, gravar, prazoMs: PRAZO_MS })
+    const resumo = await sincronizar({ conta, propriedade, dias, hoje: ate, fetcher: buscar, gravar, prazoMs: PRAZO_MS })
     await anotar(true, resumo)
-    return json({ ok: true, ...resumo })
+    // o que ficou para trás (os dias de 'de' até o dia anterior a cobriu_de), para a tela continuar
+    const faltam = resumo.parcial && resumo.cobriu_de ? Math.max(0, diasEntre(resumo.de, resumo.cobriu_de)) : 0
+    return json({ ok: true, ...resumo, faltam_dias: faltam })
   } catch (e) {
     const err = e instanceof ErroGsc ? e : new ErroGsc('falhou', `não deu para buscar no Google: ${String((e as Error)?.message ?? e).slice(0, 200)}`)
     await anotar(false, { erro: err.message })

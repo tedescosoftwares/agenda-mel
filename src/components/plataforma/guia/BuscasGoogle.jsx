@@ -92,11 +92,12 @@ async function lerBuscas(dias, secao) {
   }
 }
 
-// chama a gsc-sincronizar com o token de quem está logado (no demo, a imitação)
-async function sincronizar() {
+// chama a gsc-sincronizar com o token de quem está logado (no demo, a imitação).
+// corpo: {} para o de sempre; { dias, ate } para continuar um histórico parcial
+async function sincronizar(corpo = {}) {
   try {
-    if (isDemo) return await import('../../../lib/demoBuscas.js').then((m) => m.demoGscSincronizar())
-    const { data, error } = await supabase.functions.invoke('gsc-sincronizar', { body: {} })
+    if (isDemo) return await import('../../../lib/demoBuscas.js').then((m) => m.demoGscSincronizar(corpo))
+    const { data, error } = await supabase.functions.invoke('gsc-sincronizar', { body: corpo })
     if (!error) return data ?? { ok: false, erro: 'a função não respondeu' }
     const status = error.context?.status
     let detalhe = error.message
@@ -136,11 +137,25 @@ export default function BuscasGoogle({ dias: diasDeFora }) {
   }, [])
   useEffect(() => { ler(dias, secao) }, [dias, secao, versao, ler])
 
+  // A função responde em menos de um minuto (o caminho até o navegador corta antes
+  // dos 150 s dela). O que não coube volta como parcial, com até onde chegou
+  // (cobriu_de) e quantos dias faltam: a tela pede o resto, de trás para a frente,
+  // até fechar o histórico (ou até 12 chamadas, para não ficar num laço)
   async function atualizar() {
     setSinc({ rodando: true })
-    const r = await sincronizar()
+    let r = await sincronizar({})
+    let chamadas = 1
+    let linhas = n0(r.linhas)
+    while (montado.current && r.ok && r.parcial && r.cobriu_de && n0(r.faltam_dias) > 0 && chamadas < 12) {
+      setSinc({ rodando: true, continuando: r })
+      const parte = await sincronizar({ dias: n0(r.faltam_dias), ate: diaAnterior(r.cobriu_de) })
+      chamadas++
+      if (!parte.ok) { r = { ...parte, parte_de: r }; break }
+      linhas += n0(parte.linhas)
+      r = { ...parte, ate: r.ate, linhas }
+    }
     if (!montado.current) return
-    setSinc({ rodando: false, ...r })
+    setSinc({ rodando: false, ...r, chamadas })
     setRelendo(true)
     setVersao((v) => v + 1)
   }
@@ -176,7 +191,7 @@ export default function BuscasGoogle({ dias: diasDeFora }) {
           {/* antes de ligar, o botão é o do passo a passo */}
           {(!dados || dados.tem_dados || dados.ultima_ok) && (
             <button type="button" className="btn btn-ghost pg-gsc-btn" onClick={atualizar} disabled={rodando}>
-              {rodando ? <LoaderCircle size={15} className="pg-gira" /> : <RefreshCw size={15} />} {rodando ? 'Buscando no Google…' : 'Atualizar agora'}
+              {rodando ? <LoaderCircle size={15} className="pg-gira" /> : <RefreshCw size={15} />} {rodando ? (sinc?.continuando ? `Buscando o histórico até ${dataComAno(diaAnterior(sinc.continuando.cobriu_de))}…` : 'Buscando no Google…') : 'Atualizar agora'}
             </button>
           )}
         </div>
@@ -205,6 +220,7 @@ export default function BuscasGoogle({ dias: diasDeFora }) {
 const impressoesDa = (dados, id) => (id === 'tudo'
   ? Object.values(dados?.secoes ?? {}).reduce((s, x) => s + n0(x?.impressoes), 0)
   : n0(dados?.secoes?.[id]?.impressoes))
+const diaAnterior = (iso) => { const d = new Date(`${iso}T12:00:00Z`); d.setUTCDate(d.getUTCDate() - 1); return d.toISOString().slice(0, 10) }
 // até 9.999 inteiro; depois 12 mil, 1,2 mi (para caber no seletor)
 const compacto = (v) => (v < 1e4 ? fmt(v) : v < 1e6 ? `${virgula(v / 1e3, v < 1e5 ? 1 : 0)} mil` : `${virgula(v / 1e6, 1)} mi`)
 
@@ -232,8 +248,8 @@ function Resultado({ sinc, onFechar }) {
       {ok ? <CircleCheck size={16} /> : <CircleAlert size={16} />}
       <span>
         {ok
-          ? <>Pronto: {fmt(sinc.linhas)} {n0(sinc.linhas) === 1 ? 'linha' : 'linhas'} do Google{sinc.de ? ` (de ${dataComAno(sinc.de)} a ${dataComAno(sinc.ate)})` : ''}.{sinc.parcial ? ' O tempo acabou antes do fim: toque de novo para buscar o resto.' : ''}</>
-          : <>{NAO_LIGADO.includes(sinc.codigo) ? 'Ainda não ligado: ' : 'Não deu para atualizar: '}{sinc.erro}</>}
+          ? <>Pronto: {fmt(sinc.linhas)} {n0(sinc.linhas) === 1 ? 'linha' : 'linhas'} do Google{sinc.de ? ` (de ${dataComAno(sinc.de)} a ${dataComAno(sinc.ate)})` : ''}{n0(sinc.chamadas) > 1 ? `, em ${sinc.chamadas} partes` : ''}.{sinc.parcial ? ' O histórico mais antigo ainda não veio inteiro: toque de novo para continuar.' : ''}</>
+          : <>{NAO_LIGADO.includes(sinc.codigo) ? 'Ainda não ligado: ' : 'Não deu para atualizar: '}{sinc.erro}{sinc.parte_de ? ` O que veio antes disso (${fmt(sinc.parte_de.linhas)} linhas, até ${dataComAno(sinc.parte_de.cobriu_de)}) já está guardado; toque de novo para continuar.` : ''}</>}
       </span>
       <button type="button" className="pg-gsc-fechar" onClick={onFechar} aria-label="Fechar aviso"><X size={14} /></button>
     </div>

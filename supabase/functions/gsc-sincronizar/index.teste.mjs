@@ -91,6 +91,9 @@ assert.equal(r.corpo.descartadas, 1)
 const hoje = new Date().toISOString().slice(0, 10)
 const dias = Math.round((Date.parse(hoje) - Date.parse('2026-10-08')) / 86400e3) + 5
 assert.equal(r.corpo.dias, Math.max(7, dias), 'o que falta desde o último dia gravado + 5')
+assert.equal(r.corpo.parcial, false)
+assert.equal(r.corpo.cobriu_de, r.corpo.de, 'terminou: cobriu desde o começo')
+assert.equal(r.corpo.faltam_dias, 0)
 const gravou = rpcs('site_buscas_gravar')
 assert.equal(gravou.length, 1)
 assert.equal(gravou[0].auth, 'Bearer servico')
@@ -115,6 +118,17 @@ assert.deepEqual(rpcs('site_buscas_gravar')[0].corpo.linhas, [])
 assert.equal(rpcs('site_buscas_registrar')[0].corpo.origem_, 'relogio')
 console.log('ok  relógio com a chave de serviço passa e anota origem relogio')
 
+// 4b. a continuação de um histórico parcial: dias e ate vindos da tela (dentro dos 16 meses)
+log.length = 0
+r = await chamar('Bearer jwt-plataforma', { dias: 40, ate: '2026-06-16' })
+assert.equal(r.corpo.ok, true, JSON.stringify(r.corpo))
+assert.deepEqual([r.corpo.de, r.corpo.ate, r.corpo.dias], ['2026-05-08', '2026-06-16', 40])
+const janelasPedidas = log.filter((l) => l.host === 'searchconsole.googleapis.com').map((l) => [l.corpo.startDate, l.corpo.endDate]).sort()
+assert.deepEqual(janelasPedidas, [['2026-05-08', '2026-05-17'], ['2026-05-18', '2026-06-16']], 'as janelas até o dia pedido')
+r = await chamar('Bearer jwt-plataforma', { dias: 40, ate: 'amanhã' })
+assert.equal(r.corpo.ate, hoje, 'ate inválido: hoje')
+console.log('ok  continuação com dias e ate: as janelas terminam no dia pedido')
+
 // 5. sem segredos: 200 ok:false sem_segredos, anotado, sem Google
 log.length = 0
 const guardado = env.GSC_CONTA_SERVICO
@@ -136,4 +150,4 @@ assert.deepEqual([r.corpo.ok, r.corpo.codigo], [false, 'sem_acesso'])
 assert.match(r.corpo.erro, /gsc@teste\.iam\.gserviceaccount\.com/)
 assert.equal(rpcs('site_buscas_registrar')[0].corpo.ok_, false)
 console.log('ok  Google 403: ok:false sem_acesso, com o e-mail da conta de serviço')
-console.log('\nindex.ts: 6 cenários ok')
+console.log('\nindex.ts: 7 cenários ok')

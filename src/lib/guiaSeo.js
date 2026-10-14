@@ -11,6 +11,7 @@ import {
   seoPadraoDoLugar, seoPadraoDaCidade, conteudoSeguro, linkInstagram, horariosEmUmaLinha,
 } from './guia.js'
 import { dadosDaPagina } from './guiaTexto.js'
+import { trilhaDaColecao } from './guiaColecoes.js'
 
 export const SITE_GUIA = 'https://mimo.com.vc'
 const ORG_ID = `${SITE_GUIA}/#organization`
@@ -161,6 +162,42 @@ export function jsonLdDaCidade(dados, faq = []) {
   }
 }
 
+// ---- as coleções (3.12): bairro e horário --------------------------------------------------
+// m: o que montarColecao() devolve (packages/core/guiaColecoes.js). Coleção que existe já passou do
+// mínimo de salões, então sempre pede para indexar.
+export function seoDaColecao(m) {
+  return {
+    titulo: m.seo_title.includes('MIMO') ? m.seo_title : `${m.seo_title} | MIMO`,
+    descricao: m.meta_description,
+    h1: m.h1,
+    caminho: m.caminho,
+  }
+}
+// a coleção: migalhas, a página, a lista dos salões (em ordem) e as perguntas. Sem nota.
+export function jsonLdDaColecao(m) {
+  const { titulo, descricao, caminho } = seoDaColecao(m)
+  const url = SITE_GUIA + caminho
+  const cartoes = Array.isArray(m.cartoes) ? m.cartoes : []
+  return {
+    '@context': 'https://schema.org',
+    '@graph': [
+      migalhas(trilhaDaColecao(m)),
+      {
+        '@type': 'CollectionPage', '@id': url, url, name: titulo, description: descricao, inLanguage: 'pt-BR', publisher: { '@id': ORG_ID }, mainEntity: { '@id': `${url}#lista` },
+        ...(m.tipo === 'bairro' ? { about: { '@type': 'Place', name: `${m.nome}, ${m.cidade}`, containedInPlace: { '@type': 'City', name: m.cidade } } } : {}),
+        ...(m.atualizado ? { dateModified: m.atualizado } : {}),
+      },
+      {
+        '@type': 'ItemList',
+        '@id': `${url}#lista`,
+        numberOfItems: cartoes.length,
+        itemListElement: cartoes.map((x, i) => ({ '@type': 'ListItem', position: i + 1, url: SITE_GUIA + rotaDoLugar(m.cidade_slug, x.slug), name: x.nome })),
+      },
+      ...(m.faq?.length ? [faqLd(m.faq)] : []),
+    ],
+  }
+}
+
 export function jsonLdDoIndice(cidades) {
   const { titulo, descricao, caminho } = seoDoIndice()
   const url = SITE_GUIA + caminho
@@ -174,5 +211,5 @@ export function jsonLdDoIndice(cidades) {
   }
 }
 
-// a linha de horário que vai na descrição de um cartão (reexportada por conveniência)
-export { horariosEmUmaLinha }
+// a linha de horário que vai na descrição de um cartão e a trilha das coleções (reexportadas por conveniência)
+export { horariosEmUmaLinha, trilhaDaColecao }

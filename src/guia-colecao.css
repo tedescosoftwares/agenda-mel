@@ -1,0 +1,21 @@
+/* ============================================================
+   GUIA DE SALÕES — as páginas de bairro e de horário (3.12).
+   Prefixo gd-col-. O resto vem do guia.css (herói da cidade,
+   filtros, cartões, perguntas): aqui só o que é delas.
+   ============================================================ */
+
+/* o título é mais comprido que o da cidade ("Salões de beleza no bairro Jardim Umuarama, em Itanhaém") */
+.ld h1.gd-col-h1 { font-size: clamp(2.5rem, 8vw, 4.4rem); line-height: 0.94; overflow-wrap: break-word; }
+.gd-col-heroi { position: relative; z-index: 1; max-width: 860px; }
+
+/* na página de horário, a linha do cartão é o horário que interessa: em destaque */
+.ld .gd-col-cartoes-hora .gd-cartao-resumo { color: var(--ld-ameixa); font-weight: 600; }
+
+/* "mais no guia": horário, bairro e a volta para a cidade */
+.gd-col-grupo + .gd-col-grupo { margin-top: 22px; }
+.ld .gd-col-grupo .gd-h3 { font-size: 1.05rem; }
+.gd-col-voltar { margin-top: 26px; padding-top: 18px; border-top: 1px solid var(--ld-fio); }
+
+@container gd (max-width: 699px) {
+  .ld h1.gd-col-h1 { font-size: clamp(2.2rem, 10.5vw, 3rem); }
+}

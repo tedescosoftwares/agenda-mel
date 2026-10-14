@@ -20,7 +20,8 @@
     "./convite": "./convite.js",
     "./legal": "./legal.js",
     "./guia": "./guia.js",
-    "./guiaTexto": "./guiaTexto.js"
+    "./guiaTexto": "./guiaTexto.js",
+    "./guiaColecoes": "./guiaColecoes.js"
   },
   "sideEffects": false
 }

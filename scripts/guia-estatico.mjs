@@ -1,7 +1,9 @@
 // O guia de salões no HTML estático (chamado por paginas-estaticas.mjs).
 // Recebe o que guia_publicadas() devolve e monta uma página por rota:
-// /saloes, /saloes/<cidade>, /saloes/<cidade>/<categoria> e
-// /saloes/<cidade>/<salão>, com título, descrição, JSON-LD e o CORPO já
+// /saloes, /saloes/<cidade>, /saloes/<cidade>/<categoria>,
+// /saloes/<cidade>/<salão> e as coleções (3.12) /saloes/<cidade>/bairro/<b> e
+// /saloes/<cidade>/horario/<h>[/<categoria>] (só as que passam do mínimo de
+// salões, as mesmas de guiaColecoes.js), com título, descrição, JSON-LD e o CORPO já
 // escrito dentro de <div id="root">. O robô que não roda JavaScript lê o
 // texto inteiro; a pessoa recebe o app, que troca esse corpo ao abrir.
 // Tudo o que vem do banco passa por esc().
@@ -12,7 +14,9 @@ import {
 import {
   seoDoLugar, seoDaCidade, seoDoIndice, trilhaDoLugar, trilhaDaCidade,
   jsonLdDoLugar, jsonLdDaCidade, jsonLdDoIndice,
+  seoDaColecao, jsonLdDaColecao, trilhaDaColecao,
 } from '../src/lib/guiaSeo.js'
+import { colecoesDaCidade, montarColecao, linksDeColecoes, linkDoBairro } from '../src/lib/guiaColecoes.js'
 
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 const dia = (v) => (v ? String(v).slice(0, 10) : undefined)
@@ -20,7 +24,7 @@ const migalhas = (trilha) => `<nav aria-label="Você está em">${trilha.map(([n,
 const faqHtml = (faq) => (faq.length ? `<section><h2>Perguntas frequentes</h2>${faq.map((f) => `<h3>${esc(f.pergunta)}</h3><p>${esc(f.resposta)}</p>`).join('')}</section>` : '')
 const listaDeCartoes = (cartoes, cidadeSlug) => `<ul>${cartoes.map((c) => `<li><a href="${esc(rotaDoLugar(cidadeSlug, c.slug))}">${esc(c.nome)}</a>${c.bairro ? ` (${esc(c.bairro)})` : ''}${c.resumo ? `: ${esc(c.resumo)}` : ''}</li>`).join('')}</ul>`
 
-function corpoDoLugar(l, c, faq) {
+function corpoDoLugar(l, c, faq, bairro = null) {
   const cat = categoriaDoGuia(l.categoria)
   const horas = horariosResumo(l.horarios)
   const endereco = [l.endereco, l.bairro, `${l.cidade}${l.uf ? ` - ${l.uf}` : ''}`, l.cep].filter(Boolean).join(', ')
@@ -34,12 +38,15 @@ ${c.destaques.length ? `<section>${c.destaques.map((d) => `<h3>${esc(d.titulo)}<
 ${c.dicas.itens.length ? `<section><h2>${esc(c.dicas.titulo || 'Dicas')}</h2><ul>${c.dicas.itens.map((i) => `<li>${esc(i)}</li>`).join('')}</ul></section>` : ''}
 ${faqHtml(faq)}
 ${l.vizinhos?.length ? `<section><h2>Perto dali</h2>${listaDeCartoes(l.vizinhos, l.cidade_slug)}</section>` : ''}
-<p><a href="${esc(rotaDaCategoria(l.cidade_slug, l.categoria))}">${esc(`${cat.rotulo} em ${l.cidade}`)}</a> · <a href="${esc(rotaDaCidade(l.cidade_slug))}">${esc(`Salões em ${l.cidade}`)}</a></p>
+<p><a href="${esc(rotaDaCategoria(l.cidade_slug, l.categoria))}">${esc(`${cat.rotulo} em ${l.cidade}`)}</a> · <a href="${esc(rotaDaCidade(l.cidade_slug))}">${esc(`Salões em ${l.cidade}`)}</a>${bairro ? ` · <a href="${esc(bairro.caminho)}">${esc(bairro.rotulo)}</a>` : ''}</p>
 ${l.na_mimo ? '' : `<p><small>Página informativa feita pela MIMO com dados públicos do estabelecimento. ${esc(l.nome)} ainda não agenda pela MIMO.</small></p>`}
 </main>`
 }
 
-function corpoDaCidade(dados, faq) {
+// os links das coleções: [{ caminho, rotulo, total }]
+const navDeColecoes = (titulo, links) => (links.length ? `<nav aria-label="${esc(titulo)}"><h2>${esc(titulo)}</h2><ul>${links.map((x) => `<li><a href="${esc(x.caminho)}">${esc(x.rotulo)}</a> (${x.total})</li>`).join('')}</ul></nav>` : '')
+
+function corpoDaCidade(dados, faq, colecoes = null) {
   const c = conteudoSeguro(dados.pagina) ?? conteudoSeguro({})
   const { h1 } = seoDaCidade(dados.cidade, dados.cidade_slug, dados.categoria, dados.pagina)
   const outras = (dados.categorias ?? []).filter((x) => x.categoria !== dados.categoria)
@@ -50,9 +57,28 @@ ${migalhas(trilhaDaCidade(dados.cidade, dados.cidade_slug, dados.categoria))}
 ${c.intro.map((p) => `<p>${esc(p)}</p>`).join('')}
 <section><h2>${esc(dados.categoria ? `${categoriaDoGuia(dados.categoria).rotulo} em ${dados.cidade}` : `Salões em ${dados.cidade}`)}</h2>${listaDeCartoes(dados.lugares, dados.cidade_slug)}</section>
 ${c.como_escolher.itens.length ? `<section><h2>${esc(c.como_escolher.titulo || 'Como escolher')}</h2><ul>${c.como_escolher.itens.map((i) => `<li>${esc(i)}</li>`).join('')}</ul></section>` : ''}
+${colecoes ? navDeColecoes('Por horário', dados.categoria ? colecoes.categorias[dados.categoria] ?? [] : colecoes.horarios) : ''}
+${colecoes && !dados.categoria ? navDeColecoes('Por bairro', colecoes.bairros) : ''}
 ${faqHtml(faq)}
 ${outras.length ? `<nav aria-label="Categorias"><ul>${outras.map((x) => `<li><a href="${esc(rotaDaCategoria(dados.cidade_slug, x.categoria))}">${esc(`${categoriaDoGuia(x.categoria).rotulo} em ${dados.cidade}`)}</a></li>`).join('')}</ul></nav>` : ''}
 ${dados.categoria ? `<p><a href="${esc(rotaDaCidade(dados.cidade_slug))}">${esc(`Todos os salões de ${dados.cidade}`)}</a></p>` : ''}
+</main>`
+}
+
+// uma coleção (bairro ou horário): o mesmo texto da página do site (montarColecao)
+function corpoDaColecao(m) {
+  const r = m.relacionadas
+  return `<main>
+${migalhas(trilhaDaColecao(m))}
+<h1>${esc(m.h1)}</h1>
+<p>${esc(m.chamada)}</p>
+${m.intro.map((p) => `<p>${esc(p)}</p>`).join('')}
+<section><h2>${esc(m.tipo === 'bairro' ? `Os endereços ${/^centro$/i.test(m.nome) ? 'do Centro' : `do bairro ${m.nome}`}` : m.h1)}</h2>${listaDeCartoes(m.cartoes, m.cidade_slug)}</section>
+${faqHtml(m.faq)}
+${navDeColecoes('No mesmo horário, outras categorias', r.categorias)}
+${navDeColecoes('Por horário', r.horarios)}
+${navDeColecoes(m.tipo === 'bairro' ? 'Outros bairros' : 'Por bairro', r.bairros)}
+<p><a href="${esc(rotaDaCidade(m.cidade_slug))}">${esc(`Todos os salões de ${m.cidade}`)}</a>${m.categoria ? ` · <a href="${esc(rotaDaCategoria(m.cidade_slug, m.categoria))}">${esc(`${categoriaDoGuia(m.categoria).rotulo} em ${m.cidade}`)}</a>` : ''}</p>
 </main>`
 }
 
@@ -76,22 +102,31 @@ export function paginasDoGuia(guia) {
   const paginas = Array.isArray(guia?.paginas) ? guia.paginas : []
   if (!lugares.length) return []
   const out = []
+  const cidades = [...new Set(lugares.map((l) => l.cidade_slug))]
+  // a lista de cada cidade (a mesma lista para as contas das coleções, que guardam o resultado por lista)
+  const daCidade = new Map(cidades.map((cs) => [cs, lugares.filter((l) => l.cidade_slug === cs)]))
   // os salões
   for (const l of lugares) {
     const c = conteudoSeguro(l.conteudo)
     const faq = faqDaPagina(l, c)
     const { titulo, descricao, caminho, noindex } = seoDoLugar(l, c)
-    out.push({ caminho, titulo, descricao, noindex, atualizado: dia(l.atualizado_em), prioridade: '0.6', freq: 'monthly', jsonLd: jsonLdDoLugar(l, c, faq), corpo: corpoDoLugar(l, c, faq) })
+    out.push({ caminho, titulo, descricao, noindex, atualizado: dia(l.atualizado_em), prioridade: '0.6', freq: 'monthly', jsonLd: jsonLdDoLugar(l, c, faq), corpo: corpoDoLugar(l, c, faq, linkDoBairro(l, daCidade.get(l.cidade_slug))) })
   }
-  // as cidades e as categorias de cada uma
-  const cidades = [...new Set(lugares.map((l) => l.cidade_slug))]
+  // as cidades, as categorias e as coleções (bairro e horário) de cada uma
   for (const cs of cidades) {
+    const doGuia = daCidade.get(cs)
+    const colecoes = linksDeColecoes(doGuia, cs)
     const cats = ['', ...GUIA_CATEGORIAS.map((g) => g.slug).filter((s) => lugares.some((l) => l.cidade_slug === cs && l.categoria === s))]
     for (const cat of cats) {
       const d = dadosDaCidade(lugares, paginas, cs, cat)
       const faq = conteudoSeguro(d.pagina)?.faq ?? []
       const { titulo, descricao, caminho } = seoDaCidade(d.cidade, cs, cat, d.pagina)
-      out.push({ caminho, titulo, descricao, atualizado: d.atualizado, prioridade: cat ? '0.7' : '0.8', freq: 'weekly', jsonLd: jsonLdDaCidade(d, faq), corpo: corpoDaCidade(d, faq) })
+      out.push({ caminho, titulo, descricao, atualizado: d.atualizado, prioridade: cat ? '0.7' : '0.8', freq: 'weekly', jsonLd: jsonLdDaCidade(d, faq), corpo: corpoDaCidade(d, faq, colecoes) })
+    }
+    for (const col of colecoesDaCidade(doGuia, cs)) {
+      const m = montarColecao(col, doGuia)
+      const { titulo, descricao, caminho } = seoDaColecao(m)
+      out.push({ caminho, titulo, descricao, atualizado: m.atualizado, prioridade: '0.6', freq: 'weekly', jsonLd: jsonLdDaColecao(m), corpo: corpoDaColecao(m) })
     }
   }
   // o índice

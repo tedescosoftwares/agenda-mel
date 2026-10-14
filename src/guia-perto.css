@@ -1,28 +1,55 @@
-/* ---- 3.13: "Perto de você" (PertoDeVoce.jsx) e a distância nos cartões ----
-   Prefixo gd-perto / gd-km; usa os botões da landing (ld-btn). */
-.gd-perto { display: flex; gap: 14px; align-items: flex-start; margin: 0 0 16px; padding: 16px 18px; border-radius: 16px; background: linear-gradient(135deg, #fff5f9, #fff); border: 1px solid var(--ld-fio); }
-.gd-perto > svg { flex: none; color: var(--ld-rosa); margin-top: 2px; }
-.gd-perto-texto { display: grid; gap: 8px; min-width: 0; }
-.gd-perto-texto strong { font-size: 1.02rem; color: var(--ld-ameixa); }
-.gd-perto-texto p { margin: 0; font-size: 0.9rem; line-height: 1.5; color: var(--ld-cinza); }
-.gd-perto-texto p a { color: var(--ld-ameixa); text-decoration: underline; }
-.gd-perto-erro { color: #b4233f; }
-.gd-perto-botoes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
-.gd-perto-botoes .ld-btn { display: inline-flex; align-items: center; gap: 6px; }
-.gd-perto-gira { animation: gd-perto-girar 0.9s linear infinite; }
-@keyframes gd-perto-girar { to { transform: rotate(360deg); } }
+/* ---- 3.13: "Perto de você" (PertoDeVoce.jsx): o modal, o botão da lista, a
+   linha "do mais perto para o mais longe" e a distância nos cartões.
+   Prefixo gd-perto / gd-*-km; usa os botões da landing (ld-btn). */
 
-.gd-perto-ok { align-items: center; padding: 10px 14px; font-size: 0.9rem; color: var(--ld-ameixa); background: #f3fbf7; border-color: #cfead9; }
-.gd-perto-ok > svg { margin: 0; color: #1f9d5f; }
+/* o botão discreto na lista (quem fechou o modal abre de novo por aqui) */
+.gd-perto-linha { display: flex; margin: 0 0 14px; }
+.gd-perto-chip { display: inline-flex; align-items: center; gap: 7px; min-height: 38px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--ld-fio); background: #fff; color: var(--ld-ameixa); font: inherit; font-size: 0.86rem; font-weight: 600; cursor: pointer; transition: border-color 0.15s ease, background 0.15s ease; }
+.gd-perto-chip svg { color: var(--ld-rosa); }
+.gd-perto-chip:hover { border-color: var(--ld-rosa-2); background: #fff7fa; }
+
+/* a posição chegou */
+.gd-perto-ok { display: flex; align-items: center; gap: 10px; margin: 0 0 14px; padding: 10px 14px; border-radius: 14px; font-size: 0.9rem; color: var(--ld-ameixa); background: #f3fbf7; border: 1px solid #cfead9; }
+.gd-perto-ok > svg { flex: none; color: #1f9d5f; }
 .gd-perto-ok > span { flex: 1; min-width: 0; }
 .gd-perto-link { border: none; background: none; padding: 0; font: inherit; font-weight: 600; color: var(--ld-ameixa); text-decoration: underline; cursor: pointer; white-space: nowrap; }
 
+/* o modal */
+.gd-perto-fundo { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(31, 32, 38, 0.5); animation: gd-perto-fade 0.2s ease; }
+.gd-perto-modal { position: relative; width: min(480px, 100%); max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); overflow: auto; padding: 28px 26px 24px; border-radius: 24px; background: #fff; box-shadow: 0 24px 60px rgba(31, 32, 38, 0.28); animation: gd-perto-sobe 0.28s cubic-bezier(0.2, 0.7, 0.2, 1); }
+.gd-perto-x { position: absolute; top: 12px; right: 12px; width: 36px; height: 36px; display: grid; place-items: center; border: none; border-radius: 50%; background: #f5f2f6; color: var(--ld-cinza); cursor: pointer; }
+.gd-perto-x:hover { background: #ece7ee; color: var(--ld-ameixa); }
+.gd-perto-icone { display: grid; place-items: center; width: 56px; height: 56px; border-radius: 18px; background: linear-gradient(135deg, #ffe3ee, #fff5f9); color: var(--ld-rosa); margin-bottom: 14px; }
+.gd-perto-modal h2 { margin: 0 0 8px; font-size: 1.35rem; line-height: 1.2; color: var(--ld-ameixa); letter-spacing: -0.01em; }
+.gd-perto-lead { margin: 0 0 16px; font-size: 0.95rem; line-height: 1.5; color: var(--ld-cinza); }
+.gd-perto-beneficios { list-style: none; margin: 0 0 16px; padding: 0; display: grid; gap: 10px; }
+.gd-perto-beneficios li { display: flex; gap: 12px; align-items: flex-start; }
+.gd-perto-beneficios li > svg { flex: none; margin-top: 2px; color: var(--ld-rosa); }
+.gd-perto-beneficios li > span { display: grid; gap: 2px; }
+.gd-perto-beneficios b { font-size: 0.93rem; color: var(--ld-ameixa); }
+.gd-perto-beneficios small { font-size: 0.82rem; line-height: 1.4; color: var(--ld-cinza); }
+.gd-perto-transp { margin: 0 0 18px; padding: 12px 14px; border-radius: 14px; background: #faf8fb; font-size: 0.82rem; line-height: 1.5; color: var(--ld-cinza); }
+.gd-perto-transp a { color: var(--ld-ameixa); text-decoration: underline; }
+.gd-perto-erro { margin: 0 0 14px; font-size: 0.85rem; line-height: 1.45; color: #b4233f; }
+.gd-perto-botoes { display: grid; gap: 8px; }
+.gd-perto-botoes .ld-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; }
+.gd-perto-gira { animation: gd-perto-girar 0.9s linear infinite; }
+@keyframes gd-perto-girar { to { transform: rotate(360deg); } }
+@keyframes gd-perto-fade { from { opacity: 0; } }
+@keyframes gd-perto-sobe { from { opacity: 0; transform: translateY(18px) scale(0.98); } }
+
+/* a distância nos cartões e na ficha */
 .gd-cartao-km { color: var(--ld-ameixa); font-weight: 600; white-space: nowrap; }
 .gd-fato-km { display: inline-flex; align-items: center; gap: 5px; color: var(--ld-ameixa); font-weight: 600; }
 .gd-fato-km svg { color: #1f9d5f; }
 
 @media (max-width: 600px) {
-  .gd-perto { padding: 14px; gap: 10px; }
-  .gd-perto-botoes .ld-btn { flex: 1 1 auto; justify-content: center; }
+  /* no celular, uma folha que sobe de baixo */
+  .gd-perto-fundo { align-items: flex-end; padding: 0; }
+  .gd-perto-modal { width: 100%; max-height: calc(100dvh - 24px); border-radius: 24px 24px 0 0; padding: 24px 20px calc(20px + env(safe-area-inset-bottom)); animation-name: gd-perto-folha; }
   .gd-perto-ok { flex-wrap: wrap; }
+  @keyframes gd-perto-folha { from { transform: translateY(40px); opacity: 0; } }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gd-perto-fundo, .gd-perto-modal { animation: none; }
 }

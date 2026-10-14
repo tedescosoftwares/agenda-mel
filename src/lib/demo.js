@@ -15,6 +15,7 @@ import { modeloDePagina } from './paginas'
 import { PAGINAS_SEO, PAGINAS_INSTITUCIONAIS } from '../conteudo/paginasSeo'
 import CATALOGO_V1 from '../../supabase/catalogo/catalogo_v1.json'
 import { arvoreParaLinhas } from './catalogoBusca'
+import { GUIA_LUGARES, GUIA_PAGINAS, GUIA_INTERESSES, GUIA_RPC } from './demoGuia'
 
 const hoje = new Date()
 const iso = (d) => d.toISOString().slice(0, 10)
@@ -164,6 +165,10 @@ const acessoDemo = () => !ativadoDemo() ? { fase: 'configurando', tipo: 'salao',
   : DEMO_ACESSO === 'ativa' ? { fase: 'ativa', tipo: 'salao', situacao: 'ativa', ate: diasDepois(20), dias: 20, ...extraDemo() }
   : { fase: 'teste', tipo: 'salao', situacao: 'teste', teste: true, ate: diasDepois(5), tolerancia_ate: diasDepois(12), dias: 5, dias_tolerancia: 12, ...extraDemo() }
 const TABELAS = {
+  // o guia de salões (153): salões fictícios de Itanhaém, em src/lib/demoGuia.js
+  guia_lugares: GUIA_LUGARES,
+  guia_paginas: GUIA_PAGINAS,
+  guia_interesses: GUIA_INTERESSES,
   pagamentos: [
     { id: 'pg5', appointment_id: 'apdev', client_id: 'c1', salon_id: SALAO, status: 'estornado', valor_cents: 3000, total_cents: 6000, sinal_pct: 50, liquido_cents: 2801, estorno_cents: 2801, pago_em: mais(-3) + 'T10:12:00', estornado_em: mais(-1) + 'T18:25:00', motivo_estorno: 'cancelado pela casa', cobranca_id: 'pay_demo_2k9x1', termos_aceitos_em: mais(-3) + 'T10:10:00', criado_em: mais(-3) },
     { id: 'pg0', appointment_id: 'ap3', client_id: 'c1', salon_id: SALAO, status: 'pago', valor_cents: 3500, total_cents: 3500, sinal_pct: 100, pago_em: mais(-13) + 'T18:02:00', criado_em: mais(-13), cobranca_id: 'pay_demo_2m9q1', termos_aceitos_em: mais(-13) + 'T18:00:00', appointments: { service_name: 'Manicure', date: mais(-12), start_time: '09:00:00', profiles: { full_name: 'Juliana Silva' } } },
@@ -208,6 +213,9 @@ const TABELAS = {
 
 const HORAS = [0, 1, 2, 3, 4, 5, 6].map((weekday) => ({ weekday, open: weekday > 0, start_time: '09:00:00', end_time: weekday === 6 ? '14:00:00' : '18:00:00' }))
 const RPC = {
+  // o guia de salões: guia_pagina, guia_cidade, guia_cidades, guia_publicadas, guia_registrar_interesse,
+  // guia_importar, guia_aprovar e guia_aprovar_pagina (em src/lib/demoGuia.js)
+  ...GUIA_RPC,
   documentos_vigentes: () => ({}),
   meus_aceites: () => ({}),
   aceitar_documentos: () => ({ ok: true }),
@@ -543,8 +551,13 @@ const RPC = {
   resumo_da_ia: () => [{ hoje: 12, teto: 200 }],
 }
 
-function consulta(linhas) {
+function consulta(linhas, tabela = '') {
   let dados = [...linhas]
+  // no guia a escrita fica guardada na memória (a Plataforma edita, descarta e vê a mudança);
+  // nas outras tabelas o demo continua "dando certo" sem guardar nada
+  const guarda = tabela.startsWith('guia_')
+  let mudanca = null
+  let apagar = false
   const filtros = []
   let ordem = null
   let limite = null
@@ -567,10 +580,16 @@ function consulta(linhas) {
     maybeSingle: () => { unico = true; return q },
     single: () => { unico = true; return q },
     insert: () => q,
-    update: () => q,
+    update: (v) => { if (guarda) mudanca = v; return q },
     upsert: () => q,
-    delete: () => q,
+    delete: () => { if (guarda) apagar = true; return q },
     then: (ok) => {
+      if (guarda && (mudanca || apagar)) {
+        const alvo = linhas.filter((x) => filtros.every((f) => f(x)))
+        if (apagar) for (const x of alvo) linhas.splice(linhas.indexOf(x), 1)
+        else for (const x of alvo) Object.assign(x, mudanca, { atualizado_em: new Date().toISOString() })
+        return ok({ data: unico ? (alvo[0] ?? null) : alvo, error: null, count: alvo.length })
+      }
       let r = dados.filter((x) => filtros.every((f) => f(x)))
       if (ordem) r.sort((a, b) => (a[ordem[0]] > b[ordem[0]] ? 1 : a[ordem[0]] < b[ordem[0]] ? -1 : 0) * ordem[1])
       if (limite) r = r.slice(0, limite)
@@ -654,7 +673,7 @@ export const demo = {
     signOut: async () => { try { localStorage.removeItem('mimo-demo-papel') } catch {} ; window.location.href = '/login'; return {} },
     resetPasswordForEmail: async () => ({ error: null }),
   },
-  from: (t) => consulta(TABELAS[t] ?? CONTEUDO[t] ?? []),
+  from: (t) => consulta(TABELAS[t] ?? CONTEUDO[t] ?? [], t),
   rpc: async (nome, args) => {
     const f = RPC[nome] ?? (nome === 'seo_sitemap' ? () => [...CONTEUDO.seo_pages.map((p) => ({ caminho: p.route, atualizado_em: p.updated_at })), ...CONTEUDO.blog_posts.map((a) => ({ caminho: '/blog/' + a.slug, atualizado_em: a.updated_at }))] : undefined)
     // função que não está na lista é escrita (aceitar, encaixar, chamar…):

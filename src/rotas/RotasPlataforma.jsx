@@ -19,6 +19,7 @@ import PlataformaSeo from '../pages/plataforma/Seo'
 import PlataformaPromocoes from '../pages/plataforma/Promocoes'
 import PlataformaMel from '../pages/plataforma/Mel'
 import PlataformaCatalogo from '../pages/plataforma/Catalogo'
+import PlataformaGuia from '../pages/plataforma/Guia'
 
 const T = ({ children }) => <ProtectedRoute requireRole="plataforma">{children}</ProtectedRoute>
 
@@ -40,6 +41,7 @@ export default function RotasPlataforma() {
       <Route path="termos" element={<T><PlataformaTermos /></T>} />
       <Route path="mel" element={<T><PlataformaMel /></T>} />
       <Route path="catalogo" element={<T><PlataformaCatalogo /></T>} />
+      <Route path="guia" element={<T><PlataformaGuia /></T>} />
       <Route path="*" element={<NaoEncontrada />} />
     </Routes>
   )

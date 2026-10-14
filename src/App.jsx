@@ -51,6 +51,8 @@ const RotasCliente = lazy(() => import("./rotas/RotasCliente"));
 const RotasPro = lazy(() => import("./rotas/RotasPro"));
 const RotasAdmin = lazy(() => import("./rotas/RotasAdmin"));
 const RotasPlataforma = lazy(() => import("./rotas/RotasPlataforma"));
+// o guia de salões (3.9): /saloes, /saloes/itanhaem, /saloes/itanhaem/unhas, /saloes/itanhaem/ro-coiffeur
+const GuiaRota = lazy(() => import("./pages/publico/GuiaCidade"));
 
 export default function App() {
   // o convite chega como /?indique=CODIGO — guardamos antes de qualquer rota
@@ -107,6 +109,9 @@ export default function App() {
             <Route path="/planos" element={<Planos />} />
             <Route path="/sobre" element={<Sobre />} />
             <Route path="/contato" element={<Contato />} />
+            <Route path="/saloes" element={<GuiaRota />} />
+            <Route path="/saloes/:cidade" element={<GuiaRota />} />
+            <Route path="/saloes/:cidade/:item" element={<GuiaRota />} />
 
             {/* atalhos antigos da cliente */}
             <Route path="/agenda" element={<Navigate to="/cliente/meus-agendamentos" replace />} />

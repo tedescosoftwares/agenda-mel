@@ -23,6 +23,8 @@ export async function chamar(nome, corpo) {
 
 // no demo as funções "dão certo" com dados fictícios
 function demoFuncao(nome, corpo) {
+  // o guia de salões: a IA do demo monta um texto dos dados e grava o rascunho (src/lib/demoGuia.js)
+  if (nome === 'guia-gerar') return import('./demoGuia.js').then((m) => m.demoGuiaGerar(corpo))
   if (nome === 'pagamento-criar') {
     return { ok: true, pagamento_id: 'pg-demo', valor_cents: 4250, sinal_pct: 50, sandbox: true, expira_em: new Date(Date.now() + 14 * 60e3).toISOString(), existente: false,
       copia_cola: '00020126580014br.gov.bcb.pix0136demo-mimo-' + (corpo?.appointment_id ?? 'x') + '5204000053039865406017.505802BR5904MIMO6006Santos62070503***6304ABCD' }

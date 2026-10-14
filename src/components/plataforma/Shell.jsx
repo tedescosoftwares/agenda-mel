@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext'
 import { useDialogo } from '../../context/DialogoContext'
 import { supabase } from '../../lib/supabase'
 import { MarcaIcon, Wordmark, HomeIcon, PredioIcon, UsersIcon, LinkIcon, ListaIcon, MailIcon, GraficoIcon, EngrenagemIcon, SearchIcon, BellIcon, MaisIcon, MegafoneIcon, WhatsIcon } from '../icons'
-import { BadgePercent, Globe, Scale, Sparkles, LayoutGrid } from 'lucide-react'
+import { BadgePercent, Globe, Scale, Sparkles, LayoutGrid, MapPinned } from 'lucide-react'
 
 // A casa da plataforma é um painel de PC (056): barra lateral com as
 // oito seções, topo com a busca global (⌘K), o botão de ação da tela e
@@ -22,6 +22,7 @@ const MENU = [
   { to: '/plataforma/mel', label: 'Mel', Icon: Sparkles },
   { to: '/plataforma/metricas', label: 'Métricas', Icon: GraficoIcon },
   { to: '/plataforma/seo', label: 'SEO e Conteúdo', Icon: Globe },
+  { to: '/plataforma/guia', label: 'Guia de salões', Icon: MapPinned },
   { to: '/plataforma/termos', label: 'Termos e privacidade', Icon: Scale },
   { to: '/plataforma/configuracoes', label: 'Configurações', Icon: EngrenagemIcon },
 ]

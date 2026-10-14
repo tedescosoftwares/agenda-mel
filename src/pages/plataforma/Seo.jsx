@@ -20,7 +20,7 @@ const ABAS = [['paginas', 'Páginas', FileText], ['artigos', 'Artigos', Newspape
 const TIPO = { HOME: 'home', INSTITUTIONAL: 'institucional', SEO_LANDING: 'SEO', BLOG_INDEX: 'blog', OTHER: 'outra' }
 const dataBr = (iso) => (iso ? new Date(iso).toLocaleDateString('pt-BR') : '—')
 // rotas do app e das telas fixas: uma página SEO não pode morar nelas
-const RESERVADAS = ['/login', '/cadastro', '/entrar', '/comecar', '/onboarding', '/pro', '/admin', '/cliente', '/plataforma', '/blog', '/v', '/p', '/convite', '/equipe', '/ativar', '/avisos', '/estilo', '/termos', '/privacidade', '/planos', '/sobre', '/contato', '/splash', '/bem-vinda', '/email-confirmado']
+const RESERVADAS = ['/login', '/cadastro', '/entrar', '/comecar', '/onboarding', '/pro', '/admin', '/cliente', '/plataforma', '/blog', '/v', '/saloes', '/p', '/convite', '/equipe', '/ativar', '/avisos', '/estilo', '/termos', '/privacidade', '/planos', '/sobre', '/contato', '/splash', '/bem-vinda', '/email-confirmado']
 // o miolo que o código tem para uma rota (a reserva): página SEO normalizada, ou o conteúdo da institucional
 function mioloDoCodigo(route, tipo) {
   if (tipo === 'SEO_LANDING') { const c = PAGINAS_SEO.find((p) => p.rota === route); return c ? normalizarPagina(c) : null }

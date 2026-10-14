@@ -245,3 +245,62 @@ para os aparelhos do app da loja (`push_tokens_app`, registrados pelo app em
 `apps/mobile`). Segredo opcional `EXPO_ACCESS_TOKEN` (expo.dev → Access tokens):
 com ele, só a MIMO consegue mandar pelos tokens dela. Aparelho desinstalado
 (`DeviceNotRegistered`) é apagado sozinho. Publicar: bat 9, como sempre.
+
+## guia-gerar (3.9): o texto do guia de salões
+
+Escreve com IA o texto de uma página do guia (`/saloes/...`) e guarda como
+**rascunho**. Nada vai para o ar daqui: quem publica é `guia_aprovar()` /
+`guia_aprovar_pagina()`, pela Plataforma (migração 153). Publicada com JWT
+normal; a função confere `eh_plataforma()` como a pessoa logada (senão, 403).
+
+    POST { lugar?: uuid, pagina?: uuid, instrucao?: string, angulo?: string }
+
+    200 { ok: true, rascunho }              gravado em rascunho (com _meta)
+    200 { ok: false, erro, tentar_em }      limite da IA (429): espere tentar_em segundos e chame de novo
+    200 { ok: false, erro }                 a IA falhou, demorou (45 s) ou errou duas vezes
+    400/401/403/404/409/500 { erro }        pedido, permissão ou dado
+
+- `lugar`: um salão de `guia_lugares`. Status `importado`/`descartado` vira
+  `gerado`; `publicado` continua no ar com a página de antes até aprovarem a
+  versão nova; `removido` nunca é tocado.
+- `pagina`: a página da cidade ou de uma categoria (`guia_paginas`), escrita
+  com os números do guia (bairros, serviços, quantos abrem no sábado), sem
+  citar salão nenhum pelo nome.
+- `instrucao`: o pedido do revisor ("mais curto", "fale de noivas"), até 400
+  letras, entregue ao modelo como dado (não muda as regras).
+- `angulo`: o id de um ângulo de `conteudo.ts` (ex.: `gel-fibra`) ou um tema
+  em texto livre. Sem ele, o primeiro ângulo sai do slug e "gerar de novo"
+  pega o próximo da lista, mandando a versão anterior para não repetir.
+
+O que o modelo recebe é uma **ficha** montada campo a campo (nome, categoria,
+serviços, bairro, endereço, horário legível, quais canais existem, se é
+Seleção MIMO, se agenda pela MIMO). Nota e número de avaliações do Google,
+CNPJ, razão social, coordenadas, telefone e o CSV de origem não saem nem do
+banco. O texto volta validado: tamanhos e quantidades (o excesso é cortado),
+e recusa (com uma nova tentativa explicando o motivo) quando fala de nota,
+estrelas, avaliações, Google, preço, telefone, MIMO, horário que não está na
+ficha, ambiente, equipe ou tempo de casa inventados, ou quando o `seo_title`
+passa de 70 caracteres. Clichê ("Descubra", "experiência única") também pede
+nova tentativa; se insistir, passa com aviso em `_meta.avisos` para o revisor.
+`_meta.semelhanca` é o salão (ou página) mais parecido da mesma cidade e
+categoria, por Jaccard de trigramas de palavras do `sobre`.
+
+Segredos (`supabase secrets set --project-ref ...`):
+
+```
+GROQ_API_KEY=...                 já existe (é a mesma do WhatsApp)
+GUIA_IA_MODELO=openai/gpt-oss-120b   opcional; é o padrão
+GUIA_IA_URL=...                  opcional: outra API compatível com a da OpenAI (ex.: https://api.x.ai/v1/chat/completions)
+GUIA_IA_CHAVE=...                opcional: a chave dessa outra API
+```
+
+No Groq, `max_tokens` (2400) é reserva descontada inteira da cota por minuto:
+no plano gratuito, uma página por minuto é o ritmo realista. A Plataforma
+gera um por vez e espera o `tentar_em`.
+
+O prompt, os ângulos, a validação e a semelhança moram em `conteudo.ts`, que
+roda no Deno e no node. Teste sem rede (o provedor é simulado):
+
+    node --experimental-strip-types supabase/functions/guia-gerar/conteudo.teste.ts [csv do Google Places]
+
+Com `MOSTRAR_PROMPT=1`, imprime o prompt completo do Rô Coiffeur.

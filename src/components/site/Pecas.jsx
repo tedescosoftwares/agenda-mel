@@ -223,6 +223,7 @@ export function PeSite() {
               <Link to="/planos">Planos</Link>
               <Link to="/sobre">Sobre</Link>
               <Link to="/blog">Blog</Link>
+              <Link to="/saloes/itanhaem">Salões em Itanhaém</Link>
               <Link to="/contato">Contato</Link>
               <a href={zap.href} target="_blank" rel="noopener noreferrer">WhatsApp {zap.bonito}</a>
               <Link to="/termos">Termos de uso</Link>

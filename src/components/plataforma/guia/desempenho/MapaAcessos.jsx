@@ -2,17 +2,22 @@ import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { MapPinned, Table2, Map as MapaIcone, LoaderCircle } from 'lucide-react'
 import { Painel, Vazio } from '../../Pecas'
 import { supabase } from '../../../../lib/supabase'
+import { temGoogleMaps } from '../../../../lib/googleMaps'
 import { bairroLimpo } from '../../../../lib/guiaColecoes'
 import { n0, formatar } from '../../../../lib/guiaMetricas'
 import { Barras } from './Barras'
 
-const MapaPontos = lazy(() => import('./MapaPontos'))
+// como em Mapa.jsx: o Google Maps com a chave que o app já usa; sem chave, o Leaflet
+const MapaPontosGoogle = lazy(() => import('./MapaPontosGoogle'))
+const MapaPontosLeaflet = lazy(() => import('./MapaPontos'))
 
 // O mapa de acessos (3.13): onde estava quem tocou em "Ativar localização"
 // nas listas do guia. O ponto é exato (a pessoa foi avisada de que fica
 // guardado) e só a Plataforma vê: guia_mapa_acessos (migração 163), um
 // ponto por pessoa e dia. A conta por bairro usa o salão no ar mais perto
 // de cada ponto; a mais de 8 km de qualquer salão é "fora da cidade".
+// O mapa em si é o Google Maps (a chave do app, carregada só aqui) ou,
+// sem chave, o Leaflet + OpenStreetMap.
 
 let memoria = { dias: null, dados: null, erro: '' }
 async function lerMapa(dias) {
@@ -30,6 +35,7 @@ async function lerMapa(dias) {
 const quando = (iso) => new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
 
 export default function MapaAcessos({ dias, visitantes }) {
+  const MapaPontos = temGoogleMaps() ? MapaPontosGoogle : MapaPontosLeaflet
   const [estado, setEstado] = useState(memoria)
   const [tabela, setTabela] = useState(false)
   const pedido = useRef(0)

@@ -41095,3 +41095,1607 @@ begin
 end $$;
 
 insert into public.migracoes_aplicadas (arquivo) values ('156_metricas_do_site.sql') on conflict (arquivo) do nothing;
+
+-- =============================================================
+-- >>> 157_paginas_por_bairro_e_horario.sql
+-- =============================================================
+
+-- 157: páginas por bairro e por horário no guia de salões (3.12).
+--
+-- Mais portas de entrada pelo Google, feitas dos dados (sem IA):
+--   /saloes/itanhaem/bairro/centro            "Salões de beleza no Centro de Itanhaém"
+--   /saloes/itanhaem/horario/domingo          "Salões abertos no domingo em Itanhaém"
+--   /saloes/itanhaem/horario/cedo | noite | sabado-o-dia-todo
+--   /saloes/itanhaem/horario/domingo/unhas    "Manicures abertas no domingo em Itanhaém"
+-- Quais coleções existem (pelo menos 3 salões no ar; 5 no horário de uma
+-- categoria) e o texto de cada uma moram em packages/core/guiaColecoes.js,
+-- que serve o site e o HTML estático. O banco entrega os dados e valida:
+--   - guia_bairro_slug(texto): a chave do bairro ("Sl 18 - Centro" e
+--     "Centro" são o mesmo; "Gaivota - Praia" e "Gaivota" também). É a
+--     mesma regra de chaveDoBairro() em guiaColecoes.js: mexeu numa,
+--     mexa na outra;
+--   - guia_colecoes(cidade_): os salões no ar da cidade com bairro,
+--     categoria, horário, serviços e atributos (tudo já público; nunca
+--     nota, avaliações, CNPJ ou coordenadas);
+--   - guia_pagina(): o lugar ganha bairro_slug, bairro_total e cidade_total, para a
+--     página do salão saber se a página do bairro existe ("Mais salões no
+--     Centro") sem baixar a cidade inteira;
+--   - 'bairro' e 'horario' ficam reservados como slug de salão (nenhuma
+--     página de salão colide com as coleções); quem já tivesse esse slug
+--     ganha o da cidade no fim, como acontece com as categorias;
+--   - site_evento() aceita os caminhos das coleções que existem de verdade
+--     (bairro com salão publicado; horário e categoria da lista), com
+--     tudo o mais igual à 156 (limite por rede, dedupe de 30 minutos, robô).
+-- Idempotente.
+
+-- ---- a chave do bairro ----------------------------------------------------------------------
+-- 'Sl 18 - Centro' -> 'centro'; 'Lj 03 - Jardim MOSTEIRO' -> 'mosteiro'; 'Gaivota - Praia' -> 'gaivota';
+-- 'Nova Itanhaém - Interior' -> 'nova-itanhaem'; 'Jd tropical' -> 'tropical'; '' -> ''
+create or replace function public.guia_bairro_slug(b text)
+returns text language plpgsql immutable set search_path = public as $$
+declare
+  pedaco text;
+  s text;
+  ultimo text := '';
+begin
+  foreach pedaco in array regexp_split_to_array(coalesce(b, ''), '\s+[-–]\s+') loop
+    s := public.guia_slug(pedaco);
+    -- loja, sala, casa, número e o "Praia"/"Interior" do fim não são o bairro
+    if s = '' or s in ('praia', 'interior') or s ~ '^[0-9]'
+       or s ~ '^(lj|loja|sl|sala|cs|casa|salao|portao|interfone|sobreloja|box|bloco|bl|ap|apto|lote|lt|qd|quadra|km|andar|fundos|terreo|galeria|anexo)(-?[0-9]|-[a-z0-9]{1,2}$|-n-|$)' then
+      continue;
+    end if;
+    ultimo := s;
+  end loop;
+  return regexp_replace(ultimo, '^(jardim|jd|balneario|conj-hab)-', '');
+end $$;
+grant execute on function public.guia_bairro_slug(text) to anon, authenticated;
+
+-- ---- os dados das coleções de uma cidade -------------------------------------------------------
+create or replace function public.guia_colecoes(cidade_ text)
+returns jsonb language plpgsql stable security definer set search_path = public as $$
+declare
+  c text := lower(btrim(coalesce(cidade_, '')));
+  base record;
+begin
+  select l.cidade, l.uf into base from public.guia_lugares l
+   where l.cidade_slug = c and l.status = 'publicado' and l.conteudo is not null
+   group by l.cidade, l.uf order by count(*) desc limit 1;
+  if not found then return null; end if;
+  return jsonb_build_object(
+    'cidade', base.cidade, 'cidade_slug', c, 'uf', base.uf,
+    'lugares', coalesce((select jsonb_agg(jsonb_build_object(
+        'slug', l.slug, 'nome', l.nome, 'cidade', l.cidade, 'cidade_slug', l.cidade_slug, 'uf', l.uf,
+        'bairro', l.bairro, 'endereco', l.endereco, 'categoria', l.categoria,
+        'horarios', l.horarios, 'servicos', to_jsonb(coalesce(l.servicos, '{}')), 'atributos', coalesce(l.atributos, '{}'::jsonb),
+        'resumo', l.conteudo ->> 'resumo', 'selecao', l.selecao, 'na_mimo', l.salon_id is not null, 'atualizado_em', l.atualizado_em)
+      order by l.salon_id is null, not l.selecao, l.nome)
+      from public.guia_lugares l
+      where l.cidade_slug = c and l.status = 'publicado' and l.conteudo is not null), '[]'::jsonb));
+end $$;
+revoke execute on function public.guia_colecoes(text) from public;
+grant execute on function public.guia_colecoes(text) to anon, authenticated;
+
+-- ---- a página do salão sabe quantos salões no ar o bairro dele tem -------------------------------
+-- (a mesma guia_pagina da 153; o lugar ganha bairro_slug, bairro_total e cidade_total)
+create or replace function public.guia_pagina(cidade_ text, slug_ text)
+returns jsonb language plpgsql stable security definer set search_path = public as $$
+declare
+  l public.guia_lugares;
+  bk text;
+begin
+  select * into l from public.guia_lugares
+   where cidade_slug = lower(btrim(cidade_)) and slug = lower(btrim(slug_)) and status = 'publicado' and conteudo is not null;
+  if not found then return null; end if;
+  bk := public.guia_bairro_slug(l.bairro);
+  return jsonb_build_object(
+    'lugar', public.guia_publico(l) || jsonb_build_object(
+      'bairro_slug', nullif(bk, ''),
+      'bairro_total', case when bk = '' or bk = l.cidade_slug then 0 else
+        (select count(*) from public.guia_lugares o
+          where o.cidade_slug = l.cidade_slug and o.status = 'publicado' and o.conteudo is not null
+            and public.guia_bairro_slug(o.bairro) = bk) end,
+      'cidade_total', (select count(*) from public.guia_lugares o
+          where o.cidade_slug = l.cidade_slug and o.status = 'publicado' and o.conteudo is not null)),
+    'vizinhos', public.guia_vizinhos(l, 6),
+    'mesma_categoria', coalesce((select jsonb_agg(public.guia_cartao(o) order by o.salon_id is null, not o.selecao, o.nome)
+        from public.guia_lugares o
+        where o.id in (select o2.id from public.guia_lugares o2
+                        where o2.cidade_slug = l.cidade_slug and o2.categoria = l.categoria and o2.id <> l.id
+                          and o2.status = 'publicado' and o2.conteudo is not null
+                        order by o2.salon_id is null, not o2.selecao, o2.nome limit 8)), '[]'::jsonb));
+end $$;
+grant execute on function public.guia_pagina(text, text) to anon, authenticated;
+
+-- ---- 'bairro' e 'horario' reservados como slug de salão -------------------------------------------
+-- a importação e a Plataforma nunca gravam esses slugs: viram 'bairro-itanhaem' (e -2, -3... se preciso)
+create or replace function public.guia_slug_reservado()
+returns trigger language plpgsql security definer set search_path = public as $$
+declare
+  base text;
+  n int := 2;
+begin
+  if new.slug in ('bairro', 'horario') then
+    base := left(new.slug || '-' || new.cidade_slug, 60);
+    new.slug := base;
+    while exists (select 1 from public.guia_lugares where cidade_slug = new.cidade_slug and slug = new.slug and id is distinct from new.id) loop
+      new.slug := left(base, 56) || '-' || n; n := n + 1;
+    end loop;
+  end if;
+  return new;
+end $$;
+drop trigger if exists guia_lugares_slug_reservado on public.guia_lugares;
+create trigger guia_lugares_slug_reservado before insert or update of slug, cidade_slug on public.guia_lugares
+  for each row execute function public.guia_slug_reservado();
+-- quem já tinha um desses slugs ganha o novo antes da trava (o gatilho acima troca)
+update public.guia_lugares set slug = slug where slug in ('bairro', 'horario');
+alter table public.guia_lugares drop constraint if exists guia_lugares_slug_ok;
+alter table public.guia_lugares add constraint guia_lugares_slug_ok check (slug ~ '^[a-z0-9]+(-[a-z0-9]+)*$'
+  and slug not in ('beleza', 'cabelo', 'unhas', 'cilios', 'sobrancelhas', 'barbearia', 'estetica', 'maquiagem', 'bairro', 'horario'));
+
+-- ---- gravar um evento: a 156, agora também nas páginas das coleções ---------------------------------
+create or replace function public.site_evento(
+  tipo_ text,
+  pagina_ text,
+  origem_ text default null,
+  ref_ text default null,
+  aparelho_ text default null,
+  area_ text default null,
+  utm_ jsonb default null,
+  dados_ jsonb default null
+) returns void
+language plpgsql security definer set search_path = public as $$
+declare
+  cab jsonb;
+  ua text;
+  ip text;
+  hoje date := (now() at time zone 'America/Sao_Paulo')::date;
+  sal_ text;
+  visitante_ text;
+  rede_ text;
+  pag text;
+  partes text[];
+  lugar_ uuid;
+  cidade_ text;
+  categoria_ text;
+  cats text[] := array['beleza', 'cabelo', 'unhas', 'cilios', 'sobrancelhas', 'estetica', 'maquiagem'];
+  horarios_ text[] := array['domingo', 'cedo', 'noite', 'sabado-o-dia-todo'];
+  utm_limpo jsonb;
+begin
+  -- só tipo que existe e está ligado
+  if not exists (select 1 from public.site_eventos_tipos where tipo = tipo_ and ativo) then return; end if;
+
+  -- a página: caminho limpo, minúsculo, sem área logada
+  pag := lower(split_part(split_part(coalesce(pagina_, ''), '?', 1), '#', 1));
+  if length(pag) > 1 then pag := rtrim(pag, '/'); end if;
+  if pag !~ '^/[a-z0-9/_-]{0,200}$' then return; end if;
+  -- por enquanto só o guia (/saloes, /saloes/<cidade>, /saloes/<cidade>/<categoria ou salão>
+  -- e, desde a 157, /saloes/<cidade>/bairro/<bairro> e /saloes/<cidade>/horario/<horário>[/<categoria>]);
+  -- o blog e as outras páginas entram aqui quando forem medidas
+  partes := string_to_array(trim(both '/' from pag), '/');
+  if partes[1] is distinct from 'saloes' or coalesce(array_length(partes, 1), 0) > 5 then return; end if;
+  if array_length(partes, 1) >= 4 and not (
+       (partes[3] = 'bairro' and array_length(partes, 1) = 4)
+    or (partes[3] = 'horario' and partes[4] = any (horarios_)
+        and (array_length(partes, 1) = 4 or (partes[4] <> 'sabado-o-dia-todo' and partes[5] = any (cats) and partes[5] <> 'beleza')))) then
+    return;
+  end if;
+
+  -- robô e ferramenta não contam (quem não roda JavaScript nem chega aqui)
+  begin cab := current_setting('request.headers', true)::jsonb; exception when others then cab := null; end;
+  ua := coalesce(cab ->> 'user-agent', '');
+  if ua = '' or ua ~* '(bot|crawler|spider)[/;)+]|crawl|spider|slurp|preview|headless|lighthouse|pagespeed|gtmetrix|pingdom|uptime|google-|adsbot|mediapartners|^curl|^wget|python-|axios/|node-fetch|go-http|okhttp|postman|phantomjs|selenium|playwright|puppeteer' then
+    return;
+  end if;
+  ip := coalesce(nullif(cab ->> 'cf-connecting-ip', ''), nullif(cab ->> 'x-real-ip', ''), nullif(btrim(split_part(coalesce(cab ->> 'x-forwarded-for', ''), ',', 1)), ''), '');
+
+  -- o sal do dia; quando o de hoje nasce, o de ontem (e antes) vai embora
+  insert into public.site_sal (dia) values (hoje) on conflict (dia) do nothing;
+  if found then delete from public.site_sal where dia < hoje; end if;
+  select sal into sal_ from public.site_sal where dia = hoje;
+  visitante_ := left(encode(sha256(convert_to(coalesce(sal_, '') || '|' || ip || '|' || ua, 'UTF8')), 'hex'), 16);
+  rede_ := left(encode(sha256(convert_to(coalesce(sal_, '') || '|' || ip, 'UTF8')), 'hex'), 16);
+
+  -- quem manda demais é ignorado: por rede (trocar de navegador não fura) e um teto geral
+  if (select count(*) from public.site_eventos where rede = rede_ and em > now() - interval '1 minute') >= 40 then return; end if;
+  if (select count(*) from public.site_eventos where rede = rede_ and em > now() - interval '1 day') >= 500 then return; end if;
+  if (select count(*) from public.site_eventos where em > now() - interval '1 day') >= 50000 then return; end if;
+  -- o mesmo evento na mesma página pelo mesmo visitante em 30 minutos conta uma vez:
+  -- recarregar não é outra visita, tocar duas vezes no WhatsApp não é outra tentativa
+  if exists (select 1 from public.site_eventos where visitante = visitante_ and pagina = pag and tipo = tipo_ and em > now() - interval '30 minutes') then
+    return;
+  end if;
+
+  -- de qual salão, cidade e categoria é a página (pelo caminho; nunca pelo que o navegador diz).
+  -- Só conta página que existe no ar: cidade com salão publicado, salão publicado, bairro com
+  -- salão publicado, categoria do horário com salão publicado.
+  if array_length(partes, 1) >= 2 then
+    if not exists (select 1 from public.guia_lugares where cidade_slug = partes[2] and status = 'publicado') then return; end if;
+    cidade_ := partes[2];
+    if array_length(partes, 1) = 3 then
+      if partes[3] = any (cats) then categoria_ := partes[3];
+      else
+        select id, categoria into lugar_, categoria_ from public.guia_lugares where cidade_slug = partes[2] and slug = partes[3] and status = 'publicado';
+        if lugar_ is null then return; end if;
+      end if;
+    elsif partes[3] = 'bairro' then
+      if partes[4] = partes[2] or not exists (select 1 from public.guia_lugares where cidade_slug = partes[2] and status = 'publicado'
+          and conteudo is not null and public.guia_bairro_slug(bairro) = partes[4]) then
+        return;
+      end if;
+    elsif array_length(partes, 1) = 5 then
+      if not exists (select 1 from public.guia_lugares where cidade_slug = partes[2] and status = 'publicado' and conteudo is not null and categoria = partes[5]) then
+        return;
+      end if;
+      categoria_ := partes[5];
+    end if;
+  end if;
+
+  -- o resto só entra limpo e curto
+  if utm_ is not null and jsonb_typeof(utm_) = 'object' then
+    select jsonb_object_agg(k, left(v, 60)) into utm_limpo
+      from jsonb_each_text(utm_) as e(k, v) where k in ('source', 'medium', 'campaign') and v <> '';
+  end if;
+
+  insert into public.site_eventos (tipo, pagina, lugar_id, cidade_slug, categoria, visitante, rede, origem, ref_host, aparelho, area, utm, dados)
+  values (
+    tipo_, pag, lugar_, cidade_, categoria_, visitante_, rede_,
+    case when origem_ in ('google', 'bing', 'instagram', 'facebook', 'whatsapp', 'tiktok', 'youtube', 'interno', 'direto', 'outro') then origem_ else 'direto' end,
+    case when ref_ ~ '^[a-z0-9.-]{3,100}$' then lower(ref_) end,
+    case when aparelho_ in ('celular', 'computador') then aparelho_ end,
+    case when area_ ~ '^[a-z_]{1,20}$' then area_ end,
+    utm_limpo,
+    case when dados_ is not null and jsonb_typeof(dados_) = 'object' and length(dados_::text) <= 500 then dados_ else '{}'::jsonb end
+  );
+end $$;
+revoke execute on function public.site_evento(text, text, text, text, text, text, jsonb, jsonb) from public;
+grant execute on function public.site_evento(text, text, text, text, text, text, jsonb, jsonb) to anon, authenticated;
+
+do $$
+declare n int;
+begin
+  select count(distinct public.guia_bairro_slug(bairro)) into n from public.guia_lugares where status = 'publicado' and conteudo is not null;
+  raise notice '157: páginas por bairro e por horário prontas (% bairros com salão no ar)', n;
+end $$;
+
+insert into public.migracoes_aplicadas (arquivo) values ('157_paginas_por_bairro_e_horario.sql') on conflict (arquivo) do nothing;
+
+-- =============================================================
+-- >>> 158_guia_abordagem.sql
+-- =============================================================
+
+-- 158: a abordagem dos donos de salão (3.12), um mini-CRM do guia.
+--
+-- O guia já sabe quem visita cada página, quem toca no WhatsApp e quem pede
+-- para marcar (153 e 156). Aqui isso vira a fila de trabalho da Plataforma:
+-- com quem falar hoje e por quê, o que já foi dito, quando voltar a falar,
+-- até o salão virar cliente da MIMO.
+--
+--   guia_abordagens        um registro por salão: em que pé está a conversa
+--                          (a_abordar, abordado, respondeu, negociando,
+--                          cliente, sem_interesse, nao_abordar), o próximo
+--                          contato, a nota interna e quem mexeu por último
+--   guia_abordagem_acoes   o histórico: mandou WhatsApp, ligou, anotou,
+--                          mudou o status, marcou lembrete. Cada linha guarda
+--                          o estado de antes, para o "Desfazer"
+--
+-- guia_fila_abordagem(dias) monta a fila com a prioridade calculada e
+-- explicada em palavras ("3 pessoas pediram para marcar · 18 tocaram no
+-- WhatsApp"). O que pesa:
+--   - pedido aberto do dono ("É o seu salão?") e de "quero marcar": muito;
+--   - tentativas de contato e visitas da página no período (site_eventos, 156);
+--   - quem respondeu ou está negociando pede o próximo passo;
+--   - lembrete vencido sobe; lembrete para depois e abordagem de poucos dias
+--     sem resposta descem (é hora de esperar);
+--   - nota e avaliações do Google só desempatam (triagem interna; nunca vão
+--     para o site).
+-- Quem já é cliente (salon_id ou status cliente), quem disse que não tem
+-- interesse, quem é para não abordar e quem pediu para remover a página
+-- saem da fila principal (continuam na lista, no filtro de cada status).
+-- Entram os salões no ar e, fora do ar, os que têm pedido aberto ou uma
+-- conversa já começada. Removido não entra.
+--
+-- Só a Plataforma lê e escreve (eh_plataforma); a escrita passa pelas
+-- funções, para o histórico nunca ficar para trás. Idempotente.
+
+-- ---- a conversa com cada salão ---------------------------------------------------------
+create table if not exists public.guia_abordagens (
+  lugar_id uuid primary key references public.guia_lugares (id) on delete cascade,
+  status text not null default 'a_abordar',
+  proximo_contato date,                   -- o lembrete: voltar a falar neste dia
+  nota text,                              -- nota interna; nunca sai da Plataforma
+  ultimo_contato_em timestamptz,          -- a última vez que a MIMO falou com o salão
+  atualizado_por uuid references auth.users (id) on delete set null,
+  atualizado_em timestamptz not null default now(),
+  criado_em timestamptz not null default now(),
+  constraint guia_abordagens_status_ok check (status in ('a_abordar', 'abordado', 'respondeu', 'negociando', 'cliente', 'sem_interesse', 'nao_abordar')),
+  constraint guia_abordagens_nota_ok check (nota is null or length(nota) <= 2000)
+);
+comment on table public.guia_abordagens is 'Abordagem (158): em que pé está a conversa da MIMO com cada salão do guia. Só a Plataforma; escrita por guia_abordagem_registrar().';
+create index if not exists guia_abordagens_status on public.guia_abordagens (status, proximo_contato);
+
+create table if not exists public.guia_abordagem_acoes (
+  id bigint generated always as identity primary key,
+  lugar_id uuid not null references public.guia_lugares (id) on delete cascade,
+  tipo text not null,                     -- whatsapp, ligacao, instagram, presencial, email | nota | status | lembrete
+  de_status text,
+  para_status text,
+  texto text,                             -- a mensagem mandada ou a nota
+  proximo_contato date,
+  dados jsonb not null default '{}'::jsonb,  -- os números da mensagem; 'antes' é o estado anterior (o desfazer usa)
+  por uuid references auth.users (id) on delete set null,
+  em timestamptz not null default now(),
+  constraint guia_abordagem_acoes_tipo_ok check (tipo in ('whatsapp', 'ligacao', 'instagram', 'presencial', 'email', 'nota', 'status', 'lembrete'))
+);
+comment on table public.guia_abordagem_acoes is 'Abordagem (158): o histórico da conversa com cada salão (contatos, notas, status, lembretes).';
+create index if not exists guia_abordagem_acoes_lugar on public.guia_abordagem_acoes (lugar_id, em desc, id desc);
+
+alter table public.guia_abordagens enable row level security;
+alter table public.guia_abordagem_acoes enable row level security;
+revoke all on public.guia_abordagens, public.guia_abordagem_acoes from anon, authenticated;
+grant select on public.guia_abordagens, public.guia_abordagem_acoes to authenticated;
+drop policy if exists guia_abordagens_plataforma on public.guia_abordagens;
+create policy guia_abordagens_plataforma on public.guia_abordagens for select to authenticated
+  using (public.eh_plataforma());
+drop policy if exists guia_abordagem_acoes_plataforma on public.guia_abordagem_acoes;
+create policy guia_abordagem_acoes_plataforma on public.guia_abordagem_acoes for select to authenticated
+  using (public.eh_plataforma());
+
+-- ---- ajudantes ----------------------------------------------------------------------------
+-- até onde a conversa chegou, para o funil (a_abordar → abordado → respondeu → cliente).
+-- "Sem interesse" respondeu (com um não); "não abordar" fica fora do funil.
+create or replace function public.guia_abordagem_etapa(s text)
+returns integer language sql immutable set search_path = public as $$
+  select case s when 'a_abordar' then 0 when 'abordado' then 1 when 'respondeu' then 2 when 'sem_interesse' then 2
+                when 'negociando' then 3 when 'cliente' then 4 end
+$$;
+revoke execute on function public.guia_abordagem_etapa(text) from public, anon;
+
+-- dá para chamar no WhatsApp? (o WhatsApp divulgado, ou o telefone se for celular; a regra de ehCelular do core)
+create or replace function public.guia_tem_zap(whatsapp text, telefone text)
+returns boolean language sql immutable set search_path = public as $$
+  select coalesce(nullif(btrim(whatsapp), ''), '') <> ''
+      or (select length(d) = 11 and substr(d, 3, 1) = '9'
+            from (select regexp_replace(regexp_replace(coalesce(telefone, ''), '\D', '', 'g'), '^55(?=\d{10,11}$)', '') as d) x)
+$$;
+revoke execute on function public.guia_tem_zap(text, text) from public, anon;
+
+-- ---- a fila --------------------------------------------------------------------------------
+-- dias: o período dos números (7, 30, 90...; até 400). lugar_: só um salão
+-- (depois de uma ação, a tela pede de novo só a linha que mudou).
+-- Cada item traz os números do período no mesmo formato de guia_desempenho
+-- (visitas, eventos, interesses), para a mensagem ao dono sair igual.
+-- Os contadores e o funil a tela soma dos itens (etapa e ja_cliente vêm prontos).
+create or replace function public.guia_fila_abordagem(dias integer default 30, lugar_ uuid default null)
+returns jsonb language plpgsql stable security definer set search_path = public as $$
+declare
+  ndias integer := greatest(1, least(coalesce(dias, 30), 400));
+  hoje date := (now() at time zone 'America/Sao_Paulo')::date;
+  de timestamptz;
+  r jsonb;
+begin
+  if not public.eh_plataforma() then raise exception 'só a plataforma vê a fila de abordagem'; end if;
+  de := ((hoje - (ndias - 1))::timestamp) at time zone 'America/Sao_Paulo';
+
+  with
+  -- os pedidos ainda não atendidos, de qualquer data
+  pend as (
+    select i.lugar_id,
+           count(*) filter (where i.tipo = 'quero_marcar') as quero_marcar,
+           count(*) filter (where i.tipo = 'sou_dono') as sou_dono,
+           count(*) filter (where i.tipo = 'remover') as remover,
+           count(*) filter (where i.tipo = 'corrigir') as corrigir,
+           (array_agg(jsonb_build_object('nome', i.nome, 'contato', i.contato, 'mensagem', i.mensagem, 'em', i.criado_em) order by i.criado_em desc)
+              filter (where i.tipo = 'sou_dono' and i.contato is not null))[1] as dono
+      from public.guia_interesses i
+     where i.atendido_em is null and (lugar_ is null or i.lugar_id = lugar_)
+     group by i.lugar_id
+  ),
+  -- quem entra: no ar, ou fora do ar com pedido aberto ou conversa começada; removido nunca
+  base as (
+    select l.id, l.nome, l.slug, l.cidade, l.cidade_slug, l.bairro, l.categoria, l.status as status_pagina,
+           l.whatsapp, l.telefone, l.instagram, l.site, l.salon_id, l.nota as nota_google, l.avaliacoes,
+           a.lugar_id is not null as tem_registro, a.status as status_salvo, a.proximo_contato, a.nota, a.ultimo_contato_em,
+           a.atualizado_em, a.atualizado_por,
+           coalesce(p.quero_marcar, 0) as p_quero, coalesce(p.sou_dono, 0) as p_dono,
+           coalesce(p.remover, 0) as p_remover, coalesce(p.corrigir, 0) as p_corrigir, p.dono
+      from public.guia_lugares l
+      left join public.guia_abordagens a on a.lugar_id = l.id
+      left join pend p on p.lugar_id = l.id
+     where l.status <> 'removido' and (lugar_ is null or l.id = lugar_)
+       and (l.status = 'publicado' or a.lugar_id is not null or coalesce(p.sou_dono, 0) + coalesce(p.quero_marcar, 0) > 0)
+  ),
+  -- os números do período, agregados uma vez só
+  ev as (
+    select e.lugar_id,
+           count(*) filter (where e.tipo = 'visita') as visitas,
+           count(distinct ((e.em at time zone 'America/Sao_Paulo')::date, e.visitante)) filter (where e.tipo = 'visita') as visitantes,
+           count(*) filter (where t.grupo = 'contato') as contatos
+      from public.site_eventos e join public.site_eventos_tipos t using (tipo)
+     where e.em >= de and e.lugar_id in (select id from base)
+     group by e.lugar_id
+  ),
+  ev_tipo as (
+    select x.lugar_id, jsonb_object_agg(x.tipo, x.n) as eventos
+      from (select e.lugar_id, e.tipo, count(*) as n from public.site_eventos e
+             where e.em >= de and e.lugar_id in (select id from base) group by 1, 2) x
+     group by x.lugar_id
+  ),
+  int_ as (
+    select x.lugar_id, jsonb_object_agg(x.tipo, x.n) as interesses
+      from (select i.lugar_id, i.tipo, count(*) as n from public.guia_interesses i
+             where i.criado_em >= de and i.lugar_id in (select id from base) group by 1, 2) x
+     group by x.lugar_id
+  ),
+  hist as (
+    select h.lugar_id,
+           count(*) filter (where h.tipo in ('whatsapp', 'ligacao', 'instagram', 'presencial', 'email')) as tentativas,
+           max(public.guia_abordagem_etapa(h.para_status)) as etapa_hist
+      from public.guia_abordagem_acoes h
+     where h.lugar_id in (select id from base)
+     group by h.lugar_id
+  ),
+  ultima as (
+    select distinct on (h.lugar_id) h.lugar_id,
+           jsonb_build_object('id', h.id, 'tipo', h.tipo, 'em', h.em, 'texto', left(h.texto, 160), 'para_status', h.para_status, 'proximo_contato', h.proximo_contato) as ultima_acao
+      from public.guia_abordagem_acoes h
+     where h.lugar_id in (select id from base)
+     order by h.lugar_id, h.em desc, h.id desc
+  ),
+  junto as (
+    select b.*,
+           case when b.salon_id is not null then 'cliente' else coalesce(b.status_salvo, 'a_abordar') end as status_ef,
+           coalesce(ev.visitas, 0) as visitas, coalesce(ev.visitantes, 0) as visitantes, coalesce(ev.contatos, 0) as contatos,
+           coalesce(et.eventos, '{}'::jsonb) as eventos, coalesce(it.interesses, '{}'::jsonb) as interesses,
+           coalesce(h.tentativas, 0) as tentativas, h.etapa_hist, u.ultima_acao,
+           public.guia_tem_zap(b.whatsapp, b.telefone) as tem_zap,
+           (select coalesce(nullif(btrim(pr.full_name), ''), split_part(us.email, '@', 1))
+              from auth.users us left join public.profiles pr on pr.id = us.id where us.id = b.atualizado_por) as atualizado_por_nome,
+           hoje - (b.ultimo_contato_em at time zone 'America/Sao_Paulo')::date as dias_desde_contato
+      from base b
+      left join ev on ev.lugar_id = b.id
+      left join ev_tipo et on et.lugar_id = b.id
+      left join int_ it on it.lugar_id = b.id
+      left join hist h on h.lugar_id = b.id
+      left join ultima u on u.lugar_id = b.id
+  ),
+  -- os motivos, cada um com o seu peso; a prioridade é a soma (info pesa zero)
+  motivos as (
+    select j.id, m.tipo, m.peso, m.texto
+      from junto j
+      cross join lateral (
+        select * from (values
+          ('dono', case when j.p_dono > 0 then 120 + 20 * least(j.p_dono - 1, 2) end,
+             case when j.p_dono = 1 then 'o dono pediu contato' else j.p_dono || ' pedidos de dono abertos' end),
+          ('pedido', case when j.p_quero > 0 then 40 * least(j.p_quero, 5) end,
+             j.p_quero || case when j.p_quero = 1 then ' pessoa pediu para marcar' else ' pessoas pediram para marcar' end),
+          ('lembrete', case when j.proximo_contato <= hoje then 80 + least(20, 2 * (hoje - j.proximo_contato)) end,
+             case hoje - j.proximo_contato when 0 then 'lembrete para hoje' when 1 then 'lembrete vencido ontem'
+                  else 'lembrete vencido há ' || (hoje - j.proximo_contato) || ' dias' end),
+          ('status', case j.status_ef when 'negociando' then 50 when 'respondeu' then 40 end,
+             case j.status_ef when 'negociando' then 'em negociação' else 'respondeu: falta o próximo passo' end),
+          ('visita', case when j.visitas > 0 then least(40, (j.visitas + 1) / 2) end,
+             j.visitas || case when j.visitas = 1 then ' visita' else ' visitas' end || ' em ' || ndias || case when ndias = 1 then ' dia' else ' dias' end),
+          ('espera', case when j.proximo_contato > hoje then -60 end,
+             case when j.proximo_contato = hoje + 1 then 'lembrete para amanhã' else 'lembrete para ' || to_char(j.proximo_contato, 'DD/MM') end),
+          ('espera', case when j.proximo_contato is null and j.status_ef = 'abordado' and j.dias_desde_contato between 0 and 2 then -40 end,
+             case j.dias_desde_contato when 0 then 'abordado hoje' when 1 then 'abordado ontem' else 'abordado há ' || j.dias_desde_contato || ' dias' end || ', esperando resposta'),
+          ('sem_zap', case when not j.tem_zap then -10 end, 'sem WhatsApp divulgado'),
+          ('info', case when j.status_pagina <> 'publicado' then 0 end, 'página fora do ar')
+        ) v(tipo, peso, texto)
+        where v.peso is not null
+        union all
+        -- os toques de contato da página, os dois maiores (cada toque vale 3, até 90 no total)
+        select * from (
+          select 'contato', least(90, 3 * c.n), case when c.n = 1 then '1 pessoa ' || c.um else c.n || ' ' || c.varios end
+            from (select (e.value)::int as n, e.key as tipo,
+                         case e.key when 'whatsapp' then 'tocou no WhatsApp' when 'ligar' then 'tocou para ligar' when 'mapa' then 'pediu a rota'
+                                    when 'instagram' then 'abriu o Instagram' when 'site' then 'abriu o site' when 'agendar_mimo' then 'tocou em Agendar'
+                                    when 'email' then 'tocou no e-mail' else 'tocou em ' || e.key end as um,
+                         case e.key when 'whatsapp' then 'tocaram no WhatsApp' when 'ligar' then 'tocaram para ligar' when 'mapa' then 'pediram a rota'
+                                    when 'instagram' then 'abriram o Instagram' when 'site' then 'abriram o site' when 'agendar_mimo' then 'tocaram em Agendar'
+                                    when 'email' then 'tocaram no e-mail' else 'tocaram em ' || e.key end as varios
+                    from jsonb_each_text(j.eventos) e
+                    join public.site_eventos_tipos t on t.tipo = e.key and t.grupo = 'contato') c
+           where c.n > 0
+           order by c.n desc, c.tipo
+           limit 2
+        ) toques
+      ) m
+  ),
+  pontos as (
+    select j.id,
+           -- os toques somados contam até 90, mesmo espalhados em vários botões
+           (coalesce(sum(m.peso) filter (where m.tipo not in ('contato', 'info')), 0) + least(90, 3 * j.contatos))::int as prioridade,
+           coalesce(jsonb_agg(jsonb_build_object('tipo', m.tipo, 'peso', m.peso, 'texto', m.texto) order by m.peso desc, m.texto)
+                      filter (where m.tipo is not null), '[]'::jsonb) as motivos
+      from junto j left join motivos m on m.id = j.id
+     group by j.id, j.contatos
+  ),
+  itens as (
+    select j.*, p.prioridade,
+           -- sem nenhum motivo a favor, a tela diz por que o salão está lá embaixo
+           case when jsonb_path_exists(p.motivos, '$[*] ? (@.peso > 0)') then p.motivos
+                else p.motivos || jsonb_build_array(jsonb_build_object('tipo', 'info', 'peso', 0,
+                       'texto', 'sem pedidos nem contatos em ' || ndias || case when ndias = 1 then ' dia' else ' dias' end)) end as motivos,
+           case when j.status_ef = 'cliente' then 'cliente'
+                when j.p_remover > 0 then 'remover'
+                when j.status_ef in ('sem_interesse', 'nao_abordar') then j.status_ef end as fora_motivo,
+           greatest(public.guia_abordagem_etapa(j.status_salvo), j.etapa_hist, case when j.tentativas > 0 then 1 end,
+                    case when j.salon_id is not null and (j.tentativas > 0 or coalesce(j.etapa_hist, 0) > 0 or coalesce(public.guia_abordagem_etapa(j.status_salvo), 0) > 0) then 4 end) as etapa
+      from junto j join pontos p on p.id = j.id
+  )
+  select jsonb_build_object(
+    'dias', ndias,
+    'de', hoje - (ndias - 1),
+    'ate', hoje,
+    'hoje', hoje,
+    'itens', coalesce((select jsonb_agg(jsonb_build_object(
+        'lugar_id', i.id, 'nome', i.nome, 'slug', i.slug, 'cidade', i.cidade, 'cidade_slug', i.cidade_slug, 'bairro', i.bairro,
+        'categoria', i.categoria, 'status_pagina', i.status_pagina, 'pagina', '/saloes/' || i.cidade_slug || '/' || i.slug,
+        'whatsapp', i.whatsapp, 'telefone', i.telefone, 'instagram', i.instagram, 'site', i.site, 'tem_zap', i.tem_zap,
+        'na_mimo', i.salon_id is not null, 'nota_google', i.nota_google, 'avaliacoes', i.avaliacoes,
+        'status', i.status_ef, 'status_salvo', i.status_salvo, 'tem_registro', i.tem_registro,
+        'proximo_contato', i.proximo_contato, 'nota', i.nota, 'ultimo_contato_em', i.ultimo_contato_em,
+        'atualizado_em', i.atualizado_em, 'atualizado_por_nome', i.atualizado_por_nome,
+        'tentativas', i.tentativas, 'ultima_acao', i.ultima_acao,
+        'visitas', i.visitas, 'visitantes', i.visitantes, 'contatos', i.contatos, 'eventos', i.eventos, 'interesses', i.interesses,
+        'pendentes', jsonb_build_object('quero_marcar', i.p_quero, 'sou_dono', i.p_dono, 'remover', i.p_remover, 'corrigir', i.p_corrigir),
+        'dono', i.dono,
+        'fila', case when i.fora_motivo is null then 'principal' else 'fora' end, 'fora_motivo', i.fora_motivo,
+        'prioridade', i.prioridade, 'motivos', i.motivos,
+        'etapa', coalesce(i.etapa, 0), 'ja_cliente', i.salon_id is not null and coalesce(i.etapa, 0) < 4)
+      order by i.fora_motivo is not null, i.prioridade desc, i.nota_google desc nulls last, i.avaliacoes desc nulls last, i.nome)
+      from itens i), '[]'::jsonb)
+  ) into r;
+  return r;
+end $$;
+revoke execute on function public.guia_fila_abordagem(integer, uuid) from public, anon;
+grant execute on function public.guia_fila_abordagem(integer, uuid) to authenticated;
+
+-- ---- registrar uma ação ----------------------------------------------------------------------
+-- acao_:
+--   whatsapp | ligacao | instagram | presencial | email  falou com o salão: 'a_abordar' vira
+--       'abordado', o lembrete vencido sai (já foi feito) e proximo_contato_ marca o próximo;
+--   status    status_ novo (cliente, sem interesse e não abordar tiram o lembrete);
+--   nota      texto_ vira a nota interna (vazio apaga) e entra no histórico;
+--   lembrete  proximo_contato_ (vazio tira o lembrete).
+-- Devolve o id da ação (para o desfazer) e a linha da fila já recalculada.
+create or replace function public.guia_abordagem_registrar(
+  lugar_ uuid,
+  acao_ text,
+  status_ text default null,
+  texto_ text default null,
+  proximo_contato_ date default null,
+  dados_ jsonb default null,
+  dias_ integer default 30
+) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare
+  a public.guia_abordagens;
+  criado boolean := false;
+  antes jsonb;
+  hoje date := (now() at time zone 'America/Sao_Paulo')::date;
+  canais text[] := array['whatsapp', 'ligacao', 'instagram', 'presencial', 'email'];
+  t text := nullif(left(btrim(coalesce(texto_, '')), 2000), '');
+  d jsonb := case when dados_ is not null and jsonb_typeof(dados_) = 'object' and length(dados_::text) <= 2000 then dados_ - 'antes' else '{}'::jsonb end;
+  novo_status text;
+  novo_proximo date;
+  nova_nota text;
+  novo_contato timestamptz;
+  id_ bigint;
+begin
+  if not public.eh_plataforma() then raise exception 'só a plataforma registra a abordagem'; end if;
+  if acao_ is null or not (acao_ = any (canais || array['status', 'nota', 'lembrete'])) then raise exception 'ação desconhecida: %', acao_; end if;
+  if status_ is not null and public.guia_abordagem_etapa(status_) is null and status_ <> 'nao_abordar' then raise exception 'status desconhecido: %', status_; end if;
+  if proximo_contato_ is not null and (proximo_contato_ < hoje or proximo_contato_ > hoje + 400) then
+    raise exception 'o lembrete precisa ser de hoje até um ano para a frente';
+  end if;
+  if not exists (select 1 from public.guia_lugares where id = lugar_ and status <> 'removido') then raise exception 'salão não encontrado'; end if;
+
+  insert into public.guia_abordagens (lugar_id, atualizado_por) values (lugar_, auth.uid())
+    on conflict (lugar_id) do nothing
+    returning true into criado;
+  criado := coalesce(criado, false);
+  select * into a from public.guia_abordagens where lugar_id = lugar_ for update;
+  antes := jsonb_build_object('novo', criado, 'status', a.status, 'proximo_contato', a.proximo_contato, 'nota', a.nota, 'ultimo_contato_em', a.ultimo_contato_em);
+
+  novo_status := a.status; novo_proximo := a.proximo_contato; nova_nota := a.nota; novo_contato := a.ultimo_contato_em;
+  if acao_ = any (canais) then
+    novo_status := coalesce(status_, case when a.status = 'a_abordar' then 'abordado' else a.status end);
+    novo_proximo := coalesce(proximo_contato_, case when a.proximo_contato > hoje then a.proximo_contato end);
+    novo_contato := now();
+  elsif acao_ = 'status' then
+    if status_ is null then raise exception 'diga o status novo'; end if;
+    novo_status := status_;
+    novo_proximo := case when status_ in ('cliente', 'sem_interesse', 'nao_abordar') then null else coalesce(proximo_contato_, a.proximo_contato) end;
+  elsif acao_ = 'nota' then
+    nova_nota := t;
+  elsif acao_ = 'lembrete' then
+    novo_proximo := proximo_contato_;
+  end if;
+
+  -- nada mudou (status igual, a mesma nota, o mesmo lembrete): não suja o histórico
+  if not (acao_ = any (canais)) and novo_status is not distinct from a.status and novo_proximo is not distinct from a.proximo_contato
+     and nova_nota is not distinct from a.nota then
+    if criado then delete from public.guia_abordagens where lugar_id = lugar_; end if;
+    return jsonb_build_object('ok', true, 'acao_id', null, 'item', public.guia_fila_abordagem(dias_, lugar_) -> 'itens' -> 0);
+  end if;
+
+  update public.guia_abordagens set
+      status = novo_status, proximo_contato = novo_proximo, nota = nova_nota, ultimo_contato_em = novo_contato,
+      atualizado_por = auth.uid(), atualizado_em = now()
+    where lugar_id = lugar_;
+
+  insert into public.guia_abordagem_acoes (lugar_id, tipo, de_status, para_status, texto, proximo_contato, dados, por)
+  values (lugar_, acao_, a.status, case when novo_status is distinct from a.status then novo_status end,
+          case when acao_ = 'nota' then nova_nota when acao_ = any (canais) then t end,
+          novo_proximo, d || jsonb_build_object('antes', antes), auth.uid())
+  returning id into id_;
+
+  return jsonb_build_object('ok', true, 'acao_id', id_, 'item', public.guia_fila_abordagem(dias_, lugar_) -> 'itens' -> 0);
+end $$;
+revoke execute on function public.guia_abordagem_registrar(uuid, text, text, text, date, jsonb, integer) from public, anon;
+grant execute on function public.guia_abordagem_registrar(uuid, text, text, text, date, jsonb, integer) to authenticated;
+
+-- ---- desfazer a última ação de um salão --------------------------------------------------------
+-- Volta o registro ao estado de antes (guardado na própria ação) e apaga a ação.
+-- Só a última de cada salão: desfazer uma do meio deixaria o histórico mentindo.
+create or replace function public.guia_abordagem_desfazer(acao_ bigint, dias_ integer default 30)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare
+  x public.guia_abordagem_acoes;
+  antes jsonb;
+begin
+  if not public.eh_plataforma() then raise exception 'só a plataforma desfaz a abordagem'; end if;
+  select * into x from public.guia_abordagem_acoes where id = acao_;
+  if not found then raise exception 'essa ação não existe mais'; end if;
+  if exists (select 1 from public.guia_abordagem_acoes h where h.lugar_id = x.lugar_id and (h.em, h.id) > (x.em, x.id)) then
+    raise exception 'só dá para desfazer a última ação deste salão';
+  end if;
+  antes := x.dados -> 'antes';
+  if antes is null then raise exception 'essa ação não guarda o estado de antes'; end if;
+  perform 1 from public.guia_abordagens where lugar_id = x.lugar_id for update;
+  if coalesce((antes ->> 'novo')::boolean, false) and not exists (select 1 from public.guia_abordagem_acoes h where h.lugar_id = x.lugar_id and h.id <> x.id) then
+    delete from public.guia_abordagens where lugar_id = x.lugar_id;
+  else
+    update public.guia_abordagens set
+        status = coalesce(antes ->> 'status', 'a_abordar'),
+        proximo_contato = (antes ->> 'proximo_contato')::date,
+        nota = antes ->> 'nota',
+        ultimo_contato_em = (antes ->> 'ultimo_contato_em')::timestamptz,
+        atualizado_por = auth.uid(), atualizado_em = now()
+      where lugar_id = x.lugar_id;
+  end if;
+  delete from public.guia_abordagem_acoes where id = x.id;
+  return jsonb_build_object('ok', true, 'lugar_id', x.lugar_id, 'item', public.guia_fila_abordagem(dias_, x.lugar_id) -> 'itens' -> 0);
+end $$;
+revoke execute on function public.guia_abordagem_desfazer(bigint, integer) from public, anon;
+grant execute on function public.guia_abordagem_desfazer(bigint, integer) to authenticated;
+
+-- ---- o histórico de um salão ------------------------------------------------------------------
+create or replace function public.guia_abordagem_historico(lugar_ uuid)
+returns jsonb language plpgsql stable security definer set search_path = public as $$
+begin
+  if not public.eh_plataforma() then raise exception 'só a plataforma vê o histórico'; end if;
+  return coalesce((
+    select jsonb_agg(jsonb_build_object(
+        'id', h.id, 'tipo', h.tipo, 'de_status', h.de_status, 'para_status', h.para_status, 'texto', h.texto,
+        'proximo_contato', h.proximo_contato, 'dados', h.dados - 'antes', 'em', h.em,
+        'por_nome', (select coalesce(nullif(btrim(pr.full_name), ''), split_part(us.email, '@', 1))
+                       from auth.users us left join public.profiles pr on pr.id = us.id where us.id = h.por))
+      order by h.em desc, h.id desc)
+      from (select * from public.guia_abordagem_acoes where lugar_id = lugar_ order by em desc, id desc limit 200) h
+  ), '[]'::jsonb);
+end $$;
+revoke execute on function public.guia_abordagem_historico(uuid) from public, anon;
+grant execute on function public.guia_abordagem_historico(uuid) to authenticated;
+
+do $$
+declare n int;
+begin
+  select count(*) into n from public.guia_abordagens;
+  raise notice '158: abordagem dos donos pronta (guia_abordagens, guia_abordagem_acoes, guia_fila_abordagem); % conversas registradas', n;
+end $$;
+
+insert into public.migracoes_aplicadas (arquivo) values ('158_guia_abordagem.sql') on conflict (arquivo) do nothing;
+
+-- =============================================================
+-- >>> 159_guia_reivindicar.sql
+-- =============================================================
+
+-- 159: "É o seu salão?" vira uma reivindicação simples (3.12).
+--
+-- Decisão do dono do produto: por enquanto, a reivindicação só gera um
+-- aviso para a equipe na Plataforma e uma confirmação por e-mail para
+-- quem reivindicou. Sem código por WhatsApp, sem painel do dono.
+--
+-- Reaproveita o que a 153 já tinha:
+--   - guia_interesses (tipo 'sou_dono') guarda o pedido, agora com o
+--     e-mail (obrigatório), a ligação com o salão (dona, sócia, gerente,
+--     funcionária), o aceite de que a pessoa responde pelo salão e um
+--     status que a equipe muda: nova, em contato, confirmada, recusada;
+--   - guia_registrar_interesse() continua sendo a única porta do público.
+--     Os outros pedidos (quero marcar, corrigir, remover) seguem iguais;
+--     todos ganham o campo-armadilha contra robô (preenchido = finge que
+--     deu certo e não grava nada).
+--
+-- O aviso na Plataforma é o que já existia: a linha nova entra sem
+-- atendimento, então aparece no número "interesses novos" do topo do Guia
+-- e na aba Interesses; e a reivindicação entra também na "Atividade
+-- recente" da Visão Geral (plataforma_atividade).
+-- A confirmação vai pela fila de e-mail (email_outbox, 054), com a moldura
+-- de sempre (email_layout, 058); o relógio (mimo-emails) e a função
+-- enviar-email mandam pelo Resend, sem segredo novo.
+--
+-- Proteções: e-mail validado; o mesmo e-mail no mesmo salão conta uma vez
+-- por dia (sem e-mail repetido); um e-mail reivindica no máximo 3 vezes
+-- por dia; um salão recebe no máximo 10 reivindicações por dia; uma rede
+-- (código do dia do IP, que não identifica ninguém e não junta com as
+-- métricas da 156) no máximo 5; e 300 por dia no total. O público nunca lê
+-- guia_interesses nem email_outbox (RLS); a função só devolve ok/motivo,
+-- nunca o e-mail.
+-- Idempotente.
+
+-- ---- os dados novos do pedido ------------------------------------------------------------
+alter table public.guia_interesses add column if not exists email text;
+alter table public.guia_interesses add column if not exists ligacao text;
+alter table public.guia_interesses add column if not exists aceite_em timestamptz;
+alter table public.guia_interesses add column if not exists status text;
+alter table public.guia_interesses add column if not exists status_em timestamptz;
+alter table public.guia_interesses add column if not exists status_por uuid references auth.users (id) on delete set null;
+alter table public.guia_interesses add column if not exists email_id uuid references public.email_outbox (id) on delete set null;
+alter table public.guia_interesses add column if not exists rede text;   -- código do dia só do IP; só serve para o limite do dia
+
+comment on column public.guia_interesses.email is 'Reivindicação (159): e-mail de quem pediu. Só a Plataforma vê; nunca vai para o site.';
+comment on column public.guia_interesses.ligacao is 'Reivindicação (159): dona, socia, gerente ou funcionaria.';
+comment on column public.guia_interesses.aceite_em is 'Reivindicação (159): quando a pessoa declarou que responde pelo salão.';
+comment on column public.guia_interesses.status is 'Reivindicação (159): nova, em_contato, confirmada, recusada. A equipe muda na aba Interesses.';
+comment on column public.guia_interesses.email_id is 'Reivindicação (159): o e-mail de confirmação na fila (email_outbox).';
+comment on column public.guia_interesses.rede is 'Código do dia do IP (sal do dia, 156); não identifica ninguém e não junta com site_eventos.';
+
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'guia_interesses_ligacao_ok') then
+    alter table public.guia_interesses add constraint guia_interesses_ligacao_ok
+      check (ligacao is null or ligacao in ('dona', 'socia', 'gerente', 'funcionaria'));
+  end if;
+  if not exists (select 1 from pg_constraint where conname = 'guia_interesses_status_ok') then
+    alter table public.guia_interesses add constraint guia_interesses_status_ok
+      check (status is null or status in ('nova', 'em_contato', 'confirmada', 'recusada'));
+  end if;
+end $$;
+
+-- as reivindicações de antes (só nome e WhatsApp): abertas viram nova; atendidas, em contato
+update public.guia_interesses set status = case when atendido_em is null then 'nova' else 'em_contato' end
+ where tipo = 'sou_dono' and status is null;
+
+create index if not exists guia_interesses_email on public.guia_interesses (email, criado_em) where email is not null;
+create index if not exists guia_interesses_tipo on public.guia_interesses (tipo, criado_em);
+create index if not exists guia_interesses_rede on public.guia_interesses (rede, criado_em) where rede is not null;
+
+-- quem mexe continua sendo só a Plataforma (as policies e grants da 153 valem para as colunas novas)
+alter table public.guia_interesses enable row level security;
+revoke all on public.guia_interesses from anon;
+
+-- ---- status e "atendido" andam juntos ------------------------------------------------------
+-- "interesses novos" (topo do Guia) conta o que está sem atendido_em. Para a reivindicação:
+-- nova = ninguém pegou ainda; em contato, confirmada ou recusada = alguém pegou.
+-- A tela manda os dois campos já certos; o gatilho garante para quem mexer por fora
+-- (e para o "Marcar atendido"/"Reabrir" da tela antiga, que só mexe em atendido_em).
+create or replace function public.guia_interesses_status()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if new.status is distinct from old.status then
+    new.status_em := now();
+    new.status_por := auth.uid();
+    if new.status = 'nova' then
+      new.atendido_em := null; new.atendido_por := null;
+    elsif new.status is not null then
+      new.atendido_em := coalesce(new.atendido_em, now());
+      new.atendido_por := coalesce(new.atendido_por, auth.uid());
+    end if;
+  elsif new.status is not null and new.atendido_em is distinct from old.atendido_em then
+    if new.atendido_em is null then new.status := 'nova';
+    elsif new.status = 'nova' then new.status := 'em_contato';
+    end if;
+    if new.status is distinct from old.status then new.status_em := now(); new.status_por := auth.uid(); end if;
+  end if;
+  return new;
+end $$;
+revoke execute on function public.guia_interesses_status() from public, anon, authenticated;
+drop trigger if exists guia_interesses_status on public.guia_interesses;
+create trigger guia_interesses_status before update on public.guia_interesses
+  for each row execute function public.guia_interesses_status();
+
+-- ---- a ligação, como se escreve ----------------------------------------------------------
+create or replace function public.guia_ligacao_rotulo(l text)
+returns text language sql immutable as $$
+  select case l when 'dona' then 'dona' when 'socia' then 'sócia' when 'gerente' then 'gerente' when 'funcionaria' then 'funcionária' end
+$$;
+
+-- ---- o e-mail de confirmação --------------------------------------------------------------
+-- Simples e honesto: recebemos, em quantos dias úteis a gente fala com você, o que acontece
+-- depois e como pedir para corrigir ou remover a página. prazo: dias úteis (a tela mostra o
+-- mesmo número, que a função guia_registrar_interesse devolve).
+create or replace function public.email_reivindicacao(nome text, salao text, ligacao text, link text, prazo integer)
+returns table (assunto text, html text, texto text)
+language plpgsql immutable as $$
+declare
+  primeiro text := nullif(split_part(btrim(coalesce(nome, '')), ' ', 1), '');
+  s text := coalesce(nullif(btrim(salao), ''), 'o salão');
+  lig text := public.guia_ligacao_rotulo(ligacao);
+  dias text := prazo || case when prazo = 1 then ' dia útil' else ' dias úteis' end;
+  p1 text; passos text[]; p3 text; rodape text;
+  par text := '<p style="font-size:15px;line-height:1.55;margin:0 0 14px;color:#3d3d44">';
+begin
+  assunto := 'Recebemos seu pedido sobre ' || s;
+  p1 := 'Recebemos o seu pedido sobre a página de ' || s || ' no guia de salões da MIMO'
+        || coalesce(': você nos contou que é ' || lig || ' do salão e responde por ele', '') || '.';
+  passos := array[
+    'Em até ' || dias || ', alguém da equipe da MIMO fala com você, por este e-mail ou pelo WhatsApp, se você deixou, para confirmar que você responde pelo salão.',
+    'Confirmado, a gente anota você como responsável pela página. Daí em diante, o que você pedir sobre ela (corrigir horário, telefone, serviços ou tirar do ar) é atendido sem precisar provar de novo.',
+    'Enquanto isso, a página continua no ar do jeito que está. Nada muda nela sem a gente falar com você.'];
+  p3 := 'Viu algum dado errado ou prefere tirar a página do ar? É só responder este e-mail ou escrever para contato@mimo.com.vc contando o que mudou. No fim da própria página também dá para pedir a correção ou a remoção.';
+  rodape := 'Você recebe este e-mail porque alguém usou este endereço no "É o seu salão?" da página de ' || s
+            || ' no guia da MIMO. Se não foi você, pode ignorar este e-mail: nada muda na página.';
+
+  texto := coalesce(primeiro || E',\n\n', '') || p1
+           || E'\n\nO que acontece agora:\n1. ' || passos[1] || E'\n2. ' || passos[2] || E'\n3. ' || passos[3]
+           || E'\n\n' || p3
+           || coalesce(E'\n\nA página: ' || link, '')
+           || E'\n\n' || rodape
+           || E'\n\nMIMO — beleza na palma da mão';
+  html := public.email_layout(
+    public.escapar_html(primeiro),
+    '<p style="font-size:17px;font-weight:700;margin:0 0 10px">Recebemos seu pedido</p>'
+    || par || public.escapar_html(p1) || '</p>'
+    || '<p style="font-size:15px;font-weight:700;margin:18px 0 8px;color:#1f2026">O que acontece agora</p>'
+    || '<ol style="font-size:15px;line-height:1.55;margin:0 0 18px;padding-left:20px;color:#3d3d44">'
+    || '<li style="margin-bottom:8px">' || public.escapar_html(passos[1]) || '</li>'
+    || '<li style="margin-bottom:8px">' || public.escapar_html(passos[2]) || '</li>'
+    || '<li>' || public.escapar_html(passos[3]) || '</li></ol>'
+    || par || public.escapar_html(p3) || '</p>'
+    || '<div style="height:10px"></div>',
+    case when link is not null then 'Ver a página de ' || public.escapar_html(s) end,
+    public.escapar_html(link),
+    public.escapar_html(rodape));
+  return next;
+end $$;
+revoke execute on function public.email_reivindicacao(text, text, text, text, integer) from public, anon, authenticated;
+
+-- ---- a porta do público -------------------------------------------------------------------
+-- A assinatura cresceu (e-mail, ligação, aceite, armadilha): a de 5 parâmetros sai para o
+-- PostgREST não ficar com duas candidatas. Quem chama com os 5 de antes continua funcionando.
+drop function if exists public.guia_registrar_interesse(uuid, text, text, text, text);
+
+create or replace function public.guia_registrar_interesse(
+  lugar_ uuid,
+  tipo_ text,
+  nome_ text default null,
+  contato_ text default null,
+  mensagem_ text default null,
+  email_ text default null,
+  ligacao_ text default null,
+  aceite_ boolean default false,
+  armadilha_ text default null
+) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare
+  n text := nullif(left(btrim(coalesce(nome_, '')), 80), '');
+  k text := nullif(left(btrim(coalesce(contato_, '')), 120), '');
+  m text := nullif(left(btrim(coalesce(mensagem_, '')), 600), '');
+  e text := nullif(lower(btrim(coalesce(email_, ''))), '');
+  lig text := nullif(lower(btrim(coalesce(ligacao_, ''))), '');
+  prazo integer := 3;                     -- dias úteis para a equipe falar com quem reivindicou
+  l public.guia_lugares;
+  cab jsonb;
+  ip text;
+  rede_ text;
+  hoje date := (now() at time zone 'America/Sao_Paulo')::date;
+  sal_ text;
+  novo uuid;
+  correio record;
+  correio_id uuid;
+begin
+  -- campo-armadilha: gente não vê, robô preenche. Finge que deu certo e não grava nada.
+  if nullif(btrim(coalesce(armadilha_, '')), '') is not null then
+    return jsonb_build_object('ok', true);
+  end if;
+  if tipo_ is null or tipo_ not in ('quero_marcar', 'sou_dono', 'corrigir', 'remover') then
+    return jsonb_build_object('ok', false, 'motivo', 'pedido desconhecido');
+  end if;
+  select * into l from public.guia_lugares where id = lugar_ and status = 'publicado';
+  if not found then
+    return jsonb_build_object('ok', false, 'motivo', 'página não encontrada');
+  end if;
+
+  -- ---- os outros pedidos: como na 153 ----
+  if tipo_ <> 'sou_dono' then
+    if tipo_ <> 'quero_marcar' and k is null then
+      return jsonb_build_object('ok', false, 'motivo', 'deixe um WhatsApp ou e-mail para a gente responder');
+    end if;
+    -- freio para robô: o mesmo contato no mesmo pedido, 3 por dia; a mesma página, 200 por dia
+    if k is not null and (select count(*) from public.guia_interesses where lugar_id = lugar_ and tipo = tipo_ and contato = k and criado_em > now() - interval '1 day') >= 3 then
+      return jsonb_build_object('ok', true, 'repetido', true);
+    end if;
+    if (select count(*) from public.guia_interesses where lugar_id = lugar_ and criado_em > now() - interval '1 day') >= 200 then
+      return jsonb_build_object('ok', false, 'motivo', 'muitos pedidos hoje; tente amanhã');
+    end if;
+    insert into public.guia_interesses (lugar_id, tipo, nome, contato, mensagem) values (lugar_, tipo_, n, k, m);
+    return jsonb_build_object('ok', true);
+  end if;
+
+  -- ---- a reivindicação ----
+  if n is null or length(n) < 2 then
+    return jsonb_build_object('ok', false, 'motivo', 'conte seu nome para a gente saber com quem falar');
+  end if;
+  if e is null or length(e) > 120 or e !~ '^[a-z0-9._%+''-]+@[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$' then
+    return jsonb_build_object('ok', false, 'motivo', 'confira o e-mail: é por ele que a confirmação chega');
+  end if;
+  if k is not null and length(regexp_replace(k, '\D', '', 'g')) not between 10 and 13 then
+    return jsonb_build_object('ok', false, 'motivo', 'confira o WhatsApp: DDD e número, como (13) 99999-9999');
+  end if;
+  if lig is null or lig not in ('dona', 'socia', 'gerente', 'funcionaria') then
+    return jsonb_build_object('ok', false, 'motivo', 'conte qual é a sua ligação com o salão');
+  end if;
+  if not coalesce(aceite_, false) then
+    return jsonb_build_object('ok', false, 'motivo', 'confirme que você responde pelo salão');
+  end if;
+
+  -- o mesmo e-mail no mesmo salão em 24 h conta uma vez (e não manda outro e-mail)
+  if exists (select 1 from public.guia_interesses where lugar_id = lugar_ and tipo = 'sou_dono' and email = e and criado_em > now() - interval '1 day') then
+    return jsonb_build_object('ok', true, 'repetido', true, 'prazo', prazo);
+  end if;
+  if (select count(*) from public.guia_interesses where tipo = 'sou_dono' and email = e and criado_em > now() - interval '1 day') >= 3 then
+    return jsonb_build_object('ok', false, 'motivo', 'muitos pedidos com este e-mail hoje; tente amanhã ou escreva para contato@mimo.com.vc');
+  end if;
+  if (select count(*) from public.guia_interesses where lugar_id = lugar_ and tipo = 'sou_dono' and criado_em > now() - interval '1 day') >= 10
+     or (select count(*) from public.guia_interesses where lugar_id = lugar_ and criado_em > now() - interval '1 day') >= 200
+     or (select count(*) from public.guia_interesses where tipo = 'sou_dono' and criado_em > now() - interval '1 day') >= 300 then
+    return jsonb_build_object('ok', false, 'motivo', 'muitos pedidos hoje; tente amanhã ou escreva para contato@mimo.com.vc');
+  end if;
+
+  -- a rede: o IP com o sal do dia (156) e um rótulo próprio, para não bater com site_eventos.rede
+  begin
+    begin cab := current_setting('request.headers', true)::jsonb; exception when others then cab := null; end;
+    ip := coalesce(nullif(cab ->> 'cf-connecting-ip', ''), nullif(cab ->> 'x-real-ip', ''), nullif(btrim(split_part(coalesce(cab ->> 'x-forwarded-for', ''), ',', 1)), ''));
+    if ip is not null then
+      insert into public.site_sal (dia) values (hoje) on conflict (dia) do nothing;
+      if found then delete from public.site_sal where dia < hoje; end if;
+      select sal into sal_ from public.site_sal where dia = hoje;
+      rede_ := left(encode(sha256(convert_to(coalesce(sal_, '') || '|reivindicar|' || ip, 'UTF8')), 'hex'), 16);
+    end if;
+  exception when others then rede_ := null;
+  end;
+  if rede_ is not null and (select count(*) from public.guia_interesses where rede = rede_ and tipo = 'sou_dono' and criado_em > now() - interval '1 day') >= 5 then
+    return jsonb_build_object('ok', false, 'motivo', 'muitos pedidos hoje; tente amanhã ou escreva para contato@mimo.com.vc');
+  end if;
+
+  insert into public.guia_interesses (lugar_id, tipo, nome, contato, mensagem, email, ligacao, aceite_em, status, rede)
+  values (lugar_, 'sou_dono', n, k, m, e, lig, now(), 'nova', rede_)
+  returning id into novo;
+
+  -- a confirmação na fila; se der errado, o pedido fica (a equipe vê que a confirmação não saiu)
+  begin
+    select * into correio from public.email_reivindicacao(n, l.nome, lig,
+      public.app_base() || '/saloes/' || l.cidade_slug || '/' || l.slug, prazo);
+    correio_id := public.enfileirar_email(e, correio.assunto, correio.html, 'guia_reivindicacao', correio.texto, n, null);
+    if correio_id is not null then
+      update public.guia_interesses set email_id = correio_id where id = novo;
+    end if;
+  exception when others then
+    raise notice 'confirmação da reivindicação % não enfileirada: %', novo, sqlerrm;
+  end;
+  begin perform public.chutar_agora(); exception when others then null; end;
+
+  return jsonb_build_object('ok', true, 'prazo', prazo);
+end $$;
+revoke execute on function public.guia_registrar_interesse(uuid, text, text, text, text, text, text, boolean, text) from public;
+grant execute on function public.guia_registrar_interesse(uuid, text, text, text, text, text, text, boolean, text) to anon, authenticated;
+comment on function public.guia_registrar_interesse(uuid, text, text, text, text, text, text, boolean, text) is
+  'Guia (153, 159): os pedidos das páginas. sou_dono = reivindicação: nome, e-mail, ligação e aceite; manda a confirmação por e-mail. Devolve só ok/repetido/motivo/prazo.';
+
+-- ---- a Plataforma: como está a confirmação de cada reivindicação --------------------------
+-- { "<id do pedido>": { status, enviado_em, erro } }; a equipe vê se o e-mail saiu ou voltou.
+create or replace function public.guia_confirmacoes()
+returns jsonb language sql stable security definer set search_path = public as $$
+  select coalesce(jsonb_object_agg(i.id, jsonb_build_object('status', e.status, 'enviado_em', e.enviado_em, 'erro', left(e.erro, 200))), '{}'::jsonb)
+    from public.guia_interesses i join public.email_outbox e on e.id = i.email_id
+   where public.eh_plataforma() and i.tipo = 'sou_dono'
+$$;
+revoke execute on function public.guia_confirmacoes() from public, anon;
+grant execute on function public.guia_confirmacoes() to authenticated;
+
+-- ---- a Visão Geral: a reivindicação entra na "Atividade recente" --------------------------
+-- a mesma função da 056, com uma linha a mais (sem e-mail nem telefone; só a Plataforma lê)
+create or replace function public.plataforma_atividade(quantas integer default 20)
+returns table (tipo text, titulo text, detalhe text, quando timestamptz)
+language sql
+stable
+security definer set search_path = public
+as $$
+  select * from (
+    select 'salao'::text as tipo,
+           ('Novo ' || case when s.tipo = 'autonoma' then 'agenda autônoma' else 'salão' end)::text as titulo,
+           (s.name || case when s.city is not null then ' · ' || s.city else '' end)::text as detalhe,
+           s.created_at as quando
+    from public.salons s
+    union all
+    select 'profissional', 'Profissional criada', p.name || ' · ' || (select name from public.salons where id = p.salon_id), p.created_at
+    from public.professionals p
+    union all
+    select 'cliente', 'Nova conta', coalesce(pf.full_name, 'sem nome') || ' · ' || pf.role, pf.created_at
+    from public.profiles pf
+    union all
+    select 'vinculo', 'Cliente entrou na agenda',
+           coalesce((select full_name from public.profiles where id = v.client_id), 'cliente') || ' → '
+           || (select name from public.salons where id = v.salon_id) || ' · por ' || v.como, v.criado_em
+    from public.vinculos v
+    union all
+    select 'atendimento', 'Atendimento concluído',
+           coalesce(a.service_name, (select name from public.services where id = a.service_id), 'serviço') || ' · '
+           || coalesce((select full_name from public.profiles where id = a.client_id), a.guest_name, 'cliente')
+           || ' com ' || (select name from public.professionals where id = a.professional_id),
+           (a.date + a.end_time) at time zone 'America/Sao_Paulo'
+    from public.appointments a where a.status = 'concluido' and a.date >= (public.agora_local())::date - 30
+    union all
+    select 'salao', 'Reivindicação no guia',
+           gl.nome || ' · ' || coalesce(gi.nome, 'sem nome') || coalesce(' (' || public.guia_ligacao_rotulo(gi.ligacao) || ')', ''),
+           gi.criado_em
+    from public.guia_interesses gi join public.guia_lugares gl on gl.id = gi.lugar_id
+    where gi.tipo = 'sou_dono'
+  ) x
+  where public.eh_plataforma()
+  order by quando desc
+  limit greatest(1, least(coalesce(quantas, 20), 100));
+$$;
+revoke execute on function public.plataforma_atividade(integer) from public, anon;
+grant execute on function public.plataforma_atividade(integer) to authenticated;
+
+notify pgrst, 'reload schema';
+
+do $$
+declare n int;
+begin
+  select count(*) into n from public.guia_interesses where tipo = 'sou_dono';
+  raise notice '159: reivindicação pronta (e-mail de confirmação na fila, aviso no Guia e na Visão Geral); % reivindicações no banco', n;
+end $$;
+
+insert into public.migracoes_aplicadas (arquivo) values ('159_guia_reivindicar.sql') on conflict (arquivo) do nothing;
+
+-- =============================================================
+-- >>> 160_buscas_do_google.sql
+-- =============================================================
+
+-- 160: as buscas do Google (3.12): o que as pessoas buscaram no Google antes
+-- de chegar a cada página do guia de salões.
+--
+-- Os números vêm do Google Search Console (grátis): por dia, página, busca e
+-- aparelho, quantas vezes a página apareceu (impressões), quantas vezes
+-- clicaram, a taxa de clique (CTR) e a posição média. A MIMO guarda só o que
+-- o Search Console devolve, que já chega agregado: nada de pessoa, e as
+-- buscas raras o próprio Google esconde.
+--
+-- Quem enche a tabela é a Edge Function gsc-sincronizar, com a chave de
+-- serviço (pelo botão "Atualizar agora" da Plataforma ou pelo relógio da 052);
+-- quem lê é a Plataforma, por guia_buscas().
+--
+-- Para ligar (o passo a passo curto também aparece na tela):
+--   1. Google Cloud: um projeto com a "Google Search Console API" ativada e
+--      uma conta de serviço com chave JSON;
+--   2. Search Console: o e-mail da conta de serviço como usuário da
+--      propriedade (permissão restrita basta);
+--   3. supabase secrets set GSC_CONTA_SERVICO="$(cat chave.json)" GSC_PROPRIEDADE=sc-domain:mimo.com.vc
+--   4. ./supabase/publicar.sh e "Atualizar agora" na Plataforma.
+-- Para atualizar todo dia sozinho: o trecho comentado no fim deste arquivo.
+--
+-- O Google entrega os números com 2 a 3 dias de atraso e conta os dias no
+-- fuso do Pacífico; os períodos de guia_buscas() terminam no último dia que
+-- já chegou. O histórico fica guardado sem prazo (o Search Console só guarda
+-- 16 meses; aqui ele continua).
+-- Idempotente.
+
+-- ---- as buscas -------------------------------------------------------------------------------
+-- Uma linha por dia + página + busca + aparelho (o aparelho entra na chave
+-- porque o Google devolve cada um separado; somar os três dá o dia+página+busca).
+create table if not exists public.site_buscas (
+  dia date not null,                        -- o dia do Google (fuso do Pacífico)
+  pagina text not null,                     -- o caminho, sem domínio: '/saloes/itanhaem/studio-lirio'
+  consulta text not null,                   -- a busca, como o Google devolve ('manicure itanhaém')
+  aparelho text not null,                   -- celular | computador | tablet
+  cliques integer not null default 0,
+  impressoes integer not null default 0,
+  ctr double precision not null default 0,  -- cliques / impressões
+  posicao double precision not null default 0, -- posição média (1 = o primeiro resultado)
+  lote uuid,                                -- a sincronização que gravou a linha por último
+  atualizado_em timestamptz not null default now(),
+  constraint site_buscas_chave primary key (dia, pagina, consulta, aparelho),
+  constraint site_buscas_pagina_ok check (pagina ~ '^/saloes(/[a-z0-9_-]+)*$'),
+  constraint site_buscas_consulta_ok check (length(consulta) between 1 and 500),
+  constraint site_buscas_aparelho_ok check (aparelho in ('celular', 'computador', 'tablet')),
+  constraint site_buscas_numeros_ok check (cliques >= 0 and impressoes >= 0 and ctr >= 0 and posicao >= 0)
+);
+comment on table public.site_buscas is 'Buscas do Google (160): o que o Search Console devolve por dia, página, busca e aparelho. Só a Plataforma lê; a função gsc-sincronizar grava.';
+create index if not exists site_buscas_pagina on public.site_buscas (pagina, dia);
+
+-- cada vez que a função rodou (pela Plataforma ou pelo relógio): a tela mostra
+-- a última, para o erro do relógio não passar em silêncio
+create table if not exists public.site_buscas_execucoes (
+  id bigint generated always as identity primary key,
+  em timestamptz not null default now(),
+  origem text not null default 'plataforma',  -- plataforma | relogio
+  ok boolean not null,
+  de date,
+  ate date,
+  linhas integer not null default 0,
+  parcial boolean not null default false,     -- o tempo acabou antes de buscar tudo
+  erro text,
+  constraint site_buscas_execucoes_origem_ok check (origem in ('plataforma', 'relogio'))
+);
+comment on table public.site_buscas_execucoes is 'Buscas do Google (160): as últimas 200 sincronizações, com o erro quando deu errado.';
+
+alter table public.site_buscas enable row level security;
+alter table public.site_buscas_execucoes enable row level security;
+drop policy if exists site_buscas_plataforma on public.site_buscas;
+create policy site_buscas_plataforma on public.site_buscas for select to authenticated
+  using (public.eh_plataforma());
+drop policy if exists site_buscas_execucoes_plataforma on public.site_buscas_execucoes;
+create policy site_buscas_execucoes_plataforma on public.site_buscas_execucoes for select to authenticated
+  using (public.eh_plataforma());
+revoke all on public.site_buscas, public.site_buscas_execucoes from public, anon, authenticated;
+grant select on public.site_buscas, public.site_buscas_execucoes to authenticated;
+grant select, insert, update, delete on public.site_buscas, public.site_buscas_execucoes to service_role;
+
+-- ---- gravar (só a função, com a chave de serviço) ----------------------------------------------
+-- linhas: [{ dia, pagina, consulta, aparelho, cliques, impressoes, posicao }]
+-- A mesma chave repetida no lote é somada (posição pesada pelas impressões).
+-- dias_: os dias que o Google devolveu inteiros nesta sincronização (vai no
+-- último pedaço de cada janela); o que sobrou de uma sincronização antiga
+-- nesses dias sai, então o dia fica igual ao que o Google tem hoje. Dia que o
+-- Google não devolveu nunca é apagado.
+-- Chamar com lista vazia não grava nada: é assim que a função confere se quem
+-- a chamou tem a chave de serviço (o padrão de _shared/porteiro.ts).
+create or replace function public.site_buscas_gravar(lote_ uuid, linhas jsonb, dias_ date[] default null)
+returns integer
+language plpgsql security definer set search_path = public as $$
+declare
+  n integer := 0;
+begin
+  if lote_ is null then raise exception 'falta o lote'; end if;
+  if linhas is not null and jsonb_typeof(linhas) <> 'array' then raise exception 'linhas tem de ser uma lista'; end if;
+
+  insert into public.site_buscas as s (dia, pagina, consulta, aparelho, cliques, impressoes, ctr, posicao, lote, atualizado_em)
+  select x.dia, x.pagina, x.consulta, x.aparelho, sum(x.cliques), sum(x.impressoes),
+         case when sum(x.impressoes) > 0 then least(1, sum(x.cliques)::float8 / sum(x.impressoes)) else 0 end,
+         coalesce(sum(x.posicao * x.impressoes) / nullif(sum(x.impressoes), 0), avg(x.posicao), 0),
+         lote_, now()
+    from (
+      select r.dia,
+             lower(btrim(r.pagina)) as pagina,
+             left(btrim(regexp_replace(coalesce(r.consulta, ''), '[[:cntrl:][:space:]]+', ' ', 'g')), 500) as consulta,
+             r.aparelho,
+             greatest(coalesce(r.cliques, 0), 0) as cliques,
+             greatest(coalesce(r.impressoes, 0), 0) as impressoes,
+             greatest(coalesce(r.posicao, 0), 0) as posicao
+        from jsonb_to_recordset(coalesce(linhas, '[]'::jsonb))
+             as r(dia date, pagina text, consulta text, aparelho text, cliques integer, impressoes integer, posicao double precision)
+    ) x
+   where x.dia is not null
+     and x.pagina ~ '^/saloes(/[a-z0-9_-]+)*$'
+     and x.consulta <> ''
+     and x.aparelho in ('celular', 'computador', 'tablet')
+   group by x.dia, x.pagina, x.consulta, x.aparelho
+  on conflict (dia, pagina, consulta, aparelho) do update set
+    cliques = excluded.cliques,
+    impressoes = excluded.impressoes,
+    ctr = excluded.ctr,
+    posicao = excluded.posicao,
+    lote = excluded.lote,
+    atualizado_em = excluded.atualizado_em;
+  get diagnostics n = row_count;
+
+  if dias_ is not null and cardinality(dias_) > 0 then
+    delete from public.site_buscas where dia = any (dias_) and lote is distinct from lote_;
+  end if;
+  return n;
+end $$;
+revoke execute on function public.site_buscas_gravar(uuid, jsonb, date[]) from public, anon, authenticated;
+grant execute on function public.site_buscas_gravar(uuid, jsonb, date[]) to service_role;
+
+-- anota uma sincronização (deu certo ou não) e guarda só as 200 últimas
+create or replace function public.site_buscas_registrar(
+  origem_ text,
+  ok_ boolean,
+  de_ date default null,
+  ate_ date default null,
+  linhas_ integer default 0,
+  parcial_ boolean default false,
+  erro_ text default null
+) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  insert into public.site_buscas_execucoes (origem, ok, de, ate, linhas, parcial, erro)
+  values (case when origem_ = 'relogio' then 'relogio' else 'plataforma' end, coalesce(ok_, false), de_, ate_,
+          greatest(coalesce(linhas_, 0), 0), coalesce(parcial_, false), left(nullif(btrim(coalesce(erro_, '')), ''), 500));
+  delete from public.site_buscas_execucoes
+   where id < (select min(id) from (select id from public.site_buscas_execucoes order by id desc limit 200) x);
+end $$;
+revoke execute on function public.site_buscas_registrar(text, boolean, date, date, integer, boolean, text) from public, anon, authenticated;
+grant execute on function public.site_buscas_registrar(text, boolean, date, date, integer, boolean, text) to service_role;
+
+-- ---- o painel da Plataforma ----------------------------------------------------------------------
+-- dias: 7, 30, 90... (até 480). O período termina no último dia que o Google
+-- já entregou (ultimo_dia), não hoje: o atraso de 2 a 3 dias não vira queda.
+-- Devolve:
+--   totais e totais_antes (a mesma janela logo antes; null enquanto o
+--     histórico não cobre a janela anterior inteira): cliques, impressões,
+--     CTR (cliques / impressões), posição média pesada pelas impressões,
+--     quantas buscas e quantas páginas;
+--   por_dia, aparelhos;
+--   consultas: as 100 buscas que mais trouxeram gente (cliques, depois impressões);
+--   paginas: as 200 páginas com mais busca, cada uma com as 10 buscas dela;
+--   oportunidades: página + busca com pelo menos "limiar" impressões no período e
+--     'subir'        posição média entre 4 e 15 (já aparece; subir umas posições
+--                    costuma trazer muito mais clique), ou
+--     'pouco_clique' no top 3 e CTR abaixo de 5% (aparece bem e pouca gente clica:
+--                    o título e a descrição da página podem chamar mais);
+--   execucao: a última sincronização (e ultima_ok, a última que deu certo).
+-- Os totais somam as linhas por busca: as buscas que o Google esconde por
+-- serem raras ficam de fora, então podem dar um pouco menos que o painel do
+-- Search Console.
+create or replace function public.guia_buscas(dias integer default 30)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare
+  ndias integer := greatest(1, least(coalesce(dias, 30), 480));
+  primeiro date;
+  ultimo date;
+  ate_ date;
+  de_ date;
+  antes_ date;
+  limiar integer := greatest(5, ceil(greatest(1, least(coalesce(dias, 30), 480)) / 3.0)::integer);
+  r jsonb;
+begin
+  if not public.eh_plataforma() then raise exception 'só a plataforma vê as buscas do Google'; end if;
+
+  select min(b.dia), max(b.dia) into primeiro, ultimo from public.site_buscas b;
+  ate_ := coalesce(ultimo, (now() at time zone 'America/Sao_Paulo')::date - 3);
+  de_ := ate_ - (ndias - 1);
+  antes_ := de_ - ndias;
+
+  with b as (
+    select * from public.site_buscas where dia >= antes_ and dia <= ate_
+  ),
+  agora_ as (select * from b where dia >= de_),
+  -- o período anterior só conta quando o histórico cobre a janela inteira
+  -- (logo depois de ligar, compararia com dias vazios e daria +900%)
+  antes_b as (select * from b where dia < de_ and primeiro <= antes_),
+  -- página + busca no período: a base da lista por página e das oportunidades
+  pq as (
+    select pagina, consulta, sum(cliques)::integer as cliques, sum(impressoes)::integer as impressoes,
+           sum(posicao * impressoes) / nullif(sum(impressoes), 0) as posicao
+      from agora_ group by pagina, consulta
+  ),
+  por_pagina as (
+    select pagina, sum(cliques)::integer as cliques, sum(impressoes)::integer as impressoes,
+           sum(posicao * impressoes) / nullif(sum(impressoes), 0) as posicao,
+           count(distinct consulta) as n_consultas
+      from agora_ group by pagina
+      order by sum(cliques) desc, sum(impressoes) desc, pagina
+      limit 200
+  ),
+  oport as (
+    select q.*, case when q.posicao < 4 then 'pouco_clique' else 'subir' end as motivo
+      from pq q
+     where q.impressoes >= limiar
+       and ((q.posicao >= 4 and q.posicao <= 15)
+            or (q.posicao < 4 and q.cliques::numeric / nullif(q.impressoes, 0) < 0.05))
+     order by q.impressoes desc, q.posicao, q.consulta
+     limit 30
+  ),
+  -- o nome de cada página: o salão (pelo caminho) e a cidade
+  nomes as (
+    select p.pagina, l.id as lugar_id, l.nome, l.categoria, l.bairro, l.status,
+           (select l2.cidade from public.guia_lugares l2 where l2.cidade_slug = split_part(p.pagina, '/', 3) limit 1) as cidade
+      from (select pagina from por_pagina union select pagina from oport) p
+      left join public.guia_lugares l
+        on l.cidade_slug = split_part(p.pagina, '/', 3) and l.slug = split_part(p.pagina, '/', 4) and split_part(p.pagina, '/', 5) = ''
+  )
+  select jsonb_build_object(
+    'dias', ndias,
+    'de', de_,
+    'ate', ate_,
+    'tem_dados', ultimo is not null,
+    'primeiro_dia', primeiro,
+    'ultimo_dia', ultimo,
+    'limiar', limiar,
+    'atualizado_em', (select max(atualizado_em) from public.site_buscas),
+    'execucao', (select to_jsonb(e) - 'id' from public.site_buscas_execucoes e order by e.id desc limit 1),
+    'ultima_ok', (select max(em) from public.site_buscas_execucoes where ok),
+    'totais', (
+      select jsonb_build_object(
+        'cliques', coalesce(sum(cliques), 0), 'impressoes', coalesce(sum(impressoes), 0),
+        'ctr', round(coalesce(sum(cliques)::numeric / nullif(sum(impressoes), 0), 0), 4),
+        'posicao', round((sum(posicao * impressoes) / nullif(sum(impressoes), 0))::numeric, 1),
+        'consultas', count(distinct consulta), 'paginas', count(distinct pagina))
+        from agora_),
+    'totais_antes', (
+      select case when primeiro is not null and primeiro <= antes_ then jsonb_build_object(
+        'cliques', coalesce(sum(cliques), 0), 'impressoes', coalesce(sum(impressoes), 0),
+        'ctr', round(coalesce(sum(cliques)::numeric / nullif(sum(impressoes), 0), 0), 4),
+        'posicao', round((sum(posicao * impressoes) / nullif(sum(impressoes), 0))::numeric, 1),
+        'consultas', count(distinct consulta), 'paginas', count(distinct pagina)) end
+        from antes_b),
+    'por_dia', (
+      select jsonb_agg(jsonb_build_object('dia', d.dia, 'cliques', coalesce(x.c, 0), 'impressoes', coalesce(x.i, 0),
+                                          'posicao', round(x.p::numeric, 1)) order by d.dia)
+        from (select g::date as dia from generate_series(de_, ate_, interval '1 day') g) d
+        left join (select dia, sum(cliques) as c, sum(impressoes) as i, sum(posicao * impressoes) / nullif(sum(impressoes), 0) as p
+                     from agora_ group by dia) x using (dia)
+    ),
+    'aparelhos', (
+      select coalesce(jsonb_agg(jsonb_build_object('aparelho', aparelho, 'cliques', c, 'impressoes', i) order by i desc), '[]'::jsonb)
+        from (select aparelho, sum(cliques) as c, sum(impressoes) as i from agora_ group by aparelho) x
+    ),
+    'consultas', (
+      select coalesce(jsonb_agg(jsonb_build_object(
+               'consulta', consulta, 'cliques', c, 'impressoes', i,
+               'ctr', round(coalesce(c::numeric / nullif(i, 0), 0), 4), 'posicao', round(p::numeric, 1), 'paginas', np)
+             order by c desc, i desc, consulta), '[]'::jsonb)
+        from (select consulta, sum(cliques) as c, sum(impressoes) as i,
+                     sum(posicao * impressoes) / nullif(sum(impressoes), 0) as p, count(distinct pagina) as np
+                from agora_ group by consulta
+                order by sum(cliques) desc, sum(impressoes) desc, consulta
+                limit 100) x
+    ),
+    'paginas', (
+      select coalesce(jsonb_agg(jsonb_build_object(
+               'pagina', p.pagina, 'lugar_id', n.lugar_id, 'nome', n.nome, 'categoria', n.categoria, 'bairro', n.bairro,
+               'status', n.status, 'cidade', n.cidade,
+               'cliques', p.cliques, 'impressoes', p.impressoes,
+               'ctr', round(coalesce(p.cliques::numeric / nullif(p.impressoes, 0), 0), 4),
+               'posicao', round(p.posicao::numeric, 1), 'n_consultas', p.n_consultas,
+               'consultas', (
+                 select coalesce(jsonb_agg(jsonb_build_object(
+                          'consulta', q.consulta, 'cliques', q.cliques, 'impressoes', q.impressoes,
+                          'ctr', round(coalesce(q.cliques::numeric / nullif(q.impressoes, 0), 0), 4), 'posicao', round(q.posicao::numeric, 1))
+                        order by q.cliques desc, q.impressoes desc, q.consulta), '[]'::jsonb)
+                   from (select * from pq where pq.pagina = p.pagina order by cliques desc, impressoes desc, consulta limit 10) q))
+             order by p.cliques desc, p.impressoes desc, p.pagina), '[]'::jsonb)
+        from por_pagina p left join nomes n using (pagina)
+    ),
+    'oportunidades', (
+      select coalesce(jsonb_agg(jsonb_build_object(
+               'pagina', o.pagina, 'nome', n.nome, 'cidade', n.cidade, 'consulta', o.consulta, 'motivo', o.motivo,
+               'cliques', o.cliques, 'impressoes', o.impressoes,
+               'ctr', round(coalesce(o.cliques::numeric / nullif(o.impressoes, 0), 0), 4), 'posicao', round(o.posicao::numeric, 1))
+             order by o.impressoes desc, o.posicao, o.consulta), '[]'::jsonb)
+        from oport o left join nomes n using (pagina)
+    )
+  ) into r;
+  return r;
+end $$;
+revoke execute on function public.guia_buscas(integer) from public, anon;
+grant execute on function public.guia_buscas(integer) to authenticated;
+
+-- ---- o relógio: chamar a função todo dia -------------------------------------------------------
+-- Como chutar_fila() da 052: lê do Vault a URL do projeto e a chave de
+-- serviço (gravadas por ligar_relogio) e faz um POST assíncrono (pg_net) na
+-- gsc-sincronizar. Criar a função não liga nada: o agendamento está comentado
+-- logo abaixo. Onde não há Vault nem pg_net (o teste local), responde o motivo.
+create or replace function public.chutar_gsc()
+returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare
+  url text;
+  chave text;
+  pedido bigint;
+begin
+  begin
+    execute $q$ select decrypted_secret from vault.decrypted_secrets where name = 'mimo_url' $q$ into url;
+    execute $q$ select decrypted_secret from vault.decrypted_secrets where name = 'mimo_service_role' $q$ into chave;
+  exception when others then
+    return jsonb_build_object('ok', false, 'motivo', 'Vault indisponível: ' || sqlerrm);
+  end;
+  if url is null or chave is null then
+    return jsonb_build_object('ok', false, 'motivo', 'sem credenciais: rode antes select public.ligar_relogio(url, chave) (migração 052)');
+  end if;
+  begin
+    execute format(
+      $q$ select net.http_post(
+            url := %L,
+            headers := %L::jsonb,
+            body := '{"origem":"relogio"}'::jsonb,
+            timeout_milliseconds := 150000) $q$,
+      rtrim(url, '/') || '/functions/v1/gsc-sincronizar',
+      jsonb_build_object('Content-Type', 'application/json', 'Authorization', 'Bearer ' || chave)::text)
+    into pedido;
+  exception when others then
+    return jsonb_build_object('ok', false, 'motivo', 'pg_net indisponível: ' || sqlerrm);
+  end;
+  return jsonb_build_object('ok', true, 'pedido', pedido);
+end $$;
+revoke execute on function public.chutar_gsc() from public, anon, authenticated;
+
+-- Para atualizar sozinho todo dia (depois de: relógio da 052 ligado, segredos
+-- GSC_* gravados e a função publicada), rode UMA vez no SQL Editor:
+--
+--   select cron.schedule('mimo-gsc', '23 9 * * *', 'select public.chutar_gsc()');
+--     -- todo dia às 06:23 de Brasília (09:23 UTC); nome repetido substitui, não duplica
+--
+-- Conferir:  select jobname, schedule, active from cron.job where jobname = 'mimo-gsc';
+--            select * from public.site_buscas_execucoes order by id desc limit 5;
+-- Desligar:  select cron.unschedule('mimo-gsc');
+
+do $$
+declare n int;
+begin
+  select count(*) into n from public.site_buscas;
+  raise notice '160: buscas do Google prontas (% linhas guardadas)', n;
+end $$;
+
+insert into public.migracoes_aplicadas (arquivo) values ('160_buscas_do_google.sql') on conflict (arquivo) do nothing;
+
+-- =============================================================
+-- >>> 161_desempenho_visual.sql
+-- =============================================================
+
+-- 161: a aba Desempenho do guia de cara nova (3.12): os números por dia
+-- que os gráficos e as tendências precisam.
+--
+-- Só troca guia_desempenho() (create or replace). Tudo o que a 156
+-- devolvia continua igual, no mesmo lugar (o painel do Revisar e o demo
+-- usam), e entra:
+--   - por_dia: além de visitas e contatos, as pessoas do dia (visitantes),
+--     quantas delas tentaram contato (contataram) e os pedidos "quero
+--     marcar" do dia (pedidos). É o que desenha o gráfico por dia (quem
+--     visitou, com quem tentou contato em destaque) e as tendências dos
+--     números do topo;
+--   - paginas: visitas_antes, as visitas da página no período anterior
+--     (para o destaque "em alta"); null enquanto não houver histórico do
+--     período anterior inteiro, como totais_antes;
+--   - interesses_antes: os pedidos do período anterior, pela mesma regra
+--     (a mesma janela, cortada na mesma hora, só com histórico completo).
+-- Nada muda no rastreio: sem cookie, sem IP, robô fora (ver a 156).
+-- Idempotente.
+
+create or replace function public.guia_desempenho(dias integer default 30, cidade_ text default '')
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare
+  ndias integer := greatest(1, least(coalesce(dias, 30), 400));
+  hoje date := (now() at time zone 'America/Sao_Paulo')::date;
+  de timestamptz;
+  ate timestamptz;
+  antes timestamptz;
+  corte timestamptz;
+  tem_antes boolean;
+  cid text := nullif(btrim(coalesce(cidade_, '')), '');
+  r jsonb;
+begin
+  if not public.eh_plataforma() then raise exception 'só a plataforma vê o desempenho'; end if;
+  -- a limpeza mora aqui: sem cron, o que passou de 400 dias some quando alguém olha
+  delete from public.site_eventos where em < now() - interval '400 days';
+
+  de := ((hoje - (ndias - 1))::timestamp) at time zone 'America/Sao_Paulo';
+  ate := ((hoje + 1)::timestamp) at time zone 'America/Sao_Paulo';
+  antes := de - make_interval(days => ndias);
+  -- o período anterior: a mesma janela, cortada na mesma hora de hoje (o dia de hoje ainda não acabou);
+  -- só vale quando os eventos já cobrem a janela inteira (logo depois de ligar, daria +900%)
+  corte := now() - make_interval(days => ndias);
+  tem_antes := coalesce((select min(em) from public.site_eventos) <= antes, false);
+
+  with ev as (
+    select e.*, (e.em at time zone 'America/Sao_Paulo')::date as dia, t.grupo
+      from public.site_eventos e join public.site_eventos_tipos t using (tipo)
+     where e.em >= antes and e.em < ate and (e.pagina = '/saloes' or e.pagina like '/saloes/%') and (cid is null or e.cidade_slug = cid)
+  ),
+  agora_ as (select * from ev where em >= de),
+  antes_ as (select * from ev where em < corte and tem_antes),
+  int_ as (
+    select i.lugar_id, i.tipo, count(*) as n
+      from public.guia_interesses i join public.guia_lugares l on l.id = i.lugar_id
+     where i.criado_em >= de and i.criado_em < ate and (cid is null or l.cidade_slug = cid)
+     group by 1, 2
+  ),
+  -- 161: os pedidos "quero marcar" de cada dia (para a tendência do número do topo)
+  int_dia as (
+    select (i.criado_em at time zone 'America/Sao_Paulo')::date as dia, count(*) as n
+      from public.guia_interesses i join public.guia_lugares l on l.id = i.lugar_id
+     where i.tipo = 'quero_marcar' and i.criado_em >= de and i.criado_em < ate and (cid is null or l.cidade_slug = cid)
+     group by 1
+  ),
+  -- 161: os pedidos do período anterior, pela mesma regra de totais_antes
+  int_antes as (
+    select i.tipo, count(*) as n
+      from public.guia_interesses i join public.guia_lugares l on l.id = i.lugar_id
+     where tem_antes and i.criado_em >= antes and i.criado_em < corte and (cid is null or l.cidade_slug = cid)
+     group by 1
+  ),
+  -- 161: as visitas de cada página no período anterior (o destaque "em alta")
+  antes_pag as (
+    select pagina, count(*) as visitas from antes_ where tipo = 'visita' group by pagina
+  ),
+  -- agregado uma vez só e juntado por página (subconsulta por página ficava páginas × eventos)
+  por_tipo as (
+    select pagina, jsonb_object_agg(tipo, n) as eventos
+      from (select pagina, tipo, count(*) as n from agora_ group by 1, 2) x
+     group by 1
+  ),
+  por_pagina as (
+    select g.*, t.eventos
+      from (select a.pagina, max(a.lugar_id::text)::uuid as lugar_id,
+                   count(*) filter (where a.tipo = 'visita') as visitas,
+                   count(distinct (a.dia, a.visitante)) filter (where a.tipo = 'visita') as visitantes,
+                   count(*) filter (where a.grupo = 'contato') as contatos,
+                   count(distinct (a.dia, a.visitante)) filter (where a.grupo = 'contato') as contataram
+              from agora_ a group by a.pagina) g
+      left join por_tipo t using (pagina)
+  ),
+  -- as páginas que tiveram evento, mais os salões no ar que não tiveram nenhum
+  paginas as (
+    select p.pagina, p.lugar_id, l.nome, l.slug, l.bairro, l.status, l.whatsapp, l.telefone, l.salon_id is not null as na_mimo,
+           coalesce(l.cidade_slug, split_part(trim(both '/' from p.pagina), '/', 2)) as cidade_slug,
+           -- nas páginas por bairro e por horário (157) a parte 3 é 'bairro'/'horario': a categoria, se houver, é a 5
+           coalesce(l.categoria, case when split_part(trim(both '/' from p.pagina), '/', 3) in ('bairro', 'horario')
+                                      then nullif(split_part(trim(both '/' from p.pagina), '/', 5), '')
+                                      else nullif(split_part(trim(both '/' from p.pagina), '/', 3), '') end) as categoria,
+           p.visitas, p.visitantes, p.contatos, p.contataram, coalesce(p.eventos, '{}'::jsonb) as eventos,
+           coalesce((select jsonb_object_agg(i.tipo, i.n) from int_ i where i.lugar_id = p.lugar_id), '{}'::jsonb) as interesses,
+           case when tem_antes then coalesce((select a.visitas from antes_pag a where a.pagina = p.pagina), 0) end as visitas_antes
+      from por_pagina p left join public.guia_lugares l on l.id = p.lugar_id
+    union all
+    select '/saloes/' || l.cidade_slug || '/' || l.slug, l.id, l.nome, l.slug, l.bairro, l.status, l.whatsapp, l.telefone, l.salon_id is not null,
+           l.cidade_slug, l.categoria, 0, 0, 0, 0, '{}'::jsonb,
+           coalesce((select jsonb_object_agg(i.tipo, i.n) from int_ i where i.lugar_id = l.id), '{}'::jsonb),
+           case when tem_antes then coalesce((select a.visitas from antes_pag a where a.pagina = '/saloes/' || l.cidade_slug || '/' || l.slug), 0) end
+      from public.guia_lugares l
+     where l.status = 'publicado' and (cid is null or l.cidade_slug = cid)
+       and not exists (select 1 from por_pagina p where p.lugar_id = l.id)
+  )
+  select jsonb_build_object(
+    'dias', ndias,
+    'de', (hoje - (ndias - 1)),
+    'ate', hoje,
+    'tipos', (select coalesce(jsonb_agg(jsonb_build_object('tipo', tipo, 'rotulo', rotulo, 'grupo', grupo) order by ordem, tipo), '[]'::jsonb) from public.site_eventos_tipos where ativo),
+    'totais', (select coalesce(jsonb_object_agg(tipo, c), '{}'::jsonb) from (select tipo, count(*) c from agora_ group by tipo) x),
+    'totais_antes', (select coalesce(jsonb_object_agg(tipo, c), '{}'::jsonb) from (select tipo, count(*) c from antes_ group by tipo) x),
+    'visitantes', (select count(distinct (dia, visitante)) from agora_ where tipo = 'visita'),
+    'visitantes_antes', (select count(distinct (dia, visitante)) from antes_ where tipo = 'visita'),
+    'contataram', (select count(distinct (dia, visitante)) from agora_ where grupo = 'contato'),
+    'contataram_antes', (select count(distinct (dia, visitante)) from antes_ where grupo = 'contato'),
+    'interesses', (select coalesce(jsonb_object_agg(tipo, s), '{}'::jsonb) from (select tipo, sum(n) s from int_ group by tipo) x),
+    'interesses_antes', (select coalesce(jsonb_object_agg(tipo, n), '{}'::jsonb) from int_antes),
+    -- as pessoas do dia contam como no total (dia, visitante): a soma dos dias bate com visitantes e contataram
+    'por_dia', (
+      select jsonb_agg(jsonb_build_object(
+               'dia', d.dia, 'visitas', coalesce(x.v, 0), 'contatos', coalesce(x.c, 0),
+               'visitantes', coalesce(x.vs, 0), 'contataram', coalesce(x.ct, 0), 'pedidos', coalesce(p.n, 0)
+             ) order by d.dia)
+        from (select g::date as dia from generate_series(hoje - (ndias - 1), hoje, interval '1 day') g) d
+        left join (select dia,
+                          count(*) filter (where tipo = 'visita') as v,
+                          count(*) filter (where grupo = 'contato') as c,
+                          count(distinct (dia, visitante)) filter (where tipo = 'visita') as vs,
+                          count(distinct (dia, visitante)) filter (where grupo = 'contato') as ct
+                     from agora_ group by dia) x using (dia)
+        left join int_dia p using (dia)
+    ),
+    'origens', (select coalesce(jsonb_agg(jsonb_build_object('origem', origem, 'visitas', c) order by c desc), '[]'::jsonb)
+                  from (select origem, count(*) c from agora_ where tipo = 'visita' and origem <> 'interno' group by origem) x),
+    'aparelhos', (select coalesce(jsonb_object_agg(coalesce(aparelho, '?'), c), '{}'::jsonb)
+                    from (select aparelho, count(*) c from agora_ where tipo = 'visita' group by aparelho) x),
+    'areas', (select coalesce(jsonb_agg(jsonb_build_object('area', area, 'contatos', c) order by c desc), '[]'::jsonb)
+                from (select coalesce(area, 'outra') as area, count(*) c from agora_ where grupo in ('contato', 'interesse') group by 1) x),
+    'paginas', (select coalesce(jsonb_agg(to_jsonb(p) order by p.visitas desc, p.contatos desc, p.nome nulls last), '[]'::jsonb) from paginas p)
+  ) into r;
+  return r;
+end $$;
+revoke execute on function public.guia_desempenho(integer, text) from public, anon;
+grant execute on function public.guia_desempenho(integer, text) to authenticated;
+
+do $$
+begin
+  raise notice '161: guia_desempenho com pessoas, contatos e pedidos por dia, e o período anterior por página';
+end $$;
+
+insert into public.migracoes_aplicadas (arquivo) values ('161_desempenho_visual.sql') on conflict (arquivo) do nothing;

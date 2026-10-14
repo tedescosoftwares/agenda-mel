@@ -3,6 +3,7 @@ import { Eye, Search, ExternalLink, Send, ChevronUp, ChevronDown, X } from 'luci
 import { Painel, Vazio } from '../../Pecas'
 import { categoriaDoGuia, semAcento } from '../../../../lib/guia'
 import { urlDoAmbiente } from '../../../../lib/ambiente'
+import { nomesDosBairros } from '../../../../lib/guiaColecoes'
 import { n0, formatar, taxaTexto, taxaDeContato, contataramDe, nomeDaPagina, podeMandarMensagem } from '../../../../lib/guiaMetricas'
 
 // A tabela por página (3.12): a barra de visitas na própria linha, o
@@ -26,10 +27,12 @@ export default function TabelaPaginas({ dados, contatoTipos, filtro, setFiltro, 
   if (lim.chave !== chave) setLim({ chave, n: PASSO }) // o jeito do React de "resetar quando muda", sem efeito
   const limite = lim.chave === chave ? lim.n : PASSO
 
+  // o nome com acento dos bairros, pelos salões da própria tabela (para as páginas de bairro)
+  const bairros = useMemo(() => nomesDosBairros((dados?.paginas ?? []).filter((p) => p.lugar_id)), [dados])
   const todas = useMemo(() => (dados?.paginas ?? []).map((p) => ({
-    ...p, titulo: nomeDaPagina(p, nomeDaCidade), pedidos: n0(p.interesses?.quero_marcar),
+    ...p, titulo: nomeDaPagina(p, nomeDaCidade, (k) => bairros.get(k)), pedidos: n0(p.interesses?.quero_marcar),
     pessoasContato: contataramDe(p.contataram, p.visitantes), tx: p.lugar_id ? taxaDeContato(p.contataram, p.visitantes) : null,
-  })), [dados, nomeDaCidade])
+  })), [dados, nomeDaCidade, bairros])
   const contagem = useMemo(() => Object.fromEntries(FILTROS.map(([id]) => [id, todas.filter((p) => doFiltro(id, p)).length])), [todas])
   const linhas = useMemo(() => {
     const termo = semAcento(busca).toLowerCase().trim()

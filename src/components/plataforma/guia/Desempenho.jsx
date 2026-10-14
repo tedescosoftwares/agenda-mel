@@ -10,6 +10,7 @@ import Destaques from './desempenho/Destaques'
 import { Barras, Divisao } from './desempenho/Barras'
 import TabelaPaginas from './desempenho/TabelaPaginas'
 import ModalDono from './desempenho/ModalDono'
+import BuscasGoogle from './BuscasGoogle'
 import { Search, MessageCircle, MousePointerClick, Info, BarChart3, RotateCcw, LoaderCircle, Smartphone, Monitor } from 'lucide-react'
 import '../../../guia-desempenho.css'
 
@@ -97,12 +98,8 @@ export default function Desempenho({ g }) {
 
           <Destaques d={destaques} dias={dados.dias} onSalao={(id) => g.irPara('revisar', { selId: id })} onMensagem={setDono} onVerSemVisita={verSemVisita} />
 
-          {/* ENCAIXE "Buscas do Google" (frente buscas, migração 160): o painel
-              BuscasGoogle.jsx entra AQUI, na largura inteira, entre os destaques e
-              "De onde vieram" (que é a entrada pelo Google vista de dentro do site):
-                import BuscasGoogle from './BuscasGoogle'
-                <BuscasGoogle g={g} dias={dados.dias} />   (com as props que o componente pedir)
-              Ele já fica na grade da aba (gap de 1rem), sem CSS extra daqui. */}
+          {/* as buscas do Google que trouxeram gente para o guia (160) */}
+          <BuscasGoogle dias={dados.dias} />
 
           <div className="pg-des-linha-tres">
             <Painel Icon={Search} titulo="De onde vieram" sub="A entrada de cada visita (quem já navegava pelo site não conta aqui)">

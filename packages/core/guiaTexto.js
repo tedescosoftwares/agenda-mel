@@ -11,6 +11,8 @@
 // pública, a revisão e o HTML estático não mudam. A IA continua como
 // opção ("Reescrever com IA"), nunca obrigatória.
 import { categoriaDoGuia, semAcento, slugificar, hora, faixaTexto, horariosEmUmaLinha, atributosEmTexto } from './guia.js'
+// o bairro do Google vem sujo ('Sl 9 - Centro', 'Gaivota - Praia'); o texto usa o limpo (157)
+import { bairroLimpo } from './guiaColecoes.js'
 
 export const VERSAO_MONTADOR = 1
 
@@ -121,7 +123,7 @@ export function contextoDaCidade(lugares, cidadeSlug) {
   const comHorario = da.map((l) => fatosDoHorario(l.horarios)).filter(Boolean)
   const bairros = new Map()
   for (const l of da) {
-    const b = slugificar(l.bairro || '')
+    const b = slugificar(bairroLimpo(l.bairro) || l.bairro || '')
     if (!b) continue
     const x = bairros.get(b) ?? { total: 0, cat: {} }
     x.total++
@@ -515,7 +517,8 @@ function fraseDosServicos(l, cat, s) {
 }
 
 // ---- a página -------------------------------------------------------------------------------
-export function montarConteudo(l, ctx = null, agora = new Date()) {
+export function montarConteudo(lugar, ctx = null, agora = new Date()) {
+  const l = { ...lugar, bairro: bairroLimpo(lugar.bairro) || lugar.bairro }
   const cat = categoriaDoGuia(l.categoria)
   const s = sorteio(`${l.cidade_slug}/${l.slug}`)
   const oQue = O_QUE[cat.slug] ?? O_QUE.beleza

@@ -93,7 +93,10 @@ begin
   paginas as (
     select p.pagina, p.lugar_id, l.nome, l.slug, l.bairro, l.status, l.whatsapp, l.telefone, l.salon_id is not null as na_mimo,
            coalesce(l.cidade_slug, split_part(trim(both '/' from p.pagina), '/', 2)) as cidade_slug,
-           coalesce(l.categoria, nullif(split_part(trim(both '/' from p.pagina), '/', 3), '')) as categoria,
+           -- nas páginas por bairro e por horário (157) a parte 3 é 'bairro'/'horario': a categoria, se houver, é a 5
+           coalesce(l.categoria, case when split_part(trim(both '/' from p.pagina), '/', 3) in ('bairro', 'horario')
+                                      then nullif(split_part(trim(both '/' from p.pagina), '/', 5), '')
+                                      else nullif(split_part(trim(both '/' from p.pagina), '/', 3), '') end) as categoria,
            p.visitas, p.visitantes, p.contatos, p.contataram, coalesce(p.eventos, '{}'::jsonb) as eventos,
            coalesce((select jsonb_object_agg(i.tipo, i.n) from int_ i where i.lugar_id = p.lugar_id), '{}'::jsonb) as interesses,
            case when tem_antes then coalesce((select a.visitas from antes_pag a where a.pagina = p.pagina), 0) end as visitas_antes

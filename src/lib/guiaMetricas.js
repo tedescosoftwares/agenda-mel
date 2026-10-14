@@ -2,6 +2,7 @@
 // a aba Desempenho e o painel do salão na revisão usam o mesmo. Os números
 // vêm de guia_desempenho() (migrações 156 e 161) ou do demo, no mesmo formato.
 import { categoriaDoGuia, linkWhatsDoTel, ehCelular } from './guia'
+import { rotuloDaColecao } from './guiaColecoes'
 import { REGRAS } from './acesso'
 
 export const ROTULO_ORIGEM = {
@@ -31,8 +32,12 @@ export const tiposDo = (dados, grupo) => (dados?.tipos ?? []).filter((t) => t.gr
 export const somaDo = (dados, grupo, totais = dados?.totais) => tiposDo(dados, grupo).reduce((s, t) => s + n0(totais?.[t.tipo]), 0)
 
 // o nome de uma linha da tabela: o salão, ou "Salões em itanhaem", "Unhas em itanhaem"
-export function nomeDaPagina(p, nomeDaCidade = (s) => s) {
+// nomeDoBairro(chave): o nome com acento ('Vila São Paulo'), de nomesDosBairros (guiaColecoes)
+export function nomeDaPagina(p, nomeDaCidade = (s) => s, nomeDoBairro) {
   if (p.nome) return p.nome
+  // as páginas por bairro e por horário (157): 'Salões no Centro, Itanhaém'
+  const colecao = rotuloDaColecao(p.pagina, { cidade: nomeDaCidade, bairro: nomeDoBairro })
+  if (colecao) return colecao
   const [, , cidade, cat] = String(p.pagina ?? '').split('/')
   if (!cidade) return 'Índice do guia'
   return cat ? `${categoriaDoGuia(cat).rotulo} em ${nomeDaCidade(cidade)}` : `Salões em ${nomeDaCidade(cidade)}`

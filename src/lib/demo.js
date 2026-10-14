@@ -17,6 +17,7 @@ import CATALOGO_V1 from '../../supabase/catalogo/catalogo_v1.json'
 import { arvoreParaLinhas } from './catalogoBusca'
 import { GUIA_LUGARES, GUIA_PAGINAS, GUIA_INTERESSES, GUIA_RPC } from './demoGuia'
 import { ABORDAGEM_RPC } from './demoAbordagem'
+import { REIVINDICAR_RPC } from './demoReivindicar'
 
 const hoje = new Date()
 const iso = (d) => d.toISOString().slice(0, 10)
@@ -219,6 +220,8 @@ const RPC = {
   ...GUIA_RPC,
   // a fila de abordagem dos donos (158): guia_fila_abordagem, guia_abordagem_* (em src/lib/demoAbordagem.js)
   ...ABORDAGEM_RPC,
+  // a reivindicação (159): troca o guia_registrar_interesse do GUIA_RPC (precisa vir depois dele)
+  ...REIVINDICAR_RPC,
   documentos_vigentes: () => ({}),
   meus_aceites: () => ({}),
   aceitar_documentos: () => ({ ok: true }),

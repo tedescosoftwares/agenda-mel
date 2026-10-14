@@ -1,14 +1,15 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { X, Check, Send, ArrowRight, MessageCircle, CalendarHeart, Store, PencilLine, EyeOff } from 'lucide-react'
+import { X, Check, Send, MessageCircle, CalendarHeart, PencilLine, EyeOff } from 'lucide-react'
 import { registrarInteresse } from '../../lib/guiaPublico'
 import { soDigitosTel, telefoneBonito, linkWhatsDoTel } from '../../lib/guia'
-import { comecarEm } from '../site/Pecas'
+import Reivindicar from './Reivindicar'
 
 // O formulário do guia (3.9), numa folha que sobe de baixo no celular e
-// vira janela no computador. Quatro pedidos, um formulário:
+// vira janela no computador. Quatro pedidos, uma folha:
 //   quero_marcar  a cliente quer marcar pelo app (vira número para vender a agenda ao salão)
-//   sou_dono      a dona quer a agenda (vira lead de venda)
+//   sou_dono      "é o seu salão?": a reivindicação (3.12), com formulário
+//                 próprio em Reivindicar.jsx, dentro desta mesma folha
 //   corrigir      alguém viu um dado errado na página
 //   remover       o responsável não quer a página no ar (LGPD)
 // Pede o mínimo: quem só quer marcar nem precisa deixar contato.
@@ -22,15 +23,6 @@ const PEDIDOS = {
     mensagem: null,
     nomeObrigatorio: false,
     botao: 'Avisar o salão',
-  },
-  sou_dono: {
-    Icone: Store,
-    titulo: 'É o seu salão?',
-    texto: (n) => `Deixe seu WhatsApp e a gente mostra como colocar a agenda de ${n} online: suas clientes marcam sozinhas, pelo link e pelo app.`,
-    contato: { rotulo: 'Seu WhatsApp', opcional: false, tipo: 'tel' },
-    mensagem: { rotulo: 'Quer contar algo?', opcional: true, exemplo: 'Ex.: quantas pessoas atendem, o melhor horário para a gente falar' },
-    nomeObrigatorio: true,
-    botao: 'Quero que a MIMO me chame',
   },
   corrigir: {
     Icone: PencilLine,
@@ -54,7 +46,6 @@ const PEDIDOS = {
 
 const SUCESSO = {
   quero_marcar: ['Pedido anotado!', (n, comContato) => `A gente vai avisar ${n} que tem gente querendo marcar pela MIMO.${comContato ? ' Quando der para marcar aqui, você recebe um WhatsApp.' : ''}`],
-  sou_dono: ['Recebemos!', () => 'A gente chama você no WhatsApp para mostrar a agenda funcionando. Se preferir, já dá para criar a sua agora.'],
   corrigir: ['Obrigado pelo aviso!', () => 'A gente confere a informação e corrige a página.'],
   remover: ['Pedido recebido.', () => 'A gente confirma com você pelo contato que deixou e tira a página do ar.'],
 }
@@ -139,15 +130,16 @@ export default function Interesse({ tipo, lugar, onFechar, previa = false }) {
       <div className="gd-folha" role="dialog" aria-modal="true" aria-labelledby={`${id}-t`} ref={caixa}>
         <button type="button" className="gd-folha-x" onClick={fechar} aria-label="Fechar"><X size={20} /></button>
 
-        {feito ? (
+        {qual === 'sou_dono' ? (
+          <Reivindicar lugar={lugar} previa={previa} idBase={id} onFechar={fechar} onTrocar={trocar} />
+        ) : feito ? (
           <div className="gd-folha-feito" aria-live="polite">
             <span className="gd-folha-ok"><Check size={26} /></span>
             <h2 id={`${id}-t`} tabIndex={-1}>{feito.repetido ? 'Já estava anotado.' : SUCESSO[qual][0]}</h2>
             <p>{feito.repetido ? 'A gente já tinha recebido esse pedido com o mesmo contato. Obrigado!' : SUCESSO[qual][1](nomeLugar, feito.comContato)}</p>
             <div className="gd-folha-acoes">
-              {qual === 'sou_dono' && <a className="ld-btn ld-primario" href={comecarEm('salao')} data-evento="criar_agenda">Criar minha agenda agora <ArrowRight size={16} /></a>}
               {qual === 'quero_marcar' && zapDoSalao && <a className="ld-btn ld-fantasma" href={zapDoSalao} target="_blank" rel="noopener noreferrer" data-evento="whatsapp"><MessageCircle size={16} /> Enquanto isso, chamar o salão</a>}
-              <button type="button" className={'ld-btn ' + (qual === 'sou_dono' || (qual === 'quero_marcar' && zapDoSalao) ? 'ld-fantasma' : 'ld-primario')} onClick={fechar}>Fechar</button>
+              <button type="button" className={'ld-btn ' + (qual === 'quero_marcar' && zapDoSalao ? 'ld-fantasma' : 'ld-primario')} onClick={fechar}>Fechar</button>
             </div>
           </div>
         ) : (
@@ -190,7 +182,6 @@ export default function Interesse({ tipo, lugar, onFechar, previa = false }) {
               {enviando ? 'Enviando…' : <>{p.botao} <Send size={17} /></>}
             </button>
 
-            {qual === 'sou_dono' && <p className="gd-folha-alt">ou <a href={comecarEm('salao')} data-evento="criar_agenda">crie sua agenda grátis agora <ArrowRight size={14} /></a></p>}
             {qual === 'corrigir' && <p className="gd-folha-alt">Prefere tirar a página do ar? <button type="button" onClick={() => trocar('remover')}>Pedir a remoção</button></p>}
             {qual === 'remover' && <p className="gd-folha-alt">Só um dado está errado? <button type="button" onClick={() => trocar('corrigir')}>Corrigir a informação</button></p>}
 

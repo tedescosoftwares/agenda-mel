@@ -386,13 +386,15 @@ export default function PaginaDoLugar({ lugar, conteudo, vizinhos = [], mesmaCat
                 <div className="gd-dono-texto">
                   <span className="ld-kicker">Para quem atende</span>
                   <h2 className="gd-h2">É o seu salão?</h2>
-                  <p>Coloque a agenda de {l.nome} online: a cliente escolhe o serviço e o horário pelo link ou pelo app, e você recebe tudo organizado, com confirmação pelo WhatsApp.</p>
+                  {/* a reivindicação (3.12): a equipe confirma com a pessoa por e-mail; nada muda na página antes disso */}
+                  <p>Diga que é você: a gente confirma por e-mail e passa a falar com você sobre esta página.</p>
+                  <p>E, se quiser, coloque a agenda de {l.nome} online: a cliente marca sozinha, pelo link ou pelo app.</p>
                   <p className="gd-dono-letra">Para autônoma é grátis para sempre. Salão com equipe testa {REGRAS.testeDias} dias, sem cartão.</p>
                 </div>
                 <div className="gd-dono-botoes">
-                  {previa ? <span className="ld-btn ld-branco ld-grande">Criar minha agenda grátis <ArrowRight size={18} /></span>
-                    : <a className="ld-btn ld-branco ld-grande" href={comecarEm('salao')} data-evento="criar_agenda">Criar minha agenda grátis <ArrowRight size={18} /></a>}
-                  <button type="button" className="ld-btn ld-fantasma ld-grande gd-dono-fala" onClick={() => onInteresse('sou_dono')} data-evento="sou_dono"><MessageCircle size={18} /> Quero que a MIMO me chame</button>
+                  <button type="button" className="ld-btn ld-branco ld-grande" onClick={() => onInteresse('sou_dono')} data-evento="sou_dono"><Store size={18} /> Sim, sou responsável</button>
+                  {previa ? <span className="ld-btn ld-fantasma ld-grande gd-dono-fala">Criar minha agenda grátis <ArrowRight size={18} /></span>
+                    : <a className="ld-btn ld-fantasma ld-grande gd-dono-fala" href={comecarEm('salao')} data-evento="criar_agenda">Criar minha agenda grátis <ArrowRight size={18} /></a>}
                 </div>
               </div>
             </div>

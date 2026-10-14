@@ -1,6 +1,6 @@
 // As contas e os textos do painel de desempenho do guia (3.11), sem tela:
 // a aba Desempenho e o painel do salão na revisão usam o mesmo. Os números
-// vêm de guia_desempenho() (migração 156) ou do demo, no mesmo formato.
+// vêm de guia_desempenho() (migrações 156 e 161) ou do demo, no mesmo formato.
 import { categoriaDoGuia, linkWhatsDoTel, ehCelular } from './guia'
 import { REGRAS } from './acesso'
 
@@ -66,4 +66,153 @@ export function mensagemParaDono(p, { dias, url, cidade }) {
 export function zapDoDono(p, texto) {
   const numero = p.whatsapp || (ehCelular(p.telefone) ? p.telefone : null)
   return numero ? linkWhatsDoTel(numero, texto) : null
+}
+
+// ---- 3.12: a aba Desempenho de cara nova (frase do topo, tendências, destaques) ----
+
+const plural = (v, um, varios) => `${formatar(v)} ${n0(v) === 1 ? um : varios}`
+
+// só compara quando o banco mandou o período anterior (vazio = sem histórico inteiro ainda)
+export const temComparacao = (dados) => Object.keys(dados?.totais_antes ?? {}).length > 0
+
+// um número contra o do período anterior. null = não há com o que comparar.
+// Antes zero não vira "+100%": vira { antes: 0, pct: null }, e a tela diz "antes, nenhum".
+export function variacao(agora, antes) {
+  if (antes == null) return null
+  const a = n0(antes), b = n0(agora)
+  if (!a) return { antes: 0, pct: null, dir: b > 0 ? 'sobe' : 'igual' }
+  const pct = Math.round(((b - a) / a) * 100)
+  return { antes: a, pct, dir: pct > 0 ? 'sobe' : pct < 0 ? 'desce' : 'igual' }
+}
+
+// as pessoas que tentaram contato nunca passam das que visitaram (a mesma regra de taxaDeContato)
+export const contataramDe = (contataram, visitantes) => Math.min(n0(contataram), n0(visitantes))
+
+// a frase do topo, em pedaços: texto puro ou { forte } (a tela põe em negrito).
+// "Nos últimos 30 dias, 702 pessoas viram as páginas do guia e 131 tentaram
+// falar com os salões, 59% a mais que nos 30 dias anteriores."
+export function fraseDoPeriodo(dados) {
+  const dias = n0(dados?.dias)
+  const pessoas = n0(dados?.visitantes)
+  const contato = contataramDe(dados?.contataram, pessoas)
+  const quando = dias === 1 ? 'Hoje' : `Nos últimos ${dias} dias`
+  if (!pessoas) return [`${quando}, ninguém abriu as páginas do guia ainda.`]
+  const partes = [`${quando}, `, { forte: plural(pessoas, 'pessoa', 'pessoas') }, pessoas === 1 ? ' viu as páginas do guia' : ' viram as páginas do guia']
+  if (!contato) return [...partes, ', mas ninguém tentou falar com os salões ainda.']
+  partes.push(' e ', { forte: formatar(contato) }, contato === 1 ? ' tentou falar com os salões' : ' tentaram falar com os salões')
+  const v = temComparacao(dados) ? variacao(contato, contataramDe(dados.contataram_antes, dados.visitantes_antes)) : null
+  const anteriores = dias === 1 ? 'ontem' : `nos ${dias} dias anteriores`
+  if (v?.pct > 0) partes.push(', ', { forte: `${formatar(v.pct)}% a mais` }, ` que ${anteriores}`)
+  else if (v?.pct < 0) partes.push(', ', { forte: `${formatar(-v.pct)}% a menos` }, ` que ${anteriores}`)
+  else if (v?.pct === 0) partes.push(`, o mesmo número que ${anteriores}`)
+  else if (v) partes.push(` (${anteriores}, ninguém tinha tentado)`)
+  return [...partes, '.']
+}
+export const textoDaFrase = (partes) => partes.map((p) => (typeof p === 'string' ? p : p.forte)).join('')
+
+const ORIGEM_POR = {
+  google: 'pelo Google', bing: 'pelo Bing', direto: 'por link direto ou digitando o endereço', instagram: 'pelo Instagram',
+  facebook: 'pelo Facebook', whatsapp: 'por link no WhatsApp', tiktok: 'pelo TikTok', youtube: 'pelo YouTube', outro: 'por outros sites',
+}
+// a segunda linha do topo: de onde veio mais gente e quanto foi pelo celular
+export function detalheDoPeriodo(dados) {
+  const visitas = n0(dados?.totais?.visita)
+  if (visitas < 5) return ''
+  const origens = dados?.origens ?? []
+  const entradas = origens.reduce((s, o) => s + n0(o.visitas), 0)
+  const top = origens[0]
+  const ap = dados?.aparelhos ?? {}
+  const conhecidos = n0(ap.celular) + n0(ap.computador)
+  const partes = []
+  if (top && entradas) partes.push(`mais gente chegou ${ORIGEM_POR[top.origem] ?? `por ${top.origem}`} (${taxaTexto(taxa(top.visitas, entradas))} das entradas)`)
+  if (conhecidos) partes.push(`${taxaTexto(taxa(ap.celular, conhecidos))} das visitas foram pelo celular`)
+  if (!partes.length) return ''
+  const t = partes.join(' e ')
+  return t[0].toUpperCase() + t.slice(1) + '.'
+}
+
+// "de cada 100 pessoas, 18": a mesma taxa dita de um jeito que se lê de primeira
+export function deCada100(parte, total) {
+  if (!n0(total)) return null
+  const x = (n0(parte) / n0(total)) * 100
+  return x > 0 && x < 0.5 ? 'menos de 1' : formatar(Math.round(x))
+}
+
+// a série por dia em grupos (as tendências dos números do topo): até 31 dias, um ponto
+// por dia; mais que isso, grupos do mesmo tamanho contados do fim (o grupo incompleto do
+// começo sai, para não parecer uma queda que não houve)
+export function agruparDias(porDia, dias = (porDia ?? []).length) {
+  const xs = Array.isArray(porDia) ? porDia : []
+  const tamanho = dias > 31 ? Math.ceil(dias / 15) : 1
+  if (tamanho === 1) return xs.map((p) => ({ ...p, ate: p.dia }))
+  const grupos = []
+  for (let fim = xs.length; fim - tamanho >= 0; fim -= tamanho) {
+    const parte = xs.slice(fim - tamanho, fim)
+    const soma = {}
+    for (const p of parte) for (const [k, v] of Object.entries(p)) if (k !== 'dia') soma[k] = (soma[k] ?? 0) + n0(v)
+    grupos.unshift({ ...soma, dia: parte[0].dia, ate: parte.at(-1).dia })
+  }
+  return grupos
+}
+
+// dá para montar a mensagem para o dono? (no ar, com visita, e não pediu para sair)
+export const podeMandarMensagem = (p) => !!(p?.lugar_id && p.status === 'publicado' && n0(p.visitas) > 0 && !n0(p.interesses?.remover))
+
+// o que falta na página de um salão e costuma tirar contato (pelos dados do próprio salão)
+export function faltasDoSalao(l) {
+  if (!l) return []
+  const f = []
+  if (!l.whatsapp && !ehCelular(l.telefone)) f.push('sem WhatsApp')
+  if (!l.telefone && !l.whatsapp) f.push('sem telefone')
+  if (!l.instagram) f.push('sem Instagram')
+  if (!l.horarios?.length) f.push('sem horário')
+  if (!l.servicos?.length) f.push('sem serviços')
+  return f
+}
+
+// os limites dos destaques (para um destaque não aparecer por acaso, com dois ou três números)
+export const DESTAQUE = { altaMinVisitas: 5, altaMinGanho: 3, altaMinPct: 25, poucoMinPessoas: 10 }
+
+// os quatro destaques da aba: quem mais recebeu contato, quem cresceu, quem tem muita visita
+// e pouco contato (sinal de dado faltando) e os salões no ar sem nenhuma visita.
+// lugares: os salões da Plataforma (o que falta em cada um e a data em que entrou no ar).
+export function destaquesDoPeriodo(dados, lugares = [], agora = Date.now()) {
+  const porId = new Map(lugares.map((l) => [l.id, l]))
+  // uma linha por salão: se o endereço mudou, vale a de mais visitas (a primeira)
+  const vistos = new Set()
+  const saloes = (dados?.paginas ?? []).filter((p) => p.lugar_id && !vistos.has(p.lugar_id) && vistos.add(p.lugar_id))
+  const taxaGeral = taxaDeContato(dados?.contataram, dados?.visitantes)
+
+  const maisProcurados = saloes.filter((p) => n0(p.contataram) > 0)
+    .sort((a, b) => n0(b.contataram) - n0(a.contataram) || n0(b.visitantes) - n0(a.visitantes))
+    .slice(0, 3)
+    .map((p) => ({ p, pessoas: contataramDe(p.contataram, p.visitantes), tx: taxaDeContato(p.contataram, p.visitantes) }))
+
+  // em alta: só com o período anterior inteiro e com as visitas de antes por página (161)
+  const temAntesPorPagina = saloes.some((p) => p.visitas_antes != null)
+  const emAlta = !temComparacao(dados) || !temAntesPorPagina ? null : saloes
+    .filter((p) => {
+      const v = n0(p.visitas), a = n0(p.visitas_antes)
+      return p.visitas_antes != null && v >= DESTAQUE.altaMinVisitas && v - a >= DESTAQUE.altaMinGanho && (!a || ((v - a) / a) * 100 >= DESTAQUE.altaMinPct)
+    })
+    .sort((a, b) => (n0(b.visitas) - n0(b.visitas_antes)) - (n0(a.visitas) - n0(a.visitas_antes)) || n0(b.visitas) - n0(a.visitas))
+    .slice(0, 3)
+    .map((p) => ({ p, v: variacao(p.visitas, p.visitas_antes) }))
+
+  // muita visita e pouco contato: no ar, gente bastante e menos da metade da taxa geral
+  const poucoContato = taxaGeral == null ? [] : saloes
+    .filter((p) => p.status === 'publicado' && n0(p.visitantes) >= DESTAQUE.poucoMinPessoas && (taxaDeContato(p.contataram, p.visitantes) ?? 0) < taxaGeral / 2)
+    .sort((a, b) => n0(b.visitantes) - n0(a.visitantes))
+    .slice(0, 3)
+    .map((p) => ({ p, tx: taxaDeContato(p.contataram, p.visitantes), faltas: faltasDoSalao(porId.get(p.lugar_id)) }))
+
+  // no ar sem nenhuma visita: os que estão no ar há mais tempo primeiro (os mais preocupantes)
+  const semVisita = saloes.filter((p) => p.status === 'publicado' && !n0(p.visitas))
+    .map((p) => {
+      const desde = porId.get(p.lugar_id)?.publicado_em
+      return { p, diasNoAr: desde ? Math.max(0, Math.floor((agora - new Date(desde).getTime()) / 86400e3)) : null }
+    })
+    .sort((a, b) => (b.diasNoAr ?? -1) - (a.diasNoAr ?? -1) || String(a.p.nome).localeCompare(String(b.p.nome), 'pt-BR'))
+
+  return { taxaGeral, maisProcurados, emAlta, emAltaSem161: temComparacao(dados) && saloes.length > 0 && !temAntesPorPagina, poucoContato, semVisita }
 }

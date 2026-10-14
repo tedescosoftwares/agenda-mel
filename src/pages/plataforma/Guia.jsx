@@ -11,8 +11,9 @@ import Importar from '../../components/plataforma/guia/Importar'
 import PaginasCidade from '../../components/plataforma/guia/PaginasCidade'
 import Interesses from '../../components/plataforma/guia/Interesses'
 import Desempenho from '../../components/plataforma/guia/Desempenho'
+import Abordagem from '../../components/plataforma/guia/Abordagem'
 import { naoContarAqui } from '../../lib/eventos'
-import { ClipboardCheck, Globe2, Upload, MapPinned, Inbox, X, BarChart3 } from 'lucide-react'
+import { ClipboardCheck, Globe2, Upload, MapPinned, Inbox, X, BarChart3, Handshake } from 'lucide-react'
 import '../../guia-plataforma.css'
 
 // Guia de salões (3.9): uma página pública para cada salão da região, que
@@ -31,6 +32,7 @@ import '../../guia-plataforma.css'
 const ABAS = [
   ['revisar', 'Revisar', ClipboardCheck],
   ['desempenho', 'Desempenho', BarChart3],
+  ['abordagem', 'Abordagem', Handshake],
   ['publicadas', 'Publicadas', Globe2],
   ['importar', 'Importar', Upload],
   ['paginas', 'Páginas da cidade', MapPinned],
@@ -450,6 +452,7 @@ export default function Guia() {
 
       {aba === 'revisar' && <Revisar g={g} rev={rev} setRev={setRev} />}
       {aba === 'desempenho' && <Desempenho g={g} />}
+      {aba === 'abordagem' && <Abordagem g={g} />}
       {aba === 'publicadas' && <Publicadas g={g} />}
       {aba === 'importar' && <Importar g={g} />}
       {aba === 'paginas' && <PaginasCidade g={g} />}

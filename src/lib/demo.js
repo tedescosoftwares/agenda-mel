@@ -16,6 +16,7 @@ import { PAGINAS_SEO, PAGINAS_INSTITUCIONAIS } from '../conteudo/paginasSeo'
 import CATALOGO_V1 from '../../supabase/catalogo/catalogo_v1.json'
 import { arvoreParaLinhas } from './catalogoBusca'
 import { GUIA_LUGARES, GUIA_PAGINAS, GUIA_INTERESSES, GUIA_RPC } from './demoGuia'
+import { ABORDAGEM_RPC } from './demoAbordagem'
 
 const hoje = new Date()
 const iso = (d) => d.toISOString().slice(0, 10)
@@ -216,6 +217,8 @@ const RPC = {
   // o guia de salões: guia_pagina, guia_cidade, guia_cidades, guia_publicadas, guia_registrar_interesse,
   // guia_importar, guia_aprovar e guia_aprovar_pagina (em src/lib/demoGuia.js)
   ...GUIA_RPC,
+  // a fila de abordagem dos donos (158): guia_fila_abordagem, guia_abordagem_* (em src/lib/demoAbordagem.js)
+  ...ABORDAGEM_RPC,
   documentos_vigentes: () => ({}),
   meus_aceites: () => ({}),
   aceitar_documentos: () => ({ ok: true }),

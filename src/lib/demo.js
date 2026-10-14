@@ -18,6 +18,7 @@ import { arvoreParaLinhas } from './catalogoBusca'
 import { GUIA_LUGARES, GUIA_PAGINAS, GUIA_INTERESSES, GUIA_RPC } from './demoGuia'
 import { ABORDAGEM_RPC } from './demoAbordagem'
 import { REIVINDICAR_RPC } from './demoReivindicar'
+import { BUSCAS_RPC } from './demoBuscas'
 
 const hoje = new Date()
 const iso = (d) => d.toISOString().slice(0, 10)
@@ -222,6 +223,7 @@ const RPC = {
   ...ABORDAGEM_RPC,
   // a reivindicação (159): troca o guia_registrar_interesse do GUIA_RPC (precisa vir depois dele)
   ...REIVINDICAR_RPC,
+  ...BUSCAS_RPC, // as buscas do Google (guia_buscas, 160)
   documentos_vigentes: () => ({}),
   meus_aceites: () => ({}),
   aceitar_documentos: () => ({ ok: true }),

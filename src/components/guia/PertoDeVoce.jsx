@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { MapPin, LocateFixed, LoaderCircle, X } from 'lucide-react'
 import Portal from '../Portal'
 import { useMinhaPosicao, pedirPosicao, dispensar, dispensado, fecharNaVisita } from '../../lib/guiaPerto'
@@ -7,9 +6,9 @@ import '../../guia-perto.css'
 
 // "Perto de você" (3.13) nas listas do guia. Ao entrar na página pela
 // primeira vez, um modal curto e gentil pede a localização: é para indicar
-// os salões mais perto, com mais precisão. Uma linha pequena diz que o
-// ponto fica guardado (é o que dá base ao consentimento). O navegador só
-// pergunta quando ela toca em "Sim, pode". "Agora não" guarda por 30 dias;
+// os salões mais perto, com mais precisão (o que é feito com o ponto está
+// na política de privacidade, como o aviso de cookies aponta). O navegador
+// só pergunta quando ela toca em "Sim, pode". "Agora não" guarda por 30 dias;
 // fechar sem escolher vale só nesta visita. Quem fechou tem um botão
 // discreto na lista para abrir de novo; quem já autorizou antes nem vê o
 // modal (a posição chega sozinha) e só vê a linha "do mais perto para o
@@ -89,7 +88,6 @@ function ModalPerto({ situacao, onFechar }) {
             </button>
             <button type="button" className="ld-btn ld-fantasma ld-grande" onClick={() => onFechar(true)}>Agora não</button>
           </div>
-          <p className="gd-perto-nota">O ponto de onde você buscou fica guardado, sem nome, para melhorar o guia. <Link to="/privacidade">Saiba mais</Link></p>
         </div>
       </div>
     </Portal>

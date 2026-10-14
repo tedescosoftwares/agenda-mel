@@ -24,8 +24,6 @@
 .gd-perto-lead { margin: 0 0 20px; font-size: 1rem; line-height: 1.5; color: var(--ld-cinza); }
 .gd-perto-erro { margin: 0 0 14px; font-size: 0.85rem; line-height: 1.45; color: #b4233f; }
 .gd-perto-botoes { display: grid; gap: 8px; }
-.gd-perto-nota { margin: 14px 0 0; font-size: 0.78rem; line-height: 1.45; color: var(--ld-cinza); text-align: center; }
-.gd-perto-nota a { color: var(--ld-cinza); text-decoration: underline; }
 .gd-perto-botoes .ld-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; }
 .gd-perto-gira { animation: gd-perto-girar 0.9s linear infinite; }
 @keyframes gd-perto-girar { to { transform: rotate(360deg); } }

@@ -5,7 +5,7 @@
 //   JSON da conta de serviço -> JWT RS256 assinado com WebCrypto
 //     -> access token (oauth2.googleapis.com/token, escopo webmasters.readonly)
 //       -> searchAnalytics.query por janelas de 30 dias, paginado (rowLimit/startRow)
-//         -> só páginas do guia (/saloes...), URL vira caminho, repetidas somadas
+//         -> o site inteiro (guia, blog, páginas): URL vira caminho, repetidas somadas
 //           -> gravar(linhas, dias inteiros) em pedaços (quem grava é o index.ts)
 //
 // A rede entra por um fetch recebido de fora (Fetcher): o teste passa um falso.
@@ -26,7 +26,8 @@ export const DIAS_MAX = 480 // o Google guarda 16 meses
 export const FOLGA_DIAS = 5 // a cada sincronização, os últimos dias vêm de novo
 export const PEDACO = 2000 // linhas por chamada de gravar
 export const APARELHOS: Record<string, string> = { MOBILE: 'celular', DESKTOP: 'computador', TABLET: 'tablet' }
-const CAMINHO_DO_GUIA = /^\/saloes(\/[a-z0-9_-]+)*$/
+// um caminho de página: começa com barra, sem espaço, sem query e sem fragmento (o banco confere o mesmo)
+const CAMINHO_OK = /^\/[^\s?#\p{Cc}]{0,499}$/u
 
 // ---- tipos ------------------------------------------------------------------------
 export type Fetcher = (url: string, init?: RequestInit) => Promise<Response>
@@ -152,7 +153,8 @@ export function hostsDaPropriedade(propriedade: string): string[] {
 }
 
 // 'https://mimo.com.vc/saloes/itanhaem/studio-lirio/?x=1#topo' -> '/saloes/itanhaem/studio-lirio';
-// null para o que não é do guia (ou é de outro endereço)
+// qualquer página do site serve (guia, blog, a página inicial); null para outro
+// endereço (um subdomínio de salão, por exemplo) ou um caminho estranho
 export function caminhoDaUrl(url: string, hosts?: string[] | null): string | null {
   let u: URL
   try { u = new URL(String(url ?? '')) } catch { return null }
@@ -161,15 +163,15 @@ export function caminhoDaUrl(url: string, hosts?: string[] | null): string | nul
   try { p = decodeURIComponent(p) } catch { /* fica como veio */ }
   p = p.toLowerCase().replace(/\/{2,}/g, '/')
   if (p.length > 1) p = p.replace(/\/+$/, '')
-  return CAMINHO_DO_GUIA.test(p) ? p : null
+  return CAMINHO_OK.test(p) ? p : null
 }
 
 // sem caractere de controle e sem espaço dobrado (o banco faz o mesmo)
 const limparConsulta = (q: unknown) => String(q ?? '').replace(/[\p{Cc}\s]+/gu, ' ').trim().slice(0, 500)
 
-// as linhas do Google viram linhas do site: só o guia, a URL vira caminho, e a
-// mesma chave repetida (http e https, com e sem barra no fim) é somada, com a
-// posição pesada pelas impressões
+// as linhas do Google viram linhas do site: só o endereço da MIMO, a URL vira
+// caminho, e a mesma chave repetida (http e https, com e sem barra no fim) é
+// somada, com a posição pesada pelas impressões
 export function converterLinhas(linhas: LinhaGoogle[], hosts?: string[] | null): { linhas: LinhaSite[]; descartadas: number } {
   const por = new Map<string, LinhaSite & { soma: number }>()
   let descartadas = 0
@@ -264,9 +266,8 @@ export async function consultarJanela(o: {
       method: 'POST',
       headers: { Authorization: `Bearer ${o.token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        // o site inteiro, sem filtro de página: quem separa guia, blog e o resto é o banco (site_secao)
         startDate: o.de, endDate: o.ate, dimensions: DIMENSOES, type: 'web', rowLimit: limite, startRow,
-        // o filtro grosso no Google; o fino (caminho do guia, endereço) é converterLinhas
-        dimensionFilterGroups: [{ groupType: 'and', filters: [{ dimension: 'page', operator: 'contains', expression: '/saloes' }] }],
       }),
     })
     pedidos++

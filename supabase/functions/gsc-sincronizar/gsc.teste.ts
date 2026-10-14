@@ -139,7 +139,7 @@ await caso('os endereços aceitos: o domínio e o www', () => {
   assert.deepEqual(hostsDaPropriedade('sc-domain:mimo.com.vc'), ['mimo.com.vc', 'www.mimo.com.vc'])
   assert.deepEqual(hostsDaPropriedade('https://www.mimo.com.vc/'), ['mimo.com.vc', 'www.mimo.com.vc'])
 })
-await caso('converte a URL no caminho do guia', () => {
+await caso('converte a URL no caminho da página (o site inteiro)', () => {
   const h = hostsDaPropriedade('sc-domain:mimo.com.vc')
   const casos: Array<[string, string | null]> = [
     ['https://mimo.com.vc/saloes/itanhaem/studio-lirio', '/saloes/itanhaem/studio-lirio'],
@@ -150,10 +150,13 @@ await caso('converte a URL no caminho do guia', () => {
     ['https://mimo.com.vc/Saloes/Itanhaem/Unhas', '/saloes/itanhaem/unhas'],
     ['https://mimo.com.vc/saloes//itanhaem', '/saloes/itanhaem'],
     ['https://mimo.com.vc/saloes/itanhaem/bairro/centro', '/saloes/itanhaem/bairro/centro'],
-    ['https://mimo.com.vc/saloes/itanhaem/studio-l%C3%ADrio', null], // acento não é slug do guia
-    ['https://mimo.com.vc/saloesx', null],
-    ['https://mimo.com.vc/blog/saloes', null],
-    ['https://mimo.com.vc/', null],
+    ['https://mimo.com.vc/saloes/itanhaem/studio-l%C3%ADrio', '/saloes/itanhaem/studio-lírio'], // decodificado (o guia não tem esse slug, mas a página conta)
+    ['https://mimo.com.vc/saloesx', '/saloesx'],
+    ['https://mimo.com.vc/blog/saloes', '/blog/saloes'],
+    ['https://mimo.com.vc/', '/'],
+    ['https://mimo.com.vc/Planos/', '/planos'],
+    ['https://mimo.com.vc/blog/um-titulo-grande/?utm_source=ig', '/blog/um-titulo-grande'],
+    ['https://mimo.com.vc/' + 'a'.repeat(500), null], // comprido demais
     ['https://studiomel.mimo.com.vc/saloes/itanhaem', null], // subdomínio de salão
     ['https://outro.com/saloes/itanhaem', null],
     ['não é url', null],
@@ -169,14 +172,16 @@ await caso('converterLinhas filtra, mapeia o aparelho e soma repetidas pesando a
     linha('2026-10-01', 'http://mimo.com.vc/saloes/itanhaem/studio-lirio/', 'manicure itanhaém', 'MOBILE', 1, 30, 8),
     linha('2026-10-01', 'https://mimo.com.vc/saloes/itanhaem/studio-lirio', 'manicure itanhaém', 'DESKTOP', 0, 5, 12.5),
     linha('2026-10-01', 'https://mimo.com.vc/saloes/itanhaem', '  salão de beleza\u0000 centro itanhaém ', 'TABLET', 0, 2, 9),
-    linha('2026-10-01', 'https://mimo.com.vc/blog/x', 'fora', 'MOBILE'),
+    linha('2026-10-01', 'https://mimo.com.vc/blog/x', 'blog entra', 'MOBILE', 1, 4, 2),
+    linha('2026-10-01', 'https://outro.com/saloes/itanhaem', 'fora', 'MOBILE'),
     linha('2026-10-01', 'https://mimo.com.vc/saloes/itanhaem', '', 'MOBILE'),
     linha('2026-10-01', 'https://mimo.com.vc/saloes/itanhaem', 'tv', 'TV'),
     linha('ontem', 'https://mimo.com.vc/saloes/itanhaem', 'data ruim', 'MOBILE'),
     { keys: [] },
   ], h)
   assert.equal(descartadas, 5)
-  assert.equal(linhas.length, 3)
+  assert.equal(linhas.length, 4)
+  assert.equal(linhas.find((l) => l.pagina === '/blog/x')?.consulta, 'blog entra')
   const cel = linhas.find((l) => l.aparelho === 'celular') as LinhaSite
   assert.deepEqual(cel, { dia: '2026-10-01', pagina: '/saloes/itanhaem/studio-lirio', consulta: 'manicure itanhaém', aparelho: 'celular', cliques: 3, impressoes: 40, posicao: 7 })
   assert.equal(linhas.find((l) => l.aparelho === 'computador')?.posicao, 12.5)
@@ -237,7 +242,7 @@ await caso('pagina com rowLimit/startRow até vir menos que o limite', async () 
   assert.equal(corpo.endDate, '2026-10-14')
   assert.equal(corpo.rowLimit, 3)
   assert.equal(corpo.type, 'web')
-  assert.deepEqual(corpo.dimensionFilterGroups, [{ groupType: 'and', filters: [{ dimension: 'page', operator: 'contains', expression: '/saloes' }] }])
+  assert.equal(corpo.dimensionFilterGroups, undefined) // o site inteiro: o banco separa as seções
 })
 await caso('quando o total é múltiplo do limite, a página vazia encerra; sem rows também', async () => {
   const g = googleFalso((p) => ({ corpo: Number((p.corpo as Record<string, unknown>).startRow) < 4 ? { rows: [linha('2026-10-01', 'https://mimo.com.vc/saloes', 'a'), linha('2026-10-01', 'https://mimo.com.vc/saloes', 'b')] } : {} }))
@@ -282,7 +287,7 @@ await caso('busca as janelas, grava em pedaços e manda os dias inteiros no últ
       linha('2026-10-10', 'https://mimo.com.vc/saloes/itanhaem/studio-lirio', 'manicure itanhaém'),
       linha('2026-10-10', 'https://mimo.com.vc/saloes/itanhaem/studio-lirio', 'manicure itanhaém', 'DESKTOP'),
       linha('2026-10-11', 'https://mimo.com.vc/saloes/itanhaem', 'salão de beleza centro itanhaém'),
-      linha('2026-10-11', 'https://mimo.com.vc/blog/nada', 'fora do guia'),
+      linha('2026-10-11', 'https://studiomel.mimo.com.vc/p/x', 'fora: subdomínio de salão'),
       linha('2026-10-11', 'https://mimo.com.vc/saloes/itanhaem/unhas', 'unha em gel itanhaém'),
     ]
     return todas.slice(startRow, startRow + 2)
@@ -293,7 +298,7 @@ await caso('busca as janelas, grava em pedaços e manda os dias inteiros no últ
     gravar: async (linhas, dias) => { gravados.push({ linhas, dias }) },
   })
   assert.deepEqual(resumo, { de: '2026-08-31', ate: '2026-10-14', dias: 45, linhas: 5, janelas: 2, pedidos: 4, descartadas: 1, parcial: false })
-  // janela nova: 4 linhas do guia em 2 pedaços, dias só no último; janela velha: 1 linha
+  // janela nova: 4 linhas do site em 2 pedaços, dias só no último; janela velha: 1 linha
   assert.deepEqual(gravados.map((x) => [x.linhas.length, x.dias]), [[2, null], [2, ['2026-10-10', '2026-10-11']], [1, ['2026-08-31']]])
   assert.equal(g.pedidos[0].url, URL_TOKEN)
   assert.deepEqual(g.pedidos.slice(1).map((p) => [(p.corpo as Record<string, unknown>).startDate, (p.corpo as Record<string, unknown>).endDate, (p.corpo as Record<string, unknown>).startRow]),

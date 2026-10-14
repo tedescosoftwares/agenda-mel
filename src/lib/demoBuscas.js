@@ -1,6 +1,6 @@
 // As buscas do Google no modo demonstração (3.12): 200 dias de Search Console
 // de mentira, sempre os mesmos (sorteio com semente), no mesmo formato que
-// guia_buscas() devolve no banco (migração 160). As contas daqui imitam as do
+// guia_buscas() devolve no banco (migrações 160 e 162: o site inteiro, por seção). As contas daqui imitam as do
 // SQL: período terminando no último dia que "o Google entregou", posição
 // média pesada pelas impressões, comparação só com histórico inteiro.
 //
@@ -40,7 +40,21 @@ const GERAIS = [
   ['/saloes', 'guia de salões de beleza litoral sul', 0.6, 23, 1],
   ['/saloes/itanhaem/bairro/centro', 'salão de beleza centro itanhaém', 2.2, 6.3, 1],
   ['/saloes/itanhaem/horario/domingo', 'salão aberto domingo itanhaém', 1.8, 4.2, 1.2],
+  // o resto do site: a página inicial, planos e o blog (seções 'site' e 'blog')
+  ['/', 'mimo agenda salão', 4, 2.1, 1.3],
+  ['/', 'sistema para salão de beleza', 14, 9.8, 1],
+  ['/planos', 'sistema para salão de beleza preço', 3, 7.5, 1],
+  ['/sistema-para-salao-de-beleza', 'sistema para salão de beleza', 9, 6.4, 1],
+  ['/blog/como-lotar-a-agenda-do-salao', 'como lotar a agenda do salão', 6, 5.2, 1.1],
+  ['/blog/como-lotar-a-agenda-do-salao', 'agenda de salão cheia', 2, 8.9, 1],
+  ['/blog/whatsapp-para-salao', 'mensagem de confirmação de horário salão', 5, 3.9, 1.2],
 ]
+// os títulos do resto do site (no banco: blog_posts e seo_pages)
+const TITULOS = {
+  '/': 'Página inicial', '/planos': 'Planos', '/sistema-para-salao-de-beleza': 'Sistema para salão de beleza',
+  '/blog/como-lotar-a-agenda-do-salao': 'Como lotar a agenda do salão', '/blog/whatsapp-para-salao': 'WhatsApp para salão: mensagens que funcionam',
+}
+const secaoDe = (pagina) => (/^\/saloes(\/|$)/.test(pagina) ? 'guia' : /^\/blog(\/|$)/.test(pagina) ? 'blog' : 'site')
 // as buscas de cada salão do demo (as que têm nome do salão clicam mais)
 const DO_SALAO = {
   'studio-lirio': [['studio lírio itanhaém', 2, 1.3, 1.6], ['manicure centro itanhaém', 3, 5.8, 1], ['pedicure itanhaém', 2, 9.2, 1]],
@@ -121,6 +135,7 @@ function agrupar(linhas, chave) {
 const ordem = (a, b) => b.cliques - a.cliques || b.impressoes - a.impressoes
 
 function nomeDa(pagina) {
+  if (secaoDe(pagina) !== 'guia') return { lugar_id: null, nome: TITULOS[pagina] ?? null, categoria: null, bairro: null, status: null, cidade: null }
   const [, , cidade, slug, resto] = pagina.split('/')
   const l = !resto && slug ? GUIA_LUGARES.find((x) => x.cidade_slug === cidade && x.slug === slug) : null
   const daCidade = GUIA_LUGARES.find((x) => x.cidade_slug === cidade)
@@ -130,14 +145,22 @@ function nomeDa(pagina) {
 export function demoBuscas(args = {}) {
   lerModo()
   const ndias = Math.max(1, Math.min(Number(args.dias) || 30, 480))
+  const secao = ['guia', 'blog', 'site', 'tudo'].includes(args.secao) ? args.secao : 'guia'
   const limiar = Math.max(5, Math.ceil(ndias / 3))
-  const todas = ligado && !vazio ? linhasDemo() : []
-  const primeiro = todas.length ? todas[0].dia : null
-  const ultimo = todas.length ? todas[todas.length - 1].dia : null
+  const tudo = ligado && !vazio ? linhasDemo() : []
+  const todas = secao === 'tudo' ? tudo : tudo.filter((l) => secaoDe(l.pagina) === secao)
+  const primeiro = tudo.length ? tudo[0].dia : null
+  const ultimo = tudo.length ? tudo[tudo.length - 1].dia : null
   const ate = ultimo ?? somarDias(hojeSP(), -ATRASO)
   const de = somarDias(ate, -(ndias - 1))
   const antes = somarDias(de, -ndias)
   const agora = todas.filter((l) => l.dia >= de && l.dia <= ate)
+  const secoes = {}
+  for (const l of tudo) {
+    if (l.dia < de || l.dia > ate) continue
+    const k = secaoDe(l.pagina)
+    secoes[k] = { cliques: (secoes[k]?.cliques ?? 0) + l.cliques, impressoes: (secoes[k]?.impressoes ?? 0) + l.impressoes }
+  }
   const anteriores = primeiro && primeiro <= antes ? todas.filter((l) => l.dia >= antes && l.dia < de) : null
   const totais = (ls) => ({ ...somar(ls), consultas: new Set(ls.map((l) => l.consulta)).size, paginas: new Set(ls.map((l) => l.pagina)).size })
 
@@ -170,7 +193,7 @@ export function demoBuscas(args = {}) {
     : { em: new Date(Date.now() - 5 * 3600e3).toISOString(), origem: 'relogio', ok: true, de: somarDias(ate, -7), ate: hojeSP(), linhas: 412, parcial: false, erro: null })
 
   return {
-    dias: ndias, de, ate, tem_dados: !!ultimo, primeiro_dia: primeiro, ultimo_dia: ultimo, limiar,
+    dias: ndias, secao, de, ate, tem_dados: !!ultimo, secoes, primeiro_dia: primeiro, ultimo_dia: ultimo, limiar,
     atualizado_em: ultimo ? new Date(Date.now() - (comErro ? 31 : 5) * 3600e3).toISOString() : null,
     execucao: ultimaExec,
     ultima_ok: ultimaExec?.ok ? ultimaExec.em : ultimo ? new Date(Date.now() - 31 * 3600e3).toISOString() : null,

@@ -45,7 +45,8 @@ globalThis.fetch = async (entrada, init = {}) => {
     if (googleStatus !== 200) return responde({ error: { message: 'User does not have sufficient permission' } }, googleStatus)
     return responde({ rows: [
       { keys: [corpo.endDate, 'https://mimo.com.vc/saloes/itanhaem/studio-lirio', 'manicure itanhaém', 'MOBILE'], clicks: 2, impressions: 20, position: 5 },
-      { keys: [corpo.endDate, 'https://mimo.com.vc/blog/x', 'fora', 'MOBILE'], clicks: 1, impressions: 1, position: 1 },
+      { keys: [corpo.endDate, 'https://mimo.com.vc/blog/x', 'blog entra', 'MOBILE'], clicks: 1, impressions: 1, position: 1 },
+      { keys: [corpo.endDate, 'https://studiomel.mimo.com.vc/p/x', 'subdomínio fica fora', 'MOBILE'], clicks: 1, impressions: 1, position: 1 },
     ] })
   }
   if (url.host === 'supa.teste') {
@@ -85,7 +86,7 @@ log.length = 0
 r = await chamar('Bearer jwt-plataforma')
 assert.equal(r.status, 200)
 assert.equal(r.corpo.ok, true, JSON.stringify(r.corpo))
-assert.equal(r.corpo.linhas, 1)
+assert.equal(r.corpo.linhas, 2)
 assert.equal(r.corpo.descartadas, 1)
 const hoje = new Date().toISOString().slice(0, 10)
 const dias = Math.round((Date.parse(hoje) - Date.parse('2026-10-08')) / 86400e3) + 5
@@ -93,13 +94,16 @@ assert.equal(r.corpo.dias, Math.max(7, dias), 'o que falta desde o último dia g
 const gravou = rpcs('site_buscas_gravar')
 assert.equal(gravou.length, 1)
 assert.equal(gravou[0].auth, 'Bearer servico')
-assert.deepEqual(gravou[0].corpo.linhas, [{ dia: hoje, pagina: '/saloes/itanhaem/studio-lirio', consulta: 'manicure itanhaém', aparelho: 'celular', cliques: 2, impressoes: 20, posicao: 5 }])
+assert.deepEqual(gravou[0].corpo.linhas, [
+  { dia: hoje, pagina: '/saloes/itanhaem/studio-lirio', consulta: 'manicure itanhaém', aparelho: 'celular', cliques: 2, impressoes: 20, posicao: 5 },
+  { dia: hoje, pagina: '/blog/x', consulta: 'blog entra', aparelho: 'celular', cliques: 1, impressoes: 1, posicao: 1 },
+])
 assert.deepEqual(gravou[0].corpo.dias_, [hoje])
 const anot = rpcs('site_buscas_registrar')
 assert.equal(anot.length, 1)
 assert.equal(anot[0].corpo.origem_, 'plataforma')
 assert.equal(anot[0].corpo.ok_, true)
-console.log('ok  Plataforma: Google ->', r.corpo.linhas, 'linha gravada com a chave de serviço, execução anotada')
+console.log('ok  Plataforma: Google ->', r.corpo.linhas, 'linhas gravadas com a chave de serviço (o subdomínio fica fora), execução anotada')
 
 // 4. o relógio (chave de serviço no Authorization): o porteiro deixa, origem = relogio, pedido de dias respeitado
 log.length = 0

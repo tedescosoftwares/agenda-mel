@@ -199,7 +199,7 @@ salão?"; os dois pedidos aparecem na Plataforma.
   - o nome só entra na saudação do e-mail quando parece um nome (um link digitado ali viraria link clicável num e-mail assinado pela MIMO), e nunca vai no destinatário.
 
   O público nunca lê guia_interesses nem email_outbox, e o e-mail de quem pediu nunca vai para o site. Não precisa de segredo novo. Recomendado: `supabase secrets set EMAIL_RESPONDER=contato@mimo.com.vc`, para as respostas chegarem à equipe. Para testar: `supabase/ensaio_reivindicar.sql`.
-- **Buscas do Google (3.12).** Na aba Desempenho do guia, a seção "Buscas no Google" mostra o que as pessoas digitaram no Google antes de ver cada página do guia:
+- **Buscas do Google (3.12; o site inteiro na 3.12.1, migração 162).** Na aba Desempenho do guia, a seção "Buscas no Google" mostra o que as pessoas digitaram no Google antes de abrir cada página do site, com um seletor Guia (/saloes) · Blog (/blog) · Site (o resto: página inicial, planos, sobre, SEO) · Tudo, cada um com as impressões do período. Os nomes vêm do salão, do título do artigo (blog_posts) ou do título da página (seo_pages). Os endereços dos salões (subdomínios) ficam de fora por enquanto. A seção mostra:
   - cliques, impressões, CTR e posição média, com comparação com o período anterior;
   - cliques e impressões por dia;
   - as buscas que mais trouxeram gente;

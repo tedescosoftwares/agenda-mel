@@ -1,6 +1,7 @@
 /* eslint-disable no-undef -- Deno é global no runtime das Edge Functions; o tsc confere o resto */
 // gsc-sincronizar (3.12): traz do Google Search Console as buscas que levaram
-// às páginas do guia de salões (/saloes...) e grava em site_buscas (migração 160).
+// às páginas do site da MIMO (o guia de salões, o blog e as outras páginas) e
+// grava em site_buscas (migrações 160 e 162; quem separa as seções é o banco).
 //
 // SEGREDOS (o dono do projeto grava com `supabase secrets set`; nunca no código):
 //   GSC_CONTA_SERVICO  o JSON inteiro da chave da conta de serviço do Google
@@ -47,7 +48,8 @@ function json(corpo: unknown, status = 200) {
     headers: {
       'Content-Type': 'application/json',
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+      // a lista que o supabase-js manda (de @supabase/supabase-js/cors), para o preflight não barrar
+      'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-retry-count, traceparent, tracestate, baggage',
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
     },
   })

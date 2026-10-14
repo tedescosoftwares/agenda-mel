@@ -11,15 +11,19 @@ import {
 import '../../../guia-buscas.css'
 
 // As buscas do Google (3.12): o que as pessoas digitaram no Google antes de
-// ver as páginas do guia, com cliques, impressões, CTR e posição média. Tudo
-// vem de guia_buscas() (migração 160), que lê o que a função gsc-sincronizar
-// trouxe do Search Console. "Atualizar agora" chama a função na hora; o
-// relógio (pg_cron, se ligado) chama todo dia.
+// abrir o site da MIMO, com cliques, impressões, CTR e posição média. Tudo
+// vem de guia_buscas() (migrações 160 e 162), que lê o que a função
+// gsc-sincronizar trouxe do Search Console: o site inteiro, por seção (o
+// guia de salões, o blog, as outras páginas, ou tudo). "Atualizar agora"
+// chama a função na hora; o relógio (pg_cron, se ligado) chama todo dia.
 //
 // Para encaixar: <BuscasGoogle dias={desempenho.dias} /> na aba Desempenho.
 // Com dias, segue o período de fora; sem, mostra o próprio seletor.
 
 const PERIODOS = [[7, '7 dias'], [30, '30 dias'], [90, '90 dias']]
+const SECOES = [['guia', 'Guia'], ['blog', 'Blog'], ['site', 'Site'], ['tudo', 'Tudo']]
+const SECAO_NOME = { guia: 'o guia de salões', blog: 'o blog', site: 'as outras páginas do site', tudo: 'o site' }
+let secaoLembrada = 'guia' // a seção escolhida fica para a próxima vez que a aba abrir
 const APARELHO = { celular: 'Celular', computador: 'Computador', tablet: 'Tablet' }
 const COMANDO = 'supabase secrets set GSC_CONTA_SERVICO="$(cat chave.json)" GSC_PROPRIEDADE=sc-domain:mimo.com.vc'
 const NAO_LIGADO = ['sem_segredos', 'chave_invalida']
@@ -39,10 +43,14 @@ const dataLonga = (iso) => { const dt = new Date(`${iso}T12:00:00`); return `${D
 const dataComAno = (iso) => (String(iso).slice(0, 4) === String(new Date().getFullYear()) ? dataCurta(iso) : `${dataCurta(iso)}/${String(iso).slice(0, 4)}`)
 
 // o nome de uma página: o salão, "Unhas em Itanhaém", "Salões em Itanhaém",
-// "Salões no Centro, Itanhaém" (as coleções da 157, iguais à tabela "Por página")...
+// "Salões no Centro, Itanhaém" (as coleções da 157, iguais à tabela "Por página");
+// fora do guia, o título do artigo ou da página (162) e, sem título, o caminho
 function tituloDaPagina(p) {
   if (p?.nome) return p.nome
-  const [, , cidade, cat, ...resto] = String(p?.pagina ?? '').split('/')
+  const caminho = String(p?.pagina ?? '')
+  if (caminho === '/' || caminho === '') return 'Página inicial'
+  if (!/^\/saloes(\/|$)/.test(caminho)) return caminho
+  const [, , cidade, cat, ...resto] = caminho.split('/')
   const nomeCidade = p?.cidade || cidade
   if (!cidade) return 'Índice do guia'
   if (!cat) return `Salões em ${nomeCidade}`
@@ -70,12 +78,13 @@ function variacaoPosicao(agora, antes) {
   return { texto: d === 0 ? 'igual' : `${d > 0 ? 'subiu' : 'caiu'} ${virgula(Math.abs(d), 1)}`, bom: d >= 0, igual: d === 0 }
 }
 
-async function lerBuscas(dias) {
+async function lerBuscas(dias, secao) {
   try {
-    const { data, error } = await supabase.rpc('guia_buscas', { dias })
+    const { data, error } = await supabase.rpc('guia_buscas', { dias, secao })
     if (error) {
       const msg = String(error.message ?? error)
-      return { dados: null, erro: /guia_buscas|site_buscas|function|schema cache/i.test(msg) ? 'As buscas do Google ainda não existem neste banco. Rode a migração 160 (supabase/160_buscas_do_google.sql).' : msg }
+      if (/guia_buscas/i.test(msg) && /secao/i.test(msg)) return { dados: null, erro: 'As buscas por seção precisam da migração 162 (supabase/162_buscas_do_site_inteiro.sql).' }
+      return { dados: null, erro: /guia_buscas|site_buscas|function|schema cache/i.test(msg) ? 'As buscas do Google ainda não existem neste banco. Rode as migrações 160 e 162.' : msg }
     }
     return { dados: data, erro: '' }
   } catch (e) {
@@ -92,7 +101,10 @@ async function sincronizar() {
     const status = error.context?.status
     let detalhe = error.message
     try { const j = await error.context?.json?.(); if (j?.erro) detalhe = j.erro } catch { /* sem corpo */ }
-    if (status === 404 || /failed to send|not found/i.test(detalhe)) return { ok: false, codigo: 'sem_funcao', erro: 'A função gsc-sincronizar ainda não foi publicada: rode ./supabase/publicar.sh.' }
+    // 404 do Supabase: a função não existe no projeto. Falha de rede é outra coisa:
+    // a função pode até ter terminado do lado de lá (a tela relê os dados logo depois)
+    if (status === 404 || /not found/i.test(detalhe)) return { ok: false, codigo: 'sem_funcao', erro: 'A função gsc-sincronizar ainda não foi publicada: rode ./supabase/publicar.sh.' }
+    if (/failed to send|failed to fetch|network/i.test(detalhe)) return { ok: false, erro: 'A resposta da função não chegou (rede ou tempo esgotado). Se ela terminou do lado de lá, os números abaixo já estão atualizados.' }
     return { ok: false, erro: detalhe }
   } catch (e) {
     return { ok: false, erro: String(e?.message ?? e) }
@@ -102,6 +114,8 @@ async function sincronizar() {
 export default function BuscasGoogle({ dias: diasDeFora }) {
   const [diasProprios, setDiasProprios] = useState(30)
   const dias = diasDeFora ?? diasProprios
+  const [secao, setSecao] = useState(secaoLembrada)
+  useEffect(() => { secaoLembrada = secao }, [secao])
   // estado.dias diz de que período são os dados: trocar o período deixa a tela
   // "carregando" (com os dados de antes, mais claros) até chegar o novo
   const [estado, setEstado] = useState({ dias: null, dados: null, erro: '' })
@@ -112,15 +126,15 @@ export default function BuscasGoogle({ dias: diasDeFora }) {
   const montado = useRef(false)
   useEffect(() => { montado.current = true; return () => { montado.current = false } }, [])
 
-  const ler = useCallback((d) => {
+  const ler = useCallback((d, sec) => {
     const n = ++pedido.current
-    return lerBuscas(d).then((r) => {
+    return lerBuscas(d, sec).then((r) => {
       if (!montado.current || n !== pedido.current) return
-      setEstado({ dias: d, ...r })
+      setEstado({ dias: d, secao: sec, ...r })
       setRelendo(false)
     })
   }, [])
-  useEffect(() => { ler(dias) }, [dias, versao, ler])
+  useEffect(() => { ler(dias, secao) }, [dias, secao, versao, ler])
 
   async function atualizar() {
     setSinc({ rodando: true })
@@ -132,7 +146,7 @@ export default function BuscasGoogle({ dias: diasDeFora }) {
   }
 
   const { dados, erro } = estado
-  const carregando = relendo || estado.dias !== dias
+  const carregando = relendo || estado.dias !== dias || estado.secao !== secao
   const rodando = !!sinc?.rodando
   return (
     <section className={'pg-gsc' + (carregando && dados ? ' pg-gsc-recarregando' : '')} aria-labelledby="pg-gsc-titulo" aria-busy={carregando}>
@@ -141,10 +155,19 @@ export default function BuscasGoogle({ dias: diasDeFora }) {
           <span className="plat-icone pequeno azul"><Search /></span>
           <div>
             <h3 id="pg-gsc-titulo">Buscas no Google</h3>
-            <p className="muted">O que as pessoas digitaram no Google antes de ver as páginas do guia (Search Console)</p>
+            <p className="muted">O que as pessoas digitaram no Google antes de abrir o site da MIMO (Search Console)</p>
           </div>
         </div>
         <div className="pg-gsc-acoes">
+          {dados?.tem_dados && (
+            <div className="pg-seg" role="radiogroup" aria-label="Que parte do site">
+              {SECOES.map(([id, r]) => (
+                <button key={id} type="button" role="radio" aria-checked={secao === id} className={secao === id ? 'ativo' : ''} onClick={() => setSecao(id)} title={`Impressões neste período: ${fmt(impressoesDa(dados, id))}`}>
+                  {r} <span className="pg-gsc-conta">{compacto(impressoesDa(dados, id))}</span>
+                </button>
+              ))}
+            </div>
+          )}
           {diasDeFora == null && (
             <div className="pg-seg" role="radiogroup" aria-label="Período das buscas">
               {PERIODOS.map(([d, r]) => <button key={d} type="button" role="radio" aria-checked={dias === d} className={dias === d ? 'ativo' : ''} onClick={() => setDiasProprios(d)}>{r}</button>)}
@@ -169,10 +192,35 @@ export default function BuscasGoogle({ dias: diasDeFora }) {
         <LigadoSemBuscas ultima={dados.ultima_ok} execucao={dados.execucao} />
       ) : !dados.tem_dados ? (
         <ComoLigar execucao={dados.execucao} rodando={rodando} onBuscar={atualizar} />
+      ) : !n0(dados.totais?.impressoes) && secao !== 'tudo' && impressoesDa(dados, 'tudo') > 0 ? (
+        <SecaoVazia dados={dados} secao={secao} onTudo={() => setSecao('tudo')} />
       ) : (
         <ComDados dados={dados} />
       )}
     </section>
+  )
+}
+
+// as impressões de uma seção no período (secoes vem de todas as seções, qualquer que seja a escolhida)
+const impressoesDa = (dados, id) => (id === 'tudo'
+  ? Object.values(dados?.secoes ?? {}).reduce((s, x) => s + n0(x?.impressoes), 0)
+  : n0(dados?.secoes?.[id]?.impressoes))
+// até 9.999 inteiro; depois 12 mil, 1,2 mi (para caber no seletor)
+const compacto = (v) => (v < 1e4 ? fmt(v) : v < 1e6 ? `${virgula(v / 1e3, v < 1e5 ? 1 : 0)} mil` : `${virgula(v / 1e6, 1)} mi`)
+
+// a seção escolhida não apareceu em nenhuma busca no período, mas outras sim
+function SecaoVazia({ dados, secao, onTudo }) {
+  const outras = SECOES.filter(([id]) => id !== 'tudo' && id !== secao && impressoesDa(dados, id) > 0)
+    .map(([id, r]) => `${r.toLowerCase()} ${fmt(impressoesDa(dados, id))}`)
+  return (
+    <div className="pg-gsc-caixa pg-gsc-ok">
+      <CircleCheck size={16} />
+      <span>
+        Nenhuma busca no Google levou para {SECAO_NOME[secao]} neste período{secao === 'guia' ? ' (páginas novas levam dias ou semanas para aparecer)' : ''}.
+        {outras.length ? ` O resto do site apareceu (impressões): ${outras.join(', ')}.` : ''}
+        {' '}<button type="button" className="plat-link" onClick={onTudo}>Ver o site inteiro</button>
+      </span>
+    </div>
   )
 }
 
@@ -199,7 +247,7 @@ function LigadoSemBuscas({ ultima, execucao }) {
     <>
       <div className="pg-gsc-caixa pg-gsc-ok">
         <CircleCheck size={16} />
-        <span>Ligado (atualizado {haQuanto(ultima)}). O Google ainda não mostrou nenhuma página do guia numa busca: páginas novas levam dias ou semanas para aparecer. Os números aparecem aqui assim que ele começar a mostrar.</span>
+        <span>Ligado (atualizado {haQuanto(ultima)}). O Google ainda não mostrou nenhuma página do site numa busca: páginas novas levam dias ou semanas para aparecer. Os números aparecem aqui assim que ele começar a mostrar.</span>
       </div>
       {execucao && !execucao.ok && (
         <div className="pg-gsc-caixa pg-gsc-erro"><CircleAlert size={16} /> <span>A última atualização ({execucao.origem === 'relogio' ? 'pelo relógio' : 'por aqui'}, {haQuanto(execucao.em)}) deu erro: {execucao.erro}</span></div>
@@ -317,6 +365,7 @@ function ComDados({ dados }) {
           <li><b>Oportunidade</b>: busca com pelo menos {fmt(dados.limiar)} impressões no período que está entre a 4ª e a 15ª posição (dá para subir) ou no top 3 com menos de 5% de cliques (o título e a descrição podem chamar mais).</li>
           <li>O Google entrega os números com 2 a 3 dias de atraso e conta o dia no horário do Pacífico (4 a 5 horas atrás de Brasília). O período termina no último dia que já chegou.</li>
           <li>Buscas raras o Google esconde para proteger quem buscou; por isso os totais podem ficar um pouco abaixo dos do painel do Search Console.</li>
+          <li><b>Guia</b> são as páginas /saloes; <b>Blog</b>, as /blog; <b>Site</b>, o resto (página inicial, planos, sobre, as páginas de SEO). Os endereços dos salões (studiomel.mimo.com.vc) ficam de fora por enquanto.</li>
           <li>Com o relógio ligado, atualiza sozinho todo dia. “Atualizar agora” busca na hora o que falta.</li>
         </ul>
       </details>

@@ -173,6 +173,9 @@ export default function Guia() {
     return () => window.removeEventListener('beforeunload', segurar)
   }, [lote])
 
+  // outra aba começa do topo (a coluna da Plataforma guarda a rolagem da anterior)
+  useEffect(() => { document.querySelector('.plat-principal')?.scrollTo({ top: 0 }) }, [aba])
+
   // o recado some sozinho
   useEffect(() => {
     if (!aviso) return

@@ -112,7 +112,8 @@ export default function PaginaDoLugar({ lugar, conteudo, vizinhos = [], mesmaCat
   }, [previa, temLugar])
 
   if (!lugar) return null
-  const l = lugar
+  // site só com http(s): um 'javascript:' digitado na Plataforma nunca vira link
+  const l = { ...lugar, site: /^https?:\/\//i.test(lugar.site ?? '') ? lugar.site : null }
   const c = conteudoSeguro(conteudo)
   const cat = categoriaDoGuia(l.categoria)
   const trilha = trilhaDoLugar(l)
@@ -251,7 +252,7 @@ export default function PaginaDoLugar({ lugar, conteudo, vizinhos = [], mesmaCat
 
                   {(l.telefone || l.whatsapp) && (
                     <div className="gd-fato">
-                      <dt><span className="gd-fato-ic">{zap ? <MessageCircle size={18} /> : <Phone size={18} />}</span>{telMesmoDoZap ? 'Telefone e WhatsApp' : zap && !l.telefone ? 'WhatsApp' : 'Telefone'}</dt>
+                      <dt><span className="gd-fato-ic">{zap && (!l.telefone || telMesmoDoZap) ? <MessageCircle size={18} /> : <Phone size={18} />}</span>{telMesmoDoZap ? 'Telefone e WhatsApp' : zap && !l.telefone ? 'WhatsApp' : 'Telefone'}</dt>
                       <dd>
                         {l.telefone && <a className="gd-fato-forte" href={tel}>{telefoneBonito(l.telefone)}</a>}
                         {zap && !telMesmoDoZap && l.telefone && <span>WhatsApp: <a href={zap} target="_blank" rel="noopener noreferrer">{telefoneBonito(l.whatsapp)}</a></span>}
@@ -299,7 +300,7 @@ export default function PaginaDoLugar({ lugar, conteudo, vizinhos = [], mesmaCat
                 <section className="gd-bloco" aria-labelledby="gd-dest-t">
                   <span className="ld-kicker">Destaques</span>
                   <h2 id="gd-dest-t" className="gd-h2">Em poucas palavras</h2>
-                  <div className="gd-destaques">
+                  <div className={`gd-destaques gd-destaques-${c.destaques.length}`}>
                     {c.destaques.map((d, i) => (
                       <article className="gd-destaque ld-rv" key={d.titulo} style={{ transitionDelay: `${i * 50}ms` }}>
                         <span className="gd-destaque-n">{String(i + 1).padStart(2, '0')}</span>

@@ -1,0 +1,106 @@
+// O guia de salões no HTML estático (chamado por paginas-estaticas.mjs).
+// Recebe o que guia_publicadas() devolve e monta uma página por rota:
+// /saloes, /saloes/<cidade>, /saloes/<cidade>/<categoria> e
+// /saloes/<cidade>/<salão>, com título, descrição, JSON-LD e o CORPO já
+// escrito dentro de <div id="root">. O robô que não roda JavaScript lê o
+// texto inteiro; a pessoa recebe o app, que troca esse corpo ao abrir.
+// Tudo o que vem do banco passa por esc().
+import {
+  GUIA_CATEGORIAS, categoriaDoGuia, conteudoSeguro, faqDaPagina, horariosResumo,
+  rotaDoGuia, rotaDaCidade, rotaDaCategoria, rotaDoLugar, seoPadraoDaCidade,
+} from '../src/lib/guia.js'
+import {
+  seoDoLugar, seoDaCidade, seoDoIndice, trilhaDoLugar, trilhaDaCidade,
+  jsonLdDoLugar, jsonLdDaCidade, jsonLdDoIndice,
+} from '../src/lib/guiaSeo.js'
+
+const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+const dia = (v) => (v ? String(v).slice(0, 10) : undefined)
+const migalhas = (trilha) => `<nav aria-label="Você está em">${trilha.map(([n, r], i) => (i < trilha.length - 1 ? `<a href="${esc(r)}">${esc(n)}</a> › ` : `<span>${esc(n)}</span>`)).join('')}</nav>`
+const faqHtml = (faq) => (faq.length ? `<section><h2>Perguntas frequentes</h2>${faq.map((f) => `<h3>${esc(f.pergunta)}</h3><p>${esc(f.resposta)}</p>`).join('')}</section>` : '')
+const listaDeCartoes = (cartoes, cidadeSlug) => `<ul>${cartoes.map((c) => `<li><a href="${esc(rotaDoLugar(cidadeSlug, c.slug))}">${esc(c.nome)}</a>${c.bairro ? ` (${esc(c.bairro)})` : ''}${c.resumo ? `: ${esc(c.resumo)}` : ''}</li>`).join('')}</ul>`
+
+function corpoDoLugar(l, c, faq) {
+  const cat = categoriaDoGuia(l.categoria)
+  const horas = horariosResumo(l.horarios)
+  const endereco = [l.endereco, l.bairro, `${l.cidade}${l.uf ? ` - ${l.uf}` : ''}`, l.cep].filter(Boolean).join(', ')
+  return `<main>
+${migalhas(trilhaDoLugar(l))}
+<h1>${esc(l.nome)}</h1>
+<p>${esc(c.chamada || `${cat.curto} em ${l.cidade}${l.bairro ? `, no bairro ${l.bairro}` : ''}.`)}</p>
+<section><h2>Endereço e horário</h2><p>${esc(endereco)}</p>${horas.length ? `<ul>${horas.map((h) => `<li>${esc(h.dias)}: ${esc(h.horas)}</li>`).join('')}</ul>` : ''}${l.telefone ? `<p>Telefone: ${esc(l.telefone)}</p>` : ''}${l.servicos?.length ? `<p>Serviços: ${esc(l.servicos.join(', '))}</p>` : ''}</section>
+${c.sobre.length ? `<section><h2>Sobre ${esc(l.nome)}</h2>${c.sobre.map((p) => `<p>${esc(p)}</p>`).join('')}</section>` : ''}
+${c.destaques.length ? `<section>${c.destaques.map((d) => `<h3>${esc(d.titulo)}</h3><p>${esc(d.texto)}</p>`).join('')}</section>` : ''}
+${c.dicas.itens.length ? `<section><h2>${esc(c.dicas.titulo || 'Dicas')}</h2><ul>${c.dicas.itens.map((i) => `<li>${esc(i)}</li>`).join('')}</ul></section>` : ''}
+${faqHtml(faq)}
+${l.vizinhos?.length ? `<section><h2>Perto dali</h2>${listaDeCartoes(l.vizinhos, l.cidade_slug)}</section>` : ''}
+<p><a href="${esc(rotaDaCategoria(l.cidade_slug, l.categoria))}">${esc(`${cat.rotulo} em ${l.cidade}`)}</a> · <a href="${esc(rotaDaCidade(l.cidade_slug))}">${esc(`Salões em ${l.cidade}`)}</a></p>
+${l.na_mimo ? '' : `<p><small>Página informativa feita pela MIMO com dados públicos do estabelecimento. ${esc(l.nome)} ainda não agenda pela MIMO.</small></p>`}
+</main>`
+}
+
+function corpoDaCidade(dados, faq) {
+  const c = conteudoSeguro(dados.pagina) ?? conteudoSeguro({})
+  const { h1 } = seoDaCidade(dados.cidade, dados.cidade_slug, dados.categoria, dados.pagina)
+  const outras = (dados.categorias ?? []).filter((x) => x.categoria !== dados.categoria)
+  return `<main>
+${migalhas(trilhaDaCidade(dados.cidade, dados.cidade_slug, dados.categoria))}
+<h1>${esc(h1)}</h1>
+<p>${esc(c.chamada || seoPadraoDaCidade(dados.cidade, dados.categoria).meta_description)}</p>
+${c.intro.map((p) => `<p>${esc(p)}</p>`).join('')}
+<section><h2>${esc(dados.categoria ? `${categoriaDoGuia(dados.categoria).rotulo} em ${dados.cidade}` : `Salões em ${dados.cidade}`)}</h2>${listaDeCartoes(dados.lugares, dados.cidade_slug)}</section>
+${c.como_escolher.itens.length ? `<section><h2>${esc(c.como_escolher.titulo || 'Como escolher')}</h2><ul>${c.como_escolher.itens.map((i) => `<li>${esc(i)}</li>`).join('')}</ul></section>` : ''}
+${faqHtml(faq)}
+${outras.length ? `<nav aria-label="Categorias"><ul>${outras.map((x) => `<li><a href="${esc(rotaDaCategoria(dados.cidade_slug, x.categoria))}">${esc(`${categoriaDoGuia(x.categoria).rotulo} em ${dados.cidade}`)}</a></li>`).join('')}</ul></nav>` : ''}
+${dados.categoria ? `<p><a href="${esc(rotaDaCidade(dados.cidade_slug))}">${esc(`Todos os salões de ${dados.cidade}`)}</a></p>` : ''}
+</main>`
+}
+
+// o mesmo agrupamento de guia_cidade(), feito aqui a partir da lista inteira
+const ordem = (a, b) => (a.na_mimo ? 0 : 1) - (b.na_mimo ? 0 : 1) || (b.selecao ? 1 : 0) - (a.selecao ? 1 : 0) || a.nome.localeCompare(b.nome, 'pt-BR')
+const cartao = (l) => ({ slug: l.slug, nome: l.nome, bairro: l.bairro, categoria: l.categoria, resumo: l.conteudo?.resumo ?? null, servicos: (l.servicos ?? []).slice(0, 4), selecao: l.selecao, na_mimo: l.na_mimo })
+function dadosDaCidade(lugares, paginas, cidadeSlug, categoria) {
+  const daCidade = lugares.filter((l) => l.cidade_slug === cidadeSlug)
+  const lista = (categoria ? daCidade.filter((l) => l.categoria === categoria) : daCidade).sort(ordem)
+  const contar = (ls, campo) => [...ls.reduce((m, l) => (l[campo] ? m.set(l[campo], (m.get(l[campo]) ?? 0) + 1) : m), new Map())].map(([k, total]) => ({ [campo]: k, total })).sort((a, b) => b.total - a.total)
+  const pagina = paginas.find((p) => p.cidade_slug === cidadeSlug && (p.categoria ?? '') === categoria)
+  return {
+    cidade: daCidade[0].cidade, cidade_slug: cidadeSlug, uf: daCidade[0].uf, categoria, pagina: pagina?.conteudo ?? null, total: daCidade.length,
+    categorias: contar(daCidade, 'categoria'), bairros: contar(lista, 'bairro'), lugares: lista.map(cartao),
+    atualizado: [...lista.map((l) => dia(l.atualizado_em)), dia(pagina?.atualizado_em)].filter(Boolean).sort().at(-1),
+  }
+}
+
+export function paginasDoGuia(guia) {
+  const lugares = Array.isArray(guia?.lugares) ? guia.lugares.filter((l) => l?.slug && l?.cidade_slug && l?.conteudo) : []
+  const paginas = Array.isArray(guia?.paginas) ? guia.paginas : []
+  if (!lugares.length) return []
+  const out = []
+  // os salões
+  for (const l of lugares) {
+    const c = conteudoSeguro(l.conteudo)
+    const faq = faqDaPagina(l, c)
+    const { titulo, descricao, caminho } = seoDoLugar(l, c)
+    out.push({ caminho, titulo, descricao, atualizado: dia(l.atualizado_em), prioridade: '0.6', freq: 'monthly', jsonLd: jsonLdDoLugar(l, c, faq), corpo: corpoDoLugar(l, c, faq) })
+  }
+  // as cidades e as categorias de cada uma
+  const cidades = [...new Set(lugares.map((l) => l.cidade_slug))]
+  for (const cs of cidades) {
+    const cats = ['', ...GUIA_CATEGORIAS.map((g) => g.slug).filter((s) => lugares.some((l) => l.cidade_slug === cs && l.categoria === s))]
+    for (const cat of cats) {
+      const d = dadosDaCidade(lugares, paginas, cs, cat)
+      const faq = conteudoSeguro(d.pagina)?.faq ?? []
+      const { titulo, descricao, caminho } = seoDaCidade(d.cidade, cs, cat, d.pagina)
+      out.push({ caminho, titulo, descricao, atualizado: d.atualizado, prioridade: cat ? '0.7' : '0.8', freq: 'weekly', jsonLd: jsonLdDaCidade(d, faq), corpo: corpoDaCidade(d, faq) })
+    }
+  }
+  // o índice
+  const lista = cidades.map((cs) => { const l = lugares.find((x) => x.cidade_slug === cs); return { cidade: l.cidade, cidade_slug: cs, uf: l.uf, total: lugares.filter((x) => x.cidade_slug === cs).length } })
+  const ix = seoDoIndice()
+  out.push({
+    caminho: rotaDoGuia(), titulo: ix.titulo, descricao: ix.descricao, prioridade: '0.6', freq: 'weekly', jsonLd: jsonLdDoIndice(lista),
+    atualizado: lugares.map((l) => dia(l.atualizado_em)).filter(Boolean).sort().at(-1),
+    corpo: `<main><h1>Guia de salões de beleza</h1><ul>${lista.map((c) => `<li><a href="${esc(rotaDaCidade(c.cidade_slug))}">${esc(`Salões em ${c.cidade}`)}</a> (${c.total})</li>`).join('')}</ul></main>`,
+  })
+  return out
+}

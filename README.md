@@ -123,6 +123,30 @@ sua máquina — ou fechado.
 
 Avisos nativos (3.3): o app registra o aparelho em `push_tokens_app` e a `enviar-push` manda também pelo Expo Push; detalhes em `apps/mobile/README.md`.
 
+### Guia de salões (3.9)
+
+Uma página pública para cada salão da região, mesmo antes de ele ser cliente
+da MIMO, mais a página da cidade e de cada categoria:
+`/saloes/itanhaem`, `/saloes/itanhaem/unhas`, `/saloes/itanhaem/<salão>`.
+Serve para aparecer no Google ("salão de beleza em Itanhaém") e para
+captar: a cliente toca "Quero marcar aqui pelo app" e a dona toca "É o seu
+salão?"; os dois pedidos aparecem na Plataforma.
+
+- **Plataforma → Guia de salões**: importa os CSVs (o do Google Places e o
+  validado na Receita, que casam pelo `place_id`), gera o texto de cada
+  página com IA (Edge Function `guia-gerar`, Groq, segredo `GROQ_API_KEY`;
+  `GUIA_IA_MODELO`, `GUIA_IA_URL` e `GUIA_IA_CHAVE` opcionais) e mostra a
+  prévia da landing para aprovar, gerar de novo, editar ou descartar, um a um.
+- **Banco**: `supabase/153_guia_de_saloes.sql`. O público só lê pelas
+  funções `guia_*`, que nunca entregam nota, avaliações, CNPJ, razão social
+  nem coordenadas (ficam só para a triagem).
+- **Site**: o build (`scripts/guia-estatico.mjs`) grava o HTML de cada
+  página com o texto já escrito, título, canonical e JSON-LD, e põe tudo no
+  sitemap. Página aprovada aparece na hora para quem navega; no HTML estático
+  e no sitemap, depois do próximo bat 2.
+- Toda página de salão fora da MIMO diz que é informativa e tem o caminho
+  para o dono corrigir ou pedir a remoção; removido nunca volta pela importação.
+
 A MIMO também vai para a Play Store como app de verdade, em `apps/mobile`:
 nativo (Expo/React Native) de ponta a ponta para a cliente, falando com o
 mesmo Supabase da web, sem WebView. A web continua sendo a porta de entrada e

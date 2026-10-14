@@ -21,6 +21,7 @@ import { ARTIGOS, CATEGORIAS } from '../src/conteudo/artigos.js'
 import { PAGINAS_SEO, PAGINAS_INSTITUCIONAIS } from '../src/conteudo/paginasSeo.js'
 import { TITULO as TITULO_HOME, DESCRICAO as DESCRICAO_HOME, jsonLdDaHome } from '../src/conteudo/home.js'
 import { mesclarPagina } from '../src/lib/paginas.js'
+import { paginasDoGuia } from './guia-estatico.mjs'
 
 const SITE = 'https://mimo.com.vc'
 const DIST = path.resolve('dist')
@@ -81,9 +82,11 @@ function html(pagina) {
   h = /<meta name="robots"[^>]*>/.test(h) ? h.replace(/<meta name="robots"[^>]*>/, robots) : h.replace('</head>', `    ${robots}\n  </head>`)
   if (pagina.jsonLd) {
     // o app troca este bloco pelo id quando navega de uma página para outra (src/lib/seo.js)
-    const ld = `<script type="application/ld+json" id="seo-jsonld">${JSON.stringify(pagina.jsonLd).replace(/<\//g, '<\\/')}</script>`
+    const ld = `<script type="application/ld+json" id="seo-jsonld">${JSON.stringify(pagina.jsonLd).replace(/</g, '\\u003c')}</script>`
     h = h.replace('</head>', `    ${ld}\n  </head>`)
   }
+  // o guia de salões leva o corpo já escrito (escapado em guia-estatico.mjs): o React troca ao abrir
+  if (pagina.corpo) h = h.replace('<div id="root"></div>', `<div id="root">${pagina.corpo}</div>`)
   return h
 }
 
@@ -167,6 +170,16 @@ if (URL && CHAVE && !globalThis.process.env.VITE_DEMO) {
     console.log(`paginas-estaticas: ${pags.length} páginas e ${posts.length} artigos lidos do banco${novas ? `, ${novas} página(s) criada(s) na Plataforma` : ''}${ignoradas ? ` (${ignoradas} rota(s) do banco sem tela, ignoradas)` : ''}`)
   } catch (e) {
     console.log('paginas-estaticas: banco indisponível (' + e.message + '), seguindo só com o código')
+  }
+  // o guia de salões (153): tudo que está no ar, de uma vez. Sem a migração (404) ou sem rede, segue sem o guia.
+  try {
+    const r = await fetch(`${URL}/rest/v1/rpc/guia_publicadas`, { headers: { apikey: CHAVE, Authorization: `Bearer ${CHAVE}` } })
+    if (!r.ok) throw new Error(`${r.status} em rpc/guia_publicadas`)
+    const doGuia = paginasDoGuia(await r.json())
+    for (const pg of doGuia) registrar(pg)
+    console.log(`paginas-estaticas: guia de salões com ${doGuia.length} página(s)`)
+  } catch (e) {
+    console.log('paginas-estaticas: guia de salões indisponível (' + e.message + '), seguindo sem ele')
   }
 }
 const usadas = new Set([...ARTIGOS.map((a) => a.categoria), ...paginas.filter((p) => p.tipo === 'article' && p.jsonLd).flatMap((p) => { const m = p.jsonLd['@graph'].find((g) => g['@type'] === 'BreadcrumbList'); const c = m?.itemListElement?.[2]?.item; return c && c.includes('/blog/categoria/') ? [c.split('/blog/categoria/')[1]] : [] })])

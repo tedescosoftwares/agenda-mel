@@ -384,7 +384,12 @@ export default function Guia() {
   }, [aplicarDesempenho])
   useEffect(() => { const n = ++pedidoDesempenho.current; lerDesempenho(30).then((r) => aplicarDesempenho(n, r)) }, [aplicarDesempenho])
   // os números de cada salão, para o painel da revisão
-  const desempenhoPorLugar = useMemo(() => new Map((desempenho.dados?.paginas ?? []).filter((p) => p.lugar_id).map((p) => [p.lugar_id, p])), [desempenho.dados])
+  // (a primeira linha de cada salão, a de mais visitas, é a que vale)
+  const desempenhoPorLugar = useMemo(() => {
+    const m = new Map()
+    for (const p of desempenho.dados?.paginas ?? []) if (p.lugar_id && !m.has(p.lugar_id)) m.set(p.lugar_id, p)
+    return m
+  }, [desempenho.dados])
 
   // os números do topo
   const kpis = useMemo(() => {

@@ -5,7 +5,8 @@ import { useSeo } from '../../lib/seo'
 import { conteudoSeguro, faqDaPagina, rotaDaCidade, rotaDoLugar } from '../../lib/guia'
 import { seoDoLugar, jsonLdDoLugar } from '../../lib/guiaSeo'
 import { carregarPagina } from '../../lib/guiaPublico'
-import { registrarVisita, aoClicarNaPagina } from '../../lib/eventos'
+import { aoClicarNaPagina } from '../../lib/eventos'
+import { useVisita } from '../../lib/useVisita'
 import { NavSite, PeSite, useRevelar } from '../../components/site/Pecas'
 import PaginaDoLugar from '../../components/guia/PaginaDoLugar'
 import Interesse from '../../components/guia/Interesse'
@@ -76,7 +77,7 @@ function Pagina({ dados, onInteresse }) {
   const faq = faqDaPagina(lugar, conteudo)
   const seo = seoDoLugar(lugar, lugar.conteudo)
   const caminho = rotaDoLugar(lugar.cidade_slug, lugar.slug)
-  useEffect(() => { registrarVisita(caminho) }, [caminho])
+  useVisita(caminho)
   useSeo({ titulo: seo.titulo, descricao: seo.descricao, caminho: seo.caminho, jsonLd: jsonLdDoLugar(lugar, lugar.conteudo, faq), noindex: seo.noindex, tipo: 'business.business' })
   return (
     <PaginaDoLugar

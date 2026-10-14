@@ -145,8 +145,8 @@ export default function Interesse({ tipo, lugar, onFechar, previa = false }) {
             <h2 id={`${id}-t`} tabIndex={-1}>{feito.repetido ? 'Já estava anotado.' : SUCESSO[qual][0]}</h2>
             <p>{feito.repetido ? 'A gente já tinha recebido esse pedido com o mesmo contato. Obrigado!' : SUCESSO[qual][1](nomeLugar, feito.comContato)}</p>
             <div className="gd-folha-acoes">
-              {qual === 'sou_dono' && <a className="ld-btn ld-primario" href={comecarEm('salao')}>Criar minha agenda agora <ArrowRight size={16} /></a>}
-              {qual === 'quero_marcar' && zapDoSalao && <a className="ld-btn ld-fantasma" href={zapDoSalao} target="_blank" rel="noopener noreferrer"><MessageCircle size={16} /> Enquanto isso, chamar o salão</a>}
+              {qual === 'sou_dono' && <a className="ld-btn ld-primario" href={comecarEm('salao')} data-evento="criar_agenda">Criar minha agenda agora <ArrowRight size={16} /></a>}
+              {qual === 'quero_marcar' && zapDoSalao && <a className="ld-btn ld-fantasma" href={zapDoSalao} target="_blank" rel="noopener noreferrer" data-evento="whatsapp"><MessageCircle size={16} /> Enquanto isso, chamar o salão</a>}
               <button type="button" className={'ld-btn ' + (qual === 'sou_dono' || (qual === 'quero_marcar' && zapDoSalao) ? 'ld-fantasma' : 'ld-primario')} onClick={fechar}>Fechar</button>
             </div>
           </div>
@@ -190,7 +190,7 @@ export default function Interesse({ tipo, lugar, onFechar, previa = false }) {
               {enviando ? 'Enviando…' : <>{p.botao} <Send size={17} /></>}
             </button>
 
-            {qual === 'sou_dono' && <p className="gd-folha-alt">ou <a href={comecarEm('salao')}>crie sua agenda grátis agora <ArrowRight size={14} /></a></p>}
+            {qual === 'sou_dono' && <p className="gd-folha-alt">ou <a href={comecarEm('salao')} data-evento="criar_agenda">crie sua agenda grátis agora <ArrowRight size={14} /></a></p>}
             {qual === 'corrigir' && <p className="gd-folha-alt">Prefere tirar a página do ar? <button type="button" onClick={() => trocar('remover')}>Pedir a remoção</button></p>}
             {qual === 'remover' && <p className="gd-folha-alt">Só um dado está errado? <button type="button" onClick={() => trocar('corrigir')}>Corrigir a informação</button></p>}
 

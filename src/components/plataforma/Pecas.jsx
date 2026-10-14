@@ -15,8 +15,10 @@ export function Cabecalho({ titulo, sub, direita }) {
   )
 }
 
-export function Kpi({ Icon, cor = 'rosa', n, rotulo, anterior, serie, legenda = 'vs. mês anterior', sub }) {
-  const delta = anterior == null ? null : anterior === 0 ? (n > 0 ? 100 : 0) : Math.round(((n - anterior) / anterior) * 100)
+// valor: o número para a conta da comparação quando n chega já formatado ("1.234")
+export function Kpi({ Icon, cor = 'rosa', n, valor, rotulo, anterior, serie, legenda = 'vs. mês anterior', sub }) {
+  const base = Number(valor ?? n)
+  const delta = anterior == null || !Number.isFinite(base) ? null : anterior === 0 ? (base > 0 ? 100 : 0) : Math.round(((base - anterior) / anterior) * 100)
   return (
     <div className="plat-kpi">
       <div className="plat-kpi-topo">

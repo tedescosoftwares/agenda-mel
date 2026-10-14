@@ -28398,11 +28398,14 @@ insert into public.migracoes_aplicadas (arquivo) values ('155_guia_gratis.sql') 
 --   - site_eventos guarda a página por caminho, então o blog e as outras
 --     páginas do site podem entrar depois, na mesma tabela;
 --   - dados (jsonb) leva o que um evento novo precisar.
--- Robô (Googlebot, ferramentas de teste) não conta. Uma visita à mesma
--- página pelo mesmo visitante em 30 minutos conta uma vez (duas visitas
--- seguidas ou dois toques no WhatsApp são um só); mais de 40 eventos por
--- minuto do mesmo visitante são ignorados. O que passa de
--- 400 dias é apagado sozinho quando a Plataforma abre o painel.
+-- Robô (Googlebot, ferramentas de teste) não conta. O mesmo evento na
+-- mesma página pelo mesmo visitante em 30 minutos conta uma vez (duas
+-- visitas seguidas ou dois toques no WhatsApp são um só). Só conta página
+-- que existe no ar. Contra quem tenta inflar de propósito, o limite é por
+-- rede (o IP com o sal do dia, também sem identificar ninguém): 40 eventos
+-- por minuto e 500 por dia; e um teto geral de 50 mil por dia protege o
+-- banco da agenda. O que passa de 400 dias é apagado sozinho quando a
+-- Plataforma abre o painel.
 -- Idempotente.
 
 -- ---- os tipos de evento ----------------------------------------------------------------
@@ -28443,7 +28446,8 @@ create table if not exists public.site_eventos (
   lugar_id uuid references public.guia_lugares (id) on delete set null,
   cidade_slug text,
   categoria text,
-  visitante text,                         -- código do dia; não identifica ninguém e muda todo dia
+  visitante text,                         -- código do dia (IP + navegador); não identifica ninguém e muda todo dia
+  rede text,                              -- código do dia só do IP: o limite contra quem tenta inflar
   origem text not null default 'direto',  -- google, bing, instagram, facebook, whatsapp, tiktok, interno, direto, outro
   ref_host text,                          -- só o domínio de onde veio (www.google.com)
   aparelho text,                          -- celular | computador
@@ -28457,6 +28461,9 @@ create index if not exists site_eventos_em on public.site_eventos (em);
 create index if not exists site_eventos_lugar on public.site_eventos (lugar_id, em) where lugar_id is not null;
 create index if not exists site_eventos_pagina on public.site_eventos (pagina, em);
 create index if not exists site_eventos_visitante on public.site_eventos (visitante, em);
+-- quem rodou a primeira versão da 156 já tem a tabela sem a coluna
+alter table public.site_eventos add column if not exists rede text;
+create index if not exists site_eventos_rede on public.site_eventos (rede, em);
 
 -- o sal do dia (só dentro do banco; o de ontem some quando o de hoje nasce)
 create table if not exists public.site_sal (
@@ -28496,6 +28503,7 @@ declare
   hoje date := (now() at time zone 'America/Sao_Paulo')::date;
   sal_ text;
   visitante_ text;
+  rede_ text;
   pag text;
   partes text[];
   lugar_ uuid;
@@ -28510,7 +28518,11 @@ begin
   -- a página: caminho limpo, minúsculo, sem área logada
   pag := lower(split_part(split_part(coalesce(pagina_, ''), '?', 1), '#', 1));
   if length(pag) > 1 then pag := rtrim(pag, '/'); end if;
-  if pag !~ '^/[a-z0-9/_-]{0,200}$' or pag ~ '^/(plataforma|pro|admin|app|cliente|entrar|login|sessao)(/|$)' then return; end if;
+  if pag !~ '^/[a-z0-9/_-]{0,200}$' then return; end if;
+  -- por enquanto só o guia (/saloes, /saloes/<cidade>, /saloes/<cidade>/<categoria ou salão>);
+  -- o blog e as outras páginas entram aqui quando forem medidas
+  partes := string_to_array(trim(both '/' from pag), '/');
+  if partes[1] is distinct from 'saloes' or coalesce(array_length(partes, 1), 0) > 3 then return; end if;
 
   -- robô e ferramenta não contam (quem não roda JavaScript nem chega aqui)
   begin cab := current_setting('request.headers', true)::jsonb; exception when others then cab := null; end;
@@ -28525,24 +28537,28 @@ begin
   if found then delete from public.site_sal where dia < hoje; end if;
   select sal into sal_ from public.site_sal where dia = hoje;
   visitante_ := left(encode(sha256(convert_to(coalesce(sal_, '') || '|' || ip || '|' || ua, 'UTF8')), 'hex'), 16);
+  rede_ := left(encode(sha256(convert_to(coalesce(sal_, '') || '|' || ip, 'UTF8')), 'hex'), 16);
 
-  -- quem manda demais em um minuto é ignorado
-  if (select count(*) from public.site_eventos where visitante = visitante_ and em > now() - interval '1 minute') >= 40 then return; end if;
+  -- quem manda demais é ignorado: por rede (trocar de navegador não fura) e um teto geral
+  if (select count(*) from public.site_eventos where rede = rede_ and em > now() - interval '1 minute') >= 40 then return; end if;
+  if (select count(*) from public.site_eventos where rede = rede_ and em > now() - interval '1 day') >= 500 then return; end if;
+  if (select count(*) from public.site_eventos where em > now() - interval '1 day') >= 50000 then return; end if;
   -- o mesmo evento na mesma página pelo mesmo visitante em 30 minutos conta uma vez:
   -- recarregar não é outra visita, tocar duas vezes no WhatsApp não é outra tentativa
   if exists (select 1 from public.site_eventos where visitante = visitante_ and pagina = pag and tipo = tipo_ and em > now() - interval '30 minutes') then
     return;
   end if;
 
-  -- de qual salão, cidade e categoria é a página (pelo caminho; nunca pelo que o navegador diz)
-  partes := string_to_array(trim(both '/' from pag), '/');
-  if partes[1] = 'saloes' and array_length(partes, 1) >= 2 then
+  -- de qual salão, cidade e categoria é a página (pelo caminho; nunca pelo que o navegador diz).
+  -- Só conta página que existe no ar: cidade com salão publicado, salão publicado.
+  if array_length(partes, 1) >= 2 then
+    if not exists (select 1 from public.guia_lugares where cidade_slug = partes[2] and status = 'publicado') then return; end if;
     cidade_ := partes[2];
-    if array_length(partes, 1) >= 3 then
+    if array_length(partes, 1) = 3 then
       if partes[3] = any (cats) then categoria_ := partes[3];
       else
-        select id, categoria into lugar_, categoria_ from public.guia_lugares where cidade_slug = partes[2] and slug = partes[3];
-        if lugar_ is null then return; end if;   -- salão que não existe: não conta
+        select id, categoria into lugar_, categoria_ from public.guia_lugares where cidade_slug = partes[2] and slug = partes[3] and status = 'publicado';
+        if lugar_ is null then return; end if;
       end if;
     end if;
   end if;
@@ -28553,9 +28569,9 @@ begin
       from jsonb_each_text(utm_) as e(k, v) where k in ('source', 'medium', 'campaign') and v <> '';
   end if;
 
-  insert into public.site_eventos (tipo, pagina, lugar_id, cidade_slug, categoria, visitante, origem, ref_host, aparelho, area, utm, dados)
+  insert into public.site_eventos (tipo, pagina, lugar_id, cidade_slug, categoria, visitante, rede, origem, ref_host, aparelho, area, utm, dados)
   values (
-    tipo_, pag, lugar_, cidade_, categoria_, visitante_,
+    tipo_, pag, lugar_, cidade_, categoria_, visitante_, rede_,
     case when origem_ in ('google', 'bing', 'instagram', 'facebook', 'whatsapp', 'tiktok', 'youtube', 'interno', 'direto', 'outro') then origem_ else 'direto' end,
     case when ref_ ~ '^[a-z0-9.-]{3,100}$' then lower(ref_) end,
     case when aparelho_ in ('celular', 'computador') then aparelho_ end,
@@ -28569,10 +28585,13 @@ grant execute on function public.site_evento(text, text, text, text, text, text,
 
 -- ---- o painel da Plataforma: o desempenho do guia num período --------------------------------
 -- dias: 7, 30, 90... (até 400). cidade_: '' = todas.
--- Devolve os tipos, os totais (e os do período anterior, para comparar),
--- visitantes (somados por dia), a série por dia, as origens, os aparelhos,
--- as áreas da página que mais geram contato e uma linha por página (salões
--- no ar aparecem mesmo sem visita, para a Plataforma ver quem não teve nenhuma).
+-- Devolve os tipos, os totais (e os do período anterior, para comparar:
+-- a mesma janela, cortada na mesma hora; vazio enquanto não houver
+-- histórico que cubra o período anterior inteiro), visitantes (somados por
+-- dia), quantos deles tentaram contato, a série por dia, as origens (só a
+-- entrada de cada visita), os aparelhos, as áreas da página que mais geram
+-- contato ou pedido e uma linha por página (salões no ar aparecem mesmo sem
+-- visita, para a Plataforma ver quem não teve nenhuma).
 create or replace function public.guia_desempenho(dias integer default 30, cidade_ text default '')
 returns jsonb language plpgsql security definer set search_path = public as $$
 declare
@@ -28595,36 +28614,45 @@ begin
   with ev as (
     select e.*, (e.em at time zone 'America/Sao_Paulo')::date as dia, t.grupo
       from public.site_eventos e join public.site_eventos_tipos t using (tipo)
-     where e.em >= antes and e.em < ate and e.pagina like '/saloes%' and (cid is null or e.cidade_slug = cid)
+     where e.em >= antes and e.em < ate and (e.pagina = '/saloes' or e.pagina like '/saloes/%') and (cid is null or e.cidade_slug = cid)
   ),
   agora_ as (select * from ev where em >= de),
+  -- o período anterior: a mesma janela, cortada na mesma hora de hoje (o dia de hoje ainda não acabou);
+  -- vazio quando os eventos ainda não cobrem a janela inteira (logo depois de ligar, daria +900%)
+  antes_ as (select * from ev where em < now() - make_interval(days => ndias) and (select min(em) from public.site_eventos) <= antes),
   int_ as (
     select i.lugar_id, i.tipo, count(*) as n
       from public.guia_interesses i join public.guia_lugares l on l.id = i.lugar_id
      where i.criado_em >= de and i.criado_em < ate and (cid is null or l.cidade_slug = cid)
      group by 1, 2
   ),
-  por_tipo as (select pagina, tipo, count(*) as n from agora_ group by 1, 2),
+  -- agregado uma vez só e juntado por página (subconsulta por página ficava páginas × eventos)
+  por_tipo as (
+    select pagina, jsonb_object_agg(tipo, n) as eventos
+      from (select pagina, tipo, count(*) as n from agora_ group by 1, 2) x
+     group by 1
+  ),
   por_pagina as (
-    select a.pagina, max(a.lugar_id::text)::uuid as lugar_id,
-           count(*) filter (where a.tipo = 'visita') as visitas,
-           count(distinct (a.dia, a.visitante)) filter (where a.tipo = 'visita') as visitantes,
-           count(*) filter (where a.grupo = 'contato') as contatos,
-           (select jsonb_object_agg(t.tipo, t.n) from por_tipo t where t.pagina = a.pagina) as eventos
-      from agora_ a
-     group by a.pagina
+    select g.*, t.eventos
+      from (select a.pagina, max(a.lugar_id::text)::uuid as lugar_id,
+                   count(*) filter (where a.tipo = 'visita') as visitas,
+                   count(distinct (a.dia, a.visitante)) filter (where a.tipo = 'visita') as visitantes,
+                   count(*) filter (where a.grupo = 'contato') as contatos,
+                   count(distinct (a.dia, a.visitante)) filter (where a.grupo = 'contato') as contataram
+              from agora_ a group by a.pagina) g
+      left join por_tipo t using (pagina)
   ),
   -- as páginas que tiveram evento, mais os salões no ar que não tiveram nenhum
   paginas as (
-    select p.pagina, p.lugar_id, l.nome, l.slug, l.bairro, l.status, l.whatsapp, l.telefone,
+    select p.pagina, p.lugar_id, l.nome, l.slug, l.bairro, l.status, l.whatsapp, l.telefone, l.salon_id is not null as na_mimo,
            coalesce(l.cidade_slug, split_part(trim(both '/' from p.pagina), '/', 2)) as cidade_slug,
            coalesce(l.categoria, nullif(split_part(trim(both '/' from p.pagina), '/', 3), '')) as categoria,
-           p.visitas, p.visitantes, p.contatos, coalesce(p.eventos, '{}'::jsonb) as eventos,
+           p.visitas, p.visitantes, p.contatos, p.contataram, coalesce(p.eventos, '{}'::jsonb) as eventos,
            coalesce((select jsonb_object_agg(i.tipo, i.n) from int_ i where i.lugar_id = p.lugar_id), '{}'::jsonb) as interesses
       from por_pagina p left join public.guia_lugares l on l.id = p.lugar_id
     union all
-    select '/saloes/' || l.cidade_slug || '/' || l.slug, l.id, l.nome, l.slug, l.bairro, l.status, l.whatsapp, l.telefone,
-           l.cidade_slug, l.categoria, 0, 0, 0, '{}'::jsonb,
+    select '/saloes/' || l.cidade_slug || '/' || l.slug, l.id, l.nome, l.slug, l.bairro, l.status, l.whatsapp, l.telefone, l.salon_id is not null,
+           l.cidade_slug, l.categoria, 0, 0, 0, 0, '{}'::jsonb,
            coalesce((select jsonb_object_agg(i.tipo, i.n) from int_ i where i.lugar_id = l.id), '{}'::jsonb)
       from public.guia_lugares l
      where l.status = 'publicado' and (cid is null or l.cidade_slug = cid)
@@ -28636,9 +28664,11 @@ begin
     'ate', hoje,
     'tipos', (select coalesce(jsonb_agg(jsonb_build_object('tipo', tipo, 'rotulo', rotulo, 'grupo', grupo) order by ordem, tipo), '[]'::jsonb) from public.site_eventos_tipos where ativo),
     'totais', (select coalesce(jsonb_object_agg(tipo, c), '{}'::jsonb) from (select tipo, count(*) c from agora_ group by tipo) x),
-    'totais_antes', (select coalesce(jsonb_object_agg(tipo, c), '{}'::jsonb) from (select tipo, count(*) c from ev where em < de group by tipo) x),
+    'totais_antes', (select coalesce(jsonb_object_agg(tipo, c), '{}'::jsonb) from (select tipo, count(*) c from antes_ group by tipo) x),
     'visitantes', (select count(distinct (dia, visitante)) from agora_ where tipo = 'visita'),
-    'visitantes_antes', (select count(distinct (dia, visitante)) from ev where em < de and tipo = 'visita'),
+    'visitantes_antes', (select count(distinct (dia, visitante)) from antes_ where tipo = 'visita'),
+    'contataram', (select count(distinct (dia, visitante)) from agora_ where grupo = 'contato'),
+    'contataram_antes', (select count(distinct (dia, visitante)) from antes_ where grupo = 'contato'),
     'interesses', (select coalesce(jsonb_object_agg(tipo, s), '{}'::jsonb) from (select tipo, sum(n) s from int_ group by tipo) x),
     'por_dia', (
       select jsonb_agg(jsonb_build_object('dia', d.dia, 'visitas', coalesce(x.v, 0), 'contatos', coalesce(x.c, 0)) order by d.dia)
@@ -28646,7 +28676,7 @@ begin
         left join (select dia, count(*) filter (where tipo = 'visita') as v, count(*) filter (where grupo = 'contato') as c from agora_ group by dia) x using (dia)
     ),
     'origens', (select coalesce(jsonb_agg(jsonb_build_object('origem', origem, 'visitas', c) order by c desc), '[]'::jsonb)
-                  from (select origem, count(*) c from agora_ where tipo = 'visita' group by origem) x),
+                  from (select origem, count(*) c from agora_ where tipo = 'visita' and origem <> 'interno' group by origem) x),
     'aparelhos', (select coalesce(jsonb_object_agg(coalesce(aparelho, '?'), c), '{}'::jsonb)
                     from (select aparelho, count(*) c from agora_ where tipo = 'visita' group by aparelho) x),
     'areas', (select coalesce(jsonb_agg(jsonb_build_object('area', area, 'contatos', c) order by c desc), '[]'::jsonb)

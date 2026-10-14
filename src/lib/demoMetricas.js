@@ -87,9 +87,15 @@ export function demoDesempenho({ dias = 30, cidade_ = '' } = {}, lugares, intere
   const cid = String(cidade_ ?? '').trim() || null
   const ev = eventos(lugares).map((e) => ({ ...e, dia: diaSP(e.em), grupo: GRUPO[e.tipo] }))
     .filter((e) => e.dia >= antes && e.dia <= hoje && e.pagina.startsWith('/saloes') && (!cid || e.cidade_slug === cid))
-  const agora = ev.filter((e) => e.dia >= de), velhos = ev.filter((e) => e.dia < de)
+  const agora = ev.filter((e) => e.dia >= de)
+  // o período anterior como o banco: a mesma janela, cortada na mesma hora, e só com histórico completo
+  const corte = Date.now() - n * 86400e3
+  const todos = eventos(lugares)
+  const primeiro = todos.reduce((m, e) => (e.em < m ? e.em : m), todos[0]?.em ?? new Date().toISOString())
+  const comHistorico = diaSP(primeiro) <= antes
+  const velhos = comHistorico ? ev.filter((e) => e.dia < de && new Date(e.em).getTime() < corte) : []
   const contar = (xs, f) => xs.reduce((m, x) => { const k = f(x); m[k] = (m[k] ?? 0) + 1; return m }, {})
-  const unicos = (xs) => new Set(xs.filter((e) => e.tipo === 'visita').map((e) => `${e.dia}|${e.visitante}`)).size
+  const unicos = (xs, grupo = 'visita') => new Set(xs.filter((e) => (grupo === 'visita' ? e.tipo === 'visita' : e.grupo === grupo)).map((e) => `${e.dia}|${e.visitante}`)).size
   const ints = interesses.filter((i) => diaSP(i.criado_em) >= de)
   const porLugarInt = (id) => contar(ints.filter((i) => i.lugar_id === id), (i) => i.tipo)
   const porPagina = new Map()
@@ -98,9 +104,9 @@ export function demoDesempenho({ dias = 30, cidade_ = '' } = {}, lugares, intere
     const l = lugares.find((x) => x.id === lugarId)
     const partes = pagina.split('/')
     return {
-      pagina, lugar_id: lugarId, nome: l?.nome ?? null, slug: l?.slug ?? null, bairro: l?.bairro ?? null, status: l?.status ?? null,
+      pagina, lugar_id: lugarId, nome: l?.nome ?? null, slug: l?.slug ?? null, bairro: l?.bairro ?? null, status: l?.status ?? null, na_mimo: !!l?.salon_id,
       whatsapp: l?.whatsapp ?? null, telefone: l?.telefone ?? null, cidade_slug: l?.cidade_slug ?? partes[2] ?? null, categoria: l?.categoria ?? (partes[3] || null),
-      visitas: es.filter((e) => e.tipo === 'visita').length, visitantes: unicos(es), contatos: es.filter((e) => e.grupo === 'contato').length,
+      visitas: es.filter((e) => e.tipo === 'visita').length, visitantes: unicos(es), contatos: es.filter((e) => e.grupo === 'contato').length, contataram: unicos(es, 'contato'),
       eventos: contar(es, (e) => e.tipo), interesses: lugarId ? porLugarInt(lugarId) : {},
     }
   }
@@ -114,6 +120,7 @@ export function demoDesempenho({ dias = 30, cidade_ = '' } = {}, lugares, intere
     serie.push({ dia, visitas: doDia.filter((e) => e.tipo === 'visita').length, contatos: doDia.filter((e) => e.grupo === 'contato').length })
   }
   const visitasAgora = agora.filter((e) => e.tipo === 'visita')
+  const entradas = visitasAgora.filter((e) => e.origem !== 'interno')
   return {
     dias: n, de, ate: hoje,
     tipos: TIPOS,
@@ -121,9 +128,11 @@ export function demoDesempenho({ dias = 30, cidade_ = '' } = {}, lugares, intere
     totais_antes: contar(velhos, (e) => e.tipo),
     visitantes: unicos(agora),
     visitantes_antes: unicos(velhos),
+    contataram: unicos(agora, 'contato'),
+    contataram_antes: unicos(velhos, 'contato'),
     interesses: contar(ints, (i) => i.tipo),
     por_dia: serie,
-    origens: Object.entries(contar(visitasAgora, (e) => e.origem)).map(([origem, visitas]) => ({ origem, visitas })).sort((a, b) => b.visitas - a.visitas),
+    origens: Object.entries(contar(entradas, (e) => e.origem)).map(([origem, visitas]) => ({ origem, visitas })).sort((a, b) => b.visitas - a.visitas),
     aparelhos: contar(visitasAgora, (e) => e.aparelho ?? '?'),
     areas: Object.entries(contar(agora.filter((e) => e.grupo === 'contato' || e.grupo === 'interesse'), (e) => e.area ?? 'outra')).map(([area, contatos]) => ({ area, contatos })).sort((a, b) => b.contatos - a.contatos),
     paginas,

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Portal from '../../Portal'
 import { Kpi, Painel, Vazio } from '../Pecas'
 import { categoriaDoGuia, semAcento } from '../../../lib/guia'
@@ -6,7 +6,7 @@ import { urlDoAmbiente } from '../../../lib/ambiente'
 import { SITE_GUIA } from '../../../lib/guiaSeo'
 import { contaAqui, naoContarAqui } from '../../../lib/eventos'
 import {
-  ROTULO_ORIGEM, ROTULO_AREA, n0, formatar, taxa, taxaTexto, tiposDo, somaDo, nomeDaPagina, mensagemParaDono, zapDoDono,
+  ROTULO_ORIGEM, ROTULO_AREA, n0, formatar, taxa, taxaTexto, taxaDeContato, tiposDo, somaDo, nomeDaPagina, mensagemParaDono, zapDoDono,
 } from '../../../lib/guiaMetricas'
 import {
   Eye, Users, MessageCircle, Percent, CalendarCheck, Search, ExternalLink, Send, Copy, Check, X, LoaderCircle,
@@ -46,7 +46,7 @@ export default function Desempenho({ g }) {
   const contatoTipos = useMemo(() => tiposDo(dados, 'contato').filter((t) => n0(dados?.totais?.[t.tipo]) > 0), [dados])
   const linhas = useMemo(() => {
     const termo = semAcento(busca).toLowerCase().trim()
-    const todas = (dados?.paginas ?? []).map((p) => ({ ...p, titulo: nomeDaPagina(p, nomeDaCidade), pedidos: n0(p.interesses?.quero_marcar), tx: p.lugar_id ? taxa(p.contatos, p.visitas) : null }))
+    const todas = (dados?.paginas ?? []).map((p) => ({ ...p, titulo: nomeDaPagina(p, nomeDaCidade), pedidos: n0(p.interesses?.quero_marcar), tx: p.lugar_id ? taxaDeContato(p.contataram, p.visitantes) : null }))
     const filtradas = todas.filter((p) => (
       (filtro === 'todas' || (filtro === 'saloes' && p.lugar_id) || (filtro === 'cidade' && !p.lugar_id) || (filtro === 'zeradas' && !n0(p.visitas)))
       && (!termo || semAcento(`${p.titulo} ${p.bairro ?? ''} ${p.pagina}`).toLowerCase().includes(termo))
@@ -99,10 +99,10 @@ export default function Desempenho({ g }) {
       </div>
 
       <div className="pg-des-kpis">
-        <Kpi Icon={Eye} cor="rosa" n={formatar(visitas)} rotulo="visitas" anterior={temAntes ? n0(a.visita) : null} legenda={legenda} sub="primeiro período" />
-        <Kpi Icon={Users} cor="roxo" n={formatar(dados.visitantes)} rotulo="visitantes por dia, somados" anterior={temAntes ? n0(dados.visitantes_antes) : null} legenda={legenda} sub="sem cookie, sem IP" />
-        <Kpi Icon={MessageCircle} cor="azul" n={formatar(contatos)} rotulo="tentativas de contato" anterior={temAntes ? contatosAntes : null} legenda={legenda} sub={contatoTipos.map((x) => `${x.rotulo} ${n0(t[x.tipo])}`).join(' · ') || 'WhatsApp, ligar, rota...'} />
-        <Kpi Icon={Percent} cor="menta" n={taxaTexto(taxa(contatos, visitas))} rotulo="das visitas viram contato" sub="contatos ÷ visitas" />
+        <Kpi Icon={Eye} cor="rosa" n={formatar(visitas)} valor={visitas} rotulo="visitas" anterior={temAntes ? n0(a.visita) : null} legenda={legenda} sub="sem histórico para comparar ainda" />
+        <Kpi Icon={Users} cor="roxo" n={formatar(dados.visitantes)} valor={n0(dados.visitantes)} rotulo="visitantes por dia, somados" anterior={temAntes ? n0(dados.visitantes_antes) : null} legenda={legenda} sub="sem cookie, sem IP" />
+        <Kpi Icon={MessageCircle} cor="azul" n={formatar(contatos)} valor={contatos} rotulo="tentativas de contato" anterior={temAntes ? contatosAntes : null} legenda={legenda} sub={contatoTipos.map((x) => `${x.rotulo} ${n0(t[x.tipo])}`).join(' · ') || 'WhatsApp, ligar, rota...'} />
+        <Kpi Icon={Percent} cor="menta" n={taxaTexto(taxaDeContato(dados.contataram, dados.visitantes))} rotulo="dos visitantes tentaram contato" sub="cada pessoa conta uma vez, mesmo tocando em vários botões" />
         <Kpi Icon={CalendarCheck} cor="ambar" n={formatar(pedidos)} rotulo={'pedidos "quero marcar"'} sub={`${formatar(t.quero_marcar)} abriram o formulário`} />
       </div>
 
@@ -124,13 +124,13 @@ export default function Desempenho({ g }) {
 
       {!vazio && (
         <div className="pg-des-duas">
-          <Painel Icon={Search} titulo="De onde vieram" sub="Só a primeira página de cada visita">
-            <Barras itens={(dados.origens ?? []).map((o) => ({ chave: o.origem, rotulo: ROTULO_ORIGEM[o.origem] ?? o.origem, n: o.visitas }))} total={visitas} />
+          <Painel Icon={Search} titulo="De onde vieram" sub="A entrada de cada visita (quem já estava navegando pelo site não entra aqui)">
+            <Barras itens={(dados.origens ?? []).map((o) => ({ chave: o.origem, rotulo: ROTULO_ORIGEM[o.origem] ?? o.origem, n: o.visitas }))} total={(dados.origens ?? []).reduce((soma, o) => soma + n0(o.visitas), 0)} />
             <p className="pg-des-aparelho muted">
               {Object.entries(dados.aparelhos ?? {}).filter(([k]) => k !== '?').map(([k, v]) => `${k === 'celular' ? 'Celular' : 'Computador'}: ${formatar(v)} (${taxaTexto(taxa(v, visitas))})`).join(' · ')}
             </p>
           </Painel>
-          <Painel Icon={MessageCircle} titulo="Onde tocaram" sub="A parte da página de onde saiu cada contato">
+          <Painel Icon={MessageCircle} titulo="Onde tocaram" sub="A parte da página de onde saiu cada toque (contato ou pedido)">
             <Barras itens={(dados.areas ?? []).map((x) => ({ chave: x.area, rotulo: ROTULO_AREA[x.area] ?? x.area, n: x.contatos }))} total={(dados.areas ?? []).reduce((s, x) => s + n0(x.contatos), 0)} cor="var(--azul)" />
           </Painel>
         </div>
@@ -175,7 +175,7 @@ export default function Desempenho({ g }) {
                   <td className="pg-num">{p.pedidos || <span className="muted">–</span>}</td>
                   <td className="pg-num">{taxaTexto(p.tx)}</td>
                   <td className="pg-num">
-                    {p.lugar_id && n0(p.visitas) > 0 && <button type="button" className="btn btn-ghost pg-btn-peq" onClick={() => setDono(p)} title="Monta uma mensagem com estes números para mandar ao dono do salão"><Send size={13} /> Mensagem</button>}
+                    {p.lugar_id && p.status === 'publicado' && n0(p.visitas) > 0 && !n0(p.interesses?.remover) && <button type="button" className="btn btn-ghost pg-btn-peq" onClick={() => setDono(p)} title="Monta uma mensagem com estes números para mandar ao dono do salão"><Send size={13} /> Mensagem</button>}
                   </td>
                 </tr>
               ))}
@@ -188,10 +188,12 @@ export default function Desempenho({ g }) {
         <summary><Info size={14} /> Como a MIMO conta</summary>
         <ul>
           <li><b>Visita</b>: a página aberta por uma pessoa. Recarregar ou voltar em menos de 30 minutos não conta de novo.</li>
-          <li><b>Tentativa de contato</b>: tocar em WhatsApp, Ligar, Como chegar, Instagram, site ou "Agendar". Dois toques no mesmo botão em 30 minutos contam um.</li>
+          <li><b>Tentativa de contato</b>: tocar em WhatsApp, Ligar, Como chegar, Instagram, site ou "Agendar" no conteúdo do salão (o menu e o rodapé da MIMO não contam). Dois toques no mesmo botão em 30 minutos contam um.</li>
+          <li><b>Taxa</b>: dos visitantes, quantos tocaram em algum contato. Cada pessoa conta uma vez, mesmo tocando em vários botões.</li>
           <li><b>Visitantes</b>: pessoas diferentes em cada dia, somadas no período. Sem cookie e sem guardar IP: o banco usa um código que muda todo dia e não identifica ninguém.</li>
           <li><b>Pedidos</b>: o formulário "Quero marcar aqui pelo app" enviado (os mesmos da aba Interesses).</li>
-          <li>Robôs (Google, ferramentas de teste) não contam, nem a prévia desta tela, nem quem marcou "não contar".</li>
+          <li>Robôs (Google, ferramentas de teste) não contam, nem a prévia desta tela, nem quem está logado na Plataforma, nem quem marcou "não contar".</li>
+          <li>A comparação com o período anterior só aparece quando já há histórico do período anterior inteiro.</li>
           <li>Os eventos ficam guardados por 400 dias.</li>
         </ul>
       </details>
@@ -207,17 +209,19 @@ function Colunas({ serie, campo, cor, titulo, unidade }) {
   const [foco, setFoco] = useState(null)
   const pontos = Array.isArray(serie) ? serie : []
   if (!pontos.length) return null
-  const max = Math.max(1, ...pontos.map((p) => n0(p[campo])))
-  const iMax = pontos.findIndex((p) => n0(p[campo]) === max)
-  const total = pontos.reduce((s, p) => s + n0(p[campo]), 0)
+  const vals = pontos.map((p) => n0(p[campo]))
+  const maxReal = Math.max(0, ...vals)
+  const max = Math.max(1, maxReal)
+  const iMax = vals.indexOf(maxReal)
+  const total = vals.reduce((s, v) => s + v, 0)
   const marcas = [0, Math.floor((pontos.length - 1) / 2), pontos.length - 1]
   const qual = (v) => `${formatar(v)} ${n0(v) === 1 ? unidade[0] : unidade[1]}`
   const f = foco != null ? pontos[foco] : null
   return (
     <figure className="pg-colunas">
-      <figcaption><b>{titulo}</b> <span className="muted">{formatar(total)} no período · pico de {formatar(max)} em {dataLonga(pontos[iMax].dia)}</span></figcaption>
+      <figcaption><b>{titulo}</b> <span className="muted">{total ? `${formatar(total)} no período · pico de ${formatar(maxReal)} em ${dataLonga(pontos[iMax].dia)}` : 'nenhum no período'}</span></figcaption>
       <div className="pg-colunas-caixa" onPointerLeave={() => setFoco(null)}>
-        <span className="pg-colunas-max">{formatar(max)}</span>
+        <span className="pg-colunas-max">{formatar(maxReal)}</span>
         <div className="pg-colunas-area" role="img" aria-label={`${titulo} por dia: ${formatar(total)} no período, pico de ${formatar(max)}`}>
           {pontos.map((p, i) => (
             <button key={p.dia} type="button" className={'pg-coluna' + (foco === i ? ' foco' : foco != null ? ' apagada' : '')}
@@ -276,6 +280,13 @@ function ModalDono({ linha, dias, cidade, onFechar }) {
   const [texto, setTexto] = useState(() => mensagemParaDono(linha, { dias, url, cidade }))
   const [copiado, setCopiado] = useState(false)
   const zap = zapDoDono(linha, texto)
+  const caixa = useRef(null)
+  // o foco entra no texto ao abrir e volta para o botão da tabela ao fechar
+  useEffect(() => {
+    const antes = document.activeElement
+    caixa.current?.focus()
+    return () => antes?.focus?.()
+  }, [])
   useEffect(() => {
     const tecla = (e) => { if (e.key === 'Escape') onFechar() }
     window.addEventListener('keydown', tecla)
@@ -290,10 +301,10 @@ function ModalDono({ linha, dias, cidade, onFechar }) {
         <div className="modal-caixa plat-modal pg-modal-dono" role="dialog" aria-modal="true" aria-labelledby="pg-dono-t" onClick={(e) => e.stopPropagation()}>
           <div className="pg-modal-topo">
             <h3 id="pg-dono-t">Mensagem para {linha.nome}</h3>
-            <button type="button" className="pg-recado-x" onClick={onFechar} aria-label="Fechar"><X size={16} /></button>
+            <button type="button" onClick={onFechar} aria-label="Fechar"><X size={16} /></button>
           </div>
           <p className="muted">Os números dos últimos {dias} dias, prontos para mandar. Dá para mudar o texto antes.</p>
-          <textarea className="pg-dono-texto" rows={10} value={texto} onChange={(e) => setTexto(e.target.value)} aria-label="Texto da mensagem" />
+          <textarea ref={caixa} className="pg-dono-texto" rows={10} value={texto} onChange={(e) => setTexto(e.target.value)} aria-label="Texto da mensagem" />
           <div className="pg-modal-botoes">
             <button type="button" className="btn btn-ghost" onClick={copiar}>{copiado ? <><Check size={15} /> Copiado</> : <><Copy size={15} /> Copiar</>}</button>
             {zap

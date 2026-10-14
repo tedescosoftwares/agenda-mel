@@ -5,7 +5,8 @@ import { useSeo } from '../../lib/seo'
 import { SLUGS_CATEGORIA, GUIA_CATEGORIAS, categoriaDoGuia, conteudoSeguro, semAcento, seoPadraoDaCidade, rotaDaCidade, rotaDaCategoria } from '../../lib/guia'
 import { seoDaCidade, seoDoIndice, trilhaDaCidade, jsonLdDaCidade, jsonLdDoIndice } from '../../lib/guiaSeo'
 import { carregarCidade, carregarCidades } from '../../lib/guiaPublico'
-import { registrarVisita, aoClicarNaPagina } from '../../lib/eventos'
+import { aoClicarNaPagina } from '../../lib/eventos'
+import { useVisita } from '../../lib/useVisita'
 import { NavSite, PeSite, useRevelar, comecarEm } from '../../components/site/Pecas'
 import { REGRAS } from '../../lib/acesso'
 import { CartaoLugar, IconeCategoria } from '../../components/guia/PaginaDoLugar'
@@ -84,7 +85,7 @@ function ChamadaSalao({ cidade }) {
             <p className="gd-dono-letra">Para autônoma é grátis para sempre. Salão com equipe testa {REGRAS.testeDias} dias, sem cartão.</p>
           </div>
           <div className="gd-dono-botoes">
-            <a className="ld-btn ld-branco ld-grande" href={comecarEm()}>Colocar minha agenda online <ArrowRight size={18} /></a>
+            <a className="ld-btn ld-branco ld-grande" href={comecarEm()} data-evento="criar_agenda">Colocar minha agenda online <ArrowRight size={18} /></a>
           </div>
         </div>
       </div>
@@ -107,8 +108,7 @@ function PaginaDaCidade({ cidade, categoria }) {
     return () => { vivo = false }
   }, [cidade, categoria, tentativa])
   // a visita conta quando a página existe de verdade (3.11)
-  const existe = !!(dados && dados !== 'erro')
-  useEffect(() => { if (existe) registrarVisita(`/saloes/${cidade}${categoria ? `/${categoria}` : ''}`) }, [existe, cidade, categoria])
+  useVisita(`/saloes/${cidade}${categoria ? `/${categoria}` : ''}`, !!(dados && dados !== 'erro'))
 
   if (dados === null) return <NaoEncontrada />
   return (
@@ -289,7 +289,8 @@ function IndiceDeCidades() {
   const seo = seoDoIndice()
   useSeo({ titulo: seo.titulo, descricao: seo.descricao, caminho: seo.caminho, jsonLd: jsonLdDoIndice(Array.isArray(cidades) ? cidades : []) })
 
-  useEffect(() => { window.scrollTo(0, 0); registrarVisita('/saloes') }, [])
+  useEffect(() => { window.scrollTo(0, 0) }, [])
+  useVisita('/saloes')
   useEffect(() => {
     let vivo = true
     carregarCidades().then((c) => vivo && setCidades(c)).catch(() => vivo && setCidades('erro'))

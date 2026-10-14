@@ -1,7 +1,7 @@
 // Métricas do guia no modo demonstração (3.11): 90 dias de visitas e
 // cliques de mentira, sempre os mesmos (sorteio com semente), e o mesmo
-// formato que guia_desempenho() devolve no banco (migração 156). O que a
-// pessoa clicar nas páginas do demo entra aqui na hora (demoEvento).
+// formato que guia_desempenho() devolve no banco (migrações 156 e 161). O
+// que a pessoa clicar nas páginas do demo entra aqui na hora (demoEvento).
 
 const TIPOS = [
   ['visita', 'Visitas', 'visita'], ['whatsapp', 'WhatsApp', 'contato'], ['ligar', 'Ligar', 'contato'],
@@ -36,23 +36,28 @@ function gerar(lugares) {
   for (let d = 89; d >= 0; d--) {
     const crescer = 0.35 + (89 - d) / 89 // as páginas vão ganhando visita com o tempo
     const fimDeSemana = [0, 6].includes(new Date(agora - d * 86400e3).getDay()) ? 1.25 : 1
+    const doDia = [] // quem já passou hoje: uma parte volta e abre outra página (3.12: pessoas < visitas, como no site)
     for (const p of paginas) {
       const visitas = Math.floor(r() * p.peso * crescer * fimDeSemana)
       for (let v = 0; v < visitas; v++) {
         const em = new Date(agora - d * 86400e3 - Math.floor(r() * 12 * 3600e3)).toISOString()
-        const visitante = `demo${n++}`
-        const origem = escolher(r, [['google', 55], ['direto', 18], ['interno', 15], ['instagram', 8], ['whatsapp', 4]])
-        const aparelho = r() < 0.8 ? 'celular' : 'computador'
-        const comum = { em, pagina: p.pagina, lugar_id: p.lugar?.id ?? null, cidade_slug: 'itanhaem', categoria: p.lugar?.categoria ?? (CATS.includes(p.pagina.split('/')[3]) ? p.pagina.split('/')[3] : null), visitante, origem, aparelho }
+        const volta = doDia.length > 0 && r() < 0.25 ? doDia[Math.floor(r() * doDia.length)] : null
+        const quem = volta ?? { visitante: `demo${n++}`, aparelho: r() < 0.8 ? 'celular' : 'computador' }
+        if (!volta) doDia.push(quem)
+        const origem = volta ? 'interno' : escolher(r, [['google', 55], ['direto', 18], ['interno', 15], ['instagram', 8], ['whatsapp', 4]])
+        const comum = { em, pagina: p.pagina, lugar_id: p.lugar?.id ?? null, cidade_slug: 'itanhaem', categoria: p.lugar?.categoria ?? (CATS.includes(p.pagina.split('/')[3]) ? p.pagina.split('/')[3] : null), visitante: quem.visitante, origem, aparelho: quem.aparelho }
         ev.push({ ...comum, tipo: 'visita', area: null })
         const l = p.lugar
         if (!l) continue
+        // salão sem Instagram e fora da MIMO recebe menos contato no demo: é o caso
+        // "muita visita e pouco contato" dos destaques da aba Desempenho (3.12)
+        const atrai = l.instagram || l.salon_id ? 1 : 0.25
         const cliques = [
           ['whatsapp', l.whatsapp ? 0.1 : 0], ['ligar', l.telefone ? 0.03 : 0], ['mapa', 0.06], ['instagram', l.instagram ? 0.04 : 0],
           ['site', l.site ? 0.02 : 0], ['agendar_mimo', l.salon_id ? 0.14 : 0], ['quero_marcar', l.salon_id ? 0 : 0.03], ['compartilhar', 0.01],
         ]
         for (const [tipo, chance] of cliques) {
-          if (r() < chance) ev.push({ ...comum, tipo, area: escolher(r, [['heroi', 50], ['fatos', 25], ['barra', 25]]) })
+          if (r() < chance * atrai) ev.push({ ...comum, tipo, area: escolher(r, [['heroi', 50], ['fatos', 25], ['barra', 25]]) })
         }
       }
     }
@@ -78,7 +83,7 @@ export function demoEvento(corpo, lugares) {
   })
 }
 
-// o mesmo formato de guia_desempenho() (156)
+// o mesmo formato de guia_desempenho() (156, com o que a 161 acrescentou)
 export function demoDesempenho({ dias = 30, cidade_ = '' } = {}, lugares, interesses) {
   const n = Math.max(1, Math.min(Number(dias) || 30, 400))
   const hoje = diaSP(Date.now())
@@ -97,9 +102,12 @@ export function demoDesempenho({ dias = 30, cidade_ = '' } = {}, lugares, intere
   const contar = (xs, f) => xs.reduce((m, x) => { const k = f(x); m[k] = (m[k] ?? 0) + 1; return m }, {})
   const unicos = (xs, grupo = 'visita') => new Set(xs.filter((e) => (grupo === 'visita' ? e.tipo === 'visita' : e.grupo === grupo)).map((e) => `${e.dia}|${e.visitante}`)).size
   const ints = interesses.filter((i) => diaSP(i.criado_em) >= de)
+  // os pedidos do período anterior, pela mesma regra dos eventos (161)
+  const intsAntes = comHistorico ? interesses.filter((i) => diaSP(i.criado_em) >= antes && diaSP(i.criado_em) < de && new Date(i.criado_em).getTime() < corte) : []
   const porLugarInt = (id) => contar(ints.filter((i) => i.lugar_id === id), (i) => i.tipo)
   const porPagina = new Map()
   for (const e of agora) { if (!porPagina.has(e.pagina)) porPagina.set(e.pagina, []); porPagina.get(e.pagina).push(e) }
+  const visitasAntes = contar(velhos.filter((e) => e.tipo === 'visita'), (e) => e.pagina)
   const linha = (pagina, lugarId, es) => {
     const l = lugares.find((x) => x.id === lugarId)
     const partes = pagina.split('/')
@@ -108,6 +116,7 @@ export function demoDesempenho({ dias = 30, cidade_ = '' } = {}, lugares, intere
       whatsapp: l?.whatsapp ?? null, telefone: l?.telefone ?? null, cidade_slug: l?.cidade_slug ?? partes[2] ?? null, categoria: l?.categoria ?? (partes[3] || null),
       visitas: es.filter((e) => e.tipo === 'visita').length, visitantes: unicos(es), contatos: es.filter((e) => e.grupo === 'contato').length, contataram: unicos(es, 'contato'),
       eventos: contar(es, (e) => e.tipo), interesses: lugarId ? porLugarInt(lugarId) : {},
+      visitas_antes: comHistorico ? visitasAntes[pagina] ?? 0 : null,
     }
   }
   const paginas = [...porPagina].map(([p, es]) => linha(p, es[0].lugar_id, es))
@@ -117,7 +126,10 @@ export function demoDesempenho({ dias = 30, cidade_ = '' } = {}, lugares, intere
   for (let k = n - 1; k >= 0; k--) {
     const dia = menos(hoje, k)
     const doDia = agora.filter((e) => e.dia === dia)
-    serie.push({ dia, visitas: doDia.filter((e) => e.tipo === 'visita').length, contatos: doDia.filter((e) => e.grupo === 'contato').length })
+    serie.push({
+      dia, visitas: doDia.filter((e) => e.tipo === 'visita').length, contatos: doDia.filter((e) => e.grupo === 'contato').length,
+      visitantes: unicos(doDia), contataram: unicos(doDia, 'contato'), pedidos: ints.filter((i) => i.tipo === 'quero_marcar' && diaSP(i.criado_em) === dia).length,
+    })
   }
   const visitasAgora = agora.filter((e) => e.tipo === 'visita')
   const entradas = visitasAgora.filter((e) => e.origem !== 'interno')
@@ -131,6 +143,7 @@ export function demoDesempenho({ dias = 30, cidade_ = '' } = {}, lugares, intere
     contataram: unicos(agora, 'contato'),
     contataram_antes: unicos(velhos, 'contato'),
     interesses: contar(ints, (i) => i.tipo),
+    interesses_antes: contar(intsAntes, (i) => i.tipo),
     por_dia: serie,
     origens: Object.entries(contar(entradas, (e) => e.origem)).map(([origem, visitas]) => ({ origem, visitas })).sort((a, b) => b.visitas - a.visitas),
     aparelhos: contar(visitasAgora, (e) => e.aparelho ?? '?'),

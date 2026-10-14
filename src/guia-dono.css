@@ -1,0 +1,74 @@
+/* A reivindicação do guia (3.12): "É o seu salão?" na página pública
+   (gd-reiv-*, dentro da folha do Interesse.jsx) e a lista da equipe na
+   aba Interesses da Plataforma (pg-reiv-*). */
+
+/* ---- o formulário ---- */
+.gd-reiv-ligacao { border: 0; padding: 0; margin: 2px 0 14px; min-width: 0; }
+.gd-reiv-ligacao legend { padding: 0; margin-bottom: 8px; font-weight: 600; font-size: 0.88rem; color: var(--ld-ameixa); }
+.gd-reiv-opcoes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.gd-reiv-opcao { position: relative; display: flex; align-items: center; justify-content: center; min-height: 46px; padding: 10px 8px; border: 1.5px solid var(--ld-fio); border-radius: 14px; background: #fff; color: var(--ld-tinta); font-weight: 600; font-size: 0.92rem; text-align: center; cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+.gd-reiv-opcao:hover { border-color: var(--ld-rosa-2); }
+/* o rádio de verdade fica por cima, invisível: teclado e leitor de tela continuam funcionando */
+.gd-reiv-opcao input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.gd-reiv-opcao-on { border-color: var(--ld-rosa); background: var(--ld-rosa-veu); color: var(--ld-rosa); }
+.gd-reiv-opcao:has(input:focus-visible) { border-color: var(--ld-rosa-2); box-shadow: 0 0 0 4px var(--ld-rosa-veu); }
+
+.gd-reiv-aceite { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 14px; padding: 12px 14px; border: 1.5px solid var(--ld-fio); border-radius: 14px; background: var(--ld-lilas); color: var(--ld-tinta); font-size: 0.9rem; line-height: 1.4; cursor: pointer; }
+.gd-reiv-aceite input { width: 20px; height: 20px; flex: none; margin: 0; accent-color: var(--ld-rosa); cursor: pointer; }
+.gd-reiv-aceite:has(input:focus-visible) { border-color: var(--ld-rosa-2); box-shadow: 0 0 0 4px var(--ld-rosa-veu); }
+
+/* o campo-armadilha: fora da vista e do teclado, sem empurrar nada */
+.gd-reiv-pote { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+.ld .gd-folha .gd-reiv-outros { display: grid; gap: 6px; }
+
+/* ---- a resposta ---- */
+.gd-reiv-depois { width: 100%; margin-top: 16px; padding: 16px 18px; border: 1px solid var(--ld-fio); border-radius: 18px; background: var(--ld-lilas); text-align: left; }
+.gd-reiv-depois strong { display: block; margin-bottom: 8px; color: var(--ld-ameixa); font-size: 0.92rem; }
+.gd-reiv-depois ol { display: grid; gap: 6px; margin: 0; padding-left: 20px; color: var(--ld-tinta); font-size: 0.9rem; line-height: 1.45; }
+.ld .gd-reiv-feito .gd-folha-alt { margin-top: 12px; }
+
+@media (min-width: 480px) {
+  .gd-reiv-opcoes { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+/* ---- a Plataforma: as reivindicações na aba Interesses ---- */
+.pg-reiv-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.75rem; }
+.pg-reiv { border: 1px solid var(--fio); border-radius: 16px; padding: 0.9rem 1rem; display: grid; gap: 0.7rem; background: #fff; min-width: 0; }
+.pg-reiv.pg-reiv-nova { border-color: #ffc2d8; box-shadow: 0 0 0 3px #fff0f5; }
+.pg-reiv-topo { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 0.6rem; min-width: 0; }
+.pg-reiv-topo b { font-size: 0.98rem; overflow-wrap: anywhere; }
+.pg-reiv-topo small { color: var(--texto-2); font-size: 0.78rem; }
+.pg-reiv-topo .pg-reiv-quando { margin-left: auto; }
+.pg-reiv-dados { margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 0.55rem 1rem; }
+.pg-reiv-dados > div { min-width: 0; }
+.pg-reiv-dados dt { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--texto-2); margin-bottom: 0.1rem; }
+.pg-reiv-dados dd { margin: 0; font-size: 0.88rem; color: var(--texto); display: flex; align-items: center; flex-wrap: wrap; gap: 0.3rem; overflow-wrap: anywhere; }
+.pg-reiv-dados dd a { color: var(--rosa); text-decoration: none; overflow-wrap: anywhere; }
+.pg-reiv-dados dd.pg-reiv-aceite { margin-top: 0.2rem; font-size: 0.76rem; color: var(--texto-2); gap: 0.2rem; flex-wrap: nowrap; align-items: flex-start; }
+.pg-reiv-dados dd.pg-reiv-aceite svg { color: #0d7a4f; flex: none; margin-top: 0.15rem; }
+.pg-reiv-dados dd a:hover { text-decoration: underline; }
+.pg-reiv-dados .muted { color: var(--texto-2); }
+.pg-reiv-msg { margin: 0; padding: 0.55rem 0.75rem; border-radius: 10px; background: var(--cinza-1); font-size: 0.85rem; color: var(--texto); }
+.pg-reiv-pe { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.6rem; }
+.pg-reiv-status { display: inline-flex; flex-wrap: wrap; gap: 0.3rem; }
+.pg-reiv-status button { border: 1px solid var(--fio); background: #fff; color: var(--texto-2); font: inherit; font-size: 0.8rem; font-weight: 500; padding: 0.35rem 0.75rem; border-radius: 999px; cursor: pointer; }
+.pg-reiv-status button:hover { border-color: #ffc2d8; color: var(--texto); }
+.pg-reiv-status button:disabled { cursor: wait; opacity: 0.6; }
+.pg-reiv-status button[aria-pressed='true'] { font-weight: 600; }
+.pg-reiv-status button[aria-pressed='true'].nova { background: #ffe6ef; border-color: #ffc2d8; color: var(--rosa); }
+.pg-reiv-status button[aria-pressed='true'].em_contato { background: #fff3d6; border-color: #f5d48a; color: #9a6400; }
+.pg-reiv-status button[aria-pressed='true'].confirmada { background: #e2f7ec; border-color: #a9e4c6; color: #0d7a4f; }
+.pg-reiv-status button[aria-pressed='true'].recusada { background: var(--cinza-1); border-color: #d1d5db; color: var(--texto); }
+.pg-reiv-links { display: inline-flex; flex-wrap: wrap; gap: 0.2rem 0.9rem; }
+.pg-reiv-conf { display: inline-flex; align-items: flex-start; gap: 0.3rem; }
+.pg-reiv-conf svg { flex: none; margin-top: 0.15rem; }
+.pg-reiv-conf.falhou { color: var(--carmim); font-weight: 600; }
+.pg-reiv-conf small { display: block; font-weight: 400; font-size: 0.76rem; color: var(--texto-2); }
+
+@media (max-width: 760px) {
+  .pg-reiv { padding: 0.8rem; }
+  .pg-reiv-topo .pg-reiv-quando { margin-left: 0; width: 100%; }
+  .pg-reiv-pe { flex-direction: column; align-items: stretch; }
+  .pg-reiv-status button { flex: 1 1 auto; }
+}

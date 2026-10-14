@@ -34,3 +34,7 @@ evolution/sites/*.caddy
 apps/mobile/.env
 apps/mobile/*.keystore
 apps/mobile/*.jks
+
+# guia de salões: o que o script do Maps grava na máquina de quem roda (tem a nota do Google)
+scripts/guia/mimo_*
+scripts/guia/__pycache__/

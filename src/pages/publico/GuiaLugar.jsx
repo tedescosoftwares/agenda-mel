@@ -71,7 +71,7 @@ function Pagina({ dados, onInteresse }) {
   const conteudo = conteudoSeguro(lugar.conteudo)
   const faq = faqDaPagina(lugar, conteudo)
   const seo = seoDoLugar(lugar, lugar.conteudo)
-  useSeo({ titulo: seo.titulo, descricao: seo.descricao, caminho: seo.caminho, jsonLd: jsonLdDoLugar(lugar, lugar.conteudo, faq), tipo: 'business.business' })
+  useSeo({ titulo: seo.titulo, descricao: seo.descricao, caminho: seo.caminho, jsonLd: jsonLdDoLugar(lugar, lugar.conteudo, faq), noindex: seo.noindex, tipo: 'business.business' })
   return (
     <PaginaDoLugar
       lugar={lugar}

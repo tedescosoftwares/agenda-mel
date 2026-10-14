@@ -171,7 +171,6 @@ export const CATEGORIAS: Record<string, { rotulo: string; singular: string; plur
   unhas: { rotulo: 'Manicure e unhas', singular: 'manicure', plural: 'manicures e esmalterias', busca: 'manicure' },
   cilios: { rotulo: 'Cílios', singular: 'lash designer', plural: 'estúdios de cílios', busca: 'extensão de cílios' },
   sobrancelhas: { rotulo: 'Sobrancelhas', singular: 'designer de sobrancelha', plural: 'estúdios de sobrancelha', busca: 'design de sobrancelha' },
-  barbearia: { rotulo: 'Barbearias', singular: 'barbearia', plural: 'barbearias', busca: 'barbearia' },
   estetica: { rotulo: 'Estética', singular: 'estética', plural: 'clínicas de estética', busca: 'estética' },
   maquiagem: { rotulo: 'Maquiagem', singular: 'maquiadora', plural: 'maquiadoras', busca: 'maquiadora' },
 }
@@ -461,15 +460,6 @@ export const ANGULOS: Record<string, Angulo[]> = {
     { id: 'ocasioes', titulo: 'Sobrancelha para fotos e eventos', orientacao: 'Explique quando fazer o design antes de casamento, formatura ou ensaio de fotos (não na véspera, por causa da vermelhidão) e como combinar com maquiagem e cílios.' },
     { id: 'bairro-rotina', titulo: 'Um serviço rápido no bairro', orientacao: 'Mostre como um serviço curto cabe na rotina, usando o bairro, a rua e o horário da ficha, e como juntar com outros serviços da ficha na mesma ida quando houver.' },
   ],
-  barbearia: [
-    { id: 'corte-barba', titulo: 'Corte e barba: como pedir', orientacao: 'Explique como pedir o corte e o desenho da barba: levar foto, dizer a altura das laterais, pensar no formato do rosto e no tempo que você tem de manhã para arrumar.' },
-    { id: 'barba-cuidados', titulo: 'Cuidar da barba em casa', orientacao: 'Dê cuidados práticos para a barba entre as visitas: lavar, hidratar, pentear, manter o contorno e evitar irritação e pelo encravado.' },
-    { id: 'frequencia', titulo: 'De quanto em quanto tempo voltar', orientacao: 'Organize a frequência: corte, acabamento do pezinho e barba costumam pedir intervalos diferentes; explique como manter a forma sem perder o desenho.' },
-    { id: 'primeira-visita', titulo: 'Primeira vez numa barbearia nova', orientacao: 'Conte como costuma ser a primeira ida: a conversa antes da máquina, contar o que não deu certo em outro corte e ir com a barba do jeito que está, para o barbeiro ver como ela cresce.' },
-    { id: 'bairro-rotina', titulo: 'No caminho da semana', orientacao: 'Use o bairro, a rua e o horário da ficha para orientar quando ir: dias e horários que costumam encher, o sábado, e por que marcar evita espera.' },
-    { id: 'ocasioes', titulo: 'Antes do casamento, da entrevista e da festa', orientacao: 'Explique quando cortar e fazer a barba antes de uma data importante, para o corte assentar e a pele não estar irritada no dia.' },
-    { id: 'pele-verao', titulo: 'Barba e pele no calor', praia: true, orientacao: 'Fale de calor, suor, sol e mar na pele de quem tem barba: irritação, protetor solar, hidratação e o que muda nos cuidados durante o verão.' },
-  ],
   estetica: [
     { id: 'primeira-sessao', titulo: 'Como é a primeira sessão', orientacao: 'Conte o que costuma acontecer na primeira vez: a conversa sobre a pele e a saúde, o que avisar (gestação, alergias, remédios, uso de ácidos) e por que alguns procedimentos pedem mais de uma sessão.' },
     { id: 'depilacao', titulo: 'Depilação sem susto', requer: ['Depilação'], orientacao: 'Explique a depilação: o tamanho que os pelos precisam ter, pele sem creme no dia, o que evitar depois (sol, piscina, roupa apertada) e como diminuir os pelos encravados.' },
@@ -549,7 +539,7 @@ export function anguloAnterior(c: unknown): string | null {
 }
 
 // ---- o prompt ---------------------------------------------------------------------------------------
-export const SISTEMA_LUGAR = `Você é redatora de um guia local de beleza feito pela MIMO. O guia tem uma página para cada salão, barbearia, manicure, estúdio de cílios ou de sobrancelha, espaço de estética e maquiadora da cidade, inclusive os que não usam a MIMO. Quem lê é a cliente decidindo onde marcar. Ela quer saber, rápido, o que o lugar faz, onde fica, o que esperar do serviço e como se preparar. Escreva para ela, em português do Brasil, com a segurança de quem conhece o assunto e sem nada para vender.
+export const SISTEMA_LUGAR = `Você é redatora de um guia local de beleza feito pela MIMO. O guia tem uma página para cada salão, manicure, estúdio de cílios ou de sobrancelha, espaço de estética e maquiadora da cidade, inclusive os que não usam a MIMO. Quem lê é a cliente decidindo onde marcar. Ela quer saber, rápido, o que o lugar faz, onde fica, o que esperar do serviço e como se preparar. Escreva para ela, em português do Brasil, com a segurança de quem conhece o assunto e sem nada para vender.
 
 O QUE VOCÊ SABE DO LUGAR
 Só o que está na <ficha>: nome, categoria no guia, serviços divulgados, bairro, endereço, cidade, horário e os canais que o próprio lugar divulga. Você nunca esteve lá. Não conhece a equipe, o ambiente nem o atendimento.
@@ -573,7 +563,7 @@ O QUE FAZ A PÁGINA SER ÚTIL
 - Ajuda para escolher: o que perguntar ao marcar e o que observar no primeiro atendimento (material esterilizado ou descartável, conversa antes de começar, explicação dos cuidados).
 - Lugar de verdade: use o bairro, a rua, a cidade e o que vier em "Sobre a cidade". Tire do horário e dos serviços da ficha conclusões práticas e verdadeiras ("abre aos sábados", "dá para fazer unha e cabelo no mesmo endereço"). Não invente nada sobre o bairro (perto da praia, movimentado, tranquilo).
 - O ângulo editorial pedido define o assunto principal do texto, dos destaques, das dicas e da FAQ. Páginas de lugares parecidos têm de sair diferentes, inclusive na estrutura.
-- Busca no Google: o nome, o serviço como a pessoa procura ("manicure", "barbearia", "extensão de cílios") e a cidade aparecem no seo_title, na meta_description e no primeiro parágrafo, de forma natural. Não repita a mesma expressão mais de três vezes na página.
+- Busca no Google: o nome, o serviço como a pessoa procura ("manicure", "cabeleireiro", "extensão de cílios") e a cidade aparecem no seo_title, na meta_description e no primeiro parágrafo, de forma natural. Não repita a mesma expressão mais de três vezes na página.
 - Estilo: frases curtas, voz ativa, palavras do dia a dia, "você" para a leitora. Um fato útil vale mais que três adjetivos.
 
 FORMATO: só o objeto JSON, sem nada antes ou depois.

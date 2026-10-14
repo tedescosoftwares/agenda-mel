@@ -18,7 +18,7 @@ function paraPagina(l) {
   return {
     id: l.id, slug: l.slug, cidade: l.cidade, cidade_slug: l.cidade_slug, uf: l.uf, categoria: l.categoria, nome: l.nome,
     bairro: l.bairro, endereco: l.endereco, cep: l.cep, telefone: l.telefone, whatsapp: l.whatsapp, instagram: l.instagram,
-    site: l.site, horarios: l.horarios, servicos: l.servicos ?? [], selecao: !!l.selecao, validado_receita: !!l.validado_receita,
+    site: l.site, horarios: l.horarios, servicos: l.servicos ?? [], atributos: l.atributos ?? {}, selecao: !!l.selecao, validado_receita: !!l.validado_receita,
     na_mimo: !!l.salon_id, mimo: l.salon_id ? { salao_id: l.salon_id, nome: l.nome, slug: null, subdominio: null } : null,
     conteudo: l.conteudo, publicado_em: l.publicado_em, atualizado_em: l.atualizado_em,
   }

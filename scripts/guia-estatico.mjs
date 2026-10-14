@@ -6,7 +6,7 @@
 // texto inteiro; a pessoa recebe o app, que troca esse corpo ao abrir.
 // Tudo o que vem do banco passa por esc().
 import {
-  GUIA_CATEGORIAS, categoriaDoGuia, conteudoSeguro, faqDaPagina, horariosResumo,
+  GUIA_CATEGORIAS, categoriaDoGuia, conteudoSeguro, faqDaPagina, horariosResumo, atributosEmTexto,
   rotaDoGuia, rotaDaCidade, rotaDaCategoria, rotaDoLugar, seoPadraoDaCidade,
 } from '../src/lib/guia.js'
 import {
@@ -28,7 +28,7 @@ function corpoDoLugar(l, c, faq) {
 ${migalhas(trilhaDoLugar(l))}
 <h1>${esc(l.nome)}</h1>
 <p>${esc(c.chamada || `${cat.curto} em ${l.cidade}${l.bairro ? `, no bairro ${l.bairro}` : ''}.`)}</p>
-<section><h2>Endereço e horário</h2><p>${esc(endereco)}</p>${horas.length ? `<ul>${horas.map((h) => `<li>${esc(h.dias)}: ${esc(h.horas)}</li>`).join('')}</ul>` : ''}${l.telefone ? `<p>Telefone: ${esc(l.telefone)}</p>` : ''}${l.servicos?.length ? `<p>Serviços: ${esc(l.servicos.join(', '))}</p>` : ''}</section>
+<section><h2>Endereço e horário</h2><p>${esc(endereco)}</p>${horas.length ? `<ul>${horas.map((h) => `<li>${esc(h.dias)}: ${esc(h.horas)}</li>`).join('')}</ul>` : ''}${l.telefone ? `<p>Telefone: ${esc(l.telefone)}</p>` : ''}${l.servicos?.length ? `<p>Serviços: ${esc(l.servicos.join(', '))}</p>` : ''}${atributosEmTexto(l.atributos).map((a) => `<p>${esc(a.rotulo)}: ${esc(a.texto)}</p>`).join('')}</section>
 ${c.sobre.length ? `<section><h2>Sobre ${esc(l.nome)}</h2>${c.sobre.map((p) => `<p>${esc(p)}</p>`).join('')}</section>` : ''}
 ${c.destaques.length ? `<section>${c.destaques.map((d) => `<h3>${esc(d.titulo)}</h3><p>${esc(d.texto)}</p>`).join('')}</section>` : ''}
 ${c.dicas.itens.length ? `<section><h2>${esc(c.dicas.titulo || 'Dicas')}</h2><ul>${c.dicas.itens.map((i) => `<li>${esc(i)}</li>`).join('')}</ul></section>` : ''}
@@ -80,8 +80,8 @@ export function paginasDoGuia(guia) {
   for (const l of lugares) {
     const c = conteudoSeguro(l.conteudo)
     const faq = faqDaPagina(l, c)
-    const { titulo, descricao, caminho } = seoDoLugar(l, c)
-    out.push({ caminho, titulo, descricao, atualizado: dia(l.atualizado_em), prioridade: '0.6', freq: 'monthly', jsonLd: jsonLdDoLugar(l, c, faq), corpo: corpoDoLugar(l, c, faq) })
+    const { titulo, descricao, caminho, noindex } = seoDoLugar(l, c)
+    out.push({ caminho, titulo, descricao, noindex, atualizado: dia(l.atualizado_em), prioridade: '0.6', freq: 'monthly', jsonLd: jsonLdDoLugar(l, c, faq), corpo: corpoDoLugar(l, c, faq) })
   }
   // as cidades e as categorias de cada uma
   const cidades = [...new Set(lugares.map((l) => l.cidade_slug))]

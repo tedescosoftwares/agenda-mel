@@ -19,7 +19,8 @@
     "./contato": "./contato.js",
     "./convite": "./convite.js",
     "./legal": "./legal.js",
-    "./guia": "./guia.js"
+    "./guia": "./guia.js",
+    "./guiaTexto": "./guiaTexto.js"
   },
   "sideEffects": false
 }

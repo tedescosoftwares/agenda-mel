@@ -40,8 +40,12 @@ const comoNoBanco = (it: Record<string, unknown>): LugarLinha & Record<string, u
   ...it, slug: core.slugificar(String(it.nome)), cidade_slug: core.slugificar(String(it.cidade)), selecao: true, salon_id: null,
 } as LugarLinha & Record<string, unknown>)
 const lugares = itens.map(comoNoBanco)
-const ro = lugares.find((l: Record<string, unknown>) => l.nome === 'Rô Coiffeur' && l.cidade === 'Itanhaém')
-assert.ok(ro, 'o Rô Coiffeur tem de estar no CSV')
+const achado = lugares.find((l: Record<string, unknown>) => l.nome === 'Rô Coiffeur' && l.cidade === 'Itanhaém')
+assert.ok(achado, 'o Rô Coiffeur tem de estar no CSV')
+// o Rô como ficou no banco da 3.9 (unhas, seis serviços). Na 3.10 o core passou
+// a tirar categoria e serviços do tipo do Google e do nome (ele virou salão de
+// beleza, com cabelo e estética), mas aqui o que se testa é a ficha e o prompt
+const ro = { ...achado, categoria: 'unhas', servicos: ['Cabelo', 'Depilação', 'Estética', 'Manicure', 'Maquiagem', 'Unhas em gel'] } as LugarLinha & Record<string, unknown>
 
 // ---- o provedor de mentira -------------------------------------------------------------------
 const cabecalhos = (h: Record<string, string> = {}) => ({ get: (n: string) => h[n.toLowerCase()] ?? null })
@@ -164,7 +168,7 @@ teste('ficha de todas as linhas do CSV: nada de nota, avaliações, coordenadas,
   assert.equal(bairroValido('Nossa Sra. do Sion'), 'Nossa Sra. do Sion')
   assert.equal(bairroValido('Casa Grande'), 'Casa Grande')
   const sir = lugares.find((l: LugarLinha) => l.nome === 'SIR Barbearia')
-  if (sir) assert.equal(fichaDoLugar(sir).bairro, null, 'o "Lj 1" que o core pôs no bairro não pode ir como bairro')
+  if (sir) assert.equal(fichaDoLugar(sir).bairro, 'Centro', 'o core pula o "Lj 1" do endereço e acha o bairro (3.10)')
   console.log(`      (${lugares.length} linhas; ${semBairro} sem bairro aproveitável)`)
 })
 

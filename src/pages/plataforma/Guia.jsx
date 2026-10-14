@@ -4,6 +4,7 @@ import { Cabecalho } from '../../components/plataforma/Pecas'
 import { supabase, isDemo } from '../../lib/supabase'
 import { chamar } from '../../lib/pagamento'
 import { useAuth } from '../../context/AuthContext'
+import { montarConteudo, contextoDaCidade } from '../../lib/guiaTexto'
 import Revisar from '../../components/plataforma/guia/Revisar'
 import Publicadas from '../../components/plataforma/guia/Publicadas'
 import Importar from '../../components/plataforma/guia/Importar'
@@ -12,15 +13,18 @@ import Interesses from '../../components/plataforma/guia/Interesses'
 import { ClipboardCheck, Globe2, Upload, MapPinned, Inbox, X } from 'lucide-react'
 import '../../guia-plataforma.css'
 
-// Guia de salões (3.9): uma página pública para cada salão da região. A
-// IA escreve, a pessoa da Plataforma aprova, um por um. É a tela em que o
-// dono da MIMO passa horas, então tudo mora aqui em memória: aprovar,
-// gerar, editar e descartar mudam a lista na hora, sem recarregar nada, e
-// o lote de geração continua rodando enquanto se troca de aba.
+// Guia de salões (3.9): uma página pública para cada salão da região, que
+// a pessoa da Plataforma aprova, uma por uma. É a tela em que o dono da
+// MIMO passa horas, então tudo mora aqui em memória: aprovar, montar,
+// editar e descartar mudam a lista na hora, sem recarregar nada, e o lote
+// continua rodando enquanto se troca de aba.
 //
-// Os dados vêm direto das tabelas (RLS eh_plataforma) e das RPCs da 153;
-// o texto vem da função guia-gerar (Groq). No modo demonstração as mesmas
-// chamadas caem no src/lib/demo.js.
+// O texto (3.10) é montado aqui mesmo, dos dados de cada salão e da
+// comparação com os outros da cidade (packages/core/guiaTexto.js): de
+// graça e na hora. A IA (função guia-gerar, Groq) fica como opção para
+// reescrever um salão. Os dados vêm direto das tabelas (RLS eh_plataforma)
+// e das RPCs da 153; no modo demonstração as mesmas chamadas caem no
+// src/lib/demo.js.
 
 const ABAS = [
   ['revisar', 'Revisar', ClipboardCheck],
@@ -31,10 +35,10 @@ const ABAS = [
 ]
 
 // só o que a tela usa: origem (o CSV cru) e as coordenadas ficam no banco
-const COLUNAS_LUGAR = 'id, cidade, cidade_slug, uf, slug, categoria, nome, bairro, endereco, cep, telefone, whatsapp, instagram, site, horarios, servicos, place_id, cnpj, validado_receita, selecao, nota, avaliacoes, fontes, conteudo, rascunho, status, motivo, salon_id, gerado_em, publicado_em, criado_em, atualizado_em'
+const COLUNAS_LUGAR = 'id, cidade, cidade_slug, uf, slug, categoria, nome, bairro, endereco, cep, telefone, whatsapp, instagram, site, horarios, servicos, atributos, place_id, cnpj, validado_receita, selecao, nota, avaliacoes, fontes, conteudo, rascunho, status, motivo, salon_id, gerado_em, publicado_em, criado_em, atualizado_em'
 
 // a fase de um salão na fila de revisão (o filtro "status" da aba Revisar)
-//   gerar      ainda sem texto da IA
+//   gerar      ainda sem página (nem montada nem da IA)
 //   revisar    texto gerado esperando aprovação (inclui o despublicado, que guarda o texto)
 //   nova       no ar, com uma versão nova esperando revisão
 //   no_ar      no ar, nada pendente
@@ -137,7 +141,7 @@ export default function Guia() {
   const [lote, setLote] = useState(null)       // o "gerar todos da fila"
   const [aviso, setAviso] = useState(null)     // o recado de baixo ("está no ar · Desfazer")
   // os filtros e a seleção da aba Revisar moram aqui: trocar de aba não perde o lugar na fila
-  const [rev, setRev] = useState({ status: null, cidade: '', categoria: '', receita: false, selecao: false, busca: '', ordem: 'selecao', selId: null })
+  const [rev, setRev] = useState({ status: null, cidade: '', categoria: '', receita: false, selecao: false, triagem: '', busca: '', ordem: 'selecao', selId: null })
 
   const lugaresRef = useRef(lugares)
   useEffect(() => { lugaresRef.current = lugares }, [lugares])
@@ -226,12 +230,27 @@ export default function Guia() {
     }
   }, [mudarLocal])
 
-  // "Gerar todos da fila": um por vez, na ordem da lista; pausa, cancela e espera o limite
-  const iniciarLote = useCallback(async (ids) => {
+  // montar a página de um salão com os dados dele (sem IA, na hora). ctx: a
+  // cidade em números; o lote passa pronto para não recontar a cada salão
+  const montarUm = useCallback(async (id, ctxPronto = null) => {
+    setFalhas((f) => sem(f, id))
+    const l = (lugaresRef.current ?? []).find((x) => x.id === id)
+    if (!l) return { ok: false, erro: 'salão não encontrado' }
+    const ctx = ctxPronto ?? contextoDaCidade(lugaresRef.current, l.cidade_slug)
+    const rascunho = montarConteudo({ ...l, na_mimo: !!l.salon_id }, ctx)
+    const r = await salvarLugar(id, { rascunho, gerado_em: rascunho._meta.gerado_em, ...(l.status === 'importado' ? { status: 'gerado' } : {}) })
+    if (!r.ok) setFalhas((f) => ({ ...f, [id]: r.erro }))
+    return r
+  }, [salvarLugar])
+
+  // o lote ("Montar todas da fila"; com modo 'ia', a IA escreve uma por vez):
+  // na ordem da lista; pausa, cancela e, na IA, espera o limite
+  const iniciarLote = useCallback(async (ids, modo = 'montar') => {
     if (!ids.length || (loteCtl.current && !loteCtl.current.fim)) return
     const ctl = { pausado: false, cancelado: false, fim: false }
     loteCtl.current = ctl
-    setLote({ total: ids.length, feitos: 0, erros: [], atual: null, pausado: false, fim: false })
+    setLote({ modo, total: ids.length, feitos: 0, erros: [], atual: null, pausado: false, fim: false })
+    const contextos = new Map()
     for (const id of ids) {
       while (ctl.pausado && !ctl.cancelado) await dormir(250)
       if (ctl.cancelado) break
@@ -242,13 +261,14 @@ export default function Guia() {
         continue
       }
       setLote((s) => ({ ...s, atual: id }))
-      const r = await gerarUm(id, { cancelado: () => ctl.cancelado })
+      if (modo === 'montar' && !contextos.has(l.cidade_slug)) contextos.set(l.cidade_slug, contextoDaCidade(lugaresRef.current, l.cidade_slug))
+      const r = modo === 'montar' ? await montarUm(id, contextos.get(l.cidade_slug)) : await gerarUm(id, { cancelado: () => ctl.cancelado })
       if (r.cancelado) break
       setLote((s) => ({ ...s, feitos: s.feitos + 1, erros: r.ok ? s.erros : [...s.erros, id] }))
     }
     ctl.fim = true
     if (montado.current) setLote((s) => ({ ...s, atual: null, fim: true, cancelado: ctl.cancelado }))
-  }, [gerarUm])
+  }, [gerarUm, montarUm])
   const pausarLote = useCallback((pausar) => {
     if (!loteCtl.current) return
     loteCtl.current.pausado = pausar
@@ -349,23 +369,23 @@ export default function Guia() {
   const irPara = useCallback((destino, filtro) => {
     setAba(destino)
     // indo para um salão certo, os outros filtros saem do caminho para ele aparecer
-    const limpo = { busca: '', cidade: '', categoria: '', receita: false, selecao: false }
+    const limpo = { busca: '', cidade: '', categoria: '', receita: false, selecao: false, triagem: '' }
     if (destino === 'revisar' && filtro) setRev((r) => ({ ...r, ...(filtro.selId ? limpo : {}), ...filtro, selId: filtro.selId ?? null }))
   }, [])
 
   const g = {
     lugares: lugares ?? [], paginas: paginas ?? [], interesses: interesses ?? [], carregando: lugares === null, erro,
     faseDe, gerando, falhas, lote, usuario: user?.id ?? null,
-    carregar, salvarLugar, gerarUm, iniciarLote, pausarLote, cancelarLote, fecharLote, aprovar, desfazerAprovacao,
+    carregar, salvarLugar, montarUm, gerarUm, iniciarLote, pausarLote, cancelarLote, fecharLote, aprovar, desfazerAprovacao,
     gerarPagina, aprovarPagina, salvarInteresse, importar, avisar, irPara,
   }
 
   return (
     <Shell>
       <div className="pg-topo">
-        <Cabecalho titulo="Guia de salões" sub="Uma página pública para cada salão da região. A IA escreve, você aprova." direita={<span />} />
+        <Cabecalho titulo="Guia de salões" sub="Uma página pública para cada salão da região, montada com os dados dele (de graça). Você aprova." direita={<span />} />
         <div className="pg-kpis" aria-label="Números do guia">
-          <Num carregando={lugares === null} n={kpis.importados} rotulo="importados" sub={kpis.gerar ? `${kpis.gerar} sem texto` : null} onClick={() => irPara('revisar', { status: 'gerar' })} />
+          <Num carregando={lugares === null} n={kpis.importados} rotulo="importados" sub={kpis.gerar ? `${kpis.gerar} sem página` : null} onClick={() => irPara('revisar', { status: 'gerar' })} />
           <Num carregando={lugares === null} n={kpis.revisao} rotulo="esperando revisão" tom={kpis.revisao ? 'ambar' : ''} onClick={() => irPara('revisar', { status: kpis.soNova && kpis.revisao ? 'nova' : 'revisar' })} />
           <Num carregando={lugares === null} n={kpis.noAr} rotulo="no ar" tom="menta" onClick={() => irPara('publicadas')} />
           <Num carregando={lugares === null} n={kpis.descartados} rotulo="descartados" onClick={() => irPara('revisar', { status: 'descartado' })} />

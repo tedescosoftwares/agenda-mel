@@ -1,15 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Portal from '../../Portal'
-import { useDialogo } from '../../../context/DialogoContext'
 import { Pilula, haQuanto } from '../Pecas'
 import { MolduraPrevia, PreviaGoogle } from './Previa'
 import EditarLugar from './Editar'
 import { GUIA_CATEGORIAS, categoriaDoGuia, conteudoSeguro, semAcento, rotaDoLugar } from '../../../lib/guia'
 import { seoDoLugar } from '../../../lib/guiaSeo'
+import { dadosDaPagina } from '../../../lib/guiaTexto'
 import { urlDoAmbiente } from '../../../lib/ambiente'
 import {
   Search, Smartphone, Monitor, Check, RefreshCw, Pencil, SkipForward, Trash2, ChevronLeft, ChevronRight, Sparkles,
-  Star, ShieldCheck, LoaderCircle, TriangleAlert, ExternalLink, Maximize2, X, Keyboard, Pause, Play, Square, Undo2, Upload, Info,
+  Star, ShieldCheck, LoaderCircle, TriangleAlert, ExternalLink, Maximize2, X, Keyboard, Pause, Play, Square, Undo2, Upload, Info, Wand2,
 } from 'lucide-react'
 
 // A mesa de revisão: a fila à esquerda, a página de verdade à direita, e as
@@ -17,19 +17,38 @@ import {
 // ao próximo da fila; o que está selecionado nunca some da lista enquanto
 // estiver selecionado (mesmo que o lote o tenha gerado e ele tenha mudado
 // de fase), para a pessoa não perder o lugar.
+//
+// 3.10: "Montar página" (G) faz a página com os dados do salão, de graça e
+// na hora; "Reescrever com IA" fica como opção. A nota e o número de
+// avaliações do Google aparecem só aqui, para a triagem (ordenar e filtrar).
 
 const FASES = [
-  ['gerar', 'A gerar'],
+  ['gerar', 'Sem página'],
   ['revisar', 'Para revisar'],
   ['nova', 'Versão nova'],
   ['no_ar', 'No ar'],
   ['descartado', 'Descartados'],
   ['todos', 'Todos'],
 ]
-const FASE_ROTULO = { gerar: 'sem texto', revisar: 'para revisar', nova: 'no ar · versão nova', no_ar: 'no ar', descartado: 'descartado', removido: 'removido' }
+const FASE_ROTULO = { gerar: 'sem página', revisar: 'para revisar', nova: 'no ar · versão nova', no_ar: 'no ar', descartado: 'descartado', removido: 'removido' }
 const FASE_TOM = { gerar: 'cinza', revisar: 'ambar', nova: 'roxo', no_ar: 'menta', descartado: 'carmim', removido: 'cinza' }
 const SUGESTOES = ['Mais curto', 'Mais direto, menos adjetivo', 'Fale mais dos serviços', 'Mude a abertura', 'Menos repetição do nome']
-const MOTIVOS = ['Fechou', 'Não é salão de beleza', 'Duplicado', 'Fora da cidade', 'Dados ruins']
+const MOTIVOS = ['Fechou', 'Não é salão de beleza', 'Barbearia ou público masculino', 'Avaliação ruim', 'Duplicado', 'Fora da cidade', 'Dados ruins']
+
+// a triagem pela nota do Google (só na Plataforma; nunca vai para a página)
+const TRIAGENS = [
+  ['otima', 'Nota 4,8+ com 30+ avaliações', (l) => l.nota >= 4.8 && l.avaliacoes >= 30],
+  ['boa', 'Nota 4,5+ com 10+ avaliações', (l) => l.nota >= 4.5 && l.avaliacoes >= 10],
+  ['poucas', 'Menos de 10 avaliações', (l) => l.nota != null && (l.avaliacoes ?? 0) < 10],
+  ['baixa', 'Nota abaixo de 4,5', (l) => l.nota != null && l.nota < 4.5 && (l.avaliacoes ?? 0) >= 10],
+  ['sem', 'Sem nota no Google', (l) => l.nota == null],
+]
+const nota = (n) => String(n).replace('.', ',')
+function tomDaNota(l) {
+  if (l.nota == null) return 'cinza'
+  if ((l.avaliacoes ?? 0) < 10) return 'cinza'
+  return l.nota >= 4.8 && l.avaliacoes >= 30 ? 'menta' : l.nota >= 4.5 ? '' : 'carmim'
+}
 
 const lerPref = (k, padrao) => { try { return localStorage.getItem(k) || padrao } catch { return padrao } }
 const gravarPref = (k, v) => { try { localStorage.setItem(k, v) } catch { /* sem storage */ } }
@@ -42,12 +61,13 @@ function ordenar(lista, ordem) {
     nome,
     bairro: (a, b) => (a.bairro || '~').localeCompare(b.bairro || '~', 'pt-BR') || nome(a, b),
     recentes: (a, b) => String(b.gerado_em ?? b.atualizado_em ?? '').localeCompare(String(a.gerado_em ?? a.atualizado_em ?? '')) || nome(a, b),
+    avaliacoes: (a, b) => ((b.avaliacoes ?? -1) - (a.avaliacoes ?? -1)) || ((b.nota ?? -1) - (a.nota ?? -1)) || nome(a, b),
+    nota: (a, b) => ((b.nota ?? -1) - (a.nota ?? -1)) || ((b.avaliacoes ?? -1) - (a.avaliacoes ?? -1)) || nome(a, b),
   }
   return [...lista].sort(porOrdem[ordem] ?? porOrdem.selecao)
 }
 
 export default function Revisar({ g, rev, setRev }) {
-  const { confirmar } = useDialogo()
   const { lugares, faseDe, carregando } = g
   const [modo, setModoBruto] = useState(() => lerPref('mimo-guia-previa', 'celular'))
   // o pedido para a IA, a versão mostrada e o erro valem para um salão só:
@@ -92,8 +112,9 @@ export default function Revisar({ g, rev, setRev }) {
   const base = useMemo(() => lugares.filter((l) =>
     (!rev.cidade || l.cidade_slug === rev.cidade) && (!rev.categoria || l.categoria === rev.categoria) &&
     (!rev.receita || l.validado_receita) && (!rev.selecao || l.selecao) &&
+    (!rev.triagem || TRIAGENS.find(([id]) => id === rev.triagem)?.[2](l)) &&
     (!termo || norm(`${l.nome} ${l.bairro ?? ''} ${l.slug}`).includes(termo))
-  ), [lugares, rev.cidade, rev.categoria, rev.receita, rev.selecao, termo])
+  ), [lugares, rev.cidade, rev.categoria, rev.receita, rev.selecao, rev.triagem, termo])
   const contagem = useMemo(() => {
     const c = { gerar: 0, revisar: 0, nova: 0, no_ar: 0, descartado: 0, removido: 0, todos: 0 }
     for (const l of base) { const f = faseDe(l); c[f]++; if (f !== 'removido') c.todos++ }
@@ -169,6 +190,7 @@ export default function Revisar({ g, rev, setRev }) {
   const falha = atual ? g.falhas[atual.id] : null
   const podeAprovar = !!atual && !gerandoAtual && atual.status !== 'removido' && (fase === 'revisar' || fase === 'nova' || (fase === 'descartado' && temTexto))
   const podeGerar = !!atual && !gerandoAtual && atual.status !== 'removido'
+  const [montando, setMontando] = useState(false)
   const mostrado = atual ? (versao === 'no_ar' && atual.conteudo ? atual.conteudo : (atual.rascunho ?? atual.conteudo)) : null
   const metaMostrada = (mostrado && typeof mostrado === 'object' && mostrado._meta) || {}
   const semelhanca = Number(metaMostrada.semelhanca?.indice) || 0
@@ -197,6 +219,17 @@ export default function Revisar({ g, rev, setRev }) {
     })
   }
 
+  // a página montada com os dados (grátis, na hora)
+  async function montarAtual() {
+    if (!podeGerar || montando) return
+    const l = atual
+    setMontando(true); setErroAcao('')
+    const r = await g.montarUm(l.id)
+    setMontando(false)
+    if (!r.ok) { setErroAcao(r.erro); return }
+    if (selRef.current === l.id) setVersao('rascunho')
+  }
+
   async function descartar(motivo) {
     const l = descartando
     const proximo = vizinhoDe(l.id)
@@ -216,11 +249,10 @@ export default function Revisar({ g, rev, setRev }) {
     else g.avisar(`${l.nome} voltou para a fila.`)
   }
 
-  async function gerarFila() {
+  // montar as da fila que ainda não têm página: rápido e de graça, sem confirmar
+  function montarFila() {
     const ids = lista.filter((l) => g.faseDe(l) === 'gerar').map((l) => l.id)
-    if (!ids.length) return
-    const ok = await confirmar({ titulo: `Gerar o texto de ${ids.length} ${ids.length === 1 ? 'salão' : 'salões'}?`, texto: 'Um por vez, na ordem da lista. Cada página pronta já aparece em "Para revisar": dá para ir aprovando enquanto o lote roda. Deixe esta tela aberta.', ok: 'Gerar todos', cancelar: 'Agora não' })
-    if (ok) g.iniciarLote(ids)
+    if (ids.length) g.iniciarLote(ids, 'montar')
   }
 
   // ---- teclado ----
@@ -239,7 +271,7 @@ export default function Revisar({ g, rev, setRev }) {
       j: () => mover(1), ArrowRight: () => mover(1), ArrowDown: () => mover(1),
       k: () => mover(-1), ArrowLeft: () => mover(-1), ArrowUp: () => mover(-1),
       a: () => aprovarAtual(),
-      g: () => gerarAtual(),
+      g: () => montarAtual(),
       e: () => atual && setEditando(atual.id),
       d: () => atual && fase !== 'descartado' && atual.status !== 'removido' && setDescartando(atual),
       m: () => setModo(modo === 'celular' ? 'computador' : 'celular'),
@@ -274,7 +306,7 @@ export default function Revisar({ g, rev, setRev }) {
   )
 
   const pendentesFila = lista.filter((l) => g.faseDe(l) === 'gerar').length
-  const filtrosExtras = rev.cidade || rev.categoria || rev.receita || rev.selecao || rev.busca
+  const filtrosExtras = rev.cidade || rev.categoria || rev.receita || rev.selecao || rev.triagem || rev.busca
   const lote = g.lote
 
   return (
@@ -313,6 +345,14 @@ export default function Revisar({ g, rev, setRev }) {
               <option value="nome">A a Z</option>
               <option value="bairro">Por bairro</option>
               <option value="recentes">Recentes</option>
+              <option value="avaliacoes">Mais avaliações</option>
+              <option value="nota">Melhor nota</option>
+            </select>
+          </div>
+          <div className="pg-fila-linha">
+            <select className="plat-select" value={rev.triagem} onChange={(e) => mudarFiltro({ triagem: e.target.value })} aria-label="Triagem pela nota do Google">
+              <option value="">Todas as notas</option>
+              {TRIAGENS.map(([id, rotulo]) => <option key={id} value={id}>{rotulo}</option>)}
             </select>
           </div>
           <div className="pg-fila-linha">
@@ -324,16 +364,16 @@ export default function Revisar({ g, rev, setRev }) {
         {lote ? <Lote lote={lote} g={g} onVer={(id) => selecionar(id)} /> : (
           <div className="pg-fila-resumo">
             <span><b>{lista.length}</b> {lista.length === 1 ? 'salão' : 'salões'} nesta fila</span>
-            {pendentesFila > 0 && <button type="button" className="btn btn-ghost pg-btn-peq" onClick={gerarFila}><Sparkles size={14} /> Gerar todos da fila ({pendentesFila})</button>}
+            {pendentesFila > 0 && <button type="button" className="btn btn-ghost pg-btn-peq" onClick={montarFila} title="Monta com os dados de cada salão: de graça e na hora"><Wand2 size={14} /> Montar todas da fila ({pendentesFila})</button>}
           </div>
         )}
 
         <div className="pg-lista" ref={listaRef} role="listbox" aria-label="Salões na fila">
           {lista.length === 0 && (
             <div className="pg-lista-vazia">
-              {filtrosExtras ? (<><p>Nenhum salão com esses filtros.</p><button type="button" className="plat-link" onClick={() => mudarFiltro({ cidade: '', categoria: '', receita: false, selecao: false, busca: '' })}>Limpar filtros</button></>)
-                : status === 'revisar' ? (<><p><b>Fila zerada.</b> Nada esperando revisão.</p>{contagem.gerar > 0 && <button type="button" className="plat-link" onClick={() => mudarFiltro({ status: 'gerar' })}>Ver os {contagem.gerar} sem texto</button>}</>)
-                  : status === 'gerar' ? (<p>Todos os salões já têm texto. {contagem.revisar > 0 && <button type="button" className="plat-link" onClick={() => mudarFiltro({ status: 'revisar' })}>Revisar {contagem.revisar}</button>}</p>)
+              {filtrosExtras ? (<><p>Nenhum salão com esses filtros.</p><button type="button" className="plat-link" onClick={() => mudarFiltro({ cidade: '', categoria: '', receita: false, selecao: false, triagem: '', busca: '' })}>Limpar filtros</button></>)
+                : status === 'revisar' ? (<><p><b>Fila zerada.</b> Nada esperando revisão.</p>{contagem.gerar > 0 && <button type="button" className="plat-link" onClick={() => mudarFiltro({ status: 'gerar' })}>Ver os {contagem.gerar} sem página</button>}</>)
+                  : status === 'gerar' ? (<p>Todos os salões já têm página. {contagem.revisar > 0 && <button type="button" className="plat-link" onClick={() => mudarFiltro({ status: 'revisar' })}>Revisar {contagem.revisar}</button>}</p>)
                     : <p>Nada por aqui.</p>}
             </div>
           )}
@@ -348,6 +388,7 @@ export default function Revisar({ g, rev, setRev }) {
                 </span>
                 <span className="pg-item-sub">
                   <span>{[l.bairro, categoriaDoGuia(l.categoria).curto].filter(Boolean).join(' · ')}</span>
+                  {l.nota != null && <span className={'pg-item-nota ' + tomDaNota(l)} title={`Google: ${nota(l.nota)} com ${l.avaliacoes ?? 0} avaliações (só para a triagem)`}>★ {nota(l.nota)} · {l.avaliacoes ?? 0}</span>}
                   {l.selecao && <Star size={12} className="pg-selo-sel" aria-label="Seleção MIMO" />}
                   {l.validado_receita && <ShieldCheck size={12} className="pg-selo-rf" aria-label="Validado na Receita" />}
                 </span>
@@ -391,8 +432,11 @@ export default function Revisar({ g, rev, setRev }) {
                     <button type="button" className="btn btn-primary pg-aprovar" onClick={aprovarAtual} disabled={!podeAprovar || ocupado} title={podeAprovar ? 'Aprovar e publicar (A)' : fase === 'no_ar' ? 'Já está no ar' : 'Gere o texto primeiro'}>
                       {ocupado ? <LoaderCircle size={16} className="pg-gira" /> : <Check size={16} />} {fase === 'nova' ? <>Publicar<span className="pg-longo"> versão nova</span></> : <>Aprovar<span className="pg-longo"> e publicar</span></>} <kbd>A</kbd>
                     </button>
-                    <button type="button" className="btn btn-ghost" onClick={() => gerarAtual()} disabled={!podeGerar}>
-                      {gerandoAtual ? <LoaderCircle size={16} className="pg-gira" /> : temTexto ? <RefreshCw size={16} /> : <Sparkles size={16} />} {gerandoAtual ? 'Gerando…' : temTexto ? 'Gerar de novo' : 'Gerar'} <kbd>G</kbd>
+                    <button type="button" className="btn btn-ghost" onClick={montarAtual} disabled={!podeGerar || montando} title="Monta a página com os dados do salão: de graça e na hora (G)">
+                      {montando ? <LoaderCircle size={16} className="pg-gira" /> : temTexto ? <RefreshCw size={16} /> : <Wand2 size={16} />} {temTexto ? <>Montar<span className="pg-longo"> de novo</span></> : <>Montar<span className="pg-longo"> página</span></>} <kbd>G</kbd>
+                    </button>
+                    <button type="button" className="btn btn-ghost pg-btn-ic" onClick={() => gerarAtual()} disabled={!podeGerar} title="Reescreve com a IA (gasta da cota do Groq). O pedido escrito embaixo vai junto.">
+                      {gerandoAtual ? <LoaderCircle size={16} className="pg-gira" /> : <Sparkles size={16} />} <span>{gerandoAtual ? 'IA escrevendo…' : 'Reescrever com IA'}</span>
                     </button>
                     <button type="button" className="btn btn-ghost pg-btn-ic" onClick={() => setEditando(atual.id)} title="Editar fatos e texto (E)"><Pencil size={16} /> <span>Editar</span> <kbd>E</kbd></button>
                     <button type="button" className="btn btn-ghost pg-btn-ic" onClick={() => mover(1)} disabled={indice >= lista.length - 1} title="Pular para o próximo (J)"><SkipForward size={16} /> <span>Pular</span> <kbd>J</kbd></button>
@@ -401,7 +445,7 @@ export default function Revisar({ g, rev, setRev }) {
                       : <button type="button" className="btn btn-ghost pg-btn-ic pg-perigo" onClick={() => setDescartando(atual)} title="Descartar (D)"><Trash2 size={16} /> <span>Descartar</span> <kbd>D</kbd></button>}
                   </div>
                   <form className="pg-instrucao" onSubmit={(e) => { e.preventDefault(); gerarAtual() }}>
-                    <input ref={instrRef} value={instr} onChange={(e) => setInstr(e.target.value.slice(0, 400))} placeholder={temTexto ? 'O que mudar? (opcional) Ex.: mais curto, fale de noivas…' : 'Algum pedido para a IA? (opcional)'} aria-label="O que mudar no texto" disabled={!podeGerar} />
+                    <input ref={instrRef} value={instr} onChange={(e) => setInstr(e.target.value.slice(0, 400))} placeholder="Pedido para a IA, se for reescrever com ela (opcional). Ex.: mais curto, fale de noivas…" aria-label="Pedido para a IA" disabled={!podeGerar} />
                     <div className="pg-sugestoes">
                       {SUGESTOES.map((s) => <button key={s} type="button" disabled={!podeGerar} onClick={() => setInstr((v) => (v ? `${v.replace(/[.\s]+$/, '')}. ${s}` : s))}>{s}</button>)}
                     </div>
@@ -410,7 +454,7 @@ export default function Revisar({ g, rev, setRev }) {
               )}
               {verAtalhos && <Atalhos onFechar={() => setVerAtalhos(false)} />}
               {erroAcao && <div className="alert alert-error">{erroAcao}</div>}
-              {falha && !gerandoAtual && <div className="alert alert-error pg-falha"><span>Não deu para gerar: {falha}</span><button type="button" className="plat-link" onClick={() => gerarAtual()}>Tentar de novo</button></div>}
+              {falha && !gerandoAtual && <div className="alert alert-error pg-falha"><span>Não deu: {falha}</span><button type="button" className="plat-link" onClick={montarAtual}>Montar de novo</button></div>}
             </div>
 
             <div className={'pg-palco-area pg-modo-' + modo}>
@@ -442,8 +486,8 @@ export default function Revisar({ g, rev, setRev }) {
                   )}
                   {!temTexto && !gerandoAtual && atual.status !== 'removido' && (
                     <div className="pg-sem-texto">
-                      <span>Ainda sem texto da IA: esta é a página só com os fatos.</span>
-                      <button type="button" className="btn btn-primary pg-btn-peq" onClick={() => gerarAtual()}><Sparkles size={14} /> Gerar agora</button>
+                      <span>Ainda sem página: esta é a prévia só com os fatos.</span>
+                      <button type="button" className="btn btn-primary pg-btn-peq" onClick={montarAtual} disabled={montando}><Wand2 size={14} /> Montar agora (grátis)</button>
                     </div>
                   )}
                   <MolduraPrevia lugar={atual} conteudo={mostrado} modo={modo} className={gerandoAtual ? 'pg-esmaecida' : ''} />
@@ -497,8 +541,14 @@ function Detalhes({ l, conteudo, g }) {
   ].filter(Boolean)
   const manuais = Object.entries(l.fontes ?? {}).filter(([, v]) => v === 'manual').map(([k]) => k)
   const avisos = Array.isArray(meta.avisos) ? meta.avisos.filter(Boolean) : []
+  const dados = dadosDaPagina(l)
   return (
     <div className="pg-detalhes">
+      <div className={'pg-triagem ' + tomDaNota(l)}>
+        <b>{l.nota != null ? `★ ${nota(l.nota)}` : 'Sem nota'}</b>
+        <span>{l.nota != null ? `${l.avaliacoes ?? 0} avaliações no Google` : 'no Google'} · triagem, nunca vai para a página</span>
+        {l.place_id && <a className="plat-link" href={`https://www.google.com/maps/place/?q=place_id:${encodeURIComponent(l.place_id)}`} target="_blank" rel="noopener noreferrer">ver no Maps <ExternalLink size={12} /></a>}
+      </div>
       <PreviaGoogle titulo={seo.titulo} descricao={seo.descricao} caminho={seo.caminho} tituloBruto={c?.seo_title || seo.titulo} descricaoBruta={c?.meta_description || seo.descricao} />
       {sem && Number(sem.indice) > 0.35 && (
         <div className="pg-alerta ambar">
@@ -515,18 +565,20 @@ function Detalhes({ l, conteudo, g }) {
       {l.status === 'descartado' && (
         <div className="pg-alerta carmim"><Trash2 size={16} /><div><b>Descartado</b><span>{l.motivo || 'sem motivo anotado'}</span></div></div>
       )}
-      {faltam.length > 0 && (
+      {dados.fina ? (
+        <div className="pg-alerta ambar"><TriangleAlert size={16} /><div><b>Poucos dados ({dados.pontos} de {dados.max})</b><span>Pode ir ao ar, mas sem pedir ao Google para indexar: página fina parece cópia das outras. Falta {dados.faltam.join(', ')}; se souber, complete em Editar.</span></div></div>
+      ) : faltam.length > 0 && (
         <div className="pg-alerta"><Info size={16} /><div><b>Sem {faltam.join(', ')}</b><span>A página mostra só o que existe. Se souber, complete em Editar.</span></div></div>
       )}
       <dl className="pg-meta">
-        {meta.gerado_em && <><dt>Gerado</dt><dd>{haQuanto(meta.gerado_em)}{meta.modelo ? ` · ${String(meta.modelo).replace(/^.*\//, '')}` : ''}</dd></>}
+        {meta.gerado_em && <><dt>{meta.modelo === 'montado' ? 'Montado' : 'Gerado'}</dt><dd>{haQuanto(meta.gerado_em)}{meta.modelo === 'montado' ? ' · com os dados, sem IA' : meta.modelo ? ` · IA (${String(meta.modelo).replace(/^.*\//, '')})` : ''}</dd></>}
+        <><dt>Dados</dt><dd>{dados.pontos} de {dados.max}{dados.fina ? ' · vai sem indexar' : ''}</dd></>
         {meta.angulo && <><dt>Ângulo</dt><dd>{meta.angulo}</dd></>}
         {meta.instrucao && <><dt>Pedido</dt><dd>“{meta.instrucao}”</dd></>}
         {meta.palavras ? <><dt>Tamanho</dt><dd>{meta.palavras} palavras</dd></> : null}
         {meta.editado_em && <><dt>Editado</dt><dd>à mão, {haQuanto(meta.editado_em)}</dd></>}
         {manuais.length > 0 && <><dt>À mão</dt><dd>{manuais.join(', ')} (a importação não sobrescreve)</dd></>}
         {l.publicado_em && <><dt>No ar desde</dt><dd>{new Date(l.publicado_em).toLocaleDateString('pt-BR')}</dd></>}
-        {(l.nota != null || l.avaliacoes != null) && <><dt>Triagem</dt><dd>Google {l.nota != null ? String(l.nota).replace('.', ',') : '–'} · {l.avaliacoes ?? 0} avaliações <small>(só aqui; nunca vai para a página)</small></dd></>}
       </dl>
     </div>
   )
@@ -540,14 +592,14 @@ function Lote({ lote, g, onVer }) {
   return (
     <div className={'pg-lote' + (lote.fim ? ' fim' : '')} role="status">
       <div className="pg-lote-topo">
-        <b>{lote.fim ? (lote.cancelado ? 'Lote cancelado' : 'Lote terminado') : lote.pausado ? 'Lote pausado' : `Gerando ${Math.min(lote.feitos + 1, lote.total)} de ${lote.total}`}</b>
+        <b>{lote.fim ? (lote.cancelado ? 'Lote cancelado' : 'Lote terminado') : lote.pausado ? 'Lote pausado' : `${lote.modo === 'montar' ? 'Montando' : 'Gerando'} ${Math.min(lote.feitos + 1, lote.total)} de ${lote.total}`}</b>
         <span>{pct}%</span>
       </div>
       <div className="pg-lote-barra"><i style={{ width: `${pct}%` }} /></div>
       <p>
         {lote.fim ? `${lote.feitos - lote.erros.length} ${lote.feitos - lote.erros.length === 1 ? 'pronto' : 'prontos'}${lote.erros.length ? `, ${lote.erros.length} com erro` : ''}.`
           : espera ? `Limite da IA por minuto: continua em ${espera} s.`
-            : atual ? <>Escrevendo <button type="button" className="plat-link" onClick={() => onVer(atual.id)}>{atual.nome}</button></> : lote.pausado ? 'Termina o atual e espera.' : 'Começando…'}
+            : atual ? <>{lote.modo === 'montar' ? 'Montando' : 'Escrevendo'} <button type="button" className="plat-link" onClick={() => onVer(atual.id)}>{atual.nome}</button></> : lote.pausado ? 'Termina o atual e espera.' : 'Começando…'}
       </p>
       {lote.erros.length > 0 && (
         <div className="pg-lote-erros">
@@ -569,7 +621,7 @@ function Lote({ lote, g, onVer }) {
 
 // ---------- os atalhos ----------
 function Atalhos({ onFechar }) {
-  const lista = [['A', 'aprovar e publicar (e ir para o próximo)'], ['G', 'gerar (ou gerar de novo, com o pedido escrito)'], ['J  →  ↓', 'próximo'], ['K  ←  ↑', 'anterior'], ['E', 'editar'], ['D', 'descartar'], ['I', 'escrever o que mudar'], ['M', 'celular ou computador'], ['F', 'tela cheia'], ['/', 'buscar'], ['Esc', 'sair do campo ou da tela cheia']]
+  const lista = [['A', 'aprovar e publicar (e ir para o próximo)'], ['G', 'montar a página com os dados (grátis)'], ['J  →  ↓', 'próximo'], ['K  ←  ↑', 'anterior'], ['E', 'editar'], ['D', 'descartar'], ['I', 'escrever o que mudar'], ['M', 'celular ou computador'], ['F', 'tela cheia'], ['/', 'buscar'], ['Esc', 'sair do campo ou da tela cheia']]
   return (
     <div className="pg-atalhos">
       <div className="pg-atalhos-topo"><b>Atalhos de teclado</b><button type="button" onClick={onFechar} aria-label="Fechar"><X size={14} /></button></div>

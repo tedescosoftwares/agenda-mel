@@ -10,6 +10,7 @@ import {
   categoriaDoGuia, rotaDoGuia, rotaDaCidade, rotaDaCategoria, rotaDoLugar,
   seoPadraoDoLugar, seoPadraoDaCidade, conteudoSeguro, linkInstagram, horariosEmUmaLinha,
 } from './guia.js'
+import { dadosDaPagina } from './guiaTexto.js'
 
 export const SITE_GUIA = 'https://mimo.com.vc'
 const ORG_ID = `${SITE_GUIA}/#organization`
@@ -43,7 +44,9 @@ export function trilhaDaCidade(cidade, cidadeSlug, categoria = '') {
 }
 
 // ---- título e descrição -------------------------------------------------------------
-// o texto aprovado manda; sem ele, o padrão montado dos fatos
+// o texto aprovado manda; sem ele, o padrão montado dos fatos.
+// Página com pouco dado (sem horário, quase sem informação) vai ao ar sem
+// pedir para indexar: o Google trata página fina como cópia das outras.
 export function seoDoLugar(l, conteudo) {
   const c = conteudoSeguro(conteudo) ?? {}
   const padrao = seoPadraoDoLugar(l)
@@ -51,6 +54,7 @@ export function seoDoLugar(l, conteudo) {
     titulo: c.seo_title ? (c.seo_title.includes('MIMO') ? c.seo_title : `${c.seo_title} | MIMO`) : padrao.seo_title,
     descricao: c.meta_description || padrao.meta_description,
     caminho: rotaDoLugar(l.cidade_slug, l.slug),
+    noindex: dadosDaPagina(l).fina,
   }
 }
 export function seoDaCidade(cidade, cidadeSlug, categoria = '', pagina = null) {
@@ -82,6 +86,21 @@ export function horarioSchema(horarios) {
   return [...grupos.values()]
 }
 
+// pagamento e comodidades no vocabulário do schema.org
+const PAGAMENTO_SCHEMA = { credito: 'Cartão de crédito', debito: 'Cartão de débito', aproximacao: 'Pagamento por aproximação', so_dinheiro: 'Dinheiro' }
+const COMODIDADE_SCHEMA = {
+  acessibilidade: { entrada: 'Entrada acessível para cadeira de rodas', estacionamento: 'Vaga acessível', banheiro: 'Banheiro acessível', assentos: 'Assentos acessíveis' },
+  estacionamento: { rua_gratis: 'Estacionamento grátis na rua', rua_pago: 'Estacionamento pago na rua', local_gratis: 'Estacionamento próprio grátis', local_pago: 'Estacionamento próprio pago', garagem_gratis: 'Garagem grátis', garagem_pago: 'Garagem paga', manobrista: 'Manobrista' },
+}
+function comodidades(a) {
+  if (!a || typeof a !== 'object') return []
+  const out = []
+  for (const campo of ['acessibilidade', 'estacionamento']) for (const k of Array.isArray(a[campo]) ? a[campo] : []) if (COMODIDADE_SCHEMA[campo][k]) out.push(COMODIDADE_SCHEMA[campo][k])
+  if (a.criancas === true) out.push('Bom para crianças')
+  if (a.banheiro === true) out.push('Banheiro para clientes')
+  return out.map((name) => ({ '@type': 'LocationFeatureSpecification', name, value: true }))
+}
+
 // a página de um salão: migalhas, o negócio (o tipo certo do schema.org), a página e as perguntas
 export function jsonLdDoLugar(l, conteudo, faq = []) {
   const cat = categoriaDoGuia(l.categoria)
@@ -106,6 +125,8 @@ export function jsonLdDoLugar(l, conteudo, faq = []) {
     ...(horarioSchema(l.horarios) ? { openingHoursSpecification: horarioSchema(l.horarios) } : {}),
     ...(sameAs.length ? { sameAs } : {}),
     ...(l.servicos?.length ? { knowsAbout: l.servicos } : {}),
+    ...(Array.isArray(l.atributos?.pagamento) && l.atributos.pagamento.length ? { paymentAccepted: l.atributos.pagamento.map((k) => PAGAMENTO_SCHEMA[k]).filter(Boolean).join(', ') } : {}),
+    ...(comodidades(l.atributos).length ? { amenityFeature: comodidades(l.atributos) } : {}),
     areaServed: { '@type': 'City', name: l.cidade },
   }
   return {

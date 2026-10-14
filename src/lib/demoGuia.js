@@ -177,19 +177,19 @@ const meta = (angulo, d = 2) => ({ modelo: 'openai/gpt-oss-120b', gerado_em: dia
 // ---- os salões ------------------------------------------------------------------
 const base = (o) => ({
   cidade: 'Itanhaém', cidade_slug: 'itanhaem', uf: 'SP', cep: '11740-000', instagram: null, site: null, whatsapp: null, telefone: null,
-  horarios: null, servicos: [], latitude: null, longitude: null, place_id: null, cnpj: null, validado_receita: false, selecao: false,
+  horarios: null, servicos: [], atributos: {}, latitude: null, longitude: null, place_id: null, cnpj: null, validado_receita: false, selecao: false,
   nota: null, avaliacoes: null, origem: {}, fontes: {}, conteudo: null, rascunho: null, motivo: null, salon_id: null,
   gerado_em: null, publicado_em: null, aprovado_por: null, criado_em: dias(6), atualizado_em: dias(1), ...o,
 })
 
 export const GUIA_LUGARES = [
-  base({ id: 'gl1', slug: 'studio-lirio', categoria: 'unhas', nome: 'Studio Lírio', bairro: 'Centro', endereco: 'Rua das Acácias, 120', telefone: '(13) 99000-1101', whatsapp: '(13) 99000-1101', instagram: 'studiolirio.demo', horarios: H(2, 6), servicos: ['Manicure', 'Pedicure', 'Unhas em gel'], latitude: -24.183, longitude: -46.788, place_id: 'demo-pl-1', cnpj: '00000000000101', validado_receita: true, selecao: true, nota: 4.9, avaliacoes: 212, conteudo: { ...TEXTO.lirio, _meta: meta('o bairro e a praticidade', 3) }, status: 'publicado', gerado_em: dias(3), publicado_em: dias(3) }),
+  base({ id: 'gl1', slug: 'studio-lirio', categoria: 'unhas', nome: 'Studio Lírio', bairro: 'Centro', endereco: 'Rua das Acácias, 120', telefone: '(13) 99000-1101', whatsapp: '(13) 99000-1101', instagram: 'studiolirio.demo', horarios: H(2, 6), servicos: ['Manicure', 'Pedicure', 'Unhas em gel'], atributos: { pagamento: ['credito', 'debito', 'aproximacao'], acessibilidade: ['entrada'], estacionamento: ['rua_gratis'], tipo_google: 'Manicure e pedicure' }, latitude: -24.183, longitude: -46.788, place_id: 'demo-pl-1', cnpj: '00000000000101', validado_receita: true, selecao: true, nota: 4.9, avaliacoes: 212, conteudo: { ...TEXTO.lirio, _meta: meta('o bairro e a praticidade', 3) }, status: 'publicado', gerado_em: dias(3), publicado_em: dias(3) }),
   base({ id: 'gl3', slug: 'atelie-cabelo-e-arte', categoria: 'cabelo', nome: 'Ateliê Cabelo & Arte', bairro: 'Belas Artes', endereco: 'Rua Pintor Almeida, 78', telefone: '(13) 99000-1103', whatsapp: '(13) 99000-1103', site: 'https://exemplo.com/atelie', horarios: [...H(2, 5), { dia: 6, faixas: [['09:00', '15:00']] }], servicos: ['Cabelo', 'Química e coloração'], latitude: -24.205, longitude: -46.812, place_id: 'demo-pl-3', nota: 4.7, avaliacoes: 61, conteudo: { ...TEXTO.atelie, _meta: meta('como é a primeira visita', 5) }, status: 'publicado', gerado_em: dias(5), publicado_em: dias(5) }),
   base({ id: 'gl4', slug: 'olhar-lash-studio', categoria: 'cilios', nome: 'Olhar Lash Studio', bairro: 'Gaivota', endereco: 'Rua das Gaivotas, 1020', telefone: '(13) 99000-1104', whatsapp: '(13) 99000-1104', instagram: 'olharlash.demo', horarios: H(1, 5, '10:00', '18:00'), servicos: ['Cílios', 'Sobrancelha'], latitude: -24.232, longitude: -46.845, place_id: 'demo-pl-4', cnpj: '00000000000104', validado_receita: true, nota: 5, avaliacoes: 88, conteudo: { ...TEXTO.olhar, _meta: meta('o serviço principal em detalhe', 6) }, rascunho: RASCUNHO_OLHAR, status: 'publicado', gerado_em: dias(0.1), publicado_em: dias(6) }),
   base({ id: 'gl5', slug: 'studio-mel', categoria: 'beleza', nome: 'Studio Mel', bairro: 'Centro', endereco: 'Av. Condessa de Vimieiros, 900', telefone: '(13) 3333-0000', whatsapp: '(13) 99120-3410', instagram: 'studiomel', horarios: H(1, 6, '09:00', '18:00'), servicos: ['Cabelo', 'Manicure', 'Sobrancelha', 'Estética'], latitude: -24.184, longitude: -46.786, place_id: 'demo-pl-5', selecao: true, nota: 4.9, avaliacoes: 37, conteudo: { ...TEXTO.mel, _meta: meta('a agenda online', 2) }, status: 'publicado', salon_id: 's1', gerado_em: dias(2), publicado_em: dias(2) }),
   base({ id: 'gl6', slug: 'sobrancelha-da-re', categoria: 'sobrancelhas', nome: 'Sobrancelha da Rê', bairro: 'Suarão', endereco: 'Rua Beira-Mar, 33', telefone: '(13) 99000-1106', whatsapp: '(13) 99000-1106', horarios: H(2, 6, '09:00', '18:00'), servicos: ['Sobrancelha'], latitude: -24.165, longitude: -46.735, place_id: 'demo-pl-6', cnpj: '00000000000106', validado_receita: true, nota: 5, avaliacoes: 42, rascunho: RASCUNHOS.re, status: 'gerado', gerado_em: dias(0.2) }),
-  base({ id: 'gl7', slug: 'unhas-da-praia', categoria: 'unhas', nome: 'Unhas da Praia', bairro: 'Cibratel', endereco: 'Av. Washington Luís, 2400', telefone: '(13) 99000-1107', whatsapp: '(13) 99000-1107', horarios: H(2, 6), servicos: ['Manicure', 'Pedicure', 'Unhas em gel'], latitude: -24.214, longitude: -46.822, place_id: 'demo-pl-7', nota: 4.8, avaliacoes: 29, rascunho: RASCUNHOS.praia, status: 'gerado', gerado_em: dias(0.3) }),
-  base({ id: 'gl8', slug: 'salao-bem-me-quer', categoria: 'beleza', nome: 'Salão Bem-Me-Quer', bairro: 'Jardim Umuarama', endereco: 'Rua dos Ipês, 210', telefone: '(13) 3400-1108', horarios: H(2, 6), servicos: ['Cabelo', 'Manicure', 'Depilação'], latitude: -24.176, longitude: -46.776, place_id: 'demo-pl-8', nota: 4.6, avaliacoes: 73, status: 'importado' }),
+  base({ id: 'gl7', slug: 'unhas-da-praia', categoria: 'unhas', nome: 'Unhas da Praia', bairro: 'Cibratel', endereco: 'Av. Washington Luís, 2400', telefone: '(13) 99000-1107', whatsapp: '(13) 99000-1107', horarios: H(2, 6), servicos: ['Manicure', 'Pedicure', 'Unhas em gel'], atributos: { pagamento: ['so_dinheiro'] }, latitude: -24.214, longitude: -46.822, place_id: 'demo-pl-7', nota: 4.8, avaliacoes: 29, rascunho: RASCUNHOS.praia, status: 'gerado', gerado_em: dias(0.3) }),
+  base({ id: 'gl8', slug: 'salao-bem-me-quer', categoria: 'beleza', nome: 'Salão Bem-Me-Quer', bairro: 'Jardim Umuarama', endereco: 'Rua dos Ipês, 210', telefone: '(13) 3400-1108', horarios: H(2, 6), servicos: ['Cabelo', 'Manicure', 'Depilação'], atributos: { pagamento: ['credito', 'debito'], estacionamento: ['rua_gratis'], criancas: true }, latitude: -24.176, longitude: -46.776, place_id: 'demo-pl-8', nota: 4.6, avaliacoes: 73, status: 'importado' }),
   base({ id: 'gl10', slug: 'make-by-duda', categoria: 'maquiagem', nome: 'Make by Duda', bairro: 'Satélite', endereco: 'Rua Netuno, 88', telefone: '(13) 99000-1110', whatsapp: '(13) 99000-1110', instagram: 'makebyduda.demo', horarios: null, servicos: ['Maquiagem'], latitude: -24.221, longitude: -46.83, place_id: 'demo-pl-10', nota: 5, avaliacoes: 12, status: 'importado' }),
   base({ id: 'gl11', slug: 'estetica-venus', categoria: 'estetica', nome: 'Estética Vênus', bairro: 'Centro', endereco: 'Rua Cunha Moreira, 300', telefone: '(13) 3400-1111', horarios: H(1, 5), servicos: ['Estética', 'Limpeza de pele'], latitude: -24.185, longitude: -46.787, place_id: 'demo-pl-11', nota: 4.4, avaliacoes: 18, status: 'descartado', motivo: 'Fechou, segundo o Instagram.' }),
 ]
@@ -252,7 +252,7 @@ function publico(l) {
   return {
     id: l.id, slug: l.slug, cidade: l.cidade, cidade_slug: l.cidade_slug, uf: l.uf, categoria: l.categoria, nome: l.nome, bairro: l.bairro,
     endereco: l.endereco, cep: l.cep, telefone: l.telefone, whatsapp: l.whatsapp, instagram: l.instagram, site: l.site, horarios: l.horarios,
-    servicos: l.servicos ?? [], selecao: l.selecao, validado_receita: l.validado_receita, na_mimo: !!l.salon_id,
+    servicos: l.servicos ?? [], atributos: l.atributos ?? {}, selecao: l.selecao, validado_receita: l.validado_receita, na_mimo: !!l.salon_id,
     mimo: l.salon_id ? { salao_id: l.salon_id, nome: 'Studio Mel', slug: 'studio-mel', subdominio: 'studiomel' } : null,
     conteudo: l.conteudo, publicado_em: l.publicado_em, atualizado_em: l.atualizado_em,
   }
@@ -332,12 +332,23 @@ export const GUIA_RPC = {
       const ex = GUIA_LUGARES.find((l) => (it.place_id && l.place_id === it.place_id) || (it.cnpj && l.cnpj === it.cnpj) || (l.cidade_slug === cslug && l.slug === slugificar(it.nome)))
       if (ex?.status === 'removido') { ignorados++; return }
       if (!ex && it.origem === 'receita') { ignorados++; return } // a Receita só completa quem veio do Google
-      if (ex) { atualizados++; if (aplicar && it.origem === 'receita') { ex.validado_receita = true; ex.cnpj = ex.cnpj || it.cnpj } return }
+      if (ex) {
+        atualizados++
+        if (aplicar && it.origem === 'receita') { ex.validado_receita = true; ex.cnpj = ex.cnpj || it.cnpj }
+        // o CSV do Google traz categoria, serviços e atributos pela regra nova (155)
+        if (aplicar && it.origem === 'google') {
+          if (it.categoria && ex.fontes?.categoria !== 'manual') ex.categoria = it.categoria
+          if (Array.isArray(it.servicos) && ex.fontes?.servicos !== 'manual') ex.servicos = it.servicos
+          if (it.atributos && Object.keys(it.atributos).length) ex.atributos = it.atributos
+          if (it.nota != null) { ex.nota = it.nota; ex.avaliacoes = it.avaliacoes }
+        }
+        return
+      }
       novos++
       if (aplicar) {
         let slug = slugificar(it.nome) || 'salao'
         while (GUIA_LUGARES.some((l) => l.cidade_slug === cslug && l.slug === slug)) slug += '-2'
-        GUIA_LUGARES.push(base({ id: 'gl' + (GUIA_LUGARES.length + 100), slug, cidade: it.cidade, cidade_slug: cslug, uf: it.uf || 'SP', categoria: it.categoria || 'beleza', nome: it.nome, bairro: it.bairro || null, endereco: it.endereco || null, cep: it.cep || null, telefone: it.telefone || null, whatsapp: it.whatsapp || null, instagram: it.instagram || null, site: it.site || null, horarios: it.horarios ?? null, servicos: it.servicos ?? [], latitude: it.latitude ?? null, longitude: it.longitude ?? null, place_id: it.place_id ?? null, cnpj: it.cnpj ?? null, validado_receita: !!it.validado_receita || it.origem === 'receita', selecao: !!it.selecao, nota: it.nota ?? null, avaliacoes: it.avaliacoes ?? null, status: 'importado', criado_em: new Date().toISOString() }))
+        GUIA_LUGARES.push(base({ id: 'gl' + (GUIA_LUGARES.length + 100), slug, cidade: it.cidade, cidade_slug: cslug, uf: it.uf || 'SP', categoria: it.categoria || 'beleza', nome: it.nome, bairro: it.bairro || null, endereco: it.endereco || null, cep: it.cep || null, telefone: it.telefone || null, whatsapp: it.whatsapp || null, instagram: it.instagram || null, site: it.site || null, horarios: it.horarios ?? null, servicos: it.servicos ?? [], atributos: it.atributos ?? {}, latitude: it.latitude ?? null, longitude: it.longitude ?? null, place_id: it.place_id ?? null, cnpj: it.cnpj ?? null, validado_receita: !!it.validado_receita || it.origem === 'receita', selecao: !!it.selecao, nota: it.nota ?? null, avaliacoes: it.avaliacoes ?? null, status: 'importado', criado_em: new Date().toISOString() }))
       }
     })
     return { total: itens.length, validos, novos, atualizados, ignorados, problemas, aplicado: aplicar }

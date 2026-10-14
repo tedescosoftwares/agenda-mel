@@ -25,16 +25,71 @@ export const GUIA_CATEGORIAS = [
 ]
 export const SLUGS_CATEGORIA = GUIA_CATEGORIAS.map((c) => c.slug)
 
-// barbearia não entra no guia: o guia é de salão de beleza (decisão da casa).
-// O CSV traz barbearia ("BARBEARIA", "barber_shop", "Barbearia do Zé"): a
-// importação deixa de fora. Salão misto ("Salão e Barbearia") fica, como salão.
-const NOME_DE_SALAO = /sal[aã]o|beleza|unha|nail|c[ií]lio|lash|sobrancelha|brow|est[eé]tic|esmalt|spa|cabeleireir[ao]|hair/i
+// Quem fica fora do guia (a mesma regra do script do Maps, scripts/guia/buscar_saloes.py):
+//   - barbearia: o guia é de salão de beleza (decisão da casa). Salão misto
+//     ("Teixeira Salão e Barbearia") fica, como salão.
+//   - lugar voltado ao público masculino, e o que não é o público do guia
+//   - o que nem parece salão (consultório, curso, loja), pelo tipo do Google
+//   - o que o Google diz que fechou
+const NOME_DE_SALAO = /salao|beleza|beauty|unha|nail|cilio|lash|sobrancelha|brow|estetic|esmalt|\bspa\b|cabeleireir|hair|depila|maquiag|massag|podolog/
+const TIPOS_DE_BELEZA = new Set(['beauty_salon', 'hair_salon', 'hair_care', 'nail_salon', 'beautician', 'makeup_artist', 'spa',
+  'massage', 'massage_spa', 'skin_care_clinic', 'sauna', 'tanning_studio', 'wellness_center'])
+const nomeSemAcento = (item) => semAcento(item?.nome_original || item?.nome || '').toLowerCase()
 export function ehBarbearia(item) {
   if (!item) return false
+  const n = nomeSemAcento(item)
+  if (/salao/.test(n)) return false
   const tipo = String(item.bruto?.tipo_principal ?? '').toLowerCase()
-  const nome = String(item.nome_original || item.nome || '')
-  if (NOME_DE_SALAO.test(nome)) return item.categoria === 'barbearia' && !/sal[aã]o/i.test(nome)
-  return item.categoria === 'barbearia' || tipo === 'barber_shop' || /barb(earia|eiro|er)|barber/i.test(nome)
+  return item.categoria === 'barbearia' || tipo === 'barber_shop' || /barbear|barbeir|barber/.test(n)
+}
+export function ehMasculino(item) {
+  const n = nomeSemAcento(item)
+  return /masculin|\bmen\b|\bmens\b|for men|\bhomens?\b|gentlem/.test(n) && !/unissex|unisex|mulher|feminin/.test(n)
+}
+// o motivo de ficar fora, ou null quando entra
+export function motivoParaFicarFora(item) {
+  if (!item) return 'linha vazia'
+  const n = nomeSemAcento(item)
+  if (item.origem === 'google' && item.situacao && item.situacao !== 'OPERATIONAL') return `fechado no Google (${item.situacao})`
+  if (/tantra|tantric|sensual|erotic/.test(n)) return 'não é o público do guia'
+  if (ehBarbearia(item)) return 'barbearia'
+  if (ehMasculino(item)) return 'voltado ao público masculino'
+  const tipos = String(item.bruto?.tipos_google ?? '').split('|').map((t) => t.trim()).filter(Boolean)
+  const tipo = String(item.bruto?.tipo_principal ?? '').trim()
+  if (item.origem === 'google' && (tipo || tipos.length) && !NOME_DE_SALAO.test(n) && !tipos.some((t) => TIPOS_DE_BELEZA.has(t)) && !TIPOS_DE_BELEZA.has(tipo)) {
+    return `não parece salão (no Google: ${tipo || 'sem tipo'})`
+  }
+  return null
+}
+
+// A categoria sai do nome e do tipo que o próprio Google dá ao lugar, nunca
+// das palavras da busca (quem só apareceu numa busca de "manicure" não é de unhas).
+const SINAIS_DO_NOME = [
+  ['cilios', /cilio|lash/],
+  ['sobrancelhas', /sobrancelha|brow|micropigment/],
+  ['unhas', /unha|nail|manicure|pedicure|esmalt/],
+  ['maquiagem', /maquiag|maquiador|make ?up|\bmake\b/],
+  ['estetica', /estetic|depila|\bspa\b|massag|massoterap|podolog|drenagem|harmoniza/],
+  ['cabelo', /cabel|hair|coiffeur|tranca|cachos|progressiva|visagis/],
+]
+const CATEGORIA_DO_TIPO = {
+  nail_salon: 'unhas', hair_salon: 'cabelo', hair_care: 'cabelo', makeup_artist: 'maquiagem',
+  beautician: 'estetica', spa: 'estetica', massage: 'estetica', massage_spa: 'estetica', skin_care_clinic: 'estetica',
+  sauna: 'estetica', tanning_studio: 'estetica', wellness_center: 'estetica',
+}
+const SALAO_COMPLETO = /salao de beleza|beauty salon|centro de beleza|espaco de beleza|instituto de beleza/
+export function categoriaDoLugar(nome, tipo = '') {
+  const n = semAcento(nome).toLowerCase()
+  const doTipo = CATEGORIA_DO_TIPO[String(tipo ?? '').trim()]
+  if (SALAO_COMPLETO.test(n) && !doTipo) return 'beleza'
+  const cats = SINAIS_DO_NOME.map(([cat, re]) => [n.search(re), cat]).filter(([i]) => i >= 0).sort((a, b) => a[0] - b[0]).map(([, c]) => c)
+  if (cats.length === 1) return cats[0]
+  if (cats.length > 1) {
+    if (doTipo && cats.includes(doTipo)) return doTipo
+    if (cats.length === 2 && cats.includes('cilios') && cats.includes('sobrancelhas')) return cats[0]
+    return 'beleza'
+  }
+  return doTipo ?? 'beleza'
 }
 export const categoriaDoGuia = (slug) => GUIA_CATEGORIAS.find((c) => c.slug === slug) ?? GUIA_CATEGORIAS[0]
 
@@ -117,6 +172,20 @@ export function nomeLimpo(nome, cidade = '') {
 // ---- endereço ------------------------------------------------------------------
 // 'Av. Condessa de Vimieiros, 657 - Centro, Itanhaém - SP, 11740-052'
 //   -> { logradouro: 'Av. Condessa de Vimieiros, 657', bairro: 'Centro', cidade: 'Itanhaém', uf: 'SP', cep: '11740-052' }
+// 'R. X, 10 - Lj 2 - Centro, Itanhaém - SP, 11740-000' -> { logradouro, bairro, cidade, uf, cep }.
+// O endereço do Google às vezes traz galeria, loja, sala e "Interior" no meio:
+// a rua é o pedaço com cara de rua (ou com número), o bairro é o último pedaço
+// que não é complemento.
+const TEM_CARA_DE_RUA = /^(r\.|rua|av\.?|avenida|al\.|alameda|tv\.?|travessa|estr\.?|estrada|p[çc]a\.?|pra[çc]a|rod\.?|rodovia|lgo\.?|largo|via|beco)\s/i
+const COMPLEMENTO = /^(lj|loja|sl|sala|casa|cs|interfone|port[aã]o|ap|apto|apartamento|bloco|bl|box|fundos|t[eé]rreo|sobreloja|galeria|anexo|n[º°•o.]|km|lote|lt|qd|quadra|andar|cep|sal[aã]o\s*\d)\b|^\d/i
+function pedacoDeBairro(p, cidade) {
+  let t = p.trim()
+  if (t.includes(',')) { const segs = t.split(',').map((x) => x.trim()).filter(Boolean); if (segs.length > 1 && (COMPLEMENTO.test(segs[0]) || /\d/.test(segs[0]))) t = segs.at(-1) }
+  if (!t || TEM_CARA_DE_RUA.test(t) || COMPLEMENTO.test(t) || /,\s*\d|\//.test(t)) return ''
+  if (/^(interior|litoral|praia|zona rural)$/i.test(semAcento(t))) return ''
+  if (cidade && semAcento(t).toLowerCase() === semAcento(cidade).toLowerCase()) return ''
+  return t === t.toLowerCase() || t === t.toUpperCase() ? capitalizarNome(t) : t
+}
 export function partesDoEndereco(endereco) {
   const e = String(endereco ?? '').trim()
   const out = { logradouro: '', bairro: '', cidade: '', uf: '', cep: '' }
@@ -126,11 +195,12 @@ export function partesDoEndereco(endereco) {
   if (cep) { out.cep = cep[1].length === 8 ? `${cep[1].slice(0, 5)}-${cep[1].slice(5)}` : cep[1]; resto = resto.slice(0, cep.index) }
   const cidUf = resto.match(/,\s*([^,]+?)\s*-\s*([A-Z]{2})\s*$/)
   if (cidUf) { out.cidade = cidUf[1].trim(); out.uf = cidUf[2]; resto = resto.slice(0, cidUf.index) }
-  // o que sobra: 'Av. X, 657 - Centro', 'R. X, 10 - Nova Itanhaém - Interior' ou 'Av. X, 657'
-  // ("Interior" é a região que o Google pendura, não o bairro)
-  const partes = resto.split(' - ').map((p) => p.trim()).filter(Boolean)
-  out.logradouro = partes.shift() ?? ''
-  out.bairro = partes.filter((p) => !/^(interior|litoral|zona rural)$/i.test(semAcento(p))).at(0) ?? ''
+  const partes = resto.replace(/\s*–\s*/g, ' - ').split(/\s+-\s+|(?<=\d)-\s+/).map((p) => p.trim()).filter(Boolean)
+  const iRua = partes.findIndex((p) => TEM_CARA_DE_RUA.test(p) || /,\s*(n[º°.]?\s*)?\d/.test(p))
+  if (iRua >= 0) out.logradouro = partes[iRua]
+  else if (partes.length > 1 || /\d/.test(partes[0] ?? '')) out.logradouro = partes[0]
+  const depois = partes.filter((_, i) => i !== (iRua >= 0 ? iRua : out.logradouro ? 0 : -1))
+  out.bairro = depois.map((p) => pedacoDeBairro(p, out.cidade)).filter(Boolean).at(-1) ?? ''
   return out
 }
 
@@ -188,8 +258,8 @@ export function horariosDoGoogle(texto) {
   return dias.length ? dias.sort((a, b) => a.dia - b.dia) : (/(fechado)/i.test(t) ? [] : null)
 }
 
-const hora = (h) => { const [H, M] = String(h).split(':'); return M === '00' ? `${Number(H)}h` : `${Number(H)}h${M}` }
-const faixaTexto = (faixas) => faixas.map(([a, b]) => (a === '00:00' && b === '24:00' ? '24 horas' : `${hora(a)} às ${hora(b)}`)).join(' e ')
+export const hora = (h) => { const [H, M] = String(h).split(':'); return M === '00' ? `${Number(H)}h` : `${Number(H)}h${M}` }
+export const faixaTexto = (faixas) => faixas.map(([a, b]) => (a === '00:00' && b === '24:00' ? '24 horas' : `${hora(a)} às ${hora(b)}`)).join(' e ')
 
 // [{ dias: 'Ter a sáb', horas: '9h às 19h' }, { dias: 'Dom e seg', horas: 'Fechado' }]
 // (semana começando na segunda, como se fala)
@@ -240,34 +310,78 @@ export function abertoAgora(horarios, agora = new Date()) {
 }
 
 // ---- serviços --------------------------------------------------------------------
-// as buscas que acharam o lugar ("manicure | unha em gel | nail salon") e os
-// tipos do Google viram serviços em português, sem o genérico
-const SERVICOS = [
-  [/^(cabeleireir|hair salon|hair_salon|hair_care|corte)/, 'Cabelo'],
-  [/^(manicure|nail salon|nail_salon|unha$|unhas$)/, 'Manicure'],
-  [/^pedicure/, 'Pedicure'],
-  [/(unha em gel|alongamento de unha|fibra de vidro|unha de gel)/, 'Unhas em gel'],
-  [/^nail design/, 'Nail design'],
-  [/(sobrancelha|brow)/, 'Sobrancelha'],
-  [/(c[ií]lios|lash)/, 'Cílios'],
-  [/(depila)/, 'Depilação'],
-  [/^(estetica|esteticista|beautician|estética)/, 'Estética'],
-  [/(maquiagem|maquiadora|makeup)/, 'Maquiagem'],
-  [/(barb|barber)/, 'Barba e cabelo'],
-  [/(massag|massage)/, 'Massagem'],
-  [/(spa\b|^spa$)/, 'Spa'],
-  [/(micropigment)/, 'Micropigmentação'],
-  [/(progressiva|escova|colora|mechas|luzes)/, 'Química e coloração'],
-  [/(podolog)/, 'Podologia'],
-  [/(limpeza de pele|facial)/, 'Limpeza de pele'],
+// do nome ("Studio Ana Cabelo e Unhas") e dos tipos que o Google dá ao lugar
+// (nail_salon, hair_care...). As palavras da busca não entram: aparecer numa
+// busca de "depilação" não quer dizer que o lugar faz depilação.
+const SERVICOS_DO_NOME = [
+  [/cabel|hair|cabeleir|coiffeur|\bcorte/, 'Cabelo'],
+  [/manicure|\bunhas?\b|nail|esmalt/, 'Manicure'],
+  [/pedicure/, 'Pedicure'],
+  [/unhas? em gel|\bgel\b|alongamento|fibra/, 'Unhas em gel'],
+  [/nail design|designer de unha/, 'Nail design'],
+  [/sobrancelha|brow/, 'Sobrancelha'],
+  [/cilio|lash/, 'Cílios'],
+  [/depila/, 'Depilação'],
+  [/estetic/, 'Estética'],
+  [/maquiag|maquiador|make ?up|\bmake\b/, 'Maquiagem'],
+  [/massag|massoterap/, 'Massagem'],
+  [/\bspa\b/, 'Spa'],
+  [/micropigment/, 'Micropigmentação'],
+  [/progressiva|escova|colora|mechas|luzes|loir/, 'Química e coloração'],
+  [/tranca|box braids|nago/, 'Tranças'],
+  [/podolog/, 'Podologia'],
+  [/limpeza de pele|facial/, 'Limpeza de pele'],
+  [/drenagem/, 'Drenagem'],
 ]
-export function servicosDoGoogle(buscas, tipos) {
-  const termos = [...String(buscas ?? '').split('|'), ...String(tipos ?? '').split('|')].map((t) => semAcento(t).toLowerCase().trim()).filter(Boolean)
+const SERVICOS_DO_TIPO = { hair_salon: 'Cabelo', hair_care: 'Cabelo', nail_salon: 'Manicure', makeup_artist: 'Maquiagem', beautician: 'Estética', skin_care_clinic: 'Estética', massage: 'Massagem', massage_spa: 'Massagem', spa: 'Spa' }
+export function servicosDoLugar(nome, tipos) {
+  const n = semAcento(nome).toLowerCase()
   const achados = []
-  for (const t of termos) {
-    for (const [re, rotulo] of SERVICOS) if (re.test(t) && !achados.includes(rotulo)) achados.push(rotulo)
-  }
+  for (const [re, rotulo] of SERVICOS_DO_NOME) if (re.test(n) && !achados.includes(rotulo)) achados.push(rotulo)
+  for (const t of String(tipos ?? '').split('|').map((x) => x.trim())) if (SERVICOS_DO_TIPO[t] && !achados.includes(SERVICOS_DO_TIPO[t])) achados.push(SERVICOS_DO_TIPO[t])
   return achados.slice(0, 10)
+}
+
+// ---- atributos (pagamento, acessibilidade, estacionamento...) ---------------------
+// O script do Maps (v3) traz em texto, do jeito que dá para ler no Excel:
+// "crédito | débito | aproximação", "entrada | banheiro", "rua grátis", "sim".
+// No banco vira { pagamento: ['credito', ...], acessibilidade: [...], ... }.
+const OPCOES_ATRIBUTO = {
+  pagamento: { credito: 'cartão de crédito', debito: 'cartão de débito', aproximacao: 'pagamento por aproximação', so_dinheiro: 'só dinheiro' },
+  acessibilidade: { entrada: 'entrada acessível para cadeira de rodas', estacionamento: 'vaga acessível', banheiro: 'banheiro acessível', assentos: 'assentos acessíveis' },
+  estacionamento: { rua_gratis: 'na rua, grátis', rua_pago: 'na rua, pago', local_gratis: 'estacionamento próprio grátis', local_pago: 'estacionamento próprio pago', garagem_gratis: 'garagem grátis', garagem_pago: 'garagem paga', manobrista: 'manobrista' },
+}
+const chaveDaOpcao = (t) => semAcento(t).toLowerCase().trim().replace(/^so /, 'so_').replace(/\s+/g, '_').replace(/^(rua|local|garagem)_(gratis|pago)$/, '$1_$2')
+const simNao = (v) => { const t = semAcento(v).toLowerCase().trim(); return t === 'sim' ? true : t === 'nao' ? false : null }
+export function atributosDaLinha(r) {
+  const lista = (campo) => {
+    const opcoes = OPCOES_ATRIBUTO[campo]
+    return [...new Set(pega(r, campo).split('|').map(chaveDaOpcao).map((k) => (k === 'dinheiro' ? '' : k)).filter((k) => opcoes[k]))]
+  }
+  const a = { pagamento: lista('pagamento'), acessibilidade: lista('acessibilidade'), estacionamento: lista('estacionamento') }
+  const criancas = simNao(pega(r, 'criancas'))
+  const banheiro = simNao(pega(r, 'banheiro'))
+  if (criancas != null) a.criancas = criancas
+  if (banheiro != null) a.banheiro = banheiro
+  if (pega(r, 'tipo_nome')) a.tipo_google = pega(r, 'tipo_nome')
+  for (const k of ['pagamento', 'acessibilidade', 'estacionamento']) if (!a[k].length) delete a[k]
+  return a
+}
+const juntarE = (xs) => (xs.length <= 1 ? xs.join('') : `${xs.slice(0, -1).join(', ')} e ${xs.at(-1)}`)
+// o que a página mostra, em português, na ordem certa ("Pagamento: cartão de crédito, cartão de débito e aproximação")
+export function atributosEmTexto(a) {
+  if (!a || typeof a !== 'object') return []
+  const out = []
+  const rotulos = (campo) => (Array.isArray(a[campo]) ? a[campo] : []).map((k) => OPCOES_ATRIBUTO[campo][k]).filter(Boolean)
+  const pag = rotulos('pagamento')
+  if (pag.length) out.push({ campo: 'pagamento', rotulo: 'Pagamento', texto: juntarE(pag) })
+  const ace = rotulos('acessibilidade')
+  if (ace.length) out.push({ campo: 'acessibilidade', rotulo: 'Acessibilidade', texto: juntarE(ace) })
+  const est = rotulos('estacionamento')
+  if (est.length) out.push({ campo: 'estacionamento', rotulo: 'Estacionamento', texto: juntarE(est) })
+  if (a.criancas === true) out.push({ campo: 'criancas', rotulo: 'Crianças', texto: 'bom para ir com crianças' })
+  if (a.banheiro === true) out.push({ campo: 'banheiro', rotulo: 'Banheiro', texto: 'tem banheiro para clientes' })
+  return out
 }
 
 // ---- CSV -----------------------------------------------------------------------------
@@ -323,7 +437,9 @@ export function normalizarGoogle(r, cidadePadrao = '') {
   const cidade = end.cidade || cidadePadrao
   const tel = pega(r, 'telefone')
   const nomeOriginal = pega(r, 'nome')
-  let categoria = categoriaDoCsv(pega(r, 'categoria_mimo') || pega(r, 'tipo_principal'))
+  const tipo = pega(r, 'tipo_principal')
+  // o tipo do Google e o nome mandam; a coluna categoria_mimo só vale para CSV sem tipo
+  let categoria = tipo ? categoriaDoLugar(nomeOriginal, tipo) : categoriaDoCsv(pega(r, 'categoria_mimo'))
   // "Salão Tesoura de Ouro" marcado como barbearia no CSV: é salão (misto), entra como salão de beleza
   if (categoria === 'barbearia' && /sal[aã]o/i.test(nomeOriginal)) categoria = 'beleza'
   return {
@@ -335,15 +451,16 @@ export function normalizarGoogle(r, cidadePadrao = '') {
     categoria,
     cidade,
     uf: end.uf || 'SP',
-    bairro: end.bairro,
-    endereco: end.logradouro,
-    cep: end.cep,
+    bairro: pega(r, 'bairro') || end.bairro,
+    endereco: pega(r, 'rua') || end.logradouro,
+    cep: pega(r, 'cep') || end.cep,
     telefone: tel ? telefoneBonito(tel) : '',
     whatsapp: canais.whatsapp ? telefoneBonito(canais.whatsapp) : ehCelular(tel) ? telefoneBonito(tel) : '',
     instagram: canais.instagram ?? '',
     site: canais.site ?? '',
     horarios: horariosDoGoogle(pega(r, 'horarios')),
-    servicos: servicosDoGoogle(pega(r, 'buscas_encontradas'), pega(r, 'tipos_google')),
+    servicos: servicosDoLugar(nomeOriginal, pega(r, 'tipos_google') || tipo),
+    atributos: atributosDaLinha(r),
     latitude: num(pega(r, 'latitude')),
     longitude: num(pega(r, 'longitude')),
     nota: num(pega(r, 'avaliacao')),

@@ -2,19 +2,22 @@ import { createElement, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   MapPin, Clock, Phone, MessageCircle, Globe, Navigation, Share2, Check, Award, CalendarCheck, Info, ChevronDown,
-  ArrowRight, Lightbulb, Sparkles, Scissors, Hand, Eye, ScanFace, Flower2, Brush, Store,
+  ArrowRight, Lightbulb, Sparkles, Scissors, Hand, Eye, ScanFace, Flower2, Brush, Store, CreditCard, Accessibility, SquareParking, Baby, Bath,
 } from 'lucide-react'
 import { IconeInstagram } from '../IconesSociais'
 import { Coracao, comecarEm } from '../site/Pecas'
 import {
   categoriaDoGuia, conteudoSeguro, faqDaPagina, horariosResumo, horariosEmUmaLinha, abertoAgora,
-  linkMapa, linkWhatsDoTel, linkInstagram, telefoneBonito, soDigitosTel, rotaDoLugar, rotaDaCategoria, rotaDaCidade,
+  linkMapa, linkWhatsDoTel, linkInstagram, telefoneBonito, soDigitosTel, rotaDoLugar, rotaDaCategoria, rotaDaCidade, atributosEmTexto,
 } from '../../lib/guia'
 import { trilhaDoLugar } from '../../lib/guiaSeo'
 import { urlDoEndereco, urlDoAmbiente } from '../../lib/ambiente'
 import { REGRAS } from '../../lib/acesso'
 import '../../landing.css'
 import '../../guia.css'
+
+// pagamento, acessibilidade, estacionamento, crianças, banheiro (3.10)
+const ICONE_ATRIBUTO = { pagamento: CreditCard, acessibilidade: Accessibility, estacionamento: SquareParking, criancas: Baby, banheiro: Bath }
 
 // A página de um salão no guia (3.9): a landing em si, sem barra, rodapé
 // nem SEO, porque a Plataforma mostra esta mesma peça na prévia antes de
@@ -261,6 +264,13 @@ export default function PaginaDoLugar({ lugar, conteudo, vizinhos = [], mesmaCat
                       </dd>
                     </div>
                   )}
+
+                  {atributosEmTexto(l.atributos).map((a) => (
+                    <div className="gd-fato" key={a.campo}>
+                      <dt><span className="gd-fato-ic">{createElement(ICONE_ATRIBUTO[a.campo] ?? Info, { size: 18 })}</span>{a.rotulo}</dt>
+                      <dd><span>{a.texto.charAt(0).toUpperCase() + a.texto.slice(1)}</span></dd>
+                    </div>
+                  ))}
 
                   {(insta || l.site) && (
                     <div className="gd-fato">

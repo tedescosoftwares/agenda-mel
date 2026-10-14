@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react'
 import { useDialogo } from '../../../context/DialogoContext'
 import { Painel, Pilula, Vazio } from '../Pecas'
-import { lerCsv, detectarFormato, normalizarLinha, avisosDoItem, slugificar, categoriaDoGuia, ehBarbearia } from '../../../lib/guia'
+import { lerCsv, detectarFormato, normalizarLinha, avisosDoItem, slugificar, categoriaDoGuia, motivoParaFicarFora } from '../../../lib/guia'
 import { Upload, FileSpreadsheet, X, ListChecks, CloudUpload, LoaderCircle, Star, Info, CircleCheck, TriangleAlert } from 'lucide-react'
 
 // Importar os CSVs do guia: o do Google Places (cria os salões, com nome,
@@ -67,11 +67,14 @@ export default function Importar({ g }) {
         const item = normalizarLinha(a.formato, linha, a.formato === 'receita' ? '' : cidade)
         if (!item.cidade) item.cidade = cidade
         let fora = null
-        if (ehBarbearia(item)) fora = 'barbearia (não entra no guia)'
+        // barbearia, público masculino, o que não é salão (a mesma regra do script do Maps)
+        const motivo = motivoParaFicarFora(item)
+        const fechado = motivo?.startsWith('fechado')
+        if (motivo && !fechado) fora = `${motivo} (não entra no guia)`
+        else if (fechado && pularFechados) fora = 'fechado no Google'
         else if (soCidade && alvo && slugificar(item.cidade) !== alvo) fora = `fora de ${cidade}`
         else if (a.formato === 'google') {
-          if (pularFechados && item.situacao && /CLOSED/i.test(item.situacao)) fora = 'fechado no Google'
-          else if (nMin != null && (item.nota ?? 0) < nMin) fora = `nota abaixo de ${String(nMin).replace('.', ',')}`
+          if (nMin != null && (item.nota ?? 0) < nMin) fora = `nota abaixo de ${String(nMin).replace('.', ',')}`
           else if (aMin != null && (item.avaliacoes ?? 0) < aMin) fora = `menos de ${aMin} avaliações`
         }
         if (a.formato === 'google' && marcarSel && sN != null && sA != null) item.selecao = (item.nota ?? 0) >= sN && (item.avaliacoes ?? 0) >= sA
@@ -158,7 +161,7 @@ export default function Importar({ g }) {
             </ul>
           )}
           <ol className="pg-ordem">
-            <li><b>Primeiro o do Google Places:</b> cria os salões com nome, endereço, horário e serviços.</li>
+            <li><b>Primeiro o do Google Places:</b> cria os salões com nome, endereço, horário e serviços (e, no CSV do script v3, <code>scripts/guia/buscar_saloes.py</code>, também pagamento, acessibilidade e estacionamento).</li>
             <li><b>Depois o da Receita:</b> confirma que o salão existe e só completa o que estiver vazio.</li>
           </ol>
           <p className="pg-nota"><Info size={13} /> A importação não sobrescreve o que foi editado à mão e não traz de volta salão removido a pedido do dono. Escolhendo os dois juntos, a tela já manda nessa ordem.</p>
@@ -265,7 +268,7 @@ function Relatorio({ relatorio, g, avisoReceita }) {
         </ul>
       )}
       {avisoReceita && <p className="pg-nota"><Info size={13} /> Na conferência, o da Receita ainda não enxerga os salões do Google (eles entram na mesma rodada, antes): por isso aparecem como ignorados. Na importação de verdade eles casam.</p>}
-      <p className="pg-nota">Ignorados são linhas repetidas no arquivo, salões removidos a pedido do dono, barbearias e linhas da Receita sem o salão do Google correspondente (a Receita só confirma e completa, não cria salão).</p>
+      <p className="pg-nota">Ignorados são linhas repetidas no arquivo, salões removidos a pedido do dono, barbearias, lugares voltados ao público masculino, o que não é salão e linhas da Receita sem o salão do Google correspondente (a Receita só confirma e completa, não cria salão).</p>
       {problemas.length > 0 && (
         <ul className="pg-problemas">
           {problemas.slice(0, 30).map((p, i) => <li key={i}><TriangleAlert size={13} /> {p.arquivo}, linha {p.linha}: {p.nome || 'sem nome'} · {p.erro}</li>)}

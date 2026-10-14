@@ -133,10 +133,23 @@ captar: a cliente toca "Quero marcar aqui pelo app" e a dona toca "É o seu
 salão?"; os dois pedidos aparecem na Plataforma.
 
 - **Plataforma → Guia de salões**: importa os CSVs (o do Google Places e o
-  validado na Receita, que casam pelo `place_id`), gera o texto de cada
-  página com IA (Edge Function `guia-gerar`, Groq, segredo `GROQ_API_KEY`;
-  `GUIA_IA_MODELO`, `GUIA_IA_URL` e `GUIA_IA_CHAVE` opcionais) e mostra a
-  prévia da landing para aprovar, gerar de novo, editar ou descartar, um a um.
+  validado na Receita, que casam pelo `place_id`), monta o texto de cada
+  página e mostra a prévia da landing para aprovar, montar de novo, editar
+  ou descartar, um a um. A nota e as avaliações do Google aparecem só ali,
+  para a triagem (ordenar por nota, filtrar "4,8+ com 30+ avaliações").
+- **De graça (3.10)**: a página é montada sem IA (`packages/core/guiaTexto.js`),
+  dos fatos do salão e da comparação com os outros da cidade ("abre aos
+  domingos, coisa que só 36 dos 283 fazem"), com dicas e perguntas por
+  categoria escritas à mão e sorteadas pelo slug. Página com poucos dados vai
+  ao ar sem pedir para indexar. A IA (Edge Function `guia-gerar`, Groq,
+  segredo `GROQ_API_KEY`) fica como opção, salão por salão ("Reescrever com IA").
+- **Script do Maps**: `scripts/guia/buscar_saloes.py` (Python). A chave vem
+  da variável `GOOGLE_PLACES_KEY` (ou é pedida na hora), nunca do arquivo.
+  Uma chamada por página de resultados já traz endereço em partes, horário,
+  pagamento, acessibilidade e estacionamento; a busca fica presa no retângulo
+  da cidade e dividida em faixas; tem cache de 7 dias e teto de chamadas, e
+  no fim mostra quantas chamadas fez. Barbearia, público masculino e o que não
+  é salão vão para o CSV de descartados, com o motivo.
 - **Banco**: `supabase/153_guia_de_saloes.sql`. O público só lê pelas
   funções `guia_*`, que nunca entregam nota, avaliações, CNPJ, razão social
   nem coordenadas (ficam só para a triagem).
@@ -148,6 +161,10 @@ salão?"; os dois pedidos aparecem na Plataforma.
   para o dono corrigir ou pedir a remoção; removido nunca volta pela importação.
 - Barbearia não entra no guia (migração 154): a importação deixa de fora, e
   o CSV da Receita só confirma e completa quem veio do CSV do Google.
+- Migração 155: `guia_lugares.atributos` (pagamento, acessibilidade,
+  estacionamento, crianças, banheiro), que vão para a página e para o JSON-LD;
+  reimportar o CSV do Google corrige categoria e serviços pela regra nova
+  (tipo do Google + nome, nunca as palavras da busca).
 
 A MIMO também vai para a Play Store como app de verdade, em `apps/mobile`:
 nativo (Expo/React Native) de ponta a ponta para a cliente, falando com o

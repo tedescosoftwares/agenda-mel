@@ -2,9 +2,10 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { RotateCcw } from 'lucide-react'
 import { useSeo } from '../../lib/seo'
-import { conteudoSeguro, faqDaPagina, rotaDaCidade } from '../../lib/guia'
+import { conteudoSeguro, faqDaPagina, rotaDaCidade, rotaDoLugar } from '../../lib/guia'
 import { seoDoLugar, jsonLdDoLugar } from '../../lib/guiaSeo'
 import { carregarPagina } from '../../lib/guiaPublico'
+import { registrarVisita, aoClicarNaPagina } from '../../lib/eventos'
 import { NavSite, PeSite, useRevelar } from '../../components/site/Pecas'
 import PaginaDoLugar from '../../components/guia/PaginaDoLugar'
 import Interesse from '../../components/guia/Interesse'
@@ -16,7 +17,10 @@ import '../../guia.css'
 // dados, cuida do SEO e do formulário, e embrulha a PaginaDoLugar com a
 // barra e o rodapé do site. Enquanto carrega, o HTML que o build gravou
 // (scripts/paginas-estaticas.mjs) já deixou título e descrição certos:
-// o useSeo só entra quando os dados chegam.
+// o useSeo só entra quando os dados chegam. As métricas (3.11) moram aqui
+// também, e não na PaginaDoLugar, para a prévia da Plataforma nunca contar:
+// a visita conta quando a página abre de verdade e cada toque em WhatsApp,
+// Ligar, Como chegar, Instagram e site passa pelo onClickCapture.
 // (quem usa passa key com a URL: outro salão é outra montagem, sem dado velho na tela)
 export default function GuiaLugar() {
   const { cidade, item } = useParams()
@@ -40,7 +44,7 @@ export default function GuiaLugar() {
   if (dados === null) return <NaoEncontrada />
 
   return (
-    <div className="ld gd" ref={raiz}>
+    <div className="ld gd" ref={raiz} onClickCapture={aoClicarNaPagina}>
       <NavSite />
       <main>
         {dados === undefined && <Esqueleto />}
@@ -71,6 +75,8 @@ function Pagina({ dados, onInteresse }) {
   const conteudo = conteudoSeguro(lugar.conteudo)
   const faq = faqDaPagina(lugar, conteudo)
   const seo = seoDoLugar(lugar, lugar.conteudo)
+  const caminho = rotaDoLugar(lugar.cidade_slug, lugar.slug)
+  useEffect(() => { registrarVisita(caminho) }, [caminho])
   useSeo({ titulo: seo.titulo, descricao: seo.descricao, caminho: seo.caminho, jsonLd: jsonLdDoLugar(lugar, lugar.conteudo, faq), noindex: seo.noindex, tipo: 'business.business' })
   return (
     <PaginaDoLugar

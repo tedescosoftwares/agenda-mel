@@ -161,6 +161,20 @@ salão?"; os dois pedidos aparecem na Plataforma.
   para o dono corrigir ou pedir a remoção; removido nunca volta pela importação.
 - Barbearia não entra no guia (migração 154): a importação deixa de fora, e
   o CSV da Receita só confirma e completa quem veio do CSV do Google.
+- **Métricas (3.11, migração 156)**: cada página do guia conta visitas e
+  toques em WhatsApp, Ligar, Como chegar, Instagram, site, "Agendar" e
+  "Quero marcar", por dia, origem (Google, direto, de dentro do guia,
+  Instagram...), aparelho e parte da página. Sem cookie e sem guardar IP (o
+  aviso do site promete "sem rastreio"): o banco conta visitantes com um
+  código que muda todo dia. Robô não conta; a mesma ação da mesma pessoa em
+  30 minutos conta uma vez; quem abre a Plataforma não conta. Plataforma →
+  Guia → **Desempenho** mostra os números, a tabela por página e monta a
+  mensagem com os números para mandar ao dono do salão.
+  - Para evoluir: um evento novo é uma linha em `site_eventos_tipos` e
+    `data-evento="tipo"` no botão (ou `registrarEvento('tipo')`, em
+    `src/lib/eventos.js`); o painel já mostra. A tabela `site_eventos` guarda
+    a página pelo caminho, então blog e outras páginas podem entrar depois.
+  - Os eventos ficam 400 dias (a limpeza roda quando o painel abre).
 - Migração 155: `guia_lugares.atributos` (pagamento, acessibilidade,
   estacionamento, crianças, banheiro), que vão para a página e para o JSON-LD;
   reimportar o CSV do Google corrige categoria e serviços pela regra nova

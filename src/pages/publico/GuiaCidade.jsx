@@ -5,6 +5,7 @@ import { useSeo } from '../../lib/seo'
 import { SLUGS_CATEGORIA, GUIA_CATEGORIAS, categoriaDoGuia, conteudoSeguro, semAcento, seoPadraoDaCidade, rotaDaCidade, rotaDaCategoria } from '../../lib/guia'
 import { seoDaCidade, seoDoIndice, trilhaDaCidade, jsonLdDaCidade, jsonLdDoIndice } from '../../lib/guiaSeo'
 import { carregarCidade, carregarCidades } from '../../lib/guiaPublico'
+import { registrarVisita, aoClicarNaPagina } from '../../lib/eventos'
 import { NavSite, PeSite, useRevelar, comecarEm } from '../../components/site/Pecas'
 import { REGRAS } from '../../lib/acesso'
 import { CartaoLugar, IconeCategoria } from '../../components/guia/PaginaDoLugar'
@@ -105,10 +106,13 @@ function PaginaDaCidade({ cidade, categoria }) {
       .catch(() => vivo && setDados('erro'))
     return () => { vivo = false }
   }, [cidade, categoria, tentativa])
+  // a visita conta quando a página existe de verdade (3.11)
+  const existe = !!(dados && dados !== 'erro')
+  useEffect(() => { if (existe) registrarVisita(`/saloes/${cidade}${categoria ? `/${categoria}` : ''}`) }, [existe, cidade, categoria])
 
   if (dados === null) return <NaoEncontrada />
   return (
-    <div className="ld gd" ref={raiz}>
+    <div className="ld gd" ref={raiz} onClickCapture={aoClicarNaPagina}>
       <NavSite />
       <main className="gd-pagina">
         {dados === undefined && <Esqueleto capa={false} />}
@@ -285,7 +289,7 @@ function IndiceDeCidades() {
   const seo = seoDoIndice()
   useSeo({ titulo: seo.titulo, descricao: seo.descricao, caminho: seo.caminho, jsonLd: jsonLdDoIndice(Array.isArray(cidades) ? cidades : []) })
 
-  useEffect(() => { window.scrollTo(0, 0) }, [])
+  useEffect(() => { window.scrollTo(0, 0); registrarVisita('/saloes') }, [])
   useEffect(() => {
     let vivo = true
     carregarCidades().then((c) => vivo && setCidades(c)).catch(() => vivo && setCidades('erro'))

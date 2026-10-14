@@ -147,8 +147,8 @@ export default function PaginaDoLugar({ lugar, conteudo, vizinhos = [], mesmaCat
   // o botão principal (herói, cartão de fatos e barra de baixo): sempre o da MIMO
   const principal = (classe = '') => naMimo
     ? (previa ? <span className={'ld-btn ld-primario ld-grande ' + classe}><CalendarCheck size={19} /> Agendar pela MIMO</span>
-      : <a className={'ld-btn ld-primario ld-grande ' + classe} href={linkDaAgenda(l)}><CalendarCheck size={19} /> Agendar pela MIMO</a>)
-    : <button type="button" className={'ld-btn ld-primario ld-grande ' + classe} onClick={marcar}><CalendarCheck size={19} /> Quero marcar aqui pelo app</button>
+      : <a className={'ld-btn ld-primario ld-grande ' + classe} href={linkDaAgenda(l)} data-evento="agendar_mimo"><CalendarCheck size={19} /> Agendar pela MIMO</a>)
+    : <button type="button" className={'ld-btn ld-primario ld-grande ' + classe} onClick={marcar} data-evento="quero_marcar"><CalendarCheck size={19} /> Quero marcar aqui pelo app</button>
 
   async function compartilhar() {
     if (previa) return
@@ -166,7 +166,7 @@ export default function PaginaDoLugar({ lugar, conteudo, vizinhos = [], mesmaCat
     zap ? { chave: 'zap', href: zap, ic: <MessageCircle size={20} />, rotulo: 'WhatsApp' } : tel ? { chave: 'tel', href: tel, ic: <Phone size={20} />, rotulo: 'Ligar', mesmaAba: true } : null,
     insta ? { chave: 'insta', href: insta, ic: <IconeInstagram size={20} />, rotulo: 'Instagram' } : null,
     l.site ? { chave: 'site', href: l.site, ic: <Globe size={20} />, rotulo: 'Site' } : null,
-    { chave: 'partilha', ic: copiado ? <Check size={20} /> : <Share2 size={20} />, rotulo: copiado ? 'Link copiado' : 'Compartilhar', acao: compartilhar },
+    { chave: 'partilha', ic: copiado ? <Check size={20} /> : <Share2 size={20} />, rotulo: copiado ? 'Link copiado' : 'Compartilhar', acao: compartilhar, evento: 'compartilhar' },
   ].filter(Boolean).slice(0, 4)
 
   return (
@@ -194,11 +194,11 @@ export default function PaginaDoLugar({ lugar, conteudo, vizinhos = [], mesmaCat
                 {estado && (
                   <p className={'gd-agora' + (estado.aberto ? ' gd-aberto' : '')}><i aria-hidden="true" />{estado.texto}</p>
                 )}
-                <div className="gd-heroi-cta" ref={ctaRef}>
+                <div className="gd-heroi-cta" ref={ctaRef} data-area="heroi">
                   {principal()}
                   <div className="gd-atalhos" style={{ '--n': atalhos.length }}>
                     {atalhos.map((a) => a.acao
-                      ? <button key={a.chave} type="button" className="gd-atalho" onClick={a.acao}>{a.ic}<span>{a.rotulo}</span></button>
+                      ? <button key={a.chave} type="button" className="gd-atalho" onClick={a.acao} data-evento={a.evento}>{a.ic}<span>{a.rotulo}</span></button>
                       : <a key={a.chave} className="gd-atalho" href={a.href} {...(a.mesmaAba ? {} : { target: '_blank', rel: 'noopener noreferrer' })}>{a.ic}<span>{a.rotulo}</span></a>)}
                   </div>
                 </div>
@@ -222,7 +222,7 @@ export default function PaginaDoLugar({ lugar, conteudo, vizinhos = [], mesmaCat
         <section className="gd-sec gd-sec-corpo">
           <div className="gd-wrap gd-corpo">
             <aside className="gd-lado" aria-labelledby="gd-fatos-t" ref={ladoRef}>
-              <div className="gd-fatos">
+              <div className="gd-fatos" data-area="fatos">
                 <h2 id="gd-fatos-t" className="gd-fatos-titulo">Informações</h2>
                 <dl>
                   <div className="gd-fato">
@@ -294,7 +294,7 @@ export default function PaginaDoLugar({ lugar, conteudo, vizinhos = [], mesmaCat
 
                 <p className="gd-fatos-fonte">
                   {naMimo ? 'Informações do próprio salão na MIMO' : 'Dados públicos do estabelecimento'}{atualizado ? `, atualizados em ${atualizado}` : ''}.{' '}
-                  <button type="button" onClick={() => onInteresse('corrigir')}>Algo errado? Avise a gente</button>
+                  <button type="button" onClick={() => onInteresse('corrigir')} data-evento="corrigir">Algo errado? Avise a gente</button>
                 </p>
               </div>
             </aside>
@@ -375,7 +375,7 @@ export default function PaginaDoLugar({ lugar, conteudo, vizinhos = [], mesmaCat
 
         {/* ---- a dona ---- */}
         {!naMimo && (
-          <section className="gd-sec gd-sec-dono">
+          <section className="gd-sec gd-sec-dono" data-area="dono">
             <div className="gd-wrap">
               <div className="gd-dono ld-rv">
                 <div className="gd-dono-texto">
@@ -386,8 +386,8 @@ export default function PaginaDoLugar({ lugar, conteudo, vizinhos = [], mesmaCat
                 </div>
                 <div className="gd-dono-botoes">
                   {previa ? <span className="ld-btn ld-branco ld-grande">Criar minha agenda grátis <ArrowRight size={18} /></span>
-                    : <a className="ld-btn ld-branco ld-grande" href={comecarEm('salao')}>Criar minha agenda grátis <ArrowRight size={18} /></a>}
-                  <button type="button" className="ld-btn ld-fantasma ld-grande gd-dono-fala" onClick={() => onInteresse('sou_dono')}><MessageCircle size={18} /> Quero que a MIMO me chame</button>
+                    : <a className="ld-btn ld-branco ld-grande" href={comecarEm('salao')} data-evento="criar_agenda">Criar minha agenda grátis <ArrowRight size={18} /></a>}
+                  <button type="button" className="ld-btn ld-fantasma ld-grande gd-dono-fala" onClick={() => onInteresse('sou_dono')} data-evento="sou_dono"><MessageCircle size={18} /> Quero que a MIMO me chame</button>
                 </div>
               </div>
             </div>
@@ -396,13 +396,13 @@ export default function PaginaDoLugar({ lugar, conteudo, vizinhos = [], mesmaCat
 
         {/* ---- o aviso de página informativa (regra 3 do contrato) ---- */}
         {!naMimo && (
-          <section className="gd-sec gd-sec-aviso">
+          <section className="gd-sec gd-sec-aviso" data-area="aviso">
             <div className="gd-wrap">
               <p className="gd-aviso">
                 <Info size={18} aria-hidden="true" />
                 <span>
                   Página informativa feita pela MIMO com dados públicos do estabelecimento. {l.nome} ainda não agenda pela MIMO.{' '}
-                  <button type="button" onClick={() => onInteresse('corrigir')}>É o responsável? Corrija ou peça a remoção.</button>
+                  <button type="button" onClick={() => onInteresse('corrigir')} data-evento="corrigir">É o responsável? Corrija ou peça a remoção.</button>
                 </span>
               </p>
             </div>
@@ -412,7 +412,7 @@ export default function PaginaDoLugar({ lugar, conteudo, vizinhos = [], mesmaCat
 
       {/* a barra de baixo no celular: fora da página (que é um container) para o fixed valer na tela */}
       {!previa && (
-        <div className={'gd-barra' + (barra ? ' gd-barra-on' : '')} inert={!barra}>
+        <div className={'gd-barra' + (barra ? ' gd-barra-on' : '')} inert={!barra} data-area="barra">
           {principal('gd-barra-principal')}
           {zap && <a className="gd-barra-zap" href={zap} target="_blank" rel="noopener noreferrer" aria-label="WhatsApp do salão"><MessageCircle size={22} /></a>}
         </div>

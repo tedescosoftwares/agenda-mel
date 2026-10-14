@@ -5,6 +5,7 @@
 // que o público NÃO vê (nota, coordenadas e origem só aparecem na tabela,
 // que no demo é a Plataforma quem lê).
 import { categoriaDoGuia, slugificar, conteudoSeguro, horariosEmUmaLinha } from './guia.js'
+import { demoDesempenho, demoEvento as gravarEventoDemo } from './demoMetricas.js'
 
 const agora = Date.now()
 const dias = (n) => new Date(agora - n * 86400e3).toISOString()
@@ -278,7 +279,11 @@ const contar = (lista, campo) => {
   return [...m].map(([k, total]) => ({ [campo]: k, total })).sort((a, b) => b.total - a.total || String(a[campo]).localeCompare(String(b[campo])))
 }
 
+// as métricas (3.11): o site manda para cá no demo (src/lib/eventos.js)
+export const demoEvento = (corpo) => gravarEventoDemo(corpo, GUIA_LUGARES)
+
 export const GUIA_RPC = {
+  guia_desempenho: (a) => demoDesempenho(a ?? {}, GUIA_LUGARES, GUIA_INTERESSES),
   guia_cidades: () => cidades(),
   guia_cidade: (a) => {
     const c = String(a?.cidade_ ?? '').toLowerCase()

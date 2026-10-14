@@ -10,7 +10,9 @@ import Publicadas from '../../components/plataforma/guia/Publicadas'
 import Importar from '../../components/plataforma/guia/Importar'
 import PaginasCidade from '../../components/plataforma/guia/PaginasCidade'
 import Interesses from '../../components/plataforma/guia/Interesses'
-import { ClipboardCheck, Globe2, Upload, MapPinned, Inbox, X } from 'lucide-react'
+import Desempenho from '../../components/plataforma/guia/Desempenho'
+import { naoContarAqui } from '../../lib/eventos'
+import { ClipboardCheck, Globe2, Upload, MapPinned, Inbox, X, BarChart3 } from 'lucide-react'
 import '../../guia-plataforma.css'
 
 // Guia de salões (3.9): uma página pública para cada salão da região, que
@@ -28,6 +30,7 @@ import '../../guia-plataforma.css'
 
 const ABAS = [
   ['revisar', 'Revisar', ClipboardCheck],
+  ['desempenho', 'Desempenho', BarChart3],
   ['publicadas', 'Publicadas', Globe2],
   ['importar', 'Importar', Upload],
   ['paginas', 'Páginas da cidade', MapPinned],
@@ -48,6 +51,20 @@ function faseDe(l) {
   if (l.status === 'descartado') return 'descartado'
   if (l.status === 'publicado') return l.rascunho ? 'nova' : 'no_ar'
   return l.rascunho || l.conteudo ? 'revisar' : 'gerar'
+}
+
+// as métricas do guia num período (156); nunca rejeita: o erro vem dentro
+async function lerDesempenho(dias) {
+  try {
+    const { data, error } = await supabase.rpc('guia_desempenho', { dias, cidade_: '' })
+    if (error) {
+      const msg = String(error.message ?? error)
+      return { dias, dados: null, erro: /guia_desempenho|site_eventos|function|schema cache/i.test(msg) ? 'As métricas ainda não existem neste banco. Rode a migração 156 (supabase/156_metricas_do_site.sql).' : msg }
+    }
+    return { dias, dados: data ?? null, erro: data ? '' : 'O banco não devolveu as métricas.' }
+  } catch (e) {
+    return { dias, dados: null, erro: String(e?.message ?? e) }
+  }
 }
 
 // o Supabase entrega no máximo 1000 linhas por vez; o demo não pagina
@@ -140,6 +157,8 @@ export default function Guia() {
   const [falhas, setFalhas] = useState({})     // id -> mensagem de erro da última geração
   const [lote, setLote] = useState(null)       // o "gerar todos da fila"
   const [aviso, setAviso] = useState(null)     // o recado de baixo ("está no ar · Desfazer")
+  // as métricas (3.11): visitas e contatos por página, do período escolhido
+  const [desempenho, setDesempenho] = useState({ dias: 30, dados: null, carregando: true, erro: '' })
   // os filtros e a seleção da aba Revisar moram aqui: trocar de aba não perde o lugar na fila
   const [rev, setRev] = useState({ status: null, cidade: '', categoria: '', receita: false, selecao: false, triagem: '', busca: '', ordem: 'selecao', selId: null })
 
@@ -162,6 +181,9 @@ export default function Guia() {
     setLugares((x) => x ?? []); setPaginas((x) => x ?? []); setInteresses((x) => x ?? [])
   }, [])
   const carregar = useCallback(() => lerGuia().then(aplicarLeitura, falhouLeitura), [aplicarLeitura, falhouLeitura])
+
+  // quem trabalha na Plataforma não conta como visita no site (dá para desligar na aba Desempenho)
+  useEffect(() => { naoContarAqui(true) }, [])
 
   useEffect(() => {
     montado.current = true
@@ -350,6 +372,20 @@ export default function Guia() {
 
   const avisar = useCallback((a) => setAviso(typeof a === 'string' ? { texto: a } : a), [])
 
+  // ---- desempenho (156) ----
+  // trocou de período duas vezes seguidas: só a resposta do último pedido vale
+  const pedidoDesempenho = useRef(0)
+  const aplicarDesempenho = useCallback((n, r) => { if (montado.current && n === pedidoDesempenho.current) setDesempenho({ ...r, carregando: false }) }, [])
+  // trocar o período: a tela segura os números de antes, esmaecidos, até chegarem os novos
+  const carregarDesempenho = useCallback((dias = 30) => {
+    const n = ++pedidoDesempenho.current
+    setDesempenho((d) => ({ ...d, dias, carregando: true, erro: '' }))
+    return lerDesempenho(dias).then((r) => aplicarDesempenho(n, r))
+  }, [aplicarDesempenho])
+  useEffect(() => { const n = ++pedidoDesempenho.current; lerDesempenho(30).then((r) => aplicarDesempenho(n, r)) }, [aplicarDesempenho])
+  // os números de cada salão, para o painel da revisão
+  const desempenhoPorLugar = useMemo(() => new Map((desempenho.dados?.paginas ?? []).filter((p) => p.lugar_id).map((p) => [p.lugar_id, p])), [desempenho.dados])
+
   // os números do topo
   const kpis = useMemo(() => {
     const ls = lugares ?? []
@@ -378,6 +414,7 @@ export default function Guia() {
     faseDe, gerando, falhas, lote, usuario: user?.id ?? null,
     carregar, salvarLugar, montarUm, gerarUm, iniciarLote, pausarLote, cancelarLote, fecharLote, aprovar, desfazerAprovacao,
     gerarPagina, aprovarPagina, salvarInteresse, importar, avisar, irPara,
+    desempenho, carregarDesempenho, desempenhoPorLugar,
   }
 
   return (
@@ -407,6 +444,7 @@ export default function Guia() {
       {erro && <div className="alert alert-error">{erro}</div>}
 
       {aba === 'revisar' && <Revisar g={g} rev={rev} setRev={setRev} />}
+      {aba === 'desempenho' && <Desempenho g={g} />}
       {aba === 'publicadas' && <Publicadas g={g} />}
       {aba === 'importar' && <Importar g={g} />}
       {aba === 'paginas' && <PaginasCidade g={g} />}

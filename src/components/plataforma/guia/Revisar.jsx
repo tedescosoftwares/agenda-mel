@@ -542,6 +542,9 @@ function Detalhes({ l, conteudo, g }) {
   const manuais = Object.entries(l.fontes ?? {}).filter(([, v]) => v === 'manual').map(([k]) => k)
   const avisos = Array.isArray(meta.avisos) ? meta.avisos.filter(Boolean) : []
   const dados = dadosDaPagina(l)
+  // as métricas do período da aba Desempenho (3.11)
+  const m = g.desempenhoPorLugar?.get(l.id)
+  const diasM = g.desempenho?.dados?.dias
   return (
     <div className="pg-detalhes">
       <div className={'pg-triagem ' + tomDaNota(l)}>
@@ -578,6 +581,7 @@ function Detalhes({ l, conteudo, g }) {
         {meta.palavras ? <><dt>Tamanho</dt><dd>{meta.palavras} palavras</dd></> : null}
         {meta.editado_em && <><dt>Editado</dt><dd>à mão, {haQuanto(meta.editado_em)}</dd></>}
         {manuais.length > 0 && <><dt>À mão</dt><dd>{manuais.join(', ')} (a importação não sobrescreve)</dd></>}
+        {m && <><dt>Desempenho</dt><dd>{diasM} dias: <b>{m.visitas ?? 0}</b> {m.visitas === 1 ? 'visita' : 'visitas'} · {m.contatos ?? 0} {m.contatos === 1 ? 'contato' : 'contatos'}{m.eventos?.whatsapp ? ` (${m.eventos.whatsapp} no WhatsApp)` : ''} · <button type="button" className="plat-link" onClick={() => g.irPara('desempenho')}>ver tudo</button></dd></>}
         {l.publicado_em && <><dt>No ar desde</dt><dd>{new Date(l.publicado_em).toLocaleDateString('pt-BR')}</dd></>}
       </dl>
     </div>

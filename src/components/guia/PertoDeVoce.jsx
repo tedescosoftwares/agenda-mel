@@ -1,22 +1,23 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { MapPin, LocateFixed, LoaderCircle, Route, ShieldCheck, X } from 'lucide-react'
+import { MapPin, LocateFixed, LoaderCircle, X } from 'lucide-react'
 import Portal from '../Portal'
 import { useMinhaPosicao, pedirPosicao, dispensar, dispensado, fecharNaVisita } from '../../lib/guiaPerto'
 import '../../guia-perto.css'
 
 // "Perto de você" (3.13) nas listas do guia. Ao entrar na página pela
-// primeira vez, um modal explica o que a localização faz pela pessoa (a
-// lista do mais perto para o mais longe, a distância em cada salão) e, com
-// todas as letras, que o ponto fica guardado. O navegador só pergunta quando
-// ela toca em "Ativar localização". "Agora não" guarda por 30 dias; fechar
-// sem escolher vale só nesta visita. Quem fechou tem um botão discreto na
-// lista para abrir de novo; quem já autorizou antes nem vê o modal (a
-// posição chega sozinha) e só vê a linha "do mais perto para o mais longe".
+// primeira vez, um modal curto e gentil pede a localização: é para indicar
+// os salões mais perto, com mais precisão. Uma linha pequena diz que o
+// ponto fica guardado (é o que dá base ao consentimento). O navegador só
+// pergunta quando ela toca em "Sim, pode". "Agora não" guarda por 30 dias;
+// fechar sem escolher vale só nesta visita. Quem fechou tem um botão
+// discreto na lista para abrir de novo; quem já autorizou antes nem vê o
+// modal (a posição chega sozinha) e só vê a linha "do mais perto para o
+// mais longe".
 
 let abriuSozinho = false // uma vez por visita, mesmo andando entre as páginas do guia
 
-export default function PertoDeVoce({ ordenado, onOrdenar, cidade, bairros }) {
+export default function PertoDeVoce({ ordenado, onOrdenar }) {
   const { posicao, situacao, permissao, fechadoNaVisita } = useMinhaPosicao()
   const [aberto, setAberto] = useState(false)
   const chip = useRef(null)
@@ -53,12 +54,12 @@ export default function PertoDeVoce({ ordenado, onOrdenar, cidade, bairros }) {
           <MapPin size={15} aria-hidden="true" /> Ver os mais perto de mim
         </button>
       </div>
-      {aberto && <ModalPerto cidade={cidade} bairros={bairros} situacao={situacao} onFechar={fechar} />}
+      {aberto && <ModalPerto situacao={situacao} onFechar={fechar} />}
     </>
   )
 }
 
-function ModalPerto({ cidade, bairros, situacao, onFechar }) {
+function ModalPerto({ situacao, onFechar }) {
   const botao = useRef(null)
   const pedindo = situacao === 'pedindo'
   useEffect(() => {
@@ -70,8 +71,6 @@ function ModalPerto({ cidade, bairros, situacao, onFechar }) {
     window.addEventListener('keydown', tecla)
     return () => { window.removeEventListener('keydown', tecla); document.body.style.overflow = rolagem; antes?.focus?.() }
   }, [onFechar])
-  const onde = cidade ? `${cidade} é grande` : 'A cidade é grande'
-  const quantos = bairros > 1 ? `salão em ${bairros} bairros` : 'salão em vários bairros'
 
   return (
     <Portal>
@@ -79,25 +78,18 @@ function ModalPerto({ cidade, bairros, situacao, onFechar }) {
         <div className="gd-perto-modal" role="dialog" aria-modal="true" aria-labelledby="gd-perto-t" onClick={(e) => e.stopPropagation()}>
           <button type="button" className="gd-perto-x" onClick={() => onFechar(false)} aria-label="Fechar"><X size={18} /></button>
           <span className="gd-perto-icone" aria-hidden="true"><MapPin size={26} /></span>
-          <h2 id="gd-perto-t">Quer ver os salões mais perto de você?</h2>
-          <p className="gd-perto-lead">{onde} e o guia tem {quantos}. Com a sua localização, a lista fica do mais perto para o mais longe, e cada salão mostra a distância até você.</p>
-          <ul className="gd-perto-beneficios">
-            <li><LocateFixed size={18} aria-hidden="true" /><span><b>Os mais perto primeiro</b><small>A ordem muda na hora, aqui e nas páginas de bairro e de horário.</small></span></li>
-            <li><Route size={18} aria-hidden="true" /><span><b>A distância em cada salão</b><small>Para escolher sem abrir o mapa: 350 m, 1,2 km, 4 km.</small></span></li>
-            <li><ShieldCheck size={18} aria-hidden="true" /><span><b>Só quando você quiser</b><small>O navegador pergunta agora, e você desfaz quando quiser, nas configurações dele.</small></span></li>
-          </ul>
-          <p className="gd-perto-transp">
-            Além de ordenar a lista, a MIMO guarda o ponto de onde você procurou, sem nome e sem cadastro, para saber de quais bairros as pessoas buscam salão e levar o guia para onde falta. <Link to="/privacidade">Saiba mais</Link>
-          </p>
+          <h2 id="gd-perto-t">Pode liberar sua localização?</h2>
+          <p className="gd-perto-lead">Assim a gente indica os salões mais perto de você, com mais precisão. Leva um segundo, e você muda quando quiser.</p>
           {situacao === 'negado' && (
-            <p className="gd-perto-erro">O navegador está bloqueando a localização para a MIMO. Para liberar, toque no cadeado ao lado do endereço, permita a localização e toque de novo em Ativar.</p>
+            <p className="gd-perto-erro">O navegador está bloqueando a localização para a MIMO. Toque no cadeado ao lado do endereço, permita a localização e tente de novo.</p>
           )}
           <div className="gd-perto-botoes">
             <button ref={botao} type="button" className="ld-btn ld-primario ld-grande" onClick={pedirPosicao} disabled={pedindo}>
-              {pedindo ? <><LoaderCircle size={17} className="gd-perto-gira" aria-hidden="true" /> Achando você…</> : <><LocateFixed size={17} aria-hidden="true" /> Ativar localização</>}
+              {pedindo ? <><LoaderCircle size={17} className="gd-perto-gira" aria-hidden="true" /> Achando você…</> : <><LocateFixed size={17} aria-hidden="true" /> Sim, pode</>}
             </button>
             <button type="button" className="ld-btn ld-fantasma ld-grande" onClick={() => onFechar(true)}>Agora não</button>
           </div>
+          <p className="gd-perto-nota">O ponto de onde você buscou fica guardado, sem nome, para melhorar o guia. <Link to="/privacidade">Saiba mais</Link></p>
         </div>
       </div>
     </Portal>

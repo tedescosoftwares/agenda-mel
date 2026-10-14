@@ -155,7 +155,7 @@ function Colecao({ m }) {
             )}
           </div>
 
-          <PertoDeVoce ordenado={porDistancia} onOrdenar={setPorDistancia} cidade={m.cidade} />
+          <PertoDeVoce ordenado={porDistancia} onOrdenar={setPorDistancia} />
           <div className="gd-lista-topo" aria-live="polite">
             <span><b>{plural(filtrados.length, 'lugar', 'lugares')}</b>{filtro ? ` em ${categoriaDoGuia(filtro).rotulo.toLowerCase()}` : ''}{busca.trim() ? ` para “${busca.trim()}”` : ''}</span>
             {(filtro || busca) && <button type="button" className="gd-chip-filtro" onClick={limpar}><X size={14} /> Limpar filtros</button>}

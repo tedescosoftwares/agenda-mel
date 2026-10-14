@@ -241,7 +241,7 @@ function Cidade({ dados }) {
             )}
           </div>
 
-          <PertoDeVoce ordenado={porDistancia} onOrdenar={setPorDistancia} cidade={cidade} bairros={bairros.length} />
+          <PertoDeVoce ordenado={porDistancia} onOrdenar={setPorDistancia} />
           <div className="gd-lista-topo" aria-live="polite">
             <span><b>{plural(filtrados.length, 'lugar', 'lugares')}</b>{bairro ? ` no bairro ${bairro}` : ''}{busca.trim() ? ` para “${busca.trim()}”` : ''}</span>
             {(bairro || busca) && <button type="button" className="gd-chip-filtro" onClick={() => { setBairro(''); setBusca('') }}><X size={14} /> Limpar filtros</button>}

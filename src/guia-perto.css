@@ -20,18 +20,12 @@
 .gd-perto-x { position: absolute; top: 12px; right: 12px; width: 36px; height: 36px; display: grid; place-items: center; border: none; border-radius: 50%; background: #f5f2f6; color: var(--ld-cinza); cursor: pointer; }
 .gd-perto-x:hover { background: #ece7ee; color: var(--ld-ameixa); }
 .gd-perto-icone { display: grid; place-items: center; width: 56px; height: 56px; border-radius: 18px; background: linear-gradient(135deg, #ffe3ee, #fff5f9); color: var(--ld-rosa); margin-bottom: 14px; }
-.gd-perto-modal h2 { margin: 0 0 8px; font-size: 1.35rem; line-height: 1.2; color: var(--ld-ameixa); letter-spacing: -0.01em; }
-.gd-perto-lead { margin: 0 0 16px; font-size: 0.95rem; line-height: 1.5; color: var(--ld-cinza); }
-.gd-perto-beneficios { list-style: none; margin: 0 0 16px; padding: 0; display: grid; gap: 10px; }
-.gd-perto-beneficios li { display: flex; gap: 12px; align-items: flex-start; }
-.gd-perto-beneficios li > svg { flex: none; margin-top: 2px; color: var(--ld-rosa); }
-.gd-perto-beneficios li > span { display: grid; gap: 2px; }
-.gd-perto-beneficios b { font-size: 0.93rem; color: var(--ld-ameixa); }
-.gd-perto-beneficios small { font-size: 0.82rem; line-height: 1.4; color: var(--ld-cinza); }
-.gd-perto-transp { margin: 0 0 18px; padding: 12px 14px; border-radius: 14px; background: #faf8fb; font-size: 0.82rem; line-height: 1.5; color: var(--ld-cinza); }
-.gd-perto-transp a { color: var(--ld-ameixa); text-decoration: underline; }
+.gd-perto-modal h2 { margin: 0 0 8px; font-size: 1.4rem; line-height: 1.2; color: var(--ld-ameixa); letter-spacing: -0.01em; }
+.gd-perto-lead { margin: 0 0 20px; font-size: 1rem; line-height: 1.5; color: var(--ld-cinza); }
 .gd-perto-erro { margin: 0 0 14px; font-size: 0.85rem; line-height: 1.45; color: #b4233f; }
 .gd-perto-botoes { display: grid; gap: 8px; }
+.gd-perto-nota { margin: 14px 0 0; font-size: 0.78rem; line-height: 1.45; color: var(--ld-cinza); text-align: center; }
+.gd-perto-nota a { color: var(--ld-cinza); text-decoration: underline; }
 .gd-perto-botoes .ld-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; }
 .gd-perto-gira { animation: gd-perto-girar 0.9s linear infinite; }
 @keyframes gd-perto-girar { to { transform: rotate(360deg); } }

@@ -11,6 +11,7 @@ import {
   linkMapa, linkWhatsDoTel, linkInstagram, telefoneBonito, soDigitosTel, rotaDoLugar, rotaDaCategoria, rotaDaCidade, atributosEmTexto,
 } from '../../lib/guia'
 import { trilhaDoLugar } from '../../lib/guiaSeo'
+import { linkDoBairro } from '../../lib/guiaColecoes'
 import { urlDoEndereco, urlDoAmbiente } from '../../lib/ambiente'
 import { REGRAS } from '../../lib/acesso'
 import '../../landing.css'
@@ -142,6 +143,9 @@ export default function PaginaDoLugar({ lugar, conteudo, vizinhos = [], mesmaCat
   // os vizinhos que já aparecem em "Perto dali" não se repetem na lista da categoria
   const vistos = new Set(vizinhos.map((v) => v.slug))
   const outros = mesmaCategoria.filter((m) => !vistos.has(m.slug) && m.slug !== l.slug)
+
+  // "Mais salões no Centro": só quando a página do bairro existe (guia_pagina manda quantos o bairro tem)
+  const doBairro = linkDoBairro(l)
 
   const marcar = () => onInteresse('quero_marcar')
   // o botão principal (herói, cartão de fatos e barra de baixo): sempre o da MIMO
@@ -369,6 +373,7 @@ export default function PaginaDoLugar({ lugar, conteudo, vizinhos = [], mesmaCat
             <div className="gd-explorar">
               <Ir previa={previa} to={rotaDaCategoria(l.cidade_slug, l.categoria)} className="gd-explorar-link"><IconeCategoria slug={l.categoria} size={18} /><span><b>{cat.rotulo} em {l.cidade}</b><small>todos os endereços e horários</small></span><ArrowRight size={18} /></Ir>
               <Ir previa={previa} to={rotaDaCidade(l.cidade_slug)} className="gd-explorar-link"><MapPin size={18} /><span><b>Salões em {l.cidade}</b><small>o guia da cidade, por bairro</small></span><ArrowRight size={18} /></Ir>
+              {doBairro && <Ir previa={previa} to={doBairro.caminho} className="gd-explorar-link"><MapPin size={18} /><span><b>{doBairro.rotulo}</b><small>{doBairro.total} endereços de beleza no bairro</small></span><ArrowRight size={18} /></Ir>}
             </div>
           </div>
         </section>

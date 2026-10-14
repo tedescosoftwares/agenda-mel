@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowRight, ChevronDown, MapPin, Search, Info, Award, CalendarCheck, LayoutGrid, RotateCcw, X } from 'lucide-react'
+import { ArrowRight, ChevronDown, MapPin, Search, Info, Award, CalendarCheck, LayoutGrid, RotateCcw, X, Clock } from 'lucide-react'
 import { useSeo } from '../../lib/seo'
 import { SLUGS_CATEGORIA, GUIA_CATEGORIAS, categoriaDoGuia, conteudoSeguro, semAcento, seoPadraoDaCidade, rotaDaCidade, rotaDaCategoria } from '../../lib/guia'
 import { seoDaCidade, seoDoIndice, trilhaDaCidade, jsonLdDaCidade, jsonLdDoIndice } from '../../lib/guiaSeo'
 import { carregarCidade, carregarCidades } from '../../lib/guiaPublico'
+import { carregarColecoes } from '../../lib/guiaColecoesPublico'
+import { linksDeColecoes } from '../../lib/guiaColecoes'
 import { aoClicarNaPagina } from '../../lib/eventos'
 import { useVisita } from '../../lib/useVisita'
 import { NavSite, PeSite, useRevelar, comecarEm } from '../../components/site/Pecas'
@@ -37,7 +39,8 @@ function TituloCidade({ texto }) {
   return <h1 className="gd-cidade-h1">{texto.slice(0, i)} <span>{texto.slice(i + 1)}</span></h1>
 }
 
-function Migalhas({ trilha }) {
+// (Migalhas, Falhou, Perguntas e ChamadaSalao servem também às páginas de bairro e de horário, GuiaColecao.jsx)
+export function Migalhas({ trilha }) {
   return (
     <nav className="gd-migalhas" aria-label="Você está em">
       {trilha.map(([nome, rota], i) => i < trilha.length - 1
@@ -47,7 +50,7 @@ function Migalhas({ trilha }) {
   )
 }
 
-function Falhou({ onTentar }) {
+export function Falhou({ onTentar }) {
   return (
     <div className="gd-wrap gd-erro">
       <span className="ld-kicker">Sem conexão</span>
@@ -58,7 +61,7 @@ function Falhou({ onTentar }) {
   )
 }
 
-function Perguntas({ faq }) {
+export function Perguntas({ faq }) {
   if (!faq.length) return null
   return (
     <section className="gd-sec">
@@ -73,7 +76,7 @@ function Perguntas({ faq }) {
 }
 
 // a chamada para quem atende: é o outro lado do guia
-function ChamadaSalao({ cidade }) {
+export function ChamadaSalao({ cidade }) {
   return (
     <section className="gd-sec">
       <div className="gd-wrap">
@@ -161,6 +164,16 @@ function Cidade({ dados }) {
   const totalAqui = cat ? lugares.length : dados.total
   const plural = (n, um, varios) => `${n} ${n === 1 ? um : varios}`
 
+  // os links "Por bairro" e "Por horário" (3.12): só as páginas que passam do mínimo de salões
+  const [colecoes, setColecoes] = useState(null)
+  useEffect(() => {
+    let vivo = true
+    carregarColecoes(cslug).then((d) => vivo && d && setColecoes(linksDeColecoes(d.lugares, cslug))).catch(() => {})
+    return () => { vivo = false }
+  }, [cslug])
+  const porHorario = colecoes ? (cat ? colecoes.categorias[categoria] ?? [] : colecoes.horarios) : []
+  const porBairro = colecoes && !cat ? colecoes.bairros : []
+
   return (
     <>
       <section className="gd-cidade-heroi">
@@ -244,6 +257,30 @@ function Cidade({ dados }) {
           )}
         </div>
       </section>
+
+      {(porHorario.length > 0 || porBairro.length > 0) && (
+        <section className="gd-sec gd-sec-alt" aria-labelledby="gd-colecoes-t">
+          <div className="gd-wrap">
+            <div className="gd-sec-cabeca"><span className="ld-kicker">Mais no guia</span><h2 id="gd-colecoes-t" className="gd-h2">{cat ? `${cat.rotulo} por horário` : 'Por horário e por bairro'}</h2></div>
+            {porHorario.length > 0 && (
+              <nav aria-label={`Por horário em ${cidade}`}>
+                <h3 className="gd-h3">Por horário</h3>
+                <div className="gd-outras">
+                  {porHorario.map((c) => <Link key={c.caminho} className="gd-outra" to={c.caminho}><Clock size={15} /> {c.rotulo} <small>({c.total})</small></Link>)}
+                </div>
+              </nav>
+            )}
+            {porBairro.length > 0 && (
+              <nav aria-label={`Por bairro em ${cidade}`} style={{ marginTop: porHorario.length ? 22 : 0 }}>
+                <h3 className="gd-h3">Por bairro</h3>
+                <div className="gd-outras">
+                  {porBairro.map((c) => <Link key={c.caminho} className="gd-outra" to={c.caminho}><MapPin size={15} /> {c.rotulo} <small>({c.total})</small></Link>)}
+                </div>
+              </nav>
+            )}
+          </div>
+        </section>
+      )}
 
       {pagina?.como_escolher?.itens?.length > 0 && (
         <section className="gd-sec gd-sec-alt">

@@ -5,6 +5,8 @@
 // que o público NÃO vê (nota, coordenadas e origem só aparecem na tabela,
 // que no demo é a Plataforma quem lê).
 import { categoriaDoGuia, slugificar, conteudoSeguro, horariosEmUmaLinha } from './guia.js'
+import { montarConteudo } from './guiaTexto.js'
+import { chaveDoBairro } from './guiaColecoes.js'
 import { demoDesempenho, demoEvento as gravarEventoDemo } from './demoMetricas.js'
 
 const agora = Date.now()
@@ -193,6 +195,17 @@ export const GUIA_LUGARES = [
   base({ id: 'gl8', slug: 'salao-bem-me-quer', categoria: 'beleza', nome: 'Salão Bem-Me-Quer', bairro: 'Jardim Umuarama', endereco: 'Rua dos Ipês, 210', telefone: '(13) 3400-1108', horarios: H(2, 6), servicos: ['Cabelo', 'Manicure', 'Depilação'], atributos: { pagamento: ['credito', 'debito'], estacionamento: ['rua_gratis'], criancas: true }, latitude: -24.176, longitude: -46.776, place_id: 'demo-pl-8', nota: 4.6, avaliacoes: 73, status: 'importado' }),
   base({ id: 'gl10', slug: 'make-by-duda', categoria: 'maquiagem', nome: 'Make by Duda', bairro: 'Satélite', endereco: 'Rua Netuno, 88', telefone: '(13) 99000-1110', whatsapp: '(13) 99000-1110', instagram: 'makebyduda.demo', horarios: null, servicos: ['Maquiagem'], latitude: -24.221, longitude: -46.83, place_id: 'demo-pl-10', nota: 5, avaliacoes: 12, status: 'importado' }),
   base({ id: 'gl11', slug: 'estetica-venus', categoria: 'estetica', nome: 'Estética Vênus', bairro: 'Centro', endereco: 'Rua Cunha Moreira, 300', telefone: '(13) 3400-1111', horarios: H(1, 5), servicos: ['Estética', 'Limpeza de pele'], latitude: -24.185, longitude: -46.787, place_id: 'demo-pl-11', nota: 4.4, avaliacoes: 18, status: 'descartado', motivo: 'Fechou, segundo o Instagram.' }),
+  // mais salões no ar, com horários variados, para o demo ter páginas de bairro (Centro e
+  // Gaivota) e de horário (domingo, cedo, noite e sábado o dia todo) (3.12). O texto é o
+  // montado sem IA, como na Plataforma. O bairro vem sujo de propósito ("Sl 3 - Centro",
+  // "Gaivota - Praia"): a página do bairro junta os dois.
+  ...[
+    base({ id: 'gl12', slug: 'espaco-flor-de-sal', categoria: 'beleza', nome: 'Espaço Flor de Sal', bairro: 'Centro', endereco: 'Rua João Mariano, 410', telefone: '(13) 99000-1112', whatsapp: '(13) 99000-1112', instagram: 'flordesal.demo', horarios: [...H(1, 6, '08:00', '20:00'), { dia: 0, faixas: [['09:00', '13:00']] }], servicos: ['Cabelo', 'Manicure', 'Sobrancelha', 'Depilação'], atributos: { pagamento: ['credito', 'debito', 'aproximacao'], acessibilidade: ['entrada'] }, latitude: -24.1835, longitude: -46.7875, place_id: 'demo-pl-12', nota: 4.7, avaliacoes: 54 }),
+    base({ id: 'gl13', slug: 'unhas-da-ana', categoria: 'unhas', nome: 'Unhas da Ana', bairro: 'Sl 3 - Centro', endereco: 'Av. Rui Barbosa, 1500', telefone: '(13) 99000-1113', whatsapp: '(13) 99000-1113', horarios: H(2, 7, '09:00', '18:00'), servicos: ['Manicure', 'Pedicure', 'Unhas em gel'], atributos: { pagamento: ['credito', 'debito'] }, latitude: -24.1842, longitude: -46.7851, place_id: 'demo-pl-13', nota: 4.9, avaliacoes: 31 }),
+    base({ id: 'gl14', slug: 'cabelos-da-praia', categoria: 'cabelo', nome: 'Cabelos da Praia', bairro: 'Gaivota - Praia', endereco: 'Av. Governador Mário Covas Júnior, 6200', telefone: '(13) 99000-1114', whatsapp: '(13) 99000-1114', horarios: [...H(1, 6, '07:30', '19:00'), { dia: 0, faixas: [['08:00', '12:00']] }], servicos: ['Cabelo', 'Química e coloração', 'Tranças'], atributos: { estacionamento: ['rua_gratis'] }, latitude: -24.2318, longitude: -46.8441, place_id: 'demo-pl-14', nota: 4.6, avaliacoes: 22 }),
+    base({ id: 'gl15', slug: 'studio-noite-bela', categoria: 'unhas', nome: 'Studio Noite Bela', bairro: 'Belas Artes', endereco: 'Rua Pedro Américo, 95', telefone: '(13) 99000-1115', whatsapp: '(13) 99000-1115', instagram: 'noitebela.demo', horarios: H(2, 6, '11:00', '21:00'), servicos: ['Manicure', 'Nail design', 'Unhas em gel'], latitude: -24.2041, longitude: -46.8107, place_id: 'demo-pl-15', nota: 4.8, avaliacoes: 40 }),
+    base({ id: 'gl16', slug: 'lash-da-bia', categoria: 'cilios', nome: 'Lash da Bia', bairro: 'Gaivota', endereco: 'Rua das Gaivotas, 780', telefone: '(13) 99000-1116', whatsapp: '(13) 99000-1116', instagram: 'lashdabia.demo', horarios: H(1, 6, '08:00', '20:00'), servicos: ['Cílios', 'Sobrancelha'], atributos: { pagamento: ['credito', 'debito'], acessibilidade: ['entrada'] }, latitude: -24.2325, longitude: -46.8452, place_id: 'demo-pl-16', nota: 5, avaliacoes: 19 }),
+  ].map((l) => ({ ...l, conteudo: montarConteudo(l, null, new Date(agora)), status: 'publicado', gerado_em: dias(4), publicado_em: dias(4) })),
 ]
 
 export const GUIA_PAGINAS = [
@@ -301,10 +314,26 @@ export const GUIA_RPC = {
   guia_pagina: (a) => {
     const l = GUIA_LUGARES.find((x) => x.cidade_slug === String(a?.cidade_ ?? '').toLowerCase() && x.slug === String(a?.slug_ ?? '').toLowerCase() && noAr(x))
     if (!l) return null
+    // o lugar sabe quantos salões no ar o bairro dele tem (157): é o que decide o link "Mais salões no bairro"
+    const bk = chaveDoBairro(l.bairro)
+    const noBairro = bk && bk !== l.cidade_slug ? GUIA_LUGARES.filter((o) => o.cidade_slug === l.cidade_slug && noAr(o) && chaveDoBairro(o.bairro) === bk).length : 0
     return {
-      lugar: publico(l),
+      lugar: { ...publico(l), bairro_slug: bk || null, bairro_total: noBairro, cidade_total: GUIA_LUGARES.filter((o) => o.cidade_slug === l.cidade_slug && noAr(o)).length },
       vizinhos: vizinhos(l),
       mesma_categoria: GUIA_LUGARES.filter((o) => o.cidade_slug === l.cidade_slug && o.categoria === l.categoria && o.id !== l.id && noAr(o)).sort(ordemLista).slice(0, 8).map(cartao),
+    }
+  },
+  // as coleções (157): os salões no ar da cidade com o que as páginas de bairro e de horário precisam (nunca nota)
+  guia_colecoes: (a) => {
+    const c = String(a?.cidade_ ?? '').trim().toLowerCase()
+    const daCidade = GUIA_LUGARES.filter((l) => l.cidade_slug === c && noAr(l))
+    if (!daCidade.length) return null
+    return {
+      cidade: daCidade[0].cidade, cidade_slug: c, uf: daCidade[0].uf,
+      lugares: [...daCidade].sort(ordemLista).map((l) => ({
+        slug: l.slug, nome: l.nome, cidade: l.cidade, cidade_slug: l.cidade_slug, uf: l.uf, bairro: l.bairro, endereco: l.endereco, categoria: l.categoria,
+        horarios: l.horarios, servicos: l.servicos ?? [], atributos: l.atributos ?? {}, resumo: l.conteudo?.resumo ?? null, selecao: l.selecao, na_mimo: !!l.salon_id, atualizado_em: l.atualizado_em,
+      })),
     }
   },
   guia_publicadas: () => ({

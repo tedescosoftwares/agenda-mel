@@ -477,14 +477,22 @@ function textoDoBairro(col, todos, todas, s) {
   // 2º: o horário, comparado com a cidade
   const h = horasDo(lugares), hc = horasDo(todos)
   const p2 = []
+  const aConf = h.aConfirmar ? ` (sem contar ${h.aConfirmar === 1 ? 'um que diz' : `${h.aConfirmar} que dizem`} atender 24 horas ou depois da meia-noite, o que vale confirmar)` : ''
   if (!h.com.length) p2.push(s.um([`Nenhum deles divulga o horário de atendimento: vale chamar antes de ir.`, `O horário de atendimento não aparece nos dados públicos desses lugares; chame antes de ir.`]))
-  else {
-    const base = h.com.length === n ? 'Pelo horário que divulgam,'
-      : `Dos ${h.com.length} que divulgam o horário${h.aConfirmar ? ` (sem contar ${h.aConfirmar === 1 ? 'um que diz' : `${h.aConfirmar} que dizem`} atender 24 horas ou depois da meia-noite, o que vale confirmar)` : ''},`
+  else if (h.com.length === 1) {
+    // um só com horário: a frase é sobre ele (nada de "Dos 1 que divulgam…, 0 abrem")
+    const fds = h.sabado.length ? `abre no sábado${h.domingo.length ? ' e no domingo' : ', mas não no domingo'}` : h.domingo.length ? 'abre no domingo, mas não no sábado' : 'não abre no sábado nem no domingo'
+    const fatos = [fds, h.cedo.length && 'começa às 8h ou antes', h.noite.length && 'vai até as 20h ou mais'].filter(Boolean)
+    p2.push(`${n === 1 ? 'Pelo horário que divulga' : `Só um deles divulga o horário${aConf}`}: ${h.com[0].nome} ${juntarE(fatos)}.`)
+  } else {
+    const base = h.com.length === n ? 'Pelo horário que divulgam,' : `Dos ${h.com.length} que divulgam o horário${aConf},`
     const partes = []
-    partes.push(h.sabado.length === h.com.length ? 'todos abrem no sábado' : `${numero(h.sabado.length)} ${h.sabado.length === 1 ? 'abre' : 'abrem'} no sábado`)
-    if (h.domingo.length) partes.push(`${numero(h.domingo.length)} ${h.domingo.length === 1 ? 'abre' : 'abrem'} também no domingo${h.domingo.length <= 2 ? ` (${nomesDe(h.domingo)})` : ''}`)
-    else partes.push('nenhum abre no domingo')
+    if (!h.sabado.length && !h.domingo.length) partes.push('nenhum abre no sábado nem no domingo')
+    else {
+      partes.push(!h.sabado.length ? 'nenhum abre no sábado' : h.sabado.length === h.com.length ? 'todos abrem no sábado' : `${numero(h.sabado.length)} ${h.sabado.length === 1 ? 'abre' : 'abrem'} no sábado`)
+      if (h.domingo.length) partes.push(`${numero(h.domingo.length)} ${h.domingo.length === 1 ? 'abre' : 'abrem'} ${h.sabado.length ? 'também ' : ''}no domingo${h.domingo.length <= 2 ? ` (${nomesDe(h.domingo)})` : ''}`)
+      else partes.push('nenhum abre no domingo')
+    }
     if (h.cedo.length) partes.push(`${numero(h.cedo.length)} ${h.cedo.length === 1 ? 'começa' : 'começam'} às 8h ou antes`)
     if (h.noite.length) partes.push(`${numero(h.noite.length)} ${h.noite.length === 1 ? 'vai' : 'vão'} até as 20h ou mais`)
     p2.push(`${base} ${juntarE(partes)}.`)

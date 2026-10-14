@@ -13,7 +13,7 @@ import { dataCurta, dataLonga, escala, compacto } from './comum'
 
 export default function PorDia({ dados }) {
   const [tabela, setTabela] = useState(false)
-  const [foco, setFoco] = useState(null)
+  const [focoBruto, setFoco] = useState(null)
   const botoes = useRef([])
   const serie = Array.isArray(dados.por_dia) ? dados.por_dia : []
   const com161 = serie.some((p) => p.visitantes != null)
@@ -24,6 +24,8 @@ export default function PorDia({ dados }) {
   const { topo, marcas } = escala(maxReal)
   const iPico = totais.indexOf(maxReal)
   const n = serie.length
+  // o dia em foco só vale se ainda existe na série (trocar de período não passa pelo onPointerLeave)
+  const foco = focoBruto != null && focoBruto < n ? focoBruto : null
   const marcasX = n <= 7 ? serie.map((_, i) => i) : [...new Set([0, Math.round((n - 1) * 0.25), Math.round((n - 1) * 0.5), Math.round((n - 1) * 0.75), n - 1])]
   const meio = (i) => ((i + 0.5) / n) * 100
   const nomeDia = (p) => (p.dia === dados.ate ? 'hoje, até agora' : dataLonga(p.dia))

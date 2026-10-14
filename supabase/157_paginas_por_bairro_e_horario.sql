@@ -23,7 +23,8 @@
 --     ganha o da cidade no fim, como acontece com as categorias;
 --   - site_evento() aceita os caminhos das coleções que existem de verdade
 --     (bairro com salão publicado; horário e categoria da lista), com
---     tudo o mais igual à 156 (limite por rede, dedupe de 30 minutos, robô).
+--     tudo o mais igual à 156 (limite por rede, dedupe de 30 minutos, robô); a rede
+--     de um IPv6 passa a ser o /64 (rede_do_ip), para trocar de endereço não furar o limite.
 -- Idempotente.
 
 -- ---- a chave do bairro ----------------------------------------------------------------------
@@ -131,6 +132,18 @@ alter table public.guia_lugares drop constraint if exists guia_lugares_slug_ok;
 alter table public.guia_lugares add constraint guia_lugares_slug_ok check (slug ~ '^[a-z0-9]+(-[a-z0-9]+)*$'
   and slug not in ('beleza', 'cabelo', 'unhas', 'cilios', 'sobrancelhas', 'barbearia', 'estetica', 'maquiagem', 'bairro', 'horario'));
 
+-- ---- a rede de um IP, para os limites por rede ----------------------------------------------------
+-- IPv4: o próprio IP. IPv6: o /64, que é de uma casa ou de um aparelho (os endereços
+-- dentro dele trocam à vontade; contar cada um furaria o limite).
+create or replace function public.rede_do_ip(ip text)
+returns text language plpgsql immutable set search_path = public as $$
+begin
+  if position(':' in coalesce(ip, '')) = 0 then return ip; end if;
+  return network(set_masklen(ip::inet, 64))::text;
+exception when others then return ip;
+end $$;
+revoke execute on function public.rede_do_ip(text) from public, anon, authenticated;
+
 -- ---- gravar um evento: a 156, agora também nas páginas das coleções ---------------------------------
 create or replace function public.site_evento(
   tipo_ text,
@@ -192,7 +205,7 @@ begin
   if found then delete from public.site_sal where dia < hoje; end if;
   select sal into sal_ from public.site_sal where dia = hoje;
   visitante_ := left(encode(sha256(convert_to(coalesce(sal_, '') || '|' || ip || '|' || ua, 'UTF8')), 'hex'), 16);
-  rede_ := left(encode(sha256(convert_to(coalesce(sal_, '') || '|' || ip, 'UTF8')), 'hex'), 16);
+  rede_ := left(encode(sha256(convert_to(coalesce(sal_, '') || '|' || public.rede_do_ip(ip), 'UTF8')), 'hex'), 16);
 
   -- quem manda demais é ignorado: por rede (trocar de navegador não fura) e um teto geral
   if (select count(*) from public.site_eventos where rede = rede_ and em > now() - interval '1 minute') >= 40 then return; end if;

@@ -75,6 +75,11 @@ drop policy if exists guia_abordagem_acoes_plataforma on public.guia_abordagem_a
 create policy guia_abordagem_acoes_plataforma on public.guia_abordagem_acoes for select to authenticated
   using (public.eh_plataforma());
 
+-- o e-mail e o jeito de falar de quem reivindicou são da 159; criados aqui também
+-- (iguais, sem nada mais) para a fila poder lê-los mesmo antes dela
+alter table public.guia_interesses add column if not exists email text;
+alter table public.guia_interesses add column if not exists ligacao text;
+
 -- ---- ajudantes ----------------------------------------------------------------------------
 -- até onde a conversa chegou, para o funil (a_abordar → abordado → respondeu → cliente).
 -- "Sem interesse" respondeu (com um não); "não abordar" fica fora do funil.
@@ -119,8 +124,8 @@ begin
            count(*) filter (where i.tipo = 'sou_dono') as sou_dono,
            count(*) filter (where i.tipo = 'remover') as remover,
            count(*) filter (where i.tipo = 'corrigir') as corrigir,
-           (array_agg(jsonb_build_object('nome', i.nome, 'contato', i.contato, 'mensagem', i.mensagem, 'em', i.criado_em) order by i.criado_em desc)
-              filter (where i.tipo = 'sou_dono' and i.contato is not null))[1] as dono
+           (array_agg(jsonb_build_object('nome', i.nome, 'contato', i.contato, 'email', i.email, 'ligacao', i.ligacao, 'mensagem', i.mensagem, 'em', i.criado_em) order by i.criado_em desc)
+              filter (where i.tipo = 'sou_dono' and (i.contato is not null or i.email is not null)))[1] as dono
       from public.guia_interesses i
      where i.atendido_em is null and (lugar_ is null or i.lugar_id = lugar_)
      group by i.lugar_id
@@ -384,12 +389,16 @@ begin
   if not public.eh_plataforma() then raise exception 'só a plataforma desfaz a abordagem'; end if;
   select * into x from public.guia_abordagem_acoes where id = acao_;
   if not found then raise exception 'essa ação não existe mais'; end if;
+  -- trava o salão antes de conferir se é a última: uma ação gravando ao mesmo
+  -- tempo termina primeiro e aparece na conferência (e a de cá recusa)
+  perform 1 from public.guia_abordagens where lugar_id = x.lugar_id for update;
+  select * into x from public.guia_abordagem_acoes where id = acao_;
+  if not found then raise exception 'essa ação não existe mais'; end if;
   if exists (select 1 from public.guia_abordagem_acoes h where h.lugar_id = x.lugar_id and (h.em, h.id) > (x.em, x.id)) then
     raise exception 'só dá para desfazer a última ação deste salão';
   end if;
   antes := x.dados -> 'antes';
   if antes is null then raise exception 'essa ação não guarda o estado de antes'; end if;
-  perform 1 from public.guia_abordagens where lugar_id = x.lugar_id for update;
   if coalesce((antes ->> 'novo')::boolean, false) and not exists (select 1 from public.guia_abordagem_acoes h where h.lugar_id = x.lugar_id and h.id <> x.id) then
     delete from public.guia_abordagens where lugar_id = x.lugar_id;
   else

@@ -24,9 +24,12 @@
 --
 -- Proteções: e-mail validado; o mesmo e-mail no mesmo salão conta uma vez
 -- por dia (sem e-mail repetido); um e-mail reivindica no máximo 3 vezes
--- por dia; um salão recebe no máximo 10 reivindicações por dia; uma rede
--- (código do dia do IP, que não identifica ninguém e não junta com as
--- métricas da 156) no máximo 5; e 300 por dia no total. O público nunca lê
+-- por dia (contando pela caixa: sem "+apelido" e, no Gmail, sem pontos);
+-- um salão recebe no máximo 10 reivindicações por dia; uma rede (código do
+-- dia do IP, ou do /64 no IPv6, que não identifica ninguém e não junta com
+-- as métricas da 156) no máximo 5; e 300 por dia no total. O nome só entra
+-- na saudação do e-mail quando parece um nome (um link ali viraria link
+-- clicável num e-mail assinado pela MIMO). O público nunca lê
 -- guia_interesses nem email_outbox (RLS); a função só devolve ok/motivo,
 -- nunca o e-mail.
 -- Idempotente.
@@ -108,6 +111,15 @@ returns text language sql immutable as $$
   select case l when 'dona' then 'dona' when 'socia' then 'sócia' when 'gerente' then 'gerente' when 'funcionaria' then 'funcionária' end
 $$;
 
+-- a caixa de um e-mail, para os limites: sem o "+apelido" e, no Gmail, sem os pontos
+-- (fulana+1@gmail.com e f.ulana@gmail.com caem na mesma caixa que fulana@gmail.com)
+create or replace function public.guia_chave_email(x text)
+returns text language sql immutable set search_path = public as $$
+  select case when split_part(r, '@', 2) in ('gmail.com', 'googlemail.com') then replace(split_part(r, '@', 1), '.', '') || '@gmail.com' else r end
+    from (select regexp_replace(lower(btrim(x)), '\+[^@]*@', '@') as r) s
+$$;
+revoke execute on function public.guia_chave_email(text) from public, anon, authenticated;
+
 -- ---- o e-mail de confirmação --------------------------------------------------------------
 -- Simples e honesto: recebemos, em quantos dias úteis a gente fala com você, o que acontece
 -- depois e como pedir para corrigir ou remover a página. prazo: dias úteis (a tela mostra o
@@ -116,7 +128,8 @@ create or replace function public.email_reivindicacao(nome text, salao text, lig
 returns table (assunto text, html text, texto text)
 language plpgsql immutable as $$
 declare
-  primeiro text := nullif(split_part(btrim(coalesce(nome, '')), ' ', 1), '');
+  -- a primeira palavra do nome, só se parecer um nome (um link digitado no nome não abre o e-mail da MIMO)
+  primeiro text := (select p from (select nullif(split_part(btrim(coalesce(nome, '')), ' ', 1), '') as p) x where p ~ '^[[:alpha:]''-]{2,30}$');
   s text := coalesce(nullif(btrim(salao), ''), 'o salão');
   lig text := public.guia_ligacao_rotulo(ligacao);
   dias text := prazo || case when prazo = 1 then ' dia útil' else ' dias úteis' end;
@@ -237,11 +250,12 @@ begin
     return jsonb_build_object('ok', false, 'motivo', 'confirme que você responde pelo salão');
   end if;
 
-  -- o mesmo e-mail no mesmo salão em 24 h conta uma vez (e não manda outro e-mail)
-  if exists (select 1 from public.guia_interesses where lugar_id = lugar_ and tipo = 'sou_dono' and email = e and criado_em > now() - interval '1 day') then
+  -- o mesmo e-mail no mesmo salão em 24 h conta uma vez (e não manda outro e-mail); a conta é
+  -- pela caixa (guia_chave_email), para o "+apelido" não furar o limite
+  if exists (select 1 from public.guia_interesses where lugar_id = lugar_ and tipo = 'sou_dono' and public.guia_chave_email(email) = public.guia_chave_email(e) and criado_em > now() - interval '1 day') then
     return jsonb_build_object('ok', true, 'repetido', true, 'prazo', prazo);
   end if;
-  if (select count(*) from public.guia_interesses where tipo = 'sou_dono' and email = e and criado_em > now() - interval '1 day') >= 3 then
+  if (select count(*) from public.guia_interesses where tipo = 'sou_dono' and public.guia_chave_email(email) = public.guia_chave_email(e) and criado_em > now() - interval '1 day') >= 3 then
     return jsonb_build_object('ok', false, 'motivo', 'muitos pedidos com este e-mail hoje; tente amanhã ou escreva para contato@mimo.com.vc');
   end if;
   if (select count(*) from public.guia_interesses where lugar_id = lugar_ and tipo = 'sou_dono' and criado_em > now() - interval '1 day') >= 10
@@ -258,7 +272,7 @@ begin
       insert into public.site_sal (dia) values (hoje) on conflict (dia) do nothing;
       if found then delete from public.site_sal where dia < hoje; end if;
       select sal into sal_ from public.site_sal where dia = hoje;
-      rede_ := left(encode(sha256(convert_to(coalesce(sal_, '') || '|reivindicar|' || ip, 'UTF8')), 'hex'), 16);
+      rede_ := left(encode(sha256(convert_to(coalesce(sal_, '') || '|reivindicar|' || public.rede_do_ip(ip), 'UTF8')), 'hex'), 16);
     end if;
   exception when others then rede_ := null;
   end;
@@ -274,7 +288,8 @@ begin
   begin
     select * into correio from public.email_reivindicacao(n, l.nome, lig,
       public.app_base() || '/saloes/' || l.cidade_slug || '/' || l.slug, prazo);
-    correio_id := public.enfileirar_email(e, correio.assunto, correio.html, 'guia_reivindicacao', correio.texto, n, null);
+    -- sem o nome no destinatário: é texto livre de quem preencheu
+    correio_id := public.enfileirar_email(e, correio.assunto, correio.html, 'guia_reivindicacao', correio.texto, null, null);
     if correio_id is not null then
       update public.guia_interesses set email_id = correio_id where id = novo;
     end if;

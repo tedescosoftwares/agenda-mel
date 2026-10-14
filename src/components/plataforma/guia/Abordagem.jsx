@@ -79,10 +79,12 @@ const PITCH = [
 
 // a mensagem: com os números do período quando a página está no ar e teve visita
 // (a mesma de Desempenho, mensagemParaDono); para quem pediu contato ("É o seu
-// salão?"), uma resposta ao pedido; sem números, só a apresentação
+// salão?"), uma resposta ao pedido; sem números, só a apresentação. Para quem
+// já é cliente (agenda pela MIMO ou marcado como cliente aqui), nunca a oferta
 function montarMensagem(it, { dias, para }) {
   const url = it.status_pagina === 'publicado' ? SITE_GUIA + it.pagina : ''
   const cidade = it.cidade || 'beleza'
+  const cliente = it.na_mimo || it.status === 'cliente'
   if (para === 'dono' && it.dono) {
     const e = it.eventos ?? {}
     const q = n0(it.pendentes?.quero_marcar)
@@ -94,15 +96,15 @@ function montarMensagem(it, { dias, para }) {
     return [
       `Oi${it.dono.nome ? `, ${it.dono.nome}` : ''}! Tudo bem? Aqui é da MIMO. Você pediu contato sobre ${it.nome} no nosso guia de salões de ${cidade}.`,
       partes.length ? `Para você ter uma ideia: ${juntar(partes)}.` : '',
-      ...(it.na_mimo ? [] : PITCH),
+      ...(cliente ? [] : PITCH),
       url ? `A página: ${url}` : '',
     ].filter(Boolean).join('\n\n')
   }
-  if (url && n0(it.visitas) > 0) return mensagemParaDono(it, { dias, url, cidade })
+  if (url && n0(it.visitas) > 0) return mensagemParaDono({ ...it, na_mimo: cliente }, { dias, url, cidade })
   return [
     `Oi! Tudo bem? Aqui é da MIMO, um guia de salões de ${cidade}.`,
     url ? `${it.nome} já tem uma página no nosso guia, com endereço, horário e serviços.` : '',
-    ...PITCH,
+    ...(cliente ? [] : PITCH),
     url ? `A página: ${url}` : '',
   ].filter(Boolean).join('\n\n')
 }
@@ -169,12 +171,14 @@ export default function Abordagem({ g }) {
   const [mexidos, setMexidos] = useState(() => new Set())   // mudaram desde a última ordenação
   const [selId, setSelId] = useState(null)
   const [folha, setFolha] = useState(false)      // celular: o salão aberto por cima da lista
-  const [ocupado, setOcupado] = useState(null)   // a ação em andamento ('status', 'nota'...)
+  const [ocupado, setOcupadoJa] = useState(null) // a ação em andamento ('status', 'nota', 'desfazer'...)
   const [mensagemId, setMensagemId] = useState(null) // o salão com a mensagem aberta
   const [historicos, setHistoricos] = useState({})
   const [verAtalhos, setVerAtalhos] = useState(false)
   const [rascunho, setRascunho] = useState(null) // a nota sendo escrita: { id, base, texto }
   const montado = useRef(true)
+  const ocupadoRef = useRef(null) // o mesmo, para o "Desfazer" do recado (que guarda a função de quando apareceu)
+  const setOcupado = useCallback((v) => { ocupadoRef.current = v; setOcupadoJa(v) }, [])
   const filtroRef = useRef({ visao, busca })
   const ultimaAcao = useRef(null)
   const buscaRef = useRef(null)
@@ -186,8 +190,10 @@ export default function Abordagem({ g }) {
 
   // ---- ler a fila (trocar de período pede de novo; só a resposta do último pedido vale) ----
   const pedido = useRef(0)
+  const emVoo = useRef(false) // uma leitura completa a caminho (pode ter saído antes de uma ação)
   const aplicar = useCallback((n, r) => {
     if (!montado.current || n !== pedido.current) return
+    emVoo.current = false
     setCarregando(false)
     if (r.erro) { setErro(r.erro); return }
     const novos = r.data ?? { itens: [] }
@@ -196,7 +202,11 @@ export default function Abordagem({ g }) {
     setOrdem(ordenarIds(novos.itens ?? [], filtroRef.current.visao, filtroRef.current.busca, novos.hoje))
     setMexidos(new Set())
   }, [])
-  const ler = useCallback((d) => { const n = ++pedido.current; return chamar('guia_fila_abordagem', { dias: d }).then((r) => aplicar(n, r)) }, [aplicar])
+  const ler = useCallback((d) => {
+    const n = ++pedido.current
+    emVoo.current = true
+    return chamar('guia_fila_abordagem', { dias: d }).then((r) => aplicar(n, r))
+  }, [aplicar])
   useEffect(() => { ler(memoria.dias) }, [ler])
   const carregar = (d) => { setDias(d); setCarregando(true); ler(d) }
 
@@ -209,6 +219,18 @@ export default function Abordagem({ g }) {
   const atual = porId.get(selId) ?? (largo ? lista[0] : null) ?? null
   const indice = atual ? lista.findIndex((it) => it.lugar_id === atual.lugar_id) : -1
   const folhaAberta = !largo && folha && !!atual
+  // a folha recebe o foco ao abrir e, ao fechar, devolve ao item do salão que estava
+  // aberto (folhaDe acompanha o J/K com a folha aberta)
+  const folhaDe = useRef(null)
+  useEffect(() => { if (folhaAberta) folhaDe.current = atual.lugar_id }, [folhaAberta, atual])
+  useEffect(() => {
+    if (folhaAberta) requestAnimationFrame(() => document.querySelector('.pa-folha .pa-voltar')?.focus())
+    else if (folhaDe.current) {
+      const id = folhaDe.current
+      folhaDe.current = null
+      requestAnimationFrame(() => document.querySelector(`[data-lugar="${id}"] .pa-item-corpo`)?.focus())
+    }
+  }, [folhaAberta])
   // a nota em edição pertence ao salão (e à nota) de quando começou a ser escrita
   const notaTexto = rascunho && atual && rascunho.id === atual.lugar_id && rascunho.base === (atual.nota ?? null) ? rascunho.texto : (atual?.nota ?? '')
   const setNotaTexto = (texto) => atual && setRascunho({ id: atual.lugar_id, base: atual.nota ?? null, texto })
@@ -245,7 +267,10 @@ export default function Abordagem({ g }) {
   }, [itens, hoje])
 
   // ---- trocar uma linha pela versão nova (sem reordenar a lista) ----
+  // uma leitura completa ainda a caminho foi montada antes desta ação e a apagaria
+  // da tela: pede de novo (o pedido novo invalida o velho)
   const trocarItem = useCallback((id, novo) => {
+    if (emVoo.current) ler(memoria.dias)
     setDados((d) => {
       if (!d) return d
       const tem = d.itens.some((it) => it.lugar_id === id)
@@ -255,15 +280,18 @@ export default function Abordagem({ g }) {
     setMexidos((m) => new Set(m).add(id))
     geracao.current[id] = (geracao.current[id] ?? 0) + 1
     setHistoricos((h) => { if (!(id in h)) return h; const n = { ...h }; delete n[id]; return n })
-  }, [])
+  }, [ler])
 
   const desfazer = useCallback(async (acaoId, nome) => {
+    if (ocupadoRef.current) { g.avisar({ texto: 'Espere a ação em andamento terminar e desfaça de novo.', tom: 'erro' }); return }
+    setOcupado('desfazer')
     const r = await chamar('guia_abordagem_desfazer', { acao_: acaoId, dias_: dias })
+    if (montado.current) setOcupado(null)
     if (r.erro) { g.avisar({ texto: r.erro, tom: 'erro' }); return }
     trocarItem(r.data?.lugar_id, r.data?.item ?? null)
     if (ultimaAcao.current?.id === acaoId) ultimaAcao.current = null
     g.avisar(`${nome}: desfeito.`)
-  }, [dias, g, trocarItem])
+  }, [dias, g, trocarItem, setOcupado])
 
   // uma ação no salão: grava, troca a linha e oferece o "Desfazer"
   const registrar = useCallback(async (it, acao, { status = null, texto = null, proximo = null, dados: extra = null } = {}, recado) => {
@@ -281,7 +309,7 @@ export default function Abordagem({ g }) {
       g.avisar({ texto: texto_ || `${it.nome}: feito.`, acao: { rotulo: 'Desfazer', onClick: () => desfazer(r.data.acao_id, it.nome) } })
     }
     return r.data
-  }, [dias, g, trocarItem, desfazer])
+  }, [dias, g, trocarItem, desfazer, setOcupado])
 
   // ---- as ações do salão aberto ----
   const mudarStatus = (it, s) => {
@@ -342,7 +370,7 @@ export default function Abordagem({ g }) {
       l: () => podeAgir && lembrar(atual, somaDias(hoje, 3)),
       n: () => { if (!atual) return; if (!largo) setFolha(true); requestAnimationFrame(() => notaRef.current?.focus()) },
       v: () => abrirPagina(atual),
-      u: () => ultimaAcao.current && desfazer(ultimaAcao.current.id, ultimaAcao.current.nome),
+      u: () => !ocupado && ultimaAcao.current && desfazer(ultimaAcao.current.id, ultimaAcao.current.nome),
       r: () => reordenar(),
       '/': () => buscaRef.current?.focus(),
       '?': () => setVerAtalhos((v) => !v),
@@ -385,7 +413,7 @@ export default function Abordagem({ g }) {
   )
 
   return (
-    <div className={'pa' + (carregando ? ' pa-recarregando' : '')}>
+    <div className={'pa' + (carregando ? ' pa-recarregando' : '')} inert={folhaAberta || undefined}>
       {erro && <div className="alert alert-error">{erro}</div>}
 
       <div className="pa-barra">
@@ -597,7 +625,12 @@ function Detalhe({
           ))}
           <label className="pa-data">
             <span className="sr-only">Outra data</span>
-            <input type="date" min={hoje} max={somaDias(hoje, 365)} onChange={(ev) => { if (ev.target.value) { onLembrar(ev.target.value); ev.target.value = '' } }} disabled={!!ocupado} />
+            {/* o Chrome entrega um valor a cada dígito do ano (0002-11-20, 0020-11-20…): só vale o completo e no
+                intervalo; e o campo nunca fica desligado, para o foco não cair na página e os dígitos virarem atalhos */}
+            <input type="date" min={hoje} max={somaDias(hoje, 365)} onChange={(ev) => {
+              const v = ev.target.value
+              if (v && v >= hoje && v <= somaDias(hoje, 365)) { onLembrar(v); ev.target.value = '' }
+            }} />
           </label>
         </div>
       </section>
@@ -618,7 +651,7 @@ function Detalhe({
           {it.dono && (
             <div className="pa-dono">
               <span><b>{it.dono.nome || 'Sem nome'}</b> disse que é do salão · <span className="muted">{haQuanto(it.dono.em)}</span></span>
-              <span className="pa-dono-contato">{it.dono.contato}</span>
+              <span className="pa-dono-contato">{[it.dono.contato, it.dono.email].filter(Boolean).join(' · ')}</span>
               {it.dono.mensagem && <q>{it.dono.mensagem}</q>}
             </div>
           )}
@@ -681,7 +714,7 @@ function Historico({ lista, hoje }) {
 
 // ---- a mensagem: monta, deixa mudar, abre o WhatsApp e já registra ----
 function ModalMensagem({ it, dias, hoje, onFechar, onEnviou }) {
-  const temDono = !!it.dono?.contato
+  const temDono = !!(it.dono?.contato || it.dono?.email)
   const [para, setPara] = useState(temDono ? 'dono' : 'salao')
   const [texto, setTexto] = useState(() => montarMensagem(it, { dias, para: temDono ? 'dono' : 'salao' }))
   const [copiado, setCopiado] = useState(false)
@@ -689,8 +722,9 @@ function ModalMensagem({ it, dias, hoje, onFechar, onEnviou }) {
   const [comLembrete, setComLembrete] = useState(!futuro)
   const caixa = useRef(null)
   const contatoDono = it.dono?.contato ?? ''
+  const emailDono = it.dono?.email || (ehEmail(contatoDono) ? contatoDono.trim() : '')
   const zap = para === 'dono' ? (ehTelefone(contatoDono) ? linkWhatsDoTel(contatoDono, texto) : null) : zapDoDono(it, texto)
-  const email = para === 'dono' && ehEmail(contatoDono) ? `mailto:${contatoDono.trim()}?subject=${encodeURIComponent(`${it.nome} no guia da MIMO`)}&body=${encodeURIComponent(texto)}` : null
+  const email = para === 'dono' && ehEmail(emailDono) ? `mailto:${emailDono}?subject=${encodeURIComponent(`${it.nome} no guia da MIMO`)}&body=${encodeURIComponent(texto)}` : null
 
   useEffect(() => {
     const antes = document.activeElement
@@ -731,7 +765,7 @@ function ModalMensagem({ it, dias, hoje, onFechar, onEnviou }) {
             </div>
           )}
           <p className="muted pa-modal-sub">
-            {para === 'dono' ? `Para ${contatoDono}. ` : ''}
+            {para === 'dono' ? `Para ${[contatoDono, emailDono !== contatoDono.trim() && emailDono].filter(Boolean).join(' ou ')}. ` : ''}
             {it.status_pagina === 'publicado' && n0(it.visitas) ? `Com os números dos últimos ${dias} dias. ` : ''}Dá para mudar o texto antes.
           </p>
           <textarea ref={caixa} className="pa-msg-texto" rows={10} value={texto} onChange={(e) => setTexto(e.target.value)} aria-label="Texto da mensagem" />

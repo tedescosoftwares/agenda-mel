@@ -97,10 +97,15 @@ export default function Desempenho({ g }) {
           </div>
 
           <Destaques d={destaques} dias={dados.dias} onSalao={(id) => g.irPara('revisar', { selId: id })} onMensagem={setDono} onVerSemVisita={verSemVisita} />
+        </>
+      )}
 
-          {/* as buscas do Google que trouxeram gente para o guia (160) */}
-          <BuscasGoogle dias={dados.dias} />
+      {/* as buscas do Google que trouxeram gente para o guia (160); fica com ou sem visitas:
+          o Google mostra as páginas (impressões) antes de alguém clicar, e é aqui que se liga */}
+      <BuscasGoogle dias={dados.dias} />
 
+      {!vazio && (
+        <>
           <div className="pg-des-linha-tres">
             <Painel Icon={Search} titulo="De onde vieram" sub="A entrada de cada visita (quem já navegava pelo site não conta aqui)">
               <Barras cor="visita" itens={origens.map((o) => ({ chave: o.origem, rotulo: ROTULO_ORIGEM[o.origem] ?? o.origem, n: o.visitas }))}

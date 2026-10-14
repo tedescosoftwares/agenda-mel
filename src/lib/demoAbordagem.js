@@ -95,7 +95,7 @@ function fila({ dias = 30, lugar_ = null } = {}) {
     const conta = (t) => abertos.filter((i) => i.tipo === t).length
     const pend = { quero_marcar: conta('quero_marcar'), sou_dono: conta('sou_dono'), remover: conta('remover'), corrigir: conta('corrigir') }
     if (l.status !== 'publicado' && !ab && pend.quero_marcar + pend.sou_dono === 0) continue
-    const dono = abertos.filter((i) => i.tipo === 'sou_dono' && i.contato).sort((a, b) => String(b.criado_em).localeCompare(String(a.criado_em)))[0]
+    const dono = abertos.filter((i) => i.tipo === 'sou_dono' && (i.contato || i.email)).sort((a, b) => String(b.criado_em).localeCompare(String(a.criado_em)))[0]
     const p = numeros.get(l.id) ?? {}
     const visitas = p.visitas ?? 0
     const contatos = p.contatos ?? 0
@@ -138,7 +138,7 @@ function fila({ dias = 30, lugar_ = null } = {}) {
       atualizado_em: ab?.atualizado_em ?? null, atualizado_por_nome: ab ? ab.atualizado_por_nome : null, tentativas,
       ultima_acao: ultima ? { id: ultima.id, tipo: ultima.tipo, em: ultima.em, texto: ultima.texto ? ultima.texto.slice(0, 160) : null, para_status: ultima.para_status, proximo_contato: ultima.proximo_contato } : null,
       visitas, visitantes: p.visitantes ?? 0, contatos, eventos, interesses: p.interesses ?? {},
-      pendentes: pend, dono: dono ? { nome: dono.nome, contato: dono.contato, mensagem: dono.mensagem, em: dono.criado_em } : null,
+      pendentes: pend, dono: dono ? { nome: dono.nome, contato: dono.contato ?? null, email: dono.email ?? null, ligacao: dono.ligacao ?? null, mensagem: dono.mensagem, em: dono.criado_em } : null,
       fila: fora ? 'fora' : 'principal', fora_motivo: fora, prioridade, motivos, etapa, ja_cliente: !!l.salon_id && etapa < 4,
     })
   }

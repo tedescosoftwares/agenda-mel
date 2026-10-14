@@ -86,7 +86,7 @@ export function variacao(agora, antes) {
   if (antes == null) return null
   const a = n0(antes), b = n0(agora)
   if (!a) return { antes: 0, pct: null, dir: b > 0 ? 'sobe' : 'igual' }
-  const pct = Math.round(((b - a) / a) * 100)
+  const pct = Math.round(((b - a) / a) * 100) || 0 // sem -0 (199 contra 200)
   return { antes: a, pct, dir: pct > 0 ? 'sobe' : pct < 0 ? 'desce' : 'igual' }
 }
 
@@ -109,7 +109,11 @@ export function fraseDoPeriodo(dados) {
   const anteriores = dias === 1 ? 'ontem' : `nos ${dias} dias anteriores`
   if (v?.pct > 0) partes.push(', ', { forte: `${formatar(v.pct)}% a mais` }, ` que ${anteriores}`)
   else if (v?.pct < 0) partes.push(', ', { forte: `${formatar(-v.pct)}% a menos` }, ` que ${anteriores}`)
-  else if (v?.pct === 0) partes.push(`, o mesmo número que ${anteriores}`)
+  else if (v?.pct === 0) {
+    // menos de 0,5% de diferença arredonda para 0%: "o mesmo número" só quando é o mesmo
+    const dif = contato - v.antes
+    partes.push(dif ? `, quase o mesmo número que ${anteriores} (${formatar(Math.abs(dif))} a ${dif > 0 ? 'mais' : 'menos'})` : `, o mesmo número que ${anteriores}`)
+  }
   else if (v) partes.push(` (${anteriores}, ninguém tinha tentado)`)
   return [...partes, '.']
 }

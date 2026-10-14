@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { supabase, isDemo } from '../../../lib/supabase'
 import { categoriaDoGuia, semAcento } from '../../../lib/guia'
 import { urlDoAmbiente } from '../../../lib/ambiente'
+import { rotuloDaColecao } from '../../../lib/guiaColecoes'
 import { Painel, Vazio, haQuanto } from '../Pecas'
 import {
   Search, MousePointerClick, Eye, Percent, Target, RefreshCw, LoaderCircle, Plug, CircleAlert, CircleCheck, Lightbulb,
@@ -37,13 +38,16 @@ const dataLonga = (iso) => { const dt = new Date(`${iso}T12:00:00`); return `${D
 // com o ano quando não é o deste ano (a primeira busca volta 16 meses)
 const dataComAno = (iso) => (String(iso).slice(0, 4) === String(new Date().getFullYear()) ? dataCurta(iso) : `${dataCurta(iso)}/${String(iso).slice(0, 4)}`)
 
-// o nome de uma página: o salão, "Unhas em Itanhaém", "Salões em Itanhaém"...
+// o nome de uma página: o salão, "Unhas em Itanhaém", "Salões em Itanhaém",
+// "Salões no Centro, Itanhaém" (as coleções da 157, iguais à tabela "Por página")...
 function tituloDaPagina(p) {
   if (p?.nome) return p.nome
   const [, , cidade, cat, ...resto] = String(p?.pagina ?? '').split('/')
   const nomeCidade = p?.cidade || cidade
   if (!cidade) return 'Índice do guia'
   if (!cat) return `Salões em ${nomeCidade}`
+  const colecao = rotuloDaColecao(p?.pagina, { cidade: () => nomeCidade })
+  if (colecao) return colecao
   if (!resto.length && categoriaDoGuia(cat).slug === cat) return `${categoriaDoGuia(cat).rotulo} em ${nomeCidade}`
   return `${[cat, ...resto].join(' / ')} · ${nomeCidade}`
 }
@@ -147,7 +151,7 @@ export default function BuscasGoogle({ dias: diasDeFora }) {
             </div>
           )}
           {/* antes de ligar, o botão é o do passo a passo */}
-          {(!dados || dados.tem_dados) && (
+          {(!dados || dados.tem_dados || dados.ultima_ok) && (
             <button type="button" className="btn btn-ghost pg-gsc-btn" onClick={atualizar} disabled={rodando}>
               {rodando ? <LoaderCircle size={15} className="pg-gira" /> : <RefreshCw size={15} />} {rodando ? 'Buscando no Google…' : 'Atualizar agora'}
             </button>
@@ -161,6 +165,8 @@ export default function BuscasGoogle({ dias: diasDeFora }) {
         <div className="pg-gsc-caixa pg-gsc-erro"><CircleAlert size={16} /> <span>{erro}</span></div>
       ) : !dados ? (
         <div className="pg-gsc-carregando"><LoaderCircle className="pg-gira" size={18} /> Lendo as buscas…</div>
+      ) : !dados.tem_dados && dados.ultima_ok ? (
+        <LigadoSemBuscas ultima={dados.ultima_ok} execucao={dados.execucao} />
       ) : !dados.tem_dados ? (
         <ComoLigar execucao={dados.execucao} rodando={rodando} onBuscar={atualizar} />
       ) : (
@@ -183,6 +189,22 @@ function Resultado({ sinc, onFechar }) {
       </span>
       <button type="button" className="pg-gsc-fechar" onClick={onFechar} aria-label="Fechar aviso"><X size={14} /></button>
     </div>
+  )
+}
+
+// ---- ligado, mas o Google ainda não mostrou nenhuma página do guia numa busca ----
+// (ultima_ok só vem de execução que deu certo: faltar o segredo continua no passo a passo)
+function LigadoSemBuscas({ ultima, execucao }) {
+  return (
+    <>
+      <div className="pg-gsc-caixa pg-gsc-ok">
+        <CircleCheck size={16} />
+        <span>Ligado (atualizado {haQuanto(ultima)}). O Google ainda não mostrou nenhuma página do guia numa busca: páginas novas levam dias ou semanas para aparecer. Os números aparecem aqui assim que ele começar a mostrar.</span>
+      </div>
+      {execucao && !execucao.ok && (
+        <div className="pg-gsc-caixa pg-gsc-erro"><CircleAlert size={16} /> <span>A última atualização ({execucao.origem === 'relogio' ? 'pelo relógio' : 'por aqui'}, {haQuanto(execucao.em)}) deu erro: {execucao.erro}</span></div>
+      )}
+    </>
   )
 }
 

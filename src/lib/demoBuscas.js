@@ -7,6 +7,7 @@
 // Na URL do demo:
 //   ?gsc=desligado  a tela de "ainda não ligado" (o botão "liga" o demo)
 //   ?gsc=erro       com dados, mas a última sincronização do relógio falhou
+//   ?gsc=vazio      ligado e sincronizando, mas o Google ainda não mostrou o guia em busca nenhuma
 import { GUIA_LUGARES } from './demoGuia.js'
 
 const DIAS_DEMO = 200
@@ -37,6 +38,8 @@ const GERAIS = [
   ['/saloes/itanhaem/cilios', 'extensão de cílios itanhaém', 2.6, 4.7, 1],
   ['/saloes/itanhaem/cilios', 'lash designer itanhaém', 1.2, 9.4, 1],
   ['/saloes', 'guia de salões de beleza litoral sul', 0.6, 23, 1],
+  ['/saloes/itanhaem/bairro/centro', 'salão de beleza centro itanhaém', 2.2, 6.3, 1],
+  ['/saloes/itanhaem/horario/domingo', 'salão aberto domingo itanhaém', 1.8, 4.2, 1.2],
 ]
 // as buscas de cada salão do demo (as que têm nome do salão clicam mais)
 const DO_SALAO = {
@@ -50,6 +53,7 @@ const DO_SALAO = {
 let LINHAS = null
 let ligado = true
 let comErro = false
+let vazio = false
 let execucao = null
 let primeiraVez = true
 
@@ -60,6 +64,7 @@ function lerModo() {
   try { modo = new URLSearchParams(window.location.search).get('gsc') ?? '' } catch { /* sem janela */ }
   ligado = modo !== 'desligado'
   comErro = modo === 'erro'
+  vazio = modo === 'vazio'
 }
 
 function gerar() {
@@ -126,7 +131,7 @@ export function demoBuscas(args = {}) {
   lerModo()
   const ndias = Math.max(1, Math.min(Number(args.dias) || 30, 480))
   const limiar = Math.max(5, Math.ceil(ndias / 3))
-  const todas = ligado ? linhasDemo() : []
+  const todas = ligado && !vazio ? linhasDemo() : []
   const primeiro = todas.length ? todas[0].dia : null
   const ultimo = todas.length ? todas[todas.length - 1].dia : null
   const ate = ultimo ?? somarDias(hojeSP(), -ATRASO)
@@ -158,7 +163,9 @@ export function demoBuscas(args = {}) {
     const s = somar(porDia.get(d) ?? [])
     dias.push({ dia: d, cliques: s.cliques, impressoes: s.impressoes, posicao: s.posicao })
   }
-  const ultimaExec = execucao ?? (!ligado ? null : comErro
+  const ultimaExec = execucao ?? (!ligado ? null : vazio
+    ? { em: new Date(Date.now() - 5 * 3600e3).toISOString(), origem: 'relogio', ok: true, de: somarDias(ate, -7), ate: hojeSP(), linhas: 0, parcial: false, erro: null }
+    : comErro
     ? { em: new Date(Date.now() - 7 * 3600e3).toISOString(), origem: 'relogio', ok: false, de: null, ate: null, linhas: 0, parcial: false, erro: 'a conta de serviço (buscas@mimo-demo.iam.gserviceaccount.com) ainda não tem acesso a esta propriedade: no Search Console, Configurações → Usuários e permissões → Adicionar usuário, com esse e-mail' }
     : { em: new Date(Date.now() - 5 * 3600e3).toISOString(), origem: 'relogio', ok: true, de: somarDias(ate, -7), ate: hojeSP(), linhas: 412, parcial: false, erro: null })
 
@@ -185,7 +192,7 @@ export async function demoGscSincronizar() {
   comErro = false
   const ultimo = somarDias(hojeSP(), -ATRASO)
   const dias = primeira ? 480 : 8
-  const linhas = primeira ? linhasDemo().length : linhasDemo().filter((l) => l.dia > somarDias(ultimo, -dias)).length
+  const linhas = vazio ? 0 : primeira ? linhasDemo().length : linhasDemo().filter((l) => l.dia > somarDias(ultimo, -dias)).length
   const de = somarDias(hojeSP(), -(dias - 1))
   execucao = { em: new Date().toISOString(), origem: 'plataforma', ok: true, de, ate: hojeSP(), linhas, parcial: false, erro: null }
   return { ok: true, de, ate: hojeSP(), dias, linhas, janelas: Math.ceil(dias / 30), pedidos: Math.ceil(dias / 30), descartadas: 0, parcial: false }

@@ -89,7 +89,7 @@ function Seta({ dir }) {
 // ponto, o fio e a dica em HTML por cima, para ficarem redondos em qualquer largura.
 // Começa no zero: uma subida pequena parece pequena. Vai até ontem (dias inteiros).
 function Tendencia({ pontos, rotulo, unidade, formato = formatar, hoje }) {
-  const [foco, setFoco] = useState(null)
+  const [focoBruto, setFoco] = useState(null)
   const vals = pontos.map((p) => p.valor)
   const validos = vals.filter((x) => x != null)
   if (pontos.length < 2 || !validos.length) return <div className="pg-des-tend vazia" aria-hidden="true" />
@@ -107,6 +107,8 @@ function Tendencia({ pontos, rotulo, unidade, formato = formatar, hoje }) {
   })
   if (ini != null) area += `L${x(vals.length - 1)},${A}L${x(ini)},${A}Z`
   const ultimo = vals.findLastIndex((val) => val != null)
+  // o ponto em foco só vale se ainda existe na série: o período pode mudar com o ponteiro parado em cima
+  const foco = focoBruto != null && focoBruto < pontos.length ? focoBruto : null
   const i = foco ?? ultimo
   const p = pontos[i]
   const qual = (val) => (val == null ? 'sem visita' : unidade ? `${formatar(val)} ${val === 1 ? unidade[0] : unidade[1]}` : formato(val))

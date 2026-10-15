@@ -269,6 +269,8 @@ cartão do contato e o flutuante); no app: `src/components/LinkSuporte.jsx`.
 
 ## SEO: onde mora e como chega no Google
 
+> **HTML estático em todas as páginas públicas (3.16).** Até a 3.15 só o guia de salões escrevia o corpo da página dentro de `<div id="root">` no build. O resto do site (home, páginas de produto, blog, institucionais, termos) saía só com as metas: antes de rodar o JavaScript, o Google via dezenas de páginas "iguais", a mesma casca vazia. Foi assim que dois artigos viraram "Cópia, o Google e o usuário selecionaram uma página canônica diferente" e 24 páginas ficaram "Detectada, mas não indexada". Agora `scripts/site-estatico.mjs` escreve o texto de verdade de cada página (o Markdown dos artigos e dos termos com a mesma gramática do app, as seções das páginas de produto, as listas do blog, os planos) e um rodapé com a malha interna (Soluções, Para profissionais, MIMO, cidades do guia) em todas as páginas, inclusive nas centenas do guia; um `<style>` pequeno deixa esse texto legível no instante antes de o app montar. O app continua trocando o corpo ao abrir.
+
 > **Canônica (3.15.1).** O `index.html` do app (a casca que atende `/entrar`, `/cliente`, `/plataforma` e qualquer endereço sem página própria, inclusive erros de digitação e maiúsculas) leva `noindex` por padrão: ele saía com o título e o `og:url` da home, e o Search Console passou a apontar "Duplicada, o Google escolheu uma canônica diferente". O build troca a tag por `index, follow` em cada página pública gerada, e o `useSeo` faz o mesmo ao navegar dentro do app. O Caddy também passou a mandar `/x/` para `/x` com 301 (as duas abriam a mesma página).
 
 ### A regra da casa (3.3): tudo que é página pública se edita na Plataforma

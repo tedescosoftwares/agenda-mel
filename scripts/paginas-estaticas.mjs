@@ -20,10 +20,14 @@ import path from 'node:path'
 import { ARTIGOS, CATEGORIAS } from '../src/conteudo/artigos.js'
 import { PAGINAS_SEO, PAGINAS_INSTITUCIONAIS } from '../src/conteudo/paginasSeo.js'
 import { TITULO as TITULO_HOME, DESCRICAO as DESCRICAO_HOME, jsonLdDaHome } from '../src/conteudo/home.js'
-import { mesclarPagina } from '../src/lib/paginas.js'
+import { mesclarPagina, mesclarConteudo, HUB_AUTONOMA } from '../src/lib/paginas.js'
 import { paginasDoGuia } from './guia-estatico.mjs'
 import { cidadeDoArtigo } from '../src/lib/guiaArtigos.js'
 import { categoriaDoGuia, rotaDaCidade, rotaDaCategoria, SLUGS_CATEGORIA } from '../src/lib/guia.js'
+import { FAQ as HOME_FAQ } from '../src/conteudo/home.js'
+import { DOCUMENTOS_LEGAIS } from '../src/conteudo/legal.js'
+import { TIPOS_LEGAIS } from '../packages/core/legal.js'
+import { corpoDoArtigo, corpoDoBlog, corpoDaPaginaSeo, corpoDePlanos, corpoDeSobre, corpoDeContato, corpoDeTermos, corpoLegal, corpoDaHome, rodapeEstatico, ESTILO_PRE_APP } from './site-estatico.mjs'
 
 const SITE = 'https://mimo.com.vc'
 const DIST = path.resolve('dist')
@@ -87,8 +91,12 @@ function html(pagina) {
     const ld = `<script type="application/ld+json" id="seo-jsonld">${JSON.stringify(pagina.jsonLd).replace(/</g, '\\u003c')}</script>`
     h = h.replace('</head>', `    ${ld}\n  </head>`)
   }
-  // o guia de salões leva o corpo já escrito (escapado em guia-estatico.mjs): o React troca ao abrir
-  if (pagina.corpo) h = h.replace('<div id="root"></div>', `<div id="root">${pagina.corpo}</div>`)
+  // o corpo já escrito (guia-estatico.mjs e site-estatico.mjs, tudo escapado) e o rodapé com a
+  // malha interna: o robô lê sem JavaScript; o React troca ao abrir
+  if (pagina.corpo) {
+    h = h.replace('<div id="root"></div>', `<div id="root">${pagina.corpo}${rodape}</div>`)
+    h = h.replace('</head>', `    ${ESTILO_PRE_APP}\n  </head>`)
+  }
   return h
 }
 
@@ -111,6 +119,14 @@ for (const p of PAGINAS_SEO) {
 const categorias = new Map(CATEGORIAS.map((c) => [c.slug, c.nome]))
 // os artigos publicados (do código e, depois, do banco) para o guia: "Leia também" e a caixa "Salões em <Cidade>" (3.14)
 const artigosParaGuia = new Map(ARTIGOS.map((a) => [a.slug, { slug: a.slug, title: a.titulo, excerpt: a.resumo }]))
+// os artigos inteiros, as categorias e o miolo das institucionais: o corpo estático de cada página (3.16)
+const minutos = (t) => Math.max(1, Math.round(String(t || '').split(/\s+/).filter(Boolean).length / 200))
+const categoriasInfo = new Map(CATEGORIAS.map((c) => [c.slug, { slug: c.slug, nome: c.nome, descricao: c.descricao ?? '' }]))
+const artigosCompletos = new Map(ARTIGOS.map((a) => { const c = CATEGORIAS.find((x) => x.slug === a.categoria); return [a.slug, { slug: a.slug, titulo: a.titulo, resumo: a.resumo, conteudo: a.conteudo, categoria: c ? { slug: c.slug, nome: c.nome } : null, autor: a.autor, publicado_em: a.publicado_em, minutos: minutos(a.conteudo), produto_url: a.produto, produto_rotulo: a.produto_rotulo, relacionados: a.relacionados ?? [], caixa: a.caixa, faq: a.faq ?? [], noindex: false }] }))
+const conteudoInst = new Map(PAGINAS_INSTITUCIONAIS.map((p) => [p.rota, { ...(p.conteudo || {}) }]))
+let docsLegais = Object.fromEntries(TIPOS_LEGAIS.map((t) => [t.tipo, { tipo: t.tipo, ...DOCUMENTOS_LEGAIS[t.tipo] }]))
+let guiaDados = null
+let rodape = ''
 for (const a of ARTIGOS) {
   const cat = CATEGORIAS.find((c) => c.slug === a.categoria)
   const pg = { caminho: `/blog/${a.slug}`, titulo: a.seo_title, descricao: a.meta_description, imagem: `${SITE}/imagens/${a.foto}-1400.webp`, tipo: 'article', atualizado: a.atualizado_em || a.publicado_em }
@@ -132,14 +148,15 @@ if (URL && CHAVE && !globalThis.process.env.VITE_DEMO) {
   try {
     const [pags, posts, cats] = await Promise.all([
       pegar('seo_pages?select=route,page_type,title,seo_title,meta_description,og_image_url,robots_index,updated_at,conteudo&status=eq.published'),
-      pegar('blog_posts?select=slug,seo_title,title,meta_description,excerpt,og_image_url,cover_image_url,robots_index,published_at,updated_at,author_name,faq,blog_categories(slug,name)&status=eq.published'),
-      pegar('blog_categories?select=slug,name'),
+      pegar('blog_posts?select=slug,seo_title,title,meta_description,excerpt,og_image_url,cover_image_url,robots_index,published_at,updated_at,author_name,faq,content,produto_url,produto_rotulo,relacionados,caixa,reading_time_minutes,blog_categories(slug,name)&status=eq.published'),
+      pegar('blog_categories?select=slug,name,description'),
     ])
-    for (const c of cats) if (c?.slug) categorias.set(c.slug, c.name || c.slug)
+    for (const c of cats) if (c?.slug) { categorias.set(c.slug, c.name || c.slug); categoriasInfo.set(c.slug, { slug: c.slug, nome: c.name || c.slug, descricao: c.description ?? '' }) }
     let ignoradas = 0, novas = 0
     for (const p of pags) {
-      if (p.route === '/') { homeDoBanco = p; continue }
+      if (p.route === '/') { homeDoBanco = p; conteudoInst.set('/', mesclarConteudo(conteudoInst.get('/'), p)); continue }
       let pg = conhecida.get(p.route)
+      if (pg && !pg.seo && conteudoInst.has(p.route)) conteudoInst.set(p.route, mesclarConteudo(conteudoInst.get(p.route), p))
       if (!pg) {
         // rota que o código não conhece: página criada na Plataforma (vira página) ou sobra (ignora)
         const nova = p.page_type === 'SEO_LANDING' ? mesclarPagina(null, p) : null
@@ -169,7 +186,16 @@ if (URL && CHAVE && !globalThis.process.env.VITE_DEMO) {
       if (i >= 0) paginas[i] = pg; else registrar(pg)
       if (cat && !categorias.has(cat.slug)) categorias.set(cat.slug, cat.nome)
       if (a.robots_index !== false) artigosParaGuia.set(a.slug, { slug: a.slug, title: a.title, excerpt: a.excerpt })
+      artigosCompletos.set(a.slug, { slug: a.slug, titulo: a.title, resumo: a.excerpt, conteudo: a.content, categoria: cat, autor: a.author_name, publicado_em: a.published_at, minutos: a.reading_time_minutes || minutos(a.content), produto_url: a.produto_url, produto_rotulo: a.produto_rotulo, relacionados: Array.isArray(a.relacionados) ? a.relacionados : [], caixa: a.caixa, faq, noindex: a.robots_index === false })
     }
+    // os termos publicados na Plataforma (120); sem eles, a versão do código
+    try {
+      const r = await fetch(`${URL}/rest/v1/rpc/documentos_vigentes`, { method: 'POST', headers: { apikey: CHAVE, Authorization: `Bearer ${CHAVE}`, 'Content-Type': 'application/json' }, body: '{}' })
+      const vindos = r.ok ? await r.json() : null
+      if (vindos && typeof vindos === 'object' && !Array.isArray(vindos)) {
+        for (const t of TIPOS_LEGAIS) { const v = vindos[t.tipo]; if (v?.conteudo) docsLegais[t.tipo] = { tipo: t.tipo, titulo: v.titulo || DOCUMENTOS_LEGAIS[t.tipo].titulo, versao: v.versao, conteudo: v.conteudo, publicado_em: v.publicado_em } }
+      }
+    } catch { /* fica a versão do código */ }
     // com todas as páginas na mesa (inclusive as da Plataforma), o pai das migalhas fecha
     for (const pg of paginas) if (pg.seo) pg.jsonLd = ldDaPaginaSeo(pg, pg.seo)
     console.log(`paginas-estaticas: ${pags.length} páginas e ${posts.length} artigos lidos do banco${novas ? `, ${novas} página(s) criada(s) na Plataforma` : ''}${ignoradas ? ` (${ignoradas} rota(s) do banco sem tela, ignoradas)` : ''}`)
@@ -181,23 +207,10 @@ if (URL && CHAVE && !globalThis.process.env.VITE_DEMO) {
     const r = await fetch(`${URL}/rest/v1/rpc/guia_publicadas`, { headers: { apikey: CHAVE, Authorization: `Bearer ${CHAVE}` } })
     if (!r.ok) throw new Error(`${r.status} em rpc/guia_publicadas`)
     const guia = await r.json()
+    guiaDados = guia
     const doGuia = paginasDoGuia(guia, [...artigosParaGuia.values()])
     for (const pg of doGuia) registrar(pg)
     console.log(`paginas-estaticas: guia de salões com ${doGuia.length} página(s)`)
-    // o artigo que fala de uma cidade do guia ganha, no HTML estático, a caixa "Salões em <Cidade>" (o app a desenha também)
-    const cidadesDoGuia = Array.isArray(guia?.cidades) ? guia.cidades : []
-    const lugaresDoGuia = Array.isArray(guia?.lugares) ? guia.lugares : []
-    let comCaixa = 0
-    for (const pg of paginas) {
-      if (pg.tipo !== 'article' || pg.corpo) continue
-      const a = artigosParaGuia.get(pg.caminho.replace(/^\/blog\//, ''))
-      const c = a && cidadeDoArtigo(a, cidadesDoGuia)
-      if (!c) continue
-      const cats = SLUGS_CATEGORIA.filter((s) => lugaresDoGuia.some((l) => l.cidade_slug === c.cidade_slug && l.categoria === s))
-      pg.corpo = `<main><h1>${esc(a.title)}</h1>${a.excerpt ? `<p>${esc(a.excerpt)}</p>` : ''}<nav aria-label="${esc(`Salões em ${c.cidade}`)}"><h2>${esc(`Salões em ${c.cidade}`)}</h2><ul><li><a href="${esc(rotaDaCidade(c.cidade_slug))}">${esc(`Guia de salões em ${c.cidade}`)}</a> (${c.total})</li>${cats.map((s) => `<li><a href="${esc(rotaDaCategoria(c.cidade_slug, s))}">${esc(`${categoriaDoGuia(s).rotulo} em ${c.cidade}`)}</a></li>`).join('')}</ul></nav></main>`
-      comCaixa++
-    }
-    if (comCaixa) console.log(`paginas-estaticas: ${comCaixa} artigo(s) de cidade com a caixa do guia`)
   } catch (e) {
     console.log('paginas-estaticas: guia de salões indisponível (' + e.message + '), seguindo sem ele')
   }
@@ -210,6 +223,55 @@ for (const slug of usadas) {
   pg.jsonLd = { '@context': 'https://schema.org', '@graph': [ORG, migalhas([['Início', '/'], ['Blog', '/blog'], [nome, pg.caminho]]), webPage(pg)] }
   registrar(pg)
 }
+
+// ---- 2b. o corpo estático de cada página (3.16) -------------------------------------
+// o rodapé com a malha interna: as páginas de produto (código e Plataforma), as institucionais e as cidades do guia
+const todasSeo = [...seoPorRota.values()].filter((p) => p && p.rota)
+const ordenar = (l) => [...l].sort((a, b) => (a.ordem ?? 100) - (b.ordem ?? 100))
+rodape = rodapeEstatico({
+  solucoes: ordenar(todasSeo.filter((p) => p.rodapeMostrar !== false && p.tipo !== 'profissao' && p.rota !== HUB_AUTONOMA)),
+  profissionais: ordenar(todasSeo.filter((p) => p.rodapeMostrar !== false && (p.tipo === 'profissao' || p.rota === HUB_AUTONOMA))),
+  cidades: Array.isArray(guiaDados?.cidades) ? guiaDados.cidades : [],
+})
+const listaBlog = [...artigosCompletos.values()].filter((a) => !a.noindex).sort((a, b) => String(b.publicado_em ?? '').localeCompare(String(a.publicado_em ?? '')))
+const catsComArtigo = [...categoriasInfo.values()].filter((c) => listaBlog.some((a) => a.categoria?.slug === c.slug))
+const cidadesDoGuia = Array.isArray(guiaDados?.cidades) ? guiaDados.cidades : []
+const lugaresDoGuia = Array.isArray(guiaDados?.lugares) ? guiaDados.lugares : []
+// o artigo que fala de uma cidade do guia ganha a caixa "Salões em <Cidade>" (o app a desenha também)
+function caixaDaCidade(a) {
+  const c = cidadeDoArtigo({ slug: a.slug, title: a.titulo }, cidadesDoGuia)
+  if (!c) return ''
+  const cats = SLUGS_CATEGORIA.filter((s) => lugaresDoGuia.some((l) => l.cidade_slug === c.cidade_slug && l.categoria === s))
+  return `<nav aria-label="${esc(`Salões em ${c.cidade}`)}"><h2>${esc(`Salões em ${c.cidade}`)}</h2><ul><li><a href="${esc(rotaDaCidade(c.cidade_slug))}">${esc(`Guia de salões em ${c.cidade}`)}</a> (${c.total})</li>${cats.map((s) => `<li><a href="${esc(rotaDaCategoria(c.cidade_slug, s))}">${esc(`${categoriaDoGuia(s).rotulo} em ${c.cidade}`)}</a></li>`).join('')}</ul></nav>`
+}
+let comCorpo = 0, comCaixa = 0
+for (const pg of paginas) {
+  if (pg.corpo) { comCorpo++; continue } // o guia já veio pronto
+  const rota = pg.caminho
+  if (pg.tipo === 'article') {
+    const a = artigosCompletos.get(rota.replace(/^\/blog\//, ''))
+    if (!a) continue
+    const caixa = caixaDaCidade(a)
+    if (caixa) comCaixa++
+    pg.corpo = corpoDoArtigo({ ...a, relacionados: a.relacionados.map((slug) => artigosCompletos.get(slug)).filter(Boolean) }, { caixaGuia: caixa })
+  } else if (pg.seo) {
+    pg.corpo = corpoDaPaginaSeo(pg.seo, { pai: pg.seo.pai ? seoPorRota.get(pg.seo.pai) : null, relacionadas: (pg.seo.relacionadas ?? []).map((r) => seoPorRota.get(r)).filter(Boolean), artigos: (pg.seo.artigos ?? []).map((slug) => artigosCompletos.get(slug)).filter(Boolean) })
+  } else if (rota === '/blog') {
+    pg.corpo = corpoDoBlog({ cabeca: conteudoInst.get('/blog'), artigos: listaBlog, categorias: catsComArtigo })
+  } else if (rota.startsWith('/blog/categoria/')) {
+    const slug = rota.slice('/blog/categoria/'.length)
+    pg.corpo = corpoDoBlog({ cabeca: conteudoInst.get('/blog'), artigos: listaBlog.filter((a) => a.categoria?.slug === slug), categoria: categoriasInfo.get(slug) ?? { slug, nome: categorias.get(slug) || slug, descricao: '' }, categorias: catsComArtigo })
+  } else if (rota === '/planos') pg.corpo = corpoDePlanos(conteudoInst.get('/planos'))
+  else if (rota === '/sobre') pg.corpo = corpoDeSobre(conteudoInst.get('/sobre'))
+  else if (rota === '/contato') pg.corpo = corpoDeContato(conteudoInst.get('/contato'))
+  else if (rota === '/termos') pg.corpo = corpoDeTermos(TIPOS_LEGAIS, docsLegais)
+  else {
+    const t = TIPOS_LEGAIS.find((x) => x.rota === rota)
+    if (t && docsLegais[t.tipo]) pg.corpo = corpoLegal(t, docsLegais[t.tipo])
+  }
+  if (pg.corpo) comCorpo++
+}
+console.log(`paginas-estaticas: corpo estático em ${comCorpo} de ${paginas.length} páginas${comCaixa ? `, ${comCaixa} artigo(s) de cidade com a caixa do guia` : ''}`)
 
 // ---- 3. grava -------------------------------------------------------------
 // /saloes e /blog são inteiramente deste script: limpar antes tira a página de um
@@ -228,7 +290,8 @@ for (const p of paginas) {
   }
 }
 // a home: canonical e dados estruturados só para "/", num arquivo próprio
-fs.writeFileSync(path.join(DIST, '_home.html'), html({ caminho: '/', titulo: homeDoBanco?.seo_title || TITULO_HOME, descricao: homeDoBanco?.meta_description || DESCRICAO_HOME, imagem: homeDoBanco?.og_image_url, atualizado: dia(homeDoBanco?.updated_at) || DATA_PADRAO, jsonLd: jsonLdDaHome(homeDoBanco?.conteudo?.faq) }))
+const faqDaHome = Array.isArray(homeDoBanco?.conteudo?.faq) && homeDoBanco.conteudo.faq.length ? homeDoBanco.conteudo.faq : HOME_FAQ
+fs.writeFileSync(path.join(DIST, '_home.html'), html({ caminho: '/', titulo: homeDoBanco?.seo_title || TITULO_HOME, descricao: homeDoBanco?.meta_description || DESCRICAO_HOME, imagem: homeDoBanco?.og_image_url, atualizado: dia(homeDoBanco?.updated_at) || DATA_PADRAO, jsonLd: jsonLdDaHome(homeDoBanco?.conteudo?.faq), corpo: corpoDaHome(conteudoInst.get('/'), faqDaHome) }))
 
 const urls = [{ caminho: '/', atualizado: DATA_PADRAO, prioridade: '1.0', freq: 'weekly' }, ...paginas.filter((p) => !p.noindex)]
   .map((p) => `  <url><loc>${SITE}${p.caminho}</loc>${p.atualizado ? `<lastmod>${p.atualizado}</lastmod>` : ''}<changefreq>${p.freq || (p.tipo === 'article' ? 'monthly' : 'weekly')}</changefreq><priority>${p.prioridade || (p.seo ? '0.9' : p.tipo === 'article' ? '0.7' : '0.5')}</priority></url>`)

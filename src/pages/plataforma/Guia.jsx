@@ -8,6 +8,7 @@ import { montarConteudo, contextoDaCidade } from '../../lib/guiaTexto'
 import Revisar from '../../components/plataforma/guia/Revisar'
 import Publicadas from '../../components/plataforma/guia/Publicadas'
 import Importar from '../../components/plataforma/guia/Importar'
+import ImportarFotos from '../../components/plataforma/guia/ImportarFotos'
 import PaginasCidade from '../../components/plataforma/guia/PaginasCidade'
 import Interesses from '../../components/plataforma/guia/Interesses'
 import Desempenho from '../../components/plataforma/guia/Desempenho'
@@ -40,7 +41,7 @@ const ABAS = [
 ]
 
 // só o que a tela usa: origem (o CSV cru) e as coordenadas ficam no banco
-const COLUNAS_LUGAR = 'id, cidade, cidade_slug, uf, slug, categoria, nome, bairro, endereco, cep, telefone, whatsapp, instagram, site, horarios, servicos, atributos, place_id, cnpj, validado_receita, selecao, nota, avaliacoes, fontes, conteudo, rascunho, status, motivo, salon_id, gerado_em, publicado_em, criado_em, atualizado_em'
+const COLUNAS_LUGAR = 'id, cidade, cidade_slug, uf, slug, categoria, nome, bairro, endereco, cep, telefone, whatsapp, instagram, site, horarios, servicos, atributos, place_id, cnpj, validado_receita, selecao, nota, avaliacoes, fontes, origem, fotos, conteudo, rascunho, status, motivo, salon_id, gerado_em, publicado_em, criado_em, atualizado_em'
 
 // a fase de um salão na fila de revisão (o filtro "status" da aba Revisar)
 //   gerar      ainda sem página (nem montada nem da IA)
@@ -454,7 +455,7 @@ export default function Guia() {
       {aba === 'desempenho' && <Desempenho g={g} />}
       {aba === 'abordagem' && <Abordagem g={g} />}
       {aba === 'publicadas' && <Publicadas g={g} />}
-      {aba === 'importar' && <Importar g={g} />}
+      {aba === 'importar' && <><Importar g={g} /><ImportarFotos g={g} /></>}
       {aba === 'paginas' && <PaginasCidade g={g} />}
       {aba === 'interesses' && <Interesses g={g} />}
 

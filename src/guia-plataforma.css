@@ -448,3 +448,20 @@
 .pg-foto-mais { display: grid; place-items: center; align-content: center; gap: 6px; min-height: 132px; border: 1.5px dashed #d9cfe0; border-radius: 12px; color: #6b6472; font-size: 0.82rem; cursor: pointer; }
 .pg-foto-mais:hover { border-color: #ff2d7a; color: #3d0c4e; }
 .pg-foto-mais input { display: none; }
+
+/* ---- fotos em lote (3.14.1) ---- */
+.pg-fotos-lote { margin-top: 1rem; }
+.pg-fl-grade { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; align-items: stretch; }
+.pg-fl-soltar { padding: 1.1rem 0.9rem; }
+.pg-fl-soltar span { font-size: 0.78rem; }
+.pg-fl-arquivos { grid-column: 1 / -1; justify-self: end; font-size: 0.8rem; color: var(--rosa); cursor: pointer; text-decoration: underline; text-decoration-color: #ffc2d8; }
+.pg-fl-arquivos input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.pg-fl-acoes { display: flex; align-items: center; gap: 0.8rem; margin-top: 0.8rem; }
+.pg-fl-previa { margin-top: 0.8rem; }
+.pg-fl-nums { flex-wrap: wrap; }
+.pg-fl-nums .pg-fl-aviso b { color: #b4233f; }
+.pg-fl-declaracao { margin-top: 0.6rem; padding: 0.7rem 0.8rem; border: 1px solid #ffc2d8; border-radius: 10px; background: #fff8fb; }
+.pg-fl-tabela { margin-top: 0.6rem; }
+.pg-fl-tabela tr.ruim td { background: #fff5f5; }
+.pg-fl-tabela td svg { vertical-align: -2px; margin-right: 4px; }
+@media (max-width: 700px) { .pg-fl-grade { grid-template-columns: 1fr; } }

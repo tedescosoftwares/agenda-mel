@@ -4,8 +4,7 @@ import { useDialogo } from '../../../context/DialogoContext'
 import { PreviaGoogle } from './Previa'
 import { GUIA_CATEGORIAS, conteudoSeguro, telefoneBonito, canaisDoSite, rotaDoLugar } from '../../../lib/guia'
 import { seoDoLugar } from '../../../lib/guiaSeo'
-import { reduzirFoto } from '../../../lib/imagem'
-import { supabase, isDemo } from '../../../lib/supabase'
+import { enviarFotoDoGuia, MAX_FOTOS } from '../../../lib/guiaFotos'
 import { X, Plus, Trash2, FileText, Store, LoaderCircle, ImagePlus, ChevronLeft, ChevronRight } from 'lucide-react'
 
 // Editar um salão: os fatos (gravados com fontes[campo] = 'manual', para a
@@ -14,9 +13,6 @@ import { X, Plus, Trash2, FileText, Store, LoaderCircle, ImagePlus, ChevronLeft,
 // a primeira é a capa) e o texto da página (gravado no rascunho: o que está
 // no ar só muda quando aprovar).
 
-const MAX_FOTOS = 8
-// no demo não há storage: a foto "enviada" vira uma das imagens do site
-const FOTOS_DEMO = ['/imagens/salao-1400.webp', '/imagens/profissional-1400.webp', '/imagens/cliente-1400.webp', '/imagens/equipe-1400.webp']
 
 const FATOS = ['nome', 'categoria', 'bairro', 'endereco', 'cep', 'telefone', 'whatsapp', 'instagram', 'site', 'servicos', 'selecao', 'salon_id']
 // os campos que a importação mexe (são os que ganham a marca de "manual")
@@ -127,21 +123,17 @@ export default function EditarLugar({ lugar, g, onFechar }) {
   const setLista = (k, i, v) => setTexto((t) => ({ ...t, [k]: t[k].map((x, j) => (j === i ? v : x)) }))
   const tirar = (k, i) => setTexto((t) => ({ ...t, [k]: t[k].filter((_, j) => j !== i) }))
 
-  // as fotos: reduzidas aqui (1600 px no lado maior, JPEG) e enviadas ao bucket 'guia'
+  // as fotos: reduzidas e enviadas ao bucket 'guia' pelo mesmo caminho da importação em lote (lib/guiaFotos.js)
   async function enviarFotos(e) {
     const arquivos = [...(e.target.files ?? [])].slice(0, MAX_FOTOS - fotos.length)
     e.target.value = ''
     if (!arquivos.length) return
     setEnviando(true); setErro('')
     const novas = []
-    for (const [i, f] of arquivos.entries()) {
+    for (const f of arquivos) {
       try {
-        const { blob } = await reduzirFoto(f, { max: 1600, qualidade: 0.84 })
-        if (isDemo) { novas.push(FOTOS_DEMO[(fotos.length + i) % FOTOS_DEMO.length]); continue }
-        const caminho = `${lugar.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`
-        const { error } = await supabase.storage.from('guia').upload(caminho, blob, { contentType: 'image/jpeg', cacheControl: '31536000', upsert: false })
-        if (error) throw new Error(error.message)
-        novas.push(supabase.storage.from('guia').getPublicUrl(caminho).data.publicUrl)
+        const { url } = await enviarFotoDoGuia(lugar.id, f)
+        novas.push(url)
       } catch (err) {
         setErro(`${f.name}: ${err.message}`)
       }

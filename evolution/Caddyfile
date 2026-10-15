@@ -77,6 +77,11 @@
 	redir /agenda-online-para-salao-de-beleza /agenda-para-salao-de-beleza permanent
 	redir /software-para-salao-de-beleza /sistema-para-salao-de-beleza permanent
 	redir /landing / permanent
+	# /saloes/itanhaem/ e /saloes/itanhaem eram a mesma página em dois endereços
+	# (o try_files acha {path}/index.html nos dois): um só, sem a barra, para o
+	# Google não ver duplicata. A raiz (/) fica de fora.
+	@barra path_regexp barra ^(.+)/$
+	redir @barra {re.barra.1} permanent
 
 	# a home tem um index.html próprio (dist/_home.html, gerado no build) com
 	# canonical e dados estruturados; o index.html comum continua sendo o do

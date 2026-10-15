@@ -12,6 +12,10 @@
     <meta property="og:title" content="MIMO | Agenda, clientes e equipe para negócios de beleza" />
     <meta property="og:description" content="Organize agenda, equipe, clientes e relacionamento num só lugar. Para salões e profissionais autônomas. Autônoma grátis." />
     <meta property="og:url" content="https://mimo.com.vc/" />
+    <!-- este arquivo é a casca do app: atende /entrar, /cliente, /plataforma e qualquer endereço sem página própria.
+         Não é página para o Google: noindex. O build (scripts/paginas-estaticas.mjs) troca esta tag por "index, follow"
+         em cada página pública gerada, e o useSeo (src/lib/seo.js) faz o mesmo ao navegar dentro do app. -->
+    <meta name="robots" content="noindex, nofollow" />
     <meta property="og:image" content="https://mimo.com.vc/og-mimo.png" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="MIMO | Sistema para salão de beleza" />

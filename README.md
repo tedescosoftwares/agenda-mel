@@ -269,6 +269,8 @@ cartão do contato e o flutuante); no app: `src/components/LinkSuporte.jsx`.
 
 ## SEO: onde mora e como chega no Google
 
+> **Canônica (3.15.1).** O `index.html` do app (a casca que atende `/entrar`, `/cliente`, `/plataforma` e qualquer endereço sem página própria, inclusive erros de digitação e maiúsculas) leva `noindex` por padrão: ele saía com o título e o `og:url` da home, e o Search Console passou a apontar "Duplicada, o Google escolheu uma canônica diferente". O build troca a tag por `index, follow` em cada página pública gerada, e o `useSeo` faz o mesmo ao navegar dentro do app. O Caddy também passou a mandar `/x/` para `/x` com 301 (as duas abriam a mesma página).
+
 ### A regra da casa (3.3): tudo que é página pública se edita na Plataforma
 
 O código é a reserva e o modelo; o banco manda. Em Plataforma → SEO e

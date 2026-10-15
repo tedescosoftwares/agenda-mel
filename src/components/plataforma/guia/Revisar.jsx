@@ -3,7 +3,7 @@ import Portal from '../../Portal'
 import { Pilula, haQuanto } from '../Pecas'
 import { MolduraPrevia, PreviaGoogle } from './Previa'
 import EditarLugar from './Editar'
-import { GUIA_CATEGORIAS, categoriaDoGuia, conteudoSeguro, semAcento, rotaDoLugar } from '../../../lib/guia'
+import { GUIA_CATEGORIAS, categoriaDoGuia, conteudoSeguro, semAcento, rotaDoLugar, fotosDoLugar, ordemPublica, partesDosPontos } from '../../../lib/guia'
 import { seoDoLugar } from '../../../lib/guiaSeo'
 import { dadosDaPagina } from '../../../lib/guiaTexto'
 import { urlDoAmbiente } from '../../../lib/ambiente'
@@ -42,7 +42,11 @@ const TRIAGENS = [
   ['poucas', 'Menos de 10 avaliações', (l) => l.nota != null && (l.avaliacoes ?? 0) < 10],
   ['baixa', 'Nota abaixo de 4,5', (l) => l.nota != null && l.nota < 4.5 && (l.avaliacoes ?? 0) >= 10],
   ['sem', 'Sem nota no Google', (l) => l.nota == null],
+  ['sem_foto', 'Sem foto na página', (l) => fotosDoLugar(l).length === 0],
+  ['com_foto', 'Com foto na página', (l) => fotosDoLugar(l).length > 0],
 ]
+const nFotos = (l) => fotosDoLugar(l).length
+const pontosBr = (n) => n.toFixed(2).replace('.', ',')
 const nota = (n) => String(n).replace('.', ',')
 function tomDaNota(l) {
   if (l.nota == null) return 'cinza'
@@ -63,6 +67,10 @@ function ordenar(lista, ordem) {
     recentes: (a, b) => String(b.gerado_em ?? b.atualizado_em ?? '').localeCompare(String(a.gerado_em ?? a.atualizado_em ?? '')) || nome(a, b),
     avaliacoes: (a, b) => ((b.avaliacoes ?? -1) - (a.avaliacoes ?? -1)) || ((b.nota ?? -1) - (a.nota ?? -1)) || nome(a, b),
     nota: (a, b) => ((b.nota ?? -1) - (a.nota ?? -1)) || ((b.avaliacoes ?? -1) - (a.avaliacoes ?? -1)) || nome(a, b),
+    // 3.17: pelas fotos da página (mais primeiro, ou quem não tem primeiro) e a ordem que o site usa
+    fotos: (a, b) => nFotos(b) - nFotos(a) || porOrdem.selecao(a, b),
+    sem_foto: (a, b) => nFotos(a) - nFotos(b) || porOrdem.selecao(a, b),
+    site: ordemPublica,
   }
   return [...lista].sort(porOrdem[ordem] ?? porOrdem.selecao)
 }
@@ -347,6 +355,9 @@ export default function Revisar({ g, rev, setRev }) {
               <option value="recentes">Recentes</option>
               <option value="avaliacoes">Mais avaliações</option>
               <option value="nota">Melhor nota</option>
+              <option value="fotos">Mais fotos</option>
+              <option value="sem_foto">Sem foto 1º</option>
+              <option value="site">Ordem do site</option>
             </select>
           </div>
           <div className="pg-fila-linha">
@@ -389,6 +400,7 @@ export default function Revisar({ g, rev, setRev }) {
                 <span className="pg-item-sub">
                   <span>{[l.bairro, categoriaDoGuia(l.categoria).curto].filter(Boolean).join(' · ')}</span>
                   {l.nota != null && <span className={'pg-item-nota ' + tomDaNota(l)} title={`Google: ${nota(l.nota)} com ${l.avaliacoes ?? 0} avaliações (só para a triagem)`}>★ {nota(l.nota)} · {l.avaliacoes ?? 0}</span>}
+                  <span className={'pg-item-fotos' + (nFotos(l) ? '' : ' sem')} title={nFotos(l) ? `${nFotos(l)} ${nFotos(l) === 1 ? 'foto' : 'fotos'} na página` : 'sem foto no guia'}>{nFotos(l) ? `${nFotos(l)} ${nFotos(l) === 1 ? 'foto' : 'fotos'}` : 'sem foto'}</span>
                   {l.selecao && <Star size={12} className="pg-selo-sel" aria-label="Seleção MIMO" />}
                   {l.validado_receita && <ShieldCheck size={12} className="pg-selo-rf" aria-label="Validado na Receita" />}
                 </span>
@@ -550,6 +562,7 @@ function Detalhes({ l, conteudo, g }) {
       <div className={'pg-triagem ' + tomDaNota(l)}>
         <b>{l.nota != null ? `★ ${nota(l.nota)}` : 'Sem nota'}</b>
         <span>{l.nota != null ? `${l.avaliacoes ?? 0} avaliações no Google` : 'no Google'} · triagem, nunca vai para a página</span>
+        <span className="pg-triagem-pontos" title="A ordem das listas do site (3.17): a nota ajustada pelo número de avaliações mais a foto (ter foto vale 0,4; cada foto a mais, 0,05, até 3 a mais). Quem está na MIMO e a Seleção vêm antes.">· {pontosBr(partesDosPontos(l).total)} pontos na ordem do site ({pontosBr(partesDosPontos(l).nota)} da nota{partesDosPontos(l).foto ? ` + ${pontosBr(partesDosPontos(l).foto)} da foto` : ', sem foto'})</span>
         {l.place_id && <a className="plat-link" href={`https://www.google.com/maps/place/?q=place_id:${encodeURIComponent(l.place_id)}`} target="_blank" rel="noopener noreferrer">ver no Maps <ExternalLink size={12} /></a>}
       </div>
       <PreviaGoogle titulo={seo.titulo} descricao={seo.descricao} caminho={seo.caminho} tituloBruto={c?.seo_title || seo.titulo} descricaoBruta={c?.meta_description || seo.descricao} />

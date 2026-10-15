@@ -654,3 +654,34 @@ export function altDaFoto(l, i = 0) {
   const onde = [l?.bairro, l?.cidade].filter(Boolean).join(', ')
   return `${l?.nome ?? 'Salão'}: ${cat.curto.toLowerCase()}${onde ? ` em ${onde}` : ''}${i > 0 ? ` (foto ${i + 1})` : ''}`
 }
+
+// ---- a ordem das listas públicas (3.17) -----------------------------------------
+// Quem já agenda pela MIMO vem primeiro, depois a Seleção MIMO; entre os demais,
+// os pontos: a nota do Google puxada para 4,5 quando há poucas avaliações (como
+// se houvesse 8 avaliações de 4,5 a mais) e a foto (ter foto vale 0,4; cada foto
+// a mais, 0,05, até 3 a mais). Desempate: mais avaliações, depois o nome. A nota
+// continua sem ir para a página: só a ordem muda. É a mesma conta de guia_pontos()
+// no banco (migração 166): mexeu numa, mexa na outra (t_166.sql confere as duas).
+export const PONTOS = { notaBase: 4.5, pesoBase: 8, foto: 0.4, fotoExtra: 0.05, fotosExtras: 3 }
+export function pontosDoLugar(l, fotos = fotosDoLugar(l).length) {
+  const temNota = l?.nota != null && l.nota !== ''
+  const a = temNota ? Math.max(0, Number(l.avaliacoes) || 0) : 0
+  const nota = temNota ? (Number(l.nota) * a + PONTOS.notaBase * PONTOS.pesoBase) / (a + PONTOS.pesoBase) : PONTOS.notaBase
+  const bonus = fotos > 0 ? PONTOS.foto + PONTOS.fotoExtra * Math.min(fotos - 1, PONTOS.fotosExtras) : 0
+  return Math.round((nota + bonus) * 1000) / 1000
+}
+// as duas partes, para a Plataforma explicar a ordem: { nota, foto, total }
+export function partesDosPontos(l, fotos = fotosDoLugar(l).length) {
+  const total = pontosDoLugar(l, fotos)
+  const foto = fotos > 0 ? Math.round((PONTOS.foto + PONTOS.fotoExtra * Math.min(fotos - 1, PONTOS.fotosExtras)) * 1000) / 1000 : 0
+  return { nota: Math.round((total - foto) * 1000) / 1000, foto, total }
+}
+// a comparação inteira (MIMO, Seleção, pontos, avaliações, nome). fotosDe: quantas fotos a página
+// mostra (o demo passa as da MIMO para quem está lá; a Plataforma usa as do guia)
+export function ordemPublica(a, b, fotosDe = (l) => fotosDoLugar(l).length) {
+  return (a.na_mimo || a.salon_id ? 0 : 1) - (b.na_mimo || b.salon_id ? 0 : 1)
+    || (b.selecao ? 1 : 0) - (a.selecao ? 1 : 0)
+    || pontosDoLugar(b, fotosDe(b)) - pontosDoLugar(a, fotosDe(a))
+    || (Number(b.avaliacoes) || 0) - (Number(a.avaliacoes) || 0)
+    || String(a.nome).localeCompare(String(b.nome), 'pt-BR')
+}

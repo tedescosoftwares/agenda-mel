@@ -4,7 +4,7 @@
 // (supabase/153_guia_de_saloes.sql) e devolvem a mesma forma, inclusive o
 // que o público NÃO vê (nota, coordenadas e origem só aparecem na tabela,
 // que no demo é a Plataforma quem lê).
-import { categoriaDoGuia, slugificar, conteudoSeguro, horariosEmUmaLinha } from './guia.js'
+import { categoriaDoGuia, slugificar, conteudoSeguro, horariosEmUmaLinha, ordemPublica } from './guia.js'
 import { montarConteudo } from './guiaTexto.js'
 import { chaveDoBairro } from './guiaColecoes.js'
 import { demoDesempenho, demoMapaAcessos, demoEvento as gravarEventoDemo } from './demoMetricas.js'
@@ -276,7 +276,8 @@ function publico(l) {
   }
 }
 const cartao = (l) => ({ slug: l.slug, nome: l.nome, bairro: l.bairro, categoria: l.categoria, resumo: l.conteudo?.resumo ?? null, servicos: (l.servicos ?? []).slice(0, 4), selecao: l.selecao, na_mimo: !!l.salon_id, latitude: l.latitude ?? null, longitude: l.longitude ?? null , foto: fotosDe(l)[0] ?? null })
-const ordemLista = (a, b) => (a.salon_id ? 0 : 1) - (b.salon_id ? 0 : 1) || (b.selecao ? 1 : 0) - (a.selecao ? 1 : 0) || a.nome.localeCompare(b.nome, 'pt-BR')
+// a ordem das listas (3.17): MIMO, Seleção, pontos (nota ajustada + foto), avaliações, nome; a mesma de guia_pontos (166)
+const ordemLista = (a, b) => ordemPublica(a, b, (l) => fotosDe(l).length)
 function vizinhos(l, quantos = 6) {
   const d = (o) => (l.latitude != null && o.latitude != null ? (o.latitude - l.latitude) ** 2 + ((o.longitude - l.longitude) * Math.cos((l.latitude * Math.PI) / 180)) ** 2 : o.bairro === l.bairro ? 0 : 1e9)
   return GUIA_LUGARES.filter((o) => o.cidade_slug === l.cidade_slug && o.id !== l.id && noAr(o)).sort((a, b) => d(a) - d(b) || a.nome.localeCompare(b.nome)).slice(0, quantos).map(cartao)
@@ -343,7 +344,7 @@ export const GUIA_RPC = {
     }
   },
   guia_publicadas: () => ({
-    lugares: GUIA_LUGARES.filter(noAr).map((l) => ({ ...publico(l), vizinhos: vizinhos(l) })),
+    lugares: [...GUIA_LUGARES.filter(noAr)].sort(ordemLista).map((l) => ({ ...publico(l), vizinhos: vizinhos(l) })),
     paginas: GUIA_PAGINAS.filter((p) => p.status === 'publicado' && p.conteudo).map((p) => ({ cidade_slug: p.cidade_slug, categoria: p.categoria, conteudo: p.conteudo, atualizado_em: p.atualizado_em })),
     cidades: cidades(),
   }),

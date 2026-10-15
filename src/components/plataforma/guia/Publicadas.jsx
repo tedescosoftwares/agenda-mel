@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useDialogo } from '../../../context/DialogoContext'
 import { Painel, Pilula, Vazio } from '../Pecas'
 import EditarLugar from './Editar'
-import { GUIA_CATEGORIAS, categoriaDoGuia, rotaDoLugar, semAcento } from '../../../lib/guia'
+import { GUIA_CATEGORIAS, categoriaDoGuia, rotaDoLugar, semAcento, fotosDoLugar, ordemPublica } from '../../../lib/guia'
 import { urlDoAmbiente } from '../../../lib/ambiente'
 import { Globe2, Search, ExternalLink, RefreshCw, Pencil, EyeOff, LoaderCircle, TriangleAlert } from 'lucide-react'
 
@@ -12,19 +12,29 @@ import { Globe2, Search, ExternalLink, RefreshCw, Pencil, EyeOff, LoaderCircle, 
 
 const dataBr = (iso) => (iso ? new Date(iso).toLocaleDateString('pt-BR') : '—')
 const norm = (s) => semAcento(s).toLowerCase()
+const nFotos = (l) => fotosDoLugar(l).length
+// as ordens (3.17): as mais recentes no ar, a ordem que o site usa, pelas fotos, A a Z
+const ORDENS = {
+  recentes: (a, b) => String(b.publicado_em ?? '').localeCompare(String(a.publicado_em ?? '')) || a.nome.localeCompare(b.nome, 'pt-BR'),
+  site: ordemPublica,
+  fotos: (a, b) => nFotos(b) - nFotos(a) || ordemPublica(a, b),
+  sem_foto: (a, b) => nFotos(a) - nFotos(b) || ordemPublica(a, b),
+  nome: (a, b) => a.nome.localeCompare(b.nome, 'pt-BR'),
+}
 
 export default function Publicadas({ g }) {
   const { confirmar } = useDialogo()
   const [busca, setBusca] = useState('')
   const [categoria, setCategoria] = useState('')
+  const [ordem, setOrdem] = useState('recentes')
   const [editando, setEditando] = useState(null)
 
   const lista = useMemo(() => {
     const t = norm(busca).trim()
     return g.lugares
       .filter((l) => l.status === 'publicado' && (!categoria || l.categoria === categoria) && (!t || norm(`${l.nome} ${l.bairro ?? ''}`).includes(t)))
-      .sort((a, b) => String(b.publicado_em ?? '').localeCompare(String(a.publicado_em ?? '')) || a.nome.localeCompare(b.nome, 'pt-BR'))
-  }, [g.lugares, busca, categoria])
+      .sort(ORDENS[ordem] ?? ORDENS.recentes)
+  }, [g.lugares, busca, categoria, ordem])
   const total = g.lugares.filter((l) => l.status === 'publicado').length
 
   async function novaVersao(l) {
@@ -54,6 +64,13 @@ export default function Publicadas({ g }) {
               <option value="">Todas as categorias</option>
               {GUIA_CATEGORIAS.map((c) => <option key={c.slug} value={c.slug}>{c.rotulo}</option>)}
             </select>
+            <select className="plat-select" value={ordem} onChange={(e) => setOrdem(e.target.value)} aria-label="Ordem da lista">
+              <option value="recentes">Mais recentes no ar</option>
+              <option value="site">Ordem do site</option>
+              <option value="fotos">Mais fotos</option>
+              <option value="sem_foto">Sem foto 1º</option>
+              <option value="nome">A a Z</option>
+            </select>
           </div>
           {lista.length === 0 ? <Vazio>Nada com esses filtros.</Vazio> : (
             <div className="pg-tabela-rola">
@@ -70,6 +87,7 @@ export default function Publicadas({ g }) {
                           <div className="pg-celula-selos">
                             {l.selecao && <Pilula tom="rosa">Seleção</Pilula>}
                             {l.salon_id && <Pilula tom="menta">na MIMO</Pilula>}
+                            <Pilula tom={nFotos(l) ? 'cinza' : 'ambar'}>{nFotos(l) ? `${nFotos(l)} ${nFotos(l) === 1 ? 'foto' : 'fotos'}` : 'sem foto'}</Pilula>
                             {l.rascunho && <button type="button" className="pg-pilula-botao" onClick={() => g.irPara('revisar', { status: 'nova', selId: l.id })}><Pilula tom="roxo">versão nova esperando</Pilula></button>}
                             {g.falhas[l.id] && <span className="pg-ruim" title={g.falhas[l.id]}><TriangleAlert size={12} /> erro ao gerar</span>}
                           </div>

@@ -249,10 +249,16 @@ export function rotuloDaColecao(caminho, nomes = {}) {
 }
 
 // ---- quais coleções existem ------------------------------------------------------------------
-const ordemPadrao = (a, b) => (a.na_mimo ? 0 : 1) - (b.na_mimo ? 0 : 1) || (b.selecao ? 1 : 0) - (a.selecao ? 1 : 0) || String(a.nome).localeCompare(String(b.nome), 'pt-BR')
+// a ordem do guia (3.17): MIMO e Seleção primeiro e, depois, a ordem em que o banco mandou a lista
+// (guia_colecoes e guia_publicadas já vêm por pontos, nota e foto, migração 166; a nota não vem para
+// o site, então aqui só se respeita a posição). Lista de banco antigo (alfabética) continua alfabética.
+const POSICAO = new WeakMap()
+const ordemPadrao = (a, b) => (a.na_mimo ? 0 : 1) - (b.na_mimo ? 0 : 1) || (b.selecao ? 1 : 0) - (a.selecao ? 1 : 0)
+  || (POSICAO.get(a) ?? 0) - (POSICAO.get(b) ?? 0) || String(a.nome).localeCompare(String(b.nome), 'pt-BR')
 // o que entra: os salões no ar de uma cidade (guia_colecoes() ou guia_publicadas())
 function daCidade(lugares, cidadeSlug) {
   const lista = (Array.isArray(lugares) ? lugares : []).filter((l) => l?.slug && l?.nome && l?.cidade_slug !== undefined)
+  lista.forEach((l, i) => { if (typeof l === 'object' && !POSICAO.has(l)) POSICAO.set(l, i) })
   const cs = cidadeSlug || lista[0]?.cidade_slug
   return lista.filter((l) => l.cidade_slug === cs && l.categoria !== 'barbearia')
 }

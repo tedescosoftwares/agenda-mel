@@ -94,12 +94,13 @@ ${navDeColecoes(m.tipo === 'bairro' ? 'Outros bairros' : 'Por bairro', r.bairros
 </main>`
 }
 
-// o mesmo agrupamento de guia_cidade(), feito aqui a partir da lista inteira
-const ordem = (a, b) => (a.na_mimo ? 0 : 1) - (b.na_mimo ? 0 : 1) || (b.selecao ? 1 : 0) - (a.selecao ? 1 : 0) || a.nome.localeCompare(b.nome, 'pt-BR')
+// o mesmo agrupamento de guia_cidade(), feito aqui a partir da lista inteira. A ordem é a que
+// guia_publicadas() mandou (3.17, migração 166: MIMO, Seleção, pontos de nota e foto, nome), e
+// filtrar por categoria não a muda; a nota não vem para cá, então não dá para reordenar aqui.
 const cartao = (l) => ({ slug: l.slug, nome: l.nome, bairro: l.bairro, categoria: l.categoria, resumo: l.conteudo?.resumo ?? null, servicos: (l.servicos ?? []).slice(0, 4), selecao: l.selecao, na_mimo: l.na_mimo })
 function dadosDaCidade(lugares, paginas, cidadeSlug, categoria) {
   const daCidade = lugares.filter((l) => l.cidade_slug === cidadeSlug)
-  const lista = (categoria ? daCidade.filter((l) => l.categoria === categoria) : daCidade).sort(ordem)
+  const lista = categoria ? daCidade.filter((l) => l.categoria === categoria) : daCidade
   const contar = (ls, campo) => [...ls.reduce((m, l) => (l[campo] ? m.set(l[campo], (m.get(l[campo]) ?? 0) + 1) : m), new Map())].map(([k, total]) => ({ [campo]: k, total })).sort((a, b) => b.total - a.total)
   const pagina = paginas.find((p) => p.cidade_slug === cidadeSlug && (p.categoria ?? '') === categoria)
   return {

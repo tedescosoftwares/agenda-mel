@@ -7,7 +7,7 @@
 import { categoriaDoGuia, slugificar, conteudoSeguro, horariosEmUmaLinha, ordemPublica } from './guia.js'
 import { montarConteudo } from './guiaTexto.js'
 import { chaveDoBairro } from './guiaColecoes.js'
-import { demoDesempenho, demoMapaAcessos, demoEvento as gravarEventoDemo } from './demoMetricas.js'
+import { demoDesempenho, demoMapaAcessos, demoEvento as gravarEventoDemo, demoApagarEventos } from './demoMetricas.js'
 
 const agora = Date.now()
 const dias = (n) => new Date(agora - n * 86400e3).toISOString()
@@ -342,6 +342,38 @@ export const GUIA_RPC = {
         latitude: l.latitude ?? null, longitude: l.longitude ?? null, foto: fotosDe(l)[0] ?? null,
       })),
     }
+  },
+  // a ação em lote (3.18, migração 167): tirar do ar, descartar ou apagar de vez; o demo mexe nas listas na memória
+  guia_lote: (a) => {
+    const ids = new Set((a?.ids_ ?? []).map(String))
+    const alvo = GUIA_LUGARES.filter((l) => ids.has(l.id))
+    const agora = new Date().toISOString()
+    if (a?.acao_ === 'tirar_do_ar') {
+      let n = 0
+      for (const l of alvo) if (l.status === 'publicado') { l.status = 'gerado'; l.atualizado_em = agora; n++ }
+      return { ok: true, acao: 'tirar_do_ar', n, eventos: 0, buscas: 0, interesses: 0, paginas: 0 }
+    }
+    if (a?.acao_ === 'descartar') {
+      let n = 0
+      for (const l of alvo) if (!['descartado', 'removido'].includes(l.status)) { l.status = 'descartado'; l.motivo = String(a?.motivo_ ?? '').trim() || l.motivo || null; l.atualizado_em = agora; n++ }
+      return { ok: true, acao: 'descartar', n, eventos: 0, buscas: 0, interesses: 0, paginas: 0 }
+    }
+    if (a?.acao_ !== 'apagar') throw new Error(`ação desconhecida: ${a?.acao_}`)
+    const caminhos = new Set(alvo.map((l) => `/saloes/${l.cidade_slug}/${l.slug}`))
+    const cidades = [...new Set(alvo.map((l) => l.cidade_slug))]
+    let interesses = 0
+    for (let i = GUIA_INTERESSES.length - 1; i >= 0; i--) if (ids.has(GUIA_INTERESSES[i].lugar_id)) { GUIA_INTERESSES.splice(i, 1); interesses++ }
+    let eventos = demoApagarEventos(GUIA_LUGARES, (e) => ids.has(e.lugar_id) || caminhos.has(e.pagina))
+    for (let i = GUIA_LUGARES.length - 1; i >= 0; i--) if (ids.has(GUIA_LUGARES[i].id)) GUIA_LUGARES.splice(i, 1)
+    let paginas = 0
+    if (a?.apagar_paginas_) {
+      for (const c of cidades) {
+        if (GUIA_LUGARES.some((l) => l.cidade_slug === c)) continue
+        for (let i = GUIA_PAGINAS.length - 1; i >= 0; i--) if (GUIA_PAGINAS[i].cidade_slug === c) { GUIA_PAGINAS.splice(i, 1); paginas++ }
+        eventos += demoApagarEventos(GUIA_LUGARES, (e) => e.cidade_slug === c || String(e.pagina).startsWith(`/saloes/${c}`))
+      }
+    }
+    return { ok: true, acao: 'apagar', n: alvo.length, eventos, buscas: 0, interesses, paginas }
   },
   guia_publicadas: () => ({
     lugares: [...GUIA_LUGARES.filter(noAr)].sort(ordemLista).map((l) => ({ ...publico(l), vizinhos: vizinhos(l) })),

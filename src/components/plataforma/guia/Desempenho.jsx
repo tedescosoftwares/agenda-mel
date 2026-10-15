@@ -46,6 +46,9 @@ export default function Desempenho({ g }) {
     const m = new Map(g.lugares.map((l) => [l.cidade_slug, l.cidade]))
     return (s) => m.get(s) ?? s
   }, [g.lugares])
+  // as cidades do guia (3.18): os números de um município só, para uma cidade nova não misturar com as outras
+  const cidades = useMemo(() => [...new Map(g.lugares.map((l) => [l.cidade_slug, l.cidade]))].sort((a, b) => a[1].localeCompare(b[1], 'pt-BR')), [g.lugares])
+  const cidade = desempenho.cidade ?? ''
   const contatoTipos = useMemo(() => tiposDo(dados, 'contato').filter((t) => n0(dados?.totais?.[t.tipo]) > 0), [dados])
   const destaques = useMemo(() => (dados ? destaquesDoPeriodo(dados, g.lugares) : null), [dados, g.lugares])
 
@@ -54,7 +57,7 @@ export default function Desempenho({ g }) {
       <BarChart3 size={28} />
       <h3>Ainda não dá para ver o desempenho</h3>
       <p>{desempenho.erro}</p>
-      <button type="button" className="btn btn-ghost" onClick={() => g.carregarDesempenho(desempenho.dias)}><RotateCcw size={15} /> Tentar de novo</button>
+      <button type="button" className="btn btn-ghost" onClick={() => g.carregarDesempenho(desempenho.dias, cidade)}><RotateCcw size={15} /> Tentar de novo</button>
     </div>
   )
   if (!dados) return <div className="pg-carregando"><LoaderCircle className="pg-gira" size={18} /> Contando as visitas…</div>
@@ -74,9 +77,15 @@ export default function Desempenho({ g }) {
       <div className="pg-des-filtros">
         <div className="pg-seg" role="radiogroup" aria-label="Período">
           {PERIODOS.map(([d, r]) => (
-            <button key={d} type="button" role="radio" aria-checked={desempenho.dias === d} className={desempenho.dias === d ? 'ativo' : ''} onClick={() => g.carregarDesempenho(d)}>{r}</button>
+            <button key={d} type="button" role="radio" aria-checked={desempenho.dias === d} className={desempenho.dias === d ? 'ativo' : ''} onClick={() => g.carregarDesempenho(d, cidade)}>{r}</button>
           ))}
         </div>
+        {cidades.length > 1 && (
+          <select className="plat-select" value={cidade} onChange={(e) => g.carregarDesempenho(desempenho.dias, e.target.value)} aria-label="Cidade">
+            <option value="">Todas as cidades</option>
+            {cidades.map(([slug, nome]) => <option key={slug} value={slug}>{nome}</option>)}
+          </select>
+        )}
         <span className="pg-des-periodo">{dataCurta(dados.de)} a {dataCurta(dados.ate)}{desempenho.carregando && <LoaderCircle size={13} className="pg-gira" />}</span>
         <label className="pg-des-eu">
           <input type="checkbox" checked={!contando} onChange={(e) => { naoContarAqui(e.target.checked); setContando(!e.target.checked) }} />

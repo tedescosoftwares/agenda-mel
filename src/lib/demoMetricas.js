@@ -79,6 +79,12 @@ function gerar(lugares) {
 }
 
 const eventos = (lugares) => (EVENTOS ??= gerar(lugares))
+// apagar em lote (3.18): tira os eventos que passam no teste (dos salões apagados; da cidade que ficou vazia)
+export function demoApagarEventos(lugares, teste) {
+  const antes = eventos(lugares).length
+  EVENTOS = eventos(lugares).filter((e) => !teste(e))
+  return antes - EVENTOS.length
+}
 
 // o que a pessoa clicou nas páginas do demo (a mesma limpeza do banco, no essencial)
 export function demoEvento(corpo, lugares) {

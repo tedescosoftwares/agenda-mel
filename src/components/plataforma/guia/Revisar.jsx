@@ -3,13 +3,14 @@ import Portal from '../../Portal'
 import { Pilula, haQuanto } from '../Pecas'
 import { MolduraPrevia, PreviaGoogle } from './Previa'
 import EditarLugar from './Editar'
+import EmLote from './EmLote'
 import { GUIA_CATEGORIAS, categoriaDoGuia, conteudoSeguro, semAcento, rotaDoLugar, fotosDoLugar, ordemPublica, partesDosPontos } from '../../../lib/guia'
 import { seoDoLugar } from '../../../lib/guiaSeo'
 import { dadosDaPagina } from '../../../lib/guiaTexto'
 import { urlDoAmbiente } from '../../../lib/ambiente'
 import {
   Search, Smartphone, Monitor, Check, RefreshCw, Pencil, SkipForward, Trash2, ChevronLeft, ChevronRight, Sparkles,
-  Star, ShieldCheck, LoaderCircle, TriangleAlert, ExternalLink, Maximize2, X, Keyboard, Pause, Play, Square, Undo2, Upload, Info, Wand2,
+  Star, ShieldCheck, LoaderCircle, TriangleAlert, ExternalLink, Maximize2, X, Keyboard, Pause, Play, Square, Undo2, Upload, Info, Wand2, Layers,
 } from 'lucide-react'
 
 // A mesa de revisão: a fila à esquerda, a página de verdade à direita, e as
@@ -83,6 +84,7 @@ export default function Revisar({ g, rev, setRev }) {
   const [porSalao, setPorSalao] = useState({ id: null, instr: '', versao: 'rascunho', erro: '' })
   const [editando, setEditando] = useState(null)
   const [descartando, setDescartando] = useState(null)
+  const [emLote, setEmLote] = useState(false) // o modal da ação em lote (3.18)
   const [telaCheia, setTelaCheia] = useState(false)
   const [verAtalhos, setVerAtalhos] = useState(false)
   // coluna estreita: a página ocupa a altura toda e o Google fica a um clique
@@ -315,6 +317,13 @@ export default function Revisar({ g, rev, setRev }) {
 
   const pendentesFila = lista.filter((l) => g.faseDe(l) === 'gerar').length
   const filtrosExtras = rev.cidade || rev.categoria || rev.receita || rev.selecao || rev.triagem || rev.busca
+  // os filtros da lista em palavras, para o modal "Em lote" dizer o que vai mexer (3.18)
+  const resumoLote = [
+    status === 'removido' ? 'Removidos' : (FASES.find(([id]) => id === status)?.[1] ?? 'Todos'),
+    rev.cidade ? (cidades.find(([s]) => s === rev.cidade)?.[1] ?? rev.cidade) : 'todas as cidades',
+    rev.categoria ? categoriaDoGuia(rev.categoria).rotulo : '', rev.triagem ? TRIAGENS.find(([id]) => id === rev.triagem)?.[1] : '',
+    rev.receita ? 'validados na Receita' : '', rev.selecao ? 'Seleção MIMO' : '', rev.busca.trim() ? `busca "${rev.busca.trim()}"` : '',
+  ].filter(Boolean).join(' · ')
   const lote = g.lote
 
   return (
@@ -376,6 +385,7 @@ export default function Revisar({ g, rev, setRev }) {
           <div className="pg-fila-resumo">
             <span><b>{lista.length}</b> {lista.length === 1 ? 'salão' : 'salões'} nesta fila</span>
             {pendentesFila > 0 && <button type="button" className="btn btn-ghost pg-btn-peq" onClick={montarFila} title="Monta com os dados de cada salão: de graça e na hora"><Wand2 size={14} /> Montar todas da fila ({pendentesFila})</button>}
+            {lista.length > 0 && <button type="button" className="btn btn-ghost pg-btn-peq" onClick={() => setEmLote(true)} title="Tirar do ar, descartar ou apagar de vez tudo o que está nesta lista"><Layers size={14} /> Em lote</button>}
           </div>
         )}
 
@@ -536,6 +546,7 @@ export default function Revisar({ g, rev, setRev }) {
 
       {editando && g.lugares.some((l) => l.id === editando) && <EditarLugar lugar={g.lugares.find((l) => l.id === editando)} g={g} onFechar={() => setEditando(null)} />}
       {descartando && <ModalDescartar lugar={descartando} onFechar={() => setDescartando(null)} onDescartar={descartar} />}
+      {emLote && <EmLote lista={lista} resumo={resumoLote} g={g} onFechar={() => setEmLote(false)} onFeito={() => mudarFiltro({})} />}
     </div>
   )
 }

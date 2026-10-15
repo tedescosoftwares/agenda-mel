@@ -256,6 +256,23 @@
 .pg-modal-descartar h3 { margin: 0; }
 .pg-modal-descartar p { margin: 0; font-size: 0.88rem; }
 .pg-modal-botoes { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.3rem; }
+/* 3.18: a ação em lote da fila */
+.plat-modal-fundo:has(.pg-modal-lote) { z-index: 58; }
+.modal-caixa.plat-modal.pg-modal-lote { max-width: 580px; display: flex; flex-direction: column; gap: 0.7rem; }
+.pg-modal-lote h3 { margin: 0; }
+.pg-modal-lote p { margin: 0; font-size: 0.88rem; }
+.pg-lote-resumo { color: var(--texto-2); font-size: 0.82rem; }
+.pg-lote-opcoes { display: grid; gap: 0.45rem; }
+.pg-lote-opcao { display: grid; grid-template-columns: auto 1fr; gap: 0.25rem 0.6rem; align-items: start; padding: 0.6rem 0.75rem; border: 1px solid var(--cinza-1); border-radius: 12px; cursor: pointer; }
+.pg-lote-opcao.ativa { border-color: var(--rosa); background: #fff8fb; }
+.pg-lote-opcao.perigo.ativa { border-color: var(--carmim); background: #fdecef; }
+.pg-lote-opcao input { margin: 0.2rem 0 0; }
+.pg-lote-opcao b { display: flex; align-items: center; gap: 0.35rem; font-size: 0.92rem; }
+.pg-lote-opcao small { grid-column: 2; color: var(--texto-2); font-size: 0.8rem; line-height: 1.45; }
+.pg-lote-confirma input { width: 100%; }
+.pg-lote-feito { display: grid; gap: 0.3rem; padding: 0.7rem 0.8rem; border-radius: 12px; background: #e3f6ee; font-size: 0.88rem; color: #11704b; }
+.pg-lote-feito b { display: flex; align-items: center; gap: 0.35rem; }
+.pg-lote-feito span { color: var(--texto-2); }
 .modal-caixa.plat-modal.pg-modal-editar { max-width: 900px; width: 100%; padding: 0; max-height: 92vh; overflow: hidden; display: flex; flex-direction: column; border-radius: 20px; }
 .pg-ed-topo { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding: 1.1rem 1.4rem 0.4rem; }
 .pg-ed-topo h3 { margin: 0 0 0.1rem; font-size: 1.2rem; }

@@ -57,16 +57,16 @@ function faseDe(l) {
 }
 
 // as métricas do guia num período (156); nunca rejeita: o erro vem dentro
-async function lerDesempenho(dias) {
+async function lerDesempenho(dias, cidade = '') {
   try {
-    const { data, error } = await supabase.rpc('guia_desempenho', { dias, cidade_: '' })
+    const { data, error } = await supabase.rpc('guia_desempenho', { dias, cidade_: cidade || '' })
     if (error) {
       const msg = String(error.message ?? error)
-      return { dias, dados: null, erro: /guia_desempenho|site_eventos|function|schema cache/i.test(msg) ? 'As métricas ainda não existem neste banco. Rode a migração 156 (supabase/156_metricas_do_site.sql).' : msg }
+      return { dias, cidade, dados: null, erro: /guia_desempenho|site_eventos|function|schema cache/i.test(msg) ? 'As métricas ainda não existem neste banco. Rode a migração 156 (supabase/156_metricas_do_site.sql).' : msg }
     }
-    return { dias, dados: data ?? null, erro: data ? '' : 'O banco não devolveu as métricas.' }
+    return { dias, cidade, dados: data ?? null, erro: data ? '' : 'O banco não devolveu as métricas.' }
   } catch (e) {
-    return { dias, dados: null, erro: String(e?.message ?? e) }
+    return { dias, cidade, dados: null, erro: String(e?.message ?? e) }
   }
 }
 
@@ -380,10 +380,11 @@ export default function Guia() {
   const pedidoDesempenho = useRef(0)
   const aplicarDesempenho = useCallback((n, r) => { if (montado.current && n === pedidoDesempenho.current) setDesempenho({ ...r, carregando: false }) }, [])
   // trocar o período: a tela segura os números de antes, esmaecidos, até chegarem os novos
-  const carregarDesempenho = useCallback((dias = 30) => {
+  // cidade (3.18): os números de um município só; vazio é o guia inteiro
+  const carregarDesempenho = useCallback((dias = 30, cidade = '') => {
     const n = ++pedidoDesempenho.current
-    setDesempenho((d) => ({ ...d, dias, carregando: true, erro: '' }))
-    return lerDesempenho(dias).then((r) => aplicarDesempenho(n, r))
+    setDesempenho((d) => ({ ...d, dias, cidade, carregando: true, erro: '' }))
+    return lerDesempenho(dias, cidade).then((r) => aplicarDesempenho(n, r))
   }, [aplicarDesempenho])
   useEffect(() => { const n = ++pedidoDesempenho.current; lerDesempenho(30).then((r) => aplicarDesempenho(n, r)) }, [aplicarDesempenho])
   // os números de cada salão, para o painel da revisão

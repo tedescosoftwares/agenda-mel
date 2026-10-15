@@ -255,7 +255,7 @@ export const GUIA_INTERESSES = [
   { id: 'gi1', lugar_id: 'gl1', tipo: 'quero_marcar', nome: 'Carla', contato: '(13) 99812-0001', mensagem: null, criado_em: dias(0.2), atendido_em: null, atendido_por: null },
   { id: 'gi2', lugar_id: 'gl1', tipo: 'quero_marcar', nome: null, contato: null, mensagem: null, criado_em: dias(1), atendido_em: null, atendido_por: null },
   { id: 'gi3', lugar_id: 'gl1', tipo: 'quero_marcar', nome: 'Bia', contato: '(13) 99812-0003', mensagem: null, criado_em: dias(2), atendido_em: null, atendido_por: null },
-  { id: 'gi4', lugar_id: 'gl3', tipo: 'sou_dono', nome: 'Marta', contato: '(13) 99812-0004', mensagem: 'Sou a dona do ateliê e quero colocar a agenda no app.', criado_em: dias(0.5), atendido_em: null, atendido_por: null },
+  { id: 'gi4', lugar_id: 'gl3', tipo: 'sou_dono', nome: 'Marta', contato: '(13) 99812-0004', email: 'marta@exemplo.com', ligacao: 'dona', aceite_em: dias(0.5), status: 'confirmada', status_em: dias(0.2), token_fotos: 'demo0000000000000000000000000000', token_fotos_expira: dias(-28), fotos_enviadas: 0, fotos_enviadas_em: null, mensagem: 'Sou a dona do ateliê e quero colocar a agenda no app.', criado_em: dias(0.5), atendido_em: dias(0.2), atendido_por: 'pl1' },
   { id: 'gi5', lugar_id: 'gl3', tipo: 'corrigir', nome: 'Paula', contato: 'paula@exemplo.com', mensagem: 'Agora abrimos também na segunda.', criado_em: dias(3), atendido_em: dias(2), atendido_por: 'pl1' },
   { id: 'gi6', lugar_id: 'gl4', tipo: 'quero_marcar', nome: 'Lu', contato: '(13) 99812-0006', mensagem: null, criado_em: dias(0.1), atendido_em: null, atendido_por: null },
 ]
@@ -347,6 +347,23 @@ export const GUIA_RPC = {
     paginas: GUIA_PAGINAS.filter((p) => p.status === 'publicado' && p.conteudo).map((p) => ({ cidade_slug: p.cidade_slug, categoria: p.categoria, conteudo: p.conteudo, atualizado_em: p.atualizado_em })),
     cidades: cidades(),
   }),
+  // o dono manda as fotos (165): o link da Marta (gi4) abre a página do Ateliê
+  guia_fotos_dono: (a) => {
+    const i = GUIA_INTERESSES.find((x) => x.tipo === 'sou_dono' && x.token_fotos && x.token_fotos === String(a?.token_ ?? '').toLowerCase())
+    if (!i) return { ok: false, motivo: 'link inválido' }
+    if (i.status !== 'confirmada') return { ok: false, motivo: 'reivindicação não confirmada' }
+    const l = GUIA_LUGARES.find((x) => x.id === i.lugar_id)
+    if (!l || l.status === 'removido') return { ok: false, motivo: 'página fora do ar' }
+    return { ok: true, lugar: { id: l.id, nome: l.nome, cidade: l.cidade, cidade_slug: l.cidade_slug, slug: l.slug, categoria: l.categoria, fotos: fotosDe(l), no_ar: l.status === 'publicado' }, nome: (i.nome ?? '').split(' ')[0] || null, expira: i.token_fotos_expira, enviadas: i.fotos_enviadas ?? 0, limite: 8 }
+  },
+  guia_link_fotos: (a) => {
+    const i = GUIA_INTERESSES.find((x) => x.id === a?.interesse_)
+    if (!i) return { ok: false, motivo: 'reivindicação não encontrada' }
+    if (i.status !== 'confirmada') return { ok: false, motivo: 'a reivindicação precisa estar confirmada' }
+    const l = GUIA_LUGARES.find((x) => x.id === i.lugar_id)
+    i.token_fotos = i.token_fotos || 'demo0000000000000000000000000000'
+    return { ok: true, url: `${typeof location !== 'undefined' ? location.origin : 'https://mimo.com.vc'}/saloes/${l.cidade_slug}/${l.slug}/fotos/${i.token_fotos}`, expira: i.token_fotos_expira ?? dias(-30), enviadas: i.fotos_enviadas ?? 0, enviadas_em: i.fotos_enviadas_em ?? null }
+  },
   guia_registrar_interesse: (a) => {
     const l = GUIA_LUGARES.find((x) => x.id === a?.lugar_ && x.status === 'publicado')
     if (!l) return { ok: false, motivo: 'página não encontrada' }

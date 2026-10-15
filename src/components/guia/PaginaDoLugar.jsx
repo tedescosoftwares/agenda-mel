@@ -439,7 +439,7 @@ export default function PaginaDoLugar({ lugar, conteudo, vizinhos = [], mesmaCat
                   {/* a reivindicação (3.12): a equipe confirma com a pessoa por e-mail; nada muda na página antes disso */}
                   <p>Diga que é você: a gente confirma por e-mail e passa a falar com você sobre esta página.</p>
                   <p>E, se quiser, coloque a agenda de {l.nome} online: a cliente marca sozinha, pelo link ou pelo app.</p>
-                  {!fotos.length && <p>Tem fotos do salão? Mande para a gente: elas entram nesta página de graça.</p>}
+                  {!fotos.length && <p>Tem fotos do salão? Confirmado que é você, a gente manda um link para enviar: elas entram nesta página de graça.</p>}
                   <p className="gd-dono-letra">Para autônoma é grátis para sempre. Salão com equipe testa {REGRAS.testeDias} dias, sem cartão.</p>
                 </div>
                 <div className="gd-dono-botoes">

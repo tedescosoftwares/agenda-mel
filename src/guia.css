@@ -432,3 +432,30 @@
 .gd-cartao-capa.gd-cartao-foto { height: 124px; background: #f5f2f6; }
 .gd-cartao-foto::after { content: none; }
 .gd-cartao-foto img { display: block; width: 100%; height: 100%; object-fit: cover; }
+
+/* ---- o dono manda as fotos (3.15): /saloes/<cidade>/<salão>/fotos/<token> ---- */
+.ld .gd-sec-fotos-dono { padding: 28px 0 56px; }
+.gd-fd-wrap { max-width: 640px; }
+.gd-fd-caixa { background: #fff; border: 1px solid var(--ld-fio); border-radius: 26px; padding: 28px 24px; box-shadow: 0 18px 50px rgba(61, 12, 78, 0.08); }
+.gd-fd-carregando { display: flex; align-items: center; gap: 10px; color: var(--ld-cinza); }
+.ld .gd-fd-h1 { font-family: var(--corpo); text-transform: none; letter-spacing: -0.02em; font-size: 1.6rem; line-height: 1.15; font-weight: 700; color: var(--ld-ameixa); margin: 6px 0 8px; }
+.ld .gd-fd-h1:focus { outline: none; }
+.gd-fd-atuais { margin: 6px 0 16px; }
+.gd-fd-atuais > span { display: block; font-size: 0.78rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ld-cinza); margin-bottom: 6px; }
+.gd-fd-atuais .gd-fd-foto { width: 96px; cursor: default; }
+.gd-fd-escolhidas { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin: 6px 0 16px; }
+.gd-fd-escolhida { position: relative; margin: 0; border-radius: 16px; overflow: hidden; border: 1px solid var(--ld-fio); background: #f5f2f6; aspect-ratio: 4 / 3; }
+.gd-fd-escolhida img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.gd-fd-escolhida figcaption { position: absolute; left: 8px; bottom: 8px; padding: 3px 8px; border-radius: 999px; background: rgba(31, 32, 38, 0.65); color: #fff; font-size: 0.7rem; font-weight: 600; }
+.gd-fd-escolhida button { position: absolute; top: 6px; right: 6px; width: 28px; height: 28px; border-radius: 50%; border: none; background: rgba(255, 255, 255, 0.92); color: var(--ld-ameixa); display: grid; place-items: center; cursor: pointer; }
+.gd-fd-mais { display: grid; place-items: center; align-content: center; gap: 6px; aspect-ratio: 4 / 3; border: 2px dashed #f3bfd3; border-radius: 16px; background: #fff8fb; color: var(--ld-ameixa); font-size: 0.86rem; font-weight: 600; cursor: pointer; }
+.gd-fd-mais:hover { border-color: var(--ld-rosa); background: #ffeef5; }
+.gd-fd-mais input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.gd-fd-mais svg { color: var(--ld-rosa); }
+.gd-fd-aceite { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border: 1px solid #ffc2d8; border-radius: 14px; background: #fff8fb; font-size: 0.9rem; color: #4b4650; margin: 0 0 14px; cursor: pointer; }
+.gd-fd-aceite input { margin-top: 3px; flex: none; width: 18px; height: 18px; accent-color: var(--ld-rosa); }
+.gd-fd-aceite svg { color: #0c7a50; vertical-align: -3px; margin-right: 4px; }
+.ld .gd-fd-cheia { display: flex; align-items: center; gap: 8px; padding: 12px 14px; border-radius: 14px; background: var(--ld-menta); color: #0c7a50; font-weight: 600; }
+.gd-fd-recusadas { text-align: left; margin: 0 0 10px; padding-left: 18px; color: #b4233f; font-size: 0.86rem; }
+.ld .gd-fd-caixa .gd-folha-lgpd { text-align: left; }
+.gd-fd-caixa .gd-folha-lgpd svg { vertical-align: -2px; }

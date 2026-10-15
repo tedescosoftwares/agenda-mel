@@ -55,6 +55,7 @@ const RotasPlataforma = lazy(() => import("./rotas/RotasPlataforma"));
 const GuiaRota = lazy(() => import("./pages/publico/GuiaCidade"));
 // as coleções do guia (3.12): /saloes/itanhaem/bairro/centro, /saloes/itanhaem/horario/domingo[/unhas]
 const GuiaColecao = lazy(() => import("./pages/publico/GuiaColecao"));
+const GuiaFotosDono = lazy(() => import("./pages/publico/GuiaFotosDono"));
 
 export default function App() {
   // o convite chega como /?indique=CODIGO — guardamos antes de qualquer rota
@@ -114,6 +115,7 @@ export default function App() {
             <Route path="/saloes" element={<GuiaRota />} />
             <Route path="/saloes/:cidade" element={<GuiaRota />} />
             <Route path="/saloes/:cidade/:item" element={<GuiaRota />} />
+            <Route path="/saloes/:cidade/:item/fotos/:token" element={<GuiaFotosDono />} />
             <Route path="/saloes/:cidade/bairro/:valor" element={<GuiaColecao tipo="bairro" />} />
             <Route path="/saloes/:cidade/horario/:valor" element={<GuiaColecao tipo="horario" />} />
             <Route path="/saloes/:cidade/horario/:valor/:categoria" element={<GuiaColecao tipo="horario" />} />

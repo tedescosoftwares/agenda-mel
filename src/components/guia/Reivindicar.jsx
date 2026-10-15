@@ -93,7 +93,7 @@ export default function Reivindicar({ lugar, previa = false, idBase, onFechar, o
           <strong>O que acontece agora</strong>
           <ol>
             <li>Em até {diasUteis(feito.prazo)}, alguém da equipe da MIMO fala com você para confirmar que você responde por {nomeLugar}.</li>
-            <li>Confirmado, você vira o contato da página: o que pedir sobre ela (corrigir um dado ou tirar do ar), a gente faz.</li>
+            <li>Confirmado, você vira o contato da página e recebe um link para mandar as fotos do salão: elas entram na página de graça. O que pedir sobre ela (corrigir um dado ou tirar do ar), a gente faz.</li>
             <li>Até lá, a página continua no ar do jeito que está.</li>
           </ol>
         </div>

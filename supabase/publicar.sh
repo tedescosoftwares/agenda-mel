@@ -134,6 +134,11 @@ echo 'pagina-publica (prévia do link, com --no-verify-jwt)...'
 supabase functions deploy pagina-publica --project-ref "$PROJECT_REF" --no-verify-jwt >/dev/null
 verde '  no ar'
 
+# sem JWT: o dono do salão não tem login; o token do link (165) é a credencial, conferido no banco
+echo 'guia-fotos-dono (o dono manda as fotos pelo link do e-mail, com --no-verify-jwt)...'
+supabase functions deploy guia-fotos-dono --project-ref "$PROJECT_REF" --no-verify-jwt >/dev/null
+verde '  no ar'
+
 # JWT normal: quem chama é a Plataforma logada (a função confere eh_plataforma)
 echo 'guia-gerar (texto do guia de salões com IA)...'
 supabase functions deploy guia-gerar --project-ref "$PROJECT_REF" >/dev/null

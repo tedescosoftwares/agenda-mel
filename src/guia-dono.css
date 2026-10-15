@@ -72,3 +72,6 @@
   .pg-reiv-pe { flex-direction: column; align-items: stretch; }
   .pg-reiv-status button { flex: 1 1 auto; }
 }
+
+/* o link das fotos e as fotos enviadas, na reivindicação (165) */
+.pg-reiv-links .pg-reiv-fotos { display: inline-flex; align-items: center; gap: 4px; color: #0c7a50; font-weight: 600; }

@@ -4,7 +4,7 @@ import { supabase } from '../../../lib/supabase'
 import { Painel, Pilula, Vazio, haQuanto } from '../Pecas'
 import { rotaDoLugar, linkWhatsDoTel, soDigitosTel, ehCelular } from '../../../lib/guia'
 import { urlDoAmbiente } from '../../../lib/ambiente'
-import { Inbox, Trophy, MessageCircle, ExternalLink, Check, Undo2, Ban, BadgeCheck, Mail, MailCheck, MailWarning, Clock } from 'lucide-react'
+import { Inbox, Trophy, MessageCircle, ExternalLink, Check, Undo2, Ban, BadgeCheck, Mail, MailCheck, MailWarning, Clock, Images, Link2 } from 'lucide-react'
 import '../../../guia-dono.css'
 
 // Quem tocou nos botões das páginas: "Quero marcar aqui pelo app" (gente
@@ -28,6 +28,7 @@ const TOM_STATUS = Object.fromEntries(STATUS.map(([k, , t]) => [k, t]))
 const LIGACAO = { dona: 'Dona', socia: 'Sócia', gerente: 'Gerente', funcionaria: 'Funcionária' }
 const FILTROS = [['abertas', 'Abertas'], ['nova', 'Novas'], ['em_contato', 'Em contato'], ['confirmada', 'Confirmadas'], ['recusada', 'Recusadas'], ['', 'Todas']]
 // pedido antigo (antes da 159) não tem status: aberto é nova, atendido é em contato
+const n0 = (v) => Number(v) || 0
 const statusDe = (i) => i.status || (i.atendido_em ? 'em_contato' : 'nova')
 const aberta = (i) => ['nova', 'em_contato'].includes(statusDe(i))
 
@@ -125,6 +126,15 @@ export default function Interesses({ g }) {
     g.avisar(`${l.nome}: página removida.`)
   }
 
+  // o link do dono mandar as fotos (165): copia; se venceu, renova
+  async function copiarLinkFotos(i) {
+    const { data, error } = await supabase.rpc('guia_link_fotos', { interesse_: i.id, renovar_: false })
+    if (error) { g.avisar({ texto: /guia_link_fotos|schema cache|does not exist/i.test(error.message) ? 'Rode a migração 165 (supabase/165_fotos_do_dono.sql) para o link das fotos.' : error.message, tom: 'erro' }); return }
+    if (!data?.ok) { g.avisar({ texto: data?.motivo || 'não deu para gerar o link', tom: 'erro' }); return }
+    try { await navigator.clipboard.writeText(data.url) } catch { /* sem clipboard: mostra */ }
+    g.avisar({ texto: `Link das fotos copiado (vale até ${data.expira ? new Date(data.expira).toLocaleDateString('pt-BR') : '30 dias'}). Mande pelo WhatsApp: ${data.url}` })
+  }
+
   if (g.carregando) return <Painel Icon={Inbox} titulo="Interesses"><Vazio>Carregando…</Vazio></Painel>
 
   return (
@@ -172,6 +182,8 @@ export default function Interesses({ g }) {
                         <span className="pg-reiv-links">
                           {correio && <a className="plat-link" href={correio}><Mail size={13} /> Escrever</a>}
                           {zap && <a className="plat-link" href={zap} target="_blank" rel="noopener noreferrer"><MessageCircle size={13} /> WhatsApp</a>}
+                          {s === 'confirmada' && <button type="button" className="plat-link" onClick={() => copiarLinkFotos(i)} title="O link que a pessoa recebeu por e-mail para mandar as fotos do salão (vale 30 dias)"><Link2 size={13} /> Link das fotos</button>}
+                          {n0(i.fotos_enviadas) > 0 && <small className="pg-reiv-fotos" title={i.fotos_enviadas_em ? new Date(i.fotos_enviadas_em).toLocaleString('pt-BR') : undefined}><Images size={13} /> {i.fotos_enviadas} {i.fotos_enviadas === 1 ? 'foto enviada' : 'fotos enviadas'}{i.fotos_enviadas_em ? ` ${haQuanto(i.fotos_enviadas_em)}` : ''}</small>}
                         </span>
                       </div>
                     </li>

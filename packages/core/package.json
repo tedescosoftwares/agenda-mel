@@ -21,7 +21,8 @@
     "./legal": "./legal.js",
     "./guia": "./guia.js",
     "./guiaTexto": "./guiaTexto.js",
-    "./guiaColecoes": "./guiaColecoes.js"
+    "./guiaColecoes": "./guiaColecoes.js",
+    "./guiaArtigos": "./guiaArtigos.js"
   },
   "sideEffects": false
 }

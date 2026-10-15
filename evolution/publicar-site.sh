@@ -188,3 +188,8 @@ case "$CODIGO" in
 esac
 echo
 echo 'Para publicar de novo depois de um git pull: ./publicar-site.sh'
+# o que a Plataforma publica (artigo, salão aprovado) só chega ao HTML estático e ao sitemap
+# numa regeneração; o republicar-se-mudou.sh faz isso sozinho, de hora em hora (3.14)
+if ! crontab -l 2>/dev/null | grep -q 'republicar-se-mudou.sh'; then
+  amarelo 'Dica: ./republicar-se-mudou.sh --cron  regenera as páginas estáticas sozinho quando a Plataforma publica algo.'
+fi

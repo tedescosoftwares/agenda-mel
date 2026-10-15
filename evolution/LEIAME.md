@@ -604,3 +604,28 @@ Opcional. Sem a chave o app usa OpenStreetMap. Para ligar:
   continua falando só do tempo.
 - O ramo do salão (barbearia, unhas, estética…) é deduzido das categorias;
   a dona pode fixar com `salao_definir_ramo`.
+
+## Republicar sozinho (3.14): a Plataforma publica, o Google vê
+
+O HTML estático e o sitemap (o que o robô do Google lê) são gerados por
+`scripts/paginas-estaticas.mjs` a partir do banco. Até a 3.13 isso só
+acontecia no `publicar-site.sh`: um artigo publicado na Plataforma, ou um
+salão aprovado no guia, aparecia no site na hora, mas só entrava no sitemap
+no próximo publicar.
+
+Agora o banco tem `site_conteudo_versao()` (migração 164), um carimbo que
+muda sempre que algo publicado muda. O script `republicar-se-mudou.sh`
+compara com o carimbo da última geração e, se for outro, regenera as
+páginas em segundos, sem build e sem mexer no Caddy:
+
+```bash
+cd ~/agenda-mel/evolution
+./republicar-se-mudou.sh          # confere e regenera se mudou
+./republicar-se-mudou.sh --cron   # instala no cron: de hora em hora, sozinho (log em republicar.log)
+./republicar-se-mudou.sh --forcar # regenera mesmo sem mudança
+```
+
+Ele lê as mesmas chaves do `publicar-site.sh` (`VITE_SUPABASE_URL` e a
+chave anon, no `.env` da Evolution ou da raiz) e precisa do `dist/` de um
+publicar anterior. Quando o CÓDIGO muda (git pull), continua sendo o
+`publicar-site.sh`.

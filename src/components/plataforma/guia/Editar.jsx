@@ -4,11 +4,19 @@ import { useDialogo } from '../../../context/DialogoContext'
 import { PreviaGoogle } from './Previa'
 import { GUIA_CATEGORIAS, conteudoSeguro, telefoneBonito, canaisDoSite, rotaDoLugar } from '../../../lib/guia'
 import { seoDoLugar } from '../../../lib/guiaSeo'
-import { X, Plus, Trash2, FileText, Store, LoaderCircle } from 'lucide-react'
+import { reduzirFoto } from '../../../lib/imagem'
+import { supabase, isDemo } from '../../../lib/supabase'
+import { X, Plus, Trash2, FileText, Store, LoaderCircle, ImagePlus, ChevronLeft, ChevronRight } from 'lucide-react'
 
 // Editar um salão: os fatos (gravados com fontes[campo] = 'manual', para a
-// próxima importação não desfazer o que foi corrigido à mão) e o texto da
-// página (gravado no rascunho: o que está no ar só muda quando aprovar).
+// próxima importação não desfazer o que foi corrigido à mão), as fotos (3.14:
+// vão para o bucket 'guia' e a lista de endereços fica em guia_lugares.fotos;
+// a primeira é a capa) e o texto da página (gravado no rascunho: o que está
+// no ar só muda quando aprovar).
+
+const MAX_FOTOS = 8
+// no demo não há storage: a foto "enviada" vira uma das imagens do site
+const FOTOS_DEMO = ['/imagens/salao-1400.webp', '/imagens/profissional-1400.webp', '/imagens/cliente-1400.webp', '/imagens/equipe-1400.webp']
 
 const FATOS = ['nome', 'categoria', 'bairro', 'endereco', 'cep', 'telefone', 'whatsapp', 'instagram', 'site', 'servicos', 'selecao', 'salon_id']
 // os campos que a importação mexe (são os que ganham a marca de "manual")
@@ -77,16 +85,19 @@ export default function EditarLugar({ lugar, g, onFechar }) {
       fatos: Object.fromEntries(FATOS.map((k) => [k, k === 'servicos' ? (l.servicos ?? []).join(', ') : k === 'selecao' ? !!l.selecao : (l[k] ?? '')])),
       horario: horarioInicial(l.horarios),
       texto: textoInicial(l),
+      fotos: Array.isArray(l.fotos) ? l.fotos : [],
     }
   }, [lugar])
   const [fatos, setFatos] = useState(inicial.fatos)
   const [horario, setHorario] = useState(inicial.horario)
   const [texto, setTexto] = useState(inicial.texto)
+  const [fotos, setFotos] = useState(inicial.fotos)
+  const [enviando, setEnviando] = useState(false)
   const [erro, setErro] = useState('')
   const [salvando, setSalvando] = useState(false)
   const caixa = useRef(null)
 
-  const sujo = JSON.stringify({ fatos, horario, texto }) !== JSON.stringify(inicial)
+  const sujo = JSON.stringify({ fatos, horario, texto, fotos }) !== JSON.stringify(inicial)
   const textoMudou = JSON.stringify(texto) !== JSON.stringify(inicial.texto)
 
   async function fechar() {
@@ -115,6 +126,30 @@ export default function EditarLugar({ lugar, g, onFechar }) {
   const setT = (k, v) => setTexto((t) => ({ ...t, [k]: v }))
   const setLista = (k, i, v) => setTexto((t) => ({ ...t, [k]: t[k].map((x, j) => (j === i ? v : x)) }))
   const tirar = (k, i) => setTexto((t) => ({ ...t, [k]: t[k].filter((_, j) => j !== i) }))
+
+  // as fotos: reduzidas aqui (1600 px no lado maior, JPEG) e enviadas ao bucket 'guia'
+  async function enviarFotos(e) {
+    const arquivos = [...(e.target.files ?? [])].slice(0, MAX_FOTOS - fotos.length)
+    e.target.value = ''
+    if (!arquivos.length) return
+    setEnviando(true); setErro('')
+    const novas = []
+    for (const [i, f] of arquivos.entries()) {
+      try {
+        const { blob } = await reduzirFoto(f, { max: 1600, qualidade: 0.84 })
+        if (isDemo) { novas.push(FOTOS_DEMO[(fotos.length + i) % FOTOS_DEMO.length]); continue }
+        const caminho = `${lugar.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`
+        const { error } = await supabase.storage.from('guia').upload(caminho, blob, { contentType: 'image/jpeg', cacheControl: '31536000', upsert: false })
+        if (error) throw new Error(error.message)
+        novas.push(supabase.storage.from('guia').getPublicUrl(caminho).data.publicUrl)
+      } catch (err) {
+        setErro(`${f.name}: ${err.message}`)
+      }
+    }
+    setFotos((fs) => [...fs, ...novas.filter((n) => !fs.includes(n))].slice(0, MAX_FOTOS))
+    setEnviando(false)
+  }
+  const moverFoto = (i, d) => setFotos((fs) => { const n = [...fs]; const j = i + d; if (j < 0 || j >= n.length) return fs; [n[i], n[j]] = [n[j], n[i]]; return n })
 
   async function salvar() {
     if (salvando) return
@@ -148,6 +183,7 @@ export default function EditarLugar({ lugar, g, onFechar }) {
     if (JSON.stringify(horarios) !== JSON.stringify(lugar.horarios ?? null)) campos.horarios = horarios
     const manuais = Object.keys(campos).filter((k) => DA_IMPORTACAO.includes(k))
     if (manuais.length) campos.fontes = { ...(lugar.fontes ?? {}), ...Object.fromEntries(manuais.map((k) => [k, 'manual'])) }
+    if (JSON.stringify(fotos) !== JSON.stringify(inicial.fotos)) campos.fotos = fotos
 
     // ---- o texto vai para o rascunho (se não havia, nasce da versão no ar) ----
     if (textoMudou) {
@@ -301,6 +337,32 @@ export default function EditarLugar({ lugar, g, onFechar }) {
                       })}
                     </div>
                   )}
+                </fieldset>
+
+                <fieldset className="pg-grupo">
+                  <legend>Fotos</legend>
+                  <p className="pg-nota">Só foto que o salão mandou ou autorizou, ou que a equipe tirou. Nada copiado do Google ou do Instagram: a foto é de quem publicou. Até {MAX_FOTOS}; a primeira é a capa da página e a imagem do link no WhatsApp.</p>
+                  <div className="pg-fotos">
+                    {fotos.map((f, i) => (
+                      <figure key={f} className="pg-foto">
+                        <img src={f} alt="" />
+                        <figcaption>
+                          <button type="button" onClick={() => moverFoto(i, -1)} disabled={i === 0} aria-label="Mover para a esquerda"><ChevronLeft size={14} /></button>
+                          <span>{i === 0 ? 'capa' : i + 1}</span>
+                          <button type="button" onClick={() => moverFoto(i, 1)} disabled={i === fotos.length - 1} aria-label="Mover para a direita"><ChevronRight size={14} /></button>
+                          <button type="button" className="pg-foto-tirar" onClick={() => setFotos((fs) => fs.filter((_, j) => j !== i))} aria-label="Tirar a foto"><Trash2 size={14} /></button>
+                        </figcaption>
+                      </figure>
+                    ))}
+                    {fotos.length < MAX_FOTOS && (
+                      <label className="pg-foto-mais">
+                        <input type="file" accept="image/*" multiple onChange={enviarFotos} disabled={enviando} />
+                        {enviando ? <LoaderCircle size={18} className="pg-gira" /> : <ImagePlus size={18} />}
+                        <span>{enviando ? 'Enviando…' : 'Enviar fotos'}</span>
+                      </label>
+                    )}
+                  </div>
+                  {lugar.salon_id && !fotos.length && <p className="pg-nota">Sem foto aqui, a página usa as fotos que o salão pôs na própria página dele na MIMO.</p>}
                 </fieldset>
               </div>
             )}

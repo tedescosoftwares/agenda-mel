@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
+import { carregarCidades } from '../../lib/guiaPublico'
+import { rotaDaCidade } from '../../lib/guia'
 import { Link } from 'react-router-dom'
 import { ChevronDown, Menu, X, LogOut, ArrowRight } from 'lucide-react'
 import { MarcaIcon } from '../icons'
@@ -109,7 +111,7 @@ export function Cabeca({ kicker, titulo, children, centro = false, claro = false
 
 // os links da barra apontam para as seções da landing; fora dela viram
 // endereço completo (/#saloes), e "Conteúdos" vai para o blog
-const LINKS = [['/#saloes', 'Para salões'], ['/#autonomas', 'Para autônomas'], ['/#funcionalidades', 'Funcionalidades'], ['/#como-funciona', 'Como funciona'], ['/#planos', 'Planos'], ['/blog', 'Conteúdos']]
+const LINKS = [['/#saloes', 'Para salões'], ['/#autonomas', 'Para autônomas'], ['/#funcionalidades', 'Funcionalidades'], ['/#como-funciona', 'Como funciona'], ['/#planos', 'Planos'], ['/blog', 'Conteúdos'], ['/saloes', 'Guia de salões']]
 
 export function NavSite() {
   const [menu, setMenu] = useState(false)
@@ -193,7 +195,22 @@ export function NavSite() {
 
 // as soluções e as páginas por profissão, no rodapé de todas as páginas:
 // é por aqui que o Google (e a dona do salão) chegam em cada uma
+// as cidades publicadas no guia, para o rodapé (até 8, as com mais salões primeiro)
+let cidadesLembradas = null
+function useCidadesDoGuia() {
+  const [cidades, setCidades] = useState(cidadesLembradas ?? [])
+  useEffect(() => {
+    if (cidadesLembradas) return
+    let vivo = true
+    carregarCidades().then((c) => { cidadesLembradas = (Array.isArray(c) ? c : []).slice(0, 8); if (vivo) setCidades(cidadesLembradas) }).catch(() => {})
+    return () => { vivo = false }
+  }, [])
+  return cidades
+}
+
 export function PeSite() {
+  // as cidades do guia (3.14): lidas uma vez por sessão; sem banco (ou no demo vazio), só o link do guia
+  const cidadesDoGuia = useCidadesDoGuia()
   const entrar = entrarEm()
   const zap = useWhats('contato')
   // o rodapé lista tudo que existe: as páginas do código abrem na hora, as da Plataforma chegam logo depois
@@ -223,7 +240,8 @@ export function PeSite() {
               <Link to="/planos">Planos</Link>
               <Link to="/sobre">Sobre</Link>
               <Link to="/blog">Blog</Link>
-              <Link to="/saloes/itanhaem">Salões em Itanhaém</Link>
+              <Link to="/saloes">Guia de salões</Link>
+              {cidadesDoGuia.map((c) => <Link key={c.cidade_slug} to={rotaDaCidade(c.cidade_slug)}>Salões em {c.cidade}</Link>)}
               <Link to="/contato">Contato</Link>
               <a href={zap.href} target="_blank" rel="noopener noreferrer">WhatsApp {zap.bonito}</a>
               <Link to="/termos">Termos de uso</Link>

@@ -121,7 +121,7 @@ function Paginas() {
     }
     const r = id ? await supabase.from('seo_pages').update(campos).eq('id', id) : await supabase.from('seo_pages').insert(campos)
     if (r.error) { setErro(r.error.message); return }
-    setEditando(null); carregar(); await avisar({ titulo: 'Salvo', texto: 'Valeu na hora no site. Página nova entra no sitemap e no HTML estático no próximo publicar.' })
+    setEditando(null); carregar(); await avisar({ titulo: 'Salvo', texto: 'Valeu na hora no site. O sitemap e o HTML estático acompanham na próxima regeneração do servidor (de hora em hora, ou no publicar).' })
   }
   async function despublicar(l) {
     await supabase.from('seo_pages').update({ status: l.status === 'published' ? 'draft' : 'published' }).eq('id', l.id); carregar()
@@ -203,7 +203,7 @@ function Artigos() {
     if (typeof campos.caixa === 'string') { try { campos.caixa = campos.caixa ? JSON.parse(campos.caixa) : null } catch { setErro('caixa: JSON inválido'); return } }
     const r = id ? await supabase.from('blog_posts').update(campos).eq('id', id) : await supabase.from('blog_posts').insert(campos)
     if (r.error) { setErro(r.error.message); return }
-    setEditando(null); carregar(); await avisar({ titulo: status === 'published' ? 'Publicado' : 'Salvo', texto: 'A página do artigo ganha o próprio index.html no próximo build do site; o app já mostra agora.' })
+    setEditando(null); carregar(); await avisar({ titulo: status === 'published' ? 'Publicado' : 'Salvo', texto: 'O app já mostra agora. O HTML estático e o sitemap acompanham na próxima regeneração do servidor (de hora em hora, ou no publicar).' })
   }
   async function apagar(l) {
     if (!(await confirmar({ titulo: `Apagar “${l.title}”?`, texto: 'Some do site. Prefira despublicar se puder voltar.', ok: 'Apagar', cancelar: 'Deixar' }))) return
@@ -236,6 +236,7 @@ function Artigos() {
       {abaEd === 'links' && (
         <div className="form">
           <p className="muted plat-nota">Todo artigo aponta para uma página de produto, outro artigo e a chamada da MIMO (a chamada é automática).</p>
+          <p className="muted plat-nota">Artigo de cidade: ponha a cidade no título (ex.: “Onde fazer as unhas em Santos”). Se a cidade está no guia de salões, o artigo ganha a caixa “Salões em Santos” e aparece em “Leia também” na página da cidade, sem campo para preencher. O sitemap e o HTML estático acompanham na próxima regeneração do servidor (de hora em hora).</p>
           <div className="seo-linha-3">
             <label>Página de produto<input value={editando.produto_url || ''} onChange={(e) => set('produto_url', e.target.value)} placeholder="/agenda-online-para-salao-de-beleza" /></label>
             <label>Texto do link<input value={editando.produto_rotulo || ''} onChange={(e) => set('produto_rotulo', e.target.value)} placeholder="Conheça a agenda da MIMO para salões" /></label>

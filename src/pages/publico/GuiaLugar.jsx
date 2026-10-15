@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { RotateCcw } from 'lucide-react'
-import { useSeo } from '../../lib/seo'
-import { conteudoSeguro, faqDaPagina, rotaDaCidade, rotaDoLugar } from '../../lib/guia'
+import { useSeo, SITE } from '../../lib/seo'
+import { conteudoSeguro, faqDaPagina, rotaDaCidade, rotaDoLugar, fotosDoLugar } from '../../lib/guia'
 import { seoDoLugar, jsonLdDoLugar } from '../../lib/guiaSeo'
 import { carregarPagina } from '../../lib/guiaPublico'
 import { aoClicarNaPagina } from '../../lib/eventos'
@@ -78,7 +78,9 @@ function Pagina({ dados, onInteresse }) {
   const seo = seoDoLugar(lugar, lugar.conteudo)
   const caminho = rotaDoLugar(lugar.cidade_slug, lugar.slug)
   useVisita(caminho)
-  useSeo({ titulo: seo.titulo, descricao: seo.descricao, caminho: seo.caminho, jsonLd: jsonLdDoLugar(lugar, lugar.conteudo, faq), noindex: seo.noindex, tipo: 'business.business' })
+  // a primeira foto (3.14) vira a imagem do link no WhatsApp; sem foto, fica a da MIMO
+  const capa = fotosDoLugar(lugar)[0]
+  useSeo({ titulo: seo.titulo, descricao: seo.descricao, caminho: seo.caminho, imagem: capa ? (capa.startsWith('/') ? SITE + capa : capa) : undefined, jsonLd: jsonLdDoLugar(lugar, lugar.conteudo, faq), noindex: seo.noindex, tipo: 'business.business' })
   return (
     <PaginaDoLugar
       lugar={lugar}

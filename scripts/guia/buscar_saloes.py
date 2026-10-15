@@ -1,60 +1,73 @@
 """
-MIMO: buscar salões no Google Maps (Places API New), versão 3, pensada para
-sair de graça.
+MIMO: buscar salões no Google Maps (Places API New), versão 4, pensada para
+achar TODOS os salões de uma cidade (ou da região inteira) sem pagar.
 
-O que mudou em relação à v2:
-  - A chave NÃO fica no arquivo. Vem da variável de ambiente
-    GOOGLE_PLACES_KEY ou é pedida na hora (não aparece na tela).
-  - Uma chamada só por página de resultados (até 20 lugares), já com tudo o
-    que interessa: endereço em partes (bairro e CEP certos), horário,
-    telefone, site, nota e avaliações (só para a sua triagem), formas de
-    pagamento, acessibilidade, estacionamento, se recebe criança e se tem
-    banheiro. O Google cobra por CHAMADA, não por lugar: pedir tudo de uma vez
-    na busca sai muito mais barato do que buscar e depois pedir os detalhes
-    de cada salão (seriam ~300 chamadas a mais).
-  - A busca fica presa dentro de Itanhaém (um retângulo) e é feita em faixas:
-    cada busca do Google para em 60 resultados, então dividir a cidade acha
-    salões que a v2 perdia, sem gastar com resultado de outra cidade.
-  - Sem "barbearia" nas buscas. Barbearia, lugar voltado ao público
-    masculino, consultório, curso e loja vão para o arquivo de descartados,
-    com o motivo, para você conferir.
-  - A categoria sai do tipo que o próprio Google dá ao lugar e do nome, nunca
-    das palavras da busca (a v2 marcava como "unhas" quem só apareceu numa
-    busca de manicure).
-  - Cache: rodar de novo no mesmo dia (ou em 7 dias) não chama o Google outra
-    vez. --refazer ignora o cache.
-  - Teto de chamadas (--max-chamadas, padrão 200) e a conta do que foi gasto
-    no fim.
+Por que a v3 parava em ~500 lugares
+  Cada busca do Google devolve no máximo 60 resultados (3 páginas de 20),
+  os "mais relevantes" da área pedida. A v3 dividia a cidade em 3 faixas:
+  em Itanhaém cabia, em Santos cada faixa lotava os 60 em toda busca e os
+  mesmos salões famosos voltavam em "salão de beleza", "cabeleireiro",
+  "manicure"… Somando, uns 500 únicos, e o resto nunca aparecia.
 
-O que NÃO é pedido de propósito: fotos, texto das avaliações, resumo do
-Google. Não podem ir para o site e custariam mais.
+O que a v4 faz
+  1. DESCOBERTA, de graça: a busca "só ids" (Text Search Essentials, IDs Only)
+     é grátis e ilimitada. A cidade é dividida numa grade adaptativa: toda
+     célula que lota os 60 é partida em quatro, e de novo, até nenhuma lotar.
+     Ao fim, para cada palavra buscada, uma lista de células pequenas em que
+     o Google devolveu tudo o que tinha. Centenas de chamadas, custo zero.
+  2. DADOS COMPLETOS, no nível mais caro mas em lote: a busca com todos os
+     campos (endereço em partes, horário, telefone, site, pagamento,
+     acessibilidade, estacionamento, crianças, banheiro; nota e avaliações só
+     para a sua triagem) devolve até 20 lugares por chamada. O script escolhe
+     as palavras que trazem mais lugares novos por chamada (em geral "salão de
+     beleza", "manicure", "cabeleireiro", "estética"…) e roda só as células
+     delas.
+  3. O RESTO, um a um: os ids descobertos que não vieram nas buscas completas
+     são lidos por Place Details (outra cota grátis, separada).
+  Tudo dentro das cotas grátis do mês (1.000 chamadas de cada nível), com
+  teto por nível que o script não ultrapassa sem você pedir. O que não
+  couber no mês fica em mimo_pendentes.csv e entra na rodada seguinte: o
+  cache guarda o que já foi feito.
 
 Como rodar (Windows, no Prompt de Comando, dentro desta pasta):
     pip install requests
     set GOOGLE_PLACES_KEY=sua_chave_aqui
-    python buscar_saloes.py
+    python buscar_saloes.py --cidade "Santos"
+    python buscar_saloes.py --regiao baixada-santista        (as 9 cidades de uma vez)
 
 Opções:
-    --fatias 3          em quantas faixas dividir a cidade (1 a 6)
-    --max-chamadas 200  para de chamar o Google ao chegar nesse número
-    --refazer           ignora o cache e busca tudo de novo
-    --saida pasta       onde gravar os CSVs (padrão: a pasta atual)
+    --cidade "Praia Grande"   uma cidade (o retângulo vem do próprio Google; 1 chamada Pro)
+    --uf SP                   o estado da cidade (padrão SP)
+    --regiao baixada-santista a região inteira: uma grade só, um CSV por cidade
+    --retangulo S,O,N,L       o retângulo na mão (sul,oeste,norte,leste), em vez do Google
+    --max-completas 900       teto do MÊS para as buscas completas (cota grátis: 1.000)
+    --max-detalhes 900        teto do MÊS para os detalhes um a um (cota grátis: 1.000)
+    --sim                     não pergunta antes de gastar (para rodar sem olhar)
+    --refazer                 ignora o cache e busca tudo de novo
+    --saida pasta             onde gravar os CSVs (padrão: a pasta atual)
 
-Saída (separado por ponto e vírgula, abre no Excel):
-    mimo_saloes_itanhaem.csv       os que entram na Plataforma (importe este)
-    mimo_descartados_itanhaem.csv  os que ficaram de fora e o motivo
+Saída (separado por ponto e vírgula, abre no Excel), uma por cidade:
+    mimo_saloes_<cidade>.csv       os que entram na Plataforma (importe este)
+    mimo_descartados_<cidade>.csv  os que ficaram de fora e o motivo
+    mimo_pendentes.csv             ids que não couberam na cota (rodar de novo no mês seguinte)
+
+O que NÃO é pedido de propósito: fotos, texto das avaliações, resumo do
+Google. Não podem ir para o site (são de quem publicou) e custariam mais.
 """
 
 import argparse
 import csv
 import getpass
 import json
+import math
 import os
 import re
 import sys
+import threading
 import time
 import unicodedata
 from collections import Counter
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 try:
@@ -67,16 +80,17 @@ except ImportError:
 # CONFIGURAÇÃO
 # =========================================================
 
-CIDADE = "Itanhaém"
-ESTADO = "SP"
+UF_PADRAO = "SP"
 
-# o retângulo da área urbana de Itanhaém (do Suarão até a divisa com
-# Peruíbe), com folga. A cidade de cada resultado ainda é conferida pelo
-# endereço: o que cair em Mongaguá ou Peruíbe vai para os descartados.
-RETANGULO = {"sul": -24.30, "oeste": -46.96, "norte": -24.11, "leste": -46.69}
+# as cidades da região, para --regiao (e para o nome do arquivo de cada uma)
+REGIOES = {
+    "baixada-santista": ["Peruíbe", "Itanhaém", "Mongaguá", "Praia Grande", "São Vicente", "Santos", "Guarujá", "Cubatão", "Bertioga"],
+}
 
-URL = "https://places.googleapis.com/v1/places:searchText"
+URL_BUSCA = "https://places.googleapis.com/v1/places:searchText"
+URL_DETALHE = "https://places.googleapis.com/v1/places/%s"
 
+# o que é buscado na descoberta (de graça): quanto mais jeitos de dizer, mais salões aparecem
 BUSCAS = [
     "salão de beleza",
     "salão feminino",
@@ -100,43 +114,36 @@ BUSCAS = [
     "massagem",
 ]
 
-# Tudo numa chamada só. O preço da chamada é o do campo mais caro pedido
-# (aqui, os de pagamento, acessibilidade e estacionamento), então pedir os
-# outros junto não muda o valor.
+# os campos completos. O preço da chamada é o do campo mais caro pedido (aqui,
+# pagamento, acessibilidade, estacionamento, crianças e banheiro: "Enterprise +
+# Atmosphere"), então pedir os outros junto não muda o valor.
 CAMPOS = [
-    "places.id",
-    "places.displayName",
-    "places.formattedAddress",
-    "places.addressComponents",
-    "places.location",
-    "places.primaryType",
-    "places.primaryTypeDisplayName",
-    "places.types",
-    "places.businessStatus",
-    "places.googleMapsUri",
-    "places.rating",
-    "places.userRatingCount",
-    "places.nationalPhoneNumber",
-    "places.websiteUri",
-    "places.regularOpeningHours",
-    "places.paymentOptions",
-    "places.accessibilityOptions",
-    "places.parkingOptions",
-    "places.goodForChildren",
-    "places.restroom",
-    "nextPageToken",
+    "id", "displayName", "formattedAddress", "addressComponents", "location", "primaryType", "primaryTypeDisplayName",
+    "types", "businessStatus", "googleMapsUri", "rating", "userRatingCount", "nationalPhoneNumber", "websiteUri",
+    "regularOpeningHours", "paymentOptions", "accessibilityOptions", "parkingOptions", "goodForChildren", "restroom",
 ]
+MASCARA_IDS = "places.id,nextPageToken"                                   # Text Search Essentials (IDs Only): grátis, sem limite
+MASCARA_COMPLETA = ",".join("places." + c for c in CAMPOS) + ",nextPageToken"  # Text Search Enterprise + Atmosphere
+MASCARA_DETALHE = ",".join(CAMPOS)                                       # Place Details Enterprise + Atmosphere
+MASCARA_CIDADE = "places.id,places.displayName,places.viewport,places.types"  # Text Search Pro
 
-# preço de tabela por 1.000 chamadas desse nível (dólar, tabela de 2025) e a
-# cota grátis do mês para esse nível. Confira em
+# a tabela de preços (dólar por 1.000 chamadas, acima da cota grátis do mês) e
+# a cota grátis mensal de cada nível, em 2026. Confira em
 # https://developers.google.com/maps/billing-and-pricing/pricing
-PRECO_POR_MIL = 40.0
-COTA_GRATIS_MES = 1000
+SKUS = {
+    "ids":       {"nome": "Busca só ids (Essentials)",                "preco": 0.0,  "gratis": None},
+    "completas": {"nome": "Busca completa (Enterprise + Atmosphere)", "preco": 40.0, "gratis": 1000},
+    "detalhes":  {"nome": "Detalhes um a um (Enterprise + Atmosphere)", "preco": 25.0, "gratis": 1000},
+    "cidade":    {"nome": "Retângulo da cidade (Pro)",                "preco": 32.0, "gratis": 5000},
+}
 
-ARQ_SALOES = "mimo_saloes_itanhaem.csv"
-ARQ_DESCARTADOS = "mimo_descartados_itanhaem.csv"
-ARQ_CACHE = "mimo_cache_buscas.json"
-CACHE_DIAS = 7
+ARQ_CACHE = "mimo_cache_v4.json"
+DIAS_CACHE_IDS = 30      # ids podem ficar guardados; a grade também
+DIAS_CACHE_DADOS = 7     # os dados de cada lugar: curto, para a planilha sair fresca
+PAGINA = 20
+LOTE_MAX = 60            # o teto de uma busca do Google: 3 páginas de 20
+LADO_MINIMO = 0.0025     # ~280 m: abaixo disso não divide mais (e avisa se ainda lotar)
+THREADS = 4
 
 # =========================================================
 # CLASSIFICAÇÃO (a mesma regra do importador, em packages/core/guia.js)
@@ -145,6 +152,10 @@ CACHE_DIAS = 7
 
 def sem_acento(s):
     return "".join(c for c in unicodedata.normalize("NFD", s or "") if unicodedata.category(c) != "Mn").lower()
+
+
+def slug(s):
+    return re.sub(r"-+$", "", re.sub(r"[^a-z0-9]+", "-", sem_acento(s)).strip("-"))[:60]
 
 
 # palavra no nome -> categoria do guia
@@ -177,7 +188,6 @@ TIPOS_DE_BELEZA = {"beauty_salon", "hair_salon", "hair_care", "nail_salon", "bea
                    "massage", "massage_spa", "skin_care_clinic", "sauna", "tanning_studio", "wellness_center"}
 
 NOME_DE_SALAO = r"salao|beleza|beauty|unha|nail|cilio|lash|sobrancelha|brow|estetic|esmalt|\bspa\b|cabeleireir|hair|depila|maquiag|massag|podolog"
-
 
 SALAO_COMPLETO = r"salao de beleza|beauty salon|centro de beleza|espaco de beleza|instituto de beleza"
 
@@ -267,6 +277,12 @@ def triagem(nota, qtd):
     return "baixa"
 
 
+def cidade_do_lugar(p):
+    """o município (administrative_area_level_2 no Brasil); sem ele, a localidade"""
+    comps = p.get("addressComponents") or []
+    return parte_do_endereco(comps, "administrative_area_level_2") or parte_do_endereco(comps, "locality")
+
+
 def linha_do_lugar(p, buscas):
     nome = (p.get("displayName") or {}).get("text", "")
     comps = p.get("addressComponents") or []
@@ -285,7 +301,7 @@ def linha_do_lugar(p, buscas):
         if parte_do_endereco(comps, "route") else "",
         "bairro": parte_do_endereco(comps, "sublocality_level_1", "sublocality", "neighborhood"),
         "cep": parte_do_endereco(comps, "postal_code"),
-        "cidade": parte_do_endereco(comps, "administrative_area_level_2", "locality"),
+        "cidade": cidade_do_lugar(p),
         "telefone": p.get("nationalPhoneNumber", ""),
         "avaliacao": nota,
         "qtd_avaliacoes": qtd,
@@ -316,64 +332,174 @@ COLUNAS = ["categoria_mimo", "nome", "triagem", "avaliacao", "qtd_avaliacoes", "
            "motivo_descarte"]
 
 # =========================================================
-# GOOGLE
+# O GOOGLE: chamadas, contagem por nível e teto do mês
 # =========================================================
+
+
+class Teto(Exception):
+    """o teto do mês de um nível foi atingido: o que falta fica para a rodada seguinte"""
 
 
 class Google:
-    def __init__(self, chave, max_chamadas):
+    def __init__(self, chave, tetos, usado_no_mes):
         self.chave = chave
-        self.max = max_chamadas
-        self.chamadas = 0
-        self.parou = False
+        self.tetos = tetos                 # nível -> máximo de chamadas no mês (None = sem teto)
+        self.chamadas = Counter()          # nível -> chamadas desta rodada
+        self.usado = Counter(usado_no_mes)  # nível -> chamadas do mês (rodadas anteriores incluídas)
+        self.tranca = threading.Lock()
+        self.sessao = requests.Session()
 
-    def buscar(self, termo, ret):
-        """todas as páginas de uma busca dentro do retângulo (até 60 lugares)"""
-        corpo = {
-            "textQuery": "%s em %s, %s" % (termo, CIDADE, ESTADO),
-            "languageCode": "pt-BR",
-            "regionCode": "BR",
-            "pageSize": 20,
-            "locationRestriction": {"rectangle": {
+    def cabe(self, nivel, quantas=1):
+        teto = self.tetos.get(nivel)
+        return teto is None or self.usado[nivel] + quantas <= teto
+
+    def _contar(self, nivel):
+        with self.tranca:
+            if not self.cabe(nivel):
+                raise Teto(nivel)
+            self.chamadas[nivel] += 1
+            self.usado[nivel] += 1
+
+    def _pedir(self, metodo, url, nivel, **kw):
+        self._contar(nivel)
+        for tentativa in range(4):
+            try:
+                r = self.sessao.request(metodo, url, timeout=30, **kw)
+            except Exception as e:
+                if tentativa == 3:
+                    raise RuntimeError("sem conexão: %s" % e)
+                time.sleep(2 * (tentativa + 1))
+                continue
+            if r.status_code == 200:
+                return r.json()
+            if r.status_code in (429, 500, 502, 503, 504) and tentativa < 3:
+                time.sleep(3 * (tentativa + 1))  # limite por minuto ou soluço do Google: espera e tenta de novo
+                continue
+            if r.status_code in (400, 401, 403):
+                raise SystemExit("\nO Google respondeu %s: %s\nConfira a chave e se a Places API (New) está ativada no projeto." % (r.status_code, r.text[:300]))
+            raise RuntimeError("o Google respondeu %s: %s" % (r.status_code, r.text[:200]))
+        raise RuntimeError("o Google não respondeu")
+
+    def buscar(self, texto, ret, mascara, nivel, incluir_tipo=None, max_paginas=3):
+        """todas as páginas de uma busca de texto dentro do retângulo; devolve (lugares, saturou)"""
+        corpo = {"textQuery": texto, "languageCode": "pt-BR", "regionCode": "BR", "pageSize": PAGINA}
+        if ret:
+            corpo["locationRestriction"] = {"rectangle": {
                 "low": {"latitude": ret["sul"], "longitude": ret["oeste"]},
                 "high": {"latitude": ret["norte"], "longitude": ret["leste"]},
-            }},
-        }
-        cab = {"Content-Type": "application/json", "X-Goog-Api-Key": self.chave, "X-Goog-FieldMask": ",".join(CAMPOS)}
+            }}
+        if incluir_tipo:
+            corpo["includedType"] = incluir_tipo
+        cab = {"Content-Type": "application/json", "X-Goog-Api-Key": self.chave, "X-Goog-FieldMask": mascara}
         lugares, token = [], None
-        while True:
-            if self.chamadas >= self.max:
-                self.parou = True
-                return lugares, False
+        for _ in range(max_paginas):
             if token:
                 corpo["pageToken"] = token
-            try:
-                r = requests.post(URL, headers=cab, json=corpo, timeout=30)
-            except Exception as e:
-                print("    sem conexão: %s" % e)
-                return lugares, False
-            self.chamadas += 1
-            if r.status_code != 200:
-                print("    o Google respondeu %s: %s" % (r.status_code, r.text[:300]))
-                if r.status_code in (400, 401, 403):
-                    print("\nConfira a chave e se a Places API (New) está ativada no projeto.")
-                    sys.exit(1)
-                return lugares, False
-            dados = r.json()
+            dados = self._pedir("POST", URL_BUSCA, nivel, headers=cab, json=corpo)
             lugares.extend(dados.get("places", []))
             token = dados.get("nextPageToken")
             if not token:
-                return lugares, True
-            time.sleep(1.5)  # o token da próxima página demora um pouco a valer
+                break
+            time.sleep(0.6)  # o token da próxima página demora um instante a valer
+        return lugares, len(lugares) >= LOTE_MAX
 
+    def detalhe(self, place_id):
+        cab = {"X-Goog-Api-Key": self.chave, "X-Goog-FieldMask": MASCARA_DETALHE}
+        return self._pedir("GET", URL_DETALHE % place_id, "detalhes", headers=cab, params={"languageCode": "pt-BR", "regionCode": "BR"})
 
-def faixas(ret, n):
-    passo = (ret["leste"] - ret["oeste"]) / n
-    return [dict(ret, oeste=ret["oeste"] + i * passo, leste=ret["oeste"] + (i + 1) * passo) for i in range(n)]
+    def retangulo_da_cidade(self, cidade, uf):
+        """o retângulo (viewport) do município, pelo próprio Google; 1 chamada Pro"""
+        lugares, _ = self.buscar("%s, %s, Brasil" % (cidade, uf), None, MASCARA_CIDADE, "cidade", incluir_tipo="locality", max_paginas=1)
+        alvo = sem_acento(cidade)
+        for p in lugares:
+            nome = sem_acento((p.get("displayName") or {}).get("text", ""))
+            vp = p.get("viewport") or {}
+            if nome == alvo and vp.get("low") and vp.get("high"):
+                return {"sul": vp["low"]["latitude"], "oeste": vp["low"]["longitude"], "norte": vp["high"]["latitude"], "leste": vp["high"]["longitude"]}
+        for p in lugares:  # o nome veio diferente ("Santos" x "Santos - SP"): fica com o primeiro que tem retângulo
+            vp = p.get("viewport") or {}
+            if vp.get("low") and vp.get("high"):
+                return {"sul": vp["low"]["latitude"], "oeste": vp["low"]["longitude"], "norte": vp["high"]["latitude"], "leste": vp["high"]["longitude"]}
+        return None
 
 
 # =========================================================
-# CSV E RELATÓRIO
+# A GRADE ADAPTATIVA
+# =========================================================
+
+
+def chave_celula(ret):
+    return "%.5f,%.5f,%.5f,%.5f" % (ret["sul"], ret["oeste"], ret["norte"], ret["leste"])
+
+
+def quatro(ret):
+    mlat = (ret["sul"] + ret["norte"]) / 2
+    mlng = (ret["oeste"] + ret["leste"]) / 2
+    return [
+        {"sul": ret["sul"], "oeste": ret["oeste"], "norte": mlat, "leste": mlng},
+        {"sul": ret["sul"], "oeste": mlng, "norte": mlat, "leste": ret["leste"]},
+        {"sul": mlat, "oeste": ret["oeste"], "norte": ret["norte"], "leste": mlng},
+        {"sul": mlat, "oeste": mlng, "norte": ret["norte"], "leste": ret["leste"]},
+    ]
+
+
+def lado(ret):
+    return max(ret["norte"] - ret["sul"], ret["leste"] - ret["oeste"])
+
+
+def uniao(rets):
+    return {"sul": min(r["sul"] for r in rets), "oeste": min(r["oeste"] for r in rets),
+            "norte": max(r["norte"] for r in rets), "leste": max(r["leste"] for r in rets)}
+
+
+def paralelo(fn, itens, n=THREADS):
+    if not itens:
+        return []
+    with ThreadPoolExecutor(max_workers=min(n, len(itens))) as ex:
+        return list(ex.map(fn, itens))
+
+
+class Descoberta:
+    """para uma palavra, as células em que o Google devolveu tudo (menos de 60), e os ids de cada uma"""
+
+    def __init__(self, google, cache, agora):
+        self.google = google
+        self.cache = cache          # chave "termo|celula" -> {"em", "ids", "saturou"}
+        self.agora = agora
+        self.no_minimo = 0          # células que lotaram mesmo no tamanho mínimo (pode haver lugar perdido)
+
+    def _ids(self, termo, ret):
+        k = "%s|%s" % (termo, chave_celula(ret))
+        v = self.cache.get(k)
+        if v and self.agora - v.get("em", 0) < DIAS_CACHE_IDS * 86400:
+            return v["ids"], v["saturou"], True
+        lugares, saturou = self.google.buscar(termo, ret, MASCARA_IDS, "ids")
+        ids = sorted({p.get("id") for p in lugares if p.get("id")})
+        self.cache[k] = {"em": self.agora, "ids": ids, "saturou": saturou}
+        return ids, saturou, False
+
+    def folhas(self, termo, ret, avisar=None):
+        """[(celula, ids)] cobrindo o retângulo; chamadas em paralelo, nível a nível"""
+        pendentes, folhas, chamadas = [ret], [], 0
+        while pendentes:
+            resultados = paralelo(lambda c: self._ids(termo, c), pendentes)
+            proximas = []
+            for cel, (ids, saturou, do_cache) in zip(pendentes, resultados):
+                chamadas += 0 if do_cache else 1
+                if saturou and lado(cel) > LADO_MINIMO:
+                    proximas.extend(quatro(cel))
+                else:
+                    if saturou:
+                        self.no_minimo += 1
+                    folhas.append((cel, ids))
+            pendentes = proximas
+        if avisar:
+            avisar(termo, folhas, chamadas)
+        return folhas
+
+
+# =========================================================
+# CSV, CACHE E RELATÓRIO
 # =========================================================
 
 
@@ -388,40 +514,57 @@ def contar(linhas, campo):
     return sum(1 for x in linhas if x.get(campo))
 
 
-def relatorio(validos, fora, google, do_cache):
+def ler_cache(caminho, refazer):
+    vazio = {"descoberta": {}, "cidades": {}, "lugares": {}, "mes": "", "usado": {}}
+    if refazer or not caminho.exists():
+        return vazio
+    try:
+        c = json.loads(caminho.read_text(encoding="utf-8"))
+    except Exception:
+        return vazio
+    for k in vazio:
+        c.setdefault(k, vazio[k])
+    return c
+
+
+def relatorio_cidade(nome, validos, fora):
     print()
     print("=" * 60)
-    print("  RESULTADO")
+    print("  %s: %d entram na Plataforma, %d ficaram de fora" % (nome, len(validos), len(fora)))
     print("=" * 60)
-    print("Entram na Plataforma:   %d" % len(validos))
-    print("Ficaram de fora:        %d" % len(fora))
     for motivo, n in Counter(re.sub(r" \(.*", "", x["motivo_descarte"]) for x in fora).most_common():
-        print("   %-34s %d" % (motivo, n))
-    print()
+        print("   fora: %-30s %d" % (motivo, n))
     print("Por categoria:")
     for cat, n in Counter(x["categoria_mimo"] for x in validos).most_common():
         print("   %-20s %d" % (cat, n))
-    print()
     print("Triagem pela nota do Google (não vai para o site):")
     for t in ["ótima", "boa", "regular", "baixa", "poucas avaliações", "sem nota"]:
         print("   %-20s %d" % (t, sum(1 for x in validos if x["triagem"] == t)))
-    print("   ótima = 4,8 ou mais com 30+ avaliações; poucas = menos de 10")
-    print()
     print("Dados que enriquecem a página:")
     for campo, rotulo in [("bairro", "bairro"), ("horarios", "horário"), ("telefone", "telefone"), ("site", "site ou Instagram"),
                           ("pagamento", "formas de pagamento"), ("acessibilidade", "acessibilidade"),
                           ("estacionamento", "estacionamento"), ("criancas", "crianças"), ("banheiro", "banheiro")]:
         print("   %-22s %d de %d" % (rotulo, contar(validos, campo), len(validos)))
+
+
+def relatorio_custo(google, mes):
     print()
     print("-" * 60)
-    print("Chamadas ao Google nesta rodada: %d (do cache: %d buscas)" % (google.chamadas, do_cache))
-    custo = google.chamadas * PRECO_POR_MIL / 1000
-    print("Preço de tabela: US$ %.2f. A cota grátis do mês cobre %d chamadas" % (custo, COTA_GRATIS_MES))
-    print("desse nível; dentro dela, o custo é zero. Confira no Console do Google")
-    print("Cloud: Faturamento > Relatórios, agrupando por SKU.")
-    if google.parou:
-        print("\nATENÇÃO: parou no teto de %d chamadas. Algumas buscas ficaram pela metade." % google.max)
-    print("=" * 60)
+    print("Chamadas ao Google nesta rodada, por nível (e o total do mês %s):" % mes)
+    total = 0.0
+    for nivel, sku in SKUS.items():
+        n = google.chamadas[nivel]
+        usado = google.usado[nivel]
+        if sku["gratis"] is None:
+            print("   %-46s %5d  (grátis, sem limite)" % (sku["nome"], n))
+            continue
+        acima = max(0, usado - sku["gratis"])
+        custo = acima * sku["preco"] / 1000
+        total += custo
+        print("   %-46s %5d  no mês: %d de %d grátis%s" % (sku["nome"], n, usado, sku["gratis"], "" if not acima else ", %d acima: US$ %.2f" % (acima, custo)))
+    print("Custo estimado do mês além das cotas grátis: US$ %.2f%s" % (total, "" if total else " (nada)"))
+    print("Confira no Console do Google Cloud: Faturamento > Relatórios, agrupando por SKU.")
+    print("-" * 60)
 
 
 # =========================================================
@@ -429,83 +572,247 @@ def relatorio(validos, fora, google, do_cache):
 # =========================================================
 
 
+def pedir_chave():
+    chave = os.environ.get("GOOGLE_PLACES_KEY", "").strip() or getpass.getpass("Chave da Places API (não aparece ao digitar): ").strip()
+    if not chave:
+        print("Sem chave, sem busca.")
+        sys.exit(1)
+    return chave
+
+
+def planejar(folhas_por_termo, orcamento_completas):
+    """escolhe as palavras das buscas completas: as que trazem mais lugares novos por chamada.
+    Devolve (termos escolhidos, ids que elas cobrem, chamadas previstas)."""
+    cobertos, escolhidos, chamadas = set(), [], 0
+    custo = {t: sum(math.ceil(len(ids) / PAGINA) for _, ids in folhas if ids) for t, folhas in folhas_por_termo.items()}
+    ids_de = {t: set().union(*[set(ids) for _, ids in folhas]) if folhas else set() for t, folhas in folhas_por_termo.items()}
+    while True:
+        melhor, ganho = None, 0.0
+        for t in folhas_por_termo:
+            if t in escolhidos or not custo[t]:
+                continue
+            novos = len(ids_de[t] - cobertos)
+            # vale a pena quando cada chamada traz pelo menos 2 lugares novos (senão é mais barato um a um)
+            g = novos / custo[t]
+            if g >= 2 and g > ganho and chamadas + custo[t] <= orcamento_completas:
+                melhor, ganho = t, g
+        if not melhor:
+            break
+        escolhidos.append(melhor)
+        cobertos |= ids_de[melhor]
+        chamadas += custo[melhor]
+    return escolhidos, cobertos, chamadas
+
+
 def main():
-    ap = argparse.ArgumentParser(description="Busca os salões de Itanhaém no Google Maps (Places API New).")
-    ap.add_argument("--fatias", type=int, default=3)
-    ap.add_argument("--max-chamadas", type=int, default=200)
+    ap = argparse.ArgumentParser(description="Busca os salões de uma cidade (ou região) no Google Maps (Places API New), de graça.")
+    ap.add_argument("--cidade", default="")
+    ap.add_argument("--uf", default=UF_PADRAO)
+    ap.add_argument("--regiao", default="", choices=[""] + sorted(REGIOES))
+    ap.add_argument("--retangulo", default="", help="sul,oeste,norte,leste")
+    ap.add_argument("--max-completas", type=int, default=900)
+    ap.add_argument("--max-detalhes", type=int, default=900)
+    ap.add_argument("--sim", action="store_true")
     ap.add_argument("--refazer", action="store_true")
     ap.add_argument("--saida", default=".")
+    ap.add_argument("--fatias", type=int, default=0, help=argparse.SUPPRESS)  # da v3: não faz mais nada
     a = ap.parse_args()
-    a.fatias = max(1, min(6, a.fatias))
+    if not a.cidade and not a.regiao:
+        ap.error("diga --cidade \"Nome\" ou --regiao baixada-santista")
+    if a.fatias:
+        print("(--fatias era da v3; a grade agora se divide sozinha)")
+
+    cidades = REGIOES[a.regiao] if a.regiao else [a.cidade.strip()]
+    rotulo = a.regiao.replace("-", " ").title() if a.regiao else cidades[0]
     saida = Path(a.saida)
     saida.mkdir(parents=True, exist_ok=True)
+    agora = time.time()
+    mes = time.strftime("%Y-%m")
 
     print("=" * 60)
-    print("  MIMO: salões de %s no Google Maps (v3)" % CIDADE)
+    print("  MIMO: salões de %s no Google Maps (v4)" % rotulo)
     print("=" * 60)
-    print("%d buscas x %d faixas = até %d chamadas (no máximo %d)" % (len(BUSCAS), a.fatias, len(BUSCAS) * a.fatias * 3, a.max_chamadas))
 
     caminho_cache = saida / ARQ_CACHE
-    cache = {}
-    if caminho_cache.exists() and not a.refazer:
+    cache = ler_cache(caminho_cache, a.refazer)
+    if cache.get("mes") != mes:  # mês novo, cotas novas
+        cache["mes"], cache["usado"] = mes, {}
+    cache["descoberta"] = {k: v for k, v in cache["descoberta"].items() if agora - v.get("em", 0) < DIAS_CACHE_IDS * 86400}
+    cache["lugares"] = {k: v for k, v in cache["lugares"].items() if agora - v.get("em", 0) < DIAS_CACHE_DADOS * 86400}
+
+    def salvar_cache():
+        cache["usado"] = dict(google.usado)
+        caminho_cache.write_text(json.dumps(cache, ensure_ascii=False), encoding="utf-8")
+
+    google = Google(pedir_chave(), {"completas": a.max_completas, "detalhes": a.max_detalhes, "cidade": 200}, cache["usado"])
+
+    # ---- 1. o retângulo -------------------------------------------------------------------------
+    if a.retangulo:
         try:
-            cache = json.loads(caminho_cache.read_text(encoding="utf-8"))
-        except Exception:
-            cache = {}
-    agora = time.time()
-    cache = {k: v for k, v in cache.items() if agora - v.get("em", 0) < CACHE_DIAS * 86400}
+            s, o, n, l = [float(x) for x in a.retangulo.split(",")]
+        except ValueError:
+            ap.error("--retangulo precisa de quatro números: sul,oeste,norte,leste")
+        ret = {"sul": min(s, n), "oeste": min(o, l), "norte": max(s, n), "leste": max(o, l)}
+    else:
+        rets = []
+        for c in cidades:
+            k = slug(c)
+            v = cache["cidades"].get(k)
+            if not v or agora - v.get("em", 0) > DIAS_CACHE_IDS * 86400:
+                r = google.retangulo_da_cidade(c, a.uf)
+                if not r:
+                    print("Não achei o retângulo de %s no Google. Passe --retangulo sul,oeste,norte,leste." % c)
+                    sys.exit(1)
+                cache["cidades"][k] = v = {"em": agora, "ret": r}
+            rets.append(v["ret"])
+        ret = uniao(rets)
+    print("Área: lat %.3f a %.3f, lng %.3f a %.3f (~%d x %d km)" % (
+        ret["sul"], ret["norte"], ret["oeste"], ret["leste"], (ret["norte"] - ret["sul"]) * 111, (ret["leste"] - ret["oeste"]) * 102))
+    salvar_cache()
 
-    precisa = [(t, i) for t in BUSCAS for i in range(a.fatias) if "%s|%d/%d" % (t, i, a.fatias) not in cache]
-    chave = ""
-    if precisa:
-        chave = os.environ.get("GOOGLE_PLACES_KEY", "").strip() or getpass.getpass("Chave da Places API (não aparece ao digitar): ").strip()
-        if not chave:
-            print("Sem chave, sem busca.")
-            sys.exit(1)
-    google = Google(chave, a.max_chamadas)
+    # ---- 2. a descoberta (grátis) ----------------------------------------------------------------
+    print()
+    print("Descoberta (busca só ids, grátis): dividindo a área até nenhuma célula lotar os 60…")
+    desc = Descoberta(google, cache["descoberta"], agora)
+    folhas_por_termo = {}
+    ids_por_termo = {}
+    for i, termo in enumerate(BUSCAS, 1):
+        folhas = desc.folhas(termo, ret)
+        folhas_por_termo[termo] = folhas
+        ids_por_termo[termo] = set().union(*[set(ids) for _, ids in folhas]) if folhas else set()
+        print("  [%2d/%d] %-24s %3d células, %4d lugares" % (i, len(BUSCAS), termo, len(folhas), len(ids_por_termo[termo])))
+        salvar_cache()
+    todos_ids = set().union(*ids_por_termo.values())
+    buscas_de = {}
+    for termo, ids in ids_por_termo.items():
+        for pid in ids:
+            buscas_de.setdefault(pid, set()).add(termo)
+    print("Lugares distintos descobertos: %d" % len(todos_ids))
+    if desc.no_minimo:
+        print("  (%d células lotaram mesmo no tamanho mínimo: ali pode ter lugar que não apareceu)" % desc.no_minimo)
 
-    lugares, buscas_de = {}, {}
-    do_cache = 0
-    for n, termo in enumerate(BUSCAS, 1):
-        for i, ret in enumerate(faixas(RETANGULO, a.fatias)):
-            k = "%s|%d/%d" % (termo, i, a.fatias)
-            veio_do_cache = k in cache
-            if veio_do_cache:
-                achados = cache[k]["lugares"]
-                do_cache += 1
-            else:
-                achados, completa = google.buscar(termo, ret)
-                if completa:
-                    cache[k] = {"em": agora, "lugares": achados}
-            print("[%2d/%d] %-24s faixa %d: %2d lugares%s" % (n, len(BUSCAS), termo, i + 1, len(achados), " (cache)" if veio_do_cache else ""))
-            for p in achados:
+    # ---- 3. o plano das chamadas pagas (dentro das cotas) ---------------------------------------
+    ja_tem = {pid for pid in todos_ids if pid in cache["lugares"]}
+    faltam = todos_ids - ja_tem
+    sobra_completas = max(0, a.max_completas - google.usado["completas"])
+    sobra_detalhes = max(0, a.max_detalhes - google.usado["detalhes"])
+    # só as células com lugar que ainda falta entram na conta
+    folhas_uteis = {t: [(c, [i for i in ids if i in faltam]) for c, ids in fs] for t, fs in folhas_por_termo.items()}
+    termos, cobertos, chamadas_completas = planejar(folhas_uteis, sobra_completas)
+    restantes = faltam - cobertos
+    detalhes_previstos = min(len(restantes), sobra_detalhes)
+    pendentes_previstos = len(restantes) - detalhes_previstos
+    print()
+    print("Plano:")
+    print("  já no cache (até %d dias): %d lugares" % (DIAS_CACHE_DADOS, len(ja_tem)))
+    print("  buscas completas: %d chamadas, cobrindo %d lugares  [%s]" % (chamadas_completas, len(cobertos), ", ".join(termos) or "nenhuma"))
+    print("  detalhes um a um: %d chamadas" % detalhes_previstos)
+    if pendentes_previstos:
+        print("  ficam para o mês que vem: %d lugares (teto do mês; suba com --max-completas/--max-detalhes se quiser pagar)" % pendentes_previstos)
+    for nivel in ("completas", "detalhes"):
+        sku = SKUS[nivel]
+        previsto = google.usado[nivel] + (chamadas_completas if nivel == "completas" else detalhes_previstos)
+        if previsto > sku["gratis"]:
+            print("  ATENÇÃO: %s passaria da cota grátis do mês (%d de %d): custo de uns US$ %.2f" % (sku["nome"], previsto, sku["gratis"], (previsto - sku["gratis"]) * sku["preco"] / 1000))
+    if (chamadas_completas or detalhes_previstos) and not a.sim:
+        try:
+            resp = input("Continuar? [S/n] ").strip().lower()
+        except EOFError:
+            resp = "s"
+        if resp and resp[0] == "n":
+            print("Parado antes de gastar. A descoberta ficou no cache.")
+            salvar_cache()
+            return
+
+    # ---- 4. as buscas completas -----------------------------------------------------------------
+    def completar(item):
+        termo, cel = item
+        try:
+            lugares, _ = google.buscar(termo, cel, MASCARA_COMPLETA, "completas")
+            return lugares
+        except Teto:
+            return None
+
+    teto_batido = set()
+    for termo in termos:
+        celulas = [(termo, c) for c, ids in folhas_uteis[termo] if ids]
+        print("  busca completa: %-24s %d células" % (termo, len(celulas)))
+        for lugares in paralelo(completar, celulas):
+            if lugares is None:
+                teto_batido.add("completas")
+                continue
+            for p in lugares:
                 pid = p.get("id")
-                if not pid:
-                    continue
-                lugares.setdefault(pid, p)
-                buscas_de.setdefault(pid, set()).add(termo)
-    caminho_cache.write_text(json.dumps(cache, ensure_ascii=False), encoding="utf-8")
+                if pid:
+                    cache["lugares"][pid] = {"em": agora, "p": p}
+                    buscas_de.setdefault(pid, set()).add(termo)
+        salvar_cache()
 
-    validos, fora = [], []
-    for pid, p in lugares.items():
-        linha = linha_do_lugar(p, buscas_de[pid])
-        motivo = motivo_para_ficar_fora(linha["nome"], linha["tipo_principal"], p.get("types") or [], linha["status"])
-        if not motivo and linha["cidade"] and sem_acento(linha["cidade"]) != sem_acento(CIDADE):
-            motivo = "outra cidade (%s)" % linha["cidade"]
-        if motivo:
-            linha["motivo_descarte"] = motivo
-            fora.append(linha)
-        else:
-            validos.append(linha)
+    # ---- 5. o resto, um a um --------------------------------------------------------------------
+    restantes = sorted(todos_ids - set(cache["lugares"]))
+    if restantes:
+        print("  detalhes um a um: %d lugares" % len(restantes))
 
+    def detalhar(pid):
+        try:
+            return pid, google.detalhe(pid)
+        except Teto:
+            return pid, None
+        except RuntimeError as e:
+            print("    %s: %s" % (pid, e))
+            return pid, False
+
+    for pid, p in paralelo(detalhar, restantes):
+        if p is None:
+            teto_batido.add("detalhes")
+        elif p:
+            cache["lugares"][pid] = {"em": agora, "p": p}
+    salvar_cache()
+
+    # ---- 6. os CSVs, por cidade -----------------------------------------------------------------
+    linhas_por_cidade = {}
+    pendentes = []
+    for pid in sorted(todos_ids):
+        v = cache["lugares"].get(pid)
+        if not v:
+            pendentes.append({"place_id": pid, "buscas_encontradas": " | ".join(sorted(buscas_de.get(pid, ())))})
+            continue
+        p = v["p"]
+        linha = linha_do_lugar(p, buscas_de.get(pid, set()))
+        linha["motivo_descarte"] = motivo_para_ficar_fora(linha["nome"], linha["tipo_principal"], p.get("types") or [], linha["status"]) or ""
+        cid = linha["cidade"] or "sem cidade"
+        linhas_por_cidade.setdefault(cid, []).append(linha)
+
+    alvo = {slug(c) for c in cidades}
     ordem = {"ótima": 0, "boa": 1, "regular": 2, "poucas avaliações": 3, "sem nota": 4, "baixa": 5}
-    validos.sort(key=lambda x: (ordem.get(x["triagem"], 9), -(x["qtd_avaliacoes"] or 0), x["nome"]))
-    fora.sort(key=lambda x: (x["motivo_descarte"], x["nome"]))
-    gravar(saida / ARQ_SALOES, validos)
-    gravar(saida / ARQ_DESCARTADOS, fora)
-    relatorio(validos, fora, google, do_cache)
-    print("Importe na Plataforma: %s" % (saida / ARQ_SALOES))
-    print("Confira os de fora:    %s" % (saida / ARQ_DESCARTADOS))
+    fora_da_area = []
+    for cid, linhas in sorted(linhas_por_cidade.items(), key=lambda kv: -len(kv[1])):
+        if slug(cid) not in alvo and not a.retangulo:
+            fora_da_area.append((cid, len(linhas)))
+            continue
+        validos = [x for x in linhas if not x["motivo_descarte"]]
+        fora = [x for x in linhas if x["motivo_descarte"]]
+        validos.sort(key=lambda x: (ordem.get(x["triagem"], 9), -(x["qtd_avaliacoes"] or 0), x["nome"]))
+        fora.sort(key=lambda x: (x["motivo_descarte"], x["nome"]))
+        gravar(saida / ("mimo_saloes_%s.csv" % slug(cid)), validos)
+        gravar(saida / ("mimo_descartados_%s.csv" % slug(cid)), fora)
+        relatorio_cidade(cid, validos, fora)
+        print("Importe na Plataforma: %s" % (saida / ("mimo_saloes_%s.csv" % slug(cid))))
+    if fora_da_area:
+        print()
+        print("Fora das cidades pedidas (não gravei): " + ", ".join("%s (%d)" % x for x in fora_da_area))
+    if pendentes:
+        with open(saida / "mimo_pendentes.csv", "w", newline="", encoding="utf-8-sig") as f:
+            w = csv.DictWriter(f, fieldnames=["place_id", "buscas_encontradas"], delimiter=";")
+            w.writeheader()
+            w.writerows(pendentes)
+        print()
+        print("%d lugares ficaram sem dados (teto do mês em: %s). Rode de novo no mês que vem, ou suba o teto." % (len(pendentes), ", ".join(sorted(teto_batido)) or "cache"))
+    elif (saida / "mimo_pendentes.csv").exists():
+        (saida / "mimo_pendentes.csv").unlink()
+
+    relatorio_custo(google, mes)
+    salvar_cache()
 
 
 if __name__ == "__main__":

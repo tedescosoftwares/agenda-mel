@@ -3,13 +3,15 @@ import { Link } from 'react-router-dom'
 import {
   MapPin, Clock, Phone, MessageCircle, Globe, Navigation, Share2, Check, Award, CalendarCheck, Info, ChevronDown,
   ArrowRight, Lightbulb, Sparkles, Scissors, Hand, Eye, ScanFace, Flower2, Brush, Store, CreditCard, Accessibility, SquareParking, Baby, Bath,
-  LocateFixed,
+  LocateFixed, X, Images,
 } from 'lucide-react'
 import { IconeInstagram } from '../IconesSociais'
+import Portal from '../Portal'
 import { Coracao, comecarEm } from '../site/Pecas'
 import {
   categoriaDoGuia, conteudoSeguro, faqDaPagina, horariosResumo, horariosEmUmaLinha, abertoAgora,
   linkMapa, linkWhatsDoTel, linkInstagram, telefoneBonito, soDigitosTel, rotaDoLugar, rotaDaCategoria, rotaDaCidade, atributosEmTexto,
+  fotosDoLugar, altDaFoto,
 } from '../../lib/guia'
 import { trilhaDoLugar } from '../../lib/guiaSeo'
 import { linkDoBairro } from '../../lib/guiaColecoes'
@@ -33,7 +35,9 @@ const ICONE_ATRIBUTO = { pagamento: CreditCard, acessibilidade: Accessibility, e
 // salão divulga); o texto da IA só fala do serviço e do que está nos dados.
 // O botão principal é sempre o da MIMO; os canais do salão vêm depois.
 //
-// Sem foto do salão: a capa é um cartaz com o gradiente da marca, o ícone
+// Com fotos (3.14, enviadas pela Plataforma ou as da página do salão na
+// MIMO), a primeira é a capa e as outras ficam numa faixa; tocar abre a
+// foto grande. Sem foto do salão: a capa é um cartaz com o gradiente da marca, o ícone
 // da categoria e o nome. O layout responde à largura da própria página
 // (container queries), então a prévia em "celular" da Plataforma mostra o
 // layout de celular mesmo num monitor grande.
@@ -93,7 +97,23 @@ export default function PaginaDoLugar({ lugar, conteudo, vizinhos = [], mesmaCat
   const ctaRef = useRef(null)
   const [barra, setBarra] = useState(false)
   const [copiado, setCopiado] = useState(false)
+  const [fotoAberta, setFotoAberta] = useState(-1) // a foto grande (3.14); -1 = fechada
   const temLugar = !!lugar
+  const fotos = fotosDoLugar(lugar)
+  // a foto grande: Esc fecha, as setas andam, a página atrás não rola
+  useEffect(() => {
+    if (fotoAberta < 0) return
+    const n = fotos.length
+    const tecla = (e) => {
+      if (e.key === 'Escape') setFotoAberta(-1)
+      else if (e.key === 'ArrowRight') setFotoAberta((i) => (i + 1) % n)
+      else if (e.key === 'ArrowLeft') setFotoAberta((i) => (i - 1 + n) % n)
+    }
+    window.addEventListener('keydown', tecla)
+    const rolagem = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { window.removeEventListener('keydown', tecla); document.body.style.overflow = rolagem }
+  }, [fotoAberta, fotos.length])
   const { posicao } = useMinhaPosicao({ olhar: !previa }) // a posição, se a pessoa ativou numa lista do guia (3.13)
 
   // a barra de baixo (celular) aparece quando o botão do herói sai da tela
@@ -214,19 +234,42 @@ export default function PaginaDoLugar({ lugar, conteudo, vizinhos = [], mesmaCat
                 </div>
               </div>
 
-              <div className={`gd-capa gd-tom-${l.categoria}`} aria-hidden="true">
-                <IconeCategoria slug={l.categoria} className="gd-capa-fundo" strokeWidth={1.2} />
-                <Coracao className="gd-capa-coracao" />
-                <div className="gd-capa-centro">
-                  <span className="gd-capa-icone"><IconeCategoria slug={l.categoria} size={34} strokeWidth={1.8} /></span>
-                  <strong className="gd-capa-nome">{l.nome}</strong>
-                  <span className="gd-capa-onde">{cat.curto} · {l.bairro || l.cidade}</span>
+              {fotos.length ? (
+                <button type="button" className="gd-capa gd-capa-foto" onClick={() => setFotoAberta(0)} aria-label={`Ver as fotos de ${l.nome}`}>
+                  <img src={fotos[0]} alt={altDaFoto(l, 0)} fetchPriority="high" decoding="async" />
+                  {fotos.length > 1 && <span className="gd-capa-mais"><Images size={15} aria-hidden="true" /> {fotos.length} fotos</span>}
+                  <span className="gd-capa-guia">guia mimo · {l.cidade}</span>
+                </button>
+              ) : (
+                <div className={`gd-capa gd-tom-${l.categoria}`} aria-hidden="true">
+                  <IconeCategoria slug={l.categoria} className="gd-capa-fundo" strokeWidth={1.2} />
+                  <Coracao className="gd-capa-coracao" />
+                  <div className="gd-capa-centro">
+                    <span className="gd-capa-icone"><IconeCategoria slug={l.categoria} size={34} strokeWidth={1.8} /></span>
+                    <strong className="gd-capa-nome">{l.nome}</strong>
+                    <span className="gd-capa-onde">{cat.curto} · {l.bairro || l.cidade}</span>
+                  </div>
+                  <span className="gd-capa-guia">guia mimo · {l.cidade}</span>
                 </div>
-                <span className="gd-capa-guia">guia mimo · {l.cidade}</span>
-              </div>
+              )}
             </div>
           </div>
         </section>
+
+        {/* ---- as fotos (3.14) ---- */}
+        {fotos.length > 1 && (
+          <section className="gd-sec gd-sec-fotos" aria-label={`Fotos de ${l.nome}`}>
+            <div className="gd-wrap">
+              <div className="gd-fotos">
+                {fotos.map((f, i) => (
+                  <button key={f} type="button" className="gd-foto" onClick={() => setFotoAberta(i)} aria-label={`Abrir a foto ${i + 1} de ${fotos.length}`}>
+                    <img src={f} alt={altDaFoto(l, i)} loading="lazy" decoding="async" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* ---- fatos ao lado, texto no meio ---- */}
         <section className="gd-sec gd-sec-corpo">
@@ -396,6 +439,7 @@ export default function PaginaDoLugar({ lugar, conteudo, vizinhos = [], mesmaCat
                   {/* a reivindicação (3.12): a equipe confirma com a pessoa por e-mail; nada muda na página antes disso */}
                   <p>Diga que é você: a gente confirma por e-mail e passa a falar com você sobre esta página.</p>
                   <p>E, se quiser, coloque a agenda de {l.nome} online: a cliente marca sozinha, pelo link ou pelo app.</p>
+                  {!fotos.length && <p>Tem fotos do salão? Mande para a gente: elas entram nesta página de graça.</p>}
                   <p className="gd-dono-letra">Para autônoma é grátis para sempre. Salão com equipe testa {REGRAS.testeDias} dias, sem cartão.</p>
                 </div>
                 <div className="gd-dono-botoes">
@@ -424,6 +468,25 @@ export default function PaginaDoLugar({ lugar, conteudo, vizinhos = [], mesmaCat
         )}
       </div>
 
+      {/* a foto grande (3.14) */}
+      {fotoAberta >= 0 && fotos[fotoAberta] && (
+        <Portal>
+          <div className="gd-foto-fundo" onClick={() => setFotoAberta(-1)} role="presentation">
+            <div className="gd-foto-caixa" role="dialog" aria-modal="true" aria-label={`Foto ${fotoAberta + 1} de ${fotos.length}: ${l.nome}`} onClick={(e) => e.stopPropagation()}>
+              <img src={fotos[fotoAberta]} alt={altDaFoto(l, fotoAberta)} />
+              <button type="button" className="gd-foto-x" onClick={() => setFotoAberta(-1)} aria-label="Fechar"><X size={20} /></button>
+              {fotos.length > 1 && (
+                <div className="gd-foto-nav">
+                  <button type="button" onClick={() => setFotoAberta((i) => (i - 1 + fotos.length) % fotos.length)} aria-label="Foto anterior"><ChevronDown size={20} style={{ transform: 'rotate(90deg)' }} /></button>
+                  <span>{fotoAberta + 1} / {fotos.length}</span>
+                  <button type="button" onClick={() => setFotoAberta((i) => (i + 1) % fotos.length)} aria-label="Próxima foto"><ChevronDown size={20} style={{ transform: 'rotate(-90deg)' }} /></button>
+                </div>
+              )}
+            </div>
+          </div>
+        </Portal>
+      )}
+
       {/* a barra de baixo no celular: fora da página (que é um container) para o fixed valer na tela */}
       {!previa && (
         <div className={'gd-barra' + (barra ? ' gd-barra-on' : '')} inert={!barra} data-area="barra">
@@ -439,12 +502,17 @@ export default function PaginaDoLugar({ lugar, conteudo, vizinhos = [], mesmaCat
 export function CartaoLugar({ lugar, cidadeSlug, cidade, previa = false }) {
   const cat = categoriaDoGuia(lugar.categoria)
   const servicos = (lugar.servicos ?? []).slice(0, 3)
+  const foto = fotosDoLugar(lugar)[0] // a capa (3.14): l.foto nos cartões do banco, l.fotos[0] nos outros
   return (
     <Ir previa={previa} to={rotaDoLugar(cidadeSlug, lugar.slug)} className="gd-cartao ld-rv">
-      <span className={`gd-cartao-capa gd-tom-${lugar.categoria}`} aria-hidden="true">
-        <IconeCategoria slug={lugar.categoria} className="gd-cartao-fundo" strokeWidth={1.2} />
-        <span className="gd-cartao-icone"><IconeCategoria slug={lugar.categoria} size={20} /></span>
-      </span>
+      {foto ? (
+        <span className="gd-cartao-capa gd-cartao-foto"><img src={foto} alt="" loading="lazy" decoding="async" /></span>
+      ) : (
+        <span className={`gd-cartao-capa gd-tom-${lugar.categoria}`} aria-hidden="true">
+          <IconeCategoria slug={lugar.categoria} className="gd-cartao-fundo" strokeWidth={1.2} />
+          <span className="gd-cartao-icone"><IconeCategoria slug={lugar.categoria} size={20} /></span>
+        </span>
+      )}
       <span className="gd-cartao-corpo">
         <span className="gd-cartao-selos">
           {lugar.selecao && <span className="gd-selo gd-selo-selecao gd-selo-mini"><Award size={13} /> Seleção MIMO</span>}

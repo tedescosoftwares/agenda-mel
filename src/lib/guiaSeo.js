@@ -12,6 +12,7 @@ import {
 } from './guia.js'
 import { dadosDaPagina } from './guiaTexto.js'
 import { trilhaDaColecao } from './guiaColecoes.js'
+import { fotosDoLugar } from './guia.js'
 
 export const SITE_GUIA = 'https://mimo.com.vc'
 const ORG_ID = `${SITE_GUIA}/#organization`
@@ -108,6 +109,7 @@ export function jsonLdDoLugar(l, conteudo, faq = []) {
   const { titulo, descricao, caminho } = seoDoLugar(l, conteudo)
   const url = SITE_GUIA + caminho
   const sameAs = [linkInstagram(l.instagram), l.site].filter(Boolean)
+  const fotos = fotosDoLugar(l) // 3.14: as fotos entram no negócio e na página
   const negocio = {
     '@type': cat.schema,
     '@id': `${url}#negocio`,
@@ -126,6 +128,7 @@ export function jsonLdDoLugar(l, conteudo, faq = []) {
     ...(l.telefone ? { telephone: l.telefone } : {}),
     ...(horarioSchema(l.horarios) ? { openingHoursSpecification: horarioSchema(l.horarios) } : {}),
     ...(sameAs.length ? { sameAs } : {}),
+    ...(fotos.length ? { image: fotos } : {}),
     ...(l.servicos?.length ? { knowsAbout: l.servicos } : {}),
     ...(Array.isArray(l.atributos?.pagamento) && l.atributos.pagamento.length ? { paymentAccepted: l.atributos.pagamento.map((k) => PAGAMENTO_SCHEMA[k]).filter(Boolean).join(', ') } : {}),
     ...(comodidades(l.atributos).length ? { amenityFeature: comodidades(l.atributos) } : {}),
@@ -136,7 +139,7 @@ export function jsonLdDoLugar(l, conteudo, faq = []) {
     '@graph': [
       migalhas(trilhaDoLugar(l)),
       negocio,
-      { '@type': 'WebPage', '@id': url, url, name: titulo, description: descricao, inLanguage: 'pt-BR', about: { '@id': `${url}#negocio` }, publisher: { '@id': ORG_ID }, ...(l.atualizado_em ? { dateModified: String(l.atualizado_em).slice(0, 10) } : {}) },
+      { '@type': 'WebPage', '@id': url, url, name: titulo, description: descricao, inLanguage: 'pt-BR', about: { '@id': `${url}#negocio` }, publisher: { '@id': ORG_ID }, ...(fotos.length ? { primaryImageOfPage: fotos[0] } : {}), ...(l.atualizado_em ? { dateModified: String(l.atualizado_em).slice(0, 10) } : {}) },
       ...(faq.length ? [faqLd(faq)] : []),
     ],
   }

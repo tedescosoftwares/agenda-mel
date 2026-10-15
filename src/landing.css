@@ -1073,3 +1073,7 @@ body:has(.aviso-cookies) .ws-flutuante { display: none; }
 /* notas em Markdown (planos, contato): o parágrafo dentro da nota não ganha margem extra */
 .sp-nota p { margin: 0 0 0.4em; }
 .sp-nota p:last-child { margin-bottom: 0; }
+
+/* a caixa "Salões em <Cidade>" nos artigos de cidade (3.14) */
+.sp-caixa-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.sp-caixa-links .ld-btn { min-height: 40px; padding: 0 14px; font-size: 0.9rem; }

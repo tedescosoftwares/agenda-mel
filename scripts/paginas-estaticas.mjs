@@ -22,6 +22,8 @@ import { PAGINAS_SEO, PAGINAS_INSTITUCIONAIS } from '../src/conteudo/paginasSeo.
 import { TITULO as TITULO_HOME, DESCRICAO as DESCRICAO_HOME, jsonLdDaHome } from '../src/conteudo/home.js'
 import { mesclarPagina } from '../src/lib/paginas.js'
 import { paginasDoGuia } from './guia-estatico.mjs'
+import { cidadeDoArtigo } from '../src/lib/guiaArtigos.js'
+import { categoriaDoGuia, rotaDaCidade, rotaDaCategoria, SLUGS_CATEGORIA } from '../src/lib/guia.js'
 
 const SITE = 'https://mimo.com.vc'
 const DIST = path.resolve('dist')
@@ -107,6 +109,8 @@ for (const p of PAGINAS_SEO) {
   registrar(pg)
 }
 const categorias = new Map(CATEGORIAS.map((c) => [c.slug, c.nome]))
+// os artigos publicados (do código e, depois, do banco) para o guia: "Leia também" e a caixa "Salões em <Cidade>" (3.14)
+const artigosParaGuia = new Map(ARTIGOS.map((a) => [a.slug, { slug: a.slug, title: a.titulo, excerpt: a.resumo }]))
 for (const a of ARTIGOS) {
   const cat = CATEGORIAS.find((c) => c.slug === a.categoria)
   const pg = { caminho: `/blog/${a.slug}`, titulo: a.seo_title, descricao: a.meta_description, imagem: `${SITE}/imagens/${a.foto}-1400.webp`, tipo: 'article', atualizado: a.atualizado_em || a.publicado_em }
@@ -164,6 +168,7 @@ if (URL && CHAVE && !globalThis.process.env.VITE_DEMO) {
       const i = paginas.findIndex((x) => x.caminho === caminho)
       if (i >= 0) paginas[i] = pg; else registrar(pg)
       if (cat && !categorias.has(cat.slug)) categorias.set(cat.slug, cat.nome)
+      if (a.robots_index !== false) artigosParaGuia.set(a.slug, { slug: a.slug, title: a.title, excerpt: a.excerpt })
     }
     // com todas as páginas na mesa (inclusive as da Plataforma), o pai das migalhas fecha
     for (const pg of paginas) if (pg.seo) pg.jsonLd = ldDaPaginaSeo(pg, pg.seo)
@@ -175,9 +180,24 @@ if (URL && CHAVE && !globalThis.process.env.VITE_DEMO) {
   try {
     const r = await fetch(`${URL}/rest/v1/rpc/guia_publicadas`, { headers: { apikey: CHAVE, Authorization: `Bearer ${CHAVE}` } })
     if (!r.ok) throw new Error(`${r.status} em rpc/guia_publicadas`)
-    const doGuia = paginasDoGuia(await r.json())
+    const guia = await r.json()
+    const doGuia = paginasDoGuia(guia, [...artigosParaGuia.values()])
     for (const pg of doGuia) registrar(pg)
     console.log(`paginas-estaticas: guia de salões com ${doGuia.length} página(s)`)
+    // o artigo que fala de uma cidade do guia ganha, no HTML estático, a caixa "Salões em <Cidade>" (o app a desenha também)
+    const cidadesDoGuia = Array.isArray(guia?.cidades) ? guia.cidades : []
+    const lugaresDoGuia = Array.isArray(guia?.lugares) ? guia.lugares : []
+    let comCaixa = 0
+    for (const pg of paginas) {
+      if (pg.tipo !== 'article' || pg.corpo) continue
+      const a = artigosParaGuia.get(pg.caminho.replace(/^\/blog\//, ''))
+      const c = a && cidadeDoArtigo(a, cidadesDoGuia)
+      if (!c) continue
+      const cats = SLUGS_CATEGORIA.filter((s) => lugaresDoGuia.some((l) => l.cidade_slug === c.cidade_slug && l.categoria === s))
+      pg.corpo = `<main><h1>${esc(a.title)}</h1>${a.excerpt ? `<p>${esc(a.excerpt)}</p>` : ''}<nav aria-label="${esc(`Salões em ${c.cidade}`)}"><h2>${esc(`Salões em ${c.cidade}`)}</h2><ul><li><a href="${esc(rotaDaCidade(c.cidade_slug))}">${esc(`Guia de salões em ${c.cidade}`)}</a> (${c.total})</li>${cats.map((s) => `<li><a href="${esc(rotaDaCategoria(c.cidade_slug, s))}">${esc(`${categoriaDoGuia(s).rotulo} em ${c.cidade}`)}</a></li>`).join('')}</ul></nav></main>`
+      comCaixa++
+    }
+    if (comCaixa) console.log(`paginas-estaticas: ${comCaixa} artigo(s) de cidade com a caixa do guia`)
   } catch (e) {
     console.log('paginas-estaticas: guia de salões indisponível (' + e.message + '), seguindo sem ele')
   }
@@ -192,6 +212,9 @@ for (const slug of usadas) {
 }
 
 // ---- 3. grava -------------------------------------------------------------
+// /saloes e /blog são inteiramente deste script: limpar antes tira a página de um
+// salão ou artigo que saiu do ar (a regeneração de hora em hora não passa pelo vite, que esvazia o dist)
+for (const pasta of ['saloes', 'blog']) fs.rmSync(path.join(DIST, pasta), { recursive: true, force: true })
 let ok = 0, erros = 0
 for (const p of paginas) {
   try {

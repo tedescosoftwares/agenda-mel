@@ -435,3 +435,16 @@
 .pg-modal-topo button:hover { background: var(--cinza-1); color: var(--texto); }
 .pg-dono-texto { width: 100%; font: inherit; font-size: 0.86rem; line-height: 1.5; border: 1px solid var(--fio, #e6e7eb); border-radius: 12px; padding: 0.7rem 0.8rem; resize: vertical; margin: 0.4rem 0 0.6rem; box-sizing: border-box; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
+/* ---- fotos do salão no editar (3.14) ---- */
+.pg-fotos { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 10px; }
+.pg-foto { margin: 0; border: 1px solid #e6e0ea; border-radius: 12px; overflow: hidden; background: #fff; }
+.pg-foto img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; }
+.pg-foto figcaption { display: flex; align-items: center; gap: 4px; padding: 6px; font-size: 0.74rem; color: #6b6472; }
+.pg-foto figcaption span { flex: 1; text-align: center; }
+.pg-foto figcaption button { width: 28px; height: 28px; border-radius: 8px; border: 1px solid #e6e0ea; background: #fff; color: #3d0c4e; display: grid; place-items: center; cursor: pointer; }
+.pg-foto figcaption button:disabled { opacity: 0.35; cursor: default; }
+.pg-foto .pg-foto-tirar { color: #b4233f; }
+.pg-foto-mais { display: grid; place-items: center; align-content: center; gap: 6px; min-height: 132px; border: 1.5px dashed #d9cfe0; border-radius: 12px; color: #6b6472; font-size: 0.82rem; cursor: pointer; }
+.pg-foto-mais:hover { border-color: #ff2d7a; color: #3d0c4e; }
+.pg-foto-mais input { display: none; }

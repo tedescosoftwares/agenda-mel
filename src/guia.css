@@ -412,3 +412,23 @@
   .gd-agora.gd-aberto i, .gd-esq, .gd-folha, .gd-folha-fundo { animation: none; }
   .gd-barra { transition: none; }
 }
+
+/* ---- as fotos (3.14): a capa, a faixa, a foto grande e os cartões ---- */
+.ld .gd-capa.gd-capa-foto { display: block; padding: 0; border: none; cursor: zoom-in; background: #1f2026; text-align: left; font: inherit; }
+.gd-capa-foto img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.gd-capa-mais { position: absolute; left: 16px; bottom: 14px; z-index: 1; display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; border-radius: 999px; background: rgba(31, 32, 38, 0.62); color: #fff; font-size: 0.78rem; font-weight: 600; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.gd-capa-foto .gd-capa-guia { z-index: 1; color: rgba(255, 255, 255, 0.88); text-shadow: 0 1px 8px rgba(0, 0, 0, 0.6); }
+.ld .gd-sec-fotos { padding: 0 0 6px; }
+.gd-fotos { display: flex; gap: 10px; overflow-x: auto; padding: 4px 2px 12px; scroll-snap-type: x mandatory; scrollbar-width: thin; }
+.ld .gd-fotos .gd-foto { flex: none; width: 150px; aspect-ratio: 4 / 3; padding: 0; border: 1px solid var(--ld-fio); border-radius: 16px; overflow: hidden; background: #f5f2f6; cursor: zoom-in; scroll-snap-align: start; }
+.gd-foto img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform 0.25s ease; }
+.gd-foto:hover img { transform: scale(1.04); }
+.gd-foto-fundo { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 16px; background: rgba(20, 16, 24, 0.9); }
+.gd-foto-caixa { position: relative; max-width: min(1100px, 100%); display: grid; gap: 10px; justify-items: center; }
+.gd-foto-caixa img { max-width: 100%; max-height: calc(100vh - 120px); max-height: calc(100dvh - 120px); border-radius: 16px; object-fit: contain; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5); }
+.gd-foto-x { position: absolute; top: -8px; right: -8px; width: 40px; height: 40px; border-radius: 50%; border: none; background: #fff; color: var(--ld-ameixa); display: grid; place-items: center; cursor: pointer; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3); }
+.gd-foto-nav { display: inline-flex; align-items: center; gap: 14px; color: #fff; font-weight: 600; font-size: 0.9rem; }
+.gd-foto-nav button { width: 40px; height: 40px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.4); background: rgba(255, 255, 255, 0.1); color: #fff; display: grid; place-items: center; cursor: pointer; }
+.gd-cartao-capa.gd-cartao-foto { height: 124px; background: #f5f2f6; }
+.gd-cartao-foto::after { content: none; }
+.gd-cartao-foto img { display: block; width: 100%; height: 100%; object-fit: cover; }

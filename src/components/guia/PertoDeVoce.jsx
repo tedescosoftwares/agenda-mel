@@ -8,7 +8,8 @@ import '../../guia-perto.css'
 // primeira vez, um modal curto e gentil pede a localização: é para indicar
 // os salões mais perto, com mais precisão (o que é feito com o ponto está
 // na política de privacidade, como o aviso de cookies aponta). O navegador
-// só pergunta quando ela toca em "Sim, pode". "Agora não" guarda por 30 dias;
+// só pergunta quando ela toca em "Sim, pode" (no celular, o modal espera o
+// primeiro gesto da pessoa). "Agora não" guarda por 30 dias;
 // fechar sem escolher vale só nesta visita. Quem fechou tem um botão
 // discreto na lista para abrir de novo; quem já autorizou antes nem vê o
 // modal (a posição chega sozinha) e só vê a linha "do mais perto para o
@@ -21,12 +22,21 @@ export default function PertoDeVoce({ ordenado, onOrdenar }) {
   const [aberto, setAberto] = useState(false)
   const chip = useRef(null)
 
-  // abre sozinho ao entrar, depois que a página assentou e se o navegador ainda vai perguntar
+  // abre sozinho ao entrar, depois que a página assentou e se o navegador ainda vai perguntar.
+  // No celular, só depois do primeiro gesto (rolar ou tocar): nada de cobrir a página na
+  // chegada, que é o que o Google penaliza em "interstitial" no celular (3.14).
   useEffect(() => {
     if (abriuSozinho || posicao || permissao !== 'prompt' || fechadoNaVisita || dispensado()) return
-    abriuSozinho = true
-    const t = setTimeout(() => setAberto(true), 900)
-    return () => clearTimeout(t)
+    const abrir = () => { abriuSozinho = true; setAberto(true) }
+    const celular = typeof matchMedia === 'function' && matchMedia('(max-width: 600px), (pointer: coarse)').matches
+    let t
+    if (!celular) { t = setTimeout(abrir, 900); return () => clearTimeout(t) }
+    // só a rolagem conta (um toque no aviso de cookies não é "quero ver a lista"); e só depois que a página assentou
+    const desde = Date.now()
+    const gesto = () => { if (Date.now() - desde < 600) return; tirar(); t = setTimeout(abrir, 400) }
+    const tirar = () => window.removeEventListener('scroll', gesto)
+    window.addEventListener('scroll', gesto, { passive: true })
+    return () => { tirar(); clearTimeout(t) }
   }, [posicao, permissao, fechadoNaVisita])
   // (a posição chegou, pelo modal ou sozinha: o ramo de cima nem desenha o modal)
 

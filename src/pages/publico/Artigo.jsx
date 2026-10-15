@@ -3,6 +3,9 @@ import { Link, useParams } from 'react-router-dom'
 import { ArrowRight, CalendarDays, ChevronDown, Clock, UserRound } from 'lucide-react'
 import { useSeo, migalhasLd, ORGANIZACAO_LD, SITE } from '../../lib/seo'
 import { artigoPorSlug, artigosResumidos } from '../../lib/conteudoPublico'
+import { carregarCidades, carregarCidade } from '../../lib/guiaPublico'
+import { cidadeDoArtigo } from '../../lib/guiaArtigos'
+import { SLUGS_CATEGORIA, categoriaDoGuia, rotaDaCidade, rotaDaCategoria } from '../../lib/guia'
 import { Markdown, titulosDe } from '../../lib/markdown'
 import { NavSite, PeSite, useRevelar, comecarEm } from '../../components/site/Pecas'
 import { CartaoArtigo } from './PaginaSeo'
@@ -26,6 +29,22 @@ export default function Artigo() {
     artigosResumidos().then((as) => vivo && setTodos(as))
     return () => { vivo = false }
   }, [slug])
+
+  // a caixa "Salões em <Cidade>" (3.14): quando o artigo fala de uma cidade que está no guia
+  const [caixaGuia, setCaixaGuia] = useState(null) // { para: slug, ...cidade, categorias }
+  const slugArtigo = artigo?.slug, tituloArtigo = artigo?.title
+  useEffect(() => {
+    if (!slugArtigo) return
+    let vivo = true
+    carregarCidades().then(async (cs) => {
+      const c = cidadeDoArtigo({ slug: slugArtigo, title: tituloArtigo }, cs)
+      if (!c) return
+      const d = await carregarCidade(c.cidade_slug).catch(() => null)
+      if (vivo) setCaixaGuia({ para: slugArtigo, ...c, categorias: (d?.categorias ?? []).filter((x) => SLUGS_CATEGORIA.includes(x.categoria)) })
+    }).catch(() => {})
+    return () => { vivo = false }
+  }, [slugArtigo, tituloArtigo])
+  const guia = caixaGuia && caixaGuia.para === slugArtigo ? caixaGuia : null
 
   const a = artigo
   const capa = a?.cover_image_url ? (a.cover_image_url.startsWith('http') ? a.cover_image_url : SITE + a.cover_image_url) : undefined
@@ -74,6 +93,16 @@ export default function Artigo() {
               <div><strong>{a.produto_rotulo || 'Conheça a MIMO'}</strong><span>Agenda, equipe, clientes, WhatsApp e pagamentos num só lugar. Autônoma grátis.</span></div>
               <div className="sp-chamada-botoes">{a.produto_url && <Link className="ld-btn ld-fantasma" to={a.produto_url}>Ver a solução</Link>}<a className="ld-btn ld-primario" href={comecarEm()}>Começar agora <ArrowRight size={16} /></a><BotaoWhats chamada="artigo" extra={a.title} /></div>
             </aside>
+            {guia && (
+              <aside className="sp-caixa sp-caixa-guia">
+                <strong>Salões em {guia.cidade}</strong>
+                <p>O guia da MIMO reúne {guia.total} {guia.total === 1 ? 'lugar' : 'lugares'} de beleza em {guia.cidade}, com endereço, horário e serviços de cada um.</p>
+                <div className="sp-caixa-links">
+                  <Link className="ld-btn ld-primario" to={rotaDaCidade(guia.cidade_slug)}>Ver os salões de {guia.cidade} <ArrowRight size={16} /></Link>
+                  {guia.categorias.slice(0, 5).map((c) => <Link key={c.categoria} className="ld-btn ld-fantasma" to={rotaDaCategoria(guia.cidade_slug, c.categoria)}>{categoriaDoGuia(c.categoria).rotulo}</Link>)}
+                </div>
+              </aside>
+            )}
             {a.faq?.length > 0 && (
               <section className="sp-faq"><h2>Perguntas frequentes</h2><div className="ld-faq">{a.faq.map(([q, r]) => <details key={q}><summary>{q}<ChevronDown size={18} /></summary><p>{r}</p></details>)}</div></section>
             )}

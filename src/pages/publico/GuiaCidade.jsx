@@ -6,6 +6,9 @@ import { SLUGS_CATEGORIA, GUIA_CATEGORIAS, categoriaDoGuia, conteudoSeguro, semA
 import { seoDaCidade, seoDoIndice, trilhaDaCidade, jsonLdDaCidade, jsonLdDoIndice } from '../../lib/guiaSeo'
 import { carregarCidade, carregarCidades } from '../../lib/guiaPublico'
 import { carregarColecoes } from '../../lib/guiaColecoesPublico'
+import { artigosResumidos } from '../../lib/conteudoPublico'
+import { artigosDaCidade } from '../../lib/guiaArtigos'
+import { CartaoArtigo } from './PaginaSeo'
 import { linksDeColecoes } from '../../lib/guiaColecoes'
 import { aoClicarNaPagina } from '../../lib/eventos'
 import { useVisita } from '../../lib/useVisita'
@@ -178,6 +181,15 @@ function Cidade({ dados }) {
   }, [cslug])
   const porHorario = colecoes ? (cat ? colecoes.categorias[categoria] ?? [] : colecoes.horarios) : []
   const porBairro = colecoes && !cat ? colecoes.bairros : []
+  // "Leia também" (3.14): os artigos do blog que falam desta cidade; e as outras cidades do guia
+  const [artigos, setArtigos] = useState([])
+  const [outras, setOutras] = useState([])
+  useEffect(() => {
+    let vivo = true
+    artigosResumidos().then((as) => vivo && setArtigos(artigosDaCidade(as, cslug))).catch(() => {})
+    carregarCidades().then((cs) => vivo && setOutras((Array.isArray(cs) ? cs : []).filter((c) => c.cidade_slug !== cslug))).catch(() => {})
+    return () => { vivo = false }
+  }, [cslug])
 
   return (
     <>
@@ -309,6 +321,27 @@ function Cidade({ dados }) {
             <div className="gd-outras">
               <Link className="gd-outra" to={rotaDaCidade(cslug)}><LayoutGrid size={15} /> Todos os salões de {cidade}</Link>
               {categorias.filter((c) => c.categoria !== categoria).map((c) => <Link key={c.categoria} className="gd-outra" to={rotaDaCategoria(cslug, c.categoria)}><IconeCategoria slug={c.categoria} size={15} /> {categoriaDoGuia(c.categoria).rotulo} <small>({c.total})</small></Link>)}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {artigos.length > 0 && (
+        <section className="gd-sec gd-sec-alt" aria-labelledby="gd-leia-t">
+          <div className="gd-wrap">
+            <div className="gd-sec-cabeca"><span className="ld-kicker">Do blog</span><h2 id="gd-leia-t" className="gd-h2">Leia também</h2></div>
+            <div className="ld-artigos">{artigos.slice(0, 3).map((a, i) => <CartaoArtigo a={a} key={a.slug} atraso={i * 60} />)}</div>
+          </div>
+        </section>
+      )}
+
+      {outras.length > 0 && (
+        <section className="gd-sec" aria-labelledby="gd-outras-t">
+          <div className="gd-wrap">
+            <div className="gd-sec-cabeca"><span className="ld-kicker">Mais no guia</span><h2 id="gd-outras-t" className="gd-h2">Salões em outras cidades</h2></div>
+            <div className="gd-outras">
+              {outras.map((c) => <Link key={c.cidade_slug} className="gd-outra" to={rotaDaCidade(c.cidade_slug)}><MapPin size={15} /> {c.cidade} <small>({c.total})</small></Link>)}
+              <Link className="gd-outra" to="/saloes"><LayoutGrid size={15} /> Todas as cidades</Link>
             </div>
           </div>
         </section>

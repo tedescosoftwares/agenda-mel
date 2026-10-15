@@ -186,9 +186,9 @@ const base = (o) => ({
 })
 
 export const GUIA_LUGARES = [
-  base({ id: 'gl1', slug: 'studio-lirio', categoria: 'unhas', nome: 'Studio Lírio', bairro: 'Centro', endereco: 'Rua das Acácias, 120', telefone: '(13) 99000-1101', whatsapp: '(13) 99000-1101', instagram: 'studiolirio.demo', horarios: H(2, 6), servicos: ['Manicure', 'Pedicure', 'Unhas em gel'], atributos: { pagamento: ['credito', 'debito', 'aproximacao'], acessibilidade: ['entrada'], estacionamento: ['rua_gratis'], tipo_google: 'Manicure e pedicure' }, latitude: -24.183, longitude: -46.788, place_id: 'demo-pl-1', cnpj: '00000000000101', validado_receita: true, selecao: true, nota: 4.9, avaliacoes: 212, conteudo: { ...TEXTO.lirio, _meta: meta('o bairro e a praticidade', 3) }, status: 'publicado', gerado_em: dias(3), publicado_em: dias(3) }),
+  base({ id: 'gl1', slug: 'studio-lirio', categoria: 'unhas', nome: 'Studio Lírio', fotos: ['/imagens/salao-1400.webp', '/imagens/profissional-1400.webp', '/imagens/cliente-1400.webp'], bairro: 'Centro', endereco: 'Rua das Acácias, 120', telefone: '(13) 99000-1101', whatsapp: '(13) 99000-1101', instagram: 'studiolirio.demo', horarios: H(2, 6), servicos: ['Manicure', 'Pedicure', 'Unhas em gel'], atributos: { pagamento: ['credito', 'debito', 'aproximacao'], acessibilidade: ['entrada'], estacionamento: ['rua_gratis'], tipo_google: 'Manicure e pedicure' }, latitude: -24.183, longitude: -46.788, place_id: 'demo-pl-1', cnpj: '00000000000101', validado_receita: true, selecao: true, nota: 4.9, avaliacoes: 212, conteudo: { ...TEXTO.lirio, _meta: meta('o bairro e a praticidade', 3) }, status: 'publicado', gerado_em: dias(3), publicado_em: dias(3) }),
   base({ id: 'gl3', slug: 'atelie-cabelo-e-arte', categoria: 'cabelo', nome: 'Ateliê Cabelo & Arte', bairro: 'Belas Artes', endereco: 'Rua Pintor Almeida, 78', telefone: '(13) 99000-1103', whatsapp: '(13) 99000-1103', site: 'https://exemplo.com/atelie', horarios: [...H(2, 5), { dia: 6, faixas: [['09:00', '15:00']] }], servicos: ['Cabelo', 'Química e coloração'], latitude: -24.205, longitude: -46.812, place_id: 'demo-pl-3', nota: 4.7, avaliacoes: 61, conteudo: { ...TEXTO.atelie, _meta: meta('como é a primeira visita', 5) }, status: 'publicado', gerado_em: dias(5), publicado_em: dias(5) }),
-  base({ id: 'gl4', slug: 'olhar-lash-studio', categoria: 'cilios', nome: 'Olhar Lash Studio', bairro: 'Gaivota', endereco: 'Rua das Gaivotas, 1020', telefone: '(13) 99000-1104', whatsapp: '(13) 99000-1104', instagram: 'olharlash.demo', horarios: H(1, 5, '10:00', '18:00'), servicos: ['Cílios', 'Sobrancelha'], latitude: -24.232, longitude: -46.845, place_id: 'demo-pl-4', cnpj: '00000000000104', validado_receita: true, nota: 5, avaliacoes: 88, conteudo: { ...TEXTO.olhar, _meta: meta('o serviço principal em detalhe', 6) }, rascunho: RASCUNHO_OLHAR, status: 'publicado', gerado_em: dias(0.1), publicado_em: dias(6) }),
+  base({ id: 'gl4', slug: 'olhar-lash-studio', categoria: 'cilios', nome: 'Olhar Lash Studio', fotos: ['/imagens/equipe-1400.webp'], bairro: 'Gaivota', endereco: 'Rua das Gaivotas, 1020', telefone: '(13) 99000-1104', whatsapp: '(13) 99000-1104', instagram: 'olharlash.demo', horarios: H(1, 5, '10:00', '18:00'), servicos: ['Cílios', 'Sobrancelha'], latitude: -24.232, longitude: -46.845, place_id: 'demo-pl-4', cnpj: '00000000000104', validado_receita: true, nota: 5, avaliacoes: 88, conteudo: { ...TEXTO.olhar, _meta: meta('o serviço principal em detalhe', 6) }, rascunho: RASCUNHO_OLHAR, status: 'publicado', gerado_em: dias(0.1), publicado_em: dias(6) }),
   base({ id: 'gl5', slug: 'studio-mel', categoria: 'beleza', nome: 'Studio Mel', bairro: 'Centro', endereco: 'Av. Condessa de Vimieiros, 900', telefone: '(13) 3333-0000', whatsapp: '(13) 99120-3410', instagram: 'studiomel', horarios: H(1, 6, '09:00', '18:00'), servicos: ['Cabelo', 'Manicure', 'Sobrancelha', 'Estética'], latitude: -24.184, longitude: -46.786, place_id: 'demo-pl-5', selecao: true, nota: 4.9, avaliacoes: 37, conteudo: { ...TEXTO.mel, _meta: meta('a agenda online', 2) }, status: 'publicado', salon_id: 's1', gerado_em: dias(2), publicado_em: dias(2) }),
   base({ id: 'gl6', slug: 'sobrancelha-da-re', categoria: 'sobrancelhas', nome: 'Sobrancelha da Rê', bairro: 'Suarão', endereco: 'Rua Beira-Mar, 33', telefone: '(13) 99000-1106', whatsapp: '(13) 99000-1106', horarios: H(2, 6, '09:00', '18:00'), servicos: ['Sobrancelha'], latitude: -24.165, longitude: -46.735, place_id: 'demo-pl-6', cnpj: '00000000000106', validado_receita: true, nota: 5, avaliacoes: 42, rascunho: RASCUNHOS.re, status: 'gerado', gerado_em: dias(0.2) }),
   base({ id: 'gl7', slug: 'unhas-da-praia', categoria: 'unhas', nome: 'Unhas da Praia', bairro: 'Cibratel', endereco: 'Av. Washington Luís, 2400', telefone: '(13) 99000-1107', whatsapp: '(13) 99000-1107', horarios: H(2, 6), servicos: ['Manicure', 'Pedicure', 'Unhas em gel'], atributos: { pagamento: ['so_dinheiro'] }, latitude: -24.214, longitude: -46.822, place_id: 'demo-pl-7', nota: 4.8, avaliacoes: 29, rascunho: RASCUNHOS.praia, status: 'gerado', gerado_em: dias(0.3) }),
@@ -262,6 +262,8 @@ export const GUIA_INTERESSES = [
 
 // ---- o que o público pode ver (a mesma forma das funções do banco) -------------------
 const noAr = (l) => l.status === 'publicado' && l.conteudo
+// as fotos (164): as do guia; sem elas, as da página do salão na MIMO (no demo, o Studio Mel)
+const fotosDe = (l) => (Array.isArray(l.fotos) && l.fotos.length ? l.fotos.slice(0, 8) : l.salon_id ? ['/imagens/salao-1400.webp', '/imagens/painel-1400.webp'] : [])
 function publico(l) {
   return {
     id: l.id, slug: l.slug, cidade: l.cidade, cidade_slug: l.cidade_slug, uf: l.uf, categoria: l.categoria, nome: l.nome, bairro: l.bairro,
@@ -269,10 +271,11 @@ function publico(l) {
     servicos: l.servicos ?? [], atributos: l.atributos ?? {}, selecao: l.selecao, validado_receita: l.validado_receita, na_mimo: !!l.salon_id,
     mimo: l.salon_id ? { salao_id: l.salon_id, nome: 'Studio Mel', slug: 'studio-mel', subdominio: 'studiomel' } : null,
     latitude: l.latitude ?? null, longitude: l.longitude ?? null,
+    fotos: fotosDe(l),
     conteudo: l.conteudo, publicado_em: l.publicado_em, atualizado_em: l.atualizado_em,
   }
 }
-const cartao = (l) => ({ slug: l.slug, nome: l.nome, bairro: l.bairro, categoria: l.categoria, resumo: l.conteudo?.resumo ?? null, servicos: (l.servicos ?? []).slice(0, 4), selecao: l.selecao, na_mimo: !!l.salon_id, latitude: l.latitude ?? null, longitude: l.longitude ?? null })
+const cartao = (l) => ({ slug: l.slug, nome: l.nome, bairro: l.bairro, categoria: l.categoria, resumo: l.conteudo?.resumo ?? null, servicos: (l.servicos ?? []).slice(0, 4), selecao: l.selecao, na_mimo: !!l.salon_id, latitude: l.latitude ?? null, longitude: l.longitude ?? null , foto: fotosDe(l)[0] ?? null })
 const ordemLista = (a, b) => (a.salon_id ? 0 : 1) - (b.salon_id ? 0 : 1) || (b.selecao ? 1 : 0) - (a.selecao ? 1 : 0) || a.nome.localeCompare(b.nome, 'pt-BR')
 function vizinhos(l, quantos = 6) {
   const d = (o) => (l.latitude != null && o.latitude != null ? (o.latitude - l.latitude) ** 2 + ((o.longitude - l.longitude) * Math.cos((l.latitude * Math.PI) / 180)) ** 2 : o.bairro === l.bairro ? 0 : 1e9)
@@ -335,7 +338,7 @@ export const GUIA_RPC = {
       lugares: [...daCidade].sort(ordemLista).map((l) => ({
         slug: l.slug, nome: l.nome, cidade: l.cidade, cidade_slug: l.cidade_slug, uf: l.uf, bairro: l.bairro, endereco: l.endereco, categoria: l.categoria,
         horarios: l.horarios, servicos: l.servicos ?? [], atributos: l.atributos ?? {}, resumo: l.conteudo?.resumo ?? null, selecao: l.selecao, na_mimo: !!l.salon_id, atualizado_em: l.atualizado_em,
-        latitude: l.latitude ?? null, longitude: l.longitude ?? null,
+        latitude: l.latitude ?? null, longitude: l.longitude ?? null, foto: fotosDe(l)[0] ?? null,
       })),
     }
   },

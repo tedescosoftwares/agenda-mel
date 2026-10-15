@@ -632,3 +632,25 @@ export function seoPadraoDaCidade(cidade, categoria = '') {
     ? { seo_title: `${cat.rotulo} em ${cidade}: endereços e horários | MIMO`, h1: `${cat.rotulo} em ${cidade}`, meta_description: `${cat.artigo} ${cat.plural} de ${cidade} num lugar só: endereço, bairro, horário e serviços de cada um. Escolha e marque.` }
     : { seo_title: `Salões de beleza em ${cidade}: guia por bairro e serviço | MIMO`, h1: `Salões de beleza em ${cidade}`, meta_description: `Guia dos salões de beleza, manicures, cílios, sobrancelha e estética de ${cidade}: endereço, horário e serviços de cada um.` }
 }
+
+// ---- as fotos (3.14) -----------------------------------------------------------
+// As fotos que a página pode mostrar: endereços http(s) ou do próprio site, até
+// oito, sem repetição. A primeira é a capa. Vale para o salão (l.fotos) e, nos
+// cartões, para a capa única (l.foto).
+export function fotosDoLugar(l) {
+  const lista = Array.isArray(l?.fotos) ? l.fotos : l?.foto ? [l.foto] : []
+  const out = []
+  for (const f of lista) {
+    const s = String(f ?? '').trim()
+    if (!/^(https?:\/\/|\/)[^\s"'<>]+$/i.test(s) || out.includes(s)) continue
+    out.push(s)
+    if (out.length === 8) break
+  }
+  return out
+}
+// o texto alternativo de cada foto: diz o que é, para quem não vê a imagem (e para o Google Imagens)
+export function altDaFoto(l, i = 0) {
+  const cat = categoriaDoGuia(l?.categoria)
+  const onde = [l?.bairro, l?.cidade].filter(Boolean).join(', ')
+  return `${l?.nome ?? 'Salão'}: ${cat.curto.toLowerCase()}${onde ? ` em ${onde}` : ''}${i > 0 ? ` (foto ${i + 1})` : ''}`
+}

@@ -6,7 +6,7 @@ import { categoriaDoGuia, semAcento, linkWhatsDoTel, linkInstagram, soDigitosTel
 import { urlDoAmbiente } from '../../../lib/ambiente'
 import { SITE_GUIA } from '../../../lib/guiaSeo'
 import { REGRAS } from '../../../lib/acesso'
-import { mensagemParaDono, zapDoDono, formatar, n0 } from '../../../lib/guiaMetricas'
+import { mensagemParaDono, zapDoDono, formatar, n0, PEDIDO_DE_FOTOS, paginaSemFoto } from '../../../lib/guiaMetricas'
 import {
   Send, Phone, AtSign, Footprints, Mail, Search, X, ExternalLink, Copy, Check, LoaderCircle, Keyboard, RotateCcw, ArrowLeft,
   ChevronUp, ChevronDown, AlarmClock, StickyNote, History, Inbox, Handshake, Info, ClipboardCheck, ArrowDownWideNarrow,
@@ -80,11 +80,13 @@ const PITCH = [
 // a mensagem: com os números do período quando a página está no ar e teve visita
 // (a mesma de Desempenho, mensagemParaDono); para quem pediu contato ("É o seu
 // salão?"), uma resposta ao pedido; sem números, só a apresentação. Para quem
-// já é cliente (agenda pela MIMO ou marcado como cliente aqui), nunca a oferta
-function montarMensagem(it, { dias, para }) {
+// já é cliente (agenda pela MIMO ou marcado como cliente aqui), nunca a oferta.
+// semFotos (3.16.1): a página está no ar e sem foto, então a mensagem pede as fotos
+function montarMensagem(it, { dias, para, semFotos = false }) {
   const url = it.status_pagina === 'publicado' ? SITE_GUIA + it.pagina : ''
   const cidade = it.cidade || 'beleza'
   const cliente = it.na_mimo || it.status === 'cliente'
+  const pedido = url && semFotos ? PEDIDO_DE_FOTOS : ''
   if (para === 'dono' && it.dono) {
     const e = it.eventos ?? {}
     const q = n0(it.pendentes?.quero_marcar)
@@ -96,14 +98,16 @@ function montarMensagem(it, { dias, para }) {
     return [
       `Oi${it.dono.nome ? `, ${it.dono.nome}` : ''}! Tudo bem? Aqui é da MIMO. Você pediu contato sobre ${it.nome} no nosso guia de salões de ${cidade}.`,
       partes.length ? `Para você ter uma ideia: ${juntar(partes)}.` : '',
+      pedido,
       ...(cliente ? [] : PITCH),
       url ? `A página: ${url}` : '',
     ].filter(Boolean).join('\n\n')
   }
-  if (url && n0(it.visitas) > 0) return mensagemParaDono({ ...it, na_mimo: cliente }, { dias, url, cidade })
+  if (url && n0(it.visitas) > 0) return mensagemParaDono({ ...it, na_mimo: cliente }, { dias, url, cidade, semFotos })
   return [
     `Oi! Tudo bem? Aqui é da MIMO, um guia de salões de ${cidade}.`,
     url ? `${it.nome} já tem uma página no nosso guia, com endereço, horário e serviços.` : '',
+    pedido,
     ...(cliente ? [] : PITCH),
     url ? `A página: ${url}` : '',
   ].filter(Boolean).join('\n\n')
@@ -480,7 +484,7 @@ export default function Abordagem({ g }) {
         </Portal>
       )}
 
-      {mensagemId && porId.get(mensagemId) && <ModalMensagem it={porId.get(mensagemId)} dias={dados.dias} hoje={hoje} onFechar={() => setMensagemId(null)} onEnviou={(o) => enviou(porId.get(mensagemId), o)} />}
+      {mensagemId && porId.get(mensagemId) && <ModalMensagem it={porId.get(mensagemId)} dias={dados.dias} hoje={hoje} semFotos={paginaSemFoto(g.lugares.find((l) => l.id === mensagemId))} onFechar={() => setMensagemId(null)} onEnviou={(o) => enviou(porId.get(mensagemId), o)} />}
     </div>
   )
 }
@@ -713,10 +717,10 @@ function Historico({ lista, hoje }) {
 }
 
 // ---- a mensagem: monta, deixa mudar, abre o WhatsApp e já registra ----
-function ModalMensagem({ it, dias, hoje, onFechar, onEnviou }) {
+function ModalMensagem({ it, dias, hoje, semFotos = false, onFechar, onEnviou }) {
   const temDono = !!(it.dono?.contato || it.dono?.email)
   const [para, setPara] = useState(temDono ? 'dono' : 'salao')
-  const [texto, setTexto] = useState(() => montarMensagem(it, { dias, para: temDono ? 'dono' : 'salao' }))
+  const [texto, setTexto] = useState(() => montarMensagem(it, { dias, para: temDono ? 'dono' : 'salao', semFotos }))
   const [copiado, setCopiado] = useState(false)
   const futuro = it.proximo_contato && it.proximo_contato > hoje
   const [comLembrete, setComLembrete] = useState(!futuro)
@@ -738,7 +742,7 @@ function ModalMensagem({ it, dias, hoje, onFechar, onEnviou }) {
     return () => window.removeEventListener('keydown', tecla)
   }, [onFechar])
 
-  function trocarPara(p) { setPara(p); setTexto(montarMensagem(it, { dias, para: p })) }
+  function trocarPara(p) { setPara(p); setTexto(montarMensagem(it, { dias, para: p, semFotos })) }
   async function copiar() {
     try { await navigator.clipboard.writeText(texto); setCopiado(true); setTimeout(() => setCopiado(false), 2000) } catch { /* sem área de transferência */ }
   }
@@ -766,7 +770,7 @@ function ModalMensagem({ it, dias, hoje, onFechar, onEnviou }) {
           )}
           <p className="muted pa-modal-sub">
             {para === 'dono' ? `Para ${[contatoDono, emailDono !== contatoDono.trim() && emailDono].filter(Boolean).join(' ou ')}. ` : ''}
-            {it.status_pagina === 'publicado' && n0(it.visitas) ? `Com os números dos últimos ${dias} dias. ` : ''}Dá para mudar o texto antes.
+            {it.status_pagina === 'publicado' && n0(it.visitas) ? `Com os números dos últimos ${dias} dias. ` : ''}{semFotos && it.status_pagina === 'publicado' ? 'A página ainda não tem foto: o texto pede. ' : ''}Dá para mudar o texto antes.
           </p>
           <textarea ref={caixa} className="pa-msg-texto" rows={10} value={texto} onChange={(e) => setTexto(e.target.value)} aria-label="Texto da mensagem" />
           <label className="pa-check">

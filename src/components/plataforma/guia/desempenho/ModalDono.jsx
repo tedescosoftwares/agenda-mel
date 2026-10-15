@@ -6,10 +6,11 @@ import { mensagemParaDono, zapDoDono } from '../../../../lib/guiaMetricas'
 
 // A mensagem para o dono do salão (3.11), com os números do período: dá
 // para mudar o texto, copiar ou abrir direto no WhatsApp do salão.
-export default function ModalDono({ linha, dias, cidade, onFechar }) {
+// semFotos (3.16.1): a página está sem foto, e a mensagem pede as fotos.
+export default function ModalDono({ linha, dias, cidade, semFotos = false, onFechar }) {
   // o endereço público de verdade (é ele que vai na mensagem)
   const url = SITE_GUIA + linha.pagina
-  const [texto, setTexto] = useState(() => mensagemParaDono(linha, { dias, url, cidade }))
+  const [texto, setTexto] = useState(() => mensagemParaDono(linha, { dias, url, cidade, semFotos }))
   const [copiado, setCopiado] = useState(false)
   const zap = zapDoDono(linha, texto)
   const caixa = useRef(null)
@@ -35,7 +36,7 @@ export default function ModalDono({ linha, dias, cidade, onFechar }) {
             <h3 id="pg-dono-t">Mensagem para {linha.nome}</h3>
             <button type="button" onClick={onFechar} aria-label="Fechar"><X size={16} /></button>
           </div>
-          <p className="muted">Os números dos últimos {dias} dias, prontos para mandar. Dá para mudar o texto antes.</p>
+          <p className="muted">Os números dos últimos {dias} dias, prontos para mandar. {semFotos ? 'A página ainda não tem foto: o texto pede. ' : ''}Dá para mudar o texto antes.</p>
           <textarea ref={caixa} className="pg-dono-texto" rows={10} value={texto} onChange={(e) => setTexto(e.target.value)} aria-label="Texto da mensagem" />
           <div className="pg-modal-botoes">
             <button type="button" className="btn btn-ghost" onClick={copiar}>{copiado ? <><Check size={15} /> Copiado</> : <><Copy size={15} /> Copiar</>}</button>

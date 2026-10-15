@@ -1,7 +1,7 @@
 // As contas e os textos do painel de desempenho do guia (3.11), sem tela:
 // a aba Desempenho e o painel do salão na revisão usam o mesmo. Os números
 // vêm de guia_desempenho() (migrações 156 e 161) ou do demo, no mesmo formato.
-import { categoriaDoGuia, linkWhatsDoTel, ehCelular } from './guia'
+import { categoriaDoGuia, linkWhatsDoTel, ehCelular, fotosDoLugar } from './guia'
 import { rotuloDaColecao } from './guiaColecoes'
 import { REGRAS } from './acesso'
 
@@ -43,9 +43,16 @@ export function nomeDaPagina(p, nomeDaCidade = (s) => s, nomeDoBairro) {
   return cat ? `${categoriaDoGuia(cat).rotulo} em ${nomeDaCidade(cidade)}` : `Salões em ${nomeDaCidade(cidade)}`
 }
 
+// a frase que pede as fotos (3.16.1): entra na mensagem quando a página está no ar e sem foto.
+// A pessoa responde com as fotos pelo próprio WhatsApp e a equipe coloca (Editar → Fotos ou Fotos em lote).
+export const PEDIDO_DE_FOTOS = 'A página ainda está sem foto. Se puder, me manda umas fotos do salão por aqui (a fachada, o ambiente, trabalhos de vocês) que a gente coloca na página.'
+// a página do salão está sem foto? Pelo salão da Plataforma (guia_lugares.fotos). Quem já está na
+// MIMO usa as fotos da própria página dele, então não pede.
+export const paginaSemFoto = (lugar) => !!lugar && !lugar.salon_id && fotosDoLugar(lugar).length === 0
+
 // a mensagem para o dono do salão, com os números do período (só o que é verdade e não é zero).
-// Salão que já agenda pela MIMO recebe o relatório, sem oferta.
-export function mensagemParaDono(p, { dias, url, cidade }) {
+// Salão que já agenda pela MIMO recebe o relatório, sem oferta. semFotos: pede as fotos.
+export function mensagemParaDono(p, { dias, url, cidade, semFotos = false }) {
   const e = p.eventos ?? {}
   const partes = [
     [n0(e.agendar_mimo), 'tocaram em "Agendar pela MIMO"', 'tocou em "Agendar pela MIMO"'],
@@ -57,10 +64,12 @@ export function mensagemParaDono(p, { dias, url, cidade }) {
   ].filter(([v]) => v > 0).map(([v, varios, um]) => `${v} ${v === 1 ? `pessoa ${um}` : `pessoas ${varios}`}`)
   const lista = partes.length <= 1 ? partes.join('') : `${partes.slice(0, -1).join(', ')} e ${partes.at(-1)}`
   const numeros = `A página de ${p.nome} no nosso guia teve ${formatar(p.visitas)} ${n0(p.visitas) === 1 ? 'visita' : 'visitas'} nos últimos ${dias} dias${lista ? `, e ${lista}` : ''}.`
-  if (p.na_mimo) return [`Oi! Tudo bem? Aqui é da MIMO, com o resumo do guia de salões de ${cidade || 'beleza'}.`, numeros, url ? `A página: ${url}` : ''].filter(Boolean).join('\n\n')
+  const pedido = semFotos && url ? PEDIDO_DE_FOTOS : ''
+  if (p.na_mimo) return [`Oi! Tudo bem? Aqui é da MIMO, com o resumo do guia de salões de ${cidade || 'beleza'}.`, numeros, pedido, url ? `A página: ${url}` : ''].filter(Boolean).join('\n\n')
   return [
     `Oi! Tudo bem? Aqui é da MIMO, um guia de salões de ${cidade || 'beleza'}.`,
     numeros,
+    pedido,
     'Dá para receber essas clientes direto numa agenda online: ela escolhe o serviço e o horário, e vocês recebem tudo organizado, com confirmação pelo WhatsApp.',
     `Para autônoma é grátis para sempre; salão com equipe testa ${REGRAS.testeDias} dias, sem cartão. Posso te mostrar como fica?`,
     url ? `A página: ${url}` : '',

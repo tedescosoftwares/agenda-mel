@@ -6,17 +6,17 @@ import { enviarFotoDoGuia, assinaturaDoArquivo, MAX_FOTOS } from '../../../lib/g
 
 // Fotos em lote (3.14.1): um CSV com o salão (place_id, id ou slug) e as
 // colunas foto_1_arquivo, foto_2_arquivo… apontando para arquivos de uma
-// pasta do computador. Serve para qualquer lote autorizado: fotos que os
-// salões mandaram pelo WhatsApp, fotógrafo, onboarding. A tela analisa,
+// pasta do computador. Serve para qualquer lote: fotos que os salões
+// mandaram pelo WhatsApp, de fotógrafo, do onboarding. A tela analisa,
 // mostra a prévia (quantos salões, quantos achados, quantas imagens prontas,
-// o que faltou), pede a declaração de origem e só então envia, pelo mesmo
-// caminho do Editar → Fotos (lib/guiaFotos.js) e para o mesmo campo fotos.
-// A ordem das colunas é a ordem na página; a primeira é a capa. Arquivo
-// repetido (mesmo conteúdo) entra uma vez só, e o que já foi enviado antes
-// não sobe de novo (o nome do objeto sai do conteúdo do arquivo).
-// A declaração fica gravada no salão (origem.fotos), com quem e quando.
+// o que faltou) e só então envia, pelo mesmo caminho do Editar → Fotos
+// (lib/guiaFotos.js) e para o mesmo campo fotos. A ordem das colunas é a
+// ordem na página; a primeira é a capa. Arquivo repetido (mesmo conteúdo)
+// entra uma vez só, e o que já foi enviado antes não sobe de novo (o nome
+// do objeto sai do conteúdo do arquivo). Quem importou, quando e de que
+// lote fica gravado no salão (origem.fotos). Sem aceite para marcar: quem
+// importa é a própria equipe (3.16.1).
 
-const DECLARACAO = 'Declaro que estas fotos foram enviadas pelos próprios salões ou feitas pela equipe MIMO, com autorização para uso nas páginas do guia.'
 const RE_FOTO = /^foto_?(\d+)(_arquivo|_file|_nome)?$/i
 const RE_IMAGEM = /\.(jpe?g|png|webp|gif|avif|heic|heif)$/i
 const PARALELO = 2
@@ -56,7 +56,6 @@ export default function ImportarFotos({ g }) {
   const [analise, setAnalise] = useState(null)  // o resultado de "Analisar"
   const [analisando, setAnalisando] = useState(false)
   const [substituir, setSubstituir] = useState(false)
-  const [declarou, setDeclarou] = useState(false)
   const [andamento, setAndamento] = useState(null) // { feitos, total, fotos }
   const [relatorio, setRelatorio] = useState(null) // { linhas: [...], fotos, ok, erros }
   const [erro, setErro] = useState('')
@@ -75,7 +74,7 @@ export default function ImportarFotos({ g }) {
     return { porPlace, porId, porSlug }
   }, [lugares])
 
-  function limpar() { setAnalise(null); setRelatorio(null); setAndamento(null); setErro(''); setDeclarou(false) }
+  function limpar() { setAnalise(null); setRelatorio(null); setAndamento(null); setErro('') }
 
   async function receberCsv(lista) {
     const f = [...(lista ?? [])].find((x) => /\.(csv|tsv|txt)$/i.test(x.name) || /csv|text/.test(x.type))
@@ -115,7 +114,7 @@ export default function ImportarFotos({ g }) {
 
   async function analisar() {
     if (!csv || !arquivos.length) return
-    setAnalisando(true); setErro(''); setRelatorio(null); setDeclarou(false)
+    setAnalisando(true); setErro(''); setRelatorio(null)
     try {
       const colId = colunaDeId(csv.cabecalho)
       const cols = colunasDeFoto(csv.cabecalho)
@@ -174,7 +173,7 @@ export default function ImportarFotos({ g }) {
   }
 
   async function importar() {
-    if (!analise || !declarou || andamento) return
+    if (!analise || andamento) return
     setErro('')
     // um trabalho por salão (as linhas do mesmo salão juntas, na ordem do CSV)
     const trabalhos = new Map()
@@ -212,7 +211,7 @@ export default function ImportarFotos({ g }) {
       let gravou = urls.length ? null : { ok: jaEstavam > 0, erro: jaEstavam ? '' : 'nenhuma foto enviada' }
       if (urls.length) {
         const fotos = [...existentes, ...urls].slice(0, MAX_FOTOS)
-        const origem = { ...(atual.origem ?? {}), fotos: { em: quando, por: g.usuario ?? null, lote: csv.nome, quantas: urls.length, declaracao: 'enviadas pelo salão ou feitas pela equipe MIMO, com autorização' } }
+        const origem = { ...(atual.origem ?? {}), fotos: { em: quando, por: g.usuario ?? null, lote: csv.nome, quantas: urls.length } }
         gravou = await g.salvarLugar(t.lugar.id, { fotos, origem })
       }
       const notas = [jaEstavam ? `${jaEstavam} já ${jaEstavam === 1 ? 'estava' : 'estavam'} na página` : '', ...erros].filter(Boolean).join(' · ')
@@ -244,7 +243,7 @@ export default function ImportarFotos({ g }) {
   }
 
   const podeAnalisar = !!csv && arquivos.length > 0 && !analisando && !andamento
-  const podeImportar = !!analise && analise.imagens > 0 && declarou && !andamento && !relatorio
+  const podeImportar = !!analise && analise.imagens > 0 && !andamento && !relatorio
 
   return (
     <Painel Icon={Images} className="pg-fotos-lote" titulo="Fotos em lote" sub="Um CSV com o salão (place_id, id ou slug) e as colunas foto_1_arquivo, foto_2_arquivo…, mais a pasta com as imagens. Para fotos que os salões mandaram, de fotógrafo ou do onboarding.">
@@ -297,7 +296,6 @@ export default function ImportarFotos({ g }) {
               {analise.linhas.flatMap((l) => l.itens.filter((it) => !it.file).map((it) => ({ n: l.n, ref: it.ref }))).slice(0, 20).map((x, i) => <li key={`a${i}`}><TriangleAlert size={13} /> linha {x.n}: arquivo "{x.ref}" não está na pasta</li>)}
             </ul>
           )}
-          <label className="pg-check pg-fl-declaracao"><input type="checkbox" checked={declarou} onChange={(e) => setDeclarou(e.target.checked)} /> <span>{DECLARACAO}</span></label>
           <div className="pg-relatorio-botoes">
             <button type="button" className="btn btn-primary" onClick={importar} disabled={!podeImportar}>
               {andamento ? <><LoaderCircle size={16} className="pg-gira" /> Importando {andamento.feitos} de {andamento.total}…</> : <><Images size={16} /> 4. Importar {analise.imagens} {analise.imagens === 1 ? 'foto' : 'fotos'}</>}

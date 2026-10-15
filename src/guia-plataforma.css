@@ -460,7 +460,6 @@
 .pg-fl-previa { margin-top: 0.8rem; }
 .pg-fl-nums { flex-wrap: wrap; }
 .pg-fl-nums .pg-fl-aviso b { color: #b4233f; }
-.pg-fl-declaracao { margin-top: 0.6rem; padding: 0.7rem 0.8rem; border: 1px solid #ffc2d8; border-radius: 10px; background: #fff8fb; }
 .pg-fl-tabela { margin-top: 0.6rem; }
 .pg-fl-tabela tr.ruim td { background: #fff5f5; }
 .pg-fl-tabela td svg { vertical-align: -2px; margin-right: 4px; }

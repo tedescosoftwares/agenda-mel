@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react'
 import { Painel, Vazio } from '../Pecas'
 import { contaAqui, naoContarAqui } from '../../../lib/eventos'
-import { ROTULO_ORIGEM, ROTULO_AREA, n0, tiposDo, destaquesDoPeriodo, DESTAQUE } from '../../../lib/guiaMetricas'
+import { ROTULO_ORIGEM, ROTULO_AREA, n0, tiposDo, destaquesDoPeriodo, DESTAQUE, paginaSemFoto } from '../../../lib/guiaMetricas'
 import { dataCurta } from './desempenho/comum'
 import Numeros from './desempenho/Numeros'
 import PorDia from './desempenho/PorDia'
@@ -148,7 +148,7 @@ export default function Desempenho({ g }) {
         </ul>
       </details>
 
-      {dono && <ModalDono linha={dono} dias={dados.dias} cidade={nomeDaCidade(dono.cidade_slug)} onFechar={() => setDono(null)} />}
+      {dono && <ModalDono linha={dono} dias={dados.dias} cidade={nomeDaCidade(dono.cidade_slug)} semFotos={paginaSemFoto(g.lugares.find((l) => l.id === dono.lugar_id))} onFechar={() => setDono(null)} />}
     </div>
   )
 }

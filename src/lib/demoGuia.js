@@ -4,7 +4,7 @@
 // (supabase/153_guia_de_saloes.sql) e devolvem a mesma forma, inclusive o
 // que o público NÃO vê (nota, coordenadas e origem só aparecem na tabela,
 // que no demo é a Plataforma quem lê).
-import { categoriaDoGuia, slugificar, conteudoSeguro, horariosEmUmaLinha, ordemPublica } from './guia.js'
+import { categoriaDoGuia, slugificar, conteudoSeguro, horariosEmUmaLinha, ordemPublica, categoriasDaLista } from './guia.js'
 import { montarConteudo } from './guiaTexto.js'
 import { chaveDoBairro } from './guiaColecoes.js'
 import { demoDesempenho, demoMapaAcessos, demoEvento as gravarEventoDemo, demoApagarEventos } from './demoMetricas.js'
@@ -285,10 +285,13 @@ function vizinhos(l, quantos = 6) {
 function cidades() {
   const por = new Map()
   for (const l of GUIA_LUGARES.filter(noAr)) {
-    const c = por.get(l.cidade_slug) ?? { cidade: l.cidade, cidade_slug: l.cidade_slug, uf: l.uf, total: 0 }
+    const c = por.get(l.cidade_slug) ?? { cidade: l.cidade, cidade_slug: l.cidade_slug, uf: l.uf, total: 0, categorias: [] }
     c.total++
+    const k = c.categorias.find((x) => x.categoria === l.categoria)
+    if (k) k.total++; else c.categorias.push({ categoria: l.categoria, total: 1 })
     por.set(l.cidade_slug, c)
   }
+  for (const c of por.values()) c.categorias.sort((a, b) => b.total - a.total || a.categoria.localeCompare(b.categoria))
   return [...por.values()].sort((a, b) => b.total - a.total)
 }
 const contar = (lista, campo) => {
@@ -314,7 +317,7 @@ export const GUIA_RPC = {
     const pagina = GUIA_PAGINAS.find((p) => p.cidade_slug === c && p.categoria === cat && p.status === 'publicado')
     return {
       cidade: daCidade[0].cidade, cidade_slug: c, uf: daCidade[0].uf, categoria: cat, pagina: pagina?.conteudo ?? null, total: daCidade.length,
-      categorias: contar(daCidade, 'categoria'), bairros: contar(lista, 'bairro'), lugares: [...lista].sort(ordemLista).map(cartao),
+      categorias: categoriasDaLista([...daCidade].sort(ordemLista), (l) => fotosDe(l)[0] ?? null), bairros: contar(lista, 'bairro'), lugares: [...lista].sort(ordemLista).map(cartao),
     }
   },
   guia_pagina: (a) => {

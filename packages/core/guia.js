@@ -15,13 +15,13 @@
 // slug: vai na URL (/saloes/itanhaem/unhas). schema: o tipo do schema.org.
 // busca: como a pessoa procura no Google ("manicure em Itanhaém").
 export const GUIA_CATEGORIAS = [
-  { slug: 'beleza', rotulo: 'Salões de beleza', curto: 'Salão de beleza', singular: 'salão de beleza', plural: 'salões de beleza', artigo: 'Os', busca: 'salão de beleza', schema: 'BeautySalon' },
-  { slug: 'cabelo', rotulo: 'Cabeleireiros', curto: 'Cabelo', singular: 'cabeleireiro', plural: 'cabeleireiros', artigo: 'Os', busca: 'cabeleireiro', schema: 'HairSalon' },
-  { slug: 'unhas', rotulo: 'Manicure e unhas', curto: 'Unhas', singular: 'manicure', plural: 'manicures e esmalterias', artigo: 'As', busca: 'manicure', schema: 'NailSalon' },
-  { slug: 'cilios', rotulo: 'Cílios', curto: 'Cílios', singular: 'lash designer', plural: 'estúdios de cílios', artigo: 'Os', busca: 'extensão de cílios', schema: 'BeautySalon' },
-  { slug: 'sobrancelhas', rotulo: 'Sobrancelhas', curto: 'Sobrancelhas', singular: 'designer de sobrancelha', plural: 'estúdios de sobrancelha', artigo: 'Os', busca: 'design de sobrancelha', schema: 'BeautySalon' },
-  { slug: 'estetica', rotulo: 'Estética', curto: 'Estética', singular: 'estética', plural: 'clínicas de estética', artigo: 'As', busca: 'estética', schema: 'BeautySalon' },
-  { slug: 'maquiagem', rotulo: 'Maquiagem', curto: 'Maquiagem', singular: 'maquiadora', plural: 'maquiadoras', artigo: 'As', busca: 'maquiadora', schema: 'BeautySalon' },
+  { slug: 'beleza', rotulo: 'Salões de beleza', curto: 'Salão de beleza', singular: 'salão de beleza', plural: 'salões de beleza', artigo: 'Os', busca: 'salão de beleza', schema: 'BeautySalon', resumo: 'Cabelo, unhas, sobrancelha e estética num lugar só' },
+  { slug: 'cabelo', rotulo: 'Cabeleireiros', curto: 'Cabelo', singular: 'cabeleireiro', plural: 'cabeleireiros', artigo: 'Os', busca: 'cabeleireiro', schema: 'HairSalon', resumo: 'Corte, cor, escova, hidratação e tratamento' },
+  { slug: 'unhas', rotulo: 'Manicure e unhas', curto: 'Unhas', singular: 'manicure', plural: 'manicures e esmalterias', artigo: 'As', busca: 'manicure', schema: 'NailSalon', resumo: 'Manicure, pedicure, alongamento, gel e nail art' },
+  { slug: 'cilios', rotulo: 'Cílios', curto: 'Cílios', singular: 'lash designer', plural: 'estúdios de cílios', artigo: 'Os', busca: 'extensão de cílios', schema: 'BeautySalon', resumo: 'Extensão fio a fio, volume e lifting' },
+  { slug: 'sobrancelhas', rotulo: 'Sobrancelhas', curto: 'Sobrancelhas', singular: 'designer de sobrancelha', plural: 'estúdios de sobrancelha', artigo: 'Os', busca: 'design de sobrancelha', schema: 'BeautySalon', resumo: 'Design, henna, micropigmentação e brow lamination' },
+  { slug: 'estetica', rotulo: 'Estética', curto: 'Estética', singular: 'estética', plural: 'clínicas de estética', artigo: 'As', busca: 'estética', schema: 'BeautySalon', resumo: 'Limpeza de pele, massagem, depilação e corporal' },
+  { slug: 'maquiagem', rotulo: 'Maquiagem', curto: 'Maquiagem', singular: 'maquiadora', plural: 'maquiadoras', artigo: 'As', busca: 'maquiadora', schema: 'BeautySalon', resumo: 'Make para festa, noiva e social' },
 ]
 export const SLUGS_CATEGORIA = GUIA_CATEGORIAS.map((c) => c.slug)
 
@@ -653,6 +653,31 @@ export function altDaFoto(l, i = 0) {
   const cat = categoriaDoGuia(l?.categoria)
   const onde = [l?.bairro, l?.cidade].filter(Boolean).join(', ')
   return `${l?.nome ?? 'Salão'}: ${cat.curto.toLowerCase()}${onde ? ` em ${onde}` : ''}${i > 0 ? ` (foto ${i + 1})` : ''}`
+}
+
+// ---- as categorias com vida (3.19) -----------------------------------------------
+// "Studio Lírio, Unhas da Ana e mais 3": quem está numa categoria, para o bloco não ser só um número
+export function quemEsta(nomes, total) {
+  const ns = (Array.isArray(nomes) ? nomes : []).map((n) => String(n ?? '').trim()).filter(Boolean).slice(0, 2)
+  if (!ns.length) return ''
+  const resto = Math.max(0, (Number(total) || ns.length) - ns.length)
+  if (ns.length === 1) return resto ? `${ns[0]} e mais ${resto}` : ns[0]
+  return resto ? `${ns[0]}, ${ns[1]} e mais ${resto}` : `${ns[0]} e ${ns[1]}`
+}
+// as categorias de uma lista já na ordem do site: o total, a capa do melhor salão com foto e os 3 primeiros
+// nomes. É o que guia_cidade() devolve em 'categorias' (migração 168); o gerador estático e o demo fazem
+// a mesma conta a partir da lista. fotoDe: a capa de um salão (o demo passa as fotos da MIMO)
+export function categoriasDaLista(lista, fotoDe = (l) => fotosDoLugar(l)[0] ?? null) {
+  const por = new Map()
+  for (const l of Array.isArray(lista) ? lista : []) {
+    if (!l?.categoria) continue
+    const c = por.get(l.categoria) ?? { categoria: l.categoria, total: 0, foto: null, nomes: [] }
+    c.total++
+    if (!c.foto) c.foto = fotoDe(l) || null
+    if (c.nomes.length < 3 && l.nome) c.nomes.push(l.nome)
+    por.set(l.categoria, c)
+  }
+  return [...por.values()].sort((a, b) => b.total - a.total)
 }
 
 // ---- a ordem das listas públicas (3.17) -----------------------------------------

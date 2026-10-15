@@ -9,8 +9,7 @@
 // Tudo o que vem do banco passa por esc().
 import {
   GUIA_CATEGORIAS, categoriaDoGuia, conteudoSeguro, faqDaPagina, horariosResumo, atributosEmTexto,
-  rotaDoGuia, rotaDaCidade, rotaDaCategoria, rotaDoLugar, seoPadraoDaCidade, fotosDoLugar, altDaFoto,
-} from '../src/lib/guia.js'
+  rotaDoGuia, rotaDaCidade, rotaDaCategoria, rotaDoLugar, seoPadraoDaCidade, fotosDoLugar, altDaFoto, categoriasDaLista, quemEsta } from '../src/lib/guia.js'
 import { artigosDaCidade } from '../src/lib/guiaArtigos.js'
 import {
   seoDoLugar, seoDaCidade, seoDoIndice, trilhaDoLugar, trilhaDaCidade,
@@ -70,7 +69,7 @@ ${c.como_escolher.itens.length ? `<section><h2>${esc(c.como_escolher.titulo || '
 ${colecoes ? navDeColecoes('Por horário', dados.categoria ? colecoes.categorias[dados.categoria] ?? [] : colecoes.horarios) : ''}
 ${colecoes && !dados.categoria ? navDeColecoes('Por bairro', colecoes.bairros) : ''}
 ${faqHtml(faq)}
-${outras.length ? `<nav aria-label="Categorias"><ul>${outras.map((x) => `<li><a href="${esc(rotaDaCategoria(dados.cidade_slug, x.categoria))}">${esc(`${categoriaDoGuia(x.categoria).rotulo} em ${dados.cidade}`)}</a></li>`).join('')}</ul></nav>` : ''}
+${outras.length ? `<nav aria-label="Categorias"><h2>${esc(dados.categoria ? `Outras categorias em ${dados.cidade}` : `Por categoria em ${dados.cidade}`)}</h2><ul>${outras.map((x) => { const k = categoriaDoGuia(x.categoria); const quem = quemEsta(x.nomes, x.total); return `<li><a href="${esc(rotaDaCategoria(dados.cidade_slug, x.categoria))}">${esc(`${k.rotulo} em ${dados.cidade}`)}</a>${k.resumo ? `: ${esc(k.resumo)}` : ''}. ${x.total} ${x.total === 1 ? 'lugar' : 'lugares'}${quem ? `, como ${esc(quem)}` : ''}.</li>` }).join('')}</ul></nav>` : ''}
 ${dados.categoria ? `<p><a href="${esc(rotaDaCidade(dados.cidade_slug))}">${esc(`Todos os salões de ${dados.cidade}`)}</a></p>` : ''}
 ${leiaTambem(extras.artigos)}
 ${outrasCidades(extras.cidades, dados.cidade_slug)}
@@ -105,7 +104,7 @@ function dadosDaCidade(lugares, paginas, cidadeSlug, categoria) {
   const pagina = paginas.find((p) => p.cidade_slug === cidadeSlug && (p.categoria ?? '') === categoria)
   return {
     cidade: daCidade[0].cidade, cidade_slug: cidadeSlug, uf: daCidade[0].uf, categoria, pagina: pagina?.conteudo ?? null, total: daCidade.length,
-    categorias: contar(daCidade, 'categoria'), bairros: contar(lista, 'bairro'), lugares: lista.map(cartao),
+    categorias: categoriasDaLista(daCidade), bairros: contar(lista, 'bairro'), lugares: lista.map(cartao),
     atualizado: [...lista.map((l) => dia(l.atualizado_em)), dia(pagina?.atualizado_em)].filter(Boolean).sort().at(-1),
   }
 }
@@ -147,13 +146,14 @@ export function paginasDoGuia(guia, artigos = []) {
       out.push({ caminho, titulo, descricao, atualizado: m.atualizado, prioridade: '0.6', freq: 'weekly', jsonLd: jsonLdDaColecao(m), corpo: corpoDaColecao(m) })
     }
   }
-  // o índice
-  const lista = cidades.map((cs) => { const l = lugares.find((x) => x.cidade_slug === cs); return { cidade: l.cidade, cidade_slug: cs, uf: l.uf, total: lugares.filter((x) => x.cidade_slug === cs).length } })
+  // o índice: as cidades e, por categoria, as cidades que a têm (3.19)
+  const lista = cidades.map((cs) => { const l = lugares.find((x) => x.cidade_slug === cs); return { cidade: l.cidade, cidade_slug: cs, uf: l.uf, total: daCidade.get(cs).length, categorias: categoriasDaLista(daCidade.get(cs)).map(({ categoria, total }) => ({ categoria, total })) } })
+  const porCategoria = GUIA_CATEGORIAS.map((k) => ({ k, cidades: lista.map((c) => ({ c, n: c.categorias.find((x) => x.categoria === k.slug)?.total ?? 0 })).filter((x) => x.n > 0) })).filter((x) => x.cidades.length)
   const ix = seoDoIndice()
   out.push({
     caminho: rotaDoGuia(), titulo: ix.titulo, descricao: ix.descricao, prioridade: '0.6', freq: 'weekly', jsonLd: jsonLdDoIndice(lista),
     atualizado: lugares.map((l) => dia(l.atualizado_em)).filter(Boolean).sort().at(-1),
-    corpo: `<main><h1>Guia de salões de beleza</h1><ul>${lista.map((c) => `<li><a href="${esc(rotaDaCidade(c.cidade_slug))}">${esc(`Salões em ${c.cidade}`)}</a> (${c.total})</li>`).join('')}</ul></main>`,
+    corpo: `<main><h1>Guia de salões de beleza</h1><ul>${lista.map((c) => `<li><a href="${esc(rotaDaCidade(c.cidade_slug))}">${esc(`Salões em ${c.cidade}`)}</a> (${c.total})</li>`).join('')}</ul>${porCategoria.length ? `<section><h2>Por categoria</h2><ul>${porCategoria.map(({ k, cidades: cs }) => `<li>${esc(k.rotulo)}${k.resumo ? `: ${esc(k.resumo)}` : ''}. ${cs.map(({ c, n }) => `<a href="${esc(rotaDaCategoria(c.cidade_slug, k.slug))}">${esc(c.cidade)}</a> (${n})`).join(' · ')}</li>`).join('')}</ul></section>` : ''}</main>`,
   })
   return out
 }

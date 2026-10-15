@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ArrowRight, ChevronDown, MapPin, Search, Info, Award, CalendarCheck, LayoutGrid, RotateCcw, X, Clock } from 'lucide-react'
 import { useSeo } from '../../lib/seo'
-import { SLUGS_CATEGORIA, GUIA_CATEGORIAS, categoriaDoGuia, conteudoSeguro, semAcento, seoPadraoDaCidade, rotaDaCidade, rotaDaCategoria } from '../../lib/guia'
+import { SLUGS_CATEGORIA, GUIA_CATEGORIAS, categoriaDoGuia, conteudoSeguro, semAcento, seoPadraoDaCidade, rotaDaCidade, rotaDaCategoria, quemEsta } from '../../lib/guia'
 import { seoDaCidade, seoDoIndice, trilhaDaCidade, jsonLdDaCidade, jsonLdDoIndice } from '../../lib/guiaSeo'
 import { carregarCidade, carregarCidades } from '../../lib/guiaPublico'
 import { carregarColecoes } from '../../lib/guiaColecoesPublico'
@@ -208,18 +208,21 @@ function Cidade({ dados }) {
               </div>
             </div>
             <nav className="gd-tiles" aria-label={`Categorias em ${cidade}`}>
-              <Link to={rotaDaCidade(cslug)} className={'gd-tile gd-tile-todos' + (!cat ? ' gd-tile-on' : '')} aria-current={!cat ? 'page' : undefined}>
+              <Link to={rotaDaCidade(cslug)} className={'gd-tile gd-tile-todos' + (!cat ? ' gd-tile-on' : '')} aria-current={!cat ? 'page' : undefined} style={{ '--i': 0 }}>
                 <span className="gd-tile-ic"><LayoutGrid size={18} /></span>
-                <span><b>Todos</b><small>{plural(dados.total, 'lugar', 'lugares')}</small></span>
+                <span className="gd-tile-txt"><b>Todos</b><small>{plural(dados.total, 'lugar', 'lugares')}</small></span>
               </Link>
-              {categorias.map((c) => {
+              {categorias.map((c, i) => {
                 const k = categoriaDoGuia(c.categoria)
                 const atual = c.categoria === categoria
+                const quem = quemEsta(c.nomes, c.total) // 3.19: "Studio Lírio, Unhas da Ana e mais 1"
                 return (
-                  <Link key={c.categoria} to={rotaDaCategoria(cslug, c.categoria)} className={`gd-tile gd-tom-${c.categoria}` + (atual ? ' gd-tile-on' : '')} aria-current={atual ? 'page' : undefined}>
-                    <IconeCategoria slug={c.categoria} className="gd-tile-fundo" strokeWidth={1.2} aria-hidden="true" />
+                  <Link key={c.categoria} to={rotaDaCategoria(cslug, c.categoria)} className={`gd-tile gd-tom-${c.categoria}` + (c.foto ? ' gd-tile-com-foto' : '') + (atual ? ' gd-tile-on' : '')} aria-current={atual ? 'page' : undefined} style={{ '--i': i + 1 }} title={k.resumo || undefined}>
+                    {c.foto
+                      ? <img className="gd-tile-foto" src={c.foto} alt="" decoding="async" />
+                      : <IconeCategoria slug={c.categoria} className="gd-tile-fundo" strokeWidth={1.2} aria-hidden="true" />}
                     <span className="gd-tile-ic"><IconeCategoria slug={c.categoria} size={18} /></span>
-                    <span><b>{k.rotulo}</b><small>{plural(c.total, 'lugar', 'lugares')}</small></span>
+                    <span className="gd-tile-txt"><b>{k.rotulo}</b><small>{plural(c.total, 'lugar', 'lugares')}</small>{quem && <em>{quem}</em>}</span>
                   </Link>
                 )
               })}
@@ -318,9 +321,23 @@ function Cidade({ dados }) {
         <section className="gd-sec gd-sec-alt">
           <div className="gd-wrap">
             <div className="gd-sec-cabeca"><span className="ld-kicker">Mais no guia</span><h2 className="gd-h2">Outras categorias em {cidade}</h2></div>
-            <div className="gd-outras">
-              <Link className="gd-outra" to={rotaDaCidade(cslug)}><LayoutGrid size={15} /> Todos os salões de {cidade}</Link>
-              {categorias.filter((c) => c.categoria !== categoria).map((c) => <Link key={c.categoria} className="gd-outra" to={rotaDaCategoria(cslug, c.categoria)}><IconeCategoria slug={c.categoria} size={15} /> {categoriaDoGuia(c.categoria).rotulo} <small>({c.total})</small></Link>)}
+            <div className="gd-cat-cards">
+              {categorias.filter((c) => c.categoria !== categoria).map((c) => {
+                const k = categoriaDoGuia(c.categoria)
+                const quem = quemEsta(c.nomes, c.total)
+                return (
+                  <Link key={c.categoria} className="gd-cat-card ld-rv" to={rotaDaCategoria(cslug, c.categoria)}>
+                    <span className={`gd-cat-ic gd-tom-${c.categoria}`}><IconeCategoria slug={c.categoria} size={20} /></span>
+                    <span><b>{k.rotulo}</b>{k.resumo && <small>{k.resumo}</small>}<em>{plural(c.total, 'lugar', 'lugares')}{quem ? ` · ${quem}` : ''}</em></span>
+                    <ArrowRight size={18} aria-hidden="true" />
+                  </Link>
+                )
+              })}
+              <Link className="gd-cat-card gd-cat-card-todos ld-rv" to={rotaDaCidade(cslug)}>
+                <span className="gd-cat-ic"><LayoutGrid size={20} /></span>
+                <span><b>Todos os salões de {cidade}</b><em>{plural(dados.total, 'lugar', 'lugares')} no guia</em></span>
+                <ArrowRight size={18} aria-hidden="true" />
+              </Link>
             </div>
           </div>
         </section>
@@ -374,6 +391,13 @@ function IndiceDeCidades() {
   }, [tentativa])
 
   const lista = Array.isArray(cidades) ? cidades : []
+  // por categoria, as cidades que a têm (3.19; o banco manda em guia_cidades a partir da 168)
+  const porCategoria = useMemo(() => {
+    const ls = Array.isArray(cidades) ? cidades : []
+    return GUIA_CATEGORIAS
+      .map((k) => ({ k, cidades: ls.map((c) => ({ c, n: (Array.isArray(c.categorias) ? c.categorias : []).find((x) => x.categoria === k.slug)?.total ?? 0 })).filter((x) => x.n > 0) }))
+      .filter((x) => x.cidades.length)
+  }, [cidades])
   return (
     <div className="ld gd" ref={raiz}>
       <NavSite />
@@ -406,6 +430,25 @@ function IndiceDeCidades() {
           </div>
         </section>
 
+        {porCategoria.length > 0 && (
+          <section className="gd-sec gd-sec-alt" aria-labelledby="gd-cats-t">
+            <div className="gd-wrap">
+              <div className="gd-sec-cabeca"><span className="ld-kicker">O que você procura</span><h2 id="gd-cats-t" className="gd-h2">Por categoria</h2><p>Cada categoria tem a própria página em cada cidade, com endereço, horário e serviços de quem faz.</p></div>
+              <div className="gd-cat-cards">
+                {porCategoria.map(({ k, cidades: cs }) => (
+                  <div key={k.slug} className="gd-cat-card gd-cat-card-indice ld-rv">
+                    <span className={`gd-cat-ic gd-tom-${k.slug}`}><IconeCategoria slug={k.slug} size={20} /></span>
+                    <span>
+                      <b>{k.rotulo}</b>{k.resumo && <small>{k.resumo}</small>}
+                      <span className="gd-cat-cidades">{cs.map(({ c, n }) => <Link key={c.cidade_slug} to={rotaDaCategoria(c.cidade_slug, k.slug)}>{c.cidade} <strong>{n}</strong></Link>)}</span>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
         <section className="gd-sec gd-sec-alt">
           <div className="gd-wrap">
             <div className="gd-sec-cabeca"><span className="ld-kicker">Como funciona</span><h2 className="gd-h2">Um guia feito com cuidado</h2></div>
@@ -414,7 +457,7 @@ function IndiceDeCidades() {
               <article className="ld-mini ld-rv"><Award size={20} /><h3>Seleção MIMO</h3><p>O selo marca a curadoria da equipe MIMO: lugares que a casa escolheu destacar no guia. É uma escolha da casa, não um ranking.</p></article>
               <article className="ld-mini ld-rv"><CalendarCheck size={20} /><h3>Marque pelo app</h3><p>Quem tem o selo Na MIMO agenda pelo link ou pelo app. Nos outros, conte que quer marcar e a gente avisa o salão.</p></article>
             </div>
-            <p className="sp-nota gd-nota-cat">Categorias do guia: {GUIA_CATEGORIAS.map((c) => c.rotulo.toLowerCase()).join(', ')}.</p>
+            {!porCategoria.length && <p className="sp-nota gd-nota-cat">Categorias do guia: {GUIA_CATEGORIAS.map((c) => c.rotulo.toLowerCase()).join(', ')}.</p>}
           </div>
         </section>
 

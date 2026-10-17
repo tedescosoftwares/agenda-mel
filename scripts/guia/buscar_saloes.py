@@ -51,8 +51,15 @@ Saída (separado por ponto e vírgula, abre no Excel), uma por cidade:
     mimo_descartados_<cidade>.csv  os que ficaram de fora e o motivo
     mimo_pendentes.csv             ids que não couberam na cota (rodar de novo no mês seguinte)
 
-O que NÃO é pedido de propósito: fotos, texto das avaliações, resumo do
-Google. Não podem ir para o site (são de quem publicou) e custariam mais.
+O que NÃO é pedido de propósito: texto das avaliações e resumo do Google.
+Não podem ir para o site (são de quem publicou) e custariam mais.
+
+Fotos (3.20): o script pede só o NOME de cada foto do perfil e quem a
+publicou (campo "photos", que não muda o preço da chamada). A imagem em si
+não é baixada nem publicada: a Plataforma usa o nome para montar, na hora e
+pela API oficial (Place Photo), uma PRÉVIA da página que o dono vê, com o
+crédito de quem publicou. Pelos termos do Google o nome vale 30 dias; para
+a foto ir para a página de verdade, o dono manda pelo link dele.
 """
 
 import argparse
@@ -121,6 +128,7 @@ CAMPOS = [
     "id", "displayName", "formattedAddress", "addressComponents", "location", "primaryType", "primaryTypeDisplayName",
     "types", "businessStatus", "googleMapsUri", "rating", "userRatingCount", "nationalPhoneNumber", "websiteUri",
     "regularOpeningHours", "paymentOptions", "accessibilityOptions", "parkingOptions", "goodForChildren", "restroom",
+    "photos",  # só os nomes e os créditos (a imagem é buscada na hora, na prévia; ver o topo do arquivo)
 ]
 MASCARA_IDS = "places.id,nextPageToken"                                   # Text Search Essentials (IDs Only): grátis, sem limite
 MASCARA_COMPLETA = ",".join("places." + c for c in CAMPOS) + ",nextPageToken"  # Text Search Enterprise + Atmosphere
@@ -322,6 +330,8 @@ def linha_do_lugar(p, buscas):
         "longitude": loc.get("longitude", ""),
         "place_id": p.get("id", ""),
         "buscas_encontradas": " | ".join(sorted(buscas)),
+        "fotos_google": " | ".join(f.get("name", "") for f in (p.get("photos") or [])[:6] if f.get("name")),
+        "fotos_google_autores": " | ".join(((f.get("authorAttributions") or [{}])[0].get("displayName") or "") for f in (p.get("photos") or [])[:6] if f.get("name")),
         "motivo_descarte": "",
     }
 
@@ -329,7 +339,7 @@ def linha_do_lugar(p, buscas):
 COLUNAS = ["categoria_mimo", "nome", "triagem", "avaliacao", "qtd_avaliacoes", "bairro", "rua", "endereco", "cep", "cidade", "telefone",
            "site", "horarios", "pagamento", "acessibilidade", "estacionamento", "criancas", "banheiro", "tipo_principal",
            "tipo_nome", "tipos_google", "status", "latitude", "longitude", "google_maps", "place_id", "buscas_encontradas",
-           "motivo_descarte"]
+           "fotos_google", "fotos_google_autores", "motivo_descarte"]
 
 # =========================================================
 # O GOOGLE: chamadas, contagem por nível e teto do mês

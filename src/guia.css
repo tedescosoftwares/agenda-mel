@@ -326,6 +326,9 @@
 .gd-chip-filtro:hover { border-color: var(--ld-rosa-2); }
 .gd-chip-filtro[aria-pressed='true'] { background: var(--ld-ameixa); border-color: var(--ld-ameixa); color: #fff; }
 .gd-chip-filtro[aria-pressed='true'] small { color: #e9c9da; }
+/* 3.20: cidade grande: o seletor com os outros bairros, com a mesma cara dos chips */
+select.gd-bairro-sel { appearance: none; -webkit-appearance: none; padding-right: 30px; background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23ff2d7a' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 10px center; }
+select.gd-bairro-sel[data-ativo='1'] { background-color: var(--ld-ameixa); border-color: var(--ld-ameixa); color: #fff; }
 .gd-lista-topo { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; color: var(--ld-cinza); font-size: 0.9rem; }
 .gd-lista-topo b { color: var(--ld-ameixa); }
 .gd-vazio { text-align: center; padding: 40px 20px; border: 1px dashed #e2d6e6; border-radius: 22px; background: #fff; color: var(--ld-cinza); display: grid; gap: 12px; justify-items: center; }

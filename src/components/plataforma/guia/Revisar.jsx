@@ -118,13 +118,19 @@ export default function Revisar({ g, rev, setRev }) {
     for (const l of lugares) if (!m.has(l.cidade_slug)) m.set(l.cidade_slug, l.cidade)
     return [...m.entries()].sort((a, b) => a[1].localeCompare(b[1], 'pt-BR'))
   }, [lugares])
+  // os bairros da cidade escolhida (3.20): para revisar e aprovar bairro por bairro
+  const bairros = useMemo(() => {
+    const c = new Map()
+    for (const l of lugares) if ((!rev.cidade || l.cidade_slug === rev.cidade) && l.bairro) c.set(l.bairro, (c.get(l.bairro) ?? 0) + 1)
+    return [...c.entries()].sort((a, b) => a[0].localeCompare(b[0], 'pt-BR'))
+  }, [lugares, rev.cidade])
   const termo = norm(rev.busca).trim()
   const base = useMemo(() => lugares.filter((l) =>
-    (!rev.cidade || l.cidade_slug === rev.cidade) && (!rev.categoria || l.categoria === rev.categoria) &&
+    (!rev.cidade || l.cidade_slug === rev.cidade) && (!rev.bairro || l.bairro === rev.bairro) && (!rev.categoria || l.categoria === rev.categoria) &&
     (!rev.receita || l.validado_receita) && (!rev.selecao || l.selecao) &&
     (!rev.triagem || TRIAGENS.find(([id]) => id === rev.triagem)?.[2](l)) &&
     (!termo || norm(`${l.nome} ${l.bairro ?? ''} ${l.slug}`).includes(termo))
-  ), [lugares, rev.cidade, rev.categoria, rev.receita, rev.selecao, rev.triagem, termo])
+  ), [lugares, rev.cidade, rev.bairro, rev.categoria, rev.receita, rev.selecao, rev.triagem, termo])
   const contagem = useMemo(() => {
     const c = { gerar: 0, revisar: 0, nova: 0, no_ar: 0, descartado: 0, removido: 0, todos: 0 }
     for (const l of base) { const f = faseDe(l); c[f]++; if (f !== 'removido') c.todos++ }
@@ -316,11 +322,11 @@ export default function Revisar({ g, rev, setRev }) {
   )
 
   const pendentesFila = lista.filter((l) => g.faseDe(l) === 'gerar').length
-  const filtrosExtras = rev.cidade || rev.categoria || rev.receita || rev.selecao || rev.triagem || rev.busca
+  const filtrosExtras = rev.cidade || rev.bairro || rev.categoria || rev.receita || rev.selecao || rev.triagem || rev.busca
   // os filtros da lista em palavras, para o modal "Em lote" dizer o que vai mexer (3.18)
   const resumoLote = [
     status === 'removido' ? 'Removidos' : (FASES.find(([id]) => id === status)?.[1] ?? 'Todos'),
-    rev.cidade ? (cidades.find(([s]) => s === rev.cidade)?.[1] ?? rev.cidade) : 'todas as cidades',
+    rev.cidade ? (cidades.find(([s]) => s === rev.cidade)?.[1] ?? rev.cidade) : 'todas as cidades', rev.bairro ? `bairro ${rev.bairro}` : '',
     rev.categoria ? categoriaDoGuia(rev.categoria).rotulo : '', rev.triagem ? TRIAGENS.find(([id]) => id === rev.triagem)?.[1] : '',
     rev.receita ? 'validados na Receita' : '', rev.selecao ? 'Seleção MIMO' : '', rev.busca.trim() ? `busca "${rev.busca.trim()}"` : '',
   ].filter(Boolean).join(' · ')
@@ -348,9 +354,15 @@ export default function Revisar({ g, rev, setRev }) {
           </div>
           <div className="pg-fila-linha">
             {cidades.length > 1 && (
-              <select className="plat-select" value={rev.cidade} onChange={(e) => mudarFiltro({ cidade: e.target.value })} aria-label="Cidade">
+              <select className="plat-select" value={rev.cidade} onChange={(e) => mudarFiltro({ cidade: e.target.value, bairro: '' })} aria-label="Cidade">
                 <option value="">Todas as cidades</option>
                 {cidades.map(([slug, nome]) => <option key={slug} value={slug}>{nome}</option>)}
+              </select>
+            )}
+            {bairros.length > 1 && (
+              <select className="plat-select" value={rev.bairro} onChange={(e) => mudarFiltro({ bairro: e.target.value })} aria-label="Bairro">
+                <option value="">Todos os bairros</option>
+                {bairros.map(([b, n]) => <option key={b} value={b}>{b} ({n})</option>)}
               </select>
             )}
             <select className="plat-select" value={rev.categoria} onChange={(e) => mudarFiltro({ categoria: e.target.value })} aria-label="Categoria">
@@ -392,7 +404,7 @@ export default function Revisar({ g, rev, setRev }) {
         <div className="pg-lista" ref={listaRef} role="listbox" aria-label="Salões na fila">
           {lista.length === 0 && (
             <div className="pg-lista-vazia">
-              {filtrosExtras ? (<><p>Nenhum salão com esses filtros.</p><button type="button" className="plat-link" onClick={() => mudarFiltro({ cidade: '', categoria: '', receita: false, selecao: false, triagem: '', busca: '' })}>Limpar filtros</button></>)
+              {filtrosExtras ? (<><p>Nenhum salão com esses filtros.</p><button type="button" className="plat-link" onClick={() => mudarFiltro({ cidade: '', bairro: '', categoria: '', receita: false, selecao: false, triagem: '', busca: '' })}>Limpar filtros</button></>)
                 : status === 'revisar' ? (<><p><b>Fila zerada.</b> Nada esperando revisão.</p>{contagem.gerar > 0 && <button type="button" className="plat-link" onClick={() => mudarFiltro({ status: 'gerar' })}>Ver os {contagem.gerar} sem página</button>}</>)
                   : status === 'gerar' ? (<p>Todos os salões já têm página. {contagem.revisar > 0 && <button type="button" className="plat-link" onClick={() => mudarFiltro({ status: 'revisar' })}>Revisar {contagem.revisar}</button>}</p>)
                     : <p>Nada por aqui.</p>}

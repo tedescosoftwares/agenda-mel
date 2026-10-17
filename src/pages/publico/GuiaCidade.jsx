@@ -36,6 +36,7 @@ export default function GuiaRota() {
 }
 
 const POR_VEZ = 24
+const MUITOS_BAIRROS = 10 // acima disso, chips só dos maiores e um seletor com o resto (3.20)
 
 // "Salões de beleza em Itanhaém" -> o fim em rosa, como os títulos do site
 function TituloCidade({ texto }) {
@@ -247,7 +248,15 @@ function Cidade({ dados }) {
             {bairros.length > 1 && (
               <div className="gd-bairros" role="group" aria-label="Filtrar por bairro">
                 <button type="button" className="gd-chip-filtro" aria-pressed={!bairro} onClick={() => setBairro('')}>Todos os bairros</button>
-                {bairros.map((b) => (
+                {/* cidade grande (3.20): um seletor com todos os bairros logo depois de "Todos" (no celular abre a lista
+                    nativa, sem rolar a fileira) e, como atalho, os 8 maiores bairros em chips; os dois andam juntos */}
+                {bairros.length > MUITOS_BAIRROS && (
+                  <select className="gd-chip-filtro gd-bairro-sel" value={bairro} data-ativo={bairro ? '1' : undefined} onChange={(e) => setBairro(e.target.value)} aria-label="Escolher bairro">
+                    <option value="">Escolher bairro ({bairros.length})</option>
+                    {bairros.map((b) => <option key={b.bairro} value={b.bairro}>{b.bairro} ({b.total})</option>)}
+                  </select>
+                )}
+                {(bairros.length > MUITOS_BAIRROS ? bairros.slice(0, 8) : bairros).map((b) => (
                   <button key={b.bairro} type="button" className="gd-chip-filtro" aria-pressed={bairro === b.bairro} onClick={() => setBairro(bairro === b.bairro ? '' : b.bairro)}>
                     <MapPin size={14} aria-hidden="true" /> {b.bairro} <small>{b.total}</small>
                   </button>

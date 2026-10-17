@@ -158,8 +158,9 @@ export function jsonLdDaCidade(dados, faq = []) {
       {
         '@type': 'ItemList',
         '@id': `${url}#lista`,
-        numberOfItems: lugares.length,
-        itemListElement: lugares.map((x, i) => ({ '@type': 'ListItem', position: i + 1, url: SITE_GUIA + rotaDoLugar(dados.cidade_slug, x.slug), name: x.nome })),
+        // cidade grande (3.20): a lista estruturada para nos mesmos 96 (cidade) e 240 (categoria) da lista estática
+        numberOfItems: Math.min(lugares.length, dados.categoria ? 240 : 96),
+        itemListElement: lugares.slice(0, dados.categoria ? 240 : 96).map((x, i) => ({ '@type': 'ListItem', position: i + 1, url: SITE_GUIA + rotaDoLugar(dados.cidade_slug, x.slug), name: x.nome })),
       },
       ...(faq.length ? [faqLd(faq)] : []),
     ],

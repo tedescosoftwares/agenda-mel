@@ -351,6 +351,14 @@ export const GUIA_RPC = {
     const ids = new Set((a?.ids_ ?? []).map(String))
     const alvo = GUIA_LUGARES.filter((l) => ids.has(l.id))
     const agora = new Date().toISOString()
+    if (a?.acao_ === 'aprovar') {
+      let n = 0
+      for (const l of alvo) {
+        if (!((l.status === 'gerado' && (l.rascunho || l.conteudo)) || (l.status === 'publicado' && l.rascunho))) continue
+        l.conteudo = l.rascunho ?? l.conteudo; l.rascunho = null; l.status = 'publicado'; l.publicado_em = l.publicado_em ?? agora; l.motivo = null; l.atualizado_em = agora; n++
+      }
+      return { ok: true, acao: 'aprovar', n, eventos: 0, buscas: 0, interesses: 0, paginas: 0 }
+    }
     if (a?.acao_ === 'tirar_do_ar') {
       let n = 0
       for (const l of alvo) if (l.status === 'publicado') { l.status = 'gerado'; l.atualizado_em = agora; n++ }

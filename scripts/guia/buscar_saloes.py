@@ -54,6 +54,13 @@ Saída (separado por ponto e vírgula, abre no Excel), uma por cidade:
 O que NÃO é pedido de propósito: texto das avaliações e resumo do Google.
 Não podem ir para o site (são de quem publicou) e custariam mais.
 
+Precisão e bairros (3.20): o que tem "estética" ou "beleza" no nome mas é
+dentista, lava-rápido, pet shop, loja, hotel, academia ou escola fica de
+fora (mimo_descartados_<cidade>.csv diz o motivo); sauna e "centro de
+bem-estar" só entram com nome de salão. Lugar sem bairro no Google ganha o
+bairro da maioria dos vizinhos a até 600 m (coluna bairro_origem:
+google, vizinhos ou vazio), e o CSV sai em ordem de bairro.
+
 Fotos (3.20): o script pede só o NOME de cada foto do perfil e quem a
 publicou (campo "photos", que não muda o preço da chamada). A imagem em si
 não é baixada nem publicada: a Plataforma usa o nome para montar, na hora e
@@ -119,6 +126,12 @@ BUSCAS = [
     "maquiagem profissional",
     "spa",
     "massagem",
+    "esmalteria",
+    "nail bar",
+    "espaço de beleza",
+    "studio de beleza",
+    "mega hair",
+    "podologia",
 ]
 
 # os campos completos. O preço da chamada é o do campo mais caro pedido (aqui,
@@ -193,7 +206,30 @@ CATEGORIA_DO_TIPO = {
 }
 
 TIPOS_DE_BELEZA = {"beauty_salon", "hair_salon", "hair_care", "nail_salon", "beautician", "makeup_artist", "spa",
-                   "massage", "massage_spa", "skin_care_clinic", "sauna", "tanning_studio", "wellness_center"}
+                   "massage", "massage_spa", "skin_care_clinic", "tanning_studio"}
+# os tipos que são salão de verdade: com um deles, o lugar entra mesmo que o Google também o marque como loja ou clínica
+TIPOS_SALAO = {"beauty_salon", "hair_salon", "nail_salon", "beautician", "makeup_artist"}
+# o que não é salão, por tipo do Google (3.20): dentista, médico, academia, lava-rápido, pet, escola, hotel, loja
+TIPOS_FORA = {
+    "dentist": "clínica odontológica", "dental_clinic": "clínica odontológica", "doctor": "clínica médica", "hospital": "hospital",
+    "physiotherapist": "fisioterapia", "pharmacy": "farmácia", "drugstore": "farmácia", "gym": "academia", "fitness_center": "academia",
+    "car_wash": "lava-rápido", "car_repair": "oficina", "car_dealer": "loja de carros", "pet_store": "pet shop", "veterinary_care": "veterinário",
+    "school": "escola", "university": "escola", "hotel": "hotel", "lodging": "hotel", "clothing_store": "loja de roupas",
+    "shopping_mall": "shopping", "supermarket": "mercado", "grocery_store": "mercado",
+}
+# o que não é salão, pelo nome (3.20): vale antes de tudo, porque "Estética Automotiva" e "Odonto Estética" têm "estética" no nome
+NOMES_FORA = [
+    (r"odont|dental|dentist", "clínica odontológica"),
+    (r"automotiv|lava.?(rapido|jato)|auto ?center|funilaria|veicul|\bcarros?\b|\bmotos?\b", "estética automotiva"),
+    (r"\bpet\b|petshop|banho e tosa|veterin|canin|\bdog\b", "pet shop"),
+    (r"tatuag|tattoo|piercing", "tatuagem"),
+    (r"farmac|drogaria|manipulac", "farmácia"),
+    (r"hotel|pousada|motel|resort|hostel", "hotel"),
+    (r"fisioterap|pilates|crossfit|\bgym\b|academia de (ginastica|musculacao|luta|danca)|personal trainer", "academia ou fisioterapia"),
+    (r"escola de|curso de|cursos de|faculdade|instituto de ensino|treinamento|aula de", "escola ou curso"),
+    (r"distribuidor|atacad|perfumaria|loja de cosmet|cosmeticos e perfum|\bloja\b", "loja, não serviço"),
+    (r"clinica medica|dermatolog|cirurgia plastic|ortoped|cardiolog|psicolog|nutricion|fonoaudio", "clínica médica"),
+]
 
 NOME_DE_SALAO = r"salao|beleza|beauty|unha|nail|cilio|lash|sobrancelha|brow|estetic|esmalt|\bspa\b|cabeleireir|hair|depila|maquiag|massag|podolog"
 
@@ -237,9 +273,53 @@ def motivo_para_ficar_fora(nome, tipo, tipos, status):
         return "barbearia"
     if re.search(r"masculin|\bmen\b|\bmens\b|for men|\bhomens?\b|gentlem", n) and not re.search(r"unissex|unisex|mulher|feminin", n):
         return "voltado ao público masculino"
+    # 3.20: o que tem cara de salão no nome mas não é (dentista, lava-rápido, pet, loja…)
+    for re_, motivo in NOMES_FORA:
+        if re.search(re_, n) and not re.search(SALAO_COMPLETO, n):
+            return motivo
+    # 3.20: o que o Google diz que é outra coisa, sem nenhum tipo de salão junto
+    outros = [TIPOS_FORA[t] for t in tipos if t in TIPOS_FORA]
+    if outros and not (set(tipos) & TIPOS_SALAO):
+        return "é %s no Google" % outros[0]
     if not salao and not (set(tipos) & TIPOS_DE_BELEZA):
         return "não parece salão (tipo no Google: %s)" % (tipo or "sem tipo")
     return None
+
+
+def limpar_bairro(b):
+    """o bairro como o Google manda, só sem "Bairro " na frente e sem espaço sobrando"""
+    b = re.sub(r"\s+", " ", (b or "").strip())
+    b = re.sub(r"^(bairro|b\.)\s+", "", b, flags=re.I)
+    return b
+
+
+def km(a, b):
+    """distância em km entre dois (lat, lng)"""
+    la1, lo1, la2, lo2 = (math.radians(float(x)) for x in (a[0], a[1], b[0], b[1]))
+    h = math.sin((la2 - la1) / 2) ** 2 + math.cos(la1) * math.cos(la2) * math.sin((lo2 - lo1) / 2) ** 2
+    return 2 * 6371 * math.asin(math.sqrt(h))
+
+
+def preencher_bairros_pelos_vizinhos(linhas, raio_km=0.6, vizinhos=5):
+    """3.20: lugar sem bairro no Google ganha o bairro da maioria dos vizinhos mais perto (até 600 m).
+    Marca de onde veio em bairro_origem: google, vizinhos ou vazio."""
+    com = [(float(x["latitude"]), float(x["longitude"]), x["bairro"]) for x in linhas if x["bairro"] and x["latitude"] != "" and x["longitude"] != ""]
+    n = 0
+    for x in linhas:
+        if x["bairro"]:
+            x["bairro_origem"] = "google"
+            continue
+        x["bairro_origem"] = ""
+        if x["latitude"] == "" or x["longitude"] == "" or not com:
+            continue
+        ponto = (float(x["latitude"]), float(x["longitude"]))
+        perto = sorted(((km(ponto, (la, lo)), b) for la, lo, b in com), key=lambda t: t[0])[:vizinhos]
+        perto = [b for d, b in perto if d <= raio_km]
+        if len(perto) >= 2:
+            x["bairro"] = Counter(perto).most_common(1)[0][0]
+            x["bairro_origem"] = "vizinhos"
+            n += 1
+    return n
 
 
 # =========================================================
@@ -307,7 +387,8 @@ def linha_do_lugar(p, buscas):
         "endereco": p.get("formattedAddress", ""),
         "rua": ", ".join(x for x in [parte_do_endereco(comps, "route"), parte_do_endereco(comps, "street_number")] if x)
         if parte_do_endereco(comps, "route") else "",
-        "bairro": parte_do_endereco(comps, "sublocality_level_1", "sublocality", "neighborhood"),
+        "bairro": limpar_bairro(parte_do_endereco(comps, "sublocality_level_1", "sublocality", "neighborhood", "sublocality_level_2")),
+        "bairro_origem": "",
         "cep": parte_do_endereco(comps, "postal_code"),
         "cidade": cidade_do_lugar(p),
         "telefone": p.get("nationalPhoneNumber", ""),
@@ -339,7 +420,7 @@ def linha_do_lugar(p, buscas):
 COLUNAS = ["categoria_mimo", "nome", "triagem", "avaliacao", "qtd_avaliacoes", "bairro", "rua", "endereco", "cep", "cidade", "telefone",
            "site", "horarios", "pagamento", "acessibilidade", "estacionamento", "criancas", "banheiro", "tipo_principal",
            "tipo_nome", "tipos_google", "status", "latitude", "longitude", "google_maps", "place_id", "buscas_encontradas",
-           "fotos_google", "fotos_google_autores", "motivo_descarte"]
+           "bairro_origem", "fotos_google", "fotos_google_autores", "motivo_descarte"]
 
 # =========================================================
 # O GOOGLE: chamadas, contagem por nível e teto do mês
@@ -537,13 +618,21 @@ def ler_cache(caminho, refazer):
     return c
 
 
-def relatorio_cidade(nome, validos, fora):
+def relatorio_cidade(nome, validos, fora, inferidos=0):
     print()
     print("=" * 60)
     print("  %s: %d entram na Plataforma, %d ficaram de fora" % (nome, len(validos), len(fora)))
     print("=" * 60)
     for motivo, n in Counter(re.sub(r" \(.*", "", x["motivo_descarte"]) for x in fora).most_common():
         print("   fora: %-30s %d" % (motivo, n))
+    # 3.20: os bairros, para conferir se a separação ficou certa (o CSV sai em ordem de bairro)
+    bairros = Counter(x["bairro"] for x in validos if x["bairro"])
+    sem = sum(1 for x in validos if not x["bairro"])
+    print("Bairros: %d diferentes; %d sem bairro%s" % (len(bairros), sem, " (%d preenchidos pelos vizinhos)" % inferidos if inferidos else ""))
+    for b, n in bairros.most_common(15):
+        print("   %-32s %d" % (b, n))
+    if len(bairros) > 15:
+        print("   … e mais %d bairros" % (len(bairros) - 15))
     print("Por categoria:")
     for cat, n in Counter(x["categoria_mimo"] for x in validos).most_common():
         print("   %-20s %d" % (cat, n))
@@ -802,11 +891,12 @@ def main():
             continue
         validos = [x for x in linhas if not x["motivo_descarte"]]
         fora = [x for x in linhas if x["motivo_descarte"]]
-        validos.sort(key=lambda x: (ordem.get(x["triagem"], 9), -(x["qtd_avaliacoes"] or 0), x["nome"]))
+        inferidos = preencher_bairros_pelos_vizinhos(validos)
+        validos.sort(key=lambda x: (x["bairro"] or "~", ordem.get(x["triagem"], 9), -(x["qtd_avaliacoes"] or 0), x["nome"]))
         fora.sort(key=lambda x: (x["motivo_descarte"], x["nome"]))
         gravar(saida / ("mimo_saloes_%s.csv" % slug(cid)), validos)
         gravar(saida / ("mimo_descartados_%s.csv" % slug(cid)), fora)
-        relatorio_cidade(cid, validos, fora)
+        relatorio_cidade(cid, validos, fora, inferidos)
         print("Importe na Plataforma: %s" % (saida / ("mimo_saloes_%s.csv" % slug(cid))))
     if fora_da_area:
         print()

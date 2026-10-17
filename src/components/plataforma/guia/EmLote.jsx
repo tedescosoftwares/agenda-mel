@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Portal from '../../Portal'
 import { supabase, isDemo } from '../../../lib/supabase'
 import { fotosDoLugar } from '../../../lib/guia'
-import { EyeOff, Archive, Trash2, LoaderCircle, TriangleAlert, CircleCheck, X } from 'lucide-react'
+import { EyeOff, Archive, Trash2, LoaderCircle, TriangleAlert, CircleCheck, X, Globe2 } from 'lucide-react'
 
 // A ação em lote da fila de revisão (3.18, migração 167): o que estiver na
 // lista filtrada (fase, cidade, categoria, triagem, busca) sai do ar, é
@@ -11,12 +11,16 @@ import { EyeOff, Archive, Trash2, LoaderCircle, TriangleAlert, CircleCheck, X } 
 // abordagem e as métricas só daquelas páginas; o resto do guia (outras
 // cidades, outros salões) não é tocado. A importação pode trazer o salão de
 // novo, como salão novo. Serve para recomeçar uma cidade do zero.
+// 3.20 (migração 169): "Aprovar e publicar" publica o que está pronto na lista,
+// para aprovar uma cidade (ou um bairro) de uma vez em vez de salão por salão.
 
 const MOTIVOS = ['Recomeçar a importação', 'Fechou', 'Não é salão de beleza', 'Barbearia ou público masculino', 'Duplicado', 'Fora da cidade', 'Dados ruins']
-const ROTULO = { tirar_do_ar: 'Tirar do ar', descartar: 'Descartar', apagar: 'Apagar de vez' }
+const ROTULO = { aprovar: 'Aprovar e publicar', tirar_do_ar: 'Tirar do ar', descartar: 'Descartar', apagar: 'Apagar de vez' }
+// pronta para publicar: gerada com texto, ou no ar com versão nova (o mesmo critério de guia_lote 'aprovar', 169)
+const prontaParaPublicar = (l) => (l.status === 'gerado' && !!(l.rascunho || l.conteudo)) || (l.status === 'publicado' && !!l.rascunho)
 const plural = (n, um, varios) => `${n} ${n === 1 ? um : varios}`
 
-// uma das três opções do modal
+// uma das quatro opções do modal
 function Opcao({ id, Icon, titulo, perigo, acao, indo, onEscolher, children }) {
   return (
     <label className={'pg-lote-opcao' + (acao === id ? ' ativa' : '') + (perigo ? ' perigo' : '')}>
@@ -33,7 +37,7 @@ const objetosDasFotos = (l) => fotosDoLugar(l)
   .map((p) => { try { return decodeURIComponent(p.split('?')[0]) } catch { return p.split('?')[0] } })
 
 export default function EmLote({ lista, resumo, g, onFechar, onFeito }) {
-  const [acao, setAcao] = useState('tirar_do_ar')
+  const [acao, setAcao] = useState('aprovar')
   const [motivo, setMotivo] = useState('')
   const [apagarPaginas, setApagarPaginas] = useState(false)
   const [confirmacao, setConfirmacao] = useState('')
@@ -43,13 +47,14 @@ export default function EmLote({ lista, resumo, g, onFechar, onFeito }) {
   const caixa = useRef(null)
 
   const n = lista.length
+  const prontas = useMemo(() => lista.filter(prontaParaPublicar).length, [lista])
   const noAr = useMemo(() => lista.filter((l) => l.status === 'publicado').length, [lista])
   const descartaveis = useMemo(() => lista.filter((l) => !['descartado', 'removido'].includes(l.status)).length, [lista])
   const comFoto = useMemo(() => lista.filter((l) => objetosDasFotos(l).length).length, [lista])
   const ids = useMemo(() => lista.map((l) => l.id), [lista])
   const reivindicacoes = useMemo(() => { const s = new Set(ids); return (g.interesses ?? []).filter((i) => s.has(i.lugar_id)).length }, [g.interesses, ids])
   const cidades = useMemo(() => [...new Set(lista.map((l) => l.cidade))].sort((a, b) => a.localeCompare(b, 'pt-BR')), [lista])
-  const alvo = acao === 'tirar_do_ar' ? noAr : acao === 'descartar' ? descartaveis : n
+  const alvo = acao === 'aprovar' ? prontas : acao === 'tirar_do_ar' ? noAr : acao === 'descartar' ? descartaveis : n
   const confirmou = acao !== 'apagar' || confirmacao.trim() === String(n)
 
   useEffect(() => {
@@ -79,7 +84,7 @@ export default function EmLote({ lista, resumo, g, onFechar, onFeito }) {
         motivo_: acao === 'descartar' ? (motivo.trim() || null) : null,
         apagar_paginas_: acao === 'apagar' && apagarPaginas,
       })
-      if (error) throw new Error(/guia_lote|schema cache|does not exist|could not find/i.test(error.message) ? 'Rode a migração 167 (supabase/167_lote_e_apagar.sql) para as ações em lote.' : error.message)
+      if (error) throw new Error(/ação desconhecida: aprovar/i.test(error.message) ? 'Rode a migração 169 (supabase/169_aprovar_em_lote.sql) para aprovar em lote.' : /guia_lote|schema cache|does not exist|could not find/i.test(error.message) ? 'Rode a migração 167 (supabase/167_lote_e_apagar.sql) para as ações em lote.' : error.message)
       if (!data?.ok) throw new Error(data?.motivo || 'não deu para fazer')
       await g.carregar()
       setFeito({ ...data, fotos })
@@ -105,7 +110,8 @@ export default function EmLote({ lista, resumo, g, onFechar, onFeito }) {
           {feito ? (
             <>
               <div className="pg-lote-feito" role="status">
-                <b><CircleCheck size={15} /> {feito.acao === 'tirar_do_ar' ? `${plural(feito.n, 'página saiu', 'páginas saíram')} do ar.` : feito.acao === 'descartar' ? `${plural(feito.n, 'salão descartado', 'salões descartados')}.` : `${plural(feito.n, 'salão apagado', 'salões apagados')} de vez.`}</b>
+                <b><CircleCheck size={15} /> {feito.acao === 'aprovar' ? `${plural(feito.n, 'página publicada', 'páginas publicadas')}.` : feito.acao === 'tirar_do_ar' ? `${plural(feito.n, 'página saiu', 'páginas saíram')} do ar.` : feito.acao === 'descartar' ? `${plural(feito.n, 'salão descartado', 'salões descartados')}.` : `${plural(feito.n, 'salão apagado', 'salões apagados')} de vez.`}</b>
+                {feito.acao === 'aprovar' && <span>Entram no site na próxima republicação automática (em até uma hora) e no sitemap.</span>}
                 {feito.acao === 'apagar' && (
                   <span>
                     {plural(feito.fotos ?? 0, 'foto tirada', 'fotos tiradas')} do bucket · {plural(feito.interesses ?? 0, 'reivindicação', 'reivindicações')} · {plural(feito.eventos ?? 0, 'evento de métrica', 'eventos de métrica')} · {plural(feito.buscas ?? 0, 'linha de busca do Google', 'linhas de busca do Google')}{feito.paginas ? ` · ${plural(feito.paginas, 'página de cidade', 'páginas de cidade')}` : ''}.
@@ -119,6 +125,9 @@ export default function EmLote({ lista, resumo, g, onFechar, onFeito }) {
           ) : (
             <>
               <div className="pg-lote-opcoes" role="radiogroup" aria-label="O que fazer">
+                <Opcao id="aprovar" Icon={Globe2} titulo={`Aprovar e publicar (${plural(prontas, 'página pronta', 'páginas prontas')})`} acao={acao} indo={indo} onEscolher={escolher}>
+                  Publica o que está pronto nesta lista: as páginas montadas ou geradas com texto e as que estão no ar com versão nova. Sem texto, descartado e removido não entram. Para a Baixada inteira: importe, "Montar todas da fila", confira a triagem, descarte o que não é salão e aprove aqui.
+                </Opcao>
                 <Opcao id="tirar_do_ar" Icon={EyeOff} titulo={`Tirar do ar (${plural(noAr, 'página', 'páginas')} no ar)`} acao={acao} indo={indo} onEscolher={escolher}>
                   As páginas saem do site; texto, fotos, histórico e métricas ficam. Para voltar, é aprovar de novo. Quem não está no ar não muda.
                 </Opcao>

@@ -163,7 +163,7 @@ export default function Guia() {
   // as métricas (3.11): visitas e contatos por página, do período escolhido
   const [desempenho, setDesempenho] = useState({ dias: 30, dados: null, carregando: true, erro: '' })
   // os filtros e a seleção da aba Revisar moram aqui: trocar de aba não perde o lugar na fila
-  const [rev, setRev] = useState({ status: null, cidade: '', categoria: '', receita: false, selecao: false, triagem: '', busca: '', ordem: 'selecao', selId: null })
+  const [rev, setRev] = useState({ status: null, cidade: '', bairro: '', categoria: '', receita: false, selecao: false, triagem: '', busca: '', ordem: 'selecao', selId: null })
 
   const lugaresRef = useRef(lugares)
   useEffect(() => { lugaresRef.current = lugares }, [lugares])

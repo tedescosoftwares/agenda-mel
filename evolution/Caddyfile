@@ -79,9 +79,19 @@
 	redir /landing / permanent
 	# /saloes/itanhaem/ e /saloes/itanhaem eram a mesma página em dois endereços
 	# (o try_files acha {path}/index.html nos dois): um só, sem a barra, para o
-	# Google não ver duplicata. A raiz (/) fica de fora.
-	@barra path_regexp barra ^(.+)/$
-	redir @barra {re.barra.1} permanent
+	# Google não ver duplicata. A raiz (/) fica de fora. O "uri strip_suffix"
+	# tira a barra e o redir leva o resto do endereço junto, inclusive a query
+	# (/saloes/itanhaem/?utm_source=instagram → /saloes/itanhaem?utm_source=instagram).
+	# Dica: o Caddyfile é montado por arquivo; quem recria o container quando
+	# ele muda é o publicar-site.sh (senão o Caddy segue lendo o antigo).
+	@barra {
+		not path /
+		path */
+	}
+	route @barra {
+		uri strip_suffix /
+		redir {http.request.uri} permanent
+	}
 
 	# a home tem um index.html próprio (dist/_home.html, gerado no build) com
 	# canonical e dados estruturados; o index.html comum continua sendo o do

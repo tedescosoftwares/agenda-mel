@@ -160,9 +160,21 @@ echo '  conferindo o Caddy (a primeira vez compila e demora uns minutos)…'
 docker compose build --quiet caddy
 # up -d recria só o caddy se algo mudou (a variável nova, a pasta nova)
 docker compose up -d caddy >/dev/null
-# o Caddyfile é montado de fora: mudou o arquivo, o container continua o
-# mesmo e o "up -d" não relê nada. O reload lê, sem derrubar ninguém —
-# e é ele que faz o Caddy pedir certificado para um domínio novo (pro.)
+# O Caddyfile é montado por ARQUIVO (./Caddyfile:/etc/caddy/Caddyfile). O Docker
+# prende a montagem ao inode: quando o git pull troca o arquivo, o container
+# continua lendo o antigo, e o reload diz "config is unchanged" olhando para a
+# versão velha (foi assim que a regra da barra, 3.15.1, ficou meses sem valer).
+# Se o de dentro for diferente do de fora, recria o container: alguns segundos
+# fora do ar, certificados ficam no volume.
+FORA=$(md5sum Caddyfile | cut -c1-32)
+DENTRO=$(docker compose exec -T caddy md5sum /etc/caddy/Caddyfile 2>/dev/null | cut -c1-32)
+if [ -n "$DENTRO" ] && [ "$DENTRO" != "$FORA" ]; then
+  amarelo '  o Caddy estava lendo um Caddyfile antigo (montagem por arquivo): recriando o container…'
+  docker compose up -d --force-recreate caddy >/dev/null
+  sleep 2
+fi
+# o reload lê o arquivo de novo sem derrubar ninguém — e é ele que faz o Caddy
+# pedir certificado para um domínio novo (pro.)
 docker compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile >/dev/null 2>&1 \
   && verde '  caddy no ar (configuração relida)' \
   || amarelo '  caddy no ar, mas não consegui reler a configuração: docker compose logs caddy --tail 30'
@@ -181,6 +193,12 @@ case "$CODIGO" in
        case "$TIPO" in
          *xml*) verde '  sitemap.xml no ar' ;;
          *) amarelo "  sitemap.xml respondeu '$TIPO' (esperava xml): confira dist/sitemap.xml e o Caddy" ;;
+       esac
+       # a barra no fim tem de virar 301 (SEO 3.15.1); 200 aqui = o Caddy está com o Caddyfile antigo
+       BARRA=$(curl -s -o /dev/null -w '%{http_code}' -m 10 "https://${DOMINIO_SITE}/sobre/" || echo 000)
+       case "$BARRA" in
+         301) verde '  /sobre/ → 301 (endereço com barra redireciona)' ;;
+         *) amarelo "  /sobre/ respondeu $BARRA (esperava 301): o Caddy pode estar lendo um Caddyfile antigo; rode: docker compose up -d --force-recreate caddy" ;;
        esac ;;
   000) amarelo '  Ainda não respondeu. Se o DNS acabou de mudar, espere um minuto e abra no navegador.'
        echo '  Log:  docker compose logs caddy --tail 30' ;;

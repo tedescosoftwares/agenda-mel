@@ -311,7 +311,8 @@ def motivo_para_ficar_fora(nome, tipo, tipos, status):
 
 # "Jd Albatroz" e "Jardim Albatroz" são o mesmo bairro; "Sobreloja" e "Sala 3" não são bairro
 ABREVIACOES_BAIRRO = [(r"^jd\.? ", "Jardim "), (r"^jdm\.? ", "Jardim "), (r"^pq\.? ", "Parque "), (r"^vl\.? ", "Vila "),
-                      (r"^res\.? ", "Residencial "), (r"^bal\.? ", "Balneário "), (r"^conj\.? ", "Conjunto "), (r"^cj\.? ", "Conjunto ")]
+                      (r"^res\.? ", "Residencial "), (r"^bal\.? ", "Balneário "), (r"^conj\.? ", "Conjunto "), (r"^cj\.? ", "Conjunto "),
+                      (r"^bsq\.? ", "Bosque "), (r"^lot\.? ", "Loteamento "), (r"^ch[aá]c\.? ", "Chácara "), (r"^(ns|n\. ?s\.?) ", "Nossa Senhora ")]
 PREFIXOS_BAIRRO = ("balneario", "estancia", "praia de", "praia da", "praia do", "jardim", "vila", "parque", "conjunto", "residencial",
                    "sitio", "chacara", "loteamento", "bairro")
 # com estes prefixos o nome com e sem prefixo é o mesmo lugar ("Praia de Boiçucanga" e "Boiçucanga"): fica a grafia mais usada
@@ -344,7 +345,10 @@ def limpar_bairro(b, cidade=""):
     digitou no lugar errado) vira vazio, e o vizinho preenche. "Centro de Santos" é "Centro"."""
     b = re.sub(r"\s+", " ", (b or "").strip())
     b = re.sub(r"^(bairro|b\.)\s+", "", b, flags=re.I)
+    b = re.sub(r"\s*\([^)]*$", "", b).strip()  # "Nossa Senhora da Guia ( estrada velha": parêntese sem fechar é observação
     b = re.split(r"\s*/\s*", b)[0].strip()  # "Vila Rica / Boqueirão", "Pedreira/Enseada": fica o primeiro
+    if re.search(r"\s(de|da|do|das|dos)$", sem_acento(b)):
+        return ""  # "Campos de": pedaço de nome que o vizinho completa
     b = re.sub(r"\s*\|\s*$", " I", re.sub(r"\s*\|\|\s*$", " II", b))  # "Morrinhos ||" é "Morrinhos II"
     for re_, por in ABREVIACOES_BAIRRO:
         b = re.sub(re_, por, b, flags=re.I)

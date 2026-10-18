@@ -624,6 +624,43 @@ class Google:
 # =========================================================
 
 
+def dentro_do_poligono(lat, lng, poligono):
+    """ponto dentro do polígono [(lat, lng), ...] (ray casting)"""
+    if lat is None or lng is None or not poligono:
+        return False
+    dentro = False
+    n = len(poligono)
+    for i in range(n):
+        y1, x1 = poligono[i]
+        y2, x2 = poligono[(i + 1) % n]
+        if (y1 > lat) != (y2 > lat):
+            x = x1 + (lat - y1) * (x2 - x1) / (y2 - y1)
+            if lng < x:
+                dentro = not dentro
+    return dentro
+
+
+def _segmentos_se_cruzam(a, b, c, d):
+    def orient(p, q, r):
+        v = (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0])
+        return 0 if abs(v) < 1e-12 else (1 if v > 0 else -1)
+    return orient(a, b, c) != orient(a, b, d) and orient(c, d, a) != orient(c, d, b)
+
+
+def celula_toca_poligono(cel, poligono):
+    """a célula (retângulo) encosta no polígono: um canto ou o centro dentro, um vértice do polígono
+    dentro da célula, ou uma aresta cruzando a borda"""
+    cantos = [(cel["sul"], cel["oeste"]), (cel["sul"], cel["leste"]), (cel["norte"], cel["leste"]), (cel["norte"], cel["oeste"])]
+    centro = ((cel["sul"] + cel["norte"]) / 2, (cel["oeste"] + cel["leste"]) / 2)
+    if any(dentro_do_poligono(la, lo, poligono) for la, lo in cantos + [centro]):
+        return True
+    if any(cel["sul"] <= la <= cel["norte"] and cel["oeste"] <= lo <= cel["leste"] for la, lo in poligono):
+        return True
+    bordas = [(cantos[i], cantos[(i + 1) % 4]) for i in range(4)]
+    n = len(poligono)
+    return any(_segmentos_se_cruzam(poligono[i], poligono[(i + 1) % n], p, q) for i in range(n) for p, q in bordas)
+
+
 def chave_celula(ret):
     return "%.5f,%.5f,%.5f,%.5f" % (ret["sul"], ret["oeste"], ret["norte"], ret["leste"])
 
@@ -658,10 +695,11 @@ def paralelo(fn, itens, n=THREADS):
 class Descoberta:
     """para uma palavra, as células em que o Google devolveu tudo (menos de 60), e os ids de cada uma"""
 
-    def __init__(self, google, cache, agora):
+    def __init__(self, google, cache, agora, filtro=None):
         self.google = google
         self.cache = cache          # chave "termo|celula" -> {"em", "ids", "saturou"}
         self.agora = agora
+        self.filtro = filtro        # célula -> bool: com polígono, só as células que ele toca são buscadas
         self.no_minimo = 0          # células que lotaram mesmo no tamanho mínimo (pode haver lugar perdido)
 
     def _ids(self, termo, ret):
@@ -683,7 +721,7 @@ class Descoberta:
             for cel, (ids, saturou, do_cache) in zip(pendentes, resultados):
                 chamadas += 0 if do_cache else 1
                 if saturou and lado(cel) > LADO_MINIMO:
-                    proximas.extend(quatro(cel))
+                    proximas.extend(c for c in quatro(cel) if not self.filtro or self.filtro(c))
                 else:
                     if saturou:
                         self.no_minimo += 1
@@ -876,7 +914,29 @@ def main():
         ap.error("diga --cidade \"Nome\" ou --regiao baixada-santista / litoral-norte")
     if a.fatias:
         print("(--fatias era da v3; a grade agora se divide sozinha)")
+    if a.retangulo:
+        try:
+            s, o, n, l = [float(x) for x in a.retangulo.split(",")]
+        except ValueError:
+            ap.error("--retangulo precisa de quatro números: sul,oeste,norte,leste")
+        a.retangulo = {"sul": min(s, n), "oeste": min(o, l), "norte": max(s, n), "leste": max(o, l)}
+    try:
+        executar(a)
+    except RuntimeError as e:
+        print(e)
+        sys.exit(1)
 
+
+def executar(a):
+    """A rodada inteira. `a` tem cidade, uf, regiao, retangulo (dict sul/oeste/norte/leste, ou vazio),
+    max_completas, max_detalhes, sim, refazer e saida. A interface do mapa (mapa_saloes.py) passa,
+    opcionalmente: perguntar(texto) no lugar do input, ao_fase(nome), ao_progresso(termo, i, n, celulas,
+    lugares), ao_planejar(plano) e poligono [(lat, lng), ...] para buscar só dentro dele."""
+    gancho = lambda nome: getattr(a, nome, None)
+    perguntar = gancho("perguntar") or input
+    fase = gancho("ao_fase") or (lambda nome: None)
+    progresso = gancho("ao_progresso") or (lambda *x: None)
+    poligono = gancho("poligono") or None
     cidades = REGIOES[a.regiao] if a.regiao else [a.cidade.strip()]
     rotulo = a.regiao.replace("-", " ").title() if a.regiao else cidades[0]
     saida = Path(a.saida)
@@ -903,12 +963,9 @@ def main():
     google = Google(pedir_chave(), {"completas": a.max_completas, "detalhes": a.max_detalhes, "cidade": 200}, cache["usado"])
 
     # ---- 1. o retângulo -------------------------------------------------------------------------
+    fase("retangulo")
     if a.retangulo:
-        try:
-            s, o, n, l = [float(x) for x in a.retangulo.split(",")]
-        except ValueError:
-            ap.error("--retangulo precisa de quatro números: sul,oeste,norte,leste")
-        ret = {"sul": min(s, n), "oeste": min(o, l), "norte": max(s, n), "leste": max(o, l)}
+        ret = dict(a.retangulo)
     else:
         rets = []
         for c in cidades:
@@ -917,11 +974,12 @@ def main():
             if not v or agora - v.get("em", 0) > DIAS_CACHE_IDS * 86400:
                 r = google.retangulo_da_cidade(c, a.uf)
                 if not r:
-                    print("Não achei o retângulo de %s no Google. Passe --retangulo sul,oeste,norte,leste." % c)
-                    sys.exit(1)
+                    raise RuntimeError("Não achei o retângulo de %s no Google. Passe --retangulo sul,oeste,norte,leste." % c)
                 cache["cidades"][k] = v = {"em": agora, "ret": r}
             rets.append(v["ret"])
         ret = uniao(rets)
+    if poligono:
+        print("Polígono com %d pontos: só as células que ele toca entram na busca." % len(poligono))
     print("Área: lat %.3f a %.3f, lng %.3f a %.3f (~%d x %d km)" % (
         ret["sul"], ret["norte"], ret["oeste"], ret["leste"], (ret["norte"] - ret["sul"]) * 111, (ret["leste"] - ret["oeste"]) * 102))
     salvar_cache()
@@ -929,7 +987,8 @@ def main():
     # ---- 2. a descoberta (grátis) ----------------------------------------------------------------
     print()
     print("Descoberta (busca só ids, grátis): dividindo a área até nenhuma célula lotar os 60…")
-    desc = Descoberta(google, cache["descoberta"], agora)
+    fase("descoberta")
+    desc = Descoberta(google, cache["descoberta"], agora, filtro=(lambda cel: celula_toca_poligono(cel, poligono)) if poligono else None)
     folhas_por_termo = {}
     ids_por_termo = {}
     for i, termo in enumerate(BUSCAS, 1):
@@ -937,6 +996,7 @@ def main():
         folhas_por_termo[termo] = folhas
         ids_por_termo[termo] = set().union(*[set(ids) for _, ids in folhas]) if folhas else set()
         print("  [%2d/%d] %-24s %3d células, %4d lugares" % (i, len(BUSCAS), termo, len(folhas), len(ids_por_termo[termo])))
+        progresso(termo, i, len(BUSCAS), len(folhas), len(ids_por_termo[termo]))
         salvar_cache()
     todos_ids = set().union(*ids_por_termo.values())
     buscas_de = {}
@@ -965,22 +1025,36 @@ def main():
     print("  detalhes um a um: %d chamadas" % detalhes_previstos)
     if pendentes_previstos:
         print("  ficam para o mês que vem: %d lugares (teto do mês; suba com --max-completas/--max-detalhes se quiser pagar)" % pendentes_previstos)
+    custo = 0.0
     for nivel in ("completas", "detalhes"):
         sku = SKUS[nivel]
         previsto = google.usado[nivel] + (chamadas_completas if nivel == "completas" else detalhes_previstos)
         if previsto > sku["gratis"]:
-            print("  ATENÇÃO: %s passaria da cota grátis do mês (%d de %d): custo de uns US$ %.2f" % (sku["nome"], previsto, sku["gratis"], (previsto - sku["gratis"]) * sku["preco"] / 1000))
+            extra = previsto - max(sku["gratis"], google.usado[nivel])
+            custo += extra * sku["preco"] / 1000
+            print("  ATENÇÃO: %s passaria da cota grátis do mês (%d de %d): custo de uns US$ %.2f" % (sku["nome"], previsto, sku["gratis"], extra * sku["preco"] / 1000))
+    if gancho("ao_planejar"):
+        gancho("ao_planejar")({
+            "descobertos": len(todos_ids), "no_cache": len(ja_tem), "completas": chamadas_completas, "cobertos": len(cobertos), "termos": termos,
+            "detalhes": detalhes_previstos, "pendentes": pendentes_previstos, "custo_usd": round(custo, 2),
+            "usado": {n: google.usado[n] for n in ("completas", "detalhes")}, "gratis": {n: SKUS[n]["gratis"] for n in ("completas", "detalhes")},
+            "no_minimo": desc.no_minimo,
+        })
     if (chamadas_completas or detalhes_previstos) and not a.sim:
+        fase("aguardando")
         try:
-            resp = input("Continuar? [S/n] ").strip().lower()
+            resp = perguntar("Continuar? [S/n] ").strip().lower()
         except EOFError:
             resp = "s"
         if resp and resp[0] == "n":
             print("Parado antes de gastar. A descoberta ficou no cache.")
+            fase("cancelado")
             salvar_cache()
             return
 
     # ---- 4. as buscas completas -----------------------------------------------------------------
+    fase("buscando")
+
     def completar(item):
         termo, cel = item
         try:
@@ -1026,14 +1100,20 @@ def main():
     salvar_cache()
 
     # ---- 6. os CSVs, por cidade -----------------------------------------------------------------
+    fase("gravando")
     linhas_por_cidade = {}
     pendentes = []
+    fora_do_poligono = 0
     for pid in sorted(todos_ids):
         v = cache["lugares"].get(pid)
         if not v:
             pendentes.append({"place_id": pid, "buscas_encontradas": " | ".join(sorted(buscas_de.get(pid, ())))})
             continue
         p = v["p"]
+        loc = p.get("location") or {}
+        if poligono and not dentro_do_poligono(loc.get("latitude"), loc.get("longitude"), poligono):
+            fora_do_poligono += 1
+            continue
         linha = linha_do_lugar(p, buscas_de.get(pid, set()))
         linha["motivo_descarte"] = motivo_para_ficar_fora(linha["nome"], linha["tipo_principal"], p.get("types") or [], linha["status"]) or ""
         cid = linha["cidade"] or "sem cidade"
@@ -1059,6 +1139,8 @@ def main():
     if fora_da_area:
         print()
         print("Fora das cidades pedidas (não gravei): " + ", ".join("%s (%d)" % x for x in fora_da_area))
+    if fora_do_poligono:
+        print("Fora do polígono (não gravei): %d" % fora_do_poligono)
     if pendentes:
         with open(saida / ("mimo_pendentes_%s.csv" % slug(rotulo)), "w", newline="", encoding="utf-8-sig") as f:
             w = csv.DictWriter(f, fieldnames=["place_id", "buscas_encontradas"], delimiter=";")
@@ -1071,6 +1153,7 @@ def main():
 
     relatorio_custo(google, mes)
     salvar_cache()
+    fase("fim")
 
 
 if __name__ == "__main__":

@@ -143,6 +143,7 @@ salão?"; os dois pedidos aparecem na Plataforma.
   categoria escritas à mão e sorteadas pelo slug. Página com poucos dados vai
   ao ar sem pedir para indexar. A IA (Edge Function `guia-gerar`, Groq,
   segredo `GROQ_API_KEY`) fica como opção, salão por salão ("Reescrever com IA").
+- **Salões no mapa**: `scripts/guia/mapa_saloes.py` abre uma tela local (http://127.0.0.1:8765) para desenhar a área no Google Maps, retângulo ou polígono, e rodar a mesma busca do script: descoberta grátis, plano com o custo antes de gastar, progresso por termo e um CSV por cidade na pasta `saida`. Sem a chave do mapa (`GOOGLE_MAPS_JS_KEY`, ou a da Places aceitando o referenciador local), a tela cai num formulário com os quatro cantos.
 - **Script do Maps**: `scripts/guia/buscar_saloes.py` (Python). A chave vem
   da variável `GOOGLE_PLACES_KEY` (ou é pedida na hora), nunca do arquivo.
   Uma chamada por página de resultados já traz endereço em partes, horário,

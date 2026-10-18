@@ -708,7 +708,8 @@ def gravar_cache(caminho, cache, chamadas, ja_salvo, mes):
         if disco.get("mes") == mes:
             usado = Counter(disco.get("usado", {}))
             for k in ("descoberta", "cidades", "lugares"):
-                cache[k] = {**disco.get(k, {}), **cache[k]}
+                for chave, valor in disco.get(k, {}).items():  # no mesmo dict: a Descoberta guarda a referência
+                    cache[k].setdefault(chave, valor)
         else:
             usado = Counter()
         for nivel, n in chamadas.items():

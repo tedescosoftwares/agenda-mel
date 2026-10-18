@@ -1043,11 +1043,13 @@ def executar(a):
     desc = Descoberta(google, cache["descoberta"], agora, filtro=(lambda cel: celula_toca_poligono(cel, poligono)) if poligono else None)
     folhas_por_termo = {}
     ids_por_termo = {}
+    novas = {}
     for i, termo in enumerate(BUSCAS, 1):
-        folhas = desc.folhas(termo, ret)
+        folhas = desc.folhas(termo, ret, avisar=lambda t, f, c: novas.__setitem__(t, c))
         folhas_por_termo[termo] = folhas
         ids_por_termo[termo] = set().union(*[set(ids) for _, ids in folhas]) if folhas else set()
-        print("  [%2d/%d] %-24s %3d células, %4d lugares" % (i, len(BUSCAS), termo, len(folhas), len(ids_por_termo[termo])))
+        print("  [%2d/%d] %-24s %3d células, %4d lugares%s" % (i, len(BUSCAS), termo, len(folhas), len(ids_por_termo[termo]),
+                                                              "  (do cache)" if not novas.get(termo) else "  (%d buscas novas)" % novas[termo]))
         progresso(termo, i, len(BUSCAS), len(folhas), len(ids_por_termo[termo]))
         salvar_cache()
     todos_ids = set().union(*ids_por_termo.values())

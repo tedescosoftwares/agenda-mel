@@ -112,6 +112,8 @@ REGIOES = {
     "litoral-norte": ["Caraguatatuba", "São Sebastião", "Ubatuba", "Ilhabela"],
     "vale-do-paraiba": ["São José dos Campos", "Jacareí", "Taubaté", "Pindamonhangaba", "Guaratinguetá", "Caçapava",
                         "Lorena", "Cruzeiro", "Tremembé", "Campos do Jordão", "Aparecida"],
+    "vale-do-ribeira": ["Registro", "Iguape", "Cajati", "Pariquera-Açu", "Miracatu", "Juquiá", "Jacupiranga", "Itariri",
+                        "Eldorado", "Sete Barras", "Cananéia", "Ilha Comprida", "Pedro de Toledo"],
 }
 
 URL_BUSCA = "https://places.googleapis.com/v1/places:searchText"

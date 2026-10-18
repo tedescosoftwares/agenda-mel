@@ -310,7 +310,15 @@ PREFIXOS_BAIRRO = ("balneario", "estancia", "praia de", "praia da", "praia do", 
                    "sitio", "chacara", "loteamento", "bairro")
 # com estes prefixos o nome com e sem prefixo é o mesmo lugar ("Praia de Boiçucanga" e "Boiçucanga"): fica a grafia mais usada
 PREFIXOS_DO_MESMO_LUGAR = ("balneario", "estancia", "praia de", "praia da", "praia do")
-NAO_E_BAIRRO = r"^(sobreloja|lojas?|salas?|blocos?|andar|terreo|cobertura|fundos|galeria|box|quiosque|apto?|ap|sl|lj|sem denominacao|s/n|de|da|do|das|dos)\b"
+NAO_E_BAIRRO = r"^(sobreloja|lojas?|salas?|blocos?|andar|terreo|cobertura|fundos|galeria|box|quiosque|apto?|ap|sl|lj|sem denominacao|s/n|de|da|do|das|dos|edicula)\b"
+MINUSCULAS_DO_NOME = {"de", "da", "do", "das", "dos", "e", "d'"}
+
+
+def com_maiusculas(b):
+    """nome de bairro todo em minúsculas ganha maiúsculas: "vila itapanhau" -> "Vila Itapanhau" """
+    if b != b.lower():
+        return b
+    return " ".join(w if w in MINUSCULAS_DO_NOME else w[:1].upper() + w[1:] for w in b.split(" "))
 
 
 def distancia(a, b):
@@ -340,7 +348,7 @@ def limpar_bairro(b, cidade=""):
         return ""  # o nome da cidade no lugar do bairro
     if re.match(r"^centro( (de|do|da)( .*)?)?$", sem_acento(b)):
         return "Centro"
-    return b
+    return com_maiusculas(b)
 
 
 def canonizar_bairros(linhas):
@@ -349,7 +357,7 @@ def canonizar_bairros(linhas):
     grafias = {}
     for l in linhas:
         if l["bairro"]:
-            grafias.setdefault(sem_acento(l["bairro"]), Counter())[l["bairro"]] += 1
+            grafias.setdefault(chave_de_bairro(l["bairro"]), Counter())[l["bairro"]] += 1
     melhor = {k: max(c.items(), key=lambda x: (x[1], sum(ch.isupper() for ch in x[0])))[0] for k, c in grafias.items()}
     # a grafia rara (até 2 lugares) a uma ou duas letras de um bairro comum (5 ou mais) é erro de digitação
     total = {k: sum(c.values()) for k, c in grafias.items()}
@@ -376,10 +384,18 @@ def canonizar_bairros(linhas):
             melhor[k] = melhor[alvo]
     n = 0
     for l in linhas:
-        if l["bairro"] and melhor[sem_acento(l["bairro"])] != l["bairro"]:
-            l["bairro"] = melhor[sem_acento(l["bairro"])]
+        if l["bairro"] and melhor[chave_de_bairro(l["bairro"])] != l["bairro"]:
+            l["bairro"] = melhor[chave_de_bairro(l["bairro"])]
             n += 1
     return n
+
+
+ROMANOS = {"1": "i", "2": "ii", "3": "iii", "4": "iv", "5": "v"}
+
+
+def chave_de_bairro(b):
+    """a chave que junta grafias: sem acento, minúsculas, e "Estufa 2" igual a "Estufa II" """
+    return re.sub(r" ([1-5])$", lambda m: " " + ROMANOS[m.group(1)], sem_acento(b))
 
 
 def km(a, b):

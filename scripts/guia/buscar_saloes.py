@@ -114,6 +114,9 @@ REGIOES = {
                         "Lorena", "Cruzeiro", "Tremembé", "Campos do Jordão", "Aparecida"],
     "vale-do-ribeira": ["Registro", "Iguape", "Cajati", "Pariquera-Açu", "Miracatu", "Juquiá", "Jacupiranga", "Itariri",
                         "Eldorado", "Sete Barras", "Cananéia", "Ilha Comprida", "Pedro de Toledo"],
+    "alto-tiete": ["Mogi das Cruzes", "Suzano", "Itaquaquecetuba", "Ferraz de Vasconcelos", "Poá", "Arujá", "Santa Isabel",
+                   "Guararema", "Biritiba Mirim", "Salesópolis"],
+    "abc": ["Santo André", "São Bernardo do Campo", "São Caetano do Sul", "Diadema", "Mauá", "Ribeirão Pires", "Rio Grande da Serra"],
 }
 
 URL_BUSCA = "https://places.googleapis.com/v1/places:searchText"

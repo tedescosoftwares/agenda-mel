@@ -222,6 +222,7 @@ TIPOS_FORA = {
     "shopping_mall": "shopping", "supermarket": "mercado", "grocery_store": "mercado",
     "government_office": "repartição pública", "association_or_organization": "associação",
     "pet_care": "pet shop", "womens_clothing_store": "loja de roupas", "mens_clothing_store": "loja de roupas", "shoe_store": "loja de calçados",
+    "chiropractor": "quiropraxia",
 }
 # o que não é salão, pelo nome (3.20): vale antes de tudo, porque "Estética Automotiva" e "Odonto Estética" têm "estética" no nome
 NOMES_FORA = [
@@ -235,7 +236,7 @@ NOMES_FORA = [
     (r"escola de|curso de|cursos de|faculdade|instituto de ensino|treinamento|aula de", "escola ou curso"),
     (r"distribuidor|atacad|perfumaria|loja de cosmet|cosmeticos e perfum|\bloja\b", "loja, não serviço"),
     (r"clinica medica|dermatolog|cirurgia plastic|ortoped|cardiolog|psicolog|nutricion|fonoaudio", "clínica médica"),
-    (r"acupunt|hipnose|psicoterap|\byoga\b|reiki|constelac", "terapia, não beleza"),
+    (r"acupunt|hipnose|psicoterap|\byoga\b|reiki|constelac|quiroprax", "terapia, não beleza"),
 ]
 
 NOME_DE_SALAO = r"salao|beleza|beauty|unha|nail|cilio|lash|sobrancelha|brow|estetic|esmalt|\bspa\b|cabeleireir|hair|depila|maquiag|massag|podolog"
@@ -296,7 +297,7 @@ def motivo_para_ficar_fora(nome, tipo, tipos, status):
 # "Jd Albatroz" e "Jardim Albatroz" são o mesmo bairro; "Sobreloja" e "Sala 3" não são bairro
 ABREVIACOES_BAIRRO = [(r"^jd\.? ", "Jardim "), (r"^jdm\.? ", "Jardim "), (r"^pq\.? ", "Parque "), (r"^vl\.? ", "Vila "),
                       (r"^res\.? ", "Residencial "), (r"^bal\.? ", "Balneário "), (r"^conj\.? ", "Conjunto "), (r"^cj\.? ", "Conjunto ")]
-NAO_E_BAIRRO = r"^(sobreloja|lojas?|salas?|blocos?|andar|terreo|cobertura|fundos|galeria|box|quiosque|apto?|ap|sl|lj|sem denominacao|s/n)\b"
+NAO_E_BAIRRO = r"^(sobreloja|lojas?|salas?|blocos?|andar|terreo|cobertura|fundos|galeria|box|quiosque|apto?|ap|sl|lj|sem denominacao|s/n|de|da|do|das|dos)\b"
 
 
 def distancia(a, b):

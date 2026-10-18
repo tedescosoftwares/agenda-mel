@@ -47,6 +47,7 @@ Opções:
     --sim                     não pergunta antes de gastar (para rodar sem olhar)
     --refazer                 ignora o cache e busca tudo de novo
     --saida pasta             onde gravar os CSVs (padrão: a pasta atual)
+    --ritmo 540               pedidos por minuto ao Google (o projeto aceita 600; com 3 janelas abertas, 180 em cada)
 
 Saída (separado por ponto e vírgula, abre no Excel), uma por cidade:
     mimo_saloes_<cidade>.csv       os que entram na Plataforma (importe este)
@@ -89,7 +90,7 @@ import sys
 import threading
 import time
 import unicodedata
-from collections import Counter
+from collections import Counter, deque
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -177,6 +178,11 @@ PAGINA = 20
 LOTE_MAX = 60            # o teto de uma busca do Google: 3 páginas de 20
 LADO_MINIMO = 0.0025     # ~280 m: abaixo disso não divide mais (e avisa se ainda lotar)
 THREADS = 4
+# o Google aceita 600 pedidos por minuto por projeto, em cada família (SearchText e GetPlace). Os detalhes um a
+# um são rápidos e 4 threads passam disso fácil: o script se segura abaixo, e quando mesmo assim vem 429
+# espera o minuto virar em vez de desistir. 0 = sem freio (os testes). --ritmo muda.
+RITMO_POR_MINUTO = 540
+ESPERAS_429 = (5, 10, 20, 30, 45, 60)
 
 # =========================================================
 # CLASSIFICAÇÃO (a mesma regra do importador, em packages/core/guia.js)
@@ -532,6 +538,29 @@ COLUNAS = ["categoria_mimo", "nome", "triagem", "avaliacao", "qtd_avaliacoes", "
 # =========================================================
 
 
+class Janela:
+    """no máximo n pedidos por 60 s (janela deslizante), dividida entre as threads"""
+
+    def __init__(self, por_minuto):
+        self.n = por_minuto
+        self.marcas = deque()
+        self.tranca = threading.Lock()
+
+    def esperar(self):
+        if not self.n:
+            return
+        while True:
+            with self.tranca:
+                agora = time.monotonic()
+                while self.marcas and agora - self.marcas[0] >= 60:
+                    self.marcas.popleft()
+                if len(self.marcas) < self.n:
+                    self.marcas.append(agora)
+                    return
+                espera = 60 - (agora - self.marcas[0]) + 0.05
+            time.sleep(espera)
+
+
 class Teto(Exception):
     """o teto do mês de um nível foi atingido: o que falta fica para a rodada seguinte"""
 
@@ -544,6 +573,16 @@ class Google:
         self.usado = Counter(usado_no_mes)  # nível -> chamadas do mês (rodadas anteriores incluídas)
         self.tranca = threading.Lock()
         self.sessao = requests.Session()
+        # as duas famílias de cota por minuto do Google: as buscas de texto (ids, completas, cidade) e os detalhes
+        self.janelas = {"busca": Janela(RITMO_POR_MINUTO), "detalhe": Janela(RITMO_POR_MINUTO)}
+        self.ultimo_aviso = 0.0
+
+    def _calma(self, segundos):
+        with self.tranca:
+            if time.monotonic() - self.ultimo_aviso < 30:
+                return
+            self.ultimo_aviso = time.monotonic()
+        print("  (o Google pediu calma, limite por minuto: esperando %d s)" % segundos)
 
     def cabe(self, nivel, quantas=1):
         teto = self.tetos.get(nivel)
@@ -558,18 +597,27 @@ class Google:
 
     def _pedir(self, metodo, url, nivel, **kw):
         self._contar(nivel)
-        for tentativa in range(4):
+        janela = self.janelas["detalhe" if nivel == "detalhes" else "busca"]
+        for tentativa in range(len(ESPERAS_429) + 1):
+            janela.esperar()
             try:
                 r = self.sessao.request(metodo, url, timeout=30, **kw)
             except Exception as e:
-                if tentativa == 3:
+                if tentativa >= 3:
                     raise RuntimeError("sem conexão: %s" % e)
                 time.sleep(2 * (tentativa + 1))
                 continue
             if r.status_code == 200:
                 return r.json()
-            if r.status_code in (429, 500, 502, 503, 504) and tentativa < 3:
-                time.sleep(3 * (tentativa + 1))  # limite por minuto ou soluço do Google: espera e tenta de novo
+            if r.status_code == 429 and tentativa < len(ESPERAS_429):
+                # limite por minuto: espera o minuto virar (5, 10, 20… s) em vez de desistir
+                self._calma(ESPERAS_429[tentativa])
+                time.sleep(ESPERAS_429[tentativa])
+                continue
+            if r.status_code == 429:
+                raise RuntimeError("limite por minuto do Google (429) mesmo depois de esperar; fica para a próxima rodada")
+            if r.status_code in (500, 502, 503, 504) and tentativa < 3:
+                time.sleep(3 * (tentativa + 1))  # soluço do Google: espera e tenta de novo
                 continue
             if r.status_code in (400, 401, 403):
                 raise SystemExit("\nO Google respondeu %s: %s\nConfira a chave e se a Places API (New) está ativada no projeto." % (r.status_code, r.text[:300]))
@@ -908,6 +956,7 @@ def main():
     ap.add_argument("--sim", action="store_true")
     ap.add_argument("--refazer", action="store_true")
     ap.add_argument("--saida", default=".")
+    ap.add_argument("--ritmo", type=int, default=RITMO_POR_MINUTO, help="pedidos por minuto ao Google (o projeto aceita 600; com 3 janelas abertas use 180)")
     ap.add_argument("--fatias", type=int, default=0, help=argparse.SUPPRESS)  # da v3: não faz mais nada
     a = ap.parse_args()
     if not a.cidade and not a.regiao:
@@ -932,7 +981,10 @@ def executar(a):
     max_completas, max_detalhes, sim, refazer e saida. A interface do mapa (mapa_saloes.py) passa,
     opcionalmente: perguntar(texto) no lugar do input, ao_fase(nome), ao_progresso(termo, i, n, celulas,
     lugares), ao_planejar(plano) e poligono [(lat, lng), ...] para buscar só dentro dele."""
+    global RITMO_POR_MINUTO
     gancho = lambda nome: getattr(a, nome, None)
+    if gancho("ritmo") is not None:
+        RITMO_POR_MINUTO = int(a.ritmo)
     perguntar = gancho("perguntar") or input
     fase = gancho("ao_fase") or (lambda nome: None)
     progresso = gancho("ao_progresso") or (lambda *x: None)

@@ -34,11 +34,12 @@ Como rodar (Windows, no Prompt de Comando, dentro desta pasta):
     set GOOGLE_PLACES_KEY=sua_chave_aqui
     python buscar_saloes.py --cidade "Santos"
     python buscar_saloes.py --regiao baixada-santista        (as 9 cidades de uma vez)
+    python buscar_saloes.py --regiao litoral-norte           (Caraguatatuba, São Sebastião, Ubatuba e Ilhabela)
 
 Opções:
     --cidade "Praia Grande"   uma cidade (o retângulo vem do próprio Google; 1 chamada Pro)
     --uf SP                   o estado da cidade (padrão SP)
-    --regiao baixada-santista a região inteira: uma grade só, um CSV por cidade
+    --regiao baixada-santista a região inteira: uma grade só, um CSV por cidade (ou litoral-norte)
     --retangulo S,O,N,L       o retângulo na mão (sul,oeste,norte,leste), em vez do Google
     --max-completas 900       teto do MÊS para as buscas completas (cota grátis: 1.000)
     --max-detalhes 900        teto do MÊS para os detalhes um a um (cota grátis: 1.000)
@@ -101,6 +102,7 @@ UF_PADRAO = "SP"
 # as cidades da região, para --regiao (e para o nome do arquivo de cada uma)
 REGIOES = {
     "baixada-santista": ["Peruíbe", "Itanhaém", "Mongaguá", "Praia Grande", "São Vicente", "Santos", "Guarujá", "Cubatão", "Bertioga"],
+    "litoral-norte": ["Caraguatatuba", "São Sebastião", "Ubatuba", "Ilhabela"],
 }
 
 URL_BUSCA = "https://places.googleapis.com/v1/places:searchText"
@@ -773,7 +775,7 @@ def main():
     ap.add_argument("--fatias", type=int, default=0, help=argparse.SUPPRESS)  # da v3: não faz mais nada
     a = ap.parse_args()
     if not a.cidade and not a.regiao:
-        ap.error("diga --cidade \"Nome\" ou --regiao baixada-santista")
+        ap.error("diga --cidade \"Nome\" ou --regiao baixada-santista / litoral-norte")
     if a.fatias:
         print("(--fatias era da v3; a grade agora se divide sozinha)")
 

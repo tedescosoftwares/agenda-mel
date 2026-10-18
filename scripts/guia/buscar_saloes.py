@@ -296,7 +296,7 @@ def motivo_para_ficar_fora(nome, tipo, tipos, status):
 # "Jd Albatroz" e "Jardim Albatroz" são o mesmo bairro; "Sobreloja" e "Sala 3" não são bairro
 ABREVIACOES_BAIRRO = [(r"^jd\.? ", "Jardim "), (r"^jdm\.? ", "Jardim "), (r"^pq\.? ", "Parque "), (r"^vl\.? ", "Vila "),
                       (r"^res\.? ", "Residencial "), (r"^bal\.? ", "Balneário "), (r"^conj\.? ", "Conjunto "), (r"^cj\.? ", "Conjunto ")]
-NAO_E_BAIRRO = r"^(sobreloja|lojas?|salas?|blocos?|andar|terreo|cobertura|fundos|galeria|box|quiosque|apto?|ap|sl|lj)\b"
+NAO_E_BAIRRO = r"^(sobreloja|lojas?|salas?|blocos?|andar|terreo|cobertura|fundos|galeria|box|quiosque|apto?|ap|sl|lj|sem denominacao|s/n)\b"
 
 
 def distancia(a, b):
@@ -310,7 +310,7 @@ def distancia(a, b):
     return anterior[-1]
 
 
-def limpar_bairro(b):
+def limpar_bairro(b, cidade=""):
     """o bairro como o Google manda, só sem "Bairro " na frente e sem espaço sobrando.
     O que não é nome de bairro ("!", "1010", "B": número de sala ou bloco que alguém
     digitou no lugar errado) vira vazio, e o vizinho preenche. "Centro de Santos" é "Centro"."""
@@ -322,7 +322,9 @@ def limpar_bairro(b):
         b = re.sub(re_, por, b, flags=re.I)
     if len(re.sub(r"[^a-z]", "", sem_acento(b))) < 3 or re.match(NAO_E_BAIRRO, sem_acento(b)):
         return ""
-    if re.match(r"^centro (de|do|da) ", sem_acento(b)):
+    if cidade and sem_acento(b) == sem_acento(cidade):
+        return ""  # o nome da cidade no lugar do bairro
+    if re.match(r"^centro( (de|do|da)( .*)?)?$", sem_acento(b)):
         return "Centro"
     return b
 
@@ -445,7 +447,7 @@ def linha_do_lugar(p, buscas):
         "endereco": p.get("formattedAddress", ""),
         "rua": ", ".join(x for x in [parte_do_endereco(comps, "route"), parte_do_endereco(comps, "street_number")] if x)
         if parte_do_endereco(comps, "route") else "",
-        "bairro": limpar_bairro(parte_do_endereco(comps, "sublocality_level_1", "sublocality", "neighborhood", "sublocality_level_2")),
+        "bairro": limpar_bairro(parte_do_endereco(comps, "sublocality_level_1", "sublocality", "neighborhood", "sublocality_level_2"), cidade_do_lugar(p)),
         "bairro_origem": "",
         "cep": parte_do_endereco(comps, "postal_code"),
         "cidade": cidade_do_lugar(p),

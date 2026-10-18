@@ -359,9 +359,11 @@ PAGINA = r"""<!doctype html>
     <h2>1. A área</h2>
     <div class="fila" id="ferramentas">
       <button type="button" id="b-ret" title="Clique e arraste no mapa">Retângulo</button>
-      <button type="button" id="b-pol" title="Clique nos cantos; clique no primeiro ponto para fechar">Polígono</button>
+      <button type="button" id="b-pol" title="Clique nos cantos e feche">Polígono</button>
+      <button type="button" id="b-fechar" style="display:none">Fechar polígono</button>
       <button type="button" id="b-limpar">Limpar</button>
     </div>
+    <p class="muted" id="modo-txt">Escolha Retângulo ou Polígono e desenhe no mapa.</p>
     <div id="manual" style="display:none">
       <p class="muted">Sem o mapa, preencha os quatro cantos do retângulo (graus decimais).</p>
       <div class="cantos">
@@ -443,30 +445,68 @@ PAGINA = r"""<!doctype html>
   }
   ['c-sul', 'c-norte', 'c-oeste', 'c-leste'].forEach(function (id) { $(id).addEventListener('input', function () { if (!temMapa) { area = lerManual(); poligono = null; mostrarArea(); } }); });
 
-  function limparForma() { if (forma) { forma.setMap(null); forma = null; } area = null; poligono = null; mostrarArea(); }
+  function limparForma() { if (forma) { forma.setMap(null); forma = null; } area = null; poligono = null; mostrarArea(); if (temMapa) $('modo-txt').textContent = 'Escolha Retângulo ou Polígono e desenhe no mapa.'; }
+
+  var modo = null, ouvintes = [], ESTILO = { fillColor: '#ff2d7a', fillOpacity: 0.12, strokeColor: '#ff2d7a', strokeWeight: 2 };
+  function tirarOuvintes() { ouvintes.forEach(function (o) { google.maps.event.removeListener(o); }); ouvintes = []; }
+  function caixa(a, b) {
+    return new google.maps.LatLngBounds(new google.maps.LatLng(Math.min(a.lat(), b.lat()), Math.min(a.lng(), b.lng())),
+                                        new google.maps.LatLng(Math.max(a.lat(), b.lat()), Math.max(a.lng(), b.lng())));
+  }
+  function ativarModo(m) {
+    modo = m; tirarOuvintes();
+    $('b-ret').classList.toggle('ativo', m === 'ret'); $('b-pol').classList.toggle('ativo', m === 'pol');
+    $('b-fechar').style.display = m === 'pol' ? '' : 'none';
+    mapa.setOptions({ draggable: m === null, draggableCursor: m ? 'crosshair' : null, disableDoubleClickZoom: m === 'pol' });
+    $('modo-txt').textContent = m === 'ret' ? 'Retângulo: clique num canto e arraste até o outro.' : m === 'pol' ? 'Polígono: clique nos cantos; termine com "Fechar polígono" ou clique duplo.' : (forma ? 'Pode ajustar a forma pelos pontos, ou desenhar outra.' : 'Escolha Retângulo ou Polígono e desenhe no mapa.');
+    if (m === 'ret') {
+      var inicio = null, ret = null;
+      ouvintes.push(mapa.addListener('mousedown', function (e) {
+        if (forma) { forma.setMap(null); forma = null; }
+        inicio = e.latLng;
+        ret = new google.maps.Rectangle(Object.assign({ map: mapa, bounds: caixa(inicio, inicio), clickable: false }, ESTILO));
+      }));
+      ouvintes.push(mapa.addListener('mousemove', function (e) { if (inicio && ret) ret.setBounds(caixa(inicio, e.latLng)); }));
+      ouvintes.push(mapa.addListener('mouseup', function (e) {
+        if (!inicio || !ret) return;
+        ret.setBounds(caixa(inicio, e.latLng));
+        forma = ret; inicio = null; ret = null;
+        forma.setEditable(true);
+        forma.addListener('bounds_changed', function () { lerForma('rectangle'); });
+        lerForma('rectangle');
+        ativarModo(null);
+      }));
+    } else if (m === 'pol') {
+      if (forma) { forma.setMap(null); forma = null; }
+      var pontos = [], linha = new google.maps.Polyline({ map: mapa, path: [], strokeColor: ESTILO.strokeColor, strokeWeight: 2, clickable: false });
+      var fechar = function () {
+        if (pontos.length < 3) { $('modo-txt').textContent = 'Polígono: precisa de pelo menos 3 cantos.'; return; }
+        linha.setMap(null);
+        forma = new google.maps.Polygon(Object.assign({ map: mapa, paths: pontos, editable: true, clickable: false }, ESTILO));
+        ['set_at', 'insert_at', 'remove_at'].forEach(function (ev) { forma.getPath().addListener(ev, function () { lerForma('polygon'); }); });
+        lerForma('polygon');
+        ativarModo(null);
+      };
+      ouvintes.push(mapa.addListener('click', function (e) {
+        var u = pontos[pontos.length - 1];
+        if (u && Math.abs(u.lat() - e.latLng.lat()) < 1e-7 && Math.abs(u.lng() - e.latLng.lng()) < 1e-7) return;
+        pontos.push(e.latLng); linha.setPath(pontos);
+        $('modo-txt').textContent = 'Polígono: ' + pontos.length + (pontos.length === 1 ? ' canto' : ' cantos') + '. Termine com "Fechar polígono" ou clique duplo.';
+      }));
+      ouvintes.push(mapa.addListener('dblclick', fechar));
+      $('b-fechar').onclick = fechar;
+      var limparAntes = $('b-limpar').onclick;
+      $('b-limpar').onclick = function () { linha.setMap(null); ativarModo(null); $('b-limpar').onclick = limparAntes; limparAntes(); };
+    }
+  }
 
   window.iniciarMapa = function () {
     temMapa = true;
     $('mapa-aviso').style.display = 'none';
-    mapa = new google.maps.Map($('mapa'), { center: { lat: -23.95, lng: -46.33 }, zoom: 10, mapTypeControl: false, streetViewControl: false });
-    gerente = new google.maps.drawing.DrawingManager({
-      drawingControl: false,
-      rectangleOptions: { fillColor: '#ff2d7a', fillOpacity: 0.12, strokeColor: '#ff2d7a', strokeWeight: 2, editable: true },
-      polygonOptions: { fillColor: '#ff2d7a', fillOpacity: 0.12, strokeColor: '#ff2d7a', strokeWeight: 2, editable: true }
-    });
-    gerente.setMap(mapa);
-    google.maps.event.addListener(gerente, 'overlaycomplete', function (ev) {
-      if (forma) forma.setMap(null);
-      forma = ev.overlay;
-      gerente.setDrawingMode(null);
-      $('b-ret').classList.remove('ativo'); $('b-pol').classList.remove('ativo');
-      lerForma(ev.type);
-      var evento = ev.type === 'rectangle' ? 'bounds_changed' : null;
-      if (evento) forma.addListener(evento, function () { lerForma('rectangle'); });
-      else { ['set_at', 'insert_at', 'remove_at'].forEach(function (e) { forma.getPath().addListener(e, function () { lerForma('polygon'); }); }); }
-    });
-    $('b-ret').onclick = function () { gerente.setDrawingMode(google.maps.drawing.OverlayType.RECTANGLE); this.classList.add('ativo'); $('b-pol').classList.remove('ativo'); };
-    $('b-pol').onclick = function () { gerente.setDrawingMode(google.maps.drawing.OverlayType.POLYGON); this.classList.add('ativo'); $('b-ret').classList.remove('ativo'); };
+    mapa = new google.maps.Map($('mapa'), { center: { lat: -23.95, lng: -46.33 }, zoom: 10, mapTypeControl: false, streetViewControl: false, clickableIcons: false });
+    window.__mapa = mapa;
+    $('b-ret').onclick = function () { ativarModo(modo === 'ret' ? null : 'ret'); };
+    $('b-pol').onclick = function () { ativarModo(modo === 'pol' ? null : 'pol'); };
   };
 
   function lerForma(tipo) {
@@ -494,7 +534,7 @@ PAGINA = r"""<!doctype html>
   function carregarMapa(chave) {
     if (!chave) return semMapa('Não há chave do mapa.');
     var s = document.createElement('script');
-    s.src = 'https://maps.googleapis.com/maps/api/js?key=' + encodeURIComponent(chave) + '&libraries=drawing&callback=iniciarMapa&loading=async&language=pt-BR&region=BR';
+    s.src = 'https://maps.googleapis.com/maps/api/js?key=' + encodeURIComponent(chave) + '&callback=iniciarMapa&loading=async&language=pt-BR&region=BR';
     s.async = true;
     s.onerror = function () { semMapa('O Google recusou a chave ou não há internet.'); };
     window.gm_authFailure = function () { semMapa('O Google recusou a chave para este endereço.'); };

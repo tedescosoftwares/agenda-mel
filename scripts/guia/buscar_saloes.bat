@@ -4,7 +4,8 @@ rem   buscar_saloes.bat "Praia Grande"    ou de dois cliques e digite a cidade
 rem Uma cidade por vez gasta o minimo da cota gratis do mes: o que ja foi importado (Itanhaem, Mongagua) nao e buscado de novo.
 rem A regiao inteira de uma vez so na mao: python buscar_saloes.py --regiao baixada-santista --saida saida
 rem A chave da Places API e pedida na tela (nao aparece ao digitar) ou vem da variavel GOOGLE_PLACES_KEY.
-rem Rode de novo no mes seguinte para o que ficou em mimo_pendentes.csv: o cache guarda o que ja foi feito.
+rem Rode de novo no mes seguinte para o que ficou em mimo_pendentes_<cidade>.csv: o cache guarda o que ja foi feito.
+rem Pode abrir duas ou tres janelas e rodar uma cidade em cada: o cache e gravado com tranca e o uso do mes soma.
 cd /d "%~dp0"
 where python >nul 2>nul
 if errorlevel 1 (

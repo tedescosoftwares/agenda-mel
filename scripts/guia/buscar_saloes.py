@@ -26,7 +26,7 @@ O que a v4 faz
      são lidos por Place Details (outra cota grátis, separada).
   Tudo dentro das cotas grátis do mês (1.000 chamadas de cada nível), com
   teto por nível que o script não ultrapassa sem você pedir. O que não
-  couber no mês fica em mimo_pendentes.csv e entra na rodada seguinte: o
+  couber no mês fica em mimo_pendentes_<cidade>.csv e entra na rodada seguinte: o
   cache guarda o que já foi feito.
 
 Como rodar (Windows, no Prompt de Comando, dentro desta pasta):
@@ -50,7 +50,12 @@ Opções:
 Saída (separado por ponto e vírgula, abre no Excel), uma por cidade:
     mimo_saloes_<cidade>.csv       os que entram na Plataforma (importe este)
     mimo_descartados_<cidade>.csv  os que ficaram de fora e o motivo
-    mimo_pendentes.csv             ids que não couberam na cota (rodar de novo no mês seguinte)
+    mimo_pendentes_<cidade>.csv    ids que não couberam na cota (rodar de novo no mês seguinte)
+
+Duas ou mais cidades ao mesmo tempo: pode, em janelas separadas e na mesma pasta de
+saída. O cache é gravado com tranca e juntando o que a outra rodada escreveu, e o uso
+do mês soma as duas. O limite do Google é por minuto (600 buscas), e cada rodada usa
+uns 100; até quatro ou cinco juntas passam folgado.
 
 O que NÃO é pedido de propósito: texto das avaliações e resumo do Google.
 Não podem ir para o site (são de quem publicou) e custariam mais.
@@ -666,6 +671,56 @@ def contar(linhas, campo):
     return sum(1 for x in linhas if x.get(campo))
 
 
+def trava(caminho, espera=30):
+    """tranca entre processos (um arquivo .lock criado com O_EXCL; vale no Windows e no Linux), para duas
+    cidades rodarem ao mesmo tempo na mesma pasta. Tranca esquecida por uma rodada que morreu cai em 30 s."""
+    class Trava:
+        def __enter__(self):
+            self.lock = str(caminho) + ".lock"
+            t0 = time.time()
+            while True:
+                try:
+                    self.fd = os.open(self.lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+                    return self
+                except FileExistsError:
+                    if time.time() - t0 > espera:
+                        try:
+                            os.remove(self.lock)
+                        except OSError:
+                            pass
+                    time.sleep(0.2)
+
+        def __exit__(self, *_):
+            os.close(self.fd)
+            try:
+                os.remove(self.lock)
+            except OSError:
+                pass
+    return Trava()
+
+
+def gravar_cache(caminho, cache, chamadas, ja_salvo, mes):
+    """grava o cache juntando com o que está no disco (3.20: duas cidades em paralelo na mesma pasta):
+    a descoberta e os lugares das duas rodadas ficam, e o uso do mês soma só as chamadas novas desta
+    rodada (chamadas - ja_salvo) ao que o arquivo já tem. Devolve o uso do mês somado."""
+    with trava(caminho):
+        disco = ler_cache(caminho, False)
+        if disco.get("mes") == mes:
+            usado = Counter(disco.get("usado", {}))
+            for k in ("descoberta", "cidades", "lugares"):
+                cache[k] = {**disco.get(k, {}), **cache[k]}
+        else:
+            usado = Counter()
+        for nivel, n in chamadas.items():
+            usado[nivel] += n - ja_salvo.get(nivel, 0)
+            ja_salvo[nivel] = n
+        cache["mes"], cache["usado"] = mes, dict(usado)
+        tmp = caminho.with_name("%s.%d.tmp" % (caminho.name, os.getpid()))
+        tmp.write_text(json.dumps(cache, ensure_ascii=False), encoding="utf-8")
+        os.replace(tmp, caminho)
+    return usado
+
+
 def ler_cache(caminho, refazer):
     vazio = {"descoberta": {}, "cidades": {}, "lugares": {}, "mes": "", "usado": {}}
     if refazer or not caminho.exists():
@@ -800,9 +855,10 @@ def main():
     cache["descoberta"] = {k: v for k, v in cache["descoberta"].items() if agora - v.get("em", 0) < DIAS_CACHE_IDS * 86400}
     cache["lugares"] = {k: v for k, v in cache["lugares"].items() if agora - v.get("em", 0) < DIAS_CACHE_DADOS * 86400}
 
+    ja_salvo = {}  # chamadas desta rodada já somadas no arquivo
+
     def salvar_cache():
-        cache["usado"] = dict(google.usado)
-        caminho_cache.write_text(json.dumps(cache, ensure_ascii=False), encoding="utf-8")
+        google.usado = gravar_cache(caminho_cache, cache, dict(google.chamadas), ja_salvo, mes)
 
     google = Google(pedir_chave(), {"completas": a.max_completas, "detalhes": a.max_detalhes, "cidade": 200}, cache["usado"])
 
@@ -964,14 +1020,14 @@ def main():
         print()
         print("Fora das cidades pedidas (não gravei): " + ", ".join("%s (%d)" % x for x in fora_da_area))
     if pendentes:
-        with open(saida / "mimo_pendentes.csv", "w", newline="", encoding="utf-8-sig") as f:
+        with open(saida / ("mimo_pendentes_%s.csv" % slug(rotulo)), "w", newline="", encoding="utf-8-sig") as f:
             w = csv.DictWriter(f, fieldnames=["place_id", "buscas_encontradas"], delimiter=";")
             w.writeheader()
             w.writerows(pendentes)
         print()
         print("%d lugares ficaram sem dados (teto do mês em: %s). Rode de novo no mês que vem, ou suba o teto." % (len(pendentes), ", ".join(sorted(teto_batido)) or "cache"))
-    elif (saida / "mimo_pendentes.csv").exists():
-        (saida / "mimo_pendentes.csv").unlink()
+    elif (saida / ("mimo_pendentes_%s.csv" % slug(rotulo))).exists():
+        (saida / ("mimo_pendentes_%s.csv" % slug(rotulo))).unlink()
 
     relatorio_custo(google, mes)
     salvar_cache()

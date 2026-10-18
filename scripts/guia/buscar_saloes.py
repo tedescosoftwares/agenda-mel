@@ -230,12 +230,13 @@ TIPOS_FORA = {
     "shopping_mall": "shopping", "supermarket": "mercado", "grocery_store": "mercado",
     "government_office": "repartição pública", "association_or_organization": "associação",
     "pet_care": "pet shop", "womens_clothing_store": "loja de roupas", "mens_clothing_store": "loja de roupas", "shoe_store": "loja de calçados",
-    "chiropractor": "quiropraxia",
+    "chiropractor": "quiropraxia", "swimming_pool": "loja de piscinas", "florist": "floricultura",
 }
 # o que não é salão, pelo nome (3.20): vale antes de tudo, porque "Estética Automotiva" e "Odonto Estética" têm "estética" no nome
 NOMES_FORA = [
     (r"odont|dental|dentist", "clínica odontológica"),
-    (r"automotiv|lava.?(rapido|jato)|auto ?center|funilaria|veicul|\bcarros?\b|\bmotos?\b", "estética automotiva"),
+    (r"automotiv|auto ?estetic|lava.?(rapido|jato)|auto ?center|funilaria|veicul|\bcarros?\b|\bmotos?\b", "estética automotiva"),
+    (r"piscina|paisagism|floricultura|jardinagem", "loja de piscinas ou jardim"),
     (r"\bpet\b|petshop|banho e tosa|veterin|canin|\bdog\b|estetica animal", "pet shop"),
     (r"tatuag|tattoo|piercing", "tatuagem"),
     (r"farmac|drogaria|manipulac", "farmácia"),

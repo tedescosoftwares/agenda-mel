@@ -302,6 +302,7 @@ def motivo_para_ficar_fora(nome, tipo, tipos, status):
 # "Jd Albatroz" e "Jardim Albatroz" são o mesmo bairro; "Sobreloja" e "Sala 3" não são bairro
 ABREVIACOES_BAIRRO = [(r"^jd\.? ", "Jardim "), (r"^jdm\.? ", "Jardim "), (r"^pq\.? ", "Parque "), (r"^vl\.? ", "Vila "),
                       (r"^res\.? ", "Residencial "), (r"^bal\.? ", "Balneário "), (r"^conj\.? ", "Conjunto "), (r"^cj\.? ", "Conjunto ")]
+PREFIXOS_BAIRRO = ("balneario", "estancia", "jardim", "vila", "parque", "conjunto", "residencial", "sitio", "chacara", "loteamento", "bairro")
 NAO_E_BAIRRO = r"^(sobreloja|lojas?|salas?|blocos?|andar|terreo|cobertura|fundos|galeria|box|quiosque|apto?|ap|sl|lj|sem denominacao|s/n|de|da|do|das|dos)\b"
 
 
@@ -351,6 +352,16 @@ def canonizar_bairros(linhas):
             parecidos = [c for c in comuns if distancia(k, c) <= 2]
             if len(parecidos) == 1:
                 melhor[k] = melhor[parecidos[0]]
+    # "Stella Maris" e "Balneário Stella Maris" são o mesmo lugar (cidade de praia): o nome sem o
+    # prefixo vai para o com prefixo quando é raro, ou, com Balneário e Estância, quando não é o maior
+    for k, t in total.items():
+        candidatos = [c for c in total if c != k and any(c == pref + " " + k for pref in PREFIXOS_BAIRRO)]
+        if not candidatos:
+            continue
+        alvo = max(candidatos, key=lambda c: total[c])
+        prefixo = alvo[: -len(k) - 1]
+        if t <= 2 or (prefixo in ("balneario", "estancia") and t <= total[alvo]):
+            melhor[k] = melhor[alvo]
     n = 0
     for l in linhas:
         if l["bairro"] and melhor[sem_acento(l["bairro"])] != l["bairro"]:

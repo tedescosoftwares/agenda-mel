@@ -26,6 +26,9 @@ dist-ssr
 # variáveis de ambiente
 .env
 
+# o último sitemap avisado ao Bing (IndexNow, 3.21): estado da máquina, não código
+evolution/indexnow-ultimo.xml
+
 # sites de parceiros: configuracao vive so na VPS
 evolution/sites/*.caddy
 

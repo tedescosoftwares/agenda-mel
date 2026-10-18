@@ -14,7 +14,9 @@
 # com o carimbo da última geração (dist/.conteudo-versao) e, se for outro,
 # roda scripts/paginas-estaticas.mjs sobre o dist que já está no ar. Não
 # refaz o build do app (isso é o publicar-site.sh, quando o CÓDIGO muda) e
-# não mexe no Caddy: ele serve os arquivos novos na hora.
+# não mexe no Caddy: ele serve os arquivos novos na hora. Depois de regenerar,
+# avisa o Bing na hora do que mudou no sitemap (IndexNow, scripts/indexnow.mjs),
+# se INDEXNOW_KEY estiver no .env.
 
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -67,16 +69,29 @@ if ! printf '%s' "$VERSAO" | grep -Eq '^[0-9a-f]{32}$'; then
   exit 1
 fi
 ANTERIOR=$(cat "$CARIMBO" 2>/dev/null || true)
-if [ "${1:-}" != '--forcar' ] && [ "$VERSAO" = "$ANTERIOR" ]; then
-  exit 0  # nada mudou: silêncio (o cron roda isto a toda hora)
+cd "$RAIZ"
+MUDOU=0  # nada mudou: silêncio (o cron roda isto a toda hora)
+if [ "${1:-}" = '--forcar' ] || [ "$VERSAO" != "$ANTERIOR" ]; then
+  if node scripts/paginas-estaticas.mjs > /tmp/mimo-republicar.log 2>&1; then
+    printf '%s' "$VERSAO" > "$CARIMBO"
+    chmod -R a+rX dist
+    verde "$(date '+%F %T') páginas regeneradas: $(grep -c '<loc>' dist/sitemap.xml) URLs no sitemap ($(tail -1 /tmp/mimo-republicar.log))"
+    MUDOU=1
+  else
+    vermelho "$(date '+%F %T') a regeneração falhou:"; tail -20 /tmp/mimo-republicar.log
+    exit 1
+  fi
 fi
 
-cd "$RAIZ"
-if node scripts/paginas-estaticas.mjs > /tmp/mimo-republicar.log 2>&1; then
-  printf '%s' "$VERSAO" > "$CARIMBO"
-  chmod -R a+rX dist
-  verde "$(date '+%F %T') páginas regeneradas: $(grep -c '<loc>' dist/sitemap.xml) URLs no sitemap ($(tail -1 /tmp/mimo-republicar.log))"
-else
-  vermelho "$(date '+%F %T') a regeneração falhou:"; tail -20 /tmp/mimo-republicar.log
-  exit 1
+# IndexNow (3.21): avisa o Bing na hora do que entrou, mudou ou saiu do sitemap.
+# scripts/indexnow.mjs compara com o último sitemap avisado (indexnow-ultimo.xml,
+# aqui na pasta) e regrava dist/<chave>.txt, que o Bing confere. Roda também quando
+# um aviso anterior falhou e ficou pendente: o sitemap no ar ainda é diferente do
+# último avisado. Sem mudança e sem pendência, silêncio.
+if [ -n "${INDEXNOW_KEY:-}" ]; then
+  if [ "$MUDOU" = 1 ] || ! cmp -s dist/sitemap.xml "$AQUI/indexnow-ultimo.xml"; then
+    node scripts/indexnow.mjs || amarelo "$(date '+%F %T') o aviso ao Bing (IndexNow) falhou; fica para a próxima hora"
+  fi
+elif [ "$MUDOU" = 1 ]; then
+  amarelo 'Sem INDEXNOW_KEY no .env o Bing não é avisado na hora. Para ligar: node scripts/indexnow.mjs --gerar-chave'
 fi

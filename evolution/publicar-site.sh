@@ -141,6 +141,13 @@ if [ ! -f dist/sitemap.xml ]; then
 fi
 [ -f dist/sitemap.xml ] && [ -f dist/_home.html ] || { vermelho 'Sem as páginas estáticas (dist/sitemap.xml, dist/_home.html). Rode: node scripts/paginas-estaticas.mjs'; exit 1; }
 verde "  SEO: $(grep -c '<loc>' dist/sitemap.xml) URLs no sitemap, páginas estáticas no lugar"
+# Bing na hora (IndexNow, 3.21): o build apagou o dist e, com ele, o arquivo da chave que o
+# Bing confere (dist/<chave>.txt). O indexnow.mjs regrava a chave e avisa o que mudou no sitemap.
+if [ -n "${INDEXNOW_KEY:-}" ]; then
+  node scripts/indexnow.mjs || amarelo '  o aviso ao Bing (IndexNow) falhou; o republicar-se-mudou.sh tenta de novo na próxima hora'
+else
+  amarelo '  Sem INDEXNOW_KEY no .env o Bing não é avisado na hora. Para ligar: node scripts/indexnow.mjs --gerar-chave'
+fi
 # para não restar dúvida sobre O QUE foi publicado
 verde "  publicado o commit $(git rev-parse --short HEAD) — $(git log -1 --format=%s | cut -c1-60)"
 verde "  versão do app: $(grep -o "VERSAO = '[^']*'" src/lib/versao.js | cut -d"'" -f2)"
@@ -199,7 +206,13 @@ case "$CODIGO" in
        case "$BARRA" in
          301) verde '  /sobre/ → 301 (endereço com barra redireciona)' ;;
          *) amarelo "  /sobre/ respondeu $BARRA (esperava 301): o Caddy pode estar lendo um Caddyfile antigo; rode: docker compose up -d --force-recreate caddy" ;;
-       esac ;;
+       esac
+       # a chave do IndexNow tem de responder no ar, senão o Bing recusa os avisos (403)
+       if [ -n "${INDEXNOW_KEY:-}" ]; then
+         CHAVE_NO_AR=$(curl -s -m 10 "https://${DOMINIO_SITE}/${INDEXNOW_KEY}.txt" || true)
+         if [ "$CHAVE_NO_AR" = "$INDEXNOW_KEY" ]; then verde '  chave do IndexNow no ar (o Bing consegue conferir)'
+         else amarelo "  https://${DOMINIO_SITE}/${INDEXNOW_KEY}.txt não devolveu a chave: o Bing vai recusar os avisos"; fi
+       fi ;;
   000) amarelo '  Ainda não respondeu. Se o DNS acabou de mudar, espere um minuto e abra no navegador.'
        echo '  Log:  docker compose logs caddy --tail 30' ;;
   *)   amarelo "  Respondeu $CODIGO. Veja:  docker compose logs caddy --tail 30" ;;

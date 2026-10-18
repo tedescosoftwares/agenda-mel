@@ -629,3 +629,35 @@ Ele lê as mesmas chaves do `publicar-site.sh` (`VITE_SUPABASE_URL` e a
 chave anon, no `.env` da Evolution ou da raiz) e precisa do `dist/` de um
 publicar anterior. Quando o CÓDIGO muda (git pull), continua sendo o
 `publicar-site.sh`.
+
+## Bing na hora (3.21): IndexNow
+
+O Google lê o sitemap e vem quando quer. O Bing (e o Yandex, o Seznam e o
+Naver, que dividem o protocolo) aceita um aviso na hora, o IndexNow: uma
+página que a Plataforma publicou entra na fila do Bing em minutos, não em
+semanas, e o DuckDuckGo e o Ecosia, que bebem do índice do Bing, vêm junto.
+
+Como funciona: `scripts/indexnow.mjs` compara o `dist/sitemap.xml` com o
+último sitemap avisado (`evolution/indexnow-ultimo.xml`, fora do git) e manda
+ao `api.indexnow.org` só as URLs novas, mudadas (`lastmod`) ou que sumiram, em
+lotes de até 10.000. A chave que prova que o site é seu fica em `INDEXNOW_KEY`
+no `.env` da Evolution, e o script regrava `dist/<chave>.txt` a cada rodada,
+que é o que o Bing confere em `https://mimo.com.vc/<chave>.txt`. O
+`republicar-se-mudou.sh` chama o script depois de regenerar as páginas (e, de
+hora em hora, se um aviso anterior ficou pendente) e o `publicar-site.sh`
+depois do build, conferindo no fim que a chave responde no ar.
+
+Para ligar, uma vez:
+
+```bash
+cd ~/agenda-mel && git pull --ff-only
+node scripts/indexnow.mjs --gerar-chave             # grava INDEXNOW_KEY no evolution/.env
+cd evolution && ./republicar-se-mudou.sh --forcar   # regrava a chave no dist e avisa o Bing de todas as páginas
+curl -s "https://mimo.com.vc/$(grep ^INDEXNOW_KEY= .env | cut -d= -f2).txt"; echo   # tem de devolver a chave
+```
+
+No Bing Webmaster Tools (bing.com/webmasters), com o site já cadastrado: em
+**Sitemaps**, envie `https://mimo.com.vc/sitemap.xml` uma vez; em **IndexNow**,
+os avisos aparecem em algumas horas. Para ver o que seria mandado sem mandar:
+`node scripts/indexnow.mjs --simular`; para avisar tudo de novo: `--tudo`.
+O Google não participa do IndexNow: lá continua o sitemap e o Search Console.

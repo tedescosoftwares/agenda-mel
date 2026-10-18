@@ -306,7 +306,10 @@ def motivo_para_ficar_fora(nome, tipo, tipos, status):
 # "Jd Albatroz" e "Jardim Albatroz" são o mesmo bairro; "Sobreloja" e "Sala 3" não são bairro
 ABREVIACOES_BAIRRO = [(r"^jd\.? ", "Jardim "), (r"^jdm\.? ", "Jardim "), (r"^pq\.? ", "Parque "), (r"^vl\.? ", "Vila "),
                       (r"^res\.? ", "Residencial "), (r"^bal\.? ", "Balneário "), (r"^conj\.? ", "Conjunto "), (r"^cj\.? ", "Conjunto ")]
-PREFIXOS_BAIRRO = ("balneario", "estancia", "jardim", "vila", "parque", "conjunto", "residencial", "sitio", "chacara", "loteamento", "bairro")
+PREFIXOS_BAIRRO = ("balneario", "estancia", "praia de", "praia da", "praia do", "jardim", "vila", "parque", "conjunto", "residencial",
+                   "sitio", "chacara", "loteamento", "bairro")
+# com estes prefixos o nome com e sem prefixo é o mesmo lugar ("Praia de Boiçucanga" e "Boiçucanga"): fica a grafia mais usada
+PREFIXOS_DO_MESMO_LUGAR = ("balneario", "estancia", "praia de", "praia da", "praia do")
 NAO_E_BAIRRO = r"^(sobreloja|lojas?|salas?|blocos?|andar|terreo|cobertura|fundos|galeria|box|quiosque|apto?|ap|sl|lj|sem denominacao|s/n|de|da|do|das|dos)\b"
 
 
@@ -352,7 +355,7 @@ def canonizar_bairros(linhas):
     total = {k: sum(c.values()) for k, c in grafias.items()}
     comuns = [k for k, t in total.items() if t >= 5]
     for k, t in total.items():
-        if t <= 2 and len(k) >= 8:
+        if t <= 2 and len(k) >= 6:
             parecidos = [c for c in comuns if distancia(k, c) <= 2]
             if len(parecidos) == 1:
                 melhor[k] = melhor[parecidos[0]]
@@ -364,7 +367,12 @@ def canonizar_bairros(linhas):
             continue
         alvo = max(candidatos, key=lambda c: total[c])
         prefixo = alvo[: -len(k) - 1]
-        if t <= 2 or (prefixo in ("balneario", "estancia") and t <= total[alvo]):
+        if prefixo in PREFIXOS_DO_MESMO_LUGAR:
+            if t <= total[alvo]:
+                melhor[k] = melhor[alvo]
+            else:
+                melhor[alvo] = melhor[k]
+        elif t <= 2:
             melhor[k] = melhor[alvo]
     n = 0
     for l in linhas:

@@ -6,6 +6,7 @@ rem A regiao inteira de uma vez so na mao: python buscar_saloes.py --regiao baix
 rem A chave da Places API e pedida na tela (nao aparece ao digitar) ou vem da variavel GOOGLE_PLACES_KEY.
 rem Rode de novo no mes seguinte para o que ficou em mimo_pendentes_<cidade>.csv: o cache guarda o que ja foi feito.
 rem Pode abrir duas ou tres janelas e rodar uma cidade em cada: o cache e gravado com tranca e o uso do mes soma.
+rem Mais rapido: buscar_saloes.bat "Santos" --threads 8   (--ritmo acima de 540 nao acelera, e o teto do Google; com 2 janelas, --ritmo 270 em cada)
 cd /d "%~dp0"
 where python >nul 2>nul
 if errorlevel 1 (
@@ -22,7 +23,7 @@ if "%CIDADE%"=="" (
   pause
   exit /b 1
 )
-python buscar_saloes.py --cidade "%CIDADE%" --saida saida
+python buscar_saloes.py --cidade "%CIDADE%" --saida saida %2 %3 %4 %5 %6 %7
 echo.
 echo Os CSVs estao em %~dp0saida
 pause

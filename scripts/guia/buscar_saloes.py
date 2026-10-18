@@ -47,17 +47,25 @@ Opções:
     --sim                     não pergunta antes de gastar (para rodar sem olhar)
     --refazer                 ignora o cache e busca tudo de novo
     --saida pasta             onde gravar os CSVs (padrão: a pasta atual)
-    --ritmo 540               pedidos por minuto ao Google (o projeto aceita 600; com 3 janelas abertas, 180 em cada)
+    --ritmo 540               pedidos por minuto ao Google, por família (a cota do projeto é 600; acima disso só vem 429)
+    --threads 4               pedidos ao mesmo tempo; é o que acelera de verdade (8 encosta nos 540/min; veja abaixo)
 
 Saída (separado por ponto e vírgula, abre no Excel), uma por cidade:
     mimo_saloes_<cidade>.csv       os que entram na Plataforma (importe este)
     mimo_descartados_<cidade>.csv  os que ficaram de fora e o motivo
     mimo_pendentes_<cidade>.csv    ids que não couberam na cota (rodar de novo no mês seguinte)
 
-Duas ou mais cidades ao mesmo tempo: pode, em janelas separadas e na mesma pasta de
-saída. O cache é gravado com tranca e juntando o que a outra rodada escreveu, e o uso
-do mês soma as duas. O limite do Google é por minuto (600 buscas), e cada rodada usa
-uns 100; até quatro ou cinco juntas passam folgado.
+Velocidade: o Google aceita 600 pedidos por minuto por projeto em cada família (buscas de
+texto e detalhes) e o script se segura em --ritmo (540). Subir o --ritmo acima da cota não
+acelera nada: o que passa volta como 429 e o script espera. O que acelera é --threads: com 4
+(o padrão) cada busca leva uns meio segundo e a rodada fica em uns 400/min, abaixo do teto;
+com 8 encosta nos 540/min. A linha de cada palavra mostra o ritmo real ("412/min"). Para
+passar disso, peça mais cota no console do Google (APIs e serviços > Places API (New) >
+Cotas) e suba --ritmo e --threads juntos. Duas ou mais janelas ao mesmo tempo dividem a
+MESMA cota: --ritmo 270 em cada uma de duas, 180 em cada uma de três. O cache é gravado com
+tranca e juntando o que a outra rodada escreveu, e o uso do mês soma as duas. A cota do DIA,
+se o projeto tiver uma, é outra conta: quando acaba, o script para e diz; o cache guarda o
+que já foi feito e é só rodar de novo no dia seguinte.
 
 O que NÃO é pedido de propósito: texto das avaliações e resumo do Google.
 Não podem ir para o site (são de quem publicou) e custariam mais.
@@ -182,10 +190,11 @@ DIAS_CACHE_DADOS = 7     # os dados de cada lugar: curto, para a planilha sair f
 PAGINA = 20
 LOTE_MAX = 60            # o teto de uma busca do Google: 3 páginas de 20
 LADO_MINIMO = 0.0025     # ~280 m: abaixo disso não divide mais (e avisa se ainda lotar)
-THREADS = 4
+THREADS = 4              # pedidos ao mesmo tempo (--threads): é o que define a velocidade real, dentro do --ritmo
 # o Google aceita 600 pedidos por minuto por projeto, em cada família (SearchText e GetPlace). Os detalhes um a
 # um são rápidos e 4 threads passam disso fácil: o script se segura abaixo, e quando mesmo assim vem 429
-# espera o minuto virar em vez de desistir. 0 = sem freio (os testes). --ritmo muda.
+# espera o minuto virar em vez de desistir. 0 = sem freio (os testes). --ritmo muda; acima da cota não adianta,
+# o excesso volta como 429. A cota do DIA, se o projeto tiver, é outra: quando acaba, o script para e avisa.
 RITMO_POR_MINUTO = 540
 ESPERAS_429 = (5, 10, 20, 30, 45, 60)
 
@@ -558,19 +567,30 @@ class Janela:
         self.marcas = deque()
         self.tranca = threading.Lock()
 
+    def _limpar(self, agora):
+        while self.marcas and agora - self.marcas[0] >= 60:
+            self.marcas.popleft()
+
     def esperar(self):
-        if not self.n:
-            return
         while True:
             with self.tranca:
                 agora = time.monotonic()
-                while self.marcas and agora - self.marcas[0] >= 60:
-                    self.marcas.popleft()
-                if len(self.marcas) < self.n:
+                self._limpar(agora)
+                if not self.n or len(self.marcas) < self.n:  # sem freio (n = 0) só anota, para o ritmo real aparecer
                     self.marcas.append(agora)
                     return
                 espera = 60 - (agora - self.marcas[0]) + 0.05
             time.sleep(espera)
+
+    def no_minuto(self):
+        """quantos pedidos saíram nos últimos 60 s: o ritmo real"""
+        with self.tranca:
+            self._limpar(time.monotonic())
+            return len(self.marcas)
+
+
+class CotaDoDia(RuntimeError):
+    """a cota do dia do Google acabou: esperar o minuto virar não resolve"""
 
 
 class Teto(Exception):
@@ -621,6 +641,8 @@ class Google:
                 continue
             if r.status_code == 200:
                 return r.json()
+            if r.status_code == 429 and "per day" in r.text.lower():
+                raise CotaDoDia("a cota do DIA do Google acabou (%s). Zera à meia-noite da Califórnia (4h ou 5h em Brasília); o cache guarda o que já foi feito, é só rodar de novo" % nivel)
             if r.status_code == 429 and tentativa < len(ESPERAS_429):
                 # limite por minuto: espera o minuto virar (5, 10, 20… s) em vez de desistir
                 self._calma(ESPERAS_429[tentativa])
@@ -745,10 +767,10 @@ def uniao(rets):
             "norte": max(r["norte"] for r in rets), "leste": max(r["leste"] for r in rets)}
 
 
-def paralelo(fn, itens, n=THREADS):
+def paralelo(fn, itens, n=None):
     if not itens:
         return []
-    with ThreadPoolExecutor(max_workers=min(n, len(itens))) as ex:
+    with ThreadPoolExecutor(max_workers=min(n or THREADS, len(itens))) as ex:
         return list(ex.map(fn, itens))
 
 
@@ -968,7 +990,8 @@ def main():
     ap.add_argument("--sim", action="store_true")
     ap.add_argument("--refazer", action="store_true")
     ap.add_argument("--saida", default=".")
-    ap.add_argument("--ritmo", type=int, default=RITMO_POR_MINUTO, help="pedidos por minuto ao Google (o projeto aceita 600; com 3 janelas abertas use 180)")
+    ap.add_argument("--ritmo", type=int, default=RITMO_POR_MINUTO, help="pedidos por minuto ao Google, por família (a cota do projeto é 600: acima disso só vem 429; com 2 janelas abertas use 270 em cada)")
+    ap.add_argument("--threads", type=int, default=THREADS, help="pedidos ao mesmo tempo (padrão 4; 8 encosta nos 540/min)")
     ap.add_argument("--fatias", type=int, default=0, help=argparse.SUPPRESS)  # da v3: não faz mais nada
     a = ap.parse_args()
     if not a.cidade and not a.regiao:
@@ -993,10 +1016,12 @@ def executar(a):
     max_completas, max_detalhes, sim, refazer e saida. A interface do mapa (mapa_saloes.py) passa,
     opcionalmente: perguntar(texto) no lugar do input, ao_fase(nome), ao_progresso(termo, i, n, celulas,
     lugares), ao_planejar(plano) e poligono [(lat, lng), ...] para buscar só dentro dele."""
-    global RITMO_POR_MINUTO
+    global RITMO_POR_MINUTO, THREADS
     gancho = lambda nome: getattr(a, nome, None)
     if gancho("ritmo") is not None:
         RITMO_POR_MINUTO = int(a.ritmo)
+    if gancho("threads"):
+        THREADS = max(1, min(32, int(a.threads)))
     perguntar = gancho("perguntar") or input
     fase = gancho("ao_fase") or (lambda nome: None)
     progresso = gancho("ao_progresso") or (lambda *x: None)
@@ -1050,6 +1075,7 @@ def executar(a):
 
     # ---- 2. a descoberta (grátis) ----------------------------------------------------------------
     print()
+    print("Ritmo: %s, %d pedidos ao mesmo tempo (--ritmo, --threads)" % ("sem freio" if not RITMO_POR_MINUTO else "até %d por minuto em cada família" % RITMO_POR_MINUTO, THREADS))
     print("Descoberta (busca só ids, grátis): dividindo a área até nenhuma célula lotar os 60…")
     fase("descoberta")
     desc = Descoberta(google, cache["descoberta"], agora, filtro=(lambda cel: celula_toca_poligono(cel, poligono)) if poligono else None)
@@ -1061,7 +1087,7 @@ def executar(a):
         folhas_por_termo[termo] = folhas
         ids_por_termo[termo] = set().union(*[set(ids) for _, ids in folhas]) if folhas else set()
         print("  [%2d/%d] %-24s %3d células, %4d lugares%s" % (i, len(BUSCAS), termo, len(folhas), len(ids_por_termo[termo]),
-                                                              "  (do cache)" if not novas.get(termo) else "  (%d buscas novas)" % novas[termo]))
+                                                              "  (do cache)" if not novas.get(termo) else "  (%d buscas novas, %d/min)" % (novas[termo], google.janelas["busca"].no_minuto())))
         progresso(termo, i, len(BUSCAS), len(folhas), len(ids_por_termo[termo]))
         salvar_cache()
     todos_ids = set().union(*ids_por_termo.values())
@@ -1154,16 +1180,20 @@ def executar(a):
             return pid, google.detalhe(pid)
         except Teto:
             return pid, None
+        except CotaDoDia:
+            raise  # para a rodada com a explicação, em vez de uma linha de erro por lugar
         except RuntimeError as e:
             print("    %s: %s" % (pid, e))
             return pid, False
 
-    for pid, p in paralelo(detalhar, restantes):
-        if p is None:
-            teto_batido.add("detalhes")
-        elif p:
-            cache["lugares"][pid] = {"em": agora, "p": p}
-    salvar_cache()
+    try:
+        for pid, p in paralelo(detalhar, restantes):
+            if p is None:
+                teto_batido.add("detalhes")
+            elif p:
+                cache["lugares"][pid] = {"em": agora, "p": p}
+    finally:
+        salvar_cache()  # o que já veio fica guardado mesmo se a cota do dia acabar no meio
 
     # ---- 6. os CSVs, por cidade -----------------------------------------------------------------
     fase("gravando")

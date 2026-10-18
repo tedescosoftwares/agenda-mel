@@ -359,6 +359,8 @@ def limpar_bairro(b, cidade=""):
         return ""
     if cidade and sem_acento(b) == sem_acento(cidade):
         return ""  # o nome da cidade no lugar do bairro
+    if sem_acento(b) in PREFIXOS_BAIRRO:
+        return ""  # "Jardim" sozinho é pedaço de nome
     if re.match(r"^centro( (de|do|da)( .*)?)?$", sem_acento(b)):
         return "Centro"
     return com_maiusculas(b)

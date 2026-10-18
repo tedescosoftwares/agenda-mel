@@ -35,6 +35,7 @@ Como rodar (Windows, no Prompt de Comando, dentro desta pasta):
     python buscar_saloes.py --cidade "Santos"
     python buscar_saloes.py --regiao baixada-santista        (as 9 cidades de uma vez)
     python buscar_saloes.py --regiao litoral-norte           (Caraguatatuba, São Sebastião, Ubatuba e Ilhabela)
+    python buscar_saloes.py --regiao vale-do-paraiba         (as 11 cidades do Vale, de São José dos Campos a Cruzeiro)
 
 Opções:
     --cidade "Praia Grande"   uma cidade (o retângulo vem do próprio Google; 1 chamada Pro)
@@ -108,6 +109,8 @@ UF_PADRAO = "SP"
 REGIOES = {
     "baixada-santista": ["Peruíbe", "Itanhaém", "Mongaguá", "Praia Grande", "São Vicente", "Santos", "Guarujá", "Cubatão", "Bertioga"],
     "litoral-norte": ["Caraguatatuba", "São Sebastião", "Ubatuba", "Ilhabela"],
+    "vale-do-paraiba": ["São José dos Campos", "Jacareí", "Taubaté", "Pindamonhangaba", "Guaratinguetá", "Caçapava",
+                        "Lorena", "Cruzeiro", "Tremembé", "Campos do Jordão", "Aparecida"],
 }
 
 URL_BUSCA = "https://places.googleapis.com/v1/places:searchText"

@@ -59,7 +59,9 @@ dentista, lava-rápido, pet shop, loja, hotel, academia ou escola fica de
 fora (mimo_descartados_<cidade>.csv diz o motivo); sauna e "centro de
 bem-estar" só entram com nome de salão. Lugar sem bairro no Google ganha o
 bairro da maioria dos vizinhos a até 600 m (coluna bairro_origem:
-google, vizinhos ou vazio), e o CSV sai em ordem de bairro.
+google, vizinhos ou vazio), e o CSV sai em ordem de bairro. Bairro que não
+é bairro ("!", "1010", "B") é descartado antes, e grafias diferentes do
+mesmo bairro ("Jardim castelo") viram a mais usada.
 
 Fotos (3.20): o script pede só o NOME de cada foto do perfil e quem a
 publicou (campo "photos", que não muda o preço da chamada). A imagem em si
@@ -216,6 +218,7 @@ TIPOS_FORA = {
     "car_wash": "lava-rápido", "car_repair": "oficina", "car_dealer": "loja de carros", "pet_store": "pet shop", "veterinary_care": "veterinário",
     "school": "escola", "university": "escola", "hotel": "hotel", "lodging": "hotel", "clothing_store": "loja de roupas",
     "shopping_mall": "shopping", "supermarket": "mercado", "grocery_store": "mercado",
+    "government_office": "repartição pública", "association_or_organization": "associação",
 }
 # o que não é salão, pelo nome (3.20): vale antes de tudo, porque "Estética Automotiva" e "Odonto Estética" têm "estética" no nome
 NOMES_FORA = [
@@ -229,6 +232,7 @@ NOMES_FORA = [
     (r"escola de|curso de|cursos de|faculdade|instituto de ensino|treinamento|aula de", "escola ou curso"),
     (r"distribuidor|atacad|perfumaria|loja de cosmet|cosmeticos e perfum|\bloja\b", "loja, não serviço"),
     (r"clinica medica|dermatolog|cirurgia plastic|ortoped|cardiolog|psicolog|nutricion|fonoaudio", "clínica médica"),
+    (r"acupunt|hipnose|psicoterap|\byoga\b|reiki|constelac", "terapia, não beleza"),
 ]
 
 NOME_DE_SALAO = r"salao|beleza|beauty|unha|nail|cilio|lash|sobrancelha|brow|estetic|esmalt|\bspa\b|cabeleireir|hair|depila|maquiag|massag|podolog"
@@ -287,10 +291,32 @@ def motivo_para_ficar_fora(nome, tipo, tipos, status):
 
 
 def limpar_bairro(b):
-    """o bairro como o Google manda, só sem "Bairro " na frente e sem espaço sobrando"""
+    """o bairro como o Google manda, só sem "Bairro " na frente e sem espaço sobrando.
+    O que não é nome de bairro ("!", "1010", "B": número de sala ou bloco que alguém
+    digitou no lugar errado) vira vazio, e o vizinho preenche. "Centro de Santos" é "Centro"."""
     b = re.sub(r"\s+", " ", (b or "").strip())
     b = re.sub(r"^(bairro|b\.)\s+", "", b, flags=re.I)
+    if len(re.sub(r"[^a-z]", "", sem_acento(b))) < 3:
+        return ""
+    if re.match(r"^centro (de|do|da) ", sem_acento(b)):
+        return "Centro"
     return b
+
+
+def canonizar_bairros(linhas):
+    """o mesmo bairro escrito de dois jeitos ("Jardim castelo", "Jardim Castelo") vira um só:
+    a grafia mais usada; em empate, a que tem mais maiúsculas. Devolve quantas linhas mudaram."""
+    grafias = {}
+    for l in linhas:
+        if l["bairro"]:
+            grafias.setdefault(sem_acento(l["bairro"]), Counter())[l["bairro"]] += 1
+    melhor = {k: max(c.items(), key=lambda x: (x[1], sum(ch.isupper() for ch in x[0])))[0] for k, c in grafias.items()}
+    n = 0
+    for l in linhas:
+        if l["bairro"] and melhor[sem_acento(l["bairro"])] != l["bairro"]:
+            l["bairro"] = melhor[sem_acento(l["bairro"])]
+            n += 1
+    return n
 
 
 def km(a, b):
@@ -891,6 +917,7 @@ def main():
             continue
         validos = [x for x in linhas if not x["motivo_descarte"]]
         fora = [x for x in linhas if x["motivo_descarte"]]
+        canonizar_bairros(validos)
         inferidos = preencher_bairros_pelos_vizinhos(validos)
         validos.sort(key=lambda x: (x["bairro"] or "~", ordem.get(x["triagem"], 9), -(x["qtd_avaliacoes"] or 0), x["nome"]))
         fora.sort(key=lambda x: (x["motivo_descarte"], x["nome"]))

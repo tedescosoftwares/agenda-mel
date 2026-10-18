@@ -290,13 +290,33 @@ def motivo_para_ficar_fora(nome, tipo, tipos, status):
     return None
 
 
+# "Jd Albatroz" e "Jardim Albatroz" são o mesmo bairro; "Sobreloja" e "Sala 3" não são bairro
+ABREVIACOES_BAIRRO = [(r"^jd\.? ", "Jardim "), (r"^jdm\.? ", "Jardim "), (r"^pq\.? ", "Parque "), (r"^vl\.? ", "Vila "),
+                      (r"^res\.? ", "Residencial "), (r"^bal\.? ", "Balneário "), (r"^conj\.? ", "Conjunto "), (r"^cj\.? ", "Conjunto ")]
+NAO_E_BAIRRO = r"^(sobreloja|lojas?|salas?|blocos?|andar|terreo|cobertura|fundos|galeria|box|quiosque|apto?|ap|sl|lj)\b"
+
+
+def distancia(a, b):
+    """Levenshtein, para juntar "Jardin castelo" a "Jardim Castelo" (strings curtas)"""
+    anterior = list(range(len(b) + 1))
+    for i, ca in enumerate(a, 1):
+        atual = [i]
+        for j, cb in enumerate(b, 1):
+            atual.append(min(anterior[j] + 1, atual[j - 1] + 1, anterior[j - 1] + (ca != cb)))
+        anterior = atual
+    return anterior[-1]
+
+
 def limpar_bairro(b):
     """o bairro como o Google manda, só sem "Bairro " na frente e sem espaço sobrando.
     O que não é nome de bairro ("!", "1010", "B": número de sala ou bloco que alguém
     digitou no lugar errado) vira vazio, e o vizinho preenche. "Centro de Santos" é "Centro"."""
     b = re.sub(r"\s+", " ", (b or "").strip())
     b = re.sub(r"^(bairro|b\.)\s+", "", b, flags=re.I)
-    if len(re.sub(r"[^a-z]", "", sem_acento(b))) < 3:
+    b = b.split(" / ")[0].strip()  # "Vila Rica / Boqueirão": fica o primeiro
+    for re_, por in ABREVIACOES_BAIRRO:
+        b = re.sub(re_, por, b, flags=re.I)
+    if len(re.sub(r"[^a-z]", "", sem_acento(b))) < 3 or re.match(NAO_E_BAIRRO, sem_acento(b)):
         return ""
     if re.match(r"^centro (de|do|da) ", sem_acento(b)):
         return "Centro"
@@ -311,6 +331,14 @@ def canonizar_bairros(linhas):
         if l["bairro"]:
             grafias.setdefault(sem_acento(l["bairro"]), Counter())[l["bairro"]] += 1
     melhor = {k: max(c.items(), key=lambda x: (x[1], sum(ch.isupper() for ch in x[0])))[0] for k, c in grafias.items()}
+    # a grafia rara (até 2 lugares) a uma ou duas letras de um bairro comum (5 ou mais) é erro de digitação
+    total = {k: sum(c.values()) for k, c in grafias.items()}
+    comuns = [k for k, t in total.items() if t >= 5]
+    for k, t in total.items():
+        if t <= 2 and len(k) >= 8:
+            parecidos = [c for c in comuns if distancia(k, c) <= 2]
+            if len(parecidos) == 1:
+                melhor[k] = melhor[parecidos[0]]
     n = 0
     for l in linhas:
         if l["bairro"] and melhor[sem_acento(l["bairro"])] != l["bairro"]:

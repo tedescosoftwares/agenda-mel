@@ -659,5 +659,9 @@ curl -s "https://mimo.com.vc/$(grep ^INDEXNOW_KEY= .env | cut -d= -f2).txt"; ech
 No Bing Webmaster Tools (bing.com/webmasters), com o site já cadastrado: em
 **Sitemaps**, envie `https://mimo.com.vc/sitemap.xml` uma vez; em **IndexNow**,
 os avisos aparecem em algumas horas. Para ver o que seria mandado sem mandar:
-`node scripts/indexnow.mjs --simular`; para avisar tudo de novo: `--tudo`.
+`node scripts/indexnow.mjs --simular` (na raiz do repositório; ele lê a chave
+do `.env` sozinho); para avisar tudo de novo: `--tudo`. Na primeira vez o Bing
+pode responder 403 enquanto confere a chave nova: o script espera meio minuto e
+tenta de novo, e, se ainda assim falhar, o republicar da próxima hora repete
+sozinho (o sitemap no ar fica diferente do último avisado até dar certo).
 O Google não participa do IndexNow: lá continua o sitemap e o Search Console.

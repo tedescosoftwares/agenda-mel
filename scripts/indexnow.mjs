@@ -42,26 +42,55 @@ export function diferenca(anterior, atual) {
 
 export const hostDe = (urls) => { for (const u of urls) { try { return new URL(u).host } catch { /* segue */ } } return '' }
 
-export async function enviar({ host, chave, urls, buscar = fetch, simular = false }) {
+// o que o Bing vê quando busca o arquivo da chave ('' se não responde)
+async function chaveNoAr(keyLocation, buscar) {
+  try { const r = await buscar(keyLocation); return r.ok ? (await r.text()).trim() : '' } catch { return '' }
+}
+
+export async function enviar({ host, chave, urls, buscar = fetch, simular = false, esperar = 30, avisar = console.log }) {
   const lotes = []
   for (let i = 0; i < urls.length; i += LOTE) lotes.push(urls.slice(i, i + LOTE))
   const resultados = []
+  const keyLocation = `https://${host}/${chave}.txt`
   for (const lote of lotes) {
-    const corpo = { host, key: chave, keyLocation: `https://${host}/${chave}.txt`, urlList: lote }
+    const corpo = { host, key: chave, keyLocation, urlList: lote }
     if (simular) { resultados.push({ n: lote.length, status: 'simulado' }); continue }
-    const r = await buscar(URL_INDEXNOW, { method: 'POST', headers: { 'Content-Type': 'application/json; charset=utf-8' }, body: JSON.stringify(corpo) })
+    const pedido = { method: 'POST', headers: { 'Content-Type': 'application/json; charset=utf-8' }, body: JSON.stringify(corpo) }
+    let r = await buscar(URL_INDEXNOW, pedido)
+    if (r.status === 403) {
+      // chave nova: o Bing busca o arquivo na primeira vez e às vezes responde 403 antes de
+      // terminar de conferir (aceitou uns minutos depois, na prática). Se o arquivo está no
+      // ar, espera e tenta mais uma vez; se não está, o problema é nosso e não adianta esperar
+      if ((await chaveNoAr(keyLocation, buscar)) !== chave) throw new Error(`IndexNow respondeu 403 e ${keyLocation} não devolve a chave: o Bing não consegue conferir que o site é seu (o arquivo está no ar? responde 200, texto puro?)`)
+      avisar(`IndexNow: 403 na primeira tentativa, mas ${keyLocation} está no ar; esperando ${esperar} s para tentar de novo…`)
+      if (esperar) await new Promise((f) => setTimeout(f, esperar * 1000))
+      r = await buscar(URL_INDEXNOW, pedido)
+    }
     resultados.push({ n: lote.length, status: r.status })
     if (r.status >= 400) {
-      const motivo = { 400: 'pedido inválido', 403: 'a chave não bateu (o arquivo <chave>.txt não está no ar?)', 422: 'URL de outro host', 429: 'avisos demais: tente mais tarde' }[r.status] ?? 'erro'
+      const motivo = { 400: 'pedido inválido', 403: 'o Bing ainda não aceitou a chave nova (o arquivo está no ar; costuma aceitar em minutos, e a próxima rodada tenta de novo)', 422: 'URL de outro host', 429: 'avisos demais: tente mais tarde' }[r.status] ?? 'erro'
       throw new Error(`IndexNow respondeu ${r.status}: ${motivo}`)
     }
   }
   return resultados
 }
 
+// a chave do .env da Evolution ou do da raiz, quando não veio pelo ambiente (os scripts do
+// VPS carregam o .env antes; na mão, "node scripts/indexnow.mjs --simular" também funciona)
+export function chaveDoEnv(raiz) {
+  for (const arq of [path.join(raiz, 'evolution', '.env'), path.join(raiz, '.env')]) {
+    try {
+      const m = /^\s*(?:export\s+)?INDEXNOW_KEY=["']?([A-Za-z0-9-]{8,128})["']?\s*$/m.exec(fs.readFileSync(arq, 'utf8'))
+      if (m) return m[1]
+    } catch { /* sem o arquivo: tenta o próximo */ }
+  }
+  return ''
+}
+
 export function gerarChave() { return crypto.randomBytes(16).toString('hex') }
 
-export async function rodar({ raiz = globalThis.process.cwd(), chave = globalThis.process.env.INDEXNOW_KEY, tudo = false, simular = false, buscar = fetch } = {}) {
+export async function rodar({ raiz = globalThis.process.cwd(), chave = globalThis.process.env.INDEXNOW_KEY, tudo = false, simular = false, buscar = fetch, esperar = 30, avisar = console.log } = {}) {
+  chave = chave || chaveDoEnv(raiz)
   const dist = path.join(raiz, 'dist')
   const caminhoSitemap = path.join(dist, 'sitemap.xml')
   const caminhoUltimo = path.join(raiz, 'evolution', 'indexnow-ultimo.xml')
@@ -80,7 +109,7 @@ export async function rodar({ raiz = globalThis.process.cwd(), chave = globalThi
   }
   if (!urls.length) return fim([])
   if (!host) throw new Error('não achei o host nas URLs do sitemap')
-  return fim(await enviar({ host, chave, urls, buscar, simular }))
+  return fim(await enviar({ host, chave, urls, buscar, simular, esperar, avisar }))
 }
 
 async function main() {

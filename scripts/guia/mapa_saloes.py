@@ -358,7 +358,7 @@ PAGINA = r"""<!doctype html>
   <aside>
     <h2>1. A área</h2>
     <div class="fila" id="ferramentas">
-      <button type="button" id="b-ret" title="Clique e arraste no mapa">Retângulo</button>
+      <button type="button" id="b-ret" title="Dois cliques no mapa: um canto e o oposto">Retângulo</button>
       <button type="button" id="b-pol" title="Clique nos cantos e feche">Polígono</button>
       <button type="button" id="b-fechar" style="display:none">Fechar polígono</button>
       <button type="button" id="b-limpar">Limpar</button>
@@ -457,18 +457,19 @@ PAGINA = r"""<!doctype html>
     modo = m; tirarOuvintes();
     $('b-ret').classList.toggle('ativo', m === 'ret'); $('b-pol').classList.toggle('ativo', m === 'pol');
     $('b-fechar').style.display = m === 'pol' ? '' : 'none';
-    mapa.setOptions({ draggable: m === null, draggableCursor: m ? 'crosshair' : null, disableDoubleClickZoom: m === 'pol' });
-    $('modo-txt').textContent = m === 'ret' ? 'Retângulo: clique num canto e arraste até o outro.' : m === 'pol' ? 'Polígono: clique nos cantos; termine com "Fechar polígono" ou clique duplo.' : (forma ? 'Pode ajustar a forma pelos pontos, ou desenhar outra.' : 'Escolha Retângulo ou Polígono e desenhe no mapa.');
+    mapa.setOptions({ draggableCursor: m ? 'crosshair' : null, disableDoubleClickZoom: m === 'pol' });
+    $('modo-txt').textContent = m === 'ret' ? 'Retângulo: clique num canto do mapa, depois no canto oposto.' : m === 'pol' ? 'Polígono: clique nos cantos; termine com "Fechar polígono" ou clique duplo.' : (forma ? 'Pode ajustar a forma pelos pontos, ou desenhar outra.' : 'Escolha Retângulo ou Polígono e desenhe no mapa.');
     if (m === 'ret') {
+      // o mapa do Google não avisa mousedown/mouseup, só click e mousemove: o retângulo é em dois cliques
       var inicio = null, ret = null;
-      ouvintes.push(mapa.addListener('mousedown', function (e) {
-        if (forma) { forma.setMap(null); forma = null; }
-        inicio = e.latLng;
-        ret = new google.maps.Rectangle(Object.assign({ map: mapa, bounds: caixa(inicio, inicio), clickable: false }, ESTILO));
-      }));
-      ouvintes.push(mapa.addListener('mousemove', function (e) { if (inicio && ret) ret.setBounds(caixa(inicio, e.latLng)); }));
-      ouvintes.push(mapa.addListener('mouseup', function (e) {
-        if (!inicio || !ret) return;
+      ouvintes.push(mapa.addListener('click', function (e) {
+        if (!inicio) {
+          if (forma) { forma.setMap(null); forma = null; }
+          inicio = e.latLng;
+          ret = new google.maps.Rectangle(Object.assign({ map: mapa, bounds: caixa(inicio, inicio), clickable: false }, ESTILO));
+          $('modo-txt').textContent = 'Retângulo: agora clique no canto oposto.';
+          return;
+        }
         ret.setBounds(caixa(inicio, e.latLng));
         forma = ret; inicio = null; ret = null;
         forma.setEditable(true);
@@ -476,6 +477,7 @@ PAGINA = r"""<!doctype html>
         lerForma('rectangle');
         ativarModo(null);
       }));
+      ouvintes.push(mapa.addListener('mousemove', function (e) { if (inicio && ret) ret.setBounds(caixa(inicio, e.latLng)); }));
     } else if (m === 'pol') {
       if (forma) { forma.setMap(null); forma = null; }
       var pontos = [], linha = new google.maps.Polyline({ map: mapa, path: [], strokeColor: ESTILO.strokeColor, strokeWeight: 2, clickable: false });

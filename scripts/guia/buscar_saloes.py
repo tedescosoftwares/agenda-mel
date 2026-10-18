@@ -225,7 +225,7 @@ TIPOS_FORA = {
 NOMES_FORA = [
     (r"odont|dental|dentist", "clínica odontológica"),
     (r"automotiv|lava.?(rapido|jato)|auto ?center|funilaria|veicul|\bcarros?\b|\bmotos?\b", "estética automotiva"),
-    (r"\bpet\b|petshop|banho e tosa|veterin|canin|\bdog\b", "pet shop"),
+    (r"\bpet\b|petshop|banho e tosa|veterin|canin|\bdog\b|estetica animal", "pet shop"),
     (r"tatuag|tattoo|piercing", "tatuagem"),
     (r"farmac|drogaria|manipulac", "farmácia"),
     (r"hotel|pousada|motel|resort|hostel", "hotel"),
@@ -315,7 +315,7 @@ def limpar_bairro(b):
     b = re.sub(r"\s+", " ", (b or "").strip())
     b = re.sub(r"^(bairro|b\.)\s+", "", b, flags=re.I)
     b = re.split(r"\s*/\s*", b)[0].strip()  # "Vila Rica / Boqueirão", "Pedreira/Enseada": fica o primeiro
-    b = re.sub(r"\s*\|\|\s*$", " II", re.sub(r"\s*\|\s*$", " I", b))  # "Morrinhos ||" é "Morrinhos II"
+    b = re.sub(r"\s*\|\s*$", " I", re.sub(r"\s*\|\|\s*$", " II", b))  # "Morrinhos ||" é "Morrinhos II"
     for re_, por in ABREVIACOES_BAIRRO:
         b = re.sub(re_, por, b, flags=re.I)
     if len(re.sub(r"[^a-z]", "", sem_acento(b))) < 3 or re.match(NAO_E_BAIRRO, sem_acento(b)):

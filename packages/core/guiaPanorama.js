@@ -30,7 +30,16 @@ function nomesDe(categoria) {
   return { um: c.singular, varios: c.plural, fem, quantos: `${fem ? 'Quantas' : 'Quantos'} ${c.plural}` }
 }
 
-export function panoramaDaCidade({ cidade, categoria = '', lugares = [], completos = null }) {
+// as contagens de horário de uma lista com horários: { informam, domingo, cedo, noite } ou null
+export function horasDe(lugares) {
+  const comHorario = (Array.isArray(lugares) ? lugares : []).filter((l) => Array.isArray(l.horarios) && l.horarios.length)
+  if (!comHorario.length) return null
+  const perfis = comHorario.map(perfilDoHorario).filter(Boolean)
+  return { informam: comHorario.length, domingo: perfis.filter((p) => p.domingo).length, cedo: perfis.filter((p) => p.diasCedo.length).length, noite: perfis.filter((p) => p.diasNoite.length).length }
+}
+
+// horas: as contagens já prontas (o resumo.json do gerador, 3.24); sem elas, a conta sai de "completos"
+export function panoramaDaCidade({ cidade, categoria = '', lugares = [], completos = null, horas: horasDadas = undefined }) {
   const n = Array.isArray(lugares) ? lugares.length : 0
   if (!cidade || n < 3) return { paragrafos: [], faq: [], numeros: null }
   const k = nomesDe(categoria)
@@ -44,11 +53,7 @@ export function panoramaDaCidade({ cidade, categoria = '', lugares = [], complet
   const servicos = contar(lugares.flatMap((l) => (Array.isArray(l.servicos) ? l.servicos : []))).slice(0, 4).map(([s]) => String(s).toLowerCase())
   // horários só com a lista completa (os cartões da cidade não trazem horário)
   const fonte = Array.isArray(completos) ? completos.filter((l) => !categoria || l.categoria === categoria) : null
-  const comHorario = fonte ? fonte.filter((l) => Array.isArray(l.horarios) && l.horarios.length) : []
-  const perfis = comHorario.map(perfilDoHorario).filter(Boolean)
-  const horas = fonte && comHorario.length
-    ? { informam: comHorario.length, domingo: perfis.filter((p) => p.domingo).length, cedo: perfis.filter((p) => p.diasCedo.length).length, noite: perfis.filter((p) => p.diasNoite.length).length }
-    : null
+  const horas = horasDadas !== undefined ? (horasDadas && typeof horasDadas === 'object' ? horasDadas : null) : (fonte ? horasDe(fonte) : null)
 
   const paragrafos = []
   // 1. onde estão

@@ -124,6 +124,8 @@
 .pg-instrucao { display: flex; flex-direction: column; gap: 0.35rem; margin: 0; }
 .pg-instrucao input { width: 100%; font: inherit; font-size: 0.86rem; color: var(--texto); border: 1px solid var(--fio); background: var(--cinza-1); border-radius: 10px; padding: 0.5rem 0.75rem; outline: none; }
 .pg-instrucao input:focus { background: #fff; border-color: #ffc2d8; }
+/* 3.24: as listas por partes */
+.pg-lista-mais { display: block; width: 100%; margin: 0.5rem 0; padding: 0.55rem; text-align: center; font-size: 0.84rem; }
 /* 3.22: "Sobre a cidade", só na linha da cidade */
 .pg-contexto { display: grid; gap: 0.5rem; margin: 0.25rem 0 0.75rem; padding: 0.85rem 0.95rem; border: 1px solid var(--fio); border-radius: 14px; background: var(--cinza-1); }
 .pg-contexto-cabeca { display: flex; gap: 0.6rem; align-items: flex-start; color: var(--texto); }

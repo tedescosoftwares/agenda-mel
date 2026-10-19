@@ -17,7 +17,7 @@ import {
   seoDaColecao, jsonLdDaColecao, trilhaDaColecao,
 } from '../src/lib/guiaSeo.js'
 import { colecoesDaCidade, montarColecao, linksDeColecoes, linkDoBairro } from '../src/lib/guiaColecoes.js'
-import { panoramaDaCidade, juntarFaq, tituloDoPanorama } from '../src/lib/guiaPanorama.js'
+import { panoramaDaCidade, juntarFaq, tituloDoPanorama, horasDe } from '../src/lib/guiaPanorama.js'
 import { chaveDoBairro } from '../src/lib/guiaColecoes.js'
 import { mesmaCategoriaDe } from './guia-fonte.mjs'
 
@@ -196,6 +196,8 @@ export function dadosDoGuia(guia) {
       out.push({ caminho: `/dados/guia/${cs}${cat ? `/${cat}` : ''}.json`, dados: d })
     }
     out.push({ caminho: `/dados/guia/${cs}/colecoes.json`, dados: { cidade: doGuia[0].cidade, cidade_slug: cs, uf: doGuia[0].uf, lugares: doGuia.map(paraColecao) } })
+    // o resumo (3.24): o que a página da cidade precisa das coleções, em KB: os links e as contagens de horário
+    out.push({ caminho: `/dados/guia/${cs}/resumo.json`, dados: { links: linksDeColecoes(doGuia, cs), horas: Object.fromEntries(cats.map((cat) => [cat, horasDe(cat ? doGuia.filter((l) => l.categoria === cat) : doGuia)])) } })
     // a página de cada salão: o que guia_pagina() devolve (bairro_slug e os totais como guia_bairro_slug, 157)
     const porBairro = new Map()
     for (const l of doGuia) { const k = chaveDoBairro(l.bairro, cs); if (k) porBairro.set(k, (porBairro.get(k) ?? 0) + 1) }

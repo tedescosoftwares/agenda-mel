@@ -28,6 +28,7 @@ export default function Publicadas({ g }) {
   const [categoria, setCategoria] = useState('')
   const [ordem, setOrdem] = useState('recentes')
   const [editando, setEditando] = useState(null)
+  const [mostrar, setMostrar] = useState(150) // 3.24: por partes
 
   const lista = useMemo(() => {
     const t = norm(busca).trim()
@@ -77,7 +78,7 @@ export default function Publicadas({ g }) {
               <table className="plat-tabela pg-tabela-pub">
                 <thead><tr><th>Salão</th><th>No ar desde</th><th /></tr></thead>
                 <tbody>
-                  {lista.map((l) => {
+                  {lista.slice(0, mostrar).map((l) => {
                     const ger = g.gerando[l.id]
                     return (
                       <tr key={l.id}>
@@ -104,6 +105,9 @@ export default function Publicadas({ g }) {
                   })}
                 </tbody>
               </table>
+              {lista.length > mostrar && (
+                <button type="button" className="plat-link pg-lista-mais" onClick={() => setMostrar((n) => n + 300)}>Mostrar mais {Math.min(300, lista.length - mostrar)} de {lista.length - mostrar}</button>
+              )}
             </div>
           )}
         </>

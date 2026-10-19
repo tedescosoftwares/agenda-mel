@@ -648,6 +648,20 @@ export function fotosDoLugar(l) {
   }
   return out
 }
+// a miniatura de uma foto do guia (3.24): a mesma foto com -p.jpg, 480 px no lado maior, gerada no envio.
+// Só para as do bucket guia; as outras (fotos do salão na MIMO, demo) ficam como estão. Quem mostra
+// usa onError para voltar à foto inteira quando a miniatura não existe (fotos de antes da 3.24)
+export function miniatura(url) {
+  const s = String(url ?? '')
+  return /\/storage\/v1\/object\/public\/guia\//.test(s) ? s.replace(/\.[a-z0-9]+$/i, '-p.jpg') : s
+}
+// a miniatura não existe (foto de antes da 3.24): o <img> volta à foto inteira, uma vez só (onError)
+export const paraFotoInteira = (e) => {
+  const i = e?.currentTarget
+  if (!i || !i.dataset?.cheia || i.dataset.voltou) return
+  i.dataset.voltou = '1'
+  i.src = i.dataset.cheia
+}
 // o texto alternativo de cada foto: diz o que é, para quem não vê a imagem (e para o Google Imagens)
 export function altDaFoto(l, i = 0) {
   const cat = categoriaDoGuia(l?.categoria)

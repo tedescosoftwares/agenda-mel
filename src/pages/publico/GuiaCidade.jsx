@@ -2,14 +2,13 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ArrowRight, ChevronDown, MapPin, Search, Info, Award, CalendarCheck, LayoutGrid, RotateCcw, X, Clock } from 'lucide-react'
 import { useSeo } from '../../lib/seo'
-import { SLUGS_CATEGORIA, GUIA_CATEGORIAS, categoriaDoGuia, conteudoSeguro, semAcento, seoPadraoDaCidade, rotaDaCidade, rotaDaCategoria, quemEsta } from '../../lib/guia'
+import { SLUGS_CATEGORIA, GUIA_CATEGORIAS, categoriaDoGuia, conteudoSeguro, semAcento, seoPadraoDaCidade, rotaDaCidade, rotaDaCategoria, quemEsta, miniatura, paraFotoInteira } from '../../lib/guia'
 import { seoDaCidade, seoDoIndice, trilhaDaCidade, jsonLdDaCidade, jsonLdDoIndice } from '../../lib/guiaSeo'
 import { carregarCidade, carregarCidades } from '../../lib/guiaPublico'
-import { carregarColecoes } from '../../lib/guiaColecoesPublico'
+import { carregarResumo } from '../../lib/guiaColecoesPublico'
 import { artigosResumidos } from '../../lib/conteudoPublico'
 import { artigosDaCidade } from '../../lib/guiaArtigos'
 import { CartaoArtigo } from './PaginaSeo'
-import { linksDeColecoes } from '../../lib/guiaColecoes'
 import { panoramaDaCidade, juntarFaq, tituloDoPanorama } from '../../lib/guiaPanorama'
 import { aoClicarNaPagina } from '../../lib/eventos'
 import { useVisita } from '../../lib/useVisita'
@@ -176,14 +175,14 @@ function Cidade({ dados }) {
   const [colecoes, setColecoes] = useState(null)
   useEffect(() => {
     let vivo = true
-    // a lista completa (com horários) fica guardada: o panorama conta quem abre no domingo e à noite
-    carregarColecoes(cslug).then((d) => vivo && d && setColecoes({ links: linksDeColecoes(d.lugares, cslug), lugares: d.lugares })).catch(() => {})
+    // o resumo (3.24): os links de bairro e horário e as contagens do panorama, em KB, sem a lista completa
+    carregarResumo(cslug).then((d) => vivo && d && setColecoes(d)).catch(() => {})
     return () => { vivo = false }
   }, [cslug])
   const porHorario = colecoes ? (cat ? colecoes.links.categorias[categoria] ?? [] : colecoes.links.horarios) : []
   const porBairro = colecoes && !cat ? colecoes.links.bairros : []
   // o panorama (3.22): os números da lista em frases, e a FAQ dos dados junto com a da IA
-  const panorama = useMemo(() => panoramaDaCidade({ cidade, categoria, lugares, completos: colecoes?.lugares ?? null }), [cidade, categoria, lugares, colecoes])
+  const panorama = useMemo(() => panoramaDaCidade({ cidade, categoria, lugares, horas: colecoes ? (colecoes.horas?.[categoria] ?? null) : undefined }), [cidade, categoria, lugares, colecoes])
   const faq = juntarFaq(pagina?.faq ?? [], panorama.faq)
   useSeo({ titulo: seo.titulo, descricao: seo.descricao, caminho: seo.caminho, jsonLd: jsonLdDaCidade(dados, faq) })
   // "Leia também" (3.14): os artigos do blog que falam desta cidade; e as outras cidades do guia
@@ -224,7 +223,7 @@ function Cidade({ dados }) {
                 return (
                   <Link key={c.categoria} to={rotaDaCategoria(cslug, c.categoria)} className={`gd-tile gd-tom-${c.categoria}` + (c.foto ? ' gd-tile-com-foto' : '') + (atual ? ' gd-tile-on' : '')} aria-current={atual ? 'page' : undefined} style={{ '--i': i + 1 }} title={k.resumo || undefined}>
                     {c.foto
-                      ? <img className="gd-tile-foto" src={c.foto} alt="" decoding="async" />
+                      ? <img className="gd-tile-foto" src={miniatura(c.foto)} data-cheia={c.foto} onError={paraFotoInteira} alt="" decoding="async" />
                       : <IconeCategoria slug={c.categoria} className="gd-tile-fundo" strokeWidth={1.2} aria-hidden="true" />}
                     <span className="gd-tile-ic"><IconeCategoria slug={c.categoria} size={18} /></span>
                     <span className="gd-tile-txt"><b>{k.rotulo}</b><small>{plural(c.total, 'lugar', 'lugares')}</small>{quem && <em>{quem}</em>}</span>

@@ -39,6 +39,9 @@ Deno.serve(async (req) => {
     if (f instanceof File) arquivos.push({ nome: f.name || 'foto', bytes: new Uint8Array(await f.arrayBuffer()) })
   }
   if (!arquivos.length) return json({ erro: 'nenhuma foto no envio' }, 400)
+  // as miniaturas (3.24), pelo mesmo nome da foto; sem elas, o cartão usa a foto inteira
+  const miniaturas = new Map<string, Uint8Array>()
+  for (const f of form.getAll('miniaturas')) if (f instanceof File && f.size > 0 && f.size <= 400_000) miniaturas.set(f.name, new Uint8Array(await f.arrayBuffer()))
 
   // o link vale? e quantas vagas a página tem?
   const { data: info, error: erroInfo } = await db.rpc('guia_fotos_dono', { token_: token })
@@ -57,6 +60,8 @@ Deno.serve(async (req) => {
     const { error } = await db.storage.from('guia').upload(caminho, a.bytes, { contentType: a.tipo.mime, cacheControl: '31536000', upsert: false })
     if (error && !jaExiste(error)) { plano.recusados.push({ nome: a.nome, motivo: error.message || 'não deu para enviar' }); continue }
     urls.push(db.storage.from('guia').getPublicUrl(caminho).data.publicUrl)
+    const mini = miniaturas.get(a.nome)
+    if (mini) await db.storage.from('guia').upload(caminho.replace(/\.[a-z0-9]+$/i, '-p.jpg'), mini, { contentType: 'image/jpeg', cacheControl: '31536000', upsert: false })
   }
   if (!urls.length) return json({ erro: 'não deu para enviar as fotos agora; tente de novo', recusadas: plano.recusados }, 500)
 

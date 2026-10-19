@@ -2,7 +2,7 @@ import { supabase, isDemo } from './supabase'
 import { reduzirFoto } from './imagem'
 
 // As fotos do guia (3.14): reduzidas no navegador (1600 px no lado maior,
-// JPEG) e enviadas ao bucket 'guia'. O nome do objeto sai do conteúdo do
+// JPEG) e enviadas ao bucket 'guia', com a miniatura de 480 px ao lado (-p.jpg, 3.24). O nome do objeto sai do conteúdo do
 // arquivo original (SHA-256): o mesmo arquivo enviado duas vezes, hoje ou
 // daqui a um mês, vira um objeto só, com a mesma URL pública. Usado pelo
 // Editar → Fotos e pela importação em lote (ImportarFotos.jsx).
@@ -27,5 +27,10 @@ export async function enviarFotoDoGuia(lugarId, file, { assinatura } = {}) {
   // já existe (o mesmo arquivo, enviado antes): a URL é a mesma
   const repetida = !!error && /exists|duplicate|409/i.test(`${error.message ?? ''} ${error.statusCode ?? ''}`)
   if (error && !repetida) throw new Error(error.message || 'não deu para enviar a foto')
+  // a miniatura (3.24): 480 px para os cartões das listas, uns 7 vezes menor que a foto; sem ela, o cartão usa a inteira
+  try {
+    const { blob: mini } = await reduzirFoto(file, { max: 480, qualidade: 0.8 })
+    await supabase.storage.from('guia').upload(caminho.replace(/\.jpg$/, '-p.jpg'), mini, { contentType: 'image/jpeg', cacheControl: '31536000', upsert: false })
+  } catch { /* fica sem miniatura */ }
   return { url: supabase.storage.from('guia').getPublicUrl(caminho).data.publicUrl, sha, repetida }
 }

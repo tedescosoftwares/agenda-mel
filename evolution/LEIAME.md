@@ -688,6 +688,23 @@ cd ~/agenda-mel && node scripts/paginas-estaticas.mjs --refazer   # ignora o cac
 ls -la .cache/guia/                                                 # um arquivo por cidade, com a hora da última leitura
 ```
 
+A função que entrega o guia ao gerador exige uma chave desde a 3.24 (migração
+173), para ninguém queimar a saída do Supabase chamando as funções pesadas com
+a chave pública do site. A chave nasce com a migração; leia no SQL Editor do
+Supabase e ponha no `.env` da Evolution:
+
+```sql
+select valor from public.guia_segredos where nome = 'gerador';
+```
+
+```bash
+cd ~/agenda-mel/evolution && nano .env      # GUIA_CHAVE_GERADOR=<o valor>
+./republicar-se-mudou.sh --forcar
+```
+
+Sem a chave, o log diz "chave do gerador inválida" e o guia que está no ar fica
+como está.
+
 Ordem para atualizar: bat **B** (a 171) antes do bat **2**. O gerador novo num
 banco sem a 171 cai na função antiga e avisa; o gerador antigo num banco com a
 171 continua funcionando, só sem a seção "Perto dali" até o bat 2.

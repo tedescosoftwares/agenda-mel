@@ -106,11 +106,11 @@ export const mesmaCategoriaDe = (l, todos, quantos = 8) => todos.filter((o) => o
 export const comVizinhos = (lugares) => lugares.map((l) => ({ ...l, vizinhos: vizinhosDe(l, lugares) }))
 
 // a cidade em fatias (172): a primeira traz os slugs e as páginas; as outras só os salões, a partir do último slug
-export async function buscarCidade(rpc, slug, desde, fatia = FATIA) {
+export async function buscarCidade(rpc, slug, desde, fatia = FATIA, chave = '') {
   let primeira = null, depois = ''
   const lugares = []
   for (let n = 0; n < 1000; n++) {
-    const r = await rpc('guia_publicadas', { cidade_: slug, desde_: desde, depois_: depois, limite_: fatia })
+    const r = await rpc('guia_publicadas', { cidade_: slug, desde_: desde, depois_: depois, limite_: fatia, chave_: chave })
     if (!primeira) primeira = r
     const lote = Array.isArray(r?.lugares) ? r.lugares : []
     lugares.push(...lote)
@@ -120,7 +120,8 @@ export async function buscarCidade(rpc, slug, desde, fatia = FATIA) {
   return { ...primeira, lugares }
 }
 
-export async function carregarGuia({ url, chave, cacheDir, refazer = false, log = console.log, fetchFn = globalThis.fetch, fatia = FATIA }) {
+// chaveGerador: a chave que guia_publicadas exige desde a 173 (GUIA_CHAVE_GERADOR no .env da Evolution)
+export async function carregarGuia({ url, chave, cacheDir, refazer = false, log = console.log, fetchFn = globalThis.fetch, fatia = FATIA, chaveGerador = '' }) {
   const rpc = async (nome, corpo) => {
     const r = await fetchFn(`${url}/rest/v1/rpc/${nome}`, { method: 'POST', headers: { apikey: chave, Authorization: `Bearer ${chave}`, 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) })
     if (!r.ok) {
@@ -130,13 +131,14 @@ export async function carregarGuia({ url, chave, cacheDir, refazer = false, log 
     }
     return r.json()
   }
+  if (!chaveGerador) log('guia-fonte: sem GUIA_CHAVE_GERADOR no .env; a função do guia recusa sem a chave (173). Leia: select valor from public.guia_segredos where nome = \'gerador\'')
   const cidades = await rpc('guia_cidades', {})
   if (!Array.isArray(cidades)) throw new Error('guia_cidades não devolveu a lista de cidades')
   const lugares = [], paginas = []
   let novos = 0, doCache = 0
   for (const c of cidades) {
     if (!c?.cidade_slug) continue
-    const d = await lerCidade({ buscar: (slug, desde) => buscarCidade(rpc, slug, desde, fatia), slug: c.cidade_slug, cacheDir, refazer, log })
+    const d = await lerCidade({ buscar: (slug, desde) => buscarCidade(rpc, slug, desde, fatia, chaveGerador), slug: c.cidade_slug, cacheDir, refazer, log })
     lugares.push(...comVizinhos(d.lugares))
     paginas.push(...d.paginas)
     novos += d.novos ?? 0

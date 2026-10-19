@@ -151,6 +151,9 @@ export default function Revisar({ g, rev, setRev }) {
     return l.id === rev.selId || (status === 'todos' ? f !== 'removido' : f === status)
   }), rev.ordem), [base, status, rev.selId, rev.ordem, faseDe])
   const indice = lista.findIndex((l) => l.id === rev.selId)
+  // 3.24: a lista aparece por partes (uma cidade grande tem milhares); o escolhido sempre aparece
+  const [mostrar, setMostrar] = useState(150)
+  const mostrados = Math.max(mostrar, indice + 1)
   const atual = indice >= 0 ? lista[indice] : null
   const doAtual = porSalao.id === rev.selId ? porSalao : { instr: '', versao: 'rascunho', erro: '' }
   const { instr, versao, erro: erroAcao } = doAtual
@@ -418,7 +421,7 @@ export default function Revisar({ g, rev, setRev }) {
                     : <p>Nada por aqui.</p>}
             </div>
           )}
-          {lista.map((l) => {
+          {lista.slice(0, mostrados).map((l) => {
             const f = g.faseDe(l)
             const ger = g.gerando[l.id]
             return (
@@ -437,6 +440,9 @@ export default function Revisar({ g, rev, setRev }) {
               </button>
             )
           })}
+          {lista.length > mostrados && (
+            <button type="button" className="plat-link pg-lista-mais" onClick={() => setMostrar((n) => n + 300)}>Mostrar mais {Math.min(300, lista.length - mostrados)} de {lista.length - mostrados}</button>
+          )}
         </div>
       </aside>
 

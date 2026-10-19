@@ -11,7 +11,7 @@ import { Coracao, comecarEm } from '../site/Pecas'
 import {
   categoriaDoGuia, conteudoSeguro, faqDaPagina, horariosResumo, horariosEmUmaLinha, abertoAgora,
   linkMapa, linkWhatsDoTel, linkInstagram, telefoneBonito, soDigitosTel, rotaDoLugar, rotaDaCategoria, rotaDaCidade, atributosEmTexto,
-  fotosDoLugar, altDaFoto,
+  fotosDoLugar, altDaFoto, miniatura, paraFotoInteira,
 } from '../../lib/guia'
 import { trilhaDoLugar } from '../../lib/guiaSeo'
 import { linkDoBairro } from '../../lib/guiaColecoes'
@@ -263,7 +263,7 @@ export default function PaginaDoLugar({ lugar, conteudo, vizinhos = [], mesmaCat
               <div className="gd-fotos">
                 {fotos.map((f, i) => (
                   <button key={f} type="button" className="gd-foto" onClick={() => setFotoAberta(i)} aria-label={`Abrir a foto ${i + 1} de ${fotos.length}`}>
-                    <img src={f} alt={altDaFoto(l, i)} loading="lazy" decoding="async" />
+                    <img src={miniatura(f)} data-cheia={f} onError={paraFotoInteira} alt={altDaFoto(l, i)} loading="lazy" decoding="async" />
                   </button>
                 ))}
               </div>
@@ -506,7 +506,7 @@ export function CartaoLugar({ lugar, cidadeSlug, cidade, previa = false }) {
   return (
     <Ir previa={previa} to={rotaDoLugar(cidadeSlug, lugar.slug)} className="gd-cartao ld-rv">
       {foto ? (
-        <span className="gd-cartao-capa gd-cartao-foto"><img src={foto} alt="" loading="lazy" decoding="async" /></span>
+        <span className="gd-cartao-capa gd-cartao-foto"><img src={miniatura(foto)} data-cheia={foto} onError={paraFotoInteira} alt="" loading="lazy" decoding="async" /></span>
       ) : (
         <span className={`gd-cartao-capa gd-tom-${lugar.categoria}`} aria-hidden="true">
           <IconeCategoria slug={lugar.categoria} className="gd-cartao-fundo" strokeWidth={1.2} />

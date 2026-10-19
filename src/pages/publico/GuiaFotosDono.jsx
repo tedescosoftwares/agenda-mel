@@ -27,15 +27,19 @@ async function infoDoLink(token) {
   return data ?? { ok: false, motivo: 'link inválido' }
 }
 
-async function enviarFotos(token, blobs) {
+async function enviarFotos(token, itens) {
   if (isDemo) {
     await new Promise((r) => setTimeout(r, 600))
-    return { ok: true, novas: blobs.length, fotos: blobs.map((_, i) => `${FOTOS_DEMO[i % FOTOS_DEMO.length]}?dono=${i}`), recusadas: [] }
+    return { ok: true, novas: itens.length, fotos: itens.map((_, i) => `${FOTOS_DEMO[i % FOTOS_DEMO.length]}?dono=${i}`), recusadas: [] }
   }
   const fd = new FormData()
   fd.append('token', token)
   fd.append('aceite', 'sim')
-  for (const [i, b] of blobs.entries()) fd.append('fotos', b, `foto-${i + 1}.jpg`)
+  // a foto (1600 px) e a miniatura (480 px, 3.24) com o mesmo nome: a função guarda as duas
+  for (const [i, it] of itens.entries()) {
+    fd.append('fotos', it.blob, `foto-${i + 1}.jpg`)
+    if (it.mini) fd.append('miniaturas', it.mini, `foto-${i + 1}.jpg`)
+  }
   const ctrl = new AbortController()
   const t = setTimeout(() => ctrl.abort(), PRAZO_ENVIO)
   try {
@@ -95,7 +99,8 @@ export default function GuiaFotosDono() {
     for (const f of arquivos) {
       try {
         const { blob, preview } = await reduzirFoto(f, { max: 1600, qualidade: 0.84 })
-        novas.push({ id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, blob, preview, nome: f.name })
+        const mini = await reduzirFoto(f, { max: 480, qualidade: 0.8 }).then((r) => r.blob).catch(() => null)
+        novas.push({ id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, blob, mini, preview, nome: f.name })
       } catch (err) {
         setErro(`${f.name}: ${err.message}`)
       }
@@ -110,7 +115,7 @@ export default function GuiaFotosDono() {
     if (!escolhidas.length) return setErro('Escolha pelo menos uma foto.')
     if (!aceite) return setErro('Confirme que as fotos são do salão.')
     setErro(''); setEnviando(true)
-    const r = await enviarFotos(String(token).toLowerCase(), escolhidas.map((x) => x.blob))
+    const r = await enviarFotos(String(token).toLowerCase(), escolhidas)
     setEnviando(false)
     if (!r.ok) { setErro(r.erro.charAt(0).toUpperCase() + r.erro.slice(1) + '.'); return }
     setFeito({ novas: r.novas ?? escolhidas.length, fotos: r.fotos, recusadas: r.recusadas ?? [] })

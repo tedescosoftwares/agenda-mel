@@ -212,7 +212,7 @@ if (URL && CHAVE && !globalThis.process.env.VITE_DEMO) {
   try {
     let guia
     try {
-      guia = await carregarGuia({ url: URL, chave: CHAVE, cacheDir: path.resolve('.cache/guia'), refazer: REFAZER, log: (m) => console.log(`paginas-estaticas: ${m}`) })
+      guia = await carregarGuia({ url: URL, chave: CHAVE, cacheDir: path.resolve('.cache/guia'), refazer: REFAZER, chaveGerador: globalThis.process.env.GUIA_CHAVE_GERADOR || '', log: (m) => console.log(`paginas-estaticas: ${m}`) })
     } catch (e) {
       const r = await fetch(`${URL}/rest/v1/rpc/guia_publicadas`, { headers: { apikey: CHAVE, Authorization: `Bearer ${CHAVE}` } })
       if (!r.ok) throw new Error(`${e.message}; e ${r.status} em rpc/guia_publicadas de uma vez`)

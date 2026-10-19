@@ -1,5 +1,8 @@
 import { supabase } from './supabase'
 import { doServidor } from './guiaPublico'
+import { linksDeColecoes } from './guiaColecoes'
+import { horasDe } from './guiaPanorama'
+import { GUIA_CATEGORIAS } from './guia'
 
 // Os dados das páginas de coleção do guia (3.12): os salões no ar de uma
 // cidade, com bairro, categoria, horário, serviços e atributos, pela
@@ -28,5 +31,26 @@ export function carregarColecoes(cidade) {
     return data && Array.isArray(data.lugares) ? data : null
   })().catch((e) => { cache.delete(c); throw e })
   cache.set(c, { em: Date.now(), promessa })
+  return promessa
+}
+
+// 3.24: o que a página da cidade precisa das coleções, em alguns KB: os links de bairro e horário e as
+// contagens de horário por categoria (o panorama). Primeiro o resumo.json do gerador; sem ele, a lista
+// completa de cima e a conta aqui mesmo
+const cacheResumo = new Map()
+export function carregarResumo(cidade) {
+  const c = String(cidade ?? '').trim().toLowerCase().replace(/\/+$/, '')
+  const guardado = cacheResumo.get(c)
+  if (guardado && Date.now() - guardado.em < VALIDADE) return guardado.promessa
+  const promessa = (async () => {
+    const pronto = await doServidor(`/dados/guia/${c}/resumo.json`)
+    if (pronto && pronto.links && pronto.horas) return pronto
+    const d = await carregarColecoes(c)
+    if (!d) return null
+    const horas = { '': horasDe(d.lugares) }
+    for (const k of GUIA_CATEGORIAS) horas[k.slug] = horasDe(d.lugares.filter((l) => l.categoria === k.slug))
+    return { links: linksDeColecoes(d.lugares, c), horas }
+  })().catch((e) => { cacheResumo.delete(c); throw e })
+  cacheResumo.set(c, { em: Date.now(), promessa })
   return promessa
 }

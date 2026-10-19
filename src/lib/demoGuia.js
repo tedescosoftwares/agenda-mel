@@ -497,7 +497,7 @@ export const GUIA_RPC = {
 const ANGULOS = ['o bairro e a praticidade', 'o serviço principal em detalhe', 'para quem é', 'como é a primeira visita', 'rotina de cuidado entre as visitas']
 // 3.27: o demo ecoa a IA escolhida na Plataforma, para a tela mostrar qual escreveu
 const provedorDemo = (corpo) => (corpo?.provedor === 'groq' ? 'groq' : 'gemini')
-const modeloDemo = (corpo) => (provedorDemo(corpo) === 'groq' ? 'openai/gpt-oss-120b' : 'gemini-2.5-pro')
+const modeloDemo = (corpo) => (provedorDemo(corpo) === 'groq' ? 'openai/gpt-oss-120b' : 'gemini-3.1-pro-preview')
 export async function demoGuiaGerar(corpo) {
   await new Promise((r) => setTimeout(r, 900))
   if (corpo?.pagina) {

@@ -305,7 +305,7 @@ teste('corpo da requisição: json_schema estrito, temperatura, reserva de token
   const outro = corpoDaRequisicao({ modelo: 'grok-4-fast', mensagens: msgs, tipo: 'pagina', formato: 'json_object' })
   assert.equal(outro.reasoning_effort, undefined)
   // 3.26.1: o Gemini pensa antes de responder e o raciocínio conta no limite; pede pouco raciocínio e folga de tokens
-  const gem = corpoDaRequisicao({ modelo: 'gemini-2.5-pro', mensagens: msgs, tipo: 'pagina' })
+  const gem = corpoDaRequisicao({ modelo: 'gemini-3.1-pro-preview', mensagens: msgs, tipo: 'pagina' })
   assert.equal(gem.max_tokens, MAX_TOKENS_COM_RACIOCINIO)
   assert.equal(gem.reasoning_effort, 'low')
   assert.equal(corpoDaRequisicao({ modelo: 'moonshotai/kimi-k2-instruct', mensagens: msgs, tipo: 'pagina' }).max_tokens, MAX_TOKENS, 'modelo que responde direto fica com o limite de sempre')
@@ -753,7 +753,7 @@ teste('o provedor vem do pedido, senão do padrão, senão o Gemini se tiver cha
   const env = (o: Record<string, string>) => ({ get: (n: string) => o[n] })
   const ambos = provedoresDe(env({ GEMINI_API_KEY: 'g1', GROQ_API_KEY: 'q1', GUIA_IA_MODELO: 'qwen/qwen3.8-27b' }))
   assert.equal(ambos.gemini.url, URL_GEMINI)
-  assert.equal(ambos.gemini.modelo, 'gemini-2.5-pro')
+  assert.equal(ambos.gemini.modelo, 'gemini-3.1-pro-preview')
   assert.equal(ambos.groq.url, URL_GROQ)
   assert.equal(ambos.groq.modelo, 'qwen/qwen3.8-27b', 'GUIA_IA_MODELO continua sendo o modelo do Groq')
   const r1 = escolherProvedor(undefined, ambos)

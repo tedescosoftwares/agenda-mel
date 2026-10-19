@@ -173,7 +173,18 @@ export function paginasDoGuia(guia, artigos = []) {
 // O mesmo que guia_cidades(), guia_cidade(), guia_colecoes() e guia_pagina() devolvem, gravado em
 // dist/dados/guia/ a cada regeneração. O site lê daqui (Caddy, gzip, de graça) e só vai ao Supabase
 // quando o arquivo não existe. [{ caminho, dados }]
+//
+// 3.25, a lista por partes: a página da cidade de Praia Grande baixava 1 MB (2.271 cartões) antes de
+// mostrar 24. Agora o JSON da cidade (e o de cada categoria) leva só a primeira parte (POR_PARTE
+// cartões) e os totais em "lista"; as outras partes ficam em lista/<todos|categoria>-<n>.json e a
+// lista inteira (para a busca, o bairro e a ordem por distância) em lista/<todos|categoria>.json, lidas
+// só quando a pessoa pede. O panorama, que contava a lista inteira na página, vem pronto no resumo.json;
+// e cada coleção (bairro, horário) vem montada em colecao/<tipo>-<valor>[-<categoria>].json, alguns KB
+// em vez do colecoes.json inteiro (2 MB), que continua como reserva.
+export const POR_PARTE = 48
 const semVizinhos = ({ vizinhos: _vizinhos, ...l }) => l
+// uma coleção pronta: o que montarColecao() devolve, sem a lista crua dos lugares (o site usa os cartões)
+const colecaoPronta = ({ lugares: _lugares, ...m }) => m
 const paraColecao = (l) => ({
   slug: l.slug, nome: l.nome, cidade: l.cidade, cidade_slug: l.cidade_slug, uf: l.uf, bairro: l.bairro ?? null, endereco: l.endereco ?? null, categoria: l.categoria,
   horarios: l.horarios ?? null, servicos: Array.isArray(l.servicos) ? l.servicos : [], atributos: l.atributos ?? {},
@@ -191,13 +202,25 @@ export function dadosDoGuia(guia) {
   for (const cs of cidades) {
     const doGuia = lugares.filter((l) => l.cidade_slug === cs)
     const cats = ['', ...GUIA_CATEGORIAS.map((g) => g.slug).filter((s) => doGuia.some((l) => l.categoria === s))]
+    const panoramas = {}
     for (const cat of cats) {
       const { atualizado: _atualizado, ...d } = dadosDaCidade(lugares, paginas, cs, cat)
-      out.push({ caminho: `/dados/guia/${cs}${cat ? `/${cat}` : ''}.json`, dados: d })
+      const todos = d.lugares
+      const nome = cat || 'todos'
+      const partes = Math.max(1, Math.ceil(todos.length / POR_PARTE))
+      out.push({ caminho: `/dados/guia/${cs}${cat ? `/${cat}` : ''}.json`, dados: { ...d, lugares: todos.slice(0, POR_PARTE), lista: { total: todos.length, partes, por_parte: POR_PARTE } } })
+      for (let p = 2; p <= partes; p++) out.push({ caminho: `/dados/guia/${cs}/lista/${nome}-${p}.json`, dados: { lugares: todos.slice((p - 1) * POR_PARTE, p * POR_PARTE) } })
+      if (partes > 1) out.push({ caminho: `/dados/guia/${cs}/lista/${nome}.json`, dados: { lugares: todos } })
+      // o panorama pronto (3.25): a página não tem mais a lista inteira para contar
+      panoramas[cat] = panoramaDaCidade({ cidade: d.cidade, categoria: cat, lugares: todos, completos: doGuia })
     }
     out.push({ caminho: `/dados/guia/${cs}/colecoes.json`, dados: { cidade: doGuia[0].cidade, cidade_slug: cs, uf: doGuia[0].uf, lugares: doGuia.map(paraColecao) } })
-    // o resumo (3.24): o que a página da cidade precisa das coleções, em KB: os links e as contagens de horário
-    out.push({ caminho: `/dados/guia/${cs}/resumo.json`, dados: { links: linksDeColecoes(doGuia, cs), horas: Object.fromEntries(cats.map((cat) => [cat, horasDe(cat ? doGuia.filter((l) => l.categoria === cat) : doGuia)])) } })
+    // o resumo (3.24): o que a página da cidade precisa das coleções, em KB: os links, as contagens de horário e (3.25) o panorama
+    out.push({ caminho: `/dados/guia/${cs}/resumo.json`, dados: { links: linksDeColecoes(doGuia, cs), horas: Object.fromEntries(cats.map((cat) => [cat, horasDe(cat ? doGuia.filter((l) => l.categoria === cat) : doGuia)])), panoramas } })
+    // cada coleção pronta (3.25): a página de bairro ou de horário lê só a dela
+    for (const col of colecoesDaCidade(doGuia, cs)) {
+      out.push({ caminho: `/dados/guia/${cs}/colecao/${col.tipo}-${col.valor}${col.categoria ? `-${col.categoria}` : ''}.json`, dados: colecaoPronta(montarColecao(col, doGuia)) })
+    }
     // a página de cada salão: o que guia_pagina() devolve (bairro_slug e os totais como guia_bairro_slug, 157)
     const porBairro = new Map()
     for (const l of doGuia) { const k = chaveDoBairro(l.bairro, cs); if (k) porBairro.set(k, (porBairro.get(k) ?? 0) + 1) }

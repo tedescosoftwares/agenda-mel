@@ -57,7 +57,8 @@ export default function Interesses({ g }) {
   const [filtroReiv, setFiltroReiv] = useState('abertas')
   const [confirmacoes, setConfirmacoes] = useState({})
   const [mudando, setMudando] = useState(null)
-  const porId = useMemo(() => new Map(g.lugares.map((l) => [l.id, l])), [g.lugares])
+  // o salão de cada pedido (3.25): pela lista carregada ou pelos que vieram à parte, de qualquer cidade
+  const achar = (id) => g.lugarPorId(id) ?? undefined
 
   // ---- as reivindicações ----
   const reivs = useMemo(() => g.interesses.filter((i) => i.tipo === 'sou_dono').sort((a, b) => String(b.criado_em).localeCompare(String(a.criado_em))), [g.interesses])
@@ -86,7 +87,7 @@ export default function Interesses({ g }) {
     const r = await g.salvarInteresse(i.id, campos)
     setMudando(null)
     if (!r.ok) { g.avisar({ texto: /status|column/i.test(r.erro ?? '') ? 'Rode a migração 159 (supabase/159_guia_reivindicar.sql) para mudar o status.' : r.erro, tom: 'erro' }); return }
-    g.avisar(`${porId.get(i.lugar_id)?.nome ?? 'Reivindicação'}: ${ROTULO_STATUS[novo].toLowerCase()}.`)
+    g.avisar(`${achar(i.lugar_id)?.nome ?? 'Reivindicação'}: ${ROTULO_STATUS[novo].toLowerCase()}.`)
   }
 
   // o ranking de venda: quem mais tem gente querendo marcar pela MIMO
@@ -148,7 +149,7 @@ export default function Interesses({ g }) {
             {listaReiv.length === 0 ? <Vazio>{filtroReiv === 'abertas' ? 'Nenhuma reivindicação aberta. Tudo respondido.' : 'Nenhuma reivindicação aqui.'}</Vazio> : (
               <ul className="pg-reiv-lista">
                 {listaReiv.map((i) => {
-                  const l = porId.get(i.lugar_id)
+                  const l = achar(i.lugar_id)
                   const s = statusDe(i)
                   const zap = ehTelefone(i.contato) ? linkWhatsDoTel(i.contato, mensagemPara(i, l)) : null
                   const correio = i.email ? `mailto:${i.email}?subject=${encodeURIComponent(`Sua página no guia da MIMO: ${l?.nome ?? 'o salão'}`)}` : null
@@ -199,7 +200,7 @@ export default function Interesses({ g }) {
         {ranking.length === 0 ? <Vazio>Ninguém pediu ainda. Os pedidos aparecem quando alguém toca em “Quero marcar aqui pelo app” numa página.</Vazio> : (
           <ol className="pg-ranking">
             {ranking.map((r, n) => {
-              const l = porId.get(r.lugar_id)
+              const l = achar(r.lugar_id)
               const zap = l && (l.whatsapp || (ehCelular(l.telefone) && l.telefone))
               const texto = `Oi! Aqui é da MIMO. ${r.total} ${r.total === 1 ? 'pessoa pediu' : 'pessoas pediram'} para marcar horário no ${l?.nome ?? 'salão'} pelo nosso app. Posso te mostrar como ativar a agenda grátis?`
               return (
@@ -228,7 +229,7 @@ export default function Interesses({ g }) {
               <thead><tr><th>Pedido</th><th>Salão</th><th>Quem</th><th>Mensagem</th><th /></tr></thead>
               <tbody>
                 {lista.map((i) => {
-                  const l = porId.get(i.lugar_id)
+                  const l = achar(i.lugar_id)
                   const zap = ehTelefone(i.contato) ? linkWhatsDoTel(i.contato, mensagemPara(i, l)) : null
                   return (
                     <tr key={i.id} className={i.atendido_em ? 'pg-atendido' : ''}>

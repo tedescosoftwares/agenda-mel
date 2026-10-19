@@ -271,6 +271,7 @@ export default function ImportarFotos({ g }) {
         {(csv || arquivos.length > 0) && !andamento && <button type="button" className="plat-link" onClick={() => { setCsv(null); setArquivos([]); limpar() }}><X size={14} /> Limpar</button>}
       </div>
       {erro && <div className="alert alert-error">{erro}</div>}
+      {g.cidade && <p className="pg-nota"><Info size={13} /> A conferência usa os salões da cidade escolhida no alto da tela ({g.cidades.find((c) => c.slug === g.cidade)?.nome ?? g.cidade}). Fotos de outra cidade: troque lá antes, ou escolha "Todas as cidades".</p>}
 
       {analise && !relatorio && (
         <div className="pg-relatorio pg-fl-previa">

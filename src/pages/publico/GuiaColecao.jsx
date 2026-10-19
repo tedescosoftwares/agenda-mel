@@ -3,9 +3,9 @@ import { Link, useParams } from 'react-router-dom'
 import { ChevronDown, Clock, Info, LayoutGrid, MapPin, Search, X } from 'lucide-react'
 import { useSeo } from '../../lib/seo'
 import { categoriaDoGuia, rotaDaCidade, rotaDaCategoria, semAcento } from '../../lib/guia'
-import { acharColecao, montarColecao, rotuloDoHorario } from '../../lib/guiaColecoes'
+import { rotuloDoHorario } from '../../lib/guiaColecoes'
 import { seoDaColecao, jsonLdDaColecao, trilhaDaColecao } from '../../lib/guiaSeo'
-import { carregarColecoes } from '../../lib/guiaColecoesPublico'
+import { carregarColecao } from '../../lib/guiaColecoesPublico'
 import { aoClicarNaPagina } from '../../lib/eventos'
 import { useVisita } from '../../lib/useVisita'
 import { NavSite, PeSite, useRevelar } from '../../components/site/Pecas'
@@ -23,9 +23,10 @@ import '../../guia-colecao.css'
 //   /saloes/itanhaem/bairro/centro           os salões de um bairro
 //   /saloes/itanhaem/horario/domingo         os que abrem no domingo (cedo, noite, sábado o dia todo)
 //   /saloes/itanhaem/horario/domingo/unhas   o mesmo horário numa categoria
-// O banco manda os salões no ar da cidade (guia_colecoes, 157); quais coleções
-// existem e o texto de cada uma saem de guiaColecoes.js, o mesmo que o HTML
-// estático usa. Coleção abaixo do mínimo de salões não existe (404).
+// A coleção vem pronta do servidor (3.25: um JSON por coleção, montado pelo
+// gerador com guiaColecoes.js, o mesmo que o HTML estático usa); sem o
+// arquivo, os salões no ar da cidade (guia_colecoes, 157) e a montagem aqui.
+// Coleção abaixo do mínimo de salões não existe (404).
 export default function GuiaColecao({ tipo }) {
   const { cidade, valor, categoria = '' } = useParams()
   const c = String(cidade ?? '').toLowerCase(), v = String(valor ?? '').toLowerCase(), cat = String(categoria).toLowerCase()
@@ -45,12 +46,8 @@ function PaginaDaColecao({ cidade, tipo, valor, categoria }) {
   useEffect(() => { window.scrollTo(0, 0) }, [])
   useEffect(() => {
     let vivo = true
-    carregarColecoes(cidade)
-      .then((d) => {
-        if (!vivo) return
-        const col = d ? acharColecao(d.lugares, tipo, valor, categoria, cidade) : null
-        setDados(col ? montarColecao(col, d.lugares) : null)
-      })
+    carregarColecao(cidade, tipo, valor, categoria)
+      .then((m) => vivo && setDados(m ?? null))
       .catch(() => vivo && setDados('erro'))
     return () => { vivo = false }
   }, [cidade, tipo, valor, categoria, tentativa])

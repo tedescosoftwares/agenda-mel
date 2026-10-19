@@ -1,6 +1,6 @@
 import { supabase } from './supabase'
 import { doServidor } from './guiaPublico'
-import { linksDeColecoes } from './guiaColecoes'
+import { linksDeColecoes, acharColecao, montarColecao } from './guiaColecoes'
 import { horasDe } from './guiaPanorama'
 import { GUIA_CATEGORIAS } from './guia'
 
@@ -52,5 +52,25 @@ export function carregarResumo(cidade) {
     return { links: linksDeColecoes(d.lugares, c), horas }
   })().catch((e) => { cacheResumo.delete(c); throw e })
   cacheResumo.set(c, { em: Date.now(), promessa })
+  return promessa
+}
+
+// 3.25: cada coleção vem pronta num arquivo próprio (o gerador grava o que montarColecao() devolve, alguns KB);
+// sem ele, a lista inteira da cidade e a montagem aqui, como antes. { ...coleção montada } | null (não existe)
+const cacheColecao = new Map()
+export function carregarColecao(cidade, tipo, valor, categoria = '') {
+  const limpar = (v) => String(v ?? '').trim().toLowerCase().replace(/\/+$/, '')
+  const c = limpar(cidade), t = limpar(tipo), v = limpar(valor), cat = limpar(categoria)
+  const chave = `${c}/${t}/${v}/${cat}`
+  const guardado = cacheColecao.get(chave)
+  if (guardado && Date.now() - guardado.em < VALIDADE) return guardado.promessa
+  const promessa = (async () => {
+    const pronto = await doServidor(`/dados/guia/${c}/colecao/${t}-${v}${cat ? `-${cat}` : ''}.json`)
+    if (pronto && Array.isArray(pronto.cartoes) && pronto.caminho) return pronto
+    const d = await carregarColecoes(c)
+    const col = d ? acharColecao(d.lugares, t, v, cat, c) : null
+    return col ? montarColecao(col, d.lugares) : null
+  })().catch((e) => { cacheColecao.delete(chave); throw e })
+  cacheColecao.set(chave, { em: Date.now(), promessa })
   return promessa
 }

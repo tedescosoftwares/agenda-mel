@@ -56,6 +56,29 @@ export function carregarCidade(cidade, categoria = '') {
   return lembrar(`cidade:${c}/${cat}`, async () => (await doServidor(`/dados/guia/${c}${cat ? `/${cat}` : ''}.json`)) ?? rpc('guia_cidade', { cidade_: c, categoria_: cat }))
 }
 
+// 3.25: a lista da cidade (ou da categoria) vem por partes. O JSON da cidade traz a primeira parte e os totais
+// em "lista" ({ total, partes, por_parte }); as outras partes ficam em /dados/guia/<cidade>/lista/<categoria|todos>-<n>.json
+// e a lista inteira (busca, bairro, distância) em /dados/guia/<cidade>/lista/<categoria|todos>.json. Sem os arquivos
+// (desenvolvimento, demo), a função do banco já mandou tudo de uma vez e a página nem chama estes dois.
+// [cartões] | null (o arquivo não está lá)
+export function carregarParte(cidade, categoria, n) {
+  const c = limpar(cidade), cat = limpar(categoria) || 'todos'
+  return lembrar(`parte:${c}/${cat}/${n}`, async () => {
+    const d = await doServidor(`/dados/guia/${c}/lista/${cat}-${Number(n)}.json`)
+    return Array.isArray(d?.lugares) ? d.lugares : null
+  })
+}
+export function carregarListaInteira(cidade, categoria = '') {
+  const c = limpar(cidade), cat = limpar(categoria)
+  return lembrar(`lista:${c}/${cat}`, async () => {
+    const d = await doServidor(`/dados/guia/${c}/lista/${cat || 'todos'}.json`)
+    if (Array.isArray(d?.lugares)) return d.lugares
+    // a reserva: a função do banco (desde a 173 só para quem está logado)
+    const r = await rpc('guia_cidade', { cidade_: c, categoria_: cat })
+    return Array.isArray(r?.lugares) ? r.lugares : null
+  })
+}
+
 // [{ cidade, cidade_slug, uf, total }]
 export function carregarCidades() {
   return lembrar('cidades', async () => {

@@ -499,3 +499,10 @@ select.gd-bairro-sel[data-ativo='1'] { background-color: var(--ld-ameixa); borde
   .gd-tiles { grid-auto-columns: 164px; }
   .ld .gd-tiles .gd-tile { min-height: 138px; }
 }
+
+/* a lista por partes (3.25): a próxima parte chega do servidor; a busca pede a lista inteira */
+.gd-gira { animation: gd-gira 0.9s linear infinite; vertical-align: -2px; }
+@keyframes gd-gira { to { transform: rotate(360deg); } }
+.gd-lista-lendo { color: var(--ld-cinza); }
+.gd-lista-falha { text-align: center; margin: 14px 0 0; color: var(--ld-cinza); font-size: 0.9rem; }
+.gd-mais .ld-btn:disabled { opacity: 0.7; cursor: wait; }

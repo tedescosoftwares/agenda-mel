@@ -337,7 +337,7 @@ export default function Revisar({ g, rev, setRev }) {
   // os filtros da lista em palavras, para o modal "Em lote" dizer o que vai mexer (3.18)
   const resumoLote = [
     status === 'removido' ? 'Removidos' : (FASES.find(([id]) => id === status)?.[1] ?? 'Todos'),
-    rev.cidade ? (cidades.find(([s]) => s === rev.cidade)?.[1] ?? rev.cidade) : 'todas as cidades', rev.bairro ? `bairro ${rev.bairro}` : '',
+    rev.cidade ? (cidades.find(([s]) => s === rev.cidade)?.[1] ?? rev.cidade) : g.cidade ? (g.cidades.find((c) => c.slug === g.cidade)?.nome ?? g.cidade) : 'todas as cidades', rev.bairro ? `bairro ${rev.bairro}` : '',
     rev.categoria ? categoriaDoGuia(rev.categoria).rotulo : '', rev.triagem ? TRIAGENS.find(([id]) => id === rev.triagem)?.[1] : '',
     rev.receita ? 'validados na Receita' : '', rev.selecao ? 'Seleção MIMO' : '', rev.busca.trim() ? `busca "${rev.busca.trim()}"` : '',
   ].filter(Boolean).join(' · ')

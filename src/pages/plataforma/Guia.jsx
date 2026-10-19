@@ -9,12 +9,13 @@ import Revisar from '../../components/plataforma/guia/Revisar'
 import Publicadas from '../../components/plataforma/guia/Publicadas'
 import Importar from '../../components/plataforma/guia/Importar'
 import ImportarFotos from '../../components/plataforma/guia/ImportarFotos'
+import MiniaturasAntigas from '../../components/plataforma/guia/MiniaturasAntigas'
 import PaginasCidade from '../../components/plataforma/guia/PaginasCidade'
 import Interesses from '../../components/plataforma/guia/Interesses'
 import Desempenho from '../../components/plataforma/guia/Desempenho'
 import Abordagem from '../../components/plataforma/guia/Abordagem'
 import { naoContarAqui } from '../../lib/eventos'
-import { ClipboardCheck, Globe2, Upload, MapPinned, Inbox, X, BarChart3, Handshake } from 'lucide-react'
+import { ClipboardCheck, Globe2, Upload, MapPinned, Inbox, X, BarChart3, Handshake, MapPin, RefreshCw, LoaderCircle } from 'lucide-react'
 import '../../guia-plataforma.css'
 
 // Guia de salões (3.9): uma página pública para cada salão da região, que
@@ -29,6 +30,13 @@ import '../../guia-plataforma.css'
 // reescrever um salão. Os dados vêm direto das tabelas (RLS eh_plataforma)
 // e das RPCs da 153; no modo demonstração as mesmas chamadas caem no
 // src/lib/demo.js.
+//
+// 3.25 (migração 174): a tela abre só com os totais por cidade e por fase
+// (guia_resumo, alguns KB), escolhe uma cidade (a lembrada; senão a que tem
+// mais trabalho) e lê a lista magra daquela cidade. Trocar de cidade lê a
+// outra (e guarda em memória); "Todas as cidades" é escolha explícita. Os
+// salões que os interesses citam vêm à parte, de qualquer cidade. Num banco
+// sem a 174, tudo de uma vez, como antes.
 
 const ABAS = [
   ['revisar', 'Revisar', ClipboardCheck],
@@ -79,11 +87,11 @@ async function lerDesempenho(dias, cidade = '') {
   }
 }
 
-// o Supabase entrega no máximo 1000 linhas por vez; o demo não pagina
-async function lerTudo(tabela, colunas, ordem) {
+// o Supabase entrega no máximo 1000 linhas por vez; o demo não pagina. filtro: a cidade (3.25)
+async function lerTudo(tabela, colunas, ordem, filtro = (q) => q) {
   const todas = []
   for (let de = 0; ; de += 1000) {
-    let q = supabase.from(tabela).select(colunas).order(ordem).order('id')
+    let q = filtro(supabase.from(tabela).select(colunas)).order(ordem).order('id')
     const pagina = typeof q.range === 'function'
     if (pagina) q = q.range(de, de + 999)
     const { data, error } = await q
@@ -128,21 +136,75 @@ async function rascunhoGravadoDepois(tabela, id, desde) {
   return data?.rascunho && data.gerado_em && new Date(data.gerado_em).getTime() >= desde - 5000 ? data.rascunho : null
 }
 
-// os salões pela lista magra; num banco sem a 171, a leitura cheia (já com o texto)
-async function lerLugares() {
+// os salões de uma cidade pela lista magra ('' = todas); num banco sem a 171, a leitura cheia (já com o texto)
+async function lerLugares(cidade = '') {
+  const filtro = (q) => (cidade ? q.eq('cidade_slug', cidade) : q)
   try {
-    return (await lerTudo('guia_lista', COLUNAS_LISTA, 'nome')).map((l) => ({ ...l, texto_carregado: false }))
+    return (await lerTudo('guia_lista', COLUNAS_LISTA, 'nome', filtro)).map((l) => ({ ...l, texto_carregado: false }))
   } catch (e) {
     if (!/guia_lista/.test(String(e?.message ?? e))) throw e
-    return (await lerTudo('guia_lugares', COLUNAS_LUGAR, 'nome')).map(comFlags)
+    return (await lerTudo('guia_lugares', COLUNAS_LUGAR, 'nome', filtro)).map(comFlags)
   }
 }
-// tudo o que a tela usa, de uma vez
-const lerGuia = () => Promise.all([
-  lerLugares(),
+// os totais por cidade e por fase (3.25, migração 174): alguns KB. false num banco sem a 174: aí a tela lê tudo, como antes
+async function lerResumo() {
+  const { data, error } = await supabase.rpc('guia_resumo')
+  if (error) {
+    if (/guia_resumo|schema cache|does not exist|could not find/i.test(String(error.message ?? error))) return false
+    throw error
+  }
+  return Array.isArray(data) ? data : false
+}
+// os salões de uma lista de ids, de qualquer cidade (os que os interesses citam), pela lista magra
+async function lerLugaresPorId(ids) {
+  const out = []
+  for (let i = 0; i < ids.length; i += 100) {
+    const parte = ids.slice(i, i + 100)
+    let r = await supabase.from('guia_lista').select(COLUNAS_LISTA).in('id', parte)
+    if (!r.error) { out.push(...(r.data ?? []).map((l) => ({ ...l, texto_carregado: false }))); continue }
+    r = await supabase.from('guia_lugares').select(COLUNAS_LUGAR).in('id', parte)
+    if (!r.error) out.push(...(r.data ?? []).map(comFlags))
+  }
+  return out
+}
+// o que a tela precisa para abrir: os totais, as páginas das cidades e os interesses (a lista do guia vem depois, por cidade)
+const lerBase = () => Promise.all([
+  lerResumo(),
   lerTudo('guia_paginas', '*', 'cidade_slug'),
   lerTudo('guia_interesses', '*', 'criado_em'),
 ])
+
+// a cidade escolhida fica no aparelho
+const CIDADE_LEMBRADA = 'mimo-guia-cidade'
+const cidadeLembrada = () => { try { return localStorage.getItem(CIDADE_LEMBRADA) } catch { return null } }
+const lembrarCidade = (c) => { try { localStorage.setItem(CIDADE_LEMBRADA, c) } catch { /* sem storage */ } }
+// a cidade com que a tela abre: a lembrada; senão a com mais trabalho esperando; uma só, ela; sem a 174 (ou sem salão), todas
+function cidadeInicial(resumo) {
+  if (!Array.isArray(resumo) || !resumo.length) return ''
+  if (resumo.length === 1) return resumo[0].cidade_slug
+  const lembrada = cidadeLembrada()
+  if (lembrada === '' || resumo.some((r) => r.cidade_slug === lembrada)) return lembrada
+  return [...resumo].sort((a, b) => (b.revisar + b.nova + b.gerar) - (a.revisar + a.nova + a.gerar) || b.total - a.total)[0].cidade_slug
+}
+// os totais de uma lista por fase, no formato de guia_resumo()
+function contarFases(ls, base = {}) {
+  const r = { ...base, total: 0, gerar: 0, revisar: 0, nova: 0, no_ar: 0, descartados: 0, removidos: 0, categorias: {} }
+  for (const l of ls) {
+    const f = faseDe(l)
+    if (f !== 'removido') r.total++
+    if (f === 'gerar') r.gerar++
+    else if (f === 'revisar') r.revisar++
+    else if (f === 'descartado') r.descartados++
+    else if (f === 'removido') r.removidos++
+    else { r.no_ar++; if (f === 'nova') r.nova++; r.categorias[l.categoria] = (r.categorias[l.categoria] ?? 0) + 1 }
+  }
+  return r
+}
+const somarResumo = (linhas) => {
+  const r = { total: 0, gerar: 0, revisar: 0, nova: 0, no_ar: 0, descartados: 0, removidos: 0 }
+  for (const x of linhas) for (const k of Object.keys(r)) r[k] += Number(x[k] ?? 0)
+  return r
+}
 
 const dormir = (ms) => new Promise((r) => setTimeout(r, ms))
 const sem = (obj, k) => { if (!(k in obj)) return obj; const n = { ...obj }; delete n[k]; return n }
@@ -170,7 +232,13 @@ function Num({ n, rotulo, sub, tom, onClick, carregando }) {
 export default function Guia() {
   const { user } = useAuth()
   const [aba, setAba] = useState('revisar')
-  const [lugares, setLugares] = useState(null)
+  // 3.25: os totais por cidade (174), a cidade escolhida e a lista daquela cidade
+  const [resumo, setResumo] = useState(null)      // null = lendo; false = banco sem a 174 (tudo de uma vez); [] = por cidade
+  const [cidade, setCidade] = useState(null)      // null até saber as cidades; '' = todas; o slug
+  const [carga, setCarga] = useState({ cidade: null, lista: null }) // a lista lida e de que cidade ela é
+  const [extras, setExtras] = useState(() => new Map()) // salões fora da lista carregada que a tela cita (os dos interesses)
+  const cacheRef = useRef(new Map())              // cidade -> lista, para voltar sem ler de novo
+  const lugares = carga.cidade !== null && carga.cidade === cidade ? carga.lista : null
   const [paginas, setPaginas] = useState(null)
   const [interesses, setInteresses] = useState(null)
   const [erro, setErro] = useState('')
@@ -185,32 +253,74 @@ export default function Guia() {
 
   const lugaresRef = useRef(lugares)
   useEffect(() => { lugaresRef.current = lugares }, [lugares])
+  const cidadeRef = useRef(cidade)
+  useEffect(() => { cidadeRef.current = cidade }, [cidade])
+  const resumoRef = useRef(resumo)
+  useEffect(() => { resumoRef.current = resumo }, [resumo])
+  const extrasRef = useRef(extras)
+  useEffect(() => { extrasRef.current = extras }, [extras])
+  // um salão pelo id: na lista carregada ou entre os que vieram à parte
+  const achar = useCallback((id) => (lugaresRef.current ?? []).find((x) => x.id === id) ?? extrasRef.current.get(id) ?? null, [])
   const gerandoRef = useRef(gerando)
   useEffect(() => { gerandoRef.current = gerando }, [gerando])
   const loteCtl = useRef(null)
   const montado = useRef(true)
 
-  // ler de novo (depois de importar); a primeira leitura é a do efeito abaixo
-  const aplicarLeitura = useCallback(([l, p, i]) => {
+  // a base (totais, páginas, interesses): na abertura e ao ler de novo (depois de importar ou do lote)
+  const aplicarBase = useCallback(([r, p, i]) => {
     if (!montado.current) return
-    setLugares(l); setPaginas(p); setInteresses(i); setErro('')
+    setResumo(r); setPaginas(p); setInteresses(i); setErro('')
+    // a cidade: a lembrada ou a com mais trabalho; a escolhida some do resumo (apagou a cidade) -> outra
+    setCidade((c) => (c === null || (c && Array.isArray(r) && !r.some((x) => x.cidade_slug === c)) ? cidadeInicial(r) : c))
+    // os salões que os interesses citam, de qualquer cidade (a lista carregada é de uma só)
+    const ids = [...new Set((i ?? []).map((x) => x.lugar_id).filter(Boolean))]
+    if (ids.length) lerLugaresPorId(ids).then((ls) => { if (montado.current) setExtras(new Map(ls.map((l) => [l.id, l]))) }).catch(() => {})
   }, [])
   const falhouLeitura = useCallback((e) => {
     if (!montado.current) return
     const msg = String(e?.message ?? e)
     setErro(/guia_(lugares|paginas|interesses)/.test(msg) && /exist|schema cache/i.test(msg) ? 'As tabelas do guia ainda não existem neste banco. Rode a migração 153 (supabase/153_guia_de_saloes.sql).' : msg)
-    setLugares((x) => x ?? []); setPaginas((x) => x ?? []); setInteresses((x) => x ?? [])
+    setResumo((x) => x ?? false); setCidade((c) => c ?? ''); setPaginas((x) => x ?? []); setInteresses((x) => x ?? [])
   }, [])
-  const carregar = useCallback(() => lerGuia().then(aplicarLeitura, falhouLeitura), [aplicarLeitura, falhouLeitura])
+  // a lista da cidade escolhida: da memória, se já veio; senão do banco (só aquela cidade)
+  const pedidoLista = useRef(0)
+  useEffect(() => {
+    if (cidade === null || (carga.cidade === cidade && carga.lista)) return
+    const guardada = cacheRef.current.get(cidade)
+    if (guardada) { setCarga({ cidade, lista: guardada }); return }
+    const n = ++pedidoLista.current
+    lerLugares(cidade).then(
+      (lista) => { if (montado.current && n === pedidoLista.current) setCarga({ cidade, lista }) },
+      (e) => { if (montado.current && n === pedidoLista.current) { falhouLeitura(e); setCarga({ cidade, lista: [] }) } },
+    )
+  }, [cidade, carga, falhouLeitura])
+  useEffect(() => { if (carga.lista && carga.cidade !== null) cacheRef.current.set(carga.cidade, carga.lista) }, [carga])
+  // trocar de cidade (o seletor do topo, a importação, um salão pedido de outra aba)
+  const escolherCidade = useCallback((slug) => {
+    const s = String(slug ?? '')
+    const r = resumoRef.current
+    if (s && Array.isArray(r) && !r.some((x) => x.cidade_slug === s)) return
+    setCidade(s); lembrarCidade(s)
+  }, [])
+  // ler de novo do banco: a base e a cidade atual (as outras saem da memória)
+  const carregar = useCallback(async () => {
+    cacheRef.current.clear()
+    const c = cidadeRef.current ?? ''
+    try {
+      const [base, lista] = await Promise.all([lerBase(), lerLugares(c)])
+      aplicarBase(base)
+      if (montado.current) setCarga({ cidade: c, lista })
+    } catch (e) { falhouLeitura(e) }
+  }, [aplicarBase, falhouLeitura])
 
   // quem trabalha na Plataforma não conta como visita no site (dá para desligar na aba Desempenho)
   useEffect(() => { naoContarAqui(true) }, [])
 
   useEffect(() => {
     montado.current = true
-    lerGuia().then(aplicarLeitura, falhouLeitura)
+    lerBase().then(aplicarBase, falhouLeitura)
     return () => { montado.current = false; if (loteCtl.current) loteCtl.current.cancelado = true }
-  }, [aplicarLeitura, falhouLeitura])
+  }, [aplicarBase, falhouLeitura])
 
   // sair da tela no meio do lote para a geração: avisa antes de fechar a aba
   useEffect(() => {
@@ -231,22 +341,23 @@ export default function Guia() {
   }, [aviso])
 
   const mudarLocal = useCallback((id, mudar) => {
-    setLugares((ls) => (ls ?? []).map((l) => {
-      if (l.id !== id) return l
+    const aplicar = (l) => {
       const campos = typeof mudar === 'function' ? mudar(l) : mudar
       const n = { ...l, ...campos }
       // as flags acompanham o texto que a tela mexeu (3.23)
       if ('conteudo' in campos) n.tem_conteudo = !!n.conteudo
       if ('rascunho' in campos) n.tem_rascunho = !!n.rascunho
       return n
-    }))
+    }
+    setCarga((c) => (c.lista && c.lista.some((l) => l.id === id) ? { ...c, lista: c.lista.map((l) => (l.id === id ? aplicar(l) : l)) } : c))
+    setExtras((m) => (m.has(id) ? new Map(m).set(id, aplicar(m.get(id))) : m))
   }, [])
 
   // o texto de um salão (conteudo e rascunho), lido quando a tela precisa dele: ao escolher na fila,
   // ao editar, ao aprovar. Uma linha por vez; a promessa em andamento é reaproveitada
   const lendoTexto = useRef(new Map())
   const carregarTexto = useCallback((id) => {
-    const l = (lugaresRef.current ?? []).find((x) => x.id === id)
+    const l = achar(id)
     if (!l) return Promise.resolve(null)
     if (l.texto_carregado) return Promise.resolve(l)
     if (lendoTexto.current.has(id)) return lendoTexto.current.get(id)
@@ -259,7 +370,7 @@ export default function Guia() {
     })().finally(() => lendoTexto.current.delete(id))
     lendoTexto.current.set(id, p)
     return p
-  }, [mudarLocal])
+  }, [mudarLocal, achar])
 
   // grava campos de um salão e espelha na lista (o demo não guarda escrita; a tela sim)
   const salvarLugar = useCallback(async (id, campos) => {
@@ -304,14 +415,14 @@ export default function Guia() {
   // cidade em números; o lote passa pronto para não recontar a cada salão
   const montarUm = useCallback(async (id, ctxPronto = null) => {
     setFalhas((f) => sem(f, id))
-    const l = (lugaresRef.current ?? []).find((x) => x.id === id)
+    const l = achar(id)
     if (!l) return { ok: false, erro: 'salão não encontrado' }
     const ctx = ctxPronto ?? contextoDaCidade(lugaresRef.current, l.cidade_slug)
     const rascunho = montarConteudo({ ...l, na_mimo: !!l.salon_id }, ctx)
     const r = await salvarLugar(id, { rascunho, gerado_em: rascunho._meta.gerado_em, ...(l.status === 'importado' ? { status: 'gerado' } : {}) })
     if (!r.ok) setFalhas((f) => ({ ...f, [id]: r.erro }))
     return r
-  }, [salvarLugar])
+  }, [salvarLugar, achar])
 
   // o lote ("Montar todas da fila"; com modo 'ia', a IA escreve uma por vez):
   // na ordem da lista; pausa, cancela e, na IA, espera o limite
@@ -324,7 +435,7 @@ export default function Guia() {
     for (const id of ids) {
       while (ctl.pausado && !ctl.cancelado) await dormir(250)
       if (ctl.cancelado) break
-      const l = (lugaresRef.current ?? []).find((x) => x.id === id)
+      const l = achar(id)
       // alguém gerou, editou ou descartou enquanto o lote andava: pula
       if (!l || temTexto(l) || l.status === 'removido' || l.status === 'descartado' || gerandoRef.current[id]) {
         setLote((s) => ({ ...s, feitos: s.feitos + 1 }))
@@ -338,7 +449,7 @@ export default function Guia() {
     }
     ctl.fim = true
     if (montado.current) setLote((s) => ({ ...s, atual: null, fim: true, cancelado: ctl.cancelado }))
-  }, [gerarUm, montarUm])
+  }, [gerarUm, montarUm, achar])
   const pausarLote = useCallback((pausar) => {
     if (!loteCtl.current) return
     loteCtl.current.pausado = pausar
@@ -352,7 +463,7 @@ export default function Guia() {
     // o texto tem de estar na mão: a lista vem sem ele (3.23) e o "Desfazer" devolve o que estava
     await carregarTexto(id).catch(() => null)
     // cópia: no demo a RPC mexe na própria linha em memória
-    const achado = (lugaresRef.current ?? []).find((l) => l.id === id)
+    const achado = achar(id)
     const antes = achado ? { ...achado } : null
     const { data, error } = await supabase.rpc('guia_aprovar', { lugar_: id })
     if (error) return { ok: false, erro: /nada para aprovar/.test(error.message) ? 'Ainda não há texto para aprovar: gere a página primeiro.' : error.message }
@@ -361,7 +472,7 @@ export default function Guia() {
       publicado_em: l.publicado_em ?? data?.publicado_em ?? agora(), atualizado_em: data?.atualizado_em ?? agora(),
     }))
     return { ok: true, antes }
-  }, [mudarLocal, carregarTexto])
+  }, [mudarLocal, carregarTexto, achar])
   const desfazerAprovacao = useCallback(async (antes) => {
     if (!antes) return { ok: false }
     return salvarLugar(antes.id, { conteudo: antes.conteudo, rascunho: antes.rascunho, status: antes.status, publicado_em: antes.publicado_em, motivo: antes.motivo })
@@ -441,7 +552,10 @@ export default function Guia() {
     setDesempenho((d) => ({ ...d, dias, cidade, carregando: true, erro: '' }))
     return lerDesempenho(dias, cidade).then((r) => aplicarDesempenho(n, r))
   }, [aplicarDesempenho])
-  useEffect(() => { const n = ++pedidoDesempenho.current; lerDesempenho(30).then((r) => aplicarDesempenho(n, r)) }, [aplicarDesempenho])
+  // 3.25: o Desempenho abre na cidade escolhida no alto e a acompanha (a aba ainda deixa trocar)
+  const diasRef = useRef(30)
+  useEffect(() => { diasRef.current = desempenho.dias }, [desempenho.dias])
+  useEffect(() => { if (cidade !== null) carregarDesempenho(diasRef.current, cidade) }, [cidade, carregarDesempenho])
   // os números de cada salão, para o painel da revisão
   // (a primeira linha de cada salão, a de mais visitas, é a que vale)
   const desempenhoPorLugar = useMemo(() => {
@@ -450,31 +564,64 @@ export default function Guia() {
     return m
   }, [desempenho.dados])
 
-  // os números do topo
+  // os totais por cidade, com a cidade carregada contada ao vivo (aprovar, descartar e importar mexem na hora)
+  const resumoVivo = useMemo(() => {
+    if (!Array.isArray(resumo) || !lugares) return resumo
+    if (cidade === '') {
+      const por = new Map()
+      for (const l of lugares) por.set(l.cidade_slug, [...(por.get(l.cidade_slug) ?? []), l])
+      return resumo.map((r) => (por.has(r.cidade_slug) ? contarFases(por.get(r.cidade_slug), r) : r))
+    }
+    return resumo.map((r) => (r.cidade_slug === cidade ? contarFases(lugares, r) : r))
+  }, [resumo, lugares, cidade])
+  // as cidades do guia, para o seletor e para as abas (nome por slug)
+  const cidades = useMemo(() => {
+    const base = Array.isArray(resumoVivo)
+      ? resumoVivo.map((r) => ({ slug: r.cidade_slug, nome: r.cidade, total: r.total, esperando: r.revisar + r.nova, gerar: r.gerar }))
+      : [...new Map((lugares ?? []).map((l) => [l.cidade_slug, l.cidade]))].map(([slug, nome]) => ({ slug, nome, total: 0, esperando: 0, gerar: 0 }))
+    return base.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
+  }, [resumoVivo, lugares])
+  const totalGeral = Array.isArray(resumoVivo) ? resumoVivo.reduce((n, r) => n + Number(r.total ?? 0), 0) : 0
+
+  // os números do topo: da lista carregada (inteira para a cidade); antes de ela chegar, dos totais do banco
   const kpis = useMemo(() => {
-    const ls = lugares ?? []
-    const conta = (f) => ls.reduce((n, l) => n + (f(l) ? 1 : 0), 0)
+    const n = lugares ? contarFases(lugares) : Array.isArray(resumo) ? somarResumo(cidade ? resumo.filter((r) => r.cidade_slug === cidade) : resumo) : null
     return {
-      importados: conta((l) => l.status !== 'removido'),
-      gerar: conta((l) => faseDe(l) === 'gerar'),
-      revisao: conta((l) => faseDe(l) === 'revisar' || faseDe(l) === 'nova'),
-      soNova: conta((l) => faseDe(l) === 'revisar') === 0,
-      noAr: conta((l) => l.status === 'publicado'),
-      descartados: conta((l) => l.status === 'descartado'),
+      pronto: !!n,
+      importados: n?.total ?? 0,
+      gerar: n?.gerar ?? 0,
+      revisao: (n?.revisar ?? 0) + (n?.nova ?? 0),
+      soNova: (n?.revisar ?? 0) === 0,
+      noAr: n?.no_ar ?? 0,
+      descartados: n?.descartados ?? 0,
       interesses: (interesses ?? []).filter((i) => !i.atendido_em).length,
     }
-  }, [lugares, interesses])
+  }, [lugares, resumo, cidade, interesses])
 
-  // um clique num número leva à fila certa
+  // a cidade de um salão que não está na lista carregada (uma linha do banco)
+  const cidadeDoLugar = useCallback(async (id) => {
+    const l = extrasRef.current.get(id)
+    if (l) return l.cidade_slug
+    const { data } = await supabase.from('guia_lugares').select('cidade_slug').eq('id', id).maybeSingle()
+    return data?.cidade_slug ?? null
+  }, [])
+  // um clique num número leva à fila certa. filtro.emCidade (3.25): o salão pedido é de outra cidade; a tela troca antes
   const irPara = useCallback((destino, filtro) => {
     setAba(destino)
+    if (destino !== 'revisar' || !filtro) return
+    const { emCidade, ...f } = filtro
     // indo para um salão certo, os outros filtros saem do caminho para ele aparecer
     const limpo = { busca: '', cidade: '', categoria: '', receita: false, selecao: false, triagem: '' }
-    if (destino === 'revisar' && filtro) setRev((r) => ({ ...r, ...(filtro.selId ? limpo : {}), ...filtro, selId: filtro.selId ?? null }))
-  }, [])
+    const aplicar = () => setRev((r) => ({ ...r, ...(f.selId ? limpo : {}), ...f, selId: f.selId ?? null }))
+    if (!f.selId || cidadeRef.current === '' || (lugaresRef.current ?? []).some((l) => l.id === f.selId)) { aplicar(); return }
+    const ir = (slug) => { if (slug && slug !== cidadeRef.current) escolherCidade(slug); aplicar() }
+    if (emCidade) ir(emCidade)
+    else cidadeDoLugar(f.selId).then(ir, () => aplicar())
+  }, [escolherCidade, cidadeDoLugar])
 
   const g = {
     lugares: lugares ?? [], paginas: paginas ?? [], interesses: interesses ?? [], carregando: lugares === null, erro,
+    cidade: cidade ?? '', cidades, escolherCidade, resumo: resumoVivo, lugarPorId: achar,
     faseDe, temTexto, temRascunho, temConteudo, carregarTexto, gerando, falhas, lote, usuario: user?.id ?? null,
     carregar, salvarLugar, montarUm, gerarUm, iniciarLote, pausarLote, cancelarLote, fecharLote, aprovar, desfazerAprovacao,
     gerarPagina, aprovarPagina, salvarContexto, salvarInteresse, importar, avisar, irPara,
@@ -485,12 +632,27 @@ export default function Guia() {
     <Shell>
       <div className="pg-topo">
         <Cabecalho titulo="Guia de salões" sub="Uma página pública para cada salão da região, montada com os dados dele (de graça). Você aprova." direita={<span />} />
+        {Array.isArray(resumo) && cidades.length > 1 && (
+          <div className="pg-cidade" data-teste="cidade">
+            <label className="pg-cidade-sel">
+              <MapPin size={15} aria-hidden="true" />
+              <select className="plat-select" value={cidade ?? ''} onChange={(e) => escolherCidade(e.target.value)} aria-label="Cidade do guia">
+                {cidades.map((c) => <option key={c.slug} value={c.slug}>{c.nome} · {c.total}{c.esperando ? ` · ${c.esperando} para revisar` : ''}</option>)}
+                <option value="">Todas as cidades · {totalGeral}</option>
+              </select>
+              {lugares === null
+                ? <LoaderCircle size={14} className="pg-gira" aria-label="lendo a cidade" />
+                : <button type="button" className="pg-cidade-reler" onClick={carregar} title="Ler de novo do banco" aria-label="Ler de novo do banco"><RefreshCw size={14} /></button>}
+            </label>
+            <small>{cidade ? 'Os números e as abas são desta cidade; só a lista dela é lida.' : 'Todas as cidades de uma vez: a leitura pesa com o guia grande.'}</small>
+          </div>
+        )}
         <div className="pg-kpis" aria-label="Números do guia">
-          <Num carregando={lugares === null} n={kpis.importados} rotulo="importados" sub={kpis.gerar ? `${kpis.gerar} sem página` : null} onClick={() => irPara('revisar', { status: 'gerar' })} />
-          <Num carregando={lugares === null} n={kpis.revisao} rotulo="esperando revisão" tom={kpis.revisao ? 'ambar' : ''} onClick={() => irPara('revisar', { status: kpis.soNova && kpis.revisao ? 'nova' : 'revisar' })} />
-          <Num carregando={lugares === null} n={kpis.noAr} rotulo="no ar" tom="menta" onClick={() => irPara('publicadas')} />
-          <Num carregando={lugares === null} n={kpis.descartados} rotulo="descartados" onClick={() => irPara('revisar', { status: 'descartado' })} />
-          <Num carregando={lugares === null} n={kpis.interesses} rotulo="interesses novos" tom={kpis.interesses ? 'rosa' : ''} onClick={() => irPara('interesses')} />
+          <Num carregando={!kpis.pronto} n={kpis.importados} rotulo="importados" sub={kpis.gerar ? `${kpis.gerar} sem página` : null} onClick={() => irPara('revisar', { status: 'gerar' })} />
+          <Num carregando={!kpis.pronto} n={kpis.revisao} rotulo="esperando revisão" tom={kpis.revisao ? 'ambar' : ''} onClick={() => irPara('revisar', { status: kpis.soNova && kpis.revisao ? 'nova' : 'revisar' })} />
+          <Num carregando={!kpis.pronto} n={kpis.noAr} rotulo="no ar" tom="menta" onClick={() => irPara('publicadas')} />
+          <Num carregando={!kpis.pronto} n={kpis.descartados} rotulo="descartados" onClick={() => irPara('revisar', { status: 'descartado' })} />
+          <Num carregando={!kpis.pronto} n={kpis.interesses} rotulo="interesses novos" tom={kpis.interesses ? 'rosa' : ''} onClick={() => irPara('interesses')} />
         </div>
       </div>
 
@@ -511,7 +673,7 @@ export default function Guia() {
       {aba === 'desempenho' && <Desempenho g={g} />}
       {aba === 'abordagem' && <Abordagem g={g} />}
       {aba === 'publicadas' && <Publicadas g={g} />}
-      {aba === 'importar' && <><Importar g={g} /><ImportarFotos g={g} /></>}
+      {aba === 'importar' && <><Importar g={g} /><ImportarFotos g={g} /><MiniaturasAntigas g={g} /></>}
       {aba === 'paginas' && <PaginasCidade g={g} />}
       {aba === 'interesses' && <Interesses g={g} />}
 

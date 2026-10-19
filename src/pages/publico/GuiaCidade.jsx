@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowRight, ChevronDown, MapPin, Search, Info, Award, CalendarCheck, LayoutGrid, RotateCcw, X, Clock } from 'lucide-react'
+import { ArrowRight, ChevronDown, MapPin, Search, Info, Award, CalendarCheck, LayoutGrid, RotateCcw, X, Clock, LoaderCircle } from 'lucide-react'
 import { useSeo } from '../../lib/seo'
 import { SLUGS_CATEGORIA, GUIA_CATEGORIAS, categoriaDoGuia, conteudoSeguro, semAcento, seoPadraoDaCidade, rotaDaCidade, rotaDaCategoria, quemEsta, miniatura, paraFotoInteira } from '../../lib/guia'
 import { seoDaCidade, seoDoIndice, trilhaDaCidade, jsonLdDaCidade, jsonLdDoIndice } from '../../lib/guiaSeo'
-import { carregarCidade, carregarCidades } from '../../lib/guiaPublico'
+import { carregarCidade, carregarCidades, carregarParte, carregarListaInteira } from '../../lib/guiaPublico'
 import { carregarResumo } from '../../lib/guiaColecoesPublico'
 import { artigosResumidos } from '../../lib/conteudoPublico'
 import { artigosDaCidade } from '../../lib/guiaArtigos'
@@ -139,7 +139,22 @@ function Cidade({ dados }) {
   const pagina = conteudoSeguro(dados.pagina)
   const seo = seoDaCidade(cidade, cslug, categoria, dados.pagina)
 
-  const lugares = useMemo(() => (Array.isArray(dados.lugares) ? dados.lugares : []), [dados.lugares])
+  // a lista por partes (3.25): o JSON da cidade traz a primeira parte (48 cartões) e os totais em "lista";
+  // "Ver mais" pede a próxima parte ao servidor, e a busca, o bairro e a ordem por distância pedem a lista
+  // inteira, uma vez. Sem "lista" (a função do banco, o demo), a lista já veio inteira e nada disso acontece.
+  const cabeca = useMemo(() => (Array.isArray(dados.lugares) ? dados.lugares : []), [dados.lugares])
+  const porPartes = dados.lista && Number(dados.lista.partes) > 1 ? dados.lista : null
+  const [partes, setPartes] = useState([])       // as partes já lidas (a 2, a 3, …)
+  const [inteira, setInteira] = useState(null)   // a lista inteira, quando pedida
+  const [lendo, setLendo] = useState(false)
+  const [falhaLista, setFalhaLista] = useState(false)
+  const [tentativaLista, setTentativaLista] = useState(0)
+  const pedindo = useRef(false)
+  const vivo = useRef(true)
+  useEffect(() => { vivo.current = true; return () => { vivo.current = false } }, [])
+  const lugares = useMemo(() => inteira ?? (partes.length ? [...cabeca, ...partes.flat()] : cabeca), [inteira, cabeca, partes])
+  const totalDaLista = porPartes ? Number(porPartes.total) : lugares.length
+  const completa = !porPartes || !!inteira || lugares.length >= totalDaLista
   const bairros = Array.isArray(dados.bairros) ? dados.bairros : []
   const categorias = (Array.isArray(dados.categorias) ? dados.categorias : []).filter((c) => SLUGS_CATEGORIA.includes(c.categoria))
   const [bairro, setBairroCru] = useState('')
@@ -151,8 +166,30 @@ function Cidade({ dados }) {
   // "perto de você" (3.13): com a posição, cada cartão ganha a distância e a lista vem do mais perto
   const { posicao } = useMinhaPosicao()
   const [porDistancia, setPorDistancia] = useState(true)
+  // a busca, o bairro e a ordem por distância precisam da lista inteira
+  const precisaDeTudo = !!busca.trim() || !!bairro || (!!posicao && porDistancia)
+  useEffect(() => {
+    if (completa || !precisaDeTudo || pedindo.current) return
+    pedindo.current = true
+    setLendo(true); setFalhaLista(false)
+    carregarListaInteira(cslug, categoria)
+      .then((ls) => { if (vivo.current) { if (ls) setInteira(ls); else setFalhaLista(true) } }, () => { if (vivo.current) setFalhaLista(true) })
+      .finally(() => { pedindo.current = false; if (vivo.current) setLendo(false) })
+  }, [completa, precisaDeTudo, cslug, categoria, tentativaLista])
+  // "Ver mais": mais 24 do que já está na tela; passou do que veio do servidor, pede a próxima parte
+  async function verMais() {
+    const proximo = limite + POR_VEZ
+    setLimite(proximo)
+    if (completa || precisaDeTudo || proximo <= lugares.length || pedindo.current) return
+    pedindo.current = true
+    setLendo(true); setFalhaLista(false)
+    try {
+      const ls = await carregarParte(cslug, categoria, partes.length + 2)
+      if (vivo.current) { if (ls) setPartes((ps) => [...ps, ls]); else setFalhaLista(true) }
+    } catch { if (vivo.current) setFalhaLista(true) } finally { pedindo.current = false; if (vivo.current) setLendo(false) }
+  }
 
-  // filtro na hora, no navegador: o banco já mandou a lista inteira da cidade
+  // filtro na hora, no navegador, sobre o que já está aqui (a lista inteira, quando o filtro pede)
   const filtrados = useMemo(() => {
     const q = semAcento(busca).toLowerCase().trim()
     return comDistancia(lugares.filter((l) => {
@@ -168,7 +205,7 @@ function Cidade({ dados }) {
     `O guia reúne ${cat ? `${cat.plural} de ${cidade}` : `salões de beleza, manicures, cílios, sobrancelha e estética de ${cidade}`} com o endereço, o bairro, o horário e os serviços de cada um. ` +
       'As informações vêm de dados públicos dos estabelecimentos; quem já agenda pela MIMO aparece com o selo Na MIMO.',
   ]
-  const totalAqui = cat ? lugares.length : dados.total
+  const totalAqui = cat ? totalDaLista : dados.total
   const plural = (n, um, varios) => `${n} ${n === 1 ? um : varios}`
 
   // os links "Por bairro" e "Por horário" (3.12): só as páginas que passam do mínimo de salões
@@ -181,10 +218,19 @@ function Cidade({ dados }) {
   }, [cslug])
   const porHorario = colecoes ? (cat ? colecoes.links.categorias[categoria] ?? [] : colecoes.links.horarios) : []
   const porBairro = colecoes && !cat ? colecoes.links.bairros : []
-  // o panorama (3.22): os números da lista em frases, e a FAQ dos dados junto com a da IA
-  const panorama = useMemo(() => panoramaDaCidade({ cidade, categoria, lugares, horas: colecoes ? (colecoes.horas?.[categoria] ?? null) : undefined }), [cidade, categoria, lugares, colecoes])
-  const faq = juntarFaq(pagina?.faq ?? [], panorama.faq)
-  useSeo({ titulo: seo.titulo, descricao: seo.descricao, caminho: seo.caminho, jsonLd: jsonLdDaCidade(dados, faq) })
+  // o panorama (3.22): os números da lista em frases, e a FAQ dos dados junto com a da IA. Pronto no resumo
+  // (3.25, o gerador conta a lista inteira); sem ele, contado aqui, mas só com a lista inteira na mão
+  const panorama = useMemo(() => {
+    const pronto = colecoes?.panoramas?.[categoria]
+    if (pronto && Array.isArray(pronto.paragrafos)) return pronto
+    if (!completa) return { paragrafos: [], faq: [] }
+    return panoramaDaCidade({ cidade, categoria, lugares, horas: colecoes ? (colecoes.horas?.[categoria] ?? null) : undefined })
+  }, [cidade, categoria, lugares, colecoes, completa])
+  const faq = juntarFaq(pagina?.faq ?? [], panorama.faq ?? [])
+  useSeo({ titulo: seo.titulo, descricao: seo.descricao, caminho: seo.caminho, jsonLd: jsonLdDaCidade({ ...dados, lugares }, faq) })
+  // o que a lista mostra e quantos faltam: com filtro, dos filtrados; sem filtro, do total da cidade (ou da categoria)
+  const visiveis = Math.min(limite, filtrados.length)
+  const restam = (precisaDeTudo || completa ? filtrados.length : totalDaLista) - visiveis
   // "Leia também" (3.14): os artigos do blog que falam desta cidade; e as outras cidades do guia
   const [artigos, setArtigos] = useState([])
   const [outras, setOutras] = useState([])
@@ -277,7 +323,7 @@ function Cidade({ dados }) {
 
           <PertoDeVoce ordenado={porDistancia} onOrdenar={setPorDistancia} />
           <div className="gd-lista-topo" aria-live="polite">
-            <span><b>{plural(filtrados.length, 'lugar', 'lugares')}</b>{bairro ? ` no bairro ${bairro}` : ''}{busca.trim() ? ` para “${busca.trim()}”` : ''}</span>
+            <span><b>{plural(precisaDeTudo || completa ? filtrados.length : totalDaLista, 'lugar', 'lugares')}</b>{bairro ? ` no bairro ${bairro}` : ''}{busca.trim() ? ` para “${busca.trim()}”` : ''}{lendo && precisaDeTudo ? <span className="gd-lista-lendo"> · <LoaderCircle size={14} className="gd-gira" aria-hidden="true" /> carregando a lista inteira…</span> : null}</span>
             {(bairro || busca) && <button type="button" className="gd-chip-filtro" onClick={() => { setBairro(''); setBusca('') }}><X size={14} /> Limpar filtros</button>}
           </div>
 
@@ -292,8 +338,11 @@ function Cidade({ dados }) {
               <button type="button" className="ld-btn ld-fantasma" onClick={() => { setBairro(''); setBusca('') }}>Ver todos</button>
             </div>
           )}
-          {filtrados.length > limite && (
-            <div className="gd-mais"><button type="button" className="ld-btn ld-fantasma" onClick={() => setLimite((n) => n + POR_VEZ)}>Ver mais {Math.min(POR_VEZ, filtrados.length - limite)} de {filtrados.length - limite} <ChevronDown size={16} /></button></div>
+          {restam > 0 && (
+            <div className="gd-mais"><button type="button" className="ld-btn ld-fantasma" onClick={verMais} disabled={lendo} data-teste="ver-mais">{lendo ? <LoaderCircle size={16} className="gd-gira" aria-hidden="true" /> : null} Ver mais {Math.min(POR_VEZ, restam)} de {restam} <ChevronDown size={16} /></button></div>
+          )}
+          {falhaLista && (
+            <p className="gd-lista-falha" role="status">Não deu para carregar o resto da lista agora. <button type="button" className="gd-perto-link" onClick={() => { setFalhaLista(false); setTentativaLista((t) => t + 1); if (!precisaDeTudo) verMais() }}>Tentar de novo</button></p>
           )}
         </div>
       </section>

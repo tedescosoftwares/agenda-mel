@@ -306,6 +306,21 @@ const contar = (lista, campo) => {
 export const demoEvento = (corpo) => gravarEventoDemo(corpo, GUIA_LUGARES)
 
 export const GUIA_RPC = {
+  // os totais por cidade e por fase (3.25, migração 174): a Plataforma abre por aqui e lê só a cidade escolhida
+  guia_resumo: () => {
+    const por = new Map()
+    for (const l of GUIA_LUGARES) {
+      const r = por.get(l.cidade_slug) ?? { cidade: l.cidade, cidade_slug: l.cidade_slug, uf: l.uf, total: 0, gerar: 0, revisar: 0, nova: 0, no_ar: 0, descartados: 0, removidos: 0, categorias: {} }
+      if (l.status !== 'removido') r.total++
+      if (l.status === 'removido') r.removidos++
+      else if (l.status === 'descartado') r.descartados++
+      else if (l.status === 'publicado') { r.no_ar++; if (l.rascunho) r.nova++; r.categorias[l.categoria] = (r.categorias[l.categoria] ?? 0) + 1 }
+      else if (l.conteudo || l.rascunho) r.revisar++
+      else r.gerar++
+      por.set(l.cidade_slug, r)
+    }
+    return [...por.values()].sort((a, b) => a.cidade.localeCompare(b.cidade, 'pt-BR'))
+  },
   guia_desempenho: (a) => demoDesempenho(a ?? {}, GUIA_LUGARES, GUIA_INTERESSES),
   guia_mapa_acessos: (a) => demoMapaAcessos(a ?? {}, GUIA_LUGARES),
   guia_cidades: () => cidades(),

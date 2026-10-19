@@ -708,3 +708,20 @@ como está.
 Ordem para atualizar: bat **B** (a 171) antes do bat **2**. O gerador novo num
 banco sem a 171 cai na função antiga e avisa; o gerador antigo num banco com a
 171 continua funcionando, só sem a seção "Perto dali" até o bat 2.
+
+## A Plataforma por cidade e a página da cidade por partes (3.25, migração 174)
+
+A Plataforma abre com os totais por cidade (`guia_resumo`, alguns KB) e lê só a
+cidade escolhida no alto da tela. No site, o JSON da cidade leva só a primeira
+parte da lista (48 cartões) e os totais; o resto fica em
+`dist/dados/guia/<cidade>/lista/` e cada página de bairro ou de horário em
+`dist/dados/guia/<cidade>/colecao/`, lidos só quando a pessoa pede.
+
+Ordem: bat **B** (a 174) e bat **2**. O bat 2 publica o site novo e o gerador
+grava os arquivos por partes na mesma rodada; a republicação de hora em hora
+segue igual (`republicar-se-mudou.sh`). Sem a 174 no banco, a Plataforma lê tudo
+de uma vez, como antes.
+
+Depois, em Guia → Importar → **Miniaturas das fotos antigas**, rode uma vez por
+cidade: gera a cópia pequena das fotos enviadas antes da 3.24, que as listas
+usam no lugar da foto inteira.

@@ -412,7 +412,7 @@ export default function Abordagem({ g }) {
       posicao={indice >= 0 ? `${indice + 1} de ${lista.length}` : 'fora deste filtro'} podeVoltar={indice > 0} podeIr={indice >= 0 && indice < lista.length - 1}
       onMover={mover} onFechar={() => setFolha(false)} onMensagem={() => setMensagemId(atual.lugar_id)} onStatus={(s) => mudarStatus(atual, s)}
       onLembrar={(d) => lembrar(atual, d)} onContato={(c) => contato(atual, c)} onSalvarNota={() => salvarNota(atual)}
-      onInteresses={() => g.irPara('interesses')} onRevisar={() => g.irPara('revisar', { selId: atual.lugar_id })}
+      onInteresses={() => g.irPara('interesses')} onRevisar={() => g.irPara('revisar', { selId: atual.lugar_id, emCidade: atual.cidade_slug })}
     />
   )
 
@@ -484,7 +484,7 @@ export default function Abordagem({ g }) {
         </Portal>
       )}
 
-      {mensagemId && porId.get(mensagemId) && <ModalMensagem it={porId.get(mensagemId)} dias={dados.dias} hoje={hoje} semFotos={paginaSemFoto(g.lugares.find((l) => l.id === mensagemId))} onFechar={() => setMensagemId(null)} onEnviou={(o) => enviou(porId.get(mensagemId), o)} />}
+      {mensagemId && porId.get(mensagemId) && <ModalMensagem it={porId.get(mensagemId)} dias={dados.dias} hoje={hoje} semFotos={paginaSemFoto(g.lugarPorId(mensagemId))} onFechar={() => setMensagemId(null)} onEnviou={(o) => enviou(porId.get(mensagemId), o)} />}
     </div>
   )
 }

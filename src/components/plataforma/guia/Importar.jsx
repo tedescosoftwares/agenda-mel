@@ -120,6 +120,9 @@ export default function Importar({ g }) {
     setRelatorio({ aplicado: aplicar, arquivos: porArquivo })
     if (aplicar) {
       await g.carregar()
+      // a tela passa para a cidade importada (3.25): a fila e os números são dela
+      const cidadesImportadas = [...new Set(preparados.flatMap((a) => a.entram.map((x) => slugificar(x.item.cidade || cidade))))]
+      if (cidadesImportadas.length === 1 && cidadesImportadas[0]) g.escolherCidade?.(cidadesImportadas[0])
       const novos = porArquivo.reduce((n, a) => n + a.novos, 0)
       g.avisar({ texto: `Importação feita: ${novos} ${novos === 1 ? 'salão novo' : 'salões novos'}.`, tom: 'ok' })
     }

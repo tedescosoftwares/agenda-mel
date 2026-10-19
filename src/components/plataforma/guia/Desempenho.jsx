@@ -41,13 +41,13 @@ export default function Desempenho({ g }) {
   const [contando, setContando] = useState(() => contaAqui())
   const tabela = useRef(null)
 
-  // o nome bonito da cidade ("itanhaem" -> "Itanhaém"), pelos salões que a Plataforma já tem
+  // o nome bonito da cidade ("itanhaem" -> "Itanhaém"), pelas cidades do guia (3.25: do resumo, não da lista carregada)
   const nomeDaCidade = useMemo(() => {
-    const m = new Map(g.lugares.map((l) => [l.cidade_slug, l.cidade]))
+    const m = new Map(g.cidades.map((c) => [c.slug, c.nome]))
     return (s) => m.get(s) ?? s
-  }, [g.lugares])
+  }, [g.cidades])
   // as cidades do guia (3.18): os números de um município só, para uma cidade nova não misturar com as outras
-  const cidades = useMemo(() => [...new Map(g.lugares.map((l) => [l.cidade_slug, l.cidade]))].sort((a, b) => a[1].localeCompare(b[1], 'pt-BR')), [g.lugares])
+  const cidades = useMemo(() => g.cidades.map((c) => [c.slug, c.nome]), [g.cidades])
   const cidade = desempenho.cidade ?? ''
   const contatoTipos = useMemo(() => tiposDo(dados, 'contato').filter((t) => n0(dados?.totais?.[t.tipo]) > 0), [dados])
   const destaques = useMemo(() => (dados ? destaquesDoPeriodo(dados, g.lugares) : null), [dados, g.lugares])
@@ -106,7 +106,7 @@ export default function Desempenho({ g }) {
             <Funil dados={dados} />
           </div>
 
-          <Destaques d={destaques} dias={dados.dias} onSalao={(id) => g.irPara('revisar', { selId: id })} onMensagem={setDono} onVerSemVisita={verSemVisita} />
+          <Destaques d={destaques} dias={dados.dias} onSalao={(id) => g.irPara('revisar', { selId: id, emCidade: (dados.paginas ?? []).find((p) => p.lugar_id === id)?.cidade_slug })} onMensagem={setDono} onVerSemVisita={verSemVisita} />
         </>
       )}
 
@@ -157,7 +157,7 @@ export default function Desempenho({ g }) {
         </ul>
       </details>
 
-      {dono && <ModalDono linha={dono} dias={dados.dias} cidade={nomeDaCidade(dono.cidade_slug)} semFotos={paginaSemFoto(g.lugares.find((l) => l.id === dono.lugar_id))} onFechar={() => setDono(null)} />}
+      {dono && <ModalDono linha={dono} dias={dados.dias} cidade={nomeDaCidade(dono.cidade_slug)} semFotos={paginaSemFoto(g.lugarPorId(dono.lugar_id))} onFechar={() => setDono(null)} />}
     </div>
   )
 }

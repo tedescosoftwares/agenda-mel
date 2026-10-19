@@ -36,15 +36,23 @@ export default function PaginasCidade({ g }) {
   const [ctx, setCtx] = useState(null) // { id, texto } do que está sendo digitado; sem isso, o que está no banco
   const [salvandoCtx, setSalvandoCtx] = useState(false)
 
-  // quantos salões no ar em cada página (a da cidade conta todos)
+  // quantos salões no ar em cada página (a da cidade conta todos): dos totais por cidade (3.25, migração 174),
+  // que valem para todas as cidades; num banco sem eles, da lista carregada
   const noAr = useMemo(() => {
     const m = {}
+    if (Array.isArray(g.resumo)) {
+      for (const r of g.resumo) {
+        m[`${r.cidade_slug}/`] = Number(r.no_ar ?? 0)
+        for (const [c, n] of Object.entries(r.categorias ?? {})) m[`${r.cidade_slug}/${c}`] = Number(n ?? 0)
+      }
+      return m
+    }
     for (const l of g.lugares) if (l.status === 'publicado') {
       m[`${l.cidade_slug}/`] = (m[`${l.cidade_slug}/`] ?? 0) + 1
       m[`${l.cidade_slug}/${l.categoria}`] = (m[`${l.cidade_slug}/${l.categoria}`] ?? 0) + 1
     }
     return m
-  }, [g.lugares])
+  }, [g.resumo, g.lugares])
 
   const grupos = useMemo(() => {
     const m = new Map()

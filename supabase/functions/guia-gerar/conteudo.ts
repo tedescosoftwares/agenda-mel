@@ -884,7 +884,8 @@ export function lerResposta(r: RespostaHttp): Leitura {
   // vale passar pela nossa validação (que explica o erro na nova tentativa)
   if (codigo === 'json_validate_failed') return { tipo: 'texto', texto: typeof erro?.failed_generation === 'string' ? erro.failed_generation : '', cortado: false }
   if (r.status === 400 && /response_format|json_schema|structured output|strict/i.test(mensagem)) return { tipo: 'formato_recusado', erro: mensagem }
-  if (r.status === 401 || r.status === 403) return { tipo: 'erro', erro: `a chave da IA foi recusada pelo provedor (${r.status})` }
+  // o motivo do provedor vai junto (3.27.1): "API não ativada no projeto", "chave restrita a outras APIs", "referer bloqueado"
+  if (r.status === 401 || r.status === 403) return { tipo: 'erro', erro: `a chave da IA foi recusada pelo provedor (${r.status})${mensagem ? `: ${mensagem}` : ''}`.slice(0, 300) }
   if (r.status === 404) return { tipo: 'erro', erro: `o provedor da IA não achou o modelo: ${mensagem}`.slice(0, 300) }
   if (r.status === 413) return { tipo: 'erro', erro: `o pedido passou do tamanho que a cota da IA aceita: ${mensagem}`.slice(0, 300) }
   if (r.status >= 500) return { tipo: 'erro', erro: `a IA está instável agora (${r.status}); tente de novo em instantes` }

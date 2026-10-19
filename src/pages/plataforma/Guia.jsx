@@ -340,6 +340,14 @@ export default function Guia() {
       if (montado.current) setGerando((g) => sem(g, id))
     }
   }, [mudarPagina])
+  // "Sobre a cidade" (3.22, migração 170): o que a IA sabe da cidade; não aparece no site
+  const salvarContexto = useCallback(async (id, contexto) => {
+    const texto = String(contexto ?? '').trim().slice(0, 1500) || null
+    const { error } = await supabase.from('guia_paginas').update({ contexto: texto }).eq('id', id)
+    if (error) return { ok: false, erro: /contexto/.test(error.message) && /column|schema cache/i.test(error.message) ? 'O banco ainda não tem o campo "Sobre a cidade". Rode a migração 170 (supabase/170_cidade_com_contexto.sql).' : error.message }
+    mudarPagina(id, { contexto: texto })
+    return { ok: true }
+  }, [mudarPagina])
   const aprovarPagina = useCallback(async (id) => {
     const { data, error } = await supabase.rpc('guia_aprovar_pagina', { pagina_: id })
     if (error) return { ok: false, erro: error.message }
@@ -422,7 +430,7 @@ export default function Guia() {
     lugares: lugares ?? [], paginas: paginas ?? [], interesses: interesses ?? [], carregando: lugares === null, erro,
     faseDe, gerando, falhas, lote, usuario: user?.id ?? null,
     carregar, salvarLugar, montarUm, gerarUm, iniciarLote, pausarLote, cancelarLote, fecharLote, aprovar, desfazerAprovacao,
-    gerarPagina, aprovarPagina, salvarInteresse, importar, avisar, irPara,
+    gerarPagina, aprovarPagina, salvarContexto, salvarInteresse, importar, avisar, irPara,
     desempenho, carregarDesempenho, desempenhoPorLugar,
   }
 

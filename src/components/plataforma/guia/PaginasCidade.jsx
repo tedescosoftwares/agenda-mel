@@ -4,12 +4,18 @@ import { PreviaGoogle } from './Previa'
 import { GUIA_CATEGORIAS, categoriaDoGuia, conteudoSeguro, rotaDaCidade, rotaDaCategoria } from '../../../lib/guia'
 import { seoDaCidade } from '../../../lib/guiaSeo'
 import { urlDoAmbiente } from '../../../lib/ambiente'
-import { MapPinned, Check, RefreshCw, Sparkles, ExternalLink, LoaderCircle, TriangleAlert } from 'lucide-react'
+import { MapPinned, Check, RefreshCw, Sparkles, ExternalLink, LoaderCircle, TriangleAlert, BookOpen } from 'lucide-react'
 
 // O texto da página da cidade (/saloes/itanhaem) e de cada categoria
 // (/saloes/itanhaem/unhas). As linhas nascem sozinhas na importação; a
 // página aparece no site assim que tiver um salão publicado, com o texto
 // padrão enquanto não houver um aprovado aqui.
+//
+// Na linha da cidade há também "Sobre a cidade" (3.22, migração 170): o que a
+// redação sabe da cidade (região, tipo de cidade, temporada, como ela se
+// organiza). Não aparece no site; a IA usa em todas as páginas da cidade, a da
+// cidade, as de categoria e a de cada salão, para o texto não sair igual ao de
+// qualquer outra cidade.
 
 const ORDEM_CAT = Object.fromEntries(['', ...GUIA_CATEGORIAS.map((c) => c.slug)].map((s, i) => [s, i]))
 const ROTULO = { sem: 'sem texto', revisar: 'para revisar', nova: 'no ar · versão nova', no_ar: 'no ar' }
@@ -27,6 +33,8 @@ export default function PaginasCidade({ g }) {
   const [instr, setInstr] = useState('')
   const [erro, setErro] = useState('')
   const [aprovando, setAprovando] = useState(false)
+  const [ctx, setCtx] = useState(null) // { id, texto } do que está sendo digitado; sem isso, o que está no banco
+  const [salvandoCtx, setSalvandoCtx] = useState(false)
 
   // quantos salões no ar em cada página (a da cidade conta todos)
   const noAr = useMemo(() => {
@@ -50,6 +58,9 @@ export default function PaginasCidade({ g }) {
   // sem escolha, abre na primeira que espera revisão
   const atual = todas.find((p) => p.id === selId) ?? todas.find((p) => faseDaPagina(p) === 'revisar' || faseDaPagina(p) === 'nova') ?? todas[0] ?? null
   function escolher(id) { setSelId(id); setVersao('rascunho'); setInstr(''); setErro('') }
+  // a caixa "Sobre a cidade" (só a linha da cidade tem): o que se digita fica por página; o resto vem do banco
+  const contexto = ctx && ctx.id === atual?.id ? ctx.texto : (atual?.contexto ?? '')
+  const setContexto = (texto) => setCtx({ id: atual?.id, texto })
 
   if (g.carregando) return <Painel Icon={MapPinned} titulo="Páginas da cidade"><Vazio>Carregando…</Vazio></Painel>
   if (!todas.length) return (
@@ -80,6 +91,16 @@ export default function PaginasCidade({ g }) {
     if (!r.ok) { setErro(r.erro); return }
     g.avisar({ texto: `${tituloDe(atual)}: texto no ar.`, tom: 'ok' })
   }
+  async function salvarContexto(e) {
+    e.preventDefault()
+    setSalvandoCtx(true); setErro('')
+    const r = await g.salvarContexto(atual.id, contexto)
+    setSalvandoCtx(false)
+    if (!r.ok) { setErro(r.erro); return }
+    setCtx(null)
+    g.avisar({ texto: `Sobre ${atual.cidade}: guardado. Vale para os próximos textos gerados da cidade.`, tom: 'ok' })
+  }
+  const ctxMudou = (contexto ?? '').trim() !== (atual?.contexto ?? '').trim()
 
   return (
     <div className="pg-paginas">
@@ -130,6 +151,23 @@ export default function PaginasCidade({ g }) {
           </form>
           {erro && <div className="alert alert-error">{erro}</div>}
           {falha && !ger && <div className="alert alert-error">Não deu para gerar: {falha}</div>}
+
+          {atual.categoria === '' && (
+            <form className="pg-contexto" onSubmit={salvarContexto} data-teste="sobre-a-cidade">
+              <div className="pg-contexto-cabeca">
+                <BookOpen size={16} />
+                <div>
+                  <b>Sobre {atual.cidade}</b>
+                  <span>O que a redação sabe da cidade: região, tipo de cidade, temporada, como ela se organiza. Não aparece no site. A IA usa em todas as páginas de {atual.cidade} (cidade, categorias e cada salão), para o texto não sair igual ao de qualquer outra cidade. Só coisa certa e geral; nada de bairro "tranquilo" ou "movimentado".</span>
+                </div>
+              </div>
+              <textarea value={contexto} onChange={(e) => setContexto(e.target.value.slice(0, 1500))} rows={5} placeholder={`Ex.: ${atual.cidade} fica no litoral sul de São Paulo. É cidade de praia: o movimento cresce no verão e nos feriados…`} aria-label={`Sobre ${atual.cidade}`} disabled={salvandoCtx} />
+              <div className="pg-contexto-pe">
+                <small>{(contexto ?? '').length}/1500{!atual.contexto && !contexto ? ' · sem contexto, a IA escreve sem saber nada da cidade' : ''}</small>
+                <button type="submit" className="btn btn-ghost" disabled={!ctxMudou || salvandoCtx}>{salvandoCtx ? <LoaderCircle size={16} className="pg-gira" /> : <Check size={16} />} Guardar</button>
+              </div>
+            </form>
+          )}
 
           <div className="pg-pagina-texto">
             <PreviaGoogle titulo={seo.titulo} descricao={seo.descricao} caminho={seo.caminho} tituloBruto={c?.seo_title || seo.titulo} descricaoBruta={c?.meta_description || seo.descricao} />

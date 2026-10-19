@@ -17,6 +17,7 @@ import {
   seoDaColecao, jsonLdDaColecao, trilhaDaColecao,
 } from '../src/lib/guiaSeo.js'
 import { colecoesDaCidade, montarColecao, linksDeColecoes, linkDoBairro } from '../src/lib/guiaColecoes.js'
+import { panoramaDaCidade, juntarFaq, tituloDoPanorama } from '../src/lib/guiaPanorama.js'
 
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 const SITE = 'https://mimo.com.vc'
@@ -60,7 +61,7 @@ export const limiteDaLista = (categoria) => (categoria ? 240 : 96)
 // os links das coleções: [{ caminho, rotulo, total }]
 const navDeColecoes = (titulo, links) => (links.length ? `<nav aria-label="${esc(titulo)}"><h2>${esc(titulo)}</h2><ul>${links.map((x) => `<li><a href="${esc(x.caminho)}">${esc(x.rotulo)}</a> (${x.total})</li>`).join('')}</ul></nav>` : '')
 
-function corpoDaCidade(dados, faq, colecoes = null, extras = {}) {
+function corpoDaCidade(dados, faq, colecoes = null, extras = {}, panorama = null) {
   const c = conteudoSeguro(dados.pagina) ?? conteudoSeguro({})
   const { h1 } = seoDaCidade(dados.cidade, dados.cidade_slug, dados.categoria, dados.pagina)
   const outras = (dados.categorias ?? []).filter((x) => x.categoria !== dados.categoria)
@@ -69,6 +70,7 @@ ${migalhas(trilhaDaCidade(dados.cidade, dados.cidade_slug, dados.categoria))}
 <h1>${esc(h1)}</h1>
 <p>${esc(c.chamada || seoPadraoDaCidade(dados.cidade, dados.categoria).meta_description)}</p>
 ${c.intro.map((p) => `<p>${esc(p)}</p>`).join('')}
+${panorama?.paragrafos?.length ? `<section><h2>${esc(tituloDoPanorama(dados.cidade, dados.categoria))}</h2>${panorama.paragrafos.map((p) => `<p>${esc(p)}</p>`).join('')}</section>` : ''}
 <section><h2>${esc(dados.categoria ? `${categoriaDoGuia(dados.categoria).rotulo} em ${dados.cidade}` : `Salões em ${dados.cidade}`)}</h2>${listaDeCartoes(dados.lugares.slice(0, limiteDaLista(dados.categoria)), dados.cidade_slug)}${dados.lugares.length > limiteDaLista(dados.categoria) ? `<p>${esc(`Aqui estão os ${limiteDaLista(dados.categoria)} primeiros de ${dados.lugares.length}. Os outros estão nas páginas por bairro e por categoria.`)}</p>` : ''}</section>
 ${c.como_escolher.itens.length ? `<section><h2>${esc(c.como_escolher.titulo || 'Como escolher')}</h2><ul>${c.como_escolher.itens.map((i) => `<li>${esc(i)}</li>`).join('')}</ul></section>` : ''}
 ${colecoes ? navDeColecoes('Por horário', dados.categoria ? colecoes.categorias[dados.categoria] ?? [] : colecoes.horarios) : ''}
@@ -141,9 +143,11 @@ export function paginasDoGuia(guia, artigos = []) {
     const extras = { artigos: artigosDaCidade(artigos, cs, listaCidades), cidades: listaCidades }
     for (const cat of cats) {
       const d = dadosDaCidade(lugares, paginas, cs, cat)
-      const faq = conteudoSeguro(d.pagina)?.faq ?? []
+      // o panorama (3.22): os números da lista, montados aqui, e a FAQ dos dados junto com a da IA
+      const panorama = panoramaDaCidade({ cidade: d.cidade, categoria: cat, lugares: d.lugares, completos: doGuia })
+      const faq = juntarFaq(conteudoSeguro(d.pagina)?.faq ?? [], panorama.faq)
       const { titulo, descricao, caminho } = seoDaCidade(d.cidade, cs, cat, d.pagina)
-      out.push({ caminho, titulo, descricao, atualizado: d.atualizado, prioridade: cat ? '0.7' : '0.8', freq: 'weekly', jsonLd: jsonLdDaCidade(d, faq), corpo: corpoDaCidade(d, faq, colecoes, extras) })
+      out.push({ caminho, titulo, descricao, atualizado: d.atualizado, prioridade: cat ? '0.7' : '0.8', freq: 'weekly', jsonLd: jsonLdDaCidade(d, faq), corpo: corpoDaCidade(d, faq, colecoes, extras, panorama) })
     }
     for (const col of colecoesDaCidade(doGuia, cs)) {
       const m = montarColecao(col, doGuia)

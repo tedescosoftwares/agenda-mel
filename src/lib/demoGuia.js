@@ -211,6 +211,8 @@ export const GUIA_LUGARES = [
 export const GUIA_PAGINAS = [
   {
     id: 'gp1', cidade: 'Itanhaém', cidade_slug: 'itanhaem', uf: 'SP', categoria: '', status: 'publicado', gerado_em: dias(2), publicado_em: dias(2), criado_em: dias(6), atualizado_em: dias(2), rascunho: null,
+    // "Sobre a cidade" (3.22, migração 170): o que a IA sabe da cidade; não aparece no site
+    contexto: 'Itanhaém fica no litoral sul de São Paulo e é uma das cidades mais antigas do Brasil. É cidade de praia, comprida: vai do Centro e da Boca da Barra até Suarão e Gaivota, com muitos bairros ao longo da orla e para dentro. O movimento cresce no verão e nos feriados prolongados. Sol, sal, cloro de piscina e maresia pesam no cabelo, na pele, nos cílios e no esmalte.',
     conteudo: {
       seo_title: 'Salões de beleza em Itanhaém: guia por bairro e serviço',
       meta_description: 'Salões de beleza, manicures, cílios, sobrancelha e estética em Itanhaém: endereço, horário e serviços de cada um, do Centro ao Gaivota.',

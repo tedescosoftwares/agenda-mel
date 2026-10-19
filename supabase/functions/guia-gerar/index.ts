@@ -16,7 +16,9 @@
 //   400/401/403/404/409/500 { erro }                 pedido, permissão ou dado
 //
 // O prompt, a ficha, a validação e a semelhança moram em conteudo.ts (puro,
-// testado com node). Aqui ficam só o banco e a rede.
+// testado com node). Aqui ficam só o banco e a rede. Desde a 3.22 a ficha do
+// salão leva os atributos do cadastro (pagamento, acessibilidade, estacionamento)
+// e todas as páginas da cidade levam o "Sobre a cidade" da Plataforma (170).
 //
 // Nada vai para o ar daqui: o texto fica em rascunho até guia_aprovar(). Um
 // salão já publicado continua com a página de antes enquanto a versão nova
@@ -43,7 +45,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const VIVOS = ['importado', 'gerado', 'publicado']
 // a lista fechada do que se lê de um salão: nota, avaliações, CNPJ,
 // coordenadas e o CSV de origem nem saem do banco
-const COLUNAS_LUGAR = 'id, slug, nome, categoria, cidade, cidade_slug, uf, bairro, endereco, telefone, whatsapp, instagram, site, horarios, servicos, selecao, salon_id, status, conteudo, rascunho'
+const COLUNAS_LUGAR = 'id, slug, nome, categoria, cidade, cidade_slug, uf, bairro, endereco, telefone, whatsapp, instagram, site, horarios, servicos, selecao, salon_id, status, conteudo, rascunho, atributos'
 
 function json(corpo: unknown, status = 200) {
   return new Response(JSON.stringify(corpo), {
@@ -71,6 +73,14 @@ const pedir: Pedir = async (corpo, timeoutMs) => {
 type Linha = Record<string, unknown>
 type Pedido = { lugar?: unknown; pagina?: unknown; instrucao?: unknown; angulo?: unknown }
 
+// "Sobre a cidade" (3.22, migração 170): na linha da cidade em guia_paginas; vale para todas as páginas
+// dela. Sem a coluna (banco sem a 170) ou sem texto, null, e o conteudo.ts usa o que tem
+async function contextoDa(db: SupabaseClient, cidadeSlug: string): Promise<string | null> {
+  const { data } = await db.from('guia_paginas').select('contexto').eq('cidade_slug', cidadeSlug).eq('categoria', '').maybeSingle()
+  const c = (data as { contexto?: unknown } | null)?.contexto
+  return typeof c === 'string' && c.trim() ? c : null
+}
+
 async function gerarLugar(db: SupabaseClient, id: string, instrucao: string | null, pedidoAngulo: string | null): Promise<Response> {
   const { data, error } = await db.from('guia_lugares').select(COLUNAS_LUGAR).eq('id', id).maybeSingle()
   if (error) return json({ erro: error.message }, 500)
@@ -88,7 +98,7 @@ async function gerarLugar(db: SupabaseClient, id: string, instrucao: string | nu
     .limit(300)
   const outros = (outrosCru ?? []) as unknown as Linha[]
 
-  const { ficha, cidade, checagem } = prepararLugar(l)
+  const { ficha, cidade, checagem } = prepararLugar(l, await contextoDa(db, String(l.cidade_slug ?? '')))
   const anterior = l.rascunho ?? l.conteudo ?? null
   const candidatos = angulosPara(l.categoria, ficha.servicos_divulgados, cidade.praia)
   const angulo = escolherAngulo({ candidatos, todos: ANGULOS[l.categoria] ?? ANGULOS.beleza, semente: l.slug, pedido: pedidoAngulo, anterior: anguloAnterior(anterior) })
@@ -132,7 +142,7 @@ async function gerarPagina(db: SupabaseClient, id: string, instrucao: string | n
     .eq('cidade_slug', p.cidade_slug).neq('id', p.id)
   const irmas = (irmasCru ?? []) as unknown as Linha[]
 
-  const { ficha, cidade, checagem } = prepararPagina(p, lugares as unknown as LugarDaPagina[])
+  const { ficha, cidade, checagem } = prepararPagina(p, lugares as unknown as LugarDaPagina[], await contextoDa(db, String(p.cidade_slug ?? '')))
   const anterior = p.rascunho ?? p.conteudo ?? null
   const candidatos = ANGULOS_PAGINA.filter((a) => !a.praia || cidade.praia)
   const angulo = escolherAngulo({ candidatos, todos: ANGULOS_PAGINA, semente: `${p.cidade_slug}/${p.categoria}`, pedido: pedidoAngulo, anterior: anguloAnterior(anterior) })

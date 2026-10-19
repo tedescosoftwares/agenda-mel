@@ -46,6 +46,7 @@ export type LugarLinha = {
   selecao?: boolean | null
   salon_id?: string | null
   na_mimo?: boolean | null
+  atributos?: unknown // guia_lugares.atributos (155): pagamento, acessibilidade, estacionamento, criancas, banheiro
 }
 
 export type PaginaLinha = { cidade: string; cidade_slug: string; uf?: string | null; categoria?: string | null }
@@ -66,6 +67,7 @@ export type FichaLugar = {
   canais_divulgados: string[]
   selecao_mimo: boolean
   agenda_pela_mimo: boolean
+  o_que_o_lugar_informa: string[] // o que o cadastro público informa (3.22): pode ser afirmado
 }
 
 export type FichaPagina = {
@@ -84,6 +86,9 @@ export type FichaPagina = {
   abrem_aos_domingos: number
 }
 
+// o que o cadastro informa (3.22): libera na validação o que, sem isso, seria invenção
+export type Informa = { pagamento: boolean; estacionamento: boolean; acessibilidade: boolean; criancas: boolean; banheiro: boolean }
+
 // o que a validação precisa saber e que não vai ao modelo
 export type Checagem = {
   tipo: Tipo
@@ -94,6 +99,7 @@ export type Checagem = {
   abreDomingo: boolean | null
   canais: string[]
   mimo: boolean
+  informa: Informa
 }
 
 export type Cidade = { praia: boolean; texto: string }
@@ -154,7 +160,7 @@ type Obj = Record<string, unknown>
 export const URL_GROQ = 'https://api.groq.com/openai/v1/chat/completions'
 export const MODELO_PADRAO = 'openai/gpt-oss-120b'
 export const LIMITE_INSTRUCAO = 400
-export const TEMPERATURA = 0.8
+export const TEMPERATURA = 0.7 // 3.22: um pouco mais presa aos fatos; a variedade vem dos ângulos e das aberturas
 // max_tokens é RESERVA no Groq: a cota por minuto desconta o número inteiro.
 // 2400 cabe o raciocínio curto do gpt-oss mais ~900 palavras de JSON; menos
 // que isso a resposta corta no meio e a nova tentativa custa o dobro.
@@ -187,8 +193,17 @@ export const CIDADES: Record<string, Cidade> = {
   mongagua: litoralSul('Mongaguá'),
   peruibe: litoralSul('Peruíbe'),
 }
-export function contextoDaCidade(cidadeSlug: string, cidade: string, uf = ''): Cidade {
-  return CIDADES[cidadeSlug] ?? { praia: false, texto: `${cidade}${uf ? ` (${uf})` : ''}. A redação não tem outras informações sobre a cidade: não invente nenhuma.` }
+// as cidades de praia (o ângulo "sol, sal e cloro" só entra nelas); o contexto do banco também pode dizer
+const LITORAL = new Set(['praia-grande', 'santos', 'sao-vicente', 'guaruja', 'bertioga', 'mongagua', 'itanhaem', 'peruibe',
+  'caraguatatuba', 'sao-sebastiao', 'ubatuba', 'ilhabela', 'ilha-comprida', 'cananeia', 'iguape'])
+// 3.22 (migração 170): o "Sobre a cidade" escrito na Plataforma vale para a cidade inteira (a página da
+// cidade, as de categoria e cada salão). Sem ele, o parágrafo fixo de algumas cidades; sem nada, o aviso
+export function contextoDaCidade(cidadeSlug: string, cidade: string, uf = '', contexto: unknown = null): Cidade {
+  const texto = limpar(contexto, 1500)
+  const fixo = CIDADES[cidadeSlug]
+  const praia = LITORAL.has(cidadeSlug) || !!fixo?.praia || (/cidade de praia|veran(eio|istas)|maresia/i.test(texto) && !/n[aã]o tem praia/i.test(texto))
+  if (texto) return { praia, texto }
+  return fixo ?? { praia, texto: `${cidade}${uf ? ` (${uf})` : ''}. A redação não tem outras informações sobre a cidade: não invente nenhuma.` }
 }
 
 // ---- texto ---------------------------------------------------------------------------------
@@ -319,6 +334,27 @@ export function notasDoHorario(horarios: unknown): string[] {
 }
 
 // ---- a ficha -----------------------------------------------------------------------------------
+// o que o cadastro público informa (guia_lugares.atributos, 155), no mesmo vocabulário que a página
+// mostra (atributosEmTexto do core): vai à ficha como fato e libera as regras correspondentes
+const ATRIBUTOS: Record<'pagamento' | 'acessibilidade' | 'estacionamento', Record<string, string>> = {
+  pagamento: { credito: 'aceita cartão de crédito', debito: 'aceita cartão de débito', aproximacao: 'aceita pagamento por aproximação', so_dinheiro: 'só aceita dinheiro' },
+  acessibilidade: { entrada: 'entrada acessível para cadeira de rodas', estacionamento: 'vaga de estacionamento acessível', banheiro: 'banheiro acessível', assentos: 'assentos acessíveis' },
+  estacionamento: { rua_gratis: 'estacionamento na rua, grátis', rua_pago: 'estacionamento na rua, pago', local_gratis: 'estacionamento próprio grátis', local_pago: 'estacionamento próprio pago', garagem_gratis: 'garagem grátis', garagem_pago: 'garagem paga', manobrista: 'manobrista' },
+}
+export const NADA_INFORMADO: Informa = { pagamento: false, estacionamento: false, acessibilidade: false, criancas: false, banheiro: false }
+export function informesDoLugar(atributos: unknown): { frases: string[]; informa: Informa } {
+  const a = (atributos && typeof atributos === 'object' && !Array.isArray(atributos) ? atributos : {}) as Record<string, unknown>
+  const frases: string[] = []
+  const informa: Informa = { ...NADA_INFORMADO }
+  for (const campo of ['pagamento', 'acessibilidade', 'estacionamento'] as const) {
+    const rotulos = (Array.isArray(a[campo]) ? (a[campo] as unknown[]) : []).map((k) => ATRIBUTOS[campo][String(k)]).filter((x): x is string => !!x)
+    if (rotulos.length) { informa[campo] = true; frases.push(...rotulos) }
+  }
+  if (a.criancas === true) { informa.criancas = true; frases.push('bom para ir com crianças') }
+  if (a.banheiro === true) { informa.banheiro = true; frases.push('tem banheiro para clientes') }
+  return { frases, informa }
+}
+
 export function fichaDoLugar(l: LugarLinha): FichaLugar {
   const cat = categoria(l.categoria)
   const canais: string[] = []
@@ -340,15 +376,16 @@ export function fichaDoLugar(l: LugarLinha): FichaLugar {
     canais_divulgados: canais,
     selecao_mimo: l.selecao === true,
     agenda_pela_mimo: l.na_mimo === true || temTexto(l.salon_id),
+    o_que_o_lugar_informa: informesDoLugar(l.atributos).frases,
   }
 }
 
-export function prepararLugar(l: LugarLinha): { ficha: FichaLugar; cidade: Cidade; checagem: Checagem } {
+export function prepararLugar(l: LugarLinha, contexto: unknown = null): { ficha: FichaLugar; cidade: Cidade; checagem: Checagem } {
   const ficha = fichaDoLugar(l)
   const dias = diasValidos(l.horarios)
   return {
     ficha,
-    cidade: contextoDaCidade(String(l.cidade_slug ?? ''), ficha.cidade, ficha.uf),
+    cidade: contextoDaCidade(String(l.cidade_slug ?? ''), ficha.cidade, ficha.uf, contexto),
     checagem: {
       tipo: 'lugar',
       permitidos: [ficha.nome, ficha.bairro ?? '', ...nomesDaRua(ficha.endereco), ficha.cidade].filter((x) => x.length >= 3),
@@ -358,6 +395,7 @@ export function prepararLugar(l: LugarLinha): { ficha: FichaLugar; cidade: Cidad
       abreDomingo: dias.length ? dias.some((d) => d.dia === 0) : null,
       canais: ficha.canais_divulgados,
       mimo: ficha.agenda_pela_mimo,
+      informa: informesDoLugar(l.atributos).informa,
     },
   }
 }
@@ -378,7 +416,7 @@ const contagem = (valores: string[], quantos: number) => {
   return [...m.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, quantos)
 }
 
-export function prepararPagina(p: PaginaLinha, lugares: LugarDaPagina[]): { ficha: FichaPagina; cidade: Cidade; checagem: Checagem } {
+export function prepararPagina(p: PaginaLinha, lugares: LugarDaPagina[], contexto: unknown = null): { ficha: FichaPagina; cidade: Cidade; checagem: Checagem } {
   const cidade = limpar(p.cidade, 60)
   const uf = limpar(p.uf, 2).toUpperCase() || 'SP'
   const cat = p.categoria ? categoria(p.categoria) : null
@@ -403,8 +441,8 @@ export function prepararPagina(p: PaginaLinha, lugares: LugarDaPagina[]): { fich
   const proibidos = [...new Set(lugares.map((l) => limpar(l.nome, 80)).filter((n) => nomeIdentifica(n) && !permitidos.some((x) => norm(x) === norm(n))))]
   return {
     ficha,
-    cidade: contextoDaCidade(String(p.cidade_slug ?? ''), cidade, uf),
-    checagem: { tipo: 'pagina', permitidos, proibidos, horas: null, abreSabado: null, abreDomingo: null, canais: [], mimo: false },
+    cidade: contextoDaCidade(String(p.cidade_slug ?? ''), cidade, uf, contexto),
+    checagem: { tipo: 'pagina', permitidos, proibidos, horas: null, abreSabado: null, abreDomingo: null, canais: [], mimo: false, informa: NADA_INFORMADO },
   }
 }
 
@@ -542,12 +580,13 @@ export function anguloAnterior(c: unknown): string | null {
 export const SISTEMA_LUGAR = `Você é redatora de um guia local de beleza feito pela MIMO. O guia tem uma página para cada salão, manicure, estúdio de cílios ou de sobrancelha, espaço de estética e maquiadora da cidade, inclusive os que não usam a MIMO. Quem lê é a cliente decidindo onde marcar. Ela quer saber, rápido, o que o lugar faz, onde fica, o que esperar do serviço e como se preparar. Escreva para ela, em português do Brasil, com a segurança de quem conhece o assunto e sem nada para vender.
 
 O QUE VOCÊ SABE DO LUGAR
-Só o que está na <ficha>: nome, categoria no guia, serviços divulgados, bairro, endereço, cidade, horário e os canais que o próprio lugar divulga. Você nunca esteve lá. Não conhece a equipe, o ambiente nem o atendimento.
+Só o que está na <ficha>: nome, categoria no guia, serviços divulgados, bairro, endereço, cidade, horário, os canais que o próprio lugar divulga e, em "o_que_o_lugar_informa", o que ele informou no cadastro público (formas de pagamento, acessibilidade, estacionamento, crianças, banheiro). Você nunca esteve lá. Não conhece a equipe, o ambiente nem o atendimento.
 - A categoria diz em que lista do guia o lugar aparece; os serviços dizem o que ele faz. Se os serviços forem além da categoria, descreva pelo conjunto (ex.: salão com manicure, cabelo e depilação).
 - Serviço da lista é genérico: "Cabelo" não quer dizer que faz mechas ou progressiva. Fale do serviço em geral ou diga para confirmar com o lugar.
+- "o_que_o_lugar_informa" pode ser afirmado como fato, de preferência com "informa que" ou "segundo o cadastro". O que não estiver lá não existe para você: nada de Pix, parcelamento ou "aceita todos os cartões" por conta própria.
 
 REGRAS QUE NÃO SE QUEBRAM
-1. Não invente nada sobre o lugar. Nunca afirme: preço, tempo de casa, ano de abertura, história, marcas e produtos, prêmios, cursos ou experiência de quem atende, nomes de pessoas, como é o ambiente (aconchegante, moderno, climatizado), estacionamento, formas de pagamento, café, wi-fi, atendimento a domicílio, encaixe, serviço fora da lista. Não trate o nome do lugar como nome de alguém ("a Rô atende" é invenção).
+1. Não invente nada sobre o lugar. Nunca afirme: preço, tempo de casa, ano de abertura, história, marcas e produtos, prêmios, cursos ou experiência de quem atende, nomes de pessoas, como é o ambiente (aconchegante, moderno, climatizado), café, wi-fi, atendimento a domicílio, encaixe, serviço fora da lista; estacionamento, pagamento, acessibilidade, crianças e banheiro só se estiverem em "o_que_o_lugar_informa". Não trate o nome do lugar como nome de alguém ("a Rô atende" é invenção).
 2. Nada de nota, estrelas, avaliações, comentários ou opinião de clientes, "bem avaliado", "mais procurado", "famoso", "referência na cidade". Não cite o Google nem número de seguidores.
 3. Nada de preço: nem valor, nem "preço justo", "barato", "em conta", promoção ou desconto. No máximo, diga que o valor varia conforme o serviço e vale perguntar antes.
 4. Não prometa nada em nome do lugar ("resultado garantido", "você vai sair renovada", "sem dor", "atendimento rápido"). O que é geral do serviço vem com "costuma", "em geral", "vale perguntar". Tempo, duração e intervalo de manutenção, só como faixa aproximada.
@@ -562,6 +601,7 @@ O QUE FAZ A PÁGINA SER ÚTIL
 - O serviço explicado de verdade: como costuma ser, quanto tempo leva em geral, como chegar preparada, os cuidados depois, de quanto em quanto tempo refazer e quando marcar com antecedência (sábados, vésperas de feriado, fim de ano e, em cidade de praia, a temporada costumam lotar).
 - Ajuda para escolher: o que perguntar ao marcar e o que observar no primeiro atendimento (material esterilizado ou descartável, conversa antes de começar, explicação dos cuidados).
 - Lugar de verdade: use o bairro, a rua, a cidade e o que vier em "Sobre a cidade". Tire do horário e dos serviços da ficha conclusões práticas e verdadeiras ("abre aos sábados", "dá para fazer unha e cabelo no mesmo endereço"). Não invente nada sobre o bairro (perto da praia, movimentado, tranquilo).
+- Teste da página genérica: se uma frase servir para qualquer salão da cidade, troque por uma com um fato da ficha (serviço, bairro, horário, o que o lugar informa) ou corte. Cada parágrafo de "sobre" tem pelo menos um fato da ficha, e o segundo e o terceiro não repetem o primeiro. "Sobre a cidade" é o que a redação sabe da cidade: use um fato de lá quando ajudar a leitora (a temporada, o tipo de cidade), sem transformar a página num texto sobre a cidade.
 - O ângulo editorial pedido define o assunto principal do texto, dos destaques, das dicas e da FAQ. Páginas de lugares parecidos têm de sair diferentes, inclusive na estrutura.
 - Busca no Google: o nome, o serviço como a pessoa procura ("manicure", "cabeleireiro", "extensão de cílios") e a cidade aparecem no seo_title, na meta_description e no primeiro parágrafo, de forma natural. Não repita a mesma expressão mais de três vezes na página.
 - Estilo: frases curtas, voz ativa, palavras do dia a dia, "você" para a leitora. Um fato útil vale mais que três adjetivos.
@@ -579,7 +619,7 @@ FORMATO: só o objeto JSON, sem nada antes ou depois.
 export const SISTEMA_PAGINA = `Você é redatora de um guia local de beleza feito pela MIMO e escreve o texto de abertura das páginas de cidade ("Salões de beleza em Itanhaém") e de categoria ("Manicure e unhas em Itanhaém"). Logo abaixo do seu texto, a página mostra a lista dos lugares, com bairro, horário e serviços de cada um. Quem lê está escolhendo onde marcar e quer ajuda para decidir. Escreva para ela, em português do Brasil, com a segurança de quem conhece o assunto e sem nada para vender.
 
 O QUE VOCÊ SABE
-Só o que está na <ficha>: a cidade, a categoria e números do guia (bairros com mais lugares, serviços mais comuns, quantos abrem aos sábados e aos domingos). Os números são do guia, não da cidade inteira.
+Só o que está na <ficha>: a cidade, a categoria e números do guia (bairros com mais lugares, serviços mais comuns, quantos abrem aos sábados e aos domingos), mais o que vier em "Sobre a cidade", que é o que a redação sabe da cidade. Os números são do guia, não da cidade inteira.
 
 REGRAS QUE NÃO SE QUEBRAM
 1. Não cite nenhum lugar pelo nome e não compare lugares. A lista abaixo do texto faz isso.
@@ -594,7 +634,8 @@ REGRAS QUE NÃO SE QUEBRAM
 
 O QUE FAZ A PÁGINA SER ÚTIL
 - Explicar o serviço (o que costuma incluir, quanto tempo leva em geral, de quanto em quanto tempo refazer) e como escolher bem: o que perguntar ao marcar, o que observar no primeiro atendimento, quando reservar com antecedência.
-- Ancorar na cidade: os bairros da ficha, o horário (sábado, domingo) e o que vier em "Sobre a cidade".
+- Ancorar na cidade: um dos parágrafos parte de "Sobre a cidade" (o tipo de cidade, a temporada, como ela se organiza) e dos bairros da ficha, para a página de uma cidade não poder ser a de outra. Logo abaixo do texto a página mostra um bloco com os números exatos da lista (bairros, horários, categorias): não repita números, diga o que eles significam para quem escolhe.
+- Teste da página genérica: frase que serviria para qualquer cidade sai, ou ganha um fato da ficha ou de "Sobre a cidade".
 - Na página da cidade, apresente o guia inteiro e as categorias que existem nele; na de categoria, aprofunde aquele serviço.
 - Busca no Google: o serviço como a pessoa procura ("manicure em Itanhaém") aparece no seo_title, na meta_description e no primeiro parágrafo, sem repetir mais de três vezes.
 - O ângulo editorial pedido define o assunto principal. Frases curtas, voz ativa, "você" para a leitora.
@@ -774,15 +815,18 @@ export const REGRAS: Regra[] = [
   { nivel: 'grave', motivo: 'fala de seguidores ou curtidas', re: /\b(seguidores|curtidas|likes)\b/ },
   { nivel: 'grave', motivo: 'diz que o lugar é famoso ou referência', re: /\b(e|sao|ficou|ficaram|tornou-se|bem|muito)\s+famos[oa]s?\b|\bfamos[oa]s?\s+(na|no|em|por|pel[oa]s?|entre)\b|\bconhecid[oa]s?\s+(na|em|por|pel[oa]s?)\s|\branking\b|\bnumero\s+(1|um)\b|\bn[oº°]\s?1\b|\blider(es)?\b|\b(e|sao|virou|virar|tornou-se|se tornou|considerad[oa]s?)\s+(uma\s+|a\s+)?referencia\b|\breferencia\s+(em|no|na|de qualidade)\b/ },
   { nivel: 'grave', motivo: 'superlativo que coloca o lugar acima dos outros', re: /\b(o|a|os|as)\s+melhor(es)?\s+(salao|saloes|manicures?|barbearias?|barbeiros?|cabeleireir\w*|esteticistas?|estudios?|lash\w*|designers?|maquiador\w*|clinicas?|lugar(es)?|opc(ao|oes)|profission\w*|atendimentos?|espacos?|equipes?|servicos?|enderecos?|escolhas?)\b|\bmelhor(es)?\s+d[aeo]s?\s+(cidade|regiao|bairro|litoral|baixada|centro|praia|zona|itanhaem|sp|brasil)\b|\bexcelencia\b|\bincomparave|\bsem\s+igual\b|\binsuperave|\bunic[oa]s?\s+(na|da|do|no|em)\s+(cidade|regiao|bairro)/ },
-  { nivel: 'grave', motivo: 'fala de preço', re: /r\$\s?\d|\b\d+([.,]\d+)?\s?reais\b|\b(preco|precos|valor|valores)\s+(justo|acessive|baixo|bom|bons|otimo|camarada|competitiv|imbative|promocion|convidativ|honesto)\w*|\bbarat[oa]s?\b|\b(sai|fica|ficam|saem|e|preco|precos|valor|valores|bem|mais)\s+em\s+conta\b|\bcusto[- ]beneficio\b|\bpromoc(ao|oes|ional)\b|\bdescontos?\b|\bgratis\b|\bgratuit[oa]s?\b|\bcortesia\b/ },
+  { nivel: 'grave', motivo: 'fala de preço', re: /r\$\s?\d|\b\d+([.,]\d+)?\s?reais\b|\b(preco|precos|valor|valores)\s+(justo|acessive|baixo|bom|bons|otimo|camarada|competitiv|imbative|promocion|convidativ|honesto)\w*|\bbarat[oa]s?\b|\b(sai|fica|ficam|saem|e|preco|precos|valor|valores|bem|mais)\s+em\s+conta\b|\bcusto[- ]beneficio\b|\bpromoc(ao|oes|ional)\b|\bdescontos?\b/ },
+  { nivel: 'grave', motivo: 'fala de coisa grátis', se: (c) => !c.informa?.estacionamento, re: /\bgratis\b|\bgratuit[oa]s?\b|\bcortesia\b/ },
   { nivel: 'grave', motivo: 'traz número de telefone', re: /\(?\b\d{2}\)?\s?9?\s?\d{4}[-\s.]?\d{4}\b/ },
   { nivel: 'grave', motivo: 'traz link, e-mail ou @', re: /https?:\/\/|\bwww\.|[\w.+-]+@[\w-]+\.\w|(^|\s)@\w/ },
   { nivel: 'grave', motivo: 'inventa tempo de casa ou história do lugar', re: /\bha\s+(mais\s+de\s+|quase\s+)?\d+\s+anos\b|\bha\s+(muitos\s+|varios\s+)?anos\s+(no|na|em|atende|cuida)\b|\bdesde\s+(19|20)\d\d\b|\b\d+\s+anos\s+de\s+(experiencia|mercado|tradicao|historia|estrada|atuacao|casa)|\banos\s+de\s+(experiencia|mercado|tradicao|historia|estrada)\b|\bfundad[oa]\b|\bfundou\b|\binaugur\w*|\bdecadas\b/ },
-  { nivel: 'grave', motivo: 'inventa como é o lugar (ambiente, estrutura, estacionamento)', re: /\bambiente\s+(e\s+)?(muito\s+)?(aconcheg|acolhed|agradav|sofisticad|modern|climatizad|tranquil|descontraid|familiar|limp|confortav|charmos|elegant|requintad|intimist|relaxant|calm|gostos|bonit|lind|ampl|espacos|leve|alegre|reservad)\w*|\baconcheg\w*|\bacolhedor\w*|\bclimatizad\w*|\bar[- ]condicionado\b|\bwi-?fi\b|\bcafezinho\b|\bestacionamento\b|\bmanobrista\b|\bespaco\s+(amplo|moderno|sofisticado|reservado|aconchegante|kids|infantil)\b|\bsala\s+(vip|privativa|reservada)\b|\bbrinquedoteca\b/ },
+  { nivel: 'grave', motivo: 'inventa como é o lugar (ambiente, estrutura, estacionamento)', re: /\bambiente\s+(e\s+)?(muito\s+)?(aconcheg|acolhed|agradav|sofisticad|modern|climatizad|tranquil|descontraid|familiar|limp|confortav|charmos|elegant|requintad|intimist|relaxant|calm|gostos|bonit|lind|ampl|espacos|leve|alegre|reservad)\w*|\baconcheg\w*|\bacolhedor\w*|\bclimatizad\w*|\bar[- ]condicionado\b|\bwi-?fi\b|\bcafezinho\b|\bespaco\s+(amplo|moderno|sofisticado|reservado|aconchegante|kids|infantil)\b|\bsala\s+(vip|privativa|reservada)\b|\bbrinquedoteca\b/ },
   { nivel: 'grave', motivo: 'inventa qualidades da equipe', re: /\b(equipe|time|profissionais)\s+(\w+\s+)?(experiente|qualificad|especializad|capacitad|talentos|dedicad|atencios|simpatic|competente|treinad|certificad|habilidos|caprichos|renomad|premiad|apaixonad|atualizad|cuidados)\w*|\b(conta|contam)\s+com\s+(uma\s+)?(equipe|profissionais|time)\b|\b(equipe|time)\s+(e\s+)?(formad[oa]|composta)\s+por\b|\b(os|as|seus|suas)\s+(barbeiros|cabeleireir\w+|manicures|esteticistas|maquiador\w+|profissionais|designers)\s+(sao\s+)?(\w+\s+)?(experientes|qualificad|especializad|capacitad|talentos|renomad|premiad|certificad|treinad|atencios|simpatic)\w*|\b(possui|reune)\s+(uma\s+)?(equipe|profissionais|time)\b/ },
   { nivel: 'grave', motivo: 'fala de dono, sócio ou gerente, que a ficha não traz', re: /\b(dona|donas|dono|donos|proprietari[oa]s?|fundador[a]?s?|socia|socio|socias|socios|gerente)\b/ },
   { nivel: 'grave', motivo: 'promete um tipo de atendimento', re: /\batendimento\s+(e\s+)?(personalizad|humanizad|de qualidade|diferenciad|exclusiv|atencios|impecav|excelente|cuidados|caprichad|rapido|agil|vip|premium|de primeira|acolhed)\w*/ },
-  { nivel: 'grave', motivo: 'inventa forma de pagamento', re: /\baceita[m]?\s+(cartao|cartoes|pix|dinheiro|debito|credito)|\bcartao de (credito|debito)|\bcartoes\b|\bpix\b|\bparcel\w*|\bformas?\s+de\s+pagamento\b|\bmaquininha\b/ },
+  { nivel: 'grave', motivo: 'inventa estacionamento, que o cadastro não informa', se: (c) => !c.informa?.estacionamento, re: /\bestacionamento\b|\bmanobrista\b|\bestacionar\b|\bvagas?\s+(para|de)\s+carros?\b/ },
+  { nivel: 'grave', motivo: 'inventa forma de pagamento, que o cadastro não informa', se: (c) => !c.informa?.pagamento, re: /\baceita[m]?\s+(cartao|cartoes|dinheiro|debito|credito)|\bcartao de (credito|debito)|\bcartoes\b|\bformas?\s+de\s+pagamento\b|\bmaquininha\b/ },
+  { nivel: 'grave', motivo: 'inventa Pix ou parcelamento, que o cadastro não informa', re: /\bpix\b|\bparcel\w*/ },
   { nivel: 'grave', motivo: 'inventa forma de atendimento (domicílio, encaixe, sem hora marcada)', re: /\b(a|em)\s+domicilio\b|\bdomiciliar\b|\bsem\s+hora\s+marcada\b|\bordem\s+de\s+chegada\b|\b(faz|fazem|aceita|aceitam|atende|atendem)\s+encaixes?\b|\bhorarios?\s+de\s+encaixe\b|\bencaixes\b|\bdelivery\b/ },
   { nivel: 'grave', motivo: 'inventa prêmio, curso ou formação', re: /\bpremi(o|os|ad[oa]s?|acao)\b|\bcertificad[oa]s?\b|\bdiplomad\w*|\bformad[oa]s?\s+(em|pela|pelo|na|no)\b|\bcursos?\s+(de|em|no)\s|\bespecializacao\b|\bpos-graduad\w*|\bcampe(a|ao|oes)\b/ },
   { nivel: 'grave', motivo: 'cita marca de produto', re: /\b(l'?oreal|wella|keune|kerastase|redken|truss|vult|risque|impala|dailus|boticario|natura|schwarzkopf|joico|braae|lowell|cadiveu|eudora|avon|mary kay|loccitane|sallve|principia|nivea)\b/ },

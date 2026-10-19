@@ -10,6 +10,7 @@ import { artigosResumidos } from '../../lib/conteudoPublico'
 import { artigosDaCidade } from '../../lib/guiaArtigos'
 import { CartaoArtigo } from './PaginaSeo'
 import { linksDeColecoes } from '../../lib/guiaColecoes'
+import { panoramaDaCidade, juntarFaq, tituloDoPanorama } from '../../lib/guiaPanorama'
 import { aoClicarNaPagina } from '../../lib/eventos'
 import { useVisita } from '../../lib/useVisita'
 import { NavSite, PeSite, useRevelar, comecarEm } from '../../components/site/Pecas'
@@ -137,9 +138,7 @@ function Cidade({ dados }) {
   const { cidade, cidade_slug: cslug, categoria } = dados
   const cat = categoria ? categoriaDoGuia(categoria) : null
   const pagina = conteudoSeguro(dados.pagina)
-  const faq = pagina?.faq ?? []
   const seo = seoDaCidade(cidade, cslug, categoria, dados.pagina)
-  useSeo({ titulo: seo.titulo, descricao: seo.descricao, caminho: seo.caminho, jsonLd: jsonLdDaCidade(dados, faq) })
 
   const lugares = useMemo(() => (Array.isArray(dados.lugares) ? dados.lugares : []), [dados.lugares])
   const bairros = Array.isArray(dados.bairros) ? dados.bairros : []
@@ -177,11 +176,16 @@ function Cidade({ dados }) {
   const [colecoes, setColecoes] = useState(null)
   useEffect(() => {
     let vivo = true
-    carregarColecoes(cslug).then((d) => vivo && d && setColecoes(linksDeColecoes(d.lugares, cslug))).catch(() => {})
+    // a lista completa (com horários) fica guardada: o panorama conta quem abre no domingo e à noite
+    carregarColecoes(cslug).then((d) => vivo && d && setColecoes({ links: linksDeColecoes(d.lugares, cslug), lugares: d.lugares })).catch(() => {})
     return () => { vivo = false }
   }, [cslug])
-  const porHorario = colecoes ? (cat ? colecoes.categorias[categoria] ?? [] : colecoes.horarios) : []
-  const porBairro = colecoes && !cat ? colecoes.bairros : []
+  const porHorario = colecoes ? (cat ? colecoes.links.categorias[categoria] ?? [] : colecoes.links.horarios) : []
+  const porBairro = colecoes && !cat ? colecoes.links.bairros : []
+  // o panorama (3.22): os números da lista em frases, e a FAQ dos dados junto com a da IA
+  const panorama = useMemo(() => panoramaDaCidade({ cidade, categoria, lugares, completos: colecoes?.lugares ?? null }), [cidade, categoria, lugares, colecoes])
+  const faq = juntarFaq(pagina?.faq ?? [], panorama.faq)
+  useSeo({ titulo: seo.titulo, descricao: seo.descricao, caminho: seo.caminho, jsonLd: jsonLdDaCidade(dados, faq) })
   // "Leia também" (3.14): os artigos do blog que falam desta cidade; e as outras cidades do guia
   const [artigos, setArtigos] = useState([])
   const [outras, setOutras] = useState([])
@@ -237,6 +241,13 @@ function Cidade({ dados }) {
           <div className="gd-intro ld-rv">
             <div className="gd-texto">{intro.map((p, i) => <p key={i}>{p}</p>)}</div>
           </div>
+          {panorama.paragrafos.length > 0 && (
+            <div className="gd-panorama ld-rv" data-teste="panorama">
+              <span className="ld-kicker">Panorama</span>
+              <h2 className="gd-h2">{tituloDoPanorama(cidade, categoria)}</h2>
+              {panorama.paragrafos.map((p, i) => <p key={i}>{p}</p>)}
+            </div>
+          )}
         </div>
         <div className="gd-wrap" id="lista">
           <h2 className="gd-h2 gd-lista-h2">{cat ? `${cat.artigo} ${cat.plural} de ${cidade}` : `Os salões de ${cidade}`}</h2>

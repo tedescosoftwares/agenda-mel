@@ -170,6 +170,10 @@ const acessoDemo = () => !ativadoDemo() ? { fase: 'configurando', tipo: 'salao',
 const TABELAS = {
   // o guia de salões (153): salões fictícios de Itanhaém, em src/lib/demoGuia.js
   guia_lugares: GUIA_LUGARES,
+  // a view magra (171): a mesma linha sem conteudo e rascunho, com as flags; o texto vem de guia_lugares ao abrir
+  get guia_lista() {
+    return GUIA_LUGARES.map(({ conteudo, rascunho, ...r }) => ({ ...r, tem_conteudo: !!conteudo, tem_rascunho: !!rascunho, resumo: rascunho?.resumo ?? conteudo?.resumo ?? null, meta: conteudo?._meta ?? null, meta_rascunho: rascunho?._meta ?? null }))
+  },
   guia_paginas: GUIA_PAGINAS,
   guia_interesses: GUIA_INTERESSES,
   pagamentos: [

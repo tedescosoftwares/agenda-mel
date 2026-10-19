@@ -27,25 +27,39 @@ async function rpc(nome, args) {
   return data ?? null
 }
 
+// 3.23: o gerador deixa os mesmos dados em JSON no servidor (/dados/guia/..., Caddy, gzip): de
+// graça e sem passar pelo Supabase. Só cai na função do banco quando não há arquivo: no
+// desenvolvimento, numa cidade recém-publicada antes da regeneração da hora, ou se o servidor
+// devolver outra coisa (o Caddy responde o index.html para caminho que não existe).
+export async function doServidor(caminho) {
+  if (typeof fetch !== 'function' || typeof window === 'undefined' || window.location?.search?.includes('demo=')) return undefined
+  try {
+    const r = await fetch(caminho, { cache: 'no-cache', headers: { Accept: 'application/json' } })
+    if (!r.ok || !/json/i.test(r.headers.get('content-type') ?? '')) return undefined
+    const j = await r.json()
+    return j && typeof j === 'object' ? j : undefined
+  } catch { return undefined }
+}
+
 // os parâmetros da URL chegam como a pessoa digitou ("Itanhaem", "ro-coiffeur/")
 const limpar = (v) => String(v ?? '').trim().toLowerCase().replace(/\/+$/, '')
 
 // { lugar, vizinhos, mesma_categoria } | null (página não existe ou não está no ar)
 export function carregarPagina(cidade, slug) {
   const c = limpar(cidade), s = limpar(slug)
-  return lembrar(`pagina:${c}/${s}`, () => rpc('guia_pagina', { cidade_: c, slug_: s }))
+  return lembrar(`pagina:${c}/${s}`, async () => (await doServidor(`/dados/guia/${c}/${s}.json`)) ?? rpc('guia_pagina', { cidade_: c, slug_: s }))
 }
 
 // a cidade (categoria vazia) ou uma categoria: { cidade, pagina, total, categorias, bairros, lugares } | null
 export function carregarCidade(cidade, categoria = '') {
   const c = limpar(cidade), cat = limpar(categoria)
-  return lembrar(`cidade:${c}/${cat}`, () => rpc('guia_cidade', { cidade_: c, categoria_: cat }))
+  return lembrar(`cidade:${c}/${cat}`, async () => (await doServidor(`/dados/guia/${c}${cat ? `/${cat}` : ''}.json`)) ?? rpc('guia_cidade', { cidade_: c, categoria_: cat }))
 }
 
 // [{ cidade, cidade_slug, uf, total }]
 export function carregarCidades() {
   return lembrar('cidades', async () => {
-    const r = await rpc('guia_cidades', {})
+    const r = (await doServidor('/dados/guia/cidades.json')) ?? (await rpc('guia_cidades', {}))
     return Array.isArray(r) ? r : []
   })
 }

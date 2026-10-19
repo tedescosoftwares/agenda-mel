@@ -18,6 +18,8 @@ import {
 } from '../src/lib/guiaSeo.js'
 import { colecoesDaCidade, montarColecao, linksDeColecoes, linkDoBairro } from '../src/lib/guiaColecoes.js'
 import { panoramaDaCidade, juntarFaq, tituloDoPanorama } from '../src/lib/guiaPanorama.js'
+import { chaveDoBairro } from '../src/lib/guiaColecoes.js'
+import { mesmaCategoriaDe } from './guia-fonte.mjs'
 
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 const SITE = 'https://mimo.com.vc'
@@ -103,7 +105,7 @@ ${navDeColecoes(m.tipo === 'bairro' ? 'Outros bairros' : 'Por bairro', r.bairros
 // o mesmo agrupamento de guia_cidade(), feito aqui a partir da lista inteira. A ordem é a que
 // guia_publicadas() mandou (3.17, migração 166: MIMO, Seleção, pontos de nota e foto, nome), e
 // filtrar por categoria não a muda; a nota não vem para cá, então não dá para reordenar aqui.
-const cartao = (l) => ({ slug: l.slug, nome: l.nome, bairro: l.bairro, categoria: l.categoria, resumo: l.conteudo?.resumo ?? null, servicos: (l.servicos ?? []).slice(0, 4), selecao: l.selecao, na_mimo: l.na_mimo })
+const cartao = (l) => ({ slug: l.slug, nome: l.nome, bairro: l.bairro, categoria: l.categoria, resumo: l.conteudo?.resumo ?? null, servicos: (l.servicos ?? []).slice(0, 4), selecao: l.selecao, na_mimo: l.na_mimo, latitude: l.latitude ?? null, longitude: l.longitude ?? null, foto: Array.isArray(l.fotos) && l.fotos[0] ? l.fotos[0] : null })
 function dadosDaCidade(lugares, paginas, cidadeSlug, categoria) {
   const daCidade = lugares.filter((l) => l.cidade_slug === cidadeSlug)
   const lista = categoria ? daCidade.filter((l) => l.categoria === categoria) : daCidade
@@ -164,5 +166,47 @@ export function paginasDoGuia(guia, artigos = []) {
     atualizado: lugares.map((l) => dia(l.atualizado_em)).filter(Boolean).sort().at(-1),
     corpo: `<main><h1>Guia de salões de beleza</h1><ul>${lista.map((c) => `<li><a href="${esc(rotaDaCidade(c.cidade_slug))}">${esc(`Salões em ${c.cidade}`)}</a> (${c.total})</li>`).join('')}</ul>${porCategoria.length ? `<section><h2>Por categoria</h2><ul>${porCategoria.map(({ k, cidades: cs }) => `<li>${esc(k.rotulo)}${k.resumo ? `: ${esc(k.resumo)}` : ''}. ${cs.map(({ c, n }) => `<a href="${esc(rotaDaCategoria(c.cidade_slug, k.slug))}">${esc(c.cidade)}</a> (${n})`).join(' · ')}</li>`).join('')}</ul></section>` : ''}</main>`,
   })
+  return out
+}
+
+// ---- os dados em JSON (3.23) -----------------------------------------------------------------------
+// O mesmo que guia_cidades(), guia_cidade(), guia_colecoes() e guia_pagina() devolvem, gravado em
+// dist/dados/guia/ a cada regeneração. O site lê daqui (Caddy, gzip, de graça) e só vai ao Supabase
+// quando o arquivo não existe. [{ caminho, dados }]
+const semVizinhos = ({ vizinhos: _vizinhos, ...l }) => l
+const paraColecao = (l) => ({
+  slug: l.slug, nome: l.nome, cidade: l.cidade, cidade_slug: l.cidade_slug, uf: l.uf, bairro: l.bairro ?? null, endereco: l.endereco ?? null, categoria: l.categoria,
+  horarios: l.horarios ?? null, servicos: Array.isArray(l.servicos) ? l.servicos : [], atributos: l.atributos ?? {},
+  resumo: l.conteudo?.resumo ?? null, selecao: !!l.selecao, na_mimo: !!l.na_mimo, atualizado_em: l.atualizado_em ?? null,
+  latitude: l.latitude ?? null, longitude: l.longitude ?? null, foto: Array.isArray(l.fotos) && l.fotos[0] ? l.fotos[0] : null,
+})
+export function dadosDoGuia(guia) {
+  const lugares = Array.isArray(guia?.lugares) ? guia.lugares.filter((l) => l?.slug && l?.cidade_slug && l?.conteudo) : []
+  const paginas = Array.isArray(guia?.paginas) ? guia.paginas : []
+  if (!lugares.length) return []
+  const cidades = [...new Set(lugares.map((l) => l.cidade_slug))]
+  const listaCidades = Array.isArray(guia?.cidades) && guia.cidades.length ? guia.cidades
+    : cidades.map((cs) => { const l = lugares.find((x) => x.cidade_slug === cs); return { cidade: l.cidade, cidade_slug: cs, uf: l.uf, total: lugares.filter((x) => x.cidade_slug === cs).length } })
+  const out = [{ caminho: '/dados/guia/cidades.json', dados: listaCidades }]
+  for (const cs of cidades) {
+    const doGuia = lugares.filter((l) => l.cidade_slug === cs)
+    const cats = ['', ...GUIA_CATEGORIAS.map((g) => g.slug).filter((s) => doGuia.some((l) => l.categoria === s))]
+    for (const cat of cats) {
+      const { atualizado: _atualizado, ...d } = dadosDaCidade(lugares, paginas, cs, cat)
+      out.push({ caminho: `/dados/guia/${cs}${cat ? `/${cat}` : ''}.json`, dados: d })
+    }
+    out.push({ caminho: `/dados/guia/${cs}/colecoes.json`, dados: { cidade: doGuia[0].cidade, cidade_slug: cs, uf: doGuia[0].uf, lugares: doGuia.map(paraColecao) } })
+    // a página de cada salão: o que guia_pagina() devolve (bairro_slug e os totais como guia_bairro_slug, 157)
+    const porBairro = new Map()
+    for (const l of doGuia) { const k = chaveDoBairro(l.bairro, cs); if (k) porBairro.set(k, (porBairro.get(k) ?? 0) + 1) }
+    for (const l of doGuia) {
+      const bk = chaveDoBairro(l.bairro, cs)
+      out.push({ caminho: `/dados/guia/${cs}/${l.slug}.json`, dados: {
+        lugar: { ...semVizinhos(l), bairro_slug: bk || null, bairro_total: bk ? porBairro.get(bk) ?? 0 : 0, cidade_total: doGuia.length },
+        vizinhos: Array.isArray(l.vizinhos) ? l.vizinhos : [],
+        mesma_categoria: mesmaCategoriaDe(l, doGuia),
+      } })
+    }
+  }
   return out
 }

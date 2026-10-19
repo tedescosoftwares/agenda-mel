@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { doServidor } from './guiaPublico'
 
 // Os dados das páginas de coleção do guia (3.12): os salões no ar de uma
 // cidade, com bairro, categoria, horário, serviços e atributos, pela
@@ -18,6 +19,9 @@ export function carregarColecoes(cidade) {
   const guardado = cache.get(c)
   if (guardado && Date.now() - guardado.em < VALIDADE) return guardado.promessa
   const promessa = (async () => {
+    // 3.23: primeiro o JSON que o gerador deixou no servidor; a função do banco é a reserva
+    const pronto = await doServidor(`/dados/guia/${c}/colecoes.json`)
+    if (pronto && Array.isArray(pronto.lugares)) return pronto
     if (!supabase) return null
     const { data, error } = await supabase.rpc('guia_colecoes', { cidade_: c })
     if (error) throw error

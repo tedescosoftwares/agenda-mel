@@ -665,3 +665,28 @@ pode responder 403 enquanto confere a chave nova: o script espera meio minuto e
 tenta de novo, e, se ainda assim falhar, o republicar da próxima hora repete
 sozinho (o sitemap no ar fica diferente do último avisado até dar certo).
 O Google não participa do IndexNow: lá continua o sitemap e o Search Console.
+
+## O guia cidade a cidade, com cache (3.23, migração 171)
+
+Com milhares de salões, o republicar não lê mais o guia inteiro numa consulta.
+O gerador pede uma cidade por vez à função `guia_publicadas(cidade_, desde_)`,
+que devolve só o que mudou desde a última rodada, e guarda cada cidade em
+`~/agenda-mel/.cache/guia/<cidade>.json` (fora do git). Uma rodada sem novidade
+lê alguns KB por cidade; uma vez por dia cada cidade vem inteira. Se o Supabase
+falhar e houver cache, a rodada segue com o cache e avisa no log; sem cache, o
+guia fica de fora da rodada, mas as páginas que já estão no ar continuam, e o
+sitemap guarda as URLs delas.
+
+O gerador também grava os dados do guia em `dist/dados/guia/` (um JSON por
+cidade, por categoria, as coleções e um por salão). O site lê daí, pelo Caddy,
+e só vai ao Supabase quando o arquivo não existe. É isso que mantém o guia no
+plano gratuito: 5 GB de saída por mês.
+
+```bash
+cd ~/agenda-mel && node scripts/paginas-estaticas.mjs --refazer   # ignora o cache e lê tudo de novo
+ls -la .cache/guia/                                                 # um arquivo por cidade, com a hora da última leitura
+```
+
+Ordem para atualizar: bat **B** (a 171) antes do bat **2**. O gerador novo num
+banco sem a 171 cai na função antiga e avisa; o gerador antigo num banco com a
+171 continua funcionando, só sem a seção "Perto dali" até o bat 2.

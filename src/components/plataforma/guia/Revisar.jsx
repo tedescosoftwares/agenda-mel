@@ -199,9 +199,17 @@ export default function Revisar({ g, rev, setRev }) {
     selecionar(lista[i].id)
   }
 
+  // 3.23: a lista vem sem o texto; o do salão escolhido é lido aqui (uma linha do banco)
+  useEffect(() => {
+    if (atual && !atual.texto_carregado && g.temTexto(atual)) g.carregarTexto(atual.id).catch(() => {})
+  }, [atual, g])
+  const carregandoTexto = !!atual && !atual.texto_carregado && g.temTexto(atual)
+  // o editor só abre com o texto na mão
+  const abrirEditor = (id) => g.carregarTexto(id).catch(() => null).then(() => setEditando(id))
+
   // ---- ações sobre o selecionado ----
   const fase = atual ? g.faseDe(atual) : null
-  const temTexto = !!(atual?.rascunho || atual?.conteudo)
+  const temTexto = g.temTexto(atual)
   const gerandoAtual = atual ? g.gerando[atual.id] : null
   const falha = atual ? g.falhas[atual.id] : null
   const podeAprovar = !!atual && !gerandoAtual && atual.status !== 'removido' && (fase === 'revisar' || fase === 'nova' || (fase === 'descartado' && temTexto))
@@ -260,7 +268,7 @@ export default function Revisar({ g, rev, setRev }) {
 
   async function restaurar() {
     const l = atual
-    const r = await g.salvarLugar(l.id, { status: l.rascunho || l.conteudo ? 'gerado' : 'importado', motivo: null })
+    const r = await g.salvarLugar(l.id, { status: g.temTexto(l) ? 'gerado' : 'importado', motivo: null })
     if (!r.ok) setErroAcao(r.erro)
     else g.avisar(`${l.nome} voltou para a fila.`)
   }
@@ -288,7 +296,7 @@ export default function Revisar({ g, rev, setRev }) {
       k: () => mover(-1), ArrowLeft: () => mover(-1), ArrowUp: () => mover(-1),
       a: () => aprovarAtual(),
       g: () => montarAtual(),
-      e: () => atual && setEditando(atual.id),
+      e: () => atual && abrirEditor(atual.id),
       d: () => atual && fase !== 'descartado' && atual.status !== 'removido' && setDescartando(atual),
       m: () => setModo(modo === 'celular' ? 'computador' : 'celular'),
       f: () => setTelaCheia((v) => !v),
@@ -472,7 +480,7 @@ export default function Revisar({ g, rev, setRev }) {
                     <button type="button" className="btn btn-ghost pg-btn-ic" onClick={() => gerarAtual()} disabled={!podeGerar} title="Reescreve com a IA (gasta da cota do Groq). O pedido escrito embaixo vai junto.">
                       {gerandoAtual ? <LoaderCircle size={16} className="pg-gira" /> : <Sparkles size={16} />} <span>{gerandoAtual ? 'IA escrevendo…' : 'Reescrever com IA'}</span>
                     </button>
-                    <button type="button" className="btn btn-ghost pg-btn-ic" onClick={() => setEditando(atual.id)} title="Editar fatos e texto (E)"><Pencil size={16} /> <span>Editar</span> <kbd>E</kbd></button>
+                    <button type="button" className="btn btn-ghost pg-btn-ic" onClick={() => abrirEditor(atual.id)} title="Editar fatos e texto (E)"><Pencil size={16} /> <span>Editar</span> <kbd>E</kbd></button>
                     <button type="button" className="btn btn-ghost pg-btn-ic" onClick={() => mover(1)} disabled={indice >= lista.length - 1} title="Pular para o próximo (J)"><SkipForward size={16} /> <span>Pular</span> <kbd>J</kbd></button>
                     {fase === 'descartado'
                       ? <button type="button" className="btn btn-ghost pg-btn-ic" onClick={restaurar} title="Volta para a fila"><Undo2 size={16} /> <span>Trazer de volta</span></button>
@@ -524,7 +532,7 @@ export default function Revisar({ g, rev, setRev }) {
                       <button type="button" className="btn btn-primary pg-btn-peq" onClick={montarAtual} disabled={montando}><Wand2 size={14} /> Montar agora (grátis)</button>
                     </div>
                   )}
-                  <MolduraPrevia lugar={atual} conteudo={mostrado} modo={modo} className={gerandoAtual ? 'pg-esmaecida' : ''} />
+                  <MolduraPrevia lugar={atual} conteudo={mostrado} modo={modo} className={gerandoAtual || carregandoTexto ? 'pg-esmaecida' : ''} />
                 </div>
                 <Detalhes l={atual} conteudo={mostrado} g={g} />
               </div>

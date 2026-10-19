@@ -21,7 +21,8 @@ import { ARTIGOS, CATEGORIAS } from '../src/conteudo/artigos.js'
 import { PAGINAS_SEO, PAGINAS_INSTITUCIONAIS } from '../src/conteudo/paginasSeo.js'
 import { TITULO as TITULO_HOME, DESCRICAO as DESCRICAO_HOME, jsonLdDaHome } from '../src/conteudo/home.js'
 import { mesclarPagina, mesclarConteudo, HUB_AUTONOMA } from '../src/lib/paginas.js'
-import { paginasDoGuia } from './guia-estatico.mjs'
+import { paginasDoGuia, dadosDoGuia } from './guia-estatico.mjs'
+import { carregarGuia } from './guia-fonte.mjs'
 import { cidadeDoArtigo } from '../src/lib/guiaArtigos.js'
 import { categoriaDoGuia, rotaDaCidade, rotaDaCategoria, SLUGS_CATEGORIA } from '../src/lib/guia.js'
 import { FAQ as HOME_FAQ } from '../src/conteudo/home.js'
@@ -126,6 +127,9 @@ const artigosCompletos = new Map(ARTIGOS.map((a) => { const c = CATEGORIAS.find(
 const conteudoInst = new Map(PAGINAS_INSTITUCIONAIS.map((p) => [p.rota, { ...(p.conteudo || {}) }]))
 let docsLegais = Object.fromEntries(TIPOS_LEGAIS.map((t) => [t.tipo, { tipo: t.tipo, ...DOCUMENTOS_LEGAIS[t.tipo] }]))
 let guiaDados = null
+let guiaCarregado = false // 3.23: só apaga e reescreve o guia quando ele veio do banco (ou do cache)
+let dadosGuia = [] // 3.23: os JSON que o site lê do servidor
+const REFAZER = globalThis.process.argv.includes('--refazer') // ignora o cache do guia e lê tudo de novo
 let rodape = ''
 for (const a of ARTIGOS) {
   const cat = CATEGORIAS.find((c) => c.slug === a.categoria)
@@ -202,17 +206,27 @@ if (URL && CHAVE && !globalThis.process.env.VITE_DEMO) {
   } catch (e) {
     console.log('paginas-estaticas: banco indisponível (' + e.message + '), seguindo só com o código')
   }
-  // o guia de salões (153): tudo que está no ar, de uma vez. Sem a migração (404) ou sem rede, segue sem o guia.
+  // o guia de salões (153): cidade a cidade, com cache em .cache/guia e só o que mudou (3.23, guia-fonte.mjs).
+  // Num banco ainda sem a 171, a função antiga, de uma vez. Sem rede e sem cache, segue sem o guia, e o que já
+  // está no ar (páginas e sitemap) fica como está.
   try {
-    const r = await fetch(`${URL}/rest/v1/rpc/guia_publicadas`, { headers: { apikey: CHAVE, Authorization: `Bearer ${CHAVE}` } })
-    if (!r.ok) throw new Error(`${r.status} em rpc/guia_publicadas`)
-    const guia = await r.json()
+    let guia
+    try {
+      guia = await carregarGuia({ url: URL, chave: CHAVE, cacheDir: path.resolve('.cache/guia'), refazer: REFAZER, log: (m) => console.log(`paginas-estaticas: ${m}`) })
+    } catch (e) {
+      const r = await fetch(`${URL}/rest/v1/rpc/guia_publicadas`, { headers: { apikey: CHAVE, Authorization: `Bearer ${CHAVE}` } })
+      if (!r.ok) throw new Error(`${e.message}; e ${r.status} em rpc/guia_publicadas de uma vez`)
+      guia = await r.json()
+      console.log(`paginas-estaticas: guia lido de uma vez, do jeito antigo (${e.message}); rode a migração 171 para ler cidade a cidade`)
+    }
     guiaDados = guia
+    guiaCarregado = true
     const doGuia = paginasDoGuia(guia, [...artigosParaGuia.values()])
     for (const pg of doGuia) registrar(pg)
-    console.log(`paginas-estaticas: guia de salões com ${doGuia.length} página(s)`)
+    dadosGuia = dadosDoGuia(guia)
+    console.log(`paginas-estaticas: guia de salões com ${doGuia.length} página(s) e ${dadosGuia.length} arquivo(s) de dados`)
   } catch (e) {
-    console.log('paginas-estaticas: guia de salões indisponível (' + e.message + '), seguindo sem ele')
+    console.log('paginas-estaticas: guia de salões indisponível (' + e.message + '), seguindo sem ele; as páginas do guia que estão no ar ficam')
   }
 }
 const usadas = new Set([...ARTIGOS.map((a) => a.categoria), ...paginas.filter((p) => p.tipo === 'article' && p.jsonLd).flatMap((p) => { const m = p.jsonLd['@graph'].find((g) => g['@type'] === 'BreadcrumbList'); const c = m?.itemListElement?.[2]?.item; return c && c.includes('/blog/categoria/') ? [c.split('/blog/categoria/')[1]] : [] })])
@@ -275,8 +289,13 @@ console.log(`paginas-estaticas: corpo estático em ${comCorpo} de ${paginas.leng
 
 // ---- 3. grava -------------------------------------------------------------
 // /saloes e /blog são inteiramente deste script: limpar antes tira a página de um
-// salão ou artigo que saiu do ar (a regeneração de hora em hora não passa pelo vite, que esvazia o dist)
-for (const pasta of ['saloes', 'blog']) fs.rmSync(path.join(DIST, pasta), { recursive: true, force: true })
+// salão ou artigo que saiu do ar (a regeneração de hora em hora não passa pelo vite, que esvazia o dist).
+// O guia só é apagado quando carregou (3.23): banco fora do ar não leva as páginas que estão no ar
+for (const pasta of guiaCarregado ? ['saloes', 'blog', 'dados/guia'] : ['blog']) fs.rmSync(path.join(DIST, pasta), { recursive: true, force: true })
+// sem o guia nesta rodada, as URLs dele continuam no sitemap, como estavam
+const urlsGuardadas = guiaCarregado ? [] : (() => {
+  try { return [...fs.readFileSync(path.join(DIST, 'sitemap.xml'), 'utf8').matchAll(/<url><loc>[^<]*\/saloes[^<]*<\/loc>.*?<\/url>/g)].map((m) => `  ${m[0]}`) } catch { return [] }
+})()
 let ok = 0, erros = 0
 for (const p of paginas) {
   try {
@@ -289,12 +308,25 @@ for (const p of paginas) {
     console.log(`paginas-estaticas: não gerei ${p.caminho} (${e.message})`)
   }
 }
+// os dados do guia em JSON (3.23): o site lê daqui antes de ir ao Supabase
+let arquivosDeDados = 0
+for (const d of dadosGuia) {
+  try {
+    const f = path.join(DIST, d.caminho)
+    fs.mkdirSync(path.dirname(f), { recursive: true })
+    fs.writeFileSync(f, JSON.stringify(d.dados))
+    arquivosDeDados++
+  } catch (e) {
+    console.log(`paginas-estaticas: não gravei ${d.caminho} (${e.message})`)
+  }
+}
 // a home: canonical e dados estruturados só para "/", num arquivo próprio
 const faqDaHome = Array.isArray(homeDoBanco?.conteudo?.faq) && homeDoBanco.conteudo.faq.length ? homeDoBanco.conteudo.faq : HOME_FAQ
 fs.writeFileSync(path.join(DIST, '_home.html'), html({ caminho: '/', titulo: homeDoBanco?.seo_title || TITULO_HOME, descricao: homeDoBanco?.meta_description || DESCRICAO_HOME, imagem: homeDoBanco?.og_image_url, atualizado: dia(homeDoBanco?.updated_at) || DATA_PADRAO, jsonLd: jsonLdDaHome(homeDoBanco?.conteudo?.faq), corpo: corpoDaHome(conteudoInst.get('/'), faqDaHome) }))
 
 const urls = [{ caminho: '/', atualizado: DATA_PADRAO, prioridade: '1.0', freq: 'weekly' }, ...paginas.filter((p) => !p.noindex)]
   .map((p) => `  <url><loc>${SITE}${p.caminho}</loc>${p.atualizado ? `<lastmod>${p.atualizado}</lastmod>` : ''}<changefreq>${p.freq || (p.tipo === 'article' ? 'monthly' : 'weekly')}</changefreq><priority>${p.prioridade || (p.seo ? '0.9' : p.tipo === 'article' ? '0.7' : '0.5')}</priority></url>`)
+  .concat(urlsGuardadas)
 fs.writeFileSync(path.join(DIST, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join('\n')}\n</urlset>\n`)
-console.log(`paginas-estaticas: ${ok} páginas geradas${erros ? `, ${erros} com erro` : ''}, home própria, sitemap com ${urls.length} URLs`)
+console.log(`paginas-estaticas: ${ok} páginas geradas${erros ? `, ${erros} com erro` : ''}${arquivosDeDados ? `, ${arquivosDeDados} arquivo(s) de dados do guia` : ''}, home própria, sitemap com ${urls.length} URLs${urlsGuardadas.length ? ` (${urlsGuardadas.length} do guia guardadas da rodada anterior)` : ''}`)
 if (!ok) globalThis.process.exit(1)

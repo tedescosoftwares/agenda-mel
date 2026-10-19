@@ -73,7 +73,7 @@ function Conta({ n, max, min, unidade = '' }) {
 
 export default function EditarLugar({ lugar, g, onFechar }) {
   const { confirmar } = useDialogo()
-  const temTexto = !!(lugar?.rascunho || lugar?.conteudo)
+  const temTexto = g.temTexto(lugar)
   const [aba, setAba] = useState(temTexto ? 'texto' : 'fatos')
   const inicial = useMemo(() => {
     const l = lugar ?? {}

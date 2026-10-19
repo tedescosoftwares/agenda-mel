@@ -88,7 +88,7 @@ export default function Publicadas({ g }) {
                             {l.selecao && <Pilula tom="rosa">Seleção</Pilula>}
                             {l.salon_id && <Pilula tom="menta">na MIMO</Pilula>}
                             <Pilula tom={nFotos(l) ? 'cinza' : 'ambar'}>{nFotos(l) ? `${nFotos(l)} ${nFotos(l) === 1 ? 'foto' : 'fotos'}` : 'sem foto'}</Pilula>
-                            {l.rascunho && <button type="button" className="pg-pilula-botao" onClick={() => g.irPara('revisar', { status: 'nova', selId: l.id })}><Pilula tom="roxo">versão nova esperando</Pilula></button>}
+                            {l.tem_rascunho && <button type="button" className="pg-pilula-botao" onClick={() => g.irPara('revisar', { status: 'nova', selId: l.id })}><Pilula tom="roxo">versão nova esperando</Pilula></button>}
                             {g.falhas[l.id] && <span className="pg-ruim" title={g.falhas[l.id]}><TriangleAlert size={12} /> erro ao gerar</span>}
                           </div>
                         </td>
@@ -96,7 +96,7 @@ export default function Publicadas({ g }) {
                         <td className="pg-acoes-linha">
                           <a className="plat-link" href={urlDoAmbiente('cliente', rotaDoLugar(l.cidade_slug, l.slug))} target="_blank" rel="noopener noreferrer"><ExternalLink size={13} /> Ver no site</a>
                           <button type="button" className="plat-link" onClick={() => novaVersao(l)} disabled={!!ger}>{ger ? <><LoaderCircle size={13} className="pg-gira" /> {ger.espera ? `em ${ger.espera} s` : 'gerando…'}</> : <><RefreshCw size={13} /> Nova versão</>}</button>
-                          <button type="button" className="plat-link" onClick={() => setEditando(l.id)}><Pencil size={13} /> Editar</button>
+                          <button type="button" className="plat-link" onClick={() => g.carregarTexto(l.id).catch(() => null).then(() => setEditando(l.id))}><Pencil size={13} /> Editar</button>
                           <button type="button" className="plat-link pg-perigo" onClick={() => despublicar(l)}><EyeOff size={13} /> Despublicar</button>
                         </td>
                       </tr>

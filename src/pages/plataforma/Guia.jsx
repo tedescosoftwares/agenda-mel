@@ -42,6 +42,15 @@ const ABAS = [
 
 // só o que a tela usa: origem (o CSV cru) e as coordenadas ficam no banco
 const COLUNAS_LUGAR = 'id, cidade, cidade_slug, uf, slug, categoria, nome, bairro, endereco, cep, telefone, whatsapp, instagram, site, horarios, servicos, atributos, place_id, cnpj, validado_receita, selecao, nota, avaliacoes, fontes, origem, fotos, conteudo, rascunho, status, motivo, salon_id, gerado_em, publicado_em, criado_em, atualizado_em'
+// 3.23: a lista magra (view guia_lista, migração 171): sem conteudo e rascunho (uns 3 KB a menos por salão; com
+// 20 mil salões, 60 MB a menos por abertura). "tem_conteudo" e "tem_rascunho" dizem se existem, e o texto do
+// salão é lido quando se abre (carregarTexto). Num banco ainda sem a view, a leitura cheia de antes.
+const COLUNAS_LISTA = 'id, cidade, cidade_slug, uf, slug, categoria, nome, bairro, endereco, cep, telefone, whatsapp, instagram, site, horarios, servicos, atributos, place_id, cnpj, validado_receita, selecao, nota, avaliacoes, fontes, origem, fotos, status, motivo, salon_id, gerado_em, publicado_em, criado_em, atualizado_em, tem_conteudo, tem_rascunho, resumo, meta, meta_rascunho'
+const temConteudo = (l) => !!l?.tem_conteudo
+const temRascunho = (l) => !!l?.tem_rascunho
+const temTexto = (l) => temConteudo(l) || temRascunho(l)
+// as flags a partir de uma linha que veio com o texto (a leitura antiga)
+const comFlags = (l) => ({ ...l, tem_conteudo: !!l.conteudo, tem_rascunho: !!l.rascunho, texto_carregado: true })
 
 // a fase de um salão na fila de revisão (o filtro "status" da aba Revisar)
 //   gerar      ainda sem página (nem montada nem da IA)
@@ -52,8 +61,8 @@ const COLUNAS_LUGAR = 'id, cidade, cidade_slug, uf, slug, categoria, nome, bairr
 function faseDe(l) {
   if (l.status === 'removido') return 'removido'
   if (l.status === 'descartado') return 'descartado'
-  if (l.status === 'publicado') return l.rascunho ? 'nova' : 'no_ar'
-  return l.rascunho || l.conteudo ? 'revisar' : 'gerar'
+  if (l.status === 'publicado') return temRascunho(l) ? 'nova' : 'no_ar'
+  return temTexto(l) ? 'revisar' : 'gerar'
 }
 
 // as métricas do guia num período (156); nunca rejeita: o erro vem dentro
@@ -119,9 +128,18 @@ async function rascunhoGravadoDepois(tabela, id, desde) {
   return data?.rascunho && data.gerado_em && new Date(data.gerado_em).getTime() >= desde - 5000 ? data.rascunho : null
 }
 
+// os salões pela lista magra; num banco sem a 171, a leitura cheia (já com o texto)
+async function lerLugares() {
+  try {
+    return (await lerTudo('guia_lista', COLUNAS_LISTA, 'nome')).map((l) => ({ ...l, texto_carregado: false }))
+  } catch (e) {
+    if (!/guia_lista/.test(String(e?.message ?? e))) throw e
+    return (await lerTudo('guia_lugares', COLUNAS_LUGAR, 'nome')).map(comFlags)
+  }
+}
 // tudo o que a tela usa, de uma vez
 const lerGuia = () => Promise.all([
-  lerTudo('guia_lugares', COLUNAS_LUGAR, 'nome'),
+  lerLugares(),
   lerTudo('guia_paginas', '*', 'cidade_slug'),
   lerTudo('guia_interesses', '*', 'criado_em'),
 ])
@@ -213,8 +231,35 @@ export default function Guia() {
   }, [aviso])
 
   const mudarLocal = useCallback((id, mudar) => {
-    setLugares((ls) => (ls ?? []).map((l) => (l.id === id ? { ...l, ...(typeof mudar === 'function' ? mudar(l) : mudar) } : l)))
+    setLugares((ls) => (ls ?? []).map((l) => {
+      if (l.id !== id) return l
+      const campos = typeof mudar === 'function' ? mudar(l) : mudar
+      const n = { ...l, ...campos }
+      // as flags acompanham o texto que a tela mexeu (3.23)
+      if ('conteudo' in campos) n.tem_conteudo = !!n.conteudo
+      if ('rascunho' in campos) n.tem_rascunho = !!n.rascunho
+      return n
+    }))
   }, [])
+
+  // o texto de um salão (conteudo e rascunho), lido quando a tela precisa dele: ao escolher na fila,
+  // ao editar, ao aprovar. Uma linha por vez; a promessa em andamento é reaproveitada
+  const lendoTexto = useRef(new Map())
+  const carregarTexto = useCallback((id) => {
+    const l = (lugaresRef.current ?? []).find((x) => x.id === id)
+    if (!l) return Promise.resolve(null)
+    if (l.texto_carregado) return Promise.resolve(l)
+    if (lendoTexto.current.has(id)) return lendoTexto.current.get(id)
+    const p = (async () => {
+      const { data, error } = await supabase.from('guia_lugares').select('conteudo, rascunho').eq('id', id).maybeSingle()
+      if (error) throw error
+      const campos = { conteudo: data?.conteudo ?? null, rascunho: data?.rascunho ?? null, texto_carregado: true }
+      mudarLocal(id, campos)
+      return { ...l, ...campos }
+    })().finally(() => lendoTexto.current.delete(id))
+    lendoTexto.current.set(id, p)
+    return p
+  }, [mudarLocal])
 
   // grava campos de um salão e espelha na lista (o demo não guarda escrita; a tela sim)
   const salvarLugar = useCallback(async (id, campos) => {
@@ -281,7 +326,7 @@ export default function Guia() {
       if (ctl.cancelado) break
       const l = (lugaresRef.current ?? []).find((x) => x.id === id)
       // alguém gerou, editou ou descartou enquanto o lote andava: pula
-      if (!l || l.rascunho || l.conteudo || l.status === 'removido' || l.status === 'descartado' || gerandoRef.current[id]) {
+      if (!l || temTexto(l) || l.status === 'removido' || l.status === 'descartado' || gerandoRef.current[id]) {
         setLote((s) => ({ ...s, feitos: s.feitos + 1 }))
         continue
       }
@@ -304,6 +349,8 @@ export default function Guia() {
 
   // aprovar: a versão em revisão vai para o ar. Guarda o antes para o "Desfazer".
   const aprovar = useCallback(async (id) => {
+    // o texto tem de estar na mão: a lista vem sem ele (3.23) e o "Desfazer" devolve o que estava
+    await carregarTexto(id).catch(() => null)
     // cópia: no demo a RPC mexe na própria linha em memória
     const achado = (lugaresRef.current ?? []).find((l) => l.id === id)
     const antes = achado ? { ...achado } : null
@@ -314,7 +361,7 @@ export default function Guia() {
       publicado_em: l.publicado_em ?? data?.publicado_em ?? agora(), atualizado_em: data?.atualizado_em ?? agora(),
     }))
     return { ok: true, antes }
-  }, [mudarLocal])
+  }, [mudarLocal, carregarTexto])
   const desfazerAprovacao = useCallback(async (antes) => {
     if (!antes) return { ok: false }
     return salvarLugar(antes.id, { conteudo: antes.conteudo, rascunho: antes.rascunho, status: antes.status, publicado_em: antes.publicado_em, motivo: antes.motivo })
@@ -428,7 +475,7 @@ export default function Guia() {
 
   const g = {
     lugares: lugares ?? [], paginas: paginas ?? [], interesses: interesses ?? [], carregando: lugares === null, erro,
-    faseDe, gerando, falhas, lote, usuario: user?.id ?? null,
+    faseDe, temTexto, temRascunho, temConteudo, carregarTexto, gerando, falhas, lote, usuario: user?.id ?? null,
     carregar, salvarLugar, montarUm, gerarUm, iniciarLote, pausarLote, cancelarLote, fecharLote, aprovar, desfazerAprovacao,
     gerarPagina, aprovarPagina, salvarContexto, salvarInteresse, importar, avisar, irPara,
     desempenho, carregarDesempenho, desempenhoPorLugar,

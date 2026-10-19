@@ -17,7 +17,7 @@ import { EyeOff, Archive, Trash2, LoaderCircle, TriangleAlert, CircleCheck, X, G
 const MOTIVOS = ['Recomeçar a importação', 'Fechou', 'Não é salão de beleza', 'Barbearia ou público masculino', 'Duplicado', 'Fora da cidade', 'Dados ruins']
 const ROTULO = { aprovar: 'Aprovar e publicar', tirar_do_ar: 'Tirar do ar', descartar: 'Descartar', apagar: 'Apagar de vez' }
 // pronta para publicar: gerada com texto, ou no ar com versão nova (o mesmo critério de guia_lote 'aprovar', 169)
-const prontaParaPublicar = (l) => (l.status === 'gerado' && !!(l.rascunho || l.conteudo)) || (l.status === 'publicado' && !!l.rascunho)
+const prontaParaPublicar = (l) => (l.status === 'gerado' && !!(l.tem_rascunho || l.tem_conteudo)) || (l.status === 'publicado' && !!l.tem_rascunho)
 const plural = (n, um, varios) => `${n} ${n === 1 ? um : varios}`
 
 // uma das quatro opções do modal

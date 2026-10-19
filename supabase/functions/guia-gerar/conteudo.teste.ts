@@ -309,6 +309,10 @@ teste('corpo da requisição: json_schema estrito, temperatura, reserva de token
   assert.equal(gem.max_tokens, MAX_TOKENS_COM_RACIOCINIO)
   assert.equal(gem.reasoning_effort, 'low')
   assert.equal(corpoDaRequisicao({ modelo: 'moonshotai/kimi-k2-instruct', mensagens: msgs, tipo: 'pagina' }).max_tokens, MAX_TOKENS, 'modelo que responde direto fica com o limite de sempre')
+  const qwen = corpoDaRequisicao({ modelo: 'qwen/qwen3.8-27b', mensagens: msgs, tipo: 'pagina' })
+  assert.equal(qwen.reasoning_format, 'hidden', 'o Qwen no Groq esconde o raciocínio para o JSON vir limpo')
+  assert.equal(qwen.max_tokens, MAX_TOKENS_COM_RACIOCINIO)
+  assert.equal(gem.reasoning_format, undefined)
   assert.deepEqual(outro.response_format, { type: 'json_object' })
 })
 

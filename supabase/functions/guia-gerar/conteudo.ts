@@ -813,6 +813,8 @@ export function corpoDaRequisicao(o: { modelo: string; mensagens: Mensagem[]; ti
   // reasoning_effort: nos gpt-oss e no Gemini (pela porta compatível com a OpenAI) pede pouco raciocínio, que basta para
   // escrever e poupa cota; outro modelo pode recusar o parâmetro, então não vai
   if (o.modelo.includes('gpt-oss') || /gemini/i.test(o.modelo)) corpo.reasoning_effort = 'low'
+  // os modelos Qwen e DeepSeek no Groq devolvem o raciocínio dentro do texto (<think>…</think>), o que quebra o JSON: só o texto
+  if (/qwen|deepseek/i.test(o.modelo)) corpo.reasoning_format = 'hidden'
   return corpo
 }
 

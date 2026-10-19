@@ -19,7 +19,7 @@ import {
   horariosResumo, horariosEmUmaLinha, fichaDoLugar, prepararLugar, prepararPagina, angulosPara, escolherAngulo, escolherAbertura,
   anguloAnterior, montarPromptLugar, montarPromptPagina, frasesUsadas, corpoDaRequisicao, lerResposta, segundosDeEspera, duracao,
   validarLugar, validarPagina, gerarConteudo, maisParecido, jaccard, trigramas, comMeta, contarPalavras, limparInstrucao,
-  ruaDoEndereco, proporcao, retratoDaCidade,
+  ruaDoEndereco, proporcao, retratoDaCidade, provedoresDe, escolherProvedor, URL_GEMINI, URL_GROQ,
   cortarFrase, cortarPalavras, bairroValido, hash, vasculhar, CIDADES, informesDoLugar,
 } from './conteudo.ts'
 import type { LugarLinha, Pedir, RespostaHttp, Checagem, ConteudoLugar, Mensagem } from './conteudo.ts'
@@ -746,6 +746,37 @@ teste('a validação da página recusa (como estilo) o inventário de bairros e 
   assert.ok(formula.problemas.some((p) => p.nivel === 'estilo' && /fórmula/.test(p.texto)), `sol, sal e maresia em todo canto é fórmula: ${JSON.stringify(formula.problemas)}`)
   assert.deepEqual(retratoDaCidade([['intro 1', 'Sol e maresia.'], ['faq 1', 'maresia'], ['faq 2', 'cloro'], ['faq 3', 'sal']], { ...checagem, angulo: 'praia' }), [], 'no ângulo da praia há mais folga (quatro campos passam)')
   assert.equal(retratoDaCidade([['intro 1', 'Belas Artes, Centro, Gaivota e Suarão']], { ...checagem, tipo: 'lugar' }).length, 0, 'só na página da cidade')
+})
+
+// ---- 3.27: Gemini e Groq lado a lado ------------------------------------------------------------------------
+teste('o provedor vem do pedido, senão do padrão, senão o Gemini se tiver chave (3.27)', () => {
+  const env = (o: Record<string, string>) => ({ get: (n: string) => o[n] })
+  const ambos = provedoresDe(env({ GEMINI_API_KEY: 'g1', GROQ_API_KEY: 'q1', GUIA_IA_MODELO: 'qwen/qwen3.8-27b' }))
+  assert.equal(ambos.gemini.url, URL_GEMINI)
+  assert.equal(ambos.gemini.modelo, 'gemini-2.5-pro')
+  assert.equal(ambos.groq.url, URL_GROQ)
+  assert.equal(ambos.groq.modelo, 'qwen/qwen3.8-27b', 'GUIA_IA_MODELO continua sendo o modelo do Groq')
+  const r1 = escolherProvedor(undefined, ambos)
+  assert.ok('provedor' in r1 && r1.provedor.id === 'gemini', 'sem escolha e com as duas chaves, o Gemini')
+  const r2 = escolherProvedor('groq', ambos)
+  assert.ok('provedor' in r2 && r2.provedor.id === 'groq' && r2.provedor.chave === 'q1')
+  const r3 = escolherProvedor('', ambos, 'groq')
+  assert.ok('provedor' in r3 && r3.provedor.id === 'groq', 'GUIA_IA_PADRAO=groq vale quando ninguém escolhe')
+  const r4 = escolherProvedor('GEMINI ', ambos, 'groq')
+  assert.ok('provedor' in r4 && r4.provedor.id === 'gemini', 'a escolha do pedido vence o padrão')
+  const r5 = escolherProvedor('xai', ambos)
+  assert.ok('erro' in r5 && /desconhecido/.test(r5.erro))
+  const soGroq = provedoresDe(env({ GROQ_API_KEY: 'q1' }))
+  const r6 = escolherProvedor(undefined, soGroq)
+  assert.ok('provedor' in r6 && r6.provedor.id === 'groq', 'sem chave do Gemini, o Groq')
+  const r7 = escolherProvedor('gemini', soGroq)
+  assert.ok('erro' in r7 && /GEMINI_API_KEY/.test(r7.erro), 'pediu Gemini sem chave: o erro diz o segredo')
+  const custom = provedoresDe(env({ GUIA_IA_URL: 'https://openrouter.ai/api/v1/chat/completions', GUIA_IA_CHAVE: 'or1', GUIA_IA_MODELO: 'deepseek/deepseek-chat:free' }))
+  assert.equal(custom.groq.url, 'https://openrouter.ai/api/v1/chat/completions', 'GUIA_IA_URL e GUIA_IA_CHAVE trocam o lado "Groq" por outro provedor compatível')
+  assert.equal(custom.groq.chave, 'or1')
+  const m = comMeta(BOM, { modelo: 'gemini-2.5-pro', provedor: 'gemini', angulo: 'a', instrucao: null, semelhanca: null })
+  assert.equal(m._meta.provedor, 'gemini')
+  assert.ok(!('provedor' in comMeta(BOM, { modelo: 'm', angulo: 'a', instrucao: null, semelhanca: null })._meta))
 })
 
 // ---- roda ---------------------------------------------------------------------------------------------------

@@ -15,6 +15,7 @@ import Interesses from '../../components/plataforma/guia/Interesses'
 import Desempenho from '../../components/plataforma/guia/Desempenho'
 import Abordagem from '../../components/plataforma/guia/Abordagem'
 import { naoContarAqui } from '../../lib/eventos'
+import { iaLembrada, lembrarIa } from '../../lib/guiaIa'
 import { ClipboardCheck, Globe2, Upload, MapPinned, Inbox, X, BarChart3, Handshake, MapPin, RefreshCw, LoaderCircle } from 'lucide-react'
 import '../../guia-plataforma.css'
 
@@ -108,6 +109,7 @@ async function lerTudo(tabela, colunas, ordem, filtro = (q) => q) {
 // do cliente do Supabase, em supabase.js): por isso a chamada vai num fetch
 // próprio, com 100 s de prazo, e a resposta chega inteira.
 const PRAZO_IA = 100000
+// 3.27: qual IA escreve (Gemini ou Groq), escolhida na tela e lembrada no aparelho (src/lib/guiaIa.js); vai em cada pedido
 async function chamarGerador(corpo) {
   try {
     if (isDemo) return await chamar('guia-gerar', corpo)
@@ -232,6 +234,10 @@ function Num({ n, rotulo, sub, tom, onClick, carregando }) {
 export default function Guia() {
   const { user } = useAuth()
   const [aba, setAba] = useState('revisar')
+  const [ia, setIaBruta] = useState(iaLembrada) // 3.27: Gemini ou Groq
+  const iaRef = useRef(ia)
+  useEffect(() => { iaRef.current = ia }, [ia])
+  const setIa = useCallback((v) => { setIaBruta(v); lembrarIa(v) }, [])
   // 3.25: os totais por cidade (174), a cidade escolhida e a lista daquela cidade
   const [resumo, setResumo] = useState(null)      // null = lendo; false = banco sem a 174 (tudo de uma vez); [] = por cidade
   const [cidade, setCidade] = useState(null)      // null até saber as cidades; '' = todas; o slug
@@ -387,7 +393,7 @@ export default function Guia() {
     const desde = Date.now()
     try {
       for (let tentativa = 0; ; tentativa++) {
-        const r = await chamarGerador({ lugar: id, ...(instrucao.trim() ? { instrucao: instrucao.trim().slice(0, 400) } : {}), ...(angulo ? { angulo } : {}) })
+        const r = await chamarGerador({ lugar: id, provedor: iaRef.current, ...(instrucao.trim() ? { instrucao: instrucao.trim().slice(0, 400) } : {}), ...(angulo ? { angulo } : {}) })
         if (r?.rede && !isDemo) { const salvo = await rascunhoGravadoDepois('guia_lugares', id, desde).catch(() => null); if (salvo) { r.ok = true; r.rascunho = salvo } }
         if (r?.ok && r.rascunho) {
           mudarLocal(id, (l) => ({
@@ -486,7 +492,7 @@ export default function Guia() {
     const desde = Date.now()
     try {
       for (let tentativa = 0; ; tentativa++) {
-        const r = await chamarGerador({ pagina: id, ...(instrucao.trim() ? { instrucao: instrucao.trim().slice(0, 400) } : {}) })
+        const r = await chamarGerador({ pagina: id, provedor: iaRef.current, ...(instrucao.trim() ? { instrucao: instrucao.trim().slice(0, 400) } : {}) })
         if (r?.rede && !isDemo) { const salvo = await rascunhoGravadoDepois('guia_paginas', id, desde).catch(() => null); if (salvo) { r.ok = true; r.rascunho = salvo } }
         if (r?.ok && r.rascunho) { mudarPagina(id, { rascunho: r.rascunho, gerado_em: r.rascunho?._meta?.gerado_em ?? agora() }); return { ok: true } }
         if (r?.tentar_em && tentativa < 3) { await contagem(r.tentar_em, (s) => setGerando((g) => (g[id] ? { ...g, [id]: { espera: s } } : g))); continue }
@@ -621,7 +627,7 @@ export default function Guia() {
 
   const g = {
     lugares: lugares ?? [], paginas: paginas ?? [], interesses: interesses ?? [], carregando: lugares === null, erro,
-    cidade: cidade ?? '', cidades, escolherCidade, resumo: resumoVivo, lugarPorId: achar,
+    cidade: cidade ?? '', cidades, escolherCidade, resumo: resumoVivo, lugarPorId: achar, ia, setIa,
     faseDe, temTexto, temRascunho, temConteudo, carregarTexto, gerando, falhas, lote, usuario: user?.id ?? null,
     carregar, salvarLugar, montarUm, gerarUm, iniciarLote, pausarLote, cancelarLote, fecharLote, aprovar, desfazerAprovacao,
     gerarPagina, aprovarPagina, salvarContexto, salvarInteresse, importar, avisar, irPara,

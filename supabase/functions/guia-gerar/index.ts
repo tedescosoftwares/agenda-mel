@@ -2,12 +2,13 @@
 // guia-gerar (3.9): escreve com IA o texto de uma página do guia de salões e
 // guarda como rascunho, esperando alguém da Plataforma aprovar.
 //
-// POST { lugar?: uuid, pagina?: uuid, instrucao?: string, angulo?: string }
+// POST { lugar?: uuid, pagina?: uuid, instrucao?: string, angulo?: string, provedor?: 'gemini' | 'groq' }
 // com o Authorization de quem está logado na Plataforma.
 //   lugar   uma linha de guia_lugares (a página de um salão)
 //   pagina  uma linha de guia_paginas (a página da cidade ou de uma categoria)
 //   instrucao  o pedido do revisor ("mais curto", "fale de noivas"), até 400 letras
 //   angulo     o id de um ângulo editorial (conteudo.ts) ou um tema em texto livre
+//   provedor   3.27: qual IA escreve. Sem ele, GUIA_IA_PADRAO; sem ela, o Gemini se tiver chave, senão o Groq
 //
 // Respostas:
 //   200 { ok: true, rascunho }                       gravado em rascunho, com _meta
@@ -26,19 +27,20 @@
 
 import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import {
-  URL_GROQ, MODELO_PADRAO, ANGULOS, ANGULOS_PAGINA, limpar, limparInstrucao,
+  ANGULOS, ANGULOS_PAGINA, limpar, limparInstrucao, provedoresDe, escolherProvedor,
   prepararLugar, prepararPagina, angulosPara, escolherAngulo, escolherAbertura, anguloAnterior,
   montarPromptLugar, montarPromptPagina, frasesUsadas, gerarConteudo, maisParecido, comMeta,
-  type LugarLinha, type PaginaLinha, type LugarDaPagina, type Pedir,
+  type LugarLinha, type PaginaLinha, type LugarDaPagina, type Pedir, type Provedor,
 } from './conteudo.ts'
 
 const URL_SUPABASE = Deno.env.get('SUPABASE_URL') ?? ''
 const CHAVE_ANON = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
 const CHAVE_SERVICO = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-// qualquer API compatível com a da OpenAI serve (ex.: xAI): troque a URL, a chave e o modelo
-const URL_IA = Deno.env.get('GUIA_IA_URL') || URL_GROQ
-const CHAVE_IA = Deno.env.get('GUIA_IA_CHAVE') || Deno.env.get('GROQ_API_KEY') || ''
-const MODELO = Deno.env.get('GUIA_IA_MODELO') || MODELO_PADRAO
+// 3.27: Gemini (GEMINI_API_KEY, GUIA_IA_MODELO_GEMINI) e Groq (GROQ_API_KEY, GUIA_IA_MODELO) lado a lado; a Plataforma
+// escolhe a cada geração e GUIA_IA_PADRAO decide quando ninguém escolhe. GUIA_IA_URL e GUIA_IA_CHAVE trocam o lado
+// do Groq por outro provedor compatível com a OpenAI (OpenRouter, xAI)
+const PROVEDORES = provedoresDe(Deno.env)
+const IA_PADRAO = Deno.env.get('GUIA_IA_PADRAO') ?? ''
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 // quem pode servir de contexto e de comparação (descartado e removido, não)
@@ -60,10 +62,10 @@ function json(corpo: unknown, status = 200) {
 }
 
 // a única porta para a rede da IA (conteudo.ts recebe isto e fica testável)
-const pedir: Pedir = async (corpo, timeoutMs) => {
-  const r = await fetch(URL_IA, {
+const pedirCom = (prov: Provedor): Pedir => async (corpo, timeoutMs) => {
+  const r = await fetch(prov.url, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${CHAVE_IA}`, 'Content-Type': 'application/json' },
+    headers: { Authorization: `Bearer ${prov.chave}`, 'Content-Type': 'application/json' },
     body: JSON.stringify(corpo),
     signal: AbortSignal.timeout(timeoutMs),
   })
@@ -71,7 +73,7 @@ const pedir: Pedir = async (corpo, timeoutMs) => {
 }
 
 type Linha = Record<string, unknown>
-type Pedido = { lugar?: unknown; pagina?: unknown; instrucao?: unknown; angulo?: unknown }
+type Pedido = { lugar?: unknown; pagina?: unknown; instrucao?: unknown; angulo?: unknown; provedor?: unknown }
 
 // "Sobre a cidade" (3.22, migração 170): na linha da cidade em guia_paginas; vale para todas as páginas
 // dela. Sem a coluna (banco sem a 170) ou sem texto, null, e o conteudo.ts usa o que tem
@@ -81,7 +83,7 @@ async function contextoDa(db: SupabaseClient, cidadeSlug: string): Promise<strin
   return typeof c === 'string' && c.trim() ? c : null
 }
 
-async function gerarLugar(db: SupabaseClient, id: string, instrucao: string | null, pedidoAngulo: string | null): Promise<Response> {
+async function gerarLugar(db: SupabaseClient, ia: Provedor, id: string, instrucao: string | null, pedidoAngulo: string | null): Promise<Response> {
   const { data, error } = await db.from('guia_lugares').select(COLUNAS_LUGAR).eq('id', id).maybeSingle()
   if (error) return json({ erro: error.message }, 500)
   if (!data) return json({ erro: 'salão não encontrado no guia' }, 404)
@@ -108,11 +110,11 @@ async function gerarLugar(db: SupabaseClient, id: string, instrucao: string | nu
     jaUsadas: frasesUsadas(outros.map((o) => ({ sobre: o.r_sobre ?? o.c_sobre, chamada: o.r_chamada ?? o.c_chamada }))),
   })
 
-  const g = await gerarConteudo({ tipo: 'lugar', mensagens, checagem, modelo: MODELO, pedir })
+  const g = await gerarConteudo({ tipo: 'lugar', mensagens, checagem, modelo: ia.modelo, pedir: pedirCom(ia) })
   if (!g.ok) return json(g.limite ? { ok: false, erro: g.erro, tentar_em: g.tentarEm } : { ok: false, erro: g.erro })
 
   const semelhanca = maisParecido((g.conteudo as { sobre: string[] }).sobre, outros.flatMap((o) => [{ slug: String(o.slug), texto: o.c_sobre }, { slug: String(o.slug), texto: o.r_sobre }]))
-  const rascunho = comMeta(g.conteudo, { modelo: MODELO, angulo: angulo.id, instrucao, semelhanca, avisos: g.avisos })
+  const rascunho = comMeta(g.conteudo, { modelo: ia.modelo, provedor: ia.id, angulo: angulo.id, instrucao, semelhanca, avisos: g.avisos })
   // importado/descartado viram "gerado"; publicado continua publicado (a página
   // no ar só muda quando aprovarem); removido nunca é tocado
   const mudanca: Linha = { rascunho, gerado_em: rascunho._meta.gerado_em }
@@ -123,7 +125,7 @@ async function gerarLugar(db: SupabaseClient, id: string, instrucao: string | nu
   return json({ ok: true, rascunho })
 }
 
-async function gerarPagina(db: SupabaseClient, id: string, instrucao: string | null, pedidoAngulo: string | null): Promise<Response> {
+async function gerarPagina(db: SupabaseClient, ia: Provedor, id: string, instrucao: string | null, pedidoAngulo: string | null): Promise<Response> {
   const { data, error } = await db.from('guia_paginas').select('id, cidade, cidade_slug, uf, categoria, status, conteudo, rascunho').eq('id', id).maybeSingle()
   if (error) return json({ erro: error.message }, 500)
   if (!data) return json({ erro: 'página não encontrada no guia' }, 404)
@@ -149,14 +151,14 @@ async function gerarPagina(db: SupabaseClient, id: string, instrucao: string | n
   const angulo = escolherAngulo({ candidatos, todos: ANGULOS_PAGINA, semente: `${p.cidade_slug}/${p.categoria}`, pedido: pedidoAngulo, anterior: anguloAnterior(anterior) })
   const mensagens = montarPromptPagina({ ficha, cidade, angulo, instrucao, anterior })
 
-  const g = await gerarConteudo({ tipo: 'pagina', mensagens, checagem: { ...checagem, angulo: angulo.id }, modelo: MODELO, pedir })
+  const g = await gerarConteudo({ tipo: 'pagina', mensagens, checagem: { ...checagem, angulo: angulo.id }, modelo: ia.modelo, pedir: pedirCom(ia) })
   if (!g.ok) return json(g.limite ? { ok: false, erro: g.erro, tentar_em: g.tentarEm } : { ok: false, erro: g.erro })
 
   const semelhanca = maisParecido((g.conteudo as { intro: string[] }).intro, irmas.flatMap((o) => {
     const slug = String(o.categoria || o.cidade_slug)
     return [{ slug, texto: o.c_intro }, { slug, texto: o.r_intro }]
   }))
-  const rascunho = comMeta(g.conteudo, { modelo: MODELO, angulo: angulo.id, instrucao, semelhanca, avisos: g.avisos })
+  const rascunho = comMeta(g.conteudo, { modelo: ia.modelo, provedor: ia.id, angulo: angulo.id, instrucao, semelhanca, avisos: g.avisos })
   const { error: erroGravar } = await db.from('guia_paginas').update({ rascunho, gerado_em: rascunho._meta.gerado_em }).eq('id', p.id)
   if (erroGravar) return json({ erro: erroGravar.message }, 500)
   return json({ ok: true, rascunho })
@@ -178,14 +180,16 @@ Deno.serve(async (req) => {
   const quem = createClient(URL_SUPABASE, CHAVE_ANON, { global: { headers: { Authorization: auth } }, auth: { persistSession: false } })
   const { data: plataforma, error: erroPapel } = await quem.rpc('eh_plataforma')
   if (erroPapel || plataforma !== true) return json({ erro: 'só a Plataforma gera o texto do guia' }, 403)
-  if (!CHAVE_IA) return json({ erro: 'a chave da IA não está configurada (supabase secrets set GROQ_API_KEY=...)' }, 500)
+  const escolha = escolherProvedor(corpo.provedor, PROVEDORES, IA_PADRAO)
+  if ('erro' in escolha) return json({ erro: escolha.erro }, /desconhecido/.test(escolha.erro) ? 400 : 500)
+  const ia = escolha.provedor
 
   // o resto com a service role: a função lê os vizinhos e grava o rascunho
   const servico = createClient(URL_SUPABASE, CHAVE_SERVICO, { auth: { persistSession: false } })
   const instrucao = limparInstrucao(corpo.instrucao)
   const angulo = limpar(corpo.angulo, 200) || null
   try {
-    return lugar ? await gerarLugar(servico, lugar, instrucao, angulo) : await gerarPagina(servico, pagina, instrucao, angulo)
+    return lugar ? await gerarLugar(servico, ia, lugar, instrucao, angulo) : await gerarPagina(servico, ia, pagina, instrucao, angulo)
   } catch (e) {
     return json({ erro: `não deu para gerar: ${String((e as Error)?.message ?? e).slice(0, 200)}` }, 500)
   }

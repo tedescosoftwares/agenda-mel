@@ -495,6 +495,9 @@ export const GUIA_RPC = {
 
 // ---- a função guia-gerar no demo: um texto plausível montado dos dados ---------------
 const ANGULOS = ['o bairro e a praticidade', 'o serviço principal em detalhe', 'para quem é', 'como é a primeira visita', 'rotina de cuidado entre as visitas']
+// 3.27: o demo ecoa a IA escolhida na Plataforma, para a tela mostrar qual escreveu
+const provedorDemo = (corpo) => (corpo?.provedor === 'groq' ? 'groq' : 'gemini')
+const modeloDemo = (corpo) => (provedorDemo(corpo) === 'groq' ? 'openai/gpt-oss-120b' : 'gemini-2.5-pro')
 export async function demoGuiaGerar(corpo) {
   await new Promise((r) => setTimeout(r, 900))
   if (corpo?.pagina) {
@@ -509,7 +512,7 @@ export async function demoGuiaGerar(corpo) {
       intro: [`${p.cidade} tem opções em quase todos os bairros. Este guia mostra ${cat ? `${cat.artigo.toLowerCase()} ${cat.plural}` : 'os salões'} da cidade com o horário de cada um.`, 'Escolha pelo bairro e pelo horário que cabe na sua rotina.'],
       como_escolher: { titulo: 'Como escolher', itens: ['Comece pelo bairro.', 'Confira o horário de sábado.', 'Veja se faz o serviço que você quer.'] },
       faq: [{ pergunta: `Quantos ${cat ? cat.plural : 'salões'} há em ${p.cidade} no guia?`, resposta: 'A lista acima mostra todos os que estão no guia hoje.' }],
-      _meta: { modelo: 'demo', gerado_em: new Date().toISOString(), angulo: 'a cidade inteira', instrucao: corpo.instrucao ?? null, semelhanca: null },
+      _meta: { modelo: modeloDemo(corpo), provedor: provedorDemo(corpo), gerado_em: new Date().toISOString(), angulo: 'a cidade inteira', instrucao: corpo.instrucao ?? null, semelhanca: null },
     }
     p.gerado_em = new Date().toISOString()
     return { ok: true, rascunho: p.rascunho }
@@ -539,7 +542,7 @@ export async function demoGuiaGerar(corpo) {
     ],
     dicas: { titulo: `Antes de marcar ${cat.curto.toLowerCase()}`, itens: ['Diga se é a primeira vez ou manutenção.', 'Leve uma foto de referência.', 'Perto de feriado, marque com antecedência.'] },
     faq: [{ pergunta: `Preciso marcar horário com ${cat.singular}?`, resposta: 'É o mais seguro: marcando antes, você garante o horário e o tempo certo para o serviço.' }],
-    _meta: { modelo: 'demo', gerado_em: new Date().toISOString(), angulo, instrucao: corpo?.instrucao ?? null, semelhanca: null, palavras: sobre.join(' ').split(/\s+/).length },
+    _meta: { modelo: modeloDemo(corpo), provedor: provedorDemo(corpo), gerado_em: new Date().toISOString(), angulo, instrucao: corpo?.instrucao ?? null, semelhanca: null, palavras: sobre.join(' ').split(/\s+/).length },
   }
   l.gerado_em = new Date().toISOString()
   if (l.status === 'importado' || l.status === 'descartado') l.status = 'gerado'

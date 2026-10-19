@@ -142,6 +142,7 @@ export type Conteudo = ConteudoLugar | ConteudoPagina
 export type Semelhanca = { slug: string; indice: number } | null
 export type Meta = {
   modelo: string
+  provedor?: string // 3.27: gemini ou groq
   gerado_em: string
   angulo: string
   instrucao: string | null
@@ -170,6 +171,29 @@ type Obj = Record<string, unknown>
 
 // ---- constantes -----------------------------------------------------------------------
 export const URL_GROQ = 'https://api.groq.com/openai/v1/chat/completions'
+// 3.27: dois provedores lado a lado, escolhidos na hora de gerar (a Plataforma manda "provedor"). O Gemini
+// entra pela porta compatível com a OpenAI; a chave é a do AI Studio (o projeto com faturamento consome os
+// créditos do Google Cloud). GUIA_IA_PADRAO diz qual vale quando ninguém escolhe; sem ela, o Gemini se tiver chave
+export const URL_GEMINI = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+export const MODELO_GEMINI_PADRAO = 'gemini-2.5-pro'
+export type Provedor = { id: 'gemini' | 'groq'; nome: string; url: string; chave: string; modelo: string; segredo: string }
+export function provedoresDe(env: { get(nome: string): string | undefined | null }): Record<'gemini' | 'groq', Provedor> {
+  const v = (n: string) => String(env.get(n) ?? '').trim()
+  return {
+    gemini: { id: 'gemini', nome: 'Gemini', url: URL_GEMINI, chave: v('GEMINI_API_KEY'), modelo: v('GUIA_IA_MODELO_GEMINI') || MODELO_GEMINI_PADRAO, segredo: 'GEMINI_API_KEY' },
+    groq: { id: 'groq', nome: 'Groq', url: v('GUIA_IA_URL') || URL_GROQ, chave: v('GUIA_IA_CHAVE') || v('GROQ_API_KEY'), modelo: v('GUIA_IA_MODELO') || MODELO_PADRAO, segredo: 'GROQ_API_KEY' },
+  }
+}
+// o provedor do pedido: o nome que veio ('gemini' | 'groq'), senão o padrão; sem chave, o erro diz qual segredo falta
+export function escolherProvedor(pedido: unknown, provedores: Record<'gemini' | 'groq', Provedor>, padrao: unknown = ''): { provedor: Provedor } | { erro: string } {
+  const nome = String(pedido ?? '').trim().toLowerCase()
+  const p = String(padrao ?? '').trim().toLowerCase()
+  const id = nome === 'gemini' || nome === 'groq' ? nome : p === 'gemini' || p === 'groq' ? p : provedores.gemini.chave ? 'gemini' : 'groq'
+  if (nome && nome !== id) return { erro: `provedor desconhecido: ${nome.slice(0, 20)} (use gemini ou groq)` }
+  const prov = provedores[id]
+  if (!prov.chave) return { erro: `a chave do ${prov.nome} não está configurada (supabase secrets set ${prov.segredo}=...)` }
+  return { provedor: prov }
+}
 export const MODELO_PADRAO = 'openai/gpt-oss-120b'
 export const LIMITE_INSTRUCAO = 400
 export const TEMPERATURA = 0.7 // 3.22: um pouco mais presa aos fatos; a variedade vem dos ângulos e das aberturas
@@ -1227,9 +1251,10 @@ export function contarPalavras(c: unknown): number {
   return 0
 }
 
-export function comMeta(conteudo: Conteudo, m: { modelo: string; angulo: string; instrucao: string | null; semelhanca: Semelhanca; avisos?: string[]; agora?: Date }): Conteudo & { _meta: Meta } {
+export function comMeta(conteudo: Conteudo, m: { modelo: string; provedor?: string; angulo: string; instrucao: string | null; semelhanca: Semelhanca; avisos?: string[]; agora?: Date }): Conteudo & { _meta: Meta } {
   const _meta: Meta = {
     modelo: m.modelo,
+    ...(m.provedor ? { provedor: m.provedor } : {}),
     gerado_em: (m.agora ?? new Date()).toISOString(),
     angulo: m.angulo,
     instrucao: m.instrucao,

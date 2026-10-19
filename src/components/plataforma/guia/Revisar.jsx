@@ -4,6 +4,7 @@ import { Pilula, haQuanto } from '../Pecas'
 import { MolduraPrevia, PreviaGoogle } from './Previa'
 import EditarLugar from './Editar'
 import EmLote from './EmLote'
+import EscolhaIA from './EscolhaIA'
 import { GUIA_CATEGORIAS, categoriaDoGuia, conteudoSeguro, semAcento, rotaDoLugar, fotosDoLugar, ordemPublica, partesDosPontos } from '../../../lib/guia'
 import { seoDoLugar } from '../../../lib/guiaSeo'
 import { dadosDaPagina } from '../../../lib/guiaTexto'
@@ -483,9 +484,10 @@ export default function Revisar({ g, rev, setRev }) {
                     <button type="button" className="btn btn-ghost" onClick={montarAtual} disabled={!podeGerar || montando} title="Monta a página com os dados do salão: de graça e na hora (G)">
                       {montando ? <LoaderCircle size={16} className="pg-gira" /> : temTexto ? <RefreshCw size={16} /> : <Wand2 size={16} />} {temTexto ? <>Montar<span className="pg-longo"> de novo</span></> : <>Montar<span className="pg-longo"> página</span></>} <kbd>G</kbd>
                     </button>
-                    <button type="button" className="btn btn-ghost pg-btn-ic" onClick={() => gerarAtual()} disabled={!podeGerar} title="Reescreve com a IA (gasta da cota do Groq). O pedido escrito embaixo vai junto.">
+                    <button type="button" className="btn btn-ghost pg-btn-ic" onClick={() => gerarAtual()} disabled={!podeGerar} title="Reescreve com a IA escolhida ao lado. O pedido escrito embaixo vai junto.">
                       {gerandoAtual ? <LoaderCircle size={16} className="pg-gira" /> : <Sparkles size={16} />} <span>{gerandoAtual ? 'IA escrevendo…' : 'Reescrever com IA'}</span>
                     </button>
+                    <EscolhaIA g={g} compacta />
                     <button type="button" className="btn btn-ghost pg-btn-ic" onClick={() => abrirEditor(atual.id)} title="Editar fatos e texto (E)"><Pencil size={16} /> <span>Editar</span> <kbd>E</kbd></button>
                     <button type="button" className="btn btn-ghost pg-btn-ic" onClick={() => mover(1)} disabled={indice >= lista.length - 1} title="Pular para o próximo (J)"><SkipForward size={16} /> <span>Pular</span> <kbd>J</kbd></button>
                     {fase === 'descartado'

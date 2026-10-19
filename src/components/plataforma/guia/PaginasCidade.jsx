@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Painel, Pilula, Vazio, haQuanto } from '../Pecas'
 import { PreviaGoogle } from './Previa'
+import EscolhaIA from './EscolhaIA'
 import { GUIA_CATEGORIAS, categoriaDoGuia, conteudoSeguro, rotaDaCidade, rotaDaCategoria } from '../../../lib/guia'
 import { seoDaCidade } from '../../../lib/guiaSeo'
 import { urlDoAmbiente } from '../../../lib/ambiente'
@@ -143,10 +144,12 @@ export default function PaginasCidade({ g }) {
             {nNoAr ? `No site com ${nNoAr} ${nNoAr === 1 ? 'salão' : 'salões'}` : 'Ainda fora do site: entra quando o primeiro salão daqui for publicado'}
             {fase === 'sem' || fase === 'revisar' ? ' · sem texto aprovado, o site usa o texto padrão' : ''}
             {atual.gerado_em ? ` · gerado ${haQuanto(atual.gerado_em)}` : ''}
+            {mostrado?._meta?.modelo ? ` · IA ${String(mostrado._meta.modelo).replace(/^.*\//, '')}` : ''}
           </p>
           <div className="pg-botoes">
             <button type="button" className="btn btn-primary" onClick={aprovar} disabled={!atual.rascunho || aprovando || !!ger}>{aprovando ? <LoaderCircle size={16} className="pg-gira" /> : <Check size={16} />} {fase === 'nova' ? 'Publicar versão nova' : 'Aprovar'}</button>
             <button type="button" className="btn btn-ghost" onClick={gerar} disabled={!!ger}>{ger ? <LoaderCircle size={16} className="pg-gira" /> : fase === 'sem' ? <Sparkles size={16} /> : <RefreshCw size={16} />} {ger ? (ger.espera ? `Tentando de novo em ${ger.espera} s` : 'Gerando…') : fase === 'sem' ? 'Gerar' : 'Gerar de novo'}</button>
+            <EscolhaIA g={g} />
             {fase === 'nova' && (
               <div className="pg-seg">
                 <button type="button" className={versao === 'rascunho' ? 'ativo' : ''} onClick={() => setVersao('rascunho')}>Versão nova</button>

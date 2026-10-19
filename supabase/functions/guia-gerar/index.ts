@@ -131,7 +131,8 @@ async function gerarPagina(db: SupabaseClient, id: string, instrucao: string | n
 
   // os salões da cidade (ou da categoria) viram números para o texto; os
   // nomes só servem para a validação recusar texto que cite algum
-  let consulta = db.from('guia_lugares').select('nome, bairro, categoria, servicos, horarios').eq('cidade_slug', p.cidade_slug).in('status', VIVOS).limit(3000)
+  // 3.26: o endereço e os atributos entram no retrato da cidade (ruas com mais lugares, o que os cadastros informam)
+  let consulta = db.from('guia_lugares').select('nome, bairro, categoria, servicos, horarios, endereco, atributos').eq('cidade_slug', p.cidade_slug).in('status', VIVOS).limit(3000)
   if (p.categoria) consulta = consulta.eq('categoria', p.categoria)
   const { data: lugares, error: erroLugares } = await consulta
   if (erroLugares) return json({ erro: erroLugares.message }, 500)
@@ -148,7 +149,7 @@ async function gerarPagina(db: SupabaseClient, id: string, instrucao: string | n
   const angulo = escolherAngulo({ candidatos, todos: ANGULOS_PAGINA, semente: `${p.cidade_slug}/${p.categoria}`, pedido: pedidoAngulo, anterior: anguloAnterior(anterior) })
   const mensagens = montarPromptPagina({ ficha, cidade, angulo, instrucao, anterior })
 
-  const g = await gerarConteudo({ tipo: 'pagina', mensagens, checagem, modelo: MODELO, pedir })
+  const g = await gerarConteudo({ tipo: 'pagina', mensagens, checagem: { ...checagem, angulo: angulo.id }, modelo: MODELO, pedir })
   if (!g.ok) return json(g.limite ? { ok: false, erro: g.erro, tentar_em: g.tentarEm } : { ok: false, erro: g.erro })
 
   const semelhanca = maisParecido((g.conteudo as { intro: string[] }).intro, irmas.flatMap((o) => {

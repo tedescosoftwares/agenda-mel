@@ -140,6 +140,7 @@
 --    172  a cidade grande em fatias: guia_publicadas com limite_ e depois_ (até 500 por chamada), sem a lista de cidades; índice parcial de quem está no ar
 --    173  a chave do gerador (guia_segredos) em guia_publicadas; guia_cidade e guia_colecoes fora do anon
 --    174  a Plataforma por cidade: guia_resumo() com os totais por cidade e por fase (só a Plataforma)
+--    175  "Sobre a cidade" com o desenho da cidade para Praia Grande, Mongaguá, Itanhaém e Peruíbe (só onde ainda está igual à semente da 170)
 --
 --  Se der erro, me mande a mensagem inteira: cada bloco abaixo está
 --  marcado com o nome do arquivo de origem.
@@ -31930,3 +31931,42 @@ begin
 end $$;
 
 insert into public.migracoes_aplicadas (arquivo) values ('174_plataforma_por_cidade.sql') on conflict (arquivo) do nothing;
+
+-- =============================================================
+-- >>> 175_sobre_a_cidade_v2.sql
+-- =============================================================
+
+-- 175 (3.26): "Sobre a cidade" com o desenho da cidade, para as quatro cidades do litoral sul que o
+-- guia está recebendo agora (Praia Grande, Mongaguá, Itanhaém e Peruíbe).
+--
+-- A semente da 170 dizia só "cidade de praia, veranistas, sol e maresia", e a IA escrevia a mesma
+-- página para qualquer cidade. A nova diz como cada cidade se organiza: o que fica ao norte e ao
+-- sul, os bairros de praia e os de moradores, onde o comércio se concentra, a rodovia que a corta,
+-- as referências que quem mora conhece. Só coisa geral e certa; confira e edite à vontade em
+-- Guia → Páginas da cidade → "Sobre a cidade". Troca só o que ainda está igual à semente da 170
+-- (o que foi editado à mão fica).
+do $$
+declare
+  novas constant jsonb := jsonb_build_object(
+    'praia-grande', 'Praia Grande fica no litoral sul de São Paulo, na Baixada Santista, na chegada da rodovia dos Imigrantes, e é uma das cidades mais populosas do litoral paulista. É cidade de praia e de moradores: muita gente mora o ano inteiro e trabalha na própria cidade ou nas vizinhas, e nos fins de semana, no verão e nos feriados chegam veranistas e turistas de um dia da Grande São Paulo. A cidade se estende ao longo de uma orla comprida, e os bairros da praia se sucedem de norte a sul com os nomes que quem a frequenta conhece: Canto do Forte, Boqueirão, Guilhermina, Aviação, Tupi, Ocian, Mirim, Maracanã, Caiçara, Real, Flórida e Solemar, na divisa com Mongaguá. O comércio acompanha a orla pelas avenidas paralelas à praia, com a avenida Presidente Kennedy como eixo principal, e cada bairro tem o próprio comércio de rua. Para dentro, afastados da praia e em volta da rodovia Padre Manoel da Nóbrega, ficam bairros grandes de moradores, como Vila Sônia, Quietude, Antártica, Samambaia, Melvi, Esmeralda e Ribeirópolis, com comércio próprio. Sol, sal, cloro de piscina e maresia pesam no cabelo, na pele, nos cílios e no esmalte.',
+    'mongagua', 'Mongaguá fica no litoral sul de São Paulo, entre Praia Grande e Itanhaém. É cidade pequena, de praia e de casas de veraneio, mas com gente morando o ano inteiro: o movimento cresce muito no verão e nos feriados prolongados, quando chegam veranistas e donos de casa de praia, em geral da Grande São Paulo. O Centro fica junto à orla, perto da plataforma de pesca que é a referência da cidade, e concentra o comércio e os serviços. Os outros bairros se espalham ao longo da praia e da rodovia Padre Manoel da Nóbrega, que atravessa a cidade, como Vera Cruz, Itaóca, Flórida Mirim e Vila Atlântica, e Agenor de Campos, grande e de moradores, no sentido de Itanhaém. Fora do Centro o comércio é de bairro, ao longo das avenidas principais. Sol, sal, cloro de piscina e maresia pesam no cabelo, na pele, nos cílios e no esmalte.',
+    'itanhaem', 'Itanhaém fica no litoral sul de São Paulo e é uma das cidades mais antigas do Brasil: o Centro histórico, com a igreja matriz, a praça e o convento no alto do morro, fica junto à foz do rio Itanhaém. É cidade comprida, que acompanha a orla, e com muita gente morando o ano inteiro além dos veranistas. No sentido de Mongaguá, ao norte, ficam os bairros de praia como Gaivota e Suarão, muitos deles de veraneio; no sentido de Peruíbe, ao sul, Cibratel e os bairros que vêm depois dele; e para dentro, afastados da praia e em volta da rodovia Padre Manoel da Nóbrega, que corta a cidade, bairros de moradores como Vila São Paulo, Jardim Umuarama e Satélite. O comércio e os serviços se concentram no Centro e nas avenidas que ligam o Centro aos bairros; nos bairros de praia o comércio é de bairro, mais movimentado no verão. O movimento cresce no verão, nos feriados prolongados e nos fins de semana, quando chegam veranistas e donos de casa de praia, em geral da Grande São Paulo. Sol, sal, cloro de piscina e maresia pesam no cabelo, na pele, nos cílios e no esmalte.',
+    'peruibe', 'Peruíbe fica no litoral sul de São Paulo, a última cidade antes da Estação Ecológica Juréia-Itatins, que limita a cidade ao sul e guarda praias mais preservadas, como o Guaraú. É cidade de praia e de veraneio, conhecida também pela lama negra medicinal e pelas ruínas do Abarebebê, e com gente morando o ano inteiro. O Centro e os bairros junto à praia concentram o comércio e os serviços; os bairros para dentro, em volta da rodovia Padre Manoel da Nóbrega, são mais de moradores. O movimento cresce no verão, nos feriados prolongados e nos fins de semana, quando chegam veranistas e donos de casa de praia, em geral da Grande São Paulo. Sol, sal, cloro de piscina e maresia pesam no cabelo, na pele, nos cílios e no esmalte.'
+  );
+  sementes170 constant jsonb := jsonb_build_object(
+    'praia-grande', 'Praia Grande fica no litoral sul de São Paulo, na Baixada Santista, e é uma das cidades mais populosas do litoral paulista. É cidade de praia: nos fins de semana, no verão e nos feriados chegam veranistas e turistas de um dia vindos da Grande São Paulo, e o movimento do comércio acompanha. A cidade se estende ao longo da orla, e os bairros levam os nomes que quem frequenta a praia conhece (Canto do Forte, Boqueirão, Guilhermina, Aviação, Tupi, Ocian, Mirim, Caiçara, Solemar); o comércio se concentra nas avenidas paralelas à praia. Sol, sal, cloro de piscina e maresia pesam no cabelo, na pele, nos cílios e no esmalte.',
+    'mongagua', 'Mongaguá fica no litoral sul de São Paulo, entre Praia Grande e Itanhaém. É cidade pequena, de praia e de casas de veraneio: o movimento cresce muito no verão e nos feriados prolongados, quando chegam veranistas e donos de casa de praia. O comércio fica no Centro e ao longo da rodovia e das avenidas que acompanham a praia. Sol, sal, cloro de piscina e maresia pesam no cabelo, na pele, nos cílios e no esmalte.',
+    'itanhaem', 'Itanhaém fica no litoral sul de São Paulo e é uma das cidades mais antigas do Brasil. É cidade de praia, comprida: vai do Centro e da Boca da Barra até Suarão e Gaivota, com muitos bairros ao longo da orla e para dentro, uns de moradores o ano todo, outros de veraneio. O movimento cresce no verão e nos feriados prolongados, quando chegam veranistas e donos de casa de praia. Sol, sal, cloro de piscina e maresia pesam no cabelo, na pele, nos cílios e no esmalte.',
+    'peruibe', 'Peruíbe fica no litoral sul de São Paulo, a última cidade antes da Estação Ecológica da Juréia, que limita a cidade ao sul. É cidade de praia e de veraneio: o Centro e os bairros junto à praia concentram o comércio, e o movimento cresce no verão e nos feriados prolongados. Sol, sal, cloro de piscina e maresia pesam no cabelo, na pele, nos cílios e no esmalte.'
+  );
+  k text; n int := 0;
+begin
+  for k in select jsonb_object_keys(novas) loop
+    update public.guia_paginas set contexto = novas ->> k
+     where cidade_slug = k and categoria = '' and (contexto is null or btrim(contexto) = '' or contexto = sementes170 ->> k);
+    if found then n := n + 1; end if;
+  end loop;
+  raise notice '175: "Sobre a cidade" com o desenho da cidade em % cidade(s) do litoral sul (o que foi editado à mão ficou)', n;
+end $$;
+
+insert into public.migracoes_aplicadas (arquivo) values ('175_sobre_a_cidade_v2.sql') on conflict (arquivo) do nothing;

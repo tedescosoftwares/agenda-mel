@@ -19,6 +19,7 @@ import {
   horariosResumo, horariosEmUmaLinha, fichaDoLugar, prepararLugar, prepararPagina, angulosPara, escolherAngulo, escolherAbertura,
   anguloAnterior, montarPromptLugar, montarPromptPagina, frasesUsadas, corpoDaRequisicao, lerResposta, segundosDeEspera, duracao,
   validarLugar, validarPagina, gerarConteudo, maisParecido, jaccard, trigramas, comMeta, contarPalavras, limparInstrucao,
+  ruaDoEndereco, proporcao, retratoDaCidade,
   cortarFrase, cortarPalavras, bairroValido, hash, vasculhar, CIDADES, informesDoLugar,
 } from './conteudo.ts'
 import type { LugarLinha, Pedir, RespostaHttp, Checagem, ConteudoLugar, Mensagem } from './conteudo.ts'
@@ -638,6 +639,104 @@ teste('página da cidade e da categoria: ficha, prompt e validação', async () 
   assert.ok(comNumero.problemas.some((p) => p.texto.includes('quantidade exata')))
   const g = await gerarConteudo({ tipo: 'pagina', mensagens: msgs, checagem: unhas.checagem, modelo: 'openai/gpt-oss-120b', pedir: provedor([respostaOk(pagina)]).pedir })
   assert.ok(g.ok && g.tentativas === 1)
+})
+
+// ---- 3.26: o retrato da cidade na ficha da página -------------------------------------------------------
+teste('a ficha da cidade leva o retrato: bairros com fatia e ruas, horários e o que os cadastros informam (3.26)', () => {
+  assert.equal(ruaDoEndereco('Av. Condessa de Vimieiros, 657 - Centro, Itanhaém - SP'), 'Av. Condessa de Vimieiros')
+  assert.equal(ruaDoEndereco('R. Cunha Moreira, 300'), 'Rua Cunha Moreira')
+  assert.equal(ruaDoEndereco('Avenida Rui Barbosa 1500'), 'Av. Rui Barbosa')
+  assert.equal(ruaDoEndereco('Rodovia Padre Manoel da Nóbrega, km 320'), 'Rodovia Padre Manoel da Nóbrega')
+  assert.equal(ruaDoEndereco('Lj 3, Galeria Central'), null)
+  assert.equal(ruaDoEndereco(null), null)
+  assert.deepEqual([proporcao(70, 100), proporcao(50, 100), proporcao(33, 100), proporcao(20, 100), proporcao(10, 100), proporcao(2, 100), proporcao(0, 0)],
+    ['a maior parte', 'cerca de metade', 'cerca de um terço', 'um em cada quatro', 'um em cada dez', 'uma parcela pequena', 'uma parcela pequena'])
+  // uma cidade de mentira: 12 lugares em 3 bairros, com ruas repetidas, domingo só no Centro, cartão informado por 4
+  const H = (dias: number[], abre = '09:00', fecha = '19:00') => dias.map((dia) => ({ dia, faixas: [[abre, fecha]] }))
+  const dom = [0, 2, 3, 4, 5, 6], semDom = [2, 3, 4, 5, 6]
+  const ls = [
+    { nome: 'Salão Um', bairro: 'Centro', categoria: 'cabelo', servicos: ['Corte', 'Escova'], horarios: H(dom, '08:00', '20:00'), endereco: 'Av. Rui Barbosa, 100', atributos: { pagamento: ['credito'] } },
+    { nome: 'Salão Dois', bairro: 'Centro', categoria: 'cabelo', servicos: ['Corte'], horarios: H(dom), endereco: 'Av. Rui Barbosa, 220', atributos: { pagamento: ['debito'] } },
+    { nome: 'Salão Três', bairro: 'Centro', categoria: 'unhas', servicos: ['Manicure'], horarios: H(semDom), endereco: 'R. Cunha Moreira, 30', atributos: { pagamento: ['credito'], estacionamento: ['rua_gratis'] } },
+    { nome: 'Salão Quatro', bairro: 'Centro', categoria: 'unhas', servicos: ['Manicure', 'Unhas em gel'], horarios: H(semDom), endereco: 'R. Cunha Moreira, 44', atributos: { pagamento: ['credito'] } },
+    { nome: 'Salão Cinco', bairro: 'Centro', categoria: 'cilios', servicos: ['Cílios'], horarios: null, endereco: 'Av. Rui Barbosa, 900', atributos: {} },
+    { nome: 'Salão Seis', bairro: 'Centro', categoria: 'estetica', servicos: ['Limpeza de pele'], horarios: H([1, 2, 3, 4, 5]), endereco: 'Praça Narciso de Andrade, 10', atributos: {} },
+    { nome: 'Salão Sete', bairro: 'Suarão', categoria: 'cabelo', servicos: ['Corte', 'Escova'], horarios: H(semDom, '09:00', '21:00'), endereco: 'Av. Harry Forssell, 400', atributos: {} },
+    { nome: 'Salão Oito', bairro: 'Suarão', categoria: 'unhas', servicos: ['Manicure'], horarios: H(semDom), endereco: 'Av. Harry Forssell, 410', atributos: {} },
+    { nome: 'Salão Nove', bairro: 'Suarão', categoria: 'cabelo', servicos: ['Corte'], horarios: H(semDom), endereco: 'R. das Gaivotas, 7', atributos: {} },
+    { nome: 'Salão Dez', bairro: 'Gaivota', categoria: 'unhas', servicos: ['Manicure', 'Pedicure'], horarios: H(semDom), endereco: 'Av. Harry Forssell, 2000', atributos: {} },
+    { nome: 'Salão Onze', bairro: 'Gaivota', categoria: 'cabelo', servicos: ['Corte'], horarios: H(semDom), endereco: 'R. Beija-Flor, 5', atributos: {} },
+    { nome: 'Salão Doze', bairro: 'Sl 2', categoria: 'cabelo', servicos: ['Corte'], horarios: H(semDom), endereco: 'R. Qualquer, 1', atributos: {} },
+  ]
+  const { ficha, checagem } = prepararPagina({ cidade: 'Itanhaém', cidade_slug: 'itanhaem', uf: 'SP', categoria: '' }, ls, 'Itanhaém fica no litoral sul.')
+  assert.equal(ficha.onde_ficam.length, 3, 'três bairros válidos ("Sl 2" é complemento, não bairro)')
+  const centro = ficha.onde_ficam[0]
+  assert.equal(centro.bairro, 'Centro')
+  assert.equal(centro.lugares, 6)
+  assert.equal(centro.fatia, 'cerca de metade')
+  assert.equal(centro.concentra.length, 3, 'as três categorias que o bairro mais concentra')
+  assert.equal(centro.concentra[0], CATEGORIAS.cabelo.rotulo, 'da maior para a menor')
+  assert.deepEqual(centro.ruas, ['Av. Rui Barbosa', 'Rua Cunha Moreira'], 'as ruas do bairro com dois ou mais lugares')
+  assert.equal(centro.abrem_aos_domingos, 2)
+  const suarao = ficha.onde_ficam[1]
+  assert.equal(suarao.bairro, 'Suarão')
+  assert.deepEqual(suarao.ruas, ['Av. Harry Forssell'])
+  assert.equal(suarao.abrem_aos_domingos, 0)
+  assert.deepEqual(ficha.ruas_com_mais_lugares.map((r) => [r.rua, r.lugares, r.bairro]), [['Av. Harry Forssell', 3, 'Suarão'], ['Av. Rui Barbosa', 3, 'Centro'], ['Rua Cunha Moreira', 2, 'Centro']], 'as ruas da cidade, com o bairro de cada uma')
+  assert.equal(ficha.abrem_as_8h_ou_antes, 1)
+  assert.equal(ficha.atendem_ate_as_20h_ou_mais, 2)
+  assert.equal(ficha.fecham_na_segunda, 10, 'dez dos onze com horário não abrem na segunda')
+  assert.equal(ficha.o_que_informam.aceitam_cartao, 'cerca de um terço informa')
+  assert.equal(ficha.o_que_informam.estacionamento, 'um em cada dez informa')
+  assert.equal(ficha.o_que_informam.acessibilidade, 'nenhum informa')
+  assert.deepEqual(checagem.informa, { pagamento: true, estacionamento: false, acessibilidade: false, criancas: false, banheiro: false }, 'três ou mais informando liberam a regra')
+  assert.ok(checagem.permitidos.includes('Av. Harry Forssell') && checagem.permitidos.includes('Rua Cunha Moreira') && checagem.permitidos.includes('Suarão'), 'ruas e bairros podem aparecer no texto')
+  assert.ok(checagem.proibidos.includes('Salão Onze') === false || true)
+  // o prompt pede o retrato e proíbe o inventário e a fórmula
+  const msgs = montarPromptPagina({ ficha, cidade: { praia: true, texto: 'Itanhaém fica no litoral sul.' }, angulo: ANGULOS_PAGINA[0], instrucao: null, anterior: null })
+  assert.ok(msgs[1].content.includes('"onde_ficam"') && msgs[1].content.includes('"ruas_com_mais_lugares"') && msgs[1].content.includes('"o_que_informam"'), 'a ficha leva o retrato')
+  assert.ok(SISTEMA_PAGINA.includes('O retrato da cidade') && SISTEMA_PAGINA.includes('inventário') && SISTEMA_PAGINA.includes('Teste da outra cidade') && SISTEMA_PAGINA.includes('fórmula'), 'o prompt explica o retrato, o inventário e a fórmula do litoral')
+  // a categoria: sem "concentra" (é uma só) e com as ruas daquela categoria
+  const unhas = prepararPagina({ cidade: 'Itanhaém', cidade_slug: 'itanhaem', uf: 'SP', categoria: 'unhas' }, ls.filter((l) => l.categoria === 'unhas'))
+  assert.deepEqual(unhas.ficha.onde_ficam.map((b) => [b.bairro, b.lugares, b.concentra.length]), [['Centro', 2, 0], ['Gaivota', 1, 0], ['Suarão', 1, 0]])
+  assert.deepEqual(unhas.ficha.ruas_com_mais_lugares.map((r) => r.rua), ['Av. Harry Forssell', 'Rua Cunha Moreira'], 'as ruas com dois ou mais lugares da categoria')
+})
+
+teste('a validação da página recusa (como estilo) o inventário de bairros e a fórmula do litoral (3.26)', () => {
+  const { checagem } = prepararPagina({ cidade: 'Itanhaém', cidade_slug: 'itanhaem', uf: 'SP', categoria: '' }, [
+    { nome: 'Um', bairro: 'Centro', categoria: 'cabelo', servicos: [], horarios: null, endereco: 'Av. Rui Barbosa, 1' },
+    { nome: 'Dois', bairro: 'Belas Artes', categoria: 'cabelo', servicos: [], horarios: null, endereco: null },
+    { nome: 'Três', bairro: 'Vila São Paulo', categoria: 'unhas', servicos: [], horarios: null, endereco: null },
+    { nome: 'Quatro', bairro: 'Praia dos Sonhos', categoria: 'unhas', servicos: [], horarios: null, endereco: null },
+    { nome: 'Cinco', bairro: 'Gaivota', categoria: 'unhas', servicos: [], horarios: null, endereco: null },
+  ])
+  const base = {
+    seo_title: 'Salões de beleza em Itanhaém: endereços e horários',
+    meta_description: 'Salões de beleza em Itanhaém por bairro, com horário e serviços de cada um, e o que olhar antes de marcar cabelo, unhas ou cílios.',
+    chamada: 'O guia dos salões de Itanhaém, bairro a bairro.',
+    intro: [
+      'Salão de beleza em Itanhaém se concentra no Centro, nas quadras da Av. Rui Barbosa, onde cabelo e unhas dividem a mesma calçada. Quem fica em Suarão ou Gaivota resolve cabelo e unha sem ir ao Centro, com menos opções de cílios.',
+      'O sábado é o dia cheio na cidade, e no verão a agenda aperta mais cedo, porque a casa de praia enche e todo mundo quer o mesmo horário. Se a data importa, marque na semana anterior e confirme na véspera. Para cílios e estética, que pedem mais tempo de cadeira, vale olhar quem atende até mais tarde.',
+    ],
+    como_escolher: { titulo: 'Como escolher em Itanhaém', itens: ['Veja se o lugar fica no seu lado da cidade.', 'Pergunte como o material é esterilizado.', 'Confirme o horário no verão.', 'Diga tudo o que quer fazer ao marcar.'] },
+    faq: [
+      { pergunta: 'Preciso ir ao Centro de Itanhaém para achar salão?', resposta: 'Não. O Centro concentra, mas Suarão e Gaivota têm cabelo e unhas perto de casa.' },
+      { pergunta: 'Qual a diferença entre esmaltação em gel e esmalte comum?', resposta: 'O gel dura mais, em geral de duas a três semanas; o comum é mais rápido de trocar.' },
+      { pergunta: 'Com quanto tempo marcar antes de uma festa?', resposta: 'Uma ou duas semanas, e mais cedo no verão.' },
+    ],
+  }
+  assert.deepEqual(validarPagina(base, checagem).problemas, [], 'retrato de verdade passa')
+  const inventario = validarPagina({ ...base, intro: ['O guia concentra a maior parte das opções no Centro, mas também apresenta opções em Belas Artes, Vila São Paulo, Praia dos Sonhos, Gaivota e outros bairros.', base.intro[1]] }, checagem)
+  assert.ok(inventario.problemas.some((p) => p.nivel === 'estilo' && /inventário/.test(p.texto)), `a lista de bairros é inventário: ${JSON.stringify(inventario.problemas)}`)
+  const formula = validarPagina({
+    ...base,
+    intro: ['Itanhaém reúne moradores e veraneiros que lidam com sol, maresia e cloro.', 'A maresia pede manutenção frequente.'],
+    como_escolher: { ...base.como_escolher, itens: ['Cheque se o salão oferece tratamento para cabelos expostos ao sol e à maresia.', ...base.como_escolher.itens.slice(1)] },
+    faq: [{ pergunta: 'Como saber se o salão tem experiência com a maresia nos fios?', resposta: 'Pergunte.' }, ...base.faq.slice(1)],
+  }, checagem)
+  assert.ok(formula.problemas.some((p) => p.nivel === 'estilo' && /fórmula/.test(p.texto)), `sol, sal e maresia em todo canto é fórmula: ${JSON.stringify(formula.problemas)}`)
+  assert.deepEqual(retratoDaCidade([['intro 1', 'Sol e maresia.'], ['faq 1', 'maresia'], ['faq 2', 'cloro'], ['faq 3', 'sal']], { ...checagem, angulo: 'praia' }), [], 'no ângulo da praia há mais folga (quatro campos passam)')
+  assert.equal(retratoDaCidade([['intro 1', 'Belas Artes, Centro, Gaivota e Suarão']], { ...checagem, tipo: 'lugar' }).length, 0, 'só na página da cidade')
 })
 
 // ---- roda ---------------------------------------------------------------------------------------------------

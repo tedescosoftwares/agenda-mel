@@ -166,10 +166,10 @@ export default function PaginasCidade({ g }) {
                 <BookOpen size={16} />
                 <div>
                   <b>Sobre {atual.cidade}</b>
-                  <span>O que a redação sabe da cidade: região, tipo de cidade, temporada, como ela se organiza. Não aparece no site. A IA usa em todas as páginas de {atual.cidade} (cidade, categorias e cada salão), para o texto não sair igual ao de qualquer outra cidade. Só coisa certa e geral; nada de bairro "tranquilo" ou "movimentado".</span>
+                  <span>O que a redação sabe da cidade. Não aparece no site: a IA usa em todas as páginas de {atual.cidade} (cidade, categorias e cada salão), para o texto não sair igual ao de qualquer outra cidade. O que mais ajuda: como a cidade se organiza (o Centro, os bairros de praia e os de moradores, o que fica ao norte e ao sul, a rodovia que a corta), as avenidas de comércio, a temporada e quem vem, as referências que quem mora conhece (praça, orla, rio). Só coisa certa e geral; nada de opinião sobre bairro ("tranquilo", "movimentado").</span>
                 </div>
               </div>
-              <textarea value={contexto} onChange={(e) => setContexto(e.target.value.slice(0, 1500))} rows={5} placeholder={`Ex.: ${atual.cidade} fica no litoral sul de São Paulo. É cidade de praia: o movimento cresce no verão e nos feriados…`} aria-label={`Sobre ${atual.cidade}`} disabled={salvandoCtx} />
+              <textarea value={contexto} onChange={(e) => setContexto(e.target.value.slice(0, 1500))} rows={5} placeholder={`Ex.: ${atual.cidade} fica no litoral sul de São Paulo. O Centro, junto à orla, concentra o comércio; ao norte ficam os bairros de praia (…), ao sul (…), e para dentro, em volta da rodovia, os bairros de moradores (…). O movimento cresce no verão e nos feriados…`} aria-label={`Sobre ${atual.cidade}`} disabled={salvandoCtx} />
               <div className="pg-contexto-pe">
                 <small>{(contexto ?? '').length}/1500{!atual.contexto && !contexto ? ' · sem contexto, a IA escreve sem saber nada da cidade' : ''}</small>
                 <button type="submit" className="btn btn-ghost" disabled={!ctxMudou || salvandoCtx}>{salvandoCtx ? <LoaderCircle size={16} className="pg-gira" /> : <Check size={16} />} Guardar</button>

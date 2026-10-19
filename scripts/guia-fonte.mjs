@@ -4,8 +4,10 @@
 // com 20 mil salões) e, no banco, uma busca de vizinhos por salão que crescia com o quadrado da
 // cidade. Agora cada cidade vem numa chamada, com um "desde": o banco devolve todos os slugs na
 // ordem do site, os salões que mudaram desde a última rodada, as páginas da cidade e a lista de
-// cidades. O resto vem do cache em disco (.cache/guia/<cidade>.json), e os vizinhos são
-// calculados aqui, em memória. Uma rodada de hora em hora sem novidade pede alguns KB por cidade.
+// cidades, em fatias de até FATIA salões por chamada (172: uma cidade grande inteira numa
+// resposta passava dos ~4 s que o Supabase dá a uma consulta pública). O resto vem do cache em
+// disco (.cache/guia/<cidade>.json), e os vizinhos são calculados aqui, em memória. Uma rodada
+// de hora em hora sem novidade pede alguns KB por cidade.
 //
 //   carregarGuia({ url, chave, cacheDir, refazer }) -> { lugares, paginas, cidades }
 //     lugares  todos os salões no ar, na ordem do site, cada um com "vizinhos" (os 6 mais perto)
@@ -22,6 +24,7 @@ import path from 'node:path'
 export const REFAZER_APOS_MS = 24 * 60 * 60 * 1000
 export const SOBRA_MS = 15 * 60 * 1000
 export const VERSAO_DO_CACHE = 1
+export const FATIA = 200 // salões por chamada (a função aceita até 500)
 
 const arquivoDe = (dir, slug) => path.join(dir, `${slug}.json`)
 function lerCache(arq) {
@@ -102,10 +105,29 @@ export function vizinhosDe(l, todos, quantos = 6) {
 export const mesmaCategoriaDe = (l, todos, quantos = 8) => todos.filter((o) => o.categoria === l.categoria && o.slug !== l.slug).slice(0, quantos).map(cartaoDe)
 export const comVizinhos = (lugares) => lugares.map((l) => ({ ...l, vizinhos: vizinhosDe(l, lugares) }))
 
-export async function carregarGuia({ url, chave, cacheDir, refazer = false, log = console.log, fetchFn = globalThis.fetch }) {
+// a cidade em fatias (172): a primeira traz os slugs e as páginas; as outras só os salões, a partir do último slug
+export async function buscarCidade(rpc, slug, desde, fatia = FATIA) {
+  let primeira = null, depois = ''
+  const lugares = []
+  for (let n = 0; n < 1000; n++) {
+    const r = await rpc('guia_publicadas', { cidade_: slug, desde_: desde, depois_: depois, limite_: fatia })
+    if (!primeira) primeira = r
+    const lote = Array.isArray(r?.lugares) ? r.lugares : []
+    lugares.push(...lote)
+    if (lote.length < fatia || !lote[lote.length - 1]?.slug) break
+    depois = lote[lote.length - 1].slug
+  }
+  return { ...primeira, lugares }
+}
+
+export async function carregarGuia({ url, chave, cacheDir, refazer = false, log = console.log, fetchFn = globalThis.fetch, fatia = FATIA }) {
   const rpc = async (nome, corpo) => {
     const r = await fetchFn(`${url}/rest/v1/rpc/${nome}`, { method: 'POST', headers: { apikey: chave, Authorization: `Bearer ${chave}`, 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) })
-    if (!r.ok) throw new Error(`${r.status} em rpc/${nome}`)
+    if (!r.ok) {
+      // o motivo vai no erro: "57014 statement timeout" diz muito mais que um 500
+      const corpoErro = typeof r.text === 'function' ? await r.text().catch(() => '') : ''
+      throw new Error(`${r.status} em rpc/${nome}${corpoErro ? `: ${corpoErro.slice(0, 160)}` : ''}`)
+    }
     return r.json()
   }
   const cidades = await rpc('guia_cidades', {})
@@ -114,7 +136,7 @@ export async function carregarGuia({ url, chave, cacheDir, refazer = false, log 
   let novos = 0, doCache = 0
   for (const c of cidades) {
     if (!c?.cidade_slug) continue
-    const d = await lerCidade({ buscar: (slug, desde) => rpc('guia_publicadas', { cidade_: slug, desde_: desde }), slug: c.cidade_slug, cacheDir, refazer, log })
+    const d = await lerCidade({ buscar: (slug, desde) => buscarCidade(rpc, slug, desde, fatia), slug: c.cidade_slug, cacheDir, refazer, log })
     lugares.push(...comVizinhos(d.lugares))
     paginas.push(...d.paginas)
     novos += d.novos ?? 0

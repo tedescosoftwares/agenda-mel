@@ -669,8 +669,9 @@ O Google não participa do IndexNow: lá continua o sitemap e o Search Console.
 ## O guia cidade a cidade, com cache (3.23, migração 171)
 
 Com milhares de salões, o republicar não lê mais o guia inteiro numa consulta.
-O gerador pede uma cidade por vez à função `guia_publicadas(cidade_, desde_)`,
-que devolve só o que mudou desde a última rodada, e guarda cada cidade em
+O gerador pede uma cidade por vez à função `guia_publicadas`, em fatias de
+200 salões (a cidade grande inteira numa resposta passava dos 4 segundos que o
+Supabase dá a uma consulta pública), só o que mudou desde a última rodada, e guarda cada cidade em
 `~/agenda-mel/.cache/guia/<cidade>.json` (fora do git). Uma rodada sem novidade
 lê alguns KB por cidade; uma vez por dia cada cidade vem inteira. Se o Supabase
 falhar e houver cache, a rodada segue com o cache e avisa no log; sem cache, o

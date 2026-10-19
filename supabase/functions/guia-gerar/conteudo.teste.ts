@@ -15,7 +15,7 @@ import process from 'node:process'
 import { readFileSync, existsSync } from 'node:fs'
 import * as core from '../../../packages/core/guia.js'
 import {
-  CATEGORIAS, ANGULOS, ANGULOS_PAGINA, ABERTURAS, SISTEMA_LUGAR, SISTEMA_PAGINA, LIMITE_INSTRUCAO, MAX_TOKENS, TEMPERATURA,
+  CATEGORIAS, ANGULOS, ANGULOS_PAGINA, ABERTURAS, SISTEMA_LUGAR, SISTEMA_PAGINA, LIMITE_INSTRUCAO, MAX_TOKENS, MAX_TOKENS_COM_RACIOCINIO, TEMPERATURA,
   horariosResumo, horariosEmUmaLinha, fichaDoLugar, prepararLugar, prepararPagina, angulosPara, escolherAngulo, escolherAbertura,
   anguloAnterior, montarPromptLugar, montarPromptPagina, frasesUsadas, corpoDaRequisicao, lerResposta, segundosDeEspera, duracao,
   validarLugar, validarPagina, gerarConteudo, maisParecido, jaccard, trigramas, comMeta, contarPalavras, limparInstrucao,
@@ -304,6 +304,11 @@ teste('corpo da requisição: json_schema estrito, temperatura, reserva de token
   assert.deepEqual(rf.json_schema.schema.required, ['seo_title', 'meta_description', 'chamada', 'resumo', 'sobre', 'destaques', 'dicas', 'faq'])
   const outro = corpoDaRequisicao({ modelo: 'grok-4-fast', mensagens: msgs, tipo: 'pagina', formato: 'json_object' })
   assert.equal(outro.reasoning_effort, undefined)
+  // 3.26.1: o Gemini pensa antes de responder e o raciocínio conta no limite; pede pouco raciocínio e folga de tokens
+  const gem = corpoDaRequisicao({ modelo: 'gemini-2.5-pro', mensagens: msgs, tipo: 'pagina' })
+  assert.equal(gem.max_tokens, MAX_TOKENS_COM_RACIOCINIO)
+  assert.equal(gem.reasoning_effort, 'low')
+  assert.equal(corpoDaRequisicao({ modelo: 'moonshotai/kimi-k2-instruct', mensagens: msgs, tipo: 'pagina' }).max_tokens, MAX_TOKENS, 'modelo que responde direto fica com o limite de sempre')
   assert.deepEqual(outro.response_format, { type: 'json_object' })
 })
 

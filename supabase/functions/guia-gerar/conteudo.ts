@@ -177,6 +177,9 @@ export const TEMPERATURA = 0.7 // 3.22: um pouco mais presa aos fatos; a varieda
 // 2400 cabe o raciocínio curto do gpt-oss mais ~900 palavras de JSON; menos
 // que isso a resposta corta no meio e a nova tentativa custa o dobro.
 export const MAX_TOKENS = 2400
+// 3.26.1: nos modelos que pensam antes de responder (Gemini), o raciocínio conta no mesmo limite; com 2400 a resposta vinha cortada
+export const MAX_TOKENS_COM_RACIOCINIO = 8000
+export const pensaAntes = (modelo: string) => /gemini|deepseek-r|qwen3|kimi-k2-think/i.test(modelo)
 export const TIMEOUT_MS = 45_000
 // a função inteira tem ~150 s no Supabase; duas chamadas de 45 s e a
 // gravação cabem com folga
@@ -801,14 +804,15 @@ export function corpoDaRequisicao(o: { modelo: string; mensagens: Mensagem[]; ti
   const corpo: Record<string, unknown> = {
     model: o.modelo,
     temperature: o.temperatura ?? TEMPERATURA,
-    max_tokens: o.maxTokens ?? MAX_TOKENS,
+    max_tokens: o.maxTokens ?? (pensaAntes(o.modelo) ? MAX_TOKENS_COM_RACIOCINIO : MAX_TOKENS),
     messages: o.mensagens,
     response_format: (o.formato ?? 'json_schema') === 'json_schema'
       ? { type: 'json_schema', json_schema: { name: o.tipo === 'lugar' ? 'pagina_do_salao' : 'pagina_da_cidade', strict: true, schema: o.tipo === 'lugar' ? ESQUEMA_LUGAR : ESQUEMA_PAGINA } }
       : { type: 'json_object' },
   }
-  // reasoning_effort só existe nos gpt-oss; outro modelo recusa o parâmetro
-  if (o.modelo.includes('gpt-oss')) corpo.reasoning_effort = 'low'
+  // reasoning_effort: nos gpt-oss e no Gemini (pela porta compatível com a OpenAI) pede pouco raciocínio, que basta para
+  // escrever e poupa cota; outro modelo pode recusar o parâmetro, então não vai
+  if (o.modelo.includes('gpt-oss') || /gemini/i.test(o.modelo)) corpo.reasoning_effort = 'low'
   return corpo
 }
 

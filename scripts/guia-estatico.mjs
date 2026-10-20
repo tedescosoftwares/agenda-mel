@@ -199,8 +199,10 @@ export function dadosDoGuia(guia) {
   const paginas = Array.isArray(guia?.paginas) ? guia.paginas : []
   if (!lugares.length) return []
   const cidades = [...new Set(lugares.map((l) => l.cidade_slug))]
-  const listaCidades = Array.isArray(guia?.cidades) && guia.cidades.length ? guia.cidades
+  const listaBruta = Array.isArray(guia?.cidades) && guia.cidades.length ? guia.cidades
     : cidades.map((cs) => { const l = lugares.find((x) => x.cidade_slug === cs); return { cidade: l.cidade, cidade_slug: cs, uf: l.uf, total: lugares.filter((x) => x.cidade_slug === cs).length } })
+  // 3.32.3: a foto da cidade nos cartões do índice (guia_cidades() manda desde a 179; sem ela, a página da cidade)
+  const listaCidades = listaBruta.map((c) => ({ ...c, foto: c.foto || paginas.find((p) => p.cidade_slug === c.cidade_slug && (p.categoria ?? '') === '')?.foto || null }))
   const out = [{ caminho: '/dados/guia/cidades.json', dados: listaCidades }]
   for (const cs of cidades) {
     const doGuia = lugares.filter((l) => l.cidade_slug === cs)

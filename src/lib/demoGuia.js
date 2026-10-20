@@ -288,7 +288,7 @@ function vizinhos(l, quantos = 6) {
 function cidades() {
   const por = new Map()
   for (const l of GUIA_LUGARES.filter(noAr)) {
-    const c = por.get(l.cidade_slug) ?? { cidade: l.cidade, cidade_slug: l.cidade_slug, uf: l.uf, total: 0, categorias: [] }
+    const c = por.get(l.cidade_slug) ?? { cidade: l.cidade, cidade_slug: l.cidade_slug, uf: l.uf, total: 0, categorias: [], foto: GUIA_PAGINAS.find((p) => p.cidade_slug === l.cidade_slug && p.categoria === '')?.foto ?? null }
     c.total++
     const k = c.categorias.find((x) => x.categoria === l.categoria)
     if (k) k.total++; else c.categorias.push({ categoria: l.categoria, total: 1 })

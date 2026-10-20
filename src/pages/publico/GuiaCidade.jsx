@@ -495,7 +495,8 @@ function IndiceDeCidades() {
             {Array.isArray(cidades) && (lista.length ? (
               <div className="gd-cidades">
                 {lista.map((c) => (
-                  <Link key={c.cidade_slug} className="gd-cidade ld-rv" to={rotaDaCidade(c.cidade_slug)}>
+                  <Link key={c.cidade_slug} className={'gd-cidade ld-rv' + (c.foto ? ' gd-cidade-com-foto' : '')} to={rotaDaCidade(c.cidade_slug)}>
+                    {c.foto && <img className="gd-cidade-fundo" src={miniatura(c.foto)} data-cheia={c.foto} onError={paraFotoInteira} alt="" loading="lazy" decoding="async" />}
                     <span><small>{c.uf || 'SP'}</small><span className="gd-cidade-nome">{c.cidade}</span></span>
                     <span className="gd-cidade-pe"><span>{c.total} {c.total === 1 ? 'lugar no guia' : 'lugares no guia'}</span><span><ArrowRight size={20} /></span></span>
                   </Link>

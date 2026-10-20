@@ -22,6 +22,7 @@ import {
   ruaDoEndereco, proporcao, retratoDaCidade, provedoresDe, escolherProvedor, URL_GEMINI, URL_GROQ,
   SISTEMA_CONTEXTO, montarPromptContexto, validarContexto,
   corpoNativoGemini, lerRespostaNativa, sugerirContexto, URL_GEMINI_NATIVA,
+  corpoDaRequisicaoClaude, lerRespostaClaude, URL_CLAUDE, MODELO_CLAUDE_PADRAO, MAX_TOKENS_CLAUDE, esforcoClaude,
   cortarFrase, cortarPalavras, bairroValido, hash, vasculhar, CIDADES, informesDoLugar,
 } from './conteudo.ts'
 import type { LugarLinha, Pedir, PedirNativo, RespostaHttp, Checagem, ConteudoLugar, Mensagem } from './conteudo.ts'
@@ -837,7 +838,7 @@ teste('a porta nativa do Gemini: corpo com pesquisa (sem modo JSON) ou sem (modo
   const sem = corpoNativoGemini({ modelo: 'gemini-2.5-flash', sistema: 'S', usuario: 'U', pesquisar: false })
   assert.ok(!('tools' in sem) && (sem.generationConfig as Record<string, unknown>).responseMimeType === 'application/json', 'sem pesquisa, modo JSON e sem ferramenta')
   assert.ok(!('thinkingConfig' in (sem.generationConfig as Record<string, unknown>)), 'os 2.5 não aceitam o nível de raciocínio')
-  assert.ok(SISTEMA_CONTEXTO.includes('busca do Google') && SISTEMA_CONTEXTO.includes('"confira"'), 'o prompt manda pesquisar quando puder e separar o que ficou na memória')
+  assert.ok(SISTEMA_CONTEXTO.includes('busca na web') && SISTEMA_CONTEXTO.includes('"confira"'), 'o prompt manda pesquisar quando puder e separar o que ficou na memória')
   assert.equal(URL_GEMINI_NATIVA, 'https://generativelanguage.googleapis.com/v1beta/models')
 })
 
@@ -934,6 +935,180 @@ teste('o bairro do salão no guia entra na ficha e no prompt do lugar (3.30)', (
   assert.ok(msgs[1].content.includes('"o_bairro_no_guia"') && msgs[1].content.includes('"fatia_da_cidade"'), 'a ficha vai com o bairro no guia')
   assert.ok(SISTEMA_LUGAR.includes('"o_bairro_no_guia"') && SISTEMA_LUGAR.includes('sem comparar com outro lugar pelo nome'), 'o prompt explica para que serve e o que não fazer')
   for (const l of daCidade) assert.ok(!msgs[1].content.includes(`"${l.nome}"`) || l.nome === ro.nome, 'nenhum outro salão pelo nome')
+})
+
+// ---- 3.31: o Claude (Anthropic) como terceiro provedor, pela API de Messages ---------------------------------------
+const respostaClaude = (blocos: unknown[], o: { parada?: string; detalhes?: Record<string, unknown>; buscas?: number } = {}): RespostaHttp => ({
+  status: 200, headers: cabecalhos(),
+  texto: JSON.stringify({ id: 'msg_1', type: 'message', role: 'assistant', model: 'claude-opus-5-5', content: blocos, stop_reason: o.parada ?? 'end_turn', stop_details: o.detalhes ?? null, usage: { input_tokens: 10, output_tokens: 20, ...(o.buscas ? { server_tool_use: { web_search_requests: o.buscas } } : {}) } }),
+})
+const erroClaude = (status: number, tipo: string, message: string, h: Record<string, string> = {}): RespostaHttp => ({ status, headers: cabecalhos(h), texto: JSON.stringify({ type: 'error', error: { type: tipo, message }, request_id: 'req_1' }) })
+
+teste('o Claude entra nos provedores: chave, modelo, esforço, escolha e padrão (3.31)', () => {
+  const env = (o: Record<string, string>) => ({ get: (n: string) => o[n] })
+  const tres = provedoresDe(env({ GEMINI_API_KEY: 'g1', GROQ_API_KEY: 'q1', ANTHROPIC_API_KEY: 'sk-ant-1' }))
+  assert.equal(tres.claude.url, URL_CLAUDE)
+  assert.equal(tres.claude.modelo, MODELO_CLAUDE_PADRAO)
+  assert.equal(tres.claude.esforco, 'medium', 'sem GUIA_IA_ESFORCO_CLAUDE, esforço médio')
+  const r1 = escolherProvedor('claude', tres)
+  assert.ok('provedor' in r1 && r1.provedor.id === 'claude' && r1.provedor.chave === 'sk-ant-1')
+  const r2 = escolherProvedor('', tres, 'claude')
+  assert.ok('provedor' in r2 && r2.provedor.id === 'claude', 'GUIA_IA_PADRAO=claude vale quando ninguém escolhe')
+  const soClaude = provedoresDe(env({ ANTHROPIC_API_KEY: 'sk-ant-1', GUIA_IA_MODELO_CLAUDE: 'claude-sonnet-5-5', GUIA_IA_ESFORCO_CLAUDE: 'HIGH' }))
+  const r3 = escolherProvedor(undefined, soClaude)
+  assert.ok('provedor' in r3 && r3.provedor.id === 'claude' && r3.provedor.modelo === 'claude-sonnet-5-5' && r3.provedor.esforco === 'high', 'sem Gemini, o Claude vem antes do Groq; o modelo e o esforço dos segredos')
+  const r4 = escolherProvedor('claude', provedoresDe(env({ GROQ_API_KEY: 'q1' })))
+  assert.ok('erro' in r4 && /ANTHROPIC_API_KEY/.test(r4.erro), 'pediu Claude sem chave: o erro diz o segredo')
+  assert.ok('erro' in escolherProvedor('xai', tres) && /gemini, groq ou claude/.test((escolherProvedor('xai', tres) as { erro: string }).erro))
+  assert.equal(esforcoClaude('xhigh'), 'xhigh'); assert.equal(esforcoClaude('enorme'), 'medium')
+})
+
+teste('o pedido ao Claude: system, messages, sem temperatura, esforço, JSON garantido, pesquisa e fallbacks (3.31)', () => {
+  const msgs = montarPromptContexto({ ficha: prepararPagina({ cidade: 'Itanhaém', cidade_slug: 'itanhaem', uf: 'SP', categoria: '' }, lugares.filter((l: LugarLinha) => l.cidade_slug === 'itanhaem')).ficha, atual: null })
+  const c = corpoDaRequisicaoClaude({ modelo: 'claude-opus-5-5', mensagens: msgs, tipo: 'contexto', esforco: 'low' })
+  assert.equal(c.model, 'claude-opus-5-5')
+  assert.equal(c.max_tokens, MAX_TOKENS_CLAUDE)
+  assert.equal(c.system, SISTEMA_CONTEXTO, 'o papel vai em "system"')
+  assert.deepEqual(c.messages, [{ role: 'user', content: msgs[1].content }], 'só o pedido vai em "messages"')
+  assert.ok(!('temperature' in c) && !('thinking' in c) && !('response_format' in c), 'sem temperatura (os modelos atuais recusam), raciocínio no automático, nada do formato da OpenAI')
+  const oc = c.output_config as Record<string, unknown>
+  assert.equal(oc.effort, 'low')
+  assert.deepEqual(oc.format, { type: 'json_schema', schema: ESQUEMA_CONTEXTO_TESTE() }, 'o JSON garantido com o mesmo esquema')
+  assert.equal(c.fallbacks, 'default', 'nos Opus/Sonnet 5, o fallback de segurança da Anthropic')
+  assert.ok(!('tools' in c))
+  // com pesquisa: a ferramenta web_search localizada, sem o formato (as citações não aceitam), e o JSON fica por conta do prompt
+  const p = corpoDaRequisicaoClaude({ modelo: 'claude-sonnet-5-5', mensagens: msgs, tipo: 'contexto', pesquisa: { cidade: 'Itanhaém', uf: 'SP' } })
+  assert.deepEqual(p.tools, [{ type: 'web_search_20250305', name: 'web_search', max_uses: 5, user_location: { type: 'approximate', country: 'BR', timezone: 'America/Sao_Paulo', city: 'Itanhaém', region: 'SP' } }])
+  assert.ok(!('format' in (p.output_config as Record<string, unknown>)))
+  assert.equal((p.output_config as Record<string, unknown>).effort, 'medium')
+  // sem fallbacks quando o provedor recusou o beta, e nunca nos Haiku; o formato json_object é "sem formato"
+  const h = corpoDaRequisicaoClaude({ modelo: 'claude-haiku-5-5', mensagens: msgs, tipo: 'lugar', formato: 'json_object' })
+  assert.ok(!('fallbacks' in h) && !('format' in (h.output_config as Record<string, unknown>)))
+  assert.ok(!('fallbacks' in corpoDaRequisicaoClaude({ modelo: 'claude-opus-5-5', mensagens: msgs, tipo: 'lugar', semFallbacks: true })))
+  // a continuação (pause_turn) volta como turno da assistente, como veio
+  const cont = corpoDaRequisicaoClaude({ modelo: 'claude-opus-5-5', mensagens: msgs, tipo: 'contexto', pesquisa: {}, continuacao: [{ type: 'server_tool_use', id: 'x' }] })
+  assert.equal((cont.messages as unknown[]).length, 2)
+  // a correção (segunda tentativa) alterna user/assistant/user
+  const cor = corpoDaRequisicaoClaude({ modelo: 'claude-opus-5-5', mensagens: [...msgs, { role: 'assistant', content: '{}' }, { role: 'user', content: 'corrija' }], tipo: 'contexto' })
+  assert.deepEqual((cor.messages as Array<{ role: string }>).map((m) => m.role), ['user', 'assistant', 'user'])
+})
+function ESQUEMA_CONTEXTO_TESTE() { return (corpoDaRequisicao({ modelo: 'x', mensagens: [], tipo: 'contexto' }).response_format as { json_schema: { schema: unknown } }).json_schema.schema }
+
+teste('a leitura do Claude: texto e citações, recusa, cortado, pausa, limite, formato, beta, pesquisa, chave, créditos, modelo (3.31)', () => {
+  const l = lerRespostaClaude(respostaClaude([
+    { type: 'thinking', thinking: '', signature: 's' },
+    { type: 'text', text: 'Vou pesquisar.' },
+    { type: 'server_tool_use', id: 'srv1', name: 'web_search', input: { query: 'Itanhaém bairros' } },
+    { type: 'web_search_tool_result', tool_use_id: 'srv1', content: [{ type: 'web_search_result', url: 'https://www.itanhaem.sp.gov.br/', title: 'Prefeitura', encrypted_content: 'x', page_age: null }] },
+    { type: 'text', text: '{"texto":"a","confira":[]}', citations: [{ type: 'web_search_result_location', url: 'https://pt.wikipedia.org/wiki/Itanha%C3%A9m', title: 'Itanhaém – Wikipédia', encrypted_index: 'e', cited_text: '…' }, { type: 'web_search_result_location', url: 'https://pt.wikipedia.org/wiki/Itanha%C3%A9m', title: 'de novo', encrypted_index: 'e2', cited_text: '…' }] },
+  ], { buscas: 1 }))
+  assert.ok(l.tipo === 'texto' && l.pesquisou && !l.cortado && !l.pausa, JSON.stringify(l))
+  if (l.tipo === 'texto') {
+    assert.equal(l.texto, 'Vou pesquisar.{"texto":"a","confira":[]}', 'os blocos de texto juntos; o raciocínio fica de fora')
+    assert.deepEqual(l.fontes, [{ titulo: 'Itanhaém – Wikipédia', url: 'https://pt.wikipedia.org/wiki/Itanha%C3%A9m' }], 'as citações viram as fontes, sem repetir')
+  }
+  const semCitacao = lerRespostaClaude(respostaClaude([{ type: 'web_search_tool_result', tool_use_id: 's', content: [{ type: 'web_search_result', url: 'https://a.br/', title: 'A' }] }, { type: 'text', text: '{}' }]))
+  assert.ok(semCitacao.tipo === 'texto' && semCitacao.fontes.length === 1 && semCitacao.pesquisou === false, 'sem citação, as páginas pesquisadas; sem server_tool_use nem contagem, não conta como pesquisa')
+  const erroBusca = lerRespostaClaude(respostaClaude([{ type: 'web_search_tool_result', tool_use_id: 's', content: { type: 'web_search_tool_result_error', error_code: 'max_uses_exceeded' } }, { type: 'text', text: '{}' }]))
+  assert.ok(erroBusca.tipo === 'texto' && erroBusca.fontes.length === 0, 'o erro da busca (objeto no lugar da lista) não quebra a leitura')
+  const rec = lerRespostaClaude(respostaClaude([], { parada: 'refusal', detalhes: { type: 'refusal', category: 'general_harms', explanation: 'x' } }))
+  assert.ok(rec.tipo === 'erro' && /recusou escrever este texto \(general_harms\): x/.test(rec.erro))
+  assert.ok((lerRespostaClaude(respostaClaude([{ type: 'text', text: '{' }], { parada: 'max_tokens' })) as { cortado: boolean }).cortado)
+  const pausa = lerRespostaClaude(respostaClaude([{ type: 'server_tool_use', id: 's', name: 'web_search', input: {} }], { parada: 'pause_turn' }))
+  assert.ok(pausa.tipo === 'texto' && Array.isArray(pausa.pausa) && pausa.pausa.length === 1, 'pause_turn devolve os blocos para mandar de volta')
+  const lim = lerRespostaClaude(erroClaude(429, 'rate_limit_error', 'Rate limited', { 'retry-after': '12' }))
+  assert.ok(lim.tipo === 'limite' && lim.tentarEm === 12)
+  assert.equal(lerRespostaClaude(erroClaude(400, 'invalid_request_error', 'output_config.format: schema is invalid')).tipo, 'formato_recusado')
+  const beta = lerRespostaClaude(erroClaude(400, 'invalid_request_error', 'Unexpected value(s) `server-side-fallback-2026-07-01` for the `anthropic-beta` header.'))
+  assert.ok(beta.tipo === 'parametro_recusado' && beta.parametro === 'fallbacks')
+  assert.equal(lerRespostaClaude(erroClaude(400, 'invalid_request_error', 'tools.0: web search is not enabled for this organization')).tipo, 'sem_pesquisa')
+  assert.ok(/recusou o pedido \(400\)/.test((lerRespostaClaude(erroClaude(400, 'invalid_request_error', 'messages: roles must alternate')) as { erro: string }).erro))
+  assert.ok(/recusada pelo provedor \(401\): invalid x-api-key/.test((lerRespostaClaude(erroClaude(401, 'authentication_error', 'invalid x-api-key')) as { erro: string }).erro))
+  assert.ok(/sem créditos \(402\)/.test((lerRespostaClaude(erroClaude(402, 'billing_error', 'Your credit balance is too low')) as { erro: string }).erro))
+  assert.ok(/não achou o modelo: model: claude-x/.test((lerRespostaClaude(erroClaude(404, 'not_found_error', 'model: claude-x')) as { erro: string }).erro))
+  assert.ok(/instável agora \(529\)/.test((lerRespostaClaude(erroClaude(529, 'overloaded_error', 'Overloaded')) as { erro: string }).erro))
+})
+
+teste('gerarConteudo com o Claude: JSON garantido; formato recusado cai no prompt; beta recusado sai do pedido; recusa dos filtros (3.31)', async () => {
+  const env = (o: Record<string, string>) => ({ get: (n: string) => o[n] })
+  const claude = provedoresDe(env({ ANTHROPIC_API_KEY: 'sk-ant-1' })).claude
+  const cand = angulosPara(ro.categoria, preparoRo.ficha.servicos_divulgados, preparoRo.cidade.praia)
+  const angulo = escolherAngulo({ candidatos: cand, todos: ANGULOS[ro.categoria], semente: ro.slug })
+  const msgs = montarPromptLugar({ ficha: preparoRo.ficha, cidade: preparoRo.cidade, angulo, abertura: escolherAbertura(ro.slug, angulo, cand, true), instrucao: null, anterior: null, jaUsadas: [] })
+  // 1. de primeira
+  const c1 = provedor([respostaClaude([{ type: 'text', text: JSON.stringify(BOM) }])])
+  const g1 = await gerarConteudo({ tipo: 'lugar', mensagens: msgs, checagem: preparoRo.checagem, modelo: claude.modelo, pedir: c1.pedir, provedor: claude })
+  assert.ok(g1.ok && (g1.conteudo as ConteudoLugar).chamada === BOM.chamada, JSON.stringify(g1))
+  assert.equal(c1.pedidos.length, 1)
+  assert.equal(c1.pedidos[0].corpo.system, SISTEMA_LUGAR)
+  assert.ok((c1.pedidos[0].corpo.output_config as Record<string, unknown>).format && c1.pedidos[0].corpo.fallbacks === 'default', 'o pedido vai com o JSON garantido e o fallback')
+  // 2. o formato recusado: o mesmo pedido sem ele (o JSON vem pelo prompt), e o beta recusado: sem fallbacks
+  const c2 = provedor([erroClaude(400, 'invalid_request_error', 'output_config.format is not supported'), erroClaude(400, 'invalid_request_error', 'Unexpected value(s) for the `anthropic-beta` header.'), respostaClaude([{ type: 'text', text: `\`\`\`json\n${JSON.stringify(BOM)}\n\`\`\`` }])])
+  const g2 = await gerarConteudo({ tipo: 'lugar', mensagens: msgs, checagem: preparoRo.checagem, modelo: claude.modelo, pedir: c2.pedir, provedor: claude })
+  assert.ok(g2.ok, JSON.stringify(g2))
+  assert.equal(c2.pedidos.length, 3)
+  assert.ok(!('format' in (c2.pedidos[1].corpo.output_config as Record<string, unknown>)), 'segundo pedido: sem o formato')
+  assert.ok(!('fallbacks' in c2.pedidos[2].corpo) && !('format' in (c2.pedidos[2].corpo.output_config as Record<string, unknown>)), 'terceiro: sem o formato e sem o fallback')
+  // 3. a recusa dos filtros é erro claro, sem nova tentativa
+  const c3 = provedor([respostaClaude([], { parada: 'refusal', detalhes: { type: 'refusal', category: 'cyber' } })])
+  const g3 = await gerarConteudo({ tipo: 'lugar', mensagens: msgs, checagem: preparoRo.checagem, modelo: claude.modelo, pedir: c3.pedir, provedor: claude })
+  assert.ok(!g3.ok && /recusou escrever/.test(g3.erro) && c3.pedidos.length === 1)
+  // 4. sem créditos
+  const c4 = provedor([erroClaude(402, 'billing_error', 'credit balance is too low')])
+  const g4 = await gerarConteudo({ tipo: 'lugar', mensagens: msgs, checagem: preparoRo.checagem, modelo: claude.modelo, pedir: c4.pedir, provedor: claude })
+  assert.ok(!g4.ok && /sem créditos/.test(g4.erro))
+  // 5. o texto errado pede correção, alternando os papéis como a API exige
+  const c5 = provedor([respostaClaude([{ type: 'text', text: JSON.stringify({ ...BOM, chamada: 'O melhor salão da cidade, nota 5 no Google' }) }]), respostaClaude([{ type: 'text', text: JSON.stringify(BOM) }])])
+  const g5 = await gerarConteudo({ tipo: 'lugar', mensagens: msgs, checagem: preparoRo.checagem, modelo: claude.modelo, pedir: c5.pedir, provedor: claude })
+  assert.ok(g5.ok && c5.pedidos.length === 2, JSON.stringify(g5))
+  assert.deepEqual((c5.pedidos[1].corpo.messages as Array<{ role: string }>).map((m) => m.role), ['user', 'assistant', 'user'])
+})
+
+teste('sugerirContexto com o Claude: pesquisa na web com fontes, pause_turn, pesquisa recusada, erro direto (3.31)', async () => {
+  const env = (o: Record<string, string>) => ({ get: (n: string) => o[n] })
+  const claude = provedoresDe(env({ ANTHROPIC_API_KEY: 'sk-ant-1' })).claude
+  const daCidade = lugares.filter((l: LugarLinha) => l.cidade_slug === 'itanhaem')
+  const { ficha, checagem } = prepararPagina({ cidade: 'Itanhaém', cidade_slug: 'itanhaem', uf: 'SP', categoria: '' }, daCidade)
+  const comBusca = (blocos: unknown[] = []) => respostaClaude([
+    { type: 'server_tool_use', id: 's1', name: 'web_search', input: { query: 'Itanhaém bairros' } },
+    { type: 'web_search_tool_result', tool_use_id: 's1', content: [{ type: 'web_search_result', url: 'https://www.itanhaem.sp.gov.br/', title: 'Prefeitura de Itanhaém', encrypted_content: 'x' }] },
+    ...blocos,
+  ], { buscas: 1 })
+  // 1. pesquisou e citou: as fontes vêm das citações; um pedido só, com a ferramenta e a localização
+  const c1 = provedor([comBusca([{ type: 'text', text: JSON.stringify(BOM_CTX), citations: [{ type: 'web_search_result_location', url: 'https://www.itanhaem.sp.gov.br/', title: 'Prefeitura de Itanhaém', encrypted_index: 'e', cited_text: '…' }] }])])
+  const r1 = await sugerirContexto({ ficha, atual: null, provedor: claude, checagem, pedir: c1.pedir, localizacao: { cidade: 'Itanhaém', uf: 'SP' } })
+  assert.ok(r1.ok && r1.texto === BOM_CTX.texto && r1.pesquisou && r1.fontes.length === 1 && r1.fontes[0].titulo === 'Prefeitura de Itanhaém', JSON.stringify(r1))
+  assert.equal(c1.pedidos.length, 1)
+  const t1 = c1.pedidos[0].corpo.tools as Array<Record<string, unknown>>
+  assert.equal(t1[0].type, 'web_search_20250305'); assert.deepEqual((t1[0].user_location as Record<string, unknown>).city, 'Itanhaém')
+  assert.ok(!('format' in (c1.pedidos[0].corpo.output_config as Record<string, unknown>)), 'com pesquisa, sem o formato garantido')
+  // 2. pause_turn: a resposta volta como veio e a IA termina
+  const c2 = provedor([respostaClaude([{ type: 'server_tool_use', id: 's1', name: 'web_search', input: {} }], { parada: 'pause_turn' }), comBusca([{ type: 'text', text: JSON.stringify(BOM_CTX) }])])
+  const r2 = await sugerirContexto({ ficha, atual: null, provedor: claude, checagem, pedir: c2.pedir })
+  assert.ok(r2.ok && r2.pesquisou && c2.pedidos.length === 2, JSON.stringify(r2))
+  const m2 = c2.pedidos[1].corpo.messages as Array<{ role: string; content: unknown }>
+  assert.ok(m2.length === 2 && m2[1].role === 'assistant' && Array.isArray(m2[1].content), 'a continuação leva o turno pausado de volta')
+  // 3. a pesquisa recusada: sem ela e com o JSON garantido, avisando que saiu da memória
+  const c3 = provedor([erroClaude(400, 'invalid_request_error', 'web search is not enabled'), respostaClaude([{ type: 'text', text: JSON.stringify(BOM_CTX) }])])
+  const r3 = await sugerirContexto({ ficha, atual: null, provedor: claude, checagem, pedir: c3.pedir })
+  assert.ok(r3.ok && !r3.pesquisou && r3.fontes.length === 0 && r3.avisos.some((a) => /memória/.test(a)), JSON.stringify(r3))
+  assert.ok(!('tools' in c3.pedidos[1].corpo) && 'format' in (c3.pedidos[1].corpo.output_config as Record<string, unknown>))
+  // 4. a resposta com pesquisa não serviu, a sem pesquisa também: a porta comum resolve (com a correção)
+  const c4 = provedor([comBusca([{ type: 'text', text: 'nada de json' }]), respostaClaude([{ type: 'text', text: '{"texto":"","confira":[]}' }]), respostaClaude([{ type: 'text', text: JSON.stringify(BOM_CTX) }])])
+  const r4 = await sugerirContexto({ ficha, atual: null, provedor: claude, checagem, pedir: c4.pedir })
+  assert.ok(r4.ok && c4.pedidos.length === 3 && r4.avisos.length >= 2, JSON.stringify(r4))
+  // 5. chave recusada: erro direto, sem insistir
+  const c5 = provedor([erroClaude(401, 'authentication_error', 'invalid x-api-key')])
+  const r5 = await sugerirContexto({ ficha, atual: null, provedor: claude, checagem, pedir: c5.pedir })
+  assert.ok(!r5.ok && /401/.test(r5.erro) && c5.pedidos.length === 1)
+  // 6. limite: espera
+  const c6 = provedor([erroClaude(429, 'rate_limit_error', 'x', { 'retry-after': '15' })])
+  const r6 = await sugerirContexto({ ficha, atual: null, provedor: claude, checagem, pedir: c6.pedir })
+  assert.ok(!r6.ok && r6.limite && r6.tentarEm === 15)
+  // 7. o beta do fallback recusado: o mesmo pedido sem ele
+  const c7 = provedor([erroClaude(400, 'invalid_request_error', 'Unexpected value(s) for the `anthropic-beta` header.'), comBusca([{ type: 'text', text: JSON.stringify(BOM_CTX) }])])
+  const r7 = await sugerirContexto({ ficha, atual: null, provedor: claude, checagem, pedir: c7.pedir })
+  assert.ok(r7.ok && c7.pedidos.length === 2 && 'fallbacks' in c7.pedidos[0].corpo && !('fallbacks' in c7.pedidos[1].corpo), JSON.stringify(r7))
 })
 
 // ---- roda ---------------------------------------------------------------------------------------------------

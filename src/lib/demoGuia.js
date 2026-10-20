@@ -496,8 +496,8 @@ export const GUIA_RPC = {
 // ---- a função guia-gerar no demo: um texto plausível montado dos dados ---------------
 const ANGULOS = ['o bairro e a praticidade', 'o serviço principal em detalhe', 'para quem é', 'como é a primeira visita', 'rotina de cuidado entre as visitas']
 // 3.27: o demo ecoa a IA escolhida na Plataforma, para a tela mostrar qual escreveu
-const provedorDemo = (corpo) => (corpo?.provedor === 'groq' ? 'groq' : 'gemini')
-const modeloDemo = (corpo) => (provedorDemo(corpo) === 'groq' ? 'openai/gpt-oss-120b' : 'gemini-3-flash-preview')
+const provedorDemo = (corpo) => (corpo?.provedor === 'groq' || corpo?.provedor === 'claude' ? corpo.provedor : 'gemini')
+const modeloDemo = (corpo) => ({ groq: 'openai/gpt-oss-120b', claude: 'claude-opus-5-5' }[provedorDemo(corpo)] ?? 'gemini-3-flash-preview')
 export async function demoGuiaGerar(corpo) {
   await new Promise((r) => setTimeout(r, 900))
   // a sugestão do "Sobre a cidade" (3.28): não grava; a tela mostra para conferir
@@ -508,10 +508,10 @@ export async function demoGuiaGerar(corpo) {
     // "Melhorar" com o texto já igual ao da IA: acrescenta, como a IA de verdade faria
     const texto = !corpo.gravar && String(p.contexto ?? '').trim() === base ? `${base} Fora da temporada, a cidade é dos moradores, e os salões do Centro seguem o ritmo da semana.` : base
     const r = {
-      ok: true, modelo: modeloDemo(corpo), provedor: provedorDemo(corpo), pesquisou: provedorDemo(corpo) === 'gemini', gravado: corpo.gravar === true,
+      ok: true, modelo: modeloDemo(corpo), provedor: provedorDemo(corpo), pesquisou: provedorDemo(corpo) !== 'groq', gravado: corpo.gravar === true,
       contexto: texto,
       confira: ['Suarão e Gaivota ficam no sentido de Mongaguá', 'Vila São Paulo e Jardim Umuarama são bairros de moradores'],
-      fontes: provedorDemo(corpo) === 'gemini' ? [{ titulo: 'itanhaem.sp.gov.br', url: 'https://www.itanhaem.sp.gov.br/' }, { titulo: 'pt.wikipedia.org', url: 'https://pt.wikipedia.org/wiki/Itanha%C3%A9m' }] : [],
+      fontes: provedorDemo(corpo) !== 'groq' ? [{ titulo: 'itanhaem.sp.gov.br', url: 'https://www.itanhaem.sp.gov.br/' }, { titulo: 'pt.wikipedia.org', url: 'https://pt.wikipedia.org/wiki/Itanha%C3%A9m' }] : [],
     }
     // gravar (3.30): o demo guarda na linha da cidade, como a função
     if (corpo.gravar === true) { p.contexto = r.contexto; p.contexto_origem = 'ia'; p.contexto_fontes = { confira: r.confira, fontes: r.fontes, modelo: r.modelo, provedor: r.provedor, pesquisou: r.pesquisou, em: new Date().toISOString() } }

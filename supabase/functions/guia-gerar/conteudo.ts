@@ -182,20 +182,35 @@ export const URL_GEMINI = 'https://generativelanguage.googleapis.com/v1beta/open
 // descreve a cidade pesquisando em vez de lembrar. A resposta traz as fontes que ela usou
 export const URL_GEMINI_NATIVA = 'https://generativelanguage.googleapis.com/v1beta/models'
 export const MODELO_GEMINI_PADRAO = 'gemini-3-flash-preview' // o Flash tem plano grátis; o Pro (3.1) é só com faturamento, e o 2.5 saiu do ar para contas novas
-export type Provedor = { id: 'gemini' | 'groq'; nome: string; url: string; chave: string; modelo: string; segredo: string }
-export function provedoresDe(env: { get(nome: string): string | undefined | null }): Record<'gemini' | 'groq', Provedor> {
+// 3.31: o Claude (Anthropic) pela API de Messages, a oficial (não pelo modo compatível com a OpenAI). Chave ANTHROPIC_API_KEY
+// (platform.claude.com, API Keys); modelo em GUIA_IA_MODELO_CLAUDE; esforço em GUIA_IA_ESFORCO_CLAUDE (low|medium|high|xhigh|max)
+export const URL_CLAUDE = 'https://api.anthropic.com/v1/messages'
+export const VERSAO_CLAUDE = '2023-06-01'
+// o "fallbacks: default" (beta): se os filtros de segurança recusarem um pedido, a Anthropic refaz noutro modelo dela, no mesmo pedido
+export const BETA_FALLBACK_CLAUDE = 'server-side-fallback-2026-07-01'
+export const MODELO_CLAUDE_PADRAO = 'claude-opus-5-5'
+export const ESFORCOS_CLAUDE = ['low', 'medium', 'high', 'xhigh', 'max']
+export const esforcoClaude = (v: unknown): string => (ESFORCOS_CLAUDE.includes(String(v ?? '').trim().toLowerCase()) ? String(v).trim().toLowerCase() : 'medium')
+export const MAX_TOKENS_CLAUDE = 16_000 // o raciocínio conta aqui dentro; sem streaming, este é o teto recomendado
+export type IdProvedor = 'gemini' | 'groq' | 'claude'
+export const IDS_PROVEDOR: readonly IdProvedor[] = ['gemini', 'groq', 'claude']
+export type Provedor = { id: IdProvedor; nome: string; url: string; chave: string; modelo: string; segredo: string; esforco?: string }
+export function provedoresDe(env: { get(nome: string): string | undefined | null }): Record<IdProvedor, Provedor> {
   const v = (n: string) => String(env.get(n) ?? '').trim()
   return {
     gemini: { id: 'gemini', nome: 'Gemini', url: URL_GEMINI, chave: v('GEMINI_API_KEY'), modelo: v('GUIA_IA_MODELO_GEMINI') || MODELO_GEMINI_PADRAO, segredo: 'GEMINI_API_KEY' },
     groq: { id: 'groq', nome: 'Groq', url: v('GUIA_IA_URL') || URL_GROQ, chave: v('GUIA_IA_CHAVE') || v('GROQ_API_KEY'), modelo: v('GUIA_IA_MODELO') || MODELO_PADRAO, segredo: 'GROQ_API_KEY' },
+    claude: { id: 'claude', nome: 'Claude', url: URL_CLAUDE, chave: v('ANTHROPIC_API_KEY'), modelo: v('GUIA_IA_MODELO_CLAUDE') || MODELO_CLAUDE_PADRAO, segredo: 'ANTHROPIC_API_KEY', esforco: esforcoClaude(v('GUIA_IA_ESFORCO_CLAUDE')) },
   }
 }
-// o provedor do pedido: o nome que veio ('gemini' | 'groq'), senão o padrão; sem chave, o erro diz qual segredo falta
-export function escolherProvedor(pedido: unknown, provedores: Record<'gemini' | 'groq', Provedor>, padrao: unknown = ''): { provedor: Provedor } | { erro: string } {
+const ehProvedor = (x: string): x is IdProvedor => (IDS_PROVEDOR as readonly string[]).includes(x)
+// o provedor do pedido: o nome que veio ('gemini' | 'groq' | 'claude'), senão o padrão; sem nada, o primeiro com chave
+// (Gemini, Claude, Groq); sem chave, o erro diz qual segredo falta
+export function escolherProvedor(pedido: unknown, provedores: Record<IdProvedor, Provedor>, padrao: unknown = ''): { provedor: Provedor } | { erro: string } {
   const nome = String(pedido ?? '').trim().toLowerCase()
   const p = String(padrao ?? '').trim().toLowerCase()
-  const id = nome === 'gemini' || nome === 'groq' ? nome : p === 'gemini' || p === 'groq' ? p : provedores.gemini.chave ? 'gemini' : 'groq'
-  if (nome && nome !== id) return { erro: `provedor desconhecido: ${nome.slice(0, 20)} (use gemini ou groq)` }
+  const id: IdProvedor = ehProvedor(nome) ? nome : ehProvedor(p) ? p : provedores.gemini.chave ? 'gemini' : provedores.claude.chave ? 'claude' : 'groq'
+  if (nome && nome !== id) return { erro: `provedor desconhecido: ${nome.slice(0, 20)} (use gemini, groq ou claude)` }
   const prov = provedores[id]
   if (!prov.chave) return { erro: `a chave do ${prov.nome} não está configurada (supabase secrets set ${prov.segredo}=...)` }
   return { provedor: prov }
@@ -772,7 +787,7 @@ REGRAS
 4. Nada de número (população, distância em quilômetros, ano): "uma das maiores do litoral" e "a uma hora e pouco da capital" é o máximo.
 5. Em "confira", liste de 2 a 5 afirmações do texto que a redação deve checar antes de usar: as que dependem de memória (a direção de um bairro, o nome de uma avenida, uma referência).
 6. Se vier um <atual> com o texto que a redação já tem, melhore e complete esse texto sem perder o que ele diz; não recomece do zero.
-7. Se você tiver a busca do Google, pesquise antes de escrever: como a cidade se organiza (bairros e regiões, o Centro, as avenidas de comércio, a rodovia), a temporada e as referências. O que a pesquisa confirmou entra como fato; o que ficou só na memória vai para "confira".
+7. Se você tiver uma ferramenta de busca na web (a do Google ou a web_search), pesquise antes de escrever: como a cidade se organiza (bairros e regiões, o Centro, as avenidas de comércio, a rodovia), a temporada e as referências. O que a pesquisa confirmou entra como fato; o que ficou só na memória vai para "confira".
 
 FORMATO: só o objeto JSON { "texto": "...", "confira": ["...", "..."] }, sem nada antes ou depois.`
 
@@ -886,6 +901,28 @@ export function corpoDaRequisicao(o: { modelo: string; mensagens: Mensagem[]; ti
   return corpo
 }
 
+// 3.31: o pedido ao Claude pela API de Messages. O sistema vai em "system", o resto em "messages"; sem temperatura (os
+// modelos atuais recusam); o raciocínio fica no automático e o esforço em output_config.effort; o JSON vem garantido por
+// output_config.format (o mesmo esquema do json_schema), menos quando há pesquisa na web, que traz citações e não aceita o
+// formato (aí o JSON é pedido no prompt, como no Gemini). "fallbacks: default" nos Opus e Sonnet 5 (os Haiku não têm).
+export type PesquisaClaude = { cidade?: string; uf?: string }
+export function corpoDaRequisicaoClaude(o: { modelo: string; mensagens: Mensagem[]; tipo: Tipo; formato?: Formato; esforco?: string; pesquisa?: PesquisaClaude | null; semFallbacks?: boolean; continuacao?: unknown[] | null }): Record<string, unknown> {
+  const sistema = o.mensagens.filter((m) => m.role === 'system').map((m) => m.content).join('\n\n')
+  const messages: Array<{ role: 'user' | 'assistant'; content: unknown }> = o.mensagens.filter((m) => m.role !== 'system').map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }))
+  if (o.continuacao) messages.push({ role: 'assistant', content: o.continuacao })
+  const output_config: Record<string, unknown> = { effort: esforcoClaude(o.esforco) }
+  if ((o.formato ?? 'json_schema') === 'json_schema' && !o.pesquisa) output_config.format = { type: 'json_schema', schema: o.tipo === 'lugar' ? ESQUEMA_LUGAR : o.tipo === 'contexto' ? ESQUEMA_CONTEXTO : ESQUEMA_PAGINA }
+  const corpo: Record<string, unknown> = { model: o.modelo, max_tokens: MAX_TOKENS_CLAUDE, system: sistema, messages, output_config }
+  if (o.pesquisa) {
+    const local: Record<string, string> = { type: 'approximate', country: 'BR', timezone: 'America/Sao_Paulo' }
+    if (o.pesquisa.cidade) local.city = o.pesquisa.cidade
+    if (o.pesquisa.uf) local.region = o.pesquisa.uf
+    corpo.tools = [{ type: 'web_search_20250305', name: 'web_search', max_uses: 5, user_location: local }]
+  }
+  if (!o.semFallbacks && /claude-(opus|sonnet)-5/i.test(o.modelo)) corpo.fallbacks = 'default'
+  return corpo
+}
+
 // '7.66s', '2m59.56s', '120ms', '1h2m' (o formato dos cabeçalhos do Groq) -> segundos
 export function duracao(t: string): number | null {
   const m = String(t ?? '').trim().replace(/\.$/, '').match(/^(?:(\d+(?:\.\d+)?)h)?(?:(\d+(?:\.\d+)?)m(?!s))?(?:(\d+(?:\.\d+)?)s)?(?:(\d+(?:\.\d+)?)ms)?$/)
@@ -932,6 +969,51 @@ export function lerResposta(r: RespostaHttp): Leitura {
   if (r.status === 401 || r.status === 403) return { tipo: 'erro', erro: `a chave da IA foi recusada pelo provedor (${r.status})${mensagem ? `: ${mensagem}` : ''}`.slice(0, 300) }
   if (r.status === 404) return { tipo: 'erro', erro: `o provedor da IA não achou o modelo: ${mensagem}`.slice(0, 300) }
   if (r.status === 413) return { tipo: 'erro', erro: `o pedido passou do tamanho que a cota da IA aceita: ${mensagem}`.slice(0, 300) }
+  if (r.status >= 500) return { tipo: 'erro', erro: `a IA está instável agora (${r.status}); tente de novo em instantes` }
+  return { tipo: 'erro', erro: `a IA recusou o pedido (${r.status}): ${mensagem}`.slice(0, 300) }
+}
+
+// 3.31: a resposta do Claude: os blocos "text" viram o texto (os de raciocínio vêm vazios e ficam de fora); as citações da
+// pesquisa viram fontes; "refusal" é recusa dos filtros; "pause_turn" é pesquisa interrompida (manda-se a resposta de volta
+// para continuar); 429 espera; os 400 dizem o que o provedor não aceitou (formato, o beta do fallback, a pesquisa)
+export type LeituraClaude =
+  | { tipo: 'texto'; texto: string; cortado: boolean; fontes: Fonte[]; pesquisou: boolean; pausa: unknown[] | null }
+  | { tipo: 'limite'; tentarEm: number }
+  | { tipo: 'formato_recusado'; erro: string }
+  | { tipo: 'parametro_recusado'; parametro: 'fallbacks'; erro: string }
+  | { tipo: 'sem_pesquisa'; erro: string }
+  | { tipo: 'erro'; erro: string }
+export function lerRespostaClaude(r: RespostaHttp): LeituraClaude {
+  let corpo: Obj | null = null
+  try { corpo = JSON.parse(r.texto) as Obj } catch { corpo = null }
+  const erro = (corpo && corpo.type === 'error' && typeof corpo.error === 'object' ? corpo.error : null) as Obj | null
+  const mensagem = espacos(erro?.message) || espacos(r.texto).slice(0, 300)
+  if (r.status === 429) return { tipo: 'limite', tentarEm: segundosDeEspera(r.headers, mensagem) }
+  if (r.status >= 200 && r.status < 300 && !erro) {
+    const blocos = (Array.isArray(corpo?.content) ? corpo.content : []) as Obj[]
+    const texto = blocos.filter((b) => b.type === 'text' && typeof b.text === 'string').map((b) => b.text as string).join('')
+    const fontes: Fonte[] = []
+    const juntar = (url: unknown, titulo: unknown) => { const u = espacos(url); if (u && !fontes.some((f) => f.url === u)) fontes.push({ titulo: limpar(titulo, 120) || u, url: u }) }
+    for (const b of blocos) if (b.type === 'text') for (const c of (Array.isArray(b.citations) ? b.citations : []) as Obj[]) if (c.type === 'web_search_result_location') juntar(c.url, c.title)
+    if (!fontes.length) for (const b of blocos) if (b.type === 'web_search_tool_result' && Array.isArray(b.content)) for (const x of b.content as Obj[]) if (x.type === 'web_search_result') juntar(x.url, x.title)
+    const uso = ((corpo?.usage as Obj | undefined)?.server_tool_use ?? null) as Obj | null
+    const pesquisou = blocos.some((b) => b.type === 'server_tool_use') || Number(uso?.web_search_requests ?? 0) > 0
+    const parada = String(corpo?.stop_reason ?? '')
+    if (parada === 'refusal') {
+      const d = (corpo?.stop_details ?? null) as Obj | null
+      return { tipo: 'erro', erro: `a IA recusou escrever este texto${espacos(d?.category) ? ` (${espacos(d?.category)})` : ''}${espacos(d?.explanation) ? `: ${espacos(d?.explanation)}` : ''}`.slice(0, 300) }
+    }
+    return { tipo: 'texto', texto, cortado: parada === 'max_tokens', fontes: fontes.slice(0, 8), pesquisou, pausa: parada === 'pause_turn' ? blocos : null }
+  }
+  if (r.status === 400) {
+    if (/anthropic-beta|fallbacks?\b/i.test(mensagem)) return { tipo: 'parametro_recusado', parametro: 'fallbacks', erro: mensagem.slice(0, 300) }
+    if (/output_config|\bformat\b|schema/i.test(mensagem)) return { tipo: 'formato_recusado', erro: mensagem.slice(0, 300) }
+    if (/web_search|web search|\btools?\b|allowed_callers|user_location/i.test(mensagem)) return { tipo: 'sem_pesquisa', erro: mensagem.slice(0, 300) }
+  }
+  if (r.status === 401 || r.status === 403) return { tipo: 'erro', erro: `a chave da IA foi recusada pelo provedor (${r.status})${mensagem ? `: ${mensagem}` : ''}`.slice(0, 300) }
+  if (r.status === 402) return { tipo: 'erro', erro: `a API da Anthropic está sem créditos (402)${mensagem ? `: ${mensagem}` : ''}`.slice(0, 300) }
+  if (r.status === 404) return { tipo: 'erro', erro: `o provedor da IA não achou o modelo: ${mensagem}`.slice(0, 300) }
+  if (r.status === 413) return { tipo: 'erro', erro: `o pedido passou do tamanho que a IA aceita: ${mensagem}`.slice(0, 300) }
   if (r.status >= 500) return { tipo: 'erro', erro: `a IA está instável agora (${r.status}); tente de novo em instantes` }
   return { tipo: 'erro', erro: `a IA recusou o pedido (${r.status}): ${mensagem}`.slice(0, 300) }
 }
@@ -1234,9 +1316,43 @@ export type Sugestao =
 // a sugestão do "Sobre a cidade": no Gemini, pela porta nativa com pesquisa (se o provedor recusar a pesquisa, sem ela);
 // se a porta nativa falhar ou a resposta não vier como JSON válido, ou em outro provedor, pela porta comum
 // (gerarConteudo), a mesma de sempre. A pesquisa é o que deixa a descrição da cidade automática e com fontes
-export async function sugerirContexto(o: { ficha: FichaPagina; atual: string | null; provedor: Provedor; pedir: Pedir; pedirNativo?: PedirNativo; checagem: Checagem; timeoutMs?: number }): Promise<Sugestao> {
+export async function sugerirContexto(o: { ficha: FichaPagina; atual: string | null; provedor: Provedor; pedir: Pedir; pedirNativo?: PedirNativo; checagem: Checagem; timeoutMs?: number; localizacao?: PesquisaClaude | null }): Promise<Sugestao> {
   const mensagens = montarPromptContexto({ ficha: o.ficha, atual: o.atual })
   const avisos: string[] = []
+  const timeout = o.timeoutMs ?? TIMEOUT_MS
+  // 3.31: no Claude, a pesquisa na web é da própria API de Messages (a ferramenta web_search), pela mesma porta: primeiro com ela
+  // (as citações viram as fontes), recusada ou sem servir, sem ela e com o JSON garantido; por último a porta comum (gerarConteudo)
+  if (o.provedor.id === 'claude') {
+    let semFallbacks = false
+    for (const pesquisar of [true, false]) {
+      const montar = () => corpoDaRequisicaoClaude({ modelo: o.provedor.modelo, mensagens, tipo: 'contexto', formato: 'json_schema', esforco: o.provedor.esforco, pesquisa: pesquisar ? (o.localizacao ?? {}) : null, semFallbacks })
+      let l: LeituraClaude
+      try {
+        let corpo = montar()
+        l = lerRespostaClaude(await o.pedir(corpo, timeout))
+        if (l.tipo === 'parametro_recusado' && !semFallbacks) { semFallbacks = true; corpo = montar(); l = lerRespostaClaude(await o.pedir(corpo, timeout)) }
+        // a pesquisa parou no meio (pause_turn): a resposta volta como veio e a IA continua de onde parou, até duas vezes
+        for (let c = 0; c < 2 && l.tipo === 'texto' && l.pausa; c++) {
+          corpo = { ...corpo, messages: [...(corpo.messages as unknown[]), { role: 'assistant', content: l.pausa }] }
+          l = lerRespostaClaude(await o.pedir(corpo, timeout))
+        }
+      } catch (e) {
+        const nome = (e as { name?: string } | null)?.name
+        return { ok: false, erro: nome === 'TimeoutError' || nome === 'AbortError' ? `a IA não respondeu em ${Math.round(timeout / 1000)} s; tente de novo` : `não deu para falar com a IA (${String((e as Error | null)?.message ?? e).slice(0, 160)})` }
+      }
+      if (l.tipo === 'limite') return { ok: false, limite: true, tentarEm: l.tentarEm, erro: l.tentarEm <= 90 ? 'limite da IA por minuto' : 'limite da IA atingido por agora' }
+      if (l.tipo === 'sem_pesquisa') { avisos.push('a Anthropic não deixou pesquisar; a descrição saiu da memória do modelo'); continue }
+      if (l.tipo === 'formato_recusado') { avisos.push('o formato garantido foi recusado; fui pela porta comum'); break }
+      if (l.tipo === 'parametro_recusado' || l.tipo === 'erro') return { ok: false, erro: l.erro }
+      if (l.pausa) { avisos.push('a pesquisa não terminou a tempo'); continue }
+      const v = validarContexto(extrairJson(l.texto))
+      if (v.conteudo && !v.problemas.some((p) => p.nivel === 'grave')) {
+        const c = v.conteudo as ConteudoContexto
+        return { ok: true, texto: c.texto, confira: c.confira, fontes: l.fontes, pesquisou: l.pesquisou, avisos: [...avisos, ...v.avisos, ...v.problemas.map((p) => p.texto)] }
+      }
+      avisos.push(`a resposta ${pesquisar ? 'com' : 'sem'} pesquisa não serviu (${v.problemas.map((p) => p.texto).join('; ').slice(0, 160)})`)
+    }
+  }
   if (o.provedor.id === 'gemini' && o.pedirNativo) {
     for (const pesquisar of [true, false]) {
       let r: RespostaHttp
@@ -1254,7 +1370,7 @@ export async function sugerirContexto(o: { ficha: FichaPagina; atual: string | n
       if (!pesquisar) break
     }
   }
-  const g = await gerarConteudo({ tipo: 'contexto', mensagens, checagem: o.checagem, modelo: o.provedor.modelo, pedir: o.pedir })
+  const g = await gerarConteudo({ tipo: 'contexto', mensagens, checagem: o.checagem, modelo: o.provedor.modelo, pedir: o.pedir, provedor: o.provedor })
   if (!g.ok) return g.limite ? { ok: false, limite: true, tentarEm: g.tentarEm, erro: g.erro } : { ok: false, erro: g.erro }
   const c = g.conteudo as ConteudoContexto
   return { ok: true, texto: c.texto, confira: c.confira, fontes: [], pesquisou: false, avisos: [...avisos, ...g.avisos] }
@@ -1301,6 +1417,7 @@ export async function gerarConteudo(o: {
   checagem: Checagem
   modelo: string
   pedir: Pedir
+  provedor?: Provedor // 3.31: com o Claude, o pedido e a leitura são os da API de Messages; sem ele, o chat completions
   timeoutMs?: number
   prazoMs?: number
   agora?: () => number
@@ -1309,6 +1426,8 @@ export async function gerarConteudo(o: {
   const prazo = o.prazoMs ?? PRAZO_MS
   const agora = o.agora ?? Date.now
   const inicio = agora()
+  const claude = o.provedor?.id === 'claude'
+  let semFallbacks = false
   let formato: Formato = 'json_schema'
   let mensagens = o.mensagens
   let tentativas = 0
@@ -1323,14 +1442,17 @@ export async function gerarConteudo(o: {
     const limite = Math.min(timeout, resta)
     let resposta: RespostaHttp
     try {
-      resposta = await o.pedir(corpoDaRequisicao({ modelo: o.modelo, mensagens, tipo: o.tipo, formato }), limite)
+      const corpo = claude
+        ? corpoDaRequisicaoClaude({ modelo: o.modelo, mensagens, tipo: o.tipo, formato, esforco: o.provedor?.esforco, semFallbacks })
+        : corpoDaRequisicao({ modelo: o.modelo, mensagens, tipo: o.tipo, formato })
+      resposta = await o.pedir(corpo, limite)
     } catch (e) {
       const nome = (e as { name?: string } | null)?.name
       return desistir(nome === 'TimeoutError' || nome === 'AbortError'
         ? `a IA não respondeu em ${Math.round(limite / 1000)} s; tente de novo`
         : `não deu para falar com a IA (${String((e as Error | null)?.message ?? e).slice(0, 160)})`)
     }
-    const l = lerResposta(resposta)
+    const l: Leitura | LeituraClaude = claude ? lerRespostaClaude(resposta) : lerResposta(resposta)
     if (l.tipo === 'limite') {
       if (reserva) return desistir(`limite da IA; dava para tentar em ${l.tentarEm} s`)
       return { ok: false, limite: true, tentarEm: l.tentarEm, erro: l.tentarEm <= 90 ? 'limite da IA por minuto' : 'limite da IA atingido por agora' }
@@ -1339,6 +1461,12 @@ export async function gerarConteudo(o: {
       if (formato === 'json_schema') { formato = 'json_object'; chamadas--; continue }
       return desistir(`a IA recusou o formato: ${l.erro}`.slice(0, 300))
     }
+    // o beta do fallback não está liberado para esta conta: o mesmo pedido sem ele
+    if (l.tipo === 'parametro_recusado') {
+      if (!semFallbacks) { semFallbacks = true; chamadas--; continue }
+      return desistir(`a IA recusou o pedido: ${l.erro}`.slice(0, 300))
+    }
+    if (l.tipo === 'sem_pesquisa') return desistir(`a IA recusou o pedido: ${l.erro}`.slice(0, 300))
     if (l.tipo === 'erro') return desistir(l.erro)
 
     tentativas++

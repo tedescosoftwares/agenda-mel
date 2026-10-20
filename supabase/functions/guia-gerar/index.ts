@@ -2,7 +2,7 @@
 // guia-gerar (3.9): escreve com IA o texto de uma página do guia de salões e
 // guarda como rascunho, esperando alguém da Plataforma aprovar.
 //
-// POST { lugar?: uuid, pagina?: uuid, contexto?: uuid, instrucao?: string, angulo?: string, provedor?: 'gemini' | 'groq' }
+// POST { lugar?: uuid, pagina?: uuid, contexto?: uuid, instrucao?: string, angulo?: string, provedor?: 'gemini' | 'groq' | 'claude' }
 // com o Authorization de quem está logado na Plataforma.
 //   lugar   uma linha de guia_lugares (a página de um salão)
 //   pagina  uma linha de guia_paginas (a página da cidade ou de uma categoria)
@@ -14,7 +14,7 @@
 //   O que a equipe editou à mão (origem "editado") nunca é tocado.
 //   instrucao  o pedido do revisor ("mais curto", "fale de noivas"), até 400 letras
 //   angulo     o id de um ângulo editorial (conteudo.ts) ou um tema em texto livre
-//   provedor   3.27: qual IA escreve. Sem ele, GUIA_IA_PADRAO; sem ela, o Gemini se tiver chave, senão o Groq
+//   provedor   3.27: qual IA escreve. Sem ele, GUIA_IA_PADRAO; sem ela, o primeiro com chave: Gemini, Claude (3.31), Groq
 //
 // Respostas:
 //   200 { ok: true, rascunho }                       gravado em rascunho, com _meta
@@ -35,7 +35,7 @@ import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supa
 import {
   ANGULOS, ANGULOS_PAGINA, limpar, limparInstrucao, provedoresDe, escolherProvedor, bairroValido,
   prepararLugar, prepararPagina, angulosPara, escolherAngulo, escolherAbertura, anguloAnterior,
-  montarPromptLugar, montarPromptPagina, frasesUsadas, gerarConteudo, maisParecido, comMeta, sugerirContexto, URL_GEMINI_NATIVA,
+  montarPromptLugar, montarPromptPagina, frasesUsadas, gerarConteudo, maisParecido, comMeta, sugerirContexto, URL_GEMINI_NATIVA, VERSAO_CLAUDE, BETA_FALLBACK_CLAUDE,
   type LugarLinha, type PaginaLinha, type LugarDaPagina, type Pedir, type PedirNativo, type Provedor, type BairroDaFicha,
 } from './conteudo.ts'
 
@@ -77,14 +77,13 @@ const pedirNativoCom = (prov: Provedor): PedirNativo => async (modelo, corpo, ti
   })
   return { status: r.status, headers: r.headers, texto: await r.text() }
 }
-// a única porta para a rede da IA (conteudo.ts recebe isto e fica testável)
+// a única porta para a rede da IA (conteudo.ts recebe isto e fica testável). O Claude (3.31) fala pela API de Messages:
+// a chave em x-api-key, a versão da API e, quando o corpo leva "fallbacks", o cabeçalho do beta
 const pedirCom = (prov: Provedor): Pedir => async (corpo, timeoutMs) => {
-  const r = await fetch(prov.url, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${prov.chave}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(corpo),
-    signal: AbortSignal.timeout(timeoutMs),
-  })
+  const headers: Record<string, string> = prov.id === 'claude'
+    ? { 'x-api-key': prov.chave, 'anthropic-version': VERSAO_CLAUDE, 'Content-Type': 'application/json', ...(corpo.fallbacks !== undefined ? { 'anthropic-beta': BETA_FALLBACK_CLAUDE } : {}) }
+    : { Authorization: `Bearer ${prov.chave}`, 'Content-Type': 'application/json' }
+  const r = await fetch(prov.url, { method: 'POST', headers, body: JSON.stringify(corpo), signal: AbortSignal.timeout(timeoutMs) })
   return { status: r.status, headers: r.headers, texto: await r.text() }
 }
 
@@ -109,7 +108,7 @@ async function escreverContexto(db: SupabaseClient, ia: Provedor, p: PaginaDaCid
   const lugares = await lugaresDaCidade(db, String(p.cidade_slug ?? ''))
   const { ficha, checagem } = prepararPagina({ ...p, categoria: '' }, lugares, p.contexto)
   const atual = limpar(p.contexto, 1500) || null
-  const r = await sugerirContexto({ ficha, atual, provedor: ia, checagem, pedir: pedirCom(ia), pedirNativo: ia.id === 'gemini' ? pedirNativoCom(ia) : undefined })
+  const r = await sugerirContexto({ ficha, atual, provedor: ia, checagem, pedir: pedirCom(ia), pedirNativo: ia.id === 'gemini' ? pedirNativoCom(ia) : undefined, localizacao: { cidade: String(p.cidade ?? ''), uf: String(p.uf ?? '') } })
   if (!r.ok || !gravar) return { ...r, gravado: false }
   const fontes = { confira: r.confira, fontes: r.fontes, modelo: ia.modelo, provedor: ia.id, pesquisou: r.pesquisou, em: new Date().toISOString() }
   let gravacao = db.from('guia_paginas').update({ contexto: r.texto, contexto_origem: 'ia', contexto_fontes: fontes }).eq('id', p.id)
@@ -178,7 +177,7 @@ async function gerarLugar(db: SupabaseClient, ia: Provedor, id: string, instruca
     jaUsadas: frasesUsadas(outros.map((o) => ({ sobre: o.r_sobre ?? o.c_sobre, chamada: o.r_chamada ?? o.c_chamada }))),
   })
 
-  const g = await gerarConteudo({ tipo: 'lugar', mensagens, checagem, modelo: ia.modelo, pedir: pedirCom(ia) })
+  const g = await gerarConteudo({ tipo: 'lugar', mensagens, checagem, modelo: ia.modelo, pedir: pedirCom(ia), provedor: ia })
   if (!g.ok) return json(g.limite ? { ok: false, erro: g.erro, tentar_em: g.tentarEm } : { ok: false, erro: g.erro })
 
   const semelhanca = maisParecido((g.conteudo as { sobre: string[] }).sobre, outros.flatMap((o) => [{ slug: String(o.slug), texto: o.c_sobre }, { slug: String(o.slug), texto: o.r_sobre }]))
@@ -217,7 +216,7 @@ async function gerarPagina(db: SupabaseClient, ia: Provedor, id: string, instruc
   const angulo = escolherAngulo({ candidatos, todos: ANGULOS_PAGINA, semente: `${p.cidade_slug}/${p.categoria}`, pedido: pedidoAngulo, anterior: anguloAnterior(anterior) })
   const mensagens = montarPromptPagina({ ficha, cidade, angulo, instrucao, anterior })
 
-  const g = await gerarConteudo({ tipo: 'pagina', mensagens, checagem: { ...checagem, angulo: angulo.id }, modelo: ia.modelo, pedir: pedirCom(ia) })
+  const g = await gerarConteudo({ tipo: 'pagina', mensagens, checagem: { ...checagem, angulo: angulo.id }, modelo: ia.modelo, pedir: pedirCom(ia), provedor: ia })
   if (!g.ok) return json(g.limite ? { ok: false, erro: g.erro, tentar_em: g.tentarEm } : { ok: false, erro: g.erro })
 
   const semelhanca = maisParecido((g.conteudo as { intro: string[] }).intro, irmas.flatMap((o) => {

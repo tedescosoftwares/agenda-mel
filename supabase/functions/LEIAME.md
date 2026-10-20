@@ -274,7 +274,8 @@ normal; a função confere `eh_plataforma()` como a pessoa logada (senão, 403).
 - `contexto` (3.28): a página da cidade; a IA escreve o "Sobre a cidade" e
   devolve `{ ok, contexto, confira, fontes, pesquisou }` sem gravar. Com
   `gravar: true` (3.30), grava (origem `ia`, fontes em `contexto_fontes`).
-- `provedor` (3.27): `gemini` ou `groq`. Sem ele, `GUIA_IA_PADRAO`.
+- `provedor` (3.27): `gemini`, `groq` ou `claude` (3.31). Sem ele, `GUIA_IA_PADRAO`;
+  sem ela, o primeiro com chave: Gemini, Claude, Groq.
 
 **O "Sobre a cidade" nasce sozinho (3.30, migração 176).** Ao gerar um
 `lugar` ou uma `pagina` de uma cidade cujo contexto está vazio ou ainda é a
@@ -308,7 +309,20 @@ GROQ_API_KEY=...                 já existe (é a mesma do WhatsApp)
 GUIA_IA_MODELO=openai/gpt-oss-120b   opcional; é o padrão
 GUIA_IA_URL=...                  opcional: outra API compatível com a da OpenAI (ex.: https://api.x.ai/v1/chat/completions)
 GUIA_IA_CHAVE=...                opcional: a chave dessa outra API
+GEMINI_API_KEY=...               3.27: a chave do AI Studio
+GUIA_IA_MODELO_GEMINI=gemini-3-flash-preview   opcional; é o padrão
+ANTHROPIC_API_KEY=...            3.31: a chave de platform.claude.com (API Keys)
+GUIA_IA_MODELO_CLAUDE=claude-opus-5-5          opcional; é o padrão (claude-sonnet-5-5 e claude-haiku-5-5 custam menos)
+GUIA_IA_ESFORCO_CLAUDE=medium    opcional: low, medium, high, xhigh ou max
+GUIA_IA_PADRAO=gemini            opcional: gemini, groq ou claude, quando o pedido não escolhe
 ```
+
+O Claude (3.31) fala pela API de Messages (`https://api.anthropic.com/v1/messages`,
+`x-api-key`, `anthropic-version`): `system` com o papel, sem temperatura, esforço em
+`output_config.effort`, JSON garantido por `output_config.format` (recusado, o JSON
+vem pelo prompt), `fallbacks: "default"` nos Opus e Sonnet (conta sem o beta, o
+pedido vai sem ele). No "Sobre a cidade", a ferramenta `web_search` da própria API
+(até 5 buscas, localizadas na cidade): as citações viram as fontes.
 
 No Groq, `max_tokens` (2400) é reserva descontada inteira da cota por minuto:
 no plano gratuito, uma página por minuto é o ritmo realista. A Plataforma

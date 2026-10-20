@@ -6,8 +6,64 @@ import { GUIA_CATEGORIAS, categoriaDoGuia, conteudoSeguro, rotaDaCidade, rotaDaC
 import { seoDaCidade } from '../../../lib/guiaSeo'
 import { urlDoAmbiente } from '../../../lib/ambiente'
 import EditarPagina from './EditarPagina'
-import { enviarFotoDaCidade } from '../../../lib/guiaFotos'
-import { MapPinned, Check, RefreshCw, Sparkles, ExternalLink, LoaderCircle, TriangleAlert, BookOpen, Wand2, Globe, Pencil, ImagePlus, Trash2, Image as ImagemIcone } from 'lucide-react'
+import { enviarFotoDaCidade, enviarImagemDaCategoria } from '../../../lib/guiaFotos'
+import { copiarTexto } from '../../../lib/guiaColar'
+import { MapPinned, Check, RefreshCw, Sparkles, ExternalLink, LoaderCircle, TriangleAlert, BookOpen, Wand2, Globe, Pencil, ImagePlus, Trash2, Image as ImagemIcone, Copy } from 'lucide-react'
+
+// 3.33: como a imagem precisa ser (a foto da cidade e a imagem da categoria): ela se estica atrás do título no site
+const SPEC_IMAGEM = [
+  'Na horizontal, 16:9, com pelo menos 1600 × 900 px (o ideal é 1920 × 1080). JPG, PNG ou WebP, até 6 MB; a Plataforma reduz e guarda em JPG.',
+  'O assunto principal na metade direita: no computador, a metade esquerda desbota para o branco atrás do título; no celular, a imagem fica no alto e desbota para baixo.',
+  'Sem texto, logo ou marca d\'água na imagem. Nada copiado da internet: sua, ou gerada por IA.',
+]
+const CENA_DA_CATEGORIA = {
+  cabelo: 'uma cabeleireira finalizando o corte e a escova de uma cliente, em um salão claro',
+  unhas: 'uma manicure fazendo as unhas de uma cliente, perto das mãos e dos esmaltes, em um salão claro',
+  cilios: 'uma profissional aplicando extensão de cílios em uma cliente deitada, perto do rosto, em um estúdio claro',
+  sobrancelhas: 'uma profissional fazendo o design de sobrancelhas de uma cliente, perto do rosto, em um estúdio claro',
+  estetica: 'uma esteticista fazendo uma limpeza de pele em uma cliente deitada, em uma clínica clara',
+  maquiagem: 'uma maquiadora finalizando a maquiagem de uma cliente, perto do rosto, em um estúdio claro',
+}
+const cenaDaCategoria = (slug, rotulo) => CENA_DA_CATEGORIA[slug] ?? `${String(rotulo).toLowerCase()} em um salão de beleza claro e arrumado`
+const pedidoDaImagem = (cena) => `Foto realista, horizontal 16:9, 1920×1080, de ${cena}. O assunto principal na metade direita da imagem; a metade esquerda mais aberta e suave (céu, parede clara ou fundo desfocado). Luz natural, cores vivas sem exagero. Sem texto, sem logo, sem marca d'água.`
+
+// o bloco da imagem (3.33): a foto da cidade e a imagem da categoria, com a spec e o pedido pronto para o GPT
+function BlocoImagem({ teste, titulo, nota, palavra, url, alt, enviando, onArquivo, onTirar, cena }) {
+  const [copiado, setCopiado] = useState(false)
+  const pedido = pedidoDaImagem(cena)
+  async function copiar() {
+    if (await copiarTexto(pedido)) { setCopiado(true); setTimeout(() => setCopiado(false), 2500) }
+  }
+  return (
+    <div className="pg-contexto pg-cidade-foto" data-teste={teste}>
+      <div className="pg-contexto-cabeca">
+        <ImagemIcone size={16} />
+        <div>
+          <b>{titulo}</b>
+          <small>{nota}</small>
+        </div>
+      </div>
+      <div className="pg-cidade-foto-corpo">
+        {url ? <img src={url} alt={alt} /> : <div className="pg-cidade-foto-vazia">Sem {palavra} ainda</div>}
+        <div className="pg-cidade-foto-acoes">
+          <label className={'btn btn-ghost pg-btn-peq' + (enviando ? ' desligado' : '')}>
+            <input type="file" accept="image/*" onChange={onArquivo} disabled={enviando} hidden data-teste={`arquivo-${teste}`} />
+            {enviando ? <LoaderCircle size={14} className="pg-gira" /> : <ImagePlus size={14} />} {enviando ? 'Enviando…' : url ? `Trocar a ${palavra}` : `Enviar a ${palavra}`}
+          </label>
+          {url && <button type="button" className="btn btn-ghost pg-btn-peq" onClick={onTirar}><Trash2 size={14} /> Tirar</button>}
+        </div>
+      </div>
+      <div className="pg-imagem-spec" data-teste="spec-da-imagem">
+        <b>Como a {palavra} precisa ser</b>
+        <ul>{SPEC_IMAGEM.map((t) => <li key={t}>{t}</li>)}</ul>
+        <div className="pg-imagem-pedido">
+          <span>Para pedir ao GPT (ou a outro gerador de imagem): <q>{pedido}</q></span>
+          <button type="button" className="btn btn-ghost pg-btn-peq" onClick={copiar}>{copiado ? <Check size={14} /> : <Copy size={14} />} {copiado ? 'Copiado' : 'Copiar o pedido'}</button>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 // O texto da página da cidade (/saloes/itanhaem) e de cada categoria
 // (/saloes/itanhaem/unhas). As linhas nascem sozinhas na importação; a
@@ -149,6 +205,24 @@ export default function PaginasCidade({ g }) {
     const r = await g.salvarPagina(atual.id, { foto: null })
     if (!r.ok) setErro(r.erro)
   }
+  // a imagem da categoria (3.33, migração 180): uma para todas as cidades, enviada daqui, da página da categoria
+  async function enviarImagem(e) {
+    const f = e.target.files?.[0]
+    e.target.value = ''
+    if (!f || !atual?.categoria) return
+    setErro(''); setEnviandoFoto(true)
+    try {
+      const { url } = await enviarImagemDaCategoria(atual.categoria, f)
+      const r = await g.salvarImagemCategoria(atual.categoria, url)
+      if (!r.ok) setErro(r.erro)
+      else g.avisar({ texto: `Imagem de ${categoriaDoGuia(atual.categoria).rotulo} guardada, para todas as cidades. Entra no site na próxima publicação.`, tom: 'ok' })
+    } catch (err) { setErro(err.message || 'não deu para enviar a imagem') } finally { setEnviandoFoto(false) }
+  }
+  async function tirarImagem() {
+    if (!atual?.categoria) return
+    const r = await g.salvarImagemCategoria(atual.categoria, null)
+    if (!r.ok) setErro(r.erro)
+  }
   async function sugerir() {
     if (!atual || sugerindo) return
     setErro('')
@@ -265,26 +339,14 @@ export default function PaginasCidade({ g }) {
             </form>
           )}
 
-          {atual.categoria === '' && (
-            <div className="pg-contexto pg-cidade-foto" data-teste="foto-da-cidade">
-              <div className="pg-contexto-cabeca">
-                <ImagemIcone size={16} />
-                <div>
-                  <b>Foto de {atual.cidade}</b>
-                  <small>Aparece no alto da página da cidade e das categorias dela, e é a imagem do link no WhatsApp. Uma imagem na horizontal (16:9), sua ou gerada por IA; nada copiado da internet.</small>
-                </div>
-              </div>
-              <div className="pg-cidade-foto-corpo">
-                {atual.foto ? <img src={atual.foto} alt={`Foto de ${atual.cidade}`} /> : <div className="pg-cidade-foto-vazia">Sem foto ainda</div>}
-                <div className="pg-cidade-foto-acoes">
-                  <label className={'btn btn-ghost pg-btn-peq' + (enviandoFoto ? ' desligado' : '')}>
-                    <input type="file" accept="image/*" onChange={enviarFoto} disabled={enviandoFoto} hidden data-teste="arquivo-foto-cidade" />
-                    {enviandoFoto ? <LoaderCircle size={14} className="pg-gira" /> : <ImagePlus size={14} />} {enviandoFoto ? 'Enviando…' : atual.foto ? 'Trocar a foto' : 'Enviar a foto'}
-                  </label>
-                  {atual.foto && <button type="button" className="btn btn-ghost pg-btn-peq" onClick={tirarFoto}><Trash2 size={14} /> Tirar</button>}
-                </div>
-              </div>
-            </div>
+          {atual.categoria === '' ? (
+            <BlocoImagem teste="foto-da-cidade" palavra="foto" titulo={`Foto de ${atual.cidade}`} url={atual.foto} alt={`Foto de ${atual.cidade}`} enviando={enviandoFoto} onArquivo={enviarFoto} onTirar={tirarFoto}
+              nota="Esticada no alto da página da cidade (e das categorias dela sem imagem própria), de fundo no cartão da cidade em /saloes e no quadro ao lado do título nas categorias com imagem; é a imagem do link no WhatsApp."
+              cena={`${atual.cidade}, ${atual.uf || 'SP'}: um lugar reconhecível da cidade, de dia`} />
+          ) : (
+            <BlocoImagem teste="imagem-da-categoria" palavra="imagem" titulo={`Imagem de ${categoriaDoGuia(atual.categoria).rotulo} (vale para todas as cidades)`} url={g.imagensCategorias?.[atual.categoria] ?? null} alt={`Imagem de ${categoriaDoGuia(atual.categoria).rotulo}`} enviando={enviandoFoto} onArquivo={enviarImagem} onTirar={tirarImagem}
+              nota={`Esticada no alto da página de ${categoriaDoGuia(atual.categoria).rotulo.toLowerCase()} de cada cidade, com a foto da cidade no quadro ao lado; é a imagem do link e entra no quadradinho da categoria quando nenhum salão dela tem foto.`}
+              cena={cenaDaCategoria(atual.categoria, categoriaDoGuia(atual.categoria).rotulo)} />
           )}
 
           <div className="pg-pagina-texto">

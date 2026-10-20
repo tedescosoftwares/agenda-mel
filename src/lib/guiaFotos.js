@@ -36,11 +36,16 @@ export async function enviarFotoDoGuia(lugarId, file, { assinatura } = {}) {
 }
 
 // 3.32: a foto da cidade (Páginas da cidade → Foto da cidade): o mesmo caminho, em cidades/<cidade>/; devolve { url }
-export async function enviarFotoDaCidade(cidadeSlug, file) {
-  const { blob } = await reduzirFoto(file, { max: 1600, qualidade: 0.84 })
+export const enviarFotoDaCidade = (cidadeSlug, file) => enviarNaPasta(`cidades/${String(cidadeSlug).replace(/[^a-z0-9-]/g, '')}`, file, 'c')
+// 3.33: a imagem da categoria (vale para todas as cidades; migração 180), em categorias/<categoria>/; devolve { url }
+export const enviarImagemDaCategoria = (categoria, file) => enviarNaPasta(`categorias/${String(categoria).replace(/[^a-z0-9-]/g, '')}`, file, 'k')
+// a imagem grande de uma página (1920 px no lado maior: ela se estica atrás do título) e a miniatura, numa pasta do bucket;
+// no demo, uma imagem do site marcada com ?c= (cidade) ou ?k= (categoria)
+async function enviarNaPasta(pasta, file, marca) {
+  const { blob } = await reduzirFoto(file, { max: 1920, qualidade: 0.84 })
   const sha = await assinaturaDoArquivo(file)
-  if (isDemo) return { url: `${FOTOS_DEMO[parseInt(sha.slice(0, 2), 16) % FOTOS_DEMO.length]}?c=${sha.slice(0, 8)}`, sha }
-  const caminho = `cidades/${String(cidadeSlug).replace(/[^a-z0-9-]/g, '')}/${sha.slice(0, 24)}.jpg`
+  if (isDemo) return { url: `${FOTOS_DEMO[parseInt(sha.slice(0, 2), 16) % FOTOS_DEMO.length]}?${marca}=${sha.slice(0, 8)}`, sha }
+  const caminho = `${pasta}/${sha.slice(0, 24)}.jpg`
   const { error } = await supabase.storage.from('guia').upload(caminho, blob, { contentType: 'image/jpeg', cacheControl: '31536000', upsert: false })
   const repetida = !!error && /exists|duplicate|409/i.test(`${error.message ?? ''} ${error.statusCode ?? ''}`)
   if (error && !repetida) throw new Error(error.message || 'não deu para enviar a foto')

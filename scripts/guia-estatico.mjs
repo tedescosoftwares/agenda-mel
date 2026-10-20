@@ -70,7 +70,7 @@ function corpoDaCidade(dados, faq, colecoes = null, extras = {}, panorama = null
   return `<main>
 ${migalhas(trilhaDaCidade(dados.cidade, dados.cidade_slug, dados.categoria))}
 <h1>${esc(h1)}</h1>
-${dados.foto ? `<figure><img src="${esc(dados.foto)}" alt="${esc(`${dados.cidade}${dados.uf ? `, ${dados.uf}` : ''}`)}" /></figure>` : ''}
+${dados.imagem || dados.foto ? `<figure><img src="${esc(dados.imagem || dados.foto)}" alt="${esc(dados.imagem ? `${categoriaDoGuia(dados.categoria).rotulo} em ${dados.cidade}` : `${dados.cidade}${dados.uf ? `, ${dados.uf}` : ''}`)}" /></figure>` : ''}
 <p>${esc(c.chamada || seoPadraoDaCidade(dados.cidade, dados.categoria).meta_description)}</p>
 ${c.intro.map((p) => `<p>${esc(p)}</p>`).join('')}
 ${panorama?.paragrafos?.length ? `<section><h2>${esc(tituloDoPanorama(dados.cidade, dados.categoria))}</h2>${panorama.paragrafos.map((p) => `<p>${esc(p)}</p>`).join('')}</section>` : ''}
@@ -107,7 +107,7 @@ ${navDeColecoes(m.tipo === 'bairro' ? 'Outros bairros' : 'Por bairro', r.bairros
 // guia_publicadas() mandou (3.17, migração 166: MIMO, Seleção, pontos de nota e foto, nome), e
 // filtrar por categoria não a muda; a nota não vem para cá, então não dá para reordenar aqui.
 const cartao = (l) => ({ slug: l.slug, nome: l.nome, bairro: l.bairro, categoria: l.categoria, resumo: l.conteudo?.resumo ?? null, servicos: (l.servicos ?? []).slice(0, 4), selecao: l.selecao, na_mimo: l.na_mimo, latitude: l.latitude ?? null, longitude: l.longitude ?? null, foto: Array.isArray(l.fotos) && l.fotos[0] ? l.fotos[0] : null })
-function dadosDaCidade(lugares, paginas, cidadeSlug, categoria) {
+function dadosDaCidade(lugares, paginas, cidadeSlug, categoria, imagens = {}) {
   const daCidade = lugares.filter((l) => l.cidade_slug === cidadeSlug)
   const lista = categoria ? daCidade.filter((l) => l.categoria === categoria) : daCidade
   const contar = (ls, campo) => [...ls.reduce((m, l) => (l[campo] ? m.set(l[campo], (m.get(l[campo]) ?? 0) + 1) : m), new Map())].map(([k, total]) => ({ [campo]: k, total })).sort((a, b) => b.total - a.total)
@@ -116,7 +116,9 @@ function dadosDaCidade(lugares, paginas, cidadeSlug, categoria) {
   const daCidadePagina = categoria ? paginas.find((p) => p.cidade_slug === cidadeSlug && (p.categoria ?? '') === '') : pagina
   return {
     cidade: daCidade[0].cidade, cidade_slug: cidadeSlug, uf: daCidade[0].uf, categoria, pagina: pagina?.conteudo ?? null, foto: daCidadePagina?.foto || null, total: daCidade.length,
-    categorias: categoriasDaLista(daCidade), bairros: contar(lista, 'bairro'), lugares: lista.map(cartao),
+    // 3.33: a imagem da categoria (migração 180): a desta página e a de cada categoria da lista
+    imagem: categoria ? imagens[categoria] || null : null,
+    categorias: categoriasDaLista(daCidade).map((c) => ({ ...c, imagem: imagens[c.categoria] || null })), bairros: contar(lista, 'bairro'), lugares: lista.map(cartao),
     atualizado: [...lista.map((l) => dia(l.atualizado_em)), dia(pagina?.atualizado_em)].filter(Boolean).sort().at(-1),
   }
 }
@@ -125,6 +127,7 @@ function dadosDaCidade(lugares, paginas, cidadeSlug, categoria) {
 export function paginasDoGuia(guia, artigos = []) {
   const lugares = Array.isArray(guia?.lugares) ? guia.lugares.filter((l) => l?.slug && l?.cidade_slug && l?.conteudo) : []
   const paginas = Array.isArray(guia?.paginas) ? guia.paginas : []
+  const imagens = guia?.categorias_imagens && typeof guia.categorias_imagens === 'object' ? guia.categorias_imagens : {}
   if (!lugares.length) return []
   const out = []
   const cidades = [...new Set(lugares.map((l) => l.cidade_slug))]
@@ -147,12 +150,12 @@ export function paginasDoGuia(guia, artigos = []) {
     const cats = ['', ...GUIA_CATEGORIAS.map((g) => g.slug).filter((s) => lugares.some((l) => l.cidade_slug === cs && l.categoria === s))]
     const extras = { artigos: artigosDaCidade(artigos, cs, listaCidades), cidades: listaCidades }
     for (const cat of cats) {
-      const d = dadosDaCidade(lugares, paginas, cs, cat)
+      const d = dadosDaCidade(lugares, paginas, cs, cat, imagens)
       // o panorama (3.22): os números da lista, montados aqui, e a FAQ dos dados junto com a da IA
       const panorama = panoramaDaCidade({ cidade: d.cidade, categoria: cat, lugares: d.lugares, completos: doGuia })
       const faq = juntarFaq(conteudoSeguro(d.pagina)?.faq ?? [], panorama.faq)
       const { titulo, descricao, caminho } = seoDaCidade(d.cidade, cs, cat, d.pagina)
-      out.push({ caminho, titulo, descricao, atualizado: d.atualizado, prioridade: cat ? '0.7' : '0.8', freq: 'weekly', imagem: d.foto || undefined, jsonLd: jsonLdDaCidade(d, faq), corpo: corpoDaCidade(d, faq, colecoes, extras, panorama) })
+      out.push({ caminho, titulo, descricao, atualizado: d.atualizado, prioridade: cat ? '0.7' : '0.8', freq: 'weekly', imagem: d.imagem || d.foto || undefined, jsonLd: jsonLdDaCidade({ ...d, foto: d.imagem || d.foto }, faq), corpo: corpoDaCidade(d, faq, colecoes, extras, panorama) })
     }
     for (const col of colecoesDaCidade(doGuia, cs)) {
       const m = montarColecao(col, doGuia)
@@ -197,6 +200,7 @@ const paraColecao = (l) => ({
 export function dadosDoGuia(guia) {
   const lugares = Array.isArray(guia?.lugares) ? guia.lugares.filter((l) => l?.slug && l?.cidade_slug && l?.conteudo) : []
   const paginas = Array.isArray(guia?.paginas) ? guia.paginas : []
+  const imagens = guia?.categorias_imagens && typeof guia.categorias_imagens === 'object' ? guia.categorias_imagens : {}
   if (!lugares.length) return []
   const cidades = [...new Set(lugares.map((l) => l.cidade_slug))]
   const listaBruta = Array.isArray(guia?.cidades) && guia.cidades.length ? guia.cidades
@@ -209,7 +213,7 @@ export function dadosDoGuia(guia) {
     const cats = ['', ...GUIA_CATEGORIAS.map((g) => g.slug).filter((s) => doGuia.some((l) => l.categoria === s))]
     const panoramas = {}
     for (const cat of cats) {
-      const { atualizado: _atualizado, ...d } = dadosDaCidade(lugares, paginas, cs, cat)
+      const { atualizado: _atualizado, ...d } = dadosDaCidade(lugares, paginas, cs, cat, imagens)
       const todos = d.lugares
       const nome = cat || 'todos'
       const partes = Math.max(1, Math.ceil(todos.length / POR_PARTE))

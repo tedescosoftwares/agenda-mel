@@ -170,10 +170,21 @@ async function lerLugaresPorId(ids) {
   return out
 }
 // o que a tela precisa para abrir: os totais, as páginas das cidades e os interesses (a lista do guia vem depois, por cidade)
+// a imagem de cada categoria (3.33, migração 180): { categoria: url }; um banco sem a tabela não derruba a tela
+async function lerImagensDasCategorias() {
+  try {
+    const { data, error } = await supabase.from('guia_categorias').select('categoria, foto')
+    if (error) return {}
+    const m = {}
+    for (const r of data ?? []) if (r?.categoria && r.foto) m[r.categoria] = r.foto
+    return m
+  } catch { return {} }
+}
 const lerBase = () => Promise.all([
   lerResumo(),
   lerTudo('guia_paginas', '*', 'cidade_slug'),
   lerTudo('guia_interesses', '*', 'criado_em'),
+  lerImagensDasCategorias(),
 ])
 
 // a cidade escolhida fica no aparelho
@@ -247,6 +258,7 @@ export default function Guia() {
   const lugares = carga.cidade !== null && carga.cidade === cidade ? carga.lista : null
   const [paginas, setPaginas] = useState(null)
   const [interesses, setInteresses] = useState(null)
+  const [imagensCategorias, setImagensCategorias] = useState({}) // 3.33: { categoria: url } (guia_categorias, migração 180)
   const [erro, setErro] = useState('')
   const [gerando, setGerando] = useState({})   // id -> { espera: segundos de limite }
   const [falhas, setFalhas] = useState({})     // id -> mensagem de erro da última geração
@@ -273,9 +285,9 @@ export default function Guia() {
   const montado = useRef(true)
 
   // a base (totais, páginas, interesses): na abertura e ao ler de novo (depois de importar ou do lote)
-  const aplicarBase = useCallback(([r, p, i]) => {
+  const aplicarBase = useCallback(([r, p, i, m]) => {
     if (!montado.current) return
-    setResumo(r); setPaginas(p); setInteresses(i); setErro('')
+    setResumo(r); setPaginas(p); setInteresses(i); setImagensCategorias(m ?? {}); setErro('')
     // a cidade: a lembrada ou a com mais trabalho; a escolhida some do resumo (apagou a cidade) -> outra
     setCidade((c) => (c === null || (c && Array.isArray(r) && !r.some((x) => x.cidade_slug === c)) ? cidadeInicial(r) : c))
     // os salões que os interesses citam, de qualquer cidade (a lista carregada é de uma só)
@@ -549,6 +561,13 @@ export default function Guia() {
     mudarPagina(id, { ...campos, atualizado_em: agora() })
     return { ok: true }
   }, [mudarPagina])
+  // 3.33: a imagem de uma categoria, igual para todas as cidades (guia_categorias, migração 180); null tira
+  const salvarImagemCategoria = useCallback(async (categoria, foto) => {
+    const { error } = await supabase.from('guia_categorias').upsert({ categoria, foto: foto || null }, { onConflict: 'categoria' })
+    if (error) return { ok: false, erro: /guia_categorias/.test(error.message) && /exist|schema cache|relation/i.test(error.message) ? 'O banco ainda não tem as imagens das categorias. Rode a migração 180 (supabase/180_imagens_das_categorias.sql).' : error.message }
+    setImagensCategorias((m) => { const n = { ...m }; if (foto) n[categoria] = foto; else delete n[categoria]; return n })
+    return { ok: true }
+  }, [])
   // 3.32: o pedido pronto (sistema + pedido) de um salão ou de uma página, para escrever fora; sem IA
   const pedidoParaIa = useCallback(async (tipo, id) => {
     const r = await chamarGerador({ [tipo === 'lugar' ? 'lugar' : 'pagina']: id, prompt: true })
@@ -689,7 +708,7 @@ export default function Guia() {
     cidade: cidade ?? '', cidades, escolherCidade, resumo: resumoVivo, lugarPorId: achar, ia, setIa,
     faseDe, temTexto, temRascunho, temConteudo, carregarTexto, gerando, falhas, lote, usuario: user?.id ?? null,
     carregar, salvarLugar, montarUm, gerarUm, iniciarLote, pausarLote, cancelarLote, fecharLote, aprovar, desfazerAprovacao,
-    gerarPagina, aprovarPagina, salvarContexto, sugerirContexto, escreverContextos, contextos, salvarPagina, pedidoParaIa, conferirTexto, salvarInteresse, importar, avisar, irPara,
+    gerarPagina, aprovarPagina, salvarContexto, sugerirContexto, escreverContextos, contextos, salvarPagina, pedidoParaIa, conferirTexto, imagensCategorias, salvarImagemCategoria, salvarInteresse, importar, avisar, irPara,
     desempenho, carregarDesempenho, desempenhoPorLugar,
   }
 

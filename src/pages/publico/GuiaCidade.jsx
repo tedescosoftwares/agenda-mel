@@ -227,8 +227,12 @@ function Cidade({ dados }) {
     return panoramaDaCidade({ cidade, categoria, lugares, horas: colecoes ? (colecoes.horas?.[categoria] ?? null) : undefined })
   }, [cidade, categoria, lugares, colecoes, completa])
   const faq = juntarFaq(pagina?.faq ?? [], panorama.faq ?? [])
-  // 3.32: a foto da cidade (Plataforma, migração 177) é a imagem do link e entra no JSON-LD
-  useSeo({ titulo: seo.titulo, descricao: seo.descricao, caminho: seo.caminho, imagem: dados.foto || undefined, jsonLd: jsonLdDaCidade({ ...dados, lugares }, faq) })
+  // 3.32: a foto da cidade (Plataforma, migração 177) é a imagem do link e entra no JSON-LD; 3.33: na página de
+  // categoria, a imagem da categoria (migração 180) vem antes. O fundo esticado do topo é a imagem da categoria
+  // (categoria) ou a foto da cidade; a foto da cidade vira o cartão do canto quando as duas existem
+  const fundo = (cat && dados.imagem) || dados.foto || null
+  const cartaoDaCidade = cat && dados.imagem && dados.foto ? dados.foto : null
+  useSeo({ titulo: seo.titulo, descricao: seo.descricao, caminho: seo.caminho, imagem: fundo || undefined, jsonLd: jsonLdDaCidade({ ...dados, lugares, foto: fundo }, faq) })
   // o que a lista mostra e quantos faltam: com filtro, dos filtrados; sem filtro, do total da cidade (ou da categoria)
   const visiveis = Math.min(limite, filtrados.length)
   const restam = (precisaDeTudo || completa ? filtrados.length : totalDaLista) - visiveis
@@ -244,7 +248,8 @@ function Cidade({ dados }) {
 
   return (
     <>
-      <section className="gd-cidade-heroi">
+      <section className={'gd-cidade-heroi' + (fundo ? ' gd-com-fundo' : '')}>
+        {fundo && <div className="gd-cidade-fundo-foto" aria-hidden="true" data-teste="fundo-da-cidade"><img src={fundo} alt="" fetchPriority="high" decoding="async" /></div>}
         <div className="gd-wrap">
           <Migalhas trilha={trilha} />
           <div className="gd-cidade-grade">
@@ -259,9 +264,9 @@ function Cidade({ dados }) {
               </div>
             </div>
             <div className="gd-cidade-lado">
-            {dados.foto && (
+            {cartaoDaCidade && (
               <figure className="gd-cidade-foto" data-teste="foto-da-cidade">
-                <img src={dados.foto} alt={`${cidade}${dados.uf ? `, ${dados.uf}` : ''}`} fetchPriority="high" decoding="async" />
+                <img src={cartaoDaCidade} alt={`${cidade}${dados.uf ? `, ${dados.uf}` : ''}`} decoding="async" />
                 <figcaption>{cidade}{dados.uf ? `, ${dados.uf}` : ''}</figcaption>
               </figure>
             )}
@@ -275,9 +280,9 @@ function Cidade({ dados }) {
                 const atual = c.categoria === categoria
                 const quem = quemEsta(c.nomes, c.total) // 3.19: "Studio Lírio, Unhas da Ana e mais 1"
                 return (
-                  <Link key={c.categoria} to={rotaDaCategoria(cslug, c.categoria)} className={`gd-tile gd-tom-${c.categoria}` + (c.foto ? ' gd-tile-com-foto' : '') + (atual ? ' gd-tile-on' : '')} aria-current={atual ? 'page' : undefined} style={{ '--i': i + 1 }} title={k.resumo || undefined}>
-                    {c.foto
-                      ? <img className="gd-tile-foto" src={miniatura(c.foto)} data-cheia={c.foto} onError={paraFotoInteira} alt="" decoding="async" />
+                  <Link key={c.categoria} to={rotaDaCategoria(cslug, c.categoria)} className={`gd-tile gd-tom-${c.categoria}` + (c.foto || c.imagem ? ' gd-tile-com-foto' : '') + (atual ? ' gd-tile-on' : '')} aria-current={atual ? 'page' : undefined} style={{ '--i': i + 1 }} title={k.resumo || undefined}>
+                    {c.foto || c.imagem
+                      ? <img className="gd-tile-foto" src={miniatura(c.foto || c.imagem)} data-cheia={c.foto || c.imagem} onError={paraFotoInteira} alt="" decoding="async" />
                       : <IconeCategoria slug={c.categoria} className="gd-tile-fundo" strokeWidth={1.2} aria-hidden="true" />}
                     <span className="gd-tile-ic"><IconeCategoria slug={c.categoria} size={18} /></span>
                     <span className="gd-tile-txt"><b>{k.rotulo}</b><small>{plural(c.total, 'lugar', 'lugares')}</small>{quem && <em>{quem}</em>}</span>

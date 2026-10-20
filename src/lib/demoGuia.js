@@ -285,6 +285,10 @@ function vizinhos(l, quantos = 6) {
   const d = (o) => (l.latitude != null && o.latitude != null ? (o.latitude - l.latitude) ** 2 + ((o.longitude - l.longitude) * Math.cos((l.latitude * Math.PI) / 180)) ** 2 : o.bairro === l.bairro ? 0 : 1e9)
   return GUIA_LUGARES.filter((o) => o.cidade_slug === l.cidade_slug && o.id !== l.id && noAr(o)).sort((a, b) => d(a) - d(b) || a.nome.localeCompare(b.nome)).slice(0, quantos).map(cartao)
 }
+// 3.33: a imagem de cada categoria (guia_categorias, migração 180), igual para todas as cidades; no demo, só a de cabelo,
+// para a página de cabelo mostrar a mescla (imagem da categoria esticada + a foto da cidade no quadro) e as outras a reserva
+export const GUIA_CATEGORIAS_IMAGENS = [{ categoria: 'cabelo', foto: '/imagens/profissional-1400.webp', atualizado_em: dias(3) }]
+const imagemDaCategoria = (cat) => GUIA_CATEGORIAS_IMAGENS.find((x) => x.categoria === cat && x.foto)?.foto ?? null
 function cidades() {
   const por = new Map()
   for (const l of GUIA_LUGARES.filter(noAr)) {
@@ -336,7 +340,8 @@ export const GUIA_RPC = {
     const daCidadePagina = GUIA_PAGINAS.find((p) => p.cidade_slug === c && p.categoria === '')
     return {
       cidade: daCidade[0].cidade, cidade_slug: c, uf: daCidade[0].uf, categoria: cat, pagina: pagina?.conteudo ?? null, foto: daCidadePagina?.foto || null, total: daCidade.length,
-      categorias: categoriasDaLista([...daCidade].sort(ordemLista), (l) => fotosDe(l)[0] ?? null), bairros: contar(lista, 'bairro'), lugares: [...lista].sort(ordemLista).map(cartao),
+      imagem: cat ? imagemDaCategoria(cat) : null,
+      categorias: categoriasDaLista([...daCidade].sort(ordemLista), (l) => fotosDe(l)[0] ?? null).map((k) => ({ ...k, imagem: imagemDaCategoria(k.categoria) })), bairros: contar(lista, 'bairro'), lugares: [...lista].sort(ordemLista).map(cartao),
     }
   },
   guia_pagina: (a) => {
@@ -407,8 +412,10 @@ export const GUIA_RPC = {
   },
   guia_publicadas: () => ({
     lugares: [...GUIA_LUGARES.filter(noAr)].sort(ordemLista).map((l) => ({ ...publico(l), vizinhos: vizinhos(l) })),
-    paginas: GUIA_PAGINAS.filter((p) => p.status === 'publicado' && p.conteudo).map((p) => ({ cidade_slug: p.cidade_slug, categoria: p.categoria, conteudo: p.conteudo, atualizado_em: p.atualizado_em })),
+    // como a 177: a página publicada com texto, e a linha da cidade só com a foto (o texto só quando publicado)
+    paginas: GUIA_PAGINAS.filter((p) => (p.status === 'publicado' && p.conteudo) || p.foto).map((p) => ({ cidade_slug: p.cidade_slug, categoria: p.categoria, conteudo: p.status === 'publicado' ? p.conteudo ?? null : null, foto: p.foto ?? null, atualizado_em: p.atualizado_em })),
     cidades: cidades(),
+    categorias_imagens: Object.fromEntries(GUIA_CATEGORIAS_IMAGENS.filter((x) => x.foto).map((x) => [x.categoria, x.foto])),
   }),
   // o dono manda as fotos (165): o link da Marta (gi4) abre a página do Ateliê
   guia_fotos_dono: (a) => {

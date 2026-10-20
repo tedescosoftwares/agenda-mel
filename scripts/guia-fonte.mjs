@@ -9,8 +9,9 @@
 // disco (.cache/guia/<cidade>.json), e os vizinhos são calculados aqui, em memória. Uma rodada
 // de hora em hora sem novidade pede alguns KB por cidade.
 //
-//   carregarGuia({ url, chave, cacheDir, refazer }) -> { lugares, paginas, cidades }
+//   carregarGuia({ url, chave, cacheDir, refazer }) -> { lugares, paginas, cidades, categorias_imagens }
 //     lugares  todos os salões no ar, na ordem do site, cada um com "vizinhos" (os 6 mais perto)
+//     categorias_imagens  { categoria: url } (3.33, migração 180): a imagem de cada categoria, igual em todas as cidades
 //   lerCidade({ buscar, slug, cacheDir })            uma cidade (buscar(slug, desde) é a chamada ao banco)
 //   vizinhosDe(l, todos) / mesmaCategoriaDe(l, todos) / cartaoDe(l)   o mesmo cartão de guia_cartao()
 //
@@ -39,7 +40,8 @@ function gravarCache(arq, c) {
   fs.writeFileSync(tmp, JSON.stringify(c))
   fs.renameSync(tmp, arq)
 }
-const montar = (c) => ({ cidade: c.cidade, cidade_slug: c.cidade_slug, uf: c.uf, lugares: c.ordem.map((s) => c.lugares[s]).filter(Boolean), paginas: Array.isArray(c.paginas) ? c.paginas : [] })
+const mapa = (m) => (m && typeof m === 'object' && !Array.isArray(m) ? m : null)
+const montar = (c) => ({ cidade: c.cidade, cidade_slug: c.cidade_slug, uf: c.uf, lugares: c.ordem.map((s) => c.lugares[s]).filter(Boolean), paginas: Array.isArray(c.paginas) ? c.paginas : [], categorias_imagens: mapa(c.categorias_imagens) })
 
 export async function lerCidade({ buscar, slug, cacheDir, refazer = false, agora = Date.now(), log = () => {} }) {
   const arq = arquivoDe(cacheDir, slug)
@@ -66,6 +68,8 @@ export async function lerCidade({ buscar, slug, cacheDir, refazer = false, agora
   const novo = {
     versao: VERSAO_DO_CACHE, cidade: r?.cidade ?? cache?.cidade ?? slug, cidade_slug: slug, uf: r?.uf ?? cache?.uf ?? 'SP',
     agora: r?.agora ?? new Date(agora).toISOString(), ordem, lugares, paginas: Array.isArray(r?.paginas) ? r.paginas : [],
+    // a primeira fatia traz as imagens das categorias (180); um banco sem a 180 não manda nada e fica o que o cache tinha
+    categorias_imagens: mapa(r?.categorias_imagens) ?? mapa(cache?.categorias_imagens),
   }
   gravarCache(arq, novo)
   return { ...montar(novo), novos: (r?.lugares ?? []).length, inteira: !desde }
@@ -136,13 +140,15 @@ export async function carregarGuia({ url, chave, cacheDir, refazer = false, log 
   if (!Array.isArray(cidades)) throw new Error('guia_cidades não devolveu a lista de cidades')
   const lugares = [], paginas = []
   let novos = 0, doCache = 0
+  // as imagens das categorias valem para todas as cidades: a de uma cidade lida do banco nesta rodada; senão, a do cache
+  let imagens = null, imagensDoCache = null
   for (const c of cidades) {
     if (!c?.cidade_slug) continue
     const d = await lerCidade({ buscar: (slug, desde) => buscarCidade(rpc, slug, desde, fatia, chaveGerador), slug: c.cidade_slug, cacheDir, refazer, log })
     lugares.push(...comVizinhos(d.lugares))
     paginas.push(...d.paginas)
     novos += d.novos ?? 0
-    if (d.doCache) doCache++
+    if (d.doCache) { doCache++; imagensDoCache ??= d.categorias_imagens } else imagens ??= d.categorias_imagens
   }
   // cidade que saiu do guia não deixa cache para trás
   try {
@@ -151,5 +157,5 @@ export async function carregarGuia({ url, chave, cacheDir, refazer = false, log 
     }
   } catch { /* ainda sem a pasta */ }
   log(`guia-fonte: ${cidades.length} cidade(s), ${lugares.length} salões no ar, ${novos} lido(s) do banco nesta rodada${doCache ? `, ${doCache} cidade(s) do cache por falha no banco` : ''}`)
-  return { lugares, paginas, cidades }
+  return { lugares, paginas, cidades, categorias_imagens: imagens ?? imagensDoCache ?? {} }
 }

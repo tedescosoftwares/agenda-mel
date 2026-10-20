@@ -15,7 +15,7 @@ import { modeloDePagina } from './paginas'
 import { PAGINAS_SEO, PAGINAS_INSTITUCIONAIS } from '../conteudo/paginasSeo'
 import CATALOGO_V1 from '../../supabase/catalogo/catalogo_v1.json'
 import { arvoreParaLinhas } from './catalogoBusca'
-import { GUIA_LUGARES, GUIA_PAGINAS, GUIA_INTERESSES, GUIA_RPC } from './demoGuia'
+import { GUIA_LUGARES, GUIA_PAGINAS, GUIA_INTERESSES, GUIA_CATEGORIAS_IMAGENS, GUIA_RPC } from './demoGuia'
 import { ABORDAGEM_RPC } from './demoAbordagem'
 import { REIVINDICAR_RPC } from './demoReivindicar'
 import { BUSCAS_RPC } from './demoBuscas'
@@ -176,6 +176,7 @@ const TABELAS = {
   },
   guia_paginas: GUIA_PAGINAS,
   guia_interesses: GUIA_INTERESSES,
+  guia_categorias: GUIA_CATEGORIAS_IMAGENS, // 3.33: a imagem de cada categoria (migração 180)
   pagamentos: [
     { id: 'pg5', appointment_id: 'apdev', client_id: 'c1', salon_id: SALAO, status: 'estornado', valor_cents: 3000, total_cents: 6000, sinal_pct: 50, liquido_cents: 2801, estorno_cents: 2801, pago_em: mais(-3) + 'T10:12:00', estornado_em: mais(-1) + 'T18:25:00', motivo_estorno: 'cancelado pela casa', cobranca_id: 'pay_demo_2k9x1', termos_aceitos_em: mais(-3) + 'T10:10:00', criado_em: mais(-3) },
     { id: 'pg0', appointment_id: 'ap3', client_id: 'c1', salon_id: SALAO, status: 'pago', valor_cents: 3500, total_cents: 3500, sinal_pct: 100, pago_em: mais(-13) + 'T18:02:00', criado_em: mais(-13), cobranca_id: 'pay_demo_2m9q1', termos_aceitos_em: mais(-13) + 'T18:00:00', appointments: { service_name: 'Manicure', date: mais(-12), start_time: '09:00:00', profiles: { full_name: 'Juliana Silva' } } },
@@ -570,6 +571,7 @@ function consulta(linhas, tabela = '') {
   const guarda = tabela.startsWith('guia_')
   let mudanca = null
   let apagar = false
+  let inserir = null // upsert no guia (3.33): { linhas, chave } entra ou troca pela chave
   const filtros = []
   let ordem = null
   let limite = null
@@ -593,9 +595,17 @@ function consulta(linhas, tabela = '') {
     single: () => { unico = true; return q },
     insert: () => q,
     update: (v) => { if (guarda) mudanca = v; return q },
-    upsert: () => q,
+    upsert: (v, o) => { if (guarda) inserir = { linhas: [].concat(v ?? []), chave: o?.onConflict || 'id' }; return q },
     delete: () => { if (guarda) apagar = true; return q },
     then: (ok) => {
+      if (guarda && inserir) {
+        const quando = new Date().toISOString()
+        for (const nova of inserir.linhas) {
+          const x = linhas.find((r) => r[inserir.chave] === nova[inserir.chave])
+          if (x) Object.assign(x, nova, { atualizado_em: quando }); else linhas.push({ ...nova, atualizado_em: quando })
+        }
+        return ok({ data: inserir.linhas, error: null, count: inserir.linhas.length })
+      }
       if (guarda && (mudanca || apagar)) {
         const alvo = linhas.filter((x) => filtros.every((f) => f(x)))
         if (apagar) for (const x of alvo) linhas.splice(linhas.indexOf(x), 1)

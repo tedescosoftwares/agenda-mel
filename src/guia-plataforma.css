@@ -539,6 +539,13 @@
 .pg-cidade-foto-acoes { display: flex; flex-direction: column; gap: 0.4rem; }
 .pg-cidade-foto-acoes label.btn { cursor: pointer; }
 .pg-cidade-foto-acoes label.btn.desligado { opacity: 0.6; pointer-events: none; }
+/* a spec da imagem e o pedido pronto para o GPT (3.33) */
+.pg-imagem-spec { margin-top: 0.6rem; padding-top: 0.5rem; border-top: 1px dashed var(--fio); font-size: 0.76rem; color: var(--texto-2); }
+.pg-imagem-spec > b { display: block; margin-bottom: 0.2rem; font-size: 0.78rem; }
+.pg-imagem-spec ul { margin: 0; padding-left: 1.1rem; display: grid; gap: 0.15rem; }
+.pg-imagem-pedido { display: flex; gap: 0.5rem; align-items: flex-start; flex-wrap: wrap; margin-top: 0.4rem; color: var(--texto-3); }
+.pg-imagem-pedido span { flex: 1 1 260px; }
+.pg-imagem-pedido q { font-style: italic; }
 /* a conferência do texto (3.32.1) */
 .pg-conferencia { display: flex; flex-direction: column; gap: 0.5rem; }
 .pg-conferencia .alert ul, .pg-conferencia .alert b { margin: 0; }

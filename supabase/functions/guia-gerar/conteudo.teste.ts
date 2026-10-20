@@ -961,6 +961,9 @@ teste('o Claude entra nos provedores: chave, modelo, esforço, escolha e padrão
   assert.ok('provedor' in r1 && r1.provedor.id === 'claude' && r1.provedor.chave === 'sk-ant-1')
   const r2 = escolherProvedor('', tres, 'claude')
   assert.ok('provedor' in r2 && r2.provedor.id === 'claude', 'GUIA_IA_PADRAO=claude vale quando ninguém escolhe')
+  // 3.33.1: chave de organização pede o workspace; sem o segredo, o cabeçalho não vai
+  assert.equal(provedoresDe(env({ ANTHROPIC_API_KEY: 'sk-ant-1', ANTHROPIC_WORKSPACE_ID: ' wrkspc_01ABC ' })).claude.workspace, 'wrkspc_01ABC')
+  assert.equal(provedoresDe(env({ ANTHROPIC_API_KEY: 'sk-ant-1' })).claude.workspace, undefined)
   const soClaude = provedoresDe(env({ ANTHROPIC_API_KEY: 'sk-ant-1', GUIA_IA_MODELO_CLAUDE: 'claude-sonnet-5-5', GUIA_IA_ESFORCO_CLAUDE: 'HIGH' }))
   const r3 = escolherProvedor(undefined, soClaude)
   assert.ok('provedor' in r3 && r3.provedor.id === 'claude' && r3.provedor.modelo === 'claude-sonnet-5-5' && r3.provedor.esforco === 'high', 'sem Gemini, o Claude vem antes do Groq; o modelo e o esforço dos segredos')
@@ -1030,6 +1033,9 @@ teste('a leitura do Claude: texto e citações, recusa, cortado, pausa, limite, 
   assert.ok(beta.tipo === 'parametro_recusado' && beta.parametro === 'fallbacks')
   assert.equal(lerRespostaClaude(erroClaude(400, 'invalid_request_error', 'tools.0: web search is not enabled for this organization')).tipo, 'sem_pesquisa')
   assert.ok(/recusou o pedido \(400\)/.test((lerRespostaClaude(erroClaude(400, 'invalid_request_error', 'messages: roles must alternate')) as { erro: string }).erro))
+  // 3.33.1: chave de organização sem workspace: o erro diz o segredo que resolve
+  const semWs = lerRespostaClaude(erroClaude(400, 'invalid_request_error', 'This API key is not scoped to a workspace, so this request must include the anthropic-workspace-id header with the ID of the workspace to use.')) as { tipo: string; erro: string }
+  assert.ok(semWs.tipo === 'erro' && /ANTHROPIC_WORKSPACE_ID/.test(semWs.erro) && /workspace/i.test(semWs.erro), semWs.erro)
   assert.ok(/recusada pelo provedor \(401\): invalid x-api-key/.test((lerRespostaClaude(erroClaude(401, 'authentication_error', 'invalid x-api-key')) as { erro: string }).erro))
   assert.ok(/sem créditos \(402\)/.test((lerRespostaClaude(erroClaude(402, 'billing_error', 'Your credit balance is too low')) as { erro: string }).erro))
   assert.ok(/não achou o modelo: model: claude-x/.test((lerRespostaClaude(erroClaude(404, 'not_found_error', 'model: claude-x')) as { erro: string }).erro))

@@ -320,6 +320,9 @@ GEMINI_API_KEY=...               3.27: a chave do AI Studio
 GUIA_IA_MODELO_GEMINI=gemini-3-flash-preview   opcional; é o padrão. Recusado pelo Google (403 sem faturamento, 404 fora do ar),
                                  a função escreve com gemini-flash-latest (ou gemini-flash-lite-latest) e avisa (3.31.1)
 ANTHROPIC_API_KEY=...            3.31: a chave de platform.claude.com (API Keys)
+ANTHROPIC_WORKSPACE_ID=wrkspc_...  3.33.1: só para chave de organização (a API responde 400 pedindo o cabeçalho
+                                 anthropic-workspace-id); o ID fica em Settings → Workspaces. Chave criada dentro de um
+                                 workspace não precisa
 GUIA_IA_MODELO_CLAUDE=claude-opus-5-5          opcional; é o padrão (claude-sonnet-5-5 e claude-haiku-5-5 custam menos)
 GUIA_IA_ESFORCO_CLAUDE=medium    opcional: low, medium, high, xhigh ou max
 GUIA_IA_PADRAO=gemini            opcional: gemini, groq ou claude, quando o pedido não escolhe

@@ -199,13 +199,14 @@ export const esforcoClaude = (v: unknown): string => (ESFORCOS_CLAUDE.includes(S
 export const MAX_TOKENS_CLAUDE = 16_000 // o raciocínio conta aqui dentro; sem streaming, este é o teto recomendado
 export type IdProvedor = 'gemini' | 'groq' | 'claude'
 export const IDS_PROVEDOR: readonly IdProvedor[] = ['gemini', 'groq', 'claude']
-export type Provedor = { id: IdProvedor; nome: string; url: string; chave: string; modelo: string; segredo: string; esforco?: string }
+// workspace (3.33.1): o ID do workspace da Anthropic, para chave de organização (a API exige o cabeçalho anthropic-workspace-id)
+export type Provedor = { id: IdProvedor; nome: string; url: string; chave: string; modelo: string; segredo: string; esforco?: string; workspace?: string }
 export function provedoresDe(env: { get(nome: string): string | undefined | null }): Record<IdProvedor, Provedor> {
   const v = (n: string) => String(env.get(n) ?? '').trim()
   return {
     gemini: { id: 'gemini', nome: 'Gemini', url: URL_GEMINI, chave: v('GEMINI_API_KEY'), modelo: v('GUIA_IA_MODELO_GEMINI') || MODELO_GEMINI_PADRAO, segredo: 'GEMINI_API_KEY' },
     groq: { id: 'groq', nome: 'Groq', url: v('GUIA_IA_URL') || URL_GROQ, chave: v('GUIA_IA_CHAVE') || v('GROQ_API_KEY'), modelo: v('GUIA_IA_MODELO') || MODELO_PADRAO, segredo: 'GROQ_API_KEY' },
-    claude: { id: 'claude', nome: 'Claude', url: URL_CLAUDE, chave: v('ANTHROPIC_API_KEY'), modelo: v('GUIA_IA_MODELO_CLAUDE') || MODELO_CLAUDE_PADRAO, segredo: 'ANTHROPIC_API_KEY', esforco: esforcoClaude(v('GUIA_IA_ESFORCO_CLAUDE')) },
+    claude: { id: 'claude', nome: 'Claude', url: URL_CLAUDE, chave: v('ANTHROPIC_API_KEY'), modelo: v('GUIA_IA_MODELO_CLAUDE') || MODELO_CLAUDE_PADRAO, segredo: 'ANTHROPIC_API_KEY', esforco: esforcoClaude(v('GUIA_IA_ESFORCO_CLAUDE')), workspace: v('ANTHROPIC_WORKSPACE_ID') || undefined },
   }
 }
 const ehProvedor = (x: string): x is IdProvedor => (IDS_PROVEDOR as readonly string[]).includes(x)
@@ -1040,6 +1041,8 @@ export function lerRespostaClaude(r: RespostaHttp): LeituraClaude {
     return { tipo: 'texto', texto, cortado: parada === 'max_tokens', fontes: fontes.slice(0, 8), pesquisou, pausa: parada === 'pause_turn' ? blocos : null }
   }
   if (r.status === 400) {
+    // chave de organização sem workspace (3.33.1): a API quer o cabeçalho anthropic-workspace-id; o segredo resolve
+    if (/anthropic-workspace-id|scoped to a workspace/i.test(mensagem)) return { tipo: 'erro', erro: 'a chave da Anthropic é da organização, não de um workspace: guarde o segredo ANTHROPIC_WORKSPACE_ID (o ID do workspace, em platform.claude.com → Settings → Workspaces) ou crie a chave dentro de um workspace', status: 400 }
     if (/anthropic-beta|fallbacks?\b/i.test(mensagem)) return { tipo: 'parametro_recusado', parametro: 'fallbacks', erro: mensagem.slice(0, 300) }
     if (/output_config|\bformat\b|schema/i.test(mensagem)) return { tipo: 'formato_recusado', erro: mensagem.slice(0, 300) }
     if (/web_search|web search|\btools?\b|allowed_callers|user_location/i.test(mensagem)) return { tipo: 'sem_pesquisa', erro: mensagem.slice(0, 300) }

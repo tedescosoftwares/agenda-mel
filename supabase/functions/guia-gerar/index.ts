@@ -87,10 +87,11 @@ const pedirNativoCom = (prov: Provedor): PedirNativo => async (modelo, corpo, ti
   return { status: r.status, headers: r.headers, texto: await r.text() }
 }
 // a única porta para a rede da IA (conteudo.ts recebe isto e fica testável). O Claude (3.31) fala pela API de Messages:
-// a chave em x-api-key, a versão da API e, quando o corpo leva "fallbacks", o cabeçalho do beta
+// a chave em x-api-key, a versão da API, quando o corpo leva "fallbacks" o cabeçalho do beta e, com ANTHROPIC_WORKSPACE_ID
+// (3.33.1: chave de organização), o workspace
 const pedirCom = (prov: Provedor): Pedir => async (corpo, timeoutMs) => {
   const headers: Record<string, string> = prov.id === 'claude'
-    ? { 'x-api-key': prov.chave, 'anthropic-version': VERSAO_CLAUDE, 'Content-Type': 'application/json', ...(corpo.fallbacks !== undefined ? { 'anthropic-beta': BETA_FALLBACK_CLAUDE } : {}) }
+    ? { 'x-api-key': prov.chave, 'anthropic-version': VERSAO_CLAUDE, 'Content-Type': 'application/json', ...(corpo.fallbacks !== undefined ? { 'anthropic-beta': BETA_FALLBACK_CLAUDE } : {}), ...(prov.workspace ? { 'anthropic-workspace-id': prov.workspace } : {}) }
     : { Authorization: `Bearer ${prov.chave}`, 'Content-Type': 'application/json' }
   const r = await fetch(prov.url, { method: 'POST', headers, body: JSON.stringify(corpo), signal: AbortSignal.timeout(timeoutMs) })
   return { status: r.status, headers: r.headers, texto: await r.text() }

@@ -16,7 +16,7 @@ import Desempenho from '../../components/plataforma/guia/Desempenho'
 import Abordagem from '../../components/plataforma/guia/Abordagem'
 import { naoContarAqui } from '../../lib/eventos'
 import { IAS, iaLembrada, lembrarIa, modeloLembrado, lembrarModelo } from '../../lib/guiaIa'
-import { lerEmFatias, COLUNAS_LISTA, COLUNAS_LISTA_ANTIGAS, colunaFalta, soAFila, soAFilaNaTabela, TETO_TODAS } from '../../lib/guiaPlataformaDados'
+import { lerEmFatias, COLUNAS_LISTA, COLUNAS_LISTA_ANTIGAS, colunaFalta, consultaGlobal, POR_PAGINA } from '../../lib/guiaPlataformaDados'
 import { agruparPorRegiao, regiaoDaCidade } from '../../lib/guiaRegioes'
 import { slugificar } from '../../lib/guia'
 import { ClipboardCheck, Globe2, Upload, MapPinned, Inbox, X, BarChart3, Handshake, MapPin, RefreshCw, LoaderCircle } from 'lucide-react'
@@ -142,21 +142,20 @@ async function rascunhoGravadoDepois(tabela, id, desde) {
   return data?.rascunho && data.gerado_em && new Date(data.gerado_em).getTime() >= desde - 5000 ? data.rascunho : null
 }
 
-// os salões de uma cidade pela lista magra, por fatias com chave (3.36); '' = todas as cidades, e aí só a fila (sem página
-// ou esperando revisão), até TETO_TODAS. aoReceber(lista, fim) a cada fatia. Num banco sem a 181, as colunas de antes;
-// sem a 171, a leitura cheia (já com o texto). Devolve { lista, teto }
+// os salões de uma cidade pela lista magra, por fatias com chave (3.36). aoReceber(lista, fim) a cada fatia. Num banco
+// sem a 181, as colunas de antes; sem a 171, a leitura cheia (já com o texto). Devolve { lista, teto }.
+// "Todas as cidades" não passa por aqui desde a 3.38: a aba pede página por página ao banco (consultarGlobal)
 const semTexto = (ls) => ls.map((l) => ({ ...l, texto_carregado: false }))
-async function lerLugares(cidade = '', aoReceber) {
-  const filtro = (q) => (cidade ? q.eq('cidade_slug', cidade) : soAFila(q))
-  const ler = (colunas) => lerEmFatias({ cliente: supabase, tabela: 'guia_lista', colunas, filtro, teto: cidade ? Infinity : TETO_TODAS, aoReceber: aoReceber && ((ls, fim) => aoReceber(semTexto(ls), fim)) })
+async function lerLugares(cidade, aoReceber) {
+  const filtro = (q) => q.eq('cidade_slug', cidade)
+  const ler = (colunas) => lerEmFatias({ cliente: supabase, tabela: 'guia_lista', colunas, filtro, teto: Infinity, aoReceber: aoReceber && ((ls, fim) => aoReceber(semTexto(ls), fim)) })
   try {
     const r = await ler(COLUNAS_LISTA)
     return { lista: semTexto(r.lista), teto: r.teto }
   } catch (e) {
     if (colunaFalta(e)) { const r = await ler(COLUNAS_LISTA_ANTIGAS); return { lista: semTexto(r.lista), teto: r.teto } }
     if (!/guia_lista/.test(String(e?.message ?? e))) throw e
-    const filtroCheio = (q) => (cidade ? q.eq('cidade_slug', cidade) : soAFilaNaTabela(q))
-    return { lista: (await lerTudo('guia_lugares', COLUNAS_LUGAR, 'nome', filtroCheio)).map(comFlags), teto: false }
+    return { lista: (await lerTudo('guia_lugares', COLUNAS_LUGAR, 'nome', filtro)).map(comFlags), teto: false }
   }
 }
 // os totais por cidade e por fase (3.25, migração 174): alguns KB. false num banco sem a 174: aí a tela lê tudo, como antes
@@ -242,6 +241,7 @@ const somarResumo = (linhas) => {
 }
 
 const dormir = (ms) => new Promise((r) => setTimeout(r, ms))
+const NADA = Object.freeze([]) // a lista vazia de sempre (a mesma referência: os efeitos não repetem)
 const sem = (obj, k) => { if (!(k in obj)) return obj; const n = { ...obj }; delete n[k]; return n }
 const agora = () => new Date().toISOString()
 
@@ -279,10 +279,13 @@ export default function Guia() {
   // 3.25: os totais por cidade (174), a cidade escolhida e a lista daquela cidade
   const [resumo, setResumo] = useState(null)      // null = lendo; false = banco sem a 174 (tudo de uma vez); [] = por cidade
   const [cidade, setCidade] = useState(null)      // null até saber as cidades; '' = todas; o slug
-  const [carga, setCarga] = useState({ cidade: null, lista: null, parcial: false, teto: false }) // a lista lida e de que cidade ela é; parcial: ainda chegando (3.36)
+  const [carga, setCarga] = useState({ cidade: null, lista: null, parcial: false, teto: false }) // a lista lida e de que cidade ela é; parcial: ainda chegando (3.36); chave: a consulta, em "todas" (3.38)
+  // 3.38: em "todas as cidades" a lista é uma página de POR_PAGINA pedida pela aba: { aba, pagina, paginas, total, lendo, erro }
+  const [consulta, setConsulta] = useState(null)
   const [extras, setExtras] = useState(() => new Map()) // salões fora da lista carregada que a tela cita (os dos interesses)
   const cacheRef = useRef(new Map())              // cidade -> lista, para voltar sem ler de novo
-  const lugares = carga.cidade !== null && carga.cidade === cidade ? carga.lista : null
+  // 3.38: em "todas" vale só a página pedida pela aba (carga.cidade === ''); a lista de uma cidade que ficou não conta
+  const lugares = carga.cidade !== null && carga.cidade === cidade ? carga.lista : cidade === '' ? NADA : null
   const [paginas, setPaginas] = useState(null)
   const [interesses, setInteresses] = useState(null)
   const [imagensCategorias, setImagensCategorias] = useState({}) // 3.33: { categoria: url } (guia_categorias, migração 180)
@@ -295,7 +298,7 @@ export default function Guia() {
   // as métricas (3.11): visitas e contatos por página, do período escolhido
   const [desempenho, setDesempenho] = useState({ dias: 30, dados: null, carregando: true, erro: '' })
   // os filtros e a seleção da aba Revisar moram aqui: trocar de aba não perde o lugar na fila
-  const [rev, setRev] = useState({ status: null, cidade: '', bairro: '', categoria: '', receita: false, selecao: false, triagem: '', busca: '', ordem: 'selecao', selId: null })
+  const [rev, setRev] = useState({ status: null, cidade: '', bairro: '', categoria: '', receita: false, selecao: false, triagem: '', busca: '', ordem: 'selecao', selId: null, pagina: 1 })
 
   const lugaresRef = useRef(lugares)
   useEffect(() => { lugaresRef.current = lugares }, [lugares])
@@ -303,6 +306,8 @@ export default function Guia() {
   useEffect(() => { cidadeRef.current = cidade }, [cidade])
   const resumoRef = useRef(resumo)
   useEffect(() => { resumoRef.current = resumo }, [resumo])
+  const cargaRef = useRef(carga)
+  useEffect(() => { cargaRef.current = carga }, [carga])
   const extrasRef = useRef(extras)
   useEffect(() => { extrasRef.current = extras }, [extras])
   // um salão pelo id: na lista carregada ou entre os que vieram à parte
@@ -331,18 +336,50 @@ export default function Guia() {
   // a lista da cidade escolhida: da memória, se já veio; senão do banco (só aquela cidade)
   const pedidoLista = useRef(0)
   useEffect(() => {
-    if (cidade === null || (carga.cidade === cidade && carga.lista)) return
+    // 3.38: em "todas as cidades" quem pede a lista é a aba, página por página (consultarGlobal)
+    if (cidade === null || cidade === '' || (carga.cidade === cidade && carga.lista)) return
     const guardada = cacheRef.current.get(cidade)
     if (guardada) { setCarga({ cidade, lista: guardada }); return }
     const n = ++pedidoLista.current
+    const vale = () => montado.current && n === pedidoLista.current && cidadeRef.current === cidade
     // 3.36: cada fatia de mil já aparece na tela; a lista fica "parcial" até a última chegar
-    const aoReceber = (lista, fim) => { if (!fim && montado.current && n === pedidoLista.current) setCarga({ cidade, lista, parcial: true, teto: false }) }
+    const aoReceber = (lista, fim) => { if (!fim && vale()) setCarga({ cidade, lista, parcial: true, teto: false }) }
     lerLugares(cidade, aoReceber).then(
-      ({ lista, teto }) => { if (montado.current && n === pedidoLista.current) setCarga({ cidade, lista, parcial: false, teto }) },
-      (e) => { if (montado.current && n === pedidoLista.current) { falhouLeitura(e); setCarga({ cidade, lista: [], parcial: false, teto: false }) } },
+      ({ lista, teto }) => { if (vale()) setCarga({ cidade, lista, parcial: false, teto }) },
+      (e) => { if (vale()) { falhouLeitura(e); setCarga({ cidade, lista: [], parcial: false, teto: false }) } },
     )
   }, [cidade, carga, falhouLeitura])
-  useEffect(() => { if (carga.lista && carga.cidade !== null && !carga.parcial) cacheRef.current.set(carga.cidade, carga.lista) }, [carga])
+  useEffect(() => { if (carga.lista && carga.cidade && !carga.parcial) cacheRef.current.set(carga.cidade, carga.lista) }, [carga])
+  // 3.38: uma página de "todas as cidades", com os filtros e a ordem da aba. pedido: { aba, filtros, ordem, pagina }.
+  // A mesma consulta já na tela (ou a caminho) não vai de novo; forcar relê (o botão "ler de novo")
+  const pedidoGlobal = useRef(0)
+  const emVooRef = useRef(null)
+  const ultimaConsultaRef = useRef(null)
+  const consultarGlobal = useCallback(async (pedido, { forcar = false } = {}) => {
+    const chave = JSON.stringify(pedido)
+    ultimaConsultaRef.current = pedido
+    const c = cargaRef.current
+    if (!forcar && (emVooRef.current === chave || (c.cidade === '' && c.lista && c.chave === chave))) return
+    const n = ++pedidoGlobal.current
+    emVooRef.current = chave
+    setConsulta((x) => ({ aba: pedido.aba, pagina: pedido.pagina ?? 1, paginas: x?.paginas ?? 1, total: x?.total ?? 0, porPagina: POR_PAGINA, lendo: true, erro: '' }))
+    const vale = () => montado.current && n === pedidoGlobal.current && cidadeRef.current === ''
+    try {
+      const r = await consultaGlobal({ cliente: supabase, colunas: COLUNAS_LISTA, filtros: pedido.filtros, ordem: pedido.ordem, pagina: pedido.pagina })
+      if (!vale()) return
+      emVooRef.current = null
+      setCarga({ cidade: '', lista: semTexto(r.lista), parcial: false, teto: false, chave })
+      setConsulta({ aba: pedido.aba, pagina: r.pagina, paginas: r.paginas, total: r.total, porPagina: POR_PAGINA, lendo: false, erro: '' })
+    } catch (e) {
+      if (!vale()) return
+      emVooRef.current = null
+      const msg = String(e?.message ?? e)
+      const texto = /guia_lista/.test(msg) && /exist|schema cache/i.test(msg) ? 'A lista de todas as cidades por páginas precisa das migrações 171 a 183 (supabase/183_lista_paginada.sql).' : msg
+      setErro(texto)
+      setCarga({ cidade: '', lista: [], parcial: false, teto: false, chave })
+      setConsulta({ aba: pedido.aba, pagina: pedido.pagina ?? 1, paginas: 1, total: 0, porPagina: POR_PAGINA, lendo: false, erro: texto })
+    }
+  }, [])
   // trocar de cidade (o seletor do topo, a importação, um salão pedido de outra aba)
   const escolherCidade = useCallback((slug) => {
     const s = String(slug ?? '')
@@ -355,11 +392,17 @@ export default function Guia() {
     cacheRef.current.clear()
     const c = cidadeRef.current ?? ''
     try {
+      // 3.38: em "todas" a base de novo e a mesma página de novo
+      if (c === '') {
+        aplicarBase(await lerBase())
+        if (ultimaConsultaRef.current) await consultarGlobal(ultimaConsultaRef.current, { forcar: true })
+        return
+      }
       const [base, lista] = await Promise.all([lerBase(), lerLugares(c)])
       aplicarBase(base)
-      if (montado.current) setCarga({ cidade: c, lista })
+      if (montado.current && cidadeRef.current === c) setCarga({ cidade: c, lista })
     } catch (e) { falhouLeitura(e) }
-  }, [aplicarBase, falhouLeitura])
+  }, [aplicarBase, falhouLeitura, consultarGlobal])
 
   // quem trabalha na Plataforma não conta como visita no site (dá para desligar na aba Desempenho)
   useEffect(() => { naoContarAqui(true) }, [])
@@ -754,17 +797,19 @@ export default function Guia() {
     if (destino !== 'revisar' || !filtro) return
     const { emCidade, ...f } = filtro
     // indo para um salão certo, os outros filtros saem do caminho para ele aparecer
-    const limpo = { busca: '', cidade: '', categoria: '', receita: false, selecao: false, triagem: '' }
-    const aplicar = () => setRev((r) => ({ ...r, ...(f.selId ? limpo : {}), ...f, selId: f.selId ?? null }))
-    if (!f.selId || cidadeRef.current === '' || (lugaresRef.current ?? []).some((l) => l.id === f.selId)) { aplicar(); return }
+    const limpo = { busca: '', cidade: '', bairro: '', categoria: '', receita: false, selecao: false, triagem: '' }
+    const aplicar = () => setRev((r) => ({ ...r, ...(f.selId ? limpo : {}), ...f, selId: f.selId ?? null, pagina: 1 }))
+    // 3.38: em "todas as cidades" a lista é uma página; o salão pedido que não está nela abre na cidade dele
+    if (!f.selId || (lugaresRef.current ?? []).some((l) => l.id === f.selId)) { aplicar(); return }
     const ir = (slug) => { if (slug && slug !== cidadeRef.current) escolherCidade(slug); aplicar() }
     if (emCidade) ir(emCidade)
     else cidadeDoLugar(f.selId).then(ir, () => aplicar())
   }, [escolherCidade, cidadeDoLugar])
 
   const g = {
-    lugares: lugares ?? [], paginas: paginas ?? [], interesses: interesses ?? [], carregando: lugares === null, lendo: !!carga.parcial, listaNoTeto: !!carga.teto, erro,
+    lugares: lugares ?? [], paginas: paginas ?? [], interesses: interesses ?? [], carregando: lugares === null, lendo: !!carga.parcial || (cidade === '' && !!consulta?.lendo), listaNoTeto: !!carga.teto, erro,
     cidade: cidade ?? '', cidades, escolherCidade, resumo: resumoVivo, lugarPorId: achar, ia, setIa, modelo: modelos[ia] ?? '', setModelo,
+    paginacao: cidade === '' ? consulta : null, consultarGlobal, // 3.38: a página de "todas as cidades" e como pedir outra
     faseDe, temTexto, temRascunho, temConteudo, carregarTexto, gerando, falhas, lote, usuario: user?.id ?? null,
     carregar, salvarLugar, montarUm, gerarUm, iniciarLote, pausarLote, cancelarLote, fecharLote, aprovar, desfazerAprovacao,
     gerarPagina, aprovarPagina, salvarContexto, sugerirContexto, escreverContextos, contextos, salvarPagina, pedidoParaIa, conferirTexto, imagensCategorias, salvarImagemCategoria, salvarInteresse, importar, avisar, irPara,
@@ -786,15 +831,15 @@ export default function Guia() {
                     {gr.cidades.map((c) => <option key={c.slug} value={c.slug}>{c.nome} · {c.total}{c.esperando ? ` · ${c.esperando} para revisar` : ''}</option>)}
                   </optgroup>
                 ))}
-                <option value="">Todas as cidades · só a fila</option>
+                <option value="">Todas as cidades</option>
               </select>
-              {lugares === null || carga.parcial
+              {lugares === null || carga.parcial || (cidade === '' && consulta?.lendo)
                 ? <LoaderCircle size={14} className="pg-gira" aria-label="lendo a cidade" />
                 : <button type="button" className="pg-cidade-reler" onClick={carregar} title="Ler de novo do banco" aria-label="Ler de novo do banco"><RefreshCw size={14} /></button>}
             </label>
             <small data-teste="cidade-nota">
               {carga.parcial ? `Lendo… ${(lugares ?? []).length} salões já na tela. ` : ''}
-              {cidade ? 'Os números e as abas são desta cidade; só a lista dela é lida.' : `Todas as cidades: só a fila (sem página ou esperando revisão), até ${TETO_TODAS.toLocaleString('pt-BR')}; as páginas no ar você vê por cidade (${totalGeral.toLocaleString('pt-BR')} salões no guia).`}
+              {cidade ? 'Os números e as abas são desta cidade; só a lista dela é lida.' : `Todas as cidades: a lista vem do banco por páginas de ${POR_PAGINA}, já com os filtros da aba (${totalGeral.toLocaleString('pt-BR')} salões no guia).`}
               {carga.teto ? ' A fila passou do teto: escolha uma cidade para ver o resto.' : ''}
             </small>
           </div>

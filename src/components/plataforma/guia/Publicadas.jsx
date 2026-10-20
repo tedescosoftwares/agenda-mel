@@ -1,7 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useDialogo } from '../../../context/DialogoContext'
 import { Painel, Pilula, Vazio } from '../Pecas'
 import EditarLugar from './Editar'
+import Paginador from './Paginador'
+import { useLento } from './useLento'
 import { GUIA_CATEGORIAS, categoriaDoGuia, rotaDoLugar, semAcento, fotosDoLugar, ordemPublica } from '../../../lib/guia'
 import { urlDoAmbiente } from '../../../lib/ambiente'
 import { Globe2, Search, ExternalLink, RefreshCw, Pencil, EyeOff, LoaderCircle, TriangleAlert } from 'lucide-react'
@@ -29,14 +31,26 @@ export default function Publicadas({ g }) {
   const [ordem, setOrdem] = useState('recentes')
   const [editando, setEditando] = useState(null)
   const [mostrar, setMostrar] = useState(150) // 3.24: por partes
+  // 3.38: em "todas as cidades" a lista vem do banco por páginas, já com a busca, a categoria e a ordem (g.consultarGlobal)
+  const global = !g.cidade
+  const pg = global && g.paginacao?.aba === 'publicadas' ? g.paginacao : null
+  const [pagina, setPagina] = useState(1)
+  const buscaLenta = useLento(busca)
+  const consultar = g.consultarGlobal
+  useEffect(() => {
+    if (!global) return
+    consultar({ aba: 'publicadas', filtros: { publicadas: true, categoria, busca: buscaLenta }, ordem, pagina })
+  }, [global, consultar, categoria, buscaLenta, ordem, pagina])
+  const mudar = (fn) => (v) => { fn(v); setPagina(1); setMostrar(150) }
+  const irParaPagina = (n) => { setPagina(Math.max(1, n)); setMostrar(150) }
 
   const lista = useMemo(() => {
     const t = norm(busca).trim()
-    return g.lugares
-      .filter((l) => l.status === 'publicado' && (!categoria || l.categoria === categoria) && (!t || norm(`${l.nome} ${l.bairro ?? ''}`).includes(t)))
-      .sort(ORDENS[ordem] ?? ORDENS.recentes)
-  }, [g.lugares, busca, categoria, ordem])
-  const total = g.lugares.filter((l) => l.status === 'publicado').length
+    const noAr = g.lugares.filter((l) => l.status === 'publicado' && (!categoria || l.categoria === categoria) && (!t || norm(`${l.nome} ${l.bairro ?? ''}`).includes(t)))
+    return global ? noAr : noAr.sort(ORDENS[ordem] ?? ORDENS.recentes) // em "todas" a página já vem na ordem do banco
+  }, [g.lugares, busca, categoria, ordem, global])
+  const total = global ? Number(pg?.total ?? 0) : g.lugares.filter((l) => l.status === 'publicado').length
+  const lendo = g.carregando || (global && (!pg || (pg.lendo && !g.lugares.length)))
 
   async function novaVersao(l) {
     const r = await g.gerarUm(l.id)
@@ -52,8 +66,7 @@ export default function Publicadas({ g }) {
 
   return (
     <Painel Icon={Globe2} titulo="Publicadas" sub={total ? `${total} ${total === 1 ? 'página no ar' : 'páginas no ar'}. Para mudar o texto, gere uma versão nova: ela espera a sua aprovação em Revisar.` : 'As páginas aprovadas aparecem aqui.'}>
-      {!g.cidade && !g.carregando && <p className="pg-nota" data-teste="publicadas-todas">Em "Todas as cidades" a lista traz só a fila (sem página ou esperando revisão). Escolha uma cidade no alto para ver as páginas no ar dela.</p>}
-      {g.carregando ? <Vazio>Carregando…</Vazio> : total === 0 ? (
+      {lendo ? <Vazio>Carregando…</Vazio> : total === 0 && !(global && (busca || categoria)) ? (
         <div className="pg-lista-vazia">
           <p>Nenhuma página no ar ainda.</p>
           <button type="button" className="plat-link" onClick={() => g.irPara('revisar', {})}>Ir para a revisão</button>
@@ -61,12 +74,12 @@ export default function Publicadas({ g }) {
       ) : (
         <>
           <div className="pg-filtros-linha">
-            <label className="pg-busca"><Search size={15} /><input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar nome ou bairro" aria-label="Buscar página" /></label>
-            <select className="plat-select" value={categoria} onChange={(e) => setCategoria(e.target.value)} aria-label="Categoria">
+            <label className="pg-busca"><Search size={15} /><input value={busca} onChange={(e) => mudar(setBusca)(e.target.value)} placeholder="Buscar nome ou bairro" aria-label="Buscar página" /></label>
+            <select className="plat-select" value={categoria} onChange={(e) => mudar(setCategoria)(e.target.value)} aria-label="Categoria">
               <option value="">Todas as categorias</option>
               {GUIA_CATEGORIAS.map((c) => <option key={c.slug} value={c.slug}>{c.rotulo}</option>)}
             </select>
-            <select className="plat-select" value={ordem} onChange={(e) => setOrdem(e.target.value)} aria-label="Ordem da lista">
+            <select className="plat-select" value={ordem} onChange={(e) => mudar(setOrdem)(e.target.value)} aria-label="Ordem da lista">
               <option value="recentes">Mais recentes no ar</option>
               <option value="site">Ordem do site</option>
               <option value="fotos">Mais fotos</option>
@@ -74,7 +87,8 @@ export default function Publicadas({ g }) {
               <option value="nome">A a Z</option>
             </select>
           </div>
-          {lista.length === 0 ? <Vazio>Nada com esses filtros.</Vazio> : (
+          {global && pg && <div className="pg-tabela-pub-paginas"><Paginador pg={pg} onIr={irParaPagina} nomes={['página', 'páginas']} /></div>}
+          {lista.length === 0 ? <Vazio>{global && g.lendo ? 'Lendo a página…' : 'Nada com esses filtros.'}</Vazio> : (
             <div className="pg-tabela-rola">
               <table className="plat-tabela pg-tabela-pub">
                 <thead><tr><th>Salão</th><th>No ar desde</th><th /></tr></thead>

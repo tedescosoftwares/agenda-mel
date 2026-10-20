@@ -5,6 +5,8 @@ import { MolduraPrevia, PreviaGoogle } from './Previa'
 import EditarLugar from './Editar'
 import EmLote from './EmLote'
 import EscolhaIA from './EscolhaIA'
+import Paginador from './Paginador'
+import { useLento } from './useLento'
 import { GUIA_CATEGORIAS, categoriaDoGuia, conteudoSeguro, semAcento, rotaDoLugar, fotosDoLugar, ordemPublica, partesDosPontos } from '../../../lib/guia'
 import { temHorario, nServicos } from '../../../lib/guiaPlataformaDados'
 import { seoDoLugar } from '../../../lib/guiaSeo'
@@ -80,6 +82,9 @@ function ordenar(lista, ordem) {
 
 export default function Revisar({ g, rev, setRev }) {
   const { lugares, faseDe, carregando } = g
+  // 3.38: em "todas as cidades" a lista na tela é uma página do banco, pedida com estes filtros (g.consultarGlobal)
+  const global = !g.cidade
+  const pg = global && g.paginacao?.aba === 'revisar' ? g.paginacao : null
   const [modo, setModoBruto] = useState(() => lerPref('mimo-guia-previa', 'celular'))
   // o pedido para a IA, a versão mostrada e o erro valem para um salão só:
   // trocou de salão, voltam ao começo (guardados junto com o id dele)
@@ -116,16 +121,19 @@ export default function Revisar({ g, rev, setRev }) {
 
   // ---- filtros ----
   const cidades = useMemo(() => {
+    // 3.38: em "todas" a tela tem só uma página; as cidades vêm dos totais do guia
+    if (global && g.cidades.length) return g.cidades.map((c) => [c.slug, c.nome])
     const m = new Map()
     for (const l of lugares) if (!m.has(l.cidade_slug)) m.set(l.cidade_slug, l.cidade)
     return [...m.entries()].sort((a, b) => a[1].localeCompare(b[1], 'pt-BR'))
-  }, [lugares])
-  // os bairros da cidade escolhida (3.20): para revisar e aprovar bairro por bairro
+  }, [lugares, global, g.cidades])
+  // os bairros da cidade escolhida (3.20): para revisar e aprovar bairro por bairro (em "todas", só com uma cidade no filtro, e os da página)
   const bairros = useMemo(() => {
+    if (global && !rev.cidade) return []
     const c = new Map()
     for (const l of lugares) if ((!rev.cidade || l.cidade_slug === rev.cidade) && l.bairro) c.set(l.bairro, (c.get(l.bairro) ?? 0) + 1)
     return [...c.entries()].sort((a, b) => a[0].localeCompare(b[0], 'pt-BR'))
-  }, [lugares, rev.cidade])
+  }, [lugares, rev.cidade, global])
   const termo = norm(rev.busca).trim()
   const base = useMemo(() => lugares.filter((l) =>
     (!rev.cidade || l.cidade_slug === rev.cidade) && (!rev.bairro || l.bairro === rev.bairro) && (!rev.categoria || l.categoria === rev.categoria) &&
@@ -133,29 +141,59 @@ export default function Revisar({ g, rev, setRev }) {
     (!rev.triagem || TRIAGENS.find(([id]) => id === rev.triagem)?.[2](l)) &&
     (!termo || norm(`${l.nome} ${l.bairro ?? ''} ${l.slug}`).includes(termo))
   ), [lugares, rev.cidade, rev.bairro, rev.categoria, rev.receita, rev.selecao, rev.triagem, termo])
+  // 3.38: em "todas" os números das fases vêm dos totais do guia (174), da cidade do filtro se houver; a fila
+  // ativa mostra o total exato da consulta no cabeçalho da lista
+  const totaisGuia = useMemo(() => {
+    if (!global || !Array.isArray(g.resumo)) return null
+    const c = { gerar: 0, revisar: 0, nova: 0, no_ar: 0, descartado: 0, removido: 0, todos: 0 }
+    for (const r of g.resumo) {
+      if (rev.cidade && r.cidade_slug !== rev.cidade) continue
+      const nova = Number(r.nova ?? 0)
+      c.gerar += Number(r.gerar ?? 0); c.revisar += Number(r.revisar ?? 0); c.nova += nova; c.no_ar += Number(r.no_ar ?? 0) - nova
+      c.descartado += Number(r.descartados ?? 0); c.removido += Number(r.removidos ?? 0); c.todos += Number(r.total ?? 0)
+    }
+    return c
+  }, [global, g.resumo, rev.cidade])
   const contagem = useMemo(() => {
+    if (totaisGuia) return totaisGuia
     const c = { gerar: 0, revisar: 0, nova: 0, no_ar: 0, descartado: 0, removido: 0, todos: 0 }
     for (const l of base) { const f = faseDe(l); c[f]++; if (f !== 'removido') c.todos++ }
     return c
-  }, [base, faseDe])
+  }, [base, faseDe, totaisGuia])
 
   // a primeira fila que tem trabalho, uma vez só (depois a escolha é da pessoa)
   useEffect(() => {
     if (rev.status || carregando) return
-    const c = { gerar: 0, revisar: 0, nova: 0 }
-    for (const l of lugares) { const f = faseDe(l); if (f in c) c[f]++ }
+    let c = { gerar: 0, revisar: 0, nova: 0 }
+    if (global) {
+      if (g.resumo === null) return // os totais ainda vêm
+      if (!totaisGuia) { setRev((r) => ({ ...r, status: 'revisar' })); return } // banco sem a 174: sem totais
+      c = totaisGuia
+    } else for (const l of lugares) { const f = faseDe(l); if (f in c) c[f]++ }
     setRev((r) => ({ ...r, status: c.revisar ? 'revisar' : c.nova ? 'nova' : c.gerar ? 'gerar' : 'todos' }))
-  }, [rev.status, carregando, lugares, faseDe, setRev])
+  }, [rev.status, carregando, lugares, faseDe, setRev, global, g.resumo, totaisGuia])
   const status = rev.status ?? 'revisar'
+  // 3.38: em "todas as cidades" cada fila, filtro, ordem ou página pede a página ao banco (a busca, depois de parar de digitar)
+  const buscaLenta = useLento(rev.busca)
+  const consultar = g.consultarGlobal
+  useEffect(() => {
+    if (!global || !rev.status) return
+    consultar({ aba: 'revisar', filtros: { status: rev.status, cidade: rev.cidade, bairro: rev.bairro, categoria: rev.categoria, receita: rev.receita, selecao: rev.selecao, triagem: rev.triagem, busca: buscaLenta }, ordem: rev.ordem, pagina: rev.pagina ?? 1 })
+  }, [global, consultar, rev.status, rev.cidade, rev.bairro, rev.categoria, rev.receita, rev.selecao, rev.triagem, buscaLenta, rev.ordem, rev.pagina])
 
-  const lista = useMemo(() => ordenar(base.filter((l) => {
-    const f = faseDe(l)
-    return l.id === rev.selId || (status === 'todos' ? f !== 'removido' : f === status)
-  }), rev.ordem), [base, status, rev.selId, rev.ordem, faseDe])
+  const lista = useMemo(() => {
+    const daFila = base.filter((l) => {
+      const f = faseDe(l)
+      return l.id === rev.selId || (status === 'todos' ? f !== 'removido' : f === status)
+    })
+    return global ? daFila : ordenar(daFila, rev.ordem) // 3.38: em "todas" a página já vem na ordem do banco
+  }, [base, status, rev.selId, rev.ordem, faseDe, global])
   const indice = lista.findIndex((l) => l.id === rev.selId)
   // 3.24: a lista aparece por partes (uma cidade grande tem milhares); o escolhido sempre aparece
   const [mostrar, setMostrar] = useState(150)
   const mostrados = Math.max(mostrar, indice + 1)
+  // 3.38: outra página de "todas as cidades"
+  const irParaPagina = (n) => { setMostrar(150); listaRef.current?.scrollTo?.(0, 0); setRev((r) => ({ ...r, pagina: Math.max(1, n), selId: null })) }
   const atual = indice >= 0 ? lista[indice] : null
   const doAtual = porSalao.id === rev.selId ? porSalao : { instr: '', versao: 'rascunho', erro: '' }
   const { instr, versao, erro: erroAcao } = doAtual
@@ -167,7 +205,7 @@ export default function Revisar({ g, rev, setRev }) {
   const setVersao = (v) => mudarDoAtual('versao', v)
   const setErroAcao = (v) => mudarDoAtual('erro', v)
 
-  const mudarFiltro = (campos) => setRev((r) => ({ ...r, ...campos, selId: null }))
+  const mudarFiltro = (campos) => setRev((r) => ({ ...r, ...campos, selId: null, pagina: 1 }))
   const selecionar = (id) => setRev((r) => ({ ...r, selId: id }))
 
   // sem seleção (ou a selecionada saiu da lista): a primeira da fila
@@ -323,9 +361,11 @@ export default function Revisar({ g, rev, setRev }) {
     return () => window.removeEventListener('keydown', ouvir)
   }, [])
 
+  const filtrosExtras = rev.cidade || rev.bairro || rev.categoria || rev.receita || rev.selecao || rev.triagem || rev.busca
   // ---- telas vazias ----
-  if (g.carregando) return <div className="pg-carregando"><LoaderCircle className="pg-gira" size={18} /> Carregando o guia…</div>
-  if (!g.lugares.length) return (
+  if (g.carregando || (global && !g.lugares.length && (!pg || pg.lendo))) return <div className="pg-carregando"><LoaderCircle className="pg-gira" size={18} /> Carregando o guia…</div>
+  // em "todas" a página pode vir vazia com o guia cheio (os filtros); o guia vazio de verdade é o dos totais
+  if (!g.lugares.length && (global ? totaisGuia && totaisGuia.todos === 0 && !filtrosExtras : true)) return (
     <div className="pg-vazio-grande">
       <Upload size={28} />
       <h3>O guia ainda está vazio</h3>
@@ -335,13 +375,13 @@ export default function Revisar({ g, rev, setRev }) {
   )
 
   const pendentesFila = lista.filter((l) => g.faseDe(l) === 'gerar').length
-  const filtrosExtras = rev.cidade || rev.bairro || rev.categoria || rev.receita || rev.selecao || rev.triagem || rev.busca
   // os filtros da lista em palavras, para o modal "Em lote" dizer o que vai mexer (3.18)
   const resumoLote = [
     status === 'removido' ? 'Removidos' : (FASES.find(([id]) => id === status)?.[1] ?? 'Todos'),
     rev.cidade ? (cidades.find(([s]) => s === rev.cidade)?.[1] ?? rev.cidade) : g.cidade ? (g.cidades.find((c) => c.slug === g.cidade)?.nome ?? g.cidade) : 'todas as cidades', rev.bairro ? `bairro ${rev.bairro}` : '',
     rev.categoria ? categoriaDoGuia(rev.categoria).rotulo : '', rev.triagem ? TRIAGENS.find(([id]) => id === rev.triagem)?.[1] : '',
     rev.receita ? 'validados na Receita' : '', rev.selecao ? 'Seleção MIMO' : '', rev.busca.trim() ? `busca "${rev.busca.trim()}"` : '',
+    global && pg && pg.paginas > 1 ? `página ${pg.pagina} de ${pg.paginas}` : '',
   ].filter(Boolean).join(' · ')
   const lote = g.lote
 
@@ -382,7 +422,7 @@ export default function Revisar({ g, rev, setRev }) {
               <option value="">Categoria</option>
               {GUIA_CATEGORIAS.map((c) => <option key={c.slug} value={c.slug}>{c.rotulo}</option>)}
             </select>
-            <select className="plat-select" value={rev.ordem} onChange={(e) => setRev((r) => ({ ...r, ordem: e.target.value }))} aria-label="Ordem da lista">
+            <select className="plat-select" value={rev.ordem} onChange={(e) => setRev((r) => ({ ...r, ordem: e.target.value, pagina: 1 }))} aria-label="Ordem da lista">
               <option value="selecao">Seleção 1º</option>
               <option value="nome">A a Z</option>
               <option value="bairro">Por bairro</option>
@@ -408,14 +448,16 @@ export default function Revisar({ g, rev, setRev }) {
 
         {lote ? <Lote lote={lote} g={g} onVer={(id) => selecionar(id)} /> : (
           <div className="pg-fila-resumo">
-            <span><b>{lista.length}</b> {lista.length === 1 ? 'salão' : 'salões'} nesta fila</span>
+            <span><b>{(global && pg ? pg.total : lista.length).toLocaleString('pt-BR')}</b> {(global && pg ? pg.total : lista.length) === 1 ? 'salão' : 'salões'} nesta fila{global && pg && pg.paginas > 1 ? ` · ${lista.length} nesta página` : ''}</span>
             {pendentesFila > 0 && <button type="button" className="btn btn-ghost pg-btn-peq" onClick={montarFila} title="Monta com os dados de cada salão: de graça e na hora"><Wand2 size={14} /> Montar todas da fila ({pendentesFila})</button>}
             {lista.length > 0 && <button type="button" className="btn btn-ghost pg-btn-peq" onClick={() => setEmLote(true)} title="Tirar do ar, descartar ou apagar de vez tudo o que está nesta lista"><Layers size={14} /> Em lote</button>}
           </div>
         )}
 
+        {global && pg && <Paginador pg={pg} onIr={irParaPagina} />}
         <div className="pg-lista" ref={listaRef} role="listbox" aria-label="Salões na fila">
-          {lista.length === 0 && (
+          {global && g.lendo && <div className="pg-lista-lendo"><LoaderCircle size={14} className="pg-gira" aria-hidden="true" /> Lendo a página…</div>}
+          {lista.length === 0 && !(global && g.lendo) && (
             <div className="pg-lista-vazia">
               {filtrosExtras ? (<><p>Nenhum salão com esses filtros.</p><button type="button" className="plat-link" onClick={() => mudarFiltro({ cidade: '', bairro: '', categoria: '', receita: false, selecao: false, triagem: '', busca: '' })}>Limpar filtros</button></>)
                 : status === 'revisar' ? (<><p><b>Fila zerada.</b> Nada esperando revisão.</p>{contagem.gerar > 0 && <button type="button" className="plat-link" onClick={() => mudarFiltro({ status: 'gerar' })}>Ver os {contagem.gerar} sem página</button>}</>)

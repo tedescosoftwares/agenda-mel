@@ -16,6 +16,7 @@ import { PAGINAS_SEO, PAGINAS_INSTITUCIONAIS } from '../conteudo/paginasSeo'
 import CATALOGO_V1 from '../../supabase/catalogo/catalogo_v1.json'
 import { arvoreParaLinhas } from './catalogoBusca'
 import { GUIA_LUGARES, GUIA_PAGINAS, GUIA_INTERESSES, GUIA_CATEGORIAS_IMAGENS, GUIA_REGIOES, GUIA_CIDADES_REGIAO, GUIA_RPC } from './demoGuia'
+import { pontosDoLugar, fotosDoLugar, semAcento } from './guia'
 import { ABORDAGEM_RPC } from './demoAbordagem'
 import { REIVINDICAR_RPC } from './demoReivindicar'
 import { BUSCAS_RPC } from './demoBuscas'
@@ -170,9 +171,10 @@ const acessoDemo = () => !ativadoDemo() ? { fase: 'configurando', tipo: 'salao',
 const TABELAS = {
   // o guia de salões (153): salões fictícios de Itanhaém, em src/lib/demoGuia.js
   guia_lugares: GUIA_LUGARES,
-  // a view magra (171): a mesma linha sem conteudo e rascunho, com as flags; o texto vem de guia_lugares ao abrir
+  // a view magra (171): a mesma linha sem conteudo e rascunho, com as flags; o texto vem de guia_lugares ao abrir.
+  // 3.38 (183): pontos, fotos_n e busca (sem acento), para a lista de todas as cidades ordenar e buscar no "banco"
   get guia_lista() {
-    return GUIA_LUGARES.map(({ conteudo, rascunho, ...r }) => ({ ...r, tem_conteudo: !!conteudo, tem_rascunho: !!rascunho, resumo: rascunho?.resumo ?? conteudo?.resumo ?? null, meta: conteudo?._meta ?? null, meta_rascunho: rascunho?._meta ?? null, tem_horario: Array.isArray(r.horarios) && r.horarios.length > 0, servicos_n: (r.servicos ?? []).length }))
+    return GUIA_LUGARES.map(({ conteudo, rascunho, ...r }) => ({ ...r, tem_conteudo: !!conteudo, tem_rascunho: !!rascunho, resumo: rascunho?.resumo ?? conteudo?.resumo ?? null, meta: conteudo?._meta ?? null, meta_rascunho: rascunho?._meta ?? null, tem_horario: Array.isArray(r.horarios) && r.horarios.length > 0, servicos_n: (r.servicos ?? []).length, pontos: pontosDoLugar(r), fotos_n: fotosDoLugar(r).length, busca: semAcento(`${r.nome} ${r.bairro ?? ''}`).toLowerCase() }))
   },
   guia_paginas: GUIA_PAGINAS,
   guia_interesses: GUIA_INTERESSES,
@@ -575,13 +577,25 @@ function consulta(linhas, tabela = '') {
   let apagar = false
   let inserir = null // upsert no guia (3.33): { linhas, chave } entra ou troca pela chave
   const filtros = []
-  let ordem = null
+  const ordens = [] // 3.38: várias colunas, como no banco
   let limite = null
+  let faixa = null // range(de, ate) (3.38)
   let unico = false
+  // '{}' num campo de lista é "lista vazia" (fotos=eq.{} no PostgREST)
+  const igual = (a, v) => (v === '{}' && Array.isArray(a) ? a.length === 0 : a === v)
+  // or('a.eq.true,b.ilike.*x*') (3.38): as condições simples do PostgREST
+  const condicao = (expr) => {
+    const m = /^([a-z_]+)\.(eq|neq|is|gt|gte|lt|lte|ilike)\.(.*)$/.exec(expr.trim())
+    if (!m) return () => true
+    const [, c, op, bruto] = m
+    const v = bruto === 'true' ? true : bruto === 'false' ? false : bruto === 'null' ? null : isNaN(Number(bruto)) || bruto === '' ? bruto : Number(bruto)
+    const t = String(bruto).replace(/\*/g, '').toLowerCase()
+    return (r) => (op === 'eq' ? igual(r[c], v) : op === 'neq' ? !igual(r[c], v) : op === 'is' ? (v === null ? r[c] == null : r[c] === v) : op === 'gt' ? r[c] > v : op === 'gte' ? r[c] >= v : op === 'lt' ? r[c] < v : op === 'lte' ? r[c] <= v : String(r[c] ?? '').toLowerCase().includes(t))
+  }
   const q = {
     select: (_c, o) => { if (o?.head) q._head = true; if (o?.count) q._count = true; return q },
-    eq: (c, v) => { filtros.push((r) => r[c] === v); return q },
-    neq: (c, v) => { filtros.push((r) => r[c] !== v); return q },
+    eq: (c, v) => { filtros.push((r) => igual(r[c], v)); return q },
+    neq: (c, v) => { filtros.push((r) => !igual(r[c], v)); return q },
     gte: (c, v) => { filtros.push((r) => r[c] >= v); return q },
     lte: (c, v) => { filtros.push((r) => r[c] <= v); return q },
     gt: (c, v) => { filtros.push((r) => r[c] > v); return q },
@@ -589,10 +603,11 @@ function consulta(linhas, tabela = '') {
     in: (c, v) => { filtros.push((r) => v.includes(r[c])); return q },
     is: (c, v) => { filtros.push((r) => (v === null ? r[c] == null : r[c] === v)); return q },
     not: (c, op, v) => { if (op === 'is' && v === null) filtros.push((r) => r[c] != null); return q },
-    or: () => q,
-    ilike: (c, v) => { const t = String(v).replace(/%/g, '').toLowerCase(); filtros.push((r) => String(r[c] ?? '').toLowerCase().includes(t)); return q },
-    order: (c, o) => { ordem = [c, o?.ascending === false ? -1 : 1]; return q },
+    or: (expr) => { const cs = String(expr ?? '').split(',').map(condicao); if (cs.length) filtros.push((r) => cs.some((f) => f(r))); return q },
+    ilike: (c, v) => { const t = String(v).replace(/[%*]/g, '').toLowerCase(); filtros.push((r) => String(r[c] ?? '').toLowerCase().includes(t)); return q },
+    order: (c, o) => { ordens.push([c, o?.ascending === false ? -1 : 1]); return q },
     limit: (n) => { limite = n; return q },
+    range: (de, ate) => { faixa = [de, ate]; return q },
     maybeSingle: () => { unico = true; return q },
     single: () => { unico = true; return q },
     insert: () => q,
@@ -615,9 +630,14 @@ function consulta(linhas, tabela = '') {
         return ok({ data: unico ? (alvo[0] ?? null) : alvo, error: null, count: alvo.length })
       }
       let r = dados.filter((x) => filtros.every((f) => f(x)))
-      if (ordem) r.sort((a, b) => (a[ordem[0]] > b[ordem[0]] ? 1 : a[ordem[0]] < b[ordem[0]] ? -1 : 0) * ordem[1])
+      // as ordens na sequência pedida; nulo por último, como nullsFirst: false
+      // texto na ordem do idioma (como a collation do Postgres), número e data pelo valor
+      const cmp = (a, b) => (a == null && b == null ? 0 : a == null ? 1 : b == null ? -1 : typeof a === 'string' && typeof b === 'string' ? a.localeCompare(b, 'pt-BR') : a > b ? 1 : a < b ? -1 : 0)
+      if (ordens.length) r.sort((a, b) => { for (const [c, dir] of ordens) { const d = cmp(a[c], b[c]); if (d) return (a[c] == null || b[c] == null) ? d : d * dir } return 0 })
+      const total = r.length
+      if (faixa) r = r.slice(faixa[0], faixa[1] + 1)
       if (limite) r = r.slice(0, limite)
-      const count = r.length
+      const count = q._count ? total : r.length
       if (q._head) return ok({ data: null, error: null, count })
       return ok({ data: unico ? (r[0] ?? null) : r, error: null, count })
     },

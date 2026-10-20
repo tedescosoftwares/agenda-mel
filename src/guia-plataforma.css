@@ -566,3 +566,13 @@
 .pg-conferencia .alert b { display: inline-flex; align-items: center; gap: 0.3rem; }
 .pg-conferido { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--menta-escuro, #1d7a4c); }
 .pg-ed-erro .pg-conferencia { margin: 0 1.4rem 0.6rem; }
+
+/* 3.38: as páginas da lista de todas as cidades */
+.pg-paginador { display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.4rem 0.6rem; font-size: 0.78rem; color: var(--texto-2); border-bottom: 1px solid var(--cinza-1); }
+.pg-paginador b { color: var(--texto); }
+.pg-paginador span { white-space: nowrap; }
+.pg-paginador button { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border: 1px solid var(--cinza-1); border-radius: 8px; background: var(--fundo, #fff); color: var(--texto); cursor: pointer; }
+.pg-paginador button:disabled { opacity: 0.4; cursor: default; }
+.pg-paginador button:not(:disabled):hover { border-color: var(--rosa, #d9467d); color: var(--rosa, #d9467d); }
+.pg-lista-lendo { display: flex; align-items: center; gap: 0.4rem; padding: 0.6rem 0.5rem; font-size: 0.8rem; color: var(--texto-2); }
+.pg-tabela-pub-paginas { margin: 0.35rem 0 0.5rem; border-top: 1px solid var(--cinza-1); }

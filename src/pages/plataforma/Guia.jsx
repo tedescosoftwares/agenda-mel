@@ -16,6 +16,8 @@ import Desempenho from '../../components/plataforma/guia/Desempenho'
 import Abordagem from '../../components/plataforma/guia/Abordagem'
 import { naoContarAqui } from '../../lib/eventos'
 import { IAS, iaLembrada, lembrarIa, modeloLembrado, lembrarModelo } from '../../lib/guiaIa'
+import { lerEmFatias, COLUNAS_LISTA, COLUNAS_LISTA_ANTIGAS, colunaFalta, soAFila, soAFilaNaTabela, TETO_TODAS } from '../../lib/guiaPlataformaDados'
+import { agruparPorRegiao } from '../../lib/guiaRegioes'
 import { ClipboardCheck, Globe2, Upload, MapPinned, Inbox, X, BarChart3, Handshake, MapPin, RefreshCw, LoaderCircle } from 'lucide-react'
 import '../../guia-plataforma.css'
 
@@ -53,10 +55,9 @@ const ABAS = [
 // 3.34: o modelo escolhido para a IA, quando há um (vazio = o padrão do segredo, e o pedido não leva o campo)
 const modeloDoPedido = (m) => (m ? { modelo: m } : {})
 const COLUNAS_LUGAR = 'id, cidade, cidade_slug, uf, slug, categoria, nome, bairro, endereco, cep, telefone, whatsapp, instagram, site, horarios, servicos, atributos, place_id, cnpj, validado_receita, selecao, nota, avaliacoes, fontes, origem, fotos, conteudo, rascunho, status, motivo, salon_id, gerado_em, publicado_em, criado_em, atualizado_em'
-// 3.23: a lista magra (view guia_lista, migração 171): sem conteudo e rascunho (uns 3 KB a menos por salão; com
-// 20 mil salões, 60 MB a menos por abertura). "tem_conteudo" e "tem_rascunho" dizem se existem, e o texto do
-// salão é lido quando se abre (carregarTexto). Num banco ainda sem a view, a leitura cheia de antes.
-const COLUNAS_LISTA = 'id, cidade, cidade_slug, uf, slug, categoria, nome, bairro, endereco, cep, telefone, whatsapp, instagram, site, horarios, servicos, atributos, place_id, cnpj, validado_receita, selecao, nota, avaliacoes, fontes, origem, fotos, status, motivo, salon_id, gerado_em, publicado_em, criado_em, atualizado_em, tem_conteudo, tem_rascunho, resumo, meta, meta_rascunho'
+// 3.23: a lista magra (view guia_lista, migração 171): sem conteudo e rascunho; 3.36: por fatias com chave e só com o que a
+// lista mostra (COLUNAS_LISTA em guiaPlataformaDados.js: tem_horario e servicos_n no lugar de horarios e servicos, sem
+// atributos nem origem). A linha inteira é lida quando se abre o salão (carregarTexto). Num banco sem a view, a leitura cheia.
 const temConteudo = (l) => !!l?.tem_conteudo
 const temRascunho = (l) => !!l?.tem_rascunho
 const temTexto = (l) => temConteudo(l) || temRascunho(l)
@@ -140,14 +141,21 @@ async function rascunhoGravadoDepois(tabela, id, desde) {
   return data?.rascunho && data.gerado_em && new Date(data.gerado_em).getTime() >= desde - 5000 ? data.rascunho : null
 }
 
-// os salões de uma cidade pela lista magra ('' = todas); num banco sem a 171, a leitura cheia (já com o texto)
-async function lerLugares(cidade = '') {
-  const filtro = (q) => (cidade ? q.eq('cidade_slug', cidade) : q)
+// os salões de uma cidade pela lista magra, por fatias com chave (3.36); '' = todas as cidades, e aí só a fila (sem página
+// ou esperando revisão), até TETO_TODAS. aoReceber(lista, fim) a cada fatia. Num banco sem a 181, as colunas de antes;
+// sem a 171, a leitura cheia (já com o texto). Devolve { lista, teto }
+const semTexto = (ls) => ls.map((l) => ({ ...l, texto_carregado: false }))
+async function lerLugares(cidade = '', aoReceber) {
+  const filtro = (q) => (cidade ? q.eq('cidade_slug', cidade) : soAFila(q))
+  const ler = (colunas) => lerEmFatias({ cliente: supabase, tabela: 'guia_lista', colunas, filtro, teto: cidade ? Infinity : TETO_TODAS, aoReceber: aoReceber && ((ls, fim) => aoReceber(semTexto(ls), fim)) })
   try {
-    return (await lerTudo('guia_lista', COLUNAS_LISTA, 'nome', filtro)).map((l) => ({ ...l, texto_carregado: false }))
+    const r = await ler(COLUNAS_LISTA)
+    return { lista: semTexto(r.lista), teto: r.teto }
   } catch (e) {
+    if (colunaFalta(e)) { const r = await ler(COLUNAS_LISTA_ANTIGAS); return { lista: semTexto(r.lista), teto: r.teto } }
     if (!/guia_lista/.test(String(e?.message ?? e))) throw e
-    return (await lerTudo('guia_lugares', COLUNAS_LUGAR, 'nome', filtro)).map(comFlags)
+    const filtroCheio = (q) => (cidade ? q.eq('cidade_slug', cidade) : soAFilaNaTabela(q))
+    return { lista: (await lerTudo('guia_lugares', COLUNAS_LUGAR, 'nome', filtroCheio)).map(comFlags), teto: false }
   }
 }
 // os totais por cidade e por fase (3.25, migração 174): alguns KB. false num banco sem a 174: aí a tela lê tudo, como antes
@@ -165,6 +173,7 @@ async function lerLugaresPorId(ids) {
   for (let i = 0; i < ids.length; i += 100) {
     const parte = ids.slice(i, i + 100)
     let r = await supabase.from('guia_lista').select(COLUNAS_LISTA).in('id', parte)
+    if (r.error && colunaFalta(r.error)) r = await supabase.from('guia_lista').select(COLUNAS_LISTA_ANTIGAS).in('id', parte)
     if (!r.error) { out.push(...(r.data ?? []).map((l) => ({ ...l, texto_carregado: false }))); continue }
     r = await supabase.from('guia_lugares').select(COLUNAS_LUGAR).in('id', parte)
     if (!r.error) out.push(...(r.data ?? []).map(comFlags))
@@ -259,7 +268,7 @@ export default function Guia() {
   // 3.25: os totais por cidade (174), a cidade escolhida e a lista daquela cidade
   const [resumo, setResumo] = useState(null)      // null = lendo; false = banco sem a 174 (tudo de uma vez); [] = por cidade
   const [cidade, setCidade] = useState(null)      // null até saber as cidades; '' = todas; o slug
-  const [carga, setCarga] = useState({ cidade: null, lista: null }) // a lista lida e de que cidade ela é
+  const [carga, setCarga] = useState({ cidade: null, lista: null, parcial: false, teto: false }) // a lista lida e de que cidade ela é; parcial: ainda chegando (3.36)
   const [extras, setExtras] = useState(() => new Map()) // salões fora da lista carregada que a tela cita (os dos interesses)
   const cacheRef = useRef(new Map())              // cidade -> lista, para voltar sem ler de novo
   const lugares = carga.cidade !== null && carga.cidade === cidade ? carga.lista : null
@@ -314,12 +323,14 @@ export default function Guia() {
     const guardada = cacheRef.current.get(cidade)
     if (guardada) { setCarga({ cidade, lista: guardada }); return }
     const n = ++pedidoLista.current
-    lerLugares(cidade).then(
-      (lista) => { if (montado.current && n === pedidoLista.current) setCarga({ cidade, lista }) },
-      (e) => { if (montado.current && n === pedidoLista.current) { falhouLeitura(e); setCarga({ cidade, lista: [] }) } },
+    // 3.36: cada fatia de mil já aparece na tela; a lista fica "parcial" até a última chegar
+    const aoReceber = (lista, fim) => { if (!fim && montado.current && n === pedidoLista.current) setCarga({ cidade, lista, parcial: true, teto: false }) }
+    lerLugares(cidade, aoReceber).then(
+      ({ lista, teto }) => { if (montado.current && n === pedidoLista.current) setCarga({ cidade, lista, parcial: false, teto }) },
+      (e) => { if (montado.current && n === pedidoLista.current) { falhouLeitura(e); setCarga({ cidade, lista: [], parcial: false, teto: false }) } },
     )
   }, [cidade, carga, falhouLeitura])
-  useEffect(() => { if (carga.lista && carga.cidade !== null) cacheRef.current.set(carga.cidade, carga.lista) }, [carga])
+  useEffect(() => { if (carga.lista && carga.cidade !== null && !carga.parcial) cacheRef.current.set(carga.cidade, carga.lista) }, [carga])
   // trocar de cidade (o seletor do topo, a importação, um salão pedido de outra aba)
   const escolherCidade = useCallback((slug) => {
     const s = String(slug ?? '')
@@ -387,9 +398,10 @@ export default function Guia() {
     if (l.texto_carregado) return Promise.resolve(l)
     if (lendoTexto.current.has(id)) return lendoTexto.current.get(id)
     const p = (async () => {
-      const { data, error } = await supabase.from('guia_lugares').select('conteudo, rascunho').eq('id', id).maybeSingle()
+      // 3.36: a lista vem magra (sem horarios, servicos, atributos, origem); ao abrir, a linha inteira, com o texto
+      const { data, error } = await supabase.from('guia_lugares').select('*').eq('id', id).maybeSingle()
       if (error) throw error
-      const campos = { conteudo: data?.conteudo ?? null, rascunho: data?.rascunho ?? null, texto_carregado: true }
+      const campos = { ...(data ?? {}), conteudo: data?.conteudo ?? null, rascunho: data?.rascunho ?? null, tem_conteudo: !!data?.conteudo, tem_rascunho: !!data?.rascunho, texto_carregado: true }
       mudarLocal(id, campos)
       return { ...l, ...campos }
     })().finally(() => lendoTexto.current.delete(id))
@@ -657,14 +669,10 @@ export default function Guia() {
 
   // os totais por cidade, com a cidade carregada contada ao vivo (aprovar, descartar e importar mexem na hora)
   const resumoVivo = useMemo(() => {
-    if (!Array.isArray(resumo) || !lugares) return resumo
-    if (cidade === '') {
-      const por = new Map()
-      for (const l of lugares) por.set(l.cidade_slug, [...(por.get(l.cidade_slug) ?? []), l])
-      return resumo.map((r) => (por.has(r.cidade_slug) ? contarFases(por.get(r.cidade_slug), r) : r))
-    }
+    // 3.36: em "todas" a lista é só a fila, e uma lista parcial ainda não conta: valem os totais do banco
+    if (!Array.isArray(resumo) || !lugares || cidade === '' || carga.parcial) return resumo
     return resumo.map((r) => (r.cidade_slug === cidade ? contarFases(lugares, r) : r))
-  }, [resumo, lugares, cidade])
+  }, [resumo, lugares, cidade, carga.parcial])
   // as cidades do guia, para o seletor e para as abas (nome por slug)
   const cidades = useMemo(() => {
     const base = Array.isArray(resumoVivo)
@@ -676,7 +684,7 @@ export default function Guia() {
 
   // os números do topo: da lista carregada (inteira para a cidade); antes de ela chegar, dos totais do banco
   const kpis = useMemo(() => {
-    const n = lugares ? contarFases(lugares) : Array.isArray(resumo) ? somarResumo(cidade ? resumo.filter((r) => r.cidade_slug === cidade) : resumo) : null
+    const n = lugares && cidade && !carga.parcial ? contarFases(lugares) : Array.isArray(resumo) ? somarResumo(cidade ? resumo.filter((r) => r.cidade_slug === cidade) : resumo) : lugares ? contarFases(lugares) : null
     return {
       pronto: !!n,
       importados: n?.total ?? 0,
@@ -687,7 +695,7 @@ export default function Guia() {
       descartados: n?.descartados ?? 0,
       interesses: (interesses ?? []).filter((i) => !i.atendido_em).length,
     }
-  }, [lugares, resumo, cidade, interesses])
+  }, [lugares, resumo, cidade, interesses, carga.parcial])
 
   // a cidade de um salão que não está na lista carregada (uma linha do banco)
   const cidadeDoLugar = useCallback(async (id) => {
@@ -711,7 +719,7 @@ export default function Guia() {
   }, [escolherCidade, cidadeDoLugar])
 
   const g = {
-    lugares: lugares ?? [], paginas: paginas ?? [], interesses: interesses ?? [], carregando: lugares === null, erro,
+    lugares: lugares ?? [], paginas: paginas ?? [], interesses: interesses ?? [], carregando: lugares === null, lendo: !!carga.parcial, listaNoTeto: !!carga.teto, erro,
     cidade: cidade ?? '', cidades, escolherCidade, resumo: resumoVivo, lugarPorId: achar, ia, setIa, modelo: modelos[ia] ?? '', setModelo,
     faseDe, temTexto, temRascunho, temConteudo, carregarTexto, gerando, falhas, lote, usuario: user?.id ?? null,
     carregar, salvarLugar, montarUm, gerarUm, iniciarLote, pausarLote, cancelarLote, fecharLote, aprovar, desfazerAprovacao,
@@ -728,14 +736,22 @@ export default function Guia() {
             <label className="pg-cidade-sel">
               <MapPin size={15} aria-hidden="true" />
               <select className="plat-select" value={cidade ?? ''} onChange={(e) => escolherCidade(e.target.value)} aria-label="Cidade do guia">
-                {cidades.map((c) => <option key={c.slug} value={c.slug}>{c.nome} · {c.total}{c.esperando ? ` · ${c.esperando} para revisar` : ''}</option>)}
-                <option value="">Todas as cidades · {totalGeral}</option>
+                {agruparPorRegiao(cidades).map((gr) => (
+                  <optgroup key={gr.regiao.slug} label={gr.regiao.nome}>
+                    {gr.cidades.map((c) => <option key={c.slug} value={c.slug}>{c.nome} · {c.total}{c.esperando ? ` · ${c.esperando} para revisar` : ''}</option>)}
+                  </optgroup>
+                ))}
+                <option value="">Todas as cidades · só a fila</option>
               </select>
-              {lugares === null
+              {lugares === null || carga.parcial
                 ? <LoaderCircle size={14} className="pg-gira" aria-label="lendo a cidade" />
                 : <button type="button" className="pg-cidade-reler" onClick={carregar} title="Ler de novo do banco" aria-label="Ler de novo do banco"><RefreshCw size={14} /></button>}
             </label>
-            <small>{cidade ? 'Os números e as abas são desta cidade; só a lista dela é lida.' : 'Todas as cidades de uma vez: a leitura pesa com o guia grande.'}</small>
+            <small data-teste="cidade-nota">
+              {carga.parcial ? `Lendo… ${(lugares ?? []).length} salões já na tela. ` : ''}
+              {cidade ? 'Os números e as abas são desta cidade; só a lista dela é lida.' : `Todas as cidades: só a fila (sem página ou esperando revisão), até ${TETO_TODAS.toLocaleString('pt-BR')}; as páginas no ar você vê por cidade (${totalGeral.toLocaleString('pt-BR')} salões no guia).`}
+              {carga.teto ? ' A fila passou do teto: escolha uma cidade para ver o resto.' : ''}
+            </small>
           </div>
         )}
         <div className="pg-kpis" aria-label="Números do guia">

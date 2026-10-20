@@ -172,7 +172,7 @@ const TABELAS = {
   guia_lugares: GUIA_LUGARES,
   // a view magra (171): a mesma linha sem conteudo e rascunho, com as flags; o texto vem de guia_lugares ao abrir
   get guia_lista() {
-    return GUIA_LUGARES.map(({ conteudo, rascunho, ...r }) => ({ ...r, tem_conteudo: !!conteudo, tem_rascunho: !!rascunho, resumo: rascunho?.resumo ?? conteudo?.resumo ?? null, meta: conteudo?._meta ?? null, meta_rascunho: rascunho?._meta ?? null }))
+    return GUIA_LUGARES.map(({ conteudo, rascunho, ...r }) => ({ ...r, tem_conteudo: !!conteudo, tem_rascunho: !!rascunho, resumo: rascunho?.resumo ?? conteudo?.resumo ?? null, meta: conteudo?._meta ?? null, meta_rascunho: rascunho?._meta ?? null, tem_horario: Array.isArray(r.horarios) && r.horarios.length > 0, servicos_n: (r.servicos ?? []).length }))
   },
   guia_paginas: GUIA_PAGINAS,
   guia_interesses: GUIA_INTERESSES,

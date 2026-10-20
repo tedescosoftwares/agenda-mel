@@ -52,6 +52,7 @@ export default function Publicadas({ g }) {
 
   return (
     <Painel Icon={Globe2} titulo="Publicadas" sub={total ? `${total} ${total === 1 ? 'página no ar' : 'páginas no ar'}. Para mudar o texto, gere uma versão nova: ela espera a sua aprovação em Revisar.` : 'As páginas aprovadas aparecem aqui.'}>
+      {!g.cidade && !g.carregando && <p className="pg-nota" data-teste="publicadas-todas">Em "Todas as cidades" a lista traz só a fila (sem página ou esperando revisão). Escolha uma cidade no alto para ver as páginas no ar dela.</p>}
       {g.carregando ? <Vazio>Carregando…</Vazio> : total === 0 ? (
         <div className="pg-lista-vazia">
           <p>Nenhuma página no ar ainda.</p>

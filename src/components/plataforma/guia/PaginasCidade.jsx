@@ -8,6 +8,7 @@ import { urlDoAmbiente } from '../../../lib/ambiente'
 import EditarPagina from './EditarPagina'
 import { enviarFotoDaCidade, enviarImagemDaCategoria } from '../../../lib/guiaFotos'
 import { copiarTexto } from '../../../lib/guiaColar'
+import { agruparPorRegiao } from '../../../lib/guiaRegioes'
 import { MapPinned, Check, RefreshCw, Sparkles, ExternalLink, LoaderCircle, TriangleAlert, BookOpen, Wand2, Globe, Pencil, ImagePlus, Trash2, Image as ImagemIcone, Copy } from 'lucide-react'
 
 // 3.33: como a imagem precisa ser (a foto da cidade e a imagem da categoria): ela se estica atrás do título no site
@@ -244,7 +245,11 @@ export default function PaginasCidade({ g }) {
         <label className="pg-paginas-cidade" data-teste="paginas-cidade">
           <span>Cidade</span>
           <select className="plat-select" value={cidadeAtiva?.slug ?? ''} onChange={(e) => trocarCidade(e.target.value)} aria-label="Cidade das páginas">
-            {cidades.map((c) => <option key={c.slug} value={c.slug}>{c.nome}{c.pendentes ? ` · ${c.pendentes} para revisar` : ''}{c.noAr ? '' : ' · fora do site'}</option>)}
+            {agruparPorRegiao(cidades).map((gr) => (
+              <optgroup key={gr.regiao.slug} label={gr.regiao.nome}>
+                {gr.cidades.map((c) => <option key={c.slug} value={c.slug}>{c.nome}{c.pendentes ? ` · ${c.pendentes} para revisar` : ''}{c.noAr ? '' : ' · fora do site'}</option>)}
+              </optgroup>
+            ))}
           </select>
           <small>{cidades.length === 1 ? '1 cidade com páginas' : `${cidades.length} cidades com páginas`}{cidadeAtiva && !cidadeAtiva.noAr ? ' · esta ainda não tem salão no ar' : ''}</small>
         </label>

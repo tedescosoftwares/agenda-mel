@@ -6,6 +6,7 @@ import EditarLugar from './Editar'
 import EmLote from './EmLote'
 import EscolhaIA from './EscolhaIA'
 import { GUIA_CATEGORIAS, categoriaDoGuia, conteudoSeguro, semAcento, rotaDoLugar, fotosDoLugar, ordemPublica, partesDosPontos } from '../../../lib/guia'
+import { temHorario, nServicos } from '../../../lib/guiaPlataformaDados'
 import { seoDoLugar } from '../../../lib/guiaSeo'
 import { dadosDaPagina } from '../../../lib/guiaTexto'
 import { urlDoAmbiente } from '../../../lib/ambiente'
@@ -203,9 +204,9 @@ export default function Revisar({ g, rev, setRev }) {
     selecionar(lista[i].id)
   }
 
-  // 3.23: a lista vem sem o texto; o do salão escolhido é lido aqui (uma linha do banco)
+  // 3.23: a lista vem sem o texto; 3.36: nem com horários, serviços e atributos. A linha inteira do salão escolhido é lida aqui
   useEffect(() => {
-    if (atual && !atual.texto_carregado && g.temTexto(atual)) g.carregarTexto(atual.id).catch(() => {})
+    if (atual && !atual.texto_carregado) g.carregarTexto(atual.id).catch(() => {})
   }, [atual, g])
   const carregandoTexto = !!atual && !atual.texto_carregado && g.temTexto(atual)
   // o editor só abre com o texto na mão
@@ -587,8 +588,8 @@ function Detalhes({ l, conteudo, g }) {
   const sem = meta.semelhanca
   const parecido = sem && Number(sem.indice) > 0.35 ? g.lugares.find((o) => o.slug === sem.slug && o.cidade_slug === l.cidade_slug) : null
   const faltam = [
-    !l.endereco && 'endereço', !l.bairro && 'bairro', !Array.isArray(l.horarios) && 'horário',
-    !l.telefone && !l.whatsapp && 'telefone', !(l.servicos ?? []).length && 'serviços',
+    !l.endereco && 'endereço', !l.bairro && 'bairro', !temHorario(l) && 'horário',
+    !l.telefone && !l.whatsapp && 'telefone', !nServicos(l) && 'serviços',
   ].filter(Boolean)
   const manuais = Object.entries(l.fontes ?? {}).filter(([, v]) => v === 'manual').map(([k]) => k)
   const avisos = Array.isArray(meta.avisos) ? meta.avisos.filter(Boolean) : []

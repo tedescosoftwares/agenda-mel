@@ -437,8 +437,10 @@ teste('provedor: demora, erro de rede, chave recusada e queda do provedor', asyn
   assert.ok(!g2.ok && /dns error/.test(g2.erro))
   const g3 = await gerarRo(provedor([respostaErro(401, { message: 'Invalid API Key' })]).pedir)
   assert.ok(!g3.ok && /chave da IA foi recusada/.test(g3.erro))
-  const g4 = await gerarRo(provedor([{ status: 503, headers: cabecalhos(), texto: 'Service Unavailable' }]).pedir)
-  assert.ok(!g4.ok && /instável/.test(g4.erro))
+  // 3.31.3: o 503 é repetido uma vez (depois de 3 s); dois seguidos é instável mesmo
+  const c4 = provedor([{ status: 503, headers: cabecalhos(), texto: 'Service Unavailable' }, { status: 503, headers: cabecalhos(), texto: 'Service Unavailable' }])
+  const g4 = await gerarRo(c4.pedir, { dormir: async () => {} })
+  assert.ok(!g4.ok && /instável/.test(g4.erro) && c4.pedidos.length === 2)
   // prazo estourado antes da segunda tentativa
   let relogio = 0
   const lento: Pedir = async () => { relogio += 115_000; return respostaOk(GOOGLE) }
@@ -1163,6 +1165,25 @@ teste('os modelos que pensam têm 90 s por chamada; a sugestão respeita um praz
   assert.deepEqual(pedidosNativos, [50_000, 20_000], 'cada chamada fica com o que resta do prazo (e nunca mais que 90 s)')
   assert.equal(comum.pedidos.length, 0, 'sem tempo, a porta comum nem é chamada')
   assert.ok(!r.ok && /demorou demais/.test(r.erro), JSON.stringify(r))
+})
+
+// ---- 3.31.3: provedor instável (503): a mesma chamada de novo depois de 3 s -------------------------------------------
+teste('503 do provedor: repete uma vez depois de 3 s; se insistir, o erro diz instável (3.31.3)', async () => {
+  const esperas: number[] = []
+  const dormir = async (ms: number) => { esperas.push(ms) }
+  const c1 = provedor([respostaErro(503, { message: 'The model is overloaded. Please try again later.', status: 'UNAVAILABLE' }), respostaOk(BOM)])
+  const g1 = await gerarRo(c1.pedir, { dormir })
+  assert.ok(g1.ok, JSON.stringify(g1))
+  assert.deepEqual(esperas, [3000]); assert.equal(c1.pedidos.length, 2)
+  const c2 = provedor([respostaErro(503, { message: 'overloaded' }), respostaErro(503, { message: 'overloaded' })])
+  const g2 = await gerarRo(c2.pedir, { dormir })
+  assert.ok(!g2.ok && !g2.limite && g2.status === 503 && /instável agora \(503\)/.test(g2.erro), JSON.stringify(g2))
+  assert.equal(c2.pedidos.length, 2, 'repete só uma vez')
+  // sem tempo para esperar, não repete
+  let relogio = 0
+  const c3 = provedor([respostaErro(503, { message: 'overloaded' })])
+  const g3 = await gerarConteudo({ tipo: 'lugar', mensagens: [{ role: 'system', content: 's' }, { role: 'user', content: 'u' }], checagem: preparoRo.checagem, modelo: 'm', pedir: async (c, t) => { relogio += 5_000; return c3.pedir(c, t) }, prazoMs: 24_000, agora: () => relogio, dormir })
+  assert.ok(!g3.ok && g3.status === 503 && c3.pedidos.length === 1)
 })
 
 // ---- roda ---------------------------------------------------------------------------------------------------

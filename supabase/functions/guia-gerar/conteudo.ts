@@ -234,6 +234,7 @@ export const TIMEOUT_MS = 45_000
 // 3.31.2: os modelos que pensam antes de responder (Gemini, Claude) passavam dos 45 s numa página; 90 s para eles. O prazo
 // total (120 s) continua: a segunda tentativa fica com o que sobrar
 export const TIMEOUT_MS_COM_RACIOCINIO = 90_000
+export const dormir = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 // a função inteira tem ~150 s no Supabase; duas chamadas de 45 s e a
 // gravação cabem com folga
 export const PRAZO_MS = 120_000
@@ -1442,6 +1443,7 @@ export async function gerarConteudo(o: {
   timeoutMs?: number
   prazoMs?: number
   agora?: () => number
+  dormir?: (ms: number) => Promise<void>
 }): Promise<Geracao> {
   const timeout = o.timeoutMs ?? (pensaAntes(o.modelo) ? TIMEOUT_MS_COM_RACIOCINIO : TIMEOUT_MS)
   const prazo = o.prazoMs ?? PRAZO_MS
@@ -1449,6 +1451,7 @@ export async function gerarConteudo(o: {
   const inicio = agora()
   const claude = o.provedor?.id === 'claude'
   let semFallbacks = false
+  let repetiuInstavel = false
   let formato: Formato = 'json_schema'
   let mensagens = o.mensagens
   let tentativas = 0
@@ -1488,6 +1491,13 @@ export async function gerarConteudo(o: {
       return desistir(`a IA recusou o pedido: ${l.erro}`.slice(0, 300))
     }
     if (l.tipo === 'sem_pesquisa') return desistir(`a IA recusou o pedido: ${l.erro}`.slice(0, 300))
+    // 3.31.3: provedor instável (500/503/529, "o modelo está sobrecarregado"): o mesmo pedido de novo depois de 3 s, uma vez
+    if (l.tipo === 'erro' && (l.status === 500 || l.status === 503 || l.status === 529) && !repetiuInstavel && prazo - (agora() - inicio) > 20_000) {
+      repetiuInstavel = true
+      await (o.dormir ?? dormir)(3_000)
+      chamadas--
+      continue
+    }
     if (l.tipo === 'erro') return desistir(l.erro, l.status)
 
     tentativas++

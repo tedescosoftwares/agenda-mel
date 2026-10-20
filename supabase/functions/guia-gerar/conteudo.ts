@@ -175,7 +175,7 @@ export const URL_GROQ = 'https://api.groq.com/openai/v1/chat/completions'
 // entra pela porta compatível com a OpenAI; a chave é a do AI Studio (o projeto com faturamento consome os
 // créditos do Google Cloud). GUIA_IA_PADRAO diz qual vale quando ninguém escolhe; sem ela, o Gemini se tiver chave
 export const URL_GEMINI = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
-export const MODELO_GEMINI_PADRAO = 'gemini-3.1-pro-preview' // o 2.5 Pro saiu do ar para contas novas (404 do Google)
+export const MODELO_GEMINI_PADRAO = 'gemini-3-flash-preview' // o Flash tem plano grátis; o Pro (3.1) é só com faturamento, e o 2.5 saiu do ar para contas novas
 export type Provedor = { id: 'gemini' | 'groq'; nome: string; url: string; chave: string; modelo: string; segredo: string }
 export function provedoresDe(env: { get(nome: string): string | undefined | null }): Record<'gemini' | 'groq', Provedor> {
   const v = (n: string) => String(env.get(n) ?? '').trim()

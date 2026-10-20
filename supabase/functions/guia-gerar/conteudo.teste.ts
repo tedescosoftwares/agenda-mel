@@ -753,7 +753,7 @@ teste('o provedor vem do pedido, senão do padrão, senão o Gemini se tiver cha
   const env = (o: Record<string, string>) => ({ get: (n: string) => o[n] })
   const ambos = provedoresDe(env({ GEMINI_API_KEY: 'g1', GROQ_API_KEY: 'q1', GUIA_IA_MODELO: 'qwen/qwen3.8-27b' }))
   assert.equal(ambos.gemini.url, URL_GEMINI)
-  assert.equal(ambos.gemini.modelo, 'gemini-3.1-pro-preview')
+  assert.equal(ambos.gemini.modelo, 'gemini-3-flash-preview')
   assert.equal(ambos.groq.url, URL_GROQ)
   assert.equal(ambos.groq.modelo, 'qwen/qwen3.8-27b', 'GUIA_IA_MODELO continua sendo o modelo do Groq')
   const r1 = escolherProvedor(undefined, ambos)

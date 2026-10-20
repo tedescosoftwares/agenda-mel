@@ -9,7 +9,7 @@
 // disco (.cache/guia/<cidade>.json), e os vizinhos são calculados aqui, em memória. Uma rodada
 // de hora em hora sem novidade pede alguns KB por cidade.
 //
-//   carregarGuia({ url, chave, cacheDir, refazer }) -> { lugares, paginas, cidades, categorias_imagens }
+//   carregarGuia({ url, chave, cacheDir, refazer }) -> { lugares, paginas, cidades, categorias_imagens, regioes }
 //     lugares  todos os salões no ar, na ordem do site, cada um com "vizinhos" (os 6 mais perto)
 //     categorias_imagens  { categoria: url } (3.33, migração 180): a imagem de cada categoria, igual em todas as cidades
 //   lerCidade({ buscar, slug, cacheDir })            uma cidade (buscar(slug, desde) é a chamada ao banco)
@@ -138,6 +138,9 @@ export async function carregarGuia({ url, chave, cacheDir, refazer = false, log 
   if (!chaveGerador) log('guia-fonte: sem GUIA_CHAVE_GERADOR no .env; a função do guia recusa sem a chave (173). Leia: select valor from public.guia_segredos where nome = \'gerador\'')
   const cidades = await rpc('guia_cidades', {})
   if (!Array.isArray(cidades)) throw new Error('guia_cidades não devolveu a lista de cidades')
+  // 3.37: as regiões com as cidades de cada uma (migração 182); num banco sem a função, a semente do core faz as vezes
+  let regioes = []
+  try { const r = await rpc('guia_regioes', {}); regioes = Array.isArray(r) ? r : [] } catch (e) { log(`guia-fonte: sem guia_regioes() (${String(e.message).slice(0, 80)}); as regiões vêm da semente do código`) }
   const lugares = [], paginas = []
   let novos = 0, doCache = 0
   // as imagens das categorias valem para todas as cidades: a de uma cidade lida do banco nesta rodada; senão, a do cache
@@ -157,5 +160,5 @@ export async function carregarGuia({ url, chave, cacheDir, refazer = false, log 
     }
   } catch { /* ainda sem a pasta */ }
   log(`guia-fonte: ${cidades.length} cidade(s), ${lugares.length} salões no ar, ${novos} lido(s) do banco nesta rodada${doCache ? `, ${doCache} cidade(s) do cache por falha no banco` : ''}`)
-  return { lugares, paginas, cidades, categorias_imagens: imagens ?? imagensDoCache ?? {} }
+  return { lugares, paginas, cidades, categorias_imagens: imagens ?? imagensDoCache ?? {}, regioes }
 }

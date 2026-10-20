@@ -294,6 +294,11 @@ function vizinhos(l, quantos = 6) {
 // para a página de cabelo mostrar a mescla (imagem da categoria esticada + a foto da cidade no quadro) e as outras a reserva
 export const GUIA_CATEGORIAS_IMAGENS = [{ categoria: 'cabelo', foto: '/imagens/profissional-1400.webp', atualizado_em: dias(3) }]
 const imagemDaCategoria = (cat) => GUIA_CATEGORIAS_IMAGENS.find((x) => x.categoria === cat && x.foto)?.foto ?? null
+// 3.37: as regiões (migração 182): no demo, a Baixada Santista com Itanhaém e Mongaguá
+export const GUIA_REGIOES = [{ slug: 'baixada-santista', nome: 'Baixada Santista', uf: 'SP', ordem: 1, foto: null, chamada: 'Nove cidades entre a serra e o mar, de Bertioga a Peruíbe.', texto: null, atualizado_em: dias(10) }]
+export const GUIA_CIDADES_REGIAO = [{ cidade_slug: 'itanhaem', regiao_slug: 'baixada-santista', atualizado_em: dias(10) }, { cidade_slug: 'mongagua', regiao_slug: 'baixada-santista', atualizado_em: dias(10) }]
+const regioesDemo = () => [...GUIA_REGIOES].sort((a, b) => (a.ordem ?? 100) - (b.ordem ?? 100) || a.nome.localeCompare(b.nome)).map((r) => ({ ...r, cidades: GUIA_CIDADES_REGIAO.filter((v) => v.regiao_slug === r.slug).map((v) => v.cidade_slug).sort() }))
+const regiaoDemo = (c) => { const v = GUIA_CIDADES_REGIAO.find((x) => x.cidade_slug === c); const r = v && GUIA_REGIOES.find((x) => x.slug === v.regiao_slug); return r ? { slug: r.slug, nome: r.nome } : null }
 function cidades() {
   const por = new Map()
   for (const l of GUIA_LUGARES.filter(noAr)) {
@@ -334,6 +339,7 @@ export const GUIA_RPC = {
   guia_desempenho: (a) => demoDesempenho(a ?? {}, GUIA_LUGARES, GUIA_INTERESSES),
   guia_mapa_acessos: (a) => demoMapaAcessos(a ?? {}, GUIA_LUGARES),
   guia_cidades: () => cidades(),
+  guia_regioes: () => regioesDemo(), // 3.37
   guia_cidade: (a) => {
     const c = String(a?.cidade_ ?? '').toLowerCase()
     const cat = String(a?.categoria_ ?? '').toLowerCase()
@@ -346,6 +352,7 @@ export const GUIA_RPC = {
     return {
       cidade: daCidade[0].cidade, cidade_slug: c, uf: daCidade[0].uf, categoria: cat, pagina: pagina?.conteudo ?? null, foto: daCidadePagina?.foto || null, total: daCidade.length,
       imagem: cat ? imagemDaCategoria(cat) : null,
+      regiao: regiaoDemo(c), // 3.37: como o JSON do gerador
       categorias: categoriasDaLista([...daCidade].sort(ordemLista), (l) => fotosDe(l)[0] ?? null).map((k) => ({ ...k, imagem: imagemDaCategoria(k.categoria) })), bairros: contar(lista, 'bairro'), lugares: [...lista].sort(ordemLista).map(cartao),
     }
   },
@@ -421,6 +428,7 @@ export const GUIA_RPC = {
     paginas: GUIA_PAGINAS.filter((p) => (p.status === 'publicado' && p.conteudo) || p.foto).map((p) => ({ cidade_slug: p.cidade_slug, categoria: p.categoria, conteudo: p.status === 'publicado' ? p.conteudo ?? null : null, foto: p.foto ?? null, atualizado_em: p.atualizado_em })),
     cidades: cidades(),
     categorias_imagens: Object.fromEntries(GUIA_CATEGORIAS_IMAGENS.filter((x) => x.foto).map((x) => [x.categoria, x.foto])),
+    regioes: regioesDemo(), // 3.37: o gerador lê guia_regioes() à parte; no demo vem junto
   }),
   // o dono manda as fotos (165): o link da Marta (gi4) abre a página do Ateliê
   guia_fotos_dono: (a) => {

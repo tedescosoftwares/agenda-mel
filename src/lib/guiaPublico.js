@@ -87,6 +87,14 @@ export function carregarCidades() {
   })
 }
 
+// 3.37: as regiões com as cidades de cada uma (o gerador deixa regioes.json; sem ele, guia_regioes())
+export function carregarRegioes() {
+  return lembrar('regioes', async () => {
+    const r = (await doServidor('/dados/guia/regioes.json')) ?? (await rpc('guia_regioes', {}))
+    return Array.isArray(r) ? r : []
+  })
+}
+
 // "quero marcar aqui", "é meu salão", "corrigir", "remover".
 // Devolve sempre { ok, repetido?, motivo? }: a tela só mostra o resultado.
 export async function registrarInteresse(lugarId, tipo, { nome = '', contato = '', mensagem = '' } = {}) {

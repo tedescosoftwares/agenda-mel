@@ -13,6 +13,7 @@ import {
 import { dadosDaPagina } from './guiaTexto.js'
 import { trilhaDaColecao } from './guiaColecoes.js'
 import { fotosDoLugar } from './guia.js'
+import { rotaDaRegiao, preposicaoDaRegiao } from '../../packages/core/guiaRegioes.js'
 
 export const SITE_GUIA = 'https://mimo.com.vc'
 const ORG_ID = `${SITE_GUIA}/#organization`
@@ -38,8 +39,9 @@ export function trilhaDoLugar(l) {
     [l.nome, rotaDoLugar(l.cidade_slug, l.slug)],
   ]
 }
-export function trilhaDaCidade(cidade, cidadeSlug, categoria = '') {
-  const base = [['Início', '/'], ['Salões', rotaDoGuia()], [`Salões em ${cidade}`, rotaDaCidade(cidadeSlug)]]
+// regiao (3.37): { slug, nome } da região da cidade, quando se sabe; entra na trilha entre "Salões" e a cidade
+export function trilhaDaCidade(cidade, cidadeSlug, categoria = '', regiao = null) {
+  const base = [['Início', '/'], ['Salões', rotaDoGuia()], ...(regiao?.slug && regiao?.nome ? [[regiao.nome, rotaDaRegiao(regiao.slug)]] : []), [`Salões em ${cidade}`, rotaDaCidade(cidadeSlug)]]
   if (!categoria) return base
   const cat = categoriaDoGuia(categoria)
   return [...base, [`${cat.rotulo} em ${cidade}`, rotaDaCategoria(cidadeSlug, categoria)]]
@@ -69,6 +71,34 @@ export function seoDaCidade(cidade, cidadeSlug, categoria = '', pagina = null) {
     caminho: categoria ? rotaDaCategoria(cidadeSlug, categoria) : rotaDaCidade(cidadeSlug),
   }
 }
+// a página de região (3.37): d é o que dadosDaRegiao() devolve
+export const trilhaDaRegiao = (regiao) => [['Início', '/'], ['Salões', rotaDoGuia()], [regiao.nome, rotaDaRegiao(regiao.slug)]]
+export function seoDaRegiao(d) {
+  const r = d.regiao
+  const prep = preposicaoDaRegiao(r.nome)
+  const n = d.cidades.length
+  const nomes = d.cidades.slice(0, 3).map((c) => c.cidade)
+  return {
+    titulo: `Salões de beleza ${prep} ${r.nome}: guia por cidade | MIMO`,
+    h1: `Salões de beleza ${prep} ${r.nome}`,
+    descricao: `Salões de beleza, manicures, cílios, sobrancelha e estética ${n === 1 ? 'da cidade' : `das ${n} cidades`} ${prep.replace('n', 'd')} ${r.nome}${nomes.length ? ` (${nomes.join(', ')}${n > 3 ? ' e mais' : ''})` : ''}: endereço, horário e serviços de cada um.`.slice(0, 158),
+    caminho: rotaDaRegiao(r.slug),
+  }
+}
+export function jsonLdDaRegiao(d, faq = []) {
+  const { titulo, descricao, caminho } = seoDaRegiao(d)
+  const url = SITE_GUIA + caminho
+  return {
+    '@context': 'https://schema.org',
+    '@graph': [
+      migalhas(trilhaDaRegiao(d.regiao)),
+      { '@type': 'CollectionPage', '@id': url, url, name: titulo, description: descricao, inLanguage: 'pt-BR', publisher: { '@id': ORG_ID }, mainEntity: { '@id': `${url}#cidades` }, ...(d.foto ? { image: d.foto, primaryImageOfPage: d.foto } : {}) },
+      { '@type': 'ItemList', '@id': `${url}#cidades`, numberOfItems: d.cidades.length, itemListElement: d.cidades.map((c, i) => ({ '@type': 'ListItem', position: i + 1, url: SITE_GUIA + rotaDaCidade(c.cidade_slug), name: `Salões em ${c.cidade}` })) },
+      ...(faq.length ? [faqLd(faq)] : []),
+    ],
+  }
+}
+
 export const seoDoIndice = () => ({
   titulo: 'Guia de salões de beleza por cidade | MIMO',
   descricao: 'Salões de beleza, manicures, cílios, sobrancelha e estética por cidade: endereço, horário e serviços de cada um, num guia feito pela MIMO.',
@@ -153,7 +183,7 @@ export function jsonLdDaCidade(dados, faq = []) {
   return {
     '@context': 'https://schema.org',
     '@graph': [
-      migalhas(trilhaDaCidade(dados.cidade, dados.cidade_slug, dados.categoria)),
+      migalhas(trilhaDaCidade(dados.cidade, dados.cidade_slug, dados.categoria, dados.regiao ?? null)),
       { '@type': 'CollectionPage', '@id': url, url, name: titulo, description: descricao, inLanguage: 'pt-BR', publisher: { '@id': ORG_ID }, mainEntity: { '@id': `${url}#lista` }, ...(dados.foto ? { image: dados.foto, primaryImageOfPage: dados.foto } : {}) },
       {
         '@type': 'ItemList',

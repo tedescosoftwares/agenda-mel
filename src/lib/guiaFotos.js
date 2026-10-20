@@ -39,6 +39,8 @@ export async function enviarFotoDoGuia(lugarId, file, { assinatura } = {}) {
 export const enviarFotoDaCidade = (cidadeSlug, file) => enviarNaPasta(`cidades/${String(cidadeSlug).replace(/[^a-z0-9-]/g, '')}`, file, 'c')
 // 3.33: a imagem da categoria (vale para todas as cidades; migração 180), em categorias/<categoria>/; devolve { url }
 export const enviarImagemDaCategoria = (categoria, file) => enviarNaPasta(`categorias/${String(categoria).replace(/[^a-z0-9-]/g, '')}`, file, 'k')
+// 3.37: a foto da região (migração 182), em regioes/<regiao>/; devolve { url }
+export const enviarImagemDaRegiao = (regiao, file) => enviarNaPasta(`regioes/${String(regiao).replace(/[^a-z0-9-]/g, '')}`, file, 'g')
 // a imagem grande de uma página (1920 px no lado maior: ela se estica atrás do título) e a miniatura, numa pasta do bucket;
 // no demo, uma imagem do site marcada com ?c= (cidade) ou ?k= (categoria)
 async function enviarNaPasta(pasta, file, marca) {

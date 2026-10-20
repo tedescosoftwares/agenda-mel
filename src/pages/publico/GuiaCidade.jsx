@@ -4,7 +4,8 @@ import { ArrowRight, ChevronDown, MapPin, Search, Info, Award, CalendarCheck, La
 import { useSeo } from '../../lib/seo'
 import { SLUGS_CATEGORIA, GUIA_CATEGORIAS, categoriaDoGuia, conteudoSeguro, semAcento, seoPadraoDaCidade, rotaDaCidade, rotaDaCategoria, quemEsta, miniatura, paraFotoInteira } from '../../lib/guia'
 import { seoDaCidade, seoDoIndice, trilhaDaCidade, jsonLdDaCidade, jsonLdDoIndice } from '../../lib/guiaSeo'
-import { carregarCidade, carregarCidades, carregarParte, carregarListaInteira } from '../../lib/guiaPublico'
+import { carregarCidade, carregarCidades, carregarParte, carregarListaInteira, carregarRegioes } from '../../lib/guiaPublico'
+import { agruparPorRegiao, regiaoDaCidade, rotaDaRegiao } from '../../lib/guiaRegioes'
 import { carregarResumo } from '../../lib/guiaColecoesPublico'
 import { artigosResumidos } from '../../lib/conteudoPublico'
 import { artigosDaCidade } from '../../lib/guiaArtigos'
@@ -149,6 +150,7 @@ function Cidade({ dados }) {
   const [lendo, setLendo] = useState(false)
   const [falhaLista, setFalhaLista] = useState(false)
   const [tentativaLista, setTentativaLista] = useState(0)
+  const [regioes, setRegioes] = useState([]) // 3.37: a região da cidade na trilha
   const pedindo = useRef(false)
   const vivo = useRef(true)
   useEffect(() => { vivo.current = true; return () => { vivo.current = false } }, [])
@@ -199,7 +201,8 @@ function Cidade({ dados }) {
     }), posicao, porDistancia)
   }, [lugares, bairro, busca, posicao, porDistancia])
 
-  const trilha = trilhaDaCidade(cidade, cslug, categoria)
+  const regiao = regiaoDaCidade(cslug, regioes)
+  const trilha = trilhaDaCidade(cidade, cslug, categoria, regiao)
   const lead = pagina?.chamada || seoPadraoDaCidade(cidade, categoria).meta_description
   const intro = pagina?.intro?.length ? pagina.intro : [
     `O guia reúne ${cat ? `${cat.plural} de ${cidade}` : `salões de beleza, manicures, cílios, sobrancelha e estética de ${cidade}`} com o endereço, o bairro, o horário e os serviços de cada um. ` +
@@ -233,7 +236,7 @@ function Cidade({ dados }) {
   // (categoria) ou a foto da cidade; a foto da cidade vira o cartão do canto quando as duas existem
   const fundo = (cat && dados.imagem) || dados.foto || null
   const cartaoDaCidade = cat && dados.imagem && dados.foto ? dados.foto : null
-  useSeo({ titulo: seo.titulo, descricao: seo.descricao, caminho: seo.caminho, imagem: fundo || undefined, jsonLd: jsonLdDaCidade({ ...dados, lugares, foto: fundo }, faq) })
+  useSeo({ titulo: seo.titulo, descricao: seo.descricao, caminho: seo.caminho, imagem: fundo || undefined, jsonLd: jsonLdDaCidade({ ...dados, lugares, foto: fundo, regiao }, faq) })
   // o que a lista mostra e quantos faltam: com filtro, dos filtrados; sem filtro, do total da cidade (ou da categoria)
   const visiveis = Math.min(limite, filtrados.length)
   const restam = (precisaDeTudo || completa ? filtrados.length : totalDaLista) - visiveis
@@ -244,6 +247,7 @@ function Cidade({ dados }) {
     let vivo = true
     artigosResumidos().then((as) => vivo && setArtigos(artigosDaCidade(as, cslug))).catch(() => {})
     carregarCidades().then((cs) => vivo && setOutras((Array.isArray(cs) ? cs : []).filter((c) => c.cidade_slug !== cslug))).catch(() => {})
+    carregarRegioes().then((rs) => vivo && setRegioes(Array.isArray(rs) ? rs : [])).catch(() => {})
     return () => { vivo = false }
   }, [cslug])
 
@@ -471,6 +475,7 @@ function Cidade({ dados }) {
 // ---- /saloes ----------------------------------------------------------------------------
 function IndiceDeCidades() {
   const [cidades, setCidades] = useState(undefined)
+  const [regioes, setRegioes] = useState([]) // 3.37: os cartões agrupados por região
   const [tentativa, setTentativa] = useState(0)
   const raiz = useRevelar(cidades && cidades !== 'erro' ? 'pronto' : 'esperando')
   const seo = seoDoIndice()
@@ -481,10 +486,12 @@ function IndiceDeCidades() {
   useEffect(() => {
     let vivo = true
     carregarCidades().then((c) => vivo && setCidades(c)).catch(() => vivo && setCidades('erro'))
+    carregarRegioes().then((rs) => vivo && setRegioes(Array.isArray(rs) ? rs : [])).catch(() => {})
     return () => { vivo = false }
   }, [tentativa])
 
   const lista = Array.isArray(cidades) ? cidades : []
+  const grupos = useMemo(() => agruparPorRegiao(Array.isArray(cidades) ? cidades : [], (c) => c.cidade_slug, regioes.length ? regioes : undefined), [cidades, regioes])
   // por categoria, as cidades que a têm (3.19; o banco manda em guia_cidades a partir da 168)
   const porCategoria = useMemo(() => {
     const ls = Array.isArray(cidades) ? cidades : []
@@ -509,17 +516,25 @@ function IndiceDeCidades() {
           <div className="gd-wrap">
             {cidades === undefined && <Esqueleto capa={false} />}
             {cidades === 'erro' && <Falhou onTentar={() => { setCidades(undefined); setTentativa((t) => t + 1) }} />}
-            {Array.isArray(cidades) && (lista.length ? (
-              <div className="gd-cidades">
-                {lista.map((c) => (
-                  <Link key={c.cidade_slug} className={'gd-cidade ld-rv' + (c.foto ? ' gd-cidade-com-foto' : '')} to={rotaDaCidade(c.cidade_slug)}>
-                    {c.foto && <img className="gd-cidade-fundo" src={miniatura(c.foto)} data-cheia={c.foto} onError={paraFotoInteira} alt="" loading="lazy" decoding="async" />}
-                    <span><small>{c.uf || 'SP'}</small><span className="gd-cidade-nome">{c.cidade}</span></span>
-                    <span className="gd-cidade-pe"><span>{c.total} {c.total === 1 ? 'lugar no guia' : 'lugares no guia'}</span><span><ArrowRight size={20} /></span></span>
-                  </Link>
-                ))}
+            {Array.isArray(cidades) && (lista.length ? grupos.map((gr) => (
+              <div key={gr.regiao.slug} className="gd-regiao" data-teste={`regiao-${gr.regiao.slug}`}>
+                {(grupos.length > 1 || gr.regiao.slug !== 'outras') && (
+                  <h2 className="gd-h2 gd-regiao-titulo">
+                    {gr.regiao.slug === 'outras' ? gr.regiao.nome : <Link to={rotaDaRegiao(gr.regiao.slug)}>{gr.regiao.nome} <ArrowRight size={18} /></Link>}
+                    <small>{gr.cidades.length} {gr.cidades.length === 1 ? 'cidade' : 'cidades'} · {gr.cidades.reduce((n, c) => n + Number(c.total ?? 0), 0).toLocaleString('pt-BR')} lugares</small>
+                  </h2>
+                )}
+                <div className="gd-cidades">
+                  {gr.cidades.map((c) => (
+                    <Link key={c.cidade_slug} className={'gd-cidade ld-rv' + (c.foto ? ' gd-cidade-com-foto' : '')} to={rotaDaCidade(c.cidade_slug)}>
+                      {c.foto && <img className="gd-cidade-fundo" src={miniatura(c.foto)} data-cheia={c.foto} onError={paraFotoInteira} alt="" loading="lazy" decoding="async" />}
+                      <span><small>{c.uf || 'SP'}</small><span className="gd-cidade-nome">{c.cidade}</span></span>
+                      <span className="gd-cidade-pe"><span>{c.total} {c.total === 1 ? 'lugar no guia' : 'lugares no guia'}</span><span><ArrowRight size={20} /></span></span>
+                    </Link>
+                  ))}
+                </div>
               </div>
-            ) : (
+            )) : (
               <div className="gd-vazio"><MapPin size={26} /><p>O guia está chegando. Em breve, os salões da sua cidade aparecem aqui.</p></div>
             ))}
           </div>

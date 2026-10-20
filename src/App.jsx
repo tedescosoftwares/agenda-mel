@@ -55,6 +55,7 @@ const RotasPlataforma = lazy(() => import("./rotas/RotasPlataforma"));
 const GuiaRota = lazy(() => import("./pages/publico/GuiaCidade"));
 // as coleções do guia (3.12): /saloes/itanhaem/bairro/centro, /saloes/itanhaem/horario/domingo[/unhas]
 const GuiaColecao = lazy(() => import("./pages/publico/GuiaColecao"));
+const GuiaRegiao = lazy(() => import("./pages/publico/GuiaRegiao")); // 3.37
 const GuiaFotosDono = lazy(() => import("./pages/publico/GuiaFotosDono"));
 
 export default function App() {
@@ -113,6 +114,7 @@ export default function App() {
             <Route path="/sobre" element={<Sobre />} />
             <Route path="/contato" element={<Contato />} />
             <Route path="/saloes" element={<GuiaRota />} />
+            <Route path="/saloes/regiao/:regiao" element={<GuiaRegiao />} />
             <Route path="/saloes/:cidade" element={<GuiaRota />} />
             <Route path="/saloes/:cidade/:item" element={<GuiaRota />} />
             <Route path="/saloes/:cidade/:item/fotos/:token" element={<GuiaFotosDono />} />

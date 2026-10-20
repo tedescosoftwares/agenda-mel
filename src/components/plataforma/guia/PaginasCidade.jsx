@@ -6,9 +6,9 @@ import { GUIA_CATEGORIAS, categoriaDoGuia, conteudoSeguro, rotaDaCidade, rotaDaC
 import { seoDaCidade } from '../../../lib/guiaSeo'
 import { urlDoAmbiente } from '../../../lib/ambiente'
 import EditarPagina from './EditarPagina'
-import { enviarFotoDaCidade, enviarImagemDaCategoria } from '../../../lib/guiaFotos'
+import { enviarFotoDaCidade, enviarImagemDaCategoria, enviarImagemDaRegiao } from '../../../lib/guiaFotos'
 import { copiarTexto } from '../../../lib/guiaColar'
-import { agruparPorRegiao } from '../../../lib/guiaRegioes'
+import { agruparPorRegiao, rotaDaRegiao } from '../../../lib/guiaRegioes'
 import { MapPinned, Check, RefreshCw, Sparkles, ExternalLink, LoaderCircle, TriangleAlert, BookOpen, Wand2, Globe, Pencil, ImagePlus, Trash2, Image as ImagemIcone, Copy } from 'lucide-react'
 
 // 3.33: como a imagem precisa ser (a foto da cidade e a imagem da categoria): ela se estica atrás do título no site
@@ -66,6 +66,115 @@ function BlocoImagem({ teste, titulo, nota, palavra, url, alt, enviando, onArqui
   )
 }
 
+// A região da cidade (3.37, migração 182): toda cidade precisa de uma; a que não existe se cria aqui. O editor da página
+// da região (foto, chamada, um parágrafo) abre na coluna principal
+function RegiaoDaCidade({ g, cidade, aberta, setAberta }) {
+  const [criando, setCriando] = useState(false)
+  const [nome, setNome] = useState('')
+  const [erro, setErro] = useState('')
+  if (!cidade) return null
+  if (g.regioes === null) return <div className="pg-paginas-regiao" data-teste="regiao-da-cidade"><span>Região</span><small>Rode a migração 182 (supabase/182_regioes.sql) para vincular as cidades a regiões.</small></div>
+  const atual = g.regiaoDaCidade(cidade.slug)
+  async function mudar(v) {
+    setErro('')
+    if (v === '__nova') { setCriando(true); return }
+    const r = await g.salvarRegiaoDaCidade(cidade.slug, v)
+    if (!r.ok) setErro(r.erro)
+    else if (v) g.avisar({ texto: `${cidade.nome} vinculada à região ${g.regioes.find((x) => x.slug === v)?.nome ?? v}.`, tom: 'ok' })
+  }
+  async function criar(e) {
+    e.preventDefault()
+    setErro('')
+    const r = await g.criarRegiao(nome)
+    if (!r.ok) { setErro(r.erro); return }
+    const v = await g.salvarRegiaoDaCidade(cidade.slug, r.slug)
+    if (!v.ok) { setErro(v.erro); return }
+    setCriando(false); setNome('')
+    g.avisar({ texto: r.existia ? `${cidade.nome} vinculada à região ${r.nome}, que já existia.` : `Região ${r.nome} criada; ${cidade.nome} vinculada a ela. A página /saloes/regiao/${r.slug} entra no site na próxima republicação.`, tom: 'ok' })
+  }
+  return (
+    <div className={'pg-paginas-regiao' + (atual ? '' : ' sem')} data-teste="regiao-da-cidade">
+      <span>Região de {cidade.nome}</span>
+      <select className="plat-select" value={criando ? '__nova' : atual?.slug ?? ''} onChange={(e) => mudar(e.target.value)} aria-label="Região da cidade">
+        <option value="">Sem região</option>
+        {g.regioes.map((r) => <option key={r.slug} value={r.slug}>{r.nome}</option>)}
+        <option value="__nova">Nova região…</option>
+      </select>
+      {criando && (
+        <form className="pg-regiao-nova" onSubmit={criar}>
+          <input className="plat-input" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Nome da região (ex.: Serra da Mantiqueira)" autoFocus data-teste="nome-da-regiao" />
+          <span>
+            <button type="submit" className="btn btn-primario pg-btn-peq" disabled={!nome.trim()}>Criar</button>
+            <button type="button" className="btn btn-ghost pg-btn-peq" onClick={() => { setCriando(false); setNome('') }}>Cancelar</button>
+          </span>
+        </form>
+      )}
+      {!atual && !criando && <small className="pg-regiao-aviso">Toda cidade precisa de uma região: escolha uma ou crie. Sem ela, a cidade fica em "Outras cidades" no site.</small>}
+      {atual && <button type="button" className="plat-link" onClick={() => setAberta((v) => !v)} data-teste="abrir-regiao">{aberta ? 'Fechar a página da região' : `Página da região: ${atual.nome}`}</button>}
+      {erro && <small className="pg-regiao-erro">{erro}</small>}
+    </div>
+  )
+}
+function EditorRegiao({ g, regiao, onFechar }) {
+  const [chamada, setChamada] = useState(regiao.chamada ?? '')
+  const [texto, setTexto] = useState(regiao.texto ?? '')
+  const [salvando, setSalvando] = useState(false)
+  const [enviando, setEnviando] = useState(false)
+  const [erro, setErro] = useState('')
+  const mudou = chamada.trim() !== (regiao.chamada ?? '').trim() || texto.trim() !== (regiao.texto ?? '').trim()
+  async function salvar(e) {
+    e.preventDefault()
+    if (salvando) return
+    setSalvando(true); setErro('')
+    try {
+      const r = await g.salvarRegiao(regiao.slug, { chamada: chamada.trim().slice(0, 200) || null, texto: texto.trim().slice(0, 900) || null })
+      if (!r.ok) setErro(r.erro)
+      else g.avisar({ texto: `Página da região ${regiao.nome} guardada. Entra no site na próxima republicação (de hora em hora).`, tom: 'ok' })
+    } finally { setSalvando(false) }
+  }
+  async function enviarFoto(e) {
+    const f = e.target.files?.[0]
+    e.target.value = ''
+    if (!f) return
+    setEnviando(true); setErro('')
+    try {
+      const { url } = await enviarImagemDaRegiao(regiao.slug, f)
+      const r = await g.salvarRegiao(regiao.slug, { foto: url })
+      if (!r.ok) setErro(r.erro)
+      else g.avisar({ texto: `Foto da região ${regiao.nome} guardada. Entra no site na próxima republicação.`, tom: 'ok' })
+    } catch (err) { setErro(err.message || 'não deu para enviar a foto') } finally { setEnviando(false) }
+  }
+  async function tirarFoto() {
+    const r = await g.salvarRegiao(regiao.slug, { foto: null })
+    if (!r.ok) setErro(r.erro)
+  }
+  return (
+    <div className="pg-regiao-editor" data-teste="editor-da-regiao">
+      <div className="pg-acoes-topo">
+        <div className="pg-acoes-nome"><h2>Página da região · {regiao.nome}</h2></div>
+        <span className="pg-fora-linha">
+          <a className="plat-link" href={urlDoAmbiente('cliente', rotaDaRegiao(regiao.slug))} target="_blank" rel="noopener noreferrer">ver no site <ExternalLink size={12} /></a>
+          <button type="button" className="btn btn-ghost pg-btn-peq" onClick={onFechar}>Fechar</button>
+        </span>
+      </div>
+      <p className="pg-acoes-sub">A página da região fica acima das cidades: a foto, a chamada e, se quiser, um parágrafo. As cidades, os números e as perguntas vêm dos dados.</p>
+      <BlocoImagem teste="foto-da-regiao" palavra="foto" titulo={`Foto da região ${regiao.nome}`} url={regiao.foto} alt={`Foto da ${regiao.nome}`} enviando={enviando} onArquivo={enviarFoto} onTirar={tirarFoto}
+        nota="Esticada no alto da página da região e é a imagem do link. Sem foto, a página usa a foto da primeira cidade da região."
+        cena={`${regiao.nome}, SP: uma paisagem reconhecível da região, de dia`} />
+      <form className="pg-contexto" onSubmit={salvar}>
+        <label className="pg-campo">Chamada (abaixo do título) <small className="muted">{chamada.length}/200</small>
+          <textarea rows={2} value={chamada} onChange={(e) => setChamada(e.target.value)} placeholder="Ex.: Nove cidades entre a serra e o mar, de Bertioga a Peruíbe." data-teste="chamada-da-regiao" />
+        </label>
+        <label className="pg-campo">Um parágrafo (opcional) <small className="muted">{texto.length}/900</small>
+          <textarea rows={4} value={texto} onChange={(e) => setTexto(e.target.value)} placeholder="Escrito à mão ou colado do GPT: como a região se organiza e o que muda para quem escolhe salão. Sem horário de salão." />
+        </label>
+        {erro && <div className="alert alert-error">{erro}</div>}
+        <div className="pg-fora-linha"><button type="submit" className="btn btn-ghost" disabled={!mudou || salvando}>{salvando ? <LoaderCircle size={16} className="pg-gira" /> : <Check size={16} />} Guardar</button></div>
+      </form>
+    </div>
+  )
+}
+
 // O texto da página da cidade (/saloes/itanhaem) e de cada categoria
 // (/saloes/itanhaem/unhas). As linhas nascem sozinhas na importação; a
 // página aparece no site assim que tiver um salão publicado, com o texto
@@ -98,6 +207,7 @@ export default function PaginasCidade({ g }) {
   const [confira, setConfira] = useState(null) // { id, itens, modelo }: o que a IA pediu para conferir na sugestão (3.28)
   const [editando, setEditando] = useState(false) // 3.32: o editor do texto da página
   const [enviandoFoto, setEnviandoFoto] = useState(false) // 3.32: a foto da cidade subindo
+  const [regiaoAberta, setRegiaoAberta] = useState(false) // 3.37: o editor da página da região
 
   // quantos salões no ar em cada página (a da cidade conta todos): dos totais por cidade (3.25, migração 174),
   // que valem para todas as cidades; num banco sem eles, da lista carregada
@@ -245,14 +355,15 @@ export default function PaginasCidade({ g }) {
         <label className="pg-paginas-cidade" data-teste="paginas-cidade">
           <span>Cidade</span>
           <select className="plat-select" value={cidadeAtiva?.slug ?? ''} onChange={(e) => trocarCidade(e.target.value)} aria-label="Cidade das páginas">
-            {agruparPorRegiao(cidades).map((gr) => (
-              <optgroup key={gr.regiao.slug} label={gr.regiao.nome}>
+            {agruparPorRegiao(cidades, (c) => c.slug, g.regioes ?? undefined).map((gr) => (
+              <optgroup key={gr.regiao.slug} label={gr.regiao.slug === 'outras' ? 'Sem região' : gr.regiao.nome}>
                 {gr.cidades.map((c) => <option key={c.slug} value={c.slug}>{c.nome}{c.pendentes ? ` · ${c.pendentes} para revisar` : ''}{c.noAr ? '' : ' · fora do site'}</option>)}
               </optgroup>
             ))}
           </select>
           <small>{cidades.length === 1 ? '1 cidade com páginas' : `${cidades.length} cidades com páginas`}{cidadeAtiva && !cidadeAtiva.noAr ? ' · esta ainda não tem salão no ar' : ''}</small>
         </label>
+        <RegiaoDaCidade g={g} cidade={cidadeAtiva} aberta={regiaoAberta} setAberta={setRegiaoAberta} />
         <div className="pg-paginas-todas" data-teste="escrever-todas">
           <button type="button" className="btn btn-ghost pg-btn-peq" onClick={() => g.escreverContextos(paraEscrever)} disabled={!paraEscrever.length || (andamento && !andamento.fim)} title={paraEscrever.length ? 'A IA escreve o "Sobre a cidade" das cidades que ainda estão com a semente geral ou vazias, uma por vez, gravando. O que ela já escreveu e o que a equipe editou ficam. No Gemini, ela pesquisa no Google e guarda as fontes.' : 'Todas as cidades já têm o "Sobre a cidade" escrito. Para refazer um, "Melhorar com a IA" na cidade.'}>
             {andamento && !andamento.fim ? <><LoaderCircle size={14} className="pg-gira" /> {andamento.feitos} de {andamento.total} · {andamento.atual}…</> : <><Globe size={14} /> Escrever o "Sobre a cidade" de todas ({paraEscrever.length})</>}
@@ -281,6 +392,7 @@ export default function PaginasCidade({ g }) {
 
       {atual && (
         <section className="pg-paginas-detalhe plat-painel">
+          {regiaoAberta && cidadeAtiva && g.regiaoDaCidade(cidadeAtiva.slug) && <EditorRegiao key={g.regiaoDaCidade(cidadeAtiva.slug).slug} g={g} regiao={g.regioes?.find((r) => r.slug === g.regiaoDaCidade(cidadeAtiva.slug).slug) ?? g.regiaoDaCidade(cidadeAtiva.slug)} onFechar={() => setRegiaoAberta(false)} />}
           <div className="pg-acoes-topo">
             <div className="pg-acoes-nome"><h2>{tituloDe(atual)}</h2><Pilula tom={TOM[fase]}>{ROTULO[fase]}</Pilula></div>
             {nNoAr > 0 && <a className="plat-link" href={urlDoAmbiente('cliente', caminho)} target="_blank" rel="noopener noreferrer">ver no site <ExternalLink size={12} /></a>}

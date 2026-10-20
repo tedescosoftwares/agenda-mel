@@ -531,6 +531,14 @@
 .pg-contexto-origem { display: block; margin: 0.3rem 0 0.1rem; font-size: 0.76rem; color: var(--texto-3); }
 .pg-contexto-fontes a { color: var(--rosa); }
 
+/* a região da cidade e a página da região (3.37) */
+.pg-paginas-regiao { display: flex; flex-direction: column; gap: 0.3rem; margin: 0 0.4rem 0.6rem; font-size: 0.74rem; color: var(--texto-3); }
+.pg-paginas-regiao.sem .plat-select { border-color: #d08a00; }
+.pg-regiao-nova { display: flex; flex-direction: column; gap: 0.3rem; }
+.pg-regiao-nova span { display: flex; gap: 0.3rem; }
+.pg-regiao-aviso { color: #a05a00; }
+.pg-regiao-erro { color: #c0392b; }
+.pg-regiao-editor { margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px dashed var(--fio); }
 /* os pontos da página (3.35): título e texto lado a lado dentro da linha */
 .pg-ponto { flex: 1; display: grid; gap: 0.3rem; }
 /* escrever fora (3.32): o pedido para o GPT e o JSON colado */

@@ -17,7 +17,8 @@ import Abordagem from '../../components/plataforma/guia/Abordagem'
 import { naoContarAqui } from '../../lib/eventos'
 import { IAS, iaLembrada, lembrarIa, modeloLembrado, lembrarModelo } from '../../lib/guiaIa'
 import { lerEmFatias, COLUNAS_LISTA, COLUNAS_LISTA_ANTIGAS, colunaFalta, soAFila, soAFilaNaTabela, TETO_TODAS } from '../../lib/guiaPlataformaDados'
-import { agruparPorRegiao } from '../../lib/guiaRegioes'
+import { agruparPorRegiao, regiaoDaCidade } from '../../lib/guiaRegioes'
+import { slugificar } from '../../lib/guia'
 import { ClipboardCheck, Globe2, Upload, MapPinned, Inbox, X, BarChart3, Handshake, MapPin, RefreshCw, LoaderCircle } from 'lucide-react'
 import '../../guia-plataforma.css'
 
@@ -191,12 +192,22 @@ async function lerImagensDasCategorias() {
     return m
   } catch { return {} }
 }
+// 3.37: as regiões e o vínculo de cada cidade (migração 182); num banco sem as tabelas, null (a tela agrupa pela semente do código)
+async function lerRegioesDoGuia() {
+  try {
+    const [r, v] = await Promise.all([supabase.from('guia_regioes').select('*').order('ordem').order('nome'), supabase.from('guia_cidades_regiao').select('cidade_slug, regiao_slug')])
+    if (r.error || v.error) return null
+    return { regioes: r.data ?? [], vinculos: Object.fromEntries((v.data ?? []).map((x) => [x.cidade_slug, x.regiao_slug])) }
+  } catch { return null }
+}
 const lerBase = () => Promise.all([
   lerResumo(),
   lerTudo('guia_paginas', '*', 'cidade_slug'),
   lerTudo('guia_interesses', '*', 'criado_em'),
   lerImagensDasCategorias(),
+  lerRegioesDoGuia(),
 ])
+const SEM_TABELA_182 = (e) => (/guia_regioes|guia_cidades_regiao/.test(String(e?.message ?? e)) && /exist|schema cache|could not find|relation/i.test(String(e?.message ?? e)) ? 'O banco ainda não tem as regiões. Rode a migração 182 (supabase/182_regioes.sql).' : String(e?.message ?? e))
 
 // a cidade escolhida fica no aparelho
 const CIDADE_LEMBRADA = 'mimo-guia-cidade'
@@ -275,6 +286,7 @@ export default function Guia() {
   const [paginas, setPaginas] = useState(null)
   const [interesses, setInteresses] = useState(null)
   const [imagensCategorias, setImagensCategorias] = useState({}) // 3.33: { categoria: url } (guia_categorias, migração 180)
+  const [regioesDb, setRegioesDb] = useState(null) // 3.37: { regioes, vinculos: { cidade_slug: regiao_slug } } ou null (sem a 182)
   const [erro, setErro] = useState('')
   const [gerando, setGerando] = useState({})   // id -> { espera: segundos de limite }
   const [falhas, setFalhas] = useState({})     // id -> mensagem de erro da última geração
@@ -301,9 +313,9 @@ export default function Guia() {
   const montado = useRef(true)
 
   // a base (totais, páginas, interesses): na abertura e ao ler de novo (depois de importar ou do lote)
-  const aplicarBase = useCallback(([r, p, i, m]) => {
+  const aplicarBase = useCallback(([r, p, i, m, rg]) => {
     if (!montado.current) return
-    setResumo(r); setPaginas(p); setInteresses(i); setImagensCategorias(m ?? {}); setErro('')
+    setResumo(r); setPaginas(p); setInteresses(i); setImagensCategorias(m ?? {}); setRegioesDb(rg ?? null); setErro('')
     // a cidade: a lembrada ou a com mais trabalho; a escolhida some do resumo (apagou a cidade) -> outra
     setCidade((c) => (c === null || (c && Array.isArray(r) && !r.some((x) => x.cidade_slug === c)) ? cidadeInicial(r) : c))
     // os salões que os interesses citam, de qualquer cidade (a lista carregada é de uma só)
@@ -580,6 +592,38 @@ export default function Guia() {
     mudarPagina(id, { ...campos, atualizado_em: agora() })
     return { ok: true }
   }, [mudarPagina])
+  // 3.37: as regiões em uso, com as cidades de cada uma (as do banco; sem a 182, a semente do código vale para agrupar)
+  const listaRegioes = useMemo(() => (regioesDb ? regioesDb.regioes.map((r) => ({ ...r, cidades: Object.entries(regioesDb.vinculos).filter(([, rs]) => rs === r.slug).map(([c]) => c) })) : null), [regioesDb])
+  const regiaoDaCidadeDb = useCallback((slug) => regiaoDaCidade(slug, listaRegioes ?? undefined), [listaRegioes])
+  // toda cidade precisa de uma região: vincula (ou desvincula, com '') e, no site, a cidade entra na página da região
+  const salvarRegiaoDaCidade = useCallback(async (cidadeSlug, regiaoSlug) => {
+    const { error } = regiaoSlug
+      ? await supabase.from('guia_cidades_regiao').upsert({ cidade_slug: cidadeSlug, regiao_slug: regiaoSlug }, { onConflict: 'cidade_slug' })
+      : await supabase.from('guia_cidades_regiao').delete().eq('cidade_slug', cidadeSlug)
+    if (error) return { ok: false, erro: SEM_TABELA_182(error) }
+    setRegioesDb((x) => { if (!x) return x; const vinculos = { ...x.vinculos }; if (regiaoSlug) vinculos[cidadeSlug] = regiaoSlug; else delete vinculos[cidadeSlug]; return { ...x, vinculos } })
+    return { ok: true }
+  }, [])
+  // a região que não existe se cria aqui (o nome vira o slug do endereço /saloes/regiao/<slug>)
+  const criarRegiao = useCallback(async (nome) => {
+    const limpo = String(nome ?? '').trim().slice(0, 60)
+    const slug = slugificar(limpo)
+    if (!slug) return { ok: false, erro: 'dê um nome à região' }
+    const existente = (regioesDb?.regioes ?? []).find((r) => r.slug === slug)
+    if (existente) return { ok: true, slug, nome: existente.nome, existia: true }
+    const linha = { slug, nome: limpo, uf: 'SP', ordem: 100 }
+    const { error } = await supabase.from('guia_regioes').upsert(linha, { onConflict: 'slug' })
+    if (error) return { ok: false, erro: SEM_TABELA_182(error) }
+    setRegioesDb((x) => (x ? { ...x, regioes: [...x.regioes, { ...linha, foto: null, chamada: null, texto: null, atualizado_em: agora() }] } : x))
+    return { ok: true, slug, nome: limpo }
+  }, [regioesDb])
+  // a página da região: foto, chamada, texto
+  const salvarRegiao = useCallback(async (slug, campos) => {
+    const { error } = await supabase.from('guia_regioes').update(campos).eq('slug', slug)
+    if (error) return { ok: false, erro: SEM_TABELA_182(error) }
+    setRegioesDb((x) => (x ? { ...x, regioes: x.regioes.map((r) => (r.slug === slug ? { ...r, ...campos, atualizado_em: agora() } : r)) } : x))
+    return { ok: true }
+  }, [])
   // 3.33: a imagem de uma categoria, igual para todas as cidades (guia_categorias, migração 180); null tira
   const salvarImagemCategoria = useCallback(async (categoria, foto) => {
     const { error } = await supabase.from('guia_categorias').upsert({ categoria, foto: foto || null }, { onConflict: 'categoria' })
@@ -724,6 +768,7 @@ export default function Guia() {
     faseDe, temTexto, temRascunho, temConteudo, carregarTexto, gerando, falhas, lote, usuario: user?.id ?? null,
     carregar, salvarLugar, montarUm, gerarUm, iniciarLote, pausarLote, cancelarLote, fecharLote, aprovar, desfazerAprovacao,
     gerarPagina, aprovarPagina, salvarContexto, sugerirContexto, escreverContextos, contextos, salvarPagina, pedidoParaIa, conferirTexto, imagensCategorias, salvarImagemCategoria, salvarInteresse, importar, avisar, irPara,
+    regioes: listaRegioes, regiaoDaCidade: regiaoDaCidadeDb, salvarRegiaoDaCidade, criarRegiao, salvarRegiao,
     desempenho, carregarDesempenho, desempenhoPorLugar,
   }
 
@@ -736,8 +781,8 @@ export default function Guia() {
             <label className="pg-cidade-sel">
               <MapPin size={15} aria-hidden="true" />
               <select className="plat-select" value={cidade ?? ''} onChange={(e) => escolherCidade(e.target.value)} aria-label="Cidade do guia">
-                {agruparPorRegiao(cidades).map((gr) => (
-                  <optgroup key={gr.regiao.slug} label={gr.regiao.nome}>
+                {agruparPorRegiao(cidades, (c) => c.slug, listaRegioes ?? undefined).map((gr) => (
+                  <optgroup key={gr.regiao.slug} label={gr.regiao.slug === 'outras' ? 'Sem região' : gr.regiao.nome}>
                     {gr.cidades.map((c) => <option key={c.slug} value={c.slug}>{c.nome} · {c.total}{c.esperando ? ` · ${c.esperando} para revisar` : ''}</option>)}
                   </optgroup>
                 ))}

@@ -15,7 +15,9 @@ import {
   seoDoLugar, seoDaCidade, seoDoIndice, trilhaDoLugar, trilhaDaCidade,
   jsonLdDoLugar, jsonLdDaCidade, jsonLdDoIndice,
   seoDaColecao, jsonLdDaColecao, trilhaDaColecao,
+  seoDaRegiao, trilhaDaRegiao, jsonLdDaRegiao,
 } from '../src/lib/guiaSeo.js'
+import { REGIOES, agruparPorRegiao, regiaoDaCidade, rotaDaRegiao, dadosDaRegiao, faqDaRegiao, preposicaoDaRegiao } from '../src/lib/guiaRegioes.js'
 import { colecoesDaCidade, montarColecao, linksDeColecoes, linkDoBairro } from '../src/lib/guiaColecoes.js'
 import { panoramaDaCidade, juntarFaq, tituloDoPanorama, horasDe, faqEscrita } from '../src/lib/guiaPanorama.js'
 import { chaveDoBairro } from '../src/lib/guiaColecoes.js'
@@ -68,7 +70,7 @@ function corpoDaCidade(dados, faq, colecoes = null, extras = {}, panorama = null
   const { h1 } = seoDaCidade(dados.cidade, dados.cidade_slug, dados.categoria, dados.pagina)
   const outras = (dados.categorias ?? []).filter((x) => x.categoria !== dados.categoria)
   return `<main>
-${migalhas(trilhaDaCidade(dados.cidade, dados.cidade_slug, dados.categoria))}
+${migalhas(trilhaDaCidade(dados.cidade, dados.cidade_slug, dados.categoria, dados.regiao ?? null))}
 <h1>${esc(h1)}</h1>
 ${dados.imagem || dados.foto ? `<figure><img src="${esc(dados.imagem || dados.foto)}" alt="${esc(dados.imagem ? `${categoriaDoGuia(dados.categoria).rotulo} em ${dados.cidade}` : `${dados.cidade}${dados.uf ? `, ${dados.uf}` : ''}`)}" /></figure>` : ''}
 <p>${esc(c.chamada || seoPadraoDaCidade(dados.cidade, dados.categoria).meta_description)}</p>
@@ -107,7 +109,10 @@ ${navDeColecoes(m.tipo === 'bairro' ? 'Outros bairros' : 'Por bairro', r.bairros
 // guia_publicadas() mandou (3.17, migração 166: MIMO, Seleção, pontos de nota e foto, nome), e
 // filtrar por categoria não a muda; a nota não vem para cá, então não dá para reordenar aqui.
 const cartao = (l) => ({ slug: l.slug, nome: l.nome, bairro: l.bairro, categoria: l.categoria, resumo: l.conteudo?.resumo ?? null, servicos: (l.servicos ?? []).slice(0, 4), selecao: l.selecao, na_mimo: l.na_mimo, latitude: l.latitude ?? null, longitude: l.longitude ?? null, foto: Array.isArray(l.fotos) && l.fotos[0] ? l.fotos[0] : null })
-function dadosDaCidade(lugares, paginas, cidadeSlug, categoria, imagens = {}) {
+// as regiões em uso (3.37): as do banco (guia.regioes, com "cidades"), senão a semente do core
+const regioesDe = (guia) => (Array.isArray(guia?.regioes) && guia.regioes.length ? guia.regioes : REGIOES)
+const regiaoResumida = (r) => (r ? { slug: r.slug, nome: r.nome } : null)
+function dadosDaCidade(lugares, paginas, cidadeSlug, categoria, imagens = {}, regioes = REGIOES) {
   const daCidade = lugares.filter((l) => l.cidade_slug === cidadeSlug)
   const lista = categoria ? daCidade.filter((l) => l.categoria === categoria) : daCidade
   const contar = (ls, campo) => [...ls.reduce((m, l) => (l[campo] ? m.set(l[campo], (m.get(l[campo]) ?? 0) + 1) : m), new Map())].map(([k, total]) => ({ [campo]: k, total })).sort((a, b) => b.total - a.total)
@@ -118,6 +123,7 @@ function dadosDaCidade(lugares, paginas, cidadeSlug, categoria, imagens = {}) {
     cidade: daCidade[0].cidade, cidade_slug: cidadeSlug, uf: daCidade[0].uf, categoria, pagina: pagina?.conteudo ?? null, foto: daCidadePagina?.foto || null, total: daCidade.length,
     // 3.33: a imagem da categoria (migração 180): a desta página e a de cada categoria da lista
     imagem: categoria ? imagens[categoria] || null : null,
+    regiao: regiaoResumida(regiaoDaCidade(cidadeSlug, regioes)), // 3.37: a trilha e o JSON-LD levam a região
     categorias: categoriasDaLista(daCidade).map((c) => ({ ...c, imagem: imagens[c.categoria] || null })), bairros: contar(lista, 'bairro'), lugares: lista.map(cartao),
     atualizado: [...lista.map((l) => dia(l.atualizado_em)), dia(pagina?.atualizado_em)].filter(Boolean).sort().at(-1),
   }
@@ -150,7 +156,7 @@ export function paginasDoGuia(guia, artigos = []) {
     const cats = ['', ...GUIA_CATEGORIAS.map((g) => g.slug).filter((s) => lugares.some((l) => l.cidade_slug === cs && l.categoria === s))]
     const extras = { artigos: artigosDaCidade(artigos, cs, listaCidades), cidades: listaCidades }
     for (const cat of cats) {
-      const d = dadosDaCidade(lugares, paginas, cs, cat, imagens)
+      const d = dadosDaCidade(lugares, paginas, cs, cat, imagens, regioesDe(guia))
       // o panorama (3.22): os números da lista, montados aqui, e a FAQ dos dados junto com a da IA
       const panorama = panoramaDaCidade({ cidade: d.cidade, categoria: cat, lugares: d.lugares, completos: doGuia })
       const faq = juntarFaq(faqEscrita(conteudoSeguro(d.pagina)), panorama.faq) // 3.34: dos dados e do que foi escrito à mão
@@ -167,10 +173,36 @@ export function paginasDoGuia(guia, artigos = []) {
   const lista = cidades.map((cs) => { const l = lugares.find((x) => x.cidade_slug === cs); return { cidade: l.cidade, cidade_slug: cs, uf: l.uf, total: daCidade.get(cs).length, categorias: categoriasDaLista(daCidade.get(cs)).map(({ categoria, total }) => ({ categoria, total })) } })
   const porCategoria = GUIA_CATEGORIAS.map((k) => ({ k, cidades: lista.map((c) => ({ c, n: c.categorias.find((x) => x.categoria === k.slug)?.total ?? 0 })).filter((x) => x.n > 0) })).filter((x) => x.cidades.length)
   const ix = seoDoIndice()
+  // 3.37: as páginas de região, com as cidades da região que estão no guia; o índice agrupa as cidades por região
+  const regioes = regioesDe(guia)
+  const atualizadoGeral = lugares.map((l) => dia(l.atualizado_em)).filter(Boolean).sort().at(-1)
+  const comFoto = (c) => ({ ...c, foto: c.foto || paginas.find((p) => p.cidade_slug === c.cidade_slug && (p.categoria ?? '') === '')?.foto || null })
+  const listaComFoto = lista.map(comFoto)
+  for (const r of regioes) {
+    const d = dadosDaRegiao(r, listaComFoto)
+    if (!d.cidades.length) continue
+    const sr = seoDaRegiao(d)
+    const faq = faqDaRegiao(d, (slug) => categoriaDoGuia(slug).rotulo)
+    const prep = preposicaoDaRegiao(r.nome)
+    out.push({
+      caminho: rotaDaRegiao(r.slug), titulo: sr.titulo, descricao: sr.descricao, atualizado: atualizadoGeral, prioridade: '0.7', freq: 'weekly', imagem: d.foto || undefined, jsonLd: jsonLdDaRegiao(d, faq),
+      corpo: `<main>
+${migalhas(trilhaDaRegiao(r))}
+<h1>${esc(sr.h1)}</h1>
+${d.foto ? `<figure><img src="${esc(d.foto)}" alt="${esc(r.nome)}" /></figure>` : ''}
+<p>${esc(r.chamada || sr.descricao)}</p>
+${r.texto ? `<p>${esc(r.texto)}</p>` : ''}
+<section><h2>${esc(`As cidades ${prep.replace('n', 'd')} ${r.nome} no guia`)}</h2><ul>${d.cidades.map((c) => `<li><a href="${esc(rotaDaCidade(c.cidade_slug))}">${esc(`Salões em ${c.cidade}`)}</a> (${c.total})</li>`).join('')}</ul></section>
+${d.categorias.length ? `<section><h2>${esc(`Por categoria ${prep} ${r.nome}`)}</h2><ul>${d.categorias.map((k) => `<li>${esc(categoriaDoGuia(k.categoria).rotulo)} (${k.total}): ${d.cidades.map((c) => ({ c, n: (c.categorias ?? []).find((x) => x.categoria === k.categoria)?.total ?? 0 })).filter((x) => x.n > 0).map(({ c, n }) => `<a href="${esc(rotaDaCategoria(c.cidade_slug, k.categoria))}">${esc(c.cidade)}</a> (${n})`).join(' · ')}</li>`).join('')}</ul></section>` : ''}
+${faqHtml(faq)}
+</main>`,
+    })
+  }
+  const grupos = agruparPorRegiao(lista, (c) => c.cidade_slug, regioes)
   out.push({
     caminho: rotaDoGuia(), titulo: ix.titulo, descricao: ix.descricao, prioridade: '0.6', freq: 'weekly', jsonLd: jsonLdDoIndice(lista),
-    atualizado: lugares.map((l) => dia(l.atualizado_em)).filter(Boolean).sort().at(-1),
-    corpo: `<main><h1>Guia de salões de beleza</h1><ul>${lista.map((c) => `<li><a href="${esc(rotaDaCidade(c.cidade_slug))}">${esc(`Salões em ${c.cidade}`)}</a> (${c.total})</li>`).join('')}</ul>${porCategoria.length ? `<section><h2>Por categoria</h2><ul>${porCategoria.map(({ k, cidades: cs }) => `<li>${esc(k.rotulo)}${k.resumo ? `: ${esc(k.resumo)}` : ''}. ${cs.map(({ c, n }) => `<a href="${esc(rotaDaCategoria(c.cidade_slug, k.slug))}">${esc(c.cidade)}</a> (${n})`).join(' · ')}</li>`).join('')}</ul></section>` : ''}</main>`,
+    atualizado: atualizadoGeral,
+    corpo: `<main><h1>Guia de salões de beleza</h1>${grupos.map((gr) => `<section><h2>${gr.regiao.slug === 'outras' ? esc(gr.regiao.nome) : `<a href="${esc(rotaDaRegiao(gr.regiao.slug))}">${esc(gr.regiao.nome)}</a>`}</h2><ul>${gr.cidades.map((c) => `<li><a href="${esc(rotaDaCidade(c.cidade_slug))}">${esc(`Salões em ${c.cidade}`)}</a> (${c.total})</li>`).join('')}</ul></section>`).join('')}${porCategoria.length ? `<section><h2>Por categoria</h2><ul>${porCategoria.map(({ k, cidades: cs }) => `<li>${esc(k.rotulo)}${k.resumo ? `: ${esc(k.resumo)}` : ''}. ${cs.map(({ c, n }) => `<a href="${esc(rotaDaCategoria(c.cidade_slug, k.slug))}">${esc(c.cidade)}</a> (${n})`).join(' · ')}</li>`).join('')}</ul></section>` : ''}</main>`,
   })
   return out
 }
@@ -207,13 +239,13 @@ export function dadosDoGuia(guia) {
     : cidades.map((cs) => { const l = lugares.find((x) => x.cidade_slug === cs); return { cidade: l.cidade, cidade_slug: cs, uf: l.uf, total: lugares.filter((x) => x.cidade_slug === cs).length } })
   // 3.32.3: a foto da cidade nos cartões do índice (guia_cidades() manda desde a 179; sem ela, a página da cidade)
   const listaCidades = listaBruta.map((c) => ({ ...c, foto: c.foto || paginas.find((p) => p.cidade_slug === c.cidade_slug && (p.categoria ?? '') === '')?.foto || null }))
-  const out = [{ caminho: '/dados/guia/cidades.json', dados: listaCidades }]
+  const out = [{ caminho: '/dados/guia/cidades.json', dados: listaCidades }, { caminho: '/dados/guia/regioes.json', dados: regioesDe(guia) }] // 3.37
   for (const cs of cidades) {
     const doGuia = lugares.filter((l) => l.cidade_slug === cs)
     const cats = ['', ...GUIA_CATEGORIAS.map((g) => g.slug).filter((s) => doGuia.some((l) => l.categoria === s))]
     const panoramas = {}
     for (const cat of cats) {
-      const { atualizado: _atualizado, ...d } = dadosDaCidade(lugares, paginas, cs, cat, imagens)
+      const { atualizado: _atualizado, ...d } = dadosDaCidade(lugares, paginas, cs, cat, imagens, regioesDe(guia))
       const todos = d.lugares
       const nome = cat || 'todos'
       const partes = Math.max(1, Math.ceil(todos.length / POR_PARTE))

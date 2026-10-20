@@ -15,7 +15,7 @@ import Interesses from '../../components/plataforma/guia/Interesses'
 import Desempenho from '../../components/plataforma/guia/Desempenho'
 import Abordagem from '../../components/plataforma/guia/Abordagem'
 import { naoContarAqui } from '../../lib/eventos'
-import { iaLembrada, lembrarIa } from '../../lib/guiaIa'
+import { IAS, iaLembrada, lembrarIa, modeloLembrado, lembrarModelo } from '../../lib/guiaIa'
 import { ClipboardCheck, Globe2, Upload, MapPinned, Inbox, X, BarChart3, Handshake, MapPin, RefreshCw, LoaderCircle } from 'lucide-react'
 import '../../guia-plataforma.css'
 
@@ -50,6 +50,8 @@ const ABAS = [
 ]
 
 // só o que a tela usa: origem (o CSV cru) e as coordenadas ficam no banco
+// 3.34: o modelo escolhido para a IA, quando há um (vazio = o padrão do segredo, e o pedido não leva o campo)
+const modeloDoPedido = (m) => (m ? { modelo: m } : {})
 const COLUNAS_LUGAR = 'id, cidade, cidade_slug, uf, slug, categoria, nome, bairro, endereco, cep, telefone, whatsapp, instagram, site, horarios, servicos, atributos, place_id, cnpj, validado_receita, selecao, nota, avaliacoes, fontes, origem, fotos, conteudo, rascunho, status, motivo, salon_id, gerado_em, publicado_em, criado_em, atualizado_em'
 // 3.23: a lista magra (view guia_lista, migração 171): sem conteudo e rascunho (uns 3 KB a menos por salão; com
 // 20 mil salões, 60 MB a menos por abertura). "tem_conteudo" e "tem_rascunho" dizem se existem, e o texto do
@@ -249,6 +251,11 @@ export default function Guia() {
   const iaRef = useRef(ia)
   useEffect(() => { iaRef.current = ia }, [ia])
   const setIa = useCallback((v) => { setIaBruta(v); lembrarIa(v) }, [])
+  // 3.34: o modelo de cada IA (vazio = o padrão do segredo), lembrado no aparelho; vai no pedido como "modelo"
+  const [modelos, setModelosBruto] = useState(() => Object.fromEntries(IAS.map(([id]) => [id, modeloLembrado(id)])))
+  const modelosRef = useRef(modelos)
+  useEffect(() => { modelosRef.current = modelos }, [modelos])
+  const setModelo = useCallback((id, m) => { setModelosBruto((x) => ({ ...x, [id]: m })); lembrarModelo(id, m) }, [])
   // 3.25: os totais por cidade (174), a cidade escolhida e a lista daquela cidade
   const [resumo, setResumo] = useState(null)      // null = lendo; false = banco sem a 174 (tudo de uma vez); [] = por cidade
   const [cidade, setCidade] = useState(null)      // null até saber as cidades; '' = todas; o slug
@@ -405,7 +412,7 @@ export default function Guia() {
     const desde = Date.now()
     try {
       for (let tentativa = 0; ; tentativa++) {
-        const r = await chamarGerador({ lugar: id, provedor: iaRef.current, ...(instrucao.trim() ? { instrucao: instrucao.trim().slice(0, 400) } : {}), ...(angulo ? { angulo } : {}) })
+        const r = await chamarGerador({ lugar: id, provedor: iaRef.current, ...modeloDoPedido(modelosRef.current[iaRef.current]), ...(instrucao.trim() ? { instrucao: instrucao.trim().slice(0, 400) } : {}), ...(angulo ? { angulo } : {}) })
         if (r?.rede && !isDemo) { const salvo = await rascunhoGravadoDepois('guia_lugares', id, desde).catch(() => null); if (salvo) { r.ok = true; r.rascunho = salvo } }
         if (r?.ok && r.rascunho) {
           mudarLocal(id, (l) => ({
@@ -504,7 +511,7 @@ export default function Guia() {
     const desde = Date.now()
     try {
       for (let tentativa = 0; ; tentativa++) {
-        const r = await chamarGerador({ pagina: id, provedor: iaRef.current, ...(instrucao.trim() ? { instrucao: instrucao.trim().slice(0, 400) } : {}) })
+        const r = await chamarGerador({ pagina: id, provedor: iaRef.current, ...modeloDoPedido(modelosRef.current[iaRef.current]), ...(instrucao.trim() ? { instrucao: instrucao.trim().slice(0, 400) } : {}) })
         if (r?.rede && !isDemo) { const salvo = await rascunhoGravadoDepois('guia_paginas', id, desde).catch(() => null); if (salvo) { r.ok = true; r.rascunho = salvo } }
         if (r?.ok && r.rascunho) { mudarPagina(id, { rascunho: r.rascunho, gerado_em: r.rascunho?._meta?.gerado_em ?? agora() }); return { ok: true } }
         if (r?.tentar_em && tentativa < 3) { await contagem(r.tentar_em, (s) => setGerando((g) => (g[id] ? { ...g, [id]: { espera: s } } : g))); continue }
@@ -525,7 +532,7 @@ export default function Guia() {
     setGerando((g) => ({ ...g, [k]: { espera: 0 } }))
     try {
       for (let tentativa = 0; ; tentativa++) {
-        const r = await chamarGerador({ contexto: id, provedor: iaRef.current, ...(gravar ? { gravar: true } : {}) })
+        const r = await chamarGerador({ contexto: id, provedor: iaRef.current, ...modeloDoPedido(modelosRef.current[iaRef.current]), ...(gravar ? { gravar: true } : {}) })
         if (r?.ok && r.contexto) {
           const fontes = Array.isArray(r.fontes) ? r.fontes.filter((f) => f && f.url).map((f) => ({ titulo: String(f.titulo ?? f.url), url: String(f.url) })) : []
           const confira = Array.isArray(r.confira) ? r.confira.map(String) : []
@@ -705,7 +712,7 @@ export default function Guia() {
 
   const g = {
     lugares: lugares ?? [], paginas: paginas ?? [], interesses: interesses ?? [], carregando: lugares === null, erro,
-    cidade: cidade ?? '', cidades, escolherCidade, resumo: resumoVivo, lugarPorId: achar, ia, setIa,
+    cidade: cidade ?? '', cidades, escolherCidade, resumo: resumoVivo, lugarPorId: achar, ia, setIa, modelo: modelos[ia] ?? '', setModelo,
     faseDe, temTexto, temRascunho, temConteudo, carregarTexto, gerando, falhas, lote, usuario: user?.id ?? null,
     carregar, salvarLugar, montarUm, gerarUm, iniciarLote, pausarLote, cancelarLote, fecharLote, aprovar, desfazerAprovacao,
     gerarPagina, aprovarPagina, salvarContexto, sugerirContexto, escreverContextos, contextos, salvarPagina, pedidoParaIa, conferirTexto, imagensCategorias, salvarImagemCategoria, salvarInteresse, importar, avisar, irPara,

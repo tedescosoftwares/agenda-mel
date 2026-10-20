@@ -22,12 +22,13 @@ import {
   ruaDoEndereco, proporcao, retratoDaCidade, provedoresDe, escolherProvedor, URL_GEMINI, URL_GROQ,
   SISTEMA_CONTEXTO, montarPromptContexto, validarContexto,
   corpoNativoGemini, lerRespostaNativa, sugerirContexto, URL_GEMINI_NATIVA,
-  corpoDaRequisicaoClaude, lerRespostaClaude, URL_CLAUDE, MODELO_CLAUDE_PADRAO, MAX_TOKENS_CLAUDE, esforcoClaude,
+  corpoDaRequisicaoClaude, lerRespostaClaude, URL_CLAUDE, MODELO_CLAUDE_PADRAO, MAX_TOKENS_CLAUDE, esforcoClaude, MODELOS, modeloDoPedido, ESQUEMA_PAGINA,
   reservaGemini, modeloRecusado, RESERVAS_GEMINI, TIMEOUT_MS_COM_RACIOCINIO, TIMEOUT_MS,
   aberturasDaPagina, escolherAberturaDaPagina,
   cortarFrase, cortarPalavras, bairroValido, hash, vasculhar, CIDADES, informesDoLugar,
 } from './conteudo.ts'
 import type { LugarLinha, Pedir, PedirNativo, RespostaHttp, Checagem, ConteudoLugar, Mensagem } from './conteudo.ts'
+import { MODELOS as MODELOS_WEB } from '../../../src/lib/guiaIa.js'
 
 // ---- dados -------------------------------------------------------------------------------
 const CABECALHO = 'categoria_mimo;nome;endereco;telefone;avaliacao;qtd_avaliacoes;tipo_principal;buscas_encontradas;site;google_maps;horarios;status;latitude;longitude;place_id;tipos_google;score_qualidade;motivo_descarte'
@@ -1199,10 +1200,10 @@ teste('a abertura da página sai da ficha e rodizia; o prompt pede variação e 
   const daCidade = lugares.filter((l: LugarLinha) => l.cidade_slug === 'itanhaem')
   const { ficha, cidade, checagem } = prepararPagina({ cidade: 'Itanhaém', cidade_slug: 'itanhaem', uf: 'SP', categoria: '' }, daCidade)
   const lista = aberturasDaPagina(ficha, true)
-  assert.ok(lista.length >= 2 && lista.at(-1)!.startsWith('Comece por resolver perto de casa') && lista.some((a) => /temporada/.test(a)), JSON.stringify(lista))
+  assert.ok(lista.length >= 2 && lista.at(-1)!.startsWith('Comece pelos serviços que mais aparecem') && lista.some((a) => /temporada/.test(a)), JSON.stringify(lista))
   assert.ok(lista.every((a) => a.startsWith('Comece pel') || a.startsWith('Comece por')))
   const sem = aberturasDaPagina({ ...ficha, ruas_com_mais_lugares: [], onde_ficam: [], com_horario_informado: 0 }, false)
-  assert.deepEqual(sem, ['Comece por resolver perto de casa: o que o bairro de quem lê costuma ter e quando vale atravessar a cidade.'], 'ficha sem dados: só o que vale para qualquer cidade')
+  assert.deepEqual(sem, ['Comece pelos serviços que mais aparecem nos cadastros desta cidade e pelo que isso diz para quem vai marcar.'], 'ficha sem dados: só o que vale para qualquer cidade')
   const a0 = escolherAberturaDaPagina(ficha, true, 'itanhaem/', 0)
   assert.equal(escolherAberturaDaPagina(ficha, true, 'itanhaem/', 0), a0, 'a mesma semente dá a mesma abertura')
   const todas = new Set(lista.map((_, i) => escolherAberturaDaPagina(ficha, true, 'itanhaem/', i)))
@@ -1219,6 +1220,67 @@ teste('a abertura da página sai da ficha e rodizia; o prompt pede variação e 
   assert.ok(generica.problemas.some((p) => p.nivel === 'estilo' && /geográfico/.test(p.texto)) && generica.problemas.some((p) => p.nivel === 'estilo' && /ritmo/.test(p.texto)), JSON.stringify(generica.problemas))
   const comBairro = validarPagina({ ...base, intro: [`Em ${ficha.onde_ficam[0]?.bairro ?? 'Centro'} se concentra boa parte dos lugares do guia, e quem fica mais longe resolve cabelo e unha perto de casa sem atravessar a cidade, o que pesa na hora de escolher onde marcar e quando ir.`, 'O sábado é o dia cheio na cidade, e no verão a agenda aperta mais cedo, porque a casa de praia enche e todo mundo quer o mesmo horário; se a data importa, marque na semana anterior e confirme na véspera.'] }, checagem)
   assert.ok(!comBairro.problemas.some((p) => /geográfico|ritmo/.test(p.texto)), JSON.stringify(comBairro.problemas))
+})
+
+teste('o modelo escolhido na Plataforma (3.34): a lista por IA, a validação do pedido e o Claude sem esforço quando o modelo recusa', async () => {
+  const env = (o: Record<string, string>) => ({ get: (n: string) => o[n] })
+  assert.deepEqual(MODELOS, MODELOS_WEB, 'a lista da função é a mesma do seletor (src/lib/guiaIa.js)')
+  const tres = provedoresDe(env({ GEMINI_API_KEY: 'g1', GROQ_API_KEY: 'q1', ANTHROPIC_API_KEY: 'sk-ant-1', GUIA_IA_MODELO: 'qwen/qwen3.8-27b' }))
+  const r1 = modeloDoPedido('', tres.claude)
+  assert.ok('provedor' in r1 && r1.provedor.modelo === MODELO_CLAUDE_PADRAO, 'sem modelo no pedido, o do segredo')
+  const r2 = modeloDoPedido(' claude-haiku-5-5 ', tres.claude)
+  assert.ok('provedor' in r2 && r2.provedor.modelo === 'claude-haiku-5-5' && r2.provedor.chave === 'sk-ant-1', 'um da lista vale, com a mesma chave')
+  const r3 = modeloDoPedido('qwen/qwen3.8-27b', tres.groq)
+  assert.ok('provedor' in r3 && r3.provedor.modelo === 'qwen/qwen3.8-27b', 'o modelo do próprio segredo sempre vale, mesmo fora da lista')
+  const r4 = modeloDoPedido('gpt-5', tres.claude)
+  assert.ok('erro' in r4 && /desconhecido para o Claude/.test(r4.erro) && /claude-haiku-5-5/.test(r4.erro), 'outro nome é recusado e o erro diz as opções')
+  // o 400 de "effort" vira parâmetro recusado; o corpo sem esforço não leva output_config.effort
+  const l = lerRespostaClaude(erroClaude(400, 'invalid_request_error', 'output_config.effort: Extra inputs are not permitted'))
+  assert.ok(l.tipo === 'parametro_recusado' && l.parametro === 'esforco', JSON.stringify(l))
+  const msgsCurtas: Mensagem[] = [{ role: 'system', content: 's' }, { role: 'user', content: 'u' }]
+  const com = corpoDaRequisicaoClaude({ modelo: 'claude-haiku-5-5', mensagens: msgsCurtas, tipo: 'pagina', esforco: 'low' })
+  const sem = corpoDaRequisicaoClaude({ modelo: 'claude-haiku-5-5', mensagens: msgsCurtas, tipo: 'pagina', esforco: 'low', semEsforco: true })
+  assert.equal((com.output_config as Record<string, unknown>).effort, 'low')
+  assert.ok(!('effort' in (sem.output_config as Record<string, unknown>)) && 'format' in (sem.output_config as Record<string, unknown>), 'sem esforço, só o formato')
+  assert.ok(!('output_config' in corpoDaRequisicaoClaude({ modelo: 'claude-haiku-5-5', mensagens: msgsCurtas, tipo: 'pagina', formato: 'json_object', semEsforco: true })), 'sem esforço e sem formato garantido, output_config nem vai')
+  assert.ok(!('fallbacks' in com), 'o Haiku não leva fallbacks')
+  // gerarConteudo: o modelo recusa o esforço na primeira chamada e escreve na segunda, sem ele e ainda com o JSON garantido
+  const claude = { ...tres.claude, modelo: 'claude-haiku-5-5' }
+  const cand = angulosPara(ro.categoria, preparoRo.ficha.servicos_divulgados, preparoRo.cidade.praia)
+  const angulo = escolherAngulo({ candidatos: cand, todos: ANGULOS[ro.categoria], semente: ro.slug })
+  const msgs = montarPromptLugar({ ficha: preparoRo.ficha, cidade: preparoRo.cidade, angulo, abertura: escolherAbertura(ro.slug, angulo, cand, true), instrucao: null, anterior: null, jaUsadas: [] })
+  const c = provedor([erroClaude(400, 'invalid_request_error', 'output_config.effort: Extra inputs are not permitted'), respostaClaude([{ type: 'text', text: JSON.stringify(BOM) }])])
+  const g = await gerarConteudo({ tipo: 'lugar', mensagens: msgs, checagem: preparoRo.checagem, modelo: claude.modelo, pedir: c.pedir, provedor: claude })
+  assert.ok(g.ok && (g.conteudo as ConteudoLugar).chamada === BOM.chamada, JSON.stringify(g))
+  assert.equal(c.pedidos.length, 2)
+  assert.equal(c.pedidos[0].corpo.model, 'claude-haiku-5-5')
+  assert.ok('effort' in (c.pedidos[0].corpo.output_config as Record<string, unknown>) && !('effort' in (c.pedidos[1].corpo.output_config as Record<string, unknown>)) && 'format' in (c.pedidos[1].corpo.output_config as Record<string, unknown>), 'segundo pedido: sem o esforço, com o formato')
+})
+
+teste('páginas de cidade (3.34): a FAQ sai dos dados, "estreia" não entra e a abertura "perto de casa" virou os serviços', () => {
+  assert.ok(!SISTEMA_PAGINA.includes('- faq:') && SISTEMA_PAGINA.includes('Sem "faq"') && !SISTEMA_PAGINA.includes('Na FAQ, pelo menos'), 'o prompt da página não pede FAQ')
+  assert.ok(SISTEMA_PAGINA.includes('nunca "estreia"') && SISTEMA_PAGINA.includes('não pergunte se vale a pena sair de um bairro'), 'o prompt proíbe "estreia" e a pergunta de atravessar a cidade')
+  assert.ok(!('faq' in (ESQUEMA_PAGINA as { properties: Record<string, unknown> }).properties) && !(ESQUEMA_PAGINA as { required: string[] }).required.includes('faq'), 'o esquema da página não tem faq')
+  const pag = prepararPagina({ cidade: 'Itanhaém', cidade_slug: 'itanhaem', uf: 'SP', categoria: '' }, lugares.filter((l: LugarLinha) => l.cidade_slug === 'itanhaem'))
+  const aberturas = aberturasDaPagina(pag.ficha, true)
+  assert.ok(!aberturas.some((a) => /atravessar a cidade|perto de casa/.test(a)) && aberturas.some((a) => /serviços que mais aparecem/.test(a)), aberturas.join(' | '))
+  const bairro = pag.ficha.onde_ficam[0]?.bairro ?? 'Centro'
+  const base = {
+    seo_title: 'Salões de beleza em Itanhaém: endereços e horários',
+    meta_description: 'Salões de beleza em Itanhaém por bairro, com horário e serviços de cada um, e o que olhar antes de marcar cabelo, unhas ou cílios.',
+    chamada: 'Onde cuidar do cabelo e das unhas em Itanhaém, bairro a bairro.',
+    intro: [
+      `Em ${bairro}, os lugares do guia se concentram ao longo das ruas de comércio, e o sábado é o dia em que a agenda enche primeiro na cidade. Quem quer marcar cabelo ou unhas sem correria costuma ir num dia útil, de manhã, quando a profissional tem tempo para conversar antes de começar o serviço combinado.`,
+      'Para a primeira visita a um lugar novo, leve uma foto do resultado que você quer e diga que química fez no cabelo nos últimos meses. Pergunte quanto tempo o serviço leva e combine o horário com folga, porque no verão e nos feriados a cidade recebe mais gente e os horários somem rápido.',
+    ],
+    como_escolher: { titulo: 'Como escolher', itens: ['Veja o bairro na lista antes de marcar.', 'Pergunte do material e da esterilização.', 'Confirme o horário no cartão do lugar.', 'Diga o que quer com uma foto.'] },
+  }
+  const semFaq = validarPagina(base, pag.checagem)
+  assert.ok(semFaq.conteudo && !semFaq.problemas.some((p) => /faq/i.test(p.texto)) && (semFaq.conteudo as { faq: unknown[] }).faq.length === 0, JSON.stringify(semFaq.problemas))
+  const comFaq = validarPagina({ ...base, faq: [{ pergunta: 'Tem salão no Gaivota?', resposta: 'Tem, e a lista mostra.' }] }, pag.checagem)
+  assert.ok((comFaq.conteudo as { faq: unknown[] }).faq.length === 1 && !comFaq.problemas.some((p) => /faq/i.test(p.texto)), 'uma pergunta escrita à mão passa sem exigir três')
+  const estreia = validarPagina({ ...base, chamada: 'Como marcar a estreia num salão novo em Itanhaém.' }, pag.checagem)
+  assert.ok(estreia.problemas.some((p) => p.nivel === 'estilo' && /estreia/.test(p.texto)), JSON.stringify(estreia.problemas))
 })
 
 // ---- roda ---------------------------------------------------------------------------------------------------

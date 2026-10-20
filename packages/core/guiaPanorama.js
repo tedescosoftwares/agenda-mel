@@ -30,12 +30,16 @@ function nomesDe(categoria) {
   return { um: c.singular, varios: c.plural, fem, quantos: `${fem ? 'Quantas' : 'Quantos'} ${c.plural}` }
 }
 
-// as contagens de horário de uma lista com horários: { informam, domingo, cedo, noite } ou null
+// as contagens de horário de uma lista com horários: { informam, domingo, cedo, noite, sabado, segunda } ou null
+// (3.34: sabado = quantos abrem no sábado; segunda = quantos não abrem na segunda)
 export function horasDe(lugares) {
   const comHorario = (Array.isArray(lugares) ? lugares : []).filter((l) => Array.isArray(l.horarios) && l.horarios.length)
   if (!comHorario.length) return null
   const perfis = comHorario.map(perfilDoHorario).filter(Boolean)
-  return { informam: comHorario.length, domingo: perfis.filter((p) => p.domingo).length, cedo: perfis.filter((p) => p.diasCedo.length).length, noite: perfis.filter((p) => p.diasNoite.length).length }
+  return {
+    informam: comHorario.length, domingo: perfis.filter((p) => p.domingo).length, cedo: perfis.filter((p) => p.diasCedo.length).length, noite: perfis.filter((p) => p.diasNoite.length).length,
+    sabado: perfis.filter((p) => p.sabado).length, segunda: perfis.filter((p) => Array.isArray(p.abertos) && !p.abertos.some((d) => /^seg/i.test(String(d)))).length,
+  }
 }
 
 // horas: as contagens já prontas (o resumo.json do gerador, 3.24); sem elas, a conta sai de "completos"
@@ -100,6 +104,16 @@ export function panoramaDaCidade({ cidade, categoria = '', lugares = [], complet
     pergunta: `Quais bairros de ${cidade} têm mais ${cat ? k.varios : 'salões'}?`,
     resposta: `Pelos dados do guia, ${comConta(top)}.${B > 3 ? ` Ao todo, ${num(B)} bairros têm pelo menos um.` : ''} Na lista, filtre pelo bairro para ver só os de lá.`,
   })
+  // 3.34: os dias da semana (sábado e segunda) e os serviços mais divulgados também viram perguntas; os números são da lista
+  if (horas && Number.isFinite(horas.sabado) && Number.isFinite(horas.segunda)) {
+    const partes = [`${num(horas.sabado)} ${plural(horas.sabado, 'abre', 'abrem')} aos sábados`]
+    if (horas.segunda) partes.push(`${num(horas.segunda)} não ${plural(horas.segunda, 'abre', 'abrem')} na segunda`)
+    if (horas.cedo) partes.push(`${num(horas.cedo)} ${plural(horas.cedo, 'abre', 'abrem')} às 8h ou antes`)
+    faq.push({
+      pergunta: `Que dias ${cat ? k.varios : 'os salões'} de ${cidade} abrem?`,
+      resposta: `Dos ${num(horas.informam)} que informam horário, ${juntarE(partes)}. O horário de cada um está no cartão da lista, e as páginas por horário reúnem quem abre no sábado, no domingo ou à noite.`,
+    })
+  }
   if (horas) {
     let r
     if (horas.domingo) r = `Sim. ${num(horas.domingo)} ${plural(horas.domingo, 'informa', 'informam')} atendimento aos domingos${horas.noite ? ` e ${num(horas.noite)} ${plural(horas.noite, 'atende', 'atendem')} até as 20h ou mais em pelo menos um dia` : ''}.`
@@ -107,6 +121,10 @@ export function panoramaDaCidade({ cidade, categoria = '', lugares = [], complet
     else r = `Pelos horários divulgados, nenhum dos ${num(horas.informam)} que informam horário abre aos domingos ou atende depois das 20h.`
     faq.push({ pergunta: `Tem ${k.um} ${k.fem ? 'aberta' : 'aberto'} no domingo ou à noite em ${cidade}?`, resposta: `${r} Confira o horário no cartão de cada um antes de ir.` })
   }
+  if (servicos.length >= 2) faq.push({
+    pergunta: `Quais serviços ${cat ? k.varios : 'os salões'} de ${cidade} mais oferecem?`,
+    resposta: `Nos cadastros do guia, os serviços que mais aparecem são ${juntarE(servicos)}. Cada cartão da lista mostra os serviços informados pelo lugar; o que não estiver lá, vale perguntar ao marcar.`,
+  })
   if (mimo) faq.push({
     pergunta: `Dá para marcar online em ${cidade}?`,
     resposta: `${num(mimo)} ${mimo === 1 ? `${k.um} de ${cidade} já agenda` : `${cat ? k.varios : 'lugares'} de ${cidade} já agendam`} pela MIMO: na própria página do salão, você escolhe o serviço, o dia e o horário. Nos outros, o contato é pelos canais do próprio salão.`,
@@ -115,7 +133,7 @@ export function panoramaDaCidade({ cidade, categoria = '', lugares = [], complet
 }
 
 // a FAQ da IA e a dos dados juntas, sem repetir assunto (a mesma regra de faqDaPagina, dos salões)
-const TEMAS_DOS_DADOS = new Set(['domingo', 'domingos', 'noite', 'bairro', 'bairros', 'quantos', 'quantas', 'online', 'mimo'])
+const TEMAS_DOS_DADOS = new Set(['domingo', 'domingos', 'noite', 'bairro', 'bairros', 'quantos', 'quantas', 'online', 'mimo', 'sabado', 'sabados', 'segunda', 'dias', 'servicos', 'servico', 'oferecem'])
 export function juntarFaq(daIa, dosDados) {
   const palavras = (q) => semAcento(String(q ?? '')).toLowerCase().replace(/[^a-z ]/g, '').split(' ').filter((w) => w.length > 3)
   const chave = (q) => palavras(q).sort().join(' ')
@@ -126,6 +144,10 @@ export function juntarFaq(daIa, dosDados) {
   const ia = (Array.isArray(daIa) ? daIa : []).filter((f) => f?.pergunta && f?.resposta && !vistas.has(chave(f.pergunta)) && !palavras(f.pergunta).some((w) => temas.has(w)))
   return [...ia, ...dados]
 }
+
+// 3.34: a FAQ escrita pela IA saiu das páginas de cidade e de categoria (a IA não escreve mais perguntas; as antigas eram
+// hipóteses sem base, "vale a pena sair do bairro?"). Fica só o que a equipe escreveu à mão (o editor ou o JSON colado do GPT)
+export const faqEscrita = (conteudo) => (conteudo?._meta?.provedor === 'manual' && Array.isArray(conteudo.faq) ? conteudo.faq : [])
 
 // o título do bloco na página
 export const tituloDoPanorama = (cidade, categoria = '') => (categoria ? `${categoriaDoGuia(categoria).rotulo} em ${cidade}: os números` : `${cidade} em números`)

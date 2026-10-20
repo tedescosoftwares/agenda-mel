@@ -9,7 +9,7 @@ import { carregarResumo } from '../../lib/guiaColecoesPublico'
 import { artigosResumidos } from '../../lib/conteudoPublico'
 import { artigosDaCidade } from '../../lib/guiaArtigos'
 import { CartaoArtigo } from './PaginaSeo'
-import { panoramaDaCidade, juntarFaq, tituloDoPanorama } from '../../lib/guiaPanorama'
+import { panoramaDaCidade, juntarFaq, tituloDoPanorama, faqEscrita } from '../../lib/guiaPanorama'
 import { aoClicarNaPagina } from '../../lib/eventos'
 import { useVisita } from '../../lib/useVisita'
 import { NavSite, PeSite, useRevelar, comecarEm } from '../../components/site/Pecas'
@@ -226,7 +226,8 @@ function Cidade({ dados }) {
     if (!completa) return { paragrafos: [], faq: [] }
     return panoramaDaCidade({ cidade, categoria, lugares, horas: colecoes ? (colecoes.horas?.[categoria] ?? null) : undefined })
   }, [cidade, categoria, lugares, colecoes, completa])
-  const faq = juntarFaq(pagina?.faq ?? [], panorama.faq ?? [])
+  // 3.34: as perguntas são as dos dados (números vivos da lista) e as escritas à mão; a IA não escreve mais FAQ aqui
+  const faq = juntarFaq(faqEscrita(pagina), panorama.faq ?? [])
   // 3.32: a foto da cidade (Plataforma, migração 177) é a imagem do link e entra no JSON-LD; 3.33: na página de
   // categoria, a imagem da categoria (migração 180) vem antes. O fundo esticado do topo é a imagem da categoria
   // (categoria) ou a foto da cidade; a foto da cidade vira o cartão do canto quando as duas existem

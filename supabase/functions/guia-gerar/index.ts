@@ -37,7 +37,7 @@
 
 import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import {
-  ANGULOS, ANGULOS_PAGINA, limpar, limparInstrucao, provedoresDe, escolherProvedor, bairroValido,
+  ANGULOS, ANGULOS_PAGINA, limpar, limparInstrucao, provedoresDe, escolherProvedor, modeloDoPedido, bairroValido,
   prepararLugar, prepararPagina, angulosPara, escolherAngulo, escolherAbertura, anguloAnterior,
   montarPromptLugar, montarPromptPagina, frasesUsadas, gerarConteudo, maisParecido, comMeta, sugerirContexto, URL_GEMINI_NATIVA, VERSAO_CLAUDE, BETA_FALLBACK_CLAUDE,
   reservaGemini, modeloRecusado, PRAZO_MS, validar, escolherAberturaDaPagina, type Geracao, type IdProvedor, type Checagem,
@@ -133,7 +133,7 @@ async function gerarComReserva(ia: Provedor, o: PedidoGeracao, inicio: number): 
   return { g, modelo: ia.modelo, ia }
 }
 
-type Pedido = { lugar?: unknown; pagina?: unknown; contexto?: unknown; gravar?: unknown; instrucao?: unknown; angulo?: unknown; provedor?: unknown; prompt?: unknown; conferir?: unknown }
+type Pedido = { lugar?: unknown; pagina?: unknown; contexto?: unknown; gravar?: unknown; instrucao?: unknown; angulo?: unknown; provedor?: unknown; modelo?: unknown; prompt?: unknown; conferir?: unknown }
 
 // os salões da cidade (ou de uma categoria) que viram o retrato (prepararPagina): bairros, ruas, horários, o que informam
 async function lugaresDaCidade(db: SupabaseClient, cidadeSlug: string, categoria = ''): Promise<LugarDaPagina[]> {
@@ -415,7 +415,10 @@ Deno.serve(async (req) => {
   }
   const escolha = escolherProvedor(corpo.provedor, PROVEDORES, IA_PADRAO)
   if ('erro' in escolha) return json({ erro: escolha.erro }, /desconhecido/.test(escolha.erro) ? 400 : 500)
-  const ia = escolha.provedor
+  // 3.34: o modelo escolhido na Plataforma (só um da lista daquela IA; vazio é o do segredo)
+  const escolhaModelo = modeloDoPedido(corpo.modelo, escolha.provedor)
+  if ('erro' in escolhaModelo) return json({ erro: escolhaModelo.erro }, 400)
+  const ia = escolhaModelo.provedor
   try {
     if (contexto) return await gerarContexto(servico, ia, contexto, corpo.gravar === true, inicio)
     return lugar ? await gerarLugar(servico, ia, lugar, instrucao, angulo, inicio) : await gerarPagina(servico, ia, pagina, instrucao, angulo, inicio)

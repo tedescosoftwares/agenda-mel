@@ -17,7 +17,7 @@ import {
   seoDaColecao, jsonLdDaColecao, trilhaDaColecao,
 } from '../src/lib/guiaSeo.js'
 import { colecoesDaCidade, montarColecao, linksDeColecoes, linkDoBairro } from '../src/lib/guiaColecoes.js'
-import { panoramaDaCidade, juntarFaq, tituloDoPanorama, horasDe } from '../src/lib/guiaPanorama.js'
+import { panoramaDaCidade, juntarFaq, tituloDoPanorama, horasDe, faqEscrita } from '../src/lib/guiaPanorama.js'
 import { chaveDoBairro } from '../src/lib/guiaColecoes.js'
 import { mesmaCategoriaDe } from './guia-fonte.mjs'
 
@@ -153,7 +153,7 @@ export function paginasDoGuia(guia, artigos = []) {
       const d = dadosDaCidade(lugares, paginas, cs, cat, imagens)
       // o panorama (3.22): os números da lista, montados aqui, e a FAQ dos dados junto com a da IA
       const panorama = panoramaDaCidade({ cidade: d.cidade, categoria: cat, lugares: d.lugares, completos: doGuia })
-      const faq = juntarFaq(conteudoSeguro(d.pagina)?.faq ?? [], panorama.faq)
+      const faq = juntarFaq(faqEscrita(conteudoSeguro(d.pagina)), panorama.faq) // 3.34: dos dados e do que foi escrito à mão
       const { titulo, descricao, caminho } = seoDaCidade(d.cidade, cs, cat, d.pagina)
       out.push({ caminho, titulo, descricao, atualizado: d.atualizado, prioridade: cat ? '0.7' : '0.8', freq: 'weekly', imagem: d.imagem || d.foto || undefined, jsonLd: jsonLdDaCidade({ ...d, foto: d.imagem || d.foto }, faq), corpo: corpoDaCidade(d, faq, colecoes, extras, panorama) })
     }

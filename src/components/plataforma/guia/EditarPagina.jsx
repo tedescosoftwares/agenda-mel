@@ -151,7 +151,7 @@ export default function EditarPagina({ pagina, g, onFechar }) {
 
               <fieldset className="pg-grupo">
                 <legend>Perguntas frequentes</legend>
-                <p className="pg-nota">Sobre o serviço e a escolha na cidade. Quantos lugares há, quais abrem no sábado e por bairro entram sozinhos, a partir dos dados.</p>
+                <p className="pg-nota">As perguntas da página saem dos dados do guia (quantos lugares, bairros, dias e horários, serviços) e acompanham a lista. Aqui, só o que você quiser acrescentar à mão; a IA não escreve perguntas para páginas de cidade.</p>
                 {texto.faq.map((f, i) => (
                   <div key={i} className="pg-linha-lista">
                     <div className="pg-coluna">

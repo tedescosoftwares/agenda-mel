@@ -326,6 +326,8 @@ ANTHROPIC_WORKSPACE_ID=wrkspc_...  3.33.1: só para chave de organização (a AP
 GUIA_IA_MODELO_CLAUDE=claude-opus-5-5          opcional; é o padrão (claude-sonnet-5-5 e claude-haiku-5-5 custam menos)
 GUIA_IA_ESFORCO_CLAUDE=medium    opcional: low, medium, high, xhigh ou max
 GUIA_IA_PADRAO=gemini            opcional: gemini, groq ou claude, quando o pedido não escolhe
+                                 3.34: o pedido pode levar "modelo" (um da lista MODELOS daquela IA, em conteudo.ts; a
+                                 Plataforma escolhe ao lado da IA); vazio é o do segredo
 ```
 
 O Claude (3.31) fala pela API de Messages (`https://api.anthropic.com/v1/messages`,

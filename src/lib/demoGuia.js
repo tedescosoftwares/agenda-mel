@@ -506,7 +506,8 @@ export const GUIA_RPC = {
 const ANGULOS = ['o bairro e a praticidade', 'o serviço principal em detalhe', 'para quem é', 'como é a primeira visita', 'rotina de cuidado entre as visitas']
 // 3.27: o demo ecoa a IA escolhida na Plataforma, para a tela mostrar qual escreveu
 const provedorDemo = (corpo) => (corpo?.provedor === 'groq' || corpo?.provedor === 'claude' ? corpo.provedor : 'gemini')
-const modeloDemo = (corpo) => ({ groq: 'openai/gpt-oss-120b', claude: 'claude-opus-5-5' }[provedorDemo(corpo)] ?? 'gemini-3-flash-preview')
+// 3.34: o modelo escolhido na Plataforma vem no pedido; sem ele, o padrão de cada IA
+const modeloDemo = (corpo) => (typeof corpo?.modelo === 'string' && corpo.modelo ? corpo.modelo : ({ groq: 'openai/gpt-oss-120b', claude: 'claude-opus-5-5' }[provedorDemo(corpo)] ?? 'gemini-3-flash-preview'))
 export async function demoGuiaGerar(corpo) {
   // 3.32.1: a conferência do texto colado (no demo, as regras principais)
   if (corpo?.conferir && typeof corpo.conferir === 'object') {

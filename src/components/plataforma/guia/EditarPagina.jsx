@@ -8,18 +8,20 @@ import { seoDaCidade } from '../../../lib/guiaSeo'
 import { X, Plus, Trash2, LoaderCircle } from 'lucide-react'
 
 // O texto de uma página de cidade ou de categoria, editável à mão (3.32): os mesmos campos que a IA
-// escreve (título e descrição no Google, chamada, introdução, "como escolher" e perguntas). O que se
+// escreve (título e descrição no Google, chamada, introdução num parágrafo, três pontos e perguntas). O que se
 // salva vai para o rascunho e espera Aprovar, como o texto da IA; a página no ar não muda antes disso.
 // "Escrever fora" copia o pedido da IA para o GPT de quem tem e preenche os campos com o JSON colado.
 
-const vazio = () => ({ seo_title: '', meta_description: '', chamada: '', intro: [''], como_escolher: { titulo: '', itens: [''] }, faq: [], _meta: {} })
+const PONTO_VAZIO = () => ({ titulo: '', texto: '' })
+const vazio = () => ({ seo_title: '', meta_description: '', chamada: '', intro: [''], pontos: { titulo: '', itens: [PONTO_VAZIO(), PONTO_VAZIO(), PONTO_VAZIO()] }, faq: [], _meta: {} })
 function textoDaPagina(conteudo) {
   const c = conteudoSeguro(conteudo)
   if (!c) return vazio()
   return {
     seo_title: c.seo_title, meta_description: c.meta_description, chamada: c.chamada,
     intro: c.intro.length ? c.intro : [''],
-    como_escolher: { titulo: c.como_escolher.titulo, itens: c.como_escolher.itens.length ? c.como_escolher.itens : [''] },
+    // 3.35: os três pontos; um texto antigo (com "como escolher") abre com os pontos vazios para escrever
+    pontos: { titulo: c.pontos.titulo, itens: c.pontos.itens.length ? c.pontos.itens : [PONTO_VAZIO(), PONTO_VAZIO(), PONTO_VAZIO()] },
     faq: c.faq, _meta: c._meta,
   }
 }
@@ -28,7 +30,7 @@ function limparTexto(t) {
   return {
     seo_title: s(t.seo_title), meta_description: s(t.meta_description), chamada: s(t.chamada),
     intro: t.intro.map(s).filter(Boolean),
-    como_escolher: { titulo: s(t.como_escolher.titulo), itens: t.como_escolher.itens.map(s).filter(Boolean) },
+    pontos: { titulo: s(t.pontos.titulo), itens: t.pontos.itens.map((x) => ({ titulo: s(x.titulo), texto: s(x.texto) })).filter((x) => x.titulo && x.texto) },
     faq: t.faq.map((f) => ({ pergunta: s(f.pergunta), resposta: s(f.resposta) })).filter((f) => f.pergunta && f.resposta),
   }
 }
@@ -72,7 +74,7 @@ export default function EditarPagina({ pagina, g, onFechar }) {
   const setT = (k, v) => setTexto((t) => ({ ...t, [k]: v }))
   const setLista = (k, i, v) => setTexto((t) => ({ ...t, [k]: t[k].map((x, j) => (j === i ? v : x)) }))
   const tirar = (k, i) => setTexto((t) => ({ ...t, [k]: t[k].filter((_, j) => j !== i) }))
-  const setItem = (i, v) => setT('como_escolher', { ...texto.como_escolher, itens: texto.como_escolher.itens.map((x, j) => (j === i ? v : x)) })
+  const setPonto = (i, campo, v) => setT('pontos', { ...texto.pontos, itens: texto.pontos.itens.map((x, j) => (j === i ? { ...x, [campo]: v } : x)) })
 
   async function salvar() {
     if (salvando) return
@@ -121,32 +123,38 @@ export default function EditarPagina({ pagina, g, onFechar }) {
               </label>
 
               <fieldset className="pg-grupo">
-                <legend>Introdução</legend>
+                <legend>Introdução (um parágrafo forte)</legend>
                 {texto.intro.map((p, i) => (
                   <div key={i} className="pg-linha-lista">
-                    <label className="pg-campo">Parágrafo {i + 1} <Conta n={palavras(p)} min={45} max={110} unidade=" palavras" />
+                    <label className="pg-campo">Parágrafo {i + 1} <Conta n={palavras(p)} min={80} max={140} unidade=" palavras" />
                       <textarea rows={4} value={p} onChange={(e) => setLista('intro', i, e.target.value)} />
                     </label>
                     {texto.intro.length > 1 && <button type="button" className="pg-tirar" onClick={() => tirar('intro', i)} aria-label={`Tirar o parágrafo ${i + 1}`}><Trash2 size={15} /></button>}
                   </div>
                 ))}
-                {texto.intro.length < 3 && <button type="button" className="plat-link" onClick={() => setT('intro', [...texto.intro, ''])}><Plus size={14} /> Parágrafo</button>}
+                {texto.intro.length < 2 && <button type="button" className="plat-link" onClick={() => setT('intro', [...texto.intro, ''])}><Plus size={14} /> Parágrafo</button>}
               </fieldset>
 
               <fieldset className="pg-grupo">
-                <legend>Como escolher</legend>
-                <label className="pg-campo">Título <Conta n={texto.como_escolher.titulo.length} max={50} />
-                  <input value={texto.como_escolher.titulo} onChange={(e) => setT('como_escolher', { ...texto.como_escolher, titulo: e.target.value })} placeholder={`Ex.: Como escolher ${pagina.categoria ? categoriaDoGuia(pagina.categoria).singular : 'um salão'} em ${pagina.cidade}`} />
+                <legend>Pontos (três)</legend>
+                <p className="pg-nota">Cada ponto tem um título curto e uma ou duas frases, ancorado num fato: um bairro ou rua, uma categoria ou serviço, um traço da cidade. Sem horário: isso fica nos números e nas perguntas.</p>
+                <label className="pg-campo">Título do bloco <Conta n={texto.pontos.titulo.length} max={50} />
+                  <input value={texto.pontos.titulo} onChange={(e) => setT('pontos', { ...texto.pontos, titulo: e.target.value })} placeholder="Ex.: O que vale saber" />
                 </label>
-                {texto.como_escolher.itens.map((d, i) => (
+                {texto.pontos.itens.map((x, i) => (
                   <div key={i} className="pg-linha-lista">
-                    <label className="pg-campo">Item {i + 1} <Conta n={d.length} max={150} />
-                      <input value={d} onChange={(e) => setItem(i, e.target.value)} />
-                    </label>
-                    {texto.como_escolher.itens.length > 1 && <button type="button" className="pg-tirar" onClick={() => setT('como_escolher', { ...texto.como_escolher, itens: texto.como_escolher.itens.filter((_, j) => j !== i) })} aria-label={`Tirar o item ${i + 1}`}><Trash2 size={15} /></button>}
+                    <div className="pg-ponto">
+                      <label className="pg-campo">Ponto {i + 1}: título <Conta n={x.titulo.length} max={40} />
+                        <input value={x.titulo} onChange={(e) => setPonto(i, 'titulo', e.target.value)} />
+                      </label>
+                      <label className="pg-campo">Texto <Conta n={x.texto.length} max={170} />
+                        <textarea rows={2} value={x.texto} onChange={(e) => setPonto(i, 'texto', e.target.value)} />
+                      </label>
+                    </div>
+                    {texto.pontos.itens.length > 1 && <button type="button" className="pg-tirar" onClick={() => setT('pontos', { ...texto.pontos, itens: texto.pontos.itens.filter((_, j) => j !== i) })} aria-label={`Tirar o ponto ${i + 1}`}><Trash2 size={15} /></button>}
                   </div>
                 ))}
-                {texto.como_escolher.itens.length < 6 && <button type="button" className="plat-link" onClick={() => setT('como_escolher', { ...texto.como_escolher, itens: [...texto.como_escolher.itens, ''] })}><Plus size={14} /> Item</button>}
+                {texto.pontos.itens.length < 3 && <button type="button" className="plat-link" onClick={() => setT('pontos', { ...texto.pontos, itens: [...texto.pontos.itens, PONTO_VAZIO()] })}><Plus size={14} /> Ponto</button>}
               </fieldset>
 
               <fieldset className="pg-grupo">

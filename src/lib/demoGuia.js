@@ -219,16 +219,14 @@ export const GUIA_PAGINAS = [
       meta_description: 'Salões de beleza, manicures, cílios, sobrancelha e estética em Itanhaém: endereço, horário e serviços de cada um, do Centro ao Gaivota.',
       chamada: 'Do Centro à orla sul: onde cuidar do cabelo, das unhas e da sobrancelha em Itanhaém.',
       intro: [
-        'Itanhaém é comprida: vai da Boca da Barra até o Gaivota e o Suarão, com muito bairro no meio. Por isso, o melhor salão costuma ser o que está perto de você e abre no horário que você consegue ir.',
-        'Este guia junta os salões, manicures e estúdios de cílios, sobrancelha e estética da cidade, com endereço, horário e serviços de cada um. Onde aparece "Na MIMO", dá para marcar pelo app.',
+        'Itanhaém é comprida: vai da Boca da Barra até o Gaivota e o Suarão, com muito bairro no meio, e os salões acompanham a cidade. O Centro concentra cerca de um em cada quatro lugares do guia, nas quadras da Av. Rui Barbosa, onde cabelo, unhas e sobrancelha dividem a mesma calçada; Belas Artes e Suarão resolvem cabelo e unhas no próprio bairro, e cílios e estética ficam quase todos no Centro. A cidade recebe gente da capital nas férias e nos feriados, e quem vem de fora costuma ficar perto da orla. Este guia junta os salões, as manicures e os estúdios de cílios, sobrancelha e estética da cidade, com o endereço e os serviços de cada um.',
       ],
-      como_escolher: {
-        titulo: 'Como escolher onde marcar',
+      pontos: {
+        titulo: 'O que vale saber em Itanhaém',
         itens: [
-          'Comece pelo bairro: atravessar a cidade para fazer a unha raramente compensa.',
-          'Confira o horário: muitos salões fecham na segunda e abrem no sábado.',
-          'Para química (coloração, progressiva), prefira quem divulga esse serviço.',
-          'Perto de feriado e de temporada, marque com uma semana de antecedência.',
+          { titulo: 'O Centro concentra', texto: 'Nas quadras da Av. Rui Barbosa os salões se juntam, e dá para comparar a pé antes de marcar.' },
+          { titulo: 'A temporada muda a cidade', texto: 'Nas férias e nos feriados a cidade recebe quem vem da capital, e as agendas dos bairros de praia apertam.' },
+          { titulo: 'Cabelo e unhas em todo canto', texto: 'Cabelo e unhas aparecem em quase todo bairro; cílios e estética são poucos e ficam no Centro.' },
         ],
       },
       faq: [
@@ -244,8 +242,15 @@ export const GUIA_PAGINAS = [
       seo_title: 'Manicure em Itanhaém: onde fazer as unhas',
       meta_description: 'Manicures e esmalterias de Itanhaém por bairro: unhas em gel, esmaltação e pedicure, com endereço e horário de cada uma.',
       chamada: 'Unhas em gel, esmaltação e pedicure, do Centro ao Cibratel.',
-      intro: ['Manicure é o serviço de beleza mais procurado da cidade, e há opção em quase todo bairro.', 'Veja abaixo quem faz unhas em gel, esmaltação e pedicure, com o horário de cada uma.'],
-      como_escolher: { titulo: 'Como escolher a manicure', itens: ['Veja se faz o serviço que você quer (gel, fibra, esmaltação).', 'Prefira quem esteriliza o material à vista.', 'Confira o horário de sábado.'] },
+      intro: ['Manicure em Itanhaém tem opção em quase todo bairro: as esmalterias do Centro se juntam perto da Av. Rui Barbosa, e Belas Artes, Suarão e Cibratel resolvem a unha perto de casa. Boa parte dos lugares deste guia faz esmaltação em gel, alongamento e pedicure, e alguns juntam cabelo e sobrancelha no mesmo endereço, o que muda o tempo reservado. Diga ao marcar se quer esmalte comum, gel ou alongamento, porque o material e a duração mudam. Quem vem de fora nas férias costuma procurar perto da orla, e quem mora resolve no próprio bairro.'],
+      pontos: {
+        titulo: 'Manicure em Itanhaém: o que vale saber',
+        itens: [
+          { titulo: 'Gel ou esmalte comum', texto: 'O gel seca na cabine de luz e costuma durar mais, em geral de duas a três semanas; o comum é mais rápido de trocar.' },
+          { titulo: 'O que dizer ao marcar', texto: 'Diga se quer gel, alongamento ou esmaltação simples: o tempo reservado e o material mudam.' },
+          { titulo: 'Onde ficam', texto: 'As manicures do guia se concentram no Centro e em Belas Artes; nos bairros de praia há menos opções.' },
+        ],
+      },
       faq: [{ pergunta: 'Quanto tempo dura a esmaltação em gel?', resposta: 'Em geral de duas a três semanas sem lascar.' }],
       _meta: meta('o serviço na cidade', 0.5),
     },
@@ -560,8 +565,8 @@ export async function demoGuiaGerar(corpo) {
       seo_title: `${nome}: endereços e horários`,
       meta_description: `${cat ? `${cat.artigo} ${cat.plural}` : 'Os salões'} de ${p.cidade} por bairro, com endereço, horário e serviços de cada um.`,
       chamada: `Onde encontrar ${cat ? cat.plural : 'salões de beleza'} em ${p.cidade}, bairro por bairro.`,
-      intro: [`${p.cidade} tem opções em quase todos os bairros. Este guia mostra ${cat ? `${cat.artigo.toLowerCase()} ${cat.plural}` : 'os salões'} da cidade com o horário de cada um.`, 'Escolha pelo bairro e pelo horário que cabe na sua rotina.'],
-      como_escolher: { titulo: 'Como escolher', itens: ['Comece pelo bairro.', 'Confira o horário de sábado.', 'Veja se faz o serviço que você quer.'] },
+      intro: [`${p.cidade} tem ${cat ? cat.plural : 'salões'} em quase todos os bairros, e o Centro concentra a maior parte dos lugares deste guia, nas quadras de comércio onde cabelo, unhas e sobrancelha dividem a mesma calçada. Quem mora nos bairros de praia resolve perto de casa, e quem vem de fora nas férias costuma procurar perto da orla. A lista abaixo mostra o endereço, o bairro e os serviços de cada um, e as perguntas frequentes trazem os números do guia, que acompanham a lista.`],
+      pontos: { titulo: `O que vale saber em ${p.cidade}`, itens: [{ titulo: 'O Centro concentra', texto: 'Os lugares se juntam nas quadras de comércio do Centro, e dá para comparar a pé.' }, { titulo: 'A temporada', texto: 'Nas férias a cidade recebe quem vem da capital, e as agendas apertam.' }, { titulo: 'O que é raro', texto: 'Cílios e estética são poucos; cabelo e unhas aparecem em quase todo bairro.' }] },
       faq: [{ pergunta: `Quantos ${cat ? cat.plural : 'salões'} há em ${p.cidade} no guia?`, resposta: 'A lista acima mostra todos os que estão no guia hoje.' }],
       _meta: { modelo: modeloDemo(corpo), provedor: provedorDemo(corpo), gerado_em: new Date().toISOString(), angulo: 'a cidade inteira', instrucao: corpo.instrucao ?? null, semelhanca: null },
     }

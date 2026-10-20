@@ -37,10 +37,10 @@
 
 import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import {
-  ANGULOS, ANGULOS_PAGINA, limpar, limparInstrucao, provedoresDe, escolherProvedor, modeloDoPedido, bairroValido,
+  ANGULOS, anguloDaPaginaDaCidade, limpar, limparInstrucao, provedoresDe, escolherProvedor, modeloDoPedido, bairroValido,
   prepararLugar, prepararPagina, angulosPara, escolherAngulo, escolherAbertura, anguloAnterior,
   montarPromptLugar, montarPromptPagina, frasesUsadas, gerarConteudo, maisParecido, comMeta, sugerirContexto, URL_GEMINI_NATIVA, VERSAO_CLAUDE, BETA_FALLBACK_CLAUDE,
-  reservaGemini, modeloRecusado, PRAZO_MS, validar, escolherAberturaDaPagina, type Geracao, type IdProvedor, type Checagem,
+  reservaGemini, modeloRecusado, PRAZO_MS, validar, type Geracao, type IdProvedor, type Checagem,
   type LugarLinha, type PaginaLinha, type LugarDaPagina, type Pedir, type PedirNativo, type Provedor, type BairroDaFicha,
 } from './conteudo.ts'
 
@@ -246,10 +246,9 @@ async function pedidoPronto(db: SupabaseClient, tipo: 'lugar' | 'pagina', id: st
   if (!lugares.length) return json({ erro: 'ainda não há salões desta cidade ou categoria no guia' }, 409)
   const { ficha, cidade } = prepararPagina(p, lugares, await contextoDa(db, String(p.cidade_slug ?? '')))
   const anterior = p.rascunho ?? p.conteudo ?? null
-  const candidatos = ANGULOS_PAGINA.filter((a) => !a.praia || cidade.praia)
-  const angulo = escolherAngulo({ candidatos, todos: ANGULOS_PAGINA, semente: `${p.cidade_slug}/${p.categoria}`, pedido: pedidoAngulo, anterior: anguloAnterior(anterior) })
-  const abertura = escolherAberturaDaPagina(ficha, cidade.praia, `${p.cidade_slug}/${p.categoria}`, candidatos.findIndex((a) => a.id === angulo.id))
-  const m = montarPromptPagina({ ficha, cidade, angulo, instrucao, anterior, abertura })
+  // 3.35: um ângulo por página dentro da cidade, sem repetir entre as categorias; a página da cidade anda a cada versão
+  const angulo = anguloDaPaginaDaCidade({ cidadeSlug: String(p.cidade_slug ?? ''), categoria: String(p.categoria ?? ''), praia: cidade.praia, pedido: pedidoAngulo, anterior: anguloAnterior(anterior) })
+  const m = montarPromptPagina({ ficha, cidade, angulo, instrucao, anterior })
   return json({ ok: true, sistema: m[0].content, pedido: m[1].content, angulo: angulo.id })
 }
 
@@ -346,11 +345,9 @@ async function gerarPagina(db: SupabaseClient, ia: Provedor, id: string, instruc
 
   const { ficha, cidade, checagem } = prepararPagina(p, lugares, await contextoPronto(db, ia, String(p.cidade_slug ?? ''), inicio))
   const anterior = p.rascunho ?? p.conteudo ?? null
-  const candidatos = ANGULOS_PAGINA.filter((a) => !a.praia || cidade.praia)
-  const angulo = escolherAngulo({ candidatos, todos: ANGULOS_PAGINA, semente: `${p.cidade_slug}/${p.categoria}`, pedido: pedidoAngulo, anterior: anguloAnterior(anterior) })
-  // 3.32.1: por onde a página começa, tirado da ficha e rodiziado com o ângulo
-  const abertura = escolherAberturaDaPagina(ficha, cidade.praia, `${p.cidade_slug}/${p.categoria}`, candidatos.findIndex((a) => a.id === angulo.id))
-  const mensagens = montarPromptPagina({ ficha, cidade, angulo, instrucao, anterior, abertura })
+  // 3.35: um ângulo por página dentro da cidade, sem repetir entre as categorias; a página da cidade anda a cada versão
+  const angulo = anguloDaPaginaDaCidade({ cidadeSlug: String(p.cidade_slug ?? ''), categoria: String(p.categoria ?? ''), praia: cidade.praia, pedido: pedidoAngulo, anterior: anguloAnterior(anterior) })
+  const mensagens = montarPromptPagina({ ficha, cidade, angulo, instrucao, anterior })
 
   const { g, modelo, ia: escreveu } = await gerarComReserva(ia, { tipo: 'pagina', mensagens, checagem: { ...checagem, angulo: angulo.id } }, inicio)
   if (!g.ok) return json(g.limite ? { ok: false, erro: g.erro, tentar_em: g.tentarEm } : { ok: false, erro: g.erro })

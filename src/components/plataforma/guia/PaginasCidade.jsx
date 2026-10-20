@@ -359,7 +359,12 @@ export default function PaginasCidade({ g }) {
                 <h1>{seo.h1}</h1>
                 {c.chamada && <p className="pg-texto-chamada">{c.chamada}</p>}
                 {c.intro.map((p, i) => <p key={i}>{p}</p>)}
-                {c.como_escolher.itens.length > 0 && (
+                {c.pontos.itens.length > 0 ? (
+                  <>
+                    <h3>{c.pontos.titulo || 'O que vale saber'}</h3>
+                    <ul>{c.pontos.itens.map((x, i) => <li key={i}><b>{x.titulo}.</b> {x.texto}</li>)}</ul>
+                  </>
+                ) : c.como_escolher.itens.length > 0 && (
                   <>
                     <h3>{c.como_escolher.titulo || 'Como escolher'}</h3>
                     <ul>{c.como_escolher.itens.map((x, i) => <li key={i}>{x}</li>)}</ul>

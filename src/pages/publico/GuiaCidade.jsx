@@ -386,7 +386,18 @@ function Cidade({ dados }) {
         </section>
       )}
 
-      {pagina?.como_escolher?.itens?.length > 0 && (
+      {pagina?.pontos?.itens?.length > 0 && (
+        <section className="gd-sec gd-sec-alt" data-teste="pontos">
+          <div className="gd-wrap">
+            <div className="gd-sec-cabeca ld-rv"><span className="ld-kicker">{cat ? cat.rotulo : 'Nesta cidade'}</span><h2 className="gd-h2">{pagina.pontos.titulo || 'O que vale saber'}</h2></div>
+            <div className="gd-destaques gd-destaques-3 ld-rv">
+              {pagina.pontos.itens.map((p, i) => <article key={p.titulo} className="gd-destaque"><span className="gd-destaque-n">{i + 1}</span><h3>{p.titulo}</h3><p>{p.texto}</p></article>)}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {!pagina?.pontos?.itens?.length && pagina?.como_escolher?.itens?.length > 0 && (
         <section className="gd-sec gd-sec-alt">
           <div className="gd-wrap">
             <div className="gd-escolher ld-rv">

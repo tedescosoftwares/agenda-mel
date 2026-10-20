@@ -607,7 +607,9 @@ export function conteudoSeguro(c) {
     dicas: { titulo: s(c.dicas?.titulo), itens: l(c.dicas?.itens).map(s).filter(Boolean) },
     faq: l(c.faq).map((f) => ({ pergunta: s(f?.pergunta), resposta: s(f?.resposta) })).filter((f) => f.pergunta && f.resposta),
     intro: l(c.intro).map(s).filter(Boolean),
-    como_escolher: { titulo: s(c.como_escolher?.titulo), itens: l(c.como_escolher?.itens).map(s).filter(Boolean) },
+    como_escolher: { titulo: s(c.como_escolher?.titulo), itens: l(c.como_escolher?.itens).map(s).filter(Boolean) }, // até a 3.34; os textos antigos ainda têm
+    // 3.35: os três pontos da página de cidade ou de categoria (título curto + uma ou duas frases)
+    pontos: { titulo: s(c.pontos?.titulo), itens: l(c.pontos?.itens).map((d) => ({ titulo: s(d?.titulo), texto: s(d?.texto) })).filter((d) => d.titulo && d.texto) },
     _meta: c._meta && typeof c._meta === 'object' ? c._meta : {},
   }
 }

@@ -75,7 +75,7 @@ ${dados.imagem || dados.foto ? `<figure><img src="${esc(dados.imagem || dados.fo
 ${c.intro.map((p) => `<p>${esc(p)}</p>`).join('')}
 ${panorama?.paragrafos?.length ? `<section><h2>${esc(tituloDoPanorama(dados.cidade, dados.categoria))}</h2>${panorama.paragrafos.map((p) => `<p>${esc(p)}</p>`).join('')}</section>` : ''}
 <section><h2>${esc(dados.categoria ? `${categoriaDoGuia(dados.categoria).rotulo} em ${dados.cidade}` : `Salões em ${dados.cidade}`)}</h2>${listaDeCartoes(dados.lugares.slice(0, limiteDaLista(dados.categoria)), dados.cidade_slug)}${dados.lugares.length > limiteDaLista(dados.categoria) ? `<p>${esc(`Aqui estão os ${limiteDaLista(dados.categoria)} primeiros de ${dados.lugares.length}. Os outros estão nas páginas por bairro e por categoria.`)}</p>` : ''}</section>
-${c.como_escolher.itens.length ? `<section><h2>${esc(c.como_escolher.titulo || 'Como escolher')}</h2><ul>${c.como_escolher.itens.map((i) => `<li>${esc(i)}</li>`).join('')}</ul></section>` : ''}
+${c.pontos?.itens?.length ? `<section><h2>${esc(c.pontos.titulo || 'O que vale saber')}</h2>${c.pontos.itens.map((x) => `<h3>${esc(x.titulo)}</h3><p>${esc(x.texto)}</p>`).join('')}</section>` : c.como_escolher.itens.length ? `<section><h2>${esc(c.como_escolher.titulo || 'Como escolher')}</h2><ul>${c.como_escolher.itens.map((i) => `<li>${esc(i)}</li>`).join('')}</ul></section>` : ''}
 ${colecoes ? navDeColecoes('Por horário', dados.categoria ? colecoes.categorias[dados.categoria] ?? [] : colecoes.horarios) : ''}
 ${colecoes && !dados.categoria ? navDeColecoes('Por bairro', colecoes.bairros) : ''}
 ${faqHtml(faq)}

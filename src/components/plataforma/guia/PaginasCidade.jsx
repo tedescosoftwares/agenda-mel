@@ -197,7 +197,7 @@ export default function PaginasCidade({ g }) {
       const { url } = await enviarFotoDaCidade(atual.cidade_slug, f)
       const r = await g.salvarPagina(atual.id, { foto: url })
       if (!r.ok) setErro(r.erro)
-      else g.avisar({ texto: `Foto de ${atual.cidade} guardada. Entra no site na próxima publicação.`, tom: 'ok' })
+      else g.avisar({ texto: `Foto de ${atual.cidade} guardada. Entra no site na próxima republicação, que roda de hora em hora (no minuto 17); no servidor, ./republicar-se-mudou.sh --forcar publica agora.`, tom: 'ok' })
     } catch (err) { setErro(err.message || 'não deu para enviar a foto') } finally { setEnviandoFoto(false) }
   }
   async function tirarFoto() {
@@ -215,7 +215,7 @@ export default function PaginasCidade({ g }) {
       const { url } = await enviarImagemDaCategoria(atual.categoria, f)
       const r = await g.salvarImagemCategoria(atual.categoria, url)
       if (!r.ok) setErro(r.erro)
-      else g.avisar({ texto: `Imagem de ${categoriaDoGuia(atual.categoria).rotulo} guardada, para todas as cidades. Entra no site na próxima publicação.`, tom: 'ok' })
+      else g.avisar({ texto: `Imagem de ${categoriaDoGuia(atual.categoria).rotulo} guardada, para todas as cidades. Entra no site na próxima republicação, que roda de hora em hora (no minuto 17); no servidor, ./republicar-se-mudou.sh --forcar publica agora.`, tom: 'ok' })
     } catch (err) { setErro(err.message || 'não deu para enviar a imagem') } finally { setEnviandoFoto(false) }
   }
   async function tirarImagem() {

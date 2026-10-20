@@ -21,7 +21,7 @@
 // ---- tipos ------------------------------------------------------------------------
 export type Faixa = string[]
 export type Horario = { dia: number; faixas: Faixa[] }
-export type Tipo = 'lugar' | 'pagina'
+export type Tipo = 'lugar' | 'pagina' | 'contexto' // contexto (3.28): a sugestão do "Sobre a cidade"
 export type Formato = 'json_schema' | 'json_object'
 export type Mensagem = { role: 'system' | 'user' | 'assistant'; content: string }
 
@@ -138,7 +138,8 @@ export type ConteudoPagina = {
   como_escolher: Lista
   faq: Pergunta[]
 }
-export type Conteudo = ConteudoLugar | ConteudoPagina
+export type ConteudoContexto = { texto: string; confira: string[] }
+export type Conteudo = ConteudoLugar | ConteudoPagina | ConteudoContexto
 export type Semelhanca = { slug: string; indice: number } | null
 export type Meta = {
   modelo: string
@@ -744,6 +745,35 @@ FORMATO: só o objeto JSON, sem nada antes ou depois.
 - como_escolher: {titulo até 50 caracteres, itens: 4 a 6 frases de até 150 caracteres}.
 - faq: 3 a 5 {pergunta, resposta} sobre o serviço e a escolha na cidade. Nunca sobre horário, endereço, telefone ou preço de um lugar.`
 
+// 3.28: a IA sugere o "Sobre a cidade". É o passo de antes de escrever: o que ela sabe de certo sobre a cidade, ancorado nos
+// bairros que o guia tem, para uma pessoa da redação conferir e guardar. Não vai para o site; vira insumo de todas as páginas
+export const SISTEMA_CONTEXTO = `Você é redatora de um guia local de beleza feito pela MIMO. Antes de escrever as páginas de uma cidade, a redação monta uma ficha interna chamada "Sobre a cidade": o que se sabe de certo sobre a cidade e que ajuda quem procura salão, manicure, cílios, sobrancelha, estética ou maquiagem a escolher onde ir. Esse texto não vai para o site; é insumo para todas as páginas da cidade (a da cidade, as de categoria e a de cada salão), e uma pessoa da redação confere antes de usar.
+
+O QUE ESCREVER (um texto corrido, até 1.500 caracteres, em português do Brasil)
+- Onde a cidade fica e que tipo de cidade é: praia ou não, de moradores ou de veraneio, grande ou pequena, o que a move.
+- Como ela se organiza: o Centro, as regiões (o que fica ao norte e ao sul, junto à praia e para dentro), os bairros de moradores e os de veraneio, a rodovia ou as avenidas que a cortam, onde o comércio e os serviços se concentram.
+- O ritmo: a temporada, os feriados, o fim de semana, quem vem de fora e de onde.
+- As referências que quem mora conhece (a praça, a orla, o rio, o mercado, a rodoviária, um ponto conhecido), sem turismo e sem história longa.
+- No fim, uma frase sobre o que isso muda para quem escolhe um salão.
+
+REGRAS
+1. Só o que você sabe com segurança. Nome de bairro, rua ou referência de que você não tem certeza não entra; em vez de arriscar, deixe genérico ("os bairros de praia ao norte").
+2. Os bairros e as ruas em <guia> existem de verdade (são os dos salões cadastrados): use-os para ancorar a descrição e não invente outros.
+3. Nada de opinião sobre bairro ("tranquilo", "movimentado", "nobre", "perigoso"), nada de ranking, nada de adjetivo de propaganda.
+4. Nada de número (população, distância em quilômetros, ano): "uma das maiores do litoral" e "a uma hora e pouco da capital" é o máximo.
+5. Em "confira", liste de 2 a 5 afirmações do texto que a redação deve checar antes de usar: as que dependem de memória (a direção de um bairro, o nome de uma avenida, uma referência).
+6. Se vier um <atual> com o texto que a redação já tem, melhore e complete esse texto sem perder o que ele diz; não recomece do zero.
+
+FORMATO: só o objeto JSON { texto, confira }.`
+
+export function montarPromptContexto(o: { ficha: FichaPagina; atual?: string | null }): Mensagem[] {
+  const guia = { cidade: o.ficha.cidade, uf: o.ficha.uf, lugares_no_guia: o.ficha.lugares_no_guia, onde_ficam: o.ficha.onde_ficam, ruas_com_mais_lugares: o.ficha.ruas_com_mais_lugares, categorias_no_guia: o.ficha.categorias_no_guia }
+  const partes = [`Escreva o "Sobre a cidade" de ${o.ficha.cidade}${o.ficha.uf ? ` (${o.ficha.uf})` : ''}.`, `<guia>\n${JSON.stringify(guia, null, 2)}\n</guia>`]
+  if (o.atual) partes.push(`<atual>\n${o.atual}\n</atual>`)
+  partes.push('Responda só com o JSON.')
+  return [{ role: 'system', content: SISTEMA_CONTEXTO }, { role: 'user', content: partes.join('\n\n') }]
+}
+
 // a versão anterior, enxuta: o bastante para o modelo não repetir, sem gastar cota
 export function resumoDaVersao(c: unknown, tipo: Tipo): string | null {
   if (!c || typeof c !== 'object') return null
@@ -815,6 +845,10 @@ export const ESQUEMA_LUGAR = objeto({
   dicas: objeto({ titulo: texto('até 50 caracteres'), itens: listaDe('3 a 5 frases de até 150 caracteres', { type: 'string' }) }),
   faq: perguntas,
 })
+export const ESQUEMA_CONTEXTO = objeto({
+  texto: texto('o "Sobre a cidade": um texto corrido de até 1500 caracteres'),
+  confira: listaDe('2 a 5 afirmações do texto que a redação deve checar', { type: 'string' }),
+})
 export const ESQUEMA_PAGINA = objeto({
   seo_title: texto('até 60 caracteres, sem "| MIMO"'),
   meta_description: texto('120 a 155 caracteres'),
@@ -831,7 +865,7 @@ export function corpoDaRequisicao(o: { modelo: string; mensagens: Mensagem[]; ti
     max_tokens: o.maxTokens ?? (pensaAntes(o.modelo) ? MAX_TOKENS_COM_RACIOCINIO : MAX_TOKENS),
     messages: o.mensagens,
     response_format: (o.formato ?? 'json_schema') === 'json_schema'
-      ? { type: 'json_schema', json_schema: { name: o.tipo === 'lugar' ? 'pagina_do_salao' : 'pagina_da_cidade', strict: true, schema: o.tipo === 'lugar' ? ESQUEMA_LUGAR : ESQUEMA_PAGINA } }
+      ? { type: 'json_schema', json_schema: { name: o.tipo === 'lugar' ? 'pagina_do_salao' : o.tipo === 'contexto' ? 'sobre_a_cidade' : 'pagina_da_cidade', strict: true, schema: o.tipo === 'lugar' ? ESQUEMA_LUGAR : o.tipo === 'contexto' ? ESQUEMA_CONTEXTO : ESQUEMA_PAGINA } }
       : { type: 'json_object' },
   }
   // reasoning_effort: nos gpt-oss e no Gemini (pela porta compatível com a OpenAI) pede pouco raciocínio, que basta para
@@ -1134,7 +1168,24 @@ export function retratoDaCidade(campos: Array<[string, string]>, c: Checagem): P
   return problemas
 }
 
-export const validar = (tipo: Tipo, entrada: unknown, c: Checagem) => (tipo === 'lugar' ? validarLugar(entrada, c) : validarPagina(entrada, c))
+// 3.28: o "Sobre a cidade" sugerido: o texto inteiro, sem número e sem opinião de bairro; o que passa do tamanho é cortado em frase
+export function validarContexto(entrada: unknown): Validacao {
+  const o = objetoDe(entrada)
+  if (!o) return SEM_JSON
+  const problemas: Problema[] = []
+  const avisos: string[] = []
+  let texto = espacos(o.texto)
+  if (!texto) return { conteudo: null, problemas: [{ nivel: 'grave', texto: 'falta o texto do "Sobre a cidade"' }], avisos }
+  if (texto.length > 1500) { texto = cortarFrase(texto, 1500); avisos.push('o texto passou de 1500 caracteres e foi cortado na última frase inteira') }
+  if (texto.length < 200) problemas.push({ nivel: 'estilo', texto: `o texto veio curto demais (${texto.length} caracteres); descreva como a cidade se organiza e o ritmo dela` })
+  if (/\d/.test(texto)) problemas.push({ nivel: 'estilo', texto: 'o texto traz número (população, distância, ano): troque por palavras ou tire' })
+  const opiniao = texto.match(/\b(tranquil[oa]s?|movimentad[oa]s?|nobres?|perigos[oa]s?|badalad[oa]s?|elitizad[oa]s?|humildes?)\b/i)
+  if (opiniao) problemas.push({ nivel: 'estilo', texto: `opinião sobre bairro ("${opiniao[0]}"): só o que a cidade tem, não como ela é` })
+  const confira = itens(o.confira, 200, 'confira', avisos).slice(0, 6)
+  return { conteudo: { texto, confira }, problemas, avisos }
+}
+
+export const validar = (tipo: Tipo, entrada: unknown, c: Checagem) => (tipo === 'lugar' ? validarLugar(entrada, c) : tipo === 'contexto' ? validarContexto(entrada) : validarPagina(entrada, c))
 
 export function pedidoDeCorrecao(problemas: Problema[]): string {
   return [

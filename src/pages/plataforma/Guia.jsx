@@ -504,6 +504,25 @@ export default function Guia() {
       if (montado.current) setGerando((g) => sem(g, id))
     }
   }, [mudarPagina])
+  // "Sugerir com a IA" (3.28): a IA escreve o "Sobre a cidade" a partir do que sabe da cidade e dos bairros do guia.
+  // Não grava: a tela mostra, com a lista do que conferir, e a pessoa guarda
+  const sugerirContexto = useCallback(async (id) => {
+    const k = `ctx:${id}`
+    setFalhas((f) => sem(f, k))
+    setGerando((g) => ({ ...g, [k]: { espera: 0 } }))
+    try {
+      for (let tentativa = 0; ; tentativa++) {
+        const r = await chamarGerador({ contexto: id, provedor: iaRef.current })
+        if (r?.ok && r.contexto) return { ok: true, texto: String(r.contexto), confira: Array.isArray(r.confira) ? r.confira.map(String) : [], modelo: r.modelo ?? null }
+        if (r?.tentar_em && tentativa < 3) { await contagem(r.tentar_em, (s) => setGerando((g) => (g[k] ? { ...g, [k]: { espera: s } } : g))); continue }
+        const msg = r?.erro || 'não deu para sugerir'
+        setFalhas((f) => ({ ...f, [k]: msg }))
+        return { ok: false, erro: msg }
+      }
+    } finally {
+      if (montado.current) setGerando((g) => sem(g, k))
+    }
+  }, [])
   // "Sobre a cidade" (3.22, migração 170): o que a IA sabe da cidade; não aparece no site
   const salvarContexto = useCallback(async (id, contexto) => {
     const texto = String(contexto ?? '').trim().slice(0, 1500) || null
@@ -630,7 +649,7 @@ export default function Guia() {
     cidade: cidade ?? '', cidades, escolherCidade, resumo: resumoVivo, lugarPorId: achar, ia, setIa,
     faseDe, temTexto, temRascunho, temConteudo, carregarTexto, gerando, falhas, lote, usuario: user?.id ?? null,
     carregar, salvarLugar, montarUm, gerarUm, iniciarLote, pausarLote, cancelarLote, fecharLote, aprovar, desfazerAprovacao,
-    gerarPagina, aprovarPagina, salvarContexto, salvarInteresse, importar, avisar, irPara,
+    gerarPagina, aprovarPagina, salvarContexto, sugerirContexto, salvarInteresse, importar, avisar, irPara,
     desempenho, carregarDesempenho, desempenhoPorLugar,
   }
 

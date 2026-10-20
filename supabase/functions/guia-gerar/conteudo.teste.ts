@@ -20,6 +20,7 @@ import {
   anguloAnterior, montarPromptLugar, montarPromptPagina, frasesUsadas, corpoDaRequisicao, lerResposta, segundosDeEspera, duracao,
   validarLugar, validarPagina, gerarConteudo, maisParecido, jaccard, trigramas, comMeta, contarPalavras, limparInstrucao,
   ruaDoEndereco, proporcao, retratoDaCidade, provedoresDe, escolherProvedor, URL_GEMINI, URL_GROQ,
+  SISTEMA_CONTEXTO, montarPromptContexto, validarContexto,
   cortarFrase, cortarPalavras, bairroValido, hash, vasculhar, CIDADES, informesDoLugar,
 } from './conteudo.ts'
 import type { LugarLinha, Pedir, RespostaHttp, Checagem, ConteudoLugar, Mensagem } from './conteudo.ts'
@@ -777,6 +778,32 @@ teste('o provedor vem do pedido, senão do padrão, senão o Gemini se tiver cha
   const m = comMeta(BOM, { modelo: 'gemini-2.5-pro', provedor: 'gemini', angulo: 'a', instrucao: null, semelhanca: null })
   assert.equal(m._meta.provedor, 'gemini')
   assert.ok(!('provedor' in comMeta(BOM, { modelo: 'm', angulo: 'a', instrucao: null, semelhanca: null })._meta))
+})
+
+// ---- 3.28: a IA sugere o "Sobre a cidade" ---------------------------------------------------------------------
+teste('a sugestão do "Sobre a cidade": prompt com os bairros do guia, esquema próprio e validação (3.28)', async () => {
+  const daCidade = lugares.filter((l: LugarLinha) => l.cidade_slug === 'itanhaem')
+  const { ficha, checagem } = prepararPagina({ cidade: 'Itanhaém', cidade_slug: 'itanhaem', uf: 'SP', categoria: '' }, daCidade)
+  const msgs = montarPromptContexto({ ficha, atual: null })
+  assert.equal(msgs[0].content, SISTEMA_CONTEXTO)
+  assert.ok(msgs[1].content.includes('<guia>') && msgs[1].content.includes('"onde_ficam"') && !msgs[1].content.includes('<atual>'), 'leva os bairros do guia e, sem texto atual, não leva <atual>')
+  assert.ok(!msgs[1].content.includes('Rô Coiffeur'), 'nenhum salão pelo nome')
+  const comAtual = montarPromptContexto({ ficha, atual: 'Itanhaém fica no litoral sul.' })
+  assert.ok(comAtual[1].content.includes('<atual>\nItanhaém fica no litoral sul.\n</atual>'), 'o texto atual vai para melhorar, não recomeçar')
+  assert.ok(SISTEMA_CONTEXTO.includes('confira') && SISTEMA_CONTEXTO.includes('Só o que você sabe com segurança'), 'o prompt pede a lista do que conferir e proíbe o chute')
+  const corpo = corpoDaRequisicao({ modelo: 'gemini-3-flash-preview', mensagens: msgs, tipo: 'contexto' })
+  assert.equal((corpo.response_format as { json_schema: { name: string } }).json_schema.name, 'sobre_a_cidade')
+  const bom = { texto: 'Itanhaém fica no litoral sul de São Paulo e acompanha a orla. O Centro, junto à foz do rio, concentra o comércio e os serviços; no sentido de Mongaguá ficam os bairros de praia, como Suarão e Gaivota, e para dentro, em volta da rodovia, os bairros de moradores. O movimento cresce no verão e nos feriados, quando chegam veranistas da Grande São Paulo. Para quem escolhe um salão, o Centro tem de tudo e os bairros de praia resolvem o básico perto de casa.', confira: ['Suarão e Gaivota ficam no sentido de Mongaguá', 'a rodovia corta a cidade por dentro'] }
+  const v = validarContexto(bom)
+  assert.deepEqual(v.problemas, [], JSON.stringify(v.problemas))
+  assert.deepEqual(v.conteudo, bom)
+  assert.ok(validarContexto({ texto: '', confira: [] }).problemas.some((p) => p.nivel === 'grave'), 'sem texto é grave')
+  const longo = validarContexto({ texto: `${bom.texto} `.repeat(5), confira: [] })
+  assert.ok(longo.conteudo && (longo.conteudo as { texto: string }).texto.length <= 1500 && longo.avisos.some((a) => /1500/.test(a)), 'passou de 1500: corta na frase e avisa')
+  assert.ok(validarContexto({ texto: `${bom.texto} Tem 100 mil habitantes.`, confira: [] }).problemas.some((p) => p.nivel === 'estilo' && /número/.test(p.texto)), 'número é estilo')
+  assert.ok(validarContexto({ texto: `${bom.texto} O Centro é movimentado.`, confira: [] }).problemas.some((p) => p.nivel === 'estilo' && /opinião/.test(p.texto)), 'opinião de bairro é estilo')
+  const g = await gerarConteudo({ tipo: 'contexto', mensagens: msgs, checagem, modelo: 'gemini-3-flash-preview', pedir: provedor([respostaOk(bom)]).pedir })
+  assert.ok(g.ok && (g.conteudo as { texto: string }).texto === bom.texto, 'gerarConteudo serve para o contexto também')
 })
 
 // ---- roda ---------------------------------------------------------------------------------------------------

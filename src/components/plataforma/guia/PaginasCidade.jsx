@@ -5,7 +5,7 @@ import EscolhaIA from './EscolhaIA'
 import { GUIA_CATEGORIAS, categoriaDoGuia, conteudoSeguro, rotaDaCidade, rotaDaCategoria } from '../../../lib/guia'
 import { seoDaCidade } from '../../../lib/guiaSeo'
 import { urlDoAmbiente } from '../../../lib/ambiente'
-import { MapPinned, Check, RefreshCw, Sparkles, ExternalLink, LoaderCircle, TriangleAlert, BookOpen } from 'lucide-react'
+import { MapPinned, Check, RefreshCw, Sparkles, ExternalLink, LoaderCircle, TriangleAlert, BookOpen, Wand2 } from 'lucide-react'
 
 // O texto da página da cidade (/saloes/itanhaem) e de cada categoria
 // (/saloes/itanhaem/unhas). As linhas nascem sozinhas na importação; a
@@ -36,6 +36,7 @@ export default function PaginasCidade({ g }) {
   const [aprovando, setAprovando] = useState(false)
   const [ctx, setCtx] = useState(null) // { id, texto } do que está sendo digitado; sem isso, o que está no banco
   const [salvandoCtx, setSalvandoCtx] = useState(false)
+  const [confira, setConfira] = useState(null) // { id, itens, modelo }: o que a IA pediu para conferir na sugestão (3.28)
 
   // quantos salões no ar em cada página (a da cidade conta todos): dos totais por cidade (3.25, migração 174),
   // que valem para todas as cidades; num banco sem eles, da lista carregada
@@ -110,6 +111,16 @@ export default function PaginasCidade({ g }) {
     g.avisar({ texto: `Sobre ${atual.cidade}: guardado. Vale para os próximos textos gerados da cidade.`, tom: 'ok' })
   }
   const ctxMudou = (contexto ?? '').trim() !== (atual?.contexto ?? '').trim()
+  // a IA sugere o "Sobre a cidade" (3.28): entra na caixa para a pessoa ler, mexer e guardar
+  const sugerindo = atual ? g.gerando[`ctx:${atual.id}`] : null
+  async function sugerir() {
+    if (!atual || sugerindo) return
+    setErro('')
+    const r = await g.sugerirContexto(atual.id)
+    if (!r.ok) { setErro(`Não deu para sugerir: ${r.erro}`); return }
+    setCtx({ id: atual.id, texto: r.texto })
+    setConfira({ id: atual.id, itens: r.confira, modelo: r.modelo })
+  }
 
   return (
     <div className="pg-paginas">
@@ -173,9 +184,20 @@ export default function PaginasCidade({ g }) {
                 </div>
               </div>
               <textarea value={contexto} onChange={(e) => setContexto(e.target.value.slice(0, 1500))} rows={5} placeholder={`Ex.: ${atual.cidade} fica no litoral sul de São Paulo. O Centro, junto à orla, concentra o comércio; ao norte ficam os bairros de praia (…), ao sul (…), e para dentro, em volta da rodovia, os bairros de moradores (…). O movimento cresce no verão e nos feriados…`} aria-label={`Sobre ${atual.cidade}`} disabled={salvandoCtx} />
+              {confira && confira.id === atual.id && confira.itens.length > 0 && (
+                <div className="pg-contexto-confira" data-teste="confira">
+                  <b><TriangleAlert size={14} /> Antes de guardar, confira{confira.modelo ? ` (sugestão do ${String(confira.modelo).replace(/^.*\//, '')})` : ''}:</b>
+                  <ul>{confira.itens.map((x) => <li key={x}>{x}</li>)}</ul>
+                </div>
+              )}
               <div className="pg-contexto-pe">
                 <small>{(contexto ?? '').length}/1500{!atual.contexto && !contexto ? ' · sem contexto, a IA escreve sem saber nada da cidade' : ''}</small>
-                <button type="submit" className="btn btn-ghost" disabled={!ctxMudou || salvandoCtx}>{salvandoCtx ? <LoaderCircle size={16} className="pg-gira" /> : <Check size={16} />} Guardar</button>
+                <span className="pg-contexto-botoes">
+                  <button type="button" className="btn btn-ghost" onClick={sugerir} disabled={!!sugerindo || salvandoCtx} title="A IA escolhida ao lado de Gerar escreve o que sabe da cidade, ancorado nos bairros do guia. Você confere e guarda.">
+                    {sugerindo ? <><LoaderCircle size={16} className="pg-gira" /> {sugerindo.espera ? `em ${sugerindo.espera} s` : 'Sugerindo…'}</> : <><Wand2 size={16} /> {contexto ? 'Melhorar com a IA' : 'Sugerir com a IA'}</>}
+                  </button>
+                  <button type="submit" className="btn btn-ghost" disabled={!ctxMudou || salvandoCtx}>{salvandoCtx ? <LoaderCircle size={16} className="pg-gira" /> : <Check size={16} />} Guardar</button>
+                </span>
               </div>
             </form>
           )}

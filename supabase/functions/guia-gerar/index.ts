@@ -2,10 +2,12 @@
 // guia-gerar (3.9): escreve com IA o texto de uma página do guia de salões e
 // guarda como rascunho, esperando alguém da Plataforma aprovar.
 //
-// POST { lugar?: uuid, pagina?: uuid, instrucao?: string, angulo?: string, provedor?: 'gemini' | 'groq' }
+// POST { lugar?: uuid, pagina?: uuid, contexto?: uuid, instrucao?: string, angulo?: string, provedor?: 'gemini' | 'groq' }
 // com o Authorization de quem está logado na Plataforma.
 //   lugar   uma linha de guia_lugares (a página de um salão)
 //   pagina  uma linha de guia_paginas (a página da cidade ou de uma categoria)
+//   contexto  3.28: a linha da cidade em guia_paginas: a IA sugere o "Sobre a cidade" e devolve sem gravar
+//             ({ ok, contexto, confira }); quem guarda é a Plataforma, depois de alguém conferir
 //   instrucao  o pedido do revisor ("mais curto", "fale de noivas"), até 400 letras
 //   angulo     o id de um ângulo editorial (conteudo.ts) ou um tema em texto livre
 //   provedor   3.27: qual IA escreve. Sem ele, GUIA_IA_PADRAO; sem ela, o Gemini se tiver chave, senão o Groq
@@ -29,8 +31,8 @@ import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supa
 import {
   ANGULOS, ANGULOS_PAGINA, limpar, limparInstrucao, provedoresDe, escolherProvedor,
   prepararLugar, prepararPagina, angulosPara, escolherAngulo, escolherAbertura, anguloAnterior,
-  montarPromptLugar, montarPromptPagina, frasesUsadas, gerarConteudo, maisParecido, comMeta,
-  type LugarLinha, type PaginaLinha, type LugarDaPagina, type Pedir, type Provedor,
+  montarPromptLugar, montarPromptPagina, montarPromptContexto, frasesUsadas, gerarConteudo, maisParecido, comMeta,
+  type LugarLinha, type PaginaLinha, type LugarDaPagina, type Pedir, type Provedor, type ConteudoContexto,
 } from './conteudo.ts'
 
 const URL_SUPABASE = Deno.env.get('SUPABASE_URL') ?? ''
@@ -73,7 +75,7 @@ const pedirCom = (prov: Provedor): Pedir => async (corpo, timeoutMs) => {
 }
 
 type Linha = Record<string, unknown>
-type Pedido = { lugar?: unknown; pagina?: unknown; instrucao?: unknown; angulo?: unknown; provedor?: unknown }
+type Pedido = { lugar?: unknown; pagina?: unknown; contexto?: unknown; instrucao?: unknown; angulo?: unknown; provedor?: unknown }
 
 // "Sobre a cidade" (3.22, migração 170): na linha da cidade em guia_paginas; vale para todas as páginas
 // dela. Sem a coluna (banco sem a 170) ou sem texto, null, e o conteudo.ts usa o que tem
@@ -164,6 +166,24 @@ async function gerarPagina(db: SupabaseClient, ia: Provedor, id: string, instruc
   return json({ ok: true, rascunho })
 }
 
+// 3.28: a sugestão do "Sobre a cidade": o que a IA sabe da cidade, ancorado nos bairros e nas ruas que o guia tem.
+// Não grava: a Plataforma mostra, alguém confere (a lista "confira") e guarda
+async function gerarContexto(db: SupabaseClient, ia: Provedor, id: string): Promise<Response> {
+  const { data, error } = await db.from('guia_paginas').select('id, cidade, cidade_slug, uf, categoria, contexto').eq('id', id).maybeSingle()
+  if (error) return json({ erro: error.message }, 500)
+  if (!data) return json({ erro: 'página não encontrada no guia' }, 404)
+  const p = data as unknown as PaginaLinha & { id: string; categoria: string; contexto: unknown }
+  if (p.categoria) return json({ erro: '"Sobre a cidade" é da página da cidade, não da categoria' }, 400)
+  const { data: lugares, error: erroLugares } = await db.from('guia_lugares').select('nome, bairro, categoria, servicos, horarios, endereco, atributos').eq('cidade_slug', p.cidade_slug).in('status', VIVOS).limit(3000)
+  if (erroLugares) return json({ erro: erroLugares.message }, 500)
+  const { ficha, checagem } = prepararPagina({ ...p, categoria: '' }, (lugares ?? []) as unknown as LugarDaPagina[], p.contexto)
+  const atual = limpar(p.contexto, 1500) || null
+  const g = await gerarConteudo({ tipo: 'contexto', mensagens: montarPromptContexto({ ficha, atual }), checagem, modelo: ia.modelo, pedir: pedirCom(ia) })
+  if (!g.ok) return json(g.limite ? { ok: false, erro: g.erro, tentar_em: g.tentarEm } : { ok: false, erro: g.erro })
+  const c = g.conteudo as ConteudoContexto
+  return json({ ok: true, contexto: c.texto, confira: c.confira, modelo: ia.modelo, provedor: ia.id, avisos: g.avisos })
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return json({ ok: true })
   if (req.method !== 'POST') return json({ erro: 'use POST' }, 405)
@@ -173,8 +193,10 @@ Deno.serve(async (req) => {
   try { corpo = await req.json() } catch { /* vazio */ }
   const lugar = limpar(corpo.lugar, 40)
   const pagina = limpar(corpo.pagina, 40)
-  if (!!lugar === !!pagina) return json({ erro: 'mande lugar ou pagina (um dos dois)' }, 400)
-  if (!UUID.test(lugar || pagina)) return json({ erro: 'id inválido' }, 400)
+  const contexto = limpar(corpo.contexto, 40)
+  const alvos = [lugar, pagina, contexto].filter(Boolean)
+  if (alvos.length !== 1) return json({ erro: 'mande lugar, pagina ou contexto (um dos três)' }, 400)
+  if (!UUID.test(alvos[0])) return json({ erro: 'id inválido' }, 400)
 
   // quem pede é a Plataforma? (como a própria pessoa, pela RPC de sempre)
   const quem = createClient(URL_SUPABASE, CHAVE_ANON, { global: { headers: { Authorization: auth } }, auth: { persistSession: false } })
@@ -189,6 +211,7 @@ Deno.serve(async (req) => {
   const instrucao = limparInstrucao(corpo.instrucao)
   const angulo = limpar(corpo.angulo, 200) || null
   try {
+    if (contexto) return await gerarContexto(servico, ia, contexto)
     return lugar ? await gerarLugar(servico, ia, lugar, instrucao, angulo) : await gerarPagina(servico, ia, pagina, instrucao, angulo)
   } catch (e) {
     return json({ erro: `não deu para gerar: ${String((e as Error)?.message ?? e).slice(0, 200)}` }, 500)

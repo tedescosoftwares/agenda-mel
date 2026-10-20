@@ -500,6 +500,16 @@ const provedorDemo = (corpo) => (corpo?.provedor === 'groq' ? 'groq' : 'gemini')
 const modeloDemo = (corpo) => (provedorDemo(corpo) === 'groq' ? 'openai/gpt-oss-120b' : 'gemini-3-flash-preview')
 export async function demoGuiaGerar(corpo) {
   await new Promise((r) => setTimeout(r, 900))
+  // a sugestão do "Sobre a cidade" (3.28): não grava; a tela mostra para conferir
+  if (corpo?.contexto) {
+    const p = GUIA_PAGINAS.find((x) => x.id === corpo.contexto)
+    if (!p) return { ok: false, erro: 'página não encontrada' }
+    return {
+      ok: true, modelo: modeloDemo(corpo), provedor: provedorDemo(corpo),
+      contexto: `${p.cidade} fica no litoral sul de São Paulo e acompanha a orla. O Centro, junto à foz do rio, concentra o comércio e os serviços; no sentido de Mongaguá ficam os bairros de praia, como Suarão e Gaivota, e para dentro, em volta da rodovia, os bairros de moradores, como Vila São Paulo e Jardim Umuarama. O movimento cresce no verão e nos feriados, quando chegam veranistas da Grande São Paulo. Para quem escolhe um salão, o Centro tem de tudo e os bairros de praia resolvem o básico perto de casa.`,
+      confira: ['Suarão e Gaivota ficam no sentido de Mongaguá', 'Vila São Paulo e Jardim Umuarama são bairros de moradores'],
+    }
+  }
   if (corpo?.pagina) {
     const p = GUIA_PAGINAS.find((x) => x.id === corpo.pagina)
     if (!p) return { ok: false, erro: 'página não encontrada' }

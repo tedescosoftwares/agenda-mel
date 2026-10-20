@@ -56,18 +56,32 @@ export default function PaginasCidade({ g }) {
     return m
   }, [g.resumo, g.lugares])
 
-  const grupos = useMemo(() => {
+  // as cidades que têm páginas, cada uma com as suas (a da cidade primeiro, depois as categorias)
+  const cidades = useMemo(() => {
     const m = new Map()
     for (const p of [...g.paginas].sort((a, b) => a.cidade.localeCompare(b.cidade, 'pt-BR') || (ORDEM_CAT[a.categoria] ?? 99) - (ORDEM_CAT[b.categoria] ?? 99))) {
-      if (!m.has(p.cidade_slug)) m.set(p.cidade_slug, { cidade: p.cidade, paginas: [] })
-      m.get(p.cidade_slug).paginas.push(p)
+      if (!m.has(p.cidade_slug)) m.set(p.cidade_slug, { slug: p.cidade_slug, nome: p.cidade, paginas: [], pendentes: 0, noAr: noAr[`${p.cidade_slug}/`] ?? 0 })
+      const c = m.get(p.cidade_slug)
+      c.paginas.push(p)
+      if (['revisar', 'nova'].includes(faseDaPagina(p))) c.pendentes++
     }
     return [...m.values()]
-  }, [g.paginas])
-  const todas = grupos.flatMap((x) => x.paginas)
-  // sem escolha, abre na primeira que espera revisão
-  const atual = todas.find((p) => p.id === selId) ?? todas.find((p) => faseDaPagina(p) === 'revisar' || faseDaPagina(p) === 'nova') ?? todas[0] ?? null
+  }, [g.paginas, noAr])
+  // 3.29: uma cidade por vez na lista (eram 29 cidades com 8 páginas cada, numa rolagem só). A escolhida no alto da
+  // tela manda; dá para trocar aqui também, e a troca vale para a tela inteira
+  // (a escolha local vale enquanto a cidade do alto não muda; mudou, a do alto manda de novo: derivado, sem efeito)
+  const [sel, setSel] = useState(null) // { base: a cidade do alto na hora da escolha, slug }
+  const cidadeSel = sel && sel.base === g.cidade ? sel.slug : g.cidade || null
+  const cidadeAtiva = cidades.find((c) => c.slug === cidadeSel) ?? cidades.find((c) => c.pendentes) ?? cidades[0] ?? null
+  const daCidade = cidadeAtiva?.paginas ?? []
+  const todas = cidades.flatMap((x) => x.paginas)
+  // sem escolha, abre na página da cidade que espera revisão; senão na da cidade
+  const atual = daCidade.find((p) => p.id === selId) ?? daCidade.find((p) => faseDaPagina(p) === 'revisar' || faseDaPagina(p) === 'nova') ?? daCidade[0] ?? null
   function escolher(id) { setSelId(id); setVersao('rascunho'); setInstr(''); setErro('') }
+  function trocarCidade(slug) {
+    setSel({ base: g.cidade, slug }); setSelId(null); setErro('')
+    if (g.cidade !== slug && g.escolherCidade) g.escolherCidade(slug)
+  }
   // a caixa "Sobre a cidade" (só a linha da cidade tem): o que se digita fica por página; o resto vem do banco
   const contexto = ctx && ctx.id === atual?.id ? ctx.texto : (atual?.contexto ?? '')
   const setContexto = (texto) => setCtx({ id: atual?.id, texto })
@@ -125,16 +139,23 @@ export default function PaginasCidade({ g }) {
   return (
     <div className="pg-paginas">
       <aside className="pg-paginas-lista plat-painel">
-        {grupos.map((gr) => (
-          <div key={gr.cidade} className="pg-paginas-grupo">
-            <h4>{gr.cidade}</h4>
-            {gr.paginas.map((p) => {
+        <label className="pg-paginas-cidade" data-teste="paginas-cidade">
+          <span>Cidade</span>
+          <select className="plat-select" value={cidadeAtiva?.slug ?? ''} onChange={(e) => trocarCidade(e.target.value)} aria-label="Cidade das páginas">
+            {cidades.map((c) => <option key={c.slug} value={c.slug}>{c.nome}{c.pendentes ? ` · ${c.pendentes} para revisar` : ''}{c.noAr ? '' : ' · fora do site'}</option>)}
+          </select>
+          <small>{cidades.length === 1 ? '1 cidade com páginas' : `${cidades.length} cidades com páginas`}{cidadeAtiva && !cidadeAtiva.noAr ? ' · esta ainda não tem salão no ar' : ''}</small>
+        </label>
+        {[['Página da cidade', daCidade.filter((p) => !p.categoria)], ['Por categoria', daCidade.filter((p) => p.categoria)]].map(([titulo, paginas]) => paginas.length > 0 && (
+          <div key={titulo} className="pg-paginas-grupo">
+            <h4>{titulo}</h4>
+            {paginas.map((p) => {
               const f = faseDaPagina(p)
               const n = noAr[`${p.cidade_slug}/${p.categoria}`] ?? 0
               return (
                 <button key={p.id} type="button" className={'pg-item' + (p.id === atual?.id ? ' ativo' : '')} onClick={() => escolher(p.id)}>
                   <span className="pg-item-nome">
-                    <b>{p.categoria ? categoriaDoGuia(p.categoria).rotulo : 'Página da cidade'}</b>
+                    <b>{p.categoria ? categoriaDoGuia(p.categoria).rotulo : cidadeAtiva?.nome ?? 'Página da cidade'}</b>
                     {g.gerando[p.id] ? <LoaderCircle size={14} className="pg-gira pg-item-gerando" /> : <i className={'pg-ponto ' + TOM[f]} title={ROTULO[f]} />}
                   </span>
                   <span className="pg-item-sub"><span>{ROTULO[f]} · {n ? `${n} no ar` : 'fora do site (nenhum salão no ar)'}</span></span>

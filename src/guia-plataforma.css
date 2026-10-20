@@ -516,3 +516,8 @@
 .pg-contexto-confira b { display: flex; align-items: center; gap: 0.35rem; color: #8a5a00; }
 .pg-contexto-confira ul { margin: 0.3rem 0 0 1.1rem; padding: 0; color: var(--texto-2); }
 .pg-contexto-botoes { display: inline-flex; gap: 0.5rem; }
+
+/* Páginas da cidade (3.29): uma cidade por vez na lista */
+.pg-paginas-cidade { display: flex; flex-direction: column; gap: 0.3rem; margin: 0.2rem 0.4rem 0.6rem; font-size: 0.74rem; color: var(--texto-3); }
+.pg-paginas-cidade > span { text-transform: uppercase; letter-spacing: 0.06em; font-size: 0.7rem; }
+.pg-paginas-cidade .plat-select { width: 100%; }

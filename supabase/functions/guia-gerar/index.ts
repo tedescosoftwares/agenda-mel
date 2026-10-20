@@ -36,6 +36,7 @@ import {
   ANGULOS, ANGULOS_PAGINA, limpar, limparInstrucao, provedoresDe, escolherProvedor, bairroValido,
   prepararLugar, prepararPagina, angulosPara, escolherAngulo, escolherAbertura, anguloAnterior,
   montarPromptLugar, montarPromptPagina, frasesUsadas, gerarConteudo, maisParecido, comMeta, sugerirContexto, URL_GEMINI_NATIVA, VERSAO_CLAUDE, BETA_FALLBACK_CLAUDE,
+  reservaGemini, modeloRecusado, type Geracao,
   type LugarLinha, type PaginaLinha, type LugarDaPagina, type Pedir, type PedirNativo, type Provedor, type BairroDaFicha,
 } from './conteudo.ts'
 
@@ -88,6 +89,21 @@ const pedirCom = (prov: Provedor): Pedir => async (corpo, timeoutMs) => {
 }
 
 type Linha = Record<string, unknown>
+
+// 3.31.1: o Gemini com reserva. Se o Google recusar o modelo configurado (403: só com faturamento, como os Pro; 404: saiu do
+// ar), a função escreve com um Flash de reserva e avisa no _meta.avisos; o modelo que escreveu é o que fica gravado
+type PedidoGeracao = Omit<Parameters<typeof gerarConteudo>[0], 'modelo' | 'pedir' | 'provedor'>
+async function gerarComReserva(ia: Provedor, o: PedidoGeracao): Promise<{ g: Geracao; modelo: string }> {
+  const g = await gerarConteudo({ ...o, modelo: ia.modelo, pedir: pedirCom(ia), provedor: ia })
+  const recusa = ia.id === 'gemini' && !g.ok && !g.limite && modeloRecusado(g.status) ? g.erro : null
+  const reserva = recusa !== null ? reservaGemini(ia.modelo) : null
+  if (!reserva) return { g, modelo: ia.modelo }
+  const outra: Provedor = { ...ia, modelo: reserva }
+  const g2 = await gerarConteudo({ ...o, modelo: reserva, pedir: pedirCom(outra), provedor: outra })
+  if (!g2.ok) return { g, modelo: ia.modelo } // o erro do modelo configurado explica melhor
+  return { g: { ...g2, avisos: [`o Google recusou o modelo ${ia.modelo} (${String(recusa ?? '').slice(0, 160)}); escrevi com ${reserva}`, ...g2.avisos] }, modelo: reserva }
+}
+
 type Pedido = { lugar?: unknown; pagina?: unknown; contexto?: unknown; gravar?: unknown; instrucao?: unknown; angulo?: unknown; provedor?: unknown }
 
 // os salões da cidade (ou de uma categoria) que viram o retrato (prepararPagina): bairros, ruas, horários, o que informam
@@ -100,7 +116,7 @@ async function lugaresDaCidade(db: SupabaseClient, cidadeSlug: string, categoria
 }
 
 type PaginaDaCidade = PaginaLinha & { id: string; contexto: unknown; contexto_origem?: unknown }
-type Escrita = Awaited<ReturnType<typeof sugerirContexto>> & { gravado?: boolean }
+type Escrita = Awaited<ReturnType<typeof sugerirContexto>> & { gravado?: boolean; modelo?: string }
 // a IA escreve o "Sobre a cidade" (3.28/3.30): no Gemini, pesquisando no Google; grava quando pedido (origem "ia",
 // com o que conferir e as fontes em contexto_fontes). 'se_semente' só grava se a linha ainda estiver vazia ou com a
 // semente (alguém pode ter editado enquanto a IA escrevia). Sem a 176, grava só o texto
@@ -108,9 +124,18 @@ async function escreverContexto(db: SupabaseClient, ia: Provedor, p: PaginaDaCid
   const lugares = await lugaresDaCidade(db, String(p.cidade_slug ?? ''))
   const { ficha, checagem } = prepararPagina({ ...p, categoria: '' }, lugares, p.contexto)
   const atual = limpar(p.contexto, 1500) || null
-  const r = await sugerirContexto({ ficha, atual, provedor: ia, checagem, pedir: pedirCom(ia), pedirNativo: ia.id === 'gemini' ? pedirNativoCom(ia) : undefined, localizacao: { cidade: String(p.cidade ?? ''), uf: String(p.uf ?? '') } })
-  if (!r.ok || !gravar) return { ...r, gravado: false }
-  const fontes = { confira: r.confira, fontes: r.fontes, modelo: ia.modelo, provedor: ia.id, pesquisou: r.pesquisou, em: new Date().toISOString() }
+  const sugerirCom = (prov: Provedor) => sugerirContexto({ ficha, atual, provedor: prov, checagem, pedir: pedirCom(prov), pedirNativo: prov.id === 'gemini' ? pedirNativoCom(prov) : undefined, localizacao: { cidade: String(p.cidade ?? ''), uf: String(p.uf ?? '') } })
+  let modelo = ia.modelo
+  let r = await sugerirCom(ia)
+  // 3.31.1: o Google recusou o modelo configurado: o Flash de reserva escreve, avisando
+  const recusa = ia.id === 'gemini' && !r.ok && !r.limite && modeloRecusado(r.status) ? r.erro : null
+  const reserva = recusa !== null ? reservaGemini(ia.modelo) : null
+  if (reserva) {
+    const r2 = await sugerirCom({ ...ia, modelo: reserva })
+    if (r2.ok) { r = { ...r2, avisos: [`o Google recusou o modelo ${ia.modelo} (${String(recusa ?? '').slice(0, 160)}); escrevi com ${reserva}`, ...r2.avisos] }; modelo = reserva }
+  }
+  if (!r.ok || !gravar) return { ...r, gravado: false, modelo }
+  const fontes = { confira: r.confira, fontes: r.fontes, modelo, provedor: ia.id, pesquisou: r.pesquisou, em: new Date().toISOString() }
   let gravacao = db.from('guia_paginas').update({ contexto: r.texto, contexto_origem: 'ia', contexto_fontes: fontes }).eq('id', p.id)
   if (gravar === 'se_semente') gravacao = gravacao.or('contexto_origem.is.null,contexto_origem.eq.semente')
   const { error } = await gravacao
@@ -118,7 +143,7 @@ async function escreverContexto(db: SupabaseClient, ia: Provedor, p: PaginaDaCid
     const { error: e2 } = await db.from('guia_paginas').update({ contexto: r.texto }).eq('id', p.id)
     if (e2) return { ok: false, erro: e2.message }
   } else if (error) return { ok: false, erro: error.message }
-  return { ...r, gravado: true }
+  return { ...r, gravado: true, modelo }
 }
 
 // "Sobre a cidade" (3.22, migração 170): na linha da cidade em guia_paginas; vale para todas as páginas
@@ -177,11 +202,11 @@ async function gerarLugar(db: SupabaseClient, ia: Provedor, id: string, instruca
     jaUsadas: frasesUsadas(outros.map((o) => ({ sobre: o.r_sobre ?? o.c_sobre, chamada: o.r_chamada ?? o.c_chamada }))),
   })
 
-  const g = await gerarConteudo({ tipo: 'lugar', mensagens, checagem, modelo: ia.modelo, pedir: pedirCom(ia), provedor: ia })
+  const { g, modelo } = await gerarComReserva(ia, { tipo: 'lugar', mensagens, checagem })
   if (!g.ok) return json(g.limite ? { ok: false, erro: g.erro, tentar_em: g.tentarEm } : { ok: false, erro: g.erro })
 
   const semelhanca = maisParecido((g.conteudo as { sobre: string[] }).sobre, outros.flatMap((o) => [{ slug: String(o.slug), texto: o.c_sobre }, { slug: String(o.slug), texto: o.r_sobre }]))
-  const rascunho = comMeta(g.conteudo, { modelo: ia.modelo, provedor: ia.id, angulo: angulo.id, instrucao, semelhanca, avisos: g.avisos })
+  const rascunho = comMeta(g.conteudo, { modelo, provedor: ia.id, angulo: angulo.id, instrucao, semelhanca, avisos: g.avisos })
   // importado/descartado viram "gerado"; publicado continua publicado (a página
   // no ar só muda quando aprovarem); removido nunca é tocado
   const mudanca: Linha = { rascunho, gerado_em: rascunho._meta.gerado_em }
@@ -216,14 +241,14 @@ async function gerarPagina(db: SupabaseClient, ia: Provedor, id: string, instruc
   const angulo = escolherAngulo({ candidatos, todos: ANGULOS_PAGINA, semente: `${p.cidade_slug}/${p.categoria}`, pedido: pedidoAngulo, anterior: anguloAnterior(anterior) })
   const mensagens = montarPromptPagina({ ficha, cidade, angulo, instrucao, anterior })
 
-  const g = await gerarConteudo({ tipo: 'pagina', mensagens, checagem: { ...checagem, angulo: angulo.id }, modelo: ia.modelo, pedir: pedirCom(ia), provedor: ia })
+  const { g, modelo } = await gerarComReserva(ia, { tipo: 'pagina', mensagens, checagem: { ...checagem, angulo: angulo.id } })
   if (!g.ok) return json(g.limite ? { ok: false, erro: g.erro, tentar_em: g.tentarEm } : { ok: false, erro: g.erro })
 
   const semelhanca = maisParecido((g.conteudo as { intro: string[] }).intro, irmas.flatMap((o) => {
     const slug = String(o.categoria || o.cidade_slug)
     return [{ slug, texto: o.c_intro }, { slug, texto: o.r_intro }]
   }))
-  const rascunho = comMeta(g.conteudo, { modelo: ia.modelo, provedor: ia.id, angulo: angulo.id, instrucao, semelhanca, avisos: g.avisos })
+  const rascunho = comMeta(g.conteudo, { modelo, provedor: ia.id, angulo: angulo.id, instrucao, semelhanca, avisos: g.avisos })
   const { error: erroGravar } = await db.from('guia_paginas').update({ rascunho, gerado_em: rascunho._meta.gerado_em }).eq('id', p.id)
   if (erroGravar) return json({ erro: erroGravar.message }, 500)
   return json({ ok: true, rascunho })
@@ -241,7 +266,7 @@ async function gerarContexto(db: SupabaseClient, ia: Provedor, id: string, grava
   let r: Escrita
   try { r = await escreverContexto(db, ia, p, gravar ? 'sempre' : false) } catch (e) { return json({ erro: String((e as Error).message) }, 500) }
   if (!r.ok) return json(r.limite ? { ok: false, erro: r.erro, tentar_em: r.tentarEm } : { ok: false, erro: r.erro })
-  return json({ ok: true, contexto: r.texto, confira: r.confira, fontes: r.fontes, pesquisou: r.pesquisou, gravado: !!r.gravado, modelo: ia.modelo, provedor: ia.id, avisos: r.avisos })
+  return json({ ok: true, contexto: r.texto, confira: r.confira, fontes: r.fontes, pesquisou: r.pesquisou, gravado: !!r.gravado, modelo: r.modelo ?? ia.modelo, provedor: ia.id, avisos: r.avisos })
 }
 
 Deno.serve(async (req) => {

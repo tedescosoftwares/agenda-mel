@@ -164,11 +164,11 @@ export type Leitura =
   | { tipo: 'texto'; texto: string; cortado: boolean }
   | { tipo: 'limite'; tentarEm: number }
   | { tipo: 'formato_recusado'; erro: string }
-  | { tipo: 'erro'; erro: string }
+  | { tipo: 'erro'; erro: string; status?: number }
 export type Geracao =
   | { ok: true; conteudo: Conteudo; avisos: string[]; tentativas: number }
   | { ok: false; limite: true; tentarEm: number; erro: string }
-  | { ok: false; limite?: false; erro: string }
+  | { ok: false; limite?: false; erro: string; status?: number } // status: o HTTP do provedor quando foi ele que recusou (403, 404…)
 
 type Obj = Record<string, unknown>
 
@@ -182,6 +182,11 @@ export const URL_GEMINI = 'https://generativelanguage.googleapis.com/v1beta/open
 // descreve a cidade pesquisando em vez de lembrar. A resposta traz as fontes que ela usou
 export const URL_GEMINI_NATIVA = 'https://generativelanguage.googleapis.com/v1beta/models'
 export const MODELO_GEMINI_PADRAO = 'gemini-3-flash-preview' // o Flash tem plano grátis; o Pro (3.1) é só com faturamento, e o 2.5 saiu do ar para contas novas
+// 3.31.1: quando o Google recusa o modelo configurado (403: só com faturamento; 404: saiu do ar), a função escreve com um
+// Flash de reserva, avisando. Os "latest" seguem sempre o Flash mais novo que o Google serve
+export const RESERVAS_GEMINI = ['gemini-flash-latest', 'gemini-flash-lite-latest']
+export const reservaGemini = (modelo: string): string | null => RESERVAS_GEMINI.find((m) => m.toLowerCase() !== String(modelo ?? '').trim().toLowerCase()) ?? null
+export const modeloRecusado = (status: unknown): boolean => status === 403 || status === 404
 // 3.31: o Claude (Anthropic) pela API de Messages, a oficial (não pelo modo compatível com a OpenAI). Chave ANTHROPIC_API_KEY
 // (platform.claude.com, API Keys); modelo em GUIA_IA_MODELO_CLAUDE; esforço em GUIA_IA_ESFORCO_CLAUDE (low|medium|high|xhigh|max)
 export const URL_CLAUDE = 'https://api.anthropic.com/v1/messages'
@@ -966,11 +971,11 @@ export function lerResposta(r: RespostaHttp): Leitura {
   if (codigo === 'json_validate_failed') return { tipo: 'texto', texto: typeof erro?.failed_generation === 'string' ? erro.failed_generation : '', cortado: false }
   if (r.status === 400 && /response_format|json_schema|structured output|strict/i.test(mensagem)) return { tipo: 'formato_recusado', erro: mensagem }
   // o motivo do provedor vai junto (3.27.1): "API não ativada no projeto", "chave restrita a outras APIs", "referer bloqueado"
-  if (r.status === 401 || r.status === 403) return { tipo: 'erro', erro: `a chave da IA foi recusada pelo provedor (${r.status})${mensagem ? `: ${mensagem}` : ''}`.slice(0, 300) }
-  if (r.status === 404) return { tipo: 'erro', erro: `o provedor da IA não achou o modelo: ${mensagem}`.slice(0, 300) }
-  if (r.status === 413) return { tipo: 'erro', erro: `o pedido passou do tamanho que a cota da IA aceita: ${mensagem}`.slice(0, 300) }
-  if (r.status >= 500) return { tipo: 'erro', erro: `a IA está instável agora (${r.status}); tente de novo em instantes` }
-  return { tipo: 'erro', erro: `a IA recusou o pedido (${r.status}): ${mensagem}`.slice(0, 300) }
+  if (r.status === 401 || r.status === 403) return { tipo: 'erro', erro: `a chave da IA foi recusada pelo provedor (${r.status})${mensagem ? `: ${mensagem}` : ''}`.slice(0, 300), status: r.status }
+  if (r.status === 404) return { tipo: 'erro', erro: `o provedor da IA não achou o modelo: ${mensagem}`.slice(0, 300), status: r.status }
+  if (r.status === 413) return { tipo: 'erro', erro: `o pedido passou do tamanho que a cota da IA aceita: ${mensagem}`.slice(0, 300), status: r.status }
+  if (r.status >= 500) return { tipo: 'erro', erro: `a IA está instável agora (${r.status}); tente de novo em instantes`, status: r.status }
+  return { tipo: 'erro', erro: `a IA recusou o pedido (${r.status}): ${mensagem}`.slice(0, 300), status: r.status }
 }
 
 // 3.31: a resposta do Claude: os blocos "text" viram o texto (os de raciocínio vêm vazios e ficam de fora); as citações da
@@ -982,7 +987,7 @@ export type LeituraClaude =
   | { tipo: 'formato_recusado'; erro: string }
   | { tipo: 'parametro_recusado'; parametro: 'fallbacks'; erro: string }
   | { tipo: 'sem_pesquisa'; erro: string }
-  | { tipo: 'erro'; erro: string }
+  | { tipo: 'erro'; erro: string; status?: number }
 export function lerRespostaClaude(r: RespostaHttp): LeituraClaude {
   let corpo: Obj | null = null
   try { corpo = JSON.parse(r.texto) as Obj } catch { corpo = null }
@@ -1010,12 +1015,12 @@ export function lerRespostaClaude(r: RespostaHttp): LeituraClaude {
     if (/output_config|\bformat\b|schema/i.test(mensagem)) return { tipo: 'formato_recusado', erro: mensagem.slice(0, 300) }
     if (/web_search|web search|\btools?\b|allowed_callers|user_location/i.test(mensagem)) return { tipo: 'sem_pesquisa', erro: mensagem.slice(0, 300) }
   }
-  if (r.status === 401 || r.status === 403) return { tipo: 'erro', erro: `a chave da IA foi recusada pelo provedor (${r.status})${mensagem ? `: ${mensagem}` : ''}`.slice(0, 300) }
-  if (r.status === 402) return { tipo: 'erro', erro: `a API da Anthropic está sem créditos (402)${mensagem ? `: ${mensagem}` : ''}`.slice(0, 300) }
-  if (r.status === 404) return { tipo: 'erro', erro: `o provedor da IA não achou o modelo: ${mensagem}`.slice(0, 300) }
-  if (r.status === 413) return { tipo: 'erro', erro: `o pedido passou do tamanho que a IA aceita: ${mensagem}`.slice(0, 300) }
-  if (r.status >= 500) return { tipo: 'erro', erro: `a IA está instável agora (${r.status}); tente de novo em instantes` }
-  return { tipo: 'erro', erro: `a IA recusou o pedido (${r.status}): ${mensagem}`.slice(0, 300) }
+  if (r.status === 401 || r.status === 403) return { tipo: 'erro', erro: `a chave da IA foi recusada pelo provedor (${r.status})${mensagem ? `: ${mensagem}` : ''}`.slice(0, 300), status: r.status }
+  if (r.status === 402) return { tipo: 'erro', erro: `a API da Anthropic está sem créditos (402)${mensagem ? `: ${mensagem}` : ''}`.slice(0, 300), status: r.status }
+  if (r.status === 404) return { tipo: 'erro', erro: `o provedor da IA não achou o modelo: ${mensagem}`.slice(0, 300), status: r.status }
+  if (r.status === 413) return { tipo: 'erro', erro: `o pedido passou do tamanho que a IA aceita: ${mensagem}`.slice(0, 300), status: r.status }
+  if (r.status >= 500) return { tipo: 'erro', erro: `a IA está instável agora (${r.status}); tente de novo em instantes`, status: r.status }
+  return { tipo: 'erro', erro: `a IA recusou o pedido (${r.status}): ${mensagem}`.slice(0, 300), status: r.status }
 }
 
 // ---- validação ----------------------------------------------------------------------------------------
@@ -1266,7 +1271,7 @@ export type LeituraNativa =
   | { tipo: 'texto'; texto: string; fontes: Fonte[]; pesquisou: boolean; cortado: boolean }
   | { tipo: 'limite'; tentarEm: number }
   | { tipo: 'sem_pesquisa'; erro: string }
-  | { tipo: 'erro'; erro: string }
+  | { tipo: 'erro'; erro: string; status?: number }
 export type PedirNativo = (modelo: string, corpo: Record<string, unknown>, timeoutMs: number) => Promise<RespostaHttp>
 
 // o corpo de generateContent: com pesquisa, o JSON é pedido no prompt (a pesquisa e o modo JSON não andam juntos); sem, no modo JSON
@@ -1304,15 +1309,15 @@ export function lerRespostaNativa(r: RespostaHttp): LeituraNativa {
     }
     return { tipo: 'texto', texto, fontes: fontes.slice(0, 8), pesquisou: !!gm, cortado: cand?.finishReason === 'MAX_TOKENS' }
   }
-  if (r.status === 401 || r.status === 403) return { tipo: 'erro', erro: `a chave da IA foi recusada pelo provedor (${r.status})${mensagem ? `: ${mensagem}` : ''}`.slice(0, 300) }
-  if (r.status === 404) return { tipo: 'erro', erro: `o provedor da IA não achou o modelo: ${mensagem}`.slice(0, 300) }
-  if (r.status >= 500) return { tipo: 'erro', erro: `a IA está instável agora (${r.status}); tente de novo em instantes` }
-  return { tipo: 'erro', erro: `a IA recusou o pedido (${r.status}): ${mensagem}`.slice(0, 300) }
+  if (r.status === 401 || r.status === 403) return { tipo: 'erro', erro: `a chave da IA foi recusada pelo provedor (${r.status})${mensagem ? `: ${mensagem}` : ''}`.slice(0, 300), status: r.status }
+  if (r.status === 404) return { tipo: 'erro', erro: `o provedor da IA não achou o modelo: ${mensagem}`.slice(0, 300), status: r.status }
+  if (r.status >= 500) return { tipo: 'erro', erro: `a IA está instável agora (${r.status}); tente de novo em instantes`, status: r.status }
+  return { tipo: 'erro', erro: `a IA recusou o pedido (${r.status}): ${mensagem}`.slice(0, 300), status: r.status }
 }
 
 export type Sugestao =
   | { ok: true; texto: string; confira: string[]; fontes: Fonte[]; pesquisou: boolean; avisos: string[] }
-  | { ok: false; limite?: boolean; tentarEm?: number; erro: string }
+  | { ok: false; limite?: boolean; tentarEm?: number; erro: string; status?: number }
 // a sugestão do "Sobre a cidade": no Gemini, pela porta nativa com pesquisa (se o provedor recusar a pesquisa, sem ela);
 // se a porta nativa falhar ou a resposta não vier como JSON válido, ou em outro provedor, pela porta comum
 // (gerarConteudo), a mesma de sempre. A pesquisa é o que deixa a descrição da cidade automática e com fontes
@@ -1343,7 +1348,8 @@ export async function sugerirContexto(o: { ficha: FichaPagina; atual: string | n
       if (l.tipo === 'limite') return { ok: false, limite: true, tentarEm: l.tentarEm, erro: l.tentarEm <= 90 ? 'limite da IA por minuto' : 'limite da IA atingido por agora' }
       if (l.tipo === 'sem_pesquisa') { avisos.push('a Anthropic não deixou pesquisar; a descrição saiu da memória do modelo'); continue }
       if (l.tipo === 'formato_recusado') { avisos.push('o formato garantido foi recusado; fui pela porta comum'); break }
-      if (l.tipo === 'parametro_recusado' || l.tipo === 'erro') return { ok: false, erro: l.erro }
+      if (l.tipo === 'parametro_recusado') return { ok: false, erro: l.erro }
+      if (l.tipo === 'erro') return { ok: false, erro: l.erro, status: l.status }
       if (l.pausa) { avisos.push('a pesquisa não terminou a tempo'); continue }
       const v = validarContexto(extrairJson(l.texto))
       if (v.conteudo && !v.problemas.some((p) => p.nivel === 'grave')) {
@@ -1371,7 +1377,7 @@ export async function sugerirContexto(o: { ficha: FichaPagina; atual: string | n
     }
   }
   const g = await gerarConteudo({ tipo: 'contexto', mensagens, checagem: o.checagem, modelo: o.provedor.modelo, pedir: o.pedir, provedor: o.provedor })
-  if (!g.ok) return g.limite ? { ok: false, limite: true, tentarEm: g.tentarEm, erro: g.erro } : { ok: false, erro: g.erro }
+  if (!g.ok) return g.limite ? { ok: false, limite: true, tentarEm: g.tentarEm, erro: g.erro } : { ok: false, erro: g.erro, status: g.status }
   const c = g.conteudo as ConteudoContexto
   return { ok: true, texto: c.texto, confira: c.confira, fontes: [], pesquisou: false, avisos: [...avisos, ...g.avisos] }
 }
@@ -1432,9 +1438,9 @@ export async function gerarConteudo(o: {
   let mensagens = o.mensagens
   let tentativas = 0
   let reserva: { conteudo: Conteudo; avisos: string[] } | null = null
-  const desistir = (erro: string): Geracao => (reserva
+  const desistir = (erro: string, status?: number): Geracao => (reserva
     ? { ok: true, conteudo: reserva.conteudo, avisos: [...reserva.avisos, `não deu para pedir uma versão corrigida (${erro})`], tentativas }
-    : { ok: false, erro })
+    : { ok: false, erro, ...(status ? { status } : {}) })
 
   for (let chamadas = 0; chamadas < 4; chamadas++) {
     const resta = prazo - (agora() - inicio)
@@ -1467,7 +1473,7 @@ export async function gerarConteudo(o: {
       return desistir(`a IA recusou o pedido: ${l.erro}`.slice(0, 300))
     }
     if (l.tipo === 'sem_pesquisa') return desistir(`a IA recusou o pedido: ${l.erro}`.slice(0, 300))
-    if (l.tipo === 'erro') return desistir(l.erro)
+    if (l.tipo === 'erro') return desistir(l.erro, l.status)
 
     tentativas++
     const v: Validacao = l.cortado

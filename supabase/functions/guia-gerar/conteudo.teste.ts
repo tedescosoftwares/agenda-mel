@@ -23,6 +23,7 @@ import {
   SISTEMA_CONTEXTO, montarPromptContexto, validarContexto,
   corpoNativoGemini, lerRespostaNativa, sugerirContexto, URL_GEMINI_NATIVA,
   corpoDaRequisicaoClaude, lerRespostaClaude, URL_CLAUDE, MODELO_CLAUDE_PADRAO, MAX_TOKENS_CLAUDE, esforcoClaude,
+  reservaGemini, modeloRecusado, RESERVAS_GEMINI,
   cortarFrase, cortarPalavras, bairroValido, hash, vasculhar, CIDADES, informesDoLugar,
 } from './conteudo.ts'
 import type { LugarLinha, Pedir, PedirNativo, RespostaHttp, Checagem, ConteudoLugar, Mensagem } from './conteudo.ts'
@@ -1109,6 +1110,26 @@ teste('sugerirContexto com o Claude: pesquisa na web com fontes, pause_turn, pes
   const c7 = provedor([erroClaude(400, 'invalid_request_error', 'Unexpected value(s) for the `anthropic-beta` header.'), comBusca([{ type: 'text', text: JSON.stringify(BOM_CTX) }])])
   const r7 = await sugerirContexto({ ficha, atual: null, provedor: claude, checagem, pedir: c7.pedir })
   assert.ok(r7.ok && c7.pedidos.length === 2 && 'fallbacks' in c7.pedidos[0].corpo && !('fallbacks' in c7.pedidos[1].corpo), JSON.stringify(r7))
+})
+
+// ---- 3.31.1: o Gemini com reserva: o status do erro sobe até quem decide trocar o modelo ----------------------------
+teste('o status do provedor sobe com o erro, e a reserva do Gemini é um Flash diferente do configurado (3.31.1)', async () => {
+  assert.deepEqual(RESERVAS_GEMINI, ['gemini-flash-latest', 'gemini-flash-lite-latest'])
+  assert.equal(reservaGemini('gemini-3.1-pro-preview'), 'gemini-flash-latest', 'o Pro recusado cai no Flash mais novo')
+  assert.equal(reservaGemini('gemini-flash-latest'), 'gemini-flash-lite-latest', 'o Flash recusado cai no Lite')
+  assert.equal(reservaGemini('GEMINI-FLASH-LITE-LATEST '), 'gemini-flash-latest')
+  assert.ok(modeloRecusado(403) && modeloRecusado(404) && !modeloRecusado(401) && !modeloRecusado(429) && !modeloRecusado(undefined))
+  const l403 = lerResposta(respostaErro(403, { message: 'Gemini 3.1 Pro Preview is only available with billing enabled', status: 'PERMISSION_DENIED' }))
+  assert.ok(l403.tipo === 'erro' && l403.status === 403 && /billing/.test(l403.erro))
+  const l404 = lerResposta(respostaErro(404, { message: 'models/gemini-3-flash-preview is not found' }))
+  assert.ok(l404.tipo === 'erro' && l404.status === 404)
+  assert.ok((lerRespostaNativa(respostaErro(404, { message: 'not found' })) as { status?: number }).status === 404)
+  assert.ok((lerRespostaClaude(erroClaude(404, 'not_found_error', 'model: x')) as { status?: number }).status === 404)
+  // gerarConteudo devolve o status quando foi o provedor que recusou, e nada quando a IA só errou o texto
+  const g = await gerarConteudo({ tipo: 'lugar', mensagens: [{ role: 'system', content: 's' }, { role: 'user', content: 'u' }], checagem: preparoRo.checagem, modelo: 'gemini-3.1-pro-preview', pedir: provedor([respostaErro(403, { message: 'billing' })]).pedir })
+  assert.ok(!g.ok && !g.limite && g.status === 403, JSON.stringify(g))
+  const g2 = await gerarConteudo({ tipo: 'lugar', mensagens: [{ role: 'system', content: 's' }, { role: 'user', content: 'u' }], checagem: preparoRo.checagem, modelo: 'm', pedir: provedor([respostaOk('nada'), respostaOk('nada')]).pedir })
+  assert.ok(!g2.ok && !g2.limite && g2.status === undefined, 'texto errado não tem status de provedor')
 })
 
 // ---- roda ---------------------------------------------------------------------------------------------------

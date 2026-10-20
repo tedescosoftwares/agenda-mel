@@ -310,7 +310,8 @@ GUIA_IA_MODELO=openai/gpt-oss-120b   opcional; é o padrão
 GUIA_IA_URL=...                  opcional: outra API compatível com a da OpenAI (ex.: https://api.x.ai/v1/chat/completions)
 GUIA_IA_CHAVE=...                opcional: a chave dessa outra API
 GEMINI_API_KEY=...               3.27: a chave do AI Studio
-GUIA_IA_MODELO_GEMINI=gemini-3-flash-preview   opcional; é o padrão
+GUIA_IA_MODELO_GEMINI=gemini-3-flash-preview   opcional; é o padrão. Recusado pelo Google (403 sem faturamento, 404 fora do ar),
+                                 a função escreve com gemini-flash-latest (ou gemini-flash-lite-latest) e avisa (3.31.1)
 ANTHROPIC_API_KEY=...            3.31: a chave de platform.claude.com (API Keys)
 GUIA_IA_MODELO_CLAUDE=claude-opus-5-5          opcional; é o padrão (claude-sonnet-5-5 e claude-haiku-5-5 custam menos)
 GUIA_IA_ESFORCO_CLAUDE=medium    opcional: low, medium, high, xhigh ou max

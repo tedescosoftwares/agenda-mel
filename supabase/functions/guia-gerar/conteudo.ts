@@ -746,6 +746,9 @@ export const SISTEMA_PAGINA = `Você é redatora de um guia local de beleza feit
 O QUE VOCÊ SABE
 Só o que está na <ficha> e em "Sobre a cidade". A ficha é o retrato da cidade pelo guia: "onde_ficam" diz, bairro a bairro, quantos lugares há (e a fatia em palavras), o que cada bairro concentra, as ruas e avenidas onde eles se juntam e quantos abrem no domingo; "ruas_com_mais_lugares", os endereços que mais se repetem; os horários (sábado, domingo, cedo, noite, segunda fechada) mostram o ritmo da cidade; "o_que_informam" diz, em conjunto, o que os cadastros informam (cartão, estacionamento, acessibilidade) e pode ser dito assim, em proporção. "Sobre a cidade" é o que a redação sabe da cidade: como ela se organiza, a temporada, quem mora e quem visita. Os números são do guia, não da cidade inteira.
 
+ANTES DE ESCREVER, EM SILÊNCIO
+Leia a ficha e responda para você mesma: o que mais diferencia esta cidade nos dados? Como os lugares se distribuem? Há um bairro, uma avenida ou uma região que organiza a oferta? Os horários mostram algum comportamento (sábado cheio, domingo raro, noite, segunda fechada)? Temporada, turismo, fim de semana ou rotina de moradores mudam a escolha? Qual informação ajuda de verdade a decidir onde marcar? Não mostre essa análise: use-a para escolher o primeiro fato e a ordem do texto.
+
 REGRAS QUE NÃO SE QUEBRAM
 1. Não cite nenhum lugar pelo nome e não compare lugares. A lista abaixo do texto faz isso.
 2. Não escreva quantidades exatas: a lista muda toda semana. Use as proporções em palavras da ficha ("a maior parte", "cerca de um terço", "um em cada quatro") e "vários", "alguns".
@@ -763,6 +766,8 @@ O QUE FAZ A PÁGINA SER ÚTIL
 - Sol, sal, cloro e maresia: só no ângulo "Beleza em cidade de praia", e em uma frase. Nos outros ângulos, a praia entra pela rotina (a temporada, o fim de semana, quem mora e quem visita), nunca pela fórmula "moradores e veranistas que lidam com sol e maresia".
 - Explicar o serviço (o que costuma incluir, quanto tempo leva em geral, de quanto em quanto tempo refazer) e como escolher bem: o que perguntar ao marcar, o que observar no primeiro atendimento, quando reservar com antecedência.
 - Logo abaixo do texto a página mostra um bloco com os números exatos da lista (bairros, horários, categorias) e uma FAQ com "quantos lugares", "quais bairros têm mais" e "domingo ou noite": não repita números nem essas perguntas; diga o que eles significam para quem escolhe.
+- Variação: o primeiro fato do texto é o mais característico desta ficha, e a ordem dos assuntos muda de página para página (uma começa pela avenida onde os lugares se juntam, outra pela diferença entre bairros, outra pelo sábado, outra pela temporada, outra por resolver perto de casa). Quando vier "Abertura:", comece por ali. Nunca a mesma sequência bairro, horário, serviço em todas as páginas.
+- Pelo menos três fatos locais no conjunto do texto, com um geográfico (bairro, rua, avenida, como os lugares se distribuem) e um de ritmo (sábado, domingo, noite, cedo, segunda, temporada). Poucos fatos bem interpretados valem mais que uma enumeração.
 - Teste da página genérica: frase que serviria para qualquer cidade sai, ou ganha um fato da ficha ou de "Sobre a cidade". Teste da outra cidade: troque o nome da cidade pelo de outra; se o parágrafo continuar verdadeiro, ele está genérico.
 - Em "como_escolher", pelo menos dois itens falam desta cidade (um bairro, uma rua, o ritmo dos horários, a temporada); os outros, do serviço.
 - Na FAQ, pelo menos uma pergunta é a que alguém faria sobre esta cidade ("Preciso ir ao Centro de Itanhaém para encontrar manicure?", "Quem está em Suarão encontra cabeleireiro perto?"), respondida com a ficha.
@@ -773,7 +778,7 @@ O QUE FAZ A PÁGINA SER ÚTIL
 FORMATO: só o objeto JSON, sem nada antes ou depois.
 - seo_title: até 60 caracteres, sem "| MIMO". Ex.: "Manicure em Itanhaém: endereços, horários e bairros".
 - meta_description: 120 a 155 caracteres, com o serviço e a cidade.
-- chamada: até 140 caracteres, logo abaixo do título da página.
+- chamada: até 140 caracteres, logo abaixo do título da página; complementa o título em vez de repeti-lo.
 - intro: 2 ou 3 parágrafos de 45 a 110 palavras.
 - como_escolher: {titulo até 50 caracteres, itens: 4 a 6 frases de até 150 caracteres}.
 - faq: 3 a 5 {pergunta, resposta} sobre o serviço e a escolha na cidade. Nunca sobre horário, endereço, telefone ou preço de um lugar.`
@@ -845,7 +850,7 @@ function blocosComuns(o: Pedido, tipo: Tipo, abertura?: string): string[] {
   if (abertura) partes.push(`Abertura: ${abertura}`)
   if (o.instrucao) partes.push(`<pedido_do_editor>\n${o.instrucao}\n</pedido_do_editor>\nAtenda ao pedido do editor no que ele mudar de foco, tom ou tamanho, sem quebrar nenhuma regra.`)
   const anterior = resumoDaVersao(o.anterior, tipo)
-  if (anterior) partes.push(`Esta é uma nova versão. Não repita a estrutura, a abertura, os títulos, as perguntas nem as frases da versão anterior:\n<versao_anterior>\n${anterior}\n</versao_anterior>`)
+  if (anterior) partes.push(`Esta é uma nova versão. Não repita a estrutura, a sequência dos assuntos, a abertura, os títulos, as perguntas nem as frases da versão anterior; aborde os mesmos dados por outra construção:\n<versao_anterior>\n${anterior}\n</versao_anterior>`)
   return partes
 }
 
@@ -856,8 +861,28 @@ export function montarPromptLugar(o: Pedido & { ficha: FichaLugar; abertura: str
   return [{ role: 'system', content: SISTEMA_LUGAR }, { role: 'user', content: partes.join('\n\n') }]
 }
 
-export function montarPromptPagina(o: Pedido & { ficha: FichaPagina }): Mensagem[] {
-  const partes = ['Escreva o texto desta página do guia.', `<ficha>\n${JSON.stringify(o.ficha, null, 2)}\n</ficha>`, ...blocosComuns(o, 'pagina'), 'Responda só com o JSON.']
+// 3.32.1: por onde a página começa, tirado da própria ficha (só o que os dados sustentam) e rodiziado entre as páginas
+// e as versões, como a abertura dos textos de salão. "Perto de casa" serve para qualquer ficha e fecha a lista
+export function aberturasDaPagina(f: FichaPagina, praia: boolean): string[] {
+  const c: string[] = []
+  const rua = f.ruas_com_mais_lugares[0]
+  if (rua && rua.lugares >= 3) c.push(`Comece pela ${rua.rua}${rua.bairro ? ` (${rua.bairro})` : ''}, onde vários lugares se juntam, e pelo que isso muda para quem escolhe.`)
+  if (f.onde_ficam.length >= 2) c.push(`Comece pela diferença entre os bairros: o que ${f.onde_ficam[0].bairro} concentra e o que ${f.onde_ficam[1].bairro} resolve perto de casa.`)
+  const inf = f.com_horario_informado
+  if (inf >= 5 && f.abrem_aos_sabados / inf >= 0.5) c.push('Comece pelo ritmo de sábado na cidade e pelo que ele pede de quem marca.')
+  if (inf >= 5 && f.abrem_aos_domingos / inf <= 0.2) c.push('Comece pelo domingo, raro na cidade, e pelo que isso exige de quem planeja a semana.')
+  if (inf >= 5 && f.atendem_ate_as_20h_ou_mais / inf >= 0.2) c.push('Comece por quem trabalha o dia inteiro e precisa de atendimento à noite.')
+  if (praia) c.push('Comece pela temporada: o que muda na cidade quando o verão chega.')
+  c.push('Comece por resolver perto de casa: o que o bairro de quem lê costuma ter e quando vale atravessar a cidade.')
+  return c
+}
+export function escolherAberturaDaPagina(f: FichaPagina, praia: boolean, semente: string, indice = 0): string {
+  const lista = aberturasDaPagina(f, praia)
+  return lista[(hash(`${semente}#abertura`) + Math.max(0, indice)) % lista.length]
+}
+
+export function montarPromptPagina(o: Pedido & { ficha: FichaPagina; abertura?: string }): Mensagem[] {
+  const partes = ['Escreva o texto desta página do guia.', `<ficha>\n${JSON.stringify(o.ficha, null, 2)}\n</ficha>`, ...blocosComuns(o, 'pagina', o.abertura), 'Responda só com o JSON.']
   return [{ role: 'system', content: SISTEMA_PAGINA }, { role: 'user', content: partes.join('\n\n') }]
 }
 
@@ -1266,6 +1291,17 @@ export function retratoDaCidade(campos: Array<[string, string]>, c: Checagem): P
   if (inventario.length) problemas.push({ nivel: 'estilo', texto: `lista bairros como inventário (${inventario.map(([campo]) => campo).join(', ')}): cada bairro citado vem com o que ele tem, e no máximo três por frase` })
   const litoral = campos.filter(([, t]) => /\b(maresia|cloro|sal|salitre)\b/.test(norm(t))).length
   if (litoral >= (c.angulo === 'praia' ? 5 : 3)) problemas.push({ nivel: 'estilo', texto: `sol, sal, cloro e maresia viraram fórmula (em ${litoral} campos): deixe em uma frase e fale da cidade pelo que a ficha mostra` })
+  // 3.32.1: a introdução precisa de um fato geográfico da ficha (bairro, rua, avenida) e de um de ritmo; sem eles, está genérica
+  const intro = campos.filter(([campo]) => /^intro/.test(campo)).map(([, t]) => norm(t)).join(' ')
+  if (intro) {
+    const cidade = norm(c.permitidos[0] ?? '')
+    const escapar = (x: string) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const nomes = permitidos.filter((n) => n && n !== cidade)
+    const geo = nomes.some((n) => new RegExp(`\\b${escapar(n)}\\b`).test(intro))
+    // só cobra o fato geográfico quando a ficha tem bairro ou rua para citar
+    if (nomes.length && !geo) problemas.push({ nivel: 'estilo', texto: 'a introdução não tem nenhum fato geográfico da ficha (um bairro, uma rua, uma avenida): assim ela serviria para qualquer cidade' })
+    if (!/\b(sabados?|domingos?|noite|cedo|segunda|temporada|fim de semana|verao|feriados?|ferias|manha|tarde|madrugada|semana)\b/.test(intro)) problemas.push({ nivel: 'estilo', texto: 'a introdução não fala do ritmo da cidade (sábado, domingo, noite, cedo, segunda, temporada): use os horários da ficha ou a temporada de "Sobre a cidade"' })
+  }
   return problemas
 }
 

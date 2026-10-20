@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Portal from '../../Portal'
 import { useDialogo } from '../../../context/DialogoContext'
 import { PreviaGoogle } from './Previa'
-import EscreverFora from './EscreverFora'
+import EscreverFora, { Conferencia } from './EscreverFora'
 import { GUIA_CATEGORIAS, conteudoSeguro, telefoneBonito, canaisDoSite, rotaDoLugar } from '../../../lib/guia'
 import { seoDoLugar } from '../../../lib/guiaSeo'
 import { enviarFotoDoGuia, MAX_FOTOS } from '../../../lib/guiaFotos'
@@ -92,10 +92,12 @@ export default function EditarLugar({ lugar, g, onFechar }) {
   const [enviando, setEnviando] = useState(false)
   const [erro, setErro] = useState('')
   const [salvando, setSalvando] = useState(false)
+  const [conferencia, setConferencia] = useState(null) // 3.32.1: a validação da IA sobre o texto editado ou colado
   const caixa = useRef(null)
 
   const sujo = JSON.stringify({ fatos, horario, texto, fotos }) !== JSON.stringify(inicial)
   const textoMudou = JSON.stringify(texto) !== JSON.stringify(inicial.texto)
+  const graves = conferencia && !conferencia.erro && conferencia.texto === JSON.stringify(texto) ? conferencia.problemas.filter((p) => p.nivel === 'grave').length : 0
 
   async function fechar() {
     if (sujo && !(await confirmar({ titulo: 'Sair sem salvar?', texto: 'As mudanças feitas aqui se perdem.', ok: 'Sair sem salvar', cancelar: 'Continuar editando' }))) return
@@ -187,6 +189,12 @@ export default function EditarLugar({ lugar, g, onFechar }) {
     }
     if (!Object.keys(campos).length) { onFechar(); return }
     setSalvando(true)
+    // 3.32.1: o texto passa pela conferência da IA; com problema grave, só salva no segundo clique ("Salvar mesmo assim")
+    if (textoMudou && !(conferencia && conferencia.texto === JSON.stringify(texto))) {
+      const c = await g.conferirTexto('lugar', lugar.id, limparTexto(texto))
+      setConferencia({ ...c, texto: JSON.stringify(texto) })
+      if (!c.erro && c.problemas.some((p) => p.nivel === 'grave')) { setAba('texto'); setSalvando(false); return }
+    }
     const r = await g.salvarLugar(lugar.id, campos)
     setSalvando(false)
     if (!r.ok) { setErro(r.erro); return }
@@ -214,7 +222,7 @@ export default function EditarLugar({ lugar, g, onFechar }) {
             {aba === 'texto' ? (
               <div className="pg-form">
                 {!temTexto && <p className="pg-nota">Ainda não há texto da IA. Dá para escrever à mão, colar o que o seu GPT escreveu (abaixo), ou fechar e tocar em Gerar.</p>}
-                <EscreverFora tipo="lugar" id={lugar.id} g={g} onJson={(o) => setTexto({ ...textoInicial({ rascunho: o }), _meta: texto._meta })} />
+                <EscreverFora tipo="lugar" id={lugar.id} g={g} onJson={(o) => setTexto({ ...textoInicial({ rascunho: o }), _meta: { ...(texto._meta ?? {}), modelo: 'escrito fora', provedor: 'manual' } })} />
                 <PreviaGoogle titulo={seo.titulo} descricao={seo.descricao} caminho={seo.caminho} tituloBruto={texto.seo_title} descricaoBruta={texto.meta_description} />
                 <label className="pg-campo">Título no Google <Conta n={texto.seo_title.length} max={60} />
                   <input value={texto.seo_title} onChange={(e) => setT('seo_title', e.target.value)} placeholder="Ex.: Rô Coiffeur em Itanhaém: unhas e cabelo no Centro" />
@@ -363,10 +371,11 @@ export default function EditarLugar({ lugar, g, onFechar }) {
           </div>
 
           {erro && <div className="alert alert-error pg-ed-erro">{erro}</div>}
+          {conferencia && conferencia.texto === JSON.stringify(texto) && <div className="pg-ed-erro"><Conferencia r={conferencia} /></div>}
           <footer className="pg-ed-pe">
-            <small className="muted">{textoMudou ? 'O texto fica esperando aprovação: a página no ar não muda até aprovar.' : 'Ctrl+Enter salva · Esc fecha'}</small>
+            <small className="muted">{graves ? 'A conferência achou problema grave no texto. Corrija, ou salve mesmo assim por sua conta.' : textoMudou ? 'O texto fica esperando aprovação: a página no ar não muda até aprovar.' : 'Ctrl+Enter salva · Esc fecha'}</small>
             <button type="button" className="btn btn-ghost" onClick={fechar}>Cancelar</button>
-            <button type="button" className="btn btn-primary" onClick={salvar} disabled={salvando || !sujo}>{salvando ? <><LoaderCircle size={15} className="pg-gira" /> Salvando…</> : 'Salvar'}</button>
+            <button type="button" className="btn btn-primary" onClick={salvar} disabled={salvando || !sujo}>{salvando ? <><LoaderCircle size={15} className="pg-gira" /> Salvando…</> : graves ? 'Salvar mesmo assim' : 'Salvar'}</button>
           </footer>
         </div>
       </div>

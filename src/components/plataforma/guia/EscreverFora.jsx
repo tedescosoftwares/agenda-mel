@@ -1,6 +1,22 @@
 import { useState } from 'react'
-import { Copy, ClipboardPaste, LoaderCircle, Check } from 'lucide-react'
+import { Copy, ClipboardPaste, LoaderCircle, Check, ShieldCheck, TriangleAlert } from 'lucide-react'
 import { pedidoParaTexto, extrairJsonColado, copiarTexto } from '../../../lib/guiaColar'
+
+// o resultado da conferência (3.32.1): o que a validação da IA diria do texto colado ou editado
+export function Conferencia({ r }) {
+  if (!r) return null
+  if (r.erro) return <div className="alert alert-error" data-teste="conferencia">Não deu para conferir o texto: {r.erro}</div>
+  const graves = r.problemas.filter((p) => p.nivel === 'grave')
+  const estilo = r.problemas.filter((p) => p.nivel !== 'grave')
+  if (!graves.length && !estilo.length && !r.avisos.length) return <p className="pg-nota pg-conferido" data-teste="conferencia"><ShieldCheck size={14} /> Conferido: passou nas regras do guia.</p>
+  return (
+    <div className="pg-conferencia" data-teste="conferencia">
+      {graves.length > 0 && <div className="alert alert-error"><b><TriangleAlert size={14} /> Não pode ir assim ({graves.length}):</b><ul>{graves.map((p, i) => <li key={i}>{p.texto}</li>)}</ul></div>}
+      {estilo.length > 0 && <div className="pg-alerta ambar"><TriangleAlert size={16} /><div><b>Vale melhorar</b>{estilo.map((p, i) => <span key={i}>{p.texto}</span>)}</div></div>}
+      {r.avisos.length > 0 && <small className="muted">{r.avisos.join(' · ')}</small>}
+    </div>
+  )
+}
 
 // Escrever fora (3.32): quem tem o próprio modelo (o GPT, por exemplo) copia daqui o pedido que a função
 // montaria para a IA (ficha, regras e formato), cola lá, e traz o JSON da resposta de volta: os campos do
@@ -12,6 +28,8 @@ export default function EscreverFora({ tipo, id, g, onJson }) {
   const [manual, setManual] = useState('') // o pedido para copiar à mão, quando o navegador não deixa copiar
   const [colado, setColado] = useState('')
   const [erro, setErro] = useState('')
+  const [conferencia, setConferencia] = useState(null)
+  const [conferindo, setConferindo] = useState(false)
 
   async function copiar() {
     if (copiando) return
@@ -24,12 +42,15 @@ export default function EscreverFora({ tipo, id, g, onJson }) {
       else setManual(texto)
     } finally { setCopiando(false) }
   }
-  function preencher() {
-    setErro('')
+  async function preencher() {
+    setErro(''); setConferencia(null)
     const o = extrairJsonColado(colado)
     if (!o) { setErro('Não achei um JSON no que foi colado. Cole a resposta inteira do GPT, com as chaves { }.'); return }
     onJson(o)
     setColado('')
+    // a mesma conferência que a IA passa (3.32.1): nome de lugar, nota, preço, inventário de bairros, tamanhos
+    setConferindo(true)
+    try { setConferencia(await g.conferirTexto(tipo, id, o)) } finally { setConferindo(false) }
   }
 
   return (
@@ -51,9 +72,11 @@ export default function EscreverFora({ tipo, id, g, onJson }) {
         <textarea rows={4} value={colado} onChange={(e) => setColado(e.target.value)} placeholder={'{ "seo_title": "...", ... }'} data-teste="json-colado" />
       </label>
       <div className="pg-fora-linha">
-        <button type="button" className="btn btn-ghost pg-btn-peq" onClick={preencher} disabled={!colado.trim()}><ClipboardPaste size={14} /> 3. Preencher os campos com o que foi colado</button>
+        <button type="button" className="btn btn-ghost pg-btn-peq" onClick={preencher} disabled={!colado.trim() || conferindo}>{conferindo ? <LoaderCircle size={14} className="pg-gira" /> : <ClipboardPaste size={14} />} 3. Preencher os campos com o que foi colado</button>
+        {conferindo && <small className="muted">Conferindo pelas regras do guia…</small>}
       </div>
       {erro && <div className="alert alert-error">{erro}</div>}
+      <Conferencia r={conferencia} />
     </fieldset>
   )
 }

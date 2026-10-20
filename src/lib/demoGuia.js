@@ -501,6 +501,19 @@ const ANGULOS = ['o bairro e a praticidade', 'o serviço principal em detalhe', 
 const provedorDemo = (corpo) => (corpo?.provedor === 'groq' || corpo?.provedor === 'claude' ? corpo.provedor : 'gemini')
 const modeloDemo = (corpo) => ({ groq: 'openai/gpt-oss-120b', claude: 'claude-opus-5-5' }[provedorDemo(corpo)] ?? 'gemini-3-flash-preview')
 export async function demoGuiaGerar(corpo) {
+  // 3.32.1: a conferência do texto colado (no demo, as regras principais)
+  if (corpo?.conferir && typeof corpo.conferir === 'object') {
+    const textos = []
+    const andar = (v) => { if (typeof v === 'string') textos.push(v); else if (Array.isArray(v)) v.forEach(andar); else if (v && typeof v === 'object') Object.values(v).forEach(andar) }
+    andar(corpo.conferir)
+    const tudo = textos.join(' ')
+    const problemas = []
+    if (/\bnotas?\b|\bestrelas?\b/i.test(tudo)) problemas.push({ nivel: 'grave', texto: 'fala de nota ou estrelas' })
+    if (/\bgoogle\b/i.test(tudo)) problemas.push({ nivel: 'grave', texto: 'cita o Google' })
+    if (/R\$|\bpre[çc]o\b|\bbarat/i.test(tudo)) problemas.push({ nivel: 'grave', texto: 'fala de preço' })
+    if (/!/.test(tudo) || /\bdescubra\b/i.test(tudo)) problemas.push({ nivel: 'estilo', texto: 'clichê de anúncio ou exclamação' })
+    return { ok: !problemas.some((p) => p.nivel === 'grave'), conteudo: corpo.conferir, problemas, avisos: [] }
+  }
   // 3.32: o pedido pronto, para quem escreve fora
   if (corpo?.prompt === true && (corpo.lugar || corpo.pagina)) {
     const alvo = corpo.lugar ? GUIA_LUGARES.find((x) => x.id === corpo.lugar) : GUIA_PAGINAS.find((x) => x.id === corpo.pagina)

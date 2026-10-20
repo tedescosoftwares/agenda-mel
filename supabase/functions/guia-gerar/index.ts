@@ -2,7 +2,7 @@
 // guia-gerar (3.9): escreve com IA o texto de uma página do guia de salões e
 // guarda como rascunho, esperando alguém da Plataforma aprovar.
 //
-// POST { lugar?: uuid, pagina?: uuid, contexto?: uuid, instrucao?: string, angulo?: string, provedor?: 'gemini' | 'groq' | 'claude', prompt?: true }
+// POST { lugar?: uuid, pagina?: uuid, contexto?: uuid, instrucao?: string, angulo?: string, provedor?: 'gemini' | 'groq' | 'claude', prompt?: true, conferir?: object }
 // com o Authorization de quem está logado na Plataforma.
 //   lugar   uma linha de guia_lugares (a página de um salão)
 //   pagina  uma linha de guia_paginas (a página da cidade ou de uma categoria)
@@ -17,6 +17,8 @@
 //   provedor   3.27: qual IA escreve. Sem ele, GUIA_IA_PADRAO; sem ela, o primeiro com chave: Gemini, Claude (3.31), Groq
 //   prompt     3.32: com lugar ou pagina, devolve o pedido pronto ({ ok, sistema, pedido, angulo }) sem chamar IA nenhuma:
 //              a Plataforma copia para quem escreve fora (o GPT de quem tem) e cola o JSON de volta no editor
+//   conferir   3.32.1: com lugar ou pagina, o texto colado ou editado passa pela mesma validação que o texto da IA e volta
+//              { ok, conteudo, problemas: [{ nivel, texto }], avisos } sem gravar; grave = não pode ir assim
 //
 // Respostas:
 //   200 { ok: true, rascunho }                       gravado em rascunho, com _meta
@@ -38,7 +40,7 @@ import {
   ANGULOS, ANGULOS_PAGINA, limpar, limparInstrucao, provedoresDe, escolherProvedor, bairroValido,
   prepararLugar, prepararPagina, angulosPara, escolherAngulo, escolherAbertura, anguloAnterior,
   montarPromptLugar, montarPromptPagina, frasesUsadas, gerarConteudo, maisParecido, comMeta, sugerirContexto, URL_GEMINI_NATIVA, VERSAO_CLAUDE, BETA_FALLBACK_CLAUDE,
-  reservaGemini, modeloRecusado, PRAZO_MS, type Geracao, type IdProvedor,
+  reservaGemini, modeloRecusado, PRAZO_MS, validar, escolherAberturaDaPagina, type Geracao, type IdProvedor, type Checagem,
   type LugarLinha, type PaginaLinha, type LugarDaPagina, type Pedir, type PedirNativo, type Provedor, type BairroDaFicha,
 } from './conteudo.ts'
 
@@ -130,7 +132,7 @@ async function gerarComReserva(ia: Provedor, o: PedidoGeracao, inicio: number): 
   return { g, modelo: ia.modelo, ia }
 }
 
-type Pedido = { lugar?: unknown; pagina?: unknown; contexto?: unknown; gravar?: unknown; instrucao?: unknown; angulo?: unknown; provedor?: unknown; prompt?: unknown }
+type Pedido = { lugar?: unknown; pagina?: unknown; contexto?: unknown; gravar?: unknown; instrucao?: unknown; angulo?: unknown; provedor?: unknown; prompt?: unknown; conferir?: unknown }
 
 // os salões da cidade (ou de uma categoria) que viram o retrato (prepararPagina): bairros, ruas, horários, o que informam
 async function lugaresDaCidade(db: SupabaseClient, cidadeSlug: string, categoria = ''): Promise<LugarDaPagina[]> {
@@ -245,8 +247,33 @@ async function pedidoPronto(db: SupabaseClient, tipo: 'lugar' | 'pagina', id: st
   const anterior = p.rascunho ?? p.conteudo ?? null
   const candidatos = ANGULOS_PAGINA.filter((a) => !a.praia || cidade.praia)
   const angulo = escolherAngulo({ candidatos, todos: ANGULOS_PAGINA, semente: `${p.cidade_slug}/${p.categoria}`, pedido: pedidoAngulo, anterior: anguloAnterior(anterior) })
-  const m = montarPromptPagina({ ficha, cidade, angulo, instrucao, anterior })
+  const abertura = escolherAberturaDaPagina(ficha, cidade.praia, `${p.cidade_slug}/${p.categoria}`, candidatos.findIndex((a) => a.id === angulo.id))
+  const m = montarPromptPagina({ ficha, cidade, angulo, instrucao, anterior, abertura })
   return json({ ok: true, sistema: m[0].content, pedido: m[1].content, angulo: angulo.id })
+}
+
+// 3.32.1: o texto escrito fora (ou editado à mão) passa pela mesma validação que o texto da IA, com a checagem montada do
+// banco (nomes dos outros lugares, bairros e ruas, o que o cadastro informa). Não grava: a Plataforma mostra e a pessoa decide
+async function conferirTexto(db: SupabaseClient, tipo: 'lugar' | 'pagina', id: string, conteudo: unknown): Promise<Response> {
+  let checagem: Checagem
+  if (tipo === 'lugar') {
+    const { data, error } = await db.from('guia_lugares').select(COLUNAS_LUGAR).eq('id', id).maybeSingle()
+    if (error) return json({ erro: error.message }, 500)
+    if (!data) return json({ erro: 'salão não encontrado no guia' }, 404)
+    const l = data as unknown as LugarLinha
+    checagem = prepararLugar(l, await contextoDa(db, String(l.cidade_slug ?? ''))).checagem
+  } else {
+    const { data, error } = await db.from('guia_paginas').select('id, cidade, cidade_slug, uf, categoria').eq('id', id).maybeSingle()
+    if (error) return json({ erro: error.message }, 500)
+    if (!data) return json({ erro: 'página não encontrada no guia' }, 404)
+    const p = data as unknown as PaginaLinha & { categoria: string }
+    let lugares: LugarDaPagina[]
+    try { lugares = await lugaresDaCidade(db, String(p.cidade_slug ?? ''), String(p.categoria ?? '')) } catch (e) { return json({ erro: String((e as Error).message) }, 500) }
+    checagem = prepararPagina(p, lugares, await contextoDa(db, String(p.cidade_slug ?? ''))).checagem
+  }
+  const v = validar(tipo, conteudo, checagem)
+  const graves = v.problemas.filter((x) => x.nivel === 'grave')
+  return json({ ok: !!v.conteudo && !graves.length, conteudo: v.conteudo, problemas: v.problemas, avisos: v.avisos })
 }
 
 async function gerarLugar(db: SupabaseClient, ia: Provedor, id: string, instrucao: string | null, pedidoAngulo: string | null, inicio: number): Promise<Response> {
@@ -320,7 +347,9 @@ async function gerarPagina(db: SupabaseClient, ia: Provedor, id: string, instruc
   const anterior = p.rascunho ?? p.conteudo ?? null
   const candidatos = ANGULOS_PAGINA.filter((a) => !a.praia || cidade.praia)
   const angulo = escolherAngulo({ candidatos, todos: ANGULOS_PAGINA, semente: `${p.cidade_slug}/${p.categoria}`, pedido: pedidoAngulo, anterior: anguloAnterior(anterior) })
-  const mensagens = montarPromptPagina({ ficha, cidade, angulo, instrucao, anterior })
+  // 3.32.1: por onde a página começa, tirado da ficha e rodiziado com o ângulo
+  const abertura = escolherAberturaDaPagina(ficha, cidade.praia, `${p.cidade_slug}/${p.categoria}`, candidatos.findIndex((a) => a.id === angulo.id))
+  const mensagens = montarPromptPagina({ ficha, cidade, angulo, instrucao, anterior, abertura })
 
   const { g, modelo, ia: escreveu } = await gerarComReserva(ia, { tipo: 'pagina', mensagens, checagem: { ...checagem, angulo: angulo.id } }, inicio)
   if (!g.ok) return json(g.limite ? { ok: false, erro: g.erro, tentar_em: g.tentarEm } : { ok: false, erro: g.erro })
@@ -377,6 +406,11 @@ Deno.serve(async (req) => {
   if (corpo.prompt === true) {
     if (contexto) return json({ erro: 'o pedido pronto é de lugar ou pagina' }, 400)
     try { return await pedidoPronto(servico, lugar ? 'lugar' : 'pagina', lugar || pagina, instrucao, angulo) } catch (e) { return json({ erro: `não deu para montar o pedido: ${String((e as Error)?.message ?? e).slice(0, 200)}` }, 500) }
+  }
+  // 3.32.1: só a conferência do texto, sem IA
+  if (corpo.conferir !== undefined && corpo.conferir !== null) {
+    if (contexto) return json({ erro: 'a conferência é de lugar ou pagina' }, 400)
+    try { return await conferirTexto(servico, lugar ? 'lugar' : 'pagina', lugar || pagina, corpo.conferir) } catch (e) { return json({ erro: `não deu para conferir: ${String((e as Error)?.message ?? e).slice(0, 200)}` }, 500) }
   }
   const escolha = escolherProvedor(corpo.provedor, PROVEDORES, IA_PADRAO)
   if ('erro' in escolha) return json({ erro: escolha.erro }, /desconhecido/.test(escolha.erro) ? 400 : 500)

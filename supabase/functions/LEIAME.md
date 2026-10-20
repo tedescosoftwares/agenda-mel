@@ -279,6 +279,10 @@ normal; a função confere `eh_plataforma()` como a pessoa logada (senão, 403).
 - `prompt: true` (3.32), com `lugar` ou `pagina`: devolve `{ ok, sistema, pedido, angulo }`, o
   pedido pronto que a IA receberia, sem chamar IA nenhuma (não precisa de chave). A Plataforma
   copia para quem escreve fora e cola o JSON de volta no editor.
+- `conferir: { …o JSON }` (3.32.1), com `lugar` ou `pagina`: o texto colado ou editado passa pela
+  mesma validação do texto da IA e volta `{ ok, conteudo, problemas: [{ nivel, texto }], avisos }`,
+  sem gravar. `grave` é o que não pode ir (nome de lugar, nota, preço, invenção); `estilo`, o que
+  vale melhorar.
 
 **O "Sobre a cidade" nasce sozinho (3.30, migração 176).** Ao gerar um
 `lugar` ou uma `pagina` de uma cidade cujo contexto está vazio ou ainda é a

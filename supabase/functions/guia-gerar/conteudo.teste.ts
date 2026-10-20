@@ -24,6 +24,7 @@ import {
   corpoNativoGemini, lerRespostaNativa, sugerirContexto, URL_GEMINI_NATIVA,
   corpoDaRequisicaoClaude, lerRespostaClaude, URL_CLAUDE, MODELO_CLAUDE_PADRAO, MAX_TOKENS_CLAUDE, esforcoClaude,
   reservaGemini, modeloRecusado, RESERVAS_GEMINI, TIMEOUT_MS_COM_RACIOCINIO, TIMEOUT_MS,
+  aberturasDaPagina, escolherAberturaDaPagina,
   cortarFrase, cortarPalavras, bairroValido, hash, vasculhar, CIDADES, informesDoLugar,
 } from './conteudo.ts'
 import type { LugarLinha, Pedir, PedirNativo, RespostaHttp, Checagem, ConteudoLugar, Mensagem } from './conteudo.ts'
@@ -631,12 +632,13 @@ teste('página da cidade e da categoria: ficha, prompt e validação', async () 
   const msgs = montarPromptPagina({ ficha: unhas.ficha, cidade: unhas.cidade, angulo: ANGULOS_PAGINA[0], instrucao: null, anterior: null })
   assert.equal(msgs[0].content, SISTEMA_PAGINA)
   assert.ok(msgs[1].content.includes('"pagina": "Manicure e unhas em Itanhaém"'))
+  const bairroUnhas = unhas.checagem.permitidos[1] ?? 'Centro' // 3.32.1: um bairro ou rua da própria ficha
   const pagina = {
     seo_title: 'Manicure em Itanhaém: endereços, horários e bairros',
     meta_description: 'Manicure em Itanhaém: veja endereço, bairro, horário e serviços de cada lugar, e o que perguntar antes de marcar unhas em gel ou esmalte comum.',
     chamada: 'Manicures e esmalterias de Itanhaém por bairro, com horário e serviços de cada uma.',
     intro: [
-      'Manicure em Itanhaém tem opção em vários bairros, do Centro a Belas Artes. Boa parte dos lugares deste guia faz também unhas em gel e alguns juntam cabelo e sobrancelha no mesmo endereço. Antes de escolher, olhe o bairro, o horário e os serviços de cada um na lista abaixo.',
+      `Manicure em Itanhaém tem opção em vários bairros, de ${bairroUnhas} a Belas Artes. Boa parte dos lugares deste guia faz também unhas em gel e alguns juntam cabelo e sobrancelha no mesmo endereço. Antes de escolher, olhe o bairro, o horário e os serviços de cada um na lista abaixo.`,
       'O verão muda a agenda: com mais gente na cidade, sábados e vésperas de feriado costumam lotar. Se a data é importante, reserve com alguns dias de antecedência. E lembre que sol, sal e cloro encurtam a vida do esmalte, então vale perguntar como fazer a unha durar mais na temporada.',
     ],
     como_escolher: { titulo: 'Como escolher a sua manicure', itens: ['Veja se o lugar abre no dia em que você pode ir.', 'Pergunte como o material é esterilizado.', 'Diga se quer esmalte comum ou gel ao marcar.', 'Confirme quanto tempo reservar para o serviço.'] },
@@ -750,7 +752,7 @@ teste('a validação da página recusa (como estilo) o inventário de bairros e 
     faq: [{ pergunta: 'Como saber se o salão tem experiência com a maresia nos fios?', resposta: 'Pergunte.' }, ...base.faq.slice(1)],
   }, checagem)
   assert.ok(formula.problemas.some((p) => p.nivel === 'estilo' && /fórmula/.test(p.texto)), `sol, sal e maresia em todo canto é fórmula: ${JSON.stringify(formula.problemas)}`)
-  assert.deepEqual(retratoDaCidade([['intro 1', 'Sol e maresia.'], ['faq 1', 'maresia'], ['faq 2', 'cloro'], ['faq 3', 'sal']], { ...checagem, angulo: 'praia' }), [], 'no ângulo da praia há mais folga (quatro campos passam)')
+  assert.deepEqual(retratoDaCidade([['intro 1', 'Sol e maresia.'], ['faq 1', 'maresia'], ['faq 2', 'cloro'], ['faq 3', 'sal']], { ...checagem, angulo: 'praia' }).filter((p) => !/geográfico|ritmo/.test(p.texto)), [], 'no ângulo da praia há mais folga (quatro campos passam)')
   assert.equal(retratoDaCidade([['intro 1', 'Belas Artes, Centro, Gaivota e Suarão']], { ...checagem, tipo: 'lugar' }).length, 0, 'só na página da cidade')
 })
 
@@ -1184,6 +1186,33 @@ teste('503 do provedor: repete uma vez depois de 3 s; se insistir, o erro diz in
   const c3 = provedor([respostaErro(503, { message: 'overloaded' })])
   const g3 = await gerarConteudo({ tipo: 'lugar', mensagens: [{ role: 'system', content: 's' }, { role: 'user', content: 'u' }], checagem: preparoRo.checagem, modelo: 'm', pedir: async (c, t) => { relogio += 5_000; return c3.pedir(c, t) }, prazoMs: 24_000, agora: () => relogio, dormir })
   assert.ok(!g3.ok && g3.status === 503 && c3.pedidos.length === 1)
+})
+
+// ---- 3.32.1: a página começa por um fato da ficha, e a introdução precisa de geografia e ritmo ----------------------
+teste('a abertura da página sai da ficha e rodizia; o prompt pede variação e evidência; a introdução genérica volta (3.32.1)', () => {
+  const daCidade = lugares.filter((l: LugarLinha) => l.cidade_slug === 'itanhaem')
+  const { ficha, cidade, checagem } = prepararPagina({ cidade: 'Itanhaém', cidade_slug: 'itanhaem', uf: 'SP', categoria: '' }, daCidade)
+  const lista = aberturasDaPagina(ficha, true)
+  assert.ok(lista.length >= 2 && lista.at(-1)!.startsWith('Comece por resolver perto de casa') && lista.some((a) => /temporada/.test(a)), JSON.stringify(lista))
+  assert.ok(lista.every((a) => a.startsWith('Comece pel') || a.startsWith('Comece por')))
+  const sem = aberturasDaPagina({ ...ficha, ruas_com_mais_lugares: [], onde_ficam: [], com_horario_informado: 0 }, false)
+  assert.deepEqual(sem, ['Comece por resolver perto de casa: o que o bairro de quem lê costuma ter e quando vale atravessar a cidade.'], 'ficha sem dados: só o que vale para qualquer cidade')
+  const a0 = escolherAberturaDaPagina(ficha, true, 'itanhaem/', 0)
+  assert.equal(escolherAberturaDaPagina(ficha, true, 'itanhaem/', 0), a0, 'a mesma semente dá a mesma abertura')
+  const todas = new Set(lista.map((_, i) => escolherAberturaDaPagina(ficha, true, 'itanhaem/', i)))
+  assert.equal(todas.size, lista.length, 'o índice do ângulo percorre todas as aberturas')
+  const angulo = ANGULOS_PAGINA[0]
+  const msgs = montarPromptPagina({ ficha, cidade, angulo, instrucao: null, anterior: null, abertura: a0 })
+  assert.ok(msgs[1].content.includes(`Abertura: ${a0}`), 'a abertura vai no pedido')
+  assert.ok(SISTEMA_PAGINA.includes('ANTES DE ESCREVER, EM SILÊNCIO') && SISTEMA_PAGINA.includes('Variação:') && SISTEMA_PAGINA.includes('Pelo menos três fatos locais') && SISTEMA_PAGINA.includes('complementa o título'), 'o prompt ganhou a análise silenciosa, a variação, a evidência mínima e a chamada que complementa')
+  const anterior = montarPromptPagina({ ficha, cidade, angulo, instrucao: null, anterior: { intro: ['Um texto anterior com muitas palavras para resumir e comparar depois.'], chamada: 'x', _meta: {} } })
+  assert.ok(anterior[1].content.includes('a sequência dos assuntos'), 'a versão anterior pede outra construção')
+  // a validação: introdução sem bairro nem ritmo é estilo (volta para a IA uma vez)
+  const base = { seo_title: 'Salões de beleza em Itanhaém: endereços e horários', meta_description: 'Salões de beleza em Itanhaém por bairro, com horário e serviços de cada um, e o que olhar antes de marcar cabelo, unhas ou cílios.', chamada: 'Bairro a bairro.', como_escolher: { titulo: 'Como escolher', itens: ['Veja o bairro.', 'Pergunte do material.', 'Confirme o horário.', 'Diga o que quer.'] }, faq: [{ pergunta: 'Preciso ir ao Centro?', resposta: 'Não necessariamente; depende do bairro.' }, { pergunta: 'Gel ou comum?', resposta: 'O gel dura mais, em geral de duas a três semanas.' }, { pergunta: 'Quando marcar?', resposta: 'Uma semana antes, em geral.' }] }
+  const generica = validarPagina({ ...base, intro: ['Há opções para diferentes necessidades e perfis, e vale escolher de acordo com a sua rotina e com o que você procura em um atendimento de beleza, observando sempre o que cada profissional oferece e como você se sente no lugar escolhido.', 'Cada pessoa deve avaliar o que procura antes de decidir onde marcar, e conversar com quem atende costuma ajudar a alinhar expectativas e evitar surpresas no resultado final do serviço contratado.'] }, checagem)
+  assert.ok(generica.problemas.some((p) => p.nivel === 'estilo' && /geográfico/.test(p.texto)) && generica.problemas.some((p) => p.nivel === 'estilo' && /ritmo/.test(p.texto)), JSON.stringify(generica.problemas))
+  const comBairro = validarPagina({ ...base, intro: [`Em ${ficha.onde_ficam[0]?.bairro ?? 'Centro'} se concentra boa parte dos lugares do guia, e quem fica mais longe resolve cabelo e unha perto de casa sem atravessar a cidade, o que pesa na hora de escolher onde marcar e quando ir.`, 'O sábado é o dia cheio na cidade, e no verão a agenda aperta mais cedo, porque a casa de praia enche e todo mundo quer o mesmo horário; se a data importa, marque na semana anterior e confirme na véspera.'] }, checagem)
+  assert.ok(!comBairro.problemas.some((p) => /geográfico|ritmo/.test(p.texto)), JSON.stringify(comBairro.problemas))
 })
 
 // ---- roda ---------------------------------------------------------------------------------------------------

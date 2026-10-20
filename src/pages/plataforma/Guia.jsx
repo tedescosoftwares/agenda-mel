@@ -555,6 +555,12 @@ export default function Guia() {
     if (r?.ok && r.sistema) return { ok: true, sistema: String(r.sistema), pedido: String(r.pedido ?? ''), angulo: r.angulo ?? null }
     return { ok: false, erro: r?.erro || 'não deu para montar o pedido' }
   }, [])
+  // 3.32.1: o texto colado ou editado passa pela mesma validação da IA (na função, com a checagem do banco); não grava
+  const conferirTexto = useCallback(async (tipo, id, conteudo) => {
+    const r = await chamarGerador({ [tipo === 'lugar' ? 'lugar' : 'pagina']: id, conferir: conteudo })
+    if (r && Array.isArray(r.problemas)) return { ok: !!r.ok, problemas: r.problemas, avisos: Array.isArray(r.avisos) ? r.avisos : [] }
+    return { ok: false, erro: r?.erro || 'não deu para conferir', problemas: [], avisos: [] }
+  }, [])
   // "Sobre a cidade" (3.22, migração 170): o que a IA sabe da cidade; não aparece no site. Guardar à mão marca "editado"
   // (3.30): a IA não escreve por cima do que a equipe mexeu
   const salvarContexto = useCallback(async (id, contexto) => {
@@ -683,7 +689,7 @@ export default function Guia() {
     cidade: cidade ?? '', cidades, escolherCidade, resumo: resumoVivo, lugarPorId: achar, ia, setIa,
     faseDe, temTexto, temRascunho, temConteudo, carregarTexto, gerando, falhas, lote, usuario: user?.id ?? null,
     carregar, salvarLugar, montarUm, gerarUm, iniciarLote, pausarLote, cancelarLote, fecharLote, aprovar, desfazerAprovacao,
-    gerarPagina, aprovarPagina, salvarContexto, sugerirContexto, escreverContextos, contextos, salvarPagina, pedidoParaIa, salvarInteresse, importar, avisar, irPara,
+    gerarPagina, aprovarPagina, salvarContexto, sugerirContexto, escreverContextos, contextos, salvarPagina, pedidoParaIa, conferirTexto, salvarInteresse, importar, avisar, irPara,
     desempenho, carregarDesempenho, desempenhoPorLugar,
   }
 

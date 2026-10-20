@@ -539,3 +539,10 @@
 .pg-cidade-foto-acoes { display: flex; flex-direction: column; gap: 0.4rem; }
 .pg-cidade-foto-acoes label.btn { cursor: pointer; }
 .pg-cidade-foto-acoes label.btn.desligado { opacity: 0.6; pointer-events: none; }
+/* a conferência do texto (3.32.1) */
+.pg-conferencia { display: flex; flex-direction: column; gap: 0.5rem; }
+.pg-conferencia .alert ul, .pg-conferencia .alert b { margin: 0; }
+.pg-conferencia .alert ul { padding-left: 1.1rem; margin-top: 0.3rem; }
+.pg-conferencia .alert b { display: inline-flex; align-items: center; gap: 0.3rem; }
+.pg-conferido { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--menta-escuro, #1d7a4c); }
+.pg-ed-erro .pg-conferencia { margin: 0 1.4rem 0.6rem; }

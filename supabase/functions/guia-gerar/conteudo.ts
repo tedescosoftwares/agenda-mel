@@ -529,9 +529,16 @@ export function prepararLugar(l: LugarLinha, contexto: unknown = null, bairro: B
 
 // nome de salão que é só propaganda ("Salão de Beleza", "Studio Unhas") não
 // identifica ninguém: não adianta proibir na página da cidade
-const GENERICO = new Set(('salao beleza estetica studio estudio espaco unhas unha cabelo cabelos cilios sobrancelha sobrancelhas ' +
-  'barbearia barber shop manicure nail nails designer design lash beauty hair centro de da do das dos e em clinica clinicas ' +
-  'maquiagem maquiadora makeup esmalteria spa bem estar').split(' '))
+const GENERICO = new Set(('salao saloes salon beleza estetica esteticista studio estudio espaco unhas unha cabelo cabelos cilios sobrancelha sobrancelhas ' +
+  'barbearia barber barbeiro barbeiros shop manicure manicures pedicure nail nails designer design lash lashes brow brows beauty hair centro de da do das dos e em ' +
+  'clinica clinicas maquiagem maquiadora maquiadoras makeup make esmalteria esmalterias spa bem estar ' +
+  // 3.35.1: "Cabeleireiro" é nome de salão em várias cidades e é a palavra da categoria; o mesmo para os outros ofícios e os
+  // qualificativos de fachada. Nome só com isso não identifica ninguém, e proibi-lo barrava "cabeleireiro em Itanhaém" no título
+  'cabeleireiro cabeleireiros cabeleireira cabeleireiras cabelereiro cabelereira unissex feminino feminina masculino masculina infantil ' +
+  'profissional profissionais atelie boutique instituto loja casa ponto podologia podologa podologo massagem massoterapia terapia terapias ' +
+  'depilacao micropigmentacao alongamento extensao visagismo corpo pele ltda eireli me').split(' '))
+// as palavras das categorias do guia (rótulo, singular, plural, busca) também são genéricas
+for (const c of Object.values(CATEGORIAS)) for (const campo of [c.rotulo, c.singular, c.plural, c.busca]) for (const w of norm(campo).split(/[^a-z0-9]+/)) if (w) GENERICO.add(w)
 function nomeIdentifica(nome: string): boolean {
   const palavras = norm(nome).replace(/[^a-z0-9 ]/g, ' ').split(' ').filter(Boolean)
   return nome.length >= 5 && palavras.some((p) => !GENERICO.has(p) && p.length >= 3)

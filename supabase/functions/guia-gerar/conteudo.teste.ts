@@ -1242,6 +1242,21 @@ teste('o modelo escolhido na Plataforma (3.34): a lista por IA, a validação do
   assert.ok('effort' in (c.pedidos[0].corpo.output_config as Record<string, unknown>) && !('effort' in (c.pedidos[1].corpo.output_config as Record<string, unknown>)) && 'format' in (c.pedidos[1].corpo.output_config as Record<string, unknown>), 'segundo pedido: sem o esforço, com o formato')
 })
 
+teste('nome de salão que é só a palavra da categoria não vira "cita um lugar pelo nome" (3.35.1)', () => {
+  const { checagem } = prepararPagina({ cidade: 'Itanhaém', cidade_slug: 'itanhaem', uf: 'SP', categoria: 'cabelo' }, [
+    { nome: 'Cabeleireiro', bairro: 'Centro', categoria: 'cabelo', servicos: [], horarios: null, endereco: 'Av. Rui Barbosa, 1' },
+    { nome: 'Cabeleireiro Unissex', bairro: 'Centro', categoria: 'cabelo', servicos: [], horarios: null, endereco: null },
+    { nome: 'Espaço da Beleza', bairro: 'Suarão', categoria: 'cabelo', servicos: [], horarios: null, endereco: null },
+    { nome: 'Studio Lírio', bairro: 'Suarão', categoria: 'cabelo', servicos: [], horarios: null, endereco: null },
+  ])
+  assert.deepEqual(checagem.proibidos, ['Studio Lírio'], `só o nome que identifica alguém é proibido: ${JSON.stringify(checagem.proibidos)}`)
+  const base = { ...BASE_ITANHAEM('Centro'), seo_title: 'Cabeleireiro em Itanhaém: endereços e bairros', meta_description: 'Cabeleireiro em Itanhaém por bairro, com os serviços de cada um, e o que perguntar antes de marcar corte, cor ou escova na cidade.' }
+  const v = validarPagina(base, checagem)
+  assert.ok(!v.problemas.some((p) => /cita um lugar pelo nome/.test(p.texto)), JSON.stringify(v.problemas))
+  const cita = validarPagina({ ...base, chamada: 'O Studio Lírio é o mais procurado da cidade.' }, checagem)
+  assert.ok(cita.problemas.some((p) => /cita um lugar pelo nome/.test(p.texto)), JSON.stringify(cita.problemas))
+})
+
 // ---- 3.35: um ângulo por página dentro da cidade, a ficha sem horário, a introdução num parágrafo e três pontos ------------
 const INTRO_ITANHAEM = (bairro: string) => `Salão de beleza em Itanhaém se concentra em ${bairro}, nas quadras de comércio onde cabelo, unhas e sobrancelha dividem a mesma calçada, e quem mora nos bairros de praia encontra unha e cabelo no próprio bairro, com menos opções de cílios e estética. A cidade é comprida e recebe gente da capital nas férias e nos feriados, o que muda a escolha: quem vem de fora costuma ficar perto da orla e quem mora resolve perto de casa. Este guia junta os salões, as manicures e os estúdios de cílios, sobrancelha e estética da cidade, com o endereço e os serviços de cada um.`
 const PONTOS_ITANHAEM = (bairro: string) => ({

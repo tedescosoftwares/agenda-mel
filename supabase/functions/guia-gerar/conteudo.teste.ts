@@ -23,7 +23,7 @@ import {
   SISTEMA_CONTEXTO, montarPromptContexto, validarContexto,
   corpoNativoGemini, lerRespostaNativa, sugerirContexto, URL_GEMINI_NATIVA,
   corpoDaRequisicaoClaude, lerRespostaClaude, URL_CLAUDE, MODELO_CLAUDE_PADRAO, MAX_TOKENS_CLAUDE, esforcoClaude,
-  reservaGemini, modeloRecusado, RESERVAS_GEMINI,
+  reservaGemini, modeloRecusado, RESERVAS_GEMINI, TIMEOUT_MS_COM_RACIOCINIO, TIMEOUT_MS,
   cortarFrase, cortarPalavras, bairroValido, hash, vasculhar, CIDADES, informesDoLugar,
 } from './conteudo.ts'
 import type { LugarLinha, Pedir, PedirNativo, RespostaHttp, Checagem, ConteudoLugar, Mensagem } from './conteudo.ts'
@@ -838,7 +838,9 @@ teste('a porta nativa do Gemini: corpo com pesquisa (sem modo JSON) ou sem (modo
   assert.deepEqual(com.contents, [{ role: 'user', parts: [{ text: 'U' }] }])
   const sem = corpoNativoGemini({ modelo: 'gemini-2.5-flash', sistema: 'S', usuario: 'U', pesquisar: false })
   assert.ok(!('tools' in sem) && (sem.generationConfig as Record<string, unknown>).responseMimeType === 'application/json', 'sem pesquisa, modo JSON e sem ferramenta')
-  assert.ok(!('thinkingConfig' in (sem.generationConfig as Record<string, unknown>)), 'os 2.5 não aceitam o nível de raciocínio')
+  assert.deepEqual((sem.generationConfig as Record<string, unknown>).thinkingConfig, { thinkingBudget: 1024 }, 'os 2.5 só aceitam o orçamento de raciocínio')
+  assert.deepEqual((corpoNativoGemini({ modelo: 'gemini-flash-latest', sistema: 'S', usuario: 'U', pesquisar: false }).generationConfig as Record<string, unknown>).thinkingConfig, { thinkingLevel: 'low' }, 'os "latest" (Gemini 3 em diante) levam o nível baixo')
+  assert.ok(!('thinkingConfig' in (corpoNativoGemini({ modelo: 'gemini-2.0-flash', sistema: 'S', usuario: 'U', pesquisar: false }).generationConfig as Record<string, unknown>)), 'o 2.0 não pensa')
   assert.ok(SISTEMA_CONTEXTO.includes('busca na web') && SISTEMA_CONTEXTO.includes('"confira"'), 'o prompt manda pesquisar quando puder e separar o que ficou na memória')
   assert.equal(URL_GEMINI_NATIVA, 'https://generativelanguage.googleapis.com/v1beta/models')
 })
@@ -1130,6 +1132,37 @@ teste('o status do provedor sobe com o erro, e a reserva do Gemini é um Flash d
   assert.ok(!g.ok && !g.limite && g.status === 403, JSON.stringify(g))
   const g2 = await gerarConteudo({ tipo: 'lugar', mensagens: [{ role: 'system', content: 's' }, { role: 'user', content: 'u' }], checagem: preparoRo.checagem, modelo: 'm', pedir: provedor([respostaOk('nada'), respostaOk('nada')]).pedir })
   assert.ok(!g2.ok && !g2.limite && g2.status === undefined, 'texto errado não tem status de provedor')
+})
+
+// ---- 3.31.2: tempo por chamada conforme o modelo, prazo total da sugestão ---------------------------------------
+teste('os modelos que pensam têm 90 s por chamada; a sugestão respeita um prazo total e encolhe cada chamada (3.31.2)', async () => {
+  const env = (o: Record<string, string>) => ({ get: (n: string) => o[n] })
+  const msgs: Mensagem[] = [{ role: 'system', content: 's' }, { role: 'user', content: 'u' }]
+  const timeout = () => Object.assign(new Error('Signal timed out.'), { name: 'TimeoutError' })
+  const c1 = provedor([timeout()])
+  const g1 = await gerarConteudo({ tipo: 'lugar', mensagens: msgs, checagem: preparoRo.checagem, modelo: 'gemini-flash-latest', pedir: c1.pedir })
+  assert.equal(c1.pedidos[0].timeoutMs, TIMEOUT_MS_COM_RACIOCINIO, 'Gemini: 90 s por chamada')
+  assert.ok(!g1.ok && /\(gemini-flash-latest\) não respondeu em 90 s/.test(g1.erro), g1.ok ? '' : g1.erro)
+  const c2 = provedor([timeout()])
+  await gerarConteudo({ tipo: 'lugar', mensagens: msgs, checagem: preparoRo.checagem, modelo: 'openai/gpt-oss-120b', pedir: c2.pedir })
+  assert.equal(c2.pedidos[0].timeoutMs, TIMEOUT_MS, 'gpt-oss: 45 s')
+  const claude = provedoresDe(env({ ANTHROPIC_API_KEY: 'sk-ant-1' })).claude
+  const c3 = provedor([timeout()])
+  await gerarConteudo({ tipo: 'lugar', mensagens: msgs, checagem: preparoRo.checagem, modelo: claude.modelo, pedir: c3.pedir, provedor: claude })
+  assert.equal(c3.pedidos[0].timeoutMs, TIMEOUT_MS_COM_RACIOCINIO, 'Claude pensa também: 90 s')
+  // a sugestão com prazo de 50 s num relógio de mentira: a primeira chamada (com pesquisa) leva 30 s e não serve; a segunda
+  // fica com 20 s; a terceira (porta comum) nem sai, porque sobram menos de 8 s
+  const daCidade = lugares.filter((l: LugarLinha) => l.cidade_slug === 'itanhaem')
+  const { ficha, checagem } = prepararPagina({ cidade: 'Itanhaém', cidade_slug: 'itanhaem', uf: 'SP', categoria: '' }, daCidade)
+  const gemini = provedoresDe(env({ GEMINI_API_KEY: 'g1' })).gemini
+  let relogio = 0
+  const pedidosNativos: number[] = []
+  const pedirNativo: PedirNativo = async (_m, _c, t) => { pedidosNativos.push(t); relogio += 30_000; return respostaNativa('nada de json', { pesquisou: false }) }
+  const comum = provedor([respostaOk(BOM_CTX)])
+  const r = await sugerirContexto({ ficha, atual: null, provedor: gemini, checagem, pedir: comum.pedir, pedirNativo, prazoMs: 50_000, agora: () => relogio })
+  assert.deepEqual(pedidosNativos, [50_000, 20_000], 'cada chamada fica com o que resta do prazo (e nunca mais que 90 s)')
+  assert.equal(comum.pedidos.length, 0, 'sem tempo, a porta comum nem é chamada')
+  assert.ok(!r.ok && /demorou demais/.test(r.erro), JSON.stringify(r))
 })
 
 // ---- roda ---------------------------------------------------------------------------------------------------

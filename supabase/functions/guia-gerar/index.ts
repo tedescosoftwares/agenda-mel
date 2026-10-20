@@ -36,7 +36,7 @@ import {
   ANGULOS, ANGULOS_PAGINA, limpar, limparInstrucao, provedoresDe, escolherProvedor, bairroValido,
   prepararLugar, prepararPagina, angulosPara, escolherAngulo, escolherAbertura, anguloAnterior,
   montarPromptLugar, montarPromptPagina, frasesUsadas, gerarConteudo, maisParecido, comMeta, sugerirContexto, URL_GEMINI_NATIVA, VERSAO_CLAUDE, BETA_FALLBACK_CLAUDE,
-  reservaGemini, modeloRecusado, type Geracao,
+  reservaGemini, modeloRecusado, PRAZO_MS, type Geracao,
   type LugarLinha, type PaginaLinha, type LugarDaPagina, type Pedir, type PedirNativo, type Provedor, type BairroDaFicha,
 } from './conteudo.ts'
 
@@ -50,6 +50,10 @@ const PROVEDORES = provedoresDe(Deno.env)
 const IA_PADRAO = Deno.env.get('GUIA_IA_PADRAO') ?? ''
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+// 3.31.2: a função inteira tem 150 s de relógio no Supabase. O "Sobre a cidade" automático só entra quando sobra tempo
+// para ele e para a página, e cada chamada à IA fica com o que resta
+const PRAZO_FUNCAO_MS = 140_000
+const restanteDe = (inicio: number) => PRAZO_FUNCAO_MS - (Date.now() - inicio)
 // quem pode servir de contexto e de comparação (descartado e removido, não)
 const VIVOS = ['importado', 'gerado', 'publicado']
 // a lista fechada do que se lê de um salão: nota, avaliações, CNPJ,
@@ -92,14 +96,15 @@ type Linha = Record<string, unknown>
 
 // 3.31.1: o Gemini com reserva. Se o Google recusar o modelo configurado (403: só com faturamento, como os Pro; 404: saiu do
 // ar), a função escreve com um Flash de reserva e avisa no _meta.avisos; o modelo que escreveu é o que fica gravado
-type PedidoGeracao = Omit<Parameters<typeof gerarConteudo>[0], 'modelo' | 'pedir' | 'provedor'>
-async function gerarComReserva(ia: Provedor, o: PedidoGeracao): Promise<{ g: Geracao; modelo: string }> {
-  const g = await gerarConteudo({ ...o, modelo: ia.modelo, pedir: pedirCom(ia), provedor: ia })
+type PedidoGeracao = Omit<Parameters<typeof gerarConteudo>[0], 'modelo' | 'pedir' | 'provedor' | 'prazoMs'>
+async function gerarComReserva(ia: Provedor, o: PedidoGeracao, inicio: number): Promise<{ g: Geracao; modelo: string }> {
+  const prazo = () => Math.min(PRAZO_MS, restanteDe(inicio))
+  const g = await gerarConteudo({ ...o, modelo: ia.modelo, pedir: pedirCom(ia), provedor: ia, prazoMs: prazo() })
   const recusa = ia.id === 'gemini' && !g.ok && !g.limite && modeloRecusado(g.status) ? g.erro : null
   const reserva = recusa !== null ? reservaGemini(ia.modelo) : null
   if (!reserva) return { g, modelo: ia.modelo }
   const outra: Provedor = { ...ia, modelo: reserva }
-  const g2 = await gerarConteudo({ ...o, modelo: reserva, pedir: pedirCom(outra), provedor: outra })
+  const g2 = await gerarConteudo({ ...o, modelo: reserva, pedir: pedirCom(outra), provedor: outra, prazoMs: prazo() })
   if (!g2.ok) return { g, modelo: ia.modelo } // o erro do modelo configurado explica melhor
   return { g: { ...g2, avisos: [`o Google recusou o modelo ${ia.modelo} (${String(recusa ?? '').slice(0, 160)}); escrevi com ${reserva}`, ...g2.avisos] }, modelo: reserva }
 }
@@ -120,11 +125,12 @@ type Escrita = Awaited<ReturnType<typeof sugerirContexto>> & { gravado?: boolean
 // a IA escreve o "Sobre a cidade" (3.28/3.30): no Gemini, pesquisando no Google; grava quando pedido (origem "ia",
 // com o que conferir e as fontes em contexto_fontes). 'se_semente' só grava se a linha ainda estiver vazia ou com a
 // semente (alguém pode ter editado enquanto a IA escrevia). Sem a 176, grava só o texto
-async function escreverContexto(db: SupabaseClient, ia: Provedor, p: PaginaDaCidade, gravar: false | 'sempre' | 'se_semente'): Promise<Escrita> {
+async function escreverContexto(db: SupabaseClient, ia: Provedor, p: PaginaDaCidade, gravar: false | 'sempre' | 'se_semente', prazoMs = PRAZO_MS): Promise<Escrita> {
   const lugares = await lugaresDaCidade(db, String(p.cidade_slug ?? ''))
   const { ficha, checagem } = prepararPagina({ ...p, categoria: '' }, lugares, p.contexto)
   const atual = limpar(p.contexto, 1500) || null
-  const sugerirCom = (prov: Provedor) => sugerirContexto({ ficha, atual, provedor: prov, checagem, pedir: pedirCom(prov), pedirNativo: prov.id === 'gemini' ? pedirNativoCom(prov) : undefined, localizacao: { cidade: String(p.cidade ?? ''), uf: String(p.uf ?? '') } })
+  const inicio = Date.now()
+  const sugerirCom = (prov: Provedor) => sugerirContexto({ ficha, atual, provedor: prov, checagem, pedir: pedirCom(prov), pedirNativo: prov.id === 'gemini' ? pedirNativoCom(prov) : undefined, localizacao: { cidade: String(p.cidade ?? ''), uf: String(p.uf ?? '') }, prazoMs: Math.max(8_000, prazoMs - (Date.now() - inicio)) })
   let modelo = ia.modelo
   let r = await sugerirCom(ia)
   // 3.31.1: o Google recusou o modelo configurado: o Flash de reserva escreve, avisando
@@ -149,7 +155,7 @@ async function escreverContexto(db: SupabaseClient, ia: Provedor, p: PaginaDaCid
 // "Sobre a cidade" (3.22, migração 170): na linha da cidade em guia_paginas; vale para todas as páginas
 // dela. 3.30: vazio ou ainda a semente (176), a IA escreve agora e grava, para esta e para as próximas
 // páginas; o que a equipe editou fica. Sem a 176 (ou sem a 170), o que houver, como antes
-async function contextoPronto(db: SupabaseClient, ia: Provedor, cidadeSlug: string): Promise<string | null> {
+async function contextoPronto(db: SupabaseClient, ia: Provedor, cidadeSlug: string, inicio: number): Promise<string | null> {
   const { data, error } = await db.from('guia_paginas').select('id, cidade, cidade_slug, uf, contexto, contexto_origem').eq('cidade_slug', cidadeSlug).eq('categoria', '').maybeSingle()
   if (error) return contextoDa(db, cidadeSlug)
   const p = data as unknown as PaginaDaCidade | null
@@ -157,8 +163,11 @@ async function contextoPronto(db: SupabaseClient, ia: Provedor, cidadeSlug: stri
   const atual = limpar(p.contexto, 1500) || null
   // com texto que não é a semente (a IA já escreveu, ou alguém guardou), fica como está
   if (atual && p.contexto_origem !== 'semente') return atual
+  // só quando sobra tempo para ele e para a página (3.31.2): senão a página sai com a semente e o contexto fica para a próxima
+  const sobra = restanteDe(inicio) - 95_000
+  if (sobra < 15_000) return atual
   try {
-    const r = await escreverContexto(db, ia, p, 'se_semente')
+    const r = await escreverContexto(db, ia, p, 'se_semente', Math.min(45_000, sobra))
     return r.ok ? r.texto : atual
   } catch { return atual }
 }
@@ -168,7 +177,7 @@ async function contextoDa(db: SupabaseClient, cidadeSlug: string): Promise<strin
   return typeof c === 'string' && c.trim() ? c : null
 }
 
-async function gerarLugar(db: SupabaseClient, ia: Provedor, id: string, instrucao: string | null, pedidoAngulo: string | null): Promise<Response> {
+async function gerarLugar(db: SupabaseClient, ia: Provedor, id: string, instrucao: string | null, pedidoAngulo: string | null, inicio: number): Promise<Response> {
   const { data, error } = await db.from('guia_lugares').select(COLUNAS_LUGAR).eq('id', id).maybeSingle()
   if (error) return json({ erro: error.message }, 500)
   if (!data) return json({ erro: 'salão não encontrado no guia' }, 404)
@@ -192,7 +201,7 @@ async function gerarLugar(db: SupabaseClient, ia: Provedor, id: string, instruca
     const meu = bairroValido(l.bairro)
     bairro = (meu && retrato.ficha.onde_ficam.find((b) => b.bairro === meu)) || null
   } catch { bairro = null }
-  const { ficha, cidade, checagem } = prepararLugar(l, await contextoPronto(db, ia, String(l.cidade_slug ?? '')), bairro)
+  const { ficha, cidade, checagem } = prepararLugar(l, await contextoPronto(db, ia, String(l.cidade_slug ?? ''), inicio), bairro)
   const anterior = l.rascunho ?? l.conteudo ?? null
   const candidatos = angulosPara(l.categoria, ficha.servicos_divulgados, cidade.praia)
   const angulo = escolherAngulo({ candidatos, todos: ANGULOS[l.categoria] ?? ANGULOS.beleza, semente: l.slug, pedido: pedidoAngulo, anterior: anguloAnterior(anterior) })
@@ -202,7 +211,7 @@ async function gerarLugar(db: SupabaseClient, ia: Provedor, id: string, instruca
     jaUsadas: frasesUsadas(outros.map((o) => ({ sobre: o.r_sobre ?? o.c_sobre, chamada: o.r_chamada ?? o.c_chamada }))),
   })
 
-  const { g, modelo } = await gerarComReserva(ia, { tipo: 'lugar', mensagens, checagem })
+  const { g, modelo } = await gerarComReserva(ia, { tipo: 'lugar', mensagens, checagem }, inicio)
   if (!g.ok) return json(g.limite ? { ok: false, erro: g.erro, tentar_em: g.tentarEm } : { ok: false, erro: g.erro })
 
   const semelhanca = maisParecido((g.conteudo as { sobre: string[] }).sobre, outros.flatMap((o) => [{ slug: String(o.slug), texto: o.c_sobre }, { slug: String(o.slug), texto: o.r_sobre }]))
@@ -217,7 +226,7 @@ async function gerarLugar(db: SupabaseClient, ia: Provedor, id: string, instruca
   return json({ ok: true, rascunho })
 }
 
-async function gerarPagina(db: SupabaseClient, ia: Provedor, id: string, instrucao: string | null, pedidoAngulo: string | null): Promise<Response> {
+async function gerarPagina(db: SupabaseClient, ia: Provedor, id: string, instrucao: string | null, pedidoAngulo: string | null, inicio: number): Promise<Response> {
   const { data, error } = await db.from('guia_paginas').select('id, cidade, cidade_slug, uf, categoria, status, conteudo, rascunho').eq('id', id).maybeSingle()
   if (error) return json({ erro: error.message }, 500)
   if (!data) return json({ erro: 'página não encontrada no guia' }, 404)
@@ -235,13 +244,13 @@ async function gerarPagina(db: SupabaseClient, ia: Provedor, id: string, instruc
     .eq('cidade_slug', p.cidade_slug).neq('id', p.id)
   const irmas = (irmasCru ?? []) as unknown as Linha[]
 
-  const { ficha, cidade, checagem } = prepararPagina(p, lugares, await contextoPronto(db, ia, String(p.cidade_slug ?? '')))
+  const { ficha, cidade, checagem } = prepararPagina(p, lugares, await contextoPronto(db, ia, String(p.cidade_slug ?? ''), inicio))
   const anterior = p.rascunho ?? p.conteudo ?? null
   const candidatos = ANGULOS_PAGINA.filter((a) => !a.praia || cidade.praia)
   const angulo = escolherAngulo({ candidatos, todos: ANGULOS_PAGINA, semente: `${p.cidade_slug}/${p.categoria}`, pedido: pedidoAngulo, anterior: anguloAnterior(anterior) })
   const mensagens = montarPromptPagina({ ficha, cidade, angulo, instrucao, anterior })
 
-  const { g, modelo } = await gerarComReserva(ia, { tipo: 'pagina', mensagens, checagem: { ...checagem, angulo: angulo.id } })
+  const { g, modelo } = await gerarComReserva(ia, { tipo: 'pagina', mensagens, checagem: { ...checagem, angulo: angulo.id } }, inicio)
   if (!g.ok) return json(g.limite ? { ok: false, erro: g.erro, tentar_em: g.tentarEm } : { ok: false, erro: g.erro })
 
   const semelhanca = maisParecido((g.conteudo as { intro: string[] }).intro, irmas.flatMap((o) => {
@@ -257,19 +266,20 @@ async function gerarPagina(db: SupabaseClient, ia: Provedor, id: string, instruc
 // 3.28: a sugestão do "Sobre a cidade": o que a IA sabe da cidade (3.30: o que ela pesquisou no Google, no Gemini),
 // ancorado nos bairros e nas ruas que o guia tem. Sem gravar, a Plataforma mostra, alguém confere (a lista "confira")
 // e guarda; com gravar (o botão "escrever todas"), a função grava e devolve
-async function gerarContexto(db: SupabaseClient, ia: Provedor, id: string, gravar: boolean): Promise<Response> {
+async function gerarContexto(db: SupabaseClient, ia: Provedor, id: string, gravar: boolean, inicio: number): Promise<Response> {
   const { data, error } = await db.from('guia_paginas').select('id, cidade, cidade_slug, uf, categoria, contexto').eq('id', id).maybeSingle()
   if (error) return json({ erro: error.message }, 500)
   if (!data) return json({ erro: 'página não encontrada no guia' }, 404)
   const p = data as unknown as PaginaDaCidade & { categoria: string }
   if (p.categoria) return json({ erro: '"Sobre a cidade" é da página da cidade, não da categoria' }, 400)
   let r: Escrita
-  try { r = await escreverContexto(db, ia, p, gravar ? 'sempre' : false) } catch (e) { return json({ erro: String((e as Error).message) }, 500) }
+  try { r = await escreverContexto(db, ia, p, gravar ? 'sempre' : false, Math.min(PRAZO_MS, restanteDe(inicio))) } catch (e) { return json({ erro: String((e as Error).message) }, 500) }
   if (!r.ok) return json(r.limite ? { ok: false, erro: r.erro, tentar_em: r.tentarEm } : { ok: false, erro: r.erro })
   return json({ ok: true, contexto: r.texto, confira: r.confira, fontes: r.fontes, pesquisou: r.pesquisou, gravado: !!r.gravado, modelo: r.modelo ?? ia.modelo, provedor: ia.id, avisos: r.avisos })
 }
 
 Deno.serve(async (req) => {
+  const inicio = Date.now()
   if (req.method === 'OPTIONS') return json({ ok: true })
   if (req.method !== 'POST') return json({ erro: 'use POST' }, 405)
   const auth = req.headers.get('Authorization') ?? ''
@@ -296,8 +306,8 @@ Deno.serve(async (req) => {
   const instrucao = limparInstrucao(corpo.instrucao)
   const angulo = limpar(corpo.angulo, 200) || null
   try {
-    if (contexto) return await gerarContexto(servico, ia, contexto, corpo.gravar === true)
-    return lugar ? await gerarLugar(servico, ia, lugar, instrucao, angulo) : await gerarPagina(servico, ia, pagina, instrucao, angulo)
+    if (contexto) return await gerarContexto(servico, ia, contexto, corpo.gravar === true, inicio)
+    return lugar ? await gerarLugar(servico, ia, lugar, instrucao, angulo, inicio) : await gerarPagina(servico, ia, pagina, instrucao, angulo, inicio)
   } catch (e) {
     return json({ erro: `não deu para gerar: ${String((e as Error)?.message ?? e).slice(0, 200)}` }, 500)
   }

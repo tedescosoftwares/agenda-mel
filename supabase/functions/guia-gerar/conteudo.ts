@@ -229,8 +229,11 @@ export const TEMPERATURA = 0.7 // 3.22: um pouco mais presa aos fatos; a varieda
 export const MAX_TOKENS = 2400
 // 3.26.1: nos modelos que pensam antes de responder (Gemini), o raciocínio conta no mesmo limite; com 2400 a resposta vinha cortada
 export const MAX_TOKENS_COM_RACIOCINIO = 8000
-export const pensaAntes = (modelo: string) => /gemini|deepseek-r|qwen3|kimi-k2-think/i.test(modelo)
+export const pensaAntes = (modelo: string) => /gemini|claude|deepseek-r|qwen3|kimi-k2-think/i.test(modelo)
 export const TIMEOUT_MS = 45_000
+// 3.31.2: os modelos que pensam antes de responder (Gemini, Claude) passavam dos 45 s numa página; 90 s para eles. O prazo
+// total (120 s) continua: a segunda tentativa fica com o que sobrar
+export const TIMEOUT_MS_COM_RACIOCINIO = 90_000
 // a função inteira tem ~150 s no Supabase; duas chamadas de 45 s e a
 // gravação cabem com folga
 export const PRAZO_MS = 120_000
@@ -1276,9 +1279,10 @@ export type PedirNativo = (modelo: string, corpo: Record<string, unknown>, timeo
 
 // o corpo de generateContent: com pesquisa, o JSON é pedido no prompt (a pesquisa e o modo JSON não andam juntos); sem, no modo JSON
 export function corpoNativoGemini(o: { modelo: string; sistema: string; usuario: string; pesquisar: boolean; temperatura?: number; maxTokens?: number }): Record<string, unknown> {
-  // o raciocínio conta no teto de saída; baixo basta para um parágrafo (os Gemini 3 aceitam o nível; os 2.5 não)
+  // o raciocínio conta no teto de saída; baixo basta para um parágrafo (os Gemini 3 em diante aceitam o nível; os 2.5, só o orçamento)
   const generationConfig: Record<string, unknown> = { temperature: o.temperatura ?? 0.4, maxOutputTokens: o.maxTokens ?? MAX_TOKENS_COM_RACIOCINIO * 2 }
-  if (/gemini-3/i.test(o.modelo)) generationConfig.thinkingConfig = { thinkingLevel: 'low' }
+  if (/gemini-2\.5/i.test(o.modelo)) generationConfig.thinkingConfig = { thinkingBudget: 1024 }
+  else if (!/gemini-(1|2)\./i.test(o.modelo)) generationConfig.thinkingConfig = { thinkingLevel: 'low' }
   if (!o.pesquisar) generationConfig.responseMimeType = 'application/json'
   const corpo: Record<string, unknown> = {
     system_instruction: { parts: [{ text: o.sistema }] },
@@ -1321,25 +1325,34 @@ export type Sugestao =
 // a sugestão do "Sobre a cidade": no Gemini, pela porta nativa com pesquisa (se o provedor recusar a pesquisa, sem ela);
 // se a porta nativa falhar ou a resposta não vier como JSON válido, ou em outro provedor, pela porta comum
 // (gerarConteudo), a mesma de sempre. A pesquisa é o que deixa a descrição da cidade automática e com fontes
-export async function sugerirContexto(o: { ficha: FichaPagina; atual: string | null; provedor: Provedor; pedir: Pedir; pedirNativo?: PedirNativo; checagem: Checagem; timeoutMs?: number; localizacao?: PesquisaClaude | null }): Promise<Sugestao> {
+export async function sugerirContexto(o: { ficha: FichaPagina; atual: string | null; provedor: Provedor; pedir: Pedir; pedirNativo?: PedirNativo; checagem: Checagem; timeoutMs?: number; prazoMs?: number; agora?: () => number; localizacao?: PesquisaClaude | null }): Promise<Sugestao> {
   const mensagens = montarPromptContexto({ ficha: o.ficha, atual: o.atual })
   const avisos: string[] = []
-  const timeout = o.timeoutMs ?? TIMEOUT_MS
+  // 3.31.2: um prazo para a sugestão inteira (com pesquisa, sem, porta comum): cada chamada fica com o que sobra
+  const agora = o.agora ?? Date.now
+  const inicio = agora()
+  const prazo = o.prazoMs ?? PRAZO_MS
+  const porChamada = o.timeoutMs ?? (pensaAntes(o.provedor.modelo) ? TIMEOUT_MS_COM_RACIOCINIO : TIMEOUT_MS)
+  const resta = () => prazo - (agora() - inicio)
+  const limite = () => Math.min(porChamada, resta())
   // 3.31: no Claude, a pesquisa na web é da própria API de Messages (a ferramenta web_search), pela mesma porta: primeiro com ela
   // (as citações viram as fontes), recusada ou sem servir, sem ela e com o JSON garantido; por último a porta comum (gerarConteudo)
   if (o.provedor.id === 'claude') {
     let semFallbacks = false
     for (const pesquisar of [true, false]) {
+      const timeout = limite()
+      if (timeout < 8_000) break
       const montar = () => corpoDaRequisicaoClaude({ modelo: o.provedor.modelo, mensagens, tipo: 'contexto', formato: 'json_schema', esforco: o.provedor.esforco, pesquisa: pesquisar ? (o.localizacao ?? {}) : null, semFallbacks })
       let l: LeituraClaude
       try {
         let corpo = montar()
         l = lerRespostaClaude(await o.pedir(corpo, timeout))
-        if (l.tipo === 'parametro_recusado' && !semFallbacks) { semFallbacks = true; corpo = montar(); l = lerRespostaClaude(await o.pedir(corpo, timeout)) }
+        if (l.tipo === 'parametro_recusado' && !semFallbacks) { semFallbacks = true; corpo = montar(); l = lerRespostaClaude(await o.pedir(corpo, limite())) }
         // a pesquisa parou no meio (pause_turn): a resposta volta como veio e a IA continua de onde parou, até duas vezes
         for (let c = 0; c < 2 && l.tipo === 'texto' && l.pausa; c++) {
+          if (resta() < 8_000) break
           corpo = { ...corpo, messages: [...(corpo.messages as unknown[]), { role: 'assistant', content: l.pausa }] }
-          l = lerRespostaClaude(await o.pedir(corpo, timeout))
+          l = lerRespostaClaude(await o.pedir(corpo, limite()))
         }
       } catch (e) {
         const nome = (e as { name?: string } | null)?.name
@@ -1361,8 +1374,9 @@ export async function sugerirContexto(o: { ficha: FichaPagina; atual: string | n
   }
   if (o.provedor.id === 'gemini' && o.pedirNativo) {
     for (const pesquisar of [true, false]) {
+      if (resta() < 8_000) break
       let r: RespostaHttp
-      try { r = await o.pedirNativo(o.provedor.modelo, corpoNativoGemini({ modelo: o.provedor.modelo, sistema: mensagens[0].content, usuario: mensagens[1].content, pesquisar }), o.timeoutMs ?? TIMEOUT_MS) } catch (e) { avisos.push(`a porta nativa do Gemini falhou (${String((e as Error | null)?.message ?? e).slice(0, 120)}); fui pela porta comum`); break }
+      try { r = await o.pedirNativo(o.provedor.modelo, corpoNativoGemini({ modelo: o.provedor.modelo, sistema: mensagens[0].content, usuario: mensagens[1].content, pesquisar }), limite()) } catch (e) { avisos.push(`a porta nativa do Gemini falhou (${String((e as Error | null)?.message ?? e).slice(0, 120)}); fui pela porta comum`); break }
       const l = lerRespostaNativa(r)
       if (l.tipo === 'limite') return { ok: false, limite: true, tentarEm: l.tentarEm, erro: l.tentarEm <= 90 ? 'limite da IA por minuto' : 'limite da IA atingido por agora' }
       if (l.tipo === 'sem_pesquisa') { avisos.push('o provedor não deixou pesquisar; a descrição saiu da memória do modelo'); continue }
@@ -1376,7 +1390,8 @@ export async function sugerirContexto(o: { ficha: FichaPagina; atual: string | n
       if (!pesquisar) break
     }
   }
-  const g = await gerarConteudo({ tipo: 'contexto', mensagens, checagem: o.checagem, modelo: o.provedor.modelo, pedir: o.pedir, provedor: o.provedor })
+  if (resta() < 8_000) return { ok: false, erro: 'a IA demorou demais; tente de novo' }
+  const g = await gerarConteudo({ tipo: 'contexto', mensagens, checagem: o.checagem, modelo: o.provedor.modelo, pedir: o.pedir, provedor: o.provedor, timeoutMs: limite(), prazoMs: resta(), agora: o.agora })
   if (!g.ok) return g.limite ? { ok: false, limite: true, tentarEm: g.tentarEm, erro: g.erro } : { ok: false, erro: g.erro, status: g.status }
   const c = g.conteudo as ConteudoContexto
   return { ok: true, texto: c.texto, confira: c.confira, fontes: [], pesquisou: false, avisos: [...avisos, ...g.avisos] }
@@ -1428,7 +1443,7 @@ export async function gerarConteudo(o: {
   prazoMs?: number
   agora?: () => number
 }): Promise<Geracao> {
-  const timeout = o.timeoutMs ?? TIMEOUT_MS
+  const timeout = o.timeoutMs ?? (pensaAntes(o.modelo) ? TIMEOUT_MS_COM_RACIOCINIO : TIMEOUT_MS)
   const prazo = o.prazoMs ?? PRAZO_MS
   const agora = o.agora ?? Date.now
   const inicio = agora()
@@ -1455,7 +1470,7 @@ export async function gerarConteudo(o: {
     } catch (e) {
       const nome = (e as { name?: string } | null)?.name
       return desistir(nome === 'TimeoutError' || nome === 'AbortError'
-        ? `a IA não respondeu em ${Math.round(limite / 1000)} s; tente de novo`
+        ? `a IA (${o.modelo}) não respondeu em ${Math.round(limite / 1000)} s; tente de novo`
         : `não deu para falar com a IA (${String((e as Error | null)?.message ?? e).slice(0, 160)})`)
     }
     const l: Leitura | LeituraClaude = claude ? lerRespostaClaude(resposta) : lerResposta(resposta)

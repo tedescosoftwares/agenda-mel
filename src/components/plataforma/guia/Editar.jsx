@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Portal from '../../Portal'
 import { useDialogo } from '../../../context/DialogoContext'
 import { PreviaGoogle } from './Previa'
+import EscreverFora from './EscreverFora'
 import { GUIA_CATEGORIAS, conteudoSeguro, telefoneBonito, canaisDoSite, rotaDoLugar } from '../../../lib/guia'
 import { seoDoLugar } from '../../../lib/guiaSeo'
 import { enviarFotoDoGuia, MAX_FOTOS } from '../../../lib/guiaFotos'
@@ -212,7 +213,8 @@ export default function EditarLugar({ lugar, g, onFechar }) {
           <div className="pg-ed-corpo" ref={caixa} tabIndex={-1}>
             {aba === 'texto' ? (
               <div className="pg-form">
-                {!temTexto && <p className="pg-nota">Ainda não há texto da IA. Dá para escrever à mão, mas o normal é fechar e tocar em Gerar.</p>}
+                {!temTexto && <p className="pg-nota">Ainda não há texto da IA. Dá para escrever à mão, colar o que o seu GPT escreveu (abaixo), ou fechar e tocar em Gerar.</p>}
+                <EscreverFora tipo="lugar" id={lugar.id} g={g} onJson={(o) => setTexto({ ...textoInicial({ rascunho: o }), _meta: texto._meta })} />
                 <PreviaGoogle titulo={seo.titulo} descricao={seo.descricao} caminho={seo.caminho} tituloBruto={texto.seo_title} descricaoBruta={texto.meta_description} />
                 <label className="pg-campo">Título no Google <Conta n={texto.seo_title.length} max={60} />
                   <input value={texto.seo_title} onChange={(e) => setT('seo_title', e.target.value)} placeholder="Ex.: Rô Coiffeur em Itanhaém: unhas e cabelo no Centro" />

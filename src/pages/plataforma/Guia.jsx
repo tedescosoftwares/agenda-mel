@@ -542,6 +542,19 @@ export default function Guia() {
     }
     setContextos((c) => ({ ...c, atual: null, fim: true }))
   }, [sugerirContexto])
+  // 3.32: campos de uma página de cidade (o texto editado vai no rascunho; a foto da cidade na coluna foto, migração 177)
+  const salvarPagina = useCallback(async (id, campos) => {
+    const { error } = await supabase.from('guia_paginas').update(campos).eq('id', id)
+    if (error) return { ok: false, erro: /\bfoto\b/.test(error.message) && /column|schema cache/i.test(error.message) ? 'O banco ainda não tem a foto da cidade. Rode a migração 177 (supabase/177_foto_da_cidade.sql).' : error.message }
+    mudarPagina(id, { ...campos, atualizado_em: agora() })
+    return { ok: true }
+  }, [mudarPagina])
+  // 3.32: o pedido pronto (sistema + pedido) de um salão ou de uma página, para escrever fora; sem IA
+  const pedidoParaIa = useCallback(async (tipo, id) => {
+    const r = await chamarGerador({ [tipo === 'lugar' ? 'lugar' : 'pagina']: id, prompt: true })
+    if (r?.ok && r.sistema) return { ok: true, sistema: String(r.sistema), pedido: String(r.pedido ?? ''), angulo: r.angulo ?? null }
+    return { ok: false, erro: r?.erro || 'não deu para montar o pedido' }
+  }, [])
   // "Sobre a cidade" (3.22, migração 170): o que a IA sabe da cidade; não aparece no site. Guardar à mão marca "editado"
   // (3.30): a IA não escreve por cima do que a equipe mexeu
   const salvarContexto = useCallback(async (id, contexto) => {
@@ -670,7 +683,7 @@ export default function Guia() {
     cidade: cidade ?? '', cidades, escolherCidade, resumo: resumoVivo, lugarPorId: achar, ia, setIa,
     faseDe, temTexto, temRascunho, temConteudo, carregarTexto, gerando, falhas, lote, usuario: user?.id ?? null,
     carregar, salvarLugar, montarUm, gerarUm, iniciarLote, pausarLote, cancelarLote, fecharLote, aprovar, desfazerAprovacao,
-    gerarPagina, aprovarPagina, salvarContexto, sugerirContexto, escreverContextos, contextos, salvarInteresse, importar, avisar, irPara,
+    gerarPagina, aprovarPagina, salvarContexto, sugerirContexto, escreverContextos, contextos, salvarPagina, pedidoParaIa, salvarInteresse, importar, avisar, irPara,
     desempenho, carregarDesempenho, desempenhoPorLugar,
   }
 

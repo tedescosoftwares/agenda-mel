@@ -227,7 +227,8 @@ function Cidade({ dados }) {
     return panoramaDaCidade({ cidade, categoria, lugares, horas: colecoes ? (colecoes.horas?.[categoria] ?? null) : undefined })
   }, [cidade, categoria, lugares, colecoes, completa])
   const faq = juntarFaq(pagina?.faq ?? [], panorama.faq ?? [])
-  useSeo({ titulo: seo.titulo, descricao: seo.descricao, caminho: seo.caminho, jsonLd: jsonLdDaCidade({ ...dados, lugares }, faq) })
+  // 3.32: a foto da cidade (Plataforma, migração 177) é a imagem do link e entra no JSON-LD
+  useSeo({ titulo: seo.titulo, descricao: seo.descricao, caminho: seo.caminho, imagem: dados.foto || undefined, jsonLd: jsonLdDaCidade({ ...dados, lugares }, faq) })
   // o que a lista mostra e quantos faltam: com filtro, dos filtrados; sem filtro, do total da cidade (ou da categoria)
   const visiveis = Math.min(limite, filtrados.length)
   const restam = (precisaDeTudo || completa ? filtrados.length : totalDaLista) - visiveis
@@ -257,6 +258,13 @@ function Cidade({ dados }) {
                 {bairros.length > 0 && <span className="gd-numero"><strong>{bairros.length}</strong><span>{bairros.length === 1 ? 'bairro' : 'bairros'}</span></span>}
               </div>
             </div>
+            <div className="gd-cidade-lado">
+            {dados.foto && (
+              <figure className="gd-cidade-foto" data-teste="foto-da-cidade">
+                <img src={dados.foto} alt={`${cidade}${dados.uf ? `, ${dados.uf}` : ''}`} fetchPriority="high" decoding="async" />
+                <figcaption>{cidade}{dados.uf ? `, ${dados.uf}` : ''}</figcaption>
+              </figure>
+            )}
             <nav className="gd-tiles" aria-label={`Categorias em ${cidade}`}>
               <Link to={rotaDaCidade(cslug)} className={'gd-tile gd-tile-todos' + (!cat ? ' gd-tile-on' : '')} aria-current={!cat ? 'page' : undefined} style={{ '--i': 0 }}>
                 <span className="gd-tile-ic"><LayoutGrid size={18} /></span>
@@ -277,6 +285,7 @@ function Cidade({ dados }) {
                 )
               })}
             </nav>
+            </div>
           </div>
         </div>
       </section>

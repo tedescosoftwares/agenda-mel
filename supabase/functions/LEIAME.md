@@ -276,6 +276,9 @@ normal; a função confere `eh_plataforma()` como a pessoa logada (senão, 403).
   `gravar: true` (3.30), grava (origem `ia`, fontes em `contexto_fontes`).
 - `provedor` (3.27): `gemini`, `groq` ou `claude` (3.31). Sem ele, `GUIA_IA_PADRAO`;
   sem ela, o primeiro com chave: Gemini, Claude, Groq.
+- `prompt: true` (3.32), com `lugar` ou `pagina`: devolve `{ ok, sistema, pedido, angulo }`, o
+  pedido pronto que a IA receberia, sem chamar IA nenhuma (não precisa de chave). A Plataforma
+  copia para quem escreve fora e cola o JSON de volta no editor.
 
 **O "Sobre a cidade" nasce sozinho (3.30, migração 176).** Ao gerar um
 `lugar` ou uma `pagina` de uma cidade cujo contexto está vazio ou ainda é a

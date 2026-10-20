@@ -70,6 +70,7 @@ function corpoDaCidade(dados, faq, colecoes = null, extras = {}, panorama = null
   return `<main>
 ${migalhas(trilhaDaCidade(dados.cidade, dados.cidade_slug, dados.categoria))}
 <h1>${esc(h1)}</h1>
+${dados.foto ? `<figure><img src="${esc(dados.foto)}" alt="${esc(`${dados.cidade}${dados.uf ? `, ${dados.uf}` : ''}`)}" /></figure>` : ''}
 <p>${esc(c.chamada || seoPadraoDaCidade(dados.cidade, dados.categoria).meta_description)}</p>
 ${c.intro.map((p) => `<p>${esc(p)}</p>`).join('')}
 ${panorama?.paragrafos?.length ? `<section><h2>${esc(tituloDoPanorama(dados.cidade, dados.categoria))}</h2>${panorama.paragrafos.map((p) => `<p>${esc(p)}</p>`).join('')}</section>` : ''}
@@ -111,8 +112,10 @@ function dadosDaCidade(lugares, paginas, cidadeSlug, categoria) {
   const lista = categoria ? daCidade.filter((l) => l.categoria === categoria) : daCidade
   const contar = (ls, campo) => [...ls.reduce((m, l) => (l[campo] ? m.set(l[campo], (m.get(l[campo]) ?? 0) + 1) : m), new Map())].map(([k, total]) => ({ [campo]: k, total })).sort((a, b) => b.total - a.total)
   const pagina = paginas.find((p) => p.cidade_slug === cidadeSlug && (p.categoria ?? '') === categoria)
+  // 3.32: a foto da cidade (migração 177) vale para a cidade e para as categorias dela
+  const daCidadePagina = categoria ? paginas.find((p) => p.cidade_slug === cidadeSlug && (p.categoria ?? '') === '') : pagina
   return {
-    cidade: daCidade[0].cidade, cidade_slug: cidadeSlug, uf: daCidade[0].uf, categoria, pagina: pagina?.conteudo ?? null, total: daCidade.length,
+    cidade: daCidade[0].cidade, cidade_slug: cidadeSlug, uf: daCidade[0].uf, categoria, pagina: pagina?.conteudo ?? null, foto: daCidadePagina?.foto || null, total: daCidade.length,
     categorias: categoriasDaLista(daCidade), bairros: contar(lista, 'bairro'), lugares: lista.map(cartao),
     atualizado: [...lista.map((l) => dia(l.atualizado_em)), dia(pagina?.atualizado_em)].filter(Boolean).sort().at(-1),
   }
@@ -149,7 +152,7 @@ export function paginasDoGuia(guia, artigos = []) {
       const panorama = panoramaDaCidade({ cidade: d.cidade, categoria: cat, lugares: d.lugares, completos: doGuia })
       const faq = juntarFaq(conteudoSeguro(d.pagina)?.faq ?? [], panorama.faq)
       const { titulo, descricao, caminho } = seoDaCidade(d.cidade, cs, cat, d.pagina)
-      out.push({ caminho, titulo, descricao, atualizado: d.atualizado, prioridade: cat ? '0.7' : '0.8', freq: 'weekly', jsonLd: jsonLdDaCidade(d, faq), corpo: corpoDaCidade(d, faq, colecoes, extras, panorama) })
+      out.push({ caminho, titulo, descricao, atualizado: d.atualizado, prioridade: cat ? '0.7' : '0.8', freq: 'weekly', imagem: d.foto || undefined, jsonLd: jsonLdDaCidade(d, faq), corpo: corpoDaCidade(d, faq, colecoes, extras, panorama) })
     }
     for (const col of colecoesDaCidade(doGuia, cs)) {
       const m = montarColecao(col, doGuia)

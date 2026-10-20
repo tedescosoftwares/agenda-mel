@@ -154,7 +154,7 @@ export function jsonLdDaCidade(dados, faq = []) {
     '@context': 'https://schema.org',
     '@graph': [
       migalhas(trilhaDaCidade(dados.cidade, dados.cidade_slug, dados.categoria)),
-      { '@type': 'CollectionPage', '@id': url, url, name: titulo, description: descricao, inLanguage: 'pt-BR', publisher: { '@id': ORG_ID }, mainEntity: { '@id': `${url}#lista` } },
+      { '@type': 'CollectionPage', '@id': url, url, name: titulo, description: descricao, inLanguage: 'pt-BR', publisher: { '@id': ORG_ID }, mainEntity: { '@id': `${url}#lista` }, ...(dados.foto ? { image: dados.foto, primaryImageOfPage: dados.foto } : {}) },
       {
         '@type': 'ItemList',
         '@id': `${url}#lista`,

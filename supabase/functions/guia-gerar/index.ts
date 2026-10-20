@@ -2,7 +2,7 @@
 // guia-gerar (3.9): escreve com IA o texto de uma página do guia de salões e
 // guarda como rascunho, esperando alguém da Plataforma aprovar.
 //
-// POST { lugar?: uuid, pagina?: uuid, contexto?: uuid, instrucao?: string, angulo?: string, provedor?: 'gemini' | 'groq' | 'claude' }
+// POST { lugar?: uuid, pagina?: uuid, contexto?: uuid, instrucao?: string, angulo?: string, provedor?: 'gemini' | 'groq' | 'claude', prompt?: true }
 // com o Authorization de quem está logado na Plataforma.
 //   lugar   uma linha de guia_lugares (a página de um salão)
 //   pagina  uma linha de guia_paginas (a página da cidade ou de uma categoria)
@@ -15,6 +15,8 @@
 //   instrucao  o pedido do revisor ("mais curto", "fale de noivas"), até 400 letras
 //   angulo     o id de um ângulo editorial (conteudo.ts) ou um tema em texto livre
 //   provedor   3.27: qual IA escreve. Sem ele, GUIA_IA_PADRAO; sem ela, o primeiro com chave: Gemini, Claude (3.31), Groq
+//   prompt     3.32: com lugar ou pagina, devolve o pedido pronto ({ ok, sistema, pedido, angulo }) sem chamar IA nenhuma:
+//              a Plataforma copia para quem escreve fora (o GPT de quem tem) e cola o JSON de volta no editor
 //
 // Respostas:
 //   200 { ok: true, rascunho }                       gravado em rascunho, com _meta
@@ -128,7 +130,7 @@ async function gerarComReserva(ia: Provedor, o: PedidoGeracao, inicio: number): 
   return { g, modelo: ia.modelo, ia }
 }
 
-type Pedido = { lugar?: unknown; pagina?: unknown; contexto?: unknown; gravar?: unknown; instrucao?: unknown; angulo?: unknown; provedor?: unknown }
+type Pedido = { lugar?: unknown; pagina?: unknown; contexto?: unknown; gravar?: unknown; instrucao?: unknown; angulo?: unknown; provedor?: unknown; prompt?: unknown }
 
 // os salões da cidade (ou de uma categoria) que viram o retrato (prepararPagina): bairros, ruas, horários, o que informam
 async function lugaresDaCidade(db: SupabaseClient, cidadeSlug: string, categoria = ''): Promise<LugarDaPagina[]> {
@@ -204,6 +206,47 @@ async function contextoDa(db: SupabaseClient, cidadeSlug: string): Promise<strin
   const { data } = await db.from('guia_paginas').select('contexto').eq('cidade_slug', cidadeSlug).eq('categoria', '').maybeSingle()
   const c = (data as { contexto?: unknown } | null)?.contexto
   return typeof c === 'string' && c.trim() ? c : null
+}
+
+// 3.32: o pedido pronto (sistema + pedido), o mesmo que a IA receberia, para quem escreve fora. Sem IA e sem gravar nada;
+// o "Sobre a cidade" entra como está (sem o automático), e o ângulo é o que "Gerar" usaria agora
+async function pedidoPronto(db: SupabaseClient, tipo: 'lugar' | 'pagina', id: string, instrucao: string | null, pedidoAngulo: string | null): Promise<Response> {
+  if (tipo === 'lugar') {
+    const { data, error } = await db.from('guia_lugares').select(COLUNAS_LUGAR).eq('id', id).maybeSingle()
+    if (error) return json({ erro: error.message }, 500)
+    if (!data) return json({ erro: 'salão não encontrado no guia' }, 404)
+    const l = data as unknown as LugarLinha & { id: string; conteudo: unknown; rascunho: unknown }
+    const { data: outrosCru } = await db.from('guia_lugares')
+      .select('slug, c_sobre:conteudo->sobre, r_sobre:rascunho->sobre, c_chamada:conteudo->>chamada, r_chamada:rascunho->>chamada')
+      .eq('cidade_slug', l.cidade_slug).eq('categoria', l.categoria).neq('id', l.id).in('status', VIVOS)
+      .or('conteudo.not.is.null,rascunho.not.is.null').order('gerado_em', { ascending: false, nullsFirst: false }).limit(300)
+    const outros = (outrosCru ?? []) as unknown as Linha[]
+    let bairro: BairroDaFicha | null = null
+    try {
+      const retrato = prepararPagina({ cidade: String(l.cidade ?? ''), cidade_slug: String(l.cidade_slug ?? ''), uf: l.uf, categoria: '' }, await lugaresDaCidade(db, String(l.cidade_slug ?? '')))
+      const meu = bairroValido(l.bairro)
+      bairro = (meu && retrato.ficha.onde_ficam.find((b) => b.bairro === meu)) || null
+    } catch { bairro = null }
+    const { ficha, cidade } = prepararLugar(l, await contextoDa(db, String(l.cidade_slug ?? '')), bairro)
+    const anterior = l.rascunho ?? l.conteudo ?? null
+    const candidatos = angulosPara(l.categoria, ficha.servicos_divulgados, cidade.praia)
+    const angulo = escolherAngulo({ candidatos, todos: ANGULOS[l.categoria] ?? ANGULOS.beleza, semente: l.slug, pedido: pedidoAngulo, anterior: anguloAnterior(anterior) })
+    const m = montarPromptLugar({ ficha, cidade, angulo, instrucao, anterior, abertura: escolherAbertura(l.slug, angulo, candidatos, !!(ficha.bairro || ficha.endereco)), jaUsadas: frasesUsadas(outros.map((o) => ({ sobre: o.r_sobre ?? o.c_sobre, chamada: o.r_chamada ?? o.c_chamada }))) })
+    return json({ ok: true, sistema: m[0].content, pedido: m[1].content, angulo: angulo.id })
+  }
+  const { data, error } = await db.from('guia_paginas').select('id, cidade, cidade_slug, uf, categoria, status, conteudo, rascunho').eq('id', id).maybeSingle()
+  if (error) return json({ erro: error.message }, 500)
+  if (!data) return json({ erro: 'página não encontrada no guia' }, 404)
+  const p = data as unknown as PaginaLinha & { id: string; categoria: string; conteudo: unknown; rascunho: unknown }
+  let lugares: LugarDaPagina[]
+  try { lugares = await lugaresDaCidade(db, String(p.cidade_slug ?? ''), String(p.categoria ?? '')) } catch (e) { return json({ erro: String((e as Error).message) }, 500) }
+  if (!lugares.length) return json({ erro: 'ainda não há salões desta cidade ou categoria no guia' }, 409)
+  const { ficha, cidade } = prepararPagina(p, lugares, await contextoDa(db, String(p.cidade_slug ?? '')))
+  const anterior = p.rascunho ?? p.conteudo ?? null
+  const candidatos = ANGULOS_PAGINA.filter((a) => !a.praia || cidade.praia)
+  const angulo = escolherAngulo({ candidatos, todos: ANGULOS_PAGINA, semente: `${p.cidade_slug}/${p.categoria}`, pedido: pedidoAngulo, anterior: anguloAnterior(anterior) })
+  const m = montarPromptPagina({ ficha, cidade, angulo, instrucao, anterior })
+  return json({ ok: true, sistema: m[0].content, pedido: m[1].content, angulo: angulo.id })
 }
 
 async function gerarLugar(db: SupabaseClient, ia: Provedor, id: string, instrucao: string | null, pedidoAngulo: string | null, inicio: number): Promise<Response> {
@@ -326,14 +369,18 @@ Deno.serve(async (req) => {
   const quem = createClient(URL_SUPABASE, CHAVE_ANON, { global: { headers: { Authorization: auth } }, auth: { persistSession: false } })
   const { data: plataforma, error: erroPapel } = await quem.rpc('eh_plataforma')
   if (erroPapel || plataforma !== true) return json({ erro: 'só a Plataforma gera o texto do guia' }, 403)
-  const escolha = escolherProvedor(corpo.provedor, PROVEDORES, IA_PADRAO)
-  if ('erro' in escolha) return json({ erro: escolha.erro }, /desconhecido/.test(escolha.erro) ? 400 : 500)
-  const ia = escolha.provedor
-
   // o resto com a service role: a função lê os vizinhos e grava o rascunho
   const servico = createClient(URL_SUPABASE, CHAVE_SERVICO, { auth: { persistSession: false } })
   const instrucao = limparInstrucao(corpo.instrucao)
   const angulo = limpar(corpo.angulo, 200) || null
+  // 3.32: só o pedido pronto, sem IA (não precisa de provedor nem de chave)
+  if (corpo.prompt === true) {
+    if (contexto) return json({ erro: 'o pedido pronto é de lugar ou pagina' }, 400)
+    try { return await pedidoPronto(servico, lugar ? 'lugar' : 'pagina', lugar || pagina, instrucao, angulo) } catch (e) { return json({ erro: `não deu para montar o pedido: ${String((e as Error)?.message ?? e).slice(0, 200)}` }, 500) }
+  }
+  const escolha = escolherProvedor(corpo.provedor, PROVEDORES, IA_PADRAO)
+  if ('erro' in escolha) return json({ erro: escolha.erro }, /desconhecido/.test(escolha.erro) ? 400 : 500)
+  const ia = escolha.provedor
   try {
     if (contexto) return await gerarContexto(servico, ia, contexto, corpo.gravar === true, inicio)
     return lugar ? await gerarLugar(servico, ia, lugar, instrucao, angulo, inicio) : await gerarPagina(servico, ia, pagina, instrucao, angulo, inicio)

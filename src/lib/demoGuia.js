@@ -211,6 +211,7 @@ export const GUIA_LUGARES = [
 export const GUIA_PAGINAS = [
   {
     id: 'gp1', cidade: 'Itanhaém', cidade_slug: 'itanhaem', uf: 'SP', categoria: '', status: 'publicado', gerado_em: dias(2), publicado_em: dias(2), criado_em: dias(6), atualizado_em: dias(2), rascunho: null,
+    foto: '/imagens/salao-1400.webp', // 3.32: a foto da cidade (no demo, uma imagem do site)
     // "Sobre a cidade" (3.22, migração 170): o que a IA sabe da cidade; não aparece no site
     contexto: 'Itanhaém fica no litoral sul de São Paulo e é uma das cidades mais antigas do Brasil. É cidade de praia, comprida: vai do Centro e da Boca da Barra até Suarão e Gaivota, com muitos bairros ao longo da orla e para dentro. O movimento cresce no verão e nos feriados prolongados. Sol, sal, cloro de piscina e maresia pesam no cabelo, na pele, nos cílios e no esmalte.', contexto_origem: 'semente', contexto_fontes: null,
     conteudo: {
@@ -332,8 +333,9 @@ export const GUIA_RPC = {
     const lista = cat ? daCidade.filter((l) => l.categoria === cat) : daCidade
     if (cat && !lista.length) return null
     const pagina = GUIA_PAGINAS.find((p) => p.cidade_slug === c && p.categoria === cat && p.status === 'publicado')
+    const daCidadePagina = GUIA_PAGINAS.find((p) => p.cidade_slug === c && p.categoria === '')
     return {
-      cidade: daCidade[0].cidade, cidade_slug: c, uf: daCidade[0].uf, categoria: cat, pagina: pagina?.conteudo ?? null, total: daCidade.length,
+      cidade: daCidade[0].cidade, cidade_slug: c, uf: daCidade[0].uf, categoria: cat, pagina: pagina?.conteudo ?? null, foto: daCidadePagina?.foto || null, total: daCidade.length,
       categorias: categoriasDaLista([...daCidade].sort(ordemLista), (l) => fotosDe(l)[0] ?? null), bairros: contar(lista, 'bairro'), lugares: [...lista].sort(ordemLista).map(cartao),
     }
   },
@@ -499,6 +501,17 @@ const ANGULOS = ['o bairro e a praticidade', 'o serviço principal em detalhe', 
 const provedorDemo = (corpo) => (corpo?.provedor === 'groq' || corpo?.provedor === 'claude' ? corpo.provedor : 'gemini')
 const modeloDemo = (corpo) => ({ groq: 'openai/gpt-oss-120b', claude: 'claude-opus-5-5' }[provedorDemo(corpo)] ?? 'gemini-3-flash-preview')
 export async function demoGuiaGerar(corpo) {
+  // 3.32: o pedido pronto, para quem escreve fora
+  if (corpo?.prompt === true && (corpo.lugar || corpo.pagina)) {
+    const alvo = corpo.lugar ? GUIA_LUGARES.find((x) => x.id === corpo.lugar) : GUIA_PAGINAS.find((x) => x.id === corpo.pagina)
+    if (!alvo) return { ok: false, erro: corpo.lugar ? 'salão não encontrado' : 'página não encontrada' }
+    const nome = corpo.lugar ? alvo.nome : `${alvo.categoria ? categoriaDoGuia(alvo.categoria).rotulo : 'Salões de beleza'} em ${alvo.cidade}`
+    return {
+      ok: true, angulo: 'demo',
+      sistema: `Você é redatora de um guia local de beleza feito pela MIMO. Escreva a página "${nome}" em português do Brasil, só com fatos da ficha, sem nota, preço ou elogio. FORMATO: só o objeto JSON, sem nada antes ou depois.`,
+      pedido: `<ficha>\n${JSON.stringify(corpo.lugar ? { nome: alvo.nome, cidade: alvo.cidade, bairro: alvo.bairro, categoria: alvo.categoria, servicos: alvo.servicos } : { cidade: alvo.cidade, categoria: alvo.categoria || 'todas' }, null, 2)}\n</ficha>`,
+    }
+  }
   await new Promise((r) => setTimeout(r, 900))
   // a sugestão do "Sobre a cidade" (3.28): não grava; a tela mostra para conferir
   if (corpo?.contexto) {

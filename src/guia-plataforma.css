@@ -527,3 +527,15 @@
 .pg-paginas-todas .btn { justify-content: center; }
 .pg-contexto-origem { display: block; margin: 0.3rem 0 0.1rem; font-size: 0.76rem; color: var(--texto-3); }
 .pg-contexto-fontes a { color: var(--rosa); }
+
+/* escrever fora (3.32): o pedido para o GPT e o JSON colado */
+.pg-fora { background: #faf7fc; }
+.pg-fora-linha { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+.pg-fora .alert { margin: 0; }
+/* a foto da cidade (3.32) */
+.pg-cidade-foto-corpo { display: flex; gap: 0.9rem; align-items: flex-start; flex-wrap: wrap; margin-top: 0.4rem; }
+.pg-cidade-foto-corpo img { width: 220px; max-width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 12px; box-shadow: 0 6px 18px rgba(61, 12, 78, 0.14); }
+.pg-cidade-foto-vazia { width: 220px; max-width: 100%; aspect-ratio: 16 / 9; display: grid; place-items: center; border: 1px dashed var(--fio); border-radius: 12px; color: var(--texto-3); font-size: 0.8rem; }
+.pg-cidade-foto-acoes { display: flex; flex-direction: column; gap: 0.4rem; }
+.pg-cidade-foto-acoes label.btn { cursor: pointer; }
+.pg-cidade-foto-acoes label.btn.desligado { opacity: 0.6; pointer-events: none; }

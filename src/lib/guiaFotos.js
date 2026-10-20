@@ -34,3 +34,19 @@ export async function enviarFotoDoGuia(lugarId, file, { assinatura } = {}) {
   } catch { /* fica sem miniatura */ }
   return { url: supabase.storage.from('guia').getPublicUrl(caminho).data.publicUrl, sha, repetida }
 }
+
+// 3.32: a foto da cidade (Páginas da cidade → Foto da cidade): o mesmo caminho, em cidades/<cidade>/; devolve { url }
+export async function enviarFotoDaCidade(cidadeSlug, file) {
+  const { blob } = await reduzirFoto(file, { max: 1600, qualidade: 0.84 })
+  const sha = await assinaturaDoArquivo(file)
+  if (isDemo) return { url: `${FOTOS_DEMO[parseInt(sha.slice(0, 2), 16) % FOTOS_DEMO.length]}?c=${sha.slice(0, 8)}`, sha }
+  const caminho = `cidades/${String(cidadeSlug).replace(/[^a-z0-9-]/g, '')}/${sha.slice(0, 24)}.jpg`
+  const { error } = await supabase.storage.from('guia').upload(caminho, blob, { contentType: 'image/jpeg', cacheControl: '31536000', upsert: false })
+  const repetida = !!error && /exists|duplicate|409/i.test(`${error.message ?? ''} ${error.statusCode ?? ''}`)
+  if (error && !repetida) throw new Error(error.message || 'não deu para enviar a foto')
+  try {
+    const { blob: mini } = await reduzirFoto(file, { max: 480, qualidade: 0.8 })
+    await supabase.storage.from('guia').upload(caminho.replace(/\.jpg$/, '-p.jpg'), mini, { contentType: 'image/jpeg', cacheControl: '31536000', upsert: false })
+  } catch { /* fica sem miniatura */ }
+  return { url: supabase.storage.from('guia').getPublicUrl(caminho).data.publicUrl, sha }
+}

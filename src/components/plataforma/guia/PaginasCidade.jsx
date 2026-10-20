@@ -5,7 +5,9 @@ import EscolhaIA from './EscolhaIA'
 import { GUIA_CATEGORIAS, categoriaDoGuia, conteudoSeguro, rotaDaCidade, rotaDaCategoria } from '../../../lib/guia'
 import { seoDaCidade } from '../../../lib/guiaSeo'
 import { urlDoAmbiente } from '../../../lib/ambiente'
-import { MapPinned, Check, RefreshCw, Sparkles, ExternalLink, LoaderCircle, TriangleAlert, BookOpen, Wand2, Globe } from 'lucide-react'
+import EditarPagina from './EditarPagina'
+import { enviarFotoDaCidade } from '../../../lib/guiaFotos'
+import { MapPinned, Check, RefreshCw, Sparkles, ExternalLink, LoaderCircle, TriangleAlert, BookOpen, Wand2, Globe, Pencil, ImagePlus, Trash2, Image as ImagemIcone } from 'lucide-react'
 
 // O texto da página da cidade (/saloes/itanhaem) e de cada categoria
 // (/saloes/itanhaem/unhas). As linhas nascem sozinhas na importação; a
@@ -37,6 +39,8 @@ export default function PaginasCidade({ g }) {
   const [ctx, setCtx] = useState(null) // { id, texto } do que está sendo digitado; sem isso, o que está no banco
   const [salvandoCtx, setSalvandoCtx] = useState(false)
   const [confira, setConfira] = useState(null) // { id, itens, modelo }: o que a IA pediu para conferir na sugestão (3.28)
+  const [editando, setEditando] = useState(false) // 3.32: o editor do texto da página
+  const [enviandoFoto, setEnviandoFoto] = useState(false) // 3.32: a foto da cidade subindo
 
   // quantos salões no ar em cada página (a da cidade conta todos): dos totais por cidade (3.25, migração 174),
   // que valem para todas as cidades; num banco sem eles, da lista carregada
@@ -127,6 +131,24 @@ export default function PaginasCidade({ g }) {
   const ctxMudou = (contexto ?? '').trim() !== (atual?.contexto ?? '').trim()
   // a IA sugere o "Sobre a cidade" (3.28): entra na caixa para a pessoa ler, mexer e guardar
   const sugerindo = atual ? g.gerando[`ctx:${atual.id}`] : null
+  // a foto da cidade (3.32, migração 177): sobe pelo mesmo caminho das fotos dos salões e fica na linha da cidade
+  async function enviarFoto(e) {
+    const f = e.target.files?.[0]
+    e.target.value = ''
+    if (!f || !atual) return
+    setErro(''); setEnviandoFoto(true)
+    try {
+      const { url } = await enviarFotoDaCidade(atual.cidade_slug, f)
+      const r = await g.salvarPagina(atual.id, { foto: url })
+      if (!r.ok) setErro(r.erro)
+      else g.avisar({ texto: `Foto de ${atual.cidade} guardada. Entra no site na próxima publicação.`, tom: 'ok' })
+    } catch (err) { setErro(err.message || 'não deu para enviar a foto') } finally { setEnviandoFoto(false) }
+  }
+  async function tirarFoto() {
+    if (!atual) return
+    const r = await g.salvarPagina(atual.id, { foto: null })
+    if (!r.ok) setErro(r.erro)
+  }
   async function sugerir() {
     if (!atual || sugerindo) return
     setErro('')
@@ -193,6 +215,7 @@ export default function PaginasCidade({ g }) {
           <div className="pg-botoes">
             <button type="button" className="btn btn-primary" onClick={aprovar} disabled={!atual.rascunho || aprovando || !!ger}>{aprovando ? <LoaderCircle size={16} className="pg-gira" /> : <Check size={16} />} {fase === 'nova' ? 'Publicar versão nova' : 'Aprovar'}</button>
             <button type="button" className="btn btn-ghost" onClick={gerar} disabled={!!ger}>{ger ? <LoaderCircle size={16} className="pg-gira" /> : fase === 'sem' ? <Sparkles size={16} /> : <RefreshCw size={16} />} {ger ? (ger.espera ? `Tentando de novo em ${ger.espera} s` : 'Gerando…') : fase === 'sem' ? 'Gerar' : 'Gerar de novo'}</button>
+            <button type="button" className="btn btn-ghost" onClick={() => setEditando(true)} disabled={!!ger} title="Editar o texto à mão, ou colar o que o seu GPT escreveu"><Pencil size={16} /> Editar texto</button>
             <EscolhaIA g={g} />
             {fase === 'nova' && (
               <div className="pg-seg">
@@ -242,6 +265,28 @@ export default function PaginasCidade({ g }) {
             </form>
           )}
 
+          {atual.categoria === '' && (
+            <div className="pg-contexto pg-cidade-foto" data-teste="foto-da-cidade">
+              <div className="pg-contexto-cabeca">
+                <ImagemIcone size={16} />
+                <div>
+                  <b>Foto de {atual.cidade}</b>
+                  <small>Aparece no alto da página da cidade e das categorias dela, e é a imagem do link no WhatsApp. Uma imagem na horizontal (16:9), sua ou gerada por IA; nada copiado da internet.</small>
+                </div>
+              </div>
+              <div className="pg-cidade-foto-corpo">
+                {atual.foto ? <img src={atual.foto} alt={`Foto de ${atual.cidade}`} /> : <div className="pg-cidade-foto-vazia">Sem foto ainda</div>}
+                <div className="pg-cidade-foto-acoes">
+                  <label className={'btn btn-ghost pg-btn-peq' + (enviandoFoto ? ' desligado' : '')}>
+                    <input type="file" accept="image/*" onChange={enviarFoto} disabled={enviandoFoto} hidden data-teste="arquivo-foto-cidade" />
+                    {enviandoFoto ? <LoaderCircle size={14} className="pg-gira" /> : <ImagePlus size={14} />} {enviandoFoto ? 'Enviando…' : atual.foto ? 'Trocar a foto' : 'Enviar a foto'}
+                  </label>
+                  {atual.foto && <button type="button" className="btn btn-ghost pg-btn-peq" onClick={tirarFoto}><Trash2 size={14} /> Tirar</button>}
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="pg-pagina-texto">
             <PreviaGoogle titulo={seo.titulo} descricao={seo.descricao} caminho={seo.caminho} tituloBruto={c?.seo_title || seo.titulo} descricaoBruta={c?.meta_description || seo.descricao} />
             {sem && Number(sem.indice) > 0.35 && <div className="pg-alerta ambar"><TriangleAlert size={16} /><div><b>Parecido com outra página ({Math.round(Number(sem.indice) * 100)}%)</b><span>Lembra a de {sem.slug}. Vale gerar de novo.</span></div></div>}
@@ -269,6 +314,7 @@ export default function PaginasCidade({ g }) {
           </div>
         </section>
       )}
+      {editando && atual && <EditarPagina pagina={atual} g={g} onFechar={() => setEditando(false)} />}
     </div>
   )
 }

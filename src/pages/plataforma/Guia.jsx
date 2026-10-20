@@ -506,14 +506,20 @@ export default function Guia() {
   }, [mudarPagina])
   // "Sugerir com a IA" (3.28): a IA escreve o "Sobre a cidade" a partir do que sabe da cidade e dos bairros do guia.
   // Não grava: a tela mostra, com a lista do que conferir, e a pessoa guarda
-  const sugerirContexto = useCallback(async (id) => {
+  // gravar (3.30): a função grava (origem "ia", com as fontes da pesquisa) e a tela espelha
+  const sugerirContexto = useCallback(async (id, { gravar = false } = {}) => {
     const k = `ctx:${id}`
     setFalhas((f) => sem(f, k))
     setGerando((g) => ({ ...g, [k]: { espera: 0 } }))
     try {
       for (let tentativa = 0; ; tentativa++) {
-        const r = await chamarGerador({ contexto: id, provedor: iaRef.current })
-        if (r?.ok && r.contexto) return { ok: true, texto: String(r.contexto), confira: Array.isArray(r.confira) ? r.confira.map(String) : [], modelo: r.modelo ?? null }
+        const r = await chamarGerador({ contexto: id, provedor: iaRef.current, ...(gravar ? { gravar: true } : {}) })
+        if (r?.ok && r.contexto) {
+          const fontes = Array.isArray(r.fontes) ? r.fontes.filter((f) => f && f.url).map((f) => ({ titulo: String(f.titulo ?? f.url), url: String(f.url) })) : []
+          const confira = Array.isArray(r.confira) ? r.confira.map(String) : []
+          if (gravar && r.gravado) mudarPagina(id, { contexto: String(r.contexto), contexto_origem: 'ia', contexto_fontes: { confira, fontes, modelo: r.modelo ?? null, provedor: r.provedor ?? null, pesquisou: !!r.pesquisou, em: agora() } })
+          return { ok: true, texto: String(r.contexto), confira, fontes, modelo: r.modelo ?? null, pesquisou: !!r.pesquisou, gravado: !!r.gravado }
+        }
         if (r?.tentar_em && tentativa < 3) { await contagem(r.tentar_em, (s) => setGerando((g) => (g[k] ? { ...g, [k]: { espera: s } } : g))); continue }
         const msg = r?.erro || 'não deu para sugerir'
         setFalhas((f) => ({ ...f, [k]: msg }))
@@ -522,13 +528,28 @@ export default function Guia() {
     } finally {
       if (montado.current) setGerando((g) => sem(g, k))
     }
-  }, [])
-  // "Sobre a cidade" (3.22, migração 170): o que a IA sabe da cidade; não aparece no site
+  }, [mudarPagina])
+  // escrever o "Sobre a cidade" de várias cidades de uma vez (3.30): uma por vez, gravando; o que a equipe editou fica de fora
+  const [contextos, setContextos] = useState(null) // { total, feitos, atual, erros: [[cidade, erro]], fim }
+  const escreverContextos = useCallback(async (paginas) => {
+    if (!paginas.length) return
+    setContextos({ total: paginas.length, feitos: 0, atual: paginas[0].cidade, erros: [], fim: false })
+    for (const p of paginas) {
+      if (!montado.current) return
+      setContextos((c) => ({ ...c, atual: p.cidade }))
+      const r = await sugerirContexto(p.id, { gravar: true })
+      setContextos((c) => ({ ...c, feitos: c.feitos + 1, erros: r.ok ? c.erros : [...c.erros, [p.cidade, r.erro]] }))
+    }
+    setContextos((c) => ({ ...c, atual: null, fim: true }))
+  }, [sugerirContexto])
+  // "Sobre a cidade" (3.22, migração 170): o que a IA sabe da cidade; não aparece no site. Guardar à mão marca "editado"
+  // (3.30): a IA não escreve por cima do que a equipe mexeu
   const salvarContexto = useCallback(async (id, contexto) => {
     const texto = String(contexto ?? '').trim().slice(0, 1500) || null
-    const { error } = await supabase.from('guia_paginas').update({ contexto: texto }).eq('id', id)
+    let { error } = await supabase.from('guia_paginas').update({ contexto: texto, contexto_origem: texto ? 'editado' : null }).eq('id', id)
+    if (error && /contexto_origem/.test(error.message)) ({ error } = await supabase.from('guia_paginas').update({ contexto: texto }).eq('id', id))
     if (error) return { ok: false, erro: /contexto/.test(error.message) && /column|schema cache/i.test(error.message) ? 'O banco ainda não tem o campo "Sobre a cidade". Rode a migração 170 (supabase/170_cidade_com_contexto.sql).' : error.message }
-    mudarPagina(id, { contexto: texto })
+    mudarPagina(id, { contexto: texto, contexto_origem: texto ? 'editado' : null })
     return { ok: true }
   }, [mudarPagina])
   const aprovarPagina = useCallback(async (id) => {
@@ -649,7 +670,7 @@ export default function Guia() {
     cidade: cidade ?? '', cidades, escolherCidade, resumo: resumoVivo, lugarPorId: achar, ia, setIa,
     faseDe, temTexto, temRascunho, temConteudo, carregarTexto, gerando, falhas, lote, usuario: user?.id ?? null,
     carregar, salvarLugar, montarUm, gerarUm, iniciarLote, pausarLote, cancelarLote, fecharLote, aprovar, desfazerAprovacao,
-    gerarPagina, aprovarPagina, salvarContexto, sugerirContexto, salvarInteresse, importar, avisar, irPara,
+    gerarPagina, aprovarPagina, salvarContexto, sugerirContexto, escreverContextos, contextos, salvarInteresse, importar, avisar, irPara,
     desempenho, carregarDesempenho, desempenhoPorLugar,
   }
 

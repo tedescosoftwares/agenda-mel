@@ -68,7 +68,9 @@ export type FichaLugar = {
   selecao_mimo: boolean
   agenda_pela_mimo: boolean
   o_que_o_lugar_informa: string[] // o que o cadastro público informa (3.22): pode ser afirmado
+  o_bairro_no_guia: BairroNoGuia | null // 3.30: o que o bairro do lugar tem no guia, para situar o lugar
 }
+export type BairroNoGuia = { lugares: number; fatia_da_cidade: string; concentra: string[]; ruas: string[]; abrem_aos_domingos: number }
 
 // 3.26: o retrato da cidade pelo guia. Onde os lugares estão (bairro a bairro, com a fatia em palavras,
 // o que cada bairro concentra, as ruas onde eles se juntam e quem abre no domingo), as ruas e avenidas
@@ -176,6 +178,9 @@ export const URL_GROQ = 'https://api.groq.com/openai/v1/chat/completions'
 // entra pela porta compatível com a OpenAI; a chave é a do AI Studio (o projeto com faturamento consome os
 // créditos do Google Cloud). GUIA_IA_PADRAO diz qual vale quando ninguém escolhe; sem ela, o Gemini se tiver chave
 export const URL_GEMINI = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+// 3.30: a porta nativa do Gemini, só para o "Sobre a cidade": por ela dá para ligar a pesquisa do Google (grounding), e a IA
+// descreve a cidade pesquisando em vez de lembrar. A resposta traz as fontes que ela usou
+export const URL_GEMINI_NATIVA = 'https://generativelanguage.googleapis.com/v1beta/models'
 export const MODELO_GEMINI_PADRAO = 'gemini-3-flash-preview' // o Flash tem plano grátis; o Pro (3.1) é só com faturamento, e o 2.5 saiu do ar para contas novas
 export type Provedor = { id: 'gemini' | 'groq'; nome: string; url: string; chave: string; modelo: string; segredo: string }
 export function provedoresDe(env: { get(nome: string): string | undefined | null }): Record<'gemini' | 'groq', Provedor> {
@@ -442,11 +447,14 @@ export function fichaDoLugar(l: LugarLinha): FichaLugar {
     selecao_mimo: l.selecao === true,
     agenda_pela_mimo: l.na_mimo === true || temTexto(l.salon_id),
     o_que_o_lugar_informa: informesDoLugar(l.atributos).frases,
+    o_bairro_no_guia: null,
   }
 }
 
-export function prepararLugar(l: LugarLinha, contexto: unknown = null): { ficha: FichaLugar; cidade: Cidade; checagem: Checagem } {
+// bairro (3.30): a linha do bairro do lugar em "onde_ficam" da cidade (prepararPagina), já com os outros da cidade
+export function prepararLugar(l: LugarLinha, contexto: unknown = null, bairro: BairroDaFicha | null = null): { ficha: FichaLugar; cidade: Cidade; checagem: Checagem } {
   const ficha = fichaDoLugar(l)
+  if (bairro) ficha.o_bairro_no_guia = { lugares: bairro.lugares, fatia_da_cidade: bairro.fatia, concentra: bairro.concentra, ruas: bairro.ruas, abrem_aos_domingos: bairro.abrem_aos_domingos }
   const dias = diasValidos(l.horarios)
   return {
     ficha,
@@ -676,6 +684,7 @@ Só o que está na <ficha>: nome, categoria no guia, serviços divulgados, bairr
 - A categoria diz em que lista do guia o lugar aparece; os serviços dizem o que ele faz. Se os serviços forem além da categoria, descreva pelo conjunto (ex.: salão com manicure, cabelo e depilação).
 - Serviço da lista é genérico: "Cabelo" não quer dizer que faz mechas ou progressiva. Fale do serviço em geral ou diga para confirmar com o lugar.
 - "o_que_o_lugar_informa" pode ser afirmado como fato, de preferência com "informa que" ou "segundo o cadastro". O que não estiver lá não existe para você: nada de Pix, parcelamento ou "aceita todos os cartões" por conta própria.
+- "o_bairro_no_guia" diz o que o bairro do lugar tem no guia: quantos lugares (e a fatia da cidade em palavras), o que o bairro concentra, as ruas onde eles se juntam e quantos abrem no domingo. Serve para situar o lugar ("um dos poucos de cílios do bairro", "na avenida onde se juntam os salões do Centro", "no bairro, é dos que abrem no domingo"), sem número e sem comparar com outro lugar pelo nome.
 
 REGRAS QUE NÃO SE QUEBRAM
 1. Não invente nada sobre o lugar. Nunca afirme: preço, tempo de casa, ano de abertura, história, marcas e produtos, prêmios, cursos ou experiência de quem atende, nomes de pessoas, como é o ambiente (aconchegante, moderno, climatizado), café, wi-fi, atendimento a domicílio, encaixe, serviço fora da lista; estacionamento, pagamento, acessibilidade, crianças e banheiro só se estiverem em "o_que_o_lugar_informa". Não trate o nome do lugar como nome de alguém ("a Rô atende" é invenção).
@@ -763,8 +772,9 @@ REGRAS
 4. Nada de número (população, distância em quilômetros, ano): "uma das maiores do litoral" e "a uma hora e pouco da capital" é o máximo.
 5. Em "confira", liste de 2 a 5 afirmações do texto que a redação deve checar antes de usar: as que dependem de memória (a direção de um bairro, o nome de uma avenida, uma referência).
 6. Se vier um <atual> com o texto que a redação já tem, melhore e complete esse texto sem perder o que ele diz; não recomece do zero.
+7. Se você tiver a busca do Google, pesquise antes de escrever: como a cidade se organiza (bairros e regiões, o Centro, as avenidas de comércio, a rodovia), a temporada e as referências. O que a pesquisa confirmou entra como fato; o que ficou só na memória vai para "confira".
 
-FORMATO: só o objeto JSON { texto, confira }.`
+FORMATO: só o objeto JSON { "texto": "...", "confira": ["...", "..."] }, sem nada antes ou depois.`
 
 export function montarPromptContexto(o: { ficha: FichaPagina; atual?: string | null }): Mensagem[] {
   const guia = { cidade: o.ficha.cidade, uf: o.ficha.uf, lugares_no_guia: o.ficha.lugares_no_guia, onde_ficam: o.ficha.onde_ficam, ruas_com_mais_lugares: o.ficha.ruas_com_mais_lugares, categorias_no_guia: o.ficha.categorias_no_guia }
@@ -1166,6 +1176,88 @@ export function retratoDaCidade(campos: Array<[string, string]>, c: Checagem): P
   const litoral = campos.filter(([, t]) => /\b(maresia|cloro|sal|salitre)\b/.test(norm(t))).length
   if (litoral >= (c.angulo === 'praia' ? 5 : 3)) problemas.push({ nivel: 'estilo', texto: `sol, sal, cloro e maresia viraram fórmula (em ${litoral} campos): deixe em uma frase e fale da cidade pelo que a ficha mostra` })
   return problemas
+}
+
+// ---- o "Sobre a cidade" pela porta nativa do Gemini, com pesquisa (3.30) ----------------------------------------------
+export type Fonte = { titulo: string; url: string }
+export type LeituraNativa =
+  | { tipo: 'texto'; texto: string; fontes: Fonte[]; pesquisou: boolean; cortado: boolean }
+  | { tipo: 'limite'; tentarEm: number }
+  | { tipo: 'sem_pesquisa'; erro: string }
+  | { tipo: 'erro'; erro: string }
+export type PedirNativo = (modelo: string, corpo: Record<string, unknown>, timeoutMs: number) => Promise<RespostaHttp>
+
+// o corpo de generateContent: com pesquisa, o JSON é pedido no prompt (a pesquisa e o modo JSON não andam juntos); sem, no modo JSON
+export function corpoNativoGemini(o: { modelo: string; sistema: string; usuario: string; pesquisar: boolean; temperatura?: number; maxTokens?: number }): Record<string, unknown> {
+  // o raciocínio conta no teto de saída; baixo basta para um parágrafo (os Gemini 3 aceitam o nível; os 2.5 não)
+  const generationConfig: Record<string, unknown> = { temperature: o.temperatura ?? 0.4, maxOutputTokens: o.maxTokens ?? MAX_TOKENS_COM_RACIOCINIO * 2 }
+  if (/gemini-3/i.test(o.modelo)) generationConfig.thinkingConfig = { thinkingLevel: 'low' }
+  if (!o.pesquisar) generationConfig.responseMimeType = 'application/json'
+  const corpo: Record<string, unknown> = {
+    system_instruction: { parts: [{ text: o.sistema }] },
+    contents: [{ role: 'user', parts: [{ text: o.usuario }] }],
+    generationConfig,
+  }
+  if (o.pesquisar) corpo.tools = [{ google_search: {} }]
+  return corpo
+}
+export function lerRespostaNativa(r: RespostaHttp): LeituraNativa {
+  let corpo: Obj | null = null
+  try { corpo = JSON.parse(r.texto) as Obj } catch { corpo = null }
+  const erro = (corpo && typeof corpo.error === 'object' ? corpo.error : null) as Obj | null
+  const mensagem = espacos(erro?.message) || espacos(r.texto).slice(0, 300)
+  // a pesquisa recusada (sem cota, sem billing, modelo sem a ferramenta): tenta sem ela, não desiste
+  if (r.status >= 400 && /grounding|google_search|googlesearch|search tool|ferramenta/i.test(mensagem)) return { tipo: 'sem_pesquisa', erro: mensagem.slice(0, 300) }
+  if (r.status === 429) return { tipo: 'limite', tentarEm: segundosDeEspera(r.headers, mensagem) }
+  if (r.status >= 200 && r.status < 300 && !erro) {
+    const cand = (Array.isArray(corpo?.candidates) ? corpo?.candidates[0] : null) as Obj | null
+    const partes = ((cand?.content as Obj | undefined)?.parts ?? []) as Array<Obj>
+    const texto = partes.map((p) => (typeof p.text === 'string' ? p.text : '')).join('')
+    const gm = (cand?.groundingMetadata ?? null) as Obj | null
+    const fontes: Fonte[] = []
+    for (const c of (Array.isArray(gm?.groundingChunks) ? gm?.groundingChunks : []) as Array<Obj>) {
+      const w = (c.web ?? null) as Obj | null
+      const url = espacos(w?.uri)
+      if (url && !fontes.some((f) => f.url === url)) fontes.push({ titulo: limpar(w?.title, 120) || url, url })
+    }
+    return { tipo: 'texto', texto, fontes: fontes.slice(0, 8), pesquisou: !!gm, cortado: cand?.finishReason === 'MAX_TOKENS' }
+  }
+  if (r.status === 401 || r.status === 403) return { tipo: 'erro', erro: `a chave da IA foi recusada pelo provedor (${r.status})${mensagem ? `: ${mensagem}` : ''}`.slice(0, 300) }
+  if (r.status === 404) return { tipo: 'erro', erro: `o provedor da IA não achou o modelo: ${mensagem}`.slice(0, 300) }
+  if (r.status >= 500) return { tipo: 'erro', erro: `a IA está instável agora (${r.status}); tente de novo em instantes` }
+  return { tipo: 'erro', erro: `a IA recusou o pedido (${r.status}): ${mensagem}`.slice(0, 300) }
+}
+
+export type Sugestao =
+  | { ok: true; texto: string; confira: string[]; fontes: Fonte[]; pesquisou: boolean; avisos: string[] }
+  | { ok: false; limite?: boolean; tentarEm?: number; erro: string }
+// a sugestão do "Sobre a cidade": no Gemini, pela porta nativa com pesquisa (se o provedor recusar a pesquisa, sem ela);
+// se a porta nativa falhar ou a resposta não vier como JSON válido, ou em outro provedor, pela porta comum
+// (gerarConteudo), a mesma de sempre. A pesquisa é o que deixa a descrição da cidade automática e com fontes
+export async function sugerirContexto(o: { ficha: FichaPagina; atual: string | null; provedor: Provedor; pedir: Pedir; pedirNativo?: PedirNativo; checagem: Checagem; timeoutMs?: number }): Promise<Sugestao> {
+  const mensagens = montarPromptContexto({ ficha: o.ficha, atual: o.atual })
+  const avisos: string[] = []
+  if (o.provedor.id === 'gemini' && o.pedirNativo) {
+    for (const pesquisar of [true, false]) {
+      let r: RespostaHttp
+      try { r = await o.pedirNativo(o.provedor.modelo, corpoNativoGemini({ modelo: o.provedor.modelo, sistema: mensagens[0].content, usuario: mensagens[1].content, pesquisar }), o.timeoutMs ?? TIMEOUT_MS) } catch (e) { avisos.push(`a porta nativa do Gemini falhou (${String((e as Error | null)?.message ?? e).slice(0, 120)}); fui pela porta comum`); break }
+      const l = lerRespostaNativa(r)
+      if (l.tipo === 'limite') return { ok: false, limite: true, tentarEm: l.tentarEm, erro: l.tentarEm <= 90 ? 'limite da IA por minuto' : 'limite da IA atingido por agora' }
+      if (l.tipo === 'sem_pesquisa') { avisos.push('o provedor não deixou pesquisar; a descrição saiu da memória do modelo'); continue }
+      if (l.tipo === 'erro') { avisos.push(`a porta nativa do Gemini recusou (${l.erro.slice(0, 120)}); fui pela porta comum`); break }
+      const v = validarContexto(extrairJson(l.texto))
+      if (v.conteudo && !v.problemas.some((p) => p.nivel === 'grave')) {
+        const c = v.conteudo as ConteudoContexto
+        return { ok: true, texto: c.texto, confira: c.confira, fontes: l.fontes, pesquisou: l.pesquisou, avisos: [...avisos, ...v.avisos, ...v.problemas.map((p) => p.texto)] }
+      }
+      avisos.push(`a resposta com pesquisa não serviu (${v.problemas.map((p) => p.texto).join('; ').slice(0, 160)}); tentando sem pesquisa`)
+      if (!pesquisar) break
+    }
+  }
+  const g = await gerarConteudo({ tipo: 'contexto', mensagens, checagem: o.checagem, modelo: o.provedor.modelo, pedir: o.pedir })
+  if (!g.ok) return g.limite ? { ok: false, limite: true, tentarEm: g.tentarEm, erro: g.erro } : { ok: false, erro: g.erro }
+  const c = g.conteudo as ConteudoContexto
+  return { ok: true, texto: c.texto, confira: c.confira, fontes: [], pesquisou: false, avisos: [...avisos, ...g.avisos] }
 }
 
 // 3.28: o "Sobre a cidade" sugerido: o texto inteiro, sem número e sem opinião de bairro; o que passa do tamanho é cortado em frase

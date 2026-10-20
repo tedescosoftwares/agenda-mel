@@ -521,3 +521,9 @@
 .pg-paginas-cidade { display: flex; flex-direction: column; gap: 0.3rem; margin: 0.2rem 0.4rem 0.6rem; font-size: 0.74rem; color: var(--texto-3); }
 .pg-paginas-cidade > span { text-transform: uppercase; letter-spacing: 0.06em; font-size: 0.7rem; }
 .pg-paginas-cidade .plat-select { width: 100%; }
+
+/* o "Sobre a cidade" automático (3.30): escrever todas, a origem e as fontes */
+.pg-paginas-todas { display: flex; flex-direction: column; gap: 0.3rem; margin: 0 0.4rem 0.6rem; font-size: 0.72rem; color: var(--texto-3); }
+.pg-paginas-todas .btn { justify-content: center; }
+.pg-contexto-origem { display: block; margin: 0.3rem 0 0.1rem; font-size: 0.76rem; color: var(--texto-3); }
+.pg-contexto-fontes a { color: var(--rosa); }

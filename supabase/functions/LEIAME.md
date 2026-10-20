@@ -253,7 +253,7 @@ Escreve com IA o texto de uma página do guia (`/saloes/...`) e guarda como
 `guia_aprovar_pagina()`, pela Plataforma (migração 153). Publicada com JWT
 normal; a função confere `eh_plataforma()` como a pessoa logada (senão, 403).
 
-    POST { lugar?: uuid, pagina?: uuid, instrucao?: string, angulo?: string }
+    POST { lugar?: uuid, pagina?: uuid, contexto?: uuid, gravar?: boolean, instrucao?: string, angulo?: string, provedor?: 'gemini' | 'groq' }
 
     200 { ok: true, rascunho }              gravado em rascunho (com _meta)
     200 { ok: false, erro, tentar_em }      limite da IA (429): espere tentar_em segundos e chame de novo
@@ -271,6 +271,22 @@ normal; a função confere `eh_plataforma()` como a pessoa logada (senão, 403).
 - `angulo`: o id de um ângulo de `conteudo.ts` (ex.: `gel-fibra`) ou um tema
   em texto livre. Sem ele, o primeiro ângulo sai do slug e "gerar de novo"
   pega o próximo da lista, mandando a versão anterior para não repetir.
+- `contexto` (3.28): a página da cidade; a IA escreve o "Sobre a cidade" e
+  devolve `{ ok, contexto, confira, fontes, pesquisou }` sem gravar. Com
+  `gravar: true` (3.30), grava (origem `ia`, fontes em `contexto_fontes`).
+- `provedor` (3.27): `gemini` ou `groq`. Sem ele, `GUIA_IA_PADRAO`.
+
+**O "Sobre a cidade" nasce sozinho (3.30, migração 176).** Ao gerar um
+`lugar` ou uma `pagina` de uma cidade cujo contexto está vazio ou ainda é a
+semente geral (`contexto_origem` = `semente`), a função escreve o contexto
+antes, grava (só se a linha ainda estiver com a semente) e segue. No Gemini,
+isso passa pela porta nativa (`generateContent` com `google_search`): a IA
+pesquisa a cidade e as fontes ficam em `contexto_fontes`; pesquisa recusada
+(cota, billing, modelo sem a ferramenta) vira uma tentativa sem ela; a porta
+nativa falhando por outro motivo, vale a porta comum (chat completions), a
+mesma de sempre. No Groq, só a memória do modelo. O que a equipe guardou na
+Plataforma (`editado`) nunca é tocado. A página de cada salão leva também
+o bairro dele no guia (`o_bairro_no_guia`), tirado do retrato da cidade.
 
 O que o modelo recebe é uma **ficha** montada campo a campo (nome, categoria,
 serviços, bairro, endereço, horário legível, quais canais existem, se é

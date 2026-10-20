@@ -5,7 +5,7 @@ import EscolhaIA from './EscolhaIA'
 import { GUIA_CATEGORIAS, categoriaDoGuia, conteudoSeguro, rotaDaCidade, rotaDaCategoria } from '../../../lib/guia'
 import { seoDaCidade } from '../../../lib/guiaSeo'
 import { urlDoAmbiente } from '../../../lib/ambiente'
-import { MapPinned, Check, RefreshCw, Sparkles, ExternalLink, LoaderCircle, TriangleAlert, BookOpen, Wand2 } from 'lucide-react'
+import { MapPinned, Check, RefreshCw, Sparkles, ExternalLink, LoaderCircle, TriangleAlert, BookOpen, Wand2, Globe } from 'lucide-react'
 
 // O texto da página da cidade (/saloes/itanhaem) e de cada categoria
 // (/saloes/itanhaem/unhas). As linhas nascem sozinhas na importação; a
@@ -121,7 +121,7 @@ export default function PaginasCidade({ g }) {
     const r = await g.salvarContexto(atual.id, contexto)
     setSalvandoCtx(false)
     if (!r.ok) { setErro(r.erro); return }
-    setCtx(null)
+    setCtx(null); setConfira(null)
     g.avisar({ texto: `Sobre ${atual.cidade}: guardado. Vale para os próximos textos gerados da cidade.`, tom: 'ok' })
   }
   const ctxMudou = (contexto ?? '').trim() !== (atual?.contexto ?? '').trim()
@@ -133,8 +133,14 @@ export default function PaginasCidade({ g }) {
     const r = await g.sugerirContexto(atual.id)
     if (!r.ok) { setErro(`Não deu para sugerir: ${r.erro}`); return }
     setCtx({ id: atual.id, texto: r.texto })
-    setConfira({ id: atual.id, itens: r.confira, modelo: r.modelo })
+    setConfira({ id: atual.id, itens: r.confira, modelo: r.modelo, fontes: r.fontes, pesquisou: r.pesquisou })
   }
+  // escrever todas (3.30): as páginas de cidade cuja descrição ainda é a semente ou está vazia (o que a IA já escreveu
+  // e o que a equipe editou ficam; para refazer um, "Melhorar com a IA" na cidade)
+  const paraEscrever = todas.filter((p) => !p.categoria && (!p.contexto || p.contexto_origem === 'semente'))
+  const andamento = g.contextos
+  const origem = atual?.contexto_origem
+  const fontesGravadas = atual?.contexto_fontes && typeof atual.contexto_fontes === 'object' ? atual.contexto_fontes : null
 
   return (
     <div className="pg-paginas">
@@ -146,6 +152,12 @@ export default function PaginasCidade({ g }) {
           </select>
           <small>{cidades.length === 1 ? '1 cidade com páginas' : `${cidades.length} cidades com páginas`}{cidadeAtiva && !cidadeAtiva.noAr ? ' · esta ainda não tem salão no ar' : ''}</small>
         </label>
+        <div className="pg-paginas-todas" data-teste="escrever-todas">
+          <button type="button" className="btn btn-ghost pg-btn-peq" onClick={() => g.escreverContextos(paraEscrever)} disabled={!paraEscrever.length || (andamento && !andamento.fim)} title={paraEscrever.length ? 'A IA escreve o "Sobre a cidade" das cidades que ainda estão com a semente geral ou vazias, uma por vez, gravando. O que ela já escreveu e o que a equipe editou ficam. No Gemini, ela pesquisa no Google e guarda as fontes.' : 'Todas as cidades já têm o "Sobre a cidade" escrito. Para refazer um, "Melhorar com a IA" na cidade.'}>
+            {andamento && !andamento.fim ? <><LoaderCircle size={14} className="pg-gira" /> {andamento.feitos} de {andamento.total} · {andamento.atual}…</> : <><Globe size={14} /> Escrever o "Sobre a cidade" de todas ({paraEscrever.length})</>}
+          </button>
+          {andamento?.fim && <small>{andamento.feitos - andamento.erros.length} {andamento.feitos - andamento.erros.length === 1 ? 'escrita' : 'escritas'}{andamento.erros.length ? ` · ${andamento.erros.length} com erro (${andamento.erros.map(([c, e]) => `${c}: ${e}`).join('; ').slice(0, 160)})` : ''}</small>}
+        </div>
         {[['Página da cidade', daCidade.filter((p) => !p.categoria)], ['Por categoria', daCidade.filter((p) => p.categoria)]].map(([titulo, paginas]) => paginas.length > 0 && (
           <div key={titulo} className="pg-paginas-grupo">
             <h4>{titulo}</h4>
@@ -205,11 +217,18 @@ export default function PaginasCidade({ g }) {
                 </div>
               </div>
               <textarea value={contexto} onChange={(e) => setContexto(e.target.value.slice(0, 1500))} rows={5} placeholder={`Ex.: ${atual.cidade} fica no litoral sul de São Paulo. O Centro, junto à orla, concentra o comércio; ao norte ficam os bairros de praia (…), ao sul (…), e para dentro, em volta da rodovia, os bairros de moradores (…). O movimento cresce no verão e nos feriados…`} aria-label={`Sobre ${atual.cidade}`} disabled={salvandoCtx} />
-              {confira && confira.id === atual.id && confira.itens.length > 0 && (
+              {confira && confira.id === atual.id && (confira.itens.length > 0 || confira.fontes?.length > 0) && (
                 <div className="pg-contexto-confira" data-teste="confira">
-                  <b><TriangleAlert size={14} /> Antes de guardar, confira{confira.modelo ? ` (sugestão do ${String(confira.modelo).replace(/^.*\//, '')})` : ''}:</b>
+                  <b><TriangleAlert size={14} /> Antes de guardar, confira{confira.modelo ? ` (sugestão do ${String(confira.modelo).replace(/^.*\//, '')}${confira.pesquisou ? ', com pesquisa no Google' : ', de memória'})` : ''}:</b>
                   <ul>{confira.itens.map((x) => <li key={x}>{x}</li>)}</ul>
+                  {confira.fontes?.length > 0 && <span className="pg-contexto-fontes">Fontes: {confira.fontes.map((f, i) => <a key={f.url} href={f.url} target="_blank" rel="noopener noreferrer">{i ? ' · ' : ''}{f.titulo}</a>)}</span>}
                 </div>
+              )}
+              {!(confira && confira.id === atual.id) && origem && (
+                <small className="pg-contexto-origem" data-teste="origem">
+                  {origem === 'editado' ? 'Escrito pela equipe: a IA não mexe.' : origem === 'ia' ? `Escrito pela IA${fontesGravadas?.modelo ? ` (${String(fontesGravadas.modelo).replace(/^.*\//, '')}${fontesGravadas.pesquisou ? ', com pesquisa no Google' : ''})` : ''}; vale conferir e guardar para virar texto da equipe.` : 'Semente geral: a IA escreve por cima na primeira geração de uma página desta cidade (ou use o botão acima).'}
+                  {origem === 'ia' && Array.isArray(fontesGravadas?.fontes) && fontesGravadas.fontes.length > 0 && <span className="pg-contexto-fontes"> Fontes: {fontesGravadas.fontes.map((f, i) => <a key={f.url} href={f.url} target="_blank" rel="noopener noreferrer">{i ? ' · ' : ''}{f.titulo}</a>)}</span>}
+                </small>
               )}
               <div className="pg-contexto-pe">
                 <small>{(contexto ?? '').length}/1500{!atual.contexto && !contexto ? ' · sem contexto, a IA escreve sem saber nada da cidade' : ''}</small>

@@ -21,9 +21,10 @@ import {
   validarLugar, validarPagina, gerarConteudo, maisParecido, jaccard, trigramas, comMeta, contarPalavras, limparInstrucao,
   ruaDoEndereco, proporcao, retratoDaCidade, provedoresDe, escolherProvedor, URL_GEMINI, URL_GROQ,
   SISTEMA_CONTEXTO, montarPromptContexto, validarContexto,
+  corpoNativoGemini, lerRespostaNativa, sugerirContexto, URL_GEMINI_NATIVA,
   cortarFrase, cortarPalavras, bairroValido, hash, vasculhar, CIDADES, informesDoLugar,
 } from './conteudo.ts'
-import type { LugarLinha, Pedir, RespostaHttp, Checagem, ConteudoLugar, Mensagem } from './conteudo.ts'
+import type { LugarLinha, Pedir, PedirNativo, RespostaHttp, Checagem, ConteudoLugar, Mensagem } from './conteudo.ts'
 
 // ---- dados -------------------------------------------------------------------------------
 const CABECALHO = 'categoria_mimo;nome;endereco;telefone;avaliacao;qtd_avaliacoes;tipo_principal;buscas_encontradas;site;google_maps;horarios;status;latitude;longitude;place_id;tipos_google;score_qualidade;motivo_descarte'
@@ -804,6 +805,135 @@ teste('a sugestão do "Sobre a cidade": prompt com os bairros do guia, esquema p
   assert.ok(validarContexto({ texto: `${bom.texto} O Centro é movimentado.`, confira: [] }).problemas.some((p) => p.nivel === 'estilo' && /opinião/.test(p.texto)), 'opinião de bairro é estilo')
   const g = await gerarConteudo({ tipo: 'contexto', mensagens: msgs, checagem, modelo: 'gemini-3-flash-preview', pedir: provedor([respostaOk(bom)]).pedir })
   assert.ok(g.ok && (g.conteudo as { texto: string }).texto === bom.texto, 'gerarConteudo serve para o contexto também')
+})
+
+// ---- 3.30: o "Sobre a cidade" nasce sozinho (pesquisa no Google pela porta nativa) e o bairro do salão no guia ----
+const BOM_CTX = { texto: 'Itanhaém fica no litoral sul de São Paulo e acompanha a orla. O Centro, junto à foz do rio, concentra o comércio e os serviços; no sentido de Mongaguá ficam os bairros de praia, como Suarão e Gaivota, e para dentro, em volta da rodovia, os bairros de moradores. O movimento cresce no verão e nos feriados, quando chegam veranistas da Grande São Paulo. Para quem escolhe um salão, o Centro tem de tudo e os bairros de praia resolvem o básico perto de casa.', confira: ['Suarão e Gaivota ficam no sentido de Mongaguá'] }
+const respostaNativa = (texto: string, o: { fontes?: Array<{ uri: string; title?: string }>; finish?: string; pesquisou?: boolean } = {}): RespostaHttp => ({
+  status: 200, headers: cabecalhos(),
+  texto: JSON.stringify({ candidates: [{ content: { role: 'model', parts: [{ text: texto }] }, finishReason: o.finish ?? 'STOP', ...(o.pesquisou === false ? {} : { groundingMetadata: { groundingChunks: (o.fontes ?? []).map((f) => ({ web: f })), webSearchQueries: ['Itanhaém bairros'] } }) }] }),
+})
+function portaNativa(respostas: Array<RespostaHttp | Error>) {
+  const pedidos: Array<{ modelo: string; corpo: Record<string, unknown> }> = []
+  const pedirNativo: PedirNativo = async (modelo, corpo) => {
+    pedidos.push({ modelo, corpo })
+    const r = respostas.shift()
+    if (!r) throw new Error('o teste não preparou resposta nativa para esta chamada')
+    if (r instanceof Error) throw r
+    return r
+  }
+  return { pedirNativo, pedidos }
+}
+
+teste('a porta nativa do Gemini: corpo com pesquisa (sem modo JSON) ou sem (modo JSON), raciocínio baixo nos Gemini 3 (3.30)', () => {
+  const com = corpoNativoGemini({ modelo: 'gemini-3-flash-preview', sistema: 'S', usuario: 'U', pesquisar: true })
+  assert.deepEqual(com.tools, [{ google_search: {} }], 'com pesquisa, a ferramenta do Google')
+  const gc = com.generationConfig as Record<string, unknown>
+  assert.ok(!('responseMimeType' in gc), 'a pesquisa e o modo JSON não andam juntos: o JSON é pedido no prompt')
+  assert.deepEqual(gc.thinkingConfig, { thinkingLevel: 'low' })
+  assert.equal(gc.maxOutputTokens, MAX_TOKENS_COM_RACIOCINIO * 2)
+  assert.deepEqual(com.system_instruction, { parts: [{ text: 'S' }] })
+  assert.deepEqual(com.contents, [{ role: 'user', parts: [{ text: 'U' }] }])
+  const sem = corpoNativoGemini({ modelo: 'gemini-2.5-flash', sistema: 'S', usuario: 'U', pesquisar: false })
+  assert.ok(!('tools' in sem) && (sem.generationConfig as Record<string, unknown>).responseMimeType === 'application/json', 'sem pesquisa, modo JSON e sem ferramenta')
+  assert.ok(!('thinkingConfig' in (sem.generationConfig as Record<string, unknown>)), 'os 2.5 não aceitam o nível de raciocínio')
+  assert.ok(SISTEMA_CONTEXTO.includes('busca do Google') && SISTEMA_CONTEXTO.includes('"confira"'), 'o prompt manda pesquisar quando puder e separar o que ficou na memória')
+  assert.equal(URL_GEMINI_NATIVA, 'https://generativelanguage.googleapis.com/v1beta/models')
+})
+
+teste('a leitura da resposta nativa: texto e fontes, pesquisa recusada, limite, chave e modelo (3.30)', () => {
+  const l = lerRespostaNativa(respostaNativa('```json\n{"texto":"x"}\n```', { fontes: [{ uri: 'https://a.gov.br/', title: 'Prefeitura' }, { uri: 'https://a.gov.br/' }, { uri: 'https://b.org/' }] }))
+  assert.ok(l.tipo === 'texto' && l.pesquisou && !l.cortado, JSON.stringify(l))
+  if (l.tipo === 'texto') {
+    assert.deepEqual(l.fontes, [{ titulo: 'Prefeitura', url: 'https://a.gov.br/' }, { titulo: 'https://b.org/', url: 'https://b.org/' }], 'as fontes sem repetir, com o título ou a URL')
+    assert.equal(l.texto, '```json\n{"texto":"x"}\n```')
+  }
+  const semMeta = lerRespostaNativa(respostaNativa('{"texto":"x"}', { pesquisou: false, finish: 'MAX_TOKENS' }))
+  assert.ok(semMeta.tipo === 'texto' && !semMeta.pesquisou && semMeta.cortado, 'sem groundingMetadata, não pesquisou; MAX_TOKENS marca cortado')
+  const muitas = lerRespostaNativa(respostaNativa('{}', { fontes: Array.from({ length: 12 }, (_, i) => ({ uri: `https://f${i}.br/` })) }))
+  assert.ok(muitas.tipo === 'texto' && muitas.fontes.length === 8, 'no máximo oito fontes')
+  assert.equal(lerRespostaNativa(respostaErro(400, { message: 'google_search is not supported for this model' })).tipo, 'sem_pesquisa', 'a ferramenta recusada: tenta sem')
+  assert.equal(lerRespostaNativa(respostaErro(403, { message: 'Grounding with Google Search requires billing' })).tipo, 'sem_pesquisa', 'pesquisa sem billing: tenta sem, não desiste')
+  assert.equal(lerRespostaNativa(respostaErro(429, { message: 'Quota exceeded for grounding requests' })).tipo, 'sem_pesquisa', 'cota da pesquisa esgotada: tenta sem')
+  const limite = lerRespostaNativa(respostaErro(429, { message: 'Resource has been exhausted' }, { 'retry-after': '30' }))
+  assert.ok(limite.tipo === 'limite' && limite.tentarEm === 30, 'limite do modelo: espera')
+  const chave = lerRespostaNativa(respostaErro(401, { message: 'API key not valid' }))
+  assert.ok(chave.tipo === 'erro' && /recusada pelo provedor \(401\): API key not valid/.test(chave.erro))
+  const modelo = lerRespostaNativa(respostaErro(404, { message: 'models/x is not found' }))
+  assert.ok(modelo.tipo === 'erro' && /não achou o modelo/.test(modelo.erro))
+  const caiu = lerRespostaNativa({ status: 503, headers: cabecalhos(), texto: 'overloaded' })
+  assert.ok(caiu.tipo === 'erro' && /instável/.test(caiu.erro))
+})
+
+teste('sugerirContexto: no Gemini pesquisa e traz fontes; sem pesquisa, de memória; recusada a porta nativa, a comum; no Groq, só a comum (3.30)', async () => {
+  const daCidade = lugares.filter((l: LugarLinha) => l.cidade_slug === 'itanhaem')
+  const { ficha, checagem } = prepararPagina({ cidade: 'Itanhaém', cidade_slug: 'itanhaem', uf: 'SP', categoria: '' }, daCidade)
+  const env = (o: Record<string, string>) => ({ get: (n: string) => o[n] })
+  const gemini = provedoresDe(env({ GEMINI_API_KEY: 'g1' })).gemini!
+  const groq = provedoresDe(env({ GROQ_API_KEY: 'q1' })).groq
+  // 1. pesquisou e respondeu em cerca de código: as fontes vêm junto e a porta comum nem é chamada
+  const n1 = portaNativa([respostaNativa(`Aqui está:\n\`\`\`json\n${JSON.stringify(BOM_CTX)}\n\`\`\``, { fontes: [{ uri: 'https://www.itanhaem.sp.gov.br/', title: 'Prefeitura de Itanhaém' }] })])
+  const c1 = provedor([])
+  const r1 = await sugerirContexto({ ficha, atual: null, provedor: gemini, checagem, pedir: c1.pedir, pedirNativo: n1.pedirNativo })
+  assert.ok(r1.ok && r1.texto === BOM_CTX.texto && r1.pesquisou && r1.fontes.length === 1 && r1.fontes[0].titulo === 'Prefeitura de Itanhaém', JSON.stringify(r1))
+  assert.equal(c1.pedidos.length, 0)
+  assert.equal(n1.pedidos.length, 1)
+  assert.equal(n1.pedidos[0].modelo, 'gemini-3-flash-preview')
+  assert.ok(Array.isArray(n1.pedidos[0].corpo.tools), 'o primeiro pedido vai com a pesquisa')
+  const usuario = ((n1.pedidos[0].corpo.contents as Array<{ parts: Array<{ text: string }> }>)[0].parts[0].text)
+  assert.ok(usuario.includes('<guia>') && usuario.includes('"onde_ficam"'), 'o prompt é o mesmo da porta comum: os bairros do guia')
+  // 2. a pesquisa foi recusada (sem billing): o segundo pedido vai sem ela, em modo JSON, e avisa que saiu da memória
+  const n2 = portaNativa([respostaErro(403, { message: 'Grounding with Google Search requires billing' }), respostaNativa(JSON.stringify(BOM_CTX), { pesquisou: false })])
+  const r2 = await sugerirContexto({ ficha, atual: null, provedor: gemini, checagem, pedir: provedor([]).pedir, pedirNativo: n2.pedirNativo })
+  assert.ok(r2.ok && !r2.pesquisou && r2.fontes.length === 0 && r2.avisos.some((a) => /memória/.test(a)), JSON.stringify(r2))
+  assert.ok(!('tools' in n2.pedidos[1].corpo) && (n2.pedidos[1].corpo.generationConfig as Record<string, unknown>).responseMimeType === 'application/json')
+  // 3. a porta nativa recusou a chave: a porta comum resolve, com aviso (nada regride em relação à 3.28)
+  const n3 = portaNativa([respostaErro(401, { message: 'API key not valid' })])
+  const c3 = provedor([respostaOk(BOM_CTX)])
+  const r3 = await sugerirContexto({ ficha, atual: null, provedor: gemini, checagem, pedir: c3.pedir, pedirNativo: n3.pedirNativo })
+  assert.ok(r3.ok && r3.texto === BOM_CTX.texto && !r3.pesquisou && r3.avisos.some((a) => /porta comum/.test(a)), JSON.stringify(r3))
+  assert.equal(c3.pedidos.length, 1)
+  // 4. a resposta com pesquisa não serviu (texto vazio): tenta sem; se também não, a comum
+  const n4 = portaNativa([respostaNativa('{"texto":"","confira":[]}'), respostaNativa('nada de json', { pesquisou: false })])
+  const c4 = provedor([respostaOk(BOM_CTX)])
+  const r4 = await sugerirContexto({ ficha, atual: null, provedor: gemini, checagem, pedir: c4.pedir, pedirNativo: n4.pedirNativo })
+  assert.ok(r4.ok && r4.texto === BOM_CTX.texto && n4.pedidos.length === 2 && c4.pedidos.length === 1, JSON.stringify(r4))
+  // 5. limite do modelo na porta nativa: espera, como sempre
+  const n5 = portaNativa([respostaErro(429, { message: 'Resource has been exhausted' }, { 'retry-after': '20' })])
+  const r5 = await sugerirContexto({ ficha, atual: null, provedor: gemini, checagem, pedir: provedor([]).pedir, pedirNativo: n5.pedirNativo })
+  assert.ok(!r5.ok && r5.limite && r5.tentarEm === 20, JSON.stringify(r5))
+  // 6. a rede caiu na porta nativa: a comum
+  const n6 = portaNativa([new Error('fetch failed')])
+  const c6 = provedor([respostaOk(BOM_CTX)])
+  const r6 = await sugerirContexto({ ficha, atual: null, provedor: gemini, checagem, pedir: c6.pedir, pedirNativo: n6.pedirNativo })
+  assert.ok(r6.ok && r6.avisos.some((a) => /falhou/.test(a)) && c6.pedidos.length === 1)
+  // 7. no Groq, só a porta comum, mesmo com a nativa à mão
+  const n7 = portaNativa([])
+  const c7 = provedor([respostaOk(BOM_CTX)])
+  const r7 = await sugerirContexto({ ficha, atual: 'Itanhaém fica no litoral sul.', provedor: groq, checagem, pedir: c7.pedir, pedirNativo: n7.pedirNativo })
+  assert.ok(r7.ok && n7.pedidos.length === 0 && c7.pedidos.length === 1 && !r7.pesquisou)
+  assert.ok(String((c7.pedidos[0].corpo.messages as Mensagem[])[1].content).includes('<atual>'), 'o texto atual vai para melhorar')
+  // 8. a porta comum também falhou: o erro dela
+  const c8 = provedor([respostaErro(500, { message: 'x' }), respostaErro(500, { message: 'x' })])
+  const r8 = await sugerirContexto({ ficha, atual: null, provedor: groq, checagem, pedir: c8.pedir })
+  assert.ok(!r8.ok && !r8.limite && r8.erro)
+})
+
+teste('o bairro do salão no guia entra na ficha e no prompt do lugar (3.30)', () => {
+  const daCidade = lugares.filter((l: LugarLinha) => l.cidade_slug === 'itanhaem')
+  const retrato = prepararPagina({ cidade: 'Itanhaém', cidade_slug: 'itanhaem', uf: 'SP', categoria: '' }, daCidade)
+  assert.ok(retrato.ficha.onde_ficam.length > 0, 'as linhas de exemplo têm bairros')
+  const b = retrato.ficha.onde_ficam[0]
+  const sem = prepararLugar(ro)
+  assert.equal(sem.ficha.o_bairro_no_guia, null, 'sem o retrato, a ficha diz null')
+  const com = prepararLugar(ro, null, b)
+  assert.deepEqual(com.ficha.o_bairro_no_guia, { lugares: b.lugares, fatia_da_cidade: b.fatia, concentra: b.concentra, ruas: b.ruas, abrem_aos_domingos: b.abrem_aos_domingos })
+  const cand = angulosPara(ro.categoria, com.ficha.servicos_divulgados, com.cidade.praia)
+  const angulo = escolherAngulo({ candidatos: cand, todos: ANGULOS[ro.categoria], semente: ro.slug })
+  const msgs = montarPromptLugar({ ficha: com.ficha, cidade: com.cidade, angulo, abertura: escolherAbertura(ro.slug, angulo, cand, true), instrucao: null, anterior: null, jaUsadas: [] })
+  assert.ok(msgs[1].content.includes('"o_bairro_no_guia"') && msgs[1].content.includes('"fatia_da_cidade"'), 'a ficha vai com o bairro no guia')
+  assert.ok(SISTEMA_LUGAR.includes('"o_bairro_no_guia"') && SISTEMA_LUGAR.includes('sem comparar com outro lugar pelo nome'), 'o prompt explica para que serve e o que não fazer')
+  for (const l of daCidade) assert.ok(!msgs[1].content.includes(`"${l.nome}"`) || l.nome === ro.nome, 'nenhum outro salão pelo nome')
 })
 
 // ---- roda ---------------------------------------------------------------------------------------------------

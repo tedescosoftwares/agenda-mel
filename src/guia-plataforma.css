@@ -576,3 +576,6 @@
 .pg-paginador button:not(:disabled):hover { border-color: var(--rosa, #d9467d); color: var(--rosa, #d9467d); }
 .pg-lista-lendo { display: flex; align-items: center; gap: 0.4rem; padding: 0.6rem 0.5rem; font-size: 0.8rem; color: var(--texto-2); }
 .pg-tabela-pub-paginas { margin: 0.35rem 0 0.5rem; border-top: 1px solid var(--cinza-1); }
+
+/* 3.38.1: o lote em partes */
+.pg-lote-andamento { margin: 0.4rem 0 0; font-size: 0.8rem; color: var(--texto-2); }

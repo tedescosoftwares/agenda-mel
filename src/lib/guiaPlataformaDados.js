@@ -140,3 +140,34 @@ export async function consultaGlobal({ cliente, colunas = COLUNAS_LISTA, filtros
   const total = Number.isFinite(Number(r.count)) && r.count !== null ? Number(r.count) : lista.length
   return { lista, total, pagina: Math.max(1, pagina), paginas: Math.max(1, Math.ceil(total / porPagina)) }
 }
+
+// ---- um lote grande, em partes (3.38.1) --------------------------------------------------------------------------
+// guia_lote com milhares de ids num comando só passava do tempo limite do banco ("canceling statement due to statement
+// timeout"). Aqui o lote vai em partes de LOTE_POR_VEZ, uma de cada vez: chamar(ids) devolve o resultado da função
+// ({ n, eventos, buscas, interesses, paginas }) e os números são somados; aoAvancar(feitos, total, soma) a cada parte.
+// Uma parte que passa do tempo vai de novo pela metade (até LOTE_MINIMO). Outro erro sobe com erro.feitos (quantos ids
+// já foram, para a tela continuar de onde parou) e erro.soma (o que já foi somado nesta tentativa).
+export const LOTE_POR_VEZ = 200
+export const LOTE_MINIMO = 25
+export const ehTempoEsgotado = (e) => /statement timeout|canceling statement|57014/i.test(String(e?.message ?? e))
+export async function loteEmPartes(ids, chamar, { porVez = LOTE_POR_VEZ, desde = 0, aoAvancar } = {}) {
+  const soma = { n: 0, eventos: 0, buscas: 0, interesses: 0, paginas: 0 }
+  let feitos = Math.min(Math.max(0, desde | 0), ids.length)
+  let tamanho = Math.max(1, porVez | 0)
+  while (feitos < ids.length) {
+    const parte = ids.slice(feitos, feitos + tamanho)
+    let r
+    try {
+      r = await chamar(parte)
+    } catch (e) {
+      if (ehTempoEsgotado(e) && tamanho > LOTE_MINIMO) { tamanho = Math.max(LOTE_MINIMO, Math.floor(tamanho / 2)); continue }
+      const erro = e instanceof Error ? e : new Error(String(e?.message ?? e))
+      erro.feitos = feitos; erro.soma = soma
+      throw erro
+    }
+    for (const k of Object.keys(soma)) soma[k] += Number(r?.[k] ?? 0)
+    feitos += parte.length
+    aoAvancar?.(feitos, ids.length, soma)
+  }
+  return { ...soma, feitos }
+}

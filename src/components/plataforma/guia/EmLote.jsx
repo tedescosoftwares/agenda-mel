@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Portal from '../../Portal'
 import { supabase, isDemo } from '../../../lib/supabase'
 import { fotosDoLugar } from '../../../lib/guia'
+import { loteEmPartes, ehTempoEsgotado, LOTE_POR_VEZ } from '../../../lib/guiaPlataformaDados'
 import { EyeOff, Archive, Trash2, LoaderCircle, TriangleAlert, CircleCheck, X, Globe2 } from 'lucide-react'
 
 // A ação em lote da fila de revisão (3.18, migração 167): o que estiver na
@@ -13,6 +14,10 @@ import { EyeOff, Archive, Trash2, LoaderCircle, TriangleAlert, CircleCheck, X, G
 // novo, como salão novo. Serve para recomeçar uma cidade do zero.
 // 3.20 (migração 169): "Aprovar e publicar" publica o que está pronto na lista,
 // para aprovar uma cidade (ou um bairro) de uma vez em vez de salão por salão.
+// 3.38.1: o lote vai ao banco em partes de LOTE_POR_VEZ (loteEmPartes): com 4 mil
+// salões num comando só, o Supabase passava do tempo limite. Uma parte que
+// estoura vai de novo pela metade; outro erro para ali, e "Continuar" segue
+// de onde parou (as partes feitas já estão gravadas).
 
 const MOTIVOS = ['Recomeçar a importação', 'Fechou', 'Não é salão de beleza', 'Barbearia ou público masculino', 'Duplicado', 'Fora da cidade', 'Dados ruins']
 const ROTULO = { aprovar: 'Aprovar e publicar', tirar_do_ar: 'Tirar do ar', descartar: 'Descartar', apagar: 'Apagar de vez' }
@@ -44,7 +49,12 @@ export default function EmLote({ lista, resumo, g, onFechar, onFeito }) {
   const [indo, setIndo] = useState(false)
   const [erro, setErro] = useState('')
   const [feito, setFeito] = useState(null)
+  const [progresso, setProgresso] = useState(null) // { feitos, total } enquanto roda (3.38.1)
   const caixa = useRef(null)
+  // 3.38.1: para continuar de onde parou: ids já feitos (estado: muda o botão), os números já somados e se as fotos já saíram do bucket
+  const [retomarDe, setRetomarDe] = useState(0)
+  const acumulado = useRef({ n: 0, eventos: 0, buscas: 0, interesses: 0, paginas: 0, fotos: 0 })
+  const fotosFeitas = useRef(false)
 
   const n = lista.length
   const prontas = useMemo(() => lista.filter(prontaParaPublicar).length, [lista])
@@ -65,37 +75,59 @@ export default function EmLote({ lista, resumo, g, onFechar, onFeito }) {
     return () => { window.removeEventListener('keydown', tecla); antes?.focus?.() }
   }, [onFechar, indo])
 
+  const traduzir = (m) => (/ação desconhecida: aprovar/i.test(m) ? 'Rode a migração 169 (supabase/169_aprovar_em_lote.sql) para aprovar em lote.' : /guia_lote|schema cache|does not exist|could not find/i.test(m) ? 'Rode a migração 167 (supabase/167_lote_e_apagar.sql) para as ações em lote.' : m)
+  const CHAVES = ['n', 'eventos', 'buscas', 'interesses', 'paginas']
   async function ir() {
     if (!alvo || !confirmou || indo) return
     setIndo(true); setErro('')
     try {
-      // as fotos do bucket primeiro (o banco não apaga arquivo): só no apagar, e fora do demo
-      let fotos = 0
-      if (acao === 'apagar' && !isDemo) {
+      // as fotos do bucket primeiro (o banco não apaga arquivo): só no apagar, fora do demo, e uma vez só (ao continuar, não)
+      if (acao === 'apagar' && !isDemo && !fotosFeitas.current) {
         const caminhos = lista.flatMap(objetosDasFotos)
         for (let i = 0; i < caminhos.length; i += 100) {
           const parte = caminhos.slice(i, i + 100)
           const { error } = await supabase.storage.from('guia').remove(parte)
-          if (!error) fotos += parte.length
+          if (!error) acumulado.current.fotos += parte.length
         }
+        fotosFeitas.current = true
       }
-      const { data, error } = await supabase.rpc('guia_lote', {
-        ids_: ids, acao_: acao,
-        motivo_: acao === 'descartar' ? (motivo.trim() || null) : null,
-        apagar_paginas_: acao === 'apagar' && apagarPaginas,
-      })
-      if (error) throw new Error(/ação desconhecida: aprovar/i.test(error.message) ? 'Rode a migração 169 (supabase/169_aprovar_em_lote.sql) para aprovar em lote.' : /guia_lote|schema cache|does not exist|could not find/i.test(error.message) ? 'Rode a migração 167 (supabase/167_lote_e_apagar.sql) para as ações em lote.' : error.message)
-      if (!data?.ok) throw new Error(data?.motivo || 'não deu para fazer')
+      // 3.38.1: em partes, uma de cada vez (milhares de ids num comando só passavam do tempo limite do banco)
+      const chamar = async (parte) => {
+        const { data, error } = await supabase.rpc('guia_lote', {
+          ids_: parte, acao_: acao,
+          motivo_: acao === 'descartar' ? (motivo.trim() || null) : null,
+          apagar_paginas_: acao === 'apagar' && apagarPaginas,
+        })
+        if (error) throw new Error(traduzir(error.message))
+        if (!data?.ok) throw new Error(data?.motivo || 'não deu para fazer')
+        return data
+      }
+      const r = await loteEmPartes(ids, chamar, { desde: retomarDe, aoAvancar: (feitos, total) => setProgresso({ feitos, total }) })
+      const a = acumulado.current
+      for (const k of CHAVES) a[k] += r[k]
+      setRetomarDe(0)
       await g.carregar()
-      setFeito({ ...data, fotos })
-      onFeito?.(acao, data)
+      const resultado = { ok: true, acao, n: a.n, eventos: a.eventos, buscas: a.buscas, interesses: a.interesses, paginas: a.paginas, fotos: a.fotos }
+      setFeito(resultado)
+      onFeito?.(acao, resultado)
     } catch (e) {
-      setErro(String(e?.message ?? e))
+      if (e?.feitos != null) {
+        // parou no meio: o que foi, foi; o botão vira "Continuar"
+        setRetomarDe(e.feitos)
+        const a = acumulado.current
+        for (const k of CHAVES) a[k] += Number(e.soma?.[k] ?? 0)
+        setProgresso({ feitos: e.feitos, total: ids.length })
+        setErro(`${e.feitos.toLocaleString('pt-BR')} de ${ids.length.toLocaleString('pt-BR')} já foram. ${ehTempoEsgotado(e) ? 'O banco passou do tempo limite numa parte, mesmo pequena.' : String(e?.message ?? e)} Clique em "Continuar" para seguir de onde parou.`)
+      } else setErro(String(e?.message ?? e))
     }
     setIndo(false)
   }
 
-  const escolher = (id) => { setAcao(id); setErro('') }
+  const escolher = (id) => {
+    setAcao(id); setErro(''); setProgresso(null)
+    setRetomarDe(0); acumulado.current = { n: 0, eventos: 0, buscas: 0, interesses: 0, paginas: 0, fotos: 0 }; fotosFeitas.current = false
+  }
+  const faltam = ids.length - retomarDe
 
   return (
     <Portal>
@@ -161,10 +193,11 @@ export default function EmLote({ lista, resumo, g, onFechar, onFeito }) {
                 </>
               )}
               {erro && <div className="alert alert-error"><TriangleAlert size={14} /> {erro}</div>}
+              {indo && progresso && <p className="pg-lote-andamento" role="status" data-teste="lote-andamento">Em partes de {LOTE_POR_VEZ}: {progresso.feitos.toLocaleString('pt-BR')} de {progresso.total.toLocaleString('pt-BR')} já foram.</p>}
               <div className="pg-modal-botoes">
                 <button type="button" className="btn btn-ghost" onClick={onFechar} disabled={indo}>Voltar</button>
                 <button type="button" className={'btn btn-primary' + (acao === 'apagar' ? ' btn-perigo' : '')} onClick={ir} disabled={!alvo || !confirmou || indo}>
-                  {indo ? <><LoaderCircle size={15} className="pg-gira" /> Fazendo…</> : `${ROTULO[acao]}: ${plural(alvo, 'salão', 'salões')}`}
+                  {indo ? <><LoaderCircle size={15} className="pg-gira" /> {progresso ? `${progresso.feitos.toLocaleString('pt-BR')} de ${progresso.total.toLocaleString('pt-BR')}…` : 'Fazendo…'}</> : retomarDe > 0 ? `Continuar: ${plural(faltam, 'salão', 'salões')}` : `${ROTULO[acao]}: ${plural(alvo, 'salão', 'salões')}`}
                 </button>
               </div>
             </>

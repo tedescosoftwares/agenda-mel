@@ -398,9 +398,10 @@ export default function Guia() {
         if (ultimaConsultaRef.current) await consultarGlobal(ultimaConsultaRef.current, { forcar: true })
         return
       }
-      const [base, lista] = await Promise.all([lerBase(), lerLugares(c)])
+      // lerLugares devolve { lista, teto } (3.36); a carga guarda a lista (passar o objeto quebrava a tela ao ler de novo)
+      const [base, r] = await Promise.all([lerBase(), lerLugares(c)])
       aplicarBase(base)
-      if (montado.current && cidadeRef.current === c) setCarga({ cidade: c, lista })
+      if (montado.current && cidadeRef.current === c) setCarga({ cidade: c, lista: r.lista, parcial: false, teto: r.teto })
     } catch (e) { falhouLeitura(e) }
   }, [aplicarBase, falhouLeitura, consultarGlobal])
 

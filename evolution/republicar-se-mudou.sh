@@ -76,6 +76,8 @@ if [ "${1:-}" = '--forcar' ] || [ "$VERSAO" != "$ANTERIOR" ]; then
     printf '%s' "$VERSAO" > "$CARIMBO"
     chmod -R a+rX dist
     verde "$(date '+%F %T') páginas regeneradas: $(grep -c '<loc>' dist/sitemap.xml) URLs no sitemap ($(tail -1 /tmp/mimo-republicar.log))"
+    # 3.38.2: o que o guia disse nesta rodada (cidades, salões, uma cidade do cache ou fora da rodada) fica no log também
+    grep -E 'guia-fonte:|guia: |guia de salões|ATENÇÃO' /tmp/mimo-republicar.log | sed 's/^/    /' || true
     MUDOU=1
   else
     vermelho "$(date '+%F %T') a regeneração falhou:"; tail -20 /tmp/mimo-republicar.log

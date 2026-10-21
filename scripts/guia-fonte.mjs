@@ -19,6 +19,9 @@
 // carimbo anterior não se perde); uma vez por dia a cidade vem inteira (foto de salão na MIMO não
 // anda o carimbo do guia); se o banco falha e há cache, a rodada segue com o cache e avisa; slug
 // na ordem sem linha no cache manda buscar a cidade inteira de novo.
+// 3.38.2: uma fatia que passa do tempo do banco vai de novo pela metade (até FATIA_MINIMA); uma
+// cidade que falha sem cache fica de fora da rodada, com o nome no log (foraDaRodada), em vez de
+// derrubar o guia inteiro: as outras cidades saem, e as páginas que ela já tinha no ar ficam.
 import fs from 'node:fs'
 import path from 'node:path'
 
@@ -26,6 +29,8 @@ export const REFAZER_APOS_MS = 24 * 60 * 60 * 1000
 export const SOBRA_MS = 15 * 60 * 1000
 export const VERSAO_DO_CACHE = 1
 export const FATIA = 200 // salões por chamada (a função aceita até 500)
+export const FATIA_MINIMA = 25
+export const ehTempoEsgotado = (e) => /statement timeout|canceling statement|57014/i.test(String(e?.message ?? e))
 
 const arquivoDe = (dir, slug) => path.join(dir, `${slug}.json`)
 function lerCache(arq) {
@@ -111,14 +116,21 @@ export const comVizinhos = (lugares) => lugares.map((l) => ({ ...l, vizinhos: vi
 
 // a cidade em fatias (172): a primeira traz os slugs e as páginas; as outras só os salões, a partir do último slug
 export async function buscarCidade(rpc, slug, desde, fatia = FATIA, chave = '') {
-  let primeira = null, depois = ''
+  let primeira = null, depois = '', lim = Math.max(1, fatia)
   const lugares = []
-  for (let n = 0; n < 1000; n++) {
-    const r = await rpc('guia_publicadas', { cidade_: slug, desde_: desde, depois_: depois, limite_: fatia, chave_: chave })
+  for (let n = 0; n < 2000; n++) {
+    let r
+    try {
+      r = await rpc('guia_publicadas', { cidade_: slug, desde_: desde, depois_: depois, limite_: lim, chave_: chave })
+    } catch (e) {
+      // 3.38.2: a fatia passou do tempo do banco: a mesma fatia de novo, pela metade
+      if (ehTempoEsgotado(e) && lim > FATIA_MINIMA) { lim = Math.max(FATIA_MINIMA, Math.floor(lim / 2)); continue }
+      throw e
+    }
     if (!primeira) primeira = r
     const lote = Array.isArray(r?.lugares) ? r.lugares : []
     lugares.push(...lote)
-    if (lote.length < fatia || !lote[lote.length - 1]?.slug) break
+    if (lote.length < lim || !lote[lote.length - 1]?.slug) break
     depois = lote[lote.length - 1].slug
   }
   return { ...primeira, lugares }
@@ -142,16 +154,26 @@ export async function carregarGuia({ url, chave, cacheDir, refazer = false, log 
   let regioes = []
   try { const r = await rpc('guia_regioes', {}); regioes = Array.isArray(r) ? r : [] } catch (e) { log(`guia-fonte: sem guia_regioes() (${String(e.message).slice(0, 80)}); as regiões vêm da semente do código`) }
   const lugares = [], paginas = []
-  let novos = 0, doCache = 0
+  let novos = 0
+  const doCache = [], foraDaRodada = [] // 3.38.2: por nome, para o log dizer qual cidade ficou no cache ou de fora
   // as imagens das categorias valem para todas as cidades: a de uma cidade lida do banco nesta rodada; senão, a do cache
   let imagens = null, imagensDoCache = null
   for (const c of cidades) {
     if (!c?.cidade_slug) continue
-    const d = await lerCidade({ buscar: (slug, desde) => buscarCidade(rpc, slug, desde, fatia, chaveGerador), slug: c.cidade_slug, cacheDir, refazer, log })
+    let d
+    try {
+      d = await lerCidade({ buscar: (slug, desde) => buscarCidade(rpc, slug, desde, fatia, chaveGerador), slug: c.cidade_slug, cacheDir, refazer, log })
+    } catch (e) {
+      // sem cache e sem banco: a cidade fica de fora desta rodada; as outras saem, e as páginas dela no ar ficam
+      const motivo = String(e?.message ?? e)
+      foraDaRodada.push({ cidade_slug: c.cidade_slug, erro: motivo })
+      log(`guia: ${c.cidade_slug} indisponível e sem cache (${motivo.slice(0, 160)}); fica de fora desta rodada, e o que ela já tem no ar fica`)
+      continue
+    }
     lugares.push(...comVizinhos(d.lugares))
     paginas.push(...d.paginas)
     novos += d.novos ?? 0
-    if (d.doCache) { doCache++; imagensDoCache ??= d.categorias_imagens } else imagens ??= d.categorias_imagens
+    if (d.doCache) { doCache.push(c.cidade_slug); imagensDoCache ??= d.categorias_imagens } else imagens ??= d.categorias_imagens
   }
   // cidade que saiu do guia não deixa cache para trás
   try {
@@ -159,6 +181,35 @@ export async function carregarGuia({ url, chave, cacheDir, refazer = false, log 
       if (f.endsWith('.json') && !cidades.some((c) => c.cidade_slug === f.slice(0, -5))) fs.rmSync(path.join(cacheDir, f), { force: true })
     }
   } catch { /* ainda sem a pasta */ }
-  log(`guia-fonte: ${cidades.length} cidade(s), ${lugares.length} salões no ar, ${novos} lido(s) do banco nesta rodada${doCache ? `, ${doCache} cidade(s) do cache por falha no banco` : ''}`)
-  return { lugares, paginas, cidades, categorias_imagens: imagens ?? imagensDoCache ?? {}, regioes }
+  const fora = new Set(foraDaRodada.map((x) => x.cidade_slug))
+  log(`guia-fonte: ${cidades.length} cidade(s), ${lugares.length} salões no ar, ${novos} lido(s) do banco nesta rodada${doCache.length ? `, ${doCache.length} cidade(s) do cache por falha no banco (${doCache.join(', ')})` : ''}${fora.size ? `, ${fora.size} cidade(s) FORA desta rodada (${[...fora].join(', ')})` : ''}`)
+  return { lugares, paginas, cidades: cidades.filter((c) => !fora.has(c?.cidade_slug)), categorias_imagens: imagens ?? imagensDoCache ?? {}, regioes, foraDaRodada }
+}
+
+// 3.38.2: limpa /saloes e /dados/guia do dist antes de regravar, menos as cidades a manter (as que ficaram fora da
+// rodada): a pasta /saloes/<cidade>, o /dados/guia/<cidade>.json e a pasta /dados/guia/<cidade>. O índice, as regiões
+// e os arquivos gerais (cidades.json, regioes.json) saem sempre, porque são regravados.
+export function limparPastasDoGuia(dist, manter = []) {
+  const m = new Set((manter ?? []).filter(Boolean))
+  const lista = (dir) => { try { return fs.readdirSync(dir) } catch { return [] } }
+  if (!m.size) {
+    for (const pasta of ['saloes', 'dados/guia']) fs.rmSync(path.join(dist, pasta), { recursive: true, force: true })
+    return { mantidas: [] }
+  }
+  const saloes = path.join(dist, 'saloes')
+  for (const f of lista(saloes)) if (!m.has(f)) fs.rmSync(path.join(saloes, f), { recursive: true, force: true })
+  const dados = path.join(dist, 'dados', 'guia')
+  for (const f of lista(dados)) {
+    const base = f.endsWith('.json') ? f.slice(0, -5) : f
+    if (!m.has(base)) fs.rmSync(path.join(dados, f), { recursive: true, force: true })
+  }
+  return { mantidas: [...m].filter((c) => fs.existsSync(path.join(saloes, c))) }
+}
+// as URLs do sitemap de antes que são dessas cidades (/saloes/<cidade> e o que está dentro), para ficarem no sitemap novo
+export function urlsDoSitemapDasCidades(xml, manter = []) {
+  const prefixos = (manter ?? []).filter(Boolean).map((c) => `/saloes/${c}`)
+  if (!prefixos.length) return []
+  return [...String(xml ?? '').matchAll(/<url><loc>([^<]*)<\/loc>.*?<\/url>/g)]
+    .filter(([, loc]) => prefixos.some((p) => loc.endsWith(p) || loc.includes(`${p}/`)))
+    .map((x) => `  ${x[0]}`)
 }

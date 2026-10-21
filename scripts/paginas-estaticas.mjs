@@ -22,7 +22,7 @@ import { PAGINAS_SEO, PAGINAS_INSTITUCIONAIS } from '../src/conteudo/paginasSeo.
 import { TITULO as TITULO_HOME, DESCRICAO as DESCRICAO_HOME, jsonLdDaHome } from '../src/conteudo/home.js'
 import { mesclarPagina, mesclarConteudo, HUB_AUTONOMA } from '../src/lib/paginas.js'
 import { paginasDoGuia, dadosDoGuia } from './guia-estatico.mjs'
-import { carregarGuia } from './guia-fonte.mjs'
+import { carregarGuia, limparPastasDoGuia, urlsDoSitemapDasCidades } from './guia-fonte.mjs'
 import { cidadeDoArtigo } from '../src/lib/guiaArtigos.js'
 import { categoriaDoGuia, rotaDaCidade, rotaDaCategoria, SLUGS_CATEGORIA } from '../src/lib/guia.js'
 import { FAQ as HOME_FAQ } from '../src/conteudo/home.js'
@@ -128,6 +128,7 @@ const conteudoInst = new Map(PAGINAS_INSTITUCIONAIS.map((p) => [p.rota, { ...(p.
 let docsLegais = Object.fromEntries(TIPOS_LEGAIS.map((t) => [t.tipo, { tipo: t.tipo, ...DOCUMENTOS_LEGAIS[t.tipo] }]))
 let guiaDados = null
 let guiaCarregado = false // 3.23: só apaga e reescreve o guia quando ele veio do banco (ou do cache)
+let cidadesMantidas = [] // 3.38.2: cidades que ficaram fora da rodada (sem banco e sem cache): as páginas delas no ar ficam
 let dadosGuia = [] // 3.23: os JSON que o site lê do servidor
 const REFAZER = globalThis.process.argv.includes('--refazer') // ignora o cache do guia e lê tudo de novo
 let rodape = ''
@@ -221,6 +222,7 @@ if (URL && CHAVE && !globalThis.process.env.VITE_DEMO) {
     }
     guiaDados = guia
     guiaCarregado = true
+    cidadesMantidas = (Array.isArray(guia?.foraDaRodada) ? guia.foraDaRodada : []).map((x) => x?.cidade_slug).filter(Boolean)
     const doGuia = paginasDoGuia(guia, [...artigosParaGuia.values()])
     for (const pg of doGuia) registrar(pg)
     dadosGuia = dadosDoGuia(guia)
@@ -291,11 +293,14 @@ console.log(`paginas-estaticas: corpo estático em ${comCorpo} de ${paginas.leng
 // /saloes e /blog são inteiramente deste script: limpar antes tira a página de um
 // salão ou artigo que saiu do ar (a regeneração de hora em hora não passa pelo vite, que esvazia o dist).
 // O guia só é apagado quando carregou (3.23): banco fora do ar não leva as páginas que estão no ar
-for (const pasta of guiaCarregado ? ['saloes', 'blog', 'dados/guia'] : ['blog']) fs.rmSync(path.join(DIST, pasta), { recursive: true, force: true })
-// sem o guia nesta rodada, as URLs dele continuam no sitemap, como estavam
-const urlsGuardadas = guiaCarregado ? [] : (() => {
-  try { return [...fs.readFileSync(path.join(DIST, 'sitemap.xml'), 'utf8').matchAll(/<url><loc>[^<]*\/saloes[^<]*<\/loc>.*?<\/url>/g)].map((m) => `  ${m[0]}`) } catch { return [] }
-})()
+fs.rmSync(path.join(DIST, 'blog'), { recursive: true, force: true })
+// 3.38.2: uma cidade que ficou fora da rodada (sem banco e sem cache) não perde o que já tem no ar
+const mantidas = guiaCarregado ? limparPastasDoGuia(DIST, cidadesMantidas).mantidas : []
+// sem o guia nesta rodada, as URLs dele continuam no sitemap, como estavam; com uma cidade mantida, as dela
+const sitemapAnterior = (() => { try { return fs.readFileSync(path.join(DIST, 'sitemap.xml'), 'utf8') } catch { return '' } })()
+const urlsGuardadas = !guiaCarregado
+  ? [...sitemapAnterior.matchAll(/<url><loc>[^<]*\/saloes[^<]*<\/loc>.*?<\/url>/g)].map((m) => `  ${m[0]}`)
+  : urlsDoSitemapDasCidades(sitemapAnterior, mantidas)
 let ok = 0, erros = 0
 for (const p of paginas) {
   try {
@@ -328,5 +333,5 @@ const urls = [{ caminho: '/', atualizado: DATA_PADRAO, prioridade: '1.0', freq: 
   .map((p) => `  <url><loc>${SITE}${p.caminho}</loc>${p.atualizado ? `<lastmod>${p.atualizado}</lastmod>` : ''}<changefreq>${p.freq || (p.tipo === 'article' ? 'monthly' : 'weekly')}</changefreq><priority>${p.prioridade || (p.seo ? '0.9' : p.tipo === 'article' ? '0.7' : '0.5')}</priority></url>`)
   .concat(urlsGuardadas)
 fs.writeFileSync(path.join(DIST, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join('\n')}\n</urlset>\n`)
-console.log(`paginas-estaticas: ${ok} páginas geradas${erros ? `, ${erros} com erro` : ''}${arquivosDeDados ? `, ${arquivosDeDados} arquivo(s) de dados do guia` : ''}, home própria, sitemap com ${urls.length} URLs${urlsGuardadas.length ? ` (${urlsGuardadas.length} do guia guardadas da rodada anterior)` : ''}`)
+console.log(`paginas-estaticas: ${ok} páginas geradas${erros ? `, ${erros} com erro` : ''}${arquivosDeDados ? `, ${arquivosDeDados} arquivo(s) de dados do guia` : ''}, home própria, sitemap com ${urls.length} URLs${urlsGuardadas.length ? ` (${urlsGuardadas.length} do guia guardadas da rodada anterior${mantidas.length ? `: ${mantidas.join(', ')}` : ''})` : ''}${cidadesMantidas.length ? `. ATENÇÃO: ${cidadesMantidas.length} cidade(s) fora desta rodada: ${cidadesMantidas.join(', ')}` : ''}`)
 if (!ok) globalThis.process.exit(1)

@@ -20,6 +20,7 @@ import { pontosDoLugar, fotosDoLugar, semAcento } from './guia'
 import { ABORDAGEM_RPC } from './demoAbordagem'
 import { REIVINDICAR_RPC } from './demoReivindicar'
 import { BUSCAS_RPC } from './demoBuscas'
+import { publicarRpc } from './demoPublicar'
 
 const hoje = new Date()
 const iso = (d) => d.toISOString().slice(0, 10)
@@ -233,6 +234,7 @@ const RPC = {
   // a reivindicação (159): troca o guia_registrar_interesse do GUIA_RPC (precisa vir depois dele)
   ...REIVINDICAR_RPC,
   ...BUSCAS_RPC, // as buscas do Google (guia_buscas, 160)
+  ...publicarRpc(() => CONTEUDO), // "Publicar agora" (189): site_pendencias, site_pedir_publicacao, site_publicacao_status
   documentos_vigentes: () => ({}),
   meus_aceites: () => ({}),
   aceitar_documentos: () => ({ ok: true }),

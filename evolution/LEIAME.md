@@ -626,9 +626,20 @@ páginas em segundos, sem build e sem mexer no Caddy:
 ```bash
 cd ~/agenda-mel/evolution
 ./republicar-se-mudou.sh          # confere e regenera se mudou
-./republicar-se-mudou.sh --cron   # instala no cron: de hora em hora, sozinho (log em republicar.log)
+./republicar-se-mudou.sh --cron   # instala no cron: de hora em hora, sozinho, e a cada minuto o "Publicar agora" (log em republicar.log)
 ./republicar-se-mudou.sh --forcar # regenera mesmo sem mudança
+./republicar-se-mudou.sh --pedidos # só atende o "Publicar agora" da Plataforma, se houver pedido (é o que o cron roda a cada minuto)
 ```
+
+**Publicar agora (3.41, migração 189).** O botão no topo do Guia, na
+Plataforma, mostra o que se acumulou desde a última publicação e pede para
+publicar já. O cron do minuto (`--pedidos`) pega o pedido em até um minuto,
+regenera e registra; a tela acompanha até "no ar". A rodada da hora, o
+`--forcar` e o build do `publicar-site.sh` também ficam registrados, e uma
+trava deixa uma rodada por vez. Precisa da `GUIA_CHAVE_GERADOR` no `.env`
+(a mesma do gerador). Quem já tinha o cron da hora ganha a linha do minuto
+no próximo `publicar-site.sh`; senão, rode `./republicar-se-mudou.sh --cron`
+uma vez.
 
 Ele lê as mesmas chaves do `publicar-site.sh` (`VITE_SUPABASE_URL` e a
 chave anon, no `.env` da Evolution ou da raiz) e precisa do `dist/` de um

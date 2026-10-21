@@ -6,7 +6,8 @@
 #
 #   ./republicar-se-mudou.sh          confere e, se mudou, regenera (uns segundos)
 #   ./republicar-se-mudou.sh --forcar regenera mesmo sem mudança
-#   ./republicar-se-mudou.sh --cron   instala no cron: de hora em hora, sozinho
+#   ./republicar-se-mudou.sh --cron   instala no cron: de hora em hora, sozinho, e a cada minuto o "Publicar agora"
+#   ./republicar-se-mudou.sh --pedidos atende o "Publicar agora" da Plataforma, se houver pedido (o cron do minuto)
 #   ./republicar-se-mudou.sh --sem-cron
 #
 # Como funciona: o banco tem site_conteudo_versao() (migração 164), um
@@ -17,6 +18,10 @@
 # não mexe no Caddy: ele serve os arquivos novos na hora. Depois de regenerar,
 # avisa o Bing na hora do que mudou no sitemap (IndexNow, scripts/indexnow.mjs),
 # se INDEXNOW_KEY estiver no .env.
+# 3.41: o "Publicar agora" da Plataforma (migração 189). O cron do minuto roda --pedidos: sem pedido, sai calado; com
+# pedido, regenera na hora. Toda publicação (a da hora, a pedida, a do --forcar) fica registrada no banco
+# (scripts/registrar-publicacao.mjs, com GUIA_CHAVE_GERADOR), e é dela que a Plataforma tira o que está pendente.
+# Uma rodada por vez: a trava /tmp/mimo-republicar.lock vale também para o build do publicar-site.sh.
 
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -29,6 +34,7 @@ amarelo() { printf '\033[1;33m%s\033[0m\n' "$*"; }
 vermelho(){ printf '\033[1;31m%s\033[0m\n' "$*"; }
 
 LINHA_CRON="17 * * * * $AQUI/republicar-se-mudou.sh >> $AQUI/republicar.log 2>&1"
+LINHA_PEDIDOS="* * * * * $AQUI/republicar-se-mudou.sh --pedidos >> $AQUI/republicar.log 2>&1"
 MARCA='# agenda-mel: regenera as páginas estáticas quando a Plataforma publica algo'
 
 case "${1:-}" in
@@ -43,11 +49,22 @@ case "${1:-}" in
     { crontab -l 2>/dev/null | grep -vF "$MARCA" | grep -vF "$AQUI/republicar-se-mudou.sh"
       echo "$MARCA"
       echo "$LINHA_CRON"
+      echo "$LINHA_PEDIDOS"
     } | crontab -
-    verde 'No cron: de hora em hora (minuto 17) confere e regenera se mudou. Log em republicar.log'
+    verde 'No cron: de hora em hora (minuto 17) confere e regenera se mudou, e a cada minuto atende o "Publicar agora" da Plataforma. Log em republicar.log'
     exit 0
     ;;
 esac
+
+MODO="${1:-}"
+# 3.41: uma rodada por vez (a da hora, a do "Publicar agora", a de quem roda na mão e o build do publicar-site.sh)
+if command -v flock >/dev/null; then
+  exec 9>/tmp/mimo-republicar.lock
+  if ! flock -n 9; then
+    [ "$MODO" = '--pedidos' ] || amarelo "$(date '+%F %T') outra regeneração (ou um build) está em andamento; esta fica para a próxima"
+    exit 0
+  fi
+fi
 
 # as chaves: no .env da Evolution ou no da raiz, como no publicar-site.sh
 # shellcheck disable=SC1091
@@ -61,13 +78,34 @@ export VITE_SUPABASE_URL VITE_SUPABASE_ANON_KEY
 command -v node >/dev/null || { vermelho 'Não achei o node no PATH do cron.'; exit 1; }
 
 CARIMBO="$RAIZ/dist/.conteudo-versao"
+REGISTRADA="$AQUI/.publicacao-registrada" # a versão que o banco já tem como publicada (fora do dist: o build não apaga)
+# 3.41: o pedido do "Publicar agora" (se houver). A hora do banco vira o começo desta publicação (a régua das pendências)
+if [ "$MODO" = '--pedidos' ]; then PEDIDO=$(node "$RAIZ/scripts/registrar-publicacao.mjs" inicio 2>/dev/null || true)
+else PEDIDO=$(node "$RAIZ/scripts/registrar-publicacao.mjs" inicio || true); fi
+campo() { printf '%s\n' "$PEDIDO" | sed -n "s/^$1=//p" | head -1; }
+PEDIDO_ID=$(campo id); [ "$PEDIDO_ID" = '-' ] && PEDIDO_ID=''
+INICIO=$(campo agora); [ "$INICIO" = '-' ] && INICIO=''
+VERSAO_INICIO=$(campo versao); [ "$VERSAO_INICIO" = '-' ] && VERSAO_INICIO=''
+# o cron do minuto sem pedido: silêncio
+if [ "$MODO" = '--pedidos' ] && [ -z "$PEDIDO_ID" ]; then exit 0; fi
+FORCAR=0
+if [ "$MODO" = '--forcar' ] || [ -n "$PEDIDO_ID" ]; then FORCAR=1; fi
+ORIGEM=automatico; [ "$MODO" = '--forcar' ] && ORIGEM=manual
+[ -n "$PEDIDO_ID" ] && verde "$(date '+%F %T') publicando a pedido da Plataforma (pedido $PEDIDO_ID)"
+registrar() { # $1 = 1 (feito) ou 0 (falhou); $2 = resumo
+  local urls; urls=$(grep -c '<loc>' "$RAIZ/dist/sitemap.xml" 2>/dev/null || echo '')
+  local r; r=$(node "$RAIZ/scripts/registrar-publicacao.mjs" fim --ok "$1" --id "${PEDIDO_ID:--}" --origem "$ORIGEM" --inicio "${INICIO:--}" \
+    --versao "${VERSAO:--}" --urls "${urls:--}" --resumo "$2" || true)
+  if [ "$1" = 1 ] && [ "$r" = 'registrado' ] && [ -n "${VERSAO:-}" ]; then printf '%s' "$VERSAO" > "$REGISTRADA"; fi
+}
 ler_versao() {
   curl -s -m 20 -X POST "$VITE_SUPABASE_URL/rest/v1/rpc/site_conteudo_versao" \
     -H "apikey: $VITE_SUPABASE_ANON_KEY" -H "Authorization: Bearer $VITE_SUPABASE_ANON_KEY" \
     -H 'Content-Type: application/json' -d '{}' | tr -d '" \n' || true
 }
 eh_versao() { printf '%s' "$1" | grep -Eq '^[0-9a-f]{32}$'; }
-VERSAO=$(ler_versao)
+# a versão: a que o banco deu junto com o pedido (o mesmo instante do começo) ou lida agora
+if eh_versao "$VERSAO_INICIO"; then VERSAO="$VERSAO_INICIO"; else VERSAO=$(ler_versao); fi
 # 3.38.4: um pico passa (uma migração, um lote, o disco do plano grátis no limite): uma segunda tentativa depois de 15 s
 eh_versao "$VERSAO" || { sleep 15; VERSAO=$(ler_versao); }
 if ! eh_versao "$VERSAO"; then
@@ -78,9 +116,9 @@ if ! eh_versao "$VERSAO"; then
     '') MOTIVO='o Supabase não respondeu (rede, ou o projeto pausado)' ;;
     *) MOTIVO="resposta inesperada: $VERSAO" ;;
   esac
-  if [ "${1:-}" = '--forcar' ]; then
-    # --forcar regenera assim mesmo; sem a versão não grava o carimbo, e a próxima rodada confere de novo
-    amarelo "$(date '+%F %T') não li a versão do conteúdo ($MOTIVO). Com --forcar, regenero assim mesmo, sem gravar o carimbo."
+  if [ "$FORCAR" = 1 ]; then
+    # --forcar (ou o pedido da Plataforma) regenera assim mesmo; sem a versão não grava o carimbo, e a próxima rodada confere de novo
+    amarelo "$(date '+%F %T') não li a versão do conteúdo ($MOTIVO). Regenero assim mesmo, sem gravar o carimbo."
     VERSAO=''
   else
     vermelho "$(date '+%F %T') não consegui ler a versão do conteúdo: $MOTIVO"
@@ -90,7 +128,7 @@ fi
 ANTERIOR=$(cat "$CARIMBO" 2>/dev/null || true)
 cd "$RAIZ"
 MUDOU=0  # nada mudou: silêncio (o cron roda isto a toda hora)
-if [ "${1:-}" = '--forcar' ] || [ "$VERSAO" != "$ANTERIOR" ]; then
+if [ "$FORCAR" = 1 ] || [ "$VERSAO" != "$ANTERIOR" ]; then
   if node scripts/paginas-estaticas.mjs > /tmp/mimo-republicar.log 2>&1; then
     [ -n "$VERSAO" ] && printf '%s' "$VERSAO" > "$CARIMBO"
     chmod -R a+rX dist
@@ -98,10 +136,16 @@ if [ "${1:-}" = '--forcar' ] || [ "$VERSAO" != "$ANTERIOR" ]; then
     # 3.38.2: o que o guia disse nesta rodada (cidades, salões, uma cidade do cache ou fora da rodada) fica no log também
     grep -E 'guia-fonte:|guia: |guia de salões|ATENÇÃO' /tmp/mimo-republicar.log | sed 's/^/    /' || true
     MUDOU=1
+    registrar 1 "$(tail -1 /tmp/mimo-republicar.log | cut -c1-300)"
   else
     vermelho "$(date '+%F %T') a regeneração falhou:"; tail -20 /tmp/mimo-republicar.log
+    registrar 0 "a regeneração falhou: $(tail -5 /tmp/mimo-republicar.log | tr '\n' ' ' | cut -c1-600)"
     exit 1
   fi
+elif [ -n "$VERSAO" ] && [ "$VERSAO" != "$(cat "$REGISTRADA" 2>/dev/null || true)" ]; then
+  # 3.41: o site já está nesta versão, mas o banco ainda não sabe (logo depois da migração 189, ou de um build): registra,
+  # para a Plataforma saber o que já está no ar
+  registrar 1 'já estava no ar'
 fi
 
 # IndexNow (3.21): avisa o Bing na hora do que entrou, mudou ou saiu do sitemap.

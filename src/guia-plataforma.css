@@ -579,3 +579,40 @@
 
 /* 3.38.1: o lote em partes */
 .pg-lote-andamento { margin: 0.4rem 0 0; font-size: 0.8rem; color: var(--texto-2); }
+
+/* ---------- "Publicar agora" (3.41): o botão no topo com as pendências e a janela ---------- */
+.pg-publicar-caixa { display: flex; flex-direction: column; align-items: flex-end; gap: 0.3rem; flex-shrink: 0; }
+.pg-publicar { display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.55rem 0.95rem; border-radius: 999px; border: 1px solid var(--fio); background: #fff; color: var(--texto); font: inherit; font-size: 0.88rem; font-weight: 600; cursor: pointer; transition: border-color 0.15s ease, box-shadow 0.15s ease; }
+.pg-publicar:hover { border-color: #ffc2d8; box-shadow: 0 4px 14px rgba(61, 12, 78, 0.08); }
+.pg-publicar.tem { border-color: var(--rosa); color: var(--rosa); }
+.pg-publicar-n { min-width: 1.35rem; height: 1.35rem; padding: 0 0.35rem; border-radius: 999px; background: var(--rosa); color: #fff; font-size: 0.72rem; display: inline-grid; place-items: center; }
+.pg-publicar-nota { font-size: 0.72rem; color: var(--texto-3); text-align: right; }
+.plat-modal-fundo:has(.pg-modal-publicar) { z-index: 58; }
+.modal-caixa.plat-modal.pg-modal-publicar { max-width: 540px; display: flex; flex-direction: column; gap: 0.7rem; }
+.pg-modal-publicar, .pg-modal-publicar * { box-sizing: border-box; }
+.pg-modal-publicar h3 { margin: 0; }
+.pg-modal-publicar p { margin: 0; font-size: 0.88rem; }
+.pg-pub-titulo { font-weight: 600; }
+.pg-pub-lista { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 0.45rem; }
+.pg-pub-lista li { padding: 0.5rem 0.7rem; border: 1px solid var(--fio); border-radius: 10px; font-size: 0.88rem; }
+.pg-pub-lista li b { color: var(--rosa); font-size: 1rem; }
+.pg-pub-lista li small { display: block; margin-top: 0.15rem; color: var(--texto-3); font-size: 0.74rem; overflow-wrap: anywhere; }
+.pg-pub-cidades { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; font-size: 0.78rem; color: var(--texto-2); }
+.pg-pub-cidade { padding: 0.2rem 0.55rem; border-radius: 999px; background: var(--cinza-1, #f3f2f7); }
+.pg-pub-ultima, .pg-pub-como, .pg-pub-indo { color: var(--texto-2); }
+.pg-pub-como { font-size: 0.8rem !important; }
+.pg-pub-como code { font-size: 0.78rem; overflow-wrap: anywhere; }
+.pg-pub-tudo, .pg-pub-lendo { display: flex; align-items: center; gap: 0.4rem; }
+.pg-pub-tudo svg { color: var(--menta); flex-shrink: 0; }
+.pg-pub-etapas { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 0.45rem; }
+.pg-pub-etapas li { display: flex; align-items: center; gap: 0.5rem; font-size: 0.88rem; color: var(--texto-3); }
+.pg-pub-etapas li svg { flex-shrink: 0; }
+.pg-pub-etapas li.ok { color: var(--texto); }
+.pg-pub-etapas li.ok svg { color: var(--menta); }
+.pg-pub-etapas li.agora { color: var(--texto); font-weight: 600; }
+.pg-pub-etapas li.agora svg { color: var(--rosa); }
+@media (max-width: 640px) {
+  .pg-topo .plat-cabecalho { flex-wrap: wrap; }
+  .pg-publicar-caixa { align-items: flex-start; }
+  .pg-publicar-nota { text-align: left; }
+}

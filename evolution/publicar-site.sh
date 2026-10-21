@@ -121,6 +121,24 @@ if [ "${1:-}" != '--so-build' ]; then
   git pull --ff-only
 fi
 npm ci --no-audit --no-fund >/dev/null
+# 3.41: a mesma trava do republicar-se-mudou.sh (o build e a regeneração escrevem no mesmo dist); espera a que estiver
+# rodando terminar, até 15 minutos
+if command -v flock >/dev/null; then
+  exec 9>/tmp/mimo-republicar.lock
+  flock -w 900 9 || amarelo '  uma regeneração passou de 15 minutos; sigo com o build assim mesmo'
+fi
+# 3.41: o build também é uma publicação: atende o "Publicar agora" que estiver esperando e fica registrado no banco
+PEDIDO=$(node scripts/registrar-publicacao.mjs inicio || true)
+campo() { printf '%s\n' "$PEDIDO" | sed -n "s/^$1=//p" | head -1; }
+PEDIDO_ID=$(campo id); [ "$PEDIDO_ID" = '-' ] && PEDIDO_ID=''
+INICIO_PUB=$(campo agora); [ "$INICIO_PUB" = '-' ] && INICIO_PUB=''
+VERSAO_PUB=$(campo versao); [ "$VERSAO_PUB" = '-' ] && VERSAO_PUB=''
+registrar_pub() { # $1 = 1 (feito) ou 0 (falhou); $2 = resumo
+  local urls; urls=$(grep -c '<loc>' dist/sitemap.xml 2>/dev/null || echo '')
+  local r; r=$(node scripts/registrar-publicacao.mjs fim --ok "$1" --id "${PEDIDO_ID:--}" --origem manual --inicio "${INICIO_PUB:--}" \
+    --versao "${VERSAO_PUB:--}" --urls "${urls:--}" --resumo "$2" || true)
+  if [ "$1" = 1 ] && [ "$r" = 'registrado' ] && [ -n "$VERSAO_PUB" ]; then printf '%s' "$VERSAO_PUB" > "$AQUI/.publicacao-registrada"; fi
+}
 # 3.40: o vite esvazia o dist no build e, com ele, o guia que está no ar (/saloes, /dados/guia e o sitemap). Ele fica
 # guardado ao lado (mover não gasta disco) e o gerador o devolve antes de escrever: se o banco não entregar o guia nesta
 # rodada, o que estava no ar continua no ar, com as URLs no sitemap. Antes, um build com o banco ocupado tirava o guia
@@ -143,6 +161,7 @@ devolver_guia() {
 LOG_BUILD=/tmp/mimo-build.log
 if ! npm run build > "$LOG_BUILD" 2>&1; then
   devolver_guia
+  registrar_pub 0 'o build falhou'
   echo; tail -40 "$LOG_BUILD"; echo
   vermelho "O build falhou. Acima, o fim do log; o log inteiro está em $LOG_BUILD"
   vermelho "Antes de tentar de novo, confira espaço em disco (df -h /) e memória (free -m)."
@@ -161,6 +180,11 @@ if [ ! -f dist/sitemap.xml ]; then
 fi
 [ -f dist/sitemap.xml ] && [ -f dist/_home.html ] || { vermelho 'Sem as páginas estáticas (dist/sitemap.xml, dist/_home.html). Rode: node scripts/paginas-estaticas.mjs'; exit 1; }
 verde "  SEO: $(grep -c '<loc>' dist/sitemap.xml) URLs no sitemap, páginas estáticas no lugar"
+# 3.41: registra a publicação (a Plataforma zera o que estava pendente) e grava o carimbo do conteúdo, para a rodada da
+# hora não regenerar de novo o que o build acabou de gerar
+registrar_pub 1 "build $(git rev-parse --short HEAD)"
+[ -n "$VERSAO_PUB" ] && printf '%s' "$VERSAO_PUB" > dist/.conteudo-versao
+[ -n "$PEDIDO_ID" ] && verde "  o \"Publicar agora\" que esperava (pedido $PEDIDO_ID) foi atendido por este build"
 # Bing na hora (IndexNow, 3.21): o build apagou o dist e, com ele, o arquivo da chave que o
 # Bing confere (dist/<chave>.txt). O indexnow.mjs regrava a chave e avisa o que mudou no sitemap.
 if [ -n "${INDEXNOW_KEY:-}" ]; then
@@ -176,6 +200,8 @@ rm -rf "$GUIA_ANTERIOR"
 # o Caddy roda como outro usuário dentro do container: precisa ler
 chmod -R a+rX dist
 verde "  dist/ pronto ($(du -sh dist | cut -f1))"
+# o dist está pronto: a regeneração (a da hora, a do "Publicar agora") pode voltar a rodar
+exec 9>&-
 # de volta para a pasta da Evolution pelo caminho ABSOLUTO: o $0 era
 # relativo e, depois do cd para a raiz, apontava para o lugar errado —
 # e o docker compose não achava o arquivo
@@ -245,4 +271,9 @@ echo 'Para publicar de novo depois de um git pull: ./publicar-site.sh'
 # numa regeneração; o republicar-se-mudou.sh faz isso sozinho, de hora em hora (3.14)
 if ! crontab -l 2>/dev/null | grep -q 'republicar-se-mudou.sh'; then
   amarelo 'Dica: ./republicar-se-mudou.sh --cron  regenera as páginas estáticas sozinho quando a Plataforma publica algo.'
+elif ! crontab -l 2>/dev/null | grep -q 'republicar-se-mudou.sh --pedidos'; then
+  # 3.41: quem já tinha o cron da hora ganha a linha do minuto (o "Publicar agora" da Plataforma) sem passo a mais
+  "$AQUI/republicar-se-mudou.sh" --cron >/dev/null 2>&1 \
+    && verde 'Cron atualizado: o "Publicar agora" da Plataforma é atendido em até 1 minuto (e a rodada da hora continua).' \
+    || amarelo 'Não consegui atualizar o cron: rode ./republicar-se-mudou.sh --cron para ligar o "Publicar agora".'
 fi

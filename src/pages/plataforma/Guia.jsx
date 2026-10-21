@@ -14,6 +14,7 @@ import PaginasCidade from '../../components/plataforma/guia/PaginasCidade'
 import Interesses from '../../components/plataforma/guia/Interesses'
 import Desempenho from '../../components/plataforma/guia/Desempenho'
 import Abordagem from '../../components/plataforma/guia/Abordagem'
+import PublicarAgora from '../../components/plataforma/guia/PublicarAgora'
 import { naoContarAqui } from '../../lib/eventos'
 import { IAS, iaLembrada, lembrarIa, modeloLembrado, lembrarModelo } from '../../lib/guiaIa'
 import { lerEmFatias, COLUNAS_LISTA, COLUNAS_LISTA_ANTIGAS, colunaFalta, consultaGlobal, POR_PAGINA } from '../../lib/guiaPlataformaDados'
@@ -836,7 +837,7 @@ export default function Guia() {
   return (
     <Shell>
       <div className="pg-topo">
-        <Cabecalho titulo="Guia de salões" sub="Uma página pública para cada salão da região, montada com os dados dele (de graça). Você aprova." direita={<span />} />
+        <Cabecalho titulo="Guia de salões" sub="Uma página pública para cada salão da região, montada com os dados dele (de graça). Você aprova." direita={<PublicarAgora avisar={avisar} />} />
         {Array.isArray(resumo) && cidades.length > 1 && (
           <div className="pg-cidade" data-teste="cidade">
             <label className="pg-cidade-sel">

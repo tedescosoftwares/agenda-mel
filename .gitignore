@@ -48,3 +48,5 @@ scripts/guia/__pycache__/
 .claude/worktrees/
 # 3.40: o guia no ar guardado durante o build (publicar-site.sh)
 .guia-anterior/
+# 3.41: a versão que o banco já tem como publicada (republicar-se-mudou.sh e publicar-site.sh, no VPS)
+evolution/.publicacao-registrada

@@ -3,6 +3,9 @@
 //   node scripts/registrar-publicacao.mjs inicio
 //       pega o pedido em aberto da Plataforma (se houver) e o marca como "rodando"; imprime três linhas:
 //       id=<n ou ->   agora=<hora do banco ou ->   versao=<versão do conteúdo nesse instante ou ->
+//   node scripts/registrar-publicacao.mjs ocupado
+//       (3.42, migração 190) o cron do minuto achou outra publicação rodando: marca no banco que o servidor conferiu e está
+//       ocupado, para a Plataforma dizer "entra em seguida" em vez de "o servidor não está conferindo"
 //   node scripts/registrar-publicacao.mjs fim --ok 1|0 [--id N] [--origem automatico|manual] [--inicio ISO] [--versao V] [--urls N] [--resumo "..."]
 //       registra o fim: o do pedido (com --id) ou uma publicação sem pedido (a da hora, a do build)
 //
@@ -39,6 +42,11 @@ async function principal() {
     }
     return
   }
+  if (modo === 'ocupado') {
+    if (!env.VITE_SUPABASE_URL || !gerador) return
+    try { await chamar('site_pegar_pedido', { chave_: gerador, pegar_: false }) } catch (e) { avisar(motivo(e)) }
+    return
+  }
   if (modo === 'fim') {
     if (!env.VITE_SUPABASE_URL || !gerador) return
     const n = (v) => (v == null || v === '' || v === '-' ? null : v)
@@ -55,7 +63,7 @@ async function principal() {
     try { await chamar('site_registrar_publicacao', corpo); console.log('registrado') } catch (e) { avisar(motivo(e)) }
     return
   }
-  avisar('use: inicio | fim --ok 1|0 [--id N] [--origem automatico|manual] [--inicio ISO] [--versao V] [--urls N] [--resumo "..."]')
+  avisar('use: inicio | ocupado | fim --ok 1|0 [--id N] [--origem automatico|manual] [--inicio ISO] [--versao V] [--urls N] [--resumo "..."]')
 }
 
 if (import.meta.url === `file://${globalThis.process.argv[1]}`) await principal()

@@ -12,9 +12,13 @@ import { CloudUpload, LoaderCircle, CircleCheck, Circle, TriangleAlert, X } from
 // minuto (republicar-se-mudou.sh --pedidos), regenera e registra, e esta tela
 // acompanha: na fila, publicando, no ar (ou o erro). Fechar a janela não
 // cancela nada; o botão continua mostrando o andamento.
+// 3.42 (migração 190): as fotos novas têm linha própria (as do guia e as do
+// salão da MIMO ligado) e a tela sabe quando o servidor conferiu os pedidos
+// pela última vez: se ele não está conferindo, diz na hora o que rodar.
 
 const ANDANDO = new Set(['pedido', 'rodando'])
 const AVISO_CRON_S = 120
+const SERVIDOR_PARADO_S = 180 // o cron confere a cada minuto: três minutos sem conferir é cron desligado (ou chave errada)
 const plural = (n, um, varios) => `${n.toLocaleString('pt-BR')} ${n === 1 ? um : varios}`
 const faltaMigracao = (e) => e?.code === 'PGRST202' || e?.status === 404 || /could not find the function|schema cache/i.test(e?.message ?? '')
 const hora = (iso) => (iso ? new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '')
@@ -23,7 +27,8 @@ const ORIGEM = { plataforma: 'pedida aqui', automatico: 'automática, da hora', 
 // o que entra na conta do número do botão, na ordem em que a janela lista
 const ITENS = [
   { k: 'entraram', um: 'salão novo no ar', varios: 'salões novos no ar', curto: ['salão novo', 'salões novos'] },
-  { k: 'mudaram', um: 'salão com mudança (texto, fotos ou dados)', varios: 'salões com mudança (texto, fotos ou dados)', curto: ['salão com mudança', 'salões com mudança'] },
+  { k: 'fotos', um: 'salão com fotos novas', varios: 'salões com fotos novas', curto: ['salão com fotos novas', 'salões com fotos novas'] },
+  { k: 'mudaram', um: 'salão com mudança (texto ou dados)', varios: 'salões com mudança (texto ou dados)', curto: ['salão com mudança', 'salões com mudança'] },
   { k: 'sairam', um: 'salão que sai do site', varios: 'salões que saem do site', curto: ['salão saindo', 'salões saindo'] },
   { k: 'paginas', um: 'página de cidade ou categoria', varios: 'páginas de cidade ou categoria', curto: ['página de cidade', 'páginas de cidade'] },
   { k: 'categorias', um: 'imagem de categoria', varios: 'imagens de categoria', curto: ['imagem de categoria', 'imagens de categoria'] },
@@ -31,13 +36,28 @@ const ITENS = [
   { k: 'artigos', um: 'artigo do blog', varios: 'artigos do blog', curto: ['artigo', 'artigos'] },
   { k: 'seo', um: 'página do site (SEO)', varios: 'páginas do site (SEO)', curto: ['página SEO', 'páginas SEO'] },
 ]
-const valor = (p, k) => Number((['entraram', 'mudaram', 'sairam'].includes(k) ? p?.saloes?.[k] : p?.[k]) ?? 0)
+const valor = (p, k) => Number((['entraram', 'fotos', 'mudaram', 'sairam'].includes(k) ? p?.saloes?.[k] : p?.[k]) ?? 0)
 const totalPendente = (p) => ITENS.reduce((s, i) => s + valor(p, i.k), 0)
 function resumoCurto(p) {
   const partes = ITENS.filter((i) => valor(p, i.k) > 0).map((i) => plural(valor(p, i.k), ...i.curto))
   return partes.length <= 1 ? partes.join('') : `${partes.slice(0, -1).join(', ')} e ${partes.at(-1)}`
 }
-const daCidade = (c) => [c.entraram && plural(c.entraram, 'novo', 'novos'), c.mudaram && plural(c.mudaram, 'com mudança', 'com mudança'), c.sairam && plural(c.sairam, 'saindo', 'saindo')].filter(Boolean).join(', ')
+const daCidade = (c) => [c.entraram && plural(c.entraram, 'novo', 'novos'), c.fotos && plural(c.fotos, 'com fotos novas', 'com fotos novas'), c.mudaram && plural(c.mudaram, 'com mudança', 'com mudança'), c.sairam && plural(c.sairam, 'saindo', 'saindo')].filter(Boolean).join(', ')
+// o servidor (190): undefined = banco sem a 190 (não dá para saber); null = nunca conferiu; senão, há quantos segundos
+const segundosDoServidor = (conferiu, agora) => (conferiu === undefined ? undefined : conferiu === null ? null : Math.max(0, Math.round(((agora ? new Date(agora) : new Date()) - new Date(conferiu)) / 1000)))
+const servidorParado = (s) => s === null || (typeof s === 'number' && s >= SERVIDOR_PARADO_S)
+function ServidorParado({ conferiu }) {
+  return (
+    <div className="pg-pub-parado" role="alert" data-teste="publicar-servidor-parado">
+      <TriangleAlert size={15} />
+      <span>
+        <b>O servidor não está conferindo os pedidos</b> ({conferiu ? `a última vez foi ${haQuanto(conferiu)}` : 'nunca conferiu'}).
+        {' '}No VPS: <code>cd ~/agenda-mel/evolution && ./republicar-se-mudou.sh --forcar</code> publica agora e mostra o erro, se houver;
+        {' '}<code>./republicar-se-mudou.sh --cron</code> liga a conferência de minuto em minuto.
+      </span>
+    </div>
+  )
+}
 
 export default function PublicarAgora({ avisar }) {
   const [pend, setPend] = useState(null)
@@ -83,7 +103,13 @@ export default function PublicarAgora({ avisar }) {
     return () => { vivo = false; clearTimeout(t) }
   }, [pedido, aberto, ler, avisar])
 
-  const abrir = () => { setAberto(true); setErroPedido(''); if (!pedido || !ANDANDO.has(pedido.status)) ler() }
+  const abrir = () => {
+    setAberto(true); setErroPedido('')
+    if (pedido && ANDANDO.has(pedido.status)) return
+    // a publicação que terminou com a janela fechada já foi avisada: abre nas pendências de agora
+    if (pedido) { setPedido(null); setNoPedido(null); setJaHavia(false) }
+    ler()
+  }
   const fechar = () => {
     setAberto(false)
     if (pedido && !ANDANDO.has(pedido.status)) { setPedido(null); setNoPedido(null); setJaHavia(false) }
@@ -170,7 +196,9 @@ export default function PublicarAgora({ avisar }) {
                       Última publicação: {haQuanto(pend.ultima.inicio_em)}, às {hora(pend.ultima.inicio_em)} ({ORIGEM[pend.ultima.origem] ?? pend.ultima.origem}){pend.ultima.urls ? `, ${plural(pend.ultima.urls, 'URL', 'URLs')} no sitemap` : ''}.
                     </p>
                   )}
-                  <p className="pg-pub-como">O servidor confere os pedidos a cada minuto e regenera as páginas estáticas e o sitemap (de 1 a 3 minutos). Fechar esta janela não cancela.</p>
+                  {servidorParado(segundosDoServidor(pend.servidor_conferiu_em))
+                    ? <ServidorParado conferiu={pend.servidor_conferiu_em} />
+                    : <p className="pg-pub-como">O servidor confere os pedidos a cada minuto e regenera as páginas estáticas e o sitemap (de 1 a 3 minutos). Fechar esta janela não cancela.</p>}
                   {erroPedido && <div className="alert alert-error"><TriangleAlert size={14} /> {erroPedido}</div>}
                   <div className="pg-modal-botoes">
                     <button type="button" className="btn btn-ghost" onClick={fechar}>Voltar</button>
@@ -192,6 +220,7 @@ function Andamento({ pedido, noPedido, jaHavia, onFechar, onDeNovo, pedindo }) {
   const s = pedido.status
   const pegou = s === 'rodando' || s === 'feito' || (s === 'falhou' && !!pedido.inicio_em)
   const desde = pedido.pedido_em ? Math.max(0, Math.round(((pedido.agora ? new Date(pedido.agora) : new Date()) - new Date(pedido.pedido_em)) / 1000)) : 0
+  const servidor = segundosDoServidor(pedido.servidor_conferiu_em, pedido.agora)
   const etapas = [
     { ok: true, texto: 'Pedido feito' },
     { ok: pegou, agora: s === 'pedido', texto: s === 'pedido' ? 'Esperando o servidor pegar (ele confere a cada minuto)' : 'O servidor pegou o pedido' },
@@ -218,10 +247,15 @@ function Andamento({ pedido, noPedido, jaHavia, onFechar, onDeNovo, pedindo }) {
         </div>
       ) : s === 'falhou' ? (
         <div className="alert alert-error" data-teste="publicar-falhou"><TriangleAlert size={14} /> A publicação falhou: {pedido.resumo || 'veja o republicar.log no servidor'}. O site continua como estava.</div>
+      ) : s === 'pedido' && servidorParado(servidor) ? (
+        <ServidorParado conferiu={pedido.servidor_conferiu_em} />
       ) : (
         <p className="pg-pub-como" role="status" data-teste="publicar-andando">
           {s === 'pedido' ? `Na fila há ${desde} s.` : 'Publicando… costuma levar de 1 a 3 minutos.'}
-          {s === 'pedido' && desde >= AVISO_CRON_S && <> O servidor ainda não pegou: no VPS, ligue uma vez o cron do minuto com <code>./republicar-se-mudou.sh --cron</code>.</>}
+          {s === 'pedido' && typeof servidor === 'number' && (pedido.servidor_ocupado
+            ? ' O servidor está terminando outra publicação (a da hora ou um build); este pedido entra em seguida.'
+            : ` O servidor conferiu há ${servidor} s e pega na próxima volta.`)}
+          {s === 'pedido' && servidor === undefined && desde >= AVISO_CRON_S && <> O servidor ainda não pegou: no VPS, ligue uma vez o cron do minuto com <code>./republicar-se-mudou.sh --cron</code>.</>}
         </p>
       )}
       <div className="pg-modal-botoes">

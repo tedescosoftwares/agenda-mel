@@ -265,3 +265,7 @@
 @media (hover: none) {
   .pa-item-corpo kbd, .pa-status-op kbd, .pa-lembrar kbd { display: none; }
 }
+
+/* 3.42: a fila grande vem em páginas do banco */
+.pa-parcial { margin: -0.2rem 0 0.4rem; font-size: 0.78rem; }
+.pa-mais { display: flex; align-items: center; justify-content: center; gap: 0.4rem; width: 100%; margin: 0.6rem 0 0.2rem; }

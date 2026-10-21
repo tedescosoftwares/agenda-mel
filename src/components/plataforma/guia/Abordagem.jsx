@@ -24,6 +24,12 @@ import '../../../guia-abordagem.css'
 // histórico e devolve a linha já recalculada. A ordem da lista fica parada
 // enquanto se trabalha (para "próximo" ser o próximo de verdade) até
 // "Reordenar", trocar de filtro ou de período.
+//
+// 3.42 (migração 190): a fila vem da cidade escolhida no topo (ou de todas) e
+// em páginas de POR_PAGINA. Se a cidade cabe numa página, tudo é como antes
+// (filtro e busca na hora, aqui). Se não cabe (uma cidade grande, ou "Todas"),
+// o filtro e a busca vão ao banco, a lista cresce com "Mostrar mais" e os
+// números das abas e do funil vêm prontos do banco (e andam aqui a cada ação).
 
 const STATUS = [
   ['a_abordar', 'A abordar', 'cinza'],
@@ -52,8 +58,12 @@ const FORA = {
 }
 const DIA_SEMANA = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb']
 
-// a última leitura fica guardada: voltar para a aba mostra na hora e atualiza por trás
-let memoria = { dias: 30, dados: null, visao: 'fila' }
+// a última leitura fica guardada: voltar para a aba mostra na hora e atualiza por trás (se for da mesma cidade)
+let memoria = { dias: 30, dados: null, visao: 'fila', cidade: null }
+const POR_PAGINA = 500
+const BUSCA_ESPERA_MS = 350
+// o banco sem a 190 não conhece os parâmetros novos: a fila vem inteira, do jeito antigo
+const semParametrosNovos = (erro) => /could not find the function|schema cache|function .* does not exist/i.test(erro ?? '') && /cidade_|visao_|busca_|limite|depois/.test(erro ?? '')
 
 // ---- datas (o "hoje" vem do banco, no fuso de São Paulo) ----
 const somaDias = (dia, n) => new Date(new Date(`${dia}T12:00:00Z`).getTime() + n * 86400e3).toISOString().slice(0, 10)
@@ -117,10 +127,10 @@ function montarMensagem(it, { dias, para, semFotos = false }) {
 async function chamar(nome, args) {
   try {
     const { data, error } = await supabase.rpc(nome, args)
-    if (error) return { data: null, erro: textoDoErro(error) }
+    if (error) return { data: null, erro: textoDoErro(error), cru: String(error?.message ?? '') }
     return { data, erro: '' }
   } catch (e) {
-    return { data: null, erro: textoDoErro(e) }
+    return { data: null, erro: textoDoErro(e), cru: String(e?.message ?? e ?? '') }
   }
 }
 function textoDoErro(e) {
@@ -137,7 +147,7 @@ function passaNaVisao(it, visao, hoje) {
   if (visao === 'pedidos') return it.fila === 'principal' && n0(it.pendentes?.sou_dono) + n0(it.pendentes?.quero_marcar) > 0
   return it.status === visao
 }
-const textoDeBusca = (it) => semAcento(`${it.nome} ${it.bairro ?? ''} ${categoriaDoGuia(it.categoria).curto} ${it.nota ?? ''} ${it.dono?.nome ?? ''}`).toLowerCase()
+const textoDeBusca = (it) => semAcento(`${it.nome} ${it.bairro ?? ''} ${it.cidade ?? ''} ${categoriaDoGuia(it.categoria).curto} ${it.nota ?? ''} ${it.dono?.nome ?? ''}`).toLowerCase()
 function ordenarIds(itens, visao, busca, hoje) {
   const termo = semAcento(busca).toLowerCase().trim()
   const lista = itens.filter((it) => passaNaVisao(it, visao, hoje) && (!termo || textoDeBusca(it).includes(termo)))
@@ -146,6 +156,36 @@ function ordenarIds(itens, visao, busca, hoje) {
   // nos lembretes, o mais atrasado primeiro
   lista.sort(visao === 'lembretes' ? (a, b) => String(a.proximo_contato).localeCompare(String(b.proximo_contato)) || porPrioridade(a, b) : porPrioridade)
   return lista.map((it) => it.lugar_id)
+}
+// o que um item soma nas abas e no funil (a mesma conta do banco, migração 190)
+function somar(c, f, it, hoje, sinal) {
+  c.todos += sinal
+  c[it.status] = (c[it.status] ?? 0) + sinal
+  if (passaNaVisao(it, 'fila', hoje)) c.fila += sinal
+  if (passaNaVisao(it, 'lembretes', hoje)) c.lembretes += sinal
+  if (passaNaVisao(it, 'pedidos', hoje)) c.pedidos += sinal
+  if (it.ja_cliente) f.ja_eram += sinal
+  else if (!(it.status === 'nao_abordar' && !it.etapa)) {
+    f.para_abordar += sinal
+    if (it.etapa >= 1) f.abordados += sinal
+    if (it.etapa >= 2) f.responderam += sinal
+    if (it.etapa >= 4) f.clientes += sinal
+  }
+}
+const contagemVazia = () => ({ fila: 0, lembretes: 0, pedidos: 0, todos: 0, ...Object.fromEntries(STATUS.map(([id]) => [id, 0])) })
+const funilVazio = () => ({ para_abordar: 0, abordados: 0, responderam: 0, clientes: 0, ja_eram: 0 })
+function resumoDosItens(itens, hoje) {
+  const contagem = contagemVazia(), funil = funilVazio()
+  for (const it of itens) somar(contagem, funil, it, hoje, 1)
+  return { contagem, funil }
+}
+// uma ação trocou um item: o resumo do banco (da cidade inteira) anda junto, sem ler tudo de novo
+function ajustarResumo(resumo, velho, novo, hoje) {
+  if (!resumo) return resumo
+  const contagem = { ...contagemVazia(), ...resumo.contagem }, funil = { ...funilVazio(), ...resumo.funil }
+  if (velho) somar(contagem, funil, velho, hoje, -1)
+  if (novo) somar(contagem, funil, novo, hoje, 1)
+  return { contagem, funil }
 }
 const calor = (it) => (it.fila !== 'principal' ? 'fora' : it.prioridade >= 100 ? 'quente' : it.prioridade >= 30 ? 'morno' : 'frio')
 const CALOR = { quente: 'Prioridade alta', morno: 'Prioridade média', frio: 'Prioridade baixa', fora: 'Fora da fila' }
@@ -164,14 +204,16 @@ function useMidia(consulta) {
 
 export default function Abordagem({ g }) {
   const largo = useMidia('(min-width: 1100px)')
+  const cidade = g.cidade || null
+  const daMemoria = memoria.cidade === cidade ? memoria.dados : null
   const [dias, setDias] = useState(memoria.dias)
-  const [dados, setDados] = useState(memoria.dados)
+  const [dados, setDados] = useState(daMemoria)
   const [erro, setErro] = useState('')
   const [carregando, setCarregando] = useState(true)
   const [visao, setVisao] = useState(memoria.visao)
   const [busca, setBusca] = useState('')
   // a ordem da lista (ids): só muda quando chega uma leitura completa, troca o filtro ou a busca, ou em "Reordenar"
-  const [ordem, setOrdem] = useState(() => (memoria.dados ? ordenarIds(memoria.dados.itens ?? [], memoria.visao, '', memoria.dados.hoje) : []))
+  const [ordem, setOrdem] = useState(() => (daMemoria ? ordenarIds(daMemoria.itens ?? [], memoria.visao, '', daMemoria.hoje) : []))
   const [mexidos, setMexidos] = useState(() => new Set())   // mudaram desde a última ordenação
   const [selId, setSelId] = useState(null)
   const [folha, setFolha] = useState(false)      // celular: o salão aberto por cima da lista
@@ -188,36 +230,73 @@ export default function Abordagem({ g }) {
   const buscaRef = useRef(null)
   const notaRef = useRef(null)
 
-  useEffect(() => { if (dados) memoria = { ...memoria, dados } }, [dados])
+  useEffect(() => { if (dados) memoria = { ...memoria, dados, cidade: dados.cidadePedida } }, [dados])
   useEffect(() => { memoria = { ...memoria, dias, visao }; filtroRef.current = { visao, busca } }, [dias, visao, busca])
   useEffect(() => { montado.current = true; return () => { montado.current = false } }, [])
 
   // ---- ler a fila (trocar de período pede de novo; só a resposta do último pedido vale) ----
   const pedido = useRef(0)
   const emVoo = useRef(false) // uma leitura completa a caminho (pode ter saído antes de uma ação)
-  const aplicar = useCallback((n, r) => {
+  const ultimaConsulta = useRef(null) // a última leitura (para ler de novo a mesma coisa depois de uma ação)
+  const aplicar = useCallback((n, r, { anexar = false, cidadePedida = null } = {}) => {
     if (!montado.current || n !== pedido.current) return
     emVoo.current = false
     setCarregando(false)
     if (r.erro) { setErro(r.erro); return }
-    const novos = r.data ?? { itens: [] }
+    const veio = r.data ?? { itens: [] }
+    // a cidade inteira está aqui: o filtro e a busca rodam na tela (banco sem a 190: veio tudo, também)
+    const completo = r.antigo || (veio.visao === 'todos' && !veio.busca && !veio.mais)
     setErro('')
-    setDados(novos)
-    setOrdem(ordenarIds(novos.itens ?? [], filtroRef.current.visao, filtroRef.current.busca, novos.hoje))
+    if (anexar) {
+      // a página seguinte vai para o fim, na ordem do banco (a que já está na tela não se mexe)
+      const ids = (veio.itens ?? []).map((it) => it.lugar_id)
+      setDados((d) => {
+        if (!d) return d
+        const tem = new Set(d.itens.map((it) => it.lugar_id))
+        return { ...d, itens: [...d.itens, ...(veio.itens ?? []).filter((it) => !tem.has(it.lugar_id))], mais: veio.mais, total: veio.total, carregados: d.carregados + ids.length }
+      })
+      setOrdem((o) => { const tem = new Set(o); return [...o, ...ids.filter((id) => !tem.has(id))] })
+      return
+    }
+    setDados({ ...veio, completo, cidadePedida, carregados: (veio.itens ?? []).length })
+    // com a busca no banco, o que ele achou é o que vale (a tela não filtra a busca de novo)
+    setOrdem(ordenarIds(veio.itens ?? [], filtroRef.current.visao, completo ? filtroRef.current.busca : '', veio.hoje))
     setMexidos(new Set())
   }, [])
-  const ler = useCallback((d) => {
+  // a fila: primeiro a cidade inteira (se couber numa página, é tudo e o resto é aqui); se não couber, o filtro e a
+  // busca de agora vão ao banco
+  const ler = useCallback(async (d, { visao: v = filtroRef.current.visao, busca: b = filtroRef.current.busca, base = true } = {}) => {
     const n = ++pedido.current
     emVoo.current = true
-    return chamar('guia_fila_abordagem', { dias: d }).then((r) => aplicar(n, r))
-  }, [aplicar])
+    const comum = { dias: d, cidade_: cidade, limite: POR_PAGINA, depois: 0 }
+    ultimaConsulta.current = { d, v, b, base }
+    let r = await chamar('guia_fila_abordagem', base ? { ...comum, visao_: 'todos', busca_: null } : { ...comum, visao_: v, busca_: b.trim() || null })
+    if (n !== pedido.current) return
+    if (r.erro && semParametrosNovos(r.cru)) r = { ...(await chamar('guia_fila_abordagem', { dias: d })), antigo: true }
+    else if (base && !r.erro && r.data?.mais && (v !== 'todos' || b.trim())) {
+      r = await chamar('guia_fila_abordagem', { ...comum, visao_: v, busca_: b.trim() || null })
+    }
+    aplicar(n, r, { cidadePedida: cidade })
+  }, [aplicar, cidade])
+  const lerMais = useCallback(async () => {
+    if (!dados?.mais) return
+    const n = ++pedido.current
+    setCarregando(true)
+    const r = await chamar('guia_fila_abordagem', { dias: dados.dias, cidade_: cidade, visao_: dados.visao, busca_: dados.busca, limite: POR_PAGINA, depois: dados.carregados })
+    aplicar(n, r, { anexar: true })
+  }, [aplicar, cidade, dados])
+  const lerDeNovo = useCallback(() => { const q = ultimaConsulta.current; return ler(q?.d ?? memoria.dias, q ? { visao: q.v, busca: q.b, base: q.base } : {}) }, [ler])
+  // a primeira leitura e a troca de cidade no topo
   useEffect(() => { ler(memoria.dias) }, [ler])
   const carregar = (d) => { setDias(d); setCarregando(true); ler(d) }
+  // a busca no banco espera a pessoa parar de digitar
+  const esperaBusca = useRef(null)
+  useEffect(() => () => clearTimeout(esperaBusca.current), [])
 
   const hoje = dados?.hoje ?? new Date().toISOString().slice(0, 10)
   const itens = useMemo(() => dados?.itens ?? [], [dados])
   const porId = useMemo(() => new Map(itens.map((it) => [it.lugar_id, it])), [itens])
-  const reordenar = (v = visao, b = busca) => { setOrdem(ordenarIds(itens, v, b, hoje)); setMexidos(new Set()) }
+  const reordenar = (v = visao, b = busca) => { setOrdem(ordenarIds(itens, v, dados && !dados.completo ? '' : b, hoje)); setMexidos(new Set()) }
   const lista = useMemo(() => ordem.map((id) => porId.get(id)).filter(Boolean), [ordem, porId])
   // no computador, sempre há um salão aberto ao lado da lista (o primeiro, se nenhum foi escolhido)
   const atual = porId.get(selId) ?? (largo ? lista[0] : null) ?? null
@@ -258,33 +337,25 @@ export default function Abordagem({ g }) {
   useEffect(() => { if (atual && !historicos[atual.lugar_id]) lerHistorico(atual.lugar_id) }, [atual, historicos, lerHistorico])
 
   // ---- contadores e funil (somados dos itens) ----
-  const contagem = useMemo(() => {
-    const c = { fila: 0, lembretes: 0, pedidos: 0, todos: itens.length }
-    for (const [id] of STATUS) c[id] = 0
-    for (const it of itens) {
-      c[it.status] = (c[it.status] ?? 0) + 1
-      if (passaNaVisao(it, 'fila', hoje)) c.fila++
-      if (passaNaVisao(it, 'lembretes', hoje)) c.lembretes++
-      if (passaNaVisao(it, 'pedidos', hoje)) c.pedidos++
-    }
-    return c
-  }, [itens, hoje])
+  // os números das abas e do funil: dos itens quando a cidade inteira está aqui; senão, os do banco (da cidade inteira)
+  const resumo = useMemo(() => (dados?.completo || !dados?.resumo ? resumoDosItens(itens, hoje) : { contagem: { ...contagemVazia(), ...dados.resumo.contagem }, funil: { ...funilVazio(), ...dados.resumo.funil } }), [dados, itens, hoje])
+  const contagem = resumo.contagem
 
   // ---- trocar uma linha pela versão nova (sem reordenar a lista) ----
   // uma leitura completa ainda a caminho foi montada antes desta ação e a apagaria
   // da tela: pede de novo (o pedido novo invalida o velho)
   const trocarItem = useCallback((id, novo) => {
-    if (emVoo.current) ler(memoria.dias)
+    if (emVoo.current) lerDeNovo()
     setDados((d) => {
       if (!d) return d
-      const tem = d.itens.some((it) => it.lugar_id === id)
-      const lista_ = novo ? (tem ? d.itens.map((it) => (it.lugar_id === id ? novo : it)) : [...d.itens, novo]) : d.itens.filter((it) => it.lugar_id !== id)
-      return { ...d, itens: lista_ }
+      const velho = d.itens.find((it) => it.lugar_id === id) ?? null
+      const lista_ = novo ? (velho ? d.itens.map((it) => (it.lugar_id === id ? novo : it)) : [...d.itens, novo]) : d.itens.filter((it) => it.lugar_id !== id)
+      return { ...d, itens: lista_, resumo: d.completo ? d.resumo : ajustarResumo(d.resumo, velho, novo, d.hoje) }
     })
     setMexidos((m) => new Set(m).add(id))
     geracao.current[id] = (geracao.current[id] ?? 0) + 1
     setHistoricos((h) => { if (!(id in h)) return h; const n = { ...h }; delete n[id]; return n })
-  }, [ler])
+  }, [lerDeNovo])
 
   const desfazer = useCallback(async (acaoId, nome) => {
     if (ocupadoRef.current) { g.avisar({ texto: 'Espere a ação em andamento terminar e desfaça de novo.', tom: 'erro' }); return }
@@ -352,8 +423,17 @@ export default function Abordagem({ g }) {
     setSelId(id)
     requestAnimationFrame(() => document.querySelector(`[data-lugar="${id}"]`)?.scrollIntoView({ block: 'nearest' }))
   }
-  const trocarVisao = (v) => { setVisao(v); reordenar(v, busca); if (!largo) setFolha(false) }
-  const buscar = (t) => { setBusca(t); reordenar(visao, t) }
+  const noBanco = !!dados && !dados.completo
+  const trocarVisao = (v) => {
+    setVisao(v); if (!largo) setFolha(false)
+    if (noBanco) { filtroRef.current = { visao: v, busca }; setCarregando(true); ler(dias, { visao: v, busca, base: false }) } else reordenar(v, busca)
+  }
+  const buscar = (t) => {
+    setBusca(t)
+    if (!noBanco) { reordenar(visao, t); return }
+    clearTimeout(esperaBusca.current)
+    esperaBusca.current = setTimeout(() => { filtroRef.current = { visao, busca: t }; setCarregando(true); ler(dias, { visao, busca: t, base: false }) }, BUSCA_ESPERA_MS)
+  }
   const abrirPagina = (it) => { if (it?.status_pagina === 'publicado') window.open(urlDoAmbiente('cliente', it.pagina), '_blank', 'noopener') }
 
   // ---- teclado ----
@@ -434,7 +514,13 @@ export default function Abordagem({ g }) {
         {verAtalhos && <Atalhos onFechar={() => setVerAtalhos(false)} />}
       </div>
 
-      <Funil itens={itens} contagem={contagem} />
+      <Funil n={resumo.funil} contagem={contagem} />
+      {noBanco && (
+        <p className="pa-parcial muted" data-teste="abordagem-parcial">
+          {cidade ? 'Cidade grande' : 'Todas as cidades'}: a fila vem do banco em páginas de {POR_PAGINA}, já na ordem de prioridade; o filtro e a busca vão ao banco.
+          {' '}Na tela: {formatar(itens.length)} de {formatar(dados.total ?? itens.length)}{busca.trim() ? ' com essa busca' : visao !== 'todos' ? ' neste filtro' : ''}.
+        </p>
+      )}
 
       <div className="pa-visoes" role="tablist" aria-label="Filtrar a fila">
         {visoes.map(([id, r, tom]) => (
@@ -470,6 +556,11 @@ export default function Abordagem({ g }) {
               ))}
             </ol>
           )}
+          {noBanco && dados.mais && (
+            <button type="button" className="btn btn-ghost pa-mais" onClick={lerMais} disabled={carregando} data-teste="abordagem-mais">
+              {carregando ? <LoaderCircle size={15} className="pg-gira" /> : null} Mostrar mais {formatar(Math.min(POR_PAGINA, (dados.total ?? 0) - dados.carregados))} (faltam {formatar((dados.total ?? 0) - dados.carregados)})
+            </button>
+          )}
           <ComoOrdena dias={dados.dias} />
         </section>
 
@@ -490,16 +581,15 @@ export default function Abordagem({ g }) {
 }
 
 // ---- o funil: até onde a conversa chegou (a abordar → abordado → respondeu → cliente) ----
-function Funil({ itens, contagem }) {
-  const noFunil = itens.filter((it) => !it.ja_cliente && !(it.status === 'nao_abordar' && !it.etapa))
+function Funil({ n, contagem }) {
   const passos = [
-    ['Para abordar', noFunil.length, 'salões do guia (sem quem já era cliente)'],
-    ['Abordados', noFunil.filter((it) => it.etapa >= 1).length, 'a MIMO já falou com eles'],
-    ['Responderam', noFunil.filter((it) => it.etapa >= 2).length, contagem.negociando ? `${contagem.negociando} negociando agora` : 'sim, não ou talvez'],
-    ['Clientes', noFunil.filter((it) => it.etapa >= 4).length, 'viraram clientes da MIMO'],
+    ['Para abordar', n.para_abordar, 'salões do guia (sem quem já era cliente)'],
+    ['Abordados', n.abordados, 'a MIMO já falou com eles'],
+    ['Responderam', n.responderam, contagem.negociando ? `${contagem.negociando} negociando agora` : 'sim, não ou talvez'],
+    ['Clientes', n.clientes, 'viraram clientes da MIMO'],
   ]
   const base = Math.max(1, passos[0][1])
-  const jaEram = itens.filter((it) => it.ja_cliente).length
+  const jaEram = n.ja_eram
   return (
     <section className="pa-funil" aria-label="Funil da abordagem">
       {passos.map(([rotulo, n, sub], i) => {

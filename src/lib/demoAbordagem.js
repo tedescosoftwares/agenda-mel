@@ -6,6 +6,7 @@
 // fica guardado aqui em memória enquanto a página estiver aberta.
 import { GUIA_LUGARES, GUIA_INTERESSES } from './demoGuia.js'
 import { demoDesempenho } from './demoMetricas.js'
+import { semAcento } from './guia.js'
 
 const CANAIS = ['whatsapp', 'ligacao', 'instagram', 'presencial', 'email']
 const STATUS = ['a_abordar', 'abordado', 'respondeu', 'negociando', 'cliente', 'sem_interesse', 'nao_abordar']
@@ -80,7 +81,8 @@ function semear() {
 semear()
 
 // ---- a fila (o mesmo formato e a mesma conta de guia_fila_abordagem) ------------------------------
-function fila({ dias = 30, lugar_ = null } = {}) {
+// 3.42 (190): cidade_, visao_, busca_, limite e depois como o banco; total, mais e o resumo (abas e funil) da cidade inteira
+function fila({ dias = 30, lugar_ = null, cidade_ = null, visao_ = null, busca_ = null, limite = 500, depois = 0 } = {}) {
   const n = Math.max(1, Math.min(Number(dias) || 30, 400))
   const hoje = hojeSP()
   const de = somaDias(hoje, -(n - 1))
@@ -89,7 +91,7 @@ function fila({ dias = 30, lugar_ = null } = {}) {
   for (const p of des.paginas) if (p.lugar_id && !numeros.has(p.lugar_id)) numeros.set(p.lugar_id, p)
   const itens = []
   for (const l of GUIA_LUGARES) {
-    if (l.status === 'removido' || (lugar_ && l.id !== lugar_)) continue
+    if (l.status === 'removido' || (lugar_ && l.id !== lugar_) || (cidade_ && l.cidade_slug !== cidade_)) continue
     const ab = ABORDAGENS.get(l.id)
     const abertos = GUIA_INTERESSES.filter((i) => i.lugar_id === l.id && !i.atendido_em)
     const conta = (t) => abertos.filter((i) => i.tipo === t).length
@@ -143,7 +145,35 @@ function fila({ dias = 30, lugar_ = null } = {}) {
     })
   }
   itens.sort((a, b) => (a.fila === 'fora') - (b.fila === 'fora') || b.prioridade - a.prioridade || (b.nota_google ?? -1) - (a.nota_google ?? -1) || (b.avaliacoes ?? -1) - (a.avaliacoes ?? -1) || a.nome.localeCompare(b.nome, 'pt-BR'))
-  return { dias: n, de, ate: hoje, hoje, itens }
+  // os números das abas e do funil, da cidade inteira (antes do filtro e da busca)
+  const contagem = { todos: itens.length, fila: 0, lembretes: 0, pedidos: 0 }
+  const funil = { para_abordar: 0, abordados: 0, responderam: 0, clientes: 0, ja_eram: 0 }
+  const passa = (it, v) => (v === 'todos' ? true : v === 'fila' ? it.fila === 'principal'
+    : v === 'lembretes' ? it.fila === 'principal' && !!it.proximo_contato && it.proximo_contato <= hoje
+      : v === 'pedidos' ? it.fila === 'principal' && it.pendentes.sou_dono + it.pendentes.quero_marcar > 0 : it.status === v)
+  for (const it of itens) {
+    contagem[it.status] = (contagem[it.status] ?? 0) + 1
+    for (const v of ['fila', 'lembretes', 'pedidos']) if (passa(it, v)) contagem[v]++
+    if (it.ja_cliente) funil.ja_eram++
+    else if (!(it.status === 'nao_abordar' && !it.etapa)) {
+      funil.para_abordar++
+      if (it.etapa >= 1) funil.abordados++
+      if (it.etapa >= 2) funil.responderam++
+      if (it.etapa >= 4) funil.clientes++
+    }
+  }
+  const vis = String(visao_ ?? '').trim() || 'todos'
+  const termo = semAcento(String(busca_ ?? '')).toLowerCase().trim()
+  const filtrados = itens.filter((it) => passa(it, vis) && (!termo || semAcento(`${it.nome} ${it.bairro ?? ''} ${it.cidade ?? ''} ${it.categoria ?? ''} ${it.nota ?? ''}`).toLowerCase().includes(termo)))
+  if (vis === 'lembretes') filtrados.sort((a, b) => String(a.proximo_contato).localeCompare(String(b.proximo_contato)))
+  const pula = Math.max(0, Number(depois) || 0)
+  const lim = Math.max(1, Math.min(Number(limite) || 500, 2000))
+  const pagina = filtrados.slice(pula, pula + lim)
+  return {
+    dias: n, de, ate: hoje, hoje, cidade: cidade_ || null, visao: vis, busca: termo || null,
+    total: filtrados.length, depois: pula, limite: lim, mais: pula + pagina.length < filtrados.length,
+    resumo: { contagem, funil }, itens: pagina,
+  }
 }
 
 const erro = (msg) => { throw new Error(msg) }

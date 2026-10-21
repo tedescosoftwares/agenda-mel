@@ -57,31 +57,46 @@ case "${1:-}" in
 esac
 
 MODO="${1:-}"
-# 3.41: uma rodada por vez (a da hora, a do "Publicar agora", a de quem roda na mão e o build do publicar-site.sh)
-if command -v flock >/dev/null; then
-  exec 9>/tmp/mimo-republicar.lock
-  if ! flock -n 9; then
-    [ "$MODO" = '--pedidos' ] || amarelo "$(date '+%F %T') outra regeneração (ou um build) está em andamento; esta fica para a próxima"
-    exit 0
-  fi
-fi
+# 3.42: o --pedidos roda a cada minuto: o mesmo aviso vai ao republicar.log uma vez só (de novo quando muda) e sai
+# quando tudo volta ao normal. Antes ele ficava calado e um .env sem a chave do gerador não deixava rastro nenhum.
+AVISO_PEDIDOS="$AQUI/.pedidos-aviso"
+avisar_pedidos() { # $1 = o aviso ('' = tudo certo)
+  if [ -z "$1" ]; then rm -f "$AVISO_PEDIDOS"; return 0; fi
+  [ "$(cat "$AVISO_PEDIDOS" 2>/dev/null || true)" = "$1" ] && return 0
+  printf '%s' "$1" > "$AVISO_PEDIDOS"
+  amarelo "$(date '+%F %T') Publicar agora: $1"
+}
+falhar() { if [ "$MODO" = '--pedidos' ]; then avisar_pedidos "$1"; else vermelho "$1"; fi; exit 1; }
 
 # as chaves: no .env da Evolution ou no da raiz, como no publicar-site.sh
 # shellcheck disable=SC1091
 [ -f .env ] && { set -a; . ./.env; set +a; }
 # shellcheck disable=SC1091
 [ -f "$RAIZ/.env" ] && { set -a; . "$RAIZ/.env"; set +a; }
-case "${VITE_SUPABASE_URL:-}" in https://*) ;; *) vermelho 'Falta VITE_SUPABASE_URL (e VITE_SUPABASE_ANON_KEY) no .env.'; exit 1 ;; esac
-[ -n "${VITE_SUPABASE_ANON_KEY:-}" ] || { vermelho 'Falta VITE_SUPABASE_ANON_KEY no .env.'; exit 1; }
+case "${VITE_SUPABASE_URL:-}" in https://*) ;; *) falhar 'Falta VITE_SUPABASE_URL (e VITE_SUPABASE_ANON_KEY) no .env.' ;; esac
+[ -n "${VITE_SUPABASE_ANON_KEY:-}" ] || falhar 'Falta VITE_SUPABASE_ANON_KEY no .env.'
 export VITE_SUPABASE_URL VITE_SUPABASE_ANON_KEY
-[ -f "$RAIZ/dist/index.html" ] || { vermelho "Não existe $RAIZ/dist/index.html: rode o publicar-site.sh uma vez antes."; exit 1; }
-command -v node >/dev/null || { vermelho 'Não achei o node no PATH do cron.'; exit 1; }
+[ -f "$RAIZ/dist/index.html" ] || falhar "Não existe $RAIZ/dist/index.html: rode o publicar-site.sh uma vez antes."
+command -v node >/dev/null || falhar 'Não achei o node no PATH do cron.'
+
+# 3.41: uma rodada por vez (a da hora, a do "Publicar agora", a de quem roda na mão e o build do publicar-site.sh)
+if command -v flock >/dev/null; then
+  exec 9>/tmp/mimo-republicar.lock
+  if ! flock -n 9; then
+    # 3.42: o cron do minuto avisa o banco que conferiu e está ocupado (a Plataforma diz "entra em seguida")
+    if [ "$MODO" = '--pedidos' ]; then node "$RAIZ/scripts/registrar-publicacao.mjs" ocupado >/dev/null 2>&1 || true
+    else amarelo "$(date '+%F %T') outra regeneração (ou um build) está em andamento; esta fica para a próxima"; fi
+    exit 0
+  fi
+fi
 
 CARIMBO="$RAIZ/dist/.conteudo-versao"
 REGISTRADA="$AQUI/.publicacao-registrada" # a versão que o banco já tem como publicada (fora do dist: o build não apaga)
 # 3.41: o pedido do "Publicar agora" (se houver). A hora do banco vira o começo desta publicação (a régua das pendências)
-if [ "$MODO" = '--pedidos' ]; then PEDIDO=$(node "$RAIZ/scripts/registrar-publicacao.mjs" inicio 2>/dev/null || true)
-else PEDIDO=$(node "$RAIZ/scripts/registrar-publicacao.mjs" inicio || true); fi
+ERRO_INICIO=$(mktemp)
+PEDIDO=$(node "$RAIZ/scripts/registrar-publicacao.mjs" inicio 2>"$ERRO_INICIO" || true)
+AVISO=$(sed 's/^registrar-publicacao: //' "$ERRO_INICIO" | head -1); rm -f "$ERRO_INICIO"
+if [ "$MODO" = '--pedidos' ]; then avisar_pedidos "$AVISO"; elif [ -n "$AVISO" ]; then amarelo "$AVISO"; fi
 campo() { printf '%s\n' "$PEDIDO" | sed -n "s/^$1=//p" | head -1; }
 PEDIDO_ID=$(campo id); [ "$PEDIDO_ID" = '-' ] && PEDIDO_ID=''
 INICIO=$(campo agora); [ "$INICIO" = '-' ] && INICIO=''

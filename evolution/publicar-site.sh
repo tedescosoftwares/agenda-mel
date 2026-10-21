@@ -202,6 +202,14 @@ chmod -R a+rX dist
 verde "  dist/ pronto ($(du -sh dist | cut -f1))"
 # o dist está pronto: a regeneração (a da hora, a do "Publicar agora") pode voltar a rodar
 exec 9>&-
+# 3.42: o bat 2 liga o cron sozinho (a rodada da hora e a conferência do minuto, que atende o "Publicar agora")
+if ! command -v crontab >/dev/null; then
+  amarelo 'Sem crontab nesta máquina: o "Publicar agora" da Plataforma não é atendido. No Ubuntu: sudo apt-get install -y cron && ./republicar-se-mudou.sh --cron'
+elif ! crontab -l 2>/dev/null | grep -q 'republicar-se-mudou.sh --pedidos'; then
+  "$AQUI/republicar-se-mudou.sh" --cron >/dev/null 2>&1 \
+    && verde 'Cron ligado: o "Publicar agora" da Plataforma é atendido em até 1 minuto, e de hora em hora o site se republica sozinho.' \
+    || amarelo 'Não consegui ligar o cron: rode ./republicar-se-mudou.sh --cron para ligar o "Publicar agora".'
+fi
 # de volta para a pasta da Evolution pelo caminho ABSOLUTO: o $0 era
 # relativo e, depois do cd para a raiz, apontava para o lugar errado —
 # e o docker compose não achava o arquivo
@@ -267,13 +275,4 @@ case "$CODIGO" in
 esac
 echo
 echo 'Para publicar de novo depois de um git pull: ./publicar-site.sh'
-# o que a Plataforma publica (artigo, salão aprovado) só chega ao HTML estático e ao sitemap
-# numa regeneração; o republicar-se-mudou.sh faz isso sozinho, de hora em hora (3.14)
-if ! crontab -l 2>/dev/null | grep -q 'republicar-se-mudou.sh'; then
-  amarelo 'Dica: ./republicar-se-mudou.sh --cron  regenera as páginas estáticas sozinho quando a Plataforma publica algo.'
-elif ! crontab -l 2>/dev/null | grep -q 'republicar-se-mudou.sh --pedidos'; then
-  # 3.41: quem já tinha o cron da hora ganha a linha do minuto (o "Publicar agora" da Plataforma) sem passo a mais
-  "$AQUI/republicar-se-mudou.sh" --cron >/dev/null 2>&1 \
-    && verde 'Cron atualizado: o "Publicar agora" da Plataforma é atendido em até 1 minuto (e a rodada da hora continua).' \
-    || amarelo 'Não consegui atualizar o cron: rode ./republicar-se-mudou.sh --cron para ligar o "Publicar agora".'
-fi
+

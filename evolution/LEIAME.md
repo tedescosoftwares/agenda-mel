@@ -637,9 +637,13 @@ publicar já. O cron do minuto (`--pedidos`) pega o pedido em até um minuto,
 regenera e registra; a tela acompanha até "no ar". A rodada da hora, o
 `--forcar` e o build do `publicar-site.sh` também ficam registrados, e uma
 trava deixa uma rodada por vez. Precisa da `GUIA_CHAVE_GERADOR` no `.env`
-(a mesma do gerador). Quem já tinha o cron da hora ganha a linha do minuto
-no próximo `publicar-site.sh`; senão, rode `./republicar-se-mudou.sh --cron`
-uma vez.
+(a mesma do gerador). O `publicar-site.sh` liga o cron sozinho (3.42).
+
+Se a janela do "Publicar agora" disser que o servidor não está conferindo,
+rode `./republicar-se-mudou.sh --forcar` (publica na hora e mostra o erro,
+se houver) e `./republicar-se-mudou.sh --cron`; o motivo de o cron do minuto
+não conseguir conferir (sem a chave, chave errada, banco sem a migração) fica
+no `republicar.log`, uma vez só.
 
 Ele lê as mesmas chaves do `publicar-site.sh` (`VITE_SUPABASE_URL` e a
 chave anon, no `.env` da Evolution ou da raiz) e precisa do `dist/` de um

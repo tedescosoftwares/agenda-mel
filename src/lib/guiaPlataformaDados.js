@@ -105,10 +105,16 @@ export function ordemGlobal(ordem, { publicadas = false } = {}) {
 //   filtros: { status, cidade, bairro, categoria, receita, selecao, triagem, busca, publicadas }
 // Devolve { lista, total, pagina, paginas }. Num banco sem a 183 (sem pontos e fotos_n), a ordem cai para A a Z; sem a 181,
 // as colunas de antes. Sem a view (171), o erro sobe com o nome dela, e a tela explica.
+// 3.43: em duas idas. A primeira pede só os ids da página, com a contagem: o banco filtra e ordena sem abrir o texto de
+// cada salão (o resumo e os dados da IA moram dentro de conteudo, o campo grande). Pedir as colunas da lista já na
+// ordenação abria o texto dos 20 mil para entregar 500 e passava do tempo limite ("canceling statement due to statement
+// timeout"). A segunda pede as colunas só desses ids, em pedaços de IDS_POR_VEZ (o endereço do pedido tem limite de
+// tamanho), e a lista sai na ordem da primeira.
+export const IDS_POR_VEZ = 100
 export async function consultaGlobal({ cliente, colunas = COLUNAS_LISTA, filtros = {}, ordem = '', pagina = 1, porPagina = POR_PAGINA }) {
   const f = filtros
-  const montar = (cols, ordens, semBusca) => {
-    let q = cliente.from('guia_lista').select(cols, { count: 'exact' })
+  const montar = (ordens, semBusca) => {
+    let q = cliente.from('guia_lista').select('id', { count: 'exact' })
     q = f.publicadas ? q.eq('status', 'publicado') : porFase(q, f.status)
     if (f.cidade) q = q.eq('cidade_slug', f.cidade)
     if (f.bairro) q = q.eq('bairro', f.bairro)
@@ -123,21 +129,34 @@ export async function consultaGlobal({ cliente, colunas = COLUNAS_LISTA, filtros
     const de = (Math.max(1, pagina) - 1) * porPagina
     return q.range(de, de + porPagina - 1)
   }
-  let cols = colunas
+  const falhou = (e) => Object.assign(new Error(String(e.message ?? e)), { code: e.code, details: e.details })
+  // 1. os ids da página e o total
   let ordens = ordemGlobal(ordem, { publicadas: !!f.publicadas })
   let semBusca = false
-  let r = await montar(cols, ordens, semBusca)
-  for (let tentativa = 0; r.error && tentativa < 3; tentativa++) {
+  let r = await montar(ordens, semBusca)
+  for (let tentativa = 0; r.error && tentativa < 2; tentativa++) {
     const msg = String(r.error.message ?? r.error)
     if (SEM_BUSCA_183.test(msg) && !semBusca) semBusca = true
     else if (PRECISAM_DA_183.test(msg) && ordens !== ORDENS.nome) ordens = ORDENS.nome
-    else if (colunaFalta(r.error) && cols !== COLUNAS_LISTA_ANTIGAS) cols = COLUNAS_LISTA_ANTIGAS
     else break
-    r = await montar(cols, ordens, semBusca)
+    r = await montar(ordens, semBusca)
   }
-  if (r.error) throw Object.assign(new Error(String(r.error.message ?? r.error)), { code: r.error.code, details: r.error.details })
-  const lista = Array.isArray(r.data) ? r.data : []
-  const total = Number.isFinite(Number(r.count)) && r.count !== null ? Number(r.count) : lista.length
+  if (r.error) throw falhou(r.error)
+  const ids = (Array.isArray(r.data) ? r.data : []).map((x) => x.id).filter(Boolean)
+  const total = Number.isFinite(Number(r.count)) && r.count !== null ? Number(r.count) : ids.length
+  // 2. as colunas só desses ids
+  const lerLinhas = async (cols) => {
+    const partes = []
+    for (let i = 0; i < ids.length; i += IDS_POR_VEZ) partes.push(ids.slice(i, i + IDS_POR_VEZ))
+    const rs = await Promise.all(partes.map((parte) => cliente.from('guia_lista').select(cols).in('id', parte)))
+    return { erro: rs.find((x) => x.error)?.error ?? null, linhas: rs.flatMap((x) => (Array.isArray(x.data) ? x.data : [])) }
+  }
+  let cols = colunas
+  let l = ids.length ? await lerLinhas(cols) : { erro: null, linhas: [] }
+  if (l.erro && colunaFalta(l.erro) && cols !== COLUNAS_LISTA_ANTIGAS) { cols = COLUNAS_LISTA_ANTIGAS; l = await lerLinhas(cols) }
+  if (l.erro) throw falhou(l.erro)
+  const porId = new Map(l.linhas.map((x) => [x.id, x]))
+  const lista = ids.map((id) => porId.get(id)).filter(Boolean)
   return { lista, total, pagina: Math.max(1, pagina), paginas: Math.max(1, Math.ceil(total / porPagina)) }
 }
 

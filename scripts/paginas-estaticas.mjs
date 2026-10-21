@@ -215,6 +215,9 @@ if (URL && CHAVE && !globalThis.process.env.VITE_DEMO) {
     try {
       guia = await carregarGuia({ url: URL, chave: CHAVE, cacheDir: path.resolve('.cache/guia'), refazer: REFAZER, chaveGerador: globalThis.process.env.GUIA_CHAVE_GERADOR || '', log: (m) => console.log(`paginas-estaticas: ${m}`) })
     } catch (e) {
+      // 3.38.4: a leitura antiga, de uma vez, só serve a um banco sem a 171 (sem a função por cidade). Num tempo esgotado ou
+      // numa chave errada ela só confundia o log (e dá 403 desde a 173, que exige a chave)
+      if (!/PGRST202|could not find the function|404 em rpc\/guia_(cidades|publicadas)/i.test(String(e?.message ?? e))) throw e
       const r = await fetch(`${URL}/rest/v1/rpc/guia_publicadas`, { headers: { apikey: CHAVE, Authorization: `Bearer ${CHAVE}` } })
       if (!r.ok) throw new Error(`${e.message}; e ${r.status} em rpc/guia_publicadas de uma vez`)
       guia = await r.json()
@@ -228,7 +231,9 @@ if (URL && CHAVE && !globalThis.process.env.VITE_DEMO) {
     dadosGuia = dadosDoGuia(guia)
     console.log(`paginas-estaticas: guia de salões com ${doGuia.length} página(s) e ${dadosGuia.length} arquivo(s) de dados`)
   } catch (e) {
-    console.log('paginas-estaticas: guia de salões indisponível (' + e.message + '), seguindo sem ele; as páginas do guia que estão no ar ficam')
+    // 3.38.4: o tempo esgotado ganha o que fazer (uma migração ou consulta longa segurando o guia, ou o disco do plano no limite)
+    const dica = /57014|statement timeout/i.test(String(e?.message ?? e)) ? ' O banco passou do tempo limite: no SQL Editor, select pid, state, now() - xact_start, left(query, 70) from pg_stat_activity where state <> \'idle\'; encerre a presa com pg_terminate_backend(pid).' : ''
+    console.log('paginas-estaticas: guia de salões indisponível (' + e.message + '), seguindo sem ele; as páginas do guia que estão no ar ficam.' + dica)
   }
 }
 const usadas = new Set([...ARTIGOS.map((a) => a.categoria), ...paginas.filter((p) => p.tipo === 'article' && p.jsonLd).flatMap((p) => { const m = p.jsonLd['@graph'].find((g) => g['@type'] === 'BreadcrumbList'); const c = m?.itemListElement?.[2]?.item; return c && c.includes('/blog/categoria/') ? [c.split('/blog/categoria/')[1]] : [] })])

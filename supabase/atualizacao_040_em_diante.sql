@@ -151,6 +151,7 @@
 --    183  guia_lista com pontos e fotos_n; índice (cidade_slug, nome, id) para a lista por páginas
 --    184  guia_tocar com caminho rápido em guia_lugares (status, conteudo, fotos): o lote em partes não serializa a linha
 --    185  guia_lugares.pontos guardado por gatilho; guia_pontos(l) lê a coluna: as listas ordenadas (e a primeira fatia do gerador) ficam baratas
+--    186  site_conteudo_versao() lê o contador guia_versao (gatilhos em guia_lugares) em vez de varrer o guia
 --
 --  Se der erro, me mande a mensagem inteira: cada bloco abaixo está
 --  marcado com o nome do arquivo de origem.
@@ -32560,27 +32561,51 @@ insert into public.migracoes_aplicadas (arquivo) values ('184_lote_leve.sql') on
 -- =============================================================
 
 -- 185 (3.38.3): os pontos de cada salão guardados na linha (guia_lugares.pontos).
+-- aplicar: sem-transacao
+-- (a linha de cima diz ao aplicar.sh para rodar este arquivo comando a comando, e não numa transação só: numa transação
+-- só, a coluna nova segurava a tabela guia_lugares do começo ao fim do preenchimento, e toda leitura do site, da
+-- Plataforma e do gerador caía em "canceling statement due to statement timeout" enquanto isto rodava)
+--
 -- guia_pontos(l) (166) calculava a nota ajustada e o bônus da foto a cada chamada, e chamava guia_fotos(l) duas vezes
 -- (com uma consulta em salons para o salão da MIMO sem foto própria). Nas listas ordenadas isso corria por linha:
 -- a primeira fatia de guia_publicadas() de uma cidade com 4 mil salões no ar gastava a maior parte do tempo nisso
--- e, no Supabase, passava do tempo limite da consulta pública ("canceling statement due to statement timeout");
--- o gerador então deixava a cidade de fora (e, antes da 3.38.2, o guia inteiro).
+-- e, no Supabase, passava do tempo limite da consulta pública; o gerador então deixava a cidade de fora (e, antes da
+-- 3.38.2, o guia inteiro).
 -- Agora: a conta vira guia_pontos_calc(l); um gatilho guarda o resultado em pontos quando entra a linha ou mudam
 -- nota, avaliacoes, fotos ou salon_id (e quando o salão da MIMO muda as fotos dele); guia_pontos(l) passa a devolver
 -- a coluna (com a conta de reserva se estiver vazia), então tudo o que ordena por guia_pontos(l) fica barato sem mudar.
 -- pontos é derivado: não anda atualizado_em (entra nos "internos" de guia_tocar).
--- Pode rodar de novo (tudo "if not exists" / "or replace", e o preenchimento só pega o que está vazio). O que pega
--- trava de tabela (a coluna nova, os gatilhos) roda num bloco só, com lock_timeout de 30 s: uma sessão presa na
--- tabela (um update antigo, um lote) não deixa isto pendurado, dá um erro que diz o que fazer. O preenchimento vai
--- em partes de 2.000 com aviso a cada parte, sem o carimbo (guia.sem_carimbo, só nesta transação), sem trava nenhuma.
-do $$
+--
+-- Cuidados com o banco no ar: cada passo que pega trava de tabela (a coluna, o comentário, os gatilhos) espera no
+-- máximo 2 s e tenta de novo, até 15 vezes (pg_temp.guia_ddl), para nunca enfileirar as leituras atrás dele por muito
+-- tempo; o preenchimento vai em partes de 2.000 e, pelo aplicar.sh, grava cada parte (guia.em_partes = 1): parar no
+-- meio não perde o que foi, e rodar de novo continua de onde parou. Tudo pode rodar de novo.
+-- No SQL Editor (uma transação só, sem guia.em_partes) também funciona, mas segura a tabela até o fim: rode em hora calma.
+
+-- os comandos que pegam trava de tabela: 2 s de espera por vez, até 15 vezes, e o lock_timeout de antes de volta
+create or replace function pg_temp.guia_ddl(comando text, tentativas int default 15)
+returns void language plpgsql as $f$
+declare i int := 0; antes text := current_setting('lock_timeout');
 begin
-  perform set_config('lock_timeout', coalesce(current_setting('guia.lock_timeout', true), '30s'), true);
-  execute 'alter table public.guia_lugares add column if not exists pontos numeric';
-exception when lock_not_available then
-  raise exception '185: a tabela guia_lugares está presa por outra sessão (um update antigo ainda rodando?). No SQL Editor: select pid, query from pg_stat_activity where state <> ''idle'' and query ilike ''%%guia_lugares%%''; select pg_terminate_backend(<pid>); e rode a migração de novo';
-end $$;
-comment on column public.guia_lugares.pontos is 'Guia (185): os pontos que ordenam as listas (nota ajustada + foto), guardados pelo gatilho guia_lugares_pontos; a conta é guia_pontos_calc().';
+  loop
+    begin
+      perform set_config('lock_timeout', '2s', true);
+      execute comando;
+      perform set_config('lock_timeout', antes, true);
+      return;
+    exception when lock_not_available then
+      i := i + 1;
+      if i >= tentativas then
+        raise exception 'a tabela está presa por outra sessão (% tentativas de 2 s: %). No SQL Editor: select pid, state, now() - xact_start as ha, left(query, 70) from pg_stat_activity where state <> ''idle''; encerre a que segura a tabela com select pg_terminate_backend(<pid>); e rode de novo', tentativas, left(comando, 70);
+      end if;
+      raise notice 'tabela ocupada por outra sessão, tentando de novo em 2 s (% de %): %', i, tentativas, left(comando, 60);
+      perform pg_sleep(2);
+    end;
+  end loop;
+end $f$;
+
+select pg_temp.guia_ddl('alter table public.guia_lugares add column if not exists pontos numeric');
+select pg_temp.guia_ddl($c$comment on column public.guia_lugares.pontos is 'Guia (185): os pontos que ordenam as listas (nota ajustada + foto), guardados pelo gatilho guia_lugares_pontos; a conta é guia_pontos_calc().'$c$);
 
 -- a conta de sempre (166), com o nome novo
 create or replace function public.guia_pontos_calc(l public.guia_lugares)
@@ -32614,14 +32639,8 @@ begin
   end if;
   return new;
 end $$;
-do $$
-begin
-  perform set_config('lock_timeout', coalesce(current_setting('guia.lock_timeout', true), '30s'), true);
-  execute 'drop trigger if exists guia_lugares_pontos on public.guia_lugares';
-  execute 'create trigger guia_lugares_pontos before insert or update on public.guia_lugares for each row execute function public.guia_pontos_guardar()';
-exception when lock_not_available then
-  raise exception '185: a tabela guia_lugares está presa por outra sessão; veja pg_stat_activity, encerre com pg_terminate_backend(pid) e rode de novo';
-end $$;
+select pg_temp.guia_ddl('drop trigger if exists guia_lugares_pontos on public.guia_lugares');
+select pg_temp.guia_ddl('create trigger guia_lugares_pontos before insert or update on public.guia_lugares for each row execute function public.guia_pontos_guardar()');
 
 -- o salão da MIMO que muda as fotos dele: os salões do guia ligados a ele e sem foto própria recontam
 create or replace function public.guia_pontos_do_salao()
@@ -32633,14 +32652,8 @@ begin
   end if;
   return new;
 end $$;
-do $$
-begin
-  perform set_config('lock_timeout', coalesce(current_setting('guia.lock_timeout', true), '30s'), true);
-  execute 'drop trigger if exists salons_guia_pontos on public.salons';
-  execute 'create trigger salons_guia_pontos after update of fotos on public.salons for each row execute function public.guia_pontos_do_salao()';
-exception when lock_not_available then
-  raise exception '185: a tabela salons está presa por outra sessão; veja pg_stat_activity, encerre com pg_terminate_backend(pid) e rode de novo';
-end $$;
+select pg_temp.guia_ddl('drop trigger if exists salons_guia_pontos on public.salons');
+select pg_temp.guia_ddl('create trigger salons_guia_pontos after update of fotos on public.salons for each row execute function public.guia_pontos_do_salao()');
 
 -- o carimbo de atualização (164, 170, 184): pontos é derivado, não é atualização da página
 create or replace function public.guia_tocar()
@@ -32669,16 +32682,16 @@ begin
 end $$;
 comment on function public.guia_tocar() is 'Guia (164, 170, 184, 185): atualizado_em só anda quando muda algo que a página mostra; em guia_lugares, status, conteudo ou fotos mudados já bastam, sem serializar a linha; pontos é derivado e não conta.';
 
--- preenche em partes de 2.000, avisando a cada parte (o aviso vai para o log do aplicar.sh: tail -f /tmp/aplicar.log),
--- sem o carimbo (guia_tocar serializa a linha inteira duas vezes por linha para descobrir que nada visível mudou: com
--- dezenas de milhares de salões isso é o que demorava minutos; pontos é interno, então atualizado_em não andaria de
--- qualquer jeito) e em SQL puro: a mesma conta de guia_pontos_calc(), sem chamar função linha a linha. Sem trava de
--- tabela: a Plataforma e o gerador seguem enquanto isto roda
+-- preenche em partes de 2.000, avisando a cada parte, sem o carimbo (guia_tocar serializa a linha inteira duas vezes
+-- por linha para descobrir que nada visível mudou: com dezenas de milhares de salões isso é o que demorava minutos;
+-- pontos é interno, então atualizado_em não andaria de qualquer jeito) e em SQL puro: a mesma conta de
+-- guia_pontos_calc(), sem chamar função linha a linha. Pelo aplicar.sh (guia.em_partes = 1) cada parte é gravada na
+-- hora: as leituras nunca esperam e as escritas da Plataforma esperam no máximo uma parte
 do $$
-declare n int; feitos int := 0; t0 timestamptz := clock_timestamp();
+declare n int; feitos int := 0; t0 timestamptz := clock_timestamp(); em_partes boolean := current_setting('guia.em_partes', true) = '1';
 begin
-  perform set_config('guia.sem_carimbo', '1', true);
   loop
+    perform set_config('guia.sem_carimbo', '1', true); -- vale até o fim da transação: de novo a cada parte gravada
     with base as (
       select l.id,
              case when l.nota is null then 4.5
@@ -32696,6 +32709,7 @@ begin
     get diagnostics n = row_count;
     exit when n = 0;
     feitos := feitos + n;
+    if em_partes then commit; end if;
     raise notice '185: % salões com pontos guardados… (% s)', feitos, round(extract(epoch from clock_timestamp() - t0)::numeric, 1);
   end loop;
 end $$;
@@ -32706,3 +32720,101 @@ begin
 end $$;
 
 insert into public.migracoes_aplicadas (arquivo) values ('185_pontos_guardados.sql') on conflict (arquivo) do nothing;
+
+-- =============================================================
+-- >>> 186_versao_sem_varrer.sql
+-- =============================================================
+
+-- 186 (3.38.4): a versão do conteúdo do site sem varrer o guia.
+-- site_conteudo_versao() (164 … 182) contava os salões no ar e pegava o maior atualizado_em a cada chamada: uma volta
+-- pela tabela guia_lugares inteira, de hora em hora, pelo acesso público (3 s de limite no Supabase). Com o guia grande,
+-- ou com a tabela ocupada (uma migração, um lote, o disco do plano grátis no limite), a leitura passava do tempo e o
+-- republicar-se-mudou.sh parava ("não consegui ler a versão do conteúdo ... statement timeout").
+-- Agora o guia tem um contador de uma linha só (guia_versao), que três gatilhos sobem quando muda o que o site mostra:
+-- um salão entra no ar, sai do ar, é apagado no ar, ou um salão no ar muda algo visível (atualizado_em anda: guia_tocar,
+-- 164/170/184). Uma vez por transação basta (um lote de 200 aprovações sobe uma vez). A versão lê essa linha em vez de
+-- varrer guia_lugares; as tabelas pequenas (artigos, páginas SEO, páginas do guia, categorias, regiões) seguem como antes.
+-- Os mesmos cuidados da 185: o que pega trava de tabela espera 2 s por vez e tenta de novo.
+
+create or replace function pg_temp.guia_ddl(comando text, tentativas int default 15)
+returns void language plpgsql as $f$
+declare i int := 0; antes text := current_setting('lock_timeout');
+begin
+  loop
+    begin
+      perform set_config('lock_timeout', '2s', true);
+      execute comando;
+      perform set_config('lock_timeout', antes, true);
+      return;
+    exception when lock_not_available then
+      i := i + 1;
+      if i >= tentativas then
+        raise exception 'a tabela está presa por outra sessão (% tentativas de 2 s: %). No SQL Editor: select pid, state, now() - xact_start as ha, left(query, 70) from pg_stat_activity where state <> ''idle''; encerre a que segura a tabela com select pg_terminate_backend(<pid>); e rode de novo', tentativas, left(comando, 70);
+      end if;
+      raise notice 'tabela ocupada por outra sessão, tentando de novo em 2 s (% de %): %', i, tentativas, left(comando, 60);
+      perform pg_sleep(2);
+    end;
+  end loop;
+end $f$;
+
+create table if not exists public.guia_versao (
+  id int primary key default 1 check (id = 1),
+  n bigint not null default 0,
+  em timestamptz not null default now()
+);
+comment on table public.guia_versao is 'Guia (186): o contador que sobe quando muda o que o site mostra dos salões (gatilhos guia_lugares_versao_*); site_conteudo_versao() lê esta linha em vez de varrer guia_lugares.';
+insert into public.guia_versao (id) values (1) on conflict (id) do nothing;
+alter table public.guia_versao enable row level security; -- sem política: só as funções do banco mexem
+revoke all on public.guia_versao from public, anon, authenticated;
+
+-- sobe o contador uma vez por transação (a primeira linha que muda o site; as outras da mesma transação não repetem)
+create or replace function public.guia_versao_tocar()
+returns trigger language plpgsql security definer set search_path = public as $$
+declare x text := txid_current()::text;
+begin
+  if current_setting('guia.versao_tocada', true) is distinct from x then
+    perform set_config('guia.versao_tocada', x, true);
+    update public.guia_versao set n = n + 1, em = now() where id = 1;
+  end if;
+  return null;
+end $$;
+comment on function public.guia_versao_tocar() is 'Guia (186): sobe guia_versao uma vez por transação; chamada pelos gatilhos guia_lugares_versao_* só quando muda o que o site mostra.';
+revoke execute on function public.guia_versao_tocar() from public, anon, authenticated;
+
+-- os três gatilhos: a condição (WHEN) é conferida antes de chamar a função, então o resto das mudanças (a nota, o
+-- rascunho, os pontos, a importação de quem não está no ar) não custa nada
+select pg_temp.guia_ddl('drop trigger if exists guia_lugares_versao_ins on public.guia_lugares');
+select pg_temp.guia_ddl($c$create trigger guia_lugares_versao_ins after insert on public.guia_lugares for each row
+  when (new.status = 'publicado' and new.conteudo is not null) execute function public.guia_versao_tocar()$c$);
+select pg_temp.guia_ddl('drop trigger if exists guia_lugares_versao_upd on public.guia_lugares');
+select pg_temp.guia_ddl($c$create trigger guia_lugares_versao_upd after update on public.guia_lugares for each row
+  when (((new.status = 'publicado' and new.conteudo is not null) or (old.status = 'publicado' and old.conteudo is not null))
+        and (new.atualizado_em is distinct from old.atualizado_em or new.status is distinct from old.status
+             or (new.conteudo is null) is distinct from (old.conteudo is null)))
+  execute function public.guia_versao_tocar()$c$);
+select pg_temp.guia_ddl('drop trigger if exists guia_lugares_versao_del on public.guia_lugares');
+select pg_temp.guia_ddl($c$create trigger guia_lugares_versao_del after delete on public.guia_lugares for each row
+  when (old.status = 'publicado' and old.conteudo is not null) execute function public.guia_versao_tocar()$c$);
+
+-- a versão: o contador do guia no lugar da volta pela tabela; o resto como na 182
+create or replace function public.site_conteudo_versao()
+returns text language sql stable security definer set search_path = public as $$
+  select md5(concat_ws('|',
+    (select concat(count(*), '/', max(updated_at)) from public.blog_posts where status = 'published'),
+    (select concat(count(*), '/', max(updated_at)) from public.seo_pages where status = 'published'),
+    (select concat('g', v.n, '/', v.em) from public.guia_versao v where v.id = 1),
+    (select concat(count(*), '/', max(atualizado_em)) from public.guia_paginas where (status = 'publicado' and conteudo is not null) or coalesce(foto, '') <> ''),
+    (select concat(count(*), '/', max(atualizado_em)) from public.guia_categorias where coalesce(foto, '') <> ''),
+    (select concat(count(*), '/', max(atualizado_em)) from public.guia_regioes),
+    (select concat(count(*), '/', max(atualizado_em)) from public.guia_cidades_regiao)))
+$$;
+comment on function public.site_conteudo_versao() is 'Site (186): carimbo do conteúdo publicado (artigos, páginas SEO, o contador dos salões no ar em guia_versao, páginas do guia com texto ou foto, imagens das categorias, regiões e o vínculo das cidades); o servidor regenera as páginas estáticas quando ele muda. Não varre guia_lugares.';
+revoke execute on function public.site_conteudo_versao() from public;
+grant execute on function public.site_conteudo_versao() to anon, authenticated;
+
+do $$
+begin
+  raise notice '186: site_conteudo_versao() lê o contador guia_versao (gatilhos em guia_lugares) em vez de varrer o guia';
+end $$;
+
+insert into public.migracoes_aplicadas (arquivo) values ('186_versao_sem_varrer.sql') on conflict (arquivo) do nothing;

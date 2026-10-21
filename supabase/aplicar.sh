@@ -116,8 +116,16 @@ echo
 
 for f in "${PENDENTES[@]}"; do
   printf '  %s\n' "$f"
+  # 3.38.4: o arquivo com "-- aplicar: sem-transacao" nas primeiras linhas roda comando a comando: uma carga longa numa
+  # transação só segurava as tabelas até o fim, e o site, a Plataforma e o gerador caíam no tempo limite enquanto isso.
+  # guia.em_partes = 1 deixa a carga gravar cada parte (parou no meio, roda de novo e continua de onde parou)
+  if head -n 5 "$f" | grep -q 'aplicar: sem-transacao'; then
+    COMO=(-c "set guia.em_partes = '1'" -f "$f"); EM_PARTES=1
+  else
+    COMO=(--single-transaction -f "$f"); EM_PARTES=0
+  fi
   # 3.38.3: o que a migração avisa (NOTICE: o andamento de uma carga longa, por exemplo) aparece aqui, não só no log
-  if "${PSQL[@]}" --single-transaction -f "$f" 2>&1 | tee /tmp/aplicar.log | sed 's/^/      /'; then
+  if "${PSQL[@]}" "${COMO[@]}" 2>&1 | tee /tmp/aplicar.log | sed 's/^/      /'; then
     "${PSQL[@]}" -c "insert into public.migracoes_aplicadas (arquivo) values ('$f') on conflict (arquivo) do nothing;" >/dev/null
     verde "      ok: $f"
   else
@@ -125,7 +133,11 @@ for f in "${PENDENTES[@]}"; do
     echo
     tail -20 /tmp/aplicar.log
     echo
-    vermelho "Parei na $f. Nada dela ficou no banco (transação desfeita). Me mande a mensagem acima."
+    if [ "$EM_PARTES" = 1 ]; then
+      vermelho "Parei na $f. Ela roda em partes: o que já foi ficou no banco, e rodar de novo continua de onde parou. Me mande a mensagem acima."
+    else
+      vermelho "Parei na $f. Nada dela ficou no banco (transação desfeita). Me mande a mensagem acima."
+    fi
     exit 1
   fi
 done

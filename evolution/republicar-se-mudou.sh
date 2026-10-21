@@ -61,19 +61,38 @@ export VITE_SUPABASE_URL VITE_SUPABASE_ANON_KEY
 command -v node >/dev/null || { vermelho 'Não achei o node no PATH do cron.'; exit 1; }
 
 CARIMBO="$RAIZ/dist/.conteudo-versao"
-VERSAO=$(curl -s -m 20 -X POST "$VITE_SUPABASE_URL/rest/v1/rpc/site_conteudo_versao" \
-  -H "apikey: $VITE_SUPABASE_ANON_KEY" -H "Authorization: Bearer $VITE_SUPABASE_ANON_KEY" \
-  -H 'Content-Type: application/json' -d '{}' | tr -d '" \n')
-if ! printf '%s' "$VERSAO" | grep -Eq '^[0-9a-f]{32}$'; then
-  vermelho "$(date '+%F %T') não consegui ler a versão do conteúdo (${VERSAO:-sem resposta}). A migração 164 está aplicada?"
-  exit 1
+ler_versao() {
+  curl -s -m 20 -X POST "$VITE_SUPABASE_URL/rest/v1/rpc/site_conteudo_versao" \
+    -H "apikey: $VITE_SUPABASE_ANON_KEY" -H "Authorization: Bearer $VITE_SUPABASE_ANON_KEY" \
+    -H 'Content-Type: application/json' -d '{}' | tr -d '" \n' || true
+}
+eh_versao() { printf '%s' "$1" | grep -Eq '^[0-9a-f]{32}$'; }
+VERSAO=$(ler_versao)
+# 3.38.4: um pico passa (uma migração, um lote, o disco do plano grátis no limite): uma segunda tentativa depois de 15 s
+eh_versao "$VERSAO" || { sleep 15; VERSAO=$(ler_versao); }
+if ! eh_versao "$VERSAO"; then
+  case "$VERSAO" in
+    *57014*|*statement*timeout*)
+      MOTIVO="o banco passou do tempo limite (statement timeout): alguma consulta ou migração longa está segurando as tabelas do guia. No SQL Editor do Supabase: select pid, state, now() - xact_start as ha, left(query, 70) from pg_stat_activity where state <> 'idle'; e encerre a presa com select pg_terminate_backend(<pid>);" ;;
+    *PGRST202*|*Couldnotfind*) MOTIVO='a função site_conteudo_versao() não existe neste banco: rode a migração 164 (bat B)' ;;
+    '') MOTIVO='o Supabase não respondeu (rede, ou o projeto pausado)' ;;
+    *) MOTIVO="resposta inesperada: $VERSAO" ;;
+  esac
+  if [ "${1:-}" = '--forcar' ]; then
+    # --forcar regenera assim mesmo; sem a versão não grava o carimbo, e a próxima rodada confere de novo
+    amarelo "$(date '+%F %T') não li a versão do conteúdo ($MOTIVO). Com --forcar, regenero assim mesmo, sem gravar o carimbo."
+    VERSAO=''
+  else
+    vermelho "$(date '+%F %T') não consegui ler a versão do conteúdo: $MOTIVO"
+    exit 1
+  fi
 fi
 ANTERIOR=$(cat "$CARIMBO" 2>/dev/null || true)
 cd "$RAIZ"
 MUDOU=0  # nada mudou: silêncio (o cron roda isto a toda hora)
 if [ "${1:-}" = '--forcar' ] || [ "$VERSAO" != "$ANTERIOR" ]; then
   if node scripts/paginas-estaticas.mjs > /tmp/mimo-republicar.log 2>&1; then
-    printf '%s' "$VERSAO" > "$CARIMBO"
+    [ -n "$VERSAO" ] && printf '%s' "$VERSAO" > "$CARIMBO"
     chmod -R a+rX dist
     verde "$(date '+%F %T') páginas regeneradas: $(grep -c '<loc>' dist/sitemap.xml) URLs no sitemap ($(tail -1 /tmp/mimo-republicar.log))"
     # 3.38.2: o que o guia disse nesta rodada (cidades, salões, uma cidade do cache ou fora da rodada) fica no log também

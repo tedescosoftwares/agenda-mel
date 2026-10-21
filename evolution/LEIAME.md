@@ -552,6 +552,11 @@ limit 20;
 
 O `.bat` tem a opção **B**: roda `supabase/aplicar.sh` na VPS, que aplica só
 as migrações que ainda não rodaram (o banco anota em `migracoes_aplicadas`).
+Cada uma roda numa transação só (deu erro, nada fica), menos as que trazem
+`-- aplicar: sem-transacao` nas primeiras linhas (3.38.4, a 185): essas rodam
+comando a comando, para uma carga longa não segurar as tabelas do site até o fim;
+se pararem no meio, rodar de novo continua de onde parou. O que a migração avisa
+(o andamento de uma carga, por exemplo) aparece na tela.
 A opção **2** (publicar o site) também atualiza o banco antes do build.
 
 Uma vez só, na primeira vez, ele pede a conexão com o banco: no Supabase,

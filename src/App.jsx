@@ -6,6 +6,7 @@ import { DialogoProvider } from "./context/DialogoContext";
 import Splash from "./pages/Splash";
 import AvisoCookies from "./components/AvisoCookies";
 import AvisoAoVivo from "./components/AvisoAoVivo";
+import Presenca from "./components/Presenca";
 import { WhatsFlutuante } from "./components/site/Whats";
 import PaginaSeo from "./pages/publico/PaginaSeo";
 import Blog from "./pages/publico/Blog";
@@ -140,6 +141,7 @@ export default function App() {
           </Suspense>
           <AvisoCookies />
           <AvisoAoVivo />
+          {!SUBDOMINIO && <Presenca />}
           <WhatsFlutuante />
           </DialogoProvider>
         </NotificacoesProvider>

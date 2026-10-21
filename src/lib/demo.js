@@ -21,6 +21,7 @@ import { ABORDAGEM_RPC } from './demoAbordagem'
 import { REIVINDICAR_RPC } from './demoReivindicar'
 import { BUSCAS_RPC } from './demoBuscas'
 import { publicarRpc } from './demoPublicar'
+import { AO_VIVO_RPC } from './demoAoVivo'
 
 const hoje = new Date()
 const iso = (d) => d.toISOString().slice(0, 10)
@@ -235,6 +236,7 @@ const RPC = {
   ...REIVINDICAR_RPC,
   ...BUSCAS_RPC, // as buscas do Google (guia_buscas, 160)
   ...publicarRpc(() => CONTEUDO), // "Publicar agora" (189): site_pendencias, site_pedir_publicacao, site_publicacao_status
+  ...AO_VIVO_RPC, // o site ao vivo (192): site_ao_vivo, site_presenca
   documentos_vigentes: () => ({}),
   meus_aceites: () => ({}),
   aceitar_documentos: () => ({ ok: true }),

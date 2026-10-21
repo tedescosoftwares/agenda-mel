@@ -1,5 +1,6 @@
 import { useEffect, useSyncExternalStore } from 'react'
 import { registrarEvento } from './eventos'
+import { informarLocal } from './presenca'
 
 // "Perto de você" (3.13): a localização da pessoa nas listas do guia, só
 // quando ela toca em "Ativar localização" no modal que explica o porquê.
@@ -57,6 +58,7 @@ export function pedirPosicao() {
     (p) => {
       const posicao = { lat: p.coords.latitude, lng: p.coords.longitude, prec: Math.round(p.coords.accuracy ?? 0) }
       mudar({ posicao, situacao: 'ok', permissao: 'granted' })
+      informarLocal(posicao) // 3.44: o site ao vivo mostra a cidade certa de quem autorizou
       if (!mandou) { mandou = true; registrarEvento('localizacao', { dados: posicao }) }
     },
     (e) => mudar(e?.code === 1 ? { situacao: 'negado', permissao: 'denied' } : { situacao: 'indisponivel' }),

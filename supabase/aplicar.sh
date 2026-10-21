@@ -90,8 +90,22 @@ for f in $(ls -1 [0-9][0-9][0-9]_*.sql | sort); do
   if ! grep -qxF "$f" <<< "$APLICADAS"; then PENDENTES+=("$f"); fi
 done
 
+# 3.44: a base de IP do site ao vivo (migração 192), quando está vazia ou tem mais de 45 dias. Falhar aqui não para
+# nada: o site ao vivo funciona, só sem a cidade aproximada pelo IP
+carregar_geo() {
+  [ "$MODO" = '--listar' ] && return 0
+  local precisa
+  precisa=$("${PSQL[@]}" -tAc "select case when to_regclass('public.geo_ip_carga') is null then 'nao'
+                                            when coalesce((select carregado_em from public.geo_ip_carga where id = 1) < now() - interval '45 days', true) then 'sim'
+                                            else 'nao' end" 2>/dev/null | tr -d '\r' || echo nao)
+  [ "$precisa" = 'sim' ] || return 0
+  azul '== base de IP do site ao vivo (DB-IP Lite, só o Brasil) =='
+  ./geo-ip.sh || amarelo '  a base de IP não carregou agora; o site ao vivo segue sem a cidade pelo IP (roda de novo no próximo aplicar)'
+}
+
 if [ ${#PENDENTES[@]} -eq 0 ]; then
   verde 'Banco em dia: nenhuma migração pendente.'
+  carregar_geo
   exit 0
 fi
 
@@ -142,3 +156,4 @@ for f in "${PENDENTES[@]}"; do
   fi
 done
 verde 'Banco atualizado.'
+carregar_geo

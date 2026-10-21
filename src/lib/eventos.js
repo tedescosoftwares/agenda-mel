@@ -33,7 +33,7 @@ export function contaAqui() {
   try { return !localStorage.getItem(NAO_CONTAR) } catch { return true }
 }
 
-function podeContar() {
+export function podeContar() {
   if (typeof window === 'undefined' || typeof navigator === 'undefined') return false
   if (navigator.webdriver || ROBO.test(navigator.userAgent || '')) return false
   return contaAqui()
@@ -49,7 +49,7 @@ const ORIGENS = [
 ]
 let primeira = true
 let entrada = null
-function origemDaVisita() {
+export function origemDaVisita() {
   if (entrada) return entrada
   let origem = 'direto', ref = null, utm = null
   try {

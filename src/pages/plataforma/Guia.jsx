@@ -15,12 +15,13 @@ import Interesses from '../../components/plataforma/guia/Interesses'
 import Desempenho from '../../components/plataforma/guia/Desempenho'
 import Abordagem from '../../components/plataforma/guia/Abordagem'
 import PublicarAgora from '../../components/plataforma/guia/PublicarAgora'
+import AoVivo from '../../components/plataforma/guia/AoVivo'
 import { naoContarAqui } from '../../lib/eventos'
 import { IAS, iaLembrada, lembrarIa, modeloLembrado, lembrarModelo } from '../../lib/guiaIa'
 import { lerEmFatias, COLUNAS_LISTA, COLUNAS_LISTA_ANTIGAS, colunaFalta, consultaGlobal, POR_PAGINA } from '../../lib/guiaPlataformaDados'
 import { agruparPorRegiao, regiaoDaCidade } from '../../lib/guiaRegioes'
 import { slugificar } from '../../lib/guia'
-import { ClipboardCheck, Globe2, Upload, MapPinned, Inbox, X, BarChart3, Handshake, MapPin, RefreshCw, LoaderCircle } from 'lucide-react'
+import { ClipboardCheck, Globe2, Upload, MapPinned, Inbox, X, BarChart3, Handshake, MapPin, RefreshCw, LoaderCircle, Radio } from 'lucide-react'
 import '../../guia-plataforma.css'
 
 // Guia de salões (3.9): uma página pública para cada salão da região, que
@@ -46,6 +47,7 @@ import '../../guia-plataforma.css'
 const ABAS = [
   ['revisar', 'Revisar', ClipboardCheck],
   ['desempenho', 'Desempenho', BarChart3],
+  ['aovivo', 'Ao vivo', Radio], // 3.44
   ['abordagem', 'Abordagem', Handshake],
   ['publicadas', 'Publicadas', Globe2],
   ['importar', 'Importar', Upload],
@@ -885,6 +887,7 @@ export default function Guia() {
 
       {aba === 'revisar' && <Revisar g={g} rev={rev} setRev={setRev} />}
       {aba === 'desempenho' && <Desempenho g={g} />}
+      {aba === 'aovivo' && <AoVivo />}
       {aba === 'abordagem' && <Abordagem g={g} />}
       {aba === 'publicadas' && <Publicadas g={g} />}
       {aba === 'importar' && <><Importar g={g} /><ImportarFotos g={g} /><MiniaturasAntigas g={g} /></>}

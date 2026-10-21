@@ -745,3 +745,17 @@ de uma vez, como antes.
 Depois, em Guia → Importar → **Miniaturas das fotos antigas**, rode uma vez por
 cidade: gera a cópia pequena das fotos enviadas antes da 3.24, que as listas
 usam no lugar da foto inteira.
+
+## Site ao vivo (3.44): a base de IP
+
+A aba Ao vivo da Plataforma mostra a cidade aproximada de quem não autorizou a
+localização pela base gratuita DB-IP Lite (só o Brasil, ~42 MB no banco). O
+`aplicar.sh` (bat B) carrega sozinho quando ela está vazia ou tem mais de 45
+dias. Para carregar na mão:
+
+```bash
+cd ~/agenda-mel && ./supabase/geo-ip.sh
+```
+
+O IP de quem visita nunca é guardado: a base só diz a cidade de uma faixa de IP.
+

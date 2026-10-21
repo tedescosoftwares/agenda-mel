@@ -115,10 +115,11 @@ for f in "${PENDENTES[@]}"; do echo "   $f"; done
 echo
 
 for f in "${PENDENTES[@]}"; do
-  printf '  %-45s ' "$f"
-  if "${PSQL[@]}" --single-transaction -f "$f" >/tmp/aplicar.log 2>&1; then
+  printf '  %s\n' "$f"
+  # 3.38.3: o que a migração avisa (NOTICE: o andamento de uma carga longa, por exemplo) aparece aqui, não só no log
+  if "${PSQL[@]}" --single-transaction -f "$f" 2>&1 | tee /tmp/aplicar.log | sed 's/^/      /'; then
     "${PSQL[@]}" -c "insert into public.migracoes_aplicadas (arquivo) values ('$f') on conflict (arquivo) do nothing;" >/dev/null
-    verde 'ok'
+    verde "      ok: $f"
   else
     vermelho 'ERRO'
     echo

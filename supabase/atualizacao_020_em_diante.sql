@@ -39682,6 +39682,10 @@ insert into public.migracoes_aplicadas (arquivo) values ('184_lote_leve.sql') on
 -- nota, avaliacoes, fotos ou salon_id (e quando o salão da MIMO muda as fotos dele); guia_pontos(l) passa a devolver
 -- a coluna (com a conta de reserva se estiver vazia), então tudo o que ordena por guia_pontos(l) fica barato sem mudar.
 -- pontos é derivado: não anda atualizado_em (entra nos "internos" de guia_tocar).
+-- Pode rodar de novo (tudo "if not exists" / "or replace", e o preenchimento só pega o que está vazio). Uma trava
+-- presa (a Plataforma num lote, o gerador no meio de uma cidade) não deixa isto pendurado: lock_timeout de 30 s,
+-- e aí é só rodar de novo.
+set lock_timeout = '30s';
 alter table public.guia_lugares add column if not exists pontos numeric;
 comment on column public.guia_lugares.pontos is 'Guia (185): os pontos que ordenam as listas (nota ajustada + foto), guardados pelo gatilho guia_lugares_pontos; a conta é guia_pontos_calc().';
 
@@ -39758,8 +39762,13 @@ begin
 end $$;
 comment on function public.guia_tocar() is 'Guia (164, 170, 184, 185): atualizado_em só anda quando muda algo que a página mostra; em guia_lugares, status, conteudo ou fotos mudados já bastam, sem serializar a linha; pontos é derivado e não conta.';
 
--- preenche de uma vez (os gatilhos de cima já valem; atualizado_em não anda: pontos é interno)
+-- preenche de uma vez. O carimbo (guia_tocar) fica desligado só durante isto: ele serializa a linha inteira duas vezes
+-- por linha para descobrir que nada visível mudou, e com dezenas de milhares de salões isso é o que demora minutos;
+-- pontos é interno, então atualizado_em não andaria de qualquer jeito
+alter table public.guia_lugares disable trigger guia_lugares_tocar;
 update public.guia_lugares set pontos = public.guia_pontos_calc(guia_lugares) where pontos is null;
+alter table public.guia_lugares enable trigger guia_lugares_tocar;
+reset lock_timeout;
 
 do $$
 begin

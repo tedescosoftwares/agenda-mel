@@ -19,6 +19,7 @@
 // carimbo anterior não se perde); uma vez por dia a cidade vem inteira (foto de salão na MIMO não
 // anda o carimbo do guia); se o banco falha e há cache, a rodada segue com o cache e avisa; slug
 // na ordem sem linha no cache manda buscar a cidade inteira de novo.
+// 3.40: sem a lista de cidades do banco, as do cache e das regiões (cidadesDeReserva) e os números contados aqui.
 // 3.38.2: uma fatia que passa do tempo do banco vai de novo pela metade (até FATIA_MINIMA); uma
 // cidade que falha sem cache fica de fora da rodada, com o nome no log (foraDaRodada), em vez de
 // derrubar o guia inteiro: as outras cidades saem, e as páginas que ela já tinha no ar ficam.
@@ -148,11 +149,23 @@ export async function carregarGuia({ url, chave, cacheDir, refazer = false, log 
     return r.json()
   }
   if (!chaveGerador) log('guia-fonte: sem GUIA_CHAVE_GERADOR no .env; a função do guia recusa sem a chave (173). Leia: select valor from public.guia_segredos where nome = \'gerador\'')
-  const cidades = await rpc('guia_cidades', {})
-  if (!Array.isArray(cidades)) throw new Error('guia_cidades não devolveu a lista de cidades')
   // 3.37: as regiões com as cidades de cada uma (migração 182); num banco sem a função, a semente do core faz as vezes
   let regioes = []
   try { const r = await rpc('guia_regioes', {}); regioes = Array.isArray(r) ? r : [] } catch (e) { log(`guia-fonte: sem guia_regioes() (${String(e.message).slice(0, 80)}); as regiões vêm da semente do código`) }
+  // 3.40: a lista de cidades. Se o banco não a entregar (antes da 188 ela contava a tabela inteira e passava do tempo),
+  // a rodada segue com as cidades do cache e das regiões, e os números de cada cidade saem dos próprios salões
+  let cidades
+  let cidadesDoBanco = true
+  try {
+    cidades = await rpc('guia_cidades', {})
+    if (!Array.isArray(cidades)) throw new Error('guia_cidades não devolveu a lista de cidades')
+  } catch (e) {
+    const reserva = cidadesDeReserva(cacheDir, regioes)
+    if (!reserva.length) throw e
+    cidadesDoBanco = false
+    cidades = reserva
+    log(`guia-fonte: a lista de cidades não veio do banco (${String(e?.message ?? e).slice(0, 120)}); sigo com ${reserva.length} cidade(s) do cache e das regiões, e os números saem dos próprios salões`)
+  }
   const lugares = [], paginas = []
   let novos = 0
   const doCache = [], foraDaRodada = [] // 3.38.2: por nome, para o log dizer qual cidade ficou no cache ou de fora
@@ -175,15 +188,49 @@ export async function carregarGuia({ url, chave, cacheDir, refazer = false, log 
     novos += d.novos ?? 0
     if (d.doCache) { doCache.push(c.cidade_slug); imagensDoCache ??= d.categorias_imagens } else imagens ??= d.categorias_imagens
   }
-  // cidade que saiu do guia não deixa cache para trás
-  try {
+  // cidade que saiu do guia não deixa cache para trás (só com a lista do banco: a de reserva não é a lista inteira)
+  if (cidadesDoBanco) try {
     for (const f of fs.readdirSync(cacheDir)) {
       if (f.endsWith('.json') && !cidades.some((c) => c.cidade_slug === f.slice(0, -5))) fs.rmSync(path.join(cacheDir, f), { force: true })
     }
   } catch { /* ainda sem a pasta */ }
   const fora = new Set(foraDaRodada.map((x) => x.cidade_slug))
   log(`guia-fonte: ${cidades.length} cidade(s), ${lugares.length} salões no ar, ${novos} lido(s) do banco nesta rodada${doCache.length ? `, ${doCache.length} cidade(s) do cache por falha no banco (${doCache.join(', ')})` : ''}${fora.size ? `, ${fora.size} cidade(s) FORA desta rodada (${[...fora].join(', ')})` : ''}`)
-  return { lugares, paginas, cidades: cidades.filter((c) => !fora.has(c?.cidade_slug)), categorias_imagens: imagens ?? imagensDoCache ?? {}, regioes, foraDaRodada }
+  const lista = cidadesDoBanco ? cidades.filter((c) => !fora.has(c?.cidade_slug)) : cidadesDosSaloes(lugares, paginas)
+  return { lugares, paginas, cidades: lista, categorias_imagens: imagens ?? imagensDoCache ?? {}, regioes, foraDaRodada, cidadesDoBanco }
+}
+
+// 3.40: as cidades de reserva: as que a rodada anterior deixou no cache e as das regiões (uma cidade sem salão no ar
+// volta vazia do banco e não entra em nada)
+export function cidadesDeReserva(cacheDir, regioes = []) {
+  const m = new Map()
+  let arquivos = []
+  try { arquivos = fs.readdirSync(cacheDir).filter((f) => f.endsWith('.json')) } catch { /* sem cache */ }
+  for (const f of arquivos) {
+    const c = lerCache(path.join(cacheDir, f))
+    const slug = c?.cidade_slug || f.slice(0, -5)
+    if (slug) m.set(slug, { cidade: c?.cidade ?? slug, cidade_slug: slug, uf: c?.uf ?? 'SP' })
+  }
+  for (const r of Array.isArray(regioes) ? regioes : []) {
+    for (const s of Array.isArray(r?.cidades) ? r.cidades : []) if (s && !m.has(s)) m.set(s, { cidade: s, cidade_slug: s, uf: r?.uf ?? 'SP' })
+  }
+  return [...m.values()]
+}
+// 3.40: o mesmo formato de guia_cidades() (cidade, total, foto, categorias), contado dos salões da rodada
+export function cidadesDosSaloes(lugares, paginas = []) {
+  const porCidade = new Map()
+  for (const l of lugares) {
+    if (!l?.cidade_slug) continue
+    const c = porCidade.get(l.cidade_slug) ?? { cidade: l.cidade, cidade_slug: l.cidade_slug, uf: l.uf, total: 0, cats: new Map() }
+    c.total++
+    c.cats.set(l.categoria, (c.cats.get(l.categoria) ?? 0) + 1)
+    porCidade.set(l.cidade_slug, c)
+  }
+  return [...porCidade.values()].map(({ cats, ...c }) => ({
+    ...c,
+    foto: paginas.find((p) => p?.cidade_slug === c.cidade_slug && (p.categoria ?? '') === '' && p.foto)?.foto ?? null,
+    categorias: [...cats].map(([categoria, total]) => ({ categoria, total })).sort((a, b) => b.total - a.total || String(a.categoria).localeCompare(String(b.categoria))),
+  })).sort((a, b) => b.total - a.total || a.cidade_slug.localeCompare(b.cidade_slug))
 }
 
 // 3.38.2: limpa /saloes e /dados/guia do dist antes de regravar, menos as cidades a manter (as que ficaram fora da

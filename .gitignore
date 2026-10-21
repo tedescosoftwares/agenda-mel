@@ -46,3 +46,5 @@ scripts/guia/__pycache__/
 
 # worktrees temporários das ferramentas de agente (não vão para o repositório)
 .claude/worktrees/
+# 3.40: o guia no ar guardado durante o build (publicar-site.sh)
+.guia-anterior/

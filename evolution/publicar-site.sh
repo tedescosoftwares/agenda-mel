@@ -121,17 +121,37 @@ if [ "${1:-}" != '--so-build' ]; then
   git pull --ff-only
 fi
 npm ci --no-audit --no-fund >/dev/null
+# 3.40: o vite esvazia o dist no build e, com ele, o guia que está no ar (/saloes, /dados/guia e o sitemap). Ele fica
+# guardado ao lado (mover não gasta disco) e o gerador o devolve antes de escrever: se o banco não entregar o guia nesta
+# rodada, o que estava no ar continua no ar, com as URLs no sitemap. Antes, um build com o banco ocupado tirava o guia
+# inteiro do ar e deixava o sitemap com 42 endereços
+GUIA_ANTERIOR="$RAIZ/.guia-anterior"
+rm -rf "$GUIA_ANTERIOR"; mkdir -p "$GUIA_ANTERIOR/dados"
+[ -d dist/saloes ] && mv dist/saloes "$GUIA_ANTERIOR/saloes"
+[ -d dist/dados/guia ] && mv dist/dados/guia "$GUIA_ANTERIOR/dados/guia"
+[ -f dist/sitemap.xml ] && cp dist/sitemap.xml "$GUIA_ANTERIOR/sitemap.xml"
+export GUIA_ANTERIOR
+# o build falhou: o guia volta para o dist do jeito que estava
+devolver_guia() {
+  [ -d "$GUIA_ANTERIOR/saloes" ] && [ ! -d dist/saloes ] && mkdir -p dist && mv "$GUIA_ANTERIOR/saloes" dist/saloes
+  [ -d "$GUIA_ANTERIOR/dados/guia" ] && [ ! -d dist/dados/guia ] && mkdir -p dist/dados && mv "$GUIA_ANTERIOR/dados/guia" dist/dados/guia
+  [ -f "$GUIA_ANTERIOR/sitemap.xml" ] && [ ! -f dist/sitemap.xml ] && cp "$GUIA_ANTERIOR/sitemap.xml" dist/sitemap.xml
+  true
+}
 # o build inteiro vai para um log; na tela só o fim. Se falhar, as últimas
 # 40 linhas aparecem aqui mesmo (o erro do vite vem antes do "closeBundle")
 LOG_BUILD=/tmp/mimo-build.log
 if ! npm run build > "$LOG_BUILD" 2>&1; then
+  devolver_guia
   echo; tail -40 "$LOG_BUILD"; echo
   vermelho "O build falhou. Acima, o fim do log; o log inteiro está em $LOG_BUILD"
   vermelho "Antes de tentar de novo, confira espaço em disco (df -h /) e memória (free -m)."
   exit 1
 fi
 tail -3 "$LOG_BUILD"
-[ -f dist/index.html ] || { vermelho 'O build não gerou dist/index.html.'; exit 1; }
+# o que o guia disse no build (cidades, salões, cache, lista de reserva, fora da rodada)
+grep -E 'guia-fonte:|guia: |guia de salões|ATENÇÃO' "$LOG_BUILD" | sed 's/^/  /' || true
+[ -f dist/index.html ] || { devolver_guia; vermelho 'O build não gerou dist/index.html.'; exit 1; }
 # As páginas estáticas e o sitemap são o que o Google lê (scripts/paginas-estaticas.mjs):
 # um index.html por rota com título, descrição e canonical próprios. Sem elas o site
 # abre, mas toda rota entrega o título da home. Não se publica pela metade.
@@ -151,6 +171,8 @@ fi
 # para não restar dúvida sobre O QUE foi publicado
 verde "  publicado o commit $(git rev-parse --short HEAD) — $(git log -1 --format=%s | cut -c1-60)"
 verde "  versão do app: $(grep -o "VERSAO = '[^']*'" src/lib/versao.js | cut -d"'" -f2)"
+# o guia guardado já voltou (ou foi refeito): a pasta do lado sai
+rm -rf "$GUIA_ANTERIOR"
 # o Caddy roda como outro usuário dentro do container: precisa ler
 chmod -R a+rX dist
 verde "  dist/ pronto ($(du -sh dist | cut -f1))"

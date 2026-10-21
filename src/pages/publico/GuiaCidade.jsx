@@ -134,6 +134,9 @@ function PaginaDaCidade({ cidade, categoria }) {
   )
 }
 
+// 3.40: pediu os mais perto entre todos uma vez, vale para as outras cidades nesta visita
+let pertoEmTudoNaVisita = false
+
 function Cidade({ dados }) {
   const { cidade, cidade_slug: cslug, categoria } = dados
   const cat = categoria ? categoriaDoGuia(categoria) : null
@@ -168,8 +171,13 @@ function Cidade({ dados }) {
   // "perto de você" (3.13): com a posição, cada cartão ganha a distância e a lista vem do mais perto
   const { posicao } = useMinhaPosicao()
   const [porDistancia, setPorDistancia] = useState(true)
-  // a busca, o bairro e a ordem por distância precisam da lista inteira
-  const precisaDeTudo = !!busca.trim() || !!bairro || (!!posicao && porDistancia)
+  // 3.40: a localização não puxa mais a lista inteira em toda visita (numa cidade grande eram centenas de KB antes de a
+  // pessoa fazer qualquer coisa): ordena por distância o que já está na tela e só baixa tudo quando ela pede
+  // ("Ver os mais perto entre todos"); a escolha vale para o resto da visita
+  const [pertoEmTudo, setPertoEmTudoCru] = useState(pertoEmTudoNaVisita)
+  const setPertoEmTudo = (v) => { pertoEmTudoNaVisita = v; setPertoEmTudoCru(v) }
+  // a busca e o bairro precisam da lista inteira; a distância, só quando a pessoa pede
+  const precisaDeTudo = !!busca.trim() || !!bairro || (!!posicao && porDistancia && pertoEmTudo)
   useEffect(() => {
     if (completa || !precisaDeTudo || pedindo.current) return
     pedindo.current = true
@@ -340,7 +348,9 @@ function Cidade({ dados }) {
             )}
           </div>
 
-          <PertoDeVoce ordenado={porDistancia} onOrdenar={setPorDistancia} />
+          <PertoDeVoce ordenado={porDistancia} onOrdenar={setPorDistancia}
+            parcial={porDistancia && !completa && !pertoEmTudo ? { carregados: lugares.length, total: totalDaLista } : null}
+            onTudo={() => setPertoEmTudo(true)} />
           <div className="gd-lista-topo" aria-live="polite">
             <span><b>{plural(precisaDeTudo || completa ? filtrados.length : totalDaLista, 'lugar', 'lugares')}</b>{bairro ? ` no bairro ${bairro}` : ''}{busca.trim() ? ` para “${busca.trim()}”` : ''}{lendo && precisaDeTudo ? <span className="gd-lista-lendo"> · <LoaderCircle size={14} className="gd-gira" aria-hidden="true" /> carregando a lista inteira…</span> : null}</span>
             {(bairro || busca) && <button type="button" className="gd-chip-filtro" onClick={() => { setBairro(''); setBusca('') }}><X size={14} /> Limpar filtros</button>}

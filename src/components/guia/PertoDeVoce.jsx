@@ -17,7 +17,8 @@ import '../../guia-perto.css'
 
 let abriuSozinho = false // uma vez por visita, mesmo andando entre as páginas do guia
 
-export default function PertoDeVoce({ ordenado, onOrdenar }) {
+// parcial (3.40): { carregados, total } quando a ordem por distância vale só para o que já está na tela; onTudo pede a lista inteira
+export default function PertoDeVoce({ ordenado, onOrdenar, parcial = null, onTudo }) {
   const { posicao, situacao, permissao, fechadoNaVisita } = useMinhaPosicao()
   const [aberto, setAberto] = useState(false)
   const chip = useRef(null)
@@ -50,7 +51,12 @@ export default function PertoDeVoce({ ordenado, onOrdenar }) {
     return (
       <div className="gd-perto-ok" role="status">
         <LocateFixed size={18} aria-hidden="true" />
-        <span>{ordenado ? 'Do mais perto para o mais longe, a partir de onde você está.' : 'Sua localização está ativa: cada salão mostra a distância.'}</span>
+        <span>{!ordenado ? 'Sua localização está ativa: cada salão mostra a distância.'
+          : parcial ? `Do mais perto para o mais longe entre os ${parcial.carregados.toLocaleString('pt-BR')} primeiros da lista.`
+            : 'Do mais perto para o mais longe, a partir de onde você está.'}</span>
+        {ordenado && parcial && onTudo && (
+          <button type="button" className="gd-perto-link" onClick={onTudo} data-teste="perto-em-tudo">Ver os mais perto entre todos os {parcial.total.toLocaleString('pt-BR')}</button>
+        )}
         <button type="button" className="gd-perto-link" onClick={() => onOrdenar(!ordenado)}>{ordenado ? 'Ordem normal' : 'Ordenar por distância'}</button>
       </div>
     )

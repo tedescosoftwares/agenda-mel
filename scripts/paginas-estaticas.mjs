@@ -299,10 +299,23 @@ console.log(`paginas-estaticas: corpo estático em ${comCorpo} de ${paginas.leng
 // salão ou artigo que saiu do ar (a regeneração de hora em hora não passa pelo vite, que esvazia o dist).
 // O guia só é apagado quando carregou (3.23): banco fora do ar não leva as páginas que estão no ar
 fs.rmSync(path.join(DIST, 'blog'), { recursive: true, force: true })
+// 3.40: depois de um build (o vite esvazia o dist), o guia que estava no ar volta da pasta ao lado (GUIA_ANTERIOR, o
+// publicar-site.sh guarda): com o guia desta rodada ele é limpo e reescrito logo abaixo; sem o guia, ele fica no ar
+const ANTERIOR = globalThis.process.env.GUIA_ANTERIOR || ''
+if (ANTERIOR) {
+  const de = (p) => path.join(ANTERIOR, p), para = (p) => path.join(DIST, p)
+  try {
+    if (fs.existsSync(de('saloes')) && !fs.existsSync(para('saloes'))) fs.renameSync(de('saloes'), para('saloes'))
+    if (fs.existsSync(de('dados/guia')) && !fs.existsSync(para('dados/guia'))) { fs.mkdirSync(para('dados'), { recursive: true }); fs.renameSync(de('dados/guia'), para('dados/guia')) }
+  } catch (e) { console.log(`paginas-estaticas: não devolvi o guia anterior (${e.message})`) }
+}
 // 3.38.2: uma cidade que ficou fora da rodada (sem banco e sem cache) não perde o que já tem no ar
 const mantidas = guiaCarregado ? limparPastasDoGuia(DIST, cidadesMantidas).mantidas : []
 // sem o guia nesta rodada, as URLs dele continuam no sitemap, como estavam; com uma cidade mantida, as dela
-const sitemapAnterior = (() => { try { return fs.readFileSync(path.join(DIST, 'sitemap.xml'), 'utf8') } catch { return '' } })()
+const sitemapAnterior = (() => {
+  for (const f of [path.join(DIST, 'sitemap.xml'), ANTERIOR && path.join(ANTERIOR, 'sitemap.xml')].filter(Boolean)) { try { return fs.readFileSync(f, 'utf8') } catch { /* o próximo */ } }
+  return ''
+})()
 const urlsGuardadas = !guiaCarregado
   ? [...sitemapAnterior.matchAll(/<url><loc>[^<]*\/saloes[^<]*<\/loc>.*?<\/url>/g)].map((m) => `  ${m[0]}`)
   : urlsDoSitemapDasCidades(sitemapAnterior, mantidas)

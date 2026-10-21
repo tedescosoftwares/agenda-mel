@@ -105,13 +105,16 @@ export default function Importar({ g }) {
     }
     setErro(''); setRelatorio(null)
     const porArquivo = []
+    // 3.39: a cidade importada (uma só): a releitura depois de gravar já vai para ela e a deixa lembrada
+    const cidadesImportadas = [...new Set(preparados.flatMap((a) => a.entram.map((x) => slugificar(x.item.cidade || cidade))))].filter(Boolean)
+    const reler = () => g.carregar(cidadesImportadas.length === 1 ? { cidade: cidadesImportadas[0] } : undefined)
     for (const a of preparados) {
       if (!a.entram.length) continue
       const r = await g.importar(a.entram.map((x) => x.item), aplicar, (feitos, total) => setAndamento({ rotulo: `${aplicar ? 'Importando' : 'Conferindo'} ${a.nome}`, feitos, total }))
       if (!r.ok) {
         setAndamento(null)
         setErro(`${a.nome}: ${r.erro}${r.feitos ? ` (as primeiras ${r.feitos} linhas já foram${aplicar ? ' gravadas' : ' conferidas'})` : ''}`)
-        if (aplicar) g.carregar()
+        if (aplicar) reler()
         return
       }
       porArquivo.push({ nome: a.nome, formato: a.formato, ...r, problemas: r.problemas.map((p) => ({ ...p, linha: (a.entram[p.posicao]?.i ?? p.posicao) + 2 })) })
@@ -119,10 +122,8 @@ export default function Importar({ g }) {
     setAndamento(null)
     setRelatorio({ aplicado: aplicar, arquivos: porArquivo })
     if (aplicar) {
-      await g.carregar()
-      // a tela passa para a cidade importada (3.25): a fila e os números são dela
-      const cidadesImportadas = [...new Set(preparados.flatMap((a) => a.entram.map((x) => slugificar(x.item.cidade || cidade))))]
-      if (cidadesImportadas.length === 1 && cidadesImportadas[0]) g.escolherCidade?.(cidadesImportadas[0])
+      // a tela passa para a cidade importada (3.25, 3.39): a fila e os números são dela
+      await reler()
       const novos = porArquivo.reduce((n, a) => n + a.novos, 0)
       g.avisar({ texto: `Importação feita: ${novos} ${novos === 1 ? 'salão novo' : 'salões novos'}.`, tom: 'ok' })
     }

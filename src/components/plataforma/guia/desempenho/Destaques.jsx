@@ -8,6 +8,7 @@ import { formatar, taxaTexto, contataramDe, podeMandarMensagem } from '../../../
 
 export default function Destaques({ d, dias, onSalao, onMensagem, onVerSemVisita }) {
   const sem = d.semVisita
+  const semTotal = d.semVisitaTotal ?? sem.length // 3.39: em todas as cidades a lista é parcial; o total vem do banco
   return (
     <section className="pg-des-destaques" aria-label="Destaques do período">
       <Cartao Icon={Trophy} tom="rosa" titulo="Mais procurados" sub="Quem mais recebeu tentativa de contato">
@@ -63,7 +64,7 @@ export default function Destaques({ d, dias, onSalao, onMensagem, onVerSemVisita
               ))}
             </ul>
             <button type="button" className="plat-link pg-des-dest-mais" onClick={onVerSemVisita}>
-              {sem.length > 3 ? `Ver os ${formatar(sem.length)} na tabela` : 'Ver na tabela'} <ArrowRight size={14} />
+              {semTotal > sem.length ? `${formatar(semTotal)} no total: ver os ${formatar(sem.length)} há mais tempo no ar` : sem.length > 3 ? `Ver os ${formatar(sem.length)} na tabela` : 'Ver na tabela'} <ArrowRight size={14} />
             </button>
           </>
         ) : <p className="pg-des-dest-vazio">Todos os salões no ar tiveram visita.</p>}

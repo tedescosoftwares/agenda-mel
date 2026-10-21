@@ -728,6 +728,10 @@ export const demo = {
   },
   from: (t) => consulta(TABELAS[t] ?? CONTEUDO[t] ?? [], t),
   rpc: async (nome, args) => {
+    // 3.39: um atraso de rede de mentira, só quando um teste pede (window.__demoAtrasoMs): sem ele tudo responde na hora e
+    // as corridas que só acontecem com a rede de verdade (a troca de cidade depois de importar) não aparecem no demo
+    const atraso = Number(globalThis.__demoAtrasoMs) || 0
+    if (atraso > 0) await new Promise((r) => setTimeout(r, atraso))
     const f = RPC[nome] ?? (nome === 'seo_sitemap' ? () => [...CONTEUDO.seo_pages.map((p) => ({ caminho: p.route, atualizado_em: p.updated_at })), ...CONTEUDO.blog_posts.map((a) => ({ caminho: '/blog/' + a.slug, atualizado_em: a.updated_at }))] : undefined)
     // função que não está na lista é escrita (aceitar, encaixar, chamar…):
     // no demo ela "dá certo" e não guarda nada

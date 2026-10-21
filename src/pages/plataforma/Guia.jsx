@@ -387,9 +387,24 @@ export default function Guia() {
     if (s && Array.isArray(r) && !r.some((x) => x.cidade_slug === s)) return
     setCidade(s); lembrarCidade(s)
   }, [])
-  // ler de novo do banco: a base e a cidade atual (as outras saem da memória)
-  const carregar = useCallback(async () => {
+  // ler de novo do banco: a base e a cidade atual (as outras saem da memória).
+  // 3.39: { cidade } lê a base e passa para aquela cidade (a importada), lembrando a escolha: a troca vem depois de a base
+  // nova chegar (antes, a cidade recém-importada ainda não estava nos totais e a troca era recusada em silêncio, e o F5
+  // voltava para a cidade de antes); a cidade antiga não é relida à toa
+  const carregar = useCallback(async ({ cidade: alvo } = {}) => {
     cacheRef.current.clear()
+    const destino = alvo == null ? null : String(alvo)
+    if (destino !== null && destino !== (cidadeRef.current ?? '')) {
+      try {
+        const base = await lerBase()
+        aplicarBase(base)
+        const r = base[0]
+        // a cidade só entra se a base nova a tem (num banco sem a 174, não há como conferir: vai)
+        if (!montado.current || (destino && Array.isArray(r) && !r.some((x) => x.cidade_slug === destino))) return
+        setCidade(destino); lembrarCidade(destino)
+      } catch (e) { falhouLeitura(e) }
+      return
+    }
     const c = cidadeRef.current ?? ''
     try {
       // 3.38: em "todas" a base de novo e a mesma página de novo

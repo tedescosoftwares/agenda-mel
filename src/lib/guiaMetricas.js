@@ -227,10 +227,13 @@ export function destaquesDoPeriodo(dados, lugares = [], agora = Date.now()) {
   // no ar sem nenhuma visita: os que estão no ar há mais tempo primeiro (os mais preocupantes)
   const semVisita = saloes.filter((p) => p.status === 'publicado' && !n0(p.visitas))
     .map((p) => {
-      const desde = porId.get(p.lugar_id)?.publicado_em
+      // 3.39: a linha traz publicado_em (187); a lista carregada na tela é a reserva (em todas as cidades ela é só uma página)
+      const desde = p.publicado_em ?? porId.get(p.lugar_id)?.publicado_em
       return { p, diasNoAr: desde ? Math.max(0, Math.floor((agora - new Date(desde).getTime()) / 86400e3)) : null }
     })
     .sort((a, b) => (b.diasNoAr ?? -1) - (a.diasNoAr ?? -1) || String(a.p.nome).localeCompare(String(b.p.nome), 'pt-BR'))
 
-  return { taxaGeral, maisProcurados, emAlta, emAltaSem161: temComparacao(dados) && saloes.length > 0 && !temAntesPorPagina, poucoContato, semVisita }
+  // 3.39: em todas as cidades a lista traz só os 300 sem visita há mais tempo no ar; o total vem do banco (187)
+  const semVisitaTotal = Number.isFinite(Number(dados?.sem_visita_total)) && dados?.sem_visita_total != null ? Number(dados.sem_visita_total) : semVisita.length
+  return { taxaGeral, maisProcurados, emAlta, emAltaSem161: temComparacao(dados) && saloes.length > 0 && !temAntesPorPagina, poucoContato, semVisita, semVisitaTotal }
 }

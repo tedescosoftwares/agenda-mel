@@ -4,6 +4,7 @@ import '../polish.css'
 import '../lib/sw'
 import { Routes, Route } from 'react-router-dom'
 import ProtectedRoute from '../components/ProtectedRoute'
+import RedeDeProtecao from '../components/RedeDeProtecao'
 import NaoEncontrada from '../pages/publico/NaoEncontrada'
 import Visao from '../pages/plataforma/Visao'
 import Saloes, { Salao } from '../pages/plataforma/Saloes'
@@ -21,7 +22,8 @@ import PlataformaMel from '../pages/plataforma/Mel'
 import PlataformaCatalogo from '../pages/plataforma/Catalogo'
 import PlataformaGuia from '../pages/plataforma/Guia'
 
-const T = ({ children }) => <ProtectedRoute requireRole="plataforma">{children}</ProtectedRoute>
+// 3.39: uma tela da Plataforma que quebra mostra o erro e "Recarregar", em vez de ficar branca
+const T = ({ children }) => <ProtectedRoute requireRole="plataforma"><RedeDeProtecao>{children}</RedeDeProtecao></ProtectedRoute>
 
 export default function RotasPlataforma() {
   return (

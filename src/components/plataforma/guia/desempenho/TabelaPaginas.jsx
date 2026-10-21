@@ -34,6 +34,8 @@ export default function TabelaPaginas({ dados, contatoTipos, filtro, setFiltro, 
     pessoasContato: contataramDe(p.contataram, p.visitantes), tx: p.lugar_id ? taxaDeContato(p.contataram, p.visitantes) : null,
   })), [dados, nomeDaCidade, bairros])
   const contagem = useMemo(() => Object.fromEntries(FILTROS.map(([id]) => [id, todas.filter((p) => doFiltro(id, p)).length])), [todas])
+  // 3.39 (187): em todas as cidades o banco manda as 1.000 páginas mais visitadas e os 300 sem visita há mais tempo no ar
+  const limitada = dados?.paginas_limite != null && (n0(dados?.paginas_total) > n0(dados?.paginas_limite) || n0(dados?.sem_visita_total) > n0(dados?.sem_visita_limite))
   const linhas = useMemo(() => {
     const termo = semAcento(busca).toLowerCase().trim()
     const valor = (p) => (ordem.col === 'titulo' ? p.titulo : ordem.col === 'tx' ? (p.tx ?? -1) : ordem.col.startsWith('ev:') ? n0(p.eventos?.[ordem.col.slice(3)]) : n0(p[ordem.col]))
@@ -80,6 +82,11 @@ export default function TabelaPaginas({ dados, contatoTipos, filtro, setFiltro, 
           {busca && <button type="button" onClick={() => setBusca('')} aria-label="Limpar a busca"><X size={14} /></button>}
         </label>
       </div>
+      {limitada && (
+        <p className="pg-nota pg-des-limitada" data-teste="tabela-limitada">
+          Em todas as cidades a tabela mostra as {formatar(Math.min(n0(dados.paginas_total), n0(dados.paginas_limite)))} páginas mais visitadas (de {formatar(dados.paginas_total)} com visita) e os {formatar(Math.min(n0(dados.sem_visita_total), n0(dados.sem_visita_limite)))} salões sem visita há mais tempo no ar (de {formatar(dados.sem_visita_total)}). Os números do topo e o gráfico contam tudo. Escolha uma cidade para ver a lista inteira dela.
+        </p>
+      )}
       <div className="pg-des-tabela pg-des-tabela-paginas">
         <table className="plat-tabela">
           <thead>

@@ -13,7 +13,7 @@ import { MessageCircle, Plug, LoaderCircle, Send, RotateCcw, Save, Bot, Inbox, C
 
 const faltaMigracao = (e) => e?.code === 'PGRST202' || e?.status === 404 || /could not find the function|schema cache|migração 195/i.test(e?.message ?? '')
 const STATUS = {
-  pendente: ['Saindo', 'cinza'], enviado: ['Enviado ao salão', 'verde'], falhou: ['Não saiu', 'carmim'], sem_contato: ['Salão sem WhatsApp', 'cinza'],
+  pendente: ['Saindo', 'cinza'], enviado: ['Enviado ao salão', 'verde'], falhou: ['Não saiu', 'carmim'], sem_contato: ['Salão sem número no cadastro', 'cinza'],
   fora_do_limite: ['Fora do limite do dia', 'ambar'], salao_saiu: ['Salão pediu para não receber', 'cinza'], salao_respondeu: ['Salão respondeu', 'azul'],
   salao_quer_conhecer: ['Quer conhecer a MIMO 💗', 'rosa'],
 }
@@ -193,6 +193,7 @@ export default function WhatsAppGuia({ g }) {
                       <label><input type="checkbox" checked={!!p.atendido} onChange={(e) => atendido(p.id, e.target.checked)} /> atendido pela equipe</label>
                       {['falhou', 'fora_do_limite', 'pendente'].includes(p.status) && p.salao_tel && <button type="button" className="plat-link" onClick={() => agir('reenviar', { lead: p.id })} disabled={!!ocupado}><Send size={13} /> Reenviar ao salão</button>}
                       {p.salao_tel && <a className="plat-link" href={`https://wa.me/${p.salao_tel}`} target="_blank" rel="noopener noreferrer">Falar com o salão</a>}
+                      {p.salao_tel && !/^55[1-9][0-9]9/.test(p.salao_tel) && <a className="plat-link" href={`tel:+${p.salao_tel}`}>Ligar para o salão ({tel(p.salao_tel)})</a>}
                       <a className="plat-link" href={`https://wa.me/${String(p.cliente_tel).replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">Falar com a cliente</a>
                       {p.conversa_id && <button type="button" className="plat-link" onClick={() => abrirConversa(p.conversa_id)}>Ver a conversa</button>}
                     </div>

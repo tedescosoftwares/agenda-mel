@@ -144,3 +144,10 @@ button.pv-feed-item:hover { background: #fbf7fa; }
   .pv-agora strong { font-size: 2.2rem; }
   .pv-vis-detalhe { padding-left: 0.9rem; }
 }
+
+/* ---------- 3.49: o período de quem passou por aqui ---------- */
+.pv-periodo { display: inline-flex; gap: 2px; padding: 2px; border-radius: 999px; background: var(--cinza-1, #f3f2f7); }
+.pv-periodo button { border: none; background: none; font: inherit; font-size: 0.74rem; font-weight: 600; color: var(--texto-2); padding: 0.25rem 0.6rem; border-radius: 999px; cursor: pointer; }
+.pv-periodo button.on { background: #fff; color: var(--rosa); box-shadow: 0 1px 3px rgba(61, 12, 78, 0.12); }
+.pv-lista-saiu { max-height: 70vh; overflow-y: auto; }
+

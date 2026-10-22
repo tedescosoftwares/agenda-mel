@@ -1,47 +1,34 @@
-/* ---- 3.13: "Perto de você" (PertoDeVoce.jsx): o modal, o botão da lista, a
-   linha "do mais perto para o mais longe" e a distância nos cartões.
-   Prefixo gd-perto / gd-*-km; usa os botões da landing (ld-btn). */
+/* ---- 3.13 / 3.49: a localização no guia. A barra do topo (BarraLocal.jsx: de onde o site acha que a
+   pessoa está e de onde veio o dado), a linha da ordem por distância nas listas (PertoDeVoce.jsx)
+   e a distância nos cartões. Prefixo gd-local / gd-perto / gd-*-km; usa os botões da landing. */
 
-/* o botão discreto na lista (quem fechou o modal abre de novo por aqui) */
-.gd-perto-linha { display: flex; margin: 0 0 14px; }
-.gd-perto-chip { display: inline-flex; align-items: center; gap: 7px; min-height: 38px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--ld-fio); background: #fff; color: var(--ld-ameixa); font: inherit; font-size: 0.86rem; font-weight: 600; cursor: pointer; transition: border-color 0.15s ease, background 0.15s ease; }
-.gd-perto-chip svg { color: var(--ld-rosa); }
-.gd-perto-chip:hover { border-color: var(--ld-rosa-2); background: #fff7fa; }
+/* a barra, logo abaixo do cabeçalho */
+.gd-local { background: #fff7fa; border-bottom: 1px solid #ffe1ea; font-size: 0.86rem; color: var(--ld-ameixa); }
+.gd-local.gps { background: #f3fbf7; border-bottom-color: #cfead9; }
+.gd-local-in { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; min-height: 42px; padding-top: 6px; padding-bottom: 6px; }
+.gd-local-in > svg { flex: none; color: var(--ld-rosa); }
+.gd-local.gps .gd-local-in > svg { color: #1f9d5f; }
+.gd-local-texto { flex: 1 1 auto; min-width: 0; }
+.gd-local-texto small { color: var(--ld-cinza); font-size: 0.78rem; margin-left: 4px; }
+.gd-local-btn { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--ld-rosa); background: #fff; color: var(--ld-rosa); font: inherit; font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: background 0.15s ease, color 0.15s ease; }
+.gd-local-btn:hover { background: var(--ld-rosa); color: #fff; }
+.gd-local-btn:disabled { opacity: 0.7; cursor: default; }
+.gd-local-dica { flex-basis: 100%; color: var(--ld-cinza); font-size: 0.78rem; }
 
-/* a posição chegou */
-.gd-perto-ok { display: flex; align-items: center; gap: 10px; margin: 0 0 14px; padding: 10px 14px; border-radius: 14px; font-size: 0.9rem; color: var(--ld-ameixa); background: #f3fbf7; border: 1px solid #cfead9; }
+/* a linha da ordem por distância, nas listas */
+.gd-perto-ok { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin: 0 0 14px; padding: 10px 14px; border-radius: 14px; font-size: 0.9rem; color: var(--ld-ameixa); background: #f3fbf7; border: 1px solid #cfead9; }
+.gd-perto-ok.gd-perto-aprox { background: #fff7fa; border-color: #ffe1ea; }
 .gd-perto-ok > svg { flex: none; color: #1f9d5f; }
-.gd-perto-ok > span { flex: 1; min-width: 0; }
+.gd-perto-ok.gd-perto-aprox > svg { color: var(--ld-rosa); }
+.gd-perto-ok > span { flex: 1 1 260px; min-width: 0; }
 .gd-perto-link { border: none; background: none; padding: 0; font: inherit; font-weight: 600; color: var(--ld-ameixa); text-decoration: underline; cursor: pointer; white-space: nowrap; }
-
-/* o modal */
-.gd-perto-fundo { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(31, 32, 38, 0.5); animation: gd-perto-fade 0.2s ease; }
-.gd-perto-modal { position: relative; width: min(480px, 100%); max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); overflow: auto; padding: 28px 26px 24px; border-radius: 24px; background: #fff; box-shadow: 0 24px 60px rgba(31, 32, 38, 0.28); animation: gd-perto-sobe 0.28s cubic-bezier(0.2, 0.7, 0.2, 1); }
-.gd-perto-x { position: absolute; top: 12px; right: 12px; width: 36px; height: 36px; display: grid; place-items: center; border: none; border-radius: 50%; background: #f5f2f6; color: var(--ld-cinza); cursor: pointer; }
-.gd-perto-x:hover { background: #ece7ee; color: var(--ld-ameixa); }
-.gd-perto-icone { display: grid; place-items: center; width: 56px; height: 56px; border-radius: 18px; background: linear-gradient(135deg, #ffe3ee, #fff5f9); color: var(--ld-rosa); margin-bottom: 14px; }
-.gd-perto-modal h2 { margin: 0 0 8px; font-size: 1.4rem; line-height: 1.2; color: var(--ld-ameixa); letter-spacing: -0.01em; }
-.gd-perto-lead { margin: 0 0 20px; font-size: 1rem; line-height: 1.5; color: var(--ld-cinza); }
-.gd-perto-erro { margin: 0 0 14px; font-size: 0.85rem; line-height: 1.45; color: #b4233f; }
-.gd-perto-botoes { display: grid; gap: 8px; }
-.gd-perto-botoes .ld-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; }
+.gd-perto-link:disabled { opacity: 0.6; cursor: default; }
 .gd-perto-gira { animation: gd-perto-girar 0.9s linear infinite; }
 @keyframes gd-perto-girar { to { transform: rotate(360deg); } }
-@keyframes gd-perto-fade { from { opacity: 0; } }
-@keyframes gd-perto-sobe { from { opacity: 0; transform: translateY(18px) scale(0.98); } }
 
 /* a distância nos cartões e na ficha */
 .gd-cartao-km { color: var(--ld-ameixa); font-weight: 600; white-space: nowrap; }
 .gd-fato-km { display: inline-flex; align-items: center; gap: 5px; color: var(--ld-ameixa); font-weight: 600; }
 .gd-fato-km svg { color: #1f9d5f; }
 
-@media (max-width: 600px) {
-  /* no celular, uma folha que sobe de baixo */
-  .gd-perto-fundo { align-items: flex-end; padding: 0; }
-  .gd-perto-modal { width: 100%; max-height: calc(100dvh - 24px); border-radius: 24px 24px 0 0; padding: 24px 20px calc(20px + env(safe-area-inset-bottom)); animation-name: gd-perto-folha; }
-  .gd-perto-ok { flex-wrap: wrap; }
-  @keyframes gd-perto-folha { from { transform: translateY(40px); opacity: 0; } }
-}
-@media (prefers-reduced-motion: reduce) {
-  .gd-perto-fundo, .gd-perto-modal { animation: none; }
-}
+@media (prefers-reduced-motion: reduce) { .gd-perto-gira { animation: none; } }

@@ -259,19 +259,13 @@ export async function atenderGuia(deps: Deps, e: Entrada, opcoes: { teste?: bool
     }
   }
 
-  // 4. salão que já agenda pela MIMO, que pediu para não receber, ou sem WhatsApp: a cliente vai direto
+  // 4. salão que já agenda pela MIMO: o link da agenda. (Salão sem WhatsApp no cadastro, ou que pediu para não receber,
+  // é atendido do mesmo jeito: a Mel anota, o envio é tentado no número que há, e o que não sai fica para a equipe na
+  // Plataforma. Nunca se passa o telefone do salão à cliente.)
   if (lugar.agendar) {
     const resposta = `Oi! Aqui é a Mel, da MIMO 💗. O ${lugar.nome} já agenda pela MIMO: é só escolher o serviço e o horário aqui 👉 https://${lugar.agendar}.${RAIZ_SITE}`
     await guardar(resposta, 'encerrada', {}, lugar.id)
     return { responder: resposta, acao: 'agenda_mimo', estado: 'encerrada' }
-  }
-  if (lugar.salao_saiu || !lugar.salao_tel) {
-    const contato = contatoDoSalao(lugar)
-    const resposta = contato
-      ? `Oi! Aqui é a Mel, da MIMO 💗. O ${lugar.nome} atende direto: ${contato}`
-      : `Oi! Aqui é a Mel, da MIMO 💗. Não tenho um WhatsApp do ${lugar.nome} para passar o seu pedido, desculpa.${lugar.endereco ? ` O endereço é ${lugar.endereco}${lugar.bairro ? `, ${lugar.bairro}` : ''}.` : ''}`
-    await guardar(resposta, 'encerrada', {}, lugar.id)
-    return { responder: resposta, acao: lugar.salao_saiu ? 'salao_saiu' : 'sem_contato', estado: 'encerrada' }
   }
 
   // 5. a conversa com a Mel

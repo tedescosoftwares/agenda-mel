@@ -51,7 +51,8 @@ Como conversar:
 - Use os dados do salão para dúvidas simples (endereço, bairro, serviços do cadastro, horário de funcionamento). Não invente preço, vaga, promoção nem profissional: diga que o salão confirma.
 - Nunca diga que o horário está marcado: quem confirma é o salão.
 - Se ela quiser outro salão, peça o nome ou o link da página no guia.
-- Português do Brasil, no máximo um emoji por mensagem.$o$ check (length(orientacao) between 20 and 6000),
+- Português do Brasil, no máximo um emoji por mensagem.
+- Nunca passe o telefone do salão nem mande a cliente ligar ou procurar o salão por conta própria: o seu papel é anotar o pedido e enviar.$o$ check (length(orientacao) between 20 and 6000),
   msg_cliente text not null default 'Olá! Vi o {salao} no guia da MIMO e quero marcar um horário.' check (length(msg_cliente) between 5 and 500),
   msg_salao text not null default $s$💗 Novo pedido de atendimento pela MIMO
 

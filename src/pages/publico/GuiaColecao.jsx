@@ -10,6 +10,7 @@ import { aoClicarNaPagina } from '../../lib/eventos'
 import { useVisita } from '../../lib/useVisita'
 import { PeSite, useRevelar } from '../../components/site/Pecas'
 import NavGuia from '../../components/guia/NavGuia'
+import BarraLocal from '../../components/guia/BarraLocal'
 import { CartaoLugar, IconeCategoria } from '../../components/guia/PaginaDoLugar'
 import PertoDeVoce from '../../components/guia/PertoDeVoce'
 import { useMinhaPosicao, comDistancia } from '../../lib/guiaPerto'
@@ -60,6 +61,7 @@ function PaginaDaColecao({ cidade, tipo, valor, categoria }) {
     <div className="ld gd" ref={raiz} onClickCapture={aoClicarNaPagina}>
       <NavGuia />
       <main className="gd-pagina">
+        <BarraLocal />
         {dados === undefined && <Esqueleto capa={false} />}
         {dados === 'erro' && <Falhou onTentar={() => { setDados(undefined); setTentativa((t) => t + 1) }} />}
         {pronta && <Colecao m={dados} />}
@@ -89,7 +91,7 @@ function Colecao({ m }) {
   const setFiltro = (f) => { setFiltroCru(f); setLimite(POR_VEZ) }
   const setBusca = (q) => { setBuscaCru(q); setLimite(POR_VEZ) }
   // "perto de você" (3.13): com a posição, cada cartão ganha a distância e a lista vem do mais perto
-  const { posicao } = useMinhaPosicao()
+  const { referencia, origem } = useMinhaPosicao() // 3.49: o GPS, ou a cidade aproximada da conexão
   const [porDistancia, setPorDistancia] = useState(true)
 
   // o filtro por categoria (quando a lista tem mais de uma)
@@ -104,8 +106,8 @@ function Colecao({ m }) {
       if (filtro && c.categoria !== filtro) return false
       if (!q) return true
       return semAcento([c.nome, c.bairro, ...(c.servicos ?? [])].join(' ')).toLowerCase().includes(q)
-    }), posicao, porDistancia)
-  }, [m.cartoes, filtro, busca, posicao, porDistancia])
+    }), referencia, porDistancia, origem === 'gps')
+  }, [m.cartoes, filtro, busca, referencia, origem, porDistancia])
   const limpar = () => { setFiltro(''); setBusca('') }
 
   const kicker = m.tipo === 'bairro' ? `Guia de salões · ${m.cidade} · por bairro` : `Guia de salões · ${m.cidade} · por horário`

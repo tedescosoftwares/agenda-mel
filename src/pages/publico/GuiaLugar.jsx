@@ -10,6 +10,7 @@ import { aoClicarNaPagina } from '../../lib/eventos'
 import { useVisita } from '../../lib/useVisita'
 import { PeSite, useRevelar } from '../../components/site/Pecas'
 import NavGuia from '../../components/guia/NavGuia'
+import BarraLocal from '../../components/guia/BarraLocal'
 import PaginaDoLugar from '../../components/guia/PaginaDoLugar'
 import Interesse from '../../components/guia/Interesse'
 import NaoEncontrada from './NaoEncontrada'
@@ -50,6 +51,7 @@ export default function GuiaLugar() {
     <div className="ld gd" ref={raiz} onClickCapture={aoClicarNaPagina}>
       <NavGuia />
       <main>
+        <BarraLocal />
         {dados === undefined && <Esqueleto />}
         {dados === 'erro' && (
           <div className="gd-wrap gd-erro">

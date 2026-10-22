@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect } from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigationType } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { NotificacoesProvider } from "./context/NotificacoesContext";
 import { DialogoProvider } from "./context/DialogoContext";
@@ -58,6 +58,43 @@ const GuiaRota = lazy(() => import("./pages/publico/GuiaCidade"));
 const GuiaColecao = lazy(() => import("./pages/publico/GuiaColecao"));
 const GuiaRegiao = lazy(() => import("./pages/publico/GuiaRegiao")); // 3.37
 const GuiaFotosDono = lazy(() => import("./pages/publico/GuiaFotosDono"));
+
+// 3.49: trocar de página leva ao topo (ou à âncora do #). Sem isto, quem clica num link no rodapé abre a página nova lá
+// embaixo, onde estava, e parece que nada aconteceu. Instantâneo, para nenhum scroll-behavior suave deixar no meio
+// do caminho; voltar e avançar (POP) ficam com o navegador, que devolve a posição de antes.
+// 3.49: a posição de cada página visitada, pela chave do histórico, para "voltar" devolver onde a pessoa estava
+// (o navegador tentaria sozinho, mas a lista ainda está carregando quando ele tenta e a página curta não tem para onde rolar)
+const posicoes = new Map()
+function ScrollAoTopo() {
+  const { pathname, hash, key } = useLocation()
+  const tipo = useNavigationType()
+  useEffect(() => {
+    if ('scrollRestoration' in window.history) window.history.scrollRestoration = 'manual'
+    const guardar = () => posicoes.set(key, window.scrollY)
+    window.addEventListener('scroll', guardar, { passive: true })
+    return () => { guardar(); window.removeEventListener('scroll', guardar) }
+  }, [key])
+  useEffect(() => {
+    let n = 0
+    if (tipo === 'POP' && posicoes.has(key)) {
+      const alvo = posicoes.get(key)
+      const devolver = () => {
+        const max = document.documentElement.scrollHeight - window.innerHeight
+        if (max >= alvo || n++ >= 12) window.scrollTo({ top: Math.max(0, Math.min(alvo, max)), left: 0, behavior: 'instant' })
+        else setTimeout(devolver, 120)
+      }
+      devolver()
+      return
+    }
+    if (hash) {
+      const tentar = () => { const el = document.getElementById(hash.slice(1)); if (el) el.scrollIntoView({ block: 'start' }); else if (n++ < 12) setTimeout(tentar, 120) }
+      tentar()
+      return
+    }
+    if (tipo !== 'POP') window.scrollTo({ top: 0, left: 0, behavior: 'instant' }) // a primeira carga fica como o navegador deixou
+  }, [pathname, hash, tipo, key])
+  return null
+}
 
 export default function App() {
   // o convite chega como /?indique=CODIGO — guardamos antes de qualquer rota
@@ -139,6 +176,7 @@ export default function App() {
           </Routes>
           )}
           </Suspense>
+          <ScrollAoTopo />
           <AvisoCookies />
           <AvisoAoVivo />
           {!SUBDOMINIO && <Presenca />}

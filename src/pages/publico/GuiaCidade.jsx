@@ -15,6 +15,7 @@ import { aoClicarNaPagina } from '../../lib/eventos'
 import { useVisita } from '../../lib/useVisita'
 import { PeSite, useRevelar, comecarEm } from '../../components/site/Pecas'
 import NavGuia from '../../components/guia/NavGuia'
+import BarraLocal from '../../components/guia/BarraLocal'
 import { REGRAS } from '../../lib/acesso'
 import { CartaoLugar, IconeCategoria } from '../../components/guia/PaginaDoLugar'
 import PertoDeVoce from '../../components/guia/PertoDeVoce'
@@ -126,6 +127,7 @@ function PaginaDaCidade({ cidade, categoria }) {
     <div className="ld gd" ref={raiz} onClickCapture={aoClicarNaPagina}>
       <NavGuia />
       <main className="gd-pagina">
+        <BarraLocal />
         {dados === undefined && <Esqueleto capa={false} />}
         {dados === 'erro' && <Falhou onTentar={() => { setDados(undefined); setTentativa((t) => t + 1) }} />}
         {dados && dados !== 'erro' && <Cidade dados={dados} />}
@@ -170,7 +172,7 @@ function Cidade({ dados }) {
   const setBairro = (b) => { setBairroCru(b); setLimite(POR_VEZ) }
   const setBusca = (q) => { setBuscaCru(q); setLimite(POR_VEZ) }
   // "perto de você" (3.13): com a posição, cada cartão ganha a distância e a lista vem do mais perto
-  const { posicao } = useMinhaPosicao()
+  const { referencia, origem } = useMinhaPosicao() // 3.49: o GPS, ou a cidade aproximada da conexão
   const [porDistancia, setPorDistancia] = useState(true)
   // 3.40: a localização não puxa mais a lista inteira em toda visita (numa cidade grande eram centenas de KB antes de a
   // pessoa fazer qualquer coisa): ordena por distância o que já está na tela e só baixa tudo quando ela pede
@@ -178,7 +180,7 @@ function Cidade({ dados }) {
   const [pertoEmTudo, setPertoEmTudoCru] = useState(pertoEmTudoNaVisita)
   const setPertoEmTudo = (v) => { pertoEmTudoNaVisita = v; setPertoEmTudoCru(v) }
   // a busca e o bairro precisam da lista inteira; a distância, só quando a pessoa pede
-  const precisaDeTudo = !!busca.trim() || !!bairro || (!!posicao && porDistancia && pertoEmTudo)
+  const precisaDeTudo = !!busca.trim() || !!bairro || (!!referencia && porDistancia && pertoEmTudo)
   useEffect(() => {
     if (completa || !precisaDeTudo || pedindo.current) return
     pedindo.current = true
@@ -207,8 +209,8 @@ function Cidade({ dados }) {
       if (bairro && l.bairro !== bairro) return false
       if (!q) return true
       return semAcento([l.nome, l.bairro, ...(l.servicos ?? [])].join(' ')).toLowerCase().includes(q)
-    }), posicao, porDistancia)
-  }, [lugares, bairro, busca, posicao, porDistancia])
+    }), referencia, porDistancia, origem === 'gps')
+  }, [lugares, bairro, busca, referencia, origem, porDistancia])
 
   const regiao = regiaoDaCidade(cslug, regioes)
   const trilha = trilhaDaCidade(cidade, cslug, categoria, regiao)
@@ -484,6 +486,31 @@ function Cidade({ dados }) {
 }
 
 // ---- /saloes ----------------------------------------------------------------------------
+// 3.49: o cartão de uma região no índice: as fotos das cidades juntas (até quatro), o nome, quantas cidades e lugares;
+// leva à página da região. Embaixo, os links das cidades (fora do cartão: link dentro de link não vale)
+function CartaoRegiao({ grupo: gr }) {
+  const fotos = gr.cidades.filter((c) => c.foto).slice(0, 4)
+  const capa = fotos.length ? null : gr.regiao.foto || null
+  const total = gr.cidades.reduce((n, c) => n + Number(c.total ?? 0), 0)
+  return (
+    <div className="gd-regiao-bloco" data-teste={`regiao-${gr.regiao.slug}`}>
+      <Link className={'gd-regiao-cartao ld-rv' + (fotos.length || capa ? ' com-foto' : '')} to={rotaDaRegiao(gr.regiao.slug)} data-fotos={fotos.length || (capa ? 1 : 0)}>
+        <span className="gd-regiao-fotos" aria-hidden="true">
+          {fotos.length
+            ? fotos.map((c) => <img key={c.cidade_slug} src={miniatura(c.foto)} data-cheia={c.foto} onError={paraFotoInteira} alt="" loading="lazy" decoding="async" />)
+            : capa ? <img src={capa} alt="" loading="lazy" decoding="async" /> : null}
+        </span>
+        <span className="gd-regiao-texto">
+          <small>{gr.regiao.uf || 'SP'} · {gr.cidades.length} {gr.cidades.length === 1 ? 'cidade' : 'cidades'}</small>
+          <span className="gd-regiao-nome">{gr.regiao.nome}</span>
+          <span className="gd-regiao-pe"><span>{total.toLocaleString('pt-BR')} {total === 1 ? 'lugar no guia' : 'lugares no guia'}</span><span><ArrowRight size={20} /></span></span>
+        </span>
+      </Link>
+      <p className="gd-regiao-cidades-links">{gr.cidades.map((c) => <Link key={c.cidade_slug} to={rotaDaCidade(c.cidade_slug)}>{c.cidade}</Link>)}</p>
+    </div>
+  )
+}
+
 function IndiceDeCidades() {
   const [cidades, setCidades] = useState(undefined)
   const [regioes, setRegioes] = useState([]) // 3.37: os cartões agrupados por região
@@ -514,6 +541,7 @@ function IndiceDeCidades() {
     <div className="ld gd" ref={raiz}>
       <NavGuia />
       <main className="gd-pagina">
+        <BarraLocal />
         <section className="gd-cidade-heroi">
           <div className="gd-wrap">
             <Migalhas trilha={[['Início', '/'], ['Salões', '/saloes']]} />
@@ -527,25 +555,35 @@ function IndiceDeCidades() {
           <div className="gd-wrap">
             {cidades === undefined && <Esqueleto capa={false} />}
             {cidades === 'erro' && <Falhou onTentar={() => { setCidades(undefined); setTentativa((t) => t + 1) }} />}
-            {Array.isArray(cidades) && (lista.length ? grupos.map((gr) => (
-              <div key={gr.regiao.slug} className="gd-regiao" data-teste={`regiao-${gr.regiao.slug}`}>
-                {(grupos.length > 1 || gr.regiao.slug !== 'outras') && (
-                  <h2 className="gd-h2 gd-regiao-titulo">
-                    {gr.regiao.slug === 'outras' ? gr.regiao.nome : <Link to={rotaDaRegiao(gr.regiao.slug)}>{gr.regiao.nome} <ArrowRight size={18} /></Link>}
-                    <small>{gr.cidades.length} {gr.cidades.length === 1 ? 'cidade' : 'cidades'} · {gr.cidades.reduce((n, c) => n + Number(c.total ?? 0), 0).toLocaleString('pt-BR')} lugares</small>
-                  </h2>
+            {/* 3.49: um cartão por região (as fotos das cidades juntas), que leva à página da região; as cidades sem região seguem como cartões */}
+            {Array.isArray(cidades) && (lista.length ? (
+              <>
+                {grupos.some((gr) => gr.regiao.slug !== 'outras') && (
+                  <div className="gd-regioes" data-teste="regioes">
+                    {grupos.filter((gr) => gr.regiao.slug !== 'outras').map((gr) => <CartaoRegiao key={gr.regiao.slug} grupo={gr} />)}
+                  </div>
                 )}
-                <div className="gd-cidades">
-                  {gr.cidades.map((c) => (
-                    <Link key={c.cidade_slug} className={'gd-cidade ld-rv' + (c.foto ? ' gd-cidade-com-foto' : '')} to={rotaDaCidade(c.cidade_slug)}>
-                      {c.foto && <img className="gd-cidade-fundo" src={miniatura(c.foto)} data-cheia={c.foto} onError={paraFotoInteira} alt="" loading="lazy" decoding="async" />}
-                      <span><small>{c.uf || 'SP'}</small><span className="gd-cidade-nome">{c.cidade}</span></span>
-                      <span className="gd-cidade-pe"><span>{c.total} {c.total === 1 ? 'lugar no guia' : 'lugares no guia'}</span><span><ArrowRight size={20} /></span></span>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )) : (
+                {grupos.filter((gr) => gr.regiao.slug === 'outras').map((gr) => (
+                  <div key={gr.regiao.slug} className="gd-regiao" data-teste={`regiao-${gr.regiao.slug}`}>
+                    {grupos.length > 1 && (
+                      <h2 className="gd-h2 gd-regiao-titulo">
+                        {gr.regiao.nome}
+                        <small>{gr.cidades.length} {gr.cidades.length === 1 ? 'cidade' : 'cidades'} · {gr.cidades.reduce((n, c) => n + Number(c.total ?? 0), 0).toLocaleString('pt-BR')} lugares</small>
+                      </h2>
+                    )}
+                    <div className="gd-cidades">
+                      {gr.cidades.map((c) => (
+                        <Link key={c.cidade_slug} className={'gd-cidade ld-rv' + (c.foto ? ' gd-cidade-com-foto' : '')} to={rotaDaCidade(c.cidade_slug)}>
+                          {c.foto && <img className="gd-cidade-fundo" src={miniatura(c.foto)} data-cheia={c.foto} onError={paraFotoInteira} alt="" loading="lazy" decoding="async" />}
+                          <span><small>{c.uf || 'SP'}</small><span className="gd-cidade-nome">{c.cidade}</span></span>
+                          <span className="gd-cidade-pe"><span>{c.total} {c.total === 1 ? 'lugar no guia' : 'lugares no guia'}</span><span><ArrowRight size={20} /></span></span>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </>
+            ) : (
               <div className="gd-vazio"><MapPin size={26} /><p>O guia está chegando. Em breve, os salões da sua cidade aparecem aqui.</p></div>
             ))}
           </div>

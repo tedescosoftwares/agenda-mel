@@ -101,16 +101,19 @@ export function demoPresenca(c) {
 }
 
 // os visitantes de mentira num instante (s): quem está no meio da visita, em que página, desde quando
-function deMentira(agora) {
+// janela (s): até onde no passado os visitantes de mentira existem (o período escolhido no painel, 3.49)
+function deMentira(agora, janela = 1800) {
   const out = []
   const t = ((agora - T0) % CICLO + CICLO) % CICLO
   const voltaIni = agora - t
+  const ciclos = Math.ceil(janela / CICLO) + 1
   MOLDES.forEach((m, i) => {
     const [comeca, dura, origem, ref, utm, dispositivo, sistema, navegador, tela, cid, fonte, rota, toques] = m
-    for (const volta of [voltaIni, voltaIni - CICLO]) {
+    for (let k = 0; k <= ciclos; k++) {
+      const volta = voltaIni - k * CICLO
       const inicio = volta + comeca
       const fim = inicio + dura
-      if (agora < inicio || agora > fim + 600) continue
+      if (agora < inicio || agora > fim + janela) continue
       const vivo = Math.min(agora, fim)
       const passos = Math.min(rota.length, 1 + Math.floor((vivo - inicio) / PASSO_S))
       const trajeto = rota.slice(0, passos).map((p, k) => ({ p, t: k * PASSO_S }))
@@ -118,7 +121,7 @@ function deMentira(agora) {
       const c = CIDADES[cid]
       const acoes = toques.filter(([, ts]) => inicio + ts <= vivo).map(([tipo, ts]) => toque(tipo, inicio + ts, rota[Math.min(rota.length - 1, Math.floor(ts / PASSO_S))], ts))
       out.push({ acoes,
-        id: 1000 + i * 10 + (volta === voltaIni ? 0 : 1), inicio_em: iso(inicio), visto_em: iso(agora <= fim ? agora - (agora - inicio) % 25 : fim),
+        id: 1000 + i * 100 + k, inicio_em: iso(inicio), visto_em: iso(agora <= fim ? agora - (agora - inicio) % 25 : fim),
         saiu_em: agora > fim ? iso(fim) : null, pagina, titulo: TITULOS[pagina] ?? null, entrada: rota[0], paginas: passos, trajeto,
         origem, ref, utm, dispositivo, sistema, navegador, tela, idioma: 'pt-BR', cidade: c.cidade, uf: c.uf, bairro: null, local_fonte: fonte,
         lat: fonte === 'gps' ? +(c.lat + 0.004 * (i % 3)).toFixed(3) : c.lat, lng: fonte === 'gps' ? +(c.lng - 0.003 * (i % 2)).toFixed(3) : c.lng,
@@ -143,13 +146,16 @@ const contar = (lista, chave, rotulo = chave) => {
   return [...m].map(([k, n]) => ({ [rotulo]: k, n })).sort((a, b) => b.n - a.n)
 }
 
-export function demoAoVivo() {
+export function demoAoVivo({ horas_ } = {}) {
+  const horas = Math.max(1, Math.min(Number(horas_) || 1, 24))
+  const janela = horas * 3600
   const agora = Math.floor(Date.now() / 1000)
-  const todos = deMentira(agora)
+  const todos = deMentira(agora, janela)
   const ms = (x) => new Date(x).getTime() / 1000
-  const trinta = todos.filter((v) => ms(v.visto_em) > agora - 1800)
+  const periodo = todos.filter((v) => ms(v.visto_em) > agora - janela)
+  const trinta = periodo.filter((v) => ms(v.visto_em) > agora - 1800)
   const ativos = trinta.filter((v) => ms(v.visto_em) > agora - 75 && !v.saiu_em).sort((a, b) => b.visto_em.localeCompare(a.visto_em))
-  const recentes = trinta.filter((v) => !ativos.includes(v) && ms(v.visto_em) > agora - 600).sort((a, b) => b.visto_em.localeCompare(a.visto_em))
+  const recentes = periodo.filter((v) => !ativos.includes(v)).sort((a, b) => b.visto_em.localeCompare(a.visto_em))
   const minutos = []
   for (let k = 29; k >= 0; k--) {
     const m = Math.floor(agora / 60) * 60 - k * 60
@@ -168,7 +174,7 @@ export function demoAoVivo() {
     .map((a) => ({ ...a, dispositivo: v.dispositivo, cidade: v.cidade, uf: v.uf, local_fonte: v.local_fonte, visita: v.id })))
   // (como no banco, o toque de verdade sem visita registrada também entra, sem aparelho)
   const soltos = REAIS.size ? [] : TOQUES_REAIS.map((a) => ({ ...a, dispositivo: null, cidade: null, uf: null, local_fonte: null, visita: null }))
-  const acoesRecentes = [...toquesDe(todos), ...soltos].filter((a) => ms(a.em) > agora - 1800).sort((a, b) => b.em.localeCompare(a.em)).slice(0, 25)
+  const acoesRecentes = [...toquesDe(todos), ...soltos].filter((a) => ms(a.em) > agora - janela).sort((a, b) => b.em.localeCompare(a.em)).slice(0, 100)
   const terminadas = todos.filter((v) => v.desfecho !== 'contatou' && v.desfecho !== 'navegando')
   const somaDesfechos = { saiu_whatsapp: 21, saiu_ligar: 6, saiu_mapa: 9, saiu_pedido_enviado: 4, saiu_agendar_mimo: 3, saiu_instagram: 7, saiu_quero_marcar: 2, contatou_e_saiu: 18, sem_contato: 96 }
   for (const v of terminadas) somaDesfechos[v.desfecho] = (somaDesfechos[v.desfecho] ?? 0) + 1
@@ -180,13 +186,14 @@ export function demoAoVivo() {
     agora: iso(agora),
     no_site: ativos.length,
     ultimos_30: trinta.length,
+    horas, no_periodo: periodo.length,
     minutos,
     ativos,
-    recentes: recentes.slice(0, 30),
+    recentes: recentes.slice(0, 500),
     paginas_agora: [...paginas.values()].sort((a, b) => b.n - a.n),
-    origens: contar(trinta, 'origem'),
-    dispositivos: contar(trinta, 'dispositivo'),
-    cidades: porCidade(trinta),
+    origens: contar(periodo, 'origem'),
+    dispositivos: contar(periodo, 'dispositivo'),
+    cidades: porCidade(periodo),
     acoes_recentes: acoesRecentes,
     acoes: contar(acoesRecentes, 'tipo').map((x) => ({ ...x, rotulo: TIPOS[x.tipo]?.[0] ?? x.tipo })),
     hoje: {
@@ -209,7 +216,17 @@ export function demoAoVivo() {
   }
 }
 
+// 3.49: "de onde eu pareço estar?" (migração 196): no demo, Itanhaém pela conexão; com um ponto, a cidade do demo mais perto
+function minhaCidade({ lat_, lng_ } = {}) {
+  const lat = Number(lat_), lng = Number(lng_)
+  if (Number.isFinite(lat) && Number.isFinite(lng) && lat_ != null) {
+    const c = Object.values(CIDADES).map((x) => ({ ...x, d: (x.lat - lat) ** 2 + (x.lng - lng) ** 2 })).sort((a, b) => a.d - b.d)[0]
+    return { cidade: c.cidade, uf: c.uf, lat: +lat.toFixed(3), lng: +lng.toFixed(3), fonte: 'gps' }
+  }
+  return { ...CIDADES.itanhaem, fonte: 'ip' }
+}
 export const AO_VIVO_RPC = {
-  site_ao_vivo: () => demoAoVivo(),
+  site_ao_vivo: (a) => demoAoVivo(a ?? {}),
   site_presenca: (a) => { demoPresenca(a); return null },
+  site_minha_cidade: (a) => minhaCidade(a ?? {}),
 }

@@ -24,6 +24,11 @@ import '../../../guia-aovivo.css'
 
 const MapaAoVivo = lazy(() => import('./MapaAoVivo'))
 const INTERVALO_MS = 5000
+const INTERVALO_LONGO_MS = 20000 // com mais de uma hora na tela, a leitura é maior (até 500 visitas): 20 s bastam
+// 3.49 (migração 196): o período de quem passou por aqui, na lista e no mapa; lembrado ao trocar de aba
+const HORAS = [1, 6, 12, 24]
+const rotuloPeriodo = (h) => (h === 1 ? 'Última hora' : `Últimas ${h} horas`)
+let horasMemoria = 1
 const ORIGEM = { google: 'Google', bing: 'Bing', instagram: 'Instagram', facebook: 'Facebook', whatsapp: 'WhatsApp', tiktok: 'TikTok', youtube: 'YouTube', direto: 'Direto', interno: 'Do próprio site', outro: 'Outro site' }
 const APARELHO = { celular: 'Celular', tablet: 'Tablet', computador: 'Computador', outro: 'Outro' }
 const ICONE = { celular: Smartphone, tablet: Tablet, computador: Monitor }
@@ -80,27 +85,34 @@ export default function AoVivo() {
   const [erro, setErro] = useState('')
   const [aberto, setAberto] = useState(null)
   const [mapa, setMapa] = useState(true)
-  const [verRecentes, setVerRecentes] = useState(false)
+  const [verRecentes, setVerRecentes] = useState(true)
+  const [horas, setHoras] = useState(horasMemoria)
+  useEffect(() => { horasMemoria = horas }, [horas]) // lembrado ao trocar de aba
 
   useEffect(() => {
     let vivo = true
     let t
     const ler = async () => {
       if (document.visibilityState === 'visible') {
-        const { data, error } = await supabase.rpc('site_ao_vivo')
+        // 3.49: com o período (migração 196); num banco sem a 196, a chamada de sempre
+        let { data, error } = await supabase.rpc('site_ao_vivo', { horas_: horas })
+        if (error && faltaMigracao(error)) ({ data, error } = await supabase.rpc('site_ao_vivo'))
         if (!vivo) return
         if (error) setErro(faltaMigracao(error) ? 'sem_192' : error.message || 'não deu para ler o site ao vivo')
         else { setErro(''); memoria = data; setDados(data) }
       }
-      if (vivo) t = setTimeout(ler, INTERVALO_MS)
+      if (vivo) t = setTimeout(ler, horas > 1 ? INTERVALO_LONGO_MS : INTERVALO_MS)
     }
     t = setTimeout(ler, 0)
     return () => { vivo = false; clearTimeout(t) }
-  }, [])
+  }, [horas])
 
   const ativos = useMemo(() => (Array.isArray(dados?.ativos) ? dados.ativos : []), [dados])
-  const pontos = useMemo(() => ativos.filter((v) => Number.isFinite(v.lat) && Number.isFinite(v.lng))
-    .map((v) => ({ id: v.id, lat: v.lat, lng: v.lng, gps: v.local_fonte === 'gps', titulo: `${lugarDe(v) ?? ''} · ${v.titulo || v.pagina}` })), [ativos])
+  // o mapa (3.49): quem está no site agora em destaque e quem passou no período mais claro
+  const passaram = useMemo(() => (Array.isArray(dados?.recentes) ? dados.recentes : []), [dados])
+  const pontos = useMemo(() => [...ativos.map((v) => ({ v, ativo: true })), ...passaram.map((v) => ({ v, ativo: false }))]
+    .filter(({ v }) => Number.isFinite(v.lat) && Number.isFinite(v.lng))
+    .map(({ v, ativo }) => ({ id: v.id, lat: v.lat, lng: v.lng, gps: v.local_fonte === 'gps', ativo, titulo: `${lugarDe(v) ?? ''} · ${v.titulo || v.pagina}${ativo ? '' : ' · saiu'}` })), [ativos, passaram])
 
   if (erro === 'sem_192') return <Vazio>O site ao vivo precisa da migração 192: rode o bat B (aplica a migração e carrega a base de IP) e depois o bat 2.</Vazio>
   if (!dados) return <div className="pg-carregando">{erro ? erro : <><LoaderCircle className="pg-gira" size={18} /> Olhando quem está no site…</>}</div>
@@ -110,7 +122,10 @@ export default function AoVivo() {
   const maxMin = Math.max(1, ...minutos.map((m) => n0(m.n)))
   const hoje = dados.hoje ?? {}
   const maxHora = Math.max(1, ...(hoje.por_hora ?? []).map((h) => n0(h.n)))
-  const totalTrinta = n0(dados.ultimos_30)
+  const horasDados = n0(dados.horas) || 1
+  const periodoRotulo = rotuloPeriodo(horasDados)
+  const noPeriodo = horasDados === 1 ? 'na última hora' : `nas últimas ${horasDados} horas`
+  const totalTrinta = n0(dados.no_periodo ?? dados.ultimos_30) // o total do período (num banco sem a 196, os 30 min)
   const barras = (lista, chave, rotulo) => (lista ?? []).map((x) => ({ chave: String(x[chave]), n: x.n, rotulo: rotulo(x) }))
   const temAcoes = Array.isArray(dados.acoes_recentes) // a migração 193 já rodou
   const recentes = dados.recentes ?? []
@@ -134,7 +149,7 @@ export default function AoVivo() {
           <div>
             <strong data-teste="ao-vivo-n">{formatar(dados.no_site)}</strong>
             <span>{n0(dados.no_site) === 1 ? 'pessoa no site agora' : 'pessoas no site agora'}</span>
-            <small>{formatar(totalTrinta)} nos últimos 30 minutos · atualiza a cada 5 s</small>
+            <small>{formatar(dados.ultimos_30)} nos últimos 30 minutos · {formatar(totalTrinta)} {noPeriodo} · atualiza a cada {horas > 1 ? 20 : 5} s</small>
           </div>
         </div>
         <div className="pv-minutos" role="img" aria-label={`Pessoas no site minuto a minuto, últimos 30 minutos; agora ${n0(dados.no_site)}`}>
@@ -150,7 +165,8 @@ export default function AoVivo() {
       </section>
 
       <div className="pv-mesa">
-        <Painel Icon={Radio} titulo="No site agora" sub="Cada visita, com a página de agora. Toque para ver o caminho que fez." className="pv-lista-painel">
+        <Painel Icon={Radio} titulo="No site agora" sub="Cada visita, com a página de agora. Toque para ver o caminho que fez." className="pv-lista-painel"
+          direita={<div className="pv-periodo" role="group" aria-label="Período de quem passou por aqui">{HORAS.map((h) => <button key={h} type="button" className={h === horas ? 'on' : ''} aria-pressed={h === horas} onClick={() => setHoras(h)} data-teste={`ao-vivo-horas-${h}`}>{h} h</button>)}</div>}>
           {ativos.length === 0 ? (
             <Vazio>Ninguém no site agora. Quando alguém abrir uma página do site, aparece aqui em segundos.</Vazio>
           ) : (
@@ -160,7 +176,7 @@ export default function AoVivo() {
           )}
           {recentes.length > 0 && (
             <details className="pv-recentes" open={verRecentes} onToggle={(e) => setVerRecentes(e.currentTarget.open)}>
-              <summary><History size={14} /> Saíram há pouco ({recentes.length}){temAcoes && <ResumoSaidas lista={recentes} />}</summary>
+              <summary data-teste="ao-vivo-passaram"><History size={14} /> Passaram por aqui {noPeriodo} ({recentes.length}{n0(dados.no_periodo) - ativos.length > recentes.length ? ` de ${formatar(n0(dados.no_periodo) - ativos.length)}` : ''}){temAcoes && <ResumoSaidas lista={recentes} />}</summary>
               <ul className="pv-lista pv-lista-saiu">
                 {recentes.map((v) => <Visitante key={v.id} v={v} agora={agora} saiu aberto={aberto === v.id} onAbrir={() => setAberto((x) => (x === v.id ? null : v.id))} />)}
               </ul>
@@ -177,7 +193,7 @@ export default function AoVivo() {
                 {(dados.acoes ?? []).length > 0 && (
                   <div className="pv-acoes-30" aria-label="Toques nos últimos 30 minutos">
                     {dados.acoes.map((x) => { const { rotulo, Icon } = acaoDe(x); return <span key={x.tipo} className="pv-chip" data-tom={tomDe(x.tipo)}><Icon size={12} aria-hidden="true" />{rotulo} <b>{formatar(x.n)}</b></span> })}
-                    <small>últimos 30 min</small>
+                    <small>{periodoRotulo.toLowerCase()}</small>
                   </div>
                 )}
                 {dados.acoes_recentes.length ? (
@@ -185,29 +201,29 @@ export default function AoVivo() {
                     {dados.acoes_recentes.map((a, i) => <Toque key={`${a.em}-${a.tipo}-${a.visita ?? i}`} a={a} agora={agora} onAbrir={a.visita != null ? () => abrirVisita(a.visita) : null} />)}
                   </ul>
                 ) : (
-                  <Vazio>Ninguém tocou em nada nos últimos 30 minutos. Quando alguém tocar no WhatsApp, no Como chegar ou no Quero marcar de um salão, aparece aqui na hora.</Vazio>
+                  <Vazio>Ninguém tocou em nada {noPeriodo}. Quando alguém tocar no WhatsApp, no Como chegar ou no Quero marcar de um salão, aparece aqui na hora.</Vazio>
                 )}
               </>
             )}
           </Painel>
           {temGoogleMaps() && (
-            <Painel Icon={MapaIcone} titulo="Onde estão" sub="Rosa: cidade pelo GPS de quem autorizou a localização. Cinza: aproximada pelo IP."
+            <Painel Icon={MapaIcone} titulo="Onde estão" sub={`Rosa: cidade pelo GPS de quem autorizou a localização. Cinza: aproximada pelo IP. Forte: no site agora; claro: passou ${noPeriodo}.`}
               direita={<button type="button" className="plat-link" onClick={() => setMapa((x) => !x)}>{mapa ? 'Esconder' : 'Mostrar'}</button>}>
               {mapa && (pontos.length
                 ? <Suspense fallback={<div className="pg-carregando"><LoaderCircle className="pg-gira" size={16} /> Abrindo o mapa…</div>}><MapaAoVivo pontos={pontos} /></Suspense>
-                : <Vazio>Sem ninguém com cidade agora.</Vazio>)}
+                : <Vazio>Sem ninguém com cidade {noPeriodo}.</Vazio>)}
             </Painel>
           )}
           <Painel Icon={Layers} titulo="Páginas agora">
             <Barras itens={(dados.paginas_agora ?? []).map((p) => ({ chave: p.pagina, n: p.n, rotulo: p.titulo || p.pagina }))} total={n0(dados.no_site)} vazio="Ninguém no site agora." />
           </Painel>
-          <Painel Icon={Navigation} titulo="De onde vieram" sub="Últimos 30 minutos">
+          <Painel Icon={Navigation} titulo="De onde vieram" sub={periodoRotulo}>
             <Barras itens={barras(dados.origens, 'origem', (x) => ORIGEM[x.origem] ?? x.origem)} total={totalTrinta} />
           </Painel>
-          <Painel Icon={Smartphone} titulo="Aparelhos" sub="Últimos 30 minutos">
+          <Painel Icon={Smartphone} titulo="Aparelhos" sub={periodoRotulo}>
             <Barras itens={barras(dados.dispositivos, 'dispositivo', (x) => APARELHO[x.dispositivo] ?? x.dispositivo)} total={totalTrinta} />
           </Painel>
-          <Painel Icon={MapPin} titulo="Cidades" sub="Últimos 30 minutos">
+          <Painel Icon={MapPin} titulo="Cidades" sub={periodoRotulo}>
             <Barras itens={(dados.cidades ?? []).map((c) => ({ chave: `${c.cidade}|${c.uf}`, n: c.n, rotulo: `${c.cidade}, ${c.uf}${n0(c.gps) ? ` · ${c.gps} por GPS` : ''}` }))} total={totalTrinta} vazio="Sem cidade conhecida ainda." />
           </Painel>
         </div>

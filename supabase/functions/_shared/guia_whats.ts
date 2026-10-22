@@ -32,7 +32,7 @@ export type Saida = {
   dados?: Dados
   erro?: string
 }
-type Dados = { nome?: string; servico?: string; preferencia?: string; observacao?: string; pos_envio?: number }
+type Dados = { nome?: string; servico?: string; preferencia?: string; observacao?: string; pos_envio?: number; sem_avanco?: number }
 type Lugar = {
   id: string; nome: string; categoria?: string | null; cidade?: string | null; cidade_slug?: string; slug?: string; uf?: string | null
   bairro?: string | null; endereco?: string | null; servicos?: string[] | null; horarios?: unknown; telefone?: string | null; whatsapp?: string | null
@@ -42,6 +42,8 @@ type Conversa = { id: number; telefone: string; lugar_id: string | null; estado:
 type Config = {
   ligado: boolean; numero: string | null; instancia: string; provedor: string; modelo: string | null; orientacao: string
   msg_cliente: string; msg_salao: string; msg_salao_resposta: string; mostrar_contato_salao: boolean; limite_respostas?: number | null
+  // 3.51: o ciclo da conversa, configurável na Plataforma (os números abaixo têm padrão quando a config não trouxe)
+  msg_encerramento?: string | null; exigir_preferencia?: boolean; pos_envio?: number | null; max_sem_avanco?: number | null; ocioso_horas?: number | null
 }
 
 export const MODELO_PADRAO: Record<string, string> = { groq: 'openai/gpt-oss-120b', claude: 'claude-haiku-5-5' }
@@ -138,7 +140,7 @@ export function resumo(d: Dados, salao: string): string {
     'Anotei assim:',
     `• Nome: ${d.nome}`,
     `• Serviço: ${d.servico}`,
-    `• Preferência: ${d.preferencia}`,
+    ...(d.preferencia ? [`• Preferência: ${d.preferencia}`] : []),
     ...(d.observacao ? [`• Observação: ${d.observacao}`] : []),
     '',
     `Posso enviar seu nome, este WhatsApp e o pedido para o ${salao}? Eles te chamam aqui para combinar. É só responder *sim*.`,
@@ -176,6 +178,7 @@ export function sistema(cfg: Config, l: Lugar, d: Dados, estado: string, nomePer
     `- Preferência de dia e horário: ${d.preferencia || 'ainda não sei'}`,
     `- Observação: ${d.observacao || 'nenhuma'}`,
     `- Estado: ${estado === 'confirmando' ? 'confirmando (já mostrei o resumo e perguntei se posso enviar ao salão)' : estado === 'enviado' ? 'enviado (o pedido já foi para o salão; só tire dúvidas, não peça os dados de novo)' : 'conversando'}`,
+    `- Para enviar ao salão, o essencial é ${cfg.exigir_preferencia ? 'o nome, o serviço e a preferência de dia e horário' : 'o nome e o serviço (a preferência de dia e horário é um extra: se ela não disser, tudo bem, dá para enviar assim mesmo)'}. Se faltar o essencial, peça com gentileza; não repita a mesma pergunta várias vezes seguidas.`,
     '',
     'RESPONDA SÓ COM OS CAMPOS',
     '- resposta: a mensagem para a cliente.',
@@ -309,10 +312,11 @@ export async function atenderGuia(deps: Deps, e: Entrada, opcoes: { teste?: bool
     await guardar(resposta, estadoAntes, dadosAntes, lugar.id)
     return { responder: resposta, acao: 'limite_respostas', estado: estadoAntes }
   }
-  // depois do envio: mais POS_ENVIO respostas (dúvidas), uma despedida e silêncio
+  // depois do envio: mais pos_envio respostas (dúvidas), uma despedida e silêncio (a Plataforma configura; padrão POS_ENVIO)
+  const posEnvioMax = Math.max(0, Number(cfg.pos_envio ?? POS_ENVIO))
   const depois = Number(dadosAntes.pos_envio ?? 0)
-  if (estadoAntes === 'enviado' && depois >= POS_ENVIO) {
-    if (depois > POS_ENVIO) return { responder: null, acao: 'pos_envio', estado: estadoAntes }
+  if (estadoAntes === 'enviado' && depois >= posEnvioMax) {
+    if (depois > posEnvioMax) return { responder: null, acao: 'pos_envio', estado: estadoAntes }
     const resposta = `O ${lugar.nome} já recebeu seu pedido e vai te chamar por aqui 💗 Se quiser marcar em outro salão, me manda o link da página dele no guia.`
     await guardar(resposta, estadoAntes, { ...dadosAntes, pos_envio: depois + 1 }, lugar.id)
     return { responder: resposta, acao: 'pos_envio', estado: estadoAntes }
@@ -349,12 +353,30 @@ export async function atenderGuia(deps: Deps, e: Entrada, opcoes: { teste?: bool
   }
   const mudou = (['nome', 'servico', 'preferencia', 'observacao'] as const).some((k) => (dados[k] ?? '') !== (dadosAntes[k] ?? ''))
   if (estadoAntes === 'enviado') dados.pos_envio = depois + 1
-  const completo = !!(dados.nome && dados.servico && dados.preferencia)
+  // o essencial para enviar: nome e serviço. A preferência de dia/horário só trava o envio se a Plataforma pedir.
+  const exigirPreferencia = !!cfg.exigir_preferencia
+  const maxSemAvanco = Math.max(2, Number(cfg.max_sem_avanco ?? 6))
+  const completo = !!(dados.nome && dados.servico && (!exigirPreferencia || dados.preferencia))
 
   if (lido.cancelar && estadoAntes !== 'enviado') {
     const resposta = limpo(lido.resposta, 1200) || 'Tudo bem! Se quiser marcar depois, é só chamar. 💗'
     await guardar(resposta, 'encerrada', dados, lugar.id)
     return { responder: resposta, acao: 'cancelou', estado: 'encerrada', dados }
+  }
+
+  // sem avançar: se a cliente escreve e a conversa não anda (sem dado novo e ainda sem o essencial), a Mel insiste com
+  // gentileza; depois de max_sem_avanco mensagens assim, encerra com a mensagem configurada. Não vale no resumo
+  // (confirmando) nem depois do envio — lá quem decide são o "sim/não" e o pos_envio.
+  if (!completo && estadoAntes !== 'confirmando' && estadoAntes !== 'enviado' && !lido.cliente_confirmou_envio) {
+    const semAvanco = mudou ? 0 : Number(dadosAntes.sem_avanco ?? 0) + 1
+    dados.sem_avanco = semAvanco
+    if (semAvanco >= maxSemAvanco) {
+      const resposta = limpo(cfg.msg_encerramento, 1000) || 'Tudo bem! 💗 Quando quiser marcar, é só me chamar aqui. Até logo!'
+      await guardar(resposta, 'encerrada', { ...dados, sem_avanco: 0 }, lugar.id)
+      return { responder: resposta, acao: 'sem_avanco', estado: 'encerrada', dados }
+    }
+  } else {
+    dados.sem_avanco = 0
   }
 
   // o "sim" depois do resumo: o pedido vai para o salão

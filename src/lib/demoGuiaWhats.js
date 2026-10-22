@@ -37,7 +37,8 @@ let CFG = {
   id: 1, ligado: true, numero: '5513999990000', instancia: 'mimo-guia', botoes: ['ligar', 'whatsapp'], provedor: 'groq', modelo: null,
   orientacao: ORIENTACAO_PADRAO, msg_cliente: 'Olá! Vi o {salao} no guia da MIMO e quero marcar um horário.', msg_salao: MSG_SALAO_PADRAO,
   msg_salao_resposta: 'Obrigada pelo retorno! 💗 Se quiser receber pedidos assim direto na agenda do salão, com link próprio para as clientes marcarem e lembretes automáticos, responda QUERO que a equipe da MIMO te chama. Para não receber mais pedidos por aqui, responda SAIR.',
-  mostrar_contato_salao: false, limite_dia: 40, limite_respostas: 30, retencao_dias: 90, atualizado_em: h(60 * 24 * 3),
+  msg_encerramento: 'Tudo bem! 💗 Quando quiser marcar, é só me chamar aqui que eu te ajudo. Até logo!',
+  mostrar_contato_salao: false, exigir_preferencia: false, limite_dia: 40, limite_respostas: 30, pos_envio: 3, max_sem_avanco: 6, ocioso_horas: 24, retencao_dias: 90, atualizado_em: h(60 * 24 * 3),
 }
 let ESTADO = 'open'
 const CONVERSAS = [
@@ -91,12 +92,15 @@ function painel({ dias_ = 7 } = {}) {
 function salvar({ c }) {
   const n = { ...CFG }
   if (c.numero !== undefined) { let d = String(c.numero ?? '').replace(/\D/g, ''); if (d.length === 10 || d.length === 11) d = '55' + d; if (d && !/^[1-9][0-9]{9,14}$/.test(d)) throw new Error('número inválido: use DDD e número (com 55 na frente, se quiser)'); n.numero = d || null }
-  for (const k of ['ligado', 'mostrar_contato_salao']) if (typeof c[k] === 'boolean') n[k] = c[k]
-  for (const k of ['instancia', 'provedor', 'orientacao', 'msg_cliente', 'msg_salao', 'msg_salao_resposta']) if (typeof c[k] === 'string' && c[k].trim()) n[k] = c[k].trim()
+  for (const k of ['ligado', 'mostrar_contato_salao', 'exigir_preferencia']) if (typeof c[k] === 'boolean') n[k] = c[k]
+  for (const k of ['instancia', 'provedor', 'orientacao', 'msg_cliente', 'msg_salao', 'msg_salao_resposta', 'msg_encerramento']) if (typeof c[k] === 'string' && c[k].trim()) n[k] = c[k].trim()
   if (c.modelo !== undefined) n.modelo = String(c.modelo ?? '').trim() || null
   if (Array.isArray(c.botoes)) n.botoes = [...new Set(c.botoes.filter((b) => ['whatsapp', 'ligar', 'quero_marcar'].includes(b)))].sort()
   if (c.limite_dia !== undefined) { const v = Number(c.limite_dia); if (!(v >= 1 && v <= 1000)) throw new Error('limite por dia: de 1 a 1000'); n.limite_dia = v }
   if (c.limite_respostas !== undefined) { const v = Number(c.limite_respostas); if (!(v >= 1 && v <= 500)) throw new Error('respostas por número por dia: de 1 a 500'); n.limite_respostas = v }
+  if (c.pos_envio !== undefined) { const v = Number(c.pos_envio); if (!(v >= 0 && v <= 20)) throw new Error('dúvidas depois do envio: de 0 a 20'); n.pos_envio = v }
+  if (c.max_sem_avanco !== undefined) { const v = Number(c.max_sem_avanco); if (!(v >= 2 && v <= 50)) throw new Error('mensagens sem avançar antes de encerrar: de 2 a 50'); n.max_sem_avanco = v }
+  if (c.ocioso_horas !== undefined) { const v = Number(c.ocioso_horas); if (!(v >= 1 && v <= 168)) throw new Error('horas em silêncio para encerrar: de 1 a 168'); n.ocioso_horas = v }
   if (c.retencao_dias !== undefined) { const v = Number(c.retencao_dias); if (!(v >= 7 && v <= 730)) throw new Error('guardar as conversas: de 7 a 730 dias'); n.retencao_dias = v }
   if (!/^[a-z0-9][a-z0-9_-]{1,39}$/.test(n.instancia)) throw new Error('instância inválida: letras minúsculas, números, - e _ (2 a 40)')
   if (n.ligado && !n.numero) { n.ligado = false; CFG = { ...n, atualizado_em: new Date().toISOString() }; throw new Error('para ligar, informe o número do WhatsApp do guia') }
@@ -132,7 +136,7 @@ function simular({ texto, lugar }) {
   const t = msg.trim()
   s.mensagens.push({ q: 'cliente', t })
   let resposta, acao = 'conversa', previaSalao = null
-  const resumo = () => `Anotei assim:\n• Nome: ${s.dados.nome}\n• Serviço: ${s.dados.servico}\n• Preferência: ${s.dados.preferencia}\n\nPosso enviar seu nome, este WhatsApp e o pedido para o ${s.lugar.nome}? Eles te chamam aqui para combinar. É só responder *sim*.`
+  const resumo = () => `Anotei assim:\n• Nome: ${s.dados.nome}\n• Serviço: ${s.dados.servico}${s.dados.preferencia ? `\n• Preferência: ${s.dados.preferencia}` : ''}\n\nPosso enviar seu nome, este WhatsApp e o pedido para o ${s.lugar.nome}? Eles te chamam aqui para combinar. É só responder *sim*.`
   if (/\(código:/.test(t) || s.mensagens.length === 1) { resposta = `Oi! Aqui é a Mel, da MIMO 💗, o guia onde você encontrou o ${s.lugar.nome}. Eu anoto seu pedido e passo para o salão, que te chama aqui no WhatsApp. Como é seu nome?` }
   else if (s.estado === 'confirmando' && /^(sim|pode|ok|isso|claro)\b/i.test(t)) {
     s.estado = 'enviado'; acao = 'enviado_teste'
@@ -140,8 +144,12 @@ function simular({ texto, lugar }) {
     resposta = `Pronto, ${s.dados.nome.split(' ')[0]}! 💗 Enviei seu pedido para o ${s.lugar.nome}. Eles vão te chamar aqui no WhatsApp para combinar o horário.`
   } else if (s.estado === 'enviado') { resposta = 'Seu pedido já foi para o salão, que vai te chamar aqui. Posso ajudar em mais alguma coisa?' }
   else if (!s.dados.nome) { s.dados.nome = t.slice(0, 60); resposta = `Prazer, ${s.dados.nome}! Qual serviço você quer marcar?` }
-  else if (!s.dados.servico) { s.dados.servico = t.slice(0, 80); resposta = 'E qual a sua preferência de dia e horário? Pode ser algo como "sexta à tarde" ou "qualquer dia de manhã".' }
-  else if (!s.dados.preferencia) { s.dados.preferencia = t.slice(0, 80); s.estado = 'confirmando'; acao = 'resumo'; resposta = resumo() }
+  else if (!s.dados.servico) {
+    s.dados.servico = t.slice(0, 80)
+    // o essencial para enviar: nome e serviço; só pede a preferência se a Plataforma exigir (exigir_preferencia)
+    if (CFG.exigir_preferencia) { resposta = 'E qual a sua preferência de dia e horário? Pode ser algo como "sexta à tarde" ou "qualquer dia de manhã".' }
+    else { s.estado = 'confirmando'; acao = 'resumo'; resposta = resumo() }
+  }
   else { s.dados.preferencia = t.slice(0, 80); s.estado = 'confirmando'; acao = 'resumo'; resposta = resumo() }
   s.mensagens.push({ q: 'mel', t: resposta })
   return { ok: true, texto: t, responder: resposta, acao, previaSalao, estado: s.estado, dados: { ...s.dados } }

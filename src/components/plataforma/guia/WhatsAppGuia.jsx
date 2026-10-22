@@ -22,7 +22,7 @@ const CONEXAO = {
   nao_existe: ['Ainda não conectado', 'cinza'], erro: ['A Evolution não respondeu', 'carmim'], desconhecido: ['Estado desconhecido', 'cinza'],
 }
 const BOTOES = [['whatsapp', 'WhatsApp', 'o botão WhatsApp do salão'], ['ligar', 'Ligar', 'o botão Ligar (vira WhatsApp)'], ['quero_marcar', 'Quero marcar', 'o botão "Quero marcar aqui" (em vez do formulário)']]
-const CAMPOS_CONFIG = ['ligado', 'numero', 'instancia', 'botoes', 'provedor', 'modelo', 'orientacao', 'msg_cliente', 'msg_salao', 'msg_salao_resposta', 'mostrar_contato_salao', 'limite_dia', 'limite_respostas', 'retencao_dias']
+const CAMPOS_CONFIG = ['ligado', 'numero', 'instancia', 'botoes', 'provedor', 'modelo', 'orientacao', 'msg_cliente', 'msg_salao', 'msg_salao_resposta', 'msg_encerramento', 'mostrar_contato_salao', 'exigir_preferencia', 'limite_dia', 'limite_respostas', 'pos_envio', 'max_sem_avanco', 'ocioso_horas', 'retencao_dias']
 const tel = (d) => { const s = String(d ?? '').replace(/\D/g, ''); return s.length === 13 && s.startsWith('55') ? `(${s.slice(2, 4)}) ${s.slice(4, 9)}-${s.slice(9)}` : s.length === 12 && s.startsWith('55') ? `(${s.slice(2, 4)}) ${s.slice(4, 8)}-${s.slice(8)}` : s ? `+${s}` : '' }
 // o telefone do guia (3.49.4): máscara enquanto digita, e guardado no mesmo formato que o banco guarda (dígitos com 55
 // na frente), para a comparação com o número salvo bater e o botão Conectar liberar. telCanon = o que vai ao banco;
@@ -184,6 +184,17 @@ export default function WhatsAppGuia({ g }) {
                 <textarea rows={9} value={form.msg_salao ?? ''} onChange={(e) => campo('msg_salao', e.target.value)} maxLength={3000} data-teste="wa-msg-salao" /></label>
               <label>Resposta quando o salão responde ao pedido <span className="muted">(uma vez só; QUERO e SAIR são reconhecidos sempre)</span>
                 <textarea rows={3} value={form.msg_salao_resposta ?? ''} onChange={(e) => campo('msg_salao_resposta', e.target.value)} maxLength={1500} /></label>
+              <fieldset className="pg-wa-ciclo" data-teste="wa-ciclo">
+                <legend>O ciclo da conversa <span className="muted">(como a Mel conduz e quando encerra — você define)</span></legend>
+                <label className="pg-wa-check"><input type="checkbox" checked={!!form.exigir_preferencia} onChange={(e) => campo('exigir_preferencia', e.target.checked)} data-teste="wa-exigir-preferencia" /> Só enviar ao salão com a preferência de dia e horário <span className="muted">(desligado, basta nome e serviço; a preferência vira um extra)</span></label>
+                <div className="pg-wa-grade3">
+                  <label>Dúvidas que a Mel responde depois de enviar <span className="muted">(depois, se despede e silencia)</span><input type="number" min={0} max={20} value={form.pos_envio ?? 3} onChange={(e) => campo('pos_envio', Number(e.target.value))} data-teste="wa-pos-envio" /></label>
+                  <label>Mensagens sem avançar antes de encerrar <span className="muted">(a conversa que não anda)</span><input type="number" min={2} max={50} value={form.max_sem_avanco ?? 6} onChange={(e) => campo('max_sem_avanco', Number(e.target.value))} data-teste="wa-max-sem-avanco" /></label>
+                  <label>Horas em silêncio para encerrar <span className="muted">(depois, a cliente recomeça do zero)</span><input type="number" min={1} max={168} value={form.ocioso_horas ?? 24} onChange={(e) => campo('ocioso_horas', Number(e.target.value))} data-teste="wa-ocioso-horas" /></label>
+                </div>
+                <label>Mensagem ao encerrar a conversa <span className="muted">(quando a conversa não avança; a cliente pode voltar quando quiser)</span>
+                  <textarea rows={2} value={form.msg_encerramento ?? ''} onChange={(e) => campo('msg_encerramento', e.target.value)} maxLength={1000} data-teste="wa-msg-encerramento" /></label>
+              </fieldset>
               <div className="pg-wa-grade3">
                 <label>Limite de pedidos por dia<input type="number" min={1} max={1000} value={form.limite_dia ?? 40} onChange={(e) => campo('limite_dia', Number(e.target.value))} /></label>
                 <label>Respostas da Mel por número por dia <span className="muted">(depois disso, avisa e silencia)</span><input type="number" min={1} max={500} value={form.limite_respostas ?? 30} onChange={(e) => campo('limite_respostas', Number(e.target.value))} data-teste="wa-limite-respostas" /></label>

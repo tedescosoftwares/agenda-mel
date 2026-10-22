@@ -207,7 +207,7 @@ export default function AoVivo() {
             )}
           </Painel>
           {temGoogleMaps() && (
-            <Painel Icon={MapaIcone} titulo="Onde estão" sub={`Rosa: cidade pelo GPS de quem autorizou a localização. Cinza: aproximada pelo IP. Forte: no site agora; claro: passou ${noPeriodo}.`}
+            <Painel Icon={MapaIcone} titulo="Onde estão" sub={`Rosa: pelo GPS de quem autorizou a localização. Roxo: aproximada pelo IP. Grande: no site agora; menor: passou ${noPeriodo}.`}
               direita={<button type="button" className="plat-link" onClick={() => setMapa((x) => !x)}>{mapa ? 'Esconder' : 'Mostrar'}</button>}>
               {mapa && (pontos.length
                 ? <Suspense fallback={<div className="pg-carregando"><LoaderCircle className="pg-gira" size={16} /> Abrindo o mapa…</div>}><MapaAoVivo pontos={pontos} /></Suspense>

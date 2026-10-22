@@ -513,6 +513,27 @@ const RPC = {
   plataforma_salvar_telefones_teste: ({ fones_ }) => (fones_ ?? []).map((f) => { const [a, b] = f.includes(':') ? f.split(':') : [null, f]; return { telefone: '55' + b.replace(/\D/g, '').slice(-11), apelido: a?.trim() || null, criado_em: mais(0) } }),
   plataforma_palavras: () => [{ intencao: 'confirma', palavras: ['1','sim','confirmo','ok','pode ser'] }, { intencao: 'cancela', palavras: ['2','nao','remarcar','cancelar'] }, { intencao: 'sair', palavras: ['sair','parar','stop'] }],
   plataforma_ia: () => [{ salon_id: SALAO, salao: 'Studio Mel', canal: 'evolution', ativo: true, usa_bot: true, usa_ia: true, teto_ia_diario: 200, teto_ia_por_numero: 20, gastas_hoje: 12, orientacao_ia: 'Atendemos de terça a sábado.' }, { salon_id: 's2', salao: 'Espaço Bela', canal: 'manual', ativo: true, usa_bot: false, usa_ia: false, teto_ia_diario: 200, teto_ia_por_numero: 20, gastas_hoje: 0 }],
+  plataforma_cadastros: ({ dias_ = 30 } = {}) => {
+    const d = (h) => new Date(Date.now() - h * 3600e3).toISOString()
+    const todos = [
+      { id: 's6', nome: 'Espaço Renata', tipo: 'salao', slug: 'espaco-renata', cidade: 'Praia Grande', ativo: true, criado_em: d(5),
+        dona: 'Renata Alves', dona_email: 'renata@exemplo.com', dona_telefone: '(13) 99700-1188', plano: 'teste', teste_ate: new Date(Date.now() + 10 * 864e5).toISOString(),
+        servicos: [{ nome: 'Corte feminino', preco: 80, minutos: 60 }, { nome: 'Escova', preco: 50, minutos: 40 }, { nome: 'Coloração', preco: 180, minutos: 120 }],
+        servicos_n: 3, profissionais: 2, horarios: 6, clientes: 4, atendimentos: 1 },
+      { id: 's7', nome: 'Nail da Vi', tipo: 'autonoma', slug: 'nail-da-vi', cidade: 'São Vicente', ativo: true, criado_em: d(26),
+        dona: 'Vivian Costa', dona_email: 'vi@exemplo.com', dona_telefone: '(13) 99812-4455', plano: 'teste', teste_ate: new Date(Date.now() + 5 * 864e5).toISOString(),
+        servicos: [{ nome: 'Manicure', preco: 35, minutos: 45 }, { nome: 'Pedicure', preco: 40, minutos: 50 }],
+        servicos_n: 2, profissionais: 1, horarios: 5, clientes: 2, atendimentos: 0 },
+      { id: 's8', nome: 'Studio Lú', tipo: 'salao', slug: 'studio-lu', cidade: 'Santos', ativo: true, criado_em: d(50),
+        dona: 'Luana Dias', dona_email: 'lu@exemplo.com', dona_telefone: '(13) 99655-7788', plano: 'ativa', teste_ate: null,
+        servicos: [{ nome: 'Design de sobrancelha', preco: 45, minutos: 30 }], servicos_n: 1, profissionais: 1, horarios: 6, clientes: 11, atendimentos: 8 },
+      { id: 's9', nome: 'Bela Fácil', tipo: 'salao', slug: 'bela-facil', cidade: 'Mongaguá', ativo: true, criado_em: d(80),
+        dona: 'Patrícia Nunes', dona_email: 'pat@exemplo.com', dona_telefone: null, plano: null, teste_ate: null,
+        servicos: [], servicos_n: 0, profissionais: 0, horarios: 0, clientes: 0, atendimentos: 0 },
+    ]
+    const corte = Date.now() - Math.max(1, Math.min(dias_ ?? 30, 365)) * 864e5
+    return todos.filter((s2) => new Date(s2.criado_em).getTime() >= corte)
+  },
   plataforma_saloes: () => [
     { id: SALAO, nome: 'Studio Mel', tipo: 'salao', slug: 'studio-mel', codigo: 'MEL2K5', cidade: 'Santos', ativo: true, dona: 'Mel Tedesco', dona_email: 'mel@exemplo.com', profissionais: 4, clientes: 128, servicos: 8, tem_horario: true, atendimentos: 1240, atendimentos_mes: 96, ultimo_atendimento: mais(0), desde: '2024-11-01' },
     { id: 's6', nome: 'Agenda Mel', tipo: 'salao', slug: 'agenda-mel', codigo: 'HXUHH8', cidade: 'Itanhaém', ativo: true, dona: 'Projeto Tedesco Softwares', dona_email: 'ts@exemplo.com', profissionais: 0, clientes: 0, servicos: 0, tem_horario: true, atendimentos: 0, atendimentos_mes: 0, ultimo_atendimento: null, desde: '2025-08-30' },

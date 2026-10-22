@@ -8,6 +8,7 @@ import RedeDeProtecao from '../components/RedeDeProtecao'
 import NaoEncontrada from '../pages/publico/NaoEncontrada'
 import Visao from '../pages/plataforma/Visao'
 import Saloes, { Salao } from '../pages/plataforma/Saloes'
+import Cadastros from '../pages/plataforma/Cadastros'
 import Pessoas from '../pages/plataforma/Pessoas'
 import Vinculos from '../pages/plataforma/Vinculos'
 import Filas from '../pages/plataforma/Filas'
@@ -31,6 +32,7 @@ export default function RotasPlataforma() {
       <Route index element={<T><Visao /></T>} />
       <Route path="saloes" element={<T><Saloes /></T>} />
       <Route path="saloes/:id" element={<T><Salao /></T>} />
+      <Route path="cadastros" element={<T><Cadastros /></T>} />
       <Route path="pessoas" element={<T><Pessoas /></T>} />
       <Route path="vinculos" element={<T><Vinculos /></T>} />
       <Route path="filas" element={<T><Filas /></T>} />

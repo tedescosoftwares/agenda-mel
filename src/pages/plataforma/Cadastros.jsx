@@ -99,7 +99,7 @@ function Cartao({ s }) {
         <p className="cad-aviso">Ainda não configurou nenhum serviço{prontidao === 0 ? ', nem profissionais ou horários' : ''}.</p>
       )}
 
-      {s.cadastro && Object.keys(s.cadastro).length > 0 && (
+      {s.cadastro && (s.cadastro.cpf || s.cadastro.cnpj || s.cadastro.rg || s.cadastro.nascimento || s.cadastro.endereco || s.cadastro.endereco_fiscal) && (
         <details className="cad-dados" data-teste="cad-dados">
           <summary>Dados informados no cadastro</summary>
           <dl>

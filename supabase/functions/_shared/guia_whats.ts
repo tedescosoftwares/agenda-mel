@@ -63,7 +63,7 @@ export const palavra = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '')
 // envio, a Mel responde mais POS_ENVIO vezes e fica quieta; só emoji não vai à IA; e o teto do dia (limite_respostas)
 const SIM_CURTO = /^(sim|s|ss|sim sim|sim pode|sim quero|ok|okay|okey|pode|pode sim|pode ser|pode enviar|pode mandar|pode manda|pode ir|isso|isso mesmo|isso ai|claro|claro que sim|confirmo|confirmado|manda|manda sim|envia|enviar|certo|beleza|bora|vai|vamos|yes|uhum|aham|correto|perfeito|otimo|top|show|fechado|fechou|combinado|quero|quero sim)$/
 const NAO_CURTO = /^(nao|n|nao quero|nao precisa|nao obrigada|nao obrigado|nao nao|cancela|cancelar|cancele|desisto|desisti|deixa|deixa pra la|esquece|esqueca)$/
-const SIM_EMOJI = /^[\s👍✅👌🙏💗❤️🥰😊🏻🏼🏽🏾🏿]+$/u
+const SIM_EMOJI = /^(?:\s|👍|✅|👌|🙏|💗|\u2764|\uFE0F|🥰|😊|[\u{1F3FB}-\u{1F3FF}])+$/u
 export const POS_ENVIO = 3
 
 // o código do salão na mensagem: "código: itanhaem/studio-lirio", "ref itanhaem/studio-lirio", o link da página ou,

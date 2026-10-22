@@ -32,3 +32,14 @@
 .gd-fato-km svg { color: #1f9d5f; }
 
 @media (prefers-reduced-motion: reduce) { .gd-perto-gira { animation: none; } }
+
+/* os modais (3.49.3), sobre a folha do guia (.gd-folha, em guia.css): o que explica o pedido e o da aproximada */
+.gd-local-modal .gd-folha { max-width: 480px; }
+.gd-local-modal .gd-folha-icone.gd-local-aprox { background: #fff1f3; color: #c2185b; }
+.ld .gd-local-modal .gd-folha-texto { margin-bottom: 14px; }
+.ld .gd-local-modal .gd-folha-texto b { color: var(--ld-ameixa); }
+.ld .gd-local-passos { margin: 0; padding-left: 22px; color: var(--ld-cinza); font-size: 0.92rem; display: grid; gap: 6px; }
+.ld .gd-local-passos b { color: var(--ld-ameixa); }
+.ld .gd-local-acoes { margin-top: 18px; }
+.ld .gd-local-modal .gd-folha-alt { margin-top: 12px; font-size: 0.82rem; }
+.ld .gd-local-modal .gd-folha-alt a { color: var(--ld-rosa); font-weight: 600; }

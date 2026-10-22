@@ -242,6 +242,36 @@ function lerEvolution(corpo: any): { mensagens: Recebida[]; status: Status[] } {
 Deno.serve(async (req) => {
   const url = new URL(req.url)
 
+  // 3.52: o relógio do ocioso da Mel. Um cron na VPS chama ?tarefa=ociosas&token=<EVOLUTION_WEBHOOK_TOKEN>: a função
+  // varre as conversas paradas e manda, pela Evolution, a pergunta "posso encerrar?" (perguntar) ou o encerramento
+  // (encerrar) e fecha. Não processa evento de WhatsApp nenhum; a cada mensagem da cliente a marca (cutucada_em) zera.
+  if (url.searchParams.get('tarefa') === 'ociosas') {
+    const esperado = Deno.env.get('EVOLUTION_WEBHOOK_TOKEN')
+    if (!esperado || url.searchParams.get('token') !== esperado) return new Response('não autorizado', { status: 403 })
+    try {
+      const { data, error } = await db.rpc('guia_whats_ociosas')
+      if (error) return json({ erro: error.message }, 500)
+      const o = (data ?? {}) as { ativo?: boolean; instancia?: string; texto_perguntar?: string; texto_encerrar?: string; perguntar?: Array<{ id: number; telefone: string }>; encerrar?: Array<{ id: number; telefone: string }> }
+      if (!o.ativo) return json({ ok: true, ativo: false })
+      const instancia = o.instancia ?? ''
+      let perguntou = 0, encerrou = 0
+      // encerra primeiro (quem já foi perguntado e segue parado), depois pergunta (quem acabou de parar)
+      for (const c of o.encerrar ?? []) {
+        const env = await enviarPor('evolution', { telefone: c.telefone, corpo: o.texto_encerrar ?? '', identificador: instancia })
+        if (env.ok) { await db.rpc('guia_whats_ociosa_feita', { id_: c.id, tipo_: 'encerrar', texto_: o.texto_encerrar }); encerrou++ }
+        else console.error('ocioso encerrar: não saiu', env.erro)
+      }
+      for (const c of o.perguntar ?? []) {
+        const env = await enviarPor('evolution', { telefone: c.telefone, corpo: o.texto_perguntar ?? '', identificador: instancia })
+        if (env.ok) { await db.rpc('guia_whats_ociosa_feita', { id_: c.id, tipo_: 'perguntar', texto_: o.texto_perguntar }); perguntou++ }
+        else console.error('ocioso perguntar: não saiu', env.erro)
+      }
+      return json({ ok: true, perguntou, encerrou })
+    } catch (e) {
+      return json({ erro: String((e as Error)?.message ?? e).slice(0, 300) }, 500)
+    }
+  }
+
   // 1. A Meta verifica a URL uma vez, com GET
   if (req.method === 'GET') {
     const modo = url.searchParams.get('hub.mode')

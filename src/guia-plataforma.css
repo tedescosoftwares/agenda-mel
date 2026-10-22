@@ -655,6 +655,8 @@
 .pg-wa-ciclo { border: 1px solid var(--fio); border-radius: 12px; padding: 0.7rem 0.9rem; display: flex; flex-direction: column; gap: 0.7rem; margin: 0; }
 .pg-wa-ciclo legend { font-size: 0.82rem; font-weight: 600; padding: 0 0.3rem; }
 .pg-wa-ciclo legend .muted { font-weight: 400; }
+.pg-wa-ocioso { border-top: 1px dashed var(--fio); padding-top: 0.7rem; margin-top: 0.1rem; display: flex; flex-direction: column; gap: 0.7rem; }
+.pg-wa-ocioso input:disabled, .pg-wa-ocioso textarea:disabled { opacity: 0.55; }
 .pg-wa-nota { font-size: 0.74rem; margin: 0; line-height: 1.45; }
 .pg-wa-acoes { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
 .pg-wa-pareamento { background: #fff7fb; border: 1px dashed #ffc2d8; border-radius: 12px; padding: 0.8rem 1rem; font-size: 0.84rem; display: flex; flex-direction: column; gap: 0.5rem; }

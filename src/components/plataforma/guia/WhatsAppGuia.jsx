@@ -24,6 +24,23 @@ const CONEXAO = {
 const BOTOES = [['whatsapp', 'WhatsApp', 'o botão WhatsApp do salão'], ['ligar', 'Ligar', 'o botão Ligar (vira WhatsApp)'], ['quero_marcar', 'Quero marcar', 'o botão "Quero marcar aqui" (em vez do formulário)']]
 const CAMPOS_CONFIG = ['ligado', 'numero', 'instancia', 'botoes', 'provedor', 'modelo', 'orientacao', 'msg_cliente', 'msg_salao', 'msg_salao_resposta', 'mostrar_contato_salao', 'limite_dia', 'limite_respostas', 'retencao_dias']
 const tel = (d) => { const s = String(d ?? '').replace(/\D/g, ''); return s.length === 13 && s.startsWith('55') ? `(${s.slice(2, 4)}) ${s.slice(4, 9)}-${s.slice(9)}` : s.length === 12 && s.startsWith('55') ? `(${s.slice(2, 4)}) ${s.slice(4, 8)}-${s.slice(8)}` : s ? `+${s}` : '' }
+// o telefone do guia (3.49.4): máscara enquanto digita, e guardado no mesmo formato que o banco guarda (dígitos com 55
+// na frente), para a comparação com o número salvo bater e o botão Conectar liberar. telCanon = o que vai ao banco;
+// mascararTel = o que aparece no campo, no formato nacional (DD) 9NNNN-NNNN; telValido = DDD + número completos.
+const soDig = (s) => String(s ?? '').replace(/\D/g, '')
+const telCanon = (s) => { const d = soDig(s); return d.length === 10 || d.length === 11 ? '55' + d : d }
+const telNacional = (s) => { const d = soDig(s); return d.startsWith('55') && d.length >= 12 ? d.slice(2) : d }
+const mascararTel = (s) => {
+  const n = telNacional(s).slice(0, 11)
+  if (!n) return ''
+  const dd = n.slice(0, 2)
+  if (n.length <= 2) return `(${dd}`
+  const resto = n.slice(2)
+  if (resto.length <= 4) return `(${dd}) ${resto}`
+  const corte = resto.length >= 9 ? 5 : 4
+  return `(${dd}) ${resto.slice(0, corte)}-${resto.slice(corte)}`
+}
+const telValido = (s) => { const n = telNacional(s); return n.length === 10 || n.length === 11 }
 const quando = (iso) => (iso ? new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '')
 const Pilula = ({ par }) => <span className={'pg-wa-pilula ' + (par?.[1] ?? 'cinza')}>{par?.[0] ?? '?'}</span>
 
@@ -122,11 +139,17 @@ export default function WhatsAppGuia({ g }) {
           <Painel Icon={Plug} titulo="Conexão do número" sub="Um chip só para o guia, na mesma Evolution dos salões. Conectar cria a instância, aponta o webhook e mostra o código de pareamento.">
             <div className="pg-wa-conexao">
               <div className="pg-wa-grade2">
-                <label>Número do WhatsApp do guia<input value={form.numero ?? ''} onChange={(e) => campo('numero', e.target.value)} placeholder="(13) 99999-0000" inputMode="tel" data-teste="wa-numero" /></label>
+                <label>Número do WhatsApp do guia<input value={mascararTel(form.numero)} onChange={(e) => campo('numero', telCanon(e.target.value))} placeholder="(13) 99999-0000" inputMode="tel" maxLength={16} data-teste="wa-numero" />
+                  {form.numero ? (!telValido(form.numero)
+                    ? <small className="pg-wa-tel-dica erro"><TriangleAlert size={12} /> Faltam dígitos: DDD e número, como (13) 99999-0000.</small>
+                    : form.numero !== dados.config?.numero
+                      ? <small className="pg-wa-tel-dica salvar"><Save size={12} /> Número válido. Salve a configuração para liberar o Conectar.</small>
+                      : <small className="pg-wa-tel-dica ok"><Check size={12} /> Número salvo. Pode conectar.</small>) : null}
+                </label>
                 <label>Instância na Evolution<input value={form.instancia ?? ''} onChange={(e) => campo('instancia', e.target.value)} placeholder="mimo-guia" /></label>
               </div>
               <div className="pg-wa-acoes">
-                <button type="button" className="btn btn-primary" onClick={() => agir('conectar')} disabled={!!ocupado || !form.numero || form.numero !== dados.config?.numero} title={form.numero !== dados.config?.numero ? 'Salve a configuração antes de conectar' : ''} data-teste="wa-conectar">{ocupado === 'conectar' ? <LoaderCircle className="pg-gira" size={15} /> : <Smartphone size={15} />} {con.estado === 'open' ? 'Reconectar' : 'Conectar'}</button>
+                <button type="button" className="btn btn-primary" onClick={() => agir('conectar')} disabled={!!ocupado || !telValido(form.numero) || form.numero !== dados.config?.numero} title={form.numero !== dados.config?.numero ? 'Salve a configuração antes de conectar' : ''} data-teste="wa-conectar">{ocupado === 'conectar' ? <LoaderCircle className="pg-gira" size={15} /> : <Smartphone size={15} />} {con.estado === 'open' ? 'Reconectar' : 'Conectar'}</button>
                 {con.estado === 'open' && <button type="button" className="btn btn-ghost" onClick={() => agir('desconectar')} disabled={!!ocupado}><Unplug size={15} /> Desconectar</button>}
                 <button type="button" className="plat-link" onClick={lerEstado}><RefreshCw size={14} /> Conferir</button>
               </div>

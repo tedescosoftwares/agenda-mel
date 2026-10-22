@@ -25,6 +25,15 @@ const CHAVE = import.meta.env.VITE_SUPABASE_ANON_KEY
 const NAO_CONTAR = 'mimo-nao-contar'
 const ROBO = /bot\b|bot\/|crawl|spider|slurp|preview|headless|lighthouse|pagespeed|phantom|selenium|playwright|puppeteer/i
 
+// o robô disfarçado (3.46): Chrome novo em Android velho não existe (o Chrome parou na versão 106 no Android 6 e na 119
+// no Android 7). É o celular que os robôs de busca simulam (Nexus 5X, Android 6.0.1) sem dizer o nome. O banco confere
+// de novo (site_eh_robo, migração 194).
+export function uaImpossivel(ua) {
+  const android = Number(String(ua ?? '').match(/Android (\d{1,2})/)?.[1])
+  const chrome = Number(String(ua ?? '').match(/Chrome\/(\d{2,3})/)?.[1])
+  return Number.isFinite(android) && Number.isFinite(chrome) && ((android <= 6 && chrome >= 110) || (android === 7 && chrome >= 125))
+}
+
 // quem trabalha na Plataforma não infla os números (o painel liga sozinho)
 export function naoContarAqui(sim = true) {
   try { if (sim) localStorage.setItem(NAO_CONTAR, '1'); else localStorage.removeItem(NAO_CONTAR) } catch { /* sem storage */ }
@@ -35,7 +44,7 @@ export function contaAqui() {
 
 export function podeContar() {
   if (typeof window === 'undefined' || typeof navigator === 'undefined') return false
-  if (navigator.webdriver || ROBO.test(navigator.userAgent || '')) return false
+  if (navigator.webdriver || ROBO.test(navigator.userAgent || '') || uaImpossivel(navigator.userAgent)) return false
   return contaAqui()
 }
 

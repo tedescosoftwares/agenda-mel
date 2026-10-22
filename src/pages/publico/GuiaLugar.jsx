@@ -5,6 +5,7 @@ import { useSeo, SITE } from '../../lib/seo'
 import { conteudoSeguro, faqDaPagina, rotaDaCidade, rotaDoLugar, fotosDoLugar } from '../../lib/guia'
 import { seoDoLugar, jsonLdDoLugar } from '../../lib/guiaSeo'
 import { carregarPagina } from '../../lib/guiaPublico'
+import { carregarContato } from '../../lib/guiaContato'
 import { aoClicarNaPagina } from '../../lib/eventos'
 import { useVisita } from '../../lib/useVisita'
 import { PeSite, useRevelar } from '../../components/site/Pecas'
@@ -81,6 +82,9 @@ function Pagina({ dados, onInteresse }) {
   useVisita(caminho)
   // a primeira foto (3.14) vira a imagem do link no WhatsApp; sem foto, fica a da MIMO
   const capa = fotosDoLugar(lugar)[0]
+  // o WhatsApp do guia (3.48): se está ligado na Plataforma, os botões de contato abrem a conversa com a Mel
+  const [contato, setContato] = useState(null)
+  useEffect(() => { let vivo = true; carregarContato().then((c) => vivo && setContato(c)); return () => { vivo = false } }, [])
   useSeo({ titulo: seo.titulo, descricao: seo.descricao, caminho: seo.caminho, imagem: capa ? (capa.startsWith('/') ? SITE + capa : capa) : undefined, jsonLd: jsonLdDoLugar(lugar, lugar.conteudo, faq), noindex: seo.noindex, tipo: 'business.business' })
   return (
     <PaginaDoLugar
@@ -89,6 +93,7 @@ function Pagina({ dados, onInteresse }) {
       vizinhos={Array.isArray(vizinhos) ? vizinhos : []}
       mesmaCategoria={Array.isArray(mesmaCategoria) ? mesmaCategoria : []}
       onInteresse={onInteresse}
+      contato={contato}
     />
   )
 }

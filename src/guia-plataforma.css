@@ -619,3 +619,78 @@
 .pg-pub-parado { display: flex; gap: 0.5rem; align-items: flex-start; padding: 0.6rem 0.75rem; border-radius: 10px; background: #fff6e5; color: #6b4a00; font-size: 0.82rem; line-height: 1.45; }
 .pg-pub-parado svg { flex-shrink: 0; margin-top: 0.15rem; color: #b47a00; }
 .pg-pub-parado code { font-size: 0.76rem; background: rgba(0, 0, 0, 0.05); padding: 0.05rem 0.3rem; border-radius: 5px; overflow-wrap: anywhere; }
+
+/* ---------- o WhatsApp do guia (3.48): conexão, configuração, simulador, pedidos, conversas. Prefixo pg-wa- ---------- */
+.pg-wa { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
+.pg-wa, .pg-wa * { box-sizing: border-box; }
+.pg-wa-topo { display: grid; grid-template-columns: minmax(240px, 1.2fr) minmax(0, 2fr) auto; gap: 1rem; align-items: center; background: #fff; border: 1px solid var(--fio); border-radius: 18px; padding: 1rem 1.2rem; }
+.pg-wa-estado { display: flex; align-items: flex-start; gap: 0.7rem; min-width: 0; }
+.pg-wa-estado > div { display: flex; flex-direction: column; min-width: 0; }
+.pg-wa-estado b { font-size: 1.02rem; }
+.pg-wa-estado small { color: var(--texto-2); font-size: 0.76rem; overflow-wrap: anywhere; }
+.pg-wa-estado .pg-wa-falta { color: #b45309; display: inline-flex; align-items: center; gap: 0.3rem; margin-top: 0.2rem; }
+.pg-wa-luz { width: 13px; height: 13px; border-radius: 50%; flex-shrink: 0; margin-top: 0.35rem; background: #c9ccd3; }
+.pg-wa-luz.verde { background: #0b7a50; box-shadow: 0 0 0 4px rgba(11, 122, 80, 0.15); }
+.pg-wa-luz.ambar { background: #d08a00; } .pg-wa-luz.carmim { background: var(--carmim, #b3123c); }
+.pg-wa-kpis { display: flex; flex-wrap: wrap; gap: 0.5rem 1.2rem; }
+.pg-wa-kpis div { display: flex; flex-direction: column; }
+.pg-wa-kpis b { font-size: 1.35rem; letter-spacing: -0.02em; line-height: 1.1; }
+.pg-wa-kpis b small { font-size: 0.8rem; color: var(--texto-3); font-weight: 500; }
+.pg-wa-kpis span { font-size: 0.72rem; color: var(--texto-2); }
+.pg-wa-kpis .rosa b { color: var(--rosa); }
+.pg-wa-dias { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; color: var(--texto-2); white-space: nowrap; }
+.pg-wa-mesa { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem; align-items: start; }
+.pg-wa-col { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
+.pg-wa-form, .pg-wa-conexao { display: flex; flex-direction: column; gap: 0.8rem; }
+.pg-wa-form label, .pg-wa-conexao label, .pg-wa-sim-inicio label { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.82rem; font-weight: 600; }
+.pg-wa-form input[type="text"], .pg-wa-form input:not([type]), .pg-wa-form input[type="number"], .pg-wa-form textarea, .pg-wa-conexao input, .pg-wa-sim-inicio input, .pg-wa-sim-form input {
+  font: inherit; font-size: 0.86rem; font-weight: 400; padding: 0.5rem 0.65rem; border: 1px solid var(--fio); border-radius: 10px; background: #fff; color: var(--texto); width: 100%; }
+.pg-wa-form textarea { resize: vertical; line-height: 1.45; }
+.pg-wa-form .muted, .pg-wa-conexao .muted { font-weight: 400; }
+.pg-wa-grade2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; }
+.pg-wa-grade3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.7rem; align-items: end; }
+.pg-wa-ligar, .pg-wa-check, .pg-wa-botoes label { flex-direction: row !important; align-items: center; gap: 0.45rem !important; }
+.pg-wa-botoes { border: 1px solid var(--fio); border-radius: 12px; padding: 0.6rem 0.8rem; display: flex; flex-direction: column; gap: 0.35rem; margin: 0; }
+.pg-wa-botoes legend { font-size: 0.78rem; color: var(--texto-2); padding: 0 0.3rem; }
+.pg-wa-nota { font-size: 0.74rem; margin: 0; line-height: 1.45; }
+.pg-wa-acoes { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+.pg-wa-pareamento { background: #fff7fb; border: 1px dashed #ffc2d8; border-radius: 12px; padding: 0.8rem 1rem; font-size: 0.84rem; display: flex; flex-direction: column; gap: 0.5rem; }
+.pg-wa-pareamento code { font-size: 1.25rem; letter-spacing: 0.08em; color: var(--rosa); font-weight: 700; }
+.pg-wa-pareamento img { border-radius: 10px; border: 1px solid var(--fio); background: #fff; }
+.pg-wa-pilula { display: inline-flex; align-items: center; padding: 0.08rem 0.5rem; border-radius: 999px; font-size: 0.7rem; font-weight: 600; background: #f3f2f7; color: var(--texto-2); white-space: nowrap; }
+.pg-wa-pilula.verde { background: #e3f8ec; color: #0b7a50; } .pg-wa-pilula.carmim { background: #fdecec; color: #b42318; }
+.pg-wa-pilula.ambar { background: #fff4d6; color: #92400e; } .pg-wa-pilula.azul { background: #e8f0fe; color: #1a56db; } .pg-wa-pilula.rosa { background: #fde7f3; color: #c1127b; }
+.pg-wa-pedidos, .pg-wa-conversas { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+.pg-wa-pedido { border: 1px solid var(--fio); border-radius: 14px; padding: 0.65rem 0.8rem; display: flex; flex-direction: column; gap: 0.35rem; font-size: 0.82rem; }
+.pg-wa-pedido.atendido { opacity: 0.7; } .pg-wa-pedido.quer { border-color: #ffc2d8; background: #fffafc; }
+.pg-wa-pedido-topo { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 0.6rem; }
+.pg-wa-pedido-topo small { margin-left: auto; }
+.pg-wa-pedido-corpo { display: flex; flex-direction: column; gap: 0.15rem; color: var(--texto-2); }
+.pg-wa-pedido-corpo > span:first-child { color: var(--texto); }
+.pg-wa-erro { color: #b42318; display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.78rem; }
+.pg-wa-resposta { display: inline-flex; align-items: center; gap: 0.3rem; color: #1a56db; }
+.pg-wa-pedido-acoes { display: flex; flex-wrap: wrap; gap: 0.3rem 0.9rem; align-items: center; font-size: 0.78rem; }
+.pg-wa-pedido-acoes label { display: inline-flex; align-items: center; gap: 0.3rem; color: var(--texto-2); }
+.pg-wa-conversas button { width: 100%; text-align: left; background: #fff; border: 1px solid var(--fio); border-radius: 12px; padding: 0.55rem 0.75rem; font: inherit; color: inherit; cursor: pointer; display: flex; flex-direction: column; gap: 0.2rem; }
+.pg-wa-conversas button:hover { border-color: #ffc2d8; }
+.pg-wa-conv-topo { display: flex; align-items: center; gap: 0.5rem; font-size: 0.84rem; } .pg-wa-conv-topo small { margin-left: auto; }
+.pg-wa-conv-ultima { font-size: 0.76rem; color: var(--texto-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pg-wa-chat { display: flex; flex-direction: column; gap: 0.4rem; max-height: 360px; overflow-y: auto; padding: 0.8rem; background: #efe7dd; border-radius: 14px; }
+.pg-wa-msg { max-width: 85%; padding: 0.45rem 0.7rem; border-radius: 12px; font-size: 0.84rem; line-height: 1.4; white-space: pre-wrap; overflow-wrap: anywhere; }
+.pg-wa-msg.cliente { align-self: flex-end; background: #dcf8c6; border-bottom-right-radius: 3px; }
+.pg-wa-msg.mel { align-self: flex-start; background: #fff; border-bottom-left-radius: 3px; }
+.pg-wa-msg.digitando { color: var(--texto-3); display: inline-flex; align-items: center; gap: 0.35rem; }
+.pg-wa-sim-inicio { display: flex; flex-direction: column; gap: 0.7rem; }
+.pg-wa-sim-inicio .btn { align-self: flex-start; }
+.pg-wa-sim-form { display: flex; gap: 0.5rem; margin-top: 0.6rem; }
+.pg-wa-sim-form .btn { flex: none; }
+.pg-wa-previa { margin-top: 0.7rem; background: #f0fdf4; border: 1px solid #a7e3c4; border-radius: 12px; padding: 0.7rem 0.9rem; font-size: 0.8rem; }
+.pg-wa-previa b { display: inline-flex; align-items: center; gap: 0.3rem; color: #0b7a50; }
+.pg-wa-previa pre { margin: 0.5rem 0 0; white-space: pre-wrap; font: inherit; line-height: 1.45; }
+.pg-wa-fundo { position: fixed; inset: 0; z-index: 60; background: rgba(31, 32, 38, 0.45); display: grid; place-items: center; padding: 1rem; }
+.pg-wa-caixa { background: #fff; border-radius: 18px; width: min(100%, 560px); max-height: 90vh; display: flex; flex-direction: column; gap: 0.6rem; padding: 1rem; }
+.pg-wa-caixa header { display: flex; align-items: center; gap: 0.6rem; } .pg-wa-caixa header .plat-link { margin-left: auto; }
+.pg-wa-anotado { font-size: 0.76rem; margin: 0; }
+@media (max-width: 1100px) { .pg-wa-mesa { grid-template-columns: 1fr; } .pg-wa-topo { grid-template-columns: 1fr; } }
+@media (max-width: 640px) { .pg-wa-grade2, .pg-wa-grade3 { grid-template-columns: 1fr; } .pg-wa-msg { max-width: 95%; } }
+

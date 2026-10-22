@@ -22,6 +22,7 @@ import { REIVINDICAR_RPC } from './demoReivindicar'
 import { BUSCAS_RPC } from './demoBuscas'
 import { publicarRpc } from './demoPublicar'
 import { AO_VIVO_RPC } from './demoAoVivo'
+import { GUIA_WHATS_RPC } from './demoGuiaWhats'
 
 const hoje = new Date()
 const iso = (d) => d.toISOString().slice(0, 10)
@@ -237,6 +238,7 @@ const RPC = {
   ...BUSCAS_RPC, // as buscas do Google (guia_buscas, 160)
   ...publicarRpc(() => CONTEUDO), // "Publicar agora" (189): site_pendencias, site_pedir_publicacao, site_publicacao_status
   ...AO_VIVO_RPC, // o site ao vivo (192): site_ao_vivo, site_presenca
+  ...GUIA_WHATS_RPC, // o WhatsApp do guia (195): guia_contato_config, guia_whats_painel, guia_whats_salvar, guia_whats_conversa, guia_whats_lead_atendido
   documentos_vigentes: () => ({}),
   meus_aceites: () => ({}),
   aceitar_documentos: () => ({ ok: true }),
@@ -739,7 +741,8 @@ export const demo = {
     const f = RPC[nome] ?? (nome === 'seo_sitemap' ? () => [...CONTEUDO.seo_pages.map((p) => ({ caminho: p.route, atualizado_em: p.updated_at })), ...CONTEUDO.blog_posts.map((a) => ({ caminho: '/blog/' + a.slug, atualizado_em: a.updated_at }))] : undefined)
     // função que não está na lista é escrita (aceitar, encaixar, chamar…):
     // no demo ela "dá certo" e não guarda nada
-    return { data: f ? f(args) : null, error: null }
+    // uma função do demo que lança erro responde como o Supabase de verdade (error.message), não derruba a tela
+    try { return { data: f ? f(args) : null, error: null } } catch (e) { return { data: null, error: { message: String(e?.message ?? e) } } }
   },
   storage: { from: () => ({ upload: async () => ({ error: null }), getPublicUrl: (p) => ({ data: { publicUrl: p } }), createSignedUrl: async (p) => ({ data: { signedUrl: p } }), remove: async () => ({}) }) },
   channel: () => ({ on() { return this }, subscribe() { return this } }),

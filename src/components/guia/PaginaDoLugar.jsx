@@ -11,7 +11,7 @@ import { Coracao, comecarEm } from '../site/Pecas'
 import {
   categoriaDoGuia, conteudoSeguro, faqDaPagina, horariosResumo, horariosEmUmaLinha, abertoAgora,
   linkMapa, linkWhatsDoTel, linkInstagram, telefoneBonito, soDigitosTel, rotaDoLugar, rotaDaCategoria, rotaDaCidade, atributosEmTexto,
-  fotosDoLugar, altDaFoto, miniatura, paraFotoInteira, sugestaoDeEndereco,
+  fotosDoLugar, altDaFoto, miniatura, paraFotoInteira, sugestaoDeEndereco, linkWhatsDoGuia,
 } from '../../lib/guia'
 import { trilhaDoLugar } from '../../lib/guiaSeo'
 import { linkDoBairro } from '../../lib/guiaColecoes'
@@ -92,7 +92,7 @@ function sobrePadrao(l, cat) {
   ]
 }
 
-export default function PaginaDoLugar({ lugar, conteudo, vizinhos = [], mesmaCategoria = [], previa = false, onInteresse = () => {} }) {
+export default function PaginaDoLugar({ lugar, conteudo, vizinhos = [], mesmaCategoria = [], previa = false, onInteresse = () => {}, contato = null }) {
   const agora = useAgora()
   const ctaRef = useRef(null)
   const [barra, setBarra] = useState(false)
@@ -162,7 +162,15 @@ export default function PaginaDoLugar({ lugar, conteudo, vizinhos = [], mesmaCat
   // "a 1,2 km de você" (3.13): só quando a pessoa já ativou a localização numa lista do guia (nunca na prévia)
   const km = !previa && posicao && l.latitude != null && l.longitude != null ? distanciaKm(posicao, { lat: Number(l.latitude), lng: Number(l.longitude) }) : null
   const msgZap = 'Olá! Vi a página de vocês no guia da MIMO e queria saber sobre horários.'
-  const zap = l.whatsapp ? linkWhatsDoTel(l.whatsapp, msgZap) : null
+  // o WhatsApp do guia (3.48): nos salões fora da MIMO, com o recurso ligado na Plataforma, WhatsApp, Ligar e "Quero
+  // marcar" (os que ela escolheu) abrem a conversa com a Mel, no número da MIMO, já com o código do salão. O toque conta
+  // como antes (whatsapp, quero_marcar). Na prévia da Plataforma nada muda.
+  const pelaMimo = !naMimo && !previa && !!contato?.ligado && !!contato?.numero
+  const viaMimo = (botao) => pelaMimo && (contato.botoes ?? []).includes(botao)
+  const zapMimo = pelaMimo ? linkWhatsDoGuia(contato, l) : null
+  const contatoPelaMimo = viaMimo('whatsapp') || viaMimo('ligar')
+  const zapSalao = l.whatsapp ? linkWhatsDoTel(l.whatsapp, msgZap) : null
+  const zap = viaMimo('whatsapp') ? zapMimo : zapSalao
   const telMesmoDoZap = l.telefone && l.whatsapp && soDigitosTel(l.telefone) === soDigitosTel(l.whatsapp)
   const tel = l.telefone ? `tel:+55${soDigitosTel(l.telefone)}` : null
   const insta = l.instagram ? linkInstagram(l.instagram) : null
@@ -180,7 +188,9 @@ export default function PaginaDoLugar({ lugar, conteudo, vizinhos = [], mesmaCat
   const principal = (classe = '') => naMimo
     ? (previa ? <span className={'ld-btn ld-primario ld-grande ' + classe}><CalendarCheck size={19} /> Agendar pela MIMO</span>
       : <a className={'ld-btn ld-primario ld-grande ' + classe} href={linkDaAgenda(l)} data-evento="agendar_mimo"><CalendarCheck size={19} /> Agendar pela MIMO</a>)
-    : <button type="button" className={'ld-btn ld-primario ld-grande ' + classe} onClick={marcar} data-evento="quero_marcar"><CalendarCheck size={19} /> Quero marcar aqui pelo app</button>
+    : viaMimo('quero_marcar')
+      ? <a className={'ld-btn ld-primario ld-grande ' + classe} href={zapMimo} target="_blank" rel="noopener noreferrer" data-evento="quero_marcar"><CalendarCheck size={19} /> Quero marcar aqui</a>
+      : <button type="button" className={'ld-btn ld-primario ld-grande ' + classe} onClick={marcar} data-evento="quero_marcar"><CalendarCheck size={19} /> Quero marcar aqui pelo app</button>
 
   async function compartilhar() {
     if (previa) return
@@ -195,7 +205,8 @@ export default function PaginaDoLugar({ lugar, conteudo, vizinhos = [], mesmaCat
   // os atalhos do herói: até quatro, como na ficha de um lugar no mapa
   const atalhos = [
     { chave: 'mapa', href: mapa, ic: <Navigation size={20} />, rotulo: 'Como chegar' },
-    zap ? { chave: 'zap', href: zap, ic: <MessageCircle size={20} />, rotulo: 'WhatsApp' } : tel ? { chave: 'tel', href: tel, ic: <Phone size={20} />, rotulo: 'Ligar', mesmaAba: true } : null,
+    zap ? { chave: 'zap', href: zap, ic: <MessageCircle size={20} />, rotulo: 'WhatsApp' }
+      : tel ? (viaMimo('ligar') ? { chave: 'zap', href: zapMimo, ic: <MessageCircle size={20} />, rotulo: 'WhatsApp' } : { chave: 'tel', href: tel, ic: <Phone size={20} />, rotulo: 'Ligar', mesmaAba: true }) : null,
     insta ? { chave: 'insta', href: insta, ic: <IconeInstagram size={20} />, rotulo: 'Instagram' } : null,
     l.site ? { chave: 'site', href: l.site, ic: <Globe size={20} />, rotulo: 'Site' } : null,
     { chave: 'partilha', ic: copiado ? <Check size={20} /> : <Share2 size={20} />, rotulo: copiado ? 'Link copiado' : 'Compartilhar', acao: compartilhar, evento: 'compartilhar' },
@@ -309,14 +320,24 @@ export default function PaginaDoLugar({ lugar, conteudo, vizinhos = [], mesmaCat
                     </dd>
                   </div>
 
-                  {(l.telefone || l.whatsapp) && (
+                  {contatoPelaMimo ? (
+                    <div className="gd-fato" data-teste="gd-contato-mimo">
+                      <dt><span className="gd-fato-ic"><MessageCircle size={18} /></span>Marcar horário</dt>
+                      <dd>
+                        <span className="gd-fato-forte">Pelo WhatsApp da MIMO</span>
+                        <span>A Mel anota seu pedido e o {l.nome} te chama no WhatsApp para combinar.</span>
+                        {l.telefone && <span>Telefone do salão: {telefoneBonito(l.telefone)}</span>}
+                        <a className="gd-fato-link" href={zapMimo} target="_blank" rel="noopener noreferrer" data-evento="whatsapp">Chamar no WhatsApp <ArrowRight size={14} /></a>
+                      </dd>
+                    </div>
+                  ) : (l.telefone || l.whatsapp) && (
                     <div className="gd-fato">
-                      <dt><span className="gd-fato-ic">{zap && (!l.telefone || telMesmoDoZap) ? <MessageCircle size={18} /> : <Phone size={18} />}</span>{telMesmoDoZap ? 'Telefone e WhatsApp' : zap && !l.telefone ? 'WhatsApp' : 'Telefone'}</dt>
+                      <dt><span className="gd-fato-ic">{zapSalao && (!l.telefone || telMesmoDoZap) ? <MessageCircle size={18} /> : <Phone size={18} />}</span>{telMesmoDoZap ? 'Telefone e WhatsApp' : zapSalao && !l.telefone ? 'WhatsApp' : 'Telefone'}</dt>
                       <dd>
                         {l.telefone && <a className="gd-fato-forte" href={tel}>{telefoneBonito(l.telefone)}</a>}
-                        {zap && !telMesmoDoZap && l.telefone && <span>WhatsApp: <a href={zap} target="_blank" rel="noopener noreferrer">{telefoneBonito(l.whatsapp)}</a></span>}
-                        {zap && !l.telefone && <a className="gd-fato-forte" href={zap} target="_blank" rel="noopener noreferrer">{telefoneBonito(l.whatsapp)}</a>}
-                        {zap && <a className="gd-fato-link" href={zap} target="_blank" rel="noopener noreferrer">Chamar no WhatsApp <ArrowRight size={14} /></a>}
+                        {zapSalao && !telMesmoDoZap && l.telefone && <span>WhatsApp: <a href={zapSalao} target="_blank" rel="noopener noreferrer">{telefoneBonito(l.whatsapp)}</a></span>}
+                        {zapSalao && !l.telefone && <a className="gd-fato-forte" href={zapSalao} target="_blank" rel="noopener noreferrer">{telefoneBonito(l.whatsapp)}</a>}
+                        {zapSalao && <a className="gd-fato-link" href={zapSalao} target="_blank" rel="noopener noreferrer">Chamar no WhatsApp <ArrowRight size={14} /></a>}
                       </dd>
                     </div>
                   )}

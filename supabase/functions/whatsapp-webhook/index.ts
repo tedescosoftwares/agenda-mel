@@ -15,6 +15,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { enviarPor } from '../_shared/canais.ts'
 import { classificar } from '../_shared/ia.ts'
 import { conversar } from '../_shared/agente.ts'
+import { atenderGuia, iaDe, type Deps as DepsGuia } from '../_shared/guia_whats.ts'
 
 const db = createClient(
   Deno.env.get('SUPABASE_URL') ?? '',
@@ -23,7 +24,7 @@ const db = createClient(
 )
 
 type Recebida = { telefone: string; texto: string; id: string | null;
-                  enquete?: string | null; instancia?: string | null }
+                  enquete?: string | null; instancia?: string | null; nome?: string | null }
 type Status = { id: string; status: string; detalhe: string | null }
 
 function json(corpo: unknown, status = 200) {
@@ -201,6 +202,8 @@ function lerEvolution(corpo: any): { mensagens: Recebida[]; status: Status[] } {
             enquete: ehVoto
               ? (d?.message?.pollUpdateMessage?.pollCreationMessageKey?.id ?? null)
               : null,
+            // o nome do perfil de quem escreveu (3.48: a Mel do guia confirma antes de usar)
+            nome: typeof d?.pushName === 'string' ? d.pushName.slice(0, 60) : null,
           })
         }
       }
@@ -276,7 +279,35 @@ Deno.serve(async (req) => {
 
   const respostas: string[] = []
   const { data: config } = await db.rpc('config_publica')
+
+  // 3.48: o número do guia (a Mel, migração 195) é outra instância da mesma Evolution. O que chega por ela não é de
+  // salão nenhum da MIMO: vai para o bot do guia e volta pela mesma instância, sem passar pela cascata abaixo.
+  let guia: { instancia: string; ligado: boolean } | null = null
+  if (daEvolution && mensagens.length) {
+    const { data: g } = await db.from('guia_whats_config').select('instancia, ligado').eq('id', 1).maybeSingle()
+    guia = (g as { instancia: string; ligado: boolean } | null) ?? null
+  }
+  const depsGuia = (): DepsGuia => ({
+    rpc: (nome, args) => db.rpc(nome, args) as unknown as Promise<{ data: unknown; error: { message?: string } | null }>,
+    ia: iaDe(Deno.env, fetch as unknown as Parameters<typeof iaDe>[1]),
+    enviar: (instancia, telefone, texto) => enviarPor('evolution', { telefone, corpo: texto, identificador: instancia }),
+  })
+
   for (const m of mensagens) {
+    if (guia && m.instancia && m.instancia === guia.instancia) {
+      try {
+        const r = await atenderGuia(depsGuia(), { telefone: m.telefone, texto: m.texto, nomePerfil: m.nome ?? null })
+        respostas.push(`guia[${r.acao}]`)
+        if (r.erro) console.error('guia:', r.erro)
+        if (r.responder) {
+          const env = await enviarPor('evolution', { telefone: m.telefone, corpo: r.responder, identificador: m.instancia })
+          if (!env.ok) console.error('guia: a resposta não saiu:', env.erro)
+        }
+      } catch (e) {
+        console.error('guia: não deu para atender', e)
+      }
+      continue
+    }
     // A CASCATA -------------------------------------------------------
     // O porteiro (migração 030) diz se vale gastar uma chamada de modelo.
     // Ele resolve sozinho os casos baratos: "1", "sim", "cancelar" voltam

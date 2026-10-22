@@ -117,6 +117,15 @@ export function slugificar(texto) {
   return semAcento(texto).toLowerCase().replace(/&/g, ' e ').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60).replace(/-+$/g, '')
 }
 
+// o WhatsApp do guia (3.48): o botão abre a conversa com a Mel (o número da MIMO) com a frase da Plataforma e o código
+// do salão no fim, que é como o bot sabe de qual salão se fala (supabase/functions/_shared/guia_whats.ts lê igual)
+export function mensagemDoGuia(modelo, nomeDoSalao, cidadeSlug, slug) {
+  return `${String(modelo || '').replaceAll('{salao}', nomeDoSalao).trim()}\n\n(código: ${cidadeSlug}/${slug})`
+}
+export function linkWhatsDoGuia(contato, lugar) {
+  return `https://wa.me/${String(contato?.numero ?? '').replace(/\D/g, '')}?text=${encodeURIComponent(mensagemDoGuia(contato?.msg_cliente, lugar?.nome ?? '', lugar?.cidade_slug ?? '', lugar?.slug ?? ''))}`
+}
+
 // o endereço próprio que o salão escolhe ao entrar na MIMO (<nome>.mimo.com.vc, migração 131), sugerido pelo nome:
 // "Teixeira Salão e Barbearia" → "teixeira-salao-barbearia" (sem "de", "e"...; até 24 letras, cortando entre palavras).
 // É só um exemplo na página do guia: quem escolhe é a dona, na ativação, e o banco confere se está livre.

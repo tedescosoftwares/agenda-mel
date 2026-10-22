@@ -347,3 +347,27 @@ roda no Deno e no node. Teste sem rede (o provedor é simulado):
     node --experimental-strip-types supabase/functions/guia-gerar/conteudo.teste.ts [csv do Google Places]
 
 Com `MOSTRAR_PROMPT=1`, imprime o prompt completo do Rô Coiffeur.
+
+## guia-whats (3.48, migração 195): o WhatsApp do guia
+
+Nos salões que ainda não estão na MIMO, os botões WhatsApp, Ligar e "Quero marcar" da página do guia abrem uma
+conversa com **o número da MIMO**, não com o do salão, já com o código do salão na mensagem. A Mel (o bot, com Groq ou
+Claude) se apresenta como MIMO, anota nome, serviço e preferência de dia e horário, mostra o resumo e pede licença para
+enviar. Com o "sim", o pedido sai do nosso número para o WhatsApp do salão, com o link para falar com a cliente. O salão
+que responde recebe uma resposta uma vez (QUERO: a equipe chama; SAIR: para de receber; VOLTAR: volta a receber).
+
+- **Onde mora**: a conversa em `_shared/guia_whats.ts` (sem rede nem banco por conta própria: recebe tudo em `Deps`);
+  a mensagem da cliente chega pelo `whatsapp-webhook` (ele reconhece a instância do guia, `guia_whats_config.instancia`,
+  e não passa pela cascata dos salões); esta função atende a Plataforma (`estado`, `conectar`, `desconectar`,
+  `simular`, `reiniciar`, `reenviar`), com `eh_plataforma` como no guia-gerar.
+- **Configuração**: tudo pela Plataforma (Guia → WhatsApp): ligar e desligar, o número, a instância da Evolution, os
+  botões que passam pela MIMO, a IA e o modelo, a orientação da Mel, as três mensagens, o limite por dia e a retenção.
+- **Segredos**: os mesmos de sempre: `EVOLUTION_URL`, `EVOLUTION_API_KEY` e `EVOLUTION_WEBHOOK_TOKEN` (a instância do
+  guia é criada na mesma Evolution pelo botão Conectar, que também aponta o webhook), `GROQ_API_KEY` ou
+  `ANTHROPIC_API_KEY` (e `ANTHROPIC_WORKSPACE_ID`, se a chave é de organização).
+- **LGPD**: a Mel diz que é a MIMO na primeira resposta; nada vai ao salão sem o "sim" depois do resumo; "apagar meus
+  dados" apaga tudo da pessoa; as conversas e os pedidos saem depois de `retencao_dias` (90 por padrão: a política de
+  privacidade, seção 3.10, diz 90; se aumentar, mude a política).
+- **Testar sem rede**: `node --experimental-strip-types <t_guiawhats.mjs>` (o teste da 3.48 roda o bot com deps de
+  mentira: a conversa inteira, o salão respondendo, SAIR/VOLTAR/QUERO, apagar, o simulador e os dois provedores).
+

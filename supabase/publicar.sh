@@ -144,6 +144,12 @@ echo 'guia-gerar (texto do guia de salões com IA)...'
 supabase functions deploy guia-gerar --project-ref "$PROJECT_REF" >/dev/null
 verde '  no ar'
 
+# JWT normal: quem chama é a Plataforma logada (a função confere eh_plataforma). A conversa da Mel com a cliente
+# chega pelo whatsapp-webhook (a instância do guia é reconhecida lá); aqui só conectar, simular e reenviar (3.48)
+echo 'guia-whats (o WhatsApp do guia: conectar, simular, reenviar)...'
+supabase functions deploy guia-whats --project-ref "$PROJECT_REF" >/dev/null
+verde '  no ar'
+
 # JWT normal: quem chama é a Plataforma logada ou o relógio com a chave de serviço
 # (segredos GSC_CONTA_SERVICO e GSC_PROPRIEDADE; o passo a passo está na 160)
 echo 'gsc-sincronizar (buscas do Google no guia)...'

@@ -759,3 +759,12 @@ cd ~/agenda-mel && ./supabase/geo-ip.sh
 
 O IP de quem visita nunca é guardado: a base só diz a cidade de uma faixa de IP.
 
+## O número do guia (3.48)
+
+O WhatsApp do guia de salões (a Mel pré-atende quem veio de um salão fora da MIMO e passa o pedido ao salão) é **outra
+instância na mesma Evolution**, criada pela Plataforma (Guia → WhatsApp → Conectar): ela cria a instância com o nome
+configurado (`mimo-guia`), aponta o mesmo webhook (`whatsapp-webhook?token=...`) e mostra o código de pareamento e o QR.
+Use um **chip só para isso**, nunca o número principal da MIMO nem o dos salões: a primeira mensagem para quem não tem
+o nosso contato pesa, e um bloqueio não pode derrubar o resto. Os limites que ajudam: poucos envios por dia (o limite
+da Plataforma), mensagem com os dados de cada pedido (nunca idêntica) e SAIR respeitado na hora.
+

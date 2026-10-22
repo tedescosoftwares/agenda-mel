@@ -352,8 +352,29 @@ function confirmacao(cfg: Config, l: Lugar, d: Dados, enviado: boolean): string 
 }
 
 // ---- a IA: Groq (compatível com a OpenAI) ou Claude (API de Messages), com a resposta no esquema acima ---------------
+// No Groq o esquema estrito às vezes recusa o que o modelo escreveu (json_validate_failed: o modelo devolveu um JSON
+// fora do esquema, ou nada, quando o raciocínio comeu o espaço). Aí, como no guia-gerar: lê o que veio em
+// failed_generation se der; senão pede de novo no modo JSON simples (json_object), com os campos pedidos no prompt.
 export type Ambiente = { get(nome: string): string | undefined | null }
 type Fetch = (url: string, init: Record<string, unknown>) => Promise<{ status: number; text(): Promise<string> }>
+const CAMPOS_JSON = 'Responda só com um objeto JSON com exatamente estes campos: "resposta" (texto), "nome", "servico", "preferencia", "observacao" (textos; "" quando não souber), "cliente_confirmou_envio", "cancelar", "quer_apagar_dados" (true ou false).'
+
+function lerJson(texto: string): Record<string, unknown> | null {
+  const t = String(texto ?? '').trim().replace(/^```(?:json)?\s*|\s*```$/g, '')
+  if (!t) return null
+  try { return JSON.parse(t) } catch { /* talvez venha texto antes ou depois do objeto */ }
+  const a = t.indexOf('{'), b = t.lastIndexOf('}')
+  if (a >= 0 && b > a) { try { return JSON.parse(t.slice(a, b + 1)) } catch { return null } }
+  return null
+}
+function montarLeitura(lido: Record<string, unknown>): LeituraIa | null {
+  if (typeof lido?.resposta !== 'string') return null
+  return {
+    resposta: lido.resposta, nome: String(lido.nome ?? ''), servico: String(lido.servico ?? ''), preferencia: String(lido.preferencia ?? ''),
+    observacao: String(lido.observacao ?? ''), cliente_confirmou_envio: lido.cliente_confirmou_envio === true, cancelar: lido.cancelar === true,
+    quer_apagar_dados: lido.quer_apagar_dados === true,
+  }
+}
 
 export function iaDe(env: Ambiente, fetcher: Fetch): Deps['ia'] {
   return async (p) => {
@@ -369,41 +390,50 @@ export function iaDe(env: Ambiente, fetcher: Fetch): Deps['ia'] {
       else msgs.push({ ...m })
     }
     while (msgs.length && msgs[0].role !== 'user') msgs.shift()
-    let url: string, headers: Record<string, string>, corpo: Record<string, unknown>
-    if (claude) {
-      url = 'https://api.anthropic.com/v1/messages'
-      const workspace = String(env.get('ANTHROPIC_WORKSPACE_ID') ?? '').trim()
-      headers = { 'x-api-key': chave, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json', ...(workspace ? { 'anthropic-workspace-id': workspace } : {}) }
-      corpo = { model: p.modelo, max_tokens: 1200, system: p.sistema, messages: msgs, output_config: { format: { type: 'json_schema', schema: ESQUEMA } } }
-    } else {
-      url = 'https://api.groq.com/openai/v1/chat/completions'
-      headers = { Authorization: `Bearer ${chave}`, 'Content-Type': 'application/json' }
-      corpo = { model: p.modelo, temperature: 0.4, max_tokens: 1200, messages: [{ role: 'system', content: p.sistema }, ...msgs],
-        response_format: { type: 'json_schema', json_schema: { name: 'resposta', strict: true, schema: ESQUEMA } },
-        ...(p.modelo.includes('gpt-oss') ? { reasoning_effort: 'low' } : {}) }
-    }
-    try {
+    const sistema = `${p.sistema}\n\n${CAMPOS_JSON}`
+
+    const pedir = async (formato: 'json_schema' | 'json_object') => {
+      let url: string, headers: Record<string, string>, corpo: Record<string, unknown>
+      if (claude) {
+        url = 'https://api.anthropic.com/v1/messages'
+        const workspace = String(env.get('ANTHROPIC_WORKSPACE_ID') ?? '').trim()
+        headers = { 'x-api-key': chave, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json', ...(workspace ? { 'anthropic-workspace-id': workspace } : {}) }
+        corpo = { model: p.modelo, max_tokens: 1500, system: sistema, messages: msgs, ...(formato === 'json_schema' ? { output_config: { format: { type: 'json_schema', schema: ESQUEMA } } } : {}) }
+      } else {
+        url = 'https://api.groq.com/openai/v1/chat/completions'
+        headers = { Authorization: `Bearer ${chave}`, 'Content-Type': 'application/json' }
+        corpo = { model: p.modelo, temperature: 0.4, max_tokens: 2500, messages: [{ role: 'system', content: sistema }, ...msgs],
+          response_format: formato === 'json_schema' ? { type: 'json_schema', json_schema: { name: 'resposta', strict: true, schema: ESQUEMA } } : { type: 'json_object' },
+          ...(p.modelo.includes('gpt-oss') ? { reasoning_effort: 'low' } : {}) }
+      }
       const r = await fetcher(url, { method: 'POST', headers, body: JSON.stringify(corpo), signal: AbortSignal.timeout(25_000) })
       const cru = await r.text()
       let j: Record<string, unknown> | null = null
       try { j = JSON.parse(cru) } catch { j = null }
-      if (r.status < 200 || r.status >= 300) {
-        const err = (j?.error ?? null) as { message?: string } | null
-        return { leitura: null, erro: `IA respondeu ${r.status}: ${String(err?.message ?? cru).slice(0, 200)}`, modelo: p.modelo }
-      }
+      const err = (j?.error ?? null) as { code?: string; message?: string; failed_generation?: string } | null
       const texto = claude
         ? ((j?.content ?? []) as Array<{ type: string; text?: string }>).filter((b) => b.type === 'text').map((b) => b.text ?? '').join('')
         : String(((j?.choices ?? []) as Array<{ message?: { content?: string } }>)[0]?.message?.content ?? '')
-      const lido = JSON.parse(texto.trim().replace(/^```(?:json)?\s*|\s*```$/g, ''))
-      if (typeof lido?.resposta !== 'string') return { leitura: null, erro: 'a IA não devolveu a resposta', modelo: p.modelo }
-      return {
-        leitura: {
-          resposta: lido.resposta, nome: String(lido.nome ?? ''), servico: String(lido.servico ?? ''), preferencia: String(lido.preferencia ?? ''),
-          observacao: String(lido.observacao ?? ''), cliente_confirmou_envio: lido.cliente_confirmou_envio === true, cancelar: lido.cancelar === true,
-          quer_apagar_dados: lido.quer_apagar_dados === true,
-        },
-        modelo: p.modelo,
+      return { status: r.status, cru, err, texto }
+    }
+
+    try {
+      let r = await pedir('json_schema')
+      if (r.status >= 200 && r.status < 300 && !r.err) {
+        const leitura = montarLeitura(lerJson(r.texto) ?? {})
+        if (leitura) return { leitura, modelo: p.modelo }
+        // veio vazio ou fora do esquema (o Groq às vezes aceita e devolve ""): de novo, no modo simples
+        r = await pedir('json_object')
+      } else if (r.status === 400 && (r.err?.code === 'json_validate_failed' || /response_format|json_schema|structured|strict|schema/i.test(r.err?.message ?? ''))) {
+        // o que o modelo escreveu, se der para ler; senão de novo sem o esquema estrito
+        const salvo = typeof r.err?.failed_generation === 'string' ? montarLeitura(lerJson(r.err.failed_generation) ?? {}) : null
+        if (salvo) return { leitura: salvo, modelo: p.modelo }
+        r = await pedir('json_object')
       }
+      if (r.status < 200 || r.status >= 300 || r.err) return { leitura: null, erro: `IA respondeu ${r.status}: ${String(r.err?.message ?? r.cru).slice(0, 200)}`, modelo: p.modelo }
+      const leitura = montarLeitura(lerJson(r.texto) ?? {})
+      if (!leitura) return { leitura: null, erro: 'a IA não devolveu a resposta', modelo: p.modelo }
+      return { leitura, modelo: p.modelo }
     } catch (e) {
       return { leitura: null, erro: String((e as Error)?.message ?? e).slice(0, 200), modelo: p.modelo }
     }

@@ -32,3 +32,11 @@
 .cad-servicos li b { color: var(--plat-tinta, #2a0736); font-weight: 600; }
 .cad-servicos li span { color: var(--plat-tinta-2, #6b6472); white-space: nowrap; }
 .cad-aviso { margin: 0; font-size: 0.84rem; color: #9a6a00; background: #fff8ec; border: 1px solid #ffe6bd; border-radius: 10px; padding: 8px 12px; }
+
+/* o bloco "Dados informados no cadastro" (3.50.1): CPF, nascimento, endereço — só para a Plataforma */
+.cad-dados summary { cursor: pointer; font-size: 0.85rem; font-weight: 600; color: var(--plat-tinta-2, #6b6472); }
+.cad-dados dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 10px 0 0; font-size: 0.85rem; }
+.cad-dados dt { display: inline-flex; align-items: center; gap: 5px; color: var(--plat-tinta-2, #6b6472); white-space: nowrap; }
+.cad-dados dt svg { flex: none; color: #9a92a6; }
+.cad-dados dd { margin: 0; color: var(--plat-tinta, #2a0736); font-weight: 600; }
+.cad-dados-aviso { margin: 10px 0 0; font-size: 0.72rem; color: #9a92a6; }

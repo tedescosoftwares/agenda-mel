@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import Shell from '../../components/plataforma/Shell'
 import { Cabecalho, Vazio, Iniciais, haQuanto } from '../../components/plataforma/Pecas'
 import { supabase } from '../../lib/supabase'
-import { User, Users, Mail, Phone, MapPin, Scissors, Clock3, CalendarCheck, LoaderCircle } from 'lucide-react'
+import { User, Users, Mail, Phone, MapPin, Scissors, Clock3, CalendarCheck, IdCard, Cake, Home, LoaderCircle } from 'lucide-react'
 import '../../cadastros.css'
 
 // Cadastros recentes (3.50): quem se cadastrou, do mais novo para o mais antigo, com a dona e o contato, o plano e o
@@ -11,6 +11,12 @@ import '../../cadastros.css'
 const DIAS = [{ v: 7, r: '7 dias' }, { v: 30, r: '30 dias' }, { v: 90, r: '90 dias' }, { v: 365, r: '1 ano' }]
 const PLANO = { teste: ['Em teste', 'ambar'], ativa: ['Assinante', 'verde'], cancelada: ['Cancelou', 'carmim'] }
 const reais = (n) => (n == null ? null : `R$ ${Number(n).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`)
+const soDig = (v) => String(v ?? '').replace(/\D/g, '')
+const cpf = (v) => { const d = soDig(v); return d.length === 11 ? `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}` : v }
+const cnpj = (v) => { const d = soDig(v); return d.length === 14 ? `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12)}` : v }
+const dataBr = (iso) => { if (!iso) return null; const [a, m, d] = String(iso).slice(0, 10).split('-'); return a && m && d ? `${d}/${m}/${a}` : iso }
+const idade = (iso) => { if (!iso) return null; const n = new Date(iso); if (isNaN(n)) return null; const h = new Date(); let i = h.getFullYear() - n.getFullYear(); if (h.getMonth() < n.getMonth() || (h.getMonth() === n.getMonth() && h.getDate() < n.getDate())) i--; return i >= 0 && i < 120 ? i : null }
+const fiscalTexto = (f) => { if (!f) return null; const ciduf = [f.city, f.uf].filter(Boolean).join('/'); return [f.address, f.numero, f.bairro, ciduf, soDig(f.cep)].filter(Boolean).join(', ') || null }
 const quando = (iso) => (iso ? new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '')
 
 export default function Cadastros() {
@@ -91,6 +97,22 @@ function Cartao({ s }) {
         </details>
       ) : (
         <p className="cad-aviso">Ainda não configurou nenhum serviço{prontidao === 0 ? ', nem profissionais ou horários' : ''}.</p>
+      )}
+
+      {s.cadastro && Object.keys(s.cadastro).length > 0 && (
+        <details className="cad-dados" data-teste="cad-dados">
+          <summary>Dados informados no cadastro</summary>
+          <dl>
+            {s.cadastro.responsavel ? <><dt><User size={12} /> Responsável</dt><dd>{s.cadastro.responsavel}</dd></> : null}
+            {s.cadastro.cpf ? <><dt><IdCard size={12} /> CPF</dt><dd>{cpf(s.cadastro.cpf)}</dd></> : null}
+            {s.cadastro.cnpj ? <><dt><IdCard size={12} /> CNPJ{s.cadastro.razao_social ? ` · ${s.cadastro.razao_social}` : ''}</dt><dd>{cnpj(s.cadastro.cnpj)}</dd></> : null}
+            {s.cadastro.rg ? <><dt><IdCard size={12} /> RG</dt><dd>{s.cadastro.rg}</dd></> : null}
+            {s.cadastro.nascimento ? <><dt><Cake size={12} /> Nascimento</dt><dd>{dataBr(s.cadastro.nascimento)}{idade(s.cadastro.nascimento) != null ? ` · ${idade(s.cadastro.nascimento)} anos` : ''}</dd></> : null}
+            {s.cadastro.endereco ? <><dt><Home size={12} /> Endereço</dt><dd>{s.cadastro.endereco}</dd></> : null}
+            {fiscalTexto(s.cadastro.endereco_fiscal) ? <><dt><Home size={12} /> Endereço fiscal</dt><dd>{fiscalTexto(s.cadastro.endereco_fiscal)}</dd></> : null}
+          </dl>
+          <p className="cad-dados-aviso">Dado sensível do cadastro. Visível só para a Plataforma.</p>
+        </details>
       )}
     </article>
   )

@@ -519,17 +519,17 @@ const RPC = {
       { id: 's6', nome: 'Espaço Renata', tipo: 'salao', slug: 'espaco-renata', cidade: 'Praia Grande', ativo: true, criado_em: d(5),
         dona: 'Renata Alves', dona_email: 'renata@exemplo.com', dona_telefone: '(13) 99700-1188', plano: 'teste', teste_ate: new Date(Date.now() + 10 * 864e5).toISOString(),
         servicos: [{ nome: 'Corte feminino', preco: 80, minutos: 60 }, { nome: 'Escova', preco: 50, minutos: 40 }, { nome: 'Coloração', preco: 180, minutos: 120 }],
-        servicos_n: 3, profissionais: 2, horarios: 6, clientes: 4, atendimentos: 1 },
+        servicos_n: 3, profissionais: 2, horarios: 6, clientes: 4, atendimentos: 1, cadastro: { documento_tipo: 'cnpj', cnpj: '12345678000199', razao_social: 'Renata Beleza ME', responsavel: 'Renata Alves', cpf: '98765432100', rg: '12.345.678-9', nascimento: '1989-07-14', endereco: 'Av. Brasil, 320, Centro, Praia Grande/SP, 11700000' } },
       { id: 's7', nome: 'Nail da Vi', tipo: 'autonoma', slug: 'nail-da-vi', cidade: 'São Vicente', ativo: true, criado_em: d(26),
         dona: 'Vivian Costa', dona_email: 'vi@exemplo.com', dona_telefone: '(13) 99812-4455', plano: 'teste', teste_ate: new Date(Date.now() + 5 * 864e5).toISOString(),
         servicos: [{ nome: 'Manicure', preco: 35, minutos: 45 }, { nome: 'Pedicure', preco: 40, minutos: 50 }],
-        servicos_n: 2, profissionais: 1, horarios: 5, clientes: 2, atendimentos: 0 },
+        servicos_n: 2, profissionais: 1, horarios: 5, clientes: 2, atendimentos: 0, cadastro: { documento_tipo: 'cpf', responsavel: 'Vivian Costa', cpf: '11122233344', nascimento: '1995-02-03', endereco: 'Rua das Flores, 45, Vila Nova, São Vicente/SP, 11320000', endereco_fiscal: { address: 'Rua das Flores', numero: '45', bairro: 'Vila Nova', city: 'São Vicente', uf: 'SP', cep: '11320000' } } },
       { id: 's8', nome: 'Studio Lú', tipo: 'salao', slug: 'studio-lu', cidade: 'Santos', ativo: true, criado_em: d(50),
         dona: 'Luana Dias', dona_email: 'lu@exemplo.com', dona_telefone: '(13) 99655-7788', plano: 'ativa', teste_ate: null,
-        servicos: [{ nome: 'Design de sobrancelha', preco: 45, minutos: 30 }], servicos_n: 1, profissionais: 1, horarios: 6, clientes: 11, atendimentos: 8 },
+        servicos: [{ nome: 'Design de sobrancelha', preco: 45, minutos: 30 }], servicos_n: 1, profissionais: 1, horarios: 6, clientes: 11, atendimentos: 8, cadastro: { documento_tipo: 'cnpj', cnpj: '55444333000122', razao_social: 'Studio Lú Ltda', responsavel: 'Luana Dias', cpf: '22233344455', rg: '22.333.444-5', nascimento: '1990-11-30', endereco: 'Rua XV, 1000, Gonzaga, Santos/SP, 11055000' } },
       { id: 's9', nome: 'Bela Fácil', tipo: 'salao', slug: 'bela-facil', cidade: 'Mongaguá', ativo: true, criado_em: d(80),
         dona: 'Patrícia Nunes', dona_email: 'pat@exemplo.com', dona_telefone: null, plano: null, teste_ate: null,
-        servicos: [], servicos_n: 0, profissionais: 0, horarios: 0, clientes: 0, atendimentos: 0 },
+        servicos: [], servicos_n: 0, profissionais: 0, horarios: 0, clientes: 0, atendimentos: 0, cadastro: {} },
     ]
     const corte = Date.now() - Math.max(1, Math.min(dias_ ?? 30, 365)) * 864e5
     return todos.filter((s2) => new Date(s2.criado_em).getTime() >= corte)

@@ -768,3 +768,22 @@ Use um **chip só para isso**, nunca o número principal da MIMO nem o dos salõ
 o nosso contato pesa, e um bloqueio não pode derrubar o resto. Os limites que ajudam: poucos envios por dia (o limite
 da Plataforma), mensagem com os dados de cada pedido (nunca idêntica) e SAIR respeitado na hora.
 
+### O relógio do ocioso da Mel (3.52)
+
+A Mel só fala quando chega mensagem. Para ela encerrar sozinha uma conversa que ficou parada — primeiro perguntando
+"posso encerrar?", depois, sem resposta, mandando o encerramento e fechando —, algo precisa cutucá-la de tempos em
+tempos. Esse relógio é o `cutucar-ociosas.sh`, que chama o `whatsapp-webhook?tarefa=ociosas`. Os tempos (em minutos),
+os textos e o liga/desliga ficam na aba **WhatsApp** da Plataforma (seção "O ciclo da conversa"); com o ocioso
+desligado lá, o relógio não faz nada.
+
+```bash
+cd evolution
+# precisa de VITE_SUPABASE_URL e EVOLUTION_WEBHOOK_TOKEN no .env (o mesmo segredo do webhook, já no Supabase)
+./cutucar-ociosas.sh            # roda uma vez (mostra quantas perguntou/encerrou)
+./cutucar-ociosas.sh --cron     # instala no cron: a cada 5 minutos (log em cutucar.log)
+./cutucar-ociosas.sh --sem-cron # tira do cron
+```
+
+Enquanto esse cron não estiver no ar, deixe o ocioso desligado na Plataforma; o resto do ciclo (quantas dúvidas depois
+do envio, encerrar por "sem avançar", esquecer a conversa parada) não depende do relógio e continua valendo.
+

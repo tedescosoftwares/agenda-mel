@@ -7,7 +7,8 @@ import { seoDoLugar, jsonLdDoLugar } from '../../lib/guiaSeo'
 import { carregarPagina } from '../../lib/guiaPublico'
 import { aoClicarNaPagina } from '../../lib/eventos'
 import { useVisita } from '../../lib/useVisita'
-import { NavSite, PeSite, useRevelar } from '../../components/site/Pecas'
+import { PeSite, useRevelar } from '../../components/site/Pecas'
+import NavGuia from '../../components/guia/NavGuia'
 import PaginaDoLugar from '../../components/guia/PaginaDoLugar'
 import Interesse from '../../components/guia/Interesse'
 import NaoEncontrada from './NaoEncontrada'
@@ -46,7 +47,7 @@ export default function GuiaLugar() {
 
   return (
     <div className="ld gd" ref={raiz} onClickCapture={aoClicarNaPagina}>
-      <NavSite />
+      <NavGuia />
       <main>
         {dados === undefined && <Esqueleto />}
         {dados === 'erro' && (

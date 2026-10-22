@@ -8,7 +8,8 @@ import { seoDaColecao, jsonLdDaColecao, trilhaDaColecao } from '../../lib/guiaSe
 import { carregarColecao } from '../../lib/guiaColecoesPublico'
 import { aoClicarNaPagina } from '../../lib/eventos'
 import { useVisita } from '../../lib/useVisita'
-import { NavSite, PeSite, useRevelar } from '../../components/site/Pecas'
+import { PeSite, useRevelar } from '../../components/site/Pecas'
+import NavGuia from '../../components/guia/NavGuia'
 import { CartaoLugar, IconeCategoria } from '../../components/guia/PaginaDoLugar'
 import PertoDeVoce from '../../components/guia/PertoDeVoce'
 import { useMinhaPosicao, comDistancia } from '../../lib/guiaPerto'
@@ -57,7 +58,7 @@ function PaginaDaColecao({ cidade, tipo, valor, categoria }) {
   if (dados === null) return <NaoEncontrada />
   return (
     <div className="ld gd" ref={raiz} onClickCapture={aoClicarNaPagina}>
-      <NavSite />
+      <NavGuia />
       <main className="gd-pagina">
         {dados === undefined && <Esqueleto capa={false} />}
         {dados === 'erro' && <Falhou onTentar={() => { setDados(undefined); setTentativa((t) => t + 1) }} />}

@@ -13,7 +13,8 @@ import { CartaoArtigo } from './PaginaSeo'
 import { panoramaDaCidade, juntarFaq, tituloDoPanorama, faqEscrita } from '../../lib/guiaPanorama'
 import { aoClicarNaPagina } from '../../lib/eventos'
 import { useVisita } from '../../lib/useVisita'
-import { NavSite, PeSite, useRevelar, comecarEm } from '../../components/site/Pecas'
+import { PeSite, useRevelar, comecarEm } from '../../components/site/Pecas'
+import NavGuia from '../../components/guia/NavGuia'
 import { REGRAS } from '../../lib/acesso'
 import { CartaoLugar, IconeCategoria } from '../../components/guia/PaginaDoLugar'
 import PertoDeVoce from '../../components/guia/PertoDeVoce'
@@ -123,7 +124,7 @@ function PaginaDaCidade({ cidade, categoria }) {
   if (dados === null) return <NaoEncontrada />
   return (
     <div className="ld gd" ref={raiz} onClickCapture={aoClicarNaPagina}>
-      <NavSite />
+      <NavGuia />
       <main className="gd-pagina">
         {dados === undefined && <Esqueleto capa={false} />}
         {dados === 'erro' && <Falhou onTentar={() => { setDados(undefined); setTentativa((t) => t + 1) }} />}
@@ -511,7 +512,7 @@ function IndiceDeCidades() {
   }, [cidades])
   return (
     <div className="ld gd" ref={raiz}>
-      <NavSite />
+      <NavGuia />
       <main className="gd-pagina">
         <section className="gd-cidade-heroi">
           <div className="gd-wrap">

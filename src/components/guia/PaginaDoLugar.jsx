@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import {
   MapPin, Clock, Phone, MessageCircle, Globe, Navigation, Share2, Check, Award, CalendarCheck, Info, ChevronDown,
   ArrowRight, Lightbulb, Sparkles, Scissors, Hand, Eye, ScanFace, Flower2, Brush, Store, CreditCard, Accessibility, SquareParking, Baby, Bath,
-  LocateFixed, X, Images,
+  LocateFixed, X, Images, Lock, BellRing,
 } from 'lucide-react'
 import { IconeInstagram } from '../IconesSociais'
 import Portal from '../Portal'
@@ -11,7 +11,7 @@ import { Coracao, comecarEm } from '../site/Pecas'
 import {
   categoriaDoGuia, conteudoSeguro, faqDaPagina, horariosResumo, horariosEmUmaLinha, abertoAgora,
   linkMapa, linkWhatsDoTel, linkInstagram, telefoneBonito, soDigitosTel, rotaDoLugar, rotaDaCategoria, rotaDaCidade, atributosEmTexto,
-  fotosDoLugar, altDaFoto, miniatura, paraFotoInteira,
+  fotosDoLugar, altDaFoto, miniatura, paraFotoInteira, sugestaoDeEndereco,
 } from '../../lib/guia'
 import { trilhaDoLugar } from '../../lib/guiaSeo'
 import { linkDoBairro } from '../../lib/guiaColecoes'
@@ -153,6 +153,8 @@ export default function PaginaDoLugar({ lugar, conteudo, vizinhos = [], mesmaCat
   // nome comprido ("Espaço Bela Flor Estética Avançada e Bem-Estar") pede letra menor no título e na capa
   const tamanhoNome = l.nome.length > 40 ? ' gd-nome-muito-longo' : l.nome.length > 24 ? ' gd-nome-longo' : ''
   const naMimo = !!l.na_mimo
+  // o endereço próprio que a dona leva ao entrar na MIMO (só um exemplo, pelo nome; quem escolhe é ela, na ativação)
+  const endereco = sugestaoDeEndereco(l.nome)
   // a data em que a página foi atualizada: quem lê sabe quão fresco é o dado
   const atualizado = l.atualizado_em ? new Date(l.atualizado_em).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric', timeZone: 'America/Sao_Paulo' }) : ''
   const enderecoCompleto = [l.endereco, l.bairro, l.cidade && `${l.cidade}${l.uf ? ` - ${l.uf}` : ''}`].filter(Boolean).join(', ')
@@ -351,6 +353,13 @@ export default function PaginaDoLugar({ lugar, conteudo, vizinhos = [], mesmaCat
                   <button type="button" onClick={() => onInteresse('corrigir')} data-evento="corrigir">Algo errado? Avise a gente</button>
                 </p>
               </div>
+              {!naMimo && (
+                <a className="gd-dono-atalho" href="#seu-salao" data-area="dono-atalho">
+                  <span className="gd-dono-atalho-ic"><Store size={18} aria-hidden="true" /></span>
+                  <span><b>É o seu salão?</b><small>Garanta {endereco}.mimo.com.vc</small></span>
+                  <ArrowRight size={16} aria-hidden="true" />
+                </a>
+              )}
             </aside>
 
             <div className="gd-principal">
@@ -399,6 +408,38 @@ export default function PaginaDoLugar({ lugar, conteudo, vizinhos = [], mesmaCat
           </div>
         </section>
 
+        {/* ---- a dona (3.47): logo depois do conteúdo, com o endereço próprio que ela leva ao entrar na MIMO ---- */}
+        {!naMimo && (
+          <section className="gd-sec gd-sec-dono" id="seu-salao" data-area="dono" aria-labelledby="gd-dono-t">
+            <div className="gd-wrap">
+              <div className="gd-dono ld-rv">
+                <div className="gd-dono-texto">
+                  <span className="ld-kicker">Para a dona ou o responsável</span>
+                  <h2 id="gd-dono-t" className="gd-h2">É o seu salão? Garanta o endereço de {l.nome} na MIMO</h2>
+                  <p className="gd-dono-endereco">
+                    <Lock size={15} aria-hidden="true" />
+                    <span className="gd-dono-url"><b>{endereco}</b>.mimo.com.vc</span>
+                    <small>seu link de agendamento</small>
+                  </p>
+                  <ul className="gd-dono-vantagens">
+                    <li><CalendarCheck size={18} aria-hidden="true" /><span><b>A cliente marca sozinha, 24 horas</b>, pelo seu endereço: na bio do Instagram, no WhatsApp ou no QR do balcão.</span></li>
+                    <li><BellRing size={18} aria-hidden="true" /><span><b>Lembrete, reagendamento e retorno</b> ligados à agenda, com a equipe e a comanda no mesmo lugar.</span></li>
+                    <li><Store size={18} aria-hidden="true" /><span><b>Esta página ganha o botão "Agendar pela MIMO"</b>, com as suas fotos, serviços e horários.</span></li>
+                  </ul>
+                  <p className="gd-dono-letra">Salão com equipe testa {REGRAS.testeDias} dias grátis, sem cartão, já com o endereço. Autônoma: agenda grátis para sempre, com o link mimo.com.vc/p/seu-nome.</p>
+                </div>
+                <div className="gd-dono-botoes">
+                  {previa ? <span className="ld-btn ld-branco ld-grande"><Sparkles size={18} /> Quero meu endereço</span>
+                    : <a className="ld-btn ld-branco ld-grande" href={comecarEm('salao')} data-evento="criar_agenda"><Sparkles size={18} /> Quero meu endereço</a>}
+                  {/* a reivindicação (3.12): a equipe confirma com a pessoa por e-mail; nada muda na página antes disso */}
+                  <button type="button" className="ld-btn ld-fantasma ld-grande gd-dono-fala" onClick={() => onInteresse('sou_dono')} data-evento="sou_dono"><Store size={18} /> Sou responsável, falar com a MIMO</button>
+                  {!fotos.length && <small className="gd-dono-fotos">Confirmado que é você, a gente manda um link para pôr as fotos do salão nesta página, de graça.</small>}
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* ---- perto dali e a mesma categoria ---- */}
         {vizinhos.length > 0 && (
           <section className="gd-sec gd-sec-alt" aria-labelledby="gd-perto-t">
@@ -427,30 +468,6 @@ export default function PaginaDoLugar({ lugar, conteudo, vizinhos = [], mesmaCat
             </div>
           </div>
         </section>
-
-        {/* ---- a dona ---- */}
-        {!naMimo && (
-          <section className="gd-sec gd-sec-dono" data-area="dono">
-            <div className="gd-wrap">
-              <div className="gd-dono ld-rv">
-                <div className="gd-dono-texto">
-                  <span className="ld-kicker">Para quem atende</span>
-                  <h2 className="gd-h2">É o seu salão?</h2>
-                  {/* a reivindicação (3.12): a equipe confirma com a pessoa por e-mail; nada muda na página antes disso */}
-                  <p>Diga que é você: a gente confirma por e-mail e passa a falar com você sobre esta página.</p>
-                  <p>E, se quiser, coloque a agenda de {l.nome} online: a cliente marca sozinha, pelo link ou pelo app.</p>
-                  {!fotos.length && <p>Tem fotos do salão? Confirmado que é você, a gente manda um link para enviar: elas entram nesta página de graça.</p>}
-                  <p className="gd-dono-letra">Para autônoma é grátis para sempre. Salão com equipe testa {REGRAS.testeDias} dias, sem cartão.</p>
-                </div>
-                <div className="gd-dono-botoes">
-                  <button type="button" className="ld-btn ld-branco ld-grande" onClick={() => onInteresse('sou_dono')} data-evento="sou_dono"><Store size={18} /> Sim, sou responsável</button>
-                  {previa ? <span className="ld-btn ld-fantasma ld-grande gd-dono-fala">Criar minha agenda grátis <ArrowRight size={18} /></span>
-                    : <a className="ld-btn ld-fantasma ld-grande gd-dono-fala" href={comecarEm('salao')} data-evento="criar_agenda">Criar minha agenda grátis <ArrowRight size={18} /></a>}
-                </div>
-              </div>
-            </div>
-          </section>
-        )}
 
         {/* ---- o aviso de página informativa (regra 3 do contrato) ---- */}
         {!naMimo && (

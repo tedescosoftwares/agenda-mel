@@ -189,6 +189,47 @@
 .gd-dono-botoes .ld-btn { width: 100%; }
 .ld .gd-dono .gd-dono-fala { background: transparent; color: #fff; border-color: rgba(255, 255, 255, 0.45); }
 .ld .gd-dono .gd-dono-fala:hover { border-color: #fff; }
+/* 3.47: o endereço próprio em destaque, as vantagens e o atalho na coluna de informações */
+.ld .gd-sec-dono[id] { scroll-margin-top: 92px; }
+.gd-dono > * { min-width: 0; } /* a coluna encolhe no celular (o endereço quebra em vez de empurrar o cartão) */
+.ld .gd-dono .gd-dono-endereco { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 6px 0 4px; padding: 10px 16px; max-width: 100%; border-radius: 16px; background: #fff; color: var(--ld-cinza); box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18); }
+.gd-dono-endereco > svg { color: #1f9d55; flex: none; }
+.gd-dono-url { font-size: 1.12rem; color: var(--ld-tinta); overflow-wrap: anywhere; letter-spacing: -0.01em; }
+.gd-dono-url b { color: var(--ld-rosa); font-weight: 700; }
+.gd-dono-endereco small { font-size: 0.74rem; color: var(--ld-cinza); }
+.gd-dono-vantagens { list-style: none; margin: 16px 0 0; padding: 0; display: grid; gap: 10px; max-width: 640px; }
+.gd-dono-vantagens li { display: flex; gap: 10px; align-items: flex-start; color: #f8dfe9; font-size: 0.95rem; line-height: 1.45; }
+.gd-dono-vantagens li > svg { flex: none; margin-top: 2px; color: #ff9ec0; }
+.gd-dono-vantagens b { color: #fff; }
+.ld .gd-dono .gd-dono-fotos { display: block; font-size: 0.8rem; line-height: 1.4; color: #efc6d8; text-align: center; }
+.ld .gd-dono-atalho { display: flex; align-items: center; gap: 12px; margin-top: 12px; padding: 14px 16px; border-radius: 20px; color: #fff; background: linear-gradient(135deg, var(--ld-ameixa), var(--ld-rosa)); box-shadow: 0 14px 34px rgba(61, 12, 78, 0.18); transition: transform 0.2s ease, box-shadow 0.2s ease; }
+.ld .gd-dono-atalho:hover { transform: translateY(-2px); box-shadow: 0 18px 40px rgba(61, 12, 78, 0.24); }
+.gd-dono-atalho-ic { width: 36px; height: 36px; flex: none; display: grid; place-items: center; border-radius: 12px; background: rgba(255, 255, 255, 0.16); }
+.gd-dono-atalho > span:nth-child(2) { flex: 1; min-width: 0; }
+.gd-dono-atalho b { display: block; font-size: 0.95rem; }
+.gd-dono-atalho small { display: block; font-size: 0.78rem; color: #f8dfe9; overflow-wrap: anywhere; }
+@media (prefers-reduced-motion: reduce) { .ld .gd-dono-atalho { transition: none; } .ld .gd-dono-atalho:hover { transform: none; } }
+
+/* ---- o cabeçalho do guia (3.47): a barra do site, com a cara do guia ---- */
+.gd-nav-marca { display: inline-flex; align-items: center; gap: 12px; min-width: 0; }
+.gd-nav-marca img { display: block; margin: -8px 0; }
+.gd-nav-guia { padding-left: 12px; border-left: 1px solid var(--ld-fio); font-weight: 700; font-size: 0.98rem; letter-spacing: -0.01em; color: var(--ld-ameixa); white-space: nowrap; }
+.gd-nav-links { display: flex; align-items: center; gap: 18px; font-size: 0.92rem; font-weight: 500; color: var(--ld-cinza); }
+.gd-nav-links a { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.gd-nav-links a:hover { color: var(--ld-ameixa); }
+.gd-nav-links .gd-nav-salao { padding: 8px 14px; border: 1px solid var(--ld-fio); border-radius: 999px; background: #fff; color: var(--ld-ameixa); }
+.gd-nav-links .gd-nav-salao:hover { border-color: var(--ld-rosa); color: var(--ld-rosa); }
+.gd-nav-salao-curto { display: none; }
+@media (max-width: 560px) {
+  .gd-nav-cidades { display: none !important; }
+  .gd-nav-marca { gap: 8px; }
+  .gd-nav-marca img { height: 36px !important; }
+  .gd-nav-guia { padding-left: 8px; font-size: 0.82rem; }
+  .gd-nav-salao-longo { display: none; }
+  .gd-nav-salao-curto { display: inline; }
+  .gd-nav-links .gd-nav-salao { padding: 7px 11px; font-size: 0.84rem; }
+}
+@media (max-width: 380px) { .gd-nav-salao-curto { display: none; } .gd-nav-links .gd-nav-salao { padding: 8px; } }
 
 /* ---- o aviso de página informativa ---- */
 .ld .gd-sec-aviso { padding: 8px 0 56px; }

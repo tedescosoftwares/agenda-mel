@@ -6,7 +6,8 @@ import { supabase, isDemo } from '../../lib/supabase'
 import { reduzirFoto } from '../../lib/imagem'
 import { FOTOS_DEMO } from '../../lib/guiaFotos'
 import { fotosDoLugar, rotaDoLugar, rotaDaCidade } from '../../lib/guia'
-import { NavSite, PeSite, useRevelar } from '../../components/site/Pecas'
+import { PeSite, useRevelar } from '../../components/site/Pecas'
+import NavGuia from '../../components/guia/NavGuia'
 import '../../landing.css'
 import '../../guia.css'
 
@@ -126,7 +127,7 @@ export default function GuiaFotosDono() {
 
   return (
     <div className="ld gd" ref={raiz}>
-      <NavSite />
+      <NavGuia />
       <main className="gd-pagina">
         <section className="gd-sec gd-sec-fotos-dono">
           <div className="gd-wrap gd-fd-wrap">

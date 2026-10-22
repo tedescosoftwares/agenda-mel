@@ -117,6 +117,22 @@ export function slugificar(texto) {
   return semAcento(texto).toLowerCase().replace(/&/g, ' e ').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60).replace(/-+$/g, '')
 }
 
+// o endereço próprio que o salão escolhe ao entrar na MIMO (<nome>.mimo.com.vc, migração 131), sugerido pelo nome:
+// "Teixeira Salão e Barbearia" → "teixeira-salao-barbearia" (sem "de", "e"...; até 24 letras, cortando entre palavras).
+// É só um exemplo na página do guia: quem escolhe é a dona, na ativação, e o banco confere se está livre.
+const LIGACOES = new Set(['de', 'da', 'do', 'das', 'dos', 'e', 'a', 'o', 'the'])
+export function sugestaoDeEndereco(nome) {
+  const palavras = slugificar(nome).split('-').filter((p) => p && !LIGACOES.has(p))
+  let s = ''
+  for (const p of palavras) {
+    const prox = s ? `${s}-${p}` : p
+    if (prox.length > 24) break
+    s = prox
+  }
+  if (!s && palavras[0]) s = palavras[0].slice(0, 24)
+  return s.length >= 3 && !['salao', 'saloes', 'mimo'].includes(s) ? s : 'seusalao'
+}
+
 const MINUSCULAS = new Set(['de', 'da', 'do', 'das', 'dos', 'e', 'em', 'na', 'no', 'nas', 'nos', 'a', 'o', 'para', 'com'])
 // 'VALD'S E LUCIA CABELOS' -> 'Vald's e Lucia Cabelos' (só quando vem tudo em
 // maiúscula); sigla sem vogal fica como está ('MF', 'KB', 'WS')

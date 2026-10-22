@@ -7,7 +7,8 @@ import { seoDaRegiao, trilhaDaRegiao, jsonLdDaRegiao } from '../../lib/guiaSeo'
 import { carregarCidades, carregarRegioes } from '../../lib/guiaPublico'
 import { dadosDaRegiao, faqDaRegiao, preposicaoDaRegiao } from '../../lib/guiaRegioes'
 import { useVisita } from '../../lib/useVisita'
-import { NavSite, PeSite, useRevelar } from '../../components/site/Pecas'
+import { PeSite, useRevelar } from '../../components/site/Pecas'
+import NavGuia from '../../components/guia/NavGuia'
 import { IconeCategoria } from '../../components/guia/PaginaDoLugar'
 import { Migalhas, Falhou, Perguntas, ChamadaSalao } from './GuiaCidade'
 import { Esqueleto } from './GuiaLugar'
@@ -41,16 +42,16 @@ export default function GuiaRegiao() {
   useVisita(seo?.caminho ?? '', pronto)
 
   if (regioes === 'erro' || cidades === 'erro') {
-    return <div className="ld gd"><NavSite /><main className="gd-pagina"><section className="gd-sec"><div className="gd-wrap"><Falhou onTentar={() => { setRegioes(undefined); setCidades(undefined); setTentativa((t) => t + 1) }} /></div></section></main><PeSite /></div>
+    return <div className="ld gd"><NavGuia /><main className="gd-pagina"><section className="gd-sec"><div className="gd-wrap"><Falhou onTentar={() => { setRegioes(undefined); setCidades(undefined); setTentativa((t) => t + 1) }} /></div></section></main><PeSite /></div>
   }
   if (regiao === null) return <NaoEncontrada />
-  if (!d) return <div className="ld gd"><NavSite /><main className="gd-pagina"><section className="gd-sec"><div className="gd-wrap"><Esqueleto capa={false} /></div></section></main><PeSite /></div>
+  if (!d) return <div className="ld gd"><NavGuia /><main className="gd-pagina"><section className="gd-sec"><div className="gd-wrap"><Esqueleto capa={false} /></div></section></main><PeSite /></div>
 
   const prep = preposicaoDaRegiao(regiao.nome)
   const chamada = regiao.chamada || `${d.cidades.length === 1 ? 'A cidade' : `As ${d.cidades.length} cidades`} ${prep.replace('n', 'd')} ${regiao.nome} no guia, com os salões, as manicures e os estúdios de cada uma: endereço, horário e serviços.`
   return (
     <div className="ld gd" ref={raiz} data-teste="pagina-regiao">
-      <NavSite />
+      <NavGuia />
       <main className="gd-pagina">
         <section className={'gd-cidade-heroi' + (d.foto ? ' gd-com-fundo' : '')}>
           {d.foto && <div className="gd-cidade-fundo-foto" aria-hidden="true" data-teste="fundo-da-regiao"><img src={d.foto} alt="" fetchPriority="high" decoding="async" /></div>}

@@ -701,3 +701,7 @@
 .pg-wa-tel-dica.salvar { color: #9a6a00; }
 .pg-wa-tel-dica.ok { color: #0c7a50; }
 .pg-wa-tel-dica svg { flex: none; }
+
+/* 3.49.6: o salão abriu o link do pedido (clicou) */
+.pg-wa-abriu { display: inline-flex; align-items: center; gap: 5px; color: #0c7a50; font-weight: 600; font-size: 0.8rem; }
+.pg-wa-abriu svg { flex: none; }

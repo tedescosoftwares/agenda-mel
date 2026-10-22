@@ -141,7 +141,7 @@ Deno.serve(async (req) => {
       const id = Number(corpo.lead)
       if (!Number.isInteger(id)) return json({ erro: 'pedido inválido' }, 400)
       const { data: ld } = await servico.rpc('guia_whats_reenvio', { lead_: id })
-      const pedido = ld as { id: number; salao_nome: string; salao_tel: string; cliente_nome: string | null; servico: string | null; preferencia: string | null; observacao: string | null; cliente_tel: string } | null
+      const pedido = ld as { id: number; salao_nome: string; salao_tel: string; cliente_nome: string | null; servico: string | null; preferencia: string | null; observacao: string | null; cliente_tel: string; token?: string | null } | null
       if (!pedido) return json({ erro: 'não dá para reenviar: o salão pediu para não receber ou não tem WhatsApp' }, 400)
       const texto = mensagemDoSalao(cfg, { nome: pedido.salao_nome }, pedido)
       const env = await enviarPor('evolution', { telefone: pedido.salao_tel, corpo: texto, identificador: cfg.instancia })

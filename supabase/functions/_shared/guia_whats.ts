@@ -102,12 +102,18 @@ export function preencher(modelo: string, valores: Record<string, string | null 
 }
 
 // o link para o salão falar com a cliente, já com a primeira frase
+// 3.49.6: o link rastreável do pedido, no nosso domínio. O site (rota /r/:token) registra o clique e redireciona
+// para a conversa com a cliente. Um por pedido; só serve para ele e some quando o pedido expira.
+export function linkDoPedido(token: string): string {
+  return `https://${RAIZ_SITE}/r/${token}`
+}
+
 export function linkParaCliente(clienteTel: string, nome: string, salao: string, servico: string): string {
   const frase = `Olá${nome ? `, ${nome}` : ''}! Aqui é do ${salao}. Recebi seu pedido${servico ? ` de ${servico}` : ''} pela MIMO.`
   return `https://wa.me/${so(clienteTel)}?text=${encodeURIComponent(frase)}`
 }
 
-export function mensagemDoSalao(cfg: Pick<Config, 'msg_salao'>, l: { nome: string }, d: { cliente_nome?: string | null; servico?: string | null; preferencia?: string | null; observacao?: string | null; cliente_tel: string }): string {
+export function mensagemDoSalao(cfg: Pick<Config, 'msg_salao'>, l: { nome: string }, d: { cliente_nome?: string | null; servico?: string | null; preferencia?: string | null; observacao?: string | null; cliente_tel: string; token?: string | null }): string {
   return preencher(cfg.msg_salao, {
     salao: l.nome,
     cliente: d.cliente_nome ?? '',
@@ -115,9 +121,10 @@ export function mensagemDoSalao(cfg: Pick<Config, 'msg_salao'>, l: { nome: strin
     preferencia: d.preferencia ?? '',
     observacao: d.observacao ?? '',
     contato: telefoneBonito(d.cliente_tel),
-    link: linkParaCliente(d.cliente_tel, d.cliente_nome ?? '', l.nome, d.servico ?? ''),
-  })
-}
+    // 3.49.6: com token, o link vira o rastreável (mimo.com.vc/r/<token>): registra o clique do salão e leva à cliente.
+    // Sem token (prévia do simulador), o wa.me direto, como antes.
+    link: d.token ? linkDoPedido(d.token) : linkParaCliente(d.cliente_tel, d.cliente_nome ?? '', l.nome, d.servico ?? ''),
+  })}
 
 export function resumo(d: Dados, salao: string): string {
   return [
@@ -347,7 +354,7 @@ export async function atenderGuia(deps: Deps, e: Entrada, opcoes: { teste?: bool
       return { responder: resposta, acao: 'enviado_teste', previaSalao: previa, estado: 'enviado', dados }
     }
     await guardar(null, 'enviado', dados, lugar.id)
-    const ld = (await chamar(deps, 'guia_whats_lead_criar', { conversa_: conversa!.id })) as { id: number; status: string; salao_tel: string | null; cliente_nome: string | null; servico: string | null; preferencia: string | null; observacao: string | null; cliente_tel: string; repetido: boolean }
+    const ld = (await chamar(deps, 'guia_whats_lead_criar', { conversa_: conversa!.id })) as { id: number; status: string; token?: string | null; salao_tel: string | null; cliente_nome: string | null; servico: string | null; preferencia: string | null; observacao: string | null; cliente_tel: string; repetido: boolean }
     let ok = false
     let previa: string | null = null
     if (ld?.status === 'pendente' && ld.salao_tel) {

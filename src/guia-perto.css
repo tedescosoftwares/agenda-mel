@@ -43,3 +43,11 @@
 .ld .gd-local-acoes { margin-top: 18px; }
 .ld .gd-local-modal .gd-folha-alt { margin-top: 12px; font-size: 0.82rem; }
 .ld .gd-local-modal .gd-folha-alt a { color: var(--ld-rosa); font-weight: 600; }
+
+/* 3.49.6: a página do link rastreável do pedido (mimo.com.vc/r/<token>), enquanto redireciona */
+.gd-abrir { min-height: 70vh; display: grid; place-items: center; padding: 40px 16px; background: linear-gradient(180deg, #fff7fa, #f6f1f8); }
+.gd-abrir-caixa { max-width: 420px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px; background: #fff; border: 1px solid #ffe1ea; border-radius: 24px; padding: 32px 26px; box-shadow: var(--ld-sombra); }
+.gd-abrir-selo { display: inline-flex; align-items: center; gap: 6px; color: var(--ld-rosa); font-weight: 700; letter-spacing: 0.02em; }
+.gd-abrir-caixa > svg { color: var(--ld-rosa); }
+.ld .gd-abrir-caixa h1 { font-family: var(--corpo); font-size: 1.3rem; font-weight: 700; color: var(--ld-ameixa); margin: 0; letter-spacing: -0.01em; }
+.gd-abrir-caixa p { color: var(--ld-cinza); font-size: 0.95rem; margin: 0; line-height: 1.5; }

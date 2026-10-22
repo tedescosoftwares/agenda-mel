@@ -60,10 +60,10 @@ const CONVERSAS = [
     mensagens: [{ q: 'cliente', t: 'Olá! Vi o Studio Lírio no guia da MIMO e quero marcar um horário.\n\n(código: itanhaem/studio-lirio)', em: h(60 * 26) }, { q: 'mel', t: 'Oi! Aqui é a Mel, da MIMO 💗. Como é seu nome?', em: h(60 * 26) }, { q: 'cliente', t: 'Carla, manicure e pedicure, sábado de manhã, se puder com a Rô', em: h(60 * 25) }, { q: 'mel', t: 'Anotei assim:\n• Nome: Carla\n• Serviço: Manicure e pedicure\n• Preferência: sábado de manhã\n• Observação: prefere a Rô\n\nPosso enviar para o Studio Lírio? É só responder *sim*.', em: h(60 * 25) }, { q: 'cliente', t: 'sim', em: h(60 * 25) }, { q: 'mel', t: 'Pronto, Carla! 💗 Enviei seu pedido para o Studio Lírio.', em: h(60 * 25) }] },
 ]
 const LEADS = [
-  { id: 1, conversa_id: 1, lugar_id: 'gl1', salao_nome: 'Studio Lírio', cidade: 'Itanhaém', cliente_nome: 'Ana Paula', cliente_tel: '5513988887777', servico: 'Progressiva', preferencia: 'sexta-feira à tarde', observacao: null, salao_tel: '5513990001101', status: 'salao_quer_conhecer', erro: null, enviado_em: h(90), salao_respondeu_em: h(40), resposta_salao: 'Obrigada! Vou chamar ela.\nQUERO', atendido: false, criado_em: h(90) },
-  { id: 2, conversa_id: 3, lugar_id: 'gl1', salao_nome: 'Studio Lírio', cidade: 'Itanhaém', cliente_nome: 'Carla', cliente_tel: '5513966665555', servico: 'Manicure e pedicure', preferencia: 'sábado de manhã', observacao: 'prefere a Rô', salao_tel: '5513990001101', status: 'salao_respondeu', erro: null, enviado_em: h(60 * 25), salao_respondeu_em: h(60 * 24), resposta_salao: 'Recebido, obrigada', atendido: true, criado_em: h(60 * 25) },
-  { id: 3, conversa_id: null, lugar_id: 'gl2', salao_nome: 'Ateliê Cabelo & Arte', cidade: 'Itanhaém', cliente_nome: 'Dani', cliente_tel: '5513955554444', servico: 'Corte e escova', preferencia: 'quinta à noite', observacao: null, salao_tel: '5513990002202', status: 'falhou', erro: 'Connection Closed', enviado_em: null, salao_respondeu_em: null, resposta_salao: null, atendido: false, criado_em: h(60 * 49) },
-  { id: 4, conversa_id: null, lugar_id: null, salao_nome: 'Espaço Bela Praia', cidade: 'Mongaguá', cliente_nome: 'Eva', cliente_tel: '5513944443333', servico: 'Design de sobrancelha', preferencia: 'qualquer dia de manhã', observacao: null, salao_tel: null, status: 'sem_contato', erro: null, enviado_em: null, salao_respondeu_em: null, resposta_salao: null, atendido: false, criado_em: h(60 * 70) },
+  { id: 1, conversa_id: 1, lugar_id: 'gl1', salao_nome: 'Studio Lírio', cidade: 'Itanhaém', cliente_nome: 'Ana Paula', cliente_tel: '5513988887777', servico: 'Progressiva', preferencia: 'sexta-feira à tarde', observacao: null, salao_tel: '5513990001101', status: 'salao_quer_conhecer', erro: null, enviado_em: h(90), salao_respondeu_em: h(40), resposta_salao: 'Obrigada! Vou chamar ela.\nQUERO', atendido: false, criado_em: h(90), token: 'demotoken1', cliques: 2, clicou_em: h(88) },
+  { id: 2, conversa_id: 3, lugar_id: 'gl1', salao_nome: 'Studio Lírio', cidade: 'Itanhaém', cliente_nome: 'Carla', cliente_tel: '5513966665555', servico: 'Manicure e pedicure', preferencia: 'sábado de manhã', observacao: 'prefere a Rô', salao_tel: '5513990001101', status: 'salao_respondeu', erro: null, enviado_em: h(60 * 25), salao_respondeu_em: h(60 * 24), resposta_salao: 'Recebido, obrigada', atendido: true, criado_em: h(60 * 25), token: 'demotoken2', cliques: 1, clicou_em: h(60 * 20) },
+  { id: 3, conversa_id: null, lugar_id: 'gl2', salao_nome: 'Ateliê Cabelo & Arte', cidade: 'Itanhaém', cliente_nome: 'Dani', cliente_tel: '5513955554444', servico: 'Corte e escova', preferencia: 'quinta à noite', observacao: null, salao_tel: '5513990002202', status: 'falhou', erro: 'Connection Closed', enviado_em: null, salao_respondeu_em: null, resposta_salao: null, atendido: false, criado_em: h(60 * 49), token: 'demotoken3', cliques: 0, clicou_em: null },
+  { id: 4, conversa_id: null, lugar_id: null, salao_nome: 'Espaço Bela Praia', cidade: 'Mongaguá', cliente_nome: 'Eva', cliente_tel: '5513944443333', servico: 'Design de sobrancelha', preferencia: 'qualquer dia de manhã', observacao: null, salao_tel: null, status: 'sem_contato', erro: null, enviado_em: null, salao_respondeu_em: null, resposta_salao: null, atendido: false, criado_em: h(60 * 70), token: 'demotoken4', cliques: 0, clicou_em: null },
 ]
 const publico = () => (CFG.ligado && CFG.numero ? { ligado: true, numero: CFG.numero, botoes: CFG.botoes, msg_cliente: CFG.msg_cliente } : { ligado: false })
 export const demoContatoConfig = publico
@@ -81,6 +81,7 @@ function painel({ dias_ = 7 } = {}) {
       falhas: pedidos.filter((l) => ['falhou', 'fora_do_limite'].includes(l.status)).length,
       sem_contato: pedidos.filter((l) => l.status === 'sem_contato').length,
       responderam: pedidos.filter((l) => l.salao_respondeu_em).length, querem: pedidos.filter((l) => l.status === 'salao_quer_conhecer').length,
+      abriram: pedidos.filter((l) => l.clicou_em).length,
       enviados_hoje: LEADS.filter((l) => l.enviado_em && new Date(l.enviado_em) >= hoje).length, saloes_sairam: 0,
     },
     pedidos: [...pedidos].sort((a, b) => b.criado_em.localeCompare(a.criado_em)),
@@ -106,6 +107,7 @@ function salvar({ c }) {
 export const GUIA_WHATS_RPC = {
   guia_contato_config: () => publico(),
   guia_whats_painel: (a) => painel(a ?? {}),
+  guia_whats_clique: ({ token_ }) => { const l = LEADS.find((x) => x.token === token_); if (!l) return { ok: false }; l.cliques = (l.cliques ?? 0) + 1; l.clicou_em = l.clicou_em ?? new Date().toISOString(); return { ok: true, cliente_tel: l.cliente_tel, cliente_nome: l.cliente_nome, salao: l.salao_nome, servico: l.servico } },
   guia_whats_salvar: (a) => salvar(a ?? { c: {} }),
   guia_whats_lead_atendido: ({ id_, atendido_ }) => { const l = LEADS.find((x) => x.id === id_); if (l) l.atendido = atendido_ !== false; return null },
   guia_whats_conversa: ({ id_ }) => { const c = CONVERSAS.find((x) => x.id === id_); return c ? { ...c, salao: SALOES[c.lugar_id]?.[0] ?? null, cidade: SALOES[c.lugar_id]?.[1] ?? null } : null },
@@ -133,7 +135,7 @@ function simular({ texto, lugar }) {
   if (/\(código:/.test(t) || s.mensagens.length === 1) { resposta = `Oi! Aqui é a Mel, da MIMO 💗, o guia onde você encontrou o ${s.lugar.nome}. Eu anoto seu pedido e passo para o salão, que te chama aqui no WhatsApp. Como é seu nome?` }
   else if (s.estado === 'confirmando' && /^(sim|pode|ok|isso|claro)\b/i.test(t)) {
     s.estado = 'enviado'; acao = 'enviado_teste'
-    previaSalao = preencher(CFG.msg_salao, { salao: s.lugar.nome, cliente: s.dados.nome, servico: s.dados.servico, preferencia: s.dados.preferencia, observacao: '', contato: bonito('5513999990000'), link: `https://wa.me/5513999990000?text=${encodeURIComponent(`Olá, ${s.dados.nome}! Aqui é do ${s.lugar.nome}. Recebi seu pedido de ${s.dados.servico} pela MIMO.`)}` })
+    previaSalao = preencher(CFG.msg_salao, { salao: s.lugar.nome, cliente: s.dados.nome, servico: s.dados.servico, preferencia: s.dados.preferencia, observacao: '', contato: bonito('5513999990000'), link: 'https://mimo.com.vc/r/demotoken-previa' })
     resposta = `Pronto, ${s.dados.nome.split(' ')[0]}! 💗 Enviei seu pedido para o ${s.lugar.nome}. Eles vão te chamar aqui no WhatsApp para combinar o horário.`
   } else if (s.estado === 'enviado') { resposta = 'Seu pedido já foi para o salão, que vai te chamar aqui. Posso ajudar em mais alguma coisa?' }
   else if (!s.dados.nome) { s.dados.nome = t.slice(0, 60); resposta = `Prazer, ${s.dados.nome}! Qual serviço você quer marcar?` }

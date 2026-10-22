@@ -47751,9 +47751,68 @@ begin
   return (select to_jsonb(g) from public.guia_whats_config g where g.id = 1);
 end $$;
 
+-- ---- o link rastreável do pedido ao salão (3.49.6): sabe-se quando o salão abriu aquele pedido -------------------
+-- cada pedido nasce com um token único e curto; o {link} da mensagem ao salão passa a apontar para mimo.com.vc/r/<token>,
+-- que registra o clique e leva o salão para a conversa com a cliente. O token só serve para aquele pedido e some com ele.
+alter table public.guia_whats_leads add column if not exists token text;
+alter table public.guia_whats_leads add column if not exists clicou_em timestamptz;
+alter table public.guia_whats_leads add column if not exists cliques integer not null default 0;
+alter table public.guia_whats_leads alter column token set default substr(replace(gen_random_uuid()::text, '-', ''), 1, 16);
+update public.guia_whats_leads set token = substr(replace(gen_random_uuid()::text, '-', ''), 1, 16) where token is null;
+create unique index if not exists guia_whats_leads_token on public.guia_whats_leads (token);
+
+-- o clique do salão no link do pedido (anônimo: quem tem o link é o salão): conta o clique, marca a primeira vez e
+-- devolve o contato da cliente para o site abrir a conversa. Não expõe nada que o salão já não receba na mensagem.
+create or replace function public.guia_whats_clique(token_ text)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare ld public.guia_whats_leads;
+begin
+  if token_ is null or length(token_) not between 8 and 40 then return jsonb_build_object('ok', false); end if;
+  update public.guia_whats_leads
+     set cliques = cliques + 1, clicou_em = coalesce(clicou_em, now())
+   where token = token_
+   returning * into ld;
+  if ld.id is null then return jsonb_build_object('ok', false); end if;
+  return jsonb_build_object('ok', true, 'cliente_tel', ld.cliente_tel, 'cliente_nome', ld.cliente_nome, 'salao', ld.salao_nome, 'servico', ld.servico);
+end $$;
+revoke all on function public.guia_whats_clique(text) from public;
+grant execute on function public.guia_whats_clique(text) to anon, authenticated;
+
+-- o painel ganha quem abriu a conversa (clicou no link) e o clicou_em/cliques por pedido
+create or replace function public.guia_whats_painel(dias_ integer default 7)
+returns jsonb language plpgsql stable security definer set search_path = public set plan_cache_mode = force_custom_plan as $$
+declare
+  desde timestamptz := now() - make_interval(days => greatest(1, least(coalesce(dias_, 7), 90)));
+  hoje_ini timestamptz := ((now() at time zone 'America/Sao_Paulo')::date)::timestamp at time zone 'America/Sao_Paulo';
+begin
+  if not public.eh_plataforma() then raise exception 'só a plataforma vê o WhatsApp do guia'; end if;
+  return jsonb_build_object(
+    'config', (select to_jsonb(c) from public.guia_whats_config c where c.id = 1),
+    'totais', jsonb_build_object(
+      'conversas', (select count(*) from public.guia_whats_conversas where not teste and criada_em >= desde),
+      'pedidos', (select count(*) from public.guia_whats_leads where criado_em >= desde),
+      'enviados', (select count(*) from public.guia_whats_leads where criado_em >= desde and enviado_em is not null),
+      'falhas', (select count(*) from public.guia_whats_leads where criado_em >= desde and status in ('falhou', 'fora_do_limite')),
+      'sem_contato', (select count(*) from public.guia_whats_leads where criado_em >= desde and status = 'sem_contato'),
+      'responderam', (select count(*) from public.guia_whats_leads where criado_em >= desde and salao_respondeu_em is not null),
+      'querem', (select count(*) from public.guia_whats_leads where criado_em >= desde and status = 'salao_quer_conhecer'),
+      'abriram', (select count(*) from public.guia_whats_leads where criado_em >= desde and clicou_em is not null),
+      'enviados_hoje', (select count(*) from public.guia_whats_leads where enviado_em >= hoje_ini and status <> 'falhou'),
+      'saloes_sairam', (select count(*) from public.guia_whats_saidas where quem = 'salao')),
+    'pedidos', (select coalesce(jsonb_agg(to_jsonb(x) order by x.criado_em desc), '[]'::jsonb) from (
+                  select id, conversa_id, lugar_id, salao_nome, cidade, cliente_nome, cliente_tel, servico, preferencia, observacao, salao_tel, status,
+                         erro, enviado_em, salao_respondeu_em, resposta_salao, atendido, clicou_em, cliques, criado_em
+                    from public.guia_whats_leads where criado_em >= desde order by criado_em desc limit 300) x),
+    'conversas', (select coalesce(jsonb_agg(to_jsonb(x) order by x.atualizada_em desc), '[]'::jsonb) from (
+                    select c.id, c.telefone, c.estado, c.atualizada_em, c.criada_em, c.lead_id, l.nome as salao, l.cidade,
+                           jsonb_array_length(c.mensagens) as n, c.mensagens -> -1 ->> 't' as ultima
+                      from public.guia_whats_conversas c left join public.guia_lugares l on l.id = c.lugar_id
+                     where not c.teste and c.atualizada_em >= desde order by c.atualizada_em desc limit 100) x));
+end $$;
+
 do $$
 begin
-  raise notice '196: a Mel acha o salão pelo slug, cidade/slug ou nome em frase (guia_whats_buscar), limite_respostas por número por dia, respostas_hoje no contexto; site_minha_cidade (pelo IP ou pelo GPS, sem guardar), site_ao_vivo(horas_) com quem passou no período, a Mel sempre anota e tenta o número do salão';
+  raise notice '196: o link rastreável do pedido (guia_whats_clique, token por pedido, abriram no painel); a Mel acha o salão pelo slug, cidade/slug ou nome em frase (guia_whats_buscar), limite_respostas por número por dia, respostas_hoje no contexto; site_minha_cidade (pelo IP ou pelo GPS, sem guardar), site_ao_vivo(horas_) com quem passou no período, a Mel sempre anota e tenta o número do salão';
 end $$;
 
 insert into public.migracoes_aplicadas (arquivo) values ('196_local_e_periodo.sql') on conflict (arquivo) do nothing;

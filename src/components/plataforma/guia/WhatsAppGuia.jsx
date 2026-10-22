@@ -3,7 +3,7 @@ import { supabase } from '../../../lib/supabase'
 import { chamar } from '../../../lib/pagamento'
 import { Painel, Vazio, haQuanto } from '../Pecas'
 import { MODELOS } from '../../../lib/guiaIa'
-import { MessageCircle, Plug, LoaderCircle, Send, RotateCcw, Save, Bot, Inbox, Check, RefreshCw, TriangleAlert, Smartphone, MessagesSquare, X, Unplug } from 'lucide-react'
+import { MessageCircle, Plug, LoaderCircle, Send, RotateCcw, Save, Bot, Inbox, Check, RefreshCw, TriangleAlert, Smartphone, MessagesSquare, MousePointerClick, X, Unplug } from 'lucide-react'
 
 // O WhatsApp do guia (3.48, migração 195): tudo se configura aqui. A conexão do número (outra instância na mesma
 // Evolution: criar, parear, webhook), a configuração (ligar, número, botões que passam pela MIMO, a IA e o modelo, a
@@ -127,6 +127,7 @@ export default function WhatsAppGuia({ g }) {
         <div className="pg-wa-kpis">
           <div><b>{t.conversas ?? 0}</b><span>conversas</span></div>
           <div><b>{t.enviados ?? 0}</b><span>pedidos enviados</span></div>
+          <div><b>{t.abriram ?? 0}</b><span>abriram o pedido</span></div>
           <div><b>{t.responderam ?? 0}</b><span>salões responderam</span></div>
           <div className="rosa"><b>{t.querem ?? 0}</b><span>querem conhecer a MIMO</span></div>
           <div><b>{t.enviados_hoje ?? 0}<small>/{form.limite_dia}</small></b><span>enviados hoje</span></div>
@@ -212,6 +213,7 @@ export default function WhatsAppGuia({ g }) {
                       <span>{[p.servico, p.preferencia].filter(Boolean).join(' · ') || 'sem detalhes'}{p.observacao ? ` · ${p.observacao}` : ''}</span>
                       {p.erro && <span className="pg-wa-erro"><TriangleAlert size={13} /> {p.erro}</span>}
                       {p.resposta_salao && <span className="pg-wa-resposta"><MessagesSquare size={13} /> Salão: “{p.resposta_salao.split('\n').at(-1)}”{p.salao_respondeu_em ? ` · ${haQuanto(p.salao_respondeu_em)}` : ''}</span>}
+                      {p.clicou_em && <span className="pg-wa-abriu" data-teste="wa-abriu"><MousePointerClick size={13} /> Abriu a conversa com a cliente · {haQuanto(p.clicou_em)}{p.cliques > 1 ? ` · ${p.cliques}×` : ''}</span>}
                     </div>
                     <div className="pg-wa-pedido-acoes">
                       <label><input type="checkbox" checked={!!p.atendido} onChange={(e) => atendido(p.id, e.target.checked)} /> atendido pela equipe</label>

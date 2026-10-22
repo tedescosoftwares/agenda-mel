@@ -24,7 +24,7 @@ const db = createClient(
 )
 
 type Recebida = { telefone: string; texto: string; id: string | null;
-                  enquete?: string | null; instancia?: string | null; nome?: string | null }
+                  enquete?: string | null; instancia?: string | null; nome?: string | null; citado?: string | null }
 type Status = { id: string; status: string; detalhe: string | null }
 
 function json(corpo: unknown, status = 200) {
@@ -117,6 +117,16 @@ function lerCloud(corpo: any): { mensagens: Recebida[]; status: Status[] } {
 // Baileys entrega em três formatos diferentes conforme a versão do
 // WhatsApp de quem tocou. Todos carregam o id que definimos ("1"/"2"),
 // que é exatamente o que a cliente teria digitado.
+// 3.49.7: quando o salão responde CITANDO a nossa mensagem, o texto citado vem no contextInfo. A gente passa esse
+// texto adiante (ele tem o link mimo.com.vc/r/<token>) para amarrar a resposta ao pedido certo.
+function citadoDaMensagem(m: any): string {
+  const q = m?.extendedTextMessage?.contextInfo?.quotedMessage
+    ?? m?.imageMessage?.contextInfo?.quotedMessage
+    ?? m?.contextInfo?.quotedMessage
+  if (!q) return ''
+  return String(q.conversation ?? q.extendedTextMessage?.text ?? q.imageMessage?.caption ?? '').slice(0, 1500)
+}
+
 function textoDaMensagem(m: any): string {
   if (!m) return ''
 
@@ -204,6 +214,8 @@ function lerEvolution(corpo: any): { mensagens: Recebida[]; status: Status[] } {
               : null,
             // o nome do perfil de quem escreveu (3.48: a Mel do guia confirma antes de usar)
             nome: typeof d?.pushName === 'string' ? d.pushName.slice(0, 60) : null,
+            // a mensagem citada (3.49.7): amarra a resposta do salão ao pedido certo
+            citado: ehVoto ? null : citadoDaMensagem(d?.message),
           })
         }
       }
@@ -296,7 +308,7 @@ Deno.serve(async (req) => {
   for (const m of mensagens) {
     if (guia && m.instancia && m.instancia === guia.instancia) {
       try {
-        const r = await atenderGuia(depsGuia(), { telefone: m.telefone, texto: m.texto, nomePerfil: m.nome ?? null })
+        const r = await atenderGuia(depsGuia(), { telefone: m.telefone, texto: m.texto, nomePerfil: m.nome ?? null, citado: m.citado ?? null })
         respostas.push(`guia[${r.acao}]`)
         if (r.erro) console.error('guia:', r.erro)
         if (r.responder) {

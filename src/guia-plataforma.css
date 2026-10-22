@@ -705,3 +705,10 @@
 /* 3.49.6: o salão abriu o link do pedido (clicou) */
 .pg-wa-abriu { display: inline-flex; align-items: center; gap: 5px; color: #0c7a50; font-weight: 600; font-size: 0.8rem; }
 .pg-wa-abriu svg { flex: none; }
+
+/* 3.49.7: a conversa de volta do salão, dentro do pedido */
+.pg-wa-thread { display: flex; flex-direction: column; gap: 5px; margin-top: 4px; padding: 8px 10px; border-radius: 10px; background: #f4f0fb; }
+.pg-wa-thread > b { display: inline-flex; align-items: center; gap: 5px; font-size: 0.76rem; color: var(--ld-ameixa); }
+.pg-wa-thread > b svg { flex: none; }
+.pg-wa-thread-msg { align-self: flex-start; max-width: 90%; padding: 6px 10px; border-radius: 12px 12px 12px 3px; background: #fff; border: 1px solid #e7ddf3; font-size: 0.86rem; color: #2a0736; }
+.pg-wa-thread-msg small { display: block; margin-top: 2px; color: var(--ld-cinza); font-size: 0.7rem; }

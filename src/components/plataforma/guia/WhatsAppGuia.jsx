@@ -212,7 +212,16 @@ export default function WhatsAppGuia({ g }) {
                       <span><b>{p.cliente_nome || 'sem nome'}</b> · {tel(p.cliente_tel)}</span>
                       <span>{[p.servico, p.preferencia].filter(Boolean).join(' · ') || 'sem detalhes'}{p.observacao ? ` · ${p.observacao}` : ''}</span>
                       {p.erro && <span className="pg-wa-erro"><TriangleAlert size={13} /> {p.erro}</span>}
-                      {p.resposta_salao && <span className="pg-wa-resposta"><MessagesSquare size={13} /> Salão: “{p.resposta_salao.split('\n').at(-1)}”{p.salao_respondeu_em ? ` · ${haQuanto(p.salao_respondeu_em)}` : ''}</span>}
+                      {(p.salao_mensagens?.length > 0 || p.resposta_salao) && (
+                        <div className="pg-wa-thread" data-teste="wa-thread">
+                          <b><MessagesSquare size={13} /> Conversa com o salão{p.salao_respondeu_em ? ` · ${haQuanto(p.salao_respondeu_em)}` : ''}</b>
+                          {(p.salao_mensagens?.length > 0
+                            ? p.salao_mensagens
+                            : [{ texto: p.resposta_salao }]).map((m, i) => (
+                            <span key={i} className="pg-wa-thread-msg">{m.texto}{m.em ? <small>{quando(m.em)}</small> : null}</span>
+                          ))}
+                        </div>
+                      )}
                       {p.clicou_em && <span className="pg-wa-abriu" data-teste="wa-abriu"><MousePointerClick size={13} /> Abriu a conversa com a cliente · {haQuanto(p.clicou_em)}{p.cliques > 1 ? ` · ${p.cliques}×` : ''}</span>}
                     </div>
                     <div className="pg-wa-pedido-acoes">

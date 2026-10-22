@@ -23,7 +23,7 @@ export type Deps = {
   enviar: (instancia: string, telefone: string, texto: string) => Promise<Resultado>
   agora?: () => Date
 }
-export type Entrada = { telefone: string; texto: string; nomePerfil?: string | null }
+export type Entrada = { telefone: string; texto: string; nomePerfil?: string | null; citado?: string | null }
 export type Saida = {
   responder: string | null
   acao: string
@@ -68,6 +68,13 @@ export const POS_ENVIO = 3
 
 // o código do salão na mensagem: "código: itanhaem/studio-lirio", "ref itanhaem/studio-lirio", o link da página ou,
 // desde a 3.49.2, um "itanhaem/studio-lirio" solto (datas como 15/10 e 24/7 não contam)
+// 3.49.7: o token do pedido dentro de um texto (o link mimo.com.vc/r/<token> que vai na mensagem ao salão). Serve
+// para amarrar a resposta do salão ao pedido certo quando ele responde citando a nossa mensagem.
+export function tokenDoTexto(texto: string): string | null {
+  const m = String(texto ?? '').match(/\/r\/([a-zA-Z0-9]{8,40})/)
+  return m ? m[1] : null
+}
+
 export function codigoDoTexto(texto: string): { cidade: string; slug: string } | null {
   const t = String(texto ?? '')
   const m = t.match(/(?:c[oó]digo|ref)\s*[:#]?\s*([a-z0-9-]{2,60})\/([a-z0-9-]{2,80})/i) ?? t.match(/\/saloes\/([a-z0-9-]{2,60})\/([a-z0-9-]{2,80})/i)
@@ -235,7 +242,12 @@ export async function atenderGuia(deps: Deps, e: Entrada, opcoes: { teste?: bool
         return { responder: 'Combinado, você não vai mais receber pedidos da MIMO por aqui. Se mudar de ideia, é só escrever VOLTAR.', acao: 'salao_saiu' }
       }
       const quer = QUERO.test(p)
-      await chamar(deps, 'guia_whats_salao_respondeu', { lead_: ctx.lead_salao.id, texto_: texto, quer_: quer })
+      // a qual pedido esta resposta se refere: a mensagem citada (com o token) manda; senão o pedido que o contexto
+      // escolheu (o que o salão tocou por último, ou o mais recente)
+      let alvo = ctx.lead_salao.id
+      const tk = e.citado ? tokenDoTexto(e.citado) : null
+      if (tk) { const id = await chamar(deps, 'guia_whats_lead_do_salao', { tel_: tel, token_: tk }); if (id) alvo = Number(id) }
+      await chamar(deps, 'guia_whats_salao_respondeu', { lead_: alvo, texto_: texto, quer_: quer })
       if (quer) return { responder: 'Combinado! 💗 Alguém da equipe da MIMO vai te chamar por aqui.', acao: 'salao_quer_conhecer' }
       // responde uma vez só: depois disso, o que o salão escrever fica guardado para a equipe ver
       return { responder: ctx.lead_salao.ja_respondeu ? null : cfg.msg_salao_resposta, acao: 'salao_respondeu' }

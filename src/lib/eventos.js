@@ -89,7 +89,11 @@ export function registrarEvento(tipo, { pagina, area = null, dados = null, orige
     utm_: e.utm,
     dados_: dados,
   }
-  if (isDemo) { import('./demoGuia.js').then((m) => m.demoEvento?.(corpo)).catch(() => {}); return }
+  if (isDemo) {
+    import('./demoGuia.js').then((m) => m.demoEvento?.(corpo)).catch(() => {})
+    import('./demoAoVivo.js').then((m) => m.demoAcao?.(corpo)).catch(() => {})
+    return
+  }
   if (!URL_BANCO || !CHAVE) return
   try {
     fetch(`${URL_BANCO}/rest/v1/rpc/site_evento`, {

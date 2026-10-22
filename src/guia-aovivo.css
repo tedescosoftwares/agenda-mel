@@ -3,8 +3,19 @@
    de cada visita, as origens, os aparelhos, as cidades e o resumo do dia.
    Prefixo pv-. Segue a cara da Plataforma (cartões brancos, rosa).
    ===================================================================== */
-.pv { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
+.pv {
+  display: flex; flex-direction: column; gap: 1rem; min-width: 0;
+  /* as barras são as da aba Desempenho (./desempenho/Barras): as mesmas cores, definidas aqui também */
+  --des-visita: #3a6fd8; --des-contato: #ff2d7a; --des-pedido: #a4134f;
+  /* o tom dos toques: forte (saiu logo depois = provável agendamento), contato, outro */
+  --pv-forte: #0b7a50; --pv-forte-fundo: #e3f8ec;
+  --pv-contato: #c1127b; --pv-contato-fundo: #fde7f3;
+  --pv-outro: #5b6170; --pv-outro-fundo: #f1f2f5;
+}
 .pv, .pv * { box-sizing: border-box; }
+.pv [data-cor="visita"] { --cor: var(--des-visita); }
+.pv [data-cor="contato"] { --cor: var(--des-contato); }
+.pv [data-cor="pedido"] { --cor: var(--des-pedido); }
 
 /* ---------- o topo: agora, minuto a minuto e hoje ---------- */
 .pv-topo { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(260px, 2fr) auto; gap: 1rem; align-items: stretch; background: #fff; border: 1px solid var(--fio); border-radius: 18px; padding: 1rem 1.2rem; }
@@ -21,7 +32,7 @@
 .pv-minutos i { flex: 1; min-width: 3px; background: #ffc2d8; border-radius: 3px 3px 1px 1px; transition: height 0.4s ease; }
 .pv-minutos i.agora { background: var(--rosa); }
 .pv-minutos-legenda { position: absolute; left: 0; right: 0; bottom: 0; display: flex; justify-content: space-between; font-size: 0.68rem; color: var(--texto-3); }
-.pv-hoje-num { display: flex; gap: 1.1rem; align-items: center; }
+.pv-hoje-num { display: flex; flex-wrap: wrap; gap: 0.6rem 1.1rem; align-items: center; }
 .pv-hoje-num div { display: flex; flex-direction: column; }
 .pv-hoje-num b { font-size: 1.35rem; letter-spacing: -0.02em; }
 .pv-hoje-num span { font-size: 0.72rem; color: var(--texto-2); }
@@ -71,7 +82,48 @@
 .pv-lista-saiu { margin-top: 0.4rem; }
 .pv-mapa { border-radius: 12px; overflow: hidden; }
 
+/* ---------- os toques (3.45): chips, desfecho, feed ---------- */
+.pv-chip { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.08rem 0.45rem; border-radius: 999px; font-size: 0.7rem; font-weight: 600; background: var(--pv-outro-fundo); color: var(--pv-outro); white-space: nowrap; }
+.pv-chip b { font-variant-numeric: tabular-nums; }
+.pv-chip[data-tom="contato"] { background: var(--pv-contato-fundo); color: var(--pv-contato); }
+.pv-chip[data-tom="forte"] { background: var(--pv-forte-fundo); color: var(--pv-forte); }
+.pv-vis-acoes { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.35rem; }
+.pv-desfecho { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.1rem 0.5rem; border-radius: 8px; font-size: 0.72rem; font-weight: 700; background: var(--pv-outro-fundo); color: var(--pv-outro); }
+.pv-desfecho em, .pv-trajeto-fim em { font-style: normal; font-weight: 600; }
+.pv-desfecho[data-tom="forte"] { background: var(--pv-forte); color: #fff; }
+.pv-desfecho[data-tom="contato"] { background: var(--pv-contato-fundo); color: var(--pv-contato); }
+.pv-vis.saiu.provavel { opacity: 1; border-color: #a7e3c4; }
+.pv-trajeto li.pv-trajeto-acao::before { background: var(--pv-outro); }
+.pv-trajeto li.pv-trajeto-acao[data-tom="contato"]::before { background: var(--pv-contato); }
+.pv-trajeto li.pv-trajeto-acao[data-tom="forte"]::before { background: var(--pv-forte); }
+.pv-trajeto-salao { color: var(--texto-2); font-size: 0.74rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pv-trajeto li.pv-trajeto-fim { font-weight: 600; color: var(--texto-2); }
+.pv-trajeto li.pv-trajeto-fim::before { border-radius: 2px; background: #c9ccd3; }
+.pv-trajeto li.pv-trajeto-fim[data-tom="forte"] { color: var(--pv-forte); }
+.pv-trajeto li.pv-trajeto-fim[data-tom="forte"]::before { background: var(--pv-forte); }
+.pv-recentes-resumo { color: var(--pv-forte); font-weight: 600; }
+.pv-acoes-30 { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem; margin-bottom: 0.7rem; }
+.pv-acoes-30 small { color: var(--texto-3); font-size: 0.7rem; margin-left: 0.2rem; }
+.pv-feed { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; max-height: 340px; overflow-y: auto; }
+.pv-feed li + li { border-top: 1px solid var(--fio); }
+.pv-feed-item { display: flex; align-items: center; gap: 0.6rem; width: 100%; padding: 0.45rem 0.1rem; background: none; border: none; font: inherit; color: inherit; text-align: left; }
+button.pv-feed-item { cursor: pointer; border-radius: 8px; }
+button.pv-feed-item:hover { background: #fbf7fa; }
+.pv-feed li:first-child .pv-feed-item { animation: pv-entra 0.35s ease; }
+.pv-feed-icone { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; flex-shrink: 0; background: var(--pv-outro-fundo); color: var(--pv-outro); }
+.pv-feed-icone[data-tom="contato"] { background: var(--pv-contato-fundo); color: var(--pv-contato); }
+.pv-feed-icone[data-tom="forte"] { background: var(--pv-forte-fundo); color: var(--pv-forte); }
+.pv-feed-corpo { display: flex; flex-direction: column; min-width: 0; }
+.pv-feed-corpo b { font-size: 0.84rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pv-feed-salao { font-weight: 500; color: var(--texto-2); }
+.pv-feed-corpo small { font-size: 0.72rem; color: var(--texto-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 /* ---------- hoje ---------- */
+.pv-hoje-acoes { display: flex; flex-direction: column; gap: 0.8rem; padding-bottom: 1rem; margin-bottom: 1rem; border-bottom: 1px solid var(--fio); }
+.pv-hoje-frase { margin: 0; font-size: 0.98rem; line-height: 1.45; max-width: 60rem; text-wrap: pretty; }
+.pv-hoje-frase b { color: var(--pv-forte); font-size: 1.1rem; }
+.pv-hoje-acoes .pv-hoje-grade { grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); }
+.pv-legenda { display: flex; align-items: center; gap: 0.3rem; margin: 0.6rem 0 0; font-size: 0.72rem; color: var(--texto-2); }
 .pv-horas { display: flex; align-items: flex-end; gap: 4px; height: 90px; }
 .pv-horas span { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%; min-width: 0; }
 .pv-horas i { width: 100%; background: #ffc2d8; border-radius: 3px 3px 1px 1px; }

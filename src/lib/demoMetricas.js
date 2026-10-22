@@ -9,7 +9,7 @@ const TIPOS = [
   ['agendar_mimo', 'Agendar pela MIMO', 'contato'], ['mapa', 'Como chegar', 'contato'], ['instagram', 'Instagram', 'contato'],
   ['site', 'Site', 'contato'], ['email', 'E-mail', 'contato'], ['quero_marcar', 'Quero marcar', 'interesse'], ['sou_dono', 'É o dono', 'interesse'],
   ['criar_agenda', 'Criar agenda', 'interesse'], ['compartilhar', 'Compartilhar', 'outro'], ['corrigir', 'Corrigir dados', 'outro'],
-  ['localizacao', 'Localização ativada', 'outro'],
+  ['localizacao', 'Localização ativada', 'outro'], ['pedido_enviado', 'Pedido enviado (Quero marcar)', 'outro'],
 ].map(([tipo, rotulo, grupo]) => ({ tipo, rotulo, grupo }))
 const GRUPO = Object.fromEntries(TIPOS.map((t) => [t.tipo, t.grupo]))
 const CATS = ['beleza', 'cabelo', 'unhas', 'cilios', 'sobrancelhas', 'estetica', 'maquiagem']

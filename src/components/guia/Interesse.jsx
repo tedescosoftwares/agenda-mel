@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { X, Check, Send, MessageCircle, CalendarHeart, PencilLine, EyeOff } from 'lucide-react'
 import { registrarInteresse } from '../../lib/guiaPublico'
+import { registrarEvento } from '../../lib/eventos'
 import { soDigitosTel, telefoneBonito, linkWhatsDoTel } from '../../lib/guia'
 import Reivindicar from './Reivindicar'
 
@@ -119,6 +120,8 @@ export default function Interesse({ tipo, lugar, onFechar, previa = false }) {
     const r = await registrarInteresse(lugar?.id, qual, { nome, contato: contatoFinal, mensagem })
     setEnviando(false)
     if (!r.ok) return setErro(primeiraMaiuscula(r.motivo || 'não deu para enviar agora; tente de novo') + '.')
+    // o toque no botão já contou como quero_marcar; o pedido que chegou conta à parte (aparece no site ao vivo)
+    if (qual === 'quero_marcar') registrarEvento('pedido_enviado')
     setFeito({ repetido: r.repetido, comContato: !!k })
   }
 

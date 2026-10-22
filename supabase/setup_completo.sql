@@ -47623,9 +47623,137 @@ comment on function public.site_ao_vivo(integer) is 'Site (192, 193, 196): quem 
 revoke execute on function public.site_ao_vivo(integer) from public, anon;
 grant execute on function public.site_ao_vivo(integer) to authenticated;
 
+-- ---- a Mel reconhece o salão no que a cliente escreveu e gasta menos (3.49.2) ---------------------------------------
+-- o teto de respostas da Mel por número por dia (a conversa à toa não vira token): configurável na Plataforma
+alter table public.guia_whats_config add column if not exists limite_respostas integer not null default 30 check (limite_respostas between 1 and 500);
+
+-- as palavras de um nome (ou de um texto) que dizem qual salão é: tira as genéricas (studio, salão, beleza, cabelo…)
+create or replace function public.guia_whats_palavras(t text)
+returns text[] language sql immutable as $$
+  select coalesce(array_agg(w), '{}'::text[]) from unnest(string_to_array(public.slug_de(left(coalesce(t, ''), 300)), '-')) w
+   where length(w) >= 3 and w not in (
+     'studio', 'estudio', 'salao', 'salon', 'espaco', 'beleza', 'cabelo', 'cabelos', 'cabeleireiro', 'cabeleireira', 'cabeleireiros',
+     'estetica', 'estetico', 'unhas', 'unha', 'nails', 'nail', 'hair', 'beauty', 'centro', 'spa', 'clinica', 'design', 'designer',
+     'sobrancelha', 'sobrancelhas', 'cilios', 'make', 'makeup', 'maquiagem', 'barbearia', 'barber', 'manicure', 'pedicure', 'esmalteria',
+     'lash', 'lashes', 'brow', 'brows', 'the', 'and', 'com', 'pra', 'para', 'quero', 'queria', 'marcar', 'agendar', 'agendamento', 'horario',
+     'hora', 'ola', 'bom', 'dia', 'boa', 'tarde', 'noite', 'gostaria', 'preciso', 'por', 'favor', 'uma', 'umas', 'meu', 'minha', 'nome',
+     'como', 'aparece', 'guia', 'mimo', 'link', 'pagina', 'sou', 'voce', 'vcs', 'eles', 'ela', 'ele', 'que', 'isso', 'mais', 'ainda', 'nao',
+     'sim', 'tem', 'vai', 'ser', 'esta', 'estou', 'dos', 'das', 'gente', 'aqui', 'ali', 'esse', 'essa', 'este', 'dela', 'dele', 'pelo',
+     'pela', 'mel', 'tudo', 'bem', 'obrigada', 'obrigado', 'quer', 'posso', 'pode', 'fazer', 'servico', 'servicos', 'atendimento')
+$$;
+
+-- a busca do salão no texto: o slug ou o nome inteiro dentro do texto (3), o texto dentro do nome (2), ou palavras
+-- do nome que não sejam genéricas presentes no texto (1: ao menos uma, e duas ou metade do nome). Só os melhores, até 3;
+-- texto só de palavras genéricas ("quero marcar cabelo") não acha nada
+create or replace function public.guia_whats_buscar(texto_ text)
+returns jsonb language sql stable security definer set search_path = public as $$
+  with q as (select public.slug_de(left(coalesce(texto_, ''), 300)) as t, public.guia_whats_palavras(texto_) as pw),
+  c as (
+    select l.id, l.nome, l.cidade,
+           case when length(l.slug) >= 4 and '-' || q.t || '-' like '%-' || l.slug || '-%' then 3
+                when length(public.slug_de(l.nome)) >= 4 and '-' || q.t || '-' like '%-' || public.slug_de(l.nome) || '-%' then 3
+                when length(q.t) >= 4 and public.slug_de(l.nome) like '%' || q.t || '%' then 2
+                else 0 end as direto,
+           (select count(*) from unnest(public.guia_whats_palavras(l.slug)) w where w = any(q.pw))::int as comuns,
+           cardinality(public.guia_whats_palavras(l.slug)) as total
+      from public.guia_lugares l, q
+     where l.status = 'publicado' and cardinality(q.pw) > 0 and string_to_array(l.slug, '-') && q.pw
+  ),
+  p as (
+    select *, case when direto > 0 then direto + comuns::numeric / 10
+                   when total > 0 and comuns >= 1 and (comuns >= 2 or comuns * 2 >= total) then 1 + comuns::numeric / 10
+                   else 0 end as pontos
+      from c
+  )
+  select coalesce(jsonb_agg(jsonb_build_object('id', x.id, 'nome', x.nome, 'cidade', x.cidade) order by x.pontos desc, length(x.nome)), '[]'::jsonb)
+    from (select * from p where pontos > 0 and pontos = (select max(pontos) from p) order by pontos desc, length(nome) limit 3) x
+$$;
+
+-- o contexto ganha quantas respostas a Mel já deu a esse número hoje (dia de Brasília)
+create or replace function public.guia_whats_contexto(tel_ text)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare
+  k text := public.guia_whats_chave(tel_);
+  cv public.guia_whats_conversas;
+  r jsonb;
+begin
+  -- a limpeza (de vez em quando): o que passou da retenção; as de teste, depois de um dia
+  if random() < 0.02 then
+    delete from public.guia_whats_leads where criado_em < now() - make_interval(days => (select retencao_dias from public.guia_whats_config where id = 1));
+    delete from public.guia_whats_conversas where atualizada_em < now() - make_interval(days => (select retencao_dias from public.guia_whats_config where id = 1))
+       or (teste and atualizada_em < now() - interval '1 day');
+  end if;
+  select * into cv from public.guia_whats_conversas c where c.chave = k and c.atualizada_em > now() - interval '24 hours' order by c.atualizada_em desc limit 1;
+  select jsonb_build_object(
+    'config', (select to_jsonb(c) - 'atualizado_por' from public.guia_whats_config c where c.id = 1),
+    'saida', (select s.quem from public.guia_whats_saidas s where s.chave = k),
+    'conversa', case when cv.id is null then null else to_jsonb(cv) - 'chave' || jsonb_build_object('lugar', case when cv.lugar_id is null then null else public.guia_whats_lugar(null, null, cv.lugar_id) end) end,
+    'respostas_hoje', (select count(*) from public.guia_whats_conversas c, jsonb_array_elements(c.mensagens) m
+                         where c.chave = k and c.atualizada_em > now() - interval '2 days' and m ->> 'q' = 'mel' and m ? 'em'
+                           and (m ->> 'em')::timestamptz >= (date_trunc('day', now() at time zone 'America/Sao_Paulo') at time zone 'America/Sao_Paulo')),
+    'lead_salao', (select jsonb_build_object('id', ld.id, 'salao_nome', ld.salao_nome, 'status', ld.status, 'ja_respondeu', ld.salao_respondeu_em is not null)
+                     from public.guia_whats_leads ld
+                    where ld.salao_chave = k and ld.criado_em > now() - interval '30 days' and ld.status in ('enviado', 'salao_respondeu', 'salao_quer_conhecer')
+                    order by ld.criado_em desc limit 1)
+  ) into r;
+  return r;
+end $$;
+
+-- a configuração salva o teto de respostas
+create or replace function public.guia_whats_salvar(c jsonb)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare
+  num text;
+begin
+  if not public.eh_plataforma() then raise exception 'só a plataforma configura o WhatsApp do guia'; end if;
+  if c ? 'numero' then
+    num := nullif(regexp_replace(coalesce(c ->> 'numero', ''), '\D', '', 'g'), '');
+    if num is not null and length(num) in (10, 11) then num := '55' || num; end if;
+    if num is not null and num !~ '^[1-9][0-9]{9,14}$' then raise exception 'número inválido: use DDD e número (com 55 na frente, se quiser)'; end if;
+  end if;
+  begin
+    update public.guia_whats_config g set
+      ligado = coalesce((c ->> 'ligado')::boolean, g.ligado),
+      numero = case when c ? 'numero' then num else g.numero end,
+      instancia = coalesce(nullif(lower(btrim(c ->> 'instancia')), ''), g.instancia),
+      botoes = case when c ? 'botoes' then array(select distinct x from jsonb_array_elements_text(c -> 'botoes') x order by 1) else g.botoes end,
+      provedor = coalesce(nullif(c ->> 'provedor', ''), g.provedor),
+      modelo = case when c ? 'modelo' then nullif(btrim(c ->> 'modelo'), '') else g.modelo end,
+      orientacao = coalesce(nullif(btrim(c ->> 'orientacao'), ''), g.orientacao),
+      msg_cliente = coalesce(nullif(btrim(c ->> 'msg_cliente'), ''), g.msg_cliente),
+      msg_salao = coalesce(nullif(btrim(c ->> 'msg_salao'), ''), g.msg_salao),
+      msg_salao_resposta = coalesce(nullif(btrim(c ->> 'msg_salao_resposta'), ''), g.msg_salao_resposta),
+      mostrar_contato_salao = coalesce((c ->> 'mostrar_contato_salao')::boolean, g.mostrar_contato_salao),
+      limite_dia = coalesce((c ->> 'limite_dia')::integer, g.limite_dia),
+      limite_respostas = coalesce((c ->> 'limite_respostas')::integer, g.limite_respostas),
+      retencao_dias = coalesce((c ->> 'retencao_dias')::integer, g.retencao_dias),
+      atualizado_em = now(), atualizado_por = auth.uid()
+     where g.id = 1;
+  exception
+    when check_violation then
+      raise exception '%', case
+        when sqlerrm ~ 'instancia' then 'instância inválida: letras minúsculas, números, - e _ (2 a 40)'
+        when sqlerrm ~ 'botoes' then 'botões: whatsapp, ligar ou quero_marcar'
+        when sqlerrm ~ 'provedor' then 'IA: groq ou claude'
+        when sqlerrm ~ 'modelo' then 'modelo inválido'
+        when sqlerrm ~ 'limite_respostas' then 'respostas por número por dia: de 1 a 500'
+        when sqlerrm ~ 'limite_dia' then 'limite por dia: de 1 a 1000'
+        when sqlerrm ~ 'retencao_dias' then 'guardar as conversas: de 7 a 730 dias'
+        when sqlerrm ~ 'orientacao' then 'a orientação da Mel: de 20 a 6000 letras'
+        when sqlerrm ~ 'msg_' then 'mensagem curta ou longa demais'
+        else sqlerrm end;
+    when invalid_text_representation then raise exception 'valor inválido num campo de número ou sim/não';
+  end;
+  if (select ligado and numero is null from public.guia_whats_config where id = 1) then
+    update public.guia_whats_config set ligado = false where id = 1;
+    raise exception 'para ligar, informe o número do WhatsApp do guia';
+  end if;
+  return (select to_jsonb(g) from public.guia_whats_config g where g.id = 1);
+end $$;
+
 do $$
 begin
-  raise notice '196: site_minha_cidade (pelo IP ou pelo GPS, sem guardar), site_ao_vivo(horas_) com quem passou no período, a Mel sempre anota e tenta o número do salão';
+  raise notice '196: a Mel acha o salão pelo slug, cidade/slug ou nome em frase (guia_whats_buscar), limite_respostas por número por dia, respostas_hoje no contexto; site_minha_cidade (pelo IP ou pelo GPS, sem guardar), site_ao_vivo(horas_) com quem passou no período, a Mel sempre anota e tenta o número do salão';
 end $$;
 
 insert into public.migracoes_aplicadas (arquivo) values ('196_local_e_periodo.sql') on conflict (arquivo) do nothing;

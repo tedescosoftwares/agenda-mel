@@ -32,7 +32,7 @@ export type Saida = {
   dados?: Dados
   erro?: string
 }
-type Dados = { nome?: string; servico?: string; preferencia?: string; observacao?: string }
+type Dados = { nome?: string; servico?: string; preferencia?: string; observacao?: string; pos_envio?: number }
 type Lugar = {
   id: string; nome: string; categoria?: string | null; cidade?: string | null; cidade_slug?: string; slug?: string; uf?: string | null
   bairro?: string | null; endereco?: string | null; servicos?: string[] | null; horarios?: unknown; telefone?: string | null; whatsapp?: string | null
@@ -41,7 +41,7 @@ type Lugar = {
 type Conversa = { id: number; telefone: string; lugar_id: string | null; estado: string; dados: Dados; mensagens: Array<{ q: string; t: string; em?: string }>; lugar?: Lugar | null }
 type Config = {
   ligado: boolean; numero: string | null; instancia: string; provedor: string; modelo: string | null; orientacao: string
-  msg_cliente: string; msg_salao: string; msg_salao_resposta: string; mostrar_contato_salao: boolean
+  msg_cliente: string; msg_salao: string; msg_salao_resposta: string; mostrar_contato_salao: boolean; limite_respostas?: number | null
 }
 
 export const MODELO_PADRAO: Record<string, string> = { groq: 'openai/gpt-oss-120b', claude: 'claude-haiku-5-5' }
@@ -59,13 +59,23 @@ export function telefoneBonito(e164: string | null | undefined): string {
 // minúsculo, sem acento, sem pontuação nas pontas (para reconhecer SAIR, QUERO, VOLTAR...)
 export const palavra = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim()
 
-// o código do salão na mensagem: "código: itanhaem/studio-lirio", "ref itanhaem/studio-lirio" ou o link da página
+// 3.49.2: o que dispensa a IA (token à toa). Depois do resumo, um "sim" ou "não" seco (ou um 👍) já decide; depois do
+// envio, a Mel responde mais POS_ENVIO vezes e fica quieta; só emoji não vai à IA; e o teto do dia (limite_respostas)
+const SIM_CURTO = /^(sim|s|ss|sim sim|sim pode|sim quero|ok|okay|okey|pode|pode sim|pode ser|pode enviar|pode mandar|pode manda|pode ir|isso|isso mesmo|isso ai|claro|claro que sim|confirmo|confirmado|manda|manda sim|envia|enviar|certo|beleza|bora|vai|vamos|yes|uhum|aham|correto|perfeito|otimo|top|show|fechado|fechou|combinado|quero|quero sim)$/
+const NAO_CURTO = /^(nao|n|nao quero|nao precisa|nao obrigada|nao obrigado|nao nao|cancela|cancelar|cancele|desisto|desisti|deixa|deixa pra la|esquece|esqueca)$/
+const SIM_EMOJI = /^[\s👍✅👌🙏💗❤️🥰😊🏻🏼🏽🏾🏿]+$/u
+export const POS_ENVIO = 3
+
+// o código do salão na mensagem: "código: itanhaem/studio-lirio", "ref itanhaem/studio-lirio", o link da página ou,
+// desde a 3.49.2, um "itanhaem/studio-lirio" solto (datas como 15/10 e 24/7 não contam)
 export function codigoDoTexto(texto: string): { cidade: string; slug: string } | null {
   const t = String(texto ?? '')
   const m = t.match(/(?:c[oó]digo|ref)\s*[:#]?\s*([a-z0-9-]{2,60})\/([a-z0-9-]{2,80})/i) ?? t.match(/\/saloes\/([a-z0-9-]{2,60})\/([a-z0-9-]{2,80})/i)
+    ?? t.match(/(?:^|[\s(:,"'])([a-z0-9][a-z0-9-]{1,59})\/([a-z0-9][a-z0-9-]{1,79})(?=$|[\s).,!?;"'])/i)
   if (!m) return null
   const cidade = m[1].toLowerCase(), slug = m[2].toLowerCase()
-  if (['bairro', 'horario', 'regiao'].includes(slug) || cidade === 'regiao') return null
+  if (['bairro', 'horario', 'regiao'].includes(slug) || cidade === 'regiao' || cidade === 'saloes') return null
+  if (/^\d+$/.test(cidade) || /^\d+$/.test(slug)) return null
   return { cidade, slug }
 }
 
@@ -197,7 +207,7 @@ export async function atenderGuia(deps: Deps, e: Entrada, opcoes: { teste?: bool
   const tel = teste ? e.telefone : so(e.telefone)
   const texto = String(e.texto ?? '').trim().slice(0, 1500)
   if (!tel || !texto) return { responder: null, acao: 'vazio' }
-  const ctx = (await chamar(deps, 'guia_whats_contexto', { tel_: tel })) as { config: Config; saida: string | null; conversa: Conversa | null; lead_salao: { id: number; salao_nome: string; status: string; ja_respondeu: boolean } | null }
+  const ctx = (await chamar(deps, 'guia_whats_contexto', { tel_: tel })) as { config: Config; saida: string | null; conversa: Conversa | null; respostas_hoje?: number; lead_salao: { id: number; salao_nome: string; status: string; ja_respondeu: boolean } | null }
   const cfg = ctx?.config
   if (!cfg) return { responder: null, acao: 'sem_config' }
   if (!cfg.ligado && !teste) return { responder: null, acao: 'desligado' }
@@ -271,9 +281,38 @@ export async function atenderGuia(deps: Deps, e: Entrada, opcoes: { teste?: bool
   // 5. a conversa com a Mel
   const estadoAntes = conversa?.estado ?? 'conversando'
   const dadosAntes: Dados = { ...(conversa?.dados ?? {}) }
-  const historico: Mensagem[] = (conversa?.mensagens ?? []).slice(-20).map((m) => ({ role: m.q === 'cliente' ? 'user' as const : 'assistant' as const, content: String(m.t ?? '').slice(0, 800) }))
-  historico.push({ role: 'user', content: texto })
-  const r = await deps.ia({ provedor: cfg.provedor, modelo: cfg.modelo || MODELO_PADRAO[cfg.provedor] || MODELO_PADRAO.groq, sistema: sistema(cfg, lugar, dadosAntes, estadoAntes, e.nomePerfil, agora), mensagens: historico })
+  // 3.49.2: o teto do dia por número (a Plataforma configura): avisa uma vez, depois silêncio
+  const limite = Math.max(1, Number(cfg.limite_respostas) || 30)
+  const hoje = Number(ctx.respostas_hoje ?? 0)
+  if (!teste && hoje >= limite) {
+    if (hoje > limite) return { responder: null, acao: 'limite_respostas', estado: estadoAntes }
+    const resposta = `Por hoje já conversamos bastante por aqui 💗 Amanhã a gente continua. Se já me passou seu pedido, o ${lugar.nome} te chama.`
+    await guardar(resposta, estadoAntes, dadosAntes, lugar.id)
+    return { responder: resposta, acao: 'limite_respostas', estado: estadoAntes }
+  }
+  // depois do envio: mais POS_ENVIO respostas (dúvidas), uma despedida e silêncio
+  const depois = Number(dadosAntes.pos_envio ?? 0)
+  if (estadoAntes === 'enviado' && depois >= POS_ENVIO) {
+    if (depois > POS_ENVIO) return { responder: null, acao: 'pos_envio', estado: estadoAntes }
+    const resposta = `O ${lugar.nome} já recebeu seu pedido e vai te chamar por aqui 💗 Se quiser marcar em outro salão, me manda o link da página dele no guia.`
+    await guardar(resposta, estadoAntes, { ...dadosAntes, pos_envio: depois + 1 }, lugar.id)
+    return { responder: resposta, acao: 'pos_envio', estado: estadoAntes }
+  }
+  // o "sim"/"não" seco depois do resumo decide sem IA; só emoji (fora disso) não vai à IA
+  const curto = estadoAntes === 'confirmando' ? (SIM_CURTO.test(p) || (!p && SIM_EMOJI.test(texto)) ? 'sim' : NAO_CURTO.test(p) ? 'nao' : null) : null
+  if (!p && !curto) {
+    const resposta = 'Só consigo ler texto por aqui 😅 Me escreve o que você precisa?'
+    await guardar(resposta, estadoAntes, dadosAntes, lugar.id)
+    return { responder: resposta, acao: 'sem_texto', estado: estadoAntes }
+  }
+  let r: Awaited<ReturnType<typeof deps.ia>>
+  if (curto) {
+    r = { leitura: { resposta: '', nome: '', servico: '', preferencia: '', observacao: '', cliente_confirmou_envio: curto === 'sim', cancelar: curto === 'nao', quer_apagar_dados: false } }
+  } else {
+    const historico: Mensagem[] = (conversa?.mensagens ?? []).slice(-12).map((m) => ({ role: m.q === 'cliente' ? 'user' as const : 'assistant' as const, content: String(m.t ?? '').slice(0, 500) }))
+    historico.push({ role: 'user', content: texto })
+    r = await deps.ia({ provedor: cfg.provedor, modelo: cfg.modelo || MODELO_PADRAO[cfg.provedor] || MODELO_PADRAO.groq, sistema: sistema(cfg, lugar, dadosAntes, estadoAntes, e.nomePerfil, agora), mensagens: historico })
+  }
   if (!r.leitura) {
     const resposta = 'Desculpa, me enrolei aqui. Pode me mandar de novo?'
     await guardar(resposta, estadoAntes, dadosAntes, lugar.id)
@@ -290,6 +329,7 @@ export async function atenderGuia(deps: Deps, e: Entrada, opcoes: { teste?: bool
     if (v) dados[k] = v
   }
   const mudou = (['nome', 'servico', 'preferencia', 'observacao'] as const).some((k) => (dados[k] ?? '') !== (dadosAntes[k] ?? ''))
+  if (estadoAntes === 'enviado') dados.pos_envio = depois + 1
   const completo = !!(dados.nome && dados.servico && dados.preferencia)
 
   if (lido.cancelar && estadoAntes !== 'enviado') {

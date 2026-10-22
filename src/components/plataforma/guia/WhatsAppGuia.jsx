@@ -22,7 +22,7 @@ const CONEXAO = {
   nao_existe: ['Ainda não conectado', 'cinza'], erro: ['A Evolution não respondeu', 'carmim'], desconhecido: ['Estado desconhecido', 'cinza'],
 }
 const BOTOES = [['whatsapp', 'WhatsApp', 'o botão WhatsApp do salão'], ['ligar', 'Ligar', 'o botão Ligar (vira WhatsApp)'], ['quero_marcar', 'Quero marcar', 'o botão "Quero marcar aqui" (em vez do formulário)']]
-const CAMPOS_CONFIG = ['ligado', 'numero', 'instancia', 'botoes', 'provedor', 'modelo', 'orientacao', 'msg_cliente', 'msg_salao', 'msg_salao_resposta', 'mostrar_contato_salao', 'limite_dia', 'retencao_dias']
+const CAMPOS_CONFIG = ['ligado', 'numero', 'instancia', 'botoes', 'provedor', 'modelo', 'orientacao', 'msg_cliente', 'msg_salao', 'msg_salao_resposta', 'mostrar_contato_salao', 'limite_dia', 'limite_respostas', 'retencao_dias']
 const tel = (d) => { const s = String(d ?? '').replace(/\D/g, ''); return s.length === 13 && s.startsWith('55') ? `(${s.slice(2, 4)}) ${s.slice(4, 9)}-${s.slice(9)}` : s.length === 12 && s.startsWith('55') ? `(${s.slice(2, 4)}) ${s.slice(4, 8)}-${s.slice(8)}` : s ? `+${s}` : '' }
 const quando = (iso) => (iso ? new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '')
 const Pilula = ({ par }) => <span className={'pg-wa-pilula ' + (par?.[1] ?? 'cinza')}>{par?.[0] ?? '?'}</span>
@@ -162,6 +162,7 @@ export default function WhatsAppGuia({ g }) {
                 <textarea rows={3} value={form.msg_salao_resposta ?? ''} onChange={(e) => campo('msg_salao_resposta', e.target.value)} maxLength={1500} /></label>
               <div className="pg-wa-grade3">
                 <label>Limite de pedidos por dia<input type="number" min={1} max={1000} value={form.limite_dia ?? 40} onChange={(e) => campo('limite_dia', Number(e.target.value))} /></label>
+                <label>Respostas da Mel por número por dia <span className="muted">(depois disso, avisa e silencia)</span><input type="number" min={1} max={500} value={form.limite_respostas ?? 30} onChange={(e) => campo('limite_respostas', Number(e.target.value))} data-teste="wa-limite-respostas" /></label>
                 <label>Guardar conversas e pedidos por (dias)<input type="number" min={7} max={730} value={form.retencao_dias ?? 90} onChange={(e) => campo('retencao_dias', Number(e.target.value))} /></label>
                 <label className="pg-wa-check"><input type="checkbox" checked={!!form.mostrar_contato_salao} onChange={(e) => campo('mostrar_contato_salao', e.target.checked)} /> A cliente recebe o contato do salão no fim</label>
               </div>
@@ -248,7 +249,7 @@ function Chat({ mensagens, fim }) {
 // escrita (com o código do salão escolhido); no "sim", a mensagem que o salão receberia aparece em vez de sair
 function Simulador({ g, cfg }) {
   const lista = Array.isArray(g?.lista) ? g.lista.filter((l) => l.status === 'publicado' && !l.salon_id) : []
-  const [caminho, setCaminho] = useState(() => (lista[0] ? `${lista[0].cidade_slug}/${lista[0].slug}` : 'itanhaem/studio-lirio'))
+  const [caminho, setCaminho] = useState(() => (lista[0] ? `${lista[0].cidade_slug}/${lista[0].slug}` : ''))
   const [mensagens, setMensagens] = useState([])
   const [texto, setTexto] = useState('')
   const [previa, setPrevia] = useState(null)
@@ -275,8 +276,9 @@ function Simulador({ g, cfg }) {
     <Painel Icon={Bot} titulo="Testar a Mel" sub="Converse como se fosse uma cliente que tocou no botão de um salão. Nada é enviado a ninguém; no “sim”, você vê a mensagem que o salão receberia." className="pg-wa-sim" direita={mensagens.length > 0 && <button type="button" className="plat-link" onClick={reiniciar}><RotateCcw size={14} /> Recomeçar</button>}>
       {mensagens.length === 0 ? (
         <div className="pg-wa-sim-inicio">
-          <label>Salão (cidade/slug da página)<input list="pg-wa-saloes" value={caminho} onChange={(e) => setCaminho(e.target.value)} data-teste="wa-sim-salao" />
+          <label>Salão (cidade/slug, como no endereço da página)<input list="pg-wa-saloes" value={caminho} onChange={(e) => setCaminho(e.target.value)} placeholder="itanhaem/studio-lirio" data-teste="wa-sim-salao" />
             <datalist id="pg-wa-saloes">{lista.slice(0, 200).map((l) => <option key={l.id} value={`${l.cidade_slug}/${l.slug}`}>{l.nome}</option>)}</datalist></label>
+          {lista.length === 0 && <p className="muted">A lista vem da cidade escolhida na aba Guia (só salões publicados). Sem ela, escreva cidade/slug como está no endereço da página do salão.</p>}
           <button type="button" className="btn btn-primary" onClick={comecar} disabled={ocupado} data-teste="wa-sim-comecar">{ocupado ? <LoaderCircle className="pg-gira" size={15} /> : <MessageCircle size={15} />} Tocar no botão do salão</button>
           <p className="muted">A IA: {cfg?.provedor === 'claude' ? 'Claude' : 'Groq'}{cfg?.modelo ? ` · ${cfg.modelo}` : ''}. Cada mensagem chama a IA de verdade.</p>
         </div>

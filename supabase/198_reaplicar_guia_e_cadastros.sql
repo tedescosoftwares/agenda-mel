@@ -291,6 +291,9 @@ end $$;
 revoke execute on function public.guia_whats_lead_do_salao(text, text) from public, anon, authenticated;
 
 -- ===== os dados do cadastro na aba Cadastros (estava na 197) =====
+-- a função já existe na produção com o tipo de retorno antigo (sem 'cadastro'); create or replace não troca o
+-- tipo de retorno, então derruba antes. drop if exists é seguro mesmo quando ela ainda não existe.
+drop function if exists public.plataforma_cadastros(integer);
 create or replace function public.plataforma_cadastros(dias_ integer default 30)
 returns table (
   id uuid, nome text, tipo text, slug text, cidade text, ativo boolean, criado_em timestamptz,

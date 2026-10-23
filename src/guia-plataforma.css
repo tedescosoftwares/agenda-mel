@@ -656,6 +656,14 @@
 .pg-wa-ciclo legend { font-size: 0.82rem; font-weight: 600; padding: 0 0.3rem; }
 .pg-wa-ciclo legend .muted { font-weight: 400; }
 .pg-wa-ocioso { border-top: 1px dashed var(--fio); padding-top: 0.7rem; margin-top: 0.1rem; display: flex; flex-direction: column; gap: 0.7rem; }
+/* 3.55: a aba Onboarding reaproveita o visual da aba WhatsApp (.pg-wa-*); isto é só o que é dela */
+.pg-onb-origens { display: flex; flex-wrap: wrap; gap: 0.3rem 0.7rem; align-items: center; margin: -0.3rem 0 0.6rem; font-size: 0.8rem; }
+.pg-onb-origens span { display: inline-flex; gap: 0.3rem; align-items: center; }
+.pg-onb-passo { display: flex; flex-direction: column; gap: 0.3rem; padding-top: 0.6rem; border-top: 1px dashed var(--fio); }
+.pg-onb-passo:first-of-type { border-top: 0; padding-top: 0; }
+.pg-onb-passo-topo { display: flex; justify-content: space-between; align-items: center; gap: 0.6rem; flex-wrap: wrap; font-size: 0.84rem; }
+.pg-onb-passo textarea:disabled { opacity: 0.55; }
+.pg-onb-sim-origem { display: flex; flex-direction: column; gap: 0.4rem; }
 .pg-wa-ocioso input:disabled, .pg-wa-ocioso textarea:disabled { opacity: 0.55; }
 .pg-wa-nota { font-size: 0.74rem; margin: 0; line-height: 1.45; }
 .pg-wa-acoes { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }

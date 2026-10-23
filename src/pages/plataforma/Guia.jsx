@@ -17,12 +17,13 @@ import Abordagem from '../../components/plataforma/guia/Abordagem'
 import PublicarAgora from '../../components/plataforma/guia/PublicarAgora'
 import AoVivo from '../../components/plataforma/guia/AoVivo'
 import WhatsAppGuia from '../../components/plataforma/guia/WhatsAppGuia'
+import OnboardingGuia from '../../components/plataforma/guia/OnboardingGuia'
 import { naoContarAqui } from '../../lib/eventos'
 import { IAS, iaLembrada, lembrarIa, modeloLembrado, lembrarModelo } from '../../lib/guiaIa'
 import { lerEmFatias, COLUNAS_LISTA, COLUNAS_LISTA_ANTIGAS, colunaFalta, consultaGlobal, POR_PAGINA } from '../../lib/guiaPlataformaDados'
 import { agruparPorRegiao, regiaoDaCidade } from '../../lib/guiaRegioes'
 import { slugificar } from '../../lib/guia'
-import { ClipboardCheck, Globe2, Upload, MapPinned, Inbox, X, BarChart3, Handshake, MapPin, RefreshCw, LoaderCircle, Radio, MessageCircle } from 'lucide-react'
+import { ClipboardCheck, Globe2, Upload, MapPinned, Inbox, X, BarChart3, Handshake, MapPin, RefreshCw, LoaderCircle, Radio, MessageCircle, UserPlus } from 'lucide-react'
 import '../../guia-plataforma.css'
 
 // Guia de salões (3.9): uma página pública para cada salão da região, que
@@ -51,6 +52,7 @@ const ABAS = [
   ['aovivo', 'Ao vivo', Radio], // 3.44
   ['abordagem', 'Abordagem', Handshake],
   ['whatsapp', 'WhatsApp', MessageCircle], // 3.48
+  ['onboarding', 'Onboarding', UserPlus], // 3.55
   ['publicadas', 'Publicadas', Globe2],
   ['importar', 'Importar', Upload],
   ['paginas', 'Páginas da cidade', MapPinned],
@@ -892,6 +894,7 @@ export default function Guia() {
       {aba === 'aovivo' && <AoVivo />}
       {aba === 'abordagem' && <Abordagem g={g} />}
       {aba === 'whatsapp' && <WhatsAppGuia g={g} />}
+      {aba === 'onboarding' && <OnboardingGuia />}
       {aba === 'publicadas' && <Publicadas g={g} />}
       {aba === 'importar' && <><Importar g={g} /><ImportarFotos g={g} /><MiniaturasAntigas g={g} /></>}
       {aba === 'paginas' && <PaginasCidade g={g} />}

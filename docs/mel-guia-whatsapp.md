@@ -120,9 +120,9 @@ Pré-requisitos: guia **Conectado** e **Ligado**, `numero_avisos` preenchido, mi
 
 A ordem de sempre (você roda):
 
-1. **bat B** — aplica as migrações novas: **199, 200, 201, 202**.
-2. **bat 9** — publica as funções: **whatsapp-webhook** (ganhou `?tarefa=ociosas`) e **guia-whats** (simular com "como a dona").
-3. **bat 2** — publica a Plataforma (versão **3.54.1**).
+1. **bat B** — aplica as migrações novas: **199, 200, 201, 202, 203**.
+2. **bat 9** — publica as funções: **whatsapp-webhook** (ganhou `?tarefa=ociosas` e, na 3.55, o agente de onboarding antes da Mel) e **guia-whats** (simular com "como a dona"; na 3.55, `simular_onboarding`/`reiniciar_onboarding`).
+3. **bat 2** — publica a Plataforma (versão **3.55.0**).
 4. **VPS (opcional, para o ocioso ativo):** `cd evolution && ./cutucar-ociosas.sh --cron` (com `EVOLUTION_WEBHOOK_TOKEN` no `.env`).
 5. Na aba WhatsApp: preencha **"WhatsApp da equipe para avisos"**, revise os textos (encerramento, "posso encerrar?", mensagem da dona) e ligue o ocioso quando o cron estiver no ar.
 
@@ -158,3 +158,41 @@ A ordem de sempre (você roda):
 - A Mel **nunca** passa o telefone do salão à cliente.
 - "Apagar meus dados" apaga tudo da pessoa; **SAIR** tira o salão.
 - A política de privacidade fala em **90 dias** de guarda e que a Mel se apresenta como **MIMO** — se mudar a retenção para mais, atualize a política.
+
+---
+
+## 9. 3.55 — O agente de onboarding pelo WhatsApp (migração 203)
+
+### O que é
+Um **segundo agente no mesmo número da Mel**, separado dela: persona, contexto, passos, mensagens e configuração próprios (aba **Onboarding** da Plataforma). Enquanto a Mel-cliente anota um pedido e passa ao salão, este atende a **profissional** (dona de salão ou autônoma) que quer criar a conta na MIMO Agenda — e faz o cadastro conversando. **Senha nunca pelo WhatsApp:** no fim ele manda um link seguro (`mimo.com.vc/comecar?c=<token>`, com validade) que abre o `/comecar` já pré-preenchido; na tela ela só cria a senha, aceita os termos e escolhe o plano.
+
+### Como a mensagem chega ao agente (o webhook decide, antes da Mel)
+1. Já existe uma **conversa de onboarding aberta** deste número (48 h desde a última mensagem) → continua nela.
+2. A mensagem traz um **gatilho** (`gatilhos` na aba): o **1º gatilho é a frase do botão** das landings (origem *cta*: intenção certa, começa direto); qualquer outro é **intenção percebida** (origem *intencao*): o agente **primeiro pergunta** se ela quer mesmo criar a conta — quem é cliente diz que não e volta à Mel, sem ser arrastada.
+3. Nada disso → a Mel-cliente, como sempre. Qualquer erro no agente (a migração 203 ainda não aplicada, por exemplo) também passa para a Mel: o agente novo nunca derruba o atendimento da cliente.
+
+### Os passos
+tipo (autônoma ou salão) → **CNPJ** (dígito verificador; consulta na Receita pela BrasilAPI; **só ATIVA passa** — baixado, inapto, suspenso, nulo ou não encontrado é recusado e pedido de novo; se a consulta estiver fora do ar, tenta de novo e, se persistir, **não aceita no escuro**) — ou **"não tenho"** → **CPF** (dígito validado; o Asaas valida de fato ao cobrar) → endereço (o do CNPJ, mostrado para confirmar; ou pedido) → nome do negócio (sugere o fantasia do CNPJ) → nº de profissionais → serviços (e explica que o cadastro completo é no painel) → horários → e-mail (validado) → explicações (link próprio, QR code, lembretes; tira dúvidas) → **o link**. Serviços, horários, e-mail e explicações são opcionais (toggles); o texto de cada passo é editável.
+
+### O que é determinístico e o que é IA
+Sem IA: gatilhos, o sim/não da confirmação, CPF/CNPJ/e-mail, a consulta do CNPJ, o "sim" do endereço, a tolerância, o link, o reenvio ("não recebi"). A IA conversa: lê texto livre, agradece e faz a pergunta do passo seguinte, explica — guiada pela orientação e pelo texto de cada passo. Quando o sistema já leu a mensagem (um dado entrou), a IA é avisada e **não extrai nada dela** (senão "sim" vira nome de salão).
+
+### Tolerância
+`tolerancia` (padrão 3) e `tolerancia_cnpj` (padrão 3): **encerra na N-ª resposta inválida seguida** — ela lê o motivo e a despedida (`msg_encerrar`) — e a **equipe recebe um aviso** no WhatsApp de avisos (`numero_avisos`, aba WhatsApp) com o passo em que parou. Conversa que não anda por `tolerancia + 3` mensagens também encerra. Os contadores zeram a cada resposta válida.
+
+### A aba Onboarding (Plataforma)
+Ligar (exige a Mel ligada e com número), IA e modelo, orientação (persona), gatilhos (uma frase por linha; a 1ª é a do botão), tolerâncias, validade do link, os 9 passos (texto e liga/desliga), as 9 mensagens fixas, o **simulador** (pelo botão ou por intenção; a consulta de CNPJ é de verdade; os avisos voltam como prévia) e **quem entrou** (origem, estado, onde parou, link enviado/aberto, conta criada, atendida pela equipe, a conversa). CPF aparece mascarado.
+
+### O `/comecar?c=token`
+Lê o rascunho (`guia_onboarding_por_token`, pública, só com o link enviado e dentro da validade) e preenche tipo, CNPJ ou CPF, razão social, nome, endereço, e-mail e WhatsApp; mostra "Preenchi com o que você me contou pelo WhatsApp". O token fica no navegador: no `/onboarding`, quando a conta nasce, o rascunho é amarrado ao salão (`guia_onboarding_concluir`) e horários/serviços/nº de profissionais aparecem como lembrete (o nº já entra no passo 4).
+
+### As landings
+Botão **"Criar conta pelo WhatsApp"** (herói e chamada final das páginas `/agenda-para-*`), que abre o número da Mel com a frase do 1º gatilho. Só aparece com o agente ligado (`guia_onboarding_publico`).
+
+### Referência técnica
+- **203** `203_guia_onboarding.sql` — `guia_onboarding_config` (uma linha), `guia_onboarding_leads` (conversa + rascunho + token + vínculo); `guia_onboarding_publico` (anon), `guia_onboarding_por_token` (anon), `guia_onboarding_concluir` (authenticated, só o dono do salão); `contexto`, `conversa_salvar`, `gerar_link`, `apagar` (service role); `painel`, `lead`, `lead_atendido`, `config_salvar` (Plataforma).
+- `supabase/functions/_shared/guia_onboarding.ts` — o motor (`atenderOnboarding`, `validarCpf/validarCnpj`, `consultarCnpjDe` (BrasilAPI), `iaOnbDe`).
+- `supabase/functions/_shared/ia_json.ts` — a chamada da IA com esquema JSON, agora compartilhada pelos dois agentes (`guia_whats.iaDe` virou um atalho dela).
+- `whatsapp-webhook/index.ts` — o agente olha primeiro; `acao: 'passa'` → Mel. `guia-whats/index.ts` — `simular_onboarding`, `reiniciar_onboarding`.
+- `src/components/plataforma/guia/OnboardingGuia.jsx`, `src/lib/demoGuiaOnboarding.js`, `src/lib/guiaOnboarding.js` (público), `src/components/site/Whats.jsx` (`BotaoCriarContaWhats`), `src/pages/Onboarding.jsx` (`?c=token`).
+- Versão **3.55.0-mimo**.

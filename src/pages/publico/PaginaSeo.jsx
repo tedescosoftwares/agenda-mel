@@ -10,7 +10,7 @@ import { REGRAS } from '../../lib/acesso'
 import { NavSite, PeSite, Foto, Coracao, Cabeca, useRevelar, comecarEm } from '../../components/site/Pecas'
 import { MockDesktop, PalcoCelular, MockProfissional, MockRetorno, MockEspera, MockWhats, MockPagamento, MockQr } from '../../components/site/Mocks'
 import '../../landing.css'
-import { BotaoWhats, FaixaWhats } from '../../components/site/Whats'
+import { BotaoWhats, FaixaWhats, BotaoCriarContaWhats } from '../../components/site/Whats'
 
 // Uma página por intenção de busca. A estrutura é a mesma: herói com
 // foto, a rotina real (cenas do salão e como a MIMO resolve), o produto
@@ -88,6 +88,7 @@ export default function PaginaSeo() {
                 <p className="ld-lead">{pagina.sub}</p>
                 <div className="ld-hero-cta">
                   <a className="ld-btn ld-primario ld-grande" href={cta}>{pagina.cta.rotulo} <ArrowRight size={18} /></a>
+                  <BotaoCriarContaWhats />
                   <a className="ld-btn ld-fantasma ld-grande" href={pagina.modulos ? '#produto' : '/#como-funciona'}>Ver como funciona</a>
                 </div>
                 <ul className="ld-prova">{pagina.provas.map((p) => <li key={p}><i><Check size={12} /></i> {p}</li>)}</ul>
@@ -206,7 +207,7 @@ export default function PaginaSeo() {
               <div>
                 <h2>{autonoma ? 'Sua agenda pronta hoje.' : 'Comece hoje mesmo.'}</h2>
                 <p>{autonoma ? 'Crie sua conta grátis, cadastre seus serviços e compartilhe seu link. Sua cliente marca sozinha.' : `Cadastre o salão, monte a equipe e coloque o link no ar. Os primeiros ${REGRAS.testeDias} dias são grátis, sem cartão.`}</p>
-                <div className="ld-cta-lado"><a className="ld-btn ld-branco ld-grande" href={cta}>{pagina.cta.rotulo} <ArrowRight size={18} /></a><BotaoWhats chamada={autonoma ? 'autonoma' : 'demonstracao'} classe="ld-btn ld-fantasma ld-grande" /></div>
+                <div className="ld-cta-lado"><a className="ld-btn ld-branco ld-grande" href={cta}>{pagina.cta.rotulo} <ArrowRight size={18} /></a><BotaoCriarContaWhats /><BotaoWhats chamada={autonoma ? 'autonoma' : 'demonstracao'} classe="ld-btn ld-fantasma ld-grande" /></div>
               </div>
             </div>
           </div>

@@ -3,6 +3,8 @@
 // guia_contato_config daqui: no demo o recurso nasce ligado, com WhatsApp e Ligar pela MIMO (o "Quero marcar" fica no
 // formulário, para a demo dele continuar valendo).
 
+import { simularOnboarding, reiniciarOnboarding } from './demoGuiaOnboarding'
+
 const h = (min) => new Date(Date.now() - min * 60e3).toISOString()
 
 export const ORIENTACAO_PADRAO = `Você é a Mel, assistente da MIMO, um guia de salões de beleza. Quem escreve encontrou o {salao} no guia da MIMO e quer marcar um horário. Você não é o salão: você anota o pedido e passa para o salão, que chama a cliente aqui no WhatsApp para combinar.
@@ -176,6 +178,9 @@ export function demoGuiaWhats(corpo) {
   if (acao === 'desconectar') { ESTADO = 'close'; return { ok: true } }
   if (acao === 'simular') return simular(corpo)
   if (acao === 'reiniciar') { SIM = null; return { ok: true } }
+  // 3.55: o agente de onboarding (a aba Onboarding), um roteiro à parte (src/lib/demoGuiaOnboarding.js)
+  if (acao === 'simular_onboarding') return simularOnboarding(corpo)
+  if (acao === 'reiniciar_onboarding') { reiniciarOnboarding(); return { ok: true } }
   if (acao === 'reenviar') { const l = LEADS.find((x) => x.id === Number(corpo.lead)); if (!l || !l.salao_tel) throw new Error('não dá para reenviar: o salão pediu para não receber ou não tem WhatsApp'); l.status = 'enviado'; l.erro = null; l.enviado_em = new Date().toISOString(); return { ok: true } }
   throw new Error('ação desconhecida')
 }

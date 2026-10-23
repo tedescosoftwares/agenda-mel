@@ -14,6 +14,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { enviarPor } from '../_shared/canais.ts'
 import { atenderGuia, iaDe, mensagemDoSalao, mensagemDaCliente, type Deps } from '../_shared/guia_whats.ts'
+import { atenderOnboarding, iaOnbDe, consultarCnpjDe, type Deps as DepsOnb } from '../_shared/guia_onboarding.ts'
 
 const URL_SUPABASE = Deno.env.get('SUPABASE_URL') ?? ''
 const CHAVE_ANON = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
@@ -116,8 +117,28 @@ Deno.serve(async (req) => {
     enviar: (instancia, telefone, texto) => enviarPor('evolution', { telefone, corpo: texto, identificador: instancia }),
   })
   const telTeste = `teste-${uid.replace(/-/g, '').slice(0, 12) || 'plataforma'}`
+  // 3.55: o agente de onboarding no simulador da aba Onboarding — a consulta do CNPJ é a de verdade (BrasilAPI, dado
+  // público), para testar o fluxo real sem celular; nada sai para ninguém (teste: os avisos voltam como prévia)
+  const depsOnb = (): DepsOnb => ({
+    rpc: (nome, args) => servico.rpc(nome, args) as unknown as Promise<{ data: unknown; error: { message?: string } | null }>,
+    ia: iaOnbDe(Deno.env, fetch as unknown as Parameters<typeof iaOnbDe>[1]),
+    enviar: (instancia, telefone, texto) => enviarPor('evolution', { telefone, corpo: texto, identificador: instancia }),
+    consultarCnpj: consultarCnpjDe(fetch as unknown as Parameters<typeof consultarCnpjDe>[0]),
+  })
 
   try {
+    if (acao === 'simular_onboarding') {
+      const texto = String(corpo.texto ?? '').slice(0, 1500)
+      if (!texto) return json({ erro: 'mande o texto' }, 400)
+      // a primeira mensagem diz por onde ela entrou: pelo botão (cta: começa direto) ou por intenção (pergunta antes)
+      const origem = corpo.origem === 'cta' || corpo.origem === 'intencao' ? corpo.origem : undefined
+      const r = await atenderOnboarding(depsOnb(), { telefone: telTeste, texto, nomePerfil: 'Você' }, { teste: true, origem })
+      return json({ ok: true, texto, ...r })
+    }
+    if (acao === 'reiniciar_onboarding') {
+      await servico.rpc('guia_onboarding_apagar', { tel_: telTeste })
+      return json({ ok: true })
+    }
     if (acao === 'estado') return json(await estado(cfg))
     if (acao === 'conectar') return json(await conectar(cfg))
     if (acao === 'desconectar') {

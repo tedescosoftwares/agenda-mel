@@ -1,8 +1,20 @@
+import { useEffect, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { MessageCircle } from 'lucide-react'
 import { useConfig } from '../../lib/config'
 import { numeroWhats, linkWhats, chamada, bonito } from '../../lib/contato'
 import { PAGINAS_SEO } from '../../conteudo/paginasSeo'
+import { carregarOnboardingPublico, linkOnboardingWhats } from '../../lib/guiaOnboarding'
+
+// 3.55: criar a conta pelo WhatsApp — o agente de onboarding (migração 203) faz o cadastro conversando e manda o link
+// seguro para a senha. O botão abre a conversa com o número da Mel já com a frase do gatilho; só aparece quando a
+// Plataforma ligou o agente (guia_onboarding_publico).
+export function BotaoCriarContaWhats({ classe = 'ld-btn ld-fantasma ld-grande', rotulo = 'Criar conta pelo WhatsApp' }) {
+  const [p, setP] = useState(null)
+  useEffect(() => { let vivo = true; carregarOnboardingPublico().then((x) => { if (vivo) setP(x) }); return () => { vivo = false } }, [])
+  if (!p?.ligado) return null
+  return <a className={classe + ' ws-botao'} href={linkOnboardingWhats(p)} target="_blank" rel="noopener noreferrer" data-evento="criar_conta_whats"><MessageCircle size={17} />{rotulo}</a>
+}
 
 // O WhatsApp da MIMO no site público (3.2): o mesmo número em cada canto,
 // com uma chamada diferente para cada contexto (ver lib/contato.js).

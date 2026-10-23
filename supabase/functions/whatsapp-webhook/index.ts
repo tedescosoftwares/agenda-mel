@@ -16,6 +16,7 @@ import { enviarPor } from '../_shared/canais.ts'
 import { classificar } from '../_shared/ia.ts'
 import { conversar } from '../_shared/agente.ts'
 import { atenderGuia, iaDe, type Deps as DepsGuia } from '../_shared/guia_whats.ts'
+import { atenderOnboarding, iaOnbDe, consultarCnpjDe, type Deps as DepsOnb } from '../_shared/guia_onboarding.ts'
 
 const db = createClient(
   Deno.env.get('SUPABASE_URL') ?? '',
@@ -334,9 +335,33 @@ Deno.serve(async (req) => {
     ia: iaDe(Deno.env, fetch as unknown as Parameters<typeof iaDe>[1]),
     enviar: (instancia, telefone, texto) => enviarPor('evolution', { telefone, corpo: texto, identificador: instancia }),
   })
+  // 3.55: o agente de onboarding (migração 203) — mesmo número, outro agente; a consulta do CNPJ é a BrasilAPI
+  const depsOnb = (): DepsOnb => ({
+    rpc: (nome, args) => db.rpc(nome, args) as unknown as Promise<{ data: unknown; error: { message?: string } | null }>,
+    ia: iaOnbDe(Deno.env, fetch as unknown as Parameters<typeof iaOnbDe>[1]),
+    enviar: (instancia, telefone, texto) => enviarPor('evolution', { telefone, corpo: texto, identificador: instancia }),
+    consultarCnpj: consultarCnpjDe(fetch as unknown as Parameters<typeof consultarCnpjDe>[0]),
+  })
 
   for (const m of mensagens) {
     if (guia && m.instancia && m.instancia === guia.instancia) {
+      // 3.55: o agente de onboarding olha primeiro. Se a mensagem é dele (conversa de onboarding aberta deste número, ou um
+      // gatilho), ele atende e a Mel-cliente nem vê; se não é ("passa"), segue para a Mel como sempre. Qualquer erro aqui
+      // (a migração 203 ainda não aplicada, por exemplo) também passa: o agente novo nunca derruba o atendimento da cliente.
+      try {
+        const o = await atenderOnboarding(depsOnb(), { telefone: m.telefone, texto: m.texto, nomePerfil: m.nome ?? null })
+        if (o.acao !== 'passa') {
+          respostas.push(`onboarding[${o.acao}]`)
+          if (o.erro) console.error('onboarding:', o.erro)
+          if (o.responder) {
+            const env = await enviarPor('evolution', { telefone: m.telefone, corpo: o.responder, identificador: m.instancia })
+            if (!env.ok) console.error('onboarding: a resposta não saiu:', env.erro)
+          }
+          continue
+        }
+      } catch (e) {
+        console.error('onboarding: não deu para atender (a Mel segue)', e)
+      }
       try {
         const r = await atenderGuia(depsGuia(), { telefone: m.telefone, texto: m.texto, nomePerfil: m.nome ?? null, citado: m.citado ?? null })
         respostas.push(`guia[${r.acao}]`)

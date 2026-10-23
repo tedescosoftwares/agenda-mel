@@ -23,6 +23,7 @@ import { BUSCAS_RPC } from './demoBuscas'
 import { publicarRpc } from './demoPublicar'
 import { AO_VIVO_RPC } from './demoAoVivo'
 import { GUIA_WHATS_RPC } from './demoGuiaWhats'
+import { GUIA_ONBOARDING_RPC } from './demoGuiaOnboarding'
 
 const hoje = new Date()
 const iso = (d) => d.toISOString().slice(0, 10)
@@ -239,6 +240,7 @@ const RPC = {
   ...publicarRpc(() => CONTEUDO), // "Publicar agora" (189): site_pendencias, site_pedir_publicacao, site_publicacao_status
   ...AO_VIVO_RPC, // o site ao vivo (192): site_ao_vivo, site_presenca
   ...GUIA_WHATS_RPC, // o WhatsApp do guia (195): guia_contato_config, guia_whats_painel, guia_whats_salvar, guia_whats_conversa, guia_whats_lead_atendido
+  ...GUIA_ONBOARDING_RPC, // o agente de onboarding (203): guia_onboarding_publico, _painel, _config_salvar, _lead, _lead_atendido, _por_token, _concluir
   documentos_vigentes: () => ({}),
   meus_aceites: () => ({}),
   aceitar_documentos: () => ({ ok: true }),

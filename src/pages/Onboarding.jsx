@@ -116,6 +116,38 @@ export default function Onboarding({ publico = false }) {
   }, [passo])
   const docsLegais = useDocumentosLegais()
 
+  // 3.55: o rascunho da Mel (WhatsApp). No /comecar, pelo ?c= da URL; no /onboarding, pelo token guardado no navegador.
+  // Enquanto lê, a tela espera (o passo 2 lê o estado uma vez, ao montar: tem que estar preenchido antes).
+  const [daMel, setDaMel] = useState(null)
+  const [lendoMel, setLendoMel] = useState(() => publico && !!tokenDaURL())
+  useEffect(() => {
+    const token = (publico ? tokenDaURL() : null) ?? tokenGuardado()
+    if (!token) { setLendoMel(false); return }
+    let vivo = true
+    supabase.rpc('guia_onboarding_por_token', { token_: token }).then(({ data }) => {
+      if (!vivo) return
+      if (data?.ok && data.dados) {
+        setDaMel(data.dados)
+        try { localStorage.setItem(CHAVE_MEL, token) } catch { /* sem armazenamento: o /onboarding fica sem o lembrete */ }
+        if (publico) setS((x) => ({ ...x, ...prefillDaMel(data.dados) }))
+      } else if (!publico) esquecerToken()   // expirou ou já concluiu: nada a amarrar
+      setLendoMel(false)
+    }).catch(() => { if (vivo) setLendoMel(false) })
+    return () => { vivo = false }
+  }, [publico]) // eslint-disable-line react-hooks/exhaustive-deps
+  // o nº de profissionais que ela disse à Mel entra no passo 4, se ela ainda não mexeu nele
+  useEffect(() => {
+    if (publico || !(Number(daMel?.profissionais) > 0)) return
+    setS((x) => (x && !x.equipe_prevista ? { ...x, equipe_prevista: Number(daMel.profissionais) } : x))
+  }, [daMel, publico, s?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  // a conta nasceu: amarra o rascunho ao salão, uma vez, depois de ler o rascunho (a conversão que a Plataforma mede)
+  useEffect(() => {
+    if (publico || lendoMel || !salao?.id) return
+    const token = tokenGuardado()
+    if (!token) return
+    supabase.rpc('guia_onboarding_concluir', { token_: token, salao_: salao.id }).then(esquecerToken, () => {})
+  }, [publico, lendoMel, salao?.id])
+
   useEffect(() => {
     if (!salao || publico) return
     setS((x) => x ?? { ...salao })
@@ -219,7 +251,7 @@ export default function Onboarding({ publico = false }) {
       </div>
     )
   }
-  if (!s) return <div className="page-center"><p className="muted">Carregando…</p></div>
+  if (!s || lendoMel) return <div className="page-center"><p className="muted">Carregando…</p></div>
   if (ativando && !montando) return <AtivarSalao s={s} onAtivado={entrouNoPainel} />
 
   const props = { s, setS, salvando, erro, setErro, seguir, voltar, gravar, gravarQuieto, setEstadoAuto, user, role, autonoma, docsLegais, concluir, pronto, publico, recarregarPerfil, navigate, irPara: (n) => { setPasso(n) } }
@@ -270,6 +302,7 @@ export default function Onboarding({ publico = false }) {
         <ProximoCtx.Provider value={passos[idx + 1]?.rotulo ?? ''}>
           <RoteiroCtx.Provider value={setFeitos}>
           <div key={passo} className="ob-passo-corpo">
+            {daMel && <DicaDaMel d={daMel} passo={passo} />}
             {passo === 1 && <PassoTipo {...props} />}
             {passo === 2 && <PassoDados {...props} />}
             {passo === 3 && <PassoEstrutura {...props} />}
@@ -454,6 +487,43 @@ function PassoTipo({ s, setS, seguir, salvando, setErro }) {
 // endereço do salão pode ser outro. Telefones e e-mails a mais, e o pino
 // no mapa, que a dona arrasta até a porta.
 const enderecoDe = (o) => ({ address: o?.address ?? '', bairro: o?.bairro ?? '', city: o?.city ?? '', uf: o?.uf ?? '', cep: limparCep(o?.cep) })
+
+// 3.55: o cadastro que a Mel fez pelo WhatsApp (migração 203). /comecar?c=<token> lê o rascunho (guia_onboarding_por_token,
+// pública) e preenche o que ela já contou — tipo, CNPJ ou CPF, razão social, nome, endereço, e-mail, WhatsApp —, para
+// na tela ela só criar a senha e aceitar os termos. O token fica no navegador: quando a conta nasce (/onboarding), o
+// rascunho é amarrado ao salão (guia_onboarding_concluir) e o resto (horários, serviços, profissionais) vira lembrete.
+const CHAVE_MEL = 'mimo:onboarding:whats:token'
+const tokenDaURL = () => { try { const t = new URLSearchParams(window.location.search).get('c'); return t && /^[a-zA-Z0-9]{8,40}$/.test(t) ? t : null } catch { return null } }
+const tokenGuardado = () => { try { const t = localStorage.getItem(CHAVE_MEL); return t && /^[a-zA-Z0-9]{8,40}$/.test(t) ? t : null } catch { return null } }
+const esquecerToken = () => { try { localStorage.removeItem(CHAVE_MEL) } catch { /* sem armazenamento */ } }
+function prefillDaMel(d) {
+  const e = d.endereco ?? null
+  const fiscal = !e ? null : (e.logradouro || e.cep)
+    ? { address: [e.logradouro, e.numero].filter(Boolean).join(', ') + (e.complemento ? ` ${e.complemento}` : ''), bairro: e.bairro ?? '', city: e.cidade ?? '', uf: e.uf ?? '', cep: e.cep ?? '' }
+    : { address: e.texto ?? '', bairro: '', city: e.cidade ?? '', uf: '', cep: '' }
+  const zap = soDigitos(d.whatsapp ?? '')
+  return {
+    ...(d.tipo === 'autonoma' || d.tipo === 'salao' ? { tipo: d.tipo } : {}),
+    ...(d.cnpj ? { documento_tipo: 'cnpj', cnpj: d.cnpj } : d.cpf ? { documento_tipo: 'cpf', responsavel_cpf: d.cpf } : {}),
+    ...(d.razao_social ? { razao_social: d.razao_social } : {}),
+    ...(d.nome ? { nome_fantasia: d.nome, name: d.nome } : {}),
+    ...(fiscal ? { endereco_fiscal: fiscal } : {}),
+    ...(d.email ? { email: d.email } : {}),
+    ...(zap ? { whatsapp: formatarFone(zap.startsWith('55') && zap.length >= 12 ? zap.slice(2) : zap) } : {}),
+    ...(Number(d.profissionais) > 0 ? { equipe_prevista: Number(d.profissionais) } : {}),
+  }
+}
+// o que ela já contou à Mel: nos passos 1 e 2, o que foi preenchido (é só conferir); no 3 e no 4, o que não dá para
+// preencher sozinho (horários e serviços têm editor próprio) fica à vista para ela conferir
+function DicaDaMel({ d, passo }) {
+  const itens = passo <= 2
+    ? [d.tipo && (d.tipo === 'autonoma' ? 'autônoma' : 'salão'), d.cnpj && `CNPJ ${formatarCnpj(d.cnpj)}`, d.cpf && `CPF ${formatarCpf(d.cpf)}`, d.nome && `nome ${d.nome}`, d.email && `e-mail ${d.email}`].filter(Boolean)
+    : [d.horarios && `horários: ${d.horarios}`, Array.isArray(d.servicos) && d.servicos.length > 0 && `serviços: ${d.servicos.join(', ')}`, Number(d.profissionais) > 0 && `${d.profissionais} ${Number(d.profissionais) === 1 ? 'profissional' : 'profissionais'}`].filter(Boolean)
+  if (!itens.length) return null
+  return (
+    <div className="ob-retomada ob-da-mel" data-teste="ob-da-mel"><MessageCircle size={15} /><span><strong>{passo <= 2 ? 'Preenchi com o que você me contou pelo WhatsApp 💗' : 'Pelo WhatsApp você me contou:'}</strong> {itens.join(' · ')}.{passo <= 2 ? ' É só conferir e criar a senha.' : ' Confira se ficou igual aqui.'}</span></div>
+  )
+}
 // os contatos guardam de onde vieram: os do cadastro (passo 2) e os do salão (passo 3) não se pisam
 const escopoDe = (c) => (c?.escopo === 'cadastro' ? 'cadastro' : 'salao')
 const contatosDe = (lista, escopo) => (Array.isArray(lista) ? lista.filter((c) => escopoDe(c) === escopo) : [])

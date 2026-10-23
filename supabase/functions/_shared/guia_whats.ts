@@ -40,7 +40,7 @@ type Lugar = {
 }
 type Conversa = { id: number; telefone: string; lugar_id: string | null; estado: string; dados: Dados; mensagens: Array<{ q: string; t: string; em?: string }>; lugar?: Lugar | null }
 type Config = {
-  ligado: boolean; numero: string | null; instancia: string; provedor: string; modelo: string | null; orientacao: string
+  ligado: boolean; numero: string | null; numero_avisos?: string | null; instancia: string; provedor: string; modelo: string | null; orientacao: string
   msg_cliente: string; msg_salao: string; msg_salao_resposta: string; mostrar_contato_salao: boolean; limite_respostas?: number | null
   // 3.51: o ciclo da conversa, configurável na Plataforma (os números abaixo têm padrão quando a config não trouxe)
   msg_encerramento?: string | null; exigir_preferencia?: boolean; pos_envio?: number | null; max_sem_avanco?: number | null; ocioso_horas?: number | null
@@ -398,6 +398,10 @@ export async function atenderGuia(deps: Deps, e: Entrada, opcoes: { teste?: bool
       await chamar(deps, 'guia_whats_lead_resultado', { lead_: ld.id, ok_: env.ok, provider_: env.ok ? env.providerId : null, erro_: env.ok ? null : env.erro, mensagem_: previa })
     } else if (ld?.repetido) {
       ok = ld.status !== 'falhou'
+    } else if (ld?.status === 'sem_contato' && cfg.numero_avisos) {
+      // o salão não tem WhatsApp (ou o número é o da própria cliente): a cliente segue normal, mas avisamos a equipe no
+      // nosso número, para não ficar um pedido no vazio e para dar para medir. O aviso é melhor-esforço (não trava a cliente).
+      try { await deps.enviar(cfg.instancia, so(cfg.numero_avisos), avisoEquipe(lugar, ld)) } catch { /* segue sem o aviso */ }
     }
     const resposta = confirmacao(cfg, lugar, dados, ok)
     await guardar(resposta, 'enviado', dados, lugar.id)
@@ -415,6 +419,19 @@ export async function atenderGuia(deps: Deps, e: Entrada, opcoes: { teste?: bool
   const estado = estadoAntes === 'enviado' ? 'enviado' : completo ? estadoAntes : 'conversando'
   await guardar(resposta, estado, dados, lugar.id)
   return { responder: resposta, acao: 'conversa', estado, dados }
+}
+
+// 3.53: o aviso interno à equipe quando o salão não tem WhatsApp para receber o pedido (ou o número é o da própria
+// cliente). Vai para o nosso número (numero_avisos), nunca para a cliente. É um recado de operação, não um texto dela.
+function avisoEquipe(l: Lugar, ld: { cliente_nome?: string | null; cliente_tel?: string | null; servico?: string | null; preferencia?: string | null; cidade?: string | null }): string {
+  const onde = [l.nome, ld.cidade ?? l.cidade].filter(Boolean).join(' · ')
+  return [
+    '⚠️ MIMO — salão sem WhatsApp',
+    `${onde} não tem WhatsApp para receber o pedido.`,
+    `Cliente: ${ld.cliente_nome || 'sem nome'}${ld.cliente_tel ? ` (${telefoneBonito(ld.cliente_tel)})` : ''}`,
+    `Pedido: ${[ld.servico, ld.preferencia].filter(Boolean).join(' · ') || 'sem detalhes'}`,
+    'Fale com a cliente e, se der, convide o salão para a MIMO.',
+  ].join('\n')
 }
 
 function confirmacao(cfg: Config, l: Lugar, d: Dados, enviado: boolean): string {

@@ -313,6 +313,8 @@ function Simulador({ g, cfg }) {
   const [mensagens, setMensagens] = useState([])
   const [texto, setTexto] = useState('')
   const [previa, setPrevia] = useState(null)
+  const [previaAviso, setPreviaAviso] = useState(null)
+  const [dona, setDona] = useState(false)
   const [ocupado, setOcupado] = useState(false)
   const [erro, setErro] = useState('')
   const lugarDoCaminho = () => {
@@ -326,12 +328,13 @@ function Simulador({ g, cfg }) {
       const r = await chamar('guia-whats', { acao: 'simular', ...corpo })
       setMensagens((m) => [...m, { q: 'cliente', t: r.texto }, ...(r.responder ? [{ q: 'mel', t: r.responder }] : [])])
       if (r.previaSalao) setPrevia(r.previaSalao)
+      if (r.previaAviso) setPreviaAviso(r.previaAviso)
       if (r.acao === 'erro_ia') setErro(r.erro || 'a IA não respondeu')
     } catch (e) { setErro(e.message) } finally { setOcupado(false) }
   }
-  const comecar = () => { const l = lugarDoCaminho(); if (!l.cidade_slug || !l.slug) { setErro('informe cidade/slug, como itanhaem/studio-lirio'); return } setMensagens([]); setPrevia(null); mandar({ lugar: l }) }
-  const enviar = (e) => { e.preventDefault(); const t = texto.trim(); if (!t) return; setTexto(''); mandar({ texto: t }) }
-  const reiniciar = async () => { setMensagens([]); setPrevia(null); setErro(''); try { await chamar('guia-whats', { acao: 'reiniciar' }) } catch { /* sem conversa */ } }
+  const comecar = () => { const l = lugarDoCaminho(); if (!l.cidade_slug || !l.slug) { setErro('informe cidade/slug, como itanhaem/studio-lirio'); return } setMensagens([]); setPrevia(null); setPreviaAviso(null); mandar({ lugar: l, comoDona: dona }) }
+  const enviar = (e) => { e.preventDefault(); const t = texto.trim(); if (!t) return; setTexto(''); mandar({ texto: t, comoDona: dona }) }
+  const reiniciar = async () => { setMensagens([]); setPrevia(null); setPreviaAviso(null); setErro(''); try { await chamar('guia-whats', { acao: 'reiniciar' }) } catch { /* sem conversa */ } }
   return (
     <Painel Icon={Bot} titulo="Testar a Mel" sub="Converse como se fosse uma cliente que tocou no botão de um salão. Nada é enviado a ninguém; no “sim”, você vê a mensagem que o salão receberia." className="pg-wa-sim" direita={mensagens.length > 0 && <button type="button" className="plat-link" onClick={reiniciar}><RotateCcw size={14} /> Recomeçar</button>}>
       {mensagens.length === 0 ? (
@@ -339,14 +342,20 @@ function Simulador({ g, cfg }) {
           <label>Salão (cidade/slug, como no endereço da página)<input list="pg-wa-saloes" value={caminho} onChange={(e) => setCaminho(e.target.value)} placeholder="itanhaem/studio-lirio" data-teste="wa-sim-salao" />
             <datalist id="pg-wa-saloes">{lista.slice(0, 200).map((l) => <option key={l.id} value={`${l.cidade_slug}/${l.slug}`}>{l.nome}</option>)}</datalist></label>
           {lista.length === 0 && <p className="muted">A lista vem da cidade escolhida na aba Guia (só salões publicados). Sem ela, escreva cidade/slug como está no endereço da página do salão.</p>}
-          <button type="button" className="btn btn-primary" onClick={comecar} disabled={ocupado} data-teste="wa-sim-comecar">{ocupado ? <LoaderCircle className="pg-gira" size={15} /> : <MessageCircle size={15} />} Tocar no botão do salão</button>
+          <label className="pg-wa-check"><input type="checkbox" checked={dona} onChange={(e) => setDona(e.target.checked)} data-teste="wa-sim-dona" /> Testar como a <b>dona</b> deste salão <span className="muted">(simula quem escreve do número cadastrado: a Mel reconhece e apresenta a MIMO Agenda)</span></label>
+          <button type="button" className="btn btn-primary" onClick={comecar} disabled={ocupado} data-teste="wa-sim-comecar">{ocupado ? <LoaderCircle className="pg-gira" size={15} /> : <MessageCircle size={15} />} {dona ? 'Escrever como a dona' : 'Tocar no botão do salão'}</button>
           <p className="muted">A IA: {cfg?.provedor === 'claude' ? 'Claude' : 'Groq'}{cfg?.modelo ? ` · ${cfg.modelo}` : ''}. Cada mensagem chama a IA de verdade.</p>
         </div>
       ) : (
         <>
           <Chat mensagens={mensagens} fim={ocupado && <div className="pg-wa-msg mel digitando"><LoaderCircle className="pg-gira" size={14} /> a Mel está escrevendo…</div>} />
           {erro && <p className="pg-wa-erro"><TriangleAlert size={13} /> {erro}</p>}
-          {previa ? (
+          {previaAviso ? (
+            <div className="pg-wa-previa" data-teste="wa-previa-aviso">
+              <b><Check size={14} /> A equipe receberia este aviso (dona testando — não foi enviado):</b>
+              <pre>{previaAviso}</pre>
+            </div>
+          ) : previa ? (
             <div className="pg-wa-previa" data-teste="wa-previa">
               <b><Check size={14} /> O salão receberia esta mensagem (não foi enviada):</b>
               <pre>{previa}</pre>

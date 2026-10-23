@@ -28,6 +28,7 @@ export type Saida = {
   responder: string | null
   acao: string
   previaSalao?: string | null
+  previaAviso?: string | null
   estado?: string
   dados?: Dados
   erro?: string
@@ -236,7 +237,7 @@ async function chamar(deps: Deps, nome: string, args: Record<string, unknown>): 
   return data
 }
 
-export async function atenderGuia(deps: Deps, e: Entrada, opcoes: { teste?: boolean } = {}): Promise<Saida> {
+export async function atenderGuia(deps: Deps, e: Entrada, opcoes: { teste?: boolean; comoDona?: boolean } = {}): Promise<Saida> {
   const teste = !!opcoes.teste
   const agora = deps.agora?.() ?? new Date()
   const tel = teste ? e.telefone : so(e.telefone)
@@ -320,16 +321,20 @@ export async function atenderGuia(deps: Deps, e: Entrada, opcoes: { teste?: bool
 
   // 4.5: a própria dona testando (o número de quem escreve é o mesmo cadastrado do salão). Em vez do fluxo de cliente, a
   // Mel reconhece, mostra como um pedido chegaria (o exemplo) e apresenta a MIMO Agenda; avisa a equipe uma vez (3.54).
-  if (!teste && lugar.salao_tel && chaveDe(tel) && chaveDe(tel) === chaveDe(lugar.salao_tel)) {
+  // No simulador (teste), o botão "testar como a dona" liga o opcoes.comoDona (sem comparar número); aí o aviso à equipe
+  // não é enviado de verdade — volta como prévia.
+  const ehDona = (teste && !!opcoes.comoDona) || (!teste && !!lugar.salao_tel && !!chaveDe(tel) && chaveDe(tel) === chaveDe(lugar.salao_tel))
+  if (ehDona) {
     const exemplo = mensagemDoSalao(cfg, lugar, { cliente_nome: 'Maria (exemplo)', servico: 'Corte e escova', preferencia: 'sexta à tarde', observacao: null, cliente_tel: '5513999990000' })
     const resposta = (String(cfg.msg_dona ?? '').trim() || `Oi! 💗 Esse número é o que o ${lugar.nome} tem cadastrado no guia da MIMO. Assim chega um pedido de cliente pra você:\n\n{exemplo}\n\nA MIMO leva clientes até você, de graça — e tem a MIMO Agenda pra organizar tudo (salão e autônoma). A equipe vai te chamar pra mostrar. 💗`)
       .replaceAll('{salao}', lugar.nome).replaceAll('{exemplo}', exemplo)
     const jaAvisou = (ctx.conversa?.dados as Dados | undefined)?.dona === true
+    const aviso = cfg.numero_avisos ? avisoDona(lugar, teste ? '5513999990000' : tel) : null
     await guardar(resposta, 'encerrada', { dona: true }, lugar.id)
-    if (!jaAvisou && cfg.numero_avisos) {
-      try { await deps.enviar(cfg.instancia, so(cfg.numero_avisos), avisoDona(lugar, tel)) } catch { /* o aviso é melhor-esforço */ }
+    if (!teste && !jaAvisou && aviso) {
+      try { await deps.enviar(cfg.instancia, so(cfg.numero_avisos!), aviso) } catch { /* o aviso é melhor-esforço */ }
     }
-    return { responder: resposta, acao: 'dona', estado: 'encerrada', dados: { dona: true } }
+    return { responder: resposta, acao: 'dona', estado: 'encerrada', dados: { dona: true }, previaAviso: teste ? aviso : null }
   }
 
   // 5. a conversa com a Mel

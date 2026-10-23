@@ -130,7 +130,7 @@ Deno.serve(async (req) => {
       const lugar = corpo.lugar as { nome?: string; cidade_slug?: string; slug?: string } | undefined
       if (!texto && lugar?.cidade_slug && lugar?.slug) texto = mensagemDaCliente(cfg.msg_cliente, String(lugar.nome ?? ''), lugar.cidade_slug, lugar.slug)
       if (!texto) return json({ erro: 'mande o texto (ou o salão, para a primeira mensagem)' }, 400)
-      const r = await atenderGuia(deps(), { telefone: telTeste, texto, nomePerfil: 'Você' }, { teste: true })
+      const r = await atenderGuia(deps(), { telefone: telTeste, texto, nomePerfil: 'Você' }, { teste: true, comoDona: !!corpo.comoDona })
       return json({ ok: true, texto, ...r })
     }
     if (acao === 'reiniciar') {

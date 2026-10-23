@@ -129,7 +129,7 @@ const preencher = (modelo, valores) => String(modelo ?? '').split('\n').filter((
   .map((linha) => linha.replace(/\{([a-z_]+)\}/g, (x, k) => (k in valores ? String(valores[k] ?? '').trim() : x))).join('\n').replace(/\n{3,}/g, '\n\n').trim()
 const bonito = (d) => `(${d.slice(2, 4)}) ${d.slice(4, 9)}-${d.slice(9)}`
 let SIM = null // a conversa do simulador: { lugar, dados, estado, mensagens }
-function simular({ texto, lugar }) {
+function simular({ texto, lugar, comoDona }) {
   const inicio = !texto && lugar
   const NOMES0 = { 'studio-lirio': 'Studio Lírio', 'atelie-cabelo-e-arte': 'Ateliê Cabelo & Arte' }
   const nome0 = inicio ? (lugar.nome && lugar.nome !== lugar.slug ? lugar.nome : (NOMES0[lugar.slug] ?? lugar.nome ?? lugar.slug)) : ''
@@ -143,6 +143,14 @@ function simular({ texto, lugar }) {
   s.mensagens.push({ q: 'cliente', t })
   let resposta, acao = 'conversa', previaSalao = null
   const resumo = () => `Anotei assim:\n• Nome: ${s.dados.nome}\n• Serviço: ${s.dados.servico}${s.dados.preferencia ? `\n• Preferência: ${s.dados.preferencia}` : ''}\n\nPosso enviar seu nome, este WhatsApp e o pedido para o ${s.lugar.nome}? Eles te chamam aqui para combinar. É só responder *sim*.`
+  // 3.54: testar como a dona (o número de quem escreve é o cadastrado do salão): a Mel reconhece e apresenta a MIMO Agenda
+  if (comoDona) {
+    const exemplo = preencher(CFG.msg_salao, { salao: s.lugar.nome, cliente: 'Maria (exemplo)', servico: 'Corte e escova', preferencia: 'sexta à tarde', observacao: '', contato: bonito('5513999990000'), link: 'https://wa.me/5513999990000' })
+    resposta = (CFG.msg_dona || 'Oi {salao}! 💗 Assim chega um pedido pra você:\n{exemplo}\nConheça a MIMO Agenda.').replaceAll('{salao}', s.lugar.nome).replaceAll('{exemplo}', exemplo)
+    const previaAviso = CFG.numero_avisos ? `🎉 MIMO — dona testando o guia\n${s.lugar.nome}: a dona está escrevendo pela Mel do número cadastrado. Boa hora para apresentar a MIMO Agenda.\nNúmero: ${bonito('5513999990000')}` : null
+    s.estado = 'encerrada'; s.mensagens.push({ q: 'mel', t: resposta })
+    return { ok: true, texto: t, responder: resposta, acao: 'dona', previaSalao: null, previaAviso, estado: 'encerrada', dados: { dona: true } }
+  }
   if (/\(código:/.test(t) || s.mensagens.length === 1) { resposta = `Oi! Aqui é a Mel, da MIMO 💗, o guia onde você encontrou o ${s.lugar.nome}. Eu anoto seu pedido e passo para o salão, que te chama aqui no WhatsApp. Como é seu nome?` }
   else if (s.estado === 'confirmando' && /^(sim|pode|ok|isso|claro)\b/i.test(t)) {
     s.estado = 'enviado'; acao = 'enviado_teste'

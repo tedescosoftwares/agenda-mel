@@ -14,6 +14,7 @@ import { MailCheck } from 'lucide-react'
 import CampoSenha from '../components/CampoSenha'
 import { formatarFone } from '../lib/fone'
 import BotaoGoogle, { OuLinha } from '../components/BotaoGoogle'
+import { MSG_CONTA_ERRADA, lerContaErrada, limparContaErrada } from '../lib/oauth'
 import { FORCADOS, useProvedores } from '../lib/oauth'
 
 // Login (tela 02): "Bem-vinda de volta!", e-mail, senha, manter
@@ -65,7 +66,8 @@ export default function Login({ ambiente = AMBIENTE }) {
   const [conferindoConta, setConferindoConta] = useState(false)
   const docs = useDocumentosLegais()
   const papelDoAceite = papel || 'cliente'
-  const [contaErrada, setContaErrada] = useState(null) // 'pro' | 'cliente'
+  const [contaErrada, setContaErrada] = useState(() => lerContaErrada()) // 'pro' | 'cliente' (3.61.2: também o que o AuthContext deixou do Google)
+  const erroMostrado = erro || (contaErrada ? MSG_CONTA_ERRADA[contaErrada] : '')
 
   useEffect(() => {
     if (!convite) return
@@ -89,7 +91,7 @@ export default function Login({ ambiente = AMBIENTE }) {
     try {
       if (modo === 'login') {
         try { if (!manter) sessionStorage.setItem('mimo-sessao-temporaria', '1') } catch { /* sem storage */ }
-        setConferindoConta(true); setContaErrada(null)
+        setConferindoConta(true); setContaErrada(null); limparContaErrada()
         const { error } = await signIn(email, senha)
         if (error) { setConferindoConta(false); setErro(traduz(error.message)); return }
         if (ativar) { window.location.href = `/ativar/${ativar}`; return }
@@ -208,7 +210,7 @@ export default function Login({ ambiente = AMBIENTE }) {
             </label>
           )}
 
-          {erro && <div className="alert alert-error">{erro}{contaErrada && <> <a href={urlDoAmbiente(contaErrada, contaErrada === 'pro' ? '/pro/entrar' : '/login')} className="link-ver">{contaErrada === 'pro' ? 'Ir para o MIMO Pro' : 'Ir para o MIMO'}</a></>}</div>}
+          {erroMostrado && <div className="alert alert-error">{erroMostrado}{contaErrada && <> <a href={urlDoAmbiente(contaErrada, contaErrada === 'pro' ? '/pro/entrar' : '/login')} className="link-ver">{contaErrada === 'pro' ? 'Ir para o MIMO Pro' : 'Ir para o MIMO'}</a></>}</div>}
           {info && <div className="alert alert-info">{info}</div>}
 
           <button type="submit" className="btn btn-primary btn-block" disabled={enviando || (modo === 'cadastro' && !termos)}>

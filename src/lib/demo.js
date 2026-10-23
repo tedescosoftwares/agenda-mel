@@ -46,7 +46,7 @@ export const PAPEL = (() => {
   } catch { return 'cliente' }
 })()
 
-const UID = { cliente: 'c1', profissional: 'p1', admin: 'a1', plataforma: 'pl1', google: 'g1' }[PAPEL] || 'c1'
+const UID = { cliente: 'c1', profissional: 'p1', admin: 'a1', plataforma: 'pl1', google: 'g1', 'google-dona': 'a1' }[PAPEL] || 'c1'   // google-dona (3.61.2): a dona entrando pelo Google no app da cliente
 const SALAO = 's1'
 
 // foto fictícia: um retrato abstrato em SVG, para não depender de rede
@@ -753,7 +753,7 @@ const CONTEUDO = {
   redirects: [{ id: 'rd1', from_path: '/cadastro-antigo', to_path: '/comecar', http_status: 301, active: true, created_at: '2026-09-01T12:00:00-03:00' }],
 }
 
-const sessao = PAPEL === 'sair' ? null : { user: { id: UID, email: PAPEL + '@mimo.demo', ...(PAPEL === 'google' ? { app_metadata: { provider: 'google', providers: ['google'] }, user_metadata: { full_name: 'Larissa Google', avatar_url: FOTO(5) } } : {}) }, access_token: 'demo' }
+const sessao = PAPEL === 'sair' ? null : { user: { id: UID, email: PAPEL + '@mimo.demo', ...(PAPEL === 'google' ? { app_metadata: { provider: 'google', providers: ['google'] }, user_metadata: { full_name: 'Larissa Google', avatar_url: FOTO(5) } } : PAPEL === 'google-dona' ? { app_metadata: { provider: 'google', providers: ['google'] } } : {}) }, access_token: 'demo' }
 
 export const demo = {
   auth: {

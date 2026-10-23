@@ -86,6 +86,11 @@ site pergunta ao Auth (`/auth/v1/settings`) quais provedores estão ativos.
 Ele fica na porta (`/entrar`), no login, no cadastro e no `/v/código`. Se não
 aparece, é o provedor desligado: confira em Authentication → Providers →
 Google se o interruptor "Enable Sign in with Google" está ligado e salvo.
+O Google junta pelo e-mail: uma dona ou profissional que entra com o Google do
+mesmo e-mail da conta dela cai na conta de sempre, e o `mimo.com.vc` sai na hora
+e avisa "essa conta é de profissional ou salão, entre pelo MIMO Pro" (3.61.2),
+igual ao login por e-mail. Para testar a ponta da cliente, use um Google cujo
+e-mail não tem conta na MIMO.
 Nada de variável nova; `VITE_OAUTH=google,apple` continua valendo para forçar
 a lista (e é o único jeito de mostrar Google/Apple no MIMO Pro).
 

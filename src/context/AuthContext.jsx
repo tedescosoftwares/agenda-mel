@@ -2,7 +2,8 @@ import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { lerCodigoGuardado, limparCodigoGuardado } from '../lib/indicacao'
 import { lerConvite, limparConvite } from '../lib/convite'
-import { urlDoAmbiente } from '../lib/ambiente'
+import { AMBIENTE, ambienteDoPapel, urlDoAmbiente } from '../lib/ambiente'
+import { contaSocial, guardarContaErrada } from '../lib/oauth'
 
 const AuthContext = createContext(null)
 
@@ -57,6 +58,16 @@ export function AuthProvider({ children }) {
         .eq('id', session.user.id)
         .single()
       if (cancelled) return
+      // 3.61.2: entrou pelo Google numa conta do outro ambiente (a dona, no mimo.com.vc,
+      // com o mesmo e-mail): sai e manda para o login avisar, como o login por e-mail faz.
+      // Só contas sociais: a sessão por e-mail já passou por essa conferência ao entrar.
+      const ambienteCerto = ambienteDoPapel(perfil?.role)
+      if (ambienteCerto && ambienteCerto !== AMBIENTE && contaSocial(session.user)) {
+        guardarContaErrada(ambienteCerto)
+        await supabase.auth.signOut()
+        if (!cancelled && window.location.pathname !== '/login') window.location.replace('/login')
+        return
+      }
       setProfile(perfil)
       if (perfil?.role === 'admin' || perfil?.role === 'profissional') { await carregarNegocio(session.user.id); if (cancelled) return } else setNegocio(null)
 

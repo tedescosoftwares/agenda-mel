@@ -52,6 +52,21 @@ export async function entrarComGoogle({ convite, voltar } = {}) {
   return { error: error ? { message: traduzOAuth(error.message) } : null }
 }
 
+// 3.61.2: entrou pelo Google numa conta do OUTRO ambiente (a dona no mimo.com.vc,
+// porque o Google tem o mesmo e-mail da conta dela). O AuthContext sai da conta e
+// deixa aqui qual é o ambiente certo; o /login mostra o aviso com o link, igual ao
+// login por e-mail. Vale 2 minutos: não limpa na leitura (o StrictMode lê duas vezes).
+const CHAVE_CONTA_ERRADA = 'mimo-conta-errada'
+export function guardarContaErrada(certo) { try { sessionStorage.setItem(CHAVE_CONTA_ERRADA, JSON.stringify({ certo, em: Date.now() })) } catch { /* sem armazenamento */ } }
+export function lerContaErrada() {
+  try {
+    const v = JSON.parse(sessionStorage.getItem(CHAVE_CONTA_ERRADA) || 'null')
+    return v && Date.now() - v.em < 120000 ? v.certo : null
+  } catch { return null }
+}
+export function limparContaErrada() { try { sessionStorage.removeItem(CHAVE_CONTA_ERRADA) } catch { /* nada */ } }
+export const MSG_CONTA_ERRADA = { pro: 'Essa conta é de profissional ou salão. Entre pelo MIMO Pro.', cliente: 'Essa conta é de cliente. Entre pelo MIMO, o app da cliente.' }
+
 // a conta nasceu num provedor social (Google, Apple…), não por e-mail e senha
 export function contaSocial(user) {
   const meta = user?.app_metadata ?? {}

@@ -7,7 +7,7 @@ import { tel, telCanon, mascararTel, quando, normal, lerSecao, guardarSecao, use
 import { Pilula, Chave, Tile, Funil, Nav, Bloco, Indice, BarraSalvar, Chat } from './PecasWa'
 import {
   UserPlus, LoaderCircle, Send, RotateCcw, Bot, Inbox, Check, TriangleAlert, X, Link2, MousePointerClick, Sparkles, SlidersHorizontal, Search, Zap, ListChecks,
-  MessageSquareText, Timer, Phone, DoorOpen, CircleCheck, UserCheck, Ban, Eye,
+  MessageSquareText, Timer, Phone, DoorOpen, CircleCheck, UserCheck, Ban, Eye, MessageCircleMore, Cpu,
 } from 'lucide-react'
 
 // O agente de onboarding pelo WhatsApp (3.55, migração 203; 3.56, migração 204): um segundo agente no número da Mel,
@@ -364,14 +364,27 @@ function Simulador({ cfg }) {
   return (
     <Painel Icon={Bot} titulo="Testar o agente" sub="Converse como uma profissional que quer criar a conta. Nada sai para ninguém; as consultas de CNPJ e CEP são de verdade; os avisos à equipe voltam como prévia." className="pg-wa-sim" direita={mensagens.length > 0 && <button type="button" className="plat-link" onClick={reiniciar} data-teste="onb-sim-recomecar"><RotateCcw size={14} /> Recomeçar</button>}>
       {mensagens.length === 0 ? (
-        <div className="pg-wa-sim-inicio">
+        <div className="pg-wa-sim-inicio pg-onb-sim-inicio">
+          <p className="pg-onb-sim-pergunta">Por onde ela chega?</p>
           <div className="pg-onb-sim-origem" role="radiogroup" aria-label="Por onde ela chega">
-            <label className={'pg-onb-origem' + (origem === 'cta' ? ' ativa' : '')}><input type="radio" name="onb-origem" checked={origem === 'cta'} onChange={() => setOrigem('cta')} data-teste="onb-sim-cta" /> <span><b>Pelo botão das landings</b> <span className="muted">manda “{frase}”: começa direto</span></span></label>
-            <label className={'pg-onb-origem' + (origem === 'intencao' ? ' ativa' : '')}><input type="radio" name="onb-origem" checked={origem === 'intencao'} onChange={() => setOrigem('intencao')} data-teste="onb-sim-intencao" /> <span><b>Por intenção percebida</b> <span className="muted">o agente pergunta antes se ela quer mesmo criar a conta</span></span></label>
+            <label className={'pg-onb-origem' + (origem === 'cta' ? ' ativa' : '')}>
+              <input type="radio" name="onb-origem" checked={origem === 'cta'} onChange={() => setOrigem('cta')} data-teste="onb-sim-cta" />
+              <span className="pg-onb-origem-ico" aria-hidden="true"><MousePointerClick size={17} /></span>
+              <span className="pg-onb-origem-txt"><b>Pelo botão das landings</b><span className="muted">Ela toca em “Criar conta pelo WhatsApp” e chega com a frase do gatilho: <i>“{frase}”</i>. O agente começa direto.</span></span>
+              <span className="pg-onb-origem-check" aria-hidden="true"><Check size={12} strokeWidth={3} /></span>
+            </label>
+            <label className={'pg-onb-origem' + (origem === 'intencao' ? ' ativa' : '')}>
+              <input type="radio" name="onb-origem" checked={origem === 'intencao'} onChange={() => setOrigem('intencao')} data-teste="onb-sim-intencao" />
+              <span className="pg-onb-origem-ico" aria-hidden="true"><MessageCircleMore size={17} /></span>
+              <span className="pg-onb-origem-txt"><b>Por intenção percebida</b><span className="muted">Ela escreve do jeito dela. O agente percebe a intenção e pergunta antes se ela quer mesmo criar a conta.</span></span>
+              <span className="pg-onb-origem-check" aria-hidden="true"><Check size={12} strokeWidth={3} /></span>
+            </label>
           </div>
-          {origem === 'intencao' && <label>A primeira mensagem dela<input value={primeira} onChange={(e) => setPrimeira(e.target.value)} placeholder="oi, quero criar minha conta" data-teste="onb-sim-primeira" /></label>}
-          <button type="button" className="btn btn-primary" onClick={comecar} disabled={ocupado} data-teste="onb-sim-comecar">{ocupado ? <LoaderCircle className="pg-gira" size={15} /> : <Sparkles size={15} />} Começar</button>
-          <p className="muted">A IA: {cfg?.provedor === 'claude' ? 'Claude' : 'Groq'}{cfg?.modelo ? ` · ${cfg.modelo}` : ''}. CNPJ, CPF e e-mail são validados sem IA; o resto da conversa chama a IA de verdade.</p>
+          {origem === 'intencao' && <label className="pg-onb-sim-primeira">A primeira mensagem dela<input value={primeira} onChange={(e) => setPrimeira(e.target.value)} placeholder="oi, quero criar minha conta" data-teste="onb-sim-primeira" /></label>}
+          <div className="pg-onb-sim-rodape">
+            <button type="button" className="btn btn-primary" onClick={comecar} disabled={ocupado} data-teste="onb-sim-comecar">{ocupado ? <LoaderCircle className="pg-gira" size={15} /> : <Sparkles size={15} />} Começar</button>
+            <span className="pg-onb-sim-ia" title="CNPJ, CPF e e-mail são validados sem IA; o resto da conversa chama a IA de verdade"><Cpu size={13} /> IA <b>{cfg?.provedor === 'claude' ? 'Claude' : 'Groq'}</b>{cfg?.modelo ? <> · {cfg.modelo}</> : null}<span className="pg-onb-sim-ia-sep" /> CNPJ, CPF e e-mail sem IA</span>
+          </div>
         </div>
       ) : (
         <>

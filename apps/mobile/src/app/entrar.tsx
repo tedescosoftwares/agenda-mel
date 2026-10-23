@@ -7,12 +7,14 @@ import { Aviso, Botao } from '@/components/ui'
 import { useSessao } from '@/context/sessao'
 import { CONFIGURADO, NOME_DO_APP, SUPABASE_URL, VARIANTE, VERSAO, WEB_URL } from '@/lib/config'
 import { extrairCodigo, guardarConvite } from '@/lib/convite'
+import { entrarComGoogle, provedoresLigados } from '@/lib/oauth'
 import { supabase } from '@/lib/supabase'
 import { ESPACO, useTema } from '@/lib/tema'
 import iconeCliente from '../../assets/images/cliente/icone.png'
 import iconePro from '../../assets/images/pro/icone.png'
 
-// Entrar: e-mail e senha, direto no Supabase. "Esqueci a senha" manda o link
+// Entrar: e-mail e senha, direto no Supabase; ou com o Google (3.60), no app da
+// cliente, quando o provedor está ligado. "Esqueci a senha" manda o link
 // por e-mail (o link abre o site, que pede a senha nova; a senha vale aqui).
 // Criar conta é nativo (cadastro.tsx) e nasce de um convite: ?convite=ANA7K2
 // chega pelo QR ou pelo link /v/CODIGO e, depois de entrar, a sessão já põe
@@ -30,6 +32,30 @@ export default function Entrar() {
   const [info, setInfo] = useState<string | null>(null)
   const [ocupado, setOcupado] = useState(false)
   const [quem, setQuem] = useState<{ codigo: string; nome: string } | null>(null)
+  const [google, setGoogle] = useState(false)
+  const [googleOcupado, setGoogleOcupado] = useState(false)
+
+  // o Google aparece só no app da cliente, e só com o provedor ligado no Supabase
+  useEffect(() => {
+    if (VARIANTE !== 'cliente' || !CONFIGURADO) return
+    let vivo = true
+    provedoresLigados().then((p) => {
+      if (vivo) setGoogle(Boolean(p.google))
+    })
+    return () => {
+      vivo = false
+    }
+  }, [])
+
+  async function comGoogle() {
+    setErro(null)
+    setInfo(null)
+    setGoogleOcupado(true)
+    const falha = await entrarComGoogle()
+    setGoogleOcupado(false)
+    if (falha) setErro(falha)
+    // deu certo: a sessão muda e o _layout troca para as abas (ou pede o WhatsApp)
+  }
 
   // veio por um convite: diz quem convidou e guarda o código para depois do login
   useEffect(() => {
@@ -124,6 +150,16 @@ export default function Entrar() {
           {erro ? <Aviso tom="erro" texto={erro} /> : null}
           {info ? <Aviso tom="info" texto={info} /> : null}
           <Botao titulo={modo === 'esqueci' ? 'Enviar link' : 'Entrar'} onPress={enviar} carregando={ocupado} />
+          {google && modo === 'login' ? (
+            <>
+              <View style={e.ou}>
+                <View style={[e.ouLinha, { backgroundColor: t.fio }]} />
+                <Text style={{ color: t.texto3, fontSize: 12.5 }}>ou</Text>
+                <View style={[e.ouLinha, { backgroundColor: t.fio }]} />
+              </View>
+              <Botao titulo="Continuar com Google" tipo="linha" icone="logo-google" onPress={comGoogle} carregando={googleOcupado} />
+            </>
+          ) : null}
           {modo === 'esqueci' ? (
             <Botao
               titulo="Voltar"
@@ -173,6 +209,8 @@ const e = StyleSheet.create({
   titulo: { fontSize: 26, fontWeight: '800', letterSpacing: -0.5, textAlign: 'center' },
   sub: { fontSize: 14.5, lineHeight: 21, textAlign: 'center', paddingHorizontal: 12 },
   campo: { minHeight: 50, borderRadius: 14, borderWidth: 1, paddingHorizontal: 16, fontSize: 16 },
+  ou: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 2 },
+  ouLinha: { flex: 1, height: 1 },
   rodape: { marginTop: 'auto', paddingTop: 24, alignItems: 'center', gap: 12 },
   versao: { textAlign: 'center', fontSize: 12, marginTop: 8 },
 })

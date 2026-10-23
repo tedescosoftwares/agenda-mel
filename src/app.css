@@ -4634,6 +4634,18 @@ body { position: relative; width: 100%; }
 .login-social { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.9rem; align-items: center; }
 .login-social > .muted { font-size: 0.8rem; }
 .login-social .btn { width: 100%; }
+.login-social .ou-linha { width: 100%; margin-top: 0; }
+
+/* 3.60: entrar com Google */
+.btn-google { display: inline-flex; align-items: center; justify-content: center; gap: 0.55rem; background: #fff; color: #1f1f1f; border: 1px solid #dadce0; font-weight: 600; }
+.btn-google:hover:not(:disabled) { background: #f8f9fb; border-color: #c6c8cc; }
+.btn-google svg { flex: none; }
+.ou-linha { display: flex; align-items: center; gap: 0.7rem; margin: 0.85rem 0 0.6rem; color: #9a9aa5; font-size: 0.8rem; }
+.ou-linha::before, .ou-linha::after { content: ''; flex: 1; height: 1px; background: #e5e7eb; }
+.completar-quem { display: flex; align-items: center; gap: 0.75rem; margin: 0.2rem 0 1rem; text-align: left; }
+.completar-quem img, .completar-quem .convite-ini { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; flex: none; }
+.completar-quem strong { display: block; }
+.completar-quem .muted { font-size: 0.82rem; word-break: break-all; }
 
 /* =====================================================================
    A PLATAFORMA — painel de PC (056)

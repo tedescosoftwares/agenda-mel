@@ -6,6 +6,7 @@ import { Routes, Route } from 'react-router-dom'
 import ProtectedRoute from '../components/ProtectedRoute'
 import NaoEncontrada from '../pages/publico/NaoEncontrada'
 import Entrar from '../pages/cliente/Entrar'
+import CompletarPerfil from '../pages/cliente/CompletarPerfil'
 import ClienteHome from '../pages/cliente/ClienteHome'
 import ClienteProfissionais from '../pages/cliente/ClienteProfissionais'
 import ClienteProfissional from '../pages/cliente/ClienteProfissional'
@@ -28,6 +29,7 @@ export default function RotasCliente() {
   return (
     <Routes>
       <Route path="entrar" element={<ProtectedRoute requireRole="cliente" permitirSemVinculo><Entrar /></ProtectedRoute>} />
+      <Route path="completar" element={<ProtectedRoute requireRole="cliente" permitirSemVinculo permitirSemTelefone permitirPrimeiroAcesso><CompletarPerfil /></ProtectedRoute>} />
       <Route path="home" element={<C><ClienteHome /></C>} />
       <Route path="profissionais" element={<C><ClienteProfissionais /></C>} />
       <Route path="profissional/:id" element={<C><ClienteProfissional /></C>} />

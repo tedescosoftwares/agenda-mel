@@ -12,13 +12,16 @@ import CampoSenha from '../../components/CampoSenha'
 import RodapeSocial from '../../components/RodapeSocial'
 import LinkSuporte from '../../components/LinkSuporte'
 import { MarcaIcon, Wordmark } from '../../components/icons'
+import BotaoGoogle, { OuLinha } from '../../components/BotaoGoogle'
 import { MailCheck } from 'lucide-react'
 
 // O cadastro da cliente (065). Sempre nasce de um convite: QR, código
 // ou link de uma profissional ou salão. Dois passos curtos — quem é
 // você, e como você entra — e no fim a tela de "confira seu e-mail",
 // com reenvio. O convite vai nos metadados e o servidor cria o vínculo
-// quando o perfil nasce (053); aniversário e aceite também (065).
+// quando o perfil nasce (053); aniversário e aceite também (065). Ou, em
+// um toque, com o Google (3.60): volta logada no /v/<código> e diz o
+// WhatsApp em seguida.
 export default function CadastroCliente() {
   const { user, role, loading, signUp } = useAuth()
   const [q] = useSearchParams()
@@ -127,6 +130,7 @@ export default function CadastroCliente() {
 
             {passo === 1 ? (
               <form onSubmit={seguir} className="form">
+                {quem && <><BotaoGoogle convite={convite} voltar={`/v/${convite}`} onErro={setErro} /><OuLinha texto="ou com e-mail" /></>}
                 <label>Nome e sobrenome<input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Maria da Silva" autoComplete="name" required /></label>
                 <label>WhatsApp<input type="tel" inputMode="numeric" value={fone} onChange={(e) => setFone(formatarFone(e.target.value))} placeholder="(13) 99999-9999" autoComplete="tel" required />
                   <span className="campo-dica muted">É por ele que chegam a confirmação e o lembrete.</span></label>

@@ -15,12 +15,15 @@ export type Perfil = {
   nascimento: string | null
   accepts_reminders: boolean | null
   aceita_email: boolean | null
+  aceitou_termos_em: string | null
 }
 
 type Valor = {
   sessao: Session | null
   usuario: User | null
   perfil: Perfil | null
+  // o perfil deste uid já foi buscado (mesmo que não exista): a trava do Google espera por isto
+  perfilPronto: boolean
   carregando: boolean
   entrar: (email: string, senha: string) => Promise<string | null>
   sair: () => Promise<void>
@@ -60,6 +63,7 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
 
   const uid = sessao?.user.id ?? null
   const perfil = carregado && carregado.uid === uid ? carregado.perfil : null
+  const perfilPronto = Boolean(carregado && carregado.uid === uid)
 
   useEffect(() => {
     if (!uid) return
@@ -68,7 +72,8 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
       if (!vivo) return
       setCarregado({ uid, perfil: p })
       // entrou por um link /v/<código> antes de entrar na conta? entra na agenda agora
-      // (quem se cadastrou já entrou pelo servidor; aqui é quem já tinha conta)
+      // (quem se cadastrou já entrou pelo servidor; aqui é quem já tinha conta, ou quem
+      // entrou pelo Google — 3.60 — e tem o código guardado)
       if (p?.role === 'cliente') {
         const convite = await lerConvite()
         if (!convite) return
@@ -103,8 +108,8 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const valor = useMemo<Valor>(
-    () => ({ sessao, usuario: sessao?.user ?? null, perfil, carregando, entrar, sair, recarregarPerfil }),
-    [sessao, perfil, carregando, entrar, sair, recarregarPerfil],
+    () => ({ sessao, usuario: sessao?.user ?? null, perfil, perfilPronto, carregando, entrar, sair, recarregarPerfil }),
+    [sessao, perfil, perfilPronto, carregando, entrar, sair, recarregarPerfil],
   )
   return <Contexto.Provider value={valor}>{children}</Contexto.Provider>
 }
@@ -116,7 +121,7 @@ export function useSessao(): Valor {
 }
 
 async function buscarPerfil(uid: string): Promise<Perfil | null> {
-  const { data } = await supabase.from('profiles').select('id, full_name, phone, avatar_url, role, nascimento, accepts_reminders, aceita_email').eq('id', uid).maybeSingle()
+  const { data } = await supabase.from('profiles').select('id, full_name, phone, avatar_url, role, nascimento, accepts_reminders, aceita_email, aceitou_termos_em').eq('id', uid).maybeSingle()
   return (data as Perfil | null) ?? null
 }
 

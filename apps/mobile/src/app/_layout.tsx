@@ -5,6 +5,7 @@ import { useEffect } from 'react'
 import { SessaoProvider, useSessao } from '@/context/sessao'
 import { useTema } from '@/lib/tema'
 import { useAbrirAvisoTocado } from '@/lib/avisos'
+import { precisaCompletar } from '@/lib/oauth'
 
 // A tela de abertura fica até sabermos se há sessão guardada no aparelho
 SplashScreen.preventAutoHideAsync().catch(() => {})
@@ -20,10 +21,12 @@ export default function Raiz() {
   )
 }
 
-// Com sessão: abas. Sem sessão: entrar e criar conta. O link de código, a
-// leitura do QR e a página não encontrada ficam fora da trava: servem logada ou não.
+// Com sessão: abas. Sem sessão: entrar e criar conta. Quem entrou pelo Google
+// e ainda não disse o WhatsApp (3.60) vê só a tela de completar. O link de
+// código, a leitura do QR e a página não encontrada ficam fora da trava: servem
+// logada ou não.
 function Navegacao() {
-  const { sessao, carregando } = useSessao()
+  const { sessao, perfil, perfilPronto, carregando } = useSessao()
   const t = useTema()
 
   useEffect(() => {
@@ -40,12 +43,13 @@ function Navegacao() {
     colors: { ...base.colors, primary: t.acento, background: t.fundo, card: t.superficie, text: t.texto, border: t.fio, notification: t.acento },
   }
   const logada = Boolean(sessao)
+  const completar = logada && precisaCompletar(sessao?.user, perfil, perfilPronto)
 
   return (
     <ThemeProvider value={tema}>
       <StatusBar style={t.escuro ? 'light' : 'dark'} />
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: t.fundo } }}>
-        <Stack.Protected guard={logada}>
+        <Stack.Protected guard={logada && !completar}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="agendar" options={{ animation: 'slide_from_right' }} />
           <Stack.Screen name="agendamento/[id]" options={{ animation: 'slide_from_right' }} />
@@ -59,10 +63,14 @@ function Navegacao() {
           <Stack.Screen name="pagamento/[id]" options={{ animation: 'slide_from_right' }} />
           <Stack.Screen name="comanda/[id]" options={{ animation: 'slide_from_right' }} />
         </Stack.Protected>
+        <Stack.Protected guard={completar}>
+          <Stack.Screen name="completar" />
+        </Stack.Protected>
         <Stack.Protected guard={!logada}>
           <Stack.Screen name="entrar" />
           <Stack.Screen name="cadastro" options={{ animation: 'slide_from_right' }} />
         </Stack.Protected>
+        <Stack.Screen name="auth/google" />
         <Stack.Screen name="v/[codigo]" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="ler-qr" options={{ animation: 'slide_from_bottom' }} />
         <Stack.Screen name="+not-found" />

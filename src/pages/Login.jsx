@@ -13,6 +13,8 @@ import { AMBIENTE, urlDoAmbiente, ambienteDoPapel } from '../lib/ambiente'
 import { MailCheck } from 'lucide-react'
 import CampoSenha from '../components/CampoSenha'
 import { formatarFone } from '../lib/fone'
+import BotaoGoogle, { OuLinha } from '../components/BotaoGoogle'
+import { FORCADOS, useProvedores } from '../lib/oauth'
 
 // Login (tela 02): "Bem-vinda de volta!", e-mail, senha, manter
 // conectado, e a porta para quem esqueceu a senha ou não tem conta.
@@ -23,7 +25,6 @@ import { formatarFone } from '../lib/fone'
 //                     metadados da conta e o servidor cria o vínculo
 //   ?papel=autonoma|salao   veio de /comecar: a conta nasce como
 //                     profissional (salão de uma) ou dona de salão
-const OAUTH = String(import.meta.env.VITE_OAUTH || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean)
 
 export default function Login({ ambiente = AMBIENTE }) {
   const pro = ambiente === 'pro'
@@ -57,6 +58,10 @@ export default function Login({ ambiente = AMBIENTE }) {
   const [info, setInfo] = useState('')
   const [enviando, setEnviando] = useState(false)
   const [quemConvidou, setQuemConvidou] = useState(null)
+  // 3.60: o Google aparece na ponta da cliente assim que o provedor está ligado no
+  // Supabase; no Pro (e o Apple em qualquer lugar) só com VITE_OAUTH=google,apple
+  const prov = useProvedores()
+  const social = { google: Boolean(prov.google) && (!pro || FORCADOS.includes('google')), apple: Boolean(prov.apple) && FORCADOS.includes('apple') }
   const [conferindoConta, setConferindoConta] = useState(false)
   const docs = useDocumentosLegais()
   const papelDoAceite = papel || 'cliente'
@@ -127,14 +132,13 @@ export default function Login({ ambiente = AMBIENTE }) {
     } finally { setEnviando(false) }
   }
 
-  // Google/Apple: só aparecem quando o provedor está ligado no Supabase
-  // (VITE_OAUTH=google,apple no .env). Depois do login a pessoa volta
-  // para o código, se veio por um, ou para o início.
-  async function social(provider) {
+  // Apple (VITE_OAUTH=apple): depois do login a pessoa volta para o código,
+  // se veio por um, ou para o início. O Google vive em BotaoGoogle (lib/oauth).
+  async function socialApple() {
     setErro('')
     if (convite) guardarConvite(convite)
     const { error } = await supabase.auth.signInWithOAuth({
-      provider,
+      provider: 'apple',
       options: { redirectTo: window.location.origin + (convite ? `/v/${convite}` : '/') },
     })
     if (error) setErro(traduz(error.message))
@@ -212,11 +216,11 @@ export default function Login({ ambiente = AMBIENTE }) {
           </button>
         </form>
 
-        {OAUTH.length > 0 && modo !== 'esqueci' && (
+        {(social.google || social.apple) && modo !== 'esqueci' && (
           <div className="login-social">
-            <span className="muted">ou</span>
-            {OAUTH.includes('google') && <button type="button" className="btn btn-ghost btn-block" onClick={() => social('google')}>Continuar com Google</button>}
-            {OAUTH.includes('apple') && <button type="button" className="btn btn-ghost btn-block" onClick={() => social('apple')}>Continuar com Apple</button>}
+            <OuLinha />
+            {social.google && <BotaoGoogle convite={convite} voltar={convite ? `/v/${convite}` : '/'} onErro={setErro} />}
+            {social.apple && <button type="button" className="btn btn-ghost btn-block" onClick={socialApple}>Continuar com Apple</button>}
           </div>
         )}
 

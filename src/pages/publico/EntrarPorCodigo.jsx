@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { MarcaIcon, Wordmark } from '../../components/icons'
 import { extrairCodigo, guardarConvite } from '../../lib/convite'
 import { iniciais } from '../../lib/booking'
+import BotaoGoogle from '../../components/BotaoGoogle'
+import { erroDoRetornoOAuth, precisaCompletar } from '../../lib/oauth'
 
 // /v/ANA7K2 — o que está dentro do QR e o que vai no link do WhatsApp.
 // Diz quem convidou e leva para o lugar certo:
@@ -12,17 +14,19 @@ import { iniciais } from '../../lib/booking'
 //   logada como equipe   -> avisa para trocar de conta
 //   sem conta            -> guarda o código e manda criar conta (o
 //                           código vai junto no cadastro e o vínculo
-//                           nasce no servidor) ou entrar
+//                           nasce no servidor), entrar, ou continuar com
+//                           o Google (3.60: volta logada aqui, o vínculo
+//                           nasce no app e o WhatsApp é pedido em seguida)
 //
 // No endereço próprio do salão (studiomel.mimo.com.vc, 2.80) chega com o
 // código e o alvo já resolvidos, por props.
 export default function EntrarPorCodigo({ codigo: codigoPronto, alvo: alvoPronto }) {
   const { codigo: bruto } = useParams()
   const navigate = useNavigate()
-  const { user, role, loading, recarregarVinculos } = useAuth()
+  const { user, role, loading, recarregarVinculos, profile } = useAuth()
   const codigo = codigoPronto ?? extrairCodigo(bruto)
   const [alvo, setAlvo] = useState(alvoPronto ?? undefined)
-  const [erro, setErro] = useState('')
+  const [erro, setErro] = useState(() => erroDoRetornoOAuth())
   const [entrando, setEntrando] = useState(false)
 
   useEffect(() => {
@@ -43,6 +47,8 @@ export default function EntrarPorCodigo({ codigo: codigoPronto, alvo: alvoPronto
   }
 
   if (loading || alvo === undefined) return <div className="page-center"><p className="muted">Carregando…</p></div>
+  // voltou do Google sem WhatsApp: o vínculo já nasceu (AuthContext); falta só o número
+  if (user && precisaCompletar(user, profile)) return <Navigate to="/cliente/completar" replace />
 
   return (
     <div className="page-center login-bg">
@@ -84,6 +90,7 @@ export default function EntrarPorCodigo({ codigo: codigoPronto, alvo: alvoPronto
             )}
             {!user && (
               <div className="entrar-opcoes">
+                <BotaoGoogle convite={codigo} voltar={`/v/${codigo}`} onErro={setErro} />
                 <Link to={`/cadastro?convite=${codigo}`} className="btn btn-primary btn-block">Criar minha conta</Link>
                 <Link to={`/login?convite=${codigo}`} className="btn btn-ghost btn-block">Já tenho conta</Link>
               </div>

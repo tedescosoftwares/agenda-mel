@@ -78,6 +78,44 @@ where id = (select id from auth.users where email = 'seu-email@exemplo.com');
 
 Depois é só sair e entrar de novo no app.
 
+### Entrar com Google (3.60)
+
+Na ponta da cliente (`mimo.com.vc` e o app MIMO da loja) o botão **Continuar
+com Google** aparece sozinho assim que o provedor está ligado no Supabase: o
+site pergunta ao Auth (`/auth/v1/settings`) quais provedores estão ativos.
+Nada de variável nova; `VITE_OAUTH=google,apple` continua valendo para forçar
+a lista (e é o único jeito de mostrar Google/Apple no MIMO Pro).
+
+Para ligar, uma vez:
+
+1. **Google Cloud Console → APIs e serviços → Credenciais → Criar credenciais →
+   ID do cliente OAuth**, tipo *Aplicativo da Web*. Em *URIs de redirecionamento
+   autorizados* coloque `https://SEU-PROJETO.supabase.co/auth/v1/callback`.
+   Antes disso a *Tela de permissão OAuth* precisa existir (nome MIMO, e-mail de
+   suporte, logo) e estar publicada ("Em produção"); como "Em teste", só as
+   contas de teste conseguem entrar.
+2. **Supabase → Authentication → Providers → Google**: ligue e cole o Client ID e
+   o Client Secret que o Google gerou. Os dois ficam só lá, nunca no código.
+3. **Supabase → Authentication → URL Configuration**: *Site URL*
+   `https://mimo.com.vc` e, em *Redirect URLs*, `https://mimo.com.vc/**`,
+   `https://*.mimo.com.vc/**` (o endereço próprio de cada salão) e
+   `mimo://auth/google` (o app da loja). Para desenvolver, `http://localhost:5173/**`.
+4. Rode a migração 207 (bat B) e publique o site (bat 2). O app precisa de um
+   build novo na loja (EAS) para o botão aparecer lá.
+
+O que acontece: a conta nasce pelo gatilho de sempre (`handle_new_user`), com
+o nome e o e-mail do Google e sem WhatsApp. Como é pelo WhatsApp que chegam a
+confirmação e o lembrete (e é por ele que o salão encaixa clientes), a primeira
+tela depois do Google é **"Falta só o seu WhatsApp"** (`/cliente/completar`):
+nome, número, aniversário e o aceite dos termos. O `completar_perfil` (207)
+guarda tudo, copia a foto do Google, amarra os encaixes feitos por aquele
+número e respeita o "um WhatsApp, uma conta" (067). O convite (`/v/CÓDIGO`)
+continua valendo: o código fica guardado e o vínculo nasce quando a sessão
+volta do Google. Quem já tinha conta por e-mail e entra com o Google do mesmo
+e-mail cai na mesma conta (o Supabase junta as identidades pelo e-mail
+confirmado). Uma conta por e-mail sem telefone não cai nessa tela: só quem
+entrou por um provedor social.
+
 ### Não está vendo as mudanças?
 
 A tela de login mostra a versão no rodapé (`v0.9.0 · salões, agenda real e
@@ -589,8 +627,8 @@ where slug = 'slug-dela';
       papel com `select public.dar_plataforma('voce@email.com')` no SQL Editor
 - [x] A porta é o código: sem login, o app abre em Escanear o QR / Digitar o código /
       Já tenho conta. Cadastro solto não existe; a conta nasce atrás de um código
-      (cliente) ou de "sou profissional". Google/Apple entram com `VITE_OAUTH=google,apple`
-      depois de ligar os provedores em Authentication → Providers
+      (cliente) ou de "sou profissional". O Google entra sozinho na ponta da cliente quando
+      o provedor está ligado (3.60, "Entrar com Google"); Apple com `VITE_OAUTH=apple`
 - [x] `supabase/povoar.sql`: gente de mentira (5 clientes, 4 profissionais com
       3 meses de histórico e avaliações) para ver tudo funcionando
 - [x] O relógio da casa: pg_cron + pg_net dentro do Supabase empurram a fila a

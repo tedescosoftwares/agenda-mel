@@ -111,14 +111,28 @@ $env:EXPO_PUBLIC_DEMO='1'; npx expo start           # ou no Expo Go
 
 O valor escolhe o cenário: `1` (a Juliana com tudo: horários, novidades,
 promoções), `vazia` (sem nada marcado e sem aviso novo), `nova` (acabou de
-criar a conta, ainda sem agenda) e `fora` (sem sessão: entrar, criar conta e o
-convite). Ao trocar o cenário (ou desligar a demo)
+criar a conta, ainda sem agenda) e `fora` (sem sessão: entrar, criar conta, o
+convite e o Google). Ao trocar o cenário (ou desligar a demo)
 acrescente `--clear`: o Metro guarda o valor anterior no cache e, sem isso,
 continua mostrando o cenário de antes. Os dados moram em `src/lib/demo.ts`, uma
 imitação do cliente do Supabase igual à da web (`src/lib/demo.js`): quando uma
 tela nova usar uma tabela ou função que não está lá, acrescente. Nada disso
 entra no pacote da loja: sem a variável, `src/lib/supabase.ts` nem carrega o
 arquivo.
+
+### Entrar com Google (3.60)
+
+No app da cliente, **Continuar com Google** aparece em Entrar e em Criar conta
+assim que o provedor está ligado no Supabase (o app pergunta em
+`/auth/v1/settings`; no Pro não aparece). O login abre o navegador do sistema
+(`expo-web-browser`), o Google volta para o Supabase e o Supabase devolve para
+o app em `mimo://auth/google`, que precisa estar nas *Redirect URLs* do projeto
+(Authentication → URL Configuration). Não há SDK nativo do Google nem client ID
+por plataforma: é o mesmo cliente OAuth da web (README da raiz, "Entrar com
+Google"). A conta nova chega sem WhatsApp e o app pede o número em
+`src/app/completar.tsx` antes de abrir as abas; a lógica mora em
+`src/lib/oauth.ts`. Na demo (`fora`), o botão "entra" como a Juliana sem
+WhatsApp e mostra essa tela.
 
 ## Publicar na Play Store (EAS)
 

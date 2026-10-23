@@ -9,6 +9,7 @@ import { Avatar, Aviso, Botao, Caixa, Cartao, Entrada } from '@/components/ui'
 import { WEB_URL } from '@/lib/config'
 import { useConfig } from '@/lib/configPublica'
 import { extrairCodigo, guardarConvite } from '@/lib/convite'
+import { entrarComGoogle, provedoresLigados } from '@/lib/oauth'
 import { mascaraData, nascimentoOk, paraIso } from '@/lib/datas'
 import { aceitesDaCliente } from '@/lib/legal'
 import { supabase } from '@/lib/supabase'
@@ -18,7 +19,9 @@ import { useTema } from '@/lib/tema'
 // convite: QR, código ou link de uma profissional ou salão. Dois passos curtos
 // (quem é você, e como você entra) e no fim "confira seu e-mail", com reenvio.
 // O convite vai nos metadados da conta e o servidor cria o vínculo quando o
-// perfil nasce (053); aniversário e aceite também (065).
+// perfil nasce (053); aniversário e aceite também (065). Ou, em um toque, com o
+// Google (3.60): a sessão nasce, o código guardado vira o vínculo e o app pede o
+// WhatsApp em seguida (completar.tsx).
 type Alvo = { tipo: string; nome: string; foto: string | null }
 
 export default function Cadastro() {
@@ -42,6 +45,26 @@ export default function Cadastro() {
   const [ocupado, setOcupado] = useState(false)
   const [pronto, setPronto] = useState(false)
   const [reenviado, setReenviado] = useState('')
+  const [google, setGoogle] = useState(false)
+  const [googleOcupado, setGoogleOcupado] = useState(false)
+
+  useEffect(() => {
+    let vivo = true
+    provedoresLigados().then((p) => {
+      if (vivo) setGoogle(Boolean(p.google))
+    })
+    return () => {
+      vivo = false
+    }
+  }, [])
+
+  async function comGoogle() {
+    setErro('')
+    setGoogleOcupado(true)
+    const falha = await entrarComGoogle()
+    setGoogleOcupado(false)
+    if (falha) setErro(falha)
+  }
 
   // quem convidou (o código fica guardado: se ela só entrar, o vínculo nasce no login)
   useEffect(() => {
@@ -196,6 +219,16 @@ export default function Cadastro() {
 
           {passo === 1 ? (
             <Cartao estilo={{ gap: 12 }}>
+              {google && alvo ? (
+                <>
+                  <Botao titulo="Continuar com Google" tipo="linha" icone="logo-google" onPress={comGoogle} carregando={googleOcupado} />
+                  <View style={e.ou}>
+                    <View style={[e.ouLinha, { backgroundColor: t.fio }]} />
+                    <Text style={{ color: t.texto3, fontSize: 12.5 }}>ou com e-mail</Text>
+                    <View style={[e.ouLinha, { backgroundColor: t.fio }]} />
+                  </View>
+                </>
+              ) : null}
               <Entrada rotulo="Nome e sobrenome" placeholder="Maria da Silva" value={nome} onChangeText={setNome} autoComplete="name" textContentType="name" autoCapitalize="words" />
               <View style={{ gap: 4 }}>
                 <Entrada rotulo="WhatsApp" placeholder="(13) 99999-9999" value={fone} onChangeText={(v) => setFone(formatarFone(v))} keyboardType="phone-pad" autoComplete="tel" textContentType="telephoneNumber" maxLength={15} />
@@ -280,4 +313,6 @@ const e = StyleSheet.create({
   titulo: { fontSize: 20, fontWeight: '800', letterSpacing: -0.3 },
   icone: { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center' },
   jaTem: { borderRadius: 14, padding: 12, gap: 10 },
+  ou: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 2 },
+  ouLinha: { flex: 1, height: 1 },
 })

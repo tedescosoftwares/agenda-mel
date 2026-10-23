@@ -46,7 +46,7 @@ export const PAPEL = (() => {
   } catch { return 'cliente' }
 })()
 
-const UID = { cliente: 'c1', profissional: 'p1', admin: 'a1', plataforma: 'pl1' }[PAPEL] || 'c1'
+const UID = { cliente: 'c1', profissional: 'p1', admin: 'a1', plataforma: 'pl1', google: 'g1' }[PAPEL] || 'c1'
 const SALAO = 's1'
 
 // foto fictícia: um retrato abstrato em SVG, para não depender de rede
@@ -102,6 +102,8 @@ const clientes = [
   { id: 'p1', full_name: 'Ana Oliveira', phone: '(13) 99871-0002', role: 'profissional', accepts_reminders: true, created_at: '2024-12-01', primeiro_acesso_em: '2024-11-01', aceitou_termos_em: '2024-11-01', termos_versao: '2026-09-10' },
   { id: 'a1', full_name: 'Mel Tedesco', phone: '(13) 99120-3410', role: 'admin', accepts_reminders: true, created_at: '2024-11-01', primeiro_acesso_em: '2024-11-01', aceitou_termos_em: '2024-11-01', termos_versao: '2026-09-10' },
   { id: 'pl1', full_name: 'Bruno Tedesco', phone: '(13) 99871-0000', role: 'plataforma', accepts_reminders: true, created_at: '2024-10-01' },
+  // 3.60: a conta que acabou de nascer pelo Google (?demo=google): sem WhatsApp, sem aceite; completar_perfil preenche
+  { id: 'g1', full_name: 'Larissa Google', phone: null, avatar_url: FOTO(5), role: 'cliente', accepts_reminders: true, referral_code: 'LARISS10', created_at: mais(0), primeiro_acesso_em: mais(0) + 'T12:00:00', aceitou_termos_em: null, termos_versao: null },
 ]
 
 const jn = (a, todos) => ({ ...a, services: servicos.find((s) => s.id === a.service_id), professionals: profissionais.find((p) => p.id === a.professional_id), profiles: clientes.find((c) => c.id === a.client_id), appointment_offers: [], origem: a.remarca_de ? (todos.find((o) => o.id === a.remarca_de) ?? null) : null })
@@ -362,6 +364,15 @@ const RPC = {
     return { tipo: 'profissional', codigo: p.codigo, slug: p.slug, subdominio: salao.subdominio, nome: p.name, foto: p.photo_url, especialidade: p.especialidade ?? null, profissional_id: p.id, salao }
   },
   clientes_do_salao: () => clientes.filter((c) => c.role === 'cliente').map((c, i) => ({ client_id: c.id, nome: c.full_name, telefone: c.phone, entrou_em: mais(-(10 + i * 7)), como: ['qr', 'link', 'agendamento', 'encaixe'][i % 4], trazida_por: ['Ana Oliveira', 'Camila Rocha', null, 'Ana Oliveira'][i % 4], trazida_por_ativa: true, servico_de_entrada: ['Esmaltação em gel', 'Escova', 'Manicure', 'Spa dos pés'][i % 4], com_quem: ['Ana Oliveira', 'Camila Rocha', 'Ana Oliveira', 'Fernanda Lima'][i % 4], atendimentos: [9, 4, 2, 6][i % 4], ultima_visita: mais(-(2 + i * 3)), faltas: [0, 2, 0, 1][i % 4], cancelamentos: [1, 3, 0, 0][i % 4], cancelamentos_tardios: [0, 2, 0, 0][i % 4], remarcacoes: [2, 1, 0, 0][i % 4] })),
+  // 3.60: completa a conta que nasceu pelo Google; depois, a demo segue como cliente de sempre
+  completar_perfil: ({ nome_, fone_, nascimento_ }) => {
+    if (String(fone_ ?? '').replace(/\D/g, '').endsWith('0115')) return { ok: false, em_uso: true, motivo: 'Esse WhatsApp já está em uso e não dá pra cadastrar de novo. Se a conta é sua, entre por ela.' }
+    const c = clientes.find((x) => x.id === 'g1')
+    c.phone = fone_; if (nome_) c.full_name = nome_; if (nascimento_) c.nascimento = nascimento_
+    c.aceitou_termos_em = new Date().toISOString(); c.termos_versao = '2026-09-24'
+    try { localStorage.setItem('mimo-demo-papel', 'cliente') } catch { /* nada */ }
+    return { ok: true, phone: fone_, encaixes: 1, agendas: 1 }
+  },
   telefone_disponivel: ({ fone }) => (String(fone).replace(/\D/g, '').endsWith('0115') ? { disponivel: false, em_uso: true, motivo: 'Esse WhatsApp já está em uso e não dá pra cadastrar de novo. Se o número é seu, fale com o suporte.' } : { disponivel: true }),
   pedir_troca_whatsapp: ({ novo }) => ({ via: 'whatsapp', para: novo, expira_em: mais(0) }),
   confirmar_troca_whatsapp: () => ({ ok: true }),
@@ -742,13 +753,15 @@ const CONTEUDO = {
   redirects: [{ id: 'rd1', from_path: '/cadastro-antigo', to_path: '/comecar', http_status: 301, active: true, created_at: '2026-09-01T12:00:00-03:00' }],
 }
 
-const sessao = PAPEL === 'sair' ? null : { user: { id: UID, email: PAPEL + '@mimo.demo' }, access_token: 'demo' }
+const sessao = PAPEL === 'sair' ? null : { user: { id: UID, email: PAPEL + '@mimo.demo', ...(PAPEL === 'google' ? { app_metadata: { provider: 'google', providers: ['google'] }, user_metadata: { full_name: 'Larissa Google', avatar_url: FOTO(5) } } : {}) }, access_token: 'demo' }
 
 export const demo = {
   auth: {
     getSession: async () => ({ data: { session: sessao } }),
     onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } }),
     signInWithPassword: async () => ({ data: { session: sessao }, error: null }),
+    // 3.60: "ir ao Google" na demo é virar a Larissa (conta nova, sem WhatsApp) e voltar para onde o botão mandou
+    signInWithOAuth: async ({ options } = {}) => { try { localStorage.setItem('mimo-demo-papel', 'google') } catch { /* nada */ } ; window.location.href = options?.redirectTo || '/'; return { data: { provider: 'google', url: options?.redirectTo || '/' }, error: null } },
     verifyOtp: async () => ({ data: { session: sessao }, error: null }),
     resend: async () => ({ error: null }),
     signUp: async () => ({ error: null }),

@@ -5,10 +5,11 @@ import { AMBIENTE, ambienteDoPapel } from '../lib/ambiente'
 import AmbienteErrado from './AmbienteErrado'
 import Aguardando from '../pages/pro/Aguardando'
 import AceiteGate from './AceiteGate'
+import { precisaCompletar } from '../lib/oauth'
 
 // permitirSemVinculo: a tela "Entrar numa agenda" é a única que uma
 // cliente sem vínculo pode ver. Todas as outras mandam para lá.
-export default function ProtectedRoute({ children, requireRole, permitirSemVinculo = false, permitirPrimeiroAcesso = false, permitirOnboarding = false }) {
+export default function ProtectedRoute({ children, requireRole, permitirSemVinculo = false, permitirPrimeiroAcesso = false, permitirOnboarding = false, permitirSemTelefone = false }) {
   const { user, role, loading, vinculos, profile, erroRede, recarregarVinculos, salao, negocio, professional, acesso } = useAuth()
   const { pathname } = useLocation()
 
@@ -27,6 +28,9 @@ export default function ProtectedRoute({ children, requireRole, permitirSemVincu
   // profissional no endereço da cliente (ou o contrário): avisa, não pula
   const certo = ambienteDoPapel(role)
   if (certo && certo !== AMBIENTE) return <AmbienteErrado role={role} />
+
+  // a cliente que entrou pelo Google (3.60) ainda não disse o WhatsApp: pede antes de tudo
+  if (!permitirSemTelefone && precisaCompletar(user, profile)) return <Navigate to="/cliente/completar" replace />
 
   // a primeira entrada explica as permissões e recolhe o aceite (064);
   // a plataforma é painel de PC e não passa por ela

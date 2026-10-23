@@ -55,6 +55,8 @@ const VAZIA = CENARIO === 'vazia'
 const S1 = 's1' // Studio Mel (salão)
 const S2 = 's2' // Bia Lash (autônoma)
 
+// 3.60: na demo, "entrar com o Google" é a Juliana chegando sem WhatsApp; completar_perfil preenche
+let peloGoogle = false
 const perfis: Linha[] = [
   { id: 'c1', full_name: 'Juliana Silva', phone: '(13) 99879-0115', avatar_url: null, role: 'cliente', accepts_reminders: true, aceita_email: true, referral_code: 'JULIANA10', nascimento: '1994-08-23', created_at: '2025-01-10T12:00:00Z' },
 ]
@@ -265,7 +267,17 @@ const RPC: Record<string, (args?: Linha) => unknown> = {
     if (!existente) TABELAS.vinculos!.push({ id: 'vc-' + alvo.salao.id, client_id: DEMO_UID, salon_id: alvo.salao.id, saiu_em: null, trazida_por: alvo.profissional_id, como: args?.jeito ?? 'codigo', criado_em: mais(0) })
     return { ok: true, novo: !existente, salao: alvo.salao, trazida_por: alvo.profissional_id ? (prof(alvo.profissional_id)?.name ?? null) : null, tipo: alvo.tipo }
   },
-  telefone_disponivel: () => ({ disponivel: true }),
+  telefone_disponivel: (args) => (String(args?.fone ?? '').replace(/\D/g, '').endsWith('0001') ? { disponivel: false, em_uso: true, motivo: 'Esse WhatsApp já está em uso.' } : { disponivel: true }),
+  // 3.60: completa a conta que chegou pelo Google
+  completar_perfil: (args) => {
+    if (!peloGoogle) return { ok: false, motivo: 'Esse perfil já tem WhatsApp. Para trocar, use o perfil.', ja_tinha: true }
+    perfis[0]!.phone = args?.fone_ ?? null
+    if (args?.nome_) perfis[0]!.full_name = args.nome_
+    if (args?.nascimento_) perfis[0]!.nascimento = args.nascimento_
+    perfis[0]!.aceitou_termos_em = new Date().toISOString()
+    peloGoogle = false
+    return { ok: true, phone: args?.fone_ ?? null, encaixes: 1, agendas: 2 }
+  },
   documentos_vigentes: () => ({}),
   // o fluxo de marcar: as regras de verdade são do banco; aqui só a forma da resposta
   pagamento_do_salao: (args) => {
@@ -449,14 +461,14 @@ function consulta(linhas: Linha[]) {
 }
 
 // uma sessão de mentira, do jeito que o supabase-js devolve
-const criarSessao = () =>
+const criarSessao = (provedor = 'email') =>
   ({
     access_token: 'demo',
     refresh_token: 'demo',
     token_type: 'bearer',
     expires_in: 3600,
     expires_at: Math.floor(Date.now() / 1000) + 3600,
-    user: { id: DEMO_UID, email: 'juliana@mimo.demo', aud: 'authenticated', role: 'authenticated', app_metadata: {}, user_metadata: { full_name: 'Juliana Silva' }, created_at: '2025-01-10T12:00:00Z' },
+    user: { id: DEMO_UID, email: 'juliana@mimo.demo', aud: 'authenticated', role: 'authenticated', app_metadata: { provider: provedor, providers: [provedor] }, user_metadata: { full_name: 'Juliana Silva', ...(provedor === 'google' ? { avatar_url: FOTO(1) } : {}) }, created_at: '2025-01-10T12:00:00Z' },
   }) as any
 
 // no cenário "fora" o app abre sem sessão: entrar, criar conta e o convite
@@ -477,6 +489,16 @@ export const demo = {
       avisar('SIGNED_IN')
       return { data: { session: sessao, user: sessao.user }, error: null }
     },
+    // 3.60: entrar com o Google: a conta chega sem WhatsApp e o app pede (completar.tsx)
+    signInWithOAuth: async () => {
+      peloGoogle = true
+      perfis[0]!.phone = null
+      perfis[0]!.aceitou_termos_em = null
+      sessao = criarSessao('google')
+      avisar('SIGNED_IN')
+      return { data: { provider: 'google', url: null }, error: null }
+    },
+    exchangeCodeForSession: async () => ({ data: { session: sessao, user: sessao?.user ?? null }, error: null }),
     signOut: async () => {
       sessao = null
       avisar('SIGNED_OUT')

@@ -54,12 +54,23 @@ esac
 # shellcheck disable=SC1091
 [ -f "$RAIZ/.env" ] && { set -a; . "$RAIZ/.env"; set +a; }
 case "${VITE_SUPABASE_URL:-}" in https://*) ;; *) vermelho 'Falta VITE_SUPABASE_URL no .env.'; exit 1 ;; esac
-[ -n "${EVOLUTION_WEBHOOK_TOKEN:-}" ] || { vermelho 'Falta EVOLUTION_WEBHOOK_TOKEN no .env (o mesmo segredo do webhook, que você pôs no Supabase). Adicione-o ao .env e tente de novo.'; exit 1; }
 command -v curl >/dev/null || { vermelho 'Não achei o curl no PATH.'; exit 1; }
+
+# o token do webhook: aceita EVOLUTION_WEBHOOK_TOKEN (nome do segredo no Supabase) OU WEBHOOK_TOKEN (nome usado no .env
+# da VPS, pelo conectar.sh). Se faltar nos dois, tenta descobrir pelo webhook já configurado na Evolution (DOMINIO +
+# API_KEY, que também estão no .env) — assim não precisa guardar o token em lugar nenhum.
+TOKEN="${EVOLUTION_WEBHOOK_TOKEN:-${WEBHOOK_TOKEN:-}}"
+if [ -z "$TOKEN" ] && [ -n "${DOMINIO:-}" ] && [ -n "${API_KEY:-}" ]; then
+  for inst in mimo-guia $(curl -s --max-time 10 "https://${DOMINIO}/instance/fetchInstances" -H "apikey: ${API_KEY}" 2>/dev/null | grep -oE '"(name|instanceName)":"[^"]+"' | sed -E 's/.*":"//; s/"$//'); do
+    tok=$(curl -s --max-time 10 "https://${DOMINIO}/webhook/find/${inst}" -H "apikey: ${API_KEY}" 2>/dev/null | grep -oE 'whatsapp-webhook\?token=[A-Za-z0-9_.-]+' | head -1 | sed 's/.*token=//')
+    [ -n "$tok" ] && { TOKEN="$tok"; amarelo "Token achado pelo webhook da Evolution (instância ${inst})."; break; }
+  done
+fi
+[ -n "$TOKEN" ] || { vermelho 'Não achei o token. Ele costuma estar no .env como WEBHOOK_TOKEN (ou EVOLUTION_WEBHOOK_TOKEN) — o mesmo segredo do webhook. Confira o .env e tente de novo.'; exit 1; }
 
 RESP=$(curl -s -m 30 -G "$VITE_SUPABASE_URL/functions/v1/whatsapp-webhook" \
   --data-urlencode 'tarefa=ociosas' \
-  --data-urlencode "token=$EVOLUTION_WEBHOOK_TOKEN" || true)
+  --data-urlencode "token=$TOKEN" || true)
 
 case "$RESP" in
   *'"ok":true'*'"ativo":false'*) verde "$(date '+%F %T') ocioso desligado na Plataforma (nada a fazer)";;

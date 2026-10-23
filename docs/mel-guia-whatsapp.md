@@ -122,7 +122,7 @@ A ordem de sempre (você roda):
 
 1. **bat B** — aplica as migrações novas: **199, 200, 201, 202, 203, 204, 205**.
 2. **bat 9** — publica as funções: **whatsapp-webhook** (ganhou `?tarefa=ociosas` e, na 3.55, o agente de onboarding antes da Mel; na 3.57, o voto da enquete e a varredura dos pedidos) e **guia-whats** (simular com "como a dona"; na 3.55, `simular_onboarding`/`reiniciar_onboarding`; na 3.57, `simular_voto` e o Reenviar com a enquete).
-3. **bat 2** — publica a Plataforma (versão **3.57.0**).
+3. **bat 2** — publica a Plataforma (versão **3.58.0**).
 4. **VPS (opcional, para o ocioso ativo):** `cd evolution && ./cutucar-ociosas.sh --cron` (com `EVOLUTION_WEBHOOK_TOKEN` no `.env`).
 5. Na aba WhatsApp: preencha **"WhatsApp da equipe para avisos"**, revise os textos (encerramento, "posso encerrar?", mensagem da dona) e ligue o ocioso quando o cron estiver no ar.
 
@@ -258,3 +258,15 @@ Bloco **"O retorno do salão"**: enquete (liga/desliga, pergunta, opções), as 
 - `WhatsAppGuia.jsx`, `demoGuiaWhats.js`, `guia-plataforma.css` (`.pg-wa-voto`, `.pg-wa-retorno`, `.pg-wa-enquete`, `.pg-wa-sim-voto`), `evolution/cutucar-ociosas.sh` (mensagem do log), `evolution/LEIAME.md`.
 - Deploy: **bat B** (205) → **bat 9** (whatsapp-webhook, guia-whats) → **bat 2**. O cron já instalado não muda.
 - Versão **3.57.0-mimo**.
+
+---
+
+## 12. 3.58 — A aba WhatsApp reorganizada
+
+Sem mudança de banco nem de função: só a Plataforma (`WhatsAppGuia.jsx` e o bloco `.pg-wa-v2` em `guia-plataforma.css`). O que mudou de lugar:
+
+- **Cabeçalho:** o estado da conexão, o número e a instância, a pílula "Ligado/Desligado no site" e as ações (Conectar/Reconectar, Desconectar, Conferir, Período). O pareamento (código/QR) aparece logo abaixo.
+- **Números:** cartões com ícone (conversas, pedidos enviados, abriram, vão atender, não vão, responderam, querem a MIMO, enviados hoje com a barra do limite) e o **funil do pedido** (enviados → abriram o link → vão atender, com %).
+- **Seções** (lembradas no navegador): **Pedidos** — filtros (todos, aguardando o salão, vão atender, não vão, querem a MIMO, com problema, atendidos), busca, e cada pedido com a **linha do tempo** (enviado → abriu o link → o retorno: voto pela enquete/por texto, enquete sem voto, salão respondeu), os avisos do relógio, a conversa do salão dobrável, "atendido" como chip e os atalhos; **Conversas**; **Testar a Mel** (o simulador com as dicas ao lado); **Configuração** — oito blocos (Conexão, No site, A Mel, O pedido ao salão, O retorno do salão, Ciclo e ocioso, Equipe e dona, Limites e privacidade), o índice lateral que acompanha a rolagem, interruptores e a **barra de salvar fixa** ("Tudo salvo · há X" / "Alterações sem salvar", com Descartar).
+- Os ids de teste (`data-teste="wa-*"`) são os mesmos; os campos e as RPCs também. A aba Onboarding não mudou.
+- Versão **3.58.0-mimo**.

@@ -784,6 +784,11 @@ cd evolution
 ./cutucar-ociosas.sh --sem-cron # tira do cron
 ```
 
+Desde a 3.57 a mesma chamada também varre os **pedidos parados** (o salão recebeu o pedido e não abriu o link, não votou
+na enquete "vai atender?" nem respondeu): avisa a equipe (`aviso_demora_min`) e/ou cutuca o salão (`cutucar_salao_min`),
+uma vez por pedido. Os tempos (0 = desligado) e os textos ficam na mesma aba WhatsApp, no bloco "O retorno do salão".
+Com o cron já instalado, não precisa fazer nada na VPS.
+
 Enquanto esse cron não estiver no ar, deixe o ocioso desligado na Plataforma; o resto do ciclo (quantas dúvidas depois
 do envio, encerrar por "sem avançar", esquecer a conversa parada) não depende do relógio e continua valendo.
 

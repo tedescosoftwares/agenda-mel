@@ -15,7 +15,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { enviarPor } from '../_shared/canais.ts'
 import { classificar } from '../_shared/ia.ts'
 import { conversar } from '../_shared/agente.ts'
-import { atenderGuia, iaDe, type Deps as DepsGuia } from '../_shared/guia_whats.ts'
+import { atenderGuia, iaDe, avisoDemora, cutucadaSalao, type Deps as DepsGuia, type Pedido } from '../_shared/guia_whats.ts'
 import { atenderOnboarding, iaOnbDe, consultarCnpjDe, consultarCepDe, type Deps as DepsOnb } from '../_shared/guia_onboarding.ts'
 
 const db = createClient(
@@ -253,21 +253,48 @@ Deno.serve(async (req) => {
       const { data, error } = await db.rpc('guia_whats_ociosas')
       if (error) return json({ erro: error.message }, 500)
       const o = (data ?? {}) as { ativo?: boolean; instancia?: string; texto_perguntar?: string; texto_encerrar?: string; perguntar?: Array<{ id: number; telefone: string }>; encerrar?: Array<{ id: number; telefone: string }> }
-      if (!o.ativo) return json({ ok: true, ativo: false })
-      const instancia = o.instancia ?? ''
       let perguntou = 0, encerrou = 0
-      // encerra primeiro (quem já foi perguntado e segue parado), depois pergunta (quem acabou de parar)
-      for (const c of o.encerrar ?? []) {
-        const env = await enviarPor('evolution', { telefone: c.telefone, corpo: o.texto_encerrar ?? '', identificador: instancia })
-        if (env.ok) { await db.rpc('guia_whats_ociosa_feita', { id_: c.id, tipo_: 'encerrar', texto_: o.texto_encerrar }); encerrou++ }
-        else console.error('ocioso encerrar: não saiu', env.erro)
+      if (o.ativo) {
+        const instancia = o.instancia ?? ''
+        // encerra primeiro (quem já foi perguntado e segue parado), depois pergunta (quem acabou de parar)
+        for (const c of o.encerrar ?? []) {
+          const env = await enviarPor('evolution', { telefone: c.telefone, corpo: o.texto_encerrar ?? '', identificador: instancia })
+          if (env.ok) { await db.rpc('guia_whats_ociosa_feita', { id_: c.id, tipo_: 'encerrar', texto_: o.texto_encerrar }); encerrou++ }
+          else console.error('ocioso encerrar: não saiu', env.erro)
+        }
+        for (const c of o.perguntar ?? []) {
+          const env = await enviarPor('evolution', { telefone: c.telefone, corpo: o.texto_perguntar ?? '', identificador: instancia })
+          if (env.ok) { await db.rpc('guia_whats_ociosa_feita', { id_: c.id, tipo_: 'perguntar', texto_: o.texto_perguntar }); perguntou++ }
+          else console.error('ocioso perguntar: não saiu', env.erro)
+        }
       }
-      for (const c of o.perguntar ?? []) {
-        const env = await enviarPor('evolution', { telefone: c.telefone, corpo: o.texto_perguntar ?? '', identificador: instancia })
-        if (env.ok) { await db.rpc('guia_whats_ociosa_feita', { id_: c.id, tipo_: 'perguntar', texto_: o.texto_perguntar }); perguntou++ }
-        else console.error('ocioso perguntar: não saiu', env.erro)
+      // 3.57: o mesmo relógio varre os PEDIDOS parados (migração 205): enviado há X minutos sem o salão abrir o link,
+      // votar ou responder → avisa a equipe (uma vez) e/ou cutuca o salão (uma vez). Num banco sem a 205, só o ocioso.
+      let avisouDemora = 0, cutucou = 0, pedidosAtivo = false
+      try {
+        const { data: pd, error: ep } = await db.rpc('guia_whats_pendentes')
+        if (ep) throw new Error(ep.message)
+        const pp = (pd ?? {}) as { ativo?: boolean; instancia?: string; numero_avisos?: string | null; texto_demora?: string; texto_cutucar?: string; demora?: Array<Pedido & { minutos?: number }>; cutucar?: Array<Pedido & { minutos?: number }> }
+        pedidosAtivo = !!pp.ativo
+        if (pp.ativo) {
+          const instancia = pp.instancia ?? ''
+          for (const x of pp.demora ?? []) {
+            if (!pp.numero_avisos) break
+            const env = await enviarPor('evolution', { telefone: pp.numero_avisos, corpo: avisoDemora(pp.texto_demora, x), identificador: instancia })
+            if (env.ok) { await db.rpc('guia_whats_pendente_feita', { id_: x.id, tipo_: 'demora' }); avisouDemora++ }
+            else console.error('aviso de demora: não saiu', env.erro)
+          }
+          for (const x of pp.cutucar ?? []) {
+            if (!x.salao_tel) continue
+            const env = await enviarPor('evolution', { telefone: x.salao_tel, corpo: cutucadaSalao(pp.texto_cutucar, x), identificador: instancia })
+            if (env.ok) { await db.rpc('guia_whats_pendente_feita', { id_: x.id, tipo_: 'cutucar' }); cutucou++ }
+            else console.error('cutucar o salão: não saiu', env.erro)
+          }
+        }
+      } catch (e) {
+        console.error('pedidos parados: não deu para varrer (a migração 205 está aplicada?)', e)
       }
-      return json({ ok: true, perguntou, encerrou })
+      return json({ ok: true, ativo: !!o.ativo, perguntou, encerrou, pedidos: pedidosAtivo, avisou_demora: avisouDemora, cutucou })
     } catch (e) {
       return json({ erro: String((e as Error)?.message ?? e).slice(0, 300) }, 500)
     }
@@ -334,6 +361,8 @@ Deno.serve(async (req) => {
     rpc: (nome, args) => db.rpc(nome, args) as unknown as Promise<{ data: unknown; error: { message?: string } | null }>,
     ia: iaDe(Deno.env, fetch as unknown as Parameters<typeof iaDe>[1]),
     enviar: (instancia, telefone, texto) => enviarPor('evolution', { telefone, corpo: texto, identificador: instancia }),
+    // 3.57: a enquete "vai atender?" (sendPoll): as opções viram "1"/"2" no voto, pela posição
+    enviarEnquete: (instancia, telefone, pergunta, opcoes) => enviarPor('evolution', { telefone, corpo: pergunta, estilo: 'enquete', identificador: instancia, botoes: opcoes.map((o, i) => ({ type: 'reply' as const, displayText: o, id: String(i + 1) })) }),
   })
   // 3.55: o agente de onboarding (migração 203) — mesmo número, outro agente; a consulta do CNPJ é a BrasilAPI
   const depsOnb = (): DepsOnb => ({
@@ -346,10 +375,11 @@ Deno.serve(async (req) => {
 
   for (const m of mensagens) {
     if (guia && m.instancia && m.instancia === guia.instancia) {
+      // 3.57: um voto na enquete não é conversa de onboarding: vai direto à Mel, que amarra ao pedido do salão
       // 3.55: o agente de onboarding olha primeiro. Se a mensagem é dele (conversa de onboarding aberta deste número, ou um
       // gatilho), ele atende e a Mel-cliente nem vê; se não é ("passa"), segue para a Mel como sempre. Qualquer erro aqui
       // (a migração 203 ainda não aplicada, por exemplo) também passa: o agente novo nunca derruba o atendimento da cliente.
-      try {
+      if (!m.enquete) try {
         const o = await atenderOnboarding(depsOnb(), { telefone: m.telefone, texto: m.texto, nomePerfil: m.nome ?? null })
         if (o.acao !== 'passa') {
           respostas.push(`onboarding[${o.acao}]`)
@@ -367,7 +397,7 @@ Deno.serve(async (req) => {
         console.error('onboarding: não deu para atender (a Mel segue)', e)
       }
       try {
-        const r = await atenderGuia(depsGuia(), { telefone: m.telefone, texto: m.texto, nomePerfil: m.nome ?? null, citado: m.citado ?? null })
+        const r = await atenderGuia(depsGuia(), { telefone: m.telefone, texto: m.texto, nomePerfil: m.nome ?? null, citado: m.citado ?? null, enquete: m.enquete ?? null })
         respostas.push(`guia[${r.acao}]`)
         if (r.erro) console.error('guia:', r.erro)
         if (r.responder) {

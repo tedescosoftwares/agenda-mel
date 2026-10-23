@@ -7,7 +7,12 @@
 # pergunta "posso encerrar?" (quando passou ocioso_perguntar_min) ou o
 # encerramento e fecha (quando passou ocioso_encerrar_min desde a pergunta).
 # Os tempos, os textos e o liga/desliga ficam na aba WhatsApp da Plataforma;
-# se o ocioso estiver desligado lá, esta chamada não faz nada (sai calado).
+# se o ocioso estiver desligado lá, esta parte não faz nada.
+#
+# 3.57: a mesma chamada varre também os PEDIDOS parados (o salão recebeu o
+# pedido e não abriu o link, não votou na enquete nem respondeu): avisa a
+# equipe (aviso_demora_min) e/ou cutuca o salão (cutucar_salao_min), uma vez
+# por pedido. Também configurável na aba WhatsApp (0 = desligado).
 #
 #   ./cutucar-ociosas.sh          roda uma vez (mostra quantas perguntou/encerrou)
 #   ./cutucar-ociosas.sh --cron   instala no cron: a cada 5 minutos (log em cutucar.log)
@@ -73,7 +78,7 @@ RESP=$(curl -s -m 30 -G "$VITE_SUPABASE_URL/functions/v1/whatsapp-webhook" \
   --data-urlencode "token=$TOKEN" || true)
 
 case "$RESP" in
-  *'"ok":true'*'"ativo":false'*) verde "$(date '+%F %T') ocioso desligado na Plataforma (nada a fazer)";;
+  *'"ok":true'*'"ativo":false'*'"pedidos":false'*) verde "$(date '+%F %T') ocioso e avisos de pedido desligados na Plataforma (nada a fazer)";;
   *'"ok":true'*)                  verde "$(date '+%F %T') ok: $RESP";;
   *'não autorizado'*|*'403'*)     vermelho "$(date '+%F %T') token recusado: confira EVOLUTION_WEBHOOK_TOKEN no .env e no Supabase"; exit 1;;
   '')                             vermelho "$(date '+%F %T') sem resposta do webhook (confira VITE_SUPABASE_URL e a conexão)"; exit 1;;

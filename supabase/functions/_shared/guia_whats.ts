@@ -23,19 +23,25 @@ export type Deps = {
   rpc: (nome: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message?: string } | null }>
   ia: (p: PedidoIa) => Promise<{ leitura: LeituraIa | null; erro?: string; modelo?: string }>
   enviar: (instancia: string, telefone: string, texto: string) => Promise<Resultado>
+  // 3.57: a enquete "vai atender?" que vai logo depois do pedido ao salão (sendPoll da Evolution); opcional (sem ela, só o texto)
+  enviarEnquete?: (instancia: string, telefone: string, pergunta: string, opcoes: string[]) => Promise<Resultado>
   agora?: () => Date
 }
-export type Entrada = { telefone: string; texto: string; nomePerfil?: string | null; citado?: string | null }
+// enquete: a chave da mensagem da enquete quando a entrada é um VOTO (pollUpdateMessage) — o texto vem "1"/"2" ou o nome da opção
+export type Entrada = { telefone: string; texto: string; nomePerfil?: string | null; citado?: string | null; enquete?: string | null }
 export type Saida = {
   responder: string | null
   acao: string
   previaSalao?: string | null
   previaAviso?: string | null
+  // 3.57: no simulador, a enquete que iria junto do pedido; e, no voto simulado, a mensagem que a cliente receberia
+  previaEnquete?: { pergunta: string; opcoes: string[] } | null
+  previaCliente?: string | null
   estado?: string
   dados?: Dados
   erro?: string
 }
-type Dados = { nome?: string; servico?: string; preferencia?: string; observacao?: string; pos_envio?: number; sem_avanco?: number; dona?: boolean }
+type Dados = { nome?: string; servico?: string; preferencia?: string; observacao?: string; pos_envio?: number; sem_avanco?: number; dona?: boolean; salao_recusou?: string }
 type Lugar = {
   id: string; nome: string; categoria?: string | null; cidade?: string | null; cidade_slug?: string; slug?: string; uf?: string | null
   bairro?: string | null; endereco?: string | null; servicos?: string[] | null; horarios?: unknown; telefone?: string | null; whatsapp?: string | null
@@ -49,7 +55,19 @@ type Config = {
   msg_encerramento?: string | null; exigir_preferencia?: boolean; pos_envio?: number | null; max_sem_avanco?: number | null; ocioso_horas?: number | null
   // 3.54: a mensagem que a Mel manda quando reconhece a própria dona testando o salão ({salao} e {exemplo})
   msg_dona?: string | null
+  // 3.57: o retorno do salão — a enquete "vai atender?", as respostas e os avisos (tudo editável na aba WhatsApp)
+  enquete_ativa?: boolean; enquete_pergunta?: string | null; enquete_sim?: string | null; enquete_nao?: string | null
+  msg_salao_vai_atender?: string | null; msg_salao_nao_atende?: string | null
+  avisar_cliente_nao?: boolean; msg_cliente_nao_atende?: string | null
+  aviso_nao_atende?: boolean; msg_aviso_nao_atende?: string | null
+  aviso_demora_min?: number | null; msg_aviso_demora?: string | null; cutucar_salao_min?: number | null; msg_cutucar_salao?: string | null
 }
+// o pedido como o banco devolve (guia_whats_lead_criar / guia_whats_voto / guia_whats_pendentes): o que as mensagens usam
+export type Pedido = {
+  id: number; salao_nome: string; cidade?: string | null; cliente_nome?: string | null; cliente_tel: string; servico?: string | null
+  preferencia?: string | null; observacao?: string | null; salao_tel?: string | null; token?: string | null; status?: string; conversa_id?: number | null
+}
+type LeadSalao = { id: number; salao_nome: string; status: string; ja_respondeu: boolean; voto?: string | null }
 
 export const MODELO_PADRAO: Record<string, string> = { groq: 'openai/gpt-oss-120b', claude: 'claude-haiku-5-5' }
 export const RAIZ_SITE = 'mimo.com.vc'
@@ -131,6 +149,29 @@ export function preencher(modelo: string, valores: Record<string, string | null 
   return saida.join('\n').replace(/\n{3,}/g, '\n\n').trim()
 }
 
+// 3.57: troca todos os {campos} (sem derrubar linha); um campo vazio leva junto o separador " · " ou os parênteses que o
+// cercavam ("{salao} · {cidade}" sem cidade vira "{salao}"), e {nome} vazio leva a vírgula ("Oi, {nome}!" → "Oi!")
+export function trocarTudo(modelo: string, valores: Record<string, string | null | undefined>): string {
+  let s = String(modelo ?? '')
+  for (const [k, bruto] of Object.entries(valores)) {
+    const v = String(bruto ?? '').trim()
+    if (!v) {
+      s = s.replace(new RegExp(`\\s*·\\s*\\{${k}\\}`, 'g'), '').replace(new RegExp(`\\{${k}\\}\\s*·\\s*`, 'g'), '')
+        .replace(new RegExp(`\\s*\\(\\{${k}\\}\\)`, 'g'), '').replace(new RegExp(`,?\\s*\\{${k}\\}`, 'g'), '')
+    } else {
+      s = s.replaceAll(`{${k}}`, v)
+    }
+  }
+  return s.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim()
+}
+// 40 → "40 min"; 90 → "1 h 30"; 120 → "2 h"; 3000 → "2 dias"
+export function tempoBonito(minutos: number): string {
+  const m = Math.max(0, Math.round(Number(minutos) || 0))
+  if (m < 60) return `${m} min`
+  if (m < 48 * 60) { const h = Math.floor(m / 60), r = m % 60; return r ? `${h} h ${String(r).padStart(2, '0')}` : `${h} h` }
+  return `${Math.floor(m / (24 * 60))} dias`
+}
+
 // o link para o salão falar com a cliente, já com a primeira frase
 // 3.49.6: o link rastreável do pedido, no nosso domínio. O site (rota /r/:token) registra o clique e redireciona
 // para a conversa com a cliente. Um por pedido; só serve para ele e some quando o pedido expira.
@@ -155,6 +196,77 @@ export function mensagemDoSalao(cfg: Pick<Config, 'msg_salao'>, l: { nome: strin
     // Sem token (prévia do simulador), o wa.me direto, como antes.
     link: d.token ? linkDoPedido(d.token) : linkParaCliente(d.cliente_tel, d.cliente_nome ?? '', l.nome, d.servico ?? ''),
   })}
+
+// ---- 3.57: o retorno do salão -----------------------------------------------------------------------------------------
+const PADRAO_ENQUETE = { pergunta: 'Vai atender a {cliente}?', sim: 'Sim, vou atender', nao: 'Não vou conseguir' }
+// a enquete que vai logo depois do pedido: pergunta (até 255, limite do WhatsApp) e as duas opções, da Plataforma
+export function enqueteDoPedido(cfg: Pick<Config, 'enquete_pergunta' | 'enquete_sim' | 'enquete_nao'>, p: Pick<Pedido, 'cliente_nome' | 'salao_nome' | 'servico'>): { pergunta: string; opcoes: string[] } {
+  const pergunta = trocarTudo(String(cfg.enquete_pergunta ?? '').trim() || PADRAO_ENQUETE.pergunta, { cliente: p.cliente_nome || 'cliente', salao: p.salao_nome, servico: p.servico ?? '' }).slice(0, 255)
+  return { pergunta, opcoes: [limpo(cfg.enquete_sim, 100) || PADRAO_ENQUETE.sim, limpo(cfg.enquete_nao, 100) || PADRAO_ENQUETE.nao] }
+}
+// o voto como a Evolution entrega: "1"/"2" (a posição) ou o nome da opção → 'sim' | 'nao' | null
+export function votoDe(texto: string, cfg: Pick<Config, 'enquete_sim' | 'enquete_nao'>): 'sim' | 'nao' | null {
+  const t = String(texto ?? '').trim()
+  if (t === '1') return 'sim'
+  if (t === '2') return 'nao'
+  const p = palavra(t)
+  if (!p) return null
+  if (p === palavra(cfg.enquete_sim || PADRAO_ENQUETE.sim) || p === palavra(PADRAO_ENQUETE.sim)) return 'sim'
+  if (p === palavra(cfg.enquete_nao || PADRAO_ENQUETE.nao) || p === palavra(PADRAO_ENQUETE.nao)) return 'nao'
+  return null
+}
+// o "não vou conseguir" / "vou atender" claros, por texto (só quando o pedido ainda não tem voto). Conservador de
+// propósito: na dúvida, não é voto — fica na thread para a equipe ler.
+const NAO_ATENDE = /\bnao (vou|vamos) (conseguir|poder|dar|atender|pegar|ter como)\b|\bnao (consigo|conseguimos|posso|podemos|da|dá|vai dar|tem como|tem vaga|tenho vaga|tenho agenda|temos agenda|temos vaga|tenho horario|temos horario)\b|\bsem (vaga|agenda|horario)\b|\bagenda (cheia|lotada|fechada)\b|^(nao|nao nao|nao obrigada|nao obrigado|nao da|nao vai dar|infelizmente nao)$/
+const VAI_ATENDER = /\b(vou|vamos) (atender|chamar|falar|responder|entrar em contato|mandar mensagem|marcar|encaixar)\b|\bpode deixar\b|\bja (chamei|falei|respondi|mandei|entrei em contato|marquei|marcamos|atendi|atendemos)\b|\b(consigo|conseguimos|posso|podemos|da|vai dar) (atender|sim|encaixar)\b|\batendo sim\b|^(sim|sim sim|sim claro|claro|claro que sim|consigo|vou sim|combinado|fechado|bora|pode deixar|com certeza|atendo)$/
+export function votoDoTexto(texto: string): 'sim' | 'nao' | null {
+  const p = palavra(texto)
+  if (!p) return null
+  if (NAO_ATENDE.test(p)) return 'nao'
+  if (VAI_ATENDER.test(p)) return 'sim'
+  return null
+}
+// as mensagens de um voto: a resposta ao salão; no não, a da cliente (se ligada) e o aviso à equipe (se ligado)
+export function respostasDoVoto(cfg: Config, p: Pedido, voto: 'sim' | 'nao'): { salao: string; cliente: string | null; aviso: string | null } {
+  const link = p.token ? linkDoPedido(p.token) : linkParaCliente(p.cliente_tel, p.cliente_nome ?? '', p.salao_nome, p.servico ?? '')
+  const base = { cliente: p.cliente_nome || 'cliente', salao: p.salao_nome, servico: p.servico ?? '', preferencia: p.preferencia ?? '', link, contato: telefoneBonito(p.cliente_tel), cidade: p.cidade ?? '' }
+  if (voto === 'sim') return { salao: trocarTudo(cfg.msg_salao_vai_atender || 'Combinado! 💗 A {cliente} está esperando seu contato: {link}', base), cliente: null, aviso: null }
+  const primeiro = (p.cliente_nome ?? '').trim().split(/\s+/)[0] ?? ''
+  return {
+    salao: trocarTudo(cfg.msg_salao_nao_atende || 'Tudo bem, obrigada por avisar! 💗 Eu aviso a {cliente}.', base),
+    cliente: cfg.avisar_cliente_nao === false ? null : trocarTudo(cfg.msg_cliente_nao_atende || 'Oi, {nome}! O {salao} não vai conseguir te atender agora 😕 Quer que eu te ajude com outro salão? Me manda o nome ou o link de outro salão do guia.', { ...base, nome: primeiro }),
+    aviso: cfg.aviso_nao_atende === false || !cfg.numero_avisos ? null : trocarTudo(cfg.msg_aviso_nao_atende || '❌ MIMO — salão não vai atender\n{salao} · {cidade}\nCliente: {cliente} ({contato})\nPedido: {servico} · {preferencia}', { ...base, cliente: p.cliente_nome || 'sem nome', servico: p.servico || 'sem serviço', preferencia: p.preferencia || 'sem preferência' }),
+  }
+}
+// o relógio (guia_whats_pendentes): o aviso à equipe de que o salão não deu sinal, e a cutucada no salão
+export function avisoDemora(modelo: string | null | undefined, p: Pedido & { minutos?: number }): string {
+  return trocarTudo(modelo || '⏳ MIMO — salão sem resposta\n{salao} · {cidade} recebeu o pedido há {tempo} e ainda não abriu o link nem respondeu.\nCliente: {cliente} ({contato})\nPedido: {servico} · {preferencia}', {
+    salao: p.salao_nome, cidade: p.cidade ?? '', cliente: p.cliente_nome || 'sem nome', contato: telefoneBonito(p.cliente_tel),
+    servico: p.servico || 'sem serviço', preferencia: p.preferencia || 'sem preferência', tempo: tempoBonito(Number(p.minutos ?? 0)),
+  })
+}
+export function cutucadaSalao(modelo: string | null | undefined, p: Pedido & { minutos?: number }): string {
+  const link = p.token ? linkDoPedido(p.token) : linkParaCliente(p.cliente_tel, p.cliente_nome ?? '', p.salao_nome, p.servico ?? '')
+  return trocarTudo(modelo || 'Oi! A {cliente} ainda está esperando seu retorno sobre {servico} 💗 Vai dar pra atender? É só tocar no link: {link}', {
+    cliente: p.cliente_nome || 'cliente', salao: p.salao_nome, servico: p.servico || 'o pedido', preferencia: p.preferencia ?? '', link, tempo: tempoBonito(Number(p.minutos ?? 0)),
+  })
+}
+// manda o pedido ao salão (o texto) e, se ligada, a enquete logo depois; registra o resultado e a chave da enquete no
+// pedido. Usado no "sim" da cliente e no "Reenviar" da Plataforma. A enquete é um extra: se não sair, o pedido já foi.
+export async function despacharPedido(deps: Deps, cfg: Config, l: { nome: string }, p: Pedido & { salao_tel: string }): Promise<{ ok: boolean; erro?: string; texto: string; enquete: string | null }> {
+  const texto = mensagemDoSalao(cfg, l, p)
+  const env = await deps.enviar(cfg.instancia, p.salao_tel, texto)
+  await chamar(deps, 'guia_whats_lead_resultado', { lead_: p.id, ok_: env.ok, provider_: env.ok ? env.providerId : null, erro_: env.ok ? null : env.erro, mensagem_: texto })
+  let enquete: string | null = null
+  if (env.ok && cfg.enquete_ativa !== false && deps.enviarEnquete) {
+    try {
+      const e = enqueteDoPedido(cfg, p)
+      const r = await deps.enviarEnquete(cfg.instancia, p.salao_tel, e.pergunta, e.opcoes)
+      if (r.ok && r.providerId) { enquete = r.providerId; await chamar(deps, 'guia_whats_lead_enquete', { lead_: p.id, enquete_: enquete }) }
+    } catch { /* a enquete não saiu: o texto já foi, e o voto por texto continua valendo */ }
+  }
+  return { ok: env.ok, erro: env.ok ? undefined : env.erro, texto, enquete }
+}
 
 export function resumo(d: Dados, salao: string): string {
   return [
@@ -245,7 +357,7 @@ export async function atenderGuia(deps: Deps, e: Entrada, opcoes: { teste?: bool
   const tel = teste ? e.telefone : so(e.telefone)
   const texto = String(e.texto ?? '').trim().slice(0, 1500)
   if (!tel || !texto) return { responder: null, acao: 'vazio' }
-  const ctx = (await chamar(deps, 'guia_whats_contexto', { tel_: tel })) as { config: Config; saida: string | null; conversa: Conversa | null; respostas_hoje?: number; lead_salao: { id: number; salao_nome: string; status: string; ja_respondeu: boolean } | null }
+  const ctx = (await chamar(deps, 'guia_whats_contexto', { tel_: tel })) as { config: Config; saida: string | null; conversa: Conversa | null; respostas_hoje?: number; lead_salao: LeadSalao | null }
   const cfg = ctx?.config
   if (!cfg) return { responder: null, acao: 'sem_config' }
   if (!cfg.ligado && !teste) return { responder: null, acao: 'desligado' }
@@ -253,6 +365,20 @@ export async function atenderGuia(deps: Deps, e: Entrada, opcoes: { teste?: bool
   const codigo = codigoDoTexto(texto)
   const conversaAberta = ctx.conversa && ctx.conversa.estado !== 'encerrada' ? ctx.conversa : null
   const em = agora.toISOString()
+
+  // 0. (3.57) o VOTO do salão na enquete "vai atender?". A chave da enquete amarra ao pedido certo; se ela não casar
+  // (a chave não foi guardada), vale o pedido que o contexto escolheu para este número, desde que ainda sem voto.
+  if (!teste && e.enquete) {
+    const voto = votoDe(texto, cfg)
+    if (!voto) return { responder: null, acao: 'voto_ignorado' }
+    let r = (await chamar(deps, 'guia_whats_voto', { tel_: tel, voto_: voto, enquete_: e.enquete, lead_: null, origem_: 'enquete' })) as (Pedido & { primeiro: boolean }) | null
+    if (!r && ctx.lead_salao && !ctx.lead_salao.voto) {
+      r = (await chamar(deps, 'guia_whats_voto', { tel_: tel, voto_: voto, enquete_: null, lead_: ctx.lead_salao.id, origem_: 'enquete' })) as (Pedido & { primeiro: boolean }) | null
+    }
+    if (!r) return { responder: null, acao: 'voto_sem_pedido' }
+    if (!r.primeiro) return { responder: null, acao: 'voto_repetido' }
+    return await efeitosDoVoto(deps, cfg, r, voto)
+  }
 
   // 1. o salão respondendo ao pedido que recebeu (sem conversa de cliente aberta neste número)
   if (!teste && !conversaAberta && !codigo) {
@@ -273,6 +399,13 @@ export async function atenderGuia(deps: Deps, e: Entrada, opcoes: { teste?: bool
       if (tk) { const id = await chamar(deps, 'guia_whats_lead_do_salao', { tel_: tel, token_: tk }); if (id) alvo = Number(id) }
       await chamar(deps, 'guia_whats_salao_respondeu', { lead_: alvo, texto_: texto, quer_: quer })
       if (quer) return { responder: 'Combinado! 💗 Alguém da equipe da MIMO vai te chamar por aqui.', acao: 'salao_quer_conhecer' }
+      // 3.57: um "não vou conseguir" / "vou atender" claro, por texto, vale como o voto (só o primeiro; a chave da enquete
+      // não precisa casar). Um pedido que já tem voto não troca por texto: fica na thread para a equipe.
+      const vt = alvo === ctx.lead_salao.id && ctx.lead_salao.voto ? null : votoDoTexto(texto)
+      if (vt) {
+        const r = (await chamar(deps, 'guia_whats_voto', { tel_: tel, voto_: vt, enquete_: null, lead_: alvo, origem_: 'texto' })) as (Pedido & { primeiro: boolean }) | null
+        if (r?.primeiro) return await efeitosDoVoto(deps, cfg, r, vt)
+      }
       // responde uma vez só: depois disso, o que o salão escrever fica guardado para a equipe ver
       return { responder: ctx.lead_salao.ja_respondeu ? null : cfg.msg_salao_resposta, acao: 'salao_respondeu' }
     }
@@ -421,20 +554,21 @@ export async function atenderGuia(deps: Deps, e: Entrada, opcoes: { teste?: bool
   // o "sim" depois do resumo: o pedido vai para o salão
   if (estadoAntes === 'confirmando' && lido.cliente_confirmou_envio && completo && !mudou) {
     if (teste) {
-      const previa = mensagemDoSalao(cfg, lugar, { cliente_nome: dados.nome, servico: dados.servico, preferencia: dados.preferencia, observacao: dados.observacao, cliente_tel: '5513999990000' })
+      const pedidoTeste: Pedido = { id: 0, salao_nome: lugar.nome, cidade: lugar.cidade, cliente_nome: dados.nome, servico: dados.servico, preferencia: dados.preferencia, observacao: dados.observacao, cliente_tel: '5513999990000' }
+      const previa = mensagemDoSalao(cfg, lugar, pedidoTeste)
       const resposta = confirmacao(cfg, lugar, dados, true)
       await guardar(resposta, 'enviado', dados, lugar.id)
-      return { responder: resposta, acao: 'enviado_teste', previaSalao: previa, estado: 'enviado', dados }
+      return { responder: resposta, acao: 'enviado_teste', previaSalao: previa, previaEnquete: cfg.enquete_ativa === false ? null : enqueteDoPedido(cfg, pedidoTeste), estado: 'enviado', dados }
     }
     await guardar(null, 'enviado', dados, lugar.id)
-    const ld = (await chamar(deps, 'guia_whats_lead_criar', { conversa_: conversa!.id })) as { id: number; status: string; token?: string | null; salao_tel: string | null; cliente_nome: string | null; servico: string | null; preferencia: string | null; observacao: string | null; cliente_tel: string; repetido: boolean }
+    const ld = (await chamar(deps, 'guia_whats_lead_criar', { conversa_: conversa!.id })) as (Pedido & { status: string; salao_tel: string | null; repetido: boolean })
     let ok = false
     let previa: string | null = null
     if (ld?.status === 'pendente' && ld.salao_tel) {
-      previa = mensagemDoSalao(cfg, lugar, ld)
-      const env = await deps.enviar(cfg.instancia, ld.salao_tel, previa)
-      ok = env.ok
-      await chamar(deps, 'guia_whats_lead_resultado', { lead_: ld.id, ok_: env.ok, provider_: env.ok ? env.providerId : null, erro_: env.ok ? null : env.erro, mensagem_: previa })
+      // 3.57: o texto do pedido e, logo atrás, a enquete "vai atender?" (despacharPedido registra os dois)
+      const d = await despacharPedido(deps, cfg, lugar, { ...ld, salao_tel: ld.salao_tel })
+      ok = d.ok
+      previa = d.texto
     } else if (ld?.repetido) {
       ok = ld.status !== 'falhou'
     } else if (ld?.status === 'sem_contato' && cfg.numero_avisos) {
@@ -458,6 +592,40 @@ export async function atenderGuia(deps: Deps, e: Entrada, opcoes: { teste?: bool
   const estado = estadoAntes === 'enviado' ? 'enviado' : completo ? estadoAntes : 'conversando'
   await guardar(resposta, estado, dados, lugar.id)
   return { responder: resposta, acao: 'conversa', estado, dados }
+}
+
+// 3.57: o que acontece no PRIMEIRO voto do salão (pela enquete ou por texto). Sim: a Mel responde ao salão com o link de
+// novo. Não: agradece ao salão, avisa a equipe (numero_avisos) e, se ligado, avisa a cliente e reabre a conversa dela
+// sem salão (guia_whats_conversa_reabrir), para ela escolher outro. Os envios laterais são melhor-esforço: nunca
+// derrubam a resposta ao salão.
+async function efeitosDoVoto(deps: Deps, cfg: Config, p: Pedido, voto: 'sim' | 'nao'): Promise<Saida> {
+  const r = respostasDoVoto(cfg, p, voto)
+  if (voto === 'nao') {
+    if (r.aviso && cfg.numero_avisos) {
+      try { await deps.enviar(cfg.instancia, so(cfg.numero_avisos), r.aviso) } catch { /* melhor-esforço */ }
+    }
+    if (r.cliente) {
+      try {
+        await chamar(deps, 'guia_whats_conversa_reabrir', { lead_: p.id, texto_: r.cliente })
+        await deps.enviar(cfg.instancia, p.cliente_tel, r.cliente)
+      } catch (e) { return { responder: r.salao, acao: 'salao_nao_atende', erro: `aviso à cliente: ${String((e as Error)?.message ?? e).slice(0, 200)}` } }
+    }
+    return { responder: r.salao, acao: 'salao_nao_atende', previaCliente: r.cliente, previaAviso: r.aviso }
+  }
+  return { responder: r.salao, acao: 'salao_vai_atender' }
+}
+
+// o simulador da Plataforma: como se o salão tivesse votado no pedido da conversa de teste — devolve o que o salão, a
+// cliente e a equipe receberiam (nada é enviado; não existe pedido de verdade na conversa de teste)
+export async function simularVoto(deps: Deps, tel: string, voto: 'sim' | 'nao'): Promise<Saida> {
+  const ctx = (await chamar(deps, 'guia_whats_contexto', { tel_: tel })) as { config: Config; conversa: Conversa | null }
+  const cfg = ctx?.config
+  const cv = ctx?.conversa
+  if (!cfg || !cv?.lugar) return { responder: null, acao: 'sem_conversa_teste' }
+  const d = cv.dados ?? {}
+  const p: Pedido = { id: 0, salao_nome: cv.lugar.nome, cidade: cv.lugar.cidade, cliente_nome: d.nome, cliente_tel: '5513999990000', servico: d.servico, preferencia: d.preferencia, observacao: d.observacao }
+  const r = respostasDoVoto(cfg, p, voto)
+  return { responder: r.salao, acao: voto === 'sim' ? 'salao_vai_atender' : 'salao_nao_atende', previaCliente: r.cliente, previaAviso: r.aviso, previaEnquete: enqueteDoPedido(cfg, p) }
 }
 
 // 3.53: o aviso interno à equipe quando o salão não tem WhatsApp para receber o pedido (ou o número é o da própria

@@ -718,6 +718,23 @@
 /* 3.49.6: o salão abriu o link do pedido (clicou) */
 .pg-wa-abriu { display: inline-flex; align-items: center; gap: 5px; color: #0c7a50; font-weight: 600; font-size: 0.8rem; }
 .pg-wa-abriu svg { flex: none; }
+/* 3.57: o retorno do salão — o voto, a espera e os avisos do relógio no pedido; o bloco de configuração; o simulador */
+.pg-wa-voto { display: inline-flex; align-items: center; gap: 5px; flex-wrap: wrap; font-weight: 600; font-size: 0.8rem; }
+.pg-wa-voto.sim { color: #0c7a50; } .pg-wa-voto.nao { color: #b42318; }
+.pg-wa-voto svg { flex: none; } .pg-wa-voto small { font-weight: 500; color: var(--texto-2); }
+.pg-wa-espera { display: inline-flex; align-items: center; gap: 5px; font-size: 0.78rem; color: var(--texto-2); }
+.pg-wa-espera svg { flex: none; }
+.pg-wa-kpis .verde b { color: #0b7a50; } .pg-wa-kpis .carmim b { color: #b42318; }
+.pg-wa-retorno input:disabled, .pg-wa-retorno textarea:disabled { opacity: 0.55; }
+.pg-wa-enquete { margin-top: 0.7rem; padding-top: 0.6rem; border-top: 1px dashed #a7e3c4; display: flex; flex-direction: column; gap: 0.25rem; }
+.pg-wa-enquete p { margin: 0.2rem 0 0; font-weight: 600; }
+.pg-wa-enquete span { display: block; padding: 0.3rem 0.6rem; border: 1px solid #a7e3c4; border-radius: 8px; background: #fff; font-size: 0.8rem; }
+.pg-wa-sim-voto { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.7rem; font-size: 0.8rem; }
+.pg-wa-sim-voto .btn { display: inline-flex; align-items: center; gap: 0.35rem; }
+.pg-wa-voto-previa small { display: block; margin-top: 0.6rem; font-size: 0.72rem; color: var(--texto-2); text-transform: uppercase; letter-spacing: 0.04em; }
+.pg-wa-voto-previa pre { margin-top: 0.25rem; }
+.pg-wa-voto-previa.nao { background: #fff5f5; border-color: #f3c2c2; } .pg-wa-voto-previa.nao b { color: #b42318; }
+.pg-wa-voto-previa .plat-link { margin-top: 0.6rem; }
 
 /* 3.49.7: a conversa de volta do salão, dentro do pedido */
 .pg-wa-thread { display: flex; flex-direction: column; gap: 5px; margin-top: 4px; padding: 8px 10px; border-radius: 10px; background: #f4f0fb; }

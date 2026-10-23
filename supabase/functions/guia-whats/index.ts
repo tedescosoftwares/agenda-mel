@@ -13,7 +13,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { enviarPor } from '../_shared/canais.ts'
-import { atenderGuia, iaDe, mensagemDoSalao, mensagemDaCliente, type Deps } from '../_shared/guia_whats.ts'
+import { atenderGuia, iaDe, mensagemDaCliente, despacharPedido, simularVoto, type Deps, type Pedido } from '../_shared/guia_whats.ts'
 import { atenderOnboarding, iaOnbDe, consultarCnpjDe, consultarCepDe, type Deps as DepsOnb } from '../_shared/guia_onboarding.ts'
 
 const URL_SUPABASE = Deno.env.get('SUPABASE_URL') ?? ''
@@ -21,7 +21,7 @@ const CHAVE_ANON = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
 const CHAVE_SERVICO = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 const v = (n: string) => String(Deno.env.get(n) ?? '').trim()
 
-type Config = { ligado: boolean; numero: string | null; instancia: string; msg_cliente: string; msg_salao: string }
+type Config = { ligado: boolean; numero: string | null; instancia: string; msg_cliente: string; msg_salao: string; enquete_ativa?: boolean }
 
 function json(corpo: unknown, status = 200) {
   return new Response(JSON.stringify(corpo), {
@@ -115,6 +115,8 @@ Deno.serve(async (req) => {
     rpc: (nome, args) => servico.rpc(nome, args) as unknown as Promise<{ data: unknown; error: { message?: string } | null }>,
     ia: iaDe(Deno.env, fetch as unknown as Parameters<typeof iaDe>[1]),
     enviar: (instancia, telefone, texto) => enviarPor('evolution', { telefone, corpo: texto, identificador: instancia }),
+    // 3.57: a enquete "vai atender?" (sendPoll), igual ao webhook
+    enviarEnquete: (instancia, telefone, pergunta, opcoes) => enviarPor('evolution', { telefone, corpo: pergunta, estilo: 'enquete', identificador: instancia, botoes: opcoes.map((o, i) => ({ type: 'reply' as const, displayText: o, id: String(i + 1) })) }),
   })
   const telTeste = `teste-${uid.replace(/-/g, '').slice(0, 12) || 'plataforma'}`
   // 3.55: o agente de onboarding no simulador da aba Onboarding — a consulta do CNPJ é a de verdade (BrasilAPI, dado
@@ -159,16 +161,20 @@ Deno.serve(async (req) => {
       await servico.rpc('guia_whats_apagar', { tel_: telTeste })
       return json({ ok: true })
     }
+    // 3.57: no simulador, "o salão votou sim/não": o que o salão, a cliente e a equipe receberiam (nada sai)
+    if (acao === 'simular_voto') {
+      const voto = corpo.voto === 'nao' ? 'nao' : 'sim'
+      return json({ ok: true, ...(await simularVoto(deps(), telTeste, voto)) })
+    }
     if (acao === 'reenviar') {
       const id = Number(corpo.lead)
       if (!Number.isInteger(id)) return json({ erro: 'pedido inválido' }, 400)
       const { data: ld } = await servico.rpc('guia_whats_reenvio', { lead_: id })
-      const pedido = ld as { id: number; salao_nome: string; salao_tel: string; cliente_nome: string | null; servico: string | null; preferencia: string | null; observacao: string | null; cliente_tel: string; token?: string | null } | null
+      const pedido = ld as (Pedido & { salao_tel: string }) | null
       if (!pedido) return json({ erro: 'não dá para reenviar: o salão pediu para não receber ou não tem WhatsApp' }, 400)
-      const texto = mensagemDoSalao(cfg, { nome: pedido.salao_nome }, pedido)
-      const env = await enviarPor('evolution', { telefone: pedido.salao_tel, corpo: texto, identificador: cfg.instancia })
-      await servico.rpc('guia_whats_lead_resultado', { lead_: id, ok_: env.ok, provider_: env.ok ? env.providerId : null, erro_: env.ok ? null : env.erro, mensagem_: texto })
-      return json(env.ok ? { ok: true } : { erro: `não saiu: ${env.erro}` })
+      // 3.57: o texto e a enquete, como no envio normal (despacharPedido registra o resultado e a chave da enquete)
+      const d = await despacharPedido(deps(), cfg as unknown as Parameters<typeof despacharPedido>[1], { nome: pedido.salao_nome }, pedido)
+      return json(d.ok ? { ok: true, enquete: !!d.enquete } : { erro: `não saiu: ${d.erro}` })
     }
     return json({ erro: 'ação desconhecida' }, 400)
   } catch (e) {

@@ -120,9 +120,9 @@ Pré-requisitos: guia **Conectado** e **Ligado**, `numero_avisos` preenchido, mi
 
 A ordem de sempre (você roda):
 
-1. **bat B** — aplica as migrações novas: **199, 200, 201, 202, 203, 204**.
-2. **bat 9** — publica as funções: **whatsapp-webhook** (ganhou `?tarefa=ociosas` e, na 3.55, o agente de onboarding antes da Mel) e **guia-whats** (simular com "como a dona"; na 3.55, `simular_onboarding`/`reiniciar_onboarding`).
-3. **bat 2** — publica a Plataforma (versão **3.56.0**).
+1. **bat B** — aplica as migrações novas: **199, 200, 201, 202, 203, 204, 205**.
+2. **bat 9** — publica as funções: **whatsapp-webhook** (ganhou `?tarefa=ociosas` e, na 3.55, o agente de onboarding antes da Mel; na 3.57, o voto da enquete e a varredura dos pedidos) e **guia-whats** (simular com "como a dona"; na 3.55, `simular_onboarding`/`reiniciar_onboarding`; na 3.57, `simular_voto` e o Reenviar com a enquete).
+3. **bat 2** — publica a Plataforma (versão **3.57.0**).
 4. **VPS (opcional, para o ocioso ativo):** `cd evolution && ./cutucar-ociosas.sh --cron` (com `EVOLUTION_WEBHOOK_TOKEN` no `.env`).
 5. Na aba WhatsApp: preencha **"WhatsApp da equipe para avisos"**, revise os textos (encerramento, "posso encerrar?", mensagem da dona) e ligue o ocioso quando o cron estiver no ar.
 
@@ -226,3 +226,35 @@ Sem CNPJ (ou quando o endereço do CNPJ não é o de atendimento): `msg_cep` →
 - `guia_onboarding.ts` — `consultarCepDe`, `telefoneDe`, `montarResumo`, `dividir` (bolhas); a saída traz `bolhas` e `pausa`. `canais.ts` — `Envio.atraso`. `whatsapp-webhook` — manda as bolhas com a pausa. `guia-whats` — `consultarCep` no simulador.
 - Aba Onboarding — WhatsApp do atendimento, pausa, bolhas, os passos telefone/resumo e as mensagens novas; `demoGuiaOnboarding.js` espelha tudo.
 - Versão **3.56.0-mimo**.
+
+---
+
+## 11. 3.57 — O retorno do salão: a enquete "vai atender?" e os avisos (migração 205)
+
+Até aqui a gente só sabia que o salão **abriu o link** do pedido (`clicou_em`). Agora o salão **diz se vai atender**, e a Mel reage.
+
+### A enquete
+Logo depois da mensagem do pedido, o salão recebe uma **enquete do WhatsApp** (o único "botão" que a Evolution/Baileys renderiza em todo aparelho; já era o que o bot dos salões usava): pergunta `enquete_pergunta` ("Vai atender a {cliente}?") e as opções `enquete_sim` / `enquete_nao`, editáveis. A chave da mensagem da enquete fica no pedido (`guia_whats_leads.enquete_id`); quando o salão toca, o voto chega como `pollUpdateMessage` com essa chave → `guia_whats_voto` acha o pedido certo, sem depender de citação nem de interpretar "1".
+
+- **O primeiro voto vale.** O WhatsApp não deixa travar o voto nem fechar a enquete; uma troca depois chega para a gente, mas só fica **anotada** (`voto_atual`, `voto_mudou_em`, visível na lista de pedidos) — não dispara nada de novo. A resposta da Mel em texto funciona como o "fechamento".
+- Se a chave não casar (a Evolution não devolveu o id), vale o pedido que o contexto escolheu para aquele número, desde que ainda sem voto.
+- **Por texto também:** um "não vou conseguir" / "não dá" / "sem agenda" ou um "vou atender" / "pode deixar" / "já chamei" claro conta como voto (`voto_origem = 'texto'`), só o primeiro e só no claro — na dúvida, fica na thread para a equipe. QUERO e SAIR continuam mandando.
+
+### O que cada voto faz
+- **Sim** → status `salao_vai_atender`; a Mel responde ao salão `msg_salao_vai_atender` ({cliente}, {salao}, {servico}, {preferencia}, {link} — o link rastreável de novo).
+- **Não** → status `salao_nao_atende`; a Mel agradece (`msg_salao_nao_atende`); **avisa a equipe** no `numero_avisos` (`aviso_nao_atende`, `msg_aviso_nao_atende`); e, se `avisar_cliente_nao`, **avisa a cliente** (`msg_cliente_nao_atende`, {nome} = primeiro nome) e **reabre a conversa dela sem salão** (`guia_whats_conversa_reabrir`: estado `conversando`, sem lugar e sem pedido, nome/serviço/preferência mantidos, contadores zerados) — ela manda o nome ou o link de outro salão e a Mel já vai ao resumo. Um "não" nunca deixa a cliente no vácuo.
+- Um texto depois do voto não rebaixa o status (`guia_whats_salao_respondeu`).
+
+### O relógio: demora e cutucada
+O mesmo `cutucar-ociosas.sh` (cron, `?tarefa=ociosas`) passa a chamar `guia_whats_pendentes()`: pedido `enviado` há mais de `aviso_demora_min` sem o salão **abrir o link, votar ou responder** → aviso à equipe (`msg_aviso_demora`, com {tempo}), uma vez (`aviso_demora_em`); `cutucar_salao_min` → cutucada no salão (`msg_cutucar_salao`, com {link}), uma vez (`cutucado_em`). 0 = desligado (padrão). Só olha até 2 dias depois do prazo (ligar o recurso não inunda a equipe com pedidos velhos). O ocioso desligado não impede a varredura dos pedidos.
+
+### A aba WhatsApp
+Bloco **"O retorno do salão"**: enquete (liga/desliga, pergunta, opções), as duas respostas ao salão, o aviso à cliente (liga/desliga + texto), o aviso à equipe no não (liga/desliga + texto), os dois tempos e os dois textos do relógio. KPIs **vão atender** / **não vão atender**. No pedido: "Vai atender · há 2 h · pela enquete" (ou "por texto"; e "depois mudou para…" quando trocou), "Enquete enviada · sem voto ainda", "Equipe avisada da demora", "Salão cutucado". No simulador: a enquete que iria junto do pedido e os botões **"Sim, vou atender" / "Não vou conseguir"**, que mostram o que o salão, a cliente e a equipe receberiam (nada sai).
+
+### Referência técnica
+- **205** `205_salao_vai_atender.sql` — colunas em `guia_whats_config` (`enquete_*`, `msg_salao_vai_atender`, `msg_salao_nao_atende`, `avisar_cliente_nao`, `msg_cliente_nao_atende`, `aviso_nao_atende`, `msg_aviso_nao_atende`, `aviso_demora_min`, `msg_aviso_demora`, `cutucar_salao_min`, `msg_cutucar_salao`) e em `guia_whats_leads` (`enquete_id`, `voto`, `voto_origem`, `votou_em`, `voto_atual`, `voto_mudou_em`, `aviso_demora_em`, `cutucado_em`); status `salao_vai_atender`/`salao_nao_atende`; `guia_whats_lead_enquete`, `guia_whats_voto`, `guia_whats_conversa_reabrir`, `guia_whats_pendentes`, `guia_whats_pendente_feita` (service role); `salao_respondeu`, `contexto` (traz `voto`), `painel` (totais `vao_atender`, `nao_atendem`, `demoraram`; campos do voto) e `salvar` atualizadas.
+- `guia_whats.ts` — `enqueteDoPedido`, `votoDe` (1/2 ou o nome da opção), `votoDoTexto` (conservador), `respostasDoVoto`, `despacharPedido` (texto + enquete, usado no "sim" e no Reenviar), `avisoDemora`, `cutucadaSalao`, `trocarTudo`, `tempoBonito`, `simularVoto`; `Entrada.enquete`; `Deps.enviarEnquete`.
+- `whatsapp-webhook` — o voto (`m.enquete`) vai direto à Mel (não passa pelo onboarding); `depsGuia.enviarEnquete` (sendPoll via `canais.ts`, `estilo: 'enquete'`); `?tarefa=ociosas` varre também os pedidos (`avisou_demora`, `cutucou` na resposta). `guia-whats` — `simular_voto`; `reenviar` manda a enquete junto.
+- `WhatsAppGuia.jsx`, `demoGuiaWhats.js`, `guia-plataforma.css` (`.pg-wa-voto`, `.pg-wa-retorno`, `.pg-wa-enquete`, `.pg-wa-sim-voto`), `evolution/cutucar-ociosas.sh` (mensagem do log), `evolution/LEIAME.md`.
+- Deploy: **bat B** (205) → **bat 9** (whatsapp-webhook, guia-whats) → **bat 2**. O cron já instalado não muda.
+- Versão **3.57.0-mimo**.

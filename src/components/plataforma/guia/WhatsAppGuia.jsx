@@ -3,7 +3,7 @@ import { supabase } from '../../../lib/supabase'
 import { chamar } from '../../../lib/pagamento'
 import { Painel, Vazio, haQuanto } from '../Pecas'
 import { MODELOS } from '../../../lib/guiaIa'
-import { MessageCircle, Plug, LoaderCircle, Send, RotateCcw, Save, Bot, Inbox, Check, RefreshCw, TriangleAlert, Smartphone, MessagesSquare, MousePointerClick, X, Unplug } from 'lucide-react'
+import { MessageCircle, Plug, LoaderCircle, Send, RotateCcw, Save, Bot, Inbox, Check, RefreshCw, TriangleAlert, Smartphone, MessagesSquare, MousePointerClick, X, Unplug, ThumbsUp, ThumbsDown, Clock, BellRing, Vote } from 'lucide-react'
 
 // O WhatsApp do guia (3.48, migração 195): tudo se configura aqui. A conexão do número (outra instância na mesma
 // Evolution: criar, parear, webhook), a configuração (ligar, número, botões que passam pela MIMO, a IA e o modelo, a
@@ -16,13 +16,18 @@ const STATUS = {
   pendente: ['Saindo', 'cinza'], enviado: ['Enviado ao salão', 'verde'], falhou: ['Não saiu', 'carmim'], sem_contato: ['Salão sem número no cadastro', 'cinza'],
   fora_do_limite: ['Fora do limite do dia', 'ambar'], salao_saiu: ['Salão pediu para não receber', 'cinza'], salao_respondeu: ['Salão respondeu', 'azul'],
   salao_quer_conhecer: ['Quer conhecer a MIMO 💗', 'rosa'],
+  // 3.57: o salão disse, pela enquete ou por texto, se vai atender
+  salao_vai_atender: ['Vai atender ✅', 'verde'], salao_nao_atende: ['Não vai atender', 'carmim'],
 }
 const CONEXAO = {
   open: ['Conectado', 'verde'], connecting: ['Conectando… pareie o celular', 'ambar'], close: ['Desconectado', 'carmim'],
   nao_existe: ['Ainda não conectado', 'cinza'], erro: ['A Evolution não respondeu', 'carmim'], desconhecido: ['Estado desconhecido', 'cinza'],
 }
 const BOTOES = [['whatsapp', 'WhatsApp', 'o botão WhatsApp do salão'], ['ligar', 'Ligar', 'o botão Ligar (vira WhatsApp)'], ['quero_marcar', 'Quero marcar', 'o botão "Quero marcar aqui" (em vez do formulário)']]
-const CAMPOS_CONFIG = ['ligado', 'numero', 'numero_avisos', 'instancia', 'botoes', 'provedor', 'modelo', 'orientacao', 'msg_cliente', 'msg_salao', 'msg_salao_resposta', 'msg_encerramento', 'msg_ocioso', 'msg_dona', 'mostrar_contato_salao', 'exigir_preferencia', 'ocioso_ativo', 'limite_dia', 'limite_respostas', 'pos_envio', 'max_sem_avanco', 'ocioso_horas', 'ocioso_perguntar_min', 'ocioso_encerrar_min', 'retencao_dias']
+const CAMPOS_CONFIG = ['ligado', 'numero', 'numero_avisos', 'instancia', 'botoes', 'provedor', 'modelo', 'orientacao', 'msg_cliente', 'msg_salao', 'msg_salao_resposta', 'msg_encerramento', 'msg_ocioso', 'msg_dona', 'mostrar_contato_salao', 'exigir_preferencia', 'ocioso_ativo', 'limite_dia', 'limite_respostas', 'pos_envio', 'max_sem_avanco', 'ocioso_horas', 'ocioso_perguntar_min', 'ocioso_encerrar_min', 'retencao_dias',
+  // 3.57: o retorno do salão (migração 205)
+  'enquete_ativa', 'enquete_pergunta', 'enquete_sim', 'enquete_nao', 'msg_salao_vai_atender', 'msg_salao_nao_atende', 'avisar_cliente_nao', 'msg_cliente_nao_atende', 'aviso_nao_atende', 'msg_aviso_nao_atende', 'aviso_demora_min', 'msg_aviso_demora', 'cutucar_salao_min', 'msg_cutucar_salao']
+const VOTO = { sim: 'vou atender', nao: 'não vou conseguir' }
 const tel = (d) => { const s = String(d ?? '').replace(/\D/g, ''); return s.length === 13 && s.startsWith('55') ? `(${s.slice(2, 4)}) ${s.slice(4, 9)}-${s.slice(9)}` : s.length === 12 && s.startsWith('55') ? `(${s.slice(2, 4)}) ${s.slice(4, 8)}-${s.slice(8)}` : s ? `+${s}` : '' }
 // o telefone do guia (3.49.4): máscara enquanto digita, e guardado no mesmo formato que o banco guarda (dígitos com 55
 // na frente), para a comparação com o número salvo bater e o botão Conectar liberar. telCanon = o que vai ao banco;
@@ -128,6 +133,8 @@ export default function WhatsAppGuia({ g }) {
           <div><b>{t.conversas ?? 0}</b><span>conversas</span></div>
           <div><b>{t.enviados ?? 0}</b><span>pedidos enviados</span></div>
           <div><b>{t.abriram ?? 0}</b><span>abriram o pedido</span></div>
+          <div className="verde" data-teste="wa-kpi-vao"><b>{t.vao_atender ?? 0}</b><span>vão atender</span></div>
+          <div className="carmim" data-teste="wa-kpi-nao"><b>{t.nao_atendem ?? 0}</b><span>não vão atender</span></div>
           <div><b>{t.responderam ?? 0}</b><span>salões responderam</span></div>
           <div className="rosa"><b>{t.querem ?? 0}</b><span>querem conhecer a MIMO</span></div>
           <div><b>{t.enviados_hoje ?? 0}<small>/{form.limite_dia}</small></b><span>enviados hoje</span></div>
@@ -184,6 +191,38 @@ export default function WhatsAppGuia({ g }) {
                 <textarea rows={9} value={form.msg_salao ?? ''} onChange={(e) => campo('msg_salao', e.target.value)} maxLength={3000} data-teste="wa-msg-salao" /></label>
               <label>Resposta quando o salão responde ao pedido <span className="muted">(uma vez só; QUERO e SAIR são reconhecidos sempre)</span>
                 <textarea rows={3} value={form.msg_salao_resposta ?? ''} onChange={(e) => campo('msg_salao_resposta', e.target.value)} maxLength={1500} /></label>
+              <fieldset className="pg-wa-ciclo pg-wa-retorno" data-teste="wa-retorno">
+                <legend>O retorno do salão <span className="muted">(ele diz se vai atender; a Mel reage e a equipe acompanha)</span></legend>
+                <label className="pg-wa-check"><input type="checkbox" checked={form.enquete_ativa !== false} onChange={(e) => campo('enquete_ativa', e.target.checked)} data-teste="wa-enquete-ativa" /> <b>Mandar a enquete “vai atender?” logo depois do pedido</b> <span className="muted">(enquete do WhatsApp: o único botão que aparece em todo aparelho pela Evolution. O primeiro voto vale; trocar depois só fica anotado aqui. Um “não vou conseguir” ou “vou atender” claro, por texto, também conta.)</span></label>
+                <div className="pg-wa-grade3">
+                  <label>Pergunta da enquete <span className="muted">({'{cliente}'}, {'{salao}'}, {'{servico}'})</span><input value={form.enquete_pergunta ?? ''} onChange={(e) => campo('enquete_pergunta', e.target.value)} maxLength={200} disabled={form.enquete_ativa === false} data-teste="wa-enquete-pergunta" /></label>
+                  <label>Opção “sim”<input value={form.enquete_sim ?? ''} onChange={(e) => campo('enquete_sim', e.target.value)} maxLength={60} disabled={form.enquete_ativa === false} data-teste="wa-enquete-sim" /></label>
+                  <label>Opção “não”<input value={form.enquete_nao ?? ''} onChange={(e) => campo('enquete_nao', e.target.value)} maxLength={60} disabled={form.enquete_ativa === false} data-teste="wa-enquete-nao" /></label>
+                </div>
+                <label>Resposta ao salão no “sim” <span className="muted">({'{cliente}'}, {'{salao}'}, {'{servico}'}, {'{preferencia}'}, {'{link}'})</span>
+                  <textarea rows={2} value={form.msg_salao_vai_atender ?? ''} onChange={(e) => campo('msg_salao_vai_atender', e.target.value)} maxLength={1500} data-teste="wa-msg-vai-atender" /></label>
+                <label>Resposta ao salão no “não” <span className="muted">(os mesmos campos)</span>
+                  <textarea rows={2} value={form.msg_salao_nao_atende ?? ''} onChange={(e) => campo('msg_salao_nao_atende', e.target.value)} maxLength={1500} data-teste="wa-msg-nao-atende" /></label>
+                <div className="pg-wa-ocioso">
+                  <label className="pg-wa-check"><input type="checkbox" checked={form.avisar_cliente_nao !== false} onChange={(e) => campo('avisar_cliente_nao', e.target.checked)} data-teste="wa-avisar-cliente-nao" /> <b>No “não”, avisar a cliente e oferecer outro salão</b> <span className="muted">(a conversa dela reabre sem salão; nome, serviço e preferência ficam anotados)</span></label>
+                  <label>Mensagem para a cliente <span className="muted">({'{nome}'} = o primeiro nome, {'{salao}'}, {'{servico}'})</span>
+                    <textarea rows={2} value={form.msg_cliente_nao_atende ?? ''} onChange={(e) => campo('msg_cliente_nao_atende', e.target.value)} maxLength={1500} disabled={form.avisar_cliente_nao === false} data-teste="wa-msg-cliente-nao" /></label>
+                  <label className="pg-wa-check"><input type="checkbox" checked={form.aviso_nao_atende !== false} onChange={(e) => campo('aviso_nao_atende', e.target.checked)} data-teste="wa-aviso-nao-atende" /> <b>No “não”, avisar a equipe</b> <span className="muted">(no WhatsApp da equipe para avisos, abaixo)</span></label>
+                  <label>Aviso à equipe no “não” <span className="muted">({'{salao}'}, {'{cidade}'}, {'{cliente}'}, {'{contato}'}, {'{servico}'}, {'{preferencia}'})</span>
+                    <textarea rows={3} value={form.msg_aviso_nao_atende ?? ''} onChange={(e) => campo('msg_aviso_nao_atende', e.target.value)} maxLength={1500} disabled={form.aviso_nao_atende === false} data-teste="wa-msg-aviso-nao" /></label>
+                </div>
+                <div className="pg-wa-ocioso">
+                  <div className="pg-wa-grade2">
+                    <label>Avisar a equipe se o salão não der sinal em (min) <span className="muted">(0 = desligado; “sinal” = abrir o link, votar ou responder)</span><input type="number" min={0} max={10080} value={form.aviso_demora_min ?? 0} onChange={(e) => campo('aviso_demora_min', Number(e.target.value))} data-teste="wa-demora-min" /></label>
+                    <label>Cutucar o próprio salão em (min) <span className="muted">(0 = desligado; uma vez só por pedido)</span><input type="number" min={0} max={10080} value={form.cutucar_salao_min ?? 0} onChange={(e) => campo('cutucar_salao_min', Number(e.target.value))} data-teste="wa-cutucar-min" /></label>
+                  </div>
+                  <label>Aviso à equipe da demora <span className="muted">({'{tempo}'} e os mesmos campos)</span>
+                    <textarea rows={3} value={form.msg_aviso_demora ?? ''} onChange={(e) => campo('msg_aviso_demora', e.target.value)} maxLength={1500} disabled={!(form.aviso_demora_min > 0)} data-teste="wa-msg-demora" /></label>
+                  <label>Mensagem que cutuca o salão <span className="muted">({'{cliente}'}, {'{servico}'}, {'{link}'}, {'{salao}'})</span>
+                    <textarea rows={2} value={form.msg_cutucar_salao ?? ''} onChange={(e) => campo('msg_cutucar_salao', e.target.value)} maxLength={1500} disabled={!(form.cutucar_salao_min > 0)} data-teste="wa-msg-cutucar" /></label>
+                  <p className="muted pg-wa-nota">Os dois tempos usam o mesmo relógio (cron) do ocioso ativo na VPS: sem ele no ar, deixe em 0. A enquete e as respostas não dependem do relógio.</p>
+                </div>
+              </fieldset>
               <fieldset className="pg-wa-ciclo" data-teste="wa-ciclo">
                 <legend>O ciclo da conversa <span className="muted">(como a Mel conduz e quando encerra — você define)</span></legend>
                 <label className="pg-wa-check"><input type="checkbox" checked={!!form.exigir_preferencia} onChange={(e) => campo('exigir_preferencia', e.target.checked)} data-teste="wa-exigir-preferencia" /> Só enviar ao salão com a preferência de dia e horário <span className="muted">(desligado, basta nome e serviço; a preferência vira um extra)</span></label>
@@ -249,6 +288,15 @@ export default function WhatsAppGuia({ g }) {
                         </div>
                       )}
                       {p.clicou_em && <span className="pg-wa-abriu" data-teste="wa-abriu"><MousePointerClick size={13} /> Abriu a conversa com a cliente · {haQuanto(p.clicou_em)}{p.cliques > 1 ? ` · ${p.cliques}×` : ''}</span>}
+                      {p.voto && (
+                        <span className={'pg-wa-voto ' + p.voto} data-teste="wa-voto">
+                          {p.voto === 'sim' ? <ThumbsUp size={13} /> : <ThumbsDown size={13} />} {p.voto === 'sim' ? 'Vai atender' : 'Não vai atender'} · {haQuanto(p.votou_em)} · {p.voto_origem === 'texto' ? 'por texto' : 'pela enquete'}
+                          {p.voto_atual && p.voto_atual !== p.voto ? <small> · depois mudou para “{VOTO[p.voto_atual]}” · {haQuanto(p.voto_mudou_em)} (só anotado)</small> : null}
+                        </span>
+                      )}
+                      {!p.voto && p.com_enquete && p.status === 'enviado' && <span className="pg-wa-espera" data-teste="wa-sem-voto"><Vote size={13} /> Enquete enviada · sem voto ainda</span>}
+                      {p.aviso_demora_em && <span className="pg-wa-espera" data-teste="wa-demora"><Clock size={13} /> Equipe avisada da demora · {haQuanto(p.aviso_demora_em)}</span>}
+                      {p.cutucado_em && <span className="pg-wa-espera" data-teste="wa-cutucado"><BellRing size={13} /> Salão cutucado · {haQuanto(p.cutucado_em)}</span>}
                     </div>
                     <div className="pg-wa-pedido-acoes">
                       <label><input type="checkbox" checked={!!p.atendido} onChange={(e) => atendido(p.id, e.target.checked)} /> atendido pela equipe</label>
@@ -314,6 +362,8 @@ function Simulador({ g, cfg }) {
   const [texto, setTexto] = useState('')
   const [previa, setPrevia] = useState(null)
   const [previaAviso, setPreviaAviso] = useState(null)
+  const [previaEnquete, setPreviaEnquete] = useState(null) // 3.57: a enquete que iria junto do pedido
+  const [voto, setVoto] = useState(null) // 3.57: o que o salão, a cliente e a equipe receberiam num voto simulado
   const [dona, setDona] = useState(false)
   const [ocupado, setOcupado] = useState(false)
   const [erro, setErro] = useState('')
@@ -329,12 +379,19 @@ function Simulador({ g, cfg }) {
       setMensagens((m) => [...m, { q: 'cliente', t: r.texto }, ...(r.responder ? [{ q: 'mel', t: r.responder }] : [])])
       if (r.previaSalao) setPrevia(r.previaSalao)
       if (r.previaAviso) setPreviaAviso(r.previaAviso)
+      if (r.previaEnquete) setPreviaEnquete(r.previaEnquete)
       if (r.acao === 'erro_ia') setErro(r.erro || 'a IA não respondeu')
     } catch (e) { setErro(e.message) } finally { setOcupado(false) }
   }
-  const comecar = () => { const l = lugarDoCaminho(); if (!l.cidade_slug || !l.slug) { setErro('informe cidade/slug, como itanhaem/studio-lirio'); return } setMensagens([]); setPrevia(null); setPreviaAviso(null); mandar({ lugar: l, comoDona: dona }) }
+  const limparPrevias = () => { setPrevia(null); setPreviaAviso(null); setPreviaEnquete(null); setVoto(null) }
+  const comecar = () => { const l = lugarDoCaminho(); if (!l.cidade_slug || !l.slug) { setErro('informe cidade/slug, como itanhaem/studio-lirio'); return } setMensagens([]); limparPrevias(); mandar({ lugar: l, comoDona: dona }) }
   const enviar = (e) => { e.preventDefault(); const t = texto.trim(); if (!t) return; setTexto(''); mandar({ texto: t, comoDona: dona }) }
-  const reiniciar = async () => { setMensagens([]); setPrevia(null); setPreviaAviso(null); setErro(''); try { await chamar('guia-whats', { acao: 'reiniciar' }) } catch { /* sem conversa */ } }
+  const reiniciar = async () => { setMensagens([]); limparPrevias(); setErro(''); try { await chamar('guia-whats', { acao: 'reiniciar' }) } catch { /* sem conversa */ } }
+  // 3.57: "o salão votou": só prévias — não existe pedido de verdade na conversa de teste, nada é enviado
+  const simularVoto = async (v) => {
+    setOcupado(true); setErro('')
+    try { setVoto({ v, ...(await chamar('guia-whats', { acao: 'simular_voto', voto: v })) }) } catch (e) { setErro(e.message) } finally { setOcupado(false) }
+  }
   return (
     <Painel Icon={Bot} titulo="Testar a Mel" sub="Converse como se fosse uma cliente que tocou no botão de um salão. Nada é enviado a ninguém; no “sim”, você vê a mensagem que o salão receberia." className="pg-wa-sim" direita={mensagens.length > 0 && <button type="button" className="plat-link" onClick={reiniciar}><RotateCcw size={14} /> Recomeçar</button>}>
       {mensagens.length === 0 ? (
@@ -356,10 +413,35 @@ function Simulador({ g, cfg }) {
               <pre>{previaAviso}</pre>
             </div>
           ) : previa ? (
-            <div className="pg-wa-previa" data-teste="wa-previa">
-              <b><Check size={14} /> O salão receberia esta mensagem (não foi enviada):</b>
-              <pre>{previa}</pre>
-            </div>
+            <>
+              <div className="pg-wa-previa" data-teste="wa-previa">
+                <b><Check size={14} /> O salão receberia esta mensagem (não foi enviada):</b>
+                <pre>{previa}</pre>
+                {previaEnquete && (
+                  <div className="pg-wa-enquete" data-teste="wa-previa-enquete">
+                    <b><Vote size={14} /> …e logo atrás, a enquete:</b>
+                    <p>{previaEnquete.pergunta}</p>
+                    {previaEnquete.opcoes.map((o) => <span key={o}>○ {o}</span>)}
+                  </div>
+                )}
+              </div>
+              {voto ? (
+                <div className={'pg-wa-previa pg-wa-voto-previa ' + voto.v} data-teste="wa-previa-voto">
+                  <b>{voto.v === 'sim' ? <ThumbsUp size={14} /> : <ThumbsDown size={14} />} Se o salão votasse “{voto.v === 'sim' ? 'sim' : 'não'}” (nada foi enviado):</b>
+                  <small>A Mel responde ao salão:</small><pre>{voto.responder}</pre>
+                  {voto.previaCliente && <><small>A cliente recebe:</small><pre>{voto.previaCliente}</pre></>}
+                  {voto.previaAviso && <><small>A equipe recebe:</small><pre>{voto.previaAviso}</pre></>}
+                  {voto.v === 'nao' && !voto.previaCliente && <small>A cliente não é avisada (desligado na configuração).</small>}
+                  <button type="button" className="plat-link" onClick={() => setVoto(null)}>Simular outro voto</button>
+                </div>
+              ) : (
+                <div className="pg-wa-sim-voto" data-teste="wa-sim-voto">
+                  <span className="muted">E se o salão respondesse?</span>
+                  <button type="button" className="btn btn-ghost" onClick={() => simularVoto('sim')} disabled={ocupado} data-teste="wa-sim-voto-sim"><ThumbsUp size={14} /> Sim, vou atender</button>
+                  <button type="button" className="btn btn-ghost" onClick={() => simularVoto('nao')} disabled={ocupado} data-teste="wa-sim-voto-nao"><ThumbsDown size={14} /> Não vou conseguir</button>
+                </div>
+              )}
+            </>
           ) : (
             <form className="pg-wa-sim-form" onSubmit={enviar}>
               <input value={texto} onChange={(e) => setTexto(e.target.value)} placeholder="Escreva como a cliente…" disabled={ocupado} data-teste="wa-sim-texto" />

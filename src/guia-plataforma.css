@@ -890,3 +890,16 @@
   .pg-wa-ped { padding: 0.75rem 0.75rem 0.7rem 0.9rem; }
   .pg-wa-salvar { bottom: 0.4rem; padding: 0.45rem 0.5rem 0.45rem 0.7rem; } .pg-wa-salvar-estado { font-size: 0.74rem; }
 }
+/* 3.59: a aba Onboarding no layout v2 */
+.pg-onb-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+.pg-onb-funil-col { display: flex; flex-direction: column; gap: 0.5rem; }
+.pg-wa-v2 .pg-onb-origens { margin: 0; }
+.pg-wa-v2 .pg-onb-passo { gap: 0.4rem; }
+.pg-onb-num { display: inline-grid; place-items: center; width: 1.35rem; height: 1.35rem; border-radius: 50%; background: #ffe6ef; color: var(--rosa); font-size: 0.72rem; margin-right: 0.2rem; }
+.pg-onb-passo-topo .pg-wa-chave { font-size: 0.8rem; } .pg-onb-passo-topo .pg-wa-chave-txt { font-size: 0.78rem; }
+.pg-onb-msgs { display: flex; flex-direction: column; gap: 0.9rem; }
+.pg-onb-origem { display: flex !important; flex-direction: row !important; align-items: flex-start; gap: 0.5rem !important; border: 1px solid var(--fio); border-radius: 12px; padding: 0.6rem 0.75rem; cursor: pointer; font-weight: 500 !important; }
+.pg-onb-origem.ativa { border-color: #ff9ec2; background: #fff7fb; }
+.pg-onb-origem input { margin-top: 3px; } .pg-onb-origem .muted { display: block; font-weight: 400; font-size: 0.78rem; }
+.pg-wa-ped-pilulas { display: flex; gap: 0.3rem; flex-wrap: wrap; justify-content: flex-end; }
+@media (max-width: 640px) { .pg-onb-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; } }

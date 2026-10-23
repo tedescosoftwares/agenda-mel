@@ -6,10 +6,11 @@ import { categoriaDoGuia, semAcento, linkWhatsDoTel, linkInstagram, soDigitosTel
 import { urlDoAmbiente } from '../../../lib/ambiente'
 import { SITE_GUIA } from '../../../lib/guiaSeo'
 import { REGRAS } from '../../../lib/acesso'
-import { mensagemParaDono, zapDoDono, formatar, n0, PEDIDO_DE_FOTOS, paginaSemFoto } from '../../../lib/guiaMetricas'
+import { mensagemParaDono, zapDoDono, formatar, n0, PEDIDO_DE_FOTOS, paginaSemFoto, pelaMel } from '../../../lib/guiaMetricas'
+import { deixarRecado, pegarRecado } from '../../../lib/guiaPontes'
 import {
   Send, Phone, AtSign, Footprints, Mail, Search, X, ExternalLink, Copy, Check, LoaderCircle, Keyboard, RotateCcw, ArrowLeft,
-  ChevronUp, ChevronDown, AlarmClock, StickyNote, History, Inbox, Handshake, Info, ClipboardCheck, ArrowDownWideNarrow,
+  ChevronUp, ChevronDown, AlarmClock, StickyNote, History, Inbox, Handshake, Info, ClipboardCheck, ArrowDownWideNarrow, MessageCircle, TrendingUp, TrendingDown, Minus, UserX,
 } from 'lucide-react'
 import '../../../guia-abordagem.css'
 
@@ -108,6 +109,7 @@ function montarMensagem(it, { dias, para, semFotos = false }) {
     return [
       `Oi${it.dono.nome ? `, ${it.dono.nome}` : ''}! Tudo bem? Aqui é da MIMO. Você pediu contato sobre ${it.nome} no nosso guia de salões de ${cidade}.`,
       partes.length ? `Para você ter uma ideia: ${juntar(partes)}.` : '',
+      pelaMel(it.mel),
       pedido,
       ...(cliente ? [] : PITCH),
       url ? `A página: ${url}` : '',
@@ -117,6 +119,7 @@ function montarMensagem(it, { dias, para, semFotos = false }) {
   return [
     `Oi! Tudo bem? Aqui é da MIMO, um guia de salões de ${cidade}.`,
     url ? `${it.nome} já tem uma página no nosso guia, com endereço, horário e serviços.` : '',
+    pelaMel(it.mel),
     pedido,
     ...(cliente ? [] : PITCH),
     url ? `A página: ${url}` : '',
@@ -145,6 +148,9 @@ function passaNaVisao(it, visao, hoje) {
   if (visao === 'fila') return it.fila === 'principal'
   if (visao === 'lembretes') return it.fila === 'principal' && !!it.proximo_contato && it.proximo_contato <= hoje
   if (visao === 'pedidos') return it.fila === 'principal' && n0(it.pendentes?.sou_dono) + n0(it.pendentes?.quero_marcar) > 0
+  // 3.59: os sinais da Mel
+  if (visao === 'mel') return it.fila === 'principal' && n0(it.mel?.pedidos) > 0
+  if (visao === 'querem') return it.fila === 'principal' && n0(it.mel?.quer) > 0
   return it.status === visao
 }
 const textoDeBusca = (it) => semAcento(`${it.nome} ${it.bairro ?? ''} ${it.cidade ?? ''} ${categoriaDoGuia(it.categoria).curto} ${it.nota ?? ''} ${it.dono?.nome ?? ''}`).toLowerCase()
@@ -164,6 +170,8 @@ function somar(c, f, it, hoje, sinal) {
   if (passaNaVisao(it, 'fila', hoje)) c.fila += sinal
   if (passaNaVisao(it, 'lembretes', hoje)) c.lembretes += sinal
   if (passaNaVisao(it, 'pedidos', hoje)) c.pedidos += sinal
+  if (passaNaVisao(it, 'mel', hoje)) c.mel += sinal
+  if (passaNaVisao(it, 'querem', hoje)) c.querem += sinal
   if (it.ja_cliente) f.ja_eram += sinal
   else if (!(it.status === 'nao_abordar' && !it.etapa)) {
     f.para_abordar += sinal
@@ -172,12 +180,19 @@ function somar(c, f, it, hoje, sinal) {
     if (it.etapa >= 4) f.clientes += sinal
   }
 }
-const contagemVazia = () => ({ fila: 0, lembretes: 0, pedidos: 0, todos: 0, ...Object.fromEntries(STATUS.map(([id]) => [id, 0])) })
+const contagemVazia = () => ({ fila: 0, lembretes: 0, pedidos: 0, mel: 0, querem: 0, todos: 0, ...Object.fromEntries(STATUS.map(([id]) => [id, 0])) })
 const funilVazio = () => ({ para_abordar: 0, abordados: 0, responderam: 0, clientes: 0, ja_eram: 0 })
+// 3.59: os totais da Mel na cidade (a mesma conta de resumo.mel do banco)
+const melVazio = () => ({ pedidos: 0, abriram: 0, vai: 0, nao: 0, querem: 0, donas: 0, visitas: 0, contatos: 0 })
+function somarMel(m, it, sinal) {
+  const x = it.mel ?? {}
+  m.pedidos += sinal * n0(x.pedidos); m.abriram += sinal * n0(x.abriram); m.vai += sinal * n0(x.vai); m.nao += sinal * n0(x.nao)
+  m.querem += sinal * (n0(x.quer) > 0 ? 1 : 0); m.donas += sinal * (x.dona_em ? 1 : 0); m.visitas += sinal * n0(it.visitas); m.contatos += sinal * n0(it.contatos)
+}
 function resumoDosItens(itens, hoje) {
-  const contagem = contagemVazia(), funil = funilVazio()
-  for (const it of itens) somar(contagem, funil, it, hoje, 1)
-  return { contagem, funil }
+  const contagem = contagemVazia(), funil = funilVazio(), mel = melVazio()
+  for (const it of itens) { somar(contagem, funil, it, hoje, 1); somarMel(mel, it, 1) }
+  return { contagem, funil, mel }
 }
 // uma ação trocou um item: o resumo do banco (da cidade inteira) anda junto, sem ler tudo de novo
 function ajustarResumo(resumo, velho, novo, hoje) {
@@ -185,7 +200,7 @@ function ajustarResumo(resumo, velho, novo, hoje) {
   const contagem = { ...contagemVazia(), ...resumo.contagem }, funil = { ...funilVazio(), ...resumo.funil }
   if (velho) somar(contagem, funil, velho, hoje, -1)
   if (novo) somar(contagem, funil, novo, hoje, 1)
-  return { contagem, funil }
+  return { contagem, funil, mel: resumo.mel }
 }
 const calor = (it) => (it.fila !== 'principal' ? 'fora' : it.prioridade >= 100 ? 'quente' : it.prioridade >= 30 ? 'morno' : 'frio')
 const CALOR = { quente: 'Prioridade alta', morno: 'Prioridade média', frio: 'Prioridade baixa', fora: 'Fora da fila' }
@@ -210,8 +225,10 @@ export default function Abordagem({ g }) {
   const [dados, setDados] = useState(daMemoria)
   const [erro, setErro] = useState('')
   const [carregando, setCarregando] = useState(true)
-  const [visao, setVisao] = useState(memoria.visao)
-  const [busca, setBusca] = useState('')
+  // 3.59: a aba WhatsApp pode mandar abrir esta com uma busca (o nome do salão)
+  const [recado] = useState(() => pegarRecado('abordagem'))
+  const [visao, setVisao] = useState(recado?.busca ? 'todos' : memoria.visao)
+  const [busca, setBusca] = useState(recado?.busca ?? '')
   // a ordem da lista (ids): só muda quando chega uma leitura completa, troca o filtro ou a busca, ou em "Reordenar"
   const [ordem, setOrdem] = useState(() => (daMemoria ? ordenarIds(daMemoria.itens ?? [], memoria.visao, '', daMemoria.hoje) : []))
   const [mexidos, setMexidos] = useState(() => new Set())   // mudaram desde a última ordenação
@@ -338,7 +355,7 @@ export default function Abordagem({ g }) {
 
   // ---- contadores e funil (somados dos itens) ----
   // os números das abas e do funil: dos itens quando a cidade inteira está aqui; senão, os do banco (da cidade inteira)
-  const resumo = useMemo(() => (dados?.completo || !dados?.resumo ? resumoDosItens(itens, hoje) : { contagem: { ...contagemVazia(), ...dados.resumo.contagem }, funil: { ...funilVazio(), ...dados.resumo.funil } }), [dados, itens, hoje])
+  const resumo = useMemo(() => (dados?.completo || !dados?.resumo ? resumoDosItens(itens, hoje) : { contagem: { ...contagemVazia(), ...dados.resumo.contagem }, funil: { ...funilVazio(), ...dados.resumo.funil }, mel: { ...melVazio(), ...(dados.resumo.mel ?? {}) } }), [dados, itens, hoje])
   const contagem = resumo.contagem
 
   // ---- trocar uma linha pela versão nova (sem reordenar a lista) ----
@@ -484,7 +501,8 @@ export default function Abordagem({ g }) {
   )
   if (!dados) return <div className="pg-carregando"><LoaderCircle className="pg-gira" size={18} /> Montando a fila…</div>
 
-  const visoes = [['fila', 'Fila', ''], ['lembretes', 'Lembretes', contagem.lembretes ? 'ambar' : ''], ['pedidos', 'Com pedido', contagem.pedidos ? 'rosa' : '']]
+  const visoes = [['fila', 'Fila', ''], ['lembretes', 'Lembretes', contagem.lembretes ? 'ambar' : ''], ['pedidos', 'Com pedido', contagem.pedidos ? 'rosa' : ''],
+    ['querem', 'Querem a MIMO', contagem.querem ? 'rosa' : ''], ['mel', 'Pela Mel', contagem.mel ? 'roxo' : '']]
   const detalhe = atual && (
     <Detalhe
       it={atual} dias={dados.dias} hoje={hoje} ocupado={ocupado} largo={largo}
@@ -493,6 +511,7 @@ export default function Abordagem({ g }) {
       onMover={mover} onFechar={() => setFolha(false)} onMensagem={() => setMensagemId(atual.lugar_id)} onStatus={(s) => mudarStatus(atual, s)}
       onLembrar={(d) => lembrar(atual, d)} onContato={(c) => contato(atual, c)} onSalvarNota={() => salvarNota(atual)}
       onInteresses={() => g.irPara('interesses')} onRevisar={() => g.irPara('revisar', { selId: atual.lugar_id, emCidade: atual.cidade_slug })}
+      onWhats={() => { deixarRecado('whatsapp', { busca: atual.nome }); g.irPara('whatsapp') }}
     />
   )
 
@@ -514,7 +533,8 @@ export default function Abordagem({ g }) {
         {verAtalhos && <Atalhos onFechar={() => setVerAtalhos(false)} />}
       </div>
 
-      <Funil n={resumo.funil} contagem={contagem} />
+      <Funil n={resumo.funil} contagem={contagem} mel={resumo.mel} dias={dados.dias} />
+      <DemandaSemDono dias={dados.dias} cidade={cidade} />
       {noBanco && (
         <p className="pa-parcial muted" data-teste="abordagem-parcial">
           {cidade ? 'Cidade grande' : 'Todas as cidades'}: a fila vem do banco em páginas de {POR_PAGINA}, já na ordem de prioridade; o filtro e a busca vão ao banco.
@@ -581,7 +601,7 @@ export default function Abordagem({ g }) {
 }
 
 // ---- o funil: até onde a conversa chegou (a abordar → abordado → respondeu → cliente) ----
-function Funil({ n, contagem }) {
+function Funil({ n, contagem, mel, dias }) {
   const passos = [
     ['Para abordar', n.para_abordar, 'salões do guia (sem quem já era cliente)'],
     ['Abordados', n.abordados, 'a MIMO já falou com eles'],
@@ -605,6 +625,56 @@ function Funil({ n, contagem }) {
         )
       })}
       {jaEram > 0 && <p className="pa-funil-nota muted">{jaEram === 1 ? '1 salão já agendava pela MIMO antes de qualquer abordagem e fica fora do funil.' : `${jaEram} salões já agendavam pela MIMO antes de qualquer abordagem e ficam fora do funil.`}</p>}
+      {mel && (n0(mel.pedidos) > 0 || n0(mel.querem) > 0 || n0(mel.donas) > 0) && (
+        <p className="pa-funil-mel" data-teste="abordagem-funil-mel">
+          <MessageCircle size={14} /> <b>Pela Mel em {dias} dias:</b>
+          <span>{formatar(mel.visitas)} {n0(mel.visitas) === 1 ? 'visita' : 'visitas'}</span>
+          <i>→</i><span>{formatar(mel.contatos)} {n0(mel.contatos) === 1 ? 'toque' : 'toques'}</span>
+          <i>→</i><span><b>{formatar(mel.pedidos)}</b> {n0(mel.pedidos) === 1 ? 'pedido' : 'pedidos'}</span>
+          <i>→</i><span><b>{formatar(mel.abriram)}</b> {n0(mel.abriram) === 1 ? 'abriu' : 'abriram'} o link</span>
+          <i>→</i><span className="ok"><b>{formatar(mel.vai)}</b> {n0(mel.vai) === 1 ? 'vai' : 'vão'} atender</span>
+          {n0(mel.nao) > 0 && <span className="nao">{formatar(mel.nao)} não {n0(mel.nao) === 1 ? 'vai' : 'vão'}</span>}
+          {n0(mel.querem) > 0 && <span className="quer">💗 {formatar(mel.querem)} {n0(mel.querem) === 1 ? 'salão respondeu' : 'salões responderam'} QUERO</span>}
+          {n0(mel.donas) > 0 && <span className="quer">{formatar(mel.donas)} {n0(mel.donas) === 1 ? 'dona testou' : 'donas testaram'} o guia</span>}
+        </p>
+      )}
+    </section>
+  )
+}
+
+// ---- 3.59: a demanda sem dono — os pedidos da Mel que não acharam quem atendesse, por bairro (a equipe oferece a outro salão) ----
+function DemandaSemDono({ dias, cidade }) {
+  const [dados, setDados] = useState(null)
+  const [aberto, setAberto] = useState(false)
+  useEffect(() => {
+    let vivo = true
+    chamar('guia_demanda_sem_dono', { dias_: dias, cidade_: cidade }).then((r) => { if (vivo) setDados(r.erro ? null : r.data) })
+    return () => { vivo = false }
+  }, [dias, cidade])
+  if (!dados || !n0(dados.pedidos_n)) return null
+  return (
+    <section className={'pa-demanda' + (aberto ? ' aberta' : '')} data-teste="abordagem-demanda">
+      <button type="button" className="pa-demanda-topo" onClick={() => setAberto((v) => !v)} aria-expanded={aberto}>
+        <UserX size={15} />
+        <b>Demanda sem dono:</b> {formatar(dados.clientes_n)} {n0(dados.clientes_n) === 1 ? 'cliente pediu' : 'clientes pediram'} horário pela Mel e {n0(dados.pedidos_n) === 1 ? 'o pedido ficou' : `${formatar(dados.pedidos_n)} pedidos ficaram`} sem quem atendesse
+        <span className="muted">(salão sem WhatsApp, que não respondeu, que disse não ou pediu SAIR) · {aberto ? 'fechar' : 'ver por bairro'}</span>
+        {aberto ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+      </button>
+      {aberto && (
+        <div className="pa-demanda-corpo">
+          <ul className="pa-demanda-bairros">
+            {(dados.por_bairro ?? []).map((b) => (
+              <li key={`${b.cidade}-${b.bairro}`}><b>{b.bairro}</b>{b.cidade && <span className="muted"> · {b.cidade}</span>}<span>{b.clientes} {b.clientes === 1 ? 'cliente' : 'clientes'} · {b.pedidos} {b.pedidos === 1 ? 'pedido' : 'pedidos'} · {b.saloes} {b.saloes === 1 ? 'salão' : 'salões'}</span>{b.servicos && <small className="muted">{b.servicos}</small>}</li>
+            ))}
+          </ul>
+          <p className="muted pa-demanda-dica">Use isto na abordagem do próximo salão do bairro ("tem gente procurando horário aqui perto") — ou ofereça a cliente a um salão que já é da MIMO ali perto. Quem decide é a equipe: a Mel não encaminha sozinha.</p>
+          <ul className="pa-demanda-pedidos">
+            {(dados.pedidos ?? []).slice(0, 12).map((p) => (
+              <li key={p.id}><span><b>{p.cliente_nome || 'sem nome'}</b> · {[p.servico, p.preferencia].filter(Boolean).join(', ') || 'sem detalhes'} · pediu no {p.salao_nome}{p.bairro && p.bairro !== 'sem bairro' ? ` (${p.bairro})` : ''}</span><small className="muted">{p.motivo} · {haQuanto(p.criado_em)}</small><a className="pa-link" href={`https://wa.me/${String(p.cliente_tel).replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">Falar com a cliente</a></li>
+            ))}
+          </ul>
+        </div>
+      )}
     </section>
   )
 }
@@ -646,7 +716,7 @@ const Linha = memo(function Linha({ it, n, hoje, ativo, saiu, onSelecionar, onMe
 // ---- o salão aberto ----
 function Detalhe({
   it, dias, hoje, ocupado, largo, historico, notaTexto, setNotaTexto, notaRef, posicao, podeVoltar, podeIr,
-  onMover, onFechar, onMensagem, onStatus, onLembrar, onContato, onSalvarNota, onInteresses, onRevisar,
+  onMover, onFechar, onMensagem, onStatus, onLembrar, onContato, onSalvarNota, onInteresses, onRevisar, onWhats,
 }) {
   const cat = categoriaDoGuia(it.categoria)
   const e = it.eventos ?? {}
@@ -770,8 +840,28 @@ function Detalhe({
           <span><b>{formatar(n0(it.interesses?.quero_marcar))}</b> "quero marcar"</span>
         </div>
         {toques.length > 0 && <p className="muted pa-toques">{toques.join(' · ')}</p>}
+        {(it.visitas_7 != null) && <Tendencia7 agora={n0(it.visitas_7)} antes={n0(it.visitas_7_antes)} />}
         {it.nota_google != null && <p className="muted pa-google-det">Google: {String(it.nota_google).replace('.', ',')}★{it.avaliacoes ? ` com ${formatar(it.avaliacoes)} avaliações` : ''}. Só desempata a fila; nunca vai para o site.</p>}
       </section>
+
+      {it.mel && (n0(it.mel.pedidos) > 0 || n0(it.mel.quer) > 0 || it.mel.dona_em || it.mel.sair) && (
+        <section className="pa-bloco pa-mel" data-teste="abordagem-mel">
+          <h4><MessageCircle size={14} /> Pela Mel (o WhatsApp da MIMO)</h4>
+          {n0(it.mel.pedidos) > 0 && (
+            <div className="pa-nums">
+              <span><b>{formatar(it.mel.pedidos)}</b> {n0(it.mel.pedidos) === 1 ? 'pedido' : 'pedidos'}</span>
+              <span><b>{formatar(it.mel.abriram)}</b> {n0(it.mel.abriram) === 1 ? 'abriu' : 'abriram'} o link</span>
+              <span className="ok"><b>{formatar(it.mel.vai)}</b> {n0(it.mel.vai) === 1 ? 'vai' : 'vão'} atender</span>
+              {n0(it.mel.nao) > 0 && <span className="nao"><b>{formatar(it.mel.nao)}</b> não vai</span>}
+            </div>
+          )}
+          {n0(it.mel.pedidos) > 0 && <p className="muted pa-toques">{n0(it.mel.da_pagina) ? `${it.mel.da_pagina} ${it.mel.da_pagina === 1 ? 'veio' : 'vieram'} de um toque na página do guia` : 'nenhum veio de um toque na página (chegaram pelo nome ou pelo link direto)'}{it.mel.ultimo ? ` · último ${haQuanto(it.mel.ultimo)}` : ''}</p>}
+          {n0(it.mel.quer) > 0 && <p className="pa-mel-sinal quer">💗 Respondeu <b>QUERO</b> à Mel{it.mel.quer_em ? ` · ${haQuanto(it.mel.quer_em)}` : ''} — quer conhecer a MIMO. Já entrou aqui como "respondeu", com lembrete.</p>}
+          {it.mel.dona_em && <p className="pa-mel-sinal dona">A dona testou o próprio salão pela Mel · {haQuanto(it.mel.dona_em)}. Boa hora para falar da MIMO Agenda.</p>}
+          {it.mel.sair && <p className="pa-mel-sinal sair">Pediu SAIR dos pedidos da Mel: pelo número da Mel não vai mais nada; a abordagem pela equipe continua valendo.</p>}
+          <button type="button" className="pa-link" onClick={onWhats}><MessageCircle size={13} /> Ver os pedidos na aba WhatsApp</button>
+        </section>
+      )}
 
       <section className="pa-bloco">
         <h4><History size={14} /> Histórico</h4>
@@ -779,6 +869,13 @@ function Detalhe({
       </section>
     </div>
   )
+}
+
+// 3.59: as visitas desta semana contra a anterior
+function Tendencia7({ agora, antes }) {
+  const Ic = agora > antes ? TrendingUp : agora < antes ? TrendingDown : Minus
+  const tom = agora > antes ? 'sobe' : agora < antes ? 'desce' : 'igual'
+  return <p className={'pa-tend ' + tom} data-teste="abordagem-tendencia"><Ic size={13} /> Esta semana: <b>{formatar(agora)}</b> {agora === 1 ? 'visita' : 'visitas'} <span className="muted">· na anterior, {formatar(antes)}{antes ? ` (${agora >= antes ? '+' : ''}${Math.round(((agora - antes) / antes) * 100)}%)` : ''}</span></p>
 }
 
 function Historico({ lista, hoje }) {

@@ -6,6 +6,7 @@
 // fica guardado aqui em memória enquanto a página estiver aberta.
 import { GUIA_LUGARES, GUIA_INTERESSES } from './demoGuia.js'
 import { demoDesempenho } from './demoMetricas.js'
+import { GUIA_WHATS_LEADS } from './demoGuiaWhats.js'
 import { semAcento } from './guia.js'
 
 const CANAIS = ['whatsapp', 'ligacao', 'instagram', 'presencial', 'email']
@@ -24,6 +25,23 @@ const somaDias = (dia, n) => new Date(new Date(`${dia}T12:00:00Z`).getTime() + n
 const entre = (a, b) => Math.round((new Date(`${a}T12:00:00Z`) - new Date(`${b}T12:00:00Z`)) / 86400e3)
 const haDias = (n, horas = 0) => new Date(Date.now() - n * 86400e3 - horas * 3600e3).toISOString()
 const ddmm = (dia) => { const [, m, d] = dia.split('-'); return `${d}/${m}` }
+// 3.59: "hoje", "ontem", "há N dias" (como guia_ha_quanto)
+const haQuanto = (iso, hoje) => { if (!iso) return null; const k = entre(hoje, diaSP(iso)); return k <= 0 ? 'hoje' : k === 1 ? 'ontem' : `há ${k} dias` }
+// 3.59: o que passou pela Mel, por salão (os mesmos cortes da 206: o período para os pedidos; 90 dias para o QUERO)
+function melDe(lugarId, desdeMs, hoje) {
+  const todos = GUIA_WHATS_LEADS.filter((l) => l.lugar_id === lugarId)
+  const no = todos.filter((l) => new Date(l.criado_em).getTime() >= desdeMs)
+  const quer = todos.filter((l) => l.status === 'salao_quer_conhecer' && Date.now() - new Date(l.criado_em).getTime() < 90 * 86400e3)
+  const m = {
+    pedidos: no.length, abriram: no.filter((l) => l.clicou_em).length,
+    vai: no.filter((l) => l.voto === 'sim' || l.status === 'salao_vai_atender').length, nao: no.filter((l) => l.voto === 'nao' || l.status === 'salao_nao_atende').length,
+    respondeu: no.filter((l) => l.salao_respondeu_em).length, ultimo: no.map((l) => l.criado_em).sort().at(-1) ?? null,
+    quer: quer.length, quer_em: quer.map((l) => l.salao_respondeu_em ?? l.criado_em).sort().at(-1) ?? null,
+    dona_em: null, sair: false, da_pagina: Math.min(no.length, 1),
+  }
+  m.haQuer = haQuanto(m.quer_em, hoje)
+  return m
+}
 
 const etapaDe = (s) => ({ a_abordar: 0, abordado: 1, respondeu: 2, sem_interesse: 2, negociando: 3, cliente: 4 })[s] ?? null
 const temZap = (l) => !!String(l.whatsapp ?? '').trim() || (() => { const d = String(l.telefone ?? '').replace(/\D/g, '').replace(/^55(?=\d{10,11}$)/, ''); return d.length === 11 && d[2] === '9' })()
@@ -121,6 +139,14 @@ function fila({ dias = 30, lugar_ = null, cidade_ = null, visao_ = null, busca_ 
     if (prox && prox > hoje) m.push(['espera', -60, prox === somaDias(hoje, 1) ? 'lembrete para amanhã' : `lembrete para ${ddmm(prox)}`])
     if (!prox && status === 'abordado' && desde != null && desde >= 0 && desde <= 2) m.push(['espera', -40, `${desde === 0 ? 'abordado hoje' : desde === 1 ? 'abordado ontem' : `abordado há ${desde} dias`}, esperando resposta`])
     if (!temZap(l)) m.push(['sem_zap', -10, 'sem WhatsApp divulgado'])
+    // 3.59: os sinais da Mel (os mesmos pesos da 206)
+    const mel = melDe(l.id, new Date(`${de}T00:00:00-03:00`).getTime(), hoje)
+    if (mel.quer > 0 && !['negociando', 'cliente'].includes(status)) m.push(['mel_quer', 150, `respondeu QUERO pela Mel${mel.haQuer ? ` · ${mel.haQuer}` : ''}`])
+    if (mel.dona_em) m.push(['mel_dona', 100, `a dona testou o guia pela Mel · ${haQuanto(mel.dona_em, hoje)}`])
+    if (mel.pedidos > 0) m.push(['mel', 60 * Math.min(mel.pedidos, 3), `${mel.pedidos} ${mel.pedidos === 1 ? 'cliente pediu' : 'clientes pediram'} horário pela Mel`])
+    if (mel.vai > 0) m.push(['mel_vai', 30 * Math.min(mel.vai, 2), `disse que vai atender${mel.vai > 1 ? ` ${mel.vai} pedidos` : ''}`])
+    if (mel.nao > 0 && mel.vai === 0) m.push(['mel_nao', -15, `disse que não vai atender${mel.nao > 1 ? ` (${mel.nao}×)` : ''}`])
+    if (mel.sair) m.push(['mel_sair', -20, 'pediu SAIR dos pedidos da Mel'])
     if (l.status !== 'publicado') m.push(['info', 0, 'página fora do ar'])
     Object.entries(eventos).filter(([t, k]) => CONTATO[t] && k > 0).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 2)
       .forEach(([t, k]) => m.push(['contato', Math.min(90, 3 * k), k === 1 ? `1 pessoa ${CONTATO[t][0]}` : `${k} ${CONTATO[t][1]}`]))
@@ -142,18 +168,26 @@ function fila({ dias = 30, lugar_ = null, cidade_ = null, visao_ = null, busca_ 
       visitas, visitantes: p.visitantes ?? 0, contatos, eventos, interesses: p.interesses ?? {},
       pendentes: pend, dono: dono ? { nome: dono.nome, contato: dono.contato ?? null, email: dono.email ?? null, ligacao: dono.ligacao ?? null, mensagem: dono.mensagem, em: dono.criado_em } : null,
       fila: fora ? 'fora' : 'principal', fora_motivo: fora, prioridade, motivos, etapa, ja_cliente: !!l.salon_id && etapa < 4,
+      // 3.59
+      visitas_7: n >= 7 ? Math.round((visitas * 7) / n) : visitas, visitas_7_antes: Math.round(((n >= 7 ? (visitas * 7) / n : visitas) * 3) / 4),
+      mel: { pedidos: mel.pedidos, abriram: mel.abriram, vai: mel.vai, nao: mel.nao, respondeu: mel.respondeu, quer: mel.quer, quer_em: mel.quer_em, ultimo: mel.ultimo, dona_em: mel.dona_em, sair: mel.sair, da_pagina: mel.da_pagina },
     })
   }
   itens.sort((a, b) => (a.fila === 'fora') - (b.fila === 'fora') || b.prioridade - a.prioridade || (b.nota_google ?? -1) - (a.nota_google ?? -1) || (b.avaliacoes ?? -1) - (a.avaliacoes ?? -1) || a.nome.localeCompare(b.nome, 'pt-BR'))
   // os números das abas e do funil, da cidade inteira (antes do filtro e da busca)
-  const contagem = { todos: itens.length, fila: 0, lembretes: 0, pedidos: 0 }
+  const contagem = { todos: itens.length, fila: 0, lembretes: 0, pedidos: 0, mel: 0, querem: 0 }
   const funil = { para_abordar: 0, abordados: 0, responderam: 0, clientes: 0, ja_eram: 0 }
+  const resumoMel = { pedidos: 0, abriram: 0, vai: 0, nao: 0, querem: 0, donas: 0, visitas: 0, contatos: 0 }
   const passa = (it, v) => (v === 'todos' ? true : v === 'fila' ? it.fila === 'principal'
     : v === 'lembretes' ? it.fila === 'principal' && !!it.proximo_contato && it.proximo_contato <= hoje
-      : v === 'pedidos' ? it.fila === 'principal' && it.pendentes.sou_dono + it.pendentes.quero_marcar > 0 : it.status === v)
+      : v === 'pedidos' ? it.fila === 'principal' && it.pendentes.sou_dono + it.pendentes.quero_marcar > 0
+        : v === 'mel' ? it.fila === 'principal' && it.mel.pedidos > 0
+          : v === 'querem' ? it.fila === 'principal' && it.mel.quer > 0 : it.status === v)
   for (const it of itens) {
     contagem[it.status] = (contagem[it.status] ?? 0) + 1
-    for (const v of ['fila', 'lembretes', 'pedidos']) if (passa(it, v)) contagem[v]++
+    for (const v of ['fila', 'lembretes', 'pedidos', 'mel', 'querem']) if (passa(it, v)) contagem[v]++
+    resumoMel.pedidos += it.mel.pedidos; resumoMel.abriram += it.mel.abriram; resumoMel.vai += it.mel.vai; resumoMel.nao += it.mel.nao
+    if (it.mel.quer > 0) resumoMel.querem++; if (it.mel.dona_em) resumoMel.donas++; resumoMel.visitas += it.visitas; resumoMel.contatos += it.contatos
     if (it.ja_cliente) funil.ja_eram++
     else if (!(it.status === 'nao_abordar' && !it.etapa)) {
       funil.para_abordar++
@@ -172,7 +206,7 @@ function fila({ dias = 30, lugar_ = null, cidade_ = null, visao_ = null, busca_ 
   return {
     dias: n, de, ate: hoje, hoje, cidade: cidade_ || null, visao: vis, busca: termo || null,
     total: filtrados.length, depois: pula, limite: lim, mais: pula + pagina.length < filtrados.length,
-    resumo: { contagem, funil }, itens: pagina,
+    resumo: { contagem, funil, mel: resumoMel }, itens: pagina,
   }
 }
 

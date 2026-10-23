@@ -114,6 +114,32 @@
 .pa-motivo.espera { background: #fff; color: var(--texto-3, #9a9ea8); border-color: var(--fio); border-style: dashed; }
 .pa-motivo.sem_zap { background: #fff; color: #a3123a; border-color: #f5c6d1; }
 .pa-motivo.info { background: #fff; color: var(--texto-3, #9a9ea8); border-color: var(--fio); border-style: dashed; }
+/* 3.59: os sinais da Mel */
+.pa-motivo.mel { background: #e6fff3; color: #0b6b45; font-weight: 600; }
+.pa-motivo.mel_quer { background: var(--rosa, #ff2d7a); color: #fff; font-weight: 700; }
+.pa-motivo.mel_dona { background: #ffe6ef; color: #c8135c; font-weight: 600; }
+.pa-motivo.mel_vai { background: #e3f8ec; color: #0b7a50; }
+.pa-motivo.mel_nao { background: #fdecec; color: #b42318; }
+.pa-motivo.mel_sair { background: #fff; color: #b42318; border-color: #f3c2c2; border-style: dashed; }
+.pa-funil-mel { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.5rem; margin: 0.6rem 0 0; padding-top: 0.6rem; border-top: 1px dashed var(--fio); font-size: 0.8rem; color: var(--texto-2); }
+.pa-funil-mel > b { color: var(--texto); } .pa-funil-mel i { color: var(--texto-3); font-style: normal; }
+.pa-funil-mel span b { color: var(--texto); } .pa-funil-mel .ok b { color: #0b7a50; } .pa-funil-mel .nao { color: #b42318; } .pa-funil-mel .quer { color: #c8135c; font-weight: 600; }
+.pa-demanda { background: #fff8f1; border: 1px solid #ffd9b3; border-radius: 14px; padding: 0.55rem 0.9rem; font-size: 0.84rem; }
+.pa-demanda-topo { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; width: 100%; border: none; background: none; padding: 0; font: inherit; color: var(--texto); text-align: left; cursor: pointer; }
+.pa-demanda-topo > svg:first-child { color: #c2410c; } .pa-demanda-topo .muted { font-size: 0.78rem; }
+.pa-demanda-corpo { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.6rem; padding-top: 0.6rem; border-top: 1px dashed #ffd9b3; }
+.pa-demanda-bairros, .pa-demanda-pedidos { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.35rem; }
+.pa-demanda-bairros li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.2rem 0.6rem; } .pa-demanda-bairros li > span:not(.muted) { color: var(--texto-2); } .pa-demanda-bairros small { width: 100%; }
+.pa-demanda-dica { margin: 0; font-size: 0.78rem; }
+.pa-demanda-pedidos li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.15rem 0.6rem; background: #fff; border: 1px solid #ffe4c9; border-radius: 10px; padding: 0.4rem 0.65rem; }
+.pa-demanda-pedidos li > span { flex: 1 1 260px; } .pa-demanda-pedidos li small { font-size: 0.74rem; }
+.pa-mel .pa-nums .ok b { color: #0b7a50; } .pa-mel .pa-nums .nao b { color: #b42318; }
+.pa-mel-sinal { margin: 0.4rem 0 0; font-size: 0.82rem; padding: 0.4rem 0.6rem; border-radius: 10px; }
+.pa-mel-sinal.quer { background: #ffe6ef; color: #9f0f4b; } .pa-mel-sinal.dona { background: #fff4d6; color: #92400e; } .pa-mel-sinal.sair { background: #fdecec; color: #b42318; }
+.pa-mel .pa-link { display: inline-flex; align-items: center; gap: 0.3rem; margin-top: 0.5rem; }
+.pa-tend { margin: 0.4rem 0 0; font-size: 0.8rem; display: flex; align-items: center; gap: 0.3rem; }
+.pa-tend.sobe { color: #0b7a50; } .pa-tend.desce { color: #b42318; } .pa-tend.igual { color: var(--texto-2); } .pa-tend .muted { font-weight: 400; }
+
 
 /* ---------- o salão aberto ---------- */
 .pa-detalhe-col { position: sticky; top: 0.75rem; max-height: calc(100vh - 6.5rem); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; background: #fff; border: 1px solid var(--fio); border-radius: 16px; }

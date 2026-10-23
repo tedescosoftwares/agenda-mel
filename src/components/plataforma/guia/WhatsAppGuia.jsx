@@ -1,11 +1,14 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { chamar } from '../../../lib/pagamento'
 import { Painel, Vazio, haQuanto, Iniciais } from '../Pecas'
 import { MODELOS } from '../../../lib/guiaIa'
+import { tel, telCanon, mascararTel, telValido, quando, normal, lerSecao, guardarSecao, useIndice } from '../../../lib/guiaWa'
+import { deixarRecado, pegarRecado } from '../../../lib/guiaPontes'
+import { Pilula, Chave, Tile, Funil, Nav, Bloco, Indice, BarraSalvar, Chat } from './PecasWa'
 import {
   MessageCircle, LoaderCircle, Send, RotateCcw, Save, Bot, Inbox, Check, RefreshCw, TriangleAlert, Smartphone, MessagesSquare, MousePointerClick, X, Unplug,
-  ThumbsUp, ThumbsDown, Clock, BellRing, Vote, Users, Shield, Search, Globe, Undo2, SlidersHorizontal, Circle, Phone, Hourglass, ChevronDown, Sparkles, Zap,
+  ThumbsUp, ThumbsDown, Clock, BellRing, Vote, Users, Shield, Search, Globe, SlidersHorizontal, Circle, Phone, Hourglass, ChevronDown, Sparkles, Zap, Handshake, UserX,
 } from 'lucide-react'
 
 // O WhatsApp do guia (3.48, migração 195): tudo se configura aqui. A conexão do número (outra instância na mesma
@@ -36,7 +39,7 @@ const CAMPOS_CONFIG = ['ligado', 'numero', 'numero_avisos', 'instancia', 'botoes
   // 3.57: o retorno do salão (migração 205)
   'enquete_ativa', 'enquete_pergunta', 'enquete_sim', 'enquete_nao', 'msg_salao_vai_atender', 'msg_salao_nao_atende', 'avisar_cliente_nao', 'msg_cliente_nao_atende', 'aviso_nao_atende', 'msg_aviso_nao_atende', 'aviso_demora_min', 'msg_aviso_demora', 'cutucar_salao_min', 'msg_cutucar_salao']
 const VOTO = { sim: 'vou atender', nao: 'não vou conseguir' }
-const SECOES = [['pedidos', 'Pedidos', Inbox], ['conversas', 'Conversas', MessagesSquare], ['simulador', 'Testar a Mel', Bot], ['config', 'Configuração', SlidersHorizontal]]
+const SECOES = [['pedidos', 'Pedidos', Inbox], ['clientes', 'Clientes', Users], ['conversas', 'Conversas', MessagesSquare], ['simulador', 'Testar a Mel', Bot], ['config', 'Configuração', SlidersHorizontal]]
 const BLOCOS = [['conexao', 'Conexão', Smartphone], ['site', 'No site', Globe], ['mel', 'A Mel', Sparkles], ['pedido', 'O pedido ao salão', Send], ['retorno', 'O retorno do salão', Vote], ['ciclo', 'Ciclo e ocioso', RefreshCw], ['equipe', 'Equipe e dona', Users], ['dados', 'Limites e privacidade', Shield]]
 const PROBLEMAS = ['falhou', 'fora_do_limite', 'sem_contato', 'salao_saiu', 'pendente']
 const FILTROS = [
@@ -49,38 +52,13 @@ const FILTROS = [
   ['atendidos', 'Atendidos', (p) => !!p.atendido],
 ]
 const CHAVE_SECAO = 'mimo:plat:wa:secao'
-const tel = (d) => { const s = String(d ?? '').replace(/\D/g, ''); return s.length === 13 && s.startsWith('55') ? `(${s.slice(2, 4)}) ${s.slice(4, 9)}-${s.slice(9)}` : s.length === 12 && s.startsWith('55') ? `(${s.slice(2, 4)}) ${s.slice(4, 8)}-${s.slice(8)}` : s ? `+${s}` : '' }
-// o telefone do guia (3.49.4): máscara enquanto digita, e guardado no mesmo formato que o banco guarda (dígitos com 55
-// na frente), para a comparação com o número salvo bater e o botão Conectar liberar. telCanon = o que vai ao banco;
-// mascararTel = o que aparece no campo, no formato nacional (DD) 9NNNN-NNNN; telValido = DDD + número completos.
-const soDig = (s) => String(s ?? '').replace(/\D/g, '')
-const telCanon = (s) => { const d = soDig(s); return d.length === 10 || d.length === 11 ? '55' + d : d }
-const telNacional = (s) => { const d = soDig(s); return d.startsWith('55') && d.length >= 12 ? d.slice(2) : d }
-const mascararTel = (s) => {
-  const n = telNacional(s).slice(0, 11)
-  if (!n) return ''
-  const dd = n.slice(0, 2)
-  if (n.length <= 2) return `(${dd}`
-  const resto = n.slice(2)
-  if (resto.length <= 4) return `(${dd}) ${resto}`
-  const corte = resto.length >= 9 ? 5 : 4
-  return `(${dd}) ${resto.slice(0, corte)}-${resto.slice(corte)}`
-}
-const telValido = (s) => { const n = telNacional(s); return n.length === 10 || n.length === 11 }
-const quando = (iso) => (iso ? new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '')
-const normal = (s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
-const Pilula = ({ par }) => <span className={'pg-wa-pilula ' + (par?.[1] ?? 'cinza')}>{par?.[0] ?? '?'}</span>
-const lerSecao = () => { try { const s = localStorage.getItem(CHAVE_SECAO); return SECOES.some(([id]) => id === s) ? s : 'pedidos' } catch { return 'pedidos' } }
-
-// um interruptor (liga/desliga) no lugar da caixinha: o input fica por cima da pista, então o clique e o teste caem nele
-function Chave({ checked, onChange, children, teste, disabled }) {
-  return (
-    <label className={'pg-wa-chave' + (disabled ? ' off' : '')}>
-      <span className="pg-wa-chave-pista"><input type="checkbox" checked={!!checked} onChange={(e) => onChange(e.target.checked)} data-teste={teste} disabled={disabled} /><i /></span>
-      <span className="pg-wa-chave-txt">{children}</span>
-    </label>
-  )
-}
+const CLIENTES_FILTROS = [
+  ['todas', 'Todas', () => true],
+  ['atendidas', 'Atendidas', (c) => !!c.atendida],
+  ['aguardando', 'Aguardando', (c) => c.aguardando > 0],
+  ['sem_dono', 'Sem dono', (c) => c.sem_dono > 0],
+  ['recorrentes', 'Pediram mais de uma vez', (c) => c.pedidos > 1],
+]
 
 export default function WhatsAppGuia({ g }) {
   const [dias, setDias] = useState(7)
@@ -93,13 +71,19 @@ export default function WhatsAppGuia({ g }) {
   const [ocupado, setOcupado] = useState('')
   const [pareamento, setPareamento] = useState(null)
   const [conversa, setConversa] = useState(null)
-  const [secao, setSecaoBruto] = useState(lerSecao)
+  // 3.59: a Abordagem pode mandar abrir esta aba com uma busca (o nome do salão)
+  const [recado] = useState(() => pegarRecado('whatsapp'))
+  const [secao, setSecaoBruto] = useState(() => (recado?.busca ? 'pedidos' : lerSecao(CHAVE_SECAO, SECOES, 'pedidos')))
   const [filtro, setFiltro] = useState('todos')
-  const [busca, setBusca] = useState('')
+  const [busca, setBusca] = useState(recado?.busca ?? '')
   const [blocoAtivo, setBlocoAtivo] = useState('conexao')
-  const blocos = useRef({})
+  const indice = useIndice()
+  // 3.59: as clientes que pediram (lidas quando a seção abre; de novo quando o período muda)
+  const [cli, setCli] = useState(null) // { dias, lista }
+  const [filtroCli, setFiltroCli] = useState('todas')
+  const [buscaCli, setBuscaCli] = useState('')
 
-  const setSecao = (s) => { setSecaoBruto(s); try { localStorage.setItem(CHAVE_SECAO, s) } catch { /* sem localStorage */ } }
+  const setSecao = (s) => { setSecaoBruto(s); guardarSecao(CHAVE_SECAO, s) }
   const ler = useCallback(async () => {
     const { data, error } = await supabase.rpc('guia_whats_painel', { dias_: dias })
     if (error) { setErro(faltaMigracao(error) ? 'sem_195' : error.message || 'não deu para ler'); return }
@@ -116,15 +100,13 @@ export default function WhatsAppGuia({ g }) {
     return () => clearInterval(t)
   }, [conexao?.estado, lerEstado])
   // o índice da configuração acompanha a rolagem
+  useEffect(() => { if (secao === 'config') return indice.observar(setBlocoAtivo) }, [secao, form, indice])
   useEffect(() => {
-    if (secao !== 'config' || typeof IntersectionObserver === 'undefined') return
-    const io = new IntersectionObserver((es) => {
-      const v = es.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0]
-      if (v) setBlocoAtivo(v.target.dataset.bloco)
-    }, { rootMargin: '-90px 0px -60% 0px', threshold: 0 })
-    Object.values(blocos.current).forEach((el) => el && io.observe(el))
-    return () => io.disconnect()
-  }, [secao, form])
+    if (secao !== 'clientes' || cli?.dias === dias) return
+    let vivo = true
+    supabase.rpc('guia_whats_clientes', { dias_: dias }).then(({ data, error }) => { if (vivo) setCli({ dias, lista: error ? [] : (data ?? []) }) })
+    return () => { vivo = false }
+  }, [secao, cli, dias])
 
   const campo = (k, v) => setForm((f) => ({ ...f, [k]: v }))
   const sujo = useMemo(() => !!(form && dados?.config) && CAMPOS_CONFIG.some((k) => JSON.stringify(form[k] ?? null) !== JSON.stringify(dados.config[k] ?? null)), [form, dados])
@@ -158,8 +140,7 @@ export default function WhatsAppGuia({ g }) {
     const { data } = await supabase.rpc('guia_whats_conversa', { id_: id })
     if (data) setConversa(data)
   }
-  const irParaBloco = (id) => { setBlocoAtivo(id); blocos.current[id]?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }
-  const registrarBloco = (id, el) => { blocos.current[id] = el }
+  const irParaAbordagem = (nome) => { deixarRecado('abordagem', { busca: nome }); g?.irPara?.('abordagem') }
 
   if (erro === 'sem_195') return <Vazio>O WhatsApp do guia precisa da migração 195: rode o bat B e depois o bat 9 (as funções).</Vazio>
   if (!dados || !form) return <div className="pg-carregando">{erro ? erro : <><LoaderCircle className="pg-gira" size={18} /> Abrindo o WhatsApp do guia…</>}</div>
@@ -172,8 +153,13 @@ export default function WhatsAppGuia({ g }) {
     const q = normal(busca).trim()
     return !q || normal(`${p.cliente_nome} ${p.salao_nome} ${p.cidade} ${p.servico} ${p.cliente_tel}`).includes(q)
   })
-  const pct = (v) => (t.enviados ? Math.round(((v ?? 0) / t.enviados) * 100) : 0)
   const contagem = Object.fromEntries(FILTROS.map(([id, , fn]) => [id, pedidos.filter(fn).length]))
+  const clientes = cli?.dias === dias ? cli.lista : null
+  const clientesLista = (clientes ?? []).filter(CLIENTES_FILTROS.find(([id]) => id === filtroCli)?.[2] ?? (() => true)).filter((c) => {
+    const q = normal(buscaCli).trim()
+    return !q || normal(`${c.nome} ${c.telefone} ${c.servico} ${(c.saloes ?? []).map((x) => x.nome).join(' ')}`).includes(q)
+  })
+  const contagemCli = Object.fromEntries(CLIENTES_FILTROS.map(([id, , fn]) => [id, (clientes ?? []).filter(fn).length]))
 
   return (
     <div className="pg-wa pg-wa-v2" data-teste="whatsapp-guia">
@@ -219,22 +205,12 @@ export default function WhatsAppGuia({ g }) {
           <Tile Icon={Sparkles} cor="rosa" n={t.querem} rotulo="querem conhecer a MIMO" />
           <Tile Icon={Zap} cor="ambar" n={t.enviados_hoje} extra={<small>/{form.limite_dia}</small>} rotulo="enviados hoje" barra={form.limite_dia ? Math.min(100, Math.round(((t.enviados_hoje ?? 0) / form.limite_dia) * 100)) : 0} />
         </div>
-        <div className="pg-wa-funil" data-teste="wa-funil">
-          <b>O funil do pedido <span className="muted">(últimos {dias} dias)</span></b>
-          {[['Enviados ao salão', t.enviados ?? 0, 'a'], ['Abriram o link', t.abriram ?? 0, 'b'], ['Disseram que vão atender', t.vao_atender ?? 0, 'c']].map(([r, v, k], i) => (
-            <div key={k} className="pg-wa-funil-linha"><span>{r}</span><i><em className={k} style={{ width: `${i === 0 ? (t.enviados ? 100 : 0) : Math.max(pct(v) ? 3 : 0, pct(v))}%` }} /></i><strong>{v}{i > 0 && t.enviados ? <small> {pct(v)}%</small> : null}</strong></div>
-          ))}
-        </div>
+        <Funil titulo="O funil do pedido" sub={`últimos ${dias} dias`} teste="wa-funil" linhas={[['Enviados ao salão', t.enviados ?? 0], ['Abriram o link', t.abriram ?? 0], ['Disseram que vão atender', t.vao_atender ?? 0]]} />
       </section>
 
       {/* as seções */}
-      <nav className="pg-seg pg-wa-nav" role="tablist" aria-label="Seções do WhatsApp do guia">
-        {SECOES.map(([id, rotulo, Icon]) => (
-          <button key={id} type="button" role="tab" aria-selected={secao === id} className={secao === id ? 'ativo' : ''} onClick={() => setSecao(id)} data-teste={'wa-secao-' + id}>
-            <Icon size={14} /> {rotulo}{id === 'pedidos' && pedidos.length > 0 && <span className="pg-wa-nav-n">{pedidos.length}</span>}{id === 'conversas' && (dados.conversas ?? []).length > 0 && <span className="pg-wa-nav-n">{dados.conversas.length}</span>}{id === 'config' && sujo && <span className="pg-wa-nav-ponto" title="Alterações não salvas" />}
-          </button>
-        ))}
-      </nav>
+      <Nav secoes={SECOES} secao={secao} onTrocar={setSecao} sujo={sujo} prefixo="wa" rotulo="Seções do WhatsApp do guia"
+        contagens={{ pedidos: pedidos.length, conversas: (dados.conversas ?? []).length, clientes: clientes?.length ?? 0 }} />
 
       {secao === 'pedidos' && (
         <section className="pg-wa-secao">
@@ -247,9 +223,52 @@ export default function WhatsAppGuia({ g }) {
           {pedidos.length === 0 ? <Vazio>Nenhum pedido no período. Quando uma cliente confirmar um pedido com a Mel, ele aparece aqui.</Vazio>
             : filtrados.length === 0 ? <Vazio>Nenhum pedido com esse filtro.</Vazio> : (
               <ul className="pg-wa-peds" data-teste="wa-pedidos">
-                {filtrados.map((p) => <Pedido key={p.id} p={p} ocupado={ocupado} onAtendido={atendido} onReenviar={() => agir('reenviar', { lead: p.id })} onConversa={abrirConversa} />)}
+                {filtrados.map((p) => <Pedido key={p.id} p={p} ocupado={ocupado} onAtendido={atendido} onReenviar={() => agir('reenviar', { lead: p.id })} onConversa={abrirConversa} onAbordagem={() => irParaAbordagem(p.salao_nome)} />)}
               </ul>
             )}
+        </section>
+      )}
+
+      {secao === 'clientes' && (
+        <section className="pg-wa-secao">
+          <p className="muted pg-wa-secao-sub">As clientes que pediram horário pela Mel no período, por telefone: quantos pedidos, em quais salões, se alguém disse que vai atender e o que ficou sem dono. Quem decide o que fazer com a demanda sem dono é a equipe — a Mel não encaminha sozinha.</p>
+          <div className="pg-wa-ferramentas">
+            <div className="pg-chips pg-wa-filtros" data-teste="wa-cli-filtros">
+              {CLIENTES_FILTROS.map(([id, rotulo]) => <button key={id} type="button" className={'plat-chip' + (filtroCli === id ? ' ativo' : '')} onClick={() => setFiltroCli(id)} aria-pressed={filtroCli === id}>{rotulo}{contagemCli[id] > 0 && <span>{contagemCli[id]}</span>}</button>)}
+            </div>
+            <label className="pg-wa-busca"><Search size={14} /><input value={buscaCli} onChange={(e) => setBuscaCli(e.target.value)} placeholder="Nome, telefone, serviço ou salão…" aria-label="Buscar clientes" data-teste="wa-cli-busca" />{buscaCli && <button type="button" onClick={() => setBuscaCli('')} aria-label="Limpar"><X size={13} /></button>}</label>
+          </div>
+          {clientes === null ? <div className="pg-carregando"><LoaderCircle className="pg-gira" size={16} /> Lendo as clientes…</div>
+            : clientes.length === 0 ? <Vazio>Nenhuma cliente no período.</Vazio>
+              : clientesLista.length === 0 ? <Vazio>Nenhuma cliente com esse filtro.</Vazio> : (
+                <ul className="pg-wa-peds pg-wa-clis" data-teste="wa-clientes">
+                  {clientesLista.map((c) => (
+                    <li key={c.chave} className={'pg-wa-ped ' + (c.atendida ? 'ok' : c.sem_dono > 0 ? 'nao' : c.aguardando > 0 ? 'falha' : 'neutro')} data-teste="wa-cliente">
+                      <div className="pg-wa-ped-cab">
+                        <Iniciais nome={c.nome || '?'} />
+                        <div className="pg-wa-ped-quem">
+                          <b>{c.nome || 'sem nome'}</b>
+                          <span className="muted">{tel(c.telefone)}{c.servico ? ` · ${c.servico}` : ''}</span>
+                        </div>
+                        <div className="pg-wa-ped-dir">
+                          {c.atendida ? <Pilula par={['Vai ser atendida ✅', 'verde']} /> : c.sem_dono > 0 ? <Pilula par={['Sem dono', 'carmim']} /> : c.aguardando > 0 ? <Pilula par={['Aguardando o salão', 'ambar']} /> : <Pilula par={['Pediu', 'cinza']} />}
+                          <small className="muted" title={quando(c.ultimo)}>{haQuanto(c.ultimo)}</small>
+                        </div>
+                      </div>
+                      <p className="pg-wa-ped-pedido"><b>{c.pedidos}</b> {c.pedidos === 1 ? 'pedido' : 'pedidos'} em <b>{c.saloes_n}</b> {c.saloes_n === 1 ? 'salão' : 'salões'}: {(c.saloes ?? []).map((x) => x.nome).join(', ')}</p>
+                      <ol className="pg-wa-passos">
+                        <li className={'pg-wa-passo ' + (c.abriram ? 'ok' : 'espera')}><span className="pg-wa-passo-ic"><MousePointerClick size={12} /></span><span className="pg-wa-passo-txt">{c.abriram ? 'Algum salão abriu o link' : 'Nenhum salão abriu o link'}</span></li>
+                        <li className={'pg-wa-passo ' + (c.atendida ? 'ok' : c.recusados > 0 ? 'nao' : 'espera')}><span className="pg-wa-passo-ic">{c.atendida ? <ThumbsUp size={12} /> : c.recusados > 0 ? <ThumbsDown size={12} /> : <Circle size={12} />}</span><span className="pg-wa-passo-txt">{c.atendida ? 'Um salão disse que vai atender' : c.recusados > 0 ? `${c.recusados} ${c.recusados === 1 ? 'salão disse' : 'salões disseram'} que não` : 'Ninguém respondeu ainda'}</span></li>
+                        {c.sem_dono > 0 && <li className="pg-wa-passo nao"><span className="pg-wa-passo-ic"><UserX size={12} /></span><span className="pg-wa-passo-txt">{c.sem_dono} {c.sem_dono === 1 ? 'pedido ficou' : 'pedidos ficaram'} sem dono</span></li>}
+                      </ol>
+                      <div className="pg-wa-ped-acoes">
+                        <a className="plat-link" href={`https://wa.me/${String(c.telefone).replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer"><MessageCircle size={13} /> Falar com a cliente</a>
+                        {c.sem_dono > 0 && <span className="muted">Sem dono: ofereça outro salão (um da MIMO ali perto, se tiver) — na mão.</span>}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
         </section>
       )}
 
@@ -293,11 +312,9 @@ export default function WhatsAppGuia({ g }) {
 
       {secao === 'config' && (
         <section className="pg-wa-secao pg-wa-config">
-          <nav className="pg-wa-indice" aria-label="Blocos da configuração">
-            {BLOCOS.map(([id, rotulo, Icon]) => <button key={id} type="button" className={blocoAtivo === id ? 'ativo' : ''} onClick={() => irParaBloco(id)}><Icon size={14} /> {rotulo}</button>)}
-          </nav>
+          <Indice blocos={BLOCOS} ativo={blocoAtivo} onIr={(id) => indice.irPara(id, setBlocoAtivo)} rotulo="Blocos da configuração" />
           <div className="pg-wa-blocos pg-wa-form">
-            <Bloco id="conexao" aoMontar={registrarBloco} Icon={Smartphone} titulo="Conexão do número" sub="Um chip só para o guia, na mesma Evolution dos salões. Conectar (no topo) cria a instância, aponta o webhook e mostra o código de pareamento.">
+            <Bloco id="conexao" aoMontar={indice.registrar} Icon={Smartphone} titulo="Conexão do número" sub="Um chip só para o guia, na mesma Evolution dos salões. Conectar (no topo) cria a instância, aponta o webhook e mostra o código de pareamento.">
               <div className="pg-wa-grade2">
                 <label>Número do WhatsApp do guia<input value={mascararTel(form.numero)} onChange={(e) => campo('numero', telCanon(e.target.value))} placeholder="(13) 99999-0000" inputMode="tel" maxLength={16} data-teste="wa-numero" />
                   {form.numero ? (!telValido(form.numero)
@@ -310,7 +327,7 @@ export default function WhatsAppGuia({ g }) {
               </div>
             </Bloco>
 
-            <Bloco id="site" aoMontar={registrarBloco} Icon={Globe} titulo="No site" sub="O que os botões da página de um salão fora da MIMO fazem.">
+            <Bloco id="site" aoMontar={indice.registrar} Icon={Globe} titulo="No site" sub="O que os botões da página de um salão fora da MIMO fazem.">
               <Chave checked={form.ligado} onChange={(v) => campo('ligado', v)} teste="wa-ligado"><b>Ligado</b> <span className="muted">(os botões abaixo abrem a conversa com a Mel no número do guia)</span></Chave>
               <fieldset className="pg-wa-botoes">
                 <legend>Quais botões da página do salão passam pela MIMO</legend>
@@ -320,7 +337,7 @@ export default function WhatsAppGuia({ g }) {
                 <input value={form.msg_cliente ?? ''} onChange={(e) => campo('msg_cliente', e.target.value)} maxLength={500} /></label>
             </Bloco>
 
-            <Bloco id="mel" aoMontar={registrarBloco} Icon={Sparkles} titulo="A Mel" sub="Quem atende a cliente: a IA, o modelo e a orientação.">
+            <Bloco id="mel" aoMontar={indice.registrar} Icon={Sparkles} titulo="A Mel" sub="Quem atende a cliente: a IA, o modelo e a orientação.">
               <div className="pg-wa-grade3">
                 <label>IA que atende<select className="plat-select" value={form.provedor} onChange={(e) => { campo('provedor', e.target.value); campo('modelo', null) }}><option value="groq">Groq (grátis)</option><option value="claude">Claude</option></select></label>
                 <label>Modelo<select className="plat-select" value={form.modelo ?? ''} onChange={(e) => campo('modelo', e.target.value || null)}><option value="">o padrão ({form.provedor === 'claude' ? 'Haiku 5.5' : 'GPT-OSS 120B'})</option>{modelos.map((m) => <option key={m.id} value={m.id}>{m.nome} · {m.nota}</option>)}</select></label>
@@ -330,7 +347,7 @@ export default function WhatsAppGuia({ g }) {
                 <textarea rows={8} value={form.orientacao ?? ''} onChange={(e) => campo('orientacao', e.target.value)} maxLength={6000} /></label>
             </Bloco>
 
-            <Bloco id="pedido" aoMontar={registrarBloco} Icon={Send} titulo="O pedido ao salão" sub="O que o salão recebe quando a cliente diz “sim”, e a resposta quando ele escreve de volta.">
+            <Bloco id="pedido" aoMontar={indice.registrar} Icon={Send} titulo="O pedido ao salão" sub="O que o salão recebe quando a cliente diz “sim”, e a resposta quando ele escreve de volta.">
               <label>Mensagem que o salão recebe <span className="muted">({'{cliente}'}, {'{servico}'}, {'{preferencia}'}, {'{observacao}'}, {'{contato}'}, {'{link}'}, {'{salao}'}; a linha de um campo vazio some)</span>
                 <textarea rows={9} value={form.msg_salao ?? ''} onChange={(e) => campo('msg_salao', e.target.value)} maxLength={3000} data-teste="wa-msg-salao" /></label>
               <label>Resposta quando o salão responde ao pedido <span className="muted">(uma vez só; QUERO e SAIR são reconhecidos sempre)</span>
@@ -341,7 +358,7 @@ export default function WhatsAppGuia({ g }) {
               </div>
             </Bloco>
 
-            <Bloco id="retorno" aoMontar={registrarBloco} Icon={Vote} titulo="O retorno do salão" sub="Ele diz se vai atender; a Mel reage e a equipe acompanha." teste="wa-retorno">
+            <Bloco id="retorno" aoMontar={indice.registrar} Icon={Vote} titulo="O retorno do salão" sub="Ele diz se vai atender; a Mel reage e a equipe acompanha." teste="wa-retorno">
               <Chave checked={form.enquete_ativa !== false} onChange={(v) => campo('enquete_ativa', v)} teste="wa-enquete-ativa"><b>Mandar a enquete “vai atender?” logo depois do pedido</b> <span className="muted">(enquete do WhatsApp: o único botão que aparece em todo aparelho pela Evolution. O primeiro voto vale; trocar depois só fica anotado aqui. Um “não vou conseguir” ou “vou atender” claro, por texto, também conta.)</span></Chave>
               <div className="pg-wa-grade3">
                 <label>Pergunta da enquete <span className="muted">({'{cliente}'}, {'{salao}'}, {'{servico}'})</span><input value={form.enquete_pergunta ?? ''} onChange={(e) => campo('enquete_pergunta', e.target.value)} maxLength={200} disabled={form.enquete_ativa === false} data-teste="wa-enquete-pergunta" /></label>
@@ -377,7 +394,7 @@ export default function WhatsAppGuia({ g }) {
               </div>
             </Bloco>
 
-            <Bloco id="ciclo" aoMontar={registrarBloco} Icon={RefreshCw} titulo="O ciclo da conversa" sub="Como a Mel conduz e quando encerra — você define." teste="wa-ciclo">
+            <Bloco id="ciclo" aoMontar={indice.registrar} Icon={RefreshCw} titulo="O ciclo da conversa" sub="Como a Mel conduz e quando encerra — você define." teste="wa-ciclo">
               <Chave checked={form.exigir_preferencia} onChange={(v) => campo('exigir_preferencia', v)} teste="wa-exigir-preferencia">Só enviar ao salão com a preferência de dia e horário <span className="muted">(desligado, basta nome e serviço; a preferência vira um extra)</span></Chave>
               <div className="pg-wa-grade3">
                 <label>Dúvidas que a Mel responde depois de enviar <span className="muted">(depois, se despede e silencia)</span><input type="number" min={0} max={20} value={form.pos_envio ?? 3} onChange={(e) => campo('pos_envio', Number(e.target.value))} data-teste="wa-pos-envio" /></label>
@@ -398,27 +415,21 @@ export default function WhatsAppGuia({ g }) {
               </div>
             </Bloco>
 
-            <Bloco id="equipe" aoMontar={registrarBloco} Icon={Users} titulo="Equipe e a dona" sub="Para onde vão os avisos internos, e o que a Mel diz quando reconhece a própria dona testando.">
+            <Bloco id="equipe" aoMontar={indice.registrar} Icon={Users} titulo="Equipe e a dona" sub="Para onde vão os avisos internos, e o que a Mel diz quando reconhece a própria dona testando.">
               <label>WhatsApp da equipe para avisos <span className="muted">(salão sem WhatsApp, a dona testando, o salão que não vai atender ou que demora. Vazio = sem aviso, só na lista de pedidos.)</span>
                 <input value={mascararTel(form.numero_avisos)} onChange={(e) => campo('numero_avisos', telCanon(e.target.value))} placeholder="(13) 99999-0000" inputMode="tel" maxLength={16} data-teste="wa-numero-avisos" /></label>
               <label>Mensagem para a própria dona testando <span className="muted">(quando quem escreve está no número cadastrado do salão: a Mel reconhece e apresenta a MIMO Agenda. {'{salao}'} vira o nome; {'{exemplo}'} vira o exemplo de como um pedido chegaria.)</span>
                 <textarea rows={6} value={form.msg_dona ?? ''} onChange={(e) => campo('msg_dona', e.target.value)} maxLength={4000} data-teste="wa-msg-dona" /></label>
             </Bloco>
 
-            <Bloco id="dados" aoMontar={registrarBloco} Icon={Shield} titulo="Limites e privacidade" sub="Por quanto tempo as conversas e os pedidos ficam guardados.">
+            <Bloco id="dados" aoMontar={indice.registrar} Icon={Shield} titulo="Limites e privacidade" sub="Por quanto tempo as conversas e os pedidos ficam guardados.">
               <div className="pg-wa-grade2">
                 <label>Guardar conversas e pedidos por (dias)<input type="number" min={7} max={730} value={form.retencao_dias ?? 90} onChange={(e) => campo('retencao_dias', Number(e.target.value))} /></label>
               </div>
               <p className="muted pg-wa-nota"><Shield size={12} /> A política de privacidade (3.10) diz 90 dias de guarda e que a Mel se apresenta como MIMO: se mudar a retenção para mais, mude a política. Nada vai ao salão sem o "sim" da cliente depois do resumo; "apagar meus dados" apaga tudo dela; SAIR tira o salão.</p>
             </Bloco>
           </div>
-          <div className={'pg-wa-salvar' + (sujo ? ' sujo' : '')} data-teste="wa-salvar-barra">
-            <span className="pg-wa-salvar-estado">{sujo ? <><TriangleAlert size={14} /> Alterações sem salvar</> : <><Check size={14} /> Tudo salvo{dados.config?.atualizado_em ? ` · ${haQuanto(dados.config.atualizado_em)}` : ''}</>}</span>
-            <div>
-              {sujo && <button type="button" className="btn btn-ghost" onClick={descartar} disabled={salvando}><Undo2 size={15} /> Descartar</button>}
-              <button type="button" className="btn btn-primary" onClick={salvar} disabled={salvando} data-teste="wa-salvar">{salvando ? <LoaderCircle className="pg-gira" size={15} /> : <Save size={15} />} Salvar</button>
-            </div>
-          </div>
+          <BarraSalvar sujo={sujo} salvando={salvando} atualizadoEm={dados.config?.atualizado_em} onSalvar={salvar} onDescartar={descartar} teste="wa-salvar" />
         </section>
       )}
 
@@ -426,7 +437,7 @@ export default function WhatsAppGuia({ g }) {
         <div className="pg-wa-fundo" onClick={() => setConversa(null)} role="presentation">
           <div className="pg-wa-caixa" role="dialog" aria-modal="true" aria-label="Conversa" onClick={(e) => e.stopPropagation()} data-teste="wa-conversa-aberta">
             <header><b>{conversa.salao || 'sem salão'}</b><span className="muted">{tel(conversa.telefone)}{conversa.cidade ? ` · ${conversa.cidade}` : ''}</span><button type="button" className="plat-link" onClick={() => setConversa(null)} aria-label="Fechar"><X size={18} /></button></header>
-            <Chat mensagens={conversa.mensagens} />
+            <Chat mensagens={conversa.mensagens} teste="wa-chat" />
             {conversa.dados && Object.keys(conversa.dados).length > 0 && <p className="muted pg-wa-anotado">Anotado: {Object.entries(conversa.dados).map(([k, v]) => `${k} ${v}`).join(' · ')}</p>}
           </div>
         </div>
@@ -435,26 +446,8 @@ export default function WhatsAppGuia({ g }) {
   )
 }
 
-function Tile({ Icon, cor, n, extra, rotulo, teste, barra }) {
-  return (
-    <div className={'pg-wa-kpi ' + cor} data-teste={teste}>
-      <span className={'plat-icone pequeno ' + cor}><Icon /></span>
-      <div><b>{n ?? 0}{extra}</b><span>{rotulo}</span>{barra != null && <i className="pg-wa-kpi-barra"><em style={{ width: `${barra}%` }} /></i>}</div>
-    </div>
-  )
-}
-
-function Bloco({ id, aoMontar, Icon, titulo, sub, children, teste }) {
-  return (
-    <section id={'wa-bloco-' + id} className="pg-wa-bloco" data-bloco={id} data-teste={teste} ref={(el) => aoMontar(id, el)}>
-      <header><span className="plat-icone pequeno rosa"><Icon /></span><div><h4>{titulo}</h4>{sub && <p className="muted">{sub}</p>}</div></header>
-      <div className="pg-wa-bloco-corpo">{children}</div>
-    </section>
-  )
-}
-
 // um pedido: quem, para qual salão, o que pediu, e a linha do tempo (enviado → abriu o link → o retorno do salão)
-function Pedido({ p, ocupado, onAtendido, onReenviar, onConversa }) {
+function Pedido({ p, ocupado, onAtendido, onReenviar, onConversa, onAbordagem }) {
   const [abrir, setAbrir] = useState(false)
   const msgs = p.salao_mensagens?.length > 0 ? p.salao_mensagens : p.resposta_salao ? [{ texto: p.resposta_salao }] : []
   const tom = p.voto === 'sim' || p.status === 'salao_vai_atender' ? 'ok' : p.voto === 'nao' || p.status === 'salao_nao_atende' ? 'nao' : p.status === 'salao_quer_conhecer' ? 'quer' : PROBLEMAS.includes(p.status) ? 'falha' : 'neutro'
@@ -511,19 +504,9 @@ function Pedido({ p, ocupado, onAtendido, onReenviar, onConversa }) {
         {p.salao_tel && !/^55[1-9][0-9]9/.test(p.salao_tel) && <a className="plat-link" href={`tel:+${p.salao_tel}`}><Phone size={13} /> Ligar ({tel(p.salao_tel)})</a>}
         <a className="plat-link" href={`https://wa.me/${String(p.cliente_tel).replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer"><MessageCircle size={13} /> Falar com a cliente</a>
         {p.conversa_id && <button type="button" className="plat-link" onClick={() => onConversa(p.conversa_id)}><Bot size={13} /> Ver a conversa</button>}
+        {p.lugar_id && <button type="button" className="plat-link" onClick={onAbordagem} title="Abrir este salão na fila de abordagem"><Handshake size={13} /> Ver na Abordagem</button>}
       </div>
     </li>
-  )
-}
-
-function Chat({ mensagens, fim }) {
-  const ref = useRef(null)
-  useEffect(() => { ref.current?.scrollTo({ top: ref.current.scrollHeight }) }, [mensagens])
-  return (
-    <div className="pg-wa-chat" ref={ref} data-teste="wa-chat">
-      {(mensagens ?? []).map((m, i) => <div key={i} className={'pg-wa-msg ' + (m.q === 'cliente' ? 'cliente' : 'mel')}>{m.t}</div>)}
-      {fim}
-    </div>
   )
 }
 
@@ -579,7 +562,7 @@ function Simulador({ g, cfg }) {
         </div>
       ) : (
         <>
-          <Chat mensagens={mensagens} fim={ocupado && <div className="pg-wa-msg mel digitando"><LoaderCircle className="pg-gira" size={14} /> a Mel está escrevendo…</div>} />
+          <Chat mensagens={mensagens} teste="wa-chat" fim={ocupado && <div className="pg-wa-msg mel digitando"><LoaderCircle className="pg-gira" size={14} /> a Mel está escrevendo…</div>} />
           {erro && <p className="pg-wa-erro"><TriangleAlert size={13} /> {erro}</p>}
           {previaAviso ? (
             <div className="pg-wa-previa" data-teste="wa-previa-aviso">

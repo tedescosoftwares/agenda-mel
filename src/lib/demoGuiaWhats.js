@@ -4,6 +4,7 @@
 // formulário, para a demo dele continuar valendo).
 
 import { simularOnboarding, reiniciarOnboarding } from './demoGuiaOnboarding'
+import { GUIA_LUGARES } from './demoGuia.js'
 
 const h = (min) => new Date(Date.now() - min * 60e3).toISOString()
 
@@ -64,7 +65,7 @@ const CONVERSAS = [
       { q: 'mel', t: 'Anotei assim:\n• Nome: Ana Paula\n• Serviço: Progressiva\n• Preferência: sexta-feira à tarde\n\nPosso enviar seu nome, este WhatsApp e o pedido para o Studio Lírio? Eles te chamam aqui para combinar. É só responder *sim*.', em: h(92) },
       { q: 'cliente', t: 'sim', em: h(90) }, { q: 'mel', t: 'Pronto, Ana! 💗 Enviei seu pedido para o Studio Lírio. Eles vão te chamar aqui no WhatsApp para combinar o horário.', em: h(90) },
     ] },
-  { id: 2, telefone: '5513977776666', lugar_id: 'gl2', estado: 'conversando', dados: { nome: 'Bia' }, lead_id: null, teste: false, criada_em: h(12), atualizada_em: h(10),
+  { id: 2, telefone: '5513977776666', lugar_id: 'gl3', estado: 'conversando', dados: { nome: 'Bia' }, lead_id: null, teste: false, criada_em: h(12), atualizada_em: h(10),
     mensagens: [
       { q: 'cliente', t: 'Olá! Vi o Ateliê Cabelo & Arte no guia da MIMO e quero marcar um horário.\n\n(código: itanhaem/atelie-cabelo-e-arte)', em: h(12) },
       { q: 'mel', t: 'Oi! Aqui é a Mel, da MIMO 💗. Eu anoto seu pedido e passo para o Ateliê Cabelo & Arte, que te chama aqui. Como é seu nome?', em: h(12) },
@@ -78,19 +79,64 @@ const LEADS = [
     com_enquete: true, voto: 'sim', voto_origem: 'enquete', votou_em: h(87), voto_atual: 'sim', voto_mudou_em: null, aviso_demora_em: null, cutucado_em: null },
   { id: 2, conversa_id: 3, lugar_id: 'gl1', salao_nome: 'Studio Lírio', cidade: 'Itanhaém', cliente_nome: 'Carla', cliente_tel: '5513966665555', servico: 'Manicure e pedicure', preferencia: 'sábado de manhã', observacao: 'prefere a Rô', salao_tel: '5513990001101', status: 'salao_vai_atender', erro: null, enviado_em: h(60 * 25), salao_respondeu_em: h(60 * 24), resposta_salao: 'Recebido, obrigada', atendido: true, criado_em: h(60 * 25), token: 'demotoken2', cliques: 1, clicou_em: h(60 * 20), salao_mensagens: [{ em: h(60 * 18), texto: 'Recebido, vou chamar a Carla agora.' }],
     com_enquete: true, voto: 'sim', voto_origem: 'texto', votou_em: h(60 * 18), voto_atual: 'nao', voto_mudou_em: h(60 * 10), aviso_demora_em: null, cutucado_em: null },
-  { id: 3, conversa_id: null, lugar_id: 'gl2', salao_nome: 'Ateliê Cabelo & Arte', cidade: 'Itanhaém', cliente_nome: 'Dani', cliente_tel: '5513955554444', servico: 'Corte e escova', preferencia: 'quinta à noite', observacao: null, salao_tel: '5513990002202', status: 'falhou', erro: 'Connection Closed', enviado_em: null, salao_respondeu_em: null, resposta_salao: null, atendido: false, criado_em: h(60 * 49), token: 'demotoken3', cliques: 0, clicou_em: null, salao_mensagens: [], com_enquete: false, voto: null },
+  { id: 3, conversa_id: null, lugar_id: 'gl3', salao_nome: 'Ateliê Cabelo & Arte', cidade: 'Itanhaém', cliente_nome: 'Dani', cliente_tel: '5513955554444', servico: 'Corte e escova', preferencia: 'quinta à noite', observacao: null, salao_tel: '5513990002202', status: 'falhou', erro: 'Connection Closed', enviado_em: null, salao_respondeu_em: null, resposta_salao: null, atendido: false, criado_em: h(60 * 49), token: 'demotoken3', cliques: 0, clicou_em: null, salao_mensagens: [], com_enquete: false, voto: null },
   { id: 4, conversa_id: null, lugar_id: null, salao_nome: 'Espaço Bela Praia', cidade: 'Mongaguá', cliente_nome: 'Eva', cliente_tel: '5513944443333', servico: 'Design de sobrancelha', preferencia: 'qualquer dia de manhã', observacao: null, salao_tel: null, status: 'sem_contato', erro: null, enviado_em: null, salao_respondeu_em: null, resposta_salao: null, atendido: false, criado_em: h(60 * 70), token: 'demotoken4', cliques: 0, clicou_em: null, salao_mensagens: [], com_enquete: false, voto: null },
   // 3.57: o salão disse não (pela enquete): a equipe foi avisada e a cliente recebeu a oferta de outro salão
-  { id: 5, conversa_id: null, lugar_id: 'gl2', salao_nome: 'Ateliê Cabelo & Arte', cidade: 'Itanhaém', cliente_nome: 'Fernanda', cliente_tel: '5513933332222', servico: 'Coloração', preferencia: 'sábado', observacao: null, salao_tel: '5513990002202', status: 'salao_nao_atende', erro: null, enviado_em: h(60 * 5), salao_respondeu_em: h(60 * 4), resposta_salao: null, atendido: false, criado_em: h(60 * 5), token: 'demotoken5', cliques: 1, clicou_em: h(60 * 4 + 30), salao_mensagens: [],
+  { id: 5, conversa_id: null, lugar_id: 'gl3', salao_nome: 'Ateliê Cabelo & Arte', cidade: 'Itanhaém', cliente_nome: 'Fernanda', cliente_tel: '5513933332222', servico: 'Coloração', preferencia: 'sábado', observacao: null, salao_tel: '5513990002202', status: 'salao_nao_atende', erro: null, enviado_em: h(60 * 5), salao_respondeu_em: h(60 * 4), resposta_salao: null, atendido: false, criado_em: h(60 * 5), token: 'demotoken5', cliques: 1, clicou_em: h(60 * 4 + 30), salao_mensagens: [],
     com_enquete: true, voto: 'nao', voto_origem: 'enquete', votou_em: h(60 * 4), voto_atual: 'nao', voto_mudou_em: null, aviso_demora_em: null, cutucado_em: null },
   // e um pedido parado: enviado há 3 h, sem clique, sem voto, sem resposta — o relógio avisou a equipe
   { id: 6, conversa_id: null, lugar_id: 'gl1', salao_nome: 'Studio Lírio', cidade: 'Itanhaém', cliente_nome: 'Gabi', cliente_tel: '5513922221111', servico: 'Escova', preferencia: 'hoje à tarde', observacao: null, salao_tel: '5513990001101', status: 'enviado', erro: null, enviado_em: h(180), salao_respondeu_em: null, resposta_salao: null, atendido: false, criado_em: h(180), token: 'demotoken6', cliques: 0, clicou_em: null, salao_mensagens: [],
     com_enquete: true, voto: null, voto_origem: null, votou_em: null, voto_atual: null, voto_mudou_em: null, aviso_demora_em: h(60), cutucado_em: null },
 ]
+// 3.59: a fila de abordagem (demoAbordagem) lê os pedidos daqui para os sinais da Mel
+export const GUIA_WHATS_LEADS = LEADS
+const semDono = (l) => ['sem_contato', 'falhou', 'salao_saiu', 'fora_do_limite', 'salao_nao_atende'].includes(l.status) || l.voto === 'nao'
+  || (l.status === 'enviado' && !l.voto && !l.clicou_em && !l.salao_respondeu_em && l.enviado_em && Date.now() - new Date(l.enviado_em).getTime() > 24 * 3600e3)
+const MOTIVO = (l) => (l.status === 'salao_nao_atende' || l.voto === 'nao' ? 'o salão disse que não vai atender' : l.status === 'sem_contato' ? 'o salão não tem WhatsApp' : l.status === 'falhou' ? 'o envio não saiu'
+  : l.status === 'salao_saiu' ? 'o salão pediu SAIR' : l.status === 'fora_do_limite' ? 'fora do limite do dia' : 'sem resposta do salão há mais de 24 h')
+// as clientes que pediram (por telefone), como guia_whats_clientes (206)
+function clientes({ dias_ = 30 } = {}) {
+  const desde = Date.now() - Math.max(1, Math.min(dias_ ?? 30, 365)) * 86400e3
+  const por = new Map()
+  for (const l of LEADS.filter((x) => new Date(x.criado_em).getTime() >= desde).sort((a, b) => b.criado_em.localeCompare(a.criado_em))) {
+    const c = por.get(l.cliente_tel) ?? { chave: l.cliente_tel, nome: l.cliente_nome, telefone: l.cliente_tel, pedidos: 0, saloes: [], saloes_n: 0, ultimo: l.criado_em, servico: l.servico, atendida: false, recusados: 0, aguardando: 0, sem_dono: 0, abriram: false }
+    c.pedidos++
+    if (!c.saloes.some((s) => s.nome === l.salao_nome)) c.saloes.push({ nome: l.salao_nome, cidade: l.cidade })
+    c.saloes_n = c.saloes.length
+    if (l.voto === 'sim' || l.status === 'salao_vai_atender') c.atendida = true
+    if (l.voto === 'nao' || l.status === 'salao_nao_atende') c.recusados++
+    if (l.status === 'enviado' && !l.voto && !l.clicou_em && !l.salao_respondeu_em && Date.now() - new Date(l.enviado_em).getTime() <= 24 * 3600e3) c.aguardando++
+    if (semDono(l)) c.sem_dono++
+    if (l.clicou_em) c.abriram = true
+    por.set(l.cliente_tel, c)
+  }
+  return [...por.values()].sort((a, b) => b.pedidos - a.pedidos || b.ultimo.localeCompare(a.ultimo))
+}
+// a demanda sem dono por bairro, como guia_demanda_sem_dono (206)
+function demandaSemDono({ dias_ = 30, cidade_ = null } = {}) {
+  const n = Math.max(1, Math.min(dias_ ?? 30, 365))
+  const desde = Date.now() - n * 86400e3
+  const sd = LEADS.filter((l) => new Date(l.criado_em).getTime() >= desde && semDono(l)).map((l) => {
+    const lg = GUIA_LUGARES.find((x) => x.id === l.lugar_id)
+    return { ...l, bairro: lg?.bairro ?? 'sem bairro', cidade: lg?.cidade ?? l.cidade, cidade_slug: lg?.cidade_slug ?? null, motivo: MOTIVO(l) }
+  }).filter((l) => !cidade_ || l.cidade_slug === cidade_)
+  const grupos = new Map()
+  for (const l of sd) {
+    const k = `${l.cidade}|${l.bairro}`
+    const g = grupos.get(k) ?? { bairro: l.bairro, cidade: l.cidade, clientes: new Set(), pedidos: 0, saloes: new Set(), servicos: {} }
+    g.clientes.add(l.cliente_tel); g.pedidos++; g.saloes.add(l.lugar_id); if (l.servico) g.servicos[l.servico] = (g.servicos[l.servico] ?? 0) + 1
+    grupos.set(k, g)
+  }
+  return {
+    dias: n, cidade: cidade_ || null, pedidos_n: sd.length, clientes_n: new Set(sd.map((l) => l.cliente_tel)).size,
+    por_bairro: [...grupos.values()].map((g) => ({ bairro: g.bairro, cidade: g.cidade, clientes: g.clientes.size, pedidos: g.pedidos, saloes: g.saloes.size, servicos: Object.entries(g.servicos).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([s]) => s).join(', ') || null })).sort((a, b) => b.clientes - a.clientes || b.pedidos - a.pedidos),
+    pedidos: sd.sort((a, b) => b.criado_em.localeCompare(a.criado_em)).slice(0, 40).map((l) => ({ id: l.id, cliente_nome: l.cliente_nome, cliente_tel: l.cliente_tel, servico: l.servico, preferencia: l.preferencia, salao_nome: l.salao_nome, lugar_id: l.lugar_id, bairro: l.bairro, cidade: l.cidade, status: l.status, voto: l.voto, motivo: l.motivo, criado_em: l.criado_em })),
+  }
+}
 const publico = () => (CFG.ligado && CFG.numero ? { ligado: true, numero: CFG.numero, botoes: CFG.botoes, msg_cliente: CFG.msg_cliente } : { ligado: false })
 export const demoContatoConfig = publico
 
-const SALOES = { gl1: ['Studio Lírio', 'Itanhaém'], gl2: ['Ateliê Cabelo & Arte', 'Itanhaém'] }
+const SALOES = { gl1: ['Studio Lírio', 'Itanhaém'], gl3: ['Ateliê Cabelo & Arte', 'Itanhaém'] }
 function painel({ dias_ = 7 } = {}) {
   const desde = Date.now() - Math.max(1, Math.min(dias_ ?? 7, 90)) * 86400e3
   const pedidos = LEADS.filter((l) => new Date(l.criado_em).getTime() >= desde)
@@ -145,6 +191,9 @@ export const GUIA_WHATS_RPC = {
   guia_whats_salvar: (a) => salvar(a ?? { c: {} }),
   guia_whats_lead_atendido: ({ id_, atendido_ }) => { const l = LEADS.find((x) => x.id === id_); if (l) l.atendido = atendido_ !== false; return null },
   guia_whats_conversa: ({ id_ }) => { const c = CONVERSAS.find((x) => x.id === id_); return c ? { ...c, salao: SALOES[c.lugar_id]?.[0] ?? null, cidade: SALOES[c.lugar_id]?.[1] ?? null } : null },
+  // 3.59
+  guia_whats_clientes: (a) => clientes(a ?? {}),
+  guia_demanda_sem_dono: (a) => demandaSemDono(a ?? {}),
 }
 
 // ---- a função guia-whats no demo -------------------------------------------------------------------------------------

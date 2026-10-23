@@ -120,9 +120,9 @@ Pré-requisitos: guia **Conectado** e **Ligado**, `numero_avisos` preenchido, mi
 
 A ordem de sempre (você roda):
 
-1. **bat B** — aplica as migrações novas: **199, 200, 201, 202, 203, 204, 205**.
+1. **bat B** — aplica as migrações novas: **199, 200, 201, 202, 203, 204, 205, 206**.
 2. **bat 9** — publica as funções: **whatsapp-webhook** (ganhou `?tarefa=ociosas` e, na 3.55, o agente de onboarding antes da Mel; na 3.57, o voto da enquete e a varredura dos pedidos) e **guia-whats** (simular com "como a dona"; na 3.55, `simular_onboarding`/`reiniciar_onboarding`; na 3.57, `simular_voto` e o Reenviar com a enquete).
-3. **bat 2** — publica a Plataforma (versão **3.58.0**).
+3. **bat 2** — publica a Plataforma (versão **3.59.0**).
 4. **VPS (opcional, para o ocioso ativo):** `cd evolution && ./cutucar-ociosas.sh --cron` (com `EVOLUTION_WEBHOOK_TOKEN` no `.env`).
 5. Na aba WhatsApp: preencha **"WhatsApp da equipe para avisos"**, revise os textos (encerramento, "posso encerrar?", mensagem da dona) e ligue o ocioso quando o cron estiver no ar.
 
@@ -270,3 +270,29 @@ Sem mudança de banco nem de função: só a Plataforma (`WhatsAppGuia.jsx` e o 
 - **Seções** (lembradas no navegador): **Pedidos** — filtros (todos, aguardando o salão, vão atender, não vão, querem a MIMO, com problema, atendidos), busca, e cada pedido com a **linha do tempo** (enviado → abriu o link → o retorno: voto pela enquete/por texto, enquete sem voto, salão respondeu), os avisos do relógio, a conversa do salão dobrável, "atendido" como chip e os atalhos; **Conversas**; **Testar a Mel** (o simulador com as dicas ao lado); **Configuração** — oito blocos (Conexão, No site, A Mel, O pedido ao salão, O retorno do salão, Ciclo e ocioso, Equipe e dona, Limites e privacidade), o índice lateral que acompanha a rolagem, interruptores e a **barra de salvar fixa** ("Tudo salvo · há X" / "Alterações sem salvar", com Descartar).
 - Os ids de teste (`data-teste="wa-*"`) são os mesmos; os campos e as RPCs também. A aba Onboarding não mudou.
 - Versão **3.58.0-mimo**.
+
+---
+
+## 13. 3.59 — A Abordagem cruzada com a Mel, as clientes que pediram e a Onboarding repaginada (migração 206)
+
+### A fila de abordagem vê a Mel
+`guia_fila_abordagem` (mesma assinatura) ganha, por salão: **no período** `mel.pedidos` (o que a Mel passou), `abriram` (o link), `vai`/`nao` (o voto da enquete ou por texto), `respondeu`; **fora do período** `quer` (QUERO nos últimos 90 dias, `quer_em`), `dona_em` (a dona testou pela Mel, 60 dias) e `sair` (pediu SAIR). No detalhe da página: `da_pagina` (pedidos cujo salão recebeu um toque de contato na página até 3 h antes da conversa) e `visitas_7`/`visitas_7_antes`.
+
+- **Prioridade:** QUERO +150 (se não está em negociação/cliente), dona +100, +60 por pedido (até 3), +30 por "vai atender" (até 2), "não vai" sem nenhum "vai" −15, SAIR −20 — os mesmos pesos nos motivos (`mel_quer`, `mel_dona`, `mel`, `mel_vai`, `mel_nao`, `mel_sair`).
+- **Filtros novos:** `mel` (pediram pela Mel) e `querem` (responderam QUERO); `resumo.contagem.mel/querem` e `resumo.mel` (totais da cidade: pedidos, abriram, vai, nao, querem, donas, visitas, contatos) para o funil da Mel no topo da aba.
+- **QUERO entra sozinho:** `guia_whats_salao_respondeu(…, quer_ = true)` põe o salão (se ainda não é da MIMO) em `respondeu` na `guia_abordagens`, com `proximo_contato = hoje`, e grava uma ação `nota` ("Respondeu QUERO ao pedido da Mel…", `dados.origem = 'mel'`, `dados.lead`) — uma vez por pedido; quem está em negociação ou é cliente fica como está.
+- **Mensagem para a dona** (`pelaMel` em `guiaMetricas.js`, usada em `mensagemParaDono` e na mensagem de quem pediu contato): um parágrafo com **contagens** ("3 clientes pediram horário com vocês pela MIMO… e vocês já disseram que vão atender 1"). Nunca os nomes das clientes.
+
+### As clientes que pediram e a demanda sem dono
+- `guia_whats_clientes(dias_)` — por telefone: nome, pedidos, salões, último, serviço, `atendida` (algum salão disse que vai), `recusados`, `aguardando` (enviado há menos de 24 h sem sinal), `sem_dono`, `abriram`. Seção **Clientes** da aba WhatsApp (filtros: todas, atendidas, aguardando, sem dono, pediram mais de uma vez; busca).
+- `guia_demanda_sem_dono(dias_, cidade_)` — os pedidos sem quem atendesse (salão sem WhatsApp, envio falhou, SAIR, "não vai atender", ou enviado há mais de 24 h sem abrir/votar/responder): totais, por bairro (clientes, pedidos, salões, os 3 serviços mais pedidos) e os últimos 40 pedidos com o motivo. Painel dobrável **"Demanda sem dono"** no topo da Abordagem (da cidade escolhida). **A equipe decide na mão**; a Mel não encaminha a cliente sozinha.
+- As pontes entre as abas (`src/lib/guiaPontes.js`): "Ver os pedidos na aba WhatsApp" no detalhe da Abordagem abre a aba WhatsApp já buscando o salão; "Ver na Abordagem" em cada pedido faz o inverso.
+
+### A Onboarding repaginada
+Mesmo layout da aba WhatsApp (as peças em `components/plataforma/guia/PecasWa.jsx` e `lib/guiaWa.js`): cabeçalho com o estado (e a IA), cartões e o **funil do cadastro** (entraram → confirmaram → link → abriram → conta), **Quem entrou** (filtros por estado, busca, a linha do tempo de cada profissional, "atendida" como chip), **Testar o agente** com as dicas, e **Configuração** em blocos (O agente, Gatilhos, Tolerância e link, Atendimento e ritmo, Os passos, e as mensagens em cinco grupos), com índice e a barra de salvar. Ids de teste iguais.
+
+### Referência técnica
+- **206** `206_abordagem_com_mel.sql` — `guia_ha_quanto(em, hoje)`; `guia_fila_abordagem` (v4); `guia_whats_clientes`; `guia_demanda_sem_dono`; `guia_whats_salao_respondeu` (QUERO → abordagem). Precisa da 205.
+- `Abordagem.jsx` (filtros, funil da Mel, demanda sem dono, bloco Pela Mel, tendência), `guiaMetricas.js` (`pelaMel`), `guia-abordagem.css`; `WhatsAppGuia.jsx` (Clientes, ponte), `OnboardingGuia.jsx` (v2), `PecasWa.jsx`, `lib/guiaWa.js`, `lib/guiaPontes.js`; demos `demoAbordagem.js` (os sinais da Mel) e `demoGuiaWhats.js` (`guia_whats_clientes`, `guia_demanda_sem_dono`).
+- Deploy: **bat B** (206) → **bat 9** (só se ainda não subiu a 3.57: whatsapp-webhook e guia-whats; a 206 não muda função) → **bat 2**.
+- Versão **3.59.0-mimo**.

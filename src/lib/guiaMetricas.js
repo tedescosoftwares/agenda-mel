@@ -52,6 +52,14 @@ export const paginaSemFoto = (lugar) => !!lugar && !lugar.salon_id && fotosDoLug
 
 // a mensagem para o dono do salão, com os números do período (só o que é verdade e não é zero).
 // Salão que já agenda pela MIMO recebe o relatório, sem oferta. semFotos: pede as fotos.
+// 3.59: o que passou pela Mel, em contagens (nunca os nomes das clientes: o salão já os recebeu no pedido)
+export function pelaMel(m) {
+  const n = n0(m?.pedidos)
+  if (!n) return ''
+  const vai = n0(m?.vai)
+  return `E tem mais: nesse período, ${n === 1 ? '1 cliente pediu' : `${n} clientes pediram`} horário com vocês pela MIMO, pelo nosso WhatsApp${vai ? ` — e vocês já disseram que vão atender ${vai === 1 ? '1' : vai}` : ''}. Imagina isso caindo direto na sua agenda, com confirmação automática.`
+}
+
 export function mensagemParaDono(p, { dias, url, cidade, semFotos = false }) {
   const e = p.eventos ?? {}
   const partes = [
@@ -65,10 +73,11 @@ export function mensagemParaDono(p, { dias, url, cidade, semFotos = false }) {
   const lista = partes.length <= 1 ? partes.join('') : `${partes.slice(0, -1).join(', ')} e ${partes.at(-1)}`
   const numeros = `A página de ${p.nome} no nosso guia teve ${formatar(p.visitas)} ${n0(p.visitas) === 1 ? 'visita' : 'visitas'} nos últimos ${dias} dias${lista ? `, e ${lista}` : ''}.`
   const pedido = semFotos && url ? PEDIDO_DE_FOTOS : ''
-  if (p.na_mimo) return [`Oi! Tudo bem? Aqui é da MIMO, com o resumo do guia de salões de ${cidade || 'beleza'}.`, numeros, pedido, url ? `A página: ${url}` : ''].filter(Boolean).join('\n\n')
+  if (p.na_mimo) return [`Oi! Tudo bem? Aqui é da MIMO, com o resumo do guia de salões de ${cidade || 'beleza'}.`, numeros, pelaMel(p.mel), pedido, url ? `A página: ${url}` : ''].filter(Boolean).join('\n\n')
   return [
     `Oi! Tudo bem? Aqui é da MIMO, um guia de salões de ${cidade || 'beleza'}.`,
     numeros,
+    pelaMel(p.mel),
     pedido,
     'Dá para receber essas clientes direto numa agenda online: ela escolhe o serviço e o horário, e vocês recebem tudo organizado, com confirmação pelo WhatsApp.',
     `Para autônoma é grátis para sempre; salão com equipe testa ${REGRAS.testeDias} dias, sem cartão. Posso te mostrar como fica?`,

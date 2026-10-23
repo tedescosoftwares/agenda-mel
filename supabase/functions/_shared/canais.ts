@@ -19,6 +19,7 @@ export type Envio = {
   //   nativo  — nativeFlow buttons, só renderiza na Cloud API
   estilo?: EstiloBotao | null
   identificador: string | null // instância (evolution) ou phone_number_id (cloud)
+  atraso?: number | null // 3.56: ms de "digitando…" antes de mandar (a pausa do onboarding); sem isso, 1200
 }
 
 // título e corpo viram um bloco só quando o canal não tem botão
@@ -127,8 +128,8 @@ export async function enviarPelaEvolution(e: Envio): Promise<Resultado> {
     const r = await bater('sendText', {
       number: e.telefone,
       text: textoInteiro(e),
-      // um respiro entre mensagens ajuda a não parecer robô
-      delay: 1200,
+      // um respiro entre mensagens ajuda a não parecer robô (o onboarding manda a pausa da Plataforma)
+      delay: Math.max(0, Math.min(30_000, Math.round(Number(e.atraso ?? 1200) || 0))),
     })
 
     const corpo = await r.text()

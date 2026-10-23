@@ -5,21 +5,26 @@ import { Painel, Vazio, haQuanto } from '../Pecas'
 import { MODELOS } from '../../../lib/guiaIa'
 import { UserPlus, LoaderCircle, Send, RotateCcw, Save, Bot, Inbox, Check, TriangleAlert, X, Link2, MousePointerClick, Sparkles } from 'lucide-react'
 
-// O agente de onboarding pelo WhatsApp (3.55, migração 203): um segundo agente no número da Mel, separado dela, que faz
-// o cadastro da profissional conversando (tipo → CNPJ consultado ou CPF → endereço → nome → profissionais → serviços →
-// horários → e-mail → explicações → o link seguro para criar a senha). Aqui se ajusta ponto a ponto: ligar, a IA, a
-// persona, os gatilhos (a frase do botão é o primeiro), a tolerância a erro, a validade do link, quais passos entram e o
-// texto de cada um, as mensagens fixas; o simulador (com a consulta de CNPJ de verdade) e os leads, com a conversa.
+// O agente de onboarding pelo WhatsApp (3.55, migração 203; 3.56, migração 204): um segundo agente no número da Mel,
+// separado dela, que faz o cadastro da profissional conversando (tipo → CNPJ consultado ou CPF → endereço do CNPJ ou pelo
+// CEP → nome → profissionais → serviços → horários → e-mail confirmado → o WhatsApp do salão → explicações → o resumo para
+// conferir → o link seguro para criar a senha), conferindo antes o que já existe na MIMO (número, nome, e-mail, CPF/CNPJ).
+// Aqui se ajusta ponto a ponto: ligar, a IA, a persona, os gatilhos (a frase do botão é o primeiro), o WhatsApp do
+// atendimento, a tolerância a erro, a validade do link, a pausa e as bolhas, quais passos entram e o texto de cada um, as
+// mensagens fixas; o simulador (com as consultas de CNPJ e CEP de verdade) e os leads, com a conversa.
 
 const faltaMigracao = (e) => e?.code === 'PGRST202' || e?.status === 404 || /could not find the function|schema cache|migração 203/i.test(e?.message ?? '')
 const ESTADO = { confirmando: ['Confirmando se é profissional', 'ambar'], coletando: ['Cadastrando', 'azul'], enviado: ['Link enviado', 'verde'], concluido: ['Conta criada 💗', 'rosa'], encerrada: ['Encerrada', 'cinza'] }
 const ORIGEM = { cta: ['Pelo botão', 'verde'], intencao: ['Por intenção', 'azul'], dona: ['Dona do guia', 'rosa'], teste: ['Teste', 'cinza'] }
 const PASSO = { tipo: 'tipo de conta', documento: 'CNPJ/CPF', endereco: 'endereço', nome: 'nome do negócio', profissionais: 'profissionais', servicos: 'serviços', horarios: 'horários', email: 'e-mail', explicacoes: 'explicações', link: 'link' }
 const PASSOS = [
-  ['tipo', 'Tipo de conta (autônoma ou salão)', null], ['documento', 'CNPJ — ou CPF, se ela não tem (o CNPJ é consultado: só ATIVO passa)', null], ['endereco', 'Endereço de atendimento (do CNPJ, confirmado; ou pedido)', null],
-  ['nome', 'Nome do negócio', null], ['profissionais', 'Quantas profissionais atendem', null],
+  ['tipo', 'Tipo de conta (autônoma ou salão)', null], ['documento', 'CNPJ — ou CPF, se ela não tem (o CNPJ é consultado: só ATIVO passa; CPF/CNPJ já cadastrado vai para o atendimento)', null], ['endereco', 'Endereço de atendimento (do CNPJ, confirmado; ou pelo CEP: ela manda o CEP, o sistema puxa a rua e pede só o número)', null],
+  ['nome', 'Nome do negócio (se já existe na MIMO, pede outro — o nome.mimo.com.vc é único)', null], ['profissionais', 'Quantas profissionais atendem', null],
   ['servicos', 'Serviços principais (e explicar que o cadastro completo é no painel)', 'com_servicos'], ['horarios', 'Horários de atendimento', 'com_horarios'],
-  ['email', 'E-mail da conta', 'com_email'], ['explicacoes', 'Explicações antes do link (link próprio, QR code, lembretes) e tirar dúvidas', 'com_explicacoes'],
+  ['email', 'E-mail da conta (validado, conferido se já existe e confirmado de volta)', 'com_email'],
+  ['telefone', 'O WhatsApp do salão: o de onde ela fala, ou outro (precisa ser o do salão, pela integração com o bot); e um telefone extra', 'com_telefone'],
+  ['explicacoes', 'Explicações antes do link (link próprio, QR code, lembretes) e tirar dúvidas', 'com_explicacoes'],
+  ['resumo', 'O resumo de tudo para ela conferir (e corrigir) antes do link', 'com_resumo'],
 ]
 const MENSAGENS = [
   ['msg_boas_vindas', 'Boas-vindas (quem veio pelo botão)', 'a primeira mensagem; a pergunta do tipo vem logo depois, da IA'],
@@ -31,9 +36,26 @@ const MENSAGENS = [
   ['msg_endereco_confirmar', 'Confirmar o endereço do CNPJ', '{endereco} vira o endereço que a Receita devolveu'],
   ['msg_link', 'O link seguro', '{link} (obrigatório), {nome} (o negócio) e {dias} (a validade)'],
   ['msg_encerrar', 'Encerrar e passar para a equipe', 'quando a tolerância estoura, a consulta fica fora do ar ou a conversa não anda; vem depois do motivo'],
+  ['msg_numero_em_uso', 'Quem escreve já tem conta (o número está num perfil ou salão)', '{salao} vira " (Nome do salão)" quando houver; {atendimento} vira o link do WhatsApp do atendimento'],
+  ['msg_documento_em_uso', 'CPF ou CNPJ já cadastrado', '{documento} vira CPF ou CNPJ; {atendimento}; a conversa encerra e a equipe é avisada'],
+  ['msg_email_em_uso', 'E-mail já cadastrado', '{email}, {atendimento}; ela pode mandar outro'],
+  ['msg_nome_em_uso', 'Nome do salão já existe na MIMO', '{nome}; {cidade} vira " (em Cidade)" quando houver'],
+  ['msg_email_confirmar', 'Confirmar o e-mail de volta', '{email}'],
+  ['msg_cep', 'Pedir o CEP (sem CNPJ, ou quando o endereço do CNPJ não é o de atendimento)', 'ela pode responder "não sei" e escrever o endereço'],
+  ['msg_cep_invalido', 'CEP inválido ou não encontrado', '{motivo}'],
+  ['msg_cep_numero', 'CEP achado: pedir o número', '{endereco} vira rua, bairro e cidade do CEP'],
+  ['msg_telefone', 'O WhatsApp do salão é o de onde ela fala?', '{numero} vira o número de onde ela está escrevendo; aqui vai a orientação do WhatsApp do salão'],
+  ['msg_telefone_extra', 'Quer cadastrar mais um telefone?', ''],
+  ['msg_telefone_invalido', 'Telefone inválido', ''],
+  ['msg_resumo', 'O resumo para conferir antes do link', '{resumo} (obrigatório) vira a lista do que foi anotado'],
 ]
-const CAMPOS_CONFIG = ['ligado', 'provedor', 'modelo', 'orientacao', 'gatilhos', 'tolerancia', 'tolerancia_cnpj', 'link_dias', 'com_servicos', 'com_horarios', 'com_email', 'com_explicacoes', ...PASSOS.map(([k]) => `passo_${k}`), ...MENSAGENS.map(([k]) => k)]
+const CAMPOS_CONFIG = ['ligado', 'provedor', 'modelo', 'orientacao', 'gatilhos', 'numero_atendimento', 'tolerancia', 'tolerancia_cnpj', 'link_dias', 'pausa_seg', 'bolhas', 'com_servicos', 'com_horarios', 'com_email', 'com_telefone', 'com_explicacoes', 'com_resumo', ...PASSOS.map(([k]) => `passo_${k}`), ...MENSAGENS.map(([k]) => k)]
 const tel = (d) => { const s = String(d ?? '').replace(/\D/g, ''); return s.length === 13 && s.startsWith('55') ? `(${s.slice(2, 4)}) ${s.slice(4, 9)}-${s.slice(9)}` : s.length === 12 && s.startsWith('55') ? `(${s.slice(2, 4)}) ${s.slice(4, 8)}-${s.slice(8)}` : s ? `+${s}` : '' }
+// o telefone do atendimento: máscara (DD) 9NNNN-NNNN no campo, dígitos com 55 no banco (como na aba WhatsApp)
+const soDig = (s) => String(s ?? '').replace(/\D/g, '')
+const telCanon = (s) => { const d = soDig(s); return d.length === 10 || d.length === 11 ? '55' + d : d }
+const telNacional = (s) => { const d = soDig(s); return d.startsWith('55') && d.length >= 12 ? d.slice(2) : d }
+const mascararTel = (s) => { const n = telNacional(s).slice(0, 11); if (!n) return ''; const dd = n.slice(0, 2); if (n.length <= 2) return `(${dd}`; const resto = n.slice(2); if (resto.length <= 4) return `(${dd}) ${resto}`; const corte = resto.length >= 9 ? 5 : 4; return `(${dd}) ${resto.slice(0, corte)}-${resto.slice(corte)}` }
 const cnpjBonito = (d) => (d && d.length === 14 ? `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12)}` : d ?? '')
 const cpfMascarado = (d) => (d && d.length === 11 ? `***.***.${d.slice(6, 9)}-${d.slice(9)}` : '')
 const quando = (iso) => (iso ? new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '')
@@ -93,7 +115,7 @@ export default function OnboardingGuia() {
           <span className={'pg-wa-luz ' + (form.ligado && melPronta ? 'verde' : form.ligado ? 'ambar' : 'cinza')} aria-hidden="true" />
           <div>
             <b>{form.ligado ? (melPronta ? 'Ligado' : 'Ligado, mas a Mel do guia está desligada') : 'Desligado'}</b>
-            <small>{melPronta ? `No número da Mel: ${tel(mel.numero)}` : 'O agente usa o número da Mel do guia (aba WhatsApp): ligue e conecte lá primeiro.'}{mel.numero_avisos ? ` · avisos à equipe em ${tel(mel.numero_avisos)}` : ' · sem WhatsApp da equipe para avisos (aba WhatsApp)'}</small>
+            <small>{melPronta ? `No número da Mel: ${tel(mel.numero)}` : 'O agente usa o número da Mel do guia (aba WhatsApp): ligue e conecte lá primeiro.'}{mel.numero_avisos ? ` · avisos à equipe em ${tel(mel.numero_avisos)}` : ' · sem WhatsApp da equipe para avisos (aba WhatsApp)'}{form.numero_atendimento ? ` · atendimento em ${tel(form.numero_atendimento)}` : ' · sem WhatsApp do atendimento (quem já tem conta fica sem link)'}</small>
             {!melPronta && form.ligado && <small className="pg-wa-falta"><TriangleAlert size={13} /> Enquanto a Mel estiver desligada, nenhuma mensagem chega ao agente.</small>}
           </div>
         </div>
@@ -127,7 +149,12 @@ export default function OnboardingGuia() {
                 <label>…e na N-ª tentativa de CNPJ inválido/inativo <span className="muted">(tem a sua própria conta)</span><input type="number" min={1} max={20} value={form.tolerancia_cnpj ?? 3} onChange={(e) => campo('tolerancia_cnpj', Number(e.target.value))} data-teste="onb-tolerancia-cnpj" /></label>
                 <label>Validade do link (dias) <span className="muted">(reaberto até concluir)</span><input type="number" min={1} max={60} value={form.link_dias ?? 7} onChange={(e) => campo('link_dias', Number(e.target.value))} data-teste="onb-link-dias" /></label>
               </div>
-              <p className="muted pg-wa-nota">Ao encerrar, ela lê o motivo e a despedida, e a equipe recebe um aviso no WhatsApp de avisos (aba WhatsApp) para retomar na mão. O CNPJ é consultado na Receita (BrasilAPI): inválido, baixado, inapto ou não encontrado não passa; se a consulta estiver fora do ar, o agente não aceita no escuro. Senha nunca pelo WhatsApp: no fim vai o link.</p>
+              <div className="pg-wa-grade3">
+                <label>WhatsApp do atendimento <span className="muted">(para quem já tem conta: número, CPF/CNPJ ou e-mail já cadastrados)</span><input value={mascararTel(form.numero_atendimento)} onChange={(e) => campo('numero_atendimento', telCanon(e.target.value))} placeholder="(13) 99999-0000" inputMode="tel" maxLength={16} data-teste="onb-atendimento" /></label>
+                <label>Pausa entre as mensagens (segundos) <span className="muted">(ela vê “digitando…” antes de cada uma)</span><input type="number" min={0} max={30} value={form.pausa_seg ?? 2} onChange={(e) => campo('pausa_seg', Number(e.target.value))} data-teste="onb-pausa" /></label>
+                <label className="pg-wa-check"><input type="checkbox" checked={form.bolhas !== false} onChange={(e) => campo('bolhas', e.target.checked)} data-teste="onb-bolhas" /> Cada parágrafo numa mensagem <span className="muted">(a conversa respira, como gente)</span></label>
+              </div>
+              <p className="muted pg-wa-nota">Antes de aceitar, o agente confere o que já existe na MIMO: quem escreve de um número já cadastrado, ou manda um CPF/CNPJ já cadastrado, é mandada para o WhatsApp do atendimento; e-mail já cadastrado pede outro; nome de salão já existente pede outro (o nome.mimo.com.vc é único). Ao encerrar, ela lê o motivo e a despedida, e a equipe recebe um aviso no WhatsApp de avisos (aba WhatsApp). O CNPJ é consultado na Receita e o endereço vem pelo CEP (BrasilAPI); se a consulta estiver fora do ar, o agente não aceita no escuro. Senha nunca pelo WhatsApp: no fim vai o link.</p>
 
               <fieldset className="pg-wa-ciclo pg-onb-passos" data-teste="onb-passos">
                 <legend>Os passos, um a um <span className="muted">(o que o agente faz/explica em cada um — a IA fala com as palavras dela, mas segue isto)</span></legend>
@@ -194,6 +221,7 @@ export default function OnboardingGuia() {
               lead.dados.tipo && `tipo ${lead.dados.tipo === 'autonoma' ? 'autônoma' : 'salão'}`, lead.dados.cnpj && `CNPJ ${cnpjBonito(lead.dados.cnpj)}${lead.dados.razao_social ? ` (${lead.dados.razao_social})` : ''}`,
               lead.dados.cpf && `CPF ${cpfMascarado(lead.dados.cpf)}`, lead.dados.endereco && `endereço ${enderecoTexto(lead.dados.endereco)}`, lead.dados.profissionais && `${lead.dados.profissionais} profissional(is)`,
               lead.dados.servicos?.length && `serviços ${lead.dados.servicos.join(', ')}`, lead.dados.horarios && `horários ${lead.dados.horarios}`, lead.dados.email && `e-mail ${lead.dados.email}`,
+              lead.dados.telefone_salao && `WhatsApp do salão ${tel(lead.dados.telefone_salao)}${lead.dados.telefone_extra ? ` (outro: ${tel(lead.dados.telefone_extra)})` : ''}`,
               lead.dados.encerrada_por && `encerrada por ${lead.dados.encerrada_por}`,
             ].filter(Boolean).join(' · ') || 'nada ainda'}</p>}
           </div>
@@ -232,7 +260,8 @@ function Simulador({ cfg }) {
     try {
       const r = await chamar('guia-whats', { acao: 'simular_onboarding', ...corpo })
       if (r.acao === 'passa') { setErro('essa mensagem não acionou o agente (sem gatilho e sem conversa aberta): a Mel-cliente atenderia'); return }
-      setMensagens((m) => [...m, { q: 'cliente', t: r.texto }, ...(r.responder ? [{ q: 'mel', t: r.responder }] : [])])
+      const bolhas = r.bolhas?.length ? r.bolhas : r.responder ? [r.responder] : []   // 3.56: uma bolha por parágrafo, como no WhatsApp
+      setMensagens((m) => [...m, { q: 'cliente', t: r.texto }, ...bolhas.map((t) => ({ q: 'mel', t }))])
       if (r.link) setLink(r.link)
       if (r.previaAviso) setPreviaAviso(r.previaAviso)
       if (r.acao === 'erro_ia') setErro(r.erro || 'a IA não respondeu')
@@ -243,7 +272,7 @@ function Simulador({ cfg }) {
   const comecar = async () => { await reiniciar(); mandar({ texto: origem === 'cta' ? frase : (primeira.trim() || 'quero criar minha conta'), origem }) }
   const enviar = (e) => { e.preventDefault(); const t = texto.trim(); if (!t) return; setTexto(''); mandar({ texto: t }) }
   return (
-    <Painel Icon={Bot} titulo="Testar o agente" sub="Converse como uma profissional que quer criar a conta. Nada sai para ninguém; a consulta do CNPJ é de verdade (use um CNPJ real para ver o endereço da Receita); os avisos à equipe voltam como prévia." className="pg-wa-sim" direita={mensagens.length > 0 && <button type="button" className="plat-link" onClick={reiniciar} data-teste="onb-sim-recomecar"><RotateCcw size={14} /> Recomeçar</button>}>
+    <Painel Icon={Bot} titulo="Testar o agente" sub="Converse como uma profissional que quer criar a conta. Nada sai para ninguém; as consultas de CNPJ e CEP são de verdade (use um CNPJ e um CEP reais); as checagens de já-cadastrado também; os avisos à equipe voltam como prévia." className="pg-wa-sim" direita={mensagens.length > 0 && <button type="button" className="plat-link" onClick={reiniciar} data-teste="onb-sim-recomecar"><RotateCcw size={14} /> Recomeçar</button>}>
       {mensagens.length === 0 ? (
         <div className="pg-wa-sim-inicio">
           <div className="pg-onb-sim-origem" role="radiogroup" aria-label="Por onde ela chega">

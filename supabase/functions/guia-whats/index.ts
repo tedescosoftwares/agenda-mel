@@ -14,7 +14,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { enviarPor } from '../_shared/canais.ts'
 import { atenderGuia, iaDe, mensagemDoSalao, mensagemDaCliente, type Deps } from '../_shared/guia_whats.ts'
-import { atenderOnboarding, iaOnbDe, consultarCnpjDe, type Deps as DepsOnb } from '../_shared/guia_onboarding.ts'
+import { atenderOnboarding, iaOnbDe, consultarCnpjDe, consultarCepDe, type Deps as DepsOnb } from '../_shared/guia_onboarding.ts'
 
 const URL_SUPABASE = Deno.env.get('SUPABASE_URL') ?? ''
 const CHAVE_ANON = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
@@ -124,6 +124,7 @@ Deno.serve(async (req) => {
     ia: iaOnbDe(Deno.env, fetch as unknown as Parameters<typeof iaOnbDe>[1]),
     enviar: (instancia, telefone, texto) => enviarPor('evolution', { telefone, corpo: texto, identificador: instancia }),
     consultarCnpj: consultarCnpjDe(fetch as unknown as Parameters<typeof consultarCnpjDe>[0]),
+    consultarCep: consultarCepDe(fetch as unknown as Parameters<typeof consultarCepDe>[0]),
   })
 
   try {

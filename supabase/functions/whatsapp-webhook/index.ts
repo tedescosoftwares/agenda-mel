@@ -16,7 +16,7 @@ import { enviarPor } from '../_shared/canais.ts'
 import { classificar } from '../_shared/ia.ts'
 import { conversar } from '../_shared/agente.ts'
 import { atenderGuia, iaDe, type Deps as DepsGuia } from '../_shared/guia_whats.ts'
-import { atenderOnboarding, iaOnbDe, consultarCnpjDe, type Deps as DepsOnb } from '../_shared/guia_onboarding.ts'
+import { atenderOnboarding, iaOnbDe, consultarCnpjDe, consultarCepDe, type Deps as DepsOnb } from '../_shared/guia_onboarding.ts'
 
 const db = createClient(
   Deno.env.get('SUPABASE_URL') ?? '',
@@ -341,6 +341,7 @@ Deno.serve(async (req) => {
     ia: iaOnbDe(Deno.env, fetch as unknown as Parameters<typeof iaOnbDe>[1]),
     enviar: (instancia, telefone, texto) => enviarPor('evolution', { telefone, corpo: texto, identificador: instancia }),
     consultarCnpj: consultarCnpjDe(fetch as unknown as Parameters<typeof consultarCnpjDe>[0]),
+    consultarCep: consultarCepDe(fetch as unknown as Parameters<typeof consultarCepDe>[0]),
   })
 
   for (const m of mensagens) {
@@ -353,9 +354,12 @@ Deno.serve(async (req) => {
         if (o.acao !== 'passa') {
           respostas.push(`onboarding[${o.acao}]`)
           if (o.erro) console.error('onboarding:', o.erro)
-          if (o.responder) {
-            const env = await enviarPor('evolution', { telefone: m.telefone, corpo: o.responder, identificador: m.instancia })
-            if (!env.ok) console.error('onboarding: a resposta não saiu:', env.erro)
+          // 3.56: em bolhas (um parágrafo por mensagem), cada uma com a pausa da Plataforma como "digitando…"
+          const bolhas = o.bolhas?.length ? o.bolhas : o.responder ? [o.responder] : []
+          const atraso = Math.round(Math.max(0, Math.min(30, Number(o.pausa ?? 2) || 0)) * 1000)
+          for (const b of bolhas) {
+            const env = await enviarPor('evolution', { telefone: m.telefone, corpo: b, identificador: m.instancia, atraso })
+            if (!env.ok) { console.error('onboarding: a resposta não saiu:', env.erro); break }
           }
           continue
         }

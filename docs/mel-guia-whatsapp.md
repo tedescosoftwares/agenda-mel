@@ -120,9 +120,9 @@ Pré-requisitos: guia **Conectado** e **Ligado**, `numero_avisos` preenchido, mi
 
 A ordem de sempre (você roda):
 
-1. **bat B** — aplica as migrações novas: **199, 200, 201, 202, 203**.
+1. **bat B** — aplica as migrações novas: **199, 200, 201, 202, 203, 204**.
 2. **bat 9** — publica as funções: **whatsapp-webhook** (ganhou `?tarefa=ociosas` e, na 3.55, o agente de onboarding antes da Mel) e **guia-whats** (simular com "como a dona"; na 3.55, `simular_onboarding`/`reiniciar_onboarding`).
-3. **bat 2** — publica a Plataforma (versão **3.55.0**).
+3. **bat 2** — publica a Plataforma (versão **3.56.0**).
 4. **VPS (opcional, para o ocioso ativo):** `cd evolution && ./cutucar-ociosas.sh --cron` (com `EVOLUTION_WEBHOOK_TOKEN` no `.env`).
 5. Na aba WhatsApp: preencha **"WhatsApp da equipe para avisos"**, revise os textos (encerramento, "posso encerrar?", mensagem da dona) e ligue o ocioso quando o cron estiver no ar.
 
@@ -196,3 +196,33 @@ Botão **"Criar conta pelo WhatsApp"** (herói e chamada final das páginas `/ag
 - `whatsapp-webhook/index.ts` — o agente olha primeiro; `acao: 'passa'` → Mel. `guia-whats/index.ts` — `simular_onboarding`, `reiniciar_onboarding`.
 - `src/components/plataforma/guia/OnboardingGuia.jsx`, `src/lib/demoGuiaOnboarding.js`, `src/lib/guiaOnboarding.js` (público), `src/components/site/Whats.jsx` (`BotaoCriarContaWhats`), `src/pages/Onboarding.jsx` (`?c=token`).
 - Versão **3.55.0-mimo**.
+
+---
+
+## 10. 3.56 — Contexto, CEP, pausa e confirmações (migração 204)
+
+Do feedback de uso do agente de onboarding: ele estava cru em quatro pontos.
+
+### Contexto: conferir antes de aceitar (`guia_onboarding_conferir`)
+- **Número de quem escreve** já é de um perfil ou de um salão (telefone ou WhatsApp cadastrados, com ou sem o 9º dígito) → não é onboarding, é atendimento: `msg_numero_em_uso` com o link do **WhatsApp do atendimento** (`numero_atendimento`, na aba), a conversa encerra e a equipe é avisada. Roda a cada entrada nova.
+- **CPF ou CNPJ já cadastrado** → `msg_documento_em_uso` + atendimento; encerra (sem gastar a consulta da Receita).
+- **E-mail já cadastrado** (auth ou salão) → `msg_email_em_uso`; ela pode mandar outro (não conta como erro).
+- **Nome do salão já existe** (pelo slug: "Studio X" = `studio-x` = o subdomínio) → `msg_nome_em_uso` com a cidade; pede outro.
+- Num banco sem a 204 nada é conferido e o fluxo segue.
+
+### Endereço pelo CEP
+Sem CNPJ (ou quando o endereço do CNPJ não é o de atendimento): `msg_cep` → ela manda o CEP → BrasilAPI (`consultarCep`) → `msg_cep_numero` com rua/bairro/cidade → só o número (e complemento). CEP curto, de dígitos repetidos ou inexistente → `msg_cep_invalido` (conta na tolerância); consulta fora do ar não conta. "Não sei o CEP" → o endereço escrito, pela IA.
+
+### Pausa e bolhas
+`pausa_seg` (0–30 s; padrão 2) e `bolhas` (cada parágrafo numa mensagem). O webhook manda cada bolha com o `delay` da Evolution — ela vê "digitando…" antes de cada uma (`canais.ts` ganhou `atraso`). O simulador mostra as bolhas.
+
+### Confirmações
+- **E-mail**: validado, conferido e **confirmado de volta** (`msg_email_confirmar`): "sim" fecha; outro e-mail recomeça; "não" pede o certo.
+- **WhatsApp do salão** (passo `telefone`, `com_telefone`): `msg_telefone` pergunta se é o número de onde ela fala, com a orientação de que precisa ser o WhatsApp do salão (a MIMO se conecta a ele para confirmações e lembretes); outro número é validado e conferido (um número de outra conta não serve); depois `msg_telefone_extra` (um telefone a mais, opcional).
+- **Resumo** (passo `resumo`, `com_resumo`): `msg_resumo` com tudo anotado antes do link; "sim" manda o link; uma correção (e-mail, nome, endereço, profissionais, serviços, horários, telefone) é anotada e o resumo volta — e-mail corrigido pede confirmação de novo.
+
+### Referência técnica
+- **204** `204_onboarding_contexto_e_pausa.sql` — colunas novas em `guia_onboarding_config` (`numero_atendimento`, `pausa_seg`, `bolhas`, `com_telefone`, `com_resumo`, `passo_telefone`, `passo_resumo`, 12 `msg_*`); `guia_onboarding_conferir(tel_, email_, documento_, nome_)` (service role); `guia_onboarding_config_salvar` recriada.
+- `guia_onboarding.ts` — `consultarCepDe`, `telefoneDe`, `montarResumo`, `dividir` (bolhas); a saída traz `bolhas` e `pausa`. `canais.ts` — `Envio.atraso`. `whatsapp-webhook` — manda as bolhas com a pausa. `guia-whats` — `consultarCep` no simulador.
+- Aba Onboarding — WhatsApp do atendimento, pausa, bolhas, os passos telefone/resumo e as mensagens novas; `demoGuiaOnboarding.js` espelha tudo.
+- Versão **3.56.0-mimo**.

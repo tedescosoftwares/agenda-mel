@@ -93,7 +93,7 @@ export function Chat({ mensagens, fim, teste }) {
   useEffect(() => { ref.current?.scrollTo({ top: ref.current.scrollHeight }) }, [mensagens])
   return (
     <div className="pg-wa-chat" ref={ref} data-teste={teste}>
-      {(mensagens ?? []).map((m, i) => <div key={i} className={'pg-wa-msg ' + (m.q === 'cliente' ? 'cliente' : 'mel')}>{m.t}</div>)}
+      {(mensagens ?? []).map((m, i) => <div key={i} className={'pg-wa-msg ' + (m.q === 'cliente' ? 'cliente' : m.q === 'sistema' ? 'sistema' : 'mel')}>{m.t}</div>)}
       {fim}
     </div>
   )

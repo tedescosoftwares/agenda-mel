@@ -7,7 +7,7 @@ import { tel, telCanon, mascararTel, quando, normal, lerSecao, guardarSecao, use
 import { Pilula, Chave, Tile, Funil, Nav, Bloco, Indice, BarraSalvar, Chat } from './PecasWa'
 import {
   UserPlus, LoaderCircle, Send, RotateCcw, Bot, Inbox, Check, TriangleAlert, X, Link2, MousePointerClick, Sparkles, SlidersHorizontal, Search, Zap, ListChecks,
-  MessageSquareText, Timer, Phone, DoorOpen, CircleCheck, UserCheck, Ban, Eye, MessageCircleMore, Cpu,
+  MessageSquareText, Timer, Phone, DoorOpen, CircleCheck, UserCheck, Ban, Eye, MessageCircleMore, Cpu, MapPin, ClipboardList, Hourglass,
 } from 'lucide-react'
 
 // O agente de onboarding pelo WhatsApp (3.55, migração 203; 3.56, migração 204): um segundo agente no número da Mel,
@@ -19,6 +19,8 @@ import {
 // mensagens fixas; o simulador (com as consultas de CNPJ e CEP de verdade) e os leads, com a conversa.
 //
 // 3.59: a aba no mesmo layout da aba WhatsApp (PecasWa): cabeçalho com o estado, cartões e o funil do cadastro, as seções
+// 3.61 (migração 208): a ficha da empresa, as correções, a rua pelo nome, o complemento, as confirmações, a ajuda humana,
+// o "criando…" (espera configurável) e o convite ao suporte — os textos novos moram em grupos próprios de mensagens.
 // Quem entrou (filtros, busca, a linha do tempo de cada uma), Testar o agente e Configuração (em blocos, com índice e a
 // barra de salvar). Os ids de teste (data-teste="onb-*") são os mesmos.
 
@@ -27,13 +29,13 @@ const ESTADO = { confirmando: ['Confirmando se é profissional', 'ambar'], colet
 const ORIGEM = { cta: ['Pelo botão', 'verde'], intencao: ['Por intenção', 'azul'], dona: ['Dona do guia', 'rosa'], teste: ['Teste', 'cinza'] }
 const PASSO = { tipo: 'tipo de conta', documento: 'CNPJ/CPF', endereco: 'endereço', nome: 'nome do negócio', profissionais: 'profissionais', servicos: 'serviços', horarios: 'horários', email: 'e-mail', telefone: 'WhatsApp do salão', explicacoes: 'explicações', resumo: 'resumo', link: 'link' }
 const PASSOS = [
-  ['tipo', 'Tipo de conta (autônoma ou salão)', null], ['documento', 'CNPJ — ou CPF, se ela não tem (o CNPJ é consultado: só ATIVO passa; CPF/CNPJ já cadastrado vai para o atendimento)', null], ['endereco', 'Endereço de atendimento (do CNPJ, confirmado; ou pelo CEP: ela manda o CEP, o sistema puxa a rua e pede só o número)', null],
-  ['nome', 'Nome do negócio (se já existe na MIMO, pede outro — o nome.mimo.com.vc é único)', null], ['profissionais', 'Quantas profissionais atendem', null],
-  ['servicos', 'Serviços principais (e explicar que o cadastro completo é no painel)', 'com_servicos'], ['horarios', 'Horários de atendimento', 'com_horarios'],
+  ['tipo', 'Tipo de conta (autônoma ou salão)', null], ['documento', 'CNPJ — ou CPF, se ela não tem (o CNPJ é consultado: só ATIVO passa; CPF/CNPJ já cadastrado vai para o atendimento)', null], ['endereco', 'A ficha da empresa (nome fantasia, razão social, CNPJ e endereço do CNPJ) para ela confirmar ou corrigir campo a campo; sem CNPJ, o CEP — ou a rua pelo nome, com alternativas —, o número, o complemento e a confirmação do endereço', null],
+  ['nome', 'Nome do negócio: o sistema sugere o fantasia do CNPJ ou pergunta, e confirma de volta (se já existe na MIMO, pede outro — o nome.mimo.com.vc é único)', null], ['profissionais', 'Quantas profissionais atendem, confirmado de volta (só salão: autônoma não passa por aqui)', null],
+  ['servicos', 'Serviços principais, com exemplos dos mais escolhidos, confirmados de volta (e que o cadastro completo é no painel)', 'com_servicos'], ['horarios', 'Horários de atendimento, confirmados de volta', 'com_horarios'],
   ['email', 'E-mail da conta (validado, conferido se já existe e confirmado de volta)', 'com_email'],
   ['telefone', 'O WhatsApp do salão: o de onde ela fala, ou outro (precisa ser o do salão, pela integração com o bot); e um telefone extra', 'com_telefone'],
   ['explicacoes', 'Explicações antes do link (link próprio, QR code, lembretes) e tirar dúvidas', 'com_explicacoes'],
-  ['resumo', 'O resumo de tudo para ela conferir (e corrigir) antes do link', 'com_resumo'],
+  ['resumo', 'O resumo de tudo para ela conferir (e corrigir); depois “um minutinho, criando…”, o link e o convite ao suporte', 'com_resumo'],
 ]
 const MENSAGENS = [
   ['msg_boas_vindas', 'Boas-vindas (quem veio pelo botão)', 'a primeira mensagem; a pergunta do tipo vem logo depois, da IA'],
@@ -42,8 +44,7 @@ const MENSAGENS = [
   ['msg_cnpj_invalido', 'CNPJ inválido, inativo ou não encontrado', '{motivo} vira o motivo (dígito, situação na Receita, não encontrado)'],
   ['msg_cpf_invalido', 'CPF inválido', 'o dígito verificador não bate'],
   ['msg_email_invalido', 'E-mail inválido', ''],
-  ['msg_endereco_confirmar', 'Confirmar o endereço do CNPJ', '{endereco} vira o endereço que a Receita devolveu'],
-  ['msg_link', 'O link seguro', '{link} (obrigatório), {nome} (o negócio) e {dias} (a validade)'],
+  ['msg_link', 'O link seguro: “cadastro criado, crie a sua senha”', '{link} (obrigatório), {nome} (o negócio) e {dias} (a validade); sai depois da espera do “criando…”'],
   ['msg_encerrar', 'Encerrar e passar para a equipe', 'quando a tolerância estoura, a consulta fica fora do ar ou a conversa não anda; vem depois do motivo'],
   ['msg_numero_em_uso', 'Quem escreve já tem conta (o número está num perfil ou salão)', '{salao} vira " (Nome do salão)" quando houver; {atendimento} vira o link do WhatsApp do atendimento'],
   ['msg_documento_em_uso', 'CPF ou CNPJ já cadastrado', '{documento} vira CPF ou CNPJ; {atendimento}; a conversa encerra e a equipe é avisada'],
@@ -56,17 +57,43 @@ const MENSAGENS = [
   ['msg_telefone', 'O WhatsApp do salão é o de onde ela fala?', '{numero} vira o número de onde ela está escrevendo; aqui vai a orientação do WhatsApp do salão'],
   ['msg_telefone_extra', 'Quer cadastrar mais um telefone?', ''],
   ['msg_telefone_invalido', 'Telefone inválido', ''],
-  ['msg_resumo', 'O resumo para conferir antes do link', '{resumo} (obrigatório) vira a lista do que foi anotado'],
+  ['msg_resumo', 'O resumo para conferir', '{resumo} (obrigatório) vira a lista do que foi anotado; o “sim” dela dispara o “criando…”'],
+  // 3.61: a ficha da empresa e as correções
+  ['msg_empresa_confirmar', 'A ficha da empresa (depois do CNPJ)', '{ficha} (obrigatório) vira nome fantasia, razão social, CNPJ e endereço; ela responde sim ou diz o que está errado'],
+  ['msg_empresa_qual', 'Ela disse que algo está errado: perguntar o quê', 'ela responde nome fantasia, razão social, CNPJ ou endereço'],
+  ['msg_empresa_cnpj', 'O CNPJ estava errado: pedir o certo', 'o sistema consulta de novo e mostra a ficha nova'],
+  ['msg_empresa_nome', 'O nome fantasia estava errado: pedir o certo', 'a ficha volta corrigida'],
+  ['msg_empresa_razao', 'A razão social estava errada: pedir a certa', 'a ficha volta corrigida'],
+  // 3.61: a rua pelo nome, o complemento e a confirmação do endereço
+  ['msg_rua', 'Ela não sabe o CEP: pedir a rua e a cidade', 'o sistema procura no ViaCEP'],
+  ['msg_rua_opcoes', 'Achou mais de uma rua: ela escolhe', '{opcoes} (obrigatório) vira a lista numerada; “nenhuma” leva ao endereço escrito'],
+  ['msg_rua_nao_achei', 'Não achou a rua', '{cidade}; na segunda vez sem achar, o sistema pede o endereço escrito'],
+  ['msg_complemento', 'Pedir o complemento (depois do número)', 'ela manda ou responde “não”'],
+  ['msg_endereco_ok', 'Confirmar o endereço montado', '{endereco} (obrigatório); “não” recomeça pelo CEP'],
+  // 3.61: as perguntas do sistema e a confirmação de cada dado
+  ['msg_nome', 'Perguntar o nome do negócio (sem fantasia no CNPJ, ou quando ela recusa a sugestão)', ''],
+  ['msg_nome_confirmar', 'Sugerir o nome fantasia do CNPJ', '{nome} (obrigatório); “não” pergunta o nome'],
+  ['msg_profissionais', 'Quantas profissionais (só salão)', 'autônoma não passa por aqui'],
+  ['msg_servicos', 'Os serviços principais, com exemplos', '{exemplos} vira a lista de exemplos (configurada no passo); lembra que tudo se ajusta no painel'],
+  ['msg_horarios', 'Os horários', 'lembra que dá para ajustar no painel'],
+  ['msg_dado_confirmar', 'Confirmar um dado de volta (nome, profissionais, serviços, horários)', '{rotulo} vira “o nome do negócio”, “os serviços”…; {valor} (obrigatório) vira o que ela disse; “não” pergunta de novo; outro texto vira o valor certo'],
+  // 3.61: a ajuda humana, o “criando…” e o fim
+  ['msg_ajuda_dica', 'A dica da ajuda humana (na entrada)', 'vai logo depois das boas-vindas, ou depois do “sim” de quem veio por intenção'],
+  ['msg_ajuda', 'Quando ela pede ajuda (“ajuda”, “falar com uma pessoa”, “atendente”…)', '{atendimento} vira o link do WhatsApp do atendimento (a linha some sem ele); a equipe é avisada e a conversa segue'],
+  ['msg_criando', '“Um minutinho, criando o seu cadastro…”', 'sai logo depois do “sim” no resumo; o link vem depois da espera configurada em Atendimento e ritmo'],
+  ['msg_final', 'O convite ao suporte (depois do link)', 'pergunta se ficou dúvida e lembra do suporte para começar a configurar a agenda'],
 ]
 // as mensagens em grupos (um bloco cada)
 const GRUPOS_MSG = [
-  ['entrada', 'Entrada e saída', DoorOpen, ['msg_boas_vindas', 'msg_confirmar', 'msg_nao_sou', 'msg_encerrar']],
-  ['documentos', 'Documentos e endereço', ListChecks, ['msg_cnpj_invalido', 'msg_cpf_invalido', 'msg_endereco_confirmar', 'msg_cep', 'msg_cep_invalido', 'msg_cep_numero']],
+  ['entrada', 'Entrada, ajuda e saída', DoorOpen, ['msg_boas_vindas', 'msg_ajuda_dica', 'msg_confirmar', 'msg_nao_sou', 'msg_ajuda', 'msg_encerrar']],
+  ['documentos', 'Documentos e a ficha da empresa', ListChecks, ['msg_cnpj_invalido', 'msg_cpf_invalido', 'msg_empresa_confirmar', 'msg_empresa_qual', 'msg_empresa_cnpj', 'msg_empresa_nome', 'msg_empresa_razao']],
+  ['endereco', 'Endereço: CEP, rua, número e complemento', MapPin, ['msg_cep', 'msg_cep_invalido', 'msg_rua', 'msg_rua_opcoes', 'msg_rua_nao_achei', 'msg_cep_numero', 'msg_complemento', 'msg_endereco_ok']],
+  ['dados', 'Nome, profissionais, serviços e horários', ClipboardList, ['msg_nome_confirmar', 'msg_nome', 'msg_profissionais', 'msg_servicos', 'msg_horarios', 'msg_dado_confirmar']],
   ['contato', 'E-mail e telefone', Phone, ['msg_email_invalido', 'msg_email_confirmar', 'msg_telefone', 'msg_telefone_extra', 'msg_telefone_invalido']],
   ['em_uso', 'Quem já está na MIMO', UserCheck, ['msg_numero_em_uso', 'msg_documento_em_uso', 'msg_email_em_uso', 'msg_nome_em_uso']],
-  ['fim', 'O resumo e o link', Link2, ['msg_resumo', 'msg_link']],
+  ['fim', 'O resumo, o “criando…”, o link e o suporte', Link2, ['msg_resumo', 'msg_criando', 'msg_link', 'msg_final']],
 ]
-const CAMPOS_CONFIG = ['ligado', 'provedor', 'modelo', 'orientacao', 'gatilhos', 'numero_atendimento', 'tolerancia', 'tolerancia_cnpj', 'link_dias', 'pausa_seg', 'bolhas', 'com_servicos', 'com_horarios', 'com_email', 'com_telefone', 'com_explicacoes', 'com_resumo', ...PASSOS.map(([k]) => `passo_${k}`), ...MENSAGENS.map(([k]) => k)]
+const CAMPOS_CONFIG = ['ligado', 'provedor', 'modelo', 'orientacao', 'gatilhos', 'numero_atendimento', 'tolerancia', 'tolerancia_cnpj', 'link_dias', 'pausa_seg', 'bolhas', 'criar_espera_seg', 'servicos_exemplos', 'com_servicos', 'com_horarios', 'com_email', 'com_telefone', 'com_explicacoes', 'com_resumo', ...PASSOS.map(([k]) => `passo_${k}`), ...MENSAGENS.map(([k]) => k)]
 const SECOES = [['leads', 'Quem entrou', Inbox], ['simulador', 'Testar o agente', Bot], ['config', 'Configuração', SlidersHorizontal]]
 const BLOCOS = [['agente', 'O agente', Sparkles], ['gatilhos', 'Gatilhos', Zap], ['regras', 'Tolerância e link', Timer], ['ritmo', 'Atendimento e ritmo', Phone], ['passos', 'Os passos', ListChecks], ...GRUPOS_MSG.map(([id, r, Icon]) => [`msg_${id}`, r, Icon])]
 const FILTROS = [
@@ -203,9 +230,10 @@ export default function OnboardingGuia() {
             <h4><Bot size={16} /> O que dá para testar aqui</h4>
             <ul>
               <li><b>O caminho inteiro</b>, do botão (ou da intenção percebida) até o link — com a IA de verdade e a configuração salva.</li>
-              <li><b>CNPJ e CEP de verdade:</b> a consulta na Receita e nos Correios é real (use um CNPJ ativo e um CEP existente).</li>
-              <li><b>As checagens</b> de número, e-mail, CPF/CNPJ e nome já cadastrados — e o aviso que a equipe receberia (volta como prévia).</li>
-              <li><b>A tolerância:</b> erre o CNPJ ou o e-mail N vezes e veja o encerramento.</li>
+              <li><b>CNPJ, CEP e rua de verdade:</b> a Receita, os Correios e o ViaCEP são reais (use um CNPJ ativo; para a rua, responda “não sei” ao CEP).</li>
+              <li><b>A ficha da empresa e as correções:</b> responda “o endereço está errado”, “o nome fantasia”… e veja o caminho de cada uma.</li>
+              <li><b>As confirmações</b> de nome, profissionais, serviços, horários, endereço e e-mail — e a <b>ajuda humana</b> (“ajuda”): o aviso à equipe volta como prévia.</li>
+              <li><b>O fim:</b> o resumo, o “criando…” com a espera, o link e o convite ao suporte. A tolerância: erre o CNPJ ou o e-mail N vezes.</li>
             </ul>
             <p className="muted">O link do teste não abre cadastro nenhum. Nada sai para ninguém.</p>
           </aside>
@@ -241,10 +269,11 @@ export default function OnboardingGuia() {
               <p className="muted pg-wa-nota"><TriangleAlert size={12} /> Ao encerrar, ela lê o motivo e a despedida, e a equipe recebe um aviso no WhatsApp de avisos (aba WhatsApp).</p>
             </Bloco>
 
-            <Bloco id="ritmo" aoMontar={indice.registrar} Icon={Phone} titulo="Atendimento e ritmo" sub="Para onde vai quem já tem conta, e como as mensagens saem.">
-              <div className="pg-wa-grade2">
-                <label>WhatsApp do atendimento <span className="muted">(para quem já tem conta: número, CPF/CNPJ ou e-mail já cadastrados)</span><input value={mascararTel(form.numero_atendimento)} onChange={(e) => campo('numero_atendimento', telCanon(e.target.value))} placeholder="(13) 99999-0000" inputMode="tel" maxLength={16} data-teste="onb-atendimento" /></label>
+            <Bloco id="ritmo" aoMontar={indice.registrar} Icon={Phone} titulo="Atendimento e ritmo" sub="Para onde vai quem já tem conta (e quem pede ajuda), e como as mensagens saem.">
+              <div className="pg-wa-grade3">
+                <label>WhatsApp do atendimento <span className="muted">(para quem já tem conta, e o link da ajuda humana)</span><input value={mascararTel(form.numero_atendimento)} onChange={(e) => campo('numero_atendimento', telCanon(e.target.value))} placeholder="(13) 99999-0000" inputMode="tel" maxLength={16} data-teste="onb-atendimento" /></label>
                 <label>Pausa entre as mensagens (segundos) <span className="muted">(ela vê “digitando…” antes de cada uma)</span><input type="number" min={0} max={30} value={form.pausa_seg ?? 2} onChange={(e) => campo('pausa_seg', Number(e.target.value))} data-teste="onb-pausa" /></label>
+                <label><Hourglass size={12} /> Espera do “criando o cadastro…” (segundos) <span className="muted">(entre o “um minutinho” e o link; 0 manda junto)</span><input type="number" min={0} max={90} value={form.criar_espera_seg ?? 20} onChange={(e) => campo('criar_espera_seg', Number(e.target.value))} data-teste="onb-espera" /></label>
               </div>
               <Chave checked={form.bolhas !== false} onChange={(v) => campo('bolhas', v)} teste="onb-bolhas">Cada parágrafo numa mensagem <span className="muted">(a conversa respira, como gente)</span></Chave>
             </Bloco>
@@ -257,9 +286,13 @@ export default function OnboardingGuia() {
                     {toggle ? <Chave checked={!!form[toggle]} onChange={(v) => campo(toggle, v)} teste={`onb-${toggle}`}>pedir este passo</Chave> : <span className="pg-wa-pilula cinza">sempre</span>}
                   </div>
                   <textarea rows={2} value={form[`passo_${k}`] ?? ''} onChange={(e) => campo(`passo_${k}`, e.target.value)} maxLength={2000} disabled={toggle ? !form[toggle] : false} data-teste={`onb-passo-${k}`} />
+                  {k === 'servicos' && (
+                    <label className="pg-onb-exemplos">Exemplos dos mais escolhidos <span className="muted">(viram {'{exemplos}'} na pergunta; separados por vírgula)</span>
+                      <input value={form.servicos_exemplos ?? ''} onChange={(e) => campo('servicos_exemplos', e.target.value)} maxLength={600} disabled={!form.com_servicos} data-teste="onb-exemplos" /></label>
+                  )}
                 </div>
               ))}
-              <p className="muted pg-wa-nota"><Link2 size={12} /> Depois do último passo o agente manda o link seguro (mimo.com.vc/comecar?c=…), que abre o cadastro já preenchido com tudo isso. Lá ela só cria a senha, aceita os termos e escolhe o plano.</p>
+              <p className="muted pg-wa-nota"><Link2 size={12} /> Depois do “sim” no resumo o agente diz “um minutinho, criando…”, espera o tempo configurado e manda o link seguro (mimo.com.vc/comecar?c=…), que abre o cadastro já preenchido com tudo isso; lá ela só cria a senha, aceita os termos e escolhe o plano. Fecha convidando para o suporte. Cada dado (nome, profissionais, serviços, horários, endereço, e-mail) é confirmado de volta antes de valer, e a qualquer momento ela pode escrever <b>ajuda</b>: a equipe é avisada e um humano assume.</p>
             </Bloco>
 
             <div className="pg-onb-msgs" data-teste="onb-mensagens">
@@ -267,7 +300,7 @@ export default function OnboardingGuia() {
                 <Bloco key={id} id={`msg_${id}`} aoMontar={indice.registrar} Icon={Icon} titulo={`Mensagens: ${rotulo.toLowerCase()}`} sub="Os momentos que o sistema decide, não a IA.">
                   {chaves.map((k) => { const [, r, dica] = MENSAGENS.find(([x]) => x === k); return (
                     <label key={k}>{r} {dica && <span className="muted">({dica})</span>}
-                      <textarea rows={k === 'msg_link' || k === 'msg_endereco_confirmar' ? 4 : 3} value={form[k] ?? ''} onChange={(e) => campo(k, e.target.value)} maxLength={2000} data-teste={`onb-${k}`} /></label>
+                      <textarea rows={['msg_link', 'msg_empresa_confirmar', 'msg_rua_opcoes', 'msg_servicos', 'msg_final', 'msg_ajuda'].includes(k) ? 4 : 3} value={form[k] ?? ''} onChange={(e) => campo(k, e.target.value)} maxLength={2000} data-teste={`onb-${k}`} /></label>
                   ) })}
                 </Bloco>
               ))}
@@ -351,7 +384,10 @@ function Simulador({ cfg }) {
       const r = await chamar('guia-whats', { acao: 'simular_onboarding', ...corpo })
       if (r.acao === 'passa') { setErro('essa mensagem não acionou o agente (sem gatilho e sem conversa aberta): a Mel-cliente atenderia'); return }
       const bolhas = r.bolhas?.length ? r.bolhas : r.responder ? [r.responder] : []   // 3.56: uma bolha por parágrafo, como no WhatsApp
-      setMensagens((m) => [...m, { q: 'cliente', t: r.texto }, ...bolhas.map((t) => ({ q: 'mel', t }))])
+      // 3.61: uma bolha que espera mais que a pausa (o "criando…" antes do link) ganha uma linha do sistema no chat
+      const pausaBase = Number(r.pausa ?? 0)
+      const novas = bolhas.flatMap((t, i) => { const esp = Number(r.pausas?.[i] ?? pausaBase); return esp > pausaBase ? [{ q: 'sistema', t: `⏳ espera de ${esp} s antes da próxima (criando o cadastro)` }, { q: 'mel', t }] : [{ q: 'mel', t }] })
+      setMensagens((m) => [...m, { q: 'cliente', t: r.texto }, ...novas])
       if (r.link) setLink(r.link)
       if (r.previaAviso) setPreviaAviso(r.previaAviso)
       if (r.acao === 'erro_ia') setErro(r.erro || 'a IA não respondeu')

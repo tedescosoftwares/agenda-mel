@@ -16,7 +16,7 @@ import { enviarPor } from '../_shared/canais.ts'
 import { classificar } from '../_shared/ia.ts'
 import { conversar } from '../_shared/agente.ts'
 import { atenderGuia, iaDe, avisoDemora, cutucadaSalao, type Deps as DepsGuia, type Pedido } from '../_shared/guia_whats.ts'
-import { atenderOnboarding, iaOnbDe, consultarCnpjDe, consultarCepDe, type Deps as DepsOnb } from '../_shared/guia_onboarding.ts'
+import { atenderOnboarding, iaOnbDe, consultarCnpjDe, consultarCepDe, consultarRuaDe, type Deps as DepsOnb } from '../_shared/guia_onboarding.ts'
 
 const db = createClient(
   Deno.env.get('SUPABASE_URL') ?? '',
@@ -371,6 +371,8 @@ Deno.serve(async (req) => {
     enviar: (instancia, telefone, texto) => enviarPor('evolution', { telefone, corpo: texto, identificador: instancia }),
     consultarCnpj: consultarCnpjDe(fetch as unknown as Parameters<typeof consultarCnpjDe>[0]),
     consultarCep: consultarCepDe(fetch as unknown as Parameters<typeof consultarCepDe>[0]),
+    // 3.61: a rua pelo nome (ViaCEP), para quem não sabe o CEP
+    consultarRua: consultarRuaDe(fetch as unknown as Parameters<typeof consultarRuaDe>[0]),
   })
 
   for (const m of mensagens) {
@@ -384,11 +386,15 @@ Deno.serve(async (req) => {
         if (o.acao !== 'passa') {
           respostas.push(`onboarding[${o.acao}]`)
           if (o.erro) console.error('onboarding:', o.erro)
-          // 3.56: em bolhas (um parágrafo por mensagem), cada uma com a pausa da Plataforma como "digitando…"
+          // 3.56: em bolhas (um parágrafo por mensagem), cada uma com a pausa da Plataforma como "digitando…". 3.61: uma
+          // bolha pode pedir uma espera maior (o "um minutinho, criando…" antes do link): o que passa da pausa é silêncio.
           const bolhas = o.bolhas?.length ? o.bolhas : o.responder ? [o.responder] : []
-          const atraso = Math.round(Math.max(0, Math.min(30, Number(o.pausa ?? 2) || 0)) * 1000)
-          for (const b of bolhas) {
-            const env = await enviarPor('evolution', { telefone: m.telefone, corpo: b, identificador: m.instancia, atraso })
+          const pausaSeg = Math.max(0, Math.min(30, Number(o.pausa ?? 2) || 0))
+          const atraso = Math.round(pausaSeg * 1000)
+          for (let i = 0; i < bolhas.length; i++) {
+            const espera = Math.max(0, Math.min(90, Number(o.pausas?.[i] ?? pausaSeg) || 0))
+            if (espera > pausaSeg) await new Promise((r) => setTimeout(r, Math.round((espera - pausaSeg) * 1000)))
+            const env = await enviarPor('evolution', { telefone: m.telefone, corpo: bolhas[i], identificador: m.instancia, atraso })
             if (!env.ok) { console.error('onboarding: a resposta não saiu:', env.erro); break }
           }
           continue

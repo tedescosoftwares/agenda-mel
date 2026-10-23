@@ -296,3 +296,42 @@ Mesmo layout da aba WhatsApp (as peças em `components/plataforma/guia/PecasWa.j
 - `Abordagem.jsx` (filtros, funil da Mel, demanda sem dono, bloco Pela Mel, tendência), `guiaMetricas.js` (`pelaMel`), `guia-abordagem.css`; `WhatsAppGuia.jsx` (Clientes, ponte), `OnboardingGuia.jsx` (v2), `PecasWa.jsx`, `lib/guiaWa.js`, `lib/guiaPontes.js`; demos `demoAbordagem.js` (os sinais da Mel) e `demoGuiaWhats.js` (`guia_whats_clientes`, `guia_demanda_sem_dono`).
 - Deploy: **bat B** (206) → **bat 9** (só se ainda não subiu a 3.57: whatsapp-webhook e guia-whats; a 206 não muda função) → **bat 2**.
 - Versão **3.59.0-mimo**.
+
+---
+
+## 14. 3.61 — O onboarding que confirma tudo: a ficha da empresa, a rua pelo nome, as confirmações e o "criando o cadastro" (migração 208)
+
+### A ficha da empresa
+Depois do CNPJ válido e ativo, em vez de só o endereço, o agente mostra a **ficha** da Receita — nome fantasia, razão social, CNPJ e o endereço formatado — e pergunta "está tudo certo?" (`msg_empresa_confirmar`, com `{ficha}`). *Sim* segue. *Não* (ou "está errado") → `msg_empresa_qual`: qual dado está errado (**nome fantasia**, **razão social**, **CNPJ** ou **endereço**); ela pode responder já com o dado ("o nome fantasia", "o endereço"). Nome fantasia e razão social ela digita o certo; CNPJ volta para a consulta; endereço entra no fluxo do CEP abaixo. Depois de cada correção a ficha volta atualizada para confirmar de novo.
+
+### O endereço: CEP, a rua pelo nome, número e complemento
+- **CEP** (`msg_cep`): ViaCEP, como antes. Com o CEP achado, pergunta o número (`msg_cep_numero`).
+- **"Não sei o CEP"** → `msg_rua`: ela manda o nome da rua e a cidade ("Rua das Flores, Itanhaém"; sem cidade, usa a do CNPJ). O agente procura em `viacep.com.br/ws/{UF}/{cidade}/{rua}/json/` (`consultarRuaDe`, no webhook e no guia-whats): **uma opção** → já pede o número; **várias** (uma por CEP, até 5 na tela) → `msg_rua_opcoes` com a lista numerada (rua · bairro · trecho · CEP), ela responde o número ou o bairro; "nenhuma" ou duas tentativas sem achar → endereço escrito. Rua não achada → `msg_rua_nao_achei` (`{cidade}`), com a dica de mandar a cidade junto.
+- **Número** → **complemento** (`msg_complemento`; "5, fundos" já leva o complemento) → **o endereço montado** para confirmar (`msg_endereco_ok`, `{endereco}`); *sim* fecha (na correção da ficha, volta à ficha), um CEP novo ou um endereço escrito recomeçam.
+- O endereço escrito inteiro (rua com número), em qualquer ponto, é aceito e confirmado de volta.
+
+### As perguntas do sistema, com confirmação
+Nome, profissionais, serviços e horários deixam de ser perguntas livres da IA e passam a ser **perguntas do sistema**, determinísticas, cada uma com texto editável e com a confirmação `msg_dado_confirmar` ("Anotei {rotulo}: *{valor}*. Está certo?"): *sim* vale, *não* pergunta de novo, outro texto vira o valor novo (que também é confirmado). Uma dúvida no meio ("o que é isso?") vai à IA responder curto e a pergunta volta.
+- **Nome** (`msg_nome_confirmar` com `{nome}` quando o CNPJ trouxe nome fantasia, senão `msg_nome`); o nome em uso continua pedindo outro (`msg_nome_em_uso`).
+- **Profissionais** (`msg_profissionais`) — **só para salão**. Quem começou como **autônoma** é uma pessoa só: o passo nem aparece (`profissionais = 1`), e o resumo e o aviso à equipe não mostram a contagem.
+- **Serviços** (`msg_servicos`, com `{exemplos}`): a lista de exemplos dos mais escolhidos vem de `servicos_exemplos` (editável na aba, bloco "Os passos"), e a mensagem deixa claro que a lista completa, com preço e duração, e o resto (horários, fotos…) se ajustam no painel.
+- **Horários** (`msg_horarios`).
+- As orientações `passo_*` da IA foram reescritas (onde ainda eram as da semente) para o papel novo: ela só explica e tira dúvidas; quem pergunta é o sistema.
+
+### A ajuda humana
+No começo (depois das boas-vindas no CTA, ou depois do "sim" na intenção) e no fim, o agente avisa que **a qualquer momento ela pode escrever *ajuda*** e uma pessoa da equipe atende (`msg_ajuda_dica`). Quando ela pede ("ajuda", "quero falar com uma pessoa", "atendente"…): `msg_ajuda` (`{atendimento}` vira o link do WhatsApp do atendimento, e a linha sai se não há número), a **equipe recebe o aviso** no `numero_avisos` (quem, em que passo, o número dela) e a conversa segue de onde estava (`acao = 'ajuda'`).
+
+### O resumo, o "criando…" e o fim
+- **Resumo** (`msg_resumo`): todos os dados — tipo, CNPJ, razão social, nome fantasia (quando difere), nome para as clientes, endereço, profissionais (salão), serviços, horários, e-mail, WhatsApp — e "está tudo certo?". Corrigir continua igual.
+- *Sim* → `msg_criando` ("me dá um minutinho que estou criando o seu cadastro…"), a **espera** `criar_espera_seg` (0–90 s, na aba em "Atendimento e ritmo"; 0 manda junto), e então `msg_link` ("Cadastro criado! 🎉 Agora é só acessar o link e criar a sua senha…") e `msg_final` (se ficou dúvida, o suporte para começar a configurar a agenda, "é só chamar"). A espera vai por bolha: `Saida.pausas[i]` (o webhook dorme a diferença antes da bolha do link; o simulador mostra "⏳ espera de N s").
+- O aviso à equipe do link continua; o `msg_link` e o `msg_resumo` da semente foram trocados pelos textos novos só onde ainda estavam iguais à semente.
+
+### A aba Onboarding e o demo
+As mensagens novas em grupos (Entrada, Documentos, Endereço, Dados, Contato, Já em uso, Fim), o campo da espera (`onb-espera`) e os exemplos de serviços (`onb-exemplos`, desligado sem o passo dos serviços). O simulador do demo (`demoGuiaOnboarding.js`) anda pelo fluxo novo: a ficha (Studio Demo / STUDIO DEMO LTDA / 11.222.333/0001-81), as correções, a busca de rua de mentira ("Flores" → uma opção; "Palmeiras" → duas), as confirmações, a ajuda (com a prévia do aviso), o resumo e o "criando…" com a espera.
+
+### Referência técnica
+- **208** `208_onboarding_ficha_e_confirmacoes.sql` — em `guia_onboarding_config`: `criar_espera_seg` (0–90), `servicos_exemplos`, e as mensagens `msg_empresa_confirmar` `{ficha}`, `msg_empresa_qual`, `msg_empresa_cnpj`, `msg_empresa_nome`, `msg_empresa_razao`, `msg_rua`, `msg_rua_opcoes` `{opcoes}`, `msg_rua_nao_achei` `{cidade}`, `msg_complemento`, `msg_endereco_ok` `{endereco}`, `msg_nome`, `msg_nome_confirmar` `{nome}`, `msg_profissionais`, `msg_servicos` `{exemplos}`, `msg_horarios`, `msg_dado_confirmar` `{rotulo}` `{valor}`, `msg_ajuda_dica`, `msg_ajuda` `{atendimento}`, `msg_criando`, `msg_final`; `guia_onboarding_config_salvar` genérico (textos, sim/não, inteiros com faixa, os marcadores obrigatórios). Precisa da 204.
+- `_shared/guia_onboarding.ts` — `PADRAO`, `cfgTexto`, `passosDe(cfg, dados)`, `montarFicha`, `listarOpcoes`, `consultarRuaDe(fetch)`, `avisoEquipe('ajuda')`, `Saida.pausas`, `Deps.consultarRua`; os estados `confirmando_empresa`, `empresa_qual`, `corrigindo`, `pedindo_rua`/`opcoes_rua`, `pedindo_complemento`, `confirmando_endereco_ok`, `confirmando {campo, valor}`, `perguntado`. `whatsapp-webhook` e `guia-whats`: `consultarRua` nas deps e a espera por bolha.
+- `OnboardingGuia.jsx`, `PecasWa.jsx` (a linha "sistema" no chat), `guia-plataforma.css`, `demoGuiaOnboarding.js`.
+- Deploy: **bat B** (208) → **bat 9** (whatsapp-webhook, guia-whats) → **bat 2**.
+- Versão **3.61.0-mimo**.

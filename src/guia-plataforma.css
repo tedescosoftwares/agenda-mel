@@ -663,6 +663,7 @@
 .pg-onb-passo:first-of-type { border-top: 0; padding-top: 0; }
 .pg-onb-passo-topo { display: flex; justify-content: space-between; align-items: center; gap: 0.6rem; flex-wrap: wrap; font-size: 0.84rem; }
 .pg-onb-passo textarea:disabled { opacity: 0.55; }
+.pg-onb-exemplos { margin-top: 0.2rem; } .pg-onb-exemplos input:disabled { opacity: 0.55; }
 .pg-wa-ocioso input:disabled, .pg-wa-ocioso textarea:disabled { opacity: 0.55; }
 .pg-wa-nota { font-size: 0.74rem; margin: 0; line-height: 1.45; }
 .pg-wa-acoes { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
@@ -692,6 +693,7 @@
 .pg-wa-msg.cliente { align-self: flex-end; background: #dcf8c6; border-bottom-right-radius: 3px; }
 .pg-wa-msg.mel { align-self: flex-start; background: #fff; border-bottom-left-radius: 3px; }
 .pg-wa-msg.digitando { color: var(--texto-3); display: inline-flex; align-items: center; gap: 0.35rem; }
+.pg-wa-msg.sistema { align-self: center; background: rgba(255, 255, 255, 0.55); color: var(--texto-3); font-size: 0.72rem; padding: 0.2rem 0.6rem; border-radius: 999px; }
 .pg-wa-sim-inicio { display: flex; flex-direction: column; gap: 0.7rem; }
 .pg-wa-sim-inicio .btn { align-self: flex-start; }
 .pg-wa-sim-form { display: flex; gap: 0.5rem; margin-top: 0.6rem; }

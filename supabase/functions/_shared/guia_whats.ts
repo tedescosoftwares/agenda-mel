@@ -32,7 +32,7 @@ export type Saida = {
   dados?: Dados
   erro?: string
 }
-type Dados = { nome?: string; servico?: string; preferencia?: string; observacao?: string; pos_envio?: number; sem_avanco?: number }
+type Dados = { nome?: string; servico?: string; preferencia?: string; observacao?: string; pos_envio?: number; sem_avanco?: number; dona?: boolean }
 type Lugar = {
   id: string; nome: string; categoria?: string | null; cidade?: string | null; cidade_slug?: string; slug?: string; uf?: string | null
   bairro?: string | null; endereco?: string | null; servicos?: string[] | null; horarios?: unknown; telefone?: string | null; whatsapp?: string | null
@@ -44,6 +44,8 @@ type Config = {
   msg_cliente: string; msg_salao: string; msg_salao_resposta: string; mostrar_contato_salao: boolean; limite_respostas?: number | null
   // 3.51: o ciclo da conversa, configurável na Plataforma (os números abaixo têm padrão quando a config não trouxe)
   msg_encerramento?: string | null; exigir_preferencia?: boolean; pos_envio?: number | null; max_sem_avanco?: number | null; ocioso_horas?: number | null
+  // 3.54: a mensagem que a Mel manda quando reconhece a própria dona testando o salão ({salao} e {exemplo})
+  msg_dona?: string | null
 }
 
 export const MODELO_PADRAO: Record<string, string> = { groq: 'openai/gpt-oss-120b', claude: 'claude-haiku-5-5' }
@@ -60,6 +62,22 @@ export function telefoneBonito(e164: string | null | undefined): string {
 }
 // minúsculo, sem acento, sem pontuação nas pontas (para reconhecer SAIR, QUERO, VOLTAR...)
 export const palavra = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim()
+
+// a mesma "chave" do banco (telefone_e164 + guia_whats_chave): normaliza para comparar o número de quem escreve com o
+// cadastrado do salão (celular com e sem o 9º dígito batem). Usada para reconhecer a dona testando o próprio salão (3.54).
+function e164Local(bruto: string | null | undefined): string | null {
+  const d = so(bruto).replace(/^0+/, '')
+  if (d.length < 10) return null
+  if ((d.length === 12 || d.length === 13) && d.startsWith('55')) return d
+  if (d.length === 10 || d.length === 11) return '55' + d
+  return null
+}
+export function chaveDe(tel: string | null | undefined): string | null {
+  const d = e164Local(tel)
+  if (d === null) return String(tel ?? '').trim() || null
+  if (d.length === 13 && d.startsWith('55') && d[4] === '9') return d.slice(0, 4) + d.slice(5)
+  return d
+}
 
 // 3.49.2: o que dispensa a IA (token à toa). Depois do resumo, um "sim" ou "não" seco (ou um 👍) já decide; depois do
 // envio, a Mel responde mais POS_ENVIO vezes e fica quieta; só emoji não vai à IA; e o teto do dia (limite_respostas)
@@ -300,6 +318,20 @@ export async function atenderGuia(deps: Deps, e: Entrada, opcoes: { teste?: bool
     return { responder: resposta, acao: 'agenda_mimo', estado: 'encerrada' }
   }
 
+  // 4.5: a própria dona testando (o número de quem escreve é o mesmo cadastrado do salão). Em vez do fluxo de cliente, a
+  // Mel reconhece, mostra como um pedido chegaria (o exemplo) e apresenta a MIMO Agenda; avisa a equipe uma vez (3.54).
+  if (!teste && lugar.salao_tel && chaveDe(tel) && chaveDe(tel) === chaveDe(lugar.salao_tel)) {
+    const exemplo = mensagemDoSalao(cfg, lugar, { cliente_nome: 'Maria (exemplo)', servico: 'Corte e escova', preferencia: 'sexta à tarde', observacao: null, cliente_tel: '5513999990000' })
+    const resposta = (String(cfg.msg_dona ?? '').trim() || `Oi! 💗 Esse número é o que o ${lugar.nome} tem cadastrado no guia da MIMO. Assim chega um pedido de cliente pra você:\n\n{exemplo}\n\nA MIMO leva clientes até você, de graça — e tem a MIMO Agenda pra organizar tudo (salão e autônoma). A equipe vai te chamar pra mostrar. 💗`)
+      .replaceAll('{salao}', lugar.nome).replaceAll('{exemplo}', exemplo)
+    const jaAvisou = (ctx.conversa?.dados as Dados | undefined)?.dona === true
+    await guardar(resposta, 'encerrada', { dona: true }, lugar.id)
+    if (!jaAvisou && cfg.numero_avisos) {
+      try { await deps.enviar(cfg.instancia, so(cfg.numero_avisos), avisoDona(lugar, tel)) } catch { /* o aviso é melhor-esforço */ }
+    }
+    return { responder: resposta, acao: 'dona', estado: 'encerrada', dados: { dona: true } }
+  }
+
   // 5. a conversa com a Mel
   const estadoAntes = conversa?.estado ?? 'conversando'
   const dadosAntes: Dados = { ...(conversa?.dados ?? {}) }
@@ -431,6 +463,17 @@ function avisoEquipe(l: Lugar, ld: { cliente_nome?: string | null; cliente_tel?:
     `Cliente: ${ld.cliente_nome || 'sem nome'}${ld.cliente_tel ? ` (${telefoneBonito(ld.cliente_tel)})` : ''}`,
     `Pedido: ${[ld.servico, ld.preferencia].filter(Boolean).join(' · ') || 'sem detalhes'}`,
     'Fale com a cliente e, se der, convide o salão para a MIMO.',
+  ].join('\n')
+}
+
+// 3.54: o aviso interno quando a própria dona testa o guia pelo número cadastrado — boa hora para apresentar a MIMO
+// Agenda. Vai para o nosso número (numero_avisos), nunca para a dona.
+function avisoDona(l: Lugar, tel: string): string {
+  const onde = [l.nome, l.cidade && `${l.cidade}${l.uf ? `-${l.uf}` : ''}`].filter(Boolean).join(' · ')
+  return [
+    '🎉 MIMO — dona testando o guia',
+    `${onde}: a dona está escrevendo pela Mel do número cadastrado. Boa hora para apresentar a MIMO Agenda.`,
+    `Número: ${telefoneBonito(tel)}`,
   ].join('\n')
 }
 

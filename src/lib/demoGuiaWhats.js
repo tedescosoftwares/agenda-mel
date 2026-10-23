@@ -39,6 +39,7 @@ let CFG = {
   msg_salao_resposta: 'Obrigada pelo retorno! 💗 Se quiser receber pedidos assim direto na agenda do salão, com link próprio para as clientes marcarem e lembretes automáticos, responda QUERO que a equipe da MIMO te chama. Para não receber mais pedidos por aqui, responda SAIR.',
   msg_encerramento: 'Tudo bem! 💗 Quando quiser marcar, é só me chamar aqui que eu te ajudo. Até logo!',
   msg_ocioso: 'Oi! Vi que a gente parou por aqui 💗 Quer que eu envie seu pedido ao salão agora, ou prefere continuar depois? Se não puder responder, eu encerro por aqui — é só me chamar quando quiser.',
+  msg_dona: 'Oi! 💗 Esse número é o mesmo que o {salao} tem cadastrado no guia da MIMO — então acho que é você, do salão! Quando uma cliente te encontra no guia e pede horário, chega assim pra você:\n\n{exemplo}\n\nA MIMO leva clientes até você, de graça. E tem a MIMO Agenda pra organizar tudo, com link pras clientes marcarem sozinhas (salão e autônoma). Nossa equipe vai te chamar pra mostrar. 💗',
   numero_avisos: null,
   mostrar_contato_salao: false, exigir_preferencia: false, ocioso_ativo: false, limite_dia: 40, limite_respostas: 30, pos_envio: 3, max_sem_avanco: 6, ocioso_horas: 24, ocioso_perguntar_min: 60, ocioso_encerrar_min: 120, retencao_dias: 90, atualizado_em: h(60 * 24 * 3),
 }
@@ -96,7 +97,7 @@ function salvar({ c }) {
   if (c.numero !== undefined) { let d = String(c.numero ?? '').replace(/\D/g, ''); if (d.length === 10 || d.length === 11) d = '55' + d; if (d && !/^[1-9][0-9]{9,14}$/.test(d)) throw new Error('número inválido: use DDD e número (com 55 na frente, se quiser)'); n.numero = d || null }
   if (c.numero_avisos !== undefined) { let d = String(c.numero_avisos ?? '').replace(/\D/g, ''); if (d.length === 10 || d.length === 11) d = '55' + d; if (d && !/^[1-9][0-9]{9,14}$/.test(d)) throw new Error('número de avisos inválido: use DDD e número (com 55 na frente, se quiser)'); n.numero_avisos = d || null }
   for (const k of ['ligado', 'mostrar_contato_salao', 'exigir_preferencia', 'ocioso_ativo']) if (typeof c[k] === 'boolean') n[k] = c[k]
-  for (const k of ['instancia', 'provedor', 'orientacao', 'msg_cliente', 'msg_salao', 'msg_salao_resposta', 'msg_encerramento', 'msg_ocioso']) if (typeof c[k] === 'string' && c[k].trim()) n[k] = c[k].trim()
+  for (const k of ['instancia', 'provedor', 'orientacao', 'msg_cliente', 'msg_salao', 'msg_salao_resposta', 'msg_encerramento', 'msg_ocioso', 'msg_dona']) if (typeof c[k] === 'string' && c[k].trim()) n[k] = c[k].trim()
   if (c.modelo !== undefined) n.modelo = String(c.modelo ?? '').trim() || null
   if (Array.isArray(c.botoes)) n.botoes = [...new Set(c.botoes.filter((b) => ['whatsapp', 'ligar', 'quero_marcar'].includes(b)))].sort()
   if (c.limite_dia !== undefined) { const v = Number(c.limite_dia); if (!(v >= 1 && v <= 1000)) throw new Error('limite por dia: de 1 a 1000'); n.limite_dia = v }

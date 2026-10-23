@@ -22,7 +22,7 @@ const CONEXAO = {
   nao_existe: ['Ainda não conectado', 'cinza'], erro: ['A Evolution não respondeu', 'carmim'], desconhecido: ['Estado desconhecido', 'cinza'],
 }
 const BOTOES = [['whatsapp', 'WhatsApp', 'o botão WhatsApp do salão'], ['ligar', 'Ligar', 'o botão Ligar (vira WhatsApp)'], ['quero_marcar', 'Quero marcar', 'o botão "Quero marcar aqui" (em vez do formulário)']]
-const CAMPOS_CONFIG = ['ligado', 'numero', 'numero_avisos', 'instancia', 'botoes', 'provedor', 'modelo', 'orientacao', 'msg_cliente', 'msg_salao', 'msg_salao_resposta', 'msg_encerramento', 'msg_ocioso', 'mostrar_contato_salao', 'exigir_preferencia', 'ocioso_ativo', 'limite_dia', 'limite_respostas', 'pos_envio', 'max_sem_avanco', 'ocioso_horas', 'ocioso_perguntar_min', 'ocioso_encerrar_min', 'retencao_dias']
+const CAMPOS_CONFIG = ['ligado', 'numero', 'numero_avisos', 'instancia', 'botoes', 'provedor', 'modelo', 'orientacao', 'msg_cliente', 'msg_salao', 'msg_salao_resposta', 'msg_encerramento', 'msg_ocioso', 'msg_dona', 'mostrar_contato_salao', 'exigir_preferencia', 'ocioso_ativo', 'limite_dia', 'limite_respostas', 'pos_envio', 'max_sem_avanco', 'ocioso_horas', 'ocioso_perguntar_min', 'ocioso_encerrar_min', 'retencao_dias']
 const tel = (d) => { const s = String(d ?? '').replace(/\D/g, ''); return s.length === 13 && s.startsWith('55') ? `(${s.slice(2, 4)}) ${s.slice(4, 9)}-${s.slice(9)}` : s.length === 12 && s.startsWith('55') ? `(${s.slice(2, 4)}) ${s.slice(4, 8)}-${s.slice(8)}` : s ? `+${s}` : '' }
 // o telefone do guia (3.49.4): máscara enquanto digita, e guardado no mesmo formato que o banco guarda (dígitos com 55
 // na frente), para a comparação com o número salvo bater e o botão Conectar liberar. telCanon = o que vai ao banco;
@@ -206,8 +206,10 @@ export default function WhatsAppGuia({ g }) {
                   <p className="muted pg-wa-nota">A Mel só fala quando chega mensagem; para ela cutucar sozinha, um relógio (cron) na VPS precisa chamar o webhook de tempos em tempos. Enquanto esse cron não estiver no ar, deixe isto desligado — o fluxo “sem avançar” acima continua valendo.</p>
                 </div>
               </fieldset>
-              <label>WhatsApp da equipe para avisos <span className="muted">(quando um salão não tem WhatsApp — ou o número dele é o da própria cliente — a Mel não manda o pedido pra lá; anota como “sem contato” e avisa aqui. Vazio = sem aviso, só na lista de pedidos.)</span>
+              <label>WhatsApp da equipe para avisos <span className="muted">(quando um salão não tem WhatsApp — ou o número dele é o da própria cliente — a Mel não manda o pedido pra lá; anota como “sem contato” e avisa aqui. Também recebe o aviso quando a própria dona testa o guia. Vazio = sem aviso, só na lista de pedidos.)</span>
                 <input value={mascararTel(form.numero_avisos)} onChange={(e) => campo('numero_avisos', telCanon(e.target.value))} placeholder="(13) 99999-0000" inputMode="tel" maxLength={16} data-teste="wa-numero-avisos" /></label>
+              <label>Mensagem para a própria dona testando <span className="muted">(quando quem escreve está no número cadastrado do salão: a Mel reconhece e apresenta a MIMO Agenda. {'{salao}'} vira o nome; {'{exemplo}'} vira o exemplo de como um pedido chegaria.)</span>
+                <textarea rows={6} value={form.msg_dona ?? ''} onChange={(e) => campo('msg_dona', e.target.value)} maxLength={4000} data-teste="wa-msg-dona" /></label>
               <div className="pg-wa-grade3">
                 <label>Limite de pedidos por dia<input type="number" min={1} max={1000} value={form.limite_dia ?? 40} onChange={(e) => campo('limite_dia', Number(e.target.value))} /></label>
                 <label>Respostas da Mel por número por dia <span className="muted">(depois disso, avisa e silencia)</span><input type="number" min={1} max={500} value={form.limite_respostas ?? 30} onChange={(e) => campo('limite_respostas', Number(e.target.value))} data-teste="wa-limite-respostas" /></label>

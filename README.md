@@ -83,6 +83,9 @@ Depois é só sair e entrar de novo no app.
 Na ponta da cliente (`mimo.com.vc` e o app MIMO da loja) o botão **Continuar
 com Google** aparece sozinho assim que o provedor está ligado no Supabase: o
 site pergunta ao Auth (`/auth/v1/settings`) quais provedores estão ativos.
+Ele fica na porta (`/entrar`), no login, no cadastro e no `/v/código`. Se não
+aparece, é o provedor desligado: confira em Authentication → Providers →
+Google se o interruptor "Enable Sign in with Google" está ligado e salvo.
 Nada de variável nova; `VITE_OAUTH=google,apple` continua valendo para forçar
 a lista (e é o único jeito de mostrar Google/Apple no MIMO Pro).
 

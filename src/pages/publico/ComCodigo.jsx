@@ -6,6 +6,8 @@ import RodapeSocial from '../../components/RodapeSocial'
 import { urlDoAmbiente } from '../../lib/ambiente'
 import { extrairCodigo } from '../../lib/convite'
 import { ScanLine } from 'lucide-react'
+import BotaoGoogle, { OuLinha } from '../../components/BotaoGoogle'
+import { erroDoRetornoOAuth } from '../../lib/oauth'
 
 // /entrar — a PORTA do MIMO para quem não está logada. Ninguém chega
 // aqui do nada: sempre foi uma profissional ou um salão que chamou. Então
@@ -13,12 +15,14 @@ import { ScanLine } from 'lucide-react'
 //   Escanear o QR  ·  Digitar o código  ·  Já tenho conta
 // O código leva para /v/<código>, que mostra quem convidou e cria a
 // conta já com o vínculo. Cadastro solto não existe (a rota até aceita,
-// mas nenhuma tela leva lá).
+// mas nenhuma tela leva lá). 3.61.1: "Continuar com Google" também aqui, para
+// quem já tem conta (ou prefere criar assim): entra, completa o WhatsApp se for
+// nova e, sem vínculo ainda, o app pede o código da profissional.
 export default function ComCodigo() {
   const navigate = useNavigate()
   const [modo, setModo] = useState('menu')
   const [texto, setTexto] = useState('')
-  const [erro, setErro] = useState('')
+  const [erro, setErro] = useState(() => erroDoRetornoOAuth())
 
   const seguir = useCallback((bruto) => {
     const codigo = extrairCodigo(bruto)
@@ -59,7 +63,13 @@ export default function ComCodigo() {
           </form>
         )}
 
-        {modo === 'menu' && <Link to="/login" className="btn btn-ghost btn-block" style={{ marginTop: '0.6rem' }}>Já tenho conta</Link>}
+        {modo === 'menu' && (
+          <div className="entrar-conta">
+            <OuLinha />
+            <BotaoGoogle voltar="/" onErro={setErro} />
+            <Link to="/login" className="btn btn-ghost btn-block">Já tenho conta</Link>
+          </div>
+        )}
         <p className="login-troca muted" style={{ marginTop: '1rem' }}>Atende clientes? <a href={urlDoAmbiente('pro', '/comecar')} className="link-ver">MIMO Pro</a></p>
         <p className="brand-slogan" style={{ marginTop: '0.8rem', marginBottom: 0, textAlign: 'center' }}>Beleza na palma da mão</p>
         <RodapeSocial />

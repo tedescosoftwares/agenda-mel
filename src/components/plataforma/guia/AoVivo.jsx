@@ -1,15 +1,13 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { temGoogleMaps } from '../../../lib/googleMaps'
-import { urlDoAmbiente } from '../../../lib/ambiente'
 import { formatar, n0, taxa, taxaTexto } from '../../../lib/guiaMetricas'
 import { Painel, Vazio } from '../Pecas'
+import { Nav } from './PecasWa'
 import { Barras } from './desempenho/Barras'
-import {
-  Radio, Smartphone, Tablet, Monitor, MapPin, Navigation, Clock, ChevronDown, ChevronUp, ExternalLink, LoaderCircle, Layers, History, Sun, Map as MapaIcone,
-  MessageCircle, Phone, Route, AtSign, Globe, Mail, CalendarCheck, CalendarHeart, Send, BadgeCheck, CalendarPlus, Share2, PencilLine, LocateFixed,
-  MousePointerClick, LogOut, CircleCheck,
-} from 'lucide-react'
+import HistoricoSite from './HistoricoSite'
+import { ORIGEM, APARELHO, acaoDe, tomDe, desfechoDe, Provavel, faltaMigracao, duracao, lugarDe, Toque, ResumoSaidas, Visitante } from './AoVivoPecas'
+import { Radio, Smartphone, MapPin, Navigation, LoaderCircle, Layers, History, Sun, Map as MapaIcone, MousePointerClick, CircleCheck, CalendarRange } from 'lucide-react'
 import '../../../guia-aovivo.css'
 
 // O site ao vivo (3.44, migração 192): quem está no site agora, em que
@@ -21,6 +19,24 @@ import '../../../guia-aovivo.css'
 // Desde a 3.45 (migração 193), também onde cada visita tocou (WhatsApp,
 // ligar, como chegar, Instagram, Quero marcar...) e como terminou: quem toca
 // no WhatsApp e sai logo depois provavelmente foi marcar com o salão.
+// 3.62 (migração 209): duas seções, Agora (esta) e Histórico (HistoricoSite:
+// qualquer período de até 90 dias, com filtros); cada visita mostra a hora
+// que entrou e saiu, há quanto tempo foi e se a pessoa é nova ou já voltou.
+// As peças compartilhadas moram em AoVivoPecas.
+
+const SECOES = [['agora', 'Agora', Radio], ['historico', 'Histórico', CalendarRange]]
+let secaoMemoria = 'agora'
+
+export default function AoVivo() {
+  const [secao, setSecao] = useState(secaoMemoria)
+  useEffect(() => { secaoMemoria = secao }, [secao])
+  return (
+    <div className="pv" data-teste="ao-vivo">
+      <Nav secoes={SECOES} secao={secao} onTrocar={setSecao} prefixo="ao-vivo" rotulo="Seções do site ao vivo" />
+      {secao === 'historico' ? <HistoricoSite /> : <Agora />}
+    </div>
+  )
+}
 
 const MapaAoVivo = lazy(() => import('./MapaAoVivo'))
 const INTERVALO_MS = 5000
@@ -29,58 +45,9 @@ const INTERVALO_LONGO_MS = 20000 // com mais de uma hora na tela, a leitura é m
 const HORAS = [1, 6, 12, 24]
 const rotuloPeriodo = (h) => (h === 1 ? 'Última hora' : `Últimas ${h} horas`)
 let horasMemoria = 1
-const ORIGEM = { google: 'Google', bing: 'Bing', instagram: 'Instagram', facebook: 'Facebook', whatsapp: 'WhatsApp', tiktok: 'TikTok', youtube: 'YouTube', direto: 'Direto', interno: 'Do próprio site', outro: 'Outro site' }
-const APARELHO = { celular: 'Celular', tablet: 'Tablet', computador: 'Computador', outro: 'Outro' }
-const ICONE = { celular: Smartphone, tablet: Tablet, computador: Monitor }
-// os toques nas páginas dos salões (site_eventos_tipos): rótulo curto e ícone
-const ACAO = {
-  whatsapp: ['WhatsApp', MessageCircle], ligar: ['Ligou', Phone], mapa: ['Como chegar', Route], instagram: ['Instagram', AtSign], site: ['Site do salão', Globe],
-  email: ['E-mail', Mail], agendar_mimo: ['Agendar pela MIMO', CalendarCheck], quero_marcar: ['Quero marcar', CalendarHeart], pedido_enviado: ['Pedido enviado', Send],
-  sou_dono: ['É o dono', BadgeCheck], criar_agenda: ['Criar agenda', CalendarPlus], compartilhar: ['Compartilhou', Share2], corrigir: ['Corrigir dados', PencilLine],
-  localizacao: ['Localização ativada', LocateFixed],
-}
-const acaoDe = (a) => ({ rotulo: ACAO[a.tipo]?.[0] ?? a.rotulo ?? a.tipo, Icon: ACAO[a.tipo]?.[1] ?? MousePointerClick })
-// contato é o que leva a cliente ao salão (o mesmo da migração 193); forte é o que encerra a busca: quem sai logo
-// depois disso provavelmente foi marcar (ou ir) ao salão
-const CONTATO = new Set(['whatsapp', 'ligar', 'mapa', 'instagram', 'site', 'email', 'agendar_mimo', 'quero_marcar', 'pedido_enviado'])
-const FORTE = new Set(['whatsapp', 'ligar', 'mapa', 'agendar_mimo', 'pedido_enviado'])
-const tomDe = (tipo) => (FORTE.has(tipo) ? 'forte' : CONTATO.has(tipo) ? 'contato' : 'outro')
-const SAIU = {
-  whatsapp: 'Saiu pelo WhatsApp', ligar: 'Ligou e saiu', mapa: 'Saiu pelo Como chegar', agendar_mimo: 'Foi agendar pela MIMO', pedido_enviado: 'Enviou o pedido e saiu',
-  quero_marcar: 'Quero marcar, sem enviar', instagram: 'Saiu pelo Instagram', site: 'Saiu pelo site do salão', email: 'Saiu pelo e-mail do salão',
-}
-// nas barras de hoje, o desfecho forte leva um visto verde no lugar do ícone
-const Provavel = (p) => <CircleCheck {...p} color="#0b7a50" />
-// o desfecho da visita: texto, tom e, quando é forte, o que provavelmente aconteceu
-function desfechoDe(d) {
-  if (!d || d === 'navegando') return null
-  if (d === 'contatou') return { texto: 'Já tocou em contato', tom: 'contato', Icon: MousePointerClick }
-  if (d === 'contatou_e_saiu') return { texto: 'Contatou e saiu depois', tom: 'contato', Icon: LogOut }
-  if (d === 'sem_contato') return { texto: 'Saiu sem contatar', tom: 'fraco', Icon: LogOut }
-  const tipo = d.replace(/^saiu_/, '')
-  const forte = FORTE.has(tipo)
-  return { texto: SAIU[tipo] ?? `Saiu depois de ${acaoDe({ tipo }).rotulo}`, tom: forte ? 'forte' : 'contato', Icon: acaoDe({ tipo }).Icon,
-    provavel: forte ? (tipo === 'mapa' ? 'provável ida ao salão' : 'provável agendamento') : null }
-}
-const faltaMigracao = (e) => e?.code === 'PGRST202' || e?.status === 404 || /could not find the function|schema cache/i.test(e?.message ?? '')
-
-// 45 s · 3 min · 1 h 12 min
-function duracao(s) {
-  const x = Math.max(0, Math.round(n0(s)))
-  if (x < 60) return `${x} s`
-  if (x < 3600) return `${Math.floor(x / 60)} min`
-  return `${Math.floor(x / 3600)} h ${Math.floor((x % 3600) / 60)} min`
-}
-const mmss = (s) => `${String(Math.floor(n0(s) / 60)).padStart(2, '0')}:${String(Math.round(n0(s)) % 60).padStart(2, '0')}`
-const segs = (a, b) => (new Date(a).getTime() - new Date(b).getTime()) / 1000
-const rotuloOrigem = (v) => (v.origem === 'outro' && v.ref ? v.ref.replace(/^www\./, '') : ORIGEM[v.origem] ?? v.origem ?? 'Outro site')
-const aparelhoDe = (v) => [APARELHO[v.dispositivo] ?? null, v.sistema, v.navegador].filter(Boolean).join(' · ') || 'Aparelho desconhecido'
-const lugarDe = (v) => (v.cidade ? `${v.cidade}${v.uf ? `, ${v.uf}` : ''}${v.bairro ? ` (${v.bairro})` : ''}` : null)
-const urlDaPagina = (p) => urlDoAmbiente('cliente', p)
-
 let memoria = null // voltar para a aba mostra a última leitura na hora
 
-export default function AoVivo() {
+function Agora() {
   const [dados, setDados] = useState(memoria)
   const [erro, setErro] = useState('')
   const [aberto, setAberto] = useState(null)
@@ -141,7 +108,7 @@ export default function AoVivo() {
   const semContato = n0(desfechos.find((d) => d.desfecho === 'sem_contato')?.n)
 
   return (
-    <div className="pv" data-teste="ao-vivo">
+    <>
       {erro && <div className="alert alert-error">{erro}</div>}
       <section className="pv-topo">
         <div className="pv-agora" role="status" aria-live="polite">
@@ -161,6 +128,7 @@ export default function AoVivo() {
           <div><b>{formatar(hoje.paginas)}</b><span>páginas vistas</span></div>
           <div><b>{duracao(hoje.tempo_medio_s)}</b><span>tempo médio</span></div>
           {hoje.com_contato != null && <div data-teste="ao-vivo-contato-hoje"><b>{formatar(hoje.com_contato)}</b><span>tocaram em contato · {taxaTexto(taxa(hoje.com_contato, hoje.visitas))}</span></div>}
+          {hoje.primeira != null && <div data-teste="ao-vivo-novas-hoje"><b>{formatar(hoje.primeira)}</b><span>{n0(hoje.primeira) === 1 ? 'pessoa nova' : 'pessoas novas'} · {formatar(hoje.recorrente)} {n0(hoje.recorrente) === 1 ? 'voltou' : 'voltaram'}</span></div>}
         </div>
       </section>
 
@@ -176,7 +144,7 @@ export default function AoVivo() {
           )}
           {recentes.length > 0 && (
             <details className="pv-recentes" open={verRecentes} onToggle={(e) => setVerRecentes(e.currentTarget.open)}>
-              <summary data-teste="ao-vivo-passaram"><History size={14} /> Passaram por aqui {noPeriodo} ({recentes.length}{n0(dados.no_periodo) - ativos.length > recentes.length ? ` de ${formatar(n0(dados.no_periodo) - ativos.length)}` : ''}){temAcoes && <ResumoSaidas lista={recentes} />}</summary>
+              <summary data-teste="ao-vivo-passaram"><History size={14} /> Passaram por aqui {noPeriodo} ({recentes.length}{n0(dados.no_periodo) - ativos.length > recentes.length ? ` de ${formatar(n0(dados.no_periodo) - ativos.length)}` : ''}){temAcoes && <ResumoSaidas lista={recentes} />}{dados.recorrencia && <span className="pv-recentes-rec" data-teste="ao-vivo-rec-periodo"> · {formatar(dados.recorrencia.primeira)} {n0(dados.recorrencia.primeira) === 1 ? 'nova' : 'novas'} · {formatar(dados.recorrencia.recorrente)} {n0(dados.recorrencia.recorrente) === 1 ? 'voltou' : 'voltaram'}</span>}</summary>
               <ul className="pv-lista pv-lista-saiu">
                 {recentes.map((v) => <Visitante key={v.id} v={v} agora={agora} saiu aberto={aberto === v.id} onAbrir={() => setAberto((x) => (x === v.id ? null : v.id))} />)}
               </ul>
@@ -266,111 +234,8 @@ export default function AoVivo() {
         {dados.geo?.carregado_em
           ? <> A cidade pelo IP é aproximada (no celular, a operadora costuma aparecer na capital ou na cidade-polo), pela base <a href="https://db-ip.com" target="_blank" rel="noopener noreferrer">IP Geolocation by DB-IP</a> de {dados.geo.versao}. Quem autorizou a localização no guia aparece pelo GPS.</>
           : <> A cidade pelo IP liga quando o bat B carregar a base de IP (DB-IP Lite); até lá, só aparece a cidade de quem autorizou a localização no guia.</>}
+        {dados.recorrencia && <> "1ª vez" e "voltou" vêm de um código fixo da conexão e do navegador (aproximado: no celular fora do Wi-Fi a conexão muda). O Histórico guarda 90 dias.</>}
       </p>
-    </div>
-  )
-}
-
-// "agora" · "há 40 s" · "há 3 min"
-const ha = (s) => (s < 5 ? 'agora' : `há ${duracao(s)}`)
-const MAX_CHIPS = 5
-
-// um toque no feed: o que, em que salão, quando, com que aparelho e de onde; tocar abre a visita
-function Toque({ a, agora, onAbrir }) {
-  const { rotulo, Icon } = acaoDe(a)
-  const lugar = lugarDe(a)
-  const corpo = (
-    <>
-      <span className="pv-feed-icone" data-tom={tomDe(a.tipo)}><Icon size={15} aria-hidden="true" /></span>
-      <span className="pv-feed-corpo">
-        <b>{rotulo}{a.lugar && <span className="pv-feed-salao"> · {a.lugar}</span>}</b>
-        <small>{ha(segs(agora, a.em))} · {APARELHO[a.dispositivo] ?? 'aparelho desconhecido'}{lugar ? ` · ${lugar}` : ''}</small>
-      </span>
     </>
-  )
-  return (
-    <li data-teste="ao-vivo-toque">
-      {onAbrir ? <button type="button" className="pv-feed-item" onClick={onAbrir} title="Ver a visita">{corpo}</button> : <div className="pv-feed-item">{corpo}</div>}
-    </li>
-  )
-}
-
-// no resumo dos que saíram há pouco: quantos saíram num contato com o salão
-function ResumoSaidas({ lista }) {
-  const n = lista.filter((v) => desfechoDe(v.desfecho)?.provavel).length
-  return n ? <span className="pv-recentes-resumo"> · {n} {n === 1 ? 'saiu num contato com o salão' : 'saíram num contato com o salão'}</span> : null
-}
-
-function Visitante({ v, agora, aberto, onAbrir, saiu = false }) {
-  const Icone = ICONE[v.dispositivo] ?? Monitor
-  const lugar = lugarDe(v)
-  const tempo = segs(saiu ? v.visto_em : agora, v.inicio_em)
-  const utm = v.utm && typeof v.utm === 'object' ? [v.utm.source, v.utm.medium, v.utm.campaign].filter(Boolean).join(' / ') : ''
-  const acoes = Array.isArray(v.acoes) ? v.acoes : []
-  const fim = saiu ? desfechoDe(v.desfecho) : null
-  // o caminho com os toques no meio, na ordem do tempo (a página antes do toque feito nela)
-  const linha = [
-    ...(v.trajeto ?? []).map((p, i) => ({ k: 'p', t: n0(p.t), p: p.p, ultima: i === (v.trajeto?.length ?? 0) - 1 })),
-    ...acoes.map((a) => ({ k: 'a', t: n0(a.t), a })),
-  ].sort((x, y) => x.t - y.t || (x.k === 'p' ? -1 : 1))
-  return (
-    <li id={`pv-vis-${v.id}`} className={'pv-vis' + (aberto ? ' aberto' : '') + (saiu ? ' saiu' : '') + (fim?.provavel ? ' provavel' : '')} data-teste="ao-vivo-visita">
-      <button type="button" className="pv-vis-topo" onClick={onAbrir} aria-expanded={aberto}>
-        <span className="pv-vis-icone" data-aparelho={v.dispositivo ?? 'outro'}><Icone size={18} aria-hidden="true" /></span>
-        <span className="pv-vis-corpo">
-          <b className="pv-vis-pagina">{v.titulo || v.pagina}</b>
-          <small className="pv-vis-caminho">{v.pagina}</small>
-          <span className="pv-vis-linha">
-            <span className={'pv-tag pv-origem-' + (v.origem ?? 'outro')}>{rotuloOrigem(v)}</span>
-            {lugar
-              ? <span className="pv-vis-lugar"><MapPin size={12} aria-hidden="true" />{lugar} <span className={'pv-fonte ' + (v.local_fonte === 'gps' ? 'gps' : 'ip')}>{v.local_fonte === 'gps' ? 'GPS' : 'IP aprox.'}</span></span>
-              : <span className="pv-vis-lugar muted"><MapPin size={12} aria-hidden="true" />cidade desconhecida</span>}
-            <span>{aparelhoDe(v)}</span>
-            <span><Clock size={12} aria-hidden="true" />{saiu ? `ficou ${duracao(tempo)}` : `há ${duracao(tempo)}`} · {formatar(v.paginas)} {n0(v.paginas) === 1 ? 'página' : 'páginas'}</span>
-          </span>
-          {(acoes.length > 0 || fim) && (
-            <span className="pv-vis-acoes" data-teste="ao-vivo-acoes">
-              {fim && <span className="pv-desfecho" data-tom={fim.tom} data-teste="ao-vivo-desfecho"><fim.Icon size={12} aria-hidden="true" />{fim.texto}{fim.provavel && <em> · {fim.provavel}</em>}</span>}
-              {acoes.slice(0, MAX_CHIPS).map((a, i) => { const { rotulo, Icon } = acaoDe(a); return <span key={`${a.tipo}-${i}`} className="pv-chip" data-tom={tomDe(a.tipo)} title={a.lugar ? `${rotulo} · ${a.lugar}` : rotulo}><Icon size={12} aria-hidden="true" />{rotulo}</span> })}
-              {acoes.length > MAX_CHIPS && <span className="pv-chip">+{acoes.length - MAX_CHIPS}</span>}
-            </span>
-          )}
-        </span>
-        {aberto ? <ChevronUp size={16} aria-hidden="true" /> : <ChevronDown size={16} aria-hidden="true" />}
-      </button>
-      {aberto && (
-        <div className="pv-vis-detalhe" data-teste="ao-vivo-trajeto">
-          <ol className="pv-trajeto">
-            {linha.map((x, i) => x.k === 'p' ? (
-              <li key={`p-${x.p}-${i}`}>
-                <span className="pv-trajeto-t">{mmss(x.t)}</span>
-                <a href={urlDaPagina(x.p)} target="_blank" rel="noopener noreferrer">{x.p}</a>
-                {x.ultima && !saiu && <span className="pv-tag pv-aqui">agora</span>}
-              </li>
-            ) : (
-              <li key={`a-${x.a.tipo}-${i}`} className="pv-trajeto-acao" data-tom={tomDe(x.a.tipo)}>
-                <span className="pv-trajeto-t">{mmss(x.t)}</span>
-                {(() => { const { rotulo, Icon } = acaoDe(x.a); return <span className="pv-chip" data-tom={tomDe(x.a.tipo)}><Icon size={12} aria-hidden="true" />{rotulo}</span> })()}
-                {x.a.lugar && <span className="pv-trajeto-salao">{x.a.lugar}</span>}
-              </li>
-            ))}
-            {saiu && (
-              <li className="pv-trajeto-fim" data-tom={fim?.tom ?? 'fraco'}>
-                <span className="pv-trajeto-t">{mmss(tempo)}</span>
-                <span>{fim ? <>{fim.texto}{fim.provavel && <em> · {fim.provavel}</em>}</> : 'Saiu'}</span>
-              </li>
-            )}
-          </ol>
-          <dl className="pv-ficha">
-            <dt>Entrou por</dt><dd><a href={urlDaPagina(v.entrada)} target="_blank" rel="noopener noreferrer">{v.entrada} <ExternalLink size={11} /></a></dd>
-            <dt>Origem</dt><dd>{ORIGEM[v.origem] ?? v.origem}{v.ref ? ` (${v.ref})` : ''}</dd>
-            {utm && <><dt>Campanha</dt><dd>{utm}</dd></>}
-            <dt>Aparelho</dt><dd>{aparelhoDe(v)}{v.tela ? ` · tela ${v.tela.replace('x', '×')}` : ''}</dd>
-            {v.idioma && <><dt>Idioma</dt><dd>{v.idioma}</dd></>}
-            <dt>Cidade</dt><dd>{lugar ? `${lugar} · ${v.local_fonte === 'gps' ? 'pelo GPS (autorizou a localização)' : 'aproximada pelo IP'}` : 'desconhecida'}</dd>
-          </dl>
-        </div>
-      )}
-    </li>
   )
 }

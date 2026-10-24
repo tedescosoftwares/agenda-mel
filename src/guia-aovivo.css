@@ -151,3 +151,49 @@ button.pv-feed-item:hover { background: #fbf7fa; }
 .pv-periodo button.on { background: #fff; color: var(--rosa); box-shadow: 0 1px 3px rgba(61, 12, 78, 0.12); }
 .pv-lista-saiu { max-height: 70vh; overflow-y: auto; }
 
+
+/* ---------- 3.62: as seções (Agora / Histórico), as horas de cada visita e a recorrência ---------- */
+.pv .pg-wa-nav { align-self: flex-start; }
+.pv-vis-horario { color: var(--texto-2); }
+.pv-tag.pv-nova { background: #fff1d6; color: #9a5b00; gap: 0.2rem; }
+.pv-tag.pv-volta { background: #e6f0ff; color: #1f4fb0; gap: 0.2rem; }
+.pv-recentes-rec { color: var(--texto-2); }
+.pv-hist { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
+.pv-hist-controles { display: flex; flex-direction: column; gap: 0.7rem; background: #fff; border: 1px solid var(--fio); border-radius: 18px; padding: 0.9rem 1.1rem; }
+.pv-hist-periodo { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.8rem; color: var(--texto-2); }
+.pv-hist-periodo > small { display: inline-flex; align-items: center; gap: 0.3rem; color: var(--texto-3); font-size: 0.74rem; }
+.pv-hist-datas { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.78rem; color: var(--texto-2); }
+.pv-hist-datas input { font: inherit; font-size: 0.78rem; padding: 0.25rem 0.4rem; border: 1px solid var(--fio); border-radius: 8px; background: #fff; color: inherit; }
+.pv-hist-filtros { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.pv-hist-filtros .plat-select { font-size: 0.78rem; padding: 0.3rem 1.6rem 0.3rem 0.6rem; max-width: 200px; }
+.pv-hist-toggle { display: inline-flex; align-items: center; gap: 0.3rem; border: 1px solid var(--fio); background: #fff; color: var(--texto-2); font: inherit; font-size: 0.76rem; font-weight: 600; padding: 0.28rem 0.65rem; border-radius: 999px; cursor: pointer; }
+.pv-hist-toggle.on { background: var(--pv-contato-fundo); border-color: transparent; color: var(--pv-contato); }
+.pv-hist-busca { display: inline-flex; align-items: center; gap: 0.35rem; border: 1px solid var(--fio); border-radius: 999px; padding: 0.2rem 0.6rem; color: var(--texto-3); background: #fff; }
+.pv-hist-busca input { border: none; background: none; font: inherit; font-size: 0.78rem; color: var(--texto); width: 170px; outline: none; }
+.pv-hist-busca button { border: none; background: none; color: inherit; cursor: pointer; display: grid; place-items: center; padding: 0; }
+.pv-hist-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.6rem; transition: opacity 0.2s; }
+@media (min-width: 1200px) { .pv-hist-kpis { grid-template-columns: repeat(7, 1fr); } }
+.pv-hist-kpis[aria-busy="true"] { opacity: 0.6; }
+.pv-kpi { display: flex; flex-direction: column; gap: 0.1rem; background: #fff; border: 1px solid var(--fio); border-radius: 14px; padding: 0.7rem 0.85rem; min-width: 0; }
+.pv-kpi-icone { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; background: var(--cinza-1, #f3f2f7); color: var(--texto-2); margin-bottom: 0.25rem; }
+.pv-kpi b { font-size: 1.35rem; letter-spacing: -0.02em; line-height: 1.1; }
+.pv-kpi > span { font-size: 0.74rem; color: var(--texto-2); font-weight: 600; }
+.pv-kpi small { font-size: 0.68rem; color: var(--texto-3); }
+.pv-kpi[data-tom="nova"] .pv-kpi-icone { background: #fff1d6; color: #9a5b00; }
+.pv-kpi[data-tom="volta"] .pv-kpi-icone { background: #e6f0ff; color: #1f4fb0; }
+.pv-kpi[data-tom="contato"] .pv-kpi-icone { background: var(--pv-contato-fundo); color: var(--pv-contato); }
+.pv-kpi[data-tom="forte"] .pv-kpi-icone { background: var(--pv-forte-fundo); color: var(--pv-forte); }
+.pv-dias { display: flex; align-items: flex-end; gap: 3px; height: 150px; }
+.pv-dias span { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%; min-width: 0; }
+.pv-dias i { width: 100%; background: #ffc2d8; border-radius: 3px 3px 1px 1px; display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden; }
+.pv-dias em { display: block; width: 100%; background: var(--des-contato); }
+.pv-dias small { font-size: 0.6rem; color: var(--texto-3); height: 0.9rem; margin-top: 0.15rem; white-space: nowrap; }
+.pv-hist-grade { background: #fff; border: 1px solid var(--fio); border-radius: 18px; padding: 1rem 1.2rem; }
+.pv-lista-hist { max-height: none; }
+.pv-hist-mais { margin-top: 0.7rem; align-self: center; }
+@media (max-width: 640px) {
+  .pv-hist-busca input { width: 120px; }
+  .pv-dias { height: 110px; }
+  .pv-dias small { font-size: 0.5rem; }
+  .pv-hist-kpis { grid-template-columns: repeat(2, 1fr); }
+}

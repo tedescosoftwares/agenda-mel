@@ -1,4 +1,4 @@
-// O site ao vivo no modo demonstração (3.44): imita site_ao_vivo() (migrações 192 e 193) com visitantes de mentira que
+// O site ao vivo no modo demonstração (3.44): imita site_ao_vivo() (migrações 192 e 193; 3.62: a recorrência da 209) com visitantes de mentira que
 // entram, andam pelas páginas, tocam no WhatsApp, no Como chegar, no Quero marcar... e saem com o relógio (um ciclo de
 // 20 minutos), e soma as batidas e os toques de verdade do demo (demoPresenca, chamada por src/lib/presenca.js, e
 // demoAcao, chamada por src/lib/eventos.js, quando alguém abre o site no modo demo).
@@ -52,6 +52,8 @@ const MOLDES = [
   [900, 240, 'outro', 'guiadolitoral.com.br', null, 'computador', 'Windows', 'Edge', '1366x768', 'santos', 'ip', ['/saloes/regiao/baixada-santista'], []],
   [1000, 480, 'google', 'www.google.com', null, 'celular', 'Android 14', 'Chrome', '412x915', 'mongagua', 'ip', ['/saloes/mongagua', '/saloes/itanhaem/atelie-cabelo-e-arte'], [['whatsapp', 100]]],
 ]
+// 3.62: quantas vezes a pessoa de cada molde já esteve aqui (0 = primeira vez)
+const ANTES = [0, 2, 0, 1, 0, 0, 3, 0, 1, 0, 0, 2]
 const CICLO = 1200
 const PASSO_S = 70 // cada visitante de mentira troca de página a cada ~70 s
 const T0 = Math.floor(Date.now() / 1000) - 600 // o demo abre no meio do ciclo, já com gente no site
@@ -125,13 +127,15 @@ function deMentira(agora, janela = 1800) {
         saiu_em: agora > fim ? iso(fim) : null, pagina, titulo: TITULOS[pagina] ?? null, entrada: rota[0], paginas: passos, trajeto,
         origem, ref, utm, dispositivo, sistema, navegador, tela, idioma: 'pt-BR', cidade: c.cidade, uf: c.uf, bairro: null, local_fonte: fonte,
         lat: fonte === 'gps' ? +(c.lat + 0.004 * (i % 3)).toFixed(3) : c.lat, lng: fonte === 'gps' ? +(c.lng - 0.003 * (i % 2)).toFixed(3) : c.lng,
+        pessoa: `p${i}`, visitas_antes: ANTES[i], ultima_antes_em: ANTES[i] ? iso(inicio - (2 + i) * 86400) : null, primeira_vez: ANTES[i] === 0, recorrencia: ANTES[i] === 0 ? 'primeira' : 'recorrente',
       })
     }
   })
   for (const v of REAIS.values()) {
     out.push({ acoes: TOQUES_REAIS.filter((a) => new Date(a.em).getTime() / 1000 >= v.inicio - 60), id: v.id, inicio_em: iso(v.inicio), visto_em: iso(v.visto), saiu_em: v.saiu ? iso(v.saiu) : null, pagina: v.pagina, titulo: v.titulo, entrada: v.entrada,
       paginas: v.trajeto.length, trajeto: v.trajeto, origem: v.origem, ref: v.ref, utm: v.utm, dispositivo: v.dispositivo, sistema: v.sistema, navegador: v.navegador,
-      tela: v.tela, idioma: v.idioma, cidade: v.cidade, uf: v.uf, bairro: null, local_fonte: v.local_fonte, lat: v.lat, lng: v.lng })
+      tela: v.tela, idioma: v.idioma, cidade: v.cidade, uf: v.uf, bairro: null, local_fonte: v.local_fonte, lat: v.lat, lng: v.lng,
+      pessoa: 'voce', visitas_antes: 0, ultima_antes_em: null, primeira_vez: true, recorrencia: 'primeira' })
   }
   for (const v of out) {
     v.contatos = v.acoes.filter((a) => ehContato(a.tipo)).length
@@ -188,8 +192,9 @@ export function demoAoVivo({ horas_ } = {}) {
     ultimos_30: trinta.length,
     horas, no_periodo: periodo.length,
     minutos,
-    ativos,
-    recentes: recentes.slice(0, 500),
+    ativos: ativos.map(semPessoa),
+    recentes: recentes.slice(0, 500).map(semPessoa),
+    recorrencia: { primeira: periodo.filter((v) => v.recorrencia === 'primeira').length, recorrente: periodo.filter((v) => v.recorrencia === 'recorrente').length, desconhecida: 0 },
     paginas_agora: [...paginas.values()].sort((a, b) => b.n - a.n),
     origens: contar(periodo, 'origem'),
     dispositivos: contar(periodo, 'dispositivo'),
@@ -211,9 +216,132 @@ export function demoAoVivo({ horas_ } = {}) {
       desfechos: Object.entries(somaDesfechos).map(([d, n]) => ({ desfecho: d, n })).sort((a, b) => b.n - a.n),
       saidas_sem_contato: [['/saloes/itanhaem', 31], ['/', 22], ['/saloes/itanhaem/unhas', 14], ['/blog/como-escolher-salao', 9], ['/saloes/regiao/baixada-santista', 7]]
         .map(([pagina, n]) => ({ pagina, titulo: TITULOS[pagina] ?? null, n: n + (ultimaSemContato.get(pagina) ?? 0) })).sort((a, b) => b.n - a.n),
+      primeira: 104 + trinta.filter((v) => v.recorrencia === 'primeira').length, recorrente: 76 + trinta.filter((v) => v.recorrencia === 'recorrente').length,
     },
     geo: { carregado_em: new Date(Date.now() - 3 * 86400e3).toISOString(), versao: '2026-10', faixas: 412515 },
   }
+}
+
+// a visita sem o código da pessoa (como o banco devolve)
+const semPessoa = (v) => { const c = { ...v }; delete c.pessoa; delete c.dia; delete c.hora; return c }
+// 3.62 (migração 209): o histórico de 90 dias, gerado uma vez por dia de forma determinística (o mesmo sorteio a cada
+// abertura), com pessoas que voltam (r0..r59) e pessoas novas; o site "cresce" ao longo dos 90 dias
+const mulberry = (a) => () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let x = Math.imul(a ^ (a >>> 15), 1 | a); x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x; return ((x ^ (x >>> 14)) >>> 0) / 4294967296 }
+const FUSO = 'America/Sao_Paulo'
+// os formatadores nascem uma vez (criar um Intl.DateTimeFormat por visita travava a tela nos 90 dias)
+const FMT_DIA = new Intl.DateTimeFormat('en-CA', { timeZone: FUSO, year: 'numeric', month: '2-digit', day: '2-digit' })
+const FMT_HORA = new Intl.DateTimeFormat('en-GB', { timeZone: FUSO, hour: 'numeric', hourCycle: 'h23' })
+const hojeBr = () => FMT_DIA.format(new Date())
+const diaMenos = (dia, n) => { const d = new Date(dia + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() - n); return d.toISOString().slice(0, 10) }
+const inicioDoDia = (dia) => Math.floor(new Date(dia + 'T03:00:00Z').getTime() / 1000) // Brasília = UTC-3
+const diaDe = (isoData) => FMT_DIA.format(new Date(isoData))
+const horaDe = (isoData) => Number(FMT_HORA.format(new Date(isoData)))
+const dowDe = (dia) => new Date(dia + 'T12:00:00Z').getUTCDay()
+const FORTES = new Set(['saiu_whatsapp', 'saiu_ligar', 'saiu_mapa', 'saiu_agendar_mimo', 'saiu_pedido_enviado'])
+let HISTORICO = null
+function historico() {
+  const hoje = hojeBr()
+  if (HISTORICO?.hoje === hoje) return HISTORICO
+  const agora = Math.floor(Date.now() / 1000)
+  const visitas = []
+  const pessoas = new Map() // pessoa → { n, ultima }
+  let id = 500000
+  for (let d = 89; d >= 0; d--) {
+    const dia = diaMenos(hoje, d)
+    const rng = mulberry(7919 + d)
+    const dow = new Date(dia + 'T12:00:00Z').getUTCDay()
+    const base = dow === 0 ? 9 : dow === 6 ? 17 : 13 + (d % 4) + Math.floor(rng() * 6)
+    const n = Math.round(base * (1 + (89 - d) / 150))
+    const ini = inicioDoDia(dia)
+    const doDia = []
+    for (let k = 0; k < n; k++) {
+      const m = MOLDES[Math.floor(rng() * MOLDES.length)]
+      const h = 8 + Math.floor(rng() * 13)
+      const inicio = ini + h * 3600 + Math.floor(rng() * 3600)
+      const dura = Math.max(20, Math.round(m[1] * (0.5 + rng())))
+      const volta = rng() < 0.35
+      doDia.push({ m, inicio, dura, h, pessoa: volta ? `r${Math.floor(rng() * 60)}` : `n${id + k}` })
+    }
+    doDia.sort((a, b) => a.inicio - b.inicio)
+    for (const { m, inicio, dura, h, pessoa } of doDia) {
+      if (inicio > agora - 120) continue // hoje: só até agora
+      const [, , origem, ref, utm, dispositivo, sistema, navegador, tela, cid, fonte, rota, toques] = m
+      const antes = pessoas.get(pessoa)
+      const passos = Math.min(rota.length, 1 + Math.floor(dura / PASSO_S))
+      const trajeto = rota.slice(0, passos).map((p, j) => ({ p, t: j * PASSO_S }))
+      const pagina = trajeto.at(-1).p
+      const c = CIDADES[cid]
+      const acoes = toques.filter(([, ts]) => ts <= dura).map(([tipo, ts]) => toque(tipo, inicio + ts, rota[Math.min(rota.length - 1, Math.floor(ts / PASSO_S))], ts))
+      const v = { id: id++, inicio_em: iso(inicio), visto_em: iso(inicio + dura), saiu_em: iso(inicio + dura), pagina, titulo: TITULOS[pagina] ?? null, entrada: rota[0], paginas: passos, trajeto,
+        origem, ref, utm, dispositivo, sistema, navegador, tela, idioma: 'pt-BR', cidade: c.cidade, uf: c.uf, bairro: null, local_fonte: fonte, lat: c.lat, lng: c.lng, acoes,
+        pessoa, visitas_antes: antes?.n ?? 0, ultima_antes_em: antes ? iso(antes.ultima) : null, primeira_vez: !antes, recorrencia: antes ? 'recorrente' : 'primeira', duracao_s: dura, terminou: true, dia, hora: h }
+      v.contatos = acoes.filter((a) => ehContato(a.tipo)).length
+      v.desfecho = desfecho(v, acoes, agora + 86400)
+      pessoas.set(pessoa, { n: (antes?.n ?? 0) + 1, ultima: inicio + dura })
+      visitas.push(v)
+    }
+  }
+  // umas visitas de antes da migração 209, sem a pessoa (aparecem como "sem como saber")
+  for (const v of visitas.slice(0, 15)) Object.assign(v, { pessoa: null, visitas_antes: 0, ultima_antes_em: null, primeira_vez: null, recorrencia: 'desconhecida' })
+  HISTORICO = { hoje, visitas }
+  return HISTORICO
+}
+const top = (lista) => { const m = new Map(); for (const k of lista) if (k != null) m.set(k, (m.get(k) ?? 0) + 1); return [...m].sort((a, b) => b[1] - a[1]) }
+export function demoVisitas({ de_, ate_, recorrencia_ = 'todas', so_contato_ = false, origem_ = null, dispositivo_ = null, cidade_ = null, pagina_ = null, limite_ = 50, pular_ = 0, so_lista_ = false } = {}) {
+  const { hoje, visitas } = historico()
+  const agora = Math.floor(Date.now() / 1000)
+  const ate = ate_ && ate_ <= hoje ? ate_ : hoje
+  let de = de_ || diaMenos(ate, 6)
+  if (de > ate) de = ate
+  if (de < diaMenos(ate, 89)) de = diaMenos(ate, 89)
+  const deIni = inicioDoDia(de), ateFim = inicioDoDia(ate) + 86400
+  const ms = (x) => new Date(x).getTime() / 1000
+  // hoje também entra quem está no ciclo ao vivo agora (os mesmos visitantes da seção Agora, a última meia hora)
+  const vivos = ate === hoje ? deMentira(agora, 1800).filter((v) => ms(v.inicio_em) >= inicioDoDia(hoje))
+    .map((v) => ({ ...v, duracao_s: Math.round(ms(v.visto_em) - ms(v.inicio_em)), terminou: v.desfecho !== 'navegando' && v.desfecho !== 'contatou', dia: diaDe(v.inicio_em), hora: horaDe(v.inicio_em) })) : []
+  const base = [...visitas.filter((v) => ms(v.inicio_em) >= deIni && ms(v.inicio_em) < ateFim), ...vivos]
+  const busca = String(pagina_ ?? '').trim().toLowerCase()
+  const lim = Math.max(1, Math.min(Number(limite_) || 50, 200)), pul = Math.max(0, Number(pular_) || 0)
+  const rec = ['primeira', 'recorrente', 'desconhecida'].includes(recorrencia_) ? recorrencia_ : 'todas'
+  const sel = base.filter((v) => (rec === 'todas' || v.recorrencia === rec) && (!so_contato_ || v.contatos > 0)
+    && (!origem_ || (v.origem ?? 'outro') === origem_) && (!dispositivo_ || (v.dispositivo ?? 'outro') === dispositivo_) && (!cidade_ || v.cidade === cidade_)
+    && (!busca || v.pagina.includes(busca) || v.entrada.includes(busca) || (v.titulo ?? '').toLowerCase().includes(busca) || v.trajeto.some((t) => t.p.includes(busca))))
+    .sort((a, b) => b.inicio_em.localeCompare(a.inicio_em))
+  let resumo = null
+  if (!so_lista_) {
+    const dias = []; for (let d = de; d <= ate; d = diaMenos(d, -1)) dias.push(d)
+    const voltas = sel.filter((v) => v.recorrencia === 'recorrente' && v.ultima_antes_em)
+    const porCidade = new Map()
+    for (const v of sel) if (v.cidade) { const k = `${v.cidade}|${v.uf}`; const x = porCidade.get(k) ?? { cidade: v.cidade, uf: v.uf, n: 0, gps: 0 }; x.n++; if (v.local_fonte === 'gps') x.gps++; porCidade.set(k, x) }
+    const saloes = new Map()
+    for (const v of sel) for (const a of v.acoes) if (a.lugar && ehContato(a.tipo)) { const x = saloes.get(a.lugar) ?? { lugar: a.lugar, n: 0, whatsapp: 0, pedidos: 0 }; if (a.tipo === 'pedido_enviado') x.pedidos++; else x.n++; if (a.tipo === 'whatsapp') x.whatsapp++; saloes.set(a.lugar, x) }
+    const paginas = sel.reduce((s, v) => s + v.paginas, 0)
+    // por dia, por hora e por dia da semana numa passada só
+    const porDia = new Map(dias.map((d) => [d, { dia: d, n: 0, primeira: 0, recorrente: 0, contato: 0 }]))
+    const porHora = Array.from({ length: 24 }, (_, h) => ({ h, n: 0 }))
+    const porDow = Array.from({ length: 7 }, (_, d) => ({ d, n: 0 }))
+    for (const v of sel) {
+      const x = porDia.get(v.dia)
+      if (x) { x.n++; if (v.recorrencia === 'primeira') x.primeira++; else if (v.recorrencia === 'recorrente') x.recorrente++; if (v.contatos > 0) x.contato++ }
+      porHora[v.hora].n++; porDow[dowDe(v.dia)].n++
+    }
+    resumo = {
+      visitas: sel.length, pessoas: new Set(sel.filter((v) => v.pessoa).map((v) => v.pessoa)).size, sem_pessoa: sel.filter((v) => !v.pessoa).length,
+      primeira: sel.filter((v) => v.recorrencia === 'primeira').length, recorrente: sel.filter((v) => v.recorrencia === 'recorrente').length, desconhecida: sel.filter((v) => v.recorrencia === 'desconhecida').length,
+      volta_media_dias: voltas.length ? +(voltas.reduce((s, v) => s + (ms(v.inicio_em) - ms(v.ultima_antes_em)) / 86400, 0) / voltas.length).toFixed(1) : null,
+      com_contato: sel.filter((v) => v.contatos > 0).length, provaveis: sel.filter((v) => FORTES.has(v.desfecho)).length, terminadas: sel.filter((v) => v.terminou).length,
+      paginas, tempo_medio_s: sel.length ? Math.round(sel.reduce((s, v) => s + v.duracao_s, 0) / sel.length) : 0,
+      por_dia: [...porDia.values()], por_hora: porHora, por_dia_semana: porDow,
+      origens: contar(sel, 'origem'), dispositivos: contar(sel, 'dispositivo'), navegadores: contar(sel, 'navegador').slice(0, 8), cidades: [...porCidade.values()].sort((a, b) => b.n - a.n).slice(0, 12),
+      entradas: top(sel.map((v) => v.entrada)).slice(0, 10).map(([pagina, n]) => ({ pagina, titulo: TITULOS[pagina] ?? null, n })),
+      paginas_vistas: top(sel.flatMap((v) => v.trajeto.map((t) => t.p))).slice(0, 10).map(([pagina, n]) => ({ pagina, n })),
+      acoes: top(sel.flatMap((v) => v.acoes.filter((a) => a.tipo !== 'localizacao').map((a) => a.tipo))).map(([tipo, n]) => ({ tipo, rotulo: TIPOS[tipo]?.[0] ?? tipo, grupo: TIPOS[tipo]?.[1] ?? 'outro', n })),
+      saloes: [...saloes.values()].sort((a, b) => b.n - a.n).slice(0, 10),
+      desfechos: top(sel.filter((v) => v.terminou).map((v) => v.desfecho)).map(([desfecho, n]) => ({ desfecho, n })),
+      saidas_sem_contato: top(sel.filter((v) => v.desfecho === 'sem_contato').map((v) => v.pagina)).slice(0, 8).map(([pagina, n]) => ({ pagina, titulo: TITULOS[pagina] ?? null, n })),
+    }
+  }
+  return { de, ate, agora: iso(agora), hoje, total: sel.length, visitas: sel.slice(pul, pul + lim).map(semPessoa), resumo }
 }
 
 // 3.49: "de onde eu pareço estar?" (migração 196): no demo, Itanhaém pela conexão; com um ponto, a cidade do demo mais perto
@@ -229,4 +357,5 @@ export const AO_VIVO_RPC = {
   site_ao_vivo: (a) => demoAoVivo(a ?? {}),
   site_presenca: (a) => { demoPresenca(a); return null },
   site_minha_cidade: (a) => minhaCidade(a ?? {}),
+  site_visitas: (a) => demoVisitas(a ?? {}),
 }

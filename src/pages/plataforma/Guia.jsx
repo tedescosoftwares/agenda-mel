@@ -15,6 +15,7 @@ import Interesses from '../../components/plataforma/guia/Interesses'
 import Desempenho from '../../components/plataforma/guia/Desempenho'
 import Abordagem from '../../components/plataforma/guia/Abordagem'
 import PublicarAgora from '../../components/plataforma/guia/PublicarAgora'
+import NovoSalao from '../../components/plataforma/guia/NovoSalao'
 import AoVivo from '../../components/plataforma/guia/AoVivo'
 import WhatsAppGuia from '../../components/plataforma/guia/WhatsAppGuia'
 import OnboardingGuia from '../../components/plataforma/guia/OnboardingGuia'
@@ -23,7 +24,7 @@ import { IAS, iaLembrada, lembrarIa, modeloLembrado, lembrarModelo } from '../..
 import { lerEmFatias, COLUNAS_LISTA, COLUNAS_LISTA_ANTIGAS, colunaFalta, consultaGlobal, POR_PAGINA } from '../../lib/guiaPlataformaDados'
 import { agruparPorRegiao, regiaoDaCidade } from '../../lib/guiaRegioes'
 import { slugificar } from '../../lib/guia'
-import { ClipboardCheck, Globe2, Upload, MapPinned, Inbox, X, BarChart3, Handshake, MapPin, RefreshCw, LoaderCircle, Radio, MessageCircle, UserPlus } from 'lucide-react'
+import { ClipboardCheck, Globe2, Upload, MapPinned, Inbox, X, BarChart3, Handshake, MapPin, RefreshCw, LoaderCircle, Radio, MessageCircle, UserPlus, Plus } from 'lucide-react'
 import '../../guia-plataforma.css'
 
 // Guia de salões (3.9): uma página pública para cada salão da região, que
@@ -829,6 +830,10 @@ export default function Guia() {
     else cidadeDoLugar(f.selId).then(ir, () => aplicar())
   }, [escolherCidade, cidadeDoLugar])
 
+  // 3.63: o salão novo à mão (o modal; o botão no cabeçalho e o atalho na aba Importar)
+  const [novoSalao, setNovoSalao] = useState(false)
+  const abrirNovoSalao = () => setNovoSalao(true)
+
   const g = {
     lugares: lugares ?? [], paginas: paginas ?? [], interesses: interesses ?? [], carregando: lugares === null, lendo: !!carga.parcial || (cidade === '' && !!consulta?.lendo), listaNoTeto: !!carga.teto, erro,
     cidade: cidade ?? '', cidades, escolherCidade, resumo: resumoVivo, lugarPorId: achar, ia, setIa, modelo: modelos[ia] ?? '', setModelo,
@@ -838,12 +843,13 @@ export default function Guia() {
     gerarPagina, aprovarPagina, salvarContexto, sugerirContexto, escreverContextos, contextos, salvarPagina, pedidoParaIa, conferirTexto, imagensCategorias, salvarImagemCategoria, salvarInteresse, importar, avisar, irPara,
     regioes: listaRegioes, regiaoDaCidade: regiaoDaCidadeDb, salvarRegiaoDaCidade, criarRegiao, salvarRegiao,
     desempenho, carregarDesempenho, desempenhoPorLugar,
+    abrirNovoSalao,
   }
 
   return (
     <Shell>
       <div className="pg-topo">
-        <Cabecalho titulo="Guia de salões" sub="Uma página pública para cada salão da região, montada com os dados dele (de graça). Você aprova." direita={<PublicarAgora avisar={avisar} />} />
+        <Cabecalho titulo="Guia de salões" sub="Uma página pública para cada salão da região, montada com os dados dele (de graça). Você aprova." direita={<div className="pg-topo-botoes"><button type="button" className="btn btn-ghost pg-novo-botao" onClick={abrirNovoSalao} data-teste="guia-novo-salao"><Plus size={16} aria-hidden="true" /> Novo salão</button><PublicarAgora avisar={avisar} /></div>} />
         {Array.isArray(resumo) && cidades.length > 1 && (
           <div className="pg-cidade" data-teste="cidade">
             <label className="pg-cidade-sel">
@@ -899,6 +905,8 @@ export default function Guia() {
       {aba === 'importar' && <><Importar g={g} /><ImportarFotos g={g} /><MiniaturasAntigas g={g} /></>}
       {aba === 'paginas' && <PaginasCidade g={g} />}
       {aba === 'interesses' && <Interesses g={g} />}
+
+      {novoSalao && <NovoSalao g={g} onFechar={() => setNovoSalao(false)} />}
 
       {aviso && (
         <div className={'pg-recado ' + (aviso.tom ?? '')} role="status">

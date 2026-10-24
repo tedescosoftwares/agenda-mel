@@ -169,6 +169,7 @@ export default function Importar({ g }) {
             <li><b>Depois o da Receita:</b> confirma que o salão existe e só completa o que estiver vazio.</li>
           </ol>
           <p className="pg-nota"><Info size={13} /> A importação não sobrescreve o que foi editado à mão e não traz de volta salão removido a pedido do dono. Escolhendo os dois juntos, a tela já manda nessa ordem.</p>
+          <p className="pg-nota"><Info size={13} /> Só um salão, ou alguém pediu para entrar no guia? <button type="button" className="plat-link" onClick={() => g.abrirNovoSalao?.()} data-teste="importar-novo-salao">Cadastre à mão</button>, sem planilha.</p>
         </Painel>
 
         <Painel Icon={ListChecks} titulo="O que importar">

@@ -56,7 +56,7 @@ case "${1:-}" in
     fi
 
     # sem duplicar: tira o que já houver nosso antes de pôr de volta
-    { crontab -l 2>/dev/null | grep -vF "$MARCA" | grep -vF "$AQUI/disparar.sh"
+    { crontab -l 2>/dev/null | grep -vF "$MARCA" | grep -vF "$AQUI/disparar.sh" || true
       echo "$MARCA"
       echo "$LINHA_CRON"; } | crontab -
 

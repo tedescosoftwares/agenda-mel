@@ -46,7 +46,7 @@ case "${1:-}" in
     ;;
   --cron)
     command -v crontab >/dev/null || { vermelho 'Não achei o crontab. No Ubuntu: sudo apt-get install -y cron && sudo systemctl enable --now cron'; exit 1; }
-    { crontab -l 2>/dev/null | grep -vF "$MARCA" | grep -vF "$AQUI/republicar-se-mudou.sh"
+    { crontab -l 2>/dev/null | grep -vF "$MARCA" | grep -vF "$AQUI/republicar-se-mudou.sh" || true
       echo "$MARCA"
       echo "$LINHA_CRON"
       echo "$LINHA_PEDIDOS"

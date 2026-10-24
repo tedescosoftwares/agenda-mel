@@ -10,6 +10,7 @@ import { chamada, foneValido, formatarFone, linkWhats, numeroWhats } from '@mimo
 import { Confirmacao, Folha, type Pergunta } from '@/components/Folha'
 import { Avatar, Aviso, Botao, Cabecalho, Cartao, Chip, Entrada, Linha } from '@/components/ui'
 import { useSessao } from '@/context/sessao'
+import { textoDaAtualizacao } from '@/lib/atualizacao'
 import { NOME_DO_APP, VARIANTE, VERSAO, WEB_URL } from '@/lib/config'
 import { useConfig } from '@/lib/configPublica'
 import { deIso, mascaraData, paraIso } from '@/lib/datas'
@@ -313,7 +314,7 @@ export default function Perfil() {
         </Cartao>
 
         <Text style={[e.versao, { color: t.texto3 }]}>
-          {NOME_DO_APP} {VERSAO} · {VARIANTE}
+          {[`${NOME_DO_APP} ${VERSAO}`, VARIANTE, textoDaAtualizacao()].filter(Boolean).join(' · ')}
         </Text>
       </ScrollView>
 

@@ -138,40 +138,73 @@ Google"). A conta nova chega sem WhatsApp e o app pede o número em
 `src/lib/oauth.ts`. Na demo (`fora`), o botão "entra" como a Juliana sem
 WhatsApp e mostra essa tela.
 
-## Publicar na Play Store (EAS)
+## Publicar na Play Store (EAS) e atualizar por cima (OTA)
 
-Uma vez só:
+A ideia: **uma build na loja de vez em quando, e o resto chega por OTA**. A
+build (`.aab`) é a casca nativa; o JS, as telas e os textos viajam pelo EAS
+Update: você roda um comando, e os aparelhos pegam a versão nova na próxima
+abertura (ou na hora, pela faixa "Reiniciar" que aparece por cima das abas quando
+a atualização terminou de baixar; o app nunca reinicia sozinho no meio de um
+agendamento). No Perfil, a linha da versão mostra "atualizada em dd/mm" quando o
+que está rodando veio por OTA.
 
-1. `npm i -g eas-cli` e `eas login` (conta Expo, grátis).
+### Uma vez só
+
+1. `npm i -g eas-cli` e `eas login` (a conta Expo).
 2. `cd apps/mobile && eas init`: cria o projeto no Expo e mostra um `projectId`.
    Cole em `app.json`, dentro de `"expo"`: `"extra": { "eas": { "projectId": "..." } }`.
-   (O CLI não escreve sozinho porque a configuração é dinâmica, `app.config.js`.)
-3. As variáveis do build ficam no Expo, não no git (repita para `preview` e `development`):
+   (O CLI não escreve sozinho porque a configuração é dinâmica, `app.config.js`.
+   O `app.config.js` monta a URL das atualizações a partir desse `projectId`.)
+3. As variáveis do build ficam no Expo, não no git (repita para `preview`):
    ```
    eas env:create --scope project --environment production --visibility plaintext --name EXPO_PUBLIC_SUPABASE_URL --value https://SEU-PROJETO.supabase.co
    eas env:create --scope project --environment production --visibility plaintext --name EXPO_PUBLIC_SUPABASE_ANON_KEY --value SUA-ANON-KEY
+   eas env:create --scope project --environment production --visibility plaintext --name EXPO_PUBLIC_WEB_URL --value https://mimo.com.vc
    ```
 4. A chave de assinatura o EAS cria e guarda na primeira build
    (`eas credentials -p android` mostra). Não precisa de keystore na mão, e
    nenhuma chave entra no git.
 
-Cada versão:
+### A build da loja
 
 ```
-eas build -p android --profile preview      # .apk para instalar no seu celular e testar
-eas build -p android --profile production   # .aab para a loja (o versionCode sobe sozinho)
-eas submit -p android --profile production  # manda para o Teste interno
+npm run build:teste   # .apk para instalar no seu celular e testar (canal preview)
+npm run build:loja    # .aab para a loja (canal production; o versionCode sobe sozinho)
 ```
 
-Ou suba o `.aab` à mão no Play Console (Teste interno, depois Produção).
-`eas submit` precisa de uma **conta de serviço** do Google Cloud com acesso ao
-Play Console; o JSON dela fica fora do git e entra em `eas.json`
-(`submit.production.android.serviceAccountKeyPath`).
+O `.aab` sobe à mão no Play Console: **Testar e lançar → Teste interno → Criar
+nova versão**, envia o arquivo, salva, publica, e adiciona o seu e-mail na lista
+de testadores (o link de teste instala pela Play Store). Depois, **Produção**.
+Uma conta pessoal nova no Play passa antes por um **teste fechado** com um
+número mínimo de testadores por 14 dias (o Console diz quantos) para liberar a
+produção. `eas submit` (manda direto para o Teste interno) precisa de uma conta
+de serviço do Google Cloud ligada ao Play Console; o JSON dela fica fora do git
+e entra em `eas.json` (`submit.production.android.serviceAccountKeyPath`).
+
+### Atualizar por cima (OTA)
+
+```
+npm run ota -- --message "3.64: o guia no app"      # os aparelhos com a build da loja
+npm run ota:teste -- --message "testando o guia"    # só o .apk de teste (canal preview)
+```
+
+O que chega por OTA: tudo o que é JS e TS (telas, textos, regras, `packages/core`,
+imagens importadas no código). O que **precisa de build nova**: pacote nativo
+novo (`expo install` de algo com código nativo), permissão nova, mudança no
+`app.json`/`app.config.js` (ícone, splash, nome, scheme, App Links, plugins) e
+upgrade do SDK do Expo. A versão de runtime é por **fingerprint**
+(`runtimeVersion: { policy: "fingerprint" }`): o EAS calcula uma impressão da
+parte nativa; a atualização só vai para builds com a mesma impressão. Se o
+`eas update` avisar que nenhuma build tem esse runtime, é hora de
+`npm run build:loja` (e `npm run fingerprint` mostra a impressão atual).
+
+Os canais são por perfil de build (`eas.json`): `preview`, `production`,
+`pro-preview`, `pro-production`. Cada atualização vai para um canal; a build
+instalada só escuta o dela. As variáveis `EXPO_PUBLIC_*` entram na hora do
+`eas update` pela opção `--environment` (os valores do passo 3).
 
 A versão do app (`versionName`) é a do site, lida de `src/lib/versao.js`; o
 `versionCode` é do EAS (`appVersionSource: remote`) e sobe a cada build de produção.
-Só precisa de versão nova na loja quando a **casca** muda (telas nativas, ícone,
-nome); mudança na web é deploy da web, como sempre.
 
 ### Links que abrem no app (App Links)
 

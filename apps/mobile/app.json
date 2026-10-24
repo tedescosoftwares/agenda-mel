@@ -3,6 +3,13 @@
     "name": "MIMO",
     "slug": "mimo",
     "version": "3.0.0",
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "updates": {
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
+    },
     "orientation": "portrait",
     "platforms": [
       "android",

@@ -7,34 +7,59 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "android": { "buildType": "apk" },
-      "env": { "APP_VARIANT": "cliente" }
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "APP_VARIANT": "cliente"
+      },
+      "channel": "development"
     },
     "preview": {
       "distribution": "internal",
-      "android": { "buildType": "apk" },
-      "env": { "APP_VARIANT": "cliente" }
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "APP_VARIANT": "cliente"
+      },
+      "channel": "preview"
     },
     "production": {
       "autoIncrement": true,
-      "android": { "buildType": "app-bundle" },
-      "env": { "APP_VARIANT": "cliente" }
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "env": {
+        "APP_VARIANT": "cliente"
+      },
+      "channel": "production"
     },
     "pro-preview": {
       "extends": "preview",
-      "env": { "APP_VARIANT": "pro" }
+      "env": {
+        "APP_VARIANT": "pro"
+      },
+      "channel": "pro-preview"
     },
     "pro-production": {
       "extends": "production",
-      "env": { "APP_VARIANT": "pro" }
+      "env": {
+        "APP_VARIANT": "pro"
+      },
+      "channel": "pro-production"
     }
   },
   "submit": {
     "production": {
-      "android": { "track": "internal" }
+      "android": {
+        "track": "internal"
+      }
     },
     "pro-production": {
-      "android": { "track": "internal" }
+      "android": {
+        "track": "internal"
+      }
     }
   }
 }

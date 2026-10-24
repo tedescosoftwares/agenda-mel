@@ -4,6 +4,8 @@
 // O que é igual nos dois fica no app.json; aqui entra só o que muda.
 // A versão (versionName) é a do site, lida de src/lib/versao.js. Do
 // versionCode cuida o EAS (eas.json: appVersionSource "remote").
+// As atualizações por cima da loja (OTA) usam a versão de runtime por "fingerprint"
+// (app.json): muda só quando a parte nativa muda; o JS novo chega sem build nova.
 const fs = require('fs')
 const path = require('path')
 
@@ -44,10 +46,16 @@ module.exports = ({ config }) => {
   const imagens = `./assets/images/${v.pasta}`
   const semSplash = (config.plugins ?? []).filter((p) => (Array.isArray(p) ? p[0] : p) !== 'expo-splash-screen')
 
+  // Atualizações OTA (EAS Update): a URL vem do projectId que o `eas init` dá (cole em app.json,
+  // extra.eas.projectId). Sem projectId o app não procura atualização (desenvolvimento).
+  const projectId = config.extra?.eas?.projectId
+  const updates = projectId ? { ...config.updates, url: `https://u.expo.dev/${projectId}` } : config.updates
+
   return {
     ...config,
     name: v.nome,
     version: versao,
+    updates,
     scheme: v.esquema,
     icon: `${imagens}/icone.png`,
     ios: {

@@ -2,6 +2,7 @@ import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router'
 import * as SplashScreen from 'expo-splash-screen'
 import { StatusBar } from 'expo-status-bar'
 import { useEffect } from 'react'
+import { Atualizador } from '@/components/Atualizador'
 import { SessaoProvider, useSessao } from '@/context/sessao'
 import { useTema } from '@/lib/tema'
 import { useAbrirAvisoTocado } from '@/lib/avisos'
@@ -48,6 +49,7 @@ function Navegacao() {
   return (
     <ThemeProvider value={tema}>
       <StatusBar style={t.escuro ? 'light' : 'dark'} />
+      <Atualizador />
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: t.fundo } }}>
         <Stack.Protected guard={logada && !completar}>
           <Stack.Screen name="(tabs)" />

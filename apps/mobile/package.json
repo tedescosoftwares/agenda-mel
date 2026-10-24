@@ -21,6 +21,7 @@
     "expo-splash-screen": "~57.0.9",
     "expo-status-bar": "~57.0.1",
     "expo-system-ui": "~57.0.4",
+    "expo-updates": "~57.0.26",
     "expo-web-browser": "~57.0.3",
     "qrcode": "^1.5.4",
     "react": "19.2.3",
@@ -47,7 +48,12 @@
     "lint": "expo lint",
     "tipos": "tsc --noEmit",
     "doctor": "expo-doctor",
-    "empacotar": "expo export -p android"
+    "empacotar": "expo export -p android",
+    "build:teste": "eas build -p android --profile preview",
+    "build:loja": "eas build -p android --profile production",
+    "ota": "eas update --channel production --environment production",
+    "ota:teste": "eas update --channel preview --environment preview",
+    "fingerprint": "npx expo-updates fingerprint:generate --platform android"
   },
   "private": true,
   "description": "O app da MIMO na loja (Expo/React Native): casca nativa + ponte com a web."

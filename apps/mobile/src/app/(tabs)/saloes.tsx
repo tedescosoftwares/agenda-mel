@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons'
 import { useFocusEffect, useRouter } from 'expo-router'
 import { useCallback, useState } from 'react'
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
@@ -7,8 +8,10 @@ import { supabase } from '@/lib/supabase'
 import { ESPACO, useTema } from '@/lib/tema'
 
 // Os salões (e autônomas) onde ela já tem agenda: a RPC minhas_agendas, a
-// mesma da web. Entrar numa agenda nova é pelo código de seis letras ou pelo
-// QR, lido pela câmera (ler-qr.tsx); os dois caem em v/[codigo].tsx.
+// mesma da web. Entrar numa agenda nova é pelo guia (3.64, a aba Guia: o salão
+// que agenda pela MIMO entra com um toque) ou, escondido atrás de um toque, pelo
+// código de seis letras ou pelo QR lido pela câmera (ler-qr.tsx); os dois caem
+// em v/[codigo].tsx.
 type Agenda = {
   salao: { id: string; nome: string; tipo: string | null; cidade: string | null; logo: string | null; codigo: string | null }
   entrou_em: string | null
@@ -22,6 +25,7 @@ export default function Saloes() {
   const [erro, setErro] = useState<string | null>(null)
   const [atualizando, setAtualizando] = useState(false)
   const [codigo, setCodigo] = useState('')
+  const [comCodigo, setComCodigo] = useState(false)
 
   const carregar = useCallback(async () => {
     const { data, error } = await supabase.rpc('minhas_agendas')
@@ -62,7 +66,18 @@ export default function Saloes() {
         <Cabecalho titulo="Seus salões" sub="Onde você já tem agenda" />
 
         <Cartao>
-          <Text style={[e.forte, { color: t.texto }]}>Tem o código de um salão?</Text>
+          <Text style={[e.forte, { color: t.texto }]}>Quer entrar numa agenda nova?</Text>
+          <Text style={{ color: t.texto2 }}>No guia estão os salões da sua cidade. Os que agendam pela MIMO você entra com um toque; nos outros, a Mel marca para você pelo WhatsApp.</Text>
+          <Botao titulo="Abrir o guia de salões" icone="compass-outline" onPress={() => router.push('/guia')} />
+          <Pressable onPress={() => setComCodigo((v) => !v)} accessibilityRole="button" style={e.dobra} testID="saloes-com-codigo">
+            <Text style={{ color: t.texto2, fontWeight: '600', fontSize: 13.5 }}>Tem o código ou o QR de uma profissional?</Text>
+            <Ionicons name={comCodigo ? 'chevron-up' : 'chevron-down'} size={16} color={t.texto3} />
+          </Pressable>
+        </Cartao>
+
+        {comCodigo ? (
+        <Cartao>
+          <Text style={[e.forte, { color: t.texto }]}>O código do salão</Text>
           <Text style={{ color: t.texto2 }}>São as seis letras do QR ou do link que a profissional te mandou.</Text>
           <View style={e.linhaCodigo}>
             <TextInput
@@ -81,13 +96,14 @@ export default function Saloes() {
           </View>
           <Botao titulo="Ler o QR com a câmera" icone="qr-code-outline" tipo="fantasma" onPress={() => router.push('/ler-qr')} />
         </Cartao>
+        ) : null}
 
         {erro ? <Aviso tom="erro" texto={erro} /> : null}
         {agendas === null && !erro ? <Carregando texto="Buscando seus salões…" /> : null}
         {agendas && agendas.length === 0 ? (
           <Vazio
             titulo="Você ainda não entrou em nenhuma agenda"
-            texto="Pede o código ou o QR para a sua profissional: é com ele que você entra na agenda dela."
+            texto="Encontre o seu salão no guia, ou pede o código ou o QR para a sua profissional."
           />
         ) : null}
         {agendas?.map((ag) => (
@@ -149,6 +165,7 @@ const e = StyleSheet.create({
   conteudo: { padding: ESPACO, gap: 14, paddingBottom: 32 },
   forte: { fontSize: 16, fontWeight: '800' },
   linhaCodigo: { flexDirection: 'row', gap: 10, alignItems: 'center' },
+  dobra: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 4 },
   campo: { flex: 1, minHeight: 48, borderRadius: 14, borderWidth: 1, paddingHorizontal: 14, fontSize: 18, fontWeight: '700', letterSpacing: 2 },
   topo: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   nome: { fontSize: 17, fontWeight: '800' },

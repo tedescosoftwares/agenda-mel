@@ -4,10 +4,11 @@ import { Ciencia } from '@/components/Ciencia'
 import type { Icone } from '@/components/ui'
 import { useTema } from '@/lib/tema'
 
-// As quatro abas da cliente: início (a vitrine), horários, salões, perfil.
+// As cinco abas da cliente: início (a vitrine), o guia de salões (3.64), horários, salões, perfil.
 // O que ainda não é nativo abre na ponte, por cima das abas.
 const ABAS: { nome: string; titulo: string; icone: Icone; cheio: Icone }[] = [
   { nome: 'index', titulo: 'Início', icone: 'home-outline', cheio: 'home' },
+  { nome: 'guia', titulo: 'Guia', icone: 'compass-outline', cheio: 'compass' },
   { nome: 'horarios', titulo: 'Horários', icone: 'calendar-outline', cheio: 'calendar' },
   { nome: 'saloes', titulo: 'Salões', icone: 'storefront-outline', cheio: 'storefront' },
   { nome: 'perfil', titulo: 'Perfil', icone: 'person-circle-outline', cheio: 'person-circle' },

@@ -15,7 +15,7 @@ const VARIANTES = {
     host: 'mimo.com.vc',
     pasta: 'cliente',
     // links do site que abrem dentro do app (App Links); o resto fica no navegador
-    caminhos: ['/v/', '/p/', '/cliente/'],
+    caminhos: ['/v/', '/p/', '/cliente/', '/saloes/'],
   },
   pro: {
     nome: 'MIMO Pro',

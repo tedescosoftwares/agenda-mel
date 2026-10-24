@@ -45,13 +45,16 @@ apps/mobile/
     cadastro.tsx       criar conta pelo convite: quem é você (WhatsApp único), como você entra, confira o e-mail
     ler-qr.tsx         a câmera lê o QR da profissional ou do salão
     (tabs)/index.tsx   Início: próximo horário, atalhos, novidades, promoções, salões, profissionais e destaques
+    (tabs)/guia.tsx    Guia de salões (3.64): a cidade (lembrada; na primeira vez, pela conexão), busca, categorias, a lista
     (tabs)/horarios.tsx Horários: próximos e histórico por mês (as regras da web, ClienteAgenda)
-    (tabs)/saloes.tsx  Salões onde ela tem agenda + entrar por código
+    (tabs)/saloes.tsx  Salões onde ela tem agenda; entrar numa nova pelo guia (o código e o QR ficam atrás de um toque)
     (tabs)/perfil.tsx  Perfil: foto, dados (WhatsApp, e-mail, aniversário), agendas, como ser avisada, ajuda
     agendar/           o fluxo de marcar, nativo: com quem → serviços → data → hora → confirmar → sucesso
                        (remarcar entra pela data; as regras são as da web, src/pages/cliente/Agendar.jsx)
     agendamento/[id]   a página de um horário (as regras da web, ClienteAgendamento)
     salao/[id]         a página do salão: capas, pagamento, endereço, serviços por categoria, equipe, sobre
+    guia/[cidade]/[slug] a página de um salão do guia: fotos, endereço, horários, serviços, sobre, vizinhos;
+                       "Agendar pela MIMO" (entra na agenda, origem guia) ou "Quero marcar pela Mel" (WhatsApp)
     categoria.tsx      os serviços de uma categoria do salão, com quem faz (?salao=&cat=)
     profissional/[id]  a página da profissional: serviços, avaliações, sobre
     servico/[id]       a página de um serviço: fotos, preço, quem faz, o que costuma ir junto
@@ -67,7 +70,8 @@ apps/mobile/
   src/components/          Tela (moldura das telas empilhadas), Trilha (passos), Calendario (mês),
                            Folha (a folha que sobe de baixo, e a Confirmacao), Avaliar, Convites,
                            Ciencia (o aviso que ela precisa ler antes de seguir)
-  src/lib/             config (variante, env), supabase, tema (claro/escuro), formato, ponte, agendar
+  src/lib/             config (variante, env), supabase, tema (claro/escuro), formato, ponte, agendar, guia (os
+                       dados do guia: o JSON do servidor, senão as funções públicas; entrar pelo guia),
                        (parâmetros e regras do fluxo), notificacoes (ícone e destino de cada aviso),
                        avisos (push), configPublica (o WhatsApp da MIMO e afins), funcoes (chamar uma
                        Edge Function), convite (o código guardado), legal (aceites), datas, demo (dados fictícios)
@@ -242,6 +246,33 @@ No navegador do sistema, fora do app: os termos, a política de privacidade e
 o link de redefinir senha que chega por e-mail (a senha nova vale no app). Um
 aviso push ou um link com o caminho da web cai na tela nativa dele
 (`rotaNativa`, em `src/lib/ponte.ts`); um caminho sem tela abre no navegador.
+
+## O guia dentro do app (3.64)
+
+O app da cliente é a porta de descoberta: a aba **Guia** mostra os salões da
+cidade dela (os mesmos dados do site, `mimo.com.vc/dados/guia/*.json`, e as
+funções públicas `guia_cidades`, `guia_cidade` e `guia_pagina` quando o arquivo
+não existe). A cidade fica lembrada no aparelho; na primeira vez vem pela
+conexão (`site_minha_cidade`, sem guardar nada). Na página do salão:
+
+- **Salão que agenda pela MIMO** (`lugar.mimo.salao_id`): "Agendar pela MIMO"
+  chama `vincular_pelo_guia(salao_, lugar_)` (migração 210): o vínculo nasce com
+  `como = 'guia'` e `guia_lugar_id` apontando para a página do guia por onde ela
+  entrou (a origem fica registrada), e a página nativa do salão abre para ela
+  marcar. O salão pode fechar essa porta (`salons.aberto_no_guia = false`: só
+  por convite, código ou QR); a equipe do salão não entra como cliente.
+- **Salão fora da MIMO**: "Quero marcar pela Mel" abre o WhatsApp da MIMO com o
+  pedido pronto (a Mel do guia, 3.48, anota e passa ao salão). O WhatsApp do
+  próprio salão só aparece quando a Mel está desligada.
+
+O código de seis letras e o QR continuam valendo (`v/[codigo]`), só ficam atrás
+de um toque na aba Salões. Links do site `/saloes/...` caem nas telas nativas
+(`ponte.ts`: a cidade, a categoria, a página do salão; coleções e região caem na
+aba do guia na cidade) e são App Links da variante cliente.
+
+Vem depois: casar sozinho o salão do guia com o salão da MIMO (hoje é à mão, no
+editor da Plataforma), a página do guia apontar para o subdomínio do salão e a
+atendente virtual do salão (069) com os recursos da Mel do guia.
 
 ## O que vem depois
 

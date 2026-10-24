@@ -10,7 +10,7 @@ import { useTema } from '@/lib/tema'
 // Um link do site com o caminho antigo (mimo.com.vc/cliente/agendamento/123,
 // vindo de um lembrete, por exemplo) cai na tela nativa dele. O que não tem
 // tela no app abre no navegador; qualquer outra coisa não existe.
-const DA_WEB = /^\/(v|p|cliente|login|cadastro|entrar|termos|privacidade|pro|admin|blog)(\/|$)/
+const DA_WEB = /^\/(v|p|cliente|saloes|login|cadastro|entrar|termos|privacidade|pro|admin|blog)(\/|$)/
 
 export default function NaoEncontrada() {
   const t = useTema()

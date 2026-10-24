@@ -1,6 +1,7 @@
 import { useRouter, type Href } from 'expo-router'
 import * as WebBrowser from 'expo-web-browser'
 import { useCallback } from 'react'
+import { SLUGS_CATEGORIA } from '@mimo/core/guia.js'
 import { WEB_URL } from './config'
 
 // Caminhos da web que chegam ao app por um aviso push, por um link ou por um
@@ -36,6 +37,14 @@ export function rotaNativa(caminho: string): Href | null {
   if (rota === '/cliente/home' || rota === '/') return '/'
   if (rota === '/cliente/perfil') return '/perfil'
   if (rota === '/cliente/saloes' || rota === '/entrar') return '/saloes'
+  // o guia de salões (3.64): /saloes, /saloes/<cidade>, /saloes/<cidade>/<categoria>, /saloes/<cidade>/<salão>;
+  // as coleções (bairro, horário) e a região caem na aba do guia na cidade; as fotos do dono ficam no site
+  if (rota === '/saloes' || /^\/saloes\/regiao\/[^/]+$/.test(rota ?? '')) return '/guia'
+  const gc = (rota ?? '').match(/^\/saloes\/([^/]+)(?:\/(bairro|horario)\/.*)?$/)
+  if (gc && gc[1] !== 'regiao') return { pathname: '/guia', params: { cidade: gc[1]! } }
+  const gi = (rota ?? '').match(/^\/saloes\/([^/]+)\/([^/]+)$/)
+  if (gi && (SLUGS_CATEGORIA as string[]).includes(gi[2]!)) return { pathname: '/guia', params: { cidade: gi[1]!, categoria: gi[2]! } }
+  if (gi) return { pathname: '/guia/[cidade]/[slug]', params: { cidade: gi[1]!, slug: gi[2]! } }
   if (rota === '/cadastro') return { pathname: '/cadastro', params: q.get('convite') ? { convite: q.get('convite')! } : {} }
   if (rota === '/login') return { pathname: '/entrar', params: q.get('convite') ? { convite: q.get('convite')! } : {} }
   const v = (rota ?? '').match(/^\/v\/([^/]+)$/)

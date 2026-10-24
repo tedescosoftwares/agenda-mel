@@ -239,9 +239,9 @@ export default function Inicio() {
         ) : semAgenda ? (
           <Heroi>
             <Text style={e.heroiKicker}>Bem-vinda à MIMO</Text>
-            <Text style={e.heroiTitulo}>Entre na agenda da sua profissional</Text>
-            <Text style={e.heroiLinha}>Com o código ou o QR que ela te mandou você vê os horários dela e marca em um minuto.</Text>
-            <BotaoClaro titulo="Tenho um código" icone="qr-code-outline" onPress={() => router.push('/saloes')} />
+            <Text style={e.heroiTitulo}>Encontre onde se cuidar</Text>
+            <Text style={e.heroiLinha}>Veja os salões da sua cidade no guia e marque pelo app. Tem o código ou o QR de uma profissional? Ele continua valendo, na aba Salões.</Text>
+            <BotaoClaro titulo="Ver o guia de salões" icone="compass-outline" onPress={() => router.push('/guia')} />
           </Heroi>
         ) : (
           <Heroi>
@@ -255,7 +255,7 @@ export default function Inicio() {
         <View style={e.atalhos}>
           <Atalho icone="add-circle-outline" rotulo="Agendar" onPress={agendar} />
           <Atalho icone="calendar-outline" rotulo="Horários" onPress={() => router.push('/horarios')} />
-          <Atalho icone="qr-code-outline" rotulo="Entrar num salão" onPress={() => router.push('/saloes')} />
+          <Atalho icone="compass-outline" rotulo="Guia de salões" onPress={() => router.push('/guia')} />
           <Atalho icone="gift-outline" rotulo="Indicar amigas" onPress={() => router.push('/indicacao')} />
         </View>
 

@@ -223,6 +223,32 @@ const agendaDe = (s: Linha, vinculo: Linha) => ({
     .map((p) => ({ id: p.id, nome: p.name, foto: p.photo_url, especialidade: p.especialidade ?? null, slug: p.slug })),
 })
 
+
+// o guia de salões (3.64): duas cidades, um salão já na MIMO (o Studio Mel), os outros pela Mel no WhatsApp
+type LugarDemo = Linha & { cidade: string; cidade_slug: string; uf: string; slug: string; nome: string; categoria: string; bairro: string }
+const guiaLugares: LugarDemo[] = [
+  { id: 'gl1', cidade: 'Itanhaém', cidade_slug: 'itanhaem', uf: 'SP', slug: 'studio-mel', nome: 'Studio Mel', categoria: 'beleza', bairro: 'Centro', endereco: 'Rua das Flores, 120', resumo: 'Unhas, cabelo e estética num só lugar, no coração do Centro.', foto: CAPA('#ff2d7a', '#7a3cff', 'Studio Mel'), fotos: [CAPA('#ff2d7a', '#7a3cff', 'Studio Mel'), CAPA('#7a3cff', '#ffb27a', 'Studio Mel')], selecao: true, na_mimo: true, mimo: { salao_id: S1, nome: 'Studio Mel', slug: 'studio-mel', subdominio: 'studiomel' }, latitude: -24.183, longitude: -46.788, servicos: ['Manicure', 'Pedicure', 'Corte', 'Coloração', 'Limpeza de pele', 'Design de sobrancelhas'], horarios: [1, 2, 3, 4, 5].map((dia) => ({ dia, faixas: [['09:00', '19:00']] })).concat([{ dia: 6, faixas: [['09:00', '14:00']] }]), instagram: 'studiomel', whatsapp: '5513999990001', conteudo: { chamada: 'Um salão completo para você se cuidar da cabeça aos pés.', sobre: ['O Studio Mel reúne nail designers, cabeleireiras e esteticistas num espaço claro e acolhedor, pertinho da praia.', 'Horários marcados, sem fila: você escolhe a profissional e o horário pelo app.'], destaques: [{ titulo: 'Unhas decoradas', texto: 'Gel, fibra e as nail arts do momento com a Ana.' }, { titulo: 'Coloração', texto: 'Mechas, morena iluminada e correção de cor com a Camila.' }] } },
+  { id: 'gl2', cidade: 'Itanhaém', cidade_slug: 'itanhaem', uf: 'SP', slug: 'ro-coiffeur', nome: 'Rô Coiffeur', categoria: 'cabelo', bairro: 'Centro', endereco: 'Av. Rui Barbosa, 455', resumo: 'Cabeleireira há 20 anos: cortes, escova e química.', foto: CAPA('#8a5cff', '#ff8fb3', 'Rô Coiffeur'), fotos: [CAPA('#8a5cff', '#ff8fb3', 'Rô Coiffeur')], selecao: false, na_mimo: false, latitude: -24.186, longitude: -46.79, servicos: ['Corte', 'Escova', 'Progressiva', 'Hidratação'], horarios: [2, 3, 4, 5, 6].map((dia) => ({ dia, faixas: [['09:00', '18:00']] })), instagram: 'rocoiffeur', whatsapp: '5513999990002', conteudo: { chamada: 'Tradição no cuidado com o cabelo no Centro de Itanhaém.', sobre: ['A Rô atende com hora marcada e conhece cada cliente pelo nome.'], destaques: [] } },
+  { id: 'gl3', cidade: 'Itanhaém', cidade_slug: 'itanhaem', uf: 'SP', slug: 'espaco-unha-e-arte', nome: 'Espaço Unha & Arte', categoria: 'unhas', bairro: 'Suarão', endereco: 'Rua Marechal Deodoro, 88', resumo: 'Nail designer: alongamento em gel, fibra e nail art.', foto: CAPA('#ff6a3d', '#ffd166', 'Unha & Arte'), fotos: [CAPA('#ff6a3d', '#ffd166', 'Unha & Arte')], selecao: true, na_mimo: false, latitude: -24.17, longitude: -46.77, servicos: ['Alongamento em gel', 'Fibra de vidro', 'Esmaltação em gel', 'Spa dos pés'], horarios: [1, 2, 3, 4, 5, 6].map((dia) => ({ dia, faixas: [['10:00', '19:00']] })), instagram: 'unhaearte', whatsapp: null, conteudo: { chamada: 'Unhas que são obra de arte, no Suarão.', sobre: ['Alongamentos, esmaltação em gel e nail art com hora marcada.'], destaques: [] } },
+  { id: 'gl4', cidade: 'Itanhaém', cidade_slug: 'itanhaem', uf: 'SP', slug: 'bella-pele-estetica', nome: 'Bella Pele Estética', categoria: 'estetica', bairro: 'Centro', endereco: 'Rua Cunha Moreira, 310', resumo: 'Limpeza de pele, peeling e massagem modeladora.', foto: null, fotos: [], selecao: false, na_mimo: false, latitude: -24.19, longitude: -46.795, servicos: ['Limpeza de pele', 'Peeling', 'Drenagem', 'Massagem modeladora'], horarios: [1, 2, 3, 4, 5].map((dia) => ({ dia, faixas: [['08:00', '12:00'], ['13:00', '18:00']] })), instagram: null, whatsapp: '5513999990004', conteudo: { chamada: 'Cuidados com a pele e o corpo no Centro.', sobre: [], destaques: [] } },
+  { id: 'gl5', cidade: 'Itanhaém', cidade_slug: 'itanhaem', uf: 'SP', slug: 'cilios-da-ju', nome: 'Cílios da Ju', categoria: 'cilios', bairro: 'Belas Artes', endereco: 'Rua Benedito Calixto, 52', resumo: 'Extensão de cílios fio a fio e volume brasileiro.', foto: CAPA('#2d1b4e', '#ff2d7a', 'Cílios da Ju'), fotos: [CAPA('#2d1b4e', '#ff2d7a', 'Cílios da Ju')], selecao: false, na_mimo: false, latitude: -24.2, longitude: -46.81, servicos: ['Fio a fio', 'Volume brasileiro', 'Manutenção', 'Lash lifting'], horarios: [2, 3, 4, 5, 6].map((dia) => ({ dia, faixas: [['09:00', '18:00']] })), instagram: 'ciliosdaju', whatsapp: '5513999990005', conteudo: { chamada: 'Olhar marcante com cílios feitos sob medida.', sobre: ['A Ju atende no Belas Artes, só com hora marcada.'], destaques: [] } },
+  { id: 'gl6', cidade: 'Mongaguá', cidade_slug: 'mongagua', uf: 'SP', slug: 'studio-carol-hair', nome: 'Studio Carol Hair', categoria: 'cabelo', bairro: 'Centro', endereco: 'Av. Marina, 700', resumo: 'Cabelo e sobrancelhas no Centro de Mongaguá.', foto: CAPA('#7a3cff', '#2dd4bf', 'Carol Hair'), fotos: [CAPA('#7a3cff', '#2dd4bf', 'Carol Hair')], selecao: false, na_mimo: false, latitude: -24.09, longitude: -46.62, servicos: ['Corte', 'Escova', 'Sobrancelhas'], horarios: [1, 2, 3, 4, 5, 6].map((dia) => ({ dia, faixas: [['09:00', '19:00']] })), instagram: null, whatsapp: '5513999990006', conteudo: { chamada: 'Cabelo bonito e sobrancelhas no ponto.', sobre: [], destaques: [] } },
+  { id: 'gl7', cidade: 'Mongaguá', cidade_slug: 'mongagua', uf: 'SP', slug: 'nail-club-mongagua', nome: 'Nail Club Mongaguá', categoria: 'unhas', bairro: 'Agenor de Campos', endereco: 'Rua São Paulo, 15', resumo: 'Manicure, pedicure e alongamentos.', foto: null, fotos: [], selecao: false, na_mimo: false, latitude: -24.11, longitude: -46.65, servicos: ['Manicure', 'Pedicure', 'Alongamento'], horarios: [1, 2, 3, 4, 5].map((dia) => ({ dia, faixas: [['09:00', '18:00']] })), instagram: null, whatsapp: null, conteudo: { chamada: 'Unhas em dia em Agenor de Campos.', sobre: [], destaques: [] } },
+]
+const cartaoDoGuia = (l: LugarDemo) => ({ id: l.id, slug: l.slug, nome: l.nome, cidade: l.cidade, cidade_slug: l.cidade_slug, uf: l.uf, bairro: l.bairro, endereco: l.endereco, categoria: l.categoria, resumo: l.resumo, foto: l.foto, fotos: l.fotos, selecao: l.selecao, na_mimo: l.na_mimo, latitude: l.latitude, longitude: l.longitude, servicos: l.servicos, horarios: l.horarios })
+const guiaCidade = (cidade: string, categoria = '') => {
+  const todos = guiaLugares.filter((l) => l.cidade_slug === cidade)
+  if (!todos.length) return null
+  const lugares = (categoria ? todos.filter((l) => l.categoria === categoria) : todos).map(cartaoDoGuia)
+  const contar = (f: (l: LugarDemo) => string) => Object.entries(todos.reduce<Record<string, number>>((acc, l) => ((acc[f(l)] = (acc[f(l)] ?? 0) + 1), acc), {}))
+  return {
+    cidade: todos[0]!.cidade, cidade_slug: cidade, uf: todos[0]!.uf, total: todos.length,
+    categorias: contar((l) => l.categoria).map(([c, n]) => ({ categoria: c, total: n, foto: null })),
+    bairros: contar((l) => l.bairro).map(([b, n]) => ({ bairro: b, total: n })),
+    lugares, lista: { total: lugares.length, partes: 1, por_parte: 50 },
+  }
+}
+
 const RPC: Record<string, (args?: Linha) => unknown> = {
   minhas_agendas: () => TABELAS.vinculos!.filter((v) => v.client_id === DEMO_UID && !v.saiu_em).map((v) => agendaDe(salao(v.salon_id)!, v)),
   meu_perfil_resumo: () => (NOVA ? { desde: horasAtras(2), atendimentos: 0, proximos: 0, agendas: 0, favoritas: 0, saldo_cents: 0 } : { desde: '2025-01-10T12:00:00Z', atendimentos: 14, proximos: VAZIA ? 0 : 3, agendas: 2, favoritas: 2, saldo_cents: 3000 }),
@@ -378,6 +404,24 @@ const RPC: Record<string, (args?: Linha) => unknown> = {
   avancar_ofertas_expiradas: () => null,
   enviar_lembretes: () => null,
   marcar_avisos_lidos: () => null,
+  // o guia no app (3.64)
+  guia_cidades: () => [{ cidade: 'Itanhaém', cidade_slug: 'itanhaem', uf: 'SP', total: 5 }, { cidade: 'Mongaguá', cidade_slug: 'mongagua', uf: 'SP', total: 2 }],
+  guia_cidade: (args) => guiaCidade(String(args?.cidade_ ?? ''), String(args?.categoria_ ?? '')),
+  guia_pagina: (args) => {
+    const l = guiaLugares.find((x) => x.cidade_slug === String(args?.cidade_ ?? '') && x.slug === String(args?.slug_ ?? ''))
+    if (!l) return null
+    const outros = guiaLugares.filter((x) => x.cidade_slug === l.cidade_slug && x.id !== l.id)
+    return { lugar: { ...cartaoDoGuia(l), telefone: null, whatsapp: l.whatsapp, instagram: l.instagram, site: null, conteudo: l.conteudo, mimo: l.mimo ?? null, bairro_total: outros.filter((x) => x.bairro === l.bairro).length + 1, cidade_total: outros.length + 1 }, vizinhos: outros.map(cartaoDoGuia), mesma_categoria: outros.filter((x) => x.categoria === l.categoria).map(cartaoDoGuia) }
+  },
+  guia_contato_config: () => ({ ligado: true, numero: '5513991151099', botoes: ['Quero marcar pela Mel'], msg_cliente: 'Oi, Mel! Quero marcar em {nome} ({cidade}).' }),
+  site_minha_cidade: () => ({ cidade: 'Itanhaém', uf: 'SP', origem: 'ip' }),
+  vincular_pelo_guia: (args) => {
+    const s = salao(String(args?.salao_ ?? ''))
+    if (!s) return { ok: false, motivo: 'Esse salão não está mais na MIMO.' }
+    const existente = TABELAS.vinculos!.find((v) => v.client_id === DEMO_UID && v.salon_id === s.id && !v.saiu_em)
+    if (!existente) TABELAS.vinculos!.push({ id: 'vg-' + s.id, client_id: DEMO_UID, salon_id: s.id, saiu_em: null, trazida_por: null, como: 'guia', guia_lugar_id: args?.lugar_ ?? null, criado_em: mais(0) })
+    return { ok: true, novo: !existente, salao: { id: s.id, nome: s.name, tipo: s.tipo, cidade: s.city, logo: s.logo_url ?? null } }
+  },
 }
 
 // a imitação do PostgREST: filtros, ordem, limite, um só

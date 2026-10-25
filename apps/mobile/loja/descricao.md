@@ -2,10 +2,11 @@
 
 Os arquivos desta pasta sobem na página "Detalhes do app" do Play Console.
 Gerados a partir das telas reais do app em modo demonstração (`EXPO_PUBLIC_DEMO=1 npx expo export -p web`,
-capturas em 405×720 a 8/3 de escala) e compostos com Playwright: fundo rosa-claro com manchas suaves,
-título em Fraunces com o destaque em rosa, texto em Poppins (a fonte da marca), o celular inclinado e
-cortado, a logo `public/mimo-logo.svg`. Para refazer depois de uma mudança de tela, os scripts estão no
-histórico desta entrega (3.64.1).
+capturas em 405×720 a 8/3 de escala, com as fotos da marca de `public/imagens` no lugar dos degradês da
+demonstração) e compostos com Playwright: fundo de cetim rosa, a logo `public/mimo-logo.svg`, título em
+Fraunces com a segunda linha em rosa, texto em Poppins (a fonte da marca), e um celular 3D (moldura rosé,
+ilha, barra de status, reflexo). Para refazer depois de uma mudança de tela, o script está no histórico
+desta entrega (3.64.1).
 
 | Arquivo | Onde vai | Exigência do Play |
 |---|---|---|

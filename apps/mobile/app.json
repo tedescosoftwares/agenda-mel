@@ -48,6 +48,16 @@
       "bundler": "metro",
       "output": "single",
       "favicon": "./assets/images/cliente/icone.png"
-    }
+    },
+    "extra": {
+      "variante": "cliente",
+      "host": "mimo.com.vc",
+      "versao": "3.64.1",
+      "router": {},
+      "eas": {
+        "projectId": "68ce294b-1e25-49a4-b0f4-b93ff4d71a28"
+      }
+    },
+    "owner": "brunotedesco"
   }
 }

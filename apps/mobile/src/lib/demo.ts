@@ -251,6 +251,12 @@ const guiaCidade = (cidade: string, categoria = '') => {
 }
 
 const meusVotosDemo: string[] = []
+// 3.68: os contatos pelo guia (migração 213): um pela Mel, anteontem, sem resposta ainda
+const contatosDemo: Linha[] = NOVA ? [] : [{ id: 'gc1', lugar_id: 'gl2', canal: 'mel', criado_em: horasAtras(50), respondido_em: null, concluido: null, nota: null }]
+const contatoDemo = (c: Linha) => {
+  const l = guiaLugares.find((x) => x.id === c.lugar_id)!
+  return { ...c, lugar: { id: l.id, nome: l.nome, cidade_slug: l.cidade_slug, slug: l.slug, categoria: l.categoria, bairro: l.bairro, foto: l.foto ?? null, na_mimo: Boolean(l.mimo) } }
+}
 const RPC: Record<string, (args?: Linha) => unknown> = {
   minhas_agendas: () => TABELAS.vinculos!.filter((v) => v.client_id === DEMO_UID && !v.saiu_em).map((v) => agendaDe(salao(v.salon_id)!, v)),
   meu_perfil_resumo: () => (NOVA ? { desde: horasAtras(2), atendimentos: 0, proximos: 0, agendas: 0, favoritas: 0, saldo_cents: 0 } : { desde: '2025-01-10T12:00:00Z', atendimentos: 14, proximos: VAZIA ? 0 : 3, agendas: 2, favoritas: 2, saldo_cents: 3000 }),
@@ -428,6 +434,23 @@ const RPC: Record<string, (args?: Linha) => unknown> = {
     return { ok: true, votou: i < 0, votos: l.votos }
   },
   guia_meus_votos: () => [...meusVotosDemo],
+  guia_registrar_contato: (args) => {
+    const l = guiaLugares.find((x) => x.id === String(args?.lugar_ ?? ''))
+    if (!l) return { ok: false, motivo: 'Salão não encontrado.' }
+    const ja = contatosDemo.find((c) => c.lugar_id === l.id && c.canal === args?.canal_ && Date.now() - new Date(String(c.criado_em)).getTime() < 10 * 60e3)
+    if (ja) return { ok: true, id: ja.id, novo: false }
+    const novo = { id: 'gc' + (contatosDemo.length + 2), lugar_id: l.id, canal: String(args?.canal_ ?? 'mel'), criado_em: mais(0), respondido_em: null, concluido: null, nota: null }
+    contatosDemo.unshift(novo)
+    return { ok: true, id: novo.id, novo: true }
+  },
+  guia_meus_contatos: () => contatosDemo.map(contatoDemo),
+  guia_responder_contato: (args) => {
+    const c = contatosDemo.find((x) => x.id === String(args?.contato_ ?? ''))
+    if (!c) return { ok: false, motivo: 'Contato não encontrado.' }
+    if (args?.concluido_ && !(Number(args?.nota_) >= 1 && Number(args?.nota_) <= 5)) return { ok: false, motivo: 'Dê uma nota de 1 a 5.' }
+    c.concluido = Boolean(args?.concluido_); c.nota = c.concluido ? Number(args?.nota_) : null; c.respondido_em = mais(0)
+    return { ok: true }
+  },
   vincular_pelo_guia: (args) => {
     const s = salao(String(args?.salao_ ?? ''))
     if (!s) return { ok: false, motivo: 'Esse salão não está mais na MIMO.' }

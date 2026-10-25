@@ -7,7 +7,8 @@ import { Linking, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimens
 import { abertoAgora, categoriaDoGuia, conteudoSeguro, fotosDoLugar, horariosResumo, linkInstagram, linkMapa, linkWhatsDoGuia, miniatura } from '@mimo/core/guia.js'
 import { Tela } from '@/components/Tela'
 import { Aviso, Botao, Cartao, Chip, Selo, Vazio } from '@/components/ui'
-import { carregarContato, carregarPagina, entrarPeloGuia, meusVotos, sigoSalao, votar, type Cartao as CartaoGuia, type Contato, type Pagina } from '@/lib/guia'
+import { carregarContato, carregarPagina, entrarPeloGuia, meusVotos, registrarContato, sigoSalao, votar, type CanalContato, type Cartao as CartaoGuia, type Contato, type Pagina } from '@/lib/guia'
+import { Folha } from '@/components/Folha'
 import { useSessao } from '@/context/sessao'
 import { distanciaKm, distanciaTexto, posicaoAtual, type Posicao } from '@/lib/localizacao'
 import { ESPACO, MARCA, useTema } from '@/lib/tema'
@@ -37,6 +38,8 @@ export default function LugarDoGuia() {
   const [estado, setEstado] = useState<{ chave: string; sigo: boolean; votou: boolean; votos: number } | null>(null)
   const [votando, setVotando] = useState(false)
   const extra = estado && estado.chave === chave ? estado : null
+  // 3.68: o aviso antes de ir para o WhatsApp (a Mel ou o salão); o contato fica registrado (migração 213)
+  const [saida, setSaida] = useState<{ canal: CanalContato; url: string } | null>(null)
 
   useEffect(() => {
     let vivo = true
@@ -106,6 +109,13 @@ export default function LugarDoGuia() {
     if (!r.ok) { setAviso(r.motivo ?? 'Não deu para registrar o pedido agora.'); return }
     setEstado((s) => ({ chave, sigo: s?.sigo ?? false, votou: Boolean(r.votou), votos: Number(r.votos ?? 0) }))
   }
+  function irParaOWhatsApp() {
+    if (!saida) return
+    const { canal, url } = saida
+    setSaida(null)
+    if (sessao) void registrarContato(l.id, canal)
+    abrir(url)
+  }
   const textoDosVotos = votos === 0
     ? 'Seja a primeira a pedir. Quando muitas clientes pedem, a MIMO vai atrás do salão.'
     : `${votos} ${votos === 1 ? 'pessoa já pediu' : 'pessoas já pediram'}. Quando muitas clientes pedem, a MIMO vai atrás do salão.`
@@ -128,11 +138,11 @@ export default function LugarDoGuia() {
           </>
         ) : contato.ligado ? (
           <>
-            <Botao titulo="Quero marcar pela Mel" icone="logo-whatsapp" onPress={() => abrir(linkWhatsDoGuia(contato, l))} />
+            <Botao titulo="Quero marcar pela Mel" icone="logo-whatsapp" onPress={() => setSaida({ canal: 'mel', url: linkWhatsDoGuia(contato, l) })} />
             <Text style={{ color: t.texto3, fontSize: 12.5, textAlign: 'center' }}>A Mel, atendente da MIMO, anota o seu pedido pelo WhatsApp e passa ao salão.</Text>
           </>
         ) : whatsSalao ? (
-          <Botao titulo="WhatsApp do salão" icone="logo-whatsapp" onPress={() => abrir(whatsSalao)} />
+          <Botao titulo="WhatsApp do salão" icone="logo-whatsapp" onPress={() => setSaida({ canal: 'salao', url: whatsSalao })} />
         ) : undefined
       }
     >
@@ -230,6 +240,32 @@ export default function LugarDoGuia() {
 
       <Outros titulo="Perto daqui" lista={pg.vizinhos ?? []} cidade={l.cidade_slug || String(cidade ?? '')} />
       <Outros titulo={`Também em ${cat.rotulo.toLowerCase()}`} lista={(pg.mesma_categoria ?? []).filter((o) => o.slug !== l.slug)} cidade={l.cidade_slug || String(cidade ?? '')} />
+      <Folha aberta={Boolean(saida)} onFechar={() => setSaida(null)}>
+        <Text style={[e.folhaTitulo, { color: t.texto }]}>Você vai para o WhatsApp</Text>
+        <Text style={[e.folhaTexto, { color: t.texto2 }]}>
+          {saida?.canal === 'mel'
+            ? `A Mel, atendente da MIMO, anota o seu pedido pelo WhatsApp e passa ao ${l.nome}. O salão responde a você por lá.`
+            : `Você fala direto com o ${l.nome} pelo WhatsApp dele.`}
+        </Text>
+        <View style={e.folhaLista}>
+          <View style={e.folhaItem}>
+            <Ionicons name="bookmark-outline" size={18} color={t.acento} />
+            <Text style={[e.folhaTexto, { color: t.texto2, flex: 1 }]}>Esse contato fica registrado aqui no app, em Salões, na lista Contatos pelo guia.</Text>
+          </View>
+          <View style={e.folhaItem}>
+            <Ionicons name="star-outline" size={18} color={t.acento} />
+            <Text style={[e.folhaTexto, { color: t.texto2, flex: 1 }]}>Depois a MIMO pergunta se o atendimento aconteceu e que nota você dá. Sua nota ajuda outras clientes.</Text>
+          </View>
+          <View style={e.folhaItem}>
+            <Ionicons name="lock-closed-outline" size={18} color={t.acento} />
+            <Text style={[e.folhaTexto, { color: t.texto2, flex: 1 }]}>{sessao ? 'O salão não recebe nada do seu app: só a mensagem que você mandar no WhatsApp.' : 'Entre na conta para o app guardar esse contato e perguntar depois como foi.'}</Text>
+          </View>
+        </View>
+        <View style={e.folhaAcoes}>
+          <Botao titulo="Agora não" tipo="fantasma" onPress={() => setSaida(null)} estilo={{ flex: 1 }} />
+          <Botao titulo="Ir para o WhatsApp" icone="logo-whatsapp" onPress={irParaOWhatsApp} estilo={{ flex: 1.5 }} testID="guia-ir-whats" />
+        </View>
+      </Folha>
     </Tela>
   )
 }
@@ -268,6 +304,11 @@ const e = StyleSheet.create({
   selos: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
   secao: { fontSize: 16, fontWeight: '800' },
+  folhaTitulo: { fontSize: 19, fontWeight: '800', letterSpacing: -0.3 },
+  folhaTexto: { fontSize: 14.5, lineHeight: 21 },
+  folhaLista: { gap: 10, paddingVertical: 2 },
+  folhaItem: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  folhaAcoes: { flexDirection: 'row', gap: 10, marginTop: 4 },
   linhaHora: { flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
   mini: { width: 150, borderWidth: 1, borderRadius: 14, padding: 8, gap: 4 },
   miniFoto: { width: '100%', height: 90, borderRadius: 10 },

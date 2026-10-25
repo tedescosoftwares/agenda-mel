@@ -149,3 +149,28 @@ export async function sigoSalao(salaoId: string): Promise<boolean> {
     return Array.isArray(d) && d.some((a) => a?.salao?.id === salaoId)
   } catch { return false }
 }
+
+// 3.68: o contato pelo WhatsApp a partir do app fica registrado (migração 213). Antes de ir para o
+// WhatsApp (a Mel ou o salão), o app avisa e registra; o registro é a base da pesquisa de atendimento
+// ("aconteceu? que nota?"), respondida na aba Salões.
+export type CanalContato = 'mel' | 'salao'
+export type ContatoGuia = {
+  id: string; canal: CanalContato; criado_em: string; respondido_em: string | null; concluido: boolean | null; nota: number | null
+  lugar: { id: string; nome: string; cidade_slug: string; slug: string; categoria: string; bairro: string | null; foto: string | null; na_mimo: boolean }
+}
+export async function registrarContato(lugarId: string, canal: CanalContato): Promise<{ ok: boolean; id?: string; motivo?: string }> {
+  const { data, error } = await supabase.rpc('guia_registrar_contato', { lugar_: lugarId, canal_: canal })
+  if (error) return { ok: false, motivo: error.message }
+  return (data as { ok: boolean; id?: string; motivo?: string } | null) ?? { ok: false }
+}
+export async function meusContatos(): Promise<ContatoGuia[]> {
+  try {
+    const d = await rpc<ContatoGuia[]>('guia_meus_contatos', {})
+    return Array.isArray(d) ? d : []
+  } catch { return [] }
+}
+export async function responderContato(id: string, concluido: boolean, nota: number | null): Promise<{ ok: boolean; motivo?: string }> {
+  const { data, error } = await supabase.rpc('guia_responder_contato', { contato_: id, concluido_: concluido, nota_: nota })
+  if (error) return { ok: false, motivo: error.message }
+  return (data as { ok: boolean; motivo?: string } | null) ?? { ok: false }
+}

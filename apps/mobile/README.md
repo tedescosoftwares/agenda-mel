@@ -422,6 +422,31 @@ Os dois caminhos entre o guia e a agenda, na Plataforma:
   sozinho** (gatilho em `salons.onboarding_concluido_em`), e a página do guia
   já nasce "Agenda pela MIMO": a cliente segue por ela.
 
+## O contato pelo WhatsApp fica registrado (3.68)
+
+Num salão do guia que não agenda pela MIMO, "Quero marcar pela Mel" e "WhatsApp
+do salão" não saem do app de uma vez: sobe a folha **"Você vai para o WhatsApp"**
+(`Folha`, na página do salão), que explica quem atende (a Mel, atendente da
+MIMO, ou o próprio salão), que **o contato fica registrado no app** (aba Salões,
+lista "Contatos pelo guia"), que **depois a MIMO pergunta se o atendimento
+aconteceu e que nota ela dá**, e que o salão não recebe nada do app (só a
+mensagem dela no WhatsApp). "Ir para o WhatsApp" registra
+(`guia_registrar_contato(lugar_, canal_)`, migração 213; o mesmo toque em dez
+minutos não vira outro registro) e abre o link. Sem conta, a folha pede para
+entrar e abre o WhatsApp do mesmo jeito.
+
+Na aba Salões, **Contatos pelo guia** lista o que ela chamou (salão, pela Mel ou
+WhatsApp do salão, quando) com **"Como foi?"**: a folha pergunta se o
+atendimento aconteceu ("Não aconteceu" ou "Sim, fui atendida" e as estrelas) e
+guarda em `guia_contatos` (`guia_responder_contato`). Esse é o lugar que a
+pesquisa por push vai abrir, na próxima etapa: a tabela já tem `pesquisa_em`
+para marcar quando o app perguntou.
+
+Na Plataforma, a Abordagem ganha o sinal "N clientes chamaram pelo app" (motivo
+e peso na fila, 5 por contato até 30; `guia_lista.contatos_app`) e o número no
+detalhe; Fatos do salão mostra o total ao lado dos pedidos. As notas por salão
+ficam para a próxima etapa, junto com o push.
+
 ## O que vem depois
 
 1. **Entrar com Apple** no app (o Google já entra; a web mostra a opção quando o

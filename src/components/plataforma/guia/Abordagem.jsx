@@ -127,20 +127,24 @@ function montarMensagem(it, { dias, para, semFotos = false }) {
 }
 
 // as chamadas ao banco nunca rejeitam: o erro volta em texto (no demo, a regra quebrada sobe como exceção)
-// 3.67: os pedidos do app por salão (guia_lista.votos, migração 212), colados nos itens da fila; sem a 212, zero
+// 3.67: os pedidos do app por salão (guia_lista.votos, migração 212) e, 3.68, os contatos pelo WhatsApp a partir do
+// app (guia_lista.contatos_app, migração 213), colados nos itens da fila; banco sem essas migrações: fica como está
 async function comVotos(r) {
   const itens = r?.data?.itens
   if (r?.erro || !Array.isArray(itens) || !itens.length) return r
   try {
     const ids = itens.map((it) => it.lugar_id)
-    const { data, error } = await supabase.from('guia_lista').select('id, votos').in('id', ids).gt('votos', 0)
+    let { data, error } = await supabase.from('guia_lista').select('id, votos, contatos_app').in('id', ids).or('votos.gt.0,contatos_app.gt.0')
+    if (error) ({ data, error } = await supabase.from('guia_lista').select('id, votos').in('id', ids).gt('votos', 0))
     if (error || !Array.isArray(data) || !data.length) return r
-    const votos = new Map(data.map((x) => [x.id, n0(x.votos)]))
+    const sinais = new Map(data.map((x) => [x.id, { votos: n0(x.votos), contatos: n0(x.contatos_app) }]))
     return { ...r, data: { ...r.data, itens: itens.map((it) => {
-      const v = votos.get(it.lugar_id)
-      if (!v) return it
-      const motivo = { tipo: 'pedido', peso: Math.min(60, 10 * v), texto: `${v} ${v === 1 ? 'cliente pediu' : 'clientes pediram'} no app` }
-      return { ...it, votos: v, motivos: [motivo, ...(it.motivos ?? [])] }
+      const sn = sinais.get(it.lugar_id)
+      if (!sn || (!sn.votos && !sn.contatos)) return it
+      const motivos = []
+      if (sn.votos) motivos.push({ tipo: 'pedido', peso: Math.min(60, 10 * sn.votos), texto: `${sn.votos} ${sn.votos === 1 ? 'cliente pediu' : 'clientes pediram'} no app` })
+      if (sn.contatos) motivos.push({ tipo: 'contato', peso: Math.min(30, 5 * sn.contatos), texto: `${sn.contatos} ${sn.contatos === 1 ? 'cliente chamou' : 'clientes chamaram'} pelo app` })
+      return { ...it, votos: sn.votos, contatos_app: sn.contatos, motivos: [...motivos, ...(it.motivos ?? [])] }
     }) } }
   } catch { return r }
 }
@@ -174,8 +178,9 @@ const textoDeBusca = (it) => semAcento(`${it.nome} ${it.bairro ?? ''} ${it.cidad
 function ordenarIds(itens, visao, busca, hoje) {
   const termo = semAcento(busca).toLowerCase().trim()
   const lista = itens.filter((it) => passaNaVisao(it, visao, hoje) && (!termo || textoDeBusca(it).includes(termo)))
-  // 3.67: os pedidos do app ("quero esse salão na MIMO") pesam na fila: 10 por pedido, até 60
-  const peso = (it) => n0(it.prioridade) + Math.min(60, 10 * n0(it.votos))
+  // 3.67: os pedidos do app ("quero esse salão na MIMO") pesam na fila: 10 por pedido, até 60; 3.68: quem chamou
+  // o salão pelo WhatsApp a partir do app, 5 por contato, até 30
+  const peso = (it) => n0(it.prioridade) + Math.min(60, 10 * n0(it.votos)) + Math.min(30, 5 * n0(it.contatos_app))
   const porPrioridade = (a, b) => (a.fila === 'fora') - (b.fila === 'fora') || peso(b) - peso(a)
     || (b.nota_google ?? -1) - (a.nota_google ?? -1) || (b.avaliacoes ?? -1) - (a.avaliacoes ?? -1) || a.nome.localeCompare(b.nome, 'pt-BR')
   // nos lembretes, o mais atrasado primeiro
@@ -858,6 +863,7 @@ function Detalhe({
           <span><b>{formatar(it.contatos)}</b> contatos</span>
           <span><b>{formatar(n0(it.interesses?.quero_marcar))}</b> "quero marcar"</span>
           {n0(it.votos) > 0 && <span title="Clientes que pediram esse salão na MIMO pelo app (desde sempre)"><b>{formatar(n0(it.votos))}</b> {n0(it.votos) === 1 ? 'pedido no app' : 'pedidos no app'}</span>}
+          {n0(it.contatos_app) > 0 && <span title="Clientes que foram ao WhatsApp (Mel ou salão) a partir do app (desde sempre)"><b>{formatar(n0(it.contatos_app))}</b> {n0(it.contatos_app) === 1 ? 'chamou pelo app' : 'chamaram pelo app'}</span>}
         </div>
         {toques.length > 0 && <p className="muted pa-toques">{toques.join(' · ')}</p>}
         {(it.visitas_7 != null) && <Tendencia7 agora={n0(it.visitas_7)} antes={n0(it.visitas_7_antes)} />}

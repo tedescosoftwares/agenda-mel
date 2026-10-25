@@ -3,7 +3,9 @@ import { useFocusEffect, useRouter } from 'expo-router'
 import { useCallback, useState } from 'react'
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { Avatar, Aviso, Botao, Cabecalho, Cartao, Carregando, Vazio } from '@/components/ui'
+import { Avatar, Aviso, Botao, Cabecalho, Cartao, Carregando, Selo, Vazio } from '@/components/ui'
+import { Folha } from '@/components/Folha'
+import { meusContatos, responderContato, type ContatoGuia } from '@/lib/guia'
 import { supabase } from '@/lib/supabase'
 import { ESPACO, useTema } from '@/lib/tema'
 
@@ -26,9 +28,13 @@ export default function Saloes() {
   const [atualizando, setAtualizando] = useState(false)
   const [codigo, setCodigo] = useState('')
   const [comCodigo, setComCodigo] = useState(false)
+  // 3.68: os contatos pelo WhatsApp a partir do guia (migração 213) e a pesquisa de atendimento
+  const [contatos, setContatos] = useState<ContatoGuia[]>([])
+  const [pesquisa, setPesquisa] = useState<ContatoGuia | null>(null)
 
   const carregar = useCallback(async () => {
-    const { data, error } = await supabase.rpc('minhas_agendas')
+    const [{ data, error }, cs] = await Promise.all([supabase.rpc('minhas_agendas'), meusContatos()])
+    setContatos(cs)
     if (error) {
       setErro('Não deu para carregar seus salões. Puxa para baixo para tentar de novo.')
       return
@@ -116,8 +122,92 @@ export default function Saloes() {
             onProfissional={(id) => router.push({ pathname: '/profissional/[id]', params: { id } })}
           />
         ))}
+
+        {contatos.length ? (
+          <Cartao>
+            <Text style={[e.forte, { color: t.texto }]}>Contatos pelo guia</Text>
+            <Text style={{ color: t.texto2, fontSize: 13.5 }}>Os salões que você chamou pelo WhatsApp a partir do guia. Conta pra gente como foi: sua nota ajuda outras clientes.</Text>
+            {contatos.map((c) => (
+              <View key={c.id} style={[e.contato, { borderTopColor: t.fio }]} testID="contato-guia">
+                <Pressable onPress={() => router.push({ pathname: '/guia/[cidade]/[slug]', params: { cidade: c.lugar.cidade_slug, slug: c.lugar.slug } })} style={{ flex: 1, gap: 2 }}>
+                  <Text style={{ color: t.texto, fontWeight: '700', fontSize: 15 }} numberOfLines={1}>{c.lugar.nome}</Text>
+                  <Text style={{ color: t.texto3, fontSize: 12.5 }}>{c.canal === 'mel' ? 'pela Mel' : 'WhatsApp do salão'} · {quando(c.criado_em)}</Text>
+                </Pressable>
+                {c.respondido_em ? (
+                  <Selo texto={c.concluido ? `Atendida · ${'★'.repeat(c.nota ?? 0)}` : 'Não aconteceu'} tom={c.concluido ? 'ok' : 'neutro'} />
+                ) : (
+                  <Pressable onPress={() => setPesquisa(c)} accessibilityRole="button" style={({ pressed }) => [e.comoFoi, { backgroundColor: t.veu, opacity: pressed ? 0.7 : 1 }]}>
+                    <Text style={{ color: t.acento, fontWeight: '700', fontSize: 13 }}>Como foi?</Text>
+                  </Pressable>
+                )}
+              </View>
+            ))}
+          </Cartao>
+        ) : null}
       </ScrollView>
+      <Pesquisa contato={pesquisa} onFechar={() => setPesquisa(null)} onPronto={() => { setPesquisa(null); void carregar() }} />
     </SafeAreaView>
+  )
+}
+
+// há quanto tempo foi o contato, em palavras
+function quando(iso: string) {
+  const dias = Math.floor((Date.now() - new Date(iso).getTime()) / 864e5)
+  if (dias <= 0) return 'hoje'
+  if (dias === 1) return 'ontem'
+  if (dias < 30) return `há ${dias} dias`
+  return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+}
+
+// a pesquisa de atendimento (3.68): aconteceu? que nota? A resposta fica no registro (guia_responder_contato).
+function Pesquisa({ contato, onFechar, onPronto }: { contato: ContatoGuia | null; onFechar: () => void; onPronto: () => void }) {
+  const t = useTema()
+  const [passo, setPasso] = useState<'aconteceu' | 'nota'>('aconteceu')
+  const [nota, setNota] = useState(0)
+  const [salvando, setSalvando] = useState(false)
+  const [erro, setErro] = useState('')
+  const [chave, setChave] = useState<string | null>(null)
+  if (contato && chave !== contato.id) { setChave(contato.id); setPasso('aconteceu'); setNota(0); setErro('') }
+  async function responder(concluido: boolean, n: number | null) {
+    if (!contato || salvando) return
+    setSalvando(true); setErro('')
+    const r = await responderContato(contato.id, concluido, n)
+    setSalvando(false)
+    if (!r.ok) { setErro(r.motivo ?? 'Não deu para enviar agora.'); return }
+    onPronto()
+  }
+  return (
+    <Folha aberta={Boolean(contato)} onFechar={onFechar}>
+      {contato ? (
+        <>
+          <Text style={[e.folhaTitulo, { color: t.texto }]}>{passo === 'aconteceu' ? `O atendimento em ${contato.lugar.nome} aconteceu?` : `Que nota você dá para ${contato.lugar.nome}?`}</Text>
+          {passo === 'aconteceu' ? (
+            <>
+              <Text style={{ color: t.texto2, fontSize: 14.5, lineHeight: 21 }}>Você chamou {contato.canal === 'mel' ? 'pela Mel' : 'pelo WhatsApp do salão'} {quando(contato.criado_em)}. Sua resposta fica só na MIMO e ajuda a indicar os salões certos.</Text>
+              <View style={e.folhaAcoes}>
+                <Botao titulo="Não aconteceu" tipo="fantasma" onPress={() => { void responder(false, null) }} carregando={salvando} estilo={{ flex: 1 }} />
+                <Botao titulo="Sim, fui atendida" icone="checkmark" onPress={() => setPasso('nota')} estilo={{ flex: 1.3 }} />
+              </View>
+            </>
+          ) : (
+            <>
+              <View style={e.estrelas}>
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <Pressable key={n} onPress={() => setNota(n)} hitSlop={6} accessibilityLabel={`${n} estrelas`} style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
+                    <Ionicons name={n <= nota ? 'star' : 'star-outline'} size={38} color={n <= nota ? '#f5a623' : t.texto3} />
+                  </Pressable>
+                ))}
+              </View>
+              <View style={e.folhaAcoes}>
+                <Botao titulo="Voltar" tipo="fantasma" onPress={() => setPasso('aconteceu')} estilo={{ flex: 1 }} />
+                <Botao titulo="Enviar nota" onPress={() => { void responder(true, nota) }} carregando={salvando} desabilitado={!nota} estilo={{ flex: 1.3 }} />
+              </View>
+            </>
+          )}
+          {erro ? <Aviso tom="erro" texto={erro} /> : null}
+        </>
+      ) : null}
+    </Folha>
   )
 }
 
@@ -173,4 +263,9 @@ const e = StyleSheet.create({
   nome: { fontSize: 17, fontWeight: '800' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingLeft: 4, paddingRight: 12, paddingVertical: 4, borderRadius: 999 },
+  contato: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingTop: 10, borderTopWidth: StyleSheet.hairlineWidth },
+  comoFoi: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999 },
+  folhaTitulo: { fontSize: 19, fontWeight: '800', letterSpacing: -0.3 },
+  folhaAcoes: { flexDirection: 'row', gap: 10, marginTop: 4 },
+  estrelas: { flexDirection: 'row', justifyContent: 'center', gap: 10, paddingVertical: 6 },
 })

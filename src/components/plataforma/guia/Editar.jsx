@@ -335,7 +335,7 @@ export default function EditarLugar({ lugar, g, onFechar }) {
                 </div>
                 {/* 3.67: os pedidos do app ("quero esse salão na MIMO") e a promoção a salão com agenda (migração 212) */}
                 <div className="pg-promover" data-teste="promover">
-                  <p className="pg-promover-votos"><Heart size={14} /> <b>{Number(lugar.votos ?? 0)}</b> {Number(lugar.votos ?? 0) === 1 ? 'cliente pediu' : 'clientes pediram'} esse salão na MIMO pelo app</p>
+                  <p className="pg-promover-votos"><Heart size={14} /> <b>{Number(lugar.votos ?? 0)}</b> {Number(lugar.votos ?? 0) === 1 ? 'cliente pediu' : 'clientes pediram'} esse salão na MIMO pelo app{Number(lugar.contatos_app ?? 0) > 0 ? <> · <b>{Number(lugar.contatos_app)}</b> {Number(lugar.contatos_app) === 1 ? 'chamou' : 'chamaram'} pelo WhatsApp a partir do app</> : null}</p>
                   {fatos.salon_id ? (
                     <p className="pg-nota">Ligado a um salão da MIMO: as clientes seguem e agendam por ele no app.</p>
                   ) : promo ? (

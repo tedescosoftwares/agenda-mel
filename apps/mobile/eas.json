@@ -23,7 +23,8 @@
       "env": {
         "APP_VARIANT": "cliente"
       },
-      "channel": "preview"
+      "channel": "preview",
+      "environment": "production"
     },
     "production": {
       "autoIncrement": true,

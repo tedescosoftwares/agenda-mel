@@ -52,7 +52,7 @@
     "build:teste": "eas build -p android --profile preview",
     "build:loja": "eas build -p android --profile production",
     "ota": "eas update --channel production --environment production",
-    "ota:teste": "eas update --channel preview --environment preview",
+    "ota:teste": "eas update --channel preview --environment production",
     "fingerprint": "npx expo-updates fingerprint:generate --platform android"
   },
   "private": true,

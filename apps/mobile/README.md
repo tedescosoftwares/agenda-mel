@@ -155,7 +155,8 @@ que está rodando veio por OTA.
    Cole em `app.json`, dentro de `"expo"`: `"extra": { "eas": { "projectId": "..." } }`.
    (O CLI não escreve sozinho porque a configuração é dinâmica, `app.config.js`.
    O `app.config.js` monta a URL das atualizações a partir desse `projectId`.)
-3. As variáveis do build ficam no Expo, não no git (repita para `preview`):
+3. As variáveis do build ficam no Expo, não no git (o apk de teste usa as mesmas,
+   do ambiente `production`):
    ```
    eas env:create --scope project --environment production --visibility plaintext --name EXPO_PUBLIC_SUPABASE_URL --value https://SEU-PROJETO.supabase.co
    eas env:create --scope project --environment production --visibility plaintext --name EXPO_PUBLIC_SUPABASE_ANON_KEY --value SUA-ANON-KEY

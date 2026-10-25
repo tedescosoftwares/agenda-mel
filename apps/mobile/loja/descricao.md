@@ -1,15 +1,17 @@
 # Ficha da Play Store (MIMO, app da cliente)
 
 Os arquivos desta pasta sobem na página "Detalhes do app" do Play Console.
-Gerados a partir do app em modo demonstração (`EXPO_PUBLIC_DEMO=1 npx expo export -p web`
-e Playwright); para refazer depois de uma mudança de tela, os scripts estão no histórico
-desta entrega (3.64.1).
+Gerados a partir das telas reais do app em modo demonstração (`EXPO_PUBLIC_DEMO=1 npx expo export -p web`,
+capturas em 405×720 a 8/3 de escala) e compostos com Playwright: fundo rosa-claro com manchas suaves,
+título em Fraunces com o destaque em rosa, texto em Poppins (a fonte da marca), o celular inclinado e
+cortado, a logo `public/mimo-logo.svg`. Para refazer depois de uma mudança de tela, os scripts estão no
+histórico desta entrega (3.64.1).
 
 | Arquivo | Onde vai | Exigência do Play |
 |---|---|---|
 | `icone-512.png` | Ícone do aplicativo | PNG 512×512, até 1 MB |
 | `destaque-1024x500.png` | Recurso gráfico | PNG 1024×500 |
-| `captura-1-inicio.png` … `captura-6-salao.png` | Capturas de tela do telefone (de 2 a 8) | 9:16, 1080×1920 |
+| `captura-1-guia.png` … `captura-6-salao.png` | Capturas de tela do telefone (de 2 a 8), nesta ordem | 9:16, 1080×1920 |
 
 ## Nome do app
 

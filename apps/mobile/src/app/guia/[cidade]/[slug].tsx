@@ -7,7 +7,8 @@ import { Linking, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimens
 import { abertoAgora, categoriaDoGuia, conteudoSeguro, fotosDoLugar, horariosResumo, linkInstagram, linkMapa, linkWhatsDoGuia, miniatura } from '@mimo/core/guia.js'
 import { Tela } from '@/components/Tela'
 import { Aviso, Botao, Cartao, Chip, Selo, Vazio } from '@/components/ui'
-import { carregarContato, carregarPagina, entrarPeloGuia, type Cartao as CartaoGuia, type Contato, type Pagina } from '@/lib/guia'
+import { carregarContato, carregarPagina, entrarPeloGuia, meusVotos, sigoSalao, votar, type Cartao as CartaoGuia, type Contato, type Pagina } from '@/lib/guia'
+import { useSessao } from '@/context/sessao'
 import { distanciaKm, distanciaTexto, posicaoAtual, type Posicao } from '@/lib/localizacao'
 import { ESPACO, MARCA, useTema } from '@/lib/tema'
 
@@ -31,6 +32,11 @@ export default function LugarDoGuia() {
   const [entrando, setEntrando] = useState(false)
   const [aviso, setAviso] = useState('')
   const [posicao, setPosicao] = useState<Posicao | null>(null)
+  // 3.67: ela já segue (salão da MIMO) ou já pediu (salão fora da MIMO), e quantos pediram
+  const { sessao } = useSessao()
+  const [estado, setEstado] = useState<{ chave: string; sigo: boolean; votou: boolean; votos: number } | null>(null)
+  const [votando, setVotando] = useState(false)
+  const extra = estado && estado.chave === chave ? estado : null
 
   useEffect(() => {
     let vivo = true
@@ -40,6 +46,21 @@ export default function LugarDoGuia() {
     posicaoAtual().then((p) => { if (vivo) setPosicao(p) })
     return () => { vivo = false }
   }, [cidade, slug])
+  const lugarId = pg?.lugar?.id ?? null
+  const salaoDaMimo = pg?.lugar?.mimo?.salao_id ?? null
+  const votosDaPagina = Number(pg?.lugar?.votos ?? 0)
+  useEffect(() => {
+    if (!lugarId) return
+    let vivo = true
+    const minha = `${cidade ?? ''}/${slug ?? ''}`
+    const p: Promise<{ sigo: boolean; votou: boolean }> = !sessao
+      ? Promise.resolve({ sigo: false, votou: false })
+      : salaoDaMimo
+        ? sigoSalao(salaoDaMimo).then((sigo) => ({ sigo, votou: false }))
+        : meusVotos().then((v) => ({ sigo: false, votou: v.includes(lugarId) }))
+    p.then((r) => { if (vivo) setEstado({ chave: minha, ...r, votos: votosDaPagina }) })
+    return () => { vivo = false }
+  }, [lugarId, salaoDaMimo, votosDaPagina, sessao, cidade, slug])
 
   if (pg === undefined) return <Tela titulo="Salão"><Text style={{ color: t.texto2, textAlign: 'center', paddingTop: 30 }}>Carregando…</Text></Tela>
   if (!pg?.lugar) return <Tela titulo="Salão"><Vazio mostrarMel={false} titulo="Essa página do guia não está mais no ar." /></Tela>
@@ -57,14 +78,37 @@ export default function LugarDoGuia() {
   const naMimo = Boolean(l.mimo?.salao_id)
   const servicos = Array.isArray(l.servicos) ? l.servicos : []
 
-  async function agendar() {
+  const sigo = Boolean(extra?.sigo)
+  const votou = Boolean(extra?.votou)
+  const votos = extra?.votos ?? Number(l.votos ?? 0)
+
+  function irParaOSalao(salaoId: string) {
+    router.push({ pathname: '/salao/[id]', params: { id: salaoId, de: 'guia' } })
+  }
+  // seguir: ela entra na agenda do salão (vincular_pelo_guia) e já vê a vitrine dele
+  async function seguir() {
     if (!l.mimo?.salao_id || entrando) return
+    if (!sessao) { router.push('/entrar'); return }
     setEntrando(true); setAviso('')
     const r = await entrarPeloGuia(l.mimo.salao_id, l.id)
     setEntrando(false)
-    if (!r.ok) { setAviso(r.motivo ?? 'Não deu para entrar na agenda agora.'); return }
-    router.push({ pathname: '/salao/[id]', params: { id: l.mimo.salao_id, de: 'guia' } })
+    if (!r.ok) { setAviso(r.motivo ?? 'Não deu para seguir o salão agora.'); return }
+    setEstado((s) => ({ chave, sigo: true, votou: s?.votou ?? false, votos: s?.votos ?? votos }))
+    irParaOSalao(l.mimo.salao_id)
   }
+  // pedir (ou desfazer o pedido): "quero esse salão na MIMO"
+  async function pedir() {
+    if (votando) return
+    if (!sessao) { router.push('/entrar'); return }
+    setVotando(true); setAviso('')
+    const r = await votar(l.id)
+    setVotando(false)
+    if (!r.ok) { setAviso(r.motivo ?? 'Não deu para registrar o pedido agora.'); return }
+    setEstado((s) => ({ chave, sigo: s?.sigo ?? false, votou: Boolean(r.votou), votos: Number(r.votos ?? 0) }))
+  }
+  const textoDosVotos = votos === 0
+    ? 'Seja a primeira a pedir. Quando muitas clientes pedem, a MIMO vai atrás do salão.'
+    : `${votos} ${votos === 1 ? 'pessoa já pediu' : 'pessoas já pediram'}. Quando muitas clientes pedem, a MIMO vai atrás do salão.`
 
   const whatsSalao = !contato.ligado && l.whatsapp ? `https://wa.me/${String(l.whatsapp).replace(/\D/g, '').replace(/^(?!55)/, '55')}` : null
 
@@ -72,10 +116,15 @@ export default function LugarDoGuia() {
     <Tela
       titulo={l.nome}
       rodape={
-        naMimo ? (
+        naMimo && sigo ? (
           <>
-            <Botao titulo="Agendar pela MIMO" icone="calendar-outline" onPress={() => { void agendar() }} carregando={entrando} />
-            <Text style={{ color: t.texto3, fontSize: 12.5, textAlign: 'center' }}>Você entra na agenda do salão e marca o horário aqui no app.</Text>
+            <Botao titulo="Agendar" icone="calendar-outline" onPress={() => irParaOSalao(l.mimo!.salao_id)} />
+            <Text style={{ color: t.texto3, fontSize: 12.5, textAlign: 'center' }}>Você segue esse salão: a agenda, as promoções e as novidades dele estão no app.</Text>
+          </>
+        ) : naMimo ? (
+          <>
+            <Botao titulo="Seguir e ver a agenda" icone="heart-outline" onPress={() => { void seguir() }} carregando={entrando} />
+            <Text style={{ color: t.texto3, fontSize: 12.5, textAlign: 'center' }}>Seguindo, você vê a agenda, as promoções e as novidades do salão e marca o horário aqui no app.</Text>
           </>
         ) : contato.ligado ? (
           <>
@@ -107,6 +156,7 @@ export default function LugarDoGuia() {
         <View style={e.selos}>
           <Selo texto={cat.curto} />
           {naMimo ? <Selo texto="Agenda pela MIMO" tom="acento" /> : null}
+          {naMimo && sigo ? <Selo texto="Você segue" tom="ok" /> : null}
           {l.selecao ? <Selo texto="Seleção MIMO" tom="ok" /> : null}
         </View>
         {c?.chamada ? <Text style={{ color: t.texto2, fontSize: 14.5, lineHeight: 20 }}>{c.chamada}</Text> : null}
@@ -124,6 +174,26 @@ export default function LugarDoGuia() {
         </View>
         {aviso ? <Aviso tom="aviso" texto={aviso} /> : null}
       </View>
+
+      {!naMimo ? (
+        <Cartao>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Ionicons name="heart-circle-outline" size={22} color={t.acento} />
+            <Text style={[e.secao, { color: t.texto, flex: 1 }]}>Quer esse salão na MIMO?</Text>
+          </View>
+          <Text style={{ color: t.texto2, fontSize: 13.5, lineHeight: 19 }}>
+            Esse salão ainda não agenda pela MIMO, então não dá para seguir. {textoDosVotos}
+          </Text>
+          <Botao
+            tipo={votou ? 'fantasma' : 'primario'}
+            titulo={votou ? 'Você pediu · desfazer' : 'Quero esse salão na MIMO'}
+            icone={votou ? 'heart' : 'heart-outline'}
+            onPress={() => { void pedir() }}
+            carregando={votando}
+            testID="guia-pedir"
+          />
+        </Cartao>
+      ) : null}
 
       {servicos.length ? (
         <Cartao>

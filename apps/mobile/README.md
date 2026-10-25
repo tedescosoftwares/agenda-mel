@@ -377,9 +377,50 @@ de um toque na aba Salões. Links do site `/saloes/...` caem nas telas nativas
 (`ponte.ts`: a cidade, a categoria, a página do salão; coleções e região caem na
 aba do guia na cidade) e são App Links da variante cliente.
 
-Vem depois: casar sozinho o salão do guia com o salão da MIMO (hoje é à mão, no
-editor da Plataforma), a página do guia apontar para o subdomínio do salão e a
-atendente virtual do salão (069) com os recursos da Mel do guia.
+Vem depois: a página do guia apontar para o subdomínio do salão e a atendente
+virtual do salão (069) com os recursos da Mel do guia. (Casar o salão do guia com
+o salão da MIMO ganhou os dois caminhos em 3.67, abaixo.)
+
+## Seguir pelo guia e "quero esse salão na MIMO" (3.67)
+
+A página do salão no guia (`guia/[cidade]/[slug]`) passa a ter dois destinos,
+conforme o salão agenda ou não pela MIMO (migração 212):
+
+- **Salão da MIMO**: o botão vira **"Seguir e ver a agenda"**: a cliente entra
+  na agenda do salão (`vincular_pelo_guia`, como antes) e cai na vitrine dele; a
+  partir daí ela vê a agenda, as promoções e as novidades do salão no app (aba
+  Salões, Início). Quando já segue, a página mostra o selo **"Você segue"** e o
+  botão é só **"Agendar"** (`sigoSalao()` em `lib/guia.ts` lê `minhas_agendas`).
+- **Salão fora da MIMO**: não dá para seguir. O cartão **"Quer esse salão na
+  MIMO?"** explica e tem o botão **"Quero esse salão na MIMO"** (`guia_votar`):
+  um pedido por cliente, com desfazer, e a contagem ("12 pessoas já pediram").
+  O pedido fica em `guia_votos`, soma em `guia_lugares.votos` e vira métrica
+  de abordagem na Plataforma: na **Abordagem**, cada salão mostra "N clientes
+  pediram no app" como motivo, isso pesa na ordem da fila (10 por pedido, até
+  60), e o número aparece no detalhe; em **Fatos do salão**, o total e o botão
+  de promover. Sem conta, o toque leva a Entrar. Quem está logada vê o que já
+  pediu (`guia_meus_votos`). O site público do guia ainda não tem o botão: fica
+  para quando o guia divulgar o app (a função já aceita um token do navegador,
+  `guia_votar(lugar_, token_)`, para essa hora).
+- O chip **Instagram** já estava e continua (`linkInstagram`), com Como chegar e
+  Site.
+
+Os dois caminhos entre o guia e a agenda, na Plataforma:
+
+- **Promover** (Guia de salões → Fatos do salão → "Promover a salão com
+  agenda…"): `guia_promover(lugar_, dono_email_, tipo_)`, só a Plataforma. Pelo
+  e-mail da conta da dona (ela cria antes, em `mimo.com.vc/comecar` ou no app):
+  se ela já tem um salão sem página no guia, a página é ligada a ele; senão
+  nasce um salão (`abrir_negocio_interno`, salão ou autônoma) com os dados do
+  guia copiados (endereço, bairro, CEP, cidade, telefone, WhatsApp, Instagram,
+  ponto no mapa, fotos, resumo) e ela vira a dona. Serve ao teste e à venda.
+- **Espelhar** (Salões e autônomas → ícone do livro "Pôr no guia de salões"):
+  `guia_espelhar_salao(salao_)`, Plataforma ou a dona. O salão da MIMO ganha a
+  sua entrada no guia (`status = importado`, `origem.fonte = mimo`, ligada por
+  `salon_id`), com a categoria pelo ramo e os serviços ativos; segue a fila de
+  sempre (gerar o texto, revisar, aprovar). **Quem conclui o onboarding entra
+  sozinho** (gatilho em `salons.onboarding_concluido_em`), e a página do guia
+  já nasce "Agenda pela MIMO": a cliente segue por ela.
 
 ## O que vem depois
 

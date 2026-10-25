@@ -5,7 +5,7 @@ import { Cabecalho, Kpi, Painel, Pilula, Vazio, Iniciais } from '../../component
 import { supabase } from '../../lib/supabase'
 import { useDialogo } from '../../context/DialogoContext'
 import { PredioIcon, UsersIcon, TeamIcon, CalendarIcon, SearchIcon, PulsoIcon, SetaIcon } from '../../components/icons'
-import { User, MapPin, Pencil, Check as CheckIcon } from 'lucide-react'
+import { User, MapPin, Pencil, Check as CheckIcon, BookOpen } from 'lucide-react'
 import Portal from '../../components/Portal'
 
 // Salões e autônomas: a lista de unidades com tamanho e ações, o
@@ -14,7 +14,7 @@ import Portal from '../../components/Portal'
 export default function Saloes() {
   const navigate = useNavigate()
   const [q, setQ] = useSearchParams()
-  const { confirmar } = useDialogo()
+  const { confirmar, avisar } = useDialogo()
   const [lista, setLista] = useState(null)
   const [busca, setBusca] = useState('')
   const [tipo, setTipo] = useState('todos')
@@ -44,6 +44,17 @@ export default function Saloes() {
     if (data?.id) navigate(`/plataforma/saloes/${data.id}`)
   }
 
+  // 3.67: o caminho inverso do guia (migração 212): o salão da MIMO ganha a sua página no guia, ligada a ele,
+  // na fila de revisão (gerar o texto, revisar, aprovar). Quem conclui o onboarding entra sozinho; este botão
+  // é para os que já existiam e para o teste.
+  async function noGuia(s) {
+    if (!s.cidade) { await avisar({ titulo: 'Sem cidade', texto: `${s.nome} ainda não tem cidade no cadastro. O guia é por cidade: preencha a cidade do salão primeiro.` }); return }
+    if (!(await confirmar({ titulo: 'Pôr no guia de salões', texto: `${s.nome} ganha uma página no guia de ${s.cidade}, ligada a este salão (as clientes seguem e agendam por ele no app). Ela entra na fila de revisão: gerar o texto, revisar e aprovar antes de ir ao ar.`, ok: 'Pôr no guia' }))) return
+    const { data, error } = await supabase.rpc('guia_espelhar_salao', { salao_: s.id })
+    const r = error ? { ok: false, motivo: error.message } : (data ?? { ok: false, motivo: 'Sem resposta.' })
+    if (!r.ok) { setErro(r.motivo || 'Não deu para pôr no guia.'); return }
+    await avisar(r.ja_estava ? `${s.nome} já estava no guia.` : `${s.nome} entrou no guia (${r.cidade_slug}/${r.slug}), na fila de revisão do Guia de salões.`)
+  }
   async function ativar(s, ligar) {
     const ok = await confirmar({ titulo: ligar ? `Reativar ${s.nome}?` : `Desativar ${s.nome}?`, texto: ligar ? 'Volta a aparecer e a aceitar horários.' : 'Some da vitrine e das agendas das clientes. Nada é apagado.', ok: ligar ? 'Reativar' : 'Desativar', perigo: !ligar })
     if (!ok) return
@@ -95,6 +106,7 @@ export default function Saloes() {
                       <div>
                         <Link to={`/plataforma/saloes/${s.id}`} className="plat-btn-ico" title="Editar"><Pencil size={15} /></Link>
                         <Link to={`/plataforma/saloes/${s.id}?aba=equipe`} className="plat-btn-ico" title="Equipe"><TeamIcon /></Link>
+                        <button className="plat-btn-ico" title="Pôr no guia de salões" aria-label={`Pôr ${s.nome} no guia de salões`} onClick={() => noGuia(s)}><BookOpen size={15} /></button>
                         <button className="plat-btn-ico" title={s.ativo ? 'Desativar' : 'Reativar'} onClick={() => ativar(s, !s.ativo)}>{s.ativo ? '⏻' : '↺'}</button>
                       </div>
                     </div>

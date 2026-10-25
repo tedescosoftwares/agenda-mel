@@ -19,6 +19,7 @@ export type Lugar = Cartao & {
   atributos?: Record<string, unknown> | null; conteudo?: Record<string, unknown> | null; validado_receita?: boolean
   mimo?: { salao_id: string; nome: string | null; slug: string | null; subdominio: string | null } | null
   bairro_total?: number; cidade_total?: number
+  votos?: number
 }
 export type CidadeDados = {
   cidade: string; cidade_slug: string; uf: string; total: number
@@ -122,4 +123,29 @@ export async function entrarPeloGuia(salaoId: string, lugarId: string | null): P
   const { data, error } = await supabase.rpc('vincular_pelo_guia', { salao_: salaoId, lugar_: lugarId })
   if (error) return { ok: false, motivo: error.message }
   return ((data as Entrada | null) ?? { ok: false, motivo: 'Não deu para entrar agora.' })
+}
+
+// 3.67: seguir pelo guia e "quero esse salão na MIMO" (migração 212)
+// A cliente segue um salão que já agenda pela MIMO (vincular_pelo_guia, acima) e passa a ver a agenda,
+// as promoções e as novidades dele. Um salão que ainda não está na MIMO não dá para seguir: ela pede
+// ("quero esse salão na MIMO"), o pedido conta no guia e vira métrica de abordagem por cidade.
+export type Voto = { ok: boolean; votou?: boolean; votos?: number; na_mimo?: boolean; motivo?: string }
+export async function votar(lugarId: string): Promise<Voto> {
+  const { data, error } = await supabase.rpc('guia_votar', { lugar_: lugarId })
+  if (error) return { ok: false, motivo: error.message }
+  return (data as Voto | null) ?? { ok: false, motivo: 'Não deu para registrar o pedido agora.' }
+}
+// os salões do guia que ela já pediu
+export async function meusVotos(): Promise<string[]> {
+  try {
+    const d = await rpc<string[]>('guia_meus_votos', {})
+    return Array.isArray(d) ? d.map(String) : []
+  } catch { return [] }
+}
+// ela já segue esse salão da MIMO? (a mesma lista da aba Salões)
+export async function sigoSalao(salaoId: string): Promise<boolean> {
+  try {
+    const d = await rpc<{ salao?: { id?: string } }[]>('minhas_agendas', {})
+    return Array.isArray(d) && d.some((a) => a?.salao?.id === salaoId)
+  } catch { return false }
 }

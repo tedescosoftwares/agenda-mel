@@ -945,3 +945,11 @@
   .pg-novo-cep, .pg-novo-ponto { grid-template-columns: 1fr; }
   .pg-topo-botoes { justify-content: flex-start; }
 }
+
+/* 3.67: os pedidos do app e a promoção a salão com agenda (Fatos do salão) */
+.pg-promover { display: grid; gap: 0.5rem; padding: 0.7rem 0.85rem; border: 1px dashed var(--fio); border-radius: 12px; background: #fff8fb; }
+.pg-promover-votos { display: flex; align-items: center; gap: 0.35rem; margin: 0; font-size: 0.86rem; color: var(--texto-2); }
+.pg-promover-votos b { color: var(--carmim, #c8135c); }
+.pg-promover-form { display: grid; gap: 0.6rem; }
+.pg-promover-acoes { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.pg-promover .plat-link { justify-self: start; }

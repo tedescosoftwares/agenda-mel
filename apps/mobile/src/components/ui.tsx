@@ -18,6 +18,7 @@ export function Botao({
   carregando = false,
   desabilitado = false,
   estilo,
+  testID,
 }: {
   titulo: string
   onPress?: () => void
@@ -26,6 +27,7 @@ export function Botao({
   carregando?: boolean
   desabilitado?: boolean
   estilo?: StyleProp<ViewStyle>
+  testID?: string
 }) {
   const t = useTema()
   const fundo = tipo === 'primario' ? t.acento : tipo === 'fantasma' ? t.veu : 'transparent'
@@ -36,6 +38,7 @@ export function Botao({
       onPress={onPress}
       disabled={inativo}
       accessibilityRole="button"
+      testID={testID}
       style={({ pressed }) => [
         e.botao,
         { backgroundColor: fundo, borderColor: tipo === 'linha' ? t.fio : 'transparent', opacity: inativo ? 0.6 : pressed ? 0.85 : 1 },

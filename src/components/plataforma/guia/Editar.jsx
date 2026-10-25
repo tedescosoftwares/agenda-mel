@@ -6,7 +6,8 @@ import EscreverFora, { Conferencia } from './EscreverFora'
 import { GUIA_CATEGORIAS, conteudoSeguro, telefoneBonito, canaisDoSite, rotaDoLugar } from '../../../lib/guia'
 import { seoDoLugar } from '../../../lib/guiaSeo'
 import { enviarFotoDoGuia, MAX_FOTOS } from '../../../lib/guiaFotos'
-import { X, Plus, Trash2, FileText, Store, LoaderCircle, ImagePlus, ChevronLeft, ChevronRight } from 'lucide-react'
+import { X, Plus, Trash2, FileText, Store, LoaderCircle, ImagePlus, ChevronLeft, ChevronRight, Heart, Rocket } from 'lucide-react'
+import { supabase } from '../../../lib/supabase'
 
 // Editar um salão: os fatos (gravados com fontes[campo] = 'manual', para a
 // próxima importação não desfazer o que foi corrigido à mão), as fotos (3.14:
@@ -93,6 +94,7 @@ export default function EditarLugar({ lugar, g, onFechar }) {
   const [erro, setErro] = useState('')
   const [salvando, setSalvando] = useState(false)
   const [conferencia, setConferencia] = useState(null) // 3.32.1: a validação da IA sobre o texto editado ou colado
+  const [promo, setPromo] = useState(null) // 3.67: o formulário de promover (e-mail da dona, tipo)
   const caixa = useRef(null)
 
   const sujo = JSON.stringify({ fatos, horario, texto, fotos }) !== JSON.stringify(inicial)
@@ -122,6 +124,19 @@ export default function EditarLugar({ lugar, g, onFechar }) {
 
   if (!lugar) return null
   const set = (k, v) => setFatos((f) => ({ ...f, [k]: v }))
+  // 3.67: promover o salão do guia a um salão com agenda (a Plataforma, pelo e-mail da conta da dona)
+  async function promover() {
+    if (!promo || promo.ocupado) return
+    setPromo((p) => ({ ...p, ocupado: true }))
+    const { data, error } = await supabase.rpc('guia_promover', { lugar_: lugar.id, dono_email_: promo.email.trim(), tipo_: promo.tipo })
+    const r = error ? { ok: false, motivo: error.message } : (data ?? { ok: false, motivo: 'Sem resposta.' })
+    if (!r.ok) { setPromo((p) => (p ? { ...p, ocupado: false } : p)); g.avisar(r.motivo || 'Não deu para promover agora.'); return }
+    // o banco já ligou (salon_id); a lista da Plataforma e o formulário acompanham
+    await g.salvarLugar(lugar.id, { salon_id: r.salao_id })
+    set('salon_id', r.salao_id)
+    setPromo(null)
+    g.avisar(`${lugar.nome}: ${r.novo ? 'nasceu na MIMO como ' + (promo.tipo === 'autonoma' ? 'autônoma' : 'salão') : 'ligado ao salão da dona'} (${r.nome}). A dona entra em mimo.com.vc com a conta dela e completa serviços e horários.`)
+  }
   const setT = (k, v) => setTexto((t) => ({ ...t, [k]: v }))
   const setLista = (k, i, v) => setTexto((t) => ({ ...t, [k]: t[k].map((x, j) => (j === i ? v : x)) }))
   const tirar = (k, i) => setTexto((t) => ({ ...t, [k]: t[k].filter((_, j) => j !== i) }))
@@ -317,6 +332,29 @@ export default function EditarLugar({ lugar, g, onFechar }) {
                   <label className="pg-campo">Instagram<input value={fatos.instagram} onChange={(e) => set('instagram', e.target.value)} placeholder="o @, sem o link" /></label>
                   <label className="pg-campo">Site<input value={fatos.site} onChange={(e) => set('site', e.target.value)} placeholder="https://" /></label>
                   <label className="pg-campo">Na MIMO (id do salão, opcional)<input value={fatos.salon_id} onChange={(e) => set('salon_id', e.target.value)} placeholder="quando o salão já agenda pela MIMO" /></label>
+                </div>
+                {/* 3.67: os pedidos do app ("quero esse salão na MIMO") e a promoção a salão com agenda (migração 212) */}
+                <div className="pg-promover" data-teste="promover">
+                  <p className="pg-promover-votos"><Heart size={14} /> <b>{Number(lugar.votos ?? 0)}</b> {Number(lugar.votos ?? 0) === 1 ? 'cliente pediu' : 'clientes pediram'} esse salão na MIMO pelo app</p>
+                  {fatos.salon_id ? (
+                    <p className="pg-nota">Ligado a um salão da MIMO: as clientes seguem e agendam por ele no app.</p>
+                  ) : promo ? (
+                    <div className="pg-promover-form">
+                      <p className="pg-nota">A dona precisa ter conta na MIMO (ela cria em mimo.com.vc/comecar ou no app). Se ela já tem um salão sem página no guia, este salão do guia é ligado a ele; senão nasce um salão novo com os dados daqui (endereço, contatos, fotos, resumo) e ela vira a dona. Depois é só ela completar os serviços e os horários.</p>
+                      <div className="pg-dupla">
+                        <label className="pg-campo">E-mail da conta da dona<input type="email" value={promo.email} onChange={(e) => setPromo((p) => ({ ...p, email: e.target.value }))} placeholder="dona@exemplo.com" autoFocus /></label>
+                        <label className="pg-campo">Tipo
+                          <select value={promo.tipo} onChange={(e) => setPromo((p) => ({ ...p, tipo: e.target.value }))}><option value="salao">Salão</option><option value="autonoma">Autônoma</option></select>
+                        </label>
+                      </div>
+                      <div className="pg-promover-acoes">
+                        <button type="button" className="btn btn-primary" disabled={!promo.email.trim() || promo.ocupado} onClick={promover}>{promo.ocupado ? <LoaderCircle size={14} className="gira" /> : <Rocket size={14} />} Promover</button>
+                        <button type="button" className="btn btn-ghost" disabled={promo.ocupado} onClick={() => setPromo(null)}>Cancelar</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button type="button" className="plat-link" onClick={() => setPromo({ email: '', tipo: lugar.categoria === 'barbearia' ? 'salao' : 'salao', ocupado: false })}><Rocket size={14} /> Promover a salão com agenda…</button>
+                  )}
                 </div>
                 <label className="pg-campo">Serviços (separados por vírgula)<input value={fatos.servicos} onChange={(e) => set('servicos', e.target.value)} placeholder="Manicure, Pedicure, Unhas em gel" /></label>
                 <label className="pg-check"><input type="checkbox" checked={fatos.selecao} onChange={(e) => set('selecao', e.target.checked)} /> <span><b>Seleção MIMO</b> · a curadoria da casa, mostrada como selo na página</span></label>

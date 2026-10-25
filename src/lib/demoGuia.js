@@ -181,13 +181,13 @@ const meta = (angulo, d = 2) => ({ modelo: 'openai/gpt-oss-120b', gerado_em: dia
 const base = (o) => ({
   cidade: 'Itanhaém', cidade_slug: 'itanhaem', uf: 'SP', cep: '11740-000', instagram: null, site: null, whatsapp: null, telefone: null,
   horarios: null, servicos: [], atributos: {}, latitude: null, longitude: null, place_id: null, cnpj: null, validado_receita: false, selecao: false,
-  nota: null, avaliacoes: null, origem: {}, fontes: {}, conteudo: null, rascunho: null, motivo: null, salon_id: null,
+  nota: null, avaliacoes: null, origem: {}, fontes: {}, conteudo: null, rascunho: null, motivo: null, salon_id: null, votos: 0,
   gerado_em: null, publicado_em: null, aprovado_por: null, criado_em: dias(6), atualizado_em: dias(1), ...o,
 })
 
 export const GUIA_LUGARES = [
-  base({ id: 'gl1', slug: 'studio-lirio', categoria: 'unhas', nome: 'Studio Lírio', fotos: ['/imagens/salao-1400.webp', '/imagens/profissional-1400.webp', '/imagens/cliente-1400.webp'], bairro: 'Centro', endereco: 'Rua das Acácias, 120', telefone: '(13) 99000-1101', whatsapp: '(13) 99000-1101', instagram: 'studiolirio.demo', horarios: H(2, 6), servicos: ['Manicure', 'Pedicure', 'Unhas em gel'], atributos: { pagamento: ['credito', 'debito', 'aproximacao'], acessibilidade: ['entrada'], estacionamento: ['rua_gratis'], tipo_google: 'Manicure e pedicure' }, latitude: -24.183, longitude: -46.788, place_id: 'demo-pl-1', cnpj: '00000000000101', validado_receita: true, selecao: true, nota: 4.9, avaliacoes: 212, conteudo: { ...TEXTO.lirio, _meta: meta('o bairro e a praticidade', 3) }, status: 'publicado', gerado_em: dias(3), publicado_em: dias(3) }),
-  base({ id: 'gl3', slug: 'atelie-cabelo-e-arte', categoria: 'cabelo', nome: 'Ateliê Cabelo & Arte', bairro: 'Belas Artes', endereco: 'Rua Pintor Almeida, 78', telefone: '(13) 99000-1103', whatsapp: '(13) 99000-1103', site: 'https://exemplo.com/atelie', horarios: [...H(2, 5), { dia: 6, faixas: [['09:00', '15:00']] }], servicos: ['Cabelo', 'Química e coloração'], latitude: -24.205, longitude: -46.812, place_id: 'demo-pl-3', nota: 4.7, avaliacoes: 61, conteudo: { ...TEXTO.atelie, _meta: meta('como é a primeira visita', 5) }, status: 'publicado', gerado_em: dias(5), publicado_em: dias(5), fotos_em: dias(1) }),
+  base({ id: 'gl1', votos: 4, slug: 'studio-lirio', categoria: 'unhas', nome: 'Studio Lírio', fotos: ['/imagens/salao-1400.webp', '/imagens/profissional-1400.webp', '/imagens/cliente-1400.webp'], bairro: 'Centro', endereco: 'Rua das Acácias, 120', telefone: '(13) 99000-1101', whatsapp: '(13) 99000-1101', instagram: 'studiolirio.demo', horarios: H(2, 6), servicos: ['Manicure', 'Pedicure', 'Unhas em gel'], atributos: { pagamento: ['credito', 'debito', 'aproximacao'], acessibilidade: ['entrada'], estacionamento: ['rua_gratis'], tipo_google: 'Manicure e pedicure' }, latitude: -24.183, longitude: -46.788, place_id: 'demo-pl-1', cnpj: '00000000000101', validado_receita: true, selecao: true, nota: 4.9, avaliacoes: 212, conteudo: { ...TEXTO.lirio, _meta: meta('o bairro e a praticidade', 3) }, status: 'publicado', gerado_em: dias(3), publicado_em: dias(3) }),
+  base({ id: 'gl3', votos: 1, slug: 'atelie-cabelo-e-arte', categoria: 'cabelo', nome: 'Ateliê Cabelo & Arte', bairro: 'Belas Artes', endereco: 'Rua Pintor Almeida, 78', telefone: '(13) 99000-1103', whatsapp: '(13) 99000-1103', site: 'https://exemplo.com/atelie', horarios: [...H(2, 5), { dia: 6, faixas: [['09:00', '15:00']] }], servicos: ['Cabelo', 'Química e coloração'], latitude: -24.205, longitude: -46.812, place_id: 'demo-pl-3', nota: 4.7, avaliacoes: 61, conteudo: { ...TEXTO.atelie, _meta: meta('como é a primeira visita', 5) }, status: 'publicado', gerado_em: dias(5), publicado_em: dias(5), fotos_em: dias(1) }),
   base({ id: 'gl4', slug: 'olhar-lash-studio', categoria: 'cilios', nome: 'Olhar Lash Studio', fotos: ['/imagens/equipe-1400.webp'], bairro: 'Gaivota', endereco: 'Rua das Gaivotas, 1020', telefone: '(13) 99000-1104', whatsapp: '(13) 99000-1104', instagram: 'olharlash.demo', horarios: H(1, 5, '10:00', '18:00'), servicos: ['Cílios', 'Sobrancelha'], latitude: -24.232, longitude: -46.845, place_id: 'demo-pl-4', cnpj: '00000000000104', validado_receita: true, nota: 5, avaliacoes: 88, conteudo: { ...TEXTO.olhar, _meta: meta('o serviço principal em detalhe', 6) }, rascunho: RASCUNHO_OLHAR, status: 'publicado', gerado_em: dias(0.1), publicado_em: dias(6) }),
   base({ id: 'gl5', slug: 'studio-mel', categoria: 'beleza', nome: 'Studio Mel', bairro: 'Centro', endereco: 'Av. Condessa de Vimieiros, 900', telefone: '(13) 3333-0000', whatsapp: '(13) 99120-3410', instagram: 'studiomel', horarios: H(1, 6, '09:00', '18:00'), servicos: ['Cabelo', 'Manicure', 'Sobrancelha', 'Estética'], latitude: -24.184, longitude: -46.786, place_id: 'demo-pl-5', selecao: true, nota: 4.9, avaliacoes: 37, conteudo: { ...TEXTO.mel, _meta: meta('a agenda online', 2) }, status: 'publicado', salon_id: 's1', gerado_em: dias(2), publicado_em: dias(2) }),
   base({ id: 'gl6', slug: 'sobrancelha-da-re', categoria: 'sobrancelhas', nome: 'Sobrancelha da Rê', bairro: 'Suarão', endereco: 'Rua Beira-Mar, 33', telefone: '(13) 99000-1106', whatsapp: '(13) 99000-1106', horarios: H(2, 6, '09:00', '18:00'), servicos: ['Sobrancelha'], latitude: -24.165, longitude: -46.735, place_id: 'demo-pl-6', cnpj: '00000000000106', validado_receita: true, nota: 5, avaliacoes: 42, rascunho: RASCUNHOS.re, status: 'gerado', gerado_em: dias(0.2) }),
@@ -280,6 +280,7 @@ function publico(l) {
     mimo: l.salon_id ? { salao_id: l.salon_id, nome: 'Studio Mel', slug: 'studio-mel', subdominio: 'studiomel' } : null,
     latitude: l.latitude ?? null, longitude: l.longitude ?? null,
     fotos: fotosDe(l),
+    votos: l.votos ?? 0,
     conteudo: l.conteudo, publicado_em: l.publicado_em, atualizado_em: l.atualizado_em,
   }
 }
@@ -320,6 +321,7 @@ const contar = (lista, campo) => {
 // as métricas (3.11): o site manda para cá no demo (src/lib/eventos.js)
 export const demoEvento = (corpo) => gravarEventoDemo(corpo, GUIA_LUGARES)
 
+const MEUS_VOTOS = []
 export const GUIA_RPC = {
   // os totais por cidade e por fase (3.25, migração 174): a Plataforma abre por aqui e lê só a cidade escolhida
   guia_resumo: () => {
@@ -503,6 +505,35 @@ export const GUIA_RPC = {
     l.aprovado_por = 'pl1'
     l.atualizado_em = new Date().toISOString()
     return { ...publico(l), status: l.status }
+  },
+  // 3.67 (212): "quero esse salão na MIMO" (pede/desfaz), promover a salão com agenda e o salão da MIMO no guia
+  guia_votar: (a) => {
+    const l = GUIA_LUGARES.find((x) => x.id === a?.lugar_)
+    if (!l) return { ok: false, motivo: 'Salão não encontrado.' }
+    if (l.salon_id) return { ok: false, na_mimo: true, motivo: 'Esse salão já agenda pela MIMO.' }
+    const i = MEUS_VOTOS.indexOf(l.id)
+    if (i >= 0) MEUS_VOTOS.splice(i, 1); else MEUS_VOTOS.push(l.id)
+    l.votos = Math.max(0, (l.votos ?? 0) + (i >= 0 ? -1 : 1))
+    return { ok: true, votou: i < 0, votos: l.votos }
+  },
+  guia_meus_votos: () => [...MEUS_VOTOS],
+  guia_promover: (a) => {
+    const l = GUIA_LUGARES.find((x) => x.id === a?.lugar_)
+    if (!l) return { ok: false, motivo: 'Salão do guia não encontrado.' }
+    if (l.salon_id) return { ok: false, motivo: 'Esse salão do guia já está ligado a um salão da MIMO.', salao_id: l.salon_id }
+    const email = String(a?.dono_email_ ?? '').trim().toLowerCase()
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { ok: false, motivo: 'Não achei conta com esse e-mail. A dona cria a conta primeiro (mimo.com.vc/comecar) e você promove depois.' }
+    l.salon_id = 'sp-' + l.id
+    l.atualizado_em = new Date().toISOString()
+    return { ok: true, salao_id: l.salon_id, novo: true, nome: l.nome, slug: l.slug }
+  },
+  guia_espelhar_salao: (a) => {
+    const ja = GUIA_LUGARES.find((x) => x.salon_id === a?.salao_)
+    if (ja) return { ok: true, lugar_id: ja.id, ja_estava: true }
+    const id = 'gl' + (GUIA_LUGARES.length + 200)
+    const slug = 'salao-' + String(a?.salao_ ?? 'x').toLowerCase().replace(/[^a-z0-9]+/g, '-')
+    GUIA_LUGARES.push(base({ id, slug, categoria: 'beleza', nome: 'Salão da MIMO', bairro: 'Centro', endereco: null, status: 'importado', origem: { fonte: 'mimo', salao_id: a?.salao_ }, salon_id: a?.salao_, fotos: [] }))
+    return { ok: true, lugar_id: id, ja_estava: false, slug, cidade_slug: 'itanhaem' }
   },
   guia_aprovar_pagina: (a) => {
     const p = GUIA_PAGINAS.find((x) => x.id === a?.pagina_)

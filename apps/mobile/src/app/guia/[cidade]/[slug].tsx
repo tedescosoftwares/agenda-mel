@@ -8,6 +8,7 @@ import { abertoAgora, categoriaDoGuia, conteudoSeguro, fotosDoLugar, horariosRes
 import { Tela } from '@/components/Tela'
 import { Aviso, Botao, Cartao, Chip, Selo, Vazio } from '@/components/ui'
 import { carregarContato, carregarPagina, entrarPeloGuia, type Cartao as CartaoGuia, type Contato, type Pagina } from '@/lib/guia'
+import { distanciaKm, distanciaTexto, posicaoAtual, type Posicao } from '@/lib/localizacao'
 import { ESPACO, MARCA, useTema } from '@/lib/tema'
 
 // A página de um salão do guia, no app (3.64). Salão que agenda pela MIMO: "Agendar pela MIMO" entra na
@@ -29,12 +30,14 @@ export default function LugarDoGuia() {
   const [foto, setFoto] = useState(0)
   const [entrando, setEntrando] = useState(false)
   const [aviso, setAviso] = useState('')
+  const [posicao, setPosicao] = useState<Posicao | null>(null)
 
   useEffect(() => {
     let vivo = true
     const minha = `${cidade ?? ''}/${slug ?? ''}`
     carregarPagina(String(cidade ?? ''), String(slug ?? '')).catch(() => null).then((p) => { if (vivo) setRes({ chave: minha, pg: p }) })
     carregarContato().then((c) => { if (vivo) setContato(c) })
+    posicaoAtual().then((p) => { if (vivo) setPosicao(p) })
     return () => { vivo = false }
   }, [cidade, slug])
 
@@ -50,6 +53,7 @@ export default function LugarDoGuia() {
   const horas = horariosResumo(l.horarios ?? null) as { dias: string; horas: string }[]
   const agora = abertoAgora(l.horarios ?? null) as { aberto: boolean; texto: string } | null
   const endereco = [l.endereco, l.bairro, l.cidade ? `${l.cidade}-${l.uf ?? ''}` : null].filter(Boolean).join(' · ')
+  const km = posicao ? distanciaKm(posicao, l) : null
   const naMimo = Boolean(l.mimo?.salao_id)
   const servicos = Array.isArray(l.servicos) ? l.servicos : []
 
@@ -110,7 +114,7 @@ export default function LugarDoGuia() {
         {endereco ? (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
             <Ionicons name="location-outline" size={14} color={t.texto3} />
-            <Text style={{ color: t.texto2, fontSize: 13.5, flex: 1 }}>{endereco}</Text>
+            <Text style={{ color: t.texto2, fontSize: 13.5, flex: 1 }}>{endereco}{km != null ? ` · a ${distanciaTexto(km)} de você` : ''}</Text>
           </View>
         ) : null}
         <View style={e.chips}>
@@ -154,14 +158,14 @@ export default function LugarDoGuia() {
         </Cartao>
       ) : null}
 
-      <Outros titulo="Perto daqui" lista={pg.vizinhos ?? []} />
-      <Outros titulo={`Também em ${cat.rotulo.toLowerCase()}`} lista={(pg.mesma_categoria ?? []).filter((o) => o.slug !== l.slug)} />
+      <Outros titulo="Perto daqui" lista={pg.vizinhos ?? []} cidade={l.cidade_slug || String(cidade ?? '')} />
+      <Outros titulo={`Também em ${cat.rotulo.toLowerCase()}`} lista={(pg.mesma_categoria ?? []).filter((o) => o.slug !== l.slug)} cidade={l.cidade_slug || String(cidade ?? '')} />
     </Tela>
   )
 }
 
 // outros salões do guia (vizinhos, a mesma categoria): cartões pequenos, em linha
-function Outros({ titulo, lista }: { titulo: string; lista: CartaoGuia[] }) {
+function Outros({ titulo, lista, cidade }: { titulo: string; lista: CartaoGuia[]; cidade: string }) {
   const t = useTema()
   const router = useRouter()
   if (!lista.length) return null
@@ -172,7 +176,7 @@ function Outros({ titulo, lista }: { titulo: string; lista: CartaoGuia[] }) {
         {lista.slice(0, 8).map((o) => {
           const f = o.foto ?? (Array.isArray(o.fotos) ? o.fotos[0] : null)
           return (
-            <Pressable key={`${o.cidade_slug}/${o.slug}`} onPress={() => router.push({ pathname: '/guia/[cidade]/[slug]', params: { cidade: o.cidade_slug, slug: o.slug } })} accessibilityRole="button" style={({ pressed }) => [e.mini, { backgroundColor: t.superficie, borderColor: t.fio, opacity: pressed ? 0.85 : 1 }]}>
+            <Pressable key={o.slug} onPress={() => router.push({ pathname: '/guia/[cidade]/[slug]', params: { cidade: o.cidade_slug || cidade, slug: o.slug } })} accessibilityRole="button" style={({ pressed }) => [e.mini, { backgroundColor: t.superficie, borderColor: t.fio, opacity: pressed ? 0.85 : 1 }]}>
               {f ? <Image source={{ uri: miniatura(f) }} style={e.miniFoto} contentFit="cover" /> : <View style={[e.miniFoto, e.centro, { backgroundColor: t.superficie2 }]}><Ionicons name="storefront-outline" size={22} color={t.texto3} /></View>}
               <Text style={{ color: t.texto, fontWeight: '700', fontSize: 13.5 }} numberOfLines={1}>{o.nome}</Text>
               <Text style={{ color: t.texto3, fontSize: 12 }} numberOfLines={1}>{[categoriaDoGuia(o.categoria).curto, o.bairro].filter(Boolean).join(' · ')}</Text>

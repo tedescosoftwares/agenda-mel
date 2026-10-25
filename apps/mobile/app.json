@@ -38,6 +38,12 @@
         {
           "cameraPermission": "A MIMO usa a câmera só para ler o QR da sua profissional."
         }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "A MIMO usa sua localização só para mostrar os salões, promoções e ofertas perto de você."
+        }
       ]
     ],
     "experiments": {

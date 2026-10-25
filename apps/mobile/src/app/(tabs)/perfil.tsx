@@ -192,9 +192,9 @@ export default function Perfil() {
 
   function sairDaAgenda(ag: Agenda) {
     setPergunta({
-      titulo: `Sair da agenda de ${ag.salao.nome}?`,
-      texto: 'Você deixa de ver os horários de quem atende lá. Dá para voltar escaneando o QR de novo.',
-      ok: 'Sair da agenda',
+      titulo: `Deixar de seguir ${ag.salao.nome}?`,
+      texto: 'Você deixa de ver os horários de quem atende lá. Dá para voltar pelo guia ou pelo QR.',
+      ok: 'Deixar de seguir',
       perigo: true,
       onOk: async () => {
         const { error } = await supabase.rpc('sair_da_agenda', { salao: ag.salao.id })
@@ -236,7 +236,7 @@ export default function Perfil() {
             <View style={e.numeros}>
               <Numero valor={String(resumo.atendimentos)} rotulo="atendimentos" />
               <Numero valor={String(resumo.proximos)} rotulo="marcados" />
-              <Numero valor={String(resumo.agendas)} rotulo={resumo.agendas === 1 ? 'agenda' : 'agendas'} />
+              <Numero valor={String(resumo.agendas)} rotulo={resumo.agendas === 1 ? 'salão' : 'salões'} />
               <Numero valor={saldo > 0 ? formatPreco(saldo) : '–'} rotulo="créditos" />
             </View>
           ) : null}
@@ -255,7 +255,7 @@ export default function Perfil() {
           <Text style={{ color: t.texto3, fontSize: 12.5, lineHeight: 17 }}>O nome é como a profissional te conhece. Para corrigir, fale com a gente em Contato e ajuda.</Text>
         </Cartao>
 
-        <Text style={[e.secao, { color: t.texto }]}>Minhas agendas</Text>
+        <Text style={[e.secao, { color: t.texto }]}>Salões que você segue</Text>
         <Cartao estilo={{ paddingVertical: 4, gap: 0 }}>
           {agendas.map((ag) => (
             <View key={ag.salao.id} style={[e.agenda, { borderBottomColor: t.fio }]}>
@@ -265,14 +265,14 @@ export default function Perfil() {
               <View style={{ flex: 1 }}>
                 <Text style={{ color: t.texto, fontWeight: '600', fontSize: 15 }}>{ag.salao.nome}</Text>
                 <Text style={{ color: t.texto2, fontSize: 12.5 }}>
-                  {ag.trazida_por ? `entrou pela ${ag.trazida_por.nome.split(' ')[0]}` : 'entrou pelo código do salão'}
+                  {ag.trazida_por ? `veio pela ${ag.trazida_por.nome.split(' ')[0]}` : 'veio pelo guia ou pelo código'}
                   {ag.entrou_em ? ` · ${ag.entrou_em.slice(8, 10)}/${ag.entrou_em.slice(5, 7)}/${ag.entrou_em.slice(0, 4)}` : ''}
                 </Text>
               </View>
-              <Chip texto="Sair" onPress={() => sairDaAgenda(ag)} />
+              <Chip texto="Deixar de seguir" onPress={() => sairDaAgenda(ag)} />
             </View>
           ))}
-          <Linha icone="add-outline" titulo="Entrar em outra agenda" sub="QR, código ou link da profissional" onPress={() => router.push('/saloes')} />
+          <Linha icone="compass-outline" titulo="Seguir outro salão" sub="Pelo guia, ou pelo QR e código da profissional" onPress={() => router.push('/guia')} />
         </Cartao>
 
         <Text style={[e.secao, { color: t.texto }]}>Como você quer ser avisada</Text>

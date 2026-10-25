@@ -8,6 +8,7 @@ import { SLUGS_CATEGORIA, categoriaDoGuia, miniatura, semAcento, slugificar } fr
 import { Folha } from '@/components/Folha'
 import { Botao, Carregando, Chip, Entrada, Selo, Vazio } from '@/components/ui'
 import { carregarCidade, carregarCidades, carregarListaInteira, carregarParte, cidadeLembrada, cidadePelaConexao, lembrarCidade, type Cartao, type Cidade, type CidadeDados } from '@/lib/guia'
+import { abrirAjustes, cidadePelaPosicao, distanciaKm, distanciaTexto, pedirPermissao, permissaoAtual, posicaoAtual, type Permissao, type Posicao } from '@/lib/localizacao'
 import { ESPACO, useTema } from '@/lib/tema'
 
 // O guia de salões dentro do app (3.64): a cliente descobre os salões da região, os que já agendam pela
@@ -30,6 +31,9 @@ export default function Guia() {
   const [maisIndo, setMaisIndo] = useState(false)
   const [escolhendo, setEscolhendo] = useState(false)
   const [erro, setErro] = useState('')
+  // a localização (3.66): com a permissão, a posição ordena a lista e mostra a distância
+  const [permissao, setPermissao] = useState<Permissao | null>(null)
+  const [posicao, setPosicao] = useState<Posicao | null>(null)
   const [tentativa, setTentativa] = useState(0) // "Tentar de novo" refaz os pedidos (o cache solta o que falhou)
   const pedido = useRef(0)
   const chave = `${cidade ?? ''}/${categoria}`
@@ -39,7 +43,17 @@ export default function Guia() {
   const parte = atual?.parte ?? 1
   const inteira = atual ? atual.inteira : null
 
-  // as cidades do guia e a cidade de partida (o link, a lembrada, a da conexão, a primeira)
+  useEffect(() => {
+    let vivo = true
+    permissaoAtual().then(async (p) => {
+      if (!vivo) return
+      setPermissao(p)
+      if (p === 'ok') { const pos = await posicaoAtual(); if (vivo) setPosicao(pos) }
+    })
+    return () => { vivo = false }
+  }, [])
+
+  // as cidades do guia e a cidade de partida (o link, a lembrada, a da posição, a da conexão, a primeira)
   useEffect(() => {
     let vivo = true
     ;(async () => {
@@ -51,6 +65,7 @@ export default function Guia() {
         const slugs = new Set(cs.map((c) => c.cidade_slug))
         let escolhida = cidadeParam && slugs.has(String(cidadeParam)) ? String(cidadeParam) : null
         if (!escolhida) { const l = await cidadeLembrada(); if (l && slugs.has(l)) escolhida = l }
+        if (!escolhida) { const pos = await posicaoAtual(); if (pos) escolhida = await cidadePelaPosicao(pos, slugs) }
         if (!escolhida) { const c = await cidadePelaConexao(); const s = c ? slugificar(c.cidade) : ''; if (s && slugs.has(s)) escolhida = s }
         if (!vivo) return
         if (categoriaParam && (SLUGS_CATEGORIA as string[]).includes(String(categoriaParam))) setCategoria(String(categoriaParam))
@@ -81,10 +96,16 @@ export default function Guia() {
   }, [buscando, cidade, categoria, atual])
 
   const mostrados = useMemo(() => {
-    if (!buscando) return lista
-    const q = semAc(busca.trim())
-    return (inteira ?? lista).filter((l) => semAc(l.nome).includes(q) || semAc(l.bairro).includes(q))
-  }, [buscando, busca, lista, inteira])
+    let base = lista
+    if (buscando) {
+      const q = semAc(busca.trim())
+      base = (inteira ?? lista).filter((l) => semAc(l.nome).includes(q) || semAc(l.bairro).includes(q))
+    }
+    if (!posicao) return base
+    // perto de você: o que está na tela, ordenado pela distância (sem ponto, no fim)
+    const km = new Map(base.map((l) => [l.slug, distanciaKm(posicao, l)]))
+    return [...base].sort((a, b) => (km.get(a.slug) ?? 1e9) - (km.get(b.slug) ?? 1e9))
+  }, [buscando, busca, lista, inteira, posicao])
 
   const totalPartes = dados?.lista?.partes ?? 1
   const temMais = !buscando && parte < totalPartes
@@ -117,7 +138,7 @@ export default function Guia() {
     <SafeAreaView style={{ flex: 1, backgroundColor: t.fundo }} edges={['top']}>
       <FlatList
         data={mostrados}
-        keyExtractor={(l) => `${l.cidade_slug}/${l.slug}`}
+        keyExtractor={(l) => l.slug}
         contentContainerStyle={e.conteudo}
         keyboardShouldPersistTaps="handled"
         onEndReachedThreshold={0.6}
@@ -137,6 +158,23 @@ export default function Guia() {
               <Ionicons name="chevron-down" size={18} color={t.texto3} />
             </Pressable>
             <Entrada value={busca} onChangeText={setBusca} placeholder="Buscar por nome ou bairro" autoCorrect={false} returnKeyType="search" testID="guia-busca" />
+            {permissao === 'nunca' || permissao === 'negada' ? (
+              <Pressable
+                onPress={async () => {
+                  if (permissao === 'negada') return abrirAjustes()
+                  const ok = await pedirPermissao()
+                  setPermissao(ok ? 'ok' : await permissaoAtual())
+                  if (ok) setPosicao(await posicaoAtual())
+                }}
+                accessibilityRole="button"
+                style={({ pressed }) => [e.perto, { backgroundColor: t.veu, opacity: pressed ? 0.8 : 1 }]}
+                testID="guia-perto"
+              >
+                <Ionicons name="navigate-outline" size={18} color={t.acento} />
+                <Text style={{ color: t.texto, fontSize: 13.5, flex: 1 }}>{permissao === 'negada' ? 'A localização está desligada. Ligue nos ajustes para ver os salões mais perto.' : 'Ative a localização para ver primeiro os salões mais perto de você.'}</Text>
+                <Text style={{ color: t.acento, fontWeight: '700', fontSize: 13.5 }}>{permissao === 'negada' ? 'Ajustes' : 'Ativar'}</Text>
+              </Pressable>
+            ) : null}
             {categorias.length > 1 ? (
               <FlatList
                 horizontal
@@ -159,7 +197,7 @@ export default function Guia() {
             {buscando && inteira === null ? <Carregando texto="Procurando…" /> : null}
           </View>
         }
-        renderItem={({ item: l }) => <CartaoLugar l={l} onPress={() => router.push({ pathname: '/guia/[cidade]/[slug]', params: { cidade: l.cidade_slug, slug: l.slug } })} />}
+        renderItem={({ item: l }) => <CartaoLugar l={l} km={posicao ? distanciaKm(posicao, l) : null} onPress={() => router.push({ pathname: '/guia/[cidade]/[slug]', params: { cidade: l.cidade_slug || cidade || '', slug: l.slug } })} />}
         ListEmptyComponent={
           (dados === undefined && !erro && (cidade || cidades === null)) || (buscando && inteira === null) ? null : (
             <Vazio mostrarMel={false} titulo={buscando ? 'Nenhum salão com esse nome ou bairro.' : cidades && cidades.length === 0 ? 'O guia ainda não tem salões.' : 'Nenhum salão nessa categoria por aqui.'} />
@@ -188,7 +226,7 @@ export default function Guia() {
 }
 
 // um salão na lista: foto, nome, categoria e bairro, os selos
-function CartaoLugar({ l, onPress }: { l: Cartao; onPress: () => void }) {
+function CartaoLugar({ l, km, onPress }: { l: Cartao; km: number | null; onPress: () => void }) {
   const t = useTema()
   const foto = l.foto ?? (Array.isArray(l.fotos) ? l.fotos[0] : null)
   const cat = categoriaDoGuia(l.categoria)
@@ -203,7 +241,7 @@ function CartaoLugar({ l, onPress }: { l: Cartao; onPress: () => void }) {
       )}
       <View style={{ flex: 1, gap: 3 }}>
         <Text style={[e.nome, { color: t.texto }]} numberOfLines={1}>{l.nome}</Text>
-        <Text style={{ color: t.texto2, fontSize: 13 }} numberOfLines={1}>{[cat.curto, l.bairro].filter(Boolean).join(' · ')}</Text>
+        <Text style={{ color: t.texto2, fontSize: 13 }} numberOfLines={1}>{[cat.curto, l.bairro, km != null ? distanciaTexto(km) : null].filter(Boolean).join(' · ')}</Text>
         {l.na_mimo || l.selecao ? (
           <View style={e.selos}>
             {l.na_mimo ? <Selo texto="Agenda pela MIMO" tom="acento" /> : null}
@@ -227,6 +265,7 @@ const e = StyleSheet.create({
   centro: { alignItems: 'center', justifyContent: 'center' },
   nome: { fontSize: 15.5, fontWeight: '700' },
   selos: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 2 },
+  perto: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10 },
   folhaTitulo: { fontSize: 18, fontWeight: '800', marginBottom: 8 },
   opcao: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth },
   opcaoTexto: { flex: 1, fontSize: 15.5, fontWeight: '600' },

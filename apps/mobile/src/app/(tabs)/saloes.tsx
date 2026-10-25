@@ -63,11 +63,11 @@ export default function Saloes() {
         keyboardShouldPersistTaps="handled"
         refreshControl={<RefreshControl refreshing={atualizando} onRefresh={atualizar} tintColor={t.acento} colors={[t.acento]} />}
       >
-        <Cabecalho titulo="Seus salões" sub="Onde você já tem agenda" />
+        <Cabecalho titulo="Salões que você segue" sub="Onde você já marcou, ou escolheu acompanhar" />
 
         <Cartao>
-          <Text style={[e.forte, { color: t.texto }]}>Quer entrar numa agenda nova?</Text>
-          <Text style={{ color: t.texto2 }}>No guia estão os salões da sua cidade. Os que agendam pela MIMO você entra com um toque; nos outros, a Mel marca para você pelo WhatsApp.</Text>
+          <Text style={[e.forte, { color: t.texto }]}>Quer seguir um salão novo?</Text>
+          <Text style={{ color: t.texto2 }}>No guia estão os salões da sua cidade. Os que agendam pela MIMO você segue com um toque; nos outros, a Mel marca para você pelo WhatsApp.</Text>
           <Botao titulo="Abrir o guia de salões" icone="compass-outline" onPress={() => router.push('/guia')} />
           <Pressable onPress={() => setComCodigo((v) => !v)} accessibilityRole="button" style={e.dobra} testID="saloes-com-codigo">
             <Text style={{ color: t.texto2, fontWeight: '600', fontSize: 13.5 }}>Tem o código ou o QR de uma profissional?</Text>
@@ -102,9 +102,11 @@ export default function Saloes() {
         {agendas === null && !erro ? <Carregando texto="Buscando seus salões…" /> : null}
         {agendas && agendas.length === 0 ? (
           <Vazio
-            titulo="Você ainda não entrou em nenhuma agenda"
-            texto="Encontre o seu salão no guia, ou pede o código ou o QR para a sua profissional."
-          />
+            titulo="Você ainda não segue nenhum salão"
+            texto="Conheça os salões da sua cidade no guia e marque o seu primeiro horário. Tem o QR da sua profissional? Ele também vale."
+          >
+            <Botao titulo="Ver o guia de salões" icone="compass-outline" onPress={() => router.push('/guia')} />
+          </Vazio>
         ) : null}
         {agendas?.map((ag) => (
           <CartaoSalao

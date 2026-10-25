@@ -1,0 +1,26 @@
+<!-- Modelo do e-mail "Confirm signup" do Supabase (Authentication → Email Templates), 3.66.
+     Assunto sugerido: Bem-vinda à MIMO! Confirme seu e-mail para começar
+     Como só este e-mail chega no cadastro (as boas-vindas da MIMO vêm depois da confirmação,
+     migração 211), ele já dá as boas-vindas. {{ .ConfirmationURL }} é o link do Supabase:
+     no celular ele abre o app já logado (mimo://auth/confirmado nas Redirect URLs). -->
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#fff3f7;padding:32px 12px;font-family:Poppins,Arial,sans-serif">
+  <tr><td align="center">
+    <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:20px;padding:36px 32px;text-align:left">
+      <tr><td style="font-size:30px;font-weight:800;color:#b3124f;letter-spacing:-0.5px">mimo</td></tr>
+      <tr><td style="padding-top:18px;font-size:22px;font-weight:800;color:#2a1830;line-height:1.25">Bem-vinda à MIMO!</td></tr>
+      <tr><td style="padding-top:12px;font-size:15px;line-height:1.55;color:#5e5566">
+        Falta só um toque para a sua conta abrir: confirme o seu e-mail no botão abaixo. Depois é só escolher o salão no guia e marcar o seu horário.
+      </td></tr>
+      <tr><td style="padding-top:24px" align="center">
+        <a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#ff2d7a;color:#ffffff;text-decoration:none;font-weight:700;font-size:16px;padding:14px 28px;border-radius:999px">Confirmar meu e-mail</a>
+      </td></tr>
+      <tr><td style="padding-top:22px;font-size:13px;line-height:1.5;color:#8a8291">
+        Se você está no celular com o app MIMO instalado, o botão abre o app já logado. Se abrir no computador, volte ao app: ele entra sozinho.
+      </td></tr>
+      <tr><td style="padding-top:14px;font-size:13px;line-height:1.5;color:#8a8291">
+        Não foi você quem criou essa conta? É só ignorar este e-mail.
+      </td></tr>
+      <tr><td style="padding-top:26px;font-size:12px;color:#b0a9b6">MIMO · mimo.com.vc · Beleza na palma da mão</td></tr>
+    </table>
+  </td></tr>
+</table>

@@ -42,13 +42,14 @@ apps/mobile/
   src/app/             as rotas (expo-router)
     _layout.tsx        com sessão → abas; sem sessão → entrar
     entrar.tsx         e-mail e senha, ou Google; esqueci a senha (o link chega por e-mail); o aviso de conta de salão (3.65)
+    auth/confirmado    mimo://auth/confirmado: o link "confirme seu e-mail" volta para o app com a sessão (3.66)
     cadastro.tsx       criar conta, com ou sem convite (3.65): quem é você (WhatsApp único), como você entra, confira o e-mail
     completar.tsx      o cadastro completo antes das abas: nome, WhatsApp e o aceite (quem entrou pelo Google, conta antiga sem aceite)
     ler-qr.tsx         a câmera lê o QR da profissional ou do salão
     (tabs)/index.tsx   Início: próximo horário, atalhos, novidades, promoções, salões, profissionais e destaques
     (tabs)/guia.tsx    Guia de salões (3.64): a cidade (lembrada; na primeira vez, pela conexão), busca, categorias, a lista
     (tabs)/horarios.tsx Horários: próximos e histórico por mês (as regras da web, ClienteAgenda)
-    (tabs)/saloes.tsx  Salões onde ela tem agenda; entrar numa nova pelo guia (o código e o QR ficam atrás de um toque)
+    (tabs)/saloes.tsx  Salões que ela segue (os vínculos); seguir um novo pelo guia (o código e o QR ficam atrás de um toque)
     (tabs)/perfil.tsx  Perfil: foto, dados (WhatsApp, e-mail, aniversário), agendas, como ser avisada, ajuda
     agendar/           o fluxo de marcar, nativo: com quem → serviços → data → hora → confirmar → sucesso
                        (remarcar entra pela data; as regras são as da web, src/pages/cliente/Agendar.jsx)
@@ -68,7 +69,8 @@ apps/mobile/
     +not-found.tsx     um link do site com caminho antigo cai na tela nativa; sem tela, abre no navegador
   src/context/sessao.tsx   a sessão (Supabase + AsyncStorage)
   src/components/ui.tsx    botão, cartão, avatar, selo, chip, caixa, entrada, estado vazio com a Mel…
-  src/components/          Tela (moldura das telas empilhadas), Trilha (passos), Calendario (mês),
+  src/components/          Tela (moldura das telas empilhadas), Localizacao (a primeira tela: por que a MIMO
+                           pede a localização, 3.66), Trilha (passos), Calendario (mês),
                            Folha (a folha que sobe de baixo, e a Confirmacao), Avaliar, Convites,
                            Ciencia (o aviso que ela precisa ler antes de seguir)
   src/lib/             config (variante, env), supabase, tema (claro/escuro), formato, ponte, agendar, guia (os
@@ -289,6 +291,39 @@ No navegador do sistema, fora do app: os termos, a política de privacidade e
 o link de redefinir senha que chega por e-mail (a senha nova vale no app). Um
 aviso push ou um link com o caminho da web cai na tela nativa dele
 (`rotaNativa`, em `src/lib/ponte.ts`); um caminho sem tela abre no navegador.
+
+## A cliente no mapa (3.66)
+
+**Localização, pedida uma vez.** A primeira tela do app (`components/Localizacao.tsx`,
+antes de entrar) explica para que a MIMO pede a localização (os salões, as
+promoções e as ofertas mais perto, e a cidade do guia) e o que não faz com ela
+(fica só no aparelho; nada do ponto vai para o servidor; não vendemos nem
+repassamos dados). "Permitir" abre o pedido do sistema, "Agora não" segue sem.
+`lib/localizacao.ts`: permissão, posição (a última conhecida, cache de 5 min),
+distância, a cidade do guia pela posição (geocodificação reversa do aparelho).
+Na aba Guia, com a permissão, a lista fica em ordem de distância e cada cartão
+mostra "1,2 km"; sem a permissão, uma linha "Ative a localização" pede de novo
+(ou abre os ajustes, se foi negada de vez). `expo-location` é nativo: precisa
+de build nova. Demo: `EXPO_PUBLIC_DEMO=local` mostra a tela; nos outros cenários
+a posição é o centro de Itanhaém.
+
+**A página do guia abre.** Os cartões que vêm do servidor não trazem
+`cidade_slug`; o app navega pela cidade da lista (e, nos vizinhos, pela cidade
+da página). Antes caía em "página não existe".
+
+**Salões que você segue.** O vínculo, para a cliente, é "seguir": a aba
+Salões, o Perfil ("Deixar de seguir", "Seguir outro salão") e o Início (sem
+salão, "Agendar" leva ao guia) falam assim. Cliente nova vê a aba vazia com o
+convite para o guia.
+
+**Confirmação de e-mail fluida.** O link "confirme seu e-mail" volta para o
+app (`emailRedirectTo: mimo://auth/confirmado`, rota `auth/confirmado.tsx`)
+com a sessão: abre já logado. Precisa de `mimo://auth/confirmado` nas Redirect
+URLs do Supabase (Authentication → URL Configuration). Se o link abrir no
+computador, a tela "falta só confirmar" entra sozinha: tenta o e-mail e a senha
+a cada 12 s e ao voltar ao primeiro plano. E só um e-mail chega no cadastro: as
+boas-vindas da MIMO esperam a confirmação (migração 211); o modelo sugerido do
+e-mail de confirmação do Supabase está em `docs/emails/confirmar-cadastro.html`.
 
 ## Só a cliente entra (3.65)
 

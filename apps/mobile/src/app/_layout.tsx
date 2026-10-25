@@ -1,8 +1,11 @@
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router'
 import * as SplashScreen from 'expo-splash-screen'
 import { StatusBar } from 'expo-status-bar'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Atualizador } from '@/components/Atualizador'
+import { Localizacao } from '@/components/Localizacao'
+import { VARIANTE } from '@/lib/config'
+import { jaPerguntamos } from '@/lib/localizacao'
 import { SessaoProvider, useSessao } from '@/context/sessao'
 import { useTema } from '@/lib/tema'
 import { useAbrirAvisoTocado } from '@/lib/avisos'
@@ -29,10 +32,22 @@ export default function Raiz() {
 function Navegacao() {
   const { sessao, perfil, perfilPronto, carregando } = useSessao()
   const t = useTema()
+  // o primeiro uso (3.66): a tela da localização vem antes de tudo, uma vez só (null = ainda lendo)
+  const [pedirLocal, setPedirLocal] = useState<boolean | null>(VARIANTE === 'cliente' ? null : false)
+  useEffect(() => {
+    if (VARIANTE !== 'cliente') return
+    let vivo = true
+    jaPerguntamos().then((ja) => {
+      if (vivo) setPedirLocal(!ja)
+    })
+    return () => {
+      vivo = false
+    }
+  }, [])
 
   // com sessão, a abertura espera o perfil chegar: é ele que diz se a conta é de cliente
   // (3.65, sessao.tsx) e se o cadastro está completo (completar.tsx), sem piscar as abas
-  const pronta = !carregando && (!sessao || perfilPronto)
+  const pronta = !carregando && pedirLocal !== null && (!sessao || perfilPronto)
   useEffect(() => {
     if (pronta) SplashScreen.hideAsync().catch(() => {})
   }, [pronta])
@@ -48,6 +63,15 @@ function Navegacao() {
   }
   const logada = Boolean(sessao)
   const completar = logada && precisaCompletar(sessao?.user, perfil, perfilPronto)
+
+  if (pedirLocal) {
+    return (
+      <ThemeProvider value={tema}>
+        <StatusBar style={t.escuro ? 'light' : 'dark'} />
+        <Localizacao onPronto={() => setPedirLocal(false)} />
+      </ThemeProvider>
+    )
+  }
 
   return (
     <ThemeProvider value={tema}>
@@ -77,6 +101,7 @@ function Navegacao() {
           <Stack.Screen name="cadastro" options={{ animation: 'slide_from_right' }} />
         </Stack.Protected>
         <Stack.Screen name="auth/google" />
+        <Stack.Screen name="auth/confirmado" />
         <Stack.Screen name="v/[codigo]" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="ler-qr" options={{ animation: 'slide_from_bottom' }} />
         <Stack.Screen name="+not-found" />

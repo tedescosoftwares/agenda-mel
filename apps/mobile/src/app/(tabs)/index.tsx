@@ -141,7 +141,7 @@ export default function Inicio() {
 
   // "Agendar" abre o fluxo nativo: com quem (se houver mais de uma), serviços, data, hora
   function agendar() {
-    if (agendas && agendas.length === 0) return router.push('/saloes')
+    if (agendas && agendas.length === 0) return router.push('/guia')
     router.push('/agendar/profissional')
   }
   function abrirAgenda(ag: Agenda) {

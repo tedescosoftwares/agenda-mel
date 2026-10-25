@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons'
+import * as Linking from 'expo-linking'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import * as WebBrowser from 'expo-web-browser'
 import { useEffect, useState } from 'react'
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native'
+import { AppState, Linking as LinkingRN, Pressable, StyleSheet, Text, View } from 'react-native'
 import { chamada, foneValido, formatarFone, linkWhats, numeroWhats } from '@mimo/core'
 import { Tela } from '@/components/Tela'
 import { Avatar, Aviso, Botao, Caixa, Cartao, Entrada } from '@/components/ui'
@@ -143,8 +144,9 @@ export default function Cadastro() {
         password: senha,
         options: {
           data: { full_name: nome.trim(), phone: formatarFone(fone), codigo_convite: alvo ? convite : null, termos: versao, aceites, ...(iso ? { nascimento: iso } : {}) },
-          // o link de confirmação abre o site logado; de volta aqui, é só entrar
-          emailRedirectTo: `${WEB_URL}/`,
+          // o link de confirmação volta para o app (mimo://auth/confirmado, 3.66) com a sessão;
+          // fora da lista de Redirect URLs do Supabase ele cai no site, e a tela abaixo entra sozinha
+          emailRedirectTo: Linking.createURL('auth/confirmado'),
         },
       })
       if (error) {
@@ -162,6 +164,25 @@ export default function Cadastro() {
     }
   }
 
+  // "falta só confirmar": enquanto a tela está aberta, o app tenta entrar com o e-mail e a
+  // senha a cada 12 s e quando volta ao primeiro plano; confirmou, a sessão nasce e as abas
+  // abrem sozinhas (3.66). Antes de confirmar o Supabase recusa, e a gente ignora.
+  useEffect(() => {
+    if (!pronto) return
+    let vivo = true
+    const tentar = () => {
+      if (!vivo) return
+      supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password: senha }).catch(() => {})
+    }
+    const relogio = setInterval(tentar, 12000)
+    const sub = AppState.addEventListener('change', (estado) => { if (estado === 'active') tentar() })
+    return () => {
+      vivo = false
+      clearInterval(relogio)
+      sub.remove()
+    }
+  }, [pronto, email, senha])
+
   async function reenviar() {
     setReenviado('')
     const { error } = await supabase.auth.resend({ type: 'signup', email: email.trim().toLowerCase() })
@@ -170,7 +191,7 @@ export default function Cadastro() {
 
   const entrar = () => router.replace({ pathname: '/entrar', params: { ...(convite ? { convite } : {}), ...(email.trim() ? { email: email.trim() } : {}) } })
   const ler = (caminho: string) => void WebBrowser.openBrowserAsync(`${WEB_URL}${caminho}`)
-  const suporte = () => void Linking.openURL(linkWhats(numeroWhats(cfg), chamada('whatsEmUso', null, cfg).texto))
+  const suporte = () => void LinkingRN.openURL(linkWhats(numeroWhats(cfg), chamada('whatsEmUso', null, cfg).texto))
 
   if (pronto) {
     return (
@@ -183,6 +204,7 @@ export default function Cadastro() {
           <Text style={{ color: t.texto2, textAlign: 'center', lineHeight: 21 }}>
             Mandamos um e-mail para <Text style={{ fontWeight: '700', color: t.texto }}>{email.trim()}</Text>. Toca no botão que está nele e a sua conta abre{primeiroNome ? ` já dentro da agenda de ${primeiroNome}` : ', pronta para marcar'}.
           </Text>
+          <Text style={{ color: t.texto3, textAlign: 'center', fontSize: 13 }}>Toca no botão do e-mail e o app abre já logado. Se o e-mail abrir no computador, é só voltar aqui: a gente entra sozinho.</Text>
           <Text style={{ color: t.texto3, textAlign: 'center', fontSize: 13 }}>Não chegou? Olha o spam ou as Promoções. Pode levar um minuto.</Text>
         </View>
         {reenviado ? <Aviso tom="info" texto={reenviado} /> : null}

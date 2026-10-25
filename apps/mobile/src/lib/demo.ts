@@ -52,13 +52,14 @@ export const DEMO_UID = 'c1'
 const CENARIO = process.env.EXPO_PUBLIC_DEMO ?? '1'
 const NOVA = CENARIO === 'nova'
 const VAZIA = CENARIO === 'vazia'
+const DONA = CENARIO === 'dona' // 3.65: uma conta de salão abre o app da cliente e é posta para fora
 const S1 = 's1' // Studio Mel (salão)
 const S2 = 's2' // Bia Lash (autônoma)
 
 // 3.60: na demo, "entrar com o Google" é a Juliana chegando sem WhatsApp; completar_perfil preenche
 let peloGoogle = false
 const perfis: Linha[] = [
-  { id: 'c1', full_name: 'Juliana Silva', phone: '(13) 99879-0115', avatar_url: null, role: 'cliente', accepts_reminders: true, aceita_email: true, referral_code: 'JULIANA10', nascimento: '1994-08-23', created_at: '2025-01-10T12:00:00Z' },
+  { id: 'c1', full_name: 'Juliana Silva', phone: '(13) 99879-0115', avatar_url: null, role: DONA ? 'admin' : 'cliente', aceitou_termos_em: '2025-01-10T12:00:00Z', accepts_reminders: true, aceita_email: true, referral_code: 'JULIANA10', nascimento: '1994-08-23', created_at: '2025-01-10T12:00:00Z' },
 ]
 
 const saloes: Linha[] = [

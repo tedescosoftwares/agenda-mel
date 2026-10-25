@@ -12,7 +12,7 @@ import { erroDoRetornoOAuth } from '../../lib/oauth'
 // /entrar — a PORTA do MIMO para quem não está logada. Ninguém chega
 // aqui do nada: sempre foi uma profissional ou um salão que chamou. Então
 // a primeira tela pergunta pelo código, não pelo e-mail:
-//   Escanear o QR  ·  Digitar o código  ·  Já tenho conta
+//   Escanear o QR  ·  Digitar o código  ·  Google  ·  Criar conta sem código (3.65)  ·  Já tenho conta
 // O código leva para /v/<código>, que mostra quem convidou e cria a
 // conta já com o vínculo. Cadastro solto não existe (a rota até aceita,
 // mas nenhuma tela leva lá). 3.61.1: "Continuar com Google" também aqui, para
@@ -67,6 +67,7 @@ export default function ComCodigo() {
           <div className="entrar-conta">
             <OuLinha />
             <BotaoGoogle voltar="/" onErro={setErro} />
+            <Link to="/cadastro" className="btn btn-ghost btn-block">Criar conta sem código</Link>
             <Link to="/login" className="btn btn-ghost btn-block">Já tenho conta</Link>
           </div>
         )}

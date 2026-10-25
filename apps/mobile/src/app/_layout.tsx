@@ -30,13 +30,16 @@ function Navegacao() {
   const { sessao, perfil, perfilPronto, carregando } = useSessao()
   const t = useTema()
 
+  // com sessão, a abertura espera o perfil chegar: é ele que diz se a conta é de cliente
+  // (3.65, sessao.tsx) e se o cadastro está completo (completar.tsx), sem piscar as abas
+  const pronta = !carregando && (!sessao || perfilPronto)
   useEffect(() => {
-    if (!carregando) SplashScreen.hideAsync().catch(() => {})
-  }, [carregando])
+    if (pronta) SplashScreen.hideAsync().catch(() => {})
+  }, [pronta])
   // tocou num aviso: abre o caminho dele assim que as abas estiverem de pé
-  useAbrirAvisoTocado(!carregando && Boolean(sessao))
+  useAbrirAvisoTocado(pronta && Boolean(sessao))
 
-  if (carregando) return null
+  if (!pronta) return null
 
   const base = t.escuro ? DarkTheme : DefaultTheme
   const tema = {

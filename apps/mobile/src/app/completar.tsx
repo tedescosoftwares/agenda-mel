@@ -9,14 +9,17 @@ import { WEB_URL } from '@/lib/config'
 import { useConfig } from '@/lib/configPublica'
 import { mascaraData, nascimentoOk, paraIso } from '@/lib/datas'
 import { aceitesDaCliente } from '@/lib/legal'
+import { contaSocial } from '@/lib/oauth'
 import { supabase } from '@/lib/supabase'
 import { useTema } from '@/lib/tema'
 
-// Falta só o seu WhatsApp (3.60). A conta que nasce pelo Google chega sem
-// telefone, e é pelo WhatsApp que chegam a confirmação e o lembrete; o salão
-// também encaixa clientes por ele. Esta tela vem antes das abas (_layout.tsx) e
-// chama completar_perfil (207): telefone (um WhatsApp, uma conta — 067),
-// aniversário, o aceite dos termos e os encaixes que o salão já fez por esse número.
+// O cadastro completo (3.60, 3.65): nome, WhatsApp e o aceite dos termos. A
+// conta que nasce pelo Google chega sem telefone, e é pelo WhatsApp que chegam a
+// confirmação e o lembrete; o salão também encaixa clientes por ele. Uma conta
+// antiga pode estar sem o aceite. Esta tela vem antes das abas (_layout.tsx,
+// precisaCompletar) e chama completar_perfil (207): telefone (um WhatsApp, uma
+// conta — 067), aniversário, o aceite dos termos e os encaixes que o salão já
+// fez por esse número.
 export default function Completar() {
   const t = useTema()
   const cfg = useConfig()
@@ -24,13 +27,15 @@ export default function Completar() {
   const meta = (usuario?.user_metadata ?? {}) as { full_name?: string; name?: string; avatar_url?: string; picture?: string }
   // o nome vem do perfil (ou do Google) até a pessoa mexer nele
   const [nomeDigitado, setNomeDigitado] = useState<string | null>(null)
-  const [fone, setFone] = useState('')
+  const [fone, setFone] = useState(() => (perfil?.phone ? formatarFone(perfil.phone) : ''))
   const [nasc, setNasc] = useState('')
   const [termos, setTermos] = useState(false)
   const [erro, setErro] = useState('')
   const [jaTem, setJaTem] = useState(false)
   const [ocupado, setOcupado] = useState(false)
   const precisaAceite = !perfil?.aceitou_termos_em
+  const peloGoogle = contaSocial(usuario)
+  const faltaSoAceite = Boolean(perfil?.phone && perfil?.full_name && precisaAceite)
   const foto = perfil?.avatar_url ?? meta.avatar_url ?? meta.picture ?? null
 
   const nome = nomeDigitado ?? perfil?.full_name ?? meta.full_name ?? meta.name ?? ''
@@ -92,13 +97,19 @@ export default function Completar() {
   const suporte = () => void Linking.openURL(linkWhats(numeroWhats(cfg), chamada('whatsEmUso', null, cfg).texto))
 
   return (
-    <Tela titulo="Falta só o seu WhatsApp" voltar={() => void sair()}>
+    <Tela titulo={faltaSoAceite ? 'Falta só o seu aceite' : perfil?.phone ? 'Complete o seu cadastro' : 'Falta só o seu WhatsApp'} voltar={() => void sair()}>
       {!perfilPronto ? <Carregando /> : null}
-      <Text style={{ color: t.texto2, lineHeight: 21 }}>Você entrou com o Google. É pelo WhatsApp que chegam a confirmação e o lembrete dos seus horários, e é por ele que a profissional te reconhece.</Text>
+      <Text style={{ color: t.texto2, lineHeight: 21 }}>
+        {faltaSoAceite
+          ? 'Para seguir usando a MIMO, confira seus dados e aceite os Termos de uso e a Política de privacidade.'
+          : peloGoogle
+            ? 'Você entrou com o Google. É pelo WhatsApp que chegam a confirmação e o lembrete dos seus horários, e é por ele que a profissional te reconhece.'
+            : 'Para usar a MIMO, precisamos do seu nome, do seu WhatsApp e do aceite dos termos. É rapidinho.'}
+      </Text>
       <Cartao estilo={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
         <Avatar url={foto} nome={nome || 'G'} tamanho={48} />
         <View style={{ flex: 1 }}>
-          <Text style={{ color: t.texto, fontWeight: '800', fontSize: 16 }}>{nome || 'Sua conta Google'}</Text>
+          <Text style={{ color: t.texto, fontWeight: '800', fontSize: 16 }}>{nome || (peloGoogle ? 'Sua conta Google' : 'Sua conta')}</Text>
           <Text style={{ color: t.texto2, fontSize: 13 }}>{usuario?.email}</Text>
         </View>
       </Cartao>

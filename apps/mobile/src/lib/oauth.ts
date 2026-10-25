@@ -94,13 +94,16 @@ export function contaSocial(usuario: User | null | undefined): boolean {
   return lista.some((p) => p && p !== 'email' && p !== 'phone')
 }
 
-// a cliente que entrou pelo Google e ainda não disse o WhatsApp: a tela
-// "falta só o seu WhatsApp" vem antes das abas. Enquanto o perfil não chegou
-// (perfilPronto=false) a conta social espera lá, em vez de piscar as abas.
+// O cadastro completo (3.65): nome, WhatsApp e o aceite dos termos. Quem entra
+// pelo Google chega sem WhatsApp e sem aceite; uma conta antiga pode estar sem o
+// aceite. Nos dois casos a tela completar.tsx vem antes das abas. Enquanto o
+// perfil não chegou (perfilPronto=false) a conta social espera lá, em vez de
+// piscar as abas (o _layout também espera o perfil).
 export function precisaCompletar(usuario: User | null | undefined, perfil: Perfil | null, perfilPronto: boolean): boolean {
-  if (!usuario || !contaSocial(usuario)) return false
-  if (!perfilPronto) return true
-  return Boolean(perfil && (perfil.role === 'cliente' || perfil.role === null) && !perfil.phone)
+  if (!usuario) return false
+  if (!perfilPronto) return contaSocial(usuario)
+  if (!perfil || (perfil.role !== 'cliente' && perfil.role !== null)) return false
+  return !perfil.phone || !perfil.full_name || !perfil.aceitou_termos_em
 }
 
 export function traduzirOAuth(m: string): string {

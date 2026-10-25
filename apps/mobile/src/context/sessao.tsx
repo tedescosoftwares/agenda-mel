@@ -2,6 +2,8 @@ import type { Session, User } from '@supabase/supabase-js'
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { supabase } from '@/lib/supabase'
 import { ligarAvisos, desligarAvisos } from '@/lib/avisos'
+import { VARIANTE } from '@/lib/config'
+import { guardarContaErrada } from '@/lib/contaErrada'
 import { lerConvite, limparConvite } from '@/lib/convite'
 
 // A sessão do app: a mesma conta do site, guardada no aparelho. Todas as
@@ -70,6 +72,15 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
     let vivo = true
     buscarPerfil(uid).then(async (p) => {
       if (!vivo) return
+      // o app é só da cliente (3.65): conta de salão ou profissional sai na hora, e a tela
+      // de entrar explica (lib/contaErrada.ts). O perfil nem chega a ser guardado: as abas
+      // não aparecem (o _layout espera perfilPronto).
+      if (VARIANTE === 'cliente' && p?.role && p.role !== 'cliente') {
+        await guardarContaErrada(p.role)
+        await desligarAvisos().catch(() => {})
+        await supabase.auth.signOut()
+        return
+      }
       setCarregado({ uid, perfil: p })
       // entrou por um link /v/<código> antes de entrar na conta? entra na agenda agora
       // (quem se cadastrou já entrou pelo servidor; aqui é quem já tinha conta, ou quem

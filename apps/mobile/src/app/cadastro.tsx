@@ -15,13 +15,14 @@ import { aceitesDaCliente } from '@/lib/legal'
 import { supabase } from '@/lib/supabase'
 import { useTema } from '@/lib/tema'
 
-// O cadastro da cliente (o mesmo da web, CadastroCliente). Sempre nasce de um
-// convite: QR, código ou link de uma profissional ou salão. Dois passos curtos
-// (quem é você, e como você entra) e no fim "confira seu e-mail", com reenvio.
-// O convite vai nos metadados da conta e o servidor cria o vínculo quando o
-// perfil nasce (053); aniversário e aceite também (065). Ou, em um toque, com o
-// Google (3.60): a sessão nasce, o código guardado vira o vínculo e o app pede o
-// WhatsApp em seguida (completar.tsx).
+// O cadastro da cliente (o mesmo da web, CadastroCliente). Com ou sem convite
+// (3.65): a conta nasce sozinha e os vínculos vêm depois, pelo guia, pelo QR,
+// pelo link ou pelo código. Quando o convite vem (?convite=ANA7K2, do QR ou do
+// link /v/CODIGO), ele vai nos metadados da conta e o servidor cria o vínculo
+// quando o perfil nasce (053); aniversário e aceite também (065). Dois passos
+// curtos (quem é você, e como você entra) e no fim "confira seu e-mail", com
+// reenvio. Ou, em um toque, com o Google (3.60): a sessão nasce, o código
+// guardado vira o vínculo e o app pede o WhatsApp em seguida (completar.tsx).
 type Alvo = { tipo: string; nome: string; foto: string | null }
 
 export default function Cadastro() {
@@ -33,6 +34,7 @@ export default function Cadastro() {
   const [quem, setQuem] = useState<{ codigo: string; alvo: Alvo | null } | null>(null)
   const [passo, setPasso] = useState<1 | 2>(1)
   const [codigo, setCodigo] = useState('')
+  const [comCodigo, setComCodigo] = useState(false)
   const [nome, setNome] = useState('')
   const [fone, setFone] = useState('')
   const [nasc, setNasc] = useState('')
@@ -89,6 +91,7 @@ export default function Cadastro() {
       return
     }
     setErro('')
+    setComCodigo(false)
     router.setParams({ convite: c })
   }
 
@@ -139,7 +142,7 @@ export default function Cadastro() {
         email: email.trim().toLowerCase(),
         password: senha,
         options: {
-          data: { full_name: nome.trim(), phone: formatarFone(fone), codigo_convite: convite, termos: versao, aceites, ...(iso ? { nascimento: iso } : {}) },
+          data: { full_name: nome.trim(), phone: formatarFone(fone), codigo_convite: alvo ? convite : null, termos: versao, aceites, ...(iso ? { nascimento: iso } : {}) },
           // o link de confirmação abre o site logado; de volta aqui, é só entrar
           emailRedirectTo: `${WEB_URL}/`,
         },
@@ -178,7 +181,7 @@ export default function Cadastro() {
           </View>
           <Text style={[e.titulo, { color: t.texto, textAlign: 'center' }]}>Falta só confirmar</Text>
           <Text style={{ color: t.texto2, textAlign: 'center', lineHeight: 21 }}>
-            Mandamos um e-mail para <Text style={{ fontWeight: '700', color: t.texto }}>{email.trim()}</Text>. Toca no botão que está nele e a sua conta abre já dentro da agenda{primeiroNome ? ` de ${primeiroNome}` : ''}.
+            Mandamos um e-mail para <Text style={{ fontWeight: '700', color: t.texto }}>{email.trim()}</Text>. Toca no botão que está nele e a sua conta abre{primeiroNome ? ` já dentro da agenda de ${primeiroNome}` : ', pronta para marcar'}.
           </Text>
           <Text style={{ color: t.texto3, textAlign: 'center', fontSize: 13 }}>Não chegou? Olha o spam ou as Promoções. Pode levar um minuto.</Text>
         </View>
@@ -191,17 +194,7 @@ export default function Cadastro() {
 
   return (
     <Tela titulo="Criar conta">
-      {!convite ? (
-        <Cartao estilo={{ gap: 10 }}>
-          <Text style={[e.titulo, { color: t.texto }]}>Pra começar, o convite</Text>
-          <Text style={{ color: t.texto2, lineHeight: 20 }}>A conta nasce dentro da agenda de uma profissional. Pede o QR ou o código de seis letras para ela.</Text>
-          <Entrada rotulo="Código ou link" placeholder="ANA7K2" value={codigo} onChangeText={setCodigo} autoCapitalize="characters" autoCorrect={false} onSubmitEditing={usarCodigo} returnKeyType="go" />
-          {erro ? <Aviso tom="erro" texto={erro} /> : null}
-          <Botao titulo="Continuar" onPress={usarCodigo} desabilitado={!codigo.trim()} />
-          <Botao titulo="Escanear o QR" icone="qr-code-outline" tipo="fantasma" onPress={() => router.push('/ler-qr')} />
-        </Cartao>
-      ) : (
-        <>
+      <>
           {alvo ? (
             <Cartao estilo={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
               <Avatar url={alvo.foto} nome={alvo.nome} tamanho={48} />
@@ -211,15 +204,32 @@ export default function Cadastro() {
               </View>
             </Cartao>
           ) : alvo === null ? (
-            <Aviso tom="erro" texto="Código não encontrado. Confere as seis letras com a profissional." />
+            <Cartao estilo={{ gap: 10 }}>
+              <Aviso tom="erro" texto="Código não encontrado. Confere as seis letras com a profissional, ou siga sem ele: dá para entrar na agenda depois." />
+              <Botao titulo="Seguir sem o código" tipo="fantasma" onPress={() => router.setParams({ convite: '' })} />
+            </Cartao>
+          ) : !convite ? (
+            <Cartao estilo={{ gap: 10 }}>
+              <Pressable onPress={() => setComCodigo((v) => !v)} accessibilityRole="button" style={e.dobra} testID="cadastro-com-codigo">
+                <Text style={{ color: t.texto2, fontWeight: '600', fontSize: 13.5, flex: 1 }}>Tem o código ou o QR de uma profissional? É opcional.</Text>
+                <Ionicons name={comCodigo ? 'chevron-up' : 'chevron-down'} size={16} color={t.texto3} />
+              </Pressable>
+              {comCodigo ? (
+                <>
+                  <Text style={{ color: t.texto3, fontSize: 12.5 }}>Com ele, a conta já nasce dentro da agenda dela. Sem ele, você entra nas agendas depois, pelo guia ou pelo QR.</Text>
+                  <Entrada rotulo="Código ou link" placeholder="ANA7K2" value={codigo} onChangeText={setCodigo} autoCapitalize="characters" autoCorrect={false} onSubmitEditing={usarCodigo} returnKeyType="go" />
+                  <Botao titulo="Usar o código" tipo="linha" onPress={usarCodigo} desabilitado={!codigo.trim()} />
+                  <Botao titulo="Escanear o QR" icone="qr-code-outline" tipo="fantasma" onPress={() => router.push('/ler-qr')} />
+                </>
+              ) : null}
+            </Cartao>
           ) : null}
-          {alvo === null ? <Botao titulo="Tentar outro código" tipo="fantasma" onPress={() => router.setParams({ convite: '' })} /> : null}
 
           <Text style={{ color: t.texto3, fontSize: 12, fontWeight: '700', letterSpacing: 0.6, textTransform: 'uppercase' }}>{passo === 1 ? 'Passo 1 de 2 · Quem é você' : 'Passo 2 de 2 · Como você entra'}</Text>
 
           {passo === 1 ? (
             <Cartao estilo={{ gap: 12 }}>
-              {google && alvo ? (
+              {google ? (
                 <>
                   <Botao titulo="Continuar com Google" tipo="linha" icone="logo-google" onPress={comGoogle} carregando={googleOcupado} />
                   <View style={e.ou}>
@@ -242,13 +252,13 @@ export default function Cadastro() {
               {jaTem ? (
                 <View style={[e.jaTem, { backgroundColor: t.veu }]}>
                   <Text style={{ color: t.texto, lineHeight: 20 }}>
-                    <Text style={{ fontWeight: '800' }}>Esse WhatsApp já está em uso</Text> e não dá pra cadastrar de novo. Se a conta é sua, é só entrar; o convite continua valendo. Se o número é seu e você não tem conta, fale com o suporte.
+                    <Text style={{ fontWeight: '800' }}>Esse WhatsApp já está em uso</Text> e não dá pra cadastrar de novo. Se a conta é sua, é só entrar. Se o número é seu e você não tem conta, fale com o suporte.
                   </Text>
                   <Botao titulo="Entrar" onPress={entrar} />
                   <Botao titulo="Falar com o suporte" tipo="fantasma" icone="logo-whatsapp" onPress={suporte} />
                 </View>
               ) : null}
-              <Botao titulo={ocupado ? 'Conferindo…' : 'Continuar'} onPress={seguir} desabilitado={!alvo || ocupado} carregando={ocupado} />
+              <Botao titulo={ocupado ? 'Conferindo…' : 'Continuar'} onPress={seguir} desabilitado={ocupado} carregando={ocupado} />
             </Cartao>
           ) : (
             <Cartao estilo={{ gap: 12 }}>
@@ -283,8 +293,7 @@ export default function Cadastro() {
               />
             </Cartao>
           )}
-        </>
-      )}
+      </>
 
       <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6, paddingVertical: 4 }}>
         <Text style={{ color: t.texto2 }}>Já tem conta?</Text>
@@ -315,4 +324,5 @@ const e = StyleSheet.create({
   jaTem: { borderRadius: 14, padding: 12, gap: 10 },
   ou: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 2 },
   ouLinha: { flex: 1, height: 1 },
+  dobra: { flexDirection: 'row', alignItems: 'center', gap: 8 },
 })

@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { Aviso, Botao } from '@/components/ui'
 import { useSessao } from '@/context/sessao'
 import { CONFIGURADO, NOME_DO_APP, SUPABASE_URL, VARIANTE, VERSAO, WEB_URL } from '@/lib/config'
+import { MSG_CONTA_ERRADA, lerContaErrada } from '@/lib/contaErrada'
 import { extrairCodigo, guardarConvite } from '@/lib/convite'
 import { entrarComGoogle, provedoresLigados } from '@/lib/oauth'
 import { supabase } from '@/lib/supabase'
@@ -16,9 +17,10 @@ import iconePro from '../../assets/images/pro/icone.png'
 // Entrar: e-mail e senha, direto no Supabase; ou com o Google (3.60), no app da
 // cliente, quando o provedor está ligado. "Esqueci a senha" manda o link
 // por e-mail (o link abre o site, que pede a senha nova; a senha vale aqui).
-// Criar conta é nativo (cadastro.tsx) e nasce de um convite: ?convite=ANA7K2
+// Criar conta é nativo (cadastro.tsx), com ou sem convite (3.65): ?convite=ANA7K2
 // chega pelo QR ou pelo link /v/CODIGO e, depois de entrar, a sessão já põe
-// a pessoa na agenda (src/context/sessao.tsx).
+// a pessoa na agenda (src/context/sessao.tsx). O app é só da cliente: uma conta
+// de salão ou profissional é posta para fora e o aviso aparece aqui.
 export default function Entrar() {
   const t = useTema()
   const router = useRouter()
@@ -34,6 +36,18 @@ export default function Entrar() {
   const [quem, setQuem] = useState<{ codigo: string; nome: string } | null>(null)
   const [google, setGoogle] = useState(false)
   const [googleOcupado, setGoogleOcupado] = useState(false)
+  const [contaErrada, setContaErrada] = useState(false)
+
+  // uma conta de salão ou profissional acabou de ser posta para fora (3.65)
+  useEffect(() => {
+    let vivo = true
+    lerContaErrada().then((p) => {
+      if (vivo && p) setContaErrada(true)
+    })
+    return () => {
+      vivo = false
+    }
+  }, [])
 
   // o Google aparece só no app da cliente, e só com o provedor ligado no Supabase
   useEffect(() => {
@@ -50,6 +64,7 @@ export default function Entrar() {
   async function comGoogle() {
     setErro(null)
     setInfo(null)
+    setContaErrada(false)
     setGoogleOcupado(true)
     const falha = await entrarComGoogle()
     setGoogleOcupado(false)
@@ -75,6 +90,7 @@ export default function Entrar() {
   async function enviar() {
     setErro(null)
     setInfo(null)
+    setContaErrada(false)
     if (modo === 'esqueci') {
       if (!email.trim()) {
         setErro('Preenche o e-mail da sua conta.')
@@ -117,6 +133,7 @@ export default function Entrar() {
           {!CONFIGURADO ? (
             <Aviso tom="erro" texto="Faltam as credenciais do Supabase: EXPO_PUBLIC_SUPABASE_URL e EXPO_PUBLIC_SUPABASE_ANON_KEY no .env do app (veja .env.example)." />
           ) : null}
+          {contaErrada ? <Aviso tom="erro" icone="storefront-outline" texto={MSG_CONTA_ERRADA} /> : null}
           {convidou ? <Aviso tom="info" icone="sparkles-outline" texto={`${convidou} te convidou. Entre e você já cai na agenda.`} /> : null}
 
           <TextInput

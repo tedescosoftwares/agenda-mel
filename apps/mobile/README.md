@@ -41,8 +41,9 @@ apps/mobile/
   assets/images/       ícones (cliente/ e pro/) e a Mel
   src/app/             as rotas (expo-router)
     _layout.tsx        com sessão → abas; sem sessão → entrar
-    entrar.tsx         e-mail e senha; esqueci a senha (o link chega por e-mail)
-    cadastro.tsx       criar conta pelo convite: quem é você (WhatsApp único), como você entra, confira o e-mail
+    entrar.tsx         e-mail e senha, ou Google; esqueci a senha (o link chega por e-mail); o aviso de conta de salão (3.65)
+    cadastro.tsx       criar conta, com ou sem convite (3.65): quem é você (WhatsApp único), como você entra, confira o e-mail
+    completar.tsx      o cadastro completo antes das abas: nome, WhatsApp e o aceite (quem entrou pelo Google, conta antiga sem aceite)
     ler-qr.tsx         a câmera lê o QR da profissional ou do salão
     (tabs)/index.tsx   Início: próximo horário, atalhos, novidades, promoções, salões, profissionais e destaques
     (tabs)/guia.tsx    Guia de salões (3.64): a cidade (lembrada; na primeira vez, pela conexão), busca, categorias, a lista
@@ -281,6 +282,29 @@ o link de redefinir senha que chega por e-mail (a senha nova vale no app). Um
 aviso push ou um link com o caminho da web cai na tela nativa dele
 (`rotaNativa`, em `src/lib/ponte.ts`); um caminho sem tela abre no navegador.
 
+## Só a cliente entra (3.65)
+
+O app MIMO é da cliente, e só dela. Não há multiambiente: uma conta de salão ou
+de profissional que entra aqui (e-mail e senha, ou Google) é posta para fora na
+hora, pela sessão (`context/sessao.tsx`: o perfil chega com `role` diferente de
+`cliente`, o app sai e guarda o motivo em `lib/contaErrada.ts`), e a tela de
+entrar explica: "o app MIMO é só para clientes; para o salão, pro.mimo.com.vc".
+A abertura espera o perfil chegar antes de mostrar as abas (`_layout.tsx`), para
+não piscar. Demo: `EXPO_PUBLIC_DEMO=dona`.
+
+**Cadastro sem vínculo.** A conta nasce sozinha, sem convite (`cadastro.tsx`):
+nome, WhatsApp (um por conta), e-mail, senha, aniversário opcional e o aceite.
+Os vínculos vêm depois, pelo guia, pelo QR, pelo link `/v/CODIGO` ou pelo código
+de seis letras. Quando o convite vem (QR ou link), o cartão "você vai entrar na
+agenda de…" aparece e a conta já nasce vinculada; um código errado vira "seguir
+sem o código". Na web é igual (`CadastroCliente.jsx`, e o botão "Criar conta
+sem código" em `/entrar`).
+
+**Cadastro completo.** Quem entra pelo Google chega sem WhatsApp e sem aceite;
+uma conta antiga pode estar sem o aceite. Nos dois casos a tela
+`completar.tsx` vem antes das abas (`precisaCompletar`, em `lib/oauth.ts`:
+nome, WhatsApp e `aceitou_termos_em`) e chama `completar_perfil` (207).
+
 ## O guia dentro do app (3.64)
 
 O app da cliente é a porta de descoberta: a aba **Guia** mostra os salões da
@@ -310,8 +334,8 @@ atendente virtual do salão (069) com os recursos da Mel do guia.
 
 ## O que vem depois
 
-1. **Entrar com Google/Apple** no app (hoje é e-mail e senha; na web a opção
-   aparece quando o provedor está ligado).
+1. **Entrar com Apple** no app (o Google já entra; a web mostra a opção quando o
+   provedor está ligado).
 2. **MIMO Pro**: a variante já existe; faltam as abas de quem atende (agenda do
    dia, encaixe, pedidos).
 3. **iPhone**: mesma base. Precisa da conta Apple Developer (US$ 99/ano); a build

@@ -15,13 +15,13 @@ import { MarcaIcon, Wordmark } from '../../components/icons'
 import BotaoGoogle, { OuLinha } from '../../components/BotaoGoogle'
 import { MailCheck } from 'lucide-react'
 
-// O cadastro da cliente (065). Sempre nasce de um convite: QR, código
-// ou link de uma profissional ou salão. Dois passos curtos — quem é
-// você, e como você entra — e no fim a tela de "confira seu e-mail",
-// com reenvio. O convite vai nos metadados e o servidor cria o vínculo
-// quando o perfil nasce (053); aniversário e aceite também (065). Ou, em
-// um toque, com o Google (3.60): volta logada no /v/<código> e diz o
-// WhatsApp em seguida.
+// O cadastro da cliente (065). Com ou sem convite (3.65): a conta nasce sozinha
+// e os vínculos vêm depois, pelo guia, pelo QR, pelo link ou pelo código. Quando
+// o convite vem (?convite=ANA7K2, do QR ou do link /v/CODIGO), vai nos metadados
+// e o servidor cria o vínculo quando o perfil nasce (053); aniversário e aceite
+// também (065). Dois passos curtos — quem é você, e como você entra — e no fim
+// a tela de "confira seu e-mail", com reenvio. Ou, em um toque, com o Google
+// (3.60): volta logada e diz o WhatsApp em seguida.
 export default function CadastroCliente() {
   const { user, role, loading, signUp } = useAuth()
   const [q] = useSearchParams()
@@ -50,7 +50,7 @@ export default function CadastroCliente() {
 
   if (loading || quem === undefined) return <div className="page-center"><p className="muted">Carregando…</p></div>
   if (user) return <Navigate to={homeDoPapel(role)} replace />
-  if (!convite) return <Navigate to="/entrar" replace />
+  const paraLogin = convite ? `/login?convite=${convite}` : '/login'
 
   async function seguir(e) {
     e.preventDefault(); setErro(''); setJaTem(null)
@@ -75,7 +75,7 @@ export default function CadastroCliente() {
     if (!termos) { setErro('Para criar a conta, é preciso aceitar os Termos e a Política de privacidade.'); return }
     setEnviando(true)
     const aceites = aceitesPara('cliente', docs)
-    const extra = { codigo_convite: convite, termos: versaoMaior(aceites), aceites }
+    const extra = { codigo_convite: quem ? convite : null, termos: versaoMaior(aceites), aceites }
     if (nasc) extra.nascimento = nasc
     const { error } = await signUp(email.trim(), senha, nome.trim(), formatarFone(fone), extra)
     setEnviando(false)
@@ -103,10 +103,10 @@ export default function CadastroCliente() {
           <div className="cad-pronto">
             <span className="cad-pronto-icone" aria-hidden="true"><MailCheck size={44} strokeWidth={1.6} /></span>
             <h2 className="login-titulo">Falta só confirmar</h2>
-            <p className="muted login-sub">Mandamos um e-mail para <strong>{email.trim()}</strong>. Toca no botão que está nele e a sua conta abre já dentro da agenda {primeiroNome ? `de ${primeiroNome}` : ''}.</p>
+            <p className="muted login-sub">Mandamos um e-mail para <strong>{email.trim()}</strong>. Toca no botão que está nele e a sua conta abre{primeiroNome ? ` já dentro da agenda de ${primeiroNome}` : ', pronta para marcar'}.</p>
             <p className="muted cad-dica">Não chegou? Olha o spam ou as Promoções. Pode levar um minuto.</p>
             {reenviado && <div className="alert alert-info">{reenviado}</div>}
-            <Link to={`/login?convite=${convite}`} className="btn btn-primary btn-block">Já confirmei, entrar</Link>
+            <Link to={paraLogin} className="btn btn-primary btn-block">Já confirmei, entrar</Link>
             <button type="button" className="btn btn-ghost btn-block" onClick={reenviar}>Reenviar e-mail</button>
           </div>
         ) : (
@@ -119,8 +119,10 @@ export default function CadastroCliente() {
                   <strong>{quem.nome}</strong>
                 </div>
               </div>
+            ) : convite ? (
+              <div className="alert alert-error">Código não encontrado. <Link to="/entrar">Tentar outro</Link> ou <Link to="/cadastro">seguir sem ele</Link>: dá para entrar na agenda depois.</div>
             ) : (
-              <div className="alert alert-error">Código não encontrado. <Link to="/entrar">Tentar outro</Link></div>
+              <p className="muted cad-dica">Tem o código ou o QR de uma profissional? <Link to="/entrar" className="link-ver">Use ele</Link> e a conta já nasce dentro da agenda dela. Sem ele, você entra nas agendas depois, pelo guia ou pelo QR.</p>
             )}
 
             <div className="cad-passos" aria-label={`Passo ${passo} de 2`}>
@@ -130,7 +132,8 @@ export default function CadastroCliente() {
 
             {passo === 1 ? (
               <form onSubmit={seguir} className="form">
-                {quem && <><BotaoGoogle convite={convite} voltar={`/v/${convite}`} onErro={setErro} /><OuLinha texto="ou com e-mail" /></>}
+                <BotaoGoogle convite={quem ? convite : undefined} voltar={quem ? `/v/${convite}` : '/'} onErro={setErro} />
+                <OuLinha texto="ou com e-mail" />
                 <label>Nome e sobrenome<input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Maria da Silva" autoComplete="name" required /></label>
                 <label>WhatsApp<input type="tel" inputMode="numeric" value={fone} onChange={(e) => setFone(formatarFone(e.target.value))} placeholder="(13) 99999-9999" autoComplete="tel" required />
                   <span className="campo-dica muted">É por ele que chegam a confirmação e o lembrete.</span></label>
@@ -139,9 +142,9 @@ export default function CadastroCliente() {
                 {erro && <div className="alert alert-error">{erro}</div>}
                 {jaTem && (
                   <div className="alert alert-info ja-tem">
-                    <strong>Esse WhatsApp já está em uso</strong> e não dá pra cadastrar de novo. Se a conta é sua, é só entrar; o convite continua valendo. Se o número é seu e você não tem conta, fale com o suporte.
+                    <strong>Esse WhatsApp já está em uso</strong> e não dá pra cadastrar de novo. Se a conta é sua, é só entrar. Se o número é seu e você não tem conta, fale com o suporte.
                     <div className="ja-tem-acoes">
-                      <Link to={`/login?convite=${convite}`} className="btn btn-primary">Entrar</Link>
+                      <Link to={paraLogin} className="btn btn-primary">Entrar</Link>
                       <LinkSuporte chamada="whatsEmUso" className="btn btn-ghost">Falar com o suporte</LinkSuporte>
                     </div>
                   </div>
@@ -163,7 +166,7 @@ export default function CadastroCliente() {
               </form>
             )}
 
-            <p className="login-troca muted">Já tem conta? <Link to={`/login?convite=${convite}`} className="link-ver">Entrar</Link></p>
+            <p className="login-troca muted">Já tem conta? <Link to={paraLogin} className="link-ver">Entrar</Link></p>
           </>
         )}
         <RodapeSocial />

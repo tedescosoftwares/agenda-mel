@@ -196,9 +196,17 @@ novo (`expo install` de algo com código nativo), permissão nova, mudança no
 `app.json`/`app.config.js` (ícone, splash, nome, scheme, App Links, plugins) e
 upgrade do SDK do Expo. A versão de runtime é por **fingerprint**
 (`runtimeVersion: { policy: "fingerprint" }`): o EAS calcula uma impressão da
-parte nativa; a atualização só vai para builds com a mesma impressão. Se o
-`eas update` avisar que nenhuma build tem esse runtime, é hora de
-`npm run build:loja` (e `npm run fingerprint` mostra a impressão atual).
+parte nativa; a atualização só vai para builds com a mesma impressão.
+`fingerprint.config.js` tira da impressão o que não é nativo e muda toda hora:
+a versão do app (vem de `src/lib/versao.js`), os scripts do `package.json`, o
+`eas.json`, o `.gitignore`, a pasta `loja/`. Sem isso, cada entrega mudava a
+impressão e a build da loja ficava sem receber atualização (foi o que aconteceu
+na primeira build, 3.65.1). `npm run fingerprint` mostra a impressão atual;
+`eas build:list --platform android --limit 1` mostra a da última build. Se as
+duas diferem, a OTA não chega: é hora de `npm run build:loja`.
+
+Cada `eas update` imprime o runtime version por plataforma; o painel do Expo
+(Updates) mostra quantas builds têm aquele runtime.
 
 Os canais são por perfil de build (`eas.json`): `preview`, `production`,
 `pro-preview`, `pro-production`. Cada atualização vai para um canal; a build

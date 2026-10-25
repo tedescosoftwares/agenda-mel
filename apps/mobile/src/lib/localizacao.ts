@@ -1,35 +1,26 @@
-import AsyncStorage from '@react-native-async-storage/async-storage'
 import * as Location from 'expo-location'
 import { Linking } from 'react-native'
 import { slugificar } from '@mimo/core/guia.js'
 import { DEMO } from './config'
 
-// A localização da cliente (3.66). Pedida uma vez, no primeiro uso do app
-// (components/Localizacao.tsx), com a explicação: serve para pôr na frente os
+// A localização da cliente (3.66). Pedida na abertura do app enquanto não for
+// dada (components/Localizacao.tsx), com a explicação: serve para pôr na frente os
 // salões, as promoções e as ofertas mais perto dela e para escolher a cidade
 // do guia. Fica só no aparelho: nada do ponto vai para o servidor.
 
 export type Posicao = { latitude: number; longitude: number }
-const CHAVE = 'mimo-localizacao-pedida'
 const CENARIO = process.env.EXPO_PUBLIC_DEMO ?? ''
 // na demonstração a posição é o centro de Itanhaém (o guia da demo é de lá)
 const POSICAO_DEMO: Posicao = { latitude: -24.1877, longitude: -46.7889 }
 
-// a tela de explicação já apareceu? (na demo, só o cenário "local" mostra)
-export async function jaPerguntamos(): Promise<boolean> {
-  if (DEMO) return CENARIO !== 'local'
-  try {
-    return (await AsyncStorage.getItem(CHAVE)) === '1'
-  } catch {
-    return true
-  }
-}
-export async function marcarPerguntado(): Promise<void> {
-  try {
-    await AsyncStorage.setItem(CHAVE, '1')
-  } catch {
-    // sem armazenamento: pergunta de novo na próxima
-  }
+// a tela de explicação aparece em toda abertura enquanto a permissão não for dada
+// (3.66.1): "Permitir" grande, "Continuar sem" pequeno e só para a sessão. Obrigar de
+// vez não dá: o Play derruba app que trava tudo atrás da localização, a LGPD pede
+// consentimento livre, e o sistema deixa negar de qualquer jeito. No pagamento (o
+// antifraude), a exigência vai ser ali, ligada ao motivo. Na demo, só o cenário "local".
+export async function precisaPedirLocalizacao(): Promise<boolean> {
+  if (DEMO) return CENARIO === 'local'
+  return (await permissaoAtual()) !== 'ok'
 }
 
 export type Permissao = 'ok' | 'negada' | 'nunca'

@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 import { Atualizador } from '@/components/Atualizador'
 import { Localizacao } from '@/components/Localizacao'
 import { VARIANTE } from '@/lib/config'
-import { jaPerguntamos } from '@/lib/localizacao'
+import { precisaPedirLocalizacao } from '@/lib/localizacao'
 import { SessaoProvider, useSessao } from '@/context/sessao'
 import { useTema } from '@/lib/tema'
 import { useAbrirAvisoTocado } from '@/lib/avisos'
@@ -32,13 +32,13 @@ export default function Raiz() {
 function Navegacao() {
   const { sessao, perfil, perfilPronto, carregando } = useSessao()
   const t = useTema()
-  // o primeiro uso (3.66): a tela da localização vem antes de tudo, uma vez só (null = ainda lendo)
+  // a tela da localização vem antes de tudo enquanto a permissão não for dada (3.66.1; null = ainda lendo)
   const [pedirLocal, setPedirLocal] = useState<boolean | null>(VARIANTE === 'cliente' ? null : false)
   useEffect(() => {
     if (VARIANTE !== 'cliente') return
     let vivo = true
-    jaPerguntamos().then((ja) => {
-      if (vivo) setPedirLocal(!ja)
+    precisaPedirLocalizacao().then((precisa) => {
+      if (vivo) setPedirLocal(precisa)
     })
     return () => {
       vivo = false

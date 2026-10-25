@@ -1,30 +1,40 @@
 import { Ionicons } from '@expo/vector-icons'
 import * as WebBrowser from 'expo-web-browser'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Botao, Cartao } from '@/components/ui'
 import { WEB_URL } from '@/lib/config'
-import { marcarPerguntado, pedirPermissao } from '@/lib/localizacao'
+import { abrirAjustes, pedirPermissao, permissaoAtual, type Permissao } from '@/lib/localizacao'
 import { ESPACO, useTema } from '@/lib/tema'
 
 // A primeira tela do app (3.66): por que a MIMO pede a localização, e o que
-// faz (e não faz) com ela. Aparece uma vez, antes de entrar; "Permitir" abre o
-// pedido do sistema, "Agora não" segue sem (a cidade do guia vem pela conexão
-// e dá para ligar depois, na aba Guia).
+// faz (e não faz) com ela. Aparece em toda abertura enquanto a permissão não
+// for dada (3.66.1): "Permitir" abre o pedido do sistema; negada de vez, vira
+// "Abrir ajustes"; "Continuar sem" segue só por esta sessão (a cidade do guia
+// vem pela conexão, e a aba Guia pede de novo).
 export function Localizacao({ onPronto }: { onPronto: () => void }) {
   const t = useTema()
   const [ocupado, setOcupado] = useState(false)
+  const [permissao, setPermissao] = useState<Permissao | null>(null)
+  useEffect(() => {
+    let vivo = true
+    permissaoAtual().then((p) => {
+      if (vivo) setPermissao(p)
+    })
+    return () => {
+      vivo = false
+    }
+  }, [])
+  const negada = permissao === 'negada'
 
   async function permitir() {
     setOcupado(true)
-    await pedirPermissao().catch(() => false)
-    await marcarPerguntado()
+    const ok = await pedirPermissao().catch(() => false)
+    const agora = ok ? 'ok' : await permissaoAtual()
     setOcupado(false)
-    onPronto()
-  }
-  async function depois() {
-    await marcarPerguntado()
+    // negou de vez: a tela mostra o caminho dos ajustes; negou por ora: segue, e pergunta na próxima abertura
+    if (agora === 'negada') return setPermissao('negada')
     onPronto()
   }
 
@@ -50,8 +60,17 @@ export function Localizacao({ onPronto }: { onPronto: () => void }) {
           </Pressable>
         </Cartao>
         <View style={{ gap: 10, marginTop: 'auto' }}>
-          <Botao titulo="Permitir localização" icone="navigate-outline" onPress={() => void permitir()} carregando={ocupado} />
-          <Botao titulo="Agora não" tipo="fantasma" onPress={() => void depois()} desabilitado={ocupado} />
+          {negada ? (
+            <>
+              <Text style={{ color: t.texto2, textAlign: 'center', lineHeight: 20 }}>A localização está desligada para a MIMO no seu celular. Ligue nos ajustes: Permissões, Localização.</Text>
+              <Botao titulo="Abrir ajustes" icone="settings-outline" onPress={() => void abrirAjustes()} />
+            </>
+          ) : (
+            <Botao titulo="Permitir localização" icone="navigate-outline" onPress={() => void permitir()} carregando={ocupado} />
+          )}
+          <Pressable onPress={onPronto} hitSlop={8} accessibilityRole="button" disabled={ocupado} style={{ alignSelf: 'center', padding: 8 }} testID="localizacao-sem">
+            <Text style={{ color: t.texto3, fontSize: 13.5 }}>Continuar sem localização</Text>
+          </Pressable>
         </View>
       </ScrollView>
     </SafeAreaView>

@@ -294,11 +294,17 @@ aviso push ou um link com o caminho da web cai na tela nativa dele
 
 ## A cliente no mapa (3.66)
 
-**Localização, pedida uma vez.** A primeira tela do app (`components/Localizacao.tsx`,
+**Localização, pedida na abertura.** A primeira tela do app (`components/Localizacao.tsx`,
 antes de entrar) explica para que a MIMO pede a localização (os salões, as
 promoções e as ofertas mais perto, e a cidade do guia) e o que não faz com ela
 (fica só no aparelho; nada do ponto vai para o servidor; não vendemos nem
-repassamos dados). "Permitir" abre o pedido do sistema, "Agora não" segue sem.
+repassamos dados). "Permitir" abre o pedido do sistema; a tela volta a cada
+abertura enquanto a permissão não for dada (3.66.1), e "Continuar sem
+localização" vale só para a sessão. Negada de vez, oferece "Abrir ajustes".
+Obrigar não dá: o Play derruba app que trava tudo atrás da localização quando
+ela não é o núcleo do produto, a LGPD pede consentimento livre e o sistema
+deixa negar de qualquer jeito. No pagamento (antifraude) a exigência será ali,
+ligada ao motivo, com a declaração de dados da loja e a política atualizadas.
 `lib/localizacao.ts`: permissão, posição (a última conhecida, cache de 5 min),
 distância, a cidade do guia pela posição (geocodificação reversa do aparelho).
 Na aba Guia, com a permissão, a lista fica em ordem de distância e cada cartão

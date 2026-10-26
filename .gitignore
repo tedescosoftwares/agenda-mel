@@ -52,3 +52,4 @@ scripts/guia/__pycache__/
 evolution/.publicacao-registrada
 # 3.42: o último aviso do cron do minuto (republicar-se-mudou.sh --pedidos), para não repetir no log
 evolution/.pedidos-aviso
+undefined/

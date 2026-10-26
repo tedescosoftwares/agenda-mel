@@ -44,6 +44,7 @@ const FOTO = (n: number) => {
 }
 // uma capa (salão, serviço, promoção): degradê com um texto grande e translúcido
 const CAPA = (a: string, b: string, txt = '') => {
+  txt = txt.replace(/&/g, '&amp;').replace(/</g, '&lt;') // o nome vai dentro do SVG: o & cru quebra a imagem
   const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='1200' height='720'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='${a}'/><stop offset='1' stop-color='${b}'/></linearGradient></defs><rect width='1200' height='720' fill='url(#g)'/><circle cx='980' cy='140' r='180' fill='rgba(255,255,255,0.18)'/><circle cx='220' cy='600' r='240' fill='rgba(255,255,255,0.12)'/><text x='80' y='400' font-family='Arial' font-size='110' font-weight='700' fill='rgba(255,255,255,0.35)'>${txt}</text></svg>`
   return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg)
 }

@@ -127,7 +127,7 @@ export default function Login({ ambiente = AMBIENTE }) {
         if (error) setErro(traduz(error.message))
         else { setInfo('Conta criada! Confira seu e-mail para confirmar e depois entre aqui.'); setModo('login') }
       } else {
-        const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + '/login' })
+        const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + '/senha' })
         if (error) setErro(traduz(error.message))
         else { setInfo('Se esse e-mail tiver conta, mandamos um link para criar uma senha nova.'); setModo('login') }
       }

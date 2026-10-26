@@ -35,6 +35,7 @@ const EntrarPorCodigo = pegar("EntrarPorCodigo");
 const ComCodigo = pegar("ComCodigo");
 const ConviteEquipe = pegar("ConviteEquipe");
 const AtivarAcesso = pegar("AtivarAcesso");
+const CriarSenha = pegar("CriarSenha");
 const EmailConfirmado = pegar("EmailConfirmado");
 const CadastroCliente = pegar("CadastroCliente");
 const BemVinda = pegar("BemVinda");
@@ -128,6 +129,7 @@ export default function App() {
             <Route path="/comecar" element={<RedeDeProtecao><Onboarding publico /></RedeDeProtecao>} />
             <Route path="/equipe/:codigo" element={<ConviteEquipe />} />
             <Route path="/ativar/:token" element={<AtivarAcesso />} />
+            <Route path="/senha" element={<CriarSenha />} />
             <Route path="/email-confirmado" element={<EmailConfirmado />} />
             <Route path="/onboarding" element={<ProtectedRoute permitirSemVinculo permitirOnboarding permitirPrimeiroAcesso><RedeDeProtecao><Onboarding /></RedeDeProtecao></ProtectedRoute>} />
             <Route path="/entrar" element={<ComCodigo />} />

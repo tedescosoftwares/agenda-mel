@@ -767,6 +767,7 @@ export const demo = {
     signUp: async () => ({ error: null }),
     signOut: async () => { try { localStorage.removeItem('mimo-demo-papel') } catch {} ; window.location.href = '/login'; return {} },
     resetPasswordForEmail: async () => ({ error: null }),
+    updateUser: async () => ({ data: { user: { id: UID } }, error: null }),
   },
   from: (t) => consulta(TABELAS[t] ?? CONTEUDO[t] ?? [], t),
   rpc: async (nome, args) => {

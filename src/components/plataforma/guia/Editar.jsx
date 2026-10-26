@@ -6,8 +6,9 @@ import EscreverFora, { Conferencia } from './EscreverFora'
 import { GUIA_CATEGORIAS, conteudoSeguro, telefoneBonito, canaisDoSite, rotaDoLugar } from '../../../lib/guia'
 import { seoDoLugar } from '../../../lib/guiaSeo'
 import { enviarFotoDoGuia, MAX_FOTOS } from '../../../lib/guiaFotos'
-import { X, Plus, Trash2, FileText, Store, LoaderCircle, ImagePlus, ChevronLeft, ChevronRight, Heart, Rocket } from 'lucide-react'
-import { supabase } from '../../../lib/supabase'
+import { X, Plus, Trash2, FileText, Store, LoaderCircle, ImagePlus, ChevronLeft, ChevronRight, Heart, Rocket, Check, Copy, MessageCircle } from 'lucide-react'
+import { promoverCompleto } from '../../../lib/guiaPromover'
+import { planoDoNegocio, reais } from '../../../lib/planos'
 
 // Editar um salão: os fatos (gravados com fontes[campo] = 'manual', para a
 // próxima importação não desfazer o que foi corrigido à mão), as fotos (3.14:
@@ -124,19 +125,29 @@ export default function EditarLugar({ lugar, g, onFechar }) {
 
   if (!lugar) return null
   const set = (k, v) => setFatos((f) => ({ ...f, [k]: v }))
-  // 3.67: promover o salão do guia a um salão com agenda (a Plataforma, pelo e-mail da conta da dona)
+  // 3.71: a promoção completa (Edge Function plataforma-promover): a conta da dona (com ou sem o e-mail de
+  // confirmação), o salão com os dados do guia, o plano pela equipe, o teste de 7 dias, o Pix e as mensagens
+  const EMAIL_OK = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
+  function abrirPromocao() {
+    const doc = lugar.validado_receita && lugar.cnpj ? String(lugar.cnpj) : ''
+    setPromo({ nome: '', email: '', whatsapp: lugar.whatsapp || '', documento: doc, conta: 'automatica', tipo: 'salao', equipe: 3, cobrar: true, enviar_whats: true, ocupado: false, erro: '', resultado: null })
+  }
   async function promover() {
     if (!promo || promo.ocupado) return
-    setPromo((p) => ({ ...p, ocupado: true }))
-    const { data, error } = await supabase.rpc('guia_promover', { lugar_: lugar.id, dono_email_: promo.email.trim(), tipo_: promo.tipo })
-    const r = error ? { ok: false, motivo: error.message } : (data ?? { ok: false, motivo: 'Sem resposta.' })
-    if (!r.ok) { setPromo((p) => (p ? { ...p, ocupado: false } : p)); g.avisar(r.motivo || 'Não deu para promover agora.'); return }
+    const dona = { nome: promo.nome.trim(), email: promo.email.trim().toLowerCase(), whatsapp: promo.whatsapp.trim(), documento: promo.documento.trim() }
+    if (!dona.nome || !EMAIL_OK.test(dona.email)) { setPromo((p) => ({ ...p, erro: 'Nome e e-mail da dona são obrigatórios.' })); return }
+    const docN = dona.documento.replace(/\D/g, '')
+    if (docN && docN.length !== 11 && docN.length !== 14) { setPromo((p) => ({ ...p, erro: 'CPF tem 11 dígitos e CNPJ tem 14.' })); return }
+    setPromo((p) => ({ ...p, ocupado: true, erro: '' }))
+    const r = await promoverCompleto({ lugar: lugar.id, dona, conta: promo.conta, tipo: promo.tipo, equipe: Math.max(1, Number(promo.equipe) || 1), cobrar: promo.tipo === 'salao' && promo.cobrar, enviar_whats: promo.enviar_whats })
+    if (!r.ok) { setPromo((p) => (p ? { ...p, ocupado: false, erro: r.motivo || 'Não deu para promover agora.' } : p)); return }
     // o banco já ligou (salon_id); a lista da Plataforma e o formulário acompanham
-    await g.salvarLugar(lugar.id, { salon_id: r.salao_id })
-    set('salon_id', r.salao_id)
-    setPromo(null)
-    g.avisar(`${lugar.nome}: ${r.novo ? 'nasceu na MIMO como ' + (promo.tipo === 'autonoma' ? 'autônoma' : 'salão') : 'ligado ao salão da dona'} (${r.nome}). A dona entra em mimo.com.vc com a conta dela e completa serviços e horários.`)
+    await g.salvarLugar(lugar.id, { salon_id: r.salao.id })
+    set('salon_id', r.salao.id)
+    setPromo((p) => ({ ...p, ocupado: false, resultado: r }))
+    g.avisar(`${lugar.nome} agora agenda pela MIMO${r.conta?.nova ? ', e a conta da dona foi criada' : ''}.`)
   }
+  const copiar = (texto, aviso = 'Copiado.') => navigator.clipboard?.writeText(String(texto ?? '')).then(() => g.avisar(aviso)).catch(() => g.avisar('Não deu para copiar.'))
   const setT = (k, v) => setTexto((t) => ({ ...t, [k]: v }))
   const setLista = (k, i, v) => setTexto((t) => ({ ...t, [k]: t[k].map((x, j) => (j === i ? v : x)) }))
   const tirar = (k, i) => setTexto((t) => ({ ...t, [k]: t[k].filter((_, j) => j !== i) }))
@@ -333,27 +344,53 @@ export default function EditarLugar({ lugar, g, onFechar }) {
                   <label className="pg-campo">Site<input value={fatos.site} onChange={(e) => set('site', e.target.value)} placeholder="https://" /></label>
                   <label className="pg-campo">Na MIMO (id do salão, opcional)<input value={fatos.salon_id} onChange={(e) => set('salon_id', e.target.value)} placeholder="quando o salão já agenda pela MIMO" /></label>
                 </div>
-                {/* 3.67: os pedidos do app ("quero esse salão na MIMO") e a promoção a salão com agenda (migração 212) */}
+                {/* 3.67: os pedidos do app ("quero esse salão na MIMO"); 3.71: a promoção completa (migração 215) */}
                 <div className="pg-promover" data-teste="promover">
                   <p className="pg-promover-votos"><Heart size={14} /> <b>{Number(lugar.votos ?? 0)}</b> {Number(lugar.votos ?? 0) === 1 ? 'cliente pediu' : 'clientes pediram'} esse salão na MIMO pelo app{Number(lugar.contatos_app ?? 0) > 0 ? <> · <b>{Number(lugar.contatos_app)}</b> {Number(lugar.contatos_app) === 1 ? 'chamou' : 'chamaram'} pelo WhatsApp a partir do app</> : null}</p>
-                  {fatos.salon_id ? (
+                  {promo?.resultado ? (
+                    <ResultadoDaPromocao r={promo.resultado} onCopiar={copiar} onFechar={() => setPromo(null)} />
+                  ) : fatos.salon_id ? (
                     <p className="pg-nota">Ligado a um salão da MIMO: as clientes seguem e agendam por ele no app.</p>
                   ) : promo ? (
                     <div className="pg-promover-form">
-                      <p className="pg-nota">A dona precisa ter conta na MIMO (ela cria em mimo.com.vc/comecar ou no app). Se ela já tem um salão sem página no guia, este salão do guia é ligado a ele; senão nasce um salão novo com os dados daqui (endereço, contatos, fotos, resumo) e ela vira a dona. Depois é só ela completar os serviços e os horários.</p>
-                      <div className="pg-dupla">
-                        <label className="pg-campo">E-mail da conta da dona<input type="email" value={promo.email} onChange={(e) => setPromo((p) => ({ ...p, email: e.target.value }))} placeholder="dona@exemplo.com" autoFocus /></label>
-                        <label className="pg-campo">Tipo
-                          <select value={promo.tipo} onChange={(e) => setPromo((p) => ({ ...p, tipo: e.target.value }))}><option value="salao">Salão</option><option value="autonoma">Autônoma</option></select>
-                        </label>
-                      </div>
+                      <p className="pg-nota">Tudo de uma vez: a conta da dona, o salão com os dados daqui, o plano pela equipe, os 7 dias grátis e a primeira mensalidade por Pix. Senha nunca vai por mensagem: vai o link para ela criar a senha.</p>
+                      <fieldset className="pg-grupo">
+                        <legend>A dona</legend>
+                        <div className="pg-dupla">
+                          <label className="pg-campo">Nome<input value={promo.nome} onChange={(e) => setPromo((p) => ({ ...p, nome: e.target.value }))} placeholder="Nome e sobrenome" autoFocus /></label>
+                          <label className="pg-campo">E-mail da conta<input type="email" value={promo.email} onChange={(e) => setPromo((p) => ({ ...p, email: e.target.value }))} placeholder="dona@exemplo.com" /></label>
+                          <label className="pg-campo">WhatsApp<input value={promo.whatsapp} onChange={(e) => setPromo((p) => ({ ...p, whatsapp: e.target.value }))} inputMode="tel" placeholder="(13) 99999-0000" /></label>
+                          <label className="pg-campo">CPF ou CNPJ<input value={promo.documento} onChange={(e) => setPromo((p) => ({ ...p, documento: e.target.value }))} inputMode="numeric" placeholder="para emitir o Pix" /></label>
+                        </div>
+                        <label className="pg-check"><input type="radio" name="pg-promo-conta" checked={promo.conta === 'automatica'} onChange={() => setPromo((p) => ({ ...p, conta: 'automatica' }))} /> <span><b>Ativar a conta agora</b>, sem e-mail de confirmação: o link para criar a senha vai pelo WhatsApp e fica aqui para copiar</span></label>
+                        <label className="pg-check"><input type="radio" name="pg-promo-conta" checked={promo.conta === 'email'} onChange={() => setPromo((p) => ({ ...p, conta: 'email' }))} /> <span><b>Mandar o e-mail de confirmação</b> com o link para criar a senha (a conta só ativa quando ela abrir)</span></label>
+                      </fieldset>
+                      <fieldset className="pg-grupo">
+                        <legend>O negócio e o plano</legend>
+                        <div className="pg-dupla">
+                          <label className="pg-campo">Tipo
+                            <select value={promo.tipo} onChange={(e) => setPromo((p) => ({ ...p, tipo: e.target.value }))}><option value="salao">Salão</option><option value="autonoma">Autônoma (grátis)</option></select>
+                          </label>
+                          <label className="pg-campo">Quantas profissionais<input type="number" min={1} max={60} value={promo.equipe} onChange={(e) => setPromo((p) => ({ ...p, equipe: e.target.value }))} disabled={promo.tipo === 'autonoma'} /></label>
+                        </div>
+                        <p className="pg-promover-plano" data-teste="promover-plano">
+                          {promo.tipo === 'autonoma'
+                            ? <>Plano <b>Agenda autônoma</b>: grátis, sem prazo.</>
+                            : <>Plano <b>{planoDoNegocio('salao', promo.equipe).nome}</b> para até {Math.max(1, Number(promo.equipe) || 1)} {Math.max(1, Number(promo.equipe) || 1) === 1 ? 'profissional' : 'profissionais'}: <b>{reais(planoDoNegocio('salao', promo.equipe).total)}</b> por mês. Os 7 dias grátis são disparados agora e o relógio começa quando serviços e equipe estiverem cadastrados.</>}
+                        </p>
+                        {promo.tipo === 'salao' && (
+                          <label className="pg-check"><input type="checkbox" checked={promo.cobrar} onChange={(e) => setPromo((p) => ({ ...p, cobrar: e.target.checked }))} /> <span>Emitir a <b>primeira mensalidade por Pix</b> agora ({reais(planoDoNegocio('salao', promo.equipe).total)}), vencendo em 7 dias, quando o teste acaba{promo.documento.trim() ? '' : ' · precisa do CPF ou CNPJ'}</span></label>
+                        )}
+                        <label className="pg-check"><input type="checkbox" checked={promo.enviar_whats} onChange={(e) => setPromo((p) => ({ ...p, enviar_whats: e.target.checked }))} /> <span>Mandar o link (e o Pix) pelo <b>WhatsApp da MIMO</b> para a dona; o e-mail vai sempre</span></label>
+                      </fieldset>
+                      {promo.erro && <div className="alert alert-error">{promo.erro}</div>}
                       <div className="pg-promover-acoes">
-                        <button type="button" className="btn btn-primary" disabled={!promo.email.trim() || promo.ocupado} onClick={promover}>{promo.ocupado ? <LoaderCircle size={14} className="gira" /> : <Rocket size={14} />} Promover</button>
+                        <button type="button" className="btn btn-primary" disabled={promo.ocupado} onClick={promover} data-teste="promover-ir">{promo.ocupado ? <LoaderCircle size={14} className="gira" /> : <Rocket size={14} />} {promo.ocupado ? 'Promovendo…' : 'Promover e criar a conta'}</button>
                         <button type="button" className="btn btn-ghost" disabled={promo.ocupado} onClick={() => setPromo(null)}>Cancelar</button>
                       </div>
                     </div>
                   ) : (
-                    <button type="button" className="plat-link" onClick={() => setPromo({ email: '', tipo: lugar.categoria === 'barbearia' ? 'salao' : 'salao', ocupado: false })}><Rocket size={14} /> Promover a salão com agenda…</button>
+                    <button type="button" className="plat-link" onClick={abrirPromocao}><Rocket size={14} /> Promover a salão com agenda…</button>
                   )}
                 </div>
                 <label className="pg-campo">Serviços (separados por vírgula)<input value={fatos.servicos} onChange={(e) => set('servicos', e.target.value)} placeholder="Manicure, Pedicure, Unhas em gel" /></label>
@@ -418,5 +455,38 @@ export default function EditarLugar({ lugar, g, onFechar }) {
         </div>
       </div>
     </Portal>
+  )
+}
+
+// o que a promoção fez (3.71): a conta, o salão e o plano, o teste, o Pix, o e-mail e o WhatsApp
+function ResultadoDaPromocao({ r, onCopiar, onFechar }) {
+  const c = r.cobranca
+  const dataBr = (d) => (d ? new Date(String(d).slice(0, 10) + 'T12:00:00') .toLocaleDateString('pt-BR') : '')
+  const numero = String(r.whats?.numero ?? '').replace(/\D/g, '')
+  const zap = numero ? `https://wa.me/${numero.replace(/^(?!55)/, '55')}?text=${encodeURIComponent(r.whats?.texto ?? '')}` : null
+  return (
+    <div className="pg-promover-resultado" data-teste="promover-resultado">
+      <p><Check size={14} /> <b>{r.salao.nome}</b> agenda pela MIMO · código {r.salao.codigo} · {planoDoNegocio(r.salao.tipo, r.salao.equipe).nome}{r.salao.tipo !== 'autonoma' ? ` para até ${r.salao.equipe} ${Number(r.salao.equipe) === 1 ? 'profissional' : 'profissionais'} (${reais(planoDoNegocio(r.salao.tipo, r.salao.equipe).total)}/mês)` : ' (grátis)'}</p>
+      <p><Check size={14} /> Conta {r.conta?.nova ? (r.conta.modo === 'email' ? 'criada: o e-mail de confirmação com o link de criar a senha foi para' : 'criada e ativada sem e-mail de confirmação; o link de criar a senha foi para') : 'já existia: o link de redefinir a senha foi gerado para'} <b>{r.conta?.email}</b>{r.conta?.aviso ? <> · <span className="pg-ruim">{r.conta.aviso}</span></> : null}</p>
+      <p><Check size={14} /> {r.salao.tipo === 'autonoma' ? 'Agenda autônoma liberada, sem cobrança.' : '7 dias grátis disparados: o relógio começa quando serviços e equipe estiverem cadastrados.'}</p>
+      {c ? (c.copia_cola ? (
+        <div className="pg-promover-pix">
+          <p><Check size={14} /> Primeira mensalidade <b>{reais(Number(c.total_cents) / 100)}</b> por Pix, vence em <b>{dataBr(c.vencimento)}</b>{c.sandbox ? ' (sandbox)' : ''}.</p>
+          <textarea readOnly rows={3} value={c.copia_cola} onFocus={(e) => e.target.select()} aria-label="Pix copia e cola" />
+          <button type="button" className="plat-link" onClick={() => onCopiar(c.copia_cola, 'Pix copiado.')}><Copy size={13} /> Copiar o Pix</button>
+        </div>
+      ) : c.sem_documento ? (
+        <p className="pg-ruim">Sem CPF ou CNPJ: a cobrança de {reais(Number(c.total_cents) / 100)} ficou reservada no banco, sem o Pix. Complete o documento do salão e emita de novo em Salões.</p>
+      ) : (
+        <p className="pg-ruim">Pix não emitido{c.erro ? `: ${c.erro}` : ''}. A cobrança ficou no banco para tentar de novo.</p>
+      )) : null}
+      <p>{r.email?.enviado ? <Check size={14} /> : null} E-mail {r.email?.enviado ? 'na fila para' : 'não enviado para'} <b>{r.email?.para}</b>.</p>
+      <p>{r.whats?.enviado ? <Check size={14} /> : <MessageCircle size={14} />} WhatsApp {r.whats?.enviado ? `enviado para ${numero}` : `não enviado${r.whats?.erro ? ` (${r.whats.erro})` : ''}`}.
+        {zap ? <> <a className="plat-link" href={zap} target="_blank" rel="noopener noreferrer">Abrir no WhatsApp</a></> : null}
+        {r.whats?.texto ? <> <button type="button" className="plat-link" onClick={() => onCopiar(r.whats.texto, 'Texto copiado.')}><Copy size={13} /> Copiar o texto</button></> : null}
+      </p>
+      {r.link_senha ? <p className="pg-promover-link">Link de criar a senha: <code>{r.link_senha}</code> <button type="button" className="plat-link" onClick={() => onCopiar(r.link_senha, 'Link copiado.')}><Copy size={13} /> Copiar</button></p> : null}
+      <button type="button" className="btn btn-ghost" onClick={onFechar}>Fechar</button>
+    </div>
   )
 }

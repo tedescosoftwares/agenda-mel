@@ -10,6 +10,7 @@ const TIPOS = [
   ['site', 'Site', 'contato'], ['email', 'E-mail', 'contato'], ['quero_marcar', 'Quero marcar', 'interesse'], ['sou_dono', 'É o dono', 'interesse'],
   ['criar_agenda', 'Criar agenda', 'interesse'], ['compartilhar', 'Compartilhar', 'outro'], ['corrigir', 'Corrigir dados', 'outro'],
   ['localizacao', 'Localização ativada', 'outro'], ['pedido_enviado', 'Pedido enviado (Quero marcar)', 'outro'],
+  ['seguir', 'Seguiu pelo app', 'contato'], ['quero_na_mimo', 'Quer o salão na MIMO', 'interesse'],
 ].map(([tipo, rotulo, grupo]) => ({ tipo, rotulo, grupo }))
 const GRUPO = Object.fromEntries(TIPOS.map((t) => [t.tipo, t.grupo]))
 const CATS = ['beleza', 'cabelo', 'unhas', 'cilios', 'sobrancelhas', 'estetica', 'maquiagem']
@@ -50,13 +51,14 @@ function gerar(lugares) {
       for (let v = 0; v < visitas; v++) {
         const em = new Date(agora - d * 86400e3 - Math.floor(r() * 12 * 3600e3)).toISOString()
         const volta = doDia.length > 0 && r() < 0.25 ? doDia[Math.floor(r() * doDia.length)] : null
-        const quem = volta ?? { visitante: `demo${n++}`, aparelho: r() < 0.8 ? 'celular' : 'computador' }
+        // 3.73: uma parte das visitas vem pelo app (origem app, sempre celular; dentro do app não há "interno")
+        const quem = volta ?? (r() < 0.12 ? { visitante: `demo${n++}`, aparelho: 'celular', app: true } : { visitante: `demo${n++}`, aparelho: r() < 0.8 ? 'celular' : 'computador' })
         if (!volta) doDia.push(quem)
-        const origem = volta ? 'interno' : escolher(r, [['google', 55], ['direto', 18], ['interno', 15], ['instagram', 8], ['whatsapp', 4]])
+        const origem = quem.app ? 'app' : volta ? 'interno' : escolher(r, [['google', 55], ['direto', 18], ['interno', 15], ['instagram', 8], ['whatsapp', 4]])
         const comum = { em, pagina: p.pagina, lugar_id: p.lugar?.id ?? null, cidade_slug: 'itanhaem', categoria: p.lugar?.categoria ?? (CATS.includes(p.pagina.split('/')[3]) ? p.pagina.split('/')[3] : null), visitante: quem.visitante, origem, aparelho: quem.aparelho }
         ev.push({ ...comum, tipo: 'visita', area: null })
         // 3.13: uma parte de quem chega nas listas ativa a localização; o ponto cai perto de um salão da cidade
-        if (!volta && !p.lugar && r() < 0.3) {
+        if (!volta && !quem.app && !p.lugar && r() < 0.3) {
           const ref = noAr[Math.floor(r() * noAr.length)]
           if (ref?.latitude != null) ev.push({ ...comum, tipo: 'localizacao', area: null, dados: { lat: ref.latitude + (r() - 0.5) * 0.014, lng: ref.longitude + (r() - 0.5) * 0.014, prec: Math.round(20 + r() * 80) } })
         }
@@ -68,6 +70,7 @@ function gerar(lugares) {
         const cliques = [
           ['whatsapp', l.whatsapp ? 0.1 : 0], ['ligar', l.telefone ? 0.03 : 0], ['mapa', 0.06], ['instagram', l.instagram ? 0.04 : 0],
           ['site', l.site ? 0.02 : 0], ['agendar_mimo', l.salon_id ? 0.14 : 0], ['quero_marcar', l.salon_id ? 0 : 0.03], ['compartilhar', 0.01],
+          ['seguir', quem.app && l.salon_id ? 0.12 : 0], ['quero_na_mimo', quem.app && !l.salon_id ? 0.06 : 0],
         ]
         for (const [tipo, chance] of cliques) {
           if (r() < chance * atrai) ev.push({ ...comum, tipo, area: escolher(r, [['heroi', 50], ['fatos', 25], ['barra', 25]]) })
@@ -146,14 +149,15 @@ export function demoMapaAcessos({ dias = 30 } = {}, lugares) {
 }
 
 // o mesmo formato de guia_desempenho() (156, com o que a 161 acrescentou)
-export function demoDesempenho({ dias = 30, cidade_ = '' } = {}, lugares, interesses) {
+export function demoDesempenho({ dias = 30, cidade_ = '', origem_ = null } = {}, lugares, interesses) {
+  const ori = ['app', 'site'].includes(origem_) ? origem_ : null // 3.73: só o app, só o site ou tudo
   const n = Math.max(1, Math.min(Number(dias) || 30, 400))
   const hoje = diaSP(Date.now())
   const menos = (dia, k) => diaSP(new Date(`${dia}T15:00:00Z`).getTime() - k * 86400e3)
   const de = menos(hoje, n - 1), antes = menos(de, n)
   const cid = String(cidade_ ?? '').trim() || null
   const ev = eventos(lugares).map((e) => ({ ...e, dia: diaSP(e.em), grupo: GRUPO[e.tipo] }))
-    .filter((e) => e.dia >= antes && e.dia <= hoje && e.pagina.startsWith('/saloes') && (!cid || e.cidade_slug === cid))
+    .filter((e) => e.dia >= antes && e.dia <= hoje && e.pagina.startsWith('/saloes') && (!cid || e.cidade_slug === cid) && (!ori || (e.origem === 'app') === (ori === 'app')))
   const agora = ev.filter((e) => e.dia >= de)
   // o período anterior como o banco: a mesma janela, cortada na mesma hora, e só com histórico completo
   const corte = Date.now() - n * 86400e3
@@ -163,9 +167,10 @@ export function demoDesempenho({ dias = 30, cidade_ = '' } = {}, lugares, intere
   const velhos = comHistorico ? ev.filter((e) => e.dia < de && new Date(e.em).getTime() < corte) : []
   const contar = (xs, f) => xs.reduce((m, x) => { const k = f(x); m[k] = (m[k] ?? 0) + 1; return m }, {})
   const unicos = (xs, grupo = 'visita') => new Set(xs.filter((e) => (grupo === 'visita' ? e.tipo === 'visita' : e.grupo === grupo)).map((e) => `${e.dia}|${e.visitante}`)).size
-  const ints = interesses.filter((i) => diaSP(i.criado_em) >= de)
+  // os pedidos "quero marcar" (guia_interesses) são do formulário do site: fora quando a tela olha só o app
+  const ints = ori === 'app' ? [] : interesses.filter((i) => diaSP(i.criado_em) >= de)
   // os pedidos do período anterior, pela mesma regra dos eventos (161)
-  const intsAntes = comHistorico ? interesses.filter((i) => diaSP(i.criado_em) >= antes && diaSP(i.criado_em) < de && new Date(i.criado_em).getTime() < corte) : []
+  const intsAntes = comHistorico && ori !== 'app' ? interesses.filter((i) => diaSP(i.criado_em) >= antes && diaSP(i.criado_em) < de && new Date(i.criado_em).getTime() < corte) : []
   const porLugarInt = (id) => contar(ints.filter((i) => i.lugar_id === id), (i) => i.tipo)
   const porPagina = new Map()
   for (const e of agora) { if (!porPagina.has(e.pagina)) porPagina.set(e.pagina, []); porPagina.get(e.pagina).push(e) }
@@ -196,7 +201,7 @@ export function demoDesempenho({ dias = 30, cidade_ = '' } = {}, lugares, intere
   const visitasAgora = agora.filter((e) => e.tipo === 'visita')
   const entradas = visitasAgora.filter((e) => e.origem !== 'interno')
   return {
-    dias: n, de, ate: hoje,
+    dias: n, origem: ori, de, ate: hoje,
     tipos: TIPOS,
     totais: contar(agora, (e) => e.tipo),
     totais_antes: contar(velhos, (e) => e.tipo),

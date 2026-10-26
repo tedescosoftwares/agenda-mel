@@ -2,13 +2,13 @@ import { urlDoAmbiente } from '../../../lib/ambiente'
 import { formatar, n0 } from '../../../lib/guiaMetricas'
 import {
   Smartphone, Tablet, Monitor, MapPin, Clock, ChevronDown, ChevronUp, ExternalLink, MessageCircle, Phone, Route, AtSign, Globe, Mail, CalendarCheck,
-  CalendarHeart, Send, BadgeCheck, CalendarPlus, Share2, PencilLine, LocateFixed, MousePointerClick, LogOut, LogIn, CircleCheck, Repeat, Sparkles,
+  CalendarHeart, Send, BadgeCheck, CalendarPlus, Share2, PencilLine, LocateFixed, MousePointerClick, LogOut, LogIn, CircleCheck, Repeat, Sparkles, Heart,
 } from 'lucide-react'
 
 // As peças do site ao vivo (3.44 a 3.49) que a aba Agora e o Histórico (3.62, migração 209) compartilham: os rótulos
 // das origens, aparelhos e toques, o desfecho de cada visita, os formatos de tempo e o cartão de uma visita.
 
-export const ORIGEM = { google: 'Google', bing: 'Bing', instagram: 'Instagram', facebook: 'Facebook', whatsapp: 'WhatsApp', tiktok: 'TikTok', youtube: 'YouTube', direto: 'Direto', interno: 'Do próprio site', outro: 'Outro site' }
+export const ORIGEM = { google: 'Google', bing: 'Bing', instagram: 'Instagram', facebook: 'Facebook', whatsapp: 'WhatsApp', tiktok: 'TikTok', youtube: 'YouTube', direto: 'Direto', interno: 'Do próprio site', outro: 'Outro site', app: 'App MIMO' }
 export const APARELHO = { celular: 'Celular', tablet: 'Tablet', computador: 'Computador', outro: 'Outro' }
 export const ICONE = { celular: Smartphone, tablet: Tablet, computador: Monitor }
 // os toques nas páginas dos salões (site_eventos_tipos): rótulo curto e ícone
@@ -17,15 +17,17 @@ export const ACAO = {
   email: ['E-mail', Mail], agendar_mimo: ['Agendar pela MIMO', CalendarCheck], quero_marcar: ['Quero marcar', CalendarHeart], pedido_enviado: ['Pedido enviado', Send],
   sou_dono: ['É o dono', BadgeCheck], criar_agenda: ['Criar agenda', CalendarPlus], compartilhar: ['Compartilhou', Share2], corrigir: ['Corrigir dados', PencilLine],
   localizacao: ['Localização ativada', LocateFixed],
+  // 3.73: os toques que só existem no app (migração 217)
+  seguir: ['Seguiu pelo app', Heart], quero_na_mimo: ['Quer o salão na MIMO', Sparkles],
 }
 export const acaoDe = (a) => ({ rotulo: ACAO[a.tipo]?.[0] ?? a.rotulo ?? a.tipo, Icon: ACAO[a.tipo]?.[1] ?? MousePointerClick })
 // contato é o que leva a cliente ao salão (o mesmo da migração 193); forte é o que encerra a busca: quem sai logo
 // depois disso provavelmente foi marcar (ou ir) ao salão
-export const CONTATO = new Set(['whatsapp', 'ligar', 'mapa', 'instagram', 'site', 'email', 'agendar_mimo', 'quero_marcar', 'pedido_enviado'])
-export const FORTE = new Set(['whatsapp', 'ligar', 'mapa', 'agendar_mimo', 'pedido_enviado'])
+export const CONTATO = new Set(['whatsapp', 'ligar', 'mapa', 'instagram', 'site', 'email', 'agendar_mimo', 'quero_marcar', 'pedido_enviado', 'seguir'])
+export const FORTE = new Set(['whatsapp', 'ligar', 'mapa', 'agendar_mimo', 'pedido_enviado', 'seguir'])
 export const tomDe = (tipo) => (FORTE.has(tipo) ? 'forte' : CONTATO.has(tipo) ? 'contato' : 'outro')
 export const SAIU = {
-  whatsapp: 'Saiu pelo WhatsApp', ligar: 'Ligou e saiu', mapa: 'Saiu pelo Como chegar', agendar_mimo: 'Foi agendar pela MIMO', pedido_enviado: 'Enviou o pedido e saiu',
+  whatsapp: 'Saiu pelo WhatsApp', ligar: 'Ligou e saiu', mapa: 'Saiu pelo Como chegar', agendar_mimo: 'Foi agendar pela MIMO', pedido_enviado: 'Enviou o pedido e saiu', seguir: 'Seguiu o salão pelo app',
   quero_marcar: 'Quero marcar, sem enviar', instagram: 'Saiu pelo Instagram', site: 'Saiu pelo site do salão', email: 'Saiu pelo e-mail do salão',
 }
 // nas barras, o desfecho forte leva um visto verde no lugar do ícone

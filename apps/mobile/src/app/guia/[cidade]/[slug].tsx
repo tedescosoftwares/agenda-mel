@@ -11,6 +11,7 @@ import { carregarContato, carregarPagina, entrarPeloGuia, meusVotos, registrarCo
 import { Folha } from '@/components/Folha'
 import { useSessao } from '@/context/sessao'
 import { distanciaKm, distanciaTexto, posicaoAtual, type Posicao } from '@/lib/localizacao'
+import { paginaDoSalao, registrarEvento, useMetricasDaPagina } from '@/lib/metricas'
 import { ESPACO, MARCA, useTema } from '@/lib/tema'
 
 // A página de um salão do guia, no app (3.64). Salão que agenda pela MIMO: "Agendar pela MIMO" entra na
@@ -64,6 +65,9 @@ export default function LugarDoGuia() {
     p.then((r) => { if (vivo) setEstado({ chave: minha, ...r, votos: votosDaPagina }) })
     return () => { vivo = false }
   }, [lugarId, salaoDaMimo, votosDaPagina, sessao, cidade, slug])
+  // 3.73: a visita e a presença no portal (lib/metricas.ts), com o caminho da página do site; só com a página carregada
+  const paginaMetricas = pg?.lugar ? paginaDoSalao(String(pg.lugar.cidade_slug || cidade || ''), String(pg.lugar.slug || slug || '')) : null
+  useMetricasDaPagina(paginaMetricas, pg?.lugar?.nome ?? null)
 
   if (pg === undefined) return <Tela titulo="Salão"><Text style={{ color: t.texto2, textAlign: 'center', paddingTop: 30 }}>Carregando…</Text></Tela>
   if (!pg?.lugar) return <Tela titulo="Salão"><Vazio mostrarMel={false} titulo="Essa página do guia não está mais no ar." /></Tela>
@@ -96,6 +100,7 @@ export default function LugarDoGuia() {
     const r = await entrarPeloGuia(l.mimo.salao_id, l.id)
     setEntrando(false)
     if (!r.ok) { setAviso(r.motivo ?? 'Não deu para seguir o salão agora.'); return }
+    registrarEvento('seguir', paginaMetricas, { area: 'barra' })
     setEstado((s) => ({ chave, sigo: true, votou: s?.votou ?? false, votos: s?.votos ?? votos }))
     irParaOSalao(l.mimo.salao_id)
   }
@@ -107,6 +112,7 @@ export default function LugarDoGuia() {
     const r = await votar(l.id)
     setVotando(false)
     if (!r.ok) { setAviso(r.motivo ?? 'Não deu para registrar o pedido agora.'); return }
+    if (r.votou) registrarEvento('quero_na_mimo', paginaMetricas, { area: 'outra' })
     setEstado((s) => ({ chave, sigo: s?.sigo ?? false, votou: Boolean(r.votou), votos: Number(r.votos ?? 0) }))
   }
   function irParaOWhatsApp() {
@@ -114,6 +120,8 @@ export default function LugarDoGuia() {
     const { canal, url } = saida
     setSaida(null)
     if (sessao) void registrarContato(l.id, canal)
+    // a métrica do portal: pela Mel é um "quero marcar" (como no site); direto no salão é o toque no WhatsApp
+    registrarEvento(canal === 'mel' ? 'quero_marcar' : 'whatsapp', paginaMetricas, { area: 'barra' })
     abrir(url)
   }
   const textoDosVotos = votos === 0
@@ -128,7 +136,7 @@ export default function LugarDoGuia() {
       rodape={
         naMimo && sigo ? (
           <>
-            <Botao titulo="Agendar" icone="calendar-outline" onPress={() => irParaOSalao(l.mimo!.salao_id)} />
+            <Botao titulo="Agendar" icone="calendar-outline" onPress={() => { registrarEvento('agendar_mimo', paginaMetricas, { area: 'barra' }); irParaOSalao(l.mimo!.salao_id) }} />
             <Text style={{ color: t.texto3, fontSize: 12.5, textAlign: 'center' }}>Você segue esse salão: a agenda, as promoções e as novidades dele estão no app.</Text>
           </>
         ) : naMimo ? (
@@ -178,9 +186,9 @@ export default function LugarDoGuia() {
           </View>
         ) : null}
         <View style={e.chips}>
-          {l.endereco || l.bairro ? <Chip texto="Como chegar" onPress={() => abrir(linkMapa(l.nome, [l.endereco, l.bairro, l.cidade].filter(Boolean).join(', ')))} /> : null}
-          {l.instagram ? <Chip texto="Instagram" onPress={() => abrir(linkInstagram(String(l.instagram)))} /> : null}
-          {l.site ? <Chip texto="Site" onPress={() => { const u = String(l.site); abrir(/^https?:/.test(u) ? u : `https://${u}`) }} /> : null}
+          {l.endereco || l.bairro ? <Chip texto="Como chegar" onPress={() => { registrarEvento('mapa', paginaMetricas, { area: 'fatos' }); abrir(linkMapa(l.nome, [l.endereco, l.bairro, l.cidade].filter(Boolean).join(', '))) }} /> : null}
+          {l.instagram ? <Chip texto="Instagram" onPress={() => { registrarEvento('instagram', paginaMetricas, { area: 'fatos' }); abrir(linkInstagram(String(l.instagram))) }} /> : null}
+          {l.site ? <Chip texto="Site" onPress={() => { registrarEvento('site', paginaMetricas, { area: 'fatos' }); const u = String(l.site); abrir(/^https?:/.test(u) ? u : `https://${u}`) }} /> : null}
         </View>
         {aviso ? <Aviso tom="aviso" texto={aviso} /> : null}
       </View>

@@ -32,6 +32,8 @@ import '../../../guia-desempenho.css'
 // (site_eventos_tipos), então um tipo novo aparece aqui sem mexer na tela.
 
 const PERIODOS = [[7, '7 dias'], [30, '30 dias'], [90, '90 dias']]
+// 3.73 (migração 217): de onde veio, site ou app; vazio é tudo
+const ORIGENS = [['', 'Site e app'], ['site', 'Só o site'], ['app', 'Só o app']]
 
 export default function Desempenho({ g }) {
   const { desempenho } = g
@@ -49,6 +51,7 @@ export default function Desempenho({ g }) {
   // as cidades do guia (3.18): os números de um município só, para uma cidade nova não misturar com as outras
   const cidades = useMemo(() => g.cidades.map((c) => [c.slug, c.nome]), [g.cidades])
   const cidade = desempenho.cidade ?? ''
+  const origem = desempenho.origem ?? ''
   const contatoTipos = useMemo(() => tiposDo(dados, 'contato').filter((t) => n0(dados?.totais?.[t.tipo]) > 0), [dados])
   const destaques = useMemo(() => (dados ? destaquesDoPeriodo(dados, g.lugares) : null), [dados, g.lugares])
 
@@ -77,15 +80,21 @@ export default function Desempenho({ g }) {
       <div className="pg-des-filtros">
         <div className="pg-seg" role="radiogroup" aria-label="Período">
           {PERIODOS.map(([d, r]) => (
-            <button key={d} type="button" role="radio" aria-checked={desempenho.dias === d} className={desempenho.dias === d ? 'ativo' : ''} onClick={() => g.carregarDesempenho(d, cidade)}>{r}</button>
+            <button key={d} type="button" role="radio" aria-checked={desempenho.dias === d} className={desempenho.dias === d ? 'ativo' : ''} onClick={() => g.carregarDesempenho(d, cidade, origem)}>{r}</button>
           ))}
         </div>
         {cidades.length > 1 && (
-          <select className="plat-select" value={cidade} onChange={(e) => g.carregarDesempenho(desempenho.dias, e.target.value)} aria-label="Cidade">
+          <select className="plat-select" value={cidade} onChange={(e) => g.carregarDesempenho(desempenho.dias, e.target.value, origem)} aria-label="Cidade">
             <option value="">Todas as cidades</option>
             {cidades.map(([slug, nome]) => <option key={slug} value={slug}>{nome}</option>)}
           </select>
         )}
+        <div className="pg-seg" role="radiogroup" aria-label="Origem" data-teste="des-origem">
+          {ORIGENS.map(([o, r]) => (
+            <button key={o} type="button" role="radio" aria-checked={origem === o} className={origem === o ? 'ativo' : ''} onClick={() => g.carregarDesempenho(desempenho.dias, cidade, o)}>{r}</button>
+          ))}
+        </div>
+        {origem && desempenho.filtrou === false && <span className="pg-des-periodo" data-teste="des-sem-217">Para separar site e app, rode a migração 217 (bat B).</span>}
         <span className="pg-des-periodo">{dataCurta(dados.de)} a {dataCurta(dados.ate)}{desempenho.carregando && <LoaderCircle size={13} className="pg-gira" />}</span>
         <label className="pg-des-eu">
           <input type="checkbox" checked={!contando} onChange={(e) => { naoContarAqui(e.target.checked); setContando(!e.target.checked) }} />
@@ -117,7 +126,7 @@ export default function Desempenho({ g }) {
       {!vazio && (
         <>
           <div className="pg-des-linha-tres">
-            <Painel Icon={Search} titulo="De onde vieram" sub="A entrada de cada visita (quem já navegava pelo site não conta aqui)">
+            <Painel Icon={Search} titulo="De onde vieram" sub="A entrada de cada visita (quem já navegava pelo site não conta aqui; pelo app é App MIMO)">
               <Barras cor="visita" itens={origens.map((o) => ({ chave: o.origem, rotulo: ROTULO_ORIGEM[o.origem] ?? o.origem, n: o.visitas }))}
                 total={origens.reduce((s, o) => s + n0(o.visitas), 0)} />
               <Divisao titulo="Aparelho" partes={[

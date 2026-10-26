@@ -279,6 +279,8 @@ const contatoDemo = (c: Linha) => {
   const l = guiaLugares.find((x) => x.id === c.lugar_id)!
   return { ...c, lugar: { id: l.id, nome: l.nome, cidade_slug: l.cidade_slug, slug: l.slug, categoria: l.categoria, bairro: l.bairro, foto: l.foto ?? null, na_mimo: Boolean(l.mimo) } }
 }
+const metricasDemo = { eventos: [] as Linha[], presencas: [] as Linha[] }
+;(globalThis as { __mimoMetricas?: unknown }).__mimoMetricas = metricasDemo
 const RPC: Record<string, (args?: Linha) => unknown> = {
   minhas_agendas: () => TABELAS.vinculos!.filter((v) => v.client_id === DEMO_UID && !v.saiu_em).map((v) => agendaDe(salao(v.salon_id)!, v)),
   meu_perfil_resumo: () => (NOVA ? { desde: horasAtras(2), atendimentos: 0, proximos: 0, agendas: 0, favoritas: 0, saldo_cents: 0 } : { desde: '2025-01-10T12:00:00Z', atendimentos: 14, proximos: VAZIA ? 0 : 3, agendas: 2, favoritas: 2, saldo_cents: 3000 }),
@@ -447,6 +449,9 @@ const RPC: Record<string, (args?: Linha) => unknown> = {
   },
   guia_contato_config: () => ({ ligado: true, numero: '5513991151099', botoes: ['Quero marcar pela Mel'], msg_cliente: 'Oi, Mel! Quero marcar em {nome} ({cidade}).' }),
   site_minha_cidade: () => ({ cidade: 'Itanhaém', uf: 'SP', origem: 'ip' }),
+  // 3.73: as métricas do app (migração 217) ficam na memória da demonstração, para os testes conferirem
+  site_evento: (args) => { metricasDemo.eventos.push({ ...(args ?? {}) }); return null },
+  site_presenca: (args) => { metricasDemo.presencas.push({ ...(args ?? {}) }); return null },
   // 3.67: "quero esse salão na MIMO" (migração 212): pede ou desfaz; só nos salões fora da MIMO
   guia_votar: (args) => {
     const l = guiaLugares.find((x) => x.id === String(args?.lugar_ ?? ''))

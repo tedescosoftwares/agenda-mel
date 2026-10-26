@@ -11,6 +11,7 @@ import { Folha } from '@/components/Folha'
 import { Botao, Carregando, Entrada, Selo, Vazio, type Icone } from '@/components/ui'
 import { carregarCidade, carregarCidades, carregarListaInteira, carregarParte, carregarRegioes, cidadeLembrada, cidadePelaConexao, lembrarCidade, type Cartao, type Cidade, type CidadeDados, type Regiao } from '@/lib/guia'
 import { ordenar, type Ordenado, type Ordenavel } from '@/lib/guiaOrdem'
+import { paginaDaRegiao, paginaDoGuia, useMetricasDaPagina } from '@/lib/metricas'
 import { abrirAjustes, cidadePelaPosicao, distanciaTexto, pedirPermissao, permissaoAtual, posicaoAtual, type Permissao, type Posicao } from '@/lib/localizacao'
 import { ESPACO, MARCA, useTema } from '@/lib/tema'
 
@@ -223,6 +224,9 @@ export default function Guia() {
   }
 
   const nomeCidade = dados?.cidade ?? cidades?.find((c) => c.cidade_slug === cidade)?.cidade ?? ''
+  // 3.73: a visita e a presença no portal (lib/metricas.ts), com o caminho igual ao do site; só depois de carregar
+  const paginaMetricas = regiao ? (atualRegiao ? paginaDaRegiao(regiao.slug) : null) : cidade && dados ? paginaDoGuia(cidade, categoria) : null
+  useMetricasDaPagina(paginaMetricas, regiao ? `Salões ${preposicaoDaRegiao(regiao.nome)} ${regiao.nome}` : nomeCidade ? `Salões em ${nomeCidade}` : null)
   const nomeDoLugar = regiao ? regiao.nome : nomeCidade
   const cidadesDe = useCallback((r: Regiao) => r.cidades.map((s) => cidades?.find((c) => c.cidade_slug === s)).filter((c): c is Cidade => Boolean(c)), [cidades])
   const cidadesDaRegiao = useMemo(() => (regiao ? cidadesDe(regiao) : []), [regiao, cidadesDe])

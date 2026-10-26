@@ -197,3 +197,7 @@ button.pv-feed-item:hover { background: #fbf7fa; }
   .pv-dias small { font-size: 0.5rem; }
   .pv-hist-kpis { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* 3.73: "Só o app" ao lado do período (migração 217) */
+.pv-periodo-e-app { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.pv-so-app { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; white-space: nowrap; }

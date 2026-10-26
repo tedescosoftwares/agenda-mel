@@ -499,6 +499,29 @@ A aba Guia deixa de ficar presa à localização:
   serviços ("+n") e os selos Agenda pela MIMO e Seleção MIMO.
 - Na demonstração, Peruíbe com 40 salões gerados (paginação e a lista inteira).
 
+## As métricas do app no portal (3.73)
+
+- **O que o app manda** (`src/lib/metricas.ts`, migração 217): nas telas do
+  guia, a **visita** (cidade, categoria, região e salão, com o caminho igual ao
+  do site: `/saloes/<cidade>[/<categoria>]`, `/saloes/regiao/<slug>`,
+  `/saloes/<cidade>/<slug>`), os **toques** (WhatsApp do salão, "quero marcar"
+  pela Mel, como chegar, Instagram, site, agendar pela MIMO, seguir, quero na
+  MIMO) e a **presença** (uma batida a cada 25 s com a tela à vista; a de saída
+  ao sair da tela ou mandar o app para trás). Tudo pelas mesmas funções do site
+  (`site_evento`, `site_presenca`), com `origem = app`.
+- **Quem identifica a visita** é um código da instalação, sorteado uma vez no
+  aparelho e guardado no AsyncStorage: sem ligação com a conta, o telefone ou
+  o IP. O banco faz o hash dele e não guarda o código. Sem ele o banco não
+  contaria (o app não é navegador; o user-agent da biblioteca de rede parece
+  robô). A posição **não** vai: a localização fica só no aparelho, como a tela
+  de permissão promete; a cidade da visita vem pelo IP, como no site sem GPS.
+- Quem trabalha na Plataforma (perfil `plataforma`) não conta. Tudo é "manda e
+  esquece": nunca trava a tela. Na demonstração, os sinais ficam em
+  `globalThis.__mimoMetricas` (os testes conferem).
+- Para evoluir: um toque novo é `registrarEvento('tipo', pagina, { area })` com
+  o tipo cadastrado em `site_eventos_tipos`; uma tela nova que mereça contar
+  chama `useMetricasDaPagina(caminho, titulo)`.
+
 ## O que vem depois
 
 1. **Entrar com Apple** no app (o Google já entra; a web mostra a opção quando o

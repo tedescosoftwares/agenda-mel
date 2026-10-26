@@ -87,16 +87,23 @@ function faseDe(l) {
 }
 
 // as métricas do guia num período (156); nunca rejeita: o erro vem dentro
-async function lerDesempenho(dias, cidade = '') {
+// origem (3.73, migração 217): 'app' ou 'site' filtra de onde veio; vazio é tudo. Num banco sem a 217 o filtro não existe:
+// a chamada de sempre responde e filtrou fica falso (a tela avisa)
+async function lerDesempenho(dias, cidade = '', origem = '') {
   try {
-    const { data, error } = await supabase.rpc('guia_desempenho', { dias, cidade_: cidade || '' })
+    let filtrou = Boolean(origem)
+    let { data, error } = await supabase.rpc('guia_desempenho', origem ? { dias, cidade_: cidade || '', origem_: origem } : { dias, cidade_: cidade || '' })
+    if (error && origem && /origem_|schema cache|function/i.test(String(error.message ?? error))) {
+      filtrou = false
+      ;({ data, error } = await supabase.rpc('guia_desempenho', { dias, cidade_: cidade || '' }))
+    }
     if (error) {
       const msg = String(error.message ?? error)
-      return { dias, cidade, dados: null, erro: /guia_desempenho|site_eventos|function|schema cache/i.test(msg) ? 'As métricas ainda não existem neste banco. Rode a migração 156 (supabase/156_metricas_do_site.sql).' : msg }
+      return { dias, cidade, origem, filtrou, dados: null, erro: /guia_desempenho|site_eventos|function|schema cache/i.test(msg) ? 'As métricas ainda não existem neste banco. Rode a migração 156 (supabase/156_metricas_do_site.sql).' : msg }
     }
-    return { dias, cidade, dados: data ?? null, erro: data ? '' : 'O banco não devolveu as métricas.' }
+    return { dias, cidade, origem, filtrou, dados: data ?? null, erro: data ? '' : 'O banco não devolveu as métricas.' }
   } catch (e) {
-    return { dias, cidade, dados: null, erro: String(e?.message ?? e) }
+    return { dias, cidade, origem, filtrou: false, dados: null, erro: String(e?.message ?? e) }
   }
 }
 
@@ -761,15 +768,17 @@ export default function Guia() {
   const aplicarDesempenho = useCallback((n, r) => { if (montado.current && n === pedidoDesempenho.current) setDesempenho({ ...r, carregando: false }) }, [])
   // trocar o período: a tela segura os números de antes, esmaecidos, até chegarem os novos
   // cidade (3.18): os números de um município só; vazio é o guia inteiro
-  const carregarDesempenho = useCallback((dias = 30, cidade = '') => {
+  // origem (3.73): 'app', 'site' ou vazio (tudo)
+  const carregarDesempenho = useCallback((dias = 30, cidade = '', origem = '') => {
     const n = ++pedidoDesempenho.current
-    setDesempenho((d) => ({ ...d, dias, cidade, carregando: true, erro: '' }))
-    return lerDesempenho(dias, cidade).then((r) => aplicarDesempenho(n, r))
+    setDesempenho((d) => ({ ...d, dias, cidade, origem, carregando: true, erro: '' }))
+    return lerDesempenho(dias, cidade, origem).then((r) => aplicarDesempenho(n, r))
   }, [aplicarDesempenho])
   // 3.25: o Desempenho abre na cidade escolhida no alto e a acompanha (a aba ainda deixa trocar)
   const diasRef = useRef(30)
-  useEffect(() => { diasRef.current = desempenho.dias }, [desempenho.dias])
-  useEffect(() => { if (cidade !== null) carregarDesempenho(diasRef.current, cidade) }, [cidade, carregarDesempenho])
+  const origemRef = useRef('')
+  useEffect(() => { diasRef.current = desempenho.dias; origemRef.current = desempenho.origem ?? '' }, [desempenho.dias, desempenho.origem])
+  useEffect(() => { if (cidade !== null) carregarDesempenho(diasRef.current, cidade, origemRef.current) }, [cidade, carregarDesempenho])
   // os números de cada salão, para o painel da revisão
   // (a primeira linha de cada salão, a de mais visitas, é a que vale)
   const desempenhoPorLugar = useMemo(() => {

@@ -8,6 +8,7 @@ import { REGRAS } from './acesso'
 export const ROTULO_ORIGEM = {
   google: 'Google', bing: 'Bing', direto: 'Direto (link ou digitado)', interno: 'De outra página do site',
   instagram: 'Instagram', facebook: 'Facebook', whatsapp: 'WhatsApp', tiktok: 'TikTok', youtube: 'YouTube', outro: 'Outros sites',
+  app: 'App MIMO', // 3.73: a cliente pelo app (migração 217)
 }
 export const ROTULO_AREA = {
   heroi: 'Topo da página', fatos: 'Quadro de informações', barra: 'Barra de baixo (celular)',
@@ -139,7 +140,7 @@ export const textoDaFrase = (partes) => partes.map((p) => (typeof p === 'string'
 
 const ORIGEM_POR = {
   google: 'pelo Google', bing: 'pelo Bing', direto: 'por link direto ou digitando o endereço', instagram: 'pelo Instagram',
-  facebook: 'pelo Facebook', whatsapp: 'por link no WhatsApp', tiktok: 'pelo TikTok', youtube: 'pelo YouTube', outro: 'por outros sites',
+  facebook: 'pelo Facebook', whatsapp: 'por link no WhatsApp', tiktok: 'pelo TikTok', youtube: 'pelo YouTube', outro: 'por outros sites', app: 'pelo app da MIMO',
 }
 // a segunda linha do topo: de onde veio mais gente e quanto foi pelo celular
 export function detalheDoPeriodo(dados) {

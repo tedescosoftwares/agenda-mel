@@ -31,6 +31,7 @@ const TIPOS = {
   instagram: ['Instagram', 'contato'], site: ['Site', 'contato'], email: ['E-mail', 'contato'], quero_marcar: ['Quero marcar', 'interesse'],
   pedido_enviado: ['Pedido enviado (Quero marcar)', 'outro'], sou_dono: ['É o dono', 'interesse'], criar_agenda: ['Criar agenda', 'interesse'],
   compartilhar: ['Compartilhar', 'outro'], corrigir: ['Corrigir dados', 'outro'], localizacao: ['Localização ativada', 'outro'],
+  seguir: ['Seguiu pelo app', 'contato'], quero_na_mimo: ['Quer o salão na MIMO', 'interesse'],
 }
 const SALOES = { '/saloes/itanhaem/studio-lirio': 'Studio Lírio', '/saloes/itanhaem/atelie-cabelo-e-arte': 'Ateliê Cabelo & Arte' }
 // contato é o que leva a cliente ao salão (o mesmo da migração 193)
@@ -51,9 +52,11 @@ const MOLDES = [
   [760, 540, 'instagram', 'l.instagram.com', null, 'celular', 'Android 14', 'Instagram', '412x892', 'santos', 'ip', ['/saloes/itanhaem', '/saloes/itanhaem/unhas', '/saloes/itanhaem/studio-lirio'], [['agendar_mimo', 510]]],
   [900, 240, 'outro', 'guiadolitoral.com.br', null, 'computador', 'Windows', 'Edge', '1366x768', 'santos', 'ip', ['/saloes/regiao/baixada-santista'], []],
   [1000, 480, 'google', 'www.google.com', null, 'celular', 'Android 14', 'Chrome', '412x915', 'mongagua', 'ip', ['/saloes/mongagua', '/saloes/itanhaem/atelie-cabelo-e-arte'], [['whatsapp', 100]]],
+  // 3.73: a cliente pelo app (origem app, migração 217)
+  [500, 400, 'app', null, null, 'celular', 'Android 14', 'App MIMO 3.73', '412x915', 'itanhaem', 'ip', ['/saloes/itanhaem', '/saloes/itanhaem/unhas', '/saloes/itanhaem/studio-lirio'], [['seguir', 300]]],
 ]
 // 3.62: quantas vezes a pessoa de cada molde já esteve aqui (0 = primeira vez)
-const ANTES = [0, 2, 0, 1, 0, 0, 3, 0, 1, 0, 0, 2]
+const ANTES = [0, 2, 0, 1, 0, 0, 3, 0, 1, 0, 0, 2, 1]
 const CICLO = 1200
 const PASSO_S = 70 // cada visitante de mentira troca de página a cada ~70 s
 const T0 = Math.floor(Date.now() / 1000) - 600 // o demo abre no meio do ciclo, já com gente no site
@@ -180,9 +183,9 @@ export function demoAoVivo({ horas_ } = {}) {
   const soltos = REAIS.size ? [] : TOQUES_REAIS.map((a) => ({ ...a, dispositivo: null, cidade: null, uf: null, local_fonte: null, visita: null }))
   const acoesRecentes = [...toquesDe(todos), ...soltos].filter((a) => ms(a.em) > agora - janela).sort((a, b) => b.em.localeCompare(a.em)).slice(0, 100)
   const terminadas = todos.filter((v) => v.desfecho !== 'contatou' && v.desfecho !== 'navegando')
-  const somaDesfechos = { saiu_whatsapp: 21, saiu_ligar: 6, saiu_mapa: 9, saiu_pedido_enviado: 4, saiu_agendar_mimo: 3, saiu_instagram: 7, saiu_quero_marcar: 2, contatou_e_saiu: 18, sem_contato: 96 }
+  const somaDesfechos = { saiu_whatsapp: 21, saiu_ligar: 6, saiu_mapa: 9, saiu_pedido_enviado: 4, saiu_agendar_mimo: 3, saiu_instagram: 7, saiu_quero_marcar: 2, saiu_seguir: 2, contatou_e_saiu: 18, sem_contato: 96 }
   for (const v of terminadas) somaDesfechos[v.desfecho] = (somaDesfechos[v.desfecho] ?? 0) + 1
-  const somaAcoes = { whatsapp: 34, mapa: 15, instagram: 12, ligar: 8, quero_marcar: 7, pedido_enviado: 5, agendar_mimo: 4, site: 3, compartilhar: 3, localizacao: 11 }
+  const somaAcoes = { whatsapp: 34, mapa: 15, instagram: 12, ligar: 8, quero_marcar: 7, pedido_enviado: 5, agendar_mimo: 4, seguir: 3, site: 3, compartilhar: 3, quero_na_mimo: 2, localizacao: 11 }
   for (const a of toquesDe(todos)) somaAcoes[a.tipo] = (somaAcoes[a.tipo] ?? 0) + 1
   const ultimaSemContato = new Map()
   for (const v of terminadas) if (v.desfecho === 'sem_contato') ultimaSemContato.set(v.pagina, (ultimaSemContato.get(v.pagina) ?? 0) + 1)
@@ -204,9 +207,9 @@ export function demoAoVivo({ horas_ } = {}) {
     hoje: {
       visitas: 180 + trinta.length, paginas: 612 + trinta.reduce((s, v) => s + v.paginas, 0), tempo_medio_s: 154,
       por_hora: Array.from({ length: 24 }, (_, h) => ({ h, n: h > hora ? 0 : Math.round(4 + 10 * Math.sin((h / 24) * Math.PI) ** 2 + (h % 5)) })),
-      origens: [{ origem: 'google', n: 96 }, { origem: 'instagram', n: 41 }, { origem: 'direto', n: 22 }, { origem: 'whatsapp', n: 14 }, { origem: 'facebook', n: 7 }],
+      origens: [{ origem: 'google', n: 96 }, { origem: 'instagram', n: 41 }, { origem: 'direto', n: 22 }, { origem: 'whatsapp', n: 14 }, { origem: 'app', n: 12 }, { origem: 'facebook', n: 7 }],
       dispositivos: [{ dispositivo: 'celular', n: 151 }, { dispositivo: 'computador', n: 24 }, { dispositivo: 'tablet', n: 5 }],
-      navegadores: [{ navegador: 'Chrome', n: 88 }, { navegador: 'Safari', n: 37 }, { navegador: 'Instagram', n: 29 }, { navegador: 'Samsung Internet', n: 18 }, { navegador: 'Facebook', n: 8 }],
+      navegadores: [{ navegador: 'Chrome', n: 88 }, { navegador: 'Safari', n: 37 }, { navegador: 'Instagram', n: 29 }, { navegador: 'Samsung Internet', n: 18 }, { navegador: 'App MIMO 3.73', n: 12 }, { navegador: 'Facebook', n: 8 }],
       cidades: [{ cidade: 'Itanhaém', uf: 'SP', n: 71 }, { cidade: 'São Paulo', uf: 'SP', n: 38 }, { cidade: 'Santos', uf: 'SP', n: 29 }, { cidade: 'Mongaguá', uf: 'SP', n: 18 }, { cidade: 'Peruíbe', uf: 'SP', n: 9 }],
       entradas: [{ pagina: '/saloes/itanhaem/unhas', n: 44 }, { pagina: '/saloes/itanhaem', n: 39 }, { pagina: '/saloes/itanhaem/studio-lirio', n: 21 }, { pagina: '/', n: 17 }],
       acoes: Object.entries(somaAcoes).map(([tipo, n]) => ({ tipo, rotulo: TIPOS[tipo]?.[0] ?? tipo, grupo: TIPOS[tipo]?.[1] ?? 'outro', n })).sort((a, b) => b.n - a.n),

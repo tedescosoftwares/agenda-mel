@@ -54,6 +54,7 @@ function Agora() {
   const [mapa, setMapa] = useState(true)
   const [verRecentes, setVerRecentes] = useState(true)
   const [horas, setHoras] = useState(horasMemoria)
+  const [soApp, setSoApp] = useState(false) // 3.73: só as visitas pelo app (migração 217)
   useEffect(() => { horasMemoria = horas }, [horas]) // lembrado ao trocar de aba
 
   useEffect(() => {
@@ -74,9 +75,12 @@ function Agora() {
     return () => { vivo = false; clearTimeout(t) }
   }, [horas])
 
-  const ativos = useMemo(() => (Array.isArray(dados?.ativos) ? dados.ativos : []), [dados])
+  const doApp = (v) => v.origem === 'app'
+  const todosAtivos = useMemo(() => (Array.isArray(dados?.ativos) ? dados.ativos : []), [dados])
+  const ativos = useMemo(() => (soApp ? todosAtivos.filter(doApp) : todosAtivos), [todosAtivos, soApp])
+  const noAppAgora = useMemo(() => todosAtivos.filter(doApp).length, [todosAtivos])
   // o mapa (3.49): quem está no site agora em destaque e quem passou no período mais claro
-  const passaram = useMemo(() => (Array.isArray(dados?.recentes) ? dados.recentes : []), [dados])
+  const passaram = useMemo(() => { const r = Array.isArray(dados?.recentes) ? dados.recentes : []; return soApp ? r.filter(doApp) : r }, [dados, soApp])
   const pontos = useMemo(() => [...ativos.map((v) => ({ v, ativo: true })), ...passaram.map((v) => ({ v, ativo: false }))]
     .filter(({ v }) => Number.isFinite(v.lat) && Number.isFinite(v.lng))
     .map(({ v, ativo }) => ({ id: v.id, lat: v.lat, lng: v.lng, gps: v.local_fonte === 'gps', ativo, titulo: `${lugarDe(v) ?? ''} · ${v.titulo || v.pagina}${ativo ? '' : ' · saiu'}` })), [ativos, passaram])
@@ -95,7 +99,10 @@ function Agora() {
   const totalTrinta = n0(dados.no_periodo ?? dados.ultimos_30) // o total do período (num banco sem a 196, os 30 min)
   const barras = (lista, chave, rotulo) => (lista ?? []).map((x) => ({ chave: String(x[chave]), n: x.n, rotulo: rotulo(x) }))
   const temAcoes = Array.isArray(dados.acoes_recentes) // a migração 193 já rodou
-  const recentes = dados.recentes ?? []
+  const recentes = passaram
+  // 3.73: com "só o app", os toques são os das visitas pelo app (o toque sem visita registrada fica de fora)
+  const idsApp = new Set([...ativos, ...recentes].map((v) => v.id))
+  const acoesRecentes = soApp ? (dados.acoes_recentes ?? []).filter((a) => a.visita != null && idsApp.has(a.visita)) : (dados.acoes_recentes ?? [])
   // tocar num toque do feed abre a visita dele (na lista de agora ou na dos que saíram há pouco)
   const abrirVisita = (id) => {
     if (id == null) return
@@ -116,7 +123,7 @@ function Agora() {
           <div>
             <strong data-teste="ao-vivo-n">{formatar(dados.no_site)}</strong>
             <span>{n0(dados.no_site) === 1 ? 'pessoa no site agora' : 'pessoas no site agora'}</span>
-            <small>{formatar(dados.ultimos_30)} nos últimos 30 minutos · {formatar(totalTrinta)} {noPeriodo} · atualiza a cada {horas > 1 ? 20 : 5} s</small>
+            <small>{formatar(dados.ultimos_30)} nos últimos 30 minutos · {formatar(totalTrinta)} {noPeriodo} · atualiza a cada {horas > 1 ? 20 : 5} s{noAppAgora ? <> · <b data-teste="ao-vivo-app-agora">{noAppAgora}</b> pelo app</> : null}</small>
           </div>
         </div>
         <div className="pv-minutos" role="img" aria-label={`Pessoas no site minuto a minuto, últimos 30 minutos; agora ${n0(dados.no_site)}`}>
@@ -134,9 +141,9 @@ function Agora() {
 
       <div className="pv-mesa">
         <Painel Icon={Radio} titulo="No site agora" sub="Cada visita, com a página de agora. Toque para ver o caminho que fez." className="pv-lista-painel"
-          direita={<div className="pv-periodo" role="group" aria-label="Período de quem passou por aqui">{HORAS.map((h) => <button key={h} type="button" className={h === horas ? 'on' : ''} aria-pressed={h === horas} onClick={() => setHoras(h)} data-teste={`ao-vivo-horas-${h}`}>{h} h</button>)}</div>}>
+          direita={<div className="pv-periodo-e-app"><div className="pv-periodo" role="group" aria-label="Período de quem passou por aqui">{HORAS.map((h) => <button key={h} type="button" className={h === horas ? 'on' : ''} aria-pressed={h === horas} onClick={() => setHoras(h)} data-teste={`ao-vivo-horas-${h}`}>{h} h</button>)}</div><label className="pv-so-app"><input type="checkbox" checked={soApp} onChange={(e) => setSoApp(e.target.checked)} data-teste="ao-vivo-so-app" /> Só o app</label></div>}>
           {ativos.length === 0 ? (
-            <Vazio>Ninguém no site agora. Quando alguém abrir uma página do site, aparece aqui em segundos.</Vazio>
+            <Vazio>{soApp ? 'Ninguém no guia pelo app agora. Quando uma cliente abrir o guia no app, aparece aqui em segundos.' : 'Ninguém no site agora. Quando alguém abrir uma página do site, aparece aqui em segundos.'}</Vazio>
           ) : (
             <ul className="pv-lista" data-teste="ao-vivo-lista">
               {ativos.map((v) => <Visitante key={v.id} v={v} agora={agora} aberto={aberto === v.id} onAbrir={() => setAberto((x) => (x === v.id ? null : v.id))} />)}
@@ -164,9 +171,9 @@ function Agora() {
                     <small>{periodoRotulo.toLowerCase()}</small>
                   </div>
                 )}
-                {dados.acoes_recentes.length ? (
+                {acoesRecentes.length ? (
                   <ul className="pv-feed" data-teste="ao-vivo-toques">
-                    {dados.acoes_recentes.map((a, i) => <Toque key={`${a.em}-${a.tipo}-${a.visita ?? i}`} a={a} agora={agora} onAbrir={a.visita != null ? () => abrirVisita(a.visita) : null} />)}
+                    {acoesRecentes.map((a, i) => <Toque key={`${a.em}-${a.tipo}-${a.visita ?? i}`} a={a} agora={agora} onAbrir={a.visita != null ? () => abrirVisita(a.visita) : null} />)}
                   </ul>
                 ) : (
                   <Vazio>Ninguém tocou em nada {noPeriodo}. Quando alguém tocar no WhatsApp, no Como chegar ou no Quero marcar de um salão, aparece aqui na hora.</Vazio>

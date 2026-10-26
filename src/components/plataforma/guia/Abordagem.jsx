@@ -104,6 +104,7 @@ function montarMensagem(it, { dias, para, semFotos = false }) {
     const partes = [
       url && n0(it.visitas) ? `a página teve ${formatar(it.visitas)} ${n0(it.visitas) === 1 ? 'visita' : 'visitas'} nos últimos ${dias} dias` : '',
       n0(e.whatsapp) ? `${e.whatsapp} ${e.whatsapp === 1 ? 'pessoa tocou' : 'pessoas tocaram'} para chamar vocês no WhatsApp` : '',
+      n0(e.seguir) ? `${e.seguir} ${e.seguir === 1 ? 'cliente passou' : 'clientes passaram'} a seguir vocês pelo app da MIMO` : '',
       q ? `${q} ${q === 1 ? 'pessoa pediu' : 'pessoas pediram'} para marcar horário pelo app` : '',
     ].filter(Boolean)
     return [
@@ -751,7 +752,8 @@ function Detalhe({
   const notaMudou = (notaTexto.trim() || null) !== (it.nota ?? null)
   const ig = String(it.instagram ?? '').replace(/^@/, '').trim()
   const fone = it.whatsapp || it.telefone
-  const toques = [['whatsapp', 'WhatsApp'], ['ligar', 'Ligar'], ['mapa', 'Rota'], ['instagram', 'Instagram'], ['site', 'Site'], ['agendar_mimo', 'Agendar'], ['email', 'E-mail']]
+  // 3.73: os toques do site e do app somados (o app manda os mesmos tipos; seguir só existe no app)
+  const toques = [['whatsapp', 'WhatsApp'], ['ligar', 'Ligar'], ['mapa', 'Rota'], ['instagram', 'Instagram'], ['site', 'Site'], ['agendar_mimo', 'Agendar'], ['seguir', 'Seguiu no app'], ['email', 'E-mail']]
     .filter(([t]) => n0(e[t]) > 0).map(([t, r]) => `${r} ${n0(e[t])}`)
   return (
     <div className="pa-detalhe">

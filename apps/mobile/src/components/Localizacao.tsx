@@ -53,7 +53,7 @@ export function Localizacao({ onPronto }: { onPronto: () => void }) {
             <Ionicons name="shield-checkmark-outline" size={20} color={t.ok} />
             <Text style={[e.forte, { color: t.texto }]}>Seus dados são seus</Text>
           </View>
-          <Text style={{ color: t.texto2, lineHeight: 20 }}>A localização fica só no seu aparelho: não guardamos o seu ponto no servidor, não vendemos nem repassamos dados a ninguém. Usamos só para ordenar o que está perto.</Text>
+          <Text style={{ color: t.texto2, lineHeight: 20 }}>Usamos a sua posição para ordenar o que está perto e, de forma aproximada (uns 100 m), para saber de que cidade e região as clientes usam o guia. Não ligamos a posição à sua conta, não vendemos nem repassamos dados a ninguém.</Text>
           <Text style={{ color: t.texto2, lineHeight: 20 }}>Você liga ou desliga quando quiser, nos ajustes do celular.</Text>
           <Pressable onPress={() => void WebBrowser.openBrowserAsync(`${WEB_URL}/privacidade`)} hitSlop={6} accessibilityRole="link">
             <Text style={{ color: t.acento, fontWeight: '700', fontSize: 13 }}>Ler a política de privacidade</Text>

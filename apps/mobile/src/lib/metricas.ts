@@ -4,6 +4,7 @@ import { useCallback, useEffect } from 'react'
 import { AppState, Dimensions, Platform, type AppStateStatus } from 'react-native'
 import { useSessao } from '@/context/sessao'
 import { VERSAO } from './config'
+import { posicaoAtual, type Posicao } from './localizacao'
 import { supabase } from './supabase'
 
 // As métricas do app no portal (3.73, migração 217). O guia dentro do app manda ao banco os mesmos sinais
@@ -14,7 +15,9 @@ import { supabase } from './supabase'
 // Quem identifica a visita é um código da instalação: sorteado uma vez neste aparelho e guardado aqui, sem
 // ligação com a conta, o telefone ou o IP (o banco ainda faz um hash dele com o sal do dia; o que fica lá
 // não volta ao código). Sem ele o banco não contaria: o app não é navegador, e o user-agent da biblioteca
-// de rede cai no filtro de robô. A posição não vai: a localização fica só no aparelho (lib/localizacao.ts).
+// de rede cai no filtro de robô. Quem permitiu a localização manda a posição junto, como no site (3.73.1): na
+// presença com 3 casas (~100 m; o Ao vivo mostra a cidade certa e o pino "pelo GPS") e uma vez por tela no evento
+// 'localizacao', uma vez por sessão (o mapa de acessos do Desempenho; o banco guarda com 6 casas, como o site).
 // Quem trabalha na Plataforma (perfil "plataforma") não conta. Tudo é "manda e esquece": nunca trava a tela.
 //
 // Para evoluir: um toque novo é registrarEvento('tipo', pagina) com o tipo cadastrado em site_eventos_tipos;
@@ -79,6 +82,8 @@ export function registrarVisita(pagina: string | null | undefined): void {
 
 // ---- a presença: uma batida a cada 25 s com a tela à vista; a de saída ao sair da tela ou do app ----
 let atual: { pagina: string; titulo: string | null } | null = null
+let local: { lat: number; lng: number } | null = null // a posição de quem permitiu, arredondada
+let mandouLocalizacao = false // o evento de localização vai uma vez por sessão do app, como no site (guiaPerto.js)
 let relogio: ReturnType<typeof setInterval> | null = null
 let primeira: ReturnType<typeof setTimeout> | null = null
 let ouvindo = false
@@ -100,7 +105,7 @@ async function bater(sair = false): Promise<void> {
     await supabase.rpc('site_presenca', {
       pagina_: pagina, titulo_: titulo ? titulo.slice(0, 140) : null, origem_: 'app', ref_: null, utm_: null,
       dispositivo_: 'celular', sistema_: sistema(), navegador_: `App MIMO ${VERSAO}`,
-      tela_: `${Math.round(width)}x${Math.round(height)}`, idioma_: idioma(), lat_: null, lng_: null, sair_: sair, app_,
+      tela_: `${Math.round(width)}x${Math.round(height)}`, idioma_: idioma(), lat_: local?.lat ?? null, lng_: local?.lng ?? null, sair_: sair, app_,
     })
   } catch { /* manda e esquece */ }
 }
@@ -113,6 +118,14 @@ function ouvir() {
     if (!atual) return
     if (s === 'active') { void bater(); ligar() } else { void bater(true); desligar() }
   })
+}
+// quem permitiu a localização: a próxima batida leva a posição, com 3 casas (~100 m), como no site (presenca.js)
+export function informarPosicao(p: Posicao | null): void {
+  if (!p || !Number.isFinite(p.latitude) || !Number.isFinite(p.longitude)) return
+  const novo = { lat: Math.round(p.latitude * 1000) / 1000, lng: Math.round(p.longitude * 1000) / 1000 }
+  const mudou = !local || local.lat !== novo.lat || local.lng !== novo.lng
+  local = novo
+  if (mudou && atual && AppState.currentState === 'active') void bater() // o banco aceita a batida com GPS mesmo logo depois da outra
 }
 // a tela mudou (ou saiu da tela: nulo). O título pode chegar depois: fica para a próxima batida
 export function presencaNaPagina(pagina: string | null | undefined, titulo?: string | null): void {
@@ -134,6 +147,17 @@ export function useMetricasDaPagina(pagina: string | null, titulo?: string | nul
   const papel = perfil?.role ?? null
   useEffect(() => { contar = papel !== 'plataforma' }, [papel])
   useEffect(() => { registrarVisita(pagina) }, [pagina]) // registrarEvento já olha "contar" (o efeito acima roda antes)
+  // a posição de quem permitiu (cache de 5 min em localizacao.ts): na presença e, uma vez por sessão, no evento de localização
+  useEffect(() => {
+    if (!pagina) return
+    let vivo = true
+    posicaoAtual().then((p) => {
+      if (!vivo || !p) return
+      informarPosicao(p)
+      if (!mandouLocalizacao && contar) { mandouLocalizacao = true; registrarEvento('localizacao', pagina, { dados: { lat: p.latitude, lng: p.longitude, prec: 0 } }) }
+    }).catch(() => {})
+    return () => { vivo = false }
+  }, [pagina])
   useFocusEffect(useCallback(() => {
     presencaNaPagina(pagina, titulo)
     return () => presencaNaPagina(null)

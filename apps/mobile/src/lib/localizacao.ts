@@ -6,7 +6,8 @@ import { DEMO } from './config'
 // A localização da cliente (3.66). Pedida na abertura do app enquanto não for
 // dada (components/Localizacao.tsx), com a explicação: serve para pôr na frente os
 // salões, as promoções e as ofertas mais perto dela e para escolher a cidade
-// do guia. Fica só no aparelho: nada do ponto vai para o servidor.
+// do guia. A distância é calculada no aparelho; a posição aproximada (~100 m) vai junto com as métricas do
+// guia (lib/metricas.ts, 3.73.1), como no site, para a Plataforma ver de que cidade as clientes usam o app.
 
 export type Posicao = { latitude: number; longitude: number }
 const CENARIO = process.env.EXPO_PUBLIC_DEMO ?? ''

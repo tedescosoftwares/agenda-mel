@@ -253,10 +253,12 @@ export function cutucadaSalao(modelo: string | null | undefined, p: Pedido & { m
 }
 // manda o pedido ao salão (o texto) e, se ligada, a enquete logo depois; registra o resultado e a chave da enquete no
 // pedido. Usado no "sim" da cliente e no "Reenviar" da Plataforma. A enquete é um extra: se não sair, o pedido já foi.
-export async function despacharPedido(deps: Deps, cfg: Config, l: { nome: string }, p: Pedido & { salao_tel: string }): Promise<{ ok: boolean; erro?: string; texto: string; enquete: string | null }> {
+export async function despacharPedido(deps: Deps, cfg: Config, l: { nome: string }, p: Pedido & { salao_tel: string }): Promise<{ ok: boolean; erro?: string; status?: string; texto: string; enquete: string | null }> {
   const texto = mensagemDoSalao(cfg, l, p)
   const env = await deps.enviar(cfg.instancia, p.salao_tel, texto)
-  await chamar(deps, 'guia_whats_lead_resultado', { lead_: p.id, ok_: env.ok, provider_: env.ok ? env.providerId : null, erro_: env.ok ? null : env.erro, mensagem_: texto })
+  // 3.72: o banco decide o status do pedido; "não existe no WhatsApp" vira sem_contato (migração 216)
+  const res = (await chamar(deps, 'guia_whats_lead_resultado', { lead_: p.id, ok_: env.ok, provider_: env.ok ? env.providerId : null, erro_: env.ok ? null : env.erro, mensagem_: texto })) as { status?: string } | null
+  const status = env.ok ? 'enviado' : (res?.status ?? 'falhou')
   let enquete: string | null = null
   if (env.ok && cfg.enquete_ativa !== false && deps.enviarEnquete) {
     try {
@@ -265,7 +267,7 @@ export async function despacharPedido(deps: Deps, cfg: Config, l: { nome: string
       if (r.ok && r.providerId) { enquete = r.providerId; await chamar(deps, 'guia_whats_lead_enquete', { lead_: p.id, enquete_: enquete }) }
     } catch { /* a enquete não saiu: o texto já foi, e o voto por texto continua valendo */ }
   }
-  return { ok: env.ok, erro: env.ok ? undefined : env.erro, texto, enquete }
+  return { ok: env.ok, erro: env.ok ? undefined : env.erro, status, texto, enquete }
 }
 
 export function resumo(d: Dados, salao: string): string {
@@ -564,11 +566,21 @@ export async function atenderGuia(deps: Deps, e: Entrada, opcoes: { teste?: bool
     const ld = (await chamar(deps, 'guia_whats_lead_criar', { conversa_: conversa!.id })) as (Pedido & { status: string; salao_tel: string | null; repetido: boolean })
     let ok = false
     let previa: string | null = null
+    let statusFinal: string | undefined
     if (ld?.status === 'pendente' && ld.salao_tel) {
       // 3.57: o texto do pedido e, logo atrás, a enquete "vai atender?" (despacharPedido registra os dois)
       const d = await despacharPedido(deps, cfg, lugar, { ...ld, salao_tel: ld.salao_tel })
       ok = d.ok
       previa = d.texto
+      statusFinal = d.status
+      // 3.72: o número do salão não existe no WhatsApp (ou o envio falhou): a cliente segue normal e a equipe é
+      // avisada no nosso número, como no caso sem número — o pedido não fica no vazio
+      if (!ok && cfg.numero_avisos) {
+        const motivo = d.status === 'sem_contato'
+          ? `o número ${telefoneBonito(ld.salao_tel)} do cadastro não tem WhatsApp`
+          : `o envio para ${telefoneBonito(ld.salao_tel)} falhou${d.erro ? ` (${String(d.erro).slice(0, 120)})` : ''}`
+        try { await deps.enviar(cfg.instancia, so(cfg.numero_avisos), avisoEquipe(lugar, ld, motivo)) } catch { /* segue sem o aviso */ }
+      }
     } else if (ld?.repetido) {
       ok = ld.status !== 'falhou'
     } else if (ld?.status === 'sem_contato' && cfg.numero_avisos) {
@@ -578,7 +590,7 @@ export async function atenderGuia(deps: Deps, e: Entrada, opcoes: { teste?: bool
     }
     const resposta = confirmacao(cfg, lugar, dados, ok)
     await guardar(resposta, 'enviado', dados, lugar.id)
-    return { responder: resposta, acao: ok ? 'enviado' : `pedido_${ld?.status ?? 'erro'}`, previaSalao: previa, estado: 'enviado', dados }
+    return { responder: resposta, acao: ok ? 'enviado' : `pedido_${statusFinal ?? ld?.status ?? 'erro'}`, previaSalao: previa, estado: 'enviado', dados }
   }
 
   // tudo anotado (ou mudou algo depois do resumo): o resumo e o pedido de licença, com as nossas palavras
@@ -630,11 +642,11 @@ export async function simularVoto(deps: Deps, tel: string, voto: 'sim' | 'nao'):
 
 // 3.53: o aviso interno à equipe quando o salão não tem WhatsApp para receber o pedido (ou o número é o da própria
 // cliente). Vai para o nosso número (numero_avisos), nunca para a cliente. É um recado de operação, não um texto dela.
-function avisoEquipe(l: Lugar, ld: { cliente_nome?: string | null; cliente_tel?: string | null; servico?: string | null; preferencia?: string | null; cidade?: string | null }): string {
+export function avisoEquipe(l: Lugar, ld: { cliente_nome?: string | null; cliente_tel?: string | null; servico?: string | null; preferencia?: string | null; cidade?: string | null }, motivo?: string | null): string {
   const onde = [l.nome, ld.cidade ?? l.cidade].filter(Boolean).join(' · ')
   return [
     '⚠️ MIMO — salão sem WhatsApp',
-    `${onde} não tem WhatsApp para receber o pedido.`,
+    motivo ? `${onde}: ${motivo}.` : `${onde} não tem WhatsApp para receber o pedido.`,
     `Cliente: ${ld.cliente_nome || 'sem nome'}${ld.cliente_tel ? ` (${telefoneBonito(ld.cliente_tel)})` : ''}`,
     `Pedido: ${[ld.servico, ld.preferencia].filter(Boolean).join(' · ') || 'sem detalhes'}`,
     'Fale com a cliente e, se der, convide o salão para a MIMO.',

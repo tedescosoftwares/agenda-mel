@@ -963,3 +963,7 @@
 .pg-promover-pix textarea { width: 100%; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.78rem; resize: vertical; }
 .pg-promover-link code { word-break: break-all; font-size: 0.78rem; }
 .pg-promover-resultado .btn { justify-self: start; }
+
+/* 3.72: o WhatsApp do cadastro não existe */
+.pg-zap-invalido { display: flex; align-items: flex-start; gap: 0.35rem; margin: 0; font-size: 0.86rem; }
+.pg-zap-invalido svg { flex: none; margin-top: 0.15rem; }

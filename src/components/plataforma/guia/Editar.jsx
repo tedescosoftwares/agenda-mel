@@ -6,7 +6,8 @@ import EscreverFora, { Conferencia } from './EscreverFora'
 import { GUIA_CATEGORIAS, conteudoSeguro, telefoneBonito, canaisDoSite, rotaDoLugar } from '../../../lib/guia'
 import { seoDoLugar } from '../../../lib/guiaSeo'
 import { enviarFotoDoGuia, MAX_FOTOS } from '../../../lib/guiaFotos'
-import { X, Plus, Trash2, FileText, Store, LoaderCircle, ImagePlus, ChevronLeft, ChevronRight, Heart, Rocket, Check, Copy, MessageCircle } from 'lucide-react'
+import { X, Plus, Trash2, FileText, Store, LoaderCircle, ImagePlus, ChevronLeft, ChevronRight, Heart, Rocket, Check, Copy, MessageCircle, TriangleAlert } from 'lucide-react'
+import { supabase } from '../../../lib/supabase'
 import { promoverCompleto } from '../../../lib/guiaPromover'
 import { planoDoNegocio, reais } from '../../../lib/planos'
 
@@ -146,6 +147,13 @@ export default function EditarLugar({ lugar, g, onFechar }) {
     set('salon_id', r.salao.id)
     setPromo((p) => ({ ...p, ocupado: false, resultado: r }))
     g.avisar(`${lugar.nome} agora agenda pela MIMO${r.conta?.nova ? ', e a conta da dona foi criada' : ''}.`)
+  }
+  // 3.72: a Plataforma conferiu o número por fora e quer que a Mel volte a tentar
+  async function numeroConferido() {
+    const { data, error } = await supabase.rpc('guia_whats_numero_ok', { lugar_: lugar.id })
+    if (error || !data?.ok) { g.avisar(error?.message || 'Não deu para desmarcar.'); return }
+    await g.salvarLugar(lugar.id, { whatsapp_invalido_em: null, whatsapp_invalido_motivo: null })
+    g.avisar('Número marcado como conferido: a Mel volta a mandar os pedidos.')
   }
   const copiar = (texto, aviso = 'Copiado.') => navigator.clipboard?.writeText(String(texto ?? '')).then(() => g.avisar(aviso)).catch(() => g.avisar('Não deu para copiar.'))
   const setT = (k, v) => setTexto((t) => ({ ...t, [k]: v }))
@@ -344,6 +352,12 @@ export default function EditarLugar({ lugar, g, onFechar }) {
                   <label className="pg-campo">Site<input value={fatos.site} onChange={(e) => set('site', e.target.value)} placeholder="https://" /></label>
                   <label className="pg-campo">Na MIMO (id do salão, opcional)<input value={fatos.salon_id} onChange={(e) => set('salon_id', e.target.value)} placeholder="quando o salão já agenda pela MIMO" /></label>
                 </div>
+                {lugar.whatsapp_invalido_em && (
+                  <p className="pg-ruim pg-zap-invalido" data-teste="zap-invalido">
+                    <TriangleAlert size={14} /> {lugar.whatsapp_invalido_motivo || 'O WhatsApp do cadastro não existe.'} A Mel não manda pedidos para esse número até você corrigir o WhatsApp ou o telefone aqui (salvar desmarca) ou
+                    {' '}<button type="button" className="plat-link" onClick={numeroConferido}>marcar como conferido</button>.
+                  </p>
+                )}
                 {/* 3.67: os pedidos do app ("quero esse salão na MIMO"); 3.71: a promoção completa (migração 215) */}
                 <div className="pg-promover" data-teste="promover">
                   <p className="pg-promover-votos"><Heart size={14} /> <b>{Number(lugar.votos ?? 0)}</b> {Number(lugar.votos ?? 0) === 1 ? 'cliente pediu' : 'clientes pediram'} esse salão na MIMO pelo app{Number(lugar.contatos_app ?? 0) > 0 ? <> · <b>{Number(lugar.contatos_app)}</b> {Number(lugar.contatos_app) === 1 ? 'chamou' : 'chamaram'} pelo WhatsApp a partir do app</> : null}</p>

@@ -134,17 +134,20 @@ async function comVotos(r) {
   if (r?.erro || !Array.isArray(itens) || !itens.length) return r
   try {
     const ids = itens.map((it) => it.lugar_id)
-    let { data, error } = await supabase.from('guia_lista').select('id, votos, contatos_app').in('id', ids).or('votos.gt.0,contatos_app.gt.0')
+    // 3.72: a marca "o WhatsApp do cadastro não existe" (migração 216) entra junto
+    let { data, error } = await supabase.from('guia_lista').select('id, votos, contatos_app, whatsapp_invalido_em').in('id', ids).or('votos.gt.0,contatos_app.gt.0,whatsapp_invalido_em.not.is.null')
+    if (error) ({ data, error } = await supabase.from('guia_lista').select('id, votos, contatos_app').in('id', ids).or('votos.gt.0,contatos_app.gt.0'))
     if (error) ({ data, error } = await supabase.from('guia_lista').select('id, votos').in('id', ids).gt('votos', 0))
     if (error || !Array.isArray(data) || !data.length) return r
-    const sinais = new Map(data.map((x) => [x.id, { votos: n0(x.votos), contatos: n0(x.contatos_app) }]))
+    const sinais = new Map(data.map((x) => [x.id, { votos: n0(x.votos), contatos: n0(x.contatos_app), zapInvalido: Boolean(x.whatsapp_invalido_em) }]))
     return { ...r, data: { ...r.data, itens: itens.map((it) => {
       const sn = sinais.get(it.lugar_id)
-      if (!sn || (!sn.votos && !sn.contatos)) return it
+      if (!sn || (!sn.votos && !sn.contatos && !sn.zapInvalido)) return it
       const motivos = []
       if (sn.votos) motivos.push({ tipo: 'pedido', peso: Math.min(60, 10 * sn.votos), texto: `${sn.votos} ${sn.votos === 1 ? 'cliente pediu' : 'clientes pediram'} no app` })
       if (sn.contatos) motivos.push({ tipo: 'contato', peso: Math.min(30, 5 * sn.contatos), texto: `${sn.contatos} ${sn.contatos === 1 ? 'cliente chamou' : 'clientes chamaram'} pelo app` })
-      return { ...it, votos: sn.votos, contatos_app: sn.contatos, motivos: [...motivos, ...(it.motivos ?? [])] }
+      if (sn.zapInvalido) motivos.push({ tipo: 'sem_zap', peso: 0, texto: 'o WhatsApp do cadastro não existe' })
+      return { ...it, votos: sn.votos, contatos_app: sn.contatos, whatsapp_invalido: sn.zapInvalido, motivos: [...motivos, ...(it.motivos ?? [])] }
     }) } }
   } catch { return r }
 }

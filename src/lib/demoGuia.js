@@ -535,6 +535,13 @@ export const GUIA_RPC = {
     GUIA_LUGARES.push(base({ id, slug, categoria: 'beleza', nome: 'Salão da MIMO', bairro: 'Centro', endereco: null, status: 'importado', origem: { fonte: 'mimo', salao_id: a?.salao_ }, salon_id: a?.salao_, fotos: [] }))
     return { ok: true, lugar_id: id, ja_estava: false, slug, cidade_slug: 'itanhaem' }
   },
+  // 3.72: a Plataforma marca o número como conferido
+  guia_whats_numero_ok: (a) => {
+    const l = GUIA_LUGARES.find((x) => x.id === a?.lugar_)
+    if (!l) return { ok: false }
+    l.whatsapp_invalido_em = null; l.whatsapp_invalido_motivo = null
+    return { ok: true }
+  },
   guia_aprovar_pagina: (a) => {
     const p = GUIA_PAGINAS.find((x) => x.id === a?.pagina_)
     if (!p || !(p.rascunho || p.conteudo)) return null

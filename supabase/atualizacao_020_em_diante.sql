@@ -45188,6 +45188,12 @@ end $$;
 
 insert into public.migracoes_aplicadas (arquivo) values ('207_entrar_com_google.sql') on conflict (arquivo) do nothing;
 
+do $$ begin
+  raise notice '207: entrar com Google na ponta da cliente — completar_perfil (WhatsApp, aniversário, aceites, foto do Google, encaixes)';
+end $$;
+
+insert into public.migracoes_aplicadas (arquivo) values ('207_entrar_com_google.sql') on conflict (arquivo) do nothing;
+
 -- =============================================================
 -- >>> 208_onboarding_ficha_e_confirmacoes.sql
 -- =============================================================
@@ -45331,6 +45337,12 @@ begin
     raise exception 'para ligar o onboarding, o WhatsApp do guia (a Mel) precisa estar ligado e com número';
   end if;
   return (select to_jsonb(g) from public.guia_onboarding_config g where g.id = 1);
+end $$;
+
+insert into public.migracoes_aplicadas (arquivo) values ('208_onboarding_ficha_e_confirmacoes.sql') on conflict (arquivo) do nothing;
+
+do $$ begin
+  raise notice '208: o onboarding com a ficha da empresa, correções por campo, a rua pelo nome, complemento, confirmações, ajuda humana, "criando…" e o suporte no fim';
 end $$;
 
 insert into public.migracoes_aplicadas (arquivo) values ('208_onboarding_ficha_e_confirmacoes.sql') on conflict (arquivo) do nothing;
@@ -45858,6 +45870,12 @@ begin
 end $$;
 
 insert into public.migracoes_aplicadas (arquivo) values ('209_site_historico.sql') on conflict (arquivo) do nothing;
+do $$
+begin
+  raise notice '209: site_presencas.pessoa (o código fixo, tempero em site_segredo), 90 dias, site_ao_vivo com a recorrência, site_visitas (o histórico por período)';
+end $$;
+
+insert into public.migracoes_aplicadas (arquivo) values ('209_site_historico.sql') on conflict (arquivo) do nothing;
 
 -- =============================================================
 -- >>> 210_entrar_pelo_guia.sql
@@ -45929,6 +45947,9 @@ insert into public.migracoes_aplicadas (arquivo) values ('210_entrar_pelo_guia.s
 do $$ begin raise notice '210: vincular_pelo_guia (a cliente entra na agenda pelo guia; como = guia, guia_lugar_id), salons.aberto_no_guia'; end $$;
 
 insert into public.migracoes_aplicadas (arquivo) values ('210_entrar_pelo_guia.sql') on conflict (arquivo) do nothing;
+do $$ begin raise notice '210: vincular_pelo_guia (a cliente entra na agenda pelo guia; como = guia, guia_lugar_id), salons.aberto_no_guia'; end $$;
+
+insert into public.migracoes_aplicadas (arquivo) values ('210_entrar_pelo_guia.sql') on conflict (arquivo) do nothing;
 
 -- =============================================================
 -- >>> 211_boas_vindas_depois_de_confirmar.sql
@@ -45986,6 +46007,12 @@ drop trigger if exists liberar_emails_ao_confirmar on auth.users;
 create trigger liberar_emails_ao_confirmar
   after update of email_confirmed_at on auth.users
   for each row execute function public.liberar_emails_ao_confirmar();
+
+insert into public.migracoes_aplicadas (arquivo) values ('211_boas_vindas_depois_de_confirmar.sql') on conflict (arquivo) do nothing;
+
+do $$ begin
+  raise notice '211: boas-vindas só depois de confirmar o e-mail (aguarda_confirmacao na fila; libera ao confirmar)';
+end $$;
 
 insert into public.migracoes_aplicadas (arquivo) values ('211_boas_vindas_depois_de_confirmar.sql') on conflict (arquivo) do nothing;
 
@@ -46282,6 +46309,12 @@ end $$;
 
 insert into public.migracoes_aplicadas (arquivo) values ('212_seguir_votar_promover.sql') on conflict (arquivo) do nothing;
 
+do $$ begin
+  raise notice '212: guia_votos + guia_votar/guia_meus_votos (votos no guia_publico e na guia_lista), guia_promover, guia_espelhar_salao (+ gatilho ao concluir o onboarding)';
+end $$;
+
+insert into public.migracoes_aplicadas (arquivo) values ('212_seguir_votar_promover.sql') on conflict (arquivo) do nothing;
+
 -- =============================================================
 -- >>> 213_contatos_pelo_app.sql
 -- =============================================================
@@ -46408,3 +46441,32 @@ do $$ begin
 end $$;
 
 insert into public.migracoes_aplicadas (arquivo) values ('213_contatos_pelo_app.sql') on conflict (arquivo) do nothing;
+
+do $$ begin
+  raise notice '213: guia_contatos + guia_registrar_contato/guia_meus_contatos/guia_responder_contato, guia_lugares.contatos_app (gatilho), guia_lista com contatos_app';
+end $$;
+
+insert into public.migracoes_aplicadas (arquivo) values ('213_contatos_pelo_app.sql') on conflict (arquivo) do nothing;
+
+-- =============================================================
+-- >>> 214_cartao_com_pontos.sql
+-- =============================================================
+
+-- 214: o cartão do guia leva os pontos (3.69)
+-- O app ordena "perto de você" pela hierarquia do guia (MIMO, Seleção, foto + nota do Google = os pontos da 185).
+-- O gerador já põe os pontos no cartão do JSON; aqui a função que responde quando o JSON não existe faz o mesmo.
+create or replace function public.guia_cartao(l public.guia_lugares)
+returns jsonb language sql stable set search_path = public as $$
+  select jsonb_build_object('slug', l.slug, 'nome', l.nome, 'bairro', l.bairro, 'categoria', l.categoria,
+    'resumo', l.conteudo ->> 'resumo', 'servicos', to_jsonb((coalesce(l.servicos, '{}'))[1:4]),
+    'selecao', l.selecao, 'na_mimo', l.salon_id is not null,
+    'latitude', round(l.latitude::numeric, 5), 'longitude', round(l.longitude::numeric, 5),
+    'foto', (public.guia_fotos(l))[1],
+    'pontos', l.pontos)
+$$;
+revoke execute on function public.guia_cartao(public.guia_lugares) from public, anon;
+
+insert into public.migracoes_aplicadas (arquivo) values ('214_cartao_com_pontos.sql') on conflict (arquivo) do nothing;
+do $$ begin raise notice '214: guia_cartao com pontos'; end $$;
+
+insert into public.migracoes_aplicadas (arquivo) values ('214_cartao_com_pontos.sql') on conflict (arquivo) do nothing;

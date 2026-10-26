@@ -7,11 +7,14 @@ import { supabase } from './supabase'
 // recém-publicada, o desenvolvimento), as funções públicas do banco respondem (guia_cidades, guia_cidade,
 // guia_pagina). Cache em memória por alguns minutos, como na web (src/lib/guiaPublico.js).
 
-export type Cidade = { cidade: string; cidade_slug: string; uf: string; total: number }
+export type Cidade = { cidade: string; cidade_slug: string; uf: string; total: number; foto?: string | null; categorias?: { categoria: string; total: number }[] | null }
+// 3.69: a região (migração 182): as cidades dela, a foto e a chamada da Plataforma
+export type Regiao = { slug: string; nome: string; uf?: string; ordem?: number; foto?: string | null; chamada?: string | null; texto?: string | null; cidades: string[] }
 export type Cartao = {
   id?: string; slug: string; nome: string; cidade?: string; cidade_slug: string; uf?: string; bairro: string | null; endereco?: string | null; categoria: string
   resumo?: string | null; foto?: string | null; fotos?: string[] | null; selecao?: boolean; na_mimo?: boolean; latitude?: number | null; longitude?: number | null
   servicos?: string[] | null; horarios?: Horario[] | null
+  pontos?: number | null // 3.69: foto + nota do Google (migração 185), para a ordem no app
 }
 export type Horario = { dia: number; faixas: [string, string][] }
 export type Lugar = Cartao & {
@@ -23,6 +26,8 @@ export type Lugar = Cartao & {
 }
 export type CidadeDados = {
   cidade: string; cidade_slug: string; uf: string; total: number
+  foto?: string | null
+  regiao?: { slug: string; nome: string } | null
   categorias?: { categoria: string; total: number; foto?: string | null }[]
   bairros?: { bairro: string; total: number }[]
   lugares: Cartao[]
@@ -57,11 +62,18 @@ async function rpc<T>(nome: string, args: Record<string, unknown>): Promise<T | 
   return (data as T) ?? null
 }
 
-// [{ cidade, cidade_slug, uf, total }]
+// [{ cidade, cidade_slug, uf, total, foto, categorias }]
 export function carregarCidades(): Promise<Cidade[]> {
   return lembrar('cidades', async () => {
     const r = (await doServidor<Cidade[]>('/dados/guia/cidades.json')) ?? (await rpc<Cidade[]>('guia_cidades', {}))
     return Array.isArray(r) ? r : []
+  })
+}
+// 3.69: as regiões com as cidades de cada uma (regioes.json do gerador; sem ele, guia_regioes())
+export function carregarRegioes(): Promise<Regiao[]> {
+  return lembrar('regioes', async () => {
+    const r = (await doServidor<Regiao[]>('/dados/guia/regioes.json')) ?? (await rpc<Regiao[]>('guia_regioes', {}))
+    return Array.isArray(r) ? r.filter((x) => x && x.slug && x.nome).map((x) => ({ ...x, cidades: Array.isArray(x.cidades) ? x.cidades.map(String) : [] })) : []
   })
 }
 // a cidade (categoria vazia) ou uma categoria: a primeira parte da lista e os totais

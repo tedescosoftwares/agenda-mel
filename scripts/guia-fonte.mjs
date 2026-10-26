@@ -86,6 +86,8 @@ export const cartaoDe = (l) => ({
   slug: l.slug, nome: l.nome, bairro: l.bairro ?? null, categoria: l.categoria, resumo: l.conteudo?.resumo ?? null,
   servicos: (Array.isArray(l.servicos) ? l.servicos : []).slice(0, 4), selecao: !!l.selecao, na_mimo: !!l.na_mimo,
   latitude: l.latitude ?? null, longitude: l.longitude ?? null, foto: Array.isArray(l.fotos) && l.fotos[0] ? l.fotos[0] : null,
+  // 3.69: os pontos (foto + nota do Google, migração 185) vão no cartão: o app ordena "perto de você" por eles
+  pontos: typeof l.pontos === 'number' && Number.isFinite(l.pontos) ? l.pontos : null,
 })
 // os n menores sem ordenar a lista inteira (cada salão olha a cidade toda: 4 mil x 4 mil cabe assim)
 function menores(itens, n, chave, desempate) {

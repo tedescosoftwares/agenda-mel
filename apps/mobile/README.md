@@ -447,6 +447,35 @@ e peso na fila, 5 por contato até 30; `guia_lista.contatos_app`) e o número no
 detalhe; Fatos do salão mostra o total ao lado dos pedidos. As notas por salão
 ficam para a próxima etapa, junto com o push.
 
+## Explorar livre, categorias e a ordem do guia (3.69)
+
+A aba Guia deixa de ficar presa à localização:
+
+- **Onde você quer procurar?** O toque na cidade abre a folha com a busca
+  ("Cidade ou região"), "Usar minha localização" e a lista por **região**
+  (`regioes.json` do gerador, ou `guia_regioes()`), cada região com as cidades
+  dela e o total; "Ver a região" abre a região; cidades sem região ficam em
+  "Outras cidades". A cidade escolhida fica lembrada, como antes.
+- **A região** mostra a chamada da Plataforma, as cidades dela em cartões (foto
+  e total), as categorias somadas e os salões das cidades mesclados na ordem do
+  guia (a primeira parte de cada cidade; "para ver todos, escolha a cidade").
+- **Categorias em cartões** com a foto do melhor salão da categoria e o total
+  (os mesmos blocos do site: `categorias[].foto` do JSON da cidade), na cidade e
+  na região; o toque filtra e a lista ganha o título ("Unhas em Itanhaém").
+- **Perto de você é um interruptor** (com a permissão dada) e respeita a
+  hierarquia do guia em vez de só a distância (`lib/guiaOrdem.ts`): agenda pela
+  MIMO → Seleção MIMO → com foto → sem foto; dentro de cada grupo, os mais perto
+  primeiro; entre os com foto, faixas de 2 km e, na faixa, os pontos (foto +
+  nota do Google, migração 185). Um salão sem foto não passa na frente de um com
+  foto por estar 300 metros mais perto. Escolher outra cidade ou região na folha
+  desliga o interruptor ("perto" é da posição dela); "Usar minha localização"
+  liga de novo.
+- **A ordem sem localização** é a do site (3.17): MIMO, Seleção, pontos. Os
+  cartões do servidor já vêm nessa ordem; o gerador passa a pôr os **pontos** no
+  cartão (`scripts/guia-fonte.mjs`, e `guia_cartao` na migração 214) para a
+  mescla das regiões e as faixas do "perto" usarem a conta exata. Até a próxima
+  republicação, vale a posição na lista.
+
 ## O que vem depois
 
 1. **Entrar com Apple** no app (o Google já entra; a web mostra a opção quando o

@@ -14,6 +14,7 @@
 //   EXPO_PUBLIC_DEMO=vazia  mesma Juliana, sem nada marcado e sem aviso novo
 //   EXPO_PUBLIC_DEMO=nova   acabou de criar a conta: ainda não entrou em agenda nenhuma
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { categoriaDoGuia } from '@mimo/core/guia.js'
 
 type Linha = Record<string, any>
 
@@ -237,6 +238,22 @@ const guiaLugares: LugarDemo[] = [
   { id: 'gl6', cidade: 'Mongaguá', cidade_slug: 'mongagua', uf: 'SP', slug: 'studio-carol-hair', nome: 'Studio Carol Hair', categoria: 'cabelo', bairro: 'Centro', endereco: 'Av. Marina, 700', resumo: 'Cabelo e sobrancelhas no Centro de Mongaguá.', foto: CAPA('#7a3cff', '#2dd4bf', 'Carol Hair'), fotos: [CAPA('#7a3cff', '#2dd4bf', 'Carol Hair')], pontos: 4.8, selecao: false, na_mimo: false, votos: 7, latitude: -24.09, longitude: -46.62, servicos: ['Corte', 'Escova', 'Sobrancelhas'], horarios: [1, 2, 3, 4, 5, 6].map((dia) => ({ dia, faixas: [['09:00', '19:00']] })), instagram: null, whatsapp: '5513999990006', conteudo: { chamada: 'Cabelo bonito e sobrancelhas no ponto.', sobre: [], destaques: [] } },
   { id: 'gl7', cidade: 'Mongaguá', cidade_slug: 'mongagua', uf: 'SP', slug: 'nail-club-mongagua', nome: 'Nail Club Mongaguá', categoria: 'unhas', bairro: 'Agenor de Campos', endereco: 'Rua São Paulo, 15', resumo: 'Manicure, pedicure e alongamentos.', foto: null, fotos: [], pontos: 4.2, selecao: false, na_mimo: false, latitude: -24.11, longitude: -46.65, servicos: ['Manicure', 'Pedicure', 'Alongamento'], horarios: [1, 2, 3, 4, 5].map((dia) => ({ dia, faixas: [['09:00', '18:00']] })), instagram: null, whatsapp: null, conteudo: { chamada: 'Unhas em dia em Agenor de Campos.', sobre: [], destaques: [] } },
 ]
+// 3.70: uma terceira cidade com 40 salões gerados (a paginação de 30 em 30 e a lista inteira do "perto")
+const CATS_PERUIBE = ['beleza', 'cabelo', 'unhas', 'estetica', 'cilios', 'sobrancelhas', 'maquiagem']
+for (let i = 1; i <= 40; i++) {
+  const cat = CATS_PERUIBE[i % CATS_PERUIBE.length]!
+  const comFoto = i % 3 !== 0
+  const nome = `Salão Peruíbe ${String(i).padStart(2, '0')}`
+  guiaLugares.push({
+    id: `gp${i}`, cidade: 'Peruíbe', cidade_slug: 'peruibe', uf: 'SP', slug: `salao-peruibe-${String(i).padStart(2, '0')}`, nome, categoria: cat,
+    bairro: i % 2 ? 'Centro' : 'Estância Balneária', endereco: `Rua ${i}, ${i * 10}`, resumo: `${categoriaDoGuia(cat).rotulo} em Peruíbe, atendimento com hora marcada.`,
+    foto: comFoto ? CAPA(i % 2 ? '#7a3cff' : '#ff2d7a', '#ffb27a', nome) : null, fotos: comFoto ? [CAPA(i % 2 ? '#7a3cff' : '#ff2d7a', '#ffb27a', nome)] : [],
+    selecao: i % 10 === 0, na_mimo: false, pontos: Math.round((4 + ((i * 7) % 10) / 10) * 10) / 10,
+    latitude: -24.32 - (i % 5) * 0.004, longitude: -47.0 - (i % 7) * 0.003,
+    servicos: ['Corte', 'Escova', 'Manicure', 'Pedicure', 'Design de sobrancelhas'].slice(0, 2 + (i % 4)), horarios: [1, 2, 3, 4, 5].map((dia) => ({ dia, faixas: [['09:00', '18:00']] })),
+    instagram: null, whatsapp: i % 4 ? `55139999${String(10000 + i).slice(-5)}` : null, conteudo: { chamada: `${nome}, no bairro ${i % 2 ? 'Centro' : 'Estância Balneária'}.`, sobre: [], destaques: [] },
+  })
+}
 const cartaoDoGuia = (l: LugarDemo) => ({ id: l.id, slug: l.slug, pontos: l.pontos ?? null, nome: l.nome, cidade: l.cidade, cidade_slug: l.cidade_slug, uf: l.uf, bairro: l.bairro, endereco: l.endereco, categoria: l.categoria, resumo: l.resumo, foto: l.foto, fotos: l.fotos, selecao: l.selecao, na_mimo: l.na_mimo, latitude: l.latitude, longitude: l.longitude, servicos: l.servicos, horarios: l.horarios })
 // a ordem pública (3.17, a mesma do site e do servidor): MIMO, Seleção, pontos (foto + nota), nome
 const fotosDe = (l: LugarDemo) => (Array.isArray(l.fotos) ? l.fotos.length : l.foto ? 1 : 0)
@@ -418,9 +435,9 @@ const RPC: Record<string, (args?: Linha) => unknown> = {
   enviar_lembretes: () => null,
   marcar_avisos_lidos: () => null,
   // o guia no app (3.64)
-  guia_cidades: () => ['itanhaem', 'mongagua'].map((c) => { const d = guiaCidade(c)!; return { cidade: d.cidade, cidade_slug: c, uf: d.uf, total: d.total, foto: d.foto, categorias: d.categorias.map((x) => ({ categoria: x.categoria, total: x.total })) } }),
+  guia_cidades: () => ['itanhaem', 'mongagua', 'peruibe'].map((c) => { const d = guiaCidade(c)!; return { cidade: d.cidade, cidade_slug: c, uf: d.uf, total: d.total, foto: d.foto, categorias: d.categorias.map((x) => ({ categoria: x.categoria, total: x.total })) } }),
   // 3.69: as regiões (migração 182): uma só na demo, com as duas cidades
-  guia_regioes: () => [{ slug: 'baixada-santista', nome: 'Baixada Santista', uf: 'SP', ordem: 1, foto: null, chamada: 'As cidades do litoral sul no guia: os salões, as categorias e o que cada cidade concentra.', texto: null, cidades: ['itanhaem', 'mongagua'] }],
+  guia_regioes: () => [{ slug: 'baixada-santista', nome: 'Baixada Santista', uf: 'SP', ordem: 1, foto: null, chamada: 'As cidades do litoral sul no guia: os salões, as categorias e o que cada cidade concentra.', texto: null, cidades: ['itanhaem', 'mongagua', 'peruibe'] }],
   guia_cidade: (args) => guiaCidade(String(args?.cidade_ ?? ''), String(args?.categoria_ ?? '')),
   guia_pagina: (args) => {
     const l = guiaLugares.find((x) => x.cidade_slug === String(args?.cidade_ ?? '') && x.slug === String(args?.slug_ ?? ''))

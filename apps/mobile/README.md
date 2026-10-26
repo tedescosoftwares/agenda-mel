@@ -476,6 +476,29 @@ A aba Guia deixa de ficar presa à localização:
   mescla das regiões e as faixas do "perto" usarem a conta exata. Até a próxima
   republicação, vale a posição na lista.
 
+## Categorias, regiões em cartões, paginação e cartões ricos (3.70)
+
+- **Categorias com cara.** Cada categoria tem ícone e cor (`VISUAL` em
+  `(tabs)/guia.tsx`): o cartão traz a foto do melhor salão com o ícone sobre
+  ela; o ativo fica pintado na cor da categoria com o check. Com uma categoria
+  escolhida, entra a **faixa da categoria** acima da lista (foto, nome por
+  extenso, "57 salões em Itanhaém" e o botão "Todas").
+- **Onde você quer procurar?** Primeiro os **cartões das regiões** (foto, nome,
+  "N cidades · N salões"); tocar um filtra as cidades para as da região e mostra
+  "Ver toda a região"; embaixo, as cidades (agrupadas por região, ou só as da
+  região tocada), com a busca por nome e "Usar minha localização".
+- **Paginação na tela.** 30 cartões por vez, com "N de M salões" e "Mostrar
+  mais" (e ao chegar no fim). O servidor manda partes de 48; acabando a memória,
+  vem a próxima parte. Com **"perto de você" ligado** (ou na busca), a **lista
+  inteira** da cidade entra de uma vez (`/dados/guia/<cidade>/lista/todos.json`,
+  240 KB numa cidade de 4 mil salões) para a ordem valer para todos, e a tela
+  continua paginada; enquanto baixa, "Ordenando todos os salões pelos mais
+  perto…" sobre a primeira parte.
+- **Cartões dos salões** com foto maior, a categoria com o ícone, o bairro (e a
+  cidade, na região), a distância em destaque, o resumo em duas linhas, até três
+  serviços ("+n") e os selos Agenda pela MIMO e Seleção MIMO.
+- Na demonstração, Peruíbe com 40 salões gerados (paginação e a lista inteira).
+
 ## O que vem depois
 
 1. **Entrar com Apple** no app (o Google já entra; a web mostra a opção quando o

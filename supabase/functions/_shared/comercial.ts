@@ -42,7 +42,9 @@ export type Config = {
   cadencia_dias: number[]; msg_cadencia_1: string; msg_cadencia_2: string; msg_cadencia_3: string
   pausa_seg: number; bolhas: boolean; limite_respostas: number; retencao_dias: number
 }
-export type Guia = { lugar_id: string; nome: string; link: string; na_mimo: boolean; fotos_n: number; bairro?: string | null }
+// os números da página dela no guia (220): visitas e toques de contato em 30 dias, pedidos pela Mel em 30 dias, "quero na MIMO" no app
+export type Numeros = { visitas: number; contatos: number; pedidos: number; quero: number }
+export type Guia = { lugar_id: string; nome: string; link: string; na_mimo: boolean; fotos_n: number; bairro?: string | null; numeros?: Numeros | null }
 export type Dados = {
   nome?: string; cidade?: string; cidade_slug?: string; cidade_coberta?: boolean; salao?: string; autonoma?: boolean | null; email?: string
   interesse?: string; guia?: Guia | null; guia_informado?: boolean; incluir_guia?: boolean; fotos_pedidas?: boolean
@@ -69,7 +71,27 @@ export const EMAIL = /^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i
 export const reais = (cents: number) => `R$ ${(Math.max(0, Number(cents) || 0) / 100).toFixed(2).replace('.', ',')}`
 // preenche {chave} e some com o que ficou vazio (a frase inteira do {encaminhar}, por exemplo)
 export function preencherTexto(modelo: string, valores: Record<string, string | null | undefined>): string {
-  return String(modelo ?? '').replace(/\{([a-z_]+)\}/g, (inteiro, k: string) => (k in valores ? String(valores[k] ?? '') : inteiro)).replace(/[ \t]+\n/g, '\n').trim()
+  return String(modelo ?? '').replace(/\{([a-z_]+)\}/g, (inteiro, k: string) => (k in valores ? String(valores[k] ?? '') : inteiro)).replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim()
+}
+// os números da página dela no guia, numa frase a favor da venda (vazia quando não há o que dizer); {numeros} nos textos
+const juntar = (p: string[]) => (p.length <= 1 ? p.join('') : `${p.slice(0, -1).join(', ')} e ${p[p.length - 1]}`)
+export function numerosTexto(n?: Numeros | null): string {
+  if (!n) return ''
+  const v = Number(n.visitas) || 0, c = Number(n.contatos) || 0, p = Number(n.pedidos) || 0, q = Number(n.quero) || 0
+  const partes: string[] = []
+  if (v) partes.push(`${v} ${v === 1 ? 'visita' : 'visitas'} na sua página`)
+  if (c) partes.push(`${c} ${c === 1 ? 'pessoa tocou' : 'pessoas tocaram'} para falar com você`)
+  if (p) partes.push(`${p} ${p === 1 ? 'pediu' : 'pediram'} horário pela Mel, a nossa assistente do guia`)
+  const frase = partes.length ? `Nos últimos 30 dias: ${juntar(partes)}.` : ''
+  const quero = q ? `${q === 1 ? '1 cliente já pediu' : `${q} clientes já pediram`} o seu salão no app da MIMO.` : ''
+  return [frase, quero].filter(Boolean).join(' ')
+}
+// a mesma coisa, curta, para o aviso à equipe
+export function numerosCurto(n?: Numeros | null): string {
+  if (!n) return ''
+  const p = [[n.visitas, 'visitas'], [n.contatos, 'contatos'], [n.pedidos, 'pedidos pela Mel']].filter(([x]) => Number(x) > 0).map(([x, r]) => `${x} ${r}`)
+  const q = Number(n.quero) || 0
+  return [p.length ? `${p.join(', ')} em 30 dias` : '', q ? `${q} "quero na MIMO" no app` : ''].filter(Boolean).join(' · ')
 }
 export function dividir(texto: string, cfg: Pick<Config, 'bolhas'>): string[] {
   const t = String(texto ?? '').trim()
@@ -158,12 +180,15 @@ export function sistema(cfg: Config, planos: Plano[] | null, d: Dados, extra: { 
   const cliente = extra.cliente ?? d.ja_cliente ?? null
   if (cliente) linhas.push('ATENÇÃO', `${extra.cliente ? 'O número dela é de um salão' : 'O salão dela'} JÁ usa a MIMO (${cliente.salao}): ela já é cliente. Se ela pedir ajuda com a agenda, marque eh_cliente; o sistema manda o contato do suporte. Não venda de novo.`, '')
   if (d.guia) {
+    const nt = numerosTexto(d.guia.numeros)
     linhas.push('O SALÃO DELA NO GUIA', `${d.guia.nome} está no guia da MIMO: ${d.guia.link} (${d.guia.na_mimo ? 'já agenda pela MIMO' : 'ainda sem a agenda'}; ${d.guia.fotos_n ? `${d.guia.fotos_n} foto(s)` : 'sem fotos'}).`,
+      nt ? `Os números da página (use a favor da venda; não invente outros): ${nt}` : 'A página ainda tem poucos acessos registrados: não cite números.',
+      d.guia.na_mimo ? '' : 'Ela já tem exposição no guia: é um lead qualificado. O argumento: hoje quem acha a página dela entra em contato ou pede horário pela Mel; com a MIMO Agenda, marca direto na agenda dela, pela própria página e pelo app, e a página ganha o botão de agendar.',
       d.guia.na_mimo ? '' : 'A página é grátis. Se ela quiser pôr fotos ou corrigir algo, peça o e-mail dela e marque quer_fotos (o sistema manda o pedido e explica o e-mail de confirmação). Não peça o e-mail por outro motivo.', '')
   } else if (d.cidade_coberta === false && d.cidade) {
-    linhas.push('O GUIA', `A cidade dela (${d.cidade}) ainda não está no guia. A agenda funciona em qualquer cidade; o guia chega depois.`, '')
+    linhas.push('O GUIA', `A cidade dela (${d.cidade}) ainda não está no guia. Quando vier ao caso, explique: o guia está em expansão pelo Brasil, cidade a cidade, e é questão de tempo; isso não impede nada na agenda, que funciona em qualquer cidade; ao entrar na MIMO o salão dela ganha a página dele no guia e, se for o primeiro da cidade, a MIMO monta o guia daquela cidade para incluir. Não prometa data.`, '')
   } else if (d.cidade_coberta === true && d.salao && d.incluir_guia) {
-    linhas.push('O GUIA', `Não achamos o ${d.salao} no guia de ${d.cidade}. Se ela quiser, anote bairro, endereço e Instagram na resposta (a equipe inclui depois).`, '')
+    linhas.push('O GUIA', `Não achamos o ${d.salao} no guia de ${d.cidade}. Se ela quiser, anote bairro, endereço e Instagram na resposta (a equipe inclui depois). Ao entrar na MIMO, o salão ganha a página dele no guia de qualquer jeito.`, '')
   }
   linhas.push('A EQUIPE', `A equipe humana atende ${horarioTexto(cfg)}; agora ${dentroDoHorario(cfg, extra.agora) ? 'está' : 'não está'} no horário. Quando ela quiser começar, testar ou falar com uma pessoa, marque quer_comecar ou quer_humano: o sistema manda o texto com o contato. Você não cria conta nem senha.`, '')
   linhas.push('COMO LER O QUE ELA DISSE',
@@ -183,7 +208,7 @@ export function avisoEquipe(cfg: Pick<Config, 'nome'>, d: Dados, tel: string, mo
     `💼 Comercial (${cfg.nome || 'assistente'}): ${motivo}`,
     `Quem: ${d.nome || 'sem nome ainda'} · ${telefoneBonito(tel) || tel}`,
     `Negócio: ${d.guia?.nome || d.salao || (d.autonoma ? 'autônoma' : 'não disse')}${d.cidade ? ` · ${d.cidade}` : ''}${d.autonoma && d.salao ? ' · autônoma' : ''}`,
-    d.guia ? `No guia: ${d.guia.link}` : null,
+    d.guia ? `No guia: ${d.guia.link}${numerosCurto(d.guia.numeros) ? ` · ${numerosCurto(d.guia.numeros)}` : ''}${d.guia.na_mimo ? '' : ' · lead qualificado: já tem exposição no guia'}` : null,
     d.email ? `E-mail: ${d.email}` : null,
     ultima ? `Disse: “${ultima.replace(/\s+/g, ' ').slice(0, 200)}”` : null,
     `Responder: ${linkWhats(tel)}`,
@@ -223,7 +248,7 @@ export async function atenderComercial(deps: Deps, e: Entrada, opcoes: { teste?:
   const suporte = cfg.suporte_numero ? linkWhats(cfg.suporte_numero) : 'o nosso atendimento (a equipe te chama por aqui)'
   const encaminhar = cfg.encaminhar_numero ? ` Se preferir, o contato direto da equipe é ${linkWhats(cfg.encaminhar_numero)}.` : ''
   const fill = (modelo: string, extra: Record<string, string | null | undefined> = {}) =>
-    preencherTexto(modelo, { nome, salao: dados.guia?.nome || dados.salao || 'seu salão', cidade: dados.cidade || 'sua cidade', suporte, horario: horarioTexto(cfg), encaminhar, email: dados.email || '', link: dados.guia?.link || '', nome_lead: dados.nome ? `, ${dados.nome}` : '', ...extra })
+    preencherTexto(modelo, { nome, salao: dados.guia?.nome || dados.salao || 'seu salão', cidade: dados.cidade || 'sua cidade', suporte, horario: horarioTexto(cfg), encaminhar, email: dados.email || '', link: dados.guia?.link || '', numeros: numerosTexto(dados.guia?.numeros), nome_lead: dados.nome ? `, ${dados.nome}` : '', ...extra })
 
   const guardar = async (acao: string, extra: Partial<Saida> = {}): Promise<Saida> => {
     const saida = bolhas.map((b) => b.trim()).filter(Boolean)
@@ -365,28 +390,29 @@ export async function atenderComercial(deps: Deps, e: Entrada, opcoes: { teste?:
   return { ...saida, previaAviso }
 
   // a cidade e o salão dela: primeiro, quem já tem agenda na MIMO com esse nome nessa cidade (3.74.1: ela pode escrever de
-  // outro número) → o suporte, e a conversa vira cliente; senão o guia: a cidade é coberta? está lá? (uma mensagem do sistema)
+  // outro número) → o suporte, e a conversa vira cliente; senão o guia (3.74.2): a cidade é coberta? (fora: a expansão) está
+  // lá? (achei: a página e os números dela a favor da venda; não: incluir) — uma mensagem do sistema
   async function procurarNoGuia() {
     dados.guia_informado = true
     try {
-      const b = (await chamar(deps, 'comercial_buscar_salao', { cidade_: dados.cidade, nome_: dados.salao })) as { cidade_coberta?: boolean; cidade?: string; mimo?: { id: string; nome: string; cidade?: string | null } | null; lugares?: Array<{ id: string; nome: string; link: string; na_mimo: boolean; fotos_n: number; bairro?: string | null }> } | null
+      const b = (await chamar(deps, 'comercial_buscar_salao', { cidade_: dados.cidade, nome_: dados.salao })) as { cidade_coberta?: boolean; cidade?: string; mimo?: { id: string; nome: string; cidade?: string | null } | null; lugares?: Array<{ id: string; nome: string; link: string; na_mimo: boolean; fotos_n: number; bairro?: string | null; numeros?: Numeros | null }> } | null
       dados.cidade_coberta = !!b?.cidade_coberta
       if (b?.mimo?.nome) {
         dados.ja_cliente = { salao: b.mimo.nome }
         if (!dados.suporte_informado) { dados.suporte_informado = true; bolhas.push(fill(cfg.msg_salao_na_mimo, { salao: b.mimo.nome })) }
         situacao = 'cliente'
         const l = b.lugares?.[0]
-        if (l) { dados.guia = { lugar_id: l.id, nome: l.nome, link: l.link, na_mimo: true, fotos_n: Number(l.fotos_n) || 0, bairro: l.bairro ?? null }; lugar = l.id }
+        if (l) { dados.guia = { lugar_id: l.id, nome: l.nome, link: l.link, na_mimo: true, fotos_n: Number(l.fotos_n) || 0, bairro: l.bairro ?? null, numeros: l.numeros ?? null }; lugar = l.id }
         return
       }
       if (!b?.cidade_coberta) { dados.guia = null; bolhas.push(fill(cfg.msg_cidade_fora)); return }
       if (b.cidade) dados.cidade = b.cidade
       const l = b.lugares?.[0]
       if (!l) { dados.guia = null; dados.incluir_guia = true; bolhas.push(fill(cfg.msg_nao_achei)); return }
-      dados.guia = { lugar_id: l.id, nome: l.nome, link: l.link, na_mimo: !!l.na_mimo, fotos_n: Number(l.fotos_n) || 0, bairro: l.bairro ?? null }
+      dados.guia = { lugar_id: l.id, nome: l.nome, link: l.link, na_mimo: !!l.na_mimo, fotos_n: Number(l.fotos_n) || 0, bairro: l.bairro ?? null, numeros: l.numeros ?? null }
       dados.incluir_guia = false
       lugar = l.id
-      bolhas.push(fill(cfg.msg_achei_no_guia, { salao: l.nome, link: l.link }))
+      bolhas.push(fill(cfg.msg_achei_no_guia, { salao: l.nome, link: l.link, numeros: numerosTexto(l.numeros) }))
     } catch { dados.guia_informado = false }
   }
 }

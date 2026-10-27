@@ -16,10 +16,10 @@ let CFG = {
   suporte_numero: '5513999990002', msg_suporte: 'Oi! Esse número é o comercial da MIMO. Para suporte da sua agenda, fala com a gente em {suporte}.',
   encaminhar_numero: null, msg_equipe: 'Vou chamar alguém da equipe para continuar com você por aqui. A equipe atende {horario}; se for fora desse horário, respondemos assim que abrir.{encaminhar}',
   msg_cliente_final: 'Oi! Esse número é da equipe comercial da MIMO. Para marcar um horário, é pelo guia: mimo.com.vc/saloes 💗',
-  msg_achei_no_guia: 'Achei o {salao} no nosso guia: {link} 💗 A página já está no ar, de graça. Quer colocar fotos ou corrigir alguma coisa? Me passa um e-mail seu que eu mando o pedido para a equipe.',
+  msg_achei_no_guia: 'Achei o {salao} no nosso guia: {link} 💗 A página já está no ar, de graça.\n\n{numeros}\n\nCom a MIMO Agenda, quem chega pela página marca o horário direto com você, sem precisar chamar no WhatsApp. Quer colocar fotos ou corrigir alguma coisa na página? Me passa um e-mail seu que eu mando o pedido para a equipe.',
   msg_salao_na_mimo: 'O {salao} já usa a MIMO Agenda! Se você é da equipe dele e precisa de suporte, fala com a gente em {suporte}.',
   msg_nao_achei: 'Não achei o {salao} no guia de {cidade}. Quer que a equipe inclua? Me manda o bairro e o endereço.',
-  msg_cidade_fora: 'O guia da MIMO ainda não chegou em {cidade}, mas a agenda funciona em qualquer cidade.',
+  msg_cidade_fora: 'O guia da MIMO ainda não chegou em {cidade}: estamos em expansão pelo Brasil, cidade a cidade, e é questão de tempo. Isso não muda nada para a agenda, que funciona em qualquer cidade. E quando você entra na MIMO, o seu salão ganha a página dele no guia; se for o primeiro de {cidade}, a gente monta o guia da cidade para incluir você. 💗',
   msg_fotos_enviado: 'Pronto! Mandei para {email} um e-mail para confirmar que você responde pelo {salao}. Assim que a equipe confirmar, chega o link para você enviar as fotos 💗',
   equipe_dias: 'seg-sex', equipe_inicio: '09:00:00', equipe_fim: '18:00:00', silencio_min: 30, cadencia_dias: [1, 3, 7],
   msg_cadencia_1: 'Oi{nome_lead}! Passando para saber se ficou alguma dúvida sobre a MIMO 💗', msg_cadencia_2: 'Lembrei de você: os 7 dias grátis continuam valendo quando quiser testar.', msg_cadencia_3: 'Vou deixar você à vontade por aqui. Quando fizer sentido, é só me chamar.',
@@ -32,16 +32,18 @@ const PLANOS = [
   { plano: 'promais', nome: 'MIMO Pro+', base_cents: 14990, inclusas: 11, extra_cents: 790, ate: null },
 ]
 const LINK_LIRIO = '/saloes/itanhaem/studio-lirio'
+const NUMEROS_LIRIO = { visitas: 128, contatos: 17, pedidos: 4, quero: 2 }
+const FRASE_LIRIO = 'Nos últimos 30 dias: 128 visitas na sua página, 17 pessoas tocaram para falar com você e 4 pediram horário pela Mel, a nossa assistente do guia. 2 clientes já pediram o seu salão no app da MIMO.'
 const CONVERSAS = [
   { id: 1, telefone: '5513988001111', nome_perfil: 'Carla Mendes', origem: 'botao', situacao: 'interessada', lugar_id: 'gl1', pausada: false, humano_ate: null, cadencia_etapa: 0, avisada_em: null, teste: false,
-    dados: { nome: 'Carla', cidade: 'Itanhaém', salao: 'Studio Lírio', autonoma: false, interesse: 'alto', guia: { lugar_id: 'gl1', nome: 'Studio Lírio', link: LINK_LIRIO, na_mimo: false, fotos_n: 3 }, guia_informado: true, cidade_coberta: true },
+    dados: { nome: 'Carla', cidade: 'Itanhaém', salao: 'Studio Lírio', autonoma: false, interesse: 'alto', guia: { lugar_id: 'gl1', nome: 'Studio Lírio', link: LINK_LIRIO, na_mimo: false, fotos_n: 3, numeros: NUMEROS_LIRIO }, guia_informado: true, cidade_coberta: true },
     criado_em: h(50), atualizada_em: h(12), ultima_lead_em: h(12), ultima_nossa_em: h(12),
     mensagens: [
       { q: 'lead', t: 'Oi! Quero conhecer a MIMO Agenda.', em: h(50) },
       { q: 'ia', t: 'Oi! Eu sou a Lia, da MIMO 💗 A gente ajuda salões e profissionais de beleza a organizar a agenda e a receber clientes pelo guia. Me conta: qual é o seu nome, de que cidade você fala e como se chama o seu salão?', em: h(50) },
       { q: 'lead', t: 'Carla, do Studio Lírio em Itanhaém. Somos 3.', em: h(40) },
       { q: 'ia', t: 'Prazer, Carla! Com 3 profissionais, o plano é o MIMO Pro: R$ 49,90 por mês, com 7 dias grátis para testar. Como as suas clientes marcam hoje?', em: h(40) },
-      { q: 'ia', t: `Achei o Studio Lírio no nosso guia: https://mimo.com.vc${LINK_LIRIO} 💗 A página já está no ar, de graça. Quer colocar fotos ou corrigir alguma coisa? Me passa um e-mail seu que eu mando o pedido para a equipe.`, em: h(40) },
+      { q: 'ia', t: `Achei o Studio Lírio no nosso guia: https://mimo.com.vc${LINK_LIRIO} 💗 A página já está no ar, de graça.\n\n${FRASE_LIRIO}\n\nCom a MIMO Agenda, quem chega pela página marca o horário direto com você, sem precisar chamar no WhatsApp. Quer colocar fotos ou corrigir alguma coisa na página? Me passa um e-mail seu que eu mando o pedido para a equipe.`, em: h(40) },
       { q: 'lead', t: 'Pelo WhatsApp mesmo, é uma loucura. Vou pensar no plano.', em: h(12) },
       { q: 'ia', t: 'Entendo! A diferença é que você para de responder "tem vaga?" dez vezes por dia: elas veem o horário livre e marcam sozinhas. Posso te mandar o link da página do seu salão enquanto você pensa?', em: h(12) },
     ] },
@@ -121,7 +123,7 @@ export const COMERCIAL_RPC = {
 // ---- a função "comercial" (conectar, simular, enviar) ----
 let SIM = null
 const P = (t) => semAcento(t).replace(/[^a-z0-9@. ]+/g, ' ').replace(/\s+/g, ' ').trim()
-const fill = (m, v) => String(m).replace(/\{([a-z_]+)\}/g, (x, k) => (k in v ? String(v[k] ?? '') : x)).trim()
+const fill = (m, v) => String(m).replace(/\{([a-z_]+)\}/g, (x, k) => (k in v ? String(v[k] ?? '') : x)).replace(/\n{3,}/g, '\n\n').trim()
 function simular({ texto }) {
   const t = String(texto ?? '').trim()
   const nome = CFG.nome
@@ -174,7 +176,8 @@ function simular({ texto }) {
   }
   if (d.cidade && d.salao && !d.guia_informado) {
     d.guia_informado = true
-    bolhas.push(fill(CFG.msg_achei_no_guia, { salao: d.salao, link: `https://mimo.com.vc${LINK_LIRIO}` }))
+    d.guia = { lugar_id: 'gl1', nome: d.salao, link: LINK_LIRIO, na_mimo: false, fotos_n: 3, numeros: NUMEROS_LIRIO }
+    bolhas.push(fill(CFG.msg_achei_no_guia, { salao: d.salao, link: `https://mimo.com.vc${LINK_LIRIO}`, numeros: FRASE_LIRIO }))
   }
   if (SIM.situacao === 'novo') SIM.situacao = 'conversando'
   SIM.n++

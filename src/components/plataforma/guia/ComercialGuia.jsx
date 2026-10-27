@@ -20,7 +20,7 @@ import {
 const faltaMigracao = (e) => e?.code === 'PGRST202' || e?.status === 404 || /could not find the function|schema cache|migração 218|comercial_/i.test(e?.message ?? '')
 export const SITUACAO = {
   novo: ['Novo', 'cinza'], conversando: ['Conversando', 'azul'], interessada: ['Interessada', 'roxo'], quer_comecar: ['Quer começar 💗', 'rosa'],
-  cliente: ['Já é cliente', 'verde'], perdido: ['Perdido', 'carmim'], sem_interesse: ['Sem interesse', 'cinza'],
+  cliente: ['Já é cliente (suporte)', 'verde'], perdido: ['Perdido', 'carmim'], sem_interesse: ['Sem interesse', 'cinza'],
 }
 const ORIGEM = { direto: ['Escreveu direto', 'cinza'], botao: ['Pelo botão do site', 'verde'], mel: ['Pela Mel (dona do guia)', 'rosa'], quero: ['Respondeu QUERO', 'roxo'], teste: ['Teste', 'cinza'] }
 const CONEXAO = {
@@ -183,7 +183,7 @@ export default function ComercialGuia({ g }) {
         <div className="pg-onb-funil-col">
           <Funil titulo="O funil da venda" sub={`últimos ${dias} dias`} teste="com-funil" linhas={[['Conversas', t.conversas ?? 0], ['Interessadas', (t.interessadas ?? 0) + (t.quer_comecar ?? 0) + (t.clientes ?? 0)], ['Querem começar', (t.quer_comecar ?? 0) + (t.clientes ?? 0)], ['Já são clientes', t.clientes ?? 0]]} />
           {Object.keys(t.por_origem ?? {}).length > 0 && <p className="muted pg-onb-origens" data-teste="com-origens">Por onde chegaram: {Object.entries(t.por_origem).sort((a, b) => b[1] - a[1]).map(([o, n]) => <span key={o}><Pilula par={ORIGEM[o]} /> {n}</span>)}</p>}
-          {t.no_guia > 0 && <p className="muted pg-onb-origens">{t.no_guia} {t.no_guia === 1 ? 'conversa com o salão achado' : 'conversas com o salão achado'} no guia.</p>}
+          {t.no_guia > 0 && <p className="muted pg-onb-origens">{t.no_guia} {t.no_guia === 1 ? 'conversa com o salão achado' : 'conversas com o salão achado'} no guia: leads mais qualificados, já têm exposição.</p>}
         </div>
       </section>
 
@@ -292,11 +292,11 @@ export default function ComercialGuia({ g }) {
                 <textarea rows={2} value={form.msg_cliente_final ?? ''} onChange={(e) => campo('msg_cliente_final', e.target.value)} maxLength={1000} /></label>
             </Bloco>
 
-            <Bloco id="guia" aoMontar={indice.registrar} Icon={MapPinned} titulo="Cidade e salão: quem já é cliente, e o guia" sub="Ela pergunta a cidade e o nome do salão. Com isso o sistema confere primeiro se já existe agenda na MIMO com esse nome nessa cidade (ela pode escrever de outro número); senão, procura a página no guia. Os textos: {salao}, {cidade}, {link}, {email}, {suporte}.">
-              <label>O salão já tem agenda na MIMO <span className="muted">(achado pelo nome e pela cidade: é cliente; o sistema manda o suporte e não vende de novo)</span><textarea rows={2} value={form.msg_salao_na_mimo ?? ''} onChange={(e) => campo('msg_salao_na_mimo', e.target.value)} maxLength={1000} /></label>
-              <label>Achei a página do salão no guia (ainda sem a agenda)<textarea rows={3} value={form.msg_achei_no_guia ?? ''} onChange={(e) => campo('msg_achei_no_guia', e.target.value)} maxLength={1000} /></label>
+            <Bloco id="guia" aoMontar={indice.registrar} Icon={MapPinned} titulo="Cidade e salão: o guia a favor da venda" sub="Ela pergunta a cidade e o nome do salão. Cidade fora do guia: explica a expansão (a agenda funciona em qualquer cidade; ao entrar, o salão ganha a página dele no guia; o primeiro da cidade abre o guia dela). Cidade coberta: acha a página do salão e usa os números dela a favor ({numeros}: visitas, contatos e pedidos pela Mel nos últimos 30 dias, e quem pediu o salão no app); quem está no guia é um lead mais qualificado, marcado na lista. Salão fora do guia vira pedido de inclusão. Se o nome e a cidade batem com um salão que já tem agenda na MIMO (mesmo escrevendo de outro número), é cliente, e cliente é suporte. Os textos: {salao}, {cidade}, {link}, {numeros}, {email}, {suporte}.">
+              <label>Achei a página do salão no guia (ainda sem a agenda) <span className="muted">({'{numeros}'} vira a frase com os acessos da página; some quando não há o que dizer)</span><textarea rows={4} value={form.msg_achei_no_guia ?? ''} onChange={(e) => campo('msg_achei_no_guia', e.target.value)} maxLength={1000} /></label>
+              <label>Cidade fora do guia <span className="muted">(a expansão: nada muda para a agenda)</span><textarea rows={3} value={form.msg_cidade_fora ?? ''} onChange={(e) => campo('msg_cidade_fora', e.target.value)} maxLength={1000} /></label>
               <label>Cidade coberta, salão fora do guia<textarea rows={2} value={form.msg_nao_achei ?? ''} onChange={(e) => campo('msg_nao_achei', e.target.value)} maxLength={1000} /></label>
-              <label>Cidade fora do guia<textarea rows={2} value={form.msg_cidade_fora ?? ''} onChange={(e) => campo('msg_cidade_fora', e.target.value)} maxLength={1000} /></label>
+              <label>O salão já tem agenda na MIMO <span className="muted">(achado pelo nome e pela cidade: é cliente, e cliente é suporte)</span><textarea rows={2} value={form.msg_salao_na_mimo ?? ''} onChange={(e) => campo('msg_salao_na_mimo', e.target.value)} maxLength={1000} /></label>
               <label>O pedido das fotos saiu <span className="muted">(depois do e-mail dela: o "sou a dona" da aba Interesses; a equipe confirma e o link das fotos vai por e-mail)</span>
                 <textarea rows={2} value={form.msg_fotos_enviado ?? ''} onChange={(e) => campo('msg_fotos_enviado', e.target.value)} maxLength={1000} /></label>
             </Bloco>
@@ -344,10 +344,10 @@ function Lead({ c, onAbrir }) {
           <Iniciais nome={quem} />
           <div className="pg-wa-ped-quem">
             <b>{quem}</b>
-            <span className="muted">{tel(c.telefone)}{negocio ? ` · ${negocio}` : ''}{c.cidade ? ` · ${c.cidade}` : ''}{c.lugar_id ? ' · no guia' : ''}</span>
+            <span className="muted">{tel(c.telefone)}{negocio ? ` · ${negocio}` : ''}{c.cidade ? ` · ${c.cidade}` : ''}</span>
           </div>
           <div className="pg-wa-ped-dir">
-            <span className="pg-wa-ped-pilulas"><Pilula par={SITUACAO[c.situacao]} /><Pilula par={ORIGEM[c.origem]} />{c.pausada ? <Pilula par={['Pausada', 'cinza']} /> : c.humano_ate && new Date(c.humano_ate) > new Date() ? <Pilula par={[`Com a equipe até ${hora(c.humano_ate)}`, 'ambar']} /> : null}</span>
+            <span className="pg-wa-ped-pilulas"><Pilula par={SITUACAO[c.situacao]} /><Pilula par={ORIGEM[c.origem]} />{c.lugar_id ? <Pilula par={['No guia ✨', 'verde']} /> : null}{c.pausada ? <Pilula par={['Pausada', 'cinza']} /> : c.humano_ate && new Date(c.humano_ate) > new Date() ? <Pilula par={[`Com a equipe até ${hora(c.humano_ate)}`, 'ambar']} /> : null}</span>
             <small className="muted" title={quando(c.atualizada_em)}>{haQuanto(c.atualizada_em)}</small>
           </div>
         </div>

@@ -5,22 +5,36 @@ import { useConfig } from '../../lib/config'
 import { numeroWhats, linkWhats, chamada, bonito } from '../../lib/contato'
 import { PAGINAS_SEO } from '../../conteudo/paginasSeo'
 import { carregarOnboardingPublico, linkOnboardingWhats } from '../../lib/guiaOnboarding'
+import { carregarComercialPublico, linkComercial } from '../../lib/guiaComercial'
 
 // 3.55: criar a conta pelo WhatsApp — o agente de onboarding (migração 203) faz o cadastro conversando e manda o link
 // seguro para a senha. O botão abre a conversa com o número da Mel já com a frase do gatilho; só aparece quando a
 // Plataforma ligou o agente (guia_onboarding_publico).
+// 3.74: com o WhatsApp comercial ligado (migração 218), o botão abre a conversa com a assistente de vendas no número
+// comercial (a frase do botão diz a origem); senão, o agente de onboarding no número da Mel, como antes.
 export function BotaoCriarContaWhats({ classe = 'ld-btn ld-fantasma ld-grande', rotulo = 'Criar conta pelo WhatsApp' }) {
   const [p, setP] = useState(null)
+  const com = useComercial()
   useEffect(() => { let vivo = true; carregarOnboardingPublico().then((x) => { if (vivo) setP(x) }); return () => { vivo = false } }, [])
+  if (com?.ligado) return <a className={classe + ' ws-botao'} href={linkComercial(com)} target="_blank" rel="noopener noreferrer" data-evento="criar_conta_whats"><MessageCircle size={17} />Falar com a MIMO no WhatsApp</a>
   if (!p?.ligado) return null
   return <a className={classe + ' ws-botao'} href={linkOnboardingWhats(p)} target="_blank" rel="noopener noreferrer" data-evento="criar_conta_whats"><MessageCircle size={17} />{rotulo}</a>
+}
+// o público do comercial, uma vez por sessão (nulo enquanto carrega; {ligado: false} num banco sem a 218)
+function useComercial() {
+  const [c, setC] = useState(null)
+  useEffect(() => { let vivo = true; carregarComercialPublico().then((x) => { if (vivo) setC(x) }); return () => { vivo = false } }, [])
+  return c
 }
 
 // O WhatsApp da MIMO no site público (3.2): o mesmo número em cada canto,
 // com uma chamada diferente para cada contexto (ver lib/contato.js).
 export function useWhats(nome, extra) {
   const cfg = useConfig()
-  const numero = numeroWhats(cfg)
+  const com = useComercial()
+  // 3.74: todos os canais do site que levam ao WhatsApp da MIMO (planos, dúvidas, demonstração, o flutuante) vão ao
+  // número comercial quando a assistente está ligada; o suporte dos painéis (Pro, admin) continua no número de suporte
+  const numero = com?.ligado ? com.numero : numeroWhats(cfg)
   const c = chamada(nome, extra, cfg)
   return { href: linkWhats(numero, c.texto), rotulo: c.rotulo, numero, bonito: bonito(numero) }
 }

@@ -967,3 +967,17 @@
 /* 3.72: o WhatsApp do cadastro não existe */
 .pg-zap-invalido { display: flex; align-items: flex-start; gap: 0.35rem; margin: 0; font-size: 0.86rem; }
 .pg-zap-invalido svg { flex: none; margin-top: 0.15rem; }
+
+/* 3.74: a aba Comercial (migração 218) */
+.pg-wa-msg.equipe { background: #fde7f0; border: 1px dashed #d9578f; }
+.pg-com-item { display: block; width: 100%; text-align: left; background: none; border: 0; padding: 0; cursor: pointer; color: inherit; font: inherit; }
+.pg-com-cab { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; }
+.pg-com-cab b { font-size: 0.95rem; }
+.pg-com-situacao { margin-left: auto; max-width: 180px; }
+.pg-com-equipe { display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; font-size: 0.84rem; }
+.pg-com-resposta { display: flex; gap: 0.5rem; align-items: flex-end; }
+.pg-com-resposta textarea { flex: 1; min-height: 44px; resize: vertical; }
+.pg-com-planos { list-style: none; padding: 0; margin: 0.4rem 0; display: grid; gap: 0.3rem; }
+.pg-com-planos li { font-size: 0.88rem; }
+.pg-com-sim-topo { display: inline-flex; align-items: center; gap: 0.6rem; }
+.pg-com-caixa { width: min(100%, 640px); }

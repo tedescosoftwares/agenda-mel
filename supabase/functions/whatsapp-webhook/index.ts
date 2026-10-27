@@ -17,6 +17,7 @@ import { classificar } from '../_shared/ia.ts'
 import { conversar } from '../_shared/agente.ts'
 import { atenderGuia, iaDe, avisoDemora, cutucadaSalao, type Deps as DepsGuia, type Pedido } from '../_shared/guia_whats.ts'
 import { atenderOnboarding, iaOnbDe, consultarCnpjDe, consultarCepDe, consultarRuaDe, type Deps as DepsOnb } from '../_shared/guia_onboarding.ts'
+import { atenderComercial, iaComercialDe, textoCadencia, type Deps as DepsCom } from '../_shared/comercial.ts'
 
 const db = createClient(
   Deno.env.get('SUPABASE_URL') ?? '',
@@ -27,6 +28,8 @@ const db = createClient(
 type Recebida = { telefone: string; texto: string; id: string | null;
                   enquete?: string | null; instancia?: string | null; nome?: string | null; citado?: string | null }
 type Status = { id: string; status: string; detalhe: string | null }
+// 3.74: o que saiu do NOSSO número (fromMe): no comercial, diz se alguém da equipe escreveu pelo celular do chip
+type Propria = { telefone: string; texto: string; instancia: string | null }
 
 function json(corpo: unknown, status = 200) {
   return new Response(JSON.stringify(corpo), {
@@ -183,14 +186,20 @@ function votoDaEnquete(d: any): string {
   return String(escolhidas[0])
 }
 
-function lerEvolution(corpo: any): { mensagens: Recebida[]; status: Status[] } {
+function lerEvolution(corpo: any): { mensagens: Recebida[]; status: Status[]; proprias: Propria[] } {
   const mensagens: Recebida[] = []
   const status: Status[] = []
+  const proprias: Propria[] = []
   const evento = corpo?.event ?? ''
   const d = corpo?.data ?? {}
 
   if (evento === 'messages.upsert') {
-    // fromMe: é a própria profissional escrevendo, não a cliente
+    // fromMe: é a própria profissional escrevendo, não a cliente (3.74: no comercial, isso interessa — a equipe pelo celular)
+    if (d?.key?.fromMe) {
+      const jid: string = d?.key?.remoteJid ?? ''
+      const texto = d?.messageType === 'pollUpdateMessage' ? '' : textoDaMensagem(d?.message)
+      if (jid && !jid.includes('@g.us') && texto) proprias.push({ telefone: '+' + jid.split('@')[0], texto, instancia: corpo?.instance ?? null })
+    }
     if (!d?.key?.fromMe) {
       const jid: string = d?.key?.remoteJid ?? ''
       // grupo não interessa
@@ -237,7 +246,7 @@ function lerEvolution(corpo: any): { mensagens: Recebida[]; status: Status[] } {
     }
   }
 
-  return { mensagens, status }
+  return { mensagens, status, proprias }
 }
 
 Deno.serve(async (req) => {
@@ -294,7 +303,27 @@ Deno.serve(async (req) => {
       } catch (e) {
         console.error('pedidos parados: não deu para varrer (a migração 205 está aplicada?)', e)
       }
-      return json({ ok: true, ativo: !!o.ativo, perguntou, encerrou, pedidos: pedidosAtivo, avisou_demora: avisouDemora, cutucou })
+      // 3.74: a cadência da assistente comercial (migração 218): quem parou de responder recebe a cutucada da etapa;
+      // depois da terceira, vira "perdido". Num banco sem a 218, nada.
+      let cadencia = 0, comercialAtivo = false
+      try {
+        const { data: cd, error: ecd } = await db.rpc('comercial_cadencia')
+        if (ecd) throw new Error(ecd.message)
+        const cc = (cd ?? {}) as { ativo?: boolean; instancia?: string; textos?: string[]; enviar?: Array<{ id: number; telefone: string; etapa: number; nome?: string | null }> }
+        comercialAtivo = !!cc.ativo
+        if (cc.ativo) {
+          for (const x of cc.enviar ?? []) {
+            const texto = textoCadencia(cc.textos ?? [], x.etapa, x.nome)
+            if (!texto) continue
+            const env = await enviarPor('evolution', { telefone: x.telefone, corpo: texto, identificador: cc.instancia ?? '' })
+            if (env.ok) { await db.rpc('comercial_cadencia_feita', { id_: x.id, etapa_: x.etapa, texto_: texto }); cadencia++ }
+            else console.error('cadência comercial: não saiu', env.erro)
+          }
+        }
+      } catch (e) {
+        console.error('cadência comercial: não deu para varrer (a migração 218 está aplicada?)', e)
+      }
+      return json({ ok: true, ativo: !!o.ativo, perguntou, encerrou, pedidos: pedidosAtivo, avisou_demora: avisouDemora, cutucou, comercial: comercialAtivo, cadencia })
     } catch (e) {
       return json({ erro: String((e as Error)?.message ?? e).slice(0, 300) }, 500)
     }
@@ -337,7 +366,8 @@ Deno.serve(async (req) => {
     }
   }
 
-  const { mensagens, status } = daEvolution ? lerEvolution(corpo) : lerCloud(corpo)
+  const lido = daEvolution ? lerEvolution(corpo) : { ...lerCloud(corpo), proprias: [] as Propria[] }
+  const { mensagens, status, proprias } = lido
 
   for (const s of status) {
     await db.rpc('atualizar_status_envio', {
@@ -356,6 +386,27 @@ Deno.serve(async (req) => {
   if (daEvolution && mensagens.length) {
     const { data: g } = await db.from('guia_whats_config').select('instancia, ligado').eq('id', 1).maybeSingle()
     guia = (g as { instancia: string; ligado: boolean } | null) ?? null
+  }
+  // 3.74: o WhatsApp comercial (migração 218) é outra instância; a assistente de vendas atende. Num banco sem a 218, nada.
+  let comercial: { instancia: string; ligado: boolean } | null = null
+  if (daEvolution && (mensagens.length || proprias.length)) {
+    try {
+      const { data: c } = await db.from('comercial_config').select('instancia, ligado').eq('id', 1).maybeSingle()
+      comercial = (c as { instancia: string; ligado: boolean } | null) ?? null
+    } catch { comercial = null }
+  }
+  const depsCom = (): DepsCom => ({
+    rpc: (nome, args) => db.rpc(nome, args) as unknown as Promise<{ data: unknown; error: { message?: string } | null }>,
+    ia: iaComercialDe(Deno.env, fetch as unknown as Parameters<typeof iaComercialDe>[1]),
+    enviar: (instancia, telefone, texto) => enviarPor('evolution', { telefone, corpo: texto, identificador: instancia }),
+  })
+  // o que saiu do número comercial: eco do que a assistente/painel mandou, ou alguém da equipe pelo celular (a assistente cala)
+  for (const pr of proprias) {
+    if (!comercial || !pr.instancia || pr.instancia !== comercial.instancia) continue
+    try {
+      const { data: f } = await db.rpc('comercial_fromme', { tel_: pr.telefone, texto_: pr.texto })
+      if ((f as { intervencao?: boolean } | null)?.intervencao) respostas.push(`comercial[intervencao]`)
+    } catch (e) { console.error('comercial fromMe:', e) }
   }
   const depsGuia = (): DepsGuia => ({
     rpc: (nome, args) => db.rpc(nome, args) as unknown as Promise<{ data: unknown; error: { message?: string } | null }>,
@@ -376,6 +427,23 @@ Deno.serve(async (req) => {
   })
 
   for (const m of mensagens) {
+    // 3.74: a instância comercial: a assistente de vendas, em bolhas com a pausa da Plataforma; nada passa para a Mel
+    if (comercial && m.instancia && m.instancia === comercial.instancia) {
+      try {
+        const r = await atenderComercial(depsCom(), { telefone: m.telefone, texto: m.texto, nomePerfil: m.nome ?? null })
+        respostas.push(`comercial[${r.acao}]`)
+        if (r.erro) console.error('comercial:', r.erro)
+        const bolhas = r.bolhas?.length ? r.bolhas : r.responder ? [r.responder] : []
+        const atraso = Math.round(Math.max(0, Math.min(30, Number(r.pausa ?? 2) || 0)) * 1000)
+        for (const b of bolhas) {
+          const env = await enviarPor('evolution', { telefone: m.telefone, corpo: b, identificador: m.instancia, atraso })
+          if (!env.ok) { console.error('comercial: a resposta não saiu:', env.erro); break }
+        }
+      } catch (e) {
+        console.error('comercial: não deu para atender', e)
+      }
+      continue
+    }
     if (guia && m.instancia && m.instancia === guia.instancia) {
       // 3.57: um voto na enquete não é conversa de onboarding: vai direto à Mel, que amarra ao pedido do salão
       // 3.55: o agente de onboarding olha primeiro. Se a mensagem é dele (conversa de onboarding aberta deste número, ou um

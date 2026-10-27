@@ -353,6 +353,18 @@ async function chamar(deps: Deps, nome: string, args: Record<string, unknown>): 
   return data
 }
 
+// 3.74: o WhatsApp comercial (migração 218). Quando está ligado, a dona que a Mel reconhece e o salão que responde QUERO
+// recebem o link da assistente comercial, já com a frase que diz de onde vieram (o motor dela lê "para o {salão} ({cidade})").
+// Num banco sem a 218, ou desligado, não há link e a Mel fala como antes.
+export async function linkComercial(deps: Deps, salao: { nome: string; cidade?: string | null }, quero = false): Promise<string> {
+  try {
+    const c = (await deps.rpc('comercial_publico', {})).data as { ligado?: boolean; numero?: string; nome?: string } | null
+    if (!c?.ligado || !c.numero) return ''
+    const frase = `${quero ? 'Oi! Respondi QUERO ao pedido da MIMO:' : 'Oi! Vim pelo guia da MIMO:'} quero conhecer a MIMO Agenda para o ${salao.nome}${salao.cidade ? ` (${salao.cidade})` : ''}.`
+    return `Para conhecer a MIMO Agenda, fala com a ${c.nome || 'nossa consultora'} no WhatsApp comercial da MIMO: https://wa.me/${so(c.numero)}?text=${encodeURIComponent(frase)}`
+  } catch { return '' }
+}
+
 export async function atenderGuia(deps: Deps, e: Entrada, opcoes: { teste?: boolean; comoDona?: boolean } = {}): Promise<Saida> {
   const teste = !!opcoes.teste
   const agora = deps.agora?.() ?? new Date()
@@ -400,7 +412,11 @@ export async function atenderGuia(deps: Deps, e: Entrada, opcoes: { teste?: bool
       const tk = e.citado ? tokenDoTexto(e.citado) : null
       if (tk) { const id = await chamar(deps, 'guia_whats_lead_do_salao', { tel_: tel, token_: tk }); if (id) alvo = Number(id) }
       await chamar(deps, 'guia_whats_salao_respondeu', { lead_: alvo, texto_: texto, quer_: quer })
-      if (quer) return { responder: 'Combinado! 💗 Alguém da equipe da MIMO vai te chamar por aqui.', acao: 'salao_quer_conhecer' }
+      if (quer) {
+        // 3.74: com o WhatsApp comercial ligado, o caminho é a assistente de vendas; senão, a equipe chama por aqui
+        const com = await linkComercial(deps, { nome: ctx.lead_salao.salao_nome ?? 'seu salão' }, true)
+        return { responder: com ? `Que bom! 💗 ${com}\n\nSe preferir, alguém da equipe da MIMO te chama por aqui.` : 'Combinado! 💗 Alguém da equipe da MIMO vai te chamar por aqui.', acao: 'salao_quer_conhecer' }
+      }
       // 3.57: um "não vou conseguir" / "vou atender" claro, por texto, vale como o voto (só o primeiro; a chave da enquete
       // não precisa casar). Um pedido que já tem voto não troca por texto: fica na thread para a equipe.
       const vt = alvo === ctx.lead_salao.id && ctx.lead_salao.voto ? null : votoDoTexto(texto)
@@ -465,6 +481,7 @@ export async function atenderGuia(deps: Deps, e: Entrada, opcoes: { teste?: bool
     const exemplo = mensagemDoSalao(cfg, lugar, { cliente_nome: 'Maria (exemplo)', servico: 'Corte e escova', preferencia: 'sexta à tarde', observacao: null, cliente_tel: '5513999990000' })
     const resposta = (String(cfg.msg_dona ?? '').trim() || `Oi! 💗 Esse número é o que o ${lugar.nome} tem cadastrado no guia da MIMO. Assim chega um pedido de cliente pra você:\n\n{exemplo}\n\nA MIMO leva clientes até você, de graça — e tem a MIMO Agenda pra organizar tudo (salão e autônoma). A equipe vai te chamar pra mostrar. 💗`)
       .replaceAll('{salao}', lugar.nome).replaceAll('{exemplo}', exemplo)
+      + (await linkComercial(deps, { nome: lugar.nome, cidade: lugar.cidade }).then((l) => (l ? `\n\n${l}` : '')))
     const jaAvisou = (ctx.conversa?.dados as Dados | undefined)?.dona === true
     const aviso = cfg.numero_avisos ? avisoDona(lugar, teste ? '5513999990000' : tel) : null
     await guardar(resposta, 'encerrada', { dona: true }, lugar.id)

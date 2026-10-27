@@ -696,10 +696,11 @@ Quatro mudanças vindas do relatório de indexação do Search Console:
   antes saía 200. A página de fotos do dono (`/saloes/<cidade>/<salão>/fotos/<token>`)
   é do app e fica de fora. O `publicar-site.sh` confere no fim: página que não
   existe → 404, `/saloes` → 200.
-- **Bairro grande em páginas.** Bairro com mais de 100 salões sai em
-  `/bairro/<b>`, `/bairro/<b>/2`, `/bairro/<b>/3`..., cada uma com a sua
-  canônica, 100 salões e a navegação entre elas; a busca e o filtro da página
-  procuram no bairro inteiro.
+- **Lista grande em páginas.** Bairro ou horário com mais de 100 salões sai
+  em `/bairro/<b>`, `/bairro/<b>/2`..., `/horario/cedo/2`,
+  `/horario/noite/estetica/2` (3.75.1), cada uma com a sua canônica, 100
+  salões e a navegação entre elas; a busca e o filtro da página procuram na
+  lista inteira.
 - **Listas sem o salão em noindex e horário pequeno em noindex.** O salão com
   página fina (pouco dado, que já ia ao ar sem indexar) aparece nas listas sem
   link rastreável: no HTML, só o nome; no site, o cartão abre a página pelo

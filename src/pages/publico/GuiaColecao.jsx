@@ -31,11 +31,15 @@ import '../../guia-colecao.css'
 // Coleção abaixo do mínimo de salões não existe (404).
 // 3.75: o bairro grande vem em páginas (/saloes/santos/bairro/gonzaga/2); a 1 é o endereço sem número
 // ("/1" não existe). O arquivo da coleção tem todos os cartões; a página mostra a sua parte, e a busca e
-// o filtro procuram no bairro inteiro.
+// o filtro procuram na lista inteira. 3.75.1: o horário também (/horario/cedo/2, /horario/noite/estetica/2);
+// em /horario/cedo/2 a rota entrega o "2" como categoria, e aqui ele vira a página.
 export default function GuiaColecao({ tipo }) {
-  const { cidade, valor, categoria = '', pagina } = useParams()
-  const c = String(cidade ?? '').toLowerCase(), v = String(valor ?? '').toLowerCase(), cat = String(categoria).toLowerCase()
-  const n = pagina === undefined ? 1 : /^[0-9]{1,4}$/.test(pagina) && Number(pagina) >= 2 ? Number(pagina) : NaN
+  const params = useParams()
+  const numero = (x) => /^[0-9]{1,4}$/.test(String(x ?? ''))
+  const pagina = params.pagina ?? (numero(params.categoria) ? params.categoria : undefined)
+  const categoria = numero(params.categoria) ? '' : params.categoria ?? ''
+  const c = String(params.cidade ?? '').toLowerCase(), v = String(params.valor ?? '').toLowerCase(), cat = String(categoria).toLowerCase()
+  const n = pagina === undefined ? 1 : numero(pagina) && Number(pagina) >= 2 ? Number(pagina) : NaN
   // outra coleção (ou outra página dela) é outra montagem: nada de dado velho na tela, e o topo da página
   return <PaginaDaColecao key={`${c}/${tipo}/${v}/${cat}/${n}`} cidade={c} tipo={tipo} valor={v} categoria={cat} pagina={n} />
 }
@@ -173,7 +177,7 @@ function Colecao({ m, pm }) {
           <div className="gd-lista-topo" aria-live="polite">
             {daPagina
               ? <span>Do <b>{pm.de}º ao {pm.ate}º</b> de {plural(pm.total, 'lugar', 'lugares')} · página {pm.pagina} de {pm.paginas}</span>
-              : <span><b>{plural(filtrados.length, 'lugar', 'lugares')}</b>{filtro ? ` em ${categoriaDoGuia(filtro).rotulo.toLowerCase()}` : ''}{busca.trim() ? ` para “${busca.trim()}”` : ''}{emPaginas ? ` em todo o bairro` : ''}</span>}
+              : <span><b>{plural(filtrados.length, 'lugar', 'lugares')}</b>{filtro ? ` em ${categoriaDoGuia(filtro).rotulo.toLowerCase()}` : ''}{busca.trim() ? ` para “${busca.trim()}”` : ''}{emPaginas ? (m.tipo === 'bairro' ? ' em todo o bairro' : ' na lista inteira') : ''}</span>}
             {(filtro || busca) && <button type="button" className="gd-chip-filtro" onClick={limpar}><X size={14} /> Limpar filtros</button>}
           </div>
 

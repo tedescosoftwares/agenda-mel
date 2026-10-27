@@ -25,7 +25,8 @@
 //     com um parágrafo curto, e o Google trata como cópia;
 //   - 3.75: bairro com mais de POR_PAGINA_COLECAO salões vira páginas (/bairro/gonzaga,
 //     /bairro/gonzaga/2...), cada uma com a sua canônica; uma lista de 500 links dilui o
-//     rastreio de cada salão. Os tipos divididos estão em COLECOES_EM_PAGINAS;
+//     rastreio de cada salão. 3.75.1: o horário também (/horario/cedo/2, /horario/noite/estetica/2),
+//     onde as maiores passavam de mil salões. Os tipos divididos estão em COLECOES_EM_PAGINAS;
 //   - 3.75: o salão com página fina (noindex, dadosDaPagina) vem marcado "fina" no cartão,
 //     e as listas o mostram sem <a href> (o robô não gasta rastreio com página que não indexa).
 // Nada de nota nem avaliação: só endereço, bairro, horário, serviços e o que
@@ -44,8 +45,8 @@ export const TETO_COLECAO = 0.7
 export const TIPOS_DE_COLECAO = ['bairro', 'horario']
 export const MINIMO_INDEXAR_CATEGORIA = 10
 export const POR_PAGINA_COLECAO = 100
-// os tipos de coleção divididos em páginas; o horário cabe aqui do mesmo jeito (as maiores passam de mil salões)
-export const COLECOES_EM_PAGINAS = ['bairro']
+// os tipos de coleção divididos em páginas (3.75: bairro; 3.75.1: horário, com ou sem categoria)
+export const COLECOES_EM_PAGINAS = ['bairro', 'horario']
 
 // ---- sorteio estável (o mesmo de guiaTexto.js) ------------------------------------------
 function hash(s) {
@@ -471,7 +472,8 @@ export function paginaDaColecao(m, pagina = 1) {
   const por = Number(m.por_pagina) || POR_PAGINA_COLECAO
   const ini = (n - 1) * por
   const cartoes = paginas > 1 ? todos.slice(ini, ini + por) : todos
-  const base = { ...m, pagina: n, paginas, caminho_base: m.caminho, de: ini + 1, ate: ini + cartoes.length, total: todos.length, cartoes }
+  // h1_colecao: o título da coleção sem o "(página n)", para o título da lista
+  const base = { ...m, pagina: n, paginas, caminho_base: m.caminho, h1_colecao: m.h1, de: ini + 1, ate: ini + cartoes.length, total: todos.length, cartoes }
   if (n === 1) return base
   const sobre = m.tipo === 'bairro' ? `dos salões de beleza ${noBairro(m.nome)}, em ${m.cidade}` : `de “${m.h1}”`
   return {

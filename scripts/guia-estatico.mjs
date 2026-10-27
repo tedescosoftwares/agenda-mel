@@ -102,7 +102,7 @@ ${migalhas(trilhaDaColecao(m))}
 <h1>${esc(m.h1)}</h1>
 <p>${esc(m.chamada)}</p>
 ${m.intro.map((p) => `<p>${esc(p)}</p>`).join('')}
-<section><h2>${esc(m.tipo === 'bairro' ? `Os endereços ${/^centro$/i.test(m.nome) ? 'do Centro' : `do bairro ${m.nome}`}` : m.h1)}</h2>${m.paginas > 1 ? `<p>${esc(`Do ${m.de}º ao ${m.ate}º de ${m.total}.`)}</p>` : ''}${listaDeCartoes(m.cartoes, m.cidade_slug)}${navDasPaginas(m)}</section>
+<section><h2>${esc(m.tipo === 'bairro' ? `Os endereços ${/^centro$/i.test(m.nome) ? 'do Centro' : `do bairro ${m.nome}`}` : m.h1_colecao || m.h1)}</h2>${m.paginas > 1 ? `<p>${esc(`Do ${m.de}º ao ${m.ate}º de ${m.total}.`)}</p>` : ''}${listaDeCartoes(m.cartoes, m.cidade_slug)}${navDasPaginas(m)}</section>
 ${faqHtml(m.faq)}
 ${navDeColecoes('No mesmo horário, outras categorias', r.categorias)}
 ${navDeColecoes('Por horário', r.horarios)}

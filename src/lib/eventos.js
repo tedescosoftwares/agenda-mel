@@ -1,8 +1,9 @@
 import { isDemo } from './supabase'
 import { DOMINIO_RAIZ } from './ambiente'
 
-// 3.75: /saloes/<cidade>/bairro/<bairro>/<n> (as páginas de um bairro grande) conta como o bairro
-const caminhoParaMetricas = (c) => String(c ?? '').replace(/^(\/saloes\/[^/?#]+\/bairro\/[^/?#]+)\/[0-9]{1,4}\/?$/, '$1')
+// 3.75: /saloes/<cidade>/bairro/<bairro>/<n> (as páginas de um bairro grande) conta como o bairro; 3.75.1: a mesma
+// coisa no horário (/horario/<h>/<n> e /horario/<h>/<categoria>/<n>)
+const caminhoParaMetricas = (c) => String(c ?? '').replace(/^(\/saloes\/[^/?#]+\/(?:bairro\/[^/?#]+|horario\/[^/?#]+(?:\/[a-z]+)?))\/[0-9]{1,4}\/?$/, '$1')
 
 // As métricas do site (3.11): visitas e cliques das páginas públicas, sem
 // cookie e sem guardar nada no aparelho de quem visita (o aviso do site

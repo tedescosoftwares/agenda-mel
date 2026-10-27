@@ -164,6 +164,8 @@ export default function App() {
             <Route path="/saloes/:cidade/bairro/:valor/:pagina" element={<GuiaColecao tipo="bairro" />} />
             <Route path="/saloes/:cidade/horario/:valor" element={<GuiaColecao tipo="horario" />} />
             <Route path="/saloes/:cidade/horario/:valor/:categoria" element={<GuiaColecao tipo="horario" />} />
+            {/* 3.75.1: as páginas de um horário grande numa categoria (/horario/noite/estetica/2); /horario/cedo/2 cai na rota de cima */}
+            <Route path="/saloes/:cidade/horario/:valor/:categoria/:pagina" element={<GuiaColecao tipo="horario" />} />
 
             {/* atalhos antigos da cliente */}
             <Route path="/agenda" element={<Navigate to="/cliente/meus-agendamentos" replace />} />

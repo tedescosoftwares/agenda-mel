@@ -150,6 +150,18 @@ echo 'guia-whats (o WhatsApp do guia: conectar, simular, reenviar)...'
 supabase functions deploy guia-whats --project-ref "$PROJECT_REF" >/dev/null
 verde '  no ar'
 
+# JWT normal: quem chama é a Plataforma logada (a função confere eh_plataforma). A conversa da assistente
+# comercial chega pelo whatsapp-webhook (a instância comercial é reconhecida lá); aqui o painel: estado,
+# conectar, desconectar, simular, responder (3.74)
+echo 'comercial (o WhatsApp comercial: conectar, simular, responder pelo painel)...'
+supabase functions deploy comercial --project-ref "$PROJECT_REF" >/dev/null
+verde '  no ar'
+
+# JWT normal: quem chama é a Plataforma logada (a função confere eh_plataforma); cria a conta da dona e o salão (3.71)
+echo 'plataforma-promover (promover o salão do guia a salão com agenda)...'
+supabase functions deploy plataforma-promover --project-ref "$PROJECT_REF" >/dev/null
+verde '  no ar'
+
 # JWT normal: quem chama é a Plataforma logada ou o relógio com a chave de serviço
 # (segredos GSC_CONTA_SERVICO e GSC_PROPRIEDADE; o passo a passo está na 160)
 echo 'gsc-sincronizar (buscas do Google no guia)...'

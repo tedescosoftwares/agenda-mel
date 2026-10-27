@@ -184,6 +184,7 @@
 --    216  O numero do salao que nao tem WhatsApp (3.72): fixo nao e WhatsApp (guia_whats_do_salao so celular), exists:false vira sem_contato com motivo (guia_whats_lead_resultado devolve jsonb), guia_lugares.whatsapp_invalido_em/motivo com gatilho que desmarca ao corrigir, guia_whats_numero_ok, guia_whats_bonito, guia_whats_lugar sem numero quando marcado, guia_lista com a marca
 --    217  As metricas do app no portal (3.73): site_evento e site_presenca com app_ (codigo da instalacao, origem app, sem o filtro de robo), tipos seguir e quero_na_mimo, guia_desempenho com origem_
 --    218  A assistente comercial num numero proprio (3.74): comercial_config, comercial_conversas, comercial_* (contexto, salvar, buscar salao, fotos, equipe, fromme, cadencia, painel, config) e o publico comercial_publico
+--    219  A assistente comercial reconhece quem ja tem agenda na MIMO pelo nome do salao e pela cidade (3.74.1): comercial_buscar_salao devolve mimo
 --
 --  Se der erro, me mande a mensagem inteira: cada bloco abaixo está
 --  marcado com o nome do arquivo de origem.
@@ -38144,6 +38145,12 @@ end $$;
 
 insert into public.migracoes_aplicadas (arquivo) values ('207_entrar_com_google.sql') on conflict (arquivo) do nothing;
 
+do $$ begin
+  raise notice '207: entrar com Google na ponta da cliente — completar_perfil (WhatsApp, aniversário, aceites, foto do Google, encaixes)';
+end $$;
+
+insert into public.migracoes_aplicadas (arquivo) values ('207_entrar_com_google.sql') on conflict (arquivo) do nothing;
+
 -- =============================================================
 -- >>> 208_onboarding_ficha_e_confirmacoes.sql
 -- =============================================================
@@ -38287,6 +38294,12 @@ begin
     raise exception 'para ligar o onboarding, o WhatsApp do guia (a Mel) precisa estar ligado e com número';
   end if;
   return (select to_jsonb(g) from public.guia_onboarding_config g where g.id = 1);
+end $$;
+
+insert into public.migracoes_aplicadas (arquivo) values ('208_onboarding_ficha_e_confirmacoes.sql') on conflict (arquivo) do nothing;
+
+do $$ begin
+  raise notice '208: o onboarding com a ficha da empresa, correções por campo, a rua pelo nome, complemento, confirmações, ajuda humana, "criando…" e o suporte no fim';
 end $$;
 
 insert into public.migracoes_aplicadas (arquivo) values ('208_onboarding_ficha_e_confirmacoes.sql') on conflict (arquivo) do nothing;
@@ -38886,6 +38899,12 @@ begin
 end $$;
 
 insert into public.migracoes_aplicadas (arquivo) values ('209_site_historico.sql') on conflict (arquivo) do nothing;
+do $$
+begin
+  raise notice '209: site_presencas.pessoa (o código fixo, tempero em site_segredo), 90 dias, site_ao_vivo com a recorrência, site_visitas (o histórico por período)';
+end $$;
+
+insert into public.migracoes_aplicadas (arquivo) values ('209_site_historico.sql') on conflict (arquivo) do nothing;
 
 -- =============================================================
 -- >>> 210_entrar_pelo_guia.sql
@@ -38975,6 +38994,9 @@ insert into public.migracoes_aplicadas (arquivo) values ('210_entrar_pelo_guia.s
 do $$ begin raise notice '210: vincular_pelo_guia (a cliente entra na agenda pelo guia; como = guia, guia_lugar_id), salons.aberto_no_guia'; end $$;
 
 insert into public.migracoes_aplicadas (arquivo) values ('210_entrar_pelo_guia.sql') on conflict (arquivo) do nothing;
+do $$ begin raise notice '210: vincular_pelo_guia (a cliente entra na agenda pelo guia; como = guia, guia_lugar_id), salons.aberto_no_guia'; end $$;
+
+insert into public.migracoes_aplicadas (arquivo) values ('210_entrar_pelo_guia.sql') on conflict (arquivo) do nothing;
 
 -- =============================================================
 -- >>> 211_boas_vindas_depois_de_confirmar.sql
@@ -39032,6 +39054,12 @@ drop trigger if exists liberar_emails_ao_confirmar on auth.users;
 create trigger liberar_emails_ao_confirmar
   after update of email_confirmed_at on auth.users
   for each row execute function public.liberar_emails_ao_confirmar();
+
+insert into public.migracoes_aplicadas (arquivo) values ('211_boas_vindas_depois_de_confirmar.sql') on conflict (arquivo) do nothing;
+
+do $$ begin
+  raise notice '211: boas-vindas só depois de confirmar o e-mail (aguarda_confirmacao na fila; libera ao confirmar)';
+end $$;
 
 insert into public.migracoes_aplicadas (arquivo) values ('211_boas_vindas_depois_de_confirmar.sql') on conflict (arquivo) do nothing;
 
@@ -39400,6 +39428,12 @@ end $$;
 
 insert into public.migracoes_aplicadas (arquivo) values ('212_seguir_votar_promover.sql') on conflict (arquivo) do nothing;
 
+do $$ begin
+  raise notice '212: guia_votos + guia_votar/guia_meus_votos (votos no guia_publico e na guia_lista), guia_promover, guia_espelhar_salao (+ gatilho ao concluir o onboarding)';
+end $$;
+
+insert into public.migracoes_aplicadas (arquivo) values ('212_seguir_votar_promover.sql') on conflict (arquivo) do nothing;
+
 -- =============================================================
 -- >>> 213_contatos_pelo_app.sql
 -- =============================================================
@@ -39563,6 +39597,12 @@ end $$;
 
 insert into public.migracoes_aplicadas (arquivo) values ('213_contatos_pelo_app.sql') on conflict (arquivo) do nothing;
 
+do $$ begin
+  raise notice '213: guia_contatos + guia_registrar_contato/guia_meus_contatos/guia_responder_contato, guia_lugares.contatos_app (gatilho), guia_lista com contatos_app';
+end $$;
+
+insert into public.migracoes_aplicadas (arquivo) values ('213_contatos_pelo_app.sql') on conflict (arquivo) do nothing;
+
 -- =============================================================
 -- >>> 214_cartao_com_pontos.sql
 -- =============================================================
@@ -39580,6 +39620,9 @@ returns jsonb language sql stable set search_path = public as $$
     'pontos', l.pontos)
 $$;
 revoke execute on function public.guia_cartao(public.guia_lugares) from public, anon;
+
+insert into public.migracoes_aplicadas (arquivo) values ('214_cartao_com_pontos.sql') on conflict (arquivo) do nothing;
+do $$ begin raise notice '214: guia_cartao com pontos'; end $$;
 
 insert into public.migracoes_aplicadas (arquivo) values ('214_cartao_com_pontos.sql') on conflict (arquivo) do nothing;
 do $$ begin raise notice '214: guia_cartao com pontos'; end $$;
@@ -39894,6 +39937,9 @@ insert into public.migracoes_aplicadas (arquivo) values ('215_promocao_completa.
 do $$ begin raise notice '215: guia_promover_interno, plataforma_conta_por_email, plataforma_promover_guia, cobranca_mimo_lote, plataforma_promocao_mensagens'; end $$;
 
 insert into public.migracoes_aplicadas (arquivo) values ('215_promocao_completa.sql') on conflict (arquivo) do nothing;
+do $$ begin raise notice '215: guia_promover_interno, plataforma_conta_por_email, plataforma_promover_guia, cobranca_mimo_lote, plataforma_promocao_mensagens'; end $$;
+
+insert into public.migracoes_aplicadas (arquivo) values ('215_promocao_completa.sql') on conflict (arquivo) do nothing;
 
 -- =============================================================
 -- >>> 216_whatsapp_invalido.sql
@@ -40021,6 +40067,9 @@ create or replace view public.guia_lista with (security_invoker = true) as
          l.whatsapp_invalido_em,
          l.whatsapp_invalido_motivo
     from public.guia_lugares l;
+
+insert into public.migracoes_aplicadas (arquivo) values ('216_whatsapp_invalido.sql') on conflict (arquivo) do nothing;
+do $$ begin raise notice '216: fixo não é WhatsApp; "não existe no WhatsApp" vira sem_contato e marca o salão; guia_whats_numero_ok; guia_lista com a marca'; end $$;
 
 insert into public.migracoes_aplicadas (arquivo) values ('216_whatsapp_invalido.sql') on conflict (arquivo) do nothing;
 do $$ begin raise notice '216: fixo não é WhatsApp; "não existe no WhatsApp" vira sem_contato e marca o salão; guia_whats_numero_ok; guia_lista com a marca'; end $$;
@@ -41046,3 +41095,71 @@ end $$;
 do $$ begin raise notice '218: a assistente comercial (comercial_config, comercial_conversas, comercial_* e o público comercial_publico)'; end $$;
 
 insert into public.migracoes_aplicadas (arquivo) values ('218_comercial.sql') on conflict (arquivo) do nothing;
+
+-- =============================================================
+-- >>> 219_comercial_quem_ja_e_cliente.sql
+-- =============================================================
+
+-- 219: a assistente comercial reconhece quem já tem agenda na MIMO pelo nome do salão e pela cidade (3.74.1)
+--
+-- A cidade e o nome do salão que a assistente pergunta servem, antes de tudo, para saber se quem escreve JÁ É CLIENTE:
+-- o número de quem escreve nem sempre é o cadastrado (a dona escreve do celular pessoal, de outro chip). Então a busca
+-- (comercial_buscar_salao) passa a olhar primeiro os salões da MIMO (salons: nome e cidade) e devolve "mimo" quando acha
+-- — o motor responde o texto de suporte e marca a conversa como cliente, sem vender de novo. O guia continua como antes
+-- (a página grátis, as fotos), e um salão do guia que já tem agenda (salon_id) também conta como cliente.
+
+create or replace function public.comercial_buscar_salao(cidade_ text, nome_ text)
+returns jsonb language plpgsql stable security definer set search_path = public as $$
+declare
+  cs text := public.slug_de(left(coalesce(cidade_, ''), 80));
+  nome_cidade text;
+  pw text[] := public.guia_whats_palavras(coalesce(nome_, ''));
+  lugares jsonb;
+  mimo jsonb;
+begin
+  if cs is null or cs = '' then return jsonb_build_object('cidade_coberta', false, 'lugares', '[]'::jsonb, 'mimo', null); end if;
+  -- 1. quem já tem agenda na MIMO com esse nome nessa cidade (o nome do salão, pelas palavras que não são genéricas)
+  if cardinality(pw) > 0 then
+    with c as (
+      select s.id, s.name, s.city,
+             (select count(*) from unnest(public.guia_whats_palavras(s.name)) w where w = any (pw))::int as comuns,
+             cardinality(public.guia_whats_palavras(s.name)) as total
+        from public.salons s
+       where s.active and public.slug_de(coalesce(s.city, '')) = cs and string_to_array(public.slug_de(s.name), '-') && pw
+    ),
+    p as (select *, case when comuns >= 2 or comuns * 2 >= total then comuns + comuns::numeric / greatest(total, 1) else 0 end as pontos from c)
+    select jsonb_build_object('id', p.id, 'nome', p.name, 'cidade', p.city) into mimo
+      from p where p.pontos > 0 order by p.pontos desc, length(p.name) limit 1;
+  end if;
+  -- 2. o guia
+  select min(l.cidade) into nome_cidade from public.guia_lugares l where l.status = 'publicado' and l.cidade_slug = cs;
+  if nome_cidade is null then return jsonb_build_object('cidade_coberta', false, 'cidade_slug', cs, 'lugares', '[]'::jsonb, 'mimo', mimo); end if;
+  with c as (
+    select l.id, l.nome, l.slug, l.bairro, l.cidade_slug, l.salon_id, l.fotos,
+           (select count(*) from unnest(public.guia_whats_palavras(l.slug)) w where w = any (pw))::int as comuns,
+           cardinality(public.guia_whats_palavras(l.slug)) as total
+      from public.guia_lugares l
+     where l.status = 'publicado' and l.cidade_slug = cs and cardinality(pw) > 0 and string_to_array(l.slug, '-') && pw
+  ),
+  p as (
+    select *, case when comuns >= 2 or comuns * 2 >= total then comuns + comuns::numeric / greatest(total, 1) else 0 end as pontos from c
+  ),
+  m as (select * from p where pontos > 0 order by pontos desc, length(nome) limit 3)
+  select coalesce(jsonb_agg(jsonb_build_object(
+           'id', m.id, 'nome', m.nome, 'slug', m.slug, 'bairro', m.bairro, 'cidade_slug', m.cidade_slug,
+           'link', public.app_base() || '/saloes/' || m.cidade_slug || '/' || m.slug,
+           'na_mimo', m.salon_id is not null, 'fotos_n', coalesce(array_length(m.fotos, 1), 0)) order by m.pontos desc, length(m.nome)), '[]'::jsonb)
+    into lugares from m;
+  -- o melhor do guia já tem agenda: é cliente também (mesmo que o nome na MIMO seja um pouco diferente)
+  if mimo is null and jsonb_array_length(lugares) > 0 and (lugares -> 0 ->> 'na_mimo')::boolean then
+    select jsonb_build_object('id', s.id, 'nome', s.name, 'cidade', s.city) into mimo
+      from public.guia_lugares l join public.salons s on s.id = l.salon_id
+     where l.id = (lugares -> 0 ->> 'id')::uuid;
+  end if;
+  return jsonb_build_object('cidade_coberta', true, 'cidade_slug', cs, 'cidade', nome_cidade, 'lugares', lugares, 'mimo', mimo);
+end $$;
+revoke execute on function public.comercial_buscar_salao(text, text) from public, anon, authenticated;
+
+do $$ begin raise notice '219: a assistente comercial reconhece quem já tem agenda na MIMO pelo nome do salão e pela cidade'; end $$;
+
+insert into public.migracoes_aplicadas (arquivo) values ('219_comercial_quem_ja_e_cliente.sql') on conflict (arquivo) do nothing;

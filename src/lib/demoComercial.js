@@ -144,9 +144,10 @@ function simular({ texto }) {
     SIM.situacao = 'sem_interesse'
     return { ok: true, texto: t, acao: 'cliente_final', situacao: SIM.situacao, bolhas: [CFG.msg_cliente_final], responder: CFG.msg_cliente_final, pausa: CFG.pausa_seg }
   }
-  if (/ja uso|ja sou cliente|minha agenda nao|suporte/.test(p)) {
+  // quem já tem agenda na MIMO: pelo que diz, ou pelo nome do salão na cidade (na demo, o Studio Demo Beleza)
+  if (/ja uso|ja sou cliente|minha agenda nao|suporte/.test(p) || (/studio demo/.test(p) && /itanhaem|santos/.test(p))) {
     SIM.situacao = 'cliente'
-    const m = fill(CFG.msg_suporte, { suporte: CFG.suporte_numero ? `https://wa.me/${CFG.suporte_numero}` : 'o nosso atendimento' })
+    const m = /studio demo/.test(p) ? fill(CFG.msg_salao_na_mimo, { salao: 'Studio Demo Beleza', suporte: CFG.suporte_numero ? `https://wa.me/${CFG.suporte_numero}` : 'o nosso atendimento' }) : fill(CFG.msg_suporte, { suporte: CFG.suporte_numero ? `https://wa.me/${CFG.suporte_numero}` : 'o nosso atendimento' })
     return { ok: true, texto: t, acao: 'suporte', situacao: SIM.situacao, bolhas: [m], responder: m, pausa: CFG.pausa_seg }
   }
   if (/quero comecar|quero testar|bora|vamos comecar|falar com (uma pessoa|alguem|atendente)/.test(p)) {

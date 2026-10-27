@@ -37,7 +37,7 @@ const CAMPOS_CONFIG = [
 const SECOES = [['conversas', 'Conversas', MessagesSquare], ['simulador', 'Testar a assistente', Bot], ['config', 'Configuração', SlidersHorizontal]]
 const BLOCOS = [
   ['conexao', 'Conexão e número', Smartphone], ['assistente', 'A assistente', Sparkles], ['sabe', 'O que ela sabe', BookOpen], ['vendas', 'Vendas e planos', Tag],
-  ['equipe', 'Equipe e horário', Users], ['guia', 'O guia na conversa', MapPinned], ['cadencia', 'Cadência', Clock], ['ritmo', 'Ritmo e limites', Timer],
+  ['equipe', 'Equipe e horário', Users], ['guia', 'Cidade e salão', MapPinned], ['cadencia', 'Cadência', Clock], ['ritmo', 'Ritmo e limites', Timer],
 ]
 const comEquipe = (c) => c.pausada || (c.humano_ate && new Date(c.humano_ate) > new Date())
 const FILTROS = [
@@ -214,7 +214,7 @@ export default function ComercialGuia({ g }) {
             <ul>
               <li><b>A conversa de venda</b>, do "oi" ao "quero começar": a IA de verdade, com a configuração salva e os planos do banco.</li>
               <li><b>O salão no guia:</b> diga a cidade e o nome de um salão publicado e veja a mensagem do guia; mande um e-mail e peça fotos.</li>
-              <li><b>Quem já é cliente</b> (um número da MIMO) e a <b>cliente final</b> (quer marcar horário): o sistema responde sozinho.</li>
+              <li><b>Quem já é cliente</b> (um número da MIMO, ou o nome de um salão que já tem agenda, na cidade dele) e a <b>cliente final</b> (quer marcar horário): o sistema responde sozinho.</li>
               <li><b>Vendas desligadas:</b> desligue em Configuração e veja a assistente falar de fase de testes, sem preço.</li>
               <li><b>O aviso à equipe</b> volta como prévia; nada sai para ninguém. A intervenção, a cadência e o envio de verdade só se testam no WhatsApp.</li>
             </ul>
@@ -292,9 +292,9 @@ export default function ComercialGuia({ g }) {
                 <textarea rows={2} value={form.msg_cliente_final ?? ''} onChange={(e) => campo('msg_cliente_final', e.target.value)} maxLength={1000} /></label>
             </Bloco>
 
-            <Bloco id="guia" aoMontar={indice.registrar} Icon={MapPinned} titulo="O guia na conversa" sub="Ela pergunta a cidade e o salão; o sistema procura no guia e fala por estes textos ({salao}, {cidade}, {link}, {email}, {suporte}).">
-              <label>Achei o salão no guia (fora da MIMO)<textarea rows={3} value={form.msg_achei_no_guia ?? ''} onChange={(e) => campo('msg_achei_no_guia', e.target.value)} maxLength={1000} /></label>
-              <label>O salão achado já usa a MIMO<textarea rows={2} value={form.msg_salao_na_mimo ?? ''} onChange={(e) => campo('msg_salao_na_mimo', e.target.value)} maxLength={1000} /></label>
+            <Bloco id="guia" aoMontar={indice.registrar} Icon={MapPinned} titulo="Cidade e salão: quem já é cliente, e o guia" sub="Ela pergunta a cidade e o nome do salão. Com isso o sistema confere primeiro se já existe agenda na MIMO com esse nome nessa cidade (ela pode escrever de outro número); senão, procura a página no guia. Os textos: {salao}, {cidade}, {link}, {email}, {suporte}.">
+              <label>O salão já tem agenda na MIMO <span className="muted">(achado pelo nome e pela cidade: é cliente; o sistema manda o suporte e não vende de novo)</span><textarea rows={2} value={form.msg_salao_na_mimo ?? ''} onChange={(e) => campo('msg_salao_na_mimo', e.target.value)} maxLength={1000} /></label>
+              <label>Achei a página do salão no guia (ainda sem a agenda)<textarea rows={3} value={form.msg_achei_no_guia ?? ''} onChange={(e) => campo('msg_achei_no_guia', e.target.value)} maxLength={1000} /></label>
               <label>Cidade coberta, salão fora do guia<textarea rows={2} value={form.msg_nao_achei ?? ''} onChange={(e) => campo('msg_nao_achei', e.target.value)} maxLength={1000} /></label>
               <label>Cidade fora do guia<textarea rows={2} value={form.msg_cidade_fora ?? ''} onChange={(e) => campo('msg_cidade_fora', e.target.value)} maxLength={1000} /></label>
               <label>O pedido das fotos saiu <span className="muted">(depois do e-mail dela: o "sou a dona" da aba Interesses; a equipe confirma e o link das fotos vai por e-mail)</span>

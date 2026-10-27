@@ -47,6 +47,7 @@ export type Dados = {
   nome?: string; cidade?: string; cidade_slug?: string; cidade_coberta?: boolean; salao?: string; autonoma?: boolean | null; email?: string
   interesse?: string; guia?: Guia | null; guia_informado?: boolean; incluir_guia?: boolean; fotos_pedidas?: boolean
   suporte_informado?: boolean; cliente_final?: boolean; apresentada?: boolean; equipe_avisada_em?: string
+  ja_cliente?: { salao: string } | null // 3.74.1: achada pelo nome do salão e pela cidade (escreveu de outro número)
 }
 export type Entrada = { telefone: string; texto: string; nomePerfil?: string | null }
 export type Saida = {
@@ -154,7 +155,8 @@ export function sistema(cfg: Config, planos: Plano[] | null, d: Dados, extra: { 
     extra.nomePerfil ? `o nome no perfil do WhatsApp dela é "${extra.nomePerfil}" (use só se ela confirmar ou se não disser outro)` : null,
   ].filter(Boolean)
   linhas.push('O QUE VOCÊ JÁ SABE DESTA PESSOA', sabe.length ? sabe.map((s) => `- ${s}`).join('\n') : '- nada ainda: pergunte o nome, a cidade e o salão (uma coisa por vez, começando pelo nome).', '')
-  if (extra.cliente) linhas.push('ATENÇÃO', `O número dela é de um salão que JÁ usa a MIMO (${extra.cliente.salao}). Se ela pedir ajuda com a agenda, marque eh_cliente; o sistema manda o contato do suporte. Não venda de novo.`, '')
+  const cliente = extra.cliente ?? d.ja_cliente ?? null
+  if (cliente) linhas.push('ATENÇÃO', `${extra.cliente ? 'O número dela é de um salão' : 'O salão dela'} JÁ usa a MIMO (${cliente.salao}): ela já é cliente. Se ela pedir ajuda com a agenda, marque eh_cliente; o sistema manda o contato do suporte. Não venda de novo.`, '')
   if (d.guia) {
     linhas.push('O SALÃO DELA NO GUIA', `${d.guia.nome} está no guia da MIMO: ${d.guia.link} (${d.guia.na_mimo ? 'já agenda pela MIMO' : 'ainda sem a agenda'}; ${d.guia.fotos_n ? `${d.guia.fotos_n} foto(s)` : 'sem fotos'}).`,
       d.guia.na_mimo ? '' : 'A página é grátis. Se ela quiser pôr fotos ou corrigir algo, peça o e-mail dela e marque quer_fotos (o sistema manda o pedido e explica o e-mail de confirmação). Não peça o e-mail por outro motivo.', '')
@@ -345,8 +347,10 @@ export async function atenderComercial(deps: Deps, e: Entrada, opcoes: { teste?:
   }
   // quer começar, ou uma pessoa: a equipe
   let previaAviso: string | null = null
-  if ((li.quer_comecar || li.quer_humano) && situacao !== 'cliente') {
+  let chamouEquipe = false
+  if ((li.quer_comecar || li.quer_humano) && situacao !== 'cliente' && !dados.ja_cliente) {
     situacao = 'quer_comecar'
+    chamouEquipe = true
     bolhas.push(fill(cfg.msg_equipe))
   } else if (li.sem_interesse) {
     situacao = 'sem_interesse'
@@ -356,15 +360,25 @@ export async function atenderComercial(deps: Deps, e: Entrada, opcoes: { teste?:
     situacao = li.interesse === 'alto' ? 'interessada' : 'conversando' // voltou a falar
   }
   const saida = await guardar(li.quer_comecar ? 'quer_comecar' : li.quer_humano ? 'quer_humano' : li.eh_cliente ? 'suporte' : 'conversou')
-  if (li.quer_comecar || li.quer_humano) previaAviso = await avisar(li.quer_comecar ? 'quer começar / testar a MIMO Agenda' : 'pediu para falar com uma pessoa')
+  // o aviso à equipe acompanha o texto da equipe (quem já é cliente tem o suporte, não o comercial)
+  if (chamouEquipe) previaAviso = await avisar(li.quer_comecar ? 'quer começar / testar a MIMO Agenda' : 'pediu para falar com uma pessoa')
   return { ...saida, previaAviso }
 
-  // o salão dela no guia: a cidade é coberta? está lá? (uma mensagem do sistema, uma vez por salão/cidade)
+  // a cidade e o salão dela: primeiro, quem já tem agenda na MIMO com esse nome nessa cidade (3.74.1: ela pode escrever de
+  // outro número) → o suporte, e a conversa vira cliente; senão o guia: a cidade é coberta? está lá? (uma mensagem do sistema)
   async function procurarNoGuia() {
     dados.guia_informado = true
     try {
-      const b = (await chamar(deps, 'comercial_buscar_salao', { cidade_: dados.cidade, nome_: dados.salao })) as { cidade_coberta?: boolean; cidade?: string; lugares?: Array<{ id: string; nome: string; link: string; na_mimo: boolean; fotos_n: number; bairro?: string | null }> } | null
+      const b = (await chamar(deps, 'comercial_buscar_salao', { cidade_: dados.cidade, nome_: dados.salao })) as { cidade_coberta?: boolean; cidade?: string; mimo?: { id: string; nome: string; cidade?: string | null } | null; lugares?: Array<{ id: string; nome: string; link: string; na_mimo: boolean; fotos_n: number; bairro?: string | null }> } | null
       dados.cidade_coberta = !!b?.cidade_coberta
+      if (b?.mimo?.nome) {
+        dados.ja_cliente = { salao: b.mimo.nome }
+        if (!dados.suporte_informado) { dados.suporte_informado = true; bolhas.push(fill(cfg.msg_salao_na_mimo, { salao: b.mimo.nome })) }
+        situacao = 'cliente'
+        const l = b.lugares?.[0]
+        if (l) { dados.guia = { lugar_id: l.id, nome: l.nome, link: l.link, na_mimo: true, fotos_n: Number(l.fotos_n) || 0, bairro: l.bairro ?? null }; lugar = l.id }
+        return
+      }
       if (!b?.cidade_coberta) { dados.guia = null; bolhas.push(fill(cfg.msg_cidade_fora)); return }
       if (b.cidade) dados.cidade = b.cidade
       const l = b.lugares?.[0]
@@ -372,7 +386,7 @@ export async function atenderComercial(deps: Deps, e: Entrada, opcoes: { teste?:
       dados.guia = { lugar_id: l.id, nome: l.nome, link: l.link, na_mimo: !!l.na_mimo, fotos_n: Number(l.fotos_n) || 0, bairro: l.bairro ?? null }
       dados.incluir_guia = false
       lugar = l.id
-      bolhas.push(fill(l.na_mimo ? cfg.msg_salao_na_mimo : cfg.msg_achei_no_guia, { salao: l.nome, link: l.link }))
+      bolhas.push(fill(cfg.msg_achei_no_guia, { salao: l.nome, link: l.link }))
     } catch { dados.guia_informado = false }
   }
 }

@@ -1,6 +1,9 @@
 import { isDemo } from './supabase'
 import { DOMINIO_RAIZ } from './ambiente'
 
+// 3.75: /saloes/<cidade>/bairro/<bairro>/<n> (as páginas de um bairro grande) conta como o bairro
+const caminhoParaMetricas = (c) => String(c ?? '').replace(/^(\/saloes\/[^/?#]+\/bairro\/[^/?#]+)\/[0-9]{1,4}\/?$/, '$1')
+
 // As métricas do site (3.11): visitas e cliques das páginas públicas, sem
 // cookie e sem guardar nada no aparelho de quem visita (o aviso do site
 // promete "sem rastreio"). Quem conta visitante é o banco, com um código
@@ -86,7 +89,8 @@ function aparelho() {
 // e o pedido ainda assim chega ao banco
 export function registrarEvento(tipo, { pagina, area = null, dados = null, origem: forcarOrigem = null } = {}) {
   if (!podeContar() || !tipo) return
-  const caminho = pagina ?? window.location.pathname
+  // 3.75: a página 2, 3... de um bairro conta como o bairro (o banco só aceita o endereço de sempre)
+  const caminho = caminhoParaMetricas(pagina ?? window.location.pathname)
   const e = origemDaVisita()
   const corpo = {
     tipo_: tipo,

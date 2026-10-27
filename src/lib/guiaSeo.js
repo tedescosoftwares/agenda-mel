@@ -179,7 +179,8 @@ export function jsonLdDoLugar(l, conteudo, faq = []) {
 export function jsonLdDaCidade(dados, faq = []) {
   const { titulo, descricao, caminho } = seoDaCidade(dados.cidade, dados.cidade_slug, dados.categoria, dados.pagina)
   const url = SITE_GUIA + caminho
-  const lugares = Array.isArray(dados.lugares) ? dados.lugares : []
+  // 3.75: o salão de página fina (noindex) não entra na lista estruturada
+  const lugares = (Array.isArray(dados.lugares) ? dados.lugares : []).filter((x) => !x?.fina)
   return {
     '@context': 'https://schema.org',
     '@graph': [
@@ -206,13 +207,15 @@ export function seoDaColecao(m) {
     descricao: m.meta_description,
     h1: m.h1,
     caminho: m.caminho,
+    noindex: !!m.noindex, // 3.75: o horário pequeno numa categoria vai ao ar sem indexar
   }
 }
 // a coleção: migalhas, a página, a lista dos salões (em ordem) e as perguntas. Sem nota.
 export function jsonLdDaColecao(m) {
   const { titulo, descricao, caminho } = seoDaColecao(m)
   const url = SITE_GUIA + caminho
-  const cartoes = Array.isArray(m.cartoes) ? m.cartoes : []
+  // 3.75: o salão de página fina (noindex) não entra na lista estruturada
+  const cartoes = (Array.isArray(m.cartoes) ? m.cartoes : []).filter((x) => !x?.fina)
   return {
     '@context': 'https://schema.org',
     '@graph': [

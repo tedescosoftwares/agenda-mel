@@ -101,5 +101,6 @@ MANTER=$( { listar | tail -n "$GUARDAR"; echo "$NOVA"; } | sort -u)
 for v in $(listar); do
   if ! printf '%s\n' "$MANTER" | grep -qx "$v"; then rm -rf "$VERSOES/$v"; fi
 done
-URLS=$(grep -c '<loc>' "$DESTINO/sitemap.xml" 2>/dev/null || echo '?')
+# as URLs do sitemap (3.75: o índice aponta para as partes em sitemaps/)
+URLS=$(cat "$DESTINO/sitemap.xml" "$DESTINO"/sitemaps/*.xml 2>/dev/null | grep -o '<url>' | wc -l | tr -d ' ')
 verde "  no ar: a versão $NOVA ($URLS URLs no sitemap)${ANTERIOR:+ · anterior guardada: $ANTERIOR}"

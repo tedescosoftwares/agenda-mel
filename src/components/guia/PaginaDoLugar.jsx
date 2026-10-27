@@ -1,5 +1,5 @@
 import { createElement, useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   MapPin, Clock, Phone, MessageCircle, Globe, Navigation, Share2, Check, Award, CalendarCheck, Info, ChevronDown,
   ArrowRight, Lightbulb, Sparkles, Scissors, Hand, Eye, ScanFace, Flower2, Brush, Store, CreditCard, Accessibility, SquareParking, Baby, Bath,
@@ -52,6 +52,18 @@ export function IconeCategoria({ slug, ...props }) {
 export function Ir({ previa, to, className, children, ...resto }) {
   if (previa) return <span className={className} {...resto}>{children}</span>
   return <Link to={to} className={className} {...resto}>{children}</Link>
+}
+// 3.75: o salão de página fina (noindex) não ganha <a href> nas listas: quem toca vai para a página pelo próprio
+// app, e o robô do Google, que só segue <a href>, não gasta rastreio com página que não vai indexar
+function IrPeloApp({ to, className, children }) {
+  const navegar = useNavigate()
+  const ir = () => navegar(to)
+  return (
+    <div role="link" tabIndex={0} className={className} onClick={ir}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ir() } }}>
+      {children}
+    </div>
+  )
 }
 
 // o relógio de Itanhaém, não o de quem lê (alguém em Lisboa veria "fechado" às 15h daqui)
@@ -541,8 +553,9 @@ export function CartaoLugar({ lugar, cidadeSlug, cidade, previa = false }) {
   const cat = categoriaDoGuia(lugar.categoria)
   const servicos = (lugar.servicos ?? []).slice(0, 3)
   const foto = fotosDoLugar(lugar)[0] // a capa (3.14): l.foto nos cartões do banco, l.fotos[0] nos outros
+  const Alvo = lugar.fina && !previa ? IrPeloApp : Ir
   return (
-    <Ir previa={previa} to={rotaDoLugar(cidadeSlug, lugar.slug)} className="gd-cartao ld-rv">
+    <Alvo previa={previa} to={rotaDoLugar(cidadeSlug, lugar.slug)} className="gd-cartao ld-rv">
       {foto ? (
         <span className="gd-cartao-capa gd-cartao-foto"><img src={miniatura(foto)} data-cheia={foto} onError={paraFotoInteira} alt="" loading="lazy" decoding="async" /></span>
       ) : (
@@ -562,6 +575,6 @@ export function CartaoLugar({ lugar, cidadeSlug, cidade, previa = false }) {
         {servicos.length > 0 && <span className="gd-chips gd-chips-mini">{servicos.map((s) => <span key={s}>{s}</span>)}</span>}
         <span className="gd-cartao-ver">Ver a página <ArrowRight size={15} /></span>
       </span>
-    </Ir>
+    </Alvo>
   )
 }

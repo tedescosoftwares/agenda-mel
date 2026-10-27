@@ -139,6 +139,22 @@
 		# links que abrem no app (apps/mobile): o arquivo do iPhone não tem extensão
 		# e precisa sair como JSON; o assetlinks.json do Android já sai certo pela extensão
 		header /.well-known/apple-app-site-association Content-Type application/json
+		# 3.75: endereço do guia ou do blog sem página gerada (salão que saiu do ar, cidade com letra maiúscula,
+		# bairro escrito errado) responde 404 de verdade, com o app, que mostra "página não encontrada" em noindex.
+		# Antes saía o app com 200 e o Google contava cada um como página fina ou duplicada. Todas as páginas do
+		# guia e do blog são geradas (paginas-estaticas.mjs); a de fotos do dono (/saloes/<cidade>/<salão>/fotos/<token>)
+		# é do app e fica de fora.
+		@sem_pagina {
+			path /saloes/* /blog/*
+			not path_regexp ^/saloes/[^/]+/[^/]+/fotos/
+			not file {path} {path}/index.html
+		}
+		handle @sem_pagina {
+			rewrite * /index.html
+			file_server {
+				status 404
+			}
+		}
 		try_files {path} {path}/index.html /index.html
 		file_server
 	}

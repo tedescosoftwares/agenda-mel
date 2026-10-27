@@ -23,6 +23,7 @@ import { TITULO as TITULO_HOME, DESCRICAO as DESCRICAO_HOME, jsonLdDaHome } from
 import { mesclarPagina, mesclarConteudo, HUB_AUTONOMA } from '../src/lib/paginas.js'
 import { paginasDoGuia, dadosDoGuia } from './guia-estatico.mjs'
 import { carregarGuia, limparPastasDoGuia, urlsDoSitemapDasCidades } from './guia-fonte.mjs'
+import { gravarSitemaps, lerSitemapCompleto } from './sitemaps.mjs'
 import { cidadeDoArtigo } from '../src/lib/guiaArtigos.js'
 import { categoriaDoGuia, rotaDaCidade, rotaDaCategoria, SLUGS_CATEGORIA } from '../src/lib/guia.js'
 import { FAQ as HOME_FAQ } from '../src/conteudo/home.js'
@@ -311,11 +312,9 @@ if (ANTERIOR) {
 }
 // 3.38.2: uma cidade que ficou fora da rodada (sem banco e sem cache) não perde o que já tem no ar
 const mantidas = guiaCarregado ? limparPastasDoGuia(DIST, cidadesMantidas).mantidas : []
-// sem o guia nesta rodada, as URLs dele continuam no sitemap, como estavam; com uma cidade mantida, as dela
-const sitemapAnterior = (() => {
-  for (const f of [path.join(DIST, 'sitemap.xml'), ANTERIOR && path.join(ANTERIOR, 'sitemap.xml')].filter(Boolean)) { try { return fs.readFileSync(f, 'utf8') } catch { /* o próximo */ } }
-  return ''
-})()
+// sem o guia nesta rodada, as URLs dele continuam no sitemap, como estavam; com uma cidade mantida, as dela.
+// 3.75: o sitemap de antes pode ser o índice com as partes (sitemaps/) ou o arquivo único de até a 3.74
+const sitemapAnterior = lerSitemapCompleto(DIST) || (ANTERIOR ? lerSitemapCompleto(ANTERIOR) : '')
 const urlsGuardadas = !guiaCarregado
   ? [...sitemapAnterior.matchAll(/<url><loc>[^<]*\/saloes[^<]*<\/loc>.*?<\/url>/g)].map((m) => `  ${m[0]}`)
   : urlsDoSitemapDasCidades(sitemapAnterior, mantidas)
@@ -350,6 +349,7 @@ fs.writeFileSync(path.join(DIST, '_home.html'), html({ caminho: '/', titulo: hom
 const urls = [{ caminho: '/', atualizado: DATA_PADRAO, prioridade: '1.0', freq: 'weekly' }, ...paginas.filter((p) => !p.noindex)]
   .map((p) => `  <url><loc>${SITE}${p.caminho}</loc>${p.atualizado ? `<lastmod>${p.atualizado}</lastmod>` : ''}<changefreq>${p.freq || (p.tipo === 'article' ? 'monthly' : 'weekly')}</changefreq><priority>${p.prioridade || (p.seo ? '0.9' : p.tipo === 'article' ? '0.7' : '0.5')}</priority></url>`)
   .concat(urlsGuardadas)
-fs.writeFileSync(path.join(DIST, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join('\n')}\n</urlset>\n`)
-console.log(`paginas-estaticas: ${ok} páginas geradas${erros ? `, ${erros} com erro` : ''}${arquivosDeDados ? `, ${arquivosDeDados} arquivo(s) de dados do guia` : ''}, home própria, sitemap com ${urls.length} URLs${urlsGuardadas.length ? ` (${urlsGuardadas.length} do guia guardadas da rodada anterior${mantidas.length ? `: ${mantidas.join(', ')}` : ''})` : ''}${cidadesMantidas.length ? `. ATENÇÃO: ${cidadesMantidas.length} cidade(s) fora desta rodada: ${cidadesMantidas.join(', ')}` : ''}`)
+// 3.75: o sitemap.xml é o índice; as URLs vão em sitemaps/site.xml, sitemaps/guia.xml e um arquivo por cidade
+const mapa = gravarSitemaps(DIST, urls, SITE)
+console.log(`paginas-estaticas: ${ok} páginas geradas${erros ? `, ${erros} com erro` : ''}${arquivosDeDados ? `, ${arquivosDeDados} arquivo(s) de dados do guia` : ''}, home própria, sitemap com ${mapa.urls} URLs em ${mapa.arquivos.length} arquivo(s)${urlsGuardadas.length ? ` (${urlsGuardadas.length} do guia guardadas da rodada anterior${mantidas.length ? `: ${mantidas.join(', ')}` : ''})` : ''}${cidadesMantidas.length ? `. ATENÇÃO: ${cidadesMantidas.length} cidade(s) fora desta rodada: ${cidadesMantidas.join(', ')}` : ''}`)
 if (!ok) globalThis.process.exit(1)

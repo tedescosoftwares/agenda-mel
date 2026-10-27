@@ -139,8 +139,10 @@ campo() { printf '%s\n' "$PEDIDO" | sed -n "s/^$1=//p" | head -1; }
 PEDIDO_ID=$(campo id); [ "$PEDIDO_ID" = '-' ] && PEDIDO_ID=''
 INICIO_PUB=$(campo agora); [ "$INICIO_PUB" = '-' ] && INICIO_PUB=''
 VERSAO_PUB=$(campo versao); [ "$VERSAO_PUB" = '-' ] && VERSAO_PUB=''
+# 3.75: as URLs do sitemap, no índice com as partes (sitemaps/) ou no arquivo único de antes
+contar_urls() { cat "$1/sitemap.xml" "$1"/sitemaps/*.xml 2>/dev/null | grep -o '<url>' | wc -l | tr -d ' '; }
 registrar_pub() { # $1 = 1 (feito) ou 0 (falhou); $2 = resumo
-  local urls; urls=$(grep -c '<loc>' dist/sitemap.xml 2>/dev/null || echo '')
+  local urls; urls=$(contar_urls dist)
   local r; r=$(node scripts/registrar-publicacao.mjs fim --ok "$1" --id "${PEDIDO_ID:--}" --origem manual --inicio "${INICIO_PUB:--}" \
     --versao "${VERSAO_PUB:--}" --urls "${urls:--}" --resumo "$2" || true)
   if [ "$1" = 1 ] && [ "$r" = 'registrado' ] && [ -n "$VERSAO_PUB" ]; then printf '%s' "$VERSAO_PUB" > "$AQUI/.publicacao-registrada"; fi
@@ -154,12 +156,14 @@ rm -rf "$GUIA_ANTERIOR"; mkdir -p "$GUIA_ANTERIOR/dados"
 [ -d dist/saloes ] && mv dist/saloes "$GUIA_ANTERIOR/saloes"
 [ -d dist/dados/guia ] && mv dist/dados/guia "$GUIA_ANTERIOR/dados/guia"
 [ -f dist/sitemap.xml ] && cp dist/sitemap.xml "$GUIA_ANTERIOR/sitemap.xml"
+[ -d dist/sitemaps ] && cp -r dist/sitemaps "$GUIA_ANTERIOR/sitemaps" # 3.75: as partes do índice
 export GUIA_ANTERIOR
 # o build falhou: o guia volta para o dist do jeito que estava
 devolver_guia() {
   [ -d "$GUIA_ANTERIOR/saloes" ] && [ ! -d dist/saloes ] && mkdir -p dist && mv "$GUIA_ANTERIOR/saloes" dist/saloes
   [ -d "$GUIA_ANTERIOR/dados/guia" ] && [ ! -d dist/dados/guia ] && mkdir -p dist/dados && mv "$GUIA_ANTERIOR/dados/guia" dist/dados/guia
   [ -f "$GUIA_ANTERIOR/sitemap.xml" ] && [ ! -f dist/sitemap.xml ] && cp "$GUIA_ANTERIOR/sitemap.xml" dist/sitemap.xml
+  [ -d "$GUIA_ANTERIOR/sitemaps" ] && [ ! -d dist/sitemaps ] && cp -r "$GUIA_ANTERIOR/sitemaps" dist/sitemaps
   true
 }
 # o build inteiro vai para um log; na tela só o fim. Se falhar, as últimas
@@ -185,15 +189,14 @@ if [ ! -f dist/sitemap.xml ]; then
   node scripts/paginas-estaticas.mjs
 fi
 [ -f dist/sitemap.xml ] && [ -f dist/_home.html ] || { vermelho 'Sem as páginas estáticas (dist/sitemap.xml, dist/_home.html). Rode: node scripts/paginas-estaticas.mjs'; exit 1; }
-verde "  SEO: $(grep -c '<loc>' dist/sitemap.xml) URLs no sitemap, páginas estáticas no lugar"
+verde "  SEO: $(contar_urls dist) URLs no sitemap ($(ls dist/sitemaps 2>/dev/null | wc -l | tr -d ' ') arquivo(s) em sitemaps/), páginas estáticas no lugar"
 # o carimbo do conteúdo, para a rodada da hora não regenerar de novo o que o build acabou de gerar
 [ -n "$VERSAO_PUB" ] && printf '%s' "$VERSAO_PUB" > dist/.conteudo-versao
-# Bing na hora (IndexNow, 3.21): o build apagou o dist e, com ele, o arquivo da chave que o
-# Bing confere (dist/<chave>.txt). O indexnow.mjs regrava a chave (ela vai na foto, logo abaixo) e avisa o que mudou.
+# Bing na hora (IndexNow, 3.21): o build apagou o dist e, com ele, o arquivo da chave que o Bing confere
+# (dist/<chave>.txt). A chave é regravada agora, para ir na foto logo abaixo; o aviso sai depois da troca (3.75),
+# quando as páginas já estão no ar
 if [ -n "${INDEXNOW_KEY:-}" ]; then
-  node scripts/indexnow.mjs || amarelo '  o aviso ao Bing (IndexNow) falhou; o republicar-se-mudou.sh tenta de novo na próxima hora'
-else
-  amarelo '  Sem INDEXNOW_KEY no .env o Bing não é avisado na hora. Para ligar: node scripts/indexnow.mjs --gerar-chave'
+  node scripts/indexnow.mjs --so-chave || amarelo '  não consegui gravar o arquivo da chave do IndexNow'
 fi
 # o guia guardado já voltou (ou foi refeito): a pasta do lado sai
 rm -rf "$GUIA_ANTERIOR"
@@ -209,6 +212,11 @@ if ! "$AQUI/publicar-versao.sh"; then
 fi
 # 3.41: registra a publicação (a Plataforma zera o que estava pendente)
 registrar_pub 1 "build $(git rev-parse --short HEAD)"
+if [ -n "${INDEXNOW_KEY:-}" ]; then
+  node scripts/indexnow.mjs || amarelo '  o aviso ao Bing (IndexNow) falhou; o republicar-se-mudou.sh tenta de novo na próxima hora'
+else
+  amarelo '  Sem INDEXNOW_KEY no .env o Bing não é avisado na hora. Para ligar: node scripts/indexnow.mjs --gerar-chave'
+fi
 [ -n "$PEDIDO_ID" ] && verde "  o \"Publicar agora\" que esperava (pedido $PEDIDO_ID) foi atendido por este build"
 # para não restar dúvida sobre O QUE foi publicado
 verde "  publicado o commit $(git rev-parse --short HEAD) — $(git log -1 --format=%s | cut -c1-60)"
@@ -271,6 +279,19 @@ case "$CODIGO" in
          *xml*) verde '  sitemap.xml no ar' ;;
          *) amarelo "  sitemap.xml respondeu '$TIPO' (esperava xml): confira dist/sitemap.xml e o Caddy" ;;
        esac
+       # 3.75: o sitemap.xml é o índice; a primeira parte tem de sair como XML também
+       PARTE=$(curl -s -m 10 "https://${DOMINIO_SITE}/sitemap.xml" | grep -o '<loc>[^<]*</loc>' | head -1 | sed 's/<[^>]*>//g')
+       if [ -n "$PARTE" ]; then
+         case "$(curl -s -o /dev/null -w '%{content_type}' -m 10 "$PARTE" || true)" in
+           *xml*) verde "  índice de sitemaps no ar (${PARTE##*/} responde)" ;;
+           *) amarelo "  $PARTE não saiu como XML: confira dist/sitemaps/" ;;
+         esac
+       fi
+       # 3.75: endereço do guia que não existe responde 404 (antes, o app com 200); o guia em si, 200
+       SEM=$(curl -s -o /dev/null -w '%{http_code}' -m 10 "https://${DOMINIO_SITE}/saloes/nao-existe-conferencia" || echo 000)
+       GUIA=$(curl -s -o /dev/null -w '%{http_code}' -m 10 "https://${DOMINIO_SITE}/saloes" || echo 000)
+       if [ "$SEM" = 404 ] && [ "$GUIA" = 200 ]; then verde '  guia: página que não existe → 404; /saloes → 200'
+       else amarelo "  guia: página que não existe respondeu $SEM (esperava 404) e /saloes respondeu $GUIA (esperava 200): veja docker compose logs caddy --tail 30"; fi
        # a barra no fim tem de virar 301 (SEO 3.15.1); 200 aqui = o Caddy está com o Caddyfile antigo
        BARRA=$(curl -s -o /dev/null -w '%{http_code}' -m 10 "https://${DOMINIO_SITE}/sobre/" || echo 000)
        case "$BARRA" in

@@ -680,6 +680,35 @@ container (a montagem mudou de `../dist` para `../site`): alguns segundos fora
 do ar, uma vez. Se `../site` tiver sido criada pelo Docker antes (dona root), o
 script avisa e diz o `chown` a rodar.
 
+## O guia para o Google (3.75): sitemap por cidade, 404 de verdade, listas mais leves
+
+Quatro mudanças vindas do relatório de indexação do Search Console:
+
+- **Sitemap por cidade.** `/sitemap.xml` virou um índice que aponta para
+  `/sitemaps/site.xml` (a home, o produto, o blog), `/sitemaps/guia.xml` (o
+  índice do guia e as regiões) e um `/sitemaps/guia-<cidade>.xml` por cidade
+  (`scripts/sitemaps.mjs`). No Search Console, em Sitemaps, envie de novo o
+  `sitemap.xml`: ele passa a listar cada parte com as URLs enviadas e as
+  indexadas, e o relatório de Páginas filtra por parte (uma cidade de cada vez).
+- **404 de verdade.** No Caddy, endereço de `/saloes/...` ou `/blog/...` sem
+  página gerada (salão que saiu do ar, cidade com letra maiúscula, bairro
+  escrito errado) responde 404 com o app, que mostra "página não encontrada";
+  antes saía 200. A página de fotos do dono (`/saloes/<cidade>/<salão>/fotos/<token>`)
+  é do app e fica de fora. O `publicar-site.sh` confere no fim: página que não
+  existe → 404, `/saloes` → 200.
+- **Bairro grande em páginas.** Bairro com mais de 100 salões sai em
+  `/bairro/<b>`, `/bairro/<b>/2`, `/bairro/<b>/3`..., cada uma com a sua
+  canônica, 100 salões e a navegação entre elas; a busca e o filtro da página
+  procuram no bairro inteiro.
+- **Listas sem o salão em noindex e horário pequeno em noindex.** O salão com
+  página fina (pouco dado, que já ia ao ar sem indexar) aparece nas listas sem
+  link rastreável: no HTML, só o nome; no site, o cartão abre a página pelo
+  app. E a página de horário numa categoria com menos de 10 salões
+  (`/horario/domingo/unhas`) vai ao ar com noindex, fora do sitemap.
+
+O aviso ao Bing (IndexNow) lê as URLs das partes do índice e sai depois da
+troca da versão no ar; o arquivo da chave vai na foto antes da troca.
+
 ## Bing na hora (3.21): IndexNow
 
 O Google lê o sitemap e vem quando quer. O Bing (e o Yandex, o Seznam e o

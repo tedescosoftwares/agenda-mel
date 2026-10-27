@@ -18,10 +18,10 @@ import {
   seoDaRegiao, trilhaDaRegiao, jsonLdDaRegiao,
 } from '../src/lib/guiaSeo.js'
 import { REGIOES, agruparPorRegiao, regiaoDaCidade, rotaDaRegiao, dadosDaRegiao, faqDaRegiao, preposicaoDaRegiao } from '../src/lib/guiaRegioes.js'
-import { colecoesDaCidade, montarColecao, linksDeColecoes, linkDoBairro } from '../src/lib/guiaColecoes.js'
+import { colecoesDaCidade, montarColecao, linksDeColecoes, linkDoBairro, paginaDaColecao, linksDasPaginas } from '../src/lib/guiaColecoes.js'
 import { panoramaDaCidade, juntarFaq, tituloDoPanorama, horasDe, faqEscrita } from '../src/lib/guiaPanorama.js'
 import { chaveDoBairro } from '../src/lib/guiaColecoes.js'
-import { mesmaCategoriaDe } from './guia-fonte.mjs'
+import { mesmaCategoriaDe, paginaFina } from './guia-fonte.mjs'
 
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 const SITE = 'https://mimo.com.vc'
@@ -35,7 +35,13 @@ const outrasCidades = (cidades, atual) => { const o = (cidades ?? []).filter((c)
 const dia = (v) => (v ? String(v).slice(0, 10) : undefined)
 const migalhas = (trilha) => `<nav aria-label="Você está em">${trilha.map(([n, r], i) => (i < trilha.length - 1 ? `<a href="${esc(r)}">${esc(n)}</a> › ` : `<span>${esc(n)}</span>`)).join('')}</nav>`
 const faqHtml = (faq) => (faq.length ? `<section><h2>Perguntas frequentes</h2>${faq.map((f) => `<h3>${esc(f.pergunta)}</h3><p>${esc(f.resposta)}</p>`).join('')}</section>` : '')
-const listaDeCartoes = (cartoes, cidadeSlug) => `<ul>${cartoes.map((c) => `<li><a href="${esc(rotaDoLugar(cidadeSlug, c.slug))}">${esc(c.nome)}</a>${c.bairro ? ` (${esc(c.bairro)})` : ''}${c.resumo ? `: ${esc(c.resumo)}` : ''}</li>`).join('')}</ul>`
+// 3.75: o salão de página fina (noindex) entra na lista pelo nome, sem link: o robô não gasta rastreio com página
+// que não vai indexar (no site, o cartão dele abre a página pelo próprio app, sem <a href>)
+const listaDeCartoes = (cartoes, cidadeSlug) => `<ul>${cartoes.map((c) => `<li>${c.fina ? esc(c.nome) : `<a href="${esc(rotaDoLugar(cidadeSlug, c.slug))}">${esc(c.nome)}</a>`}${c.bairro ? ` (${esc(c.bairro)})` : ''}${c.resumo ? `: ${esc(c.resumo)}` : ''}</li>`).join('')}</ul>`
+// as páginas de uma coleção grande (3.75): 1 · 2 · 3, a atual sem link
+const navDasPaginas = (m) => { const ls = linksDasPaginas(m); return ls.length ? `<nav aria-label="Páginas"><p>Páginas: ${ls.map((x) => (x.atual ? `<strong>${x.pagina}</strong>` : `<a href="${esc(x.caminho)}">${x.pagina}</a>`)).join(' · ')}</p></nav>` : '' }
+// o salão com a marca de página fina, para os cartões (o gerador marca uma vez; o resto do código só lê l.fina)
+const marcarFina = (l) => ({ ...l, fina: paginaFina(l) })
 
 function corpoDoLugar(l, c, faq, bairro = null) {
   const cat = categoriaDoGuia(l.categoria)
@@ -96,7 +102,7 @@ ${migalhas(trilhaDaColecao(m))}
 <h1>${esc(m.h1)}</h1>
 <p>${esc(m.chamada)}</p>
 ${m.intro.map((p) => `<p>${esc(p)}</p>`).join('')}
-<section><h2>${esc(m.tipo === 'bairro' ? `Os endereços ${/^centro$/i.test(m.nome) ? 'do Centro' : `do bairro ${m.nome}`}` : m.h1)}</h2>${listaDeCartoes(m.cartoes, m.cidade_slug)}</section>
+<section><h2>${esc(m.tipo === 'bairro' ? `Os endereços ${/^centro$/i.test(m.nome) ? 'do Centro' : `do bairro ${m.nome}`}` : m.h1)}</h2>${m.paginas > 1 ? `<p>${esc(`Do ${m.de}º ao ${m.ate}º de ${m.total}.`)}</p>` : ''}${listaDeCartoes(m.cartoes, m.cidade_slug)}${navDasPaginas(m)}</section>
 ${faqHtml(m.faq)}
 ${navDeColecoes('No mesmo horário, outras categorias', r.categorias)}
 ${navDeColecoes('Por horário', r.horarios)}
@@ -108,7 +114,7 @@ ${navDeColecoes(m.tipo === 'bairro' ? 'Outros bairros' : 'Por bairro', r.bairros
 // o mesmo agrupamento de guia_cidade(), feito aqui a partir da lista inteira. A ordem é a que
 // guia_publicadas() mandou (3.17, migração 166: MIMO, Seleção, pontos de nota e foto, nome), e
 // filtrar por categoria não a muda; a nota não vem para cá, então não dá para reordenar aqui.
-const cartao = (l) => ({ slug: l.slug, nome: l.nome, bairro: l.bairro, categoria: l.categoria, resumo: l.conteudo?.resumo ?? null, servicos: (l.servicos ?? []).slice(0, 4), selecao: l.selecao, na_mimo: l.na_mimo, latitude: l.latitude ?? null, longitude: l.longitude ?? null, foto: Array.isArray(l.fotos) && l.fotos[0] ? l.fotos[0] : null })
+const cartao = (l) => ({ slug: l.slug, nome: l.nome, bairro: l.bairro, categoria: l.categoria, resumo: l.conteudo?.resumo ?? null, servicos: (l.servicos ?? []).slice(0, 4), selecao: l.selecao, na_mimo: l.na_mimo, latitude: l.latitude ?? null, longitude: l.longitude ?? null, foto: Array.isArray(l.fotos) && l.fotos[0] ? l.fotos[0] : null, ...(l.fina ? { fina: true } : {}) })
 // as regiões em uso (3.37): as do banco (guia.regioes, com "cidades"), senão a semente do core
 const regioesDe = (guia) => (Array.isArray(guia?.regioes) && guia.regioes.length ? guia.regioes : REGIOES)
 const regiaoResumida = (r) => (r ? { slug: r.slug, nome: r.nome } : null)
@@ -131,7 +137,7 @@ function dadosDaCidade(lugares, paginas, cidadeSlug, categoria, imagens = {}, re
 
 // guia: o que guia_publicadas() devolve; artigos: [{ slug, title }] dos artigos publicados (para "Leia também")
 export function paginasDoGuia(guia, artigos = []) {
-  const lugares = Array.isArray(guia?.lugares) ? guia.lugares.filter((l) => l?.slug && l?.cidade_slug && l?.conteudo) : []
+  const lugares = Array.isArray(guia?.lugares) ? guia.lugares.filter((l) => l?.slug && l?.cidade_slug && l?.conteudo).map(marcarFina) : []
   const paginas = Array.isArray(guia?.paginas) ? guia.paginas : []
   const imagens = guia?.categorias_imagens && typeof guia.categorias_imagens === 'object' ? guia.categorias_imagens : {}
   if (!lugares.length) return []
@@ -164,9 +170,14 @@ export function paginasDoGuia(guia, artigos = []) {
       out.push({ caminho, titulo, descricao, atualizado: d.atualizado, prioridade: cat ? '0.7' : '0.8', freq: 'weekly', imagem: d.imagem || d.foto || undefined, jsonLd: jsonLdDaCidade({ ...d, foto: d.imagem || d.foto }, faq), corpo: corpoDaCidade(d, faq, colecoes, extras, panorama) })
     }
     for (const col of colecoesDaCidade(doGuia, cs)) {
-      const m = montarColecao(col, doGuia)
-      const { titulo, descricao, caminho } = seoDaColecao(m)
-      out.push({ caminho, titulo, descricao, atualizado: m.atualizado, prioridade: '0.6', freq: 'weekly', jsonLd: jsonLdDaColecao(m), corpo: corpoDaColecao(m) })
+      const inteira = montarColecao(col, doGuia)
+      // 3.75: o bairro grande sai em páginas (cada uma com a sua canônica e os seus cartões); o horário pequeno numa
+      // categoria, com noindex (fora do sitemap)
+      for (let n = 1; n <= inteira.paginas; n++) {
+        const m = paginaDaColecao(inteira, n)
+        const { titulo, descricao, caminho, noindex } = seoDaColecao(m)
+        out.push({ caminho, titulo, descricao, noindex, atualizado: m.atualizado, prioridade: n > 1 ? '0.4' : '0.6', freq: 'weekly', jsonLd: jsonLdDaColecao(m), corpo: corpoDaColecao(m) })
+      }
     }
   }
   // o índice: as cidades e, por categoria, as cidades que a têm (3.19)
@@ -228,9 +239,10 @@ const paraColecao = (l) => ({
   horarios: l.horarios ?? null, servicos: Array.isArray(l.servicos) ? l.servicos : [], atributos: l.atributos ?? {},
   resumo: l.conteudo?.resumo ?? null, selecao: !!l.selecao, na_mimo: !!l.na_mimo, atualizado_em: l.atualizado_em ?? null,
   latitude: l.latitude ?? null, longitude: l.longitude ?? null, foto: Array.isArray(l.fotos) && l.fotos[0] ? l.fotos[0] : null,
+  ...(l.fina ? { fina: true } : {}), // 3.75: o site monta a coleção daqui quando falta o arquivo pronto
 })
 export function dadosDoGuia(guia) {
-  const lugares = Array.isArray(guia?.lugares) ? guia.lugares.filter((l) => l?.slug && l?.cidade_slug && l?.conteudo) : []
+  const lugares = Array.isArray(guia?.lugares) ? guia.lugares.filter((l) => l?.slug && l?.cidade_slug && l?.conteudo).map(marcarFina) : []
   const paginas = Array.isArray(guia?.paginas) ? guia.paginas : []
   const imagens = guia?.categorias_imagens && typeof guia.categorias_imagens === 'object' ? guia.categorias_imagens : {}
   if (!lugares.length) return []

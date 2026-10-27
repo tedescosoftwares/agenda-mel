@@ -160,6 +160,8 @@ export default function App() {
             <Route path="/saloes/:cidade/:item" element={<GuiaRota />} />
             <Route path="/saloes/:cidade/:item/fotos/:token" element={<GuiaFotosDono />} />
             <Route path="/saloes/:cidade/bairro/:valor" element={<GuiaColecao tipo="bairro" />} />
+            {/* 3.75: as páginas de um bairro grande: /saloes/santos/bairro/gonzaga/2 */}
+            <Route path="/saloes/:cidade/bairro/:valor/:pagina" element={<GuiaColecao tipo="bairro" />} />
             <Route path="/saloes/:cidade/horario/:valor" element={<GuiaColecao tipo="horario" />} />
             <Route path="/saloes/:cidade/horario/:valor/:categoria" element={<GuiaColecao tipo="horario" />} />
 

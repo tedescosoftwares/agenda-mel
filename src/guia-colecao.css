@@ -16,6 +16,17 @@
 .ld .gd-col-grupo .gd-h3 { font-size: 1.05rem; }
 .gd-col-voltar { margin-top: 26px; padding-top: 18px; border-top: 1px solid var(--ld-fio); }
 
+/* as páginas de um bairro grande (3.75) */
+.gd-paginas { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 30px; flex-wrap: wrap; }
+.gd-pag-numeros { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+.ld .gd-pag { min-width: 42px; height: 42px; padding: 0 12px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; border-radius: 12px; border: 1px solid var(--ld-fio); background: #fff; color: var(--ld-ameixa); font-weight: 600; text-decoration: none; transition: border-color 0.2s ease, transform 0.2s ease; }
+.ld a.gd-pag:hover { border-color: #f6d3e1; transform: translateY(-1px); }
+.ld .gd-pag-atual { background: var(--ld-ameixa); border-color: var(--ld-ameixa); color: #fff; }
+.gd-pag-vazio { width: 1px; }
+
 @container gd (max-width: 699px) {
   .ld h1.gd-col-h1 { font-size: clamp(2.2rem, 10.5vw, 3rem); }
+  .gd-pag-numeros { order: -1; width: 100%; }
+  .ld .gd-pag-seta { flex: 1 1 0; }
+  .gd-pag-vazio { display: none; }
 }

@@ -107,8 +107,10 @@ FORCAR=0
 if [ "$MODO" = '--forcar' ] || [ -n "$PEDIDO_ID" ]; then FORCAR=1; fi
 ORIGEM=automatico; [ "$MODO" = '--forcar' ] && ORIGEM=manual
 [ -n "$PEDIDO_ID" ] && verde "$(date '+%F %T') publicando a pedido da Plataforma (pedido $PEDIDO_ID)"
+# 3.75: as URLs do sitemap, no índice com as partes (sitemaps/) ou no arquivo único de antes
+contar_urls() { cat "$1/sitemap.xml" "$1"/sitemaps/*.xml 2>/dev/null | grep -o '<url>' | wc -l | tr -d ' '; }
 registrar() { # $1 = 1 (feito) ou 0 (falhou); $2 = resumo
-  local urls; urls=$(grep -c '<loc>' "$RAIZ/dist/sitemap.xml" 2>/dev/null || echo '')
+  local urls; urls=$(contar_urls "$RAIZ/dist")
   local r; r=$(node "$RAIZ/scripts/registrar-publicacao.mjs" fim --ok "$1" --id "${PEDIDO_ID:--}" --origem "$ORIGEM" --inicio "${INICIO:--}" \
     --versao "${VERSAO:--}" --urls "${urls:--}" --resumo "$2" || true)
   if [ "$1" = 1 ] && [ "$r" = 'registrado' ] && [ -n "${VERSAO:-}" ]; then printf '%s' "$VERSAO" > "$REGISTRADA"; fi
@@ -154,7 +156,7 @@ if [ "$FORCAR" = 1 ] || [ "$VERSAO" != "$ANTERIOR" ]; then
       registrar 0 "a troca da versão no ar falhou: $(tail -3 /tmp/mimo-republicar.log | tr '\n' ' ' | cut -c1-600)"
       exit 1
     fi
-    verde "$(date '+%F %T') páginas regeneradas e no ar: $(grep -c '<loc>' dist/sitemap.xml) URLs no sitemap ($(tail -1 /tmp/mimo-republicar.log))"
+    verde "$(date '+%F %T') páginas regeneradas e no ar: $(contar_urls dist) URLs no sitemap ($(grep -v 'no ar: a versão' /tmp/mimo-republicar.log | tail -1))"
     # 3.38.2: o que o guia disse nesta rodada (cidades, salões, uma cidade do cache ou fora da rodada) fica no log também
     grep -E 'guia-fonte:|guia: |guia de salões|ATENÇÃO' /tmp/mimo-republicar.log | sed 's/^/    /' || true
     MUDOU=1
@@ -180,8 +182,12 @@ fi
 # um aviso anterior falhou e ficou pendente: o sitemap no ar ainda é diferente do
 # último avisado. Sem mudança e sem pendência, silêncio.
 if [ -n "${INDEXNOW_KEY:-}" ]; then
-  if [ "$MUDOU" = 1 ] || ! cmp -s dist/sitemap.xml "$AQUI/indexnow-ultimo.xml"; then
+  # 3.75: o sitemap.xml é um índice (não dá mais para comparar o arquivo): sem regeneração, o --se-pendente confere as
+  # URLs das partes contra o último aviso e só fala se houver o que avisar
+  if [ "$MUDOU" = 1 ]; then
     node scripts/indexnow.mjs || amarelo "$(date '+%F %T') o aviso ao Bing (IndexNow) falhou; fica para a próxima hora"
+  else
+    node scripts/indexnow.mjs --se-pendente || amarelo "$(date '+%F %T') o aviso ao Bing (IndexNow) falhou; fica para a próxima hora"
   fi
 elif [ "$MUDOU" = 1 ]; then
   amarelo 'Sem INDEXNOW_KEY no .env o Bing não é avisado na hora. Para ligar: node scripts/indexnow.mjs --gerar-chave'

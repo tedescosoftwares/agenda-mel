@@ -25,6 +25,7 @@
 // derrubar o guia inteiro: as outras cidades saem, e as páginas que ela já tinha no ar ficam.
 import fs from 'node:fs'
 import path from 'node:path'
+import { dadosDaPagina } from '../src/lib/guiaTexto.js'
 
 export const REFAZER_APOS_MS = 24 * 60 * 60 * 1000
 export const SOBRA_MS = 15 * 60 * 1000
@@ -88,7 +89,11 @@ export const cartaoDe = (l) => ({
   latitude: l.latitude ?? null, longitude: l.longitude ?? null, foto: Array.isArray(l.fotos) && l.fotos[0] ? l.fotos[0] : null,
   // 3.69: os pontos (foto + nota do Google, migração 185) vão no cartão: o app ordena "perto de você" por eles
   pontos: typeof l.pontos === 'number' && Number.isFinite(l.pontos) ? l.pontos : null,
+  // 3.75: a página do salão vai ao ar sem indexar (pouco dado): as listas do site o mostram sem link rastreável
+  ...(paginaFina(l) ? { fina: true } : {}),
 })
+// a mesma regra do noindex da página do salão (seoDoLugar): quem já vem marcado (o gerador marca) vale como está
+export const paginaFina = (l) => (typeof l?.fina === 'boolean' ? l.fina : dadosDaPagina(l).fina)
 // os n menores sem ordenar a lista inteira (cada salão olha a cidade toda: 4 mil x 4 mil cabe assim)
 function menores(itens, n, chave, desempate) {
   const top = []

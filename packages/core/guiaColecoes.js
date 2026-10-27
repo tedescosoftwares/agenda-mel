@@ -20,6 +20,14 @@
 //   - "sábado o dia todo" não tem versão por categoria (é o normal de quase
 //     todo salão) e a categoria "beleza" não tem versão por horário (o
 //     título ficaria igual ao da cidade).
+//   - 3.75: horário numa categoria com menos de MINIMO_INDEXAR_CATEGORIA salões vai ao
+//     ar sem pedir para indexar (noindex, fora do sitemap): é um pedaço da página do horário
+//     com um parágrafo curto, e o Google trata como cópia;
+//   - 3.75: bairro com mais de POR_PAGINA_COLECAO salões vira páginas (/bairro/gonzaga,
+//     /bairro/gonzaga/2...), cada uma com a sua canônica; uma lista de 500 links dilui o
+//     rastreio de cada salão. Os tipos divididos estão em COLECOES_EM_PAGINAS;
+//   - 3.75: o salão com página fina (noindex, dadosDaPagina) vem marcado "fina" no cartão,
+//     e as listas o mostram sem <a href> (o robô não gasta rastreio com página que não indexa).
 // Nada de nota nem avaliação: só endereço, bairro, horário, serviços e o que
 // o próprio lugar divulga. Quem divulga "24 horas" fica fora das contas de
 // horário (é dado que vale confirmar, como diz a página do salão).
@@ -34,6 +42,10 @@ export const MINIMO_COLECAO = 3
 export const MINIMO_COLECAO_CATEGORIA = 5
 export const TETO_COLECAO = 0.7
 export const TIPOS_DE_COLECAO = ['bairro', 'horario']
+export const MINIMO_INDEXAR_CATEGORIA = 10
+export const POR_PAGINA_COLECAO = 100
+// os tipos de coleção divididos em páginas; o horário cabe aqui do mesmo jeito (as maiores passam de mil salões)
+export const COLECOES_EM_PAGINAS = ['bairro']
 
 // ---- sorteio estável (o mesmo de guiaTexto.js) ------------------------------------------
 function hash(s) {
@@ -223,29 +235,39 @@ const HORARIOS_POR_CATEGORIA = ['domingo', 'cedo', 'noite']
 export const rotuloDoHorario = (valor) => HORARIOS[valor]?.rotulo ?? ''
 
 // ---- caminhos -------------------------------------------------------------------------------
-export function rotaDaColecao(cidadeSlug, tipo, valor, categoria = '') {
-  return `/saloes/${cidadeSlug}/${tipo}/${valor}${categoria ? `/${categoria}` : ''}`
+// pagina (3.75): a partir da 2, o número vai no fim (/saloes/santos/bairro/gonzaga/2); a 1 é o endereço de sempre
+export function rotaDaColecao(cidadeSlug, tipo, valor, categoria = '', pagina = 1) {
+  return `/saloes/${cidadeSlug}/${tipo}/${valor}${categoria ? `/${categoria}` : ''}${Number(pagina) > 1 ? `/${Number(pagina)}` : ''}`
 }
-// '/saloes/itanhaem/horario/domingo/unhas' -> { cidade, tipo, valor, categoria } | null
+// '/saloes/itanhaem/horario/domingo/unhas' -> { cidade, tipo, valor, categoria, pagina } | null
+// '/saloes/santos/bairro/gonzaga/2' -> { ..., pagina: 2 } (só nos tipos de COLECOES_EM_PAGINAS; '/1' não existe)
 export function lerCaminhoDeColecao(caminho) {
-  const p = String(caminho ?? '').split(/[?#]/)[0].replace(/\/+$/, '').split('/').filter(Boolean)
+  let p = String(caminho ?? '').split(/[?#]/)[0].replace(/\/+$/, '').split('/').filter(Boolean)
+  let pagina = 1
+  if (p.length >= 5 && /^[0-9]{1,4}$/.test(p.at(-1))) {
+    pagina = Number(p.at(-1))
+    if (pagina < 2 || !COLECOES_EM_PAGINAS.includes(p[2])) return null
+    p = p.slice(0, -1)
+  }
   if (p[0] !== 'saloes' || p.length < 4 || p.length > 5 || !p[1]) return null
-  if (p[2] === 'bairro' && p.length === 4 && /^[a-z0-9]+(-[a-z0-9]+)*$/.test(p[3])) return { cidade: p[1], tipo: 'bairro', valor: p[3], categoria: '' }
+  if (p[2] === 'bairro' && p.length === 4 && /^[a-z0-9]+(-[a-z0-9]+)*$/.test(p[3])) return { cidade: p[1], tipo: 'bairro', valor: p[3], categoria: '', pagina }
   if (p[2] !== 'horario' || !HORARIOS[p[3]]) return null
   if (p.length === 5 && !(HORARIOS_POR_CATEGORIA.includes(p[3]) && NOMES[p[4]] && p[4] !== 'beleza')) return null
-  return { cidade: p[1], tipo: 'horario', valor: p[3], categoria: p[4] ?? '' }
+  return { cidade: p[1], tipo: 'horario', valor: p[3], categoria: p[4] ?? '', pagina }
 }
+
 // o nome de uma página de coleção pelo caminho (a aba Desempenho da Plataforma usa):
 // nomes.cidade('itanhaem') -> 'Itanhaém'; nomes.bairro('centro', 'itanhaem') -> 'Centro'
 export function rotuloDaColecao(caminho, nomes = {}) {
   const c = lerCaminhoDeColecao(caminho)
   if (!c) return null
   const cidade = (nomes.cidade ?? ((s) => s))(c.cidade)
-  if (c.tipo === 'bairro') return `Salões ${noBairro(nomes.bairro?.(c.valor, c.cidade) || nomeDoSlug(c.valor))}, ${cidade}`
+  const pag = c.pagina > 1 ? ` (página ${c.pagina})` : ''
+  if (c.tipo === 'bairro') return `Salões ${noBairro(nomes.bairro?.(c.valor, c.cidade) || nomeDoSlug(c.valor))}, ${cidade}${pag}`
   const h = HORARIOS[c.valor]
-  if (!c.categoria) return `Salões ${h.frase('o')} em ${cidade}`
+  if (!c.categoria) return `Salões ${h.frase('o')} em ${cidade}${pag}`
   const [, varios, g] = nomeDa(c.categoria)
-  return `${cap(varios)} ${h.frase(g)} em ${cidade}`
+  return `${cap(varios)} ${h.frase(g)} em ${cidade}${pag}`
 }
 
 // ---- quais coleções existem ------------------------------------------------------------------
@@ -425,10 +447,50 @@ export function montarColecao(col, lugares) {
       latitude: l.latitude ?? null, longitude: l.longitude ?? null, // a distância é calculada no aparelho (3.13)
       // na página de horário, a linha do cartão é o horário que interessa; no bairro, o resumo do salão
       resumo: col.tipo === 'horario' && h && p ? h.linha(p) : (l.resumo ?? l.conteudo?.resumo ?? null),
+      // 3.75: a página do salão vai ao ar sem indexar; a lista o mostra sem link rastreável (o gerador marca l.fina)
+      ...(l.fina === true ? { fina: true } : {}),
     }
   })
   const atualizado = todos.map((l) => (l.atualizado_em ? String(l.atualizado_em).slice(0, 10) : '')).filter(Boolean).sort().at(-1)
-  return { ...col, ...texto, cartoes, relacionadas: relacionadas(col, todas), atualizado }
+  // 3.75: as páginas (bairro grande) e o noindex do horário pequeno numa categoria
+  const paginas = COLECOES_EM_PAGINAS.includes(col.tipo) ? Math.max(1, Math.ceil(cartoes.length / POR_PAGINA_COLECAO)) : 1
+  const noindex = col.tipo === 'horario' && !!col.categoria && cartoes.length < MINIMO_INDEXAR_CATEGORIA
+  return { ...col, ...texto, cartoes, relacionadas: relacionadas(col, todas), atualizado, paginas, por_pagina: POR_PAGINA_COLECAO, ...(noindex ? { noindex: true } : {}) }
+}
+
+// uma página da coleção (3.75): m é o que montarColecao() devolve, com todos os cartões. A 1 é a coleção de
+// sempre, só com os primeiros cartões; da 2 em diante, o endereço com o número, o título com "(página n)" e um
+// texto curto (a visão geral, os números e as perguntas ficam na primeira: nada de texto repetido). null se a
+// página não existe.
+export function paginaDaColecao(m, pagina = 1) {
+  if (!m) return null
+  const paginas = Math.max(1, Number(m.paginas) || 1)
+  const n = Number(pagina)
+  if (!Number.isInteger(n) || n < 1 || n > paginas) return null
+  const todos = Array.isArray(m.cartoes) ? m.cartoes : []
+  const por = Number(m.por_pagina) || POR_PAGINA_COLECAO
+  const ini = (n - 1) * por
+  const cartoes = paginas > 1 ? todos.slice(ini, ini + por) : todos
+  const base = { ...m, pagina: n, paginas, caminho_base: m.caminho, de: ini + 1, ate: ini + cartoes.length, total: todos.length, cartoes }
+  if (n === 1) return base
+  const sobre = m.tipo === 'bairro' ? `dos salões de beleza ${noBairro(m.nome)}, em ${m.cidade}` : `de “${m.h1}”`
+  return {
+    ...base,
+    caminho: rotaDaColecao(m.cidade_slug, m.tipo, m.valor, m.categoria, n),
+    h1: `${m.h1} (página ${n})`,
+    seo_title: `${m.seo_title} (página ${n})`,
+    meta_description: cortarSeco(`Página ${n} de ${paginas} ${sobre}: do ${ini + 1}º ao ${ini + cartoes.length}º de ${todos.length}, com endereço, horário e serviços de cada um.`, 158),
+    chamada: `Página ${n} de ${paginas}: do ${ini + 1}º ao ${ini + cartoes.length}º dos ${todos.length} endereços, na mesma ordem da primeira página.`,
+    intro: [`A primeira página tem a visão geral: quantos lugares são, as categorias, os horários e as perguntas frequentes.`],
+    faq: [],
+  }
+}
+// os links das páginas de uma coleção: [{ pagina, caminho, atual }] (vazio quando é uma página só)
+export function linksDasPaginas(m) {
+  const paginas = Math.max(1, Number(m?.paginas) || 1)
+  if (paginas < 2) return []
+  const atual = Number(m.pagina) || 1
+  return Array.from({ length: paginas }, (_, i) => ({ pagina: i + 1, caminho: rotaDaColecao(m.cidade_slug, m.tipo, m.valor, m.categoria, i + 1), atual: i + 1 === atual }))
 }
 
 // os links de "mais no guia": outros bairros, os horários, as categorias do mesmo horário
@@ -775,8 +837,11 @@ export function linksDeColecoes(lugares, cidadeSlug = '') {
 // a trilha (migalhas) de uma coleção, para a tela e para o JSON-LD
 export function trilhaDaColecao(m) {
   const base = [['Início', '/'], ['Salões', rotaDoGuia()], [`Salões em ${m.cidade}`, rotaDaCidade(m.cidade_slug)]]
+  // 3.75: da página 2 em diante, a coleção aponta para a primeira e a última migalha é a página
+  const pag = Number(m.pagina) > 1 ? [[`Página ${m.pagina}`, m.caminho]] : []
+  const daColecao = pag.length ? (m.caminho_base || rotaDaColecao(m.cidade_slug, m.tipo, m.valor, m.categoria)) : m.caminho
   if (m.tipo === 'horario' && m.categoria) {
-    return [...base, [HORARIOS[m.valor].rotulo, rotaDaColecao(m.cidade_slug, 'horario', m.valor)], [m.migalha || categoriaDoGuia(m.categoria).rotulo, m.caminho]]
+    return [...base, [HORARIOS[m.valor].rotulo, rotaDaColecao(m.cidade_slug, 'horario', m.valor)], [m.migalha || categoriaDoGuia(m.categoria).rotulo, daColecao], ...pag]
   }
-  return [...base, [m.migalha || m.nome, m.caminho]]
+  return [...base, [m.migalha || m.nome, daColecao], ...pag]
 }

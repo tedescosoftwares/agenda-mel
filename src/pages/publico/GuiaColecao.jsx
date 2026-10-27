@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ChevronDown, Clock, Info, LayoutGrid, MapPin, Search, X } from 'lucide-react'
+import { ChevronDown, ChevronLeft, ChevronRight, Clock, Info, LayoutGrid, MapPin, Search, X } from 'lucide-react'
 import { useSeo } from '../../lib/seo'
 import { categoriaDoGuia, rotaDaCidade, rotaDaCategoria, semAcento } from '../../lib/guia'
-import { rotuloDoHorario } from '../../lib/guiaColecoes'
+import { rotuloDoHorario, paginaDaColecao, linksDasPaginas } from '../../lib/guiaColecoes'
 import { seoDaColecao, jsonLdDaColecao, trilhaDaColecao } from '../../lib/guiaSeo'
 import { carregarColecao } from '../../lib/guiaColecoesPublico'
 import { aoClicarNaPagina } from '../../lib/eventos'
@@ -29,20 +29,26 @@ import '../../guia-colecao.css'
 // gerador com guiaColecoes.js, o mesmo que o HTML estático usa); sem o
 // arquivo, os salões no ar da cidade (guia_colecoes, 157) e a montagem aqui.
 // Coleção abaixo do mínimo de salões não existe (404).
+// 3.75: o bairro grande vem em páginas (/saloes/santos/bairro/gonzaga/2); a 1 é o endereço sem número
+// ("/1" não existe). O arquivo da coleção tem todos os cartões; a página mostra a sua parte, e a busca e
+// o filtro procuram no bairro inteiro.
 export default function GuiaColecao({ tipo }) {
-  const { cidade, valor, categoria = '' } = useParams()
+  const { cidade, valor, categoria = '', pagina } = useParams()
   const c = String(cidade ?? '').toLowerCase(), v = String(valor ?? '').toLowerCase(), cat = String(categoria).toLowerCase()
-  // outra coleção é outra montagem: nada de dado velho na tela
-  return <PaginaDaColecao key={`${c}/${tipo}/${v}/${cat}`} cidade={c} tipo={tipo} valor={v} categoria={cat} />
+  const n = pagina === undefined ? 1 : /^[0-9]{1,4}$/.test(pagina) && Number(pagina) >= 2 ? Number(pagina) : NaN
+  // outra coleção (ou outra página dela) é outra montagem: nada de dado velho na tela, e o topo da página
+  return <PaginaDaColecao key={`${c}/${tipo}/${v}/${cat}/${n}`} cidade={c} tipo={tipo} valor={v} categoria={cat} pagina={n} />
 }
 
 const POR_VEZ = 24
 
-function PaginaDaColecao({ cidade, tipo, valor, categoria }) {
+function PaginaDaColecao({ cidade, tipo, valor, categoria, pagina }) {
   // undefined = carregando · null = não existe · 'erro' = a rede falhou
   const [dados, setDados] = useState(undefined)
   const [tentativa, setTentativa] = useState(0)
-  const pronta = !!(dados && dados !== 'erro')
+  // 3.75: a parte desta página (null: a coleção não tem essa página)
+  const pm = useMemo(() => (dados && dados !== 'erro' ? paginaDaColecao(dados, pagina) : null), [dados, pagina])
+  const pronta = !!pm
   const raiz = useRevelar(pronta ? 'pronto' : 'esperando')
 
   useEffect(() => { window.scrollTo(0, 0) }, [])
@@ -53,10 +59,10 @@ function PaginaDaColecao({ cidade, tipo, valor, categoria }) {
       .catch(() => vivo && setDados('erro'))
     return () => { vivo = false }
   }, [cidade, tipo, valor, categoria, tentativa])
-  // a visita conta quando a página existe de verdade (3.11)
-  useVisita(pronta ? dados.caminho : null, pronta)
+  // a visita conta quando a página existe de verdade (3.11); a página 2, 3... conta como o bairro (eventos.js)
+  useVisita(pronta ? pm.caminho : null, pronta)
 
-  if (dados === null) return <NaoEncontrada />
+  if (dados === null || (dados && dados !== 'erro' && !pm)) return <NaoEncontrada />
   return (
     <div className="ld gd" ref={raiz} onClickCapture={aoClicarNaPagina}>
       <NavGuia />
@@ -64,7 +70,7 @@ function PaginaDaColecao({ cidade, tipo, valor, categoria }) {
         <BarraLocal />
         {dados === undefined && <Esqueleto capa={false} />}
         {dados === 'erro' && <Falhou onTentar={() => { setDados(undefined); setTentativa((t) => t + 1) }} />}
-        {pronta && <Colecao m={dados} />}
+        {pronta && <Colecao m={dados} pm={pm} />}
       </main>
       <PeSite />
     </div>
@@ -80,9 +86,10 @@ function Titulo({ texto, destaque }) {
 
 const plural = (n, um, varios) => `${n} ${n === 1 ? um : varios}`
 
-function Colecao({ m }) {
-  const seo = seoDaColecao(m)
-  useSeo({ titulo: seo.titulo, descricao: seo.descricao, caminho: seo.caminho, jsonLd: jsonLdDaColecao(m) })
+// m: a coleção inteira (todos os cartões); pm: a página que está na tela (paginaDaColecao)
+function Colecao({ m, pm }) {
+  const seo = seoDaColecao(pm)
+  useSeo({ titulo: seo.titulo, descricao: seo.descricao, caminho: seo.caminho, jsonLd: jsonLdDaColecao(pm), noindex: seo.noindex })
   const cat = m.categoria ? categoriaDoGuia(m.categoria) : null
   const [filtro, setFiltroCru] = useState('')
   const [busca, setBuscaCru] = useState('')
@@ -100,29 +107,36 @@ function Colecao({ m }) {
     for (const c of m.cartoes) n.set(c.categoria, (n.get(c.categoria) ?? 0) + 1)
     return [...n].sort((a, b) => b[1] - a[1])
   }, [m.cartoes])
+  // 3.75: em páginas, sem filtro nem busca, a lista é a da página (inteira na tela, e as páginas embaixo);
+  // com filtro ou busca, o bairro todo, de POR_VEZ em POR_VEZ
+  const emPaginas = pm.paginas > 1
+  const buscando = !!(filtro || busca.trim())
+  const daPagina = emPaginas && !buscando
+  const fonte = daPagina ? pm.cartoes : m.cartoes
   const filtrados = useMemo(() => {
     const q = semAcento(busca).toLowerCase().trim()
-    return comDistancia(m.cartoes.filter((c) => {
+    return comDistancia(fonte.filter((c) => {
       if (filtro && c.categoria !== filtro) return false
       if (!q) return true
       return semAcento([c.nome, c.bairro, ...(c.servicos ?? [])].join(' ')).toLowerCase().includes(q)
     }), referencia, porDistancia, origem === 'gps')
-  }, [m.cartoes, filtro, busca, referencia, origem, porDistancia])
+  }, [fonte, filtro, busca, referencia, origem, porDistancia])
+  const visiveis = daPagina ? filtrados : filtrados.slice(0, limite)
   const limpar = () => { setFiltro(''); setBusca('') }
 
   const kicker = m.tipo === 'bairro' ? `Guia de salões · ${m.cidade} · por bairro` : `Guia de salões · ${m.cidade} · por horário`
-  const tituloLista = m.tipo === 'bairro' ? `Os endereços ${/^centro$/i.test(m.nome) ? 'do Centro' : `do bairro ${m.nome}`}` : m.h1.slice(0, m.h1.lastIndexOf(` em ${m.cidade}`))
+  const tituloLista = m.tipo === 'bairro' ? `Os endereços ${/^centro$/i.test(m.nome) ? 'do Centro' : `do bairro ${m.nome}`}` : m.h1.slice(0, m.h1.lastIndexOf(` em ${m.cidade}`)) // m: sem o "(página n)"
   const { bairros, horarios, categorias: outrasCategorias } = m.relacionadas
 
   return (
     <>
       <section className="gd-cidade-heroi">
         <div className="gd-wrap">
-          <Migalhas trilha={trilhaDaColecao(m)} />
+          <Migalhas trilha={trilhaDaColecao(pm)} />
           <div className="gd-col-heroi">
             <span className="ld-kicker">{kicker}</span>
-            <Titulo texto={m.h1} destaque={m.destaque} />
-            <p className="ld-lead">{m.chamada}</p>
+            <Titulo texto={pm.h1} destaque={pm.destaque} />
+            <p className="ld-lead">{pm.chamada}</p>
             <div className="gd-numeros">
               {m.numeros.map((x) => <span key={x.rotulo} className="gd-numero"><strong>{x.valor}</strong><span>{x.rotulo}</span></span>)}
             </div>
@@ -133,7 +147,7 @@ function Colecao({ m }) {
       <section className="gd-sec gd-sec-lista">
         <div className="gd-wrap">
           <div className="gd-intro ld-rv">
-            <div className="gd-texto">{m.intro.map((p, i) => <p key={i}>{p}</p>)}</div>
+            <div className="gd-texto">{pm.intro.map((p, i) => <p key={i}>{p}</p>)}</div>
           </div>
         </div>
         <div className="gd-wrap" id="lista">
@@ -157,13 +171,15 @@ function Colecao({ m }) {
 
           <PertoDeVoce ordenado={porDistancia} onOrdenar={setPorDistancia} />
           <div className="gd-lista-topo" aria-live="polite">
-            <span><b>{plural(filtrados.length, 'lugar', 'lugares')}</b>{filtro ? ` em ${categoriaDoGuia(filtro).rotulo.toLowerCase()}` : ''}{busca.trim() ? ` para “${busca.trim()}”` : ''}</span>
+            {daPagina
+              ? <span>Do <b>{pm.de}º ao {pm.ate}º</b> de {plural(pm.total, 'lugar', 'lugares')} · página {pm.pagina} de {pm.paginas}</span>
+              : <span><b>{plural(filtrados.length, 'lugar', 'lugares')}</b>{filtro ? ` em ${categoriaDoGuia(filtro).rotulo.toLowerCase()}` : ''}{busca.trim() ? ` para “${busca.trim()}”` : ''}{emPaginas ? ` em todo o bairro` : ''}</span>}
             {(filtro || busca) && <button type="button" className="gd-chip-filtro" onClick={limpar}><X size={14} /> Limpar filtros</button>}
           </div>
 
           {filtrados.length ? (
             <div className={'gd-cartoes gd-cartoes-lista' + (m.tipo === 'horario' ? ' gd-col-cartoes-hora' : '')}>
-              {filtrados.slice(0, limite).map((c) => <CartaoLugar key={c.slug} lugar={c} cidadeSlug={m.cidade_slug} cidade={m.cidade} />)}
+              {visiveis.map((c) => <CartaoLugar key={c.slug} lugar={c} cidadeSlug={m.cidade_slug} cidade={m.cidade} />)}
             </div>
           ) : (
             <div className="gd-vazio">
@@ -172,13 +188,14 @@ function Colecao({ m }) {
               <button type="button" className="ld-btn ld-fantasma" onClick={limpar}>Ver todos</button>
             </div>
           )}
-          {filtrados.length > limite && (
+          {!daPagina && filtrados.length > limite && (
             <div className="gd-mais"><button type="button" className="ld-btn ld-fantasma" onClick={() => setLimite((n) => n + POR_VEZ)}>Ver mais {Math.min(POR_VEZ, filtrados.length - limite)} de {filtrados.length - limite} <ChevronDown size={16} /></button></div>
           )}
+          {daPagina && <Paginas m={pm} />}
         </div>
       </section>
 
-      <Perguntas faq={m.faq} />
+      <Perguntas faq={pm.faq} />
 
       <section className="gd-sec gd-sec-alt" aria-labelledby="gd-col-mais-t">
         <div className="gd-wrap">
@@ -215,5 +232,24 @@ function Colecao({ m }) {
         </div>
       </section>
     </>
+  )
+}
+
+// as páginas de um bairro grande (3.75): anterior, os números e a próxima, todos <a href> (o robô segue)
+function Paginas({ m }) {
+  const ls = linksDasPaginas(m)
+  if (!ls.length) return null
+  const ant = ls.find((x) => x.pagina === m.pagina - 1)
+  const prox = ls.find((x) => x.pagina === m.pagina + 1)
+  return (
+    <nav className="gd-paginas" aria-label="Páginas da lista">
+      {ant ? <Link className="gd-pag gd-pag-seta" to={ant.caminho} rel="prev"><ChevronLeft size={16} aria-hidden="true" /> Anterior</Link> : <span className="gd-pag-vazio" aria-hidden="true" />}
+      <span className="gd-pag-numeros">
+        {ls.map((x) => (x.atual
+          ? <span key={x.pagina} className="gd-pag gd-pag-atual" aria-current="page">{x.pagina}</span>
+          : <Link key={x.pagina} className="gd-pag" to={x.caminho} aria-label={`Página ${x.pagina}`}>{x.pagina}</Link>))}
+      </span>
+      {prox ? <Link className="gd-pag gd-pag-seta" to={prox.caminho} rel="next">Próxima <ChevronRight size={16} aria-hidden="true" /></Link> : <span className="gd-pag-vazio" aria-hidden="true" />}
+    </nav>
   )
 }

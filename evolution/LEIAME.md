@@ -650,6 +650,36 @@ chave anon, no `.env` da Evolution ou da raiz) e precisa do `dist/` de um
 publicar anterior. Quando o CÓDIGO muda (git pull), continua sendo o
 `publicar-site.sh`.
 
+## Publicação atômica (3.74.3): o site nunca aparece pela metade
+
+Até a 3.74.2 o Caddy servia a pasta `dist` diretamente. O build (vite) esvazia
+essa pasta, e a regeneração do guia apaga `/saloes` antes de regravar as 18 mil
+páginas: por alguns minutos, qualquer página pedida nesse intervalo saía como a
+casca do app (o `index.html` com noindex). O Google caiu nisso centenas de vezes
+(Search Console: "excluída por noindex" em páginas indexáveis e em páginas de
+bairro, que nunca levam noindex), e uma página já indexada, rastreada dentro de
+uma janela dessas, sai do índice.
+
+Agora o `dist` é só a oficina. O que vai ao ar é uma foto dele em
+`../site/versoes/<carimbo>`, e `../site/atual`, um link que o Caddy serve
+(`root * /srv/site/atual`; o docker-compose monta `../site`), passa a apontar
+para a foto nova num único rename. Nenhum pedido vê o site pela metade. As
+fotos usam hard links entre si (`rsync --link-dest`): o que não mudou não ocupa
+disco de novo, e ficam guardadas as duas últimas. O `publicar-site.sh` e o
+`republicar-se-mudou.sh` chamam isso sozinhos no fim; na mão:
+
+```bash
+cd ~/agenda-mel/evolution
+./publicar-versao.sh            # põe no ar uma foto do dist de agora
+./publicar-versao.sh --estado   # o que está no ar e as versões guardadas
+./publicar-versao.sh --voltar   # volta para a versão anterior, em um segundo
+```
+
+Na primeira publicação depois da 3.74.3 o `docker compose up -d caddy` recria o
+container (a montagem mudou de `../dist` para `../site`): alguns segundos fora
+do ar, uma vez. Se `../site` tiver sido criada pelo Docker antes (dona root), o
+script avisa e diz o `chown` a rodar.
+
 ## Bing na hora (3.21): IndexNow
 
 O Google lê o sitemap e vem quando quer. O Bing (e o Yandex, o Seznam e o

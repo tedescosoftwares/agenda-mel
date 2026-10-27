@@ -211,6 +211,7 @@ depois)
   fi
 
   azul '== Os containers voltaram? =='
+  mkdir -p ../site ../dist 2>/dev/null || true
   docker compose up -d 2>/dev/null
   sleep 3
   docker compose ps --format '  {{.Name}}\t{{.Status}}' 2>/dev/null || docker compose ps

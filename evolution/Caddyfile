@@ -50,7 +50,9 @@
 # ---------------------------------------------------------------
 # O SITE, na mesma máquina.
 #
-# O app é estático (Vite gera dist/), então não precisa de servidor
+# O app é estático (Vite gera dist/), então não precisa de servidor.
+# 3.74.3: a raiz é /srv/site/atual, um link para a versão publicada (../site/versoes/<carimbo>,
+# ver publicar-versao.sh); a troca de versão é um rename, e o site nunca aparece pela metade
 # próprio: o Caddy entrega os arquivos e, para qualquer rota que não
 # seja arquivo, devolve o index.html — é assim que /cliente/home
 # funciona ao abrir direto pela URL.
@@ -60,7 +62,7 @@
 # ---------------------------------------------------------------
 {$DOMINIO_SITE:localhost}, pro.{$DOMINIO_SITE:localhost} {
 	tls {$EMAIL}
-	root * /srv/site
+	root * /srv/site/atual
 	encode gzip
 
 	# o service worker nunca pode ser cacheado, senão a pessoa fica
@@ -165,7 +167,7 @@
 	tls {$EMAIL} {
 		dns cloudflare {$CLOUDFLARE_API_TOKEN}
 	}
-	root * /srv/site
+	root * /srv/site/atual
 	encode gzip
 
 	@sw path /sw.js

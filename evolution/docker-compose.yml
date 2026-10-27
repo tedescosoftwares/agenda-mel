@@ -134,8 +134,10 @@ services:
       SUPABASE_REF: ${SUPABASE_REF:-nenhum}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      # o build do app, gerado por ./publicar-site.sh
-      - ../dist:/srv/site:ro
+      # 3.74.3: o site no ar é ../site/atual, um link para a versão atual em ../site/versoes/<carimbo>
+      # (publicar-versao.sh). O dist é só a oficina do build e da regeneração: o Caddy não o vê mais, e
+      # ninguém pega uma página pela metade enquanto o guia é regravado.
+      - ../site:/srv/site:ro
       # sites de parceiros: um .caddy por domínio (só na VPS) e os
       # arquivos deles em ~/sites/<nome>
       - ./sites:/etc/caddy/sites:ro

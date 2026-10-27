@@ -48,6 +48,8 @@ scripts/guia/__pycache__/
 .claude/worktrees/
 # 3.40: o guia no ar guardado durante o build (publicar-site.sh)
 .guia-anterior/
+# 3.74.3: as versões do site no ar (publicar-versao.sh): estado da máquina, não código
+site/
 # 3.41: a versão que o banco já tem como publicada (republicar-se-mudou.sh e publicar-site.sh, no VPS)
 evolution/.publicacao-registrada
 # 3.42: o último aviso do cron do minuto (republicar-se-mudou.sh --pedidos), para não repetir no log

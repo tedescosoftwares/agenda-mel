@@ -9,7 +9,9 @@
 #   1. garante Node 22 (instala pelo NodeSource se não tiver)
 #   2. pergunta o domínio do site UMA vez e guarda em .env
 #   3. confere que ../.env tem as chaves do Supabase (o build precisa)
-#   4. git pull, npm ci, npm run build  →  ../dist
+#   4. git pull, npm ci, npm run build  →  ../dist (a oficina)
+#      e põe no ar uma foto do dist: ../site/versoes/<carimbo>, com ../site/atual
+#      apontando para ela num único rename (publicar-versao.sh, 3.74.3)
 #   5. sobe o Caddy de novo para ele enxergar o domínio e a pasta
 #   6. confere pela internet que o site responde
 #
@@ -39,6 +41,10 @@ if ! command -v node >/dev/null || [ "$(node -v | cut -c2-3)" -lt 22 ]; then
   sudo apt-get install -y nodejs >/dev/null
 fi
 verde "  node $(node -v) · npm $(npm -v)"
+# 3.74.3: o rsync faz a foto do site com hard links (rápida, sem gastar disco); sem ele a publicação copia o site inteiro
+if ! command -v rsync >/dev/null; then
+  sudo apt-get install -y rsync >/dev/null 2>&1 || amarelo '  sem rsync: cada publicação copia o site inteiro (funciona, só é mais lenta)'
+fi
 
 # 2. Domínio ------------------------------------------------------------------
 azul '== 2/6  Domínio do site =='
@@ -180,27 +186,34 @@ if [ ! -f dist/sitemap.xml ]; then
 fi
 [ -f dist/sitemap.xml ] && [ -f dist/_home.html ] || { vermelho 'Sem as páginas estáticas (dist/sitemap.xml, dist/_home.html). Rode: node scripts/paginas-estaticas.mjs'; exit 1; }
 verde "  SEO: $(grep -c '<loc>' dist/sitemap.xml) URLs no sitemap, páginas estáticas no lugar"
-# 3.41: registra a publicação (a Plataforma zera o que estava pendente) e grava o carimbo do conteúdo, para a rodada da
-# hora não regenerar de novo o que o build acabou de gerar
-registrar_pub 1 "build $(git rev-parse --short HEAD)"
+# o carimbo do conteúdo, para a rodada da hora não regenerar de novo o que o build acabou de gerar
 [ -n "$VERSAO_PUB" ] && printf '%s' "$VERSAO_PUB" > dist/.conteudo-versao
-[ -n "$PEDIDO_ID" ] && verde "  o \"Publicar agora\" que esperava (pedido $PEDIDO_ID) foi atendido por este build"
 # Bing na hora (IndexNow, 3.21): o build apagou o dist e, com ele, o arquivo da chave que o
-# Bing confere (dist/<chave>.txt). O indexnow.mjs regrava a chave e avisa o que mudou no sitemap.
+# Bing confere (dist/<chave>.txt). O indexnow.mjs regrava a chave (ela vai na foto, logo abaixo) e avisa o que mudou.
 if [ -n "${INDEXNOW_KEY:-}" ]; then
   node scripts/indexnow.mjs || amarelo '  o aviso ao Bing (IndexNow) falhou; o republicar-se-mudou.sh tenta de novo na próxima hora'
 else
   amarelo '  Sem INDEXNOW_KEY no .env o Bing não é avisado na hora. Para ligar: node scripts/indexnow.mjs --gerar-chave'
 fi
+# o guia guardado já voltou (ou foi refeito): a pasta do lado sai
+rm -rf "$GUIA_ANTERIOR"
+chmod -R a+rX dist
+verde "  dist/ pronto ($(du -sh dist | cut -f1))"
+# 3.74.3: até aqui o site no ar não mudou. O dist é a oficina; o que vai ao ar é uma foto dele em ../site/versoes/<carimbo>,
+# e ../site/atual (o que o Caddy serve) passa a apontar para ela num único rename. Nenhum pedido vê o site pela metade.
+mkdir -p "$RAIZ/site"
+if ! "$AQUI/publicar-versao.sh"; then
+  registrar_pub 0 'a troca da versão no ar falhou (publicar-versao.sh)'
+  vermelho 'A foto do site não foi ao ar; a versão anterior continua servindo. Veja o erro acima.'
+  exit 1
+fi
+# 3.41: registra a publicação (a Plataforma zera o que estava pendente)
+registrar_pub 1 "build $(git rev-parse --short HEAD)"
+[ -n "$PEDIDO_ID" ] && verde "  o \"Publicar agora\" que esperava (pedido $PEDIDO_ID) foi atendido por este build"
 # para não restar dúvida sobre O QUE foi publicado
 verde "  publicado o commit $(git rev-parse --short HEAD) — $(git log -1 --format=%s | cut -c1-60)"
 verde "  versão do app: $(grep -o "VERSAO = '[^']*'" src/lib/versao.js | cut -d"'" -f2)"
-# o guia guardado já voltou (ou foi refeito): a pasta do lado sai
-rm -rf "$GUIA_ANTERIOR"
-# o Caddy roda como outro usuário dentro do container: precisa ler
-chmod -R a+rX dist
-verde "  dist/ pronto ($(du -sh dist | cut -f1))"
-# o dist está pronto: a regeneração (a da hora, a do "Publicar agora") pode voltar a rodar
+# a versão está no ar: a regeneração (a da hora, a do "Publicar agora") pode voltar a rodar
 exec 9>&-
 # 3.42: o bat 2 liga o cron sozinho (a rodada da hora e a conferência do minuto, que atende o "Publicar agora")
 if ! command -v crontab >/dev/null; then
@@ -221,7 +234,8 @@ azul '== 5/6  Caddy =='
 # 2.80). A primeira compilação demora uns minutos; depois fica em cache.
 echo '  conferindo o Caddy (a primeira vez compila e demora uns minutos)…'
 docker compose build --quiet caddy
-# up -d recria só o caddy se algo mudou (a variável nova, a pasta nova)
+# up -d recria só o caddy se algo mudou (a variável nova, a pasta nova; na primeira vez depois da 3.74.3, a montagem
+# de ../site no lugar de ../dist: alguns segundos fora do ar, uma vez)
 docker compose up -d caddy >/dev/null
 # O Caddyfile é montado por ARQUIVO (./Caddyfile:/etc/caddy/Caddyfile). O Docker
 # prende a montagem ao inode: quando o git pull troca o arquivo, o container

@@ -147,16 +147,27 @@ if [ "$FORCAR" = 1 ] || [ "$VERSAO" != "$ANTERIOR" ]; then
   if node scripts/paginas-estaticas.mjs > /tmp/mimo-republicar.log 2>&1; then
     [ -n "$VERSAO" ] && printf '%s' "$VERSAO" > "$CARIMBO"
     chmod -R a+rX dist
-    verde "$(date '+%F %T') páginas regeneradas: $(grep -c '<loc>' dist/sitemap.xml) URLs no sitemap ($(tail -1 /tmp/mimo-republicar.log))"
+    # 3.74.3: até aqui o site no ar não mudou (o Caddy serve ../site/atual, não o dist). A foto do dist vai ao ar num
+    # único rename; se a troca falhar, a versão anterior continua servindo e a Plataforma fica sabendo
+    if ! "$AQUI/publicar-versao.sh" >> /tmp/mimo-republicar.log 2>&1; then
+      vermelho "$(date '+%F %T') a troca da versão no ar falhou:"; tail -5 /tmp/mimo-republicar.log
+      registrar 0 "a troca da versão no ar falhou: $(tail -3 /tmp/mimo-republicar.log | tr '\n' ' ' | cut -c1-600)"
+      exit 1
+    fi
+    verde "$(date '+%F %T') páginas regeneradas e no ar: $(grep -c '<loc>' dist/sitemap.xml) URLs no sitemap ($(tail -1 /tmp/mimo-republicar.log))"
     # 3.38.2: o que o guia disse nesta rodada (cidades, salões, uma cidade do cache ou fora da rodada) fica no log também
     grep -E 'guia-fonte:|guia: |guia de salões|ATENÇÃO' /tmp/mimo-republicar.log | sed 's/^/    /' || true
     MUDOU=1
-    registrar 1 "$(tail -1 /tmp/mimo-republicar.log | cut -c1-300)"
+    registrar 1 "$(grep -v 'no ar: a versão' /tmp/mimo-republicar.log | tail -1 | cut -c1-300)"
   else
     vermelho "$(date '+%F %T') a regeneração falhou:"; tail -20 /tmp/mimo-republicar.log
     registrar 0 "a regeneração falhou: $(tail -5 /tmp/mimo-republicar.log | tr '\n' ' ' | cut -c1-600)"
     exit 1
   fi
+elif [ ! -L "$RAIZ/site/atual" ] && [ -f "$RAIZ/dist/sitemap.xml" ] && [ -f "$RAIZ/dist/_home.html" ]; then
+  # 3.74.3: nada mudou, mas ainda não existe versão no ar (a primeira rodada depois da troca para ../site): publica o dist
+  mkdir -p "$RAIZ/site"
+  "$AQUI/publicar-versao.sh" || amarelo "$(date '+%F %T') não consegui pôr o dist no ar (publicar-versao.sh); rode ./publicar-site.sh"
 elif [ -n "$VERSAO" ] && [ "$VERSAO" != "$(cat "$REGISTRADA" 2>/dev/null || true)" ]; then
   # 3.41: o site já está nesta versão, mas o banco ainda não sabe (logo depois da migração 189, ou de um build): registra,
   # para a Plataforma saber o que já está no ar

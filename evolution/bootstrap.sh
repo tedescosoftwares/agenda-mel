@@ -201,6 +201,8 @@ if [ "$LIVRE_MB" -lt 3000 ]; then
 fi
 
 docker compose pull -q 2>/dev/null || docker compose pull
+# 3.74.3: a pasta do site no ar existe antes do Caddy subir; se o Docker a criasse, seria de root e a publicação não escreveria nela
+mkdir -p ../site ../dist
 docker compose up -d
 
 echo 'Esperando a Evolution responder (o certificado leva alguns segundos)...'

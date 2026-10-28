@@ -176,6 +176,8 @@ function passaNaVisao(it, visao, hoje) {
   // 3.59: os sinais da Mel
   if (visao === 'mel') return it.fila === 'principal' && n0(it.mel?.pedidos) > 0
   if (visao === 'querem') return it.fila === 'principal' && n0(it.mel?.quer) > 0
+  // 3.77: os salões que deixaram clientes sem resposta (o argumento do que perderam)
+  if (visao === 'sem_resposta') return it.fila === 'principal' && n0(it.mel?.sem) > 0
   return it.status === visao
 }
 const textoDeBusca = (it) => semAcento(`${it.nome} ${it.bairro ?? ''} ${it.cidade ?? ''} ${categoriaDoGuia(it.categoria).curto} ${it.nota ?? ''} ${it.dono?.nome ?? ''}`).toLowerCase()
@@ -200,6 +202,7 @@ function somar(c, f, it, hoje, sinal) {
   if (passaNaVisao(it, 'pedidos', hoje)) c.pedidos += sinal
   if (passaNaVisao(it, 'mel', hoje)) c.mel += sinal
   if (passaNaVisao(it, 'querem', hoje)) c.querem += sinal
+  if (passaNaVisao(it, 'sem_resposta', hoje)) c.sem_resposta += sinal
   if (it.ja_cliente) f.ja_eram += sinal
   else if (!(it.status === 'nao_abordar' && !it.etapa)) {
     f.para_abordar += sinal
@@ -208,13 +211,13 @@ function somar(c, f, it, hoje, sinal) {
     if (it.etapa >= 4) f.clientes += sinal
   }
 }
-const contagemVazia = () => ({ fila: 0, lembretes: 0, pedidos: 0, mel: 0, querem: 0, todos: 0, ...Object.fromEntries(STATUS.map(([id]) => [id, 0])) })
+const contagemVazia = () => ({ fila: 0, lembretes: 0, pedidos: 0, mel: 0, querem: 0, sem_resposta: 0, todos: 0, ...Object.fromEntries(STATUS.map(([id]) => [id, 0])) })
 const funilVazio = () => ({ para_abordar: 0, abordados: 0, responderam: 0, clientes: 0, ja_eram: 0 })
 // 3.59: os totais da Mel na cidade (a mesma conta de resumo.mel do banco)
-const melVazio = () => ({ pedidos: 0, abriram: 0, vai: 0, nao: 0, querem: 0, donas: 0, visitas: 0, contatos: 0 })
+const melVazio = () => ({ pedidos: 0, abriram: 0, vai: 0, nao: 0, querem: 0, donas: 0, sem: 0, visitas: 0, contatos: 0 })
 function somarMel(m, it, sinal) {
   const x = it.mel ?? {}
-  m.pedidos += sinal * n0(x.pedidos); m.abriram += sinal * n0(x.abriram); m.vai += sinal * n0(x.vai); m.nao += sinal * n0(x.nao)
+  m.pedidos += sinal * n0(x.pedidos); m.abriram += sinal * n0(x.abriram); m.vai += sinal * n0(x.vai); m.nao += sinal * n0(x.nao); m.sem += sinal * n0(x.sem)
   m.querem += sinal * (n0(x.quer) > 0 ? 1 : 0); m.donas += sinal * (x.dona_em ? 1 : 0); m.visitas += sinal * n0(it.visitas); m.contatos += sinal * n0(it.contatos)
 }
 function resumoDosItens(itens, hoje) {
@@ -530,7 +533,7 @@ export default function Abordagem({ g }) {
   if (!dados) return <div className="pg-carregando"><LoaderCircle className="pg-gira" size={18} /> Montando a fila…</div>
 
   const visoes = [['fila', 'Fila', ''], ['lembretes', 'Lembretes', contagem.lembretes ? 'ambar' : ''], ['pedidos', 'Com pedido', contagem.pedidos ? 'rosa' : ''],
-    ['querem', 'Querem a MIMO', contagem.querem ? 'rosa' : ''], ['mel', 'Pela Mel', contagem.mel ? 'roxo' : '']]
+    ['querem', 'Querem a MIMO', contagem.querem ? 'rosa' : ''], ['mel', 'Pela Mel', contagem.mel ? 'roxo' : ''], ['sem_resposta', 'Sem resposta', contagem.sem_resposta ? 'ambar' : '']]
   const detalhe = atual && (
     <Detalhe
       it={atual} dias={dados.dias} hoje={hoje} ocupado={ocupado} largo={largo}
@@ -662,6 +665,7 @@ function Funil({ n, contagem, mel, dias }) {
           <i>→</i><span><b>{formatar(mel.abriram)}</b> {n0(mel.abriram) === 1 ? 'abriu' : 'abriram'} o link</span>
           <i>→</i><span className="ok"><b>{formatar(mel.vai)}</b> {n0(mel.vai) === 1 ? 'vai' : 'vão'} atender</span>
           {n0(mel.nao) > 0 && <span className="nao">{formatar(mel.nao)} não {n0(mel.nao) === 1 ? 'vai' : 'vão'}</span>}
+          {n0(mel.sem) > 0 && <span className="nao">{formatar(mel.sem)} {n0(mel.sem) === 1 ? 'ficou' : 'ficaram'} sem resposta</span>}
           {n0(mel.querem) > 0 && <span className="quer">💗 {formatar(mel.querem)} {n0(mel.querem) === 1 ? 'salão respondeu' : 'salões responderam'} QUERO</span>}
           {n0(mel.donas) > 0 && <span className="quer">{formatar(mel.donas)} {n0(mel.donas) === 1 ? 'dona testou' : 'donas testaram'} o guia</span>}
         </p>
@@ -884,6 +888,7 @@ function Detalhe({
               <span><b>{formatar(it.mel.abriram)}</b> {n0(it.mel.abriram) === 1 ? 'abriu' : 'abriram'} o link</span>
               <span className="ok"><b>{formatar(it.mel.vai)}</b> {n0(it.mel.vai) === 1 ? 'vai' : 'vão'} atender</span>
               {n0(it.mel.nao) > 0 && <span className="nao"><b>{formatar(it.mel.nao)}</b> não vai</span>}
+              {n0(it.mel.sem) > 0 && <span className="nao" data-teste="abordagem-mel-sem"><b>{formatar(it.mel.sem)}</b> {n0(it.mel.sem) === 1 ? 'ficou' : 'ficaram'} sem resposta</span>}
             </div>
           )}
           {n0(it.mel.pedidos) > 0 && <p className="muted pa-toques">{n0(it.mel.da_pagina) ? `${it.mel.da_pagina} ${it.mel.da_pagina === 1 ? 'veio' : 'vieram'} de um toque na página do guia` : 'nenhum veio de um toque na página (chegaram pelo nome ou pelo link direto)'}{it.mel.ultimo ? ` · último ${haQuanto(it.mel.ultimo)}` : ''}</p>}

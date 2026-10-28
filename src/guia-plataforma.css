@@ -981,3 +981,19 @@
 .pg-com-planos li { font-size: 0.88rem; }
 .pg-com-sim-topo { display: inline-flex; align-items: center; gap: 0.6rem; }
 .pg-com-caixa { width: min(100%, 640px); }
+
+/* 3.77: o resgate da cliente, o relógio da VPS e os salões sem resposta */
+.pg-wa-espera.ok { color: var(--menta, #1f9d6b); }
+.pg-wa-sub-titulo { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; margin: 0; font-size: 0.85rem; }
+.pg-wa-sub-titulo svg { flex: none; align-self: center; }
+.pg-wa-janela { display: flex; align-items: center; gap: 6px; }
+.pg-wa-janela input { min-width: 0; flex: 1; }
+.pg-wa-relogio { display: flex; align-items: flex-start; gap: 6px; padding: 0.5rem 0.7rem; border-radius: 10px; font-size: 0.8rem; }
+.pg-wa-relogio svg { flex: none; margin-top: 2px; }
+.pg-wa-relogio.ok { background: color-mix(in srgb, var(--menta, #1f9d6b) 10%, #fff); color: var(--texto-2); }
+.pg-wa-relogio.falta { background: #fdecef; color: var(--carmim); }
+.pg-wa-relogio code { font-size: 0.75rem; }
+.pg-wa-sr-numeros { margin: 0; }
+.pg-wa-sr-numeros b { font-size: 1rem; color: var(--carmim); }
+.pg-wa-sr-conferido { margin: 0; display: flex; align-items: center; gap: 5px; font-size: 0.78rem; color: var(--texto-2); }
+

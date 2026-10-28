@@ -15,7 +15,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { enviarPor } from '../_shared/canais.ts'
 import { classificar } from '../_shared/ia.ts'
 import { conversar } from '../_shared/agente.ts'
-import { atenderGuia, iaDe, avisoDemora, cutucadaSalao, type Deps as DepsGuia, type Pedido } from '../_shared/guia_whats.ts'
+import { atenderGuia, iaDe, avisoDemora, cutucadaSalao, resgatarCliente, VOTO_ILEGIVEL, type Deps as DepsGuia, type Pedido } from '../_shared/guia_whats.ts'
 import { atenderOnboarding, iaOnbDe, consultarCnpjDe, consultarCepDe, consultarRuaDe, type Deps as DepsOnb } from '../_shared/guia_onboarding.ts'
 import { atenderComercial, iaComercialDe, textoCadencia, type Deps as DepsCom } from '../_shared/comercial.ts'
 
@@ -205,7 +205,9 @@ function lerEvolution(corpo: any): { mensagens: Recebida[]; status: Status[]; pr
       // grupo não interessa
       if (jid && !jid.includes('@g.us')) {
         const ehVoto = d?.messageType === 'pollUpdateMessage'
-        const texto = ehVoto ? votoDaEnquete(d) : textoDaMensagem(d?.message)
+        // 3.77: o voto que a Evolution não conseguiu decifrar (ela não tinha a enquete guardada) vira VOTO_ILEGIVEL, para a
+        // Mel pedir por texto; fora do número da Mel, ele é descartado como antes
+        const texto = ehVoto ? (votoDaEnquete(d) || VOTO_ILEGIVEL) : textoDaMensagem(d?.message)
         if (texto) {
           mensagens.push({
             // com o "+" na frente: o JID sempre traz o país, e sem o
@@ -259,6 +261,8 @@ Deno.serve(async (req) => {
     const esperado = Deno.env.get('EVOLUTION_WEBHOOK_TOKEN')
     if (!esperado || url.searchParams.get('token') !== esperado) return new Response('não autorizado', { status: 403 })
     try {
+      // 3.77: o relógio passou (a aba WhatsApp mostra "há X min"); num banco sem a 222, nada
+      try { await db.rpc('guia_whats_relogio_bateu') } catch { /* melhor-esforço */ }
       const { data, error } = await db.rpc('guia_whats_ociosas')
       if (error) return json({ erro: error.message }, 500)
       const o = (data ?? {}) as { ativo?: boolean; instancia?: string; texto_perguntar?: string; texto_encerrar?: string; perguntar?: Array<{ id: number; telefone: string }>; encerrar?: Array<{ id: number; telefone: string }> }
@@ -279,11 +283,11 @@ Deno.serve(async (req) => {
       }
       // 3.57: o mesmo relógio varre os PEDIDOS parados (migração 205): enviado há X minutos sem o salão abrir o link,
       // votar ou responder → avisa a equipe (uma vez) e/ou cutuca o salão (uma vez). Num banco sem a 205, só o ocioso.
-      let avisouDemora = 0, cutucou = 0, pedidosAtivo = false
+      let avisouDemora = 0, cutucou = 0, resgatou = 0, pedidosAtivo = false
       try {
         const { data: pd, error: ep } = await db.rpc('guia_whats_pendentes')
         if (ep) throw new Error(ep.message)
-        const pp = (pd ?? {}) as { ativo?: boolean; instancia?: string; numero_avisos?: string | null; texto_demora?: string; texto_cutucar?: string; demora?: Array<Pedido & { minutos?: number }>; cutucar?: Array<Pedido & { minutos?: number }> }
+        const pp = (pd ?? {}) as { ativo?: boolean; instancia?: string; numero_avisos?: string | null; texto_demora?: string; texto_cutucar?: string; texto_resgate?: string | null; resgate_opcoes?: number | null; demora?: Array<Pedido & { minutos?: number }>; cutucar?: Array<Pedido & { minutos?: number }>; resgate?: Array<Pedido & { status?: string }> }
         pedidosAtivo = !!pp.ativo
         if (pp.ativo) {
           const instancia = pp.instancia ?? ''
@@ -298,6 +302,18 @@ Deno.serve(async (req) => {
             const env = await enviarPor('evolution', { telefone: x.salao_tel, corpo: cutucadaSalao(pp.texto_cutucar, x), identificador: instancia })
             if (env.ok) { await db.rpc('guia_whats_pendente_feita', { id_: x.id, tipo_: 'cutucar' }); cutucou++ }
             else console.error('cutucar o salão: não saiu', env.erro)
+          }
+          // 3.77: o resgate (migração 222): a cliente cujo pedido ficou sem sinal recebe os salões sugeridos
+          const depsResgate = {
+            rpc: (nome: string, args: Record<string, unknown>) => db.rpc(nome, args) as unknown as Promise<{ data: unknown; error: { message?: string } | null }>,
+            enviar: (inst: string, telefone: string, texto: string) => enviarPor('evolution', { telefone, corpo: texto, identificador: inst }),
+          }
+          for (const x of pp.resgate ?? []) {
+            try {
+              const r = await resgatarCliente(depsResgate, { instancia, modelo: pp.texto_resgate, n: pp.resgate_opcoes }, x)
+              if (r.ok) resgatou++
+              else console.error('resgate: não saiu', r.erro)
+            } catch (e) { console.error('resgate: não deu', e) }
           }
         }
       } catch (e) {
@@ -323,7 +339,7 @@ Deno.serve(async (req) => {
       } catch (e) {
         console.error('cadência comercial: não deu para varrer (a migração 218 está aplicada?)', e)
       }
-      return json({ ok: true, ativo: !!o.ativo, perguntou, encerrou, pedidos: pedidosAtivo, avisou_demora: avisouDemora, cutucou, comercial: comercialAtivo, cadencia })
+      return json({ ok: true, ativo: !!o.ativo, perguntou, encerrou, pedidos: pedidosAtivo, avisou_demora: avisouDemora, cutucou, resgatou, comercial: comercialAtivo, cadencia })
     } catch (e) {
       return json({ erro: String((e as Error)?.message ?? e).slice(0, 300) }, 500)
     }
@@ -427,6 +443,7 @@ Deno.serve(async (req) => {
   })
 
   for (const m of mensagens) {
+    if (m.texto === VOTO_ILEGIVEL && !(guia && m.instancia && m.instancia === guia.instancia)) continue
     // 3.74: a instância comercial: a assistente de vendas, em bolhas com a pausa da Plataforma; nada passa para a Mel
     if (comercial && m.instancia && m.instancia === comercial.instancia) {
       try {

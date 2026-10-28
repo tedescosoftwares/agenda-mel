@@ -14,6 +14,9 @@
 # equipe (aviso_demora_min) e/ou cutuca o salão (cutucar_salao_min), uma vez
 # por pedido. Também configurável na aba WhatsApp (0 = desligado).
 #
+# 3.77: e o resgate da cliente (o salão não deu sinal em X minutos: a Mel oferece outros salões, dentro da janela da
+# Plataforma); cada passada fica carimbada (a aba WhatsApp mostra "o relógio passou há X min"). O bat 2 instala o cron.
+#
 #   ./cutucar-ociosas.sh          roda uma vez (mostra quantas perguntou/encerrou)
 #   ./cutucar-ociosas.sh --cron   instala no cron: a cada 5 minutos (log em cutucar.log)
 #   ./cutucar-ociosas.sh --sem-cron  tira do cron

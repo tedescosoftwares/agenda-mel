@@ -308,6 +308,33 @@ case "$CODIGO" in
        echo '  Log:  docker compose logs caddy --tail 30' ;;
   *)   amarelo "  Respondeu $CODIGO. Veja:  docker compose logs caddy --tail 30" ;;
 esac
+
+# 3.77: o WhatsApp. A Evolution passa a guardar as mensagens (é o que deixa ela ler o voto das enquetes da Mel) e os
+# relógios ficam ligados: o da Mel (avisos, cutucadas e o resgate da cliente, a cada 5 min) e a limpeza de 90 dias.
+azul '== WhatsApp: a Evolution e os relógios da Mel =='
+if docker ps --format '{{.Names}}' | grep -qx evolution; then
+  if docker inspect evolution --format '{{range .Config.Env}}{{println .}}{{end}}' 2>/dev/null | grep -qx 'DATABASE_SAVE_DATA_NEW_MESSAGE=true'; then
+    verde '  a Evolution guarda as mensagens (o voto das enquetes volta)'
+  else
+    amarelo '  a Evolution passa a guardar as mensagens (para ler o voto das enquetes): reiniciando só ela, uns segundos…'
+    docker compose up -d evolution >/dev/null 2>&1 \
+      && verde '  Evolution no ar guardando as mensagens (os números reconectam sozinhos)' \
+      || amarelo '  não consegui reiniciar a Evolution: rode  docker compose up -d evolution'
+  fi
+else
+  amarelo '  a Evolution não está rodando aqui: docker compose up -d evolution'
+fi
+if command -v crontab >/dev/null; then
+  if crontab -l 2>/dev/null | grep -q 'cutucar-ociosas.sh'; then verde '  relógio da Mel no cron (a cada 5 min)'
+  else "$AQUI/cutucar-ociosas.sh" --cron >/dev/null 2>&1 \
+         && verde '  relógio da Mel ligado: a cada 5 min (avisos, cutucadas e o resgate da cliente)' \
+         || amarelo '  não consegui ligar o relógio da Mel: rode ./cutucar-ociosas.sh --cron'; fi
+  if crontab -l 2>/dev/null | grep -q 'limpar-mensagens.sh'; then verde '  limpeza das mensagens de mais de 90 dias no cron'
+  else "$AQUI/limpar-mensagens.sh" --cron >/dev/null 2>&1 \
+         && verde '  limpeza das mensagens de mais de 90 dias ligada (todo dia às 4h17)' \
+         || amarelo '  não consegui ligar a limpeza: rode ./limpar-mensagens.sh --cron'; fi
+fi
+
 echo
 echo 'Para publicar de novo depois de um git pull: ./publicar-site.sh'
 

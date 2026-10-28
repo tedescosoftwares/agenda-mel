@@ -54,11 +54,15 @@ export const paginaSemFoto = (lugar) => !!lugar && !lugar.salon_id && fotosDoLug
 // a mensagem para o dono do salão, com os números do período (só o que é verdade e não é zero).
 // Salão que já agenda pela MIMO recebe o relatório, sem oferta. semFotos: pede as fotos.
 // 3.59: o que passou pela Mel, em contagens (nunca os nomes das clientes: o salão já os recebeu no pedido)
+// 3.77: quem deixou clientes sem resposta ouve o que perdeu, em número; quem atende, o valor do que recebeu
 export function pelaMel(m) {
   const n = n0(m?.pedidos)
   if (!n) return ''
   const vai = n0(m?.vai)
-  return `E tem mais: nesse período, ${n === 1 ? '1 cliente pediu' : `${n} clientes pediram`} horário com vocês pela MIMO, pelo nosso WhatsApp${vai ? ` — e vocês já disseram que vão atender ${vai === 1 ? '1' : vai}` : ''}. Imagina isso caindo direto na sua agenda, com confirmação automática.`
+  const sem = Math.min(n, n0(m?.sem))
+  const pediram = `nesse período, ${n === 1 ? '1 cliente pediu' : `${n} clientes pediram`} horário com vocês pela MIMO, pelo nosso WhatsApp`
+  if (sem && !vai) return `E tem mais: ${pediram} — e ${sem === n ? (n === 1 ? 'ela ficou' : 'todas ficaram') : `${sem} ${sem === 1 ? 'ficou' : 'ficaram'}`} sem resposta. ${sem === 1 ? 'É um atendimento que foi' : 'São atendimentos que foram'} para outro lugar. Com a agenda da MIMO, a cliente vê o horário livre e marca sozinha, sem depender de alguém responder.`
+  return `E tem mais: ${pediram}${vai ? ` — e vocês já disseram que vão atender ${vai === 1 ? '1' : vai}` : ''}. Imagina isso caindo direto na sua agenda, com confirmação automática.`
 }
 
 export function mensagemParaDono(p, { dias, url, cidade, semFotos = false }) {

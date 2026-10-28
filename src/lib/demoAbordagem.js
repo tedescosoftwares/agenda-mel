@@ -38,6 +38,8 @@ function melDe(lugarId, desdeMs, hoje) {
     respondeu: no.filter((l) => l.salao_respondeu_em).length, ultimo: no.map((l) => l.criado_em).sort().at(-1) ?? null,
     quer: quer.length, quer_em: quer.map((l) => l.salao_respondeu_em ?? l.criado_em).sort().at(-1) ?? null,
     dona_em: null, sair: false, da_pagina: Math.min(no.length, 1),
+    // 3.77: ficaram sem resposta (foi há mais de 2 h e nada; ou nem chegou)
+    sem: no.filter((l) => (l.status === 'enviado' && !l.clicou_em && !l.voto && !l.salao_respondeu_em && l.enviado_em && Date.now() - new Date(l.enviado_em).getTime() > 2 * 3600e3) || ['sem_contato', 'falhou'].includes(l.status)).length,
   }
   m.haQuer = haQuanto(m.quer_em, hoje)
   return m
@@ -147,6 +149,7 @@ function fila({ dias = 30, lugar_ = null, cidade_ = null, visao_ = null, busca_ 
     if (mel.vai > 0) m.push(['mel_vai', 30 * Math.min(mel.vai, 2), `disse que vai atender${mel.vai > 1 ? ` ${mel.vai} pedidos` : ''}`])
     if (mel.nao > 0 && mel.vai === 0) m.push(['mel_nao', -15, `disse que não vai atender${mel.nao > 1 ? ` (${mel.nao}×)` : ''}`])
     if (mel.sair) m.push(['mel_sair', -20, 'pediu SAIR dos pedidos da Mel'])
+    if (mel.sem > 0 && mel.vai === 0) m.push(['mel_sem', 40 * Math.min(mel.sem, 3), `${mel.sem} ${mel.sem === 1 ? 'cliente ficou' : 'clientes ficaram'} sem resposta`])
     if (l.status !== 'publicado') m.push(['info', 0, 'página fora do ar'])
     Object.entries(eventos).filter(([t, k]) => CONTATO[t] && k > 0).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 2)
       .forEach(([t, k]) => m.push(['contato', Math.min(90, 3 * k), k === 1 ? `1 pessoa ${CONTATO[t][0]}` : `${k} ${CONTATO[t][1]}`]))
@@ -170,23 +173,24 @@ function fila({ dias = 30, lugar_ = null, cidade_ = null, visao_ = null, busca_ 
       fila: fora ? 'fora' : 'principal', fora_motivo: fora, prioridade, motivos, etapa, ja_cliente: !!l.salon_id && etapa < 4,
       // 3.59
       visitas_7: n >= 7 ? Math.round((visitas * 7) / n) : visitas, visitas_7_antes: Math.round(((n >= 7 ? (visitas * 7) / n : visitas) * 3) / 4),
-      mel: { pedidos: mel.pedidos, abriram: mel.abriram, vai: mel.vai, nao: mel.nao, respondeu: mel.respondeu, quer: mel.quer, quer_em: mel.quer_em, ultimo: mel.ultimo, dona_em: mel.dona_em, sair: mel.sair, da_pagina: mel.da_pagina },
+      mel: { pedidos: mel.pedidos, abriram: mel.abriram, vai: mel.vai, nao: mel.nao, respondeu: mel.respondeu, quer: mel.quer, quer_em: mel.quer_em, ultimo: mel.ultimo, dona_em: mel.dona_em, sair: mel.sair, da_pagina: mel.da_pagina, sem: mel.sem },
     })
   }
   itens.sort((a, b) => (a.fila === 'fora') - (b.fila === 'fora') || b.prioridade - a.prioridade || (b.nota_google ?? -1) - (a.nota_google ?? -1) || (b.avaliacoes ?? -1) - (a.avaliacoes ?? -1) || a.nome.localeCompare(b.nome, 'pt-BR'))
   // os números das abas e do funil, da cidade inteira (antes do filtro e da busca)
-  const contagem = { todos: itens.length, fila: 0, lembretes: 0, pedidos: 0, mel: 0, querem: 0 }
+  const contagem = { todos: itens.length, fila: 0, lembretes: 0, pedidos: 0, mel: 0, querem: 0, sem_resposta: 0 }
   const funil = { para_abordar: 0, abordados: 0, responderam: 0, clientes: 0, ja_eram: 0 }
   const resumoMel = { pedidos: 0, abriram: 0, vai: 0, nao: 0, querem: 0, donas: 0, visitas: 0, contatos: 0 }
   const passa = (it, v) => (v === 'todos' ? true : v === 'fila' ? it.fila === 'principal'
     : v === 'lembretes' ? it.fila === 'principal' && !!it.proximo_contato && it.proximo_contato <= hoje
       : v === 'pedidos' ? it.fila === 'principal' && it.pendentes.sou_dono + it.pendentes.quero_marcar > 0
         : v === 'mel' ? it.fila === 'principal' && it.mel.pedidos > 0
-          : v === 'querem' ? it.fila === 'principal' && it.mel.quer > 0 : it.status === v)
+          : v === 'querem' ? it.fila === 'principal' && it.mel.quer > 0
+            : v === 'sem_resposta' ? it.fila === 'principal' && it.mel.sem > 0 : it.status === v)
   for (const it of itens) {
     contagem[it.status] = (contagem[it.status] ?? 0) + 1
-    for (const v of ['fila', 'lembretes', 'pedidos', 'mel', 'querem']) if (passa(it, v)) contagem[v]++
-    resumoMel.pedidos += it.mel.pedidos; resumoMel.abriram += it.mel.abriram; resumoMel.vai += it.mel.vai; resumoMel.nao += it.mel.nao
+    for (const v of ['fila', 'lembretes', 'pedidos', 'mel', 'querem', 'sem_resposta']) if (passa(it, v)) contagem[v]++
+    resumoMel.pedidos += it.mel.pedidos; resumoMel.abriram += it.mel.abriram; resumoMel.vai += it.mel.vai; resumoMel.nao += it.mel.nao; resumoMel.sem = (resumoMel.sem ?? 0) + it.mel.sem
     if (it.mel.quer > 0) resumoMel.querem++; if (it.mel.dona_em) resumoMel.donas++; resumoMel.visitas += it.visitas; resumoMel.contatos += it.contatos
     if (it.ja_cliente) funil.ja_eram++
     else if (!(it.status === 'nao_abordar' && !it.etapa)) {

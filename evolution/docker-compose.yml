@@ -29,7 +29,10 @@ services:
       DATABASE_CONNECTION_URI: postgresql://evolution:${POSTGRES_SENHA}@postgres:5432/evolution?schema=evolution_api
       DATABASE_CONNECTION_CLIENT_NAME: agendamel
       DATABASE_SAVE_DATA_INSTANCE: 'true'
-      DATABASE_SAVE_DATA_NEW_MESSAGE: 'false'
+      # 3.77: guarda as mensagens. A Evolution só decifra o voto de uma enquete se tiver a enquete guardada (a Mel pergunta
+      # "vai atender?" ao salão por enquete); sem isto o voto chegava cifrado e se perdia. O limpar-mensagens.sh apaga o
+      # que passou de 90 dias (o mesmo prazo da política de privacidade); o bat 2 liga a limpeza no cron.
+      DATABASE_SAVE_DATA_NEW_MESSAGE: 'true'
       DATABASE_SAVE_MESSAGE_UPDATE: 'false'
       DATABASE_SAVE_DATA_CONTACTS: 'false'
       DATABASE_SAVE_DATA_CHATS: 'false'

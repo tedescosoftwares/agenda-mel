@@ -53,11 +53,14 @@ let CFG = {
   msg_dona: 'Oi! 💗 Esse número é o mesmo que o {salao} tem cadastrado no guia da MIMO — então acho que é você, do salão! Quando uma cliente te encontra no guia e pede horário, chega assim pra você:\n\n{exemplo}\n\nA MIMO leva clientes até você, de graça. E tem a MIMO Agenda pra organizar tudo, com link pras clientes marcarem sozinhas (salão e autônoma). Nossa equipe vai te chamar pra mostrar. 💗',
   numero_avisos: '5513999991111',
   sobre_agenda: true, msg_sobre_agenda: MSG_SOBRE_AGENDA, msg_sobre_agenda_site: MSG_SOBRE_AGENDA_SITE,
+  // 3.77 (migração 222): o resgate da cliente e o relógio da VPS
+  resgate_min: 30, resgate_inicio: '08:00:00', resgate_fim: '21:00:00', resgate_opcoes: 3,
+  msg_resgate: 'Oi, {nome}! O {salao} ainda não respondeu o seu pedido 😕\n\n{opcoes}\n\nSe preferir esperar o {salao}, é só me dizer 💗', relogio_em: h(3),
   // 3.57: o retorno do salão (migração 205)
   enquete_ativa: true, enquete_pergunta: 'Vai atender a {cliente}?', enquete_sim: 'Sim, vou atender', enquete_nao: 'Não vou conseguir',
   msg_salao_vai_atender: 'Combinado! 💗 A {cliente} está esperando seu contato: {link}\n\nSe no fim não for conseguir atender, é só me avisar por aqui.',
   msg_salao_nao_atende: 'Tudo bem, obrigada por avisar! 💗 Eu aviso a {cliente}. Os próximos pedidos continuam chegando por aqui; para não receber mais, responda SAIR.',
-  avisar_cliente_nao: true, msg_cliente_nao_atende: 'Oi, {nome}! O {salao} não vai conseguir te atender agora 😕 Quer que eu te ajude com outro salão? Me manda o nome ou o link de outro salão do guia que eu passo seu pedido pra ele.',
+  avisar_cliente_nao: true, msg_cliente_nao_atende: 'Oi, {nome}! O {salao} não vai conseguir te atender agora 😕\n\n{opcoes}',
   aviso_nao_atende: true, msg_aviso_nao_atende: '❌ MIMO — salão não vai atender\n{salao} · {cidade} respondeu que não vai atender.\nCliente: {cliente} ({contato})\nPedido: {servico} · {preferencia}',
   aviso_demora_min: 120, msg_aviso_demora: '⏳ MIMO — salão sem resposta\n{salao} · {cidade} recebeu o pedido há {tempo} e ainda não abriu o link nem respondeu.\nCliente: {cliente} ({contato})\nPedido: {servico} · {preferencia}',
   cutucar_salao_min: 0, msg_cutucar_salao: 'Oi! A {cliente} ainda está esperando seu retorno sobre {servico} 💗 Vai dar pra atender? É só tocar no link: {link}',
@@ -95,7 +98,11 @@ const LEADS = [
     com_enquete: true, voto: 'nao', voto_origem: 'enquete', votou_em: h(60 * 4), voto_atual: 'nao', voto_mudou_em: null, aviso_demora_em: null, cutucado_em: null },
   // e um pedido parado: enviado há 3 h, sem clique, sem voto, sem resposta — o relógio avisou a equipe
   { id: 6, conversa_id: null, lugar_id: 'gl1', salao_nome: 'Studio Lírio', cidade: 'Itanhaém', cliente_nome: 'Gabi', cliente_tel: '5513922221111', servico: 'Escova', preferencia: 'hoje à tarde', observacao: null, salao_tel: '5513990001101', status: 'enviado', erro: null, enviado_em: h(180), salao_respondeu_em: null, resposta_salao: null, atendido: false, criado_em: h(180), token: 'demotoken6', cliques: 0, clicou_em: null, salao_mensagens: [],
-    com_enquete: true, voto: null, voto_origem: null, votou_em: null, voto_atual: null, voto_mudou_em: null, aviso_demora_em: h(60), cutucado_em: null },
+    com_enquete: true, voto: null, voto_origem: null, votou_em: null, voto_atual: null, voto_mudou_em: null, aviso_demora_em: h(60), cutucado_em: null,
+    // 3.77: a Mel ofereceu outros salões à Gabi, que escolheu o Ateliê (pedido 7)
+    resgate_em: h(150), resgate_motivo: 'demora', resgate_opcoes: [{ id: 'gl3', nome: 'Ateliê Cabelo & Arte', bairro: 'Centro', km: 0.8, agendar: null }, { id: 'gl2', nome: 'Espaço Bela', bairro: 'Belas Artes', km: 2.4, agendar: null }] },
+  { id: 7, conversa_id: null, lugar_id: 'gl3', salao_nome: 'Ateliê Cabelo & Arte', cidade: 'Itanhaém', cliente_nome: 'Gabi', cliente_tel: '5513922221111', servico: 'Escova', preferencia: 'hoje à tarde', observacao: null, salao_tel: '5513990002202', status: 'salao_vai_atender', erro: null, enviado_em: h(140), salao_respondeu_em: h(120), resposta_salao: null, atendido: false, criado_em: h(141), token: 'demotoken7', cliques: 1, clicou_em: h(125), salao_mensagens: [],
+    com_enquete: true, voto: 'sim', voto_origem: 'enquete', votou_em: h(120), voto_atual: 'sim', voto_mudou_em: null, aviso_demora_em: null, cutucado_em: null, resgate_de: 6 },
 ]
 // 3.59: a fila de abordagem (demoAbordagem) lê os pedidos daqui para os sinais da Mel
 export const GUIA_WHATS_LEADS = LEADS
@@ -160,6 +167,7 @@ function painel({ dias_ = 7 } = {}) {
       responderam: pedidos.filter((l) => l.salao_respondeu_em).length, querem: pedidos.filter((l) => l.status === 'salao_quer_conhecer').length,
       abriram: pedidos.filter((l) => l.clicou_em).length,
       vao_atender: pedidos.filter((l) => l.voto === 'sim').length, nao_atendem: pedidos.filter((l) => l.voto === 'nao').length, demoraram: pedidos.filter((l) => l.aviso_demora_em).length,
+      resgatados: pedidos.filter((l) => l.resgate_em).length, recuperados: pedidos.filter((l) => l.resgate_de).length,
       enviados_hoje: LEADS.filter((l) => l.enviado_em && new Date(l.enviado_em) >= hoje).length, saloes_sairam: 0,
     },
     pedidos: [...pedidos].sort((a, b) => b.criado_em.localeCompare(a.criado_em)),
@@ -171,6 +179,12 @@ function salvar({ c }) {
   if (c.numero !== undefined) { let d = String(c.numero ?? '').replace(/\D/g, ''); if (d.length === 10 || d.length === 11) d = '55' + d; if (d && !/^[1-9][0-9]{9,14}$/.test(d)) throw new Error('número inválido: use DDD e número (com 55 na frente, se quiser)'); n.numero = d || null }
   if (c.numero_avisos !== undefined) { let d = String(c.numero_avisos ?? '').replace(/\D/g, ''); if (d.length === 10 || d.length === 11) d = '55' + d; if (d && !/^[1-9][0-9]{9,14}$/.test(d)) throw new Error('número de avisos inválido: use DDD e número (com 55 na frente, se quiser)'); n.numero_avisos = d || null }
   for (const k of ['ligado', 'mostrar_contato_salao', 'exigir_preferencia', 'ocioso_ativo', 'enquete_ativa', 'avisar_cliente_nao', 'aviso_nao_atende', 'sobre_agenda']) if (typeof c[k] === 'boolean') n[k] = c[k]
+  // 3.77: o resgate
+  if (c.resgate_min !== undefined) { const v = Number(c.resgate_min); if (!(v === 0 || (v >= 5 && v <= 1440))) throw new Error('oferecer outro salão depois de: 0 (desligado) ou de 5 a 1440 minutos'); n.resgate_min = v }
+  if (c.resgate_opcoes !== undefined) { const v = Number(c.resgate_opcoes); if (!(v >= 1 && v <= 5)) throw new Error('quantos salões sugerir: de 1 a 5'); n.resgate_opcoes = v }
+  for (const k of ['resgate_inicio', 'resgate_fim']) if (typeof c[k] === 'string' && /^\d{2}:\d{2}/.test(c[k])) n[k] = `${c[k].slice(0, 5)}:00`
+  if (n.resgate_inicio >= n.resgate_fim) throw new Error('a janela do resgate: o começo antes do fim (ex.: 08:00 a 21:00)')
+  if (typeof c.msg_resgate === 'string' && c.msg_resgate.trim()) { const v = c.msg_resgate.trim(); if (v.length < 10 || !v.includes('{opcoes}')) throw new Error('a mensagem do resgate: de 10 a 1500 letras, com {opcoes}'); n.msg_resgate = v }
   for (const [k, rot] of [['msg_sobre_agenda', 'a mensagem da MIMO Agenda'], ['msg_sobre_agenda_site', 'a mensagem da MIMO Agenda com o comercial desligado']]) {
     const v = typeof c[k] === 'string' ? c[k].trim() : ''
     if (v && (v.length < 10 || v.length > 2000 || !v.includes('{link}'))) throw new Error(`${rot}: de 10 a 2000 letras, com {link}`)
@@ -208,7 +222,18 @@ export const GUIA_WHATS_RPC = {
   // 3.59
   guia_whats_clientes: (a) => clientes(a ?? {}),
   guia_demanda_sem_dono: (a) => demandaSemDono(a ?? {}),
+  // 3.77
+  guia_whats_sem_resposta: () => SEM_RESPOSTA.map((x) => ({ ...x, conferido_em: CONFERIDOS[x.lugar_id]?.em ?? null, conferido_nota: CONFERIDOS[x.lugar_id]?.nota ?? null })),
+  guia_whats_conferir: ({ lugar_, nota_, desfazer_ }) => { if (desfazer_) delete CONFERIDOS[lugar_]; else CONFERIDOS[lugar_] = { em: new Date().toISOString(), nota: String(nota_ ?? '').trim() || null }; return { ok: true } },
 }
+// 3.77: os salões que deixaram clientes sem resposta (o Studio Lírio com a Gabi; o Espaço Bela Praia nem tem WhatsApp)
+const CONFERIDOS = {}
+const SEM_RESPOSTA = [
+  { lugar_id: 'gl9', nome: 'Espaço Bela Praia', cidade: 'Mongaguá', cidade_slug: 'mongagua', slug: 'espaco-bela-praia', bairro: 'Centro', telefone: '1334481234', whatsapp: null, numero: null, invalido: false, invalido_motivo: null, na_mimo: false,
+    pedidos: 3, clientes: 3, sem_resposta: 0, nao_chegou: 3, responderam: 0, ofereceu_outro: 2, ultimo: h(60 * 70) },
+  { lugar_id: 'gl1', nome: 'Studio Lírio', cidade: 'Itanhaém', cidade_slug: 'itanhaem', slug: 'studio-lirio', bairro: 'Centro', telefone: null, whatsapp: '13990001101', numero: '5513990001101', invalido: false, invalido_motivo: null, na_mimo: false,
+    pedidos: 4, clientes: 4, sem_resposta: 1, nao_chegou: 0, responderam: 3, ofereceu_outro: 1, ultimo: h(180) },
+]
 
 // ---- a função guia-whats no demo -------------------------------------------------------------------------------------
 const preencher = (modelo, valores) => String(modelo ?? '').split('\n').filter((linha) => !/\{([a-z_]+)\}/.test(linha) || linha.replace(/\{([a-z_]+)\}/g, (x, k) => (k in valores ? String(valores[k] ?? '').trim() : x)).trim().split(':').slice(1).join(':').trim() !== '')
@@ -232,9 +257,21 @@ function simularVoto({ voto }) {
   if (voto !== 'nao') return { ok: true, acao: 'salao_vai_atender', responder: trocar(CFG.msg_salao_vai_atender, p), previaCliente: null, previaAviso: null, previaEnquete: enqueteDe(p) }
   return {
     ok: true, acao: 'salao_nao_atende', responder: trocar(CFG.msg_salao_nao_atende, p), previaEnquete: enqueteDe(p),
-    previaCliente: CFG.avisar_cliente_nao === false ? null : trocar(CFG.msg_cliente_nao_atende, { ...p, nome: p.cliente.split(' ')[0] }),
+    previaCliente: CFG.avisar_cliente_nao === false ? null : trocar(CFG.msg_cliente_nao_atende, { ...p, nome: p.cliente.split(' ')[0], opcoes: opcoesTexto(OPCOES_DEMO, p.servico) }),
     previaAviso: CFG.aviso_nao_atende === false || !CFG.numero_avisos ? null : trocar(CFG.msg_aviso_nao_atende, { ...p, cliente: p.cliente || 'sem nome', servico: p.servico || 'sem serviço', preferencia: p.preferencia || 'sem preferência' }),
   }
+}
+// 3.77: os salões que a Mel sugere no demo (a regra de verdade está em guia_whats_alternativas, migração 222)
+const OPCOES_DEMO = [{ id: 'gl3', nome: 'Ateliê Cabelo & Arte', bairro: 'Centro', km: 0.8, agendar: null }, { id: 'gl2', nome: 'Espaço Bela', bairro: 'Belas Artes', km: 2.4, agendar: 'espacobela' }]
+const opcoesTexto = (ops, servico) => ops.length
+  ? [`Achei ${ops.length === 1 ? 'este salão' : 'estes salões'} ali perto${servico ? ` para ${String(servico).toLowerCase()}` : ''}:`, '', ...ops.map((o, i) => `${i + 1}) ${o.nome}${o.bairro ? ` · ${o.bairro}` : ''}${o.km != null ? ` · ${String(o.km.toFixed(1)).replace('.', ',')} km` : ''}${o.agendar ? ' — agenda pela MIMO, você marca na hora' : ''}`), '', `Quer que eu passe o seu pedido para ${ops.length === 1 ? 'ele' : 'um deles'}? É só responder o número.`].join('\n')
+  : 'Quer que eu te ajude com outro salão? Me manda o nome ou o link de outro salão do guia que eu passo o seu pedido pra ele.'
+function simularResgate() {
+  const s = SIM
+  if (!s?.lugar) return { ok: true, responder: null, acao: 'sem_conversa_teste' }
+  const resposta = trocar(CFG.msg_resgate, { nome: (s.dados.nome ?? '').split(' ')[0], salao: s.lugar.nome, opcoes: opcoesTexto(OPCOES_DEMO, s.dados.servico) })
+  s.anterior = s.lugar.nome; s.opcoes = OPCOES_DEMO; s.estado = 'conversando'; s.mensagens.push({ q: 'mel', t: resposta })
+  return { ok: true, responder: resposta, acao: 'resgate', estado: 'conversando' }
 }
 let SIM = null // a conversa do simulador: { lugar, dados, estado, mensagens }
 function simular({ texto, lugar, comoDona }) {
@@ -271,6 +308,23 @@ function simular({ texto, lugar, comoDona }) {
     s.mensagens.push({ q: 'mel', t: resposta })
     return { ok: true, texto: t, responder: resposta, acao: 'sobre_agenda', previaSalao: null, previaEnquete: null, estado: s.estado, dados: { ...s.dados } }
   }
+  // 3.77: escolhendo entre os salões oferecidos
+  if (s.opcoes?.length && !inicio) {
+    const n = Number((palavraDemo(t).match(/^(?:o |a |opcao )?([1-9])\b/) ?? [])[1])
+    const o = s.opcoes[n - 1]
+    if (o) {
+      s.opcoes = null
+      s.lugar = { nome: o.nome, cidade_slug: 'itanhaem', slug: o.id }
+      if (o.agendar) { s.estado = 'encerrada'; resposta = `Oi! Aqui é a Mel, da MIMO 💗. O ${o.nome} já agenda pela MIMO: é só escolher o serviço e o horário aqui 👉 https://${o.agendar}.mimo.com.vc`; s.mensagens.push({ q: 'mel', t: resposta }); return { ok: true, texto: t, responder: resposta, acao: 'agenda_mimo', estado: s.estado, dados: { ...s.dados } } }
+      s.estado = 'confirmando'; acao = 'escolheu'; resposta = resumo()
+      s.mensagens.push({ q: 'mel', t: resposta })
+      return { ok: true, texto: t, responder: resposta, acao, estado: s.estado, dados: { ...s.dados } }
+    }
+    if (/\b(esperar|aguardar|nao)\b/.test(palavraDemo(t))) { s.opcoes = null; resposta = `Combinado! 💗 Vou deixar o seu pedido com o ${s.anterior}. Se mudar de ideia, é só me mandar o número de um dos salões.`; s.mensagens.push({ q: 'mel', t: resposta }); return { ok: true, texto: t, responder: resposta, acao: 'vai_esperar', estado: s.estado, dados: { ...s.dados } } }
+    resposta = `É só me responder o número do salão (de 1 a ${s.opcoes.length}) que eu passo o seu pedido 💗 Se preferir esperar o ${s.anterior}, me diz "vou esperar".`
+    s.mensagens.push({ q: 'mel', t: resposta })
+    return { ok: true, texto: t, responder: resposta, acao: 'escolhendo', estado: s.estado, dados: { ...s.dados } }
+  }
   if (/\(código:/.test(t) || s.mensagens.length === 1) { resposta = `Oi! Aqui é a Mel, da MIMO 💗, o guia onde você encontrou o ${s.lugar.nome}. Eu anoto seu pedido e passo para o salão, que te chama aqui no WhatsApp. Como é seu nome?` }
   else if (s.estado === 'confirmando' && /^(sim|pode|ok|isso|claro)\b/i.test(t)) {
     s.estado = 'enviado'; acao = 'enviado_teste'
@@ -298,6 +352,7 @@ export function demoGuiaWhats(corpo) {
   if (acao === 'simular') return simular(corpo)
   if (acao === 'reiniciar') { SIM = null; return { ok: true } }
   if (acao === 'simular_voto') return simularVoto(corpo)
+  if (acao === 'simular_resgate') return simularResgate()
   // 3.55: o agente de onboarding (a aba Onboarding), um roteiro à parte (src/lib/demoGuiaOnboarding.js)
   if (acao === 'simular_onboarding') return simularOnboarding(corpo)
   if (acao === 'reiniciar_onboarding') { reiniciarOnboarding(); return { ok: true } }

@@ -376,4 +376,11 @@ que responde recebe uma resposta uma vez (QUERO: a equipe chama; SAIR: para de r
   desligado. A conversa segue no estado em que estava; `guia_whats_config.sobre_agenda` desliga. O agente de onboarding,
   com o comercial ligado, devolve `comercial` para um gatilho sem conversa aberta, e o webhook passa à Mel com
   `opcoes.sobreAgenda`.
+- **O resgate da cliente (3.77, migração 222)**: o relógio (`?tarefa=ociosas`) pega em `guia_whats_pendentes().resgate` os
+  pedidos sem sinal há `resgate_min` (ou que nem chegaram), e `resgatarCliente` manda à cliente os salões de
+  `guia_whats_alternativas` (`textoOpcoes`) e marca com `guia_whats_oferecer` (a conversa reabre com `dados.opcoes`). A
+  resposta dela passa por `escolhaDe` (o número ou o nome) e vai ao resumo com o salão novo; o pedido novo leva
+  `resgate_de`. O "não" do salão usa as mesmas sugestões. Salão que responde depois: `guia_whats_cliente_seguiu` (obrigado
+  ao salão) ou `guia_whats_conversa_voltou` (a cliente fica sabendo). Voto ilegível (`VOTO_ILEGIVEL`): a Mel pede 1 ou 2
+  por texto. No simulador, `simular_resgate`.
 

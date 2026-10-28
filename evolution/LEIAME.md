@@ -852,3 +852,24 @@ Com o cron já instalado, não precisa fazer nada na VPS.
 Enquanto esse cron não estiver no ar, deixe o ocioso desligado na Plataforma; o resto do ciclo (quantas dúvidas depois
 do envio, encerrar por "sem avançar", esquecer a conversa parada) não depende do relógio e continua valendo.
 
+Desde a 3.77 o relógio também faz o **resgate da cliente** (o salão não deu sinal em `resgate_min`, 30 de fábrica: a Mel
+oferece outros salões perto, só entre `resgate_inicio` e `resgate_fim`), carimba a passada (a aba WhatsApp mostra "o
+relógio passou há X min") e **o bat 2 liga o cron sozinho** se ele não estiver lá.
+
+### A Evolution guarda as mensagens (3.77) e a limpeza de 90 dias
+
+A Evolution só decifra o **voto de uma enquete** se tiver a enquete guardada no banco dela. Até a 3.76 ela não guardava
+nada (`DATABASE_SAVE_DATA_NEW_MESSAGE: 'false'`), e o voto do salão no "vai atender?" chegava cifrado e se perdia. Agora
+guarda (`'true'` no `docker-compose.yml`), e o `limpar-mensagens.sh` apaga o que passou de 90 dias (o prazo da política
+de privacidade) e cria o índice que deixa rápida a busca da enquete. O bat 2 faz as duas coisas: reinicia só a Evolution
+se ela ainda não guardava (uns segundos; os números reconectam sozinhos) e liga a limpeza no cron (todo dia às 4h17).
+As enquetes enviadas antes disso continuam ilegíveis: quando chega um voto assim, a Mel pede ao salão para responder 1
+ou 2 por texto.
+
+```bash
+cd evolution
+./limpar-mensagens.sh            # roda uma vez (mostra quantas apagou)
+./limpar-mensagens.sh --cron     # todo dia às 4h17 (log em limpar-mensagens.log)
+./limpar-mensagens.sh --sem-cron # tira do cron
+```
+

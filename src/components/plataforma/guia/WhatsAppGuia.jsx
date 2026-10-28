@@ -9,6 +9,7 @@ import { Pilula, Chave, Tile, Funil, Nav, Bloco, Indice, BarraSalvar, Chat } fro
 import {
   MessageCircle, LoaderCircle, Send, RotateCcw, Save, Bot, Inbox, Check, RefreshCw, TriangleAlert, Smartphone, MessagesSquare, MousePointerClick, X, Unplug,
   ThumbsUp, ThumbsDown, Clock, BellRing, Vote, Users, Shield, Search, Globe, SlidersHorizontal, Circle, Phone, Hourglass, ChevronDown, Sparkles, Zap, Handshake, UserX,
+  PhoneMissed, LifeBuoy, Undo2, ShieldCheck,
 } from 'lucide-react'
 
 // O WhatsApp do guia (3.48, migração 195): tudo se configura aqui. A conexão do número (outra instância na mesma
@@ -24,6 +25,10 @@ import {
 //
 // 3.76 (migração 221): o bloco "Quem quer a MIMO Agenda" — a dona ou a profissional que pergunta da MIMO Agenda no
 // número da Mel recebe o link do WhatsApp comercial (ou do site, com ele desligado); os dois textos se editam aqui.
+//
+// 3.77 (migração 222): o resgate da cliente (o salão não deu sinal em X minutos → a Mel oferece outros salões; os campos
+// em "O retorno do salão", com o estado do relógio da VPS), a seção "Sem resposta" (os salões que deixaram clientes sem
+// resposta, para a equipe conferir o número) e, no simulador, "e se o salão não responder?".
 
 const faltaMigracao = (e) => e?.code === 'PGRST202' || e?.status === 404 || /could not find the function|schema cache|migração 195/i.test(e?.message ?? '')
 const STATUS = {
@@ -42,9 +47,12 @@ const CAMPOS_CONFIG = ['ligado', 'numero', 'numero_avisos', 'instancia', 'botoes
   // 3.57: o retorno do salão (migração 205)
   'enquete_ativa', 'enquete_pergunta', 'enquete_sim', 'enquete_nao', 'msg_salao_vai_atender', 'msg_salao_nao_atende', 'avisar_cliente_nao', 'msg_cliente_nao_atende', 'aviso_nao_atende', 'msg_aviso_nao_atende', 'aviso_demora_min', 'msg_aviso_demora', 'cutucar_salao_min', 'msg_cutucar_salao',
   // 3.76: quem pergunta da MIMO Agenda (migração 221)
-  'sobre_agenda', 'msg_sobre_agenda', 'msg_sobre_agenda_site']
+  'sobre_agenda', 'msg_sobre_agenda', 'msg_sobre_agenda_site',
+  // 3.77: o resgate da cliente (migração 222)
+  'resgate_min', 'resgate_inicio', 'resgate_fim', 'resgate_opcoes', 'msg_resgate']
 const VOTO = { sim: 'vou atender', nao: 'não vou conseguir' }
-const SECOES = [['pedidos', 'Pedidos', Inbox], ['clientes', 'Clientes', Users], ['conversas', 'Conversas', MessagesSquare], ['simulador', 'Testar a Mel', Bot], ['config', 'Configuração', SlidersHorizontal]]
+const RESGATE = { demora: 'o salão não deu sinal', sem_contato: 'o salão não tem WhatsApp', falhou: 'o pedido não chegou ao salão', nao: 'o salão disse não' }
+const SECOES = [['pedidos', 'Pedidos', Inbox], ['clientes', 'Clientes', Users], ['sem_resposta', 'Sem resposta', PhoneMissed], ['conversas', 'Conversas', MessagesSquare], ['simulador', 'Testar a Mel', Bot], ['config', 'Configuração', SlidersHorizontal]]
 const BLOCOS = [['conexao', 'Conexão', Smartphone], ['site', 'No site', Globe], ['mel', 'A Mel', Sparkles], ['pedido', 'O pedido ao salão', Send], ['retorno', 'O retorno do salão', Vote], ['ciclo', 'Ciclo e ocioso', RefreshCw], ['equipe', 'Equipe e dona', Users], ['agenda', 'Quem quer a MIMO Agenda', Handshake], ['dados', 'Limites e privacidade', Shield]]
 const PROBLEMAS = ['falhou', 'fora_do_limite', 'sem_contato', 'salao_saiu', 'pendente']
 const FILTROS = [
@@ -53,6 +61,7 @@ const FILTROS = [
   ['vao', 'Vão atender', (p) => p.voto === 'sim' || p.status === 'salao_vai_atender'],
   ['nao', 'Não vão atender', (p) => p.voto === 'nao' || p.status === 'salao_nao_atende'],
   ['querem', 'Querem a MIMO', (p) => p.status === 'salao_quer_conhecer'],
+  ['resgate', 'Mel ofereceu outro salão', (p) => !!p.resgate_em],
   ['problemas', 'Com problema', (p) => PROBLEMAS.includes(p.status)],
   ['atendidos', 'Atendidos', (p) => !!p.atendido],
 ]
@@ -216,6 +225,7 @@ export default function WhatsAppGuia({ g }) {
           <Tile Icon={ThumbsDown} cor="carmim" n={t.nao_atendem} rotulo="não vão atender" teste="wa-kpi-nao" />
           <Tile Icon={MessageCircle} cor="azul" n={t.responderam} rotulo="salões responderam" />
           <Tile Icon={Sparkles} cor="rosa" n={t.querem} rotulo="querem conhecer a MIMO" />
+          <Tile Icon={LifeBuoy} cor="menta" n={t.recuperados} rotulo="recuperadas: escolheram outro salão" teste="wa-kpi-recuperadas" />
           <Tile Icon={Zap} cor="ambar" n={t.enviados_hoje} extra={<small>/{form.limite_dia}</small>} rotulo="enviados hoje" barra={form.limite_dia ? Math.min(100, Math.round(((t.enviados_hoje ?? 0) / form.limite_dia) * 100)) : 0} />
         </div>
         <Funil titulo="O funil do pedido" sub={`últimos ${dias} dias`} teste="wa-funil" linhas={[['Enviados ao salão', t.enviados ?? 0], ['Abriram o link', t.abriram ?? 0], ['Disseram que vão atender', t.vao_atender ?? 0]]} />
@@ -244,7 +254,7 @@ export default function WhatsAppGuia({ g }) {
 
       {secao === 'clientes' && (
         <section className="pg-wa-secao">
-          <p className="muted pg-wa-secao-sub">As clientes que pediram horário pela Mel no período, por telefone: quantos pedidos, em quais salões, se alguém disse que vai atender e o que ficou sem dono. Quem decide o que fazer com a demanda sem dono é a equipe — a Mel não encaminha sozinha.</p>
+          <p className="muted pg-wa-secao-sub">As clientes que pediram horário pela Mel no período, por telefone: quantos pedidos, em quais salões, se alguém disse que vai atender e o que ficou sem dono. Quando o salão não responde (ou diz não), a Mel oferece outros salões e a cliente escolhe; o pedido só vai com o “sim” dela.</p>
           <div className="pg-wa-ferramentas">
             <div className="pg-chips pg-wa-filtros" data-teste="wa-cli-filtros">
               {CLIENTES_FILTROS.map(([id, rotulo]) => <button key={id} type="button" className={'plat-chip' + (filtroCli === id ? ' ativo' : '')} onClick={() => setFiltroCli(id)} aria-pressed={filtroCli === id}>{rotulo}{contagemCli[id] > 0 && <span>{contagemCli[id]}</span>}</button>)}
@@ -285,6 +295,8 @@ export default function WhatsAppGuia({ g }) {
         </section>
       )}
 
+      {secao === 'sem_resposta' && <SemResposta dias={dias} onAbordagem={irParaAbordagem} />}
+
       {secao === 'conversas' && (
         <section className="pg-wa-secao">
           <p className="muted pg-wa-secao-sub">As últimas conversas no número do guia (as de teste não entram). Toque para ler.</p>
@@ -315,7 +327,8 @@ export default function WhatsAppGuia({ g }) {
             <ul>
               <li><b>A conversa da cliente</b>, do botão do salão até o "sim": a Mel chama a IA de verdade, com a configuração salva.</li>
               <li><b>A mensagem que o salão receberia</b> e a enquete "vai atender?" que vai logo atrás — sem enviar nada.</li>
-              <li><b>Cada voto do salão:</b> o que ele, a cliente e a equipe receberiam no "sim" e no "não".</li>
+              <li><b>Cada voto do salão:</b> o que ele, a cliente e a equipe receberiam no "sim" e no "não" (no “não”, já com os salões sugeridos).</li>
+              <li><b>E se o salão não responder:</b> a mensagem que a cliente recebe com os salões sugeridos — e dá para seguir respondendo o número, como ela faria.</li>
               <li><b>A dona testando</b> o próprio salão: o reconhecimento, o exemplo e o aviso à equipe.</li>
               <li><b>Quem pergunta da MIMO Agenda</b> (“quanto custa o sistema?”, “sou dona de um salão”): a Mel responde com o link do comercial, e a conversa segue.</li>
             </ul>
@@ -405,6 +418,19 @@ export default function WhatsAppGuia({ g }) {
                     <textarea rows={3} value={form.msg_cutucar_salao ?? ''} onChange={(e) => campo('msg_cutucar_salao', e.target.value)} maxLength={1500} disabled={!(form.cutucar_salao_min > 0)} data-teste="wa-msg-cutucar" /></label>
                 </div>
                 <p className="muted pg-wa-nota"><Clock size={12} /> Os dois tempos usam o mesmo relógio (cron) do ocioso ativo na VPS: sem ele no ar, deixe em 0. A enquete e as respostas não dependem do relógio.</p>
+              </div>
+              <div className="pg-wa-sub" data-teste="wa-resgate">
+                <p className="pg-wa-sub-titulo"><LifeBuoy size={14} /> <b>Recuperar a cliente</b> <span className="muted">— o salão não deu sinal (ou o pedido nem chegou): a Mel escreve para a cliente com outros salões perto, e ela escolhe pelo número. O pedido só vai com o “sim” dela.</span></p>
+                <div className="pg-wa-grade3">
+                  <label>Oferecer outros salões depois de (min) <span className="muted">(0 = desligado)</span><input type="number" min={0} max={1440} value={form.resgate_min ?? 30} onChange={(e) => campo('resgate_min', Number(e.target.value))} data-teste="wa-resgate-min" /></label>
+                  <label>Só entre <span className="muted">(de madrugada ela espera a manhã)</span>
+                    <span className="pg-wa-janela"><input type="time" value={String(form.resgate_inicio ?? '08:00').slice(0, 5)} onChange={(e) => campo('resgate_inicio', e.target.value)} disabled={!(form.resgate_min > 0)} data-teste="wa-resgate-inicio" /> e <input type="time" value={String(form.resgate_fim ?? '21:00').slice(0, 5)} onChange={(e) => campo('resgate_fim', e.target.value)} disabled={!(form.resgate_min > 0)} data-teste="wa-resgate-fim" /></span></label>
+                  <label>Quantos salões sugerir<select className="plat-select" value={form.resgate_opcoes ?? 3} onChange={(e) => campo('resgate_opcoes', Number(e.target.value))} disabled={!(form.resgate_min > 0)} data-teste="wa-resgate-opcoes">{[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n}</option>)}</select></label>
+                </div>
+                <label>Mensagem para a cliente <span className="muted">({'{nome}'} = o primeiro nome, {'{salao}'} = o que não respondeu, {'{opcoes}'} = a lista numerada com a pergunta — obrigatória)</span>
+                  <textarea rows={4} value={form.msg_resgate ?? ''} onChange={(e) => campo('msg_resgate', e.target.value)} maxLength={1500} disabled={!(form.resgate_min > 0)} data-teste="wa-msg-resgate" /></label>
+                <p className="muted pg-wa-nota"><Sparkles size={12} /> Os salões sugeridos: a mesma cidade, com o serviço pedido (ou a mesma categoria), os mais perto (até 20 km) e, entre eles, primeiro os que agendam pela MIMO e os que costumam responder. Ficam fora o próprio salão, os que ela já tentou, quem não tem WhatsApp e quem recebeu 3 pedidos sem dar sinal. Se o primeiro salão responder depois: a cliente que já escolheu outro segue com ele (o salão recebe um obrigado); a que ainda não escolheu fica sabendo que ele vai chamar. O “não” do salão também já sugere os salões ({'{opcoes}'} na mensagem do “não”).</p>
+                <Relogio em={dados.config?.relogio_em} />
               </div>
             </Bloco>
 
@@ -511,8 +537,10 @@ function Pedido({ p, ocupado, onAtendido, onReenviar, onConversa, onAbordagem })
           </li>
         ))}
       </ol>
-      {(p.erro || p.aviso_demora_em || p.cutucado_em) && (
+      {(p.erro || p.aviso_demora_em || p.cutucado_em || p.resgate_em || p.resgate_de) && (
         <div className="pg-wa-ped-extras">
+          {p.resgate_em && <span className="pg-wa-espera" data-teste="wa-resgatado" title={(p.resgate_opcoes ?? []).map((o, i) => `${i + 1}) ${o.nome}`).join('\n') || 'sem salões para sugerir: pediu outro pelo nome'}><LifeBuoy size={13} /> Mel ofereceu {p.resgate_opcoes?.length ? `${p.resgate_opcoes.length} ${p.resgate_opcoes.length === 1 ? 'salão' : 'salões'}` : 'outro salão'} à cliente ({RESGATE[p.resgate_motivo] ?? 'sem sinal'}) · {haQuanto(p.resgate_em)}</span>}
+          {p.resgate_de && <span className="pg-wa-espera ok" data-teste="wa-recuperada"><LifeBuoy size={13} /> Cliente recuperada: veio de um salão que não respondeu</span>}
           {p.erro && <span className="pg-wa-erro"><TriangleAlert size={13} /> {p.erro}</span>}
           {p.aviso_demora_em && <span className="pg-wa-espera" data-teste="wa-demora"><Hourglass size={13} /> Equipe avisada da demora · {haQuanto(p.aviso_demora_em)}</span>}
           {p.cutucado_em && <span className="pg-wa-espera" data-teste="wa-cutucado"><BellRing size={13} /> Salão cutucado · {haQuanto(p.cutucado_em)}</span>}
@@ -534,6 +562,85 @@ function Pedido({ p, ocupado, onAtendido, onReenviar, onConversa, onAbordagem })
         {p.lugar_id && <button type="button" className="plat-link" onClick={onAbordagem} title="Abrir este salão na fila de abordagem"><Handshake size={13} /> Ver na Abordagem</button>}
       </div>
     </li>
+  )
+}
+
+// 3.77: o relógio da VPS (cutucar-ociosas.sh, a cada 5 min) é quem dispara os avisos, as cutucadas e o resgate
+const minutosDesde = (em) => (em ? Math.round((Date.now() - new Date(em).getTime()) / 60000) : null)
+function Relogio({ em }) {
+  const min = minutosDesde(em)
+  const ok = min !== null && min <= 15
+  return (
+    <p className={'pg-wa-nota pg-wa-relogio ' + (ok ? 'ok' : 'falta')} data-teste="wa-relogio">
+      <Clock size={12} /> {min === null
+        ? <>O relógio da VPS ainda não passou por aqui. O bat 2 liga o relógio sozinho (cutucar-ociosas.sh, a cada 5 min); sem ele, nada disto dispara.</>
+        : ok ? <>O relógio da VPS está rodando: passou {min < 1 ? 'agora há pouco' : `há ${min} min`}.</>
+          : <>O relógio da VPS não passa há {haQuanto(em)}: confira na VPS com <code>crontab -l | grep cutucar</code> e <code>tail cutucar.log</code>.</>}
+    </p>
+  )
+}
+
+// 3.77: os salões que deixaram clientes sem resposta (ou que o pedido nem alcançou): a equipe confere o número e anota
+function SemResposta({ dias, onAbordagem }) {
+  const [lista, setLista] = useState(null)
+  const [erro, setErro] = useState('')
+  const [ocupado, setOcupado] = useState('')
+  const [busca, setBusca] = useState('')
+  const ler = useCallback(async () => {
+    const { data, error } = await supabase.rpc('guia_whats_sem_resposta', { dias_: Math.max(dias, 30) })
+    if (error) { setErro(faltaMigracao(error) ? 'Falta a migração 222 no banco (bat, opção B).' : error.message || 'não deu para ler'); setLista([]); return }
+    setErro(''); setLista(data ?? [])
+  }, [dias])
+  useEffect(() => { const t = setTimeout(ler, 0); return () => clearTimeout(t) }, [ler])
+  const conferir = async (l, desfazer = false) => {
+    const nota = desfazer ? null : window.prompt(`O que você achou ao conferir o número de ${l.nome}? (ex.: atende por este número, número errado, não atendeu)`, l.conferido_nota ?? '')
+    if (!desfazer && nota === null) return
+    setOcupado(l.lugar_id)
+    const { error } = await supabase.rpc('guia_whats_conferir', { lugar_: l.lugar_id, nota_: nota, desfazer_: desfazer })
+    setOcupado('')
+    if (error) { setErro(error.message); return }
+    ler()
+  }
+  const q = normal(busca).trim()
+  const vistos = (lista ?? []).filter((l) => !q || normal(`${l.nome} ${l.cidade} ${l.bairro} ${l.numero}`).includes(q))
+  return (
+    <section className="pg-wa-secao" data-teste="wa-sem-resposta">
+      <p className="muted pg-wa-secao-sub">Os salões que deixaram clientes sem resposta nos últimos {Math.max(dias, 30)} dias: o pedido foi há mais de 2 horas e ele não abriu o link, não votou nem escreveu — ou o pedido nem chegou (sem WhatsApp, o envio falhou). Vale conferir se o número atende; e o número de clientes perdidas é o argumento na abordagem.</p>
+      <div className="pg-wa-ferramentas">
+        <label className="pg-wa-busca"><Search size={14} /><input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar salão, cidade, bairro ou número" /></label>
+      </div>
+      {erro && <p className="pg-wa-erro"><TriangleAlert size={13} /> {erro}</p>}
+      {lista === null ? <Vazio>Carregando…</Vazio> : vistos.length === 0 ? <Vazio>Nenhum salão deixou cliente sem resposta no período. 💗</Vazio> : (
+        <ul className="pg-wa-peds pg-wa-sr-lista">
+          {vistos.map((l) => (
+            <li key={l.lugar_id} className={'pg-wa-ped pg-wa-sr ' + (l.conferido_em ? 'neutro' : 'falha')} data-teste="wa-sem-resposta-item">
+              <div className="pg-wa-ped-cab">
+                <Iniciais nome={l.nome} />
+                <div className="pg-wa-ped-quem">
+                  <b>{l.nome}</b>
+                  <span className="muted">{[l.bairro, l.cidade].filter(Boolean).join(' · ')}{l.numero ? ` · ${tel(l.numero)}` : ' · sem celular no cadastro'}{l.invalido ? ' · número marcado sem WhatsApp' : ''}</span>
+                </div>
+                <div className="pg-wa-ped-dir"><small className="muted">último pedido {haQuanto(l.ultimo)}</small></div>
+              </div>
+              <p className="pg-wa-sr-numeros">
+                <b>{l.sem_resposta + l.nao_chegou}</b> {l.sem_resposta + l.nao_chegou === 1 ? 'cliente ficou' : 'clientes ficaram'} sem resposta
+                {l.nao_chegou > 0 && <span className="muted"> ({l.nao_chegou} nem {l.nao_chegou === 1 ? 'chegou' : 'chegaram'} ao salão)</span>}
+                <span className="muted"> · {l.pedidos} {l.pedidos === 1 ? 'pedido' : 'pedidos'} no período{l.responderam > 0 ? ` · respondeu ${l.responderam}` : ''}{l.ofereceu_outro > 0 ? ` · a Mel ofereceu outro salão ${l.ofereceu_outro}×` : ''}</span>
+              </p>
+              {l.conferido_em && <p className="pg-wa-sr-conferido"><ShieldCheck size={13} /> Conferido {haQuanto(l.conferido_em)}{l.conferido_nota ? `: ${l.conferido_nota}` : ''}</p>}
+              <div className="pg-wa-ped-acoes">
+                {l.numero && <a className="plat-link" href={`https://wa.me/${l.numero}`} target="_blank" rel="noopener noreferrer"><MessageCircle size={13} /> Testar no WhatsApp</a>}
+                {(l.telefone || l.numero) && <a className="plat-link" href={`tel:+${String(l.numero || l.telefone).replace(/\D/g, '').replace(/^(?!55)/, '55')}`}><Phone size={13} /> Ligar</a>}
+                <button type="button" className="plat-link" onClick={() => conferir(l)} disabled={ocupado === l.lugar_id} data-teste="wa-conferir"><ShieldCheck size={13} /> {l.conferido_em ? 'Conferir de novo' : 'Marcar como conferido'}</button>
+                {l.conferido_em && <button type="button" className="plat-link" onClick={() => conferir(l, true)} disabled={ocupado === l.lugar_id}><Undo2 size={13} /> Desfazer</button>}
+                <a className="plat-link" href={`/saloes/${l.cidade_slug}/${l.slug}`} target="_blank" rel="noopener noreferrer"><Globe size={13} /> A página</a>
+                <button type="button" className="plat-link" onClick={() => onAbordagem(l.nome)}><Handshake size={13} /> Ver na Abordagem</button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   )
 }
 
@@ -573,6 +680,15 @@ function Simulador({ g, cfg }) {
   const comecar = () => { const l = lugarDoCaminho(); if (!l.cidade_slug || !l.slug) { setErro('informe cidade/slug, como itanhaem/studio-lirio'); return } setMensagens([]); limparPrevias(); mandar({ lugar: l, comoDona: dona }) }
   const enviar = (e) => { e.preventDefault(); const t = texto.trim(); if (!t) return; setTexto(''); mandar({ texto: t, comoDona: dona }) }
   const reiniciar = async () => { setMensagens([]); limparPrevias(); setErro(''); try { await chamar('guia-whats', { acao: 'reiniciar' }) } catch { /* sem conversa */ } }
+  // 3.77: "e se o salão não responder?": a mensagem do resgate entra na conversa, que reabre com as opções (nada sai)
+  const simularResgate = async () => {
+    setOcupado(true); setErro('')
+    try {
+      const r = await chamar('guia-whats', { acao: 'simular_resgate' })
+      if (r.responder) { setMensagens((m) => [...m, { q: 'mel', t: r.responder }]); limparPrevias(); setEncaminhou(false) }
+      else setErro('não há conversa de teste com salão para simular')
+    } catch (e) { setErro(e.message) } finally { setOcupado(false) }
+  }
   // 3.57: "o salão votou": só prévias — não existe pedido de verdade na conversa de teste, nada é enviado
   const simularVoto = async (v) => {
     setOcupado(true); setErro('')
@@ -626,6 +742,7 @@ function Simulador({ g, cfg }) {
                   <span className="muted">E se o salão respondesse?</span>
                   <button type="button" className="btn btn-ghost" onClick={() => simularVoto('sim')} disabled={ocupado} data-teste="wa-sim-voto-sim"><ThumbsUp size={14} /> Sim, vou atender</button>
                   <button type="button" className="btn btn-ghost" onClick={() => simularVoto('nao')} disabled={ocupado} data-teste="wa-sim-voto-nao"><ThumbsDown size={14} /> Não vou conseguir</button>
+                  <button type="button" className="btn btn-ghost" onClick={simularResgate} disabled={ocupado} data-teste="wa-sim-resgate"><LifeBuoy size={14} /> E se não responder?</button>
                 </div>
               )}
             </>

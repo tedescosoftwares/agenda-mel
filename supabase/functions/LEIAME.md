@@ -370,4 +370,10 @@ que responde recebe uma resposta uma vez (QUERO: a equipe chama; SAIR: para de r
   privacidade, seção 3.10, diz 90; se aumentar, mude a política).
 - **Testar sem rede**: `node --experimental-strip-types <t_guiawhats.mjs>` (o teste da 3.48 roda o bot com deps de
   mentira: a conversa inteira, o salão respondendo, SAIR/VOLTAR/QUERO, apagar, o simulador e os dois provedores).
+- **Quem quer a MIMO Agenda (3.76, migração 221)**: quem escreve para a Mel querendo saber da MIMO Agenda (pelas frases
+  óbvias, `sobreAgendaDe`, ou pela IA, o campo `sobre_agenda`) recebe `textoSobreAgenda`: o link do WhatsApp comercial
+  (`comercial_publico`) com a frase "Vim pela Mel" (o `comercial.ts` marca a origem `mel`), ou o site com o comercial
+  desligado. A conversa segue no estado em que estava; `guia_whats_config.sobre_agenda` desliga. O agente de onboarding,
+  com o comercial ligado, devolve `comercial` para um gatilho sem conversa aberta, e o webhook passa à Mel com
+  `opcoes.sobreAgenda`.
 

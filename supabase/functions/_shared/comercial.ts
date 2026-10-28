@@ -64,8 +64,11 @@ type Contexto = { config: Config | null; planos: Plano[] | null; cliente: { sala
 
 export const FRASE_BOTAO = 'Oi! Quero conhecer a MIMO Agenda.'
 const APAGAR = /\b(apag|exclu|delet|remov)[a-z]*\b.*\b(dados|conversa|numero|informac)/
-// o que a Mel manda no link para a dona e para o salão que respondeu QUERO: "… para o {salão} ({cidade})."
-const VINDO_DA_MEL = /para o (.+?)(?: \(([^()]+)\))?\.?\s*$/i
+// o que a Mel manda no link para a dona e para o salão que respondeu QUERO: "…quero conhecer a MIMO Agenda para o {salão}
+// ({cidade})." (3.76: só com "MIMO Agenda para o", para um "quero o preço para o meu salão" escrito à mão não virar origem
+// Mel); para quem perguntou da MIMO Agenda sem salão, "Vim pela Mel"
+const VINDO_DA_MEL = /mimo agenda para o (.+?)(?: \(([^()]+)\))?\.?\s*$/i
+const PELA_MEL = /\bvim pela mel\b/
 export const EMAIL = /^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i
 
 export const reais = (cents: number) => `R$ ${(Math.max(0, Number(cents) || 0) / 100).toFixed(2).replace('.', ',')}`
@@ -294,6 +297,8 @@ export async function atenderComercial(deps: Deps, e: Entrada, opcoes: { teste?:
       origem = /respondi quero/i.test(texto) ? 'quero' : 'mel'
       dados.salao = vindo[1].trim().slice(0, 80)
       if (vindo[2]) dados.cidade = vindo[2].trim().slice(0, 60)
+    } else if (PELA_MEL.test(p)) {
+      origem = 'mel' // 3.76: a Mel mandou para cá quem perguntou da MIMO Agenda no número das clientes
     } else if (/quero conhecer a mimo agenda|quero criar minha conta/.test(p) || (/\bmimo\b/.test(p) && /plano|sistema|agenda|duvida|demonstra|conhecer/.test(p))) {
       origem = 'botao' // a frase do botão, ou as chamadas do site (planos, dúvida, demonstração…)
     } else origem = 'direto'
@@ -306,7 +311,7 @@ export async function atenderComercial(deps: Deps, e: Entrada, opcoes: { teste?:
     // quem veio pela Mel já disse o salão e a cidade: procura no guia antes mesmo da IA
     if (dados.salao && dados.cidade) await procurarNoGuia()
     // só um "oi" (ou a frase do botão): a apresentação basta; o resto segue para a IA responder também
-    const curta = p.split(' ').length <= 3 || origem === 'botao' || !!vindo
+    const curta = p.split(' ').length <= 3 || origem === 'botao' || origem === 'mel' || !!vindo
     if (curta) return await guardar('apresentou')
   }
   // 5. quem já é cliente: o suporte, uma vez (depois a IA segue sabendo)

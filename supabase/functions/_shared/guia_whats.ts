@@ -18,6 +18,8 @@ export type PedidoIa = { provedor: string; modelo: string; sistema: string; mens
 export type LeituraIa = {
   resposta: string; nome: string; servico: string; preferencia: string; observacao: string
   cliente_confirmou_envio: boolean; cancelar: boolean; quer_apagar_dados: boolean
+  // 3.76: quem escreve quer saber da MIMO Agenda (não marcar horário); e se disse que é deste salão
+  sobre_agenda: boolean; dona_do_salao: boolean
 }
 export type Deps = {
   rpc: (nome: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message?: string } | null }>
@@ -41,7 +43,7 @@ export type Saida = {
   dados?: Dados
   erro?: string
 }
-type Dados = { nome?: string; servico?: string; preferencia?: string; observacao?: string; pos_envio?: number; sem_avanco?: number; dona?: boolean; salao_recusou?: string }
+type Dados = { nome?: string; servico?: string; preferencia?: string; observacao?: string; pos_envio?: number; sem_avanco?: number; dona?: boolean; salao_recusou?: string; comercial?: number }
 type Lugar = {
   id: string; nome: string; categoria?: string | null; cidade?: string | null; cidade_slug?: string; slug?: string; uf?: string | null
   bairro?: string | null; endereco?: string | null; servicos?: string[] | null; horarios?: unknown; telefone?: string | null; whatsapp?: string | null
@@ -61,6 +63,8 @@ type Config = {
   avisar_cliente_nao?: boolean; msg_cliente_nao_atende?: string | null
   aviso_nao_atende?: boolean; msg_aviso_nao_atende?: string | null
   aviso_demora_min?: number | null; msg_aviso_demora?: string | null; cutucar_salao_min?: number | null; msg_cutucar_salao?: string | null
+  // 3.76 (migração 221): quem pergunta da MIMO Agenda vai para o WhatsApp comercial (ou para o site, com ele desligado)
+  sobre_agenda?: boolean | null; msg_sobre_agenda?: string | null; msg_sobre_agenda_site?: string | null
 }
 // o pedido como o banco devolve (guia_whats_lead_criar / guia_whats_voto / guia_whats_pendentes): o que as mensagens usam
 export type Pedido = {
@@ -321,6 +325,10 @@ export function sistema(cfg: Config, l: Lugar, d: Dados, estado: string, nomePer
     '- cliente_confirmou_envio: true só se o estado é confirmando e ela respondeu que sim, que pode enviar.',
     '- cancelar: true se ela desistiu do pedido.',
     '- quer_apagar_dados: true se ela pediu para apagar os dados dela.',
+    ...(cfg.sobre_agenda !== false ? [
+      '- sobre_agenda: true se quem escreve não quer marcar horário, e sim saber da MIMO Agenda: é dona, dono ou profissional de beleza perguntando do sistema de agendamento da MIMO, dos planos ou do preço da MIMO, de como contratar, de como colocar o salão dela na MIMO ou no guia, ou propondo parceria. Perguntas sobre ESTE salão (preço de um serviço, horário, endereço, se tem vaga) não contam. Quando for true, deixe a resposta curta: o sistema manda o contato certo.',
+      '- dona_do_salao: true só se ela disse que é a dona ou que trabalha NESTE salão.',
+    ] : ['- sobre_agenda e dona_do_salao: sempre false.']),
   ].join('\n')
 }
 
@@ -336,8 +344,10 @@ export const ESQUEMA = {
     cliente_confirmou_envio: { type: 'boolean' },
     cancelar: { type: 'boolean' },
     quer_apagar_dados: { type: 'boolean' },
+    sobre_agenda: { type: 'boolean' },
+    dona_do_salao: { type: 'boolean' },
   },
-  required: ['resposta', 'nome', 'servico', 'preferencia', 'observacao', 'cliente_confirmou_envio', 'cancelar', 'quer_apagar_dados'],
+  required: ['resposta', 'nome', 'servico', 'preferencia', 'observacao', 'cliente_confirmou_envio', 'cancelar', 'quer_apagar_dados', 'sobre_agenda', 'dona_do_salao'],
 }
 
 // ---- a conversa -----------------------------------------------------------------------------------------------------
@@ -356,16 +366,68 @@ async function chamar(deps: Deps, nome: string, args: Record<string, unknown>): 
 // 3.74: o WhatsApp comercial (migração 218). Quando está ligado, a dona que a Mel reconhece e o salão que responde QUERO
 // recebem o link da assistente comercial, já com a frase que diz de onde vieram (o motor dela lê "para o {salão} ({cidade})").
 // Num banco sem a 218, ou desligado, não há link e a Mel fala como antes.
-export async function linkComercial(deps: Deps, salao: { nome: string; cidade?: string | null }, quero = false): Promise<string> {
+type Comercial = { ligado: boolean; numero?: string; nome?: string }
+async function comercialPublico(deps: { rpc: Deps['rpc'] }): Promise<Comercial> {
   try {
-    const c = (await deps.rpc('comercial_publico', {})).data as { ligado?: boolean; numero?: string; nome?: string } | null
-    if (!c?.ligado || !c.numero) return ''
-    const frase = `${quero ? 'Oi! Respondi QUERO ao pedido da MIMO:' : 'Oi! Vim pelo guia da MIMO:'} quero conhecer a MIMO Agenda para o ${salao.nome}${salao.cidade ? ` (${salao.cidade})` : ''}.`
-    return `Para conhecer a MIMO Agenda, fala com a ${c.nome || 'nossa consultora'} no WhatsApp comercial da MIMO: https://wa.me/${so(c.numero)}?text=${encodeURIComponent(frase)}`
-  } catch { return '' }
+    const c = (await deps.rpc('comercial_publico', {})).data as Comercial | null
+    return c?.ligado && c.numero ? { ligado: true, numero: so(c.numero), nome: c.nome || '' } : { ligado: false }
+  } catch { return { ligado: false } }
+}
+export async function comercialLigado(deps: { rpc: Deps['rpc'] }): Promise<boolean> {
+  return (await comercialPublico(deps)).ligado
+}
+const linkWa = (numero: string, frase: string) => `https://wa.me/${so(numero)}?text=${encodeURIComponent(frase)}`
+export async function linkComercial(deps: Deps, salao: { nome: string; cidade?: string | null }, quero = false): Promise<string> {
+  const c = await comercialPublico(deps)
+  if (!c.ligado || !c.numero) return ''
+  const frase = `${quero ? 'Oi! Respondi QUERO ao pedido da MIMO:' : 'Oi! Vim pelo guia da MIMO:'} quero conhecer a MIMO Agenda para o ${salao.nome}${salao.cidade ? ` (${salao.cidade})` : ''}.`
+  return `Para conhecer a MIMO Agenda, fala com a ${c.nome || 'nossa consultora'} no WhatsApp comercial da MIMO: ${linkWa(c.numero, frase)}`
 }
 
-export async function atenderGuia(deps: Deps, e: Entrada, opcoes: { teste?: boolean; comoDona?: boolean } = {}): Promise<Saida> {
+// 3.76: quem escreve para a Mel querendo saber da MIMO Agenda (a dona ou a profissional que viu o guia, quem quer contratar)
+// recebe o link do WhatsApp comercial, com a frase "Vim pela Mel" (o motor da assistente marca a origem "mel"); com o
+// comercial desligado, o site. A conversa não fecha: se era uma cliente, ela segue marcando. A equipe não é avisada.
+export const MSG_SOBRE_AGENDA = 'Esse número é o da Mel, para clientes que marcam horário pelos salões do guia 💗 Para saber da MIMO Agenda (como funciona, os planos, como colocar o seu salão), quem atende é a {nome}, no WhatsApp comercial da MIMO: {link}\n\n{marcar}'
+export const MSG_SOBRE_AGENDA_SITE = 'Esse número é o da Mel, para clientes que marcam horário pelos salões do guia 💗 Para saber da MIMO Agenda (como funciona, os planos, como colocar o seu salão), é por aqui: {link}\n\n{marcar}'
+export const SITE_AGENDA = `https://${RAIZ_SITE}`
+// as frases que não deixam dúvida (o texto já normalizado por palavra()): falam da MIMO Agenda, do sistema, de contratar,
+// de pôr o salão na MIMO, ou dizem que quem escreve é do ramo. "Agenda" sozinha não conta (a cliente pergunta da agenda do
+// salão), nem "agenda da MIMO" (a cliente de um salão com o selo "Agenda pela MIMO"). As frases de "criar conta" são os
+// gatilhos do onboarding: o webhook passa opcoes.sobreAgenda quando um deles chega com o comercial ligado.
+const NEGOCIO = '(?:salao|studio|estudio|barbearia|esmalteria|clinica|negocio|atelie|atelier)'
+const SOBRE_AGENDA = new RegExp([
+  '\\bmimo agenda\\b',
+  '\\bsistema (?:da |de |do )?(?:mimo|voces|agendamento|agenda)\\b',
+  '\\b(?:contratar|assinar|assinatura|mensalidade|planos?|preco|valor|valores) (?:da |do |de |a |o )?(?:mimo|sistema|aplicativo da mimo|app da mimo)\\b',
+  '\\bquanto custa (?:a |o )?(?:mimo|sistema|plano)\\b',
+  '\\b(?:sou|eu sou) (?:a |o )?(?:dona|dono|proprietaria|proprietario|socia|socio) (?:de |do |da |desse |deste |dessa |desta |de um |de uma )',
+  `\\btenho (?:um |uma )?${NEGOCIO}\\b`,
+  `\\b(?:cadastrar|colocar|incluir|anunciar|divulgar|inscrever|botar|por) (?:o |a )?(?:meu|minha|nosso|nossa) ${NEGOCIO}\\b`,
+  `\\b(?:meu|minha|nosso|nossa) ${NEGOCIO} (?:no|na) (?:guia|mimo)\\b`,
+  '\\bsou (?:manicure|cabeleireira|cabeleireiro|esteticista|maquiadora|barbeira|barbeiro|lash designer|designer de sobrancelhas?|profissional autonoma|profissional de beleza|autonoma)\\b',
+  '\\btrabalhar com voces\\b', '\\bparceria\\b',
+].join('|'))
+export function sobreAgendaDe(texto: string): boolean {
+  return SOBRE_AGENDA.test(palavra(texto))
+}
+// o texto: o da Plataforma na primeira vez; depois, só o link (curto). {marcar} é a volta para quem era cliente.
+export async function textoSobreAgenda(deps: { rpc: Deps['rpc'] }, cfg: Config, o: { lugar?: Lugar | null; dona?: boolean; curta?: boolean } = {}): Promise<string> {
+  const c = await comercialPublico(deps)
+  const l = o.lugar ?? null
+  const marcar = l
+    ? `Se você queria marcar um horário no ${l.nome}, é só me dizer o serviço que eu sigo com você.`
+    : 'Se você queria marcar um horário, me manda o nome do salão (ou o link da página dele no guia) que eu sigo com você.'
+  const frase = `Oi! Vim pela Mel, do guia da MIMO: quero conhecer a MIMO Agenda${o.dona && l ? ` para o ${l.nome}${l.cidade ? ` (${l.cidade})` : ''}` : ''}.`
+  const link = c.ligado && c.numero ? linkWa(c.numero, frase) : SITE_AGENDA
+  const nome = c.nome || 'nossa consultora'
+  const modelo = o.curta
+    ? (c.ligado ? 'Para a MIMO Agenda, quem te atende é a {nome}, no WhatsApp comercial: {link} 💗\n\n{marcar}' : 'Para a MIMO Agenda, é por aqui: {link} 💗\n\n{marcar}')
+    : (c.ligado ? (String(cfg.msg_sobre_agenda ?? '').trim() || MSG_SOBRE_AGENDA) : (String(cfg.msg_sobre_agenda_site ?? '').trim() || MSG_SOBRE_AGENDA_SITE))
+  return modelo.replaceAll('{nome}', nome).replaceAll('{link}', link).replaceAll('{marcar}', marcar).replace(/\n{3,}/g, '\n\n').trim()
+}
+
+// opcoes.sobreAgenda (3.76): o webhook avisa que a mensagem trouxe um gatilho do onboarding com o comercial ligado
+export async function atenderGuia(deps: Deps, e: Entrada, opcoes: { teste?: boolean; comoDona?: boolean; sobreAgenda?: boolean } = {}): Promise<Saida> {
   const teste = !!opcoes.teste
   const agora = deps.agora?.() ?? new Date()
   const tel = teste ? e.telefone : so(e.telefone)
@@ -448,6 +510,23 @@ export async function atenderGuia(deps: Deps, e: Entrada, opcoes: { teste?: bool
     const id = await chamar(deps, 'guia_whats_conversa_salvar', { id_: conversa?.id ?? null, tel_: tel, lugar_: lugarId, estado_: estado, dados_: dados, novas_: novas, teste_: teste })
     if (!conversa) conversa = { id: Number(id), telefone: tel, lugar_id: lugarId, estado, dados, mensagens: [] }
   }
+  // 3.76: quem quer saber da MIMO Agenda: o link do comercial (ou do site). A conversa segue no estado em que estava —
+  // se era uma cliente no meio do pedido, ela continua de onde parou.
+  const agendaLigada = cfg.sobre_agenda !== false
+  const sobreAgenda = async (dona: boolean): Promise<Saida> => {
+    // o teto do dia por número (o mesmo do passo 5) vale aqui também: passou dele, silêncio
+    if (!teste && Number(ctx.respostas_hoje ?? 0) >= Math.max(1, Number(cfg.limite_respostas) || 30)) return { responder: null, acao: 'limite_respostas' }
+    const antes: Dados = { ...(conversa?.dados ?? {}) }
+    const vezes = Number(antes.comercial ?? 0)
+    const resposta = await textoSobreAgenda(deps, cfg, { lugar, dona, curta: vezes > 0 })
+    const estado = conversa && conversa.estado !== 'encerrada' ? conversa.estado : 'conversando'
+    const dados: Dados = { ...antes, comercial: vezes + 1 }
+    await guardar(resposta, estado, dados, lugar?.id ?? null)
+    return { responder: resposta, acao: 'sobre_agenda', estado, dados }
+  }
+  // a própria dona (o número é o cadastrado do salão) segue para o passo 4.5, que já apresenta a MIMO Agenda com o link
+  const ehDonaDe = (l: Lugar | null) => !!l && ((teste && !!opcoes.comoDona) || (!teste && !!l.salao_tel && !!chaveDe(tel) && chaveDe(tel) === chaveDe(l.salao_tel)))
+  if (agendaLigada && (opcoes.sobreAgenda || sobreAgendaDe(texto)) && !ehDonaDe(lugar)) return await sobreAgenda(false)
 
   if (!lugar) {
     const achados = p.length >= 4 ? ((await chamar(deps, 'guia_whats_buscar', { texto_: texto })) as Array<{ id: string; nome: string; cidade: string }>) : []
@@ -455,6 +534,8 @@ export async function atenderGuia(deps: Deps, e: Entrada, opcoes: { teste?: bool
       lugar = (await chamar(deps, 'guia_whats_lugar', { cidade_: null, slug_: null, id_: achados[0].id })) as Lugar | null
     }
     if (!lugar) {
+      // 3.76: quem já recebeu o link do comercial e segue sem salão: o lembrete curto, em vez de "de qual salão?"
+      if (agendaLigada && !achados?.length && Number(conversa?.dados?.comercial ?? 0) > 0) return await sobreAgenda(false)
       const resposta = achados?.length > 1
         ? `Oi! Aqui é a Mel, da MIMO 💗. Encontrei mais de um salão com esse nome: ${achados.map((a) => `${a.nome} (${a.cidade})`).join(', ')}. Qual deles? Se puder, me manda o link da página do salão no guia.`
         : 'Oi! Aqui é a Mel, da MIMO 💗, o guia de salões. De qual salão você quer marcar? Me manda o nome como aparece no guia ou o link da página do salão.'
@@ -476,8 +557,7 @@ export async function atenderGuia(deps: Deps, e: Entrada, opcoes: { teste?: bool
   // Mel reconhece, mostra como um pedido chegaria (o exemplo) e apresenta a MIMO Agenda; avisa a equipe uma vez (3.54).
   // No simulador (teste), o botão "testar como a dona" liga o opcoes.comoDona (sem comparar número); aí o aviso à equipe
   // não é enviado de verdade — volta como prévia.
-  const ehDona = (teste && !!opcoes.comoDona) || (!teste && !!lugar.salao_tel && !!chaveDe(tel) && chaveDe(tel) === chaveDe(lugar.salao_tel))
-  if (ehDona) {
+  if (ehDonaDe(lugar)) {
     const exemplo = mensagemDoSalao(cfg, lugar, { cliente_nome: 'Maria (exemplo)', servico: 'Corte e escova', preferencia: 'sexta à tarde', observacao: null, cliente_tel: '5513999990000' })
     const resposta = (String(cfg.msg_dona ?? '').trim() || `Oi! 💗 Esse número é o que o ${lugar.nome} tem cadastrado no guia da MIMO. Assim chega um pedido de cliente pra você:\n\n{exemplo}\n\nA MIMO leva clientes até você, de graça — e tem a MIMO Agenda pra organizar tudo (salão e autônoma). A equipe vai te chamar pra mostrar. 💗`)
       .replaceAll('{salao}', lugar.nome).replaceAll('{exemplo}', exemplo)
@@ -521,7 +601,7 @@ export async function atenderGuia(deps: Deps, e: Entrada, opcoes: { teste?: bool
   }
   let r: Awaited<ReturnType<typeof deps.ia>>
   if (curto) {
-    r = { leitura: { resposta: '', nome: '', servico: '', preferencia: '', observacao: '', cliente_confirmou_envio: curto === 'sim', cancelar: curto === 'nao', quer_apagar_dados: false } }
+    r = { leitura: { resposta: '', nome: '', servico: '', preferencia: '', observacao: '', cliente_confirmou_envio: curto === 'sim', cancelar: curto === 'nao', quer_apagar_dados: false, sobre_agenda: false, dona_do_salao: false } }
   } else {
     const historico: Mensagem[] = (conversa?.mensagens ?? []).slice(-12).map((m) => ({ role: m.q === 'cliente' ? 'user' as const : 'assistant' as const, content: String(m.t ?? '').slice(0, 500) }))
     historico.push({ role: 'user', content: texto })
@@ -537,6 +617,8 @@ export async function atenderGuia(deps: Deps, e: Entrada, opcoes: { teste?: bool
     await chamar(deps, 'guia_whats_apagar', { tel_: tel })
     return { responder: 'Pronto, apaguei seus dados e esta conversa aqui na MIMO. 💗 Se precisar de novo, é só chamar.', acao: 'apagou' }
   }
+  // 3.76: a IA percebeu que é alguém do ramo querendo a MIMO Agenda (a frase não era das óbvias)
+  if (lido.sobre_agenda && agendaLigada) return await sobreAgenda(!!lido.dona_do_salao)
   const dados: Dados = { ...dadosAntes }
   for (const k of ['nome', 'servico', 'preferencia', 'observacao'] as const) {
     const v = limpo(lido[k], k === 'observacao' ? 300 : 120)
@@ -693,14 +775,14 @@ function confirmacao(cfg: Config, l: Lugar, d: Dados, enviado: boolean): string 
 // ---- a IA: Groq (compatível com a OpenAI) ou Claude (API de Messages), com a resposta no esquema acima ---------------
 // A chamada em si (esquema estrito, failed_generation, json_object de reserva) mora em ia_json.ts (3.55: é a mesma do
 // agente de onboarding); aqui ficam só o esquema da Mel-cliente, a frase dos campos e o leitor.
-const CAMPOS_JSON = 'Responda só com um objeto JSON com exatamente estes campos: "resposta" (texto), "nome", "servico", "preferencia", "observacao" (textos; "" quando não souber), "cliente_confirmou_envio", "cancelar", "quer_apagar_dados" (true ou false).'
+const CAMPOS_JSON = 'Responda só com um objeto JSON com exatamente estes campos: "resposta" (texto), "nome", "servico", "preferencia", "observacao" (textos; "" quando não souber), "cliente_confirmou_envio", "cancelar", "quer_apagar_dados", "sobre_agenda", "dona_do_salao" (true ou false).'
 
 function montarLeitura(lido: Record<string, unknown>): LeituraIa | null {
   if (typeof lido?.resposta !== 'string') return null
   return {
     resposta: lido.resposta, nome: String(lido.nome ?? ''), servico: String(lido.servico ?? ''), preferencia: String(lido.preferencia ?? ''),
     observacao: String(lido.observacao ?? ''), cliente_confirmou_envio: lido.cliente_confirmou_envio === true, cancelar: lido.cancelar === true,
-    quer_apagar_dados: lido.quer_apagar_dados === true,
+    quer_apagar_dados: lido.quer_apagar_dados === true, sobre_agenda: lido.sobre_agenda === true, dona_do_salao: lido.dona_do_salao === true,
   }
 }
 

@@ -18,6 +18,9 @@
 // sempre. O 1º gatilho é a frase do botão das landings (origem "cta": intenção certa, começa direto); os demais são
 // intenção percebida (origem "intencao"): o agente PRIMEIRO pergunta se ela quer mesmo criar a conta — quem é cliente diz
 // que não e é devolvida à Mel, sem ser arrastada para o fluxo errado.
+// 3.76: com o WhatsApp comercial ligado (218) e o encaminhamento da Mel ligado (221), um gatilho sem conversa aberta volta { acao: 'comercial' }: o webhook passa
+// a mensagem à Mel com opcoes.sobreAgenda e ela responde com o link da assistente comercial. O agente fica para quando o
+// comercial está desligado (e para as conversas de onboarding que já estavam abertas, que seguem até o fim).
 //
 // Contexto (3.56): antes de aceitar, o agente confere o que já existe na MIMO (guia_onboarding_conferir) — o número que
 // escreve já tem conta (→ manda para o número de atendimento, numero_atendimento), o nome do salão já existe (o endereço
@@ -32,7 +35,7 @@
 //
 // Como a Mel, este arquivo não fala com a rede nem com o banco por conta própria: tudo vem em `Deps`.
 
-import { so, palavra, telefoneBonito, preencher, RAIZ_SITE, MODELO_PADRAO } from './guia_whats.ts'
+import { so, palavra, telefoneBonito, preencher, comercialLigado, RAIZ_SITE, MODELO_PADRAO } from './guia_whats.ts'
 import { iaJsonDe, type Ambiente, type Fetch, type Mensagem } from './ia_json.ts'
 
 export type Resultado = { ok: true; providerId: string | null } | { ok: false; erro: string }
@@ -88,7 +91,7 @@ export type Dados = {
 }
 export type Saida = { responder: string | null; acao: string; estado?: string; passo?: string; dados?: Dados; link?: string | null; previaAviso?: string | null; erro?: string; bolhas?: string[]; pausa?: number; pausas?: number[] }
 type Conversa = { id: number; telefone: string; origem: string; estado: string; dados: Dados; mensagens: Array<{ q: string; t: string; em?: string }>; token?: string }
-type Mel = { ligado: boolean; numero: string | null; instancia: string; numero_avisos: string | null }
+type Mel = { ligado: boolean; numero: string | null; instancia: string; numero_avisos: string | null; sobre_agenda?: boolean | null }
 export type Config = {
   ligado: boolean; provedor: string; modelo: string | null; orientacao: string; gatilhos: string[]
   tolerancia: number; tolerancia_cnpj: number; link_dias: number
@@ -512,6 +515,10 @@ export async function atenderOnboarding(deps: Deps, e: Entrada, opcoes: { teste?
   const ctx = (await chamar(deps, 'guia_onboarding_contexto', { tel_: tel })) as { config: Config | null; mel: Mel | null; conversa: Conversa | null } | null
   const cfg = ctx?.config
   if (!cfg) return { responder: null, acao: 'passa' }
+  // 3.76: o gatilho de quem ainda não tem conversa aberta vai para o comercial, se ele está ligado e a Mel encaminha
+  // (mel.sobre_agenda, da 221; sem ela, vale ligado) — mesmo com este agente desligado: os gatilhos dizem "quero a MIMO
+  // Agenda". No simulador da aba Onboarding, o agente atende como sempre.
+  if (!teste && !ctx?.conversa && ctx?.mel?.sobre_agenda !== false && gatilhoDe(texto, cfg.gatilhos) && (await comercialLigado(deps))) return { responder: null, acao: 'comercial' }
   if (!cfg.ligado && !teste) return { responder: null, acao: 'passa' }
   const mel: Mel = ctx?.mel ?? { ligado: false, numero: null, instancia: 'mimo-guia', numero_avisos: null }
   const p = palavra(texto)

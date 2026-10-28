@@ -449,9 +449,12 @@ Deno.serve(async (req) => {
       // 3.55: o agente de onboarding olha primeiro. Se a mensagem é dele (conversa de onboarding aberta deste número, ou um
       // gatilho), ele atende e a Mel-cliente nem vê; se não é ("passa"), segue para a Mel como sempre. Qualquer erro aqui
       // (a migração 203 ainda não aplicada, por exemplo) também passa: o agente novo nunca derruba o atendimento da cliente.
+      // 3.76: com o comercial ligado, o gatilho do onboarding volta 'comercial' e a Mel responde com o link da assistente
+      let sobreAgenda = false
       if (!m.enquete) try {
         const o = await atenderOnboarding(depsOnb(), { telefone: m.telefone, texto: m.texto, nomePerfil: m.nome ?? null })
-        if (o.acao !== 'passa') {
+        if (o.acao === 'comercial') { sobreAgenda = true; respostas.push('onboarding[comercial]') }
+        else if (o.acao !== 'passa') {
           respostas.push(`onboarding[${o.acao}]`)
           if (o.erro) console.error('onboarding:', o.erro)
           // 3.56: em bolhas (um parágrafo por mensagem), cada uma com a pausa da Plataforma como "digitando…". 3.61: uma
@@ -471,7 +474,7 @@ Deno.serve(async (req) => {
         console.error('onboarding: não deu para atender (a Mel segue)', e)
       }
       try {
-        const r = await atenderGuia(depsGuia(), { telefone: m.telefone, texto: m.texto, nomePerfil: m.nome ?? null, citado: m.citado ?? null, enquete: m.enquete ?? null })
+        const r = await atenderGuia(depsGuia(), { telefone: m.telefone, texto: m.texto, nomePerfil: m.nome ?? null, citado: m.citado ?? null, enquete: m.enquete ?? null }, { sobreAgenda })
         respostas.push(`guia[${r.acao}]`)
         if (r.erro) console.error('guia:', r.erro)
         if (r.responder) {

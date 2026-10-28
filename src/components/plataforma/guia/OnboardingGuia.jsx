@@ -7,7 +7,7 @@ import { tel, telCanon, mascararTel, quando, normal, lerSecao, guardarSecao, use
 import { Pilula, Chave, Tile, Funil, Nav, Bloco, Indice, BarraSalvar, Chat } from './PecasWa'
 import {
   UserPlus, LoaderCircle, Send, RotateCcw, Bot, Inbox, Check, TriangleAlert, X, Link2, MousePointerClick, Sparkles, SlidersHorizontal, Search, Zap, ListChecks,
-  MessageSquareText, Timer, Phone, DoorOpen, CircleCheck, UserCheck, Ban, Eye, MessageCircleMore, Cpu, MapPin, ClipboardList, Hourglass,
+  MessageSquareText, Timer, Phone, DoorOpen, CircleCheck, UserCheck, Ban, Eye, MessageCircleMore, Cpu, MapPin, ClipboardList, Hourglass, Handshake,
 } from 'lucide-react'
 
 // O agente de onboarding pelo WhatsApp (3.55, migração 203; 3.56, migração 204): um segundo agente no número da Mel,
@@ -23,6 +23,8 @@ import {
 // o "criando…" (espera configurável) e o convite ao suporte — os textos novos moram em grupos próprios de mensagens.
 // Quem entrou (filtros, busca, a linha do tempo de cada uma), Testar o agente e Configuração (em blocos, com índice e a
 // barra de salvar). Os ids de teste (data-teste="onb-*") são os mesmos.
+// 3.76: com o WhatsApp comercial ligado, os gatilhos vão para a assistente comercial (a Mel manda o link dela); o agente
+// atende só as conversas já abertas e volta a atender tudo quando o comercial desliga. O cabeçalho e os Gatilhos dizem isso.
 
 const faltaMigracao = (e) => e?.code === 'PGRST202' || e?.status === 404 || /could not find the function|schema cache|migração 203/i.test(e?.message ?? '')
 const ESTADO = { confirmando: ['Confirmando se é profissional', 'ambar'], coletando: ['Cadastrando', 'azul'], enviado: ['Link enviado', 'verde'], concluido: ['Conta criada 💗', 'rosa'], encerrada: ['Encerrada', 'cinza'] }
@@ -122,6 +124,12 @@ export default function OnboardingGuia() {
   const [busca, setBusca] = useState('')
   const [blocoAtivo, setBlocoAtivo] = useState('agente')
   const indice = useIndice()
+  const [comercial, setComercial] = useState(null) // 3.76: { ligado, nome }
+  useEffect(() => {
+    let vivo = true
+    supabase.rpc('comercial_publico').then(({ data, error }) => { if (vivo) setComercial(error || !data?.ligado ? { ligado: false } : { ligado: true, nome: data.nome }) })
+    return () => { vivo = false }
+  }, [])
   const setSecao = (s) => { setSecaoBruto(s); guardarSecao(CHAVE_SECAO, s) }
 
   const ler = useCallback(async () => {
@@ -180,6 +188,7 @@ export default function OnboardingGuia() {
             <b>{ligadoAgora ? (melPronta ? 'Ligado' : 'Ligado, mas a Mel do guia está desligada') : 'Desligado'}</b>
             <small>{melPronta ? `No número da Mel: ${tel(mel.numero)}` : 'O agente usa o número da Mel do guia (aba WhatsApp): ligue e conecte lá primeiro.'}{mel.numero_avisos ? ` · avisos à equipe em ${tel(mel.numero_avisos)}` : ' · sem WhatsApp da equipe para avisos (aba WhatsApp)'}{form.numero_atendimento ? ` · atendimento em ${tel(form.numero_atendimento)}` : ' · sem WhatsApp do atendimento (quem já tem conta fica sem link)'}</small>
             {!melPronta && ligadoAgora && <small className="pg-wa-falta"><TriangleAlert size={13} /> Enquanto a Mel estiver desligada, nenhuma mensagem chega ao agente.</small>}
+            {comercial?.ligado && <small className="pg-wa-falta" data-teste="onb-comercial"><Handshake size={13} /> O WhatsApp comercial está ligado{comercial.nome ? ` (${comercial.nome})` : ''}: quem chega com um gatilho vai para o comercial (a Mel manda o link), se o encaminhamento “Quem quer a MIMO Agenda” estiver ligado na aba WhatsApp. Este agente só termina as conversas que já estavam abertas e volta a atender tudo quando o comercial (ou o encaminhamento) for desligado.</small>}
           </div>
         </div>
         <div className="pg-wa-hero-acoes">
@@ -258,6 +267,7 @@ export default function OnboardingGuia() {
             <Bloco id="gatilhos" aoMontar={indice.registrar} Icon={Zap} titulo="Gatilhos" sub="As frases que acionam o agente. A primeira é a do botão das landings.">
               <label>Uma frase por linha <span className="muted">(a <b>primeira</b> é a frase do botão: quem chega com ela começa direto. As outras são intenção percebida: o agente pergunta antes se ela quer mesmo criar a conta. Sem acento e sem maiúsculas, não importa; de 4 a 80 letras.)</span>
                 <textarea rows={5} value={(form.gatilhos ?? []).join('\n')} onChange={(e) => campo('gatilhos', e.target.value.split('\n'))} data-teste="onb-gatilhos" /></label>
+              <p className="muted pg-wa-nota"><Handshake size={12} /> Com o WhatsApp comercial ligado (aba Comercial) e o encaminhamento “Quem quer a MIMO Agenda” ligado (aba WhatsApp), estas frases vão para a assistente comercial — a Mel responde com o link dela —, mesmo com este agente desligado. Com um dos dois desligado, elas voltam para cá.</p>
             </Bloco>
 
             <Bloco id="regras" aoMontar={indice.registrar} Icon={Timer} titulo="Tolerância e link" sub="Quantos erros seguidos o agente aguenta antes de passar para a equipe, e por quanto tempo o link vale.">

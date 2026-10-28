@@ -5,6 +5,7 @@
 
 import { simularOnboarding, reiniciarOnboarding } from './demoGuiaOnboarding'
 import { GUIA_LUGARES } from './demoGuia.js'
+import { COMERCIAL_RPC } from './demoComercial'
 
 const h = (min) => new Date(Date.now() - min * 60e3).toISOString()
 
@@ -36,6 +37,13 @@ Se esse atendimento der certo e você quiser entender como funciona, chama a gen
 
 Para não receber mais pedidos pela MIMO, responda SAIR.`
 
+// 3.76 (migração 221): quem pergunta da MIMO Agenda vai para o comercial (os textos padrão são os do banco)
+const MSG_SOBRE_AGENDA = 'Esse número é o da Mel, para clientes que marcam horário pelos salões do guia 💗 Para saber da MIMO Agenda (como funciona, os planos, como colocar o seu salão), quem atende é a {nome}, no WhatsApp comercial da MIMO: {link}\n\n{marcar}'
+const MSG_SOBRE_AGENDA_SITE = 'Esse número é o da Mel, para clientes que marcam horário pelos salões do guia 💗 Para saber da MIMO Agenda (como funciona, os planos, como colocar o seu salão), é por aqui: {link}\n\n{marcar}'
+// as frases óbvias (a regra de verdade, mais completa, está em supabase/functions/_shared/guia_whats.ts, SOBRE_AGENDA)
+const SOBRE_AGENDA = /\bmimo agenda\b|\bsistema (?:da |de |do )?(?:mimo|voces|agendamento|agenda)\b|\bquanto custa (?:a |o )?(?:mimo|sistema|plano)\b|\b(?:sou|eu sou) (?:a |o )?(?:dona|dono) (?:de|do|da|desse|deste)\b|\btenho (?:um |uma )?(?:salao|studio|estudio|barbearia|esmalteria)\b|\b(?:cadastrar|colocar|incluir) (?:o |a )?(?:meu|minha|nosso|nossa) (?:salao|studio|estudio|barbearia|esmalteria)\b|\bsou (?:manicure|cabeleireira|cabeleireiro|esteticista|autonoma)\b|\bparceria\b/
+const palavraDemo = (t) => String(t ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim()
+
 let CFG = {
   id: 1, ligado: true, numero: '5513999990000', instancia: 'mimo-guia', botoes: ['ligar', 'whatsapp'], provedor: 'groq', modelo: null,
   orientacao: ORIENTACAO_PADRAO, msg_cliente: 'Olá! Vi o {salao} no guia da MIMO e quero marcar um horário.', msg_salao: MSG_SALAO_PADRAO,
@@ -44,6 +52,7 @@ let CFG = {
   msg_ocioso: 'Oi! Vi que a gente parou por aqui 💗 Quer que eu envie seu pedido ao salão agora, ou prefere continuar depois? Se não puder responder, eu encerro por aqui — é só me chamar quando quiser.',
   msg_dona: 'Oi! 💗 Esse número é o mesmo que o {salao} tem cadastrado no guia da MIMO — então acho que é você, do salão! Quando uma cliente te encontra no guia e pede horário, chega assim pra você:\n\n{exemplo}\n\nA MIMO leva clientes até você, de graça. E tem a MIMO Agenda pra organizar tudo, com link pras clientes marcarem sozinhas (salão e autônoma). Nossa equipe vai te chamar pra mostrar. 💗',
   numero_avisos: '5513999991111',
+  sobre_agenda: true, msg_sobre_agenda: MSG_SOBRE_AGENDA, msg_sobre_agenda_site: MSG_SOBRE_AGENDA_SITE,
   // 3.57: o retorno do salão (migração 205)
   enquete_ativa: true, enquete_pergunta: 'Vai atender a {cliente}?', enquete_sim: 'Sim, vou atender', enquete_nao: 'Não vou conseguir',
   msg_salao_vai_atender: 'Combinado! 💗 A {cliente} está esperando seu contato: {link}\n\nSe no fim não for conseguir atender, é só me avisar por aqui.',
@@ -161,7 +170,12 @@ function salvar({ c }) {
   const n = { ...CFG }
   if (c.numero !== undefined) { let d = String(c.numero ?? '').replace(/\D/g, ''); if (d.length === 10 || d.length === 11) d = '55' + d; if (d && !/^[1-9][0-9]{9,14}$/.test(d)) throw new Error('número inválido: use DDD e número (com 55 na frente, se quiser)'); n.numero = d || null }
   if (c.numero_avisos !== undefined) { let d = String(c.numero_avisos ?? '').replace(/\D/g, ''); if (d.length === 10 || d.length === 11) d = '55' + d; if (d && !/^[1-9][0-9]{9,14}$/.test(d)) throw new Error('número de avisos inválido: use DDD e número (com 55 na frente, se quiser)'); n.numero_avisos = d || null }
-  for (const k of ['ligado', 'mostrar_contato_salao', 'exigir_preferencia', 'ocioso_ativo', 'enquete_ativa', 'avisar_cliente_nao', 'aviso_nao_atende']) if (typeof c[k] === 'boolean') n[k] = c[k]
+  for (const k of ['ligado', 'mostrar_contato_salao', 'exigir_preferencia', 'ocioso_ativo', 'enquete_ativa', 'avisar_cliente_nao', 'aviso_nao_atende', 'sobre_agenda']) if (typeof c[k] === 'boolean') n[k] = c[k]
+  for (const [k, rot] of [['msg_sobre_agenda', 'a mensagem da MIMO Agenda'], ['msg_sobre_agenda_site', 'a mensagem da MIMO Agenda com o comercial desligado']]) {
+    const v = typeof c[k] === 'string' ? c[k].trim() : ''
+    if (v && (v.length < 10 || v.length > 2000 || !v.includes('{link}'))) throw new Error(`${rot}: de 10 a 2000 letras, com {link}`)
+    if (v) n[k] = v
+  }
   for (const k of ['instancia', 'provedor', 'orientacao', 'msg_cliente', 'msg_salao', 'msg_salao_resposta', 'msg_encerramento', 'msg_ocioso', 'msg_dona', 'msg_salao_vai_atender', 'msg_salao_nao_atende', 'msg_cliente_nao_atende', 'msg_aviso_nao_atende', 'msg_aviso_demora', 'msg_cutucar_salao', 'enquete_pergunta', 'enquete_sim', 'enquete_nao']) if (typeof c[k] === 'string' && c[k].trim()) n[k] = c[k].trim()
   if (typeof c.enquete_pergunta === 'string' && c.enquete_pergunta.trim() && c.enquete_pergunta.trim().length < 3) throw new Error('a pergunta da enquete: de 3 a 200 letras')
   for (const k of ['enquete_sim', 'enquete_nao']) if (typeof c[k] === 'string' && c[k].trim() && c[k].trim().length < 2) throw new Error('cada opção da enquete: de 2 a 60 letras')
@@ -244,6 +258,18 @@ function simular({ texto, lugar, comoDona }) {
     const previaAviso = CFG.numero_avisos ? `🎉 MIMO — dona testando o guia\n${s.lugar.nome}: a dona está escrevendo pela Mel do número cadastrado. Boa hora para apresentar a MIMO Agenda.\nNúmero: ${bonito('5513999990000')}` : null
     s.estado = 'encerrada'; s.mensagens.push({ q: 'mel', t: resposta })
     return { ok: true, texto: t, responder: resposta, acao: 'dona', previaSalao: null, previaAviso, estado: 'encerrada', dados: { dona: true } }
+  }
+  // 3.76: quem pergunta da MIMO Agenda: o link do comercial (ou o site); a conversa segue
+  if (!inicio && CFG.sobre_agenda !== false && SOBRE_AGENDA.test(palavraDemo(t))) {
+    const c = COMERCIAL_RPC.comercial_publico()
+    const vezes = s.dados.comercial ?? 0
+    const marcar = `Se você queria marcar um horário no ${s.lugar.nome}, é só me dizer o serviço que eu sigo com você.`
+    const link = c?.ligado ? `https://wa.me/${c.numero}?text=${encodeURIComponent('Oi! Vim pela Mel, do guia da MIMO: quero conhecer a MIMO Agenda.')}` : 'https://mimo.com.vc'
+    const modelo = vezes > 0 ? (c?.ligado ? 'Para a MIMO Agenda, quem te atende é a {nome}, no WhatsApp comercial: {link} 💗\n\n{marcar}' : 'Para a MIMO Agenda, é por aqui: {link} 💗\n\n{marcar}') : (c?.ligado ? CFG.msg_sobre_agenda : CFG.msg_sobre_agenda_site)
+    resposta = modelo.replaceAll('{nome}', c?.nome || 'nossa consultora').replaceAll('{link}', link).replaceAll('{marcar}', marcar).replace(/\n{3,}/g, '\n\n').trim()
+    s.dados.comercial = vezes + 1
+    s.mensagens.push({ q: 'mel', t: resposta })
+    return { ok: true, texto: t, responder: resposta, acao: 'sobre_agenda', previaSalao: null, previaEnquete: null, estado: s.estado, dados: { ...s.dados } }
   }
   if (/\(código:/.test(t) || s.mensagens.length === 1) { resposta = `Oi! Aqui é a Mel, da MIMO 💗, o guia onde você encontrou o ${s.lugar.nome}. Eu anoto seu pedido e passo para o salão, que te chama aqui no WhatsApp. Como é seu nome?` }
   else if (s.estado === 'confirmando' && /^(sim|pode|ok|isso|claro)\b/i.test(t)) {

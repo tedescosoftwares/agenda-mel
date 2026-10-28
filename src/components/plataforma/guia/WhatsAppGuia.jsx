@@ -21,6 +21,9 @@ import {
 // pedido (enviado → abriu → vai atender); e quatro seções — Pedidos (com filtros, busca e a linha do tempo de cada
 // pedido), Conversas, Testar a Mel e Configuração (em blocos, com um índice que acompanha a rolagem e a barra de salvar
 // fixa, que diz quando há mudança sem salvar). Os ids de teste (data-teste) são os mesmos de antes.
+//
+// 3.76 (migração 221): o bloco "Quem quer a MIMO Agenda" — a dona ou a profissional que pergunta da MIMO Agenda no
+// número da Mel recebe o link do WhatsApp comercial (ou do site, com ele desligado); os dois textos se editam aqui.
 
 const faltaMigracao = (e) => e?.code === 'PGRST202' || e?.status === 404 || /could not find the function|schema cache|migração 195/i.test(e?.message ?? '')
 const STATUS = {
@@ -37,10 +40,12 @@ const CONEXAO = {
 const BOTOES = [['whatsapp', 'WhatsApp', 'o botão WhatsApp do salão'], ['ligar', 'Ligar', 'o botão Ligar (vira WhatsApp)'], ['quero_marcar', 'Quero marcar', 'o botão "Quero marcar aqui" (em vez do formulário)']]
 const CAMPOS_CONFIG = ['ligado', 'numero', 'numero_avisos', 'instancia', 'botoes', 'provedor', 'modelo', 'orientacao', 'msg_cliente', 'msg_salao', 'msg_salao_resposta', 'msg_encerramento', 'msg_ocioso', 'msg_dona', 'mostrar_contato_salao', 'exigir_preferencia', 'ocioso_ativo', 'limite_dia', 'limite_respostas', 'pos_envio', 'max_sem_avanco', 'ocioso_horas', 'ocioso_perguntar_min', 'ocioso_encerrar_min', 'retencao_dias',
   // 3.57: o retorno do salão (migração 205)
-  'enquete_ativa', 'enquete_pergunta', 'enquete_sim', 'enquete_nao', 'msg_salao_vai_atender', 'msg_salao_nao_atende', 'avisar_cliente_nao', 'msg_cliente_nao_atende', 'aviso_nao_atende', 'msg_aviso_nao_atende', 'aviso_demora_min', 'msg_aviso_demora', 'cutucar_salao_min', 'msg_cutucar_salao']
+  'enquete_ativa', 'enquete_pergunta', 'enquete_sim', 'enquete_nao', 'msg_salao_vai_atender', 'msg_salao_nao_atende', 'avisar_cliente_nao', 'msg_cliente_nao_atende', 'aviso_nao_atende', 'msg_aviso_nao_atende', 'aviso_demora_min', 'msg_aviso_demora', 'cutucar_salao_min', 'msg_cutucar_salao',
+  // 3.76: quem pergunta da MIMO Agenda (migração 221)
+  'sobre_agenda', 'msg_sobre_agenda', 'msg_sobre_agenda_site']
 const VOTO = { sim: 'vou atender', nao: 'não vou conseguir' }
 const SECOES = [['pedidos', 'Pedidos', Inbox], ['clientes', 'Clientes', Users], ['conversas', 'Conversas', MessagesSquare], ['simulador', 'Testar a Mel', Bot], ['config', 'Configuração', SlidersHorizontal]]
-const BLOCOS = [['conexao', 'Conexão', Smartphone], ['site', 'No site', Globe], ['mel', 'A Mel', Sparkles], ['pedido', 'O pedido ao salão', Send], ['retorno', 'O retorno do salão', Vote], ['ciclo', 'Ciclo e ocioso', RefreshCw], ['equipe', 'Equipe e dona', Users], ['dados', 'Limites e privacidade', Shield]]
+const BLOCOS = [['conexao', 'Conexão', Smartphone], ['site', 'No site', Globe], ['mel', 'A Mel', Sparkles], ['pedido', 'O pedido ao salão', Send], ['retorno', 'O retorno do salão', Vote], ['ciclo', 'Ciclo e ocioso', RefreshCw], ['equipe', 'Equipe e dona', Users], ['agenda', 'Quem quer a MIMO Agenda', Handshake], ['dados', 'Limites e privacidade', Shield]]
 const PROBLEMAS = ['falhou', 'fora_do_limite', 'sem_contato', 'salao_saiu', 'pendente']
 const FILTROS = [
   ['todos', 'Todos', () => true],
@@ -78,6 +83,8 @@ export default function WhatsAppGuia({ g }) {
   const [busca, setBusca] = useState(recado?.busca ?? '')
   const [blocoAtivo, setBlocoAtivo] = useState('conexao')
   const indice = useIndice()
+  // 3.76: o WhatsApp comercial está ligado? (decide qual dos dois textos da MIMO Agenda vai)
+  const [comercial, setComercial] = useState(null)
   // 3.59: as clientes que pediram (lidas quando a seção abre; de novo quando o período muda)
   const [cli, setCli] = useState(null) // { dias, lista }
   const [filtroCli, setFiltroCli] = useState('todas')
@@ -101,6 +108,12 @@ export default function WhatsAppGuia({ g }) {
   }, [conexao?.estado, lerEstado])
   // o índice da configuração acompanha a rolagem
   useEffect(() => { if (secao === 'config') return indice.observar(setBlocoAtivo) }, [secao, form, indice])
+  useEffect(() => {
+    if (secao !== 'config' || comercial) return
+    let vivo = true
+    supabase.rpc('comercial_publico').then(({ data, error }) => { if (vivo) setComercial(error || !data?.ligado ? { ligado: false } : { ligado: true, numero: data.numero, nome: data.nome }) })
+    return () => { vivo = false }
+  }, [secao, comercial])
   useEffect(() => {
     if (secao !== 'clientes' || cli?.dias === dias) return
     let vivo = true
@@ -304,6 +317,7 @@ export default function WhatsAppGuia({ g }) {
               <li><b>A mensagem que o salão receberia</b> e a enquete "vai atender?" que vai logo atrás — sem enviar nada.</li>
               <li><b>Cada voto do salão:</b> o que ele, a cliente e a equipe receberiam no "sim" e no "não".</li>
               <li><b>A dona testando</b> o próprio salão: o reconhecimento, o exemplo e o aviso à equipe.</li>
+              <li><b>Quem pergunta da MIMO Agenda</b> (“quanto custa o sistema?”, “sou dona de um salão”): a Mel responde com o link do comercial, e a conversa segue.</li>
             </ul>
             <p className="muted">O envio de verdade ao salão, o "sem contato" e o relógio só se testam no WhatsApp.</p>
           </aside>
@@ -422,6 +436,19 @@ export default function WhatsAppGuia({ g }) {
                 <textarea rows={6} value={form.msg_dona ?? ''} onChange={(e) => campo('msg_dona', e.target.value)} maxLength={4000} data-teste="wa-msg-dona" /></label>
             </Bloco>
 
+            <Bloco id="agenda" aoMontar={indice.registrar} Icon={Handshake} titulo="Quem quer a MIMO Agenda" sub="O número da Mel é das clientes. A dona ou a profissional que pergunta da MIMO Agenda recebe o link do WhatsApp comercial." teste="wa-bloco-agenda">
+              {dados.config && !('msg_sobre_agenda' in dados.config) && <p className="pg-wa-erro"><TriangleAlert size={13} /> Falta a migração 221 no banco (bat, opção B): até lá a Mel não encaminha e estes campos não são salvos.</p>}
+              <Chave checked={form.sobre_agenda !== false} onChange={(v) => campo('sobre_agenda', v)} teste="wa-sobre-agenda"><b>Encaminhar para o comercial quem pergunta da MIMO Agenda</b> <span className="muted">(a conversa não fecha: se era uma cliente, ela segue marcando)</span></Chave>
+              <p className="muted pg-wa-nota" data-teste="wa-comercial-estado"><Handshake size={12} /> {!comercial ? 'Conferindo o WhatsApp comercial…' : comercial.ligado
+                ? <>O WhatsApp comercial está <b>ligado</b> ({comercial.nome || 'a assistente'}, {tel(comercial.numero)}): vai o primeiro texto, com o link dele.</>
+                : <>O WhatsApp comercial está <b>desligado</b> (aba Comercial): vai o segundo texto, com o site.</>}</p>
+              <label>Com o comercial ligado <span className="muted">({'{nome}'} vira o nome da assistente; {'{link}'}, o WhatsApp comercial, já com a frase “Vim pela Mel”; {'{marcar}'}, a volta para quem era cliente. O {'{link}'} é obrigatório.)</span>
+                <textarea rows={5} value={form.msg_sobre_agenda ?? ''} onChange={(e) => campo('msg_sobre_agenda', e.target.value)} maxLength={2000} disabled={form.sobre_agenda === false} data-teste="wa-msg-sobre-agenda" /></label>
+              <label>Com o comercial desligado <span className="muted">({'{link}'} vira mimo.com.vc; {'{marcar}'} como acima)</span>
+                <textarea rows={4} value={form.msg_sobre_agenda_site ?? ''} onChange={(e) => campo('msg_sobre_agenda_site', e.target.value)} maxLength={2000} disabled={form.sobre_agenda === false} data-teste="wa-msg-sobre-agenda-site" /></label>
+              <p className="muted pg-wa-nota"><Sparkles size={12} /> A Mel percebe pelas frases que não deixam dúvida (“como funciona a MIMO Agenda”, “quanto custa o sistema”, “sou dona de um salão”, “quero colocar meu salão no guia”) e, no meio da conversa de um salão, pela IA. Da segunda vez em diante ela manda só o link. A própria dona, escrevendo do número cadastrado do salão, continua recebendo a mensagem da dona (bloco acima). Com o comercial e este encaminhamento ligados, as frases de entrada do agente de onboarding também vêm para cá (o agente volta a atender quando um dos dois desliga). A equipe não é avisada: o comercial cuida.</p>
+            </Bloco>
+
             <Bloco id="dados" aoMontar={indice.registrar} Icon={Shield} titulo="Limites e privacidade" sub="Por quanto tempo as conversas e os pedidos ficam guardados.">
               <div className="pg-wa-grade2">
                 <label>Guardar conversas e pedidos por (dias)<input type="number" min={7} max={730} value={form.retencao_dias ?? 90} onChange={(e) => campo('retencao_dias', Number(e.target.value))} /></label>
@@ -522,6 +549,7 @@ function Simulador({ g, cfg }) {
   const [previaEnquete, setPreviaEnquete] = useState(null) // 3.57: a enquete que iria junto do pedido
   const [voto, setVoto] = useState(null) // 3.57: o que o salão, a cliente e a equipe receberiam num voto simulado
   const [dona, setDona] = useState(false)
+  const [encaminhou, setEncaminhou] = useState(false) // 3.76: a última resposta foi o link do comercial
   const [ocupado, setOcupado] = useState(false)
   const [erro, setErro] = useState('')
   const lugarDoCaminho = () => {
@@ -537,10 +565,11 @@ function Simulador({ g, cfg }) {
       if (r.previaSalao) setPrevia(r.previaSalao)
       if (r.previaAviso) setPreviaAviso(r.previaAviso)
       if (r.previaEnquete) setPreviaEnquete(r.previaEnquete)
+      setEncaminhou(r.acao === 'sobre_agenda')
       if (r.acao === 'erro_ia') setErro(r.erro || 'a IA não respondeu')
     } catch (e) { setErro(e.message) } finally { setOcupado(false) }
   }
-  const limparPrevias = () => { setPrevia(null); setPreviaAviso(null); setPreviaEnquete(null); setVoto(null) }
+  const limparPrevias = () => { setPrevia(null); setPreviaAviso(null); setPreviaEnquete(null); setVoto(null); setEncaminhou(false) }
   const comecar = () => { const l = lugarDoCaminho(); if (!l.cidade_slug || !l.slug) { setErro('informe cidade/slug, como itanhaem/studio-lirio'); return } setMensagens([]); limparPrevias(); mandar({ lugar: l, comoDona: dona }) }
   const enviar = (e) => { e.preventDefault(); const t = texto.trim(); if (!t) return; setTexto(''); mandar({ texto: t, comoDona: dona }) }
   const reiniciar = async () => { setMensagens([]); limparPrevias(); setErro(''); try { await chamar('guia-whats', { acao: 'reiniciar' }) } catch { /* sem conversa */ } }
@@ -564,6 +593,7 @@ function Simulador({ g, cfg }) {
         <>
           <Chat mensagens={mensagens} teste="wa-chat" fim={ocupado && <div className="pg-wa-msg mel digitando"><LoaderCircle className="pg-gira" size={14} /> a Mel está escrevendo…</div>} />
           {erro && <p className="pg-wa-erro"><TriangleAlert size={13} /> {erro}</p>}
+          {encaminhou && <p className="muted pg-wa-nota" data-teste="wa-sim-comercial"><Handshake size={12} /> Esta resposta foi o encaminhamento para o comercial (quem pergunta da MIMO Agenda). A conversa segue: dá para continuar como cliente.</p>}
           {previaAviso ? (
             <div className="pg-wa-previa" data-teste="wa-previa-aviso">
               <b><Check size={14} /> A equipe receberia este aviso (dona testando — não foi enviado):</b>

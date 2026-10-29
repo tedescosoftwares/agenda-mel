@@ -383,4 +383,7 @@ que responde recebe uma resposta uma vez (QUERO: a equipe chama; SAIR: para de r
   `resgate_de`. O "não" do salão usa as mesmas sugestões. Salão que responde depois: `guia_whats_cliente_seguiu` (obrigado
   ao salão) ou `guia_whats_conversa_voltou` (a cliente fica sabendo). Voto ilegível (`VOTO_ILEGIVEL`): a Mel pede 1 ou 2
   por texto. No simulador, `simular_resgate`.
+  3.77.1 (migração 223): o pedido que não chega ao salão já recebe a oferta na resposta ao "sim" (`oferta_na_hora`); a
+  conversa com a oferta aberta fica fora do ocioso; a resposta à oferta reabre a conversa encerrada; "pode enviar" pede o
+  número com a lista; `oferta_motivo` decide se "vou esperar" faz sentido.
 

@@ -16011,3 +16011,18 @@ select.cont-mais { max-width: 420px; }
 .cont-form textarea { resize: vertical; line-height: 1.45; }
 .cont-form input:focus, .cont-form textarea:focus, .cont-form select:focus { border-color: var(--rosa); box-shadow: 0 0 0 3px var(--latao-veu); }
 .cont-form input[type='checkbox'] { width: 18px; height: 18px; padding: 0; }
+
+/* 3.80: o "a partir de" no cadastro do serviço e o aviso para a cliente */
+.a-partir-opcao { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--fio); background: var(--superficie); cursor: pointer; text-align: left; }
+.a-partir-opcao.ligado { border-color: var(--latao-fio); background: var(--latao-veu); }
+.a-partir-caixa { flex: 0 0 20px; width: 20px; height: 20px; margin: 1px 0 0; accent-color: var(--rosa); cursor: pointer; }
+.a-partir-opcao-texto { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.a-partir-opcao-texto strong { font-size: 0.88rem; font-weight: 600; color: var(--texto); }
+.a-partir-opcao-texto strong em { font-style: normal; font-weight: 400; color: var(--rosa-escuro); }
+.a-partir-opcao-texto small { font-size: 0.78rem; color: var(--texto-2); line-height: 1.4; }
+.a-partir-opcao.compacto { padding: 8px 10px; }
+.resumo-a-partir, .svc-a-partir-aviso { margin: 6px 0 0; font-size: 0.8rem; line-height: 1.45; }
+/* nos formulários (.form label empilha): a chave e o texto lado a lado */
+label.a-partir-opcao { flex-direction: row !important; align-items: center !important; gap: 12px !important; font-weight: 400; }
+label.a-partir-opcao > .a-partir-caixa { flex: 0 0 20px; width: 20px !important; height: 20px; margin: 0; accent-color: var(--rosa); cursor: pointer; }
+label.a-partir-opcao .a-partir-opcao-texto { flex: 1; }

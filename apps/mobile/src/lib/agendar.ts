@@ -87,6 +87,7 @@ export function juntar(ids: string[], lista: Servico[] | null): ServicoJunto | n
     price: ordenada.reduce((a, x) => a + Number(x.price ?? 0), 0),
     duration_minutes: ordenada.reduce((a, x) => a + Number(x.duration_minutes ?? 0), 0),
     is_combo: ordenada.some((x) => x.is_combo),
+    a_partir: ordenada.some((x) => x.a_partir),
   }
 }
 

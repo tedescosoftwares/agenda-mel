@@ -10,6 +10,7 @@ import { useCategorias, categoriasDoSalao, agruparPorCategoria, bate, capaPadrao
 import { ajustarCriativo } from '../../lib/imagem'
 import Portal from '../../components/Portal'
 import CadastroDeServico, { MelFala, useFalaDaMel } from '../../components/CadastroDeServico'
+import APartirOpcao from '../../components/APartirOpcao'
 import EscolhaDeCategorias, { ImagemCategoria, tonsDaCategoria } from '../../components/EscolhaDeCategorias'
 import { useCatalogo } from '../../lib/catalogo'
 import { falaDaMel } from '../../lib/melMotor'
@@ -19,6 +20,7 @@ const FORM_VAZIO = {
   description: '',
   duration_minutes: 60,
   price: '',
+  a_partir: false,   // 3.80: "a partir de" (varia com o cabelo)
   is_combo: false,
   categoria_id: '',   // vazio = o app chuta pelo nome
   catalogo_item_id: '',   // o item do catálogo (2.91); vazio = serviço personalizado
@@ -212,6 +214,7 @@ export default function AdminServices() {
       description: service.description ?? '',
       duration_minutes: service.duration_minutes,
       price: String(service.price),
+      a_partir: Boolean(service.a_partir),
       is_combo: Boolean(service.is_combo),
       categoria_id: service.categoria_id ?? '',
       catalogo_item_id: service.catalogo_item_id ?? '',
@@ -377,6 +380,7 @@ export default function AdminServices() {
         description: form.description.trim() || null,
         duration_minutes: form.is_combo ? somaCombo : Number(form.duration_minutes),
         price,
+        a_partir: Boolean(form.a_partir),
         images,
         is_combo: form.is_combo,
         combo_service_ids: form.is_combo ? comboIds : [],
@@ -685,6 +689,7 @@ export default function AdminServices() {
               />
             </label>
           </div>}
+          {!form.is_combo && <APartirOpcao ligado={form.a_partir} onMudar={(a_partir) => setForm({ ...form, a_partir })} preco={Number(String(form.price).replace(',', '.')) || null} />}
 
           <div className="img-field">
             <span className="img-field-label">
@@ -773,7 +778,7 @@ export default function AdminServices() {
                   {s.catalogo_item_id && catalogo?.porId.get(s.catalogo_item_id) && <span className="badge badge-catalogo" title={catalogo.porId.get(s.catalogo_item_id).caminho.join(' › ')}>{catalogo.porId.get(s.catalogo_item_id).caminho.slice(1).join(' › ')}</span>}
                 </span>
                 <span className="muted service-meta">
-                  {labelDuracao(s)} · {formatPreco(s.price)}
+                  {labelDuracao(s)} · {s.a_partir ? 'a partir de ' : ''}{formatPreco(s.price)}
                 </span>
                 {s.active && profs.length > 0 && !(quemFaz[s.id] ?? []).length && (
                   <button type="button" className="service-meta service-sem-quem" onClick={() => startEdit(s)}>Ninguém faz ainda: toque e marque quem faz, senão a cliente não vê</button>

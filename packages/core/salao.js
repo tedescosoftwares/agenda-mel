@@ -72,3 +72,9 @@ export function menorPrecoDaCasa(servicos) {
   const vs = (servicos ?? []).filter((s) => (s.quem ?? []).length).map((s) => precoDoServico(s).valor).filter((v) => v > 0)
   return vs.length ? Math.min(...vs) : null
 }
+
+// 3.80: o preço "a partir de" (o salão marca no cadastro do serviço: varia pelo tipo e tamanho do cabelo, volume…).
+// Num pedido com vários serviços (`lista`), basta um ser "a partir de" para o total também ser.
+export const ehAPartir = (sv) => Boolean(sv?.a_partir) || (Array.isArray(sv?.lista) && sv.lista.some((x) => x?.a_partir))
+export const prefixoAPartir = (sv) => (ehAPartir(sv) ? 'a partir de ' : '')
+export const AVISO_A_PARTIR = 'O valor final pode variar com o tipo, o tamanho e o volume do cabelo e é confirmado no salão.'

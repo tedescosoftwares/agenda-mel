@@ -4,7 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
 import { useCallback, useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
-import { agruparPorCategoria, labelDuracao } from '@mimo/core'
+import { agruparPorCategoria, labelDuracao, prefixoAPartir } from '@mimo/core'
 import { Tela } from '@/components/Tela'
 import { Botao, Carregando, Cartao, Vazio } from '@/components/ui'
 import { useCategorias, type Servico } from '@/lib/agendar'
@@ -150,6 +150,7 @@ export default function Profissional() {
                   <View style={{ flex: 1, gap: 2 }}>
                     <Text style={[e.servico, { color: t.texto }]}>{s.name}</Text>
                     <Text style={{ color: t.texto2, fontSize: 13 }}>
+                      {prefixoAPartir(s)}
                       {formatPreco(s.price)} · {labelDuracao(s)}
                     </Text>
                   </View>

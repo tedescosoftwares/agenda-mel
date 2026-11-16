@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import APartirOpcao from '../../components/APartirOpcao'
 import ProShell from '../../components/ProShell'
 import SemFicha from './SemFicha'
 import { supabase } from '../../lib/supabase'
@@ -67,7 +68,7 @@ export default function ProServicos() {
     setSalvando(true)
     const { data, error } = await supabase.from('services').insert({
       salon_id: salaoId, name: novo.name.trim(), duration_minutes: Number(novo.duration_minutes) || 60, price: Number(String(novo.price).replace(',', '.')) || 0,
-      categoria_id: novo.categoria_id || null,
+      categoria_id: novo.categoria_id || null, a_partir: Boolean(novo.a_partir),
     }).select('id').maybeSingle()
     if (!error && data?.id) await supabase.from('professional_services').insert({ professional_id: profId, service_id: data.id })
     setSalvando(false)
@@ -128,7 +129,7 @@ export default function ProServicos() {
               <span className="servico-linha-foto" aria-hidden="true">{s.images?.[0] ? <img src={s.images[0]} alt="" /> : <Sparkles />}</span>
               <span className="cliente-info">
                 <span className="cliente-nome"><span className="nome-txt">{s.name}</span>{s.is_combo && <span className="badge badge-combo">combo</span>}</span>
-                <span className="muted cliente-meta">{formatPreco(s.price)} · {formatDuracao(s.duration_minutes)}</span>
+                <span className="muted cliente-meta">{s.a_partir ? 'a partir de ' : ''}{formatPreco(s.price)} · {formatDuracao(s.duration_minutes)}</span>
                 {dona && (
                   <label className="servico-categoria-troca">
                     <span className="muted">Categoria</span>
@@ -191,6 +192,7 @@ export default function ProServicos() {
               <label>Duração (min)<input type="number" min="15" step="15" value={novo.duration_minutes} onChange={(e) => setNovo({ ...novo, duration_minutes: e.target.value })} /></label>
               <label>Preço (R$)<input inputMode="decimal" value={novo.price} onChange={(e) => setNovo({ ...novo, price: e.target.value })} placeholder="80" /></label>
             </div>
+            <APartirOpcao ligado={novo.a_partir} onMudar={(a_partir) => setNovo({ ...novo, a_partir })} preco={Number(String(novo.price).replace(',', '.')) || null} />
             <div className="modal-acoes">
               <button className="btn btn-ghost" onClick={() => setNovo(null)}>Cancelar</button>
               <button className="btn btn-primary" onClick={criar} disabled={salvando || !novo.name.trim()}>{salvando ? 'Salvando…' : 'Criar serviço'}</button>

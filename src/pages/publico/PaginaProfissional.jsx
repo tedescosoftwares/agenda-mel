@@ -10,6 +10,7 @@ import ListaEsperaForm from '../../components/ListaEsperaForm'
 import { StarIcon, CompartilharIcon, MarcaIcon, InstagramIcon } from '../../components/icons'
 import RodapeSocial from '../../components/RodapeSocial'
 import { formatPreco, labelDuracao } from '../../lib/format'
+import { prefixoAPartir, AVISO_A_PARTIR } from '../../../packages/core/salao.js'
 import { toMin, minToHora, formatDataLonga } from '../../lib/booking'
 import CalendarioMes from '../../components/CalendarioMes'
 import { iniciais } from '../../lib/booking'
@@ -347,7 +348,7 @@ export default function PaginaProfissional({ slug: slugPronto }) {
                   </span>
                   <span className="cliente-info">
                     <span className="cliente-nome"><span className="nome-txt">{s.name}{s.is_combo && <span className="badge badge-combo">combo</span>}</span></span>
-                    <span className="muted cliente-meta">{formatPreco(s.price)} · {labelDuracao(s)}</span>
+                    <span className="muted cliente-meta">{prefixoAPartir(s)}{formatPreco(s.price)} · {labelDuracao(s)}</span>
                   </span>
                   <span className="link-ver">Agendar</span>
                 </button>
@@ -465,7 +466,7 @@ export default function PaginaProfissional({ slug: slugPronto }) {
 
         {/* A trilha mostra onde a pessoa está e o que falta. Os passos
             já cumpridos voltam com um toque; os da frente, não. */}
-        {servicoSel && <p className="muted" style={{ marginTop: 0 }}>{servicoSel.name} com {prof.name} · {formatPreco(servicoSel.price)}</p>}
+        {servicoSel && <p className="muted" style={{ marginTop: 0 }}>{servicoSel.name} com {prof.name} · {prefixoAPartir(servicoSel)}{formatPreco(servicoSel.price)}</p>}
         <ol className="trilha">
           {PASSOS.map((rotulo, i) => {
             const n = i + 1
@@ -548,7 +549,8 @@ export default function PaginaProfissional({ slug: slugPronto }) {
               <div className="resumo-linha"><span className="muted">Com</span><strong>{prof.name}</strong></div>
               <div className="resumo-linha"><span className="muted">Quando</span><strong>{formatDataLonga(dataSel)} às {horaSel}</strong></div>
               <div className="resumo-linha"><span className="muted">Duração</span><strong>{labelDuracao(servicoSel)}</strong></div>
-              <div className="resumo-linha resumo-total"><span>Valor</span><strong>{formatPreco(servicoSel.price)}</strong></div>
+              <div className="resumo-linha resumo-total"><span>Valor</span><strong>{prefixoAPartir(servicoSel)}{formatPreco(servicoSel.price)}</strong></div>
+              {servicoSel.a_partir && <p className="muted resumo-a-partir">{AVISO_A_PARTIR}</p>}
             </div>
 
             <p className="muted resumo-aviso">

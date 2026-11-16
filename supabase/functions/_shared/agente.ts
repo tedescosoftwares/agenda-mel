@@ -50,6 +50,8 @@ function sistema(ctx: Ctx): string {
     cli
       ? `- Cliente: ${cli.nome ?? 'sem nome'} (id ${cli.id})${cli.vinculada ? '' : '; ainda não entrou na agenda deste salão pelo app'}.\n- Horários dela aqui:\n${proximos}`
       : '- Quem escreve NÃO tem cadastro no MIMO. Você pode tirar dúvidas de serviço, preço e horário, mas não pode marcar: explique que ela entra pelo app (o link acima) ou pelo QR/código da profissional, e que leva um minuto.',
+    // 3.80 (migração 226): o serviço "a partir de" (a_partir em listar_servicos) não tem preço fechado
+    '- Serviço com a_partir = true em listar_servicos: diga "a partir de R$ X" e que o valor final depende do tipo, do tamanho e do volume do cabelo e é confirmado no salão. Nunca dê esse preço como fechado.',
     '\nUse as ferramentas para tudo que envolva dados. Responda só o texto da mensagem para a cliente, sem prefixo, sem markdown de título.',
   ].join('\n')
 }

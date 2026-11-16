@@ -10,6 +10,7 @@ import { categoriasDoSalao, useCategorias, temCategoria } from '../../../lib/cat
 import { formatDuracao } from '../../../lib/format'
 import { Trava } from './Manual'
 import AssistenteDeServico from './AssistenteDeServico'
+import APartirOpcao from '../../../components/APartirOpcao'
 import { ajustarCriativo } from '../../../lib/imagem'
 
 // Etapa 2 da configuração inicial (2.94): "Monte seu menu de serviços" em duas
@@ -47,7 +48,7 @@ export default function EtapaServicos({ s, setErro, onEstado, compacto = false, 
   }, [servicos, catalogo])
 
   const carregar = useCallback(async () => {
-    const { data } = await supabase.from('services').select('id, name, description, duration_minutes, price, categoria_id, catalogo_item_id, active, created_at, images').eq('salon_id', s.id).eq('active', true).order('created_at')
+    const { data } = await supabase.from('services').select('id, name, description, duration_minutes, price, a_partir, categoria_id, catalogo_item_id, active, created_at, images').eq('salon_id', s.id).eq('active', true).order('created_at')
     setServicos((atual) => { const vindos = data ?? []; const locais = (atual ?? []).filter((x) => x._local && !vindos.some((v) => v.id === x.id)); return [...vindos, ...locais] })
   }, [s.id])
   useEffect(() => { carregar() }, [carregar])
@@ -70,7 +71,7 @@ export default function EtapaServicos({ s, setErro, onEstado, compacto = false, 
     setAssistente({ item: base, tecnica: alvo })
   }
   async function concluirAssistente(d) {
-    const payload = { salon_id: s.id, name: d.nome, duration_minutes: d.duracao, price: d.preco, categoria_id: d.categoria_id, catalogo_item_id: d.catalogo_item_id, description: d.descricao, active: true, images: d.foto.tipo === 'mimo' && d.foto.url ? [d.foto.url] : [] }
+    const payload = { salon_id: s.id, name: d.nome, duration_minutes: d.duracao, price: d.preco, a_partir: Boolean(d.a_partir), categoria_id: d.categoria_id, catalogo_item_id: d.catalogo_item_id, description: d.descricao, active: true, images: d.foto.tipo === 'mimo' && d.foto.url ? [d.foto.url] : [] }
     const { data, error } = await supabase.from('services').insert(payload).select('id, categoria_id').maybeSingle()
     if (error) throw new Error('Não deu para adicionar: ' + error.message)
     const id = data?.id ?? 'local-' + crypto.randomUUID()
@@ -325,7 +326,7 @@ function CartaoCardapio({ sv, catalogo, aberto, onAbrir, onMudar, onTirar }) {
       <div className="cfg-item-topo">
         <button type="button" className="cfg-item-nome" onClick={onAbrir} aria-expanded={aberto}>
           <strong>{sv.name}</strong>
-          <small>{[formatDuracao(sv.duration_minutes), Number(sv.price) > 0 ? emReais(sv.price) && `R$ ${emReais(sv.price)}` : null].filter(Boolean).join(' · ')}{!(Number(sv.price) > 0) && <em className="cfg-item-sem-preco">sem preço</em>}{sv.catalogo_item_id ? '' : ' · personalizado'}</small>
+          <small>{[formatDuracao(sv.duration_minutes), Number(sv.price) > 0 ? emReais(sv.price) && `${sv.a_partir ? 'a partir de ' : ''}R$ ${emReais(sv.price)}` : null].filter(Boolean).join(' · ')}{!(Number(sv.price) > 0) && <em className="cfg-item-sem-preco">sem preço</em>}{sv.catalogo_item_id ? '' : ' · personalizado'}</small>
         </button>
         <button type="button" className={'cfg-item-btn' + (aberto ? ' ativo' : '')} onClick={onAbrir} aria-label={aberto ? 'Fechar' : 'Editar'}>{aberto ? <Check size={14} /> : <Pencil size={14} />}</button>
         <button type="button" className="cfg-item-btn perigo" onClick={onTirar} aria-label="Remover"><Trash2 size={14} /></button>
@@ -334,6 +335,7 @@ function CartaoCardapio({ sv, catalogo, aberto, onAbrir, onMudar, onTirar }) {
         <label>Duração<span className="cfg-min"><input type="number" min="5" step="5" value={dur} onChange={(e) => setDur(e.target.value)} onBlur={() => { const v = Number(dur); if (v > 0 && v !== sv.duration_minutes) onMudar({ duration_minutes: v }) }} /><i>min</i></span></label>
         <label>Preço<span className="cfg-reais"><i>R$</i><input value={preco} inputMode="decimal" placeholder="______" onChange={(e) => setPreco(e.target.value)} onBlur={() => { const v = reais(preco); if (v != null && v !== Number(sv.price)) onMudar({ price: v }) }} /></span></label>
       </div>}
+      {aberto && <APartirOpcao ligado={sv.a_partir} onMudar={(a_partir) => onMudar({ a_partir })} preco={sv.price} compacto />}
       {aberto && tecnicas.length > 0 && (
         <label className="cfg-item-tecnica">Técnica <small className="muted">(opcional)</small>
           <select value={tecnicaAtual} onChange={(e) => escolherTecnica(e.target.value)}><option value="">Não definir agora</option>{tecnicas.map((t) => <option key={t.id} value={t.id}>{t.nome}</option>)}</select>

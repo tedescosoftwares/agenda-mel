@@ -3,7 +3,7 @@ import { Image } from 'expo-image'
 import { useRouter } from 'expo-router'
 import { useEffect, useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
-import { formatDataLonga, labelDuracao, textoPolitica, textoSinal } from '@mimo/core'
+import { AVISO_A_PARTIR, ehAPartir, formatDataLonga, labelDuracao, prefixoAPartir, textoPolitica, textoSinal } from '@mimo/core'
 import { Tela } from '@/components/Tela'
 import { Trilha } from '@/components/Trilha'
 import { Aviso, Botao, Caixa, Cartao, Entrada, Selo } from '@/components/ui'
@@ -281,7 +281,7 @@ export default function Confirmar() {
                     {descontos[x.id] ? <Selo texto={`-${descontos[x.id]!.desconto_pct}%`} tom="acento" /> : null}
                   </View>
                   <Text style={{ color: t.texto2, fontSize: 13 }}>
-                    {labelDuracao(x)} ·{' '}
+                    {labelDuracao(x)} · {prefixoAPartir(x)}
                     {descontos[x.id] ? (
                       <>
                         <Text style={{ textDecorationLine: 'line-through' }}>{formatPreco(x.price)}</Text> {formatPreco(precoDe(x))}
@@ -333,6 +333,7 @@ export default function Confirmar() {
         <View style={[e.linha, { borderTopColor: t.fio, borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 8 }]}>
           <Text style={{ color: t.texto, fontWeight: '700' }}>{servico && servico.lista.length > 1 ? 'Valor total' : 'Valor'}</Text>
           <Text style={{ color: t.texto, fontWeight: '800', fontSize: 17 }}>
+            {servico && ehAPartir(servico) ? <Text style={{ color: t.texto2, fontSize: 13, fontWeight: '500' }}>a partir de </Text> : null}
             {servico ? (
               economia > 0 && !remarcando ? (
                 <>
@@ -346,6 +347,7 @@ export default function Confirmar() {
             )}
           </Text>
         </View>
+        {servico && ehAPartir(servico) ? <Text style={{ color: t.texto2, fontSize: 12.5, lineHeight: 17 }}>{AVISO_A_PARTIR}</Text> : null}
       </Cartao>
 
       {partesDetalhadas.length > 0 ? (
@@ -365,7 +367,7 @@ export default function Confirmar() {
                   <Text style={[e.itemNome, { color: t.texto }]}>{x.s?.name ?? '…'}</Text>
                   <Text style={{ color: t.texto2, fontSize: 13 }}>
                     com {x.p?.name ?? '…'}
-                    {x.s ? ` · ${formatDuracao(x.s.duration_minutes)} · ${formatPreco(x.s.price)}` : ''}
+                    {x.s ? ` · ${formatDuracao(x.s.duration_minutes)} · ${prefixoAPartir(x.s)}${formatPreco(x.s.price)}` : ''}
                     {espera > 0 ? ` · espera de ${formatDuracao(espera)}` : ''}
                   </Text>
                 </View>
@@ -408,7 +410,8 @@ export default function Confirmar() {
                   {x.name}
                 </Text>
                 <Text style={{ color: t.texto2, fontSize: 13 }}>
-                  +{formatDuracao(x.duration_minutes)} · {formatPreco(x.price)}
+                  +{formatDuracao(x.duration_minutes)} · {prefixoAPartir(x)}
+                  {formatPreco(x.price)}
                 </Text>
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>

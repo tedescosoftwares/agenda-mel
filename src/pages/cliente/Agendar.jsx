@@ -5,6 +5,7 @@ import CalendarioMes from '../../components/CalendarioMes'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { formatPreco, labelDuracao, formatDuracao } from '../../lib/format'
+import { prefixoAPartir, ehAPartir, AVISO_A_PARTIR } from '../../../packages/core/salao.js'
 import { formatDataLonga } from '../../lib/booking'
 import { Check, Sparkles, Repeat, Plus, Users, Hourglass, Search, BadgePercent } from 'lucide-react'
 import { useCategorias, agruparPorCategoria, bate } from '../../lib/categorias'
@@ -126,6 +127,7 @@ function juntar(ids, lista) {
     price: ordenada.reduce((a, x) => a + Number(x.price ?? 0), 0),
     duration_minutes: ordenada.reduce((a, x) => a + Number(x.duration_minutes ?? 0), 0),
     is_combo: ordenada.some((x) => x.is_combo),
+    a_partir: ordenada.some((x) => x.a_partir),
   }
 }
 
@@ -229,7 +231,7 @@ export function AgendarServicos() {
               </span>
               <span className="cliente-info">
                 <span className="cliente-nome"><span className="nome-txt">{s.name}</span>{descontos[s.id] && <span className="badge badge-promo">-{descontos[s.id].desconto_pct}%</span>}</span>
-                <span className="muted cliente-meta">{descontos[s.id] ? <><strong className="preco-por">{formatPreco(precoDe(s))}</strong> <s>{formatPreco(s.price)}</s></> : formatPreco(s.price)} · {labelDuracao(s)}</span>
+                <span className="muted cliente-meta">{prefixoAPartir(s)}{descontos[s.id] ? <><strong className="preco-por">{formatPreco(precoDe(s))}</strong> <s>{formatPreco(s.price)}</s></> : formatPreco(s.price)} · {labelDuracao(s)}</span>
                 {/* até duas linhas; a dica lá em cima já diz que o cartão abre os detalhes */}
                 {s.description && <span className="muted servico-desc">{s.description}</span>}
               </span>
@@ -350,7 +352,7 @@ export function AgendarHora() {
 
       {servico && (
         <div className="card resumo-mini">
-          <div className="resumo-linha"><span className="muted">Valor</span><strong>{formatPreco(servico.price)}</strong></div>
+          <div className="resumo-linha"><span className="muted">Valor</span><strong>{prefixoAPartir(servico)}{formatPreco(servico.price)}</strong></div>
           <div className="resumo-linha"><span className="muted">Duração</span><span className="resumo-mini-dur">{labelDuracao(servico)}</span></div>
         </div>
       )}
@@ -440,7 +442,7 @@ export function AgendarConfirmar() {
     if (!extras.length) return
     let vivo = true
     Promise.all([
-      supabase.from('services').select('id, name, price, duration_minutes').in('id', extras.map((x) => x.servico)),
+      supabase.from('services').select('id, name, price, duration_minutes, a_partir').in('id', extras.map((x) => x.servico)),
       supabase.from('professionals').select('id, name, photo_url').in('id', extras.map((x) => x.prof)),
     ]).then(([s, p]) => {
       if (!vivo) return
@@ -521,7 +523,7 @@ export function AgendarConfirmar() {
         {servico?.lista?.length > 1 ? (
           <div className="resumo-itens">
             <span className="muted">Serviços</span>
-            <ul>{servico.lista.map((x) => <li key={x.id}><span>{x.name}{descontos[x.id] && <span className="badge badge-promo">-{descontos[x.id].desconto_pct}%</span>}</span><span className="muted">{labelDuracao(x)} · {descontos[x.id] ? <><s>{formatPreco(x.price)}</s> {formatPreco(precoDe(x))}</> : formatPreco(x.price)}{!remarcando && <button type="button" className="resumo-tirar" onClick={() => tirar(x.id)} aria-label={`Tirar ${x.name}`}>×</button>}</span></li>)}</ul>
+            <ul>{servico.lista.map((x) => <li key={x.id}><span>{x.name}{descontos[x.id] && <span className="badge badge-promo">-{descontos[x.id].desconto_pct}%</span>}</span><span className="muted">{labelDuracao(x)} · {prefixoAPartir(x)}{descontos[x.id] ? <><s>{formatPreco(x.price)}</s> {formatPreco(precoDe(x))}</> : formatPreco(x.price)}{!remarcando && <button type="button" className="resumo-tirar" onClick={() => tirar(x.id)} aria-label={`Tirar ${x.name}`}>×</button>}</span></li>)}</ul>
           </div>
         ) : (
           <div className="resumo-linha"><span className="muted">Serviço</span><strong>{servico?.name}</strong></div>
@@ -542,7 +544,8 @@ export function AgendarConfirmar() {
         {economia > 0 && !remarcando && (
           <div className="resumo-linha resumo-desconto"><span><BadgePercent size={14} /> {Object.values(descontos).map((d) => d.titulo).filter((v, i, a) => a.indexOf(v) === i).join(', ')}</span><strong>− {formatPreco(economia)}</strong></div>
         )}
-        <div className="resumo-linha resumo-total"><span>{servico?.lista?.length > 1 ? 'Valor total' : 'Valor'}</span><strong>{servico && (economia > 0 && !remarcando ? <><s className="muted resumo-de">{formatPreco(totalCheio)}</s> {formatPreco(totalComDesconto)}</> : formatPreco(servico.price))}</strong></div>
+        <div className="resumo-linha resumo-total"><span>{servico?.lista?.length > 1 ? 'Valor total' : 'Valor'}</span><strong>{servico && prefixoAPartir(servico)}{servico && (economia > 0 && !remarcando ? <><s className="muted resumo-de">{formatPreco(totalCheio)}</s> {formatPreco(totalComDesconto)}</> : formatPreco(servico.price))}</strong></div>
+        {servico && ehAPartir(servico) && <p className="muted resumo-a-partir">{AVISO_A_PARTIR}</p>}
       </div>
 
       {partesDetalhadas.length > 0 && (
@@ -552,7 +555,7 @@ export function AgendarConfirmar() {
             {partesDetalhadas.map((x, i) => (
               <li key={x.servico + x.prof}>
                 <span className="resumo-parte-hora">{x.hora}</span>
-                <span className="resumo-parte-oque"><strong>{x.s?.name ?? '…'}</strong><span className="muted">com {x.p?.name ?? '…'}{x.s ? ` · ${formatDuracao(x.s.duration_minutes)} · ${formatPreco(x.s.price)}` : ''}{fimPrincipal && diffMin(i === 0 ? fimPrincipal : somarMin(partesDetalhadas[i - 1].hora, partesDetalhadas[i - 1].s?.duration_minutes ?? 0), x.hora) > 0 ? ` · espera de ${formatDuracao(diffMin(i === 0 ? fimPrincipal : somarMin(partesDetalhadas[i - 1].hora, partesDetalhadas[i - 1].s?.duration_minutes ?? 0), x.hora))}` : ''}</span></span>
+                <span className="resumo-parte-oque"><strong>{x.s?.name ?? '…'}</strong><span className="muted">com {x.p?.name ?? '…'}{x.s ? ` · ${formatDuracao(x.s.duration_minutes)} · ${prefixoAPartir(x.s)}${formatPreco(x.s.price)}` : ''}{fimPrincipal && diffMin(i === 0 ? fimPrincipal : somarMin(partesDetalhadas[i - 1].hora, partesDetalhadas[i - 1].s?.duration_minutes ?? 0), x.hora) > 0 ? ` · espera de ${formatDuracao(diffMin(i === 0 ? fimPrincipal : somarMin(partesDetalhadas[i - 1].hora, partesDetalhadas[i - 1].s?.duration_minutes ?? 0), x.hora))}` : ''}</span></span>
                 <button type="button" className="resumo-tirar" onClick={() => tirarParte(i)} aria-label={`Tirar ${x.s?.name ?? 'parte'}`}>×</button>
               </li>
             ))}
@@ -579,7 +582,7 @@ export function AgendarConfirmar() {
             {sugestoes.map((x) => (
               <button key={x.id} type="button" className="card upsell-item" onClick={() => adicionar(x.id)}>
                 <span className="upsell-foto" aria-hidden="true">{x.images?.[0] ? <img src={x.images[0]} alt="" /> : <Sparkles size={18} />}</span>
-                <span className="upsell-texto"><strong>{x.name}</strong><span className="muted">+{formatDuracao(x.duration_minutes)} · {formatPreco(x.price)}</span></span>
+                <span className="upsell-texto"><strong>{x.name}</strong><span className="muted">+{formatDuracao(x.duration_minutes)} · {prefixoAPartir(x)}{formatPreco(x.price)}</span></span>
                 <span className="upsell-mais"><Plus size={16} /> Adicionar</span>
               </button>
             ))}

@@ -3,7 +3,7 @@ import { Image } from 'expo-image'
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
 import { useCallback, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
-import { labelDuracao, nomeDaCategoria } from '@mimo/core'
+import { AVISO_A_PARTIR, labelDuracao, nomeDaCategoria, prefixoAPartir } from '@mimo/core'
 import { Tela } from '@/components/Tela'
 import { Avatar, Botao, Carregando, Cartao, Selo, Vazio } from '@/components/ui'
 import { paramsDe, useCategorias, type Servico } from '@/lib/agendar'
@@ -53,7 +53,7 @@ export default function ServicoPagina() {
         )
         const ids = ((ju.data ?? []) as { sugerido_id: string }[]).map((x) => x.sugerido_id)
         if (ids.length) {
-          const { data: js } = await supabase.from('services').select('id, name, price, duration_minutes, images').in('id', ids)
+          const { data: js } = await supabase.from('services').select('id, name, price, duration_minutes, images, a_partir').in('id', ids)
           if (vivo) setJuntos((js ?? []) as Junto[])
         } else setJuntos([])
         setDesconto(((de.data ?? []) as Desconto[])[0] ?? null)
@@ -136,7 +136,10 @@ export default function ServicoPagina() {
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           {precoPor != null ? (
             <>
-              <Text style={[e.preco, { color: t.texto }]}>{formatPreco(precoPor)}</Text>
+              <Text style={[e.preco, { color: t.texto }]}>
+                {s.a_partir ? <Text style={{ color: t.texto2, fontSize: 14, fontWeight: '500' }}>a partir de </Text> : null}
+                {formatPreco(precoPor)}
+              </Text>
               <Text style={{ color: t.texto3, textDecorationLine: 'line-through' }}>{formatPreco(s.price)}</Text>
               <Selo texto={desconto!.titulo} tom="acento" />
             </>
@@ -151,6 +154,7 @@ export default function ServicoPagina() {
             <Text style={{ color: t.texto2, fontSize: 13.5 }}>{labelDuracao(s)}</Text>
           </View>
         </View>
+        {s.a_partir ? <Text style={{ color: t.texto2, fontSize: 12.5, lineHeight: 17 }}>{AVISO_A_PARTIR}</Text> : null}
       </View>
 
       {s.description ? (
@@ -169,7 +173,7 @@ export default function ServicoPagina() {
                 <Text style={[e.forte, { color: t.texto }]}>{p.name}</Text>
                 {p.id === profId ? <Text style={{ color: t.acento, fontSize: 12.5, fontWeight: '600' }}>você está marcando com ela</Text> : null}
                 {p.preco_cents != null || p.duracao_minutos != null ? (
-                  <Text style={{ color: t.texto2, fontSize: 12.5 }}>com ela: {[p.preco_cents != null ? formatPreco(p.preco_cents / 100) : null, p.duracao_minutos != null ? formatDuracao(p.duracao_minutos) : null].filter(Boolean).join(' · ')}</Text>
+                  <Text style={{ color: t.texto2, fontSize: 12.5 }}>com ela: {[p.preco_cents != null ? `${prefixoAPartir(s)}${formatPreco(p.preco_cents / 100)}` : null, p.duracao_minutos != null ? formatDuracao(p.duracao_minutos) : null].filter(Boolean).join(' · ')}</Text>
                 ) : null}
               </View>
               <Ionicons name="chevron-forward" size={18} color={t.texto3} />
@@ -187,6 +191,7 @@ export default function ServicoPagina() {
               <View style={{ flex: 1, gap: 2 }}>
                 <Text style={[e.forte, { color: t.texto }]}>{x.name}</Text>
                 <Text style={{ color: t.texto2, fontSize: 13 }}>
+                  {prefixoAPartir(x)}
                   {formatPreco(x.price)} · {formatDuracao(x.duration_minutes)}
                 </Text>
               </View>

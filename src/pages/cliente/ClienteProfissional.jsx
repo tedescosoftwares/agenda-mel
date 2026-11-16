@@ -4,6 +4,7 @@ import ClienteShell from '../../components/ClienteShell'
 import { supabase } from '../../lib/supabase'
 import { StarIcon } from '../../components/icons'
 import { formatPreco, labelDuracao } from '../../lib/format'
+import { prefixoAPartir } from '../../../packages/core/salao.js'
 import { iniciais } from '../../lib/booking'
 import { Sparkles, Star, User } from 'lucide-react'
 import { useCategorias, agruparPorCategoria } from '../../lib/categorias'
@@ -98,7 +99,7 @@ export default function ClienteProfissional() {
               </span>
               <span className="cliente-info">
                 <span className="cliente-nome"><span className="nome-txt">{s.name}</span></span>
-                <span className="muted cliente-meta">{formatPreco(s.price)} · {labelDuracao(s)}</span>
+                <span className="muted cliente-meta">{prefixoAPartir(s)}{formatPreco(s.price)} · {labelDuracao(s)}</span>
               </span>
               <span className="link-ver">Ver</span>
             </Link>

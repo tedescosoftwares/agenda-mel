@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowLeft, ArrowRight, Check, Clock, Image as ImageIcon, Sparkles, Upload, Link2, X } from 'lucide-react'
 import Portal from '../../../components/Portal'
+import APartirOpcao from '../../../components/APartirOpcao'
 import { imagemDoItem } from '../../../components/CadastroDeServico'
 import { duracaoDe, nomeSugerido } from '../../../lib/catalogoBusca'
 import { formatDuracao, formatPreco } from '../../../lib/format'
@@ -22,6 +23,7 @@ export default function AssistenteDeServico({ catalogo, cats, item = null, tecni
     categoria_id: item?.categoria_id ?? categoriaInicial ?? '',
     duracao: item ? (duracaoDe(catalogo, tecnica ?? item) ?? 60) : 60,
     preco: '',
+    a_partir: false,
     descricao: '',
   }))
   const [foto, setFoto] = useState({ tipo: 'nenhuma', url: null, file: null, preview: null })
@@ -72,7 +74,7 @@ export default function AssistenteDeServico({ catalogo, cats, item = null, tecni
     if (!ultimo) { setI(i + 1); return }
     setSalvando(true)
     try {
-      await onConcluir({ nome: v.nome.trim(), categoria_id: v.categoria_id || null, catalogo_item_id: item ? (tec ?? item).id : null, duracao: Number(v.duracao) || 60, preco: paraReais(v.preco) ?? 0, descricao: v.descricao.trim() || null, foto, juntos })
+      await onConcluir({ nome: v.nome.trim(), categoria_id: v.categoria_id || null, catalogo_item_id: item ? (tec ?? item).id : null, duracao: Number(v.duracao) || 60, preco: paraReais(v.preco) ?? 0, a_partir: Boolean(v.a_partir), descricao: v.descricao.trim() || null, foto, juntos })
     } catch (err) { setErro(err?.message || 'Não deu para adicionar agora.'); setSalvando(false); return }
     setSalvando(false)
   }
@@ -125,9 +127,10 @@ export default function AssistenteDeServico({ catalogo, cats, item = null, tecni
               </label>
               <label>Preço
                 <span className="cfg-assist-campo"><em>R$</em><input value={v.preco} onChange={(e) => setV({ ...v, preco: e.target.value })} inputMode="decimal" placeholder="0,00" /></span>
-                <small className="muted">{precoN ? `A cliente vê ${formatPreco(precoN)}.` : 'Pode deixar para depois; sem preço, aparece “a combinar”.'}</small>
+                <small className="muted">{precoN ? `A cliente vê ${v.a_partir ? 'a partir de ' : ''}${formatPreco(precoN)}.` : 'Pode deixar para depois; sem preço, aparece “a combinar”.'}</small>
               </label>
             </div>
+            <APartirOpcao ligado={v.a_partir} onMudar={(a_partir) => setV({ ...v, a_partir })} preco={precoN} />
             <div className="cfg-assist-atalhos" aria-label="Durações comuns">
               {[30, 45, 60, 90, 120].map((m) => <button key={m} type="button" className={'btn-mini' + (Number(v.duracao) === m ? '' : ' btn-mini-neutro')} onClick={() => { mexeu.current.duracao = true; setV({ ...v, duracao: m }) }}>{formatDuracao(m)}</button>)}
             </div>
@@ -196,7 +199,7 @@ export default function AssistenteDeServico({ catalogo, cats, item = null, tecni
             </button>
           </div>
         </footer>
-        <p className="muted cfg-assist-resumo"><Clock size={12} /> {formatDuracao(Number(v.duracao) || 0)} · {precoN ? formatPreco(precoN) : 'a combinar'} · {foto.tipo === 'mimo' ? 'foto da MIMO' : foto.tipo === 'minha' ? 'sua foto' : 'sem foto'}{juntos.length ? ` · ${juntos.length} junto` : ''}</p>
+        <p className="muted cfg-assist-resumo"><Clock size={12} /> {formatDuracao(Number(v.duracao) || 0)} · {precoN ? `${v.a_partir ? 'a partir de ' : ''}${formatPreco(precoN)}` : 'a combinar'} · {foto.tipo === 'mimo' ? 'foto da MIMO' : foto.tipo === 'minha' ? 'sua foto' : 'sem foto'}{juntos.length ? ` · ${juntos.length} junto` : ''}</p>
       </div>
     </div></Portal>
   )

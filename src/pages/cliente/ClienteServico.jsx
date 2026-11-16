@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import ClienteShell from '../../components/ClienteShell'
 import { supabase } from '../../lib/supabase'
 import { formatPreco, labelDuracao, formatDuracao } from '../../lib/format'
+import { prefixoAPartir, AVISO_A_PARTIR } from '../../../packages/core/salao.js'
 import { iniciais } from '../../lib/booking'
 import { useCategorias, nomeDaCategoria } from '../../lib/categorias'
 import { Sparkles, Clock, Tag, Users, Plus, Check, ChevronRight, BadgePercent } from 'lucide-react'
@@ -58,7 +59,7 @@ export default function ClienteServico() {
       setQuem((ps.data ?? []).map((v) => (v.professionals ? { ...v.professionals, preco_cents: v.preco_cents, duracao_minutos: v.duracao_minutos } : null)).filter((p) => p?.active).sort((a, b) => a.name.localeCompare(b.name)))
       const ids = (ju.data ?? []).map((x) => x.sugerido_id)
       if (ids.length) {
-        const { data: js } = await supabase.from('services').select('id, name, price, duration_minutes, images').in('id', ids)
+        const { data: js } = await supabase.from('services').select('id, name, price, duration_minutes, images, a_partir').in('id', ids)
         if (vivo) setJuntos(js ?? [])
       } else setJuntos([])
       setDesconto((de.data ?? [])[0] ?? null)
@@ -97,10 +98,11 @@ export default function ClienteServico() {
         <h2>{s.name}</h2>
         <div className="svc-preco">
           {precoPor != null ? (
-            <><strong>{formatPreco(precoPor)}</strong><s className="muted">{formatPreco(s.price)}</s><span className="svc-promo-nome">{desconto.titulo}</span></>
+            <><strong>{s.a_partir ? <span className="muted svc-a-partir">a partir de </span> : null}{formatPreco(precoPor)}</strong><s className="muted">{formatPreco(s.price)}</s><span className="svc-promo-nome">{desconto.titulo}</span></>
           ) : <strong>{s.a_partir ? <span className="muted svc-a-partir">a partir de </span> : null}{formatPreco(s.price)}</strong>}
           <span className="muted svc-dur"><Clock size={14} /> {labelDuracao(s)}</span>
         </div>
+        {s.a_partir && <p className="muted svc-a-partir-aviso">{AVISO_A_PARTIR}</p>}
       </div>
 
       {s.description && <div className="card svc-bloco"><Tag size={16} /><p>{s.description}</p></div>}
@@ -127,7 +129,7 @@ export default function ClienteServico() {
             {juntos.map((x) => (
               <Link key={x.id} to={`/cliente/servico/${x.id}?${comOrigem({ ...(prof ? { prof } : {}), sel: escolha.join(',') })}`} className="card servico-linha">
                 <span className="servico-linha-foto" aria-hidden="true">{x.images?.[0] ? <img src={x.images[0]} alt="" /> : <Sparkles />}</span>
-                <span className="cliente-info"><span className="cliente-nome"><span className="nome-txt">{x.name}</span></span><span className="muted cliente-meta">{formatPreco(x.price)} · {formatDuracao(x.duration_minutes)}</span></span>
+                <span className="cliente-info"><span className="cliente-nome"><span className="nome-txt">{x.name}</span></span><span className="muted cliente-meta">{prefixoAPartir(x)}{formatPreco(x.price)} · {formatDuracao(x.duration_minutes)}</span></span>
                 <ChevronRight size={18} className="agdt-seta" />
               </Link>
             ))}

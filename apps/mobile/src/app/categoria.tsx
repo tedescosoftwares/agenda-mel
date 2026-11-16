@@ -4,7 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
 import { useCallback, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
-import { labelDuracao } from '@mimo/core'
+import { labelDuracao, prefixoAPartir } from '@mimo/core'
 import { Tela } from '@/components/Tela'
 import { Avatar, Carregando, Cartao, Chip, Selo, Vazio } from '@/components/ui'
 import { useCategorias } from '@/lib/agendar'
@@ -147,6 +147,7 @@ export default function Categoria() {
                 {d ? <Selo texto={`-${d.desconto_pct}%`} tom="acento" /> : null}
               </View>
               <Text style={{ color: t.texto2, fontSize: 13 }}>
+                {prefixoAPartir(sv)}
                 {d ? (
                   <>
                     <Text style={{ color: t.texto, fontWeight: '800' }}>{formatPreco(d.preco_com_desconto_cents / 100)}</Text> <Text style={{ textDecorationLine: 'line-through' }}>{formatPreco(sv.price)}</Text>

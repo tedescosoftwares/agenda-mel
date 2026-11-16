@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import ClienteShell from '../../components/ClienteShell'
 import { supabase } from '../../lib/supabase'
 import { formatPreco, labelDuracao } from '../../lib/format'
+import { prefixoAPartir } from '../../../packages/core/salao.js'
 import { iniciais } from '../../lib/booking'
 import { useCategorias, capaPadrao } from '../../lib/categorias'
 import { Sparkles, ChevronRight, Star, BadgePercent } from 'lucide-react'
@@ -106,7 +107,7 @@ export default function ClienteCategoria() {
               <span className="servico-linha-foto" aria-hidden="true">{sv.images?.[0] ? <img src={sv.images[0]} alt="" /> : <Sparkles />}</span>
               <span className="cliente-info">
                 <span className="cliente-nome"><span className="nome-txt">{sv.name}</span>{sv.is_combo && <span className="badge badge-combo">combo</span>}{d && <span className="badge badge-promo"><BadgePercent size={10} /> -{d.desconto_pct}%</span>}</span>
-                <span className="muted cliente-meta">{d ? <><strong className="preco-por">{formatPreco(d.preco_com_desconto_cents / 100)}</strong> <s>{formatPreco(sv.price)}</s></> : formatPreco(sv.price)} · {labelDuracao(sv)}</span>
+                <span className="muted cliente-meta">{prefixoAPartir(sv)}{d ? <><strong className="preco-por">{formatPreco(d.preco_com_desconto_cents / 100)}</strong> <s>{formatPreco(sv.price)}</s></> : formatPreco(sv.price)} · {labelDuracao(sv)}</span>
                 {quem.length > 0 && (
                   <span className="catpg-quem-linha">
                     <span className="home-salao-avatares">{quem.slice(0, 4).map((q) => q.foto ? <img key={q.id} src={q.foto} alt="" /> : <span key={q.id}>{q.nome.charAt(0)}</span>)}</span>

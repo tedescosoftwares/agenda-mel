@@ -3,7 +3,7 @@ import { Image } from 'expo-image'
 import { useRouter } from 'expo-router'
 import { useEffect, useMemo, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
-import { agruparPorCategoria, bate, labelDuracao } from '@mimo/core'
+import { agruparPorCategoria, bate, labelDuracao, prefixoAPartir } from '@mimo/core'
 import { Tela } from '@/components/Tela'
 import { Trilha } from '@/components/Trilha'
 import { Aviso, Botao, Carregando, Chip, Entrada, Selo } from '@/components/ui'
@@ -77,7 +77,7 @@ export default function Servicos() {
                 {escolhidos.map((s) => s.name).join(' + ')}
               </Text>
               <Text style={{ color: t.texto2, fontSize: 13 }}>
-                {escolhidos.length} {escolhidos.length === 1 ? 'serviço' : 'serviços'} · {formatDuracao(totalMin)} · <Text style={{ color: t.texto, fontWeight: '800' }}>{formatPreco(totalPreco)}</Text>
+                {escolhidos.length} {escolhidos.length === 1 ? 'serviço' : 'serviços'} · {formatDuracao(totalMin)} · <Text style={{ color: t.texto, fontWeight: '800' }}>{escolhidos.some((s) => s.a_partir) ? 'a partir de ' : ''}{formatPreco(totalPreco)}</Text>
               </Text>
             </View>
           ) : null}
@@ -139,6 +139,7 @@ export default function Servicos() {
                     {d ? <Selo texto={`-${d.desconto_pct}%`} tom="acento" /> : null}
                   </View>
                   <Text style={{ color: t.texto2, fontSize: 13 }}>
+                    {prefixoAPartir(s)}
                     {d ? (
                       <>
                         <Text style={{ color: t.texto, fontWeight: '800' }}>{formatPreco(precoDe(s))}</Text> <Text style={{ textDecorationLine: 'line-through' }}>{formatPreco(s.price)}</Text>

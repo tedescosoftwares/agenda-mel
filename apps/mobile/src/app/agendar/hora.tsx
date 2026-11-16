@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router'
 import { useEffect, useState } from 'react'
 import { StyleSheet, Text, View } from 'react-native'
-import { formatDataLonga, labelDuracao } from '@mimo/core'
+import { formatDataLonga, labelDuracao, prefixoAPartir } from '@mimo/core'
 import { Tela } from '@/components/Tela'
 import { Trilha } from '@/components/Trilha'
 import { Botao, Carregando, Cartao, Chip } from '@/components/ui'
@@ -60,7 +60,10 @@ export default function Hora() {
         <Cartao estilo={{ gap: 6 }}>
           <View style={e.linha}>
             <Text style={{ color: t.texto2 }}>Valor</Text>
-            <Text style={{ color: t.texto, fontWeight: '800' }}>{formatPreco(servico.price)}</Text>
+            <Text style={{ color: t.texto, fontWeight: '800' }}>
+              {prefixoAPartir(servico)}
+              {formatPreco(servico.price)}
+            </Text>
           </View>
           <View style={e.linha}>
             <Text style={{ color: t.texto2 }}>Duração</Text>

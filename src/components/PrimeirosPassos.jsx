@@ -123,7 +123,7 @@ function EquipePendente({ r }) {
   return (
     <Link to="/admin/equipe" className="card pp-equipe">
       <Users size={18} />
-      <span><strong>Equipe pendente de ativação</strong><small className="muted">{n === 1 ? '1 profissional ainda não acessou.' : `${n} profissionais ainda não acessaram.`}{Number(r.equipe_rascunho ?? 0) > 0 ? ` ${r.equipe_rascunho === 1 ? 'Uma mandou os dados e espera você configurar.' : `${r.equipe_rascunho} mandaram os dados e esperam você configurar.`}` : ''}</small></span>
+      <span><strong>Equipe: falta ativar o acesso</strong><small className="muted">{n === 1 ? '1 profissional já está na agenda, mas ainda não ativou o acesso pelo e-mail.' : `${n} profissionais já estão na agenda, mas ainda não ativaram o acesso pelo e-mail.`}{Number(r.equipe_rascunho ?? 0) > 0 ? ` ${r.equipe_rascunho === 1 ? 'Uma mandou os dados e espera você configurar.' : `${r.equipe_rascunho} mandaram os dados e esperam você configurar.`}` : ''}</small></span>
       <span className="pp-equipe-acao">Ver equipe</span>
     </Link>
   )

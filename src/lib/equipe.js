@@ -58,7 +58,8 @@ export function pode(prof, chave) {
 // ---- situação ---------------------------------------------------------------
 export const SITUACOES = {
   rascunho: { rotulo: 'Dados recebidos', cor: 'cinza', texto: 'Ela mandou nome e WhatsApp pelo link. Falta você configurar.' },
-  configurada: { rotulo: 'Aguardando ativação', cor: 'amarelo', texto: 'Tudo pronto. Ela ainda não abriu o link de acesso.' },
+  // 3.82: quem o salão cadastrou já está na agenda (recebe horários, a cliente vê); o acesso dela ao app é à parte
+  configurada: { rotulo: 'Na agenda · falta ativar', cor: 'verde', texto: 'Já recebe horários e aparece para as clientes. Falta ela abrir o e-mail de acesso e criar a senha para ver a agenda no celular.' },
   ativa: { rotulo: 'Ativa', cor: 'verde', texto: 'Ela já entrou e usa a agenda.' },
   inativa: { rotulo: 'Inativa', cor: 'cinza', texto: 'Não aparece para as clientes e não recebe horários.' },
 }

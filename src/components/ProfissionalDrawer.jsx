@@ -36,11 +36,11 @@ const hhmm = (t) => String(t ?? '').slice(0, 5)
 const centsDe = (t) => { const n = Number(String(t ?? '').replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.')); return Number.isFinite(n) && n > 0 ? Math.round(n * 100) : null }
 const emReais = (c) => (c == null ? '' : (Number(c) / 100).toFixed(2).replace('.', ','))
 
-export default function ProfissionalDrawer({ salao, profissional = null, servicos = [], cats = [], onFechar, onSalvo, semServicos = false }) {
+export default function ProfissionalDrawer({ salao, profissional = null, servicos = [], cats = [], onFechar, onSalvo, semServicos = false, abaInicial = 1 }) {
   const editando = Boolean(profissional?.id)
   // semServicos (3.81): na Configuração, os serviços de cada uma se ligam na etapa seguinte ("Quem faz o quê")
   const abas = ABAS.filter((a) => (ETAPAS_COMPLETAS || !ETAPAS_DEPOIS.has(a.id)) && !(semServicos && a.id === 3))
-  const [aba, setAba] = useState(1)
+  const [aba, setAba] = useState(abaInicial)
   const pos = Math.max(0, abas.findIndex((a) => a.id === aba))
   const proxima = abas[pos + 1]?.id ?? 7
   const anterior = abas[pos - 1]?.id ?? 1
@@ -49,6 +49,9 @@ export default function ProfissionalDrawer({ salao, profissional = null, servico
   const [salva, setSalva] = useState(null)        // o resultado do salvar: { id, situacao, token }
   const [copiado, setCopiado] = useState(false)
   const [horasSalao, setHorasSalao] = useState(null)
+  // o acesso vai por e-mail (129); depois dá pra avisar no WhatsApp
+  const [enviadoPara, setEnviadoPara] = useState('')
+  const [enviando, setEnviando] = useState(false)
   const arq = useRef(null)
   const [f, setF] = useState(() => inicial(profissional, servicos))
   const m = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.value }))
@@ -86,8 +89,8 @@ export default function ProfissionalDrawer({ salao, profissional = null, servico
   function validar(ate) {
     if (ate >= 1 && !f.name.trim()) { setAba(1); setErro('Diga o nome completo dela.'); return false }
     if (ate >= 1 && f.phone.replace(/\D/g, '').length < 10) { setAba(1); setErro('Diga o WhatsApp: é por ele que chegam os avisos.'); return false }
-    // 3.81: o e-mail é opcional (sem ele, o acesso vai pelo link no WhatsApp); só não pode estar errado
-    if (ate >= 1 && f.email.trim() && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(f.email.trim())) { setAba(1); setErro('Esse e-mail não parece certo. Confira, ou deixe em branco e mande o acesso pelo WhatsApp.'); return false }
+    // 3.82: o e-mail não trava o caminho entre as etapas; no salvar, quem ainda não ativou precisa dele (o acesso vai por e-mail)
+    if (ate >= 1 && f.email.trim() && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(f.email.trim())) { setAba(1); setErro('Esse e-mail não parece certo. Confira, por favor.'); return false }
     if (ate >= 4 && !f.usa_horario_salao) for (const h of f.horarios ?? []) if (h.open && h.start_time >= h.end_time) { setAba(4); setErro(`${DIAS[h.weekday]}: o fim precisa ser depois do início.`); return false }
     if (ETAPAS_COMPLETAS && ate >= 5 && f.repasse !== 'nao') { const c = Number(f.cota_pct); if (!(c >= 0 && c <= 100)) { setAba(5); setErro('O percentual vai de 0 a 100.'); return false } }
     setErro(''); return true
@@ -109,6 +112,7 @@ export default function ProfissionalDrawer({ salao, profissional = null, servico
 
   async function salvar() {
     if (!validar(6)) return
+    if (!profissional?.user_id && !f.email.trim()) { setAba(1); setErro(`Diga o e-mail de ${nome || 'dela'}: é por ele que ela recebe o acesso para ativar. Ela já entra na agenda assim que você salvar.`); return }
     setSalvando(true); setErro('')
     try {
       let photo_url = f.photo_url ?? null
@@ -136,16 +140,18 @@ export default function ProfissionalDrawer({ salao, profissional = null, servico
       const idSalvo = data?.id ?? profissional?.id
       const categorias = ETAPAS_COMPLETAS ? (f.categorias ?? []) : [...new Set(escolhidos.map((sv) => sv.categoria_id).filter(Boolean))]
       if (idSalvo && !semServicos) { const r2 = await supabase.rpc('equipe_definir_categorias', { prof: idSalvo, categorias }); if (r2.error) throw new Error(r2.error.message) }
-      setSalva({ id: data?.id ?? profissional?.id, situacao: data?.situacao ?? (profissional?.user_id ? 'ativa' : 'configurada'), token: data?.token ?? profissional?.token ?? null })
+      const situacaoSalva = data?.situacao ?? (profissional?.user_id ? 'ativa' : 'configurada')
+      setSalva({ id: data?.id ?? profissional?.id, situacao: situacaoSalva, token: data?.token ?? profissional?.token ?? null })
       setAba(7)
       onSalvo?.(data)
+      // 3.82: a ativação é cobrada por e-mail: quem nunca recebeu o acesso recebe agora, sem precisar de outro toque
+      if (situacaoSalva === 'configurada' && f.email.trim() && !profissional?.acesso_enviado_em && (data?.id ?? profissional?.id)) {
+        try { const r = await enviarAcesso(supabase, { id: data?.id ?? profissional?.id }, f.email.trim()); setEnviadoPara(r.email) } catch (e2) { setErro('Ela já está na agenda, mas o e-mail de acesso não saiu: ' + e2.message + ' Tente de novo no botão abaixo.') }
+      }
     } catch (err) { setErro(err.message) } finally { setSalvando(false) }
   }
   async function marcarEnviado() { if (salva?.id) try { await supabase.rpc('equipe_acesso_enviado', { prof: salva.id }) } catch { /* segue */ } }
   function copiar() { navigator.clipboard?.writeText(link); setCopiado(true); setTimeout(() => setCopiado(false), 2000); marcarEnviado() }
-  // o acesso vai por e-mail (129); depois dá pra avisar no WhatsApp
-  const [enviadoPara, setEnviadoPara] = useState('')
-  const [enviando, setEnviando] = useState(false)
   async function enviarEmail() {
     if (!salva?.id) return
     setEnviando(true); setErro('')
@@ -169,7 +175,7 @@ export default function ProfissionalDrawer({ salao, profissional = null, servico
           {aba === 1 && (
             <section className="gv-secao">
               <h3>Quem é ela</h3>
-              <p className="muted">Você preenche tudo; ela só recebe o link de acesso no e-mail e entra com a agenda pronta. {semServicos ? 'Depois é só dizer quando ela atende.' : 'Depois você marca os serviços dela e quando ela atende.'}</p>
+              <p className="muted">Você preenche tudo e ela já entra na agenda ao salvar: dá para distribuir os serviços e marcar horários com ela na hora. Ela recebe o acesso por e-mail para ativar e ver a agenda no celular.</p>
               <div className="gv-foto-linha">
                 <button type="button" className="gv-foto" onClick={() => arq.current?.click()} aria-label="Foto">
                   {f.fotoNova?.preview || f.photo_url ? <img src={f.fotoNova?.preview ?? f.photo_url} alt="" /> : <Avatar nome={f.name || "?"} grande />}
@@ -182,7 +188,7 @@ export default function ProfissionalDrawer({ salao, profissional = null, servico
                 </div>
               </div>
               <div className="gv-form gv-form-2">
-                <label>E-mail <span className="muted">(opcional: o acesso chega por ele)</span><input type="email" value={f.email} onChange={m('email')} placeholder="carla@exemplo.com" /></label>
+                <label>E-mail {!profissional?.user_id && <b>*</b>} <span className="muted">(o acesso para ela ativar chega por ele)</span><input type="email" value={f.email} onChange={m('email')} placeholder="carla@exemplo.com" /></label>
                 <label>Função <span className="muted">(opcional)</span><input value={f.especialidade} onChange={m('especialidade')} placeholder="Cabeleireira" list="gv-funcoes" /><datalist id="gv-funcoes">{FUNCOES.map((x) => <option key={x} value={x} />)}</datalist></label>
               </div>
               <label className="gv-form gv-bio">Apresentação <span className="muted">(opcional, aparece na página dela)</span><textarea rows={2} value={f.bio} onChange={m('bio')} placeholder="Especialista em loiros e cortes modernos…" /></label>
@@ -317,21 +323,12 @@ export default function ProfissionalDrawer({ salao, profissional = null, servico
                   <Resumo f={f} escolhidos={escolhidos} horasSalao={horasSalao} semServicos={semServicos} />
                   {salva.situacao === 'configurada' && link ? (
                     <div className="gv-acesso">
-                      <strong>Agora é só mandar o acesso</strong>
-                      {f.email.trim() ? (
-                        <>
-                          <p className="muted">O acesso vai por e-mail pra <b>{f.email.trim()}</b>: ela abre o link, cria a senha e entra com a agenda pronta. Não precisa escolher serviço, preço nem horário.</p>
-                          {enviadoPara
-                            ? <div className="alert alert-info">Enviado para {enviadoPara}. Se quiser, avisa no WhatsApp pra ela olhar o e-mail.</div>
-                            : <button type="button" className="btn btn-primary btn-block" onClick={enviarEmail} disabled={enviando}><Mail size={16} /> {enviando ? 'Enviando…' : 'Enviar acesso por e-mail'}</button>}
-                          {enviadoPara && <a className="btn btn-ghost btn-block" href={whats} target="_blank" rel="noreferrer"><MessageCircle size={16} /> Avisar no WhatsApp</a>}
-                        </>
-                      ) : (
-                        <>
-                          <p className="muted">Mande o link pelo WhatsApp: ela abre, cria a senha e entra com a agenda pronta.</p>
-                          <a className="btn btn-primary btn-block" href={whats} target="_blank" rel="noreferrer" onClick={marcarEnviado}><MessageCircle size={16} /> Mandar o acesso no WhatsApp</a>
-                        </>
-                      )}
+                      <strong>Falta ela ativar o acesso</strong>
+                      <p className="muted">{nome} <b>já está na agenda</b>: você já pode marcar horários com ela e as clientes já veem os serviços dela. Falta só ela ativar o acesso: abrir o e-mail, criar a senha e ver a agenda no celular.</p>
+                      {enviadoPara
+                        ? <div className="alert alert-info">Acesso enviado para {enviadoPara}. Se quiser, avise no WhatsApp para ela olhar o e-mail (e o spam).</div>
+                        : <button type="button" className="btn btn-primary btn-block" onClick={enviarEmail} disabled={enviando || !f.email.trim()}><Mail size={16} /> {enviando ? 'Enviando…' : profissional?.acesso_enviado_em ? 'Reenviar o acesso por e-mail' : 'Enviar o acesso por e-mail'}</button>}
+                      <a className="btn btn-ghost btn-block" href={whats} target="_blank" rel="noreferrer" onClick={marcarEnviado}><MessageCircle size={16} /> Avisar no WhatsApp</a>
                       <div className="gv-link"><input readOnly value={link} onFocus={(e) => e.target.select()} /><button type="button" className="btn-mini" onClick={copiar}><Copy size={12} /> {copiado ? 'Copiado!' : 'Copiar link'}</button></div>
                     </div>
                   ) : salva.situacao === 'ativa' ? (
@@ -342,7 +339,7 @@ export default function ProfissionalDrawer({ salao, profissional = null, servico
               ) : (
                 <>
                   <h3>Confira e salve</h3>
-                  <p className="muted">Depois de salvar, {nome} fica como <b>aguardando ativação</b> e você manda o link de acesso.{!ETAPAS_COMPLETAS && ' Repasse e permissões seguem o padrão da casa por enquanto.'}</p>
+                  <p className="muted">Ao salvar, {nome} <b>já entra na agenda</b> e recebe o acesso por e-mail para ativar.{!ETAPAS_COMPLETAS && ' Repasse e permissões seguem o padrão da casa por enquanto.'}</p>
                   <Resumo f={f} escolhidos={escolhidos} horasSalao={horasSalao} semServicos={semServicos} />
                 </>
               )}

@@ -26,7 +26,9 @@ export default function EtapaProfissionais({ s, autonoma, setErro, onEstado }) {
       supabase.from('services').select('id, name, price, duration_minutes, categoria_id').eq('salon_id', s.id).eq('active', true).order('name'),
       supabase.from('categorias_de_servico').select('id, salon_id, nome, ordem, slug, ativa').or(`salon_id.eq.${s.id},salon_id.is.null`).order('ordem'),
     ])
-    setEquipe(Array.isArray(eq.data) ? eq.data : []); setServicos(sv.data ?? []); setCats(ct.data ?? [])
+    const lista = Array.isArray(eq.data) ? eq.data : []
+    setEquipe(lista); setServicos(sv.data ?? []); setCats(ct.data ?? [])
+    return lista
   }, [s.id])
   useEffect(() => { carregar() }, [carregar])
   const ativas = (equipe ?? []).filter((p) => p.situacao !== 'inativa')
@@ -89,7 +91,7 @@ export default function EtapaProfissionais({ s, autonoma, setErro, onEstado }) {
               <span className="muted">{(p.servicos ?? []).length} {(p.servicos ?? []).length === 1 ? 'serviço' : 'serviços'}</span>
               {p.dona
                 ? <button type="button" className="plat-link cfg-prof-dona-sair" onClick={() => donaAtender(false)} disabled={mudandoDona}>Não atendo mais</button>
-                : <button type="button" className="btn btn-ghost btn-mini" onClick={() => setGaveta(p)}><Pencil size={13} /> Editar</button>}
+                : <button type="button" className="btn btn-ghost btn-mini" onClick={() => setGaveta({ prof: p })}><Pencil size={13} /> Editar</button>}
             </div>
           ))}
           {!autonoma && (
@@ -101,8 +103,8 @@ export default function EtapaProfissionais({ s, autonoma, setErro, onEstado }) {
           )}
         </div>
       )}
-      {novo && <ProfissionalQuickForm salao={s} onFechar={() => setNovo(false)} onSalvo={() => { setNovo(false); carregar() }} setErro={setErro} />}
-      {gaveta && <ProfissionalDrawer salao={s} profissional={gaveta} servicos={servicos} cats={cats} semServicos onFechar={() => { setGaveta(null); carregar() }} onSalvo={() => carregar()} />}
+      {novo && <ProfissionalQuickForm salao={s} onFechar={() => setNovo(false)} onSalvo={async (id, dados) => { setNovo(false); const lista = await carregar(); const nova = id && (lista.find((x) => x.id === id) ?? { ...dados, id, situacao: 'configurada', servicos: [], usa_horario_salao: true }); if (nova && servicos.length) setGaveta({ prof: nova, aba: 3 }) }} setErro={setErro} />}
+      {gaveta && <ProfissionalDrawer salao={s} profissional={gaveta.prof} abaInicial={gaveta.aba ?? 1} servicos={servicos} cats={cats} onFechar={() => { setGaveta(null); carregar() }} onSalvo={() => carregar()} />}
     </section>
   )
 }
@@ -133,9 +135,9 @@ function ProfissionalQuickForm({ salao, onFechar, onSalvo, setErro }) {
         photo_url = supabase.storage.from('professional-photos').getPublicUrl(path).data.publicUrl
       }
       const dados = { name: v.name.trim(), phone: v.phone.trim(), email: v.email.trim() || null, especialidade: v.especialidade || null, photo_url, servicos: [], usa_horario_salao: true, permissoes: PERMISSOES_RECOMENDADAS }
-      const { error } = await supabase.rpc('equipe_salvar_profissional', { salao: salao.id, dados })
+      const { data, error } = await supabase.rpc('equipe_salvar_profissional', { salao: salao.id, dados })
       if (error) throw new Error(error.message)
-      onSalvo()
+      onSalvo(data?.id ?? null, dados)
     } catch (err) { setErroLocal(err.message); setErro?.('') } finally { setSalvando(false) }
   }
   return (
@@ -143,7 +145,7 @@ function ProfissionalQuickForm({ salao, onFechar, onSalvo, setErro }) {
       <form className="cfg-drawer" onClick={(e) => e.stopPropagation()} onSubmit={salvar} role="dialog" aria-modal="true" aria-label="Adicionar profissional">
         <button type="button" className="modal-fechar" onClick={onFechar} aria-label="Fechar">×</button>
         <h3>Adicionar profissional</h3>
-        <p className="muted">Só o essencial agora. Horários, repasse e acesso ficam em Profissionais, quando quiser.</p>
+        <p className="muted">Só o essencial agora. Ao salvar, ela já entra na agenda e você marca os serviços que ela faz. O acesso dela chega pelo e-mail.</p>
         {erro && <div className="alert alert-error">{erro}</div>}
         <div className="cfg-quick-foto">
           <button type="button" className="cfg-foto-btn" onClick={() => arq.current?.click()}>{v.foto ? <img src={v.foto.preview} alt="" /> : <><Camera size={18} /><span>Foto</span></>}</button>

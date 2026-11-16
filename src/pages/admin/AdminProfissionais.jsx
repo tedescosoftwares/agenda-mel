@@ -91,7 +91,7 @@ export default function AdminProfissionais() {
           <p className="muted">
             {lista.length} {lista.length === 1 ? 'profissional' : 'profissionais'}
             {lista.length > 0 ? ` · ${ativas} ativa${ativas === 1 ? '' : 's'}` : ''}
-            {pendentes.length > 0 ? ` · ${pendentes.length} aguardando ativação` : ''}
+            {pendentes.length > 0 ? ` · ${pendentes.length} na agenda sem ativar o acesso` : ''}
           </p>
         </div>
       </div>

@@ -16026,3 +16026,48 @@ select.cont-mais { max-width: 420px; }
 label.a-partir-opcao { flex-direction: row !important; align-items: center !important; gap: 12px !important; font-weight: 400; }
 label.a-partir-opcao > .a-partir-caixa { flex: 0 0 20px; width: 20px !important; height: 20px; margin: 0; accent-color: var(--rosa); cursor: pointer; }
 label.a-partir-opcao .a-partir-opcao-texto { flex: 1; }
+
+/* ---- 3.84: a plataforma seleciona, apaga e mostra a ficha cadastral ---- */
+.plat-unidades li { position: relative; }
+.plat-unidade-nums { flex-wrap: wrap; row-gap: 0.5rem; min-width: 0; }   /* o terceiro número desce em vez de passar por baixo dos botões */
+.plat-unidades li > .plat-sel { position: absolute; top: 0.6rem; left: 0.6rem; z-index: 1; background: #fff; border-radius: 4px; box-shadow: 0 0 0 3px #fff; }
+.plat-unidades li.selecionado { border-color: #ffc2d8; background: #fff8fb; }
+.plat-sel, .plat-sel-col input, .plat-sel-todos input { width: 17px; height: 17px; accent-color: var(--rosa); cursor: pointer; margin: 0; }
+.plat-sel-col { width: 34px; padding-right: 0 !important; }
+.plat-tabela tr.selecionado td { background: #fff8fb; }
+.plat-sel-todos { display: inline-flex; align-items: center; gap: 0.45rem; font-size: 0.85rem; color: var(--texto-2); cursor: pointer; white-space: nowrap; }
+.plat-sel-barra { display: flex; align-items: center; flex-wrap: wrap; gap: 0.6rem 1rem; padding: 0.6rem 0.8rem; margin-bottom: 0.8rem; border-radius: 12px; background: #fff0f5; border: 1px solid #ffc2d8; font-size: 0.88rem; }
+.plat-sel-barra .btn-mini { display: inline-flex; align-items: center; gap: 0.3rem; }
+.btn-perigo.btn-mini { color: #fff; border-color: transparent; }
+.plat-btn-ico.perigo { color: var(--carmim); }
+.plat-btn-ico.perigo:hover { background: #fdecef; border-color: #f4b8c6; }
+.btn-perigo-borda { color: var(--carmim) !important; border-color: #f4b8c6 !important; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; }
+.plat-apagar-dica { display: block; margin-top: 0.45rem; font-size: 0.78rem; line-height: 1.4; }
+.plat-negocio { display: block; margin-top: 0.25rem; font-size: 0.75rem; font-weight: 600; }
+.plat-negocio.salao { color: var(--rosa); } .plat-negocio.autonoma { color: var(--roxo); }
+.plat-ficha { margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 1.4rem; }
+.plat-ficha div { padding: 0.55rem 0; border-bottom: 1px solid var(--cinza-1); min-width: 0; }
+.plat-ficha dt { font-size: 0.75rem; color: var(--texto-3); margin-bottom: 0.1rem; }
+.plat-ficha dd { margin: 0; font-size: 0.9rem; overflow-wrap: anywhere; }
+.pap-modal { max-width: 560px; }
+.pap-modal h3 { display: flex; align-items: center; gap: 0.45rem; margin: 0 0 0.4rem; }
+.pap-modal h3 svg { color: var(--carmim); flex-shrink: 0; }
+.pap-modal > p { margin: 0 0 0.8rem; font-size: 0.88rem; line-height: 1.45; }
+.pap-lista { list-style: none; margin: 0 0 0.8rem; padding: 0; display: flex; flex-direction: column; gap: 0.45rem; max-height: 38vh; overflow-y: auto; }
+.pap-lista li { border: 1px solid var(--fio); border-radius: 12px; padding: 0.6rem 0.75rem; display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.88rem; }
+.pap-lista li small { color: var(--texto-2); line-height: 1.4; }
+.pap-lista li em { color: var(--carmim); font-style: normal; }
+.pap-lista li.impede { background: var(--cinza-1); opacity: 0.85; }
+.pap-impede { font-size: 0.8rem; font-weight: 600; color: var(--texto-2); }
+.pap-total { font-weight: 600; margin: 0 0 0.6rem; font-size: 0.9rem; }
+.pap-check { display: flex; align-items: flex-start; gap: 0.5rem; font-size: 0.86rem; margin-bottom: 0.7rem; cursor: pointer; }
+.pap-check input { margin-top: 0.15rem; accent-color: var(--carmim); }
+.pap-confirma > span b { color: var(--carmim); letter-spacing: 0.06em; }
+.pap-confirma { display: flex; flex-direction: column; gap: 0.35rem; font-size: 0.86rem; color: var(--texto-2); }
+.pap-confirma input { font: inherit; padding: 0.55rem 0.7rem; border: 1px solid var(--fio); border-radius: 10px; letter-spacing: 0.08em; }
+.pap-modal .modal-acoes .btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem; }
+.pap-pulados { border-radius: 12px; background: var(--cinza-1); padding: 0.6rem 0.8rem; font-size: 0.86rem; margin-bottom: 0.6rem; }
+.pap-pulados ul { margin: 0.3rem 0 0; padding-left: 1.1rem; }
+@media (max-width: 700px) {
+  .plat-ficha { grid-template-columns: 1fr; }
+}

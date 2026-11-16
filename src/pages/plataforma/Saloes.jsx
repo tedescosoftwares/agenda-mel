@@ -5,8 +5,10 @@ import { Cabecalho, Kpi, Painel, Pilula, Vazio, Iniciais } from '../../component
 import { supabase } from '../../lib/supabase'
 import { useDialogo } from '../../context/DialogoContext'
 import { PredioIcon, UsersIcon, TeamIcon, CalendarIcon, SearchIcon, PulsoIcon, SetaIcon } from '../../components/icons'
-import { User, MapPin, Pencil, Check as CheckIcon, BookOpen } from 'lucide-react'
+import { User, MapPin, Pencil, Check as CheckIcon, BookOpen, Trash2 } from 'lucide-react'
 import Portal from '../../components/Portal'
+import ApagarModal from '../../components/plataforma/ApagarModal'
+import { formatarCnpj, formatarCpf } from '../../lib/cnpj'
 
 // Salões e autônomas: a lista de unidades com tamanho e ações, o
 // checklist de implantação de quem ainda não começou, e o ranking do
@@ -19,6 +21,9 @@ export default function Saloes() {
   const [busca, setBusca] = useState('')
   const [tipo, setTipo] = useState('todos')
   const [soAtivos, setSoAtivos] = useState(true)
+  const [semAtendimento, setSemAtendimento] = useState(false)   // 3.84: os testes costumam ser os sem atendimento
+  const [sel, setSel] = useState(() => new Set())
+  const [apagar, setApagar] = useState(null)   // ids para a janela de apagar
   const [erro, setErro] = useState('')
   const [novo, setNovo] = useState(q.get('novo') === '1' ? { nome: '', cidade: '', tipo: 'salao', email: '' } : null)
   const [salvando, setSalvando] = useState(false)
@@ -27,7 +32,9 @@ export default function Saloes() {
   useEffect(() => { carregar() }, [])
 
   const t = busca.trim().toLowerCase()
-  const vis = useMemo(() => (lista ?? []).filter((s) => (!soAtivos || s.ativo) && (tipo === 'todos' || s.tipo === tipo) && (!t || s.nome.toLowerCase().includes(t) || (s.dona || '').toLowerCase().includes(t) || (s.cidade || '').toLowerCase().includes(t) || (s.codigo || '').toLowerCase() === t)), [lista, t, tipo, soAtivos])
+  const vis = useMemo(() => (lista ?? []).filter((s) => (!soAtivos || s.ativo) && (!semAtendimento || s.atendimentos === 0) && (tipo === 'todos' || s.tipo === tipo) && (!t || s.nome.toLowerCase().includes(t) || (s.dona || '').toLowerCase().includes(t) || (s.cidade || '').toLowerCase().includes(t) || (s.codigo || '').toLowerCase() === t)), [lista, t, tipo, soAtivos, semAtendimento])
+  const alternar = (id) => setSel((x) => { const n = new Set(x); if (n.has(id)) n.delete(id); else n.add(id); return n })
+  const todosVis = vis.length > 0 && vis.every((s) => sel.has(s.id))
   const ativos = (lista ?? []).filter((s) => s.ativo)
   const implantacao = ativos.filter((s) => s.atendimentos === 0)
   const top = [...ativos].sort((a, b) => b.atendimentos_mes - a.atendimentos_mes).slice(0, 3)
@@ -74,6 +81,7 @@ export default function Saloes() {
             <div className="plat-chips">
               {[['todos', 'Todos'], ['salao', 'Salões'], ['autonoma', 'Autônomas']].map(([k, r]) => <button key={k} className={'plat-chip' + (tipo === k ? ' ativo' : '')} onClick={() => setTipo(k)}>{r}</button>)}
               <button className={'plat-chip' + (soAtivos ? ' ativo' : '')} onClick={() => setSoAtivos((v) => !v)}>● {soAtivos ? 'Ativos' : 'Todos os status'}</button>
+              <button className={'plat-chip' + (semAtendimento ? ' ativo' : '')} onClick={() => setSemAtendimento((v) => !v)}>Sem atendimento</button>
             </div>
           </div>
 
@@ -84,11 +92,19 @@ export default function Saloes() {
             <Kpi Icon={UsersIcon} cor="roxo" n={ativos.reduce((a, s) => a + s.clientes, 0)} rotulo="clientes" sub="vinculadas" />
           </div>
 
-          <Painel titulo="Unidades cadastradas" sub={`${vis.length} ${vis.length === 1 ? 'no total' : 'no total'}`} direita={<span className="muted plat-ordem">↕ Mais recentes</span>}>
+          <Painel titulo="Unidades cadastradas" sub={`${vis.length} ${vis.length === 1 ? 'no total' : 'no total'}`} direita={<label className="plat-sel-todos"><input type="checkbox" checked={todosVis} onChange={() => setSel(todosVis ? new Set() : new Set(vis.map((s) => s.id)))} /> Selecionar {todosVis ? 'nenhum' : `os ${vis.length}`}</label>}>
+            {sel.size > 0 && (
+              <div className="plat-sel-barra">
+                <strong>{sel.size} {sel.size === 1 ? 'selecionado' : 'selecionados'}</strong>
+                <button className="btn btn-perigo btn-mini" onClick={() => setApagar([...sel])}><Trash2 size={13} /> Apagar</button>
+                <button className="plat-link" onClick={() => setSel(new Set())}>Limpar seleção</button>
+              </div>
+            )}
             {!lista ? <Vazio>Carregando…</Vazio> : vis.length === 0 ? <Vazio>Nenhuma unidade com esse filtro.</Vazio> : (
               <ul className="plat-unidades">
                 {vis.map((s) => (
-                  <li key={s.id} className={s.ativo ? '' : 'apagado'}>
+                  <li key={s.id} className={(s.ativo ? '' : 'apagado') + (sel.has(s.id) ? ' selecionado' : '')}>
+                    <input type="checkbox" className="plat-sel" checked={sel.has(s.id)} onChange={() => alternar(s.id)} aria-label={`Selecionar ${s.nome}`} />
                     <span className={'plat-logo ' + (s.tipo === 'autonoma' ? 'roxo' : 'rosa')}>{s.tipo === 'autonoma' ? <UsersIcon /> : <PredioIcon />}</span>
                     <div className="plat-unidade-info">
                       <div className="plat-unidade-nome"><Link to={`/plataforma/saloes/${s.id}`}><strong>{s.nome}</strong></Link><Pilula>{s.tipo === 'autonoma' ? 'Autônoma' : 'Salão'}</Pilula><Pilula>{!s.ativo ? 'Desativado' : s.atendimentos === 0 ? 'Implantação' : s.tipo === 'autonoma' ? 'Ativa' : 'Ativo'}</Pilula></div>
@@ -108,6 +124,7 @@ export default function Saloes() {
                         <Link to={`/plataforma/saloes/${s.id}?aba=equipe`} className="plat-btn-ico" title="Equipe"><TeamIcon /></Link>
                         <button className="plat-btn-ico" title="Pôr no guia de salões" aria-label={`Pôr ${s.nome} no guia de salões`} onClick={() => noGuia(s)}><BookOpen size={15} /></button>
                         <button className="plat-btn-ico" title={s.ativo ? 'Desativar' : 'Reativar'} onClick={() => ativar(s, !s.ativo)}>{s.ativo ? '⏻' : '↺'}</button>
+                        <button className="plat-btn-ico perigo" title="Apagar" aria-label={`Apagar ${s.nome}`} onClick={() => setApagar([s.id])}><Trash2 size={15} /></button>
                       </div>
                     </div>
                   </li>
@@ -145,6 +162,7 @@ export default function Saloes() {
         </aside>
       </div>
 
+      {apagar && <ApagarModal tipo="salao" ids={apagar} onFechar={() => setApagar(null)} onApagado={() => { setSel(new Set()); carregar() }} />}
       {novo && (
         <Portal><div className="modal-fundo plat-modal-fundo" onClick={() => setNovo(null)}>
           <div className="modal-caixa plat-modal" onClick={(e) => e.stopPropagation()}>
@@ -181,8 +199,10 @@ export function Salao() {
   const { confirmar } = useDialogo()
   const [d, setD] = useState(null)
   const [erro, setErro] = useState('')
-  const [aba, setAba] = useState(q.get('aba') || 'equipe')
+  const navigate = useNavigate()
+  const [aba, setAba] = useState(q.get('aba') || 'cadastro')
   const [novaDona, setNovaDona] = useState('')
+  const [apagar, setApagar] = useState(false)
 
   const carregar = () => supabase.rpc('plataforma_salao', { salao: id }).then(({ data, error }) => { if (error) setErro(error.message); setD(data) })
   useEffect(() => { carregar() }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -215,9 +235,10 @@ export function Salao() {
               <Kpi Icon={PulsoIcon} cor={s.active ? 'menta' : 'carmim'} n={s.active ? 'Ativo' : 'Off'} rotulo="status" sub={s.active ? 'aparece na vitrine' : 'desativado pela plataforma'} />
             </div>
             <div className="abas plat-abas">
-              {[['equipe', `Equipe (${d.equipe?.length ?? 0})`], ['clientes', `Clientes (${d.clientes?.length ?? 0})`], ['ultimos', 'Últimos horários']].map(([k, r]) => <button key={k} className={aba === k ? 'aba active' : 'aba'} onClick={() => setAba(k)}>{r}</button>)}
+              {[['cadastro', 'Cadastro'], ['equipe', `Equipe (${d.equipe?.length ?? 0})`], ['clientes', `Clientes (${d.clientes?.length ?? 0})`], ['ultimos', 'Últimos horários']].map(([k, r]) => <button key={k} className={aba === k ? 'aba active' : 'aba'} onClick={() => setAba(k)}>{r}</button>)}
             </div>
-            <Painel titulo={aba === 'equipe' ? 'Equipe' : aba === 'clientes' ? 'Clientes vinculadas' : 'Últimos 30 horários'}>
+            <Painel titulo={aba === 'cadastro' ? 'Ficha cadastral' : aba === 'equipe' ? 'Equipe' : aba === 'clientes' ? 'Clientes vinculadas' : 'Últimos 30 horários'}>
+              {aba === 'cadastro' && <FichaCadastral s={s} dona={d.dona} />}
               {aba === 'equipe' && (
                 <table className="plat-tabela"><thead><tr><th>Profissional</th><th>Código</th><th>Trouxe</th><th>Atendimentos</th><th>Status</th></tr></thead><tbody>
                   {(d.equipe ?? []).map((p) => <tr key={p.id}><td><div className="plat-pessoa"><Iniciais nome={p.nome} /><div><strong>{p.nome}</strong><small className="muted">{p.telefone || 'sem telefone'}{p.tem_conta ? '' : ' · sem conta'}</small></div></div></td><td className="mono">{p.codigo}</td><td>{p.trouxe}</td><td>{p.atendimentos}</td><td><Pilula>{p.ativa ? 'Ativa' : 'Saiu'}</Pilula></td></tr>)}
@@ -253,10 +274,55 @@ export function Salao() {
               {s.active
                 ? <button className="btn btn-ghost btn-block btn-perigo-borda" style={{ marginTop: '0.8rem' }} onClick={() => ativar(false)}>Desativar unidade</button>
                 : <button className="btn btn-primary btn-block" style={{ marginTop: '0.8rem' }} onClick={() => ativar(true)}>Reativar unidade</button>}
+              <button className="btn btn-ghost btn-block btn-perigo-borda" style={{ marginTop: '0.5rem' }} onClick={() => setApagar(true)}><Trash2 size={15} /> Apagar de vez</button>
+              <small className="muted plat-apagar-dica">Desativar esconde e guarda tudo. Apagar tira o salão, a agenda e o histórico do banco (para testes e pedidos de exclusão).</small>
             </Painel>
           </aside>
         </div>
       )}
+      {apagar && <ApagarModal tipo="salao" ids={[id]} onFechar={() => setApagar(false)} onApagado={(r) => { if (Number(r?.apagados) > 0) setTimeout(() => navigate('/plataforma/saloes'), 1200) }} />}
     </Shell>
+  )
+}
+
+// 3.84: a ficha cadastral inteira, como está no banco: quem é, documento, contatos, endereços, plano e datas
+const dataBr = (v) => (v ? new Date(v).toLocaleDateString('pt-BR') : '—')
+const enderecoTexto = (e) => (e && typeof e === 'object' ? [e.address ?? e.logradouro, e.bairro, [e.city ?? e.cidade, e.uf].filter(Boolean).join('/'), e.cep].filter(Boolean).join(' · ') : '')
+function FichaCadastral({ s, dona }) {
+  const doc = s.documento_tipo === 'cpf' || (!s.cnpj && s.responsavel_cpf)
+    ? (s.responsavel_cpf ? `CPF ${formatarCpf(s.responsavel_cpf)}` : '—')
+    : (s.cnpj ? `CNPJ ${formatarCnpj(s.cnpj)}` : '—')
+  const contatos = Array.isArray(s.contatos) ? s.contatos : []
+  const redes = s.redes && typeof s.redes === 'object' ? Object.entries(s.redes).filter(([, v]) => v) : []
+  const linhas = [
+    ['Tipo', s.tipo === 'autonoma' ? 'Autônoma' : 'Salão'],
+    ['Nome para as clientes', s.name],
+    ['Nome fantasia', s.nome_fantasia],
+    ['Razão social', s.razao_social],
+    ['Documento', doc],
+    ['Responsável', [s.responsavel_nome, s.responsavel_cpf && s.cnpj ? `CPF ${formatarCpf(s.responsavel_cpf)}` : null, s.responsavel_nascimento ? `nasc. ${dataBr(s.responsavel_nascimento + 'T12:00')}` : null, s.responsavel_rg ? `RG ${s.responsavel_rg}` : null].filter(Boolean).join(' · ')],
+    ['Dona (conta)', dona?.nome ? `${dona.nome}${dona.email ? ` · ${dona.email}` : ''}${dona.telefone ? ` · ${dona.telefone}` : ''}` : 'sem dona ainda'],
+    ['E-mail do negócio', s.email],
+    ['Telefone / WhatsApp', [s.phone, s.whatsapp && s.whatsapp !== s.phone ? `WhatsApp ${s.whatsapp}` : null].filter(Boolean).join(' · ')],
+    ['Outros contatos', contatos.map((c) => [c.rotulo ?? c.tipo, c.valor ?? c.numero ?? c.email].filter(Boolean).join(': ')).filter(Boolean).join(' · ')],
+    ['Instagram e redes', [s.instagram ? `@${String(s.instagram).replace(/^@/, '')}` : null, ...redes.map(([k, v]) => `${k}: ${v}`)].filter(Boolean).join(' · ')],
+    ['Endereço do salão', [s.address, s.bairro, [s.city, s.uf].filter(Boolean).join('/'), s.cep].filter(Boolean).join(' · ')],
+    ['Endereço fiscal', s.endereco_igual ? 'o mesmo do salão' : enderecoTexto(s.endereco_fiscal)],
+    ['Ramo', s.ramo],
+    ['Endereço próprio', s.subdominio ? `${s.subdominio}.mimo.com.vc` : null],
+    ['Código (clientes) · equipe', [s.codigo, s.codigo_equipe].filter(Boolean).join(' · ')],
+    ['Plano · agendas previstas', [{ autonoma: 'Autônoma', pro: 'Pro', promais: 'Pro+' }[s.plano] ?? s.plano, s.equipe_prevista ? `${s.equipe_prevista} ${Number(s.equipe_prevista) === 1 ? 'agenda' : 'agendas'}` : null].filter(Boolean).join(' · ')],
+    ['A dona também atende', s.dona_atende ? 'sim' : 'não'],
+    ['Aceite dos pedidos', { automatico: 'automático', casa: 'a casa confirma', profissional: 'a profissional confirma' }[s.aceite_modo] ?? s.aceite_modo],
+    ['Pagamento pelo app', s.pagamento_modo && s.pagamento_modo !== 'nao' ? `${s.pagamento_modo === 'obrigatorio' ? 'obrigatório' : 'opcional'}${s.sinal_pct ? ` · sinal de ${s.sinal_pct}%` : ''}` : 'não'],
+    ['Cadastrado em', dataBr(s.created_at)],
+    ['Cadastro concluído em', dataBr(s.onboarding_concluido_em)],
+    ['Ativado em', dataBr(s.ativado_em)],
+    ['No guia de salões', s.aberto_no_guia ? 'sim' : 'não'],
+  ]
+  return (
+    <dl className="plat-ficha">
+      {linhas.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v || <span className="muted">—</span>}</dd></div>)}
+    </dl>
   )
 }

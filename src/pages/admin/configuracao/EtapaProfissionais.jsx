@@ -102,7 +102,7 @@ export default function EtapaProfissionais({ s, autonoma, setErro, onEstado }) {
         </div>
       )}
       {novo && <ProfissionalQuickForm salao={s} onFechar={() => setNovo(false)} onSalvo={() => { setNovo(false); carregar() }} setErro={setErro} />}
-      {gaveta && <ProfissionalDrawer salao={s} profissional={gaveta} servicos={servicos} cats={cats} onFechar={() => { setGaveta(null); carregar() }} onSalvo={() => carregar()} />}
+      {gaveta && <ProfissionalDrawer salao={s} profissional={gaveta} servicos={servicos} cats={cats} semServicos onFechar={() => { setGaveta(null); carregar() }} onSalvo={() => carregar()} />}
     </section>
   )
 }

@@ -181,3 +181,11 @@ body.com-gaveta { overflow: hidden; }
 .gv-servicos li.gv-servicos-cat { border: 0; padding: 10px 4px 2px; display: flex; justify-content: space-between; align-items: baseline; background: none; }
 .gv-servicos li.gv-servicos-cat span { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #6b6f7a; }
 .gv-servicos li.gv-servicos-cat small { font-size: 0.74rem; }
+
+/* 3.81: a etapa de serviços explicada; "marcar todos" por categoria */
+.gv-explica { margin: 0 0 12px; line-height: 1.5; }
+.gv-explica b { color: var(--texto); font-weight: 600; }
+.gv-servicos-cat-todos { margin-left: auto; padding: 2px 8px; border: 0; background: none; color: var(--rosa-escuro); font: inherit; font-size: 0.78rem; font-weight: 600; cursor: pointer; border-radius: 99px; }
+.gv-servicos-cat-todos:hover { background: var(--latao-veu); }
+.gv-servicos li.gv-servicos-cat { gap: 8px; justify-content: flex-start; }
+.gv-explica > svg { flex: 0 0 14px; margin-top: 2px; }

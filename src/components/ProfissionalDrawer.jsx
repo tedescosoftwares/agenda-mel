@@ -24,15 +24,26 @@ const ABAS = [
   { id: 6, rotulo: 'Permissões', Icone: ShieldCheck },
   { id: 7, rotulo: 'Acesso', Icone: Link2 },
 ]
+// 3.81: o simples primeiro. Por enquanto a gaveta pede só o que a agenda precisa: Dados, Serviços e Horários (e o
+// Acesso, depois de salvar). Vínculo, Repasse e Permissões ficam escondidos e não são obrigatórios: quem é nova
+// entra sem vínculo, com o repasse padrão da casa e as permissões recomendadas; quem já tem fica como está (a
+// gaveta não manda esses campos e o servidor não mexe). Para voltar as 7 etapas: true.
+const ETAPAS_COMPLETAS = false
+const ETAPAS_DEPOIS = new Set([2, 5, 6])
 const DIAS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
 const ORDEM_DIAS = [1, 2, 3, 4, 5, 6, 0]
 const hhmm = (t) => String(t ?? '').slice(0, 5)
 const centsDe = (t) => { const n = Number(String(t ?? '').replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.')); return Number.isFinite(n) && n > 0 ? Math.round(n * 100) : null }
 const emReais = (c) => (c == null ? '' : (Number(c) / 100).toFixed(2).replace('.', ','))
 
-export default function ProfissionalDrawer({ salao, profissional = null, servicos = [], cats = [], onFechar, onSalvo }) {
+export default function ProfissionalDrawer({ salao, profissional = null, servicos = [], cats = [], onFechar, onSalvo, semServicos = false }) {
   const editando = Boolean(profissional?.id)
+  // semServicos (3.81): na Configuração, os serviços de cada uma se ligam na etapa seguinte ("Quem faz o quê")
+  const abas = ABAS.filter((a) => (ETAPAS_COMPLETAS || !ETAPAS_DEPOIS.has(a.id)) && !(semServicos && a.id === 3))
   const [aba, setAba] = useState(1)
+  const pos = Math.max(0, abas.findIndex((a) => a.id === aba))
+  const proxima = abas[pos + 1]?.id ?? 7
+  const anterior = abas[pos - 1]?.id ?? 1
   const [erro, setErro] = useState('')
   const [salvando, setSalvando] = useState(false)
   const [salva, setSalva] = useState(null)        // o resultado do salvar: { id, situacao, token }
@@ -75,9 +86,10 @@ export default function ProfissionalDrawer({ salao, profissional = null, servico
   function validar(ate) {
     if (ate >= 1 && !f.name.trim()) { setAba(1); setErro('Diga o nome completo dela.'); return false }
     if (ate >= 1 && f.phone.replace(/\D/g, '').length < 10) { setAba(1); setErro('Diga o WhatsApp: é por ele que chegam os avisos.'); return false }
-    if (ate >= 1 && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(f.email.trim())) { setAba(1); setErro('Diga o e-mail: é por ele que ela recebe o acesso.'); return false }
+    // 3.81: o e-mail é opcional (sem ele, o acesso vai pelo link no WhatsApp); só não pode estar errado
+    if (ate >= 1 && f.email.trim() && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(f.email.trim())) { setAba(1); setErro('Esse e-mail não parece certo. Confira, ou deixe em branco e mande o acesso pelo WhatsApp.'); return false }
     if (ate >= 4 && !f.usa_horario_salao) for (const h of f.horarios ?? []) if (h.open && h.start_time >= h.end_time) { setAba(4); setErro(`${DIAS[h.weekday]}: o fim precisa ser depois do início.`); return false }
-    if (ate >= 5 && f.repasse !== 'nao') { const c = Number(f.cota_pct); if (!(c >= 0 && c <= 100)) { setAba(5); setErro('O percentual vai de 0 a 100.'); return false } }
+    if (ETAPAS_COMPLETAS && ate >= 5 && f.repasse !== 'nao') { const c = Number(f.cota_pct); if (!(c >= 0 && c <= 100)) { setAba(5); setErro('O percentual vai de 0 a 100.'); return false } }
     setErro(''); return true
   }
   function ir(n) { if (n > aba && !validar(Math.min(aba, 6))) return; setErro(''); setAba(n) }
@@ -109,18 +121,21 @@ export default function ProfissionalDrawer({ salao, profissional = null, servico
       const dados = {
         id: profissional?.id ?? null,
         name: f.name.trim(), phone: f.phone.trim(), email: f.email.trim() || null, especialidade: f.especialidade.trim() || null, photo_url, bio: f.bio.trim() || null, slug: editando ? f.slug.trim() : undefined,
-        vinculo: f.vinculo || null,
-        servicos: escolhidos.map((sv) => ({ service_id: sv.id, preco_cents: f.servicos[sv.id]?.personalizar ? centsDe(f.servicos[sv.id]?.preco) : null, duracao_minutos: f.servicos[sv.id]?.personalizar && Number(f.servicos[sv.id]?.duracao) > 0 ? Number(f.servicos[sv.id].duracao) : null })),
+        ...(ETAPAS_COMPLETAS ? { vinculo: f.vinculo || null } : {}),
+        ...(semServicos ? {} : { servicos: escolhidos.map((sv) => ({ service_id: sv.id, preco_cents: f.servicos[sv.id]?.personalizar ? centsDe(f.servicos[sv.id]?.preco) : null, duracao_minutos: f.servicos[sv.id]?.personalizar && Number(f.servicos[sv.id]?.duracao) > 0 ? Number(f.servicos[sv.id].duracao) : null })) }),
         usa_horario_salao: f.usa_horario_salao,
         horarios: f.usa_horario_salao ? null : f.horarios,
-        cota_pct: f.repasse === 'nao' ? null : Number(f.cota_pct),
-        cota_excecoes: f.repasse === 'servico' ? escolhidos.filter((sv) => f.excecoes[sv.id] !== '' && f.excecoes[sv.id] != null).map((sv) => ({ service_id: sv.id, cota_pct: Number(f.excecoes[sv.id]) })) : [],
-        permissoes: f.permissoes,
+        ...(ETAPAS_COMPLETAS ? {
+          cota_pct: f.repasse === 'nao' ? null : Number(f.cota_pct),
+          cota_excecoes: f.repasse === 'servico' ? escolhidos.filter((sv) => f.excecoes[sv.id] !== '' && f.excecoes[sv.id] != null).map((sv) => ({ service_id: sv.id, cota_pct: Number(f.excecoes[sv.id]) })) : [],
+        } : {}),
+        ...(ETAPAS_COMPLETAS || !editando ? { permissoes: f.permissoes } : {}),
       }
       const { data, error } = await supabase.rpc('equipe_salvar_profissional', { salao: salao.id, dados })
       if (error) throw new Error(error.message)
       const idSalvo = data?.id ?? profissional?.id
-      if (idSalvo) { const r2 = await supabase.rpc('equipe_definir_categorias', { prof: idSalvo, categorias: f.categorias ?? [] }); if (r2.error) throw new Error(r2.error.message) }
+      const categorias = ETAPAS_COMPLETAS ? (f.categorias ?? []) : [...new Set(escolhidos.map((sv) => sv.categoria_id).filter(Boolean))]
+      if (idSalvo && !semServicos) { const r2 = await supabase.rpc('equipe_definir_categorias', { prof: idSalvo, categorias }); if (r2.error) throw new Error(r2.error.message) }
       setSalva({ id: data?.id ?? profissional?.id, situacao: data?.situacao ?? (profissional?.user_id ? 'ativa' : 'configurada'), token: data?.token ?? profissional?.token ?? null })
       setAba(7)
       onSalvo?.(data)
@@ -146,7 +161,7 @@ export default function ProfissionalDrawer({ salao, profissional = null, servico
           <button type="button" className="gv-fechar" onClick={onFechar} aria-label="Fechar"><X size={18} /></button>
         </header>
         <nav className="gv-abas" aria-label="Etapas">
-          {ABAS.map((a) => <button key={a.id} type="button" className={'gv-aba' + (aba === a.id ? ' atual' : '') + (a.id < aba || (a.id === 7 && salva) ? ' feita' : '')} onClick={() => (a.id === 7 && !salva ? ir(7) : ir(a.id))}><span>{a.id}</span>{a.rotulo}</button>)}
+          {abas.map((a, i) => <button key={a.id} type="button" className={'gv-aba' + (aba === a.id ? ' atual' : '') + (i < pos || (a.id === 7 && salva) ? ' feita' : '')} onClick={() => (a.id === 7 && !salva ? ir(7) : ir(a.id))}><span>{i + 1}</span>{a.rotulo}</button>)}
         </nav>
         <div className="gv-corpo">
           {erro && <div className="alert alert-error">{erro}</div>}
@@ -154,7 +169,7 @@ export default function ProfissionalDrawer({ salao, profissional = null, servico
           {aba === 1 && (
             <section className="gv-secao">
               <h3>Quem é ela</h3>
-              <p className="muted">Você preenche, ela só confirma o WhatsApp quando ativar o acesso.</p>
+              <p className="muted">Você preenche tudo; ela só recebe o link de acesso no e-mail e entra com a agenda pronta. {semServicos ? 'Depois é só dizer quando ela atende.' : 'Depois você marca os serviços dela e quando ela atende.'}</p>
               <div className="gv-foto-linha">
                 <button type="button" className="gv-foto" onClick={() => arq.current?.click()} aria-label="Foto">
                   {f.fotoNova?.preview || f.photo_url ? <img src={f.fotoNova?.preview ?? f.photo_url} alt="" /> : <Avatar nome={f.name || "?"} grande />}
@@ -167,7 +182,7 @@ export default function ProfissionalDrawer({ salao, profissional = null, servico
                 </div>
               </div>
               <div className="gv-form gv-form-2">
-                <label>E-mail <span className="muted">(o acesso chega por ele)</span><input type="email" value={f.email} onChange={m('email')} placeholder="carla@exemplo.com" /></label>
+                <label>E-mail <span className="muted">(opcional: o acesso chega por ele)</span><input type="email" value={f.email} onChange={m('email')} placeholder="carla@exemplo.com" /></label>
                 <label>Função <span className="muted">(opcional)</span><input value={f.especialidade} onChange={m('especialidade')} placeholder="Cabeleireira" list="gv-funcoes" /><datalist id="gv-funcoes">{FUNCOES.map((x) => <option key={x} value={x} />)}</datalist></label>
               </div>
               <label className="gv-form gv-bio">Apresentação <span className="muted">(opcional, aparece na página dela)</span><textarea rows={2} value={f.bio} onChange={m('bio')} placeholder="Especialista em loiros e cortes modernos…" /></label>
@@ -194,25 +209,28 @@ export default function ProfissionalDrawer({ salao, profissional = null, servico
 
           {aba === 3 && (
             <section className="gv-secao">
-              <div className="gv-secao-linha"><div><h3>O que {nome} atende?</h3><p className="muted">Marque as categorias: os serviços delas entram pré-marcados. Depois tire o que {nome} não faz. A lista de serviços é o que vale na agenda.</p></div>
+              <div className="gv-secao-linha"><div><h3>Quais serviços {nome || 'ela'} faz?</h3><p className="muted">Marque o que {nome || 'ela'} atende. É só isso que a cliente consegue marcar na agenda dela.</p></div>
                 {servicos.length > 0 && <button type="button" className="btn-mini btn-mini-neutro" onClick={() => setF((x) => { const todos = escolhidos.length === servicos.length; const s = { ...x.servicos }; for (const sv of servicos) s[sv.id] = { ...(s[sv.id] ?? {}), on: !todos }; return { ...x, servicos: s, categorias: todos ? [] : catsAtende.map((c) => c.id) } })}>{escolhidos.length === servicos.length ? 'Desmarcar todos' : 'Selecionar todos'}</button>}
               </div>
-              {catsAtende.length > 0 && (
+              {servicos.length > 0 && (
+                <p className="gv-aviso gv-explica"><Info size={14} /><span>A lista vem dos serviços que você cadastrou em <b>Serviços</b>, com o preço e o tempo de lá. Se {nome || 'ela'} cobra ou demora diferente em algum, toque em <b>Preço ou tempo dela</b> ao lado do serviço.</span></p>
+              )}
+              {ETAPAS_COMPLETAS && catsAtende.length > 0 && (
                 <div className="gv-cats">
                   <small className="gv-cats-rotulo">Categorias que {nome} atende</small>
                   <div className="chips gv-chips">{catsAtende.map((c) => { const on = (f.categorias ?? []).includes(c.id); const n = servicos.filter((sv) => sv.categoria_id === c.id).length; return <button key={c.id} type="button" className={'chip' + (on ? ' active' : '')} aria-pressed={on} onClick={() => alternarCategoria(c.id)}>{c.nome}{n ? ` · ${n}` : ''}</button> })}</div>
                 </div>
               )}
-              {servicos.length === 0 ? <p className="gv-vazio">Nenhum serviço cadastrado ainda. Cadastre no passo Serviços; dá pra voltar aqui depois. As categorias marcadas já ficam guardadas.</p> : (
+              {servicos.length === 0 ? <p className="gv-vazio">Você ainda não cadastrou serviços. Pode salvar {nome || 'ela'} agora: depois de cadastrar os serviços em <b>Serviços</b>, volte aqui e marque o que ela faz.</p> : (
                 <ul className="gv-servicos">
                   {grupos.map(([catId, lista]) => [
-                    <li key={'cat-' + catId} className="gv-servicos-cat"><span>{catId ? nomeCat(catId) : 'Outros'}</span><small className="muted">{lista.filter((sv) => f.servicos[sv.id]?.on).length} de {lista.length}</small></li>,
+                    <li key={'cat-' + catId} className="gv-servicos-cat"><span>{catId ? nomeCat(catId) : 'Outros'}</span><small className="muted">{lista.filter((sv) => f.servicos[sv.id]?.on).length} de {lista.length}</small>{lista.length > 1 && <button type="button" className="gv-servicos-cat-todos" onClick={() => { const todos = lista.every((sv) => f.servicos[sv.id]?.on); setF((x) => { const s = { ...x.servicos }; for (const sv of lista) s[sv.id] = { ...(s[sv.id] ?? {}), on: !todos }; return { ...x, servicos: s } }) }}>{lista.every((sv) => f.servicos[sv.id]?.on) ? 'Desmarcar' : 'Marcar todos'}</button>}</li>,
                     ...lista.map((sv) => { const c = f.servicos[sv.id] ?? {}; return (
                     <li key={sv.id} className={c.on ? 'on' : ''}>
                       <label className="gv-servico">
                         <input type="checkbox" checked={Boolean(c.on)} onChange={(e) => mudaServico(sv.id, 'on', e.target.checked)} />
-                        <span className="gv-servico-texto"><strong>{sv.name}</strong><small className="muted">{nomeCat(sv.categoria_id)} · {formatPreco(sv.price)} · {formatDuracao(sv.duration_minutes)}</small></span>
-                        {c.on && <button type="button" className="gv-servico-pers" onClick={(e) => { e.preventDefault(); mudaServico(sv.id, 'personalizar', !c.personalizar) }}>{c.personalizar ? 'Usar o do salão' : `Personalizar para ${nome}`}</button>}
+                        <span className="gv-servico-texto"><strong>{sv.name}</strong><small className="muted">{sv.a_partir ? 'a partir de ' : ''}{formatPreco(sv.price)} · {formatDuracao(sv.duration_minutes)}</small></span>
+                        {c.on && <button type="button" className="gv-servico-pers" onClick={(e) => { e.preventDefault(); mudaServico(sv.id, 'personalizar', !c.personalizar) }}>{c.personalizar ? 'Usar o do salão' : 'Preço ou tempo dela'}</button>}
                       </label>
                       {c.on && c.personalizar && (
                         <div className="gv-servico-campos">
@@ -296,15 +314,24 @@ export default function ProfissionalDrawer({ salao, profissional = null, servico
               {salva ? (
                 <>
                   <div className="gv-pronta"><span className="gv-pronta-check"><Check size={18} /></span><div><h3>{nome} está pronta</h3><span className={'gv-situacao ' + (situacao?.cor ?? '')}>{situacao?.rotulo}</span></div></div>
-                  <Resumo f={f} escolhidos={escolhidos} horasSalao={horasSalao} />
+                  <Resumo f={f} escolhidos={escolhidos} horasSalao={horasSalao} semServicos={semServicos} />
                   {salva.situacao === 'configurada' && link ? (
                     <div className="gv-acesso">
                       <strong>Agora é só mandar o acesso</strong>
-                      <p className="muted">O acesso vai por e-mail pra <b>{f.email.trim()}</b>: ela abre o link, cria a senha e entra com a agenda pronta. Não precisa escolher serviço, preço, vínculo nem horário.</p>
-                      {enviadoPara
-                        ? <div className="alert alert-info">Enviado para {enviadoPara}. Se quiser, avisa no WhatsApp pra ela olhar o e-mail.</div>
-                        : <button type="button" className="btn btn-primary btn-block" onClick={enviarEmail} disabled={enviando}><Mail size={16} /> {enviando ? 'Enviando…' : 'Enviar acesso por e-mail'}</button>}
-                      {enviadoPara && <a className="btn btn-ghost btn-block" href={whats} target="_blank" rel="noreferrer"><MessageCircle size={16} /> Avisar no WhatsApp</a>}
+                      {f.email.trim() ? (
+                        <>
+                          <p className="muted">O acesso vai por e-mail pra <b>{f.email.trim()}</b>: ela abre o link, cria a senha e entra com a agenda pronta. Não precisa escolher serviço, preço nem horário.</p>
+                          {enviadoPara
+                            ? <div className="alert alert-info">Enviado para {enviadoPara}. Se quiser, avisa no WhatsApp pra ela olhar o e-mail.</div>
+                            : <button type="button" className="btn btn-primary btn-block" onClick={enviarEmail} disabled={enviando}><Mail size={16} /> {enviando ? 'Enviando…' : 'Enviar acesso por e-mail'}</button>}
+                          {enviadoPara && <a className="btn btn-ghost btn-block" href={whats} target="_blank" rel="noreferrer"><MessageCircle size={16} /> Avisar no WhatsApp</a>}
+                        </>
+                      ) : (
+                        <>
+                          <p className="muted">Mande o link pelo WhatsApp: ela abre, cria a senha e entra com a agenda pronta.</p>
+                          <a className="btn btn-primary btn-block" href={whats} target="_blank" rel="noreferrer" onClick={marcarEnviado}><MessageCircle size={16} /> Mandar o acesso no WhatsApp</a>
+                        </>
+                      )}
                       <div className="gv-link"><input readOnly value={link} onFocus={(e) => e.target.select()} /><button type="button" className="btn-mini" onClick={copiar}><Copy size={12} /> {copiado ? 'Copiado!' : 'Copiar link'}</button></div>
                     </div>
                   ) : salva.situacao === 'ativa' ? (
@@ -315,8 +342,8 @@ export default function ProfissionalDrawer({ salao, profissional = null, servico
               ) : (
                 <>
                   <h3>Confira e salve</h3>
-                  <p className="muted">Depois de salvar, {nome} fica como <b>aguardando ativação</b> e você manda o link de acesso.</p>
-                  <Resumo f={f} escolhidos={escolhidos} horasSalao={horasSalao} />
+                  <p className="muted">Depois de salvar, {nome} fica como <b>aguardando ativação</b> e você manda o link de acesso.{!ETAPAS_COMPLETAS && ' Repasse e permissões seguem o padrão da casa por enquanto.'}</p>
+                  <Resumo f={f} escolhidos={escolhidos} horasSalao={horasSalao} semServicos={semServicos} />
                 </>
               )}
             </section>
@@ -325,9 +352,9 @@ export default function ProfissionalDrawer({ salao, profissional = null, servico
 
         {!(aba === 7 && salva) && (
           <footer className="gv-rodape">
-            {aba > 1 ? <button type="button" className="btn btn-ghost" onClick={() => ir(aba - 1)} disabled={salvando}><ArrowLeft size={16} /> Voltar</button> : <span />}
+            {pos > 0 ? <button type="button" className="btn btn-ghost" onClick={() => ir(anterior)} disabled={salvando}><ArrowLeft size={16} /> Voltar</button> : <span />}
             <span className="gv-rodape-acoes">
-              {aba < 7 && <button type="button" className="btn btn-ghost" onClick={() => ir(aba + 1)} disabled={salvando}>Continuar <ArrowRight size={16} /></button>}
+              {aba !== 7 && <button type="button" className="btn btn-ghost" onClick={() => ir(proxima)} disabled={salvando}>Continuar <ArrowRight size={16} /></button>}
               <button type="button" className="btn btn-primary" onClick={salvar} disabled={salvando}>{salvando ? 'Salvando…' : editando ? 'Salvar alterações' : 'Salvar profissional'}</button>
             </span>
           </footer>
@@ -337,17 +364,17 @@ export default function ProfissionalDrawer({ salao, profissional = null, servico
   )
 }
 
-function Resumo({ f, escolhidos, horasSalao }) {
+function Resumo({ f, escolhidos, horasSalao, semServicos = false }) {
   const v = vinculoPor(f.vinculo)
   const clientes = (f.permissoes.clientes ?? 'salao') === 'salao' ? 'todas as clientes do salão' : 'clientes relacionadas'
   return (
     <dl className="gv-resumo">
       <div><dt>Função</dt><dd>{f.especialidade || '—'}</dd></div>
-      <div><dt>Vínculo</dt><dd>{v?.nome ?? 'Não definido'}</dd></div>
-      <div><dt>Serviços</dt><dd>{escolhidos.length === 0 ? 'Nenhum ainda' : `${escolhidos.length} ${escolhidos.length === 1 ? 'serviço' : 'serviços'}${escolhidos.some((sv) => f.servicos[sv.id]?.personalizar) ? ', com preço ou duração próprios' : ''}`}</dd></div>
+      {ETAPAS_COMPLETAS && <div><dt>Vínculo</dt><dd>{v?.nome ?? 'Não definido'}</dd></div>}
+      {!semServicos && <div><dt>Serviços</dt><dd>{escolhidos.length === 0 ? 'Nenhum ainda' : `${escolhidos.length} ${escolhidos.length === 1 ? 'serviço' : 'serviços'}${escolhidos.some((sv) => f.servicos[sv.id]?.personalizar) ? ', com preço ou duração próprios' : ''}`}</dd></div>}
       <div><dt>Horário</dt><dd>{f.usa_horario_salao ? `Do salão${horasSalao ? ` · ${resumoDias(horasSalao)}` : ''}` : resumoDias(f.horarios)}</dd></div>
-      <div><dt>Repasse</dt><dd>{f.repasse === 'nao' ? 'Padrão da casa' : `${f.cota_pct}%${f.repasse === 'servico' ? ', com exceções' : ''}`}</dd></div>
-      <div><dt>Acesso</dt><dd>própria agenda e {clientes}{f.permissoes.ver_repasse === false ? ', sem ver repasse' : ''}</dd></div>
+      {ETAPAS_COMPLETAS && <div><dt>Repasse</dt><dd>{f.repasse === 'nao' ? 'Padrão da casa' : `${f.cota_pct}%${f.repasse === 'servico' ? ', com exceções' : ''}`}</dd></div>}
+      {ETAPAS_COMPLETAS && <div><dt>Acesso</dt><dd>própria agenda e {clientes}{f.permissoes.ver_repasse === false ? ', sem ver repasse' : ''}</dd></div>}
     </dl>
   )
 }

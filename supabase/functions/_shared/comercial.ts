@@ -15,7 +15,7 @@
 //
 // Como a Mel, este arquivo não fala com a rede nem com o banco por conta própria: tudo vem em `Deps`.
 
-import { so, palavra, telefoneBonito, MODELO_PADRAO } from './guia_whats.ts'
+import { so, palavra, telefoneBonito, MODELO_PADRAO, AUTONOMA_NO_CADASTRO } from './guia_whats.ts'
 import { iaJsonDe, type Ambiente, type Fetch, type Mensagem } from './ia_json.ts'
 
 export type Resultado = { ok: true; providerId: string | null } | { ok: false; erro: string }
@@ -116,13 +116,15 @@ export function dentroDoHorario(cfg: Pick<Config, 'equipe_dias' | 'equipe_inicio
   const diaOk = cfg.equipe_dias === 'todos' ? true : cfg.equipe_dias === 'seg-sab' ? dia !== 'Sun' : !['Sat', 'Sun'].includes(dia)
   return diaOk && min >= hi * 60 + (mi || 0) && min < hf * 60 + (mf || 0)
 }
+// 3.78: sem a autônoma no cadastro, a Lia não oferece o plano grátis: quem atende sozinha entra como salão de 1 agenda
 export function planosTexto(planos: Plano[] | null | undefined): string {
-  if (!planos?.length) return ''
-  return planos.map((p) => {
+  const lista = (planos ?? []).filter((p) => AUTONOMA_NO_CADASTRO || !(p.plano === 'autonoma' || !p.base_cents))
+  if (!lista.length) return ''
+  return [...lista.map((p) => {
     if (p.plano === 'autonoma' || !p.base_cents) return `${p.nome}: grátis (uma agenda, para quem atende sozinha).`
     const extra = p.extra_cents ? `, mais ${reais(p.extra_cents)} por agenda ${p.ate ? `da ${p.inclusas + 1}ª à ${p.ate}ª` : `da ${p.inclusas + 1}ª em diante`}` : ''
     return `${p.nome}: ${reais(p.base_cents)} por mês até ${p.inclusas} agendas${extra}.`
-  }).join('\n')
+  }), ...(AUTONOMA_NO_CADASTRO ? [] : ['Por enquanto, todo cadastro é de salão: quem atende sozinha entra no primeiro plano, com 1 agenda. Não ofereça plano grátis.'])].join('\n')
 }
 export const linkWhats = (numero: string | null | undefined, texto?: string) => {
   const d = so(numero)

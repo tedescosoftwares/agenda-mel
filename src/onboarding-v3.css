@@ -350,6 +350,10 @@
   grid-template-columns:repeat(2,minmax(0,1fr));
   gap:20px;
 }
+/* 3.78: só o salão no cadastro (a autônoma saiu por enquanto): um cartão, sem esticar */
+.ob-v3 .ob-tipos.ob-tipos-um {
+  grid-template-columns:minmax(0,520px);
+}
 .ob-v3 .ob-tipo {
   gap:11px;
   padding:0 0 20px;

@@ -6,6 +6,8 @@
 // 11.444.777/0001-61 (baixado); qualquer outro válido de dígito "não existe".
 import { cnpjValido, cpfValido, soDigitos } from './cnpj'
 
+// 3.78: a autônoma saiu do cadastro por enquanto (igual a supabase/functions/_shared/guia_whats.ts): sem pergunta de tipo
+const AUTONOMA_NO_CADASTRO = false
 const h = (min) => new Date(Date.now() - min * 60e3).toISOString()
 const semAcento = (t) => String(t ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 const palavra = (t) => semAcento(t).replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim()
@@ -232,12 +234,12 @@ export function simularOnboarding({ texto, origem }) {
   const p = palavra(t)
   if (!SIM) {
     const o = origem === 'intencao' ? 'intencao' : 'cta'
-    SIM = { origem: o, estado: o === 'cta' ? 'coletando' : 'confirmando', dados: {}, mensagens: [], passo: 'tipo' }
+    SIM = { origem: o, estado: o === 'cta' ? 'coletando' : 'confirmando', dados: AUTONOMA_NO_CADASTRO ? {} : { tipo: 'salao' }, mensagens: [], passo: AUTONOMA_NO_CADASTRO ? 'tipo' : 'documento' }
   }
   const s = SIM
   s.mensagens.push({ q: 'cliente', t })
   const d = s.dados
-  const passosDe = () => ['tipo', 'documento', 'endereco', 'nome', ...(d.tipo === 'autonoma' ? [] : ['profissionais']), ...(CFG.com_servicos ? ['servicos'] : []), ...(CFG.com_horarios ? ['horarios'] : []), ...(CFG.com_email ? ['email'] : []), ...(CFG.com_telefone ? ['telefone'] : []), ...(CFG.com_explicacoes ? ['explicacoes'] : []), ...(CFG.com_resumo ? ['resumo'] : []), 'link']
+  const passosDe = () => [...(AUTONOMA_NO_CADASTRO ? ['tipo'] : []), 'documento', 'endereco', 'nome', ...(d.tipo === 'autonoma' ? [] : ['profissionais']), ...(CFG.com_servicos ? ['servicos'] : []), ...(CFG.com_horarios ? ['horarios'] : []), ...(CFG.com_email ? ['email'] : []), ...(CFG.com_telefone ? ['telefone'] : []), ...(CFG.com_explicacoes ? ['explicacoes'] : []), ...(CFG.com_resumo ? ['resumo'] : []), 'link']
   const atendimento = () => (CFG.numero_atendimento ? `https://wa.me/${CFG.numero_atendimento}` : '')
   const dividir = (x) => (CFG.bolhas === false ? [x] : x.split(/\n{2,}/).map((y) => y.trim()).filter(Boolean))
   const sair = (resposta, acao, extra = {}) => { s.mensagens.push({ q: 'mel', t: resposta }); return { ok: true, texto: t, responder: resposta, acao, estado: s.estado, passo: s.passo, dados: { ...d }, bolhas: dividir(resposta), pausa: CFG.pausa_seg, ...extra } }

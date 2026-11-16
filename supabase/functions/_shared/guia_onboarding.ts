@@ -35,7 +35,7 @@
 //
 // Como a Mel, este arquivo não fala com a rede nem com o banco por conta própria: tudo vem em `Deps`.
 
-import { so, palavra, telefoneBonito, preencher, comercialLigado, RAIZ_SITE, MODELO_PADRAO } from './guia_whats.ts'
+import { so, palavra, telefoneBonito, preencher, comercialLigado, RAIZ_SITE, MODELO_PADRAO, AUTONOMA_NO_CADASTRO } from './guia_whats.ts'
 import { iaJsonDe, type Ambiente, type Fetch, type Mensagem } from './ia_json.ts'
 
 export type Resultado = { ok: true; providerId: string | null } | { ok: false; erro: string }
@@ -207,8 +207,9 @@ export const NOME_PASSO: Record<string, string> = {
   resumo: 'o resumo do cadastro, para ela conferir', link: 'mandar o link seguro',
 }
 // 3.61: autônoma não passa por "quantas profissionais" (é ela)
+// 3.78: sem a autônoma no cadastro, nem se pergunta o tipo: é salão (quem atende sozinha diz 1 profissional)
 export function passosDe(cfg: Pick<Config, 'com_servicos' | 'com_horarios' | 'com_email' | 'com_explicacoes' | 'com_telefone' | 'com_resumo'>, d: Pick<Dados, 'tipo'> = {}): string[] {
-  return ['tipo', 'documento', 'endereco', 'nome', ...(d.tipo === 'autonoma' ? [] : ['profissionais']),
+  return [...(AUTONOMA_NO_CADASTRO ? ['tipo'] : []), 'documento', 'endereco', 'nome', ...(d.tipo === 'autonoma' ? [] : ['profissionais']),
     ...(cfg.com_servicos ? ['servicos'] : []), ...(cfg.com_horarios ? ['horarios'] : []), ...(cfg.com_email ? ['email'] : []),
     ...(cfg.com_telefone !== false ? ['telefone'] : []), ...(cfg.com_explicacoes ? ['explicacoes'] : []), ...(cfg.com_resumo !== false ? ['resumo'] : []), 'link']
 }
@@ -952,6 +953,7 @@ export async function atenderOnboarding(deps: Deps, e: Entrada, opcoes: { teste?
     }
   }
   if (fimAgora) return fimAgora
+  if (!AUTONOMA_NO_CADASTRO) dados.tipo = 'salao'   // 3.78: todo cadastro é salão por enquanto
   if (dados.tipo === 'autonoma') dados.profissionais = 1   // autônoma é ela: não se pergunta
   passos = passosDe(cfg, dados)
 
@@ -1030,7 +1032,7 @@ export async function atenderOnboarding(deps: Deps, e: Entrada, opcoes: { teste?
   const t = (v: string) => limpo(v, 200)
   const noResumo = passo === 'resumo'
   if (!consumida && !perguntaFeita) {
-    if (t(lido.tipo)) dados.tipo = /auton/i.test(lido.tipo) ? 'autonoma' : /sal/i.test(lido.tipo) ? 'salao' : dados.tipo
+    if (AUTONOMA_NO_CADASTRO && t(lido.tipo)) dados.tipo = /auton/i.test(lido.tipo) ? 'autonoma' : /sal/i.test(lido.tipo) ? 'salao' : dados.tipo
     if (passo === 'documento' || noResumo) {
       if (lido.sem_cnpj && !dados.cnpj && passo === 'documento') { dados.sem_cnpj = true; delete dados.cnpj }
       const c = so(lido.cnpj), f = so(lido.cpf)

@@ -42,8 +42,15 @@ import { limparEndereco, enderecoEscrito } from '../lib/endereco'
 // conta lembra onde parou; quem sair volta pro mesmo lugar. Serviços,
 // equipe e a ativação com o QR ficam pra dentro do painel (Configurar).
 // cada passo tem a foto, o bilhete e a frase do painel da esquerda
+// 3.78: a autônoma sai do cadastro por enquanto. Todo cadastro novo é salão, mesmo com ?tipo=autonoma na URL ou
+// com o rascunho da Mel dizendo autônoma; quem atende sozinha entra como salão de uma agenda. Quem já se cadastrou
+// como autônoma segue igual (o passo 1 ainda mostra os dois cartões para ela). Para voltar a oferecer: true aqui e
+// em supabase/functions/_shared/guia_whats.ts (o cadastro pela Mel e os planos que a Lia fala).
+const AUTONOMA_NO_CADASTRO = false
 const PASSOS = [
-  { id: 1, rotulo: 'Tipo de conta', foto: 'profissional', bilhete: 'começa por aqui', titulo: 'Como você trabalha?', texto: 'Escolha a opção que mais combina com a sua rotina. Se isso mudar depois, você pode ajustar sem perder seus dados.', roteiro: ['Escolha seu tipo de conta', 'Confira o plano'] },
+  AUTONOMA_NO_CADASTRO
+    ? { id: 1, rotulo: 'Tipo de conta', foto: 'profissional', bilhete: 'começa por aqui', titulo: 'Como você trabalha?', texto: 'Escolha a opção que mais combina com a sua rotina. Se isso mudar depois, você pode ajustar sem perder seus dados.', roteiro: ['Escolha seu tipo de conta', 'Confira o plano'] }
+    : { id: 1, rotulo: 'Seu plano', foto: 'profissional', bilhete: 'começa por aqui', titulo: 'Seu salão na MIMO.', texto: 'Veja o que vem no plano. Quem atende sozinha entra como salão de uma agenda.', roteiro: ['Confira o plano', 'Siga para os seus dados'] },
   { id: 2, rotulo: 'Seus dados', foto: 'agenda-celular', bilhete: 'rapidinho', titulo: 'Agora, seus dados.', texto: 'Precisamos de algumas informações para criar sua conta e identificar o negócio. O que as clientes veem você configura no próximo passo.', roteiro: ['CPF ou CNPJ', 'Endereço de cadastro', 'E-mail, WhatsApp e senha'] },
   { id: 3, rotulo: 'Seu espaço', foto: 'salao', bilhete: 'com a sua cara', titulo: 'Dê cara ao seu salão.', texto: 'Nome, fotos, contatos, endereço e horários. É o que a cliente vê.', roteiro: ['Nome e fotos', 'Contatos e localização', 'Horários e regras'] },
   { id: 4, rotulo: 'Quase lá', foto: 'equipe', bilhete: 'falta pouco', titulo: 'Quase lá.', texto: 'Diga quantas profissionais vão ter agenda. Serviços e equipe você configura já dentro do painel.', roteiro: ['Profissionais com agenda', 'Entrar no painel'] },
@@ -68,7 +75,7 @@ const emReais = (c) => (Number(c ?? 0) / 100).toFixed(2).replace('.', ',')
 // e a conta acorda no passo 3, já logada em /onboarding.
 // a landing manda ?tipo=autonoma ou ?tipo=salao; sem isso, salão
 function tipoDaURL() {
-  try { return new URLSearchParams(window.location.search).get('tipo') === 'autonoma' ? 'autonoma' : 'salao' } catch { return 'salao' }
+  try { return AUTONOMA_NO_CADASTRO && new URLSearchParams(window.location.search).get('tipo') === 'autonoma' ? 'autonoma' : 'salao' } catch { return 'salao' }
 }
 
 // Autosave: a tela muda um campo, espera um instante, grava e avisa
@@ -451,17 +458,26 @@ function PassoTipo({ s, setS, seguir, salvando, setErro }) {
     seguir({})
   }
   const pro = PLANOS.pro
+  // 3.78: sem a autônoma no cadastro, o passo 1 mostra só o salão (e vira a apresentação do plano). Quem já é
+  // autônoma continua vendo as duas opções, para não ser trocada de plano sem querer.
+  const soSalao = !AUTONOMA_NO_CADASTRO && s.tipo !== 'autonoma'
   return (
     <>
-      <h1 className="ob-titulo">Como você trabalha hoje?</h1>
-      <p className="ob-sub">Escolha a opção que mais combina com a sua rotina. Se isso mudar, você pode ajustar depois.</p>
-      <GuiaContexto Icone={Users} titulo="Essa escolha muda só a forma de administrar">
-        No salão, você controla várias agendas e envia o acesso da equipe. Na autônoma, a MIMO fica enxuta e mostra apenas a sua agenda.
-      </GuiaContexto>
-      <div className="ob-tipos">
+      <h1 className="ob-titulo">{soSalao ? 'Seu salão na MIMO' : 'Como você trabalha hoje?'}</h1>
+      <p className="ob-sub">{soSalao ? 'Veja o que vem no plano. No fim do cadastro, você escolhe começar com 7 dias grátis ou com a primeira mensalidade com desconto.' : 'Escolha a opção que mais combina com a sua rotina. Se isso mudar, você pode ajustar depois.'}</p>
+      {soSalao ? (
+        <GuiaContexto Icone={Users} titulo="Atende sozinha? Serve também">
+          Cada profissional tem a sua agenda, inclusive você, se também atende. No passo 4 você diz quantas agendas quer, e o plano se ajusta a isso.
+        </GuiaContexto>
+      ) : (
+        <GuiaContexto Icone={Users} titulo="Essa escolha muda só a forma de administrar">
+          No salão, você controla várias agendas e envia o acesso da equipe. Na autônoma, a MIMO fica enxuta e mostra apenas a sua agenda.
+        </GuiaContexto>
+      )}
+      <div className={'ob-tipos' + (soSalao ? ' ob-tipos-um' : '')}>
         {[
-          { id: 'salao', foto: 'equipe', pilula: 'Salão · MIMO Pro', titulo: 'Tenho salão e equipe', texto: 'Para quem organiza a agenda de duas ou mais profissionais.', bloco: 'Tudo em um só lugar', itens: ['equipe e agendas', 'serviços e horários', 'clientes', 'permissões', 'rotina do salão'], destaque: 'Você configura tudo primeiro e depois envia o acesso de cada profissional já com a agenda pronta.', preco: emDinheiro(pro.base), sub: `/mês até ${pro.inclusas} profissionais · ${emDinheiro(pro.extra)} por agenda a mais`, promais: <><b>{PLANOS.promais.nome}</b> a partir de {PLANOS.promais.inclusas} profissionais: <strong>{emDinheiro(PLANOS.promais.base)}/mês</strong> + {emDinheiro(PLANOS.promais.extra)} por profissional a partir da {PLANOS.promais.inclusas + 1}ª. O plano se ajusta sozinho pelo número de agendas, no passo 3.</> },
-          { id: 'autonoma', foto: 'profissional', pilula: 'Autônoma · grátis', titulo: 'Trabalho por conta própria', texto: 'Uma agenda completa para quem atende sozinha.', bloco: 'Sua rotina, sem complicação', itens: ['sua agenda', 'seus serviços', 'seus horários', 'seus clientes', 'seu link e QR Code'], destaque: 'Sem configurações de equipe. Só o que você realmente precisa.', preco: 'R$ 0', sub: '/mês, sem cartão' },
+          { id: 'salao', foto: 'equipe', pilula: 'Salão · MIMO Pro', titulo: soSalao ? 'Salão, sozinha ou com equipe' : 'Tenho salão e equipe', texto: soSalao ? 'Uma agenda para cada profissional, inclusive você.' : 'Para quem organiza a agenda de duas ou mais profissionais.', bloco: 'Tudo em um só lugar', itens: ['equipe e agendas', 'serviços e horários', 'clientes', 'permissões', 'rotina do salão'], destaque: 'Você configura tudo primeiro e depois envia o acesso de cada profissional já com a agenda pronta.', preco: emDinheiro(pro.base), sub: `/mês até ${pro.inclusas} profissionais · ${emDinheiro(pro.extra)} por agenda a mais`, promais: <><b>{PLANOS.promais.nome}</b> a partir de {PLANOS.promais.inclusas} profissionais: <strong>{emDinheiro(PLANOS.promais.base)}/mês</strong> + {emDinheiro(PLANOS.promais.extra)} por profissional a partir da {PLANOS.promais.inclusas + 1}ª. O plano se ajusta sozinho pelo número de agendas, no passo 4.</> },
+          ...(soSalao ? [] : [{ id: 'autonoma', foto: 'profissional', pilula: 'Autônoma · grátis', titulo: 'Trabalho por conta própria', texto: 'Uma agenda completa para quem atende sozinha.', bloco: 'Sua rotina, sem complicação', itens: ['sua agenda', 'seus serviços', 'seus horários', 'seus clientes', 'seu link e QR Code'], destaque: 'Sem configurações de equipe. Só o que você realmente precisa.', preco: 'R$ 0', sub: '/mês, sem cartão' }]),
         ].map((o) => (
           <button key={o.id} type="button" className={'ob-tipo' + (tipo === o.id ? ' ativo' : '')} onClick={() => setTipo(o.id)} aria-pressed={tipo === o.id}>
             <span className="ob-tipo-foto"><img src={`/imagens/${o.foto}-720.webp`} alt="" /><span className="ob-pilula">{o.pilula}</span></span>
@@ -503,7 +519,7 @@ function prefillDaMel(d) {
     : { address: e.texto ?? '', bairro: '', city: e.cidade ?? '', uf: '', cep: '' }
   const zap = soDigitos(d.whatsapp ?? '')
   return {
-    ...(d.tipo === 'autonoma' || d.tipo === 'salao' ? { tipo: d.tipo } : {}),
+    ...(d.tipo === 'autonoma' || d.tipo === 'salao' ? { tipo: AUTONOMA_NO_CADASTRO ? d.tipo : 'salao' } : {}),
     ...(d.cnpj ? { documento_tipo: 'cnpj', cnpj: d.cnpj } : d.cpf ? { documento_tipo: 'cpf', responsavel_cpf: d.cpf } : {}),
     ...(d.razao_social ? { razao_social: d.razao_social } : {}),
     ...(d.nome ? { nome_fantasia: d.nome, name: d.nome } : {}),
@@ -517,7 +533,7 @@ function prefillDaMel(d) {
 // preencher sozinho (horários e serviços têm editor próprio) fica à vista para ela conferir
 function DicaDaMel({ d, passo }) {
   const itens = passo <= 2
-    ? [d.tipo && (d.tipo === 'autonoma' ? 'autônoma' : 'salão'), d.cnpj && `CNPJ ${formatarCnpj(d.cnpj)}`, d.cpf && `CPF ${formatarCpf(d.cpf)}`, d.nome && `nome ${d.nome}`, d.email && `e-mail ${d.email}`].filter(Boolean)
+    ? [d.tipo && (d.tipo === 'salao' ? 'salão' : AUTONOMA_NO_CADASTRO ? 'autônoma' : null), d.cnpj && `CNPJ ${formatarCnpj(d.cnpj)}`, d.cpf && `CPF ${formatarCpf(d.cpf)}`, d.nome && `nome ${d.nome}`, d.email && `e-mail ${d.email}`].filter(Boolean)
     : [d.horarios && `horários: ${d.horarios}`, Array.isArray(d.servicos) && d.servicos.length > 0 && `serviços: ${d.servicos.join(', ')}`, Number(d.profissionais) > 0 && `${d.profissionais} ${Number(d.profissionais) === 1 ? 'profissional' : 'profissionais'}`].filter(Boolean)
   if (!itens.length) return null
   return (

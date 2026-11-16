@@ -86,6 +86,10 @@ type LeadSalao = { id: number; salao_nome: string; status: string; ja_respondeu:
 
 export const MODELO_PADRAO: Record<string, string> = { groq: 'openai/gpt-oss-120b', claude: 'claude-haiku-5-5' }
 export const RAIZ_SITE = 'mimo.com.vc'
+// 3.78: a autônoma sai do cadastro por enquanto. A Mel não pergunta mais "salão ou autônoma" no cadastro pelo
+// WhatsApp (todo cadastro é salão; quem atende sozinha diz 1 profissional), e a Lia não oferece o plano Autônoma.
+// Para voltar a oferecer: true aqui e em src/pages/Onboarding.jsx.
+export const AUTONOMA_NO_CADASTRO = false
 
 // ---- textos e números ----------------------------------------------------------------------------------------------
 export const so = (t: unknown) => String(t ?? '').replace(/\D/g, '')

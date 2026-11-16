@@ -36,13 +36,16 @@ const hhmm = (t) => String(t ?? '').slice(0, 5)
 const centsDe = (t) => { const n = Number(String(t ?? '').replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.')); return Number.isFinite(n) && n > 0 ? Math.round(n * 100) : null }
 const emReais = (c) => (c == null ? '' : (Number(c) / 100).toFixed(2).replace('.', ','))
 
-export default function ProfissionalDrawer({ salao, profissional = null, servicos = [], cats = [], onFechar, onSalvo, semServicos = false, abaInicial = 1 }) {
+export default function ProfissionalDrawer({ salao, profissional = null, servicos = [], cats = [], onFechar, onSalvo, semServicos = false, abaInicial = null }) {
   const editando = Boolean(profissional?.id)
+  // 3.83: a dona que também atende (147) configura a própria agenda aqui: abre nos serviços e não tem etapa de acesso
+  const dona = Boolean(profissional?.dona)
   // semServicos (3.81): na Configuração, os serviços de cada uma se ligam na etapa seguinte ("Quem faz o quê")
-  const abas = ABAS.filter((a) => (ETAPAS_COMPLETAS || !ETAPAS_DEPOIS.has(a.id)) && !(semServicos && a.id === 3))
-  const [aba, setAba] = useState(abaInicial)
+  const abas = ABAS.filter((a) => (ETAPAS_COMPLETAS || !ETAPAS_DEPOIS.has(a.id)) && !(semServicos && a.id === 3) && !(dona && a.id === 7))
+  const [aba, setAba] = useState(abaInicial ?? (dona ? 3 : 1))
   const pos = Math.max(0, abas.findIndex((a) => a.id === aba))
   const proxima = abas[pos + 1]?.id ?? 7
+  const temProxima = pos < abas.length - 1
   const anterior = abas[pos - 1]?.id ?? 1
   const [erro, setErro] = useState('')
   const [salvando, setSalvando] = useState(false)
@@ -140,6 +143,7 @@ export default function ProfissionalDrawer({ salao, profissional = null, servico
       const idSalvo = data?.id ?? profissional?.id
       const categorias = ETAPAS_COMPLETAS ? (f.categorias ?? []) : [...new Set(escolhidos.map((sv) => sv.categoria_id).filter(Boolean))]
       if (idSalvo && !semServicos) { const r2 = await supabase.rpc('equipe_definir_categorias', { prof: idSalvo, categorias }); if (r2.error) throw new Error(r2.error.message) }
+      if (dona) { onSalvo?.(data); onFechar?.(); return }
       const situacaoSalva = data?.situacao ?? (profissional?.user_id ? 'ativa' : 'configurada')
       setSalva({ id: data?.id ?? profissional?.id, situacao: situacaoSalva, token: data?.token ?? profissional?.token ?? null })
       setAba(7)
@@ -163,7 +167,7 @@ export default function ProfissionalDrawer({ salao, profissional = null, servico
     <div className="gv-fundo" onClick={onFechar}>
       <div className="gv" role="dialog" aria-modal="true" aria-label={editando ? 'Configurar profissional' : 'Adicionar profissional'} onClick={(e) => e.stopPropagation()}>
         <header className="gv-topo">
-          <div className="gv-topo-texto"><small>{editando ? 'Configurar profissional' : 'Adicionar profissional'}</small><strong>{f.name.trim() || 'Nova profissional'}</strong></div>
+          <div className="gv-topo-texto"><small>{dona ? 'Sua agenda' : editando ? 'Configurar profissional' : 'Adicionar profissional'}</small><strong>{f.name.trim() || 'Nova profissional'}</strong></div>
           <button type="button" className="gv-fechar" onClick={onFechar} aria-label="Fechar"><X size={18} /></button>
         </header>
         <nav className="gv-abas" aria-label="Etapas">
@@ -174,8 +178,8 @@ export default function ProfissionalDrawer({ salao, profissional = null, servico
 
           {aba === 1 && (
             <section className="gv-secao">
-              <h3>Quem é ela</h3>
-              <p className="muted">Você preenche tudo e ela já entra na agenda ao salvar: dá para distribuir os serviços e marcar horários com ela na hora. Ela recebe o acesso por e-mail para ativar e ver a agenda no celular.</p>
+              <h3>{dona ? 'Seus dados na agenda' : 'Quem é ela'}</h3>
+              <p className="muted">{dona ? 'É assim que as clientes veem você na agenda. O login é o mesmo do painel.' : <>Você preenche tudo e ela já entra na agenda ao salvar: dá para distribuir os serviços e marcar horários com ela na hora. Ela recebe o acesso por e-mail para ativar e ver a agenda no celular.</>}</p>
               <div className="gv-foto-linha">
                 <button type="button" className="gv-foto" onClick={() => arq.current?.click()} aria-label="Foto">
                   {f.fotoNova?.preview || f.photo_url ? <img src={f.fotoNova?.preview ?? f.photo_url} alt="" /> : <Avatar nome={f.name || "?"} grande />}
@@ -215,7 +219,7 @@ export default function ProfissionalDrawer({ salao, profissional = null, servico
 
           {aba === 3 && (
             <section className="gv-secao">
-              <div className="gv-secao-linha"><div><h3>Quais serviços {nome || 'ela'} faz?</h3><p className="muted">Marque o que {nome || 'ela'} atende. É só isso que a cliente consegue marcar na agenda dela.</p></div>
+              <div className="gv-secao-linha"><div><h3>{dona ? 'Quais serviços você faz?' : `Quais serviços ${nome || 'ela'} faz?`}</h3><p className="muted">{dona ? 'Marque o que você atende. É só isso que a cliente consegue marcar na sua agenda.' : `Marque o que ${nome || 'ela'} atende. É só isso que a cliente consegue marcar na agenda dela.`}</p></div>
                 {servicos.length > 0 && <button type="button" className="btn-mini btn-mini-neutro" onClick={() => setF((x) => { const todos = escolhidos.length === servicos.length; const s = { ...x.servicos }; for (const sv of servicos) s[sv.id] = { ...(s[sv.id] ?? {}), on: !todos }; return { ...x, servicos: s, categorias: todos ? [] : catsAtende.map((c) => c.id) } })}>{escolhidos.length === servicos.length ? 'Desmarcar todos' : 'Selecionar todos'}</button>}
               </div>
               {servicos.length > 0 && (
@@ -253,7 +257,7 @@ export default function ProfissionalDrawer({ salao, profissional = null, servico
 
           {aba === 4 && (
             <section className="gv-secao">
-              <h3>Quando {nome} atende</h3>
+              <h3>{dona ? 'Quando você atende' : `Quando ${nome} atende`}</h3>
               <label className="gv-check"><input type="checkbox" checked={f.usa_horario_salao} onChange={(e) => setF((x) => ({ ...x, usa_horario_salao: e.target.checked, horarios: e.target.checked && horasSalao ? horasSalao : x.horarios }))} /><span><strong>Usar o horário geral do salão</strong><small>Ela herda o horário padrão e acompanha quando o salão mudar. {horasSalao ? `Hoje: ${resumoDias(horasSalao)}.` : ''}</small></span></label>
               {!f.usa_horario_salao && f.horarios && (
                 <div className="gv-horas">
@@ -351,8 +355,8 @@ export default function ProfissionalDrawer({ salao, profissional = null, servico
           <footer className="gv-rodape">
             {pos > 0 ? <button type="button" className="btn btn-ghost" onClick={() => ir(anterior)} disabled={salvando}><ArrowLeft size={16} /> Voltar</button> : <span />}
             <span className="gv-rodape-acoes">
-              {aba !== 7 && <button type="button" className="btn btn-ghost" onClick={() => ir(proxima)} disabled={salvando}>Continuar <ArrowRight size={16} /></button>}
-              <button type="button" className="btn btn-primary" onClick={salvar} disabled={salvando}>{salvando ? 'Salvando…' : editando ? 'Salvar alterações' : 'Salvar profissional'}</button>
+              {aba !== 7 && temProxima && <button type="button" className="btn btn-ghost" onClick={() => ir(proxima)} disabled={salvando}>Continuar <ArrowRight size={16} /></button>}
+              <button type="button" className="btn btn-primary" onClick={salvar} disabled={salvando}>{salvando ? 'Salvando…' : dona ? 'Salvar minha agenda' : editando ? 'Salvar alterações' : 'Salvar profissional'}</button>
             </span>
           </footer>
         )}

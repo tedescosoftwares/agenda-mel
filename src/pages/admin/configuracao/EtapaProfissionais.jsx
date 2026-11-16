@@ -90,7 +90,7 @@ export default function EtapaProfissionais({ s, autonoma, setErro, onEstado }) {
               <small>{p.dona ? 'Você · sua agenda' : (p.especialidade || 'Profissional')}</small>
               <span className="muted">{(p.servicos ?? []).length} {(p.servicos ?? []).length === 1 ? 'serviço' : 'serviços'}</span>
               {p.dona
-                ? <button type="button" className="plat-link cfg-prof-dona-sair" onClick={() => donaAtender(false)} disabled={mudandoDona}>Não atendo mais</button>
+                ? <><button type="button" className="btn btn-ghost btn-mini" onClick={() => setGaveta({ prof: p, aba: servicos.length ? 3 : 4 })}><Pencil size={13} /> Meus serviços</button><button type="button" className="plat-link cfg-prof-dona-sair" onClick={() => donaAtender(false)} disabled={mudandoDona}>Não atendo mais</button></>
                 : <button type="button" className="btn btn-ghost btn-mini" onClick={() => setGaveta({ prof: p })}><Pencil size={13} /> Editar</button>}
             </div>
           ))}

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import ClienteShell from '../../components/ClienteShell'
 import AvisosNovos from '../../components/AvisosNovos'
 import LigarAvisos from '../../components/LigarAvisos'
@@ -11,12 +11,16 @@ import { SearchIcon } from '../../components/icons'
 import { formatPreco, formatDuracao } from '../../lib/format'
 import { Sparkles, Store, MapPin, ChevronRight, Star, Wallet } from 'lucide-react'
 import { MODOS } from '../../lib/pagamento'
+import { tomarDepois } from '../../lib/convite'
 
 // Início da cliente (tela 03 do painel): saudação, busca, a fileira de
 // profissionais, e os serviços em destaque. É a vitrine — tudo aqui
 // leva para "marcar com alguém".
 export default function ClienteHome() {
   const { profile, user, vinculos: agendas } = useAuth()
+  // 3.79: entrou pela página pública do salão para marcar um serviço (ou falar com o salão): segue para lá
+  const navigate = useNavigate()
+  useEffect(() => { const d = tomarDepois(); if (d) navigate(d, { replace: true }) }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const nome = (profile?.full_name || user?.email || '').split(' ')[0]
 
   const [profissionais, setProfissionais] = useState([])

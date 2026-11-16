@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { MarcaIcon, Wordmark } from '../../components/icons'
-import { extrairCodigo, guardarConvite } from '../../lib/convite'
+import { extrairCodigo, guardarConvite, guardarDepois, tomarDepois } from '../../lib/convite'
 import { iniciais } from '../../lib/booking'
 import BotaoGoogle from '../../components/BotaoGoogle'
 import { erroDoRetornoOAuth, precisaCompletar } from '../../lib/oauth'
@@ -25,6 +25,10 @@ export default function EntrarPorCodigo({ codigo: codigoPronto, alvo: alvoPronto
   const navigate = useNavigate()
   const { user, role, loading, recarregarVinculos, profile } = useAuth()
   const codigo = codigoPronto ?? extrairCodigo(bruto)
+  // 3.79: a página pública do salão manda ?depois= (o serviço que ela quis marcar); vale também na volta do Google
+  const [q] = useSearchParams()
+  const depois = q.get('depois')
+  useEffect(() => { if (depois) guardarDepois(depois) }, [depois])
   const [alvo, setAlvo] = useState(alvoPronto ?? undefined)
   const [erro, setErro] = useState(() => erroDoRetornoOAuth())
   const [entrando, setEntrando] = useState(false)
@@ -43,7 +47,7 @@ export default function EntrarPorCodigo({ codigo: codigoPronto, alvo: alvoPronto
     if (error) { setErro(error.message); return }
     if (!data?.ok) { setErro(data?.motivo || 'não deu para entrar'); return }
     await recarregarVinculos?.()
-    navigate('/cliente/home', { replace: true })
+    navigate(tomarDepois() ?? '/cliente/home', { replace: true })
   }
 
   if (loading || alvo === undefined) return <div className="page-center"><p className="muted">Carregando…</p></div>
@@ -91,8 +95,8 @@ export default function EntrarPorCodigo({ codigo: codigoPronto, alvo: alvoPronto
             {!user && (
               <div className="entrar-opcoes">
                 <BotaoGoogle convite={codigo} voltar={`/v/${codigo}`} onErro={setErro} />
-                <Link to={`/cadastro?convite=${codigo}`} className="btn btn-primary btn-block">Criar minha conta</Link>
-                <Link to={`/login?convite=${codigo}`} className="btn btn-ghost btn-block">Já tenho conta</Link>
+                <Link to={`/cadastro?convite=${codigo}${depois ? `&depois=${encodeURIComponent(depois)}` : ''}`} className="btn btn-primary btn-block">Criar minha conta</Link>
+                <Link to={`/login?convite=${codigo}${depois ? `&depois=${encodeURIComponent(depois)}` : ''}`} className="btn btn-ghost btn-block">Já tenho conta</Link>
               </div>
             )}
           </>

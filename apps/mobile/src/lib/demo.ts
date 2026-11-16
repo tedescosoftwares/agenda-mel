@@ -362,12 +362,19 @@ const RPC: Record<string, (args?: Linha) => unknown> = {
     const notas = (n: number) => (n === 1 ? 5 : 4.8)
     return {
       salao: {
-        id: s.id, nome: s.name, tipo: s.tipo, descricao: s.descricao, fotos: s.fotos, logo_url: s.logo_url, endereco: s.address, cidade: s.city, cep: s.cep ?? null, lat: s.lat ?? null, lng: s.lng ?? null,
+        id: s.id, nome: s.name, tipo: s.tipo, descricao: s.descricao, fotos: s.fotos, logo_url: s.logo_url, endereco: s.address, bairro: s.id === S1 ? 'Gonzaga' : null, cidade: s.city, cep: s.cep ?? null, lat: s.lat ?? null, lng: s.lng ?? null,
         telefone: s.phone, whatsapp: s.whatsapp ?? s.phone, instagram: s.instagram, pagamento: RPC.pagamento_do_salao!({ salao: s.id }), aceita: true,
       },
       horarios: s.tipo === 'salao' ? [0, 1, 2, 3, 4, 5, 6].map((weekday) => ({ weekday, open: weekday !== 0, start_time: '09:00:00', end_time: weekday === 6 ? '14:00:00' : '19:00:00' })) : [],
       nota: s.id === S1 ? { media: 4.9, quantas: 37 } : { media: 5, quantas: 12 },
-      equipe: equipe.map((p, i) => ({ id: p.id, nome: p.name, foto: p.photo_url, bio: p.bio, faz: vinculosProf.filter((v) => v.professional_id === p.id).map((v) => serv(v.service_id)?.name ?? '').sort(), nota: notas(i) })),
+      // 3.79 (migração 225): as avaliações recentes da casa, a equipe com slug e o número de avaliações
+      avaliacoes: [
+        { nota: 5, comentario: 'Atendimento impecável, saí renovada!', quem: 'Carla', quando: mais(-3) + 'T12:00:00Z', profissional: equipe[0]?.name ?? null, servico: 'Manicure' },
+        { nota: 5, comentario: 'Super atenciosa e caprichosa.', quem: 'Mariana', quando: mais(-9) + 'T12:00:00Z', profissional: equipe[1]?.name ?? equipe[0]?.name ?? null, servico: 'Escova' },
+        { nota: 4, comentario: 'Ficou lindo, só atrasou um pouquinho.', quem: 'Beatriz', quando: mais(-20) + 'T12:00:00Z', profissional: equipe[0]?.name ?? null, servico: null },
+        { nota: 5, comentario: 'Voltarei com certeza.', quem: 'Paula', quando: mais(-28) + 'T12:00:00Z', profissional: equipe[0]?.name ?? null, servico: null },
+      ],
+      equipe: equipe.map((p, i) => ({ id: p.id, nome: p.name, foto: p.photo_url, bio: p.bio, slug: p.slug ?? null, especialidade: p.especialidade ?? null, avaliacoes: i === 0 ? 23 : 12, faz: vinculosProf.filter((v) => v.professional_id === p.id).map((v) => serv(v.service_id)?.name ?? '').sort(), nota: notas(i) })),
       servicos: servicos
         .filter((x) => x.salon_id === s.id && x.active)
         .map((x) => ({ ...x, quem: vinculosProf.filter((v) => v.service_id === x.id).map((v) => ({ id: v.professional_id, nome: prof(v.professional_id)?.name, foto: prof(v.professional_id)?.photo_url, preco_cents: null, duracao_minutos: null })) })),

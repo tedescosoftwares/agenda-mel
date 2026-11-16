@@ -3,13 +3,13 @@ import { useLocation } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { SUBDOMINIO, urlDoAmbiente, urlDoEndereco } from '../../lib/ambiente'
 import { MarcaIcon, Wordmark } from '../../components/icons'
-import EntrarPorCodigo from './EntrarPorCodigo'
+import VitrineDoSalao from './VitrineDoSalao'
 import PaginaProfissional from './PaginaProfissional'
 
 // O endereço próprio do salão (2.80): studiomel.mimo.com.vc.
 //
-// Só duas páginas vivem aqui: a raiz (a casa) e /<slug> (a profissional
-// da casa). Qualquer outro caminho volta para o domínio principal, com a
+// Só duas páginas vivem aqui: a raiz (a casa: a página pública do salão,
+// VitrineDoSalao, 3.79) e /<slug> (a profissional da casa). Qualquer outro caminho volta para o domínio principal, com a
 // sessão junto (o cookie é da raiz). Quem responde de quem é o nome é
 // resolver_endereco(); um endereço trocado redireciona para o novo.
 
@@ -51,7 +51,8 @@ export default function EnderecoDoSalao({ prof }) {
   if (!r) return <EnderecoVazio titulo="Esse endereço não existe" texto="Confira o link com o salão, ou entre pelo código de seis letras que fica no balcão." />
   if (r.tipo === 'indisponivel') return <EnderecoVazio titulo={`${r.nome} está com o endereço pausado`} texto="O salão precisa regularizar a assinatura para o endereço voltar a abrir. Se você já é cliente, entra pelo app." />
   if (r.tipo === 'profissional') return <PaginaProfissional slug={r.slug} />
-  return <EntrarPorCodigo codigo={r.codigo} alvo={r} />
+  // 3.79: a raiz é a página do salão, aberta a quem visita (marcar e falar com o salão pedem a conta)
+  return <VitrineDoSalao r={r} />
 }
 
 function EnderecoVazio({ titulo, texto }) {

@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
-import type { ReactNode } from 'react'
+import type { ReactNode, Ref } from 'react'
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { ESPACO, useTema } from '@/lib/tema'
@@ -13,12 +13,15 @@ export function Tela({
   children,
   rodape,
   direita,
+  rolagem,
 }: {
   titulo: string
   voltar?: () => void
   children: ReactNode
   rodape?: ReactNode
   direita?: ReactNode
+  // 3.79: quem precisa rolar até uma seção (a página do salão: "Agendar horário" leva aos serviços)
+  rolagem?: Ref<ScrollView>
 }) {
   const t = useTema()
   const router = useRouter()
@@ -35,7 +38,7 @@ export function Tela({
         <View style={e.icone}>{direita}</View>
       </View>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={e.conteudo} keyboardShouldPersistTaps="handled">
+        <ScrollView ref={rolagem} contentContainerStyle={e.conteudo} keyboardShouldPersistTaps="handled">
           {children}
         </ScrollView>
         {rodape ? <View style={[e.rodape, { backgroundColor: t.superficie, borderTopColor: t.fio }]}>{rodape}</View> : null}

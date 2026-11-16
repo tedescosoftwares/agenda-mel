@@ -188,7 +188,8 @@ export default function App() {
           <AvisoCookies />
           <AvisoAoVivo />
           {!SUBDOMINIO && <Presenca />}
-          <WhatsFlutuante />
+          {/* 3.79: no endereço do salão, o WhatsApp de suporte da MIMO confundiria com o do salão */}
+          {!SUBDOMINIO && <WhatsFlutuante />}
           </DialogoProvider>
         </NotificacoesProvider>
       </AuthProvider>

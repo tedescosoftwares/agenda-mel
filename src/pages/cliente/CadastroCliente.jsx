@@ -3,7 +3,7 @@ import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { homeDoPapel } from '../../lib/roles'
 import { supabase } from '../../lib/supabase'
-import { extrairCodigo, guardarConvite } from '../../lib/convite'
+import { extrairCodigo, guardarConvite, guardarDepois } from '../../lib/convite'
 import { formatarFone, foneValido } from '../../lib/fone'
 import { FraseDeAceite } from '../../components/LinkLegal'
 import { useDocumentosLegais, aceitesPara, versaoMaior } from '../../lib/legal'
@@ -47,10 +47,13 @@ export default function CadastroCliente() {
     guardarConvite(convite)
     supabase.rpc('resolver_codigo', { chave: convite }).then(({ data }) => setQuem(data ?? null))
   }, [convite])
+  // 3.79: veio da página pública do salão: depois de entrar, a Home leva para o que ela escolheu
+  const depois = q.get('depois')
+  useEffect(() => { if (depois) guardarDepois(depois) }, [depois])
 
   if (loading || quem === undefined) return <div className="page-center"><p className="muted">Carregando…</p></div>
   if (user) return <Navigate to={homeDoPapel(role)} replace />
-  const paraLogin = convite ? `/login?convite=${convite}` : '/login'
+  const paraLogin = (convite ? `/login?convite=${convite}` : '/login') + (depois ? `${convite ? '&' : '?'}depois=${encodeURIComponent(depois)}` : '')
 
   async function seguir(e) {
     e.preventDefault(); setErro(''); setJaTem(null)

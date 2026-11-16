@@ -8,7 +8,7 @@ import { FraseDeAceite } from '../components/LinkLegal'
 import { useDocumentosLegais, aceitesPara, versaoMaior } from '../lib/legal'
 import { VERSAO } from '../lib/versao'
 import { MarcaIcon, Wordmark } from '../components/icons'
-import { extrairCodigo, guardarConvite } from '../lib/convite'
+import { extrairCodigo, guardarConvite, guardarDepois } from '../lib/convite'
 import { AMBIENTE, urlDoAmbiente, ambienteDoPapel } from '../lib/ambiente'
 import { MailCheck } from 'lucide-react'
 import CampoSenha from '../components/CampoSenha'
@@ -74,6 +74,9 @@ export default function Login({ ambiente = AMBIENTE }) {
     guardarConvite(convite)
     supabase.rpc('resolver_codigo', { chave: convite }).then(({ data }) => setQuemConvidou(data ?? null))
   }, [convite])
+  // 3.79: veio da página pública do salão (marcar um serviço, falar com o salão): a Home leva para lá depois
+  const depois = q.get('depois')
+  useEffect(() => { if (depois) guardarDepois(depois) }, [depois])
 
   if (loading) return <div className="page-center"><p className="muted">Carregando…</p></div>
   if (user && !conferindoConta && !contaErrada) return <Navigate to={homeDoPapel(role)} replace />

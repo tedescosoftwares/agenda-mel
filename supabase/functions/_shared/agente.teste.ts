@@ -109,7 +109,7 @@ await caso('o pedido ao Claude: sem temperatura, esforço baixo, cache só na pa
   const msgs = c.messages as Array<{ content: unknown }>
   assert.equal(typeof msgs[0].content, 'string')
   assert.deepEqual(msgs[2].content, [{ type: 'text', text: 'quero escova', cache_control: { type: 'ephemeral' } }])
-  assert.equal((c.tools as unknown[]).length, 7)
+  assert.equal((c.tools as unknown[]).length, 8)
 })
 
 await caso('Claude com ferramenta: lista os serviços, devolve o raciocínio inteiro e responde; soma uso e custo', async () => {
@@ -149,14 +149,39 @@ await caso('Claude fora do ar (duas vezes): a reserva no Groq responde', async (
   assert.match(String((g.corpo.messages as Array<{ content: string }>)[0].content), /Seu nome é Bia/)
 })
 
-await caso('Claude recusou: a reserva responde', async () => {
+await caso('Claude recusou (política): não vai para o Groq; encerra com educação e o número fica em silêncio', async () => {
   const db = bancoDe(ctxDe())
   const p = provedorDe({
     claude: [{ status: 200, corpo: { content: [], stop_reason: 'refusal', usage: { input_tokens: 10, output_tokens: 0 } } }],
-    groq: [{ status: 200, corpo: { choices: [{ message: { content: 'Posso ajudar com horários!' } }] } }],
+    groq: [{ status: 200, corpo: { choices: [{ message: { content: 'NÃO DEVIA CHAMAR' } }] } }],
   })
-  const r = await conversar(db, SALAO, '+55', 'oi', { ambiente: AMBOS, fetcher: p.fetcher })
-  assert.equal(r.provedor, 'groq'); assert.match(r.falhas[0], /recusou/)
+  const r = await conversar(db, SALAO, '+55', 'conteúdo que viola a política', { ambiente: AMBOS, fetcher: p.fetcher })
+  assert.equal(r.provedor, 'claude'); assert.match(r.falhas[0], /recusou/)
+  assert.match(String(r.resposta), /só consigo ajudar com horários e serviços do Studio Rosa/)
+  assert.equal(p.pedidos.filter((x) => x.url.includes('groq')).length, 0)
+  const enc = db.chamadas.find((c) => c.nome === 'bot_encerrar')!
+  assert.equal(enc.args.motivo, 'politica'); assert.equal(r.acoes.encerrou, 1)
+})
+
+await caso('mensagem ofensiva: encerra (24 h no banco), despede-se e não comenta o conteúdo', async () => {
+  const db = bancoDe(ctxDe())
+  const p = provedorDe({ claude: [ferramentaClaude('encerrar_conversa', { motivo: 'ofensiva' }), textoClaude('Vou encerrar nosso atendimento por aqui. Até mais!')] })
+  const r = await conversar(db, SALAO, '+55', 'mensagem ofensiva', { ambiente: AMBOS, fetcher: p.fetcher })
+  assert.equal(r.resposta, 'Vou encerrar nosso atendimento por aqui. Até mais!')
+  assert.equal(db.chamadas.find((c) => c.nome === 'bot_encerrar')!.args.motivo, 'ofensiva')
+  assert.equal(r.acoes.encerrou, 1)
+  const seg = p.pedidos[1].corpo.messages as Array<{ content: Array<Record<string, unknown>> }>
+  assert.match(JSON.stringify(seg[seg.length - 1].content), /Você encerrou a conversa/)
+  // a regra do assunto está na parte fixa (vale para todos os salões, mesmo com a orientação editada)
+  assert.match(String((p.pedidos[0].corpo.system as Array<{ text: string }>)[0].text), /encerrar_conversa com motivo fora_do_assunto/)
+})
+
+await caso('encerrou e o Claude caiu antes de se despedir: sai a despedida pronta', async () => {
+  const db = bancoDe(ctxDe())
+  const p = provedorDe({ claude: [ferramentaClaude('encerrar_conversa', { motivo: 'fora_do_assunto' }), { status: 500, corpo: { error: { message: 'x' } } }, { status: 500, corpo: { error: { message: 'x' } } }] })
+  const r = await conversar(db, SALAO, '+55', 'me ajuda com a lição de casa?', { ambiente: AMBOS, fetcher: p.fetcher })
+  assert.match(String(r.resposta), /Vou encerrar nosso atendimento por agora/)
+  assert.equal(p.pedidos.filter((x) => x.url.includes('groq')).length, 0)
 })
 
 await caso('marcou e o Claude caiu depois: não recomeça no Groq (marcaria de novo); responde o resumo', async () => {

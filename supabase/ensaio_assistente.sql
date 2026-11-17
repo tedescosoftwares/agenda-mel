@@ -1,4 +1,4 @@
--- Ensaio da 235 (3.95), 236 (3.95.1), 237 (3.95.2) e 238 (3.95.3): a assistente do WhatsApp do salão; o número da MIMO só como reserva;
+-- Ensaio da 235 (3.95), 236 (3.95.1), 237 (3.95.2), 238 (3.95.3) e 239 (3.95.4): a assistente do WhatsApp do salão; o número da MIMO só como reserva;
 -- a chave desligada desliga tudo. Desfaz no fim.
 begin;
 do $$
@@ -252,6 +252,37 @@ begin
     if r -> 'aceite' ->> 'modo' is null then raise exception 'N5: %', r -> 'aceite'; end if;
     raise notice 'N teste: pendente/confirmado como de verdade, sem gravar; regra do salão na tela (%)', r -> 'aceite' ->> 'modo';
   end;
+
+  -- O. encerrar a conversa (239): pausa de 6 h (fora do assunto) ou 24 h (ofensiva); nada responde, nada gasta
+  perform public.assistente_numero_conectado(salao, inst, null);
+  update public.whatsapp_channels set usa_ia = true where salon_id = salao;
+  delete from public.bot_pausas where telefone = e164;
+  perform public.assistente_esperar(salao, fone, inst, 'oi', now() + interval '10 minutes');
+  r := public.bot_encerrar(salao, fone, 'fora_do_assunto');
+  if not (r ->> 'ok')::boolean or (r ->> 'ate')::timestamptz > now() + interval '6 hours 1 minute' or (r ->> 'ate')::timestamptz < now() + interval '5 hours 59 minutes'
+     or exists (select 1 from public.assistente_esperas where salon_id = salao) then raise exception 'O: %', r; end if;
+  r := public.bot_encerrar(salao, fone, 'ofensiva');
+  if (r ->> 'ate')::timestamptz < now() + interval '23 hours 59 minutes' then raise exception 'O2: %', r; end if;
+  r := public.bot_encerrar(salao, fone, 'fora_do_assunto');   -- não encurta a pausa que já existe
+  if (select ate from public.bot_pausas where telefone = e164 and salon_id = salao) < now() + interval '23 hours' then raise exception 'O3'; end if;
+  ctx := public.bot_contexto(salao, fone, inst);
+  if ctx ->> 'motivo' <> 'pausado_para_humano' then raise exception 'O4: %', ctx; end if;
+  r := public.receber_mensagem(fone, 'responde aí sua inútil', 'ens-o1', null, null, salao);
+  if r ->> 'acao' <> 'conversa_encerrada' or r ? 'responder' then raise exception 'O5: %', r; end if;
+  r := public.receber_mensagem(fone, 'sair', 'ens-o2', null, null, salao);
+  if r ->> 'acao' <> 'sair' then raise exception 'O6 (SAIR vale mesmo encerrada): %', r; end if;
+  -- a pausa do "chamar alguém" (2 h) não é encerramento: as regras seguem
+  update public.profiles set accepts_reminders = true where id = cli;
+  update public.bot_pausas set motivo = 'quer falar com uma pessoa' where telefone = e164;
+  r := public.receber_mensagem(fone, 'oi de novo', 'ens-o3', null, null, salao);
+  if r ->> 'acao' = 'conversa_encerrada' then raise exception 'O7: %', r; end if;
+  delete from public.ia_chamadas where salon_id = salao;
+  perform public.registrar_chamada_ia(salao, fone, 'claude-haiku-5-5', 100, 10, 500, null, null, 'claude', 0, 0, 0.0001, array['encerrar_conversa'], '{"encerrou": 1}', true, false);
+  perform set_config('request.jwt.claim.sub', dona::text, true);
+  r := public.assistente_numeros(salao, 30);
+  perform set_config('request.jwt.claim.sub', '', true);
+  if (r ->> 'encerrou')::int <> 1 then raise exception 'O8: %', r; end if;
+  raise notice 'O encerrar: pausa 6 h/24 h, silêncio sem gastar, SAIR vale, conta nos números';
 
   raise notice 'ensaio_assistente: tudo certo';
 end $$;

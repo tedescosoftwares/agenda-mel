@@ -35,7 +35,7 @@ export function assistenteSalvarDemo({ dados } = {}) {
   gravar(e)
   return assistenteDoSalaoDemo()
 }
-export const assistenteNumerosDemo = () => ({ dias: 30, conversas: 48, respostas: 131, marcou: 19, remarcou: 4, cancelou: 3, chamou: 6, falhas: 1, custo_usd: 0.41, por_dia: [] })
+export const assistenteNumerosDemo = () => ({ dias: 30, conversas: 48, respostas: 131, marcou: 19, remarcou: 4, cancelou: 3, chamou: 6, encerrou: 2, falhas: 1, custo_usd: 0.41, por_dia: [] })
 
 const semAcento = (t) => String(t ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 
@@ -67,8 +67,12 @@ export async function demoAssistente(corpo = {}) {
     const cliente = corpo.rascunho?.cliente_nome || 'Ana'
     const roteiro = previa(cfg, { salao: 'Studio Mel', proprio: true, cliente })
     let resposta
-    let acoes = { marcou: 0, remarcou: 0, cancelou: 0, chamou: 0 }
-    if (/\b(sim|pode|confirm|isso)\b/.test(ultima) && msgs.length > 2) {
+    let acoes = { marcou: 0, remarcou: 0, cancelou: 0, chamou: 0, encerrou: 0 }
+    if (/(idiota|burra|otaria|vagabunda|lixo|inutil|porra|caralho)/.test(ultima)) {
+      resposta = 'Vou encerrar nosso atendimento por aqui. Se precisar de horário, é só chamar mais tarde.'; acoes = { ...acoes, encerrou: 1 }
+    } else if (/(licao|dever de casa|politica|receita de|piada|futebol)/.test(ultima)) {
+      resposta = 'Por aqui eu só consigo ajudar com horários e serviços do Studio Mel. Quer ver os horários livres?'
+    } else if (/\b(sim|pode|confirm|isso)\b/.test(ultima) && msgs.length > 2) {
       if (cfg.pode_marcar) { resposta = 'Anotei o seu pedido: escova com a Carla amanhã às 10h. O salão confirma em breve e eu te aviso por aqui.'; acoes = { ...acoes, marcou: 1 } }
       else { resposta = 'Vou chamar alguém da equipe para confirmar com você, tá? Já já te respondem.'; acoes = { ...acoes, chamou: 1 } }
     } else if (/\b(\d{1,2}h|as \d|às \d)/.test(ultima) || /\d{1,2}:\d{2}/.test(ultima)) {

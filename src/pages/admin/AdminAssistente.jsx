@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { Bot, Send, RotateCcw, QrCode, Unplug, Smartphone, PartyPopper, MessageCircle, Check, Clock, Info, CalendarCheck, CalendarClock, CalendarX, HandHelping, Loader2, Sparkles, MessagesSquare } from 'lucide-react'
+import { Bot, Send, RotateCcw, QrCode, Unplug, Smartphone, PartyPopper, ShieldCheck, MessageCircle, Check, Clock, Info, CalendarCheck, CalendarClock, CalendarX, HandHelping, Loader2, Sparkles, MessagesSquare } from 'lucide-react'
 import AdminShell from '../../components/AdminShell'
 import ProShell from '../../components/ProShell'
 import { useAuth } from '../../context/AuthContext'
@@ -408,6 +408,10 @@ export default function AdminAssistente({ para = 'admin' }) {
               <Chave ligado={cfg.pode_remarcar} onMudar={(v) => mudar('pode_remarcar', v)} rotulo="Remarcar" texto="Pede a troca; a profissional pode precisar aceitar." />
               <Chave ligado={cfg.pode_cancelar} onMudar={(v) => mudar('pode_cancelar', v)} rotulo="Cancelar" texto="Só horário da própria cliente, com o sim dela." />
               <small className="muted as-dica">O que estiver desligado, ela não faz: chama alguém da equipe.</small>
+              <p className="as-nota as-encerra">
+                <ShieldCheck size={15} />
+                <span>Ela só conversa sobre o salão. Pergunta fora do assunto, ela avisa com gentileza; se a pessoa insistir, encerra e fica 6 horas sem responder aquele número. Mensagem ofensiva, assédio ou golpe: encerra na hora e fica 24 horas em silêncio. Assim ninguém gasta a sua assistente à toa.</span>
+              </p>
               <div className="as-rotulo">Preço</div>
               <Opcoes rotulo="Preço" lista={PRECOS} valor={cfg.preco} onEscolher={(v) => mudar('preco', v)} />
             </section>
@@ -481,6 +485,7 @@ export default function AdminAssistente({ para = 'admin' }) {
                   <div><CalendarClock size={16} /><strong>{numeros.remarcou ?? 0}</strong><small>remarcados</small></div>
                   <div><CalendarX size={16} /><strong>{numeros.cancelou ?? 0}</strong><small>cancelados</small></div>
                   <div><HandHelping size={16} /><strong>{numeros.chamou ?? 0}</strong><small>chamou a equipe</small></div>
+                  <div><ShieldCheck size={16} /><strong>{numeros.encerrou ?? 0}</strong><small>conversas encerradas</small></div>
                 </div>
                 {para === 'admin' && <Link to="/admin/whatsapp" className="as-link">Ver as mensagens e o diagnóstico do WhatsApp</Link>}
               </section>

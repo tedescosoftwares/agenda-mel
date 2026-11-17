@@ -178,3 +178,7 @@
 .as-encerra svg { color: var(--menta); }
 .as-encerra > span { min-width: 0; }
 .as-kpis > div:last-child:nth-child(even) { grid-column: auto; }
+
+/* 3.95.6: a regra de quem confirma, editável aqui também */
+.as-aceite-bloco { display: grid; gap: 0.45rem; padding: 0.2rem 0 0.6rem; }
+.as-aceite-bloco .aj-aceite { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }

@@ -4,6 +4,7 @@ import { Bot, Send, RotateCcw, QrCode, Unplug, Smartphone, PartyPopper, ShieldCh
 import AdminShell from '../../components/AdminShell'
 import ProShell from '../../components/ProShell'
 import { useAuth } from '../../context/AuthContext'
+import RegraDeAceite from '../../components/RegraDeAceite'
 import { useDialogo } from '../../context/DialogoContext'
 import { supabase } from '../../lib/supabase'
 import { chamar } from '../../lib/pagamento'
@@ -392,17 +393,22 @@ export default function AdminAssistente({ para = 'admin' }) {
             <section className="card as-secao">
               <h3><CalendarClock size={18} /> O que ela pode fazer sozinha</h3>
               <Chave ligado={cfg.pode_marcar} onMudar={(v) => mudar('pode_marcar', v)} rotulo="Marcar horário" texto="Sempre repete o resumo e espera o sim da cliente." />
-              {cfg.pode_marcar && dados.aceite?.modo && (
+              {cfg.pode_marcar && para === 'admin' && dados.aceite?.modo && (
+                <div className="as-aceite-bloco">
+                  <div className="as-rotulo">Quem confirma o horário que ela marca</div>
+                  <RegraDeAceite salaoId={salaoId} inicial={dados.aceite} pergunta={null} onMudou={(a) => setDados((d) => ({ ...d, aceite: a }))} />
+                  <small className="muted as-dica">
+                    {dados.aceite.modo === 'automatico'
+                      ? 'Ela diz à cliente que o horário está confirmado.'
+                      : 'Ela diz à cliente que o pedido foi anotado e que o salão confirma em breve.'}
+                    {' '}É a mesma regra de Ajustes › Pedidos de horário: vale também para o que a cliente marca pelo app.
+                  </small>
+                </div>
+              )}
+              {cfg.pode_marcar && para !== 'admin' && (
                 <p className="as-nota as-aceite">
                   <Info size={15} />
-                  <span>
-                    {dados.aceite.modo === 'automatico'
-                      ? 'O horário que ela marca entra confirmado na hora.'
-                      : dados.aceite.modo === 'casa'
-                        ? `O horário que ela marca vira um pedido: a casa confirma em até ${dados.aceite.minutos} min (sem resposta, ${dados.aceite.no_silencio === 'cancela' ? 'cancela' : 'confirma'}). Por isso ela avisa a cliente que ainda falta confirmar.`
-                        : 'Vale o que cada profissional configurou: quem pede confirmação recebe o pedido, e ela avisa a cliente que ainda falta confirmar.'}
-                    {' '}{dados.aceite.modo !== 'automatico' && <Link to={para === 'admin' ? '/admin/ajustes' : '/pro/pedidos'}>Para entrar confirmado na hora, mude em {para === 'admin' ? 'Ajustes › Pedidos de horário' : 'Pedidos'}.</Link>}
-                  </span>
+                  <span>Se você pede para confirmar cada horário, ela avisa a cliente que ainda falta confirmar. <Link to="/pro/pedidos">Mudar em Pedidos</Link>.</span>
                 </p>
               )}
               <Chave ligado={cfg.pode_remarcar} onMudar={(v) => mudar('pode_remarcar', v)} rotulo="Remarcar" texto="Pede a troca; a profissional pode precisar aceitar." />

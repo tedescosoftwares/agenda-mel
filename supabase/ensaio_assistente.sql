@@ -1,4 +1,5 @@
--- Ensaio da 235 (3.95) e da 236 (3.95.1): a assistente do WhatsApp do salão; o número da MIMO só como reserva. Desfaz no fim.
+-- Ensaio da 235 (3.95), 236 (3.95.1) e 237 (3.95.2): a assistente do WhatsApp do salão; o número da MIMO só como reserva;
+-- a chave desligada desliga tudo. Desfaz no fim.
 begin;
 do $$
 declare
@@ -200,6 +201,29 @@ begin
   ctx := public.bot_contexto(salao, fone);
   if ctx ->> 'motivo' <> 'agente_desligado' then raise exception 'K: %', ctx; end if;
   raise notice 'K agente desligado na Plataforma: nada responde';
+
+  -- M. a chave desligada desliga tudo (237): conversa solta não recebe nada; o SAIR e o 1/2 do lembrete continuam
+  update public.config_publica set valor = 'ligado' where chave = 'ia_agente';
+  update public.whatsapp_channels set usa_ia = false, usa_bot = true where salon_id = salao;
+  r := public.receber_mensagem(fone, 'oi, tem horário amanhã?', 'ens-m1', null, null, salao);
+  if r ->> 'acao' <> 'assistente_desligada' or r ? 'responder' then raise exception 'M: %', r; end if;
+  if (select acao from public.whatsapp_inbox where provider_id = 'ens-m1') <> 'assistente_desligada' then raise exception 'M2: não registrou'; end if;
+  r := public.receber_mensagem(fone, 'quero marcar', 'ens-m2', null, 'quer_agendar', salao);
+  if r ->> 'acao' <> 'assistente_desligada' then raise exception 'M3 (menu de marcar com a chave desligada): %', r; end if;
+  r := public.receber_mensagem(fone, '1', 'ens-m3', null, null, salao);
+  if r ? 'responder' and r ->> 'acao' not in ('confirmado', 'cancelado', 'remarcado') then raise exception 'M4 (1 sem lembrete respondeu): %', r; end if;
+  r := public.receber_mensagem(fone, 'sair', 'ens-m4', null, null, salao);
+  if r ->> 'acao' <> 'sair' or not (r ? 'responder') then raise exception 'M5 (SAIR vale sempre): %', r; end if;
+  -- ligada: a conversa solta volta a seguir o caminho de sempre
+  update public.whatsapp_channels set usa_ia = true where salon_id = salao;
+  update public.profiles set accepts_reminders = true where id = cli;
+  r := public.receber_mensagem(fone, 'oi, tem horário amanhã?', 'ens-m5', null, null, salao);
+  if r ->> 'acao' = 'assistente_desligada' then raise exception 'M6: %', r; end if;
+  -- sem o WhatsApp do salão conectado conta como desligada
+  update public.whatsapp_channels set numero_proprio = false where salon_id = salao;
+  r := public.receber_mensagem(fone, 'oi de novo', 'ens-m6', null, null, salao);
+  if r ->> 'acao' <> 'assistente_desligada' then raise exception 'M7: %', r; end if;
+  raise notice 'M chave desligada: conversa solta só registrada; SAIR e 1/2 do lembrete continuam';
 
   raise notice 'ensaio_assistente: tudo certo';
 end $$;

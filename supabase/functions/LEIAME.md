@@ -468,7 +468,10 @@ livres) e marca, remarca e cancela com o "sim" dela. É o agente da 069 (`_share
   (`assistente_salvar` recusa, `bot_contexto` devolve `sem_numero_proprio`) e o canal do salão é o manual (nada sai
   sozinho pelo nosso número; os avisos seguem no app). O número da MIMO (`whatsapp_instancia_casa`) é só a **reserva**:
   `puxar_da_fila` devolve `reserva` para quem tem número próprio, e o `enviar-whatsapp` tenta por ela quando a
-  instância do salão falha (celular sem internet, desconectado). Quando a equipe responde pelo celular (fromMe que não é eco nosso:
+  instância do salão falha (celular sem internet, desconectado).
+- **A chave (3.95.2, migração 237)**: `whatsapp_channels.usa_ia` com o número do salão conectado. Desligada, o
+  `receber_mensagem` não responde nada sozinho (nem a IA, nem o menu, nem o "não entendi"): registra a mensagem como
+  `assistente_desligada` para a equipe. Só passam o 1/2 do lembrete, o SAIR e o aceite da profissional. Quando a equipe responde pelo celular (fromMe que não é eco nosso:
   `assistente_fromme` confere o id e o texto do que saiu, `whatsapp_saidas`), a assistente fica quieta 2 h com aquela
   cliente. "Se a equipe não responder em X min" (só no horário do salão): a mensagem espera em `assistente_esperas` e o
   relógio da VPS (`whatsapp-webhook?tarefa=ociosas`, a cada 5 min) responde quando vence.

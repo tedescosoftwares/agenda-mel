@@ -177,7 +177,7 @@ export default function AdminAssistente({ para = 'admin' }) {
     setSalvando(false)
     if (error) { setErro(error.message); return }
     setDados(data)
-    setOk(v ? 'Assistente ligada. Ela já responde as mensagens que chegarem.' : 'Assistente desligada. As mensagens ficam para a equipe.')
+    setOk(v ? 'Assistente ligada. Ela já responde as mensagens que chegarem.' : 'Assistente desligada: nenhuma resposta automática. As mensagens ficam para a equipe.')
   }
 
   async function gerarCodigo() {
@@ -242,7 +242,7 @@ export default function AdminAssistente({ para = 'admin' }) {
             <strong>{dados.canal?.numero ?? 'WhatsApp do salão'} {desconectou ? 'desconectado' : 'conectado'}</strong>
             <small className="muted">
               {desconectou
-                ? 'O celular desconectou. Gere um código novo abaixo. Até lá, os lembretes saem pelo número da MIMO.'
+                ? 'O celular desconectou. Gere um código novo abaixo para conectar de novo.'
                 : dados.canal?.conectado_em ? `Desde ${new Date(dados.canal.conectado_em).toLocaleDateString('pt-BR')}. Mantenha o celular com internet.` : 'Mantenha o celular com internet.'}
             </small>
           </div>
@@ -286,12 +286,7 @@ export default function AdminAssistente({ para = 'admin' }) {
         </div>
       )}
 
-      <p className="as-nota">
-        <Info size={15} />
-        {proprio
-          ? 'O número da MIMO é só reserva: se o celular do salão ficar sem internet, os lembretes saem por ele até você reconectar.'
-          : 'Enquanto o WhatsApp do salão não estiver conectado, nenhuma mensagem sai pelo WhatsApp: os avisos continuam no app.'}
-      </p>
+      {!proprio && <p className="as-nota"><Info size={15} /> Enquanto o WhatsApp do salão não estiver conectado, nenhuma mensagem sai pelo WhatsApp: os avisos continuam no app.</p>}
     </section>
   )
 
@@ -347,8 +342,8 @@ export default function AdminAssistente({ para = 'admin' }) {
                   {!proprio
                     ? 'Conecte o WhatsApp do salão para ligar a assistente.'
                     : ativa
-                      ? `No WhatsApp do salão${dados.canal?.numero ? ` (${dados.canal.numero})` : ''}.`
-                      : 'As mensagens das clientes ficam para a equipe responder.'}
+                      ? `Ela responde as clientes sozinha, no WhatsApp do salão${dados.canal?.numero ? ` (${dados.canal.numero})` : ''}.`
+                      : 'Nada é respondido sozinho: as mensagens ficam para a equipe responder pelo celular. Só continuam valendo o 1 ou 2 da resposta ao lembrete e o SAIR.'}
                 </span>
                 {ativa && dados.agente_global === false && <span className="as-aviso"><Info size={14} /> As respostas automáticas estão pausadas pela MIMO neste momento.</span>}
               </div>

@@ -164,32 +164,22 @@ export default function AdminWhatsapp() {
         ))}
       </ul>
 
+      {/* 3.95.2: a chave geral mora na tela da assistente (ligada, ela entende texto solto e responde; desligada, nada
+          é respondido sozinho, só valem o 1/2 do lembrete e o SAIR) */}
       <div className="wa-ia">
         <div className="wa-ia-topo">
           <div>
-            <strong>Entender texto solto</strong>
+            <strong>Assistente do WhatsApp</strong>
             <span className="wa-check-detalhe">
-              As regras exatas ("1", "sim", "cancelar") funcionam sempre e são de
-              graça. Isto liga a leitura do que elas não previram — "pode deixar
-              que eu vou", "não vou conseguir dessa vez".
+              {usaIa
+                ? 'Ligada: ela entende o que a cliente escreve e responde sozinha, com a agenda do salão.'
+                : 'Desligada: nada é respondido sozinho. As mensagens ficam para a equipe; só valem o 1 ou 2 da resposta ao lembrete e o SAIR.'}
             </span>
           </div>
-          <button
-            className={'wa-chave' + (usaIa ? ' wa-chave-on' : '')}
-            onClick={() => alternar('ia')}
-            disabled={mudando === 'ia'}
-            aria-pressed={usaIa}
-          >
+          <Link className={'wa-chave' + (usaIa ? ' wa-chave-on' : '')} to="/admin/assistente" style={{ textDecoration: 'none' }}>
             {usaIa ? 'ligada' : 'desligada'}
-          </button>
+          </Link>
         </div>
-        {usaIa && (
-          <p className="wa-check-detalhe" style={{ marginTop: '.6rem' }}>
-            A IA nunca decide sozinha: ela só traduz a mensagem para uma das
-            respostas que o sistema já conhece. Quando a regra e a IA discordam,
-            a regra ganha.
-          </p>
-        )}
       </div>
 
       <div className="wa-ia">

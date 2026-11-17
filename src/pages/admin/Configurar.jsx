@@ -103,6 +103,9 @@ export default function Configurar({ para = 'admin' }) {
   }, [base]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (passo && chaveLocal) { try { localStorage.setItem(chaveLocal, passo) } catch { /* nada */ } } }, [passo, chaveLocal])
   useEffect(() => { if (s) derivar(s) }, [passo]) // eslint-disable-line react-hooks/exhaustive-deps
+  // 3.86: o que muda dentro da etapa (a agenda da dona criada ali, a primeira profissional) entra na conta na hora;
+  // antes o progresso só era refeito ao trocar de etapa, e "Quem faz o quê" ficava trancado até sair e voltar
+  useEffect(() => { if (s && estado.podeContinuar) derivar(s) }, [estado.podeContinuar, estado.rodape]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function gravarQuieto(dados) {
     const { error } = await supabase.rpc('onboarding_salvar', { salao: s.id, dados })
@@ -110,18 +113,22 @@ export default function Configurar({ para = 'admin' }) {
     setS((x) => ({ ...x, ...dados }))
     return true
   }
-  const feitasAgora = { ...feitas, categorias: catsBase && s ? temCategoria(catsBase, s.id, s.categorias_escolhidas) : Boolean(feitas.categorias) }
-  const liberada = (id) => dependenciasOk(id, feitasAgora)
+  const comCategorias = (f) => ({ ...f, categorias: catsBase && s ? temCategoria(catsBase, s.id, s.categorias_escolhidas) : Boolean(f.categorias) })
+  const feitasAgora = comCategorias(feitas)
+  const liberada = (id, f = feitasAgora) => dependenciasOk(id, f)
   const indice = passo === REVISAO ? etapas.length : etapas.findIndex((e) => e.id === passo)
   const ultimaEtapa = indice === etapas.length - 1
-  function ir(id) { if (!liberada(id)) { setManual(true); return } setEstado({ podeContinuar: false, rodape: '' }); setPasso(id); document.querySelector('main.admin-content')?.scrollTo({ top: 0, behavior: 'smooth' }) }
+  function ir(id, f) { if (!liberada(id, f)) { setManual(true); return } setEstado({ podeContinuar: false, rodape: '' }); setPasso(id); document.querySelector('main.admin-content')?.scrollTo({ top: 0, behavior: 'smooth' }) }
   const MOTIVO_PADRAO = { titulo: 'Ainda falta algo nesta etapa', texto: estado.rodape || 'Complete a etapa para seguir.' }
   async function continuar() {
     if (!estado.podeContinuar) { setAviso(estado.motivo ?? MOTIVO_PADRAO); return }
     setSalvando(true)
     try { if (estado.aoContinuar) await estado.aoContinuar() } catch (e) { setErro(e?.message || 'Não deu para salvar agora. Tente de novo.'); setSalvando(false); return }
+    // confere de novo com o banco antes de seguir (a etapa pode ter acabado de criar o que destrava a próxima)
+    let f = feitas
+    try { f = await derivar(s) } catch { /* fica com o que já sabia */ }
     setSalvando(false)
-    ir(ultimaEtapa ? REVISAO : etapas[indice + 1].id)
+    ir(ultimaEtapa ? REVISAO : etapas[indice + 1].id, comCategorias(f))
   }
   function voltar() { ir(passo === REVISAO ? etapas[etapas.length - 1].id : etapas[Math.max(0, indice - 1)].id) }
   async function concluir() {

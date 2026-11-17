@@ -159,6 +159,8 @@ const promocoes = [
 const DEMO_PASSO = (typeof localStorage !== 'undefined' && Number(localStorage.getItem('mimo-demo-passo'))) || null
 const DEMO_VAZIO = typeof localStorage !== 'undefined' && localStorage.getItem('mimo-demo-vazio') === '1'
 let DEMO_DONA_ATENDE = false   // a dona que também atende (2.99), só enquanto a página vive
+// mimo-demo-sem-equipe=1 (3.86): o salão começa sem ninguém na equipe (para ver a configuração destravar quando a dona cria a agenda dela)
+const DEMO_SEM_EQUIPE = typeof localStorage !== 'undefined' && localStorage.getItem('mimo-demo-sem-equipe') === '1'
 // mimo-demo-acesso = teste | leitura | bloqueado | ativa (126); mimo-demo-metodo = cartao | pix_automatico | pix (128)
 const DEMO_METODO = (typeof localStorage !== 'undefined' && localStorage.getItem('mimo-demo-metodo')) || null
 // mimo-demo-ativar=1: o salão ainda não foi ativado (mostra o cartão de ativar)
@@ -251,14 +253,14 @@ const RPC = {
   aceites_por_versao: () => [{ tipo: 'cliente', versao: '2026-09-24', pessoas: 128, ultimo: new Date().toISOString() }, { tipo: 'privacidade', versao: '2026-09-24', pessoas: 140, ultimo: new Date().toISOString() }],
   // a equipe configurada pelo salão (119)
   dona_atender: ({ atende }) => { DEMO_DONA_ATENDE = atende; TABELAS.salons[0].dona_atende = atende; return { ok: true, professional_id: atende ? 'pr-dona' : null, atende } },
-  equipe_da_casa: () => [...(DEMO_DONA_ATENDE ? [{ id: 'pr-dona', user_id: 'a1', name: 'Mel Tedesco', slug: 'mel', phone: '(13) 99120-3410', photo_url: null, active: true, salon_id: SALAO, situacao: 'ativa', vinculo: null, categorias: [], dona: true, servicos: [] }] : []), ...profissionais].map((p, i) => ({ ...p, dona: Boolean(p.dona), servicos: vinculos.filter((v) => v.professional_id === p.id).map((v) => ({ service_id: v.service_id, preco_cents: p.id === 'pr5' && v.service_id === 'sv7' ? 7000 : null, duracao_minutos: null })).concat(p.id === 'pr5' ? [{ service_id: 'sv6', preco_cents: null, duracao_minutos: 50 }, { service_id: 'sv7', preco_cents: 7000, duracao_minutos: null }] : []), horarios: HORAS, token: p.token ?? null, acesso_enviado_em: i === 4 ? null : undefined, parceria: i === 0 ? 'vigente' : null, tem_historico: i < 4, created_at: '2025-0' + (i + 1) + '-01' })),
+  equipe_da_casa: () => [...(DEMO_DONA_ATENDE ? [{ id: 'pr-dona', user_id: 'a1', name: 'Mel Tedesco', slug: 'mel', phone: '(13) 99120-3410', photo_url: null, active: true, salon_id: SALAO, situacao: 'ativa', vinculo: null, categorias: [], dona: true, servicos: [] }] : []), ...(DEMO_SEM_EQUIPE ? [] : profissionais)].map((p, i) => ({ ...p, dona: Boolean(p.dona), servicos: vinculos.filter((v) => v.professional_id === p.id).map((v) => ({ service_id: v.service_id, preco_cents: p.id === 'pr5' && v.service_id === 'sv7' ? 7000 : null, duracao_minutos: null })).concat(p.id === 'pr5' ? [{ service_id: 'sv6', preco_cents: null, duracao_minutos: 50 }, { service_id: 'sv7', preco_cents: 7000, duracao_minutos: null }] : []), horarios: HORAS, token: p.token ?? null, acesso_enviado_em: i === 4 ? null : undefined, parceria: i === 0 ? 'vigente' : null, tem_historico: i < 4, created_at: '2025-0' + (i + 1) + '-01' })),
   equipe_salvar_profissional: ({ dados }) => ({ ok: true, id: dados?.id ?? 'pr9', situacao: 'configurada', slug: 'nova', token: 'demo0123456789ab' }),
   equipe_acesso_enviado: () => ({ ok: true }),
   equipe_situacao: ({ acao }) => ({ ok: true, acao }),
   acesso_por_token: () => ({ salao: { id: SALAO, nome: 'Studio Mel', logo_url: null, cidade: 'Santos' }, profissional: { id: 'pr5', nome: 'Carla Mendes', email: 'carla@exemplo.com', telefone: '(13) 99171-3123', especialidade: 'Cabeleireira', vinculo: 'parceira', telefone_final: '4321', servicos: 2, dias: [1, 2, 3, 4, 5, 6] }, situacao: 'configurada', tem_conta: false, usado: false }),
   ativar_acesso: () => ({ ok: true, salao: 'Studio Mel', professional_id: 'pr5', situacao: 'ativa' }),
   equipe_informar_dados: () => ({ ok: true, ja: false, salao: 'Studio Mel' }),
-  primeiros_passos: () => ({ tipo: 'salao', codigo: 'MEL2K5', nome: 'Studio Mel', dados: true, horarios: true, servicos: DEMO_VAZIO ? 0 : servicos.length, equipe: DEMO_VAZIO ? 0 : profissionais.length, equipe_pendente: 1, equipe_rascunho: 0, agendamentos: 0, avisos: false, feitos: {}, onboarding_concluido_em: '2025-01-10' }),
+  primeiros_passos: () => ({ tipo: 'salao', codigo: 'MEL2K5', nome: 'Studio Mel', dados: true, horarios: true, servicos: DEMO_VAZIO ? 0 : servicos.length, equipe: DEMO_VAZIO || DEMO_SEM_EQUIPE ? (DEMO_DONA_ATENDE ? 1 : 0) : profissionais.length, equipe_pendente: 1, equipe_rascunho: 0, agendamentos: 0, avisos: false, feitos: {}, onboarding_concluido_em: '2025-01-10' }),
   primeiro_passo_feito: () => ({}),
   acesso_do_salao: () => acessoDemo(),
   acesso_enviar: ({ email_ }) => ({ ok: true, email: email_ || 'carla@exemplo.com', link: 'http://localhost/ativar/demo', token: 'demo', whats: 'Oi! Te mandei o acesso por e-mail.' }),

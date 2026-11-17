@@ -1,17 +1,7 @@
 import { Check } from 'lucide-react'
 import { useState } from 'react'
 import CalendarioMes from '../components/CalendarioMes'
-import {
-  CalendarIcon,
-  SparkleIcon,
-  ClockIcon,
-  ChevronIcon,
-  BellIcon,
-  GraficoIcon,
-  VoltarIcon,
-  MarcaIcon,
-  Wordmark,
-} from '../components/icons'
+import { CalendarIcon, SparkleIcon, ClockIcon, ChevronIcon, BellIcon, GraficoIcon, VoltarIcon, LogoMimo } from '../components/icons'
 
 // Mostruário do sistema visual. Serve para conferir todas as peças
 // numa tela só, sem precisar de banco. Fica fora das rotas com login.
@@ -26,8 +16,7 @@ export default function Estilo() {
     <div className="admin-shell">
       <header className="topbar topbar-admin">
         <span className="brand-inline">
-          <MarcaIcon className="marca" />
-          <Wordmark tamanho={1.35} />
+          <LogoMimo altura={30} />
         </span>
         <div className="topbar-acoes">
           <span className="sino">

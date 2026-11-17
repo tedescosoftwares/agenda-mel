@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { CalendarClock, Check, CreditCard, Receipt, RefreshCw, ShieldCheck, Smartphone, Sparkles, Wrench } from 'lucide-react'
+import { CalendarClock, Check, Receipt, RefreshCw, ShieldCheck, Smartphone, Sparkles, Wrench } from 'lucide-react'
 import AdminShell from '../../components/AdminShell'
 import { QrPix } from '../../components/FormasDePagar'
 import { useAuth } from '../../context/AuthContext'
@@ -11,7 +11,7 @@ import { assinatura, mascaraCartao, mascaraValidade, cartaoValido } from '../../
 
 // 2.81: pagamento manual. Nada é recorrente.
 // Primeira escolha acontece na ativação; depois, esta tela serve para acompanhar
-// o período e renovar 30 dias por Pix ou cartão avulso.
+// o período e renovar 30 dias por Pix avulso (3.85: só Pix; o cartão saiu daqui e da função).
 export default function AdminAssinatura() {
   const { salao, acesso, recarregarAcesso } = useAuth()
   const [cobrancas, setCobrancas] = useState([])
@@ -102,7 +102,7 @@ export default function AdminAssinatura() {
         : fase === 'ativa'
           ? { titulo: 'Mensalidade em dia', texto: acesso.sem_prazo ? 'Acesso sem prazo.' : `Seu período vai até ${dataCurta(acesso.ate)}. Não haverá renovação automática.` }
           : fase === 'leitura'
-            ? { titulo: 'Período encerrado', texto: `O salão está em modo leitura até ${dataCurta(acesso.tolerancia_ate)}. Renove por Pix ou cartão para voltar a receber agendamentos.` }
+            ? { titulo: 'Período encerrado', texto: `O salão está em modo leitura até ${dataCurta(acesso.tolerancia_ate)}. Renove por Pix para voltar a receber agendamentos.` }
             : fase === 'bloqueado'
               ? { titulo: 'Painel pausado', texto: 'Nada foi apagado. Renove uma mensalidade e tudo volta.' }
               : null
@@ -139,8 +139,8 @@ export default function AdminAssinatura() {
 
           <ul className="assin-lista">
             <li><Check size={13} /> Pagamento avulso, sem recorrência</li>
-            <li><Check size={13} /> Pix ou cartão de crédito</li>
-            <li><Check size={13} /> Cartão não fica vinculado à MIMO</li>
+            <li><Check size={13} /> Por Pix, pelo Asaas</li>
+            <li><Check size={13} /> Sem cartão e sem débito automático</li>
             <li><Check size={13} /> Você recebe aviso antes do período acabar</li>
             <li><Check size={13} /> Sem fidelidade e sem multa</li>
           </ul>
@@ -149,9 +149,6 @@ export default function AdminAssinatura() {
             <div className="assin-opcoes">
               <button type="button" className="assin-opcao" onClick={abrirPix} disabled={indo}>
                 <Smartphone size={16} /><span><b>Renovar por Pix</b><em>{reais(valorCents / 100)} · 30 dias</em><small>QR Code na hora</small></span>
-              </button>
-              <button type="button" className="assin-opcao" onClick={() => setModal('cartao')} disabled={indo}>
-                <CreditCard size={16} /><span><b>Renovar no cartão</b><em>{reais(valorCents / 100)} · 30 dias</em><small>Cobrança única, sem salvar o cartão</small></span>
               </button>
             </div>
           )}
@@ -180,7 +177,7 @@ export default function AdminAssinatura() {
       {!autonoma && (
         <div className="card">
           <h3 className="secao-titulo"><CalendarClock size={16} /> Como funciona</h3>
-          <p className="muted">A MIMO nunca renova sozinha nesta versão. Perto do vencimento, você recebe um aviso e escolhe Pix ou cartão para comprar os próximos 30 dias.</p>
+          <p className="muted">A MIMO nunca renova sozinha nesta versão. Perto do vencimento, você recebe um aviso e paga os próximos 30 dias por Pix.</p>
         </div>
       )}
 

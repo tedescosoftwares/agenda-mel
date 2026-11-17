@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Check, MailWarning } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
-import { MarcaIcon, Wordmark } from '../../components/icons'
-import { urlDoAmbiente } from '../../lib/ambiente'
+import { LogoMimo } from '../../components/icons'
+import { urlDoAmbiente, ehPro } from '../../lib/ambiente'
 
 // Onde o link do e-mail de confirmação cai (2.81.2). Não volta pro meio do
 // cadastro: diz que deu certo e manda a pessoa de volta pra aba onde estava,
@@ -46,8 +46,7 @@ function Caixa({ icone, titulo, ok = false, children }) {
     <div className="page-center login-bg">
       <div className="card login-card entrar-card">
         <div className="brand">
-          <MarcaIcon className="brand-icon" width={44} height={40} id="email-confirmado" />
-          <Wordmark tamanho={2.2} />
+          <LogoMimo altura={60} pro={ehPro} className="brand-logo" />
         </div>
         <span className={ok ? 'ce-check' : 'ce-icone'} style={{ margin: '0.6rem auto 0' }}>{icone}</span>
         <h2 className="login-titulo">{titulo}</h2>

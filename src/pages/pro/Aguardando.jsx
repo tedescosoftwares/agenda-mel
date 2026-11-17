@@ -1,6 +1,6 @@
 import { Store, Clock } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
-import { MarcaIcon, Wordmark } from '../../components/icons'
+import { LogoMimo } from '../../components/icons'
 
 // A profissional entrou (pelo link da equipe ou por uma conta antiga),
 // mas a agenda dela ainda não está pronta: o salão não terminou de
@@ -12,7 +12,7 @@ export default function Aguardando({ situacao }) {
   return (
     <div className="page-center login-bg">
       <div className="card login-card entrar-card">
-        <div className="brand"><MarcaIcon className="brand-icon" width={44} height={40} id="aguardando" /><Wordmark tamanho={2.2} /></div>
+        <div className="brand"><LogoMimo altura={60} pro className="brand-logo" /></div>
         <span className="ativar-check espera">{inativa ? <Store size={22} /> : <Clock size={22} />}</span>
         <h2 className="login-titulo">{inativa ? 'Sua agenda está desativada' : 'O salão está montando sua agenda'}</h2>
         <p className="muted login-sub">

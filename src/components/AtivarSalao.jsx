@@ -1,22 +1,27 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { Check, CreditCard, Gift, LoaderCircle, Rocket, ShieldCheck, Smartphone, Sparkles, Tags, Scissors, UsersRound, Route } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import QRCode from 'qrcode'
+import { ArrowLeft, Check, Copy, Gift, LoaderCircle, QrCode, Rocket, ShieldCheck, Sparkles, Tags, Scissors, UsersRound, Route, Zap, Clock } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { reais } from '../lib/planos'
 import { REGRAS, dataCurta } from '../lib/acesso'
-import { assinatura, mascaraCartao, mascaraValidade, cartaoValido } from '../lib/assinatura'
-import { QrPix } from './FormasDePagar'
+import { assinatura } from '../lib/assinatura'
+import { LogoMimo, MarcaIcon } from './icons'
+import '../checkout-mimo.css'
 
 // 2.81: a decisão final é uma tela própria, sem navegação e sem "X".
 // O salão só sai daqui escolhendo:
 //   • 7 dias grátis, sem cartão; OU
-//   • primeira mensalidade agora, Pix/cartão avulso, 20% OFF.
-// Não há recorrência nem cartão guardado nesta versão.
+//   • primeira mensalidade agora, por Pix (Asaas), 20% OFF.
+// 3.85: só Pix (o cartão saiu, aqui e na função assinatura-metodo). Tela pensada no celular: lá, o que resolve é
+// "Copiar código Pix" (ninguém escaneia a própria tela); no computador, o QR vem primeiro. Enquanto o Pix está
+// aberto, a tela confere sozinha a cada 5 s, e a Plataforma pode dar baixa à mão (Salões › o salão › Mensalidades):
+// a confirmação aparece aqui do mesmo jeito. Não há recorrência nem cartão guardado.
 export default function AtivarSalao({ s, onAtivado, onErro }) {
   const { recarregarAcesso, recarregarPerfil } = useAuth()
   const autonoma = s?.tipo === 'autonoma'
   const [estado, setEstado] = useState(null)
-  const [modo, setModo] = useState('escolha') // escolha | pix | cartao | analise | sucesso
+  const [modo, setModo] = useState('escolha') // escolha | pix | sucesso
   const [sucesso, setSucesso] = useState(null)
   const [indo, setIndo] = useState(false)
   const [erro, setErro] = useState('')
@@ -38,8 +43,6 @@ export default function AtivarSalao({ s, onAtivado, onErro }) {
     else if (data?.cobranca?.metodo === 'pix' && data?.cobranca?.copia_cola) {
       setPix(data.cobranca)
       setModo('pix')
-    } else if (data?.cobranca?.metodo === 'cartao' && ['a_criar', 'aguardando'].includes(data?.cobranca?.status)) {
-      setModo('analise')
     }
     return data
   }
@@ -48,12 +51,15 @@ export default function AtivarSalao({ s, onAtivado, onErro }) {
     if (!autonoma) carregar().catch((e) => setErro(e.message))
   }, [s?.id, autonoma]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // a conferência automática chama sempre a versão atual do conferir (antes o relógio guardava a do momento em que
+  // o Pix abriu, ainda com "indo" ligado, e nunca conferia: só o botão "Já paguei" funcionava)
+  const conferirAgora = useRef(null)
   useEffect(() => {
-    if (modo !== 'pix' && modo !== 'analise') return
+    if (modo !== 'pix') return
     clearInterval(poll.current)
-    poll.current = setInterval(() => conferir(false), 5000)
+    poll.current = setInterval(() => conferirAgora.current?.(false), 5000)
     return () => clearInterval(poll.current)
-  }, [modo]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [modo])
 
   async function rodar(fn) {
     setIndo(true); setErro('')
@@ -105,32 +111,20 @@ export default function AtivarSalao({ s, onAtivado, onErro }) {
     })
   }
 
-  async function pagarCartao(cartao, titular) {
-    await rodar(async () => {
-      if (estado?.cobranca && estado.cobranca.metodo !== 'cartao' && estado.cobranca.status !== 'pago') await cancelarPagamentoPendente()
-      const r = await assinatura('inicio_cartao', s.id, { cartao, titular })
-      if (r?.acesso?.fase === 'ativa') {
-        await atualizarContexto()
-        setSucesso(r.acesso)
-        setModo('sucesso')
-      } else {
-        setModo('analise')
-      }
-    })
-  }
-
   async function conferir(manual = true) {
     if (indo) return
     if (manual) setIndo(true)
     try {
       const r = await assinatura('inicio_conferir', s.id)
       setEstado(r?.estado ?? estado)
-      if (r?.estado?.cobranca?.copia_cola) setPix(r.estado.cobranca)
+      if (r?.estado?.cobranca?.copia_cola) setPix((x) => ({ ...(x ?? {}), ...r.estado.cobranca }))
       if (r?.acesso?.fase === 'ativa') {
         clearInterval(poll.current)
         await atualizarContexto()
         setSucesso(r.acesso)
         setModo('sucesso')
+      } else if (manual) {
+        setErro('Ainda não chegou. O Pix costuma cair em segundos; se você já pagou, espere um pouquinho que a tela confere sozinha.')
       }
     } catch (e) {
       if (manual) setErro(e?.message || String(e))
@@ -138,6 +132,8 @@ export default function AtivarSalao({ s, onAtivado, onErro }) {
       if (manual) setIndo(false)
     }
   }
+
+  useEffect(() => { conferirAgora.current = conferir })
 
   async function trocarOpcao() {
     await rodar(async () => {
@@ -168,320 +164,217 @@ export default function AtivarSalao({ s, onAtivado, onErro }) {
     )
   }
 
+  if (modo === 'escolha' || modo === 'pix') {
+    return (
+      <div className="ai-fundo ck-fundo" role="dialog" aria-modal="true" aria-label="Ativação do salão">
+        <div className="ck">
+          <header className="ck-topo">
+            <LogoMimo pro altura={38} />
+            <span className="ck-salvo"><ShieldCheck size={13} /> Configuração salva</span>
+          </header>
+
+          {modo === 'escolha' ? (
+            <>
+              <section className="ck-hero">
+                <span className="ck-hero-marca"><MarcaIcon width={30} height={30} /></span>
+                <span className="ck-kicker">Tudo pronto para começar</span>
+                <h1><span>{s?.name || 'Seu salão'}</span> está pronto para entrar no ar.</h1>
+                <p>Escolha como começar. Nenhuma das opções tem cobrança automática.</p>
+                <div className="ck-plano">
+                  <span><small>Seu plano</small><b>MIMO Pro · {agendas} {agendas === 1 ? 'agenda' : 'agendas'}</b></span>
+                  <strong>{cheio ? reais(cheio / 100) : '…'}<small>/mês</small></strong>
+                </div>
+              </section>
+
+              <div className="ck-opcoes">
+                <section className="ck-opcao ck-pagar">
+                  <span className="ck-fita"><Gift size={13} /> Boas-vindas · {descontoPct}% OFF</span>
+                  <h2>Primeira mensalidade com desconto</h2>
+                  <div className="ck-preco">
+                    {cheio > 0 && <s>{reais(cheio / 100)}</s>}
+                    <strong>{oferta ? reais(oferta / 100) : '…'}</strong>
+                    {economia > 0 && <em>você economiza {reais(economia / 100)}</em>}
+                  </div>
+                  <ul className="ck-lista">
+                    <li><Check size={14} /> 30 dias liberados na hora</li>
+                    <li><Check size={14} /> Pagamento único por Pix</li>
+                    <li><Check size={14} /> Sem cartão, sem renovação automática</li>
+                  </ul>
+                  <button type="button" className="ck-botao ck-botao-pix" onClick={abrirPix} disabled={indo || !oferta}>
+                    {indo ? <LoaderCircle className="ai-gira" size={18} /> : <PixIcone />} {indo ? 'Gerando o Pix…' : `Pagar ${oferta ? reais(oferta / 100) : ''} com Pix`}
+                  </button>
+                  <small className="ck-nota"><ShieldCheck size={12} /> Processado pelo Asaas. O desconto vale só agora, na ativação.</small>
+                </section>
+
+                <div className="ck-ou"><span>ou</span></div>
+
+                <section className="ck-opcao ck-teste">
+                  <span className="ck-fita ck-fita-suave"><Sparkles size={13} /> Sem compromisso</span>
+                  <h2>{REGRAS.testeDias} dias grátis</h2>
+                  <p>Use tudo de verdade antes de decidir. Sem cartão e sem Pix agora.</p>
+                  <button type="button" className="ck-botao ck-botao-teste" onClick={comecarTeste} disabled={indo}>
+                    <Sparkles size={16} /> {indo ? 'Ativando…' : `Começar ${REGRAS.testeDias} dias grátis`}
+                  </button>
+                  <small className="ck-nota">Escolhendo o teste, o desconto de {descontoPct}% da primeira mensalidade sai da mesa.</small>
+                </section>
+              </div>
+
+              {erro && <div className="ai-erro ck-erro">{erro}</div>}
+              <p className="ck-rodape">Depois da escolha, seu salão entra no ar e você segue para o painel.</p>
+            </>
+          ) : (
+            <TelaPix
+              pix={pix}
+              total={Number(pix?.total_cents ?? oferta)}
+              descontoPct={descontoPct}
+              indo={indo}
+              erro={erro}
+              onConferir={() => conferir(true)}
+              onVoltar={trocarOpcao}
+            />
+          )}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="ai-fundo" role="dialog" aria-modal="true" aria-label="Ativação do salão">
       <div className="ai-shell">
         <header className="ai-topo">
-          <img src="/mimo-logo.svg" alt="MIMO" />
+          <LogoMimo pro altura={36} />
           <span><ShieldCheck size={14} /> Sua configuração está salva</span>
         </header>
 
-        {modo !== 'sucesso' && (
-          <div className="ai-corpo ai-escolha-corpo">
-            <div className="ai-hero ai-hero-escolha">
-              <span className="ai-icone"><Sparkles size={25} /></span>
-              <span className="ai-kicker">Tudo pronto para começar</span>
-              <h1>{s?.name || 'Seu salão'} está pronto para entrar no ar.</h1>
-              <p>Você escolhe como começar. Sem cobrança automática e sem cartão obrigatório no teste.</p>
-            </div>
+        <div className="ai-corpo ai-sucesso ai-sucesso-guiado">
+          <span className="ai-sucesso-check"><Check size={30} /></span>
+          <span className="ai-kicker">{sucesso?.fase === 'teste' ? 'Teste iniciado' : 'Pagamento confirmado'}</span>
+          <h1>Agora sim. Seu salão está no ar. 🎉</h1>
+          <p>
+            {sucesso?.fase === 'teste'
+              ? (sucesso?.ate
+                ? `Seus ${REGRAS.testeDias} dias grátis começaram agora. Você pode usar tudo até ${dataCurta(sucesso.ate)}.`
+                : `Seu teste está liberado. Os ${REGRAS.testeDias} dias só começam a contar quando a agenda estiver pronta. Até lá, configure tudo com calma.`)
+              : `Sua primeira mensalidade está paga e a MIMO está liberada até ${dataCurta(sucesso?.ate)}.`}
+          </p>
 
-            <div className="ai-resumo">
-              <span><b>{agendas}</b> {agendas === 1 ? 'agenda' : 'agendas'}</span>
-              <i />
-              <span>mensalidade atual <strong>{cheio ? reais(cheio / 100) : 'calculando…'}</strong></span>
-            </div>
-
-            <div className="ai-escolhas ai-escolhas-premium">
-              <section className="ai-opcao ai-teste ai-opcao-nova">
-                <div className="ai-opcao-cabeca">
-                  <span className="ai-opcao-selo"><Sparkles size={13} /> Quero conhecer primeiro</span>
-                  <span className="ai-opcao-tag-neutra">sem compromisso</span>
-                </div>
-
-                <div className="ai-opcao-principal">
-                  <span className="ai-opcao-supra">Teste completo</span>
-                  <h2>{REGRAS.testeDias} dias grátis</h2>
-                  <p>Conheça a MIMO funcionando de verdade antes de decidir se quer continuar.</p>
-                </div>
-
-                <ul className="ai-beneficios">
-                  <li><Check size={14} /> Link e QR liberados</li>
-                  <li><Check size={14} /> Painel completo</li>
-                  <li><Check size={14} /> Sem cartão e sem Pix</li>
-                </ul>
-
-                <div className="ai-opcao-acao">
-                  <button type="button" className="btn ai-cta ai-cta-teste" onClick={comecarTeste} disabled={indo}>
-                    <Sparkles size={16} /> {indo ? 'Ativando…' : `Começar ${REGRAS.testeDias} dias grátis`}
-                  </button>
-                  <small>Ao escolher o teste, a oferta de {descontoPct}% da primeira mensalidade deixa de ficar disponível.</small>
-                </div>
-              </section>
-
-              <section className="ai-opcao ai-pagar ai-opcao-nova ai-opcao-destaque">
-                <div className="ai-opcao-cabeca">
-                  <span className="ai-opcao-selo destaque"><Gift size={13} /> Oferta de boas-vindas</span>
-                  <span className="ai-opcao-tag-oferta">{descontoPct}% OFF hoje</span>
-                </div>
-
-                <div className="ai-opcao-principal ai-opcao-principal-pago">
-                  <span className="ai-opcao-supra">Primeiros 30 dias</span>
-                  <div className="ai-preco-novo">
-                    <s>{cheio ? reais(cheio / 100) : '...'}</s>
-                    <strong>{oferta ? reais(oferta / 100) : '...'}</strong>
-                    {economia > 0 && <span>economize {reais(economia / 100)}</span>}
-                  </div>
-                  <h2>Começar pagando agora</h2>
-                  <p>Ative 30 dias imediatamente e aproveite o desconto da primeira mensalidade.</p>
-                </div>
-
-                <div className="ai-beneficios ai-beneficios-pago">
-                  <span><Check size={13} /> 30 dias liberados</span>
-                  <span><Check size={13} /> Sem recorrência</span>
-                  <span><Check size={13} /> Pix ou cartão</span>
-                </div>
-
-                <div className="ai-opcao-acao">
-                  <div className="ai-pagar-botoes ai-pagar-botoes-novos">
-                    <button type="button" className="ai-cta-pagamento" onClick={abrirPix} disabled={indo || !oferta}>
-                      <Smartphone size={18} /><span><strong>Pagar com Pix</strong><small>QR Code na hora</small></span>
-                    </button>
-                    <button type="button" className="ai-cta-pagamento ai-cta-cartao" onClick={() => setModo('cartao')} disabled={indo || !oferta}>
-                      <CreditCard size={18} /><span><strong>Pagar com cartão</strong><small>Pagamento único</small></span>
-                    </button>
-                  </div>
-                  <small><ShieldCheck size={12} /> Pagamento único. Nenhuma renovação automática é criada.</small>
-                </div>
-              </section>
-            </div>
-
-            {erro && modo === 'escolha' && <div className="ai-erro">{erro}</div>}
-            <p className="ai-rodape">Depois da escolha, seu salão entra no ar e você segue para o painel.</p>
+          <div className="ai-sucesso-itens">
+            <span><Check size={14} /> Link do salão liberado</span>
+            <span><Check size={14} /> QR Code pronto</span>
+            <span><Check size={14} /> Painel liberado</span>
           </div>
-        )}
 
-        {modo === 'pix' && (
-          <div className="ai-modal-fundo" role="dialog" aria-modal="true" aria-label="Pagamento por Pix">
-            <div className="ai-modal-card ai-modal-pix">
-              <div className="ai-modal-topo">
-                <span className="ai-modal-icone"><Smartphone size={20} /></span>
-                <div>
-                  <span className="ai-kicker">Primeira mensalidade · {descontoPct}% OFF</span>
-                  <h2>Finalize pelo Pix</h2>
-                </div>
-              </div>
-
-              <div className="ai-pix-resumo">
-                <div>
-                  <span>Valor do pagamento</span>
-                  <strong>{reais(Number(pix?.total_cents ?? oferta) / 100)}</strong>
-                </div>
-                <span className="ai-pix-status"><ShieldCheck size={14} /> cobrança única</span>
-              </div>
-
-              <p className="ai-modal-texto">Escaneie o QR Code ou copie o código Pix. Assim que o Asaas confirmar o pagamento, seus 30 dias são liberados.</p>
-
-              <div className="ai-pix-box ai-pix-modal">
-                <span className="ai-pix-selo"><Smartphone size={14} /> Pix copia e cola</span>
-                {pix?.copia_cola ? <QrPix payload={pix.copia_cola} imagem={pix.imagem} /> : <p><LoaderCircle className="ai-gira" size={18} /> Gerando seu Pix…</p>}
-              </div>
-
-              <div className="ai-pix-passos">
-                <span><b>1</b><small>Abra o app do banco</small></span>
-                <span><b>2</b><small>Escaneie ou copie o Pix</small></span>
-                <span><b>3</b><small>Confirme e volte aqui</small></span>
-              </div>
-
-              {erro && <div className="ai-erro">{erro}</div>}
-
-              <div className="ai-modal-acoes">
-                <button type="button" className="btn btn-primary ai-botao-grande" onClick={() => conferir(true)} disabled={indo || !pix?.copia_cola}>
-                  {indo ? 'Conferindo…' : 'Já paguei, conferir'}
-                </button>
-                <button type="button" className="btn btn-ghost" onClick={trocarOpcao} disabled={indo}>Voltar às opções</button>
-              </div>
-
-              <div className="ai-checkout-seguranca">
-                <ShieldCheck size={14} />
-                <span><strong>Pagamento protegido</strong><small>Processado via Asaas. Sem débito automático e sem renovação recorrente.</small></span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {modo === 'cartao' && (
-          <div className="ai-modal-fundo" role="dialog" aria-modal="true" aria-label="Pagamento com cartão">
-            <CartaoInicial
-              total={oferta}
-              desconto={descontoPct}
-              indo={indo}
-              erro={erro}
-              onEnviar={pagarCartao}
-              onVoltar={() => { setErro(''); setModo('escolha') }}
-            />
-          </div>
-        )}
-
-        {modo === 'analise' && (
-          <div className="ai-modal-fundo" role="dialog" aria-modal="true" aria-label="Confirmação do pagamento">
-            <div className="ai-modal-card ai-modal-analise">
-              <span className="ai-modal-loader"><LoaderCircle className="ai-gira" size={24} /></span>
-              <span className="ai-kicker">Pagamento enviado</span>
-              <h2>Estamos confirmando seu cartão</h2>
-              <p>Algumas transações levam alguns instantes. A MIMO continua conferindo automaticamente.</p>
-              {erro && <div className="ai-erro">{erro}</div>}
-              <div className="ai-modal-acoes">
-                <button type="button" className="btn btn-primary ai-botao-grande" onClick={() => conferir(true)} disabled={indo}>{indo ? 'Conferindo…' : 'Conferir agora'}</button>
-                <button type="button" className="btn btn-ghost" onClick={trocarOpcao} disabled={indo}>Tentar outra forma</button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {modo === 'sucesso' && (
-          <div className="ai-corpo ai-sucesso ai-sucesso-guiado">
-            <span className="ai-sucesso-check"><Check size={30} /></span>
-            <span className="ai-kicker">{sucesso?.fase === 'teste' ? 'Teste iniciado' : 'Pagamento confirmado'}</span>
-            <h1>Agora sim. Seu salão está no ar. 🎉</h1>
-            <p>
-              {sucesso?.fase === 'teste'
-                ? (sucesso?.ate
-                  ? `Seus ${REGRAS.testeDias} dias grátis começaram agora. Você pode usar tudo até ${dataCurta(sucesso.ate)}.`
-                  : `Seu teste está liberado. Os ${REGRAS.testeDias} dias só começam a contar quando a agenda estiver pronta. Até lá, configure tudo com calma.`)
-                : `Sua primeira mensalidade está paga e a MIMO está liberada até ${dataCurta(sucesso?.ate)}.`}
-            </p>
-
-            <div className="ai-sucesso-itens">
-              <span><Check size={14} /> Link do salão liberado</span>
-              <span><Check size={14} /> QR Code pronto</span>
-              <span><Check size={14} /> Painel liberado</span>
+          <section className="ai-proximo-passo">
+            <div className="ai-proximo-topo">
+              <span className="ai-proximo-icone"><Route size={18} /></span>
+              <span>
+                <strong>Quando entrar, a gente te guia.</strong>
+                <small>O painel tem um tour rápido para deixar sua agenda pronta sem você precisar descobrir tudo sozinho.</small>
+              </span>
             </div>
 
-            <section className="ai-proximo-passo">
-              <div className="ai-proximo-topo">
-                <span className="ai-proximo-icone"><Route size={18} /></span>
-                <span>
-                  <strong>Quando entrar, a gente te guia.</strong>
-                  <small>O painel tem um tour rápido para deixar sua agenda pronta sem você precisar descobrir tudo sozinho.</small>
-                </span>
-              </div>
+            <div className="ai-proximo-etapas" aria-label="Próximos passos no painel">
+              <span><i><Tags size={15} /></i><b>1</b><em><strong>Categorias</strong><small>Organize o que seu salão oferece.</small></em></span>
+              <span><i><Scissors size={15} /></i><b>2</b><em><strong>Serviços</strong><small>Cadastre preço, duração e detalhes.</small></em></span>
+              <span><i><UsersRound size={15} /></i><b>3</b><em><strong>Profissionais</strong><small>Monte a equipe e as agendas.</small></em></span>
+            </div>
 
-              <div className="ai-proximo-etapas" aria-label="Próximos passos no painel">
-                <span><i><Tags size={15} /></i><b>1</b><em><strong>Categorias</strong><small>Organize o que seu salão oferece.</small></em></span>
-                <span><i><Scissors size={15} /></i><b>2</b><em><strong>Serviços</strong><small>Cadastre preço, duração e detalhes.</small></em></span>
-                <span><i><UsersRound size={15} /></i><b>3</b><em><strong>Profissionais</strong><small>Monte a equipe e as agendas.</small></em></span>
-              </div>
+            <p><Sparkles size={14} /> Você pode seguir o tour inteiro ou configurar no seu ritmo. Tudo fica salvo.</p>
+          </section>
 
-              <p><Sparkles size={14} /> Você pode seguir o tour inteiro ou configurar no seu ritmo. Tudo fica salvo.</p>
-            </section>
-
-            <button type="button" className="btn btn-primary ai-botao-grande ai-entrar-tour" onClick={entrar}>
-              Entrar no painel e começar <Rocket size={17} />
-            </button>
-            <small className="ai-sucesso-ajuda">Primeira vez na MIMO? Procure o guia de configuração no painel.</small>
-          </div>
-        )}
+          <button type="button" className="btn btn-primary ai-botao-grande ai-entrar-tour" onClick={entrar}>
+            Entrar no painel e começar <Rocket size={17} />
+          </button>
+          <small className="ai-sucesso-ajuda">Primeira vez na MIMO? Procure o guia de configuração no painel.</small>
+        </div>
       </div>
     </div>
   )
 }
 
-function CartaoInicial({ total, desconto, indo, erro, onEnviar, onVoltar }) {
-  const [c, setC] = useState({ nome: '', numero: '', validade: '', cvv: '', cep: '', numeroEnd: '' })
-  const [mes, ano] = c.validade.split('/')
-  const ok = useMemo(() => (
-    c.nome.trim().length > 3 &&
-    cartaoValido(c.numero) &&
-    mes >= '01' && mes <= '12' &&
-    (ano ?? '').length === 2 &&
-    c.cvv.replace(/\D/g, '').length >= 3 &&
-    c.cep.replace(/\D/g, '').length === 8 &&
-    c.numeroEnd.trim().length > 0
-  ), [c, mes, ano])
-
-  const set = (k) => (e) => setC((x) => ({ ...x, [k]: e.target.value }))
-
+// o Pix aberto: valor, status ao vivo, copiar (o principal no celular) e o QR (o principal no computador)
+function TelaPix({ pix, total, descontoPct, indo, erro, onConferir, onVoltar }) {
+  const [qr, setQr] = useState('')
+  const [copiado, setCopiado] = useState(false)
+  const [verQr, setVerQr] = useState(false)
+  const codigo = pix?.copia_cola || ''
+  useEffect(() => {
+    if (!codigo || pix?.imagem) return
+    let vivo = true
+    QRCode.toDataURL(codigo, { width: 520, margin: 1, color: { dark: '#2b0b1c', light: '#ffffff' } }).then((d) => { if (vivo) setQr(d) }).catch(() => {})
+    return () => { vivo = false }
+  }, [codigo, pix?.imagem])
+  const imagem = pix?.imagem ? `data:image/png;base64,${pix.imagem}` : qr
+  async function copiar() {
+    try { await navigator.clipboard.writeText(codigo) } catch {
+      const t = document.createElement('textarea'); t.value = codigo; document.body.appendChild(t); t.select()
+      try { document.execCommand('copy') } catch { /* sem cópia: o código está na caixa */ }
+      t.remove()
+    }
+    setCopiado(true); setTimeout(() => setCopiado(false), 2500)
+  }
   return (
-    <form
-      className="ai-modal-card ai-modal-cartao"
-      onSubmit={(e) => {
-        e.preventDefault()
-        if (!ok) return
-        onEnviar(
-          { nome: c.nome.trim(), numero: c.numero, mes, ano, cvv: c.cvv },
-          { cep: c.cep, numero: c.numeroEnd },
-        )
-      }}
-    >
-      <div className="ai-modal-topo">
-        <span className="ai-modal-icone"><CreditCard size={20} /></span>
-        <div>
-          <span className="ai-kicker">Primeira mensalidade · {desconto}% OFF</span>
-          <h2>Pagar {reais(Number(total || 0) / 100)} no cartão</h2>
-        </div>
-      </div>
-      <p className="ai-modal-texto">Cobrança única. O cartão não fica vinculado e não existe renovação automática.</p>
+    <section className="ck-pix" aria-label="Pagamento por Pix">
+      <button type="button" className="ck-voltar" onClick={onVoltar} disabled={indo}><ArrowLeft size={16} /> Voltar às opções</button>
 
-      <div className="ai-cartao-preview">
-        <div className="ai-cartao-preview-topo">
-          <span>MIMO</span>
-          <CreditCard size={22} />
-        </div>
-        <div className="ai-cartao-chip" aria-hidden="true"><i /><i /><i /></div>
-        <strong className="ai-cartao-numero">
-          {c.numero ? mascaraCartao(c.numero).padEnd(19, '•') : '•••• •••• •••• ••••'}
-        </strong>
-        <div className="ai-cartao-preview-rodape">
-          <span><small>Titular</small><b>{c.nome.trim() || 'NOME NO CARTÃO'}</b></span>
-          <span><small>Validade</small><b>{c.validade || 'MM/AA'}</b></span>
-        </div>
+      <div className="ck-pix-cabeca">
+        <span className="ck-pix-icone"><PixIcone /></span>
+        <span>
+          <small>Primeira mensalidade · {descontoPct}% OFF</small>
+          <strong>{reais(total / 100)}</strong>
+        </span>
+        {pix?.sandbox && <span className="ck-teste-tag">ambiente de testes</span>}
       </div>
 
-      <div className="ai-cartao-selos">
-        <span><ShieldCheck size={13} /> Ambiente protegido</span>
-        <span><Check size={13} /> Cobrança única</span>
-        <span><Check size={13} /> Cartão não armazenado</span>
+      <div className="ck-status" role="status">
+        <i />
+        <span><b>Aguardando o pagamento</b><small>A tela confere sozinha. Pagou, liberou.</small></span>
       </div>
 
-      <div className="ai-cartao-secao">
-        <span className="ai-cartao-secao-titulo">Dados do cartão</span>
-        <div className="ai-cartao-grade">
-          <label className="ai-campo inteiro">Nome como está no cartão
-            <input value={c.nome} onChange={set('nome')} autoComplete="cc-name" required />
-          </label>
-          <label className="ai-campo inteiro">Número do cartão
-            <input value={c.numero} onChange={(e) => setC((x) => ({ ...x, numero: mascaraCartao(e.target.value) }))} inputMode="numeric" autoComplete="cc-number" placeholder="0000 0000 0000 0000" required />
-          </label>
-          <label className="ai-campo">Validade
-            <input value={c.validade} onChange={(e) => setC((x) => ({ ...x, validade: mascaraValidade(e.target.value) }))} inputMode="numeric" autoComplete="cc-exp" placeholder="MM/AA" required />
-          </label>
-          <label className="ai-campo">CVV
-            <input value={c.cvv} onChange={set('cvv')} inputMode="numeric" autoComplete="cc-csc" maxLength={4} placeholder="123" required />
-          </label>
-        </div>
-      </div>
+      {!codigo ? (
+        <p className="ck-gerando"><LoaderCircle className="ai-gira" size={18} /> Gerando seu Pix…</p>
+      ) : (
+        <>
+          <div className="ck-copia">
+            <span className="ck-copia-codigo">{codigo}</span>
+            <button type="button" className={'ck-botao ck-botao-pix' + (copiado ? ' ok' : '')} onClick={copiar}>
+              {copiado ? <><Check size={18} /> Código copiado</> : <><Copy size={18} /> Copiar código Pix</>}
+            </button>
+          </div>
 
-      <div className="ai-cartao-secao">
-        <span className="ai-cartao-secao-titulo">Endereço da cobrança</span>
-        <div className="ai-cartao-grade ai-cartao-grade-endereco">
-          <label className="ai-campo">CEP da fatura
-            <input value={c.cep} onChange={set('cep')} inputMode="numeric" autoComplete="postal-code" placeholder="00000-000" required />
-          </label>
-          <label className="ai-campo">Número
-            <input value={c.numeroEnd} onChange={set('numeroEnd')} inputMode="numeric" placeholder="120" required />
-          </label>
-        </div>
-      </div>
+          <div className={'ck-qr' + (verQr ? ' aberto' : '')}>
+            <button type="button" className="ck-qr-abrir" onClick={() => setVerQr((v) => !v)}><QrCode size={16} /> {verQr ? 'Esconder o QR Code' : 'Pagar com QR Code (em outro aparelho)'}</button>
+            <div className="ck-qr-img">{imagem ? <img src={imagem} alt="QR Code do Pix" /> : <i />}<small>Abra o app do banco e escaneie</small></div>
+          </div>
 
-      {erro && <div className="ai-erro">{erro}</div>}
-      <button type="submit" className="btn btn-primary ai-botao-grande ai-cartao-pagar" disabled={!ok || indo}>
-        <ShieldCheck size={16} /> {indo ? 'Processando…' : `Pagar ${reais(Number(total || 0) / 100)} com segurança`}
+          <ol className="ck-passos">
+            <li><b>1</b><span><strong>Copie o código</strong><small>ou escaneie o QR</small></span></li>
+            <li><b>2</b><span><strong>No app do banco</strong><small>Pix › Copia e cola</small></span></li>
+            <li><b>3</b><span><strong>Volte aqui</strong><small>libera sozinho</small></span></li>
+          </ol>
+        </>
+      )}
+
+      {erro && <div className="ai-erro ck-erro">{erro}</div>}
+
+      <button type="button" className="ck-botao ck-botao-claro" onClick={onConferir} disabled={indo || !codigo}>
+        {indo ? <><LoaderCircle className="ai-gira" size={16} /> Conferindo…</> : <><Zap size={16} /> Já paguei, conferir agora</>}
       </button>
-      <button type="button" className="btn btn-ghost" onClick={onVoltar} disabled={indo}>Voltar às opções</button>
-      <div className="ai-checkout-seguranca">
-        <ShieldCheck size={14} />
-        <span><strong>Seus dados ficam protegidos</strong><small>A MIMO não armazena número nem CVV. Os dados desta cobrança são enviados ao Asaas.</small></span>
+
+      <div className="ck-seguro">
+        <ShieldCheck size={15} />
+        <span><strong>Pagamento único e protegido</strong><small>Processado pelo Asaas. Sem débito automático e sem renovação. <Clock size={11} /> O código vale por hoje.</small></span>
       </div>
-    </form>
+    </section>
+  )
+}
+
+// o losango do Pix, desenhado (sem depender de imagem)
+function PixIcone() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round">
+      <path d="M12 2.8 21.2 12 12 21.2 2.8 12Z" />
+      <path d="M7.6 9.6 10 12l-2.4 2.4M16.4 9.6 14 12l2.4 2.4" />
+    </svg>
   )
 }

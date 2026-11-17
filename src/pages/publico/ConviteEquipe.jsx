@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Store, Users, Check } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
-import { MarcaIcon, Wordmark } from '../../components/icons'
+import { LogoMimo } from '../../components/icons'
 import { formatarFone } from '../../lib/fone'
 
 // O link genérico da equipe (114 → 119). Ele só recolhe nome e WhatsApp:
@@ -50,7 +50,7 @@ export default function ConviteEquipe() {
   return (
     <div className="page-center login-bg">
       <div className="card login-card entrar-card">
-        <div className="brand"><MarcaIcon className="brand-icon" width={44} height={40} id="equipe" /><Wordmark tamanho={2.2} /></div>
+        <div className="brand"><LogoMimo altura={60} pro className="brand-logo" /></div>
         {!salao ? (
           <>
             <h2 className="login-titulo">Convite não encontrado</h2>

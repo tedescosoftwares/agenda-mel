@@ -11,7 +11,7 @@ import { iniciais } from '../../lib/booking'
 import CampoSenha from '../../components/CampoSenha'
 import RodapeSocial from '../../components/RodapeSocial'
 import LinkSuporte from '../../components/LinkSuporte'
-import { MarcaIcon, Wordmark } from '../../components/icons'
+import { LogoMimo } from '../../components/icons'
 import BotaoGoogle, { OuLinha } from '../../components/BotaoGoogle'
 import { MailCheck } from 'lucide-react'
 
@@ -98,8 +98,7 @@ export default function CadastroCliente() {
     <div className="page-center login-bg">
       <div className="card login-card cad-card">
         <div className="brand">
-          <MarcaIcon className="brand-icon" width={44} height={40} id="cadastro" />
-          <Wordmark tamanho={2.2} />
+          <LogoMimo altura={60} className="brand-logo" />
         </div>
 
         {pronto ? (

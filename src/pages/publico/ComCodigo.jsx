@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import LeitorQr from '../../components/LeitorQr'
-import { MarcaIcon, Wordmark } from '../../components/icons'
+import { LogoMimo } from '../../components/icons'
 import RodapeSocial from '../../components/RodapeSocial'
 import { urlDoAmbiente } from '../../lib/ambiente'
 import { extrairCodigo } from '../../lib/convite'
@@ -35,8 +35,7 @@ export default function ComCodigo() {
     <div className="page-center login-bg">
       <div className="card login-card entrar-card">
         <div className="brand">
-          <MarcaIcon className="brand-icon" width={44} height={40} id="comcodigo" />
-          <Wordmark tamanho={2.2} />
+          <LogoMimo altura={60} className="brand-logo" />
         </div>
         <h2 className="login-titulo">Bem-vinda ao MIMO</h2>
         <p className="muted login-sub">Sua profissional te mostrou um QR ou te passou um código de seis letras. É por ele que você entra na agenda dela.</p>

@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Check, Sparkles, CalendarDays, QrCode, MessageCircle, Store, Heart } from 'lucide-react'
+import { LogoMimo, LOGO_CORACAO, LOGO_RABO } from './icons'
 
 // Fechamento da configuração: depois de serviços/equipe, esta tela prepara
 // a estrutura final antes da escolha de ativação. Nada é liberado ainda.
+// 3.85: com a cara da MIMO: o coração do logo oficial se desenha em volta (o traço vai e volta enquanto monta),
+// o logo MIMO Pro embaixo, e no fim o coração se enche de rosa com o check.
 // Dura pelo menos `minimo` ms mesmo que o banco responda na hora; se o banco
 // demorar, fica no último passo até `pronto` virar true.
 const PASSOS_SALAO = [
@@ -43,7 +46,20 @@ export default function MontandoSalao({ nome, autonoma = false, pronto = false, 
     <div className="ms-fundo" role="status" aria-live="polite">
       <div className="ms-card">
         <div className="ms-topo">
-          <span className={'ms-orbita' + (terminou ? ' pronta' : '')}><span className="ms-nucleo">{terminou ? <Check size={26} /> : <Sparkles size={24} />}</span></span>
+          <span className={'ms-logo' + (terminou ? ' pronta' : '')}>
+            <span className="ms-aura" />
+            <svg viewBox="67 13 112 112" className="ms-coracao" aria-hidden="true">
+              <g transform="translate(8,0)">
+                <path className="ms-traco-fundo" d={LOGO_CORACAO} />
+                <path className="ms-traco" d={LOGO_CORACAO} pathLength="1" />
+                <path className="ms-traco ms-rabo" d={LOGO_RABO} pathLength="1" />
+              </g>
+            </svg>
+            <span className="ms-faisca ms-faisca-1"><Sparkles size={14} /></span>
+            <span className="ms-faisca ms-faisca-2"><Sparkles size={11} /></span>
+            {terminou && <span className="ms-ok"><Check size={22} /></span>}
+          </span>
+          <LogoMimo pro={!autonoma} altura={autonoma ? 26 : 38} className="ms-marca" />
           <h1>{terminou ? (autonoma ? 'Tudo preparado' : 'Seu espaço está preparado') : (autonoma ? 'Montando a sua agenda' : `Preparando ${nome || 'seu salão'}`)}</h1>
           <p className="muted">{terminou ? (autonoma ? 'Só falta liberar sua agenda.' : 'Perfeito. Agora escolha como quer começar na MIMO.') : 'Pode deixar com a gente por alguns segundos. Estamos organizando seu espaço.'}</p>
         </div>

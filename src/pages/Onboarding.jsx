@@ -34,7 +34,9 @@ import { useDocumentosLegais, aceitesPara, versaoMaior } from '../lib/legal'
 import { EMAIL_CONTATO } from '../conteudo/legal'
 import RodapeSocial from '../components/RodapeSocial'
 import { CampoEndereco, useChecagemEndereco } from '../components/EnderecoProprio'
-import { limparEndereco, enderecoEscrito } from '../lib/endereco'
+import { LogoMimo } from '../components/icons'
+import { sugerirEndereco, sugestoesDeEndereco } from '../lib/endereco'
+import ArteDoLink from '../components/ArteDoLink'
 
 // O onboarding do salão (114, 119): do cadastro à agenda em seis passos, o
 // mesmo fluxo no computador e no celular. Cada passo explica por que
@@ -268,7 +270,7 @@ export default function Onboarding({ publico = false }) {
   return (
     <div className={"ob ob-v2 ob-v3 ob-step-" + passo}>
       <aside className="ob-painel">
-        <div className="ob-painel-topo"><img src="/mimo-logo.svg" alt="MIMO" />{sairLink}</div>
+        <div className="ob-painel-topo"><LogoMimo pro altura={42} className="ob-marca-logo" />{sairLink}</div>
         <div key={atual.id} className="ob-painel-vivo">
           <div className="ob-painel-foto"><img src={`/imagens/${atual.foto}-720.webp`} alt="" /><span className="ob-painel-bilhete">{atual.bilhete} <i>♥</i></span></div>
           <div className="ob-painel-texto"><small>Passo {idx + 1} de {total}</small><h2>{atual.titulo}</h2><p>{atual.texto}</p>
@@ -781,13 +783,17 @@ function PassoDados({ s, seguir, voltar, salvando, setErro, user, autonoma, publ
     seguir(dadosDe(f))
   }
   const idsDados = ['identificacao', 'endereco', 'acesso']
-  const chaveDados = `mimo:onboarding:dados:v1:${s.id || user?.id || 'novo'}`
-  const nivelDadosInicial = (() => {
-    try {
-      const salvo = Number(sessionStorage.getItem(chaveDados))
-      return Number.isFinite(salvo) ? Math.min(3, Math.max(1, salvo)) : 1
-    } catch { return 1 }
-  })()
+  // 3.85: o subpasso em que ela estava só volta para quem já tem conta (a chave é a do salão). No cadastro novo
+  // (/comecar) nada fica guardado entre cadastros: antes a chave era a mesma para todos ("novo"), e o segundo
+  // cadastro no mesmo navegador abria direto no Acesso. E nunca abre além do primeiro bloco que falta preencher.
+  const chaveDados = s.id ? `mimo:onboarding:dados:v2:${s.id}` : null
+  const [nivelDadosInicial] = useState(() => {
+    const identOk0 = comCnpj ? cnpjValido(f.cnpj) && f.razao_social.trim() && f.responsavel_nome.trim() : cpfValido(f.cpf) && f.responsavel_nome.trim() && f.responsavel_nascimento && idadeEm(f.responsavel_nascimento) >= 18
+    const falta = !identOk0 ? 1 : !(f.fiscal.address.trim() && f.fiscal.city.trim()) ? 2 : 3
+    let salvo = 1
+    try { if (chaveDados) salvo = Number(sessionStorage.getItem(chaveDados)) || 1 } catch { /* sem storage */ }
+    return Math.min(falta, Math.min(3, Math.max(1, salvo)))
+  })
   const [nivelDados, setNivelDados] = useState(nivelDadosInicial)
   const [blocoDados, setBlocoDados] = useState(() => idsDados[nivelDadosInicial - 1] || 'identificacao')
   const [direcaoDados, setDirecaoDados] = useState('frente')
@@ -815,6 +821,7 @@ function PassoDados({ s, seguir, voltar, salvando, setErro, user, autonoma, publ
   const proximaDados = indiceDados < 2 ? etapasDados[indiceDados + 1] : null
 
   useEffect(() => {
+    if (!chaveDados) return
     try { sessionStorage.setItem(chaveDados, String(nivelDados)) } catch { /* navegador sem storage */ }
   }, [chaveDados, nivelDados])
 
@@ -1020,10 +1027,10 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
   // a cara do negócio: o logo e as fotos do espaço sobem na hora e ficam gravadas
   const [nome, setNome] = useState(s.name || s.nome_fantasia || s.razao_social || '')   // o nome que a cliente vê
   // o endereço próprio (studiomel.mimo.com.vc, 2.80): nasce aqui, junto com o
-  // nome, e não depende de ativar. Sugerido a partir do nome até ela mexer.
+  // nome, e não depende de ativar. Sugerido a partir do nome até ela mexer (3.85: com as palavras juntas).
   const [endereco, setEndereco] = useState(s.subdominio ?? '')
   const [enderecoMexido, setEnderecoMexido] = useState(Boolean(s.subdominio))
-  const enderecoDigitado = enderecoMexido ? endereco : limparEndereco(nome)
+  const enderecoDigitado = enderecoMexido ? endereco : sugerirEndereco(nome)
   const { limpo: enderecoLimpo, chk: enderecoChk } = useChecagemEndereco(autonoma ? '' : enderecoDigitado, s.id, s.subdominio ?? null)
   const enderecoOk = autonoma || Boolean(enderecoChk?.ok)
   const [logo, setLogo] = useState(s.logo_url ?? null)
@@ -1411,20 +1418,24 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
                 <label className="ob-cara-nome">{autonoma ? 'Nome da agenda' : 'Nome do salão'} <b>*</b><span className="muted"> (como as clientes vão ver)</span><input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Studio Essenza Hair" maxLength={60} /></label>
 
                 {!autonoma && (
-                  <div className="ob-cara-endereco">
-                    <span className="ob-rotulo">Seu link na MIMO <b>*</b></span>
-                    <CampoEndereco nome={enderecoDigitado} onNome={(v) => { setEndereco(v); setEnderecoMexido(true) }} limpo={enderecoLimpo} chk={enderecoChk} />
-
-                    <div className="ob-link-explica">
-                      <Link2 size={15} />
-                      <span>
-                        <strong>Esse é o endereço digital do seu salão.</strong>
-                        <small>É o link que você pode colocar na bio, mandar no WhatsApp e transformar em QR Code.</small>
-                      </span>
+                  <div className={'ob-cara-endereco ob-link-destaque' + (enderecoMexido ? '' : ' sugerido')}>
+                    <div className="ob-link-topo">
+                      <span className="ob-rotulo"><Link2 size={15} /> Seu link na MIMO <b>*</b></span>
+                      {!enderecoMexido && enderecoLimpo && <span className="ob-link-selo"><Wand2 size={12} /> sugestão · deixe com a sua cara</span>}
                     </div>
-
+                    <p className="ob-link-dica">É o endereço do seu salão na internet. Escolha um nome curto e fácil de falar: a cliente vai ver na bio, receber no WhatsApp e escanear no QR.</p>
+                    <CampoEndereco nome={enderecoDigitado} onNome={(v) => { setEndereco(v); setEnderecoMexido(true) }} limpo={enderecoLimpo} chk={enderecoChk} />
+                    {sugestoesDeEndereco(nome, local.city).length > 1 && (
+                      <div className="ob-link-ideias">
+                        <small>Ideias:</small>
+                        {sugestoesDeEndereco(nome, local.city).map((x) => (
+                          <button key={x} type="button" className={x === enderecoLimpo ? 'ativo' : ''} onClick={() => { setEndereco(x); setEnderecoMexido(true) }}>{x}</button>
+                        ))}
+                      </div>
+                    )}
+                    <ArteDoLink endereco={enderecoLimpo} nome={nome} logo={logo} />
                     <AjudaInline titulo="O que é esse link?">
-                      Não é o endereço físico. É a página pública do seu salão dentro da MIMO. Escolha algo curto, fácil de ler e parecido com o nome do negócio. Ex.: jacques-janine.mimo.com.vc. Você pode trocar depois em Ajustes.
+                      Não é o endereço físico. É a página do seu salão dentro da MIMO, onde a cliente vê tudo e marca. Prefira algo curto e parecido com o nome do negócio, sem espaços: studioessenza.mimo.com.vc. Você pode trocar depois em Ajustes.
                     </AjudaInline>
                   </div>
                 )}
@@ -1720,7 +1731,7 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
             <button type="button" className="ob-finale-fechar" onClick={() => setFinaleAberto(false)} aria-label="Fechar"><X size={18} /></button>
             <div className="ob-finale-estouro" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
             <div className="ob-finale-modal-cabeca">
-              <img className="ob-finale-modal-logo" src="/mimo-logo.svg" alt="MIMO" />
+              <LogoMimo pro altura={46} className="ob-finale-modal-logo" />
               <span className="ob-finale-selo">Seu espaço está pronto</span>
               <h2 id="ob-finale-titulo">Seu salão ganhou forma.<br /><strong>Agora veja como sua cliente vai encontrar você.</strong></h2>
               <p>Nome, fotos, contato, localização, horários e regras já estão organizados. Abaixo está a prévia do espaço que você acabou de montar.</p>

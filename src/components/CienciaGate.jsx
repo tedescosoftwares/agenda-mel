@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { MarcaIcon, Wordmark } from './icons'
+import { LogoMimo } from './icons'
+import { ehPro } from '../lib/ambiente'
 import { CalendarX, UserX } from 'lucide-react'
 
 // A página de ciência (077): a cliente faltou, ou cancelou em cima da
@@ -41,7 +42,7 @@ export default function CienciaGate() {
   return (
     <div className="ciencia" role="dialog" aria-modal="true" aria-labelledby="ciencia-titulo">
       <div className="ciencia-caixa">
-        <span className="brand-inline ciencia-marca"><MarcaIcon className="marca" id="ciencia" /><Wordmark tamanho={1.2} /></span>
+        <span className="brand-inline ciencia-marca"><LogoMimo altura={26} pro={ehPro} /></span>
         <span className="ciencia-icone">{falta ? <UserX size={26} /> : <CalendarX size={26} />}</span>
         <h2 id="ciencia-titulo">{falta ? 'Sobre o horário que não aconteceu' : 'Sobre o cancelamento em cima da hora'}</h2>
         <p className="ciencia-quando"><strong>{c.servico}</strong> com {c.profissional}, {c.quando}.</p>

@@ -3,7 +3,8 @@ import { Link, useNavigate } from 'react-router-dom'
 import { KeyRound, Check } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
-import { MarcaIcon, Wordmark } from '../../components/icons'
+import { LogoMimo } from '../../components/icons'
+import { ehPro } from '../../lib/ambiente'
 
 // Onde o link de criar (ou redefinir) a senha cai (3.71): o convite da conta criada pela Plataforma,
 // o "esqueci a senha" do login. O link já abre a sessão; aqui a pessoa só escolhe a senha.
@@ -36,7 +37,7 @@ export default function CriarSenha() {
   return (
     <div className="page-center login-bg">
       <div className="card login-card entrar-card">
-        <div className="brand"><MarcaIcon className="brand-icon" width={44} height={40} id="senha" /><Wordmark tamanho={2.2} /></div>
+        <div className="brand"><LogoMimo altura={60} pro={ehPro} className="brand-logo" /></div>
         {pronta ? (
           <>
             <span className="ativar-check"><Check size={22} /></span>

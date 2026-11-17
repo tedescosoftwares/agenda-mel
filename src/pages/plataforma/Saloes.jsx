@@ -8,6 +8,7 @@ import { PredioIcon, UsersIcon, TeamIcon, CalendarIcon, SearchIcon, PulsoIcon, S
 import { User, MapPin, Pencil, Check as CheckIcon, BookOpen, Trash2 } from 'lucide-react'
 import Portal from '../../components/Portal'
 import ApagarModal from '../../components/plataforma/ApagarModal'
+import Mensalidades from '../../components/plataforma/Mensalidades'
 import { formatarCnpj, formatarCpf } from '../../lib/cnpj'
 
 // Salões e autônomas: a lista de unidades com tamanho e ações, o
@@ -135,6 +136,9 @@ export default function Saloes() {
         </div>
 
         <aside className="plat-lado">
+          <Painel titulo="Pix aguardando" sub="Mensalidades abertas da MIMO · dá para dar baixa à mão">
+            <Mensalidades abertas onMudou={carregar} />
+          </Painel>
           <Painel Icon={PulsoIcon} titulo="Implantação" sub={`${implantacao.length} em implantação`}>
             {implantacao.length === 0 ? <Vazio>Todas as unidades já atendem.</Vazio> : implantacao.slice(0, 2).map((s) => (
               <div key={s.id} className="plat-implantacao">
@@ -235,10 +239,11 @@ export function Salao() {
               <Kpi Icon={PulsoIcon} cor={s.active ? 'menta' : 'carmim'} n={s.active ? 'Ativo' : 'Off'} rotulo="status" sub={s.active ? 'aparece na vitrine' : 'desativado pela plataforma'} />
             </div>
             <div className="abas plat-abas">
-              {[['cadastro', 'Cadastro'], ['equipe', `Equipe (${d.equipe?.length ?? 0})`], ['clientes', `Clientes (${d.clientes?.length ?? 0})`], ['ultimos', 'Últimos horários']].map(([k, r]) => <button key={k} className={aba === k ? 'aba active' : 'aba'} onClick={() => setAba(k)}>{r}</button>)}
+              {[['cadastro', 'Cadastro'], ['mensalidades', 'Mensalidades'], ['equipe', `Equipe (${d.equipe?.length ?? 0})`], ['clientes', `Clientes (${d.clientes?.length ?? 0})`], ['ultimos', 'Últimos horários']].map(([k, r]) => <button key={k} className={aba === k ? 'aba active' : 'aba'} onClick={() => setAba(k)}>{r}</button>)}
             </div>
-            <Painel titulo={aba === 'cadastro' ? 'Ficha cadastral' : aba === 'equipe' ? 'Equipe' : aba === 'clientes' ? 'Clientes vinculadas' : 'Últimos 30 horários'}>
+            <Painel titulo={aba === 'cadastro' ? 'Ficha cadastral' : aba === 'mensalidades' ? 'Mensalidades da MIMO' : aba === 'equipe' ? 'Equipe' : aba === 'clientes' ? 'Clientes vinculadas' : 'Últimos 30 horários'}>
               {aba === 'cadastro' && <FichaCadastral s={s} dona={d.dona} />}
+              {aba === 'mensalidades' && <Mensalidades salao={id} onMudou={carregar} />}
               {aba === 'equipe' && (
                 <table className="plat-tabela"><thead><tr><th>Profissional</th><th>Código</th><th>Trouxe</th><th>Atendimentos</th><th>Status</th></tr></thead><tbody>
                   {(d.equipe ?? []).map((p) => <tr key={p.id}><td><div className="plat-pessoa"><Iniciais nome={p.nome} /><div><strong>{p.nome}</strong><small className="muted">{p.telefone || 'sem telefone'}{p.tem_conta ? '' : ' · sem conta'}</small></div></div></td><td className="mono">{p.codigo}</td><td>{p.trouxe}</td><td>{p.atendimentos}</td><td><Pilula>{p.ativa ? 'Ativa' : 'Saiu'}</Pilula></td></tr>)}

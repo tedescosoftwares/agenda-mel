@@ -3,7 +3,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { useDialogo } from '../../context/DialogoContext'
 import { supabase } from '../../lib/supabase'
-import { MarcaIcon, Wordmark, HomeIcon, PredioIcon, UsersIcon, LinkIcon, ListaIcon, MailIcon, GraficoIcon, EngrenagemIcon, SearchIcon, BellIcon, MaisIcon, MegafoneIcon, WhatsIcon } from '../icons'
+import { MarcaIcon, HomeIcon, PredioIcon, UsersIcon, LinkIcon, ListaIcon, MailIcon, GraficoIcon, EngrenagemIcon, SearchIcon, BellIcon, MaisIcon, MegafoneIcon, WhatsIcon, LogoMimo } from '../icons'
 import { BadgePercent, Globe, Scale, Sparkles, LayoutGrid, MapPinned, UserPlus } from 'lucide-react'
 
 // A casa da plataforma é um painel de PC (056): barra lateral com as
@@ -74,8 +74,8 @@ export default function Shell({ children, acao }) {
     <div className="plat">
       <aside className="plat-lateral">
         <div className="plat-marca">
-          <MarcaIcon className="marca" id="plat" width={30} height={26} />
-          <Wordmark tamanho={1.5} />
+          <LogoMimo altura={34} className="plat-logo-cheio" />
+          <MarcaIcon className="plat-logo-ico" width={34} height={34} />
           <span className="plat-tag">plataforma</span>
         </div>
         <nav className="plat-menu">

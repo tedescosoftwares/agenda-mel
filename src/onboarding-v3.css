@@ -4989,3 +4989,89 @@
     flex-wrap:wrap;
   }
 }
+
+/* ==========================================================================
+   3.85 · PASSO 1 COM UM CARTÃO SÓ (o salão)
+   Antes o cartão ficava em meia tela e sobrava um vazio do lado. No computador ele deita e ocupa a largura
+   toda: a foto à esquerda, o plano à direita. No celular continua um cartão de largura total.
+   ========================================================================== */
+.ob-v3 .ob-tipos.ob-tipos-um { grid-template-columns: minmax(0, 1fr); }
+.ob-v3 .ob-tipos-um > .ob-tipo { width: 100%; }
+@media (min-width: 760px) {
+  .ob-v3 .ob-tipos-um > .ob-tipo {
+    display: grid;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    grid-auto-rows: min-content;
+    align-content: center;
+    column-gap: 28px;
+    row-gap: 10px;
+    padding: 0;
+    min-height: 360px;
+  }
+  .ob-v3 .ob-tipos-um > .ob-tipo > .ob-tipo-foto {
+    grid-column: 1;
+    grid-row: 1 / span 8;
+    align-self: stretch;
+    aspect-ratio: auto;
+    height: 100%;
+    min-height: 360px;
+  }
+  .ob-v3 .ob-tipos-um > .ob-tipo > .ob-tipo-foto img { position: absolute; inset: 0; }
+  .ob-v3 .ob-tipos-um > .ob-tipo > :not(.ob-tipo-foto):not(.ob-tipo-check) {
+    grid-column: 2;
+    margin-left: 0 !important;
+    margin-right: 26px !important;
+  }
+  .ob-v3 .ob-tipos-um > .ob-tipo > strong { margin-top: 26px !important; font-size: 1.55rem; }
+  .ob-v3 .ob-tipos-um > .ob-tipo > :last-child { margin-bottom: 26px; }
+  .ob-v3 .ob-tipos-um .ob-tipo-bloco ul { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; display: grid !important; }
+  .ob-v3 .ob-tipos-um > .ob-tipo:hover { transform: none; }
+}
+/* no celular: o cartão inteiro, sem a foto achatada */
+@media (max-width: 759px) {
+  .ob-v3 .ob-tipos-um > .ob-tipo > .ob-tipo-foto { aspect-ratio: 16 / 8; }
+}
+
+/* ==========================================================================
+   3.85 · PASSO 3 · O LINK DO SALÃO EM DESTAQUE
+   Rótulo com selo de "sugestão", a dica curta, as ideias de um toque e a arte (ArteDoLink, arte-link.css).
+   ========================================================================== */
+.ob-v3 .ob-link-destaque {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+  padding: 14px;
+  border-radius: 20px;
+  border: 1.5px solid #ffd3e3;
+  background: #fffafc;
+  min-width: 0;
+  max-width: 100%;
+}
+.ob-v3 .ob-link-destaque > * { min-width: 0; }
+.ob-v3 .ob-link-destaque.sugerido { border-style: dashed; border-color: #ff9fc0; }
+.ob-v3 .ob-link-topo { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.ob-v3 .ob-link-topo .ob-rotulo { display: inline-flex; align-items: center; gap: 6px; font-size: 0.95rem; font-weight: 750; color: var(--o-tinta, #2b0b1c); }
+.ob-v3 .ob-link-topo .ob-rotulo svg { color: #ff2f73; }
+.ob-v3 .ob-link-selo {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 10px; border-radius: 999px;
+  background: #ff2f73; color: #fff;
+  font-size: 0.68rem; font-weight: 700; letter-spacing: 0.02em;
+  animation: ob-link-pulsa 2.4s ease-in-out infinite;
+}
+@keyframes ob-link-pulsa { 0%, 100% { box-shadow: 0 0 0 0 rgba(255, 47, 115, 0.35); } 50% { box-shadow: 0 0 0 6px rgba(255, 47, 115, 0); } }
+@media (prefers-reduced-motion: reduce) { .ob-v3 .ob-link-selo { animation: none; } }
+.ob-v3 .ob-link-dica { margin: 0; font-size: 0.82rem; line-height: 1.45; color: #6f6470; }
+.ob-v3 .ob-link-destaque .ep-campo input { font-size: 1.08rem; font-weight: 700; color: #ff2f73; }
+.ob-v3 .ob-link-ideias { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.ob-v3 .ob-link-ideias small { font-size: 0.75rem; color: #8b7f86; margin-right: 2px; }
+.ob-v3 .ob-link-ideias button {
+  border: 1px solid #ffc2d8; background: #fff; color: #65142f;
+  border-radius: 999px; padding: 6px 12px; font: inherit; font-size: 0.8rem; font-weight: 600; cursor: pointer;
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ob-v3 .ob-link-ideias button.ativo { background: #ff2f73; border-color: #ff2f73; color: #fff; }
+@media (max-width: 600px) {
+  .ob-v3 .ob-link-destaque { padding: 12px; border-radius: 18px; }
+}

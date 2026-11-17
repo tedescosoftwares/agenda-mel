@@ -6,7 +6,7 @@ import SinoAvisos from './SinoAvisos'
 import MenuDaConta, { ITENS_ADMIN } from './MenuDaConta'
 import ClimaTopo from './ClimaTopo'
 import MelDock from './MelDock'
-import { MarcaIcon, Wordmark } from './icons'
+import { LogoMimo } from './icons'
 import {
   CalendarIcon,
   UsersIcon,
@@ -77,7 +77,7 @@ export default function AdminShell({ children, amplo = false, primeiroAcesso = f
       <MelDock escopo={pathname === '/admin' ? 'tudo' : 'configuracao'} />
       <aside className="admin-desktop-sidebar" aria-label="Navegação principal">
         <div className="admin-sidebar-marca">
-          <span><MarcaIcon className="marca" id="lateral" /><Wordmark tamanho={1.7} /></span>
+          <span><LogoMimo altura={38} pro /></span>
           <ChevronLeft size={17} />
         </div>
         <nav className="admin-sidebar-nav">
@@ -120,8 +120,7 @@ export default function AdminShell({ children, amplo = false, primeiroAcesso = f
       <header className={'topbar topbar-admin' + (primeiroAcesso ? ' topbar-admin-primeiro' : '')}>
         <div className="topbar-admin-esquerda">
           <span className="brand-inline">
-            <MarcaIcon className="marca" id="topo" />
-            <Wordmark tamanho={1.35} />
+            <LogoMimo altura={30} pro />
           </span>
           <button type="button" className="admin-topbar-negocio" onClick={() => saloes?.length > 1 && setTrocaAberta((v) => !v)}>
             <span className="admin-topbar-negocio-avatar">{thumbSalao ? <img src={thumbSalao} alt="" /> : <Store size={16} />}</span>

@@ -5,7 +5,8 @@ import { supabase } from '../lib/supabase'
 import { useDocumentosLegais, precisaAceitar, aceitesPara, dataBr } from '../lib/legal'
 import { tiposDoPapel, tipoLegal } from '../conteudo/legal'
 import { FraseDeAceite } from './LinkLegal'
-import { MarcaIcon, Wordmark } from './icons'
+import { LogoMimo } from './icons'
+import { ehPro } from '../lib/ambiente'
 
 // A plataforma publicou termos novos (120): quem aceitou a versão antiga
 // vê esta tela uma vez, na próxima entrada, e aceita antes de seguir.
@@ -29,7 +30,7 @@ export default function AceiteGate({ children }) {
   return (
     <div className="page-center login-bg">
       <div className="card login-card entrar-card">
-        <div className="brand"><MarcaIcon className="brand-icon" width={44} height={40} id="aceite" /><Wordmark tamanho={2.2} /></div>
+        <div className="brand"><LogoMimo altura={60} pro={ehPro} className="brand-logo" /></div>
         <span className="ativar-check espera"><ShieldCheck size={22} /></span>
         <h2 className="login-titulo">Atualizamos os nossos termos</h2>
         <p className="muted login-sub">Pra continuar usando a MIMO, é preciso ler e aceitar a versão nova. Leva um minuto.</p>

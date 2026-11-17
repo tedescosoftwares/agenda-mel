@@ -565,6 +565,13 @@ const RPC = {
     { canal: 'whatsapp', id: 'f3', quando: new Date(Date.now() - 40 * 60e3).toISOString(), salao: 'Espaço Bela', para: '5513997001188', tipo: 'lembrete_agendamento', status: 'falhou', erro: 'número não existe no WhatsApp', resumo: '📅 Amanhã tem horário marcado · Manicure com Renata' },
     { canal: 'email', id: 'f4', quando: new Date(Date.now() - 3 * 3600e3).toISOString(), salao: null, para: 'pro@exemplo.com', tipo: 'boas_vindas', status: 'na_fila', erro: 'RESEND_API_KEY não configurada', resumo: 'Sua agenda no MIMO está pronta 💛' },
   ],
+  // 3.85: as mensalidades e a baixa à mão
+  plataforma_cobrancas: ({ salao }) => [
+    { id: 'cm1', salon_id: 's6', salao: 'Agenda Mel', tipo: 'inicial', metodo: 'pix', status: 'aguardando', total_cents: 3992, criado_em: mais(0) + 'T14:20:00', pago_em: null },
+    { id: 'cm2', salon_id: SALAO, salao: 'Studio Mel', tipo: 'renovacao', metodo: 'pix', status: 'pago', total_cents: 6970, criado_em: mais(-30) + 'T10:00:00', pago_em: mais(-30) + 'T10:04:00' },
+    { id: 'cm3', salon_id: SALAO, salao: 'Studio Mel', tipo: 'inicial', metodo: 'pix', status: 'pago', total_cents: 5576, criado_em: mais(-60) + 'T09:00:00', pago_em: mais(-60) + 'T09:02:00', baixa_manual_em: mais(-60) + 'T09:02:00', baixa_manual_quem: 'Bruno Tedesco' },
+  ].filter((c) => !salao || c.salon_id === salao || salao === 'x'),
+  plataforma_dar_baixa: () => ({ ok: true, manual: true }),
   // 3.84: a prévia e o apagar (no demo nada sai de verdade)
   plataforma_apagar_previa: ({ tipo_, ids }) => (ids ?? []).map((id, i) => tipo_ === 'salao'
     ? { id, nome: ['Salão de Teste', 'Agenda Mel', 'Léa Solo'][i % 3], tipo: i % 3 === 2 ? 'autonoma' : 'salao', cidade: 'Santos', profissionais: [2, 0, 1][i % 3], servicos: [5, 0, 3][i % 3], clientes: [3, 0, 1][i % 3], agendamentos: [7, 0, 2][i % 3], agendamentos_futuros: [1, 0, 0][i % 3], pagamentos: 0, pagamentos_pagos: 0, mensalidades_pagas: 0, dona: { id: 'd' + i, nome: 'Dona Teste ' + (i + 1), email: `dona${i + 1}@teste.com`, papel: 'admin', outros_saloes: 0 } }

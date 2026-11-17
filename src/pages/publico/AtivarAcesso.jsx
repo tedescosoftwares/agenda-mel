@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Store, Check, Sparkles, CalendarDays, ShieldCheck } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
-import { MarcaIcon, Wordmark } from '../../components/icons'
+import { LogoMimo } from '../../components/icons'
 import { resumoDias, primeiroNome } from '../../lib/equipe'
 
 // O link de acesso que chega por e-mail (119, 129). A profissional abre,
@@ -44,7 +44,7 @@ export default function AtivarAcesso() {
   return (
     <div className="page-center login-bg">
       <div className="card login-card entrar-card ativar-card">
-        <div className="brand"><MarcaIcon className="brand-icon" width={44} height={40} id="ativar" /><Wordmark tamanho={2.2} /></div>
+        <div className="brand"><LogoMimo altura={60} pro className="brand-logo" /></div>
         {!acesso ? (
           <>
             <h2 className="login-titulo">Link de acesso não encontrado</h2>

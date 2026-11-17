@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
-import { MarcaIcon, Wordmark } from '../../components/icons'
+import { LogoMimo } from '../../components/icons'
 import { extrairCodigo, guardarConvite, guardarDepois, tomarDepois } from '../../lib/convite'
 import { iniciais } from '../../lib/booking'
 import BotaoGoogle from '../../components/BotaoGoogle'
@@ -58,8 +58,7 @@ export default function EntrarPorCodigo({ codigo: codigoPronto, alvo: alvoPronto
     <div className="page-center login-bg">
       <div className="card login-card entrar-card">
         <div className="brand">
-          <MarcaIcon className="brand-icon" width={44} height={40} id="convite" />
-          <Wordmark tamanho={2.2} />
+          <LogoMimo altura={60} className="brand-logo" />
         </div>
 
         {!alvo ? (

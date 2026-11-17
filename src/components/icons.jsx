@@ -114,47 +114,48 @@ export function VoltarIcon(props) {
   )
 }
 
-// A marca: a lâmpada em volta do espelho do salão
-// O coração do MIMO: uma fita de duas alças que se cruzam no alto e
-// deixam um respiro no meio. Gradiente rosa→magenta. O id do gradiente
-// precisa ser único por página — daí o sufixo.
-export function MarcaIcon({ id = 'mimo', ...props }) {
-  const g = `mimo-grad-${id}`
+// 3.85: o logo oficial da MIMO (o mesmo de public/mimo-logo.svg e public/mimo-pro-logo.svg), desenhado
+// aqui para sair nítido em qualquer tamanho e sem pedir arquivo: o coração rosa com o rabinho e "mimo" em vinho;
+// no "pro" (salão e profissional), o "pro" rosa embaixo. O viewBox corta as margens do arquivo original.
+export const LOGO_CORACAO = 'M107 31 C94 14 65 19 65 45 C65 71 107 90 107 90 C107 90 149 71 149 45 C149 19 120 14 107 31 Z'
+export const LOGO_RABO = 'M107 90 C129 94 148 104 166 118'
+const LOGO_MIMO = 'm 146.99902,71.105469 3.32032,-1.708985 q 6.83593,-3.515625 12.25586,-3.515625 8.20312,0 10.9375,5.957032 10.00976,-5.957032 16.89453,-5.957032 12.40234,0 12.40234,13.525391 v 29.19922 l 4.58984,1.17187 V 113 h -22.80273 v -3.22266 l 4.10156,-1.17187 V 81.310547 q 0,-4.101563 -1.61133,-6.396485 -1.5625,-2.294921 -4.78515,-2.294921 -3.61328,0 -7.8125,2.050781 0.48828,2.050781 0.48828,4.736328 v 29.19922 l 4.58984,1.17187 V 113 h -22.80273 v -3.22266 l 4.10156,-1.17187 V 81.310547 q 0,-4.101563 -1.61133,-6.396485 -1.5625,-2.294921 -4.78515,-2.294921 -3.22266,0 -7.37305,1.904296 v 34.082033 l 4.19922,1.17187 V 113 h -22.80274 v -3.22266 l 4.49219,-1.17187 V 71.496094 l -4.49219,-1.171875 v -3.222657 h 17.82227 z m 77.39844,37.500001 5.0293,1.17187 V 113 h -24.1211 v -3.22266 l 4.98047,-1.17187 V 71.496094 l -4.6875,-1.171875 v -3.222657 h 18.79883 z M 209.79785,51.085937 q 0,-3.173828 2.19727,-5.322265 2.24609,-2.148438 5.32226,-2.148438 3.125,0 5.27344,2.197266 2.19727,2.148437 2.19727,5.273437 0,3.076172 -2.14844,5.322266 -2.14844,2.197266 -5.32227,2.197266 -3.125,0 -5.32226,-2.148438 -2.19727,-2.197265 -2.19727,-5.371094 z m 36.28516,20.019532 3.32031,-1.708985 q 6.83594,-3.515625 12.25586,-3.515625 8.20312,0 10.9375,5.957032 10.00977,-5.957032 16.89453,-5.957032 12.40234,0 12.40234,13.525391 v 29.19922 l 4.58985,1.17187 V 113 h -22.80274 v -3.22266 l 4.10157,-1.17187 V 81.310547 q 0,-4.101563 -1.61133,-6.396485 -1.5625,-2.294921 -4.78516,-2.294921 -3.61328,0 -7.8125,2.050781 0.48828,2.050781 0.48828,4.736328 v 29.19922 l 4.58985,1.17187 V 113 h -22.80274 v -3.22266 l 4.10157,-1.17187 V 81.310547 q 0,-4.101563 -1.61133,-6.396485 -1.5625,-2.294921 -4.78516,-2.294921 -3.22266,0 -7.37305,1.904296 v 34.082033 l 4.19922,1.17187 V 113 h -22.80273 v -3.22266 l 4.49219,-1.17187 V 71.496094 l -4.49219,-1.171875 v -3.222657 h 17.82226 z m 102.30078,18.701172 q 0,12.353519 -5.32227,18.261719 -5.27343,5.9082 -16.16211,5.9082 -10.54687,0 -15.72265,-5.95703 -5.17578,-6.00586 -5.17578,-18.212889 0,-12.158204 5.22461,-18.017579 5.27343,-5.908203 16.06445,-5.908203 10.88867,0 15.9668,6.103516 5.12695,6.054687 5.12695,17.822266 z m -14.30664,0 q 0,-10.742188 -1.61133,-14.84375 -1.5625,-4.150391 -5.46875,-4.150391 -3.75977,0 -5.22461,3.955078 -1.46484,3.955078 -1.46484,15.039063 0,11.279299 1.46484,15.283199 1.51367,4.00391 5.22461,4.00391 3.85742,0 5.46875,-4.19922 1.61133,-4.24805 1.61133,-15.087889 z'
+const LOGO_PRO = 'm 275.27783,150.60352 q 0,7.1455 -2.87402,11.04785 -2.84766,3.87597 -8.06836,3.87597 -3.00586,0 -5.24707,-1.29199 -2.21484,-1.31836 -3.40137,-3.77051 h -0.1582 q 0.1582,0.79102 0.1582,4.79883 v 10.94238 h -7.40918 v -33.16992 q 0,-4.03418 -0.21094,-6.56543 h 7.19825 q 0.13183,0.47461 0.21093,1.87207 0.10547,1.39746 0.10547,2.76856 h 0.10547 q 2.50488,-5.24707 9.12305,-5.24707 4.9834,0 7.72558,3.84961 2.74219,3.82324 2.74219,10.88965 z m -7.72558,0 q 0,-9.59766 -5.87989,-9.59766 -2.95312,0 -4.53515,2.58398 -1.55567,2.58399 -1.55567,7.22461 0,4.61426 1.55567,7.14551 1.58203,2.50488 4.48242,2.50488 5.93262,0 5.93262,-9.86132 z M 279.26318,165 v -21.83203 q 0,-2.34668 -0.0791,-3.90235 -0.0527,-1.58203 -0.13183,-2.79492 h 7.0664 q 0.0791,0.47461 0.21094,2.90039 0.13184,2.39942 0.13184,3.19043 h 0.10546 q 1.08106,-3.00586 1.92481,-4.21875 0.84375,-1.23925 2.00391,-1.81933 1.16015,-0.60645 2.90039,-0.60645 1.42382,0 2.29394,0.39551 v 6.19629 q -1.79297,-0.39551 -3.16406,-0.39551 -2.76856,0 -4.32422,2.24121 -1.5293,2.24121 -1.5293,6.64453 V 165 Z m 46.12012,-14.29102 q 0,6.93457 -3.84961,10.88965 -3.84961,3.92871 -10.65234,3.92871 -6.6709,0 -10.46778,-3.95507 -3.79687,-3.95508 -3.79687,-10.86329 0,-6.88183 3.79687,-10.81054 3.79688,-3.95508 10.62598,-3.95508 6.98731,0 10.65234,3.82324 3.69141,3.79688 3.69141,10.94238 z m -7.75195,0 q 0,-5.08886 -1.66114,-7.38281 -1.66113,-2.29394 -4.82519,-2.29394 -6.75,0 -6.75,9.67675 0,4.77247 1.63477,7.27735 1.66113,2.47851 4.77246,2.47851 6.8291,0 6.8291,-9.75586 z'
+export const LOGO_ROSA = '#FF2F73'
+export const LOGO_VINHO = '#65142f'
+//   pro      a variante MIMO Pro (área do salão e da profissional)
+//   altura   em px (a largura segue a proporção)
+//   claro    "mimo" em branco, para fundo escuro ou rosa
+export function LogoMimo({ pro = false, altura = 32, claro = false, className = '', ...props }) {
+  const h = pro ? 163 : 107
   return (
-    <svg viewBox="0 0 64 56" width={28} height={24} fill="none" aria-hidden="true" {...props}>
-      <defs>
-        <linearGradient id={g} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#ff7bb5" />
-          <stop offset="55%" stopColor="#ff2d7a" />
-          <stop offset="100%" stopColor="#c40a7a" />
-        </linearGradient>
-      </defs>
-      <path
-        d="M32 52 L11 31 C4 24 4 13 11 8 C17 3 26 4 32 11 C38 4 47 3 53 8 C60 13 60 24 53 31 L38 46"
-        stroke={`url(#${g})`}
-        strokeWidth="9.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <circle cx="32" cy="21" r="6" fill={`url(#${g})`} />
+    <svg viewBox={`68 16 291 ${h}`} height={altura} width={Math.round((altura * 291) / h)} role="img" aria-label={pro ? 'MIMO Pro' : 'MIMO'}
+      className={'logo-mimo' + (className ? ' ' + className : '')} {...props}>
+      <g transform="translate(8,0)">
+        <path d={LOGO_CORACAO} fill="none" stroke={LOGO_ROSA} strokeWidth="6" />
+        <path d={LOGO_RABO} fill="none" stroke={LOGO_ROSA} strokeWidth="5" strokeLinecap="round" />
+        <path d={LOGO_MIMO} fill={claro ? '#ffffff' : LOGO_VINHO} />
+        {pro && <path d={LOGO_PRO} fill={LOGO_ROSA} />}
+      </g>
     </svg>
   )
 }
 
-// A palavra, em roxo-ameixa. Fica separada do coração porque nem todo
-// lugar tem espaço para os dois — na barra do topo cabe o coração; na
-// tela de abertura, os dois um sobre o outro.
-export function Wordmark({ tamanho = 2.4, ...props }) {
+// o coração do logo oficial, sozinho (ícone pequeno: menus, selos, "feito com MIMO")
+export function MarcaIcon({ id: _id, cor = LOGO_ROSA, grosso = false, ...props }) {
   return (
-    <span
-      className="wordmark"
-      style={{ fontSize: `${tamanho}rem` }}
-      aria-label="mimo"
-      {...props}
-    >
-      mimo
-    </span>
+    <svg viewBox="67 13 112 112" width={28} height={24} fill="none" aria-hidden="true" {...props}>
+      <g transform="translate(8,0)">
+        <path d={LOGO_CORACAO} stroke={cor} strokeWidth={grosso ? 10 : 7} strokeLinejoin="round" />
+        <path d={LOGO_RABO} stroke={cor} strokeWidth={grosso ? 9 : 6} strokeLinecap="round" />
+      </g>
+    </svg>
   )
+}
+
+// antes era o "mimo" escrito com a fonte do site; agora é o logo oficial inteiro (tamanho em rem, como era)
+export function Wordmark({ tamanho = 2.4, pro = false, ...props }) {
+  return <LogoMimo pro={pro} altura={Math.round(tamanho * 16 * 1.15)} {...props} />
 }
 
 export function HeartIcon({ cheio = false, ...props }) {

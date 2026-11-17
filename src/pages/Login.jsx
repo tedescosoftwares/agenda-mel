@@ -7,9 +7,9 @@ import RodapeSocial from '../components/RodapeSocial'
 import { FraseDeAceite } from '../components/LinkLegal'
 import { useDocumentosLegais, aceitesPara, versaoMaior } from '../lib/legal'
 import { VERSAO } from '../lib/versao'
-import { MarcaIcon, Wordmark } from '../components/icons'
+import { LogoMimo } from '../components/icons'
 import { extrairCodigo, guardarConvite, guardarDepois } from '../lib/convite'
-import { AMBIENTE, urlDoAmbiente, ambienteDoPapel } from '../lib/ambiente'
+import { AMBIENTE, urlDoAmbiente, ambienteDoPapel, ehPro } from '../lib/ambiente'
 import { MailCheck } from 'lucide-react'
 import CampoSenha from '../components/CampoSenha'
 import { formatarFone } from '../lib/fone'
@@ -167,8 +167,7 @@ export default function Login({ ambiente = AMBIENTE }) {
     <div className="page-center login-bg">
       <div className="card login-card">
         <div className="brand">
-          <MarcaIcon className="brand-icon" width={52} height={46} id="login" />
-          <Wordmark tamanho={2.6} />
+          <LogoMimo altura={68} pro={ehPro} className="brand-logo" />
           {pro ? <p className="brand-assinatura brand-pro"><span className="selo-pro">PRO</span> a agenda de quem atende</p> : <p className="brand-assinatura">Agenda Mel</p>}
         </div>
 

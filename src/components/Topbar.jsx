@@ -1,6 +1,7 @@
 import { useAuth } from '../context/AuthContext'
 import SinoAvisos from './SinoAvisos'
-import { MarcaIcon, Wordmark } from './icons'
+import { LogoMimo } from './icons'
+import { ehPro } from '../lib/ambiente'
 
 export default function Topbar() {
   const { signOut } = useAuth()
@@ -8,8 +9,7 @@ export default function Topbar() {
   return (
     <header className="topbar">
       <span className="brand-inline">
-          <MarcaIcon className="marca" id="topo" />
-          <Wordmark tamanho={1.35} />
+          <LogoMimo altura={30} pro={ehPro} />
         </span>
       <div className="topbar-acoes">
         <SinoAvisos />

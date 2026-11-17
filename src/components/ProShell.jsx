@@ -4,15 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import PainelPausado from './PainelPausado'
 import SinoAvisos from './SinoAvisos'
 import MenuDaConta, { ITENS_PRO } from './MenuDaConta'
-import {
-  CalendarIcon,
-  SparkleIcon,
-  GraficoIcon,
-  VoltarIcon,
-  ClockIcon,
-  MarcaIcon,
-  Wordmark,
-} from './icons'
+import { CalendarIcon, SparkleIcon, GraficoIcon, VoltarIcon, ClockIcon, LogoMimo } from './icons'
 
 
 const TABS = [
@@ -38,8 +30,7 @@ export default function ProShell({ children, titulo, voltar }) {
           <span className="topo-titulo">{titulo}</span>
         ) : (
           <span className="brand-inline">
-            <MarcaIcon className="marca" id="pro" />
-            <Wordmark tamanho={1.35} />
+            <LogoMimo altura={30} pro />
           </span>
         )}
         <div className="topbar-acoes">

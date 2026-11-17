@@ -7,7 +7,7 @@ import { useDialogo } from '../../context/DialogoContext'
 import { supabase } from '../../lib/supabase'
 import { formatCents } from '../../lib/pagamento'
 import { useCategorias, categoriasDoSalao, agruparPorCategoria, bate } from '../../lib/categorias'
-import { MarcaIcon, Wordmark } from '../../components/icons'
+import { LogoMimo } from '../../components/icons'
 import QuadroDoDia from '../../components/QuadroDoDia'
 import FecharComanda from '../../components/FecharComanda'
 import { imprimirCupom } from '../../lib/cupom'
@@ -221,7 +221,7 @@ export default function AdminPdv() {
   return (
     <div className="pdv">
       <header className="pdv-topo">
-        <span className="brand-inline"><MarcaIcon className="marca" id="pdv" /><Wordmark tamanho={1.2} /></span>
+        <span className="brand-inline"><LogoMimo altura={26} pro /></span>
         <div className="pdv-modos" role="tablist">
           <button type="button" role="tab" className={modo === 'quadro' ? 'active' : ''} onClick={() => trocarModo('quadro')}><CalendarDays size={14} /> Quadro</button>
           <button type="button" role="tab" className={modo === 'comanda' ? 'active' : ''} onClick={() => trocarModo('comanda')}><Receipt size={14} /> Comanda</button>

@@ -9,7 +9,7 @@ import { useDocumentosLegais, aceitesPara } from '../../lib/legal'
 import { iniciais } from '../../lib/booking'
 import { precisaCompletar } from '../../lib/oauth'
 import LinkSuporte from '../../components/LinkSuporte'
-import { MarcaIcon, Wordmark } from '../../components/icons'
+import { LogoMimo } from '../../components/icons'
 
 // Falta só o seu WhatsApp (3.60). A conta que nasce pelo Google chega sem
 // telefone, e é pelo WhatsApp que chegam a confirmação e o lembrete; o salão
@@ -61,8 +61,7 @@ export default function CompletarPerfil() {
     <div className="page-center login-bg">
       <div className="card login-card cad-card" data-teste="completar">
         <div className="brand">
-          <MarcaIcon className="brand-icon" width={44} height={40} id="completar" />
-          <Wordmark tamanho={2.2} />
+          <LogoMimo altura={60} className="brand-logo" />
         </div>
         <h2 className="login-titulo">Falta só o seu WhatsApp</h2>
         <p className="muted login-sub">Você entrou com o Google. É pelo WhatsApp que chegam a confirmação e o lembrete dos seus horários, e é por ele que a profissional te reconhece.</p>

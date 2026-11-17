@@ -1649,3 +1649,35 @@
 .ob-dona-atende strong { font-size: 0.95rem; }
 .ob-dona-atende small { font-size: 0.8rem; line-height: 1.4; }
 .ob-dona-opcoes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 2px; }
+
+/* ---- 3.85: a montagem com a cara da MIMO (MontandoSalao) ---- */
+.ms-logo { position: relative; width: 112px; height: 112px; display: grid; place-items: center; }
+.ms-aura { position: absolute; inset: 6px; border-radius: 50%; background: radial-gradient(circle, #ffe3ee 0%, rgba(255, 227, 238, 0) 70%); animation: ms-pulsa 1.8s ease-in-out infinite; }
+.ms-coracao { position: relative; width: 100px; height: 100px; overflow: visible; }
+.ms-coracao path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.ms-traco-fundo { stroke: #ffe0ec; stroke-width: 7; }
+.ms-traco { stroke: #ff2f73; stroke-width: 7; stroke-dasharray: 1; stroke-dashoffset: 1; animation: ms-desenha 2.4s cubic-bezier(.6, .05, .3, 1) infinite; }
+.ms-rabo { stroke-width: 6; animation-delay: .35s; }
+@keyframes ms-desenha { 0% { stroke-dashoffset: 1; } 45%, 62% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: -1; } }
+.ms-logo.pronta .ms-traco { animation: none; stroke-dashoffset: 0; }
+.ms-logo.pronta .ms-coracao path:first-of-type { fill: #ff2f73; stroke: #ff2f73; transition: fill .4s ease; }
+.ms-logo.pronta .ms-coracao { animation: ms-bate .9s ease both; }
+@keyframes ms-bate { 0% { transform: scale(.9); } 35% { transform: scale(1.12); } 60% { transform: scale(.98); } 100% { transform: scale(1); } }
+.ms-ok { position: absolute; top: 33%; left: 50%; transform: translate(-58%, -50%); color: #fff; display: grid; place-items: center; animation: ob-check-pop .45s ease both; }
+.ms-faisca { position: absolute; color: #ff7aa8; animation: ms-faisca 2.4s ease-in-out infinite; }
+.ms-faisca-1 { top: 4px; right: 6px; }
+.ms-faisca-2 { bottom: 14px; left: 4px; animation-delay: 1.1s; }
+@keyframes ms-faisca { 0%, 100% { opacity: 0; transform: scale(.6) rotate(0deg); } 40%, 60% { opacity: 1; transform: scale(1) rotate(20deg); } }
+.ms-marca { margin: 0.1rem auto 0; }
+.ms-topo h1 { color: #65142f; }
+.ms-barra i { background: linear-gradient(90deg, #ff2f73, #ff7aa8); }
+.ms-passos li.agora { border-color: #ff2f73; }
+.ms-passos li.feito .ms-passo-icone { background: #ff2f73; }
+@media (max-width: 480px) {
+  .ms-card { padding: 1.5rem 1.1rem; gap: 1rem; border-radius: 22px; }
+  .ms-logo { width: 96px; height: 96px; }
+  .ms-coracao { width: 86px; height: 86px; }
+  .ms-topo h1 { font-size: 1.3rem; }
+  .ms-passos li { padding: 0.55rem 0.7rem; font-size: 0.86rem; }
+}
+@media (prefers-reduced-motion: reduce) { .ms-traco, .ms-aura, .ms-faisca { animation: none; } .ms-traco { stroke-dashoffset: 0; } }

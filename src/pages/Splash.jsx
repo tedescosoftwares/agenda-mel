@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { homeDoPapel } from '../lib/roles'
 import { AMBIENTE, ehPro, ambienteDoPapel } from '../lib/ambiente'
 import AmbienteErrado from '../components/AmbienteErrado'
-import { MarcaIcon, Wordmark } from '../components/icons'
+import { LogoMimo } from '../components/icons'
 import Landing from './publico/Landing'
 
 // A abertura: marca, respiro, e vai. Fica na tela o tempo de o app
@@ -45,9 +45,8 @@ export default function Splash() {
 
   return (
     <div className="splash">
-      <MarcaIcon width={72} height={63} id="splash" />
-      <Wordmark tamanho={3.2} />
-      <p className="brand-assinatura">{ehPro ? 'Pro · sua agenda' : 'Agenda Mel'}</p>
+      <LogoMimo altura={84} pro={ehPro} className="brand-logo" />
+      <p className="brand-assinatura">{ehPro ? 'Sua agenda de salão' : 'Sua agenda de beleza'}</p>
       <p className="brand-slogan">Beleza na palma da mão</p>
       <span className="splash-roda" aria-label="Carregando" />
     </div>

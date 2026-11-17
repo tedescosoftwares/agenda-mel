@@ -17,7 +17,7 @@
 // com o Asaas, na conta-pai.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { garantirClienteMimo, tokenizarCartao, cobrarCartaoAvulso, cobrarPixMimo, criarAutorizacaoPixAutomatico, situacaoAutorizacaoPixAutomatico, cancelarAutorizacaoPixAutomatico, obterCobrancaMimo, baixarCobrancaMimoSandbox, apagarCobrancaMimo, AMBIENTE, PAGO, AUTORIZADA, AUTORIZACAO_MORTA, json, preflight, ErroAsaas } from '../_shared/asaas.ts'
+import { asaas, chavePai, NAO_VAI_PAGAR, garantirClienteMimo, tokenizarCartao, cobrarCartaoAvulso, cobrarPixMimo, criarAutorizacaoPixAutomatico, situacaoAutorizacaoPixAutomatico, cancelarAutorizacaoPixAutomatico, obterCobrancaMimo, baixarCobrancaMimoSandbox, apagarCobrancaMimo, AMBIENTE, PAGO, AUTORIZADA, AUTORIZACAO_MORTA, json, preflight, ErroAsaas } from '../_shared/asaas.ts'
 import { criarNoAsaas } from '../_shared/cobranca_mimo.ts'
 
 const URL_SUPABASE = Deno.env.get('SUPABASE_URL') ?? ''
@@ -57,6 +57,25 @@ Deno.serve(async (req) => {
     return (pend ?? []).length
   }
 
+  // 3.85: ao sair do sandbox para a produção, o cliente e as cobranças guardados são do sandbox e não existem no
+  // Asaas de verdade. Antes de usar, confere neste Asaas: o cliente que não existir é achado (ou criado) de novo pelo
+  // CPF/CNPJ, e a cobrança aberta que não existir (ou que não vai mais ser paga) é refeita.
+  async function clienteDaqui(): Promise<string> {
+    if (prep.customer_id) {
+      const c = await asaas(chavePai(), 'GET', `/customers/${prep.customer_id}`).catch(() => null)
+      if (c?.id && !c?.deleted) return String(c.id)
+    }
+    return await garantirClienteMimo({
+      nome: prep.razao_social, documento: prep.documento, telefone: prep.telefone,
+      email: prep.email, ref: `salao:${salao}`,
+    })
+  }
+  async function cobrancaViva(id: string | null | undefined): Promise<boolean> {
+    if (!id) return false
+    const c = await obterCobrancaMimo(id).catch(() => null)
+    return Boolean(c?.id) && !c?.deleted && !NAO_VAI_PAGAR.has(String(c?.status ?? ''))
+  }
+
   try {
     // Fluxos recorrentes antigos ficam no código só como referência para uma
     // evolução futura, mas não podem ser acionados nesta versão.
@@ -70,15 +89,12 @@ Deno.serve(async (req) => {
       const { data: ab, error } = await quem.rpc('cobranca_inicial_abrir', { salao, metodo_: 'pix' })
       if (error) return json({ erro: error.message }, 400)
 
-      // cobrança já criada no Asaas numa tentativa anterior: reaproveita
-      if (ab?.cobranca_id && ab?.copia_cola) {
-        return json({ ok: true, cobranca: ab, acesso: await acesso() })
+      // cobrança já criada no Asaas numa tentativa anterior: reaproveita, se ela existe neste Asaas e ainda vale
+      if (ab?.cobranca_id && ab?.copia_cola && await cobrancaViva(ab.cobranca_id)) {
+        return json({ ok: true, cobranca: { ...ab, sandbox }, acesso: await acesso() })
       }
 
-      const customer = prep.customer_id || await garantirClienteMimo({
-        nome: prep.razao_social, documento: prep.documento, telefone: prep.telefone,
-        email: prep.email, ref: `salao:${salao}`,
-      })
+      const customer = await clienteDaqui()
       const hoje = new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10)
       const r = await cobrarPixMimo({
         customer,
@@ -109,7 +125,11 @@ Deno.serve(async (req) => {
       })
     }
 
+    // 3.85: a ativação é só por Pix. O cartão fica no código para uma volta futura, mas não roda.
     if (corpo.acao === 'inicio_cartao') {
+      return json({ erro: 'O pagamento da MIMO é só por Pix. Use "Pagar com Pix".' }, 410)
+    }
+    if (corpo.acao === 'inicio_cartao_desligado') {
       const c = corpo.cartao ?? {}; const t = corpo.titular ?? {}
       if (!c.numero || !c.nome || !c.mes || !c.ano || !c.cvv) return json({ erro: 'Preencha os dados do cartão.' }, 400)
       const { data: ab, error } = await quem.rpc('cobranca_inicial_abrir', { salao, metodo_: 'cartao' })
@@ -198,12 +218,9 @@ Deno.serve(async (req) => {
     if (corpo.acao === 'renovar_pix') {
       const { data: ab, error } = await quem.rpc('cobranca_manual_abrir', { salao, metodo_: 'pix' })
       if (error) return json({ erro: error.message }, 400)
-      if (ab?.cobranca_id && ab?.copia_cola) return json({ ok: true, cobranca: ab, acesso: await acesso() })
+      if (ab?.cobranca_id && ab?.copia_cola && await cobrancaViva(ab.cobranca_id)) return json({ ok: true, cobranca: { ...ab, sandbox }, acesso: await acesso() })
 
-      const customer = prep.customer_id || await garantirClienteMimo({
-        nome: prep.razao_social, documento: prep.documento, telefone: prep.telefone,
-        email: prep.email, ref: `salao:${salao}`,
-      })
+      const customer = await clienteDaqui()
       const hoje = new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10)
       const r = await cobrarPixMimo({
         customer,
@@ -220,6 +237,9 @@ Deno.serve(async (req) => {
     }
 
     if (corpo.acao === 'renovar_cartao') {
+      return json({ erro: 'O pagamento da MIMO é só por Pix. Use "Renovar por Pix".' }, 410)
+    }
+    if (corpo.acao === 'renovar_cartao_desligado') {
       const c = corpo.cartao ?? {}; const t = corpo.titular ?? {}
       if (!c.numero || !c.nome || !c.mes || !c.ano || !c.cvv) return json({ erro: 'Preencha os dados do cartão.' }, 400)
       const { data: ab, error } = await quem.rpc('cobranca_manual_abrir', { salao, metodo_: 'cartao' })

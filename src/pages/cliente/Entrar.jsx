@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { useDialogo } from '../../context/DialogoContext'
 import LeitorQr from '../../components/LeitorQr'
-import { MarcaIcon, Wordmark } from '../../components/icons'
+import { LogoMimo } from '../../components/icons'
 import { extrairCodigo } from '../../lib/convite'
 import { ScanLine } from 'lucide-react'
 
@@ -45,8 +45,7 @@ export default function Entrar() {
     <div className="page-center entrar-bg">
       <div className="card login-card entrar-card">
         <div className="brand">
-          <MarcaIcon className="brand-icon" width={44} height={40} id="entrar" />
-          <Wordmark tamanho={2.2} />
+          <LogoMimo altura={60} className="brand-logo" />
         </div>
 
         <h2 className="login-titulo">{jaTem ? 'Entrar numa agenda' : `Oi${profile?.full_name ? ', ' + profile.full_name.split(' ')[0] : ''}!`}</h2>

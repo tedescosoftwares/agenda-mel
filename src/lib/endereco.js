@@ -15,6 +15,26 @@ export function limparEndereco(texto) {
     .slice(0, 40).replace(/-+$/g, '')
 }
 
+// 3.85: a sugestão de link a partir do nome junta as palavras ("Salão Mimo" vira salaomimo, não salao-mimo):
+// lê melhor, fala melhor e cabe na bio. O hífen continua valendo para quem digitar.
+export function sugerirEndereco(texto) {
+  return limparEndereco(texto).replace(/-/g, '').slice(0, 40)
+}
+// algumas ideias de link para ela escolher com um toque: o nome junto, o nome com a cidade, e o nome sem as
+// palavras genéricas (salão, studio, espaço…), quando sobra algo com cara de nome
+const GENERICAS = new Set(['salao', 'saloes', 'studio', 'estudio', 'espaco', 'beleza', 'beauty', 'hair', 'cabeleireiro', 'cabeleireira', 'de', 'da', 'do', 'das', 'dos', 'e', 'the'])
+// os reservados mais prováveis de sair de um nome (a lista inteira está no banco, em subdominios_reservados)
+const RESERVADOS = new Set(['mimo', 'mimoapp', 'salao', 'saloes', 'agenda', 'beleza', 'studio', 'cliente', 'clientes', 'profissional', 'profissionais', 'autonoma', 'pro', 'app', 'admin', 'painel', 'loja', 'blog', 'contato', 'suporte', 'ajuda', 'teste', 'demo'])
+export function sugestoesDeEndereco(nome, cidade) {
+  const base = sugerirEndereco(nome)
+  if (!base) return []
+  const partes = limparEndereco(nome).split('-').filter(Boolean)
+  const semGenericas = partes.filter((p) => !GENERICAS.has(p)).join('')
+  const city = sugerirEndereco(cidade)
+  const lista = [base, semGenericas && semGenericas !== base ? semGenericas : '', city ? (semGenericas || base) + city : '']
+  return [...new Set(lista.filter((x) => x && x.length >= 3 && !RESERVADOS.has(x)).map((x) => x.slice(0, 40)))].slice(0, 3)
+}
+
 // como o endereço aparece escrito: studiomel.mimo.com.vc
 export function enderecoEscrito(subdominio) {
   return `${subdominio}.${DOMINIO_RAIZ}`

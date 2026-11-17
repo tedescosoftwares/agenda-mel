@@ -192,6 +192,28 @@ pelo `ASAAS_WEBHOOK_TOKEN` no header `asaas-access-token`.
 No sandbox, o PIX se paga sozinho pelo simulador do Asaas
 (`POST /v3/pix/qrCodes/pay` com o copia e cola) ou pelo painel.
 
+### Sair do sandbox (3.85)
+
+A mensalidade da MIMO é só por Pix, na conta-pai. Para cobrar de verdade:
+
+1. Na conta Asaas de produção (asaas.com, conta aprovada), cadastre uma
+   chave Pix (Pix › Minhas chaves): sem ela o Asaas não gera o QR.
+2. Gere a chave de API de produção (Integrações › Chave de API).
+3. No servidor (bat 1), você mesmo digita, nunca no chat. A chave de
+   produção começa com `$aact_prod_`: use aspas simples, senão o shell
+   come o `$`:
+
+   ```
+   supabase secrets set ASAAS_AMBIENTE=producao 'ASAAS_API_KEY=$aact_prod_...' --project-ref ...
+   ```
+4. Publique as functions (bat 9).
+
+Para testar sem pagar: gere o Pix na ativação e, na Plataforma, Salões ›
+"Pix aguardando" (ou o salão › Mensalidades) › "Dar baixa" (migração 229).
+A tela de ativação segue sozinha em alguns segundos. A cobrança continua
+aberta no Asaas até vencer (vale pelo dia). Os clientes e cobranças que
+ficaram do sandbox são refeitos sozinhos no primeiro Pix de produção.
+
 
 ## clima (2.86): o tempo no painel
 

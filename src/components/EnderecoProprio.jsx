@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Globe, Check, X } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import CodigoQr from './CodigoQr'
-import { enderecoEscrito, limparEndereco, linkDoSalao } from '../lib/endereco'
+import { enderecoEscrito, limparEndereco, linkDoSalao, sugerirEndereco } from '../lib/endereco'
 
 // O endereço próprio do salão (2.80): studiomel.mimo.com.vc.
 //
@@ -15,14 +15,17 @@ import { enderecoEscrito, limparEndereco, linkDoSalao } from '../lib/endereco'
 export function useChecagemEndereco(nome, salaoId, atual) {
   const [chk, setChk] = useState(null)      // { ok, nome, motivo, mesmo }
   const timer = useRef(null)
+  const vez = useRef(0)   // 3.85: só vale a resposta da última conferência (enquanto ela digita "salao…", a de "salao" não pode chegar depois e dizer "reservado")
   const limpo = limparEndereco(nome)
   useEffect(() => {
     if (!limpo) { setChk(null); return }
     if (atual && limpo === atual) { setChk({ ok: true, nome: atual, mesmo: true }); return }
     setChk(null)
     clearTimeout(timer.current)
+    const esta = ++vez.current
     timer.current = setTimeout(async () => {
       const { data, error } = await supabase.rpc('subdominio_disponivel', { nome: limpo, salao: salaoId ?? null })
+      if (esta !== vez.current) return
       if (error) { setChk({ ok: false, nome: limpo, motivo: error.message }); return }
       setChk(data ?? null)
     }, 350)
@@ -54,7 +57,7 @@ export default function EnderecoProprio({ salao, acesso, endereco, onMudou }) {
   const atual = endereco ?? salao?.subdominio ?? null
   const bloqueado = acesso?.fase === 'bloqueado'
   const [editando, setEditando] = useState(false)
-  const [nome, setNome] = useState(() => atual ?? limparEndereco(salao?.name))
+  const [nome, setNome] = useState(() => atual ?? sugerirEndereco(salao?.name))
   const { limpo, chk } = useChecagemEndereco((!atual || editando) ? nome : '', salao?.id, atual)
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState('')

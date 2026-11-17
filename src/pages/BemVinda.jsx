@@ -6,7 +6,8 @@ import { homeDoPapel } from '../lib/roles'
 import { FraseDeAceite } from '../components/LinkLegal'
 import { useDocumentosLegais, aceitesPara, precisaAceitar as precisaAceitarDocs } from '../lib/legal'
 import AvisosNoCelular from '../components/AvisosNoCelular'
-import { MarcaIcon, Wordmark, CameraIcon, PinoIcon, EscudoIcon } from '../components/icons'
+import { CameraIcon, PinoIcon, EscudoIcon, LogoMimo } from '../components/icons'
+import { ehPro } from '../lib/ambiente'
 
 // A primeira entrada (064): explica as permissões antes de o sistema
 // pedir, e recolhe o aceite dos termos de quem ainda não deu. Aparece
@@ -38,7 +39,7 @@ export default function BemVinda() {
   return (
     <div className="page-center login-bg">
       <div className="card login-card bemvinda">
-        <div className="brand"><MarcaIcon className="brand-icon" width={44} height={40} id="bemvinda" /><Wordmark tamanho={2.2} /></div>
+        <div className="brand"><LogoMimo altura={60} pro={ehPro} className="brand-logo" /></div>
         <h2 className="login-titulo">{primeiro ? `Oi, ${primeiro}!` : 'Bem-vinda!'}</h2>
         <p className="muted login-sub">Antes de começar, três coisas rápidas sobre o que o MIMO pede ao seu celular.</p>
 

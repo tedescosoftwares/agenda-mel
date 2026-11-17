@@ -1,7 +1,7 @@
 import { useAuth } from '../context/AuthContext'
-import { urlDoAmbiente } from '../lib/ambiente'
+import { urlDoAmbiente, ehPro } from '../lib/ambiente'
 import { homeDoPapel } from '../lib/roles'
-import { MarcaIcon, Wordmark } from './icons'
+import { LogoMimo } from './icons'
 
 // Conta de profissional aberta no endereço da cliente (ou o contrário).
 // Não entra sozinha no outro: avisa, e a pessoa escolhe ir ou sair.
@@ -12,7 +12,7 @@ export default function AmbienteErrado({ role }) {
   return (
     <div className="page-center login-bg">
       <div className="card login-card" style={{ textAlign: 'center' }}>
-        <div className="brand"><MarcaIcon className="brand-icon" width={44} height={40} id="ambiente" /><Wordmark tamanho={2.2} /></div>
+        <div className="brand"><LogoMimo altura={60} pro={ehPro} className="brand-logo" /></div>
         <h2 className="login-titulo">{pro ? 'Essa conta é de quem atende' : 'Essa conta é de cliente'}</h2>
         <p className="muted login-sub">
           {pro

@@ -16071,3 +16071,30 @@ label.a-partir-opcao .a-partir-opcao-texto { flex: 1; }
 @media (max-width: 700px) {
   .plat-ficha { grid-template-columns: 1fr; }
 }
+
+/* ---- 3.85: o logo oficial (LogoMimo) em todas as telas ---- */
+.logo-mimo { display: block; flex-shrink: 0; height: auto; max-width: 100%; }
+.brand-inline .logo-mimo, .admin-sidebar-marca .logo-mimo { display: block; }
+.brand-logo { margin: 0 auto 0.7rem; }
+.brand .brand-logo { margin-bottom: 0.9rem; }
+.plat-logo-ico { display: none; }
+@media (max-width: 900px) {
+  .plat-marca .plat-logo-cheio { display: none; }
+  .plat-marca .plat-logo-ico { display: block; }
+}
+
+/* ---- 3.85: mensalidades da MIMO e a baixa à mão (Plataforma) ---- */
+.plat-mens-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+.plat-mens-lista li { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto auto; align-items: center; gap: 0.6rem; padding: 0.6rem 0.7rem; border: 1px solid var(--fio); border-radius: 12px; font-size: 0.86rem; }
+.plat-mens-lista li.st-aguardando, .plat-mens-lista li.st-a_criar { border-color: #f5e3a3; background: #fffdf3; }
+.plat-mens-ico { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; background: #fff0f5; color: var(--rosa); }
+.plat-mens-info { display: flex; flex-direction: column; min-width: 0; }
+.plat-mens-info strong small { font-weight: 500; color: var(--texto-2); }
+.plat-mens-info > small { overflow: hidden; text-overflow: ellipsis; }
+.plat-mens-baixa { display: inline-flex; align-items: center; gap: 0.3rem; white-space: nowrap; color: #fff !important; }
+.plat-lado .plat-mens-lista li { grid-template-columns: minmax(0, 1fr) auto; }
+.plat-lado .plat-mens-ico, .plat-lado .plat-mens-lista .plat-pilula { display: none; }
+@media (max-width: 700px) {
+  .plat-mens-lista li { grid-template-columns: minmax(0, 1fr) auto; }
+  .plat-mens-ico { display: none; }
+}

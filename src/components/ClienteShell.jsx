@@ -4,7 +4,7 @@ import { ScanLine, ChevronLeft } from 'lucide-react'
 import SinoAvisos from './SinoAvisos'
 import AvaliarConvite from './AvaliarConvite'
 import CienciaGate from './CienciaGate'
-import { MarcaIcon, Wordmark, HomeIcon, CalendarioCheckIcon, BellIcon, PessoaIcon } from './icons'
+import { HomeIcon, CalendarioCheckIcon, BellIcon, PessoaIcon, LogoMimo } from './icons'
 import { useNotificacoes } from '../context/NotificacoesContext'
 
 // As quatro abas da cliente e, no meio, o botão de ler QR: é assim que
@@ -45,8 +45,7 @@ export default function ClienteShell({ children, titulo, voltar, semTopo = false
             <span className="topo-titulo">{titulo}</span>
           ) : (
             <span className="brand-inline">
-              <MarcaIcon className="marca" id="cliente" />
-              <Wordmark tamanho={1.35} />
+              <LogoMimo altura={30} />
             </span>
           )}
           <div className="topbar-acoes">

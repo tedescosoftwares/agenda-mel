@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { SUBDOMINIO, urlDoAmbiente, urlDoEndereco } from '../../lib/ambiente'
-import { MarcaIcon, Wordmark } from '../../components/icons'
+import { LogoMimo } from '../../components/icons'
 import VitrineDoSalao from './VitrineDoSalao'
 import PaginaProfissional from './PaginaProfissional'
 
@@ -60,8 +60,7 @@ function EnderecoVazio({ titulo, texto }) {
     <div className="page-center login-bg">
       <div className="card login-card entrar-card">
         <div className="brand">
-          <MarcaIcon className="brand-icon" width={44} height={40} id="endereco" />
-          <Wordmark tamanho={2.2} />
+          <LogoMimo altura={60} className="brand-logo" />
         </div>
         <h2 className="login-titulo">{titulo}</h2>
         <p className="muted login-sub">{texto}</p>

@@ -1,0 +1,152 @@
+/* 3.85: a ativação (AtivarSalao) só com Pix, pensada no celular primeiro. No computador as duas opções ficam
+   lado a lado e o QR do Pix aparece aberto. Cores do logo oficial: rosa #ff2f73 e vinho #65142f. */
+.ck-fundo { padding: 0; }
+.ck {
+  --ck-rosa: #ff2f73;
+  --ck-vinho: #65142f;
+  --ck-tinta: #2b0b1c;
+  --ck-cinza: #7b6f77;
+  --ck-fio: #f1dfe7;
+  width: min(1000px, 100%);
+  margin: 0 auto;
+  padding: 14px 16px calc(28px + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  color: var(--ck-tinta);
+}
+.ck-topo { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 4px 0; }
+.ck-salvo { display: inline-flex; align-items: center; gap: 5px; padding: 6px 10px; border-radius: 999px; background: #eefaf3; color: #1f7a4d; font-size: 0.72rem; font-weight: 700; white-space: nowrap; }
+
+/* o topo: nome do salão e o plano */
+.ck-hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: 24px;
+  padding: 20px 18px 16px;
+  background:
+    radial-gradient(110% 80% at 100% 0%, rgba(255, 47, 115, 0.16), transparent 60%),
+    linear-gradient(150deg, #fff5f9, #ffffff 60%);
+  border: 1px solid var(--ck-fio);
+}
+.ck-hero-marca { position: absolute; right: 14px; top: 12px; width: 46px; height: 46px; border-radius: 14px; background: #fff; display: grid; place-items: center; box-shadow: 0 8px 20px rgba(101, 20, 47, 0.1); animation: ck-bate 2.6s ease-in-out infinite; }
+@keyframes ck-bate { 0%, 100% { transform: scale(1); } 12% { transform: scale(1.1); } 24% { transform: scale(1); } 36% { transform: scale(1.06); } 48% { transform: scale(1); } }
+.ck-kicker { display: inline-block; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ck-rosa); }
+.ck-hero h1 { margin: 6px 56px 6px 0; font-size: clamp(1.45rem, 5.6vw, 2.2rem); line-height: 1.1; letter-spacing: -0.035em; font-weight: 800; }
+.ck-hero h1 span { color: var(--ck-vinho); }
+.ck-hero > p { margin: 0 0 14px; color: var(--ck-cinza); font-size: 0.92rem; line-height: 1.45; }
+.ck-plano { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-radius: 16px; background: #fff; border: 1px solid var(--ck-fio); }
+.ck-plano span { display: flex; flex-direction: column; min-width: 0; }
+.ck-plano small { font-size: 0.72rem; color: var(--ck-cinza); }
+.ck-plano b { font-size: 0.95rem; }
+.ck-plano strong { font-size: 1.25rem; letter-spacing: -0.03em; white-space: nowrap; }
+.ck-plano strong small { font-size: 0.75rem; font-weight: 500; color: var(--ck-cinza); }
+
+/* as duas opções */
+.ck-opcoes { display: flex; flex-direction: column; gap: 10px; }
+.ck-opcao { position: relative; border-radius: 24px; padding: 20px 18px 16px; background: #fff; border: 1.5px solid var(--ck-fio); display: flex; flex-direction: column; gap: 10px; }
+.ck-pagar { border-color: var(--ck-rosa); box-shadow: 0 0 0 4px #fff0f6, 0 18px 40px rgba(255, 47, 115, 0.14); }
+.ck-fita { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; border-radius: 999px; background: var(--ck-rosa); color: #fff; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.02em; }
+.ck-fita-suave { background: #fff0f6; color: var(--ck-vinho); }
+.ck-opcao h2 { margin: 0; font-size: 1.25rem; letter-spacing: -0.03em; line-height: 1.15; }
+.ck-opcao > p { margin: 0; color: var(--ck-cinza); font-size: 0.9rem; line-height: 1.45; }
+.ck-preco { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px; }
+.ck-preco s { color: #a2949b; font-size: 0.95rem; }
+.ck-preco strong { font-size: 2.3rem; letter-spacing: -0.05em; line-height: 1; color: var(--ck-vinho); }
+.ck-preco em { font-style: normal; font-size: 0.75rem; font-weight: 700; color: #1f7a4d; background: #eefaf3; padding: 3px 8px; border-radius: 999px; }
+.ck-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 0.88rem; }
+.ck-lista li { display: flex; align-items: center; gap: 8px; }
+.ck-lista svg { color: var(--ck-rosa); flex-shrink: 0; }
+.ck-nota { display: flex; align-items: center; gap: 5px; justify-content: center; text-align: center; font-size: 0.74rem; color: var(--ck-cinza); line-height: 1.35; }
+.ck-ou { display: flex; align-items: center; gap: 10px; color: #b3a5ac; font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
+.ck-ou::before, .ck-ou::after { content: ''; flex: 1; height: 1px; background: var(--ck-fio); }
+
+/* botões: grandes, para o dedo */
+.ck-botao {
+  width: 100%;
+  min-height: 54px;
+  border-radius: 16px;
+  border: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 0.12s, box-shadow 0.12s, background 0.12s;
+}
+.ck-botao:active:not(:disabled) { transform: scale(0.98); }
+.ck-botao:disabled { opacity: 0.6; cursor: default; }
+.ck-botao-pix { background: linear-gradient(135deg, #ff5a92, var(--ck-rosa) 60%, #e0175f); color: #fff; box-shadow: 0 12px 26px rgba(255, 47, 115, 0.32); }
+.ck-botao-pix.ok { background: #1f9d63; box-shadow: 0 12px 26px rgba(31, 157, 99, 0.28); }
+.ck-botao-teste { background: #fff0f6; color: var(--ck-vinho); border: 1.5px solid #ffc2d8; }
+.ck-botao-claro { background: #fff; color: var(--ck-vinho); border: 1.5px solid var(--ck-fio); min-height: 50px; font-size: 0.95rem; }
+.ck-erro { margin: 0; }
+.ck-rodape { margin: 0; text-align: center; font-size: 0.8rem; color: var(--ck-cinza); }
+
+/* a tela do Pix */
+.ck-pix { display: flex; flex-direction: column; gap: 14px; width: min(560px, 100%); margin: 0 auto; }
+.ck-voltar { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; padding: 6px 2px; font: inherit; font-size: 0.88rem; font-weight: 700; color: var(--ck-vinho); cursor: pointer; }
+.ck-pix-cabeca { display: flex; align-items: center; gap: 12px; padding: 16px; border-radius: 20px; background: linear-gradient(150deg, #fff5f9, #fff); border: 1px solid var(--ck-fio); }
+.ck-pix-icone { width: 48px; height: 48px; border-radius: 14px; display: grid; place-items: center; background: var(--ck-rosa); color: #fff; flex-shrink: 0; }
+.ck-pix-icone svg { width: 24px; height: 24px; }
+.ck-pix-cabeca > span:nth-child(2) { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.ck-pix-cabeca small { font-size: 0.74rem; color: var(--ck-cinza); font-weight: 600; }
+.ck-pix-cabeca strong { font-size: 2rem; letter-spacing: -0.05em; line-height: 1.05; color: var(--ck-vinho); }
+.ck-pix-cabeca { position: relative; }
+.ck-teste-tag { position: absolute; top: -9px; right: 14px; box-shadow: 0 0 0 3px #fff; font-size: 0.62rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; padding: 4px 8px; border-radius: 8px; background: #fff4d6; color: #8a5a00; }
+.ck-status { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 14px; background: #fffbea; border: 1px solid #f5e3a3; }
+.ck-status i { width: 10px; height: 10px; border-radius: 50%; background: #f2a900; flex-shrink: 0; animation: ck-pisca 1.4s ease-in-out infinite; }
+@keyframes ck-pisca { 0%, 100% { box-shadow: 0 0 0 0 rgba(242, 169, 0, 0.5); } 50% { box-shadow: 0 0 0 7px rgba(242, 169, 0, 0); } }
+.ck-status span { display: flex; flex-direction: column; }
+.ck-status b { font-size: 0.88rem; }
+.ck-status small { font-size: 0.76rem; color: var(--ck-cinza); }
+.ck-gerando { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 30px 0; color: var(--ck-cinza); }
+.ck-copia { display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: 20px; background: #fff; border: 1.5px dashed #ffb3cd; }
+.ck-copia-codigo { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.72rem; line-height: 1.4; color: #6f6470; word-break: break-all; max-height: 3.2em; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.ck-qr { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.ck-qr-abrir { border: 0; background: none; font: inherit; font-size: 0.86rem; font-weight: 700; color: var(--ck-vinho); display: inline-flex; align-items: center; gap: 6px; cursor: pointer; padding: 6px; }
+.ck-qr-img { display: none; flex-direction: column; align-items: center; gap: 6px; padding: 14px; border-radius: 20px; background: #fff; border: 1px solid var(--ck-fio); box-shadow: 0 12px 30px rgba(101, 20, 47, 0.08); }
+.ck-qr.aberto .ck-qr-img { display: flex; }
+.ck-qr-img img, .ck-qr-img i { width: min(240px, 62vw); aspect-ratio: 1; display: block; border-radius: 10px; background: #fbeef3; }
+.ck-qr-img small { font-size: 0.75rem; color: var(--ck-cinza); }
+.ck-passos { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.ck-passos li { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; padding: 10px 6px; border-radius: 14px; background: #fcf7fa; }
+.ck-passos b { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: var(--ck-vinho); color: #fff; font-size: 0.75rem; }
+.ck-passos span { display: flex; flex-direction: column; }
+.ck-passos strong { font-size: 0.78rem; line-height: 1.2; }
+.ck-passos small { font-size: 0.7rem; color: var(--ck-cinza); }
+.ck-seguro { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border-radius: 14px; background: #f6fbf8; color: #1f7a4d; }
+.ck-seguro svg { flex-shrink: 0; margin-top: 2px; }
+.ck-seguro span { display: flex; flex-direction: column; gap: 2px; }
+.ck-seguro strong { font-size: 0.85rem; color: var(--ck-tinta); }
+.ck-seguro small { font-size: 0.76rem; color: var(--ck-cinza); line-height: 1.4; }
+.ck-seguro small svg { display: inline; vertical-align: -1px; margin: 0 1px 0 3px; }
+
+/* a ordem na tela do Pix: no celular o "Copiar" vem antes do QR; no computador, o QR antes */
+.ck-pix > .ck-voltar { order: 1; } .ck-pix > .ck-pix-cabeca { order: 2; } .ck-pix > .ck-status { order: 3; }
+.ck-pix > .ck-gerando, .ck-pix > .ck-copia { order: 5; } .ck-pix > .ck-qr { order: 6; } .ck-pix > .ck-passos { order: 7; }
+.ck-pix > .ck-erro { order: 8; } .ck-pix > .ck-botao-claro { order: 9; } .ck-pix > .ck-seguro { order: 10; }
+
+/* computador: as opções lado a lado, o QR aberto e primeiro */
+@media (min-width: 860px) {
+  .ck { padding: 22px 28px 40px; gap: 20px; }
+  .ck-hero { padding: 28px 30px 22px; }
+  .ck-hero h1 { margin-right: 80px; }
+  .ck-hero-marca { right: 24px; top: 22px; width: 58px; height: 58px; }
+  .ck-plano { max-width: 520px; }
+  .ck-opcoes { display: grid; grid-template-columns: minmax(0, 1.15fr) auto minmax(0, 1fr); align-items: stretch; gap: 16px; }
+  .ck-opcao { padding: 26px 24px 20px; }
+  .ck-opcao .ck-botao { margin-top: auto; }
+  .ck-ou { flex-direction: column; }
+  .ck-ou::before, .ck-ou::after { width: 1px; height: auto; flex: 1; }
+  .ck-pix { width: min(620px, 100%); }
+  .ck-pix > .ck-qr { order: 4; }
+  .ck-qr-abrir { display: none; }
+  .ck-qr-img { display: flex; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ck-hero-marca, .ck-status i { animation: none; }
+}

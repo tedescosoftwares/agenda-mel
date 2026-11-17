@@ -19,6 +19,7 @@ import { AGENDA_ART_EXACT, MEL_ART_EXACT } from '../../assets/mockArtExact'
 import PrimeiroAcessoHome from './PrimeiroAcessoHome'
 import { CalendarPlus, Users, Sparkles, MessageCircle, FileSignature, ArrowRight, CalendarDays, TrendingUp, Clock3, QrCode, Settings2, X, PlayCircle, ChevronRight, Activity, CircleDot, Rocket, BellRing, BookOpen, Scissors, Link2, Headphones, Trophy, BadgeCheck, Copy, ExternalLink, LayoutDashboard } from 'lucide-react'
 import LinkSuporte from '../../components/LinkSuporte'
+import { PARCERIA_LIGADA } from '../../lib/contratoParceria'
 
 // Dashboard do salão (tela 23): o dia de hoje em quatro números, o
 // faturamento do mês dia a dia, o que está esperando resposta, e os
@@ -72,7 +73,7 @@ export default function AdminDashboard() {
   }, [salaoId])
   useEffect(() => { carregar() }, [carregar])
   useEffect(() => {
-    if (!salao?.id || salao?.tipo === 'autonoma') return
+    if (!PARCERIA_LIGADA || !salao?.id || salao?.tipo === 'autonoma') return
     // só quem foi configurada como parceira (ou de antes da 119, sem vínculo definido) entra no aviso
     Promise.all([supabase.rpc('parcerias_da_equipe', { salao: salao.id }), supabase.from('professionals').select('id, vinculo').eq('salon_id', salao.id)]).then(([{ data }, { data: profs }]) => {
       const parceiras = new Set((profs ?? []).filter((p) => !p.vinculo || p.vinculo === 'parceira').map((p) => p.id))
@@ -424,7 +425,7 @@ export default function AdminDashboard() {
           <AvisosNovos />
           <PendenciasBaixa para="/admin/fechar-dia" />
           <LigarAvisos texto="Pedidos, cancelamentos e clientes chamando no WhatsApp chegam na hora, mesmo com o app fechado." />
-          {semContrato.length > 0 && (
+          {PARCERIA_LIGADA && semContrato.length > 0 && (
             <Link to="/admin/equipe" className="card fin-alerta parceria-alerta">
               <FileSignature size={18} />
               <span><strong>Parceria ainda não formalizada.</strong> {semContrato.length === 1 ? `${semContrato[0].nome} está configurada como parceira na MIMO, mas não há contrato registrado.` : `${semContrato.length} profissionais estão configuradas como parceiras na MIMO, mas não há contrato registrado.`} Confira se a formalização da relação está adequada ao modelo adotado pelo salão. <u>Ver orientação</u></span>

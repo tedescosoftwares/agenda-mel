@@ -5,6 +5,7 @@ import AdminShell from '../../components/AdminShell'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import { formatCents } from '../../lib/pagamento'
+import { PARCERIA_LIGADA } from '../../lib/contratoParceria'
 
 // Repasses: o que é de quem, num período. Cada item de comanda fechada
 // sabe a profissional que o fez; aqui eles são somados por pessoa, com o
@@ -83,10 +84,10 @@ export default function AdminRepasses() {
 
       {dados?.padrao && (
         <div className="card rp-padrao">
-          <span className="rp-padrao-texto"><Scale size={15} /> <strong>Padrão da casa:</strong> quem não tem contrato de parceria fica com</span>
+          <span className="rp-padrao-texto"><Scale size={15} /> <strong>Padrão da casa:</strong> {PARCERIA_LIGADA ? 'quem não tem contrato de parceria fica com' : 'cada profissional fica com'}</span>
           <label><input type="number" min="0" max="100" step="5" defaultValue={Number(dados.padrao.cota_pct)} key={dados.padrao.cota_pct} onBlur={(e) => { const v = Number(e.target.value); if (Number.isFinite(v) && v !== Number(dados.padrao.cota_pct)) salvarPadrao(v, dados.padrao.base) }} />%</label>
           <label>do <select value={dados.padrao.base} onChange={(e) => salvarPadrao(Number(dados.padrao.cota_pct), e.target.value)}><option value="liquido">líquido (depois do desconto)</option><option value="bruto">bruto</option></select></label>
-          <span className="muted">O contrato de parceria, quando existe, manda sobre isso.</span>
+          {PARCERIA_LIGADA && <span className="muted">O contrato de parceria, quando existe, manda sobre isso.</span>}
           {padraoMsg && <span className="rp-padrao-msg">{padraoMsg}</span>}
         </div>
       )}
@@ -128,7 +129,7 @@ export default function AdminRepasses() {
               </button>
               {ab && (
                 <div className="rp-itens">
-                  {p.contrato?.origem !== 'contrato' && p.professional_id && <p className="rp-aviso rp-aviso-neutro"><FileSignature size={14} /> Vale o padrão da casa. Um <Link to={`/admin/equipe/${p.professional_id}/parceria`}>contrato de parceria</Link> pode dar a ela uma cota própria e exceções por serviço.</p>}
+                  {PARCERIA_LIGADA && p.contrato?.origem !== 'contrato' && p.professional_id && <p className="rp-aviso rp-aviso-neutro"><FileSignature size={14} /> Vale o padrão da casa. Um <Link to={`/admin/equipe/${p.professional_id}/parceria`}>contrato de parceria</Link> pode dar a ela uma cota própria e exceções por serviço.</p>}
                   <table>
                     <thead><tr><th>Dia</th><th>Cliente</th><th>Serviço</th><th className="n">Bruto</th><th className="n">Desc.</th><th className="n">Líquido</th><th className="n">Cota</th><th className="n">Para ela</th></tr></thead>
                     <tbody>
@@ -149,7 +150,7 @@ export default function AdminRepasses() {
       </div>
 
       <div className="card rp-como">
-        <p><Info size={15} /> <strong>Como é contado.</strong> Cada serviço da comanda fica com a profissional que o fez, mesmo quando a cliente passou por mais de uma na mesma visita. O desconto da comanda é rateado na proporção do valor de cada serviço. O sinal pago pelo app não muda nada aqui: ele é só uma forma de pagamento. A cota vem do contrato de parceria vigente (com as exceções por serviço, se houver); sem contrato, vale o padrão da casa. Comandas estornadas saem da conta.</p>
+        <p><Info size={15} /> <strong>Como é contado.</strong> Cada serviço da comanda fica com a profissional que o fez, mesmo quando a cliente passou por mais de uma na mesma visita. O desconto da comanda é rateado na proporção do valor de cada serviço. O sinal pago pelo app não muda nada aqui: ele é só uma forma de pagamento. {PARCERIA_LIGADA ? 'A cota vem do contrato de parceria vigente (com as exceções por serviço, se houver); sem contrato, vale o padrão da casa.' : 'A cota é a de cada profissional (na ficha dela) ou o padrão da casa.'} Comandas estornadas saem da conta.</p>
         <p className="muted"><HandCoins size={14} /> A transferência do repasse pelo app vem depois; por enquanto esta tela e a planilha são o fechamento.</p>
       </div>
     </AdminShell>

@@ -9,6 +9,7 @@ import { VINCULOS, AVISO_VINCULO, PERMISSOES, PERMISSOES_RECOMENDADAS, presetDoV
 import { categoriasDoSalao } from '../lib/categorias'
 import Avatar from './Avatar'
 import '../equipe.css'
+import { PARCERIA_LIGADA } from '../lib/contratoParceria'
 
 // A gaveta de "Adicionar profissional" (119). O salão configura tudo —
 // dados, vínculo, serviços (com preço e duração dela, se for o caso),
@@ -297,7 +298,7 @@ export default function ProfissionalDrawer({ salao, profissional = null, servico
                   </ul>
                 )
               )}
-              <p className="gv-aviso"><Info size={14} /> Um contrato de parceria vigente, quando existir, passa na frente desta configuração.</p>
+              {PARCERIA_LIGADA && <p className="gv-aviso"><Info size={14} /> Um contrato de parceria vigente, quando existir, passa na frente desta configuração.</p>}
             </section>
           )}
 
@@ -414,7 +415,7 @@ export function CartaoProfissional({ p, salao, onConfigurar, onAcao, menuAberto,
       <Avatar nome={p.name} foto={p.photo_url} />
       <div className="eq-cartao-texto">
         <strong>{p.name}{p.dona && <em className="eq-papel">Administradora</em>}</strong>
-        <span className="muted">{p.especialidade || vinculoPor(p.vinculo)?.nome || 'Profissional'}</span>
+        <span className="muted">{p.especialidade || (PARCERIA_LIGADA ? vinculoPor(p.vinculo)?.nome : null) || 'Profissional'}</span>
         <span className="muted eq-cartao-meta">{p.situacao === 'rascunho' ? 'Só nome e WhatsApp' : `${n} ${n === 1 ? 'serviço' : 'serviços'} · ${resumoDias(p.horarios)}`}</span>
       </div>
       <div className="eq-cartao-lado">

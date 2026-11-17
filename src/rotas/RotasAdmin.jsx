@@ -26,6 +26,7 @@ import AdminParceria from '../pages/admin/AdminParceria'
 import AdminPdv from '../pages/admin/AdminPdv'
 import AdminRepasses from '../pages/admin/AdminRepasses'
 import AdminFecharDia from '../pages/admin/AdminFecharDia'
+import { PARCERIA_LIGADA } from '../lib/contratoParceria'
 
 const A = ({ children }) => <ProtectedRoute requireRole="admin">{children}</ProtectedRoute>
 
@@ -37,7 +38,7 @@ export default function RotasAdmin() {
       <Route path="guia" element={<A><AdminGuia /></A>} />
       <Route path="agenda" element={<A><AdminAgenda /></A>} />
       <Route path="equipe" element={<A><AdminProfissionais /></A>} />
-      <Route path="equipe/:id/parceria" element={<A><AdminParceria /></A>} />
+      <Route path="equipe/:id/parceria" element={PARCERIA_LIGADA ? <A><AdminParceria /></A> : <Navigate to="/admin/equipe" replace />} />
       <Route path="servicos" element={<A><AdminServices /></A>} />
       <Route path="horarios" element={<A><AdminHours /></A>} />
       <Route path="clientes" element={<A><AdminClientes /></A>} />

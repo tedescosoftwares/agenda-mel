@@ -7,7 +7,7 @@ import { useAuth } from '../../context/AuthContext'
 import { ChevronIcon, LinkIcon, ClockIcon } from '../../components/icons'
 import Avatar from '../../components/Avatar'
 import { FileSignature, MessageCircle, Plus, Link2, Copy, Mail } from 'lucide-react'
-import { STATUS } from '../../lib/contratoParceria'
+import { STATUS, PARCERIA_LIGADA } from '../../lib/contratoParceria'
 import { urlDoAmbiente } from '../../lib/ambiente'
 import { situacaoDe, resumoDias, vinculoPor, mensagemDeAcesso, primeiroNome, enviarAcesso, linkWhats } from '../../lib/equipe'
 import ProfissionalDrawer from '../../components/ProfissionalDrawer'
@@ -36,7 +36,7 @@ export default function AdminProfissionais() {
       supabase.rpc('equipe_da_casa', { salao: salao.id }),
       supabase.from('services').select('id, name, price, duration_minutes, categoria_id').eq('salon_id', salao.id).eq('active', true).order('name'),
       supabase.from('categorias_de_servico').select('id, salon_id, nome').or(`salon_id.eq.${salao.id},salon_id.is.null`),
-      supabase.rpc('parcerias_da_equipe', { salao: salao.id }),
+      PARCERIA_LIGADA ? supabase.rpc('parcerias_da_equipe', { salao: salao.id }) : Promise.resolve({ data: [] }),
     ])
     if (eq.error) setError('Erro ao carregar a equipe: ' + eq.error.message)
     else { setEquipe(Array.isArray(eq.data) ? eq.data : []); setError('') }
@@ -130,7 +130,7 @@ export default function AdminProfissionais() {
                 <div className="cliente-info">
                   <span className="cliente-nome"><span className="nome-txt">{p.name}</span>{p.dona && <em className="eq-papel">Administradora</em>}</span>
                   <span className="muted cliente-meta">
-                    {p.especialidade || vinculoPor(p.vinculo)?.nome || 'Profissional'} · {p.situacao === 'rascunho' ? 'só nome e WhatsApp' : `${(p.servicos ?? []).length} serviço${(p.servicos ?? []).length === 1 ? '' : 's'} · ${resumoDias(p.horarios)}`}
+                    {p.especialidade || (PARCERIA_LIGADA ? vinculoPor(p.vinculo)?.nome : null) || 'Profissional'} · {p.situacao === 'rascunho' ? 'só nome e WhatsApp' : `${(p.servicos ?? []).length} serviço${(p.servicos ?? []).length === 1 ? '' : 's'} · ${resumoDias(p.horarios)}`}
                   </span>
                   <span className="prof-selos">
                     <span className={'gv-situacao ' + sit.cor}>{sit.rotulo}</span>

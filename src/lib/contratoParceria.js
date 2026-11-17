@@ -1,3 +1,9 @@
+// 3.87: a parceria (contrato da profissional parceira, a formalização, a cota do contrato nos repasses) fica
+// escondida por enquanto: estava pela metade e confundia. Nada foi apagado: os dados, as rotas e as funções
+// continuam; com esta chave em true tudo volta a aparecer (o aviso da Home, o selo e o contrato na Equipe,
+// "Meu contrato" da profissional, as menções em Ajustes, Repasses e na gaveta da profissional).
+export const PARCERIA_LIGADA = false
+
 // O contrato de parceria (101), nos termos da Lei 12.592/2012 com a
 // redação da Lei 13.352/2016. Monta os blocos do documento a partir dos
 // dados da parceria; o PDF e a tela renderizam os mesmos blocos, e é

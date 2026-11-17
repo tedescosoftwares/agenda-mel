@@ -12,6 +12,7 @@ import AvisosNoCelular from '../../components/AvisosNoCelular'
 import AvisosPorEmail from '../../components/AvisosPorEmail'
 import LinkSuporte from '../../components/LinkSuporte'
 import { MODOS } from '../../lib/pagamento'
+import { PARCERIA_LIGADA } from '../../lib/contratoParceria'
 
 // Ajustes do salão: o hub. Cada área é um cartão que diz o que faz e em
 // que pé está (fotos, pino, PIX, equipe com contrato, horário…), em vez
@@ -51,7 +52,7 @@ export default function AdminAjustes() {
         supabase.from('services').select('id, active, destaque').eq('salon_id', salao.id),
         supabase.from('business_hours').select('weekday, open, start_time, end_time').eq('salon_id', salao.id),
         supabase.from('promocoes').select('id, fim').eq('salon_id', salao.id),
-        supabase.rpc('parcerias_da_equipe', { salao: salao.id }),
+        PARCERIA_LIGADA ? supabase.rpc('parcerias_da_equipe', { salao: salao.id }) : Promise.resolve({ data: [] }),
       ])
       if (!vivo) return
       const abertos = (horas.data ?? []).filter((h) => h.open).map((h) => h.weekday).sort()
@@ -96,12 +97,12 @@ export default function AdminAjustes() {
       { to: '/admin/salao', Icon: Store, tom: 'rosa', titulo: 'Página do salão', texto: 'Fotos, descrição, contatos e o pino no mapa que a cliente vê.', situacao: st && (fotos ? `${fotos} ${fotos === 1 ? 'foto' : 'fotos'}` : 'sem fotos') + (st ? (pino ? ' · pino no mapa' : ' · sem pino no mapa') : ''), ok: st ? fotos > 0 && pino : null },
       { to: '/admin/horarios', Icon: Clock, tom: 'roxo', titulo: 'Horário do salão', texto: 'Os dias e as horas em que a casa abre, e o padrão da equipe.', situacao: st && (st.horario || 'sem horário definido'), ok: st ? Boolean(st.horario) : null },
       { to: '/admin/servicos', Icon: Sparkles, tom: 'ambar', titulo: 'Serviços', texto: 'O cardápio: preço, duração, foto, categoria e quem faz.', situacao: st && (st.servicos ? `${st.servicos} ativos · ${st.destaques} em destaque` : 'nenhum serviço ainda'), ok: st ? st.servicos > 0 : null },
-      { to: '/admin/equipe', Icon: Users, tom: 'menta', titulo: 'Equipe', texto: 'Quem atende, com quais serviços, e o contrato de parceria.', situacao: st && (st.profissionais ? `${st.profissionais} ${st.profissionais === 1 ? 'ativa' : 'ativas'} · ${st.comContrato} com contrato` : 'ninguém cadastrada'), ok: st ? st.profissionais > 0 && st.semContrato === 0 : null },
+      { to: '/admin/equipe', Icon: Users, tom: 'menta', titulo: 'Equipe', texto: PARCERIA_LIGADA ? 'Quem atende, com quais serviços, e o contrato de parceria.' : 'Quem atende, com quais serviços e horários.', situacao: st && (st.profissionais ? `${st.profissionais} ${st.profissionais === 1 ? 'ativa' : 'ativas'}${PARCERIA_LIGADA ? ` · ${st.comContrato} com contrato` : ''}` : 'ninguém cadastrada'), ok: st ? st.profissionais > 0 && (!PARCERIA_LIGADA || st.semContrato === 0) : null },
     ] },
     { titulo: 'Dinheiro', cartoes: [
       { to: '/admin/receber', Icon: Wallet, tom: 'rosa', titulo: 'Receber pelo app', texto: 'PIX ao marcar, política de cancelamento e o financeiro do mês.', situacao: st && (pag ? `${MODOS[s.pagamento_modo]?.curto ?? s.pagamento_modo} · sinal de ${s.sinal_pct ?? 0}%` : 'desligado'), ok: st ? pag : null },
       { to: '/admin/numeros', Icon: BarChart3, tom: 'roxo', titulo: 'O mês', texto: 'Faturamento, ocupação e atendimentos, por profissional.', situacao: null },
-      { to: '/admin/repasses', Icon: HandCoins, tom: 'menta', titulo: 'Repasses', texto: 'O que é de cada profissional no período, já com a cota do contrato.', situacao: st && (st.comContrato ? `${st.comContrato} com cota no contrato` : 'sem contratos ainda'), ok: st ? st.comContrato > 0 : null },
+      { to: '/admin/repasses', Icon: HandCoins, tom: 'menta', titulo: 'Repasses', texto: PARCERIA_LIGADA ? 'O que é de cada profissional no período, já com a cota do contrato.' : 'O que é de cada profissional no período, pela cota da casa.', situacao: PARCERIA_LIGADA ? st && (st.comContrato ? `${st.comContrato} com cota no contrato` : 'sem contratos ainda') : null, ok: PARCERIA_LIGADA ? (st ? st.comContrato > 0 : null) : null },
       { to: '/admin/pdv', Icon: Monitor, tom: 'verde', titulo: 'PDV do balcão', texto: 'Quadro, comanda, caixa do dia e projeção da semana, na tela cheia do computador.', situacao: desktop ? (pdv ? 'abre direto ao entrar' : 'pronto para abrir') : 'só no computador', ok: desktop ? true : false },
     ] },
     { titulo: 'Clientes', cartoes: [

@@ -9,6 +9,7 @@ import LinkSuporte from '../../components/LinkSuporte'
 import { supabase } from '../../lib/supabase'
 import AvisosNoCelular from '../../components/AvisosNoCelular'
 import AvisosPorEmail from '../../components/AvisosPorEmail'
+import { PARCERIA_LIGADA } from '../../lib/contratoParceria'
 
 // Hub das configurações da profissional. Cada item continua tendo a
 // sua própria tela — aqui é só a porta de entrada.
@@ -84,6 +85,7 @@ export default function ProAjustes() {
           <ChevronIcon />
         </Link>
 
+        {PARCERIA_LIGADA && (
         <Link to="/pro/contrato" className="card prof-row">
           <span className="ajuste-icone">
             <FileSignature />
@@ -98,6 +100,7 @@ export default function ProAjustes() {
           </div>
           <ChevronIcon />
         </Link>
+        )}
 
         <Link to="/pro/promocoes" className="card prof-row">
           <span className="ajuste-icone">

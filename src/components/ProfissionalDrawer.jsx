@@ -10,6 +10,7 @@ import { categoriasDoSalao } from '../lib/categorias'
 import Avatar from './Avatar'
 import '../equipe.css'
 import { PARCERIA_LIGADA } from '../lib/contratoParceria'
+import { linkDaProfissional, prefixoDaProfissional, limparEndereco } from '../lib/endereco'
 
 // A gaveta de "Adicionar profissional" (119). O salão configura tudo —
 // dados, vínculo, serviços (com preço e duração dela, se for o caso),
@@ -197,7 +198,7 @@ export default function ProfissionalDrawer({ salao, profissional = null, servico
                 <label>Função <span className="muted">(opcional, pode ter mais de uma)</span><input value={f.especialidade} onChange={m('especialidade')} placeholder="Cabeleireira · Colorista" /></label>
               </div>
               <label className="gv-form gv-bio">Apresentação <span className="muted">(opcional, aparece na página dela)</span><textarea rows={2} value={f.bio} onChange={m('bio')} placeholder="Especialista em loiros e cortes modernos…" /></label>
-              {editando && <label className="gv-form gv-slug">Link da agenda dela<span className="gv-slug-campo"><span>/p/</span><input value={f.slug} onChange={m('slug')} placeholder="carla-mendes" /></span></label>}
+              {editando && <label className="gv-form gv-slug">Link da agenda dela <span className="muted">(ela também pode trocar, em Meu link)</span><span className="gv-slug-campo"><span>{prefixoDaProfissional(salao)}</span><input value={f.slug} onChange={(e) => setF((x) => ({ ...x, slug: limparEndereco(e.target.value) }))} placeholder="carla" autoCapitalize="none" /></span></label>}
               <div className="chips gv-chips">{FUNCOES.map((x) => <button key={x} type="button" aria-pressed={cargosDe(f.especialidade).includes(x)} className={'chip' + (cargosDe(f.especialidade).includes(x) ? ' active' : '')} onClick={() => setF((y) => ({ ...y, especialidade: alternarCargo(y.especialidade, x) }))}>{x}</button>)}</div>
             </section>
           )}
@@ -431,7 +432,7 @@ export function CartaoProfissional({ p, salao, onConfigurar, onAcao, menuAberto,
             {!p.dona && <button type="button" onClick={() => { setMenu(null); onConfigurar(p) }}>Editar configuração</button>}
             {pendente && <button type="button" onClick={() => { setMenu(null); onAcao('enviar', p) }}>Reenviar acesso por e-mail</button>}
             {pendente && link && <button type="button" onClick={() => { setMenu(null); navigator.clipboard?.writeText(link); onAcao('copiado', p) }}>Copiar link</button>}
-            {p.slug && <button type="button" onClick={() => { setMenu(null); window.open(urlDoAmbiente('cliente', `/p/${p.slug}`), '_blank') }}>Ver link dela</button>}
+            {p.slug && <button type="button" onClick={() => { setMenu(null); window.open(linkDaProfissional(p, salao), '_blank') }}>Ver link dela</button>}
             {!p.dona && p.situacao !== 'inativa' && p.situacao !== 'rascunho' && <button type="button" onClick={() => { setMenu(null); onAcao('desativar', p) }}>Desativar</button>}
             {!p.dona && p.situacao === 'inativa' && <button type="button" onClick={() => { setMenu(null); onAcao('reativar', p) }}>Reativar</button>}
             {!p.dona && <button type="button" className="perigo" onClick={() => { setMenu(null); onAcao('remover', p) }}>Remover do salão</button>}

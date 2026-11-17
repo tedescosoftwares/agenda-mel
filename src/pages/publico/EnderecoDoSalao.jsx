@@ -9,7 +9,7 @@ import PaginaProfissional from './PaginaProfissional'
 // O endereço próprio do salão (2.80): studiomel.mimo.com.vc.
 //
 // Só duas páginas vivem aqui: a raiz (a casa: a página pública do salão,
-// VitrineDoSalao, 3.79) e /<slug> (a profissional da casa). Qualquer outro caminho volta para o domínio principal, com a
+// VitrineDoSalao, 3.79) e /profissionais/<slug> (a profissional da casa, 3.89; /<slug> continua valendo). Qualquer outro caminho volta para o domínio principal, com a
 // sessão junto (o cookie é da raiz). Quem responde de quem é o nome é
 // resolver_endereco(); um endereço trocado redireciona para o novo.
 
@@ -19,8 +19,8 @@ const RESERVADOS = new Set(['login', 'cadastro', 'entrar', 'comecar', 'onboardin
 // decide o que este host mostra para o caminho atual
 export function NoEndereco() {
   const { pathname, search, hash } = useLocation()
-  const m = pathname.match(/^\/([a-z0-9-]+)\/?$/)
-  const prof = pathname === '/' ? null : (m && !RESERVADOS.has(m[1]) ? m[1] : undefined)
+  const m = pathname.match(/^\/(?:profissionais\/)?([a-z0-9-]+)\/?$/)
+  const prof = pathname === '/' || /^\/profissionais\/?$/.test(pathname) ? null : (m && !RESERVADOS.has(m[1]) ? m[1] : undefined)
   useEffect(() => {
     if (prof !== undefined) return
     // (no PC o "subdomínio" é ?endereco=…: sai dele para não voltar aqui)
@@ -43,7 +43,7 @@ export default function EnderecoDoSalao({ prof }) {
     return () => { vivo = false }
   }, [prof])
   useEffect(() => {
-    if (r?.redirecionar) window.location.replace(urlDoEndereco(r.redirecionar, prof ? `/${prof}` : '/'))
+    if (r?.redirecionar) window.location.replace(urlDoEndereco(r.redirecionar, prof ? `/profissionais/${prof}` : '/'))
   }, [r, prof])
 
   if (r === undefined) return <div className="page-center"><p className="muted">Carregando…</p></div>

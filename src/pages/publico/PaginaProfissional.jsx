@@ -234,7 +234,7 @@ export default function PaginaProfissional({ slug: slugPronto }) {
   }
 
   function compartilhar() {
-    const url = window.location.origin + (SUBDOMINIO ? '/' : '/p/') + prof.slug
+    const url = window.location.origin + (SUBDOMINIO ? '/profissionais/' : '/p/') + prof.slug
     const texto = `Agende com ${prof.name} por aqui: ${url}`
     if (navigator.share) {
       navigator.share({ title: prof.name, text: texto, url }).catch(() => {})

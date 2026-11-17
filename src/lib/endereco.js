@@ -45,8 +45,14 @@ export function linkDoSalao(salao) {
   return salao?.codigo ? urlDoAmbiente('cliente', `/v/${salao.codigo}`) : ''
 }
 
+// 3.89: no endereço do salão, a profissional fica em /profissionais/<nome> (salaomimo.mimo.com.vc/profissionais/melissa).
+// O /<nome> no endereço do salão e o /p/<nome> do domínio principal continuam abrindo (link e QR antigos não morrem).
 export function linkDaProfissional(prof, salao) {
   if (!prof?.slug) return ''
-  if (salao?.subdominio) return urlDoEndereco(salao.subdominio, `/${prof.slug}`)
-  return `${window.location.origin}/p/${prof.slug}`
+  if (salao?.subdominio) return urlDoEndereco(salao.subdominio, `/profissionais/${prof.slug}`)
+  return urlDoAmbiente('cliente', `/p/${prof.slug}`)
+}
+// o que vem antes do nome dela, escrito como a cliente lê (para o campo de escolher): salaomimo.mimo.com.vc/profissionais/
+export function prefixoDaProfissional(salao) {
+  return salao?.subdominio ? `${salao.subdominio}.${DOMINIO_RAIZ}/profissionais/` : `${DOMINIO_RAIZ}/p/`
 }

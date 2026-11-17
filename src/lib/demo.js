@@ -565,6 +565,15 @@ const RPC = {
     { canal: 'whatsapp', id: 'f3', quando: new Date(Date.now() - 40 * 60e3).toISOString(), salao: 'Espaço Bela', para: '5513997001188', tipo: 'lembrete_agendamento', status: 'falhou', erro: 'número não existe no WhatsApp', resumo: '📅 Amanhã tem horário marcado · Manicure com Renata' },
     { canal: 'email', id: 'f4', quando: new Date(Date.now() - 3 * 3600e3).toISOString(), salao: null, para: 'pro@exemplo.com', tipo: 'boas_vindas', status: 'na_fila', erro: 'RESEND_API_KEY não configurada', resumo: 'Sua agenda no MIMO está pronta 💛' },
   ],
+  // 3.89: a profissional escolhe o próprio link
+  profissional_link_livre: ({ nome }) => {
+    const n = String(nome ?? '').toLowerCase()
+    if (n.length < 2) return { ok: false, nome: n, motivo: 'Use pelo menos 2 letras ou números.' }
+    if (['profissionais', 'login', 'admin', 'pro', 'p', 'v'].includes(n)) return { ok: false, nome: n, motivo: 'Esse nome é reservado.' }
+    if (n === 'camila') return { ok: false, nome: n, motivo: 'Esse já é de outra profissional na MIMO. Tente com o sobrenome ou com o nome do salão.' }
+    return { ok: true, nome: n }
+  },
+  profissional_definir_link: ({ nome }) => ({ ok: true, slug: String(nome ?? '').toLowerCase() }),
   // 3.85: as mensalidades e a baixa à mão
   plataforma_cobrancas: ({ salao }) => [
     { id: 'cm1', salon_id: 's6', salao: 'Agenda Mel', tipo: 'inicial', metodo: 'pix', status: 'aguardando', total_cents: 3992, criado_em: mais(0) + 'T14:20:00', pago_em: null },

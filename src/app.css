@@ -16098,3 +16098,15 @@ label.a-partir-opcao .a-partir-opcao-texto { flex: 1; }
   .plat-mens-lista li { grid-template-columns: minmax(0, 1fr) auto; }
   .plat-mens-ico { display: none; }
 }
+
+/* ---- 3.89: a profissional escolhe o próprio link (Meu link) ---- */
+.meu-link label { display: flex; flex-direction: column; gap: 0.4rem; }
+.meu-link-campo { display: flex; flex-wrap: wrap; align-items: center; min-width: 0; border: 1.5px solid var(--fio); border-radius: 12px; background: #fff; overflow: hidden; }
+.meu-link-campo:focus-within { border-color: var(--rosa); }
+.meu-link-prefixo { flex: 0 1 auto; min-width: 0; padding: 0.65rem 0 0.65rem 0.75rem; color: var(--texto-2); font-size: 0.82rem; overflow-wrap: anywhere; }
+@media (max-width: 520px) { .meu-link-prefixo { flex-basis: 100%; padding: 0.55rem 0.75rem 0; font-size: 0.76rem; } .meu-link-campo input { padding-left: 0.75rem !important; } }
+.meu-link-campo input { flex: 1 1 7rem; min-width: 6rem; border: 0 !important; outline: 0; padding: 0.65rem 0.75rem 0.65rem 0.1rem !important; font: inherit; font-weight: 700; color: var(--rosa); background: transparent; box-shadow: none !important; }
+.meu-link-chk { margin: 0.4rem 0 0.6rem; font-size: 0.82rem; color: var(--texto-2); overflow-wrap: anywhere; }
+.meu-link-chk.ok { color: #1f7a4d; } .meu-link-chk.nao { color: var(--carmim); }
+.gv-slug-campo { flex-wrap: wrap; }
+.gv-slug-campo > span { overflow-wrap: anywhere; min-width: 0; }

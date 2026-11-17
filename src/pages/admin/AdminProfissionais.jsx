@@ -12,6 +12,7 @@ import { urlDoAmbiente } from '../../lib/ambiente'
 import { situacaoDe, resumoDias, vinculoPor, mensagemDeAcesso, primeiroNome, enviarAcesso, linkWhats } from '../../lib/equipe'
 import ProfissionalDrawer from '../../components/ProfissionalDrawer'
 import '../../equipe.css'
+import { linkDaProfissional } from '../../lib/endereco'
 
 // A equipe do salão (119): a mesma gaveta do onboarding configura a
 // profissional inteira (dados, vínculo, serviços, horários, repasse,
@@ -56,7 +57,7 @@ export default function AdminProfissionais() {
     else fetchTudo()
   }
   async function copiarLink(p) {
-    const url = urlDoAmbiente('cliente', `/p/${p.slug}`)
+    const url = linkDaProfissional(p, salao)
     try { await navigator.clipboard.writeText(url); setInfo(`Link de ${p.name} copiado: ${url}`) } catch { setInfo(`Link de ${p.name}: ${url}`) }
   }
   async function enviado(p) { try { await supabase.rpc('equipe_acesso_enviado', { prof: p.id }) } catch { /* segue */ } fetchTudo() }

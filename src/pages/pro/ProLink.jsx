@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import ProShell from '../../components/ProShell'
 import SemFicha from './SemFicha'
 import FotoUpload from '../../components/FotoUpload'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
-import { linkDaProfissional } from '../../lib/endereco'
+import { linkDaProfissional, prefixoDaProfissional, limparEndereco } from '../../lib/endereco'
 import { CopiarIcon, CompartilharIcon } from '../../components/icons'
 import CodigoQr from '../../components/CodigoQr'
 import { useDialogo } from '../../context/DialogoContext'
@@ -92,6 +92,9 @@ export default function ProLink() {
         {trazidas && trazidas.length > 0 && <> Você já trouxe <strong>{trazidas.length}</strong> {trazidas.length === 1 ? 'cliente' : 'clientes'}.</>}
       </p>
 
+      <h3 className="secao-titulo">Meu link</h3>
+      <EscolherLink professional={professional} casa={casa} onTrocou={() => recarregarProfessional?.()} />
+
       <h3 className="secao-titulo">Minha vitrine</h3>
       <div className="card link-previa">
         <FotoUpload nome={professional.name} pasta={professional.id} valor={professional.photo_url} onChange={salvarFoto} onErro={setErro} />
@@ -116,5 +119,56 @@ export default function ProLink() {
 
       <p className="muted" style={{ fontSize: '0.82rem' }}>Coloque o link na bio do Instagram e no status do WhatsApp. A cliente escolhe serviço, dia e hora sozinha — você só confirma.</p>
     </ProShell>
+  )
+}
+
+// 3.89 (migração 231): ela escolhe o fim do próprio link (salaomimo.mimo.com.vc/profissionais/<isto>). Confere enquanto
+// digita (só vale a resposta da última conferência) e avisa que o link antigo para de abrir; o QR com o código continua.
+function EscolherLink({ professional, casa, onTrocou }) {
+  const { confirmar } = useDialogo()
+  const [nome, setNome] = useState(professional.slug ?? '')
+  const [chk, setChk] = useState(null)
+  const [salvando, setSalvando] = useState(false)
+  const [erro, setErro] = useState('')
+  const [ok, setOk] = useState(false)
+  const vez = useRef(0)
+  const limpo = limparEndereco(nome)
+  const mesmo = limpo === professional.slug
+  useEffect(() => {
+    if (!limpo || mesmo) { setChk(null); return }
+    setChk(null)
+    const esta = ++vez.current
+    const t = setTimeout(async () => {
+      const { data, error } = await supabase.rpc('profissional_link_livre', { nome: limpo, profissional: professional.id })
+      if (esta !== vez.current) return
+      setChk(error ? { ok: false, motivo: error.message } : data)
+    }, 350)
+    return () => clearTimeout(t)
+  }, [limpo, mesmo, professional.id])
+  async function salvar() {
+    if (!chk?.ok) return
+    const sim = await confirmar({ titulo: 'Trocar o seu link?', texto: `O novo fica ${prefixoDaProfissional(casa)}${chk.nome}. Quem tiver o link antigo não abre mais a sua página (o QR com o código continua valendo).`, ok: 'Trocar' })
+    if (!sim) return
+    setSalvando(true); setErro('')
+    const { error } = await supabase.rpc('profissional_definir_link', { profissional: professional.id, nome: chk.nome })
+    setSalvando(false)
+    if (error) { setErro(error.message); return }
+    setOk(true); setTimeout(() => setOk(false), 2500)
+    onTrocou?.()
+  }
+  return (
+    <div className="card form meu-link">
+      <label>O fim do seu link <span className="muted">(do seu jeito: curto e fácil de falar)</span>
+        <span className="meu-link-campo">
+          <span className="meu-link-prefixo">{prefixoDaProfissional(casa)}</span>
+          <input value={nome} onChange={(e) => { setOk(false); setNome(e.target.value.toLowerCase()) }} placeholder="seunome" autoCapitalize="none" autoCorrect="off" spellCheck={false} maxLength={40} />
+        </span>
+      </label>
+      <p className={'meu-link-chk' + (chk ? (chk.ok ? ' ok' : ' nao') : '')}>
+        {!limpo ? 'Digite como quer que fique.' : mesmo ? (ok ? 'Pronto, este é o seu link agora.' : 'Este é o seu link hoje.') : chk == null ? 'Conferindo…' : chk.ok ? `${prefixoDaProfissional(casa)}${chk.nome} está livre` : chk.motivo}
+      </p>
+      {erro && <div className="alert alert-error">{erro}</div>}
+      <button type="button" className="btn btn-primary btn-block" onClick={salvar} disabled={salvando || mesmo || !chk?.ok}>{salvando ? 'Salvando…' : 'Usar este link'}</button>
+    </div>
   )
 }

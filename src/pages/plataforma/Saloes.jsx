@@ -10,6 +10,7 @@ import Portal from '../../components/Portal'
 import ApagarModal from '../../components/plataforma/ApagarModal'
 import Mensalidades from '../../components/plataforma/Mensalidades'
 import { formatarCnpj, formatarCpf } from '../../lib/cnpj'
+import { linkDaProfissional } from '../../lib/endereco'
 
 // Salões e autônomas: a lista de unidades com tamanho e ações, o
 // checklist de implantação de quem ainda não começou, e o ranking do
@@ -274,7 +275,7 @@ export function Salao() {
             </Painel>
             <Painel Icon={PredioIcon} titulo="Unidade">
               <div className="dado-linha"><span className="muted">Código</span><strong className="mono">{s.codigo}</strong></div>
-              <div className="dado-linha"><span className="muted">Vitrine</span><strong>{d.equipe?.[0]?.slug ? <a className="plat-link" href={`/p/${d.equipe[0].slug}`} target="_blank" rel="noreferrer">/p/{d.equipe[0].slug}</a> : '—'}</strong></div>
+              <div className="dado-linha"><span className="muted">Vitrine</span><strong>{d.equipe?.[0]?.slug ? <a className="plat-link" href={linkDaProfissional(d.equipe[0], s)} target="_blank" rel="noreferrer">{linkDaProfissional(d.equipe[0], s).replace(/^https?:\/\//, '').replace(/[?&]endereco=.*$/, '')}</a> : '—'}</strong></div>
               <div className="dado-linha"><span className="muted">Desde</span><strong>{s.created_at ? new Date(s.created_at).toLocaleDateString('pt-BR') : '—'}</strong></div>
               {s.active
                 ? <button className="btn btn-ghost btn-block btn-perigo-borda" style={{ marginTop: '0.8rem' }} onClick={() => ativar(false)}>Desativar unidade</button>

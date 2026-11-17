@@ -109,7 +109,7 @@ export default function AdminAjustes() {
     { titulo: 'Clientes', cartoes: [
       { to: '/admin/promocoes', Icon: BadgePercent, tom: 'ambar', titulo: 'Promoções', texto: 'Um criativo na home das clientes, com desconto ou preço especial.', situacao: st && (st.promocoes ? `${st.promocoes} no ar` : 'nenhuma no ar'), ok: st ? st.promocoes > 0 : null },
       { to: '/admin/recados', Icon: Megaphone, tom: 'menta', titulo: 'Recados', texto: 'Um aviso para a carteira inteira ou para a equipe, no celular.', situacao: null },
-      { to: '/admin/assistente', Icon: Bot, tom: 'roxo', titulo: 'Assistente do WhatsApp', texto: 'Quem responde as clientes: o nome, o jeito, o que pode fazer e em qual número.', situacao: null },
+      { to: '/admin/assistente', Icon: Bot, tom: 'roxo', titulo: 'Assistente do WhatsApp', texto: 'Conecte o WhatsApp do salão e escolha o nome e o jeito de quem responde as clientes.', situacao: null },
       { to: '/admin/whatsapp', Icon: MessageCircle, tom: 'verde', titulo: 'WhatsApp', texto: 'O diagnóstico do canal: o que saiu, o que chegou e por quê.', situacao: st && (s.whatsapp ? `número ${s.whatsapp}` : 'sem número cadastrado'), ok: st ? Boolean(s.whatsapp) : null },
     ] },
   ]

@@ -464,7 +464,11 @@ livres) e marca, remarca e cancela com o "sim" dela. É o agente da 069 (`_share
   No **número da casa** ela continua sendo a Mel, da MIMO (nome e tom só valem no número do salão).
 - **O número do próprio salão** (`whatsapp_channels.numero_proprio`): a dona conecta pela tela, com o código de
   pareamento; a instância é `salao-<id sem traços>` na mesma Evolution, com o mesmo webhook. A partir daí tudo do salão
-  sai por ele (lembretes, confirmações, respostas). Quando a equipe responde pelo celular (fromMe que não é eco nosso:
+  sai por ele (lembretes, confirmações, respostas). **3.95.1 (236): sem ele, nada feito** — a assistente não liga
+  (`assistente_salvar` recusa, `bot_contexto` devolve `sem_numero_proprio`) e o canal do salão é o manual (nada sai
+  sozinho pelo nosso número; os avisos seguem no app). O número da MIMO (`whatsapp_instancia_casa`) é só a **reserva**:
+  `puxar_da_fila` devolve `reserva` para quem tem número próprio, e o `enviar-whatsapp` tenta por ela quando a
+  instância do salão falha (celular sem internet, desconectado). Quando a equipe responde pelo celular (fromMe que não é eco nosso:
   `assistente_fromme` confere o id e o texto do que saiu, `whatsapp_saidas`), a assistente fica quieta 2 h com aquela
   cliente. "Se a equipe não responder em X min" (só no horário do salão): a mensagem espera em `assistente_esperas` e o
   relógio da VPS (`whatsapp-webhook?tarefa=ociosas`, a cada 5 min) responde quando vence.

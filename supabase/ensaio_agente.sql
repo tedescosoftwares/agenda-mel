@@ -5,8 +5,9 @@ begin
   select p.salon_id, p.id into salao, prof from public.professionals p where p.slug = 'ana-paula';
   select ps.service_id into serv from public.professional_services ps where ps.professional_id = prof limit 1;
   select p.id, p.phone into cli, fone from public.profiles p where p.role = 'cliente' and p.phone is not null limit 1;
-  insert into public.whatsapp_channels (salon_id, canal, identificador, ativo, usa_ia, usa_bot) values (salao, 'evolution', 'mimo', true, true, true)
-  on conflict (salon_id) do update set canal = 'evolution', identificador = 'mimo', ativo = true, usa_ia = true;
+  -- 3.95.1 (236): a assistente só atende salão com o próprio WhatsApp conectado
+  insert into public.whatsapp_channels (salon_id, canal, identificador, ativo, usa_ia, usa_bot, numero_proprio) values (salao, 'evolution', 'salao-ensaio', true, true, true, true)
+  on conflict (salon_id) do update set canal = 'evolution', identificador = 'salao-ensaio', ativo = true, usa_ia = true, numero_proprio = true;
 
   ctx := public.bot_contexto(salao, fone);
   raise notice '1 contexto: permitido=% modelo=% cliente=% agora=%', ctx ->> 'permitido', ctx ->> 'modelo', ctx -> 'cliente' ->> 'primeiro_nome', ctx -> 'agora' ->> 'texto';

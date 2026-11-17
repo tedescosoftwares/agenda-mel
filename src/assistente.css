@@ -159,3 +159,11 @@
 @media (min-width: 960px) { .as-salvar { bottom: 1.2rem; left: calc(50% + 130px); } }
 @keyframes as-sobe { from { transform: translate(-50%, 16px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .as-salvar, .as-gira, .as-digitando i { animation: none; } }
+
+/* 3.95.1: o WhatsApp do salão primeiro; o interruptor trancado até conectar */
+.as-whats.destaque { border: 1px solid var(--rosa); box-shadow: 0 0 0 4px var(--latao-veu); }
+.as-texto { margin: 0; font-size: 0.9rem; line-height: 1.45; color: var(--texto-2); }
+.as-texto b { color: var(--texto); }
+.as-conectado.ruim { background: var(--latao-veu); }
+.as-status-chave.trancada { opacity: 0.45; cursor: not-allowed; }
+.as-status-chave.trancada input { cursor: not-allowed; }

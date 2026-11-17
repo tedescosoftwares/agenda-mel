@@ -123,11 +123,8 @@ BONITO="+${NUMERO:0:2} (${NUMERO:2:2}) ${NUMERO:4:5}-${NUMERO:9}"
 echo
 azul '== Agora cole isto no SQL Editor do Supabase =='
 cat <<SQL
--- todas as agendas passam a mandar pelo número da casa (menos quem conectou o número do próprio salão, 3.95)
-update public.whatsapp_channels
-   set canal = 'evolution', identificador = 'mimo', numero_exibicao = '${BONITO}', ativo = true
- where not coalesce((to_jsonb(whatsapp_channels) ->> 'numero_proprio')::boolean, false);
--- salão novo nasce no número da casa (3.95)
+-- 3.95.1 (236): o número da casa é só a RESERVA de envio dos salões que conectaram o próprio WhatsApp
+-- (nenhum salão passa a mandar por ele; cada um conecta o seu na tela Assistente do WhatsApp)
 select public.definir_config_publica('whatsapp_instancia_casa', 'mimo');
 -- o "Contato e ajuda" do app aponta para ele
 select public.definir_config_publica('whatsapp_suporte', '${NUMERO}');

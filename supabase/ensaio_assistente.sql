@@ -1,4 +1,4 @@
--- Ensaio da 235 (3.95): a assistente do WhatsApp do salão. Desfaz no fim.
+-- Ensaio da 235 (3.95) e da 236 (3.95.1): a assistente do WhatsApp do salão; o número da MIMO só como reserva. Desfaz no fim.
 begin;
 do $$
 declare
@@ -22,9 +22,16 @@ begin
   r := public.assistente_config(salao);
   if r ->> 'nome' <> 'Mel' or r ->> 'tom' <> 'acolhedora' or (r ->> 'pode_marcar')::boolean is not true or r ->> 'quando' <> 'sempre' then raise exception 'A: %', r; end if;
   perform set_config('request.jwt.claim.sub', dona::text, true);
-  r := public.assistente_salvar(salao, '{"nome": "  Bia  ", "tom": "profissional", "emojis": "nenhum", "pode_cancelar": false, "recado": "Atraso de 15 min perde o horário.", "ligada": true}');
+  r := public.assistente_salvar(salao, '{"nome": "  Bia  ", "tom": "profissional", "emojis": "nenhum", "pode_cancelar": false, "recado": "Atraso de 15 min perde o horário."}');
   if r -> 'config' ->> 'nome' <> 'Bia' or r -> 'config' ->> 'emojis' <> 'nenhum' or (r -> 'config' ->> 'pode_cancelar')::boolean
-     or r ->> 'recado' <> 'Atraso de 15 min perde o horário.' or not (r ->> 'ligada')::boolean then raise exception 'A2: %', r; end if;
+     or r ->> 'recado' <> 'Atraso de 15 min perde o horário.' or (r ->> 'ligada')::boolean then raise exception 'A2: %', r; end if;
+  -- 236: ligar sem o WhatsApp do salão é recusado
+  begin
+    perform public.assistente_salvar(salao, '{"ligada": true}');
+    raise exception 'A6: ligou sem número próprio';
+  exception when raise_exception then
+    if sqlerrm not like 'conecte o WhatsApp do salão%' then raise; end if;
+  end;
   r := public.assistente_salvar(salao, '{"nome": ""}');
   if r -> 'config' ->> 'nome' <> 'Mel' or r -> 'config' ->> 'tom' <> 'profissional' then raise exception 'A3 (nome vazio volta para Mel, o resto fica): %', r; end if;
   begin
@@ -42,20 +49,26 @@ begin
   perform set_config('request.jwt.claim.sub', '', true);
   raise notice 'A personalidade: padrões, salvar, nome vazio, tom inválido, só a dona';
 
-  -- B. o contexto no número da casa: a Mel, sem espera, com o horário do salão
+  -- B. sem o WhatsApp do salão a assistente não atende (236), mesmo ligada
+  update public.whatsapp_channels set usa_ia = true where salon_id = salao;
   ctx := public.bot_contexto(salao, fone);
-  if (ctx ->> 'permitido') <> 'true' or (ctx ->> 'numero_proprio')::boolean or ctx -> 'assistente' ->> 'tom' <> 'profissional'
-     or ctx ->> 'provedor' <> 'claude' or ctx ->> 'modelo_claude' <> 'claude-haiku-5-5' or ctx ->> 'orientacao_salao' is null then raise exception 'B: %', ctx; end if;
-  if ctx -> 'salao' ->> 'horario' is null then raise exception 'B2: sem horário %', ctx -> 'salao'; end if;
-  raise notice 'B número da casa: % · %', ctx -> 'salao' ->> 'horario', ctx ->> 'provedor';
+  if ctx ->> 'motivo' <> 'sem_numero_proprio' then raise exception 'B: %', ctx; end if;
+  raise notice 'B sem número próprio: não atende';
 
   -- C. o número próprio e "quando responde"
   perform public.assistente_numero_conectado(salao, inst, '+55 (13) 99999-0000');
   if not (select numero_proprio and identificador = inst and canal = 'evolution' from public.whatsapp_channels where salon_id = salao) then raise exception 'C'; end if;
+  perform set_config('request.jwt.claim.sub', dona::text, true);
+  r := public.assistente_salvar(salao, '{"ligada": true}');
+  perform set_config('request.jwt.claim.sub', '', true);
+  if not (r ->> 'ligada')::boolean then raise exception 'C1: %', r; end if;
   ctx := public.bot_contexto(salao, fone, inst);
-  if not (ctx ->> 'numero_proprio')::boolean then raise exception 'C2: %', ctx; end if;
+  if (ctx ->> 'permitido') <> 'true' or not (ctx ->> 'numero_proprio')::boolean or ctx -> 'assistente' ->> 'tom' <> 'profissional'
+     or ctx ->> 'provedor' <> 'claude' or ctx ->> 'modelo_claude' <> 'claude-haiku-5-5' or ctx ->> 'orientacao_salao' is null
+     or ctx -> 'salao' ->> 'horario' is null then raise exception 'C2: %', ctx; end if;
+  -- a cliente respondeu um aviso que saiu pela reserva (o número da MIMO): atende, como a Mel da MIMO
   ctx := public.bot_contexto(salao, fone, 'mimo');
-  if (ctx ->> 'numero_proprio')::boolean then raise exception 'C3: por outra instância não é o número próprio'; end if;
+  if (ctx ->> 'permitido') <> 'true' or (ctx ->> 'numero_proprio')::boolean then raise exception 'C3: %', ctx; end if;
   -- o salão aberto agora, para valer a espera
   delete from public.business_hours where salon_id = salao;
   insert into public.business_hours (salon_id, weekday, open, start_time, end_time)
@@ -140,12 +153,12 @@ begin
   if (r ->> 'salon_id')::uuid <> outro then raise exception 'G5: %', r; end if;
   raise notice 'G número compartilhado: o salão de quem falou com ela por último';
 
-  -- H. salão novo nasce no número da casa
+  -- H. salão novo nasce no canal manual (236): o número da MIMO não é de ninguém
   insert into public.salons (name, slug, tipo) values ('Salão do Ensaio 235', 'salao-do-ensaio-235', 'salao') returning id into novo;
-  if not exists (select 1 from public.whatsapp_channels where salon_id = novo and canal = 'evolution' and identificador = 'mimo' and not numero_proprio) then
+  if not exists (select 1 from public.whatsapp_channels where salon_id = novo and canal = 'manual' and identificador is null and not numero_proprio) then
     raise exception 'H: %', (select to_jsonb(c) from public.whatsapp_channels c where c.salon_id = novo);
   end if;
-  raise notice 'H salão novo no número da casa (%)', public.instancia_da_casa();
+  raise notice 'H salão novo no canal manual';
 
   -- I. o registro e os números
   delete from public.ia_chamadas where salon_id = salao;
@@ -160,15 +173,28 @@ begin
   perform set_config('request.jwt.claim.sub', '', true);
   raise notice 'I números (sem o teste da dona): %', r - 'por_dia';
 
-  -- J. desconectar volta para o número da casa
+  -- L. a fila (236): quem tem número próprio leva a reserva (a instância da MIMO); quem não tem, não sai sozinho
+  insert into public.config_publica (chave, valor) values ('whatsapp_instancia_casa', 'mimo') on conflict (chave) do update set valor = excluded.valor;
   perform public.assistente_numero_conectado(salao, inst, null);
+  update public.message_outbox set status = 'cancelado' where status = 'na_fila';
+  insert into public.message_outbox (salon_id, telefone, kind, corpo, canal, status, liberado_em) values (salao, e164, 'lembrete_agendamento', 'Seu horário é amanhã', 'evolution', 'na_fila', now() - interval '1 minute');
+  update public.whatsapp_channels set canal = 'manual', identificador = null, numero_proprio = false where salon_id = outro;
+  insert into public.message_outbox (salon_id, telefone, kind, corpo, canal, status, liberado_em) values (outro, e164, 'lembrete_agendamento', 'Seu horário é amanhã', 'manual', 'na_fila', now() - interval '1 minute');
+  select count(*) into n from public.puxar_da_fila(10) f where f.salon_id = salao and f.identificador = inst and f.reserva = 'mimo';
+  if n <> 1 then raise exception 'L: %', n; end if;
+  if exists (select 1 from public.message_outbox where salon_id = outro and status = 'enviando') then raise exception 'L2: o manual saiu sozinho'; end if;
+  raise notice 'L fila: o do salão com a reserva da MIMO; o manual fica';
+
+  -- J. desconectar volta para o manual e desliga a assistente
   perform public.assistente_esperar(salao, fone, inst, 'oi', now() + interval '10 minutes');
   perform public.assistente_numero_desligado(salao);
-  if not (select not numero_proprio and identificador = 'mimo' and canal = 'evolution' from public.whatsapp_channels where salon_id = salao)
+  if not (select not numero_proprio and identificador is null and canal = 'manual' and not usa_ia from public.whatsapp_channels where salon_id = salao)
      or exists (select 1 from public.assistente_esperas where salon_id = salao) then raise exception 'J'; end if;
-  raise notice 'J desconectado: de volta ao número da casa';
+  raise notice 'J desconectado: canal manual, assistente desligada';
 
   -- K. o agente desligado na Plataforma
+  perform public.assistente_numero_conectado(salao, inst, null);
+  update public.whatsapp_channels set usa_ia = true where salon_id = salao;
   update public.config_publica set valor = 'desligado' where chave = 'ia_agente';
   if not found then insert into public.config_publica (chave, valor) values ('ia_agente', 'desligado'); end if;
   ctx := public.bot_contexto(salao, fone);

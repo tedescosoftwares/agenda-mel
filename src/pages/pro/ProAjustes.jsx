@@ -55,7 +55,7 @@ export default function ProAjustes() {
                 <span className="nome-txt">Assistente do WhatsApp</span>
               </span>
               <span className="muted cliente-meta">
-                Quem responde as suas clientes: o nome, o jeito e em qual número
+                Conecte o seu WhatsApp e escolha o nome e o jeito de quem responde
               </span>
             </div>
             <ChevronIcon />

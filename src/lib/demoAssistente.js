@@ -1,5 +1,6 @@
 // A assistente do WhatsApp no modo demonstração (3.95): a personalidade fica no navegador, o número do salão "conecta"
-// uns segundos depois do código, e o teste responde por um roteiro sem IA (no jeito escolhido).
+// uns segundos depois do código, e o teste responde por um roteiro sem IA (no jeito escolhido). 3.95.1: sem o número
+// do salão ela não liga, e desconectar desliga.
 import { PADRAO, configDe, previa } from './assistente'
 
 const CHAVE = 'mimo-demo-assistente'
@@ -16,7 +17,7 @@ export function assistenteDoSalaoDemo() {
   const e = ler()
   return {
     salao: 'Studio Mel', config: configDe(e.config), recado: e.recado, ligada: e.ligada, agente_global: true,
-    canal: { tipo: 'evolution', ativo: true, numero_proprio: e.numero_proprio, numero: e.numero_proprio ? e.numero : '+55 (13) 99871-0002', conectado_em: e.conectado_em, casa: true },
+    canal: { tipo: e.numero_proprio ? 'evolution' : 'manual', ativo: true, numero_proprio: e.numero_proprio, numero: e.numero_proprio ? e.numero : null, conectado_em: e.conectado_em, casa: true },
     horario: HORARIO, aberto_agora: true,
   }
 }
@@ -27,6 +28,7 @@ export function assistenteSalvarDemo({ dados } = {}) {
   for (const k of Object.keys(PADRAO)) if (k in d) c[k] = d[k]
   if ('nome' in d) c.nome = String(d.nome ?? '').trim().slice(0, 30) || 'Mel'
   if ('recado' in d) e.recado = String(d.recado ?? '').slice(0, 1200)
+  if ('ligada' in d && d.ligada && !e.numero_proprio) throw new Error('conecte o WhatsApp do salão antes de ligar a assistente')
   if ('ligada' in d) e.ligada = Boolean(d.ligada)
   e.config = c
   gravar(e)
@@ -54,7 +56,7 @@ export async function demoAssistente(corpo = {}) {
     return { estado: 'connecting', numero: bonito, pairingCode: 'MIMO2K95', qr: null }
   }
   if (corpo.acao === 'desconectar') {
-    e.numero_proprio = false; e.conectado_em = null; e.pendente = null; gravar(e)
+    e.numero_proprio = false; e.conectado_em = null; e.pendente = null; e.ligada = false; gravar(e)
     return { ok: true }
   }
   if (corpo.acao === 'testar') {

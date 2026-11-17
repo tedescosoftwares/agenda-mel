@@ -884,7 +884,8 @@ vinculados que ficam semanas sem o celular principal).
 
 - **Quanto pesa**: cada instância conectada usa uns 50–80 MB de memória com movimento. Nesta máquina (7,6 GB, a
   Evolution hoje com ~200 MB para 3 instâncias) cabem com folga 50–100 salões; acima disso, outra VPS de Evolution.
-- **O trocar-numero.sh** não mexe em quem tem número próprio (só nos salões do número da casa) e grava
-  `whatsapp_instancia_casa`, para salão novo nascer no número da casa.
+- **O número da casa é só reserva (3.95.1, migração 236)**: nenhum salão manda pelo nosso WhatsApp; cada um conecta o
+  dele. O da casa só entra quando o salão que tem número próprio não consegue mandar por ele (o aviso sai pelo nosso
+  até reconectar). O `trocar-numero.sh` só grava `whatsapp_instancia_casa` (a reserva) e o número de suporte.
 - **"Se a equipe não responder em X min"** usa o mesmo relógio do `cutucar-ociosas.sh` (a cada 5 min): a resposta sai
   entre X e X+5 minutos depois da primeira mensagem sem resposta.

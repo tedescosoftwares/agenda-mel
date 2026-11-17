@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { Bot, Send, RotateCcw, QrCode, Unplug, Smartphone, Store, PartyPopper, MessageCircle, Check, Clock, Info, CalendarCheck, CalendarClock, CalendarX, HandHelping, Loader2, Sparkles, MessagesSquare } from 'lucide-react'
+import { Bot, Send, RotateCcw, QrCode, Unplug, Smartphone, PartyPopper, MessageCircle, Check, Clock, Info, CalendarCheck, CalendarClock, CalendarX, HandHelping, Loader2, Sparkles, MessagesSquare } from 'lucide-react'
 import AdminShell from '../../components/AdminShell'
 import ProShell from '../../components/ProShell'
 import { useAuth } from '../../context/AuthContext'
@@ -11,10 +11,11 @@ import { PADRAO, SUGESTOES_DE_NOME, TONS, EMOJIS, TRATAMENTOS, TAMANHOS, PRECOS,
 import '../../assistente.css'
 
 // 3.95: a assistente do WhatsApp do salão (migração 235; Edge Function assistente).
-// A dona escolhe o jeito dela (nome, tom, emojis, como chama a cliente, tamanho), o que ela pode fazer sozinha, como
-// fala de preço, quando responde e em qual número: o da MIMO (já funciona, ela é a Mel da MIMO) ou o do salão
-// (conecta pelo código de pareamento; aí valem o nome e o jeito escolhidos). A prévia muda na hora; o "Testar de
-// verdade" chama a assistente com a agenda real, sem marcar nada. ?inicio=1: veio do fim da configuração.
+// 3.95.1 (migração 236): a assistente atende no WhatsApp DO SALÃO. O primeiro passo é conectar esse número (código de
+// pareamento); sem ele, ela não liga. O número da MIMO é só reserva de envio (o aviso sai por ele quando o do salão
+// não consegue mandar). A dona escolhe o jeito dela (nome, tom, emojis, como chama a cliente, tamanho), o que pode
+// fazer sozinha, como fala de preço e quando responde. A prévia muda na hora; o "Testar de verdade" chama a
+// assistente com a agenda real, sem marcar nada (funciona antes de conectar). ?inicio=1: veio do fim da configuração.
 
 function Opcoes({ lista, valor, onEscolher, rotulo }) {
   return (
@@ -35,6 +36,14 @@ function Chave({ ligado, onMudar, rotulo, texto, desligado }) {
       <span className="switch"><input type="checkbox" checked={ligado} disabled={desligado} onChange={(e) => onMudar(e.target.checked)} /><span /></span>
     </label>
   )
+}
+
+// depois de conectar pelo "sim" das boas-vindas, a assistente já liga (devolve o estado novo, ou null)
+async function ligarSePediu(salao, querLigar, d) {
+  if (!querLigar.current || d?.ligada) return null
+  querLigar.current = false
+  const { data, error } = await supabase.rpc('assistente_salvar', { salao, dados: { ligada: true } })
+  return error ? null : data
 }
 
 function Bolhas({ mensagens, nome, digitando }) {
@@ -70,6 +79,8 @@ export default function AdminAssistente({ para = 'admin' }) {
   const [ok, setOk] = useState('')
   const [numeros, setNumeros] = useState(null)
   const [inicio, setInicio] = useState(params.get('inicio') === '1')
+  const querLigar = useRef(false)    // veio do "sim" das boas-vindas: ao conectar, já liga
+  const refNumero = useRef(null)
 
   // o número do salão
   const [numero, setNumero] = useState('')
@@ -124,7 +135,10 @@ export default function AdminAssistente({ para = 'admin' }) {
           clearInterval(t)
           const { data } = await supabase.rpc('assistente_do_salao', { salao: salaoId })
           if (!vivo) return
-          setDados(data); setConferido('open'); setCon({ fase: 'livre' }); setOk('Número conectado! A partir de agora a assistente atende por ele.')
+          const ligou = await ligarSePediu(salaoId, querLigar, data)
+          if (!vivo) return
+          setDados(ligou ?? data); setConferido('open'); setCon({ fase: 'livre' })
+          setOk(ligou ? 'WhatsApp conectado e assistente ligada! Ela já responde as clientes por ele.' : 'WhatsApp do salão conectado! Agora é só ligar a assistente.')
         }
       } catch { /* tenta de novo no próximo */ }
     }, 4000)
@@ -136,12 +150,18 @@ export default function AdminAssistente({ para = 'admin' }) {
   const sujo = salvo != null && JSON.stringify({ c: cfg, r: recado }) !== salvo
   const proprio = Boolean(dados?.canal?.numero_proprio)
   const ligada = Boolean(dados?.ligada)
+  const ativa = ligada && proprio
+  const desconectou = proprio && conferido && conferido !== 'open'
   const nomeSalao = dados?.salao ?? base?.name ?? 'seu salão'
   const mudar = (k, v) => setCfg((c) => ({ ...c, [k]: v }))
-  // a prévia mostra sempre o jeito escolhido (o do número do salão); no da casa, um aviso diz que lá ela é a Mel da MIMO
   const conversaPrevia = useMemo(() => previa(cfg, { salao: nomeSalao, proprio: true, autonoma, cliente: 'Ana' }), [cfg, nomeSalao, autonoma])
   const nomeEscolhido = cfg.nome?.trim() || 'Mel'
-  const nomeQueAparece = proprio ? nomeEscolhido : 'Mel'
+
+  async function ligarAoConectar(d) {
+    const novo = await ligarSePediu(salaoId, querLigar, d)
+    if (novo) setDados(novo)
+    return Boolean(novo)
+  }
 
   async function salvar(extra = {}) {
     setSalvando(true); setErro(''); setOk('')
@@ -166,7 +186,8 @@ export default function AdminAssistente({ para = 'admin' }) {
       const r = await chamar('assistente', { acao: 'conectar', salao: salaoId, numero })
       if (r?.estado === 'open') {
         const { data } = await supabase.rpc('assistente_do_salao', { salao: salaoId })
-        setDados(data); setConferido('open'); setCon({ fase: 'livre' }); setOk('Esse número já estava conectado. Tudo certo!')
+        setDados(data); setConferido('open'); setCon({ fase: 'livre' })
+        setOk(await ligarAoConectar(data) ? 'Esse número já estava conectado. Assistente ligada!' : 'Esse número já estava conectado. Tudo certo!')
         return
       }
       setCon({ fase: 'codigo', codigo: r?.pairingCode ?? null, qr: r?.qr ?? null, numero: r?.numero ?? numero })
@@ -175,13 +196,13 @@ export default function AdminAssistente({ para = 'admin' }) {
     }
   }
   async function desconectar() {
-    const sim = await confirmar({ titulo: 'Desconectar o número do salão?', texto: 'A assistente volta a atender pelo número da MIMO, como a Mel. O WhatsApp do seu celular continua funcionando normalmente.', ok: 'Desconectar', cancelar: 'Cancelar' })
+    const sim = await confirmar({ titulo: 'Desconectar o WhatsApp do salão?', texto: 'A assistente para de atender e os lembretes deixam de sair pelo WhatsApp (os avisos continuam no app). O WhatsApp do seu celular continua funcionando normalmente.', ok: 'Desconectar', cancelar: 'Cancelar' })
     if (!sim) return
     setErro(''); setOk('')
     try {
       await chamar('assistente', { acao: 'desconectar', salao: salaoId })
       const { data } = await supabase.rpc('assistente_do_salao', { salao: salaoId })
-      setDados(data); setConferido(null); setOk('Desconectado. A assistente voltou para o número da MIMO.')
+      setDados(data); setConferido(null); setOk('Desconectado. A assistente parou de atender.')
     } catch (e) { setErro(e.message) }
   }
 
@@ -207,6 +228,73 @@ export default function AdminAssistente({ para = 'admin' }) {
   const voltar = para === 'admin' ? '/admin' : '/pro/agenda'
   const horario = dados?.horario
 
+  const secaoNumero = dados && (
+    <section ref={refNumero} className={'card as-secao as-whats' + (!proprio || desconectou ? ' destaque' : '')}>
+      <h3><Smartphone size={18} /> {proprio ? 'WhatsApp do salão' : 'Primeiro passo: conecte o WhatsApp do salão'}</h3>
+      {!proprio && (
+        <p className="as-texto">A assistente atende no WhatsApp do <b>seu</b> salão, com o nome e o jeito que você escolher. Você continua vendo e respondendo tudo pelo celular; quando você responde, ela fica quieta com aquela cliente por 2 horas.</p>
+      )}
+
+      {proprio && (
+        <div className={'as-conectado' + (desconectou ? ' ruim' : '')}>
+          <span className={'as-ponto' + (desconectou ? ' ruim' : '')} />
+          <div>
+            <strong>{dados.canal?.numero ?? 'WhatsApp do salão'} {desconectou ? 'desconectado' : 'conectado'}</strong>
+            <small className="muted">
+              {desconectou
+                ? 'O celular desconectou. Gere um código novo abaixo. Até lá, os lembretes saem pelo número da MIMO.'
+                : dados.canal?.conectado_em ? `Desde ${new Date(dados.canal.conectado_em).toLocaleDateString('pt-BR')}. Mantenha o celular com internet.` : 'Mantenha o celular com internet.'}
+            </small>
+          </div>
+          <button type="button" className="btn btn-ghost as-desconectar" onClick={desconectar}><Unplug size={16} /> Desconectar</button>
+        </div>
+      )}
+
+      {(!proprio || desconectou) && (
+        <div className="as-conectar">
+          {con.fase !== 'codigo' ? (
+            <>
+              <label className="as-campo">
+                <span>WhatsApp do salão (com DDD)</span>
+                <input inputMode="tel" autoComplete="tel" placeholder="(13) 99999-9999" value={numero} onChange={(e) => setNumero(e.target.value)} />
+              </label>
+              <button type="button" className="btn btn-primary" disabled={con.fase === 'gerando' || numero.replace(/\D/g, '').length < 10} onClick={gerarCodigo}>
+                {con.fase === 'gerando' ? <><Loader2 size={16} className="as-gira" /> Gerando…</> : 'Gerar código para conectar'}
+              </button>
+              {con.fase === 'erro' && <p className="as-erro-linha">{con.erro}</p>}
+              <small className="muted as-dica">Use o número que as clientes já conhecem (de preferência WhatsApp Business). O WhatsApp continua funcionando no celular como sempre.</small>
+            </>
+          ) : (
+            <div className="as-codigo">
+              <p className="as-codigo-tit">No celular do salão ({con.numero}), abra o WhatsApp e digite este código:</p>
+              {con.codigo ? <div className="as-codigo-num" aria-label="código de pareamento">{codigoBonito(con.codigo)}</div> : <p className="muted">O código não veio. Use o QR code abaixo.</p>}
+              <ol className="as-passos">
+                <li>WhatsApp › <b>⋮</b> (ou <b>Configurações</b>) › <b>Aparelhos conectados</b></li>
+                <li>Toque em <b>Conectar um aparelho</b></li>
+                <li>Escolha <b>Conectar com número de telefone</b> e digite o código</li>
+              </ol>
+              <p className="as-esperando"><Loader2 size={16} className="as-gira" /> Esperando o celular conectar…</p>
+              {con.qr && (
+                <>
+                  <button type="button" className="btn btn-ghost" onClick={() => setVerQr((v) => !v)}><QrCode size={16} /> {verQr ? 'Esconder o QR code' : 'Prefere ler um QR code?'}</button>
+                  {verQr && <img className="as-qr" src={con.qr} alt="QR code para conectar o WhatsApp" />}
+                </>
+              )}
+              <button type="button" className="btn btn-ghost" onClick={() => setCon({ fase: 'livre' })}>Cancelar</button>
+            </div>
+          )}
+        </div>
+      )}
+
+      <p className="as-nota">
+        <Info size={15} />
+        {proprio
+          ? 'O número da MIMO é só reserva: se o celular do salão ficar sem internet, os lembretes saem por ele até você reconectar.'
+          : 'Enquanto o WhatsApp do salão não estiver conectado, nenhuma mensagem sai pelo WhatsApp: os avisos continuam no app.'}
+      </p>
+    </section>
+  )
+
   return (
     <Shell amplo>
       <div className="page-head">
@@ -216,7 +304,7 @@ export default function AdminAssistente({ para = 'admin' }) {
         </div>
       </div>
 
-      {inicio && dados && !dados.ligada && (
+      {inicio && dados && !ativa && (
         <section className="card as-boas-vindas">
           <span className="as-boas-icone"><PartyPopper size={22} /></span>
           <div className="as-boas-texto">
@@ -226,8 +314,14 @@ export default function AdminAssistente({ para = 'admin' }) {
               <li><Sparkles size={16} /><span><b>A assistente responde em segundos</b>, olhando a sua agenda de verdade.</span></li>
               <li><CalendarCheck size={16} /><span><b>Marca com o sim da cliente</b> e chama você quando precisar de gente.</span></li>
             </ol>
+            <p className="as-texto">Para começar, é só conectar o WhatsApp do salão. Leva um minuto.</p>
             <div className="as-boas-botoes">
-              <button type="button" className="btn btn-primary" onClick={() => { setInicio(false); if (!ligada) ligarDesligar(true) }}><Check size={16} /> Sim, quero ligar</button>
+              <button type="button" className="btn btn-primary" onClick={() => {
+                setInicio(false)
+                if (proprio) { if (!ligada) ligarDesligar(true); return }
+                querLigar.current = true
+                setTimeout(() => { refNumero.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); refNumero.current?.querySelector('input')?.focus() }, 50)
+              }}><Check size={16} /> {proprio ? 'Sim, quero ligar' : 'Sim, conectar o WhatsApp'}</button>
               <button type="button" className="btn btn-ghost" onClick={() => navigate(voltar)}>Agora não</button>
             </div>
             <small className="muted">Dá para mudar tudo depois em Ajustes › Assistente do WhatsApp.</small>
@@ -241,97 +335,34 @@ export default function AdminAssistente({ para = 'admin' }) {
       {!dados ? (!erro && <p className="muted">Carregando…</p>) : (
         <div className="as-grade">
           <div className="as-principal">
+            {/* o WhatsApp do salão vem primeiro: sem ele, ela não liga */}
+            {!proprio && secaoNumero}
+
             {/* ligada / desligada */}
-            <section className={'card as-status' + (ligada ? ' ligada' : '')}>
+            <section className={'card as-status' + (ativa ? ' ligada' : '')}>
               <span className="as-status-icone"><Bot size={22} /></span>
               <div className="as-status-texto">
-                <strong>{ligada ? `${nomeQueAparece} está atendendo` : 'Assistente desligada'}</strong>
+                <strong>{ativa ? `${nomeEscolhido} está atendendo` : 'Assistente desligada'}</strong>
                 <span className="muted">
-                  {ligada
-                    ? (proprio ? `No número do salão${dados.canal?.numero ? ` (${dados.canal.numero})` : ''}.` : `No número da MIMO${dados.canal?.numero ? ` (${dados.canal.numero})` : ''}, em nome ${autonoma ? 'da' : 'do'} ${nomeSalao}.`)
-                    : 'As mensagens das clientes ficam para a equipe responder.'}
+                  {!proprio
+                    ? 'Conecte o WhatsApp do salão para ligar a assistente.'
+                    : ativa
+                      ? `No WhatsApp do salão${dados.canal?.numero ? ` (${dados.canal.numero})` : ''}.`
+                      : 'As mensagens das clientes ficam para a equipe responder.'}
                 </span>
-                {ligada && dados.agente_global === false && <span className="as-aviso"><Info size={14} /> As respostas automáticas estão pausadas pela MIMO neste momento.</span>}
+                {ativa && dados.agente_global === false && <span className="as-aviso"><Info size={14} /> As respostas automáticas estão pausadas pela MIMO neste momento.</span>}
               </div>
-              <span className="switch as-status-chave"><input type="checkbox" aria-label="Ligar a assistente" checked={ligada} disabled={salvando} onChange={(e) => ligarDesligar(e.target.checked)} /><span /></span>
+              <label className={'switch as-status-chave' + (!proprio ? ' trancada' : '')}>
+                <input type="checkbox" aria-label="Ligar a assistente" checked={ativa} disabled={salvando || !proprio} onChange={(e) => ligarDesligar(e.target.checked)} />
+                <span />
+              </label>
             </section>
 
-            {/* o número */}
-            <section className="card as-secao">
-              <h3><Smartphone size={18} /> Em qual número ela atende</h3>
-              <div className="as-numeros">
-                <div className={'as-numero' + (!proprio ? ' atual' : '')}>
-                  <span className="as-numero-icone"><MessageCircle size={18} /></span>
-                  <div>
-                    <strong>Número da MIMO {!proprio && <em className="as-selo">em uso</em>}</strong>
-                    <small>Já funciona hoje, sem fazer nada. As clientes falam com a Mel, da MIMO, em nome {autonoma ? 'da' : 'do'} {nomeSalao}.</small>
-                  </div>
-                </div>
-                <div className={'as-numero' + (proprio ? ' atual' : '')}>
-                  <span className="as-numero-icone"><Store size={18} /></span>
-                  <div>
-                    <strong>Número do salão {proprio && <em className="as-selo">em uso</em>}</strong>
-                    <small>As clientes falam com a <b>sua</b> assistente, no <b>seu</b> número, com o nome e o jeito que você escolher. Você continua vendo e respondendo tudo pelo celular; quando você responde, ela fica quieta com aquela cliente por 2 horas.</small>
-                  </div>
-                </div>
-              </div>
-
-              {proprio ? (
-                <div className="as-conectado">
-                  <span className={'as-ponto' + (conferido && conferido !== 'open' ? ' ruim' : '')} />
-                  <div>
-                    <strong>{dados.canal?.numero ?? 'Número do salão'} conectado</strong>
-                    <small className="muted">
-                      {conferido && conferido !== 'open'
-                        ? 'O celular desconectou. Gere um código novo abaixo para conectar de novo.'
-                        : dados.canal?.conectado_em ? `Desde ${new Date(dados.canal.conectado_em).toLocaleDateString('pt-BR')}. Mantenha o celular com internet.` : 'Mantenha o celular com internet.'}
-                    </small>
-                  </div>
-                  <button type="button" className="btn btn-ghost as-desconectar" onClick={desconectar}><Unplug size={16} /> Desconectar</button>
-                </div>
-              ) : null}
-
-              {(!proprio || (conferido && conferido !== 'open')) && (
-                <div className="as-conectar">
-                  {con.fase !== 'codigo' ? (
-                    <>
-                      <label className="as-campo">
-                        <span>WhatsApp do salão (com DDD)</span>
-                        <input inputMode="tel" autoComplete="tel" placeholder="(13) 99999-9999" value={numero} onChange={(e) => setNumero(e.target.value)} />
-                      </label>
-                      <button type="button" className="btn btn-primary" disabled={con.fase === 'gerando' || numero.replace(/\D/g, '').length < 10} onClick={gerarCodigo}>
-                        {con.fase === 'gerando' ? <><Loader2 size={16} className="as-gira" /> Gerando…</> : 'Gerar código para conectar'}
-                      </button>
-                      {con.fase === 'erro' && <p className="as-erro-linha">{con.erro}</p>}
-                      <small className="muted as-dica">Use o número que as clientes já conhecem (de preferência WhatsApp Business). O WhatsApp continua funcionando no celular como sempre.</small>
-                    </>
-                  ) : (
-                    <div className="as-codigo">
-                      <p className="as-codigo-tit">No celular do salão ({con.numero}), abra o WhatsApp e digite este código:</p>
-                      {con.codigo ? <div className="as-codigo-num" aria-label="código de pareamento">{codigoBonito(con.codigo)}</div> : <p className="muted">O código não veio. Use o QR code abaixo.</p>}
-                      <ol className="as-passos">
-                        <li>WhatsApp › <b>⋮</b> (ou <b>Configurações</b>) › <b>Aparelhos conectados</b></li>
-                        <li>Toque em <b>Conectar um aparelho</b></li>
-                        <li>Escolha <b>Conectar com número de telefone</b> e digite o código</li>
-                      </ol>
-                      <p className="as-esperando"><Loader2 size={16} className="as-gira" /> Esperando o celular conectar…</p>
-                      {con.qr && (
-                        <>
-                          <button type="button" className="btn btn-ghost" onClick={() => setVerQr((v) => !v)}><QrCode size={16} /> {verQr ? 'Esconder o QR code' : 'Prefere ler um QR code?'}</button>
-                          {verQr && <img className="as-qr" src={con.qr} alt="QR code para conectar o WhatsApp" />}
-                        </>
-                      )}
-                      <button type="button" className="btn btn-ghost" onClick={() => setCon({ fase: 'livre' })}>Cancelar</button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </section>
+            {proprio && secaoNumero}
 
             {/* o jeito dela */}
             <section className="card as-secao">
               <h3><Sparkles size={18} /> O jeito dela</h3>
-              {!proprio && <p className="as-nota"><Info size={15} /> No número da MIMO ela se apresenta como Mel, da MIMO, no jeito padrão. O nome e o jeito que você escolher aqui valem quando ela atende no número do salão.</p>}
               <label className="as-campo">
                 <span>Nome da assistente</span>
                 <input maxLength={30} placeholder="Mel" value={cfg.nome} onChange={(e) => mudar('nome', e.target.value)} />
@@ -374,21 +405,20 @@ export default function AdminAssistente({ para = 'admin' }) {
             </section>
 
             {/* quando ela responde */}
-            <section className={'card as-secao' + (!proprio ? ' as-secao-off' : '')}>
+            <section className="card as-secao">
               <h3><Clock size={18} /> Quando ela responde</h3>
-              {!proprio && <p className="as-nota"><Info size={15} /> No número da MIMO ela responde sempre, na hora (a equipe não vê essas conversas). Isto vale no número do salão.</p>}
               <div className="as-quando" role="radiogroup" aria-label="Quando ela responde">
                 {[
                   { id: 'sempre', t: 'Sempre, na hora', s: 'A cliente nunca fica esperando.' },
                   { id: 'fora_do_horario', t: 'Só fora do horário do salão', s: 'No horário, quem responde é a equipe.' },
                   { id: 'sem_resposta', t: 'Se a equipe não responder', s: 'No horário do salão, espera a equipe; fora dele, responde na hora.' },
                 ].map((q) => (
-                  <button key={q.id} type="button" role="radio" aria-checked={cfg.quando === q.id} disabled={!proprio} className={'as-quando-op' + (cfg.quando === q.id ? ' ativa' : '')} onClick={() => mudar('quando', q.id)}>
+                  <button key={q.id} type="button" role="radio" aria-checked={cfg.quando === q.id} className={'as-quando-op' + (cfg.quando === q.id ? ' ativa' : '')} onClick={() => mudar('quando', q.id)}>
                     <span className="as-radio" /><span><strong>{q.t}</strong><small>{q.s}</small></span>
                   </button>
                 ))}
               </div>
-              {cfg.quando === 'sem_resposta' && proprio && (
+              {cfg.quando === 'sem_resposta' && (
                 <div className="as-espera">
                   <span>Esperar a equipe por</span>
                   <div className="as-opcoes">
@@ -418,7 +448,6 @@ export default function AdminAssistente({ para = 'admin' }) {
                 <em className="as-selo">prévia</em>
               </div>
               <Bolhas mensagens={conversaPrevia} nome={nomeEscolhido} />
-              {!proprio && <small className="muted as-dica">Assim ela fala no número do salão. No número da MIMO, ela se apresenta como Mel, da MIMO.</small>}
             </section>
 
             <section className="card as-teste">

@@ -44,15 +44,24 @@ Deno.serve(async (req) => {
   let enviadas = 0
   let falhas = 0
 
+  let pelaReserva = 0
   for (const m of fila ?? []) {
-    const r = await enviarPor(m.canal, {
+    const envio = {
       telefone: m.telefone,
       titulo: m.titulo,
       corpo: m.corpo,
       botoes: m.botoes,
       estilo: m.estilo_botao,
       identificador: m.identificador,
-    })
+    }
+    let r = await enviarPor(m.canal, envio)
+    // 3.95.1 (236): o WhatsApp é o do salão; o da MIMO é só a reserva. Se o do salão não mandou (celular sem internet,
+    // desconectado), tenta pelo nosso, para o aviso não se perder até ele reconectar.
+    if (!r.ok && m.reserva && m.canal === 'evolution') {
+      const ruim = r.erro
+      r = await enviarPor('evolution', { ...envio, identificador: m.reserva })
+      if (r.ok) { pelaReserva++; console.log(`pela reserva (${m.identificador} falhou: ${ruim})`) }
+    }
 
     if (r.ok) {
       await db.rpc('confirmar_envio', { mensagem_id: m.id, id_provedor: r.providerId })
@@ -70,7 +79,7 @@ Deno.serve(async (req) => {
   }
 
   return new Response(
-    JSON.stringify({ puxadas: fila?.length ?? 0, enviadas, falhas }),
+    JSON.stringify({ puxadas: fila?.length ?? 0, enviadas, falhas, pela_reserva: pelaReserva }),
     { headers: { 'Content-Type': 'application/json' } },
   )
 })

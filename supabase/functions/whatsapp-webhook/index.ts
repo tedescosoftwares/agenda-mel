@@ -14,7 +14,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { enviarPor } from '../_shared/canais.ts'
 import { classificar } from '../_shared/ia.ts'
-import { conversar } from '../_shared/agente.ts'
+import { conversar, registroDaConversa } from '../_shared/agente.ts'
 import { atenderGuia, iaDe, avisoDemora, cutucadaSalao, resgatarCliente, VOTO_ILEGIVEL, type Deps as DepsGuia, type Pedido } from '../_shared/guia_whats.ts'
 import { atenderOnboarding, iaOnbDe, consultarCnpjDe, consultarCepDe, consultarRuaDe, type Deps as DepsOnb } from '../_shared/guia_onboarding.ts'
 import { atenderComercial, iaComercialDe, textoCadencia, type Deps as DepsCom } from '../_shared/comercial.ts'
@@ -29,13 +29,49 @@ type Recebida = { telefone: string; texto: string; id: string | null;
                   enquete?: string | null; instancia?: string | null; nome?: string | null; citado?: string | null }
 type Status = { id: string; status: string; detalhe: string | null }
 // 3.74: o que saiu do NOSSO número (fromMe): no comercial, diz se alguém da equipe escreveu pelo celular do chip
-type Propria = { telefone: string; texto: string; instancia: string | null }
+// 3.95: no número próprio do salão também (o id separa o eco do que a gente mandou da equipe pelo celular)
+type Propria = { telefone: string; texto: string; instancia: string | null; id?: string | null }
 
 function json(corpo: unknown, status = 200) {
   return new Response(JSON.stringify(corpo), {
     status,
     headers: { 'Content-Type': 'application/json' },
   })
+}
+
+const espera = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
+// Responde a cliente. Por qual canal é O NÚMERO QUE RECEBEU a mensagem (m.instancia); antes isto vinha do histórico de
+// envios, e quem escrevia pela primeira vez não recebia resposta nenhuma. Sem canal automático, a resposta espera na
+// fila para alguém mandar na mão. Falha de envio vira linha na fila: resposta atrasada é ruim; resposta que nunca
+// existiu é pior. 3.95: o que saiu fica anotado (whatsapp_saiu), para o eco no número próprio não parecer a equipe, e a
+// espera pela equipe daquela cliente (se houver) cai.
+async function responderCliente(o: { salao: string | null; telefone: string; instancia: string | null; corpo: string; doAgente: boolean }): Promise<boolean> {
+  const { data: canal } = await db.rpc('canal_para_responder', { tel: o.telefone, instancia: o.instancia, salao: o.salao })
+  const c = Array.isArray(canal) ? canal[0] : canal
+  if (!c?.canal || c.canal === 'manual') {
+    await db.rpc('resposta_nao_saiu', {
+      tel: o.telefone, corpo: o.corpo, salao: o.salao,
+      motivo: c?.canal === 'manual' ? 'canal manual' : 'nenhum canal para este número',
+    })
+    return false
+  }
+  try {
+    const env = await enviarPor(c.canal, { telefone: o.telefone, corpo: o.corpo, identificador: c.identificador ?? null })
+    if (env.ok) {
+      try { await db.rpc('whatsapp_saiu', { id_provedor_: env.providerId ?? null, tel: o.telefone, texto_: o.corpo, salao: o.salao }) } catch { /* banco sem a 235 */ }
+      if (o.doAgente && o.salao) {
+        await db.rpc('bot_registrar_resposta', { salao: o.salao, tel: o.telefone, corpo: o.corpo, id_provedor: env.providerId ?? null, canal_: c.canal }).then(() => {}, () => {})
+      }
+      return true
+    }
+    console.error('resposta não saiu; vai para a fila:', env.erro)
+    await db.rpc('resposta_nao_saiu', { tel: o.telefone, corpo: o.corpo, salao: o.salao, motivo: env.erro ?? 'envio falhou' })
+  } catch (e) {
+    console.error('resposta não saiu; vai para a fila', e)
+    await db.rpc('resposta_nao_saiu', { tel: o.telefone, corpo: o.corpo, salao: o.salao, motivo: String(e).slice(0, 200) })
+  }
+  return false
 }
 
 // A Meta assina cada POST. Sem conferir, qualquer um posta na sua URL
@@ -198,7 +234,7 @@ function lerEvolution(corpo: any): { mensagens: Recebida[]; status: Status[]; pr
     if (d?.key?.fromMe) {
       const jid: string = d?.key?.remoteJid ?? ''
       const texto = d?.messageType === 'pollUpdateMessage' ? '' : textoDaMensagem(d?.message)
-      if (jid && !jid.includes('@g.us') && texto) proprias.push({ telefone: '+' + jid.split('@')[0], texto, instancia: corpo?.instance ?? null })
+      if (jid && !jid.includes('@g.us') && texto) proprias.push({ telefone: '+' + jid.split('@')[0], texto, instancia: corpo?.instance ?? null, id: d?.key?.id ?? null })
     }
     if (!d?.key?.fromMe) {
       const jid: string = d?.key?.remoteJid ?? ''
@@ -339,7 +375,22 @@ Deno.serve(async (req) => {
       } catch (e) {
         console.error('cadência comercial: não deu para varrer (a migração 218 está aplicada?)', e)
       }
-      return json({ ok: true, ativo: !!o.ativo, perguntou, encerrou, pedidos: pedidosAtivo, avisou_demora: avisouDemora, cutucou, resgatou, comercial: comercialAtivo, cadencia })
+      // 3.95: a espera pela equipe (número próprio, "se ninguém responder em X min", migração 235): venceu sem a equipe
+      // responder pelo celular, a assistente responde agora. Num banco sem a 235, nada.
+      let esperas = 0
+      try {
+        const { data: ev, error: eev } = await db.rpc('assistente_esperas_vencidas', { quantas: 20 })
+        if (eev) throw new Error(eev.message)
+        for (const e of (ev ?? []) as Array<{ salon_id: string; telefone: string; instancia: string | null; texto: string }>) {
+          const ag = await conversar(db, e.salon_id, e.telefone, e.texto, { instancia: e.instancia, semEspera: true })
+          if (ag.provedor || ag.erro) await db.rpc('registrar_chamada_ia', registroDaConversa(e.salon_id, e.telefone, ag)).then(() => {}, () => {})
+          if (ag.erro) console.error('assistente (espera):', ag.erro)
+          if (ag.resposta && await responderCliente({ salao: e.salon_id, telefone: e.telefone, instancia: e.instancia, corpo: ag.resposta, doAgente: true })) esperas++
+        }
+      } catch (e) {
+        console.error('esperas da assistente: não deu para varrer (a migração 235 está aplicada?)', e)
+      }
+      return json({ ok: true, ativo: !!o.ativo, perguntou, encerrou, pedidos: pedidosAtivo, avisou_demora: avisouDemora, cutucou, resgatou, comercial: comercialAtivo, cadencia, esperas })
     } catch (e) {
       return json({ erro: String((e as Error)?.message ?? e).slice(0, 300) }, 500)
     }
@@ -418,11 +469,26 @@ Deno.serve(async (req) => {
   })
   // o que saiu do número comercial: eco do que a assistente/painel mandou, ou alguém da equipe pelo celular (a assistente cala)
   for (const pr of proprias) {
-    if (!comercial || !pr.instancia || pr.instancia !== comercial.instancia) continue
+    if (!pr.instancia) continue
+    if (comercial && pr.instancia === comercial.instancia) {
+      try {
+        const { data: f } = await db.rpc('comercial_fromme', { tel_: pr.telefone, texto_: pr.texto })
+        if ((f as { intervencao?: boolean } | null)?.intervencao) respostas.push(`comercial[intervencao]`)
+      } catch (e) { console.error('comercial fromMe:', e) }
+      continue
+    }
+    // 3.95: no número próprio do salão, a equipe respondendo pelo celular cala a assistente com essa cliente por 2 h.
+    // O eco do que a gente mesma mandou pode chegar antes de a saída estar anotada: confere, espera 3 s e só então registra.
     try {
-      const { data: f } = await db.rpc('comercial_fromme', { tel_: pr.telefone, texto_: pr.texto })
-      if ((f as { intervencao?: boolean } | null)?.intervencao) respostas.push(`comercial[intervencao]`)
-    } catch (e) { console.error('comercial fromMe:', e) }
+      const args = { instancia_: pr.instancia, tel: pr.telefone, texto_: pr.texto, id_provedor_: pr.id ?? null }
+      const { data: f1 } = await db.rpc('assistente_fromme', { ...args, registrar: false })
+      const r1 = (f1 ?? {}) as { proprio?: boolean; eco?: boolean }
+      if (r1.proprio && !r1.eco) {
+        await espera(3000)
+        const { data: f2 } = await db.rpc('assistente_fromme', { ...args, registrar: true })
+        if ((f2 as { intervencao?: boolean } | null)?.intervencao) respostas.push('assistente[a equipe respondeu]')
+      }
+    } catch (e) { console.error('assistente fromMe:', e) }
   }
   const depsGuia = (): DepsGuia => ({
     rpc: (nome, args) => db.rpc(nome, args) as unknown as Promise<{ data: unknown; error: { message?: string } | null }>,
@@ -593,14 +659,21 @@ Deno.serve(async (req) => {
     let responder: string | null = (data as any)?.responder ?? null
     const acao = String((data as any)?.acao ?? '')
     if (!responder && salao && ['nada', 'sem_cadastro', 'fora_de_contexto', 'sem_horario'].includes(acao)) {
-      const ag = await conversar(db, salao, m.telefone, m.texto)
-      await db.rpc('registrar_chamada_ia', {
-        salao, tel: m.telefone, modelo_usado: ag.modelo || null, duracao_ms: ag.ms, deu_erro: ag.erro ?? null,
-      }).then(() => {}, () => {})
+      const ag = await conversar(db, salao, m.telefone, m.texto, { instancia: m.instancia ?? null })
+      // 3.95: no número próprio, no horário do salão, a dona pode querer que a equipe responda primeiro: a mensagem
+      // espera; o relógio responde se ninguém responder pelo celular até lá
+      if (ag.motivo === 'esperar') {
+        await db.rpc('assistente_esperar', { salao, tel: m.telefone, instancia_: m.instancia ?? null, texto_: m.texto, ate: ag.responderEm ?? null }).then(() => {}, (e) => console.error('assistente: não deu para esperar', e))
+        respostas.push('assistente[esperando a equipe]')
+        continue
+      }
+      // só conta (teto e custo) o que chegou a falar com um modelo
+      if (ag.provedor || ag.erro) await db.rpc('registrar_chamada_ia', registroDaConversa(salao, m.telefone, ag)).then(() => {}, () => {})
       if (ag.erro) console.error('agente:', ag.erro)
+      if (ag.falhas.length && ag.resposta) console.error('agente: a reserva respondeu depois de', ag.falhas.join(' | '))
       if (ag.resposta) {
         responder = ag.resposta
-        respostas.push(`agente[${ag.ferramentas.join(',')}]`)
+        respostas.push(`agente[${ag.provedor}:${ag.ferramentas.join(',')}]`)
       }
     }
     if (!responder) continue
@@ -609,51 +682,7 @@ Deno.serve(async (req) => {
     // Ela acabou de escrever, então a janela de 24h está aberta: a
     // confirmação sai na hora, sem template e sem custo. E sem passar
     // pela fila — resposta que chega meia hora depois não é resposta.
-    // Por qual canal responder é O NÚMERO QUE RECEBEU a mensagem —
-    // m.instancia. Antes isto vinha do histórico de envios, então quem
-    // escrevia pela primeira vez não tinha histórico, não tinha canal, e
-    // não recebia resposta nenhuma. Ovo e galinha, em silêncio.
-    const { data: canal } = await db.rpc('canal_para_responder', {
-      tel: m.telefone,
-      instancia: m.instancia ?? null,
-      salao,
-    })
-    const c = Array.isArray(canal) ? canal[0] : canal
-
-    if (!c?.canal || c.canal === 'manual') {
-      // sem canal automático: a resposta espera na fila, para alguém
-      // mandar na mão pela tela do admin
-      await db.rpc('resposta_nao_saiu', {
-        tel: m.telefone, corpo: responder, salao,
-        motivo: c?.canal === 'manual' ? 'canal manual' : 'nenhum canal para este número',
-      })
-      continue
-    }
-
-    // Falha de envio não pode virar silêncio: se não saiu agora, vira
-    // linha na fila e o escoamento tenta de novo. Resposta atrasada é
-    // ruim; resposta que nunca existiu é pior.
-    try {
-      const env = await enviarPor(c.canal, {
-        telefone: m.telefone,
-        corpo: responder,
-        identificador: c.identificador ?? null,
-      })
-      if (env.ok && acao && !(data as any)?.responder) {
-        await db.rpc('bot_registrar_resposta', { salao, tel: m.telefone, corpo: responder, id_provedor: env.providerId ?? null, canal_: c.canal }).then(() => {}, () => {})
-      }
-      if (!env.ok) {
-        console.error('resposta não saiu; vai para a fila:', env.erro)
-        await db.rpc('resposta_nao_saiu', {
-          tel: m.telefone, corpo: responder, salao, motivo: env.erro ?? 'envio falhou',
-        })
-      }
-    } catch (e) {
-      console.error('resposta não saiu; vai para a fila', e)
-      await db.rpc('resposta_nao_saiu', {
-        tel: m.telefone, corpo: responder, salao, motivo: String(e).slice(0, 200),
-      })
-    }
+    await responderCliente({ salao, telefone: m.telefone, instancia: m.instancia ?? null, corpo: responder, doAgente: Boolean(acao && !(data as any)?.responder) })
   }
 
   // O WhatsApp reenvia o evento se a gente demorar ou devolver erro:

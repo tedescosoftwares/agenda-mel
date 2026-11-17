@@ -873,3 +873,18 @@ cd evolution
 ./limpar-mensagens.sh --sem-cron # tira do cron
 ```
 
+
+## O número do próprio salão (3.95)
+
+Além do número da casa (todas as agendas) e dos números do guia e do comercial, cada salão pode conectar **o próprio
+WhatsApp** pela tela Ajustes › Assistente do WhatsApp: a Edge Function `assistente` cria a instância `salao-<id>` nesta
+mesma Evolution, aponta o webhook de sempre e mostra o código de pareamento (e o QR). O celular do salão continua
+funcionando normalmente; ele só precisa entrar na internet de vez em quando (o WhatsApp desconecta aparelhos
+vinculados que ficam semanas sem o celular principal).
+
+- **Quanto pesa**: cada instância conectada usa uns 50–80 MB de memória com movimento. Nesta máquina (7,6 GB, a
+  Evolution hoje com ~200 MB para 3 instâncias) cabem com folga 50–100 salões; acima disso, outra VPS de Evolution.
+- **O trocar-numero.sh** não mexe em quem tem número próprio (só nos salões do número da casa) e grava
+  `whatsapp_instancia_casa`, para salão novo nascer no número da casa.
+- **"Se a equipe não responder em X min"** usa o mesmo relógio do `cutucar-ociosas.sh` (a cada 5 min): a resposta sai
+  entre X e X+5 minutos depois da primeira mensagem sem resposta.

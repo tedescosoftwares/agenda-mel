@@ -4,7 +4,7 @@ import ProShell from '../../components/ProShell'
 import SemFicha from './SemFicha'
 import { useAuth } from '../../context/AuthContext'
 import { ClockIcon, LinkIcon, ChevronIcon, BellIcon, MegafoneIcon } from '../../components/icons'
-import { BadgePercent, Wallet, MapPin, FileSignature, Building2, MessageCircle } from 'lucide-react'
+import { BadgePercent, Wallet, MapPin, FileSignature, Building2, MessageCircle, Bot } from 'lucide-react'
 import LinkSuporte from '../../components/LinkSuporte'
 import { supabase } from '../../lib/supabase'
 import AvisosNoCelular from '../../components/AvisosNoCelular'
@@ -45,6 +45,23 @@ export default function ProAjustes() {
       <AvisosPorEmail />
 
       <div className="cliente-list">
+        {negocio && (
+          <Link to="/pro/assistente" className="card prof-row">
+            <span className="ajuste-icone">
+              <Bot />
+            </span>
+            <div className="cliente-info">
+              <span className="cliente-nome">
+                <span className="nome-txt">Assistente do WhatsApp</span>
+              </span>
+              <span className="muted cliente-meta">
+                Quem responde as suas clientes: o nome, o jeito e em qual número
+              </span>
+            </div>
+            <ChevronIcon />
+          </Link>
+        )}
+
         <Link to="/pro/recados" className="card prof-row">
           <span className="ajuste-icone">
             <MegafoneIcon />

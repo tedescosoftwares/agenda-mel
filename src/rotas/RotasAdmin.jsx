@@ -14,6 +14,7 @@ import AdminHours from '../pages/admin/AdminHours'
 import AdminClientes from '../pages/admin/AdminClientes'
 import AdminNumeros from '../pages/admin/AdminNumeros'
 import AdminWhatsapp from '../pages/admin/AdminWhatsapp'
+import AdminAssistente from '../pages/admin/AdminAssistente'
 import AdminRecados from '../pages/admin/AdminRecados'
 import AdminAjustes from '../pages/admin/AdminAjustes'
 import AdminBancada from '../pages/admin/AdminBancada'
@@ -44,6 +45,7 @@ export default function RotasAdmin() {
       <Route path="clientes" element={<A><AdminClientes /></A>} />
       <Route path="numeros" element={<A><AdminNumeros /></A>} />
       <Route path="whatsapp" element={<A><AdminWhatsapp /></A>} />
+      <Route path="assistente" element={<A><AdminAssistente /></A>} />
       <Route path="recados" element={<A><AdminRecados /></A>} />
       <Route path="ajustes" element={<A><AdminAjustes /></A>} />
       <Route path="bancada" element={<A><AdminBancada /></A>} />

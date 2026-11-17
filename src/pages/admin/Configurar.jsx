@@ -138,7 +138,8 @@ export default function Configurar({ para = 'admin' }) {
     try { localStorage.removeItem(chaveLocal) } catch { /* nada */ }
     await recarregarPerfil?.()
     setSalvando(false)
-    navigate(para === 'admin' ? '/admin' : '/pro/agenda', { replace: true })
+    // 3.95: no fim da configuração, a pergunta "quer atender pelo WhatsApp também?" (a tela da assistente)
+    navigate(para === 'admin' ? '/admin/assistente?inicio=1' : '/pro/assistente?inicio=1', { replace: true })
   }
   const onEstado = useCallback((e) => setEstado((atual) => ({ ...atual, aoContinuar: null, aviso: false, acaoRodape: null, motivo: null, ...e })), [])
   const Shell = para === 'admin' ? AdminShell : ProShell

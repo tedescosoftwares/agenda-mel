@@ -444,3 +444,41 @@ que responde recebe uma resposta uma vez (QUERO: a equipe chama; SAIR: para de r
   conversa com a oferta aberta fica fora do ocioso; a resposta à oferta reabre a conversa encerrada; "pode enviar" pede o
   número com a lista; `oferta_motivo` decide se "vou esperar" faz sentido.
 
+
+## A assistente do WhatsApp do salão (3.95, migração 235)
+
+A cliente escreve para o salão no WhatsApp; a assistente responde com os dados da agenda (serviços, preços, horários
+livres) e marca, remarca e cancela com o "sim" dela. É o agente da 069 (`_shared/agente.ts`, chamado pelo
+`whatsapp-webhook`) com três mudanças:
+
+- **O cérebro**: o Claude Haiku 5.5 pela API de Messages, com o Groq de reserva. Se o primeiro falhar ou recusar
+  **antes** de mexer na agenda, o outro responde; depois de marcar, remarcar, cancelar ou chamar alguém, ninguém
+  recomeça em outro provedor (marcaria duas vezes): a cliente recebe o resumo do que foi feito. Qual vai primeiro e
+  qual modelo do Claude: Plataforma › Mensagens › IA (`ia_provedor`, `ia_modelo_claude` em `config_publica`).
+  O pedido vai sem temperatura (o Haiku 5.5 recusa), com esforço baixo (`output_config.effort: low`), e devolve o
+  raciocínio inteiro junto com os resultados das ferramentas. A parte fixa (ferramentas + orientação) é igual para todos
+  os salões e vai em cache; o que é do salão vem depois.
+- **A personalidade** (`assistentes`, tela Ajustes › Assistente do WhatsApp): nome (Mel se a dona não escolher), tom,
+  emojis, como chama a cliente, tamanho, saudação, o que ela pode fazer sozinha, como fala de preço, quando responde e o
+  recado da casa (`whatsapp_channels.orientacao_ia`). O que a dona desligou a ferramenta recusa, além do prompt pedir.
+  No **número da casa** ela continua sendo a Mel, da MIMO (nome e tom só valem no número do salão).
+- **O número do próprio salão** (`whatsapp_channels.numero_proprio`): a dona conecta pela tela, com o código de
+  pareamento; a instância é `salao-<id sem traços>` na mesma Evolution, com o mesmo webhook. A partir daí tudo do salão
+  sai por ele (lembretes, confirmações, respostas). Quando a equipe responde pelo celular (fromMe que não é eco nosso:
+  `assistente_fromme` confere o id e o texto do que saiu, `whatsapp_saidas`), a assistente fica quieta 2 h com aquela
+  cliente. "Se a equipe não responder em X min" (só no horário do salão): a mensagem espera em `assistente_esperas` e o
+  relógio da VPS (`whatsapp-webhook?tarefa=ociosas`, a cada 5 min) responde quando vence.
+
+- **Esta função (`assistente`)**: atende a tela da dona (`is_admin_do_salao` com o token dela): `estado`, `conectar`
+  (cria a instância, aponta o webhook, devolve o código e o QR), `desconectar` (logout, apaga a instância, volta para o
+  número da casa) e `testar` (a assistente de verdade, com a personalidade da tela mesmo sem salvar; lê serviços, equipe e
+  horários reais, mas marcar, remarcar, cancelar e chamar alguém só fingem; 40 testes por hora).
+- **Segredos**: `ANTHROPIC_API_KEY` (e `ANTHROPIC_WORKSPACE_ID`, se a chave é de organização), `GROQ_API_KEY` (a
+  reserva) e os da Evolution de sempre (`EVOLUTION_URL`, `EVOLUTION_API_KEY`, `EVOLUTION_WEBHOOK_TOKEN`).
+- **Custo**: cada conversa grava em `ia_chamadas` o provedor, os tokens (com o cache lido e gravado), o custo em dólar
+  (Haiku: US$ 0,10 por milhão de entrada, 0,50 de saída; cache lido a 0,1 e gravado a 1,25 da entrada), as ferramentas e
+  o que ela fez. A dona vê conversas, horários e passagens para a equipe; a Plataforma vê o custo por salão (30 dias).
+  O teste da dona é marcado como `ensaio` e não gasta o teto do salão.
+- **Testar sem rede**: `node --experimental-strip-types supabase/functions/_shared/agente.teste.ts` (Claude com
+  ferramentas, cache, reserva no Groq, recusa, não marcar duas vezes, o que o salão desligou, o ensaio, o banco antigo).
+  No banco: `supabase/ensaio_assistente.sql`.

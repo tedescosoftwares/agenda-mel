@@ -157,6 +157,13 @@ echo 'comercial (o WhatsApp comercial: conectar, simular, responder pelo painel)
 supabase functions deploy comercial --project-ref "$PROJECT_REF" >/dev/null
 verde '  no ar'
 
+# JWT normal: quem chama é quem administra o salão (a função confere is_admin_do_salao). A conversa da assistente
+# chega pelo whatsapp-webhook; aqui a tela Assistente do WhatsApp: estado, conectar o número do salão, desconectar,
+# testar (3.95; usa ANTHROPIC_API_KEY, com GROQ_API_KEY de reserva)
+echo 'assistente (a assistente do WhatsApp do salão: número próprio e teste)...'
+supabase functions deploy assistente --project-ref "$PROJECT_REF" >/dev/null
+verde '  no ar'
+
 # JWT normal: quem chama é a Plataforma logada (a função confere eh_plataforma); cria a conta da dona e o salão (3.71)
 echo 'plataforma-promover (promover o salão do guia a salão com agenda)...'
 supabase functions deploy plataforma-promover --project-ref "$PROJECT_REF" >/dev/null
@@ -196,6 +203,10 @@ fi
 if ! supabase secrets list --project-ref "$PROJECT_REF" 2>/dev/null | grep -q ASAAS_API_KEY; then
   amarelo 'ASAAS_API_KEY ainda não está nos segredos: o pagamento pelo app fica desligado.'
   echo "   supabase secrets set --project-ref $PROJECT_REF ASAAS_API_KEY=... ASAAS_AMBIENTE=sandbox ASAAS_WEBHOOK_TOKEN=... MIMO_WALLET_ID=... MIMO_TAXA_PCT=0"
+fi
+if ! supabase secrets list --project-ref "$PROJECT_REF" 2>/dev/null | grep -q ANTHROPIC_API_KEY; then
+  amarelo 'ANTHROPIC_API_KEY ainda não está nos segredos: a assistente do WhatsApp responde só pelo Groq (a reserva).'
+  echo "   supabase secrets set --project-ref $PROJECT_REF ANTHROPIC_API_KEY=sk-ant-..."
 fi
 if ! supabase secrets list --project-ref "$PROJECT_REF" 2>/dev/null | grep -q RESEND_API_KEY; then
   amarelo 'RESEND_API_KEY ainda não está nos segredos: o e-mail de boas-vindas fica na fila sem sair.'

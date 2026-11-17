@@ -401,6 +401,19 @@ function IA({ modelos, aoSalvar, confirmar, avisar }) {
         <div className="plat-painel"><span className="msg-previa-tit">Agente</span>
           <label className="chave-linha"><button type="button" className={'switch' + (agente ? ' on' : '')} onClick={() => config('ia_agente', agente ? 'desligado' : 'ligado')} role="switch" aria-checked={agente} /><span>{agente ? 'Conversando com ferramentas' : 'Desligado (só regras e menu antigo)'}</span></label>
         </div>
+        <div className="plat-painel"><span className="msg-previa-tit">Quem responde primeiro</span>
+          <select value={cfg.ia_provedor ?? 'claude'} onChange={(e) => config('ia_provedor', e.target.value)} className="msg-select">
+            <option value="claude">Claude (o outro fica de reserva)</option>
+            <option value="groq">Groq (o outro fica de reserva)</option>
+          </select>
+          <span className="muted msg-nota">Se o primeiro falhar antes de mexer na agenda, o outro responde. Precisa da chave de cada um nos segredos.</span>
+        </div>
+        <div className="plat-painel"><span className="msg-previa-tit">Modelo (Claude)</span>
+          <select value={cfg.ia_modelo_claude ?? 'claude-haiku-5-5'} onChange={(e) => config('ia_modelo_claude', e.target.value)} className="msg-select">
+            {[['claude-haiku-5-5', 'Haiku 5.5 · o mais barato (US$ 0,10 e 0,50 por milhão)'], ['claude-sonnet-5-5', 'Sonnet 5.5 · meio-termo (US$ 2 e 10)'], ['claude-opus-5-5', 'Opus 5.5 · o mais caro (US$ 4 e 20)']].map(([m, n]) => <option key={m} value={m}>{n}</option>)}
+          </select>
+          <span className="muted msg-nota">Para atendimento, o Haiku basta: a parte fixa vai em cache e cada conversa sai por centavos.</span>
+        </div>
         <div className="plat-painel"><span className="msg-previa-tit">Modelo (Groq)</span>
           <select value={cfg.ia_modelo ?? 'openai/gpt-oss-120b'} onChange={(e) => config('ia_modelo', e.target.value)} className="msg-select">
             {['openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'qwen/qwen3.6-27b', 'meta-llama/llama-4-scout-17b-16e-instruct'].map((m) => <option key={m} value={m}>{m}</option>)}
@@ -408,6 +421,11 @@ function IA({ modelos, aoSalvar, confirmar, avisar }) {
           <span className="muted msg-nota">Precisa aceitar ferramentas (tool use). Trocou e parou de responder? Volte para o primeiro.</span>
         </div>
       </div>
+      {lista?.length > 0 && (
+        <p className="muted msg-nota" style={{ margin: '-0.4rem 0 1rem' }}>
+          Últimos 30 dias, todos os salões: {lista.reduce((t, s) => t + Number(s.conversas_30d ?? 0), 0)} conversas · {lista.reduce((t, s) => t + Number(s.chamadas_30d ?? 0), 0)} chamadas · US$ {lista.reduce((t, s) => t + Number(s.custo_30d ?? 0), 0).toFixed(2)} no Claude (o Groq não entra na conta).
+        </p>
+      )}
 
       <div className="msg-duas">
         <Painel Icon={Sparkles} titulo="Orientação do agente" sub="Quem ele é, como fala, o que nunca faz. Vale para todos os salões; cada salão acrescenta a parte dele na tabela abaixo.">
@@ -417,20 +435,21 @@ function IA({ modelos, aoSalvar, confirmar, avisar }) {
           {erro && <div className="alert alert-error">{erro}</div>}
           {lista == null ? <p className="muted">Carregando…</p> : lista.length === 0 ? <Vazio>Nenhum canal de WhatsApp cadastrado ainda.</Vazio> : (
             <div className="plat-tabela-wrap"><table className="plat-tabela">
-              <thead><tr><th>Salão</th><th>Canal</th><th>Bot</th><th>IA</th><th>Hoje</th><th>Teto</th><th></th></tr></thead>
+              <thead><tr><th>Salão</th><th>Canal</th><th>Bot</th><th>IA</th><th>Hoje</th><th>Teto</th><th>30 dias</th><th></th></tr></thead>
               <tbody>
                 {lista.map((s) => (
                   <>
                     <tr key={s.salon_id}>
                       <td><strong>{s.salao}</strong>{s.orientacao_ia && <Pilula tom="roxo">orientação própria</Pilula>}</td>
-                      <td><Pilula tom={s.ativo && s.canal !== 'manual' ? 'menta' : 'cinza'}>{s.canal}{s.ativo ? '' : ' · desligado'}</Pilula></td>
+                      <td><Pilula tom={s.ativo && s.canal !== 'manual' ? 'menta' : 'cinza'}>{s.numero_proprio ? 'número próprio' : s.canal === 'evolution' ? 'número da casa' : s.canal}{s.ativo ? '' : ' · desligado'}</Pilula></td>
                       <td><button type="button" className={'switch' + (s.usa_bot ? ' on' : '')} onClick={() => ligar(s, !s.usa_bot, s.usa_ia)} role="switch" aria-checked={Boolean(s.usa_bot)} /></td>
                       <td><button type="button" className={'switch' + (s.usa_ia ? ' on' : '')} onClick={() => ligar(s, s.usa_bot, !s.usa_ia)} role="switch" aria-checked={Boolean(s.usa_ia)} /></td>
                       <td>{s.gastas_hoje}</td><td>{s.teto_ia_diario}/dia · {s.teto_ia_por_numero}/nº</td>
+                      <td>{Number(s.conversas_30d ?? 0)} conv. · US$ {Number(s.custo_30d ?? 0).toFixed(2)}</td>
                       <td><button className="btn btn-ghost" style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem' }} onClick={() => setEditandoSalao(editandoSalao === s.salon_id ? null : s.salon_id)}>Orientação</button></td>
                     </tr>
                     {editandoSalao === s.salon_id && (
-                      <tr key={s.salon_id + '-o'}><td colSpan={7}>
+                      <tr key={s.salon_id + '-o'}><td colSpan={8}>
                         <OrientacaoSalao salao={s} onSalvar={(t) => salvarOrientacaoSalao(s, t)} onCancelar={() => setEditandoSalao(null)} />
                       </td></tr>
                     )}

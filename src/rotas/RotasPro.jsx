@@ -24,6 +24,7 @@ import ProLocal from '../pages/pro/ProLocal'
 import ProContrato from '../pages/pro/ProContrato'
 import ProAvisos from '../pages/pro/ProAvisos'
 import ProConta from '../pages/pro/ProConta'
+import AdminAssistente from '../pages/admin/AdminAssistente'
 import { PARCERIA_LIGADA } from '../lib/contratoParceria'
 
 const P = ({ children }) => <ProtectedRoute requireRole="profissional">{children}</ProtectedRoute>
@@ -50,6 +51,7 @@ export default function RotasPro() {
       <Route path="receber" element={<P><ProReceber /></P>} />
       <Route path="local" element={<P><ProLocal /></P>} />
       <Route path="configurar" element={<P><Configurar para="pro" /></P>} />
+      <Route path="assistente" element={<P><AdminAssistente para="pro" /></P>} />
       <Route path="contrato" element={PARCERIA_LIGADA ? <P><ProContrato /></P> : <Navigate to="/pro/ajustes" replace />} />
       <Route path="*" element={<NaoEncontrada />} />
     </Routes>

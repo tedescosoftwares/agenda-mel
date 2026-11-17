@@ -24,6 +24,7 @@ import { AO_VIVO_RPC } from './demoAoVivo'
 import { GUIA_WHATS_RPC } from './demoGuiaWhats'
 import { GUIA_ONBOARDING_RPC } from './demoGuiaOnboarding'
 import { COMERCIAL_RPC } from './demoComercial'
+import { assistenteDoSalaoDemo, assistenteSalvarDemo, assistenteNumerosDemo } from './demoAssistente'
 
 const hoje = new Date()
 const iso = (d) => d.toISOString().slice(0, 10)
@@ -549,7 +550,11 @@ const RPC = {
   plataforma_telefones_teste: () => [{ telefone: '5513999990000', apelido: 'Bruno', criado_em: mais(-3) }, { telefone: '5511977770000', apelido: null, criado_em: mais(-1) }],
   plataforma_salvar_telefones_teste: ({ fones_ }) => (fones_ ?? []).map((f) => { const [a, b] = f.includes(':') ? f.split(':') : [null, f]; return { telefone: '55' + b.replace(/\D/g, '').slice(-11), apelido: a?.trim() || null, criado_em: mais(0) } }),
   plataforma_palavras: () => [{ intencao: 'confirma', palavras: ['1','sim','confirmo','ok','pode ser'] }, { intencao: 'cancela', palavras: ['2','nao','remarcar','cancelar'] }, { intencao: 'sair', palavras: ['sair','parar','stop'] }],
-  plataforma_ia: () => [{ salon_id: SALAO, salao: 'Studio Mel', canal: 'evolution', ativo: true, usa_bot: true, usa_ia: true, teto_ia_diario: 200, teto_ia_por_numero: 20, gastas_hoje: 12, orientacao_ia: 'Atendemos de terça a sábado.' }, { salon_id: 's2', salao: 'Espaço Bela', canal: 'manual', ativo: true, usa_bot: false, usa_ia: false, teto_ia_diario: 200, teto_ia_por_numero: 20, gastas_hoje: 0 }],
+  plataforma_ia: () => [{ salon_id: SALAO, salao: 'Studio Mel', canal: 'evolution', ativo: true, usa_bot: true, usa_ia: true, teto_ia_diario: 200, teto_ia_por_numero: 20, gastas_hoje: 12, orientacao_ia: 'Atendemos de terça a sábado.', numero_proprio: true, chamadas_30d: 131, conversas_30d: 48, tokens_30d: 612400, custo_30d: 0.41 }, { salon_id: 's2', salao: 'Espaço Bela', canal: 'evolution', ativo: true, usa_bot: false, usa_ia: true, teto_ia_diario: 200, teto_ia_por_numero: 20, gastas_hoje: 0, numero_proprio: false, chamadas_30d: 22, conversas_30d: 9, tokens_30d: 98300, custo_30d: 0.07 }],
+  // 3.95: a assistente do WhatsApp do salão (src/lib/demoAssistente.js)
+  assistente_do_salao: () => assistenteDoSalaoDemo(),
+  assistente_salvar: (a) => assistenteSalvarDemo(a),
+  assistente_numeros: () => assistenteNumerosDemo(),
   plataforma_cadastros: ({ dias_ = 30 } = {}) => {
     const d = (h) => new Date(Date.now() - h * 3600e3).toISOString()
     const todos = [
@@ -608,7 +613,7 @@ const RPC = {
     : { id, nome: (clientes.find((c) => c.id === id) || {}).full_name || 'Pessoa de teste', email: 'teste@exemplo.com', papel: (clientes.find((c) => c.id === id) || {}).role || 'cliente', agendamentos: 2, agendamentos_futuros: 0, vinculos: 1, pagamentos_pagos: 0, impede: { admin: 'É dona de Studio Mel. Apague o salão com a conta da dona, em Salões.', plataforma: 'É a sua conta.' }[(clientes.find((c) => c.id === id) || {}).role] ?? null }),
   plataforma_apagar: ({ ids }) => ({ ok: true, apagados: (ids ?? []).length, contas: 0, pulados: [] }),
   promover_plataforma: ({ email_ }) => 'ok: ' + email_ + ' agora é plataforma',
-  config_publica: () => ({ vapid_public: 'BDEMO', instagram: 'mimo.com.vc', app_url: 'https://mimo.com.vc', ia_agente: 'ligado', ia_modelo: 'openai/gpt-oss-120b' }),
+  config_publica: () => ({ vapid_public: 'BDEMO', instagram: 'mimo.com.vc', app_url: 'https://mimo.com.vc', ia_agente: 'ligado', ia_modelo: 'openai/gpt-oss-120b', ia_provedor: 'claude', ia_modelo_claude: 'claude-haiku-5-5' }),
   relogio_status: () => ({ ligado: true, jobs: [{ nome: 'mimo-fila', agenda: '* * * * *', ativo: true, ultima: new Date().toISOString(), status: 'succeeded' }, { nome: 'mimo-rotinas', agenda: '*/5 * * * *', ativo: true, ultima: new Date().toISOString(), status: 'succeeded' }] }),
   diagnostico_whatsapp: () => [{ item: 'Canal', situacao: 'ok', detalhe: 'Evolution, instância 11' }, { item: 'Número', situacao: 'ok', detalhe: '+55 13 99171-9086' }, { item: 'IA', situacao: 'ok', detalhe: 'ligada · 12 chamadas hoje' }],
   fila_do_salao: () => [],

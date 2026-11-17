@@ -146,6 +146,9 @@ export default function AdminWhatsapp() {
         <Link className="btn-mini btn-mini-neutro" to="/admin/bancada">
           bancada de testes
         </Link>
+        <Link className="btn-mini btn-mini-neutro" to="/admin/assistente">
+          personalizar a assistente
+        </Link>
       </div>
 
       <ul className="wa-check">

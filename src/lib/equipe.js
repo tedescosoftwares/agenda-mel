@@ -124,4 +124,12 @@ export function sugestoesPara(nomeCategoria) {
 }
 
 // ---- funções/especialidades sugeridas -----------------------------------------------
-export const FUNCOES = ['Cabeleireira', 'Manicure', 'Nail designer', 'Lash designer', 'Esteticista', 'Barbeiro', 'Massoterapeuta', 'Maquiadora', 'Designer de sobrancelhas', 'Colorista', 'Depiladora']
+export const FUNCOES = ['Cabeleireira', 'Manicure', 'Nail designer', 'Lash designer', 'Esteticista', 'Massoterapeuta', 'Maquiadora', 'Designer de sobrancelhas', 'Colorista', 'Depiladora']
+// 3.88: mais de um cargo. Ficam juntos no mesmo campo (especialidade), separados por " · ", e é assim que
+// aparecem em todo lugar (cartão, página da profissional, app). Quem digitar com vírgula também vale.
+export const cargosDe = (texto) => String(texto ?? '').split(/\s*[·,]\s*/).map((x) => x.trim()).filter(Boolean)
+export const juntarCargos = (lista) => [...new Set(lista.map((x) => String(x).trim()).filter(Boolean))].join(' · ')
+export const alternarCargo = (texto, cargo) => {
+  const l = cargosDe(texto)
+  return juntarCargos(l.includes(cargo) ? l.filter((x) => x !== cargo) : [...l, cargo])
+}

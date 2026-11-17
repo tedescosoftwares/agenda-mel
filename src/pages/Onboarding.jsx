@@ -35,7 +35,7 @@ import { EMAIL_CONTATO } from '../conteudo/legal'
 import RodapeSocial from '../components/RodapeSocial'
 import { CampoEndereco, useChecagemEndereco } from '../components/EnderecoProprio'
 import { LogoMimo } from '../components/icons'
-import { sugerirEndereco, sugestoesDeEndereco } from '../lib/endereco'
+import { sugerirEndereco, sugestoesDeEndereco, linkDoSalao } from '../lib/endereco'
 import ArteDoLink from '../components/ArteDoLink'
 
 // O onboarding do salão (114, 119): do cadastro à agenda em seis passos, o
@@ -2186,7 +2186,7 @@ function PassoAtivacao({ s, voltar, salvando, concluir, pronto, autonoma, irPara
   const [copiado, setCopiado] = useState(false)
   const [resumo, setResumo] = useState(null)
   const qr = useRef(null)
-  const link = s.codigo ? urlDoAmbiente('cliente', `/v/${s.codigo}`) : linkDoCodigo('')
+  const link = s.subdominio || s.codigo ? linkDoSalao(s) : linkDoCodigo('')
   useEffect(() => { if (qr.current && s.codigo) QRCode.toCanvas(qr.current, link, { width: 120, margin: 1, color: { dark: '#1f2026', light: '#ffffff' } }).catch(() => {}) }, [link, s.codigo])
   useEffect(() => { supabase.rpc('primeiros_passos', { salao: s.id }).then(({ data }) => setResumo(data ?? {})) }, [s.id])
   // a cobertura (2.93): por categoria, quantos serviços e quem atende; categoria sem ninguém é aviso

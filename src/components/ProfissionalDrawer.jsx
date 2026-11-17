@@ -5,7 +5,7 @@ import { reduzirFoto } from '../lib/imagem'
 import { formatarFone } from '../lib/fone'
 import { formatPreco, formatDuracao } from '../lib/format'
 import { urlDoAmbiente } from '../lib/ambiente'
-import { VINCULOS, AVISO_VINCULO, PERMISSOES, PERMISSOES_RECOMENDADAS, presetDoVinculo, vinculoPor, FUNCOES, resumoDias, mensagemDeAcesso, primeiroNome, situacaoDe, enviarAcesso, linkWhats } from '../lib/equipe'
+import { VINCULOS, AVISO_VINCULO, PERMISSOES, PERMISSOES_RECOMENDADAS, presetDoVinculo, vinculoPor, FUNCOES, cargosDe, alternarCargo, resumoDias, mensagemDeAcesso, primeiroNome, situacaoDe, enviarAcesso, linkWhats } from '../lib/equipe'
 import { categoriasDoSalao } from '../lib/categorias'
 import Avatar from './Avatar'
 import '../equipe.css'
@@ -194,11 +194,11 @@ export default function ProfissionalDrawer({ salao, profissional = null, servico
               </div>
               <div className="gv-form gv-form-2">
                 <label>E-mail {!profissional?.user_id && <b>*</b>} <span className="muted">(o acesso para ela ativar chega por ele)</span><input type="email" value={f.email} onChange={m('email')} placeholder="carla@exemplo.com" /></label>
-                <label>Função <span className="muted">(opcional)</span><input value={f.especialidade} onChange={m('especialidade')} placeholder="Cabeleireira" list="gv-funcoes" /><datalist id="gv-funcoes">{FUNCOES.map((x) => <option key={x} value={x} />)}</datalist></label>
+                <label>Função <span className="muted">(opcional, pode ter mais de uma)</span><input value={f.especialidade} onChange={m('especialidade')} placeholder="Cabeleireira · Colorista" /></label>
               </div>
               <label className="gv-form gv-bio">Apresentação <span className="muted">(opcional, aparece na página dela)</span><textarea rows={2} value={f.bio} onChange={m('bio')} placeholder="Especialista em loiros e cortes modernos…" /></label>
               {editando && <label className="gv-form gv-slug">Link da agenda dela<span className="gv-slug-campo"><span>/p/</span><input value={f.slug} onChange={m('slug')} placeholder="carla-mendes" /></span></label>}
-              <div className="chips gv-chips">{FUNCOES.slice(0, 6).map((x) => <button key={x} type="button" className={'chip' + (f.especialidade === x ? ' active' : '')} onClick={() => setF((y) => ({ ...y, especialidade: x }))}>{x}</button>)}</div>
+              <div className="chips gv-chips">{FUNCOES.map((x) => <button key={x} type="button" aria-pressed={cargosDe(f.especialidade).includes(x)} className={'chip' + (cargosDe(f.especialidade).includes(x) ? ' active' : '')} onClick={() => setF((y) => ({ ...y, especialidade: alternarCargo(y.especialidade, x) }))}>{x}</button>)}</div>
             </section>
           )}
 

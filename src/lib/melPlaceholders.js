@@ -9,7 +9,7 @@
 export const LIMITE = { mel_bubble: 60, weather_card: 90 }
 
 export const SUPERFICIES = { mel_bubble: 'Balão da Mel', weather_card: 'Cartão do clima' }
-export const RAMOS = { beleza: 'Beleza (geral)', barbearia: 'Barbearia', unhas: 'Unhas', estetica: 'Estética', cabelo: 'Cabelo', sobrancelhas_cilios: 'Sobrancelhas e cílios', depilacao: 'Depilação', maquiagem: 'Maquiagem' }
+export const RAMOS = { beleza: 'Beleza (geral)', unhas: 'Unhas', estetica: 'Estética', cabelo: 'Cabelo', sobrancelhas_cilios: 'Sobrancelhas e cílios', depilacao: 'Depilação', maquiagem: 'Maquiagem' }
 export const TIPOS = { salao: 'Salão', autonoma: 'Autônoma' }
 export const CONTEXTOS_CLIMA = { ensolarado: 'Ensolarado', nublado: 'Nublado', chuva: 'Chuva', trovoada: 'Trovoada', frio: 'Frio', calor: 'Calor' }
 export const PERIODOS = { manha: 'Manhã', tarde: 'Tarde', noite: 'Noite' }

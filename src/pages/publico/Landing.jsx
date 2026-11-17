@@ -25,7 +25,7 @@ import { linhas, pares } from '../../lib/paginas'
 
 // title, description, FAQ e dados estruturados da home: src/conteudo/home.js
 
-const PROFISSOES = ['manicure', 'cabeleireira', 'lash designer', 'designer de sobrancelhas', 'maquiadora', 'barbeira', 'esteticista', 'nail designer', 'trancista', 'depiladora', 'colorista', 'massoterapeuta']
+const PROFISSOES = ['manicure', 'cabeleireira', 'lash designer', 'designer de sobrancelhas', 'maquiadora', 'esteticista', 'nail designer', 'trancista', 'depiladora', 'colorista', 'massoterapeuta']
 const CATEGORIAS = [[Hand, 'unhas'], [Scissors, 'cabelo'], [Palette, 'make'], [Eye, 'sobrancelha'], [Flower2, 'estética']]
 
 // os cartazes: quatro coisas que a dona do salão passa a fazer com a MIMO,

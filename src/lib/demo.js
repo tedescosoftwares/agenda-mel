@@ -11,7 +11,6 @@
 // quando a variável está ligada, e o Vite descarta o resto.
 
 import { ARTIGOS, CATEGORIAS as CATS_BLOG, minutosDeLeitura } from '../conteudo/artigos'
-import { modeloDePagina } from './paginas'
 import { PAGINAS_SEO, PAGINAS_INSTITUCIONAIS } from '../conteudo/paginasSeo'
 import CATALOGO_V1 from '../../supabase/catalogo/catalogo_v1.json'
 import { arvoreParaLinhas } from './catalogoBusca'
@@ -70,10 +69,9 @@ const profissionais = [
   { id: 'pr5', user_id: null, name: 'Carla Mendes', slug: 'carla-mendes', phone: '(11) 98765-4321', especialidade: 'Cabeleireira', photo_url: null, active: true, salon_id: SALAO, aceite_manual: true, vinculo: 'parceira', situacao: 'configurada', cota_pct: 30, permissoes: { confirmar: true, bloquear: true, clientes: 'proprias', servicos: false, ver_repasse: true }, token: 'demo0123456789ab' },
 ].map((p) => ({ situacao: p.user_id ? 'ativa' : 'configurada', vinculo: 'funcionaria', permissoes: { confirmar: true, bloquear: true, clientes: 'salao', servicos: true, ver_repasse: true }, usa_horario_salao: true, ...p }))
 
-// as categorias da plataforma como ficam depois da 143 (slug, descrição, ativa; Barba inativa) e uma do salão
+// as categorias da plataforma como ficam depois da 143 (slug, descrição, ativa; a Barba saiu na 230) e uma do salão
 const CATS = [
   ...CATALOGO_V1.categorias.map((c, i) => ({ id: 'ct' + (i + 1), salon_id: null, nome: c.nome, slug: c.slug, descricao: c.descricao, aliases: c.aliases, ordem: c.ordem, ativa: true })),
-  { id: 'ct98', salon_id: null, nome: 'Barba', slug: 'barba', descricao: null, aliases: [], ordem: 900, ativa: false },
   { id: 'ct99', salon_id: null, nome: 'Outros', slug: 'outros', descricao: null, aliases: [], ordem: 999, ativa: true },
   { id: 'ct11', salon_id: SALAO, nome: 'Noivas', ordem: 500 },
 ]
@@ -715,7 +713,7 @@ const CONTEUDO = {
     og_image_url: 'https://mimo.com.vc/imagens/salao-1400.webp', robots_index: true, status: 'published', published_at: '2026-10-10T12:00:00-03:00', updated_at: '2026-10-10T12:00:00-03:00',
     reading_time_minutes: 3, produto_url: '/agenda-online-para-salao-de-beleza', produto_rotulo: null, relacionados: [], caixa: null, faq: [],
   }]),
-  seo_pages: [...PAGINAS_INSTITUCIONAIS.map((p, i) => ({ id: 'sp' + i, route: p.rota, page_type: p.tipo === 'home' ? 'HOME' : p.tipo === 'blog' ? 'BLOG_INDEX' : 'INSTITUTIONAL', title: p.titulo, slug: p.rota === '/' ? 'home' : p.rota.slice(1), seo_title: p.seo_title, meta_description: p.meta_description, og_title: p.seo_title, og_description: p.meta_description, og_image_url: 'https://mimo.com.vc/og-mimo.png', robots_index: true, robots_follow: true, status: 'published', conteudo: null, updated_at: '2026-09-20T12:00:00-03:00' })), ...PAGINAS_SEO.map((p, i) => ({ id: 'sq' + i, route: p.rota, page_type: 'SEO_LANDING', title: p.h1.join(' '), slug: p.rota.slice(1), seo_title: p.seo_title, meta_description: p.meta_description, og_title: p.seo_title, og_description: p.meta_description, og_image_url: `https://mimo.com.vc/imagens/${p.foto}-1400.webp`, robots_index: true, robots_follow: true, status: 'published', conteudo: null, updated_at: '2026-09-22T12:00:00-03:00' })), { id: 'sqx', route: '/agenda-para-barbearia', page_type: 'SEO_LANDING', title: 'Agenda para barbearia', slug: 'agenda-para-barbearia', seo_title: 'Agenda para Barbearia: online e grátis | MIMO', meta_description: 'Agenda online para barbearia, criada na Plataforma (demo).', og_title: 'Agenda para Barbearia | MIMO', og_description: 'Demo.', og_image_url: 'https://mimo.com.vc/imagens/profissional-1400.webp', robots_index: true, robots_follow: true, status: 'published', updated_at: '2026-10-12T12:00:00-03:00', conteudo: { ...modeloDePagina('/agenda-para-barbearia'), tipo: 'profissao', kicker: 'Agenda para barbearia', rodape: 'Agenda para barbearia', h1: ['Agenda para barbearia', 'que o barbeiro', 'controla pelo celular.'], sub: 'Página criada na Plataforma, sem código: cabe aqui no demo para provar o caminho.', provas: ['Grátis para quem atende sozinho', 'Cliente marca pelo link', 'Lembrete no celular'] } }],
+  seo_pages: [...PAGINAS_INSTITUCIONAIS.map((p, i) => ({ id: 'sp' + i, route: p.rota, page_type: p.tipo === 'home' ? 'HOME' : p.tipo === 'blog' ? 'BLOG_INDEX' : 'INSTITUTIONAL', title: p.titulo, slug: p.rota === '/' ? 'home' : p.rota.slice(1), seo_title: p.seo_title, meta_description: p.meta_description, og_title: p.seo_title, og_description: p.meta_description, og_image_url: 'https://mimo.com.vc/og-mimo.png', robots_index: true, robots_follow: true, status: 'published', conteudo: null, updated_at: '2026-09-20T12:00:00-03:00' })), ...PAGINAS_SEO.map((p, i) => ({ id: 'sq' + i, route: p.rota, page_type: 'SEO_LANDING', title: p.h1.join(' '), slug: p.rota.slice(1), seo_title: p.seo_title, meta_description: p.meta_description, og_title: p.seo_title, og_description: p.meta_description, og_image_url: `https://mimo.com.vc/imagens/${p.foto}-1400.webp`, robots_index: true, robots_follow: true, status: 'published', conteudo: null, updated_at: '2026-09-22T12:00:00-03:00' }))],
   documentos_legais: [{ id: 'dl1', tipo: 'cliente', versao: '2026-09-24', titulo: 'Termos de Uso para Clientes', resumo: 'Primeira versão publicada pela plataforma.', status: 'publicado', publicado_em: '2026-09-24T12:00:00-03:00', atualizado_em: '2026-09-24T12:00:00-03:00', conteudo: '## 1. Sobre a MIMO\n\nTexto de demonstração.' }, { id: 'dl2', tipo: 'privacidade', versao: '2026-09-24', titulo: 'Política de Privacidade', resumo: 'Primeira versão publicada pela plataforma.', status: 'publicado', publicado_em: '2026-09-24T12:00:00-03:00', atualizado_em: '2026-09-24T12:00:00-03:00', conteudo: '## 1. Sobre esta Política\n\nTexto de demonstração.' }, { id: 'dl3', tipo: 'salao', versao: '2026-09-30', titulo: 'Termos de Uso para Salões e Estabelecimentos', resumo: 'Item sobre pagamentos pelo app.', status: 'rascunho', publicado_em: null, atualizado_em: '2026-09-25T12:00:00-03:00', conteudo: '## 1. Sobre estes Termos\n\nRascunho de demonstração.' }],
   landing_leads: [{ id: 'll1', salon_name: 'Espaço Bela Vista', professionals_count: '4-6', whatsapp: '13998710010', utm_source: 'instagram', utm_medium: 'bio', created_at: new Date(Date.now() - 3600e3).toISOString(), atendido_em: null }, { id: 'll2', salon_name: 'Nail Studio da Lu', professionals_count: '1', whatsapp: '13998710011', origem: '/agenda-para-manicure', created_at: new Date(Date.now() - 26 * 3600e3).toISOString(), atendido_em: new Date().toISOString() }],
   // a personalidade da Mel (2.87): catálogo e algumas frases para a tela da plataforma
@@ -748,12 +746,10 @@ const CONTEUDO = {
     ['dia_vazio', 'mel_bubble', 'Hoje tá quieto. Dá pra divulgar o link, se quiser.', null, 'neutra', 1, true],
     ['vaga_hoje', 'mel_bubble', 'Liberou {hora}. Quer colocar essa vaga pra jogo?', null, 'feliz', 1, true],
     ['calor_extremo', 'mel_bubble', '{temperatura} graus e secador ligado. Você é forte.', ['cabelo', 'beleza'], 'cansada', 1, true],
-    ['calor_extremo', 'mel_bubble', '{temperatura} graus e a máquina esquentando junto. Água por perto.', ['barbearia'], 'cansada', 1, true],
     ['calor_extremo', 'mel_bubble', '{temperatura} graus e esmalte secando antes da hora.', ['unhas'], 'atenta', 1, true],
     ['calor_extremo', 'mel_bubble', 'Hoje até o café está pedindo gelo.', null, 'feliz', 2, true],
     ['calor_extremo', 'weather_card', 'Sensação de {sensacao} graus. Água pra cliente, água pra você, ar no máximo.', null, 'neutra', 1, true],
     ['frio_forte', 'weather_card', '{temperatura} graus. Cliente chega de gorro e sai de escova feita.', ['cabelo'], 'feliz', 1, true],
-    ['frio_forte', 'weather_card', '{temperatura} graus. Barba cheia hoje vale como cachecol.', ['barbearia'], 'feliz', 1, true],
     ['contexto_comum', 'mel_bubble', 'Céu fechado, agenda aberta.', null, 'neutra', 1, true],
     ['contexto_comum', 'weather_card', 'Céu cinza, mas a sua cliente vai sair daqui colorida.', null, 'feliz', 1, true],
     ['contexto_comum', 'mel_bubble', 'Boa noite! Amanhã já tá se organizando.', null, 'cansada', 1, false],

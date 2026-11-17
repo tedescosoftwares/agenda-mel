@@ -3,7 +3,7 @@ import { Check, Minus, AlertTriangle, Copy, Pencil, CalendarPlus } from 'lucide-
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../../lib/supabase'
 import { useCategorias, categoriasDoSalao } from '../../../lib/categorias'
-import { urlDoAmbiente } from '../../../lib/ambiente'
+import { linkDoSalao } from '../../../lib/endereco'
 
 // Etapa final da configuração inicial (2.94): "Tudo pronto?" — o resumo
 // (cards e listas) à esquerda, o status e o botão de concluir à direita.
@@ -40,7 +40,8 @@ export default function EtapaRevisao({ s, autonoma, irPara, onEstado }) {
   const pendencias = [...(semPreco.length ? [{ texto: `${semPreco.length} ${semPreco.length === 1 ? 'serviço está sem preço' : 'serviços estão sem preço'}`, ir: 'servicos' }] : [])]
   useEffect(() => { if (resumo) onEstado({ podeContinuar: bloqueios.length === 0, rodape: bloqueios.length ? 'Resolva o que está bloqueando para concluir' : 'Tudo certo para concluir', motivo: { titulo: 'Falta pouco para concluir', texto: 'Ainda tem o que resolver antes de abrir seu salão na MIMO:', lista: bloqueios.map((b) => b.texto), ir: bloqueios[0]?.ir, acao: 'Resolver' } }) }, [resumo, bloqueios.length]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const link = s.codigo ? urlDoAmbiente('cliente', `/v/${s.codigo}`) : ''
+  // 3.88: o endereço próprio (salaomimo.mimo.com.vc) quando ela escolheu um; sem ele, o link do código
+  const link = linkDoSalao(s)
   function copiar() { if (!link) return; navigator.clipboard?.writeText(link); setCopiado(true); setTimeout(() => setCopiado(false), 2000) }
   const itens = [
     { ok: escolhidas.length > 0, texto: 'Categorias configuradas' },

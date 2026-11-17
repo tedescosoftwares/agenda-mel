@@ -6,7 +6,7 @@ import ProfissionalDrawer from '../../../components/ProfissionalDrawer'
 import { supabase } from '../../../lib/supabase'
 import { reduzirFoto } from '../../../lib/imagem'
 import { formatarFone } from '../../../lib/fone'
-import { FUNCOES, PERMISSOES_RECOMENDADAS } from '../../../lib/equipe'
+import { FUNCOES, PERMISSOES_RECOMENDADAS, cargosDe, alternarCargo } from '../../../lib/equipe'
 import { useAuth } from '../../../context/AuthContext'
 
 // Etapa 3 da configuração inicial (2.94): "Quem atende por aí?" — a
@@ -156,8 +156,8 @@ function ProfissionalQuickForm({ salao, onFechar, onSalvo, setErro }) {
           </div>
         </div>
         <label>E-mail <small className="muted">(opcional, para o acesso dela)</small><input type="email" value={v.email} onChange={set('email')} placeholder="ela@exemplo.com" /></label>
-        <label>Cargo <small className="muted">(opcional)</small>
-          <div className="chips cfg-chips">{FUNCOES.map((f) => <button key={f} type="button" className={'chip' + (v.especialidade === f ? ' active' : '')} onClick={() => setV((x) => ({ ...x, especialidade: x.especialidade === f ? '' : f }))}>{f}</button>)}</div>
+        <label>Cargo <small className="muted">(opcional, pode marcar mais de um)</small>
+          <div className="chips cfg-chips">{FUNCOES.map((f) => <button key={f} type="button" aria-pressed={cargosDe(v.especialidade).includes(f)} className={'chip' + (cargosDe(v.especialidade).includes(f) ? ' active' : '')} onClick={() => setV((x) => ({ ...x, especialidade: alternarCargo(x.especialidade, f) }))}>{f}</button>)}</div>
         </label>
         <div className="modal-acoes"><button type="button" className="btn btn-ghost" onClick={onFechar}>Cancelar</button><button type="submit" className="btn btn-primary" disabled={salvando}>{salvando ? 'Salvando…' : 'Adicionar'}</button></div>
       </form>

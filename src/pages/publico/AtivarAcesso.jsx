@@ -12,7 +12,10 @@ import { resumoDias, primeiroNome } from '../../lib/equipe'
 // escolher vínculo, serviço, preço ou horário: isso o salão já configurou.
 export default function AtivarAcesso() {
   const { token } = useParams()
-  const { user, role, loading, recarregarPerfil } = useAuth()
+  const { user, role, loading, recarregarPerfil, signOut, profile } = useAuth()
+  const [saindo, setSaindo] = useState(false)
+  async function sairEContinuar() { setSaindo(true); setErro(''); try { await signOut?.() } finally { setSaindo(false) } }
+  const quemEsta = profile?.full_name || user?.email || ''
   const navigate = useNavigate()
   const [acesso, setAcesso] = useState(undefined)
   const [erro, setErro] = useState('')
@@ -74,7 +77,12 @@ export default function AtivarAcesso() {
         ) : user && role !== 'cliente' && role !== 'profissional' ? (
           <>
             <SalaoCabeca acesso={acesso} />
-            <div className="alert alert-info">Esta conta já é dona de um negócio. Pra entrar numa equipe, saia e use outra conta.</div>
+            <h2 className="login-titulo">Convite para {p.nome}</h2>
+            {p.email && <p className="muted login-sub ativar-para">{p.email}</p>}
+            {/* 3.89: antes era um beco sem saída; quem testa no mesmo navegador da dona caía aqui */}
+            <div className="alert alert-info">Este navegador está com a conta de <strong>{quemEsta}</strong>, que é dona de um negócio. Para ativar o acesso de {nome}, saia desta conta e continue.</div>
+            <button type="button" className="btn btn-primary btn-block" onClick={sairEContinuar} disabled={saindo}>{saindo ? 'Saindo…' : 'Sair desta conta e continuar'}</button>
+            <p className="muted ativar-confere">Confira o salão acima: o convite é do <strong>{acesso.salao.nome}</strong>. Se não for o que você esperava, o link é de outro convite.</p>
           </>
         ) : (
           <>
@@ -89,7 +97,10 @@ export default function AtivarAcesso() {
             </ul>
             {erro && <div className="alert alert-error">{erro}</div>}
             {user
-              ? <button type="button" className="btn btn-primary btn-block" onClick={ativar} disabled={indo}>{indo ? 'Ativando…' : 'Ativar meu acesso'}</button>
+              ? <>
+                  <button type="button" className="btn btn-primary btn-block" onClick={ativar} disabled={indo}>{indo ? 'Ativando…' : 'Ativar meu acesso'}</button>
+                  <p className="muted ativar-confere">Vai ativar na conta de <strong>{quemEsta}</strong>. Não é você? <button type="button" className="plat-link" onClick={sairEContinuar} disabled={saindo}>Sair</button></p>
+                </>
               : <>
                   <button type="button" className="btn btn-primary btn-block" onClick={seguirParaCadastro}>Criar minha senha</button>
                   <Link to={`/pro/entrar?ativar=${token}`} className="btn btn-ghost btn-block">Já tenho conta na MIMO</Link>

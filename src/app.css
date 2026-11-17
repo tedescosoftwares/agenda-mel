@@ -16110,3 +16110,8 @@ label.a-partir-opcao .a-partir-opcao-texto { flex: 1; }
 .meu-link-chk.ok { color: #1f7a4d; } .meu-link-chk.nao { color: var(--carmim); }
 .gv-slug-campo { flex-wrap: wrap; }
 .gv-slug-campo > span { overflow-wrap: anywhere; min-width: 0; }
+
+/* ---- 3.89: o link de ativar com outra conta aberta ---- */
+.ativar-para { margin-top: -0.4rem; }
+.ativar-confere { font-size: 0.8rem; text-align: center; margin: 0.8rem 0 0; line-height: 1.45; }
+.ativar-confere .plat-link { font-size: 0.8rem; padding: 0; }

@@ -403,6 +403,37 @@ export async function cobrarPixAutomatico(p: { customer: string; autorizacao: st
 
 export const obterCobrancaMimo = (id: string) => asaas(chavePai(), 'GET', `/payments/${id}`)
 export const apagarCobrancaMimo = (id: string) => asaas(chavePai(), 'DELETE', `/payments/${id}`)
+
+// 3.94: a cobrança da MIMO como ela está no Asaas. Apagada lá (pelo painel do Asaas ou por nós) volta como
+// { apagada: true }: o GET de uma cobrança removida responde com deleted: true (status continua PENDING) ou 404.
+// Antes o webhook olhava só o status e a cobrança apagada no Asaas seguia "aguardando" no painel da MIMO.
+// deno-lint-ignore no-explicit-any
+export async function situacaoCobrancaMimo(id: string): Promise<{ apagada: boolean; status: string; real: any }> {
+  try {
+    const real = await obterCobrancaMimo(id)
+    return { apagada: Boolean(real?.deleted) || String(real?.status ?? '') === 'DELETED', status: String(real?.status ?? ''), real }
+  } catch (e) {
+    if (e instanceof ErroAsaas && e.status === 404) return { apagada: true, status: 'DELETED', real: null }
+    throw e
+  }
+}
+
+// a cobrança que já foi criada no Asaas para uma linha nossa (pela referência mimo:<id>): evita criar duas quando
+// uma tentativa anterior criou lá e caiu antes de gravar aqui
+export async function acharCobrancaMimoPorRef(ref: string) {
+  const r = await asaas(chavePai(), 'GET', `/payments?externalReference=${encodeURIComponent(ref)}&limit=10`)
+  // deno-lint-ignore no-explicit-any
+  return ((r?.data ?? []) as any[]).find((p) => !p?.deleted) ?? null
+}
+
+// o QR de uma cobrança Pix já criada
+export async function pixDaCobrancaMimo(id: string) {
+  const qr = await asaas(chavePai(), 'GET', `/payments/${id}/pixQrCode`)
+  return { copiaCola: String(qr.payload ?? ''), imagem: (qr.encodedImage ?? null) as string | null, expira: (qr.expirationDate ?? null) as string | null }
+}
+
+// estornada ou em disputa: não vai ser paga (OVERDUE não entra: o Pix vencido ainda pode ser pago até a MIMO cancelar)
+export const ESTORNADA = new Set(['REFUNDED', 'REFUND_REQUESTED', 'CHARGEBACK_REQUESTED', 'CHARGEBACK_DISPUTE'])
 // só no sandbox: a conta-pai dá baixa na própria cobrança, como se a dona tivesse pago
 export const baixarCobrancaMimoSandbox = (id: string, valorCents: number) =>
   asaas(chavePai(), 'POST', `/payments/${id}/receiveInCash`, { paymentDate: new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10), value: Math.round(valorCents) / 100, notifyCustomer: false })

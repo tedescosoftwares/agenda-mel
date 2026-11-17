@@ -10,11 +10,15 @@ import { REGRAS, dataCurta } from '../../lib/acesso'
 import { assinatura, mascaraCartao, mascaraValidade, cartaoValido } from '../../lib/assinatura'
 
 // 2.81: pagamento manual. Nada é recorrente.
-// Primeira escolha acontece na ativação; depois, esta tela serve para acompanhar
-// o período e renovar 30 dias por Pix avulso (3.85: só Pix; o cartão saiu daqui e da função).
+// 3.94: planos mensal, semestral (10% OFF) e anual (15% OFF). Uma cobrança aberta por vez: a próxima mensalidade
+// aparece sozinha uns dias antes do fim do período, vencendo no último dia (o "dia X" da contratação); se não for
+// paga até 3 dias depois, é cancelada (no Asaas também). No teste, "pagar agora e já ativar": o salão fica ativo na
+// hora e o plano começa quando o teste acabaria. Trocar de plano cancela o Pix anterior.
 export default function AdminAssinatura() {
   const { salao, acesso, recarregarAcesso } = useAuth()
   const [cobrancas, setCobrancas] = useState([])
+  const [planos, setPlanos] = useState(null)
+  const [escolhido, setEscolhido] = useState(null)   // meses do plano escolhido (null = ainda não mexeu)
   const [modal, setModal] = useState(null) // pix | cartao | analise
   const [pix, setPix] = useState(null)
   const [erro, setErro] = useState('')
@@ -22,15 +26,17 @@ export default function AdminAssinatura() {
 
   const carregar = useCallback(async () => {
     if (!salao?.id) return
-    const { data } = await supabase
-      .from('cobrancas_mimo')
-      .select('id, tipo, periodo_inicio, periodo_fim, total_cents, desconto_cents, metodo, status, vencimento, pago_em, copia_cola, link_url')
-      .eq('salon_id', salao.id)
-      .order('criado_em', { ascending: false })
-      .limit(24)
-    setCobrancas(data ?? [])
-    const pend = (data ?? []).find((x) => x.status === 'aguardando')
-    if (pend?.metodo === 'pix' && pend.copia_cola) setPix(pend)
+    const [lista, pl] = await Promise.all([
+      supabase
+        .from('cobrancas_mimo')
+        .select('id, tipo, periodo_inicio, periodo_fim, total_cents, desconto_cents, metodo, status, vencimento, pago_em, copia_cola, link_url, meses, cancelar_em, inicio_no_pagamento')
+        .eq('salon_id', salao.id)
+        .order('criado_em', { ascending: false })
+        .limit(24),
+      supabase.rpc('planos_do_salao', { salao: salao.id }),
+    ])
+    setCobrancas(lista.data ?? [])
+    setPlanos(pl.data?.planos ?? null)
   }, [salao?.id])
 
   useEffect(() => { carregar() }, [carregar, acesso?.fase, acesso?.pendente?.status])
@@ -51,7 +57,25 @@ export default function AdminAssinatura() {
 
   const fase = acesso?.fase
   const valorCents = Number(m?.valor_cents ?? Math.round(plano.total * 100) ?? 0)
-  const ST = { a_criar: 'gerando', aguardando: 'aguardando', pago: 'pago', falhou: 'não passou', cancelado: 'cancelado', expirado: 'venceu' }
+  const ST = { a_criar: 'gerando', aguardando: 'aguardando', pago: 'pago', falhou: 'não passou', cancelado: 'cancelado', expirado: 'cancelado' }
+  const NOME = { 1: 'Mensal', 6: 'Semestral', 12: 'Anual' }
+
+  // a cobrança aberta (uma por vez) e o plano que aparece marcado
+  const aberta = cobrancas.find((c) => c.status === 'aguardando' || c.status === 'a_criar') ?? null
+  const meses = escolhido ?? aberta?.meses ?? 1
+  const lista = planos ?? [1, 6, 12].map((x) => ({ meses: x, nome: NOME[x], desconto_pct: x === 12 ? 15 : x === 6 ? 10 : 0, total_cents: Math.floor((valorCents * x * (100 - (x === 12 ? 15 : x === 6 ? 10 : 0))) / 100), sem_desconto_cents: valorCents * x }))
+  const atual = lista.find((p) => p.meses === meses) ?? lista[0]
+  const abertaDesteplano = aberta && aberta.meses === meses && aberta.total_cents === atual?.total_cents
+
+  // quando o plano novo começa (o "dia X")
+  const noTeste = fase === 'teste'
+  const comecaEm = (fase === 'teste' && !acesso?.aguardando_configuracao && acesso?.ate) || (fase === 'ativa' && !acesso?.sem_prazo && acesso?.ate) || null
+  const chamada = noTeste ? 'Pagar agora e já ativar' : fase === 'ativa' ? 'Próxima mensalidade' : 'Renovar agora'
+  const explica = noTeste
+    ? (comecaEm ? `O salão fica ativo na hora e seus dias grátis continuam: o plano começa em ${dataCurta(comecaEm)}, quando o teste acabaria.` : 'O salão fica ativo na hora e o plano começa no dia do pagamento.')
+    : fase === 'ativa'
+      ? (comecaEm ? `O Pix vence em ${dataCurta(comecaEm)}, o último dia do seu período. Pagando antes, nada se perde: o novo período começa nesse dia.` : 'Seu acesso não tem prazo.')
+      : 'O Pix vale 3 dias e o período começa no dia do pagamento.'
 
   async function rodar(fn) {
     setIndo(true); setErro('')
@@ -60,11 +84,13 @@ export default function AdminAssinatura() {
     finally { setIndo(false) }
   }
 
+  // abre o Pix do plano escolhido: se já existe (mesmo plano), é o mesmo; outro plano cancela o anterior
   async function abrirPix() {
     await rodar(async () => {
-      const r = await assinatura('renovar_pix', salao.id)
+      const r = await assinatura('renovar_pix', salao.id, { meses })
       setPix(r?.cobranca ?? null)
       setModal('pix')
+      await recarregarAcesso?.()
       await carregar()
     })
   }
@@ -100,11 +126,11 @@ export default function AdminAssinatura() {
           ? { titulo: `Teste grátis: ${acesso.dias} dias, ainda sem contar`, texto: 'O relógio começa quando a agenda estiver pronta (serviços e profissionais). Não existe cartão vinculado nem cobrança automática.' }
           : { titulo: `Teste grátis: ${acesso.dias <= 1 ? 'acaba hoje' : `faltam ${acesso.dias} dias`}`, texto: `Tudo liberado até ${dataCurta(acesso.ate)}. Não existe cartão vinculado nem cobrança automática.` })
         : fase === 'ativa'
-          ? { titulo: 'Mensalidade em dia', texto: acesso.sem_prazo ? 'Acesso sem prazo.' : `Seu período vai até ${dataCurta(acesso.ate)}. Não haverá renovação automática.` }
+          ? { titulo: 'Mensalidade em dia', texto: acesso.sem_prazo ? 'Acesso sem prazo.' : `Seu período vai até ${dataCurta(acesso.ate)}. Nada é debitado sozinho.` }
           : fase === 'leitura'
-            ? { titulo: 'Período encerrado', texto: `O salão está em modo leitura até ${dataCurta(acesso.tolerancia_ate)}. Renove por Pix para voltar a receber agendamentos.` }
+            ? { titulo: 'Período encerrado', texto: `O salão está em modo leitura até ${dataCurta(acesso.tolerancia_ate)}. Pague o Pix para voltar a receber agendamentos.` }
             : fase === 'bloqueado'
-              ? { titulo: 'Painel pausado', texto: 'Nada foi apagado. Renove uma mensalidade e tudo volta.' }
+              ? { titulo: 'Painel pausado', texto: 'Nada foi apagado. Pague uma mensalidade e tudo volta.' }
               : null
 
   return (
@@ -112,7 +138,7 @@ export default function AdminAssinatura() {
       <div className="page-head">
         <div>
           <h2>Plano e mensalidade</h2>
-          <p className="muted">Sem fidelidade e sem cobrança automática. Você decide quando renovar.</p>
+          <p className="muted">Sem fidelidade e sem débito automático. Mensal, semestral ou anual, por Pix.</p>
         </div>
       </div>
 
@@ -126,6 +152,18 @@ export default function AdminAssinatura() {
         </div>
       )}
 
+      {!autonoma && aberta && (
+        <div className="card assin-aberta">
+          <span className="assin-aberta-icone"><Smartphone size={18} /></span>
+          <div className="assin-aberta-texto">
+            <small className="assin-rotulo">Pix em aberto · {NOME[aberta.meses] ?? 'Mensal'}</small>
+            <strong>{reais(aberta.total_cents / 100)}<span> · vence {dataCurta(aberta.vencimento)}</span></strong>
+            <span className="muted">{aberta.cancelar_em ? `Se não for pago até ${dataCurta(aberta.cancelar_em)}, ele é cancelado (sem multa) e você gera outro quando quiser.` : 'Assim que o Asaas confirmar, o período é liberado.'}</span>
+          </div>
+          <button type="button" className="btn btn-primary" onClick={() => { setEscolhido(aberta.meses); abrirPixDe(aberta.meses) }} disabled={indo}>Ver o Pix</button>
+        </div>
+      )}
+
       {!autonoma && (
         <div className="card assin-plano">
           <div className="assin-plano-topo">
@@ -134,26 +172,39 @@ export default function AdminAssinatura() {
               <strong className="assin-nome">{plano.nome}</strong>
               <span className="muted">{n} {n === 1 ? 'agenda ativa' : 'agendas ativas'} · o preço acompanha a equipe ativa</span>
             </div>
-            <b className="assin-preco">{reais(valorCents / 100)}<small> / 30 dias</small></b>
+            <b className="assin-preco">{reais(valorCents / 100)}<small> / mês</small></b>
           </div>
 
-          <ul className="assin-lista">
-            <li><Check size={13} /> Pagamento avulso, sem recorrência</li>
-            <li><Check size={13} /> Por Pix, pelo Asaas</li>
-            <li><Check size={13} /> Sem cartão e sem débito automático</li>
-            <li><Check size={13} /> Você recebe aviso antes do período acabar</li>
-            <li><Check size={13} /> Sem fidelidade e sem multa</li>
-          </ul>
-
           {fase !== 'configurando' && (
-            <div className="assin-opcoes">
-              <button type="button" className="assin-opcao" onClick={abrirPix} disabled={indo}>
-                <Smartphone size={16} /><span><b>Renovar por Pix</b><em>{reais(valorCents / 100)} · 30 dias</em><small>QR Code na hora</small></span>
+            <>
+              <h3 className="assin-chamada">{chamada}</h3>
+              <p className="muted assin-explica">{explica}</p>
+              <div className="assin-planos" role="radiogroup" aria-label="Escolha o plano">
+                {lista.map((p) => (
+                  <button key={p.meses} type="button" role="radio" aria-checked={p.meses === meses}
+                    className={'assin-plano-op' + (p.meses === meses ? ' ativo' : '')} onClick={() => setEscolhido(p.meses)}>
+                    {p.desconto_pct > 0 && <span className="assin-plano-selo">{p.desconto_pct}% OFF</span>}
+                    <span className="assin-plano-nome">{p.nome}</span>
+                    <strong>{reais(p.total_cents / 100)}</strong>
+                    <small>{p.meses === 1 ? 'por mês' : `${reais(Math.floor(p.total_cents / p.meses) / 100)}/mês · ${p.meses} meses`}</small>
+                    {p.desconto_pct > 0 && <em>economiza {reais((p.sem_desconto_cents - p.total_cents) / 100)}</em>}
+                  </button>
+                ))}
+              </div>
+              <button type="button" className="btn btn-primary btn-block assin-pagar" onClick={abrirPix} disabled={indo || !atual}>
+                <Smartphone size={16} /> {indo ? 'Gerando o Pix…' : abertaDesteplano ? `Ver o Pix de ${reais(atual.total_cents / 100)}` : `Pagar ${reais((atual?.total_cents ?? 0) / 100)} com Pix`}
               </button>
-            </div>
+              {aberta && !abertaDesteplano && <p className="muted assin-nota">Gerar o Pix deste plano cancela o Pix em aberto ({NOME[aberta.meses] ?? 'Mensal'}).</p>}
+            </>
           )}
 
-          <p className="muted assin-nota">O desconto de {REGRAS.descontoInicialPct}% é exclusivo da primeira escolha, para quem paga na ativação e abre mão dos {REGRAS.testeDias} dias grátis.</p>
+          <ul className="assin-lista">
+            <li><Check size={13} /> Pagamento por Pix, pelo Asaas</li>
+            <li><Check size={13} /> Sem cartão e sem débito automático</li>
+            <li><Check size={13} /> Uma cobrança por vez, vencendo no fim do seu período</li>
+            <li><Check size={13} /> Aviso antes do período acabar</li>
+            <li><Check size={13} /> Sem fidelidade e sem multa</li>
+          </ul>
         </div>
       )}
 
@@ -164,8 +215,8 @@ export default function AdminAssinatura() {
             {cobrancas.map((c) => (
               <li key={c.id} className={c.status}>
                 <div>
-                  <strong>{reais(c.total_cents / 100)}</strong>
-                  <span className="muted">{dataCurta(c.periodo_inicio)} a {dataCurta(c.periodo_fim)} · {c.metodo === 'cartao' ? 'cartão' : 'Pix'}{c.desconto_cents > 0 ? ` · ${reais(c.desconto_cents / 100)} de desconto` : ''}</span>
+                  <strong>{reais(c.total_cents / 100)}{c.meses > 1 ? ` · ${NOME[c.meses]}` : ''}</strong>
+                  <span className="muted">{c.inicio_no_pagamento && c.status !== 'pago' ? 'começa no dia do pagamento' : `${dataCurta(c.periodo_inicio)} a ${dataCurta(c.periodo_fim)}`} · {c.metodo === 'cartao' ? 'cartão' : 'Pix'}{c.desconto_cents > 0 ? ` · ${reais(c.desconto_cents / 100)} de desconto` : ''}{['aguardando', 'a_criar'].includes(c.status) ? ` · vence ${dataCurta(c.vencimento)}` : ''}</span>
                 </div>
                 <span className={'assin-st ' + c.status}>{ST[c.status] ?? c.status}{c.status === 'pago' && c.pago_em ? ` ${dataCurta(c.pago_em)}` : ''}</span>
               </li>
@@ -177,17 +228,18 @@ export default function AdminAssinatura() {
       {!autonoma && (
         <div className="card">
           <h3 className="secao-titulo"><CalendarClock size={16} /> Como funciona</h3>
-          <p className="muted">A MIMO nunca renova sozinha nesta versão. Perto do vencimento, você recebe um aviso e paga os próximos 30 dias por Pix.</p>
+          <p className="muted">A MIMO nunca debita sozinha. Uns dias antes do fim do seu período, o Pix da próxima mensalidade aparece aqui, vencendo no último dia, e você recebe um aviso. Se ele não for pago até 3 dias depois, é cancelado, sem multa, e você gera outro quando quiser. Só existe um Pix em aberto por vez.</p>
+          <p className="muted">O desconto de {REGRAS.descontoInicialPct}% é da primeira mensalidade, para quem paga na ativação. Os planos semestral (10%) e anual (15%) valem sempre.</p>
         </div>
       )}
 
       {modal === 'pix' && (
-        <ModalManual titulo="Renovar por Pix" onVoltar={() => setModal(null)}>
-          <p className="muted">Pague {reais(Number(pix?.total_cents ?? valorCents) / 100)}. Assim que o Asaas confirmar, o novo período é liberado.</p>
+        <ModalManual titulo={`Pix · ${NOME[pix?.meses ?? meses] ?? 'Mensal'}`} onVoltar={() => setModal(null)}>
+          <p className="muted">Pague {reais(Number(pix?.total_cents ?? atual?.total_cents ?? valorCents) / 100)}{pix?.vencimento ? ` até ${dataCurta(pix.vencimento)}` : ''}. Assim que o Asaas confirmar, o período é liberado.</p>
           {pix?.copia_cola ? <QrPix payload={pix.copia_cola} imagem={pix.imagem} /> : <p className="muted">Gerando o Pix…</p>}
           {erro && <div className="alert alert-error">{erro}</div>}
           <button type="button" className="btn btn-primary btn-block" onClick={conferir} disabled={indo || !pix?.copia_cola}><RefreshCw size={14} /> {indo ? 'Conferindo…' : 'Já paguei, conferir'}</button>
-          <p className="muted fp-garantia"><ShieldCheck size={13} /> Pagamento único. Nenhum débito automático é criado.</p>
+          <p className="muted fp-garantia"><ShieldCheck size={13} /> Pagamento único. Nenhum débito automático é criado.{pix?.cancelar_em ? ` Não pago até ${dataCurta(pix.cancelar_em)}, é cancelado.` : ''}</p>
         </ModalManual>
       )}
 
@@ -206,6 +258,16 @@ export default function AdminAssinatura() {
       )}
     </AdminShell>
   )
+
+  // o "Ver o Pix" do cartão do topo: o plano da cobrança aberta (não o marcado embaixo)
+  function abrirPixDe(mesesDela) {
+    rodar(async () => {
+      const r = await assinatura('renovar_pix', salao.id, { meses: mesesDela })
+      setPix(r?.cobranca ?? null)
+      setModal('pix')
+      await carregar()
+    })
+  }
 }
 
 function ModalManual({ titulo, onVoltar, children }) {

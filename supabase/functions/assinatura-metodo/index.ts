@@ -17,7 +17,7 @@
 // com o Asaas, na conta-pai.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { asaas, chavePai, NAO_VAI_PAGAR, garantirClienteMimo, tokenizarCartao, cobrarCartaoAvulso, cobrarPixMimo, criarAutorizacaoPixAutomatico, situacaoAutorizacaoPixAutomatico, cancelarAutorizacaoPixAutomatico, obterCobrancaMimo, baixarCobrancaMimoSandbox, apagarCobrancaMimo, AMBIENTE, PAGO, AUTORIZADA, AUTORIZACAO_MORTA, json, preflight, ErroAsaas } from '../_shared/asaas.ts'
+import { asaas, chavePai, ESTORNADA, acharCobrancaMimoPorRef, pixDaCobrancaMimo, garantirClienteMimo, tokenizarCartao, cobrarCartaoAvulso, cobrarPixMimo, criarAutorizacaoPixAutomatico, situacaoAutorizacaoPixAutomatico, cancelarAutorizacaoPixAutomatico, obterCobrancaMimo, baixarCobrancaMimoSandbox, apagarCobrancaMimo, AMBIENTE, PAGO, AUTORIZADA, AUTORIZACAO_MORTA, json, preflight, ErroAsaas } from '../_shared/asaas.ts'
 import { criarNoAsaas } from '../_shared/cobranca_mimo.ts'
 
 const URL_SUPABASE = Deno.env.get('SUPABASE_URL') ?? ''
@@ -72,8 +72,35 @@ Deno.serve(async (req) => {
   }
   async function cobrancaViva(id: string | null | undefined): Promise<boolean> {
     if (!id) return false
+    // 3.94: vencida (OVERDUE) ainda vale: o Pix pode ser pago até o prazo da MIMO (antes, criava outra no Asaas)
     const c = await obterCobrancaMimo(id).catch(() => null)
-    return Boolean(c?.id) && !c?.deleted && !NAO_VAI_PAGAR.has(String(c?.status ?? ''))
+    return Boolean(c?.id) && !c?.deleted && !ESTORNADA.has(String(c?.status ?? ''))
+  }
+  // 3.94: o plano pedido (1, 6 ou 12 meses)
+  function mesesDoPedido(): number {
+    const m = Number(corpo.meses ?? 1)
+    return [1, 6, 12].includes(m) ? m : 1
+  }
+  // as cobranças que o banco acabou de substituir saem do Asaas (para não ficarem pagáveis)
+  // deno-lint-ignore no-explicit-any
+  async function apagarAnteriores(ab: any) {
+    for (const id of (ab?.anteriores ?? []) as string[]) {
+      if (id) await apagarCobrancaMimo(id).catch(() => {})
+    }
+  }
+  // a rotina (ou uma tentativa que caiu) já criou o Pix desta linha no Asaas? Então é ele: grava e devolve
+  // deno-lint-ignore no-explicit-any
+  async function jaNoAsaas(ab: any) {
+    const p = await acharCobrancaMimoPorRef(`mimo:${ab.id}`).catch(() => null)
+    if (!p?.id || PAGO.has(String(p.status ?? '')) || ESTORNADA.has(String(p.status ?? ''))) return null
+    const q = await pixDaCobrancaMimo(String(p.id)).catch(() => null)
+    if (!q?.copiaCola) return null
+    await servico.rpc('cobranca_mimo_atualizar', { cobranca: ab.id, dados: { status: 'aguardando', cobranca_id: String(p.id), copia_cola: q.copiaCola, link_url: p.invoiceUrl ?? null } })
+    return { status: 'aguardando', cobranca_id: String(p.id), copia_cola: q.copiaCola, imagem: q.imagem, link_url: p.invoiceUrl ?? null }
+  }
+  function descricaoDoPlano(meses: number, inicial: boolean, pct: number) {
+    const plano = meses === 12 ? 'Plano anual' : meses === 6 ? 'Plano semestral' : inicial ? 'Primeira mensalidade' : 'Mensalidade'
+    return `${plano} MIMO · ${prep.nome}${pct > 0 ? ` · ${pct}% de desconto` : ''}`
   }
 
   try {
@@ -86,22 +113,26 @@ Deno.serve(async (req) => {
     // 2.81: ativação inicial sem recorrência. O banco calcula os 20% e
     // reserva a cobrança; esta função só conversa com o Asaas.
     if (corpo.acao === 'inicio_pix') {
-      const { data: ab, error } = await quem.rpc('cobranca_inicial_abrir', { salao, metodo_: 'pix' })
+      const meses = mesesDoPedido()
+      const { data: ab, error } = await quem.rpc('cobranca_inicial_abrir', meses === 1 ? { salao, metodo_: 'pix' } : { salao, metodo_: 'pix', meses_: meses })
       if (error) return json({ erro: error.message }, 400)
+      await apagarAnteriores(ab)
 
       // cobrança já criada no Asaas numa tentativa anterior: reaproveita, se ela existe neste Asaas e ainda vale
       if (ab?.cobranca_id && ab?.copia_cola && await cobrancaViva(ab.cobranca_id)) {
         return json({ ok: true, cobranca: { ...ab, sandbox }, acesso: await acesso() })
       }
 
+      const ja = await jaNoAsaas(ab)
+      if (ja) return json({ ok: true, cobranca: { ...ab, ...ja, sandbox }, acesso: await acesso() })
       const customer = await clienteDaqui()
       const hoje = new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10)
       const r = await cobrarPixMimo({
         customer,
         valorCents: Number(ab.total_cents),
-        descricao: `Primeira mensalidade MIMO · ${prep.nome} · 20% de desconto`,
+        descricao: descricaoDoPlano(Number(ab.meses ?? 1), true, Number(ab.desconto_pct ?? 0)),
         ref: `mimo:${ab.id}`,
-        vencimento: hoje,
+        vencimento: String(ab.vencimento ?? '') > hoje ? String(ab.vencimento) : hoje,
       })
       await servico.rpc('cobranca_mimo_atualizar', {
         cobranca: ab.id,
@@ -215,19 +246,26 @@ Deno.serve(async (req) => {
       return json({ ok: true, estado: (await quem.rpc('ativacao_inicial_estado', { salao })).data, acesso: await acesso() })
     }
 
+    // 3.94: a mensalidade (renovação, ou "pagar agora" no teste). Uma aberta por vez: o banco devolve a que já
+    // existe (mesmo plano, no prazo) ou abre outra e lista as anteriores, que saem do Asaas aqui. Vence no dia X
+    // (o fim do período atual) ou, para quem já passou do prazo, em 3 dias.
     if (corpo.acao === 'renovar_pix') {
-      const { data: ab, error } = await quem.rpc('cobranca_manual_abrir', { salao, metodo_: 'pix' })
+      const meses = mesesDoPedido()
+      const { data: ab, error } = await quem.rpc('cobranca_manual_abrir', meses === 1 ? { salao, metodo_: 'pix' } : { salao, metodo_: 'pix', meses_: meses })
       if (error) return json({ erro: error.message }, 400)
+      await apagarAnteriores(ab)
       if (ab?.cobranca_id && ab?.copia_cola && await cobrancaViva(ab.cobranca_id)) return json({ ok: true, cobranca: { ...ab, sandbox }, acesso: await acesso() })
 
+      const ja = await jaNoAsaas(ab)
+      if (ja) return json({ ok: true, cobranca: { ...ab, ...ja, sandbox }, acesso: await acesso() })
       const customer = await clienteDaqui()
       const hoje = new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10)
       const r = await cobrarPixMimo({
         customer,
         valorCents: Number(ab.total_cents),
-        descricao: `Mensalidade MIMO · ${prep.nome}`,
+        descricao: descricaoDoPlano(Number(ab.meses ?? 1), false, Number(ab.desconto_pct ?? 0)),
         ref: `mimo:${ab.id}`,
-        vencimento: hoje,
+        vencimento: String(ab.vencimento ?? '') > hoje ? String(ab.vencimento) : hoje,
       })
       await servico.rpc('cobranca_mimo_atualizar', {
         cobranca: ab.id,

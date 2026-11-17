@@ -109,9 +109,9 @@ begin
   if (select avisos ->> 'bloqueado' from public.assinaturas where salon_id = sid) is null then raise exception '8g'; end if;
   raise notice '8 leitura → bloqueado, rotina só avisou';
 
-  -- 9. chutar_assinaturas está desligado
+  -- 9. chutar_assinaturas voltou (234): só leva ao Asaas as cobranças Pix que a rotina abriu, confere e cancela
   r := public.chutar_assinaturas();
-  if not (r ->> 'desativado')::boolean then raise exception '9: %', r; end if;
+  if r ? 'desativado' then raise exception '9: devia estar ligado de novo (234): %', r; end if;
 
   -- 10. pagou a primeira com 20% (outro salão zerado): confirma → ativa, sem teste
   perform set_config('request.jwt.claim.sub', dona::text, true);

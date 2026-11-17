@@ -16134,3 +16134,43 @@ label.a-partir-opcao .a-partir-opcao-texto { flex: 1; }
   .modal-fundo:has(> .encaixe-quem) { align-items: center; }
   .modal-caixa.encaixe-quem { max-width: 460px; border-radius: 22px; padding-bottom: 1.3rem; }
 }
+
+/* 3.94: a faixa do teste grátis, no alto de todas as páginas do painel do salão */
+.faixa-teste { flex: none; display: flex; align-items: center; justify-content: center; gap: 0.55rem; min-height: 30px; padding: 0.3rem 0.9rem; background: linear-gradient(90deg, #fff4f9 0%, #f7efff 100%); border-bottom: 1px solid var(--latao-fio); font-size: 0.76rem; color: var(--texto-2); text-align: center; flex-wrap: wrap; }
+.faixa-teste-selo { display: inline-flex; align-items: center; gap: 0.3rem; font-weight: 700; color: var(--rosa); text-transform: uppercase; letter-spacing: 0.04em; font-size: 0.68rem; }
+.faixa-teste-texto { color: var(--texto); }
+.faixa-teste-link { display: inline-flex; align-items: center; gap: 0.2rem; font-weight: 700; color: var(--rosa); text-decoration: none; }
+.faixa-teste-link:hover { text-decoration: underline; }
+.faixa-teste.perto { background: linear-gradient(90deg, #fff1f3 0%, #ffe9f1 100%); }
+@media (max-width: 420px) { .faixa-teste { gap: 0.4rem; font-size: 0.72rem; } }
+/* no iPhone com o app instalado, a faixa fica debaixo do relógio: ela leva a folga do entalhe e o topo perde a dele */
+.faixa-teste { padding-top: calc(0.3rem + env(safe-area-inset-top)); }
+@media (max-width: 959px) { .faixa-teste + .topbar { padding-top: 0.85rem; } }
+
+/* 3.94: planos (mensal, semestral, anual) e o Pix em aberto */
+.assin-aberta { display: flex; align-items: center; gap: 0.85rem; border: 1px solid var(--latao-fio); background: linear-gradient(135deg, #fff 0%, #fff6fa 100%); flex-wrap: wrap; }
+.assin-aberta-icone { width: 40px; height: 40px; flex: none; border-radius: 12px; display: grid; place-items: center; background: var(--gradiente); color: #fff; }
+.assin-aberta-texto { display: grid; gap: 0.15rem; flex: 1; min-width: 200px; }
+.assin-aberta-texto strong { font-size: 1.1rem; }
+.assin-aberta-texto strong span { font-size: 0.85rem; font-weight: 500; color: var(--texto-2); }
+.assin-aberta-texto .muted { font-size: 0.8rem; line-height: 1.4; }
+.assin-chamada { margin: 0.4rem 0 0; font-size: 1.02rem; }
+.assin-explica { margin: -0.4rem 0 0; font-size: 0.84rem; line-height: 1.45; }
+.assin-planos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.5rem; }
+.assin-plano-op { position: relative; display: grid; gap: 0.15rem; justify-items: start; padding: 0.95rem 0.8rem 0.8rem; border-radius: 16px; border: 1.5px solid #ece7ee; background: #fff; font: inherit; text-align: left; cursor: pointer; color: var(--texto); min-width: 0; }
+.assin-plano-op:hover { border-color: var(--latao-fio); }
+.assin-plano-op.ativo { border-color: var(--rosa); background: #fff6fa; box-shadow: 0 0 0 3px rgba(255, 45, 122, 0.1); }
+.assin-plano-nome { font-size: 0.72rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--texto-2); }
+.assin-plano-op strong { font-size: 1.12rem; line-height: 1.2; }
+.assin-plano-op small { font-size: 0.72rem; color: var(--texto-2); line-height: 1.3; }
+.assin-plano-op em { font-style: normal; font-size: 0.7rem; font-weight: 700; color: var(--menta); }
+.assin-plano-selo { position: absolute; top: -9px; right: 8px; padding: 0.1rem 0.45rem; border-radius: 999px; background: var(--gradiente); color: #fff; font-size: 0.62rem; font-weight: 800; letter-spacing: 0.03em; }
+.assin-pagar { display: flex; align-items: center; justify-content: center; gap: 0.45rem; }
+@media (max-width: 520px) {
+  .assin-planos { grid-template-columns: 1fr; }
+  .assin-plano-op { grid-template-columns: auto 1fr auto; align-items: center; gap: 0 0.6rem; padding: 0.85rem; }
+  .assin-plano-op .assin-plano-nome { grid-row: 1; }
+  .assin-plano-op strong { grid-column: 3; grid-row: 1 / span 2; justify-self: end; }
+  .assin-plano-op small { grid-column: 1 / span 2; }
+  .assin-plano-op em { grid-column: 1 / span 2; }
+}

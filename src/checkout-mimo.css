@@ -150,3 +150,11 @@
 @media (prefers-reduced-motion: reduce) {
   .ck-hero-marca, .ck-status i { animation: none; }
 }
+
+/* 3.94: a escolha do plano no "pagar agora" (mensal 20% no 1º mês, semestral 10%, anual 15%) */
+.ck-planos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; padding: 4px; border-radius: 14px; background: rgba(255, 255, 255, 0.6); border: 1px solid rgba(255, 45, 122, 0.15); }
+.ck-plano-op { display: grid; gap: 1px; justify-items: center; padding: 0.5rem 0.25rem; border: 0; border-radius: 11px; background: transparent; font: inherit; cursor: pointer; color: var(--texto-2, #6b6f7a); min-width: 0; }
+.ck-plano-op span { font-size: 0.82rem; font-weight: 700; }
+.ck-plano-op b { font-size: 0.66rem; font-weight: 800; color: var(--rosa, #ff2d7a); letter-spacing: 0.02em; }
+.ck-plano-op.ativo { background: #fff; color: var(--texto, #1f2026); box-shadow: 0 2px 8px rgba(255, 45, 122, 0.18); }
+.ck-plano-op:disabled { opacity: 0.7; cursor: default; }

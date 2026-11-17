@@ -7,6 +7,7 @@ import MenuDaConta, { ITENS_ADMIN } from './MenuDaConta'
 import ClimaTopo from './ClimaTopo'
 import MelDock from './MelDock'
 import { InstalarNoMenu } from './InstalarApp'
+import FaixaDoTeste from './FaixaDoTeste'
 import { LogoMimo } from './icons'
 import {
   CalendarIcon,
@@ -118,6 +119,7 @@ export default function AdminShell({ children, amplo = false, primeiroAcesso = f
       </aside>
 
       <div className={primeiroAcesso ? 'admin-first-workspace' : 'admin-shell-workspace'}>
+      <FaixaDoTeste />
       <header className={'topbar topbar-admin' + (primeiroAcesso ? ' topbar-admin-primeiro' : '')}>
         <div className="topbar-admin-esquerda">
           <span className="brand-inline">

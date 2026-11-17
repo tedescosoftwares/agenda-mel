@@ -214,6 +214,41 @@ A tela de ativação segue sozinha em alguns segundos. A cobrança continua
 aberta no Asaas até vencer (vale pelo dia). Os clientes e cobranças que
 ficaram do sandbox são refeitos sozinhos no primeiro Pix de produção.
 
+### Webhook da conta-pai: a mensalidade da MIMO (3.94)
+
+As subcontas dos salões nascem com o webhook. A **conta-pai** (a da MIMO,
+onde a mensalidade é cobrada) não: ele tem de ser cadastrado uma vez, à mão.
+Sem ele, pagar ou apagar uma cobrança no Asaas não chega ao painel (a
+rotina `assinatura-cuidar` confere de hora em hora, mas o webhook é o
+que avisa na hora).
+
+1. Se ainda não existe, crie o token (no servidor, bat 1; você mesmo
+   digita, nunca no chat): um texto longo e aleatório seu.
+
+   ```
+   supabase secrets set 'ASAAS_WEBHOOK_TOKEN=um-texto-longo-so-seu' --project-ref ...
+   ```
+   e publique as functions (bat 9).
+2. No Asaas da conta-pai: Integrações › Webhooks › Adicionar.
+   - URL: `https://SEU_REF.supabase.co/functions/v1/pagamento-webhook`
+   - Token de autenticação: o mesmo texto do `ASAAS_WEBHOOK_TOKEN`
+   - Versão da API: v3 · Envio: sequencial · ativo
+   - Eventos de cobrança: recebida (`PAYMENT_RECEIVED`), confirmada
+     (`PAYMENT_CONFIRMED`), removida (`PAYMENT_DELETED`), estornada
+     (`PAYMENT_REFUNDED`) e vencida (`PAYMENT_OVERDUE`)
+3. Se o Asaas mostrar a fila do webhook **interrompida** (ele pausa depois
+   de várias falhas, por exemplo enquanto o token não existia), reative-a
+   na mesma tela.
+
+Como fica a mensalidade (migração 234):
+- uma cobrança aberta por vez; a próxima aparece sozinha 7 dias antes do fim
+  do período pago (3 antes do fim do teste), vencendo no último dia;
+- quem já passou do prazo paga em até 3 dias, e o período começa no pagamento;
+- não paga até 3 dias depois do vencimento: a `assinatura-cuidar` apaga no
+  Asaas e o painel mostra "cancelado";
+- apagada no Asaas (por você, no painel deles): o webhook marca "cancelado";
+- planos mensal, semestral (10%) e anual (15%); na ativação o mensal tem 20%.
+
 
 ## clima (2.86): o tempo no painel
 

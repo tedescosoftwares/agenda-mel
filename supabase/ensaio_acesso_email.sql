@@ -30,6 +30,14 @@ begin
   select p.id into conta from public.profiles p where p.role = 'cliente' and p.id not in (select owner_id from public.salons where owner_id is not null) and p.id not in (select user_id from public.professionals where user_id is not null) limit 1;
   update public.profiles set phone = '(11) 90000-0001' where id = conta;
   perform set_config('request.jwt.claim.sub', conta::text, true);
+  -- 232: o convite só ativa na conta do e-mail convidado
+  update auth.users set email = 'outra@exemplo.com' where id = conta;
+  begin
+    perform public.ativar_acesso(t);
+    raise exception '3x: ativou com outro e-mail';
+  exception when others then if sqlerrm not like '%Este convite é para%' then raise; end if;
+  end;
+  update auth.users set email = 'carla@exemplo.com' where id = conta;
   r := public.ativar_acesso(t);
   if not (r ->> 'ok')::boolean or r ->> 'situacao' <> 'ativa' then raise exception '3b: %', r; end if;
   if (select phone from public.professionals where id = pid) <> '(11) 90000-0001' then raise exception '3c: telefone da conta não valeu'; end if;

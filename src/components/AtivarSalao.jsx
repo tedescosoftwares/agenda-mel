@@ -26,13 +26,20 @@ export default function AtivarSalao({ s, onAtivado, onErro }) {
   const [indo, setIndo] = useState(false)
   const [erro, setErro] = useState('')
   const [pix, setPix] = useState(null)
+  const [meses, setMeses] = useState(null)   // 3.94: o plano do "pagar agora" (1, 6 ou 12)
   const poll = useRef(null)
 
   const cheio = Number(estado?.valor_cents ?? estado?.mensalidade?.valor_cents ?? 0)
-  const oferta = Number(estado?.oferta_cents ?? Math.floor(cheio * 0.8))
-  const descontoPct = Number(estado?.desconto_pct ?? REGRAS.descontoInicialPct ?? 20)
   const agendas = Number(estado?.mensalidade?.agendas ?? s?.equipe_prevista ?? 1)
-  const economia = Math.max(0, cheio - oferta)
+  // os planos: mensal com os 20% da primeira mensalidade, semestral 10%, anual 15% (o banco manda os preços)
+  const planos = estado?.planos?.length ? estado.planos : [[1, 'Mensal', Number(estado?.desconto_pct ?? REGRAS.descontoInicialPct ?? 20)], [6, 'Semestral', 10], [12, 'Anual', 15]]
+    .map(([m, nome, pct]) => ({ meses: m, nome, desconto_pct: pct, sem_desconto_cents: cheio * m, total_cents: Math.floor((cheio * m * (100 - pct)) / 100) }))
+  const mesesEscolhidos = meses ?? estado?.cobranca?.meses ?? 1
+  const planoEscolhido = planos.find((p) => p.meses === mesesEscolhidos) ?? planos[0]
+  const oferta = Number(planoEscolhido?.total_cents ?? estado?.oferta_cents ?? 0)
+  const semDesconto = Number(planoEscolhido?.sem_desconto_cents ?? cheio)
+  const descontoPct = Number(planoEscolhido?.desconto_pct ?? estado?.desconto_pct ?? REGRAS.descontoInicialPct ?? 20)
+  const economia = Math.max(0, semDesconto - oferta)
 
   async function carregar() {
     if (!s?.id || autonoma) return null
@@ -104,7 +111,7 @@ export default function AtivarSalao({ s, onAtivado, onErro }) {
   async function abrirPix() {
     await rodar(async () => {
       if (estado?.cobranca && estado.cobranca.metodo !== 'pix' && estado.cobranca.status !== 'pago') await cancelarPagamentoPendente()
-      const r = await assinatura('inicio_pix', s.id)
+      const r = await assinatura('inicio_pix', s.id, { meses: mesesEscolhidos })
       setPix(r?.cobranca ?? null)
       setEstado((x) => ({ ...(x ?? {}), cobranca: r?.cobranca ?? x?.cobranca }))
       setModo('pix')
@@ -188,22 +195,31 @@ export default function AtivarSalao({ s, onAtivado, onErro }) {
 
               <div className="ck-opcoes">
                 <section className="ck-opcao ck-pagar">
-                  <span className="ck-fita"><Gift size={13} /> Boas-vindas · {descontoPct}% OFF</span>
-                  <h2>Primeira mensalidade com desconto</h2>
+                  <span className="ck-fita"><Gift size={13} /> {mesesEscolhidos === 1 ? `Boas-vindas · ${descontoPct}% OFF` : `Plano ${planoEscolhido?.nome?.toLowerCase()} · ${descontoPct}% OFF`}</span>
+                  <h2>Pagar agora e já ativar</h2>
+                  <div className="ck-planos" role="radiogroup" aria-label="Escolha o plano">
+                    {planos.map((p) => (
+                      <button key={p.meses} type="button" role="radio" aria-checked={p.meses === mesesEscolhidos}
+                        className={'ck-plano-op' + (p.meses === mesesEscolhidos ? ' ativo' : '')} onClick={() => setMeses(p.meses)} disabled={indo}>
+                        <span>{p.nome}</span>
+                        <b>{p.desconto_pct}% OFF</b>
+                      </button>
+                    ))}
+                  </div>
                   <div className="ck-preco">
-                    {cheio > 0 && <s>{reais(cheio / 100)}</s>}
+                    {semDesconto > 0 && economia > 0 && <s>{reais(semDesconto / 100)}</s>}
                     <strong>{oferta ? reais(oferta / 100) : '…'}</strong>
                     {economia > 0 && <em>você economiza {reais(economia / 100)}</em>}
                   </div>
                   <ul className="ck-lista">
-                    <li><Check size={14} /> 30 dias liberados na hora</li>
-                    <li><Check size={14} /> Pagamento único por Pix</li>
+                    <li><Check size={14} /> {mesesEscolhidos === 1 ? '1 mês liberado na hora' : `${mesesEscolhidos} meses liberados na hora (${reais(Math.floor(oferta / mesesEscolhidos) / 100)}/mês)`}</li>
+                    <li><Check size={14} /> {mesesEscolhidos === 1 ? `${descontoPct}% de desconto na primeira mensalidade` : 'Pagamento único por Pix'}</li>
                     <li><Check size={14} /> Sem cartão, sem renovação automática</li>
                   </ul>
                   <button type="button" className="ck-botao ck-botao-pix" onClick={abrirPix} disabled={indo || !oferta}>
                     {indo ? <LoaderCircle className="ai-gira" size={18} /> : <PixIcone />} {indo ? 'Gerando o Pix…' : `Pagar ${oferta ? reais(oferta / 100) : ''} com Pix`}
                   </button>
-                  <small className="ck-nota"><ShieldCheck size={12} /> Processado pelo Asaas. O desconto vale só agora, na ativação.</small>
+                  <small className="ck-nota"><ShieldCheck size={12} /> Processado pelo Asaas. {mesesEscolhidos === 1 ? 'Os 20% da primeira mensalidade valem só agora, na ativação.' : 'Os planos de 6 e 12 meses têm desconto sempre.'}</small>
                 </section>
 
                 <div className="ck-ou"><span>ou</span></div>
@@ -215,7 +231,7 @@ export default function AtivarSalao({ s, onAtivado, onErro }) {
                   <button type="button" className="ck-botao ck-botao-teste" onClick={comecarTeste} disabled={indo}>
                     <Sparkles size={16} /> {indo ? 'Ativando…' : `Começar ${REGRAS.testeDias} dias grátis`}
                   </button>
-                  <small className="ck-nota">Escolhendo o teste, o desconto de {descontoPct}% da primeira mensalidade sai da mesa.</small>
+                  <small className="ck-nota">Escolhendo o teste, os 20% da primeira mensalidade saem da mesa. Os planos de 6 e 12 meses continuam com desconto.</small>
                 </section>
               </div>
 
@@ -227,6 +243,7 @@ export default function AtivarSalao({ s, onAtivado, onErro }) {
               pix={pix}
               total={Number(pix?.total_cents ?? oferta)}
               descontoPct={descontoPct}
+              rotulo={(pix?.meses ?? mesesEscolhidos) === 12 ? 'Plano anual' : (pix?.meses ?? mesesEscolhidos) === 6 ? 'Plano semestral' : 'Primeira mensalidade'}
               indo={indo}
               erro={erro}
               onConferir={() => conferir(true)}
@@ -293,7 +310,7 @@ export default function AtivarSalao({ s, onAtivado, onErro }) {
 }
 
 // o Pix aberto: valor, status ao vivo, copiar (o principal no celular) e o QR (o principal no computador)
-function TelaPix({ pix, total, descontoPct, indo, erro, onConferir, onVoltar }) {
+function TelaPix({ pix, total, descontoPct, rotulo = 'Primeira mensalidade', indo, erro, onConferir, onVoltar }) {
   const [qr, setQr] = useState('')
   const [copiado, setCopiado] = useState(false)
   const [verQr, setVerQr] = useState(false)
@@ -320,7 +337,7 @@ function TelaPix({ pix, total, descontoPct, indo, erro, onConferir, onVoltar }) 
       <div className="ck-pix-cabeca">
         <span className="ck-pix-icone"><PixIcone /></span>
         <span>
-          <small>Primeira mensalidade · {descontoPct}% OFF</small>
+          <small>{rotulo} · {descontoPct}% OFF</small>
           <strong>{reais(total / 100)}</strong>
         </span>
         {pix?.sandbox && <span className="ck-teste-tag">ambiente de testes</span>}

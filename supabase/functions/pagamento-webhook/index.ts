@@ -9,7 +9,7 @@
 // (banco fora) responde 500 e o Asaas tenta de novo.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { obterCobranca, obterCobrancaMimo, situacaoDaSubconta, AMBIENTE, PAGO, NAO_VAI_PAGAR, json } from '../_shared/asaas.ts'
+import { obterCobranca, situacaoCobrancaMimo, situacaoDaSubconta, AMBIENTE, PAGO, ESTORNADA, json } from '../_shared/asaas.ts'
 
 const servico = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '', { auth: { persistSession: false } })
 
@@ -31,20 +31,27 @@ Deno.serve(async (req) => {
     // a mensalidade da MIMO (128): cobrada na conta-pai, referência mimo:<id>
     if (ref.startsWith('mimo:')) {
       const id = ref.slice(5)
-      const { data: linha } = await servico.from('cobrancas_mimo').select('id, status, metodo').eq('id', id).maybeSingle()
+      const { data: linha } = await servico.from('cobrancas_mimo').select('id, status, metodo, cobranca_id').eq('id', id).maybeSingle()
       if (!linha) return json({ ok: true, ignorado: 'cobrança da MIMO desconhecida' })
-      let real
-      try { real = await obterCobrancaMimo(cobranca) } catch (e) { return json({ erro: 'não deu para conferir: ' + String(e) }, 500) }
-      const st = String(real?.status ?? '')
+      // confere na fonte: o POST sozinho não vale como prova. 3.94: apagada no Asaas (deleted ou 404) também conta
+      let sit
+      try { sit = await situacaoCobrancaMimo(cobranca) } catch (e) { return json({ erro: 'não deu para conferir: ' + String(e) }, 500) }
+      const st = sit.status
       if (PAGO.has(st) && (st !== 'RECEIVED_IN_CASH' || AMBIENTE !== 'producao')) {
-        const quando = real?.paymentDate ? new Date(real.paymentDate + 'T12:00:00-03:00').toISOString() : new Date().toISOString()
+        const quando = sit.real?.paymentDate ? new Date(sit.real.paymentDate + 'T12:00:00-03:00').toISOString() : new Date().toISOString()
         const { data: r, error } = await servico.rpc('cobranca_mimo_confirmar', { cobranca: linha.id, cobranca_asaas: cobranca, quando })
         if (error) return json({ erro: error.message }, 500)
         return json({ ok: true, mimo: r })
       }
-      if (NAO_VAI_PAGAR.has(st) && linha.status !== 'pago') {
-        if (linha.metodo === 'pix') await servico.rpc('cobranca_mimo_atualizar', { cobranca: linha.id, dados: { status: 'expirado', erro: 'não pago (' + st + ')' } })
-        else await servico.rpc('cobranca_mimo_falhou', { cobranca: linha.id, motivo: 'não pago (' + st + ')' })
+      // uma cobrança velha desta linha (trocada por outra no Asaas) que não foi paga: o evento é dela, não mexe
+      // (paga, ela vale acima: dinheiro recebido é sempre creditado)
+      if (linha.cobranca_id && cobranca && linha.cobranca_id !== cobranca) return json({ ok: true, ignorado: 'cobrança substituída' })
+      // apagada no Asaas (por lá ou por nós) ou estornada: cancelada no painel. Vencida (OVERDUE) não: o Pix ainda
+      // pode ser pago até o prazo da MIMO, e quem cancela no fim do prazo é a assinatura-cuidar.
+      if ((sit.apagada || ESTORNADA.has(st)) && linha.status !== 'pago') {
+        const { error } = await servico.rpc('cobranca_mimo_atualizar', { cobranca: linha.id, dados: { status: 'cancelado', erro: sit.apagada ? 'apagada no Asaas' : 'não vai ser paga (' + st + ')' } })
+        if (error) return json({ erro: error.message }, 500)
+        return json({ ok: true, mimo: 'cancelada' })
       }
       return json({ ok: true, mimo: st })
     }

@@ -44,6 +44,8 @@ export default function AtivarAcesso() {
   if (loading || acesso === undefined) return <div className="page-center"><p className="muted">Carregando…</p></div>
   const p = acesso?.profissional
   const nome = primeiroNome(p?.nome)
+  // 3.89.2 (migração 232): o convite só ativa na conta do e-mail convidado
+  const outraConta = Boolean(user && p?.email && user.email && p.email.trim().toLowerCase() !== user.email.trim().toLowerCase())
   return (
     <div className="page-center login-bg">
       <div className="card login-card entrar-card ativar-card">
@@ -89,14 +91,19 @@ export default function AtivarAcesso() {
             <SalaoCabeca acesso={acesso} />
             <h2 className="login-titulo">Você foi adicionada ao {acesso.salao.nome}</h2>
             <p className="ativar-nome"><strong>{p.nome}</strong>{p.especialidade && <span className="muted">{` · ${p.especialidade}`}</span>}{p.email && <small className="muted">{p.email}</small>}</p>
-            <p className="muted login-sub">O salão já configurou sua agenda. Você não precisa escolher serviço, preço, vínculo nem horário.</p>
+            <p className="muted login-sub">O salão já configurou sua agenda. Você não precisa escolher serviço, preço, vínculo nem horário.{p.email ? ' Use o e-mail do convite para criar a senha ou entrar.' : ''}</p>
             <ul className="pronto-lista convite-lista ativar-lista">
               <li><Sparkles size={14} /><span>{`${p.servicos} ${p.servicos === 1 ? 'serviço configurado' : 'serviços configurados'}`}</span></li>
               <li><CalendarDays size={14} /><span>{`Atende ${resumoDias((p.dias ?? []).map((d) => ({ weekday: d, open: true })))}`}</span></li>
               <li><ShieldCheck size={14} /><span>Sua agenda, seu link e suas clientes, dentro do salão</span></li>
             </ul>
             {erro && <div className="alert alert-error">{erro}</div>}
-            {user
+            {user && outraConta
+              ? <>
+                  <div className="alert alert-info">Este convite é para <strong>{p.email}</strong>, e este navegador está com <strong>{user.email}</strong>. Para ativar, entre com a conta do e-mail do convite.</div>
+                  <button type="button" className="btn btn-primary btn-block" onClick={sairEContinuar} disabled={saindo}>{saindo ? 'Saindo…' : 'Sair desta conta e continuar'}</button>
+                </>
+              : user
               ? <>
                   <button type="button" className="btn btn-primary btn-block" onClick={ativar} disabled={indo}>{indo ? 'Ativando…' : 'Ativar meu acesso'}</button>
                   <p className="muted ativar-confere">Vai ativar na conta de <strong>{quemEsta}</strong>. Não é você? <button type="button" className="plat-link" onClick={sairEContinuar} disabled={saindo}>Sair</button></p>

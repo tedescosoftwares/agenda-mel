@@ -119,7 +119,17 @@ export default function Login({ ambiente = AMBIENTE }) {
         if (!termos) { setErro('Para criar a conta, é preciso aceitar os Termos e a Política de privacidade.'); return }
         // um WhatsApp, uma conta (067)
         const { data: livre } = await supabase.rpc('telefone_disponivel', { fone: fone.trim() })
-        if (livre && livre.disponivel === false) { setErro(livre.em_uso || livre.email ? 'Esse WhatsApp já está em uso e não dá pra cadastrar de novo. Se o número é seu, fale com o suporte.' : (livre.motivo || 'Confere o WhatsApp.')); return }
+        if (livre && livre.disponivel === false) {
+          // 3.89.4: no convite da equipe, o número já ter conta é comum (ela já usava a MIMO como cliente, ou é o
+          // número de quem está testando). A ficha que o salão criou não conta: o que existe é uma conta de acesso.
+          const deEquipe = papel === 'ativar' || papel === 'equipe'
+          setErro(livre.em_uso || livre.email
+            ? (deEquipe
+              ? 'Esse WhatsApp já tem uma conta na MIMO (não é a ficha que o salão criou: é uma conta de acesso, de cliente ou de salão). Se a conta é sua, toque em Entrar aqui embaixo e use ela. Se não é, use o seu próprio número.'
+              : 'Esse WhatsApp já está em uso e não dá pra cadastrar de novo. Se o número é seu, fale com o suporte.')
+            : (livre.motivo || 'Confere o WhatsApp.'))
+          return
+        }
         const aceites = aceitesPara(papelDoAceite, docs)
         const extra = { termos: versaoMaior(aceites), aceites }
         if (convite) extra.codigo_convite = convite

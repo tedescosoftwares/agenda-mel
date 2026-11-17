@@ -15,7 +15,9 @@
 .pe-faixa-grande .pe-faixa-logo { width: 52px; height: 52px; border-radius: 14px; font-size: 1rem; }
 .pe-faixa-grande .pe-faixa-botao { flex: 1 1 100%; justify-content: center; min-height: 46px; margin-top: 0.2rem; font-size: 0.92rem; }
 
-.pe-cabeca h2 { text-transform: none; }
+.pe-ola { margin: 0.2rem 0.2rem 0.9rem; }
+.pe-ola h2 { margin: 0; font-size: 1.45rem; line-height: 1.2; text-transform: none; }
+.pe-ola p { margin: 0.15rem 0 0; font-size: 0.88rem; }
 
 /* a caixa de avisos */
 .pe-filtro { margin: 0 0 0.8rem; }
@@ -57,3 +59,107 @@
 
 @keyframes pe-brilho { from { background-position: 200% 0; } to { background-position: -200% 0; } }
 @media (prefers-reduced-motion: reduce) { .pe-aviso-carregando { animation: none; } }
+
+/* 3.91: a agenda da equipe como linha do tempo */
+.lte { margin-top: 0.4rem; }
+.lte-semana-topo { display: flex; align-items: center; gap: 0.4rem; margin: 0 0 0.45rem; }
+.lte-mes { flex: 1; font-size: 0.92rem; font-weight: 600; color: var(--texto); }
+.lte-seta { width: 34px; height: 34px; border-radius: 999px; border: 1px solid var(--fio); background: var(--branco); color: var(--texto-2); display: grid; place-items: center; cursor: pointer; }
+.lte-hoje { height: 30px; padding: 0 0.75rem; border-radius: 999px; border: 1px solid var(--latao-fio); background: var(--latao-veu); color: var(--rosa); font: inherit; font-size: 0.8rem; font-weight: 600; cursor: pointer; }
+
+.lte-semana { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; padding: 5px; border-radius: 18px; background: var(--branco); border: 1px solid var(--fio); box-shadow: var(--sombra); }
+.lte-dia { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 0.45rem 0 0.4rem; border: 0; border-radius: 13px; background: transparent; font: inherit; color: var(--texto); cursor: pointer; min-width: 0; }
+.lte-dia-nome { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--texto-3); font-weight: 600; }
+.lte-dia-num { font-size: 1.05rem; font-weight: 700; line-height: 1.2; }
+.lte-dia-pontos { display: flex; align-items: center; gap: 2px; height: 7px; }
+.lte-dia-pontos i { width: 5px; height: 5px; border-radius: 999px; background: var(--rosa); }
+.lte-dia-pontos b { font-size: 0.6rem; line-height: 1; color: var(--rosa); }
+.lte-dia.passado .lte-dia-num { color: var(--texto-3); }
+.lte-dia.passado .lte-dia-pontos i { background: var(--texto-3); }
+.lte-dia.hoje .lte-dia-num { color: var(--rosa); }
+.lte-dia.ativo { background: var(--gradiente); box-shadow: var(--sombra-rosa); }
+.lte-dia.ativo .lte-dia-nome, .lte-dia.ativo .lte-dia-num, .lte-dia.ativo .lte-dia-pontos b { color: #fff; }
+.lte-dia.ativo .lte-dia-pontos i { background: #fff; }
+
+.lte-corpo { padding-top: 0.9rem; min-height: 220px; }
+.lte-resumo { display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap; margin: 0 0.2rem 0.7rem; }
+.lte-resumo strong { font-size: 1.05rem; }
+.lte-resumo span { font-size: 0.85rem; color: var(--texto-2); }
+
+/* a próxima (ou quem está agora) */
+.lte-destaque { position: relative; display: flex; flex-direction: column; gap: 0.45rem; width: 100%; margin-bottom: 0.9rem; padding: 0.95rem 1rem 1rem 1.15rem; border: 0; border-radius: 18px; text-align: left; font: inherit; color: #fff; background: linear-gradient(135deg, #ff2d7a 0%, #c13cf0 100%); box-shadow: 0 10px 24px rgba(193, 60, 240, 0.25); cursor: pointer; overflow: hidden; }
+.lte-destaque::after { content: ''; position: absolute; right: -40px; top: -40px; width: 140px; height: 140px; border-radius: 999px; background: rgba(255, 255, 255, 0.12); }
+.lte-destaque.agora { background: linear-gradient(135deg, #3d0c4e 0%, #aa4cff 100%); }
+.lte-destaque-rotulo { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.92; }
+.lte-destaque-linha { display: flex; align-items: center; gap: 0.85rem; }
+.lte-destaque-hora { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.01em; line-height: 1; }
+.lte-destaque-quem { display: flex; flex-direction: column; min-width: 0; padding-left: 0.85rem; border-left: 2px solid rgba(255, 255, 255, 0.45); }
+.lte-destaque-quem strong { font-size: 1.02rem; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lte-destaque-quem span { font-size: 0.84rem; opacity: 0.92; }
+.lte-destaque .lte-selo.pendente { align-self: flex-start; background: rgba(255, 255, 255, 0.2); color: #fff; }
+.lte-fim-do-dia { margin: -0.2rem 0.2rem 0.8rem; font-size: 0.85rem; color: var(--texto-2); }
+
+/* a lista: a hora à esquerda, um fio vertical ligando tudo */
+.lte-lista { list-style: none; margin: 0; padding: 0; position: relative; }
+.lte-lista::before { content: ''; position: absolute; left: 68px; top: 10px; bottom: 10px; width: 2px; border-radius: 2px; background: var(--fio); }
+.lte-item-botao { position: relative; display: grid; grid-template-columns: 50px 14px minmax(0, 1fr) auto auto; align-items: center; gap: 0 0.55rem; width: 100%; padding: 0.55rem 0.2rem; border: 0; background: transparent; text-align: left; font: inherit; color: inherit; cursor: pointer; border-radius: 14px; }
+.lte-item-botao:active { background: var(--cinza-1); }
+.lte-hora { display: flex; flex-direction: column; align-items: flex-end; font-size: 0.95rem; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.15; }
+.lte-hora small { font-size: 0.72rem; font-weight: 500; color: var(--texto-3); }
+.lte-marca { position: relative; z-index: 1; width: 14px; height: 14px; border-radius: 999px; background: var(--rosa); border: 3px solid var(--tinta); box-shadow: 0 0 0 1px var(--rosa); justify-self: center; }
+.lte-item-texto { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; padding: 0.7rem 0.85rem; border-radius: 14px; background: var(--branco); border: 1px solid var(--fio); box-shadow: var(--sombra); }
+.lte-item-texto strong { font-size: 0.95rem; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lte-item-texto > span:not(.lte-selo) { font-size: 0.82rem; color: var(--texto-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lte-tem-nota { color: var(--texto-3); }
+.lte-item-seta { color: var(--texto-3); }
+.lte-item.em-curso .lte-item-texto { border-color: var(--roxo); box-shadow: 0 0 0 3px rgba(170, 76, 255, 0.12); }
+.lte-item.em-curso .lte-marca { background: var(--roxo); box-shadow: 0 0 0 1px var(--roxo), 0 0 0 6px rgba(170, 76, 255, 0.18); }
+.lte-item.st-pendente .lte-marca { background: var(--tinta); box-shadow: 0 0 0 2px var(--rosa); }
+.lte-item.st-pendente .lte-item-texto { border-style: dashed; border-color: var(--latao-fio); }
+.lte-item.passou .lte-hora, .lte-item.passou .lte-item-texto strong { color: var(--texto-3); }
+.lte-item.passou .lte-marca { background: var(--fio-forte); box-shadow: 0 0 0 1px var(--fio-forte); }
+.lte-item.passou .lte-item-texto { background: transparent; box-shadow: none; }
+.lte-item.st-faltou .lte-item-texto strong { text-decoration: line-through; }
+
+.lte-selo { align-self: flex-start; margin-top: 0.25rem; padding: 0.1rem 0.5rem; border-radius: 999px; font-size: 0.7rem; font-weight: 600; background: var(--cinza-1); color: var(--texto-2); }
+.lte-selo.pendente { background: var(--latao-veu); color: var(--rosa); }
+.lte-selo.concluido { background: var(--menta-veu); color: var(--menta); }
+.lte-selo.faltou { background: var(--carmim-veu); color: var(--carmim); }
+.lte-selo.confirmado { background: var(--menta-veu); color: var(--menta); }
+.lte-selo.grande { margin: 0 0 0.5rem; font-size: 0.75rem; padding: 0.2rem 0.65rem; }
+
+.lte-livre { display: grid; grid-template-columns: 50px 14px minmax(0, 1fr); gap: 0 0.55rem; align-items: center; padding: 0.35rem 0.2rem; }
+.lte-livre .lte-hora { font-size: 0.8rem; font-weight: 500; color: var(--texto-3); }
+.lte-livre-texto { grid-column: 3; font-size: 0.8rem; color: var(--texto-3); padding: 0.45rem 0.85rem; border-radius: 12px; border: 1px dashed var(--fio-forte); background: repeating-linear-gradient(135deg, transparent 0 8px, rgba(31, 32, 38, 0.025) 8px 16px); }
+
+.lte-agora { position: relative; display: flex; align-items: center; height: 26px; margin: 0.1rem 0; padding-left: 64px; }
+.lte-agora::before { content: ''; position: absolute; left: 64px; width: 10px; height: 10px; border-radius: 999px; background: var(--roxo); box-shadow: 0 0 0 4px rgba(170, 76, 255, 0.18); z-index: 1; }
+.lte-agora::after { content: ''; position: absolute; left: 69px; right: 0; height: 2px; background: linear-gradient(90deg, var(--roxo), rgba(170, 76, 255, 0)); }
+.lte-agora span { position: relative; z-index: 1; margin-left: 16px; padding: 0 0.45rem; border-radius: 999px; background: var(--tinta); color: var(--roxo); font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+
+.lte-esqueleto { height: 64px; margin: 0.5rem 0 0.5rem 76px; border-radius: 14px; background: linear-gradient(90deg, var(--cinza-1) 0%, #fafafb 50%, var(--cinza-1) 100%); background-size: 200% 100%; animation: pe-brilho 1.2s linear infinite; }
+
+.lte-vazio { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 0.3rem; padding: 2rem 1rem; border-radius: 18px; border: 1px dashed var(--fio-forte); background: var(--branco); }
+.lte-vazio-icone { width: 50px; height: 50px; border-radius: 999px; display: grid; place-items: center; background: var(--lilas); color: var(--rosa); margin-bottom: 0.3rem; }
+.lte-vazio span { font-size: 0.85rem; color: var(--texto-2); max-width: 300px; line-height: 1.45; }
+
+/* a folha de detalhes */
+.lte-fundo { position: fixed; inset: 0; z-index: 80; background: rgba(31, 32, 38, 0.48); display: flex; align-items: flex-end; justify-content: center; animation: lte-aparece 0.18s ease-out; }
+.lte-folha { position: relative; width: 100%; max-width: 520px; max-height: 88vh; max-height: 88dvh; overflow-y: auto; background: var(--branco); border-radius: 24px 24px 0 0; padding: 0.6rem 1.2rem calc(1rem + env(safe-area-inset-bottom)); box-shadow: var(--sombra-alta); animation: lte-sobe 0.24s cubic-bezier(0.2, 0.8, 0.2, 1); }
+@media (min-width: 700px) { .lte-fundo { align-items: center; } .lte-folha { border-radius: 24px; } }
+.lte-pegador { display: block; width: 40px; height: 4px; border-radius: 4px; background: var(--cinza-2); margin: 0 auto 0.9rem; }
+.lte-fechar { position: absolute; top: 10px; right: 10px; width: 34px; height: 34px; border: 0; border-radius: 999px; background: var(--cinza-1); color: var(--texto-2); display: grid; place-items: center; cursor: pointer; }
+.lte-folha h3 { margin: 0; font-size: 1.3rem; line-height: 1.2; padding-right: 2.5rem; }
+.lte-folha-servico { margin: 0.2rem 0 0.9rem; color: var(--texto-2); font-size: 0.95rem; }
+.lte-folha-quando { display: flex; gap: 0.6rem; align-items: flex-start; padding: 0.8rem 0.9rem; border-radius: 14px; background: var(--lilas); font-size: 0.92rem; line-height: 1.4; }
+.lte-folha-quando svg { flex: none; margin-top: 2px; color: var(--rosa); }
+.lte-folha-dia { color: var(--texto-2); font-size: 0.85rem; }
+.lte-folha-nota { display: flex; gap: 0.6rem; align-items: flex-start; margin-top: 0.6rem; padding: 0.8rem 0.9rem; border-radius: 14px; background: #fff8e8; border: 1px solid #f6e3b4; font-size: 0.88rem; line-height: 1.45; white-space: pre-line; overflow-wrap: anywhere; }
+.lte-folha-nota svg { flex: none; margin-top: 2px; color: #b7860b; }
+.lte-folha-nota b { display: block; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: #8a6508; margin-bottom: 0.1rem; }
+.lte-folha-dica { margin: 0.8rem 0.1rem 0; font-size: 0.83rem; color: var(--texto-2); line-height: 1.45; }
+.lte-folha-whats { display: flex; align-items: center; justify-content: center; gap: 0.45rem; min-height: 48px; margin-top: 0.8rem; border-radius: 999px; background: #1faa59; color: #fff; font-weight: 600; font-size: 0.92rem; text-decoration: none; box-shadow: 0 4px 12px rgba(31, 170, 89, 0.25); text-align: center; padding: 0 1rem; }
+.lte-folha-ok { margin-top: 0.5rem; }
+@media (prefers-reduced-motion: reduce) { .lte-fundo, .lte-folha, .lte-esqueleto { animation: none; } }
+@keyframes lte-aparece { from { opacity: 0; } to { opacity: 1; } }
+@keyframes lte-sobe { from { transform: translateY(40px); opacity: 0.6; } to { transform: none; opacity: 1; } }

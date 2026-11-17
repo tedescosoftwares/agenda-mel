@@ -14,6 +14,7 @@ import PrimeirosPassos from '../../components/PrimeirosPassos'
 import AcessoAviso from '../../components/AcessoAviso'
 import { CartaoInstalar } from '../../components/InstalarApp'
 import FaixaDoSalao from '../../components/pro/FaixaDoSalao'
+import AgendaLinhaDoTempo from '../../components/pro/AgendaLinhaDoTempo'
 import { ehDaEquipe } from '../../lib/meuSalao'
 import '../../pro-equipe.css'
 
@@ -46,23 +47,21 @@ export default function ProAgenda() {
     </div>
   )
 
+  // 3.91: a equipe vê a agenda como linha do tempo, só para ver (mudar algo é com o salão), sem
+  // valores em R$ e sem responder pedidos (o salão responde, ou vale a regra de quando ninguém responde)
   if (equipe) {
     const primeiro = String(professional.name || profile?.full_name || '').trim().split(/\s+/)[0]
     return (
       <ProShell>
         <FaixaDoSalao />
-        <div className="page-head pe-cabeca">
-          <div>
-            <h2>{primeiro ? `Oi, ${primeiro}` : 'Sua agenda'}</h2>
-            <p className="muted titulo-dia">{hoje}</p>
-          </div>
-          {abas}
+        <div className="pe-ola">
+          <h2>{primeiro ? `Oi, ${primeiro}` : 'Sua agenda'}</h2>
+          <p className="muted">{hoje.charAt(0).toUpperCase() + hoje.slice(1)}</p>
         </div>
         <CartaoInstalar />
         <AvisosNovos />
         <LigarAvisos semInstalar texto="Recados do salão, horários novos e cancelamentos chegam na hora, mesmo com o app fechado." />
-        <PedidosPendentes />
-        {vista === 'dia' ? <AgendaDia professionalId={professional.id} semFab /> : <AgendaSemana professionalId={professional.id} />}
+        <AgendaLinhaDoTempo professionalId={professional.id} />
       </ProShell>
     )
   }

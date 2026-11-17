@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Navigate } from 'react-router-dom'
 import ProShell from '../../components/ProShell'
 import SemFicha from './SemFicha'
 import FilaEspera from '../../components/FilaEspera'
@@ -7,6 +8,7 @@ import { useAuth } from '../../context/AuthContext'
 import { Repeat } from 'lucide-react'
 import { pode } from '../../lib/equipe'
 import FichaCliente from '../../components/FichaCliente'
+import { ehDaEquipe } from '../../lib/meuSalao'
 
 // Pedidos pendentes (tela 16): duas abas — o que espera o seu sim, e
 // quem está na fila de espera. Cada pedido mostra quanto tempo falta
@@ -22,7 +24,8 @@ function prazo(min) {
 }
 
 export default function ProPedidos() {
-  const { professional } = useAuth()
+  const { professional, negocio } = useAuth()
+  const equipe = ehDaEquipe({ professional, negocio })
   const [aba, setAba] = useState('pendentes')
   const [pedidos, setPedidos] = useState([])
   const [cfg, setCfg] = useState(null)
@@ -32,7 +35,7 @@ export default function ProPedidos() {
   const profId = professional?.id
 
   const buscar = useCallback(async () => {
-    if (!profId) return
+    if (!profId || equipe) return
     const [lista, conf] = await Promise.all([
       supabase.rpc('meus_pedidos'),
       supabase.from('professionals').select('aceite_manual, minutos_para_aceitar, ao_expirar, confirmar_historico_ruim').eq('id', profId).maybeSingle(),
@@ -40,10 +43,12 @@ export default function ProPedidos() {
     if (lista.error) setErro(lista.error.message)
     else { setPedidos(lista.data ?? []); setCfg(conf.data ?? null); setErro('') }
     setLoading(false)
-  }, [profId])
+  }, [profId, equipe])
   useEffect(() => { buscar() }, [buscar])
 
   if (!professional) return <SemFicha />
+  // 3.91: a profissional da equipe só vê a agenda; quem responde os pedidos é o salão
+  if (equipe) return <Navigate to="/pro/agenda" replace />
 
   async function responder(id, aceitou) {
     setRespondendo(id)

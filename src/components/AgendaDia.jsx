@@ -25,6 +25,10 @@ export default function AgendaDia({
   // botão flutuante sumir — dois "+" na mesma tela é um a mais.
   pedidoDeEncaixe = 0,
   semFab = false,
+  // 3.92: quem hospeda o encaixe fora daqui (o botão "Novo encaixe" da Agenda do salão) precisa
+  // saber o dia que está na tela, e pede para recarregar quando o encaixe entra
+  onDiaMudou = null,
+  recarga = 0,
 }) {
   const { confirmar } = useDialogo()
   const dias = useMemo(() => {
@@ -80,7 +84,8 @@ export default function AgendaDia({
   useEffect(() => {
     setLoading(true)
     fetchAgenda()
-  }, [fetchAgenda])
+  }, [fetchAgenda, recarga])
+  useEffect(() => { onDiaMudou?.(dataSel) }, [dataSel, onDiaMudou])
 
   // a tolerância de atraso é configurável por profissional
   useEffect(() => {

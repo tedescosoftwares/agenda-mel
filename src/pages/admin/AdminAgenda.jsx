@@ -1,29 +1,42 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { CalendarPlus } from 'lucide-react'
 import AdminShell from '../../components/AdminShell'
 import AgendaDia from '../../components/AgendaDia'
 import AgendaVazia from '../../components/AgendaVazia'
+import EncaixeModal from '../../components/EncaixeModal'
+import Avatar from '../../components/Avatar'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { toISODate } from '../../lib/format'
 
 export default function AdminAgenda() {
-  const [profissionais, setProfissionais] = useState([])
+  const [profissionais, setProfissionais] = useState(null)   // null = ainda carregando
   const [filtro, setFiltro] = useState('') // '' = todas
   const [params, setParams] = useSearchParams()
-  const [pedidoDeEncaixe, setPedidoDeEncaixe] = useState(0)
+  // 3.92: o encaixe sai daqui, pelo botão "Novo encaixe" do topo (no computador a barra de baixo,
+  // com o antigo "+", nem aparece). Encaixar exige saber COM QUEM: com a agenda filtrada vai direto;
+  // com "Todas", pergunta numa lista (com uma profissional só, nem pergunta).
+  const [escolhendo, setEscolhendo] = useState(false)
+  const [encaixeCom, setEncaixeCom] = useState(null)
+  const [diaVisto, setDiaVisto] = useState(() => toISODate(new Date()))
+  const [recarga, setRecarga] = useState(0)
+  const aoMudarDia = useCallback((d) => setDiaVisto(d), [])
 
-  // O "+" da barra de baixo chega aqui como ?encaixe=1. Encaixar exige
-  // saber COM QUEM, e a agenda pode estar mostrando todas — então ou já
-  // existe uma filtrada, ou a tela pede para escolher primeiro.
+  function novoEncaixe() {
+    if (filtro) { setEncaixeCom(filtro); return }
+    if (profissionais?.length === 1) { setEncaixeCom(profissionais[0].id); return }
+    setEscolhendo(true)
+  }
+
+  // o "Encaixe" da barra de baixo (e o atalho do Início) chegam aqui como ?encaixe=1
+  const pediuPeloLink = Boolean(params.get('encaixe'))
   useEffect(() => {
-    if (!params.get('encaixe')) return
+    if (!pediuPeloLink || profissionais === null) return
     setParams({}, { replace: true })
-    if (filtro) setPedidoDeEncaixe((n) => n + 1)
-    else setPrecisaEscolher(true)
-  }, [params, setParams, filtro])
-
-  const [precisaEscolher, setPrecisaEscolher] = useState(false)
+    novoEncaixe()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pediuPeloLink, profissionais])
 
   const { salao } = useAuth()
   // sem serviço ou sem profissional configurada não há o que marcar: mostra o caminho
@@ -43,6 +56,7 @@ export default function AdminAgenda() {
       .order('name')
       .then(({ data }) => setProfissionais(data ?? []))
   }, [salao?.id])
+  const lista = profissionais ?? []
 
   const tituloDia = new Date(toISODate(new Date()) + 'T12:00:00').toLocaleDateString(
     'pt-BR',
@@ -56,10 +70,17 @@ export default function AdminAgenda() {
           <h2>Agenda</h2>
           <p className="muted titulo-dia">{tituloDia}</p>
         </div>
+        {!semAgenda && lista.length > 0 && (
+          <div className="page-head-acoes">
+            <button type="button" className="btn btn-primary btn-novo-encaixe" onClick={novoEncaixe}>
+              <CalendarPlus size={18} /> Novo encaixe
+            </button>
+          </div>
+        )}
       </div>
 
       {semAgenda ? <AgendaVazia r={resumo} /> : (<>
-      {profissionais.length > 0 && (
+      {lista.length > 0 && (
         <div className="filtro-chips">
           <button
             className={filtro === '' ? 'chip active' : 'chip'}
@@ -67,24 +88,15 @@ export default function AdminAgenda() {
           >
             Todas
           </button>
-          {profissionais.map((p) => (
+          {lista.map((p) => (
             <button
               key={p.id}
               className={filtro === p.id ? 'chip active' : 'chip'}
-              onClick={() => {
-                setFiltro(p.id)
-                setPrecisaEscolher(false)
-              }}
+              onClick={() => setFiltro(p.id)}
             >
               {p.name}
             </button>
           ))}
-        </div>
-      )}
-
-      {precisaEscolher && (
-        <div className="alert alert-warn">
-          Escolha primeiro com qual profissional é o encaixe, ali em cima.
         </div>
       )}
 
@@ -94,10 +106,38 @@ export default function AdminAgenda() {
         professionalId={filtro || null}
         salonId={salao?.id ?? null}
         mostrarProfissional={filtro === ''}
-        pedidoDeEncaixe={pedidoDeEncaixe}
         semFab
+        onDiaMudou={aoMudarDia}
+        recarga={recarga}
       />
       </>)}
+
+      {escolhendo && (
+        <div className="modal-fundo" onClick={() => setEscolhendo(false)}>
+          <div className="modal-caixa encaixe-quem" role="dialog" aria-modal="true" aria-labelledby="encaixe-quem-titulo" onClick={(e) => e.stopPropagation()}>
+            <button type="button" className="modal-fechar" onClick={() => setEscolhendo(false)} aria-label="Fechar">×</button>
+            <h3 id="encaixe-quem-titulo">Novo encaixe com quem?</h3>
+            <p className="muted">Escolha a profissional que vai atender.</p>
+            <div className="encaixe-quem-lista">
+              {lista.map((p) => (
+                <button key={p.id} type="button" className="encaixe-quem-item" onClick={() => { setEscolhendo(false); setEncaixeCom(p.id) }}>
+                  <Avatar nome={p.name} />
+                  <span>{p.name}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {encaixeCom && (
+        <EncaixeModal
+          professionalId={encaixeCom}
+          data={diaVisto}
+          onFechar={() => setEncaixeCom(null)}
+          onPronto={() => { setEncaixeCom(null); setRecarga((n) => n + 1) }}
+        />
+      )}
     </AdminShell>
   )
 }

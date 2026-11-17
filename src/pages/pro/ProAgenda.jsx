@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { CalendarPlus } from 'lucide-react'
 import ProShell from '../../components/ProShell'
 import AgendaDia from '../../components/AgendaDia'
 import AgendaSemana from '../../components/AgendaSemana'
@@ -96,7 +97,7 @@ export default function ProAgenda() {
       {vista === 'dia' ? <AgendaDia professionalId={professional.id} semFab /> : <AgendaSemana professionalId={professional.id} />}
 
       <div className="rodape-fixo">
-        <Link to="/pro/encaixe" className="btn btn-primary btn-block">+ Novo encaixe</Link>
+        <Link to="/pro/encaixe" className="btn btn-primary btn-block btn-novo-encaixe"><CalendarPlus size={18} /> Novo encaixe</Link>
       </div>
     </ProShell>
   )

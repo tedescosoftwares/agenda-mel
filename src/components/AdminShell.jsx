@@ -11,10 +11,9 @@ import {
   CalendarIcon,
   UsersIcon,
   ClockIcon,
-  MaisIcon,
   HomeIcon,
 } from './icons'
-import { Sparkles, UserRound, WalletCards, Megaphone, Settings2, ChevronLeft, CreditCard, BarChart3, Search, Crown, Store, ChevronDown, CalendarHeart } from 'lucide-react'
+import { Sparkles, UserRound, WalletCards, Megaphone, Settings2, ChevronLeft, CreditCard, BarChart3, Search, Crown, Store, ChevronDown, CalendarHeart, CalendarPlus } from 'lucide-react'
 
 // Cinco abas, não seis. Numa barra de celular, seis alvos dão 60px
 // cada e o polegar erra. O mês, Serviços e WhatsApp foram para dentro
@@ -153,13 +152,15 @@ export default function AdminShell({ children, amplo = false, primeiroAcesso = f
         <div className="bottom-nav-inner">
           {TABS.map((t) =>
             t === null ? (
+              // 3.92: era um "+" redondo; agora diz o que faz
               <button
-                key="mais"
-                className="nav-mais"
+                key="encaixe"
+                type="button"
+                className="nav-item nav-encaixe"
                 onClick={() => navigate('/admin/agenda?encaixe=1')}
-                aria-label="Novo encaixe"
               >
-                <MaisIcon />
+                <span className="nav-encaixe-icone"><CalendarPlus size={20} strokeWidth={2} /></span>
+                <span>Encaixe</span>
               </button>
             ) : (
               <NavLink

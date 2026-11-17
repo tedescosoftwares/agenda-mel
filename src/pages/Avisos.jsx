@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { useNotificacoes } from '../context/NotificacoesContext'
@@ -46,9 +46,13 @@ export default function Avisos() {
 
   // abriu a caixa, leu tudo — só depois que os avisos chegaram
   useEffect(() => {
+    if (role === 'profissional') return
     if (!loading && naoLidos > 0) marcarTodosLidos()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, naoLidos])
+
+  // 3.90: a profissional tem a caixa dentro da área dela, com as abas (links antigos e o toque no push caem aqui)
+  if (role === 'profissional') return <Navigate to="/pro/avisos" replace />
 
   return (
     <div className="layout">

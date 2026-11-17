@@ -5,6 +5,8 @@ import './base.css'
 import App from './App.jsx'
 import { ligarMedidor } from './lib/medir.js'
 import { ehPro } from './lib/ambiente.js'
+// pega cedo o "dá para instalar" do Chrome do Android (ele avisa uma vez só, logo que a página abre)
+import './lib/instalar.js'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -27,8 +29,9 @@ if (ehPro) {
   if (link) link.setAttribute('href', '/manifest-pro.webmanifest')
   const titulo = document.querySelector('meta[name="apple-mobile-web-app-title"]')
   if (titulo) titulo.setAttribute('content', 'MIMO Pro')
+  // 3.90: barra do celular branca, igual ao topo do app (o roxo fazia uma faixa acima da barra branca)
   const cor = document.querySelector('meta[name="theme-color"]')
-  if (cor) cor.setAttribute('content', '#aa4cff')
+  if (cor) cor.setAttribute('content', '#ffffff')
   const apple = document.querySelector('link[rel="apple-touch-icon"]')
   if (apple) apple.setAttribute('href', '/pro-apple-180.png')
   const fav = document.querySelector('link[rel="icon"]')

@@ -22,6 +22,8 @@ import ProPromocoes from '../pages/pro/ProPromocoes'
 import ProReceber from '../pages/pro/ProReceber'
 import ProLocal from '../pages/pro/ProLocal'
 import ProContrato from '../pages/pro/ProContrato'
+import ProAvisos from '../pages/pro/ProAvisos'
+import ProConta from '../pages/pro/ProConta'
 import { PARCERIA_LIGADA } from '../lib/contratoParceria'
 
 const P = ({ children }) => <ProtectedRoute requireRole="profissional">{children}</ProtectedRoute>
@@ -38,6 +40,8 @@ export default function RotasPro() {
       <Route path="numeros" element={<P><ProNumeros /></P>} />
       <Route path="retorno" element={<P><ProRetorno /></P>} />
       <Route path="ajustes" element={<P><ProAjustes /></P>} />
+      <Route path="avisos" element={<P><ProAvisos /></P>} />
+      <Route path="conta" element={<P><ProConta /></P>} />
       <Route path="pedidos" element={<P><ProPedidos /></P>} />
       <Route path="enviar" element={<P><ProEnviar /></P>} />
       <Route path="recados" element={<P><ProRecados /></P>} />

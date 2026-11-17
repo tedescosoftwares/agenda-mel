@@ -17,11 +17,15 @@ export function destinoDoAviso(aviso, role) {
   if (role === 'cliente' && DESTINO_CLIENTE[aviso.kind]) return DESTINO_CLIENTE[aviso.kind]
   if (aviso.action_url && aviso.action_url !== '/') return aviso.action_url
   if (role === 'cliente') return '/cliente/notificacoes'
+  if (role === 'profissional') return '/pro/avisos'
   return '/avisos'
 }
 
+// 3.90: a profissional tem a caixa dentro da área dela (/pro/avisos), com as abas
 export function centralDoPapel(role) {
-  return role === 'cliente' ? '/cliente/notificacoes' : '/avisos'
+  if (role === 'cliente') return '/cliente/notificacoes'
+  if (role === 'profissional') return '/pro/avisos'
+  return '/avisos'
 }
 
 // 'agora', 'há 5 min', 'há 3h', 'ontem', '02/10'

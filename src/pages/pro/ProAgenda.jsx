@@ -12,23 +12,60 @@ import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import PrimeirosPassos from '../../components/PrimeirosPassos'
 import AcessoAviso from '../../components/AcessoAviso'
+import { CartaoInstalar } from '../../components/InstalarApp'
+import FaixaDoSalao from '../../components/pro/FaixaDoSalao'
+import { ehDaEquipe } from '../../lib/meuSalao'
+import '../../pro-equipe.css'
 
 // Agenda do dia (tela 15): os pedidos esperando no topo, o dia com
 // status por atendimento, e o botão de encaixe fixo no pé.
+// 3.90: a profissional da equipe vê só o que é dela: o salão no topo (com o
+// WhatsApp da casa), a agenda, os avisos e recados. Sem teste grátis, sem
+// encaixe, sem pendências do caixa: isso é com o salão.
 export default function ProAgenda() {
-  const { professional, negocio } = useAuth()
+  const { professional, negocio, profile } = useAuth()
   const [vista, setVista] = useState('dia')
   const [paraEnviar, setParaEnviar] = useState(0)
   const profId = professional?.id
+  const equipe = ehDaEquipe({ professional, negocio })
 
   useEffect(() => {
-    if (!profId) return
+    if (!profId || equipe) return
     let vivo = true
     supabase.rpc('quantas_para_enviar', { prof: profId }).then(({ data }) => { if (vivo) setParaEnviar(data ?? 0) })
     return () => { vivo = false }
-  }, [profId])
+  }, [profId, equipe])
 
   if (!professional) return <SemFicha />
+
+  const hoje = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })
+  const abas = (
+    <div className="abas abas-mini">
+      <button className={vista === 'dia' ? 'aba active' : 'aba'} onClick={() => setVista('dia')}>Dia</button>
+      <button className={vista === 'semana' ? 'aba active' : 'aba'} onClick={() => setVista('semana')}>Semana</button>
+    </div>
+  )
+
+  if (equipe) {
+    const primeiro = String(professional.name || profile?.full_name || '').trim().split(/\s+/)[0]
+    return (
+      <ProShell>
+        <FaixaDoSalao />
+        <div className="page-head pe-cabeca">
+          <div>
+            <h2>{primeiro ? `Oi, ${primeiro}` : 'Sua agenda'}</h2>
+            <p className="muted titulo-dia">{hoje}</p>
+          </div>
+          {abas}
+        </div>
+        <CartaoInstalar />
+        <AvisosNovos />
+        <LigarAvisos semInstalar texto="Recados do salão, horários novos e cancelamentos chegam na hora, mesmo com o app fechado." />
+        <PedidosPendentes />
+        {vista === 'dia' ? <AgendaDia professionalId={professional.id} semFab /> : <AgendaSemana professionalId={professional.id} />}
+      </ProShell>
+    )
+  }
 
   return (
     <ProShell>
@@ -37,17 +74,15 @@ export default function ProAgenda() {
       <div className="page-head">
         <div>
           <h2>Agenda</h2>
-          <p className="muted titulo-dia">{new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+          <p className="muted titulo-dia">{hoje}</p>
         </div>
-        <div className="abas abas-mini">
-          <button className={vista === 'dia' ? 'aba active' : 'aba'} onClick={() => setVista('dia')}>Dia</button>
-          <button className={vista === 'semana' ? 'aba active' : 'aba'} onClick={() => setVista('semana')}>Semana</button>
-        </div>
+        {abas}
       </div>
 
+      <CartaoInstalar />
       <AvisosNovos />
       <PendenciasBaixa />
-      <LigarAvisos texto="Pedido de horário, cancelamento e cliente chamando no WhatsApp chegam na hora, mesmo com o app fechado." />
+      <LigarAvisos semInstalar texto="Pedido de horário, cancelamento e cliente chamando no WhatsApp chegam na hora, mesmo com o app fechado." />
       <PedidosPendentes />
 
       {paraEnviar > 0 && (

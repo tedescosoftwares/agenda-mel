@@ -113,5 +113,5 @@ export const ITENS_ADMIN = [
 ]
 export const ITENS_PRO = [
   { to: '/pro/link', rotulo: 'Meu link', Icon: Store },
-  { to: '/avisos', rotulo: 'Avisos', Icon: Bell },
+  { to: '/pro/avisos', rotulo: 'Avisos', Icon: Bell },
 ]

@@ -1,5 +1,5 @@
 import { useDialogo } from '../../context/DialogoContext'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import ProShell from '../../components/ProShell'
 import SemFicha from './SemFicha'
 import { useAuth } from '../../context/AuthContext'
@@ -10,6 +10,8 @@ import { supabase } from '../../lib/supabase'
 import AvisosNoCelular from '../../components/AvisosNoCelular'
 import AvisosPorEmail from '../../components/AvisosPorEmail'
 import { PARCERIA_LIGADA } from '../../lib/contratoParceria'
+import { ehDaEquipe } from '../../lib/meuSalao'
+import { LinhaInstalar } from '../../components/InstalarApp'
 
 // Hub das configurações da profissional. Cada item continua tendo a
 // sua própria tela — aqui é só a porta de entrada.
@@ -28,6 +30,8 @@ export default function ProAjustes() {
   }
 
   if (!professional) return <SemFicha />
+  // 3.90: a profissional da equipe não configura a agenda: a conta dela é a aba Conta
+  if (ehDaEquipe({ professional, negocio })) return <Navigate to="/pro/conta" replace />
 
   return (
     <ProShell>
@@ -36,6 +40,7 @@ export default function ProAjustes() {
         <p className="muted">{professional.name}</p>
       </div>
 
+      <LinhaInstalar />
       <AvisosNoCelular />
       <AvisosPorEmail />
 

@@ -7,7 +7,9 @@ import { estadoPush, ativarPush } from '../lib/push'
 // aparece quando dá para ligar (ou quando falta instalar, no iPhone).
 // "Agora não" esconde por 7 dias; ligou, some de vez.
 const CHAVE = 'mimo-ligar-avisos-depois'
-export default function LigarAvisos({ texto }) {
+// 3.90: `semInstalar` quando a tela já tem o cartão de instalar (CartaoInstalar): no iPhone sem o app
+// instalado, quem ensina é ele, com o passo a passo; aqui não repete.
+export default function LigarAvisos({ texto, semInstalar = false }) {
   const { user } = useAuth()
   const [estado, setEstado] = useState(null)
   const [mexendo, setMexendo] = useState(false)
@@ -20,7 +22,7 @@ export default function LigarAvisos({ texto }) {
     estadoPush().then(setEstado)
   }, [])
 
-  if (!estado || !['desligado', 'instale'].includes(estado)) return null
+  if (!estado || !(estado === 'desligado' || (estado === 'instale' && !semInstalar))) return null
 
   async function ligar() {
     setMexendo(true); setErro('')

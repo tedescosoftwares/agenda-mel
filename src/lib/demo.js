@@ -46,6 +46,8 @@ export const PAPEL = (() => {
   } catch { return 'cliente' }
 })()
 
+// 3.90: localStorage mimo-demo-autonoma=1 faz a Ana ser dona do negócio (autônoma): a área pro completa
+const DEMO_AUTONOMA = typeof localStorage !== 'undefined' && localStorage.getItem('mimo-demo-autonoma') === '1'
 const UID = { cliente: 'c1', profissional: 'p1', admin: 'a1', plataforma: 'pl1', google: 'g1', 'google-dona': 'a1' }[PAPEL] || 'c1'   // google-dona (3.61.2): a dona entrando pelo Google no app da cliente
 const SALAO = 's1'
 
@@ -128,7 +130,14 @@ const agendamentos = [
   })),
 ).map((a, _i, todos) => jn(a, todos))
 
-const avisos = [
+// 3.90: a profissional da equipe vê recado do salão e o que mudou na agenda dela
+const AVISOS_PRO = [
+  { id: 'np1', user_id: UID, kind: 'recado', title: 'Studio Mel: Reunião de equipe no sábado', body: 'Oi, gente! Sábado às 8h30, antes de abrir, vamos alinhar a agenda de dezembro e as folgas de fim de ano. Café por nossa conta ☕', data: { remetente: 'Studio Mel' }, created_at: new Date(Date.now() - 40 * 60e3).toISOString(), read_at: null },
+  { id: 'np2', user_id: UID, kind: 'novo_agendamento', title: 'Horário novo na sua agenda', body: 'Juliana Silva · Esmaltação em gel · amanhã às 10:30', action_url: '/pro/agenda', created_at: new Date(Date.now() - 3 * 3600e3).toISOString(), read_at: null },
+  { id: 'np3', user_id: UID, kind: 'agendamento_cancelado', title: 'Horário cancelado', body: 'Carla Mendes cancelou a manicure de sexta às 14:00.', action_url: '/pro/agenda', created_at: new Date(Date.now() - 26 * 3600e3).toISOString(), read_at: new Date().toISOString() },
+  { id: 'np4', user_id: UID, kind: 'recado', title: 'Studio Mel: Produtos novos chegaram', body: 'Chegou a linha nova de esmaltes em gel. Está no armário da sala 2.', data: { remetente: 'Studio Mel' }, created_at: new Date(Date.now() - 3 * 86400e3).toISOString(), read_at: new Date().toISOString() },
+]
+const avisos = PAPEL === 'profissional' ? AVISOS_PRO : [
   { id: 'n1', user_id: UID, kind: 'agendamento_confirmado', title: 'Agendamento confirmado', body: 'Corte feminino · ' + mais(9) + ' às 10:30', created_at: new Date(Date.now() - 3600e3).toISOString(), read_at: null },
   { id: 'n2', user_id: UID, kind: 'lembrete_agendamento', title: 'Lembrete', body: 'Seu horário é amanhã às 14:00.', created_at: new Date(Date.now() - 86400e3).toISOString(), read_at: null },
   { id: 'n3', user_id: UID, kind: 'vaga_disponivel', title: 'Abriu uma vaga', body: 'Ana Oliveira tem horário livre dia ' + mais(1) + ' às 15:00.', created_at: new Date(Date.now() - 2 * 86400e3).toISOString(), read_at: new Date().toISOString() },
@@ -223,7 +232,7 @@ const TABELAS = {
   servicos_juntos: [{ service_id: 'sv1', sugerido_id: 'sv3' }],
   parcerias: [],
   comandas: [{ id: 'cmv', appointment_id: 'ap3', appointment_ids: ['ap3'], status: 'fechada' }],
-  salons: [{ id: SALAO, name: 'Studio Mel', slug: 'studio-mel', subdominio: DEMO_ENDERECO, aceite_modo: 'casa', minutos_para_aceitar: 60, ao_expirar: 'confirma', ativado_em: DEMO_ATIVADO ? '2025-01-10' : null, onboarding_passo: DEMO_PASSO ?? 1, onboarding_concluido_em: (typeof localStorage !== 'undefined' && localStorage.getItem('mimo-demo-onboarding') === '1') ? null : '2025-01-10', codigo_equipe: 'EQ7P2M', owner_id: 'a1', email: 'contato@studiomel.com.br', uf: 'SP', bairro: 'Gonzaga', cnpj: '12.345.678/0001-95', responsavel_nome: 'Mel Tedesco', antecedencia_min_minutos: 60, permite_remarcar: true, sinal_modo: 'fixo', sinal_fixo_cents: 5000, equipe_prevista: 4, pagamento_modo: 'opcional', sinal_pct: 50, politica_cancelamento: 'moderada', app_url: 'https://mimo.app', city: 'Santos', address: 'Rua das Flores, 120 · Gonzaga', cep: '11060300', lat: -23.9668, lng: -46.3325, codigo: 'MEL2K5', tipo: 'salao', categorias_escolhidas: DEMO_VAZIO ? [] : ['ct1', 'ct2', 'ct4'], descricao: 'Um cantinho no Gonzaga para você se cuidar com calma: café, música baixa e uma equipe que capricha em cada detalhe.', fotos: [PROMO_IMG('#FF7BAA', '#AA4CFF', ''), PROMO_IMG('#FFC2D8', '#FF2D7A', '')], logo_url: null, phone: '(13) 3333-0000', whatsapp: '(13) 99120-3410', instagram: 'studiomel' }],
+  salons: [{ id: SALAO, name: 'Studio Mel', slug: 'studio-mel', subdominio: DEMO_ENDERECO, aceite_modo: 'casa', minutos_para_aceitar: 60, ao_expirar: 'confirma', ativado_em: DEMO_ATIVADO ? '2025-01-10' : null, onboarding_passo: DEMO_PASSO ?? 1, onboarding_concluido_em: (typeof localStorage !== 'undefined' && localStorage.getItem('mimo-demo-onboarding') === '1') ? null : '2025-01-10', codigo_equipe: 'EQ7P2M', owner_id: DEMO_AUTONOMA ? 'p1' : 'a1', email: 'contato@studiomel.com.br', uf: 'SP', bairro: 'Gonzaga', cnpj: '12.345.678/0001-95', responsavel_nome: 'Mel Tedesco', antecedencia_min_minutos: 60, permite_remarcar: true, sinal_modo: 'fixo', sinal_fixo_cents: 5000, equipe_prevista: 4, pagamento_modo: 'opcional', sinal_pct: 50, politica_cancelamento: 'moderada', app_url: 'https://mimo.app', city: 'Santos', address: 'Rua das Flores, 120 · Gonzaga', cep: '11060300', lat: -23.9668, lng: -46.3325, codigo: 'MEL2K5', tipo: DEMO_AUTONOMA ? 'autonoma' : 'salao', categorias_escolhidas: DEMO_VAZIO ? [] : ['ct1', 'ct2', 'ct4'], descricao: 'Um cantinho no Gonzaga para você se cuidar com calma: café, música baixa e uma equipe que capricha em cada detalhe.', fotos: [PROMO_IMG('#FF7BAA', '#AA4CFF', ''), PROMO_IMG('#FFC2D8', '#FF2D7A', '')], logo_url: null, phone: '(13) 3333-0000', whatsapp: '(13) 99120-3410', instagram: 'studiomel' }],
   salon_members: [{ salon_id: SALAO, user_id: 'a1', papel: 'admin', salons: { id: SALAO, name: 'Studio Mel', slug: 'studio-mel', subdominio: DEMO_ENDERECO, codigo: 'MEL2K5', tipo: 'salao', equipe_prevista: 4, categorias_escolhidas: DEMO_VAZIO ? [] : ['ct1', 'ct2', 'ct4'], city: 'Santos', owner_id: 'a1', ativado_em: DEMO_ATIVADO ? '2025-01-10' : null, onboarding_passo: DEMO_PASSO ?? 3, onboarding_concluido_em: (typeof localStorage !== 'undefined' && localStorage.getItem('mimo-demo-onboarding') === '1') ? null : '2025-01-10', codigo_equipe: 'EQ7P2M' } }],
   whatsapp_channels: [{ salon_id: SALAO, canal: 'evolution', identificador: '11', ativo: true, usa_ia: true, usa_bot: true, silencio_inicio: '21:00', silencio_fim: '08:00', teto_diario: 300 }],
   affiliate_settings: [{ id: true, ativo: true, platform_fee_bps: 300, affiliate_share_bps: 50 }],

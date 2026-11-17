@@ -50,7 +50,19 @@ export function aparelho() {
     iosOutroNavegador: ios && /CriOS|FxiOS|EdgiOS|OPiOS/i.test(ua),
     // o navegador de dentro do Instagram ou do Facebook não instala: precisa abrir no navegador de verdade
     embutido: /Instagram|FBAN|FBAV|FB_IAB/i.test(ua),
+    // 3.93: no computador também instala (Chrome e Edge; Safari do Mac a partir do Sonoma). O Firefox não.
+    navegadorPc: !(ios || android) ? navegadorDoPc(ua) : null,
+    mac: /Macintosh|Mac OS X/i.test(ua) && !ios,
   }
+}
+
+function navegadorDoPc(ua) {
+  if (/Edg\//.test(ua)) return 'edge'
+  if (/Firefox\//.test(ua)) return 'firefox'
+  if (/OPR\//.test(ua)) return 'chrome'          // Opera instala igual ao Chrome
+  if (/Chrome\//.test(ua)) return 'chrome'
+  if (/Safari\//.test(ua) && /Macintosh/.test(ua)) return 'safari'
+  return 'chrome'
 }
 
 // o cartão "Coloque na tela de início" some por uma semana quando ela toca em "Agora não"

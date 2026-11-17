@@ -6,6 +6,7 @@ import SinoAvisos from './SinoAvisos'
 import MenuDaConta, { ITENS_ADMIN } from './MenuDaConta'
 import ClimaTopo from './ClimaTopo'
 import MelDock from './MelDock'
+import { InstalarNoMenu } from './InstalarApp'
 import { LogoMimo } from './icons'
 import {
   CalendarIcon,
@@ -93,6 +94,7 @@ export default function AdminShell({ children, amplo = false, primeiroAcesso = f
           ))}
         </nav>
         <div className="admin-sidebar-rodape">
+          <InstalarNoMenu para="salao" />
           <NavLink to="/admin/assinatura" className="admin-sidebar-plano">
             <span className="admin-sidebar-plano-icone"><Crown size={17} /></span>
             <span><strong>{plano.titulo}</strong><small>{plano.texto}</small></span>

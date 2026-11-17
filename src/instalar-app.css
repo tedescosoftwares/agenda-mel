@@ -75,3 +75,19 @@
 @keyframes ia-aparece { from { opacity: 0; } to { opacity: 1; } }
 @keyframes ia-sobe { from { transform: translateY(40px); opacity: 0.6; } to { transform: none; opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .ia-fundo, .ia-folha { animation: none; } }
+
+/* 3.93: iPhone | Android | Computador, o navegador do computador e o atalho do menu lateral */
+.ia-abas-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.ia-abas-3 .ia-aba { font-size: 0.84rem; gap: 0.3rem; }
+.ia-navegadores { display: flex; flex-wrap: wrap; gap: 6px; margin: 0.7rem 0 0; }
+.ia-nav { height: 32px; padding: 0 0.8rem; border-radius: 999px; border: 1px solid var(--fio-forte); background: var(--branco); font: inherit; font-size: 0.8rem; font-weight: 600; color: var(--texto-2); cursor: pointer; }
+.ia-nav.ativo { border-color: var(--rosa); background: var(--latao-veu); color: var(--rosa); }
+.ia-aviso > span { min-width: 0; }
+.ia-menu { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px; border: 1px dashed var(--latao-fio); border-radius: 14px; background: #fff; font: inherit; text-align: left; color: var(--texto); cursor: pointer; }
+.ia-menu:hover { background: var(--latao-veu); }
+.ia-menu-icone { width: 32px; height: 32px; flex: none; border-radius: 10px; display: grid; place-items: center; background: var(--gradiente); color: #fff; }
+.ia-menu > span:last-child { display: grid; min-width: 0; }
+.ia-menu strong { font-size: 0.8rem; }
+.ia-menu small { font-size: 0.66rem; color: var(--texto-3); }
+@media (min-width: 700px) { .ia-folha { max-width: 540px; padding: 0.6rem 1.6rem 1.4rem; } }
+@media (min-width: 700px) { .ia-pegador, .lte-pegador { display: none; } .ia-folha { padding-top: 1.2rem; } }

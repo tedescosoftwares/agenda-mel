@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { toISODate, formatDuracao } from '../../lib/format'
 import { useMeuSalao, linkWhatsApp } from '../../lib/meuSalao'
 import { WhatsIcon } from '../icons'
+import Portal from '../Portal'
 import '../../pro-equipe.css'
 
 // 3.91: a agenda da profissional da equipe como linha do tempo. A semana no topo (com bolinhas de
@@ -251,6 +252,7 @@ function DetalheDoHorario({ a, fechar }) {
   const whats = linkWhatsApp(salao?.whatsapp, `Oi! Sobre o horário de ${nomeDa(a)}, dia ${curto} às ${hm(ini)} (${servicoDe(a)}): `)
 
   return (
+    <Portal>
     <div className="lte-fundo" onClick={fechar}>
       <div className="lte-folha" role="dialog" aria-modal="true" aria-labelledby="lte-folha-nome" onClick={(e) => e.stopPropagation()}>
         <span className="lte-pegador" aria-hidden="true" />
@@ -274,5 +276,6 @@ function DetalheDoHorario({ a, fechar }) {
         <button type="button" className="btn btn-ghost btn-block lte-folha-ok" onClick={fechar}>Fechar</button>
       </div>
     </div>
+    </Portal>
   )
 }

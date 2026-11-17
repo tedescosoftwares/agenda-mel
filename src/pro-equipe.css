@@ -163,3 +163,39 @@
 @media (prefers-reduced-motion: reduce) { .lte-fundo, .lte-folha, .lte-esqueleto { animation: none; } }
 @keyframes lte-aparece { from { opacity: 0; } to { opacity: 1; } }
 @keyframes lte-sobe { from { transform: translateY(40px); opacity: 0.6; } to { transform: none; opacity: 1; } }
+
+/* 3.93: a área da profissional no computador (a partir de 960px, como o painel do salão) */
+.pe-grade, .pe-conta-grade { display: block; }
+.pro-topo-meio { flex: 1; }
+.pro-sidebar-rodape { display: grid; gap: 8px; }
+.pro-sidebar-salao { display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 14px; background: var(--lilas); border: 1px solid var(--fio); min-width: 0; }
+.pro-sidebar-salao .avatar-iniciais { width: 34px; height: 34px; margin: 0; flex: none; font-size: 0.72rem; border-radius: 10px; }
+.pro-sidebar-salao > span { display: grid; min-width: 0; flex: 1; }
+.pro-sidebar-salao strong { font-size: 0.8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pro-sidebar-salao small { font-size: 0.66rem; color: var(--texto-3); }
+.pro-sidebar-whats { flex: none; width: 32px; height: 32px; border-radius: 999px; display: grid; place-items: center; background: #1faa59; color: #fff; }
+.pro-sidebar-contador { margin-left: auto; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: var(--rosa); color: #fff; font-size: 0.68rem; font-weight: 700; display: grid; place-items: center; }
+
+@media (min-width: 960px) {
+  .pro-shell .content { padding: 1.6rem 1.8rem 3rem; }
+  .pe-grade { display: grid; grid-template-columns: minmax(0, 1fr) 360px; grid-template-areas: "ola lado" "principal lado"; column-gap: 28px; align-items: start; max-width: 1120px; margin: 0 auto; }
+  .pe-grade > .pe-ola { grid-area: ola; margin-top: 0; }
+  .pe-grade > .pe-lado { grid-area: lado; }
+  .pe-grade > .pe-principal { grid-area: principal; min-width: 0; }
+  .pe-ola h2 { font-size: 1.7rem; }
+  .lte-semana { padding: 6px; }
+  .lte-dia { padding: 0.6rem 0 0.5rem; }
+  .lte-item-botao { grid-template-columns: 58px 14px minmax(0, 1fr) auto auto; }
+  .lte-lista::before { left: 76px; }
+  .lte-agora { padding-left: 72px; }
+  .lte-agora::before { left: 72px; }
+  .lte-agora::after { left: 77px; }
+  .lte-livre { grid-template-columns: 58px 14px minmax(0, 1fr); }
+  .lte-esqueleto { margin-left: 84px; }
+  .lte-item-texto { padding: 0.85rem 1rem; }
+  .lte-folha { max-width: 460px; }
+
+  .pe-conta-grade { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: 28px; align-items: start; max-width: 1040px; margin: 0 auto; }
+  .pe-conta-esq { position: sticky; top: 0; }
+  .pe-conta-dir > .pe-secao:first-child { margin-top: 0.3rem; }
+}

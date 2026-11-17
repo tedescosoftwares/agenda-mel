@@ -7,6 +7,7 @@ import {
   Sun, Trophy, Users, Zap,
 } from 'lucide-react'
 import { AGENDA_ART_EXACT } from '../../assets/mockArtExact'
+import { CartaoInstalar } from '../../components/InstalarApp'
 import './PrimeiroAcessoHome.css'
 
 // A home do primeiro acesso (2.85): o salão existe, falta montar a agenda.
@@ -194,6 +195,8 @@ export default function PrimeiroAcessoHome({
             </div>
           </article>
 
+          {/* 3.93: instalar a MIMO (computador e celular), como na área da profissional */}
+          <CartaoInstalar para="salao" />
         </aside>
       </section>
 

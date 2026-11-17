@@ -10,6 +10,7 @@ import EnderecoProprio from '../../components/EnderecoProprio'
 import { linkDoSalao } from '../../lib/endereco'
 import AvisosNoCelular from '../../components/AvisosNoCelular'
 import AvisosPorEmail from '../../components/AvisosPorEmail'
+import { LinhaInstalar } from '../../components/InstalarApp'
 import LinkSuporte from '../../components/LinkSuporte'
 import { MODOS } from '../../lib/pagamento'
 import { PARCERIA_LIGADA } from '../../lib/contratoParceria'
@@ -248,7 +249,8 @@ export default function AdminAjustes() {
       </section>
 
       <section className="secao aj-secao">
-        <h3 className="secao-titulo">Avisos para você</h3>
+        <h3 className="secao-titulo">App e avisos para você</h3>
+        <LinhaInstalar para="salao" />
         <AvisosNoCelular />
         <AvisosPorEmail />
       </section>

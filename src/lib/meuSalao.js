@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useSyncExternalStore } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from './supabase'
 
@@ -15,23 +15,30 @@ export function useDaEquipe() {
   return ehDaEquipe({ professional, negocio })
 }
 
-// nome, contato e foto do salão em que ela atende (guardado entre as telas: não muda no meio do uso)
+// nome, contato e foto do salão em que ela atende (guardado entre as telas: não muda no meio do uso).
+// 3.93: uma busca só para todas as telas, e quem mostra o salão (faixa da agenda, menu do computador,
+// folha do horário) é avisado quando ela chega (useSyncExternalStore: sem perder o aviso se a busca
+// terminar entre o desenho e o efeito, que deixava a faixa da agenda vazia).
 const guardado = new Map()
+const buscando = new Set()
+const ouvintes = new Set()
+function assinar(f) { ouvintes.add(f); return () => ouvintes.delete(f) }
+function buscarSalao(id) {
+  if (!id || guardado.has(id) || buscando.has(id)) return
+  buscando.add(id)
+  supabase.from('salons').select('id, name, whatsapp, phone, logo_url, city, bairro').eq('id', id).maybeSingle().then(({ data }) => {
+    buscando.delete(id)
+    if (!data) return
+    guardado.set(id, data)
+    ouvintes.forEach((f) => f())
+  }, () => { buscando.delete(id) })
+}
 export function useMeuSalao() {
   const { professional } = useAuth()
   const id = professional?.salon_id ?? null
-  const [, setVez] = useState(0)
-  useEffect(() => {
-    if (!id || guardado.has(id)) return
-    let vivo = true
-    supabase.from('salons').select('id, name, whatsapp, phone, logo_url, city, bairro').eq('id', id).maybeSingle().then(({ data }) => {
-      if (!data) return
-      guardado.set(id, data)
-      if (vivo) setVez((v) => v + 1)
-    })
-    return () => { vivo = false }
-  }, [id])
-  return id ? guardado.get(id) ?? null : null
+  const salao = useSyncExternalStore(assinar, () => (id ? guardado.get(id) ?? null : null))
+  useEffect(() => { buscarSalao(id) }, [id])
+  return salao
 }
 
 // "(13) 99120-3410" → "5513991203410" (link do WhatsApp); sem número que preste, null

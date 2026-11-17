@@ -53,16 +53,24 @@ export default function ProAgenda() {
   if (equipe) {
     const primeiro = String(professional.name || profile?.full_name || '').trim().split(/\s+/)[0]
     return (
-      <ProShell>
-        <FaixaDoSalao />
-        <div className="pe-ola">
-          <h2>{primeiro ? `Oi, ${primeiro}` : 'Sua agenda'}</h2>
-          <p className="muted">{hoje.charAt(0).toUpperCase() + hoje.slice(1)}</p>
+      // 3.93: no computador, duas colunas: a agenda larga à esquerda e o salão, o instalar e as
+      // novidades à direita. No celular, uma coluna só, na mesma ordem de antes.
+      <ProShell amplo>
+        <div className="pe-grade">
+          <div className="pe-ola">
+            <h2>{primeiro ? `Oi, ${primeiro}` : 'Sua agenda'}</h2>
+            <p className="muted">{hoje.charAt(0).toUpperCase() + hoje.slice(1)}</p>
+          </div>
+          <aside className="pe-lado">
+            <FaixaDoSalao />
+            <CartaoInstalar para="equipe" />
+            <AvisosNovos />
+            <LigarAvisos semInstalar texto="Recados do salão, horários novos e cancelamentos chegam na hora, mesmo com o app fechado." />
+          </aside>
+          <div className="pe-principal">
+            <AgendaLinhaDoTempo professionalId={professional.id} />
+          </div>
         </div>
-        <CartaoInstalar />
-        <AvisosNovos />
-        <LigarAvisos semInstalar texto="Recados do salão, horários novos e cancelamentos chegam na hora, mesmo com o app fechado." />
-        <AgendaLinhaDoTempo professionalId={professional.id} />
       </ProShell>
     )
   }

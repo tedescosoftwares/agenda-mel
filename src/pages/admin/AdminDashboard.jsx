@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import AdminShell from '../../components/AdminShell'
 import AvisosNovos from '../../components/AvisosNovos'
 import LigarAvisos from '../../components/LigarAvisos'
+import { CartaoInstalar } from '../../components/InstalarApp'
 import PendenciasBaixa from '../../components/PendenciasBaixa'
 import { MEL_PADRAO } from '../../lib/mel'
 import PrimeirosPassos from '../../components/PrimeirosPassos'
@@ -424,7 +425,8 @@ export default function AdminDashboard() {
           <PrimeirosPassos salao={salao} />
           <AvisosNovos />
           <PendenciasBaixa para="/admin/fechar-dia" />
-          <LigarAvisos texto="Pedidos, cancelamentos e clientes chamando no WhatsApp chegam na hora, mesmo com o app fechado." />
+          <CartaoInstalar para="salao" />
+          <LigarAvisos semInstalar texto="Pedidos, cancelamentos e clientes chamando no WhatsApp chegam na hora, mesmo com o app fechado." />
           {PARCERIA_LIGADA && semContrato.length > 0 && (
             <Link to="/admin/equipe" className="card fin-alerta parceria-alerta">
               <FileSignature size={18} />

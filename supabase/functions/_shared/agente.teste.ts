@@ -197,6 +197,10 @@ await caso('ensaio: marcar e chamar alguém só fingem; a conversa do teste vem 
   const r = await conversar(db, SALAO, 'ensaio', 'sim', { ambiente: AMBOS, fetcher: p.fetcher, rascunho: { assistente: { nome: 'Lu' } }, historico: [{ quem: 'cliente', texto: 'quero escova amanhã 10h' }, { quem: 'mimo', texto: 'Posso marcar?' }] })
   assert.equal(r.resposta, 'Marcado (teste)!')
   assert.equal(db.chamadas.filter((c) => ['bot_marcar', 'bot_chamar_humano'].includes(c.nome)).length, 0)
+  // o marcar do teste pergunta ao banco o que aconteceria, sem gravar (238)
+  assert.equal(db.chamadas.filter((c) => c.nome === 'bot_marcar_simular').length, 1)
+  const res = JSON.stringify(p.pedidos[1].corpo.messages)
+  assert.doesNotMatch(res, /nada foi marcado/)
   assert.equal(r.acoes.marcou, 1); assert.equal(r.acoes.chamou, 1)
   const ctxPedido = db.chamadas.find((c) => c.nome === 'bot_contexto')!
   assert.deepEqual(ctxPedido.args.rascunho, { assistente: { nome: 'Lu' } })

@@ -167,3 +167,8 @@
 .as-conectado.ruim { background: var(--latao-veu); }
 .as-status-chave.trancada { opacity: 0.45; cursor: not-allowed; }
 .as-status-chave.trancada input { cursor: not-allowed; }
+
+/* 3.95.3: a regra de quem confirma, embaixo do Marcar; o aviso do teste no meio da conversa */
+.as-aceite { margin: 0.1rem 0 0.4rem; }
+.as-aceite > span { min-width: 0; }
+.as-bolha-aviso { align-self: center; font-size: 0.72rem; color: var(--texto-3); background: rgba(255, 255, 255, 0.7); padding: 2px 10px; border-radius: 999px; }

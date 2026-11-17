@@ -19,6 +19,7 @@ export function assistenteDoSalaoDemo() {
     salao: 'Studio Mel', config: configDe(e.config), recado: e.recado, ligada: e.ligada, agente_global: true,
     canal: { tipo: e.numero_proprio ? 'evolution' : 'manual', ativo: true, numero_proprio: e.numero_proprio, numero: e.numero_proprio ? e.numero : null, conectado_em: e.conectado_em, casa: true },
     horario: HORARIO, aberto_agora: true,
+    aceite: { modo: 'casa', minutos: 120, no_silencio: 'confirma' },
   }
 }
 export function assistenteSalvarDemo({ dados } = {}) {
@@ -68,7 +69,7 @@ export async function demoAssistente(corpo = {}) {
     let resposta
     let acoes = { marcou: 0, remarcou: 0, cancelou: 0, chamou: 0 }
     if (/\b(sim|pode|confirm|isso)\b/.test(ultima) && msgs.length > 2) {
-      if (cfg.pode_marcar) { resposta = 'Prontinho! Escova com a Carla amanhã às 10h. (No teste, nada foi marcado de verdade.)'; acoes = { ...acoes, marcou: 1 } }
+      if (cfg.pode_marcar) { resposta = 'Anotei o seu pedido: escova com a Carla amanhã às 10h. O salão confirma em breve e eu te aviso por aqui.'; acoes = { ...acoes, marcou: 1 } }
       else { resposta = 'Vou chamar alguém da equipe para confirmar com você, tá? Já já te respondem.'; acoes = { ...acoes, chamou: 1 } }
     } else if (/\b(\d{1,2}h|as \d|às \d)/.test(ultima) || /\d{1,2}:\d{2}/.test(ultima)) {
       resposta = roteiro[3].texto

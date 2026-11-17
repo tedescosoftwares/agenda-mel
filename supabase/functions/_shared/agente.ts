@@ -264,9 +264,15 @@ export function executorDe(db: Rpc, salao: string, telefone: string, ctx: Ctx, r
       case 'marcar': {
         if (!a.pode_marcar) return proibido('marcar')
         if (!confirmou) return { erro: 'peça a confirmação da cliente antes: repita serviço, profissional, dia e hora e espere o sim' }
-        const r = ensaio
-          ? { ok: true, ensaio: true, dia: args.dia, hora: args.hora, aviso: 'teste: nada foi marcado de verdade' }
-          : await rpc('bot_marcar', { salao, cliente: cli, profissional_id: args.profissional_id, servico_id: args.servico_id, dia: args.dia, hora: args.hora })
+        // ensaio (238): pergunta ao banco o que aconteceria (confirmado ou pedido, pela regra do salão), sem gravar; a
+        // resposta sai igual à de verdade. Banco sem a 238: um "ok" neutro.
+        let r: unknown
+        if (ensaio) {
+          r = await rpc('bot_marcar_simular', { salao, profissional_id: args.profissional_id, servico_id: args.servico_id, dia: args.dia, hora: args.hora })
+          if (r && typeof r === 'object' && /bot_marcar_simular/.test(String((r as Record<string, unknown>).erro ?? ''))) r = { ok: true, dia: args.dia, hora: args.hora }
+        } else {
+          r = await rpc('bot_marcar', { salao, cliente: cli, profissional_id: args.profissional_id, servico_id: args.servico_id, dia: args.dia, hora: args.hora })
+        }
         if (ehOk(r)) {
           registro.acoes.marcou++
           const x = r as Record<string, unknown>

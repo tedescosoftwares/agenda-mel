@@ -1,4 +1,4 @@
--- Ensaio da 235 (3.95), 236 (3.95.1) e 237 (3.95.2): a assistente do WhatsApp do salão; o número da MIMO só como reserva;
+-- Ensaio da 235 (3.95), 236 (3.95.1), 237 (3.95.2) e 238 (3.95.3): a assistente do WhatsApp do salão; o número da MIMO só como reserva;
 -- a chave desligada desliga tudo. Desfaz no fim.
 begin;
 do $$
@@ -224,6 +224,34 @@ begin
   r := public.receber_mensagem(fone, 'oi de novo', 'ens-m6', null, null, salao);
   if r ->> 'acao' <> 'assistente_desligada' then raise exception 'M7: %', r; end if;
   raise notice 'M chave desligada: conversa solta só registrada; SAIR e 1/2 do lembrete continuam';
+
+  -- N. o teste marca como marcaria de verdade (238): pedido pendente ou confirmado pela regra, sem gravar nada
+  declare prof uuid; serv uuid; d date; h time; livres jsonb; antes integer;
+  begin
+    select p.id into prof from public.professionals p where p.slug = 'ana-paula';
+    select ps.service_id into serv from public.professional_services ps where ps.professional_id = prof limit 1;
+    d := (now() at time zone 'America/Sao_Paulo')::date + 1;
+    for i in 0..6 loop
+      livres := public.bot_horarios(salao, prof, d + i, serv);
+      exit when jsonb_array_length(livres -> 'horarios') > 0;
+    end loop;
+    d := (livres ->> 'dia')::date; h := (livres -> 'horarios' ->> 0)::time;
+    select count(*) into antes from public.appointments;
+    update public.professionals set aceite_manual = true where id = prof;
+    r := public.bot_marcar_simular(salao, prof, serv, d, h);
+    if r ->> 'status' <> 'pendente' or not (r ->> 'ok')::boolean then raise exception 'N: %', r; end if;
+    update public.professionals set aceite_manual = false where id = prof;
+    r := public.bot_marcar_simular(salao, prof, serv, d, h);
+    if r ->> 'status' <> 'confirmado' or r ->> 'aviso' <> 'já está confirmado' then raise exception 'N2: %', r; end if;
+    if (select count(*) from public.appointments) <> antes then raise exception 'N3: o teste gravou um horário'; end if;
+    r := public.bot_marcar_simular(salao, prof, serv, d, '03:17');
+    if r ->> 'erro' is null then raise exception 'N4: horário fora aceito %', r; end if;
+    perform set_config('request.jwt.claim.sub', dona::text, true);
+    r := public.assistente_do_salao(salao);
+    perform set_config('request.jwt.claim.sub', '', true);
+    if r -> 'aceite' ->> 'modo' is null then raise exception 'N5: %', r -> 'aceite'; end if;
+    raise notice 'N teste: pendente/confirmado como de verdade, sem gravar; regra do salão na tela (%)', r -> 'aceite' ->> 'modo';
+  end;
 
   raise notice 'ensaio_assistente: tudo certo';
 end $$;

@@ -49,7 +49,7 @@ async function ligarSePediu(salao, querLigar, d) {
 function Bolhas({ mensagens, nome, digitando }) {
   return (
     <div className="as-conversa">
-      {mensagens.map((m, i) => (
+      {mensagens.map((m, i) => m.quem === 'aviso' ? <div key={i} className="as-bolha-aviso">{m.texto}</div> : (
         <div key={i} className={'as-bolha ' + (m.quem === 'cliente' ? 'dela' : 'nossa')}>
           {m.quem !== 'cliente' && i > 0 && mensagens[i - 1]?.quem === 'cliente' && <span className="as-bolha-quem">{nome}</span>}
           {m.texto}
@@ -210,12 +210,12 @@ export default function AdminAssistente({ para = 'admin' }) {
     e?.preventDefault()
     const t = escrito.trim()
     if (!t || testando) return
-    const conversa = [...teste, { quem: 'cliente', texto: t }]
-    setTeste(conversa); setEscrito(''); setTestando(true); setErroTeste('')
+    const conversa = [...teste.filter((m) => m.quem !== 'aviso'), { quem: 'cliente', texto: t }]
+    setTeste((c) => [...c, { quem: 'cliente', texto: t }]); setEscrito(''); setTestando(true); setErroTeste('')
     try {
       const { quando: _q, espera_min: _e, ...jeito } = cfg
       const r = await chamar('assistente', { acao: 'testar', salao: salaoId, mensagens: conversa, rascunho: { assistente: jeito, recado, cliente_nome: primeiroNome(profile?.full_name) } })
-      setTeste((c) => [...c, { quem: 'assistente', texto: r.resposta, acoes: r.acoes }])
+      setTeste((c) => [...c, { quem: 'assistente', texto: r.resposta, acoes: r.acoes }, ...(r.acoes?.marcou || r.acoes?.remarcou || r.acoes?.cancelou ? [{ quem: 'aviso', texto: 'Teste: nada foi gravado na agenda.' }] : [])])
     } catch (er) {
       setErroTeste(er.message || 'Não deu para testar agora.')
     }
@@ -392,6 +392,19 @@ export default function AdminAssistente({ para = 'admin' }) {
             <section className="card as-secao">
               <h3><CalendarClock size={18} /> O que ela pode fazer sozinha</h3>
               <Chave ligado={cfg.pode_marcar} onMudar={(v) => mudar('pode_marcar', v)} rotulo="Marcar horário" texto="Sempre repete o resumo e espera o sim da cliente." />
+              {cfg.pode_marcar && dados.aceite?.modo && (
+                <p className="as-nota as-aceite">
+                  <Info size={15} />
+                  <span>
+                    {dados.aceite.modo === 'automatico'
+                      ? 'O horário que ela marca entra confirmado na hora.'
+                      : dados.aceite.modo === 'casa'
+                        ? `O horário que ela marca vira um pedido: a casa confirma em até ${dados.aceite.minutos} min (sem resposta, ${dados.aceite.no_silencio === 'cancela' ? 'cancela' : 'confirma'}). Por isso ela avisa a cliente que ainda falta confirmar.`
+                        : 'Vale o que cada profissional configurou: quem pede confirmação recebe o pedido, e ela avisa a cliente que ainda falta confirmar.'}
+                    {' '}{dados.aceite.modo !== 'automatico' && <Link to={para === 'admin' ? '/admin/ajustes' : '/pro/pedidos'}>Para entrar confirmado na hora, mude em {para === 'admin' ? 'Ajustes › Pedidos de horário' : 'Pedidos'}.</Link>}
+                  </span>
+                </p>
+              )}
               <Chave ligado={cfg.pode_remarcar} onMudar={(v) => mudar('pode_remarcar', v)} rotulo="Remarcar" texto="Pede a troca; a profissional pode precisar aceitar." />
               <Chave ligado={cfg.pode_cancelar} onMudar={(v) => mudar('pode_cancelar', v)} rotulo="Cancelar" texto="Só horário da própria cliente, com o sim dela." />
               <small className="muted as-dica">O que estiver desligado, ela não faz: chama alguém da equipe.</small>

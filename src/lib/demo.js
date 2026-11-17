@@ -176,10 +176,13 @@ const DEMO_ACESSO = (typeof localStorage !== 'undefined' && localStorage.getItem
 // o endereço próprio do salão (2.80): ?demo=admin + localStorage mimo-demo-endereco=studiomel
 const DEMO_ENDERECO = (typeof localStorage !== 'undefined' && localStorage.getItem('mimo-demo-endereco')) || null
 const diasDepois = (n) => new Date(Date.now() + n * 86400000).toISOString()
-const mensalidadeDemo = () => ({ agendas: 5, plano: 'pro', valor_cents: 6970, desconto_cents: DEMO_METODO === 'pix_automatico' ? 700 : 0, total_cents: DEMO_METODO === 'pix_automatico' ? 6270 : 6970, desconto_pct: DEMO_METODO === 'pix_automatico' ? 10 : 0 })
+// 3.94.1: localStorage mimo-demo-agendas muda o tamanho da equipe (padrão 5: R$ 49,90 + 2 × R$ 9,90 = R$ 69,70)
+const agendasDemo = () => Math.max(1, Number((typeof localStorage !== 'undefined' && localStorage.getItem('mimo-demo-agendas')) || 5))
+const valorDemo = () => 4990 + Math.max(0, Math.min(agendasDemo(), 10) - 3) * 990
+const mensalidadeDemo = () => ({ agendas: agendasDemo(), plano: 'pro', valor_cents: valorDemo(), desconto_cents: DEMO_METODO === 'pix_automatico' ? Math.round(valorDemo() / 10) : 0, total_cents: DEMO_METODO === 'pix_automatico' ? valorDemo() - Math.round(valorDemo() / 10) : valorDemo(), desconto_pct: DEMO_METODO === 'pix_automatico' ? 10 : 0 })
 const extraDemo = () => ({ metodo: DEMO_METODO, desconto_pct: DEMO_METODO === 'pix_automatico' ? 10 : 0, cartao_final: DEMO_METODO === 'cartao' ? '4242' : null, cartao_bandeira: DEMO_METODO === 'cartao' ? 'VISA' : null, autorizacao_status: DEMO_METODO === 'pix_automatico' ? 'ACTIVE' : null, bonus_usado: false, cancelada: false, mensalidade: mensalidadeDemo(), pendente: DEMO_METODO === 'pix' ? { id: 'cm-pend', status: 'aguardando', metodo: 'pix', copia_cola: '00020126580014br.gov.bcb.pix0136demo-mimo-pendente5204000053039865406069.705802BR5904MIMO6006Santos62070503***6304ABCD', total_cents: 6970, vencimento: new Date().toISOString().slice(0, 10), periodo_fim: new Date(Date.now() + 37 * 86400e3).toISOString().slice(0, 10) } : null, cobrar_em: ['cartao', 'pix_automatico'].includes(DEMO_METODO) ? diasDepois(5) : null })
 // 3.94: os planos (mensal, semestral 10%, anual 15%; na ativação o mensal leva 20%)
-export function planosDemo(inicial = false, mes = 6970) {
+export function planosDemo(inicial = false, mes = valorDemo()) {
   return [[1, 'Mensal', inicial ? 20 : 0], [6, 'Semestral', 10], [12, 'Anual', 15]].map(([meses, nome, pct]) => {
     const total = Math.floor((mes * meses * (100 - pct)) / 100)
     return { meses, nome, desconto_pct: pct, mes_cents: mes, sem_desconto_cents: mes * meses, total_cents: total, economia_cents: mes * meses - total, por_mes_cents: Math.floor(total / meses) }
@@ -282,8 +285,8 @@ const RPC = {
   assinatura_cancelar: () => acessoDemo(),
   salao_ativar: () => acessoDemo(),
   // a ativação inicial do GPT (133): 7 dias grátis ou 20% na primeira mensalidade
-  ativacao_inicial_estado: () => ({ salao: SALAO, ativado: DEMO_ATIVADO, pendente_desde: DEMO_ATIVADO ? null : mais(0), escolha: null, oferta_usada: false, desconto_pct: 20, valor_cents: 6970, oferta_cents: 5576, mensalidade: mensalidadeDemo(), planos: planosDemo(true), cobranca: null }),
-  planos_do_salao: ({ inicial }) => ({ agendas: 5, plano: 'pro', mes_cents: 6970, planos: planosDemo(Boolean(inicial)) }),
+  ativacao_inicial_estado: () => ({ salao: SALAO, ativado: DEMO_ATIVADO, pendente_desde: DEMO_ATIVADO ? null : mais(0), escolha: null, oferta_usada: false, desconto_pct: 20, valor_cents: valorDemo(), oferta_cents: Math.floor(valorDemo() * 0.8), mensalidade: mensalidadeDemo(), planos: planosDemo(true), cobranca: null }),
+  planos_do_salao: ({ inicial }) => ({ agendas: agendasDemo(), plano: 'pro', mes_cents: valorDemo(), planos: planosDemo(Boolean(inicial)) }),
   cobranca_aberta: () => null,
   ativacao_inicial_preparar: () => RPC.ativacao_inicial_estado(),
   ativacao_inicial_teste: () => { try { localStorage.removeItem('mimo-demo-ativar') } catch { /* nada */ } const q = new Date().toISOString(); TABELAS.salons[0].ativado_em = q; TABELAS.salon_members[0].salons.ativado_em = q; return DEMO_VAZIO ? { ...acessoDemo(), fase: 'teste', ate: null, tolerancia_ate: null, dias: 7, aguardando_configuracao: true, ativacao_pendente: false } : { ...acessoDemo(), fase: 'teste', ativacao_pendente: false } },

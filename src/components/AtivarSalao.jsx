@@ -212,7 +212,8 @@ export default function AtivarSalao({ s, onAtivado, onErro }) {
                     {economia > 0 && <em>você economiza {reais(economia / 100)}</em>}
                   </div>
                   <ul className="ck-lista">
-                    <li><Check size={14} /> {mesesEscolhidos === 1 ? '1 mês liberado na hora' : `${mesesEscolhidos} meses liberados na hora (${reais(Math.floor(oferta / mesesEscolhidos) / 100)}/mês)`}</li>
+                    <li><Check size={14} /> {mesesEscolhidos === 1 ? '1 mês liberado na hora' : `${mesesEscolhidos} meses liberados na hora`}</li>
+                    {mesesEscolhidos > 1 && <li><Check size={14} /> {mesesEscolhidos} × {reais(cheio / 100)} = {reais(semDesconto / 100)}, com {descontoPct}% OFF</li>}
                     <li><Check size={14} /> {mesesEscolhidos === 1 ? `${descontoPct}% de desconto na primeira mensalidade` : 'Pagamento único por Pix'}</li>
                     <li><Check size={14} /> Sem cartão, sem renovação automática</li>
                   </ul>

@@ -16174,3 +16174,14 @@ label.a-partir-opcao .a-partir-opcao-texto { flex: 1; }
   .assin-plano-op small { grid-column: 1 / span 2; }
   .assin-plano-op em { grid-column: 1 / span 2; }
 }
+
+/* 3.94.1: a conta à mostra (mensalidade e cada plano) */
+.assin-conta-mes { margin: -0.3rem 0 0; font-size: 0.8rem; color: var(--texto-2); }
+.assin-conta-mes b { color: var(--texto); }
+.assin-plano-conta { font-size: 0.74rem; color: var(--texto-2); }
+.assin-plano-conta s { color: var(--texto-3); }
+@media (max-width: 520px) {
+  .assin-plano-op { grid-template-columns: minmax(0, 1fr) auto; gap: 0.1rem 0.6rem; }
+  .assin-plano-op > :not(strong):not(.assin-plano-selo) { grid-column: 1; grid-row: auto; }
+  .assin-plano-op strong { grid-column: 2; grid-row: 1 / span 4; align-self: center; justify-self: end; }
+}

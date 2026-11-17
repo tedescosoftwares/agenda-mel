@@ -174,6 +174,12 @@ export default function AdminAssinatura() {
             </div>
             <b className="assin-preco">{reais(valorCents / 100)}<small> / mês</small></b>
           </div>
+          {/* 3.94.1: a conta da mensalidade, para ninguém estranhar o valor */}
+          <p className="assin-conta-mes">
+            {reais(plano.base)} até {plano.plano === 'promais' ? PLANOS.promais.inclusas : PLANOS.pro.inclusas} agendas
+            {plano.extras > 0 ? ` + ${plano.extras} ${plano.extras === 1 ? 'agenda extra' : 'agendas extras'} × ${reais(plano.valorExtra)}` : ''}
+            {' '}= <b>{reais(valorCents / 100)} por mês</b>
+          </p>
 
           {fase !== 'configurando' && (
             <>
@@ -185,9 +191,10 @@ export default function AdminAssinatura() {
                     className={'assin-plano-op' + (p.meses === meses ? ' ativo' : '')} onClick={() => setEscolhido(p.meses)}>
                     {p.desconto_pct > 0 && <span className="assin-plano-selo">{p.desconto_pct}% OFF</span>}
                     <span className="assin-plano-nome">{p.nome}</span>
+                    {p.meses > 1 && <span className="assin-plano-conta">{p.meses} × {reais(valorCents / 100)} = <s>{reais(p.sem_desconto_cents / 100)}</s></span>}
                     <strong>{reais(p.total_cents / 100)}</strong>
-                    <small>{p.meses === 1 ? 'por mês' : `${reais(Math.floor(p.total_cents / p.meses) / 100)}/mês · ${p.meses} meses`}</small>
-                    {p.desconto_pct > 0 && <em>economiza {reais((p.sem_desconto_cents - p.total_cents) / 100)}</em>}
+                    <small>{p.meses === 1 ? 'por mês' : `pagamento único · ${p.meses} meses`}</small>
+                    {p.desconto_pct > 0 && <em>−{p.desconto_pct}% · economiza {reais((p.sem_desconto_cents - p.total_cents) / 100)}</em>}
                   </button>
                 ))}
               </div>

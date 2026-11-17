@@ -40,7 +40,10 @@ function demoFuncao(nome, corpo) {
     const acesso = { fase: 'teste', tipo: 'salao', situacao: 'teste', teste: true, dias: 5, ate: new Date(Date.now() + 5 * 86400e3).toISOString(), cobrar_em: new Date(Date.now() + 5 * 86400e3).toISOString(), mensalidade: { agendas: 5, plano: 'pro', valor_cents: 6970, desconto_cents: 0, total_cents: 6970 }, bonus_usado: false }
     const qr = '00020126580014br.gov.bcb.pix0136demo-mimo-assinatura5204000053039865406069.705802BR5904MIMO6006Santos62070503***6304ABCD'
     const meses = [1, 6, 12].includes(Number(corpo?.meses)) ? Number(corpo.meses) : 1
-    const totalDe = (inicial) => Math.floor((6970 * meses * (100 - (meses === 12 ? 15 : meses === 6 ? 10 : inicial ? 20 : 0))) / 100)
+    let agendas = 5
+    try { agendas = Math.max(1, Number(localStorage.getItem('mimo-demo-agendas') || 5)) } catch { /* sem armazenamento */ }
+    const mes = 4990 + Math.max(0, Math.min(agendas, 10) - 3) * 990
+    const totalDe = (inicial) => Math.floor((mes * meses * (100 - (meses === 12 ? 15 : meses === 6 ? 10 : inicial ? 20 : 0))) / 100)
     const emDias = (n) => new Date(Date.now() + n * 86400e3).toISOString().slice(0, 10)
     if (corpo?.acao === 'inicio_pix') return { ok: true, cobranca: { id: 'cm-inicial', status: 'aguardando', metodo: 'pix', meses, copia_cola: qr, total_cents: totalDe(true), vencimento: emDias(0), cancelar_em: emDias(3), sandbox: true }, acesso: { fase: 'configurando', tipo: 'salao', ativacao_pendente: true } }
     if (corpo?.acao === 'inicio_cartao') return { ok: true, cobranca: { id: 'cm-inicial', status: 'CONFIRMED', metodo: 'cartao', total_cents: 5576 }, cartao: { final: '4242', bandeira: 'VISA' }, acesso: { ...acesso, fase: 'ativa', teste: false, ate: new Date(Date.now() + 30 * 86400e3).toISOString(), metodo: 'cartao', recorrente: false } }

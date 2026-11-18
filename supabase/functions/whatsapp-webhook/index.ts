@@ -41,6 +41,29 @@ function json(corpo: unknown, status = 200) {
 
 const espera = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
+// 3.98.4 (migração 246): uma conversa por vez por número. Quem escreve em rajada ("Não entendi" / "Remarcou meu
+// atendimento") mandava duas respostas que se contradiziam, cada uma sem ver o que a outra fez. Agora: espera um
+// instante; se chegou mensagem mais nova desse número, é ela quem responde as duas ('pulou'); se outra resposta está
+// saindo, espera ela terminar. Banco sem a 246: segue como antes.
+async function naVez<T>(salao: string, telefone: string, msgId: string | null, fazer: () => Promise<T>, rajada = true): Promise<T | 'pulou'> {
+  if (rajada) await espera(2500)
+  const ate = Date.now() + 45_000
+  let pegou = false
+  for (;;) {
+    const { data, error } = await db.rpc('assistente_pegar_vez', { salao, tel: telefone, msg: msgId })
+    if (error) break
+    if (data === 'nova') return 'pulou'
+    if (data === 'sua') { pegou = true; break }
+    if (Date.now() > ate) break
+    await espera(1500)
+  }
+  try {
+    return await fazer()
+  } finally {
+    if (pegou) await db.rpc('assistente_soltar_vez', { salao, tel: telefone, msg: msgId }).then(() => {}, () => {})
+  }
+}
+
 // Responde a cliente. Por qual canal é O NÚMERO QUE RECEBEU a mensagem (m.instancia); antes isto vinha do histórico de
 // envios, e quem escrevia pela primeira vez não recebia resposta nenhuma. Sem canal automático, a resposta espera na
 // fila para alguém mandar na mão. Falha de envio vira linha na fila: resposta atrasada é ruim; resposta que nunca
@@ -382,14 +405,16 @@ Deno.serve(async (req) => {
         const { data: ev, error: eev } = await db.rpc('assistente_esperas_vencidas', { quantas: 20 })
         if (eev) throw new Error(eev.message)
         for (const e of (ev ?? []) as Array<{ salon_id: string; telefone: string; instancia: string | null; texto: string }>) {
-          const ag = await conversar(db, e.salon_id, e.telefone, e.texto, { instancia: e.instancia, semEspera: true })
-          if (ag.provedor || ag.erro) await db.rpc('registrar_chamada_ia', registroDaConversa(e.salon_id, e.telefone, ag)).then(() => {}, () => {})
-          if (ag.erro) console.error('assistente (espera):', ag.erro)
-          if (ag.resposta && await responderCliente({ salao: e.salon_id, telefone: e.telefone, instancia: e.instancia, corpo: ag.resposta, doAgente: true })) {
-            esperas++
-            // 3.98: o que vai depois da resposta (o link de criar a senha de quem acabou de se cadastrar)
-            for (const d of ag.depois ?? []) await responderCliente({ salao: e.salon_id, telefone: e.telefone, instancia: e.instancia, corpo: d, doAgente: true })
-          }
+          await naVez(e.salon_id, e.telefone, null, async () => {
+            const ag = await conversar(db, e.salon_id, e.telefone, e.texto, { instancia: e.instancia, semEspera: true })
+            if (ag.provedor || ag.erro) await db.rpc('registrar_chamada_ia', registroDaConversa(e.salon_id, e.telefone, ag)).then(() => {}, () => {})
+            if (ag.erro) console.error('assistente (espera):', ag.erro)
+            if (ag.resposta && await responderCliente({ salao: e.salon_id, telefone: e.telefone, instancia: e.instancia, corpo: ag.resposta, doAgente: true })) {
+              esperas++
+              // 3.98: o que vai depois da resposta (o link de criar a senha de quem acabou de se cadastrar)
+              for (const d of ag.depois ?? []) await responderCliente({ salao: e.salon_id, telefone: e.telefone, instancia: e.instancia, corpo: d, doAgente: true })
+            }
+          }, false)
         }
       } catch (e) {
         console.error('esperas da assistente: não deu para varrer (a migração 235 está aplicada?)', e)
@@ -660,27 +685,35 @@ Deno.serve(async (req) => {
       }
     }
 
-    let responder: string | null = (data as any)?.responder ?? null
-    let depois: string[] = []   // 3.98: mensagens que saem logo depois da resposta da assistente (o link de criar a senha)
+    const responder: string | null = (data as any)?.responder ?? null
     const acao = String((data as any)?.acao ?? '')
-    if (!responder && salao && ['nada', 'sem_cadastro', 'fora_de_contexto', 'sem_horario'].includes(acao)) {
-      const ag = await conversar(db, salao, m.telefone, m.texto, { instancia: m.instancia ?? null })
-      // 3.95: no número próprio, no horário do salão, a dona pode querer que a equipe responda primeiro: a mensagem
-      // espera; o relógio responde se ninguém responder pelo celular até lá
-      if (ag.motivo === 'esperar') {
-        await db.rpc('assistente_esperar', { salao, tel: m.telefone, instancia_: m.instancia ?? null, texto_: m.texto, ate: ag.responderEm ?? null }).then(() => {}, (e) => console.error('assistente: não deu para esperar', e))
-        respostas.push('assistente[esperando a equipe]')
-        continue
-      }
-      // só conta (teto e custo) o que chegou a falar com um modelo
-      if (ag.provedor || ag.erro) await db.rpc('registrar_chamada_ia', registroDaConversa(salao, m.telefone, ag)).then(() => {}, () => {})
-      if (ag.erro) console.error('agente:', ag.erro)
-      if (ag.falhas.length && ag.resposta) console.error('agente: a reserva respondeu depois de', ag.falhas.join(' | '))
-      if (ag.resposta) {
-        responder = ag.resposta
-        depois = ag.depois ?? []
+    // 3.98.4: com a assistente ligada, a resposta pronta antiga ("Recebi! Pra marcar ou mudar um horário, é só abrir o
+    // app") não tira a vez dela: o "sim" ao resumo que ela mesma fez é resposta para ela. A pronta só vale se a
+    // assistente não responder (desligada, em pausa, no teto do dia).
+    if (salao && ['nada', 'sem_cadastro', 'fora_de_contexto', 'sem_horario'].includes(acao)) {
+      const feito = await naVez(salao, m.telefone, m.id ?? null, async () => {
+        const ag = await conversar(db, salao!, m.telefone, m.texto, { instancia: m.instancia ?? null })
+        // 3.95: no número próprio, no horário do salão, a dona pode querer que a equipe responda primeiro: a mensagem
+        // espera; o relógio responde se ninguém responder pelo celular até lá
+        if (ag.motivo === 'esperar') {
+          await db.rpc('assistente_esperar', { salao, tel: m.telefone, instancia_: m.instancia ?? null, texto_: m.texto, ate: ag.responderEm ?? null }).then(() => {}, (e) => console.error('assistente: não deu para esperar', e))
+          respostas.push('assistente[esperando a equipe]')
+          return 'esperou' as const
+        }
+        // só conta (teto e custo) o que chegou a falar com um modelo
+        if (ag.provedor || ag.erro) await db.rpc('registrar_chamada_ia', registroDaConversa(salao!, m.telefone, ag)).then(() => {}, () => {})
+        if (ag.erro) console.error('agente:', ag.erro)
+        if (ag.falhas.length && ag.resposta) console.error('agente: a reserva respondeu depois de', ag.falhas.join(' | '))
+        if (!ag.resposta) return 'sem_resposta' as const
         respostas.push(`agente[${ag.provedor}:${ag.ferramentas.join(',')}]`)
-      }
+        respostas.push(`${m.telefone}: ${ag.resposta}`)
+        // dentro da vez: a próxima mensagem desse número já encontra esta resposta no histórico
+        const saiu = await responderCliente({ salao, telefone: m.telefone, instancia: m.instancia ?? null, corpo: ag.resposta, doAgente: true })
+        if (saiu) for (const d of ag.depois ?? []) await responderCliente({ salao, telefone: m.telefone, instancia: m.instancia ?? null, corpo: d, doAgente: true })
+        return 'respondeu' as const
+      })
+      if (feito === 'pulou') { respostas.push('assistente[juntou com a mensagem seguinte]'); continue }
+      if (feito === 'esperou' || feito === 'respondeu') continue
     }
     if (!responder) continue
     respostas.push(`${m.telefone}: ${responder}`)
@@ -688,8 +721,7 @@ Deno.serve(async (req) => {
     // Ela acabou de escrever, então a janela de 24h está aberta: a
     // confirmação sai na hora, sem template e sem custo. E sem passar
     // pela fila — resposta que chega meia hora depois não é resposta.
-    const saiu = await responderCliente({ salao, telefone: m.telefone, instancia: m.instancia ?? null, corpo: responder, doAgente: Boolean(acao && !(data as any)?.responder) })
-    if (saiu) for (const d of depois) await responderCliente({ salao, telefone: m.telefone, instancia: m.instancia ?? null, corpo: d, doAgente: true })
+    await responderCliente({ salao, telefone: m.telefone, instancia: m.instancia ?? null, corpo: responder, doAgente: false })
   }
 
   // O WhatsApp reenvia o evento se a gente demorar ou devolver erro:

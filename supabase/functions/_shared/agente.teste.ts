@@ -321,4 +321,74 @@ await caso('passou do limite: a ferramenta manda chamar a equipe; com cadastro, 
   assert.equal(r.acoes.marcou, 0); assert.equal(r.acoes.chamou, 1); assert.equal(db.criados.length, 0)
 })
 
+// ---- 3.98.4: o ref curto, a conferência do que foi feito, o negrito do WhatsApp ------------------------------------
+const DOIS = [
+  { appointment_id: 'aaaaaaaa-1111-4111-8111-111111111111', servico: 'Progressiva', profissional: 'Melissa', dia: '2026-11-19', dia_semana: 'quinta-feira', hora: '08:00', status: 'confirmado' },
+  { appointment_id: 'bbbbbbbb-2222-4222-8222-222222222222', servico: 'Progressiva', profissional: 'Melissa', dia: '2026-11-22', dia_semana: 'domingo', hora: '12:00', status: 'confirmado' },
+]
+
+await caso('os horários dela vão com ref curto (1, 2), sem o código longo que a IA copia errado', () => {
+  const t = textoSalao(ctxDe({ proximos: DOIS }))
+  assert.match(t, /ref 1: Progressiva com Melissa em quinta-feira 2026-11-19 às 08:00/)
+  assert.match(t, /ref 2: Progressiva com Melissa em domingo 2026-11-22 às 12:00/)
+  assert.doesNotMatch(t, /aaaaaaaa-1111/)
+})
+
+await caso('cancelar pelo ref: o banco recebe o código certo do horário', async () => {
+  const db = bancoDe(ctxDe({ proximos: DOIS }), { bot_cancelar: { ok: true, dia: '22/11', hora: '12:00' } })
+  const p = provedorDe({ claude: [ferramentaClaude('cancelar', { appointment_id: '2', cliente_confirmou: true }), textoClaude('Pronto, cancelei o de domingo.')] })
+  const r = await conversar(db, SALAO, '5513999991234', 'sim, pode cancelar o de domingo', { ambiente: AMBOS, fetcher: p.fetcher })
+  const c = db.chamadas.find((x) => x.nome === 'bot_cancelar')
+  assert.equal(c?.args.appt, 'bbbbbbbb-2222-4222-8222-222222222222')
+  assert.equal(r.acoes.cancelou, 1); assert.equal(r.resposta, 'Pronto, cancelei o de domingo.')
+  assert.equal(p.pedidos.length, 2)   // cancelou de verdade: nada de conferência
+})
+
+await caso('código copiado errado: não chama o banco e a IA fica sabendo que não foi feito', async () => {
+  const db = bancoDe(ctxDe({ proximos: DOIS }))
+  const p = provedorDe({ claude: [ferramentaClaude('cancelar', { appointment_id: 'bbbbbbbc-2222-4222-8222-22222222222', cliente_confirmou: true }), textoClaude('Não encontrei esse horário; vou chamar alguém.')] })
+  await conversar(db, SALAO, '5513999991234', 'sim', { ambiente: AMBOS, fetcher: p.fetcher })
+  assert.equal(db.chamadas.some((x) => x.nome === 'bot_cancelar'), false)
+  assert.match(JSON.stringify(p.pedidos[1].corpo.messages), /não achei esse horário/)
+})
+
+await caso('o banco recusou: a ferramenta volta dizendo, sem margem, que não foi feito', async () => {
+  const db = bancoDe(ctxDe({ proximos: DOIS }), { bot_remarcar: { erro: 'já existe um pedido aberto para esse horário' } })
+  const p = provedorDe({ claude: [ferramentaClaude('remarcar', { appointment_id: '1', dia: '2026-11-18', hora: '13:00', cliente_confirmou: true }), textoClaude('Não deu: já existe um pedido aberto.')] })
+  const r = await conversar(db, SALAO, '5513999991234', 'sim', { ambiente: AMBOS, fetcher: p.fetcher })
+  assert.match(JSON.stringify(p.pedidos[1].corpo.messages), /NÃO foi feito/)
+  assert.equal(r.acoes.remarcou, 0)
+})
+
+await caso('disse "está cancelada" sem cancelar: uma rodada pede para conferir e vale a resposta corrigida', async () => {
+  const db = bancoDe(ctxDe({ proximos: DOIS }))
+  const p = provedorDe({ claude: [textoClaude('Pronto, Bruno! A de domingo está cancelada. ✅'), textoClaude('Ainda não cancelei a de domingo: posso cancelar agora?')] })
+  const r = await conversar(db, SALAO, '5513999991234', 'pode cancelar o de domingo', { ambiente: AMBOS, fetcher: p.fetcher })
+  assert.equal(p.pedidos.length, 2)
+  const segunda = p.pedidos[1].corpo.messages as Array<{ role: string; content: unknown }>
+  assert.equal(segunda[segunda.length - 2].role, 'assistant')
+  assert.match(JSON.stringify(segunda[segunda.length - 1]), /conferência do sistema.*cancelou o horário/)
+  assert.equal(r.resposta, 'Ainda não cancelei a de domingo: posso cancelar agora?')
+})
+
+await caso('a conferência é uma vez só: se insistir, a resposta sai como veio (sem laço)', async () => {
+  const db = bancoDe(ctxDe({ proximos: DOIS }))
+  const p = provedorDe({ claude: [textoClaude('Seu horário foi cancelado.'), textoClaude('Seu horário foi cancelado antes, pela equipe.')] })
+  const r = await conversar(db, SALAO, '5513999991234', 'meu horário foi cancelado?', { ambiente: AMBOS, fetcher: p.fetcher })
+  assert.equal(p.pedidos.length, 2); assert.equal(r.resposta, 'Seu horário foi cancelado antes, pela equipe.')
+})
+
+await caso('negrito do WhatsApp: dois asteriscos viram um; título de markdown sai', async () => {
+  const db = bancoDe(ctxDe())
+  const p = provedorDe({ claude: [textoClaude('## Pronto\nSua progressiva é **hoje, às 13:00**.')] })
+  const r = await conversar(db, SALAO, '5513999991234', 'que horas é?', { ambiente: AMBOS, fetcher: p.fetcher })
+  assert.equal(r.resposta, 'Pronto\nSua progressiva é *hoje, às 13:00*.')
+})
+
+await caso('as regras fixas: só diz que fez com ok, usa o ref, negrito com um asterisco e horários com •', () => {
+  const t = textoNucleo({ orientacao: '' })
+  assert.match(t, /Só diga que marcou, cancelou ou remarcou depois que a ferramenta devolveu ok/)
+  assert.match(t, /ref do horário/); assert.match(t, /• 13:00/)
+})
+
 console.log(`\n${ok} casos ok`)

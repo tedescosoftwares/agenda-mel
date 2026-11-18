@@ -104,9 +104,9 @@ export const FERRAMENTAS: Ferramenta[] = [
   { nome: 'marcar', descricao: 'Marca um horário. SÓ depois que a cliente confirmou serviço, profissional, dia e hora com um sim. Se ela ainda não tem cadastro, mande também o nome e o sobrenome dela: o cadastro é feito junto.',
     parametros: obj({ profissional_id: { type: 'string' }, servico_id: { type: 'string' }, dia: { type: 'string', description: 'YYYY-MM-DD' }, hora: { type: 'string', description: 'HH:MM' }, cliente_confirmou: { type: 'boolean', description: 'true só se ela disse sim ao resumo' }, nome: { type: 'string', description: 'nome e sobrenome da cliente, só quando ela ainda não tem cadastro' } }, ['profissional_id', 'servico_id', 'dia', 'hora', 'cliente_confirmou']) },
   { nome: 'cancelar', descricao: 'Cancela um horário da cliente. SÓ depois que ela confirmou.',
-    parametros: obj({ appointment_id: { type: 'string' }, cliente_confirmou: { type: 'boolean' } }, ['appointment_id', 'cliente_confirmou']) },
+    parametros: obj({ appointment_id: { type: 'string', description: 'o ref do horário em "Horários dela aqui" (1, 2, …)' }, cliente_confirmou: { type: 'boolean' } }, ['appointment_id', 'cliente_confirmou']) },
   { nome: 'remarcar', descricao: 'Pede a troca de um horário da cliente para outro dia/hora. SÓ depois que ela confirmou. A profissional pode precisar aceitar.',
-    parametros: obj({ appointment_id: { type: 'string' }, dia: { type: 'string', description: 'YYYY-MM-DD' }, hora: { type: 'string', description: 'HH:MM' }, cliente_confirmou: { type: 'boolean' } }, ['appointment_id', 'dia', 'hora', 'cliente_confirmou']) },
+    parametros: obj({ appointment_id: { type: 'string', description: 'o ref do horário em "Horários dela aqui" (1, 2, …)' }, dia: { type: 'string', description: 'YYYY-MM-DD' }, hora: { type: 'string', description: 'HH:MM' }, cliente_confirmou: { type: 'boolean' } }, ['appointment_id', 'dia', 'hora', 'cliente_confirmou']) },
   { nome: 'chamar_humano', descricao: 'Avisa uma pessoa do salão e para de responder por 2 horas. Use quando a cliente pedir, estiver irritada, ou você não conseguir resolver.',
     parametros: obj({ motivo: { type: 'string' } }, ['motivo']) },
   // 3.95.4 (239): encerra e fica quieta com o número (6 h fora do assunto, 24 h o resto); nada responde e nada é gasto
@@ -128,6 +128,9 @@ export function textoNucleo(ctx: Pick<Ctx, 'orientacao'>): string {
     '- Serviço com a_partir = true em listar_servicos: diga "a partir de R$ X" e que o valor final depende do tipo, do tamanho e do volume do cabelo e é confirmado no salão. Nunca dê esse preço como fechado.',
     '- Use as ferramentas para tudo que envolva dados. Datas nas ferramentas em YYYY-MM-DD, horas em HH:MM.',
     '- Responda só o texto da mensagem para a cliente, sem prefixo, sem markdown de título, sem explicar o que você está fazendo por dentro.',
+    '- Só diga que marcou, cancelou ou remarcou depois que a ferramenta devolveu ok nesta conversa. Se ela devolver erro, diga com suas palavras que não deu e por quê; nunca diga que foi feito.',
+    '- Para cancelar ou remarcar, passe o ref do horário (1, 2, …) da lista "Horários dela aqui". Se a cliente pedir duas coisas (cancelar um e trocar outro), faça as duas e diga o resultado de cada uma.',
+    '- Formatação do WhatsApp: negrito com um asterisco só (*assim*), nunca dois. Para listar horários, um por linha começando com • (ex.: • 13:00), sem número na frente.',
     '',
     'Assunto da conversa: só o salão (serviços, preços, horários livres, marcar, remarcar, cancelar, endereço, como chegar, horário de funcionamento, formas de pagamento, regras da casa). Dúvida de verdade sobre isso é sempre bem-vinda, mesmo que pareça simples.',
     '- Pergunta que não é do salão (lição, política, receita, piada, outro serviço, conversa sem fim): diga com gentileza, em uma frase, que por aqui você só ajuda com o salão. Se a pessoa insistir, use encerrar_conversa com motivo fora_do_assunto.',
@@ -207,7 +210,7 @@ export function textoSalao(ctx: Ctx): string {
   ]
   const cli = ctx.cliente
   const proximos = ctx.proximos?.length
-    ? ctx.proximos.map((p) => `- ${p.servico} com ${p.profissional} em ${p.dia_semana} ${p.dia} às ${p.hora} (${p.status}; appointment_id ${p.appointment_id})`).join('\n')
+    ? ctx.proximos.map((p, i) => `- ref ${i + 1}: ${p.servico} com ${p.profissional} em ${p.dia_semana} ${p.dia} às ${p.hora} (${p.status})`).join('\n')
     : '- nenhum'
   const fatos = [
     `- ${autonoma ? 'Profissional autônoma' : 'Salão'}: ${s.nome}${s.cidade ? `, ${s.cidade}` : ''}${s.endereco ? `. Endereço: ${s.endereco}` : ''}${autonoma ? ' (fale dela, não de "salão")' : ''}.`,
@@ -249,6 +252,26 @@ export function mensagensDaConversa(historico: Array<{ quem: string; texto: stri
 }
 
 const zeroAcoes = (): Acoes => ({ marcou: 0, remarcou: 0, cancelou: 0, chamou: 0, encerrou: 0, cadastrou: 0 })
+
+// 3.98.4: a resposta diz que fez o que a ferramenta não fez? (a IA às vezes conta vitória antes da hora: "está
+// cancelada ✅" sem ter cancelado). Uma rodada a mais pede para ela conferir; quem já tinha sido feito antes fica igual.
+const semAcento = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+const O_QUE: Record<string, string> = { cancelou: 'cancelou o horário', remarcou: 'pediu a troca do horário', marcou: 'marcou o horário' }
+export function afirmouSemFazer(texto: string, acoes: Acoes): string | null {
+  const t = semAcento(texto)
+  const falta: string[] = []
+  if (acoes.cancelou === 0 && /\b(cancelei|(foi|esta|ficou|ja esta) cancelad[oa]s?|cancelamento (foi )?(feito|confirmado))\b/.test(t)) falta.push('cancelou')
+  if (acoes.remarcou === 0 && /\b(remarquei|(foi|esta|ficou|ja esta) remarcad[oa]s?|(pedi|solicitei) a troca|troca (foi )?(feita|pedida|solicitada))\b/.test(t)) falta.push('remarcou')
+  if (acoes.marcou === 0 && /\b(marquei|agendei|(foi|ficou) (marcad|agendad)[oa]s?)\b/.test(t)) falta.push('marcou')
+  if (!falta.length) return null
+  return `[conferência do sistema, não é a cliente] A sua resposta diz que você ${falta.map((f) => O_QUE[f]).join(' e ')} agora, mas nesta conversa a ferramenta não devolveu ok para isso. `
+    + 'Se você estava falando de algo que já tinha sido feito antes (confira "Horários dela aqui"), mantenha a resposta. Se não foi feito: faça agora, '
+    + 'se a cliente já confirmou com um sim, ou diga com clareza que ainda não foi feito e por quê. Escreva de novo só a resposta final para a cliente.'
+}
+// o WhatsApp usa um asterisco para negrito; dois aparecem na tela (**assim**)
+export function paraWhatsapp(t: string): string {
+  return String(t ?? '').replace(/\*\*(.+?)\*\*/gs, '*$1*').replace(/__(.+?)__/gs, '_$1_').replace(/~~(.+?)~~/gs, '~$1~').replace(/^#{1,6}\s+/gm, '').trim()
+}
 const ehOk = (r: unknown) => !!r && typeof r === 'object' && (r as Record<string, unknown>).ok === true
 
 // 3.98: a cliente que ainda não tem cadastro vira cliente de verdade na hora de marcar: uma conta sem senha (a entrada é
@@ -291,6 +314,19 @@ export function executorDe(db: Rpc, salao: string, telefone: string, ctx: Ctx, r
     return data
   }
   const proibido = (o: string) => ({ erro: `o salão não deixa você ${o} pela conversa: diga que vai chamar alguém da equipe e use chamar_humano` })
+  // 3.98.4: o horário pelo ref da lista (1, 2, …). O código longo também vale, se vier inteiro (o banco confere de quem é)
+  const ids = (ctx.proximos ?? []).map((p) => String((p as Record<string, unknown>).appointment_id ?? ''))
+  const idDoHorario = (v: unknown): string | null => {
+    const t = String(v ?? '').trim().toLowerCase().replace(/^ref\s*/, '').replace(/^#/, '')
+    if (/^\d{1,2}$/.test(t)) return ids[Number(t) - 1] || null
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(t)) return t
+    if (t.length >= 8) { const pref = ids.filter((id) => id.toLowerCase().startsWith(t.slice(0, 8))); if (pref.length === 1) return pref[0] }
+    return null
+  }
+  const semHorario = { erro: 'não achei esse horário: passe o ref (1, 2, …) da lista "Horários dela aqui". Se ele não está lá, diga à cliente que não encontrou esse horário e chame alguém da equipe', feito: false }
+  // o que não deu certo volta dizendo, sem margem, que não foi feito
+  const naoFeito = (r: unknown) => (r && typeof r === 'object' && 'erro' in (r as Record<string, unknown>)
+    ? { ...(r as Record<string, unknown>), feito: false, atencao: 'NÃO foi feito. Não diga à cliente que foi; diga o que houve.' } : r)
   return async (nome: string, args: Record<string, unknown>): Promise<unknown> => {
     registro.usadas.push(nome)
     const confirmou = args.cliente_confirmou === true
@@ -336,21 +372,25 @@ export function executorDe(db: Rpc, salao: string, telefone: string, ctx: Ctx, r
             return { ...x, cadastro: 'feito agora: diga que o cadastro dela na MIMO está feito (da próxima vez é só pedir) e que o link para criar a senha do app vai na mensagem seguinte; não escreva link nenhum' }
           }
         }
-        return r
+        return naoFeito(r)
       }
       case 'cancelar': {
         if (!a.pode_cancelar) return proibido('cancelar')
         if (!confirmou) return { erro: 'peça a confirmação da cliente antes de cancelar' }
-        const r = ensaio ? { ok: true, ensaio: true } : await rpc('bot_cancelar', { salao, cliente: cli, appt: args.appointment_id })
+        const appt = ensaio ? null : idDoHorario(args.appointment_id)
+        if (!ensaio && !appt) return semHorario
+        const r = ensaio ? { ok: true, ensaio: true } : await rpc('bot_cancelar', { salao, cliente: cli, appt })
         if (ehOk(r)) { registro.acoes.cancelou++; registro.resumo.push('Pronto, seu horário foi cancelado.') }
-        return r
+        return naoFeito(r)
       }
       case 'remarcar': {
         if (!a.pode_remarcar) return proibido('remarcar')
         if (!confirmou) return { erro: 'peça a confirmação da cliente antes de remarcar' }
-        const r = ensaio ? { ok: true, ensaio: true, dia: args.dia, hora: args.hora } : await rpc('bot_remarcar', { salao, cliente: cli, appt: args.appointment_id, dia: args.dia, hora: args.hora })
+        const appt = ensaio ? null : idDoHorario(args.appointment_id)
+        if (!ensaio && !appt) return semHorario
+        const r = ensaio ? { ok: true, ensaio: true, dia: args.dia, hora: args.hora } : await rpc('bot_remarcar', { salao, cliente: cli, appt, dia: args.dia, hora: args.hora })
         if (ehOk(r)) { registro.acoes.remarcou++; registro.resumo.push('Pronto, pedi a troca do seu horário. Você recebe a resposta por aqui.') }
-        return r
+        return naoFeito(r)
       }
       case 'chamar_humano': {
         const r = ensaio ? { ok: true, ensaio: true, avisados: 1 } : await rpc('bot_chamar_humano', { salao, tel: telefone, motivo: String(args.motivo ?? '') })
@@ -398,7 +438,7 @@ export function corpoClaude(modelo: string, nucleo: string, salao: string, mensa
   }
 }
 
-async function comClaude(o: { chave: string; workspace?: string; modelo: string; nucleo: string; salao: string; msgs: Msg[]; fetcher: Fetch; executar: (n: string, a: Record<string, unknown>) => Promise<unknown> }): Promise<Tentativa> {
+async function comClaude(o: { chave: string; workspace?: string; modelo: string; nucleo: string; salao: string; msgs: Msg[]; fetcher: Fetch; executar: (n: string, a: Record<string, unknown>) => Promise<unknown>; conferir?: (t: string) => string | null }): Promise<Tentativa> {
   const uso: Required<Uso> = { input_tokens: 0, output_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 }
   const mensagens: Array<{ role: string; content: unknown }> = o.msgs.map((m) => ({ role: m.role, content: m.content }))
   const headers: Record<string, string> = { 'x-api-key': o.chave, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json', ...(o.workspace ? { 'anthropic-workspace-id': o.workspace } : {}) }
@@ -440,12 +480,18 @@ async function comClaude(o: { chave: string; workspace?: string; modelo: string;
     }
     const texto = blocos.filter((b) => b.type === 'text').map((b) => b.text ?? '').join('').trim()
     if (parada === 'max_tokens') return fim(null, 'Claude: a resposta foi cortada (max_tokens)')
+    const aviso = texto && rodada < RODADAS - 1 ? o.conferir?.(texto) : null
+    if (aviso) {
+      mensagens.push({ role: 'assistant', content: j?.content })
+      mensagens.push({ role: 'user', content: [{ type: 'text', text: aviso }] })
+      continue
+    }
     return texto ? fim(texto) : fim(null, 'Claude: resposta vazia')
   }
   return fim(null, 'muitas rodadas')
 }
 
-async function comGroq(o: { chave: string; modelo: string; sistema: string; msgs: Msg[]; fetcher: Fetch; executar: (n: string, a: Record<string, unknown>) => Promise<unknown> }): Promise<Tentativa> {
+async function comGroq(o: { chave: string; modelo: string; sistema: string; msgs: Msg[]; fetcher: Fetch; executar: (n: string, a: Record<string, unknown>) => Promise<unknown>; conferir?: (t: string) => string | null }): Promise<Tentativa> {
   const uso: Required<Uso> = { input_tokens: 0, output_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 }
   const mensagens: Array<Record<string, unknown>> = [{ role: 'system', content: o.sistema }, ...o.msgs]
   const fim = (resposta: string | null, erro?: string): Tentativa => ({ resposta, erro, modelo: o.modelo, uso, custo: null })
@@ -469,6 +515,8 @@ async function comGroq(o: { chave: string; modelo: string; sistema: string; msgs
     const chamadas = (msg.tool_calls ?? []) as Array<{ id: string; function?: { name?: string; arguments?: string } }>
     if (!chamadas.length) {
       const texto = String(msg.content ?? '').trim()
+      const aviso = texto && rodada < RODADAS - 1 ? o.conferir?.(texto) : null
+      if (aviso) { mensagens.push({ role: 'assistant', content: texto }); mensagens.push({ role: 'user', content: aviso }); continue }
       return texto ? fim(texto) : fim(null, 'Groq: resposta vazia')
     }
     mensagens.push(msg)
@@ -513,6 +561,8 @@ export async function conversar(db: Rpc, salao: string, telefone: string, texto:
   const doSalao = textoSalao(ctx)
   const registro = { usadas: [] as string[], acoes: zeroAcoes(), resumo: [] as string[], depois: [] as string[] }
   const executar = executorDe(db, salao, telefone, ctx, registro, String(env.get('SITE_URL') ?? '').trim() || SITE_PADRAO)
+  let conferiu = false
+  const conferir = (t: string) => { if (conferiu) return null; const a = afirmouSemFazer(t, registro.acoes); if (a) conferiu = true; return a }
 
   const claude = String(env.get('ANTHROPIC_API_KEY') ?? '').trim()
   const groq = String(env.get('GROQ_API_KEY') ?? '').trim()
@@ -526,8 +576,8 @@ export async function conversar(db: Rpc, salao: string, telefone: string, texto:
     let t: Tentativa
     try {
       t = p === 'claude'
-        ? await comClaude({ chave: claude, workspace: String(env.get('ANTHROPIC_WORKSPACE_ID') ?? '').trim() || undefined, modelo: ctx.modelo_claude || MODELO_CLAUDE_PADRAO, nucleo, salao: doSalao, msgs, fetcher, executar })
-        : await comGroq({ chave: groq, modelo: ctx.modelo, sistema: `${nucleo}\n\n${doSalao}`, msgs, fetcher, executar })
+        ? await comClaude({ chave: claude, workspace: String(env.get('ANTHROPIC_WORKSPACE_ID') ?? '').trim() || undefined, modelo: ctx.modelo_claude || MODELO_CLAUDE_PADRAO, nucleo, salao: doSalao, msgs, fetcher, executar, conferir })
+        : await comGroq({ chave: groq, modelo: ctx.modelo, sistema: `${nucleo}\n\n${doSalao}`, msgs, fetcher, executar, conferir })
     } catch (e) {
       t = { resposta: null, erro: `${p}: ${String((e as Error)?.message ?? e).slice(0, 200)}`, modelo: p === 'claude' ? (ctx.modelo_claude || MODELO_CLAUDE_PADRAO) : ctx.modelo, uso: {}, custo: null }
     }
@@ -537,7 +587,7 @@ export async function conversar(db: Rpc, salao: string, telefone: string, texto:
     if (t.custo != null) soma.custo = Math.round(((soma.custo ?? 0) + t.custo) * 1e6) / 1e6
     const fez = registro.resumo.length > 0
     if (t.resposta) {
-      return { resposta: t.resposta, ferramentas: registro.usadas, modelo: t.modelo, provedor: p, ms: Date.now() - t0, erro: undefined,
+      return { resposta: paraWhatsapp(t.resposta), ferramentas: registro.usadas, modelo: t.modelo, provedor: p, ms: Date.now() - t0, erro: undefined,
                tokensEntrada: soma.entrada, tokensSaida: soma.saida, cacheLidos: soma.lidos, cacheGravados: soma.gravados, custoUsd: soma.custo, acoes: registro.acoes, falhas, depois: registro.depois }
     }
     falhas.push(t.erro ?? `${p}: sem resposta`)

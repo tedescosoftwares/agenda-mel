@@ -15,13 +15,15 @@ export default function EtapaRevisao({ s, autonoma, irPara, onEstado }) {
   const [servicos, setServicos] = useState([])
   const [cobertura, setCobertura] = useState([])
   const [copiado, setCopiado] = useState(false)
+  const [wa, setWa] = useState(null)   // 3.97: o WhatsApp (etapa opcional)
   const carregar = useCallback(async () => {
-    const [r, sv, cb] = await Promise.all([
+    const [r, sv, cb, w] = await Promise.all([
       supabase.rpc('primeiros_passos', { salao: s.id }),
       supabase.from('services').select('id, name, price, categoria_id').eq('salon_id', s.id).eq('active', true),
       supabase.rpc('cobertura_por_categoria', { salao: s.id }),
+      supabase.rpc('assistente_do_salao', { salao: s.id }),
     ])
-    setResumo(r.data ?? {}); setServicos(sv.data ?? []); setCobertura(Array.isArray(cb.data) ? cb.data : [])
+    setResumo(r.data ?? {}); setServicos(sv.data ?? []); setCobertura(Array.isArray(cb.data) ? cb.data : []); setWa(w.error ? null : w.data)
   }, [s.id])
   useEffect(() => { carregar() }, [carregar])
 
@@ -48,6 +50,7 @@ export default function EtapaRevisao({ s, autonoma, irPara, onEstado }) {
     { ok: nServicos > 0, texto: 'Serviços cadastrados' },
     { ok: nEquipe > 0, texto: autonoma ? 'Sua agenda' : 'Profissionais cadastradas' },
     { ok: nServicos > 0 && semProf === 0, texto: autonoma ? 'Serviços na sua agenda' : 'Quem faz o quê' },
+    ...(wa ? [{ ok: Boolean(wa.canal?.numero_proprio), texto: wa.canal?.numero_proprio ? 'WhatsApp conectado' : 'WhatsApp (opcional, para depois)' }] : []),
   ]
   if (!resumo) return <section className="cfg-etapa"><p className="muted">Carregando…</p></section>
   return (
@@ -65,6 +68,7 @@ export default function EtapaRevisao({ s, autonoma, irPara, onEstado }) {
             <div><dt>Categorias</dt><dd>{escolhidas.length ? escolhidas.map((c) => c.nome).join(' • ') : '—'}</dd></div>
             <div><dt>Serviços</dt><dd>{nServicos ? `${nServicos} cadastrados` : '—'}{semPreco.length > 0 && <small> · {semPreco.length} sem preço</small>}</dd></div>
             {!autonoma && <div><dt>Quem atende</dt><dd>{cobertura.length ? cobertura.map((c) => `${c.nome}: ${c.profissionais?.length ? c.profissionais.join(', ') : 'ninguém'}`).join(' • ') : '—'}</dd></div>}
+            {wa && <div><dt>WhatsApp</dt><dd>{wa.canal?.numero_proprio ? `${wa.canal?.numero ?? 'conectado'} · ${wa.config?.nome || 'Mel'} ${wa.ligada ? 'atendendo' : 'desligada'}` : 'para depois'} <button type="button" className="plat-link" onClick={() => irPara('whatsapp')}><Pencil size={12} /> {wa.canal?.numero_proprio ? 'Ajustar' : 'Conectar'}</button></dd></div>}
             {link && <div><dt>Seu link</dt><dd className="cfg-revisao-link"><span>{link.replace(/^https?:\/\//, '')}</span><button type="button" className="btn btn-ghost btn-mini" onClick={copiar}><Copy size={12} /> {copiado ? 'Copiado!' : 'Copiar'}</button></dd></div>}
           </dl>
         </div>

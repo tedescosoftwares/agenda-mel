@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
-import { Check, Lock, Sparkles, Users, LayoutGrid, Link2, ArrowLeft, ArrowRight, Save, LogOut, HelpCircle } from 'lucide-react'
+import { Check, Lock, Sparkles, Users, LayoutGrid, Link2, ArrowLeft, ArrowRight, Save, LogOut, HelpCircle, MessageCircle } from 'lucide-react'
 import AdminShell from '../../components/AdminShell'
 import ProShell from '../../components/ProShell'
 import { useAuth } from '../../context/AuthContext'
@@ -13,13 +13,14 @@ import EtapaCategorias from './configuracao/EtapaCategorias'
 import EtapaServicos from './configuracao/EtapaServicos'
 import EtapaProfissionais from './configuracao/EtapaProfissionais'
 import EtapaVinculos from './configuracao/EtapaVinculos'
+import EtapaWhatsapp from './configuracao/EtapaWhatsapp'
 import EtapaRevisao from './configuracao/EtapaRevisao'
 import useCompacto from './configuracao/useCompacto'
 import { ManualDaConfiguracao, dependenciasOk, oQueFalta } from './configuracao/Manual'
 import '../../configuracao.css'
 
 // Configuração inicial (2.94): Categorias → Serviços → Profissionais →
-// Quem faz o quê → Revisão, no painel, com o espaço do desktop (duas
+// Quem faz o quê → WhatsApp (3.97, opcional) → Revisão, no painel, com o espaço do desktop (duas
 // colunas, painel sticky, matriz) e o mesmo fluxo no celular.
 //
 // Cada etapa grava sozinha (categorias em salons, serviços em services,
@@ -31,6 +32,7 @@ const ETAPAS = [
   { id: 'servicos', rotulo: 'Serviços', Icone: Sparkles },
   { id: 'profissionais', rotulo: 'Profissionais', Icone: Users },
   { id: 'vinculos', rotulo: 'Quem faz o quê', Icone: Link2 },
+  { id: 'whatsapp', rotulo: 'WhatsApp', Icone: MessageCircle },   // 3.97: opcional, o Continuar sempre passa
 ]
 const REVISAO = 'revisao'
 
@@ -75,7 +77,7 @@ export default function Configurar({ para = 'admin' }) {
 
   // o progresso vem dos dados: primeira etapa não feita é onde a pessoa entra
   const derivar = useCallback(async (salao) => {
-    const [r, cb, ct] = await Promise.all([supabase.rpc('primeiros_passos', { salao: salao.id }), autonoma ? Promise.resolve({ data: [] }) : supabase.rpc('cobertura_por_categoria', { salao: salao.id }), supabase.from('categorias_de_servico').select('id, salon_id, slug').or(`salon_id.eq.${salao.id},salon_id.is.null`)])
+    const [r, cb, ct, wa] = await Promise.all([supabase.rpc('primeiros_passos', { salao: salao.id }), autonoma ? Promise.resolve({ data: [] }) : supabase.rpc('cobertura_por_categoria', { salao: salao.id }), supabase.from('categorias_de_servico').select('id, salon_id, slug').or(`salon_id.eq.${salao.id},salon_id.is.null`), supabase.rpc('assistente_do_salao', { salao: salao.id })])
     const cats = ct.data ?? []
     setCatsBase(cats)
     const n = (k) => Number(r.data?.[k] ?? 0)
@@ -85,6 +87,7 @@ export default function Configurar({ para = 'admin' }) {
       servicos: n('servicos') > 0,
       profissionais: autonoma || n('equipe') > 0,
       vinculos: n('servicos') > 0 && (autonoma || (cobertura.length > 0 && cobertura.every((c) => Number(c.sem_profissional ?? 0) === 0))),
+      whatsapp: Boolean(wa.data?.canal?.numero_proprio),   // 3.97: o WhatsApp conectado (a etapa é opcional)
     }
     setFeitas(f)
     return f
@@ -138,8 +141,8 @@ export default function Configurar({ para = 'admin' }) {
     try { localStorage.removeItem(chaveLocal) } catch { /* nada */ }
     await recarregarPerfil?.()
     setSalvando(false)
-    // 3.95: no fim da configuração, a pergunta "quer atender pelo WhatsApp também?" (a tela da assistente)
-    navigate(para === 'admin' ? '/admin/whatsapp?inicio=1' : '/pro/assistente?inicio=1', { replace: true })
+    // 3.97: o WhatsApp virou a etapa antes da Revisão; ao concluir, o painel
+    navigate(para === 'admin' ? '/admin' : '/pro/agenda', { replace: true })
   }
   const onEstado = useCallback((e) => setEstado((atual) => ({ ...atual, aoContinuar: null, aviso: false, acaoRodape: null, motivo: null, ...e })), [])
   const Shell = para === 'admin' ? AdminShell : ProShell
@@ -223,6 +226,7 @@ export default function Configurar({ para = 'admin' }) {
             {passo === 'servicos' && <EtapaServicos {...props} />}
             {passo === 'profissionais' && <EtapaProfissionais {...props} />}
             {passo === 'vinculos' && <EtapaVinculos {...props} />}
+            {passo === 'whatsapp' && <EtapaWhatsapp {...props} />}
             {passo === REVISAO && <EtapaRevisao {...props} />}
           </div>
         )}

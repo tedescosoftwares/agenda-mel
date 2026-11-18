@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { Bot, Send, RotateCcw, QrCode, Unplug, Smartphone, PartyPopper, ShieldCheck, MessageCircle, Check, Clock, Info, CalendarCheck, CalendarClock, CalendarX, HandHelping, Loader2, Sparkles, MessagesSquare } from 'lucide-react'
+import { Bot, Unplug, Smartphone, PartyPopper, ShieldCheck, MessageCircle, Check, Clock, Info, CalendarCheck, CalendarClock, CalendarX, HandHelping, Sparkles, MessagesSquare } from 'lucide-react'
 import AdminShell from '../../components/AdminShell'
 import ProShell from '../../components/ProShell'
 import { useAuth } from '../../context/AuthContext'
 import RegraDeAceite from '../../components/RegraDeAceite'
+import { Bolhas, ConectarWhatsapp, ConversaDeTeste } from '../../components/AssistenteWhatsapp'
 import { useDialogo } from '../../context/DialogoContext'
 import { supabase } from '../../lib/supabase'
 import { chamar } from '../../lib/pagamento'
-import { PADRAO, SUGESTOES_DE_NOME, TONS, EMOJIS, TRATAMENTOS, TAMANHOS, PRECOS, ESPERAS, configDe, codigoBonito, primeiroNome, previa } from '../../lib/assistente'
+import { PADRAO, SUGESTOES_DE_NOME, TONS, EMOJIS, TRATAMENTOS, TAMANHOS, PRECOS, ESPERAS, configDe, primeiroNome, previa } from '../../lib/assistente'
 import '../../assistente.css'
 
 // 3.95: a assistente do WhatsApp do salão (migração 235; Edge Function assistente).
@@ -68,20 +69,6 @@ async function ligarSePediu(salao, querLigar, d) {
   return error ? null : data
 }
 
-function Bolhas({ mensagens, nome, digitando }) {
-  return (
-    <div className="as-conversa">
-      {mensagens.map((m, i) => m.quem === 'aviso' ? <div key={i} className="as-bolha-aviso">{m.texto}</div> : (
-        <div key={i} className={'as-bolha ' + (m.quem === 'cliente' ? 'dela' : 'nossa')}>
-          {m.quem !== 'cliente' && i > 0 && mensagens[i - 1]?.quem === 'cliente' && <span className="as-bolha-quem">{nome}</span>}
-          {m.texto}
-        </div>
-      ))}
-      {digitando && <div className="as-bolha nossa as-digitando" aria-label="digitando"><i /><i /><i /></div>}
-    </div>
-  )
-}
-
 // embutido (3.96): dentro da área WhatsApp do salão (aba Assistente), sem casca nem título; os atalhos trocam de aba
 export default function AdminAssistente({ para = 'admin', embutido = false, onAbrirPedidos, onAbrirMensagens }) {
   const { salao, negocio, profile } = useAuth()
@@ -105,18 +92,8 @@ export default function AdminAssistente({ para = 'admin', embutido = false, onAb
   const querLigar = useRef(false)    // veio do "sim" das boas-vindas: ao conectar, já liga
   const refNumero = useRef(null)
 
-  // o número do salão
-  const [numero, setNumero] = useState('')
-  const [con, setCon] = useState({ fase: 'livre' })   // livre · gerando · codigo · erro
-  const [verQr, setVerQr] = useState(false)
+  // o número do salão (3.97: o código e a espera ficam em ConectarWhatsapp)
   const [conferido, setConferido] = useState(null)    // estado da Evolution, quando o salão já tem número próprio
-
-  // o teste de verdade
-  const [teste, setTeste] = useState([])
-  const [escrito, setEscrito] = useState('')
-  const [testando, setTestando] = useState(false)
-  const [erroTeste, setErroTeste] = useState('')
-  const fimDoTeste = useRef(null)
 
   // o que veio do banco vira a tela inteira (ao abrir e ao salvar); conectar, desconectar e ligar só trocam o canal
   // (setDados), para não perder o que a dona mudou e ainda não salvou
@@ -145,31 +122,6 @@ export default function AdminAssistente({ para = 'admin', embutido = false, onAb
     return () => { vivo = false }
   }, [salaoId])
 
-  // enquanto o código está na tela, pergunta a cada 4 s se o celular já conectou (até 3 min)
-  useEffect(() => {
-    if (con.fase !== 'codigo') return
-    let vivo = true
-    const desde = Date.now()
-    const t = setInterval(async () => {
-      if (Date.now() - desde > 180_000) { clearInterval(t); if (vivo) setCon({ fase: 'erro', erro: 'O código expirou. Gere outro e digite no celular em até 2 minutos.', jaGerou: true }); return }
-      try {
-        const e = await chamar('assistente', { acao: 'estado', salao: salaoId })
-        if (vivo && e?.estado === 'open') {
-          clearInterval(t)
-          const { data } = await supabase.rpc('assistente_do_salao', { salao: salaoId })
-          if (!vivo) return
-          const ligou = await ligarSePediu(salaoId, querLigar, data)
-          if (!vivo) return
-          setDados(ligou ?? data); setConferido('open'); setCon({ fase: 'livre' })
-          setOk(ligou ? 'WhatsApp conectado e assistente ligada! Ela já responde as clientes por ele.' : 'WhatsApp do salão conectado! Agora é só ligar a assistente.')
-        }
-      } catch { /* tenta de novo no próximo */ }
-    }, 4000)
-    return () => { vivo = false; clearInterval(t) }
-  }, [con.fase, salaoId])
-
-  useEffect(() => { fimDoTeste.current?.scrollIntoView({ block: 'nearest' }) }, [teste, testando])
-
   const sujo = salvo != null && JSON.stringify({ c: cfg, r: recado }) !== salvo
   const proprio = Boolean(dados?.canal?.numero_proprio)
   const ligada = Boolean(dados?.ligada)
@@ -179,11 +131,18 @@ export default function AdminAssistente({ para = 'admin', embutido = false, onAb
   const mudar = (k, v) => setCfg((c) => ({ ...c, [k]: v }))
   const conversaPrevia = useMemo(() => previa(cfg, { salao: nomeSalao, proprio: true, autonoma, cliente: 'Ana' }), [cfg, nomeSalao, autonoma])
   const nomeEscolhido = cfg.nome?.trim() || 'Mel'
+  const rascunho = useMemo(() => {
+    const { quando: _q, espera_min: _e, ...jeito } = cfg
+    return { assistente: jeito, recado, cliente_nome: primeiroNome(profile?.full_name) }
+  }, [cfg, recado, profile?.full_name])
 
-  async function ligarAoConectar(d) {
-    const novo = await ligarSePediu(salaoId, querLigar, d)
-    if (novo) setDados(novo)
-    return Boolean(novo)
+  // o celular conectou (pelo código ou porque o número já estava conectado); se veio do "sim" das boas-vindas, já liga
+  async function aoConectar(data, { jaEstava }) {
+    const ligou = await ligarSePediu(salaoId, querLigar, data)
+    setDados(ligou ?? data); setConferido('open')
+    setOk(jaEstava
+      ? (ligou ? 'Esse número já estava conectado. Assistente ligada!' : 'Esse número já estava conectado. Tudo certo!')
+      : (ligou ? 'WhatsApp conectado e assistente ligada! Ela já responde as clientes por ele.' : 'WhatsApp do salão conectado! Agora é só ligar a assistente.'))
   }
 
   async function salvar(extra = {}) {
@@ -203,22 +162,6 @@ export default function AdminAssistente({ para = 'admin', embutido = false, onAb
     setOk(v ? 'Assistente ligada. Ela já responde as mensagens que chegarem.' : 'Assistente desligada: nenhuma resposta automática. As mensagens ficam para a equipe.')
   }
 
-  // novo (3.96.2): "Gerar outro código" recomeça a conexão do zero (o código anterior deixa de valer)
-  async function gerarCodigo(novo = false) {
-    setErro(''); setOk(''); setCon({ fase: 'gerando' }); setVerQr(false)
-    try {
-      const r = await chamar('assistente', { acao: 'conectar', salao: salaoId, numero, novo })
-      if (r?.estado === 'open') {
-        const { data } = await supabase.rpc('assistente_do_salao', { salao: salaoId })
-        setDados(data); setConferido('open'); setCon({ fase: 'livre' })
-        setOk(await ligarAoConectar(data) ? 'Esse número já estava conectado. Assistente ligada!' : 'Esse número já estava conectado. Tudo certo!')
-        return
-      }
-      setCon({ fase: 'codigo', codigo: r?.pairingCode ?? null, qr: r?.qr ?? null, numero: r?.numero ?? numero })
-    } catch (e) {
-      setCon({ fase: 'erro', erro: e.message || 'Não deu para gerar o código agora.', jaGerou: novo })
-    }
-  }
   async function desconectar() {
     const sim = await confirmar({ titulo: 'Desconectar o WhatsApp do salão?', texto: 'A assistente para de atender e os lembretes deixam de sair pelo WhatsApp (os avisos continuam no app). O WhatsApp do seu celular continua funcionando normalmente.', ok: 'Desconectar', cancelar: 'Cancelar' })
     if (!sim) return
@@ -228,22 +171,6 @@ export default function AdminAssistente({ para = 'admin', embutido = false, onAb
       const { data } = await supabase.rpc('assistente_do_salao', { salao: salaoId })
       setDados(data); setConferido(null); setOk('Desconectado. A assistente parou de atender.')
     } catch (e) { setErro(e.message) }
-  }
-
-  async function enviarTeste(e) {
-    e?.preventDefault()
-    const t = escrito.trim()
-    if (!t || testando) return
-    const conversa = [...teste.filter((m) => m.quem !== 'aviso'), { quem: 'cliente', texto: t }]
-    setTeste((c) => [...c, { quem: 'cliente', texto: t }]); setEscrito(''); setTestando(true); setErroTeste('')
-    try {
-      const { quando: _q, espera_min: _e, ...jeito } = cfg
-      const r = await chamar('assistente', { acao: 'testar', salao: salaoId, mensagens: conversa, rascunho: { assistente: jeito, recado, cliente_nome: primeiroNome(profile?.full_name) } })
-      setTeste((c) => [...c, { quem: 'assistente', texto: r.resposta, acoes: r.acoes }, ...(r.acoes?.marcou || r.acoes?.remarcou || r.acoes?.cancelou ? [{ quem: 'aviso', texto: 'Teste: nada foi gravado na agenda.' }] : [])])
-    } catch (er) {
-      setErroTeste(er.message || 'Não deu para testar agora.')
-    }
-    setTestando(false)
   }
 
   // a profissional da equipe não tem negócio próprio: a assistente é do salão (a dona configura)
@@ -263,37 +190,7 @@ export default function AdminAssistente({ para = 'admin', embutido = false, onAb
     <Secao ordem={1} secaoRef={refNumero} className="asx-destaque" Icone={Smartphone}
       titulo={desconectou ? 'Reconecte o WhatsApp do salão' : 'Primeiro passo: conecte o WhatsApp do salão'}
       sub={desconectou ? `${dados.canal?.numero ?? 'O número'} desconectou. Gere um código novo e digite no celular.` : 'A assistente atende no WhatsApp do seu salão. Você continua vendo e respondendo tudo pelo celular.'}>
-      {con.fase !== 'codigo' ? (
-        <div className="asx-conectar">
-          <label className="asx-rot-campo">
-            <span>WhatsApp do salão, com DDD</span>
-            <input className="asx-input" inputMode="tel" autoComplete="tel" placeholder="(13) 99999-9999" value={numero} onChange={(e) => setNumero(e.target.value)} />
-          </label>
-          <button type="button" className="btn btn-primary asx-btn" disabled={con.fase === 'gerando' || numero.replace(/\D/g, '').length < 10} onClick={() => gerarCodigo(Boolean(con.jaGerou))}>
-            {con.fase === 'gerando' ? <><Loader2 size={16} className="as-gira" /> Gerando…</> : con.jaGerou ? <><RotateCcw size={16} /> Gerar outro código</> : 'Gerar código'}
-          </button>
-          {con.fase === 'erro' && <p className="as-erro-linha">{con.erro}</p>}
-          <small className="asx-dica">Use o número que as clientes já conhecem (de preferência WhatsApp Business). Enquanto não conectar, nenhuma mensagem sai pelo WhatsApp: os avisos continuam no app.</small>
-        </div>
-      ) : (
-        <div className="as-codigo">
-          <p className="as-codigo-tit">No celular do salão ({con.numero}), abra o WhatsApp e digite:</p>
-          {con.codigo ? <div className="as-codigo-num" aria-label="código de pareamento">{codigoBonito(con.codigo)}</div> : <p className="muted">O código não veio. Use o QR code abaixo.</p>}
-          <ol className="as-passos">
-            <li>WhatsApp › <b>⋮</b> (ou <b>Configurações</b>) › <b>Aparelhos conectados</b></li>
-            <li>Toque em <b>Conectar um aparelho</b></li>
-            <li>Escolha <b>Conectar com número de telefone</b> e digite o código</li>
-          </ol>
-          <p className="as-esperando"><Loader2 size={16} className="as-gira" /> Esperando o celular conectar…</p>
-          <p className="asx-nao-chegou">O código não funcionou ou o celular pediu outro? Gere um novo: o anterior deixa de valer.</p>
-          <div className="asx-botoes">
-            <button type="button" className="btn btn-ghost" onClick={() => gerarCodigo(true)}><RotateCcw size={16} /> Gerar outro código</button>
-            {con.qr && <button type="button" className="btn btn-ghost" onClick={() => setVerQr((v) => !v)}><QrCode size={16} /> {verQr ? 'Esconder o QR code' : 'Ler um QR code'}</button>}
-            <button type="button" className="btn btn-ghost" onClick={() => setCon({ fase: 'livre' })}>Cancelar</button>
-          </div>
-          {con.qr && verQr && <img className="as-qr" src={con.qr} alt="QR code para conectar o WhatsApp" />}
-        </div>
-      )}
+      <ConectarWhatsapp salaoId={salaoId} onConectou={aoConectar} onComecou={() => { setErro(''); setOk('') }} />
     </Secao>
   )
 
@@ -483,14 +380,7 @@ export default function AdminAssistente({ para = 'admin', embutido = false, onAb
                 <span className="asx-ico"><Bot size={18} /></span>
                 <div className="asx-cab-txt"><h3>Testar de verdade</h3><p>Escreva como uma cliente. Ela usa a sua agenda real, mas não marca nada.</p></div>
               </header>
-              {(teste.length > 0 || testando) && <Bolhas mensagens={teste} nome={nomeEscolhido} digitando={testando} />}
-              <div ref={fimDoTeste} />
-              {erroTeste && <p className="as-erro-linha">{erroTeste}</p>}
-              <form className="as-teste-form" onSubmit={enviarTeste}>
-                <input value={escrito} maxLength={500} onChange={(e) => setEscrito(e.target.value)} placeholder={teste.length ? 'Responda…' : 'Oi! Tem horário amanhã?'} aria-label="Mensagem de teste" />
-                <button type="submit" className="btn btn-primary as-enviar" disabled={!escrito.trim() || testando} aria-label="Enviar"><Send size={16} /></button>
-              </form>
-              {teste.length > 0 && <button type="button" className="as-link-botao as-recomecar" onClick={() => { setTeste([]); setErroTeste('') }}><RotateCcw size={14} /> Recomeçar a conversa</button>}
+              <ConversaDeTeste salaoId={salaoId} nome={nomeEscolhido} rascunho={rascunho} />
             </section>
           </aside>
         </div>

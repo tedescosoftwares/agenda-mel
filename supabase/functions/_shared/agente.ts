@@ -97,7 +97,7 @@ const obj = (props: Record<string, unknown>, req: string[] = []) => ({ type: 'ob
 export const FERRAMENTAS: Ferramenta[] = [
   { nome: 'listar_servicos', descricao: 'Serviços do salão com preço, duração e quem faz cada um. Use antes de falar de preço ou de marcar.', parametros: obj({}) },
   { nome: 'listar_profissionais', descricao: 'Profissionais ativas do salão.', parametros: obj({}) },
-  { nome: 'horarios_livres', descricao: 'Horários livres de uma profissional num dia. Sempre consulte antes de oferecer horário.',
+  { nome: 'horarios_livres', descricao: 'Horários livres de uma profissional num dia: todos os do dia, com o primeiro e o último. Sempre consulte antes de oferecer horário; para dizer até que horas tem vaga, use o último.',
     parametros: obj({ profissional_id: { type: 'string' }, dia: { type: 'string', description: 'YYYY-MM-DD' }, servico_id: { type: 'string', description: 'opcional; ajusta a duração' } }, ['profissional_id', 'dia']) },
   { nome: 'marcar', descricao: 'Marca um horário. SÓ depois que a cliente confirmou serviço, profissional, dia e hora com um sim.',
     parametros: obj({ profissional_id: { type: 'string' }, servico_id: { type: 'string' }, dia: { type: 'string', description: 'YYYY-MM-DD' }, hora: { type: 'string', description: 'HH:MM' }, cliente_confirmou: { type: 'boolean', description: 'true só se ela disse sim ao resumo' } }, ['profissional_id', 'servico_id', 'dia', 'hora', 'cliente_confirmou']) },

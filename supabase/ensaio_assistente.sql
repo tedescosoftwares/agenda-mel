@@ -307,6 +307,24 @@ begin
     raise notice 'P diagnóstico: a dona e a Plataforma veem (% itens), outra pessoa não', n_plat;
   end;
 
+  -- Q. os horários do dia inteiro (241): das 8h às 18h, um serviço de 90 minutos vai até 16h30 (antes parava em 14h30)
+  declare prof uuid; serv uuid; d date; livres jsonb;
+  begin
+    select p.id into prof from public.professionals p where p.slug = 'ana-paula';
+    select ps.service_id into serv from public.professional_services ps where ps.professional_id = prof limit 1;
+    d := (now() at time zone 'America/Sao_Paulo')::date + 40;
+    delete from public.professional_hours where professional_id = prof and weekday = extract(dow from d);
+    insert into public.professional_hours (professional_id, weekday, start_time, end_time, open) values (prof, extract(dow from d), '08:00', '18:00', true);
+    update public.services set duration_minutes = 90 where id = serv;
+    delete from public.appointments where professional_id = prof and date = d;
+    livres := public.bot_horarios(salao, prof, d, serv);
+    if (livres ->> 'total')::integer <> 18 or livres ->> 'primeiro' <> '08:00' or livres ->> 'ultimo' <> '16:30'
+       or jsonb_array_length(livres -> 'horarios') <> 18 or livres -> 'horarios' ->> 17 <> '16:30' then
+      raise exception 'Q: %', livres;
+    end if;
+    raise notice 'Q horários: % livres, das % às % (serviço de 90 min, 8h às 18h)', livres ->> 'total', livres ->> 'primeiro', livres ->> 'ultimo';
+  end;
+
   raise notice 'ensaio_assistente: tudo certo';
 end $$;
 rollback;

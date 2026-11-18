@@ -2,7 +2,7 @@
 import '../app.css'
 import '../polish.css'
 import '../lib/sw'
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import ProtectedRoute from '../components/ProtectedRoute'
 import NaoEncontrada from '../pages/publico/NaoEncontrada'
 import AdminDashboard from '../pages/admin/AdminDashboard'
@@ -14,7 +14,6 @@ import AdminHours from '../pages/admin/AdminHours'
 import AdminClientes from '../pages/admin/AdminClientes'
 import AdminNumeros from '../pages/admin/AdminNumeros'
 import AdminWhatsapp from '../pages/admin/AdminWhatsapp'
-import AdminAssistente from '../pages/admin/AdminAssistente'
 import AdminRecados from '../pages/admin/AdminRecados'
 import AdminAjustes from '../pages/admin/AdminAjustes'
 import AdminBancada from '../pages/admin/AdminBancada'
@@ -30,6 +29,8 @@ import AdminFecharDia from '../pages/admin/AdminFecharDia'
 import { PARCERIA_LIGADA } from '../lib/contratoParceria'
 
 const A = ({ children }) => <ProtectedRoute requireRole="admin">{children}</ProtectedRoute>
+// 3.96: a assistente virou a aba Assistente da área WhatsApp (o ?inicio=1 do fim da configuração vai junto)
+function ParaWhatsapp() { const { search } = useLocation(); return <Navigate to={'/admin/whatsapp' + search} replace /> }
 
 export default function RotasAdmin() {
   return (
@@ -45,7 +46,7 @@ export default function RotasAdmin() {
       <Route path="clientes" element={<A><AdminClientes /></A>} />
       <Route path="numeros" element={<A><AdminNumeros /></A>} />
       <Route path="whatsapp" element={<A><AdminWhatsapp /></A>} />
-      <Route path="assistente" element={<A><AdminAssistente /></A>} />
+      <Route path="assistente" element={<ParaWhatsapp />} />
       <Route path="recados" element={<A><AdminRecados /></A>} />
       <Route path="ajustes" element={<A><AdminAjustes /></A>} />
       <Route path="bancada" element={<A><AdminBancada /></A>} />

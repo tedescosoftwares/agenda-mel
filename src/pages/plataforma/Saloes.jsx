@@ -9,6 +9,7 @@ import { User, MapPin, Pencil, Check as CheckIcon, BookOpen, Trash2 } from 'luci
 import Portal from '../../components/Portal'
 import ApagarModal from '../../components/plataforma/ApagarModal'
 import Mensalidades from '../../components/plataforma/Mensalidades'
+import DiagnosticoWhatsapp from '../../components/plataforma/DiagnosticoWhatsapp'
 import { formatarCnpj, formatarCpf } from '../../lib/cnpj'
 import { linkDaProfissional } from '../../lib/endereco'
 
@@ -240,10 +241,11 @@ export function Salao() {
               <Kpi Icon={PulsoIcon} cor={s.active ? 'menta' : 'carmim'} n={s.active ? 'Ativo' : 'Off'} rotulo="status" sub={s.active ? 'aparece na vitrine' : 'desativado pela plataforma'} />
             </div>
             <div className="abas plat-abas">
-              {[['cadastro', 'Cadastro'], ['mensalidades', 'Mensalidades'], ['equipe', `Equipe (${d.equipe?.length ?? 0})`], ['clientes', `Clientes (${d.clientes?.length ?? 0})`], ['ultimos', 'Últimos horários']].map(([k, r]) => <button key={k} className={aba === k ? 'aba active' : 'aba'} onClick={() => setAba(k)}>{r}</button>)}
+              {[['cadastro', 'Cadastro'], ['mensalidades', 'Mensalidades'], ['equipe', `Equipe (${d.equipe?.length ?? 0})`], ['clientes', `Clientes (${d.clientes?.length ?? 0})`], ['ultimos', 'Últimos horários'], ['whatsapp', 'WhatsApp']].map(([k, r]) => <button key={k} className={aba === k ? 'aba active' : 'aba'} onClick={() => setAba(k)}>{r}</button>)}
             </div>
-            <Painel titulo={aba === 'cadastro' ? 'Ficha cadastral' : aba === 'mensalidades' ? 'Mensalidades da MIMO' : aba === 'equipe' ? 'Equipe' : aba === 'clientes' ? 'Clientes vinculadas' : 'Últimos 30 horários'}>
+            <Painel titulo={aba === 'cadastro' ? 'Ficha cadastral' : aba === 'mensalidades' ? 'Mensalidades da MIMO' : aba === 'equipe' ? 'Equipe' : aba === 'clientes' ? 'Clientes vinculadas' : aba === 'whatsapp' ? 'WhatsApp (técnico)' : 'Últimos 30 horários'}>
               {aba === 'cadastro' && <FichaCadastral s={s} dona={d.dona} />}
+              {aba === 'whatsapp' && <DiagnosticoWhatsapp salaoId={id} />}
               {aba === 'mensalidades' && <Mensalidades salao={id} onMudou={carregar} />}
               {aba === 'equipe' && (
                 <table className="plat-tabela"><thead><tr><th>Profissional</th><th>Código</th><th>Trouxe</th><th>Atendimentos</th><th>Status</th></tr></thead><tbody>

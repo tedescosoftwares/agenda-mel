@@ -489,7 +489,7 @@ export default function AdminDashboard() {
                 <Link to="/admin/agenda?encaixe=1"><span><CalendarPlus size={18} /></span><strong>Novo encaixe</strong><small>Adicionar um atendimento manualmente</small><ArrowRight size={14} /></Link>
                 <Link to="/admin/equipe"><span><Users size={18} /></span><strong>Equipe</strong><small>Profissionais e agendas</small><ArrowRight size={14} /></Link>
                 <Link to="/admin/servicos"><span><Sparkles size={18} /></span><strong>Serviços</strong><small>Preços, duração e categorias</small><ArrowRight size={14} /></Link>
-                <Link to="/admin/assistente"><span><MessageCircle size={18} /></span><strong>Assistente do WhatsApp</strong><small>Quem responde as suas clientes</small><ArrowRight size={14} /></Link>
+                <Link to="/admin/whatsapp"><span><MessageCircle size={18} /></span><strong>WhatsApp</strong><small>A assistente e as mensagens</small><ArrowRight size={14} /></Link>
                 <Link to="/admin/guia"><span><BookOpen size={18} /></span><strong>Guia MIMO</strong><small>Vídeos rápidos para aprender o sistema</small><ArrowRight size={14} /></Link>
               </div>
             </section>

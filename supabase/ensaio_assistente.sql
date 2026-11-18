@@ -1,4 +1,4 @@
--- Ensaio da 235 (3.95), 236 (3.95.1), 237 (3.95.2), 238 (3.95.3) e 239 (3.95.4): a assistente do WhatsApp do salão; o número da MIMO só como reserva;
+-- Ensaio da 235 (3.95), 236 (3.95.1), 237 (3.95.2), 238 (3.95.3), 239 (3.95.4) e 240 (3.96): a assistente do WhatsApp do salão; o número da MIMO só como reserva;
 -- a chave desligada desliga tudo. Desfaz no fim.
 begin;
 do $$
@@ -283,6 +283,29 @@ begin
   perform set_config('request.jwt.claim.sub', '', true);
   if (r ->> 'encerrou')::int <> 1 then raise exception 'O8: %', r; end if;
   raise notice 'O encerrar: pausa 6 h/24 h, silêncio sem gastar, SAIR vale, conta nos números';
+
+  -- P. o diagnóstico técnico (240): a dona e a Plataforma veem; outra pessoa não
+  declare plat uuid; n_dona integer; n_plat integer; n_outro integer;
+  begin
+    select id into plat from public.profiles where role = 'plataforma' limit 1;
+    if plat is null then
+      insert into auth.users (id, email) values ('00000000-0000-0000-0000-0000000000a0', 'plat-ensaio@exemplo.com') on conflict do nothing;
+      insert into public.profiles (id, full_name, role) values ('00000000-0000-0000-0000-0000000000a0', 'Plataforma Ensaio', 'plataforma')
+      on conflict (id) do update set role = 'plataforma';
+      plat := '00000000-0000-0000-0000-0000000000a0';
+    end if;
+    perform set_config('request.jwt.claim.sub', dona::text, true);
+    select count(*) into n_dona from public.diagnostico_whatsapp(salao);
+    perform set_config('request.jwt.claim.sub', plat::text, true);
+    select count(*) into n_plat from public.diagnostico_whatsapp(salao);
+    perform count(*) from public.fila_do_salao(salao, 5);
+    perform count(*) from public.leituras_recentes(salao, 5);
+    perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
+    select count(*) into n_outro from public.diagnostico_whatsapp(salao);
+    perform set_config('request.jwt.claim.sub', '', true);
+    if n_dona = 0 or n_plat <> n_dona or n_outro <> 0 then raise exception 'P: dona %, plataforma %, outro %', n_dona, n_plat, n_outro; end if;
+    raise notice 'P diagnóstico: a dona e a Plataforma veem (% itens), outra pessoa não', n_plat;
+  end;
 
   raise notice 'ensaio_assistente: tudo certo';
 end $$;

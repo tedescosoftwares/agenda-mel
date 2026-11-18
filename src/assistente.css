@@ -182,3 +182,29 @@
 /* 3.95.6: a regra de quem confirma, editável aqui também */
 .as-aceite-bloco { display: grid; gap: 0.45rem; padding: 0.2rem 0 0.6rem; }
 .as-aceite-bloco .aj-aceite { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+
+/* 3.96: a área WhatsApp (abas) */
+.wa-area-abas { max-width: 620px; margin: 0 0 1rem; }
+.wa-area-abas .aba { display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem; }
+@media (max-width: 520px) { .wa-area-abas .aba span { font-size: 0.78rem; } .wa-area-abas .aba svg { display: none; } }
+.as-link-botao { border: 0; background: none; padding: 0; font: inherit; color: var(--rosa); text-decoration: underline; cursor: pointer; }
+.wa-pedidos { max-width: 980px; }
+.ms-grade { display: grid; gap: 1rem; padding-bottom: 2rem; }
+@media (min-width: 1100px) { .ms-grade { grid-template-columns: 1fr 1fr; align-items: start; } }
+.ms-secao { display: grid; gap: 0.5rem; padding: 1.1rem; min-width: 0; }
+.ms-secao h3 { display: flex; align-items: center; gap: 0.45rem; margin: 0; font-size: 1rem; }
+.ms-secao h3 svg { color: var(--rosa); }
+.ms-sub { margin: 0; font-size: 0.84rem; }
+.ms-lista { list-style: none; margin: 0.3rem 0 0; padding: 0; display: grid; }
+.ms-lista > li + li { border-top: 1px solid var(--fio); }
+.ms-item { display: grid; gap: 0.15rem; width: 100%; padding: 0.6rem 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.ms-item-topo { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; }
+.ms-item-topo strong { font-size: 0.9rem; }
+.ms-item-meta { color: var(--texto-3); font-size: 0.78rem; overflow-wrap: anywhere; }
+.ms-status { flex: none; font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--cinza-1); color: var(--texto-2); }
+.ms-status.ok { background: var(--menta-veu); color: var(--menta); }
+.ms-status.ruim { background: var(--latao-veu); color: var(--rosa); }
+.ms-status.espera { background: var(--azul-veu, #eef4ff); color: var(--azul, #2f6fed); }
+.ms-corpo { margin: 0 0 0.6rem; padding: 0.7rem 0.8rem; border-radius: 12px; background: #efeae2; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; font-size: 0.85rem; }
+.ms-recebida { display: grid; gap: 0.15rem; padding: 0.6rem 0; }
+.ms-texto { font-size: 0.9rem; overflow-wrap: anywhere; }

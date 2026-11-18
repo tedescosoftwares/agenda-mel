@@ -139,7 +139,7 @@ export default function Configurar({ para = 'admin' }) {
     await recarregarPerfil?.()
     setSalvando(false)
     // 3.95: no fim da configuração, a pergunta "quer atender pelo WhatsApp também?" (a tela da assistente)
-    navigate(para === 'admin' ? '/admin/assistente?inicio=1' : '/pro/assistente?inicio=1', { replace: true })
+    navigate(para === 'admin' ? '/admin/whatsapp?inicio=1' : '/pro/assistente?inicio=1', { replace: true })
   }
   const onEstado = useCallback((e) => setEstado((atual) => ({ ...atual, aoContinuar: null, aviso: false, acaoRodape: null, motivo: null, ...e })), [])
   const Shell = para === 'admin' ? AdminShell : ProShell

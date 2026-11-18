@@ -61,7 +61,8 @@ function Bolhas({ mensagens, nome, digitando }) {
   )
 }
 
-export default function AdminAssistente({ para = 'admin' }) {
+// embutido (3.96): dentro da área WhatsApp do salão (aba Assistente), sem casca nem título; os atalhos trocam de aba
+export default function AdminAssistente({ para = 'admin', embutido = false, onAbrirPedidos, onAbrirMensagens }) {
   const { salao, negocio, profile } = useAuth()
   const { confirmar } = useDialogo()
   const navigate = useNavigate()
@@ -224,7 +225,10 @@ export default function AdminAssistente({ para = 'admin' }) {
   }
 
   // a profissional da equipe não tem negócio próprio: a assistente é do salão (a dona configura)
-  if (!salaoId) return <Shell><p className="muted">{para === 'pro' ? 'A assistente do WhatsApp é configurada por quem administra o salão.' : 'Carregando…'}</p></Shell>
+  if (!salaoId) {
+    const aviso = <p className="muted">{para === 'pro' ? 'A assistente do WhatsApp é configurada por quem administra o salão.' : 'Carregando…'}</p>
+    return embutido ? aviso : <Shell>{aviso}</Shell>
+  }
 
   const voltar = para === 'admin' ? '/admin' : '/pro/agenda'
   const horario = dados?.horario
@@ -291,15 +295,8 @@ export default function AdminAssistente({ para = 'admin' }) {
     </section>
   )
 
-  return (
-    <Shell amplo>
-      <div className="page-head">
-        <div>
-          <h2>Assistente do WhatsApp</h2>
-          <p className="muted">Ela responde as suas clientes no WhatsApp com os dados da sua agenda: serviços, preços e horários livres. Marca, remarca e cancela quando você deixar.</p>
-        </div>
-      </div>
-
+  const corpo = (
+    <>
       {inicio && dados && !ativa && (
         <section className="card as-boas-vindas">
           <span className="as-boas-icone"><PartyPopper size={22} /></span>
@@ -393,7 +390,20 @@ export default function AdminAssistente({ para = 'admin' }) {
             <section className="card as-secao">
               <h3><CalendarClock size={18} /> O que ela pode fazer sozinha</h3>
               <Chave ligado={cfg.pode_marcar} onMudar={(v) => mudar('pode_marcar', v)} rotulo="Marcar horário" texto="Sempre repete o resumo e espera o sim da cliente." />
-              {cfg.pode_marcar && para === 'admin' && dados.aceite?.modo && (
+              {cfg.pode_marcar && para === 'admin' && dados.aceite?.modo && onAbrirPedidos && (
+                <p className="as-nota as-aceite">
+                  <Info size={15} />
+                  <span>
+                    {dados.aceite.modo === 'automatico'
+                      ? 'O horário que ela marca entra confirmado na hora, e ela diz isso à cliente.'
+                      : dados.aceite.modo === 'casa'
+                        ? `O horário que ela marca vira um pedido: a casa confirma em até ${dados.aceite.minutos < 60 ? `${dados.aceite.minutos} min` : `${dados.aceite.minutos / 60} h`}. Ela diz à cliente que o pedido foi anotado.`
+                        : 'Vale o que cada profissional configurou. Quando falta confirmar, ela diz à cliente que o pedido foi anotado.'}
+                    {' '}<button type="button" className="as-link-botao" onClick={onAbrirPedidos}>Mudar em Pedidos de horário</button>
+                  </span>
+                </p>
+              )}
+              {cfg.pode_marcar && para === 'admin' && dados.aceite?.modo && !onAbrirPedidos && (
                 <div className="as-aceite-bloco">
                   <div className="as-rotulo">Quem confirma o horário que ela marca</div>
                   <RegraDeAceite salaoId={salaoId} inicial={dados.aceite} pergunta={null} onMudou={(a) => setDados((d) => ({ ...d, aceite: a }))} />
@@ -493,7 +503,7 @@ export default function AdminAssistente({ para = 'admin' }) {
                   <div><HandHelping size={16} /><strong>{numeros.chamou ?? 0}</strong><small>chamou a equipe</small></div>
                   <div><ShieldCheck size={16} /><strong>{numeros.encerrou ?? 0}</strong><small>conversas encerradas</small></div>
                 </div>
-                {para === 'admin' && <Link to="/admin/whatsapp" className="as-link">Ver as mensagens e o diagnóstico do WhatsApp</Link>}
+                {para === 'admin' && onAbrirMensagens && <button type="button" className="as-link-botao" onClick={onAbrirMensagens}>Ver o que saiu e o que chegou</button>}
               </section>
             )}
           </aside>
@@ -509,6 +519,18 @@ export default function AdminAssistente({ para = 'admin' }) {
           </div>
         </div>
       )}
+    </>
+  )
+  if (embutido) return corpo
+  return (
+    <Shell amplo>
+      <div className="page-head">
+        <div>
+          <h2>Assistente do WhatsApp</h2>
+          <p className="muted">Ela responde as suas clientes no WhatsApp com os dados da sua agenda: serviços, preços e horários livres. Marca, remarca e cancela quando você deixar.</p>
+        </div>
+      </div>
+      {corpo}
     </Shell>
   )
 }

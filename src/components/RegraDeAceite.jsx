@@ -6,7 +6,7 @@ import { supabase } from '../lib/supabase'
 // um lugar muda no outro. Sem `inicial`, lê do banco.
 const MODOS_DE_ACEITE = [
   { id: 'automatico', titulo: 'Entra confirmado na hora', texto: 'A vaga estava livre, ela pegou. Ninguém precisa responder.' },
-  { id: 'casa', titulo: 'A casa confirma', texto: 'Vira um pedido; você confirma pelo quadro ou pelo alerta, dentro do prazo.' },
+  { id: 'casa', titulo: 'A casa confirma', texto: 'Vira um pedido só para a casa; você confirma pelo quadro ou pelo alerta, dentro do prazo.' },
   { id: 'profissional', titulo: 'Cada profissional decide', texto: 'Vale o que cada uma configurou na própria agenda.' },
 ]
 
@@ -17,6 +17,27 @@ function textoDoPrazo(m) {
 export default function RegraDeAceite({ salaoId, inicial = null, onMudou, pergunta = 'Quando uma cliente marca pelo app ou pelo WhatsApp, quem confirma?' }) {
   const [aceite, setAceite] = useState(inicial)
   const [msg, setMsg] = useState('')
+  // 3.98.3 (migração 245): no "a casa confirma", a profissional só fica sabendo depois de confirmado, se o salão quiser.
+  // null = ainda lendo, ou o banco sem a 245 (aí o seletor nem aparece)
+  const [avisa, setAvisa] = useState(null)
+
+  useEffect(() => {
+    if (!salaoId) return
+    let vivo = true
+    supabase.rpc('salao_avisa_profissional', { salao: salaoId, avisa: null }).then(({ data, error }) => {
+      if (vivo && !error && typeof data === 'boolean') setAvisa(data)
+    })
+    return () => { vivo = false }
+  }, [salaoId])
+
+  async function mudarAviso(valor) {
+    const antes = avisa
+    setAvisa(valor); setMsg('')
+    const { data, error } = await supabase.rpc('salao_avisa_profissional', { salao: salaoId, avisa: valor })
+    if (error) { setAvisa(antes); setMsg(error.message); return }
+    setAvisa(Boolean(data))
+    setMsg(data ? 'Pronto: depois que a casa confirmar, a profissional fica sabendo.' : 'Pronto: a profissional não recebe aviso; o horário aparece na agenda dela.')
+  }
 
   useEffect(() => {
     if (inicial || !salaoId) return
@@ -60,7 +81,15 @@ export default function RegraDeAceite({ salaoId, inicial = null, onMudou, pergun
               <option value="cancela">cancela e avisa a cliente</option>
             </select>
           </label>
-          <p className="muted">O pedido chega no celular de quem manda no salão e no alerta do PDV, com "Confirmar" e "Recusar". No quadro, o cartão fica marcado "a confirmar" até alguém decidir.</p>
+          {avisa !== null && (
+            <label>Depois que a casa confirmar
+              <select value={avisa ? 'sim' : 'nao'} onChange={(e) => mudarAviso(e.target.value === 'sim')}>
+                <option value="sim">avisar a profissional</option>
+                <option value="nao">não avisar (ela vê na agenda)</option>
+              </select>
+            </label>
+          )}
+          <p className="muted">O pedido chega só para quem manda no salão (no celular e no alerta do PDV), com "Confirmar" e "Recusar". A profissional não recebe o pedido{avisa === false ? '; o horário aparece na agenda dela.' : ': fica sabendo depois de confirmado.'} No quadro, o cartão fica marcado "a confirmar" até alguém decidir.</p>
         </div>
       )}
       {msg && <p className="muted aj-aceite-msg">{msg}</p>}

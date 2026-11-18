@@ -251,6 +251,7 @@ const TABELAS = {
 }
 
 const HORAS = [0, 1, 2, 3, 4, 5, 6].map((weekday) => ({ weekday, open: weekday > 0, start_time: '09:00:00', end_time: weekday === 6 ? '14:00:00' : '18:00:00' }))
+let demoAvisaProfissional = true   // 3.98.3: "depois que a casa confirmar" (só enquanto a página vive)
 const RPC = {
   // o guia de salões: guia_pagina, guia_cidade, guia_cidades, guia_publicadas, guia_registrar_interesse,
   // guia_importar, guia_aprovar e guia_aprovar_pagina (em src/lib/demoGuia.js)
@@ -462,6 +463,7 @@ const RPC = {
       semana_passada: { realizado_cents: 268500, horarios: 36 } }
   },
   casa_decide: ({ aceitou }) => ({ ok: true, status: aceitou ? 'confirmado' : 'cancelado' }),
+  salao_avisa_profissional: ({ avisa }) => { if (typeof avisa === 'boolean') demoAvisaProfissional = avisa; return demoAvisaProfissional },
   salao_aceite: ({ modo, minutos, no_silencio }) => ({ modo, minutos: minutos ?? 60, no_silencio: no_silencio ?? 'confirma', profissionais_ajustadas: modo === 'profissional' ? 0 : 4 }),
   pdv_repasse: ({ de, ate }) => {
     const ps = profissionais.filter((p) => p.active).slice(0, 3)

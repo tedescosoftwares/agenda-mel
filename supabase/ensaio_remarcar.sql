@@ -19,6 +19,7 @@ begin
    join public.professional_hours h on h.professional_id = prof and h.weekday = extract(dow from d) and h.open
    order by d limit 1;
   raise notice 'dias: % e %', dia, dia2;
+  update public.salons set aceite_modo = 'profissional' where id = salao;  -- 245: aqui quem decide é a profissional
 
   update public.professionals set confirmar_historico_ruim = false where id = prof;  -- o ensaio cancela e remarca: não é histórico ruim
   perform set_config('request.jwt.claim.sub', cli::text, false);

@@ -222,6 +222,9 @@
   .wa-pedidos .aj-aceite-prazo p { grid-column: 1 / -1; }
 }
 .wa-pedidos { max-width: 980px; }
+/* 3.98.3: no celular o bloco passava da tela (a coluna do grid crescia com o seletor de texto comprido) */
+.asx-secao > * { min-width: 0; }
+.wa-pedidos .aj-aceite-prazo select, .as-aceite-bloco .aj-aceite-prazo select { width: 100%; max-width: 100%; min-width: 0; text-overflow: ellipsis; }
 
 /* ---------- a área: cabeçalho e abas ---------- */
 .wa-cabeca { margin-bottom: 4px; }

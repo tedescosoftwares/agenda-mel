@@ -8,6 +8,7 @@ begin
   select p.id into cli from public.profiles p where p.role = 'cliente' and p.id <> prof.user_id and not public.historico_ruim_comigo(p.id, prof.id) order by p.created_at limit 1;
   update public.profiles set phone = '(13) 99999-0003' where id = prof.user_id;
   update public.professionals set aceite_manual = true, minutos_para_aceitar = 120 where id = prof.id;
+  update public.salons set aceite_modo = 'profissional' where id = prof.salon_id;  -- 245: aqui quem decide é a profissional
   delete from public.notifications where user_id = prof.user_id;
 
   -- 1. pedido comum com aceite manual: UM aviso para a profissional

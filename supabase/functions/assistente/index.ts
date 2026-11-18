@@ -3,6 +3,7 @@
 //   estado       o número do salão está conectado? Se a Evolution diz que sim e o banco ainda não sabia, anota (o canal
 //                do salão passa a ser a instância dele).
 //   conectar     cria a instância do salão (se não existe), aponta o webhook e devolve o código de pareamento e o QR
+//                (novo: true recomeça do zero, para o "Gerar outro código")
 //   desconectar  desliga o número do salão (logout e apaga a instância); o salão volta para o número da casa
 //   testar       conversa com a assistente como se fosse uma cliente, com a personalidade da tela (mesmo a não salva).
 //                Lê serviços, equipe e horários de verdade; não marca nada nem chama ninguém. Tem teto: 40 por hora.
@@ -51,6 +52,17 @@ async function evolution(caminho: string, metodo = 'GET', corpo?: unknown): Prom
 }
 const estadoDa = (j: unknown) => String(((j as Record<string, unknown> | null)?.instance as Record<string, unknown> | undefined)?.state ?? '')
 export const instanciaDo = (salao: string) => `salao-${salao.replace(/-/g, '').toLowerCase()}`
+
+// 3.96.2: o código de pareamento e o QR de uma resposta da Evolution: o /instance/connect devolve solto
+// ({ pairingCode, base64 }); o /instance/create devolve dentro de qrcode
+export function codigoDa(j: unknown): { pairingCode: string | null; qr: string | null } {
+  const o = (j && typeof j === 'object' ? j : {}) as Record<string, unknown>
+  const q = (o.qrcode && typeof o.qrcode === 'object' ? o.qrcode : o) as Record<string, unknown>
+  const pairingCode = typeof q.pairingCode === 'string' && q.pairingCode ? q.pairingCode : null
+  const b = typeof q.base64 === 'string' && q.base64 ? q.base64 : null
+  return { pairingCode, qr: b ? (b.startsWith('data:') ? b : `data:image/png;base64,${b}`) : null }
+}
+const espera = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 // só dígitos, com o 55 na frente quando vier com DDD e sem país
 export function numeroLimpo(n: unknown): string | null {
@@ -109,11 +121,23 @@ Deno.serve(async (req) => {
     if (acao === 'conectar') {
       const numero = numeroLimpo(corpo.numero)
       if (!numero) return json({ erro: 'confira o número: DDD e celular, só números (ex.: 13 99999-9999)' }, 400)
-      const atual = await evolution(`/instance/connectionState/${encodeURIComponent(inst)}`)
+      let atual = await evolution(`/instance/connectionState/${encodeURIComponent(inst)}`)
       if (!atual.ok && atual.status !== 404) return json({ erro: atual.erro }, 502)
-      if (atual.status === 404) {
+      // 3.96.2: "Gerar outro código" (novo: true) recomeça do zero: apaga a conexão que não chegou a abrir e cria outra
+      if (corpo.novo === true && atual.status !== 404 && estadoDa(atual.json) !== 'open') {
+        await evolution(`/instance/logout/${encodeURIComponent(inst)}`, 'DELETE')
+        await evolution(`/instance/delete/${encodeURIComponent(inst)}`, 'DELETE')
+        await espera(1500)
+        atual = { ok: false, status: 404, json: null }
+      }
+      // 3.96.2: na primeira vez, a criação já devolve o código. Pedir outro logo em seguida (o connect) às vezes
+      // invalidava o primeiro ou chegava antes de a conexão subir: o código da tela não funcionava no celular
+      let codigo: { pairingCode: string | null; qr: string | null } = { pairingCode: null, qr: null }
+      const criou = atual.status === 404
+      if (criou) {
         const c = await evolution('/instance/create', 'POST', { instanceName: inst, integration: 'WHATSAPP-BAILEYS', qrcode: true, number: numero })
         if (!c.ok && !/already|exists|já existe/i.test(c.erro ?? '')) return json({ erro: `não deu para preparar o número: ${c.erro}` }, 502)
+        if (c.ok) codigo = codigoDa(c.json)
       }
       const token = v('EVOLUTION_WEBHOOK_TOKEN')
       if (!token || !URL_SUPABASE) return json({ erro: 'falta o EVOLUTION_WEBHOOK_TOKEN nos segredos da MIMO: avise o suporte' }, 500)
@@ -124,15 +148,13 @@ Deno.serve(async (req) => {
         await servico.rpc('assistente_numero_conectado', { salao, instancia_: inst, numero_: n ?? numeroBonito(numero) })
         return json({ estado: 'open', numero: n ?? numeroBonito(numero) })
       }
-      const c = await evolution(`/instance/connect/${encodeURIComponent(inst)}?number=${encodeURIComponent(numero)}`)
-      const j = (c.json ?? {}) as Record<string, unknown>
-      const base64 = typeof j.base64 === 'string' ? j.base64 : null
-      if (!c.ok) return json({ erro: `não deu para gerar o código: ${c.erro}` }, 502)
-      return json({
-        estado: 'connecting', numero: numeroBonito(numero),
-        pairingCode: typeof j.pairingCode === 'string' ? j.pairingCode : null,
-        qr: base64 ? (base64.startsWith('data:') ? base64 : `data:image/png;base64,${base64}`) : null,
-      })
+      if (!codigo.pairingCode) {
+        if (criou) await espera(1500)   // a conexão recém-criada ainda está subindo
+        const c = await evolution(`/instance/connect/${encodeURIComponent(inst)}?number=${encodeURIComponent(numero)}`)
+        if (!c.ok) return json({ erro: `não deu para gerar o código: ${c.erro}` }, 502)
+        codigo = codigoDa(c.json)
+      }
+      return json({ estado: 'connecting', numero: numeroBonito(numero), pairingCode: codigo.pairingCode, qr: codigo.qr })
     }
 
     if (acao === 'desconectar') {

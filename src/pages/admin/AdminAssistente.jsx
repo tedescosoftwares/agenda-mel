@@ -18,13 +18,34 @@ import '../../assistente.css'
 // fazer sozinha, como fala de preço e quando responde. A prévia muda na hora; o "Testar de verdade" chama a
 // assistente com a agenda real, sem marcar nada (funciona antes de conectar). ?inicio=1: veio do fim da configuração.
 
-function Opcoes({ lista, valor, onEscolher, rotulo }) {
+// 3.96.1: as peças de layout da tela (um padrão só): o bloco com cabeçalho, o campo (rótulo à esquerda e controle à
+// direita no computador, empilhados no celular) e o seletor de largura fixa (não quebra a linha como os botões soltos)
+function Secao({ Icone, titulo, sub, children, className = '', ordem, secaoRef }) {
   return (
-    <div className="as-opcoes" role="radiogroup" aria-label={rotulo}>
+    <section ref={secaoRef} className={'card asx-secao ' + className} style={ordem != null ? { order: ordem } : undefined}>
+      <header className="asx-cab">
+        {Icone && <span className="asx-ico"><Icone size={18} /></span>}
+        <div className="asx-cab-txt"><h3>{titulo}</h3>{sub && <p>{sub}</p>}</div>
+      </header>
+      {children}
+    </section>
+  )
+}
+
+function Campo({ rotulo, dica, children }) {
+  return (
+    <div className="asx-campo">
+      <div className="asx-campo-rot"><strong>{rotulo}</strong>{dica && <small>{dica}</small>}</div>
+      <div className="asx-campo-ctl">{children}</div>
+    </div>
+  )
+}
+
+function Segmentos({ lista, valor, onEscolher, rotulo }) {
+  return (
+    <div className="asx-seg" role="radiogroup" aria-label={rotulo} style={{ '--n': lista.length }}>
       {lista.map((o) => (
-        <button key={o.id} type="button" role="radio" aria-checked={valor === o.id} className={'as-opcao' + (valor === o.id ? ' ativa' : '')} onClick={() => onEscolher(o.id)}>
-          {o.rotulo}
-        </button>
+        <button key={o.id} type="button" role="radio" aria-checked={valor === o.id} className={valor === o.id ? 'ativa' : ''} onClick={() => onEscolher(o.id)}>{o.rotulo}</button>
       ))}
     </div>
   )
@@ -130,7 +151,7 @@ export default function AdminAssistente({ para = 'admin', embutido = false, onAb
     let vivo = true
     const desde = Date.now()
     const t = setInterval(async () => {
-      if (Date.now() - desde > 180_000) { clearInterval(t); if (vivo) setCon({ fase: 'erro', erro: 'O código expirou. Gere outro e digite no celular em até 2 minutos.' }); return }
+      if (Date.now() - desde > 180_000) { clearInterval(t); if (vivo) setCon({ fase: 'erro', erro: 'O código expirou. Gere outro e digite no celular em até 2 minutos.', jaGerou: true }); return }
       try {
         const e = await chamar('assistente', { acao: 'estado', salao: salaoId })
         if (vivo && e?.estado === 'open') {
@@ -182,10 +203,11 @@ export default function AdminAssistente({ para = 'admin', embutido = false, onAb
     setOk(v ? 'Assistente ligada. Ela já responde as mensagens que chegarem.' : 'Assistente desligada: nenhuma resposta automática. As mensagens ficam para a equipe.')
   }
 
-  async function gerarCodigo() {
+  // novo (3.96.2): "Gerar outro código" recomeça a conexão do zero (o código anterior deixa de valer)
+  async function gerarCodigo(novo = false) {
     setErro(''); setOk(''); setCon({ fase: 'gerando' }); setVerQr(false)
     try {
-      const r = await chamar('assistente', { acao: 'conectar', salao: salaoId, numero })
+      const r = await chamar('assistente', { acao: 'conectar', salao: salaoId, numero, novo })
       if (r?.estado === 'open') {
         const { data } = await supabase.rpc('assistente_do_salao', { salao: salaoId })
         setDados(data); setConferido('open'); setCon({ fase: 'livre' })
@@ -194,7 +216,7 @@ export default function AdminAssistente({ para = 'admin', embutido = false, onAb
       }
       setCon({ fase: 'codigo', codigo: r?.pairingCode ?? null, qr: r?.qr ?? null, numero: r?.numero ?? numero })
     } catch (e) {
-      setCon({ fase: 'erro', erro: e.message || 'Não deu para gerar o código agora.' })
+      setCon({ fase: 'erro', erro: e.message || 'Não deu para gerar o código agora.', jaGerou: novo })
     }
   }
   async function desconectar() {
@@ -233,67 +255,61 @@ export default function AdminAssistente({ para = 'admin', embutido = false, onAb
   const voltar = para === 'admin' ? '/admin' : '/pro/agenda'
   const horario = dados?.horario
 
-  const secaoNumero = dados && (
-    <section ref={refNumero} className={'card as-secao as-whats' + (!proprio || desconectou ? ' destaque' : '')}>
-      <h3><Smartphone size={18} /> {proprio ? 'WhatsApp do salão' : 'Primeiro passo: conecte o WhatsApp do salão'}</h3>
-      {!proprio && (
-        <p className="as-texto">A assistente atende no WhatsApp do <b>seu</b> salão, com o nome e o jeito que você escolher. Você continua vendo e respondendo tudo pelo celular; quando você responde, ela fica quieta com aquela cliente por 2 horas.</p>
-      )}
+  const precisaConectar = !proprio || desconectou
+  const desde = dados?.canal?.conectado_em ? new Date(dados.canal.conectado_em).toLocaleDateString('pt-BR') : null
 
-      {proprio && (
-        <div className={'as-conectado' + (desconectou ? ' ruim' : '')}>
-          <span className={'as-ponto' + (desconectou ? ' ruim' : '')} />
-          <div>
-            <strong>{dados.canal?.numero ?? 'WhatsApp do salão'} {desconectou ? 'desconectado' : 'conectado'}</strong>
-            <small className="muted">
-              {desconectou
-                ? 'O celular desconectou. Gere um código novo abaixo para conectar de novo.'
-                : dados.canal?.conectado_em ? `Desde ${new Date(dados.canal.conectado_em).toLocaleDateString('pt-BR')}. Mantenha o celular com internet.` : 'Mantenha o celular com internet.'}
-            </small>
+  // o WhatsApp do salão a conectar (sem ele, ela não liga) ou a reconectar (o celular desconectou)
+  const secaoNumero = dados && precisaConectar && (
+    <Secao ordem={1} secaoRef={refNumero} className="asx-destaque" Icone={Smartphone}
+      titulo={desconectou ? 'Reconecte o WhatsApp do salão' : 'Primeiro passo: conecte o WhatsApp do salão'}
+      sub={desconectou ? `${dados.canal?.numero ?? 'O número'} desconectou. Gere um código novo e digite no celular.` : 'A assistente atende no WhatsApp do seu salão. Você continua vendo e respondendo tudo pelo celular.'}>
+      {con.fase !== 'codigo' ? (
+        <div className="asx-conectar">
+          <label className="asx-rot-campo">
+            <span>WhatsApp do salão, com DDD</span>
+            <input className="asx-input" inputMode="tel" autoComplete="tel" placeholder="(13) 99999-9999" value={numero} onChange={(e) => setNumero(e.target.value)} />
+          </label>
+          <button type="button" className="btn btn-primary asx-btn" disabled={con.fase === 'gerando' || numero.replace(/\D/g, '').length < 10} onClick={() => gerarCodigo(Boolean(con.jaGerou))}>
+            {con.fase === 'gerando' ? <><Loader2 size={16} className="as-gira" /> Gerando…</> : con.jaGerou ? <><RotateCcw size={16} /> Gerar outro código</> : 'Gerar código'}
+          </button>
+          {con.fase === 'erro' && <p className="as-erro-linha">{con.erro}</p>}
+          <small className="asx-dica">Use o número que as clientes já conhecem (de preferência WhatsApp Business). Enquanto não conectar, nenhuma mensagem sai pelo WhatsApp: os avisos continuam no app.</small>
+        </div>
+      ) : (
+        <div className="as-codigo">
+          <p className="as-codigo-tit">No celular do salão ({con.numero}), abra o WhatsApp e digite:</p>
+          {con.codigo ? <div className="as-codigo-num" aria-label="código de pareamento">{codigoBonito(con.codigo)}</div> : <p className="muted">O código não veio. Use o QR code abaixo.</p>}
+          <ol className="as-passos">
+            <li>WhatsApp › <b>⋮</b> (ou <b>Configurações</b>) › <b>Aparelhos conectados</b></li>
+            <li>Toque em <b>Conectar um aparelho</b></li>
+            <li>Escolha <b>Conectar com número de telefone</b> e digite o código</li>
+          </ol>
+          <p className="as-esperando"><Loader2 size={16} className="as-gira" /> Esperando o celular conectar…</p>
+          <p className="asx-nao-chegou">O código não funcionou ou o celular pediu outro? Gere um novo: o anterior deixa de valer.</p>
+          <div className="asx-botoes">
+            <button type="button" className="btn btn-ghost" onClick={() => gerarCodigo(true)}><RotateCcw size={16} /> Gerar outro código</button>
+            {con.qr && <button type="button" className="btn btn-ghost" onClick={() => setVerQr((v) => !v)}><QrCode size={16} /> {verQr ? 'Esconder o QR code' : 'Ler um QR code'}</button>}
+            <button type="button" className="btn btn-ghost" onClick={() => setCon({ fase: 'livre' })}>Cancelar</button>
           </div>
-          <button type="button" className="btn btn-ghost as-desconectar" onClick={desconectar}><Unplug size={16} /> Desconectar</button>
+          {con.qr && verQr && <img className="as-qr" src={con.qr} alt="QR code para conectar o WhatsApp" />}
         </div>
       )}
-
-      {(!proprio || desconectou) && (
-        <div className="as-conectar">
-          {con.fase !== 'codigo' ? (
-            <>
-              <label className="as-campo">
-                <span>WhatsApp do salão (com DDD)</span>
-                <input inputMode="tel" autoComplete="tel" placeholder="(13) 99999-9999" value={numero} onChange={(e) => setNumero(e.target.value)} />
-              </label>
-              <button type="button" className="btn btn-primary" disabled={con.fase === 'gerando' || numero.replace(/\D/g, '').length < 10} onClick={gerarCodigo}>
-                {con.fase === 'gerando' ? <><Loader2 size={16} className="as-gira" /> Gerando…</> : 'Gerar código para conectar'}
-              </button>
-              {con.fase === 'erro' && <p className="as-erro-linha">{con.erro}</p>}
-              <small className="muted as-dica">Use o número que as clientes já conhecem (de preferência WhatsApp Business). O WhatsApp continua funcionando no celular como sempre.</small>
-            </>
-          ) : (
-            <div className="as-codigo">
-              <p className="as-codigo-tit">No celular do salão ({con.numero}), abra o WhatsApp e digite este código:</p>
-              {con.codigo ? <div className="as-codigo-num" aria-label="código de pareamento">{codigoBonito(con.codigo)}</div> : <p className="muted">O código não veio. Use o QR code abaixo.</p>}
-              <ol className="as-passos">
-                <li>WhatsApp › <b>⋮</b> (ou <b>Configurações</b>) › <b>Aparelhos conectados</b></li>
-                <li>Toque em <b>Conectar um aparelho</b></li>
-                <li>Escolha <b>Conectar com número de telefone</b> e digite o código</li>
-              </ol>
-              <p className="as-esperando"><Loader2 size={16} className="as-gira" /> Esperando o celular conectar…</p>
-              {con.qr && (
-                <>
-                  <button type="button" className="btn btn-ghost" onClick={() => setVerQr((v) => !v)}><QrCode size={16} /> {verQr ? 'Esconder o QR code' : 'Prefere ler um QR code?'}</button>
-                  {verQr && <img className="as-qr" src={con.qr} alt="QR code para conectar o WhatsApp" />}
-                </>
-              )}
-              <button type="button" className="btn btn-ghost" onClick={() => setCon({ fase: 'livre' })}>Cancelar</button>
-            </div>
-          )}
-        </div>
-      )}
-
-      {!proprio && <p className="as-nota"><Info size={15} /> Enquanto o WhatsApp do salão não estiver conectado, nenhuma mensagem sai pelo WhatsApp: os avisos continuam no app.</p>}
-    </section>
+    </Secao>
   )
+
+  const kpis = numeros && [
+    ['conversas', MessageCircle, numeros.conversas],
+    ['marcados', CalendarCheck, numeros.marcou],
+    ['remarcados', CalendarClock, numeros.remarcou],
+    ['cancelados', CalendarX, numeros.cancelou],
+    ['chamou a equipe', HandHelping, numeros.chamou],
+    ['encerradas', ShieldCheck, numeros.encerrou],
+  ]
+  const textoAceite = dados?.aceite?.modo === 'automatico'
+    ? 'O horário que ela marca entra confirmado na hora, e ela diz isso à cliente.'
+    : dados?.aceite?.modo === 'casa'
+      ? `O horário que ela marca vira um pedido: a casa confirma em até ${dados.aceite.minutos < 60 ? `${dados.aceite.minutos} min` : `${dados.aceite.minutos / 60} h`}. Ela diz à cliente que o pedido foi anotado.`
+      : 'Vale o que cada profissional configurou. Quando falta confirmar, ela diz à cliente que o pedido foi anotado.'
 
   const corpo = (
     <>
@@ -317,7 +333,7 @@ export default function AdminAssistente({ para = 'admin', embutido = false, onAb
               }}><Check size={16} /> {proprio ? 'Sim, quero ligar' : 'Sim, conectar o WhatsApp'}</button>
               <button type="button" className="btn btn-ghost" onClick={() => navigate(voltar)}>Agora não</button>
             </div>
-            <small className="muted">Dá para mudar tudo depois em Ajustes › Assistente do WhatsApp.</small>
+            <small className="muted">Dá para mudar tudo depois, aqui no WhatsApp.</small>
           </div>
         </section>
       )}
@@ -328,118 +344,109 @@ export default function AdminAssistente({ para = 'admin', embutido = false, onAb
       {!dados ? (!erro && <p className="muted">Carregando…</p>) : (
         <div className="as-grade">
           <div className="as-principal">
-            {/* o WhatsApp do salão vem primeiro: sem ele, ela não liga */}
-            {!proprio && secaoNumero}
+            {secaoNumero}
 
-            {/* ligada / desligada */}
-            <section className={'card as-status' + (ativa ? ' ligada' : '')}>
-              <span className="as-status-icone"><Bot size={22} /></span>
-              <div className="as-status-texto">
-                <strong>{ativa ? `${nomeEscolhido} está atendendo` : 'Assistente desligada'}</strong>
-                <span className="muted">
-                  {!proprio
-                    ? 'Conecte o WhatsApp do salão para ligar a assistente.'
-                    : ativa
-                      ? `Ela responde as clientes sozinha, no WhatsApp do salão${dados.canal?.numero ? ` (${dados.canal.numero})` : ''}.`
-                      : 'Nada é respondido sozinho: as mensagens ficam para a equipe responder pelo celular. Só continuam valendo o 1 ou 2 da resposta ao lembrete e o SAIR.'}
-                </span>
-                {ativa && dados.agente_global === false && <span className="as-aviso"><Info size={14} /> As respostas automáticas estão pausadas pela MIMO neste momento.</span>}
-              </div>
-              <label className={'switch as-status-chave' + (!proprio ? ' trancada' : '')}>
-                <input type="checkbox" aria-label="Ligar a assistente" checked={ativa} disabled={salvando || !proprio} onChange={(e) => ligarDesligar(e.target.checked)} />
-                <span />
-              </label>
-            </section>
-
-            {proprio && secaoNumero}
-
-            {/* o jeito dela */}
-            <section className="card as-secao">
-              <h3><Sparkles size={18} /> O jeito dela</h3>
-              <label className="as-campo">
-                <span>Nome da assistente</span>
-                <input maxLength={30} placeholder="Mel" value={cfg.nome} onChange={(e) => mudar('nome', e.target.value)} />
-              </label>
-              <div className="as-sugestoes">
-                {SUGESTOES_DE_NOME.map((n) => <button key={n} type="button" className={'as-opcao' + ((cfg.nome?.trim() || 'Mel') === n ? ' ativa' : '')} onClick={() => mudar('nome', n)}>{n}</button>)}
-              </div>
-              <small className="muted">Não precisa trocar: se deixar em branco, ela é a Mel.</small>
-
-              <div className="as-rotulo">Tom</div>
-              <div className="as-tons" role="radiogroup" aria-label="Tom">
-                {TONS.map((t) => (
-                  <button key={t.id} type="button" role="radio" aria-checked={cfg.tom === t.id} className={'as-tom' + (cfg.tom === t.id ? ' ativa' : '')} onClick={() => mudar('tom', t.id)}>
-                    <strong>{t.rotulo}</strong><small>{t.texto}</small>
-                  </button>
-                ))}
-              </div>
-
-              <div className="as-linha2">
-                <div><div className="as-rotulo">Emojis</div><Opcoes rotulo="Emojis" lista={EMOJIS} valor={cfg.emojis} onEscolher={(v) => mudar('emojis', v)} /></div>
-                <div><div className="as-rotulo">Como chama a cliente</div><Opcoes rotulo="Como chama a cliente" lista={TRATAMENTOS} valor={cfg.tratamento} onEscolher={(v) => mudar('tratamento', v)} /></div>
-                <div><div className="as-rotulo">Respostas</div><Opcoes rotulo="Tamanho das respostas" lista={TAMANHOS} valor={cfg.tamanho} onEscolher={(v) => mudar('tamanho', v)} /></div>
-              </div>
-
-              <label className="as-campo">
-                <span>Saudação <em>(opcional)</em></span>
-                <input maxLength={300} placeholder={`Oi! Aqui é a ${cfg.nome?.trim() || 'Mel'}, do ${nomeSalao}. Como posso te ajudar?`} value={cfg.saudacao ?? ''} onChange={(e) => mudar('saudacao', e.target.value)} />
-              </label>
-            </section>
-
-            {/* o que ela pode fazer */}
-            <section className="card as-secao">
-              <h3><CalendarClock size={18} /> O que ela pode fazer sozinha</h3>
-              <Chave ligado={cfg.pode_marcar} onMudar={(v) => mudar('pode_marcar', v)} rotulo="Marcar horário" texto="Sempre repete o resumo e espera o sim da cliente." />
-              {cfg.pode_marcar && para === 'admin' && dados.aceite?.modo && onAbrirPedidos && (
-                <p className="as-nota as-aceite">
-                  <Info size={15} />
+            {/* ligada / desligada, e o número quando está tudo certo */}
+            <section className={'card asx-status' + (ativa ? ' ligada' : '')} style={{ order: 2 }}>
+              <div className="asx-status-linha">
+                <span className="asx-status-ico"><Bot size={22} /></span>
+                <div className="asx-status-txt">
+                  <strong>{ativa ? `${nomeEscolhido} está atendendo` : 'Assistente desligada'}</strong>
                   <span>
-                    {dados.aceite.modo === 'automatico'
-                      ? 'O horário que ela marca entra confirmado na hora, e ela diz isso à cliente.'
-                      : dados.aceite.modo === 'casa'
-                        ? `O horário que ela marca vira um pedido: a casa confirma em até ${dados.aceite.minutos < 60 ? `${dados.aceite.minutos} min` : `${dados.aceite.minutos / 60} h`}. Ela diz à cliente que o pedido foi anotado.`
-                        : 'Vale o que cada profissional configurou. Quando falta confirmar, ela diz à cliente que o pedido foi anotado.'}
-                    {' '}<button type="button" className="as-link-botao" onClick={onAbrirPedidos}>Mudar em Pedidos de horário</button>
+                    {!proprio
+                      ? 'Conecte o WhatsApp do salão para ligar.'
+                      : ativa
+                        ? 'Ela responde as clientes sozinha, com a sua agenda.'
+                        : 'Nada é respondido sozinho: as mensagens ficam para a equipe. Só valem o 1 ou 2 do lembrete e o SAIR.'}
                   </span>
-                </p>
-              )}
-              {cfg.pode_marcar && para === 'admin' && dados.aceite?.modo && !onAbrirPedidos && (
-                <div className="as-aceite-bloco">
-                  <div className="as-rotulo">Quem confirma o horário que ela marca</div>
-                  <RegraDeAceite salaoId={salaoId} inicial={dados.aceite} pergunta={null} onMudou={(a) => setDados((d) => ({ ...d, aceite: a }))} />
-                  <small className="muted as-dica">
-                    {dados.aceite.modo === 'automatico'
-                      ? 'Ela diz à cliente que o horário está confirmado.'
-                      : 'Ela diz à cliente que o pedido foi anotado e que o salão confirma em breve.'}
-                    {' '}É a mesma regra de Ajustes › Pedidos de horário: vale também para o que a cliente marca pelo app.
-                  </small>
+                  {ativa && dados.agente_global === false && <span className="as-aviso"><Info size={14} /> As respostas automáticas estão pausadas pela MIMO neste momento.</span>}
+                </div>
+                <label className={'switch as-status-chave' + (!proprio ? ' trancada' : '')}>
+                  <input type="checkbox" aria-label="Ligar a assistente" checked={ativa} disabled={salvando || !proprio} onChange={(e) => ligarDesligar(e.target.checked)} />
+                  <span />
+                </label>
+              </div>
+              {proprio && !desconectou && (
+                <div className="asx-numero-linha">
+                  <span className="as-ponto" />
+                  <span className="asx-numero-txt"><strong>{dados.canal?.numero ?? 'WhatsApp do salão'}</strong> <span>conectado{desde ? ` desde ${desde}` : ''}</span></span>
+                  <button type="button" className="as-link-botao asx-desconectar" onClick={desconectar}><Unplug size={14} /> Desconectar</button>
                 </div>
               )}
-              {cfg.pode_marcar && para !== 'admin' && (
-                <p className="as-nota as-aceite">
-                  <Info size={15} />
-                  <span>Se você pede para confirmar cada horário, ela avisa a cliente que ainda falta confirmar. <Link to="/pro/pedidos">Mudar em Pedidos</Link>.</span>
-                </p>
-              )}
-              <Chave ligado={cfg.pode_remarcar} onMudar={(v) => mudar('pode_remarcar', v)} rotulo="Remarcar" texto="Pede a troca; a profissional pode precisar aceitar." />
-              <Chave ligado={cfg.pode_cancelar} onMudar={(v) => mudar('pode_cancelar', v)} rotulo="Cancelar" texto="Só horário da própria cliente, com o sim dela." />
-              <small className="muted as-dica">O que estiver desligado, ela não faz: chama alguém da equipe.</small>
-              <p className="as-nota as-encerra">
-                <ShieldCheck size={15} />
-                <span>Ela só conversa sobre o salão. Pergunta fora do assunto, ela avisa com gentileza; se a pessoa insistir, encerra e fica 6 horas sem responder aquele número. Mensagem ofensiva, assédio ou golpe: encerra na hora e fica 24 horas em silêncio. Assim ninguém gasta a sua assistente à toa.</span>
-              </p>
-              <div className="as-rotulo">Preço</div>
-              <Opcoes rotulo="Preço" lista={PRECOS} valor={cfg.preco} onEscolher={(v) => mudar('preco', v)} />
             </section>
 
-            {/* quando ela responde */}
-            <section className="card as-secao">
-              <h3><Clock size={18} /> Quando ela responde</h3>
+            {kpis && (
+              <section className="card asx-kpis-card" style={{ order: 4 }}>
+                <div className="asx-kpis-topo">
+                  <h3>Últimos {numeros.dias ?? 30} dias</h3>
+                  {onAbrirMensagens && <button type="button" className="as-link-botao" onClick={onAbrirMensagens}>Ver mensagens</button>}
+                </div>
+                <div className="asx-kpis">
+                  {kpis.map(([rot, Icone, n]) => <div key={rot}><Icone size={15} /><strong>{n ?? 0}</strong><small>{rot}</small></div>)}
+                </div>
+              </section>
+            )}
+
+            <Secao ordem={5} Icone={Sparkles} titulo="O jeito dela" sub="Como ela se apresenta e conversa com as suas clientes.">
+              <Campo rotulo="Nome" dica="Se deixar em branco, ela é a Mel.">
+                <input className="asx-input" maxLength={30} placeholder="Mel" value={cfg.nome} onChange={(e) => mudar('nome', e.target.value)} aria-label="Nome da assistente" />
+                <div className="asx-chips">
+                  {SUGESTOES_DE_NOME.map((n) => <button key={n} type="button" className={'asx-chip' + (nomeEscolhido === n ? ' ativa' : '')} onClick={() => mudar('nome', n)}>{n}</button>)}
+                </div>
+              </Campo>
+              <Campo rotulo="Tom">
+                <div className="as-tons" role="radiogroup" aria-label="Tom">
+                  {TONS.map((t) => (
+                    <button key={t.id} type="button" role="radio" aria-checked={cfg.tom === t.id} className={'as-tom' + (cfg.tom === t.id ? ' ativa' : '')} onClick={() => mudar('tom', t.id)}>
+                      <span className="as-radio" /><span><strong>{t.rotulo}</strong><small>{t.texto}</small></span>
+                    </button>
+                  ))}
+                </div>
+              </Campo>
+              <Campo rotulo="Emojis"><Segmentos rotulo="Emojis" lista={EMOJIS} valor={cfg.emojis} onEscolher={(v) => mudar('emojis', v)} /></Campo>
+              <Campo rotulo="Como chama a cliente"><Segmentos rotulo="Como chama a cliente" lista={TRATAMENTOS} valor={cfg.tratamento} onEscolher={(v) => mudar('tratamento', v)} /></Campo>
+              <Campo rotulo="Respostas"><Segmentos rotulo="Tamanho das respostas" lista={TAMANHOS} valor={cfg.tamanho} onEscolher={(v) => mudar('tamanho', v)} /></Campo>
+              <Campo rotulo="Saudação" dica="Opcional. Ela usa na primeira mensagem.">
+                <input className="asx-input" maxLength={300} placeholder={`Oi! Aqui é a ${nomeEscolhido}, do ${nomeSalao}. Como posso te ajudar?`} value={cfg.saudacao ?? ''} onChange={(e) => mudar('saudacao', e.target.value)} aria-label="Saudação" />
+              </Campo>
+            </Secao>
+
+            <Secao ordem={7} Icone={CalendarClock} titulo="O que ela pode fazer sozinha" sub="O que estiver desligado, ela não faz: chama alguém da equipe.">
+              <div className="asx-chaves">
+                <Chave ligado={cfg.pode_marcar} onMudar={(v) => mudar('pode_marcar', v)} rotulo="Marcar horário" texto="Sempre repete o resumo e espera o sim da cliente." />
+                {cfg.pode_marcar && para === 'admin' && dados.aceite?.modo && onAbrirPedidos && (
+                  <p className="as-nota asx-nota-dentro">
+                    <Info size={15} />
+                    <span>{textoAceite} <button type="button" className="as-link-botao" onClick={onAbrirPedidos}>Mudar em Pedidos</button></span>
+                  </p>
+                )}
+                {cfg.pode_marcar && para === 'admin' && dados.aceite?.modo && !onAbrirPedidos && (
+                  <div className="as-aceite-bloco">
+                    <RegraDeAceite salaoId={salaoId} inicial={dados.aceite} pergunta={null} onMudou={(a) => setDados((d) => ({ ...d, aceite: a }))} />
+                  </div>
+                )}
+                {cfg.pode_marcar && para !== 'admin' && (
+                  <p className="as-nota asx-nota-dentro">
+                    <Info size={15} />
+                    <span>Se você pede para confirmar cada horário, ela avisa a cliente que ainda falta confirmar. <Link to="/pro/pedidos">Mudar em Pedidos</Link>.</span>
+                  </p>
+                )}
+                <Chave ligado={cfg.pode_remarcar} onMudar={(v) => mudar('pode_remarcar', v)} rotulo="Remarcar" texto="Pede a troca; a profissional pode precisar aceitar." />
+                <Chave ligado={cfg.pode_cancelar} onMudar={(v) => mudar('pode_cancelar', v)} rotulo="Cancelar" texto="Só horário da própria cliente, com o sim dela." />
+              </div>
+              <Campo rotulo="Preço" dica="Como ela fala dos valores."><Segmentos rotulo="Preço" lista={PRECOS} valor={cfg.preco} onEscolher={(v) => mudar('preco', v)} /></Campo>
+              <p className="as-nota as-encerra">
+                <ShieldCheck size={15} />
+                <span>Ela só conversa sobre o salão. Fora do assunto, avisa com gentileza; se a pessoa insistir, encerra e fica 6 horas sem responder aquele número. Ofensa, assédio ou golpe: encerra na hora e fica 24 horas em silêncio.</span>
+              </p>
+            </Secao>
+
+            <Secao ordem={8} Icone={Clock} titulo="Quando ela responde" sub={<>Horário do salão: {horario || 'ainda não definido'}. <Link to={para === 'admin' ? '/admin/horarios' : '/pro/horarios'}>Mudar</Link></>}>
               <div className="as-quando" role="radiogroup" aria-label="Quando ela responde">
                 {[
                   { id: 'sempre', t: 'Sempre, na hora', s: 'A cliente nunca fica esperando.' },
                   { id: 'fora_do_horario', t: 'Só fora do horário do salão', s: 'No horário, quem responde é a equipe.' },
-                  { id: 'sem_resposta', t: 'Se a equipe não responder', s: 'No horário do salão, espera a equipe; fora dele, responde na hora.' },
+                  { id: 'sem_resposta', t: 'Se a equipe não responder', s: 'No horário, espera a equipe; fora dele, responde na hora.' },
                 ].map((q) => (
                   <button key={q.id} type="button" role="radio" aria-checked={cfg.quando === q.id} className={'as-quando-op' + (cfg.quando === q.id ? ' ativa' : '')} onClick={() => mudar('quando', q.id)}>
                     <span className="as-radio" /><span><strong>{q.t}</strong><small>{q.s}</small></span>
@@ -447,65 +454,44 @@ export default function AdminAssistente({ para = 'admin', embutido = false, onAb
                 ))}
               </div>
               {cfg.quando === 'sem_resposta' && (
-                <div className="as-espera">
-                  <span>Esperar a equipe por</span>
-                  <div className="as-opcoes">
-                    {ESPERAS.map((m) => <button key={m} type="button" className={'as-opcao' + (cfg.espera_min === m ? ' ativa' : '')} onClick={() => mudar('espera_min', m)}>{m} min</button>)}
-                  </div>
-                </div>
+                <Campo rotulo="Esperar a equipe por">
+                  <Segmentos rotulo="Esperar a equipe por" lista={ESPERAS.map((m) => ({ id: m, rotulo: `${m} min` }))} valor={cfg.espera_min} onEscolher={(v) => mudar('espera_min', v)} />
+                </Campo>
               )}
-              <small className="muted as-dica">
-                Horário do salão: {horario || 'ainda não definido'}. <Link to={para === 'admin' ? '/admin/horarios' : '/pro/horarios'}>Mudar o horário</Link>
-              </small>
-            </section>
+            </Secao>
 
-            {/* recado */}
-            <section className="card as-secao">
-              <h3><MessagesSquare size={18} /> O que ela precisa saber da casa</h3>
-              <textarea className="as-recado" rows={5} maxLength={1200} value={recado} onChange={(e) => setRecado(e.target.value)}
+            <Secao ordem={9} Icone={MessagesSquare} titulo="O que ela precisa saber da casa" sub="Regras, pagamento, estacionamento. Ela usa isto para responder e não inventa o resto.">
+              <textarea className="as-recado" rows={4} maxLength={1200} value={recado} onChange={(e) => setRecado(e.target.value)} aria-label="O que ela precisa saber da casa"
                 placeholder="Ex.: Atraso de mais de 15 minutos perde o horário. Cancelamento com 24 h de antecedência. Temos estacionamento na rua de trás. Aceitamos Pix e cartão." />
-              <small className="muted">{recado.length}/1200 · Ela usa isto para responder; não inventa o que não está aqui nem na agenda.</small>
-            </section>
+              <small className="asx-contador">{recado.length}/1200</small>
+            </Secao>
           </div>
 
           <aside className="as-lado">
-            <section className="card as-previa">
+            <section className="card as-previa" style={{ order: 6 }}>
               <div className="as-previa-topo">
                 <span className="as-avatar">{nomeEscolhido.slice(0, 1).toUpperCase()}</span>
                 <div><strong>{nomeEscolhido}</strong><small>assistente {autonoma ? 'da' : 'do'} {nomeSalao}</small></div>
                 <em className="as-selo">prévia</em>
               </div>
               <Bolhas mensagens={conversaPrevia} nome={nomeEscolhido} />
+              <small className="asx-dica">Muda na hora, a cada escolha. Para conversar com ela de verdade, use o teste.</small>
             </section>
 
-            <section className="card as-teste">
-              <h3><Bot size={18} /> Testar de verdade</h3>
-              <p className="muted as-teste-sub">Escreva como se fosse uma cliente. Ela consulta a sua agenda de verdade, com o jeito escolhido aqui (mesmo sem salvar), mas não marca nada nem chama ninguém.</p>
-              {teste.length > 0 && <Bolhas mensagens={teste} nome={cfg.nome?.trim() || 'Mel'} digitando={testando} />}
-              {teste.length === 0 && testando && <Bolhas mensagens={[]} digitando />}
+            <section className="card as-teste" style={{ order: 10 }}>
+              <header className="asx-cab">
+                <span className="asx-ico"><Bot size={18} /></span>
+                <div className="asx-cab-txt"><h3>Testar de verdade</h3><p>Escreva como uma cliente. Ela usa a sua agenda real, mas não marca nada.</p></div>
+              </header>
+              {(teste.length > 0 || testando) && <Bolhas mensagens={teste} nome={nomeEscolhido} digitando={testando} />}
               <div ref={fimDoTeste} />
               {erroTeste && <p className="as-erro-linha">{erroTeste}</p>}
               <form className="as-teste-form" onSubmit={enviarTeste}>
                 <input value={escrito} maxLength={500} onChange={(e) => setEscrito(e.target.value)} placeholder={teste.length ? 'Responda…' : 'Oi! Tem horário amanhã?'} aria-label="Mensagem de teste" />
                 <button type="submit" className="btn btn-primary as-enviar" disabled={!escrito.trim() || testando} aria-label="Enviar"><Send size={16} /></button>
               </form>
-              {teste.length > 0 && <button type="button" className="btn btn-ghost as-recomecar" onClick={() => { setTeste([]); setErroTeste('') }}><RotateCcw size={14} /> Recomeçar</button>}
+              {teste.length > 0 && <button type="button" className="as-link-botao as-recomecar" onClick={() => { setTeste([]); setErroTeste('') }}><RotateCcw size={14} /> Recomeçar a conversa</button>}
             </section>
-
-            {numeros && (
-              <section className="card as-numeros-card">
-                <h3>Últimos {numeros.dias ?? 30} dias</h3>
-                <div className="as-kpis">
-                  <div><MessageCircle size={16} /><strong>{numeros.conversas ?? 0}</strong><small>conversas</small></div>
-                  <div><CalendarCheck size={16} /><strong>{numeros.marcou ?? 0}</strong><small>horários marcados</small></div>
-                  <div><CalendarClock size={16} /><strong>{numeros.remarcou ?? 0}</strong><small>remarcados</small></div>
-                  <div><CalendarX size={16} /><strong>{numeros.cancelou ?? 0}</strong><small>cancelados</small></div>
-                  <div><HandHelping size={16} /><strong>{numeros.chamou ?? 0}</strong><small>chamou a equipe</small></div>
-                  <div><ShieldCheck size={16} /><strong>{numeros.encerrou ?? 0}</strong><small>conversas encerradas</small></div>
-                </div>
-                {para === 'admin' && onAbrirMensagens && <button type="button" className="as-link-botao" onClick={onAbrirMensagens}>Ver o que saiu e o que chegou</button>}
-              </section>
-            )}
           </aside>
         </div>
       )}

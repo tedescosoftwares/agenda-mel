@@ -54,7 +54,7 @@ export async function demoAssistente(corpo = {}) {
     const cheio = d.length <= 11 ? '55' + d : d
     const bonito = `+55 (${cheio.slice(2, 4)}) ${cheio.slice(4, cheio.length - 4)}-${cheio.slice(-4)}`
     e.pendente = { desde: Date.now(), numero: bonito }; gravar(e)
-    return { estado: 'connecting', numero: bonito, pairingCode: 'MIMO2K95', qr: null }
+    return { estado: 'connecting', numero: bonito, pairingCode: corpo.novo ? 'NOVO7Q4X' : 'MIMO2K95', qr: null }
   }
   if (corpo.acao === 'desconectar') {
     e.numero_proprio = false; e.conectado_em = null; e.pendente = null; e.ligada = false; gravar(e)

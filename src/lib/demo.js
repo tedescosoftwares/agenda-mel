@@ -616,8 +616,24 @@ const RPC = {
   config_publica: () => ({ vapid_public: 'BDEMO', instagram: 'mimo.com.vc', app_url: 'https://mimo.com.vc', ia_agente: 'ligado', ia_modelo: 'openai/gpt-oss-120b', ia_provedor: 'claude', ia_modelo_claude: 'claude-haiku-5-5' }),
   relogio_status: () => ({ ligado: true, jobs: [{ nome: 'mimo-fila', agenda: '* * * * *', ativo: true, ultima: new Date().toISOString(), status: 'succeeded' }, { nome: 'mimo-rotinas', agenda: '*/5 * * * *', ativo: true, ultima: new Date().toISOString(), status: 'succeeded' }] }),
   diagnostico_whatsapp: () => [{ item: 'Canal', situacao: 'ok', detalhe: 'Evolution, instância 11' }, { item: 'Número', situacao: 'ok', detalhe: '+55 13 99171-9086' }, { item: 'IA', situacao: 'ok', detalhe: 'ligada · 12 chamadas hoje' }],
-  fila_do_salao: () => [],
-  leituras_recentes: () => [{ telefone: '5511987900115', texto: 'quero marcar um horário', via: 'ia', intencao_ia: 'agendar', acao: 'bot:perguntou', recebido_em: new Date().toISOString() }],
+  // a aba Mensagens da área WhatsApp (3.96.2): algumas que saíram e chegaram hoje, com as colunas de verdade
+  fila_do_salao: () => {
+    const h = (min) => new Date(Date.now() - min * 60000).toISOString()
+    return [
+      { id: 'f1', quando: h(12), para: 'Juliana Costa', telefone: '5511987900115', tipo: 'agente', status: 'lido', corpo: 'Oi, Juliana! Amanhã tenho 10h e 14h30 com a Camila para escova. Qual fica melhor?' },
+      { id: 'f2', quando: h(45), para: 'Patrícia Lima', telefone: '5511991234567', tipo: 'lembrete_agendamento', status: 'entregue', corpo: 'Oi, Patrícia! Lembrete do seu horário amanhã às 9h: Manicure com a Ana. Responda 1 para confirmar ou 2 para cancelar.' },
+      { id: 'f3', quando: h(90), para: 'Renata Alves', telefone: '5511990001122', tipo: 'agendamento_confirmado', status: 'enviado', corpo: 'Prontinho, Renata! Seu horário está confirmado: quinta às 15h, Design de sobrancelhas.' },
+      { id: 'f4', quando: h(200), para: 'sem nome', telefone: '5511977776666', tipo: 'lembrete_agendamento', status: 'falhou', corpo: 'Oi! Lembrete do seu horário amanhã às 11h.' },
+    ]
+  },
+  leituras_recentes: () => {
+    const h = (min) => new Date(Date.now() - min * 60000).toISOString()
+    return [
+      { quando: h(13), telefone: '5511987900115', texto: 'Oi! Tem horário amanhã pra escova?', entendeu: 'bot:perguntou', via: 'ia', intencao: 'agendar' },
+      { quando: h(40), telefone: '5511991234567', texto: '1', entendeu: 'confirmado', via: 'regra', intencao: null },
+      { quando: h(130), telefone: '5511955554444', texto: 'Vocês aceitam Pix?', entendeu: 'agente', via: 'ia', intencao: 'duvida' },
+    ]
+  },
   fila_para_enviar: () => [],
   marcar_avisos_lidos: () => null,
   avancar_ofertas_expiradas: () => 0,

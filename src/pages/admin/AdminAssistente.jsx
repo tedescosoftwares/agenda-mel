@@ -5,6 +5,8 @@ import AdminShell from '../../components/AdminShell'
 import ProShell from '../../components/ProShell'
 import { useAuth } from '../../context/AuthContext'
 import RegraDeAceite from '../../components/RegraDeAceite'
+import LimitesDaAssistente from '../../components/LimitesDaAssistente'
+import NumerosSemResposta from '../../components/NumerosSemResposta'
 import { Bolhas, ConectarWhatsapp, ConversaDeTeste } from '../../components/AssistenteWhatsapp'
 import { useDialogo } from '../../context/DialogoContext'
 import { supabase } from '../../lib/supabase'
@@ -362,6 +364,10 @@ export default function AdminAssistente({ para = 'admin', embutido = false, onAb
                 </Campo>
               )}
             </Secao>
+
+            {/* 3.99: quanto ela respondeu hoje, o saldo extra (Pix), as pausas e os números que ela não responde */}
+            <LimitesDaAssistente salaoId={salaoId} ordem={8} />
+            <NumerosSemResposta salaoId={salaoId} ordem={8} />
 
             <Secao ordem={9} Icone={MessagesSquare} titulo="O que ela precisa saber da casa" sub="Regras, pagamento, estacionamento. Ela usa isto para responder e não inventa o resto.">
               <textarea className="as-recado" rows={4} maxLength={1200} value={recado} onChange={(e) => setRecado(e.target.value)} aria-label="O que ela precisa saber da casa"

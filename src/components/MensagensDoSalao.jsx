@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react'
-import { Send, Inbox, Bell, CalendarCheck, CalendarX, CalendarPlus, Bot, HandHelping, Heart, RotateCcw, Sparkles, FastForward, MessageCircle, ChevronDown } from 'lucide-react'
+import { Send, Inbox, Bell, CalendarCheck, CalendarX, CalendarPlus, Bot, HandHelping, Heart, RotateCcw, Sparkles, FastForward, MessageCircle, ChevronDown, MessageCircleOff } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { useDialogo } from '../context/DialogoContext'
 
 // 3.96: a aba Mensagens da área WhatsApp do salão. O que saiu (lembretes, confirmações, respostas da assistente) e o
 // que chegou das clientes, com o que aconteceu, em palavras da dona. O lado técnico (canal, relógio, a fila crua, o
 // que a IA leu) ficou na Plataforma.
 // 3.96.1: cada tipo com o seu ícone, a situação numa etiqueta à direita, o texto que saiu e o que chegou em balão
 // (como no WhatsApp) e listas vazias que explicam o que vai aparecer ali.
+// 3.99 (248): em cada número que escreveu, "Não responder este número" (a lista da aba Assistente); quem já está na
+// lista, ou é da equipe, aparece marcado.
 
 const TIPO = {
   lembrete_agendamento: ['Lembrete do horário', Bell],
@@ -50,6 +53,7 @@ function quando(iso) {
   const hora = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
   return mesmoDia ? `hoje, ${hora}` : d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) + ', ' + hora
 }
+const chaveTel = (t) => String(t ?? '').replace(/\D/g, '').replace(/^55(?=\d{10,11}$)/, '')
 // 5513999998888 → (13) 99999-8888
 function telefone(t) {
   const n = String(t ?? '').replace(/\D/g, '').replace(/^55(?=\d{10,11}$)/, '')
@@ -73,6 +77,9 @@ export default function MensagensDoSalao({ salaoId }) {
   const [recebidas, setRecebidas] = useState(null)
   const [aberta, setAberta] = useState(null)
   const [erro, setErro] = useState('')
+  const [semResposta, setSemResposta] = useState(null)   // a lista da 248 (null: sem a 248 ou sem permissão)
+  const [calando, setCalando] = useState(null)
+  const { confirmar } = useDialogo()
 
   useEffect(() => {
     if (!salaoId) return
@@ -86,8 +93,26 @@ export default function MensagensDoSalao({ salaoId }) {
       setEnviadas(f.data ?? [])
       setRecebidas(l.data ?? [])
     })
+    supabase.rpc('assistente_sem_resposta', { salao: salaoId }).then(({ data, error }) => { if (vivo && !error) setSemResposta(data) }, () => {})
     return () => { vivo = false }
   }, [salaoId])
+
+  async function naoResponder(tel) {
+    const ok = await confirmar({
+      titulo: 'Não responder este número?',
+      texto: `A assistente para de responder ${telefone(tel)}. As mensagens continuam chegando no celular do salão. Para desfazer: aba Assistente › Números que ela não responde.`,
+      ok: 'Não responder',
+    })
+    if (!ok) return
+    setCalando(tel)
+    const { data, error } = await supabase.rpc('assistente_sem_resposta_salvar', { salao: salaoId, tel, nome_: null })
+    setCalando(null)
+    if (error) { setErro(error.message); return }
+    setSemResposta(data)
+  }
+  const naLista = new Set((semResposta?.lista ?? []).map((n) => chaveTel(n.telefone)))
+  const daEquipe = new Set(semResposta?.ignora_equipe ? (semResposta?.equipe ?? []).map((n) => chaveTel(n.telefone)) : [])
+  const vistos = new Set()
 
   return (
     <div className="ms-grade">
@@ -135,6 +160,10 @@ export default function MensagensDoSalao({ salaoId }) {
           <ul className="ms-lista ms-chegou">
             {recebidas.map((l, i) => {
               const [resultado, cor] = oQueAconteceu(l.entendeu)
+              // a ação aparece uma vez por número (na mensagem mais recente dele)
+              const k = chaveTel(l.telefone)
+              const primeira = semResposta && k && !vistos.has(k)
+              vistos.add(k)
               return (
                 <li key={i} className="ms-recebida">
                   <div className="ms-recebida-topo">
@@ -142,7 +171,14 @@ export default function MensagensDoSalao({ salaoId }) {
                     <small>{quando(l.quando)}</small>
                   </div>
                   <p className="ms-balao">{l.texto || '(sem texto)'}</p>
-                  <span className={'ms-status ' + cor}>{resultado}</span>
+                  <div className="ms-recebida-pe">
+                    <span className={'ms-status ' + cor}>{resultado}</span>
+                    {primeira && (naLista.has(k)
+                      ? <span className="ms-calada"><MessageCircleOff size={13} /> ela não responde este número</span>
+                      : daEquipe.has(k)
+                        ? <span className="ms-calada"><MessageCircleOff size={13} /> da equipe: ela não responde</span>
+                        : <button type="button" className="ms-nao-responder" disabled={calando === l.telefone} onClick={() => naoResponder(l.telefone)}><MessageCircleOff size={14} /> {calando === l.telefone ? 'Salvando…' : 'Não responder este número'}</button>)}
+                  </div>
                 </li>
               )
             })}

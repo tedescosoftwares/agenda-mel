@@ -170,6 +170,11 @@ echo 'acesso (cliente do WhatsApp: criar a senha e entrar pelo número)...'
 supabase functions deploy acesso --project-ref "$PROJECT_REF" >/dev/null
 verde '  no ar'
 
+# 3.99: as respostas extras da assistente (o Pix do pacote e a conferência)
+echo 'respostas-extras (pacotes de respostas da assistente por Pix)...'
+supabase functions deploy respostas-extras --project-ref "$PROJECT_REF" >/dev/null
+verde '  no ar'
+
 # JWT normal: quem chama é a Plataforma logada (a função confere eh_plataforma); cria a conta da dona e o salão (3.71)
 echo 'plataforma-promover (promover o salão do guia a salão com agenda)...'
 supabase functions deploy plataforma-promover --project-ref "$PROJECT_REF" >/dev/null

@@ -311,7 +311,8 @@ export default function AtivarSalao({ s, onAtivado, onErro }) {
 }
 
 // o Pix aberto: valor, status ao vivo, copiar (o principal no celular) e o QR (o principal no computador)
-function TelaPix({ pix, total, descontoPct, rotulo = 'Primeira mensalidade', indo, erro, onConferir, onVoltar }) {
+// 3.99: também é a tela do Pix das respostas extras da assistente (LimitesDaAssistente)
+export function TelaPix({ pix, total, descontoPct, rotulo = 'Primeira mensalidade', voltarTexto = 'Voltar às opções', statusTexto = 'A tela confere sozinha. Pagou, liberou.', indo, erro, onConferir, onVoltar }) {
   const [qr, setQr] = useState('')
   const [copiado, setCopiado] = useState(false)
   const [verQr, setVerQr] = useState(false)
@@ -333,12 +334,12 @@ function TelaPix({ pix, total, descontoPct, rotulo = 'Primeira mensalidade', ind
   }
   return (
     <section className="ck-pix" aria-label="Pagamento por Pix">
-      <button type="button" className="ck-voltar" onClick={onVoltar} disabled={indo}><ArrowLeft size={16} /> Voltar às opções</button>
+      <button type="button" className="ck-voltar" onClick={onVoltar} disabled={indo}><ArrowLeft size={16} /> {voltarTexto}</button>
 
       <div className="ck-pix-cabeca">
         <span className="ck-pix-icone"><PixIcone /></span>
         <span>
-          <small>{rotulo} · {descontoPct}% OFF</small>
+          <small>{rotulo}{descontoPct > 0 ? ` · ${descontoPct}% OFF` : ''}</small>
           <strong>{reais(total / 100)}</strong>
         </span>
         {pix?.sandbox && <span className="ck-teste-tag">ambiente de testes</span>}
@@ -346,7 +347,7 @@ function TelaPix({ pix, total, descontoPct, rotulo = 'Primeira mensalidade', ind
 
       <div className="ck-status" role="status">
         <i />
-        <span><b>Aguardando o pagamento</b><small>A tela confere sozinha. Pagou, liberou.</small></span>
+        <span><b>Aguardando o pagamento</b><small>{statusTexto}</small></span>
       </div>
 
       {!codigo ? (
@@ -388,7 +389,7 @@ function TelaPix({ pix, total, descontoPct, rotulo = 'Primeira mensalidade', ind
 }
 
 // o losango do Pix, desenhado (sem depender de imagem)
-function PixIcone() {
+export function PixIcone() {
   return (
     <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round">
       <path d="M12 2.8 21.2 12 12 21.2 2.8 12Z" />

@@ -31,6 +31,8 @@ function demoFuncao(nome, corpo) {
   if (nome === 'comercial') return import('./demoComercial.js').then((m) => m.demoComercial(corpo))
   // a assistente do WhatsApp do salão (3.95): número próprio e teste (src/lib/demoAssistente.js)
   if (nome === 'assistente') return import('./demoAssistente.js').then((m) => m.demoAssistente(corpo))
+  // as respostas extras da assistente (3.99): o Pix do pacote e a conferência (src/lib/demoRespostas.js)
+  if (nome === 'respostas-extras') return import('./demoRespostas.js').then((m) => m.demoRespostasExtras(corpo))
   // o acesso de quem se cadastrou pelo WhatsApp (3.98): o link /s/<token>, criar a senha, pedir o link, entrar
   if (nome === 'acesso') {
     if (corpo?.acao === 'ver') return String(corpo.token ?? '').startsWith('usado') ? Promise.reject(new Error('Esse link já foi usado. Para entrar de novo, peça outro em Entrar › Receber link no WhatsApp.')) : { ok: true, nome: 'Ana', telefone: '(13) •••••-1234' }

@@ -25,6 +25,7 @@ import { GUIA_WHATS_RPC } from './demoGuiaWhats'
 import { GUIA_ONBOARDING_RPC } from './demoGuiaOnboarding'
 import { COMERCIAL_RPC } from './demoComercial'
 import { assistenteDoSalaoDemo, assistenteSalvarDemo, assistenteNumerosDemo } from './demoAssistente'
+import { RESPOSTAS_RPC } from './demoRespostas'
 
 const hoje = new Date()
 const iso = (d) => d.toISOString().slice(0, 10)
@@ -266,6 +267,7 @@ const RPC = {
   ...GUIA_WHATS_RPC, // o WhatsApp do guia (195): guia_contato_config, guia_whats_painel, guia_whats_salvar, guia_whats_conversa, guia_whats_lead_atendido
   ...GUIA_ONBOARDING_RPC, // o agente de onboarding (203): guia_onboarding_publico, _painel, _config_salvar, _lead, _lead_atendido, _por_token, _concluir
   ...COMERCIAL_RPC, // a assistente comercial (218): comercial_publico, _painel, _conversa, _config_salvar, _situacao, _pausar, _intervir, _reativar
+  ...RESPOSTAS_RPC, // limites, saldo extra e números que a assistente não responde (248): assistente_limites, assistente_sem_resposta*, salao_ignora_equipe
   documentos_vigentes: () => ({}),
   meus_aceites: () => ({}),
   aceitar_documentos: () => ({ ok: true }),

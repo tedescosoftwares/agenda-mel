@@ -693,6 +693,8 @@ Deno.serve(async (req) => {
     if (salao && ['nada', 'sem_cadastro', 'fora_de_contexto', 'sem_horario'].includes(acao)) {
       const feito = await naVez(salao, m.telefone, m.id ?? null, async () => {
         const ag = await conversar(db, salao!, m.telefone, m.texto, { instancia: m.instancia ?? null })
+        // 3.99 (248): número que ela não responde (a equipe, a lista do salão): nada sai, nem a resposta pronta
+        if (ag.motivo === 'nao_responder') { respostas.push('assistente[não responde este número]'); return 'calada' as const }
         // 3.95: no número próprio, no horário do salão, a dona pode querer que a equipe responda primeiro: a mensagem
         // espera; o relógio responde se ninguém responder pelo celular até lá
         if (ag.motivo === 'esperar') {
@@ -713,7 +715,7 @@ Deno.serve(async (req) => {
         return 'respondeu' as const
       })
       if (feito === 'pulou') { respostas.push('assistente[juntou com a mensagem seguinte]'); continue }
-      if (feito === 'esperou' || feito === 'respondeu') continue
+      if (feito === 'esperou' || feito === 'respondeu' || feito === 'calada') continue
     }
     if (!responder) continue
     respostas.push(`${m.telefone}: ${responder}`)

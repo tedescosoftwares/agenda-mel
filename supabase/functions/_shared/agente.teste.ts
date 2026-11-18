@@ -267,4 +267,58 @@ await caso('banco sem a 235: cai no contexto antigo (salao, tel)', async () => {
   assert.equal(p.pedidos[0].corpo.model, 'claude-haiku-5-5')
 })
 
+// 3.98: o banco com o cadastro (auth.admin.createUser) de mentira
+function bancoComCadastro(ctx: Ctx, bot: Record<string, unknown> | null = null) {
+  const db = bancoDe(ctx, bot ? { bot_marcar: bot } : {})
+  const criados: Array<Record<string, unknown>> = []
+  const rpcOriginal = db.rpc
+  db.rpc = async (nome: string, args: Record<string, unknown> = {}) => {
+    if (nome === 'bot_marcar' && bot) { db.chamadas.push({ nome, args }); return { data: bot, error: null } }
+    return rpcOriginal(nome, args)
+  }
+  return Object.assign(db, { criados, auth: { admin: { createUser: async (a: Record<string, unknown>) => { criados.push(a); return { data: { user: { id: 'conta-nova' } }, error: null } } } } })
+}
+const marcarCom = (extra: Record<string, unknown> = {}, id = 'tu1') => ferramentaClaude('marcar', { profissional_id: 'p1', servico_id: 'sv1', dia: '2026-11-18', hora: '10:00', cliente_confirmou: true, ...extra }, id)
+
+await caso('sem cadastro: o texto manda pedir nome e sobrenome só na hora de marcar', () => {
+  const t = textoSalao(ctxDe({ cliente: null }))
+  assert.match(t, /ainda NÃO tem cadastro/); assert.match(t, /peça o nome e o sobrenome/); assert.match(t, /não escreva link/)
+  assert.doesNotMatch(t, /não pode marcar/)
+})
+
+await caso('sem cadastro: marca com o nome, cria a conta, e o link vai numa mensagem depois', async () => {
+  const db = bancoComCadastro(ctxDe({ cliente: null }))
+  const p = provedorDe({ claude: [marcarCom({ nome: 'ana  souza' }), textoClaude('Marcado, Ana! Seu cadastro na MIMO está feito.')] })
+  const r = await conversar(db, SALAO, '5513999991234', 'sim', { ambiente: AMBOS, fetcher: p.fetcher })
+  assert.equal(r.resposta, 'Marcado, Ana! Seu cadastro na MIMO está feito.')
+  assert.deepEqual(db.criados, [{ email: '5513999991234@whatsapp.mimo.com.vc', email_confirm: true, user_metadata: { full_name: 'Ana Souza', phone: '(13) 99999-1234', origem: 'whatsapp' } }])
+  assert.deepEqual(db.chamadas.find((c) => c.nome === 'cliente_do_whatsapp')?.args, { conta: 'conta-nova' })
+  assert.equal(db.chamadas.find((c) => c.nome === 'bot_marcar')?.args.cliente, 'conta-nova')
+  const link = db.chamadas.find((c) => c.nome === 'link_de_acesso_guardar')!
+  assert.equal(link.args.conta, 'conta-nova'); assert.equal(link.args.origem_, 'assistente'); assert.match(String(link.args.hash), /^[0-9a-f]{64}$/)
+  assert.equal(r.depois.length, 1)
+  assert.match(r.depois[0], /^Ana, quer acompanhar seus horários pelo app\? Toque aqui para criar sua senha:\nhttps:\/\/mimo\.com\.vc\/s\/[A-Za-z0-9]{16}\n/)
+  assert.equal(r.acoes.marcou, 1); assert.equal(r.acoes.cadastrou, 1)
+  // a ferramenta avisa o modelo que o link vai sozinho
+  assert.match(JSON.stringify(p.pedidos[1].corpo.messages), /não escreva link nenhum/)
+})
+
+await caso('sem cadastro: sem nome ou com nome estranho, a ferramenta pede o nome e não cria nada', async () => {
+  const db = bancoComCadastro(ctxDe({ cliente: null }))
+  const p = provedorDe({ claude: [marcarCom(), marcarCom({ nome: 'kkkk' }, 'tu2'), textoClaude('Me diz seu nome e sobrenome?')] })
+  const r = await conversar(db, SALAO, '5513999991234', 'sim', { ambiente: AMBOS, fetcher: p.fetcher })
+  assert.equal(db.criados.length, 0); assert.equal(db.chamadas.filter((c) => c.nome === 'bot_marcar').length, 0)
+  const tudo = JSON.stringify(p.pedidos[2].corpo.messages)
+  assert.match(tudo, /ela ainda não tem cadastro: peça o nome e o sobrenome/); assert.match(tudo, /não parece nome e sobrenome de verdade/)
+  assert.equal(r.depois.length, 0); assert.equal(r.acoes.cadastrou, 0)
+})
+
+await caso('passou do limite: a ferramenta manda chamar a equipe; com cadastro, nenhuma conta nova', async () => {
+  const db = bancoComCadastro(ctxDe(), { erro: 'Você já tem 2 horários marcados neste salão. Para marcar mais, fale com o salão.', limite: true, chamar_equipe: true })
+  const p = provedorDe({ claude: [marcarCom(), ferramentaClaude('chamar_humano', { motivo: 'limite' }, 'tu2'), textoClaude('Já chamei alguém da equipe.')] })
+  const r = await conversar(db, SALAO, '5513999991234', 'sim', { ambiente: AMBOS, fetcher: p.fetcher })
+  assert.match(JSON.stringify(p.pedidos[1].corpo.messages), /Você já tem 2 horários marcados neste salão.*use chamar_humano/)
+  assert.equal(r.acoes.marcou, 0); assert.equal(r.acoes.chamou, 1); assert.equal(db.criados.length, 0)
+})
+
 console.log(`\n${ok} casos ok`)

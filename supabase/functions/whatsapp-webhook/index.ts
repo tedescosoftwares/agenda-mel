@@ -385,7 +385,11 @@ Deno.serve(async (req) => {
           const ag = await conversar(db, e.salon_id, e.telefone, e.texto, { instancia: e.instancia, semEspera: true })
           if (ag.provedor || ag.erro) await db.rpc('registrar_chamada_ia', registroDaConversa(e.salon_id, e.telefone, ag)).then(() => {}, () => {})
           if (ag.erro) console.error('assistente (espera):', ag.erro)
-          if (ag.resposta && await responderCliente({ salao: e.salon_id, telefone: e.telefone, instancia: e.instancia, corpo: ag.resposta, doAgente: true })) esperas++
+          if (ag.resposta && await responderCliente({ salao: e.salon_id, telefone: e.telefone, instancia: e.instancia, corpo: ag.resposta, doAgente: true })) {
+            esperas++
+            // 3.98: o que vai depois da resposta (o link de criar a senha de quem acabou de se cadastrar)
+            for (const d of ag.depois ?? []) await responderCliente({ salao: e.salon_id, telefone: e.telefone, instancia: e.instancia, corpo: d, doAgente: true })
+          }
         }
       } catch (e) {
         console.error('esperas da assistente: não deu para varrer (a migração 235 está aplicada?)', e)
@@ -657,6 +661,7 @@ Deno.serve(async (req) => {
     }
 
     let responder: string | null = (data as any)?.responder ?? null
+    let depois: string[] = []   // 3.98: mensagens que saem logo depois da resposta da assistente (o link de criar a senha)
     const acao = String((data as any)?.acao ?? '')
     if (!responder && salao && ['nada', 'sem_cadastro', 'fora_de_contexto', 'sem_horario'].includes(acao)) {
       const ag = await conversar(db, salao, m.telefone, m.texto, { instancia: m.instancia ?? null })
@@ -673,6 +678,7 @@ Deno.serve(async (req) => {
       if (ag.falhas.length && ag.resposta) console.error('agente: a reserva respondeu depois de', ag.falhas.join(' | '))
       if (ag.resposta) {
         responder = ag.resposta
+        depois = ag.depois ?? []
         respostas.push(`agente[${ag.provedor}:${ag.ferramentas.join(',')}]`)
       }
     }
@@ -682,7 +688,8 @@ Deno.serve(async (req) => {
     // Ela acabou de escrever, então a janela de 24h está aberta: a
     // confirmação sai na hora, sem template e sem custo. E sem passar
     // pela fila — resposta que chega meia hora depois não é resposta.
-    await responderCliente({ salao, telefone: m.telefone, instancia: m.instancia ?? null, corpo: responder, doAgente: Boolean(acao && !(data as any)?.responder) })
+    const saiu = await responderCliente({ salao, telefone: m.telefone, instancia: m.instancia ?? null, corpo: responder, doAgente: Boolean(acao && !(data as any)?.responder) })
+    if (saiu) for (const d of depois) await responderCliente({ salao, telefone: m.telefone, instancia: m.instancia ?? null, corpo: d, doAgente: true })
   }
 
   // O WhatsApp reenvia o evento se a gente demorar ou devolver erro:

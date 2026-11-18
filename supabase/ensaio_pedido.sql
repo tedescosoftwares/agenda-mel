@@ -7,6 +7,8 @@ begin
   if prof.id is null then raise exception 'sem profissional com conta'; end if;
   select s.* into svc from public.services s join public.professional_services ps on ps.service_id = s.id where ps.professional_id = prof.id limit 1;
   select id into cli from public.profiles where role = 'cliente' and id <> prof.user_id limit 1;
+  -- 3.98 (242): este ensaio é do aceite da profissional; as regras da cliente (faltas, limites, cliente nova) ficam de fora
+  update public.salons set limite_faltas = 5, limite_futuros = 5, cliente_nova = 'igual' where id = prof.salon_id;
   update public.profiles set phone = '(13) 99999-0001' where id = prof.user_id;
   -- este ensaio é do fluxo de aceite; o aceite forçado por histórico (077) tem ensaio próprio
   update public.professionals set aceite_manual = true, minutos_para_aceitar = 60, confirmar_historico_ruim = false where id = prof.id;

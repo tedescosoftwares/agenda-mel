@@ -164,6 +164,12 @@ echo 'assistente (a assistente do WhatsApp do salão: número próprio e teste).
 supabase functions deploy assistente --project-ref "$PROJECT_REF" >/dev/null
 verde '  no ar'
 
+# 3.98: o acesso da cliente que se cadastrou pelo WhatsApp (ver o link, criar a senha, pedir o link, entrar pelo número).
+# Quem chama ainda não entrou: a chave anônima do app basta (JWT normal).
+echo 'acesso (cliente do WhatsApp: criar a senha e entrar pelo número)...'
+supabase functions deploy acesso --project-ref "$PROJECT_REF" >/dev/null
+verde '  no ar'
+
 # JWT normal: quem chama é a Plataforma logada (a função confere eh_plataforma); cria a conta da dona e o salão (3.71)
 echo 'plataforma-promover (promover o salão do guia a salão com agenda)...'
 supabase functions deploy plataforma-promover --project-ref "$PROJECT_REF" >/dev/null

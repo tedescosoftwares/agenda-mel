@@ -4384,6 +4384,15 @@ a.prof-row:hover,
 .chave-linha { display: flex; align-items: center; gap: 0.6rem; font-size: 0.85rem; color: var(--texto-2); }
 .login-troca { text-align: center; margin: 1.1rem 0 0; font-size: 0.9rem; }
 .login-card .brand { margin-bottom: 0.8rem; }
+/* 3.98: entrar pelo WhatsApp e criar a senha pelo link (quem se cadastrou pela assistente) */
+.login-whats { display: grid; gap: 0.6rem; margin-top: 0.9rem; }
+.login-ou { display: flex; align-items: center; gap: 0.6rem; margin: 0; color: var(--texto-3); font-size: 0.78rem; }
+.login-ou::before, .login-ou::after { content: ''; flex: 1; height: 1px; background: var(--fio); }
+.login-whats-btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem; }
+.whats-confirmado { justify-self: center; align-self: center; display: inline-flex; align-items: center; gap: 0.35rem; margin: -0.4rem auto 0.2rem; padding: 0.3rem 0.75rem; border-radius: var(--r-pilula); background: var(--menta-veu); color: var(--menta); font-size: 0.8rem; font-weight: 600; }
+.whats-termos { margin: 0; font-size: 0.78rem; line-height: 1.45; text-align: center; }
+.whats-cadeado { display: flex; gap: 0.4rem; align-items: flex-start; margin: 0; font-size: 0.76rem; line-height: 1.45; color: var(--texto-3); }
+.whats-cadeado svg { flex: none; margin-top: 2px; }
 
 /* ---- o switch ---- */
 .switch {

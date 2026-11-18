@@ -31,6 +31,12 @@ function demoFuncao(nome, corpo) {
   if (nome === 'comercial') return import('./demoComercial.js').then((m) => m.demoComercial(corpo))
   // a assistente do WhatsApp do salão (3.95): número próprio e teste (src/lib/demoAssistente.js)
   if (nome === 'assistente') return import('./demoAssistente.js').then((m) => m.demoAssistente(corpo))
+  // o acesso de quem se cadastrou pelo WhatsApp (3.98): o link /s/<token>, criar a senha, pedir o link, entrar
+  if (nome === 'acesso') {
+    if (corpo?.acao === 'ver') return String(corpo.token ?? '').startsWith('usado') ? Promise.reject(new Error('Esse link já foi usado. Para entrar de novo, peça outro em Entrar › Receber link no WhatsApp.')) : { ok: true, nome: 'Ana', telefone: '(13) •••••-1234' }
+    if (corpo?.acao === 'pedir_link') return { ok: true, mensagem: 'Se esse WhatsApp tiver cadastro na MIMO, o link chega em instantes.' }
+    return { ok: true, sessao: null }
+  }
   if (nome === 'pagamento-criar') {
     return { ok: true, pagamento_id: 'pg-demo', valor_cents: 4250, sinal_pct: 50, sandbox: true, expira_em: new Date(Date.now() + 14 * 60e3).toISOString(), existente: false,
       copia_cola: '00020126580014br.gov.bcb.pix0136demo-mimo-' + (corpo?.appointment_id ?? 'x') + '5204000053039865406017.505802BR5904MIMO6006Santos62070503***6304ABCD' }

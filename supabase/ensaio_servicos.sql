@@ -9,6 +9,8 @@ begin
   select s.* into s2 from public.services s join public.professional_services ps on ps.service_id = s.id where ps.professional_id = prof.id and s.active and s.id <> s1.id order by s.name limit 1;
   select p.id into cli from public.profiles p where p.role = 'cliente' and p.id <> prof.user_id and not public.historico_ruim_comigo(p.id, prof.id) order by p.created_at limit 1;
   update public.professionals set aceite_manual = false, confirmar_historico_ruim = false where id = prof.id;
+  -- 3.98 (242): este ensaio é do aceite da profissional; as regras da cliente (faltas, limites, cliente nova) ficam de fora
+  update public.salons set limite_faltas = 5, limite_futuros = 5, cliente_nova = 'igual' where id = prof.salon_id;
   perform set_config('request.jwt.claim.sub', cli::text, false);
 
   -- 1. marca dois serviços: soma duração e preço, nome junto, dois itens

@@ -18,6 +18,7 @@
 //   • 3.95.4 (239): só o assunto do salão. Fora dele, avisa com gentileza; se insistir, ou se for ofensivo, encerra
 //     (encerrar_conversa: o número fica em silêncio 6 h ou 24 h, sem gastar nada). Recusa do Claude também encerra.
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { nomeDeVerdade, numeroCompleto, telefoneBonito, emailDoWhatsapp, tokenNovo, hashDoToken, urlDoLink, textoDoLink, SITE_PADRAO } from './acesso.ts'
 
 export type Ambiente = { get(nome: string): string | undefined | null }
 export type Fetch = (url: string, init: Record<string, unknown>) => Promise<{ status: number; text(): Promise<string> }>
@@ -40,7 +41,7 @@ export type Ctx = {
   historico: Array<{ quem: 'cliente' | 'mimo'; texto: string; quando?: string }>
 }
 
-export type Acoes = { marcou: number; remarcou: number; cancelou: number; chamou: number; encerrou: number }
+export type Acoes = { marcou: number; remarcou: number; cancelou: number; chamou: number; encerrou: number; cadastrou: number }
 
 export type Conversa = {
   resposta: string | null
@@ -58,6 +59,7 @@ export type Conversa = {
   custoUsd: number | null
   acoes: Acoes
   falhas: string[]          // o que deu errado em quem tentou antes (para o log)
+  depois: string[]          // 3.98: o que sai logo depois da resposta, em outra mensagem (o link de criar a senha do app)
 }
 
 export type Opcoes = {
@@ -99,8 +101,8 @@ export const FERRAMENTAS: Ferramenta[] = [
   { nome: 'listar_profissionais', descricao: 'Profissionais ativas do salão.', parametros: obj({}) },
   { nome: 'horarios_livres', descricao: 'Horários livres de uma profissional num dia: todos os do dia, com o primeiro e o último. Sempre consulte antes de oferecer horário; para dizer até que horas tem vaga, use o último.',
     parametros: obj({ profissional_id: { type: 'string' }, dia: { type: 'string', description: 'YYYY-MM-DD' }, servico_id: { type: 'string', description: 'opcional; ajusta a duração' } }, ['profissional_id', 'dia']) },
-  { nome: 'marcar', descricao: 'Marca um horário. SÓ depois que a cliente confirmou serviço, profissional, dia e hora com um sim.',
-    parametros: obj({ profissional_id: { type: 'string' }, servico_id: { type: 'string' }, dia: { type: 'string', description: 'YYYY-MM-DD' }, hora: { type: 'string', description: 'HH:MM' }, cliente_confirmou: { type: 'boolean', description: 'true só se ela disse sim ao resumo' } }, ['profissional_id', 'servico_id', 'dia', 'hora', 'cliente_confirmou']) },
+  { nome: 'marcar', descricao: 'Marca um horário. SÓ depois que a cliente confirmou serviço, profissional, dia e hora com um sim. Se ela ainda não tem cadastro, mande também o nome e o sobrenome dela: o cadastro é feito junto.',
+    parametros: obj({ profissional_id: { type: 'string' }, servico_id: { type: 'string' }, dia: { type: 'string', description: 'YYYY-MM-DD' }, hora: { type: 'string', description: 'HH:MM' }, cliente_confirmou: { type: 'boolean', description: 'true só se ela disse sim ao resumo' }, nome: { type: 'string', description: 'nome e sobrenome da cliente, só quando ela ainda não tem cadastro' } }, ['profissional_id', 'servico_id', 'dia', 'hora', 'cliente_confirmou']) },
   { nome: 'cancelar', descricao: 'Cancela um horário da cliente. SÓ depois que ela confirmou.',
     parametros: obj({ appointment_id: { type: 'string' }, cliente_confirmou: { type: 'boolean' } }, ['appointment_id', 'cliente_confirmou']) },
   { nome: 'remarcar', descricao: 'Pede a troca de um horário da cliente para outro dia/hora. SÓ depois que ela confirmou. A profissional pode precisar aceitar.',
@@ -214,7 +216,7 @@ export function textoSalao(ctx: Ctx): string {
     `- App para a cliente ver e marcar sozinha: ${s.app}`,
     cli
       ? `- Cliente: ${cli.nome ?? 'sem nome'}${cli.primeiro_nome ? ` (primeiro nome: ${cli.primeiro_nome})` : ''}${cli.vinculada ? '' : '; ainda não entrou na agenda deste salão pelo app'}.\n- Horários dela aqui:\n${proximos}`
-      : '- Quem escreve NÃO tem cadastro no MIMO. Você pode tirar dúvidas de serviço, preço e horário, mas não pode marcar: explique que ela entra pelo app (o link acima) ou pelo QR/código da profissional, e que leva um minuto.',
+      : '- Quem escreve ainda NÃO tem cadastro na MIMO. Tire as dúvidas normalmente. Para marcar: depois que ela escolher serviço, profissional, dia e hora, peça o nome e o sobrenome dela (não peça antes, nem CPF, e-mail ou outro dado), ponha o nome no resumo e, com o sim, chame marcar com o campo nome. O cadastro é feito junto; o link para ela criar a senha do app vai sozinho numa mensagem logo depois (não escreva link).',
   ]
   return [
     'QUEM VOCÊ É', ...quem.filter(Boolean),
@@ -246,14 +248,43 @@ export function mensagensDaConversa(historico: Array<{ quem: string; texto: stri
   return msgs
 }
 
-const zeroAcoes = (): Acoes => ({ marcou: 0, remarcou: 0, cancelou: 0, chamou: 0, encerrou: 0 })
+const zeroAcoes = (): Acoes => ({ marcou: 0, remarcou: 0, cancelou: 0, chamou: 0, encerrou: 0, cadastrou: 0 })
 const ehOk = (r: unknown) => !!r && typeof r === 'object' && (r as Record<string, unknown>).ok === true
 
+// 3.98: a cliente que ainda não tem cadastro vira cliente de verdade na hora de marcar: uma conta sem senha (a entrada é
+// <número>@whatsapp.mimo.com.vc, sem caixa de correio), com o nome e o telefone confirmado (a mensagem saiu dele). Ela cria
+// a senha no primeiro acesso ao app, pelo link que vai logo depois da resposta.
+type Banco = { rpc: (n: string, a: Record<string, unknown>) => PromiseLike<{ data: unknown; error: { message?: string } | null }> }
+type Admin = { createUser: (a: Record<string, unknown>) => Promise<{ data: { user?: { id: string } | null } | null; error: { message?: string } | null }> }
+export async function cadastrarCliente(db: Rpc, telefone: string, nome: string): Promise<{ id: string } | { erro: string }> {
+  const numero = numeroCompleto(telefone)
+  const admin = (db as { auth?: { admin?: Admin } }).auth?.admin
+  if (!numero || typeof admin?.createUser !== 'function') return { erro: 'não deu para fazer o cadastro agora: diga que alguém da equipe vai marcar e use chamar_humano' }
+  const banco = db as Banco
+  const { data, error } = await admin.createUser({ email: emailDoWhatsapp(numero), email_confirm: true, user_metadata: { full_name: nome, phone: telefoneBonito(numero), origem: 'whatsapp' } })
+  let id = data?.user?.id ?? null
+  if (!id) {
+    // a conta já existe (a mesma cliente em duas conversas ao mesmo tempo): pega pelo telefone
+    const r = await banco.rpc('cliente_pelo_telefone', { tel: numero })
+    id = typeof r.data === 'string' ? r.data : null
+    if (!id) return { erro: `não deu para fazer o cadastro agora (${String(error?.message ?? 'sem conta').slice(0, 80)}): diga que alguém da equipe vai marcar e use chamar_humano` }
+  }
+  await banco.rpc('cliente_do_whatsapp', { conta: id })
+  return { id }
+}
+// o link de criar a senha: só o hash fica no banco; vale uma vez, por 7 dias
+export async function linkDeAcesso(db: Rpc, conta: string, origem: 'assistente' | 'app', site = SITE_PADRAO): Promise<string | null> {
+  const token = tokenNovo()
+  const { error } = await (db as Banco).rpc('link_de_acesso_guardar', { conta, hash: await hashDoToken(token), origem_: origem })
+  return error ? null : urlDoLink(token, site)
+}
+
 // executa uma ferramenta: no banco (bot_*), com o que o salão desligou recusado, e no ensaio só fingindo as que mexem
-export function executorDe(db: Rpc, salao: string, telefone: string, ctx: Ctx, registro: { usadas: string[]; acoes: Acoes; resumo: string[] }) {
+export function executorDe(db: Rpc, salao: string, telefone: string, ctx: Ctx, registro: { usadas: string[]; acoes: Acoes; resumo: string[]; depois: string[] }, site = SITE_PADRAO) {
   const a = assistenteLimpa(ctx.assistente)
   const ensaio = !!ctx.ensaio
   const cli = ctx.cliente?.id ?? null
+  let contaNova: { id: string; nome: string } | null = null   // o cadastro feito nesta conversa (não faz duas vezes)
   const rpc = async (nome: string, args: Record<string, unknown>) => {
     const { data, error } = await (db as { rpc: (n: string, a: Record<string, unknown>) => PromiseLike<{ data: unknown; error: { message?: string } | null }> }).rpc(nome, args)
     if (error) return { erro: String(error.message ?? 'erro no banco').slice(0, 200) }
@@ -281,12 +312,29 @@ export function executorDe(db: Rpc, salao: string, telefone: string, ctx: Ctx, r
           r = await rpc('bot_marcar_simular', { salao, profissional_id: args.profissional_id, servico_id: args.servico_id, dia: args.dia, hora: args.hora })
           if (r && typeof r === 'object' && /bot_marcar_simular/.test(String((r as Record<string, unknown>).erro ?? ''))) r = { ok: true, dia: args.dia, hora: args.hora }
         } else {
-          r = await rpc('bot_marcar', { salao, cliente: cli, profissional_id: args.profissional_id, servico_id: args.servico_id, dia: args.dia, hora: args.hora })
+          let cliente = cli ?? contaNova?.id ?? null
+          if (!cliente) {
+            const nomeCerto = nomeDeVerdade(args.nome)
+            if (!nomeCerto) return { erro: args.nome ? 'isso não parece nome e sobrenome de verdade: peça com educação o nome e o sobrenome dela (é o que aparece na agenda do salão e no lembrete)' : 'ela ainda não tem cadastro: peça o nome e o sobrenome, ponha no resumo e chame marcar de novo com o campo nome' }
+            const c = await cadastrarCliente(db, telefone, nomeCerto)
+            if ('erro' in c) return c
+            contaNova = { id: c.id, nome: nomeCerto }; cliente = c.id
+          }
+          r = await rpc('bot_marcar', { salao, cliente, profissional_id: args.profissional_id, servico_id: args.servico_id, dia: args.dia, hora: args.hora })
         }
+        const x = (r ?? {}) as Record<string, unknown>
+        // 3.98 (242): passou do limite de horários, ou o primeiro horário de cliente nova é com a equipe
+        if (x.chamar_equipe) return { ...x, erro: `${x.erro ?? ''} Diga isso a ela com gentileza e use chamar_humano para alguém da equipe atender.`.trim() }
         if (ehOk(r)) {
           registro.acoes.marcou++
-          const x = r as Record<string, unknown>
           registro.resumo.push(x.servico ? `Pronto! ${x.servico} com ${x.profissional} no dia ${x.dia} às ${x.hora}. ${x.aviso ?? ''}`.trim() : 'Pronto, seu horário foi marcado.')
+          if (contaNova && !registro.acoes.cadastrou) {
+            registro.acoes.cadastrou++
+            registro.resumo.push('Seu cadastro na MIMO está feito: da próxima vez é só pedir.')
+            const url = await linkDeAcesso(db, contaNova.id, 'assistente', site)
+            if (url) registro.depois.push(textoDoLink(url, contaNova.nome))
+            return { ...x, cadastro: 'feito agora: diga que o cadastro dela na MIMO está feito (da próxima vez é só pedir) e que o link para criar a senha do app vai na mensagem seguinte; não escreva link nenhum' }
+          }
         }
         return r
       }
@@ -446,7 +494,7 @@ export async function conversar(db: Rpc, salao: string, telefone: string, texto:
   const t0 = Date.now()
   const env = op.ambiente ?? ambientePadrao()
   const fetcher = op.fetcher ?? (fetch as unknown as Fetch)
-  const base = (): Conversa => ({ resposta: null, ferramentas: [], modelo: '', provedor: null, ms: Date.now() - t0, tokensEntrada: 0, tokensSaida: 0, cacheLidos: 0, cacheGravados: 0, custoUsd: null, acoes: zeroAcoes(), falhas: [] })
+  const base = (): Conversa => ({ resposta: null, ferramentas: [], modelo: '', provedor: null, ms: Date.now() - t0, tokensEntrada: 0, tokensSaida: 0, cacheLidos: 0, cacheGravados: 0, custoUsd: null, acoes: zeroAcoes(), falhas: [], depois: [] })
 
   const chamar = (db as { rpc: (n: string, a: Record<string, unknown>) => PromiseLike<{ data: unknown; error: { message?: string } | null }> }).rpc.bind(db)
   let { data: ctxRaw, error } = await chamar('bot_contexto', {
@@ -463,8 +511,8 @@ export async function conversar(db: Rpc, salao: string, telefone: string, texto:
   if (!msgs.length) return { ...base(), erro: 'conversa vazia' }
   const nucleo = textoNucleo(ctx)
   const doSalao = textoSalao(ctx)
-  const registro = { usadas: [] as string[], acoes: zeroAcoes(), resumo: [] as string[] }
-  const executar = executorDe(db, salao, telefone, ctx, registro)
+  const registro = { usadas: [] as string[], acoes: zeroAcoes(), resumo: [] as string[], depois: [] as string[] }
+  const executar = executorDe(db, salao, telefone, ctx, registro, String(env.get('SITE_URL') ?? '').trim() || SITE_PADRAO)
 
   const claude = String(env.get('ANTHROPIC_API_KEY') ?? '').trim()
   const groq = String(env.get('GROQ_API_KEY') ?? '').trim()
@@ -490,23 +538,23 @@ export async function conversar(db: Rpc, salao: string, telefone: string, texto:
     const fez = registro.resumo.length > 0
     if (t.resposta) {
       return { resposta: t.resposta, ferramentas: registro.usadas, modelo: t.modelo, provedor: p, ms: Date.now() - t0, erro: undefined,
-               tokensEntrada: soma.entrada, tokensSaida: soma.saida, cacheLidos: soma.lidos, cacheGravados: soma.gravados, custoUsd: soma.custo, acoes: registro.acoes, falhas }
+               tokensEntrada: soma.entrada, tokensSaida: soma.saida, cacheLidos: soma.lidos, cacheGravados: soma.gravados, custoUsd: soma.custo, acoes: registro.acoes, falhas, depois: registro.depois }
     }
     falhas.push(t.erro ?? `${p}: sem resposta`)
     // o Claude recusou pelo conteúdo (política de uso): não tenta no Groq (que poderia responder); encerra com educação
     if (t.recusou) {
       if (!registro.acoes.encerrou) await executar('encerrar_conversa', { motivo: 'politica' })
       return { resposta: despedida(ctx), ferramentas: registro.usadas, modelo: t.modelo, provedor: p, ms: Date.now() - t0, erro: undefined,
-               tokensEntrada: soma.entrada, tokensSaida: soma.saida, cacheLidos: soma.lidos, cacheGravados: soma.gravados, custoUsd: soma.custo, acoes: registro.acoes, falhas }
+               tokensEntrada: soma.entrada, tokensSaida: soma.saida, cacheLidos: soma.lidos, cacheGravados: soma.gravados, custoUsd: soma.custo, acoes: registro.acoes, falhas, depois: registro.depois }
     }
     // já mexeu na agenda (ou chamou alguém): outro provedor recomeçaria do zero e faria de novo. Responde o que foi feito.
     if (fez) {
       return { resposta: registro.resumo.join('\n'), ferramentas: registro.usadas, modelo: t.modelo, provedor: p, ms: Date.now() - t0, erro: undefined,
-               tokensEntrada: soma.entrada, tokensSaida: soma.saida, cacheLidos: soma.lidos, cacheGravados: soma.gravados, custoUsd: soma.custo, acoes: registro.acoes, falhas }
+               tokensEntrada: soma.entrada, tokensSaida: soma.saida, cacheLidos: soma.lidos, cacheGravados: soma.gravados, custoUsd: soma.custo, acoes: registro.acoes, falhas, depois: registro.depois }
     }
   }
   return { resposta: null, ferramentas: registro.usadas, modelo: ultimo.modelo, provedor: ultimo.provedor, ms: Date.now() - t0, erro: falhas.join(' | ').slice(0, 400),
-           tokensEntrada: soma.entrada, tokensSaida: soma.saida, cacheLidos: soma.lidos, cacheGravados: soma.gravados, custoUsd: soma.custo, acoes: registro.acoes, falhas }
+           tokensEntrada: soma.entrada, tokensSaida: soma.saida, cacheLidos: soma.lidos, cacheGravados: soma.gravados, custoUsd: soma.custo, acoes: registro.acoes, falhas, depois: registro.depois }
 }
 
 // o que vai para ia_chamadas (registrar_chamada_ia)

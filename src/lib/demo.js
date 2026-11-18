@@ -555,6 +555,15 @@ const RPC = {
   assistente_do_salao: () => assistenteDoSalaoDemo(),
   assistente_salvar: (a) => assistenteSalvarDemo(a),
   assistente_numeros: () => assistenteNumerosDemo(),
+  // as regras da cliente (3.98): o primeiro horário de cliente nova e os limites, guardados no navegador
+  regras_da_cliente: () => { try { return JSON.parse(localStorage.getItem('mimo-demo-regras') ?? 'null') ?? { cliente_nova: 'igual', limite_futuros: 2, limite_faltas: 2 } } catch { return { cliente_nova: 'igual', limite_futuros: 2, limite_faltas: 2 } } },
+  salao_regras_cliente: ({ cliente_nova_, limite_futuros_, limite_faltas_ }) => {
+    let r = { cliente_nova: 'igual', limite_futuros: 2, limite_faltas: 2 }
+    try { r = JSON.parse(localStorage.getItem('mimo-demo-regras') ?? 'null') ?? r } catch { /* padrão */ }
+    r = { cliente_nova: cliente_nova_ ?? r.cliente_nova, limite_futuros: limite_futuros_ ?? r.limite_futuros, limite_faltas: limite_faltas_ ?? r.limite_faltas }
+    try { localStorage.setItem('mimo-demo-regras', JSON.stringify(r)) } catch { /* sem storage */ }
+    return r
+  },
   plataforma_cadastros: ({ dias_ = 30 } = {}) => {
     const d = (h) => new Date(Date.now() - h * 3600e3).toISOString()
     const todos = [

@@ -502,6 +502,8 @@ export function AgendarConfirmar() {
     setSaving(false)
     if (error) {
       if (error.code === '23505' || error.code === '23P01' || /^ocupado:/.test(error.message)) setErro(partes.length ? 'Um dos horários acabou de ser reservado por outra pessoa. Nada foi marcado: tire essa parte ou escolha outro horário.' : 'Esse horário acabou de ser reservado por outra pessoa. Escolha outro, por favor.')
+      // 3.98 (242): passou do limite de horários do salão, ou o primeiro horário de cliente nova é com a equipe
+      else if (error.code === 'MI001' || error.code === 'MI002') setErro(error.message)
       else setErro('Erro ao agendar: ' + error.message)
       return
     }

@@ -493,3 +493,25 @@ livres) e marca, remarca e cancela com o "sim" dela. É o agente da 069 (`_share
 - **Testar sem rede**: `node --experimental-strip-types supabase/functions/_shared/agente.teste.ts` (Claude com
   ferramentas, cache, reserva no Groq, recusa, não marcar duas vezes, o que o salão desligou, o ensaio, o banco antigo).
   No banco: `supabase/ensaio_assistente.sql`.
+
+## A cliente que se cadastra pelo WhatsApp (3.98, migração 242)
+
+Quem escreve para o salão e ainda não tem cadastro pode marcar pela assistente. Na hora de marcar, a assistente pede
+**nome e sobrenome** (só isso; o telefone é o do próprio WhatsApp, já confirmado) e cria uma **conta de verdade, sem
+senha**: a entrada é `<número>@whatsapp.mimo.com.vc` (sem caixa de correio; `enfileirar_email` não manda nada para ela),
+o perfil nasce com o telefone confirmado (`cliente_do_whatsapp`). Logo depois da resposta sai outra mensagem com o
+**link de criar a senha** (`/s/<token>`, vale uma vez, por 7 dias; no banco só o hash, em `links_de_acesso`).
+
+- **`_shared/acesso.ts`**: nome de verdade (`nomeDeVerdade`), telefone, token e a mensagem do link. Testes:
+  `node --experimental-strip-types supabase/functions/_shared/acesso.teste.ts`.
+- **`acesso`** (função nova, chave anônima): `ver` (o link vale?), `criar_senha` (grava a senha e, se ela quiser, o
+  e-mail, sem confirmar; gasta o link e devolve a sessão), `pedir_link` ("Receber link no WhatsApp" da tela de entrar:
+  sai pelo WhatsApp da MIMO, `whatsapp_instancia_casa`; 3 por hora por número; responde igual tendo ou não cadastro) e
+  `entrar` (WhatsApp e senha; só telefone confirmado; 8 tentativas a cada 15 min por número).
+- **As regras do salão** (aba Pedidos): o primeiro horário de cliente nova (`igual`, `casa_confirma`, `so_equipe`) e os
+  limites por cliente (horários futuros e faltas em 12 meses, de 1 a 5, começam em 2). Valem para o que a cliente marca
+  sozinha, pelo app ou pela assistente; o que o salão lança não conta. O gatilho `limites_da_cliente` barra o horário
+  além do limite (`MI001`) e o primeiro horário pela assistente quando só a equipe marca (`MI002`); a assistente responde
+  com gentileza e chama a equipe. Cliente nova com a casa confirmando, e faltas além do limite, viram pedido (o aceite).
+- Testes do banco: `supabase/ensaio_cliente_whatsapp.sql`.
+

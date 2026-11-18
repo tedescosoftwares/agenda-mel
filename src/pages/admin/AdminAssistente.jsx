@@ -88,6 +88,7 @@ export default function AdminAssistente({ para = 'admin', embutido = false, onAb
   const [salvando, setSalvando] = useState(false)
   const [ok, setOk] = useState('')
   const [numeros, setNumeros] = useState(null)
+  const [regras, setRegras] = useState(null)   // 3.98: cliente nova e limites (aba Pedidos)
   const [inicio, setInicio] = useState(params.get('inicio') === '1')
   const querLigar = useRef(false)    // veio do "sim" das boas-vindas: ao conectar, já liga
   const refNumero = useRef(null)
@@ -113,6 +114,7 @@ export default function AdminAssistente({ para = 'admin', embutido = false, onAb
       if (!vivo) return
       if (error) { setErro(/function|does not exist|schema cache/i.test(error.message) ? 'A assistente ainda não está no banco (falta a atualização 235).' : error.message); return }
       aplicar(data)
+      supabase.rpc('regras_da_cliente', { salao: salaoId }).then(({ data: rg }) => { if (vivo && rg) setRegras(rg) }, () => {})
       const n = await supabase.rpc('assistente_numeros', { salao: salaoId, dias: 30 })
       if (vivo && !n.error) setNumeros(n.data)
       if (data?.canal?.numero_proprio) {
@@ -207,6 +209,10 @@ export default function AdminAssistente({ para = 'admin', embutido = false, onAb
     : dados?.aceite?.modo === 'casa'
       ? `O horário que ela marca vira um pedido: a casa confirma em até ${dados.aceite.minutos < 60 ? `${dados.aceite.minutos} min` : `${dados.aceite.minutos / 60} h`}. Ela diz à cliente que o pedido foi anotado.`
       : 'Vale o que cada profissional configurou. Quando falta confirmar, ela diz à cliente que o pedido foi anotado.'
+  // 3.98: quem ainda não tem cadastro, ela cadastra na hora de marcar (sempre; não tem chave)
+  const textoCliente = regras
+    ? `Cliente nova: ela pede nome e sobrenome e faz o cadastro${regras.cliente_nova === 'casa_confirma' ? '; o primeiro horário a casa confirma' : regras.cliente_nova === 'so_equipe' ? '; o primeiro horário a equipe marca' : ''}. Cada cliente marca até ${regras.limite_futuros} ${regras.limite_futuros === 1 ? 'horário futuro' : 'horários futuros'}.`
+    : ''
 
   const corpo = (
     <>
@@ -314,7 +320,7 @@ export default function AdminAssistente({ para = 'admin', embutido = false, onAb
                 {cfg.pode_marcar && para === 'admin' && dados.aceite?.modo && onAbrirPedidos && (
                   <p className="as-nota asx-nota-dentro">
                     <Info size={15} />
-                    <span>{textoAceite} <button type="button" className="as-link-botao" onClick={onAbrirPedidos}>Mudar em Pedidos</button></span>
+                    <span>{textoAceite} {textoCliente} <button type="button" className="as-link-botao" onClick={onAbrirPedidos}>Mudar em Pedidos</button></span>
                   </p>
                 )}
                 {cfg.pode_marcar && para === 'admin' && dados.aceite?.modo && !onAbrirPedidos && (

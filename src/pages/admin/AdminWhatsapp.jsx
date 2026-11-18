@@ -3,6 +3,7 @@ import { Bot, CalendarCheck, MessagesSquare, Info } from 'lucide-react'
 import AdminShell from '../../components/AdminShell'
 import { useAuth } from '../../context/AuthContext'
 import RegraDeAceite from '../../components/RegraDeAceite'
+import RegrasDaCliente from '../../components/RegrasDaCliente'
 import MensagensDoSalao from '../../components/MensagensDoSalao'
 import AdminAssistente from './AdminAssistente'
 import '../../assistente.css'
@@ -45,6 +46,7 @@ export default function AdminWhatsapp() {
 
       {aba === 'assistente' && <AdminAssistente embutido onAbrirPedidos={() => irPara('pedidos')} onAbrirMensagens={() => irPara('mensagens')} />}
       {aba === 'pedidos' && salao?.id && (
+        <div className="wa-pedidos-grade">
         <section className="card asx-secao wa-pedidos">
           <header className="asx-cab">
             <span className="asx-ico"><CalendarCheck size={18} /></span>
@@ -56,6 +58,9 @@ export default function AdminWhatsapp() {
           <RegraDeAceite salaoId={salao.id} pergunta={null} />
           <p className="as-nota"><Info size={15} /><span>Com <b>Entra confirmado na hora</b>, a assistente diz à cliente que está confirmado. Nos outros, diz que o pedido foi anotado e que o salão confirma em breve.</span></p>
         </section>
+        {/* 3.98: o primeiro horário de cliente nova e os limites por cliente */}
+        <RegrasDaCliente salaoId={salao.id} />
+        </div>
       )}
       {aba === 'mensagens' && salao?.id && <MensagensDoSalao salaoId={salao.id} />}
     </AdminShell>

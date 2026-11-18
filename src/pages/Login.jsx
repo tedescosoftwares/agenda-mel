@@ -10,8 +10,9 @@ import { VERSAO } from '../lib/versao'
 import { LogoMimo } from '../components/icons'
 import { extrairCodigo, guardarConvite, guardarDepois } from '../lib/convite'
 import { AMBIENTE, urlDoAmbiente, ambienteDoPapel, ehPro } from '../lib/ambiente'
-import { MailCheck } from 'lucide-react'
+import { MailCheck, MessageCircle } from 'lucide-react'
 import CampoSenha from '../components/CampoSenha'
+import { chamar } from '../lib/pagamento'
 import { formatarFone } from '../lib/fone'
 import BotaoGoogle, { OuLinha } from '../components/BotaoGoogle'
 import { MSG_CONTA_ERRADA, lerContaErrada, limparContaErrada } from '../lib/oauth'
@@ -27,6 +28,9 @@ import { FORCADOS, useProvedores } from '../lib/oauth'
 //   ?papel=autonoma|salao   veio de /comecar: a conta nasce como
 //                     profissional (salão de uma) ou dona de salão
 
+// 3.98: a cliente que se cadastrou pelo WhatsApp entra com o número (função acesso); o e-mail continua valendo
+const pareceNumero = (v) => !String(v ?? '').includes('@') && String(v ?? '').replace(/\D/g, '').length >= 10
+
 export default function Login({ ambiente = AMBIENTE }) {
   const pro = ambiente === 'pro'
   const { user, role, loading, signIn, signUp } = useAuth()
@@ -37,6 +41,7 @@ export default function Login({ ambiente = AMBIENTE }) {
   // o link de acesso que o salão mandou (119): a conta nasce ligada à ficha já configurada
   const ativar = (q.get('ativar') || '').toLowerCase().replace(/[^a-f0-9]/g, '').slice(0, 16)
   const [modo, setModo] = useState(q.get('modo') === 'cadastro' ? 'cadastro' : q.get('modo') === 'esqueci' ? 'esqueci' : 'login') // login | cadastro | esqueci
+  const porNumero = !pro && modo === 'login'   // 3.98: no app da cliente, entrar com o e-mail ou com o WhatsApp
   const [email, setEmail] = useState(q.get('email') || '')
   const [senha, setSenha] = useState('')
   const [nome, setNome] = useState('')
@@ -56,7 +61,7 @@ export default function Login({ ambiente = AMBIENTE }) {
       return decodeURIComponent(desc.replace(/\+/g, ' '))
     } catch { return '' }
   })
-  const [info, setInfo] = useState('')
+  const [info, setInfo] = useState(() => (q.get('whats') === '1' ? 'Digite seu WhatsApp no campo de cima e toque em "Receber link no WhatsApp".' : ''))
   const [enviando, setEnviando] = useState(false)
   const [quemConvidou, setQuemConvidou] = useState(null)
   // 3.60: o Google aparece na ponta da cliente assim que o provedor está ligado no
@@ -95,8 +100,23 @@ export default function Login({ ambiente = AMBIENTE }) {
       if (modo === 'login') {
         try { if (!manter) sessionStorage.setItem('mimo-sessao-temporaria', '1') } catch { /* sem storage */ }
         setConferindoConta(true); setContaErrada(null); limparContaErrada()
-        const { error } = await signIn(email, senha)
-        if (error) { setConferindoConta(false); setErro(traduz(error.message)); return }
+        // 3.98: no app da cliente, o campo aceita o WhatsApp (quem se cadastrou pela assistente não tem e-mail)
+        if (porNumero && pareceNumero(email)) {
+          // quem não pôs e-mail entra direto pela entrada do WhatsApp; quem pôs, a função acesso acha a conta pelo número
+          let d = email.replace(/\D/g, '')
+          if (d.length === 10 || d.length === 11) d = '55' + d
+          const direto = await supabase.auth.signInWithPassword({ email: `${d}@whatsapp.mimo.com.vc`, password: senha })
+          if (direto.error) {
+            try {
+              const r = await chamar('acesso', { acao: 'entrar', telefone: email, senha })
+              const { error: es } = await supabase.auth.setSession(r.sessao)
+              if (es) throw es
+            } catch (er) { setConferindoConta(false); setErro(er.message || 'Não deu para entrar agora.'); return }
+          }
+        } else {
+          const { error } = await signIn(email, senha)
+          if (error) { setConferindoConta(false); setErro(traduz(error.message)); return }
+        }
         if (ativar) { window.location.href = `/ativar/${ativar}`; return }
         if (equipe) { window.location.href = `/equipe/${equipe}`; return }
         // a conta é deste ambiente? senão, sai na hora e avisa
@@ -145,6 +165,18 @@ export default function Login({ ambiente = AMBIENTE }) {
         else { setInfo('Se esse e-mail tiver conta, mandamos um link para criar uma senha nova.'); setModo('login') }
       }
     } finally { setEnviando(false) }
+  }
+
+  // 3.98: primeiro acesso de quem se cadastrou pelo WhatsApp (ou esqueceu a senha): o link vai pelo WhatsApp da MIMO.
+  // A resposta é a mesma tendo ou não cadastro.
+  async function pedirLink() {
+    setErro(''); setInfo('')
+    if (!pareceNumero(email)) { setErro('Digite o seu WhatsApp com DDD no campo de cima e toque de novo.'); return }
+    setEnviando(true)
+    try {
+      await chamar('acesso', { acao: 'pedir_link', telefone: email })
+      setInfo('Pronto! Se esse WhatsApp tiver cadastro na MIMO, o link chega em instantes. Toque nele para criar sua senha.')
+    } catch (er) { setErro(er.message || 'Não deu para mandar o link agora.') } finally { setEnviando(false) }
   }
 
   // Apple (VITE_OAUTH=apple): depois do login a pessoa volta para o código,
@@ -200,7 +232,9 @@ export default function Login({ ambiente = AMBIENTE }) {
               {papel && papel !== 'equipe' && papel !== 'ativar' && <label>Cidade<input value={cidade} onChange={(e) => setCidade(e.target.value)} placeholder="Santos" /></label>}
             </>
           )}
-          <label>E-mail<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="voce@email.com" autoComplete="email" required /></label>
+          {porNumero
+            ? <label>E-mail ou WhatsApp<input type="text" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="voce@email.com ou (13) 99999-9999" autoComplete="username" required autoFocus={q.get('whats') === '1'} /></label>
+            : <label>E-mail<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="voce@email.com" autoComplete="email" required /></label>}
           {modo !== 'esqueci' && (
             <CampoSenha valor={senha} onChange={(e) => setSenha(e.target.value)} placeholder="••••••••" autoComplete={modo === 'login' ? 'current-password' : 'new-password'} />
           )}
@@ -229,6 +263,13 @@ export default function Login({ ambiente = AMBIENTE }) {
             {enviando ? 'Aguarde…' : modo === 'login' ? 'Entrar' : modo === 'cadastro' ? (papel ? 'Criar e começar' : 'Criar conta') : 'Enviar link'}
           </button>
         </form>
+
+        {porNumero && (
+          <div className="login-whats">
+            <p className="login-ou"><span>primeiro acesso ou esqueceu a senha?</span></p>
+            <button type="button" className="btn btn-ghost btn-block login-whats-btn" onClick={pedirLink} disabled={enviando}><MessageCircle size={17} /> Receber link no WhatsApp</button>
+          </div>
+        )}
 
         {(social.google || social.apple) && modo !== 'esqueci' && (
           <div className="login-social">

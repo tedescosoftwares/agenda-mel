@@ -11,11 +11,67 @@ import '../../../guia.css'
 // 3.99.1: Plataforma › Guia › Instagram. O @ da MIMO (config_publica.instagram: o rodapé do site, o do login e o guia)
 // e o convite que aparece antes de falar com um salão do guia (config_publica.guia_instagram, JSON): ligado, título,
 // texto, as três linhas do que ela recebe e de quantos em quantos dias ele volta. A prévia ao lado é o modal de verdade.
-// Os toques aparecem no Desempenho: "Convite do Instagram", "Seguir a MIMO no Instagram" e "Foi direto ao salão".
+// 3.99.2 (migração 250): os números ficam aqui mesmo (o Desempenho do guia só desenha os contatos com o salão): quantas
+// pessoas tocaram em Seguir, de onde, quantas vezes o convite apareceu e quantas foram direto ao salão.
 
 const limparHandle = (v) => String(v ?? '').trim().replace(/^https?:\/\/(www\.)?instagram\.com\//i, '').replace(/^@/, '').replace(/[/?#].*$/, '').trim()
 const handleOk = (h) => /^[A-Za-z0-9._]{1,30}$/.test(h)
 const nada = () => {}
+const milhar = (n) => Number(n ?? 0).toLocaleString('pt-BR')
+const pct = (a, b) => (Number(b) > 0 ? Math.round((Number(a) / Number(b)) * 100) : null)
+// de onde veio o Seguir (a área do toque)
+const AREAS = [
+  ['insta_modal', 'No convite, antes de chamar o salão'],
+  ['insta_cartao', 'No cartão da página do salão'],
+  ['insta_lista', 'Na faixa da lista da cidade'],
+  ['insta_pedido', 'Depois do "Quero marcar"'],
+  ['insta_rodape', 'No rodapé do site'],
+]
+
+// os números do período (guia_instagram_numeros, migração 250)
+function Resultados() {
+  const [dias, setDias] = useState(30)
+  const [n, setN] = useState(null)
+  const [erro, setErro] = useState('')
+  useEffect(() => {
+    let vivo = true
+    setN(null); setErro('')
+    supabase.rpc('guia_instagram_numeros', { dias_: dias }).then(({ data, error }) => {
+      if (!vivo) return
+      if (error) setErro(/function|does not exist|schema cache/i.test(error.message) ? 'Os números ainda não estão no banco (falta a atualização 250).' : error.message)
+      else setN(data ?? {})
+    })
+    return () => { vivo = false }
+  }, [dias])
+  const areas = AREAS.map(([k, rotulo]) => ({ k, rotulo, c: Number(n?.por_area?.[k] ?? 0) }))
+  const maior = Math.max(1, ...areas.map((a) => a.c))
+  const doConvite = pct(n?.seguir_do_convite, n?.convites)
+  return (
+    <Bloco id="resultados" aoMontar={nada} Icon={BarChart3} titulo="Quem seguiu" sub="Os toques em Seguir no site do guia. O Instagram não conta para a gente quem seguiu de fato: vale o toque.">
+      <label className="pg-insta-periodo">Período
+        <select className="plat-select" value={dias} onChange={(e) => setDias(Number(e.target.value))}>
+          <option value={7}>7 dias</option><option value={30}>30 dias</option><option value={90}>90 dias</option>
+        </select>
+      </label>
+      {erro ? <p className="muted">{erro}</p> : !n ? <p className="muted">Carregando…</p> : (
+        <>
+          <div className="pg-insta-numeros" data-teste="insta-numeros">
+            <div className="pg-insta-num destaque"><b>{milhar(n.seguir_pessoas)}</b><span>{Number(n.seguir_pessoas) === 1 ? 'pessoa tocou' : 'pessoas tocaram'} em Seguir</span><small>{milhar(n.seguir)} {Number(n.seguir) === 1 ? 'toque' : 'toques'} no total</small></div>
+            <div className="pg-insta-num"><b>{milhar(n.convites)}</b><span>{Number(n.convites) === 1 ? 'vez' : 'vezes'} o convite apareceu</span><small>{doConvite != null ? `${doConvite}% seguiram por ele` : 'antes de chamar um salão'}</small></div>
+            <div className="pg-insta-num"><b>{milhar(n.direto)}</b><span>foram direto ao salão</span><small>tocaram em “Agora não”</small></div>
+          </div>
+          <div className="pg-insta-areas">
+            <h5>De onde veio o Seguir</h5>
+            {areas.map((a) => (
+              <div key={a.k} className="pg-insta-area"><span>{a.rotulo}</span><i><em style={{ width: `${Math.round((a.c / maior) * 100)}%` }} /></i><b>{milhar(a.c)}</b></div>
+            ))}
+          </div>
+          <p className="muted pg-wa-nota">No mesmo período, {milhar(n.contatos)} {Number(n.contatos) === 1 ? 'toque' : 'toques'} em WhatsApp e Ligar nas páginas dos salões. Se o “foram direto” crescer e os contatos caírem, vale suavizar o texto ou desligar o convite. Os toques do fim dos artigos do blog não entram (só as páginas do guia contam).</p>
+        </>
+      )}
+    </Bloco>
+  )
+}
 // o ícone do Instagram com o size dos ícones do lucide (as abas e os blocos passam size)
 export const IconeInsta = ({ size = 18, ...p }) => <InstagramIcon width={size} height={size} {...p} />
 
@@ -88,13 +144,7 @@ export default function InstagramGuia() {
             <p className="muted pg-wa-nota">Só prometa o que vai mesmo aparecer no Instagram da MIMO. Os cartões fixos (página do salão, lista da cidade, “Pedido anotado!”, fim do artigo e rodapé) usam o mesmo @.</p>
           </Bloco>
 
-          <Bloco id="medir" aoMontar={nada} Icon={BarChart3} titulo="Como medir" sub="No Desempenho do guia, nos tipos de toque:">
-            <ul className="pg-insta-lista">
-              <li><b>Convite do Instagram</b>: quantas vezes o convite apareceu.</li>
-              <li><b>Seguir a MIMO no Instagram</b>: tocou em Seguir (no convite, nos cartões ou no rodapé).</li>
-              <li><b>Foi direto ao salão</b>: tocou em “Agora não”. Se esse número for alto e os contatos com salões caírem, desligue o convite.</li>
-            </ul>
-          </Bloco>
+          <Resultados />
         </div>
 
         <aside className="pg-insta-previa" aria-label="Prévia do convite">

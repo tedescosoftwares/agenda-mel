@@ -628,6 +628,7 @@ const RPC = {
   plataforma_apagar: ({ ids }) => ({ ok: true, apagados: (ids ?? []).length, contas: 0, pulados: [] }),
   promover_plataforma: ({ email_ }) => 'ok: ' + email_ + ' agora é plataforma',
   definir_config_publica: ({ chave_, valor_ }) => { CONFIG_PUBLICA_DEMO[chave_] = valor_; return null },   // 3.99.1
+  guia_instagram_numeros: ({ dias_ }) => { const f = Number(dias_ ?? 30) / 30; const k = (v) => Math.round(v * f); return { dias: dias_, convites: k(412), seguir: k(131), seguir_pessoas: k(118), seguir_do_convite: k(96), direto: k(287), contatos: k(640), por_area: { insta_modal: k(96), insta_cartao: k(14), insta_lista: k(9), insta_pedido: k(8), insta_rodape: k(4) } } },   // 3.99.2
   config_publica: () => ({ ...CONFIG_PUBLICA_DEMO, vapid_public: 'BDEMO', app_url: 'https://mimo.com.vc', ia_agente: 'ligado', ia_modelo: 'openai/gpt-oss-120b', ia_provedor: 'claude', ia_modelo_claude: 'claude-haiku-5-5' }),
   relogio_status: () => ({ ligado: true, jobs: [{ nome: 'mimo-fila', agenda: '* * * * *', ativo: true, ultima: new Date().toISOString(), status: 'succeeded' }, { nome: 'mimo-rotinas', agenda: '*/5 * * * *', ativo: true, ultima: new Date().toISOString(), status: 'succeeded' }] }),
   diagnostico_whatsapp: () => [{ item: 'Canal', situacao: 'ok', detalhe: 'Evolution, instância 11' }, { item: 'Número', situacao: 'ok', detalhe: '+55 13 99171-9086' }, { item: 'IA', situacao: 'ok', detalhe: 'ligada · 12 chamadas hoje' }],

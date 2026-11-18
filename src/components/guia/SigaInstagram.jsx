@@ -10,8 +10,8 @@ import '../../insta.css'
 //   useConviteAntes   o que a página do salão põe no onClickCapture: segura o toque no contato e abre o modal
 //   CartaoInstagram   o cartão fixo (página do salão, lista da cidade, "Pedido anotado!", fim do artigo)
 //   InstaRodape       o @ no rodapé do site
-// Os toques contam no Desempenho: insta_convite (viu o modal), insta_seguir (tocou em Seguir, com a área de onde
-// veio) e insta_direto (foi direto ao salão sem seguir). Nos cartões, data-evento + data-area passam pelo
+// Os toques contam (os números ficam na Plataforma › Guia › Instagram, 3.99.2): insta_convite (viu o modal), insta_seguir
+// (tocou em Seguir, com a área de onde veio) e insta_direto (foi direto ao salão sem seguir). Nos cartões, data-evento + data-area passam pelo
 // aoClicarNaPagina das páginas do guia; onde ele não existe (o artigo, o rodapé), o cartão conta sozinho (manual).
 
 const ICONES = [Sparkles, Heart, Bell]

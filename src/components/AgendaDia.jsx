@@ -140,15 +140,36 @@ export default function AgendaDia({
       })
       if (!ok) return
     }
+    const pedido = appt.status === 'pendente'
+    const quem = appt.profiles?.full_name ?? 'A cliente'
+    const hora = appt.start_time.slice(0, 5)
     if (novo === 'cancelado') {
-      const ok = await confirmar({
-        titulo: 'Recusar este horário?',
-        texto: `${appt.profiles?.full_name ?? 'A cliente'}, às ${appt.start_time.slice(0, 5)}. O horário volta a ficar livre.`,
-        ok: 'Recusar', perigo: true,
-      })
+      const ok = await confirmar(pedido
+        ? {
+            titulo: appt.remarca_de ? 'Recusar a troca?' : 'Recusar este pedido?',
+            texto: appt.remarca_de
+              ? `${quem} pediu para trocar para as ${hora}. O horário de antes continua valendo e ela é avisada.`
+              : `${quem}, às ${hora}. O horário volta a ficar livre e ela recebe o aviso para escolher outro.`,
+            ok: 'Recusar', perigo: true,
+          }
+        : {
+            titulo: 'Cancelar este horário?',
+            texto: `${quem}, às ${hora}. O horário volta a ficar livre e ela é avisada.`,
+            ok: 'Cancelar horário', perigo: true,
+          })
       if (!ok) return
     }
     setMudandoId(appt.id)
+    // 3.98.2: pedido (pendente) confirmado ou recusado passa por casa_decide, que avisa a cliente (app e WhatsApp) e,
+    // se for troca, tira o horário de antes da agenda. Mudar o status direto não avisava ninguém.
+    if (pedido && (novo === 'confirmado' || novo === 'cancelado')) {
+      const { data, error } = await supabase.rpc('casa_decide', { appt: appt.id, aceitou: novo === 'confirmado' })
+      setMudandoId(null)
+      if (error) setError('Erro ao atualizar: ' + error.message)
+      else if (data?.ok === false) setError(data.motivo ? 'Não deu: ' + data.motivo + '.' : 'Não deu para decidir esse pedido.')
+      fetchAgenda()
+      return
+    }
     const { error } = await supabase
       .from('appointments')
       .update({ status: novo })

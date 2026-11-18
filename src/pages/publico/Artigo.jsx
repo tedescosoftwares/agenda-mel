@@ -10,6 +10,7 @@ import { Markdown, titulosDe } from '../../lib/markdown'
 import { NavSite, PeSite, useRevelar, comecarEm } from '../../components/site/Pecas'
 import { CartaoArtigo } from './PaginaSeo'
 import { BotaoWhats } from '../../components/site/Whats'
+import { CartaoInstagram } from '../../components/guia/SigaInstagram'
 import NaoEncontrada from './NaoEncontrada'
 import '../../landing.css'
 
@@ -106,6 +107,8 @@ export default function Artigo() {
             {a.faq?.length > 0 && (
               <section className="sp-faq"><h2>Perguntas frequentes</h2><div className="ld-faq">{a.faq.map(([q, r]) => <details key={q}><summary>{q}<ChevronDown size={18} /></summary><p>{r}</p></details>)}</div></section>
             )}
+            {/* 3.99.1: o Instagram da MIMO no fim do artigo */}
+            <CartaoInstagram manual area="insta_artigo" className="gi-artigo" titulo="Gostou? Siga a gente para mais dicas" texto={guia ? `Os salões mais bem avaliados de ${guia.cidade}, dicas de beleza e novidades. Siga {@}.` : 'Dicas de beleza, os salões mais bem avaliados e novidades da MIMO. Siga {@}.'} />
           </div>
         </article>
         {relacionados.length > 0 && (

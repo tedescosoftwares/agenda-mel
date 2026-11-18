@@ -1,0 +1,60 @@
+/* 3.99.1: o Instagram da MIMO no guia (components/guia/SigaInstagram.jsx): o convite antes de falar com o salão, o
+   cartão fixo e o @ no rodapé. O modal usa a folha do guia (gd-folha, em guia.css); aqui só o que é dele. */
+.gi-anel { flex: none; width: 58px; height: 58px; border-radius: 50%; padding: 3px; background: conic-gradient(from 210deg, #ff2d7a, #ff7baa, #ffb36b, #ff2d7a); }
+.gi-anel > span { display: grid; place-items: center; width: 100%; height: 100%; border-radius: 50%; background: #fff; border: 2px solid #fff; overflow: hidden; }
+.gi-anel img { width: 62%; height: auto; display: block; }
+.gi-anel.p { width: 46px; height: 46px; }
+
+.gi-perfil { display: flex; align-items: center; gap: 12px; margin: 0 48px 16px 0; }
+.gi-perfil b { display: block; font-size: 1rem; color: var(--ld-ameixa, #3d0c4e); overflow-wrap: anywhere; }
+.gi-perfil small { display: block; color: var(--ld-cinza, #6b6f7a); font-size: 0.82rem; }
+.ld .gd-folha .gi-titulo { margin: 0 0 8px; font-size: 1.32rem; }
+.ld .gd-folha .gi-texto { margin: 0 0 14px; color: var(--ld-cinza, #6b6f7a); font-size: 0.95rem; line-height: 1.45; }
+.ld .gd-folha .gi-ganhos { list-style: none; margin: 0 0 22px; padding: 0; display: grid; gap: 8px; }
+.ld .gd-folha .gi-ganhos li { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 14px; background: #fdf6f9; font-size: 0.92rem; line-height: 1.35; color: var(--ld-ameixa, #3d0c4e); }
+.gi-ganhos li svg { flex: none; color: var(--ld-rosa, #ff2d7a); margin-top: 1px; }
+.gi-botoes { display: grid; gap: 10px; width: 100%; }
+.gi-botoes .ld-btn { width: 100%; justify-content: center; display: inline-flex; align-items: center; gap: 8px; text-align: center; }
+.gi-nota { display: block; text-align: center; margin-top: 12px; font-size: 0.78rem; color: var(--ld-cinza, #6b6f7a); }
+.gi-feito { display: grid; justify-items: center; text-align: center; padding-top: 6px; }
+.gi-feito .gd-folha-ok { margin-bottom: 14px; }
+.ld .gd-folha .gi-feito .gi-titulo { margin-right: 0; }
+.ld .gd-folha .gi-feito .gi-texto { margin-bottom: 22px; }
+/* a prévia na Plataforma: a folha solta, sem fundo escuro e sem subir */
+.gi-previa { display: flex; justify-content: center; padding: 18px; border-radius: 22px; background: rgba(42, 7, 54, 0.08); }
+.gi-previa .gd-folha { position: static; max-height: none; border-radius: 26px; animation: none; box-shadow: 0 18px 50px rgba(42, 7, 54, 0.16); }
+
+/* o cartão fixo */
+.gi-cartao { display: flex; align-items: center; gap: 14px; padding: 16px; border-radius: 20px; background: linear-gradient(135deg, #fff5f9, #fff); border: 1.5px solid #f6d5e3; text-align: left; min-width: 0; }
+.gi-cartao > div { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.gi-cartao strong { font-size: 0.98rem; color: var(--ld-ameixa, #3d0c4e); line-height: 1.3; }
+.gi-cartao small { color: var(--ld-cinza, #6b6f7a); font-size: 0.84rem; line-height: 1.4; overflow-wrap: anywhere; }
+.gi-cartao .ld-btn { flex: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 16px; font-size: 0.88rem; white-space: nowrap; }
+.gi-cartao.empilha { flex-wrap: wrap; }
+.gi-cartao.empilha .ld-btn { width: 100%; }
+@media (max-width: 560px) {
+  .gi-cartao { flex-wrap: wrap; }
+  .gi-cartao .ld-btn { width: 100%; }
+}
+.gi-sec { padding-top: 8px; padding-bottom: 26px; }
+.gi-faixa { grid-column: 1 / -1; }
+.gd-folha-feito .gi-cartao { margin-top: 18px; width: 100%; }
+.gi-artigo { margin-top: 28px; }
+
+/* o @ no rodapé */
+.gi-pe { display: inline-flex; align-items: center; gap: 8px; margin-top: 12px; font-weight: 600; color: var(--ld-ameixa, #3d0c4e); text-decoration: none; padding: 8px 14px; border-radius: 999px; background: #fff; border: 1px solid var(--ld-fio, #ece7ee); }
+.gi-pe svg { color: var(--ld-rosa, #ff2d7a); }
+.gi-pe:hover { border-color: var(--ld-rosa-2, #ff7baa); }
+.ld-pe .gi-pe, .ld .ld-pe a.gi-pe { color: var(--ld-ameixa, #3d0c4e); }   /* os links do rodapé são cinza */
+
+/* a aba Instagram na Plataforma › Guia (components/plataforma/guia/InstagramGuia.jsx) */
+.pg-insta-grade { display: grid; gap: 18px; align-items: start; }
+@media (min-width: 1100px) { .pg-insta-grade { grid-template-columns: minmax(0, 1fr) 440px; } .pg-insta-previa { position: sticky; top: 1rem; } }
+.pg-insta-ganhos { display: grid; gap: 8px; margin: 0; padding: 0; border: 0; min-width: 0; }
+.pg-insta-ganhos legend { padding: 0; margin-bottom: 6px; font-size: 0.82rem; font-weight: 600; }
+.pg-insta-ganhos input { width: 100%; }
+.pg-insta-lista { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: 0.86rem; line-height: 1.45; }
+.pg-insta-previa { display: grid; gap: 10px; min-width: 0; }
+.pg-insta-previa h4 { margin: 0; display: flex; align-items: center; gap: 6px; font-size: 0.9rem; }
+.pg-insta-previa .ld { background: transparent; padding: 0; min-height: 0; }   /* o .ld do site tem o recuo da barra de cima */
+.pg-insta-previa .gd-folha { width: 100%; }

@@ -5,6 +5,7 @@ import { registrarInteresse } from '../../lib/guiaPublico'
 import { registrarEvento } from '../../lib/eventos'
 import { soDigitosTel, telefoneBonito, linkWhatsDoTel } from '../../lib/guia'
 import Reivindicar from './Reivindicar'
+import { CartaoInstagram } from './SigaInstagram'
 
 // O formulário do guia (3.9), numa folha que sobe de baixo no celular e
 // vira janela no computador. Quatro pedidos, uma folha:
@@ -140,6 +141,8 @@ export default function Interesse({ tipo, lugar, onFechar, previa = false }) {
             <span className="gd-folha-ok"><Check size={26} /></span>
             <h2 id={`${id}-t`} tabIndex={-1}>{feito.repetido ? 'Já estava anotado.' : SUCESSO[qual][0]}</h2>
             <p>{feito.repetido ? 'A gente já tinha recebido esse pedido com o mesmo contato. Obrigado!' : SUCESSO[qual][1](nomeLugar, feito.comContato)}</p>
+            {/* 3.99.1: enquanto espera o salão chegar na MIMO, o Instagram (na prévia da Plataforma não aparece) */}
+            {qual === 'quero_marcar' && !previa && <CartaoInstagram empilha primario botao="handle" area="insta_pedido" titulo="Enquanto isso, siga a MIMO" texto={`A gente mostra no Instagram quando salões de ${lugar?.cidade || 'sua cidade'} começam a marcar pelo app.`} />}
             <div className="gd-folha-acoes">
               {qual === 'quero_marcar' && zapDoSalao && <a className="ld-btn ld-fantasma" href={zapDoSalao} target="_blank" rel="noopener noreferrer" data-evento="whatsapp"><MessageCircle size={16} /> Enquanto isso, chamar o salão</a>}
               <button type="button" className={'ld-btn ' + (qual === 'quero_marcar' && zapDoSalao ? 'ld-fantasma' : 'ld-primario')} onClick={fechar}>Fechar</button>

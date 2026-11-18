@@ -252,6 +252,7 @@ const TABELAS = {
 }
 
 const HORAS = [0, 1, 2, 3, 4, 5, 6].map((weekday) => ({ weekday, open: weekday > 0, start_time: '09:00:00', end_time: weekday === 6 ? '14:00:00' : '18:00:00' }))
+const CONFIG_PUBLICA_DEMO = { instagram: 'mimo.com.vc' }   // 3.99.1: o @ e o convite do Instagram do guia (Plataforma › Guia › Instagram)
 let demoAvisaProfissional = true   // 3.98.3: "depois que a casa confirmar" (só enquanto a página vive)
 const RPC = {
   // o guia de salões: guia_pagina, guia_cidade, guia_cidades, guia_publicadas, guia_registrar_interesse,
@@ -626,7 +627,8 @@ const RPC = {
     : { id, nome: (clientes.find((c) => c.id === id) || {}).full_name || 'Pessoa de teste', email: 'teste@exemplo.com', papel: (clientes.find((c) => c.id === id) || {}).role || 'cliente', agendamentos: 2, agendamentos_futuros: 0, vinculos: 1, pagamentos_pagos: 0, impede: { admin: 'É dona de Studio Mel. Apague o salão com a conta da dona, em Salões.', plataforma: 'É a sua conta.' }[(clientes.find((c) => c.id === id) || {}).role] ?? null }),
   plataforma_apagar: ({ ids }) => ({ ok: true, apagados: (ids ?? []).length, contas: 0, pulados: [] }),
   promover_plataforma: ({ email_ }) => 'ok: ' + email_ + ' agora é plataforma',
-  config_publica: () => ({ vapid_public: 'BDEMO', instagram: 'mimo.com.vc', app_url: 'https://mimo.com.vc', ia_agente: 'ligado', ia_modelo: 'openai/gpt-oss-120b', ia_provedor: 'claude', ia_modelo_claude: 'claude-haiku-5-5' }),
+  definir_config_publica: ({ chave_, valor_ }) => { CONFIG_PUBLICA_DEMO[chave_] = valor_; return null },   // 3.99.1
+  config_publica: () => ({ ...CONFIG_PUBLICA_DEMO, vapid_public: 'BDEMO', app_url: 'https://mimo.com.vc', ia_agente: 'ligado', ia_modelo: 'openai/gpt-oss-120b', ia_provedor: 'claude', ia_modelo_claude: 'claude-haiku-5-5' }),
   relogio_status: () => ({ ligado: true, jobs: [{ nome: 'mimo-fila', agenda: '* * * * *', ativo: true, ultima: new Date().toISOString(), status: 'succeeded' }, { nome: 'mimo-rotinas', agenda: '*/5 * * * *', ativo: true, ultima: new Date().toISOString(), status: 'succeeded' }] }),
   diagnostico_whatsapp: () => [{ item: 'Canal', situacao: 'ok', detalhe: 'Evolution, instância 11' }, { item: 'Número', situacao: 'ok', detalhe: '+55 13 99171-9086' }, { item: 'IA', situacao: 'ok', detalhe: 'ligada · 12 chamadas hoje' }],
   // a aba Mensagens da área WhatsApp (3.96.2): algumas que saíram e chegaram hoje, com as colunas de verdade

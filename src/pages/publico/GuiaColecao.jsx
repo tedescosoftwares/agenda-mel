@@ -12,6 +12,7 @@ import { PeSite, useRevelar } from '../../components/site/Pecas'
 import NavGuia from '../../components/guia/NavGuia'
 import BarraLocal from '../../components/guia/BarraLocal'
 import { CartaoLugar, IconeCategoria } from '../../components/guia/PaginaDoLugar'
+import { CartaoInstagram } from '../../components/guia/SigaInstagram'
 import PertoDeVoce from '../../components/guia/PertoDeVoce'
 import { useMinhaPosicao, comDistancia } from '../../lib/guiaPerto'
 import { Migalhas, Falhou, Perguntas, ChamadaSalao } from './GuiaCidade'
@@ -33,6 +34,14 @@ import '../../guia-colecao.css'
 // ("/1" não existe). O arquivo da coleção tem todos os cartões; a página mostra a sua parte, e a busca e
 // o filtro procuram na lista inteira. 3.75.1: o horário também (/horario/cedo/2, /horario/noite/estetica/2);
 // em /horario/cedo/2 a rota entrega o "2" como categoria, e aqui ele vira a página.
+// 3.99.1: a faixa do Instagram da MIMO depois dos primeiros salões da lista (ou no fim, se a lista for curta)
+function comFaixaInsta(cartoes, cidade) {
+  if (!cartoes.length) return cartoes
+  const i = Math.min(3, cartoes.length - 1)
+  const faixa = <div key="gi-faixa" className="gi-faixa"><CartaoInstagram area="insta_lista" titulo="Gostou de algum? Toda semana tem mais no Instagram" texto={`Os salões mais bem avaliados de ${cidade}, dicas e novidades. Siga {@}.`} /></div>
+  return [...cartoes.slice(0, i + 1), faixa, ...cartoes.slice(i + 1)]
+}
+
 export default function GuiaColecao({ tipo }) {
   const params = useParams()
   const numero = (x) => /^[0-9]{1,4}$/.test(String(x ?? ''))
@@ -183,7 +192,7 @@ function Colecao({ m, pm }) {
 
           {filtrados.length ? (
             <div className={'gd-cartoes gd-cartoes-lista' + (m.tipo === 'horario' ? ' gd-col-cartoes-hora' : '')}>
-              {visiveis.map((c) => <CartaoLugar key={c.slug} lugar={c} cidadeSlug={m.cidade_slug} cidade={m.cidade} />)}
+              {comFaixaInsta(visiveis.map((c) => <CartaoLugar key={c.slug} lugar={c} cidadeSlug={m.cidade_slug} cidade={m.cidade} />), m.cidade)}
             </div>
           ) : (
             <div className="gd-vazio">

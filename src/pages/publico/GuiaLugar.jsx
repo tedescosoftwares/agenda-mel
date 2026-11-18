@@ -13,6 +13,7 @@ import NavGuia from '../../components/guia/NavGuia'
 import BarraLocal from '../../components/guia/BarraLocal'
 import PaginaDoLugar from '../../components/guia/PaginaDoLugar'
 import Interesse from '../../components/guia/Interesse'
+import { useConviteAntes } from '../../components/guia/SigaInstagram'
 import NaoEncontrada from './NaoEncontrada'
 import '../../landing.css'
 import '../../guia.css'
@@ -25,6 +26,8 @@ import '../../guia.css'
 // também, e não na PaginaDoLugar, para a prévia da Plataforma nunca contar:
 // a visita conta quando a página abre de verdade e cada toque em WhatsApp,
 // Ligar, Como chegar, Instagram e site passa pelo onClickCapture.
+// 3.99.1: no mesmo onClickCapture, o toque em WhatsApp ou Ligar abre antes o convite do Instagram da MIMO (uma vez
+// por aparelho; components/guia/SigaInstagram.jsx). O toque conta como antes; o convite conta à parte.
 // (quem usa passa key com a URL: outro salão é outra montagem, sem dado velho na tela)
 export default function GuiaLugar() {
   const { cidade, item } = useParams()
@@ -44,11 +47,14 @@ export default function GuiaLugar() {
   }, [cidade, item, tentativa])
 
   const fechar = useCallback(() => setInteresse(null), [])
+  const lugar = dados && dados !== 'erro' ? dados.lugar : null
+  const convite = useConviteAntes({ salao: lugar?.nome, cidade: lugar?.cidade, desligado: !lugar })
+  const aoClicar = useCallback((e) => { aoClicarNaPagina(e); convite.aoClicar(e) }, [convite])
 
   if (dados === null) return <NaoEncontrada />
 
   return (
-    <div className="ld gd" ref={raiz} onClickCapture={aoClicarNaPagina}>
+    <div className="ld gd" ref={raiz} onClickCapture={aoClicar}>
       <NavGuia />
       <main>
         <BarraLocal />
@@ -70,6 +76,7 @@ export default function GuiaLugar() {
       </main>
       <PeSite />
       {interesse && dados?.lugar && <Interesse key={interesse} tipo={interesse} lugar={dados.lugar} onFechar={fechar} />}
+      {convite.modal}
     </div>
   )
 }

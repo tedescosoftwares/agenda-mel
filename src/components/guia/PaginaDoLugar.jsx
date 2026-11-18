@@ -18,6 +18,7 @@ import { linkDoBairro } from '../../lib/guiaColecoes'
 import { useMinhaPosicao, distanciaKm, kmTexto } from '../../lib/guiaPerto'
 import { urlDoEndereco, urlDoAmbiente } from '../../lib/ambiente'
 import { REGRAS } from '../../lib/acesso'
+import { CartaoInstagram } from './SigaInstagram'
 import '../../landing.css'
 import '../../guia.css'
 import '../../guia-perto.css'
@@ -472,6 +473,9 @@ export default function PaginaDoLugar({ lugar, conteudo, vizinhos = [], mesmaCat
             </div>
           </section>
         )}
+
+        {/* 3.99.1: o Instagram da MIMO, longe do botão de marcar (depois do conteúdo e do "é o seu salão?") */}
+        <CartaoInstagram secao area="insta_cartao" titulo={`Os melhores salões de ${l.cidade} no Instagram`} texto="Os mais bem avaliados, dicas antes de marcar e quem chegou na MIMO. Siga {@}." />
 
         {/* ---- perto dali e a mesma categoria ---- */}
         {vizinhos.length > 0 && (

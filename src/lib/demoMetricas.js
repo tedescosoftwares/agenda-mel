@@ -11,6 +11,7 @@ const TIPOS = [
   ['criar_agenda', 'Criar agenda', 'interesse'], ['compartilhar', 'Compartilhar', 'outro'], ['corrigir', 'Corrigir dados', 'outro'],
   ['localizacao', 'Localização ativada', 'outro'], ['pedido_enviado', 'Pedido enviado (Quero marcar)', 'outro'],
   ['seguir', 'Seguiu pelo app', 'contato'], ['quero_na_mimo', 'Quer o salão na MIMO', 'interesse'],
+  ['insta_convite', 'Convite do Instagram', 'outro'], ['insta_seguir', 'Seguir a MIMO no Instagram', 'outro'], ['insta_direto', 'Foi direto ao salão (sem seguir)', 'outro'],
 ].map(([tipo, rotulo, grupo]) => ({ tipo, rotulo, grupo }))
 const GRUPO = Object.fromEntries(TIPOS.map((t) => [t.tipo, t.grupo]))
 const CATS = ['beleza', 'cabelo', 'unhas', 'cilios', 'sobrancelhas', 'estetica', 'maquiagem']

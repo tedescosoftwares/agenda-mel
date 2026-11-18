@@ -11,6 +11,7 @@ import { useWhats } from './Whats'
 import { PAGINAS_SEO } from '../../conteudo/paginasSeo'
 import { paginasPublicas } from '../../lib/conteudoPublico'
 import { normalizarPagina, rotuloRodape, HUB_AUTONOMA } from '../../lib/paginas'
+import { InstaRodape } from '../guia/SigaInstagram'
 
 // As peças do site público (mimo.com.vc): barra, rodapé, fotos, logo,
 // coração de pincel e o "aparece ao rolar". A landing e as páginas de
@@ -225,6 +226,7 @@ export function PeSite() {
           <div>
             <Logo altura={44} />
             <p>Beleza, organização e relacionamento.</p>
+            <InstaRodape />
           </div>
           <nav className="ld-pe-colunas" aria-label="Rodapé">
             <div>

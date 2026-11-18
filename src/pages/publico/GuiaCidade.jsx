@@ -19,6 +19,7 @@ import BarraLocal from '../../components/guia/BarraLocal'
 import { REGRAS } from '../../lib/acesso'
 import { CartaoLugar, IconeCategoria } from '../../components/guia/PaginaDoLugar'
 import PertoDeVoce from '../../components/guia/PertoDeVoce'
+import { CartaoInstagram } from '../../components/guia/SigaInstagram'
 import { useMinhaPosicao, comDistancia } from '../../lib/guiaPerto'
 import GuiaLugar, { Esqueleto } from './GuiaLugar'
 import NaoEncontrada from './NaoEncontrada'
@@ -30,6 +31,14 @@ import '../../guia.css'
 //   /saloes/itanhaem             a cidade (todos os salões publicados)
 //   /saloes/itanhaem/unhas       uma categoria na cidade
 //   /saloes/itanhaem/ro-coiffeur um salão (o slug nunca é de categoria)
+// 3.99.1: a faixa do Instagram da MIMO depois dos primeiros salões da lista (ou no fim, se a lista for curta)
+function comFaixaInsta(cartoes, cidade) {
+  if (!cartoes.length) return cartoes
+  const i = Math.min(3, cartoes.length - 1)
+  const faixa = <div key="gi-faixa" className="gi-faixa"><CartaoInstagram area="insta_lista" titulo="Gostou de algum? Toda semana tem mais no Instagram" texto={`Os salões mais bem avaliados de ${cidade}, dicas e novidades. Siga {@}.`} /></div>
+  return [...cartoes.slice(0, i + 1), faixa, ...cartoes.slice(i + 1)]
+}
+
 export default function GuiaRota() {
   const { cidade, item } = useParams()
   if (!cidade) return <IndiceDeCidades />
@@ -361,7 +370,7 @@ function Cidade({ dados }) {
 
           {filtrados.length ? (
             <div className="gd-cartoes gd-cartoes-lista">
-              {filtrados.slice(0, limite).map((l) => <CartaoLugar key={l.slug} lugar={l} cidadeSlug={cslug} cidade={cidade} />)}
+              {comFaixaInsta(filtrados.slice(0, limite).map((l) => <CartaoLugar key={l.slug} lugar={l} cidadeSlug={cslug} cidade={cidade} />), cidade)}
             </div>
           ) : (
             <div className="gd-vazio">

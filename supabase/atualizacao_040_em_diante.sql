@@ -214,6 +214,7 @@
 --    246  a assistente com uma conversa por vez e só o histórico do salão; textos da casa; lembrete Hoje/Amanhã (3.98.4): assistente_vez, whatsapp_inbox.salon_id, titulo_do_lembrete
 --    247  a voz é do salão em tudo o que a cliente recebe (3.98.5): titulo_com_salao, montar_texto_padrao, avisos do app sem a profissional como quem decide
 --    248  limites e pausas, respostas extras por Pix e números que a assistente não responde (3.99): assistente_limites, assistente_voltar_a_responder, respostas_pacotes, respostas_compras e respostas_compra_*, contar_resposta_do_dia (avisos de 80%, fim do dia e saldo), assistente_nao_responder, numero_sem_resposta no bot_contexto, salons.assistente_ignora_equipe
+--    249  o Instagram da MIMO no guia (3.99.1): os toques insta_convite, insta_seguir e insta_direto em site_eventos_tipos (o @ e os textos do convite ficam na config_publica)
 --
 --  Se der erro, me mande a mensagem inteira: cada bloco abaixo está
 --  marcado com o nome do arquivo de origem.
@@ -48569,4 +48570,32 @@ end;
 $function$;
 
 insert into public.migracoes_aplicadas (arquivo) values ('248_respostas_extras_e_nao_responder.sql') on conflict (arquivo) do nothing;
+
+-- =============================================================
+-- >>> 249_guia_instagram.sql
+-- =============================================================
+
+-- 249 · O Instagram da MIMO no guia (3.99.1)
+--
+-- O site ganhou o convite para seguir a MIMO no Instagram antes de falar com um salão do guia (WhatsApp ou Ligar) e
+-- os cartões fixos (página do salão, lista da cidade, "Pedido anotado!", fim do artigo e o @ no rodapé). O @ e os
+-- textos do convite moram na config_publica, que já existe ('instagram' e 'guia_instagram', este em JSON; a
+-- Plataforma › Guia › Instagram grava pela definir_config_publica). Aqui só entram os três toques novos, para o
+-- Desempenho mostrar sozinho (156: tipo novo = linha nova; sem a linha, o site manda e o banco ignora):
+--   insta_convite  o convite apareceu
+--   insta_seguir   tocou em Seguir (no convite, num cartão ou no rodapé; a área diz onde)
+--   insta_direto   tocou em "Agora não" e foi direto ao salão
+-- Ficam no grupo 'outro': não somam como contato com o salão (o toque no WhatsApp ou no Ligar já contou).
+
+insert into public.site_eventos_tipos (tipo, rotulo, grupo, ordem) values
+  ('insta_convite', 'Convite do Instagram', 'outro', 96),
+  ('insta_seguir', 'Seguir a MIMO no Instagram', 'outro', 97),
+  ('insta_direto', 'Foi direto ao salão (sem seguir)', 'outro', 98)
+on conflict (tipo) do update set rotulo = excluded.rotulo, grupo = excluded.grupo, ordem = excluded.ordem, ativo = true;
+
+do $$ begin
+  raise notice '249: os toques do Instagram da MIMO no guia (insta_convite, insta_seguir, insta_direto).';
+end $$;
+
+insert into public.migracoes_aplicadas (arquivo) values ('249_guia_instagram.sql') on conflict (arquivo) do nothing;
 

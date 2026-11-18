@@ -20,6 +20,7 @@ import AoVivo from '../../components/plataforma/guia/AoVivo'
 import WhatsAppGuia from '../../components/plataforma/guia/WhatsAppGuia'
 import OnboardingGuia from '../../components/plataforma/guia/OnboardingGuia'
 import ComercialGuia from '../../components/plataforma/guia/ComercialGuia'
+import InstagramGuia, { IconeInsta } from '../../components/plataforma/guia/InstagramGuia'
 import { naoContarAqui } from '../../lib/eventos'
 import { IAS, iaLembrada, lembrarIa, modeloLembrado, lembrarModelo } from '../../lib/guiaIa'
 import { lerEmFatias, COLUNAS_LISTA, COLUNAS_LISTA_ANTIGAS, colunaFalta, consultaGlobal, POR_PAGINA } from '../../lib/guiaPlataformaDados'
@@ -56,6 +57,7 @@ const ABAS = [
   ['whatsapp', 'WhatsApp', MessageCircle], // 3.48
   ['onboarding', 'Onboarding', UserPlus], // 3.55
   ['comercial', 'Comercial', Briefcase], // 3.74
+  ['instagram', 'Instagram', IconeInsta], // 3.99.1
   ['publicadas', 'Publicadas', Globe2],
   ['importar', 'Importar', Upload],
   ['paginas', 'Páginas da cidade', MapPinned],
@@ -913,6 +915,7 @@ export default function Guia() {
       {aba === 'whatsapp' && <WhatsAppGuia g={g} />}
       {aba === 'onboarding' && <OnboardingGuia />}
       {aba === 'comercial' && <ComercialGuia g={g} />}
+      {aba === 'instagram' && <InstagramGuia />}
       {aba === 'publicadas' && <Publicadas g={g} />}
       {aba === 'importar' && <><Importar g={g} /><ImportarFotos g={g} /><MiniaturasAntigas g={g} /></>}
       {aba === 'paginas' && <PaginasCidade g={g} />}

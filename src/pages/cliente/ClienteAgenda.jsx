@@ -209,7 +209,7 @@ function Destaque({ a, troca, onCancelar }) {
         <span className="ag-destaque-prof-nome">com <strong>{a.professionals?.name}</strong></span>
         <span className="ag-destaque-preco">{formatPreco(a.price_cents != null ? a.price_cents / 100 : a.services?.price)}</span>
       </div>
-      {troca && <p className="ag-nota"><Repeat size={14} /> Você pediu para mudar para {quando(troca)}. Aguardando a profissional.</p>}
+      {troca && <p className="ag-nota"><Repeat size={14} /> Você pediu para mudar para {quando(troca)}. Aguardando o salão confirmar.</p>}
       {troca_ && a.origem && <p className="ag-nota"><Repeat size={14} /> No lugar de {formatDataCurta(a.origem.date)} às {a.origem.start_time.slice(0, 5)}.</p>}
       <div className="ag-destaque-acoes" onClick={(e) => e.stopPropagation()}>
         <Link className="btn btn-primary" to={`/cliente/agendamento/${a.id}`}>Ver detalhes <ChevronRight size={16} /></Link>
@@ -269,7 +269,7 @@ function Cartao({ a, troca, historico = false, nota, pagamento, saiu = false, on
           <span className="ag-estrelas" aria-label={`Você deu ${nota} estrelas`}>{[1, 2, 3, 4, 5].map((n) => <Star key={n} size={13} className={n <= nota ? 'cheia' : ''} />)} <span className="muted">sua avaliação</span></span>
         )}
         {troca_ && a.origem && <span className="ag-nota"><Repeat size={13} /> No lugar de {formatDataCurta(a.origem.date)} às {a.origem.start_time.slice(0, 5)}. Até ela responder, o de antes continua valendo.</span>}
-        {troca && <span className="ag-nota"><Repeat size={13} /> Você pediu para mudar para {quando(troca)}. Aguardando a profissional.</span>}
+        {troca && <span className="ag-nota"><Repeat size={13} /> Você pediu para mudar para {quando(troca)}. Aguardando o salão confirmar.</span>}
         {visita > 0 && <span className="ag-nota ag-visita"><Users size={13} /> Na mesma visita: mais {visita === 1 ? '1 parte' : visita + ' partes'} com outra profissional.</span>}
         {children}
       </div>

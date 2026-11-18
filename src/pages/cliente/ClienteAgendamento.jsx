@@ -190,7 +190,7 @@ export default function ClienteAgendamento() {
                 </li>
               ))}
             </ul>
-            <span className="muted">Cada profissional confirma a parte dela.</span></span></div>
+            <span className="muted">O salão confirma cada parte.</span></span></div>
         )}
         {a.notes && <div className="agdt-item"><StickyNote size={18} /><span><span className="muted agdt-rotulo">Sua observação</span><span>{a.notes}</span></span></div>}
         <div className="agdt-item"><Clock size={18} /><span><span className="muted agdt-rotulo">Pedido feito</span><span>{new Date(a.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span></span></div>

@@ -389,6 +389,7 @@ await caso('as regras fixas: só diz que fez com ok, usa o ref, negrito com um a
   const t = textoNucleo({ orientacao: '' })
   assert.match(t, /Só diga que marcou, cancelou ou remarcou depois que a ferramenta devolveu ok/)
   assert.match(t, /ref do horário/); assert.match(t, /• 13:00/)
+  assert.match(t, /Você fala em nome do salão/); assert.match(t, /o salão ainda precisa confirmar a troca/)
 })
 
 console.log(`\n${ok} casos ok`)

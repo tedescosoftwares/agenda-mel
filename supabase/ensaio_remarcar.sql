@@ -65,7 +65,7 @@ begin
   assert st = 'cancelado', 'antigo devia cancelar';
   assert (select remarcado_para from public.appointments where id = antigo) = novo, 'remarcado_para';
   select corpo into txt from public.message_outbox where appointment_id = novo and kind = 'remarcacao_aceita';
-  assert txt like '%Remarcado%', 'texto aceita: ' || coalesce(txt, '(nulo)');
+  assert txt like '%troca confirmada%' and txt like '%era:%', 'texto aceita: ' || coalesce(txt, '(nulo)');   -- 247: a voz é do salão
   raise notice E'--- aviso para a cliente:\n%', txt;
   select count(*) into n from public.message_outbox where appointment_id = antigo and kind in ('cancelou_comigo', 'profissional_cancelou', 'agendamento_cancelado');
   assert n = 0, 'cancelamento do antigo tinha que ser silencioso, mandou ' || n;

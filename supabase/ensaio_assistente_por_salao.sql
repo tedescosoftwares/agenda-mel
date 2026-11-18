@@ -80,7 +80,7 @@ begin
   perform set_config('agenda_mel.ja_avisei', '', true);
   r := public.casa_decide(ped, true);
   select corpo into t from public.message_outbox where client_id = c and kind = 'pedido_aceito' and appointment_id = ped;
-  if t is null or t not like '%Seu horário está confirmado%' or t like '%aceitou%' then raise exception 'F1: texto da confirmação: %', t; end if;
+  if t is null or t not like '%horário confirmado%' or t like '%aceitou%' then raise exception 'F1: texto da confirmação: %', t; end if;   -- 247: a voz é do salão
   perform set_config('request.jwt.claim.sub', '', true);
   r := public.bot_remarcar(salao, c, ped, d2, (public.bot_horarios(salao, prof, d2, serv) -> 'horarios' ->> 0)::time);
   novo := (r ->> 'appointment_id')::uuid;
@@ -88,7 +88,7 @@ begin
   perform set_config('agenda_mel.ja_avisei', '', true);
   r := public.casa_decide(novo, true);
   select corpo into t from public.message_outbox where client_id = c and kind = 'remarcacao_aceita' and appointment_id = novo;
-  if t is null or t not like '%A troca está confirmada%' or t like '%aceitou%' then raise exception 'F2: texto do remarcado: %', t; end if;
+  if t is null or t not like '%troca confirmada%' or t like '%aceitou%' then raise exception 'F2: texto do remarcado: %', t; end if;
   perform set_config('request.jwt.claim.sub', '', true);
   r := public.bot_marcar(salao, c, prof, serv, d1, (public.bot_horarios(salao, prof, d1, serv) -> 'horarios' ->> 0)::time);
   ped := (r ->> 'appointment_id')::uuid;
@@ -113,7 +113,7 @@ begin
   select title into t from public.notifications where user_id = c and kind = 'lembrete_agendamento' and data ->> 'appointment_id' = ap::text;
   if t <> (case when quando::date = public.agora_local()::date then 'Hoje tem horário marcado' else 'Amanhã tem horário marcado' end) then raise exception 'G3: título no app: %', t; end if;
   select corpo into t from public.message_outbox where client_id = c and kind = 'lembrete_agendamento' and appointment_id = ap;
-  if t is null or t not like '%' || public.titulo_do_lembrete(ap) || '%' then raise exception 'G4: título no WhatsApp: %', t; end if;
+  if t is null or t not like '%' || public.titulo_com_salao((select name from public.salons where id = salao), public.titulo_do_lembrete(ap)) || '%' then raise exception 'G4: título no WhatsApp: %', t; end if;   -- 247: com o nome do salão
   raise notice 'G lembrete: não logo depois de marcar; título "%"', public.titulo_do_lembrete(ap);
 
   raise notice 'ensaio_assistente_por_salao: tudo certo';

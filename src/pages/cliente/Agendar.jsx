@@ -552,7 +552,7 @@ export function AgendarConfirmar() {
 
       {partesDetalhadas.length > 0 && (
         <div className="card resumo-pedido resumo-visita">
-          <div className="resumo-visita-topo"><Users size={16} /> <strong>Na mesma visita</strong><span className="muted">cada profissional confirma a parte dela</span></div>
+          <div className="resumo-visita-topo"><Users size={16} /> <strong>Na mesma visita</strong><span className="muted">o salão confirma cada parte</span></div>
           <ul className="resumo-partes">
             {partesDetalhadas.map((x, i) => (
               <li key={x.servico + x.prof}>
@@ -655,8 +655,8 @@ export function AgendarConfirmar() {
         <strong>{remarcando ? 'Seu horário atual continua guardado' : 'Confirmação pelo WhatsApp'}</strong>
         <span className="muted">
           {remarcando
-            ? 'A profissional recebe o pedido de troca e responde. Enquanto isso, nada muda. Se ela não responder no prazo dela, o sistema decide sozinho.'
-            : 'A profissional confirma o pedido e você recebe um aviso. Se ela não responder no prazo dela, o sistema decide sozinho.'}
+            ? 'O salão recebe o pedido de troca e responde. Enquanto isso, nada muda. Se não responder no prazo, o sistema decide sozinho.'
+            : 'O salão confirma o pedido e você recebe um aviso. Se não responder no prazo, o sistema decide sozinho.'}
         </span>
       </div>
 
@@ -696,12 +696,12 @@ export function AgendarSucesso() {
   const texto = jaTrocou
     ? 'Sua profissional não pede confirmação, então a troca já valeu. Ela foi avisada.'
     : jaConfirmou
-      ? 'Sua profissional não pede confirmação: o horário já é seu. Ela foi avisada.'
+      ? 'O salão não pede confirmação: o horário já é seu.'
       : troca
-        ? 'Seu horário atual continua guardado. Assim que a profissional aceitar a troca, você recebe um aviso aqui no app.'
+        ? 'Seu horário atual continua guardado. Assim que o salão confirmar a troca, você recebe um aviso aqui no app.'
         : partes.length
-          ? 'Sua visita ficou guardada. Cada profissional confirma a parte dela, e você recebe um aviso aqui no app.'
-          : 'Seu horário ficou guardado, aguardando a confirmação da profissional. Assim que ela responder, você recebe um aviso aqui no app.'
+          ? 'Sua visita ficou guardada. O salão confirma cada parte, e você recebe um aviso aqui no app.'
+          : 'Seu horário ficou guardado, aguardando a confirmação do salão. Assim que ele responder, você recebe um aviso aqui no app.'
 
   return (
     <ClienteShell semTopo>

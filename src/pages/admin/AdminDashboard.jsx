@@ -89,7 +89,8 @@ export default function AdminDashboard() {
 
   const nomeSalao = salao?.name ?? 'Meu salão'
   const linkSalao = linkDoSalao(salao)
-  const primeiraPalavra = nomeSalao.split(' ')[0]
+  // 3.99.3: o nome inteiro ("Salão Mimo", não só "Salão"); nome comprido demais para a manchete vira "seu salão"
+  const nomeNaManchete = nomeSalao.trim().length <= 24 ? nomeSalao.trim() : ''
   const hojeTexto = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })
   const temMovimento = hoje.atendimentos > 0 || totalMes > 0 || pendentes > 0 || naFila > 0
   const servicosProntos = Number(primeiros?.servicos ?? 0) > 0
@@ -217,7 +218,7 @@ export default function AdminDashboard() {
         <section className={'admin-home-hero' + (capaSalao ? ' tem-capa' : '') + (primeiroAcesso ? ' primeiro-acesso' : '')} data-tour="inicio" style={capaSalao ? { '--home-hero-capa': `url("${capaSalao}")` } : undefined}>
           <div className="admin-home-hero-copy">
             <span className="admin-home-eyebrow"><Sparkles size={13} /> {saudacao}{nomePessoa ? `, ${nomePessoa}` : ''}</span>
-            <h1>{temMovimento ? <>Tudo acontecendo em <strong>{primeiraPalavra}</strong>, num só lugar.</> : <>Seu salão ganhou um <strong>centro de comando.</strong></>}</h1>
+            <h1>{temMovimento ? <>{nomeNaManchete ? <>Tudo acontecendo em <strong>{nomeNaManchete}</strong>, num só lugar.</> : <>Tudo do <strong>seu salão</strong>, num só lugar.</>}</> : <>Seu salão ganhou um <strong>centro de comando.</strong></>}</h1>
             <p>{temMovimento
               ? 'Agenda, equipe, clientes e números organizados para você bater o olho e saber o que precisa de atenção.'
               : 'Você já montou a base. Agora faltam poucos passos para começar a receber agendamentos de verdade.'}</p>

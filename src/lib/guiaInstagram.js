@@ -87,3 +87,11 @@ export function deveConvidar(convite, agora = Date.now()) {
 }
 export function marcarConvite() { try { gravarMarca({ ...lerMarca(), visto: new Date().toISOString() }) } catch { /* sem armazenamento */ } }
 export function marcarSeguiu() { try { gravarMarca({ ...lerMarca(), seguiu: true }) } catch { /* sem armazenamento */ } }
+
+// 4.2.1/4.4: para onde mandar quem tocou num link nosso. Um perfil do Instagram, no Android, abre direto no app (o
+// intent, com o navegador de reserva); no iPhone e no computador, e qualquer outro endereço, vai como está.
+export function destinoNoApp(url, ua = '') {
+  const m = /^https:\/\/(?:www\.)?instagram\.com\/([A-Za-z0-9._]{1,30})\/?$/.exec(String(url ?? ''))
+  if (m && /Android/i.test(ua)) return `intent://instagram.com/_u/${m[1]}/#Intent;package=com.instagram.android;scheme=https;S.browser_fallback_url=${encodeURIComponent(`https://www.instagram.com/${m[1]}/`)};end`
+  return url
+}

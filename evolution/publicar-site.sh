@@ -253,7 +253,17 @@ docker compose up -d caddy >/dev/null
 # fora do ar, certificados ficam no volume.
 FORA=$(md5sum Caddyfile | cut -c1-32)
 DENTRO=$(docker compose exec -T caddy md5sum /etc/caddy/Caddyfile 2>/dev/null | cut -c1-32)
+# 4.4: antes de trocar, confere o Caddyfile novo com o próprio Caddy (num container à parte, com as mesmas variáveis):
+# com erro, recriar derrubaria o site. Inválido, o Caddy de agora fica no ar com a configuração antiga.
+CADDY_OK=1
 if [ -n "$DENTRO" ] && [ "$DENTRO" != "$FORA" ]; then
+  if ! docker compose run --rm --no-deps -T --entrypoint caddy caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile > /tmp/mimo-caddy-validar.log 2>&1; then
+    CADDY_OK=0
+    vermelho '  o Caddyfile novo tem erro: o Caddy segue com o antigo (o site não cai). Mande isto para o suporte:'
+    tail -n 8 /tmp/mimo-caddy-validar.log | sed 's/^/    /'
+  fi
+fi
+if [ "$CADDY_OK" = 1 ] && [ -n "$DENTRO" ] && [ "$DENTRO" != "$FORA" ]; then
   amarelo '  o Caddy estava lendo um Caddyfile antigo (montagem por arquivo): recriando o container…'
   docker compose up -d --force-recreate caddy >/dev/null
   sleep 2

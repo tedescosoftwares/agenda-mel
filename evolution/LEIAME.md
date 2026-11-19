@@ -920,3 +920,15 @@ apagado do Supabase nesses passos; esvaziar o bucket `guia` fica para depois de 
 registros ficam em `~/fotos-s3.log` e, se faltar alguma foto, em `~/fotos-s3-falhas.txt` ou
 `~/fotos-s3-faltam.txt`.
 
+
+## O disparo (4.4): chips só para disparar
+
+Em Plataforma › Guia › WhatsApp › Disparo, os chips de disparo se conectam ali mesmo (Conectar outro número:
+nome e número, e o QR ou o código no celular do chip). Cada chip vira uma instância da mesma Evolution
+(`mimo-disparo`, `mimo-disparo-2`…) com o webhook de sempre; ninguém responde por ela (a conversa fica no
+celular do chip). A Mel do guia também pode disparar, e aí quem responde fala com ela.
+
+Depois da 4.4, o bat **2** confere o Caddyfile novo antes de trocar: se aparecer "o Caddyfile novo tem erro",
+o site segue no ar com o antigo; mande o trecho que ele mostra. O `/c/<token>` (o link de cada pessoa) só
+mostra a prévia da campanha com o Caddy novo.
+

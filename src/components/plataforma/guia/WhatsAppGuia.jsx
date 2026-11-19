@@ -7,10 +7,11 @@ import { tel, telCanon, mascararTel, telValido, quando, normal, lerSecao, guarda
 import { deixarRecado, pegarRecado } from '../../../lib/guiaPontes'
 import { Pilula, Chave, Tile, Funil, Nav, Bloco, Indice, BarraSalvar, Chat } from './PecasWa'
 import { IconeInsta } from './InstagramGuia'
+import DisparoGuia from './DisparoGuia'
 import {
   MessageCircle, LoaderCircle, Send, RotateCcw, Save, Bot, Inbox, Check, RefreshCw, TriangleAlert, Smartphone, MessagesSquare, MousePointerClick, X, Unplug,
   ThumbsUp, ThumbsDown, Clock, BellRing, Vote, Users, Shield, Search, Globe, SlidersHorizontal, Circle, Phone, Hourglass, ChevronDown, Sparkles, Zap, Handshake, UserX,
-  PhoneMissed, LifeBuoy, Undo2, ShieldCheck,
+  PhoneMissed, LifeBuoy, Undo2, ShieldCheck, Megaphone,
 } from 'lucide-react'
 
 // O WhatsApp do guia (3.48, migração 195): tudo se configura aqui. A conexão do número (outra instância na mesma
@@ -55,7 +56,7 @@ const CAMPOS_CONFIG = ['ligado', 'numero', 'numero_avisos', 'instancia', 'botoes
   'resgate_min', 'resgate_inicio', 'resgate_fim', 'resgate_opcoes', 'msg_resgate']
 const VOTO = { sim: 'vou atender', nao: 'não vou conseguir' }
 const RESGATE = { demora: 'o salão não deu sinal', sem_contato: 'o salão não tem WhatsApp', falhou: 'o pedido não chegou ao salão', nao: 'o salão disse não' }
-const SECOES = [['pedidos', 'Pedidos', Inbox], ['clientes', 'Clientes', Users], ['sem_resposta', 'Sem resposta', PhoneMissed], ['conversas', 'Conversas', MessagesSquare], ['simulador', 'Testar a Mel', Bot], ['config', 'Configuração', SlidersHorizontal]]
+const SECOES = [['pedidos', 'Pedidos', Inbox], ['clientes', 'Clientes', Users], ['sem_resposta', 'Sem resposta', PhoneMissed], ['conversas', 'Conversas', MessagesSquare], ['simulador', 'Testar a Mel', Bot], ['config', 'Configuração', SlidersHorizontal], ['disparo', 'Disparo', Megaphone]]
 const BLOCOS = [['conexao', 'Conexão', Smartphone], ['site', 'No site', Globe], ['mel', 'A Mel', Sparkles], ['pedido', 'O pedido ao salão', Send], ['retorno', 'O retorno do salão', Vote], ['ciclo', 'Ciclo e ocioso', RefreshCw], ['equipe', 'Equipe e dona', Users], ['agenda', 'Quem quer a MIMO Agenda', Handshake], ['dados', 'Limites e privacidade', Shield]]
 const PROBLEMAS = ['falhou', 'fora_do_limite', 'sem_contato', 'salao_saiu', 'pendente']
 const FILTROS = [
@@ -342,6 +343,9 @@ export default function WhatsAppGuia({ g }) {
           </aside>
         </section>
       )}
+
+      {/* 4.4: o disparo (migração 254): mensagem da equipe para quem já conversou com a Mel */}
+      {secao === 'disparo' && <DisparoGuia irParaConexao={() => { setSecao('config'); setTimeout(() => indice.irPara('conexao', setBlocoAtivo), 300) }} />}
 
       {secao === 'config' && (
         <section className="pg-wa-secao pg-wa-config">

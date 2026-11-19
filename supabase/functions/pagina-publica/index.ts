@@ -7,8 +7,9 @@
 // Este HTML pequeno tem o nome, a foto e a nota DELA nas etiquetas
 // Open Graph, e manda gente de verdade (que roda JS) para o app.
 //
-// Dois formatos de link (o Caddy manda o caminho todo):
+// Os formatos de link (o Caddy manda o caminho todo):
 //   /p/<slug>                 a vitrine da profissional (mimo.com.vc/p/ana)
+//   /c/<token>                o link de uma pessoa num disparo da Plataforma (4.4)
 //   /s/<subdominio>           a página do salão (studiomel.mimo.com.vc)
 //   /s/<subdominio>/<slug>    a profissional dentro do salão (2.80)
 //
@@ -42,7 +43,8 @@ function html(corpo: string, status = 200, cache = 'public, max-age=300') {
 
 const NADA = () => html('<!doctype html><title>MIMO</title><p>Não encontramos essa agenda.</p>', 404, 'no-store')
 
-type Previa = { titulo: string; nome: string; descricao: string; imagem: string; link: string; tipo: string }
+// ir: para onde vai quem chegou aqui sem ser robô (o padrão é o próprio link)
+type Previa = { titulo: string; nome: string; descricao: string; imagem: string; link: string; tipo: string; ir?: string }
 
 function pagina(p: Previa) {
   return html(`<!doctype html>
@@ -61,11 +63,11 @@ function pagina(p: Previa) {
 <meta name="twitter:title" content="${escapar(p.titulo)}">
 <meta name="twitter:description" content="${escapar(p.descricao)}">
 <meta name="twitter:image" content="${escapar(p.imagem)}">
-<meta http-equiv="refresh" content="0; url=${escapar(p.link)}">
+<meta http-equiv="refresh" content="0; url=${escapar(p.ir ?? p.link)}">
 <link rel="canonical" href="${escapar(p.link)}">
 </head>
 <body style="font-family:sans-serif;padding:2rem;text-align:center">
-<p><a href="${escapar(p.link)}">${escapar(p.titulo)}</a></p>
+<p><a href="${escapar(p.ir ?? p.link)}">${escapar(p.titulo)}</a></p>
 </body>
 </html>`)
 }
@@ -88,6 +90,25 @@ async function previaDaProfissional(slug: string, base: string, link: string) {
   })
 }
 
+// 4.4 (migração 254): o link de um disparo, mimo.com.vc/c/<token>: a prévia que a Plataforma escolheu para aquele
+// disparo (título, texto, imagem). Não conta toque: quem conta é a página do site, que só gente de verdade abre (o
+// refresh leva para ela com ?h=1, que o Caddy não desvia mais para cá)
+async function previaDoDisparo(token: string, base: string) {
+  const raiz = base || 'https://mimo.com.vc'
+  const { data } = /^[0-9a-f]{10}$/.test(token) ? await db.rpc('disparo_previa', { token_: token }) : { data: null }
+  const d = (data ?? {}) as { titulo?: string | null; texto?: string | null; imagem?: string | null; destino?: string | null }
+  const insta = /instagram\.com/i.test(d.destino ?? '')
+  return pagina({
+    tipo: 'website',
+    nome: d.titulo || 'MIMO',
+    titulo: d.titulo || (insta ? 'Siga a MIMO no Instagram 💗' : 'MIMO · guia de salões'),
+    descricao: d.texto || (insta ? 'Ajude o guia de salões a crescer e veja primeiro os salões mais bem avaliados da sua cidade.' : 'Os salões da sua cidade, com nota, fotos e WhatsApp.'),
+    imagem: d.imagem || (insta ? `${raiz}/og-instagram.jpg` : `${raiz}/pwa-512.png`),
+    link: `${raiz}/c/${token}`,
+    ir: `${raiz}/c/${token}?h=1`,
+  })
+}
+
 Deno.serve(async (req) => {
   const url = new URL(req.url)
   // o Caddy manda /functions/v1/pagina-publica/p/<slug> ou …/s/<sub>[/<prof>]
@@ -103,6 +124,8 @@ Deno.serve(async (req) => {
   if (modo === 'p' && nome) {
     return previaDaProfissional(nome, base, `${base}/p/${nome}`)
   }
+
+  if (modo === 'c' && nome) return previaDoDisparo(nome, base)
 
   if (modo === 's' && nome) {
     const { data, error } = await db.rpc('resolver_endereco', { nome, prof: prof ?? null })

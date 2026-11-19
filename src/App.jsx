@@ -14,6 +14,7 @@ import Artigo from "./pages/publico/Artigo";
 import NaoEncontrada from "./pages/publico/NaoEncontrada";
 import AbrirPedido from "./pages/publico/AbrirPedido";
 import IrParaInstagram from "./pages/publico/IrParaInstagram";
+import IrDoDisparo from "./pages/publico/IrDoDisparo";
 import PaginaOu404 from "./pages/publico/PaginaOu404";
 import { Planos, Sobre, Contato } from "./pages/publico/Institucional";
 import { PAGINAS_SEO } from "./conteudo/paginasSeo";
@@ -186,6 +187,7 @@ export default function App() {
             <Route path="/r/:token" element={<AbrirPedido />} />
             {/* 4.2.1: o link do Instagram que passa pela MIMO (conta o toque e abre o perfil) */}
             <Route path="/instagram" element={<IrParaInstagram />} />
+            <Route path="/c/:token" element={<IrDoDisparo />} />
             <Route path="*" element={<PaginaOu404 />} />
           </Routes>
           )}

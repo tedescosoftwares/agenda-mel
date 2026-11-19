@@ -17,8 +17,8 @@ export default function AvisoCookies() {
     try { setVisivel(!localStorage.getItem(CHAVE)) } catch { setVisivel(false) }
   }, [])
 
-  // 4.2.1: /instagram é só uma passagem de meio segundo até o Instagram; o aviso ali só pisca e some
-  if (!visivel || pathname === '/privacidade' || pathname === '/instagram' || pathname.startsWith('/termos') || pathname.startsWith('/plataforma')) return null
+  // 4.2.1/4.4: /instagram e /c/<token> (o link de um disparo) são só uma passagem até o destino; o aviso ali só pisca
+  if (!visivel || pathname === '/privacidade' || pathname === '/instagram' || pathname.startsWith('/c/') || pathname.startsWith('/termos') || pathname.startsWith('/plataforma')) return null
 
   function ok() {
     try { localStorage.setItem(CHAVE, new Date().toISOString()) } catch { /* sem storage */ }

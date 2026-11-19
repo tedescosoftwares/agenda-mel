@@ -123,13 +123,46 @@
 		path /p/*
 		header_regexp User-Agent (?i)(whatsapp|facebookexternalhit|facebot|twitterbot|telegrambot|linkedinbot|slackbot|discordbot|pinterest|skypeuripreview|iframely|embedly|googlebot|bingbot)
 	}
+	# 4.4: o link de cada pessoa num disparo (mimo.com.vc/c/<token>) mostra a prévia daquele disparo. Quem monta a prévia
+	# na hora de mandar é a própria Evolution (não se apresenta como robô conhecido), então aqui vai para a função tudo o
+	# que não é navegador de verdade (todo navegador e todo app com navegador dentro têm AppleWebKit, Gecko ou Firefox no
+	# User-Agent), além dos robôs de sempre. Quem cai na função por engano volta com ?h=1, que não é desviado.
+	@disparo_robos {
+		path /c/*
+		not query h=1
+		header_regexp User-Agent (?i)(whatsapp|facebookexternalhit|facebot|twitterbot|telegrambot|linkedinbot|slackbot|discordbot|pinterest|skypeuripreview|iframely|embedly|googlebot|bingbot)
+	}
+	@disparo_sem_navegador {
+		path /c/*
+		not query h=1
+		not header_regexp User-Agent (?i)(applewebkit|gecko/|firefox)
+	}
 	# Dentro de "route" a ordem é a escrita. Fora dele o Caddy roda
 	# try_files ANTES de handle, e aí /p/<slug> já virou /index.html
 	# quando o robô chega — foi assim que a prévia ficou muda.
+	# 4.4: o Supabase devolve o HTML das funções como text/plain (e com CSP sandbox), e o robô não lê prévia de texto puro:
+	# o Caddy põe de volta text/html e tira o sandbox (é só a prévia, para robô).
 	route {
 		handle @robos_no_link {
 			rewrite * /functions/v1/pagina-publica{path}
-			reverse_proxy https://{$SUPABASE_REF:nenhum}.supabase.co
+			reverse_proxy https://{$SUPABASE_REF:nenhum}.supabase.co {
+				header_down Content-Type "text/html; charset=utf-8"
+				header_down -Content-Security-Policy
+			}
+		}
+		handle @disparo_robos {
+			rewrite * /functions/v1/pagina-publica{path}
+			reverse_proxy https://{$SUPABASE_REF:nenhum}.supabase.co {
+				header_down Content-Type "text/html; charset=utf-8"
+				header_down -Content-Security-Policy
+			}
+		}
+		handle @disparo_sem_navegador {
+			rewrite * /functions/v1/pagina-publica{path}
+			reverse_proxy https://{$SUPABASE_REF:nenhum}.supabase.co {
+				header_down Content-Type "text/html; charset=utf-8"
+				header_down -Content-Security-Policy
+			}
 		}
 		# as páginas do site público (blog, /sistema-para-salao-de-beleza…)
 		# têm um index.html próprio gerado no build, com título, descrição
@@ -200,7 +233,10 @@
 		handle @robos_no_endereco {
 			# {labels.3} é o primeiro pedaço do host (studiomel de studiomel.mimo.com.vc)
 			rewrite * /functions/v1/pagina-publica/s/{http.request.host.labels.3}{path}
-			reverse_proxy https://{$SUPABASE_REF:nenhum}.supabase.co
+			reverse_proxy https://{$SUPABASE_REF:nenhum}.supabase.co {
+				header_down Content-Type "text/html; charset=utf-8"
+				header_down -Content-Security-Policy
+			}
 		}
 		try_files {path} /index.html
 		file_server

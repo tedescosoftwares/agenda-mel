@@ -473,6 +473,19 @@ Deno.serve(async (req) => {
     })
   }
 
+  // 4.4 (migração 254): o disparo. Na Mel do guia e nos chips de disparo: o que o WhatsApp avisa (entregue, lida) e
+  // quem respondeu a um disparo (só marca: na Mel a conversa segue para ela, como sempre). Um chip de disparo não tem
+  // atendente: o evento dele para aqui e não passa para a Mel nem para a assistente dos salões. Para os outros números,
+  // o banco responde vazio na hora. Sem a 254, o erro é ignorado e tudo segue como antes.
+  if (daEvolution && corpo?.instance && (status.length || mensagens.length || proprias.length)) {
+    const { data: dd, error: ed } = await db.rpc('disparo_evento', {
+      instancia_: corpo.instance,
+      status_: status.map((s) => ({ id: s.id, status: s.status })),
+      recebidas_: mensagens.map((m) => ({ telefone: m.telefone, nome: m.nome ?? null })),
+    })
+    if (!ed && (dd as { extra?: boolean } | null)?.extra) return json({ ok: true, disparo: true })
+  }
+
   const respostas: string[] = []
   const { data: config } = await db.rpc('config_publica')
 

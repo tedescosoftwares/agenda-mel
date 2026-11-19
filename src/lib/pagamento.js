@@ -27,6 +27,8 @@ function demoFuncao(nome, corpo) {
   if (nome === 'guia-gerar') return import('./demoGuia.js').then((m) => m.demoGuiaGerar(corpo))
   // o WhatsApp do guia (3.48): conectar, simular a Mel, reenviar (src/lib/demoGuiaWhats.js)
   if (nome === 'guia-whats') return import('./demoGuiaWhats.js').then((m) => m.demoGuiaWhats(corpo))
+  // 4.4: o disparo (src/lib/demoDisparo.js)
+  if (nome === 'disparo') return import('./demoDisparo.js').then((m) => m.demoDisparo(corpo))
   // o WhatsApp comercial (3.74): conectar, simular a assistente, responder pelo painel (src/lib/demoComercial.js)
   if (nome === 'comercial') return import('./demoComercial.js').then((m) => m.demoComercial(corpo))
   // a assistente do WhatsApp do salão (3.95): número próprio e teste (src/lib/demoAssistente.js)

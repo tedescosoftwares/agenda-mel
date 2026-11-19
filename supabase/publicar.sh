@@ -145,6 +145,12 @@ echo 'guia-fotos (as fotos do guia no S3: enviar e apagar)...'
 supabase functions deploy guia-fotos --project-ref "$PROJECT_REF" >/dev/null
 verde '  no ar'
 
+# JWT normal: quem chama é a Plataforma logada (a função confere eh_plataforma). 4.4: o disparo do WhatsApp do guia
+# (os chips de disparo, a IA que escreve, o teste e o envio um por um)
+echo 'disparo (mensagem para quem conversou com a Mel)...'
+supabase functions deploy disparo --project-ref "$PROJECT_REF" >/dev/null
+verde '  no ar'
+
 # JWT normal: quem chama é a Plataforma logada (a função confere eh_plataforma)
 echo 'guia-gerar (texto do guia de salões com IA)...'
 supabase functions deploy guia-gerar --project-ref "$PROJECT_REF" >/dev/null

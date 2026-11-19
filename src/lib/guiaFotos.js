@@ -140,6 +140,8 @@ export const enviarFotoDaCidade = (cidadeSlug, file) => enviarNaPasta(`cidades/$
 export const enviarImagemDaCategoria = (categoria, file) => enviarNaPasta(`categorias/${String(categoria).replace(/[^a-z0-9-]/g, '')}`, file, 'k')
 // 3.37: a foto da região (migração 182), em regioes/<regiao>/; devolve { url }
 export const enviarImagemDaRegiao = (regiao, file) => enviarNaPasta(`regioes/${String(regiao).replace(/[^a-z0-9-]/g, '')}`, file, 'g')
+// 4.4: a imagem da prévia do link de um disparo (WhatsApp › Disparo), em campanhas/; devolve { url }
+export const enviarImagemDoDisparo = (file) => enviarNaPasta('campanhas', file, 'd')
 // a imagem grande de uma página (1920 px no lado maior: ela se estica atrás do título) e a miniatura, numa pasta;
 // no demo, uma imagem do site marcada com ?c= (cidade) ou ?k= (categoria)
 async function enviarNaPasta(pasta, file, marca) {

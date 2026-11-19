@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { LoaderCircle, Heart } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { carregarConfig, instagramDe } from '../../lib/config'
+import { destinoNoApp } from '../../lib/guiaInstagram'
 import '../../guia-perto.css'
 
 // 4.2.1: o link do Instagram que passa pela MIMO (mimo.com.vc/instagram?de=whats_sim). Ao abrir de verdade (num
@@ -12,12 +13,6 @@ import '../../guia-perto.css'
 // o mesmo site_evento do guia (visitante do dia, sem IP guardado).
 const areaDe = (v) => (/^[a-z_]{1,20}$/.test(v ?? '') ? v : 'link')
 
-// no Android, o intent abre o app do Instagram direto (e, sem o app, o navegador); no iPhone e no computador, o perfil
-function destinoDoInstagram(handle, ua = '') {
-  const web = `https://www.instagram.com/${handle}/`
-  if (/Android/i.test(ua)) return `intent://instagram.com/_u/${handle}/#Intent;package=com.instagram.android;scheme=https;S.browser_fallback_url=${encodeURIComponent(web)};end`
-  return web
-}
 
 export default function IrParaInstagram() {
   const [params] = useSearchParams()
@@ -40,7 +35,8 @@ export default function IrParaInstagram() {
         new Promise((ok) => setTimeout(ok, 900)),
       ]).catch(() => {})
       // o redirecionamento é a ação final da página: acontece mesmo que o efeito já não siga vivo
-      window.location.replace(destinoDoInstagram(i.handle, ua))
+      // no Android, o app do Instagram direto (e, sem o app, o navegador); no iPhone e no computador, o perfil
+      window.location.replace(destinoNoApp(`https://www.instagram.com/${i.handle}/`, ua))
     })()
     return () => { vivo = false }
   }, [de])

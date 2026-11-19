@@ -9,6 +9,8 @@ import QuadroDoDia from '../../components/QuadroDoDia'
 import AgendaLista from '../../components/agenda/AgendaLista'
 import AgendaSemana from '../../components/agenda/AgendaSemana'
 import PedidosEsperando from '../../components/agenda/PedidosEsperando'
+import FolhaDoHorario from '../../components/agenda/FolhaDoHorario'
+import RemarcarHorario from '../../components/agenda/RemarcarHorario'
 import { isoHoje, somarDias, segundaDe, semanaDe, rotuloLongo, jornadaDoDia, bloqueiosDoDia, min } from '../../components/agenda/agendaComum'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
@@ -19,7 +21,8 @@ import '../../agenda.css'
 //   Computador (>= 1024px): Dia = o quadro do dia em modo agenda (uma coluna por profissional, as horas descendo, o
 //   tamanho do cartão é a duração, folga e fora do horário sombreados, a linha da hora atual, arrastar para remarcar,
 //   clicar no vazio para encaixar; no cartão aberto, concluir, não veio, remarcar, cancelar, WhatsApp). Semana = os 7
-//   dias lado a lado, com a cor de cada profissional; clicar num dia abre o Dia.
+//   dias lado a lado, com a cor de cada profissional; clicar num dia abre o Dia. Com uma profissional no filtro, é a
+//   semana só dela (fora do horário, folga e almoço sombreados; clicar no horário abre as ações, no vazio encaixa).
 //   Celular: a lista por horário, com os livres no meio e as ações numa folha.
 //   Em cima de tudo, a faixa dos pedidos que esperam a casa confirmar.
 // Os dados do dia são os do PDV (pdv_dia); a jornada de cada uma vem de professional_hours.
@@ -54,7 +57,9 @@ export default function AdminAgenda() {
   const [erro, setErro] = useState('')
   const [recarga, setRecarga] = useState(0)
   const [escolhendo, setEscolhendo] = useState(false)
-  const [encaixe, setEncaixe] = useState(null)    // { prof, hora }
+  const [encaixe, setEncaixe] = useState(null)    // { prof, hora, dia? }
+  const [abertoSemana, setAbertoSemana] = useState(null)      // o horário aberto na semana dela
+  const [remarcandoSemana, setRemarcandoSemana] = useState(null)
   const recarregar = useCallback(() => setRecarga((n) => n + 1), [])
 
   useEffect(() => { if (diaDaUrl && diaDaUrl !== dia) setDia(diaDaUrl) }, [diaDaUrl]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -111,13 +116,15 @@ export default function AdminAgenda() {
   useEffect(() => { if (dia !== isoHoje()) return; const t = setInterval(carregarDia, 60000); return () => clearInterval(t) }, [carregarDia, dia])
 
   // a semana inteira, só na vista Semana do computador
-  const verSemana = largo && vista === 'semana'
+  // com uma profissional no filtro, o computador mostra a semana só dela
+  const semanaDela = largo && Boolean(filtro)
+  const verSemana = largo && (vista === 'semana' || semanaDela)
   useEffect(() => {
     if (!verSemana || !salao?.id) return
     let vivo = true
     const dias = semanaDe(dia)
     supabase.from('appointments')
-      .select('id, date, start_time, end_time, status, professional_id, client_id, guest_name, service_name, price_cents, profiles (full_name), services (name)')
+      .select('id, date, start_time, end_time, status, professional_id, client_id, guest_name, guest_phone, remarca_de, service_name, price_cents, profiles (full_name, phone), services (name, price)')
       .eq('salon_id', salao.id).gte('date', dias[0]).lte('date', dias[6]).neq('status', 'cancelado')
       .order('date').order('start_time')
       .then(({ data, error }) => { if (!vivo) return; if (error) setErro(error.message); setDaSemana((data ?? []).filter((a) => a.date >= dias[0] && a.date <= dias[6] && a.status !== 'cancelado')) })
@@ -128,6 +135,15 @@ export default function AdminAgenda() {
   const visiveis = filtro ? lista.filter((p) => p.id === filtro) : lista
   const jornada = useMemo(() => jornadaDoDia(horasProf, dia), [horasProf, dia])
   const bloqueios = useMemo(() => bloqueiosDoDia(blocos, dia), [blocos, dia])
+  // a semana no formato da pdv_dia (a folha de ações lê cliente, servico, profissional e telefone)
+  const itensSemana = useMemo(() => (daSemana ?? []).map((a) => ({
+    ...a, cliente: a.profiles?.full_name || a.guest_name || 'Cliente', servico: a.service_name || a.services?.name || '',
+    profissional: lista.find((p) => p.id === a.professional_id)?.name ?? '', telefone: a.profiles?.phone || a.guest_phone || null,
+    price_cents: a.price_cents ?? (a.services?.price != null ? Math.round(Number(a.services.price) * 100) : null),
+  })), [daSemana, lista])
+  // a jornada e os bloqueios dela em cada dia da semana
+  const sombrasDela = useMemo(() => (filtro ? Object.fromEntries(semanaDe(dia).map((d) => [d, { jornada: jornadaDoDia(horasProf, d)[filtro] ?? null, blocos: bloqueiosDoDia(blocos, d)[filtro] ?? [] }])) : null), [filtro, dia, horasProf, blocos])
+  const profDela = filtro ? lista.find((p) => p.id === filtro) ?? null : null
   const agendaDoDia = doDia?.dia === dia ? (doDia?.agenda ?? []) : []
   const faixaCasa = useMemo(() => {
     const abertos = horasCasa.filter((h) => h.open)
@@ -168,7 +184,7 @@ export default function AdminAgenda() {
           <h1>Agenda</h1>
           {largo && navData}
           <span className="ags-esp" />
-          {largo && !semAgenda && (
+          {largo && !semAgenda && !semanaDela && (
             <div className="ags-seg" role="tablist" aria-label="Como ver a agenda">
               <button type="button" role="tab" aria-selected={vista === 'dia'} className={vista === 'dia' ? 'on' : ''} onClick={() => trocarVista('dia')}>Dia</button>
               <button type="button" role="tab" aria-selected={vista === 'semana'} className={vista === 'semana' ? 'on' : ''} onClick={() => trocarVista('semana')}>Semana</button>
@@ -194,7 +210,11 @@ export default function AdminAgenda() {
             {profs === null ? <p className="muted">Carregando…</p> : largo ? (
               verSemana ? (
                 daSemana === null ? <p className="muted">Carregando a semana…</p>
-                  : <AgendaSemana dias={semanaDe(dia)} itens={daSemana.filter((a) => !filtro || a.professional_id === filtro)} profs={lista} faixa={faixaCasa} onAbrirDia={(d) => { irPara(d); trocarVista('dia') }} />
+                  : semanaDela && profDela
+                    ? <AgendaSemana dias={semanaDe(dia)} itens={itensSemana.filter((a) => a.professional_id === filtro)} profs={lista} faixa={faixaCasa}
+                        uma={profDela} sombras={sombrasDela} onAbrir={setAbertoSemana} onEncaixar={({ dia: d, hora }) => setEncaixe({ prof: filtro, hora, dia: d })}
+                        onAbrirDia={(d) => { setFiltro(''); irPara(d); trocarVista('dia') }} />
+                    : <AgendaSemana dias={semanaDe(dia)} itens={itensSemana} profs={lista} faixa={faixaCasa} onAbrirDia={(d) => { irPara(d); trocarVista('dia') }} />
               ) : (
                 <div className="ags-quadro">
                   <QuadroDoDia modo="agenda" dia={dia} agenda={agendaDoDia.filter((a) => !filtro || a.professional_id === filtro)} semana={contagem} onTrocarDia={irPara}
@@ -230,12 +250,14 @@ export default function AdminAgenda() {
       {encaixe && (
         <EncaixeModal
           professionalId={encaixe.prof}
-          data={dia}
+          data={encaixe.dia ?? dia}
           horaInicial={encaixe.hora}
           onFechar={() => setEncaixe(null)}
           onPronto={() => { setEncaixe(null); recarregar() }}
         />
       )}
+      {abertoSemana && <FolhaDoHorario a={abertoSemana} dia={abertoSemana.date} profs={lista} onFechar={() => setAbertoSemana(null)} onRemarcar={setRemarcandoSemana} onMudou={recarregar} />}
+      {remarcandoSemana && <RemarcarHorario appt={remarcandoSemana} dia={remarcandoSemana.date} profs={lista} onFechar={() => setRemarcandoSemana(null)} onPronto={() => { setRemarcandoSemana(null); recarregar() }} />}
     </AdminShell>
   )
 }

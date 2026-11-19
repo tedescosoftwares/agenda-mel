@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Check, Ban, UserX, CalendarClock, MessageCircle, X, Plus, RotateCcw, ChevronDown } from 'lucide-react'
-import Portal from '../Portal'
+import { Plus, ChevronDown } from 'lucide-react'
 import { useDialogo } from '../../context/DialogoContext'
 import { formatPreco } from '../../lib/format'
-import { concluirHorario, marcarFalta, cancelarHorario, decidirPedido, perdoarFalta, jaComecou, passouDaTolerancia, atendendoAgora, ativo, zapDaCliente, fimDe } from '../../lib/acoesDoHorario'
+import { decidirPedido, atendendoAgora, fimDe } from '../../lib/acoesDoHorario'
 import { isoHoje, somarDias, DIAS_CURTOS, hhmm, corDa, livresDoDia, primeiroNome, iniciais } from './agendaComum'
 import RemarcarHorario from './RemarcarHorario'
+import FolhaDoHorario from './FolhaDoHorario'
 
 // 4.0: a Agenda no celular: os dias no topo, as profissionais em fichas, o que já passou recolhido numa linha, os
 // horários livres no meio da lista ("Livre até 12:00 · Ana · Encaixar") e, ao tocar num horário, as ações numa
@@ -138,34 +138,7 @@ export default function AgendaLista({ dia, agenda, profs, filtro, onFiltro, jorn
         </div>
       )}
 
-      {aberto && (
-        <Portal><div className="ags-folha-fundo" onClick={() => setAberto(null)}>
-          <div className="ags-folha" role="dialog" aria-modal="true" aria-labelledby="ags-folha-t" onClick={(e) => e.stopPropagation()}>
-            <span className="ags-folha-pega" aria-hidden="true" />
-            <div className="ags-folha-cab">
-              <span className="ags-av" style={{ background: corDa(profs, aberto.professional_id).veu, color: corDa(profs, aberto.professional_id).cor }}>{iniciais(aberto.cliente)}</span>
-              <div><b id="ags-folha-t">{aberto.cliente}</b><small>{aberto.servico} · {aberto.start_time.slice(0, 5)}–{aberto.end_time.slice(0, 5)} · {primeiroNome(aberto.profissional)}{valor(aberto) ? ` · ${valor(aberto)}` : ''}</small>
-                {aberto.client_id ? <small>{aberto.atendimentos === 0 ? 'Primeira vez na casa' : `${aberto.atendimentos + 1}ª visita`}{aberto.faltas > 0 ? ` · ${aberto.faltas} ${aberto.faltas === 1 ? 'falta' : 'faltas'}` : ''}</small> : <small>Cliente avulsa, sem conta</small>}
-              </div>
-              <button type="button" className="ags-folha-x" onClick={() => setAberto(null)} aria-label="Fechar"><X size={18} /></button>
-            </div>
-            {erro && <div className="alert alert-error">{erro}</div>}
-            <div className="ags-folha-acoes">
-              {aberto.status === 'pendente' && <>
-                <button type="button" className="ags-acao ok" disabled={indo} onClick={() => agir(() => decidirPedido(aberto, true, confirmar))}><Check size={18} /> Confirmar pedido</button>
-                <button type="button" className="ags-acao nao" disabled={indo} onClick={() => agir(() => decidirPedido(aberto, false, confirmar))}><Ban size={18} /> Recusar</button>
-              </>}
-              {aberto.status === 'confirmado' && jaComecou(aberto, dia, agoraMs) && <button type="button" className="ags-acao ok" disabled={indo} onClick={() => agir(() => concluirHorario(aberto, confirmar))}><Check size={18} /> Concluir atendimento</button>}
-              {aberto.status === 'confirmado' && passouDaTolerancia(aberto, dia, 15, agoraMs) && <button type="button" className="ags-acao" disabled={indo} onClick={() => agir(() => marcarFalta(aberto, confirmar))}><UserX size={18} /> Não veio</button>}
-              {aberto.status === 'faltou' && <button type="button" className="ags-acao" disabled={indo} onClick={() => agir(() => perdoarFalta(aberto))}><RotateCcw size={18} /> Perdoar a falta</button>}
-              {ativo(aberto) && !aberto.comanda_id && <button type="button" className="ags-acao" disabled={indo} onClick={() => { setRemarcando(aberto); setAberto(null) }}><CalendarClock size={18} /> Remarcar</button>}
-              {zapDaCliente(aberto) && <a className="ags-acao" href={zapDaCliente(aberto)} target="_blank" rel="noopener noreferrer"><MessageCircle size={18} /> Mandar WhatsApp</a>}
-              {aberto.status === 'confirmado' && !aberto.comanda_id && <button type="button" className="ags-acao nao" disabled={indo} onClick={() => agir(() => cancelarHorario(aberto, confirmar))}><X size={18} /> Cancelar horário</button>}
-              {aberto.status === 'concluido' && <p className="muted ags-folha-nota">Atendimento concluído{aberto.comanda_id ? ', com a comanda fechada' : ''}.</p>}
-            </div>
-          </div>
-        </div></Portal>
-      )}
+      {aberto && <FolhaDoHorario a={aberto} dia={dia} profs={profs} onFechar={() => setAberto(null)} onRemarcar={setRemarcando} onMudou={onMudou} />}
       {remarcando && <RemarcarHorario appt={remarcando} dia={dia} profs={profs} onFechar={() => setRemarcando(null)} onPronto={() => { setRemarcando(null); onMudou?.() }} />}
     </div>
   )

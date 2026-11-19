@@ -171,3 +171,18 @@
 .quadro-bloqueio em { font-style: normal; font-size: 0.74rem; font-weight: 600; color: var(--texto-3); background: rgba(255, 255, 255, 0.85); padding: 2px 9px; border-radius: 99px; }
 .ags-li.pausa { grid-template-columns: 48px minmax(0, 1fr); align-items: center; background: repeating-linear-gradient(135deg, #fbf9fc 0 7px, #f5f1f7 7px 14px); border-left-color: var(--fio-forte); font-size: 0.84rem; color: var(--texto-3); padding: 8px 12px; }
 .ags-li.pausa .ags-li-hora { font-weight: 600; color: var(--texto-3); }
+
+/* a semana de uma profissional só (o filtro no computador) */
+.ags-semana.uma .ags-semana-col { cursor: default; }
+.ags-semana.uma .ags-semana-col.encaixa { cursor: pointer; }
+.ags-semana.uma .ags-semana-item { padding: 4px 8px; }
+.ags-semana.uma .ags-semana-item b { font-size: 0.76rem; }
+.ags-semana-item.agora { background: #ffe1ec; box-shadow: 0 0 0 2px rgba(255, 45, 122, 0.18); }
+.ags-semana-col .quadro-fora, .ags-semana-col .quadro-agora { z-index: 0; }
+
+/* no computador, a folha de ações fica no meio da tela */
+@media (min-width: 1024px) {
+  .ags-folha-fundo { align-items: center; justify-content: center; }
+  .ags-folha { width: min(440px, calc(100vw - 32px)); border-radius: 20px; padding: 18px 18px 20px; animation: ags-aparece 0.16s ease both; }
+  .ags-folha-pega { display: none; }
+}

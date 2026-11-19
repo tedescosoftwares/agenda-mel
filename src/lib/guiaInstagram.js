@@ -5,15 +5,16 @@ import { carregarConfig, instagramDe } from './config'
 // convite que aparece antes de falar com um salão (WhatsApp ou Ligar) tem os textos em config_publica.guia_instagram
 // (JSON), editáveis na Plataforma › Guia › Instagram. Sem @, nada aparece em lugar nenhum.
 //
-// O convite aparece uma vez por aparelho: depois, o contato abre direto por N dias (padrão 30); quem tocou em Seguir
-// não vê mais. O aparelho guarda só isso (quando viu e se tocou em Seguir), como as outras preferências de tela; nada
+// O convite aparece uma vez por aparelho: depois, o contato abre direto por N dias (padrão 30; 0 = toda vez, 4.2); quem
+// tocou em Seguir não vê mais. O aparelho guarda só isso (quando viu e se tocou em Seguir), como as outras preferências de tela; nada
 // que identifique a pessoa. Sem armazenamento (aba anônima bloqueada), o convite não aparece: melhor que aparecer
 // em todo clique.
 
+// 4.2: o padrão é o pedido de ajuda (o Instagram é novo, e quem chega e vê o perfil quase vazio não segue por "dicas")
 export const PADRAO_INSTA = {
   ligado: true,
-  titulo: 'Antes de chamar, siga a MIMO no Instagram',
-  texto: 'É de graça. Seguindo, você recebe:',
+  titulo: 'Posso te pedir uma ajudinha? 🙏',
+  texto: 'A MIMO é um projeto pequeno e o nosso Instagram acabou de nascer. Seguindo, você ajuda o guia a crescer e ainda vê primeiro:',
   ganhos: [
     'Os salões mais bem avaliados de {cidade}, toda semana',
     'Dicas para escolher o salão e aproveitar o horário',
@@ -21,7 +22,8 @@ export const PADRAO_INSTA = {
   ],
   dias: 30,
 }
-export const DIAS_INSTA = [7, 15, 30, 60, 90]
+// 4.2: 0 = toda vez (até a pessoa tocar em Seguir)
+export const DIAS_INSTA = [0, 7, 15, 30, 60, 90]
 
 // o que veio do banco (texto JSON ou objeto), com o padrão no que faltar
 export function lerConviteInsta(valor) {
@@ -76,6 +78,7 @@ export function deveConvidar(convite, agora = Date.now()) {
     localStorage.setItem(CHAVE + '-t', '1'); localStorage.removeItem(CHAVE + '-t')
     const m = lerMarca()
     if (m.seguiu) return false
+    if (convite.dias === 0) return true
     const visto = Date.parse(m.visto ?? '')
     return !(Number.isFinite(visto) && agora - visto < convite.dias * 86400e3)
   } catch {

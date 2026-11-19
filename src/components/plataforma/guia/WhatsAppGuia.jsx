@@ -6,6 +6,7 @@ import { MODELOS } from '../../../lib/guiaIa'
 import { tel, telCanon, mascararTel, telValido, quando, normal, lerSecao, guardarSecao, useIndice } from '../../../lib/guiaWa'
 import { deixarRecado, pegarRecado } from '../../../lib/guiaPontes'
 import { Pilula, Chave, Tile, Funil, Nav, Bloco, Indice, BarraSalvar, Chat } from './PecasWa'
+import { IconeInsta } from './InstagramGuia'
 import {
   MessageCircle, LoaderCircle, Send, RotateCcw, Save, Bot, Inbox, Check, RefreshCw, TriangleAlert, Smartphone, MessagesSquare, MousePointerClick, X, Unplug,
   ThumbsUp, ThumbsDown, Clock, BellRing, Vote, Users, Shield, Search, Globe, SlidersHorizontal, Circle, Phone, Hourglass, ChevronDown, Sparkles, Zap, Handshake, UserX,
@@ -48,6 +49,8 @@ const CAMPOS_CONFIG = ['ligado', 'numero', 'numero_avisos', 'instancia', 'botoes
   'enquete_ativa', 'enquete_pergunta', 'enquete_sim', 'enquete_nao', 'msg_salao_vai_atender', 'msg_salao_nao_atende', 'avisar_cliente_nao', 'msg_cliente_nao_atende', 'aviso_nao_atende', 'msg_aviso_nao_atende', 'aviso_demora_min', 'msg_aviso_demora', 'cutucar_salao_min', 'msg_cutucar_salao',
   // 3.76: quem pergunta da MIMO Agenda (migração 221)
   'sobre_agenda', 'msg_sobre_agenda', 'msg_sobre_agenda_site',
+  // 4.2: o convite do Instagram no fim da conversa (migração 252)
+  'insta_ligado', 'insta_dias', 'msg_insta_sim', 'msg_insta_nao',
   // 3.77: o resgate da cliente (migração 222)
   'resgate_min', 'resgate_inicio', 'resgate_fim', 'resgate_opcoes', 'msg_resgate']
 const VOTO = { sim: 'vou atender', nao: 'não vou conseguir' }
@@ -94,6 +97,9 @@ export default function WhatsAppGuia({ g }) {
   const indice = useIndice()
   // 3.76: o WhatsApp comercial está ligado? (decide qual dos dois textos da MIMO Agenda vai)
   const [comercial, setComercial] = useState(null)
+  // 4.2: quantos números já receberam o convite do Instagram (migração 252)
+  const [instaNum, setInstaNum] = useState(null)
+  useEffect(() => { supabase.rpc('guia_whats_insta_numeros').then(({ data, error }) => setInstaNum(error ? { falta: true } : data)) }, [])
   // 3.59: as clientes que pediram (lidas quando a seção abre; de novo quando o período muda)
   const [cli, setCli] = useState(null) // { dias, lista }
   const [filtroCli, setFiltroCli] = useState('todas')
@@ -455,6 +461,22 @@ export default function WhatsAppGuia({ g }) {
               </div>
             </Bloco>
 
+            <Bloco id="instagram" aoMontar={indice.registrar} Icon={IconeInsta} titulo="Convite do Instagram" sub="No fim da conversa, a Mel pede uma ajudinha: seguir a MIMO no Instagram. Vai numa mensagem só dela, uns segundos depois da última." teste="wa-bloco-insta">
+              {(instaNum?.falta || (dados.config && !('insta_dias' in dados.config))) && <p className="pg-wa-erro"><TriangleAlert size={13} /> Falta a migração 252 no banco (bat, opção B): até lá o convite não sai e estes campos não são salvos.</p>}
+              <Chave checked={form.insta_ligado !== false} onChange={(v) => campo('insta_ligado', v)} teste="wa-insta-ligado"><b>Convidar para seguir o Instagram no fim da conversa</b> <span className="muted">(o @ é o de Plataforma › Guia › Instagram; sem @, nada sai)</span></Chave>
+              <label>Quando a mesma pessoa recebe de novo
+                <select className="plat-select" value={form.insta_dias ?? 30} onChange={(e) => campo('insta_dias', Number(e.target.value))} disabled={form.insta_ligado === false} data-teste="wa-insta-dias">
+                  <option value={0}>Em toda conversa</option>
+                  {[7, 15, 30, 60, 90, 180, 365].map((d) => <option key={d} value={d}>{d === 365 ? 'Uma vez por ano' : `Depois de ${d} dias`}</option>)}
+                </select></label>
+              <label>Depois do “sim” <span className="muted">(o pedido foi para o salão e ela espera a resposta). {'{salao}'}, {'{cidade}'}, {'{nome}'} e {'{link}'}; sem {'{link}'}, o link vai no fim.</span>
+                <textarea rows={4} value={form.msg_insta_sim ?? ''} onChange={(e) => campo('msg_insta_sim', e.target.value)} maxLength={1500} disabled={form.insta_ligado === false} data-teste="wa-msg-insta-sim" /></label>
+              <label>Depois do “não” <span className="muted">(ela desistiu, ou a conversa encerrou sem avançar)</span>
+                <textarea rows={4} value={form.msg_insta_nao ?? ''} onChange={(e) => campo('msg_insta_nao', e.target.value)} maxLength={1500} disabled={form.insta_ligado === false} data-teste="wa-msg-insta-nao" /></label>
+              {instaNum && !instaNum.falta && <p className="muted pg-wa-nota" data-teste="wa-insta-numeros"><Users size={12} /> {instaNum.numeros} {instaNum.numeros === 1 ? 'número já recebeu' : 'números já receberam'} o convite ({instaNum.ultimos_30} nos últimos 30 dias). Quem tocou em Seguir aparece em Plataforma › Guia › Instagram.</p>}
+              <p className="muted pg-wa-nota"><Sparkles size={12} /> Não vai junto do “não vai atender” do salão: nessa hora a Mel está oferecendo outros salões. E no simulador ele aparece sempre, sem contar.</p>
+            </Bloco>
+
             <Bloco id="equipe" aoMontar={indice.registrar} Icon={Users} titulo="Equipe e a dona" sub="Para onde vão os avisos internos, e o que a Mel diz quando reconhece a própria dona testando.">
               <label>WhatsApp da equipe para avisos <span className="muted">(salão sem WhatsApp, a dona testando, o salão que não vai atender ou que demora. Vazio = sem aviso, só na lista de pedidos.)</span>
                 <input value={mascararTel(form.numero_avisos)} onChange={(e) => campo('numero_avisos', telCanon(e.target.value))} placeholder="(13) 99999-0000" inputMode="tel" maxLength={16} data-teste="wa-numero-avisos" /></label>
@@ -668,7 +690,7 @@ function Simulador({ g, cfg }) {
     setOcupado(true); setErro('')
     try {
       const r = await chamar('guia-whats', { acao: 'simular', ...corpo })
-      setMensagens((m) => [...m, { q: 'cliente', t: r.texto }, ...(r.responder ? [{ q: 'mel', t: r.responder }] : [])])
+      setMensagens((m) => [...m, { q: 'cliente', t: r.texto }, ...(r.responder ? [{ q: 'mel', t: r.responder }] : []), ...(r.depois ? [{ q: 'mel', t: r.depois }] : [])])
       if (r.previaSalao) setPrevia(r.previaSalao)
       if (r.previaAviso) setPreviaAviso(r.previaAviso)
       if (r.previaEnquete) setPreviaEnquete(r.previaEnquete)

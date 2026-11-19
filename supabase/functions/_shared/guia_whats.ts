@@ -33,6 +33,8 @@ export type Deps = {
 export type Entrada = { telefone: string; texto: string; nomePerfil?: string | null; citado?: string | null; enquete?: string | null }
 export type Saida = {
   responder: string | null
+  // 4.2 (migração 252): uma segunda mensagem, uns segundos depois da resposta (o convite do Instagram no fim da conversa)
+  depois?: string | null
   acao: string
   previaSalao?: string | null
   previaAviso?: string | null
@@ -75,6 +77,8 @@ type Config = {
   sobre_agenda?: boolean | null; msg_sobre_agenda?: string | null; msg_sobre_agenda_site?: string | null
   // 3.77 (migração 222): o resgate da cliente quando o salão não dá sinal
   resgate_min?: number | null; resgate_opcoes?: number | null; msg_resgate?: string | null
+  // 4.2 (migração 252): o convite do Instagram no fim da conversa ("sim" e "não") e de quanto em quanto tempo por número
+  insta_ligado?: boolean | null; insta_dias?: number | null; msg_insta_sim?: string | null; msg_insta_nao?: string | null
 }
 // o pedido como o banco devolve (guia_whats_lead_criar / guia_whats_voto / guia_whats_pendentes): o que as mensagens usam
 export type Pedido = {
@@ -765,7 +769,7 @@ export async function atenderGuia(deps: Deps, e: Entrada, opcoes: { teste?: bool
   if (lido.cancelar && estadoAntes !== 'enviado') {
     const resposta = limpo(lido.resposta, 1200) || 'Tudo bem! Se quiser marcar depois, é só chamar. 💗'
     await guardar(resposta, 'encerrada', dados, lugar.id)
-    return { responder: resposta, acao: 'cancelou', estado: 'encerrada', dados }
+    return { responder: resposta, depois: await conviteInsta(deps, cfg, lugar, dados, tel, teste, 'nao'), acao: 'cancelou', estado: 'encerrada', dados }
   }
 
   // sem avançar: se a cliente escreve e a conversa não anda (sem dado novo e ainda sem o essencial), a Mel insiste com
@@ -777,7 +781,7 @@ export async function atenderGuia(deps: Deps, e: Entrada, opcoes: { teste?: bool
     if (semAvanco >= maxSemAvanco) {
       const resposta = limpo(cfg.msg_encerramento, 1000) || 'Tudo bem! 💗 Quando quiser marcar, é só me chamar aqui. Até logo!'
       await guardar(resposta, 'encerrada', { ...dados, sem_avanco: 0 }, lugar.id)
-      return { responder: resposta, acao: 'sem_avanco', estado: 'encerrada', dados }
+      return { responder: resposta, depois: await conviteInsta(deps, cfg, lugar, dados, tel, teste, 'nao'), acao: 'sem_avanco', estado: 'encerrada', dados }
     }
   } else {
     dados.sem_avanco = 0
@@ -790,7 +794,7 @@ export async function atenderGuia(deps: Deps, e: Entrada, opcoes: { teste?: bool
       const previa = mensagemDoSalao(cfg, lugar, pedidoTeste)
       const resposta = confirmacao(cfg, lugar, dados, true)
       await guardar(resposta, 'enviado', dados, lugar.id)
-      return { responder: resposta, acao: 'enviado_teste', previaSalao: previa, previaEnquete: cfg.enquete_ativa === false ? null : enqueteDoPedido(cfg, pedidoTeste), estado: 'enviado', dados }
+      return { responder: resposta, depois: await conviteInsta(deps, cfg, lugar, dados, tel, teste, 'sim'), acao: 'enviado_teste', previaSalao: previa, previaEnquete: cfg.enquete_ativa === false ? null : enqueteDoPedido(cfg, pedidoTeste), estado: 'enviado', dados }
     }
     await guardar(null, 'enviado', dados, lugar.id)
     const ld = (await chamar(deps, 'guia_whats_lead_criar', { conversa_: conversa!.id })) as (Pedido & { status: string; salao_tel: string | null; repetido: boolean })
@@ -833,7 +837,9 @@ export async function atenderGuia(deps: Deps, e: Entrada, opcoes: { teste?: bool
     }
     const resposta = confirmacao(cfg, lugar, dados, ok)
     await guardar(resposta, 'enviado', dados, lugar.id)
-    return { responder: resposta, acao: ok ? 'enviado' : `pedido_${statusFinal ?? ld?.status ?? 'erro'}`, previaSalao: previa, estado: 'enviado', dados }
+    // 4.2: com o pedido no salão (ou anotado), o convite do Instagram vem logo atrás, numa mensagem só dele
+    const depois = await conviteInsta(deps, cfg, lugar, dados, tel, teste, 'sim')
+    return { responder: resposta, depois, acao: ok ? 'enviado' : `pedido_${statusFinal ?? ld?.status ?? 'erro'}`, previaSalao: previa, estado: 'enviado', dados }
   }
 
   // tudo anotado (ou mudou algo depois do resumo): o resumo e o pedido de licença, com as nossas palavras
@@ -946,6 +952,32 @@ function avisoDona(l: Lugar, tel: string): string {
     `${onde}: a dona está escrevendo pela Mel do número cadastrado. Boa hora para apresentar a MIMO Agenda.`,
     `Número: ${telefoneBonito(tel)}`,
   ].join('\n')
+}
+
+// 4.2 (migração 252): o convite do Instagram no fim da conversa. O banco decide se este número pode receber agora
+// (insta_ligado, o @ da MIMO configurado, insta_dias desde a última vez; 0 = toda conversa) e anota; o simulador vê sempre
+// e não anota. Melhor-esforço: num banco sem a 252, ou num erro, a conversa segue sem o convite.
+export const INSTA_SIM_PADRAO = 'Enquanto o {salao} te responde, posso te pedir uma ajudinha? 🙏\nA MIMO é um projeto pequeno e o nosso Instagram acabou de nascer. Seguindo, você ajuda o guia a crescer e ainda vê primeiro os salões mais bem avaliados de {cidade}. Leva 2 segundos 💗\n👉 {link}'
+export const INSTA_NAO_PADRAO = 'Posso te pedir uma ajudinha antes de ir? 🙏\nA MIMO é um projeto pequeno e o nosso Instagram acabou de nascer. Seguindo, você ajuda o guia a crescer e ainda vê primeiro os salões mais bem avaliados de {cidade}. Leva 2 segundos 💗\n👉 {link}'
+export function textoInsta(modelo: string | null | undefined, l: Pick<Lugar, 'nome' | 'cidade'>, d: Pick<Dados, 'nome'>, link: string): string {
+  const base = String(modelo ?? '').trim()
+  const t = base
+    .replaceAll('{salao}', l.nome || 'salão')
+    .replaceAll('{cidade}', l.cidade || 'sua cidade')
+    .replaceAll('{nome}', primeiroNome(d.nome) || '')
+    .replaceAll('{link}', link)
+    .replace(/[ \t]+([,!?.])/g, '$1')
+  return (base.includes('{link}') ? t : `${t}\n👉 ${link}`).slice(0, 1600)
+}
+async function conviteInsta(deps: Deps, cfg: Config, l: Lugar, d: Dados, tel: string, teste: boolean, ponta: 'sim' | 'nao'): Promise<string | null> {
+  if (cfg.insta_ligado === false) return null
+  try {
+    const link = (await chamar(deps, 'guia_whats_insta_convidar', { tel_: tel, teste_: teste })) as string | null
+    if (!link) return null
+    return textoInsta(ponta === 'sim' ? (cfg.msg_insta_sim || INSTA_SIM_PADRAO) : (cfg.msg_insta_nao || INSTA_NAO_PADRAO), l, d, link)
+  } catch {
+    return null
+  }
 }
 
 function confirmacao(cfg: Config, l: Lugar, d: Dados, enviado: boolean): string {

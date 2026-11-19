@@ -49,6 +49,11 @@ let CFG = {
   orientacao: ORIENTACAO_PADRAO, msg_cliente: 'Olá! Vi o {salao} no guia da MIMO e quero marcar um horário.', msg_salao: MSG_SALAO_PADRAO,
   msg_salao_resposta: 'Obrigada pelo retorno! 💗 Se quiser receber pedidos assim direto na agenda do salão, com link próprio para as clientes marcarem e lembretes automáticos, responda QUERO que a equipe da MIMO te chama. Para não receber mais pedidos por aqui, responda SAIR.',
   msg_encerramento: 'Tudo bem! 💗 Quando quiser marcar, é só me chamar aqui que eu te ajudo. Até logo!',
+  // 4.2 (migração 252): o convite do Instagram no fim da conversa
+  insta_ligado: true,
+  insta_dias: 30,
+  msg_insta_sim: 'Enquanto o {salao} te responde, posso te pedir uma ajudinha? 🙏\nA MIMO é um projeto pequeno e o nosso Instagram acabou de nascer. Seguindo, você ajuda o guia a crescer e ainda vê primeiro os salões mais bem avaliados de {cidade}. Leva 2 segundos 💗\n👉 {link}',
+  msg_insta_nao: 'Posso te pedir uma ajudinha antes de ir? 🙏\nA MIMO é um projeto pequeno e o nosso Instagram acabou de nascer. Seguindo, você ajuda o guia a crescer e ainda vê primeiro os salões mais bem avaliados de {cidade}. Leva 2 segundos 💗\n👉 {link}',
   msg_ocioso: 'Oi! Vi que a gente parou por aqui 💗 Quer que eu envie seu pedido ao salão agora, ou prefere continuar depois? Se não puder responder, eu encerro por aqui — é só me chamar quando quiser.',
   msg_dona: 'Oi! 💗 Esse número é o mesmo que o {salao} tem cadastrado no guia da MIMO — então acho que é você, do salão! Quando uma cliente te encontra no guia e pede horário, chega assim pra você:\n\n{exemplo}\n\nA MIMO leva clientes até você, de graça. E tem a MIMO Agenda pra organizar tudo, com link pras clientes marcarem sozinhas (salão e autônoma). Nossa equipe vai te chamar pra mostrar. 💗',
   numero_avisos: '5513999991111',
@@ -195,6 +200,10 @@ function salvar({ c }) {
   for (const k of ['enquete_sim', 'enquete_nao']) if (typeof c[k] === 'string' && c[k].trim() && c[k].trim().length < 2) throw new Error('cada opção da enquete: de 2 a 60 letras')
   if (c.aviso_demora_min !== undefined) { const v = Number(c.aviso_demora_min); if (!(v === 0 || (v >= 5 && v <= 10080))) throw new Error('avisar a equipe da demora: 0 (desligado) ou de 5 a 10080 minutos'); n.aviso_demora_min = v }
   if (c.cutucar_salao_min !== undefined) { const v = Number(c.cutucar_salao_min); if (!(v === 0 || (v >= 5 && v <= 10080))) throw new Error('cutucar o salão: 0 (desligado) ou de 5 a 10080 minutos'); n.cutucar_salao_min = v }
+  // 4.2: o convite do Instagram
+  if (c.insta_ligado !== undefined) n.insta_ligado = !!c.insta_ligado
+  if (c.insta_dias !== undefined) { const v = Number(c.insta_dias); if (!(Number.isInteger(v) && v >= 0 && v <= 365)) throw new Error('o convite do Instagram de novo depois de: 0 (toda conversa) a 365 dias'); n.insta_dias = v }
+  for (const k of ['msg_insta_sim', 'msg_insta_nao']) { const v = typeof c[k] === 'string' ? c[k].trim() : ''; if (v && (v.length < 10 || v.length > 1500)) throw new Error('a mensagem do Instagram: de 10 a 1500 letras'); if (v) n[k] = v }
   if (c.modelo !== undefined) n.modelo = String(c.modelo ?? '').trim() || null
   if (Array.isArray(c.botoes)) n.botoes = [...new Set(c.botoes.filter((b) => ['whatsapp', 'ligar', 'quero_marcar'].includes(b)))].sort()
   if (c.limite_dia !== undefined) { const v = Number(c.limite_dia); if (!(v >= 1 && v <= 1000)) throw new Error('limite por dia: de 1 a 1000'); n.limite_dia = v }
@@ -217,6 +226,8 @@ export const GUIA_WHATS_RPC = {
   guia_whats_lead_do_salao: ({ token_ }) => { const l = LEADS.find((x) => x.token === token_); return l ? l.id : null },
   guia_whats_clique: ({ token_ }) => { const l = LEADS.find((x) => x.token === token_); if (!l) return { ok: false }; l.cliques = (l.cliques ?? 0) + 1; l.clicou_em = l.clicou_em ?? new Date().toISOString(); return { ok: true, cliente_tel: l.cliente_tel, cliente_nome: l.cliente_nome, salao: l.salao_nome, servico: l.servico } },
   guia_whats_salvar: (a) => salvar(a ?? { c: {} }),
+  // 4.2: quantos números receberam o convite do Instagram
+  guia_whats_insta_numeros: () => ({ numeros: 214, ultimos_30: 87, envios: 241 }),
   guia_whats_lead_atendido: ({ id_, atendido_ }) => { const l = LEADS.find((x) => x.id === id_); if (l) l.atendido = atendido_ !== false; return null },
   guia_whats_conversa: ({ id_ }) => { const c = CONVERSAS.find((x) => x.id === id_); return c ? { ...c, salao: SALOES[c.lugar_id]?.[0] ?? null, cidade: SALOES[c.lugar_id]?.[1] ?? null } : null },
   // 3.59
@@ -286,7 +297,7 @@ function simular({ texto, lugar, comoDona }) {
   const s = SIM
   const t = msg.trim()
   s.mensagens.push({ q: 'cliente', t })
-  let resposta, acao = 'conversa', previaSalao = null, previaEnquete = null
+  let resposta, acao = 'conversa', previaSalao = null, previaEnquete = null, depois = null
   const resumo = () => `Anotei assim:\n• Nome: ${s.dados.nome}\n• Serviço: ${s.dados.servico}${s.dados.preferencia ? `\n• Preferência: ${s.dados.preferencia}` : ''}\n\nPosso enviar seu nome, este WhatsApp e o pedido para o ${s.lugar.nome}? Eles te chamam aqui para combinar. É só responder *sim*.`
   // 3.54: testar como a dona (o número de quem escreve é o cadastrado do salão): a Mel reconhece e apresenta a MIMO Agenda
   if (comoDona) {
@@ -331,6 +342,11 @@ function simular({ texto, lugar, comoDona }) {
     previaSalao = preencher(CFG.msg_salao, { salao: s.lugar.nome, cliente: s.dados.nome, servico: s.dados.servico, preferencia: s.dados.preferencia, observacao: '', contato: bonito('5513999990000'), link: 'https://mimo.com.vc/r/demotoken-previa' })
     if (CFG.enquete_ativa !== false) previaEnquete = enqueteDe({ cliente: s.dados.nome, salao: s.lugar.nome, servico: s.dados.servico })
     resposta = `Pronto, ${s.dados.nome.split(' ')[0]}! 💗 Enviei seu pedido para o ${s.lugar.nome}. Eles vão te chamar aqui no WhatsApp para combinar o horário.`
+    depois = instaDemo('sim', s)
+  } else if (/^(nao|n|desisto|desisti|deixa|cancela|cancelar)\b/.test(palavraDemo(t)) && s.estado !== 'enviado') {
+    s.estado = 'encerrada'; acao = 'cancelou'
+    resposta = `Tudo bem${s.dados.nome ? `, ${s.dados.nome.split(' ')[0]}` : ''}! 💗 Se quiser marcar depois, é só me chamar.`
+    depois = instaDemo('nao', s)
   } else if (s.estado === 'enviado') { resposta = 'Seu pedido já foi para o salão, que vai te chamar aqui. Posso ajudar em mais alguma coisa?' }
   else if (!s.dados.nome) { s.dados.nome = t.slice(0, 60); resposta = `Prazer, ${s.dados.nome}! Qual serviço você quer marcar?` }
   else if (!s.dados.servico) {
@@ -341,7 +357,17 @@ function simular({ texto, lugar, comoDona }) {
   }
   else { s.dados.preferencia = t.slice(0, 80); s.estado = 'confirmando'; acao = 'resumo'; resposta = resumo() }
   s.mensagens.push({ q: 'mel', t: resposta })
-  return { ok: true, texto: t, responder: resposta, acao, previaSalao, previaEnquete, estado: s.estado, dados: { ...s.dados } }
+  if (depois) s.mensagens.push({ q: 'mel', t: depois })
+  return { ok: true, texto: t, responder: resposta, depois, acao, previaSalao, previaEnquete, estado: s.estado, dados: { ...s.dados } }
+}
+// 4.2: o convite do Instagram no simulador (sempre aparece, como no banco com teste_; o @ é o do demo)
+function instaDemo(ponta, s) {
+  if (CFG.insta_ligado === false) return null
+  const modelo = String((ponta === 'sim' ? CFG.msg_insta_sim : CFG.msg_insta_nao) ?? '').trim()
+  if (!modelo) return null
+  const link = 'https://instagram.com/mimo.com.vc'
+  const t = modelo.replaceAll('{salao}', s.lugar?.nome || 'salão').replaceAll('{cidade}', 'Itanhaém').replaceAll('{nome}', (s.dados?.nome || '').split(' ')[0]).replaceAll('{link}', link)
+  return modelo.includes('{link}') ? t : `${t}\n👉 ${link}`
 }
 
 export function demoGuiaWhats(corpo) {

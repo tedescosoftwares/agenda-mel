@@ -592,6 +592,12 @@ Deno.serve(async (req) => {
         if (r.responder) {
           const env = await enviarPor('evolution', { telefone: m.telefone, corpo: r.responder, identificador: m.instancia })
           if (!env.ok) console.error('guia: a resposta não saiu:', env.erro)
+          // 4.2 (migração 252): o convite do Instagram, numa mensagem só dele, uns segundos depois (só se a resposta saiu)
+          if (env.ok && r.depois) {
+            await new Promise((ok) => setTimeout(ok, 4000))
+            const env2 = await enviarPor('evolution', { telefone: m.telefone, corpo: r.depois, identificador: m.instancia })
+            if (!env2.ok) console.error('guia: o convite do Instagram não saiu:', env2.erro)
+          }
         }
       } catch (e) {
         console.error('guia: não deu para atender', e)

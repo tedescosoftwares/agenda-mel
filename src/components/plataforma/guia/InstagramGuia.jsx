@@ -131,14 +131,14 @@ export default function InstagramGuia() {
           <Bloco id="convite" aoMontar={nada} Icon={MessageSquareText} titulo="O convite antes de falar com o salão" sub="Na página de um salão do guia, o toque em WhatsApp ou Ligar abre este convite antes. Uma vez por aparelho; quem toca em Seguir não vê mais.">
             <Chave checked={c.ligado} onChange={(v) => mudar('ligado', v)} teste="insta-ligado"><b>Ligado</b> <span className="muted">(desligado, o contato abre direto, como antes)</span></Chave>
             <label>Título<input value={c.titulo} onChange={(e) => mudar('titulo', e.target.value)} maxLength={90} placeholder={PADRAO_INSTA.titulo} /></label>
-            <label>Texto antes da lista<input value={c.texto} onChange={(e) => mudar('texto', e.target.value)} maxLength={120} placeholder={PADRAO_INSTA.texto} /></label>
+            <label>Texto antes da lista<input value={c.texto} onChange={(e) => mudar('texto', e.target.value)} maxLength={200} placeholder={PADRAO_INSTA.texto} /></label>
             <fieldset className="pg-insta-ganhos">
               <legend>O que ela recebe seguindo <span className="muted">(até 3 linhas; use {'{cidade}'} para o nome da cidade)</span></legend>
               {[0, 1, 2].map((i) => <input key={i} value={c.ganhos[i] ?? ''} onChange={(e) => mudarGanho(i, e.target.value)} maxLength={110} placeholder={PADRAO_INSTA.ganhos[i]} aria-label={`Linha ${i + 1}`} />)}
             </fieldset>
             <label>Mostrar de novo depois de
               <select className="plat-select" value={c.dias} onChange={(e) => mudar('dias', Number(e.target.value))}>
-                {DIAS_INSTA.map((d) => <option key={d} value={d}>{d} dias</option>)}
+                {DIAS_INSTA.map((d) => <option key={d} value={d}>{d === 0 ? 'Toda vez (até tocar em Seguir)' : `${d} dias`}</option>)}
               </select>
             </label>
             <p className="muted pg-wa-nota">Só prometa o que vai mesmo aparecer no Instagram da MIMO. Os cartões fixos (página do salão, lista da cidade, “Pedido anotado!”, fim do artigo e rodapé) usam o mesmo @.</p>

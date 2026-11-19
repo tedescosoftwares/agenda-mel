@@ -61,7 +61,7 @@ export function ConviteInstagram({ insta, salao, cidade, destino, onFechar, prev
               {ligar ? <Phone size={17} /> : <MessageCircle size={17} />} Agora não, {ligar ? 'ligar para' : 'chamar'} {nome}
             </a>
           </div>
-          <small className="gi-nota">Aparece uma vez só. Depois, o {ligar ? 'telefone' : 'WhatsApp'} abre direto.</small>
+          <small className="gi-nota">{c.dias === 0 ? 'Leva 2 segundos 💗' : `Aparece uma vez só. Depois, o ${ligar ? 'telefone' : 'WhatsApp'} abre direto.`}</small>
         </>
       ) : (
         <div className="gi-feito">

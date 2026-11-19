@@ -216,6 +216,7 @@
 --    248  limites e pausas, respostas extras por Pix e números que a assistente não responde (3.99): assistente_limites, assistente_voltar_a_responder, respostas_pacotes, respostas_compras e respostas_compra_*, contar_resposta_do_dia (avisos de 80%, fim do dia e saldo), assistente_nao_responder, numero_sem_resposta no bot_contexto, salons.assistente_ignora_equipe
 --    249  o Instagram da MIMO no guia (3.99.1): os toques insta_convite, insta_seguir e insta_direto em site_eventos_tipos (o @ e os textos do convite ficam na config_publica)
 --    250  quem seguiu a MIMO pelo guia (3.99.2): guia_instagram_numeros, os números do Instagram na aba Instagram da Plataforma
+--    251  o histórico do relógio sem crescer para sempre: esvazia cron.job_run_details e agenda mimo-limpa-relogio, que guarda só 3 dias
 --
 --  Se der erro, me mande a mensagem inteira: cada bloco abaixo está
 --  marcado com o nome do arquivo de origem.
@@ -48655,4 +48656,39 @@ do $$ begin
 end $$;
 
 insert into public.migracoes_aplicadas (arquivo) values ('250_guia_instagram_numeros.sql') on conflict (arquivo) do nothing;
+
+-- =============================================================
+-- >>> 251_relogio_sem_historico_infinito.sql
+-- =============================================================
+
+-- 251 · O histórico do relógio sem crescer para sempre
+--
+-- O relógio do banco (pg_cron, desde a 052) guarda uma linha por execução em cron.job_run_details: a fila, os
+-- e-mails e o push rodam a cada minuto, a Mel e as rotinas a cada 5, uns 6 mil registros por dia, e nada apagava.
+-- Chegou a 58 MB dos 500 do plano gratuito do Supabase (o guia de salões, com 20 mil, ocupa 158). As telas que mostram
+-- o relógio (052, 054, 055, 057) só leem a última execução de cada job, então o histórico antigo não serve a ninguém.
+--
+--   1. Esvazia o histórico agora: o truncate devolve o espaço ao disco na hora. Sem permissão para isso, apaga o que
+--      tem mais de 3 dias (o espaço passa a ser reaproveitado pelas execuções novas, mas o arquivo não encolhe).
+--   2. Agenda a limpeza de todo dia (mimo-limpa-relogio, 03:41 de Brasília): fica só o histórico dos últimos 3 dias.
+--
+-- Depois de rodar, as telas do relógio mostram "ainda não rodou" até a próxima execução de cada job (um minuto para
+-- os da fila; o mimo-gsc, só no dia seguinte). Pode rodar de novo: nada é duplicado.
+
+do $$
+begin
+  begin
+    execute 'truncate table cron.job_run_details';
+    raise notice '251: histórico do relógio esvaziado (espaço devolvido ao disco)';
+  exception when insufficient_privilege then
+    delete from cron.job_run_details where end_time < now() - interval '3 days';
+    raise notice '251: sem permissão de truncate; apaguei o histórico com mais de 3 dias';
+  end;
+end $$;
+
+-- nome repetido substitui no pg_cron novo; o unschedule antes vale para o antigo e para o banco de teste
+select cron.unschedule(jobid) from cron.job where jobname = 'mimo-limpa-relogio';
+select cron.schedule('mimo-limpa-relogio', '41 6 * * *', $$delete from cron.job_run_details where end_time < now() - interval '3 days'$$);
+
+insert into public.migracoes_aplicadas (arquivo) values ('251_relogio_sem_historico_infinito.sql') on conflict (arquivo) do nothing;
 

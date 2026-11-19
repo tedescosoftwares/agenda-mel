@@ -1,17 +1,23 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { X, Receipt, Ban, Clock, UserRound, Sparkles, GripVertical, ChevronLeft, ChevronRight, Star, History, Plus, Heart, AlertTriangle, ZoomIn, ZoomOut, Hourglass, Check } from 'lucide-react'
+import { X, Receipt, Ban, Clock, UserRound, Sparkles, GripVertical, ChevronLeft, ChevronRight, Star, History, Plus, Heart, AlertTriangle, ZoomIn, ZoomOut, Hourglass, Check, UserX, CalendarClock, MessageCircle, RotateCcw } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useDialogo } from '../context/DialogoContext'
 import { formatCents } from '../lib/pagamento'
 import { agruparPorCategoria, bate } from '../lib/categorias'
 import Avatar from './Avatar'
 import AvaliacoesDaProfissional from './AvaliacoesDaProfissional'
+import RemarcarHorario from './agenda/RemarcarHorario'
+import { concluirHorario, marcarFalta, perdoarFalta, jaComecou, passouDaTolerancia, zapDaCliente } from '../lib/acoesDoHorario'
 
 // O quadro do dia (103): uma coluna por profissional, as horas descendo,
 // cada horário é um cartão que se arrasta para outra hora ou outra
 // coluna (remarca pela casa e avisa a cliente). Clique num espaço vazio
 // abre o modal de serviços para encaixar; clique num cartão abre o
 // horário, com "abrir comanda" e "cancelar".
+// 4.0: modo="agenda" (a Agenda do salão no computador): no cartão aberto, as ações da agenda (concluir, não veio,
+// remarcar, cancelar, WhatsApp; perdoar a falta) no lugar da comanda; a jornada de cada profissional sombreia a folga
+// e o fora do horário; quem está atendendo agora se destaca; passar o mouse no vazio mostra "+ Encaixar às …";
+// no topo de cada coluna, quantos horários e quanto a profissional tem no dia. O PDV (modo "pdv") fica igual.
 // 90px por hora é o nível de sempre. A lupa do tempo: Ctrl + rodinha (ou os botões) troca a escala; cada nível
 // diz quantos px tem um minuto, de quanto em quanto vai a grade e o rótulo
 const ZOOMS = [
@@ -21,7 +27,7 @@ const ZOOMS = [
   { escala: 4.2, grade: 15, rotulo: 15, nome: '15 min · lupa' },
 ]
 const ZOOM_PADRAO = 1
-const lerZoom = () => { try { const z = Number(localStorage.getItem('mimo-quadro-zoom')); return Number.isInteger(z) && z >= 0 && z < ZOOMS.length ? z : ZOOM_PADRAO } catch { return ZOOM_PADRAO } }
+const lerZoom = () => { try { const v = localStorage.getItem('mimo-quadro-zoom'); if (v === null || v === '') return ZOOM_PADRAO; const z = Number(v); return Number.isInteger(z) && z >= 0 && z < ZOOMS.length ? z : ZOOM_PADRAO } catch { return ZOOM_PADRAO } }
 const PASSO = 15                // arrasto e cliques caem em múltiplos de 15 min
 const min = (t) => { const [h, m] = String(t).slice(0, 5).split(':').map(Number); return h * 60 + m }
 const hhmm = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
@@ -33,7 +39,8 @@ const somar = (iso, n) => { const d = new Date(iso + 'T12:00:00'); d.setDate(d.g
 const semanaDe = (iso) => { const d = new Date(iso + 'T12:00:00'); const seg = somar(iso, -((d.getDay() + 6) % 7)); return Array.from({ length: 7 }, (_, i) => somar(seg, i)) }
 const rotuloDia = (iso) => { const d = new Date(iso + 'T12:00:00'); const t = `${DIAS_CURTOS[d.getDay()]}, ${d.getDate()} de ${MESES[d.getMonth()]}`; return t.charAt(0).toUpperCase() + t.slice(1) }
 
-export default function QuadroDoDia({ dia, agenda, semana = [], onTrocarDia, profs, horas, servicos, cats, clientes, salaoId, onAbrirComanda, onMudou }) {
+export default function QuadroDoDia({ dia, agenda, semana = [], onTrocarDia, profs, horas, servicos, cats, clientes, salaoId, onAbrirComanda, onMudou, modo = 'pdv', jornada = null, bloqueios = null, todasProfs = null }) {
+  const ehAgenda = modo === 'agenda'
   const { confirmar } = useDialogo()
   const [agora, setAgora] = useState(() => new Date())
   useEffect(() => { const t = setInterval(() => setAgora(new Date()), 60000); return () => clearInterval(t) }, [])
@@ -44,6 +51,8 @@ export default function QuadroDoDia({ dia, agenda, semana = [], onTrocarDia, pro
   const [adicionarEm, setAdicionarEm] = useState(null)    // horário que vai ganhar mais um serviço
   const [erro, setErro] = useState('')
   const [ocupado, setOcupado] = useState(false)
+  const [remarcando, setRemarcando] = useState(null)      // 4.0 (agenda): o horário que vai para outro dia/hora
+  const [fantasma, setFantasma] = useState(null)          // 4.0 (agenda): { prof, inicio } com o mouse no vazio
 
   const weekday = new Date(dia + 'T12:00:00').getDay()
   const [ini, fim] = useMemo(() => {
@@ -138,22 +147,36 @@ export default function QuadroDoDia({ dia, agenda, semana = [], onTrocarDia, pro
     setAberto(null); onMudou?.()
   }
 
+  // 4.0 (agenda): concluir, não veio e perdoar a falta, como na lista
+  async function acao(fn) {
+    setOcupado(true); setErro('')
+    const r = await fn()
+    setOcupado(false)
+    if (!r.ok) { if (r.erro) setErro(r.erro); return }
+    setAberto(null); onMudou?.()
+  }
+  const moeda = (c) => formatCents(c).replace(',00', '')
+
   const colunas = profs
   return (
-    <div className="quadro">
+    <div className={'quadro' + (ehAgenda ? ' quadro-agenda' : '')}>
       {erro && <div className="alert alert-error quadro-erro">{erro}<button type="button" onClick={() => setErro('')} aria-label="Fechar">×</button></div>}
       <div className="quadro-nav">
         <div className="quadro-nav-dia">
+          {/* 4.0: na Agenda, o dia se troca no topo da página; aqui ficam a lupa e a faixa da semana */}
+          {!ehAgenda && <>
           <button type="button" className="quadro-nav-btn" onClick={() => onTrocarDia?.(somar(dia, -1))} aria-label="Dia anterior"><ChevronLeft size={18} /></button>
           <button type="button" className="quadro-nav-btn" onClick={() => onTrocarDia?.(somar(dia, 1))} aria-label="Dia seguinte"><ChevronRight size={18} /></button>
           <strong className="quadro-nav-rotulo">{rotuloDia(dia)}{ehHoje ? ' · hoje' : passado ? ' · passado' : ''}</strong>
+          </>}
           <span className="quadro-lupa" title="Ctrl + rodinha do mouse também muda a escala">
             <button type="button" className="quadro-nav-btn" onClick={() => mudarZoom(-1)} disabled={zoom === 0} aria-label="Menos detalhe"><ZoomOut size={15} /></button>
             <span className="quadro-lupa-nome">{ZOOMS[zoom].nome}</span>
             <button type="button" className="quadro-nav-btn" onClick={() => mudarZoom(1)} disabled={zoom === ZOOMS.length - 1} aria-label="Mais detalhe"><ZoomIn size={15} /></button>
           </span>
-          <input type="date" className="quadro-nav-data" value={dia} onChange={(e) => e.target.value && onTrocarDia?.(e.target.value)} aria-label="Escolher o dia" />
-          {!ehHoje && <button type="button" className="btn-mini btn-mini-neutro" onClick={() => onTrocarDia?.(hojeStr)}>Hoje</button>}
+          {!ehAgenda && <input type="date" className="quadro-nav-data" value={dia} onChange={(e) => e.target.value && onTrocarDia?.(e.target.value)} aria-label="Escolher o dia" />}
+          {!ehAgenda && !ehHoje && <button type="button" className="btn-mini btn-mini-neutro" onClick={() => onTrocarDia?.(hojeStr)}>Hoje</button>}
+          {ehAgenda && <span className="quadro-dica-topo muted">Arraste um horário para remarcar · clique no vazio para encaixar</span>}
         </div>
         <div className="quadro-semana">
           <button type="button" className="quadro-nav-btn" onClick={() => onTrocarDia?.(somar(dia, -7))} aria-label="Semana anterior"><ChevronLeft size={16} /></button>
@@ -177,7 +200,7 @@ export default function QuadroDoDia({ dia, agenda, semana = [], onTrocarDia, pro
       <div className="quadro-cabeca">
         <div className="quadro-gutter" />
         {colunas.map((p) => (
-          <button key={p.id} type="button" className="quadro-col-cabeca" onClick={() => setProfAv(p)} title={`Avaliações de ${p.name}`}><Avatar nome={p.name} foto={p.photo_url} pequeno /><strong>{p.name}</strong><span className="muted">{agenda.filter((a) => a.professional_id === p.id && a.status !== 'cancelado').length} no dia</span></button>
+          <button key={p.id} type="button" className="quadro-col-cabeca" onClick={() => setProfAv(p)} title={`Avaliações de ${p.name}`}><Avatar nome={p.name} foto={p.photo_url} pequeno /><strong>{p.name}</strong>{ehAgenda ? (() => { const hs = agenda.filter((a) => a.professional_id === p.id && a.status !== 'cancelado' && a.status !== 'faltou'); const j = jornada?.[p.id]; const bt = (bloqueios?.[p.id] ?? []).find((b) => b.diaTodo); return <span className="muted">{(j && !j.open) || bt ? (!hs.length ? (bt?.motivo || 'folga').toLowerCase() : `${hs.length} ${hs.length === 1 ? 'horário' : 'horários'} · ${(bt?.motivo || 'folga').toLowerCase()}`) : `${hs.length} ${hs.length === 1 ? 'horário' : 'horários'}${hs.length ? ' · ' + moeda(hs.reduce((t, a) => t + Number(a.price_cents ?? 0), 0)) : ''}`}</span> })() : <span className="muted">{agenda.filter((a) => a.professional_id === p.id && a.status !== 'cancelado').length} no dia</span>}</button>
         ))}
       </div>
       <div className="quadro-rolagem" ref={rolagem}>
@@ -190,9 +213,23 @@ export default function QuadroDoDia({ dia, agenda, semana = [], onTrocarDia, pro
               onDragOver={(e) => { e.preventDefault(); const inicio = Math.min(fim - PASSO, Math.max(ini, posDoEvento(e, e.currentTarget))); if (sombra?.prof !== p.id || sombra?.inicio !== inicio) setSombra({ prof: p.id, inicio }) }}
               onDragLeave={() => setSombra((s) => (s?.prof === p.id ? null : s))}
               onDrop={(e) => soltar(e, p.id)}
-              onClick={(e) => { if (e.target !== e.currentTarget) return; const inicio = Math.min(fim - PASSO, Math.max(ini, posDoEvento(e, e.currentTarget))); setNovo({ prof: p.id, inicio }) }}
+              onClick={(e) => { if (e.target !== e.currentTarget) return; const inicio = ehAgenda && fantasma?.prof === p.id ? fantasma.inicio : Math.min(fim - PASSO, Math.max(ini, posDoEvento(e, e.currentTarget))); setNovo({ prof: p.id, inicio }) }}
+              onMouseMove={ehAgenda ? (e) => { if (arrastando || e.target !== e.currentTarget) { if (fantasma) setFantasma(null); return } const inicio = Math.min(fim - 30, Math.max(ini, Math.floor((posDoEvento(e, e.currentTarget) - ini) / 30) * 30 + ini)); if (fantasma?.prof !== p.id || fantasma?.inicio !== inicio) setFantasma({ prof: p.id, inicio }) } : undefined}
+              onMouseLeave={ehAgenda ? () => setFantasma(null) : undefined}
             >
               {linhas.map((m) => <span key={m} className={'quadro-linha' + (m % 60 ? ' meia' : '')} style={{ top: (m - ini) * escala }} />)}
+              {ehAgenda && jornada?.[p.id] && (jornada[p.id].open
+                ? <>{min(jornada[p.id].start) > ini && <span className="quadro-fora" style={{ top: 0, height: (min(jornada[p.id].start) - ini) * escala }} />}{min(jornada[p.id].end) < fim && <span className="quadro-fora" style={{ top: (min(jornada[p.id].end) - ini) * escala, bottom: 0 }} />}</>
+                : <span className="quadro-fora quadro-folga" style={{ top: 0, bottom: 0 }}><em>Folga</em></span>)}
+              {ehAgenda && jornada?.[p.id]?.open !== false && (bloqueios?.[p.id] ?? []).map((b, i) => b.diaTodo
+                ? <span key={'b' + i} className="quadro-fora quadro-folga" style={{ top: 0, bottom: 0 }}><em>{b.motivo || 'Bloqueado'}</em></span>
+                : b.fim > ini && b.ini < fim && <span key={'b' + i} className="quadro-fora quadro-bloqueio" style={{ top: (Math.max(b.ini, ini) - ini) * escala, height: (Math.min(b.fim, fim) - Math.max(b.ini, ini)) * escala }}>{(b.fim - b.ini) * escala >= 22 && <em>{b.motivo || 'Bloqueado'}</em>}</span>)}
+              {ehAgenda && fantasma?.prof === p.id && !arrastando && (() => {
+                // fora da jornada dela ou num bloqueio (almoço): o encaixe ainda pode, mas avisa
+                const j = jornada?.[p.id]; const t = fantasma.inicio
+                const fora = (j && (!j.open || t < min(j.start) || t >= min(j.end))) || (bloqueios?.[p.id] ?? []).some((b) => t >= b.ini && t < b.fim)
+                return <span className={'quadro-fantasma' + (fora ? ' fora' : '')} style={{ top: (t - ini) * escala, height: 30 * escala }}>+ Encaixar às {hhmm(t)}{fora && <small>fora do horário dela</small>}</span>
+              })()}
               {ehHoje && agoraMin >= ini && agoraMin <= fim && <span className="quadro-agora" style={{ top: (agoraMin - ini) * escala }} />}
               {sombra?.prof === p.id && !sombra?.dia && arrastando && (() => { const a = agenda.find((x) => x.id === arrastando); if (!a) return null; const d = min(a.end_time) - min(a.start_time); return <span className="quadro-sombra" style={{ top: (sombra.inicio - ini) * escala, height: d * escala }}>{hhmm(sombra.inicio)}</span> })()}
               {agenda.filter((a) => a.professional_id === p.id).map((a) => {
@@ -201,7 +238,7 @@ export default function QuadroDoDia({ dia, agenda, semana = [], onTrocarDia, pro
                 const aberto_ = sobre?.id === a.id && !arrastando
                 const hv = aberto_ ? 999 : h   // com o mouse em cima, mostra tudo
                 return (
-                  <button key={a.id} type="button" draggable={movel && !ocupado} className={`quadro-cartao ${a.status}${a.comanda_id ? ' fechado' : ''}${arrastando === a.id ? ' no-ar' : ''}${movel ? ' movel' : ''}${aberto_ ? (sobre.paraCima ? ' aberto para-cima' : ' aberto') : ''}`}
+                  <button key={a.id} type="button" draggable={movel && !ocupado} className={`quadro-cartao ${a.status}${ehAgenda && ehHoje && a.status === 'confirmado' && agoraMin >= min(a.start_time) && agoraMin < min(a.end_time) ? ' agora' : ''}${a.comanda_id ? ' fechado' : ''}${arrastando === a.id ? ' no-ar' : ''}${movel ? ' movel' : ''}${aberto_ ? (sobre.paraCima ? ' aberto para-cima' : ' aberto') : ''}`}
                     style={aberto_ ? (sobre.paraCima ? { top: top + h, height: 'auto', minHeight: h } : { top, height: 'auto', minHeight: h }) : { top, height: h }} title={aberto_ ? undefined : `${a.cliente} · ${a.servico}`}
                     onMouseEnter={(e) => {
                       // cresce pra baixo; se não couber na parte visível do quadro, cresce pra cima
@@ -213,6 +250,7 @@ export default function QuadroDoDia({ dia, agenda, semana = [], onTrocarDia, pro
                     onMouseLeave={() => setSobre((x) => (x?.id === a.id ? null : x))}
                     onDragStart={(e) => { e.dataTransfer.setData('text/plain', a.id); e.dataTransfer.effectAllowed = 'move'; setArrastando(a.id) }}
                     onDragEnd={() => { setArrastando(null); setSombra(null) }}
+                    onMouseMove={ehAgenda ? () => { if (fantasma) setFantasma(null) } : undefined}
                     onClick={(e) => { e.stopPropagation(); setAberto(a) }}>
                     {movel && <GripVertical size={12} className="quadro-grip" />}
                     {hv < 84 && a.client_id && a.atendimentos === 0 && <span className="quadro-marca nova" title="Primeira vez na casa">1ª vez</span>}
@@ -239,6 +277,7 @@ export default function QuadroDoDia({ dia, agenda, semana = [], onTrocarDia, pro
       </div>
 
       {profAv && <AvaliacoesDaProfissional prof={profAv} salaoId={salaoId} onFechar={() => setProfAv(null)} />}
+      {remarcando && <RemarcarHorario appt={remarcando} dia={dia} profs={todasProfs ?? profs} onFechar={() => setRemarcando(null)} onPronto={() => { setRemarcando(null); onMudou?.() }} />}
       {novo && <NovoHorario prof={profs.find((p) => p.id === novo.prof)} inicio={novo.inicio} dia={dia} servicos={servicos} cats={cats} clientes={clientes} salaoId={salaoId} agenda={agenda} onFechar={() => setNovo(null)} onPronto={() => { setNovo(null); onMudou?.() }} />}
       {adicionarEm && <NovoHorario prof={profs.find((p) => p.id === adicionarEm.professional_id)} inicio={min(adicionarEm.end_time)} dia={dia} servicos={servicos} cats={cats} clientes={clientes} salaoId={salaoId} agenda={agenda} juntarEm={adicionarEm} onFechar={() => setAdicionarEm(null)} onPronto={() => { setAdicionarEm(null); onMudou?.() }} />}
 
@@ -285,12 +324,27 @@ export default function QuadroDoDia({ dia, agenda, semana = [], onTrocarDia, pro
                 </span>
               </div>
             )}
-            <div className="quadro-detalhe-acoes">
-              {(aberto.status === 'pendente' || aberto.status === 'confirmado') && !aberto.comanda_id && <button type="button" className={'btn ' + (aberto.status === 'pendente' ? 'btn-ghost' : 'btn-primary')} onClick={() => { onAbrirComanda?.(aberto); setAberto(null) }}><Receipt size={15} /> Abrir comanda</button>}
-              {(aberto.status === 'pendente' || aberto.status === 'confirmado') && !aberto.comanda_id && <button type="button" className="btn btn-ghost" onClick={() => { setAdicionarEm(aberto); setAberto(null) }}><Plus size={15} /> Adicionar serviço</button>}
-              {(aberto.status === 'pendente' || aberto.status === 'confirmado') && !aberto.comanda_id && <button type="button" className="btn btn-ghost" onClick={() => cancelar(aberto)}><Ban size={15} /> Cancelar horário</button>}
-            </div>
-            {(aberto.status === 'pendente' || aberto.status === 'confirmado') && !aberto.comanda_id && <p className="muted quadro-dica">Para remarcar, arraste o cartão no quadro para outra hora, outra coluna ou um dia da faixa de cima.</p>}
+            {ehAgenda ? (() => {
+              // 4.0 (agenda): as ações num bloco só, e nada (nem a linha) quando não sobra ação (concluído com comanda)
+              const vivo = (aberto.status === 'pendente' || aberto.status === 'confirmado') && !aberto.comanda_id
+              const itens = [
+                aberto.status === 'confirmado' && jaComecou(aberto, dia) && <button key="c" type="button" className="btn btn-primary" disabled={ocupado} onClick={() => acao(() => concluirHorario(aberto, confirmar))}><Check size={15} /> Concluir</button>,
+                aberto.status === 'confirmado' && passouDaTolerancia(aberto, dia) && <button key="f" type="button" className="btn btn-ghost" disabled={ocupado} onClick={() => acao(() => marcarFalta(aberto, confirmar))}><UserX size={15} /> Não veio</button>,
+                aberto.status === 'faltou' && <button key="p" type="button" className="btn btn-ghost" disabled={ocupado} onClick={() => acao(() => perdoarFalta(aberto))}><RotateCcw size={15} /> Perdoar a falta</button>,
+                vivo && <button key="r" type="button" className="btn btn-ghost" onClick={() => { setRemarcando(aberto); setAberto(null) }}><CalendarClock size={15} /> Remarcar</button>,
+                zapDaCliente(aberto) && <a key="w" className="btn btn-ghost" href={zapDaCliente(aberto)} target="_blank" rel="noopener noreferrer"><MessageCircle size={15} /> WhatsApp</a>,
+                vivo && <button key="a" type="button" className="btn btn-ghost" onClick={() => { setAdicionarEm(aberto); setAberto(null) }}><Plus size={15} /> Adicionar serviço</button>,
+                vivo && <button key="x" type="button" className="btn btn-ghost" onClick={() => cancelar(aberto)}><Ban size={15} /> Cancelar horário</button>,
+              ].filter(Boolean)
+              return itens.length ? <div className="quadro-detalhe-acoes quadro-acoes-agenda">{itens}</div> : null
+            })() : (
+              <div className="quadro-detalhe-acoes">
+                {(aberto.status === 'pendente' || aberto.status === 'confirmado') && !aberto.comanda_id && <button type="button" className={'btn ' + (aberto.status === 'pendente' ? 'btn-ghost' : 'btn-primary')} onClick={() => { onAbrirComanda?.(aberto); setAberto(null) }}><Receipt size={15} /> Abrir comanda</button>}
+                {(aberto.status === 'pendente' || aberto.status === 'confirmado') && !aberto.comanda_id && <button type="button" className="btn btn-ghost" onClick={() => { setAdicionarEm(aberto); setAberto(null) }}><Plus size={15} /> Adicionar serviço</button>}
+                {(aberto.status === 'pendente' || aberto.status === 'confirmado') && !aberto.comanda_id && <button type="button" className="btn btn-ghost" onClick={() => cancelar(aberto)}><Ban size={15} /> Cancelar horário</button>}
+              </div>
+            )}
+            {(aberto.status === 'pendente' || aberto.status === 'confirmado') && !aberto.comanda_id && <p className="muted quadro-dica">{ehAgenda ? 'Também dá para remarcar arrastando o cartão para outra hora, outra coluna ou um dia da faixa de cima.' : 'Para remarcar, arraste o cartão no quadro para outra hora, outra coluna ou um dia da faixa de cima.'}</p>}
             {aberto.client_id && <LinhaDoTempo salaoId={salaoId} clienteId={aberto.client_id} atualId={aberto.id} />}
           </div>
         </div>

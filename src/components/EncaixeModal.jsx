@@ -8,11 +8,12 @@ import { formatarFone } from '../lib/fone'
 
 // Encaixe manual: a cliente ligou, apareceu na porta, ou simplesmente
 // não usa o app. O horário entra na agenda do mesmo jeito.
-export default function EncaixeModal({ professionalId, data, onFechar, onPronto }) {
+// 4.0: horaInicial: o horário livre que a pessoa tocou na Agenda ("Livre até 12:00 · Encaixar")
+export default function EncaixeModal({ professionalId, data, horaInicial = '', onFechar, onPronto }) {
   const [services, setServices] = useState([])
   const cats = useCategorias()
   const [servicoId, setServicoId] = useState('')
-  const [hora, setHora] = useState('')
+  const [hora, setHora] = useState(horaInicial || '')
   const [nome, setNome] = useState('')
   const [telefone, setTelefone] = useState('')
   const [salvando, setSalvando] = useState(false)

@@ -17,7 +17,8 @@ export default function AvisoCookies() {
     try { setVisivel(!localStorage.getItem(CHAVE)) } catch { setVisivel(false) }
   }, [])
 
-  if (!visivel || pathname === '/privacidade' || pathname.startsWith('/termos') || pathname.startsWith('/plataforma')) return null
+  // 4.2.1: /instagram é só uma passagem de meio segundo até o Instagram; o aviso ali só pisca e some
+  if (!visivel || pathname === '/privacidade' || pathname === '/instagram' || pathname.startsWith('/termos') || pathname.startsWith('/plataforma')) return null
 
   function ok() {
     try { localStorage.setItem(CHAVE, new Date().toISOString()) } catch { /* sem storage */ }

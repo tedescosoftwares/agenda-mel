@@ -969,12 +969,14 @@ export function textoInsta(modelo: string | null | undefined, l: Pick<Lugar, 'no
     .replace(/[ \t]+([,!?.])/g, '$1')
   return (base.includes('{link}') ? t : `${t}\n👉 ${link}`).slice(0, 1600)
 }
+export const linkInsta = (ponta: 'sim' | 'nao') => `https://${RAIZ_SITE}/instagram?de=whats_${ponta}`
 async function conviteInsta(deps: Deps, cfg: Config, l: Lugar, d: Dados, tel: string, teste: boolean, ponta: 'sim' | 'nao'): Promise<string | null> {
   if (cfg.insta_ligado === false) return null
   try {
-    const link = (await chamar(deps, 'guia_whats_insta_convidar', { tel_: tel, teste_: teste })) as string | null
-    if (!link) return null
-    return textoInsta(ponta === 'sim' ? (cfg.msg_insta_sim || INSTA_SIM_PADRAO) : (cfg.msg_insta_nao || INSTA_NAO_PADRAO), l, d, link)
+    const pode = (await chamar(deps, 'guia_whats_insta_convidar', { tel_: tel, teste_: teste })) as string | null
+    if (!pode) return null
+    // 4.2.1: o link passa pela MIMO (mimo.com.vc/instagram): conta o toque, com a prévia própria, e abre o perfil
+    return textoInsta(ponta === 'sim' ? (cfg.msg_insta_sim || INSTA_SIM_PADRAO) : (cfg.msg_insta_nao || INSTA_NAO_PADRAO), l, d, linkInsta(ponta))
   } catch {
     return null
   }

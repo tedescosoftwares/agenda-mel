@@ -365,7 +365,7 @@ function instaDemo(ponta, s) {
   if (CFG.insta_ligado === false) return null
   const modelo = String((ponta === 'sim' ? CFG.msg_insta_sim : CFG.msg_insta_nao) ?? '').trim()
   if (!modelo) return null
-  const link = 'https://instagram.com/mimo.com.vc'
+  const link = `https://mimo.com.vc/instagram?de=whats_${ponta}`  // 4.2.1: o link que passa pela MIMO
   const t = modelo.replaceAll('{salao}', s.lugar?.nome || 'salão').replaceAll('{cidade}', 'Itanhaém').replaceAll('{nome}', (s.dados?.nome || '').split(' ')[0]).replaceAll('{link}', link)
   return modelo.includes('{link}') ? t : `${t}\n👉 ${link}`
 }

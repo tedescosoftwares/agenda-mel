@@ -26,6 +26,9 @@ const AREAS = [
   ['insta_lista', 'Na faixa da lista da cidade'],
   ['insta_pedido', 'Depois do "Quero marcar"'],
   ['insta_rodape', 'No rodapé do site'],
+  // 4.2.1: o link do WhatsApp do guia (mimo.com.vc/instagram)
+  ['whats_sim', 'No WhatsApp, depois do "sim"'],
+  ['whats_nao', 'No WhatsApp, depois do "não"'],
 ]
 
 // os números do período (guia_instagram_numeros, migração 250)
@@ -47,7 +50,7 @@ function Resultados() {
   const maior = Math.max(1, ...areas.map((a) => a.c))
   const doConvite = pct(n?.seguir_do_convite, n?.convites)
   return (
-    <Bloco id="resultados" aoMontar={nada} Icon={BarChart3} titulo="Quem seguiu" sub="Os toques em Seguir no site do guia. O Instagram não conta para a gente quem seguiu de fato: vale o toque.">
+    <Bloco id="resultados" aoMontar={nada} Icon={BarChart3} titulo="Quem seguiu" sub="Os toques em Seguir no site do guia e no link que a Mel manda no WhatsApp (mimo.com.vc/instagram). O Instagram não conta para a gente quem seguiu de fato: vale o toque.">
       <label className="pg-insta-periodo">Período
         <select className="plat-select" value={dias} onChange={(e) => setDias(Number(e.target.value))}>
           <option value={7}>7 dias</option><option value={30}>30 dias</option><option value={90}>90 dias</option>

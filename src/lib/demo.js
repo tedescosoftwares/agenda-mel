@@ -645,7 +645,7 @@ const RPC = {
   plataforma_apagar: ({ ids }) => ({ ok: true, apagados: (ids ?? []).length, contas: 0, pulados: [] }),
   promover_plataforma: ({ email_ }) => 'ok: ' + email_ + ' agora é plataforma',
   definir_config_publica: ({ chave_, valor_ }) => { CONFIG_PUBLICA_DEMO[chave_] = valor_; return null },   // 3.99.1
-  guia_instagram_numeros: ({ dias_ }) => { const f = Number(dias_ ?? 30) / 30; const k = (v) => Math.round(v * f); return { dias: dias_, convites: k(412), seguir: k(131), seguir_pessoas: k(118), seguir_do_convite: k(96), direto: k(287), contatos: k(640), por_area: { insta_modal: k(96), insta_cartao: k(14), insta_lista: k(9), insta_pedido: k(8), insta_rodape: k(4) } } },   // 3.99.2
+  guia_instagram_numeros: ({ dias_ }) => { const f = Number(dias_ ?? 30) / 30; const k = (v) => Math.round(v * f); return { dias: dias_, convites: k(412), seguir: k(164), seguir_pessoas: k(149), seguir_do_convite: k(96), direto: k(287), contatos: k(640), por_area: { insta_modal: k(96), whats_sim: k(27), insta_cartao: k(14), insta_lista: k(9), insta_pedido: k(8), whats_nao: k(6), insta_rodape: k(4) } } },   // 3.99.2 (4.2.1: whats_sim e whats_nao)
   config_publica: () => ({ ...CONFIG_PUBLICA_DEMO, vapid_public: 'BDEMO', app_url: 'https://mimo.com.vc', ia_agente: 'ligado', ia_modelo: 'openai/gpt-oss-120b', ia_provedor: 'claude', ia_modelo_claude: 'claude-haiku-5-5' }),
   relogio_status: () => ({ ligado: true, jobs: [{ nome: 'mimo-fila', agenda: '* * * * *', ativo: true, ultima: new Date().toISOString(), status: 'succeeded' }, { nome: 'mimo-rotinas', agenda: '*/5 * * * *', ativo: true, ultima: new Date().toISOString(), status: 'succeeded' }] }),
   diagnostico_whatsapp: () => [{ item: 'Canal', situacao: 'ok', detalhe: 'Evolution, instância 11' }, { item: 'Número', situacao: 'ok', detalhe: '+55 13 99171-9086' }, { item: 'IA', situacao: 'ok', detalhe: 'ligada · 12 chamadas hoje' }],
@@ -872,6 +872,8 @@ export const demo = {
     // as corridas que só acontecem com a rede de verdade (a troca de cidade depois de importar) não aparecem no demo
     const atraso = Number(globalThis.__demoAtrasoMs) || 0
     if (atraso > 0) await new Promise((r) => setTimeout(r, atraso))
+    // 4.2.1: um teste pode ver o que a tela pediu ao banco (window.__demoRpcs = [] e depois ler a lista)
+    if (Array.isArray(globalThis.__demoRpcs)) globalThis.__demoRpcs.push([nome, args])
     const f = RPC[nome] ?? (nome === 'seo_sitemap' ? () => [...CONTEUDO.seo_pages.map((p) => ({ caminho: p.route, atualizado_em: p.updated_at })), ...CONTEUDO.blog_posts.map((a) => ({ caminho: '/blog/' + a.slug, atualizado_em: a.updated_at }))] : undefined)
     // função que não está na lista é escrita (aceitar, encaixar, chamar…):
     // no demo ela "dá certo" e não guarda nada

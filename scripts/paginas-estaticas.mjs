@@ -118,6 +118,9 @@ for (const p of PAGINAS_SEO) {
   pg.jsonLd = ldDaPaginaSeo(pg, p)
   registrar(pg)
 }
+// 4.2.1: mimo.com.vc/instagram, o link do Instagram que passa pela MIMO: a prévia no WhatsApp com a imagem própria
+// (og-instagram.jpg); o app conta o toque e leva ao perfil. Fora do sitemap e do Google (noindex)
+registrar({ caminho: '/instagram', titulo: 'Siga a MIMO no Instagram 💗', descricao: 'Ajude o guia de salões a crescer e veja primeiro os salões mais bem avaliados da sua cidade. Leva 2 segundos.', imagem: `${SITE}/og-instagram.jpg`, noindex: true, atualizado: DATA_PADRAO })
 const categorias = new Map(CATEGORIAS.map((c) => [c.slug, c.nome]))
 // os artigos publicados (do código e, depois, do banco) para o guia: "Leia também" e a caixa "Salões em <Cidade>" (3.14)
 const artigosParaGuia = new Map(ARTIGOS.map((a) => [a.slug, { slug: a.slug, title: a.titulo, excerpt: a.resumo }]))

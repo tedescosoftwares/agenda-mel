@@ -447,7 +447,7 @@ function NovoHorario({ prof, inicio, dia, servicos, cats, clientes, agenda = [],
 }
 
 // a linha do tempo da cliente na casa: o que ela já fez, com quem, quanto, como pagou
-function LinhaDoTempo({ salaoId, clienteId, atualId }) {
+export function LinhaDoTempo({ salaoId, clienteId, atualId }) {
   const [lista, setLista] = useState(null)
   useEffect(() => {
     let vivo = true

@@ -16,10 +16,23 @@
 .ags-cal input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
 .ags-cal input::-webkit-calendar-picker-indicator { position: absolute; inset: 0; width: 100%; height: 100%; cursor: pointer; }
 .ags-hoje-on { border-color: var(--rosa); color: var(--rosa); }
-.ags-seg { display: inline-flex; padding: 3px; border-radius: 12px; background: var(--superficie-3); gap: 2px; }
-.ags-seg button { border: 0; background: none; font: inherit; padding: 6px 14px; border-radius: 9px; font-size: 0.86rem; font-weight: 600; color: var(--texto-2); cursor: pointer; }
-.ags-seg button.on { background: #fff; color: var(--texto); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); }
-.ags-filtro { font: inherit; font-size: 0.86rem; font-weight: 600; padding: 8px 12px; border-radius: 12px; border: 1px solid var(--fio-forte); background: #fff; color: var(--texto); max-width: 240px; }
+.ags-abas { display: inline-flex; padding: 4px; border-radius: 14px; background: var(--superficie-3); gap: 2px; margin-left: 8px; }
+.ags-abas button { display: inline-flex; align-items: center; gap: 7px; border: 0; background: none; font: inherit; padding: 8px 16px; border-radius: 10px; font-size: 0.9rem; font-weight: 600; color: var(--texto-2); cursor: pointer; }
+.ags-abas button:hover { color: var(--texto); }
+.ags-abas button.on { background: #fff; color: var(--rosa); box-shadow: 0 1px 4px rgba(42, 7, 54, 0.1); }
+.ags-ajuda { display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 12px; border-radius: 12px; border: 1px solid var(--fio-forte); background: #fff; font: inherit; font-size: 0.86rem; font-weight: 600; color: var(--texto-2); cursor: pointer; }
+.ags-ajuda:hover { color: var(--rosa); border-color: var(--rosa); }
+@media (max-width: 1023px) { .ags-ajuda { width: 36px; height: 36px; padding: 0; justify-content: center; } }
+/* a barra embaixo do título: o período, e na aba Profissional quem */
+.ags-barra { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; min-width: 0; }
+.ags-barra-dica { font-size: 0.82rem; }
+.ags-quem { display: flex; gap: 6px; flex-wrap: wrap; }
+.ags-quem-item { display: inline-flex; align-items: center; gap: 7px; padding: 5px 12px 5px 5px; border-radius: 99px; border: 1px solid var(--fio); background: #fff; font: inherit; font-size: 0.86rem; font-weight: 600; color: var(--texto); cursor: pointer; }
+.ags-quem-item i { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-size: 0.64rem; font-weight: 700; background: var(--v); color: var(--c); }
+.ags-quem-item small { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 99px; background: var(--superficie-3); display: grid; place-items: center; font-size: 0.7rem; color: var(--texto-2); }
+.ags-quem-item:hover { border-color: var(--c); }
+.ags-quem-item.on { border-color: var(--c); background: var(--v); box-shadow: 0 0 0 2px var(--v); }
+.ags-quem-item.on small { background: #fff; color: var(--c); }
 .ags-novo { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 
 /* os pedidos esperando a casa */
@@ -185,4 +198,84 @@
   .ags-folha-fundo { align-items: center; justify-content: center; }
   .ags-folha { width: min(440px, calc(100vw - 32px)); border-radius: 20px; padding: 18px 18px 20px; animation: ags-aparece 0.16s ease both; }
   .ags-folha-pega { display: none; }
+}
+
+/* ---------- 4.1: o resumo, a legenda, a folha completa, arrastar e o passo a passo ---------- */
+.ags-resumo { display: flex; align-items: center; gap: 8px 10px; flex-wrap: wrap; padding: 10px 14px; border-radius: 14px; background: #fff; border: 1px solid var(--fio); font-size: 0.86rem; color: var(--texto-2); }
+.ags-resumo-titulo { font-weight: 700; color: var(--texto); margin-right: 4px; }
+.ags-resumo-item { display: inline-flex; align-items: baseline; gap: 5px; padding: 3px 10px; border-radius: 99px; background: var(--superficie-2); }
+.ags-resumo-item b { font-size: 0.98rem; color: var(--texto); }
+.ags-resumo-item.ok b { color: #0c7a50; }
+.ags-resumo-item.pend { background: #fff4dc; }
+.ags-resumo-item.pend b { color: #8a5a00; }
+.ags-resumo-item.falta b { color: #7a7f88; }
+.ags-resumo-extra { margin-left: auto; font-size: 0.82rem; color: var(--texto-2); }
+@media (max-width: 1023px) { .ags-resumo { padding: 8px 10px; font-size: 0.8rem; gap: 6px; } .ags-resumo-extra { margin-left: 0; flex-basis: 100%; } .ags-resumo-item b { font-size: 0.9rem; } }
+
+.ags-legenda { display: grid; gap: 8px; padding: 12px 14px; border-top: 1px solid var(--fio); font-size: 0.8rem; color: var(--texto-2); }
+.ags-quadro + .ags-legenda { border: 1px solid var(--fio); border-radius: 14px; background: #fff; }
+.ags-legenda > div { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; }
+.ags-legenda span { display: inline-flex; align-items: center; gap: 6px; }
+.ags-legenda-cores i { width: 10px; height: 10px; border-radius: 3px; }
+.ags-legenda-dicas { color: var(--texto-3); }
+.ags-legenda-dicas svg { color: var(--rosa); }
+.ags-amostra { width: 22px; height: 14px; border-radius: 4px; border: 1px solid #ff2d7a; border-left-width: 3px; background: #ffe6ef; }
+.ags-amostra.pend { border-style: dashed; border-left-style: solid; }
+.ags-amostra.ok { opacity: 0.55; }
+.ags-amostra.falta { opacity: 0.45; background: repeating-linear-gradient(0deg, transparent 0 5px, #ff2d7a 5px 6px, transparent 6px 14px), #ffe6ef; }
+.ags-amostra.fora { border: 1px solid #e6e0ea; background: repeating-linear-gradient(135deg, #f7f4f9 0 4px, #e9e3ed 4px 8px); }
+
+/* os cartões da semana: ícone do estado, mover com a mão, o lugar onde vai cair */
+.ags-semana-item b { display: flex; align-items: center; gap: 4px; }
+.ags-semana-item b svg { flex: none; }
+.ags-semana-item.concluido b svg { color: #0c7a50; }
+.ags-semana-item.pendente b svg { color: #b26a00; }
+.ags-semana-item.movel { cursor: grab; }
+.ags-semana-item.movel:active { cursor: grabbing; }
+.ags-semana-item.no-ar { opacity: 0.35; }
+.ags-semana-pend { color: #8a5a00 !important; font-weight: 600; }
+.ags-semana.arrastando .ags-semana-item:not(.no-ar) { pointer-events: none; }
+.ags-semana-col.alvo { background-color: #fff6fa; }
+.ags-semana-col.passado .ags-semana-item { filter: saturate(0.7); }
+
+/* a folha completa (as informações do horário, no computador) */
+.ags-folha.completa { width: min(520px, calc(100vw - 32px)); max-height: min(86dvh, 820px); }
+.ags-estado { display: inline-block; width: fit-content; font-size: 0.72rem; font-weight: 700; padding: 2px 9px; border-radius: 99px; background: var(--superficie-3); color: var(--texto-2); text-transform: lowercase; margin-bottom: 2px; }
+.ags-estado.confirmado { background: #ffe6ef; color: #c2185b; }
+.ags-estado.pendente { background: #fff1d6; color: #8a5a00; }
+.ags-estado.concluido { background: #e3f6ee; color: #0c7a50; }
+.ags-estado.faltou { background: #f1f1f3; color: #6b7280; }
+.ags-folha-info { list-style: none; margin: 0; padding: 12px 14px; border-radius: 14px; background: var(--superficie-2); display: grid; gap: 8px; font-size: 0.88rem; }
+.ags-folha-info li { display: flex; align-items: flex-start; gap: 9px; }
+.ags-folha-info svg { flex: none; margin-top: 2px; color: var(--texto-3); }
+.ags-folha-explica { color: var(--texto-2); font-size: 0.84rem; padding-top: 6px; border-top: 1px dashed var(--fio-forte); }
+.ags-folha-explica.pendente { color: #8a5a00; }
+.ags-folha-explica.pendente svg { color: #b26a00; }
+.ags-folha-dica { margin: 0; font-size: 0.8rem; display: flex; align-items: center; gap: 6px; }
+.ags-folha.completa .lt { margin-top: 0; }
+.ags-quem-nome { display: grid; gap: 1px; }
+.ags-quem-nome small { font-size: 0.76rem; font-weight: 500; }
+
+/* o passo a passo (Como usar) */
+.ags-tour { position: fixed; inset: 0; z-index: 1400; }
+.ags-tour-foco { position: fixed; border-radius: 14px; box-shadow: 0 0 0 9999px rgba(42, 7, 54, 0.58); outline: 2px solid rgba(255, 255, 255, 0.9); pointer-events: none; transition: left 0.25s, top 0.25s, width 0.25s, height 0.25s; }
+.ags-tour-escuro { position: fixed; inset: 0; background: rgba(42, 7, 54, 0.58); }
+.ags-tour-cartao { position: fixed; width: min(340px, calc(100vw - 24px)); background: #fff; border-radius: 18px; padding: 16px 18px 14px; box-shadow: 0 18px 50px rgba(42, 7, 54, 0.3); display: grid; gap: 6px; transition: left 0.25s, top 0.25s; }
+.ags-tour-n { font-size: 0.72rem; font-weight: 700; color: var(--rosa); text-transform: uppercase; letter-spacing: 0.04em; }
+.ags-tour-cartao b { font-size: 1.02rem; }
+.ags-tour-cartao p { margin: 0; font-size: 0.88rem; line-height: 1.45; color: var(--texto-2); }
+.ags-tour-botoes { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
+.ags-tour-botoes > span { display: flex; gap: 6px; }
+.ags-tour-pular { border: 0; background: none; font: inherit; font-size: 0.84rem; color: var(--texto-3); cursor: pointer; padding: 6px 0; }
+.ags-tour-pontos { display: flex; gap: 5px; justify-content: center; margin-top: 4px; }
+.ags-tour-pontos i { width: 6px; height: 6px; border-radius: 50%; background: var(--fio-forte); }
+.ags-tour-pontos i.on { background: var(--rosa); width: 16px; border-radius: 99px; }
+@media (prefers-reduced-motion: reduce) { .ags-tour-foco, .ags-tour-cartao { transition: none; } }
+.ags-tour-botoes .btn { padding: 7px 14px; font-size: 0.84rem; min-height: 0; }
+.ags-semana-item { user-select: none; -webkit-user-select: none; }
+.ags-semana-item:focus-visible { outline: 2px solid var(--rosa); outline-offset: 1px; z-index: 3; }
+@media (max-width: 1023px) {
+  .ags-resumo { gap: 2px 12px; padding: 9px 12px; }
+  .ags-resumo-titulo { display: none; }
+  .ags-resumo-item { padding: 0; background: none !important; }
 }

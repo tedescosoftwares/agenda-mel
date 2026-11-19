@@ -889,3 +889,34 @@ vinculados que ficam semanas sem o celular principal).
   até reconectar). O `trocar-numero.sh` só grava `whatsapp_instancia_casa` (a reserva) e o número de suporte.
 - **"Se a equipe não responder em X min"** usa o mesmo relógio do `cutucar-ociosas.sh` (a cada 5 min): a resposta sai
   entre X e X+5 minutos depois da primeira mensagem sem resposta.
+
+
+## As fotos do guia na AWS (4.3): img.mimo.com.vc
+
+As fotos do guia saem do Storage do Supabase (plano gratuito: 1 GB e 5 GB de tráfego por mês) e vão para o
+bucket `mimo-guia-fotos` (S3, São Paulo), servidas pelo CloudFront em `https://img.mimo.com.vc/`. A agenda
+continua no Supabase. Uma vez só:
+
+1. **AWS:** o bucket (acesso público bloqueado; CORS só com PUT de `https://mimo.com.vc` e
+   `https://pro.mimo.com.vc`), o certificado de `img.mimo.com.vc` em us-east-1, a distribuição do CloudFront
+   (origem privada, SimpleCORS, todos os locais da borda) e o usuário IAM `mimo-guia-fotos`, que só lê,
+   grava, apaga e lista nesse bucket.
+2. **Cloudflare → DNS:** o CNAME de validação do certificado e o CNAME `img` → `d….cloudfront.net`, os dois
+   em **DNS only** (nuvem cinza).
+3. **Chaves**, nunca no chat: `AWS_FOTOS_CHAVE_ID` e `AWS_FOTOS_CHAVE_SECRETA` nos secrets do Supabase
+   (Edge Functions → Secrets) e no `evolution/.env` (`nano evolution/.env`).
+4. Bat **B** (migração 253), **9** (as funções `guia-fotos` e `guia-fotos-dono`) e **2**. A partir daqui,
+   foto nova já vai para o S3.
+
+As fotos que já existem, pela opção **1** do bat (cai nesta pasta):
+
+    ./fotos-s3.sh teste       grava, lê por img.mimo.com.vc e apaga um arquivinho
+    ./fotos-s3.sh copiar      copia tudo em segundo plano (pode fechar o terminal; rodar de novo pula o que já foi)
+    ./fotos-s3.sh andamento   como vai a cópia
+    ./fotos-s3.sh trocar      confere que nada falta e troca os links no banco (pede SIM)
+
+Depois do `trocar`, a opção **2** do bat de novo: as páginas do guia saem com os links novos. Nada é
+apagado do Supabase nesses passos; esvaziar o bucket `guia` fica para depois de conferir o site. Os
+registros ficam em `~/fotos-s3.log` e, se faltar alguma foto, em `~/fotos-s3-falhas.txt` ou
+`~/fotos-s3-faltam.txt`.
+

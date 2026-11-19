@@ -675,12 +675,28 @@ export function fotosDoLugar(l) {
   }
   return out
 }
+// 4.3: onde mora uma foto do guia. As novas, no S3 da AWS, saindo por img.mimo.com.vc; as de antes, no bucket guia do
+// Supabase (até a cópia e a troca dos links da 253). { onde: 's3' | 'supabase', caminho } ou null (não é foto do guia:
+// as fotos do salão na MIMO, as do demo, um link de fora)
+export const HOST_FOTOS_GUIA = 'img.mimo.com.vc'
+const PREFIXO_SUPABASE_GUIA = '/storage/v1/object/public/guia/'
+export function objetoDaFoto(url) {
+  const s = String(url ?? '').trim().split('#')[0].split('?')[0]
+  let onde = null
+  let resto = ''
+  const i = s.indexOf(PREFIXO_SUPABASE_GUIA)
+  if (i > 0 && /^https:\/\//i.test(s)) { onde = 'supabase'; resto = s.slice(i + PREFIXO_SUPABASE_GUIA.length) }
+  else if (s.startsWith(`https://${HOST_FOTOS_GUIA}/`)) { onde = 's3'; resto = s.slice(HOST_FOTOS_GUIA.length + 9) }
+  if (!resto) return null
+  try { resto = decodeURIComponent(resto) } catch { /* fica como veio */ }
+  return { onde, caminho: resto }
+}
 // a miniatura de uma foto do guia (3.24): a mesma foto com -p.jpg, 480 px no lado maior, gerada no envio.
-// Só para as do bucket guia; as outras (fotos do salão na MIMO, demo) ficam como estão. Quem mostra
+// Só para as do guia (nos dois lugares); as outras ficam como estão. Quem mostra
 // usa onError para voltar à foto inteira quando a miniatura não existe (fotos de antes da 3.24)
 export function miniatura(url) {
   const s = String(url ?? '')
-  return /\/storage\/v1\/object\/public\/guia\//.test(s) ? s.replace(/\.[a-z0-9]+$/i, '-p.jpg') : s
+  return objetoDaFoto(s) ? s.replace(/\.[a-z0-9]+$/i, '-p.jpg') : s
 }
 // a miniatura não existe (foto de antes da 3.24): o <img> volta à foto inteira, uma vez só (onError)
 export const paraFotoInteira = (e) => {

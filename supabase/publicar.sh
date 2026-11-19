@@ -139,6 +139,12 @@ echo 'guia-fotos-dono (o dono manda as fotos pelo link do e-mail, com --no-verif
 supabase functions deploy guia-fotos-dono --project-ref "$PROJECT_REF" --no-verify-jwt >/dev/null
 verde '  no ar'
 
+# JWT normal: quem chama é a Plataforma logada (a função confere eh_plataforma). 4.3: dá a URL de envio das fotos do
+# guia no S3 da AWS (img.mimo.com.vc) e apaga de lá; precisa dos secrets AWS_FOTOS_CHAVE_ID e AWS_FOTOS_CHAVE_SECRETA
+echo 'guia-fotos (as fotos do guia no S3: enviar e apagar)...'
+supabase functions deploy guia-fotos --project-ref "$PROJECT_REF" >/dev/null
+verde '  no ar'
+
 # JWT normal: quem chama é a Plataforma logada (a função confere eh_plataforma)
 echo 'guia-gerar (texto do guia de salões com IA)...'
 supabase functions deploy guia-gerar --project-ref "$PROJECT_REF" >/dev/null

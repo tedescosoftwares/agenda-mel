@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Portal from '../../Portal'
 import { supabase, isDemo } from '../../../lib/supabase'
-import { fotosDoLugar } from '../../../lib/guia'
+import { fotosDoLugar, objetoDaFoto } from '../../../lib/guia'
+import { apagarFotosDoGuia } from '../../../lib/guiaFotos'
 import { loteEmPartes, ehTempoEsgotado, LOTE_POR_VEZ } from '../../../lib/guiaPlataformaDados'
 import { EyeOff, Archive, Trash2, LoaderCircle, TriangleAlert, CircleCheck, X, Globe2 } from 'lucide-react'
 
@@ -36,10 +37,8 @@ function Opcao({ id, Icon, titulo, perigo, acao, indo, onEscolher, children }) {
   )
 }
 
-// os objetos do bucket guia que as fotos da lista apontam (as fotos de quem está na MIMO são da página dele e ficam)
-const objetosDasFotos = (l) => fotosDoLugar(l)
-  .map((u) => u.split('/storage/v1/object/public/guia/')[1]).filter(Boolean)
-  .map((p) => { try { return decodeURIComponent(p.split('?')[0]) } catch { return p.split('?')[0] } })
+// as fotos do guia que a lista aponta, no Supabase ou no S3 (4.3); as fotos de quem está na MIMO são da página dele e ficam
+const fotosDoGuia = (l) => fotosDoLugar(l).filter((u) => objetoDaFoto(u))
 
 export default function EmLote({ lista, resumo, g, onFechar, onFeito }) {
   const [acao, setAcao] = useState('aprovar')
@@ -60,7 +59,7 @@ export default function EmLote({ lista, resumo, g, onFechar, onFeito }) {
   const prontas = useMemo(() => lista.filter(prontaParaPublicar).length, [lista])
   const noAr = useMemo(() => lista.filter((l) => l.status === 'publicado').length, [lista])
   const descartaveis = useMemo(() => lista.filter((l) => !['descartado', 'removido'].includes(l.status)).length, [lista])
-  const comFoto = useMemo(() => lista.filter((l) => objetosDasFotos(l).length).length, [lista])
+  const comFoto = useMemo(() => lista.filter((l) => fotosDoGuia(l).length).length, [lista])
   const ids = useMemo(() => lista.map((l) => l.id), [lista])
   const reivindicacoes = useMemo(() => { const s = new Set(ids); return (g.interesses ?? []).filter((i) => s.has(i.lugar_id)).length }, [g.interesses, ids])
   const cidades = useMemo(() => [...new Set(lista.map((l) => l.cidade))].sort((a, b) => a.localeCompare(b, 'pt-BR')), [lista])
@@ -83,12 +82,8 @@ export default function EmLote({ lista, resumo, g, onFechar, onFeito }) {
     try {
       // as fotos do bucket primeiro (o banco não apaga arquivo): só no apagar, fora do demo, e uma vez só (ao continuar, não)
       if (acao === 'apagar' && !isDemo && !fotosFeitas.current) {
-        const caminhos = lista.flatMap(objetosDasFotos)
-        for (let i = 0; i < caminhos.length; i += 100) {
-          const parte = caminhos.slice(i, i + 100)
-          const { error } = await supabase.storage.from('guia').remove(parte)
-          if (!error) acumulado.current.fotos += parte.length
-        }
+        // 4.3: nos dois lugares (Supabase e S3), com as miniaturas
+        acumulado.current.fotos += await apagarFotosDoGuia(lista.flatMap(fotosDoGuia))
         fotosFeitas.current = true
       }
       // 3.38.1: em partes, uma de cada vez (milhares de ids num comando só passavam do tempo limite do banco)

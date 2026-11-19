@@ -14,14 +14,21 @@
 //   500 { erro }
 //
 // Publicada com --no-verify-jwt: quem manda não tem login; o token é a
-// credencial, conferido no banco (guia_fotos_dono). O arquivo sobe com a
-// chave de serviço para o bucket 'guia', na pasta do salão e com o prefixo
-// dono-; o banco (guia_fotos_dono_gravar) só aceita URL com essa cara.
+// credencial, conferido no banco (guia_fotos_dono). O arquivo sobe na pasta
+// do salão e com o prefixo dono-; o banco (guia_fotos_dono_gravar) só aceita
+// URL com essa cara.
+//
+// 4.3: com as chaves da AWS nos secrets (AWS_FOTOS_CHAVE_ID e
+// AWS_FOTOS_CHAVE_SECRETA), a foto vai para o S3 e a URL é a de
+// img.mimo.com.vc (a migração 253 ensina o banco a aceitar); sem elas, segue
+// no bucket 'guia' do Supabase, como antes.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { CORS, planejarEnvio, sha256Hex, caminhoDaFoto, jaExiste, type Arquivo } from './logica.ts'
+import { configDoS3, gravarNoS3 } from '../_shared/s3.js'
 
 const db = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '', { auth: { persistSession: false } })
+const s3 = configDoS3((k: string) => Deno.env.get(k))
 
 const json = (corpo: unknown, status = 200) => new Response(JSON.stringify(corpo), { status, headers: { 'Content-Type': 'application/json', ...CORS } })
 
@@ -57,11 +64,18 @@ Deno.serve(async (req) => {
   for (const a of plano.aceitos) {
     const sha = await sha256Hex(a.bytes)
     const caminho = caminhoDaFoto(lugar.id, sha, a.tipo.ext)
+    const mini = miniaturas.get(a.nome)
+    const caminhoMini = caminho.replace(/\.[a-z0-9]+$/i, '-p.jpg')
+    if (s3) {
+      // no S3 gravar de novo o mesmo nome é a mesma foto (o nome sai do conteúdo): não precisa conferir antes
+      try { urls.push(await gravarNoS3(s3, caminho, a.bytes, a.tipo.mime)) } catch (e) { plano.recusados.push({ nome: a.nome, motivo: String((e as Error)?.message ?? e).slice(0, 200) }); continue }
+      if (mini) { try { await gravarNoS3(s3, caminhoMini, mini, 'image/jpeg') } catch { /* fica sem miniatura: o cartão usa a foto inteira */ } }
+      continue
+    }
     const { error } = await db.storage.from('guia').upload(caminho, a.bytes, { contentType: a.tipo.mime, cacheControl: '31536000', upsert: false })
     if (error && !jaExiste(error)) { plano.recusados.push({ nome: a.nome, motivo: error.message || 'não deu para enviar' }); continue }
     urls.push(db.storage.from('guia').getPublicUrl(caminho).data.publicUrl)
-    const mini = miniaturas.get(a.nome)
-    if (mini) await db.storage.from('guia').upload(caminho.replace(/\.[a-z0-9]+$/i, '-p.jpg'), mini, { contentType: 'image/jpeg', cacheControl: '31536000', upsert: false })
+    if (mini) await db.storage.from('guia').upload(caminhoMini, mini, { contentType: 'image/jpeg', cacheControl: '31536000', upsert: false })
   }
   if (!urls.length) return json({ erro: 'não deu para enviar as fotos agora; tente de novo', recusadas: plano.recusados }, 500)
 

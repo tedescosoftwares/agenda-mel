@@ -1,8 +1,9 @@
 import { useRef, useState } from 'react'
 import { Painel } from '../Pecas'
-import { supabase, isDemo } from '../../../lib/supabase'
-import { fotosDoLugar, miniatura } from '../../../lib/guia'
+import { isDemo } from '../../../lib/supabase'
+import { fotosDoLugar, miniatura, objetoDaFoto } from '../../../lib/guia'
 import { reduzirFoto } from '../../../lib/imagem'
+import { gravarMiniatura } from '../../../lib/guiaFotos'
 import { ImageDown, LoaderCircle, TriangleAlert, Square, Info } from 'lucide-react'
 
 // Miniaturas das fotos antigas (3.25). Desde a 3.24 toda foto enviada ganha a cópia de 480 px
@@ -13,8 +14,8 @@ import { ImageDown, LoaderCircle, TriangleAlert, Square, Info } from 'lucide-rea
 // cópia pequena. Pode rodar quantas vezes quiser: o que já existe é pulado.
 
 const PARALELO = 3
-const PREFIXO = '/storage/v1/object/public/guia/'
-const objetoDe = (url) => { const p = String(url ?? '').split(PREFIXO)[1]; return p ? decodeURIComponent(p.split('?')[0]) : null }
+// 4.3: a foto pode estar no Supabase (as de antes) ou no S3 (img.mimo.com.vc); a miniatura vai para o mesmo lugar dela
+const objetoDe = (url) => objetoDaFoto(url)?.caminho ?? null
 const doBucket = (url) => { const o = objetoDe(url); return !!o && /\.jpe?g$/i.test(o) && !/-p\.jpe?g$/i.test(o) }
 
 async function existe(url) {
@@ -25,9 +26,7 @@ async function gerar(url) {
   if (!r.ok) throw new Error(`a foto respondeu ${r.status}`)
   const blob = await r.blob()
   const { blob: mini } = await reduzirFoto(new File([blob], 'foto.jpg', { type: blob.type || 'image/jpeg' }), { max: 480, qualidade: 0.8 })
-  const caminho = objetoDe(url).replace(/\.jpe?g$/i, '-p.jpg')
-  const { error } = await supabase.storage.from('guia').upload(caminho, mini, { contentType: 'image/jpeg', cacheControl: '31536000', upsert: false })
-  if (error && !/already exists|duplicate|409/i.test(String(error.message ?? error))) throw new Error(error.message ?? String(error))
+  await gravarMiniatura(url, mini)
 }
 
 export default function MiniaturasAntigas({ g }) {

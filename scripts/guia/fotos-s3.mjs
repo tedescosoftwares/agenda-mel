@@ -15,9 +15,10 @@
 
 import process from 'node:process'
 import { execFileSync } from 'node:child_process'
-import { writeFileSync } from 'node:fs'
+import { writeFileSync, rmSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { join } from 'node:path'
+import { join, dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { createInterface } from 'node:readline/promises'
 import { configDoS3, existeNoS3, gravarNoS3, apagarDoS3, urlPublica, codificar } from '../../supabase/functions/_shared/s3.js'
 
@@ -211,6 +212,10 @@ async function trocar() {
   const j = JSON.parse(saida)
   console.log(verde(`  ✓ ${j.linhas} linhas trocadas`))
   for (const [col, n] of Object.entries(j.colunas ?? {})) console.log(`    ${col}: ${n}`)
+  // o gerador das páginas guarda os salões de cada cidade em .cache/guia e só busca o que mudou de data; a troca não muda
+  // a data dos salões (guia.sem_carimbo), então o cache precisa sair para o bat 2 ler os links novos
+  const cache = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '.cache', 'guia')
+  try { rmSync(cache, { recursive: true, force: true }); console.log(verde('  ✓ apaguei o cache do gerador das páginas (o bat 2 lê os salões de novo)')) } catch (e) { console.log(amarelo(`  não consegui apagar ${cache} (${e.message}): apague à mão antes do bat 2`)) }
   console.log(verde('Pronto. Agora rode a opção 2 do bat: as páginas do guia saem de novo com os links novos.'))
   console.log('As fotos antigas continuam no Supabase até o bucket ser esvaziado (passo à parte, depois de conferir o site).')
 }

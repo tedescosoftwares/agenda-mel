@@ -23,7 +23,7 @@ import ComercialGuia from '../../components/plataforma/guia/ComercialGuia'
 import InstagramGuia, { IconeInsta } from '../../components/plataforma/guia/InstagramGuia'
 import { naoContarAqui } from '../../lib/eventos'
 import { IAS, iaLembrada, lembrarIa, modeloLembrado, lembrarModelo } from '../../lib/guiaIa'
-import { lerEmFatias, COLUNAS_LISTA, COLUNAS_LISTA_ANTIGAS, colunaFalta, consultaGlobal, POR_PAGINA } from '../../lib/guiaPlataformaDados'
+import { lerEmFatias, COLUNAS_LISTA, COLUNAS_LISTA_ANTIGAS, colunaFalta, consultaGlobal, POR_PAGINA, LOTE_POR_VEZ, LOTE_MINIMO, ehTempoEsgotado } from '../../lib/guiaPlataformaDados'
 import { agruparPorRegiao, regiaoDaCidade } from '../../lib/guiaRegioes'
 import { slugificar } from '../../lib/guia'
 import { ClipboardCheck, Globe2, Upload, MapPinned, Inbox, X, BarChart3, Handshake, MapPin, RefreshCw, LoaderCircle, Radio, MessageCircle, UserPlus, Plus, Briefcase } from 'lucide-react'
@@ -749,16 +749,24 @@ export default function Guia() {
   // ---- importação ----
   // cada arquivo vai em chamadas separadas (o da Receita depois do Google): dentro
   // de uma chamada, o mesmo place_id aparece uma vez só e o segundo seria ignorado
+  // 4.4.1: em lotes de LOTE_POR_VEZ; um lote que passa do tempo do banco vai de novo pela metade (até LOTE_MINIMO) e o
+  // resto segue nesse tamanho. O lote que estourou não gravou nada (o banco desfaz a chamada inteira), então repetir é seguro.
   const importar = useCallback(async (itens, aplicar, aoAndar) => {
     const soma = { total: 0, validos: 0, novos: 0, atualizados: 0, ignorados: 0, problemas: [] }
-    for (let de = 0; de < itens.length; de += 300) {
-      const fatia = itens.slice(de, de + 300)
+    let tamanho = LOTE_POR_VEZ
+    for (let de = 0; de < itens.length;) {
+      const fatia = itens.slice(de, de + tamanho)
       aoAndar?.(de, itens.length)
       const { data, error } = await supabase.rpc('guia_importar', { itens: fatia, aplicar })
-      if (error) return { ok: false, erro: error.message, parcial: soma, feitos: de }
+      if (error && ehTempoEsgotado(error) && tamanho > LOTE_MINIMO) { tamanho = Math.max(LOTE_MINIMO, Math.floor(tamanho / 2)); continue }
+      if (error) {
+        const erro = ehTempoEsgotado(error) ? 'o banco está demorando demais agora (passou do tempo mesmo em lotes pequenos); espere um pouco e tente de novo' : error.message
+        return { ok: false, erro, parcial: soma, feitos: de }
+      }
       const r = data ?? {}
       for (const k of ['total', 'validos', 'novos', 'atualizados', 'ignorados']) soma[k] += Number(r[k] ?? 0)
       for (const p of r.problemas ?? []) soma.problemas.push({ ...p, posicao: de + Number(p.indice ?? 1) - 1 })
+      de += fatia.length
     }
     aoAndar?.(itens.length, itens.length)
     return { ok: true, ...soma }

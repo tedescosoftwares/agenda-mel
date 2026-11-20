@@ -80,12 +80,16 @@ export VITE_SUPABASE_URL VITE_SUPABASE_ANON_KEY
 command -v node >/dev/null || falhar 'Não achei o node no PATH do cron.'
 
 # 3.41: uma rodada por vez (a da hora, a do "Publicar agora", a de quem roda na mão e o build do publicar-site.sh)
+# 4.4.1: só o cron do minuto (--pedidos) desiste na hora; as outras esperam a vez (até 15 minutos). A rodada da hora
+# (minuto 17) saía junto com a conferida do minuto, que segura a trava por uns segundos, e quase sempre desistia: o site
+# só se regenerava pelo "Publicar agora" ou pelo bat 2.
 if command -v flock >/dev/null; then
   exec 9>/tmp/mimo-republicar.lock
-  if ! flock -n 9; then
+  if [ "$MODO" = '--pedidos' ]; then ESPERA=(-n); else ESPERA=(-w 900); fi
+  if ! flock "${ESPERA[@]}" 9; then
     # 3.42: o cron do minuto avisa o banco que conferiu e está ocupado (a Plataforma diz "entra em seguida")
     if [ "$MODO" = '--pedidos' ]; then node "$RAIZ/scripts/registrar-publicacao.mjs" ocupado >/dev/null 2>&1 || true
-    else amarelo "$(date '+%F %T') outra regeneração (ou um build) está em andamento; esta fica para a próxima"; fi
+    else amarelo "$(date '+%F %T') outra regeneração (ou um build) passou de 15 minutos; esta fica para a próxima"; fi
     exit 0
   fi
 fi

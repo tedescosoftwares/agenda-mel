@@ -42,6 +42,7 @@ Opções:
     --uf SP                   o estado da cidade (padrão SP)
     --regiao baixada-santista a região inteira: uma grade só, um CSV por cidade (ou litoral-norte)
     --retangulo S,O,N,L       o retângulo na mão (sul,oeste,norte,leste), em vez do Google
+    --sem-contorno            busca o retângulo inteiro (sem o contorno das cidades pelo IBGE, que corta as vizinhas)
     --max-completas 900       teto do MÊS para as buscas completas (cota grátis: 1.000)
     --max-detalhes 900        teto do MÊS para os detalhes um a um (cota grátis: 1.000)
     --sim                     não pergunta antes de gastar (para rodar sem olhar)
@@ -743,6 +744,66 @@ def celula_toca_poligono(cel, poligono):
     return any(_segmentos_se_cruzam(poligono[i], poligono[(i + 1) % n], p, q) for i in range(n) for p, q in bordas)
 
 
+# 4.4.1: o contorno de cada município, do IBGE (grátis, sem chave). A busca da região cobria o retângulo em volta das
+# cidades: o do Alto Tietê pegou São José dos Campos, Jacareí, a zona leste de São Paulo e Guarulhos, e mais da metade
+# dos lugares pagos era de fora (não virava CSV). Com o contorno, só as células que encostam nas cidades pedidas entram.
+URL_IBGE_MUNICIPIOS = "https://servicodados.ibge.gov.br/api/v1/localidades/estados/%s/municipios"
+URL_IBGE_MALHA = "https://servicodados.ibge.gov.br/api/v3/malhas/municipios/%s?formato=application/vnd.geo+json&qualidade=intermediaria"
+
+
+def aneis_do_geojson(geo):
+    """os anéis externos [(lat, lng), ...] de um GeoJSON do IBGE (FeatureCollection, Feature, Polygon ou MultiPolygon)"""
+    if not isinstance(geo, dict):
+        return []
+    if geo.get("type") == "FeatureCollection":
+        return [a for f in geo.get("features") or [] for a in aneis_do_geojson(f)]
+    if geo.get("type") == "Feature":
+        return aneis_do_geojson(geo.get("geometry"))
+    coords = geo.get("coordinates") or []
+    poligonos = [coords] if geo.get("type") == "Polygon" else coords if geo.get("type") == "MultiPolygon" else []
+    return [[(float(lat), float(lng)) for lng, lat in p[0]] for p in poligonos if p and len(p[0]) >= 3]
+
+
+def contornos_do_ibge(cidades, uf, get=None):
+    """os contornos das cidades (lista de anéis) ou None se faltar alguma: sem o de uma, o filtro cortaria a cidade"""
+    get = get or (lambda url: requests.get(url, timeout=30))
+    try:
+        r = get(URL_IBGE_MUNICIPIOS % uf.upper())
+        r.raise_for_status()
+        ids = {sem_acento(m.get("nome", "")): m.get("id") for m in r.json()}
+        aneis = []
+        for c in cidades:
+            mid = ids.get(sem_acento(c.strip()))
+            if not mid:
+                print("Contorno do IBGE: não achei %s/%s na lista de municípios; sigo com o retângulo inteiro." % (c, uf))
+                return None
+            m = get(URL_IBGE_MALHA % mid)
+            m.raise_for_status()
+            da_cidade = aneis_do_geojson(m.json())
+            if not da_cidade:
+                print("Contorno do IBGE: veio vazio para %s; sigo com o retângulo inteiro." % c)
+                return None
+            aneis.extend(da_cidade)
+        return aneis
+    except Exception as e:  # sem rede para o IBGE: a busca segue como antes
+        print("Contorno do IBGE indisponível (%s); sigo com o retângulo inteiro." % str(e)[:120])
+        return None
+
+
+def dentro_de_algum(lat, lng, aneis):
+    return any(dentro_do_poligono(lat, lng, a) for a in aneis or [])
+
+
+def celula_toca_algum(cel, aneis):
+    return any(celula_toca_poligono(cel, a) for a in aneis or [])
+
+
+def retangulo_dos_aneis(aneis, folga=0.005):
+    pts = [p for a in aneis for p in a]
+    return {"sul": min(p[0] for p in pts) - folga, "oeste": min(p[1] for p in pts) - folga,
+            "norte": max(p[0] for p in pts) + folga, "leste": max(p[1] for p in pts) + folga}
+
+
 def chave_celula(ret):
     return "%.5f,%.5f,%.5f,%.5f" % (ret["sul"], ret["oeste"], ret["norte"], ret["leste"])
 
@@ -992,6 +1053,7 @@ def main():
     ap.add_argument("--saida", default=".")
     ap.add_argument("--ritmo", type=int, default=RITMO_POR_MINUTO, help="pedidos por minuto ao Google, por família (a cota do projeto é 600: acima disso só vem 429; com 2 janelas abertas use 270 em cada)")
     ap.add_argument("--threads", type=int, default=THREADS, help="pedidos ao mesmo tempo (padrão 4; 8 encosta nos 540/min)")
+    ap.add_argument("--sem-contorno", action="store_true", help="não usa o contorno das cidades (IBGE): busca o retângulo inteiro, como antes da 4.4.1")
     ap.add_argument("--fatias", type=int, default=0, help=argparse.SUPPRESS)  # da v3: não faz mais nada
     a = ap.parse_args()
     if not a.cidade and not a.regiao:
@@ -1053,8 +1115,17 @@ def executar(a):
 
     # ---- 1. o retângulo -------------------------------------------------------------------------
     fase("retangulo")
+    # 4.4.1: sem polígono desenhado e sem retângulo na mão, o contorno das cidades pelo IBGE (o retângulo sai dele)
+    contornos = [poligono] if poligono else None
+    if not poligono and not a.retangulo and not getattr(a, "sem_contorno", False):
+        contornos = contornos_do_ibge(cidades, a.uf)
+        if contornos:
+            print("Contorno de %s pelo IBGE: só as células que encostam %s entram na busca (--sem-contorno desliga)." % (
+                ", ".join(cidades), "nelas" if len(cidades) > 1 else "nela"))
     if a.retangulo:
         ret = dict(a.retangulo)
+    elif contornos and not poligono:
+        ret = retangulo_dos_aneis(contornos)
     else:
         rets = []
         for c in cidades:
@@ -1078,7 +1149,7 @@ def executar(a):
     print("Ritmo: %s, %d pedidos ao mesmo tempo (--ritmo, --threads)" % ("sem freio" if not RITMO_POR_MINUTO else "até %d por minuto em cada família" % RITMO_POR_MINUTO, THREADS))
     print("Descoberta (busca só ids, grátis): dividindo a área até nenhuma célula lotar os 60…")
     fase("descoberta")
-    desc = Descoberta(google, cache["descoberta"], agora, filtro=(lambda cel: celula_toca_poligono(cel, poligono)) if poligono else None)
+    desc = Descoberta(google, cache["descoberta"], agora, filtro=(lambda cel: celula_toca_algum(cel, contornos)) if contornos else None)
     folhas_por_termo = {}
     ids_por_termo = {}
     novas = {}

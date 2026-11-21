@@ -24,10 +24,11 @@ O que a v4 faz
      delas.
   3. O RESTO, um a um: os ids descobertos que não vieram nas buscas completas
      são lidos por Place Details (outra cota grátis, separada).
-  Tudo dentro das cotas grátis do mês (1.000 chamadas de cada nível), com
-  teto por nível que o script não ultrapassa sem você pedir. O que não
-  couber no mês fica em mimo_pendentes_<cidade>.csv e entra na rodada seguinte: o
-  cache guarda o que já foi feito.
+  4.4.1: sem teto. Antes de gastar, o plano mostra quantas chamadas vai fazer
+  e o custo do que passar das cotas grátis do mês (1.000 de cada nível), e
+  pergunta. Com --max-completas/--max-detalhes há um teto do mês: o que não
+  couber fica em mimo_pendentes_<cidade>.csv e entra na rodada seguinte (o
+  cache guarda o que já foi feito).
 
 Como rodar (Windows, no Prompt de Comando, dentro desta pasta):
     pip install requests
@@ -43,8 +44,8 @@ Opções:
     --regiao baixada-santista a região inteira: uma grade só, um CSV por cidade (ou litoral-norte)
     --retangulo S,O,N,L       o retângulo na mão (sul,oeste,norte,leste), em vez do Google
     --sem-contorno            busca o retângulo inteiro (sem o contorno das cidades pelo IBGE, que corta as vizinhas)
-    --max-completas 900       teto do MÊS para as buscas completas (cota grátis: 1.000)
-    --max-detalhes 900        teto do MÊS para os detalhes um a um (cota grátis: 1.000)
+    --max-completas 900       teto do MÊS para as buscas completas (sem teto se não disser; cota grátis: 1.000)
+    --max-detalhes 900        teto do MÊS para os detalhes um a um (sem teto se não disser; cota grátis: 1.000)
     --sim                     não pergunta antes de gastar (para rodar sem olhar)
     --refazer                 ignora o cache e busca tudo de novo
     --saida pasta             onde gravar os CSVs (padrão: a pasta atual)
@@ -1046,8 +1047,9 @@ def main():
     ap.add_argument("--uf", default=UF_PADRAO)
     ap.add_argument("--regiao", default="", choices=[""] + sorted(REGIOES))
     ap.add_argument("--retangulo", default="", help="sul,oeste,norte,leste")
-    ap.add_argument("--max-completas", type=int, default=900)
-    ap.add_argument("--max-detalhes", type=int, default=900)
+    # 4.4.1: sem teto por padrão (o plano mostra o custo e pergunta antes de gastar)
+    ap.add_argument("--max-completas", type=int, default=None, help="teto do mês para as buscas completas (sem teto se não disser)")
+    ap.add_argument("--max-detalhes", type=int, default=None, help="teto do mês para os detalhes um a um (sem teto se não disser)")
     ap.add_argument("--sim", action="store_true")
     ap.add_argument("--refazer", action="store_true")
     ap.add_argument("--saida", default=".")
@@ -1111,7 +1113,8 @@ def executar(a):
     def salvar_cache():
         google.usado = gravar_cache(caminho_cache, cache, dict(google.chamadas), ja_salvo, mes)
 
-    google = Google(pedir_chave(), {"completas": a.max_completas, "detalhes": a.max_detalhes, "cidade": 200}, cache["usado"])
+    teto = lambda t: None if t is None or t <= 0 else t
+    google = Google(pedir_chave(), {"completas": teto(a.max_completas), "detalhes": teto(a.max_detalhes), "cidade": 200}, cache["usado"])
 
     # ---- 1. o retângulo -------------------------------------------------------------------------
     fase("retangulo")
@@ -1173,8 +1176,9 @@ def executar(a):
     # ---- 3. o plano das chamadas pagas (dentro das cotas) ---------------------------------------
     ja_tem = {pid for pid in todos_ids if pid in cache["lugares"]}
     faltam = todos_ids - ja_tem
-    sobra_completas = max(0, a.max_completas - google.usado["completas"])
-    sobra_detalhes = max(0, a.max_detalhes - google.usado["detalhes"])
+    sem_teto = lambda t: t is None or t <= 0  # 4.4.1: sem teto, o plano cobre tudo (e pergunta antes, com o custo)
+    sobra_completas = math.inf if sem_teto(a.max_completas) else max(0, a.max_completas - google.usado["completas"])
+    sobra_detalhes = math.inf if sem_teto(a.max_detalhes) else max(0, a.max_detalhes - google.usado["detalhes"])
     # só as células com lugar que ainda falta entram na conta
     folhas_uteis = {t: [(c, [i for i in ids if i in faltam]) for c, ids in fs] for t, fs in folhas_por_termo.items()}
     termos, cobertos, chamadas_completas = planejar(folhas_uteis, sobra_completas)

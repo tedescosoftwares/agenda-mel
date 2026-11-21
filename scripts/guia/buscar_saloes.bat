@@ -1,7 +1,7 @@
 @echo off
 rem MIMO: busca os saloes de UMA cidade no Google Maps (Places API New) e grava os CSVs na pasta "saida", ao lado deste arquivo.
 rem   buscar_saloes.bat "Praia Grande"    ou de dois cliques e digite a cidade
-rem Uma cidade por vez gasta o minimo da cota gratis do mes: o que ja foi importado (Itanhaem, Mongagua) nao e buscado de novo.
+rem Sem teto de gasto: antes de gastar o script mostra o custo alem da cota gratis do mes e pergunta (--max-completas N poe um teto).
 rem A regiao inteira de uma vez so na mao: python buscar_saloes.py --regiao baixada-santista --saida saida
 rem A chave da Places API e pedida na tela (nao aparece ao digitar) ou vem da variavel GOOGLE_PLACES_KEY.
 rem Rode de novo no mes seguinte para o que ficou em mimo_pendentes_<cidade>.csv: o cache guarda o que ja foi feito.
@@ -23,7 +23,7 @@ if "%CIDADE%"=="" (
   pause
   exit /b 1
 )
-python buscar_saloes.py --cidade "%CIDADE%" --saida saida %2 %3 %4 %5 %6 %7
+python buscar_saloes.py --cidade "%CIDADE%" --saida saida %2 %3 %4 %5 %6 %7 %8 %9
 echo.
 echo Os CSVs estao em %~dp0saida
 pause

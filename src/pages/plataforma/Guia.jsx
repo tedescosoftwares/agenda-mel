@@ -225,6 +225,8 @@ const lerBase = () => Promise.all([
   lerImagensDasCategorias(),
   lerRegioesDoGuia(),
 ])
+// 4.4.2: quanto esperar antes de mandar de novo um lote que o navegador desistiu de esperar (o banco pode ainda estar gravando)
+const ESPERA_LENTO = 10000
 const SEM_TABELA_182 = (e) => (/guia_regioes|guia_cidades_regiao/.test(String(e?.message ?? e)) && /exist|schema cache|could not find|relation/i.test(String(e?.message ?? e)) ? 'O banco ainda não tem as regiões. Rode a migração 182 (supabase/182_regioes.sql).' : String(e?.message ?? e))
 
 // a cidade escolhida fica no aparelho
@@ -751,18 +753,32 @@ export default function Guia() {
   // de uma chamada, o mesmo place_id aparece uma vez só e o segundo seria ignorado
   // 4.4.1: em lotes de LOTE_POR_VEZ; um lote que passa do tempo do banco vai de novo pela metade (até LOTE_MINIMO) e o
   // resto segue nesse tamanho. O lote que estourou não gravou nada (o banco desfaz a chamada inteira), então repetir é seguro.
+  // 4.4.2: o mesmo quando quem desiste é o navegador (15 s sem resposta: "TimeoutError: tempo esgotado") ou a rede cai. Aí o
+  // banco pode ainda estar gravando aquele lote: espera ESPERA_LENTO antes de mandar de novo, e o salão que já entrou volta
+  // como atualizado (o mesmo place_id). Se os dois se cruzarem mesmo assim (o mesmo place_id gravado ao mesmo tempo:
+  // "duplicate key"), espera e repete o lote, até 3 vezes.
   const importar = useCallback(async (itens, aplicar, aoAndar) => {
     const soma = { total: 0, validos: 0, novos: 0, atualizados: 0, ignorados: 0, problemas: [] }
+    const lento = (e) => ehTempoEsgotado(e) || e?.name === 'TimeoutError' || /tempo esgotado|TimeoutError|failed to fetch|networkerror|load failed/i.test(String(e?.message ?? e))
+    const cruzou = (e) => e?.code === '23505' || /duplicate key/i.test(String(e?.message ?? e))
+    const esperar = (ms) => new Promise((ok) => setTimeout(ok, ms))
     let tamanho = LOTE_POR_VEZ
+    let cruzamentos = 0
     for (let de = 0; de < itens.length;) {
       const fatia = itens.slice(de, de + tamanho)
       aoAndar?.(de, itens.length)
       const { data, error } = await supabase.rpc('guia_importar', { itens: fatia, aplicar })
-      if (error && ehTempoEsgotado(error) && tamanho > LOTE_MINIMO) { tamanho = Math.max(LOTE_MINIMO, Math.floor(tamanho / 2)); continue }
+      if (error && lento(error) && tamanho > LOTE_MINIMO) {
+        if (!ehTempoEsgotado(error)) await esperar(ESPERA_LENTO)
+        tamanho = Math.max(LOTE_MINIMO, Math.floor(tamanho / 2))
+        continue
+      }
+      if (error && cruzou(error) && cruzamentos < 3) { cruzamentos++; await esperar(ESPERA_LENTO); continue }
       if (error) {
-        const erro = ehTempoEsgotado(error) ? 'o banco está demorando demais agora (passou do tempo mesmo em lotes pequenos); espere um pouco e tente de novo' : error.message
+        const erro = lento(error) ? 'o banco está demorando demais agora (passou do tempo mesmo em lotes pequenos); espere um pouco e importe o mesmo arquivo de novo: o que já entrou não duplica' : error.message
         return { ok: false, erro, parcial: soma, feitos: de }
       }
+      cruzamentos = 0
       const r = data ?? {}
       for (const k of ['total', 'validos', 'novos', 'atualizados', 'ignorados']) soma[k] += Number(r[k] ?? 0)
       for (const p of r.problemas ?? []) soma.problemas.push({ ...p, posicao: de + Number(p.indice ?? 1) - 1 })

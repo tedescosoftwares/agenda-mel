@@ -201,3 +201,57 @@ button.pv-feed-item:hover { background: #fbf7fa; }
 /* 3.73: "Só o app" ao lado do período (migração 217) */
 .pv-periodo-e-app { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .pv-so-app { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; white-space: nowrap; }
+
+/* 4.5: as cidades do guia no Google (CidadesSite, migração 260) */
+@media (min-width: 1200px) { .pv-cid .pv-hist-kpis { grid-template-columns: repeat(6, 1fr); } }
+.pv-cid-nota { display: flex; align-items: flex-start; gap: 0.4rem; margin: 0; font-size: 0.78rem; color: var(--pv-outro); }
+.pv-cid-nota svg { flex-shrink: 0; margin-top: 0.15rem; }
+.pv-cid-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.pv-cid { border-top: 1px solid var(--fio); }
+.pv-cid:first-child { border-top: 0; }
+.pv-cid-linha { width: 100%; display: grid; grid-template-columns: minmax(180px, 1.3fr) minmax(190px, 1.3fr) minmax(140px, 1.2fr) minmax(220px, 1.2fr) 18px; align-items: center; gap: 0.9rem;
+  padding: 0.75rem 0.4rem; background: none; border: 0; text-align: left; cursor: pointer; font: inherit; color: inherit; border-radius: 10px; }
+.pv-cid-linha:hover { background: var(--cinza-1, #f6f5fa); }
+.pv-cid-linha:focus-visible { outline: 2px solid var(--pv-contato); outline-offset: 1px; }
+.pv-cid-nome { display: flex; flex-direction: column; min-width: 0; }
+.pv-cid-titulo b { font-size: 0.95rem; }
+.pv-cid-titulo small { color: var(--pv-outro); font-size: 0.78rem; }
+.pv-cid-sub { font-size: 0.74rem; color: var(--pv-outro); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pv-cid-fase { display: flex; flex-direction: column; align-items: flex-start; gap: 0.2rem; min-width: 0; }
+.pv-cid-fase small { font-size: 0.74rem; color: var(--pv-outro); }
+.pv-cid-nums { display: grid; grid-template-columns: auto auto 1fr; gap: 0.9rem; }
+.pv-cid-nums > span { display: flex; flex-direction: column; min-width: 0; }
+.pv-cid-nums b { font-size: 1rem; font-variant-numeric: tabular-nums; }
+.pv-cid-nums small { font-size: 0.7rem; color: var(--pv-outro); white-space: nowrap; }
+.pv-cid-google b { color: var(--pv-forte); }
+.pv-cid-seta { color: var(--pv-outro); transition: transform 0.15s; }
+.pv-cid.aberta .pv-cid-seta { transform: rotate(180deg); }
+/* as barras do período: clara = aparições, escura = visitas do Google, a linha = foi ao ar */
+.pv-cid-serie { display: flex; align-items: flex-end; gap: 1px; height: 34px; min-width: 0; border-bottom: 1px solid var(--fio); }
+.pv-cid-serie i { position: relative; flex: 1 1 0; height: 100%; display: flex; align-items: flex-end; justify-content: center; min-width: 1px; }
+.pv-cid-serie em { position: absolute; bottom: 0; left: 0; right: 0; border-radius: 2px 2px 0 0; }
+.pv-cid-serie em.ap { background: #f6c3df; }
+.pv-cid-serie em.go { background: var(--pv-forte); left: 20%; right: 20%; }
+.pv-cid-serie i.ao-ar::after { content: ''; position: absolute; top: -3px; bottom: -3px; left: 50%; width: 2px; margin-left: -1px; background: #1f4fb0; border-radius: 1px; }
+.pv-cid-serie.grande { height: 110px; gap: 2px; }
+.pv-cid-detalhe { padding: 0.2rem 0.6rem 1rem; display: flex; flex-direction: column; gap: 0.45rem; }
+.pv-cid-eixo { display: flex; justify-content: space-between; color: var(--pv-outro); font-size: 0.7rem; }
+.pv-cid-legenda { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 0.8rem; margin: 0; font-size: 0.74rem; color: var(--pv-outro); }
+.pv-cid-legenda i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: -0.4rem; }
+.pv-cid-legenda i.ap { background: #f6c3df; }
+.pv-cid-legenda i.go { background: var(--pv-forte); }
+.pv-cid-legenda i.ar { background: #1f4fb0; width: 3px; }
+.pv-cid-marcos { list-style: none; margin: 0.3rem 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.5rem; }
+.pv-cid-marcos li { display: flex; flex-direction: column; gap: 0.1rem; padding: 0.55rem 0.7rem; border: 1px solid var(--fio); border-radius: 12px; background: #fff; }
+.pv-cid-marcos li span { font-size: 0.72rem; color: var(--pv-outro); }
+.pv-cid-marcos li b { font-size: 1rem; }
+.pv-cid-marcos li small { font-size: 0.72rem; color: var(--pv-outro); }
+.pv-cid-marcos li.falta b { color: var(--pv-outro); }
+@media (max-width: 1100px) {
+  .pv-cid-linha { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 18px; grid-template-areas: 'nome fase seta' 'serie nums seta'; row-gap: 0.55rem; }
+  .pv-cid-nome { grid-area: nome; } .pv-cid-fase { grid-area: fase; } .pv-cid-linha > .pv-cid-serie { grid-area: serie; } .pv-cid-nums { grid-area: nums; } .pv-cid-seta { grid-area: seta; }
+}
+@media (max-width: 640px) {
+  .pv-cid-linha { grid-template-columns: minmax(0, 1fr) 18px; grid-template-areas: 'nome seta' 'fase seta' 'serie serie' 'nums nums'; gap: 0.45rem; padding: 0.7rem 0.2rem; }
+  .pv-cid-nums { grid-template-columns: repeat(3, auto); justify-content: start; }
+}

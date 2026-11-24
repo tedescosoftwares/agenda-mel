@@ -6,8 +6,9 @@ import { Painel, Vazio } from '../Pecas'
 import { Nav } from './PecasWa'
 import { Barras } from './desempenho/Barras'
 import HistoricoSite from './HistoricoSite'
+import CidadesSite from './CidadesSite'
 import { ORIGEM, APARELHO, acaoDe, tomDe, desfechoDe, Provavel, faltaMigracao, duracao, lugarDe, Toque, ResumoSaidas, Visitante } from './AoVivoPecas'
-import { Radio, Smartphone, MapPin, Navigation, LoaderCircle, Layers, History, Sun, Map as MapaIcone, MousePointerClick, CircleCheck, CalendarRange } from 'lucide-react'
+import { Radio, Smartphone, MapPin, Navigation, LoaderCircle, Layers, History, Sun, Map as MapaIcone, MousePointerClick, CircleCheck, CalendarRange, MapPinned } from 'lucide-react'
 import '../../../guia-aovivo.css'
 
 // O site ao vivo (3.44, migração 192): quem está no site agora, em que
@@ -23,8 +24,9 @@ import '../../../guia-aovivo.css'
 // qualquer período de até 90 dias, com filtros); cada visita mostra a hora
 // que entrou e saiu, há quanto tempo foi e se a pessoa é nova ou já voltou.
 // As peças compartilhadas moram em AoVivoPecas.
+// 4.5 (migração 260): a terceira, Cidades (CidadesSite): cada cidade do guia no Google, de quando foi ao ar à 1ª visita.
 
-const SECOES = [['agora', 'Agora', Radio], ['historico', 'Histórico', CalendarRange]]
+const SECOES = [['agora', 'Agora', Radio], ['historico', 'Histórico', CalendarRange], ['cidades', 'Cidades', MapPinned]]
 let secaoMemoria = 'agora'
 
 export default function AoVivo() {
@@ -33,7 +35,7 @@ export default function AoVivo() {
   return (
     <div className="pv" data-teste="ao-vivo">
       <Nav secoes={SECOES} secao={secao} onTrocar={setSecao} prefixo="ao-vivo" rotulo="Seções do site ao vivo" />
-      {secao === 'historico' ? <HistoricoSite /> : <Agora />}
+      {secao === 'historico' ? <HistoricoSite /> : secao === 'cidades' ? <CidadesSite /> : <Agora />}
     </div>
   )
 }

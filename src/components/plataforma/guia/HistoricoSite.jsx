@@ -182,7 +182,7 @@ export default function HistoricoSite() {
   )
 }
 
-function Kpi({ Icon, n, rotulo, sub, tom, teste }) {
+export function Kpi({ Icon, n, rotulo, sub, tom, teste }) {
   return (
     <div className="pv-kpi" data-tom={tom} data-teste={teste}>
       <span className="pv-kpi-icone"><Icon size={15} aria-hidden="true" /></span>

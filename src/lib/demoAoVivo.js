@@ -2,6 +2,7 @@
 // entram, andam pelas páginas, tocam no WhatsApp, no Como chegar, no Quero marcar... e saem com o relógio (um ciclo de
 // 20 minutos), e soma as batidas e os toques de verdade do demo (demoPresenca, chamada por src/lib/presenca.js, e
 // demoAcao, chamada por src/lib/eventos.js, quando alguém abre o site no modo demo).
+import { demoCidades } from './demoCidades'
 import { GUIA_LUGARES } from './demoGuia'
 
 const CIDADES = {
@@ -361,4 +362,5 @@ export const AO_VIVO_RPC = {
   site_presenca: (a) => { demoPresenca(a); return null },
   site_minha_cidade: (a) => minhaCidade(a ?? {}),
   site_visitas: (a) => demoVisitas(a ?? {}),
+  site_cidades: (a) => demoCidades(a ?? {}), // 4.5: as cidades do guia no Google (migração 260)
 }

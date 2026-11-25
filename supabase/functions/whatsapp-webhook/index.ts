@@ -15,7 +15,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { enviarPor } from '../_shared/canais.ts'
 import { classificar } from '../_shared/ia.ts'
 import { conversar, registroDaConversa } from '../_shared/agente.ts'
-import { atenderGuia, iaDe, avisoDemora, cutucadaSalao, resgatarCliente, VOTO_ILEGIVEL, type Deps as DepsGuia, type Pedido } from '../_shared/guia_whats.ts'
+import { atenderGuia, iaDe, avisoDemora, cutucadaSalao, resgatarCliente, textoOcioso, VOTO_ILEGIVEL, type Deps as DepsGuia, type Pedido } from '../_shared/guia_whats.ts'
 import { atenderOnboarding, iaOnbDe, consultarCnpjDe, consultarCepDe, consultarRuaDe, type Deps as DepsOnb } from '../_shared/guia_onboarding.ts'
 import { atenderComercial, iaComercialDe, textoCadencia, type Deps as DepsCom } from '../_shared/comercial.ts'
 
@@ -324,7 +324,8 @@ Deno.serve(async (req) => {
       try { await db.rpc('guia_whats_relogio_bateu') } catch { /* melhor-esforço */ }
       const { data, error } = await db.rpc('guia_whats_ociosas')
       if (error) return json({ erro: error.message }, 500)
-      const o = (data ?? {}) as { ativo?: boolean; instancia?: string; texto_perguntar?: string; texto_encerrar?: string; perguntar?: Array<{ id: number; telefone: string }>; encerrar?: Array<{ id: number; telefone: string }> }
+      // 4.6 (migração 261): cada conversa vem com a etapa, o salão e o que já foi anotado; o lembrete diz o que falta
+      const o = (data ?? {}) as { ativo?: boolean; instancia?: string; texto_perguntar?: string; texto_encerrar?: string; exigir_preferencia?: boolean; perguntar?: Array<{ id: number; telefone: string; estado?: string | null; salao?: string | null; nome?: string | null; servico?: string | null; preferencia?: string | null }>; encerrar?: Array<{ id: number; telefone: string }> }
       let perguntou = 0, encerrou = 0
       if (o.ativo) {
         const instancia = o.instancia ?? ''
@@ -335,8 +336,9 @@ Deno.serve(async (req) => {
           else console.error('ocioso encerrar: não saiu', env.erro)
         }
         for (const c of o.perguntar ?? []) {
-          const env = await enviarPor('evolution', { telefone: c.telefone, corpo: o.texto_perguntar ?? '', identificador: instancia })
-          if (env.ok) { await db.rpc('guia_whats_ociosa_feita', { id_: c.id, tipo_: 'perguntar', texto_: o.texto_perguntar }); perguntou++ }
+          const texto = c.estado ? textoOcioso(o.texto_perguntar, c, !!o.exigir_preferencia) : (o.texto_perguntar ?? '')
+          const env = await enviarPor('evolution', { telefone: c.telefone, corpo: texto, identificador: instancia })
+          if (env.ok) { await db.rpc('guia_whats_ociosa_feita', { id_: c.id, tipo_: 'perguntar', texto_: texto }); perguntou++ }
           else console.error('ocioso perguntar: não saiu', env.erro)
         }
       }

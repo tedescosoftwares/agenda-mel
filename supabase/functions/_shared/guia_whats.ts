@@ -47,12 +47,15 @@ export type Saida = {
 }
 // 3.77: opcoes = os salões que a Mel ofereceu (o resgate ou o "não" do salão), resgate_de = o pedido de origem,
 // salao_anterior = o salão que não respondeu (ou disse não)
-export type Opcao = { id: string; nome: string; bairro?: string | null; km?: number | null; agendar?: string | null }
+export type Opcao = { id: string; nome: string; bairro?: string | null; cidade?: string | null; km?: number | null; agendar?: string | null }
 type Dados = {
   nome?: string; servico?: string; preferencia?: string; observacao?: string; pos_envio?: number; sem_avanco?: number; dona?: boolean; salao_recusou?: string; comercial?: number
   opcoes?: Opcao[]; resgate_de?: number; salao_anterior?: string
   // 3.77.1 (migração 223): por que a Mel ofereceu (demora, sem_contato, falhou, nao): só na demora dá para "esperar"
   oferta_motivo?: string
+  // 4.6: os salões achados pelo nome, esperando a cliente confirmar qual é; quantas vezes a Mel já pediu o salão sem achar;
+  // e a marca de quem pediu para parar
+  candidatos?: Opcao[]; sem_salao?: number; parou?: boolean
 }
 type Lugar = {
   id: string; nome: string; categoria?: string | null; cidade?: string | null; cidade_slug?: string; slug?: string; uf?: string | null
@@ -127,7 +130,7 @@ export function chaveDe(tel: string | null | undefined): string | null {
 // envio, a Mel responde mais POS_ENVIO vezes e fica quieta; só emoji não vai à IA; e o teto do dia (limite_respostas)
 const SIM_CURTO = /^(sim|s|ss|sim sim|sim pode|sim quero|ok|okay|okey|pode|pode sim|pode ser|pode enviar|pode mandar|pode manda|pode ir|isso|isso mesmo|isso ai|claro|claro que sim|confirmo|confirmado|manda|manda sim|envia|enviar|certo|beleza|bora|vai|vamos|yes|uhum|aham|correto|perfeito|otimo|top|show|fechado|fechou|combinado|quero|quero sim)$/
 const NAO_CURTO = /^(nao|n|nao quero|nao precisa|nao obrigada|nao obrigado|nao nao|cancela|cancelar|cancele|desisto|desisti|deixa|deixa pra la|esquece|esqueca)$/
-const SIM_EMOJI = /^(?:\s|👍|✅|👌|🙏|💗|\u2764|\uFE0F|🥰|😊|[\u{1F3FB}-\u{1F3FF}])+$/u
+const SIM_EMOJI = /^(?:\s|👍|✅|👌|🙏|💗|🆗|\u2764|\uFE0F|🥰|😊|[\u{1F3FB}-\u{1F3FF}])+$/u
 export const POS_ENVIO = 3
 
 // o código do salão na mensagem: "código: itanhaem/studio-lirio", "ref itanhaem/studio-lirio", o link da página ou,
@@ -325,6 +328,76 @@ const ESPERAR_NAO = /\b(nao|sem) (quero |vou |posso |da pra |consigo )?(esperar|
 const ESPERAR = { test: (p: string) => ESPERAR_SIM.test(p) && !ESPERAR_NAO.test(p) }
 // 3.77.1: a cliente topou outro salão sem dizer qual ("pode enviar para outros", "qualquer um", "pode mandar")
 const CONSENTE = /\b(pode|podem|manda|mande|mandar|envia|envie|enviar|qualquer|tanto faz|outro|outros|outra|outras|sim|quero|ok|bora|claro|beleza)\b/
+// ---- 4.6: o pacote 1 das conversas reais -----------------------------------------------------------------------------
+// A resposta automática do WhatsApp Business (fora do horário, boas-vindas, "em breve estarei com você", menu de opções).
+// Ela chega do salão logo depois do pedido, ou cai aqui como se fosse uma cliente. Não é resposta do salão, nem voto
+// (um "no momento não consigo atender" automático virava o "não" do salão), nem pedido de cliente.
+const AUTOMATICA = [
+  /\b(mensagem|resposta) automatica\b/,
+  /\bfora do (nosso |meu )?(horario|expediente)\b/,
+  /\bsejam? bem vind[oa]s?\b/,
+  /\b(estou|estamos) (ausente|ausentes|indisponivel|indisponiveis|offline)\b/,
+  /\bno momento (nao )?(estou|estamos|me encontro|nos encontramos) (ausente|ausentes|indisponivel|indisponiveis|offline|fora)\b/,
+  /\b(em breve|logo|ja ja) (estarei|estaremos) (com voce|contigo|com vc|disponivel|disponiveis)\b/,
+  /\b(retornarei|retornaremos|responderei|responderemos|te respondo|te retorno|retorno|respondo) (assim que (possivel|puder|eu (retornar|voltar|puder))|o mais (breve|rapido) possivel)\b/,
+  /\bassim que (eu )?(retornar|voltar|estiver disponivel)\b.*\b(respond|retorn|atend)/,
+  /\b(digite|escolha|selecione) (uma das opcoes|uma opcao|o numero|a opcao)\b/,
+  /\bdeixe (sua|seu|a sua|o seu) (mensagem|recado)\b/,
+]
+export const ehRespostaAutomatica = (texto: string) => { const p = palavra(texto); return !!p && AUTOMATICA.some((r) => r.test(p)) }
+
+// "parar", "encerrar", "para de mandar mensagem", "me tira da lista": a Mel encerra e não manda mais nada por conta própria
+const PARAR = /^(parar|pare|para|parem|stop|sair|encerrar|encerra|encerre|chega|descadastrar|descadastra|me descadastra|bloquear)( (por favor|pf|pfv|obrigad[ao]))?$|\b(para|pare|parem|parar) de (me )?(mandar|enviar|manda|envia|mandando|enviando)\b|\bnao (me )?(mande|mandem|envie|enviem|manda|envia) mais\b|\b(me )?(tira|tirem|remove|remova|removam|exclui|exclua) (da|dessa|desta) lista\b|\b(tira|tirem|remove|remova|exclui|exclua) (o )?meu (numero|contato)\b|\bnao quero (mais )?receber\b|\bencerr(ar|a|e) (a |essa |esta |nossa )?conversa\b/
+export const pedidoDeParar = (texto: string) => PARAR.test(palavra(texto))
+export const MSG_PAROU = 'Tudo bem! 💗 Encerrei por aqui e não te mando mais mensagens. Se quiser marcar um horário depois, é só me chamar.'
+
+// a cliente desistiu de vez (na oferta de outros salões): "desisto, obrigada", "já consegui", "deixa pra lá"
+const DESISTE = /\b(desisto|desisti|desistir|deixa (pra|para) la|esquece|esqueca|nao (quero|preciso) mais|nao vou (mais )?(querer|precisar)|ja (consegui|marquei|resolvi|achei|agendei)|nao precisa mais)\b/
+export const desistiu = (p: string) => DESISTE.test(p)
+// "não, obrigada" é um "não": a gentileza no fim não muda a resposta
+const semCortesia = (p: string) => p.replace(/\s+(obrigad[ao]|brigad[ao]|obg|valeu|vlw)( mesmo)?$/, '').trim()
+
+// mais de um número na resposta à oferta ("1 e 3", "o 2 ou o 3"): a Mel passa para um por vez, começando pelo primeiro.
+// Só vale quando a frase é a lista de números (em "pode ser às 3" o 3 é hora, não salão).
+const ENCHIMENTO = /\b(o|a|os|as|e|ou|opcao|opcoes|numero|numeros|quero|manda|mande|pode|ser|pro|pra|pros|pras|para|no|na|nos|nas|salao|saloes|sim|por favor)\b/g
+export function escolhasDe(texto: string, opcoes: Opcao[]): Opcao[] {
+  const resto = palavra(texto).replace(ENCHIMENTO, ' ').replace(/\s+/g, ' ').trim()
+  if (!/^[1-9](?: [1-9])+$/.test(resto)) return []
+  const nums = [...new Set(resto.split(' ').map(Number))].filter((n) => n >= 1 && n <= opcoes.length)
+  return nums.map((n) => opcoes[n - 1]).filter(Boolean)
+}
+// "manda pros 3", "todos", "os dois": a Mel explica que é um por vez e pergunta qual primeiro
+const TODOS = /\b(todos|todas|ambos|ambas|os (2|3|4|5|dois|tres)|as (2|3|duas|tres)|pros (2|3|dois|tres|todos)|pras (2|3|duas|tres|todas)|para (os|todos) (2|3|dois|tres)|para todos|pra todos)\b/
+
+// os salões achados pelo nome, para a cliente confirmar antes de a Mel seguir
+const ondeFica = (o: Opcao) => [o.bairro, o.cidade].filter(Boolean).join(', ')
+// "é esse", "esse mesmo", "exato": o sim de quem confirma o salão
+const E_ESSE = /^(e |sim )?(esse|essa|este|esta|ele|ela|isso|exato|exatamente|correto|certinho)( mesmo| mesma| ai| sim| ai mesmo)?( sim)?$/
+export const MSG_OI = 'Oi! Aqui é a Mel, da MIMO 💗, o guia de salões.'
+export function textoCandidatos(c: Opcao[], primeira: boolean): string {
+  const oi = primeira ? `${MSG_OI} ` : ''
+  if (c.length === 1) return `${oi}É o *${c[0].nome}*${ondeFica(c[0]) ? ` (${ondeFica(c[0])})` : ''}? Me responde *sim* que eu sigo com o seu pedido.`
+  return [`${oi}Achei mais de um salão com esse nome:`, '', ...c.map((o, i) => `${i + 1}) ${o.nome}${ondeFica(o) ? ` · ${ondeFica(o)}` : ''}`), '', 'Qual deles? Me responde o número.'].join('\n')
+}
+export const MSG_SEM_SALAO = `${MSG_OI} De qual salão você quer marcar? Me manda o nome como aparece no guia ou o link da página do salão.`
+export const MSG_SEM_SALAO_DICA = `Ainda não sei de qual salão é 😕 O jeito mais fácil: abra a página do salão em ${RAIZ_SITE} e toque em *WhatsApp*. A mensagem já vem com o código dele e eu sigo daqui. Se preferir, me manda o nome do salão do jeito que aparece no guia.`
+
+// 4.6: o lembrete da conversa parada, conforme a etapa. No resumo (confirmando), o texto da Plataforma (msg_ocioso); antes
+// dele, o que falta para o pedido sair. O relógio só cutuca conversa com salão (migração 261).
+export function textoOcioso(base: string | null | undefined, c: { estado?: string | null; salao?: string | null; nome?: string | null; servico?: string | null; preferencia?: string | null }, exigirPreferencia = false): string {
+  const nome = primeiroNome(c.nome)
+  const oi = `Oi${nome ? `, ${nome}` : ''}!`
+  const salao = c.salao || 'salão'
+  if (c.estado === 'confirmando') {
+    const t = String(base ?? '').trim()
+    return t ? trocarTudo(ajustarNome(t), { nome, salao: c.salao ?? '' }) : `${oi} Seu pedido para o ${salao} está pronto 💗 Posso enviar? É só responder *sim*. Se preferir deixar pra depois, tudo bem: é só me chamar quando quiser.`
+  }
+  const falta = [!c.nome && 'o seu nome', !c.servico && 'o serviço que você quer', exigirPreferencia && !c.preferencia && 'o dia e o horário de preferência'].filter(Boolean) as string[]
+  if (!falta.length) return `${oi} Ainda quer marcar no ${salao}? 💗 É só me responder por aqui. Se preferir deixar pra depois, tudo bem.`
+  const lista = falta.length === 1 ? falta[0] : `${falta.slice(0, -1).join(', ')} e ${falta[falta.length - 1]}`
+  return `${oi} Ficou faltando só ${lista} para eu passar o seu pedido para o ${salao} 💗 Se preferir continuar depois, tudo bem: é só me chamar.`
+}
+
 // o salão respondeu depois que a cliente já fez o pedido em outro salão
 export const salaoAtrasado = (p: Pick<Pedido, 'cliente_nome'>) =>
   `Obrigada pelo retorno! 💗 ${p.cliente_nome ? `A ${primeiroNome(p.cliente_nome)}` : 'A cliente'} já seguiu com outro salão desta vez. Os próximos pedidos continuam chegando por aqui.`
@@ -554,6 +627,12 @@ export async function atenderGuia(deps: Deps, e: Entrada, opcoes: { teste?: bool
         await chamar(deps, 'guia_whats_sair', { tel_: tel, quem_: 'salao', sair_: true })
         return { responder: 'Combinado, você não vai mais receber pedidos da MIMO por aqui. Se mudar de ideia, é só escrever VOLTAR.', acao: 'salao_saiu' }
       }
+      // 4.6 (migração 261): a resposta automática do WhatsApp Business não é resposta do salão nem voto. Fica guardada na
+      // conversa do salão, marcada, e o resgate da cliente continua contando. A Mel não responde a ela.
+      if (ehRespostaAutomatica(texto)) {
+        try { await chamar(deps, 'guia_whats_salao_respondeu', { lead_: ctx.lead_salao.id, texto_: texto, quer_: false, auto_: true }) } catch { /* banco sem a 261: não marca nada */ }
+        return { responder: null, acao: 'salao_automatica' }
+      }
       const quer = QUERO.test(p)
       // a qual pedido esta resposta se refere: a mensagem citada (com o token) manda; senão o pedido que o contexto
       // escolheu (o que o salão tocou por último, ou o mais recente)
@@ -584,13 +663,13 @@ export async function atenderGuia(deps: Deps, e: Entrada, opcoes: { teste?: bool
     return { responder: 'Pronto, apaguei seus dados e esta conversa aqui na MIMO. 💗 Se precisar de novo, é só chamar.', acao: 'apagou' }
   }
 
-  // 3. de qual salão é a conversa: o código manda; sem código, a conversa aberta; sem nada, pelo nome
+  // 4.6: a resposta automática de um WhatsApp Business que caiu aqui como se fosse cliente (o salão respondendo de outro
+  // número, uma loja que recebeu mensagem nossa). Sem conversa com salão, a Mel fica quieta: era ela que puxava a busca
+  // por nome ("Seja bem-vinda ao Studio X") e o lembrete "quer que eu envie seu pedido?".
+  if (!codigo && !conversaAberta?.lugar && ehRespostaAutomatica(texto)) return { responder: null, acao: 'resposta_automatica' }
+
   let conversa: Conversa | null = conversaAberta
   let lugar: Lugar | null = conversa?.lugar ?? null
-  if (codigo && (!lugar || lugar.cidade_slug !== codigo.cidade || lugar.slug !== codigo.slug)) {
-    const l = (await chamar(deps, 'guia_whats_lugar', { cidade_: codigo.cidade, slug_: codigo.slug })) as Lugar | null
-    if (l) { lugar = l; conversa = null }
-  }
   const novas: Array<{ q: string; t: string; em: string }> = [{ q: 'cliente', t: texto, em }]
   const guardar = async (resposta: string | null, estado: string, dados: Dados, lugarId: string | null) => {
     if (resposta) novas.push({ q: 'mel', t: resposta, em })
@@ -598,6 +677,84 @@ export async function atenderGuia(deps: Deps, e: Entrada, opcoes: { teste?: bool
     novas.length = 0 // 3.77.1: o que foi gravado não vai de novo (o "sim" da cliente aparecia duas vezes na conversa)
     if (!conversa) conversa = { id: Number(id), telefone: tel, lugar_id: lugarId, estado, dados, mensagens: [] }
   }
+  const semOpcoes = (d: Dados): Dados => { const { opcoes: _o, ...resto } = d; return resto }
+  const semCandidatos = (d: Dados): Dados => { const { candidatos: _c, ...resto } = d; return resto }
+
+  // 4.6: "parar", "encerrar", "para de mandar mensagem": a Mel encerra, sai da lista dos lembretes e das ofertas
+  // (guia_whats_saidas, quem = 'cliente') e só volta a falar quando a pessoa escrever de novo. Responde uma vez.
+  if (pedidoDeParar(texto)) {
+    if (!teste && ctx.saida !== 'salao') { try { await chamar(deps, 'guia_whats_sair', { tel_: tel, quem_: 'cliente', sair_: true }) } catch { /* segue */ } }
+    if (ctx.saida === 'cliente' && !conversaAberta) return { responder: null, acao: 'parou_de_novo' }
+    const dados: Dados = { ...semCandidatos(semOpcoes(conversa?.dados ?? {})), parou: true }
+    await guardar(MSG_PAROU, 'encerrada', dados, conversa?.lugar_id ?? lugar?.id ?? null)
+    return { responder: MSG_PAROU, acao: 'parou', estado: 'encerrada', dados }
+  }
+  // quem tinha pedido para parar e escreveu de novo volta a ser atendida normalmente
+  if (!teste && ctx.saida === 'cliente') { try { await chamar(deps, 'guia_whats_sair', { tel_: tel, quem_: 'cliente', sair_: false }) } catch { /* segue */ } }
+
+  // 3. de qual salão é a conversa: o código manda; sem código, a conversa aberta; sem nada, pelo nome (confirmado)
+  if (codigo && (!lugar || lugar.cidade_slug !== codigo.cidade || lugar.slug !== codigo.slug)) {
+    const l = (await chamar(deps, 'guia_whats_lugar', { cidade_: codigo.cidade, slug_: codigo.slug })) as Lugar | null
+    if (l) { lugar = l; conversa = null }
+  }
+
+  // o pedido vai para o salão: o "sim" depois do resumo, ou (4.6) o número escolhido na oferta de outros salões, que já é
+  // a licença ("quer que eu passe o seu pedido? é só responder o número"). extra: a frase que vai depois da confirmação.
+  const enviarAoSalao = async (l: Lugar, dados: Dados, acaoOk = 'enviado', extra = ''): Promise<Saida> => {
+    if (teste) {
+      const pedidoTeste: Pedido = { id: 0, salao_nome: l.nome, cidade: l.cidade, cliente_nome: dados.nome, servico: dados.servico, preferencia: dados.preferencia, observacao: dados.observacao, cliente_tel: '5513999990000' }
+      const previa = mensagemDoSalao(cfg, l, pedidoTeste)
+      const resposta = confirmacao(cfg, l, dados, true) + extra
+      await guardar(resposta, 'enviado', dados, l.id)
+      return { responder: resposta, depois: await conviteInsta(deps, cfg, l, dados, tel, teste, 'sim'), acao: `${acaoOk}_teste`, previaSalao: previa, previaEnquete: cfg.enquete_ativa === false ? null : enqueteDoPedido(cfg, pedidoTeste), estado: 'enviado', dados }
+    }
+    await guardar(null, 'enviado', dados, l.id)
+    const ld = (await chamar(deps, 'guia_whats_lead_criar', { conversa_: conversa!.id })) as (Pedido & { status: string; salao_tel: string | null; repetido: boolean })
+    let ok = false
+    let previa: string | null = null
+    let statusFinal: string | undefined
+    if (ld?.status === 'pendente' && ld.salao_tel) {
+      // 3.57: o texto do pedido e, logo atrás, a enquete "vai atender?" (despacharPedido registra os dois)
+      const d = await despacharPedido(deps, cfg, l, { ...ld, salao_tel: ld.salao_tel })
+      ok = d.ok
+      previa = d.texto
+      statusFinal = d.status
+      // 3.72: o número do salão não existe no WhatsApp (ou o envio falhou): a cliente segue normal e a equipe é
+      // avisada no nosso número, como no caso sem número — o pedido não fica no vazio
+      if (!ok && cfg.numero_avisos) {
+        const motivo = d.status === 'sem_contato'
+          ? `o número ${telefoneBonito(ld.salao_tel)} do cadastro não tem WhatsApp`
+          : `o envio para ${telefoneBonito(ld.salao_tel)} falhou${d.erro ? ` (${String(d.erro).slice(0, 120)})` : ''}`
+        try { await deps.enviar(cfg.instancia, so(cfg.numero_avisos), avisoEquipe(l, ld, motivo)) } catch { /* segue sem o aviso */ }
+      }
+    } else if (ld?.repetido) {
+      ok = ld.status !== 'falhou'
+    } else if (ld?.status === 'sem_contato' && cfg.numero_avisos) {
+      // o salão não tem WhatsApp (ou o número é o da própria cliente): a cliente segue normal, mas avisamos a equipe no
+      // nosso número, para não ficar um pedido no vazio e para dar para medir. O aviso é melhor-esforço (não trava a cliente).
+      try { await deps.enviar(cfg.instancia, so(cfg.numero_avisos), avisoEquipe(l, ld)) } catch { /* segue sem o aviso */ }
+    }
+    // 3.77.1: o pedido não chegou ao salão (sem WhatsApp, o envio falhou, o salão pediu SAIR): em vez de "vou passar e
+    // eles te chamam" (e o resgate só meia hora depois), a Mel já oferece os outros salões. Com o resgate desligado
+    // (resgate_min = 0), ou num banco sem a 222, fica como era.
+    const st = statusFinal ?? ld?.status ?? ''
+    if (!ok && ld?.id && !ld.repetido && ['sem_contato', 'falhou', 'salao_saiu'].includes(st) && Number(cfg.resgate_min ?? 30) > 0) {
+      try {
+        const opcoesNovas = ((await chamar(deps, 'guia_whats_alternativas', { lead_: ld.id, n_: Math.max(1, Math.min(5, Number(cfg.resgate_opcoes) || 3)) })) as Opcao[] | null) ?? []
+        const nome = dados.nome ? `, ${primeiroNome(dados.nome)}` : ''
+        const texto = `Anotei seu pedido${nome}! 💗 Mas não consegui passar para o ${l.nome} pelo WhatsApp 😕\n\n${textoOpcoes(opcoesNovas, dados.servico)}`
+        await chamar(deps, 'guia_whats_oferecer', { lead_: ld.id, texto_: texto, opcoes_: opcoesNovas, motivo_: st === 'falhou' ? 'falhou' : 'sem_contato' })
+        return { responder: texto, acao: 'oferta_na_hora', previaSalao: previa, estado: 'conversando', dados: { ...dados, opcoes: opcoesNovas, salao_anterior: l.nome, oferta_motivo: st === 'falhou' ? 'falhou' : 'sem_contato' } }
+      } catch { /* sem as funções da 222: a resposta de antes */ }
+    }
+    const resposta = confirmacao(cfg, l, dados, ok) + (ok ? extra : '')
+    await guardar(resposta, 'enviado', dados, l.id)
+    // 4.2: com o pedido no salão (ou anotado), o convite do Instagram vem logo atrás, numa mensagem só dele
+    const depois = await conviteInsta(deps, cfg, l, dados, tel, teste, 'sim')
+    return { responder: resposta, depois, acao: ok ? acaoOk : `pedido_${statusFinal ?? ld?.status ?? 'erro'}`, previaSalao: previa, estado: 'enviado', dados }
+  }
+  const completoPara = (d: Dados) => !!(d.nome && d.servico && (!cfg.exigir_preferencia || d.preferencia))
+
   // 3.76: quem quer saber da MIMO Agenda: o link do comercial (ou do site). A conversa segue no estado em que estava —
   // se era uma cliente no meio do pedido, ela continua de onde parou.
   const agendaLigada = cfg.sobre_agenda !== false
@@ -612,30 +769,43 @@ export async function atenderGuia(deps: Deps, e: Entrada, opcoes: { teste?: bool
     await guardar(resposta, estado, dados, lugar?.id ?? null)
     return { responder: resposta, acao: 'sobre_agenda', estado, dados }
   }
-  // 3.77: a cliente respondendo à oferta de outros salões (o resgate ou o "não" do salão): o número (ou o nome) escolhe;
-  // com os dados completos vai direto ao resumo com o salão novo, e o pedido só sai com o "sim" dela
+  // 3.77: a cliente respondendo à oferta de outros salões (o resgate ou o "não" do salão): o número (ou o nome) escolhe.
+  // 4.6: com os dados completos, o número já envia (antes ela precisava dizer "sim" de novo, e algumas sumiam aí); mais de
+  // um número vai para o primeiro, um por vez; "desisto" encerra.
   const oferecidas = (!lugar && !codigo ? (conversa?.dados?.opcoes ?? []) : []) as Opcao[]
-  const semOpcoes = (d: Dados): Dados => { const { opcoes: _o, ...resto } = d; return resto }
   if (oferecidas.length && conversa) {
-    const escolha = escolhaDe(texto, oferecidas)
+    // "desisto", "já marquei com o 2": vale antes do número (senão o 2 viraria um pedido novo)
+    if (desistiu(p)) {
+      const resposta = 'Tudo bem! 💗 Se precisar de um salão depois, é só me chamar aqui.'
+      await guardar(resposta, 'encerrada', semOpcoes(conversa.dados ?? {}), null)
+      return { responder: resposta, acao: 'desistiu', estado: 'encerrada' }
+    }
+    const varias = escolhasDe(texto, oferecidas)
+    const escolha = varias[0] ?? escolhaDe(texto, oferecidas)
+    if (!escolha && TODOS.test(p)) {
+      const lista = oferecidas.map((o, i) => `${i + 1}) ${o.nome}${o.bairro ? ` · ${o.bairro}` : ''}`).join('\n')
+      const resposta = `Eu passo o seu pedido para um salão por vez, assim quem aceitar não fica esperando à toa 💗 Qual você quer primeiro? Me responde o número:\n\n${lista}`
+      await guardar(resposta, 'conversando', conversa.dados ?? {}, null)
+      return { responder: resposta, acao: 'escolhendo', estado: 'conversando' }
+    }
     const l = escolha ? ((await chamar(deps, 'guia_whats_lugar', { cidade_: null, slug_: null, id_: escolha.id })) as Lugar | null) : null
     if (l) {
       lugar = l
       conversa = { ...conversa, dados: semOpcoes(conversa.dados ?? {}), lugar: l, lugar_id: l.id }
       const dd: Dados = { ...conversa.dados, sem_avanco: 0 }
-      if (!l.agendar && dd.nome && dd.servico && (!cfg.exigir_preferencia || dd.preferencia)) {
-        const resposta = resumo(dd, l.nome)
-        await guardar(resposta, 'confirmando', dd, l.id)
-        return { responder: resposta, acao: 'escolheu', estado: 'confirmando', dados: dd }
+      if (!l.agendar && completoPara(dd)) {
+        const extra = varias.length > 1 ? `\n\nPasso para um salão por vez: comecei pelo ${l.nome}. Se ele não responder, eu te mostro outras opções 💗` : ''
+        return await enviarAoSalao(l, dd, 'escolheu', extra)
       }
       // salão com agenda pela MIMO: o passo 4 manda o link; faltando algo, a conversa segue e a Mel pede
-    } else if (!escolha && (ESPERAR.test(p) || NAO_CURTO.test(p))) {
+    } else if (!escolha && (ESPERAR.test(p) || NAO_CURTO.test(semCortesia(p)))) {
       const anterior = conversa.dados?.salao_anterior || 'salão'
       // 3.77.1: esperar só faz sentido na demora; o salão que nem recebeu o pedido (ou que disse não) não vai chamar
       const motivo = conversa.dados?.oferta_motivo
+      const nao = NAO_CURTO.test(semCortesia(p)) && !ESPERAR.test(p)
       const resposta = !motivo || motivo === 'demora'
         ? `Combinado! 💗 Vou deixar o seu pedido com o ${anterior}. Se mudar de ideia, é só me mandar o número de um dos salões.`
-        : NAO_CURTO.test(p) && !ESPERAR.test(p)
+        : nao
           ? `Tudo bem! 💗 Se mudar de ideia, é só me mandar o número de um dos salões ou o nome de outro salão do guia.`
           : motivo === 'nao'
             ? `O ${anterior} avisou que não vai conseguir atender desta vez 😕 Se quiser, me responde o número de um dos salões, ou me manda o nome de outro salão do guia.`
@@ -647,36 +817,71 @@ export async function atenderGuia(deps: Deps, e: Entrada, opcoes: { teste?: bool
   // achou o salão de outro jeito (o código, o nome): as opções antigas saem
   if (lugar && conversa?.dados?.opcoes) conversa = { ...conversa, dados: semOpcoes(conversa.dados) }
 
+  // 4.6: o salão achado pelo nome espera a confirmação da cliente: "sim" (com um só), o número ou o nome escolhe; "não"
+  // pede o nome de novo; outra coisa vira busca nova
+  const candidatos = (!lugar && !codigo ? (conversa?.dados?.candidatos ?? []) : []) as Opcao[]
+  if (candidatos.length && conversa) {
+    const certo = candidatos.length === 1 && (SIM_CURTO.test(semCortesia(p)) || E_ESSE.test(semCortesia(p)) || (!p && SIM_EMOJI.test(texto))) ? candidatos[0] : escolhaDe(texto, candidatos)
+    const l = certo ? ((await chamar(deps, 'guia_whats_lugar', { cidade_: null, slug_: null, id_: certo.id })) as Lugar | null) : null
+    if (l) {
+      lugar = l
+      conversa = { ...conversa, dados: { ...semCandidatos(conversa.dados ?? {}), sem_salao: 0 }, lugar: l, lugar_id: l.id }
+    } else if (NAO_CURTO.test(semCortesia(p)) || /\b(nenhum|nenhuma|nao e (esse|essa|nenhum|nenhuma|ele|ela)|outro salao)\b/.test(p)) {
+      const resposta = 'Tudo bem! 💗 Me manda o nome do salão do jeito que aparece no guia, ou o link da página dele, que eu procuro de novo.'
+      await guardar(resposta, 'conversando', semCandidatos(conversa.dados ?? {}), null)
+      return { responder: resposta, acao: 'nao_era', estado: 'conversando' }
+    }
+  }
+
   // a própria dona (o número é o cadastrado do salão) segue para o passo 4.5, que já apresenta a MIMO Agenda com o link
   const ehDonaDe = (l: Lugar | null) => !!l && ((teste && !!opcoes.comoDona) || (!teste && !!l.salao_tel && !!chaveDe(tel) && chaveDe(tel) === chaveDe(l.salao_tel)))
   if (agendaLigada && (opcoes.sobreAgenda || sobreAgendaDe(texto)) && !ehDonaDe(lugar)) return await sobreAgenda(false)
 
   if (!lugar) {
-    const achados = p.length >= 4 ? ((await chamar(deps, 'guia_whats_buscar', { texto_: texto })) as Array<{ id: string; nome: string; cidade: string }>) : []
-    if (achados?.length === 1) {
-      lugar = (await chamar(deps, 'guia_whats_lugar', { cidade_: null, slug_: null, id_: achados[0].id })) as Lugar | null
+    // 4.6: o nome achado não vira o salão na hora: a Mel pergunta "é o X (bairro, cidade)?" ou lista até 3, numerados.
+    // Antes, uma palavra solta bastava ("como funciona" foi para o "Não funciona mais").
+    const achados = p.length >= 4 ? (((await chamar(deps, 'guia_whats_buscar', { texto_: texto })) as Array<{ id: string; nome: string; cidade?: string | null; bairro?: string | null }> | null) ?? []) : []
+    // a Mel perguntou "é o X?" (ou mostrou a lista) e a resposta não decidiu nem trouxe outro nome: pergunta de novo
+    if (!achados.length && candidatos.length && conversa) {
+      const resposta = candidatos.length === 1
+        ? `É o *${candidatos[0].nome}*${ondeFica(candidatos[0]) ? ` (${ondeFica(candidatos[0])})` : ''}? Me responde *sim* ou *não* 💗`
+        : `Me responde o número do salão (de 1 a ${candidatos.length}) 💗 Se não for nenhum deles, me manda o nome do jeito que aparece no guia.`
+      await guardar(resposta, 'conversando', conversa.dados ?? {}, null)
+      return { responder: resposta, acao: 'confirmar_salao', estado: 'conversando' }
     }
-    if (!lugar) {
-      // 3.76: quem já recebeu o link do comercial e segue sem salão: o lembrete curto, em vez de "de qual salão?"
-      if (agendaLigada && !achados?.length && Number(conversa?.dados?.comercial ?? 0) > 0) return await sobreAgenda(false)
-      // 3.77: quem está escolhendo entre os salões oferecidos e escreveu outra coisa: como responder
-      if (oferecidas.length && !achados?.length) {
-        // 3.77.1: "pode enviar", "qualquer um", "para outros": a Mel pede o número com a lista de novo (decisão da equipe:
-        // não manda para todos de uma vez); o "vou esperar" só é lembrado quando o salão só está demorando
-        const motivo = conversa?.dados?.oferta_motivo
-        const lista = oferecidas.map((o, i) => `${i + 1}) ${o.nome}${o.bairro ? ` · ${o.bairro}` : ''}`).join('\n')
-        const resposta = CONSENTE.test(p)
-          ? `Claro! 💗 Para qual deles? Me responde o número:\n\n${lista}`
-          : `É só me responder o número do salão (de 1 a ${oferecidas.length}) que eu passo o seu pedido 💗${!motivo || motivo === 'demora' ? ` Se preferir esperar o ${conversa?.dados?.salao_anterior || 'salão'}, me diz "vou esperar".` : ''}`
-        await guardar(resposta, 'conversando', conversa?.dados ?? {}, null)
-        return { responder: resposta, acao: 'escolhendo', estado: 'conversando' }
-      }
-      const resposta = achados?.length > 1
-        ? `Oi! Aqui é a Mel, da MIMO 💗. Encontrei mais de um salão com esse nome: ${achados.map((a) => `${a.nome} (${a.cidade})`).join(', ')}. Qual deles? Se puder, me manda o link da página do salão no guia.`
-        : 'Oi! Aqui é a Mel, da MIMO 💗, o guia de salões. De qual salão você quer marcar? Me manda o nome como aparece no guia ou o link da página do salão.'
+    if (achados.length) {
+      const cand: Opcao[] = achados.slice(0, 3).map((a) => ({ id: a.id, nome: a.nome, bairro: a.bairro ?? null, cidade: a.cidade ?? null }))
+      const dados: Dados = { ...semCandidatos(conversa?.dados ?? {}), candidatos: cand, sem_salao: 0 }
+      const resposta = textoCandidatos(cand, !conversa)
+      await guardar(resposta, 'conversando', dados, null)
+      return { responder: resposta, acao: 'confirmar_salao', estado: 'conversando', dados }
+    }
+    // 3.76: quem já recebeu o link do comercial e segue sem salão: o lembrete curto, em vez de "de qual salão?"
+    if (agendaLigada && Number(conversa?.dados?.comercial ?? 0) > 0) return await sobreAgenda(false)
+    // 3.77: quem está escolhendo entre os salões oferecidos e escreveu outra coisa: como responder
+    if (oferecidas.length) {
+      // 3.77.1: "pode enviar", "qualquer um", "para outros": a Mel pede o número com a lista de novo (decisão da equipe:
+      // não manda para todos de uma vez); o "vou esperar" só é lembrado quando o salão só está demorando
+      const motivo = conversa?.dados?.oferta_motivo
+      const lista = oferecidas.map((o, i) => `${i + 1}) ${o.nome}${o.bairro ? ` · ${o.bairro}` : ''}`).join('\n')
+      const resposta = CONSENTE.test(p)
+        ? `Claro! 💗 Para qual deles? Me responde o número:\n\n${lista}`
+        : `É só me responder o número do salão (de 1 a ${oferecidas.length}) que eu passo o seu pedido 💗${!motivo || motivo === 'demora' ? ` Se preferir esperar o ${conversa?.dados?.salao_anterior || 'salão'}, me diz "vou esperar". Se não quiser mais, me diz "desisto".` : ' Se não quiser mais, me diz "desisto".'}`
       await guardar(resposta, 'conversando', conversa?.dados ?? {}, null)
-      return { responder: resposta, acao: 'sem_salao', estado: 'conversando' }
+      return { responder: resposta, acao: 'escolhendo', estado: 'conversando' }
     }
+    // 4.6: sem salão, a Mel pede duas vezes (a segunda com o caminho mais fácil: o botão WhatsApp na página do salão) e
+    // depois fica quieta até chegar um nome ou link que ela ache. Antes, a mesma frase voltava a cada mensagem, inclusive
+    // para "parar" e "encerrar".
+    const vezes = Number(conversa?.dados?.sem_salao ?? 0)
+    const dados: Dados = { ...semCandidatos(conversa?.dados ?? {}), sem_salao: vezes + 1 }
+    if (vezes >= 2) {
+      await guardar(null, 'conversando', dados, null)
+      return { responder: null, acao: 'sem_salao_quieta', estado: 'conversando', dados }
+    }
+    const resposta = vezes === 0 ? MSG_SEM_SALAO : MSG_SEM_SALAO_DICA
+    await guardar(resposta, 'conversando', dados, null)
+    return { responder: resposta, acao: 'sem_salao', estado: 'conversando', dados }
   }
 
   // 4. salão que já agenda pela MIMO: o link da agenda. (Salão sem WhatsApp no cadastro, ou que pediu para não receber,
@@ -728,11 +933,13 @@ export async function atenderGuia(deps: Deps, e: Entrada, opcoes: { teste?: bool
     return { responder: resposta, acao: 'pos_envio', estado: estadoAntes }
   }
   // o "sim"/"não" seco depois do resumo decide sem IA; só emoji (fora disso) não vai à IA
-  const curto = estadoAntes === 'confirmando' ? (SIM_CURTO.test(p) || (!p && SIM_EMOJI.test(texto)) ? 'sim' : NAO_CURTO.test(p) ? 'nao' : null) : null
-  if (!p && !curto) {
-    const resposta = 'Só consigo ler texto por aqui 😅 Me escreve o que você precisa?'
-    await guardar(resposta, estadoAntes, dadosAntes, lugar.id)
-    return { responder: resposta, acao: 'sem_texto', estado: estadoAntes }
+  // 4.6: "sim, obrigada" e "não, obrigada" também decidem (a gentileza no fim não muda a resposta)
+  const curto = estadoAntes === 'confirmando' ? (SIM_CURTO.test(semCortesia(p)) || (!p && SIM_EMOJI.test(texto)) ? 'sim' : NAO_CURTO.test(semCortesia(p)) ? 'nao' : null) : null
+  // 4.6: sem letra nenhuma: o "?" é um "e aí?" e vai para a IA com a conversa; emoji sozinho ("😉", "🙏") não pede
+  // resposta (antes recebia "Só consigo ler texto por aqui")
+  if (!p && !curto && !/\?/.test(texto)) {
+    await guardar(null, estadoAntes, dadosAntes, lugar.id)
+    return { responder: null, acao: 'so_emoji', estado: estadoAntes }
   }
   let r: Awaited<ReturnType<typeof deps.ia>>
   if (curto) {
@@ -788,59 +995,7 @@ export async function atenderGuia(deps: Deps, e: Entrada, opcoes: { teste?: bool
   }
 
   // o "sim" depois do resumo: o pedido vai para o salão
-  if (estadoAntes === 'confirmando' && lido.cliente_confirmou_envio && completo && !mudou) {
-    if (teste) {
-      const pedidoTeste: Pedido = { id: 0, salao_nome: lugar.nome, cidade: lugar.cidade, cliente_nome: dados.nome, servico: dados.servico, preferencia: dados.preferencia, observacao: dados.observacao, cliente_tel: '5513999990000' }
-      const previa = mensagemDoSalao(cfg, lugar, pedidoTeste)
-      const resposta = confirmacao(cfg, lugar, dados, true)
-      await guardar(resposta, 'enviado', dados, lugar.id)
-      return { responder: resposta, depois: await conviteInsta(deps, cfg, lugar, dados, tel, teste, 'sim'), acao: 'enviado_teste', previaSalao: previa, previaEnquete: cfg.enquete_ativa === false ? null : enqueteDoPedido(cfg, pedidoTeste), estado: 'enviado', dados }
-    }
-    await guardar(null, 'enviado', dados, lugar.id)
-    const ld = (await chamar(deps, 'guia_whats_lead_criar', { conversa_: conversa!.id })) as (Pedido & { status: string; salao_tel: string | null; repetido: boolean })
-    let ok = false
-    let previa: string | null = null
-    let statusFinal: string | undefined
-    if (ld?.status === 'pendente' && ld.salao_tel) {
-      // 3.57: o texto do pedido e, logo atrás, a enquete "vai atender?" (despacharPedido registra os dois)
-      const d = await despacharPedido(deps, cfg, lugar, { ...ld, salao_tel: ld.salao_tel })
-      ok = d.ok
-      previa = d.texto
-      statusFinal = d.status
-      // 3.72: o número do salão não existe no WhatsApp (ou o envio falhou): a cliente segue normal e a equipe é
-      // avisada no nosso número, como no caso sem número — o pedido não fica no vazio
-      if (!ok && cfg.numero_avisos) {
-        const motivo = d.status === 'sem_contato'
-          ? `o número ${telefoneBonito(ld.salao_tel)} do cadastro não tem WhatsApp`
-          : `o envio para ${telefoneBonito(ld.salao_tel)} falhou${d.erro ? ` (${String(d.erro).slice(0, 120)})` : ''}`
-        try { await deps.enviar(cfg.instancia, so(cfg.numero_avisos), avisoEquipe(lugar, ld, motivo)) } catch { /* segue sem o aviso */ }
-      }
-    } else if (ld?.repetido) {
-      ok = ld.status !== 'falhou'
-    } else if (ld?.status === 'sem_contato' && cfg.numero_avisos) {
-      // o salão não tem WhatsApp (ou o número é o da própria cliente): a cliente segue normal, mas avisamos a equipe no
-      // nosso número, para não ficar um pedido no vazio e para dar para medir. O aviso é melhor-esforço (não trava a cliente).
-      try { await deps.enviar(cfg.instancia, so(cfg.numero_avisos), avisoEquipe(lugar, ld)) } catch { /* segue sem o aviso */ }
-    }
-    // 3.77.1: o pedido não chegou ao salão (sem WhatsApp, o envio falhou, o salão pediu SAIR): em vez de "vou passar e
-    // eles te chamam" (e o resgate só meia hora depois), a Mel já oferece os outros salões. Com o resgate desligado
-    // (resgate_min = 0), ou num banco sem a 222, fica como era.
-    const st = statusFinal ?? ld?.status ?? ''
-    if (!ok && ld?.id && !ld.repetido && ['sem_contato', 'falhou', 'salao_saiu'].includes(st) && Number(cfg.resgate_min ?? 30) > 0) {
-      try {
-        const opcoes = ((await chamar(deps, 'guia_whats_alternativas', { lead_: ld.id, n_: Math.max(1, Math.min(5, Number(cfg.resgate_opcoes) || 3)) })) as Opcao[] | null) ?? []
-        const nome = dados.nome ? `, ${primeiroNome(dados.nome)}` : ''
-        const texto = `Anotei seu pedido${nome}! 💗 Mas não consegui passar para o ${lugar.nome} pelo WhatsApp 😕\n\n${textoOpcoes(opcoes, dados.servico)}`
-        await chamar(deps, 'guia_whats_oferecer', { lead_: ld.id, texto_: texto, opcoes_: opcoes, motivo_: st === 'falhou' ? 'falhou' : 'sem_contato' })
-        return { responder: texto, acao: 'oferta_na_hora', previaSalao: previa, estado: 'conversando', dados: { ...dados, opcoes, salao_anterior: lugar.nome, oferta_motivo: st === 'falhou' ? 'falhou' : 'sem_contato' } }
-      } catch { /* sem as funções da 222: a resposta de antes */ }
-    }
-    const resposta = confirmacao(cfg, lugar, dados, ok)
-    await guardar(resposta, 'enviado', dados, lugar.id)
-    // 4.2: com o pedido no salão (ou anotado), o convite do Instagram vem logo atrás, numa mensagem só dele
-    const depois = await conviteInsta(deps, cfg, lugar, dados, tel, teste, 'sim')
-    return { responder: resposta, depois, acao: ok ? 'enviado' : `pedido_${statusFinal ?? ld?.status ?? 'erro'}`, previaSalao: previa, estado: 'enviado', dados }
-  }
+  if (estadoAntes === 'confirmando' && lido.cliente_confirmou_envio && completo && !mudou) return await enviarAoSalao(lugar, dados)
 
   // tudo anotado (ou mudou algo depois do resumo): o resumo e o pedido de licença, com as nossas palavras
   if (completo && estadoAntes !== 'enviado' && (estadoAntes === 'conversando' || mudou)) {
@@ -868,28 +1023,31 @@ async function efeitosDoVoto(deps: Deps, cfg: Config, p: Pedido, voto: 'sim' | '
       ? { responder: salaoAtrasado(p), acao: 'salao_vai_atender_tarde' }
       : { responder: respostasDoVoto(cfg, p, 'nao').salao, acao: 'salao_nao_atende' }
   }
+  // 4.6 (migração 261): a cliente que pediu para parar não recebe aviso do voto nem oferta de outros salões
+  let clienteSaiu = false
+  try { clienteSaiu = (await chamar(deps, 'guia_whats_cliente_saiu', { tel_: p.cliente_tel })) === true } catch { clienteSaiu = false }
   if (voto === 'nao') {
     // 3.77: o "não" já sugere os salões (os mesmos critérios do resgate)
     let opcoes: Opcao[] = []
-    if (cfg.avisar_cliente_nao !== false) {
+    if (cfg.avisar_cliente_nao !== false && !clienteSaiu) {
       try { opcoes = ((await chamar(deps, 'guia_whats_alternativas', { lead_: p.id, n_: Math.max(1, Math.min(5, Number(cfg.resgate_opcoes) || 3)) })) as Opcao[] | null) ?? [] } catch { opcoes = [] }
     }
     const r = respostasDoVoto(cfg, p, voto, opcoes)
     if (r.aviso && cfg.numero_avisos) {
       try { await deps.enviar(cfg.instancia, so(cfg.numero_avisos), r.aviso) } catch { /* melhor-esforço */ }
     }
-    if (r.cliente) {
+    if (r.cliente && !clienteSaiu) {
       try {
         try { await chamar(deps, 'guia_whats_oferecer', { lead_: p.id, texto_: r.cliente, opcoes_: opcoes, motivo_: 'nao' }) }
         catch { await chamar(deps, 'guia_whats_conversa_reabrir', { lead_: p.id, texto_: r.cliente }) } // num banco sem a 222
         await deps.enviar(cfg.instancia, p.cliente_tel, r.cliente)
       } catch (e) { return { responder: r.salao, acao: 'salao_nao_atende', erro: `aviso à cliente: ${String((e as Error)?.message ?? e).slice(0, 200)}` } }
     }
-    return { responder: r.salao, acao: 'salao_nao_atende', previaCliente: r.cliente, previaAviso: r.aviso }
+    return { responder: r.salao, acao: 'salao_nao_atende', previaCliente: clienteSaiu ? null : r.cliente, previaAviso: r.aviso }
   }
   const r = respostasDoVoto(cfg, p, voto)
   // 3.77: a Mel já tinha oferecido outros salões e a cliente ainda não escolheu: ela fica sabendo, e a conversa volta
-  if (p.resgate_em) {
+  if (p.resgate_em && !clienteSaiu) {
     const aviso = `Boa notícia${p.cliente_nome ? `, ${primeiroNome(p.cliente_nome)}` : ''}! 💗 O ${p.salao_nome} respondeu e vai te chamar aqui no WhatsApp para combinar o horário.`
     try {
       const voltou = await chamar(deps, 'guia_whats_conversa_voltou', { lead_: p.id, texto_: aviso })

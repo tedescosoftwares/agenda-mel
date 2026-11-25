@@ -1,4 +1,4 @@
-// Testes da Mel do guia (4.6, pacote 1 das conversas reais), sem rede e sem banco:
+// Testes da Mel do guia (4.6 e 4.7, pacotes 1 e 2 das conversas reais), sem rede e sem banco:
 //
 //   node --experimental-strip-types supabase/functions/_shared/guia_whats.teste.ts
 //
@@ -6,7 +6,7 @@
 // combina (a busca de verdade, guia_whats_buscar da migração 261, é testada no Postgres). Os textos dos casos vêm das
 // conversas reais exportadas (22/10 a 24/11).
 import assert from 'node:assert/strict'
-import { atenderGuia, ehRespostaAutomatica, pedidoDeParar, escolhasDe, textoOcioso, MSG_PAROU, MSG_SEM_SALAO, MSG_SEM_SALAO_DICA, type Deps, type Opcao, type PedidoIa, type LeituraIa } from './guia_whats.ts'
+import { atenderGuia, ehRespostaAutomatica, pedidoDeParar, escolhasDe, textoOcioso, perguntaDoPedido, querOutroSalao, situacaoDoPedido, MSG_PAROU, MSG_SEM_SALAO, MSG_SEM_SALAO_DICA, type Deps, type Opcao, type PedidoIa, type LeituraIa, type Indicacao, type LeadMemoria } from './guia_whats.ts'
 
 let ok = 0
 async function caso(nome: string, f: () => Promise<void> | void) {
@@ -28,7 +28,7 @@ const ofertadas: Opcao[] = [
   { id: 'd', nome: 'Gabi Mendes Beauty', bairro: 'Centro' },
 ]
 
-function banco(o: { busca?: Record<string, string[]>; ia?: (p: PedidoIa) => Partial<LeituraIa>; leadSalao?: Record<string, unknown> | null; saidas?: Record<string, string> } = {}) {
+function banco(o: { busca?: Record<string, string[]>; ia?: (p: PedidoIa) => Partial<LeituraIa>; leadSalao?: Record<string, unknown> | null; saidas?: Record<string, string>; indicar?: (a: Record<string, unknown>) => Indicacao | null; memoria?: { lead?: LeadMemoria | null; nome?: string | null } } = {}) {
   const convs: Conv[] = []
   const leads: Array<Record<string, unknown>> = []
   const saidas = new Map<string, string>(Object.entries(o.saidas ?? {}))
@@ -44,7 +44,8 @@ function banco(o: { busca?: Record<string, string[]>; ia?: (p: PedidoIa) => Part
     switch (nome) {
       case 'guia_whats_contexto': {
         const cv = [...convs].reverse().find((c) => c.telefone === tel) ?? null
-        return { data: { config: cfg, saida: saidas.get(tel) ?? null, respostas_hoje: 0, lead_salao: o.leadSalao ?? null, conversa: cv ? { ...structuredClone(cv), lugar: lugarDe(cv.lugar_id) } : null }, error: null }
+        // como no banco: a conversa encerrada continua sendo "a última" (a Mel é que decide se está aberta)
+        return { data: { config: cfg, saida: saidas.get(tel) ?? null, respostas_hoje: 0, lead_salao: o.leadSalao ?? null, memoria: o.memoria ?? { lead: null, nome: null }, conversa: cv ? { ...structuredClone(cv), lugar: lugarDe(cv.lugar_id) } : null }, error: null }
       }
       case 'guia_whats_conversa_salvar': {
         const novas = (args.novas_ as Conv['mensagens']) ?? []
@@ -81,7 +82,25 @@ function banco(o: { busca?: Record<string, string[]>; ia?: (p: PedidoIa) => Part
       case 'guia_whats_voto': return { data: { id: 7, salao_nome: 'Espaço Spa Dharma', cliente_nome: 'Ana', cliente_tel: '5513988887777', servico: 'massagem', primeiro: true, resgate_em: null }, error: null }
       case 'guia_whats_cliente_seguiu': return { data: false, error: null }
       case 'guia_whats_alternativas': return { data: ofertadas, error: null }
-      case 'guia_whats_oferecer': return { data: 1, error: null }
+      case 'guia_whats_oferecer': {
+        // como a 223: a conversa do pedido reabre sem salão, com as opções
+        const c = convs.find((x) => x.id === (o.memoria?.lead?.id === args.lead_ ? o.memoria?.lead?.conversa_id : (leads.find((l) => l.id === args.lead_)?.conversa_id)))
+        if (!c) return { data: null, error: null }
+        c.estado = 'conversando'; c.lugar_id = null
+        c.dados = { ...c.dados, opcoes: args.opcoes_, salao_anterior: o.memoria?.lead?.salao_nome ?? 'salão', resgate_de: args.lead_, oferta_motivo: args.motivo_ }
+        c.mensagens.push({ q: 'mel', t: String(args.texto_) })
+        return { data: c.id, error: null }
+      }
+      case 'guia_whats_conversa_anotar': {
+        const c = convs.find((x) => x.id === (o.memoria?.lead?.id === args.lead_ ? o.memoria?.lead?.conversa_id : (leads.find((l) => l.id === args.lead_)?.conversa_id)))
+        if (!c) return { data: null, error: null }
+        c.mensagens.push(...((args.novas_ as Conv['mensagens']) ?? []))
+        return { data: c.id, error: null }
+      }
+      case 'guia_whats_indicar': {
+        if (!o.indicar) return { data: null, error: { message: 'banco sem a 262' } }
+        return { data: o.indicar(args), error: null }
+      }
       default: return { data: null, error: { message: `rpc de mentira não conhece ${nome}` } }
     }
   }
@@ -102,7 +121,7 @@ function banco(o: { busca?: Record<string, string[]>; ia?: (p: PedidoIa) => Part
 const CLIENTE = '+5513988887777'
 const fala = (b: ReturnType<typeof banco>, texto: string, tel = CLIENTE, extra: Record<string, unknown> = {}) => atenderGuia(b.deps, { telefone: tel, texto, nomePerfil: 'Ana', ...extra })
 
-console.log('a Mel do guia (4.6)')
+console.log('a Mel do guia (4.6 e 4.7)')
 
 // ---- as funções de texto ---------------------------------------------------------------------------------------------
 await caso('resposta automática do WhatsApp Business é reconhecida (textos reais)', () => {
@@ -290,6 +309,158 @@ await caso('voto "não" do salão: quem pediu para parar não recebe aviso nem o
   assert.equal(r.acao, 'salao_nao_atende')
   assert.equal(b.enviados.some((x) => x.tel === '5513988887777'), false)
   assert.equal(b.chamadas.some((x) => x.nome === 'guia_whats_oferecer'), false)
+})
+
+// ---- 4.7: indicar, lembrar, avisar do "sim" ---------------------------------------------------------------------------
+const emSantos = { slug: 'santos', nome: 'Santos' }
+const op = (id: string, nome: string, bairro: string): Opcao => ({ id, nome, bairro, cidade: 'Santos' })
+// a indicação de mentira: cidade pela frase ou pelo que a Mel já sabia; serviço = "unha" na frase ou a categoria guardada
+function indicarDeMentira(a: Record<string, unknown>): Indicacao {
+  const tx = String(a.texto_ ?? '').toLowerCase()
+  const cidade = /santos/.test(tx) || a.cidade_ === 'santos' ? emSantos : null
+  const agora = /unha|nail/.test(tx) ? 'unhas' : /cabelo/.test(tx) ? 'cabelo' : null
+  const categoria = agora ?? ((a.categoria_ as string | null) ?? null)
+  const fora = (a.fora_ as string[]) ?? []
+  const todas = categoria === 'unhas' ? [op('b', 'Espaço Spa Dharma', 'Aparecida'), op('c', 'Lash Tatiane Paes', 'Centro'), op('d', 'Gabi Mendes Beauty', 'Centro'), op('a', 'Studio Dharma', 'Centro')] : categoria === 'cabelo' ? [op('a', 'Studio Dharma', 'Centro')] : []
+  return { cidade, presumida: false, categoria, bairro: null, tem_servico: !!categoria, servico_agora: !!agora, opcoes: cidade ? todas.filter((x) => !fora.includes(x.id)).slice(0, 3) : [] }
+}
+await caso('perguntas do pedido e "outro salão" são reconhecidas; pedido novo não', () => {
+  for (const t of ['O salão respondeu?', 'a Bianca respondeu?', 'Até agora não recebi, o retorno da Paula Moura.', 'ninguém me chamou', 'Eu nao tive nenhum retorno de nenhum salão', 'alguma novidade?', 'E aí?', 'até agora nada'])
+    assert.ok(perguntaDoPedido(t), t)
+  for (const t of ['quero marcar unha amanhã', 'Obrigada', 'qual o valor?', 'pode ser sexta à tarde'])
+    assert.equal(perguntaDoPedido(t), false, t)
+  for (const t of ['outro', 'quero outro salão', 'tem outra opção?', 'me mostra outros']) assert.ok(querOutroSalao(t), t)
+  assert.equal(querOutroSalao('quero fazer outra coisa no cabelo'), false)
+})
+await caso('a situação do pedido sai do que o banco sabe', () => {
+  const b: LeadMemoria = { id: 1, salao_nome: 'Studio X', status: 'enviado', minutos: 185 }
+  assert.equal(situacaoDoPedido(b).tipo, 'sem_sinal')
+  assert.equal(situacaoDoPedido(b).texto, 'O Studio X ainda não respondeu o seu pedido (enviei há 3 h 05) 😕')
+  assert.equal(situacaoDoPedido({ ...b, minutos: 8 }).tipo, 'recente')
+  assert.equal(situacaoDoPedido({ ...b, viu: true }).tipo, 'viu')
+  assert.equal(situacaoDoPedido({ ...b, voto: 'sim' }).tipo, 'sim')
+  assert.equal(situacaoDoPedido({ ...b, voto: 'nao' }).tipo, 'nao')
+  assert.equal(situacaoDoPedido({ ...b, status: 'sem_contato' }).tipo, 'nao_chegou')
+})
+await caso('indicar: serviço e cidade na frase dão a lista; o número escolhe e a conversa segue com o salão', async () => {
+  const b = banco({ indicar: indicarDeMentira })
+  const r = await fala(b, 'quero fazer unha em Santos')
+  assert.equal(r.acao, 'indicou')
+  assert.equal(r.responder, 'Oi! Aqui é a Mel, da MIMO 💗, o guia de salões. Achei estes salões de unhas em Santos:\n\n1) Espaço Spa Dharma · Aparecida\n2) Lash Tatiane Paes · Centro\n3) Gabi Mendes Beauty · Centro\n\nEm qual deles você quer marcar? Me responde o número 💗 Se quiser ver outros, me diz *outros*.')
+  const r2 = await fala(b, '2')
+  assert.equal(r2.acao, 'conversa')
+  const cv = b.convs.at(-1)!
+  assert.equal(cv.lugar_id, 'c')
+  assert.equal('busca' in cv.dados, false)
+  assert.equal('candidatos' in cv.dados, false)
+  // a IA recebe a conversa inteira: o serviço que ela disse antes de escolher o salão está lá
+  assert.ok(b.iaPedidos[0].mensagens.some((m) => m.content === 'quero fazer unha em Santos'))
+  // e, no lugar do "2" solto, o que ela quis dizer
+  assert.equal(b.iaPedidos[0].mensagens.at(-1)!.content, 'Quero marcar no Lash Tatiane Paes. O que eu disse antes: "quero fazer unha em Santos"')
+  assert.equal(cv.mensagens.filter((m) => m.q === 'cliente').at(-1)!.t, '2')
+})
+await caso('indicar: só a cidade pergunta o serviço; o serviço depois completa', async () => {
+  const b = banco({ indicar: indicarDeMentira })
+  const r = await fala(b, 'Sou de Santos')
+  assert.equal(r.acao, 'pede_servico')
+  assert.match(r.responder!, /Qual serviço você quer fazer em Santos\?/)
+  const r2 = await fala(b, 'unha')
+  assert.equal(r2.acao, 'indicou')
+  assert.match(r2.responder!, /^Achei estes salões de unhas em Santos:/)
+  const arg = b.chamadas.filter((x) => x.nome === 'guia_whats_indicar').at(-1)!.args
+  assert.equal(arg.cidade_, 'santos')
+})
+await caso('indicar: só o serviço pergunta a cidade; sem resposta que ajude, pergunta de outro jeito e depois fica quieta', async () => {
+  const b = banco({ indicar: indicarDeMentira })
+  const r = await fala(b, 'Nail designer')
+  assert.equal(r.acao, 'pede_cidade')
+  assert.match(r.responder!, /Em qual cidade você está\? Eu te indico salões de unhas por aí/)
+  const r2 = await fala(b, 'aqui perto de casa')
+  assert.match(r2.responder!, /Não achei essa cidade no guia/)
+  const r3 = await fala(b, 'no meu bairro')
+  assert.equal(r3.responder, null)
+})
+await caso('indicar: "outros" mostra os próximos sem repetir; acabou, manda o link da cidade', async () => {
+  const b = banco({ indicar: indicarDeMentira })
+  await fala(b, 'quero fazer unha em Santos')
+  const r = await fala(b, 'tem outros?')
+  assert.equal(r.acao, 'indicou_mais')
+  assert.match(r.responder!, /^Tenho mais este de unhas em Santos:\n\n1\) Studio Dharma · Centro/)
+  assert.deepEqual(b.chamadas.filter((x) => x.nome === 'guia_whats_indicar').at(-1)!.args.fora_, ['b', 'c', 'd'])
+  const r2 = await fala(b, 'outros')
+  assert.equal(r2.acao, 'indicou_fim')
+  assert.match(r2.responder!, /mimo\.com\.vc\/saloes\/santos/)
+})
+await caso('indicar: com a lista na tela, frase sem novidade pede o número; outro serviço troca a lista', async () => {
+  const b = banco({ indicar: indicarDeMentira })
+  await fala(b, 'quero fazer unha em Santos')
+  const r = await fala(b, 'hmm não sei')
+  assert.equal(r.responder, 'Me responde o número do salão (de 1 a 3) 💗 Se quiser ver outros, me diz *outros*.')
+  const r2 = await fala(b, 'na verdade quero cabelo')
+  assert.equal(r2.acao, 'indicou')
+  assert.match(r2.responder!, /^Achei este salão de cabelo em Santos:\n\n1\) Studio Dharma/)
+})
+const pedido = (x: Partial<LeadMemoria> = {}): LeadMemoria => ({ id: 7, conversa_id: null, lugar_id: 'a', salao_nome: 'Studio Dharma', cidade: 'São Vicente', cliente_nome: 'Ana Clara', servico: 'massagem', status: 'enviado', minutos: 185, ...x })
+await caso('memória: "a Bianca respondeu?" sem conversa aberta: a situação e os outros salões (sem busca por nome)', async () => {
+  const b = banco({ memoria: { lead: pedido({ conversa_id: 1 }), nome: 'Ana Clara' } })
+  b.abrir({ telefone: CLIENTE.replace('+', ''), lugar_id: 'a', estado: 'encerrada', dados: { nome: 'Ana Clara', servico: 'massagem' } })
+  const r = await fala(b, 'A Bianca respondeu?')
+  assert.equal(r.acao, 'situacao_oferta')
+  assert.match(r.responder!, /^O Studio Dharma ainda não respondeu o seu pedido \(enviei há 3 h 05\) 😕\n\nAchei estes salões ali perto para massagem:/)
+  assert.match(r.responder!, /Se preferir esperar o Studio Dharma, é só me dizer 💗$/)
+  assert.equal(b.chamadas.some((x) => x.nome === 'guia_whats_buscar'), false)
+  assert.equal(b.chamadas.find((x) => x.nome === 'guia_whats_oferecer')!.args.motivo_, 'demora')
+  // a conversa do pedido reabriu com as opções: o "2" de depois já envia
+  const r2 = await fala(b, '2')
+  assert.equal(r2.acao, 'escolheu')
+  assert.match(r2.responder!, /Enviei seu pedido para o Lash Tatiane Paes/)
+})
+await caso('memória: salão que votou "sim": a Mel conta, sem oferecer outros', async () => {
+  const b = banco({ memoria: { lead: pedido({ conversa_id: 1, voto: 'sim', status: 'salao_vai_atender' }), nome: 'Ana Clara' } })
+  b.abrir({ telefone: CLIENTE.replace('+', ''), lugar_id: 'a', estado: 'encerrada', dados: { nome: 'Ana Clara' } })
+  const r = await fala(b, 'o salão respondeu?')
+  assert.equal(r.acao, 'situacao')
+  assert.match(r.responder!, /^O Studio Dharma confirmou que vai te atender 💗/)
+  assert.equal(b.chamadas.some((x) => x.nome === 'guia_whats_oferecer'), false)
+  assert.equal(b.convs[0].mensagens.at(-1)!.t, r.responder)
+})
+await caso('memória: pedido recém-enviado, conversa aberta: "até agora nada" recebe a situação, sem IA', async () => {
+  const b = banco({ memoria: { lead: pedido({ conversa_id: 1, minutos: 8 }), nome: 'Ana Clara' } })
+  b.abrir({ telefone: CLIENTE.replace('+', ''), lugar_id: 'a', estado: 'enviado', dados: { nome: 'Ana Clara', servico: 'massagem', pos_envio: 9 } })
+  const r = await fala(b, 'até agora nada')
+  assert.equal(r.acao, 'situacao')
+  assert.match(r.responder!, /^Enviei o seu pedido para o Studio Dharma há 8 min e ele ainda não respondeu/)
+  assert.equal(b.iaPedidos.length, 0)
+  const r2 = await fala(b, 'quero outro salão')
+  assert.equal(r2.acao, 'situacao_oferta')
+  assert.match(r2.responder!, /^Claro! 💗\n\nAchei estes salões/)
+})
+await caso('memória: a IA sabe a situação do pedido e o nome de quem já pediu não é perguntado de novo', async () => {
+  const b = banco({ memoria: { lead: pedido({ conversa_id: 1, viu: true }), nome: 'Ana Clara' } })
+  b.abrir({ telefone: CLIENTE.replace('+', ''), lugar_id: 'a', estado: 'enviado', dados: { nome: 'Ana Clara', servico: 'massagem' } })
+  await fala(b, 'eles atendem domingo?')
+  assert.match(b.iaPedidos[0].sistema, /Situação do pedido .*: o salão já viu o pedido \(enviado há 3 h 05\), mas ainda não confirmou se vai atender\./)
+  const b2 = banco({ memoria: { lead: null, nome: 'Ana Clara' } })
+  await fala(b2, 'Oi! Quero marcar (código: guaratingueta/gabi-mendes-beauty)')
+  assert.match(b2.iaPedidos[0].sistema, /- Nome: Ana Clara\n/)
+})
+await caso('memória: "obrigada" de quem já foi atendida e não tem conversa aberta fica sem resposta', async () => {
+  const b = banco({ indicar: indicarDeMentira, memoria: { lead: pedido(), nome: 'Ana Clara' } })
+  const r = await fala(b, 'Obrigada!')
+  assert.equal(r.responder, null)
+  assert.equal(r.acao, 'agradeceu')
+  assert.equal(b.convs.length, 0)
+})
+await caso('voto "sim" do salão: a cliente é avisada e o aviso fica na conversa; quem pediu para parar não recebe', async () => {
+  const b = banco({ leadSalao: { id: 7, salao_nome: 'Espaço Spa Dharma', status: 'enviado', ja_respondeu: false, voto: null } })
+  const r = await atenderGuia(b.deps, { telefone: '+5513911110002', texto: '1', enquete: 'enq1' })
+  assert.equal(r.acao, 'salao_vai_atender')
+  const aviso = b.enviados.find((x) => x.tel === '5513988887777')!
+  assert.equal(aviso.texto, 'Boa notícia, Ana! 💗 O Espaço Spa Dharma confirmou que vai te atender e vai te chamar aqui no WhatsApp para combinar o horário.')
+  assert.ok(b.chamadas.some((x) => x.nome === 'guia_whats_conversa_anotar'))
+  const b2 = banco({ leadSalao: { id: 7, salao_nome: 'Espaço Spa Dharma', status: 'enviado', ja_respondeu: false, voto: null }, saidas: { '5513988887777': 'cliente' } })
+  await atenderGuia(b2.deps, { telefone: '+5513911110002', texto: '1', enquete: 'enq1' })
+  assert.equal(b2.enviados.some((x) => x.tel === '5513988887777'), false)
 })
 
 console.log(`\n${ok} casos ok`)

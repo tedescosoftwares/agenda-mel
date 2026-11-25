@@ -6,7 +6,7 @@ import { CalendarX, UserX } from 'lucide-react'
 
 // A página de ciência (077): a cliente faltou, ou cancelou em cima da
 // hora. Cobre o app até ela tocar em "Li e concordo". Numa falta, ela
-// pode dizer "Eu compareci": a profissional é avisada, a plataforma vê.
+// pode dizer "Eu compareci": quem dá a baixa (o salão, ou a profissional quando é ela quem confirma) é avisado.
 export default function CienciaGate() {
   const [lista, setLista] = useState([])
   const [contestando, setContestando] = useState(false)

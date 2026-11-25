@@ -32,7 +32,7 @@ export default function PainelPausado({ para = 'admin', dona: donaDoNegocio }) {
           {' '}Nada foi apagado: serviços, equipe, clientes e histórico continuam guardados.
         </p>
         {dona || donaDoNegocio
-          ? <><p>Assine pra reabrir o painel e voltar a receber agendamentos na hora.</p><a className="btn btn-primary" href={LINK_ASSINAR}>Assinar a MIMO</a><Link to="/admin/assinatura" className="btn btn-ghost btn-mini">Ver plano e valores</Link></>
+          ? <><p>Assine pra reabrir o painel e voltar a receber agendamentos na hora.</p><Link to="/admin/assinatura" className="btn btn-primary">Assinar a MIMO</Link><a className="btn btn-ghost btn-mini" href={LINK_ASSINAR}>Falar com a MIMO por e-mail</a></>
           : <p>Fale com a dona do salão: assim que a assinatura estiver em dia, sua agenda volta sozinha.</p>}
         <button type="button" className="btn btn-ghost btn-mini" onClick={signOut}><LogOut size={14} /> Sair da conta</button>
       </div>

@@ -151,7 +151,7 @@ export default function CadastroCliente() {
                     </div>
                   </div>
                 )}
-                <button type="submit" className="btn btn-primary btn-block" disabled={!quem || conferindo}>{conferindo ? 'Conferindo…' : 'Continuar'}</button>
+                <button type="submit" className="btn btn-primary btn-block" disabled={conferindo || (Boolean(convite) && !quem)}>{conferindo ? 'Conferindo…' : 'Continuar'}</button>
               </form>
             ) : (
               <form onSubmit={criar} className="form">

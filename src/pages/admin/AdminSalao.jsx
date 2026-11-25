@@ -12,7 +12,7 @@ import { ImagePlus, Store } from 'lucide-react'
 const MAX_FOTOS = 8
 
 export default function AdminSalao() {
-  const { salao } = useAuth()
+  const { salao, recarregarPerfil } = useAuth()
   const [form, setForm] = useState(null)
   const [fotos, setFotos] = useState([])        // { url } | { blob, preview }
   const [logo, setLogo] = useState(null)        // { url } | { blob, preview }
@@ -83,6 +83,7 @@ export default function AdminSalao() {
       setLogo(logoUrl ? { url: logoUrl } : null)
       setForm((f) => ({ ...f, pinoMexido: false }))
       setInfo('Página salva. É assim que a cliente vê o salão.')
+      recarregarPerfil?.() // o nome e a logo novos aparecem no menu sem recarregar
     } catch (err) { setErro(err.message) } finally { setSalvando(false) }
   }
 

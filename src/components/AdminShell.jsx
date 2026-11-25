@@ -21,6 +21,8 @@ import { Sparkles, UserRound, WalletCards, Megaphone, Settings2, ChevronLeft, Cr
 // cada e o polegar erra. O mês, Serviços e WhatsApp foram para dentro
 // de Ajustes: são coisas que se configuram, não o dia a dia.
 // O botão do meio é a ação da casa — encaixar alguém agora.
+import { PIX_LIGADO } from '../lib/pixLigado'
+
 const TABS = [
   { to: '/admin', end: true, label: 'Início', Icon: HomeIcon },
   { to: '/admin/agenda', label: 'Agenda', Icon: CalendarIcon },
@@ -35,7 +37,7 @@ const DESKTOP_NAV = [
   { to: '/admin/clientes', label: 'Clientes', Icon: UsersIcon },
   { to: '/admin/servicos', label: 'Serviços', Icon: Sparkles },
   { to: '/admin/equipe', label: 'Profissionais', Icon: UserRound },
-  { to: '/admin/receber', label: 'Financeiro', Icon: WalletCards },
+  ...(PIX_LIGADO ? [{ to: '/admin/receber', label: 'Financeiro', Icon: WalletCards }] : []),
   { to: '/admin/promocoes', label: 'Marketing', Icon: Megaphone },
   { to: '/admin/numeros', label: 'Relatórios', Icon: BarChart3 },
   { to: '/admin/ajustes', label: 'Configurações', Icon: Settings2 },
@@ -149,7 +151,7 @@ export default function AdminShell({ children, amplo = false, primeiroAcesso = f
         </div>
       </header>
 
-      <main className={'content admin-content' + (primeiroAcesso ? ' admin-content-primeiro' : '')} ref={miolo}><div className="miolo">{acesso?.fase === 'bloqueado' ? <PainelPausado para="admin" /> : children}</div></main>
+      <main className={'content admin-content' + (primeiroAcesso ? ' admin-content-primeiro' : '')} ref={miolo}><div className="miolo">{acesso?.fase === 'bloqueado' && pathname !== '/admin/assinatura' ? <PainelPausado para="admin" /> : children}</div></main>
       </div>
 
       <nav className="bottom-nav">

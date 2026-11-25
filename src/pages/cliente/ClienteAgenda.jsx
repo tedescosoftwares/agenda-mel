@@ -11,6 +11,7 @@ import ConviteAdiantar from '../../components/ConviteAdiantar'
 import OfertaVaga from '../../components/OfertaVaga'
 import AvaliarModal from '../../components/AvaliarModal'
 import { Repeat, Check, ChevronRight, CalendarDays, Clock, MapPin, Star, Sparkles, Users, Wallet } from 'lucide-react'
+import { SITUACAO_CLIENTE } from '../../lib/situacoes'
 
 // O nome que vale é o do atendimento (service_name): se o salão juntou um
 // serviço na mesma visita, ele vira 'Coloração + Escova'. O do catálogo é
@@ -29,7 +30,7 @@ const minutosDe = (a) => { if (!ajustadoNoSalao(a) || !a.end_time) return a.serv
 // aguardando"), e o horário atual continua na lista, com uma nota
 // dizendo para onde ele quer ir.
 
-const ROTULO = { pendente: 'Aguardando', confirmado: 'Confirmado', concluido: 'Concluído', faltou: 'Não fui', cancelado: 'Cancelado' }
+const ROTULO = { ...SITUACAO_CLIENTE, pendente: 'Aguardando' } // no selo da lista, a forma curta
 
 export default function ClienteAgenda() {
   const { confirmar } = useDialogo()

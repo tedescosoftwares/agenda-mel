@@ -555,7 +555,7 @@ export default function PaginaProfissional({ slug: slugPronto }) {
 
             <p className="muted resumo-aviso">
               {prof.aceite_manual
-                ? 'Seu horário fica guardado e a profissional confirma. Você é avisada assim que ela responder.'
+                ? 'Seu horário fica guardado e o salão confirma. Você é avisada assim que sair a resposta.'
                 : 'Confirmando, o horário é seu. Você recebe um lembrete na véspera.'}
             </p>
 

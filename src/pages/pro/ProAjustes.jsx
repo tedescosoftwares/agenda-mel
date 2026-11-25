@@ -12,6 +12,7 @@ import AvisosPorEmail from '../../components/AvisosPorEmail'
 import { PARCERIA_LIGADA } from '../../lib/contratoParceria'
 import { ehDaEquipe } from '../../lib/meuSalao'
 import { LinhaInstalar } from '../../components/InstalarApp'
+import { PIX_LIGADO } from '../../lib/pixLigado'
 
 // Hub das configurações da profissional. Cada item continua tendo a
 // sua própria tela — aqui é só a porta de entrada.
@@ -77,6 +78,7 @@ export default function ProAjustes() {
           <ChevronIcon />
         </Link>
 
+{PIX_LIGADO && (
         <Link to="/pro/receber" className="card prof-row">
           <span className="ajuste-icone">
             <Wallet />
@@ -91,6 +93,7 @@ export default function ProAjustes() {
           </div>
           <ChevronIcon />
         </Link>
+        )}
 
         <Link to="/pro/local" className="card prof-row">
           <span className="ajuste-icone">

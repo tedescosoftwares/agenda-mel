@@ -15,9 +15,9 @@ import { MegafoneIcon } from './icons'
 const LINKS = [
   ['', 'Sem link — só o aviso'],
   ['/cliente/home', 'Início da cliente'],
-  ['/cliente/agenda', 'Agendamentos da cliente'],
+  ['/cliente/meus-agendamentos', 'Agendamentos da cliente'],
   ['/cliente/perfil', 'Perfil › Preferências'],
-  ['/cliente/avisos', 'Aba Avisos'],
+  ['/cliente/notificacoes', 'Aba Avisos'],
   ['/pro/agenda', 'Agenda da profissional'],
   ['/admin', 'Painel do salão'],
 ]

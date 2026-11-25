@@ -49,7 +49,7 @@ export default function ClienteShell({ children, titulo, voltar, semTopo = false
             </span>
           )}
           <div className="topbar-acoes">
-            <SinoAvisos />
+            <SinoAvisos to="/cliente/notificacoes" />
           </div>
         </header>
       )}

@@ -5,6 +5,7 @@ import { toISODate, formatDuracao } from '../../lib/format'
 import { useMeuSalao, linkWhatsApp } from '../../lib/meuSalao'
 import { WhatsIcon } from '../icons'
 import Portal from '../Portal'
+import { SITUACAO_EQUIPE } from '../../lib/situacoes'
 import '../../pro-equipe.css'
 
 // 3.91: a agenda da profissional da equipe como linha do tempo. A semana no topo (com bolinhas de
@@ -12,7 +13,7 @@ import '../../pro-equipe.css'
 // livres entre um atendimento e outro. Só para ver: tocar num horário abre os detalhes, e para mudar
 // algo ela fala com o salão (o WhatsApp da casa já vem com o horário escrito). Sem valores em R$.
 
-const ROTULO = { pendente: 'aguardando confirmação', concluido: 'atendida', faltou: 'não veio' }
+const ROTULO = { pendente: SITUACAO_EQUIPE.pendente, concluido: SITUACAO_EQUIPE.concluido, faltou: SITUACAO_EQUIPE.faltou, aguardando_pagamento: SITUACAO_EQUIPE.aguardando_pagamento }
 const DIAS = ['seg', 'ter', 'qua', 'qui', 'sex', 'sáb', 'dom']
 
 const minutos = (t) => { const [h, m] = String(t || '0:0').split(':').map(Number); return h * 60 + (m || 0) }

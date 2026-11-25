@@ -11,6 +11,7 @@ import Avatar from './Avatar'
 import '../equipe.css'
 import { PARCERIA_LIGADA } from '../lib/contratoParceria'
 import { linkDaProfissional, prefixoDaProfissional, limparEndereco } from '../lib/endereco'
+import BloqueiosEditor from './BloqueiosEditor'
 
 // A gaveta de "Adicionar profissional" (119). O salão configura tudo —
 // dados, vínculo, serviços (com preço e duração dela, se for o caso),
@@ -270,10 +271,12 @@ export default function ProfissionalDrawer({ salao, profissional = null, servico
                       <label className="switch"><input type="checkbox" checked={h.open} onChange={(e) => mudaHora(h.weekday, 'open', e.target.checked)} /><span></span></label>
                     </div>
                   ))}
-                  <small className="muted">Folgas e feriados ela marca depois, em Bloqueios, na agenda dela.</small>
+                  {!profissional?.id && <small className="muted">Almoço, folgas e compromissos entram aqui mesmo, depois de salvar o cadastro.</small>}
                 </div>
               )}
               {f.usa_horario_salao && !horasSalao && <p className="muted">Carregando o horário do salão…</p>}
+              {/* 4.9: a dona também marca almoço, folga e compromisso (antes só a própria profissional, na área dela) */}
+              {profissional?.id && <BloqueiosEditor professionalId={profissional.id} />}
             </section>
           )}
 

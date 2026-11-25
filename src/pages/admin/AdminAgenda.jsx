@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { CalendarPlus, ChevronLeft, ChevronRight, CalendarDays, CalendarRange, Columns3, UserRound, CircleHelp } from 'lucide-react'
 import AdminShell from '../../components/AdminShell'
 import AgendaVazia from '../../components/AgendaVazia'
@@ -327,7 +327,9 @@ export default function AdminAgenda() {
           <div className="modal-caixa encaixe-quem" role="dialog" aria-modal="true" aria-labelledby="encaixe-quem-titulo" onClick={(e) => e.stopPropagation()}>
             <button type="button" className="modal-fechar" onClick={() => setEscolhendo(null)} aria-label="Fechar">×</button>
             <h3 id="encaixe-quem-titulo">{escolhendo.dia ? `Encaixe ${escolhendo.dia === hoje ? 'hoje' : `na ${DIAS_LONGOS[new Date(escolhendo.dia + 'T12:00:00').getDay()]}, ${new Date(escolhendo.dia + 'T12:00:00').getDate()}`}${escolhendo.hora ? ` às ${escolhendo.hora}` : ''}: com quem?` : 'Novo encaixe com quem?'}</h3>
-            <p className="muted">Escolha a profissional que vai atender.</p>
+            {lista.length === 0
+              ? <><p className="muted">Ainda não há profissional na equipe. Cadastre a primeira (pode ser você) para encaixar um horário.</p><Link className="btn btn-primary btn-block" to="/admin/equipe">Cadastrar profissional</Link></>
+              : <p className="muted">Escolha a profissional que vai atender.</p>}
             <div className="encaixe-quem-lista">
               {lista.map((p) => {
                 const d = escolhendo.dia ?? dia; const j = jornadaDoDia(horasProf, d)[p.id]; const t = escolhendo.hora ? min(escolhendo.hora) : null

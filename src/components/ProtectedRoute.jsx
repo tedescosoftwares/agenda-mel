@@ -58,7 +58,8 @@ export default function ProtectedRoute({ children, requireRole, permitirSemVincu
     return <Aguardando situacao={professional.situacao} />
   }
 
-  if (requireRole && role !== requireRole) {
+  const donaAtende = requireRole === 'profissional' && role === 'admin' && Boolean(professional)
+  if (requireRole && role !== requireRole && !donaAtende) {
     return <Navigate to={homeDoPapel(role)} replace />
   }
 

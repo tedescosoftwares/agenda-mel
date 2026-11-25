@@ -5,13 +5,9 @@ import AdiantarModal from './AdiantarModal'
 import EncaixeModal from './EncaixeModal'
 import { formatarCents } from '../lib/indicacao'
 import { formatPreco, formatDuracao, toISODate } from '../lib/format'
+import { SITUACAO_EQUIPE } from '../lib/situacoes'
 
-const STATUS_LABEL = {
-  pendente: 'pendente',
-  confirmado: 'confirmado',
-  concluido: 'concluído',
-  faltou: 'não veio',
-}
+const STATUS_LABEL = SITUACAO_EQUIPE
 
 // Agenda de um dia — usada pelo admin (todas as profissionais ou uma
 // filtrada) e pela própria profissional (só a agenda dela).

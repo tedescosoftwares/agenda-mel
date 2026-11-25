@@ -10,7 +10,7 @@ import { formatarFone } from '../lib/fone'
 // não usa o app. O horário entra na agenda do mesmo jeito.
 // 4.0: horaInicial: o horário livre que a pessoa tocou na Agenda ("Livre até 12:00 · Encaixar")
 export default function EncaixeModal({ professionalId, data, horaInicial = '', onFechar, onPronto }) {
-  const [services, setServices] = useState([])
+  const [services, setServices] = useState(null) // null: carregando
   const cats = useCategorias()
   const [servicoId, setServicoId] = useState('')
   const [hora, setHora] = useState(horaInicial || '')
@@ -34,7 +34,9 @@ export default function EncaixeModal({ professionalId, data, horaInicial = '', o
       })
   }, [professionalId])
 
-  const servico = services.find((s) => s.id === servicoId)
+  const carregando = services === null
+  const lista = services ?? []
+  const servico = lista.find((s) => s.id === servicoId)
 
   async function salvar(e) {
     e.preventDefault()
@@ -74,6 +76,9 @@ export default function EncaixeModal({ professionalId, data, horaInicial = '', o
         <p className="muted modal-resumo">{formatDataLonga(data)}</p>
 
         <form className="form" onSubmit={salvar}>
+          {!carregando && lista.length === 0 && (
+            <div className="alert alert-info">Esta profissional ainda não tem serviço ligado a ela. Em Equipe, abra a ficha dela e marque os serviços que ela faz; depois o encaixe funciona.</div>
+          )}
           <label>
             Serviço
             <select
@@ -81,8 +86,8 @@ export default function EncaixeModal({ professionalId, data, horaInicial = '', o
               onChange={(e) => setServicoId(e.target.value)}
               required
             >
-              {services.length === 0 && <option value="">Nenhum serviço ativo</option>}
-              {agruparPorCategoria(services, cats).map((g) => (
+              {lista.length === 0 && <option value="">{carregando ? 'Carregando…' : 'Nenhum serviço ativo'}</option>}
+              {agruparPorCategoria(lista, cats).map((g) => (
                 <optgroup key={g.id || 'outros'} label={g.nome}>
                   {g.itens.map((s) => (
                     <option key={s.id} value={s.id}>

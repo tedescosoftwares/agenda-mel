@@ -2,7 +2,7 @@
 import '../app.css'
 import '../polish.css'
 import '../lib/sw'
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import ProtectedRoute from '../components/ProtectedRoute'
 import NaoEncontrada from '../pages/publico/NaoEncontrada'
 import Entrar from '../pages/cliente/Entrar'
@@ -28,6 +28,7 @@ const C = ({ children }) => <ProtectedRoute requireRole="cliente">{children}</Pr
 export default function RotasCliente() {
   return (
     <Routes>
+      <Route index element={<Navigate to="/cliente/home" replace />} />
       <Route path="entrar" element={<ProtectedRoute requireRole="cliente" permitirSemVinculo><Entrar /></ProtectedRoute>} />
       <Route path="completar" element={<ProtectedRoute requireRole="cliente" permitirSemVinculo permitirSemTelefone permitirPrimeiroAcesso><CompletarPerfil /></ProtectedRoute>} />
       <Route path="home" element={<C><ClienteHome /></C>} />

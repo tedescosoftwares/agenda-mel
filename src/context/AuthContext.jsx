@@ -162,7 +162,18 @@ export function AuthProvider({ children }) {
       .maybeSingle()
     if (data) setProfile(data)
     await carregarNegocio(session.user.id)
-    await carregarAcesso(salao?.id ?? professional?.salon_id)
+    // 4.9: quem acabou de ativar o convite (ou de salvar a página do salão) não precisa recarregar a tela
+    let ficha = professional
+    if (data?.role === 'profissional') {
+      const r = await supabase.from('professionals').select('*').eq('user_id', session.user.id).maybeSingle()
+      ficha = r.data ?? null
+      setProfessional(ficha)
+    }
+    if (data?.role === 'admin' && salao?.id) {
+      const r = await supabase.from('salons').select('*').eq('id', salao.id).maybeSingle()
+      if (r.data) { setSalao(r.data); setSaloes((l) => l.map((x) => (x.id === r.data.id ? r.data : x))) }
+    }
+    await carregarAcesso(salao?.id ?? ficha?.salon_id)
   }
 
   // em que pé está o acesso do salão (126): dias de teste, modo leitura, pausado

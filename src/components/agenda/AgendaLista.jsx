@@ -6,11 +6,12 @@ import { decidirPedido, atendendoAgora, fimDe } from '../../lib/acoesDoHorario'
 import { isoHoje, somarDias, DIAS_CURTOS, hhmm, corDa, livresDoDia, primeiroNome, iniciais } from './agendaComum'
 import RemarcarHorario from './RemarcarHorario'
 import FolhaDoHorario from './FolhaDoHorario'
+import { SITUACAO_EQUIPE } from '../../lib/situacoes'
 
 // 4.0: a Agenda no celular: os dias no topo, as profissionais em fichas, o que já passou recolhido numa linha, os
 // horários livres no meio da lista ("Livre até 12:00 · Ana · Encaixar") e, ao tocar num horário, as ações numa
 // folha que sobe. Os dados são os do quadro (pdv_dia).
-const ROTULO = { pendente: ['a confirmar', 'pend'], confirmado: ['confirmado', 'conf'], concluido: ['concluído', 'ok'], faltou: ['não veio', 'falta'] }
+const ROTULO = { pendente: [SITUACAO_EQUIPE.pendente, 'pend'], confirmado: [SITUACAO_EQUIPE.confirmado, 'conf'], concluido: [SITUACAO_EQUIPE.concluido, 'ok'], faltou: [SITUACAO_EQUIPE.faltou, 'falta'], aguardando_pagamento: [SITUACAO_EQUIPE.aguardando_pagamento, 'pend'] }
 const valor = (a) => (a.price_cents != null ? formatPreco(a.price_cents / 100).replace(',00', '') : '')
 
 export default function AgendaLista({ dia, agenda, profs, filtro, onFiltro, jornada, bloqueios = null, semana = [], onTrocarDia, onEncaixar, onMudou }) {

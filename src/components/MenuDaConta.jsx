@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import { useDialogo } from '../context/DialogoContext'
 import { supabase } from '../lib/supabase'
 import Avatar from './Avatar'
+import Portal from './Portal'
 import LinkSuporte from './LinkSuporte'
 
 // O menu da conta na barra de cima (admin e pro): toca no avatar e abre
@@ -71,21 +72,22 @@ export default function MenuDaConta({ itens = [], papel, foto }) {
 
 function MinhaConta({ fechar, profile, user, recarregar }) {
   const [nome, setNome] = useState(profile?.full_name ?? '')
-  const [fone, setFone] = useState(profile?.phone ?? '')
+  const fone = profile?.phone ?? ''
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState('')
   async function salvar(e) {
     e.preventDefault()
     if (!nome.trim()) { setErro('Diga o seu nome.'); return }
     setSalvando(true); setErro('')
-    const { error } = await supabase.from('profiles').update({ full_name: nome.trim(), phone: fone.trim() || null }).eq('id', user.id)
+    // 4.9 (migração 264): o nome vai pela função (a 066 fechou a gravação direta); o WhatsApp não se troca por aqui
+    const { error } = await supabase.rpc('minha_conta_nome', { nome_: nome.trim() })
     if (error) { setErro(error.message); setSalvando(false); return }
     await recarregar?.()
     setSalvando(false)
     fechar()
   }
   return (
-    <div className="modal-fundo" onClick={fechar}>
+    <Portal><div className="modal-fundo" onClick={fechar}>
       <form className="modal-caixa conta-folha" onClick={(e) => e.stopPropagation()} onSubmit={salvar}>
         <button type="button" className="modal-fechar" onClick={fechar} aria-label="Fechar">×</button>
         <h3>Minha conta</h3>
@@ -93,7 +95,7 @@ function MinhaConta({ fechar, profile, user, recarregar }) {
         {erro && <div className="alert alert-error">{erro}</div>}
         <div className="form">
           <label>Nome<input value={nome} onChange={(e) => setNome(e.target.value)} required maxLength={80} /></label>
-          <label>Telefone<input value={fone} onChange={(e) => setFone(e.target.value)} inputMode="tel" placeholder="(13) 99999-0000" /></label>
+          <label>WhatsApp<input value={fone} readOnly disabled /><span className="muted salao-dica">É o número da sua conta. Para trocar, <LinkSuporte chamada="whatsapp">fale com o suporte</LinkSuporte>.</span></label>
           <label>E-mail<input value={user?.email ?? ''} readOnly disabled /><span className="muted salao-dica">O e-mail é o seu login. Para trocar, <LinkSuporte chamada="email">fale com o suporte</LinkSuporte>.</span></label>
         </div>
         <div className="form-actions">
@@ -101,7 +103,7 @@ function MinhaConta({ fechar, profile, user, recarregar }) {
           <button type="submit" className="btn btn-primary" disabled={salvando}>{salvando ? 'Salvando…' : 'Salvar'}</button>
         </div>
       </form>
-    </div>
+    </div></Portal>
   )
 }
 

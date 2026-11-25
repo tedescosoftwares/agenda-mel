@@ -61,7 +61,7 @@ export default function ConviteEquipe() {
           <>
             <span className="ativar-check"><Check size={22} /></span>
             <h2 className="login-titulo">{enviado.ja ? 'Você já está na equipe' : 'Dados enviados!'}</h2>
-            <p className="muted login-sub">{enviado.ja ? `O ${salao.nome} já tem o seu cadastro. Quando o acesso for liberado, o link chega pelo seu WhatsApp.` : `O ${salao.nome} termina a configuração da sua agenda e te manda o link de acesso pelo WhatsApp. Aí é só confirmar o número e criar a senha.`}</p>
+            <p className="muted login-sub">{enviado.ja ? `O ${salao.nome} já tem o seu cadastro. Quando o acesso for liberado, o link chega por e-mail: combine com o salão qual e-mail usar.` : `O ${salao.nome} termina a configuração da sua agenda e te manda o link de acesso por e-mail (passe o seu e-mail para o salão). Aí é só abrir o link e criar a senha.`}</p>
           </>
         ) : (
           <>

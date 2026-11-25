@@ -17,7 +17,8 @@ export default function Splash() {
   // instalado no celular (PWA) abre direto na agenda; no navegador, a landing é a casa de quem está logada (2.60)
   const naApp = typeof window !== 'undefined' && Boolean(window.matchMedia?.('(display-mode: standalone)')?.matches || window.navigator.standalone)
   const porIndicacao = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('indique')
-  const ficaNaLanding = !ehPro && !porIndicacao && !naApp
+  // 4.9 (D1): a cliente logada vai para a agenda dela; a landing é a porta de quem ainda não entrou
+  const ficaNaLanding = !ehPro && !porIndicacao && !naApp && !(user && role === 'cliente')
 
   useEffect(() => {
     if (loading) return

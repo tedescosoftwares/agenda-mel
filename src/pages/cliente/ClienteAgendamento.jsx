@@ -18,12 +18,12 @@ import { CalendarDays, Clock, MapPin, Sparkles, StickyNote, Repeat, CircleCheck,
 // A página de um agendamento (2.16): tudo sobre ele num lugar só. É
 // para onde os avisos apontam e para onde o cartão da lista leva.
 const ESTADO = {
-  pendente: { rotulo: 'Aguardando confirmação', Icone: Hourglass, texto: 'A profissional ainda vai confirmar. Você recebe um aviso assim que ela responder.' },
+  pendente: { rotulo: 'Aguardando confirmação', Icone: Hourglass, texto: 'O salão ainda vai confirmar. Você recebe um aviso assim que sair a resposta.' },
   confirmado: { rotulo: 'Confirmado', Icone: CircleCheck, texto: 'Está tudo certo. Se precisar, dá para remarcar ou cancelar por aqui.' },
   concluido: { rotulo: 'Concluído', Icone: Check, texto: 'Já aconteceu. Que tal contar como foi?' },
   cancelado: { rotulo: 'Cancelado', Icone: CircleX, texto: 'Este horário não vale mais.' },
   faltou: { rotulo: 'Não compareceu', Icone: CircleX, texto: 'Este horário passou sem atendimento.' },
-  aguardando_pagamento: { rotulo: 'Aguardando pagamento', Icone: Hourglass, texto: 'Assim que o PIX cair, o pedido vai para a profissional.' },
+  aguardando_pagamento: { rotulo: 'Aguardando pagamento', Icone: Hourglass, texto: 'Assim que o PIX cair, o pedido vai para o salão.' },
 }
 
 export default function ClienteAgendamento() {
@@ -231,7 +231,7 @@ export default function ClienteAgendamento() {
   )
 }
 
-const PARTE = { pendente: 'Aguardando', confirmado: 'Confirmado', concluido: 'Concluído', cancelado: 'Recusado', faltou: 'Não foi' }
+const PARTE = { pendente: 'Aguardando', confirmado: 'Confirmado', concluido: 'Concluído', cancelado: 'Recusado', faltou: 'Não compareceu' }
 
 function minutosEntre(ini, fim) {
   if (!ini || !fim) return null

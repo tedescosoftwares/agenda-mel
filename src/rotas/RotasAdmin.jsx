@@ -27,6 +27,7 @@ import AdminPdv from '../pages/admin/AdminPdv'
 import AdminRepasses from '../pages/admin/AdminRepasses'
 import AdminFecharDia from '../pages/admin/AdminFecharDia'
 import { PARCERIA_LIGADA } from '../lib/contratoParceria'
+import { PIX_LIGADO } from '../lib/pixLigado'
 
 const A = ({ children }) => <ProtectedRoute requireRole="admin">{children}</ProtectedRoute>
 // 3.96: a assistente virou a aba Assistente da área WhatsApp (o ?inicio=1 do fim da configuração vai junto)
@@ -49,12 +50,12 @@ export default function RotasAdmin() {
       <Route path="assistente" element={<ParaWhatsapp />} />
       <Route path="recados" element={<A><AdminRecados /></A>} />
       <Route path="ajustes" element={<A><AdminAjustes /></A>} />
-      <Route path="bancada" element={<A><AdminBancada /></A>} />
+      {import.meta.env.DEV && <Route path="bancada" element={<A><AdminBancada /></A>} />}
       <Route path="salao" element={<A><AdminSalao /></A>} />
       <Route path="configurar" element={<A><Configurar para="admin" /></A>} />
       <Route path="assinatura" element={<A><AdminAssinatura /></A>} />
       <Route path="promocoes" element={<A><AdminPromocoes /></A>} />
-      <Route path="receber" element={<A><AdminReceber /></A>} />
+      <Route path="receber" element={PIX_LIGADO ? <A><AdminReceber /></A> : <Navigate to="/admin/ajustes" replace />} />
       <Route path="pdv" element={<A><AdminPdv /></A>} />
       <Route path="repasses" element={<A><AdminRepasses /></A>} />
       <Route path="fechar-dia" element={<A><AdminFecharDia /></A>} />

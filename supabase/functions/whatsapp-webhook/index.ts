@@ -612,6 +612,8 @@ Deno.serve(async (req) => {
             await new Promise((ok) => setTimeout(ok, 4000))
             const env2 = await enviarPor('evolution', { telefone: m.telefone, corpo: r.depois, identificador: m.instancia })
             if (!env2.ok) console.error('guia: o convite do Instagram não saiu:', env2.erro)
+            // 4.8 (migração 263): o convite fica na conversa (a Plataforma e as exportações passam a mostrá-lo)
+            else if (r.conversaId) await db.rpc('guia_whats_conversa_nota', { id_: r.conversaId, texto_: r.depois }).then(() => {}, () => {})
           }
         }
       } catch (e) {

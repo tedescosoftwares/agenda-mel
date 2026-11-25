@@ -35,6 +35,8 @@ export type Saida = {
   responder: string | null
   // 4.2 (migração 252): uma segunda mensagem, uns segundos depois da resposta (o convite do Instagram no fim da conversa)
   depois?: string | null
+  // 4.8 (migração 263): a conversa em que a segunda mensagem deve ficar guardada
+  conversaId?: number | null
   acao: string
   previaSalao?: string | null
   previaAviso?: string | null
@@ -463,6 +465,40 @@ export const MSG_CLIENTE_VAI_ATENDER = 'Boa notícia, {nome}! 💗 O {salao} con
 export const avisoDoSim = (cfg: Pick<Config, 'msg_cliente_vai_atender'>, p: Pick<Pedido, 'cliente_nome' | 'salao_nome' | 'servico'>) =>
   trocarTudo(ajustarNome(String(cfg.msg_cliente_vai_atender ?? '').trim() || MSG_CLIENTE_VAI_ATENDER), { nome: primeiroNome(p.cliente_nome), salao: p.salao_nome, servico: p.servico ?? '' })
 
+// ---- 4.8: o resto do pacote 2 (começo mais curto, complemento do pedido) -----------------------------------------------
+// O nome do perfil do WhatsApp, quando parece nome de gente ("Bia Souza 💕" → "Bia Souza"; "Studio Bella", "Mãe da Lu",
+// "." e números não valem). Ele entra no pedido sem pergunta: aparece no resumo, e a cliente corrige se quiser.
+const NAO_E_NOME = /\b(salao|studio|estudio|beauty|nails?|hair|lash|make|estetica|esmalteria|loja|store|oficial|vendas|atendimento|delivery|ltda|mei|imoveis|consultoria|advocacia|clinica|espaco|atelie|doces|bolos|moda|mae|pai|filh[ao]|mamae|vovo|tia|tio|amor|vida|deus|jesus|familia|casa|trabalho|whatsapp|zap|cliente|contato)\b/
+export function nomeDoPerfil(perfil: string | null | undefined): string {
+  const limpo = String(perfil ?? '').normalize('NFC').replace(/[^\p{L}\s'.-]/gu, ' ').replace(/\s+/g, ' ').trim()
+  if (limpo.length < 2 || limpo.length > 40) return ''
+  const partes = limpo.split(' ')
+  if (partes.length > 4 || partes[0].replace(/[^\p{L}]/gu, '').length < 2) return ''
+  if (NAO_E_NOME.test(palavra(limpo))) return ''
+  // tudo em maiúsculas ou em minúsculas vira "Bia Souza"
+  const igual = limpo === limpo.toUpperCase() || limpo === limpo.toLowerCase()
+  return igual ? partes.map((w) => (w.length <= 2 && partes.length > 1 && w !== partes[0] ? w.toLowerCase() : w[0].toUpperCase() + w.slice(1).toLowerCase())).join(' ') : limpo
+}
+// a primeira resposta a quem chega pelo botão do site (a mensagem pronta, sem mais nada): curta e já com a pergunta do
+// serviço. Antes era um parágrafo que terminava em "Qual é o seu nome?", e 81 de 279 clientes paravam ali.
+export function aberturaCurta(l: { nome: string }, nome: string): string {
+  const primeiro = primeiroNome(nome)
+  return primeiro
+    ? `Oi, ${primeiro}! Aqui é a Mel, da MIMO 💗 Eu passo o seu pedido para o ${l.nome} e eles te chamam aqui no WhatsApp para combinar. Qual serviço você quer fazer? Se já souber o dia, me conta também.`
+    : `Oi! Aqui é a Mel, da MIMO 💗 Eu passo o seu pedido para o ${l.nome} e eles te chamam aqui no WhatsApp para combinar. Me conta o seu nome e o serviço que você quer fazer?`
+}
+// o complemento que vai ao salão quando a cliente diz o dia, o horário ou um detalhe depois que o pedido já foi
+export function complementoDoSalao(p: { cliente_nome?: string | null; cliente_tel: string; salao_nome: string; servico?: string | null; token?: string | null }, novo: { servico?: string; preferencia?: string; observacao?: string }): string {
+  const link = p.token ? linkDoPedido(p.token) : linkParaCliente(p.cliente_tel, p.cliente_nome ?? '', p.salao_nome, p.servico ?? '')
+  return [
+    `💗 MIMO — complemento do pedido ${p.cliente_nome ? `da ${primeiroNome(p.cliente_nome)}` : 'da cliente'}`,
+    ...(novo.servico ? [`Serviço: ${novo.servico}`] : []),
+    ...(novo.preferencia ? [`Preferência: ${novo.preferencia}`] : []),
+    ...(novo.observacao ? [`Observação: ${novo.observacao}`] : []),
+    `Para falar com ela: ${link}`,
+  ].join('\n')
+}
+
 // o salão respondeu depois que a cliente já fez o pedido em outro salão
 export const salaoAtrasado = (p: Pick<Pedido, 'cliente_nome'>) =>
   `Obrigada pelo retorno! 💗 ${p.cliente_nome ? `A ${primeiroNome(p.cliente_nome)}` : 'A cliente'} já seguiu com outro salão desta vez. Os próximos pedidos continuam chegando por aqui.`
@@ -526,12 +562,14 @@ export function sistema(cfg: Config, l: Lugar, d: Dados, estado: string, nomePer
     `- Agora: ${agoraTexto(agora)} (horário de Brasília)`,
     '',
     'O QUE JÁ ANOTEI',
-    `- Nome: ${d.nome || 'ainda não sei'}${!d.nome && nomePerfil ? ` (o perfil do WhatsApp diz "${nomePerfil}"; confirme antes de usar)` : ''}`,
+    `- Nome: ${d.nome || 'ainda não sei'}${!d.nome && nomePerfil ? ` (o perfil do WhatsApp diz "${nomePerfil}"; confirme antes de usar)` : ''}${d.nome ? ' (já anotado: não pergunte nem peça para confirmar; ele aparece no resumo e ela corrige se quiser)' : ''}`,
     `- Serviço: ${d.servico || 'ainda não sei'}`,
     `- Preferência de dia e horário: ${d.preferencia || 'ainda não sei'}`,
     `- Observação: ${d.observacao || 'nenhuma'}`,
     `- Estado: ${estado === 'confirmando' ? 'confirmando (já mostrei o resumo e perguntei se posso enviar ao salão)' : estado === 'enviado' ? 'enviado (o pedido já foi para o salão; só tire dúvidas, não peça os dados de novo)' : 'conversando'}`,
     ...(estado === 'enviado' && situacao ? [`- Situação do pedido (é o que se sabe de verdade; pode dizer à cliente, sem inventar nada além disso): ${situacao}.`] : []),
+    '- Nunca gaste uma mensagem só para pedir o nome: se ainda não souber, peça junto com o serviço. A apresentação é uma frase curta, só na primeira resposta.',
+    ...(estado === 'enviado' ? ['- Se ela disser agora um dia, um horário ou um detalhe novo, diga só que anotou. Não diga que vai passar, avisar ou repassar ao salão: quando o aviso sai, o sistema acrescenta essa frase.'] : []),
     `- Para enviar ao salão, o essencial é ${cfg.exigir_preferencia ? 'o nome, o serviço e a preferência de dia e horário' : 'o nome e o serviço (a preferência de dia e horário é um extra: se ela não disser, tudo bem, dá para enviar assim mesmo)'}. Se faltar o essencial, peça com gentileza; não repita a mesma pergunta várias vezes seguidas.`,
     '',
     'RESPONDA SÓ COM OS CAMPOS',
@@ -778,7 +816,7 @@ export async function atenderGuia(deps: Deps, e: Entrada, opcoes: { teste?: bool
       const previa = mensagemDoSalao(cfg, l, pedidoTeste)
       const resposta = confirmacao(cfg, l, dados, true) + extra
       await guardar(resposta, 'enviado', dados, l.id)
-      return { responder: resposta, depois: await conviteInsta(deps, cfg, l, dados, tel, teste, 'sim'), acao: `${acaoOk}_teste`, previaSalao: previa, previaEnquete: cfg.enquete_ativa === false ? null : enqueteDoPedido(cfg, pedidoTeste), estado: 'enviado', dados }
+      return { responder: resposta, depois: await conviteInsta(deps, cfg, l, dados, tel, teste, 'sim'), conversaId: conversa?.id ?? null, acao: `${acaoOk}_teste`, previaSalao: previa, previaEnquete: cfg.enquete_ativa === false ? null : enqueteDoPedido(cfg, pedidoTeste), estado: 'enviado', dados }
     }
     await guardar(null, 'enviado', dados, l.id)
     const ld = (await chamar(deps, 'guia_whats_lead_criar', { conversa_: conversa!.id })) as (Pedido & { status: string; salao_tel: string | null; repetido: boolean })
@@ -823,7 +861,7 @@ export async function atenderGuia(deps: Deps, e: Entrada, opcoes: { teste?: bool
     await guardar(resposta, 'enviado', dados, l.id)
     // 4.2: com o pedido no salão (ou anotado), o convite do Instagram vem logo atrás, numa mensagem só dele
     const depois = await conviteInsta(deps, cfg, l, dados, tel, teste, 'sim')
-    return { responder: resposta, depois, acao: ok ? acaoOk : `pedido_${statusFinal ?? ld?.status ?? 'erro'}`, previaSalao: previa, estado: 'enviado', dados }
+    return { responder: resposta, depois, conversaId: conversa?.id ?? null, acao: ok ? acaoOk : `pedido_${statusFinal ?? ld?.status ?? 'erro'}`, previaSalao: previa, estado: 'enviado', dados }
   }
   const completoPara = (d: Dados) => !!(d.nome && d.servico && (!cfg.exigir_preferencia || d.preferencia))
 
@@ -1089,6 +1127,8 @@ export async function atenderGuia(deps: Deps, e: Entrada, opcoes: { teste?: bool
   const dadosAntes: Dados = { ...semBusca(conversa?.dados ?? {}) }
   // 4.7: o nome de quem já fez pedido por este número (60 dias) não é pedido de novo; ele aparece no resumo, e ela corrige
   if (!dadosAntes.nome && mem?.nome) dadosAntes.nome = limpo(mem.nome, 120)
+  // 4.8: o nome do perfil do WhatsApp, quando parece nome de gente, entra sem pergunta
+  if (!dadosAntes.nome) { const doPerfil = nomeDoPerfil(e.nomePerfil); if (doPerfil) dadosAntes.nome = doPerfil }
   // 4.7: com o pedido já no salão, "o salão respondeu?" e "quero outro" recebem a situação de verdade (e a oferta de
   // outros salões quando não há sinal). Vem antes do teto das dúvidas: era aí que a Mel respondia "não consigo saber".
   const doPedido = estadoAntes === 'enviado' && pedidoRecente && pedidoRecente.lugar_id === lugar.id ? pedidoRecente : null
@@ -1112,6 +1152,14 @@ export async function atenderGuia(deps: Deps, e: Entrada, opcoes: { teste?: bool
     return { responder: resposta, acao: 'pos_envio', estado: estadoAntes }
   }
   // o "sim"/"não" seco depois do resumo decide sem IA; só emoji (fora disso) não vai à IA
+  // 4.8: quem chega pelo botão do site com a mensagem pronta (sem mais nada) recebe a abertura curta, sem IA: uma frase
+  // de apresentação e a pergunta do serviço. Quem escreveu algo a mais na mensagem vai para a IA, que aproveita o que veio.
+  if (!conversa && codigo && palavra(texto) === palavra(mensagemDaCliente(cfg.msg_cliente, lugar.nome, codigo.cidade, codigo.slug))) {
+    const resposta = aberturaCurta(lugar, dadosAntes.nome ?? '')
+    const dados: Dados = { ...dadosAntes, sem_avanco: 0 }
+    await guardar(resposta, 'conversando', dados, lugar.id)
+    return { responder: resposta, acao: 'abertura', estado: 'conversando', dados }
+  }
   // 4.6: "sim, obrigada" e "não, obrigada" também decidem (a gentileza no fim não muda a resposta)
   const curto = estadoAntes === 'confirmando' ? (SIM_CURTO.test(semCortesia(p)) || (!p && SIM_EMOJI.test(texto)) ? 'sim' : NAO_CURTO.test(semCortesia(p)) ? 'nao' : null) : null
   // 4.6: sem letra nenhuma: o "?" é um "e aí?" e vai para a IA com a conversa; emoji sozinho ("😉", "🙏") não pede
@@ -1155,7 +1203,7 @@ export async function atenderGuia(deps: Deps, e: Entrada, opcoes: { teste?: bool
   if (lido.cancelar && estadoAntes !== 'enviado') {
     const resposta = limpo(lido.resposta, 1200) || 'Tudo bem! Se quiser marcar depois, é só chamar. 💗'
     await guardar(resposta, 'encerrada', dados, lugar.id)
-    return { responder: resposta, depois: await conviteInsta(deps, cfg, lugar, dados, tel, teste, 'nao'), acao: 'cancelou', estado: 'encerrada', dados }
+    return { responder: resposta, depois: await conviteInsta(deps, cfg, lugar, dados, tel, teste, 'nao'), conversaId: conversa?.id ?? null, acao: 'cancelou', estado: 'encerrada', dados }
   }
 
   // sem avançar: se a cliente escreve e a conversa não anda (sem dado novo e ainda sem o essencial), a Mel insiste com
@@ -1167,7 +1215,7 @@ export async function atenderGuia(deps: Deps, e: Entrada, opcoes: { teste?: bool
     if (semAvanco >= maxSemAvanco) {
       const resposta = limpo(cfg.msg_encerramento, 1000) || 'Tudo bem! 💗 Quando quiser marcar, é só me chamar aqui. Até logo!'
       await guardar(resposta, 'encerrada', { ...dados, sem_avanco: 0 }, lugar.id)
-      return { responder: resposta, depois: await conviteInsta(deps, cfg, lugar, dados, tel, teste, 'nao'), acao: 'sem_avanco', estado: 'encerrada', dados }
+      return { responder: resposta, depois: await conviteInsta(deps, cfg, lugar, dados, tel, teste, 'nao'), conversaId: conversa?.id ?? null, acao: 'sem_avanco', estado: 'encerrada', dados }
     }
   } else {
     dados.sem_avanco = 0
@@ -1183,10 +1231,25 @@ export async function atenderGuia(deps: Deps, e: Entrada, opcoes: { teste?: bool
     return { responder: resposta, acao: 'resumo', estado: 'confirmando', dados }
   }
 
-  const resposta = limpo(lido.resposta, 1500) || 'Me conta mais um pouquinho?'
+  let resposta = limpo(lido.resposta, 1500) || 'Me conta mais um pouquinho?'
   const estado = estadoAntes === 'enviado' ? 'enviado' : completo ? estadoAntes : 'conversando'
+  // 4.8 (migração 263): o dia, o horário ou o detalhe dito DEPOIS do envio vai para o salão como complemento do pedido
+  // (até 2 por pedido). A frase "já avisei o salão" só entra quando o aviso saiu de verdade.
+  let acao = 'conversa'
+  if (estadoAntes === 'enviado' && mudou && !teste && conversa) {
+    const novo = Object.fromEntries((['servico', 'preferencia', 'observacao'] as const).filter((k) => dados[k] && dados[k] !== dadosAntes[k]).map((k) => [k, dados[k] as string]))
+    if (Object.keys(novo).length) {
+      try {
+        const c = (await chamar(deps, 'guia_whats_lead_complemento', { conversa_: conversa.id, servico_: novo.servico ?? null, preferencia_: novo.preferencia ?? null, observacao_: novo.observacao ?? null })) as (Pedido & { salao_tel: string }) | null
+        if (c?.salao_tel) {
+          const env = await deps.enviar(cfg.instancia, c.salao_tel, complementoDoSalao(c, novo))
+          if (env.ok) { resposta = `${resposta}\n\nJá avisei o ${lugar.nome} 💗`; acao = 'complemento' }
+        }
+      } catch { /* banco sem a 263: a conversa segue como antes */ }
+    }
+  }
   await guardar(resposta, estado, dados, lugar.id)
-  return { responder: resposta, acao: 'conversa', estado, dados }
+  return { responder: resposta, acao, estado, dados }
 }
 
 // 3.57: o que acontece no PRIMEIRO voto do salão (pela enquete ou por texto). Sim: a Mel responde ao salão com o link de

@@ -1,4 +1,4 @@
-// Testes da Mel do guia (4.6 e 4.7, pacotes 1 e 2 das conversas reais), sem rede e sem banco:
+// Testes da Mel do guia (4.6 a 4.8, pacotes 1 e 2 das conversas reais), sem rede e sem banco:
 //
 //   node --experimental-strip-types supabase/functions/_shared/guia_whats.teste.ts
 //
@@ -6,7 +6,7 @@
 // combina (a busca de verdade, guia_whats_buscar da migração 261, é testada no Postgres). Os textos dos casos vêm das
 // conversas reais exportadas (22/10 a 24/11).
 import assert from 'node:assert/strict'
-import { atenderGuia, ehRespostaAutomatica, pedidoDeParar, escolhasDe, textoOcioso, perguntaDoPedido, querOutroSalao, situacaoDoPedido, MSG_PAROU, MSG_SEM_SALAO, MSG_SEM_SALAO_DICA, type Deps, type Opcao, type PedidoIa, type LeituraIa, type Indicacao, type LeadMemoria } from './guia_whats.ts'
+import { atenderGuia, nomeDoPerfil, aberturaCurta, complementoDoSalao, ehRespostaAutomatica, pedidoDeParar, escolhasDe, textoOcioso, perguntaDoPedido, querOutroSalao, situacaoDoPedido, MSG_PAROU, MSG_SEM_SALAO, MSG_SEM_SALAO_DICA, type Deps, type Opcao, type PedidoIa, type LeituraIa, type Indicacao, type LeadMemoria } from './guia_whats.ts'
 
 let ok = 0
 async function caso(nome: string, f: () => Promise<void> | void) {
@@ -28,7 +28,7 @@ const ofertadas: Opcao[] = [
   { id: 'd', nome: 'Gabi Mendes Beauty', bairro: 'Centro' },
 ]
 
-function banco(o: { busca?: Record<string, string[]>; ia?: (p: PedidoIa) => Partial<LeituraIa>; leadSalao?: Record<string, unknown> | null; saidas?: Record<string, string>; indicar?: (a: Record<string, unknown>) => Indicacao | null; memoria?: { lead?: LeadMemoria | null; nome?: string | null } } = {}) {
+function banco(o: { busca?: Record<string, string[]>; ia?: (p: PedidoIa) => Partial<LeituraIa>; leadSalao?: Record<string, unknown> | null; saidas?: Record<string, string>; indicar?: (a: Record<string, unknown>) => Indicacao | null; semComplemento?: boolean; memoria?: { lead?: LeadMemoria | null; nome?: string | null } } = {}) {
   const convs: Conv[] = []
   const leads: Array<Record<string, unknown>> = []
   const saidas = new Map<string, string>(Object.entries(o.saidas ?? {}))
@@ -97,6 +97,12 @@ function banco(o: { busca?: Record<string, string[]>; ia?: (p: PedidoIa) => Part
         c.mensagens.push(...((args.novas_ as Conv['mensagens']) ?? []))
         return { data: c.id, error: null }
       }
+      case 'guia_whats_lead_complemento': {
+        const c = convs.find((x) => x.id === args.conversa_)
+        const l = lugarDe(c?.lugar_id)
+        if (!c || !l?.salao_tel || o.semComplemento) return { data: null, error: null }
+        return { data: { id: 7, salao_nome: l.nome, salao_tel: l.salao_tel, cliente_nome: c.dados.nome, cliente_tel: c.telefone, token: 'tok7xxxxxxxx', servico: c.dados.servico }, error: null }
+      }
       case 'guia_whats_indicar': {
         if (!o.indicar) return { data: null, error: { message: 'banco sem a 262' } }
         return { data: o.indicar(args), error: null }
@@ -121,7 +127,7 @@ function banco(o: { busca?: Record<string, string[]>; ia?: (p: PedidoIa) => Part
 const CLIENTE = '+5513988887777'
 const fala = (b: ReturnType<typeof banco>, texto: string, tel = CLIENTE, extra: Record<string, unknown> = {}) => atenderGuia(b.deps, { telefone: tel, texto, nomePerfil: 'Ana', ...extra })
 
-console.log('a Mel do guia (4.6 e 4.7)')
+console.log('a Mel do guia (4.6 a 4.8)')
 
 // ---- as funções de texto ---------------------------------------------------------------------------------------------
 await caso('resposta automática do WhatsApp Business é reconhecida (textos reais)', () => {
@@ -442,7 +448,7 @@ await caso('memória: a IA sabe a situação do pedido e o nome de quem já pedi
   assert.match(b.iaPedidos[0].sistema, /Situação do pedido .*: o salão já viu o pedido \(enviado há 3 h 05\), mas ainda não confirmou se vai atender\./)
   const b2 = banco({ memoria: { lead: null, nome: 'Ana Clara' } })
   await fala(b2, 'Oi! Quero marcar (código: guaratingueta/gabi-mendes-beauty)')
-  assert.match(b2.iaPedidos[0].sistema, /- Nome: Ana Clara\n/)
+  assert.match(b2.iaPedidos[0].sistema, /- Nome: Ana Clara \(já anotado: não pergunte/)
 })
 await caso('memória: "obrigada" de quem já foi atendida e não tem conversa aberta fica sem resposta', async () => {
   const b = banco({ indicar: indicarDeMentira, memoria: { lead: pedido(), nome: 'Ana Clara' } })
@@ -461,6 +467,63 @@ await caso('voto "sim" do salão: a cliente é avisada e o aviso fica na convers
   const b2 = banco({ leadSalao: { id: 7, salao_nome: 'Espaço Spa Dharma', status: 'enviado', ja_respondeu: false, voto: null }, saidas: { '5513988887777': 'cliente' } })
   await atenderGuia(b2.deps, { telefone: '+5513911110002', texto: '1', enquete: 'enq1' })
   assert.equal(b2.enviados.some((x) => x.tel === '5513988887777'), false)
+})
+
+// ---- 4.8: começo mais curto, complemento do pedido, o convite na conversa ------------------------------------------------
+await caso('nome do perfil: só quando parece nome de gente', () => {
+  assert.equal(nomeDoPerfil('Bia Souza 💕'), 'Bia Souza')
+  assert.equal(nomeDoPerfil('ANA CLARA'), 'Ana Clara')
+  assert.equal(nomeDoPerfil('maria de lourdes'), 'Maria de Lourdes')
+  for (const x of ['Studio Bella Nails', 'Mãe da Lu', '.', '💕✨', '13 99999-8888', 'J', 'Loja da Ju Oficial', '', null]) assert.equal(nomeDoPerfil(x), '', String(x))
+})
+const PRONTA = 'Oi\n\n(código: guaratingueta/gabi-mendes-beauty)' // a mensagem pronta do site (msg_cliente = "Oi" no banco de mentira)
+await caso('abertura curta: a mensagem pronta do site recebe uma frase e a pergunta do serviço, sem IA, com o nome do perfil', async () => {
+  const b = banco()
+  const r = await atenderGuia(b.deps, { telefone: CLIENTE, texto: PRONTA, nomePerfil: 'Bia Souza 💕' })
+  assert.equal(r.acao, 'abertura')
+  assert.equal(r.responder, 'Oi, Bia! Aqui é a Mel, da MIMO 💗 Eu passo o seu pedido para o Gabi Mendes Beauty e eles te chamam aqui no WhatsApp para combinar. Qual serviço você quer fazer? Se já souber o dia, me conta também.')
+  assert.equal(b.iaPedidos.length, 0)
+  assert.equal(b.convs[0].dados.nome, 'Bia Souza')
+  // a resposta dela com o serviço já fecha o resumo: 2 mensagens da cliente em vez de 3
+  const b2 = banco({ ia: () => ({ servico: 'Unha em gel', preferencia: 'sexta à tarde' }) })
+  await atenderGuia(b2.deps, { telefone: CLIENTE, texto: PRONTA, nomePerfil: 'Bia Souza' })
+  const r2 = await atenderGuia(b2.deps, { telefone: CLIENTE, texto: 'unha em gel, sexta à tarde', nomePerfil: 'Bia Souza' })
+  assert.equal(r2.acao, 'resumo')
+  assert.match(r2.responder!, /• Nome: Bia Souza\n• Serviço: Unha em gel\n• Preferência: sexta à tarde/)
+})
+await caso('abertura curta: perfil que não é nome pede nome e serviço juntos; mensagem com algo a mais vai para a IA', async () => {
+  assert.match(aberturaCurta({ nome: 'X' }, ''), /Me conta o seu nome e o serviço que você quer fazer\?$/)
+  const b = banco()
+  const r = await atenderGuia(b.deps, { telefone: CLIENTE, texto: PRONTA, nomePerfil: 'Studio da Ju' })
+  assert.match(r.responder!, /^Oi! Aqui é a Mel.*Me conta o seu nome e o serviço/)
+  const b2 = banco()
+  const r2 = await atenderGuia(b2.deps, { telefone: CLIENTE, texto: 'Oi, quero fazer unha amanhã (código: guaratingueta/gabi-mendes-beauty)', nomePerfil: 'Bia' })
+  assert.equal(r2.acao, 'conversa')
+  assert.equal(b2.iaPedidos.length, 1)
+})
+await caso('complemento: o dia dito depois do envio vai para o salão, e só aí a Mel diz que avisou', async () => {
+  const ia = () => ({ resposta: 'Anotei, Celise: quinta de manhã. 😊', preferencia: 'quinta de manhã' })
+  const b = banco({ ia })
+  b.abrir({ telefone: CLIENTE.replace('+', ''), lugar_id: 'd', estado: 'enviado', dados: { nome: 'Celise', servico: 'depilação' }, lead_id: 7 })
+  const r = await fala(b, 'Quinta pela manhã')
+  assert.equal(r.acao, 'complemento')
+  assert.equal(r.responder, 'Anotei, Celise: quinta de manhã. 😊\n\nJá avisei o Gabi Mendes Beauty 💗')
+  assert.equal(b.enviados[0].tel, '5512911110004')
+  assert.equal(b.enviados[0].texto, '💗 MIMO — complemento do pedido da Celise\nPreferência: quinta de manhã\nPara falar com ela: https://mimo.com.vc/r/tok7xxxxxxxx')
+  // o pedido não aceita complemento (não chegou, já teve 2, o salão recusou): a Mel não diz que avisou
+  const b2 = banco({ ia, semComplemento: true })
+  b2.abrir({ telefone: CLIENTE.replace('+', ''), lugar_id: 'd', estado: 'enviado', dados: { nome: 'Celise', servico: 'depilação' } })
+  const r2 = await fala(b2, 'Quinta pela manhã')
+  assert.equal(r2.responder, 'Anotei, Celise: quinta de manhã. 😊')
+  assert.equal(b2.enviados.length, 0)
+  assert.match(b2.iaPedidos[0].sistema, /Não diga que vai passar, avisar ou repassar ao salão/)
+  assert.match(complementoDoSalao({ cliente_tel: '5513988887777', salao_nome: 'X' }, { observacao: 'alérgica a esmalte comum' }), /^💗 MIMO — complemento do pedido da cliente\nObservação: alérgica a esmalte comum\nPara falar com ela: https:\/\/wa\.me\/5513988887777/)
+})
+await caso('o envio devolve a conversa, para o convite do Instagram ficar guardado nela', async () => {
+  const b = banco()
+  const c = b.abrir({ telefone: CLIENTE.replace('+', ''), lugar_id: 'd', estado: 'confirmando', dados: { nome: 'Ana', servico: 'unha' } })
+  const r = await fala(b, 'sim')
+  assert.equal(r.conversaId, c.id)
 })
 
 console.log(`\n${ok} casos ok`)

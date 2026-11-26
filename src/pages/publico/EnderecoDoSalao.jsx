@@ -4,7 +4,6 @@ import { supabase } from '../../lib/supabase'
 import { SUBDOMINIO, urlDoAmbiente, urlDoEndereco } from '../../lib/ambiente'
 import { LogoMimo } from '../../components/icons'
 import VitrineDoSalao from './VitrineDoSalao'
-import PaginaProfissional from './PaginaProfissional'
 
 // O endereço próprio do salão (2.80): studiomel.mimo.com.vc.
 //
@@ -50,7 +49,8 @@ export default function EnderecoDoSalao({ prof }) {
   if (r?.redirecionar) return null
   if (!r) return <EnderecoVazio titulo="Esse endereço não existe" texto="Confira o link com o salão, ou entre pelo código de seis letras que fica no balcão." />
   if (r.tipo === 'indisponivel') return <EnderecoVazio titulo={`${r.nome} está com o endereço pausado`} texto="O salão precisa regularizar a assinatura para o endereço voltar a abrir. Se você já é cliente, entra pelo app." />
-  if (r.tipo === 'profissional') return <PaginaProfissional slug={r.slug} />
+  // 4.11: a página da profissional é a página do salão com ela na frente (antes era uma página à parte, sem o salão)
+  if (r.tipo === 'profissional') return <VitrineDoSalao r={r} />
   // 3.79: a raiz é a página do salão, aberta a quem visita (marcar e falar com o salão pedem a conta)
   return <VitrineDoSalao r={r} />
 }

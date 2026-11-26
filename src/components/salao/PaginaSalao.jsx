@@ -26,7 +26,10 @@ import '../../salao-pagina.css'
 const DIAS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
 const POR_CATEGORIA = 5
 
-export default function PaginaSalao({ pg, cats, modo = 'cliente', onAgendar, onContato, onProfissional, onPreferida, onPromo, guiaUrl }) {
+//   foco        (4.11) id de uma profissional: a página vira a DELA (foto, nome, nota, serviços e avaliações dela),
+//               sempre dentro do salão: o cartão "Atende no …" leva para a página da casa (salaoUrl) e o resto da
+//               equipe aparece embaixo (profUrl(p) → a página de cada uma)
+export default function PaginaSalao({ pg, cats, modo = 'cliente', onAgendar, onContato, onProfissional, onPreferida, onPromo, guiaUrl, foco = null, salaoUrl = null, profUrl = null }) {
   const publico = modo === 'publico'
   const s = pg.salao
   const [foto, setFoto] = useState(0)
@@ -34,25 +37,30 @@ export default function PaginaSalao({ pg, cats, modo = 'cliente', onAgendar, onC
   const servicosRef = useRef(null)
   const [descAberta, setDescAberta] = useState(false)
   const [abertas, setAbertas] = useState({})   // categoria → mostra todos
-  const [comQuem, setComQuem] = useState(null) // público: a profissional tocada filtra os serviços dela
+  const [tocada, setComQuem] = useState(null) // público: a profissional tocada filtra os serviços dela
   const [todasAvaliacoes, setTodasAvaliacoes] = useState(false)
 
   const fotos = s.fotos ?? []
-  const nota = pg.nota?.quantas ? pg.nota : null
+  const notaCasa = pg.nota?.quantas ? pg.nota : null
   const pino = temPino(s.lat, s.lng)
   const rota = linksDeRota({ lat: s.lat, lng: s.lng, nome: s.nome, endereco: s.endereco, cidade: s.cidade })?.google ?? null
   const local = [s.bairro, s.cidade].filter(Boolean).join(', ')
   const agora = situacaoAgora(pg.horarios)
   const hoje = new Date().getDay()
   const equipe = pg.equipe ?? []
+  const dela = foco ? equipe.find((p) => p.id === foco) ?? null : null
+  const comQuem = dela ?? tocada
+  const primeiro = dela ? primeiroNome(dela.nome) : ''
   // o que ninguém faz não dá para marcar: fica fora da vitrine
   const servicos = useMemo(() => (pg.servicos ?? []).filter((x) => (x.quem ?? []).length > 0), [pg.servicos])
   const visiveis = comQuem ? servicos.filter((x) => (x.quem ?? []).some((q) => q.id === comQuem.id)) : servicos
   const grupos = agruparPorCategoria(visiveis, cats)
   const destaques = comQuem ? [] : servicos.filter((x) => x.destaque).slice(0, 8)
-  const promos = pg.promocoes ?? []
+  const promos = (pg.promocoes ?? []).filter((p) => !dela || p.professional_id === dela.id || (!p.professional_id && (!p.service_id || (pg.servicos ?? []).some((x) => x.id === p.service_id && (x.quem ?? []).some((q) => q.id === dela.id)))))
   const descontoDe = (id) => promos.find((p) => p.service_id === id && p.desconto_pct)?.desconto_pct ?? null
-  const avaliacoes = (pg.avaliacoes ?? []).filter((a) => a.comentario || todasAvaliacoes)
+  const nota = dela ? (dela.nota ? { media: dela.nota, quantas: dela.avaliacoes || 0 } : null) : notaCasa
+  const todasAsAvaliacoes = (pg.avaliacoes ?? []).filter((a) => !dela || a.profissional === dela.nome)
+  const avaliacoes = todasAsAvaliacoes.filter((a) => a.comentario || todasAvaliacoes)
   const menor = menorPrecoDaCasa(servicos)
   const pag = s.pagamento?.modo && s.pagamento.modo !== 'nao' ? s.pagamento : null
   const politica = pag?.politica ? POLITICAS[pag.politica] : null
@@ -65,11 +73,12 @@ export default function PaginaSalao({ pg, cats, modo = 'cliente', onAgendar, onC
   async function compartilhar() {
     const url = window.location.href
     try {
-      if (navigator.share) await navigator.share({ title: s.nome, text: `${s.nome} na MIMO`, url })
+      if (navigator.share) await navigator.share({ title: dela?.nome ?? s.nome, text: dela ? `${dela.nome}, no ${s.nome}` : `${s.nome} na MIMO`, url })
       else { await navigator.clipboard?.writeText(url); window.alert('Link copiado.') }
     } catch { /* ela desistiu */ }
   }
   const escolher = (p) => {
+    if (dela) { const u = profUrl?.(p); if (u) window.location.href = u; return }
     if (publico) { setComQuem((x) => (x?.id === p.id ? null : p)); irParaServicos() }
     else onProfissional?.(p)
   }
@@ -93,7 +102,24 @@ export default function PaginaSalao({ pg, cats, modo = 'cliente', onAgendar, onC
 
       <div className="sal-corpo">
         {/* ---- quem é, se está aberto, marcar ---- */}
-        <aside className="sal-id" aria-label={s.nome}>
+        <aside className={'sal-id' + (dela ? ' sal-id-prof' : '')} aria-label={dela?.nome ?? s.nome}>
+          {dela ? (
+            <>
+              <div className="sal-id-topo">
+                <span className="sal-logo sal-logo-prof">{dela.foto ? <img src={dela.foto} alt="" /> : iniciais(dela.nome)}</span>
+                <div className="sal-id-nome">
+                  <h1>{dela.nome}</h1>
+                  {(dela.especialidade || (dela.faz ?? []).length > 0) && <p className="sal-id-local">{dela.especialidade || (dela.faz ?? []).slice(0, 2).join(' · ')}</p>}
+                </div>
+              </div>
+              {/* sempre ligada à casa: quem chega pela página dela também conhece o salão */}
+              <a className="sal-casa" href={salaoUrl ?? '#'}>
+                <span className="sal-casa-logo">{s.logo_url ? <img src={s.logo_url} alt="" /> : iniciais(s.nome)}</span>
+                <span className="sal-casa-txt"><small>Atende no</small><strong>{s.nome}</strong>{local && <em><MapPin size={11} /> {local}</em>}</span>
+                <span className="sal-casa-ir">Ver o salão <ChevronRight size={14} /></span>
+              </a>
+            </>
+          ) : (
           <div className="sal-id-topo">
             <span className="sal-logo">{s.logo_url ? <img src={s.logo_url} alt="" /> : iniciais(s.nome)}</span>
             <div className="sal-id-nome">
@@ -101,6 +127,7 @@ export default function PaginaSalao({ pg, cats, modo = 'cliente', onAgendar, onC
               {local && <p className="sal-id-local"><MapPin size={13} /> {local}</p>}
             </div>
           </div>
+          )}
           <div className="sal-id-selos">
             {nota && <span className="sal-selo sal-selo-nota"><StarIcon /> <b>{Number(nota.media).toFixed(1)}</b> <span>({nota.quantas})</span></span>}
             {agora && <span className={'sal-selo ' + (agora.aberto ? 'sal-selo-aberto' : 'sal-selo-fechado')}><i aria-hidden="true" />{agora.texto}</span>}
@@ -109,7 +136,7 @@ export default function PaginaSalao({ pg, cats, modo = 'cliente', onAgendar, onC
           {fechado && <p className="sal-aviso">Este salão não está recebendo agendamentos novos pelo app no momento. Os horários já marcados continuam valendo.</p>}
           {!fechado && (
             <button type="button" className="btn btn-primary btn-block sal-marcar" onClick={irParaServicos}>
-              <CalendarHeart size={18} /> Agendar horário{menor ? <small> · a partir de {formatPreco(menor)}</small> : null}
+              <CalendarHeart size={18} /> {dela ? `Agendar com ${primeiro}` : 'Agendar horário'}{menor && !dela ? <small> · a partir de {formatPreco(menor)}</small> : null}
             </button>
           )}
           <div className="sal-acoes">
@@ -127,7 +154,7 @@ export default function PaginaSalao({ pg, cats, modo = 'cliente', onAgendar, onC
           {/* ---- promoções ---- */}
           {promos.length > 0 && (
             <section className="sal-secao">
-              <h2 className="sal-titulo"><BadgePercent size={17} /> Promoções da casa</h2>
+              <h2 className="sal-titulo"><BadgePercent size={17} /> {dela ? 'Promoções' : 'Promoções da casa'}</h2>
               <div className="sal-faixa">
                 {promos.map((p) => (
                   <button key={p.id} type="button" className="sal-promo" onClick={() => onPromo?.(p)}>
@@ -163,8 +190,8 @@ export default function PaginaSalao({ pg, cats, modo = 'cliente', onAgendar, onC
 
           {/* ---- serviços ---- */}
           <section className="sal-secao" ref={servicosRef} id="sal-servicos">
-            <h2 className="sal-titulo"><Sparkles size={17} /> Serviços {servicos.length > 0 && <span className="sal-conta">{servicos.length}</span>}</h2>
-            {comQuem && (
+            <h2 className="sal-titulo"><Sparkles size={17} /> {dela ? `Serviços com ${primeiro}` : 'Serviços'} {(dela ? visiveis : servicos).length > 0 && <span className="sal-conta">{(dela ? visiveis : servicos).length}</span>}</h2>
+            {comQuem && !dela && (
               <div className="sal-filtro">
                 <span className="sal-filtro-av">{comQuem.foto ? <img src={comQuem.foto} alt="" /> : iniciais(comQuem.nome)}</span>
                 <span>Serviços com <b>{primeiroNome(comQuem.nome)}</b></span>
@@ -219,11 +246,12 @@ export default function PaginaSalao({ pg, cats, modo = 'cliente', onAgendar, onC
           {/* ---- a equipe ---- */}
           {equipe.length > 0 && (
             <section className="sal-secao">
-              <h2 className="sal-titulo"><Star size={17} /> {equipe.length === 1 ? 'Quem atende' : 'A equipe'}</h2>
-              {publico && equipe.length > 1 && <p className="sal-sub">Toque em quem você prefere para ver os serviços dela.</p>}
+              <h2 className="sal-titulo"><Star size={17} /> {dela ? `Mais gente do ${s.nome}` : equipe.length === 1 ? 'Quem atende' : 'A equipe'}</h2>
+              {dela && <p className="sal-sub">A {primeiro} faz parte desta equipe. Toque para conhecer cada uma.</p>}
+              {!dela && publico && equipe.length > 1 && <p className="sal-sub">Toque em quem você prefere para ver os serviços dela.</p>}
               {!publico && equipe.length > 1 && <p className="sal-sub">Marque a estrela da sua preferida: quando mais de uma faz o mesmo serviço, o app já leva para ela.</p>}
               <div className="sal-faixa sal-equipe">
-                {equipe.map((p) => {
+                {equipe.filter((p) => !dela || p.id !== dela.id).map((p) => {
                   const pref = !publico && pg.preferida === p.id
                   return (
                     <div key={p.id} className={'sal-prof' + (comQuem?.id === p.id ? ' on' : '') + (pref ? ' preferida' : '')}>
@@ -246,7 +274,7 @@ export default function PaginaSalao({ pg, cats, modo = 'cliente', onAgendar, onC
           {/* ---- avaliações ---- */}
           {nota && (
             <section className="sal-secao">
-              <h2 className="sal-titulo"><StarIcon /> Avaliações</h2>
+              <h2 className="sal-titulo"><StarIcon /> {dela ? `O que dizem da ${primeiro}` : 'Avaliações'}</h2>
               <div className="sal-nota">
                 <b>{Number(nota.media).toFixed(1)}</b>
                 <span className="sal-nota-estrelas" aria-label={`${Number(nota.media).toFixed(1)} de 5`}>{[1, 2, 3, 4, 5].map((n) => <StarIcon key={n} cheio={n <= Math.round(nota.media)} />)}</span>
@@ -267,13 +295,19 @@ export default function PaginaSalao({ pg, cats, modo = 'cliente', onAgendar, onC
                   ))}
                 </ul>
               )}
-              {!todasAvaliacoes && (pg.avaliacoes ?? []).length > 3 && <button type="button" className="sal-mais" onClick={() => setTodasAvaliacoes(true)}>Ver mais avaliações</button>}
+              {!todasAvaliacoes && todasAsAvaliacoes.length > 3 && <button type="button" className="sal-mais" onClick={() => setTodasAvaliacoes(true)}>Ver mais avaliações</button>}
             </section>
           )}
 
           {/* ---- sobre ---- */}
+          {dela?.bio && (
+            <section className="sal-secao">
+              <h2 className="sal-titulo"><Star size={17} /> Sobre a {primeiro}</h2>
+              <div className="sal-desc aberta"><p>{dela.bio}</p></div>
+            </section>
+          )}
           <section className="sal-secao sal-sobre">
-            <h2 className="sal-titulo"><Store size={17} /> Sobre o {s.tipo === 'autonoma' ? 'espaço' : 'salão'}</h2>
+            <h2 className="sal-titulo"><Store size={17} /> {dela ? `Onde ela atende: ${s.nome}` : `Sobre o ${s.tipo === 'autonoma' ? 'espaço' : 'salão'}`}</h2>
             {s.descricao && (
               <div className={'sal-desc' + (descAberta ? ' aberta' : '')}>
                 <p>{s.descricao}</p>

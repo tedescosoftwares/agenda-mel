@@ -199,3 +199,10 @@
   .pe-conta-esq { position: sticky; top: 0; }
   .pe-conta-dir > .pe-secao:first-child { margin-top: 0.3rem; }
 }
+
+/* 4.11: a equipe que confirma os próprios pedidos */
+.pe-pedidos { display: flex; align-items: center; gap: 12px; padding: 14px 16px; margin-bottom: 12px; text-decoration: none; color: inherit; border-color: #ffc2d8; background: linear-gradient(135deg, #fff 55%, #fff3f8); }
+.pe-pedidos-icone { flex: 0 0 42px; width: 42px; height: 42px; border-radius: 13px; display: grid; place-items: center; background: var(--gradiente, linear-gradient(135deg, #ff2d7a, #ff7baa)); color: #fff; }
+.pe-pedidos-txt { display: grid; flex: 1; min-width: 0; }
+.pe-pedidos-txt small { color: var(--texto-2, #6b6f7a); font-size: 0.82rem; }
+.pe-pedidos-topo p { margin: 4px 0 0; }

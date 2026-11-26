@@ -2,7 +2,8 @@ import { useEffect, useRef } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useNotificacoes } from '../context/NotificacoesContext'
-import { ehDaEquipe, useMeuSalao, linkWhatsApp } from '../lib/meuSalao'
+import { ehDaEquipe, useMeuSalao, useConfirmaPedidos, linkWhatsApp } from '../lib/meuSalao'
+import { Inbox } from 'lucide-react'
 import PainelPausado from './PainelPausado'
 import SinoAvisos from './SinoAvisos'
 import MenuDaConta, { ITENS_PRO } from './MenuDaConta'
@@ -43,8 +44,11 @@ export default function ProShell({ children, titulo, voltar, amplo = false }) {
   const { professional, negocio, acesso, profile } = useAuth()
   const { naoLidos } = useNotificacoes()
   const equipe = ehDaEquipe({ professional, negocio })
-  const abas = equipe ? TABS_EQUIPE : TABS
-  const menu = equipe ? TABS_EQUIPE : MENU_AUTONOMA
+  // 4.11: quando o salão deixa a confirmação com ela, a equipe ganha a aba Pedidos
+  const confirma = useConfirmaPedidos()
+  const tabsEquipe = confirma ? [TABS_EQUIPE[0], { to: '/pro/pedidos', label: 'Pedidos', Icon: Inbox }, ...TABS_EQUIPE.slice(1)] : TABS_EQUIPE
+  const abas = equipe ? tabsEquipe : TABS
+  const menu = equipe ? tabsEquipe : MENU_AUTONOMA
   const nome = professional?.name || profile?.full_name || ''
   const primeiroNome = nome.trim().split(/\s+/)[0] || 'Conta'
   const contador = naoLidos > 0 ? <span className="nav-contador" aria-label={`${naoLidos} avisos novos`}>{naoLidos > 9 ? '9+' : naoLidos}</span> : null

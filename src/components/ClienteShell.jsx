@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
-import { ScanLine, ChevronLeft } from 'lucide-react'
+import { ScanLine, ChevronLeft, Compass } from 'lucide-react'
 import SinoAvisos from './SinoAvisos'
 import AvaliarConvite from './AvaliarConvite'
 import CienciaGate from './CienciaGate'
@@ -32,6 +32,27 @@ export default function ClienteShell({ children, titulo, voltar, semTopo = false
 
   return (
     <div className="admin-shell cliente-shell">
+      {/* 4.11: no computador, o menu fica na lateral (como no salão e na profissional); a barra de baixo some */}
+      <aside className="admin-desktop-sidebar pro-sidebar cli-sidebar" aria-label="Navegação principal">
+        <div className="admin-sidebar-marca">
+          <span><LogoMimo altura={38} /></span>
+        </div>
+        <nav className="admin-sidebar-nav">
+          {TABS.filter(Boolean).map(({ to, label, Icon, sino }) => (
+            <NavLink key={to} to={to} className={({ isActive }) => (isActive ? 'admin-sidebar-item ativo' : 'admin-sidebar-item')}>
+              <Icon width={18} height={18} />
+              <span>{label}</span>
+              {sino && naoLidos > 0 && <span className="pro-sidebar-contador">{naoLidos > 9 ? '9+' : naoLidos}</span>}
+            </NavLink>
+          ))}
+          <NavLink to="/saloes" className="admin-sidebar-item"><Compass size={18} /><span>Guia de salões</span></NavLink>
+        </nav>
+        <div className="admin-sidebar-rodape pro-sidebar-rodape">
+          <button type="button" className="cli-sidebar-qr" onClick={() => navigate('/cliente/entrar')}><ScanLine size={18} /><span><strong>Entrar em um salão</strong><small>Com o código ou o link dele</small></span></button>
+        </div>
+      </aside>
+
+      <div className="admin-shell-workspace">
       {!semTopo && (
         <header className="topbar topbar-cliente">
           {typeof voltar === 'function' ? (
@@ -61,6 +82,8 @@ export default function ClienteShell({ children, titulo, voltar, semTopo = false
           {children}
         </div>
       </main>
+
+      </div>
 
       <nav className="bottom-nav">
         <div className="bottom-nav-inner">

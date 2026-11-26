@@ -52,6 +52,7 @@ export function pode(prof, chave) {
   if (!prof) return false
   const p = prof.permissoes ?? {}
   if (chave === 'clientes_do_salao') return (p.clientes ?? 'salao') === 'salao'
+  if (chave === 'telefone') return p[chave] ?? false   // 266: a única que nasce desligada
   return p[chave] ?? true
 }
 
@@ -133,3 +134,11 @@ export const alternarCargo = (texto, cargo) => {
   const l = cargosDe(texto)
   return juntarCargos(l.includes(cargo) ? l.filter((x) => x !== cargo) : [...l, cargo])
 }
+
+// 4.11 (266): a apresentação e a função da profissional não levam contato pessoal (o contato da página é o do salão).
+// O banco barra do mesmo jeito (professionals_sem_contato_tg); aqui é só para avisar antes de salvar.
+export function temContato(texto) {
+  const t = String(texto ?? '')
+  return /(@|https?:|www\.|wa\.me|\.com\b|instagram|insta\b|whats|zap\b|telegram)/i.test(t) || /\d{8,}/.test(t.replace(/[\s().-]/g, ''))
+}
+export const AVISO_CONTATO = 'A apresentação não pode ter telefone, @ de rede social nem link: o contato da página dela é o do salão.'

@@ -16214,3 +16214,12 @@ label.a-partir-opcao .a-partir-opcao-texto { flex: 1; }
 .agx-nota { font-size: 0.86rem; line-height: 1.45; color: #5d5560; }
 .agx-suporte { justify-self: center; text-align: center; font-size: 0.84rem; font-weight: 600; color: #8a1247; text-decoration: underline; text-underline-offset: 3px; }
 .pk-janela > .agx-suporte { display: block; margin: 14px auto 4px; }
+
+/* 4.11: a cliente no computador: menu na lateral */
+.cli-sidebar-qr { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px; border-radius: 14px; background: var(--lilas, #f6f1ff); border: 1px solid var(--fio, #ece6f0); font: inherit; text-align: left; cursor: pointer; color: inherit; }
+.cli-sidebar-qr span { display: grid; min-width: 0; }
+.cli-sidebar-qr strong { font-size: 0.8rem; }
+.cli-sidebar-qr small { font-size: 0.66rem; color: var(--texto-3, #8a8f9a); }
+@media (min-width: 1080px) {
+  .cliente-shell .topbar-cliente .brand-inline { visibility: hidden; }
+}

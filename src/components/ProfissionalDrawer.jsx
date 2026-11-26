@@ -5,7 +5,7 @@ import { reduzirFoto } from '../lib/imagem'
 import { formatarFone } from '../lib/fone'
 import { formatPreco, formatDuracao } from '../lib/format'
 import { urlDoAmbiente } from '../lib/ambiente'
-import { VINCULOS, AVISO_VINCULO, PERMISSOES, PERMISSOES_RECOMENDADAS, presetDoVinculo, vinculoPor, FUNCOES, cargosDe, alternarCargo, resumoDias, mensagemDeAcesso, primeiroNome, situacaoDe, enviarAcesso, linkWhats } from '../lib/equipe'
+import { VINCULOS, AVISO_VINCULO, PERMISSOES, PERMISSOES_RECOMENDADAS, presetDoVinculo, vinculoPor, FUNCOES, temContato, AVISO_CONTATO, cargosDe, alternarCargo, resumoDias, mensagemDeAcesso, primeiroNome, situacaoDe, enviarAcesso, linkWhats } from '../lib/equipe'
 import { categoriasDoSalao } from '../lib/categorias'
 import Avatar from './Avatar'
 import '../equipe.css'
@@ -43,6 +43,15 @@ export default function ProfissionalDrawer({ salao, profissional = null, servico
   const editando = Boolean(profissional?.id)
   // 3.83: a dona que também atende (147) configura a própria agenda aqui: abre nos serviços e não tem etapa de acesso
   const dona = Boolean(profissional?.dona)
+  const [verTelefone, setVerTelefone] = useState(Boolean(profissional?.permissoes?.telefone))
+  const [mudandoTel, setMudandoTel] = useState(false)
+  async function mudarTelefone(v) {
+    setMudandoTel(true)
+    const { error } = await supabase.rpc('equipe_permissao', { prof: profissional.id, chave: 'telefone', valor: v })
+    setMudandoTel(false)
+    if (error) { setErro(error.message); return }
+    setVerTelefone(v)
+  }
   // semServicos (3.81): na Configuração, os serviços de cada uma se ligam na etapa seguinte ("Quem faz o quê")
   const abas = ABAS.filter((a) => (ETAPAS_COMPLETAS || !ETAPAS_DEPOIS.has(a.id)) && !(semServicos && a.id === 3) && !(dona && a.id === 7))
   const [aba, setAba] = useState(abaInicial ?? (dona ? 3 : 1))
@@ -94,6 +103,7 @@ export default function ProfissionalDrawer({ salao, profissional = null, servico
 
   function validar(ate) {
     if (ate >= 1 && !f.name.trim()) { setAba(1); setErro('Diga o nome completo dela.'); return false }
+    if (ate >= 1 && !dona && (temContato(f.bio) || temContato(f.especialidade))) { setAba(1); setErro(AVISO_CONTATO); return false }
     if (ate >= 1 && f.phone.replace(/\D/g, '').length < 10) { setAba(1); setErro('Diga o WhatsApp: é por ele que chegam os avisos.'); return false }
     // 3.82: o e-mail não trava o caminho entre as etapas; no salvar, quem ainda não ativou precisa dele (o acesso vai por e-mail)
     if (ate >= 1 && f.email.trim() && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(f.email.trim())) { setAba(1); setErro('Esse e-mail não parece certo. Confira, por favor.'); return false }
@@ -198,7 +208,7 @@ export default function ProfissionalDrawer({ salao, profissional = null, servico
                 <label>E-mail {!profissional?.user_id && <b>*</b>} <span className="muted">(o acesso para ela ativar chega por ele)</span><input type="email" value={f.email} onChange={m('email')} placeholder="carla@exemplo.com" /></label>
                 <label>Função <span className="muted">(opcional, pode ter mais de uma)</span><input value={f.especialidade} onChange={m('especialidade')} placeholder="Cabeleireira · Colorista" /></label>
               </div>
-              <label className="gv-form gv-bio">Apresentação <span className="muted">(opcional, aparece na página dela)</span><textarea rows={2} value={f.bio} onChange={m('bio')} placeholder="Especialista em loiros e cortes modernos…" /></label>
+              <label className="gv-form gv-bio">Apresentação <span className="muted">(opcional, aparece na página dela; sem telefone, @ ou link)</span><textarea rows={2} value={f.bio} onChange={m('bio')} placeholder="Especialista em loiros e cortes modernos…" /></label>
               {editando && <label className="gv-form gv-slug">Link da agenda dela <span className="muted">(ela também pode trocar, em Meu link)</span><span className="gv-slug-campo"><span>{prefixoDaProfissional(salao)}</span><input value={f.slug} onChange={(e) => setF((x) => ({ ...x, slug: limparEndereco(e.target.value) }))} placeholder="carla" autoCapitalize="none" /></span></label>}
               <div className="chips gv-chips">{FUNCOES.map((x) => <button key={x} type="button" aria-pressed={cargosDe(f.especialidade).includes(x)} className={'chip' + (cargosDe(f.especialidade).includes(x) ? ' active' : '')} onClick={() => setF((y) => ({ ...y, especialidade: alternarCargo(y.especialidade, x) }))}>{x}</button>)}</div>
             </section>
@@ -326,6 +336,13 @@ export default function ProfissionalDrawer({ salao, profissional = null, servico
 
           {aba === 7 && (
             <section className="gv-secao">
+              {/* 4.11 (266): a cliente é do salão: o telefone dela só aparece para a profissional se a casa liberar */}
+              {profissional?.id && !dona && (
+                <label className="gv-check gv-telefone">
+                  <input type="checkbox" checked={verTelefone} disabled={mudandoTel} onChange={(e) => mudarTelefone(e.target.checked)} />
+                  <span><strong>{nome} pode ver o telefone das clientes</strong><small className="muted">Desligado, ela vê nome, serviço e horário, e fala com o salão quando precisar. Ligado, o telefone das clientes que ela atende aparece para ela.</small></span>
+                </label>
+              )}
               {salva ? (
                 <>
                   <div className="gv-pronta"><span className="gv-pronta-check"><Check size={18} /></span><div><h3>{nome} está pronta</h3><span className={'gv-situacao ' + (situacao?.cor ?? '')}>{situacao?.rotulo}</span></div></div>

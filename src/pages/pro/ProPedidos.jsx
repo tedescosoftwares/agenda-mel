@@ -8,7 +8,7 @@ import { useAuth } from '../../context/AuthContext'
 import { Repeat } from 'lucide-react'
 import { pode } from '../../lib/equipe'
 import FichaCliente from '../../components/FichaCliente'
-import { ehDaEquipe } from '../../lib/meuSalao'
+import { ehDaEquipe, useMeuSalao } from '../../lib/meuSalao'
 
 // Pedidos pendentes (tela 16): duas abas — o que espera o seu sim, e
 // quem está na fila de espera. Cada pedido mostra quanto tempo falta
@@ -26,6 +26,10 @@ function prazo(min) {
 export default function ProPedidos() {
   const { professional, negocio } = useAuth()
   const equipe = ehDaEquipe({ professional, negocio })
+  // 4.11: a profissional da equipe responde os próprios pedidos quando o salão deixa a confirmação com ela
+  const meuSalao = useMeuSalao()
+  const confirma = meuSalao?.aceite_modo === 'profissional'
+  const soVer = equipe && !confirma
   const [aba, setAba] = useState('pendentes')
   const [pedidos, setPedidos] = useState([])
   const [cfg, setCfg] = useState(null)
@@ -35,7 +39,7 @@ export default function ProPedidos() {
   const profId = professional?.id
 
   const buscar = useCallback(async () => {
-    if (!profId || equipe) return
+    if (!profId || soVer) return
     const [lista, conf] = await Promise.all([
       supabase.rpc('meus_pedidos'),
       supabase.from('professionals').select('aceite_manual, minutos_para_aceitar, ao_expirar, confirmar_historico_ruim').eq('id', profId).maybeSingle(),
@@ -43,12 +47,13 @@ export default function ProPedidos() {
     if (lista.error) setErro(lista.error.message)
     else { setPedidos(lista.data ?? []); setCfg(conf.data ?? null); setErro('') }
     setLoading(false)
-  }, [profId, equipe])
+  }, [profId, soVer])
   useEffect(() => { buscar() }, [buscar])
 
   if (!professional) return <SemFicha />
-  // 3.91: a profissional da equipe só vê a agenda; quem responde os pedidos é o salão
-  if (equipe) return <Navigate to="/pro/agenda" replace />
+  // 3.91: no modo "a casa confirma", a profissional da equipe só vê a agenda; quem responde os pedidos é o salão
+  if (equipe && !meuSalao) return <ProShell titulo="Pedidos"><p className="muted">Carregando…</p></ProShell>
+  if (soVer) return <Navigate to="/pro/agenda" replace />
 
   async function responder(id, aceitou) {
     setRespondendo(id)
@@ -65,18 +70,24 @@ export default function ProPedidos() {
   }
 
   return (
-    <ProShell titulo="Pedidos pendentes" voltar="/pro/agenda">
-      <div className="abas">
+    <ProShell titulo={equipe ? 'Pedidos' : 'Pedidos pendentes'} voltar={equipe ? undefined : '/pro/agenda'}>
+      {equipe && (
+        <div className="page-head pe-pedidos-topo">
+          <h2>Pedidos esperando você</h2>
+          <p className="muted">No {meuSalao?.name ?? 'salão'}, quem confirma os horários é você. A cliente é avisada na hora da sua resposta.</p>
+        </div>
+      )}
+      {!equipe && <div className="abas">
         <button className={aba === 'pendentes' ? 'aba active' : 'aba'} onClick={() => setAba('pendentes')}>Pendentes{pedidos.length ? ` (${pedidos.length})` : ''}</button>
         <button className={aba === 'fila' ? 'aba active' : 'aba'} onClick={() => setAba('fila')}>Fila de espera</button>
-      </div>
+      </div>}
 
       {erro && <div className="alert alert-error">{erro}</div>}
 
       {aba === 'fila' && <FilaEspera professionalId={profId} />}
 
       {aba === 'pendentes' && (loading ? <p className="muted">Carregando…</p> : pedidos.length === 0 ? (
-        <div className="card empty-state"><p>Nenhum pedido esperando você.</p><p className="muted">Quando uma cliente marcar, aparece aqui e no seu WhatsApp.</p></div>
+        <div className="card empty-state"><p>Nenhum pedido esperando você.</p><p className="muted">{equipe ? 'Quando uma cliente marcar com você, o pedido aparece aqui e chega um aviso no seu celular.' : 'Quando uma cliente marcar, aparece aqui e no seu WhatsApp.'}</p></div>
       ) : (
         <div className="cliente-list">
           {pedidos.map((p) => (
@@ -106,7 +117,7 @@ export default function ProPedidos() {
         </div>
       ))}
 
-      {aba === 'pendentes' && cfg && (
+      {aba === 'pendentes' && cfg && !equipe && (
         <>
           <h3 className="secao-titulo">Como você aprova</h3>
           <div className="card cl-ajuste">

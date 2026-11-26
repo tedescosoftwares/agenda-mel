@@ -26,7 +26,7 @@ function assinar(f) { ouvintes.add(f); return () => ouvintes.delete(f) }
 function buscarSalao(id) {
   if (!id || guardado.has(id) || buscando.has(id)) return
   buscando.add(id)
-  supabase.from('salons').select('id, name, whatsapp, phone, logo_url, city, bairro').eq('id', id).maybeSingle().then(({ data }) => {
+  supabase.from('salons').select('id, name, whatsapp, phone, logo_url, city, bairro, aceite_modo').eq('id', id).maybeSingle().then(({ data }) => {
     buscando.delete(id)
     if (!data) return
     guardado.set(id, data)
@@ -47,4 +47,11 @@ export function linkWhatsApp(numero, texto) {
   if (d.length < 10) return null
   if (!d.startsWith('55') || d.length <= 11) d = '55' + d
   return `https://wa.me/${d}${texto ? `?text=${encodeURIComponent(texto)}` : ''}`
+}
+
+// 4.11 (decisão de 25/11): quando o salão deixa a confirmação com a profissional (aceite_modo = 'profissional'),
+// a profissional da equipe responde os próprios pedidos e dá a baixa de quem veio. No modo 'casa', é o salão.
+export function useConfirmaPedidos() {
+  const salao = useMeuSalao()
+  return salao?.aceite_modo === 'profissional'
 }

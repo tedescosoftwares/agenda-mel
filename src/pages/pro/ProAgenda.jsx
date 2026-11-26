@@ -8,6 +8,7 @@ import PedidosPendentes from '../../components/PedidosPendentes'
 import AvisosNovos from '../../components/AvisosNovos'
 import LigarAvisos from '../../components/LigarAvisos'
 import PendenciasBaixa from '../../components/PendenciasBaixa'
+import PedidosEsperando from '../../components/PedidosEsperando'
 import SemFicha from './SemFicha'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
@@ -68,6 +69,8 @@ export default function ProAgenda() {
             <LigarAvisos semInstalar texto="Recados do salão, horários novos e cancelamentos chegam na hora, mesmo com o app fechado." />
           </aside>
           <div className="pe-principal">
+            <PedidosEsperando />
+            <PendenciasBaixa />
             <AgendaLinhaDoTempo professionalId={professional.id} />
           </div>
         </div>

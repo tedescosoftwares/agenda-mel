@@ -8,18 +8,22 @@ import { useAuth } from '../../context/AuthContext'
 import { useCategorias } from '../../lib/categorias'
 import { guardarConvite } from '../../lib/convite'
 import { iniciais } from '../../lib/booking'
-import { urlDoAmbiente } from '../../lib/ambiente'
+import { urlDoAmbiente, urlDoEndereco } from '../../lib/ambiente'
 
 // A página pública do salão (3.79), no endereço próprio dele (nome.mimo.com.vc): quem visita vê a página inteira,
 // sem conta. Marcar um serviço, falar com o salão ou tocar numa promoção pedem a conta: abre a folha "entre para
 // marcar", que leva ao cadastro (ou ao login, ou ao Google) com o código do salão (ela já nasce na agenda dele) e
 // com ?depois= (o que ela escolheu); depois de entrar, a Home da cliente segue para lá. Já logada como cliente,
 // entra na agenda do salão (se ainda não está) e segue direto para o fluxo de marcar de sempre.
+// 4.11: com r.profissional_id a mesma página abre como a página DELA (foco), sempre dentro do salão.
 export default function VitrineDoSalao({ r }) {
   const { user, role, vinculos, recarregarVinculos } = useAuth()
   const cats = useCategorias()
   const salaoId = r.salao?.id ?? r.id
   const codigo = r.codigo
+  // (quem toca o próprio negócio não tem "salão" acima dela: a página é a do negócio)
+  const foco = r.tipo === 'profissional' && r.salao?.tipo !== 'autonoma' ? r.profissional_id : null
+  const sub = r.subdominio ?? r.salao?.subdominio ?? null
   const [pg, setPg] = useState(undefined)
   const [folha, setFolha] = useState(null)   // { alvo, destino }
   const [indo, setIndo] = useState(false)
@@ -32,7 +36,7 @@ export default function VitrineDoSalao({ r }) {
   useEffect(() => { if (codigo) guardarConvite(codigo) }, [codigo])
   useEffect(() => {
     const s = pg?.salao
-    if (s) document.title = `${s.nome}${s.cidade ? ` · ${s.cidade}` : ''} | Agende pela MIMO`
+    if (s) document.title = foco ? `${r.nome}, no ${s.nome} | Agende pela MIMO` : `${s.nome}${s.cidade ? ` · ${s.cidade}` : ''} | Agende pela MIMO`
   }, [pg])
 
   if (pg === undefined) return <div className="page-center"><p className="muted">Carregando…</p></div>
@@ -41,7 +45,7 @@ export default function VitrineDoSalao({ r }) {
 
   // para onde cada ação leva, já dentro do app da cliente
   function destinoDe(alvo) {
-    if (alvo.servico) return `/cliente/servico/${alvo.servico.id}?${new URLSearchParams({ ...(alvo.prof ? { prof: alvo.prof } : (alvo.servico.quem ?? []).length === 1 ? { prof: alvo.servico.quem[0].id } : {}), de: `salao:${salaoId}` })}`
+    if (alvo.servico) return `/cliente/servico/${alvo.servico.id}?${new URLSearchParams({ ...(alvo.prof ?? foco ? { prof: alvo.prof ?? foco } : (alvo.servico.quem ?? []).length === 1 ? { prof: alvo.servico.quem[0].id } : {}), de: `salao:${salaoId}` })}`
     if (alvo.promo?.service_id) return `/cliente/servico/${alvo.promo.service_id}?${new URLSearchParams({ ...(alvo.promo.professional_id ? { prof: alvo.promo.professional_id } : {}), de: `salao:${salaoId}` })}`
     return `/cliente/salao/${salaoId}`
   }
@@ -69,6 +73,7 @@ export default function VitrineDoSalao({ r }) {
           ? <a className="salp-entrar logada" href={urlDoAmbiente('cliente', '/cliente/home')}><CalendarHeart size={15} /> Minha agenda</a>
           : <a className="salp-entrar" href={urlDoAmbiente('cliente', `/login?convite=${codigo}&depois=${encodeURIComponent(`/cliente/salao/${salaoId}`)}`)}>Entrar</a>}
       </header>
+      {r.saiu && <p className="salp-saiu">{r.saiu} não atende mais no {s.nome}. Veja quem faz esses serviços na equipe da casa.</p>}
       <PaginaSalao
         pg={pg}
         cats={cats}
@@ -77,6 +82,9 @@ export default function VitrineDoSalao({ r }) {
         onContato={() => (conta ? agir({ contato: true }) : setFolha({ alvo: { contato: true }, destino: `/cliente/salao/${salaoId}` }))}
         onPromo={(p) => agir({ promo: p })}
         guiaUrl={urlDoAmbiente('cliente', '/saloes')}
+        foco={foco}
+        salaoUrl={sub ? urlDoEndereco(sub, '/') : null}
+        profUrl={(p) => (sub && p.slug ? urlDoEndereco(sub, `/profissionais/${p.slug}`) : null)}
       />
       {indo && <div className="salp-folha-fundo"><p className="salp-indo">Abrindo a agenda…</p></div>}
       {folha && <EntrarParaMarcar salao={s} codigo={codigo} alvo={folha.alvo} destino={folha.destino} equipe={Boolean(user) && role !== 'cliente'} onFechar={() => setFolha(null)} />}

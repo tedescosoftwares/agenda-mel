@@ -27,7 +27,8 @@ function segundaDe(iso) {
 function maisDias(iso, n) { const d = meioDia(iso); d.setDate(d.getDate() + n); return toISODate(d) }
 // só a primeira letra maiúscula (o capitalize do CSS fazia "17 De Novembro")
 const maiuscula = (s) => (s ? s[0].toUpperCase() + s.slice(1) : s)
-const nomeDa = (a) => a.profiles?.full_name || a.guest_name || 'Cliente'
+// 4.11 (266): o nome vem por cliente_nome (a equipe não lê o cadastro da cliente sem a permissão do salão)
+const nomeDa = (a) => a.cliente_nome || a.profiles?.full_name || a.guest_name || 'Cliente'
 const servicoDe = (a) => a.service_name || a.services?.name || 'Atendimento'
 function emQuanto(min) {
   if (min < 1) return 'agora'
@@ -57,7 +58,7 @@ export default function AgendaLinhaDoTempo({ professionalId }) {
     let vivo = true
     supabase
       .from('appointments')
-      .select('id, date, start_time, end_time, status, notes, client_id, guest_name, service_name, profiles (full_name), services (name, duration_minutes)')
+      .select('id, date, start_time, end_time, status, notes, client_id, guest_name, service_name, cliente_nome, services (name, duration_minutes)')
       .eq('professional_id', professionalId)
       .gte('date', de)
       .lte('date', ate)

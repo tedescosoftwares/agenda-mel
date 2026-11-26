@@ -242,3 +242,17 @@
 @media (min-width: 960px) and (max-width: 1160px) {
   .sal-publico .sal-capa, .sal-publico .sal-corpo, .salp-topo { margin-left: 20px; margin-right: 20px; }
 }
+
+/* 4.11: a página da profissional, dentro do salão */
+.sal-logo-prof { border-radius: 50%; }
+.sal-casa { display: flex; align-items: center; gap: 10px; padding: 10px 12px; margin: 2px 0 4px; border-radius: 16px; background: #fff7fa; border: 1px solid #ffd9e6; color: inherit; text-decoration: none; }
+.sal-casa:hover { border-color: var(--rosa, #ff2d7a); }
+.sal-casa-logo { flex: 0 0 38px; width: 38px; height: 38px; border-radius: 11px; overflow: hidden; display: grid; place-items: center; background: var(--gradiente); color: #fff; font-weight: 800; font-size: 0.8rem; }
+.sal-casa-logo img { width: 100%; height: 100%; object-fit: cover; }
+.sal-casa-txt { display: grid; min-width: 0; flex: 1; line-height: 1.25; }
+.sal-casa-txt small { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; color: var(--texto-2, #6b6f7a); }
+.sal-casa-txt strong { font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sal-casa-txt em { font-style: normal; font-size: 0.74rem; color: var(--texto-2, #6b6f7a); display: inline-flex; align-items: center; gap: 3px; }
+.sal-casa-ir { display: inline-flex; align-items: center; gap: 2px; font-size: 0.76rem; font-weight: 700; color: var(--rosa, #ff2d7a); white-space: nowrap; }
+
+.salp-saiu { margin: 0 auto 10px; max-width: 1180px; padding: 10px 14px; border-radius: 14px; background: #fff7e6; border: 1px solid #ffe2a8; color: #6b4a00; font-size: 0.9rem; text-align: center; }

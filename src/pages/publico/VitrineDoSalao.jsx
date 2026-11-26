@@ -48,8 +48,8 @@ export default function VitrineDoSalao({ r }) {
 
   // para onde cada ação leva, já dentro do app da cliente
   function destinoDe(alvo) {
-    if (alvo.servico) return `/cliente/servico/${alvo.servico.id}?${new URLSearchParams({ ...(alvo.prof ?? foco ? { prof: alvo.prof ?? foco } : (alvo.servico.quem ?? []).length === 1 ? { prof: alvo.servico.quem[0].id } : {}), de: `salao:${salaoId}` })}`
-    if (alvo.promo?.service_id) return `/cliente/servico/${alvo.promo.service_id}?${new URLSearchParams({ ...(alvo.promo.professional_id ? { prof: alvo.promo.professional_id } : {}), de: `salao:${salaoId}` })}`
+    if (alvo.servico) return `/cliente/servico/${alvo.servico.id}?${new URLSearchParams({ ...(alvo.prof ?? foco ? { prof: alvo.prof ?? foco, firme: '1' } : (alvo.servico.quem ?? []).length === 1 ? { prof: alvo.servico.quem[0].id } : {}), de: `salao:${salaoId}` })}`
+    if (alvo.promo?.service_id) return `/cliente/servico/${alvo.promo.service_id}?${new URLSearchParams({ ...(alvo.promo.professional_id ? { prof: alvo.promo.professional_id, firme: '1' } : {}), de: `salao:${salaoId}` })}`
     return `/cliente/salao/${salaoId}`
   }
   async function agir(alvo) {

@@ -6,13 +6,19 @@ import { formatPreco, labelDuracao, formatDuracao } from '../../lib/format'
 import { prefixoAPartir, AVISO_A_PARTIR } from '../../../packages/core/salao.js'
 import { iniciais } from '../../lib/booking'
 import { useCategorias, nomeDaCategoria } from '../../lib/categorias'
-import { Sparkles, Clock, Tag, Users, Plus, Check, ChevronRight, BadgePercent } from 'lucide-react'
+import { Sparkles, Clock, Tag, Users, Plus, Check, ChevronRight, BadgePercent, X } from 'lucide-react'
+import Portal from '../../components/Portal'
 
 // A página de um serviço (2.25): fotos, descrição, preço (com o desconto
 // da promoção que ela enxerga), duração, quem faz e o que costuma ir
 // junto. Chega com ?prof=<id> quando ela já está no fluxo de uma
 // profissional, ?sel=<ids> com o que já tinha escolhido e ?de=<origem>
 // dizendo de onde veio — é isso que decide o "voltar".
+//
+// 4.15: a profissional da URL só vale como ESCOLHIDA quando a cliente escolheu de verdade: veio do perfil dela
+// (de=perfil:…), do passo de serviços dela (sem ?de) ou de um toque explícito (?firme=1: o filtro "com fulana", a
+// promoção de uma profissional, a página dela). Fora isso é palpite (a preferida, a primeira): se mais de uma faz o
+// serviço, "Escolher data" pergunta com quem, em vez de mandar todo mundo para a mesma.
 
 // De onde ela veio → para onde o voltar leva. Sem `de`, vale a regra
 // antiga: com profissional, a lista de serviços dela; senão, a Home.
@@ -44,18 +50,20 @@ export default function ClienteServico() {
   const [desconto, setDesconto] = useState(null)
   const [foto, setFoto] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [perguntar, setPerguntar] = useState(false)   // a folha "com quem?"
 
   useEffect(() => {
     let vivo = true
     ;(async () => {
       const [sv, ps, ju, de] = await Promise.all([
-        supabase.from('services').select('*').eq('id', id).maybeSingle(),
+        supabase.from('services').select('*, salons (name, tipo)').eq('id', id).maybeSingle(),
         supabase.from('professional_services').select('preco_cents, duracao_minutos, professionals (id, name, photo_url, active, salon_id)').eq('service_id', id),
         supabase.rpc('servicos_sugeridos_para', { servicos: [id] }),
         supabase.rpc('descontos_para_mim', { servicos: [id] }),
       ])
       if (!vivo) return
-      setS(sv.data ?? null)
+      // (se o banco não devolver o salão junto, o serviço vem sozinho)
+      setS(sv.data ?? (sv.error ? (await supabase.from('services').select('*').eq('id', id).maybeSingle()).data : null) ?? null)
       setQuem((ps.data ?? []).map((v) => (v.professionals ? { ...v.professionals, preco_cents: v.preco_cents, duracao_minutos: v.duracao_minutos } : null)).filter((p) => p?.active).sort((a, b) => a.name.localeCompare(b.name)))
       const ids = (ju.data ?? []).map((x) => x.sugerido_id)
       if (ids.length) {
@@ -74,12 +82,16 @@ export default function ClienteServico() {
 
   const jaEscolhido = sel.includes(s.id)
   const escolha = jaEscolhido ? sel : [...sel, s.id]
-  // com quem: a da URL, ou a única que faz
-  const prof = profId || (quem.length === 1 ? quem[0].id : '')
-  const fotos = s.images ?? []
-  const precoPor = desconto ? desconto.preco_com_desconto_cents / 100 : null
   // a origem segue junto para o próximo serviço e para o fluxo de marcar
   const comOrigem = (obj) => new URLSearchParams({ ...obj, ...(de ? { de } : {}) })
+  // com quem: a que ela escolheu de verdade, ou a única que faz. O palpite da URL (sem escolha dela) vira só sugestão.
+  const escolhida = Boolean(profId) && (!de || de.startsWith('perfil:') || q.get('firme') === '1' || sel.length > 0)
+  const prof = (escolhida && quem.some((p) => p.id === profId) ? profId : '') || (quem.length === 1 ? quem[0].id : '')
+  const sugerida = !prof && profId && quem.some((p) => p.id === profId) ? profId : ''
+  const salaoNome = s.salons?.tipo === 'salao' ? s.salons?.name : null
+  const irParaData = (p) => navigate(`/cliente/agendamento/data?${comOrigem({ prof: p, servico: escolha.join(','), firme: '1' })}`)
+  const fotos = s.images ?? []
+  const precoPor = desconto ? desconto.preco_com_desconto_cents / 100 : null
 
   return (
     <ClienteShell titulo={s.name} voltar={voltar}>
@@ -114,9 +126,9 @@ export default function ClienteServico() {
             {quem.map((p) => (
               // 4.14: tocar em quem faz já leva para a data, com este serviço escolhido (antes abria o perfil dela e
               // pedia o serviço de novo)
-              <Link key={p.id} to={`/cliente/agendamento/data?${comOrigem({ prof: p.id, servico: escolha.join(',') })}`} className={'card agdt-linha agdt-link' + (p.id === profId ? ' svc-prof-atual' : '')}>
+              <Link key={p.id} to={`/cliente/agendamento/data?${comOrigem({ prof: p.id, servico: escolha.join(','), firme: '1' })}`} className={'card agdt-linha agdt-link' + (p.id === prof ? ' svc-prof-atual' : '')}>
                 <span className="agdt-avatar">{p.photo_url ? <img src={p.photo_url} alt="" /> : iniciais(p.name)}</span>
-                <span className="cliente-info"><span className="cliente-nome"><span className="nome-txt">{p.name}</span></span>{p.id === profId && <span className="muted cliente-meta">você está marcando com ela</span>}{(p.preco_cents != null || p.duracao_minutos != null) && <span className="muted cliente-meta">com ela: {[p.preco_cents != null ? formatPreco(p.preco_cents / 100) : null, p.duracao_minutos != null ? formatDuracao(p.duracao_minutos) : null].filter(Boolean).join(' · ')}</span>}</span>
+                <span className="cliente-info"><span className="cliente-nome"><span className="nome-txt">{p.name}</span></span>{p.id === prof && quem.length > 1 && <span className="muted cliente-meta">você está marcando com ela</span>}{p.id === sugerida && <span className="muted cliente-meta">sua preferida</span>}{(p.preco_cents != null || p.duracao_minutos != null) && <span className="muted cliente-meta">com ela: {[p.preco_cents != null ? formatPreco(p.preco_cents / 100) : null, p.duracao_minutos != null ? formatDuracao(p.duracao_minutos) : null].filter(Boolean).join(' · ')}</span>}</span>
                 <span className="link-ver svc-quem-agendar">Agendar <ChevronRight size={15} /></span>
               </Link>
             ))}
@@ -146,14 +158,40 @@ export default function ClienteServico() {
           <div className="svc-espaco" aria-hidden="true" />
           <div className="rodape-fixo rodape-servicos">
             {sel.length > 0 && !jaEscolhido && <p className="muted svc-rodape-nota">Entra junto com {sel.length === 1 ? 'o que você já escolheu' : `os ${sel.length} que você já escolheu`}.</p>}
-            <button className="btn btn-primary btn-block" onClick={() => navigate(`/cliente/agendamento/data?${comOrigem({ prof, servico: escolha.join(',') })}`)}>
+            <button className="btn btn-primary btn-block" onClick={() => irParaData(prof)}>
               {jaEscolhido ? <><Check size={16} /> Escolher data</> : sel.length ? <><Plus size={16} /> Adicionar e escolher data</> : 'Escolher data'}
             </button>
             <Link to={`/cliente/profissional/${prof}/servicos?servico=${escolha.join(',')}`} className="btn btn-ghost btn-block">{jaEscolhido ? 'Ver outros serviços' : 'Adicionar e ver outros serviços'}</Link>
           </div>
         </>
+      ) : quem.length > 1 ? (
+        <>
+          <div className="svc-espaco" aria-hidden="true" />
+          <div className="rodape-fixo">
+            <button className="btn btn-primary btn-block" onClick={() => setPerguntar(true)} data-teste="svc-escolher-data">Escolher data</button>
+          </div>
+        </>
       ) : (
-        quem.length === 0 && <div className="card empty-state"><p>Ninguém atendendo com este serviço agora.</p></div>
+        <div className="card empty-state"><p>Ninguém atendendo com este serviço agora.</p></div>
+      )}
+
+      {perguntar && (
+        <Portal><div className="modal-fundo" onClick={() => setPerguntar(false)}>
+          <div className="modal-caixa svc-quem-folha" role="dialog" aria-modal="true" aria-labelledby="svc-quem-titulo" onClick={(e) => e.stopPropagation()}>
+            <button type="button" className="svc-quem-fechar" onClick={() => setPerguntar(false)} aria-label="Fechar"><X size={17} /></button>
+            <h3 id="svc-quem-titulo">Com quem você quer marcar?</h3>
+            <p className="muted">{quem.length} profissionais fazem {s.name}{salaoNome ? ` no ${salaoNome}` : ''}. Tem preferência por alguma?</p>
+            <div className="cliente-list">
+              {[...quem].sort((a, b) => (b.id === sugerida) - (a.id === sugerida)).map((p) => (
+                <button key={p.id} type="button" className="card agdt-linha agdt-link svc-quem-opcao" onClick={() => irParaData(p.id)}>
+                  <span className="agdt-avatar">{p.photo_url ? <img src={p.photo_url} alt="" /> : iniciais(p.name)}</span>
+                  <span className="cliente-info"><span className="cliente-nome"><span className="nome-txt">{p.name}</span></span>{p.id === sugerida && <span className="muted cliente-meta">sua preferida</span>}{(p.preco_cents != null || p.duracao_minutos != null) && <span className="muted cliente-meta">com ela: {[p.preco_cents != null ? formatPreco(p.preco_cents / 100) : null, p.duracao_minutos != null ? formatDuracao(p.duracao_minutos) : null].filter(Boolean).join(' · ')}</span>}</span>
+                  <ChevronRight size={18} className="agdt-seta" />
+                </button>
+              ))}
+            </div>
+          </div>
+        </div></Portal>
       )}
     </ClienteShell>
   )

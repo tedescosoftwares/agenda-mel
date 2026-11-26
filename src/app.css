@@ -16331,3 +16331,9 @@ label.a-partir-opcao .a-partir-opcao-texto { flex: 1; }
 .servico-linha-dupla { position: relative; }
 .servico-linha-agendar::after { content: ''; position: absolute; inset: 0; border-radius: inherit; }
 .servico-linha-detalhes { position: relative; z-index: 1; align-self: flex-start; font-size: 0.78rem; color: var(--texto-2); text-decoration: underline; text-underline-offset: 2px; padding: 0.2rem 0.4rem 0.2rem 0; margin-top: 0.1rem; }
+/* 4.15: a folha "com quem você quer marcar?" na página do serviço */
+.svc-quem-folha { position: relative; max-width: 420px; width: 100%; text-align: left; }
+.svc-quem-folha h3 { margin: 0 2rem 0.3rem 0; font-size: 1.15rem; }
+.svc-quem-folha > p { margin: 0 0 0.9rem; font-size: 0.9rem; line-height: 1.45; }
+.svc-quem-fechar { position: absolute; top: 0.8rem; right: 0.8rem; width: 34px; height: 34px; border-radius: 99px; border: 0; background: var(--cinza-1, #f1f1f4); color: var(--texto-2); display: grid; place-items: center; cursor: pointer; }
+.svc-quem-opcao { width: 100%; font: inherit; text-align: left; cursor: pointer; }

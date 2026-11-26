@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import ClienteShell from '../../components/ClienteShell'
 import { supabase } from '../../lib/supabase'
 import { StarIcon } from '../../components/icons'
@@ -15,7 +15,6 @@ import { useCategorias, agruparPorCategoria } from '../../lib/categorias'
 export default function ClienteProfissional() {
   const cats = useCategorias()
   const { id } = useParams()
-  const navigate = useNavigate()
   const [prof, setProf] = useState(null)
   const [preferida, setPreferida] = useState(false)
   useEffect(() => {
@@ -58,8 +57,9 @@ export default function ClienteProfissional() {
     await supabase.rpc('escolher_preferida', { salao: prof.salon_id, prof: nova })
   }
 
-  // volta para de onde veio (início, lista, agenda); sem histórico, para o início
-  const voltar = () => { if (window.history.length > 1) navigate(-1); else navigate('/cliente/home') }
+  // 4.15: o voltar sobe um nível (o salão dela, ou o início). Antes era "a página anterior": vindo da página de um
+  // serviço, o voltar dela trazia para cá e o daqui levava de volta para ela, sem saída
+  const voltar = prof.salons?.tipo === 'salao' && prof.salon_id ? `/cliente/salao/${prof.salon_id}` : '/cliente/home'
 
   return (
     <ClienteShell titulo={prof.name} voltar={voltar}>

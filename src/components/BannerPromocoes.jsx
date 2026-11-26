@@ -47,7 +47,7 @@ export default function BannerPromocoes() {
   // página do salão
   function abrir(p) {
     supabase.rpc('promocao_clicada', { promo: p.id })
-    if (p.service_id) navigate(`/cliente/servico/${p.service_id}?${new URLSearchParams({ ...(p.professional_id ? { prof: p.professional_id } : {}), de: 'home' })}`)
+    if (p.service_id) navigate(`/cliente/servico/${p.service_id}?${new URLSearchParams({ ...(p.professional_id ? { prof: p.professional_id, firme: '1' } : {}), de: 'home' })}`)
     else if (p.professional_id) navigate(`/cliente/profissional/${p.professional_id}`)
     else if (p.salon_id) navigate(`/cliente/salao/${p.salon_id}`)
   }

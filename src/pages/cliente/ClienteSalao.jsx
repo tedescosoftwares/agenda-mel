@@ -34,7 +34,7 @@ export default function ClienteSalao() {
   function agendar({ servico, prof }) {
     const quem = servico.quem ?? []
     const com = prof || (pg.preferida && quem.some((q) => q.id === pg.preferida) ? pg.preferida : '') || (quem.length === 1 ? quem[0].id : '')
-    navigate(`/cliente/servico/${servico.id}?${new URLSearchParams({ ...(com ? { prof: com } : {}), de: `salao:${id}` })}`)
+    navigate(`/cliente/servico/${servico.id}?${new URLSearchParams({ ...(com ? { prof: com } : {}), ...(prof ? { firme: '1' } : {}), de: `salao:${id}` })}`)
   }
   function contato() {
     const zap = s.whatsapp ? 'https://wa.me/55' + String(s.whatsapp).replace(/\D/g, '').replace(/^55/, '') : null
@@ -43,7 +43,7 @@ export default function ClienteSalao() {
   }
   function promo(p) {
     supabase.rpc('promocao_clicada', { promo: p.id })
-    if (p.service_id) navigate(`/cliente/servico/${p.service_id}?${new URLSearchParams({ ...(p.professional_id ? { prof: p.professional_id } : {}), de: `salao:${id}` })}`)
+    if (p.service_id) navigate(`/cliente/servico/${p.service_id}?${new URLSearchParams({ ...(p.professional_id ? { prof: p.professional_id, firme: '1' } : {}), de: `salao:${id}` })}`)
   }
 
   return (

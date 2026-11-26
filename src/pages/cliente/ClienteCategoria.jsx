@@ -103,7 +103,7 @@ export default function ClienteCategoria() {
           const quem = sv.quem ?? []
           const d = descontos[sv.id]
           return (
-            <Link key={sv.id} to={`/cliente/servico/${sv.id}?${new URLSearchParams({ ...(prof ? { prof } : {}), de: `categoria:${id}:${cat}` })}`} className="card servico-linha">
+            <Link key={sv.id} to={`/cliente/servico/${sv.id}?${new URLSearchParams({ ...(prof ? { prof } : {}), ...(prof && prof === filtro ? { firme: '1' } : {}), de: `categoria:${id}:${cat}` })}`} className="card servico-linha">
               <span className="servico-linha-foto" aria-hidden="true">{sv.images?.[0] ? <img src={sv.images[0]} alt="" /> : <Sparkles />}</span>
               <span className="cliente-info">
                 <span className="cliente-nome"><span className="nome-txt">{sv.name}</span>{sv.is_combo && <span className="badge badge-combo">combo</span>}{d && <span className="badge badge-promo"><BadgePercent size={10} /> -{d.desconto_pct}%</span>}</span>

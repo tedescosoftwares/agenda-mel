@@ -63,3 +63,40 @@ export function Anel({ pct = 0, children, tamanho = 58 }) {
     </span>
   )
 }
+
+// barras do mês: um retângulo por dia com movimento; a maior fica em destaque
+export function Barras({ pontos = [], altura = 120 }) {
+  if (!pontos.length) return null
+  const max = Math.max(...pontos.map((p) => Number(p.y) || 0), 1)
+  const n = pontos.length, larg = 100 / n
+  const iMax = pontos.findIndex((p) => (Number(p.y) || 0) === max)
+  const passo = Math.ceil(n / 6)
+  return (
+    <div className="hd-barras" style={{ '--hd-barras-alt': `${altura}px` }} role="img" aria-label="Faturamento por dia do mês">
+      <div className="hd-barras-area">
+        {pontos.map((p, i) => (
+          <span key={i} className={'hd-barra' + (i === iMax ? ' maior' : '')} style={{ width: `${larg}%`, '--h': `${Math.max(4, ((Number(p.y) || 0) / max) * 100)}%`, '--i': i }}>
+            {i === iMax && <em>R$ {Math.round(max).toLocaleString('pt-BR')}</em>}
+            <i />
+          </span>
+        ))}
+      </div>
+      <div className="hd-barras-eixo">{pontos.map((p, i) => <span key={i} style={{ width: `${larg}%` }}>{i % passo === 0 || i === n - 1 ? p.x : ''}</span>)}</div>
+    </div>
+  )
+}
+
+// a pessoa da equipe com o anel de ocupação em volta
+export function Pessoa({ nome, pct = 0, children }) {
+  const p = Math.max(0, Math.min(100, Number(pct) || 0)), r = 30, volta = 2 * Math.PI * r
+  const iniciais = String(nome ?? '?').split(/\s+/).filter(Boolean).slice(0, 2).map((x) => x[0]).join('').toUpperCase()
+  return (
+    <span className="hd-pessoa-anel">
+      <svg viewBox="0 0 68 68" aria-hidden="true">
+        <circle className="hd-pessoa-trilho" cx="34" cy="34" r={r} />
+        <circle className="hd-pessoa-valor" cx="34" cy="34" r={r} strokeDasharray={volta} style={{ '--dia-anel-fim': volta * (1 - p / 100), '--dia-anel-volta': volta }} />
+      </svg>
+      <b>{children ?? iniciais}</b>
+    </span>
+  )
+}

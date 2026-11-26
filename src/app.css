@@ -16611,3 +16611,54 @@ html[data-tema="escuro"] .admin-first-workspace, html[data-tema="escuro"] .admin
 .hd-col > * { min-width:0; }
 .hd-link small, .hd-secao-topo small { overflow-wrap:anywhere; }
 html[data-tema="escuro"] .admin-desktop-sidebar .admin-sidebar-item:not(.ativo) { background:transparent !important; border-color:transparent !important; }
+
+/* 4.24: o desenho novo nas telas de cadastro do painel do salão (Equipe e Serviços, e as demais que usam as
+   mesmas peças): título limpo no lugar do cartão rosado, itens numa lista agrupada com divisórias em vez de um
+   cartão por item, situação em texto com ponto, categorias em etiquetas, botão de adicionar em rosa sólido.
+   Vale só dentro do painel (.admin-shell); o escuro destas telas ainda vem da inversão geral. */
+.admin-shell .page-head { padding:6px 2px 10px; margin-bottom:6px; border:0; border-radius:0; background:none; box-shadow:none; }
+.admin-shell .page-head h2 { margin:0; color:#1d1323; font-size:1.65rem; font-weight:600; letter-spacing:-.03em; line-height:1.15; }
+.admin-shell .page-head p { margin:4px 0 0; color:#766b7c; font-size:.86rem; line-height:1.45; }
+.admin-shell :is(.cliente-list, .service-list) { gap:0; border:1px solid #e9e4ec; border-radius:18px; background:#fff; overflow:hidden; }
+.admin-shell :is(.cliente-list, .service-list) > :is(.card, .prof-row, .service-row, .cliente-row) { margin:0; padding:14px 16px; gap:12px; border:0; border-radius:0; background:transparent; box-shadow:none; }
+.admin-shell :is(.cliente-list, .service-list) > * + :is(.card, .prof-row, .service-row, .cliente-row) { border-top:1px solid #f0ebf2; }
+.admin-shell :is(.cliente-list, .service-list) > :is(.prof-row, .service-row, .cliente-row):hover { background:#fbf9fc; }
+.admin-shell .miolo > .card.prof-row, .admin-shell .miolo > .card.atalho-horarios { border:1px solid #e9e4ec; border-radius:18px; box-shadow:none; padding:14px 16px; }
+.admin-shell :is(.prof-row, .service-row) :is(.avatar, .prof-foto, .cliente-avatar, img.avatar) { border-radius:50%; }
+.admin-shell :is(.prof-row, .service-row) .nome-txt, .admin-shell .service-nome { color:#1d1323; font-size:.94rem; font-weight:600; letter-spacing:-.01em; }
+.admin-shell :is(.prof-row, .service-row) :is(.cliente-meta, .service-meta) { color:#766b7c; font-size:.78rem; }
+.admin-shell .gv-situacao { padding:0; border:0; background:none !important; font-size:.72rem; font-weight:600; letter-spacing:0; text-transform:none; }
+.admin-shell .gv-situacao::first-letter { text-transform:uppercase; }
+.admin-shell .service-thumb, .admin-shell .service-thumb-vazio { border-radius:12px; background:#f6f3f7; border:0; color:#8a7d90; }
+.admin-shell .fab { background:var(--rosa); box-shadow:0 12px 26px rgba(255,45,122,.34); }
+.admin-shell .secao-titulo, .admin-shell .cat-titulo { color:#766b7c; font-size:.72rem; font-weight:600; letter-spacing:.08em; }
+/* categorias: etiquetas em vez de cartões com capa colorida */
+.admin-shell .svc-cats-rolo { gap:8px; padding:2px 0 6px; scrollbar-width:none; }
+.admin-shell .svc-cats-rolo::-webkit-scrollbar { display:none; }
+.admin-shell .svc-cat { width:auto; display:inline-flex; align-items:center; gap:8px; grid-template-rows:none; padding:8px 14px 8px 8px; border:1px solid #e9e4ec; border-radius:99px; background:#fff; box-shadow:none; }
+.admin-shell .svc-cat:hover { transform:none; box-shadow:none; border-color:#1d1323; }
+.admin-shell .svc-cat.ativa { border-color:#1d1323; background:#1d1323; box-shadow:none; }
+.admin-shell .svc-cat.ativa .svc-cat-txt :is(strong, small) { color:#fff; }
+.admin-shell .svc-cat-img { flex:none; width:30px; height:30px; border-radius:50%; object-fit:cover; background:#f3f0f5; }
+.admin-shell .svc-cat-txt { display:flex; align-items:baseline; gap:6px; padding:0; }
+.admin-shell .svc-cat-txt strong { color:#1d1323; font-size:.84rem; }
+.admin-shell .svc-cat-txt small { color:#766b7c; font-size:.72rem; }
+.admin-shell .svc-cat-mais { grid-template-rows:none; border-style:dashed; background:transparent; padding-left:8px; }
+.admin-shell .svc-cat-mais-icone { width:30px; height:30px; border-radius:50%; background:#fff0f6; }
+@media (max-width: 760px) {
+  .admin-shell .page-head h2 { font-size:1.45rem; }
+  .admin-shell :is(.cliente-list, .service-list) > :is(.card, .prof-row, .service-row, .cliente-row) { padding:13px 14px; }
+}
+/* (4.24) Serviços: a lista é por categoria (.cat-grupo), então quem vira a lista agrupada é cada grupo */
+.admin-shell .service-list { border:0; border-radius:0; background:none; overflow:visible; display:grid; gap:18px; }
+.admin-shell .service-list > .cat-grupo { display:grid; gap:0; margin:0; }
+.admin-shell .service-list > .cat-grupo > .cat-titulo { margin:0 2px 8px; }
+.admin-shell .service-list > .cat-grupo > .service-row { margin:0; padding:14px 16px; gap:12px; border:1px solid #e9e4ec; border-top-width:0; border-radius:0; background:#fff; box-shadow:none; }
+.admin-shell .service-list > .cat-grupo > .service-row:first-of-type { border-top-width:1px; border-radius:18px 18px 0 0; }
+.admin-shell .service-list > .cat-grupo > .service-row:last-of-type { border-radius:0 0 18px 18px; }
+.admin-shell .service-list > .cat-grupo > .service-row:first-of-type:last-of-type { border-radius:18px; }
+.admin-shell .service-list > .cat-grupo > .service-row + .service-row { border-top:1px solid #f0ebf2; }
+.admin-shell .service-list > .cat-grupo > .service-row:hover { background:#fbf9fc; }
+.admin-shell .service-list, .admin-shell .service-list > .cat-grupo { grid-template-columns:minmax(0,1fr); min-width:0; }
+.admin-shell .service-list > .cat-grupo > .service-row { min-width:0; }
+.admin-shell .service-row .service-info { min-width:0; flex:1; }

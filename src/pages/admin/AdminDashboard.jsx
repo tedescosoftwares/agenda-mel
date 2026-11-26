@@ -87,7 +87,7 @@ export default function AdminDashboard() {
   const totalMes = linhas.reduce((s, l) => s + Number(l.faturamento_cents ?? 0), 0)
   const atendMes = linhas.reduce((s, l) => s + Number(l.atendimentos ?? 0), 0)
   const ocup = linhas.length ? Math.round(linhas.reduce((s, l) => s + Number(l.ocupacao_bps ?? 0), 0) / linhas.length) : 0
-  const maior = Math.max(1, ...linhas.map((l) => Number(l.faturamento_cents ?? 0)))
+  const maior = Math.max(1, ...linhas.map((l) => Number(l.faturamento_cents) || 0))
 
   const nomeSalao = salao?.name ?? 'Meu salão'
   const linkSalao = linkDoSalao(salao)
@@ -218,19 +218,14 @@ export default function AdminDashboard() {
             é passageira: sai do topo e fica só o que ainda falta, no fim da página */}
         <header className="dia-topo" data-tour="inicio">
           <svg className="dia-topo-arte" viewBox="0 0 600 200" preserveAspectRatio="xMaxYMid slice" aria-hidden="true">
-            <defs>
-              <radialGradient id="dia-brilho-a" cx="50%" cy="50%" r="50%"><stop offset="0" stopColor="#ff7baa" stopOpacity=".5" /><stop offset="1" stopColor="#ff7baa" stopOpacity="0" /></radialGradient>
-              <radialGradient id="dia-brilho-b" cx="50%" cy="50%" r="50%"><stop offset="0" stopColor="#aa4cff" stopOpacity=".34" /><stop offset="1" stopColor="#aa4cff" stopOpacity="0" /></radialGradient>
-            </defs>
-            <circle className="dia-topo-bolha a" cx="470" cy="40" r="150" fill="url(#dia-brilho-a)" />
-            <circle className="dia-topo-bolha b" cx="580" cy="170" r="130" fill="url(#dia-brilho-b)" />
-            <path className="dia-topo-fio" d="M300,170 C360,90 430,190 500,110 S590,60 620,90" />
-            <path className="dia-topo-fio dois" d="M340,200 C400,130 450,210 530,150 S600,120 630,140" />
+            <path d="M250,230 C340,120 420,210 500,120 S600,40 660,70" />
+            <path d="M300,240 C380,150 450,230 530,150 S620,90 680,110" />
+            <path d="M350,250 C420,180 480,250 560,180 S640,140 700,150" />
           </svg>
           <div className="dia-quem">
             <span className="dia-logo">{logoSalao ? <img src={logoSalao} alt="" /> : <b>{iniciaisSalao || 'M'}</b>}</span>
             <div>
-              <small>{saudacao}{nomePessoa ? `, ${nomePessoa}` : ''} <Sparkles size={12} /></small>
+              <small>{saudacao}{nomePessoa ? `, ${nomePessoa}` : ''}</small>
               <h1>{nomeSalao}</h1>
               <span className="dia-chips">
                 <span className={'dia-chip' + (salaoAtivo ? ' on' : '')}><i></i>{salaoAtivo ? 'Agenda ativa' : 'Agenda ainda não ativada'}</span>
@@ -274,25 +269,21 @@ export default function AdminDashboard() {
         <AcessoAviso compacto />
 
         <nav className="dia-atalhos" data-tour="atalhos" aria-label="Ações do dia a dia">
-          <Link to="/admin/equipe" className="tom-rosa"><span><UserPlus size={19} /></span><div><strong>Adicionar profissional</strong><small>Mais uma agenda no salão</small></div><ChevronRight size={16} /></Link>
-          <Link to="/admin/servicos" className="tom-violeta"><span><Scissors size={19} /></span><div><strong>Serviços</strong><small>Preços, duração e fotos</small></div><ChevronRight size={16} /></Link>
-          <Link to="/admin/salao" className="tom-azul"><span><QrCode size={19} /></span><div><strong>Link e QR do salão</strong><small>Para divulgar e receber clientes</small></div><ChevronRight size={16} /></Link>
-          <Link to="/admin/whatsapp" className="tom-menta"><span><MessageCircle size={19} /></span><div><strong>WhatsApp</strong><small>A assistente e as mensagens</small></div><ChevronRight size={16} /></Link>
+          <Link to="/admin/equipe"><span><UserPlus size={19} /></span><div><strong>Adicionar profissional</strong><small>Mais uma agenda no salão</small></div><ChevronRight size={16} /></Link>
+          <Link to="/admin/servicos"><span><Scissors size={19} /></span><div><strong>Serviços</strong><small>Preços, duração e fotos</small></div><ChevronRight size={16} /></Link>
+          <Link to="/admin/salao"><span><QrCode size={19} /></span><div><strong>Link e QR do salão</strong><small>Para divulgar e receber clientes</small></div><ChevronRight size={16} /></Link>
+          <Link to="/admin/whatsapp"><span><MessageCircle size={19} /></span><div><strong>WhatsApp</strong><small>A assistente e as mensagens</small></div><ChevronRight size={16} /></Link>
         </nav>
 
-        {(pendentes > 0 || naFila > 0) && <section className="admin-home-pulso admin-dia-pulso">
-          <div className="admin-home-pulso-principal">
-            <span className="admin-home-pulso-icone">{agoraMimo.icone}<i></i></span>
-            <div>
-              <small>{agoraMimo.selo}</small>
-              <strong>{agoraMimo.titulo}</strong>
-              <p>{agoraMimo.texto}</p>
-            </div>
-            <Link to={agoraMimo.para} className="admin-home-pulso-acao">{agoraMimo.acao} <ArrowRight size={14} /></Link>
-          </div>
-        </section>}
+        {(pendentes > 0 || naFila > 0) && (
+          <Link to={agoraMimo.para} className="card dia-linha destaque">
+            <span className="dia-linha-icone">{agoraMimo.icone}</span>
+            <span className="dia-linha-texto"><strong>{agoraMimo.titulo}</strong><small>{agoraMimo.texto}</small></span>
+            <span className="dia-linha-acao">{agoraMimo.acao} <ArrowRight size={13} /></span>
+          </Link>
+        )}
 
-        <div className="admin-home-alertas" data-tour="primeiros-passos">
+        <div className="admin-home-alertas dia-resolver" data-tour="primeiros-passos">
           <AcessoAviso soAlerta />
           <PrimeirosPassos salao={salao} parte="urgente" />
           <PendenciasBaixa para="/admin/fechar-dia" />
@@ -308,10 +299,10 @@ export default function AdminDashboard() {
         </div>
 
         <div className="admin-home-grade">
-          <section className="card admin-home-grafico">
-            <div className="admin-home-secao-topo compacto">
-              <div><span className="admin-home-label">Movimento</span><h2>Faturamento do mês</h2></div>
-              <span className="admin-home-total">{formatarReaisCurto(totalMes)}</span>
+          <section className="card admin-home-grafico dia-grafico">
+            <div className="dia-cartao-topo">
+              <div><span className="dia-rotulo">Movimento · {nomeDoMes(mesAtual()).split(' ')[0]}</span><h2>Faturamento do mês</h2></div>
+              <span className="dia-total"><b>{formatarReaisCurto(totalMes)}</b><small>{atendMes} {atendMes === 1 ? 'atendimento' : 'atendimentos'}</small></span>
             </div>
             {porDia.length
               ? <GraficoLinha pontos={porDia} />
@@ -319,21 +310,30 @@ export default function AdminDashboard() {
           </section>
 
           <aside className="admin-home-lateral">
-            <section className="card admin-home-profissionais">
-              <div className="admin-home-secao-topo compacto">
-                <div><span className="admin-home-label">Equipe</span><h2>Por profissional</h2></div>
-                <Link to="/admin/equipe">Ver equipe</Link>
+            <section className="card dia-equipe">
+              <div className="dia-cartao-topo">
+                <div><span className="dia-rotulo">Equipe · {nomeDoMes(mesAtual()).split(' ')[0]}</span><h2>Quem mais atendeu</h2></div>
+                <Link to="/admin/equipe" className="dia-link">Ver equipe <ArrowRight size={13} /></Link>
               </div>
-              <div className="barra-list">
-                {linhas.slice(0, 5).map((l) => (
-                  <div key={l.professional_id} className="barra-item">
-                    <div className="barra-topo"><span className="barra-nome">{l.nome}</span><span className="barra-valor">{formatarCents(l.faturamento_cents)}</span></div>
-                    <div className="barra-trilho"><span className="barra-preenche" style={{ width: `${Math.max(2, (Number(l.faturamento_cents) * 100) / maior)}%` }} /></div>
-                    <span className="barra-nota">{l.atendimentos}× · {formatarPct(l.ocupacao_bps)} ocupada</span>
-                  </div>
-                ))}
-                {linhas.length === 0 && <div className="admin-home-vazio mini"><Users size={19} /><strong>Sua equipe vai aparecer aqui.</strong><span>Adicione profissionais para acompanhar o movimento de cada agenda.</span></div>}
-              </div>
+              {linhas.length > 0 ? (
+                <ol className="dia-equipe-lista">
+                  {[...linhas].sort((x, y) => Number(y.faturamento_cents ?? 0) - Number(x.faturamento_cents ?? 0)).slice(0, 5).map((l, i) => (
+                    <li key={l.professional_id}>
+                      <span className="dia-equipe-posicao">{i + 1}</span>
+                      <span className="dia-equipe-avatar">{String(l.nome ?? '?').split(/\s+/).slice(0, 2).map((x) => x[0]).join('').toUpperCase()}</span>
+                      <span className="dia-equipe-quem">
+                        <strong>{l.nome}</strong>
+                        <small>{Number(l.atendimentos ?? 0)} {Number(l.atendimentos ?? 0) === 1 ? 'atendimento' : 'atendimentos'} · {formatarPct(l.ocupacao_bps)} da agenda ocupada</small>
+                        <span className="dia-equipe-barra"><i style={{ width: `${Math.max(2, ((Number(l.faturamento_cents) || 0) * 100) / maior)}%` }} /></span>
+                      </span>
+                      <b>{formatarReaisCurto(Number(l.faturamento_cents) || 0)}</b>
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <div className="admin-home-vazio mini"><Users size={19} /><strong>Sua equipe vai aparecer aqui.</strong><span>Adicione profissionais para acompanhar o movimento de cada agenda.</span></div>
+              )}
+              <Link to="/admin/equipe" className="dia-equipe-mais"><UserPlus size={15} /> Adicionar profissional</Link>
             </section>
           </aside>
         </div>

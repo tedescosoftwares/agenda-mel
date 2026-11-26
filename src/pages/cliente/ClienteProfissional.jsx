@@ -94,17 +94,19 @@ export default function ClienteProfissional() {
           {todos.length > 1 && <h3 className="cat-titulo">{g.nome}</h3>}
           {g.itens.map((s) => (
             // 4.14: tocar no serviço já leva para a data, com ela e com ele escolhidos (antes voltava para a página do
-            // serviço, que parecia pedir a profissional de novo)
-            <Link key={s.id} to={`/cliente/agendamento/data?prof=${prof.id}&servico=${s.id}&de=perfil:${prof.id}`} className="card servico-linha">
+            // serviço, que parecia pedir a profissional de novo). 4.14.1: "ver detalhes" abre a página do serviço
+            // (fotos e descrição), já com ela escolhida. O cartão inteiro é o link de agendar; o de detalhes fica por cima.
+            <div key={s.id} className="card servico-linha servico-linha-dupla">
               <span className="servico-linha-foto" aria-hidden="true">
                 {s.images?.[0] ? <img src={s.images[0]} alt="" /> : <Sparkles />}
               </span>
               <span className="cliente-info">
                 <span className="cliente-nome"><span className="nome-txt">{s.name}</span></span>
                 <span className="muted cliente-meta">{prefixoAPartir(s)}{formatPreco(s.price)} · {labelDuracao(s)}</span>
+                <Link to={`/cliente/servico/${s.id}?prof=${prof.id}&de=perfil:${prof.id}`} className="servico-linha-detalhes">ver detalhes</Link>
               </span>
-              <span className="link-ver">Agendar</span>
-            </Link>
+              <Link to={`/cliente/agendamento/data?prof=${prof.id}&servico=${s.id}&de=perfil:${prof.id}`} className="link-ver servico-linha-agendar" aria-label={`Agendar ${s.name}`}>Agendar</Link>
+            </div>
           ))}
           </section>))}
         </div>

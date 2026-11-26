@@ -42,6 +42,35 @@ const semAcento = (t) => String(t ?? '').normalize('NFD').replace(/[̀-ͯ]/g, ''
 export async function demoAssistente(corpo = {}) {
   const e = ler()
   await new Promise((r) => setTimeout(r, corpo.acao === 'testar' ? 700 : 400))
+  // 4.12: a Plataforma vê o WhatsApp de cada salão
+  if (corpo.acao === 'instancias') {
+    const h = (min) => new Date(Date.now() - min * 60000).toISOString()
+    return { ok: true, evolution: true, casa: { instancia: 'mimo', estado: 'open' }, saloes: [
+      { salon_id: 's1', situacao: 'proprio_ok', numero: '+55 (13) 99871-0002', conectado_em: h(60 * 24 * 12), caiu_em: null },
+      { salon_id: 's2', situacao: 'proprio_caido', numero: '+55 (13) 99122-4410', conectado_em: h(60 * 24 * 30), caiu_em: h(190) },
+      { salon_id: 's3', situacao: 'casa', numero: '+55 (13) 99171-9086', conectado_em: null, caiu_em: null },
+      { salon_id: 's6', situacao: 'conectando', numero: null, conectado_em: null, caiu_em: null },
+    ] }
+  }
+  if (corpo.acao === 'reapontar') return { ok: true }
+  if (corpo.acao === 'instancia') {
+    const h = (min) => new Date(Date.now() - min * 60000).toISOString()
+    const inst = 'salao-' + String(corpo.salao ?? '').replace(/-/g, '')
+    if (localStorage.getItem('mimo-demo-whats') === 'caido') return {
+      ok: true, evolution: true, situacao: 'proprio_caido',
+      instancia: { nome: inst, existe: true, estado: 'close', numero: '+55 (13) 99871-0002', perfil: 'Studio Mel', criada_em: h(60 * 24 * 12), caiu_em: h(190), motivo_queda: '401', mensagens: 1840, conversas: 212 },
+      webhook: { existe: true, ligado: true, certo: true, eventos: ['MESSAGES_UPSERT', 'MESSAGES_UPDATE'], falta_mensagens: false },
+      canal: { canal: 'evolution', identificador: inst, numero_exibicao: '+55 (13) 99871-0002', ativo: true, numero_proprio: true, conectado_em: h(60 * 24 * 12), usa_bot: true, usa_ia: true },
+      casa: null, ultima_recebida: h(200), ultima_enviada: h(195), ultima_falha: { quando: h(40), tipo: 'lembrete', erro: 'Connection Closed' },
+    }
+    return {
+      ok: true, evolution: true, situacao: 'proprio_ok',
+      instancia: { nome: inst, existe: true, estado: 'open', numero: '+55 (13) 99871-0002', perfil: 'Studio Mel', criada_em: h(60 * 24 * 12), caiu_em: null, motivo_queda: null, mensagens: 1840, conversas: 212 },
+      webhook: { existe: true, ligado: true, certo: true, eventos: ['MESSAGES_UPSERT', 'MESSAGES_UPDATE'], falta_mensagens: false },
+      canal: { canal: 'evolution', identificador: inst, numero_exibicao: '+55 (13) 99871-0002', ativo: true, numero_proprio: true, conectado_em: h(60 * 24 * 12), usa_bot: true, usa_ia: true },
+      casa: null, ultima_recebida: h(4), ultima_enviada: h(3), ultima_falha: null,
+    }
+  }
   if (corpo.acao === 'estado') {
     if (e.pendente && Date.now() - e.pendente.desde > 8000) {
       e.numero_proprio = true; e.numero = e.pendente.numero; e.conectado_em = new Date().toISOString(); e.pendente = null; gravar(e)

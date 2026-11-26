@@ -16223,3 +16223,92 @@ label.a-partir-opcao .a-partir-opcao-texto { flex: 1; }
 @media (min-width: 1080px) {
   .cliente-shell .topbar-cliente .brand-inline { visibility: hidden; }
 }
+
+/* 4.12: o WhatsApp de cada salão na Plataforma (instância da Evolution ao vivo) */
+.inst-wa { border: 1px solid var(--fio); border-radius: 14px; padding: 1rem 1.1rem; margin-bottom: 1.4rem; background: #fff; }
+.inst-wa-carmim { border-color: #f6b9c6; background: #fff8f9; }
+.inst-wa-ambar { border-color: #f3dca4; background: #fffdf6; }
+.inst-wa-topo { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
+.inst-wa-topo .btn-mini { display: inline-flex; align-items: center; gap: 0.35rem; white-space: nowrap; }
+.inst-wa-frase { margin: 0.5rem 0 0; font-size: 0.9rem; color: var(--texto-2); max-width: 46rem; }
+.inst-wa-aviso { margin: 0.9rem 0 0; padding: 0.65rem 0.8rem; border-radius: 10px; background: #fde2e8; color: var(--carmim); font-size: 0.85rem; }
+.inst-wa-grade { display: grid; grid-template-columns: 1fr 1fr; gap: 1.6rem; margin-top: 1.1rem; }
+.inst-wa h4 { margin: 0 0 0.5rem; font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--texto-2); font-weight: 600; }
+.inst-wa dl { margin: 0; }
+.inst-wa dl > div { display: grid; grid-template-columns: 8.5rem 1fr; gap: 0.6rem; padding: 0.42rem 0; border-bottom: 1px solid var(--fio); font-size: 0.87rem; }
+.inst-wa dl > div:last-child { border-bottom: 0; }
+.inst-wa dt { color: var(--texto-2); }
+.inst-wa dd { margin: 0; min-width: 0; overflow-wrap: anywhere; display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; }
+.inst-wa code { font-size: 0.78rem; background: var(--cinza-1); padding: 0.1rem 0.35rem; border-radius: 6px; overflow-wrap: anywhere; }
+.inst-wa-copiar { border: 0; background: none; padding: 0.2rem; color: var(--texto-2); cursor: pointer; display: inline-flex; }
+.inst-wa-copiar:hover { color: var(--rosa); }
+.diag-wa-tit { margin: 1.2rem 0 0.6rem; }
+@media (max-width: 760px) {
+  .inst-wa-grade { grid-template-columns: 1fr; gap: 1.1rem; }
+  .inst-wa-topo { flex-direction: column; }
+  .inst-wa dl > div { grid-template-columns: 7rem 1fr; }
+}
+.plat-whats { display: inline-flex; align-items: baseline; gap: 0.4rem; font-size: 0.8rem; font-weight: 500; color: var(--texto-2); text-decoration: none; margin-top: 0.15rem; }
+.plat-whats i { width: 0.5rem; height: 0.5rem; border-radius: 50%; background: #b9bcc6; flex: none; }
+.plat-whats-menta i { background: #12a06a; } .plat-whats-azul i { background: var(--azul); } .plat-whats-ambar i { background: #e0a100; }
+.plat-whats-carmim { color: var(--carmim); font-weight: 600; } .plat-whats-carmim i { background: var(--carmim); }
+.plat-whats:hover { text-decoration: underline; }
+.plat-chip-alerta { color: var(--carmim); border-color: #f6b9c6; }
+.plat-chip-alerta.ativo { background: #fde2e8; color: var(--carmim); border-color: #f6b9c6; }
+
+/* 4.12: a aba WhatsApp do salão (Plataforma): topo com o número, três partes, conversas por número */
+.wsal-topo { display: grid; grid-template-columns: 1fr auto; gap: 0.6rem 1rem; align-items: center; border: 1px solid var(--fio); border-radius: 14px; padding: 1rem 1.1rem; background: #fff; }
+.wsal-topo.wsal-menta { border-color: #bfe9d3; background: #f6fcf9; }
+.wsal-topo.wsal-carmim { border-color: #f6b9c6; background: #fff8f9; }
+.wsal-topo.wsal-ambar { border-color: #f3dca4; background: #fffdf6; }
+.wsal-topo-num { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; }
+.wsal-topo-num small { font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--texto-2); font-weight: 600; }
+.wsal-topo-num strong { font-size: 1.45rem; letter-spacing: -0.01em; }
+.wsal-topo-num span { font-size: 0.85rem; color: var(--texto-2); }
+.wsal-topo-sit { display: flex; flex-direction: column; align-items: flex-end; gap: 0.5rem; }
+.wsal-topo-sit .btn-mini { display: inline-flex; align-items: center; gap: 0.35rem; white-space: nowrap; }
+.wsal-topo-frase { grid-column: 1 / -1; margin: 0; font-size: 0.88rem; color: var(--texto-2); }
+.wsal-nums { list-style: none; margin: 0.8rem 0 0; padding: 0; display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.6rem; }
+.wsal-nums li { border: 1px solid var(--fio); border-radius: 12px; padding: 0.6rem 0.8rem; display: flex; flex-direction: column; background: #fff; }
+.wsal-nums strong { font-size: 1.15rem; } .wsal-nums span { font-size: 0.76rem; color: var(--texto-2); }
+.wsal-nums li.ruim strong { color: var(--carmim); }
+.wsal-partes { margin: 1.1rem 0 0.9rem; }
+.wsal .inst-wa { margin-bottom: 0; }
+.wsal-conv { display: grid; grid-template-columns: minmax(15rem, 20rem) 1fr; border: 1px solid var(--fio); border-radius: 14px; overflow: hidden; height: 34rem; background: #fff; }
+.wsal-lista { border-right: 1px solid var(--fio); display: flex; flex-direction: column; min-height: 0; }
+.wsal-busca { display: flex; align-items: center; gap: 0.45rem; margin: 0.7rem 0.7rem 0.4rem; padding: 0.45rem 0.65rem; border: 1px solid var(--fio); border-radius: 10px; color: var(--texto-2); }
+.wsal-busca input { border: 0; outline: 0; font: inherit; font-size: 0.87rem; width: 100%; min-width: 0; background: none; }
+.wsal-so { display: flex; align-items: center; gap: 0.4rem; margin: 0 0.8rem 0.5rem; font-size: 0.78rem; color: var(--texto-2); }
+.wsal-lista ul { list-style: none; margin: 0; padding: 0; overflow-y: auto; flex: 1; border-top: 1px solid var(--fio); }
+.wsal-lista li button { width: 100%; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--fio); padding: 0.65rem 0.85rem; font: inherit; cursor: pointer; display: flex; flex-direction: column; gap: 0.12rem; }
+.wsal-lista li button:hover { background: #fafafc; } .wsal-lista li button.ativa { background: #fff0f5; }
+.wsal-quem { display: flex; justify-content: space-between; gap: 0.5rem; align-items: baseline; }
+.wsal-quem strong { font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wsal-quem time { font-size: 0.72rem; color: var(--texto-2); white-space: nowrap; }
+.wsal-fone, .wsal-conta { font-size: 0.74rem; color: var(--texto-2); }
+.wsal-conta b { color: var(--carmim); font-weight: 600; }
+.wsal-previa { font-size: 0.82rem; color: var(--texto-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wsal-fio { display: flex; flex-direction: column; min-height: 0; min-width: 0; background: #f7f6f9; }
+.wsal-fio-vazio { margin: auto; padding: 2rem; text-align: center; max-width: 22rem; }
+.wsal-fio header { display: flex; align-items: center; gap: 0.7rem; padding: 0.7rem 0.9rem; background: #fff; border-bottom: 1px solid var(--fio); }
+.wsal-fio header div { display: flex; flex-direction: column; flex: 1; min-width: 0; } .wsal-fio header span { font-size: 0.78rem; }
+.wsal-voltar { display: none; border: 0; background: none; padding: 0.3rem; cursor: pointer; color: var(--texto-2); }
+.wsal-baloes { flex: 1; overflow-y: auto; padding: 0.9rem; display: flex; flex-direction: column; gap: 0.45rem; }
+.wsal-linha { display: flex; flex-direction: column; gap: 0.45rem; }
+.wsal-dia { text-align: center; margin: 0.4rem 0 0.1rem; } .wsal-dia span { font-size: 0.72rem; background: #e9e7ee; color: var(--texto-2); padding: 0.15rem 0.6rem; border-radius: 999px; }
+.wsal-balao { max-width: min(78%, 32rem); padding: 0.5rem 0.7rem; border-radius: 12px; background: #fff; border: 1px solid var(--fio); align-self: flex-start; }
+.wsal-balao.saiu { align-self: flex-end; background: #e7f8ee; border-color: #cdebd9; }
+.wsal-balao.falhou { background: #fde8ec; border-color: #f6b9c6; }
+.wsal-balao p { margin: 0; font-size: 0.88rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+.wsal-tipo { display: block; font-size: 0.66rem; letter-spacing: 0.05em; text-transform: uppercase; font-weight: 600; color: #0d7a4f; margin-bottom: 0.15rem; }
+.wsal-balao.falhou .wsal-tipo, .wsal-erro { color: var(--carmim); }
+.wsal-pe { display: block; font-size: 0.7rem; color: var(--texto-2); margin-top: 0.2rem; }
+.wsal-erro { display: block; font-size: 0.72rem; margin-top: 0.15rem; }
+.wsal-mais { align-self: center; }
+@media (max-width: 860px) {
+  .wsal-nums { grid-template-columns: repeat(2, 1fr); }
+  .wsal-topo { grid-template-columns: 1fr; } .wsal-topo-sit { flex-direction: row; align-items: center; flex-wrap: wrap; }
+  .wsal-conv { grid-template-columns: 1fr; }
+  .wsal-conv .wsal-fio { display: none; } .wsal-conv.aberta .wsal-fio { display: flex; } .wsal-conv.aberta .wsal-lista { display: none; }
+  .wsal-voltar { display: inline-flex; }
+}

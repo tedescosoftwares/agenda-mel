@@ -663,6 +663,36 @@ const RPC = {
   definir_config_publica: ({ chave_, valor_ }) => { CONFIG_PUBLICA_DEMO[chave_] = valor_; return null },   // 3.99.1
   guia_instagram_numeros: ({ dias_ }) => { const f = Number(dias_ ?? 30) / 30; const k = (v) => Math.round(v * f); return { dias: dias_, convites: k(412), seguir: k(164), seguir_pessoas: k(149), seguir_do_convite: k(96), direto: k(287), contatos: k(640), por_area: { insta_modal: k(96), whats_sim: k(27), insta_cartao: k(14), insta_lista: k(9), insta_pedido: k(8), whats_nao: k(6), insta_rodape: k(4) } } },   // 3.99.2 (4.2.1: whats_sim e whats_nao)
   config_publica: () => ({ ...CONFIG_PUBLICA_DEMO, vapid_public: 'BDEMO', app_url: 'https://mimo.com.vc', ia_agente: 'ligado', ia_modelo: 'openai/gpt-oss-120b', ia_provedor: 'claude', ia_modelo_claude: 'claude-haiku-5-5' }),
+  plataforma_whats_resumo: () => ({ conversas_30d: 212, chegaram_30d: 1184, sairam_30d: 1967, falharam_30d: localStorage.getItem('mimo-demo-whats') === 'caido' ? 14 : 2, na_fila: 0 }),
+  plataforma_whats_conversas: (p) => {
+    const h = (min) => new Date(Date.now() - min * 60000).toISOString()
+    const caido = localStorage.getItem('mimo-demo-whats') === 'caido'
+    const todas = [
+      { telefone: '5513991203410', nome: 'Juliana Prado', ultima: h(4), ultimo_texto: 'Perfeito, te espero amanhã às 14h!', ultimo_lado: 'saiu', chegaram: 6, sairam: 7, falharam: 0 },
+      { telefone: '5513988112233', nome: 'Carla Menezes', ultima: h(38), ultimo_texto: 'Lembrete: você tem horário amanhã, 10h, com a Ana.', ultimo_lado: 'saiu', chegaram: 2, sairam: 5, falharam: caido ? 2 : 0 },
+      { telefone: '5513997654321', nome: null, ultima: h(95), ultimo_texto: 'vcs fazem progressiva?', ultimo_lado: 'chegou', chegaram: 3, sairam: 3, falharam: 0 },
+      { telefone: '5513996001122', nome: 'Patrícia Lima', ultima: h(60 * 26), ultimo_texto: 'Seu horário de sexta foi confirmado.', ultimo_lado: 'saiu', chegaram: 1, sairam: 3, falharam: 1 },
+      { telefone: '5511987650000', nome: 'Renata Souza', ultima: h(60 * 50), ultimo_texto: 'obrigada!', ultimo_lado: 'chegou', chegaram: 4, sairam: 4, falharam: 0 },
+    ]
+    const b = String(p?.busca ?? '').toLowerCase(), bd = b.replace(/\D/g, '')
+    return todas.filter((c) => (!p?.so_falhas || c.falharam > 0) && (!b || (c.nome || '').toLowerCase().includes(b) || (bd && c.telefone.includes(bd))))
+  },
+  plataforma_whats_mensagens: (p) => {
+    const h = (min) => new Date(Date.now() - min * 60000).toISOString()
+    if (p?.antes) return []
+    if (p?.tel === '5513988112233') return [
+      { id: 's9', quando: h(38), lado: 'saiu', texto: 'Lembrete: você tem horário amanhã, 10h, com a Ana. Responda 1 para confirmar ou 2 para desmarcar.', tipo: 'lembrete', status: 'falhou', erro: 'Connection Closed' },
+      { id: 's8', quando: h(60 * 27), lado: 'saiu', texto: 'Seu horário foi confirmado: quinta, 10h, Escova com a Ana.', tipo: 'confirmacao', status: 'lido' },
+    ]
+    return [
+      { id: 's6', quando: h(4), lado: 'saiu', texto: 'Perfeito, te espero amanhã às 14h!', tipo: 'agente', status: 'entregue' },
+      { id: 'e5', quando: h(5), lado: 'chegou', texto: 'pode ser 14h', via: 'bot', entendeu: 'bot:marcou · agendar' },
+      { id: 's4', quando: h(6), lado: 'saiu', texto: 'Amanhã a Ana tem 14h ou 16h30 para escova. Qual prefere?', tipo: 'agente', status: 'lido' },
+      { id: 'e3', quando: h(7), lado: 'chegou', texto: 'Oi! Tem horário amanhã pra escova?', via: 'ia', entendeu: 'bot:perguntou · agendar' },
+      { id: 's2', quando: h(60 * 24 * 6), lado: 'saiu', texto: 'Lembrete: você tem horário hoje, 15h, com a Camila.', tipo: 'lembrete', status: 'lido' },
+      { id: 's1', quando: h(60 * 24 * 7), lado: 'saiu', texto: 'Seu horário foi confirmado: sexta, 15h, Manicure com a Camila.', tipo: 'confirmacao', status: 'lido' },
+    ]
+  },
   relogio_status: () => ({ ligado: true, jobs: [{ nome: 'mimo-fila', agenda: '* * * * *', ativo: true, ultima: new Date().toISOString(), status: 'succeeded' }, { nome: 'mimo-rotinas', agenda: '*/5 * * * *', ativo: true, ultima: new Date().toISOString(), status: 'succeeded' }] }),
   diagnostico_whatsapp: () => [{ item: 'Canal', situacao: 'ok', detalhe: 'Evolution, instância 11' }, { item: 'Número', situacao: 'ok', detalhe: '+55 13 99171-9086' }, { item: 'IA', situacao: 'ok', detalhe: 'ligada · 12 chamadas hoje' }],
   // a aba Mensagens da área WhatsApp (3.96.2): algumas que saíram e chegaram hoje, com as colunas de verdade

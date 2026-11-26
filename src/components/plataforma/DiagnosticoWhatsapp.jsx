@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabase'
 
 // 3.96: o diagnóstico técnico do WhatsApp de um salão, só na Plataforma (aba WhatsApp da página do salão). Saiu da
 // área do salão, que ficou com o que a dona usa. Responde "por que a mensagem não chegou": o canal, as regras, o
-// relógio (pg_cron), o que chegou e como foi entendido (regra, IA, bot) e a fila crua, com o texto exato.
+// relógio (pg_cron). 4.12: o que chegou e o que saiu viraram a parte Conversas (WhatsappDoSalao), por número.
 
 function checagemDoRelogio(r) {
   if (!r) return { item: 'Relógio (pg_cron)', situacao: 'falta', detalhe: 'sem resposta do banco — a migração 052 já rodou?' }
@@ -20,19 +20,8 @@ function checagemDoRelogio(r) {
 
 const CORES = { ok: 'ok', falta: 'ruim', desligado: 'ruim', parcial: 'atencao', atenção: 'atencao' }
 
-function quando(iso) {
-  if (!iso) return ''
-  const d = new Date(iso)
-  const mesmoDia = d.toDateString() === new Date().toDateString()
-  const hora = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-  return mesmoDia ? hora : d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) + ' ' + hora
-}
-
 export default function DiagnosticoWhatsapp({ salaoId }) {
   const [checagens, setChecagens] = useState([])
-  const [fila, setFila] = useState([])
-  const [leituras, setLeituras] = useState([])
-  const [aberta, setAberta] = useState(null)
   const [loading, setLoading] = useState(true)
   const [erro, setErro] = useState('')
 
@@ -42,17 +31,13 @@ export default function DiagnosticoWhatsapp({ salaoId }) {
     let vivo = true
     Promise.all([
       supabase.rpc('diagnostico_whatsapp', { salao: salaoId }),
-      supabase.rpc('fila_do_salao', { salao: salaoId, quantas: 40 }),
-      supabase.rpc('leituras_recentes', { salao: salaoId, quantas: 30 }),
       supabase.rpc('relogio_status'),
-    ]).then(([diag, msgs, lidas, relogio]) => {
+    ]).then(([diag, relogio]) => {
       if (!vivo) return
-      const falhou = diag.error || msgs.error || lidas.error
+      const falhou = diag.error
       if (falhou) setErro('Erro ao carregar: ' + falhou.message + (/permission|administra/i.test(falhou.message) ? ' (a migração 240 já rodou?)' : ''))
       else {
         setChecagens([...(diag.data ?? []), checagemDoRelogio(relogio.data)])
-        setFila(msgs.data ?? [])
-        setLeituras(lidas.data ?? [])
         setErro('')
       }
       setLoading(false)
@@ -61,7 +46,6 @@ export default function DiagnosticoWhatsapp({ salaoId }) {
   }, [salaoId, versao])
 
   const problemas = checagens.filter((c) => c.situacao !== 'ok').length
-  const pelaIa = leituras.filter((l) => l.via === 'ia').length
 
   return (
     <div className="diag-wa">
@@ -82,40 +66,6 @@ export default function DiagnosticoWhatsapp({ salaoId }) {
         ))}
       </ul>
 
-      <h4 className="diag-wa-tit">O que chegou <small className="muted">{leituras.length ? (pelaIa === 0 ? 'todas pelas regras, sem IA' : `${pelaIa} de ${leituras.length} pela IA`) : ''}</small></h4>
-      {leituras.length === 0 ? <p className="muted">Nada chegou ainda.</p> : (
-        <ul className="wa-fila">
-          {leituras.map((l, i) => (
-            <li key={i} className="wa-lida">
-              <span className={'wa-via wa-via-' + l.via}>{l.via}</span>
-              <span className="wa-lida-texto">{l.texto || '(sem texto)'}</span>
-              <span className="wa-lida-seta" aria-hidden="true">→</span>
-              <span className="wa-lida-acao">{l.entendeu}{l.intencao ? ` · ${l.intencao}` : ''}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      <h4 className="diag-wa-tit">Fila de saída</h4>
-      {!loading && fila.length === 0 && <p className="muted">Nada na fila ainda.</p>}
-      <ul className="wa-fila">
-        {fila.map((m) => (
-          <li key={m.id} className="wa-msg">
-            <button className="wa-msg-topo" onClick={() => setAberta(aberta === m.id ? null : m.id)} aria-expanded={aberta === m.id}>
-              <span className={'wa-status wa-' + m.status}>{m.status}</span>
-              <span className="wa-msg-tipo">{m.tipo}</span>
-              <span className="wa-msg-para">{m.para}</span>
-              <span className="wa-msg-quando">{quando(m.quando)}</span>
-            </button>
-            {aberta === m.id && (
-              <div className="wa-msg-corpo">
-                <pre>{m.corpo}</pre>
-                <a className="btn-mini" href={m.link_wa} target="_blank" rel="noreferrer">abrir no WhatsApp</a>
-              </div>
-            )}
-          </li>
-        ))}
-      </ul>
     </div>
   )
 }

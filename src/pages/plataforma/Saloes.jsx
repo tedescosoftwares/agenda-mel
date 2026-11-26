@@ -9,9 +9,11 @@ import { User, MapPin, Pencil, Check as CheckIcon, BookOpen, Trash2 } from 'luci
 import Portal from '../../components/Portal'
 import ApagarModal from '../../components/plataforma/ApagarModal'
 import Mensalidades from '../../components/plataforma/Mensalidades'
-import DiagnosticoWhatsapp from '../../components/plataforma/DiagnosticoWhatsapp'
+import WhatsappDoSalao from '../../components/plataforma/WhatsappDoSalao'
 import { formatarCnpj, formatarCpf } from '../../lib/cnpj'
 import { linkDaProfissional } from '../../lib/endereco'
+import { chamar } from '../../lib/pagamento'
+import { situacaoDe, FORA_DO_AR, haQuanto } from '../../lib/instanciaWhats'
 
 // Salões e autônomas: a lista de unidades com tamanho e ações, o
 // checklist de implantação de quem ainda não começou, e o ranking do
@@ -33,13 +35,22 @@ export default function Saloes() {
 
   const carregar = () => supabase.rpc('plataforma_saloes').then(({ data, error }) => { if (error) setErro(error.message); setLista(data ?? []) })
   useEffect(() => { carregar() }, [])
+  // 4.12: o WhatsApp de cada salão, ao vivo (a Evolution responde por todos de uma vez). Se ela não responder, a lista
+  // segue sem a etiqueta: é informação a mais, não trava a tela.
+  const [whats, setWhats] = useState(null)   // { [salon_id]: { situacao, numero, caiu_em } }
+  const [soCaidos, setSoCaidos] = useState(false)
+  useEffect(() => {
+    chamar('assistente', { acao: 'instancias' }).then((r) => setWhats(Object.fromEntries((r?.saloes ?? []).map((x) => [x.salon_id, x])))).catch(() => setWhats({}))
+  }, [])
+  const situacaoDo = (s) => (whats ? whats[s.id]?.situacao ?? 'sem_canal' : null)
 
   const t = busca.trim().toLowerCase()
-  const vis = useMemo(() => (lista ?? []).filter((s) => (!soAtivos || s.ativo) && (!semAtendimento || s.atendimentos === 0) && (tipo === 'todos' || s.tipo === tipo) && (!t || s.nome.toLowerCase().includes(t) || (s.dona || '').toLowerCase().includes(t) || (s.cidade || '').toLowerCase().includes(t) || (s.codigo || '').toLowerCase() === t)), [lista, t, tipo, soAtivos, semAtendimento])
+  const vis = useMemo(() => (lista ?? []).filter((s) => (!soAtivos || s.ativo) && (!semAtendimento || s.atendimentos === 0) && (!soCaidos || FORA_DO_AR.has(whats?.[s.id]?.situacao)) && (tipo === 'todos' || s.tipo === tipo) && (!t || s.nome.toLowerCase().includes(t) || (s.dona || '').toLowerCase().includes(t) || (s.cidade || '').toLowerCase().includes(t) || (s.codigo || '').toLowerCase() === t)), [lista, t, tipo, soAtivos, semAtendimento, soCaidos, whats])
   const alternar = (id) => setSel((x) => { const n = new Set(x); if (n.has(id)) n.delete(id); else n.add(id); return n })
   const todosVis = vis.length > 0 && vis.every((s) => sel.has(s.id))
   const ativos = (lista ?? []).filter((s) => s.ativo)
   const implantacao = ativos.filter((s) => s.atendimentos === 0)
+  const caidos = ativos.filter((s) => FORA_DO_AR.has(whats?.[s.id]?.situacao))
   const top = [...ativos].sort((a, b) => b.atendimentos_mes - a.atendimentos_mes).slice(0, 3)
   const maxMes = Math.max(1, ...top.map((s) => s.atendimentos_mes))
 
@@ -85,6 +96,7 @@ export default function Saloes() {
               {[['todos', 'Todos'], ['salao', 'Salões'], ['autonoma', 'Autônomas']].map(([k, r]) => <button key={k} className={'plat-chip' + (tipo === k ? ' ativo' : '')} onClick={() => setTipo(k)}>{r}</button>)}
               <button className={'plat-chip' + (soAtivos ? ' ativo' : '')} onClick={() => setSoAtivos((v) => !v)}>● {soAtivos ? 'Ativos' : 'Todos os status'}</button>
               <button className={'plat-chip' + (semAtendimento ? ' ativo' : '')} onClick={() => setSemAtendimento((v) => !v)}>Sem atendimento</button>
+              {(caidos.length > 0 || soCaidos) && <button className={'plat-chip plat-chip-alerta' + (soCaidos ? ' ativo' : '')} onClick={() => setSoCaidos((v) => !v)}>WhatsApp caído ({caidos.length})</button>}
             </div>
           </div>
 
@@ -114,6 +126,7 @@ export default function Saloes() {
                       <span className="muted"><User size={13} /> {s.dona || 'sem dona ainda'}</span>
                       <span className="muted"><MapPin size={13} /> {s.cidade || 'sem cidade'}</span>
                       <span className="muted">▦ Código: {s.codigo}</span>
+                      <WhatsDoSalao id={s.id} situacao={situacaoDo(s)} dado={whats?.[s.id]} />
                     </div>
                     <div className="plat-unidade-nums">
                       <span><strong>{s.profissionais}</strong><small>{s.profissionais === 1 ? 'profissional' : 'profissionais'}</small></span>
@@ -194,6 +207,18 @@ export default function Saloes() {
   )
 }
 
+// 4.12: a etiqueta do WhatsApp na linha do salão; leva para a aba WhatsApp dele
+function WhatsDoSalao({ id, situacao, dado }) {
+  if (!situacao) return null
+  const sit = situacaoDe(situacao)
+  const caiu = FORA_DO_AR.has(situacao) ? haQuanto(dado?.caiu_em) : null
+  return (
+    <Link to={`/plataforma/saloes/${id}?aba=whatsapp`} className={'plat-whats plat-whats-' + sit.tom} title={sit.frase}>
+      <i aria-hidden="true" /> {sit.lista}{caiu ? ` · ${caiu}` : ''}
+    </Link>
+  )
+}
+
 function Check({ ok, titulo }) {
   return <li className={ok ? 'ok' : ''}><span className="plat-check">{ok ? <CheckIcon size={12} /> : ''}</span><span>{titulo}</span><Pilula tom={ok ? 'menta' : 'cinza'}>{ok ? 'Concluído' : 'Pendente'}</Pilula></li>
 }
@@ -243,9 +268,9 @@ export function Salao() {
             <div className="abas plat-abas">
               {[['cadastro', 'Cadastro'], ['mensalidades', 'Mensalidades'], ['equipe', `Equipe (${d.equipe?.length ?? 0})`], ['clientes', `Clientes (${d.clientes?.length ?? 0})`], ['ultimos', 'Últimos horários'], ['whatsapp', 'WhatsApp']].map(([k, r]) => <button key={k} className={aba === k ? 'aba active' : 'aba'} onClick={() => setAba(k)}>{r}</button>)}
             </div>
-            <Painel titulo={aba === 'cadastro' ? 'Ficha cadastral' : aba === 'mensalidades' ? 'Mensalidades da MIMO' : aba === 'equipe' ? 'Equipe' : aba === 'clientes' ? 'Clientes vinculadas' : aba === 'whatsapp' ? 'WhatsApp (técnico)' : 'Últimos 30 horários'}>
+            <Painel titulo={aba === 'cadastro' ? 'Ficha cadastral' : aba === 'mensalidades' ? 'Mensalidades da MIMO' : aba === 'equipe' ? 'Equipe' : aba === 'clientes' ? 'Clientes vinculadas' : aba === 'whatsapp' ? 'WhatsApp do salão' : 'Últimos 30 horários'}>
               {aba === 'cadastro' && <FichaCadastral s={s} dona={d.dona} />}
-              {aba === 'whatsapp' && <DiagnosticoWhatsapp salaoId={id} />}
+              {aba === 'whatsapp' && <WhatsappDoSalao salaoId={id} />}
               {aba === 'mensalidades' && <Mensalidades salao={id} onMudou={carregar} />}
               {aba === 'equipe' && (
                 <table className="plat-tabela"><thead><tr><th>Profissional</th><th>Código</th><th>Trouxe</th><th>Atendimentos</th><th>Status</th></tr></thead><tbody>

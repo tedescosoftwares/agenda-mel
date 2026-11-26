@@ -8,12 +8,20 @@
 //   testar       conversa com a assistente como se fosse uma cliente, com a personalidade da tela (mesmo a não salva).
 //                Lê serviços, equipe e horários de verdade; não marca nada nem chama ninguém. Tem teto: 40 por hora.
 //
+// 4.12, só para a Plataforma (eh_plataforma): o WhatsApp de cada salão visto de fora, ao vivo.
+//   instancias   todos os salões com canal: a situação de cada um (número próprio no ar, caído, número da casa…)
+//   instancia    um salão de perto: a instância na Evolution (estado, número, quando caiu), o webhook, o que o banco
+//                anotou e a última mensagem que chegou e que saiu. Só lê: não anota nada no canal do salão.
+//   reapontar    aponta de novo o webhook da instância do salão para o whatsapp-webhook
+//
 // Quem chama é quem administra o salão (is_admin_do_salao, com o token dela); o resto roda com a chave de serviço.
 // A Evolution é a mesma de sempre (EVOLUTION_URL, EVOLUTION_API_KEY); o webhook é o whatsapp-webhook
 // (EVOLUTION_WEBHOOK_TOKEN), que reconhece a instância do salão pelo canal dele.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { conversar, registroDaConversa } from '../_shared/agente.ts'
+import { numeroBonito, fichaDaInstancia, situacaoDoCanal, webhookDa, txt, type Obj } from '../_shared/instancia.ts'
+export { numeroBonito }
 
 const URL_SUPABASE = Deno.env.get('SUPABASE_URL') ?? ''
 const CHAVE_ANON = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
@@ -70,11 +78,6 @@ export function numeroLimpo(n: unknown): string | null {
   if (d.length === 10 || d.length === 11) d = '55' + d
   return d.length >= 12 && d.length <= 15 ? d : null
 }
-export function numeroBonito(d: string): string {
-  if (d.startsWith('55') && d.length === 13) return `+55 (${d.slice(2, 4)}) ${d.slice(4, 9)}-${d.slice(9)}`
-  if (d.startsWith('55') && d.length === 12) return `+55 (${d.slice(2, 4)}) ${d.slice(4, 8)}-${d.slice(8)}`
-  return `+${d}`
-}
 
 // o número que conectou, pelo ownerJid da instância
 async function numeroDaInstancia(inst: string): Promise<string | null> {
@@ -87,6 +90,75 @@ async function numeroDaInstancia(inst: string): Promise<string | null> {
   return d.length >= 10 ? numeroBonito(d) : null
 }
 
+async function daPlataforma(acao: string, corpo: Obj): Promise<Response> {
+  const servico = createClient(URL_SUPABASE, CHAVE_SERVICO, { auth: { persistSession: false } })
+  const casa = v('EVOLUTION_INSTANCIA') || null
+  const segredos = { evolution: !!(v('EVOLUTION_URL') && v('EVOLUTION_API_KEY')), webhook: !!v('EVOLUTION_WEBHOOK_TOKEN') }
+
+  if (acao === 'instancias') {
+    const [{ data: canais, error }, r] = await Promise.all([
+      servico.from('whatsapp_channels').select('salon_id, canal, identificador, numero_exibicao, ativo, numero_proprio, conectado_em'),
+      evolution('/instance/fetchInstances'),
+    ])
+    if (error) return json({ erro: error.message }, 500)
+    const fichas = new Map<string, ReturnType<typeof fichaDaInstancia>>()
+    for (const b of (Array.isArray(r.json) ? r.json : [])) { const f = fichaDaInstancia(b); if (f.nome) fichas.set(f.nome, f) }
+    const daCasa = casa ? fichas.get(casa)?.estado ?? null : null
+    const saloes = (canais ?? []).map((c) => {
+      const f = fichas.get(instanciaDo(String(c.salon_id)))
+      const casaDele = !c.numero_proprio && c.identificador ? fichas.get(String(c.identificador))?.estado ?? daCasa : daCasa
+      return {
+        salon_id: c.salon_id, situacao: situacaoDoCanal(c as Obj, f?.estado ?? null, casaDele, r.ok),
+        numero: (c.numero_proprio ? f?.numero : null) ?? c.numero_exibicao ?? null, conectado_em: c.conectado_em, caiu_em: f?.caiu_em ?? null,
+      }
+    })
+    return json({ ok: true, evolution: r.ok, erro: r.ok ? null : r.erro, casa: casa ? { instancia: casa, estado: daCasa } : null, saloes, segredos })
+  }
+
+  const salao = String(corpo.salao ?? '')
+  if (!/^[0-9a-f-]{36}$/i.test(salao)) return json({ erro: 'qual salão?' }, 400)
+  const inst = instanciaDo(salao)
+
+  if (acao === 'reapontar') {
+    const token = v('EVOLUTION_WEBHOOK_TOKEN')
+    if (!token || !URL_SUPABASE) return json({ erro: 'falta o EVOLUTION_WEBHOOK_TOKEN nos segredos' }, 500)
+    const w = await evolution(`/webhook/set/${encodeURIComponent(inst)}`, 'POST', { webhook: { enabled: true, url: `${URL_SUPABASE}/functions/v1/whatsapp-webhook?token=${token}`, byEvents: false, base64: false, events: ['MESSAGES_UPSERT', 'MESSAGES_UPDATE'] } })
+    if (!w.ok) return json({ erro: w.status === 404 ? 'este salão não tem instância na Evolution' : `não deu para apontar o webhook: ${w.erro}` }, 502)
+    return json({ ok: true })
+  }
+
+  // instancia: um salão de perto
+  const [{ data: canal }, lista, wh, { data: recebida }, { data: enviada }, { data: falha }] = await Promise.all([
+    servico.from('whatsapp_channels').select('canal, identificador, numero_exibicao, ativo, numero_proprio, conectado_em, usa_bot, usa_ia').eq('salon_id', salao).maybeSingle(),
+    evolution(`/instance/fetchInstances?instanceName=${encodeURIComponent(inst)}`),
+    evolution(`/webhook/find/${encodeURIComponent(inst)}`),
+    servico.from('whatsapp_inbox').select('recebido_em').eq('salon_id', salao).order('recebido_em', { ascending: false }).limit(1).maybeSingle(),
+    servico.from('message_outbox').select('enviado_em').eq('salon_id', salao).not('enviado_em', 'is', null).order('enviado_em', { ascending: false }).limit(1).maybeSingle(),
+    servico.from('message_outbox').select('criado_em, erro, kind').eq('salon_id', salao).eq('status', 'falhou').order('criado_em', { ascending: false }).limit(1).maybeSingle(),
+  ])
+  const brutos = Array.isArray(lista.json) ? lista.json : lista.json && lista.ok ? [lista.json] : []
+  const achou = brutos.map(fichaDaInstancia).find((f) => f.nome === inst) ?? null
+  // a Evolution responde 404 (ou lista vazia) quando a instância não existe; qualquer outro erro é ela fora do ar
+  const evolutionOk = lista.ok || lista.status === 404
+  const usaCasa = !!canal && !canal.numero_proprio && canal.canal === 'evolution'
+  const nomeCasa = usaCasa ? (txt(canal?.identificador) ?? casa) : null
+  let estadoCasa: string | null = null
+  if (nomeCasa) {
+    const rc = await evolution(`/instance/connectionState/${encodeURIComponent(nomeCasa)}`)
+    estadoCasa = rc.status === 404 ? 'nao_existe' : rc.ok ? (estadoDa(rc.json) || 'desconhecido') : null
+  }
+  return json({
+    ok: true, evolution: evolutionOk, erro: evolutionOk ? null : lista.erro, segredos,
+    situacao: situacaoDoCanal(canal as Obj | null, achou?.estado ?? null, estadoCasa, evolutionOk),
+    instancia: { ...(achou ?? {}), nome: inst, existe: !!achou },
+    webhook: achou ? webhookDa(wh.ok ? wh.json : null, URL_SUPABASE) : null,
+    canal: canal ?? null,
+    casa: nomeCasa ? { instancia: nomeCasa, estado: estadoCasa } : null,
+    ultima_recebida: recebida?.recebido_em ?? null, ultima_enviada: enviada?.enviado_em ?? null,
+    ultima_falha: falha ? { quando: falha.criado_em, erro: falha.erro, tipo: falha.kind } : null,
+  })
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return json({ ok: true })
   if (req.method !== 'POST') return json({ erro: 'use POST' }, 405)
@@ -96,6 +168,13 @@ Deno.serve(async (req) => {
   try { corpo = await req.json() } catch { /* vazio */ }
   const acao = String(corpo.acao ?? '')
   const salao = String(corpo.salao ?? '')
+
+  if (acao === 'instancias' || acao === 'instancia' || acao === 'reapontar') {
+    const eu = createClient(URL_SUPABASE, CHAVE_ANON, { global: { headers: { Authorization: auth } }, auth: { persistSession: false } })
+    const { data: plat, error: erroPlat } = await eu.rpc('eh_plataforma')
+    if (erroPlat || plat !== true) return json({ erro: 'só a Plataforma vê isto' }, 403)
+    try { return await daPlataforma(acao, corpo) } catch (e) { return json({ erro: String((e as Error)?.message ?? e).slice(0, 300) }, 500) }
+  }
   if (!/^[0-9a-f-]{36}$/i.test(salao)) return json({ erro: 'qual salão?' }, 400)
 
   const quem = createClient(URL_SUPABASE, CHAVE_ANON, { global: { headers: { Authorization: auth } }, auth: { persistSession: false } })

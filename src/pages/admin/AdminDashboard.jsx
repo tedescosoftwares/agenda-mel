@@ -24,7 +24,6 @@ export default function AdminDashboard() {
   const [porDia, setPorDia] = useState([])
   const [primeiros, setPrimeiros] = useState(null)
   const [cobertura, setCobertura] = useState(null)   // quem atende o quê, por categoria (2.94)
-  const [clientesCount, setClientesCount] = useState(0)
   const [homeCarregada, setHomeCarregada] = useState(false)
   const navigate = useNavigate()
   useEffect(() => {
@@ -38,14 +37,13 @@ export default function AdminDashboard() {
     if (!salaoId) return
     setHomeCarregada(false)
     const d = toISODate(new Date()), mes = mesAtual()
-    const [ag, pend, fila, res, mesAg, pp, clientes, cb] = await Promise.all([
+    const [ag, pend, fila, res, mesAg, pp, cb] = await Promise.all([
       supabase.from('appointments').select('price_cents, status').eq('salon_id', salaoId).eq('date', d).neq('status', 'cancelado'),
       supabase.from('appointments').select('id', { count: 'exact', head: true }).eq('salon_id', salaoId).eq('status', 'pendente').gte('date', d),
       supabase.from('waitlist_entries').select('id, professionals!inner(salon_id)', { count: 'exact', head: true }).eq('professionals.salon_id', salaoId).eq('status', 'aguardando'),
       supabase.rpc('resumo_do_salao', { salao: salaoId, mes }),
       supabase.from('appointments').select('date, price_cents').eq('salon_id', salaoId).eq('status', 'concluido').gte('date', mes),
       supabase.rpc('primeiros_passos', { salao: salaoId }),
-      supabase.rpc('clientes_do_salao', { salao: salaoId }),
       supabase.rpc('cobertura_por_categoria', { salao: salaoId }),
     ])
     const lista = ag.data ?? []
@@ -58,7 +56,6 @@ export default function AdminDashboard() {
     setPorDia(Object.entries(soma).sort().map(([k, v]) => ({ x: k.slice(8, 10), y: v / 100 })))
     setPrimeiros(pp.data ?? null)
     setCobertura(Array.isArray(cb.data) ? cb.data : [])
-    setClientesCount(Array.isArray(clientes.data) ? clientes.data.length : 0)
     setHomeCarregada(true)
   }, [salaoId])
   useEffect(() => { carregar() }, [carregar])
@@ -111,21 +108,9 @@ export default function AdminDashboard() {
       <AdminShell amplo primeiroAcesso>
         <TutorialPainel primeiroAcesso />
         <PrimeiroAcessoHome
-          saudacao={saudacao}
-          nomePessoa={nomePessoa}
-          capaSalao={capaSalao}
-          logoSalao={logoSalao}
-          iniciaisSalao={iniciaisSalao}
-          nomeSalao={nomeSalao}
-          hoje={hoje}
-          clientesCount={clientesCount}
-          feitosConfig={feitosConfig}
-          categoriasProntas={categoriasProntas}
-          servicosProntos={servicosProntos}
-          equipePronta={equipePronta}
-          vinculosProntos={vinculosProntos}
-          linkPronto={linkPronto}
-          linkSalao={linkSalao}
+          saudacao={saudacao} nomePessoa={nomePessoa} capaSalao={capaSalao} logoSalao={logoSalao} iniciaisSalao={iniciaisSalao} nomeSalao={nomeSalao}
+          feitosConfig={feitosConfig} categoriasProntas={categoriasProntas} servicosProntos={servicosProntos} equipePronta={equipePronta}
+          vinculosProntos={vinculosProntos} linkSalao={linkSalao}
         />
       </AdminShell>
     )

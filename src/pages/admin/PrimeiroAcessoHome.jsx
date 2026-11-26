@@ -1,205 +1,128 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import QRCode from 'qrcode'
-import {
-  ArrowRight, BellRing, CalendarDays, CalendarPlus, Check, ChevronRight, Copy,
-  HelpCircle, Link2, PlayCircle, QrCode, Scissors, Settings2, Sparkles, Store,
-  Sun, Trophy, Users, Zap,
-} from 'lucide-react'
-import { AGENDA_ART_EXACT } from '../../assets/mockArtExact'
+import { ArrowRight, CalendarPlus, Check, ChevronRight, Copy, HelpCircle, Link2, PlayCircle, Scissors, Store, UserPlus } from 'lucide-react'
 import { CartaoInstalar } from '../../components/InstalarApp'
-import './PrimeiroAcessoHome.css'
 
-// A home do primeiro acesso (2.85): o salão existe, falta montar a agenda.
-// Uma tela só, sem rolar no desktop: hero com a foto do salão, os quatro
-// primeiros passos, e embaixo agenda de hoje · agora na MIMO · ações
-// rápidas + divulgar + ajuda com a Mel.
-// a foto do hero é a capa que o salão subiu (fotos do espaço); só sem
-// nenhuma foto entra a de estoque
-const FUNDO_PADRAO = '/imagens/salao-1400.webp'
-
-function money(cents = 0) {
-  return (Number(cents || 0) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-}
-
+// A Home de quem ainda está montando o salão (2.85; 4.22 no mesmo desenho da Home do dia a dia, HomeDoDia):
+// o cabeçalho da casa, o progresso dos quatro passos no lugar do faturamento, os passos em lista com o próximo
+// em destaque, as ações em círculos, o link do salão com o QR, e a agenda de hoje com o agendamento teste.
+// Quando os quatro passos fecham, o AdminDashboard troca esta tela pela do dia a dia.
 function MiniQr({ value }) {
   const [src, setSrc] = useState('')
   useEffect(() => {
-    let alive = true
-    if (!value) { setSrc(''); return () => { alive = false } }
-    QRCode.toDataURL(value, { width: 180, margin: 1, color: { dark: '#2c1636', light: '#ffffff' } })
-      .then((url) => { if (alive) setSrc(url) }).catch(() => { if (alive) setSrc('') })
-    return () => { alive = false }
+    let vivo = true
+    if (!value) { setSrc(''); return () => { vivo = false } }
+    QRCode.toDataURL(value, { width: 220, margin: 1, color: { dark: '#1d1323', light: '#ffffff' } })
+      .then((url) => { if (vivo) setSrc(url) }).catch(() => { if (vivo) setSrc('') })
+    return () => { vivo = false }
   }, [value])
-  return src ? <img className="fa-qr" src={src} alt="QR Code do salão" /> : <span className="fa-qr fa-qr-vazio" />
-}
-
-function StepCard({ number, title, text, to, done, current }) {
-  return (
-    <Link className={'fa-step' + (done ? ' is-done' : '') + (current ? ' is-current' : '')} to={to}>
-      <span className="fa-step-number">{done ? <Check size={16} strokeWidth={3} /> : number}</span>
-      <span className="fa-step-copy"><strong>{title}</strong><small>{text}</small></span>
-      <ChevronRight size={16} />
-    </Link>
-  )
+  return src ? <img className="hd-qr" src={src} alt="QR Code do salão" /> : <span className="hd-qr vazio" />
 }
 
 export default function PrimeiroAcessoHome({
-  saudacao, nomePessoa, capaSalao, logoSalao, iniciaisSalao, nomeSalao, hoje, clientesCount,
+  saudacao, nomePessoa, capaSalao, logoSalao, iniciaisSalao, nomeSalao,
   feitosConfig, categoriasProntas, servicosProntos, equipePronta, vinculosProntos = false, linkSalao,
 }) {
-  const progresso = Math.max(0, Math.min(100, (Number(feitosConfig || 0) / 4) * 100))
+  const feitos = Math.max(0, Math.min(4, Number(feitosConfig || 0)))
+  const faltam = 4 - feitos
   const abrirTour = () => window.dispatchEvent(new CustomEvent('mimo:abrir-tour-painel'))
   const [copiado, setCopiado] = useState(false)
   function copiar() { if (!linkSalao) return; navigator.clipboard?.writeText(linkSalao); setCopiado(true); setTimeout(() => setCopiado(false), 1800) }
   const linkCurto = (linkSalao || 'seusalao.mimo.com.vc').replace(/^https?:\/\//, '').replace(/\/$/, '')
-  const faltam = 4 - Number(feitosConfig || 0)
 
-  const steps = useMemo(() => ([
-    { number: 1, title: 'Categorias de serviços', text: 'Ex: Cabelo, Unha, Estética.', to: '/admin/configurar', done: categoriasProntas, current: !categoriasProntas },
-    { number: 2, title: 'Serviços', text: 'Nome, duração e preço.', to: '/admin/configurar', done: servicosProntos, current: categoriasProntas && !servicosProntos },
-    { number: 3, title: 'Profissionais', text: 'Quem vai aparecer na agenda.', to: '/admin/configurar', done: equipePronta, current: servicosProntos && !equipePronta },
-    { number: 4, title: 'Quem faz o quê', text: 'Ligue cada serviço a quem atende.', to: '/admin/configurar', done: vinculosProntos, current: equipePronta && !vinculosProntos },
+  const passos = useMemo(() => ([
+    { n: 1, titulo: 'Categorias de serviços', texto: 'Ex.: Cabelo, Unhas, Estética.', feito: categoriasProntas, agora: !categoriasProntas },
+    { n: 2, titulo: 'Serviços', texto: 'Nome, duração e preço de cada um.', feito: servicosProntos, agora: categoriasProntas && !servicosProntos },
+    { n: 3, titulo: 'Profissionais', texto: 'Quem vai aparecer na agenda.', feito: equipePronta, agora: servicosProntos && !equipePronta },
+    { n: 4, titulo: 'Quem faz o quê', texto: 'Ligue cada serviço a quem atende.', feito: vinculosProntos, agora: equipePronta && !vinculosProntos },
   ]), [categoriasProntas, servicosProntos, equipePronta, vinculosProntos])
+  const proximo = passos.find((p) => p.agora) ?? passos.find((p) => !p.feito)
+  const r = 34, volta = 2 * Math.PI * r
 
   return (
-    <div className="fa-home">
-      <section className="fa-hero" style={{ '--fa-fundo': `url("${capaSalao || FUNDO_PADRAO}")` }} data-tour="inicio">
-        <div className="fa-hero-copy">
-          <span className="fa-eyebrow"><Sun size={14} /> {saudacao}{nomePessoa ? `, ${nomePessoa}` : ''} <Sun size={14} /></span>
-          <h1>Seu salão ganhou<br />um <em>centro de comando.</em></h1>
-          <p>Organize sua agenda, sua equipe e receba mais clientes de forma simples, tudo em um só lugar.</p>
-          <div className="fa-hero-actions">
-            <Link className="fa-btn fa-btn-primary" to="/admin/configurar"><Settings2 size={17} /> Continuar configuração <ArrowRight size={16} /></Link>
-            <button className="fa-btn fa-btn-tour" type="button" onClick={abrirTour}><PlayCircle size={18} /> Fazer tour guiado <span>1 min</span></button>
+    <div className="hd hd-primeiro">
+      <header className="hd-cab" data-tour="inicio">
+        <svg className="hd-cab-arte" viewBox="0 0 400 220" preserveAspectRatio="xMaxYMin slice" aria-hidden="true">
+          <circle cx="345" cy="20" r="120" /><circle cx="345" cy="20" r="82" /><circle cx="345" cy="20" r="46" />
+          <path d="M-20,210 C70,150 150,230 240,170 S380,130 430,160" />
+        </svg>
+        <div className="hd-cab-linha">
+          <span className="hd-logo">{logoSalao ? <img src={logoSalao} alt="" /> : capaSalao ? <img src={capaSalao} alt="" /> : <b>{iniciaisSalao || 'M'}</b>}</span>
+          <div className="hd-cab-acoes">
+            <button type="button" onClick={abrirTour} aria-label="Fazer o tour guiado"><HelpCircle size={19} /></button>
           </div>
         </div>
+        <p className="hd-ola">{saudacao}{nomePessoa ? `, ${nomePessoa}` : ''}</p>
+        <h1>{nomeSalao}</h1>
+        <span className="hd-estado"><i />Montando a agenda · {feitos} de 4 passos prontos</span>
+      </header>
 
-        <div className="fa-salon-card">
-          <div className="fa-salon-head">
-            <div className="fa-salon-photo">
-              {logoSalao ? <img src={logoSalao} alt="" /> : capaSalao ? <img src={capaSalao} alt="" /> : <b>{iniciaisSalao || 'M'}</b>}
-            </div>
-            <div className="fa-salon-title">
-              <span className="fa-online"><i /> Online</span>
-              <strong>{nomeSalao}</strong>
-            </div>
-            <Link to="/admin/salao" className="fa-salon-go" aria-label="Ver meu salão"><ChevronRight size={20} /></Link>
-          </div>
-          <div className="fa-salon-metrics">
-            <div><small>Hoje</small><strong>{hoje?.atendimentos ?? 0}</strong><span>atendimentos</span></div>
-            <div><small>Faturamento hoje</small><strong>{money(hoje?.faturamento)}</strong></div>
-            <div><small>Novos clientes</small><strong>{clientesCount ?? 0}</strong></div>
-          </div>
-        </div>
-      </section>
-
-      <section className="fa-setup" data-tour="primeiros-passos">
-        <div className="fa-setup-top">
-          <div className="fa-setup-title">
-            <span className="fa-icon-badge"><CalendarDays size={22} /></span>
-            <div>
-              <span className="fa-eyebrow"><Sparkles size={12} /> Primeiros passos</span>
-              <h2>Deixe seu salão pronto para receber clientes</h2>
-              <p>Complete as etapas abaixo para liberar sua agenda e começar a receber agendamentos.</p>
-            </div>
-          </div>
-          <div className="fa-progress-wrap">
-            <div className="fa-progress"><i style={{ width: `${progresso}%` }} /></div>
-            <div className="fa-progress-meta">{feitosConfig} de 4 concluídos</div>
-          </div>
-          <div className="fa-almost">
-            <span className="fa-almost-icone"><Sparkles size={18} /></span>
-            <div><strong>{faltam <= 1 ? 'Falta pouco!' : 'Vamos lá!'}</strong><small>{faltam <= 1 ? 'Seu salão já está quase pronto.' : `Faltam ${faltam} passos para liberar a agenda.`}</small></div>
-          </div>
-        </div>
-        <div className="fa-steps">
-          {steps.map((step) => <StepCard key={step.number} {...step} />)}
-        </div>
-      </section>
-
-      <section className="fa-board" data-tour="primeiro-operacao">
-        <article className="fa-card fa-agenda-card">
-          <header className="fa-card-head">
-            <div className="fa-card-titulo"><span className="fa-icon-badge"><CalendarDays size={20} /></span><h3>Agenda de hoje</h3></div>
-            <Link to="/admin/agenda">Ver agenda completa <ArrowRight size={14} /></Link>
-          </header>
-          <div className="fa-empty">
-            <div className="fa-agenda-art"><img src={AGENDA_ART_EXACT} alt="" /></div>
-            <strong>Ainda não há agendamentos para hoje.</strong>
-            <p>Quando os primeiros clientes agendarem, eles aparecerão aqui.</p>
-            <Link className="fa-btn fa-btn-primary" to="/admin/agenda?encaixe=1"><CalendarPlus size={16} /> Fazer um agendamento teste</Link>
-            <button type="button" onClick={abrirTour}><HelpCircle size={14} /> Como funciona?</button>
-          </div>
-        </article>
-
-        <div className="fa-center-stack">
-          <article className="fa-card fa-now-card">
-            <header className="fa-card-head"><div className="fa-card-titulo"><span className="fa-icon-badge"><Zap size={20} /></span><h3>Agora na MIMO</h3></div></header>
-            <div className="fa-now-list">
-              <div className="is-ok">
-                <i><Check size={15} strokeWidth={3} /></i>
-                <span><strong>Seu salão está online</strong><small>Clientes já podem acessar seu link.</small></span>
+      <div className="hd-corpo">
+        <div className="hd-col">
+          <section className="hd-saldo hd-progresso" data-tour="primeiros-passos">
+            <span className="hd-saldo-topo"><span>{faltam <= 1 ? 'Falta pouco para abrir a agenda' : 'Deixe o salão pronto para receber clientes'}</span></span>
+            <div className="hd-progresso-meio">
+              <span className="hd-progresso-anel">
+                <svg viewBox="0 0 80 80" aria-hidden="true">
+                  <circle className="hd-pessoa-trilho" cx="40" cy="40" r={r} />
+                  <circle className="hd-pessoa-valor" cx="40" cy="40" r={r} strokeDasharray={volta} style={{ '--dia-anel-fim': volta * (1 - feitos / 4), '--dia-anel-volta': volta }} />
+                </svg>
+                <b>{feitos}<small>/4</small></b>
+              </span>
+              <div>
+                <strong>{proximo ? `Agora: ${proximo.titulo.toLowerCase()}` : 'Tudo pronto'}</strong>
+                <small>{proximo ? proximo.texto : 'Os quatro passos estão feitos.'}</small>
               </div>
-              <Link to="/admin/configurar" className={categoriasProntas ? 'is-ok' : 'is-todo'}>
-                <i>{categoriasProntas ? <Check size={15} strokeWidth={3} /> : null}</i>
-                <span><strong>{categoriasProntas ? 'Categorias criadas' : 'Crie suas categorias'}</strong><small>{categoriasProntas ? 'Suas categorias de serviços estão prontas.' : 'Organize o que você oferece.'}</small></span>
-                {!categoriasProntas && <ChevronRight size={16} />}
-              </Link>
-              <Link to="/admin/servicos" className={servicosProntos ? 'is-ok' : 'is-todo'}>
-                <i>{servicosProntos ? <Check size={15} strokeWidth={3} /> : null}</i>
-                <span><strong>{servicosProntos ? 'Serviços cadastrados' : 'Cadastre seus serviços'}</strong><small>{servicosProntos ? 'Sua vitrine já sabe o que você oferece.' : `${faltam === 1 ? 'Falta 1 passo' : `Faltam ${faltam} passos`} para liberar sua agenda.`}</small></span>
-                {!servicosProntos && <ChevronRight size={16} />}
-              </Link>
-              <button type="button" className="is-tour" onClick={abrirTour}>
-                <i><PlayCircle size={16} /></i>
-                <span><strong>Aprenda com o tour</strong><small>Veja como usar o painel em 1 minuto.</small></span>
-                <ChevronRight size={16} />
-              </button>
             </div>
-          </article>
+            <div className="hd-progresso-botoes">
+              <Link to="/admin/configurar" className="hd-botao rosa">Continuar configuração <ArrowRight size={15} /></Link>
+              <button type="button" className="hd-botao vazado" onClick={abrirTour}><PlayCircle size={15} /> Tour de 1 min</button>
+            </div>
+            <ol className="hd-passos">
+              {passos.map((p) => (
+                <li key={p.n} className={(p.feito ? 'feito' : '') + (p === proximo ? ' agora' : '')}>
+                  <Link to="/admin/configurar">
+                    <span className="hd-passo-n">{p.feito ? <Check size={14} strokeWidth={3} /> : p.n}</span>
+                    <span className="hd-dia-quem"><strong>{p.titulo}</strong><small>{p.texto}</small></span>
+                    {p === proximo ? <em>Agora</em> : p.feito ? <em className="ok">Feito</em> : null}
+                    <ChevronRight size={16} />
+                  </Link>
+                </li>
+              ))}
+            </ol>
+          </section>
 
-          <article className="fa-card fa-win-card">
-            <header className="fa-card-head"><div className="fa-card-titulo"><span className="fa-icon-badge trophy"><Trophy size={18} /></span><h3>O que você vai conquistar</h3></div></header>
-            <div className="fa-win-grid">
-              <div><i><CalendarDays size={17} /></i><span><strong>Agenda organizada</strong><small>Veja todos os atendimentos do dia e quem vai atender.</small></span></div>
-              <div><i><Users size={17} /></i><span><strong>Equipe em um só lugar</strong><small>Serviços, horários e agenda de cada profissional.</small></span></div>
-              <div><i><BellRing size={17} /></i><span><strong>Pedidos de clientes</strong><small>Receba e confirme solicitações de agendamento.</small></span></div>
-              <div><i><Link2 size={17} /></i><span><strong>Seu salão para compartilhar</strong><small>Link e QR para clientes marcarem sozinhos.</small></span></div>
-            </div>
-          </article>
+          <nav className="hd-acoes" data-tour="atalhos" aria-label="Ações rápidas">
+            <Link to="/admin/servicos" className="principal"><span className="hd-acao-bola"><Scissors size={22} /></span><span>Novo serviço</span></Link>
+            <Link to="/admin/equipe"><span className="hd-acao-bola"><UserPlus size={22} /></span><span>Nova profissional</span></Link>
+            <Link to="/admin/salao"><span className="hd-acao-bola"><Store size={22} /></span><span>Meu salão</span></Link>
+            <button type="button" onClick={copiar}><span className="hd-acao-bola">{copiado ? <Check size={22} /> : <Link2 size={22} />}</span><span>{copiado ? 'Copiado!' : 'Copiar link'}</span></button>
+            <Link to="/admin/agenda?encaixe=1"><span className="hd-acao-bola"><CalendarPlus size={22} /></span><span>Horário teste</span></Link>
+          </nav>
         </div>
 
-        <aside className="fa-right-stack">
-          <article className="fa-card fa-quick-card" data-tour="atalhos">
-            <header className="fa-card-head"><div className="fa-card-titulo"><span className="fa-icon-badge"><Zap size={20} /></span><h3>Ações rápidas</h3></div></header>
-            <div className="fa-quick-grid">
-              <Link className="fa-quick-action" to="/admin/servicos"><i><Scissors size={18} /></i><span>Novo serviço</span></Link>
-              <Link className="fa-quick-action" to="/admin/equipe"><i><Users size={18} /></i><span>Nova profissional</span></Link>
-              <Link className="fa-quick-action" to="/admin/salao"><i><Store size={18} /></i><span>Ver meu salão</span></Link>
-              <button type="button" className="fa-quick-action" onClick={copiar}><i><Link2 size={18} /></i><span>{copiado ? 'Link copiado!' : 'Compartilhar link'}</span></button>
-            </div>
-          </article>
-
-          <article className="fa-card fa-share-card" data-tour="link">
-            <div className="fa-share-copy">
-              <div className="fa-card-titulo"><span className="fa-icon-badge"><QrCode size={20} /></span><h3>Divulgue seu salão</h3></div>
-              <small>Compartilhe seu link e comece a receber clientes.</small>
-              <button type="button" className="fa-link-box" onClick={copiar} title="Copiar link">
-                <Link2 size={15} /><span>{linkCurto}</span><Copy size={15} />
-              </button>
-            </div>
-            <div className="fa-share-qr">
+        <div className="hd-col">
+          <section className="hd-secao" data-tour="link">
+            <div className="hd-secao-topo"><span><h2>O endereço do seu salão</h2><small>É por aqui que as clientes vão marcar. Divulgue quando a agenda estiver pronta.</small></span></div>
+            <div className="hd-link">
               <MiniQr value={linkSalao} />
-              <small>Escanear QR</small>
+              <div>
+                <button type="button" className="hd-link-caixa" onClick={copiar} title="Copiar o link"><Link2 size={15} /><span>{linkCurto}</span><Copy size={15} /></button>
+                <small>{copiado ? 'Link copiado.' : 'Toque para copiar. O QR Code serve para o balcão e o espelho.'}</small>
+              </div>
             </div>
-          </article>
+          </section>
+
+          <section className="hd-secao" data-tour="primeiro-operacao">
+            <Link to="/admin/agenda" className="hd-secao-topo"><span><h2>Agenda de hoje</h2><small>Os horários do dia aparecem aqui, com cliente, serviço e profissional.</small></span><ChevronRight size={20} /></Link>
+            <div className="hd-vazio"><CalendarPlus size={22} /><strong>Ainda sem horários hoje</strong><p>Faça um agendamento de teste para ver como fica: é o próprio salão marcando, com o nome digitado.</p><Link to="/admin/agenda?encaixe=1" className="hd-botao">Fazer um agendamento teste</Link></div>
+          </section>
 
           {/* 3.93: instalar a MIMO (computador e celular), como na área da profissional */}
           <CartaoInstalar para="salao" />
-        </aside>
-      </section>
-
+        </div>
+      </div>
     </div>
   )
 }

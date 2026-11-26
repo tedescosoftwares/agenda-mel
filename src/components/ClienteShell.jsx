@@ -28,6 +28,19 @@ export default function ClienteShell({ children, titulo, voltar, semTopo = false
   const { pathname } = useLocation()
   useEffect(() => { miolo.current?.scrollTo({ top: 0 }) }, [pathname])
   const { naoLidos } = useNotificacoes()
+  // 4.14: o rodapé fixo das telas (Agendar horário, Escolher data) fica encostado no menu de baixo. A altura do menu
+  // muda com o aparelho e com a fonte; uma altura fixa no CSS deixava o botão meio escondido atrás dele.
+  const menu = useRef(null)
+  useEffect(() => {
+    const el = menu.current
+    if (!el) return
+    const medir = () => document.documentElement.style.setProperty('--cli-menu-h', `${Math.round(el.getBoundingClientRect().height)}px`)
+    medir()
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(medir) : null
+    ro?.observe(el)
+    window.addEventListener('resize', medir)
+    return () => { ro?.disconnect(); window.removeEventListener('resize', medir) }
+  }, [])
   const navigate = useNavigate()
 
   return (
@@ -85,7 +98,7 @@ export default function ClienteShell({ children, titulo, voltar, semTopo = false
 
       </div>
 
-      <nav className="bottom-nav">
+      <nav className="bottom-nav" ref={menu}>
         <div className="bottom-nav-inner">
           {TABS.map((t) => t === null ? (
             <button key="qr" className="nav-mais nav-qr" onClick={() => navigate('/cliente/entrar?modo=camera')} aria-label="Ler QR de uma agenda">

@@ -94,7 +94,7 @@ export default function ClienteServico() {
       </div>
 
       <div className="svc-cabeca">
-        <span className="muted svc-cat">{nomeDaCategoria(cats, s.categoria_id)}{s.is_combo ? ' · combo' : ''}</span>
+        <span className="muted svc-categoria">{nomeDaCategoria(cats, s.categoria_id)}{s.is_combo ? ' · combo' : ''}</span>
         <h2>{s.name}</h2>
         <div className="svc-preco">
           {precoPor != null ? (
@@ -109,13 +109,15 @@ export default function ClienteServico() {
 
       {quem.length > 0 && (
         <section className="svc-secao">
-          <h3 className="secao-titulo"><Users size={15} /> Quem faz</h3>
+          <h3 className="secao-titulo"><Users size={15} /> {!profId && quem.length > 1 ? 'Com quem você quer marcar?' : 'Quem faz'}</h3>
           <div className="cliente-list">
             {quem.map((p) => (
-              <Link key={p.id} to={`/cliente/profissional/${p.id}`} className={'card agdt-linha agdt-link' + (p.id === profId ? ' svc-prof-atual' : '')}>
+              // 4.14: tocar em quem faz já leva para a data, com este serviço escolhido (antes abria o perfil dela e
+              // pedia o serviço de novo)
+              <Link key={p.id} to={`/cliente/agendamento/data?${comOrigem({ prof: p.id, servico: escolha.join(',') })}`} className={'card agdt-linha agdt-link' + (p.id === profId ? ' svc-prof-atual' : '')}>
                 <span className="agdt-avatar">{p.photo_url ? <img src={p.photo_url} alt="" /> : iniciais(p.name)}</span>
                 <span className="cliente-info"><span className="cliente-nome"><span className="nome-txt">{p.name}</span></span>{p.id === profId && <span className="muted cliente-meta">você está marcando com ela</span>}{(p.preco_cents != null || p.duracao_minutos != null) && <span className="muted cliente-meta">com ela: {[p.preco_cents != null ? formatPreco(p.preco_cents / 100) : null, p.duracao_minutos != null ? formatDuracao(p.duracao_minutos) : null].filter(Boolean).join(' · ')}</span>}</span>
-                <ChevronRight size={18} className="agdt-seta" />
+                <span className="link-ver svc-quem-agendar">Agendar <ChevronRight size={15} /></span>
               </Link>
             ))}
           </div>
@@ -151,10 +153,7 @@ export default function ClienteServico() {
           </div>
         </>
       ) : (
-        <div className="card empty-state">
-          <p>{quem.length > 1 ? 'Escolha acima com quem quer marcar.' : 'Ninguém atendendo com este serviço agora.'}</p>
-          {quem.length > 1 && <p className="muted">Toque numa das profissionais para ver o horário dela.</p>}
-        </div>
+        quem.length === 0 && <div className="card empty-state"><p>Ninguém atendendo com este serviço agora.</p></div>
       )}
     </ClienteShell>
   )

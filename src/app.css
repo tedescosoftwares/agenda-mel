@@ -16316,3 +16316,14 @@ label.a-partir-opcao .a-partir-opcao-texto { flex: 1; }
   .wsal-voltar { display: inline-flex; }
 }
 .cfg-chave { display: flex; align-items: center; gap: 0.55rem; font-weight: 600; font-size: 0.92rem; } .cfg-nota { font-size: 0.82rem; margin: 0.6rem 0 0; }
+
+/* 4.14: o agendamento da cliente sem desalinhamento */
+/* o rodapé fixo encosta no menu de baixo pela altura real dele (medida no ClienteShell) */
+.cliente-shell .rodape-fixo { bottom: var(--cli-menu-h, calc(64px + env(safe-area-inset-bottom))); z-index: 29; }
+.cliente-shell .content:has(.rodape-fixo) { padding-bottom: 7rem; }
+.cliente-shell .content:has(.rodape-servicos) { padding-bottom: 11rem; }
+/* o botão Ler QR é só o círculo e o rótulo: a borda e a sombra do botão redondo antigo viravam um quadrado branco */
+.cliente-shell .nav-qr { border: 0; box-shadow: none; transform: none; background: transparent; }
+/* a etiqueta da categoria na página do serviço (o nome antigo, svc-cat, batia com os cartões de categoria do painel) */
+.svc-categoria { display: block; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; color: var(--texto-2); margin-bottom: 0.15rem; }
+.svc-quem-agendar { display: inline-flex; align-items: center; gap: 0.1rem; white-space: nowrap; }

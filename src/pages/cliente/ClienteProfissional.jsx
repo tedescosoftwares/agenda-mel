@@ -93,7 +93,9 @@ export default function ClienteProfissional() {
           {agruparPorCategoria(servicos, cats).map((g, _, todos) => (<section key={g.id || 'outros'} className="cat-grupo">
           {todos.length > 1 && <h3 className="cat-titulo">{g.nome}</h3>}
           {g.itens.map((s) => (
-            <Link key={s.id} to={`/cliente/servico/${s.id}?prof=${prof.id}&de=perfil:${prof.id}`} className="card servico-linha">
+            // 4.14: tocar no serviço já leva para a data, com ela e com ele escolhidos (antes voltava para a página do
+            // serviço, que parecia pedir a profissional de novo)
+            <Link key={s.id} to={`/cliente/agendamento/data?prof=${prof.id}&servico=${s.id}&de=perfil:${prof.id}`} className="card servico-linha">
               <span className="servico-linha-foto" aria-hidden="true">
                 {s.images?.[0] ? <img src={s.images[0]} alt="" /> : <Sparkles />}
               </span>
@@ -101,7 +103,7 @@ export default function ClienteProfissional() {
                 <span className="cliente-nome"><span className="nome-txt">{s.name}</span></span>
                 <span className="muted cliente-meta">{prefixoAPartir(s)}{formatPreco(s.price)} · {labelDuracao(s)}</span>
               </span>
-              <span className="link-ver">Ver</span>
+              <span className="link-ver">Agendar</span>
             </Link>
           ))}
           </section>))}
@@ -134,8 +136,9 @@ export default function ClienteProfissional() {
       )}
 
       <div className="rodape-fixo">
-        <Link to={`/cliente/profissional/${prof.id}/servicos`} className="btn btn-primary btn-block">
-          Agendar horário
+        {/* um serviço só: não tem o que escolher, vai direto para a data */}
+        <Link to={servicos.length === 1 ? `/cliente/agendamento/data?prof=${prof.id}&servico=${servicos[0].id}&de=perfil:${prof.id}` : `/cliente/profissional/${prof.id}/servicos`} className="btn btn-primary btn-block">
+          {servicos.length === 1 ? `Agendar ${servicos[0].name}` : 'Agendar horário'}
         </Link>
       </div>
     </ClienteShell>

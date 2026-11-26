@@ -57,17 +57,23 @@ export default function ClienteHome() {
   useEffect(() => {
     let vivo = true
     ;(async () => {
-      const [pr, vi] = await Promise.all([
-        supabase.from('professionals').select('*').eq('active', true).order('name'),
-        supabase.from('professional_services').select('professional_id, service_id, services (*)'),
-      ])
+      // 4.13.1: só dos salões que ela segue. Desde que a página do salão ficou pública, profissionais e serviços de
+      // todos os salões são legíveis: sem este filtro a Home mostrava gente e serviços de salão que ela nunca viu.
+      const meus = (agendas ?? []).map((a) => a.salao?.id).filter(Boolean)
+      if (!meus.length) { if (vivo) { setProfissionais([]); setVinculos([]); setLoading(false) } return }
+      const pr = await supabase.from('professionals').select('*').eq('active', true).in('salon_id', meus).order('name')
+      const delas = (pr.data ?? []).map((p) => p.id)
+      const vi = delas.length
+        ? await supabase.from('professional_services').select('professional_id, service_id, services (*)').in('professional_id', delas)
+        : { data: [] }
       if (!vivo) return
       setProfissionais(pr.data ?? [])
       setVinculos(vi.data ?? [])
       setLoading(false)
     })()
     return () => { vivo = false }
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [(agendas ?? []).map((a) => a.salao?.id).join(',')])
 
   // a especialidade de cada uma é o que ela faz — o primeiro serviço
   // dela, não um campo separado que ninguém preencheria

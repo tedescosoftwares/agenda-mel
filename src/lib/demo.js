@@ -313,6 +313,18 @@ const RPC = {
   planos_do_salao: ({ inicial }) => ({ agendas: agendasDemo(), plano: 'pro', mes_cents: valorDemo(), planos: planosDemo(Boolean(inicial)) }),
   cobranca_aberta: () => null,
   ativacao_inicial_preparar: () => RPC.ativacao_inicial_estado(),
+  // 4.10 (265): as agendas do plano
+  ativacao_equipe: ({ agendas_ }) => { TABELAS.salons[0].equipe_prevista = Math.max(3, Number(agendas_) || 3); return RPC.ativacao_inicial_estado() },
+  agendas_do_salao: ({ a_mais = 1 }) => {
+    const ativas = TABELAS.professionals.filter((p) => p.salon_id === SALAO && p.active !== false).length
+    const liberadas = Math.max(3, Number(TABELAS.salons[0].equipe_prevista) || 0)
+    const base = Math.max(liberadas, ativas); const depois = base + Math.max(1, Number(a_mais) || 1)
+    const preco = (n) => (n > 10 ? 14990 + Math.max(0, n - 11) * 790 : 4990 + Math.max(0, n - 3) * 990)
+    const paga = DEMO_ACESSO === 'ativa'; const meses = paga && (typeof localStorage !== 'undefined' && localStorage.getItem('mimo-demo-anual') === '1') ? 9 : 1
+    return { ativas, liberadas, a_mais: depois - base, total_depois: depois, paga, meses, mensalidade_antes_cents: preco(base), mensalidade_depois_cents: preco(depois),
+      por_mes_cents: preco(depois) - preco(base), agora_cents: paga ? (preco(depois) - preco(base)) * meses : 0 }
+  },
+  agendas_liberar: ({ a_mais }) => { const e = RPC.agendas_do_salao({ a_mais }); TABELAS.salons[0].equipe_prevista = e.total_depois; return RPC.agendas_do_salao({ a_mais: 1 }) },
   ativacao_inicial_teste: () => { try { localStorage.removeItem('mimo-demo-ativar') } catch { /* nada */ } const q = new Date().toISOString(); TABELAS.salons[0].ativado_em = q; TABELAS.salon_members[0].salons.ativado_em = q; return DEMO_VAZIO ? { ...acessoDemo(), fase: 'teste', ate: null, tolerancia_ate: null, dias: 7, aguardando_configuracao: true, ativacao_pendente: false } : { ...acessoDemo(), fase: 'teste', ativacao_pendente: false } },
   cobranca_inicial_cancelar: () => null,
   promocoes_para_mim: () => promocoes.filter((p) => p.ativa && p.aprovacao !== 'pendente' && (!p.fim || p.fim >= mais(0))).map((p) => ({ ...p, desconto_pct: p.desconto_pct ?? null, preco_de: servicos.find((s) => s.id === p.service_id)?.price ?? null, preco_por: p.desconto_pct ? Math.round(servicos.find((s) => s.id === p.service_id)?.price * (100 - p.desconto_pct)) / 100 : null, salao: p.salon_id ? 'Studio Mel' : null, profissional: p.professional_id ? profissionais.find((x) => x.id === p.professional_id)?.name : null, professional_id: p.professional_id ?? (p.service_id ? 'pr1' : null), servico: servicos.find((s) => s.id === p.service_id)?.name ?? null })),

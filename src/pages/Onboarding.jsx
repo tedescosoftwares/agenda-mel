@@ -55,7 +55,7 @@ const PASSOS = [
     : { id: 1, rotulo: 'Seu plano', foto: 'profissional', bilhete: 'começa por aqui', titulo: 'Seu salão na MIMO.', texto: 'Veja o que vem no plano. Quem atende sozinha entra como salão de uma agenda.', roteiro: ['Confira o plano', 'Siga para os seus dados'] },
   { id: 2, rotulo: 'Seus dados', foto: 'agenda-celular', bilhete: 'rapidinho', titulo: 'Agora, seus dados.', texto: 'Precisamos de algumas informações para criar sua conta e identificar o negócio. O que as clientes veem você configura no próximo passo.', roteiro: ['CPF ou CNPJ', 'Endereço de cadastro', 'E-mail, WhatsApp e senha'] },
   { id: 3, rotulo: 'Seu espaço', foto: 'salao', bilhete: 'com a sua cara', titulo: 'Dê cara ao seu salão.', texto: 'Nome, fotos, contatos, endereço e horários. É o que a cliente vê.', roteiro: ['Nome e fotos', 'Contatos e localização', 'Horários e regras'] },
-  { id: 4, rotulo: 'Quase lá', foto: 'equipe', bilhete: 'falta pouco', titulo: 'Quase lá.', texto: 'Diga quantas profissionais vão ter agenda. Serviços e equipe você configura já dentro do painel.', roteiro: ['Profissionais com agenda', 'Entrar no painel'] },
+  // 4.10: o passo 4 ("Quase lá", quantas agendas) saiu: o plano se escolhe na tela de ativação, com os preços na frente
 ]
 const DIAS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
 const ORDEM_DIAS = [1, 2, 3, 4, 5, 6, 0]
@@ -162,7 +162,7 @@ export default function Onboarding({ publico = false }) {
     setS((x) => x ?? { ...salao })
     // retoma de onde parou; quem já concluiu e abriu de novo começa do 1 (revisão)
     setPasso((p) => {
-      if (p === 1 && !salao.onboarding_concluido_em && salao.onboarding_passo > 2) { setRetomado(true); return Math.min(4, salao.onboarding_passo) }
+      if (p === 1 && !salao.onboarding_concluido_em && salao.onboarding_passo > 2) { setRetomado(true); return Math.min(3, salao.onboarding_passo) }
       return p
     })
   }, [salao])
@@ -192,6 +192,8 @@ export default function Onboarding({ publico = false }) {
     return true
   }
   async function seguir(dados = {}) {
+    const ultimo = passos[passos.length - 1].id
+    if (passo >= ultimo) { if (await gravar(dados, passo)) await concluir(); return }
     const proximo = pular(passo)
     const ok = await gravar(dados, proximo)
     if (ok) { setPasso(proximo); setRetomado(false) }
@@ -300,7 +302,7 @@ export default function Onboarding({ publico = false }) {
         <div className="ob-topo-m">
           <button type="button" onClick={() => (idx === 0 ? sair() : voltar())} aria-label="Voltar"><ArrowLeft size={20} /></button>
           <div className="ob-barra" aria-label={`Passo ${idx + 1} de ${total}`}><i style={{ width: `${((idx + 1) / total) * 100}%` }} /></div>
-          {!(publico && passo === 2) ? <button type="button" onClick={() => (passo === 4 ? concluir() : seguir({}))}>{passo === 4 ? 'Concluir' : 'Pular'}</button> : <span />}
+          {!(publico && passo === 2) ? <button type="button" onClick={() => seguir({})}>{passo === passos[passos.length - 1].id ? 'Concluir' : 'Pular'}</button> : <span />}
         </div>
         <div className="ob-conteudo-linha"><span className="ob-conteudo-num">Passo {idx + 1} de {total} · {atual.rotulo}</span><EstadoSalvo estado={estadoAuto} /></div>
         {retomado && <div className="ob-retomada"><Wand2 size={15} /><span><strong>Continuando de onde você parou.</strong> O que você já preencheu está guardado; os passos anteriores ficam no menu ao lado.</span><button type="button" onClick={() => setRetomado(false)} aria-label="Fechar"><X size={14} /></button></div>}
@@ -315,7 +317,6 @@ export default function Onboarding({ publico = false }) {
             {passo === 1 && <PassoTipo {...props} />}
             {passo === 2 && <PassoDados {...props} />}
             {passo === 3 && <PassoEstrutura {...props} />}
-            {passo === 4 && <PassoQuaseLa {...props} />}
           </div>
           </RoteiroCtx.Provider>
         </ProximoCtx.Provider>
@@ -1723,7 +1724,7 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
           </button>
         </div>
       ) : (
-        <Rodape voltar={voltarNoSubfluxo} avancar={avancar} salvando={salvando} rotulo="Ir para o último passo" />
+        <Rodape voltar={voltarNoSubfluxo} avancar={avancar} salvando={salvando} rotulo={autonoma ? 'Entrar no painel' : 'Concluir e ativar'} />
       )}
       {finaleAberto && (
         <div className="ob-finale-modal" role="dialog" aria-modal="true" aria-labelledby="ob-finale-titulo">
@@ -1749,8 +1750,8 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
             />
 
             <div className="ob-finale-ultimo">
-              <span><Check size={16} /><span><strong>Essa parte acabou.</strong><small>Antes de acessar seu painel, falta só um último passo.</small></span></span>
-              <button type="button" className="btn btn-primary" onClick={() => { setFinaleAberto(false); avancar() }} disabled={salvando}>{salvando ? 'Salvando…' : 'Ir para o último passo'} <ArrowRight size={15} /></button>
+              <span><Check size={16} /><span><strong>Essa parte acabou.</strong><small>{autonoma ? 'Agora é só entrar no painel.' : 'Agora é só escolher como começar: 7 dias grátis ou a primeira mensalidade com desconto.'}</small></span></span>
+              <button type="button" className="btn btn-primary" onClick={() => { setFinaleAberto(false); avancar() }} disabled={salvando}>{salvando ? 'Salvando…' : autonoma ? 'Entrar no painel' : 'Concluir e ativar'} <ArrowRight size={15} /></button>
             </div>
           </div>
         </div>
@@ -1770,104 +1771,7 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
 }
 
 
-// ---------- 4 · Quase lá ------------------------------------------------------------
-// O cadastro termina aqui: quantas agendas (define o plano) e o aviso de que
-// serviços, equipe e o QR vêm no painel, guiados.
-function PassoQuaseLa({ s, voltar, salvando, concluir, pronto, autonoma, gravarQuieto, setEstadoAuto }) {
-  const [n, setNum] = useState(Math.max(1, Number(s.equipe_prevista) || 1))
-  const setN = (v) => setNum(Math.max(1, Math.round(v)))
-  const c = planoDoNegocio(autonoma ? 'autonoma' : 'salao', n)
-  const inclusas = c.plano === 'pro' ? PLANOS.pro.inclusas : PLANOS.promais.inclusas
-  const estado = useAutosave(() => gravarQuieto({ equipe_prevista: n }), { n }, { ativo: Boolean(s.id) && !autonoma })
-  useEffect(() => { setEstadoAuto(estado); return () => setEstadoAuto('') }, [estado, setEstadoAuto])
-  useRoteiro([autonoma || n >= 1, false])
-  // a dona que também atende (2.99): responde aqui e a ficha dela nasce na hora
-  const [respondendo, setRespondendo] = useState(false)
-  async function responderDona(atende) {
-    setRespondendo(true)
-    const { error } = await supabase.rpc('dona_atender', { salao: s.id, atende })
-    setRespondendo(false)
-    if (error) { setEstadoAuto('erro'); return }
-    setEstadoAuto('salvo'); setTimeout(() => setEstadoAuto(''), 1500)
-    s.dona_atende = atende; setNum((x) => x)   // reflete sem esperar o perfil recarregar
-  }
-  return (
-    <>
-      <h1 className="ob-titulo">Quase lá</h1>
-      <p className="ob-sub">{autonoma ? 'Sua agenda já tem cara. Falta só entrar no painel e montar os serviços.' : 'Seu salão já tem cara. Falta dizer quantas agendas e entrar no painel.'}</p>
-      <GuiaContexto Icone={Check} titulo={autonoma ? 'Você não tem mensalidade' : 'Você ainda não está contratando nada agora'} tom="rosa">
-        {autonoma
-          ? 'Sua agenda individual é gratuita. Você entra no painel, cadastra os serviços e libera o link.'
-          : 'A quantidade abaixo serve para estimar o plano. O teste só começa quando você ativar o link e o QR no painel, e as agendas podem ser ajustadas depois.'}
-      </GuiaContexto>
-      <div className="ob-estrutura">
-        {!autonoma && (
-          <div className="ob-card ob-card-largo ob-plano-simples">
-            <div className="ob-plano-simples-cabeca">
-              <span>
-                <em className="ob-etapa-mini">Só falta dimensionar sua equipe</em>
-                <strong className="ob-card-titulo">Quantas pessoas terão agenda própria na MIMO?</strong>
-                <small>Comece com quem realmente atende clientes. Recepção, administrativo e pessoas sem agenda própria não entram nessa conta.</small>
-              </span>
-              <AjudaCampo titulo="O que conta como uma agenda?">Cada profissional que recebe horários próprios na MIMO usa uma agenda. Se duas pessoas atendem clientes em horários separados, são duas agendas. Você pode adicionar ou remover profissionais depois.</AjudaCampo>
-            </div>
-
-            <div className="ob-plano-simples-miolo">
-              <div className="ob-plano-escolha">
-                <span className="ob-plano-pergunta">Quantas agendas você quer começar usando?</span>
-                <div className="ob-contador ob-contador-grande">
-                  <button type="button" onClick={() => setN(n - 1)} aria-label="Diminuir agendas" disabled={n <= 1}><Minus size={17} /></button>
-                  <strong>{n}</strong>
-                  <button type="button" onClick={() => setN(n + 1)} aria-label="Aumentar agendas"><Plus size={17} /></button>
-                </div>
-                <span className="ob-plano-agendas">{n === 1 ? '1 profissional com agenda própria' : `${n} profissionais com agenda própria`}</span>
-              </div>
-
-              <div className="ob-dona-atende" role="group" aria-label="Você também atende?">
-                <strong>Você também atende clientes?</strong>
-                <small className="muted">Se sim, você ganha a sua própria agenda, com o mesmo login. Ela conta como uma das {n} {n === 1 ? 'agenda' : 'agendas'}.</small>
-                <div className="ob-dona-opcoes">
-                  <button type="button" className={'chip' + (s.dona_atende === true ? ' active' : '')} onClick={() => responderDona(true)} disabled={respondendo}>Sim, tenho minha agenda</button>
-                  <button type="button" className={'chip' + (s.dona_atende === false ? ' active' : '')} onClick={() => responderDona(false)} disabled={respondendo}>Não, só administro</button>
-                </div>
-              </div>
-
-              <div className="ob-plano-resultado">
-                <small>Com essa equipe, você começa no</small>
-                <strong>{c.nome}</strong>
-                <div className="ob-plano-preco"><b>{emDinheiro(c.total)}</b><span>/mês</span></div>
-                <span>{c.extras === 0 ? `${n} de ${inclusas} agendas inclusas` : `${inclusas} inclusas + ${c.extras} ${c.extras === 1 ? 'agenda extra' : 'agendas extras'}`}</span>
-              </div>
-            </div>
-
-            <div className="ob-plano-simples-rodape">
-              <span className="ob-plano-teste"><Sparkles size={15} /><span><strong>7 dias grátis, sem cartão.</strong><small>O teste começa só quando você ativar seu link e QR no painel.</small></span></span>
-              <AjudaCampo titulo="E se minha equipe mudar?">Sem problema. O valor acompanha as agendas ativas. Você ajusta a equipe quando quiser e a MIMO mostra o impacto antes de qualquer mudança.</AjudaCampo>
-            </div>
-          </div>
-        )}
-        <div className="ob-card ob-card-largo ob-depois-painel">
-          <span className="ob-depois-selo"><Sparkles size={13} /> Continua no painel</span>
-          <strong className="ob-card-titulo">{autonoma ? 'Os serviços você monta já dentro do painel' : 'Serviços e equipe você monta já dentro do painel'}</strong>
-          <span className="muted">Com calma, do seu jeito, e com a gente guiando. {autonoma ? 'O painel abre com a configuração pronta pra continuar.' : 'Antes, você escolhe como quer começar: 7 dias grátis ou a primeira mensalidade com desconto.'}</span>
-          <div className="ob-fluxo-depois" aria-label="O que acontece depois">
-            {!autonoma && <><span><b>1</b> Ativar o salão</span><i>→</i></>}
-            <span><b>{autonoma ? '1' : '2'}</b> Entrar no painel</span><i>→</i>
-            <span><b>{autonoma ? '2' : '3'}</b> Cadastrar serviços</span><i>→</i>
-            {!autonoma && <><span><b>4</b> Montar equipe</span></>}
-            {autonoma && <span><b>3</b> Liberar link e QR</span>}
-          </div>
-          <div className="ob-depois-lista">
-            <div className="ob-depois-item"><span className="ob-depois-icone"><Sparkles size={18} /></span><strong>Serviços</strong><small>Nome, duração e preço. Com sugestões por categoria pra ir rápido.</small></div>
-            {!autonoma && <div className="ob-depois-item"><span className="ob-depois-icone"><Users size={18} /></span><strong>Equipe</strong><small>Cada profissional com os seus serviços e horários. Ela recebe um link e entra com tudo pronto.</small></div>}
-            <div className="ob-depois-item apagado"><span className="ob-depois-icone"><QrCode size={18} /></span><strong>Link e QR Code</strong><small>{autonoma ? 'Aparecem assim que os serviços estiverem prontos. Sua agenda é grátis, sem prazo.' : 'Liberados na ativação. Recebem clientes de verdade quando serviços e equipe estiverem prontos.'}</small></div>
-          </div>
-        </div>
-      </div>
-      <Rodape voltar={voltar} avancar={concluir} salvando={salvando || pronto} rotulo={autonoma ? 'Entrar no painel' : 'Concluir e ativar'} icone={<ArrowRight size={16} />} />
-    </>
-  )
-}
+// (4.10) O passo 4, "Quase lá", saiu: o tamanho da equipe e o plano se escolhem na tela de ativação (AtivarSalao).
 
 // ---------- Categorias, serviços, equipe e ativação: vivem no painel, em Configurar ----------
 // O passo Categorias (2.91): as áreas do salão como cartões visuais, antes

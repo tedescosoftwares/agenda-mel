@@ -50,6 +50,20 @@ export const RESPOSTAS_RPC = {
 // a função respostas-extras na demo: o Pix sai na hora; o "Já paguei" (ou a conferência sozinha, a partir da
 // segunda) dá como pago
 export function demoRespostasExtras(corpo) {
+  // 4.10: as agendas a mais do plano usam a mesma função (tipo 'agendas')
+  if (corpo?.tipo === 'agendas') {
+    if (corpo.acao === 'pix') {
+      const n = Math.max(1, Number(corpo.agendas) || 1)
+      estado.agendas = { id: 'ag-demo', agendas: n, meses: 1, valor_cents: n * 990, status: 'aguardando', cobranca_id: 'pay_demo_ag', conferidas: 0, sandbox: true,
+        copia_cola: '00020126580014br.gov.bcb.pix0136demo-mimo-agendas-' + n + '5204000053039865802BR5904MIMO6009SAO PAULO62070503***6304ABCD' }
+      return { ok: true, compra: { ...estado.agendas, imagem: null } }
+    }
+    const c = estado.agendas
+    if (!c) return { ok: true, compra: null }
+    c.conferidas += 1
+    if (c.status === 'aguardando' && (corpo.manual || c.conferidas > 2)) c.status = 'pago'
+    return { ok: true, compra: { ...c, liberadas: 5 + c.agendas } }
+  }
   if (corpo?.acao === 'pix') {
     const p = PACOTES.find((x) => x.respostas === Number(corpo.respostas)) ?? PACOTES[1]
     estado.compra = { id: 'rc-demo', respostas: p.respostas, valor_cents: p.valor_cents, status: 'aguardando', cobranca_id: 'pay_demo', conferidas: 0, sandbox: true,

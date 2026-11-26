@@ -33,7 +33,7 @@ export default function EtapaProfissionais({ s, autonoma, setErro, onEstado }) {
   useEffect(() => { carregar() }, [carregar])
   const ativas = (equipe ?? []).filter((p) => p.situacao !== 'inativa')
   const dona = ativas.find((p) => p.dona) ?? null
-  const vagas = Math.max(0, Number(s.equipe_prevista) || 0)   // as agendas do plano: um teto, não uma meta
+  const vagas = Math.max(3, Number(s.equipe_prevista) || 0)   // as agendas do plano: um teto, não uma meta
   // a dona que também atende (2.99): liga ou desliga a própria agenda aqui mesmo
   async function donaAtender(atende) {
     setMudandoDona(true)

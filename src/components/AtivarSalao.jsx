@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import QRCode from 'qrcode'
-import { ArrowLeft, Check, Copy, Gift, LoaderCircle, QrCode, Rocket, ShieldCheck, Sparkles, Tags, Scissors, UsersRound, Route, Zap, Clock } from 'lucide-react'
+import { ArrowLeft, Check, Copy, Gift, LoaderCircle, QrCode, Rocket, ShieldCheck, Sparkles, Tags, Scissors, UsersRound, Route, Zap, Clock, MessageCircle } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
-import { reais } from '../lib/planos'
+import { reais, precoPara, PLANOS } from '../lib/planos'
 import { REGRAS, dataCurta } from '../lib/acesso'
 import { assinatura } from '../lib/assinatura'
 import { LogoMimo, MarcaIcon } from './icons'
+import LinkSuporte from './LinkSuporte'
 import '../checkout-mimo.css'
 
 // 2.81: a decisão final é uma tela própria, sem navegação e sem "X".
@@ -29,10 +30,30 @@ export default function AtivarSalao({ s, onAtivado, onErro }) {
   const [meses, setMeses] = useState(null)   // 3.94: o plano do "pagar agora" (1, 6 ou 12)
   const poll = useRef(null)
 
-  const cheio = Number(estado?.valor_cents ?? estado?.mensalidade?.valor_cents ?? 0)
-  const agendas = Number(estado?.mensalidade?.agendas ?? s?.equipe_prevista ?? 1)
+  // 4.10: o tamanho da equipe se escolhe aqui (o passo "Quase lá" saiu do cadastro). Até 3 profissionais é o mesmo
+  // valor; só quem diz que tem mais de 3 vê o contador, e o preço acompanha.
+  const INCLUSAS = PLANOS.pro.inclusas
+  const agendasServidor = Number(estado?.mensalidade?.agendas ?? s?.equipe_prevista ?? INCLUSAS)
+  const [equipe, setEquipeLocal] = useState(null)
+  const agendas = equipe ?? Math.max(INCLUSAS, agendasServidor)
+  const gravando = useRef(null)
+  function setEquipe(n) {
+    setEquipeLocal(n)
+    clearTimeout(gravando.current)
+    gravando.current = setTimeout(() => gravarEquipe(n).catch(() => {}), 500)
+  }
+  async function gravarEquipe(n) {
+    clearTimeout(gravando.current)
+    if (!s?.id || n == null || n === agendasServidor) return
+    const { data, error } = await supabase.rpc('ativacao_equipe', { salao: s.id, agendas_: n })
+    if (error) throw new Error(error.message)
+    setEstado(data ?? null)
+  }
+  const plano = precoPara(agendas)
+  const mesmoDoServidor = agendas === agendasServidor
+  const cheio = mesmoDoServidor ? Number(estado?.valor_cents ?? estado?.mensalidade?.valor_cents ?? 0) : Math.round(plano.total * 100)
   // os planos: mensal com os 20% da primeira mensalidade, semestral 10%, anual 15% (o banco manda os preços)
-  const planos = estado?.planos?.length ? estado.planos : [[1, 'Mensal', Number(estado?.desconto_pct ?? REGRAS.descontoInicialPct ?? 20)], [6, 'Semestral', 10], [12, 'Anual', 15]]
+  const planos = mesmoDoServidor && estado?.planos?.length ? estado.planos : [[1, 'Mensal', Number(estado?.desconto_pct ?? REGRAS.descontoInicialPct ?? 20)], [6, 'Semestral', 10], [12, 'Anual', 15]]
     .map(([m, nome, pct]) => ({ meses: m, nome, desconto_pct: pct, sem_desconto_cents: cheio * m, total_cents: Math.floor((cheio * m * (100 - pct)) / 100) }))
   const mesesEscolhidos = meses ?? estado?.cobranca?.meses ?? 1
   const planoEscolhido = planos.find((p) => p.meses === mesesEscolhidos) ?? planos[0]
@@ -100,6 +121,7 @@ export default function AtivarSalao({ s, onAtivado, onErro }) {
   async function comecarTeste() {
     await rodar(async () => {
       if (estado?.cobranca && estado.cobranca.status !== 'pago') await cancelarPagamentoPendente()
+      await gravarEquipe(equipe)
       const { data, error } = await supabase.rpc('ativacao_inicial_teste', { salao: s.id })
       if (error) throw new Error(error.message)
       await atualizarContexto()
@@ -111,6 +133,7 @@ export default function AtivarSalao({ s, onAtivado, onErro }) {
   async function abrirPix() {
     await rodar(async () => {
       if (estado?.cobranca && estado.cobranca.metodo !== 'pix' && estado.cobranca.status !== 'pago') await cancelarPagamentoPendente()
+      await gravarEquipe(equipe)
       const r = await assinatura('inicio_pix', s.id, { meses: mesesEscolhidos })
       setPix(r?.cobranca ?? null)
       setEstado((x) => ({ ...(x ?? {}), cobranca: r?.cobranca ?? x?.cobranca }))
@@ -187,9 +210,30 @@ export default function AtivarSalao({ s, onAtivado, onErro }) {
                 <span className="ck-kicker">Tudo pronto para começar</span>
                 <h1><span>{s?.name || 'Seu salão'}</span> está pronto para entrar no ar.</h1>
                 <p>Escolha como começar. Nenhuma das opções tem cobrança automática.</p>
-                <div className="ck-plano">
-                  <span><small>Seu plano</small><b>MIMO Pro · {agendas} {agendas === 1 ? 'agenda' : 'agendas'}</b></span>
-                  <strong>{cheio ? reais(cheio / 100) : '…'}<small>/mês</small></strong>
+                <div className="ck-equipe">
+                  <div className="ck-equipe-oferta">
+                    <span className="ck-equipe-selo"><UsersRound size={14} /> {plano.nome}</span>
+                    <b>{agendas <= INCLUSAS ? `Até ${INCLUSAS} profissionais com agenda` : `${agendas} profissionais com agenda`}</b>
+                    <strong>{reais(plano.total)}<small>/mês</small></strong>
+                    <small>{agendas <= INCLUSAS
+                      ? `Uma, duas ou ${INCLUSAS}: o valor é o mesmo. Passou de ${INCLUSAS}, cada profissional a mais custa ${reais(plano.valorExtra)} por mês.`
+                      : `${reais(plano.base)} até ${plano.plano === 'promais' ? PLANOS.promais.inclusas : INCLUSAS} profissionais + ${plano.extras} × ${reais(plano.valorExtra)}`}</small>
+                  </div>
+                  <div className="ck-equipe-escolha" role="group" aria-label="Tamanho da equipe">
+                    <span>Quantas pessoas atendem no salão?</span>
+                    <div className="ck-equipe-botoes">
+                      <button type="button" className={agendas <= INCLUSAS ? 'ativo' : ''} onClick={() => setEquipe(INCLUSAS)} disabled={indo}>Até {INCLUSAS}</button>
+                      <button type="button" className={agendas > INCLUSAS ? 'ativo' : ''} onClick={() => setEquipe(Math.max(INCLUSAS + 1, agendas))} disabled={indo}>Mais de {INCLUSAS}</button>
+                    </div>
+                    {agendas > INCLUSAS && (
+                      <div className="ck-equipe-contador">
+                        <button type="button" onClick={() => setEquipe(Math.max(INCLUSAS, agendas - 1))} aria-label="Diminuir" disabled={indo}>−</button>
+                        <b>{agendas}</b>
+                        <button type="button" onClick={() => setEquipe(agendas + 1)} aria-label="Aumentar" disabled={indo}>+</button>
+                      </div>
+                    )}
+                    <small>Dá para aumentar depois, direto na Equipe do painel.</small>
+                  </div>
                 </div>
               </section>
 
@@ -226,11 +270,19 @@ export default function AtivarSalao({ s, onAtivado, onErro }) {
                 <div className="ck-ou"><span>ou</span></div>
 
                 <section className="ck-opcao ck-teste">
-                  <span className="ck-fita ck-fita-suave"><Sparkles size={13} /> Sem compromisso</span>
-                  <h2>{REGRAS.testeDias} dias grátis</h2>
-                  <p>Use tudo de verdade antes de decidir. Sem cartão e sem Pix agora.</p>
+                  <span className="ck-fita ck-fita-teste"><Sparkles size={13} /> Grátis · sem cartão · sem Pix</span>
+                  <h2>{REGRAS.testeDias} dias grátis para usar tudo</h2>
+                  <div className="ck-preco ck-preco-teste"><strong>R$ 0</strong><em>por {REGRAS.testeDias} dias</em></div>
+                  <p>O salão entra no ar agora, completo. Você usa de verdade, com as suas clientes, e só decide no fim.</p>
+                  <ul className="ck-lista">
+                    <li><Check size={14} /> Tudo liberado: nenhuma função fica de fora</li>
+                    <li><Check size={14} /> Agendamentos e clientes à vontade até o {REGRAS.testeDias}º dia</li>
+                    <li><Check size={14} /> {agendas <= INCLUSAS ? `Até ${INCLUSAS} profissionais com agenda própria` : `${agendas} profissionais com agenda própria`}</li>
+                    <li><Check size={14} /> Assistente no WhatsApp, link e QR do salão</li>
+                    <li><Check size={14} /> Não quis continuar? Não paga nada</li>
+                  </ul>
                   <button type="button" className="ck-botao ck-botao-teste" onClick={comecarTeste} disabled={indo}>
-                    <Sparkles size={16} /> {indo ? 'Ativando…' : `Começar ${REGRAS.testeDias} dias grátis`}
+                    <Sparkles size={16} /> {indo ? 'Ativando…' : `Começar meus ${REGRAS.testeDias} dias grátis`}
                   </button>
                   <small className="ck-nota">Escolhendo o teste, os 20% da primeira mensalidade saem da mesa. Os planos de 6 e 12 meses continuam com desconto.</small>
                 </section>
@@ -238,6 +290,7 @@ export default function AtivarSalao({ s, onAtivado, onErro }) {
 
               {erro && <div className="ai-erro ck-erro">{erro}</div>}
               <p className="ck-rodape">Depois da escolha, seu salão entra no ar e você segue para o painel.</p>
+              <LinkSuporte className="ck-suporte"><MessageCircle size={15} /> Ficou com dúvida ou deu algum problema? Fale com o suporte</LinkSuporte>
             </>
           ) : (
             <TelaPix

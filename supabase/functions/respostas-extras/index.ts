@@ -6,6 +6,10 @@
 //     conferir  { compra }  confere no Asaas; pago, o saldo entra (o aviso do Asaas também faz isso sozinho)
 //     simular   { compra }  só no sandbox: dá baixa no Pix como se tivesse pago
 //
+// 4.10 (migração 265): a mesma conversa serve às agendas a mais do plano. Com { tipo: 'agendas' } a ação pix recebe
+//     pix       { agendas: n }   n profissionais além das liberadas; o valor é a diferença da mensalidade × os meses
+//                                que faltam do período pago (agendas_compra_*), referência agendas:<id>
+//
 // O banco decide o que pode e guarda tudo (respostas_compra_*); aqui é só a conversa com o Asaas. A referência no
 // Asaas é respostas:<id> (o aviso do Asaas, em pagamento-webhook, credita por ela).
 
@@ -29,6 +33,10 @@ Deno.serve(async (req) => {
   try { corpo = await req.json() } catch { return json({ erro: 'corpo inválido' }, 400) }
   if (!corpo.salao || !corpo.acao) return json({ erro: 'salão e ação?' }, 400)
   const sandbox = AMBIENTE !== 'producao'
+  // o que se compra: respostas da assistente (padrão) ou agendas a mais do plano
+  const AG = corpo.tipo === 'agendas'
+  const F = AG ? 'agendas_compra' : 'respostas_compra'
+  const REF = AG ? 'agendas' : 'respostas'
   const hoje = new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10)
 
   // pagou de verdade (no sandbox, a baixa manual também vale)
@@ -36,23 +44,25 @@ Deno.serve(async (req) => {
   // deno-lint-ignore no-explicit-any
   async function creditar(compra: string, real: any) {
     const quando = real?.paymentDate ? new Date(real.paymentDate + 'T12:00:00-03:00').toISOString() : new Date().toISOString()
-    const { error } = await servico.rpc('respostas_compra_paga', { compra, cobranca_asaas: real?.id ? String(real.id) : null, quando })
+    const { error } = await servico.rpc(`${F}_paga`, { compra, cobranca_asaas: real?.id ? String(real.id) : null, quando })
     if (error) throw new Error(error.message)
   }
   async function estado(compra: string) {
-    const { data, error } = await quem.rpc('respostas_compra_estado', { compra })
+    const { data, error } = await quem.rpc(`${F}_estado`, { compra })
     if (error) throw new Error(error.message)
     return data
   }
 
   try {
     if (corpo.acao === 'pix') {
-      const { data: ab, error } = await quem.rpc('respostas_compra_abrir', { salao: corpo.salao, respostas_: Number(corpo.respostas) })
+      const { data: ab, error } = AG
+        ? await quem.rpc('agendas_compra_abrir', { salao: corpo.salao, agendas_: Number(corpo.agendas) })
+        : await quem.rpc('respostas_compra_abrir', { salao: corpo.salao, respostas_: Number(corpo.respostas) })
       if (error) return json({ erro: error.message }, 400)
       // as compras que este pedido substituiu saem do Asaas (para não ficarem pagáveis)
       for (const id of (ab?.anteriores ?? []) as string[]) if (id) await apagarCobrancaMimo(id).catch(() => {})
       const pronta = (cobranca_id: string, copia_cola: string, imagem: string | null) =>
-        json({ ok: true, compra: { id: ab.id, respostas: ab.respostas, valor_cents: ab.valor_cents, status: 'aguardando', cobranca_id, copia_cola, imagem, sandbox } })
+        json({ ok: true, compra: { id: ab.id, respostas: ab.respostas, agendas: ab.agendas, meses: ab.meses, valor_cents: ab.valor_cents, status: 'aguardando', cobranca_id, copia_cola, imagem, sandbox } })
 
       // já criada antes (tocou de novo): se ainda vale no Asaas, é ela
       if (ab?.cobranca_id && ab?.copia_cola) {
@@ -64,11 +74,11 @@ Deno.serve(async (req) => {
         }
       }
       // uma tentativa que caiu depois de criar no Asaas: acha pela referência
-      const achada = await acharCobrancaMimoPorRef(`respostas:${ab.id}`).catch(() => null)
+      const achada = await acharCobrancaMimoPorRef(`${REF}:${ab.id}`).catch(() => null)
       if (achada?.id && !PAGO.has(String(achada.status ?? '')) && !ESTORNADA.has(String(achada.status ?? ''))) {
         const q = await pixDaCobrancaMimo(String(achada.id)).catch(() => null)
         if (q?.copiaCola) {
-          await servico.rpc('respostas_compra_atualizar', { compra: ab.id, cobranca_id_: String(achada.id), copia_cola_: q.copiaCola })
+          await servico.rpc(`${F}_atualizar`, { compra: ab.id, cobranca_id_: String(achada.id), copia_cola_: q.copiaCola })
           return pronta(String(achada.id), q.copiaCola, q.imagem)
         }
       }
@@ -85,11 +95,13 @@ Deno.serve(async (req) => {
       const r = await cobrarPixMimo({
         customer,
         valorCents: Number(ab.valor_cents),
-        descricao: `${milhar(Number(ab.respostas))} respostas extras da assistente · ${cli.nome ?? 'MIMO'}`,
-        ref: `respostas:${ab.id}`,
+        descricao: AG
+          ? `${ab.agendas} ${Number(ab.agendas) === 1 ? 'agenda a mais' : 'agendas a mais'} no plano${Number(ab.meses) > 1 ? ` (${ab.meses} meses)` : ''} · ${cli.nome ?? 'MIMO'}`
+          : `${milhar(Number(ab.respostas))} respostas extras da assistente · ${cli.nome ?? 'MIMO'}`,
+        ref: `${REF}:${ab.id}`,
         vencimento: hoje,
       })
-      await servico.rpc('respostas_compra_atualizar', { compra: ab.id, cobranca_id_: r.id, copia_cola_: r.copiaCola })
+      await servico.rpc(`${F}_atualizar`, { compra: ab.id, cobranca_id_: r.id, copia_cola_: r.copiaCola })
       return pronta(r.id, r.copiaCola, r.imagem)
     }
 

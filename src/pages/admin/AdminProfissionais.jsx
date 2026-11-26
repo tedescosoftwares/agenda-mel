@@ -13,6 +13,8 @@ import { situacaoDe, resumoDias, vinculoPor, mensagemDeAcesso, primeiroNome, env
 import ProfissionalDrawer from '../../components/ProfissionalDrawer'
 import '../../equipe.css'
 import { linkDaProfissional } from '../../lib/endereco'
+import AgendasExtras from '../../components/AgendasExtras'
+import { PLANOS } from '../../lib/planos'
 
 // A equipe do salão (119): a mesma gaveta do onboarding configura a
 // profissional inteira (dados, vínculo, serviços, horários, repasse,
@@ -20,7 +22,7 @@ import { linkDaProfissional } from '../../lib/endereco'
 // ativou o acesso ganha o botão de mandar o link.
 export default function AdminProfissionais() {
   const { confirmar } = useDialogo()
-  const { salao } = useAuth()
+  const { salao, recarregarPerfil } = useAuth()
   const [equipe, setEquipe] = useState(null)
   const [services, setServices] = useState([])
   const [cats, setCats] = useState([])
@@ -29,6 +31,15 @@ export default function AdminProfissionais() {
   const [info, setInfo] = useState('')
   const [gaveta, setGaveta] = useState(null) // null | 'nova' | profissional
   const [coletar, setColetar] = useState(false)
+  // 4.10 (265): passou das agendas liberadas? Antes de abrir a ficha, a tela mostra a conta (AgendasExtras)
+  const [extras, setExtras] = useState(false)
+  const [folga, setFolga] = useState(0)   // agendas liberadas nesta visita (o perfil só recarrega depois)
+  const liberadas = Math.max(PLANOS.pro.inclusas, Number(salao?.equipe_prevista ?? 0)) + folga
+  const comAgenda = (equipe ?? []).filter((p) => p.active ?? !['inativa', 'rascunho'].includes(p.situacao)).length
+  function adicionar() {
+    if (salao?.tipo !== 'autonoma' && comAgenda >= liberadas) { setExtras(true); return }
+    setGaveta('nova')
+  }
   const linkEquipe = urlDoAmbiente('pro', `/equipe/${salao?.codigo_equipe ?? ''}`)
 
   const fetchTudo = useCallback(async () => {
@@ -117,7 +128,7 @@ export default function AdminProfissionais() {
         <div className="card empty-state">
           <p>Ninguém na equipe ainda.</p>
           <p className="muted">Você configura cada profissional; ela recebe um link e entra com a agenda pronta.</p>
-          <button type="button" className="btn btn-primary" onClick={() => setGaveta('nova')}><Plus size={16} /> Adicionar profissional</button>
+          <button type="button" className="btn btn-primary" onClick={adicionar}><Plus size={16} /> Adicionar profissional</button>
         </div>
       ) : (
         <div className="cliente-list">
@@ -168,7 +179,9 @@ export default function AdminProfissionais() {
       )}
 
       {gaveta && salao && <ProfissionalDrawer salao={salao} profissional={gaveta === 'nova' ? null : gaveta} servicos={services} cats={cats} onFechar={() => { setGaveta(null); fetchTudo() }} onSalvo={() => fetchTudo()} />}
-      {!gaveta && <button className="fab" onClick={() => setGaveta('nova')} aria-label="Adicionar profissional">+</button>}
+      {!gaveta && <button className="fab" onClick={adicionar} aria-label="Adicionar profissional">+</button>}
+      {extras && <AgendasExtras salaoId={salao.id} onFechar={() => setExtras(false)}
+        onLiberadas={(n) => { setFolga((x) => x + n); setExtras(false); recarregarPerfil?.(); setGaveta('nova') }} />}
     </AdminShell>
   )
 }

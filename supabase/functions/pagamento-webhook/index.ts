@@ -77,6 +77,28 @@ Deno.serve(async (req) => {
       }
       return json({ ok: true, respostas: st })
     }
+    // 4.10 (265): agendas a mais do plano, cobradas na conta-pai, referência agendas:<id>
+    if (ref.startsWith('agendas:')) {
+      const id = ref.slice('agendas:'.length)
+      const { data: linha } = await servico.from('agendas_compras').select('id, status, cobranca_id').eq('id', id).maybeSingle()
+      if (!linha) return json({ ok: true, ignorado: 'compra de agendas desconhecida' })
+      // confere na fonte: o POST sozinho não vale como prova
+      let sit
+      try { sit = await situacaoCobrancaMimo(cobranca) } catch (e) { return json({ erro: 'não deu para conferir: ' + String(e) }, 500) }
+      const st = sit.status
+      if (PAGO.has(st) && (st !== 'RECEIVED_IN_CASH' || AMBIENTE !== 'producao')) {
+        const quando = sit.real?.paymentDate ? new Date(sit.real.paymentDate + 'T12:00:00-03:00').toISOString() : new Date().toISOString()
+        const { data: r, error } = await servico.rpc('agendas_compra_paga', { compra: linha.id, cobranca_asaas: cobranca, quando })
+        if (error) return json({ erro: error.message }, 500)
+        return json({ ok: true, agendas: r })
+      }
+      if ((sit.apagada || ESTORNADA.has(st)) && linha.status === 'aguardando' && (!linha.cobranca_id || linha.cobranca_id === cobranca)) {
+        const { error } = await servico.rpc('agendas_compra_cancelar', { compra: linha.id, motivo: sit.apagada ? 'apagada no Asaas' : 'não vai ser paga (' + st + ')' })
+        if (error) return json({ erro: error.message }, 500)
+        return json({ ok: true, agendas: 'cancelada' })
+      }
+      return json({ ok: true, agendas: st })
+    }
     // a nossa linha: pela referência (o id do pagamento) ou pelo id da cobrança
     let linha = null
     if (/^[0-9a-f-]{36}$/i.test(ref)) {

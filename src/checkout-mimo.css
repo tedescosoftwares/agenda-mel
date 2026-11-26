@@ -158,3 +158,32 @@
 .ck-plano-op b { font-size: 0.66rem; font-weight: 800; color: var(--rosa, #ff2d7a); letter-spacing: 0.02em; }
 .ck-plano-op.ativo { background: #fff; color: var(--texto, #1f2026); box-shadow: 0 2px 8px rgba(255, 45, 122, 0.18); }
 .ck-plano-op:disabled { opacity: 0.7; cursor: default; }
+
+/* 4.10: o plano e o tamanho da equipe na tela de ativação (o passo "Quase lá" saiu do cadastro) */
+.ck-equipe { display: grid; gap: 10px; text-align: left; }
+.ck-equipe-oferta, .ck-equipe-escolha { display: grid; gap: 6px; padding: 16px; border-radius: 18px; background: #fff; border: 1px solid var(--ck-fio); }
+.ck-equipe-oferta { border-color: #ffd0e0; background: linear-gradient(135deg, #fff 55%, #fff3f8); }
+.ck-equipe-selo { display: inline-flex; align-items: center; gap: 6px; justify-self: start; padding: 4px 10px; border-radius: 999px; background: #fff0f6; color: var(--ck-vinho); font-size: 0.72rem; font-weight: 800; }
+.ck-equipe-oferta b { font-size: 1.05rem; letter-spacing: -0.02em; }
+.ck-equipe-oferta strong { font-size: 1.9rem; letter-spacing: -0.04em; line-height: 1; color: var(--ck-rosa); }
+.ck-equipe-oferta strong small { font-size: 0.8rem; font-weight: 500; color: var(--ck-cinza); }
+.ck-equipe small { font-size: 0.78rem; color: var(--ck-cinza); line-height: 1.4; }
+.ck-equipe-escolha > span { font-size: 0.86rem; font-weight: 700; }
+.ck-equipe-botoes { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 14px; background: #f6f1f4; }
+.ck-equipe-botoes button { padding: 0.6rem 0.4rem; border: 0; border-radius: 11px; background: transparent; font: inherit; font-weight: 700; font-size: 0.88rem; color: var(--ck-cinza); cursor: pointer; }
+.ck-equipe-botoes button.ativo { background: #fff; color: var(--ck-vinho); box-shadow: 0 2px 8px rgba(255, 45, 122, 0.18); }
+.ck-equipe-contador { display: flex; align-items: center; gap: 10px; }
+.ck-equipe-contador button { width: 42px; height: 42px; border-radius: 12px; border: 1px solid var(--ck-fio); background: #fff; font-size: 1.2rem; cursor: pointer; }
+.ck-equipe-contador b { min-width: 56px; text-align: center; padding: 8px 0; border-radius: 12px; background: #fff0f6; color: var(--ck-rosa); font-size: 1.2rem; }
+@media (min-width: 760px) {
+  .ck-equipe { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); width: min(760px, 100%); margin-inline: auto; }
+}
+
+/* 4.10: o teste grátis com cara de oferta, e o suporte */
+.ck-teste { border-color: #cdb8f5; background: linear-gradient(160deg, #fff 40%, #f6f0ff); box-shadow: 0 0 0 4px #f5efff, 0 18px 40px rgba(124, 77, 255, 0.10); }
+.ck-fita-teste { background: #6d3fd6; color: #fff; }
+.ck-preco-teste strong { color: #4b23a8; }
+.ck-preco-teste em { color: #4b23a8; background: #ede4ff; }
+.ck-teste .ck-lista svg { color: #6d3fd6; }
+.ck-teste .ck-botao-teste { background: #6d3fd6; color: #fff; border-color: #6d3fd6; box-shadow: 0 10px 24px rgba(109, 63, 214, 0.25); }
+.ck-suporte { display: flex; align-items: center; justify-content: center; gap: 7px; margin: 2px auto 0; font-size: 0.86rem; font-weight: 700; color: var(--ck-vinho); text-decoration: underline; text-underline-offset: 3px; }

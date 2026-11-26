@@ -16196,3 +16196,21 @@ label.a-partir-opcao .a-partir-opcao-texto { flex: 1; }
   .assin-plano-op > :not(strong):not(.assin-plano-selo) { grid-column: 1; grid-row: auto; }
   .assin-plano-op strong { grid-column: 2; grid-row: 1 / span 4; align-self: center; justify-self: end; }
 }
+
+/* 4.10: agendas além do plano, na Equipe */
+.agx { display: grid; gap: 12px; max-width: 440px; }
+.agx-selo { display: inline-flex; align-items: center; gap: 6px; justify-self: start; padding: 4px 10px; border-radius: 999px; background: #fff0f6; color: #8a1247; font-size: 0.72rem; font-weight: 800; }
+.agx h3 { margin: 0; }
+.agx > p { margin: 0; }
+.agx-contador { display: flex; align-items: center; gap: 10px; }
+.agx-contador button { width: 44px; height: 44px; border-radius: 12px; border: 1px solid #eadfe6; background: #fff; display: grid; place-items: center; cursor: pointer; }
+.agx-contador button:disabled { opacity: 0.4; cursor: default; }
+.agx-contador strong { min-width: 60px; text-align: center; padding: 9px 0; border-radius: 12px; background: #fff0f6; color: #ff2d7a; font-size: 1.25rem; }
+.agx-contador span { font-size: 0.9rem; font-weight: 600; }
+.agx-conta { display: grid; gap: 8px; padding: 14px; border-radius: 16px; background: #fcfafc; border: 1px solid #eee7ef; }
+.agx-conta div { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: 0.9rem; }
+.agx-total { padding-top: 8px; border-top: 1px dashed #e6dbe3; }
+.agx-total b { font-size: 1.15rem; color: #ff2d7a; }
+.agx-nota { font-size: 0.86rem; line-height: 1.45; color: #5d5560; }
+.agx-suporte { justify-self: center; text-align: center; font-size: 0.84rem; font-weight: 600; color: #8a1247; text-decoration: underline; text-underline-offset: 3px; }
+.pk-janela > .agx-suporte { display: block; margin: 14px auto 4px; }

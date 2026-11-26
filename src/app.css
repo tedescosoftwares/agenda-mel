@@ -16558,8 +16558,8 @@ html[data-tema="escuro"] .admin-desktop-sidebar .ia-menu :is(strong, small, span
 .admin-topbar-tema { width:38px; height:38px; display:grid; place-items:center; border:1px solid var(--fio); border-radius:50%; background:#fff; color:var(--ameixa); cursor:pointer; transition:transform .12s ease, border-color .16s ease; }
 .admin-topbar-tema:hover { border-color:var(--ameixa); } .admin-topbar-tema:active { transform:scale(.92); }
 html[data-tema="escuro"] .admin-topbar-tema { background:#1a121e; border-color:#2c2132; color:#f6f1f8; }
-html[data-tema="escuro"] .admin-content .miolo > *:not(.hd) { filter:invert(.93) hue-rotate(180deg); }
-html[data-tema="escuro"] .admin-content .miolo > *:not(.hd) :is(img, video, canvas, [style*="background-image"]) { filter:invert(1) hue-rotate(180deg); }
+html[data-tema="escuro"] .admin-content .miolo > *:not(.hd):not(.ags-pagina) { filter:invert(.93) hue-rotate(180deg); }
+html[data-tema="escuro"] .admin-content .miolo > *:not(.hd):not(.ags-pagina) :is(img, video, canvas, [style*="background-image"]) { filter:invert(1) hue-rotate(180deg); }
 html[data-tema="escuro"] .modal-fundo .modal-caixa { filter:invert(.93) hue-rotate(180deg); }
 html[data-tema="escuro"] .modal-fundo .modal-caixa :is(img, video, canvas, [style*="background-image"]) { filter:invert(1) hue-rotate(180deg); }
 @media (max-width: 760px) { .admin-topbar-tema { width:34px; height:34px; } }
@@ -16610,3 +16610,4 @@ html[data-tema="escuro"] .admin-first-workspace, html[data-tema="escuro"] .admin
 }
 .hd-col > * { min-width:0; }
 .hd-link small, .hd-secao-topo small { overflow-wrap:anywhere; }
+html[data-tema="escuro"] .admin-desktop-sidebar .admin-sidebar-item:not(.ativo) { background:transparent !important; border-color:transparent !important; }

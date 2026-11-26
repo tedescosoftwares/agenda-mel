@@ -4,8 +4,8 @@
 -- NÃO é migração. Cole no SQL Editor do Supabase e rode. Rodar de novo é seguro: o que já existe não duplica
 -- (e a senha das três contas volta a ser a que estiver na linha abaixo).
 --
--- ANTES DE RODAR: troque COLOQUE_A_SENHA_AQUI pela senha das contas (8 caracteres ou mais). Ela fica só no
--- SQL Editor; de propósito não está escrita neste arquivo.
+-- ANTES DE RODAR: na linha do set_config, logo abaixo deste cabeçalho, troque o marcador pela senha das contas
+-- (8 caracteres ou mais). Pode usar "substituir tudo". Ela fica só no SQL Editor; não está escrita neste arquivo.
 --
 -- O que nasce:
 --   teste.dona@mimo.com.vc           dona do "Salão de Teste MIMO" (cadastro concluído, teste grátis ativo)
@@ -35,8 +35,9 @@ declare
   senha text := current_setting('mimo.senha_teste', true);
   tem_provider_id boolean;
 begin
-  if coalesce(senha, '') in ('', 'COLOQUE_A_SENHA_AQUI') or length(senha) < 8 then
-    raise exception 'Troque COLOQUE_A_SENHA_AQUI pela senha das contas de teste (8 caracteres ou mais) antes de rodar.';
+  -- (a conferência não repete o texto do marcador: quem troca com "substituir tudo" não pode cair aqui)
+  if coalesce(senha, '') = '' or senha like 'COLOQUE\_A\_SENHA%' or length(senha) < 8 then
+    raise exception 'Falta a senha das contas de teste: troque o marcador da linha do set_config, lá em cima, por uma senha de 8 caracteres ou mais.';
   end if;
   select id into uid from auth.users where email = email_;
   if uid is null then

@@ -270,7 +270,7 @@ const TABELAS = {
 }
 
 const HORAS = [0, 1, 2, 3, 4, 5, 6].map((weekday) => ({ weekday, open: weekday > 0, start_time: '09:00:00', end_time: weekday === 6 ? '14:00:00' : '18:00:00' }))
-const CONFIG_PUBLICA_DEMO = { instagram: 'mimo.com.vc' }   // 3.99.1: o @ e o convite do Instagram do guia (Plataforma › Guia › Instagram)
+const CONFIG_PUBLICA_DEMO = { instagram: 'mimo.com.vc', agendar_sem_cadastro: 'ligado' }   // 3.99.1: o @ e o convite do Instagram do guia (Plataforma › Guia › Instagram)
 let demoAvisaProfissional = true   // 3.98.3: "depois que a casa confirmar" (só enquanto a página vive)
 const RPC = {
   // o guia de salões: guia_pagina, guia_cidade, guia_cidades, guia_publicadas, guia_registrar_interesse,

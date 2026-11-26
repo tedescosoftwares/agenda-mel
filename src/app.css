@@ -16312,3 +16312,4 @@ label.a-partir-opcao .a-partir-opcao-texto { flex: 1; }
   .wsal-conv .wsal-fio { display: none; } .wsal-conv.aberta .wsal-fio { display: flex; } .wsal-conv.aberta .wsal-lista { display: none; }
   .wsal-voltar { display: inline-flex; }
 }
+.cfg-chave { display: flex; align-items: center; gap: 0.55rem; font-weight: 600; font-size: 0.92rem; } .cfg-nota { font-size: 0.82rem; margin: 0.6rem 0 0; }

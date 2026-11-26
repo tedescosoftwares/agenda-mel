@@ -5,6 +5,10 @@
 //                confirmado pelo WhatsApp), gasta o link e devolve a sessão para o app entrar direto.
 //   pedir_link   "Receber link no WhatsApp" (primeiro acesso ou esqueceu a senha): manda um link novo pelo WhatsApp da
 //                MIMO. Responde igual tendo ou não cadastro (ninguém descobre quem é cliente). 3 por hora por número.
+//   visita       4.13 (migração 268): marcar sem criar conta. Nome, sobrenome e WhatsApp viram uma conta leve, sem senha,
+//                e a sessão volta para o site seguir até o horário. O número NÃO foi conferido: um número que já tem
+//                conta não entra por aqui (devolve existe: true; ela recebe o link no WhatsApp ou usa a senha).
+//                Liga e desliga em config_publica.agendar_sem_cadastro. 3 por hora por número e 150 por hora no total.
 //   entrar       WhatsApp e senha: acha a conta pelo número (só telefone confirmado) e devolve a sessão. 8 tentativas
 //                a cada 15 minutos por número.
 //
@@ -13,7 +17,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { enviarPor } from '../_shared/canais.ts'
-import { numeroCompleto, telefoneEscondido, tokenNovo, tokenValido, hashDoToken, urlDoLink, textoDoLinkPedido, senhaValida, emailValido, SITE_PADRAO } from '../_shared/acesso.ts'
+import { numeroCompleto, telefoneEscondido, telefoneBonito, emailDoWhatsapp, nomeDeVerdade, tokenNovo, tokenValido, hashDoToken, urlDoLink, textoDoLinkPedido, senhaValida, emailValido, SITE_PADRAO } from '../_shared/acesso.ts'
 
 const URL_SUPABASE = Deno.env.get('SUPABASE_URL') ?? ''
 const CHAVE_ANON = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
@@ -80,6 +84,9 @@ Deno.serve(async (req) => {
         return json({ erro: ja ? 'Esse e-mail já tem cadastro na MIMO. Use outro ou deixe em branco.' : 'Não deu para criar a senha agora. Tente de novo.' }, ja ? 409 : 500)
       }
       await servico.rpc('link_de_acesso_usar', { hash })
+      // 4.13: abrir o link prova que o número é dela. Se a conta veio do site (número só digitado), quem estava dentro sai.
+      const { data: eraNova } = await servico.rpc('conta_conferida_pelo_link', { conta })
+      if (eraNova === true) await servico.rpc('conta_encerrar_sessoes', { conta }).then(() => {}, () => {})
       const sessao = await sessaoDe(conta, senha)
       return json({ ok: true, sessao })
     }
@@ -90,7 +97,9 @@ Deno.serve(async (req) => {
       const resposta = { ok: true, mensagem: 'Se esse WhatsApp tiver cadastro na MIMO, o link chega em instantes.' }
       const { data: pode } = await servico.rpc('acesso_tentativa', { chave_: `link:${numero}`, maximo: 3, minutos: 60 })
       if (pode === false) return json({ erro: 'Você já pediu o link algumas vezes. Espere um pouco e tente de novo.' }, 429)
-      const { data: conta } = await servico.rpc('conta_para_entrar', { tel: numero })
+      let { data: conta } = await servico.rpc('conta_para_entrar', { tel: numero })
+      // 4.13: a conta feita pelo site ainda não tem o número conferido; o link é o que confere
+      if (!conta) conta = (await servico.rpc('conta_para_link', { tel: numero })).data ?? null
       if (!conta) return json(resposta)
       const token = tokenNovo()
       const { error: eg } = await servico.rpc('link_de_acesso_guardar', { conta, hash: await hashDoToken(token), origem_: 'app' })
@@ -100,6 +109,34 @@ Deno.serve(async (req) => {
       const env = await enviarPor('evolution', { telefone: numero, corpo: textoDoLinkPedido(urlDoLink(token, SITE), p?.full_name), identificador: (casa as string | null) ?? null })
       if (!env.ok) console.error('acesso: o link não saiu pelo WhatsApp da MIMO:', env.erro)
       return json(resposta)
+    }
+
+    if (acao === 'visita') {
+      const { data: cfg } = await servico.from('config_publica').select('valor').eq('chave', 'agendar_sem_cadastro').maybeSingle()
+      if (cfg?.valor !== 'ligado') return json({ erro: 'Para marcar, crie sua conta ou entre.', desligado: true }, 403)
+      const nome = nomeDeVerdade(`${String(corpo.nome ?? '').trim()} ${String(corpo.sobrenome ?? '').trim()}`)
+      if (!nome) return json({ erro: 'Confira o nome e o sobrenome.' }, 400)
+      const numero = numeroCompleto(corpo.telefone)
+      if (!numero) return json({ erro: 'Confira o WhatsApp: DDD e número (ex.: 13 99999-1234).' }, 400)
+      const { data: p1 } = await servico.rpc('acesso_tentativa', { chave_: `visita:${numero}`, maximo: 3, minutos: 60 })
+      if (p1 === false) return json({ erro: 'Muitas tentativas com esse número. Espere um pouco ou entre com a sua conta.' }, 429)
+      const { data: ja } = await servico.rpc('cliente_pelo_telefone', { tel: numero })
+      if (ja) return json({ ok: false, existe: true })
+      const { data: p2 } = await servico.rpc('acesso_tentativa', { chave_: 'visita:todas', maximo: 150, minutos: 60 })
+      if (p2 === false) return json({ erro: 'Muita gente marcando agora. Crie sua conta ou tente de novo em alguns minutos.', cheio: true }, 429)
+      // a senha é sorteada aqui e ninguém fica com ela: serve só para abrir esta sessão. Ela cria a dela depois, pelo link.
+      const senha = tokenNovo(40)
+      const email = emailDoWhatsapp(numero)
+      const { data: novo, error: e1 } = await servico.auth.admin.createUser({ email, password: senha, email_confirm: true, user_metadata: { full_name: nome, phone: telefoneBonito(numero), origem: 'site' } })
+      if (e1 || !novo?.user?.id) {
+        if (/already|registered|exists|duplicate/i.test(e1?.message ?? '')) return json({ ok: false, existe: true })
+        console.error('acesso visita: não criou a conta:', e1?.message)
+        return json({ erro: 'Não deu para continuar agora. Tente de novo em instantes.' }, 500)
+      }
+      await servico.rpc('cliente_da_visita', { conta: novo.user.id })
+      const sessao = await sessaoDe(novo.user.id, senha)
+      if (!sessao) return json({ erro: 'Não deu para continuar agora. Tente de novo em instantes.' }, 500)
+      return json({ ok: true, sessao, nome: primeiroNome(nome) })
     }
 
     if (acao === 'entrar') {

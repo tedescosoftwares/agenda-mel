@@ -9,6 +9,9 @@ import { useCategorias } from '../../lib/categorias'
 import { guardarConvite } from '../../lib/convite'
 import { iniciais } from '../../lib/booking'
 import { urlDoAmbiente, urlDoEndereco } from '../../lib/ambiente'
+import { chamar } from '../../lib/pagamento'
+import { useConfig } from '../../lib/config'
+import { formatarFone, foneValido } from '../../lib/fone'
 
 // A página pública do salão (3.79), no endereço próprio dele (nome.mimo.com.vc): quem visita vê a página inteira,
 // sem conta. Marcar um serviço, falar com o salão ou tocar numa promoção pedem a conta: abre a folha "entre para
@@ -95,6 +98,9 @@ export default function VitrineDoSalao({ r }) {
 // a folha "entre para marcar": quem é o salão, o que ela ganha com a conta e os três jeitos de entrar
 function EntrarParaMarcar({ salao, codigo, alvo, destino, equipe, onFechar }) {
   const [erro, setErro] = useState('')
+  // 4.13: marcar sem criar conta (config_publica.agendar_sem_cadastro): nome, sobrenome e WhatsApp, e ela já vê os horários
+  const semCadastro = useConfig().agendar_sem_cadastro === 'ligado' && !equipe
+  const [comConta, setComConta] = useState(false)   // "já tenho conta": mostra os jeitos de entrar
   useEffect(() => {
     const esc = (e) => { if (e.key === 'Escape') onFechar() }
     window.addEventListener('keydown', esc)
@@ -116,6 +122,9 @@ function EntrarParaMarcar({ salao, codigo, alvo, destino, equipe, onFechar }) {
           <span className="sal-logo">{salao.logo_url ? <img src={salao.logo_url} alt="" /> : iniciais(salao.nome)}</span>
           <span><strong>{salao.nome}</strong><small>{[salao.bairro, salao.cidade].filter(Boolean).join(', ') || 'agenda pela MIMO'}</small></span>
         </div>
+        {semCadastro && !comConta ? (
+          <MarcarSemCadastro salao={salao} codigo={codigo} alvo={alvo} destino={destino} onComConta={() => setComConta(true)} />
+        ) : (<>
         <h2 id="salp-folha-titulo">{titulo}</h2>
         <p>{sub}</p>
         {equipe ? (
@@ -138,7 +147,81 @@ function EntrarParaMarcar({ salao, codigo, alvo, destino, equipe, onFechar }) {
           </>
         )}
         <p className="salp-folha-pe">Ao criar a conta, você entra na agenda do {salao.nome}. Seus dados seguem a <a href={urlDoAmbiente('cliente', '/privacidade')}>Política de Privacidade</a>.</p>
+        </>)}
       </div>
     </div>
+  )
+}
+
+// 4.13: a folha de quem marca sem criar conta. Três campos e ela segue para os horários. Um número que já tem conta
+// não entra só por digitar: recebe o link no WhatsApp (ou usa a senha).
+function MarcarSemCadastro({ salao, codigo, alvo, destino, onComConta }) {
+  const [nome, setNome] = useState('')
+  const [sobrenome, setSobrenome] = useState('')
+  const [fone, setFone] = useState('')
+  const [erro, setErro] = useState('')
+  const [indo, setIndo] = useState(false)
+  const [existe, setExiste] = useState(false)
+  const [linkPedido, setLinkPedido] = useState('')
+  const depois = encodeURIComponent(destino)
+
+  async function seguir(e) {
+    e.preventDefault()
+    setErro('')
+    if (nome.trim().length < 2 || sobrenome.trim().length < 2) { setErro('Digite o nome e o sobrenome.'); return }
+    if (!foneValido(fone)) { setErro('Confira o WhatsApp: DDD e número.'); return }
+    setIndo(true)
+    try {
+      const r = await chamar('acesso', { acao: 'visita', nome: nome.trim(), sobrenome: sobrenome.trim(), telefone: fone })
+      if (r?.existe) { setExiste(true); return }
+      if (!r?.sessao) throw new Error('Não deu para continuar agora. Tente de novo.')
+      const h = new URLSearchParams({ a: r.sessao.access_token, r: r.sessao.refresh_token, c: codigo ?? '', d: destino })
+      window.location.href = urlDoAmbiente('cliente', `/visita#${h}`)
+    } catch (er) {
+      setErro(er.message || 'Não deu para continuar agora. Tente de novo.')
+    } finally {
+      setIndo(false)
+    }
+  }
+  async function pedirLink() {
+    setErro(''); setIndo(true)
+    try {
+      const r = await chamar('acesso', { acao: 'pedir_link', telefone: fone })
+      setLinkPedido(r?.mensagem || 'O link chega em instantes no seu WhatsApp.')
+    } catch (er) { setErro(er.message || 'Não deu para mandar o link agora.') } finally { setIndo(false) }
+  }
+
+  if (existe) return (
+    <>
+      <h2 id="salp-folha-titulo">Esse WhatsApp já tem cadastro na MIMO</h2>
+      <p>Para sua segurança, a gente não abre uma conta só pelo número. Receba um link no seu WhatsApp e entre com um toque, ou use a sua senha.</p>
+      {erro && <div className="alert alert-error">{erro}</div>}
+      {linkPedido && <div className="alert alert-info">{linkPedido}</div>}
+      <div className="salp-folha-botoes">
+        <button type="button" className="btn btn-primary btn-block" onClick={pedirLink} disabled={indo || Boolean(linkPedido)} data-teste="salp-link">{indo ? 'Enviando…' : 'Receber link no WhatsApp'}</button>
+        <a className="btn btn-ghost btn-block" href={urlDoAmbiente('cliente', `/login?convite=${codigo}&depois=${depois}`)}><LogIn size={16} /> Entrar com a senha</a>
+        <button type="button" className="salp-folha-link" onClick={() => { setExiste(false); setLinkPedido('') }}>Usar outro número</button>
+      </div>
+    </>
+  )
+
+  return (
+    <form onSubmit={seguir} className="salp-folha-form" noValidate>
+      <h2 id="salp-folha-titulo">{alvo.servico ? `Marcar ${alvo.servico.name}` : alvo.contato ? `Falar com o ${salao.nome}` : `Marcar no ${salao.nome}`}</h2>
+      <p>Sem criar conta e sem senha. Diga quem é você e já escolha o dia e o horário.</p>
+      <div className="salp-folha-dupla">
+        <label>Nome<input value={nome} onChange={(e) => setNome(e.target.value)} autoComplete="given-name" autoFocus data-teste="salp-nome" /></label>
+        <label>Sobrenome<input value={sobrenome} onChange={(e) => setSobrenome(e.target.value)} autoComplete="family-name" data-teste="salp-sobrenome" /></label>
+      </div>
+      <label>WhatsApp<input value={fone} onChange={(e) => setFone(formatarFone(e.target.value))} inputMode="tel" autoComplete="tel" placeholder="(13) 99999-1234" data-teste="salp-fone" />
+        <small>O salão confirma e lembra do horário por aqui.</small>
+      </label>
+      {erro && <div className="alert alert-error">{erro}</div>}
+      <div className="salp-folha-botoes">
+        <button type="submit" className="btn btn-primary btn-block" disabled={indo} data-teste="salp-seguir">{indo ? 'Abrindo…' : 'Ver horários livres'}</button>
+        <button type="button" className="salp-folha-link" onClick={onComConta}>Já tenho conta</button>
+      </div>
+      <p className="salp-folha-pe">Ao continuar, você concorda com os <a href={urlDoAmbiente('cliente', '/termos')}>Termos</a> e a <a href={urlDoAmbiente('cliente', '/privacidade')}>Política de Privacidade</a>.</p>
+    </form>
   )
 }

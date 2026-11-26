@@ -19,7 +19,13 @@ export default function Configuracoes() {
   const [zapSalvo, setZapSalvo] = useState('')
   useEffect(() => { supabase.rpc('relogio_status').then(({ data }) => setRelogio(data)) }, [])
   const [cham, setCham] = useState({})
-  useEffect(() => { carregarConfig().then((c) => { const v = String(c?.whatsapp_suporte || ''); setZap(v); setZapSalvo(v); setCham(lerChamadas(c)) }) }, [])
+  // 4.13 (migração 268): a cliente marca só com nome, sobrenome e WhatsApp, sem criar conta
+  const [semCadastro, setSemCadastro] = useState(false)
+  async function mudarSemCadastro(ligar) {
+    const { error } = await supabase.rpc('definir_config_publica', { chave_: 'agendar_sem_cadastro', valor_: ligar ? 'ligado' : 'desligado' })
+    if (error) setErro(error.message); else setSemCadastro(ligar)
+  }
+  useEffect(() => { carregarConfig().then((c) => { const v = String(c?.whatsapp_suporte || ''); setZap(v); setZapSalvo(v); setCham(lerChamadas(c)); setSemCadastro(c?.agendar_sem_cadastro === 'ligado') }) }, [])
 
   // as chamadas do WhatsApp: só o que difere do código vai para o banco
   const chamadaAtual = (nome, campo) => cham[nome]?.[campo] ?? CHAMADAS[nome][campo]
@@ -74,6 +80,10 @@ export default function Configuracoes() {
             <button className="btn btn-primary" onClick={salvarZap} disabled={zap.replace(/\D/g, '') === zapSalvo}>Salvar número</button>
           </div>
           <p className="muted plat-nota">Hoje: <strong>{bonito(numeroWhats({ whatsapp_suporte: zapSalvo }))}</strong>{zapSalvo ? '' : ' (a reserva do código)'}. Só números; o 55 entra sozinho. Vale na hora, sem publicar.</p>
+        </Painel>
+        <Painel Icon={UsersIcon} titulo="Marcar sem cadastro" sub="Na página do salão, a cliente dá nome, sobrenome e WhatsApp e já escolhe o horário.">
+          <label className="cfg-chave"><input type="checkbox" checked={semCadastro} onChange={(e) => mudarSemCadastro(e.target.checked)} /> <span>{semCadastro ? 'Ligado: não pede conta nem senha' : 'Desligado: pede criar conta ou entrar'}</span></label>
+          <p className="muted cfg-nota">O número não é conferido na hora. Quem já tem conta com aquele WhatsApp entra pelo link que vai para o WhatsApp dela, ou pela senha. Vale em poucos minutos para quem já está com o site aberto.</p>
         </Painel>
         <Painel Icon={EngrenagemIcon} titulo="Versão">
           <div className="dado-linha"><span className="muted">App</span><strong>v{VERSAO}</strong></div>

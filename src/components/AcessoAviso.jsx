@@ -1,14 +1,36 @@
-import { Sparkles, BookOpen, Clock } from 'lucide-react'
+import { Sparkles, BookOpen, Clock, ArrowRight, Crown } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { avisoDoAcesso } from '../lib/acesso'
+import { avisoDoAcesso, REGRAS } from '../lib/acesso'
 
 // O cartão do acesso no topo do painel (126): dias de teste, modo leitura
 // ou assinatura vencendo. Some quando não há o que dizer.
-export default function AcessoAviso({ para = 'admin' }) {
+// 4.19: na Home do dia a dia o plano é uma linha (`compacto`): quando vence e o atalho para renovar. O cartão grande
+// fica para o que pede atenção (`soAlerta`: modo leitura, cobrança, teste acabando).
+export default function AcessoAviso({ para = 'admin', compacto = false, soAlerta = false }) {
   const { acesso } = useAuth()
   const a = avisoDoAcesso(acesso, { dona: para === 'admin' })
   if (!a) return null
+  const calmo = a.tom === 'calmo'
+  if (soAlerta && calmo) return null
+  if (compacto) {
+    if (!calmo) return null
+    const destino = a.acao?.to || '/admin/assinatura'
+    // no teste, a barra mostra quanto do período já passou
+    const emTeste = acesso?.fase === 'teste' && !acesso?.aguardando_configuracao
+    const passou = emTeste ? Math.max(4, Math.min(100, 100 - (Number(acesso.dias ?? 0) / REGRAS.testeDias) * 100)) : null
+    return (
+      <Link to={destino} className="acesso-linha">
+        <span className="acesso-linha-icone"><Crown size={16} /></span>
+        <span className="acesso-linha-texto">
+          <small>{a.selo}</small>
+          <strong>{a.titulo}</strong>
+          {passou != null && <span className="acesso-linha-barra"><i style={{ width: `${passou}%` }} /></span>}
+        </span>
+        <span className="acesso-linha-acao">{a.acao?.rotulo || 'Ver plano'} <ArrowRight size={13} /></span>
+      </Link>
+    )
+  }
   const Icone = a.tom === 'alerta' ? BookOpen : a.tom === 'atencao' ? Clock : Sparkles
   return (
     <div className={`card acesso-aviso ${a.tom}`}>

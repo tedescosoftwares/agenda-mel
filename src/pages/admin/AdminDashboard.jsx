@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import AdminShell from '../../components/AdminShell'
 import AvisosNovos from '../../components/AvisosNovos'
@@ -15,11 +15,9 @@ import { formatarCents, formatarReaisCurto, formatarPct, mesAtual, nomeDoMes } f
 import GraficoLinha from '../../components/GraficoLinha'
 import { toISODate } from '../../lib/format'
 import { linkDoSalao } from '../../lib/endereco'
-import QRCode from 'qrcode'
-import { AGENDA_ART_EXACT, MEL_ART_EXACT } from '../../assets/mockArtExact'
 import PrimeiroAcessoHome from './PrimeiroAcessoHome'
-import { CalendarPlus, Users, Sparkles, MessageCircle, FileSignature, ArrowRight, CalendarDays, TrendingUp, Clock3, QrCode, Settings2, X, PlayCircle, ChevronRight, Activity, CircleDot, Rocket, BellRing, BookOpen, Scissors, Link2, Headphones, Trophy, BadgeCheck, Copy, ExternalLink, LayoutDashboard } from 'lucide-react'
-import LinkSuporte from '../../components/LinkSuporte'
+import { Contador, Faisca, Anel } from '../../components/admin/HomeDia'
+import { CalendarPlus, Users, Sparkles, MessageCircle, FileSignature, ArrowRight, CalendarDays, TrendingUp, Clock3, QrCode, X, ChevronRight, Activity, Rocket, BellRing, CalendarCheck2, ArrowUpRight, CheckCheck, Zap, UserPlus, Scissors } from 'lucide-react'
 import { PARCERIA_LIGADA } from '../../lib/contratoParceria'
 
 // Dashboard do salão (tela 23): o dia de hoje em quatro números, o
@@ -28,6 +26,7 @@ import { PARCERIA_LIGADA } from '../../lib/contratoParceria'
 export default function AdminDashboard() {
   const { salao, profile } = useAuth()
   const [hoje, setHoje] = useState({ atendimentos: 0, faturamento: 0 })
+  const [proximo, setProximo] = useState(null)
   const [pendentes, setPendentes] = useState(0)
   const [naFila, setNaFila] = useState(0)
   const [linhas, setLinhas] = useState([])
@@ -50,7 +49,7 @@ export default function AdminDashboard() {
     setHomeCarregada(false)
     const d = toISODate(new Date()), mes = mesAtual()
     const [ag, pend, fila, res, mesAg, pp, clientes, cb] = await Promise.all([
-      supabase.from('appointments').select('price_cents, status').eq('salon_id', salaoId).eq('date', d).neq('status', 'cancelado'),
+      supabase.from('appointments').select('price_cents, status, start_time').eq('salon_id', salaoId).eq('date', d).neq('status', 'cancelado'),
       supabase.from('appointments').select('id', { count: 'exact', head: true }).eq('salon_id', salaoId).eq('status', 'pendente').gte('date', d),
       supabase.from('waitlist_entries').select('id, professionals!inner(salon_id)', { count: 'exact', head: true }).eq('professionals.salon_id', salaoId).eq('status', 'aguardando'),
       supabase.rpc('resumo_do_salao', { salao: salaoId, mes }),
@@ -61,6 +60,9 @@ export default function AdminDashboard() {
     ])
     const lista = ag.data ?? []
     setHoje({ atendimentos: lista.length, faturamento: lista.reduce((s, a) => s + (a.price_cents ?? 0), 0) })
+    // o próximo horário que ainda vai acontecer hoje (para o cartão "Hoje")
+    const agoraHM = new Date().toTimeString().slice(0, 5)
+    setProximo(lista.map((a) => String(a.start_time ?? '').slice(0, 5)).filter((h) => h && h >= agoraHM).sort()[0] ?? null)
     setPendentes(pend.count ?? 0)
     setNaFila(fila.count ?? 0)
     setLinhas(res.data ?? [])
@@ -89,10 +91,7 @@ export default function AdminDashboard() {
 
   const nomeSalao = salao?.name ?? 'Meu salão'
   const linkSalao = linkDoSalao(salao)
-  // 3.99.3: o nome inteiro ("Salão Mimo", não só "Salão"); nome comprido demais para a manchete vira "seu salão"
-  const nomeNaManchete = nomeSalao.trim().length <= 24 ? nomeSalao.trim() : ''
   const hojeTexto = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })
-  const temMovimento = hoje.atendimentos > 0 || totalMes > 0 || pendentes > 0 || naFila > 0
   const servicosProntos = Number(primeiros?.servicos ?? 0) > 0
   const equipePronta = salao?.tipo === 'autonoma' || Number(primeiros?.equipe ?? 0) > 0
   const catsReais = useCategorias()
@@ -215,217 +214,89 @@ export default function AdminDashboard() {
       <div className="admin-home">
         <TutorialPainel primeiroAcesso={primeiroAcesso} />
 
-        <section className={'admin-home-hero' + (capaSalao ? ' tem-capa' : '') + (primeiroAcesso ? ' primeiro-acesso' : '')} data-tour="inicio" style={capaSalao ? { '--home-hero-capa': `url("${capaSalao}")` } : undefined}>
-          <div className="admin-home-hero-copy">
-            <span className="admin-home-eyebrow"><Sparkles size={13} /> {saudacao}{nomePessoa ? `, ${nomePessoa}` : ''}</span>
-            <h1>{temMovimento ? <>{nomeNaManchete ? <>Tudo acontecendo em <strong>{nomeNaManchete}</strong>, num só lugar.</> : <>Tudo do <strong>seu salão</strong>, num só lugar.</>}</> : <>Seu salão ganhou um <strong>centro de comando.</strong></>}</h1>
-            <p>{temMovimento
-              ? 'Agenda, equipe, clientes e números organizados para você bater o olho e saber o que precisa de atenção.'
-              : 'Você já montou a base. Agora faltam poucos passos para começar a receber agendamentos de verdade.'}</p>
-            {!primeiroAcesso && (
-              <div className="admin-home-status">
-                <span className={salaoAtivo ? 'online' : 'configurando'}><i></i>{salaoAtivo ? 'Agenda ativa' : 'Em configuração'}</span>
-                <span><CalendarDays size={12} /> {hoje.atendimentos} {hoje.atendimentos === 1 ? 'horário hoje' : 'horários hoje'}</span>
-                <span><QrCode size={12} /> {salaoAtivo ? 'Link disponível' : 'Link após ativação'}</span>
-              </div>
-            )}
-            <div className="admin-home-hero-acoes">
-              {primeiroAcesso ? (
-                <>
-                  <Link to="/admin/configurar" className="btn btn-primary"><Settings2 size={16} /> Continuar configuração <ArrowRight size={15} /></Link>
-                  <button type="button" className="btn btn-ghost admin-home-tour-btn" onClick={() => window.dispatchEvent(new CustomEvent('mimo:abrir-tour-painel'))}><PlayCircle size={16} /> Fazer tour guiado <small>1 min</small></button>
-                </>
-              ) : (
-                <>
-                  <Link to="/admin/agenda" className="btn btn-primary"><CalendarDays size={16} /> Abrir agenda</Link>
-                  <Link to="/admin/configurar" className="btn btn-ghost"><Settings2 size={16} /> Configurar salão</Link>
-                </>
-              )}
-            </div>
-          </div>
-
-          <div className={'admin-home-hoje' + (primeiroAcesso ? ' primeiro' : '')}>
-            <div className="admin-home-negocio-mini">
-              <span className="admin-home-negocio-avatar">
-                {logoSalao ? <img src={logoSalao} alt="" /> : capaSalao ? <img src={capaSalao} alt="" /> : <b>{iniciaisSalao || 'M'}</b>}
+        {/* 4.19: a Home do salão já configurado é do dia a dia: quem é, o que fazer agora e os números. A configuração
+            é passageira: sai do topo e fica só o que ainda falta, no fim da página */}
+        <header className="dia-topo" data-tour="inicio">
+          <svg className="dia-topo-arte" viewBox="0 0 600 200" preserveAspectRatio="xMaxYMid slice" aria-hidden="true">
+            <defs>
+              <radialGradient id="dia-brilho-a" cx="50%" cy="50%" r="50%"><stop offset="0" stopColor="#ff7baa" stopOpacity=".5" /><stop offset="1" stopColor="#ff7baa" stopOpacity="0" /></radialGradient>
+              <radialGradient id="dia-brilho-b" cx="50%" cy="50%" r="50%"><stop offset="0" stopColor="#aa4cff" stopOpacity=".34" /><stop offset="1" stopColor="#aa4cff" stopOpacity="0" /></radialGradient>
+            </defs>
+            <circle className="dia-topo-bolha a" cx="470" cy="40" r="150" fill="url(#dia-brilho-a)" />
+            <circle className="dia-topo-bolha b" cx="580" cy="170" r="130" fill="url(#dia-brilho-b)" />
+            <path className="dia-topo-fio" d="M300,170 C360,90 430,190 500,110 S590,60 620,90" />
+            <path className="dia-topo-fio dois" d="M340,200 C400,130 450,210 530,150 S600,120 630,140" />
+          </svg>
+          <div className="dia-quem">
+            <span className="dia-logo">{logoSalao ? <img src={logoSalao} alt="" /> : <b>{iniciaisSalao || 'M'}</b>}</span>
+            <div>
+              <small>{saudacao}{nomePessoa ? `, ${nomePessoa}` : ''} <Sparkles size={12} /></small>
+              <h1>{nomeSalao}</h1>
+              <span className="dia-chips">
+                <span className={'dia-chip' + (salaoAtivo ? ' on' : '')}><i></i>{salaoAtivo ? 'Agenda ativa' : 'Agenda ainda não ativada'}</span>
+                <span className="dia-chip"><CalendarDays size={12} /> {hojeTexto.charAt(0).toUpperCase() + hojeTexto.slice(1)}</span>
               </span>
-              <span><small>Seu salão</small><strong>{nomeSalao}</strong></span>
-              <span className="admin-home-online"><i></i> Online</span>
-              <ChevronRight size={16} />
             </div>
-            {primeiroAcesso ? (
-              <div className="admin-home-hoje-metricas">
-                <span><small>Hoje</small><strong>{hoje.atendimentos}</strong><em>{hoje.atendimentos === 1 ? 'atendimento' : 'atendimentos'}</em></span>
-                <span><small>Faturamento hoje</small><strong>{formatarCents(hoje.faturamento)}</strong></span>
-                <span><small>Novos clientes</small><strong>{clientesCount}</strong></span>
-              </div>
-            ) : (
-              <>
-                {capaSalao && <div className="admin-home-capa-mini" style={{ backgroundImage:`linear-gradient(180deg,rgba(45,8,57,.08),rgba(45,8,57,.58)),url("${capaSalao}")` }} />}
-                <div className="admin-home-hoje-topo"><span>Hoje</span><small>{hojeTexto}</small></div>
-                <div className="admin-home-hoje-numero"><strong>{hoje.atendimentos}</strong><span>{hoje.atendimentos === 1 ? 'atendimento' : 'atendimentos'}</span></div>
-                <div className="admin-home-hoje-linha"><span><TrendingUp size={14} /> previsto hoje</span><strong>{formatarCents(hoje.faturamento)}</strong></div>
-                <Link to="/admin/agenda" className="admin-home-hoje-link">Ver agenda de hoje <ArrowRight size={14} /></Link>
-              </>
-            )}
           </div>
+          <div className="dia-acoes">
+            <Link to="/admin/agenda?encaixe=1" className="btn btn-primary"><CalendarPlus size={17} /> Novo horário</Link>
+            <Link to="/admin/agenda" className="btn btn-ghost"><CalendarDays size={17} /> Abrir agenda</Link>
+          </div>
+        </header>
+
+        <section className="dia-kpis" data-tour="numeros" aria-label="Os números do salão">
+          <Link to="/admin/agenda" className="dia-kpi tom-rosa">
+            <span className="dia-kpi-topo"><span className="dia-kpi-icone"><CalendarCheck2 size={18} /></span><span className="dia-kpi-rotulo">Hoje</span><ArrowUpRight size={15} className="dia-kpi-seta" /></span>
+            <strong><Contador valor={hoje.atendimentos} /></strong>
+            <small>{hoje.atendimentos === 1 ? 'atendimento na agenda' : 'atendimentos na agenda'}</small>
+            <span className="dia-kpi-pe"><span><Clock3 size={12} /> {proximo ? `Próximo às ${proximo}` : hoje.atendimentos > 0 ? 'Dia encerrado' : 'Dia livre'}</span><em>{formatarCents(hoje.faturamento)}</em></span>
+          </Link>
+          <Link to="/admin/agenda" className={'dia-kpi ' + (pendentes > 0 ? 'tom-alerta' : 'tom-menta')}>
+            <span className="dia-kpi-topo"><span className="dia-kpi-icone">{pendentes > 0 ? <BellRing size={18} /> : <CheckCheck size={18} />}</span><span className="dia-kpi-rotulo">Esperando você</span><ArrowUpRight size={15} className="dia-kpi-seta" /></span>
+            <strong><Contador valor={pendentes} /></strong>
+            <small>{pendentes === 1 ? 'pedido para confirmar' : 'pedidos para confirmar'}</small>
+            <span className="dia-kpi-pe"><span>{pendentes > 0 ? <><Zap size={12} /> Responder agora</> : <><CheckCheck size={12} /> Tudo em dia</>}</span></span>
+          </Link>
+          <Link to="/admin/numeros" className="dia-kpi tom-violeta">
+            <span className="dia-kpi-topo"><span className="dia-kpi-icone"><TrendingUp size={18} /></span><span className="dia-kpi-rotulo">{(() => { const m = nomeDoMes(mesAtual()).split(' ')[0]; return m.charAt(0).toUpperCase() + m.slice(1) })()}</span><ArrowUpRight size={15} className="dia-kpi-seta" /></span>
+            <strong><Contador valor={Math.round(totalMes / 100)} formato={(n) => 'R$ ' + n.toLocaleString('pt-BR')} /></strong>
+            <small>{atendMes} {atendMes === 1 ? 'atendimento concluído' : 'atendimentos concluídos'}</small>
+            <Faisca pontos={porDia} />
+          </Link>
+          <Link to="/admin/agenda" className={'dia-kpi com-anel ' + (naFila > 0 ? 'tom-alerta' : 'tom-azul')}>
+            <span className="dia-kpi-topo"><span className="dia-kpi-icone"><Users size={18} /></span><span className="dia-kpi-rotulo">Fila de espera</span><ArrowUpRight size={15} className="dia-kpi-seta" /></span>
+            <strong><Contador valor={naFila} /></strong>
+            <small>{naFila === 1 ? 'cliente esperando vaga' : 'clientes esperando vaga'}</small>
+            <span className="dia-kpi-anel"><Anel pct={ocup / 100}>{Math.round(ocup / 100)}%</Anel><em>ocupação<br />do mês</em></span>
+          </Link>
         </section>
 
-        {primeiroAcesso && (
-          <section className="admin-home-primeiro" aria-label="Primeiros passos no painel">
-            <div className="admin-home-primeiro-config" data-tour="primeiros-passos">
-              <div className="admin-home-primeiro-topo">
-                <div className="admin-home-primeiro-intro">
-                  <span className="admin-home-primeiro-icone"><Sparkles size={18} /></span>
-                  <div>
-                    <span className="admin-home-label">Primeiros passos</span>
-                    <h2>Deixe seu salão pronto para receber clientes.</h2>
-                    <p>Complete o essencial abaixo para liberar a agenda e começar a receber agendamentos de verdade.</p>
-                  </div>
-                </div>
-                <div className="admin-home-primeiro-progresso">
-                  <strong>{feitosConfig} de 4 concluídos</strong>
-                  <span><i style={{ width:`${(feitosConfig / 4) * 100}%` }} /></span>
-                </div>
-                <div className="admin-home-primeiro-falta">
-                  <Sparkles size={15} />
-                  <span><strong>{feitosConfig >= 3 ? 'Quase lá!' : 'Falta pouco!'}</strong><small>Seu salão já está quase pronto.</small></span>
-                </div>
-              </div>
+        <AcessoAviso compacto />
 
-              <div className="admin-home-primeiro-etapas">
-                <Link to="/admin/configurar" className={categoriasProntas ? 'feito' : 'atual'}>
-                  <b>{categoriasProntas ? <BadgeCheck size={16} /> : '1'}</b>
-                  <span><strong>Categorias de serviços</strong><small>Organize os tipos de atendimento.</small></span>
-                  <ChevronRight size={15} />
-                </Link>
-                <Link to="/admin/configurar" className={servicosProntos ? 'feito' : (!categoriasProntas ? '' : 'atual')}>
-                  <b>{servicosProntos ? <BadgeCheck size={16} /> : '2'}</b>
-                  <span><strong>Serviços</strong><small>Cadastre duração, preço e detalhes.</small></span>
-                  <ChevronRight size={15} />
-                </Link>
-                <Link to="/admin/equipe" className={equipePronta ? 'feito' : (servicosProntos ? 'atual' : '')}>
-                  <b>{equipePronta ? <BadgeCheck size={16} /> : '3'}</b>
-                  <span><strong>Profissionais</strong><small>Monte a equipe e defina as agendas.</small></span>
-                  <ChevronRight size={15} />
-                </Link>
-                <Link to="/admin/salao" className={linkPronto ? 'feito' : (equipePronta ? 'atual' : '')}>
-                  <b>{linkPronto ? <BadgeCheck size={16} /> : '4'}</b>
-                  <span><strong>Compartilhar link</strong><small>Leve sua agenda para os clientes.</small></span>
-                  <ChevronRight size={15} />
-                </Link>
-              </div>
-            </div>
+        <nav className="dia-atalhos" data-tour="atalhos" aria-label="Ações do dia a dia">
+          <Link to="/admin/equipe" className="tom-rosa"><span><UserPlus size={19} /></span><div><strong>Adicionar profissional</strong><small>Mais uma agenda no salão</small></div><ChevronRight size={16} /></Link>
+          <Link to="/admin/servicos" className="tom-violeta"><span><Scissors size={19} /></span><div><strong>Serviços</strong><small>Preços, duração e fotos</small></div><ChevronRight size={16} /></Link>
+          <Link to="/admin/salao" className="tom-azul"><span><QrCode size={19} /></span><div><strong>Link e QR do salão</strong><small>Para divulgar e receber clientes</small></div><ChevronRight size={16} /></Link>
+          <Link to="/admin/whatsapp" className="tom-menta"><span><MessageCircle size={19} /></span><div><strong>WhatsApp</strong><small>A assistente e as mensagens</small></div><ChevronRight size={16} /></Link>
+        </nav>
 
-            <div className="admin-home-primeiro-grade" data-tour="primeiro-operacao">
-              <section className="card admin-home-primeiro-agenda">
-                <div className="admin-home-secao-topo compacto">
-                  <div><span className="admin-home-label">Seu dia</span><h2>Agenda de hoje</h2></div>
-                  <Link to="/admin/agenda">Ver agenda completa <ArrowRight size={13} /></Link>
-                </div>
-                <div className="admin-home-primeiro-vazio">
-                  <img className="admin-home-agenda-art" src={AGENDA_ART_EXACT} alt="" />
-                  <strong>Ainda não há agendamentos para hoje.</strong>
-                  <p>Quando os primeiros clientes agendarem, eles aparecerão aqui com horário, serviço e profissional.</p>
-                  <Link to="/admin/agenda?encaixe=1" className="btn btn-primary">Fazer um agendamento teste</Link>
-                  <button type="button" className="admin-home-como" onClick={() => window.dispatchEvent(new CustomEvent('mimo:abrir-tour-painel'))}>Como funciona?</button>
-                </div>
-              </section>
-
-              <div className="admin-home-primeiro-centro">
-                <section className="card admin-home-agora-primeiro">
-                  <div className="admin-home-secao-topo compacto">
-                    <div><span className="admin-home-label">Agora na MIMO</span><h2>Seu salão está tomando forma</h2></div>
-                  </div>
-                  <div className="admin-home-agora-lista">
-                    <span className={salaoAtivo ? 'ok' : 'pendente'}><i>{salaoAtivo ? <BadgeCheck size={15} /> : <CircleDot size={14} />}</i><b>{salaoAtivo ? 'Seu salão está online' : 'Seu espaço já está criado'}</b><small>{salaoAtivo ? 'Clientes já podem acessar seu link.' : 'A base do salão está salva.'}</small></span>
-                    <span className={categoriasProntas ? 'ok' : 'pendente'}><i>{categoriasProntas ? <BadgeCheck size={15} /> : <CircleDot size={14} />}</i><b>{categoriasProntas ? 'Categorias criadas' : 'Crie suas categorias'}</b><small>Organize o que você oferece.</small></span>
-                    <Link to="/admin/servicos" className={servicosProntos ? 'ok' : 'atual'}><i>{servicosProntos ? <BadgeCheck size={15} /> : <Scissors size={14} />}</i><b>{servicosProntos ? 'Serviços cadastrados' : 'Cadastre seus serviços'}</b><small>{servicosProntos ? 'Sua vitrine já sabe o que você oferece.' : 'Falta esse passo para montar a agenda.'}</small><ChevronRight size={14} /></Link>
-                    <button type="button" className="tour" onClick={() => window.dispatchEvent(new CustomEvent('mimo:abrir-tour-painel'))}><i><PlayCircle size={15} /></i><b>Aprenda com o tour</b><small>Veja o painel em menos de 1 minuto.</small><ChevronRight size={14} /></button>
-                  </div>
-                </section>
-
-                <section className="card admin-home-primeiro-explica">
-                  <div className="admin-home-primeiro-explica-topo">
-                    <span className="admin-home-primeiro-explica-icone"><LayoutDashboard size={18} /></span>
-                    <div><strong>O que você vai conquistar</strong><small>Quando a configuração terminar, essa Home vira o centro da operação.</small></div>
-                  </div>
-                  <div className="admin-home-primeiro-beneficios">
-                    <article><span><CalendarDays size={16} /></span><strong>Agenda organizada</strong><small>Veja o dia e quem vai atender.</small></article>
-                    <article><span><Users size={16} /></span><strong>Equipe em um só lugar</strong><small>Serviços, horários e agenda de cada profissional.</small></article>
-                    <article><span><BellRing size={16} /></span><strong>Pedidos de clientes</strong><small>Receba e confirme solicitações.</small></article>
-                    <article><span><Link2 size={16} /></span><strong>Seu salão para compartilhar</strong><small>Link e QR para marcarem sozinhos.</small></article>
-                  </div>
-                </section>
-              </div>
-
-              <aside className="admin-home-primeiro-lateral">
-                <section className="card admin-home-acoes admin-home-acoes-primeiro" data-tour="atalhos">
-                  <div className="admin-home-secao-topo compacto">
-                    <div><span className="admin-home-label">Acesso rápido</span><h2>Ações rápidas</h2></div>
-                  </div>
-                  <div className="admin-home-atalhos">
-                    <Link to="/admin/servicos"><span><Scissors size={18} /></span><strong>Cadastrar serviço</strong><small>Adicione o que seu salão oferece</small><ArrowRight size={14} /></Link>
-                    <Link to="/admin/equipe"><span><Users size={18} /></span><strong>Adicionar profissional</strong><small>Monte a equipe e os horários</small><ArrowRight size={14} /></Link>
-                    <Link to="/admin/salao"><span><QrCode size={18} /></span><strong>Ver meu salão</strong><small>Confira sua página pública</small><ArrowRight size={14} /></Link>
-                    <Link to="/admin/salao"><span><Link2 size={18} /></span><strong>Compartilhar link</strong><small>Leve a agenda aos clientes</small><ArrowRight size={14} /></Link>
-                  </div>
-                </section>
-
-                <section className="card admin-home-compartilhar" data-tour="link">
-                  <div>
-                    <span className="admin-home-label">Divulgue seu salão</span>
-                    <strong>Seu link já pode morar no Instagram, WhatsApp e balcão.</strong>
-                    <small>{linkPronto ? 'Copie o link ou use o QR Code.' : 'Assim que a configuração terminar, este é o endereço que você compartilha.'}</small>
-                  </div>
-                  <div className="admin-home-compartilhar-corpo">
-                    <span className="admin-home-link-mini">{linkSalao || 'seusalao.mimo.com.vc'}</span>
-                    {linkSalao && <HomeQr texto={linkSalao} />}
-                  </div>
-                  <div className="admin-home-compartilhar-acoes">
-                    {linkSalao && <button type="button" onClick={() => navigator.clipboard?.writeText(linkSalao)}><Copy size={13} /> Copiar link</button>}
-                    {linkSalao && <a href={linkSalao} target="_blank" rel="noreferrer"><ExternalLink size={13} /> Abrir</a>}
-                  </div>
-                </section>
-
-                <section className="card admin-home-primeiro-ajuda">
-                  <span><Headphones size={18} /></span>
-                  <div>
-                    <strong>Precisa de ajuda?</strong>
-                    <small>Acesse os tutoriais ou fale com o suporte da MIMO.</small>
-                  </div>
-                  <span className="admin-home-mel-balao">Oi! Eu sou a <b>Mel</b> 💗</span>
-                  <div className="admin-home-ajuda-links"><Link to="/admin/guia">Acessar central de ajuda <ArrowRight size={13} /></Link><LinkSuporte>WhatsApp da MIMO <MessageCircle size={13} /></LinkSuporte></div>
-                  <img className="admin-home-mel" src={MEL_ART_EXACT} alt="Mel, assistente virtual da MIMO" />
-                </section>
-              </aside>
-            </div>
-          </section>
-        )}
-
-        {!primeiroAcesso && <section className="admin-home-pulso">
+        {(pendentes > 0 || naFila > 0) && <section className="admin-home-pulso admin-dia-pulso">
           <div className="admin-home-pulso-principal">
             <span className="admin-home-pulso-icone">{agoraMimo.icone}<i></i></span>
             <div>
-              <span className="admin-home-pulso-selo"><CircleDot size={11} /> Agora na MIMO</span>
               <small>{agoraMimo.selo}</small>
               <strong>{agoraMimo.titulo}</strong>
               <p>{agoraMimo.texto}</p>
             </div>
             <Link to={agoraMimo.para} className="admin-home-pulso-acao">{agoraMimo.acao} <ArrowRight size={14} /></Link>
           </div>
-          <div className="admin-home-pulso-trilha" aria-label="Estado atual do salão">
-            <span className={salaoAtivo ? 'feito' : 'atual'}><i></i><span><strong>{salaoAtivo ? 'Salão online' : 'Preparando salão'}</strong><small>{salaoAtivo ? 'Clientes já podem entrar pelo seu link.' : 'Finalize os pontos essenciais para liberar sua vitrine.'}</small></span></span>
-            <span className={pendentes > 0 ? 'atual' : ''}><i></i><span><strong>{pendentes > 0 ? `${pendentes} ${pendentes === 1 ? 'pedido pendente' : 'pedidos pendentes'}` : 'Pedidos em dia'}</strong><small>{pendentes > 0 ? 'Tem cliente esperando sua confirmação.' : 'Nada esperando resposta agora.'}</small></span></span>
-            <span className={naFila > 0 ? 'atual' : ''}><i></i><span><strong>{naFila > 0 ? `${naFila} na fila de espera` : 'Fila tranquila'}</strong><small>{naFila > 0 ? 'Há clientes de olho numa oportunidade.' : 'Nenhuma cliente aguardando vaga.'}</small></span></span>
-          </div>
         </section>}
 
-        {!primeiroAcesso && <div className="admin-home-alertas" data-tour="primeiros-passos">
-          <AcessoAviso />
-          <PrimeirosPassos salao={salao} />
-          <AvisosNovos />
+        <div className="admin-home-alertas" data-tour="primeiros-passos">
+          <AcessoAviso soAlerta />
+          <PrimeirosPassos salao={salao} parte="urgente" />
           <PendenciasBaixa para="/admin/fechar-dia" />
+          <AvisosNovos />
           <CartaoInstalar para="salao" />
           <LigarAvisos semInstalar texto="Pedidos, cancelamentos e clientes chamando no WhatsApp chegam na hora, mesmo com o app fechado." />
           {PARCERIA_LIGADA && semContrato.length > 0 && (
@@ -434,43 +305,9 @@ export default function AdminDashboard() {
               <span><strong>Parceria ainda não formalizada.</strong> {semContrato.length === 1 ? `${semContrato[0].nome} está configurada como parceira na MIMO, mas não há contrato registrado.` : `${semContrato.length} profissionais estão configuradas como parceiras na MIMO, mas não há contrato registrado.`} Confira se a formalização da relação está adequada ao modelo adotado pelo salão. <u>Ver orientação</u></span>
             </Link>
           )}
-        </div>}
+        </div>
 
-        {!primeiroAcesso && <section className="admin-home-resumo" data-tour="numeros">
-          <div className="admin-home-secao-topo">
-            <div><span className="admin-home-label">Visão rápida</span><h2>Seu negócio hoje</h2></div>
-            <span className="admin-home-data">{hojeTexto}</span>
-          </div>
-
-          <div className="admin-home-kpis">
-            <div className="admin-home-kpi destaque">
-              <span className="admin-home-kpi-icone"><CalendarDays size={18} /></span>
-              <span className="admin-home-kpi-label">Atendimentos hoje</span>
-              <strong>{hoje.atendimentos}</strong>
-              <small>{formatarCents(hoje.faturamento)} em serviços agendados</small>
-            </div>
-            <div className="admin-home-kpi">
-              <span className="admin-home-kpi-icone"><TrendingUp size={18} /></span>
-              <span className="admin-home-kpi-label">{nomeDoMes(mesAtual()).split(' ')[0]}</span>
-              <strong>{formatarReaisCurto(totalMes)}</strong>
-              <small>{atendMes} {atendMes === 1 ? 'atendimento concluído' : 'atendimentos concluídos'}</small>
-            </div>
-            <Link to="/admin/agenda" className="admin-home-kpi admin-home-kpi-link">
-              <span className="admin-home-kpi-icone"><Clock3 size={18} /></span>
-              <span className="admin-home-kpi-label">Esperando confirmação</span>
-              <strong>{pendentes}</strong>
-              <small>{pendentes === 1 ? 'pedido precisa de resposta' : 'pedidos precisam de resposta'}</small>
-            </Link>
-            <div className="admin-home-kpi">
-              <span className="admin-home-kpi-icone"><Users size={18} /></span>
-              <span className="admin-home-kpi-label">Fila de espera</span>
-              <strong>{naFila}</strong>
-              <small>ocupação média de {formatarPct(ocup)}</small>
-            </div>
-          </div>
-        </section>}
-
-        {!primeiroAcesso && <div className="admin-home-grade">
+        <div className="admin-home-grade">
           <section className="card admin-home-grafico">
             <div className="admin-home-secao-topo compacto">
               <div><span className="admin-home-label">Movimento</span><h2>Faturamento do mês</h2></div>
@@ -481,20 +318,7 @@ export default function AdminDashboard() {
               : <div className="admin-home-vazio"><TrendingUp size={22} /><strong>Os números começam aqui.</strong><span>Quando os primeiros atendimentos forem concluídos, o movimento do mês aparece neste gráfico.</span></div>}
           </section>
 
-          <aside className="admin-home-lateral" data-tour="atalhos">
-            <section className="card admin-home-acoes">
-              <div className="admin-home-secao-topo compacto">
-                <div><span className="admin-home-label">Acesso rápido</span><h2>O que você pode fazer agora</h2></div>
-              </div>
-              <div className="admin-home-atalhos">
-                <Link to="/admin/agenda?encaixe=1"><span><CalendarPlus size={18} /></span><strong>Novo encaixe</strong><small>Adicionar um atendimento manualmente</small><ArrowRight size={14} /></Link>
-                <Link to="/admin/equipe"><span><Users size={18} /></span><strong>Equipe</strong><small>Profissionais e agendas</small><ArrowRight size={14} /></Link>
-                <Link to="/admin/servicos"><span><Sparkles size={18} /></span><strong>Serviços</strong><small>Preços, duração e categorias</small><ArrowRight size={14} /></Link>
-                <Link to="/admin/whatsapp"><span><MessageCircle size={18} /></span><strong>WhatsApp</strong><small>A assistente e as mensagens</small><ArrowRight size={14} /></Link>
-                <Link to="/admin/guia"><span><BookOpen size={18} /></span><strong>Guia MIMO</strong><small>Vídeos rápidos para aprender o sistema</small><ArrowRight size={14} /></Link>
-              </div>
-            </section>
-
+          <aside className="admin-home-lateral">
             <section className="card admin-home-profissionais">
               <div className="admin-home-secao-topo compacto">
                 <div><span className="admin-home-label">Equipe</span><h2>Por profissional</h2></div>
@@ -512,15 +336,11 @@ export default function AdminDashboard() {
               </div>
             </section>
           </aside>
-        </div>}
+        </div>
 
-        {!primeiroAcesso && <section className="admin-home-link card" data-tour="link">
-          <div>
-            <span className="admin-home-link-icone"><QrCode size={20} /></span>
-            <span><strong>Seu salão também vive fora deste painel.</strong><small>Quando serviços e equipe estiverem prontos, seu link e QR Code viram a porta de entrada das clientes.</small></span>
-          </div>
-          <Link to="/admin/configurar" className="btn btn-ghost">Preparar meu link <ArrowRight size={15} /></Link>
-        </section>}
+        <div className="admin-dia-fim" data-tour="link">
+          <PrimeirosPassos salao={salao} parte="resto" />
+        </div>
       </div>
     </AdminShell>
   )
@@ -623,11 +443,3 @@ function TutorialPainel({ primeiroAcesso = false }) {
 }
 
 
-function HomeQr({ texto }) {
-  const ref = useRef(null)
-  useEffect(() => {
-    if (!ref.current || !texto) return
-    QRCode.toCanvas(ref.current, texto, { width: 92, margin: 1, color: { dark: '#3d0c4e', light: '#ffffff' } }).catch(() => {})
-  }, [texto])
-  return <canvas ref={ref} className="admin-home-qr" aria-label="QR Code do salão" />
-}

@@ -13,7 +13,12 @@ import AtivarSalao from './AtivarSalao'
 // ativou o acesso, e o QR pronto pra imprimir. Some quando tudo está
 // feito (depois de comemorar uma vez).
 const CHAVE_FESTA = 'mimo-primeiros-passos-festa'
-export default function PrimeirosPassos({ salao, para = 'admin' }) {
+// 4.19: `parte` divide o que aparece na Home do salão já configurado. "urgente" é o que trava o salão (terminar a
+// configuração, ativar, equipe sem acesso) e fica em cima; "resto" são os passos que sobraram (QR, avisos, teste),
+// numa linha discreta no fim da página, que a dona pode dispensar. Sem `parte`, tudo junto, como antes.
+const CHAVE_DISPENSA = 'mimo-primeiros-passos-dispensado'
+export default function PrimeirosPassos({ salao, para = 'admin', parte = null }) {
+  const [dispensado, setDispensado] = useState(() => { try { return localStorage.getItem(CHAVE_DISPENSA) === '1' } catch { return false } })
   const navigate = useNavigate()
   const { user, recarregarAcesso, recarregarPerfil } = useAuth()
   const [r, setR] = useState(null)
@@ -45,6 +50,7 @@ export default function PrimeirosPassos({ salao, para = 'admin' }) {
   // Aqui o papel é outro: guiar a dona na montagem operacional do salão.
   const configurado = n('servicos') > 0 && (autonoma || n('equipe') > 0)
   if (!configurado) {
+    if (parte === 'resto') return null
     const falta = n('servicos') === 0 && !autonoma && n('equipe') === 0 ? 'Faltam os serviços e a equipe' : n('servicos') === 0 ? 'Faltam os serviços' : 'Falta a equipe'
     return (
       <>
@@ -65,6 +71,7 @@ export default function PrimeirosPassos({ salao, para = 'admin' }) {
     )
   }
   if (!autonoma && !salao?.ativado_em) {
+    if (parte === 'resto') return null
     return (
       <>
         <AtivarSalao s={{ ...salao, tipo: r.tipo }} onAtivado={() => carregar()} />
@@ -83,6 +90,20 @@ export default function PrimeirosPassos({ salao, para = 'admin' }) {
   ]
   const feitosN = passos.filter((p) => p.ok).length
   const tudo = feitosN === passos.length
+  if (parte === 'urgente') return <EquipePendente r={r} />
+  if (parte === 'resto') {
+    const faltam = passos.filter((p) => !p.ok)
+    if (!faltam.length || dispensado) return null
+    return (
+      <div className="card pp-resto">
+        <span className="pp-resto-texto"><strong>{faltam.length === 1 ? 'Falta 1 passo para completar' : `Faltam ${faltam.length} passos para completar`}</strong><small className="muted">Nada disso trava a agenda. Faça quando quiser.</small></span>
+        <span className="pp-resto-passos">
+          {faltam.map((p) => p.para ? <Link key={p.id} to={p.para} className="btn-mini">{p.texto}</Link> : <button key={p.id} type="button" className="btn-mini" onClick={p.acao}>{p.texto}</button>)}
+        </span>
+        <button type="button" className="pp-resto-fechar" onClick={() => { try { localStorage.setItem(CHAVE_DISPENSA, '1') } catch { /* sem storage */ } setDispensado(true) }} aria-label="Não mostrar mais"><X size={15} /></button>
+      </div>
+    )
+  }
   let jaComemorou = false
   try { jaComemorou = localStorage.getItem(CHAVE_FESTA) === '1' } catch { /* sem storage */ }
   if (tudo && jaComemorou && !festa) return <EquipePendente r={r} />

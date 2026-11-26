@@ -181,6 +181,8 @@ const DEMO_PASSO = (typeof localStorage !== 'undefined' && Number(localStorage.g
 const DEMO_VAZIO = typeof localStorage !== 'undefined' && localStorage.getItem('mimo-demo-vazio') === '1'
 let DEMO_DONA_ATENDE = false   // a dona que também atende (2.99), só enquanto a página vive
 // mimo-demo-sem-equipe=1 (3.86): o salão começa sem ninguém na equipe (para ver a configuração destravar quando a dona cria a agenda dela)
+// mimo-demo-configurado=1 (4.19): o salão já terminou a configuração (a Home do dia a dia, sem os primeiros passos em cima)
+const DEMO_CONFIGURADO = typeof localStorage !== 'undefined' && localStorage.getItem('mimo-demo-configurado') === '1'
 const DEMO_SEM_EQUIPE = typeof localStorage !== 'undefined' && localStorage.getItem('mimo-demo-sem-equipe') === '1'
 // mimo-demo-acesso = teste | leitura | bloqueado | ativa (126); mimo-demo-metodo = cartao | pix_automatico | pix (128)
 const DEMO_METODO = (typeof localStorage !== 'undefined' && localStorage.getItem('mimo-demo-metodo')) || null
@@ -301,7 +303,7 @@ const RPC = {
   acesso_por_token: () => ({ salao: { id: SALAO, nome: 'Studio Mel', logo_url: null, cidade: 'Santos' }, profissional: { id: 'pr5', nome: 'Carla Mendes', email: 'carla@exemplo.com', telefone: '(13) 99171-3123', especialidade: 'Cabeleireira', vinculo: 'parceira', telefone_final: '4321', servicos: 2, dias: [1, 2, 3, 4, 5, 6] }, situacao: 'configurada', tem_conta: false, usado: false }),
   ativar_acesso: () => ({ ok: true, salao: 'Studio Mel', professional_id: 'pr5', situacao: 'ativa' }),
   equipe_informar_dados: () => ({ ok: true, ja: false, salao: 'Studio Mel' }),
-  primeiros_passos: () => ({ tipo: 'salao', codigo: 'MEL2K5', nome: 'Studio Mel', dados: true, horarios: true, servicos: DEMO_VAZIO ? 0 : servicos.length, equipe: DEMO_VAZIO || DEMO_SEM_EQUIPE ? (DEMO_DONA_ATENDE ? 1 : 0) : profissionais.length, equipe_pendente: 1, equipe_rascunho: 0, agendamentos: 0, avisos: false, feitos: {}, onboarding_concluido_em: '2025-01-10' }),
+  primeiros_passos: () => ({ tipo: 'salao', codigo: 'MEL2K5', nome: 'Studio Mel', dados: true, horarios: true, servicos: DEMO_VAZIO ? 0 : servicos.length, equipe: DEMO_VAZIO || DEMO_SEM_EQUIPE ? (DEMO_DONA_ATENDE ? 1 : 0) : profissionais.length, equipe_pendente: 1, equipe_rascunho: 0, agendamentos: DEMO_CONFIGURADO ? 6 : 0, avisos: false, feitos: DEMO_CONFIGURADO ? { configuracao: '2025-01-12' } : {}, onboarding_concluido_em: '2025-01-10' }),
   primeiro_passo_feito: () => ({}),
   acesso_do_salao: () => acessoDemo(),
   acesso_enviar: ({ email_ }) => ({ ok: true, email: email_ || 'carla@exemplo.com', link: 'http://localhost/ativar/demo', token: 'demo', whats: 'Oi! Te mandei o acesso por e-mail.' }),

@@ -4965,6 +4965,9 @@ a, button { -webkit-tap-highlight-color: transparent; }
 .rodape-links a:hover { text-decoration: underline; }
 .aceite-termos { display: flex !important; flex-direction: row !important; align-items: flex-start; gap: 0.6rem; font-size: 0.85rem; line-height: 1.4; color: #3d3d44; }
 .aceite-termos input { width: 1.15rem; height: 1.15rem; margin: 0.1rem 0 0; flex: none; accent-color: #ff2d7a; font-size: 1rem !important; }
+/* 4.13.2: dentro de um formulário, a regra dos campos (altura mínima de 48px, fundo, borda, sombra) pegava a caixinha
+   também: ela virava um bloco alto, fora da linha do texto. A caixinha do aceite é sempre só a caixinha. */
+.aceite-termos input[type="checkbox"] { width: 1.15rem !important; height: 1.15rem !important; min-height: 0 !important; min-width: 0 !important; padding: 0 !important; margin: 0.12rem 0 0 !important; border-radius: 4px !important; box-shadow: none !important; background: none !important; appearance: auto !important; -webkit-appearance: auto !important; }
 .aceite-termos a { color: var(--roxo, #aa4cff); font-weight: 600; }
 .bemvinda .cl-ajuste { margin-bottom: 0.6rem; }
 .bemvinda .ajuste-icone { flex: none; }

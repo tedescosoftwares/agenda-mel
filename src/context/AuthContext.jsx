@@ -4,6 +4,7 @@ import { lerCodigoGuardado, limparCodigoGuardado } from '../lib/indicacao'
 import { lerConvite, limparConvite } from '../lib/convite'
 import { AMBIENTE, ambienteDoPapel, urlDoAmbiente } from '../lib/ambiente'
 import { contaSocial, guardarContaErrada } from '../lib/oauth'
+import { conferirPush, soltarPush } from '../lib/push'
 
 const AuthContext = createContext(null)
 
@@ -250,8 +251,13 @@ export function AuthProvider({ children }) {
   }, [session?.user?.id, profile?.role])
 
   async function signOut() {
+    // 4.17: o aparelho para de receber os avisos desta conta (com limite de tempo: sair não espera a rede)
+    await Promise.race([soltarPush(), new Promise((r) => setTimeout(r, 2500))])
     await supabase.auth.signOut()
   }
+
+  // 4.17: os avisos deste aparelho vão para a conta que está logada nele (migração 269)
+  useEffect(() => { if (session?.user?.id) conferirPush(session.user.id) }, [session?.user?.id])
 
   // a admin com mais de um salão escolhe em qual está trabalhando
   function trocarSalao(id) {

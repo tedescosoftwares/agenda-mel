@@ -42,11 +42,7 @@ export async function ativarPush(userId) {
   const reg = await navigator.serviceWorker.ready
   let sub = await reg.pushManager.getSubscription()
   if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ParaBytes(vapid) })
-  const j = sub.toJSON()
-  const { error } = await supabase.from('push_subscriptions').upsert({
-    user_id: userId, endpoint: sub.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth,
-    agente: navigator.userAgent.slice(0, 200),
-  }, { onConflict: 'endpoint' })
+  const { error } = await registrar(sub)
   if (error) throw new Error(error.message)
   return sub
 }
@@ -55,6 +51,40 @@ export async function desativarPush() {
   const reg = await navigator.serviceWorker.getRegistration()
   const sub = await reg?.pushManager.getSubscription()
   if (!sub) return
-  await supabase.from('push_subscriptions').delete().eq('endpoint', sub.endpoint)
+  await supabase.rpc('esquecer_celular', { endpoint_: sub.endpoint })
   await sub.unsubscribe()
+}
+
+// 4.17: o aparelho passa para a conta que está logada (migração 269). A linha do banco é uma por aparelho; antes
+// ela ficava com a primeira conta que ligou os avisos, e quem entrava depois via "ligado" sem receber nada.
+function registrar(sub) {
+  const j = sub.toJSON()
+  return supabase.rpc('registrar_celular', {
+    endpoint_: sub.endpoint, p256dh_: j.keys?.p256dh, auth_: j.keys?.auth, agente_: navigator.userAgent.slice(0, 200),
+  })
+}
+
+// Ao entrar (e ao abrir o app já logada): se este aparelho já tem os avisos ligados, confere que é para esta conta
+// que eles vão. Não pede permissão nem cria assinatura: só acerta o dono da que existe. Uma vez por conta e aba.
+let conferido = null
+export async function conferirPush(userId) {
+  if (!userId || conferido === userId || !suportaPush() || Notification.permission !== 'granted') return
+  conferido = userId
+  try {
+    const reg = await navigator.serviceWorker.getRegistration()
+    const sub = await reg?.pushManager.getSubscription()
+    if (sub) await registrar(sub)
+  } catch { conferido = null }
+}
+
+// Ao sair da conta: o aparelho deixa de receber os avisos dela. A assinatura do navegador fica, para a próxima
+// conta que entrar aqui herdar os avisos sem ter de ligar de novo.
+export async function soltarPush() {
+  conferido = null
+  if (!suportaPush()) return
+  try {
+    const reg = await navigator.serviceWorker.getRegistration()
+    const sub = await reg?.pushManager.getSubscription()
+    if (sub) await supabase.rpc('esquecer_celular', { endpoint_: sub.endpoint })
+  } catch { /* sair não pode depender disto */ }
 }

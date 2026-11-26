@@ -6,7 +6,7 @@ import { formatPreco, labelDuracao, formatDuracao } from '../../lib/format'
 import { prefixoAPartir, AVISO_A_PARTIR } from '../../../packages/core/salao.js'
 import { iniciais } from '../../lib/booking'
 import { useCategorias, nomeDaCategoria } from '../../lib/categorias'
-import { Sparkles, Clock, Tag, Users, Plus, Check, ChevronRight, BadgePercent, X } from 'lucide-react'
+import { Sparkles, Clock, Tag, Users, Plus, Check, ChevronRight, BadgePercent, X, Zap } from 'lucide-react'
 import Portal from '../../components/Portal'
 
 // A página de um serviço (2.25): fotos, descrição, preço (com o desconto
@@ -51,6 +51,26 @@ export default function ClienteServico() {
   const [foto, setFoto] = useState(0)
   const [loading, setLoading] = useState(true)
   const [perguntar, setPerguntar] = useState(false)   // a folha "com quem?"
+  // 4.16: o próximo horário livre de cada uma (a folha mostra, e "quem tem horário mais perto" usa). null = procurando
+  const [proximos, setProximos] = useState(null)       // { [profId]: { dia, hora } | null }
+  useEffect(() => {
+    if (!perguntar || !s) return
+    let vivo = true
+    setProximos(null)
+    Promise.all(quem.map(async (p) => {
+      const duracao = p.duracao_minutos ?? s.duration_minutes
+      try {
+        const { data: dias } = await supabase.rpc('dias_com_vaga', { prof: p.id, duracao, quantos: 1 })
+        const dia = dias?.[0]?.dia
+        if (!dia) return [p.id, null]
+        const { data: horas } = await supabase.rpc('horarios_livres', { prof: p.id, dia, duracao })
+        const hora = horas?.[0]?.hora
+        return [p.id, hora ? { dia, hora: String(hora).slice(0, 5) } : null]
+      } catch { return [p.id, null] }
+    })).then((pares) => { if (vivo) setProximos(Object.fromEntries(pares)) })
+    return () => { vivo = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [perguntar])
 
   useEffect(() => {
     let vivo = true
@@ -89,6 +109,15 @@ export default function ClienteServico() {
   const prof = (escolhida && quem.some((p) => p.id === profId) ? profId : '') || (quem.length === 1 ? quem[0].id : '')
   const sugerida = !prof && profId && quem.some((p) => p.id === profId) ? profId : ''
   const salaoNome = s.salons?.tipo === 'salao' ? s.salons?.name : null
+  // quem tem o horário livre mais cedo (dia e hora); empate fica com a preferida, depois pela ordem do nome
+  const maisPerto = proximos
+    ? quem.filter((p) => proximos[p.id]).sort((a, b) => `${proximos[a.id].dia} ${proximos[a.id].hora}`.localeCompare(`${proximos[b.id].dia} ${proximos[b.id].hora}`) || (b.id === sugerida) - (a.id === sugerida))[0] ?? null
+    : null
+  const quando = (x) => {
+    const d = new Date(x.dia + 'T12:00:00'), hoje = new Date(), amanha = new Date(Date.now() + 864e5)
+    const dia = d.toDateString() === hoje.toDateString() ? 'hoje' : d.toDateString() === amanha.toDateString() ? 'amanhã' : d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' }).replace('.', '')
+    return `${dia} às ${x.hora}`
+  }
   const irParaData = (p) => navigate(`/cliente/agendamento/data?${comOrigem({ prof: p, servico: escolha.join(','), firme: '1' })}`)
   const fotos = s.images ?? []
   const precoPor = desconto ? desconto.preco_com_desconto_cents / 100 : null
@@ -181,11 +210,19 @@ export default function ClienteServico() {
             <button type="button" className="svc-quem-fechar" onClick={() => setPerguntar(false)} aria-label="Fechar"><X size={17} /></button>
             <h3 id="svc-quem-titulo">Com quem você quer marcar?</h3>
             <p className="muted">{quem.length} profissionais fazem {s.name}{salaoNome ? ` no ${salaoNome}` : ''}. Tem preferência por alguma?</p>
+            <button type="button" className="svc-quem-perto" disabled={!maisPerto} data-teste="svc-mais-perto"
+              onClick={() => navigate(`/cliente/agendamento/hora?${comOrigem({ prof: maisPerto.id, servico: escolha.join(','), data: proximos[maisPerto.id].dia, firme: '1' })}`)}>
+              <Zap size={18} />
+              <span><strong>Quem tem horário mais perto</strong>
+                <small>{proximos == null ? 'Procurando os horários…' : maisPerto ? `${maisPerto.name.split(' ')[0]} · ${quando(proximos[maisPerto.id])}` : 'Ninguém com horário livre nos próximos dias'}</small></span>
+              <ChevronRight size={18} />
+            </button>
+            <p className="svc-quem-ou">ou escolha</p>
             <div className="cliente-list">
               {[...quem].sort((a, b) => (b.id === sugerida) - (a.id === sugerida)).map((p) => (
                 <button key={p.id} type="button" className="card agdt-linha agdt-link svc-quem-opcao" onClick={() => irParaData(p.id)}>
                   <span className="agdt-avatar">{p.photo_url ? <img src={p.photo_url} alt="" /> : iniciais(p.name)}</span>
-                  <span className="cliente-info"><span className="cliente-nome"><span className="nome-txt">{p.name}</span></span>{p.id === sugerida && <span className="muted cliente-meta">sua preferida</span>}{(p.preco_cents != null || p.duracao_minutos != null) && <span className="muted cliente-meta">com ela: {[p.preco_cents != null ? formatPreco(p.preco_cents / 100) : null, p.duracao_minutos != null ? formatDuracao(p.duracao_minutos) : null].filter(Boolean).join(' · ')}</span>}</span>
+                  <span className="cliente-info"><span className="cliente-nome"><span className="nome-txt">{p.name}</span></span>{p.id === sugerida && <span className="muted cliente-meta">sua preferida</span>}{proximos && <span className="muted cliente-meta">{proximos[p.id] ? `próximo horário: ${quando(proximos[p.id])}` : 'sem horário livre nos próximos dias'}</span>}{(p.preco_cents != null || p.duracao_minutos != null) && <span className="muted cliente-meta">com ela: {[p.preco_cents != null ? formatPreco(p.preco_cents / 100) : null, p.duracao_minutos != null ? formatDuracao(p.duracao_minutos) : null].filter(Boolean).join(' · ')}</span>}</span>
                   <ChevronRight size={18} className="agdt-seta" />
                 </button>
               ))}

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, BarChart3, BellRing, CalendarDays, CalendarPlus, CheckCheck, ChevronRight, ClipboardCheck, Crown, Eye, EyeOff, HelpCircle, MessageCircle, Moon, Plus, QrCode, Scissors, Sun, UserPlus, Users, Hourglass } from 'lucide-react'
+import { ArrowRight, BarChart3, BellRing, CalendarDays, CalendarPlus, CheckCheck, ChevronRight, ClipboardCheck, Crown, Eye, EyeOff, HelpCircle, MessageCircle, Plus, QrCode, Scissors, UserPlus, Users, Hourglass } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { avisoDoAcesso } from '../../lib/acesso'
@@ -14,8 +14,7 @@ import { CartaoInstalar } from '../../components/InstalarApp'
 // A Home do salão já configurado (4.20), no desenho de banco digital: o cabeçalho na cor da casa, o faturamento do
 // mês como o "saldo" (com o olho para esconder os valores), as ações em círculos, o que pede resposta em carrossel,
 // o dia em lista, a equipe com o anel de ocupação e o mês em barras. Claro e escuro: todas as cores são variáveis
-// em .hd; o tema escuro vale enquanto esta tela está aberta (as outras telas do painel ainda são só claras).
-const CHAVE_TEMA = 'mimo-home-tema'
+// em .hd; o tema (src/lib/tema.js) é do painel inteiro; aqui ele troca só as variáveis.
 const CHAVE_OLHO = 'mimo-home-ocultar'
 const ler = (k) => { try { return localStorage.getItem(k) } catch { return null } }
 const gravar = (k, v) => { try { localStorage.setItem(k, v) } catch { /* sem armazenamento */ } }
@@ -24,16 +23,9 @@ const hm = (t) => String(t ?? '').slice(0, 5)
 
 export default function HomeDoDia({ salao, nomePessoa, saudacao, logoSalao, iniciaisSalao, salaoAtivo, hoje, pendentes, naFila, linhas, porDia, totalMes, atendMes, ocup, primeiros }) {
   const { acesso } = useAuth()
-  const [tema, setTema] = useState(() => (ler(CHAVE_TEMA) === 'escuro' ? 'escuro' : 'claro'))
   const [oculto, setOculto] = useState(() => ler(CHAVE_OLHO) === '1')
   const [agenda, setAgenda] = useState(null)
   const [baixas, setBaixas] = useState(0)
-
-  // o tema vale só enquanto a Home está aberta: sai dela, o painel volta ao claro
-  useEffect(() => {
-    document.documentElement.dataset.temaHome = tema
-    return () => { delete document.documentElement.dataset.temaHome }
-  }, [tema])
 
   useEffect(() => {
     if (!salao?.id) return
@@ -90,7 +82,6 @@ export default function HomeDoDia({ salao, nomePessoa, saudacao, logoSalao, inic
           <span className="hd-logo">{logoSalao ? <img src={logoSalao} alt="" /> : <b>{iniciaisSalao || 'M'}</b>}</span>
           <div className="hd-cab-acoes">
             <button type="button" onClick={() => { const v = !oculto; setOculto(v); gravar(CHAVE_OLHO, v ? '1' : '0') }} aria-label={oculto ? 'Mostrar valores' : 'Esconder valores'} aria-pressed={oculto}>{oculto ? <EyeOff size={19} /> : <Eye size={19} />}</button>
-            <button type="button" onClick={() => { const v = tema === 'escuro' ? 'claro' : 'escuro'; setTema(v); gravar(CHAVE_TEMA, v) }} aria-label={tema === 'escuro' ? 'Usar tema claro' : 'Usar tema escuro'}>{tema === 'escuro' ? <Sun size={19} /> : <Moon size={19} />}</button>
             <Link to="/admin/guia" aria-label="Ajuda"><HelpCircle size={19} /></Link>
           </div>
         </div>
@@ -124,7 +115,7 @@ export default function HomeDoDia({ salao, nomePessoa, saudacao, logoSalao, inic
             ))}
           </nav>
 
-          <section className="hd-avisos" aria-label="O que pede a sua atenção">
+          <section className="hd-avisos" data-tour="primeiros-passos" aria-label="O que pede a sua atenção">
             {avisos.length === 0 && <div className="hd-aviso calmo"><span className="hd-aviso-icone"><CheckCheck size={18} /></span><strong>Tudo em dia</strong><p>Nenhum pedido, baixa ou cliente esperando por você agora.</p></div>}
             {avisos.map(({ id, tom, Icone, titulo, texto, acao, para }) => (
               <Link key={id} to={para} className={'hd-aviso' + (tom ? ' ' + tom : '')}>
@@ -163,7 +154,7 @@ export default function HomeDoDia({ salao, nomePessoa, saudacao, logoSalao, inic
         </div>
 
         <div className="hd-col">
-          <section className="hd-secao">
+          <section className="hd-secao" data-tour="link">
             <Link to="/admin/equipe" className="hd-secao-topo">
               <span><h2>Equipe</h2><small>Quanto da agenda de cada uma está ocupada em {mes.toLowerCase()}</small></span>
               <ChevronRight size={20} />
@@ -192,7 +183,7 @@ export default function HomeDoDia({ salao, nomePessoa, saudacao, logoSalao, inic
           <div className="hd-novidades"><AvisosNovos /></div>
           <CartaoInstalar para="salao" />
           <LigarAvisos semInstalar texto="Pedidos, cancelamentos e clientes chamando no WhatsApp chegam na hora, mesmo com o app fechado." />
-          <div className="admin-dia-fim" data-tour="link"><PrimeirosPassos salao={salao} parte="resto" /></div>
+          <div className="admin-dia-fim"><PrimeirosPassos salao={salao} parte="resto" /></div>
         </div>
       </div>
     </div>

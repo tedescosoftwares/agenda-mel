@@ -15,7 +15,8 @@ import {
   ClockIcon,
   HomeIcon,
 } from './icons'
-import { Sparkles, UserRound, WalletCards, Megaphone, Settings2, ChevronLeft, CreditCard, BarChart3, Search, Crown, Store, ChevronDown, CalendarHeart, CalendarPlus } from 'lucide-react'
+import { Sparkles, UserRound, WalletCards, Megaphone, Settings2, ChevronLeft, CreditCard, BarChart3, Search, Crown, Store, ChevronDown, CalendarHeart, CalendarPlus, Moon, Sun } from 'lucide-react'
+import { lerTema, aplicarTema, trocarTema, ouvirTema } from '../lib/tema'
 
 // Cinco abas, não seis. Numa barra de celular, seis alvos dão 60px
 // cada e o polegar erra. O mês, Serviços e WhatsApp foram para dentro
@@ -48,6 +49,9 @@ export default function AdminShell({ children, amplo = false, primeiroAcesso = f
   const miolo = useRef(null)
   const { pathname } = useLocation()
   useEffect(() => { miolo.current?.scrollTo({ top: 0 }) }, [pathname])
+  // 4.21: o tema do painel (claro ou escuro) vale enquanto o painel está aberto
+  const [tema, setTema] = useState(lerTema)
+  useEffect(() => { aplicarTema(lerTema()); const parar = ouvirTema(setTema); return () => { parar(); aplicarTema('claro') } }, [])
   const { salao, acesso, profile, saloes, trocarSalao, professional } = useAuth()
   // a dona que também atende (2.99) vê a própria agenda no menu
   const donaAtende = Boolean(professional && professional.salon_id === salao?.id)
@@ -143,6 +147,7 @@ export default function AdminShell({ children, amplo = false, primeiroAcesso = f
         </form>
 
         <div className="topbar-acoes">
+          <button type="button" className="admin-topbar-tema" onClick={trocarTema} aria-label={tema === 'escuro' ? 'Usar tema claro' : 'Usar tema escuro'} title={tema === 'escuro' ? 'Tema claro' : 'Tema escuro'}>{tema === 'escuro' ? <Sun size={18} /> : <Moon size={18} />}</button>
           <SinoAvisos />
           <div className="admin-topbar-user">
             <MenuDaConta itens={ITENS_ADMIN} papel={salao?.name ? `Administração · ${salao.name}` : 'Administração do salão'} />

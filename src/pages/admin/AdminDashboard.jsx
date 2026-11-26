@@ -143,11 +143,11 @@ export default function AdminDashboard() {
 }
 
 const PASSOS_TOUR_DIA = [
-  { alvo:'[data-tour="inicio"]', titulo:'Esse é o centro do seu salão', texto:'Aqui você enxerga o dia, abre sua agenda e continua qualquer configuração que ainda faltar.' },
-  { alvo:'[data-tour="primeiros-passos"]', titulo:'A MIMO te mostra o que falta', texto:'Enquanto o salão ainda estiver sendo preparado, esta área te conduz por serviços, equipe, ativação, link e QR.' },
-  { alvo:'[data-tour="numeros"]', titulo:'Os números aparecem sem você caçar', texto:'Atendimentos, movimento do mês, pedidos pendentes e fila de espera ficam resumidos aqui.' },
-  { alvo:'[data-tour="atalhos"]', titulo:'As ações do dia a dia ficam perto', texto:'Equipe, serviços, encaixes e WhatsApp estão a um toque. Você não precisa decorar menus.' },
-  { alvo:'[data-tour="link"]', titulo:'E daqui seu salão vai para a rua', texto:'O link e o QR Code são a porta de entrada das clientes. Quando a configuração estiver pronta, é isso que você compartilha.' },
+  { alvo:'[data-tour="inicio"]', titulo:'Esse é o centro do seu salão', texto:'No topo ficam o olho, que esconde os valores quando tem cliente por perto, o tema claro ou escuro e a ajuda.' },
+  { alvo:'[data-tour="numeros"]', titulo:'O mês, de bate-pronto', texto:'O faturamento do mês em destaque e, embaixo, quantos atendimentos tem hoje, quanto da agenda está ocupada e se tem fila.' },
+  { alvo:'[data-tour="atalhos"]', titulo:'As ações do dia a dia', texto:'Novo horário, agenda, equipe, serviços, link e WhatsApp a um toque. O número em cima da Agenda são os pedidos esperando você.' },
+  { alvo:'[data-tour="primeiros-passos"]', titulo:'O que pede a sua resposta', texto:'Pedidos para confirmar, baixas do dia, fila e equipe sem acesso aparecem aqui. Sem nada pendente, fica "Tudo em dia".' },
+  { alvo:'[data-tour="link"]', titulo:'Sua equipe em um olhar', texto:'O anel em volta de cada profissional mostra quanto da agenda dela está ocupada no mês.' },
 ]
 
 const PASSOS_TOUR_PRIMEIRO = [

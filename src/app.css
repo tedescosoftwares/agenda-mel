@@ -16346,7 +16346,7 @@ label.a-partir-opcao .a-partir-opcao-texto { flex: 1; }
 .svc-quem-ou { margin: 0.8rem 0 0.5rem; font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 600; color: var(--texto-2); text-align: center; }
 
 /* 4.20: a Home do salão já configurado, no desenho de banco digital (src/pages/admin/HomeDoDia.jsx).
-   Todas as cores saem das variáveis de .hd; o tema escuro troca só as variáveis (html[data-tema-home="escuro"]),
+   Todas as cores saem das variáveis de .hd; o tema escuro troca só as variáveis (html[data-tema="escuro"]),
    e enquanto ele vale a moldura do painel (barra de cima, menu, fundo) escurece junto. */
 .hd {
   --hd-fundo:#f6f4f7; --hd-sup:#ffffff; --hd-sup2:#f3f0f5; --hd-tx:#1d1323; --hd-ap:#766b7c; --hd-fio:#e9e4ec;
@@ -16354,7 +16354,7 @@ label.a-partir-opcao .a-partir-opcao-texto { flex: 1; }
   --hd-ouro:#b07a12; --hd-ouro-veu:#fbf1dc; --hd-menta:#0f8a5c; --hd-sombra:0 1px 2px rgba(29,19,35,.05), 0 10px 30px rgba(29,19,35,.06);
   display:grid; gap:0; color:var(--hd-tx); min-width:0;
 }
-html[data-tema-home="escuro"] .hd {
+html[data-tema="escuro"] .hd {
   --hd-fundo:#0f0a12; --hd-sup:#1a121e; --hd-sup2:#241a29; --hd-tx:#f6f1f8; --hd-ap:#a99cae; --hd-fio:#2c2132;
   --hd-cab1:#1c0726; --hd-cab2:#3d0c4e; --hd-rosa-veu:#3a1026; --hd-rosa-tx:#ff7baa;
   --hd-ouro:#e2b25c; --hd-ouro-veu:#33260f; --hd-menta:#4fd3a0; --hd-sombra:0 1px 2px rgba(0,0,0,.4), 0 14px 34px rgba(0,0,0,.35);
@@ -16506,13 +16506,13 @@ a.hd-aviso:hover { border-color:var(--hd-ap); } a.hd-aviso:active { transform:sc
 .pp-resto-fechar { border:0; background:none; color:#a59dab; cursor:pointer; padding:4px; display:grid; place-items:center; }
 
 /* a moldura do painel acompanha o escuro enquanto a Home está aberta */
-html[data-tema-home="escuro"], html[data-tema-home="escuro"] body, html[data-tema-home="escuro"] .admin-shell, html[data-tema-home="escuro"] .admin-shell-workspace, html[data-tema-home="escuro"] .admin-content { background:#0f0a12; }
-html[data-tema-home="escuro"] .topbar-admin, html[data-tema-home="escuro"] .bottom-nav, html[data-tema-home="escuro"] .bottom-nav-inner, html[data-tema-home="escuro"] .admin-desktop-sidebar { background:#140d18; border-color:#2c2132; color:#f6f1f8; box-shadow:none; }
-html[data-tema-home="escuro"] .bottom-nav .nav-item, html[data-tema-home="escuro"] .admin-sidebar-nav a { color:#a99cae; }
-html[data-tema-home="escuro"] .bottom-nav .nav-item.active, html[data-tema-home="escuro"] .admin-sidebar-nav a.active { color:#ff7baa; background:#2a1326; border-color:#3a1a33; }
-html[data-tema-home="escuro"] .topbar-admin :is(strong, b, span, small), html[data-tema-home="escuro"] .admin-desktop-sidebar :is(strong, b, span, small) { color:inherit; }
-html[data-tema-home="escuro"] .admin-topbar-busca, html[data-tema-home="escuro"] .admin-topbar-busca input, html[data-tema-home="escuro"] .admin-topbar-negocio, html[data-tema-home="escuro"] .admin-sidebar-plano, html[data-tema-home="escuro"] .admin-sidebar-salao, html[data-tema-home="escuro"] .admin-sidebar-plano-cta { background:#1a121e; border-color:#2c2132; color:#f6f1f8; }
-html[data-tema-home="escuro"] .mimo-logo-texto, html[data-tema-home="escuro"] .brand-inline { filter:brightness(0) invert(1); }
+html[data-tema="escuro"], html[data-tema="escuro"] body, html[data-tema="escuro"] .admin-shell, html[data-tema="escuro"] .admin-shell-workspace, html[data-tema="escuro"] .admin-content { background:#0f0a12; }
+html[data-tema="escuro"] .topbar-admin, html[data-tema="escuro"] .bottom-nav, html[data-tema="escuro"] .bottom-nav-inner, html[data-tema="escuro"] .admin-desktop-sidebar { background:#140d18; border-color:#2c2132; color:#f6f1f8; box-shadow:none; }
+html[data-tema="escuro"] .bottom-nav .nav-item, html[data-tema="escuro"] .admin-sidebar-nav a { color:#a99cae; }
+html[data-tema="escuro"] .bottom-nav .nav-item.active, html[data-tema="escuro"] .admin-sidebar-nav a.active { color:#ff7baa; background:#2a1326; border-color:#3a1a33; }
+html[data-tema="escuro"] .topbar-admin :is(strong, b, span, small), html[data-tema="escuro"] .admin-desktop-sidebar :is(strong, b, span, small) { color:inherit; }
+html[data-tema="escuro"] .admin-topbar-busca, html[data-tema="escuro"] .admin-topbar-busca input, html[data-tema="escuro"] .admin-topbar-negocio, html[data-tema="escuro"] .admin-sidebar-plano, html[data-tema="escuro"] .admin-sidebar-salao, html[data-tema="escuro"] .admin-sidebar-plano-cta { background:#1a121e; border-color:#2c2132; color:#f6f1f8; }
+html[data-tema="escuro"] .mimo-logo-texto, html[data-tema="escuro"] .brand-inline { filter:brightness(0) invert(1); }
 
 @media (max-width: 980px) {
   .hd-corpo { grid-template-columns:minmax(0,1fr); gap:18px; }
@@ -16537,17 +16537,31 @@ html[data-tema-home="escuro"] .mimo-logo-texto, html[data-tema-home="escuro"] .b
 .hd-saldo { margin-top:-62px; position:relative; }
 .hd-pessoa.nova .hd-pessoa-anel b svg { width:20px; height:20px; }
 /* moldura escura: os miolos da barra de cima e do menu lateral */
-html[data-tema-home="escuro"] .logo-mimo { filter:brightness(0) invert(1); }
-html[data-tema-home="escuro"] .brand-inline { filter:none; }
-html[data-tema-home="escuro"] .faixa-teste { background:#1a121e; border-color:#2c2132; color:#d9cfdd; }
-html[data-tema-home="escuro"] .faixa-teste-texto { color:#d9cfdd; }
-html[data-tema-home="escuro"] :is(.admin-desktop-sidebar, .topbar-admin) :is(.admin-sidebar-item, .admin-sidebar-plano, .admin-sidebar-salao, .admin-sidebar-plano-cta, .admin-sidebar-plano-icone, .admin-sidebar-salao-avatar, .admin-sidebar-marca, .admin-sidebar-rodape, .ia-linha, .card, .admin-topbar-online, .admin-topbar-clima, .admin-topbar-negocio, .admin-topbar-negocio-avatar, .admin-topbar-user, .admin-topbar-busca, .admin-topbar-busca input, .admin-topbar-busca kbd, .topbar-acoes button, .topbar-acoes a) { background:#1a121e; border-color:#2c2132; color:#f6f1f8; box-shadow:none; }
-html[data-tema-home="escuro"] .admin-desktop-sidebar :is(.admin-sidebar-item, .admin-sidebar-marca, .admin-sidebar-rodape) { background:transparent; color:#a99cae; }
-html[data-tema-home="escuro"] .admin-desktop-sidebar .admin-sidebar-item.ativo { background:#2a1326; border-color:#3a1a33; color:#ff7baa; }
-html[data-tema-home="escuro"] :is(.admin-desktop-sidebar, .topbar-admin) :is(strong, b, small, span, p) { color:inherit; }
-html[data-tema-home="escuro"] :is(.admin-desktop-sidebar, .topbar-admin) :is(small, .muted) { opacity:.72; }
-html[data-tema-home="escuro"] .admin-topbar-online { color:#4fd3a0; }
-html[data-tema-home="escuro"] .bottom-nav .nav-item.active { background:#2a1326; }
-html[data-tema-home="escuro"] .admin-desktop-sidebar .admin-sidebar-item { border-color:transparent; }
-html[data-tema-home="escuro"] .admin-desktop-sidebar .ia-menu { background:#1a121e; border-color:#2c2132; color:#f6f1f8; box-shadow:none; }
-html[data-tema-home="escuro"] .admin-desktop-sidebar .ia-menu :is(strong, small, span) { color:inherit; }
+html[data-tema="escuro"] .logo-mimo { filter:brightness(0) invert(1); }
+html[data-tema="escuro"] .brand-inline { filter:none; }
+html[data-tema="escuro"] .faixa-teste { background:#1a121e; border-color:#2c2132; color:#d9cfdd; }
+html[data-tema="escuro"] .faixa-teste-texto { color:#d9cfdd; }
+html[data-tema="escuro"] :is(.admin-desktop-sidebar, .topbar-admin) :is(.admin-sidebar-item, .admin-sidebar-plano, .admin-sidebar-salao, .admin-sidebar-plano-cta, .admin-sidebar-plano-icone, .admin-sidebar-salao-avatar, .admin-sidebar-marca, .admin-sidebar-rodape, .ia-linha, .card, .admin-topbar-online, .admin-topbar-clima, .admin-topbar-negocio, .admin-topbar-negocio-avatar, .admin-topbar-user, .admin-topbar-busca, .admin-topbar-busca input, .admin-topbar-busca kbd, .topbar-acoes button, .topbar-acoes a) { background:#1a121e; border-color:#2c2132; color:#f6f1f8; box-shadow:none; }
+html[data-tema="escuro"] .admin-desktop-sidebar :is(.admin-sidebar-item, .admin-sidebar-marca, .admin-sidebar-rodape) { background:transparent; color:#a99cae; }
+html[data-tema="escuro"] .admin-desktop-sidebar .admin-sidebar-item.ativo { background:#2a1326; border-color:#3a1a33; color:#ff7baa; }
+html[data-tema="escuro"] :is(.admin-desktop-sidebar, .topbar-admin) :is(strong, b, small, span, p) { color:inherit; }
+html[data-tema="escuro"] :is(.admin-desktop-sidebar, .topbar-admin) :is(small, .muted) { opacity:.72; }
+html[data-tema="escuro"] .admin-topbar-online { color:#4fd3a0; }
+html[data-tema="escuro"] .bottom-nav .nav-item.active { background:#2a1326; }
+html[data-tema="escuro"] .admin-desktop-sidebar .admin-sidebar-item { border-color:transparent; }
+html[data-tema="escuro"] .admin-desktop-sidebar .ia-menu { background:#1a121e; border-color:#2c2132; color:#f6f1f8; box-shadow:none; }
+html[data-tema="escuro"] .admin-desktop-sidebar .ia-menu :is(strong, small, span) { color:inherit; }
+
+/* 4.21: o tema escuro é do painel inteiro. A Home (.hd) tem as cores em variáveis; as telas que ainda não foram
+   redesenhadas escurecem por inversão (o rosa continua rosa com o giro de matiz) e as fotos são devolvidas ao normal.
+   O filtro vai nos filhos do miolo, não nele, para não prender o que é fixo na tela. */
+.admin-topbar-tema { width:38px; height:38px; display:grid; place-items:center; border:1px solid var(--fio); border-radius:50%; background:#fff; color:var(--ameixa); cursor:pointer; transition:transform .12s ease, border-color .16s ease; }
+.admin-topbar-tema:hover { border-color:var(--ameixa); } .admin-topbar-tema:active { transform:scale(.92); }
+html[data-tema="escuro"] .admin-topbar-tema { background:#1a121e; border-color:#2c2132; color:#f6f1f8; }
+html[data-tema="escuro"] .admin-content .miolo > *:not(.hd) { filter:invert(.93) hue-rotate(180deg); }
+html[data-tema="escuro"] .admin-content .miolo > *:not(.hd) :is(img, video, canvas, [style*="background-image"]) { filter:invert(1) hue-rotate(180deg); }
+html[data-tema="escuro"] .modal-fundo .modal-caixa { filter:invert(.93) hue-rotate(180deg); }
+html[data-tema="escuro"] .modal-fundo .modal-caixa :is(img, video, canvas, [style*="background-image"]) { filter:invert(1) hue-rotate(180deg); }
+@media (max-width: 760px) { .admin-topbar-tema { width:34px; height:34px; } }
+html[data-tema="escuro"] .admin-topbar-user :is(button, span, strong, b) { color:#f6f1f8; background-color:transparent; }
+html[data-tema="escuro"] .admin-topbar-user > :first-child { background:#2a1f30; border-radius:50%; }

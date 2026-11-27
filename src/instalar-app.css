@@ -91,3 +91,19 @@
 .ia-menu small { font-size: 0.66rem; color: var(--texto-3); }
 @media (min-width: 700px) { .ia-folha { max-width: 540px; padding: 0.6rem 1.6rem 1.4rem; } }
 @media (min-width: 700px) { .ia-pegador, .lte-pegador { display: none; } .ia-folha { padding-top: 1.2rem; } }
+
+/* 4.33: o convite de instalar que abre a cada entrada no painel */
+.ia-convite { text-align: center; padding-bottom: calc(1.1rem + env(safe-area-inset-bottom)); }
+.ia-convite-topo { position: relative; width: 72px; margin: 0.9rem auto 0; }
+.ia-convite-topo img { display: block; width: 72px; height: 72px; border-radius: 18px; box-shadow: 0 10px 26px rgba(42, 11, 55, 0.22); }
+.ia-convite-sino { position: absolute; top: -8px; right: -10px; width: 28px; height: 28px; border-radius: 50%; background: #ff2d7a; color: #fff; display: grid; place-items: center; border: 3px solid #fff; }
+.ia-convite h3 { margin: 1rem 0 0.35rem; font-size: 1.22rem; line-height: 1.25; letter-spacing: -0.01em; color: #1d1323; }
+.ia-convite-sub { margin: 0 auto; max-width: 26rem; color: #766b7c; font-size: 0.9rem; line-height: 1.45; }
+.ia-convite-lista { list-style: none; margin: 1rem 0 0; padding: 0; text-align: left; border: 1px solid #e9e4ec; border-radius: 16px; overflow: hidden; }
+.ia-convite-lista li { display: flex; align-items: center; gap: 0.75rem; padding: 0.7rem 0.9rem; }
+.ia-convite-lista li + li { border-top: 1px solid #f0ebf2; }
+.ia-convite-lista svg { flex: none; width: 34px; height: 34px; padding: 8px; border-radius: 50%; background: #f3f0f5; color: #1d1323; }
+.ia-convite-lista span { display: flex; flex-direction: column; min-width: 0; font-size: 0.8rem; line-height: 1.35; color: #766b7c; }
+.ia-convite-lista strong { font-size: 0.92rem; font-weight: 600; color: #1d1323; }
+.ia-convite-ir { margin-top: 1rem; min-height: 52px; font-size: 1rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
+.ia-convite-depois { display: block; width: 100%; margin-top: 0.5rem; padding: 0.7rem; border: 0; background: none; font: inherit; font-size: 0.86rem; color: #766b7c; cursor: pointer; }

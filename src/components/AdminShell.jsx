@@ -6,7 +6,7 @@ import SinoAvisos from './SinoAvisos'
 import MenuDaConta, { ITENS_ADMIN } from './MenuDaConta'
 import ClimaTopo from './ClimaTopo'
 import MelDock from './MelDock'
-import { InstalarNoMenu } from './InstalarApp'
+import { InstalarNoMenu, ConviteInstalar } from './InstalarApp'
 import FaixaDoTeste from './FaixaDoTeste'
 import { LogoMimo } from './icons'
 import {
@@ -145,6 +145,7 @@ export default function AdminShell({ children, amplo = false, primeiroAcesso = f
         </div>
       </aside>
 
+      {!primeiroAcesso && <ConviteInstalar para="salao" />}
       <div className={primeiroAcesso ? 'admin-first-workspace' : 'admin-shell-workspace'}>
       <FaixaDoTeste />
       <header className={'topbar topbar-admin' + (primeiroAcesso ? ' topbar-admin-primeiro' : '')}>

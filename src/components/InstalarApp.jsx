@@ -57,6 +57,61 @@ export function CartaoInstalar({ para = 'pro' }) {
   )
 }
 
+// 4.33: o convite que abre a cada entrada no painel enquanto a MIMO estiver só no navegador.
+// Uma vez por abertura (a aba guarda que já mostrou); "Agora não" fecha só desta vez.
+const CHAVE_CONVITE = 'mimo-convite-instalar-visto'
+const conviteVisto = () => { try { return sessionStorage.getItem(CHAVE_CONVITE) === '1' } catch { return false } }
+export function ConviteInstalar({ para = 'salao' }) {
+  const { instalado, direto } = useInstalacao()
+  const [aberto, setAberto] = useState(false)
+  const [guia, setGuia] = useState(false)
+  // espera a tela assentar; não disputa com o tour do primeiro dia
+  useEffect(() => {
+    if (conviteVisto()) return
+    let tour = false
+    try { tour = localStorage.getItem('mimo-tour-painel-concluido') !== '1' } catch { /* segue */ }
+    if (tour) return
+    const t = setTimeout(() => setAberto(true), 900)
+    return () => clearTimeout(t)
+  }, [])
+  if (instalado) return null
+  const ap = aparelho()
+  const pc = !ap.celular
+  const fechar = () => { try { sessionStorage.setItem(CHAVE_CONVITE, '1') } catch { /* sem armazenamento */ } setAberto(false) }
+  async function instalar() {
+    if (direto) { if (await instalarDireto()) fechar(); return }
+    fechar(); setGuia(true)
+  }
+  if (guia) return <GuiaInstalar para={para} fechar={() => setGuia(false)} />
+  if (!aberto) return null
+  return (
+    <Portal>
+      <div className="ia-fundo" onClick={fechar}>
+        <div className="ia-folha ia-convite" role="dialog" aria-modal="true" aria-labelledby="ia-convite-titulo" onClick={(e) => e.stopPropagation()}>
+          <span className="ia-pegador" aria-hidden="true" />
+          <div className="ia-convite-topo">
+            <span className="ia-convite-sino"><BellRing size={15} /></span>
+            <img src={ICONE_APP} alt="" width="72" height="72" />
+          </div>
+          <h3 id="ia-convite-titulo">Você está usando a MIMO pelo navegador</h3>
+          <p className="ia-convite-sub">
+            {ap.ios
+              ? 'No iPhone, a notificação só chega pelo app instalado. Sem instalar, um pedido novo ou um cancelamento só aparece quando você abrir o site.'
+              : 'Assim é fácil perder um pedido novo ou um cancelamento: fechou a aba, o aviso depende do navegador. Instalada, ela avisa na hora e abre num toque.'}
+          </p>
+          <ul className="ia-convite-lista">
+            <li><BellRing size={17} /> <span><strong>Avisos na hora</strong>{avisosDe(para).replace(' chegam na hora', '')}</span></li>
+            <li><Zap size={17} /> <span><strong>{pc ? 'Abre num clique' : 'Abre num toque'}</strong>{pc ? 'atalho no computador, sem procurar a aba' : 'ícone na tela de início, sem procurar o link'}</span></li>
+            <li>{pc ? <Monitor size={17} /> : <Smartphone size={17} />} <span><strong>Leva 30 segundos</strong>não baixa nada da loja nem ocupa espaço</span></li>
+          </ul>
+          <button type="button" className="btn btn-primary btn-block ia-convite-ir" onClick={instalar}><Download size={18} /> {direto ? 'Instalar agora' : 'Instalar: ver como fazer'}</button>
+          <button type="button" className="ia-convite-depois" onClick={fechar}>Agora não, continuar no navegador</button>
+        </div>
+      </div>
+    </Portal>
+  )
+}
+
 // A linha em Conta / Ajustes / Configurações: mostra se já está instalado e abre o guia.
 export function LinhaInstalar({ para = 'pro' }) {
   const { instalado } = useInstalacao()

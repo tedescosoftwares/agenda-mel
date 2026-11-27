@@ -101,6 +101,18 @@ export default function ProfissionalDrawer({ salao, profissional = null, servico
   const link = salva?.token ? urlDoAmbiente('pro', `/ativar/${salva.token}`) : ''
   const situacao = salva ? situacaoDe({ situacao: salva.situacao }) : null
 
+  // 4.39: WhatsApp ou e-mail que já é de alguém da equipe trava aqui, no passo dos dados (antes só no salvar)
+  const [colegas, setColegas] = useState([])
+  useEffect(() => {
+    let vivo = true
+    supabase.rpc('equipe_da_casa', { salao: salao.id }).then(({ data }) => { if (vivo) setColegas((Array.isArray(data) ? data : []).filter((x) => x.id !== profissional?.id && x.situacao !== 'inativa')) })
+    return () => { vivo = false }
+  }, [salao.id, profissional?.id])
+  const soNumero = (t) => String(t ?? '').replace(/\D/g, '').replace(/^55(?=\d{10,11}$)/, '')
+  const foneDela = soNumero(f.phone)
+  const emailDela = f.email.trim().toLowerCase()
+  const dupFone = foneDela.length >= 10 ? colegas.find((x) => soNumero(x.phone) === foneDela) : null
+  const dupEmail = emailDela ? colegas.find((x) => String(x.email ?? '').trim().toLowerCase() === emailDela) : null
   function validar(ate) {
     if (ate >= 1 && !f.name.trim()) { setAba(1); setErro('Diga o nome completo dela.'); return false }
     if (ate >= 1 && !dona && !editando && f.name.trim().split(/\s+/).length < 2) { setAba(1); setErro('Diga o nome e o sobrenome dela.'); return false }
@@ -109,6 +121,8 @@ export default function ProfissionalDrawer({ salao, profissional = null, servico
     if (ate >= 1 && f.phone.replace(/\D/g, '').length < 10) { setAba(1); setErro('Diga o WhatsApp: é por ele que chegam os avisos.'); return false }
     // 3.82: o e-mail não trava o caminho entre as etapas; no salvar, quem ainda não ativou precisa dele (o acesso vai por e-mail)
     if (ate >= 1 && f.email.trim() && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(f.email.trim())) { setAba(1); setErro('Esse e-mail não parece certo. Confira, por favor.'); return false }
+    if (ate >= 1 && dupFone) { setAba(1); setErro(`Esse WhatsApp já é de ${dupFone.name}, que está na equipe. Cada profissional precisa do próprio número.`); return false }
+    if (ate >= 1 && dupEmail) { setAba(1); setErro(`Esse e-mail já é de ${dupEmail.name}, que está na equipe. Cada profissional precisa do próprio e-mail.`); return false }
     if (ate >= 4 && !f.usa_horario_salao) for (const h of f.horarios ?? []) if (h.open && h.start_time >= h.end_time) { setAba(4); setErro(`${DIAS[h.weekday]}: o fim precisa ser depois do início.`); return false }
     if (ETAPAS_COMPLETAS && ate >= 5 && f.repasse !== 'nao') { const c = Number(f.cota_pct); if (!(c >= 0 && c <= 100)) { setAba(5); setErro('O percentual vai de 0 a 100.'); return false } }
     setErro(''); return true
@@ -208,11 +222,11 @@ export default function ProfissionalDrawer({ salao, profissional = null, servico
                 <input ref={arq} type="file" accept="image/*" hidden onChange={trocarFoto} />
                 <div className="gv-form">
                   <label><span className="gv-rot">Nome e sobrenome <b>*</b></span><input value={f.name} onChange={m('name')} placeholder="Carla Mendes" autoFocus /></label>
-                  <label><span className="gv-rot">WhatsApp <b>*</b></span><input type="tel" inputMode="numeric" value={f.phone} onChange={(e) => setF((x) => ({ ...x, phone: formatarFone(e.target.value) }))} placeholder="(11) 98765-4321" /><small className="muted">Precisa ser o número dela: o acesso e os avisos chegam por ele.</small></label>
+                  <label><span className="gv-rot">WhatsApp <b>*</b></span><input type="tel" inputMode="numeric" value={f.phone} onChange={(e) => setF((x) => ({ ...x, phone: formatarFone(e.target.value) }))} placeholder="(11) 98765-4321" />{dupFone ? <small className="gv-dup">Esse WhatsApp já é de {dupFone.name}, que está na equipe.</small> : <small className="muted">Precisa ser o número dela: o acesso e os avisos chegam por ele.</small>}</label>
                 </div>
               </div>
               <div className="gv-form gv-form-2">
-                <label><span className="gv-rot">E-mail {!profissional?.user_id && <b>*</b>} <span className="muted">(é com ele que ela entra)</span></span><input type="email" value={f.email} onChange={m('email')} placeholder="carla@exemplo.com" /></label>
+                <label><span className="gv-rot">E-mail {!profissional?.user_id && <b>*</b>} <span className="muted">(é com ele que ela entra)</span></span><input type="email" value={f.email} onChange={m('email')} placeholder="carla@exemplo.com" />{dupEmail && <small className="gv-dup">Esse e-mail já é de {dupEmail.name}, que está na equipe.</small>}</label>
                 <label><span className="gv-rot">Função <span className="muted">(opcional, pode ter mais de uma)</span></span><input value={f.especialidade} onChange={m('especialidade')} placeholder="Cabeleireira · Colorista" /></label>
               </div>
               <label className="gv-form gv-bio"><span className="gv-rot">Apresentação <span className="muted">(opcional, aparece na página dela; sem telefone, @ ou link)</span></span><textarea rows={2} value={f.bio} onChange={m('bio')} placeholder="Especialista em loiros e cortes modernos…" /></label>

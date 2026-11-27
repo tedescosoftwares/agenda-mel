@@ -219,3 +219,5 @@ body.com-gaveta { overflow: hidden; }
 .gv-canais-nota { margin: 10px 0 6px; font-size: 0.8rem; line-height: 1.45; }
 .gv-canais-nota a { color: var(--eq-rosa); font-weight: 600; }
 @media (max-width: 520px) { .gv-canais { grid-template-columns: 1fr; } }
+/* 4.39: o aviso de WhatsApp ou e-mail repetido, embaixo do campo */
+.gv-form small.gv-dup { color: #c2185b; font-weight: 600; }

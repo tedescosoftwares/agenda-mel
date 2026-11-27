@@ -15,7 +15,7 @@ import {
   ClockIcon,
   HomeIcon,
 } from './icons'
-import { Sparkles, UserRound, WalletCards, Megaphone, Settings2, ChevronLeft, CreditCard, BarChart3, Search, Crown, Store, ChevronDown, CalendarHeart, Plus, Moon, Sun, LayoutGrid, Scissors, UserPlus, QrCode, MessageCircle, Clock, HelpCircle, X } from 'lucide-react'
+import { Sparkles, UserRound, WalletCards, Megaphone, Settings2, ChevronLeft, CreditCard, BarChart3, Search, Crown, Store, ChevronDown, Plus, Moon, Sun, LayoutGrid, Scissors, UserPlus, QrCode, MessageCircle, Clock, HelpCircle, X } from 'lucide-react'
 import { lerTema, aplicarTema, trocarTema, ouvirTema } from '../lib/tema'
 
 // Cinco posições na barra do celular (4.26): Início, Agenda, o "+" de novo horário no meio, Clientes e Menu.
@@ -64,12 +64,11 @@ export default function AdminShell({ children, amplo = false, primeiroAcesso = f
   // 4.21: o tema do painel (claro ou escuro) vale enquanto o painel está aberto
   const [tema, setTema] = useState(lerTema)
   useEffect(() => { aplicarTema(lerTema()); const parar = ouvirTema(setTema); return () => { parar(); aplicarTema('claro') } }, [])
-  const { salao, acesso, profile, saloes, trocarSalao, professional } = useAuth()
-  // a dona que também atende (2.99) vê a própria agenda no menu
-  const donaAtende = Boolean(professional && professional.salon_id === salao?.id)
-  const nav = donaAtende ? [...DESKTOP_NAV.slice(0, 2), { to: '/pro/agenda', label: 'Minha agenda', Icon: CalendarHeart }, ...DESKTOP_NAV.slice(2)] : DESKTOP_NAV
+  const { salao, acesso, profile, saloes, trocarSalao } = useAuth()
+  // 4.31: a "Minha agenda" saiu do menu; a dona que atende já tem a coluna dela na Agenda
+  const nav = DESKTOP_NAV
   const navigate = useNavigate()
-  const menu = donaAtende ? [{ to: '/pro/agenda', label: 'Minha agenda', Icon: CalendarHeart }, ...MENU] : MENU
+  const menu = MENU
   const [menuAberto, setMenuAberto] = useState(false)
   useEffect(() => { setMenuAberto(false) }, [pathname])
   useEffect(() => {

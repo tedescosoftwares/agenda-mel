@@ -28,12 +28,12 @@ export default function ProLink() {
   }, [professional])
 
   // a casa (salão) pode ter endereço próprio: studiomel.mimo.com.vc/ana (2.80)
-  const [casa, setCasa] = useState(null)
+  const [casa, setCasa] = useState(undefined) // undefined = ainda lendo (o QR espera, para não nascer com o link antigo)
   useEffect(() => {
-    if (!professional?.salon_id) return
+    if (!professional?.salon_id) { setCasa(null); return }
     let vivo = true
     Promise.resolve(supabase.from('salons').select('subdominio, tipo').eq('id', professional.salon_id).maybeSingle())
-      .then(({ data }) => { if (vivo) setCasa(data ?? null) }).catch(() => {})
+      .then(({ data }) => { if (vivo) setCasa(data ?? null) }).catch(() => { if (vivo) setCasa(null) })
     return () => { vivo = false }
   }, [professional?.salon_id])
   const url = professional ? linkDaProfissional(professional, casa) : ''
@@ -85,7 +85,10 @@ export default function ProLink() {
 
       <h3 className="secao-titulo">Entrar na minha agenda</h3>
       <div className="card">
-        <CodigoQr codigo={professional.codigo} nome={professional.name} onNovo={novoCodigo} />
+        {/* 4.47: o QR e o link deste cartão eram o /v/CÓDIGO antigo, que mandava a cliente criar conta antes de ver
+            qualquer coisa. Agora são o mesmo link da vitrine dela (no endereço do salão); as seis letras seguem valendo. */}
+        {casa === undefined ? <p className="muted">Carregando o seu link…</p>
+          : <CodigoQr codigo={professional.codigo} nome={professional.name} onNovo={novoCodigo} link={url || undefined} mensagem={url ? `Oi! Você pode agendar comigo por aqui: ${url}` : undefined} />}
       </div>
       <p className="muted" style={{ fontSize: '0.82rem' }}>
         Mostre o QR no fim do atendimento ou mande o link. A cliente entra na sua agenda e passa a marcar pelo app.

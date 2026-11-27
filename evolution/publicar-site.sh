@@ -126,7 +126,17 @@ cd "$RAIZ"
 if [ "${1:-}" != '--so-build' ]; then
   git pull --ff-only
 fi
-npm ci --no-audit --no-fund >/dev/null
+# 4.41: o npm ci apaga e reinstala o node_modules inteiro (é o passo mais lento numa máquina pequena). Ele só roda
+# quando o package-lock.json mudou desde a última instalação; o carimbo fica dentro do próprio node_modules.
+T0=$SECONDS
+CARIMBO_NPM=$(sha256sum package-lock.json | cut -c1-64)
+if [ -d node_modules/.bin ] && [ "$(cat node_modules/.carimbo-lock 2>/dev/null)" = "$CARIMBO_NPM" ]; then
+  verde '  dependências iguais às da última publicação: instalação pulada'
+else
+  npm ci --no-audit --no-fund >/dev/null
+  printf '%s' "$CARIMBO_NPM" > node_modules/.carimbo-lock
+fi
+T_NPM=$((SECONDS - T0))
 # 3.41: a mesma trava do republicar-se-mudou.sh (o build e a regeneração escrevem no mesmo dist); espera a que estiver
 # rodando terminar, até 15 minutos
 if command -v flock >/dev/null; then
@@ -169,7 +179,10 @@ devolver_guia() {
 # o build inteiro vai para um log; na tela só o fim. Se falhar, as últimas
 # 40 linhas aparecem aqui mesmo (o erro do vite vem antes do "closeBundle")
 LOG_BUILD=/tmp/mimo-build.log
-if ! npm run build > "$LOG_BUILD" 2>&1; then
+# 4.41: os dois passos do "npm run build" rodam separados só para medir cada um (o app e as páginas do guia)
+T0=$SECONDS; T_APP=0
+construir() { npx --no-install vite build && T_APP=$((SECONDS - T0)) && node scripts/paginas-estaticas.mjs; }
+if ! construir > "$LOG_BUILD" 2>&1; then
   devolver_guia
   registrar_pub 0 'o build falhou'
   echo; tail -40 "$LOG_BUILD"; echo
@@ -177,6 +190,7 @@ if ! npm run build > "$LOG_BUILD" 2>&1; then
   vermelho "Antes de tentar de novo, confira espaço em disco (df -h /) e memória (free -m)."
   exit 1
 fi
+T_BUILD=$((SECONDS - T0)); T_PAGINAS=$((T_BUILD - T_APP))
 tail -3 "$LOG_BUILD"
 # o que o guia disse no build (cidades, salões, cache, lista de reserva, fora da rodada)
 grep -E 'guia-fonte:|guia: |guia de salões|ATENÇÃO' "$LOG_BUILD" | sed 's/^/  /' || true
@@ -205,11 +219,13 @@ verde "  dist/ pronto ($(du -sh dist | cut -f1))"
 # 3.74.3: até aqui o site no ar não mudou. O dist é a oficina; o que vai ao ar é uma foto dele em ../site/versoes/<carimbo>,
 # e ../site/atual (o que o Caddy serve) passa a apontar para ela num único rename. Nenhum pedido vê o site pela metade.
 mkdir -p "$RAIZ/site"
+T0=$SECONDS
 if ! "$AQUI/publicar-versao.sh"; then
   registrar_pub 0 'a troca da versão no ar falhou (publicar-versao.sh)'
   vermelho 'A foto do site não foi ao ar; a versão anterior continua servindo. Veja o erro acima.'
   exit 1
 fi
+T_FOTO=$((SECONDS - T0))
 # 3.41: registra a publicação (a Plataforma zera o que estava pendente)
 registrar_pub 1 "build $(git rev-parse --short HEAD)"
 if [ -n "${INDEXNOW_KEY:-}" ]; then
@@ -238,6 +254,7 @@ cd "$AQUI"
 
 # 5. Caddy --------------------------------------------------------------------
 azul '== 5/6  Caddy =='
+T0=$SECONDS
 # o Caddy daqui é o oficial + plugin de DNS da Cloudflare (caddy/Dockerfile,
 # 2.80). A primeira compilação demora uns minutos; depois fica em cache.
 echo '  conferindo o Caddy (a primeira vez compila e demora uns minutos)…'
@@ -275,6 +292,7 @@ docker compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile >/dev/nu
   || amarelo '  caddy no ar, mas não consegui reler a configuração: docker compose logs caddy --tail 30'
 
 # 6. Conferir ----------------------------------------------------------------
+T_CADDY=$((SECONDS - T0))
 azul '== 6/6  Conferindo =='
 for i in 1 2 3 4 5 6; do
   CODIGO=$(curl -s -o /dev/null -w '%{http_code}' -m 10 "https://${DOMINIO_SITE}/" || echo 000)
@@ -346,5 +364,7 @@ if command -v crontab >/dev/null; then
 fi
 
 echo
+# 4.41: onde o tempo foi, para saber o que vale acelerar
+azul "Tempo: dependências ${T_NPM}s · app ${T_APP}s · páginas e guia ${T_PAGINAS}s · foto no ar ${T_FOTO}s · Caddy ${T_CADDY}s · total ${SECONDS}s"
 echo 'Para publicar de novo depois de um git pull: ./publicar-site.sh'
 

@@ -16755,3 +16755,103 @@ html[data-tema="escuro"] :is(.ia-fundo .ia-folha, .avisos-do-painel) :is(img, vi
 html[data-tema="escuro"] :is(.ia-fundo .ia-folha, .avisos-do-painel) .btn-primary { color:#12060c; }
 /* (4.27) o botão principal pequeno saía com a letra cinza do .btn-mini por cima do rosa: letra branca, em qualquer tela */
 .btn.btn-primary.btn-mini { color:var(--branco, #fff); }
+
+/* 4.28: as telas do painel que tinham ficado só com o acabamento comum ganham desenho próprio: Clientes, O mês,
+   Horários, WhatsApp, Promoções, Plano e Recados. Mesma linguagem da Home: destaque em ameixa, superfícies
+   brancas com fio fino, rosa só como acento, ícones redondos neutros, situação em texto no lugar de etiqueta. */
+/* Clientes */
+.admin-shell .search-box { height:46px; padding:0 16px; border:1px solid #e9e4ec; border-radius:99px; background:#fff; box-shadow:none; }
+.admin-shell .search-box:focus-within { border-color:#1d1323; box-shadow:none; }
+.admin-shell .cliente-row { align-items:flex-start; }
+.admin-shell .cliente-row .avatar-iniciais { width:42px; height:42px; flex:none; border:0; border-radius:50%; background:#f3f0f5; color:#1d1323; font-size:.8rem; font-weight:600; }
+.admin-shell .cliente-row .nome-txt { color:#1d1323; font-size:.95rem; font-weight:600; letter-spacing:-.01em; }
+.admin-shell .cliente-row .cliente-meta { color:#766b7c; font-size:.76rem; line-height:1.4; }
+.admin-shell .cliente-row .ficha { gap:2px 12px; margin:5px 0 3px; }
+.admin-shell .cliente-row .ficha-item { padding:0; border:0; border-radius:0; background:none; font-size:.74rem; font-weight:600; color:#766b7c; }
+.admin-shell .cliente-row .ficha-item::before { content:''; width:6px; height:6px; margin-right:6px; border-radius:50%; background:#c9c0cd; }
+.admin-shell .cliente-row .ficha-item.ok { color:#0d7a4f; } .admin-shell .cliente-row .ficha-item.ok::before { background:#19a974; }
+.admin-shell .cliente-row .ficha-item.atencao { color:#9a6400; } .admin-shell .cliente-row .ficha-item.atencao::before { background:#e0a100; }
+.admin-shell .cliente-row .ficha-item.ruim { color:#c0263d; } .admin-shell .cliente-row .ficha-item.ruim::before { background:#e5484d; }
+.admin-shell .cliente-row .cliente-origem { color:#9a90a0; font-size:.72rem; }
+.admin-shell .cliente-row > .btn-mini { align-self:center; padding:6px 12px; border:1px solid #e9e4ec; border-radius:99px; background:#fff; color:#766b7c; font-size:.72rem; font-weight:600; box-shadow:none; }
+.admin-shell .cliente-row > .btn-mini:hover:not(:disabled) { border-color:#1d1323; color:#1d1323; background:#fff; }
+/* O mês (Números) */
+.admin-shell .mes-nav { gap:8px; margin:0 0 14px; }
+.admin-shell .mes-nav .btn-mini { padding:7px 14px; border:1px solid #e9e4ec; border-radius:99px; background:#fff; color:#1d1323; font-size:.76rem; font-weight:600; }
+.admin-shell .painel-agora { gap:10px; margin-bottom:10px; }
+.admin-shell .painel-tile { padding:14px 16px; border-radius:18px; }
+.admin-shell .painel-tile strong { color:#1d1323; font-size:1.7rem; font-weight:600; letter-spacing:-.03em; }
+.admin-shell .painel-tile span { color:#766b7c; }
+.admin-shell .card.numero-heroi { gap:6px; padding:20px 20px 22px; border:0; border-radius:22px; background:linear-gradient(135deg,#2a0b37,#4a1160); box-shadow:none; }
+.admin-shell .numero-heroi .numero-rotulo { color:rgba(255,255,255,.72); font-size:.72rem; font-weight:600; letter-spacing:.08em; text-transform:uppercase; }
+.admin-shell .numero-heroi .numero-grande { color:#fff; font-size:2.3rem; font-weight:600; letter-spacing:-.04em; }
+.admin-shell .numero-heroi .numero-nota { color:rgba(255,255,255,.78); font-size:.78rem; }
+.admin-shell .barra-list { gap:0; border:1px solid #e9e4ec; border-radius:18px; background:#fff; box-shadow:none; overflow:hidden; padding:0; }
+.admin-shell .barra-item { gap:8px; padding:14px 16px; }
+.admin-shell .barra-item + .barra-item { border-top:1px solid #f0ebf2; }
+.admin-shell .barra-nome { color:#1d1323; font-size:.92rem; font-weight:600; }
+.admin-shell .barra-valor { color:#1d1323; font-size:.9rem; font-weight:600; }
+.admin-shell .barra-trilho { height:5px; background:#f0ebf2; }
+.admin-shell .barra-preenche { background:var(--rosa,#ff2d7a); }
+.admin-shell .barra-nota { color:#766b7c; font-size:.74rem; }
+/* Horários: uma lista só; no celular o dia fica em cima e as horas embaixo (antes as horas saíam da tela) */
+.admin-shell .hours-list { gap:0; border:1px solid #e9e4ec; border-radius:18px; background:#fff; overflow:hidden; }
+.admin-shell .hours-list > .hours-row { margin:0; padding:14px 16px; gap:12px; border:0; border-radius:0; background:transparent; box-shadow:none; flex-wrap:wrap; }
+.admin-shell .hours-list > .hours-row + .hours-row { border-top:1px solid #f0ebf2; }
+.admin-shell .hours-dia { color:#1d1323; font-size:.94rem; font-weight:600; }
+.admin-shell .hours-times { gap:8px; min-width:0; }
+.admin-shell .hours-times .muted { color:#766b7c; font-size:.76rem; }
+.admin-shell .hours-times input[type='time'] { min-width:0; height:40px; padding:0 10px; border:1px solid #e9e4ec; border-radius:12px; background:#f8f6f9; color:#1d1323; font-size:.88rem; }
+.admin-shell .hours-times input[type='time']:focus { border-color:#1d1323; background:#fff; }
+@media (max-width: 560px) {
+  .admin-shell .hours-times { flex:1 1 100%; }
+  .admin-shell .hours-times input[type='time'] { flex:1 1 0; }
+}
+/* abas (WhatsApp e as demais do painel): controle segmentado neutro */
+.admin-shell .abas { gap:4px; padding:4px; margin:4px 0 14px; border-radius:14px; background:#f0ecf2; }
+.admin-shell .aba { padding:9px 8px; border-radius:11px; color:#766b7c; font-size:.84rem; }
+.admin-shell .aba.active { background:#fff; color:#1d1323; box-shadow:0 1px 2px rgba(29,19,35,.08); }
+/* WhatsApp */
+.admin-shell .asx-destaque { border:1px solid #e9e4ec; box-shadow:none; }
+.admin-shell :is(.asx-ico, .asx-status-ico) { width:42px; height:42px; border:0; border-radius:50%; background:#f3f0f5; color:#1d1323; }
+.admin-shell .asx-kpis > div { border:0; border-radius:14px; background:#f6f4f7; }
+.admin-shell .asx-kpis > div :is(strong, b) { color:#1d1323; }
+.admin-shell .asx-input, .admin-shell .asx-secao :is(input[type='text'], textarea, select) { border-color:#e9e4ec; border-radius:12px; }
+.admin-shell .as-link-botao { color:#1d1323; }
+/* Promoções */
+.admin-shell .aprovar-promos h3 { color:#1d1323; }
+.admin-shell .promo-cartao { overflow:hidden; border-radius:18px; }
+.admin-shell .promos-topo { align-items:center; }
+@media (max-width: 560px) {
+  .admin-shell .promos-topo { flex-direction:column-reverse; align-items:stretch; gap:10px; }
+  .admin-shell .promos-topo .btn { justify-content:center; min-height:46px; }
+}
+/* Plano e mensalidade */
+.admin-shell .card.assin-situacao, .admin-shell .card.assin-situacao.alerta { border:1px solid #e9e4ec; background:#fff; }
+.admin-shell .card.assin-situacao.alerta { border-color:#f1c3c8; }
+.admin-shell .assin-icone { width:42px; height:42px; border:0; border-radius:50%; background:#f3f0f5; color:#1d1323; }
+.admin-shell .assin-rotulo { color:#766b7c; letter-spacing:.08em; }
+.admin-shell .assin-nome { color:#1d1323; }
+.admin-shell .assin-preco { color:#1d1323; letter-spacing:-.03em; }
+.admin-shell .assin-plano-op { border:1px solid #e9e4ec; border-radius:16px; background:#fff; box-shadow:none; }
+.admin-shell .assin-plano-op.ativo { border-color:#1d1323; background:#fff; box-shadow:inset 0 0 0 1px #1d1323; }
+.admin-shell .assin-plano-selo { background:#1d1323; color:#fff; }
+/* Recados */
+.admin-shell .recado-publico { border:1px solid #e9e4ec; background:#fff; }
+.admin-shell .recado-publico.ativo { border-color:#1d1323; background:#fff; box-shadow:inset 0 0 0 1px #1d1323; }
+.admin-shell .recado-previa { background:#f6f4f7; border-radius:14px; }
+.admin-shell .recado-previa svg { color:#766b7c; }
+.admin-shell .recado-item .recado-corpo { color:#1d1323; }
+/* escuro: o destaque em ameixa não entra na conversão (sairia claro) */
+html[data-tema="escuro"] .admin-shell .card.numero-heroi { filter:invert(1) hue-rotate(180deg); }
+/* (4.28) acertos: fundo liso nas telas que não são a Home nem a Agenda; cliente com o botão no canto e o texto
+   na largura toda; blocos de "agora" alinhados; destaque em ameixa fora da conversão do escuro */
+.admin-shell .admin-content:not(:has(.hd)):not(:has(.ags-pagina)) { background:#f8f6f9; }
+html[data-tema="escuro"] .admin-shell .admin-content:not(:has(.hd)):not(:has(.ags-pagina)) { background:#0f0a12; }
+.admin-shell .cliente-row-vinculo { position:relative; }
+.admin-shell .cliente-row-vinculo > .btn-mini { position:absolute; top:12px; right:14px; align-self:auto; }
+.admin-shell .cliente-row-vinculo .cliente-nome { display:block; padding-right:104px; min-height:22px; }
+.admin-shell .cliente-row .ficha-bloco { gap:0; }
+.admin-shell .painel-tile, .admin-shell .card.painel-tile { justify-content:flex-start; background:#fff; }
+html[data-tema="escuro"] .admin-content .miolo > .card.numero-heroi:not(.hd):not(.ags-pagina) { filter:none; }
+.admin-shell .painel-agora > * { margin:0; align-self:stretch; }

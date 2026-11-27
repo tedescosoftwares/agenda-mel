@@ -144,12 +144,12 @@ export default function AdminNumeros() {
                     <span
                       className="barra-preenche"
                       style={{
-                        width: `${Math.max(2, (Number(l.faturamento_cents) * 100) / maior)}%`,
+                        width: `${Math.max(2, ((Number(l.faturamento_cents) || 0) * 100) / (maior || 1))}%`,
                       }}
                     />
                   </div>
                   <span className="barra-nota">
-                    {l.atendimentos}× · agenda {formatarPct(l.ocupacao_bps)} ocupada
+                    {l.atendimentos ?? 0}× · agenda {formatarPct(l.ocupacao_bps)} ocupada
                     {l.faltas > 0 && ` · ${l.faltas} faltas`}
                   </span>
                 </div>

@@ -189,3 +189,13 @@ body.com-gaveta { overflow: hidden; }
 .gv-servicos-cat-todos:hover { background: var(--latao-veu); }
 .gv-servicos li.gv-servicos-cat { gap: 8px; justify-content: flex-start; }
 .gv-explica > svg { flex: 0 0 14px; margin-top: 2px; }
+
+/* 4.34: a conta das agendas à vista e o botão de adicionar por extenso (no lugar do "+" flutuante) */
+.eq-plano { display: flex; align-items: center; gap: 1rem; padding: 0.9rem 1rem; margin-bottom: 0.8rem; background: #fff; border: 1px solid #e9e4ec; border-radius: 16px; box-shadow: none; }
+.eq-plano-conta { display: flex; align-items: flex-start; gap: 0.75rem; flex: 1; min-width: 0; }
+.eq-plano-ico { flex: none; width: 38px; height: 38px; border-radius: 50%; background: #f3f0f5; color: #1d1323; display: grid; place-items: center; }
+.eq-plano-conta strong { display: block; font-size: 0.95rem; font-weight: 600; color: #1d1323; letter-spacing: -0.01em; }
+.eq-plano-conta p { margin: 0.15rem 0 0; font-size: 0.82rem; line-height: 1.4; color: #766b7c; }
+.eq-plano-add { flex: none; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; min-height: 46px; white-space: nowrap; }
+.eq-plano > .eq-plano-add:only-child { width: 100%; }
+@media (max-width: 640px) { .eq-plano { flex-direction: column; align-items: stretch; } .eq-plano-add { width: 100%; } }

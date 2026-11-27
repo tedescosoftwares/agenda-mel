@@ -6,7 +6,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { ChevronIcon, LinkIcon, ClockIcon } from '../../components/icons'
 import Avatar from '../../components/Avatar'
-import { FileSignature, MessageCircle, Plus, Link2, Copy, Mail } from 'lucide-react'
+import { FileSignature, MessageCircle, Plus, Link2, Copy, Mail, UsersRound } from 'lucide-react'
 import { STATUS, PARCERIA_LIGADA } from '../../lib/contratoParceria'
 import { urlDoAmbiente } from '../../lib/ambiente'
 import { situacaoDe, resumoDias, vinculoPor, mensagemDeAcesso, primeiroNome, enviarAcesso, linkWhats } from '../../lib/equipe'
@@ -14,7 +14,7 @@ import ProfissionalDrawer from '../../components/ProfissionalDrawer'
 import '../../equipe.css'
 import { linkDaProfissional } from '../../lib/endereco'
 import AgendasExtras from '../../components/AgendasExtras'
-import { PLANOS } from '../../lib/planos'
+import { PLANOS, precoPara, reais } from '../../lib/planos'
 
 // A equipe do salão (119): a mesma gaveta do onboarding configura a
 // profissional inteira (dados, vínculo, serviços, horários, repasse,
@@ -22,7 +22,7 @@ import { PLANOS } from '../../lib/planos'
 // ativou o acesso ganha o botão de mandar o link.
 export default function AdminProfissionais() {
   const { confirmar } = useDialogo()
-  const { salao, recarregarPerfil } = useAuth()
+  const { salao, recarregarPerfil, acesso } = useAuth()
   const [equipe, setEquipe] = useState(null)
   const [services, setServices] = useState([])
   const [cats, setCats] = useState([])
@@ -36,9 +36,38 @@ export default function AdminProfissionais() {
   const [folga, setFolga] = useState(0)   // agendas liberadas nesta visita (o perfil só recarrega depois)
   const liberadas = Math.max(PLANOS.pro.inclusas, Number(salao?.equipe_prevista ?? 0)) + folga
   const comAgenda = (equipe ?? []).filter((p) => p.active ?? !['inativa', 'rascunho'].includes(p.situacao)).length
-  function adicionar() {
-    if (salao?.tipo !== 'autonoma' && comAgenda >= liberadas) { setExtras(true); return }
+  const autonoma = salao?.tipo === 'autonoma'
+  const noTeste = acesso?.fase === 'teste'
+  // 4.34: a conta fica à vista. Até 3 agendas o valor é o mesmo; cada uma depois soma na mensalidade.
+  const hoje = precoPara(Math.max(1, comAgenda))
+  const comMaisUma = precoPara(comAgenda + 1)
+  const sobeComMaisUma = !autonoma && comMaisUma.total > precoPara(Math.max(1, comAgenda)).total
+  // antes de abrir uma agenda que muda o valor, a tela diz de quanto para quanto (no teste grátis também)
+  async function avisarValor(nome) {
+    if (!sobeComMaisUma) return true
+    return Boolean(await confirmar({
+      titulo: nome ? `Reativar ${nome} muda a mensalidade` : 'Mais uma agenda muda a mensalidade',
+      texto: `Hoje são ${comAgenda} ${comAgenda === 1 ? 'agenda' : 'agendas'} por ${reais(hoje.total)} por mês. Com ${comAgenda + 1}, passa para ${reais(comMaisUma.total)} por mês${comMaisUma.plano !== hoje.plano ? ` (plano ${comMaisUma.nome})` : ''}.${noTeste ? ' No teste grátis você não paga nada agora: esse é o valor quando o plano começar.' : ''}`,
+      ok: 'Entendi, continuar', cancelar: 'Voltar',
+    }))
+  }
+  async function adicionar() {
+    if (!autonoma && comAgenda >= liberadas) { setExtras(true); return }
+    if (!(await avisarValor())) return
     setGaveta('nova')
+  }
+  // a dona que atende liga e desliga a própria agenda aqui (antes só dava no cadastro inicial)
+  async function donaAtender(p, atende) {
+    setError(''); setInfo('')
+    if (atende) { if (!(await avisarValor(primeiroNome(p.name)))) return }
+    else {
+      const ok = await confirmar({ titulo: 'Parar de atender?', texto: 'Sua agenda deixa de aparecer para as clientes marcarem e para de contar no plano. O histórico fica guardado e você continua administrando o salão. Dá para voltar a atender quando quiser, por este mesmo botão.', ok: 'Parar de atender', cancelar: 'Continuar atendendo', perigo: true })
+      if (!ok) return
+    }
+    const { error } = await supabase.rpc('dona_atender', { salao: salao.id, atende })
+    if (error) { setError(error.message); return }
+    setInfo(atende ? 'Sua agenda voltou a aparecer para as clientes.' : 'Sua agenda foi desligada. Você continua como administradora.')
+    await fetchTudo(); recarregarPerfil?.()
   }
   const linkEquipe = urlDoAmbiente('pro', `/equipe/${salao?.codigo_equipe ?? ''}`)
 
@@ -59,6 +88,7 @@ export default function AdminProfissionais() {
 
   async function acao(qual, p) {
     setError(''); setInfo('')
+    if (qual === 'reativar' && !(await avisarValor(primeiroNome(p.name)))) return
     if (qual === 'remover') {
       const ok = await confirmar({ titulo: `Remover ${p.name} do salão?`, texto: 'Ela perde o acesso à agenda deste salão. O histórico de atendimentos fica guardado.', ok: 'Remover', perigo: true })
       if (!ok) return
@@ -112,6 +142,26 @@ export default function AdminProfissionais() {
       {info && <div className="alert alert-info">{info}</div>}
       {rascunhos.length > 0 && <div className="alert alert-info">{rascunhos.length === 1 ? `${rascunhos[0].name} mandou nome e WhatsApp pelo link da equipe.` : `${rascunhos.length} profissionais mandaram os dados pelo link da equipe.`} Configure para liberar o acesso.</div>}
 
+      {equipe !== null && lista.length > 0 && (
+        <div className="card eq-plano">
+          {!autonoma && (
+            <div className="eq-plano-conta">
+              <span className="eq-plano-ico"><UsersRound size={18} /></span>
+              <div>
+                <strong>{comAgenda} {comAgenda === 1 ? 'agenda ativa' : 'agendas ativas'} · {reais(hoje.total)} por mês</strong>
+                <p>
+                  {comAgenda < PLANOS.pro.inclusas
+                    ? `O plano inclui ${PLANOS.pro.inclusas} agendas: ainda ${PLANOS.pro.inclusas - comAgenda === 1 ? 'cabe 1' : `cabem ${PLANOS.pro.inclusas - comAgenda}`} sem mudar o valor. Da 4ª em diante, cada uma soma ${reais(PLANOS.pro.extra)} por mês.`
+                    : `O plano inclui ${PLANOS.pro.inclusas} agendas. A próxima leva a mensalidade para ${reais(comMaisUma.total)}${comMaisUma.plano !== hoje.plano ? ` (plano ${comMaisUma.nome})` : ''}.`}
+                  {noTeste ? ' No teste grátis você não paga nada agora.' : ''}
+                </p>
+              </div>
+            </div>
+          )}
+          <button type="button" className="btn btn-primary eq-plano-add" onClick={adicionar}><Plus size={17} /> Adicionar profissional</button>
+        </div>
+      )}
+
       {/* o horário padrão do salão é da casa, não de uma profissional */}
       <Link to="/admin/horarios" className="card prof-row atalho-horarios">
         <span className="ajuste-icone"><ClockIcon /></span>
@@ -155,12 +205,11 @@ export default function AdminProfissionais() {
                   <Link to={`/admin/equipe/${p.id}/parceria`} className="icon-btn" aria-label={`Contrato de parceria de ${p.name}`} title="Contrato de parceria"><FileSignature size={18} /></Link>
                 )}
                 <button className="icon-btn" onClick={() => copiarLink(p)} aria-label={`Copiar link de ${p.name}`} title="Copiar link da agenda dela"><LinkIcon /></button>
-                {!p.dona && (
-                  <label className="switch" title={p.situacao === 'inativa' ? 'Reativar' : 'Desativar'}>
-                    <input type="checkbox" checked={p.situacao !== 'inativa'} onChange={() => acao(p.situacao === 'inativa' ? 'reativar' : 'desativar', p)} />
-                    <span></span>
-                  </label>
-                )}
+                <label className="switch" title={p.dona ? (p.situacao === 'inativa' ? 'Voltar a atender' : 'Parar de atender') : (p.situacao === 'inativa' ? 'Reativar' : 'Desativar')}>
+                  <input type="checkbox" checked={p.situacao !== 'inativa'} aria-label={p.dona ? 'Você atende' : `${p.name} ativa`}
+                    onChange={() => (p.dona ? donaAtender(p, p.situacao === 'inativa') : acao(p.situacao === 'inativa' ? 'reativar' : 'desativar', p))} />
+                  <span></span>
+                </label>
                 <button className="icon-btn" onClick={() => setGaveta(p)} aria-label={`Configurar ${p.name}`}><ChevronIcon /></button>
               </div>
             )
@@ -179,7 +228,6 @@ export default function AdminProfissionais() {
       )}
 
       {gaveta && salao && <ProfissionalDrawer salao={salao} profissional={gaveta === 'nova' ? null : gaveta} servicos={services} cats={cats} onFechar={() => { setGaveta(null); fetchTudo() }} onSalvo={() => fetchTudo()} />}
-      {!gaveta && <button className="fab" onClick={adicionar} aria-label="Adicionar profissional">+</button>}
       {extras && <AgendasExtras salaoId={salao.id} onFechar={() => setExtras(false)}
         onLiberadas={(n) => { setFolga((x) => x + n); setExtras(false); recarregarPerfil?.(); setGaveta('nova') }} />}
     </AdminShell>

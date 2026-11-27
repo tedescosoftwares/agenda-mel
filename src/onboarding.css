@@ -1681,3 +1681,12 @@
   .ms-passos li { padding: 0.55rem 0.7rem; font-size: 0.86rem; }
 }
 @media (prefers-reduced-motion: reduce) { .ms-traco, .ms-aura, .ms-faisca { animation: none; } .ms-traco { stroke-dashoffset: 0; } }
+
+/* 4.29: "Sobre o salão" no cadastro, e a prévia sem texto fixo no lugar do bairro e da cidade */
+.ob-cara-sobre { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem; margin-top: 0.8rem; font-size: 0.76rem; font-weight: 700; color: var(--cinza-3, #6b7280); }
+.ob-cara-sobre .muted { font-weight: 500; }
+.ob-cara-sobre textarea { flex: 0 0 100%; width: 100%; min-width: 0; box-sizing: border-box; resize: vertical; font: inherit; font-size: 0.92rem; font-weight: 500; line-height: 1.45; color: var(--grafite, #1f2026); padding: 0.6rem 0.7rem; border: 1px solid var(--fio); border-radius: 12px; background: #fff; }
+.ob-cara-sobre textarea:focus { outline: 2px solid #ffc2d8; border-color: var(--rosa); }
+.ob-cara-sobre small { flex: 0 0 100%; font-size: 0.72rem; font-weight: 500; line-height: 1.4; }
+.ob-previa-corpo > .ob-previa-falta { font-style: italic; opacity: 0.75; }
+.ob-previa-corpo > .ob-previa-sobre { margin-top: 4px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.4; }

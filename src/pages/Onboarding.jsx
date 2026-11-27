@@ -1027,6 +1027,16 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
   const [horas, setHoras] = useState(null)
   // a cara do negócio: o logo e as fotos do espaço sobem na hora e ficam gravadas
   const [nome, setNome] = useState(s.name || s.nome_fantasia || s.razao_social || '')   // o nome que a cliente vê
+  // 4.29: o "Sobre o salão" da página nasce aqui (antes só dava para escrever em Ajustes). Grava ao sair do campo,
+  // direto na tabela: o onboarding_salvar não leva este campo.
+  const [sobre, setSobre] = useState(s.descricao ?? '')
+  async function guardarSobre() {
+    const texto = sobre.trim() || null
+    if (texto === (s.descricao ?? null) || !s.id) return
+    const { error } = await supabase.from('salons').update({ descricao: texto }).eq('id', s.id)
+    if (error) { setErro('Não deu para guardar o texto: ' + error.message); return }
+    setS?.((x) => ({ ...x, descricao: texto }))
+  }
   // o endereço próprio (studiomel.mimo.com.vc, 2.80): nasce aqui, junto com o
   // nome, e não depende de ativar. Sugerido a partir do nome até ela mexer (3.85: com as palavras juntas).
   const [endereco, setEndereco] = useState(s.subdominio ?? '')
@@ -1418,6 +1428,11 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
 
                 <label className="ob-cara-nome">{autonoma ? 'Nome da agenda' : 'Nome do salão'} <b>*</b><span className="muted"> (como as clientes vão ver)</span><input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Studio Essenza Hair" maxLength={60} /></label>
 
+                <label className="ob-cara-sobre">{autonoma ? 'Sobre você e o seu espaço' : 'Sobre o salão'}<span className="muted"> (opcional)</span>
+                  <textarea value={sobre} maxLength={800} rows={4} onChange={(e) => setSobre(e.target.value)} onBlur={guardarSobre} placeholder="Fale do espaço e do jeito de atender: estacionamento, café, se aceita cartão." />
+                  <small className="muted">{sobre.length}/800 · aparece na sua página, abaixo das fotos. Dá para mudar depois em Ajustes.</small>
+                </label>
+
                 {!autonoma && (
                   <div className={'ob-cara-endereco ob-link-destaque' + (enderecoMexido ? '' : ' sugerido')}>
                     <div className="ob-link-topo">
@@ -1540,7 +1555,10 @@ function PassoEstrutura({ s, setS, seguir, voltar, salvando, setErro, autonoma, 
                 </div>
                 <div className="ob-previa-corpo">
                   <strong>{nome || (autonoma ? 'Sua agenda' : 'Seu salão')}</strong>
-                  <span>{[local.bairro, local.city].filter(Boolean).join(' • ') || 'Bairro • Cidade'}</span>
+                  {[local.bairro, local.city].filter(Boolean).length
+                    ? <span>{[local.bairro, local.city].filter(Boolean).join(' • ')}</span>
+                    : <span className="ob-previa-falta">O bairro e a cidade entram aqui quando você preencher o endereço</span>}
+                  {sobre.trim() && <span className="ob-previa-sobre">{sobre.trim()}</span>}
                   <div className="ob-previa-botoes"><span className="ob-preview-botao">Ver serviços</span><span className="ob-previa-botao-2"><MapPin size={11} /> Como chegar</span></div>
                 </div>
               </div>

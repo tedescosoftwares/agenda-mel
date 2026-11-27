@@ -16950,3 +16950,10 @@ html[data-tema="escuro"] .admin-content .miolo > .card.numero-heroi:not(.hd):not
 .a-partir-dica strong { color:#3d2f0e; }
 .a-partir-dica-botao { display:block; margin-top:6px; font-weight:700; font-size:.86rem; padding:0; }
 .a-partir-dica.compacto { padding:8px 11px; font-size:.82rem; }
+
+/* 4.52: as folhas de compra por Pix (respostas extras da assistente, agendas a mais) abrem fora do miolo e ficavam
+   claras no tema escuro. Entram na mesma inversão das outras folhas; imagem e QR voltam ao normal para o banco ler. */
+html[data-tema="escuro"] .pk-fundo > * { filter:invert(.93) hue-rotate(180deg); }
+html[data-tema="escuro"] .pk-fundo > * :is(img, video, canvas) { filter:invert(1) hue-rotate(180deg); }
+html[data-tema="escuro"] .pk-fundo > * .btn-primary { color:#12060c; }
+html[data-tema="escuro"] .pk-fundo { background:#0f0a12; }

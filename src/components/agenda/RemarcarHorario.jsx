@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { X, CalendarClock } from 'lucide-react'
 import Portal from '../Portal'
-import { remarcarHorario } from '../../lib/acoesDoHorario'
+import { remarcarHorario, pedeAviso } from '../../lib/acoesDoHorario'
 
 // 4.0: remarcar pela casa (mover_horario): outro dia, outra hora ou outra profissional. O horário antigo é
 // cancelado e a cliente recebe o aviso do novo. No computador também dá para arrastar o cartão no quadro.
@@ -10,6 +10,7 @@ export default function RemarcarHorario({ appt, dia, profs = [], onFechar, onPro
   const [hora, setHora] = useState(String(appt.start_time).slice(0, 5))
   const [prof, setProf] = useState(appt.professional_id)
   const [indo, setIndo] = useState(false)
+  const [avisar, setAvisar] = useState(true)   // 4.30: quem move escolhe se avisa
   const [erro, setErro] = useState('')
   const nome = appt.cliente || appt.profiles?.full_name || appt.guest_name || 'a cliente'
   const igual = novoDia === dia && hora === String(appt.start_time).slice(0, 5) && prof === appt.professional_id
@@ -18,7 +19,7 @@ export default function RemarcarHorario({ appt, dia, profs = [], onFechar, onPro
     e.preventDefault()
     if (igual) { onFechar(); return }
     setIndo(true); setErro('')
-    const r = await remarcarHorario(appt, { dia: novoDia, hora, prof })
+    const r = await remarcarHorario(appt, { dia: novoDia, hora, prof, avisar })
     setIndo(false)
     if (!r.ok) { setErro(r.erro ?? 'Não deu para mover.'); return }
     onPronto?.()
@@ -41,7 +42,11 @@ export default function RemarcarHorario({ appt, dia, profs = [], onFechar, onPro
             </select>
           </label>
         )}
-        <p className="muted ags-remarcar-nota">O horário antigo é cancelado e {nome.split(' ')[0]} recebe o aviso do novo.</p>
+        <p className="muted ags-remarcar-nota">O horário antigo é cancelado e o novo entra no lugar.</p>
+        <label className="dialogo-opcao">
+          <input type="checkbox" checked={avisar} onChange={(e) => setAvisar(e.target.checked)} />
+          <span><strong>{pedeAviso.rotulo}</strong><small>{pedeAviso.nota}</small></span>
+        </label>
         {erro && <div className="alert alert-error">{erro}</div>}
         <div className="form-actions">
           <button type="button" className="btn btn-ghost" onClick={onFechar}>Voltar</button>

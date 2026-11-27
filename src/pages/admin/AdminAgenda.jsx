@@ -14,7 +14,7 @@ import RemarcarHorario from '../../components/agenda/RemarcarHorario'
 import ComoUsarAgenda from '../../components/agenda/ComoUsarAgenda'
 import { ResumoAgenda, LegendaAgenda } from '../../components/agenda/PecasAgenda'
 import { isoHoje, somarDias, segundaDe, semanaDe, rotuloLongo, jornadaDoDia, bloqueiosDoDia, min, corDa, primeiroNome, iniciais } from '../../components/agenda/agendaComum'
-import { remarcarHorario } from '../../lib/acoesDoHorario'
+import { remarcarHorario, pedeAviso } from '../../lib/acoesDoHorario'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { useDialogo } from '../../context/DialogoContext'
@@ -48,7 +48,7 @@ function useLargo() {
 const PASSOS_PC = [
   { alvo: '.ags-abas', titulo: 'Três jeitos de ver a agenda', texto: 'Semana mostra a casa toda, os 7 dias. Dia mostra uma coluna por profissional. Profissional mostra a semana de uma só, com o almoço e a folga dela.' },
   { alvo: '.ags-semana-item.movel, .ags-semana-item', titulo: 'Clique num horário para ver tudo', texto: 'Abre os dados da cliente, o histórico dela na casa e as ações: concluir, não veio, remarcar, mandar WhatsApp e cancelar.' },
-  { alvo: '.ags-semana-item.movel', titulo: 'Arraste para remarcar', texto: 'Segure o cartão e solte em outro dia ou outra hora. A gente pergunta antes de mover, e a cliente recebe o aviso do horário novo.' },
+  { alvo: '.ags-semana-item.movel', titulo: 'Arraste para remarcar', texto: 'Segure o cartão e solte em outro dia ou outra hora. A gente pergunta antes de mover, e você escolhe se a cliente e a profissional são avisadas.' },
   { alvo: '.ags-semana-col.encaixa', titulo: 'Clique no vazio para encaixar', texto: 'Passe o mouse num espaço livre e aparece a hora. Clicando, você escolhe a profissional e marca ali, para quem ligou ou chegou na porta.' },
   { alvo: '.ags-pedidos', titulo: 'Pedidos esperando você', texto: 'Quem marcou pelo app ou pelo WhatsApp e espera o salão confirmar. Confirme ou recuse por aqui: ela é avisada na hora.' },
   { alvo: '.ags-legenda', titulo: 'O que cada cartão quer dizer', texto: 'Cada profissional tem uma cor. Tracejado é a confirmar, apagado é concluído, riscado é não veio, e o listrado é almoço, folga ou salão fechado.' },
@@ -199,9 +199,9 @@ export default function AdminAgenda() {
 
   // arrastar na semana: pergunta e move (a mesma profissional; o antigo é cancelado e ela é avisada do novo)
   async function moverNaSemana(a, { dia: d, hora }) {
-    const ok = await confirmar({ titulo: `Mover ${a.cliente} para ${rotuloLongo(d).toLowerCase()}, às ${hora}?`, texto: `Continua com ${primeiroNome(a.profissional)}. O horário antigo é cancelado e ela recebe o aviso do novo.`, ok: 'Mover' })
+    const ok = await confirmar({ titulo: `Mover ${a.cliente} para ${rotuloLongo(d).toLowerCase()}, às ${hora}?`, texto: `Continua com ${primeiroNome(a.profissional)}. O horário antigo é cancelado e o novo entra no lugar.`, ok: 'Mover', cancelar: 'Deixar como está', opcao: pedeAviso })
     if (!ok) return
-    const r = await remarcarHorario(a, { dia: d, hora, prof: a.professional_id })
+    const r = await remarcarHorario(a, { dia: d, hora, prof: a.professional_id, avisar: ok.marcada })
     if (!r.ok) { if (r.erro) setErro(r.erro); return }
     setErro(''); recarregar()
   }

@@ -93,9 +93,17 @@ export async function perdoarFalta(a) {
   return { ok: true }
 }
 
-// mover para outro dia, hora ou profissional (o antigo é cancelado e ela recebe o aviso do novo)
-export async function remarcarHorario(a, { dia, hora: novaHora, prof }) {
-  const { data, error } = await supabase.rpc('mover_horario', { appt: a.id, nova_data: dia, nova_hora: novaHora, nova_prof: prof })
+// mover para outro dia, hora ou profissional (o antigo é cancelado). 4.30: quem move escolhe se avisa a cliente e a
+// profissional. O "avisar" só vai na chamada quando é falso, para o banco de antes da 271 continuar aceitando.
+export const SEM_271 = 'Para mover sem avisar, o banco precisa da atualização 271 (opção B do .bat). Nada foi movido.'
+export const pedeAviso = { rotulo: 'Avisar a cliente e a profissional', nota: 'Desmarque se foi só um acerto e ninguém precisa receber notificação.' }
+export async function moverNoBanco(a, { dia, hora: novaHora, prof, avisar = true }) {
+  const r = await supabase.rpc('mover_horario', { appt: a.id, nova_data: dia, nova_hora: novaHora, nova_prof: prof, ...(avisar ? {} : { avisar: false }) })
+  if (r.error && !avisar && (r.error.code === 'PGRST202' || /avisar|schema cache|does not exist/i.test(r.error.message ?? ''))) return { data: null, error: { message: SEM_271 } }
+  return r
+}
+export async function remarcarHorario(a, { dia, hora: novaHora, prof, avisar = true }) {
+  const { data, error } = await moverNoBanco(a, { dia, hora: novaHora, prof, avisar })
   if (error) return falhou(error)
   if (data && data.ok === false) {
     return { ok: false, erro: data.motivo === 'ocupado' ? 'Esse horário já está ocupado.' : data.motivo === 'nao_faz' ? `${data.profissional ?? 'Essa profissional'} não faz esse serviço.` : 'Não deu para mover.' }

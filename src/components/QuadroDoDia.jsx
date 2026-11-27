@@ -7,7 +7,7 @@ import { agruparPorCategoria, bate } from '../lib/categorias'
 import Avatar from './Avatar'
 import AvaliacoesDaProfissional from './AvaliacoesDaProfissional'
 import RemarcarHorario from './agenda/RemarcarHorario'
-import { concluirHorario, marcarFalta, perdoarFalta, jaComecou, passouDaTolerancia, zapDaCliente } from '../lib/acoesDoHorario'
+import { concluirHorario, marcarFalta, perdoarFalta, jaComecou, passouDaTolerancia, zapDaCliente, moverNoBanco, pedeAviso } from '../lib/acoesDoHorario'
 
 // O quadro do dia (103): uma coluna por profissional, as horas descendo,
 // cada horário é um cartão que se arrasta para outra hora ou outra
@@ -119,10 +119,10 @@ export default function QuadroDoDia({ dia, agenda, semana = [], onTrocarDia, pro
   }
   async function mover(a, prof, inicio, novoDia = dia) {
     const p = profs.find((x) => x.id === prof)
-    const ok = await confirmar({ titulo: `Mover ${a.cliente} para ${novoDia !== dia ? rotuloDia(novoDia) + ' às ' : ''}${hhmm(inicio)}${p && prof !== a.professional_id ? `, com ${p.name}` : ''}?`, texto: 'O horário antigo é cancelado e ela recebe o aviso do novo.', ok: 'Mover' })
+    const ok = await confirmar({ titulo: `Mover ${a.cliente} para ${novoDia !== dia ? rotuloDia(novoDia) + ' às ' : ''}${hhmm(inicio)}${p && prof !== a.professional_id ? `, com ${p.name}` : ''}?`, texto: 'O horário antigo é cancelado e o novo entra no lugar.', ok: 'Mover', cancelar: 'Deixar como está', opcao: pedeAviso })
     if (!ok) return
     setOcupado(true); setErro('')
-    const { data, error } = await supabase.rpc('mover_horario', { appt: a.id, nova_data: novoDia, nova_hora: hhmm(inicio), nova_prof: prof })
+    const { data, error } = await moverNoBanco(a, { dia: novoDia, hora: hhmm(inicio), prof, avisar: ok.marcada })
     setOcupado(false)
     if (error) { setErro(error.message); return }
     if (data && data.ok === false) { setErro(data.motivo === 'ocupado' ? 'Esse horário já está ocupado.' : data.motivo === 'nao_faz' ? `${data.profissional} não faz esse serviço.` : 'Não deu para mover.'); return }

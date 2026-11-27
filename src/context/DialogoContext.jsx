@@ -10,6 +10,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 //   if (!(await confirmar('Sair da fila?'))) return
 //   await confirmar({ titulo: 'Excluir serviço', texto: '…', ok: 'Excluir', perigo: true })
 //   await avisar('Pronto! 3 horários apagados.')
+//   const r = await confirmar({ titulo: 'Mover?', opcao: { rotulo: 'Avisar a cliente' } })   // r = false ou { marcada }
 //
 // Devolvem uma Promise: o código que chama continua lendo de cima para
 // baixo, como fazia com o confirm() do navegador.
@@ -30,6 +31,7 @@ export function DialogoProvider({ children }) {
         ok: o.ok ?? (tipo === 'confirmar' ? 'Confirmar' : 'Entendi'),
         cancelar: o.cancelar ?? 'Voltar',
         perigo: Boolean(o.perigo),
+        opcao: o.opcao ? { rotulo: o.opcao.rotulo, nota: o.opcao.nota ?? '', marcada: o.opcao.marcada !== false } : null,
         resolver,
       })
     })
@@ -39,7 +41,8 @@ export function DialogoProvider({ children }) {
   const avisar = useCallback((opcoes) => abrir('avisar', opcoes), [abrir])
 
   function fechar(resposta) {
-    atual?.resolver(atual.tipo === 'confirmar' ? resposta : undefined)
+    // com opção (4.30): o "sim" devolve { marcada }, para quem chamou saber o que a pessoa escolheu
+    atual?.resolver(atual.tipo === 'confirmar' ? (resposta && atual.opcao ? { marcada: atual.opcao.marcada } : resposta) : undefined)
     setAtual(null)
   }
 
@@ -61,6 +64,12 @@ export function DialogoProvider({ children }) {
           <div className="modal-caixa dialogo" role={atual.tipo === 'confirmar' ? 'alertdialog' : 'dialog'} aria-modal="true" aria-labelledby="dialogo-titulo" onClick={(e) => e.stopPropagation()}>
             <h3 id="dialogo-titulo">{atual.titulo}</h3>
             {atual.texto && <p className="muted dialogo-texto">{atual.texto}</p>}
+            {atual.opcao && (
+              <label className="dialogo-opcao">
+                <input type="checkbox" checked={atual.opcao.marcada} onChange={(e) => setAtual((x) => ({ ...x, opcao: { ...x.opcao, marcada: e.target.checked } }))} />
+                <span><strong>{atual.opcao.rotulo}</strong>{atual.opcao.nota && <small>{atual.opcao.nota}</small>}</span>
+              </label>
+            )}
             <div className="modal-acoes">
               {atual.tipo === 'confirmar' && (
                 <button type="button" className="btn btn-ghost" onClick={() => fechar(false)}>{atual.cancelar}</button>

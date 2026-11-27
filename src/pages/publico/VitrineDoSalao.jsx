@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { CalendarCheck, BellRing, RefreshCw, Compass, X, LogIn, CalendarHeart } from 'lucide-react'
+import { CalendarCheck, BellRing, RefreshCw, Compass, X, LogIn, CalendarHeart, Moon, Sun } from 'lucide-react'
 import PaginaSalao from '../../components/salao/PaginaSalao'
 import BotaoGoogle, { OuLinha } from '../../components/BotaoGoogle'
 import { MarcaIcon } from '../../components/icons'
@@ -12,6 +12,7 @@ import { urlDoAmbiente, urlDoEndereco } from '../../lib/ambiente'
 import { chamar } from '../../lib/pagamento'
 import { useConfig } from '../../lib/config'
 import { formatarFone, foneValido } from '../../lib/fone'
+import { lerTema, aplicarTema, trocarTema, ouvirTema } from '../../lib/tema'
 
 // A página pública do salão (3.79), no endereço próprio dele (nome.mimo.com.vc): quem visita vê a página inteira,
 // sem conta. Marcar um serviço, falar com o salão ou tocar numa promoção pedem a conta: abre a folha "entre para
@@ -30,6 +31,13 @@ export default function VitrineDoSalao({ r }) {
   const [pg, setPg] = useState(undefined)
   const [folha, setFolha] = useState(null)   // { alvo, destino }
   const [indo, setIndo] = useState(false)
+  // 4.25: claro ou escuro, no botão da lua; vale enquanto a página está aberta (mesma escolha guardada do painel)
+  const [tema, setTema] = useState(lerTema)
+  useEffect(() => {
+    aplicarTema(lerTema())
+    const parar = ouvirTema(setTema)
+    return () => { parar(); aplicarTema('claro') }
+  }, [])
 
   useEffect(() => {
     let vivo = true
@@ -72,9 +80,12 @@ export default function VitrineDoSalao({ r }) {
     <div className="salp-wrap">
       <header className="salp-topo">
         <a className="salp-marca" href={urlDoAmbiente('cliente', '/')} aria-label="MIMO"><MarcaIcon width={20} height={18} id="salp" /> mimo</a>
-        {conta
-          ? <a className="salp-entrar logada" href={urlDoAmbiente('cliente', '/cliente/home')}><CalendarHeart size={15} /> Minha agenda</a>
-          : <a className="salp-entrar" href={urlDoAmbiente('cliente', `/login?convite=${codigo}&depois=${encodeURIComponent(`/cliente/salao/${salaoId}`)}`)}>Entrar</a>}
+        <span className="salp-topo-dir">
+          <button type="button" className="salp-tema" onClick={trocarTema} aria-label={tema === 'escuro' ? 'Usar tema claro' : 'Usar tema escuro'} title={tema === 'escuro' ? 'Tema claro' : 'Tema escuro'}>{tema === 'escuro' ? <Sun size={17} /> : <Moon size={17} />}</button>
+          {conta
+            ? <a className="salp-entrar logada" href={urlDoAmbiente('cliente', '/cliente/home')}><CalendarHeart size={15} /> Minha agenda</a>
+            : <a className="salp-entrar" href={urlDoAmbiente('cliente', `/login?convite=${codigo}&depois=${encodeURIComponent(`/cliente/salao/${salaoId}`)}`)}>Entrar</a>}
+        </span>
       </header>
       {r.saiu && <p className="salp-saiu">{r.saiu} não atende mais no {s.nome}. Veja quem faz esses serviços na equipe da casa.</p>}
       <PaginaSalao

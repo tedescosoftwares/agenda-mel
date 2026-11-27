@@ -274,3 +274,149 @@ html:has(.salp-wrap) { height: auto; }
 .salp-folha-dupla { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .salp-folha-form .salp-folha-pe { margin-top: 2px; }
 .salp-folha-link { border: 0; background: none; font: inherit; font-size: 0.88rem; font-weight: 600; color: var(--rosa); padding: 8px; cursor: pointer; align-self: center; }
+
+/* ============ 4.25: a página do salão no desenho novo (o mesmo do painel, 4.20) ============
+   Só aparência. As cores saem das variáveis redefinidas em .salp-wrap e .sal; o tema escuro (só na página
+   pública, botão da lua no topo) troca as variáveis. Superfícies com fio fino no lugar de sombra, rosa só
+   como destaque (botão de marcar, preço em promoção, ligações), ações em círculos, equipe em avatares. */
+.salp-wrap, .sal {
+  --sal-fundo: #f6f4f7; --superficie: #ffffff; --superficie-2: #ffffff; --superficie-3: #f3f0f5;
+  --texto: #1d1323; --texto-2: #766b7c; --texto-3: #9d93a3; --fio: #e9e4ec; --fio-forte: #d9d2de;
+  --latao-veu: #ffe9f1; --rosa-escuro: #d81461; --menta-veu: transparent; --sal-menta: #0f8a5c; --sal-ouro: #b07a12;
+  --sal-cab1: #2a0b37; --sal-cab2: #4a1160;
+  --sombra: none; --sombra-alta: 0 1px 2px rgba(29, 19, 35, 0.05), 0 14px 36px rgba(29, 19, 35, 0.08);
+  --sal-r: 20px;
+}
+html[data-tema="escuro"] .salp-wrap, html[data-tema="escuro"] .salp-wrap .sal {
+  --sal-fundo: #0f0a12; --superficie: #1a121e; --superficie-2: #1a121e; --superficie-3: #241a29;
+  --texto: #f6f1f8; --texto-2: #a99cae; --texto-3: #85798b; --fio: #2c2132; --fio-forte: #3a2d41;
+  --latao-veu: #3a1026; --rosa-escuro: #ff7baa; --sal-menta: #4fd3a0; --sal-ouro: #e2b25c;
+  --sal-cab1: #1c0726; --sal-cab2: #3d0c4e; --ameixa: #f6f1f8;
+  --sombra-alta: 0 1px 2px rgba(0, 0, 0, 0.4), 0 16px 38px rgba(0, 0, 0, 0.4);
+}
+.salp-wrap { background: var(--sal-fundo); min-height: 100vh; color: var(--texto); }
+html:has(.salp-wrap) body { background: #f6f4f7; }
+html[data-tema="escuro"]:has(.salp-wrap), html[data-tema="escuro"]:has(.salp-wrap) body { background: #0f0a12; color-scheme: dark; }
+
+/* a capa: sem foto, o roxo do painel com traços finos */
+.sal-capa { background: linear-gradient(135deg, var(--sal-cab1), var(--sal-cab2)); }
+.sal-capa-vazia { position: relative; color: rgba(255, 255, 255, 0.5); }
+.sal-capa-vazia::before, .sal-capa-vazia::after { content: ''; position: absolute; border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.1); }
+.sal-capa-vazia::before { width: 320px; height: 320px; right: -90px; top: -120px; background: rgba(255, 255, 255, 0.03); }
+.sal-capa-vazia::after { width: 220px; height: 220px; left: -70px; bottom: -110px; }
+
+/* o cartão de quem é */
+.sal-id { border: 1px solid var(--fio); border-radius: 24px; padding: 18px 18px 16px; gap: 14px; }
+.sal-logo { border-radius: 50%; background: linear-gradient(135deg, var(--sal-cab1), var(--sal-cab2)); font-weight: 600; font-size: 1.05rem; letter-spacing: 0.04em; box-shadow: none; }
+.sal-id-nome h1 { font-weight: 600; letter-spacing: -0.025em; font-size: 1.5rem; }
+.sal-id-selos { gap: 6px 14px; }
+.sal-selo, .sal-selo-nota, .sal-selo-aberto, .sal-selo-fechado, .sal-selo-pag { padding: 0; background: none; color: var(--texto-2); font-size: 0.82rem; }
+.sal-selo-nota b { color: var(--texto); font-weight: 600; }
+.sal-selo-nota span { color: var(--texto-2); }
+.sal-selo-nota svg, .sal-prof-nota svg, .sal-nota-estrelas svg, .sal-aval-estrelas svg { color: var(--sal-ouro); fill: currentColor; }
+.sal-selo-aberto { color: var(--sal-menta); font-weight: 600; }
+.sal-selo-aberto i { box-shadow: none; animation: sal-pulsa 2.4s ease-out infinite; }
+.sal-selo-pag svg { color: var(--texto-2); }
+@keyframes sal-pulsa { 0% { box-shadow: 0 0 0 0 rgba(79, 211, 160, 0.55); } 70%, 100% { box-shadow: 0 0 0 7px rgba(79, 211, 160, 0); } }
+.sal-aviso { background: var(--superficie-3); color: var(--texto); border: 1px solid var(--fio); }
+.sal .sal-marcar, .sal-pe .btn-primary, .salp-folha .btn-primary { background: var(--rosa); box-shadow: none; border-radius: 16px; font-weight: 600; }
+.sal .sal-marcar:hover, .sal-pe .btn-primary:hover, .salp-folha .btn-primary:hover { background: #e8246c; }
+.sal .sal-marcar { min-height: 54px; }
+.sal-acoes { padding-top: 2px; }
+.sal-acao { color: var(--texto); font-size: 0.74rem; font-weight: 500; gap: 7px; }
+.sal-acao > span { width: 52px; height: 52px; border-radius: 50%; background: var(--superficie-3); color: var(--texto); }
+.sal-acao:hover > span { background: var(--latao-veu); color: var(--rosa-escuro); }
+.sal-acao-cadeado { right: 8px; bottom: 8px; }
+.sal-id-dica { justify-content: flex-start; text-align: left; padding-top: 12px; border-top: 1px solid var(--fio); color: var(--texto-2); }
+
+/* as seções */
+.sal-miolo { gap: 34px; margin-top: 30px; }
+.sal-titulo { font-size: 1.22rem; font-weight: 600; letter-spacing: -0.02em; margin-bottom: 14px !important; }
+.sal-titulo > svg { display: none; }
+.sal-conta { background: none; padding: 0; margin-left: 4px; font-size: 0.9rem; font-weight: 500; color: var(--texto-3); }
+.sal-vazio, .sal-lista, .sal-nota, .sal-aval, .sal-dados, .sal-dest { border: 1px solid var(--fio); }
+.sal-mais { border: 0; background: var(--superficie-3); color: var(--texto); border-radius: 16px; padding: 13px; }
+.sal-mais:hover { background: var(--latao-veu); color: var(--rosa-escuro); }
+
+/* promoções e destaques */
+.sal-promo { background: var(--sal-cab2); border-radius: 22px; }
+.sal-promo-fundo { background: linear-gradient(135deg, var(--sal-cab1), var(--sal-cab2)); }
+.sal-promo-selo { background: var(--rosa); color: #fff; }
+.sal-dest { padding: 0 0 14px; overflow: hidden; gap: 8px; }
+.sal-dest-foto { border-radius: 0; background: var(--superficie-3); color: var(--texto-3); }
+.sal-dest strong, .sal-dest-meta { padding: 0 12px; }
+.sal-dest strong { font-weight: 600; }
+
+/* serviços */
+.sal-filtro { background: var(--superficie-3); }
+.sal-filtro button { background: var(--superficie); }
+.sal-chip { border: 0; background: var(--superficie-3); padding: 9px 15px; }
+.sal-chip:hover { background: var(--texto); color: var(--superficie); }
+.sal-chip:hover span { color: inherit; opacity: 0.7; }
+.sal-cat-nome { text-transform: none; letter-spacing: 0; font-size: 0.9rem !important; color: var(--texto-2); font-weight: 500; }
+.sal-item { padding: 14px; }
+.sal-item:hover { background: var(--superficie-3); }
+.sal-item-foto { border-radius: 14px; background: var(--superficie-3); color: var(--texto-3); }
+.sal-item-preco b { font-weight: 600; font-variant-numeric: tabular-nums; }
+.sal-item-ir { color: var(--rosa-escuro); }
+
+/* equipe: avatares com anel, sem cartão */
+.sal-prof { flex-basis: 104px; }
+.sal-prof-corpo { padding: 4px 2px 0; background: none; border: 0; box-shadow: none; border-radius: 0; gap: 3px; }
+.sal-prof-av { width: 76px; height: 76px; margin-bottom: 6px; background: linear-gradient(135deg, var(--sal-cab1), var(--sal-cab2)); border: 3px solid var(--sal-fundo); box-shadow: 0 0 0 1.5px var(--fio-forte); font-weight: 600; transition: box-shadow 0.15s; }
+.sal-cliente .sal-prof-av { border-color: var(--superficie); }
+.sal-prof-corpo:hover .sal-prof-av { box-shadow: 0 0 0 2px var(--texto-2); }
+.sal-prof.on .sal-prof-av, .sal-prof.preferida .sal-prof-av { box-shadow: 0 0 0 2.5px var(--rosa); }
+.sal-prof-corpo strong { font-weight: 600; font-size: 0.86rem; }
+.sal-prof-nova { color: var(--texto-2); }
+.sal-prof-estrela { top: 0; right: 4px; width: 28px; height: 28px; background: var(--superficie); border: 1px solid var(--fio); }
+.sal-prof-estrela.on { background: var(--superficie); color: var(--sal-ouro); border-color: var(--sal-ouro); }
+.sal-prof-estrela.on svg { fill: var(--sal-ouro); }
+
+/* avaliações: um bloco só */
+.sal-nota { border-radius: var(--sal-r) var(--sal-r) 0 0; margin-bottom: 0; padding: 18px; }
+.sal-nota:last-child { border-radius: var(--sal-r); }
+.sal-nota > b { font-weight: 600; font-size: 2.6rem; font-variant-numeric: tabular-nums; }
+.sal-avals { gap: 0; }
+.sal-aval { border-top: 0; border-radius: 0; padding: 16px 18px; }
+.sal-aval:last-child { border-radius: 0 0 var(--sal-r) var(--sal-r); }
+.sal-aval-ini { background: var(--superficie-3); color: var(--texto); font-weight: 600; }
+.sal-avals + .sal-mais { margin-top: 10px; }
+
+/* sobre */
+.sal-dados { padding: 4px 18px; }
+.sal-dado { padding: 16px 0; }
+.sal-dado > svg { color: var(--texto-2); }
+.sal-dado-rotulo { text-transform: none; letter-spacing: 0; font-size: 0.8rem; font-weight: 500; }
+.sal-dado-agora.aberto, .sal-pe small.aberto { color: var(--sal-menta); }
+.sal-horarios li.hoje span:first-child::after { color: var(--rosa-escuro); }
+.sal .link-ver { color: var(--rosa-escuro); }
+
+/* rodapé e pé */
+.sal-rodape-marca svg { color: var(--texto-2); }
+.sal-rodape-guia { border: 1px solid var(--fio); color: var(--texto); font-weight: 500; }
+.sal-pe { background: color-mix(in srgb, var(--superficie) 94%, transparent); box-shadow: none; border-top: 1px solid var(--fio); }
+
+/* o topo da página pública e a folha */
+.salp-topo-dir { display: inline-flex; align-items: center; gap: 8px; }
+.salp-tema { width: 36px; height: 36px; display: grid; place-items: center; border: 0; border-radius: 50%; background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(8px); color: #1d1323; cursor: pointer; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12); }
+.salp-marca, .salp-entrar { color: #1d1323; }
+.salp-folha { border: 1px solid var(--fio); }
+.salp-folha-lista svg { color: var(--texto-2); }
+.salp-folha-quem .sal-logo { border-radius: 50%; }
+.salp-folha-link { color: var(--rosa-escuro); }
+.sal-casa { background: var(--superficie-3); border-color: var(--fio); }
+.sal-casa:hover { border-color: var(--fio-forte); }
+.sal-casa-logo { border-radius: 50%; background: linear-gradient(135deg, var(--sal-cab1), var(--sal-cab2)); font-weight: 600; }
+.sal-casa-txt small { text-transform: none; letter-spacing: 0; font-weight: 500; font-size: 0.74rem; }
+.sal-casa-ir { color: var(--rosa-escuro); font-weight: 600; }
+.salp-saiu { background: var(--superficie-3); border-color: var(--fio); color: var(--texto); }
+
+@media (min-width: 960px) {
+  .salp-marca, .salp-entrar, .salp-tema { color: var(--texto); }
+  .salp-tema { background: var(--superficie); border: 1px solid var(--fio); box-shadow: none; backdrop-filter: none; }
+  .sal-publico .sal-capa { border-radius: 28px; }
+  .sal-publico .sal-prof { flex-basis: 116px; }
+}
+.sal .rota-chip { border: 0; background: var(--superficie-3); color: var(--texto); font-weight: 500; }
+.sal .rota-chip:active { background: var(--latao-veu); }

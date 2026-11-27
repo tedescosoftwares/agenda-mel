@@ -133,7 +133,8 @@ CARIMBO_NPM=$(sha256sum package-lock.json | cut -c1-64)
 if [ -d node_modules/.bin ] && [ "$(cat node_modules/.carimbo-lock 2>/dev/null)" = "$CARIMBO_NPM" ]; then
   verde '  dependências iguais às da última publicação: instalação pulada'
 else
-  npm ci --no-audit --no-fund >/dev/null
+  echo '  as dependências mudaram (ou é a primeira vez): reinstalando, leva alguns minutos…'
+  npm ci --no-audit --no-fund >/dev/null 2>&1
   printf '%s' "$CARIMBO_NPM" > node_modules/.carimbo-lock
 fi
 T_NPM=$((SECONDS - T0))
@@ -141,7 +142,7 @@ T_NPM=$((SECONDS - T0))
 # rodando terminar, até 15 minutos
 if command -v flock >/dev/null; then
   exec 9>/tmp/mimo-republicar.lock
-  flock -w 900 9 || amarelo '  uma regeneração passou de 15 minutos; sigo com o build assim mesmo'
+  flock -n 9 || { echo '  a regeneração da hora está rodando: esperando ela terminar…'; flock -w 900 9; } || amarelo '  uma regeneração passou de 15 minutos; sigo com o build assim mesmo'
 fi
 # 3.41: o build também é uma publicação: atende o "Publicar agora" que estiver esperando e fica registrado no banco
 PEDIDO=$(node scripts/registrar-publicacao.mjs inicio || true)
@@ -181,7 +182,9 @@ devolver_guia() {
 LOG_BUILD=/tmp/mimo-build.log
 # 4.41: os dois passos do "npm run build" rodam separados só para medir cada um (o app e as páginas do guia)
 T0=$SECONDS; T_APP=0
-construir() { npx --no-install vite build && T_APP=$((SECONDS - T0)) && node scripts/paginas-estaticas.mjs; }
+construir() { npx --no-install vite build && T_APP=$((SECONDS - T0)) && echo "  app montado em ${T_APP}s; gerando as páginas e o guia de salões…" >&3 && node scripts/paginas-estaticas.mjs; }
+echo '  montando o app…'
+exec 3>&1
 if ! construir > "$LOG_BUILD" 2>&1; then
   devolver_guia
   registrar_pub 0 'o build falhou'

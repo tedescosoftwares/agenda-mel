@@ -316,7 +316,7 @@ export default function AdminAgenda() {
               )
             ) : (
               <AgendaLista dia={dia} agenda={agendaDoDia} profs={lista} filtro={filtro} onFiltro={setFiltro} jornada={jornada} bloqueios={bloqueios} semana={contagem}
-                onTrocarDia={irPara} onEncaixar={({ prof, hora }) => setEncaixe({ prof, hora })} onMudou={recarregar} />
+                onTrocarDia={irPara} onEncaixar={({ prof, hora, livres }) => (prof ? setEncaixe({ prof, hora }) : setEscolhendo({ hora, so: livres }))} onMudou={recarregar} />
             )}
           </>
         )}
@@ -326,12 +326,13 @@ export default function AdminAgenda() {
         <div className="modal-fundo" onClick={() => setEscolhendo(null)}>
           <div className="modal-caixa encaixe-quem" role="dialog" aria-modal="true" aria-labelledby="encaixe-quem-titulo" onClick={(e) => e.stopPropagation()}>
             <button type="button" className="modal-fechar" onClick={() => setEscolhendo(null)} aria-label="Fechar">×</button>
-            <h3 id="encaixe-quem-titulo">{escolhendo.dia ? `Encaixe ${escolhendo.dia === hoje ? 'hoje' : `na ${DIAS_LONGOS[new Date(escolhendo.dia + 'T12:00:00').getDay()]}, ${new Date(escolhendo.dia + 'T12:00:00').getDate()}`}${escolhendo.hora ? ` às ${escolhendo.hora}` : ''}: com quem?` : 'Novo encaixe com quem?'}</h3>
+            <h3 id="encaixe-quem-titulo">{escolhendo.dia ? `Encaixe ${escolhendo.dia === hoje ? 'hoje' : `na ${DIAS_LONGOS[new Date(escolhendo.dia + 'T12:00:00').getDay()]}, ${new Date(escolhendo.dia + 'T12:00:00').getDate()}`}${escolhendo.hora ? ` às ${escolhendo.hora}` : ''}: com quem?` : escolhendo.hora ? `Encaixe às ${escolhendo.hora}: com quem?` : 'Novo encaixe com quem?'}</h3>
             {lista.length === 0
               ? <><p className="muted">Ainda não há profissional na equipe. Cadastre a primeira (pode ser você) para encaixar um horário.</p><Link className="btn btn-primary btn-block" to="/admin/equipe">Cadastrar profissional</Link></>
               : <p className="muted">Escolha a profissional que vai atender.</p>}
             <div className="encaixe-quem-lista">
-              {lista.map((p) => {
+              {/* 4.35: vindo de um horário livre da lista, só quem está livre naquela hora */}
+              {lista.filter((p) => !escolhendo.so || escolhendo.so.includes(p.id)).map((p) => {
                 const d = escolhendo.dia ?? dia; const j = jornadaDoDia(horasProf, d)[p.id]; const t = escolhendo.hora ? min(escolhendo.hora) : null
                 const fora = j && (!j.open || (t != null && (t < min(j.start) || t >= min(j.end))))
                 return (

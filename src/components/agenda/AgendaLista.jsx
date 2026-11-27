@@ -108,7 +108,7 @@ export default function AgendaLista({ dia, agenda, profs, filtro, onFiltro, jorn
                 <div key={'l' + l.ini + nomes.join()} className="ags-li livre">
                   <span className="ags-li-hora">{hhmm(l.ini)}</span>
                   <span className="ags-li-livre">Livre até {hhmm(l.fim)}{daEquipe.length > 1 ? ` · ${nomes.length > 2 ? `${nomes.slice(0, 2).join(', ')} e mais ${nomes.length - 2}` : nomes.join(' e ')}` : ''}</span>
-                  <button type="button" className="btn-mini btn-mini-neutro" onClick={() => onEncaixar({ prof: l.profs[0].id, hora: hhmm(l.ini) })}><Plus size={13} /> Encaixar</button>
+                  <button type="button" className="btn-mini btn-mini-neutro" onClick={() => onEncaixar({ prof: l.profs.length === 1 ? l.profs[0].id : null, livres: l.profs.map((p) => p.id), hora: hhmm(l.ini) })}><Plus size={13} /> Encaixar</button>
                 </div>
               )
             }

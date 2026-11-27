@@ -138,12 +138,14 @@ export function LinhaInstalar({ para = 'pro' }) {
 
 // No menu lateral do computador (painel do salão e área da profissional). Some quando já está instalada.
 export function InstalarNoMenu({ para = 'pro' }) {
-  const { instalado } = useInstalacao()
+  const { instalado, direto } = useInstalacao()
   const [guia, setGuia] = useState(false)
   if (instalado) return null
+  // 4.33: quando o navegador deixa (Chrome e Edge), o clique já abre a janela de instalar; o guia fica de reserva
+  const clicar = async () => { if (direto) { await instalarDireto(); return } setGuia(true) }
   return (
     <>
-      <button type="button" className="ia-menu" onClick={() => setGuia(true)}>
+      <button type="button" className="ia-menu" onClick={clicar}>
         <span className="ia-menu-icone"><Download size={16} /></span>
         <span><strong>Instalar a MIMO</strong><small>No computador e no celular</small></span>
       </button>

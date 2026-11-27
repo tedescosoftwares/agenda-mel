@@ -16943,3 +16943,10 @@ html[data-tema="escuro"] .admin-content .miolo > .card.numero-heroi:not(.hd):not
 
 /* 4.43: os diálogos (confirmar, avisar, quanto ficou) ficam por cima da folha do horário da Agenda (z 1200) */
 .dialogo-fundo { z-index: 1300; }
+
+/* 4.44: a dica do cadastro de serviço quando o preço fica vazio */
+.a-partir-dica { display:flex; gap:10px; align-items:flex-start; padding:11px 13px; margin:8px 0; border-radius:12px; background:#fff8ec; border:1px solid #f5e2bd; color:#5c4a1f; font-size:.86rem; line-height:1.45; }
+.a-partir-dica > svg { flex:none; margin-top:2px; color:#b45309; }
+.a-partir-dica strong { color:#3d2f0e; }
+.a-partir-dica-botao { display:block; margin-top:6px; font-weight:700; font-size:.86rem; padding:0; }
+.a-partir-dica.compacto { padding:8px 11px; font-size:.82rem; }

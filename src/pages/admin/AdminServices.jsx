@@ -689,7 +689,7 @@ export default function AdminServices() {
               />
             </label>
           </div>}
-          {!form.is_combo && <APartirOpcao ligado={form.a_partir} onMudar={(a_partir) => setForm({ ...form, a_partir })} preco={Number(String(form.price).replace(',', '.')) || null} />}
+          {!form.is_combo && <APartirOpcao ligado={form.a_partir} onMudar={(a_partir) => setForm({ ...form, a_partir })} preco={Number(String(form.price).replace(',', '.')) || null} dica={String(form.price ?? '').trim() !== ''} />}
 
           <div className="img-field">
             <span className="img-field-label">

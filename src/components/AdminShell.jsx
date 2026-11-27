@@ -15,13 +15,12 @@ import {
   ClockIcon,
   HomeIcon,
 } from './icons'
-import { Sparkles, UserRound, WalletCards, Megaphone, Settings2, ChevronLeft, CreditCard, BarChart3, Search, Crown, Store, ChevronDown, CalendarHeart, CalendarPlus, Moon, Sun } from 'lucide-react'
+import { Sparkles, UserRound, WalletCards, Megaphone, Settings2, ChevronLeft, CreditCard, BarChart3, Search, Crown, Store, ChevronDown, CalendarHeart, Plus, Moon, Sun, LayoutGrid, Scissors, UserPlus, QrCode, MessageCircle, Clock, HelpCircle, X } from 'lucide-react'
 import { lerTema, aplicarTema, trocarTema, ouvirTema } from '../lib/tema'
 
-// Cinco abas, não seis. Numa barra de celular, seis alvos dão 60px
-// cada e o polegar erra. O mês, Serviços e WhatsApp foram para dentro
-// de Ajustes: são coisas que se configuram, não o dia a dia.
-// O botão do meio é a ação da casa — encaixar alguém agora.
+// Cinco posições na barra do celular (4.26): Início, Agenda, o "+" de novo horário no meio, Clientes e Menu.
+// O Menu abre uma folha com todo o resto do painel em círculos (os mesmos da Home), para qualquer tela ficar
+// a dois toques de qualquer outra. No computador nada disso aparece: o menu lateral já mostra tudo.
 import { PIX_LIGADO } from '../lib/pixLigado'
 
 const TABS = [
@@ -29,7 +28,20 @@ const TABS = [
   { to: '/admin/agenda', label: 'Agenda', Icon: CalendarIcon },
   null,
   { to: '/admin/clientes', label: 'Clientes', Icon: UsersIcon },
-  { to: '/admin/ajustes', label: 'Ajustes', Icon: ClockIcon },
+  'menu',
+]
+const MENU = [
+  { to: '/admin/equipe', label: 'Equipe', Icon: UserPlus },
+  { to: '/admin/servicos', label: 'Serviços', Icon: Scissors },
+  { to: '/admin/salao', label: 'Link e QR', Icon: QrCode },
+  { to: '/admin/whatsapp', label: 'WhatsApp', Icon: MessageCircle },
+  ...(PIX_LIGADO ? [{ to: '/admin/receber', label: 'Financeiro', Icon: WalletCards }] : []),
+  { to: '/admin/promocoes', label: 'Marketing', Icon: Megaphone },
+  { to: '/admin/numeros', label: 'Números', Icon: BarChart3 },
+  { to: '/admin/horarios', label: 'Horários', Icon: Clock },
+  { to: '/admin/assinatura', label: 'Assinatura', Icon: Crown },
+  { to: '/admin/ajustes', label: 'Ajustes', Icon: Settings2 },
+  { to: '/admin/guia', label: 'Ajuda', Icon: HelpCircle },
 ]
 
 const DESKTOP_NAV = [
@@ -57,6 +69,16 @@ export default function AdminShell({ children, amplo = false, primeiroAcesso = f
   const donaAtende = Boolean(professional && professional.salon_id === salao?.id)
   const nav = donaAtende ? [...DESKTOP_NAV.slice(0, 2), { to: '/pro/agenda', label: 'Minha agenda', Icon: CalendarHeart }, ...DESKTOP_NAV.slice(2)] : DESKTOP_NAV
   const navigate = useNavigate()
+  const menu = donaAtende ? [{ to: '/pro/agenda', label: 'Minha agenda', Icon: CalendarHeart }, ...MENU] : MENU
+  const [menuAberto, setMenuAberto] = useState(false)
+  useEffect(() => { setMenuAberto(false) }, [pathname])
+  useEffect(() => {
+    if (!menuAberto) return
+    const esc = (e) => { if (e.key === 'Escape') setMenuAberto(false) }
+    window.addEventListener('keydown', esc)
+    return () => window.removeEventListener('keydown', esc)
+  }, [menuAberto])
+  const noMenu = menu.some((m) => pathname === m.to || pathname.startsWith(m.to + '/'))
   const [busca, setBusca] = useState('')
   const [trocaAberta, setTrocaAberta] = useState(false)
   const nomePessoa = profile?.full_name || 'Conta MIMO'
@@ -163,25 +185,17 @@ export default function AdminShell({ children, amplo = false, primeiroAcesso = f
         <div className="bottom-nav-inner">
           {TABS.map((t) =>
             t === null ? (
-              // 3.92: era um "+" redondo; agora diz o que faz
-              <button
-                key="encaixe"
-                type="button"
-                className="nav-item nav-encaixe"
-                onClick={() => navigate('/admin/agenda?encaixe=1')}
-              >
-                <span className="nav-encaixe-icone"><CalendarPlus size={20} strokeWidth={2} /></span>
-                <span>Encaixe</span>
+              <button key="novo" type="button" className="nav-item nav-novo" onClick={() => navigate('/admin/agenda?encaixe=1')}>
+                <span className="nav-novo-bola"><Plus size={24} strokeWidth={2.2} /></span>
+                <span>Novo horário</span>
+              </button>
+            ) : t === 'menu' ? (
+              <button key="menu" type="button" className={'nav-item nav-menu' + (noMenu || menuAberto ? ' active' : '')} onClick={() => setMenuAberto((v) => !v)} aria-expanded={menuAberto} aria-haspopup="dialog">
+                <LayoutGrid />
+                <span>Menu</span>
               </button>
             ) : (
-              <NavLink
-                key={t.to}
-                to={t.to}
-                end={t.end}
-                className={({ isActive }) =>
-                  isActive ? 'nav-item active' : 'nav-item'
-                }
-              >
+              <NavLink key={t.to} to={t.to} end={t.end} className={({ isActive }) => (isActive ? 'nav-item active' : 'nav-item')}>
                 <t.Icon />
                 <span>{t.label}</span>
               </NavLink>
@@ -189,6 +203,26 @@ export default function AdminShell({ children, amplo = false, primeiroAcesso = f
           )}
         </div>
       </nav>
+
+      {menuAberto && (
+        <div className="nav-folha-fundo" role="presentation" onClick={(e) => { if (e.target === e.currentTarget) setMenuAberto(false) }}>
+          <div className="nav-folha" role="dialog" aria-modal="true" aria-label="Menu do painel">
+            <span className="nav-folha-alca" aria-hidden="true" />
+            <div className="nav-folha-topo">
+              <strong>{salao?.name ?? 'Menu'}</strong>
+              <button type="button" onClick={() => setMenuAberto(false)} aria-label="Fechar"><X size={18} /></button>
+            </div>
+            <div className="nav-folha-grade">
+              {menu.map((m) => (
+                <NavLink key={m.to} to={m.to} onClick={() => setMenuAberto(false)} className={({ isActive }) => (isActive ? 'on' : '')}>
+                  <span className="nav-folha-bola"><m.Icon size={22} /></span>
+                  <span>{m.label}</span>
+                </NavLink>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

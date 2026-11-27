@@ -10,6 +10,7 @@
 //                conta não entra por aqui (devolve existe: true; ela recebe o link no WhatsApp ou usa a senha).
 //                Liga e desliga em config_publica.agendar_sem_cadastro. 3 por hora por número e 150 por hora no total.
 //   convite_criar  4.38 (migração 272): a profissional cria a senha no link do convite do salão; sem segundo e-mail.
+//   painel_criar   4.51 (migração 279): quem recebeu acesso ao painel (administração ou recepção) cria a senha no link.
 //   convite_whats  4.38: o salão manda esse convite pelo WhatsApp da MIMO (precisa estar logado como o salão).
 //   entrar       WhatsApp e senha: acha a conta pelo número (só telefone confirmado) e devolve a sessão. 8 tentativas
 //                a cada 15 minutos por número.
@@ -191,6 +192,40 @@ Deno.serve(async (req) => {
           await servico.auth.admin.deleteUser(novo.user.id).then(() => {}, () => {})
           return json({ erro: e2.message || 'Não deu para ativar o acesso. Fale com o salão.' }, 409)
         }
+      }
+      const sessao = await sessaoDe(novo.user.id, senha)
+      return json({ ok: true, sessao })
+    }
+
+    // 4.51 (migração 279): quem recebeu um acesso ao painel (administração ou recepção) cria a senha no link do
+    // convite, como a profissional: a conta nasce com o e-mail do convite confirmado e já entra no salão.
+    if (acao === 'painel_criar') {
+      const token = String(corpo.token ?? '').toLowerCase()
+      if (!/^[a-f0-9]{32}$/.test(token)) return json({ erro: 'Esse convite não vale. Peça outro ao salão.' }, 400)
+      const { data: pode } = await servico.rpc('acesso_tentativa', { chave_: `painel_criar:${token}`, maximo: 8, minutos: 15 })
+      if (pode === false) return json({ erro: 'Muitas tentativas. Espere 15 minutos e tente de novo.' }, 429)
+      const senha = String(corpo.senha ?? '')
+      const ruim = senhaValida(senha)
+      if (ruim) return json({ erro: ruim }, 400)
+      const { data: v } = await servico.rpc('acesso_painel_ver', { token_: token })
+      const conv = (v ?? null) as Record<string, any> | null
+      if (!conv) return json({ erro: 'Convite não encontrado. Confira o link com o salão.' }, 404)
+      if (conv.usado) return json({ erro: 'Esse convite já foi usado. É só entrar com a sua conta.', usado: true }, 409)
+      const email = String(conv.email ?? '').trim().toLowerCase()
+      if (!emailValido(email)) return json({ erro: 'O convite está sem e-mail. Peça ao salão para refazer.' }, 409)
+      const meta: Record<string, unknown> = { full_name: conv.nome ?? '' }
+      if (corpo.termos) meta.termos = corpo.termos
+      if (corpo.aceites && typeof corpo.aceites === 'object') meta.aceites = corpo.aceites
+      const { data: novo, error: e1 } = await servico.auth.admin.createUser({ email, password: senha, email_confirm: true, user_metadata: meta })
+      if (e1 || !novo?.user?.id) {
+        if (/already|registered|exists|duplicate/i.test(e1?.message ?? '')) return json({ ok: false, existe: true })
+        console.error('acesso painel_criar: não criou a conta:', e1?.message)
+        return json({ erro: 'Não deu para criar a conta agora. Tente de novo em instantes.' }, 500)
+      }
+      const { error: e2 } = await servico.rpc('acesso_painel_ativar_interno', { conta: novo.user.id, token_: token })
+      if (e2) {
+        await servico.auth.admin.deleteUser(novo.user.id).then(() => {}, () => {})
+        return json({ erro: e2.message || 'Não deu para ativar o acesso. Fale com o salão.' }, 409)
       }
       const sessao = await sessaoDe(novo.user.id, senha)
       return json({ ok: true, sessao })

@@ -4,6 +4,7 @@ import '../polish.css'
 import '../lib/sw'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import ProtectedRoute from '../components/ProtectedRoute'
+import { useAuth } from '../context/AuthContext'
 import NaoEncontrada from '../pages/publico/NaoEncontrada'
 import AdminDashboard from '../pages/admin/AdminDashboard'
 import AdminGuia from '../pages/admin/AdminGuia'
@@ -29,7 +30,17 @@ import AdminFecharDia from '../pages/admin/AdminFecharDia'
 import { PARCERIA_LIGADA } from '../lib/contratoParceria'
 import { PIX_LIGADO } from '../lib/pixLigado'
 
-const A = ({ children }) => <ProtectedRoute requireRole="admin">{children}</ProtectedRoute>
+// 4.51 (migração 279): a recepção só abre agenda, clientes, comanda (PDV), fechar o dia e ajuda; o resto volta para a
+// agenda. As mudanças que ela não pode fazer também são barradas no banco.
+const DA_RECEPCAO = ['/admin/agenda', '/admin/clientes', '/admin/pdv', '/admin/fechar-dia', '/admin/guia']
+export const recepcaoPode = (caminho) => DA_RECEPCAO.some((r) => caminho === r || caminho.startsWith(r + '/'))
+function SoParaQuemPode({ children }) {
+  const { papelNoSalao } = useAuth()
+  const { pathname } = useLocation()
+  if (papelNoSalao === 'recepcao' && !recepcaoPode(pathname)) return <Navigate to="/admin/agenda" replace />
+  return children
+}
+const A = ({ children }) => <ProtectedRoute requireRole="admin"><SoParaQuemPode>{children}</SoParaQuemPode></ProtectedRoute>
 // 3.96: a assistente virou a aba Assistente da área WhatsApp (o ?inicio=1 do fim da configuração vai junto)
 function ParaWhatsapp() { const { search } = useLocation(); return <Navigate to={'/admin/whatsapp' + search} replace /> }
 

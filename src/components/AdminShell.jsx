@@ -64,11 +64,15 @@ export default function AdminShell({ children, amplo = false, primeiroAcesso = f
   // 4.21: o tema do painel (claro ou escuro) vale enquanto o painel está aberto
   const [tema, setTema] = useState(lerTema)
   useEffect(() => { aplicarTema(lerTema()); const parar = ouvirTema(setTema); return () => { parar(); aplicarTema('claro') } }, [])
-  const { salao, acesso, profile, saloes, trocarSalao } = useAuth()
+  const { salao, acesso, profile, saloes, trocarSalao, papelNoSalao } = useAuth()
+  // 4.51: a recepção vê só o que é dela (agenda, clientes, comanda, fechar o dia e ajuda)
+  const recepcao = papelNoSalao === 'recepcao'
+  const daRecepcao = (m) => ['/admin/agenda', '/admin/clientes', '/admin/guia'].includes(m.to)
   // 4.31: a "Minha agenda" saiu do menu; a dona que atende já tem a coluna dela na Agenda
-  const nav = DESKTOP_NAV
+  const nav = recepcao ? [...DESKTOP_NAV.filter(daRecepcao), { to: '/admin/fechar-dia', label: 'Fechar o dia', Icon: Clock }] : DESKTOP_NAV
   const navigate = useNavigate()
-  const menu = MENU
+  const menu = recepcao ? [{ to: '/admin/fechar-dia', label: 'Fechar o dia', Icon: Clock }, ...MENU.filter(daRecepcao)] : MENU
+  const abas = recepcao ? TABS.filter((t) => t === null || t === 'menu' || t.to !== '/admin') : TABS
   const [menuAberto, setMenuAberto] = useState(false)
   useEffect(() => { setMenuAberto(false) }, [pathname])
   useEffect(() => {
@@ -102,7 +106,7 @@ export default function AdminShell({ children, amplo = false, primeiroAcesso = f
   return (
     <div className={'admin-shell' + (amplo ? ' admin-shell-amplo' : '') + (primeiroAcesso ? ' admin-shell-primeiro-acesso' : '')}>
       {/* a Mel (2.89.4): na home fala de tudo; nas outras telas acompanha só a configuração inicial */}
-      <MelDock escopo={pathname === '/admin' ? 'tudo' : 'configuracao'} />
+      {!recepcao && <MelDock escopo={pathname === '/admin' ? 'tudo' : 'configuracao'} />}
       <aside className="admin-desktop-sidebar" aria-label="Navegação principal">
         <div className="admin-sidebar-marca">
           <span><LogoMimo altura={38} pro /></span>
@@ -123,11 +127,11 @@ export default function AdminShell({ children, amplo = false, primeiroAcesso = f
         </nav>
         <div className="admin-sidebar-rodape">
           <InstalarNoMenu para="salao" />
-          <NavLink to="/admin/assinatura" className="admin-sidebar-plano">
+          {!recepcao && <NavLink to="/admin/assinatura" className="admin-sidebar-plano">
             <span className="admin-sidebar-plano-icone"><Crown size={17} /></span>
             <span><strong>{plano.titulo}</strong><small>{plano.texto}</small></span>
             <span className="admin-sidebar-plano-cta">Ver planos</span>
-          </NavLink>
+          </NavLink>}
           <button type="button" className="admin-sidebar-salao" onClick={() => setTrocaAberta((v) => !v)}>
             <span className="admin-sidebar-salao-avatar">{thumbSalao ? <img src={thumbSalao} alt="" /> : <Store size={17} />}</span>
             <span><strong>{salao?.name || 'Meu salão'}</strong><small>{saloes?.length > 1 ? 'Trocar salão' : 'Meu salão'}</small></span>
@@ -147,7 +151,7 @@ export default function AdminShell({ children, amplo = false, primeiroAcesso = f
 
       {!primeiroAcesso && <ConviteInstalar para="salao" esperaTour />}
       <div className={primeiroAcesso ? 'admin-first-workspace' : 'admin-shell-workspace'}>
-      <FaixaDoTeste />
+      {!recepcao && <FaixaDoTeste />}
       <header className={'topbar topbar-admin' + (primeiroAcesso ? ' topbar-admin-primeiro' : '')}>
         <div className="topbar-admin-esquerda">
           <span className="brand-inline">
@@ -172,7 +176,7 @@ export default function AdminShell({ children, amplo = false, primeiroAcesso = f
           <button type="button" className="admin-topbar-tema" onClick={trocarTema} aria-label={tema === 'escuro' ? 'Usar tema claro' : 'Usar tema escuro'} title={tema === 'escuro' ? 'Tema claro' : 'Tema escuro'}>{tema === 'escuro' ? <Sun size={18} /> : <Moon size={18} />}</button>
           <SinoAvisos />
           <div className="admin-topbar-user">
-            <MenuDaConta itens={ITENS_ADMIN} papel={salao?.name ? `Administração · ${salao.name}` : 'Administração do salão'} />
+            <MenuDaConta itens={recepcao ? ITENS_ADMIN.filter((i) => i.to === '/admin/guia' || i.to === '/avisos') : ITENS_ADMIN} papel={salao?.name ? `${recepcao ? 'Recepção' : 'Administração'} · ${salao.name}` : 'Administração do salão'} />
             <span><strong>{primeiroNome}</strong><small>Proprietário</small></span>
           </div>
         </div>
@@ -183,7 +187,7 @@ export default function AdminShell({ children, amplo = false, primeiroAcesso = f
 
       <nav className="bottom-nav">
         <div className="bottom-nav-inner">
-          {TABS.map((t) =>
+          {abas.map((t) =>
             t === null ? (
               <button key="novo" type="button" className="nav-item nav-novo" onClick={() => navigate('/admin/agenda?encaixe=1')}>
                 <span className="nav-novo-bola"><Plus size={24} strokeWidth={2.2} /></span>

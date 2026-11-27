@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useDialogo } from '../../context/DialogoContext'
 import { Link } from 'react-router-dom'
 import AdminShell from '../../components/AdminShell'
+import AcessosDoPainel from '../../components/AcessosDoPainel'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { ChevronIcon, LinkIcon, ClockIcon } from '../../components/icons'
@@ -220,6 +221,8 @@ export default function AdminProfissionais() {
           })}
         </div>
       )}
+
+      {salao && salao.tipo !== 'autonoma' && <AcessosDoPainel salao={salao} />}
 
       {salao?.codigo_equipe && (
         <div className="card eq-coletar" style={{ marginTop: '0.8rem' }}>

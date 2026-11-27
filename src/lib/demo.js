@@ -113,6 +113,7 @@ const clientes = [
 
 const jn = (a, todos) => ({ ...a, services: servicos.find((s) => s.id === a.service_id), professionals: profissionais.find((p) => p.id === a.professional_id), profiles: clientes.find((c) => c.id === a.client_id), appointment_offers: [], origem: a.remarca_de ? (todos.find((o) => o.id === a.remarca_de) ?? null) : null })
 
+const ACESSOS_DEMO = [{ id: 'acp1', papel: 'recepcao', nome: 'Rita Souza', email: 'rita@exemplo.com', telefone: '(13) 99888-1122', ativo: true, token: null, criado_em: '2026-11-10T12:00:00Z' }]
 const agendamentos = [
   { id: 'ap1', client_id: 'c1', professional_id: 'pr1', service_id: 'sv2', salon_id: SALAO, date: mais(2), start_time: '14:00:00', end_time: '15:30:00', status: 'pendente', price_cents: 8500, created_at: mais(0) },
   { id: 'ap2', client_id: 'c1', professional_id: 'pr2', service_id: 'sv7', salon_id: SALAO, date: mais(9), start_time: '10:30:00', end_time: '11:15:00', status: 'confirmado', price_cents: 6000, pago_cents: 3000, created_at: mais(-1), visita_id: 'v1' },
@@ -461,6 +462,12 @@ const RPC = {
       caixa: { total_cents: 8500, balcao_cents: 8500, app_cents: 0, por_forma: [{ forma: 'pix', valor_cents: 8500 }], por_profissional: [{ professional_id: 'pr1', nome: 'Ana Oliveira', valor_cents: 8500, comandas: 1 }] },
     }
   },
+  // 4.51: acessos ao painel (administração e recepção)
+  acessos_do_salao: () => ({ limite: 3, lista: ACESSOS_DEMO.map((x) => ({ ...x })) }),
+  acesso_painel_criar: ({ papel_, nome_, email_, telefone_ }) => { const a = { id: 'acp' + (ACESSOS_DEMO.length + 2), papel: papel_, nome: nome_, email: email_, telefone: telefone_, ativo: false, token: 'a'.repeat(32), criado_em: new Date().toISOString() }; ACESSOS_DEMO.push(a); return { ok: true, ...a } },
+  acesso_painel_tirar: ({ id_ }) => { const i = ACESSOS_DEMO.findIndex((x) => x.id === id_); if (i >= 0) ACESSOS_DEMO.splice(i, 1); return { ok: true } },
+  acesso_painel_ver: () => ({ salao: { nome: 'Studio Mel', logo_url: null, cidade: 'Santos' }, papel: 'recepcao', nome: 'Rita Souza', email: 'rita@exemplo.com', usado: false }),
+  acesso_painel_ativar: () => ({ ok: true, salao: 'Studio Mel', papel: 'recepcao' }),
   // 4.43: valor a combinar
   informar_valor: ({ valor_cents, cortesia_ }) => (cortesia_ ? { ok: true, cortesia: true } : { ok: true, price_cents: valor_cents }),
   atendimentos_sem_valor: () => [

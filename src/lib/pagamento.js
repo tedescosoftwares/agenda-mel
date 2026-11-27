@@ -42,6 +42,7 @@ function demoFuncao(nome, corpo) {
     if (corpo?.acao === 'visita') return String(corpo.telefone ?? '').replace(/\D/g, '').endsWith('0000') ? { ok: false, existe: true } : { ok: true, sessao: { access_token: 'demo', refresh_token: 'demo' }, nome: corpo.nome }
     if (corpo?.acao === 'convite_whats') return { ok: true, telefone: '(13) 99999-0005' }
     if (corpo?.acao === 'convite_criar') return { ok: true, sessao: null }
+    if (corpo?.acao === 'painel_criar') return { ok: true, sessao: null }
     if (corpo?.acao === 'pedir_link') return { ok: true, mensagem: 'Se esse WhatsApp tiver cadastro na MIMO, o link chega em instantes.' }
     return { ok: true, sessao: null }
   }

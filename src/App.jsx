@@ -37,6 +37,7 @@ const EntrarPorCodigo = pegar("EntrarPorCodigo");
 const ComCodigo = pegar("ComCodigo");
 const ConviteEquipe = pegar("ConviteEquipe");
 const AtivarAcesso = pegar("AtivarAcesso");
+const AtivarPainel = pegar("AtivarPainel");
 const CriarSenha = pegar("CriarSenha");
 const SenhaPeloWhatsapp = pegar("SenhaPeloWhatsapp");
 const EntradaDaVisita = pegar("EntradaDaVisita");
@@ -133,6 +134,7 @@ export default function App() {
             <Route path="/comecar" element={<RedeDeProtecao><Onboarding publico /></RedeDeProtecao>} />
             <Route path="/equipe/:codigo" element={<ConviteEquipe />} />
             <Route path="/ativar/:token" element={<AtivarAcesso />} />
+            <Route path="/acesso-painel/:token" element={<AtivarPainel />} />
             <Route path="/senha" element={<CriarSenha />} />
             {/* 3.98: o link de criar a senha de quem se cadastrou pelo WhatsApp */}
             <Route path="/s/:token" element={<SenhaPeloWhatsapp />} />

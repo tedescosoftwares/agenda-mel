@@ -14,6 +14,7 @@ export function AuthProvider({ children }) {
   const [professional, setProfessional] = useState(null)
   const [salao, setSalao] = useState(null)
   const [saloes, setSaloes] = useState([])      // todos os salões que a admin administra
+  const [papeis, setPapeis] = useState({})      // salão → 'admin' | 'recepcao'
   const [negocio, setNegocio] = useState(null)   // o negócio que ela é dona (salão ou a agenda de autônoma): quem passa pelo onboarding
   // as agendas em que a cliente entrou (053). Sem nenhuma, não há app.
   // null = ainda não sei (carregando ou a rede falhou); [] = sei que não tem
@@ -78,10 +79,12 @@ export function AuthProvider({ children }) {
       if (perfil?.role === 'admin') {
         const { data: vinculos } = await supabase
           .from('salon_members')
-          .select('salon_id, salons (*)')
+          .select('salon_id, papel, salons (*)')
           .eq('user_id', session.user.id)
-          .eq('papel', 'admin')
+          .in('papel', ['admin', 'recepcao'])
         if (cancelled) return
+        // 4.51 (migração 279): o papel dela em cada salão (a recepção vê só agenda, clientes e comanda)
+        setPapeis(Object.fromEntries((vinculos ?? []).filter((v) => v.salons).map((v) => [v.salon_id, v.papel])))
         const lista = (vinculos ?? []).map((v) => v.salons).filter(Boolean).sort((a, b) => String(a.name).localeCompare(String(b.name)))
         let preferido = null
         try { preferido = localStorage.getItem('mimo-salao-admin') } catch { /* sem armazenamento */ }
@@ -275,6 +278,8 @@ export function AuthProvider({ children }) {
     professional,
     salao,
     saloes,
+    // 'dona' | 'admin' | 'recepcao' no salão aberto
+    papelNoSalao: salao ? (salao.owner_id === session?.user?.id ? 'dona' : papeis[salao.id] ?? 'admin') : null,
     negocio,
     recarregarNegocio: () => (session?.user ? carregarNegocio(session.user.id) : Promise.resolve(null)),
     trocarSalao,

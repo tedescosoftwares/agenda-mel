@@ -8,7 +8,7 @@ import PainelPausado from './PainelPausado'
 import SinoAvisos from './SinoAvisos'
 import MenuDaConta, { ITENS_PRO } from './MenuDaConta'
 import Avatar from './Avatar'
-import { InstalarNoMenu } from './InstalarApp'
+import { InstalarNoMenu, ConviteInstalar } from './InstalarApp'
 import { CalendarIcon, SparkleIcon, GraficoIcon, VoltarIcon, ClockIcon, BellIcon, PessoaIcon, LogoMimo, WhatsIcon } from './icons'
 import '../pro-equipe.css'
 
@@ -55,6 +55,7 @@ export default function ProShell({ children, titulo, voltar, amplo = false }) {
 
   return (
     <div className={'admin-shell pro-shell' + (amplo ? ' admin-shell-amplo' : '')}>
+      <ConviteInstalar para={equipe ? 'equipe' : 'pro'} />
       <aside className="admin-desktop-sidebar pro-sidebar" aria-label="Navegação principal">
         <div className="admin-sidebar-marca">
           <span><LogoMimo altura={38} pro /></span>

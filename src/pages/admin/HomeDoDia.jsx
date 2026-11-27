@@ -9,7 +9,6 @@ import { Contador, Faisca, Barras, Pessoa } from '../../components/admin/HomeDia
 import AvisosNovos from '../../components/AvisosNovos'
 import PrimeirosPassos from '../../components/PrimeirosPassos'
 import LigarAvisos from '../../components/LigarAvisos'
-import { CartaoInstalar } from '../../components/InstalarApp'
 
 // A Home do salão já configurado (4.20), no desenho de banco digital: o cabeçalho na cor da casa, o faturamento do
 // mês como o "saldo" (com o olho para esconder os valores), as ações em círculos, o que pede resposta em carrossel,
@@ -181,7 +180,6 @@ export default function HomeDoDia({ salao, nomePessoa, saudacao, logoSalao, inic
           </section>
 
           <div className="hd-novidades"><AvisosNovos /></div>
-          <CartaoInstalar para="salao" />
           <LigarAvisos semInstalar texto="Pedidos, cancelamentos e clientes chamando no WhatsApp chegam na hora, mesmo com o app fechado." />
           <div className="admin-dia-fim"><PrimeirosPassos salao={salao} parte="resto" /></div>
         </div>

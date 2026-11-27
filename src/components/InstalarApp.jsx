@@ -61,7 +61,7 @@ export function CartaoInstalar({ para = 'pro' }) {
 // Uma vez por abertura (a aba guarda que já mostrou); "Agora não" fecha só desta vez.
 const CHAVE_CONVITE = 'mimo-convite-instalar-visto'
 const conviteVisto = () => { try { return sessionStorage.getItem(CHAVE_CONVITE) === '1' } catch { return false } }
-export function ConviteInstalar({ para = 'salao' }) {
+export function ConviteInstalar({ para = 'salao', esperaTour = false }) {
   const { instalado, direto } = useInstalacao()
   const [aberto, setAberto] = useState(false)
   const [guia, setGuia] = useState(false)
@@ -69,11 +69,11 @@ export function ConviteInstalar({ para = 'salao' }) {
   useEffect(() => {
     if (conviteVisto()) return
     let tour = false
-    try { tour = localStorage.getItem('mimo-tour-painel-concluido') !== '1' } catch { /* segue */ }
+    if (esperaTour) { try { tour = localStorage.getItem('mimo-tour-painel-concluido') !== '1' } catch { /* segue */ } }
     if (tour) return
     const t = setTimeout(() => setAberto(true), 900)
     return () => clearTimeout(t)
-  }, [])
+  }, [esperaTour])
   if (instalado) return null
   const ap = aparelho()
   const pc = !ap.celular

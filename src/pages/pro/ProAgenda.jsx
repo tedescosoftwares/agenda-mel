@@ -14,7 +14,6 @@ import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import PrimeirosPassos from '../../components/PrimeirosPassos'
 import AcessoAviso from '../../components/AcessoAviso'
-import { CartaoInstalar } from '../../components/InstalarApp'
 import FaixaDoSalao from '../../components/pro/FaixaDoSalao'
 import AgendaLinhaDoTempo from '../../components/pro/AgendaLinhaDoTempo'
 import { ehDaEquipe } from '../../lib/meuSalao'
@@ -64,7 +63,6 @@ export default function ProAgenda() {
           </div>
           <aside className="pe-lado">
             <FaixaDoSalao />
-            <CartaoInstalar para="equipe" />
             <AvisosNovos />
             <LigarAvisos semInstalar texto="Recados do salão, horários novos e cancelamentos chegam na hora, mesmo com o app fechado." />
           </aside>
@@ -90,7 +88,6 @@ export default function ProAgenda() {
         {abas}
       </div>
 
-      <CartaoInstalar />
       <AvisosNovos />
       <PendenciasBaixa />
       <LigarAvisos semInstalar texto="Pedido de horário, cancelamento e cliente chamando no WhatsApp chegam na hora, mesmo com o app fechado." />

@@ -145,7 +145,7 @@ export default function AdminShell({ children, amplo = false, primeiroAcesso = f
         </div>
       </aside>
 
-      {!primeiroAcesso && <ConviteInstalar para="salao" />}
+      {!primeiroAcesso && <ConviteInstalar para="salao" esperaTour />}
       <div className={primeiroAcesso ? 'admin-first-workspace' : 'admin-shell-workspace'}>
       <FaixaDoTeste />
       <header className={'topbar topbar-admin' + (primeiroAcesso ? ' topbar-admin-primeiro' : '')}>

@@ -16957,3 +16957,8 @@ html[data-tema="escuro"] .pk-fundo > * { filter:invert(.93) hue-rotate(180deg); 
 html[data-tema="escuro"] .pk-fundo > * :is(img, video, canvas) { filter:invert(1) hue-rotate(180deg); }
 html[data-tema="escuro"] .pk-fundo > * .btn-primary { color:#12060c; }
 html[data-tema="escuro"] .pk-fundo { background:#0f0a12; }
+/* 4.53: o mesmo para a ativação do salão aberta pela home (AtivarSalao dentro do .hd, que não entra na inversão do
+   miolo). Só ali: nas outras telas do miolo ela já vem invertida pelo pai, e inverter de novo a deixaria clara. */
+html[data-tema="escuro"] .hd .ai-fundo > * { filter:invert(.93) hue-rotate(180deg); }
+html[data-tema="escuro"] .hd .ai-fundo > * :is(img, video, canvas) { filter:invert(1) hue-rotate(180deg); }
+html[data-tema="escuro"] .hd .ck-fundo { background:#0f0a12; }

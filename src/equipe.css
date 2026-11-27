@@ -221,3 +221,8 @@ body.com-gaveta { overflow: hidden; }
 @media (max-width: 520px) { .gv-canais { grid-template-columns: 1fr; } }
 /* 4.39: o aviso de WhatsApp ou e-mail repetido, embaixo do campo */
 .gv-form small.gv-dup { color: #c2185b; font-weight: 600; }
+
+/* 4.50: na lista da equipe o nome não é mais cortado (quebra em até duas linhas) e o selo de administradora fica na linha dos selos */
+.prof-row .cliente-nome { display: block; min-width: 0; }
+.prof-row .cliente-nome .nome-txt { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; white-space: normal; overflow: hidden; overflow-wrap: anywhere; line-height: 1.25; }
+.prof-row .prof-selos { align-items: center; }

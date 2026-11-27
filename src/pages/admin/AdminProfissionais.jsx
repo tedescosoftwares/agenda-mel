@@ -193,11 +193,12 @@ export default function AdminProfissionais() {
               <div key={p.id} className={'card prof-row' + (p.situacao === 'inativa' ? ' inactive' : '')}>
                 <Avatar nome={p.name} foto={p.photo_url} />
                 <div className="cliente-info">
-                  <span className="cliente-nome"><span className="nome-txt">{p.name}</span>{p.dona && <em className="eq-papel">Administradora</em>}</span>
+                  <span className="cliente-nome"><span className="nome-txt">{p.name}</span></span>
                   <span className="muted cliente-meta">
                     {p.especialidade || (PARCERIA_LIGADA ? vinculoPor(p.vinculo)?.nome : null) || 'Profissional'} · {p.situacao === 'rascunho' ? 'só nome e WhatsApp' : `${(p.servicos ?? []).length} serviço${(p.servicos ?? []).length === 1 ? '' : 's'} · ${resumoDias(p.horarios)}`}
                   </span>
                   <span className="prof-selos">
+                    {p.dona && <em className="eq-papel">Administradora</em>}
                     <span className={'gv-situacao ' + sit.cor}>{sit.rotulo}</span>
                     {parcerias[p.id] && (!p.vinculo || p.vinculo === 'parceira') && <span className={'parceria-selo ' + parcerias[p.id].status}>{parcerias[p.id].status === 'sem_contrato' ? 'sem contrato' : `${STATUS[parcerias[p.id].status]?.toLowerCase()}${parcerias[p.id].status === 'assinado' && parcerias[p.id].homologacao !== 'homologado' ? ', sem homologação' : ''}`}</span>}
                   </span>

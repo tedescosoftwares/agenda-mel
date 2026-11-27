@@ -19,7 +19,7 @@ export default function EntradaDaVisita() {
   const [erro, setErro] = useState('')
   const [lido] = useState(() => {
     const h = new URLSearchParams(window.location.hash.replace(/^#/, ''))
-    return { a: h.get('a'), r: h.get('r'), c: h.get('c'), d: h.get('d') }
+    return { a: h.get('a'), r: h.get('r'), c: h.get('c'), d: h.get('d'), s: h.get('s'), p: h.get('p') }
   })
 
   useEffect(() => {
@@ -40,6 +40,9 @@ export default function EntradaDaVisita() {
       } catch { /* o app pergunta depois */ }
       try { await supabase.rpc('concluir_primeiro_acesso') } catch { /* cai na boas-vindas e segue de lá */ }
       if (lido.c) { try { await supabase.rpc('vincular', { codigo: lido.c, jeito: 'link' }) } catch { /* sem vínculo, o app pede o código */ } }
+      // 4.49: a preferida que ela marcou na página do salão antes de se identificar
+      const uuid = /^[0-9a-f-]{36}$/i
+      if (uuid.test(lido.s ?? '') && uuid.test(lido.p ?? '')) { try { await supabase.rpc('escolher_preferida', { salao: lido.s, prof: lido.p }) } catch { /* ela marca de novo no app */ } }
       // espera o app saber quem entrou (até 6 s) e só então recarrega o perfil e os salões dela: navegar antes disso
       // caía no login, que devolvia para a Home
       for (let i = 0; i < 30 && vivo && !agora.current.user; i++) await new Promise((r) => setTimeout(r, 200))

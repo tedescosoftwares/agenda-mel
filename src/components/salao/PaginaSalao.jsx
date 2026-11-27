@@ -39,6 +39,7 @@ export default function PaginaSalao({ pg, cats, modo = 'cliente', onAgendar, onC
   const [abertas, setAbertas] = useState({})   // categoria → mostra todos
   const [tocada, setComQuem] = useState(null) // público: a profissional tocada filtra os serviços dela
   const [todasAvaliacoes, setTodasAvaliacoes] = useState(false)
+  const [dica, setDica] = useState(false) // 4.49: o "Agendar" rola até os serviços e diz o que fazer ali
 
   const fotos = s.fotos ?? []
   const notaCasa = pg.nota?.quantas ? pg.nota : null
@@ -68,7 +69,7 @@ export default function PaginaSalao({ pg, cats, modo = 'cliente', onAgendar, onC
   const insta = s.instagram ? 'https://instagram.com/' + String(s.instagram).replace(/^@/, '') : null
   const fechado = s.aceita === false
 
-  const irParaServicos = () => servicosRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  const irParaServicos = () => { setDica(true); servicosRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }
   const irParaCategoria = (id) => document.getElementById('sal-cat-' + (id || 'outros'))?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   async function compartilhar() {
     const url = window.location.href
@@ -189,8 +190,23 @@ export default function PaginaSalao({ pg, cats, modo = 'cliente', onAgendar, onC
           )}
 
           {/* ---- serviços ---- */}
-          <section className="sal-secao" ref={servicosRef} id="sal-servicos">
+          <section className={'sal-secao' + (dica ? ' sal-pisca' : '')} ref={servicosRef} id="sal-servicos">
             <h2 className="sal-titulo"><Sparkles size={17} /> {dela ? `Serviços com ${primeiro}` : 'Serviços'} {(dela ? visiveis : servicos).length > 0 && <span className="sal-conta">{(dela ? visiveis : servicos).length}</span>}</h2>
+            {dica && !fechado && visiveis.length > 0 && (
+              <div className="sal-dica" role="status">
+                <CalendarHeart size={17} />
+                <span>
+                  <strong>{comQuem ? `Escolha o serviço que você quer fazer com ${primeiroNome(comQuem.nome)}.` : 'Escolha o serviço que você quer marcar.'}</strong>
+                  {' '}{comQuem ? 'Em seguida você escolhe o dia e a hora.' : equipe.length > 1 ? 'Prefere uma profissional? Toque nela em “A equipe”, mais abaixo, e veja só os serviços dela.' : 'Em seguida você escolhe o dia e a hora.'}
+                </span>
+                <button type="button" onClick={() => setDica(false)} aria-label="Fechar a dica"><X size={15} /></button>
+              </div>
+            )}
+            {dela && onPreferida && (
+              <button type="button" className={'sal-pref-dela' + (pg.preferida === dela.id ? ' on' : '')} onClick={() => onPreferida(pg.preferida === dela.id ? null : dela.id)} aria-pressed={pg.preferida === dela.id}>
+                <Star size={15} /> {pg.preferida === dela.id ? `${primeiro} é a sua preferida` : `Marcar ${primeiro} como minha preferida`}
+              </button>
+            )}
             {comQuem && !dela && (
               <div className="sal-filtro">
                 <span className="sal-filtro-av">{comQuem.foto ? <img src={comQuem.foto} alt="" /> : iniciais(comQuem.nome)}</span>
@@ -248,11 +264,11 @@ export default function PaginaSalao({ pg, cats, modo = 'cliente', onAgendar, onC
             <section className="sal-secao">
               <h2 className="sal-titulo"><Star size={17} /> {dela ? `Mais gente do ${s.nome}` : equipe.length === 1 ? 'Quem atende' : 'A equipe'}</h2>
               {dela && <p className="sal-sub">A {primeiro} faz parte desta equipe. Toque para conhecer cada uma.</p>}
-              {!dela && publico && equipe.length > 1 && <p className="sal-sub">Toque em quem você prefere para ver os serviços dela.</p>}
+              {!dela && publico && equipe.length > 1 && <p className="sal-sub">Toque em quem você prefere para ver os serviços dela.{onPreferida ? ' A estrela guarda a sua preferida: os serviços que ela faz já vão com ela.' : ''}</p>}
               {!publico && equipe.length > 1 && <p className="sal-sub">Marque a estrela da sua preferida: quando mais de uma faz o mesmo serviço, o app já leva para ela.</p>}
               <div className="sal-faixa sal-equipe">
                 {equipe.filter((p) => !dela || p.id !== dela.id).map((p) => {
-                  const pref = !publico && pg.preferida === p.id
+                  const pref = (!publico || Boolean(onPreferida)) && pg.preferida === p.id
                   return (
                     <div key={p.id} className={'sal-prof' + (comQuem?.id === p.id ? ' on' : '') + (pref ? ' preferida' : '')}>
                       <button type="button" className="sal-prof-corpo" onClick={() => escolher(p)}>
@@ -261,7 +277,7 @@ export default function PaginaSalao({ pg, cats, modo = 'cliente', onAgendar, onC
                         {p.nota ? <span className="sal-prof-nota"><StarIcon /> {Number(p.nota).toFixed(1)}{p.avaliacoes ? <span> ({p.avaliacoes})</span> : null}</span> : <span className="sal-prof-nota sal-prof-nova">nova na casa</span>}
                         <span className="sal-prof-faz">{p.especialidade || (p.faz ?? []).slice(0, 2).join(' · ') || p.bio || ''}</span>
                       </button>
-                      {!publico && equipe.length > 1 && (
+                      {(!publico || (onPreferida && !dela)) && equipe.length > 1 && (
                         <button type="button" className={'sal-prof-estrela' + (pref ? ' on' : '')} onClick={() => onPreferida?.(pref ? null : p.id)} aria-pressed={pref} aria-label={pref ? 'Tirar a preferência' : `Marcar ${p.nome} como preferida`}><Star size={16} /></button>
                       )}
                     </div>

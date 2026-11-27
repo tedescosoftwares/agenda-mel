@@ -20,6 +20,11 @@ import { lerTema, aplicarTema, trocarTema, ouvirTema } from '../../lib/tema'
 // com ?depois= (o que ela escolheu); depois de entrar, a Home da cliente segue para lá. Já logada como cliente,
 // entra na agenda do salão (se ainda não está) e segue direto para o fluxo de marcar de sempre.
 // 4.11: com r.profissional_id a mesma página abre como a página DELA (foco), sempre dentro do salão.
+// a preferida de quem ainda não tem conta: fica neste aparelho, por salão
+const chavePref = (salao) => `mimo-preferida:${salao}`
+function lerPreferida(salao) { try { return localStorage.getItem(chavePref(salao)) || null } catch { return null } }
+function guardarPreferida(salao, id) { try { if (id) localStorage.setItem(chavePref(salao), id); else localStorage.removeItem(chavePref(salao)) } catch { /* sem storage: vale só nesta visita */ } }
+
 export default function VitrineDoSalao({ r }) {
   const { user, role, vinculos, recarregarVinculos } = useAuth()
   const cats = useCategorias()
@@ -30,6 +35,9 @@ export default function VitrineDoSalao({ r }) {
   const sub = r.subdominio ?? r.salao?.subdominio ?? null
   const [pg, setPg] = useState(undefined)
   const [folha, setFolha] = useState(null)   // { alvo, destino }
+  // 4.49: a preferida também aqui. Com conta, grava na hora; sem conta, fica neste aparelho e segue junto quando ela
+  // se identifica para marcar (o /visita grava no cadastro dela).
+  const [prefLocal, setPrefLocal] = useState(() => lerPreferida(salaoId) ?? undefined) // undefined: não mexeu aqui; null: tirou
   const [indo, setIndo] = useState(false)
   // 4.25: claro ou escuro, no botão da lua; vale enquanto a página está aberta (mesma escolha guardada do painel)
   const [tema, setTema] = useState(lerTema)
@@ -54,6 +62,11 @@ export default function VitrineDoSalao({ r }) {
   if (!pg?.salao) return <div className="page-center"><p className="muted">Não encontramos esse salão.</p></div>
   const s = pg.salao
 
+  const preferida = prefLocal !== undefined ? prefLocal : pg.preferida ?? null
+  function escolherPreferida(id) {
+    setPrefLocal(id); guardarPreferida(salaoId, id)
+    if (user && role === 'cliente') { setPg((x) => ({ ...x, preferida: id })); supabase.rpc('escolher_preferida', { salao: salaoId, prof: id }).then(() => {}, () => {}) }
+  }
   // para onde cada ação leva, já dentro do app da cliente
   function destinoDe(alvo) {
     // 4.48: serviço e profissional já decididos (ela tocou no serviço na página da profissional, só uma faz, ou a
@@ -61,7 +74,7 @@ export default function VitrineDoSalao({ r }) {
     const direto = (servico, prof) => `/cliente/agendamento/data?${new URLSearchParams({ prof, servico, firme: '1', de: `salao:${salaoId}` })}`
     if (alvo.servico) {
       const quem = alvo.servico.quem ?? []
-      const dela = alvo.prof ?? foco
+      const dela = alvo.prof ?? foco ?? (preferida && quem.some((x) => x.id === preferida) ? preferida : null)
       if (dela && (!quem.length || quem.some((x) => x.id === dela))) return direto(alvo.servico.id, dela)
       if (quem.length === 1) return direto(alvo.servico.id, quem[0].id)
       return `/cliente/servico/${alvo.servico.id}?${new URLSearchParams({ de: `salao:${salaoId}` })}`
@@ -77,6 +90,7 @@ export default function VitrineDoSalao({ r }) {
       try {
         const ja = (vinculos ?? []).some((v) => v.salao?.id === salaoId)
         if (!ja && codigo) { await supabase.rpc('vincular', { codigo, jeito: 'link' }); await recarregarVinculos?.() }
+        if (prefLocal && prefLocal !== pg?.preferida) await supabase.rpc('escolher_preferida', { salao: salaoId, prof: prefLocal })
       } catch { /* sem vínculo, o app pede o código */ }
       window.location.href = urlDoAmbiente('cliente', destino)
       return
@@ -98,9 +112,10 @@ export default function VitrineDoSalao({ r }) {
       </header>
       {r.saiu && <p className="salp-saiu">{r.saiu} não atende mais no {s.nome}. Veja quem faz esses serviços na equipe da casa.</p>}
       <PaginaSalao
-        pg={pg}
+        pg={preferida === pg.preferida ? pg : { ...pg, preferida }}
         cats={cats}
         modo="publico"
+        onPreferida={escolherPreferida}
         onAgendar={agir}
         onContato={() => (conta ? agir({ contato: true }) : setFolha({ alvo: { contato: true }, destino: `/cliente/salao/${salaoId}` }))}
         onPromo={(p) => agir({ promo: p })}
@@ -110,13 +125,13 @@ export default function VitrineDoSalao({ r }) {
         profUrl={(p) => (sub && p.slug ? urlDoEndereco(sub, `/profissionais/${p.slug}`) : null)}
       />
       {indo && <div className="salp-folha-fundo"><p className="salp-indo">Abrindo a agenda…</p></div>}
-      {folha && <EntrarParaMarcar salao={s} codigo={codigo} alvo={folha.alvo} destino={folha.destino} equipe={Boolean(user) && role !== 'cliente'} onFechar={() => setFolha(null)} />}
+      {folha && <EntrarParaMarcar salao={s} codigo={codigo} alvo={folha.alvo} destino={folha.destino} preferida={prefLocal ? { s: salaoId, p: prefLocal } : null} equipe={Boolean(user) && role !== 'cliente'} onFechar={() => setFolha(null)} />}
     </div>
   )
 }
 
 // a folha "entre para marcar": quem é o salão, o que ela ganha com a conta e os três jeitos de entrar
-function EntrarParaMarcar({ salao, codigo, alvo, destino, equipe, onFechar }) {
+function EntrarParaMarcar({ salao, codigo, alvo, destino, equipe, onFechar, preferida = null }) {
   const [erro, setErro] = useState('')
   // 4.13: marcar sem criar conta (config_publica.agendar_sem_cadastro): nome, sobrenome e WhatsApp, e ela já vê os horários
   const semCadastro = useConfig().agendar_sem_cadastro === 'ligado' && !equipe
@@ -143,7 +158,7 @@ function EntrarParaMarcar({ salao, codigo, alvo, destino, equipe, onFechar }) {
           <span><strong>{salao.nome}</strong><small>{[salao.bairro, salao.cidade].filter(Boolean).join(', ') || 'agenda pela MIMO'}</small></span>
         </div>
         {semCadastro && !comConta ? (
-          <MarcarSemCadastro salao={salao} codigo={codigo} alvo={alvo} destino={destino} onComConta={() => setComConta(true)} />
+          <MarcarSemCadastro salao={salao} codigo={codigo} alvo={alvo} destino={destino} preferida={preferida} onComConta={() => setComConta(true)} />
         ) : (<>
         <h2 id="salp-folha-titulo">{titulo}</h2>
         <p>{sub}</p>
@@ -175,7 +190,7 @@ function EntrarParaMarcar({ salao, codigo, alvo, destino, equipe, onFechar }) {
 
 // 4.13: a folha de quem marca sem criar conta. Três campos e ela segue para os horários. Um número que já tem conta
 // não entra só por digitar: recebe o link no WhatsApp (ou usa a senha).
-function MarcarSemCadastro({ salao, codigo, alvo, destino, onComConta }) {
+function MarcarSemCadastro({ salao, codigo, alvo, destino, onComConta, preferida = null }) {
   const [nome, setNome] = useState('')
   const [sobrenome, setSobrenome] = useState('')
   const [fone, setFone] = useState('')
@@ -195,7 +210,7 @@ function MarcarSemCadastro({ salao, codigo, alvo, destino, onComConta }) {
       const r = await chamar('acesso', { acao: 'visita', nome: nome.trim(), sobrenome: sobrenome.trim(), telefone: fone })
       if (r?.existe) { setExiste(true); return }
       if (!r?.sessao) throw new Error('Não deu para continuar agora. Tente de novo.')
-      const h = new URLSearchParams({ a: r.sessao.access_token, r: r.sessao.refresh_token, c: codigo ?? '', d: destino })
+      const h = new URLSearchParams({ a: r.sessao.access_token, r: r.sessao.refresh_token, c: codigo ?? '', d: destino, ...(preferida ? { s: preferida.s, p: preferida.p } : {}) })
       window.location.href = urlDoAmbiente('cliente', `/visita#${h}`)
     } catch (er) {
       setErro(er.message || 'Não deu para continuar agora. Tente de novo.')

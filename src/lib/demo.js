@@ -462,6 +462,9 @@ const RPC = {
       caixa: { total_cents: 8500, balcao_cents: 8500, app_cents: 0, por_forma: [{ forma: 'pix', valor_cents: 8500 }], por_profissional: [{ professional_id: 'pr1', nome: 'Ana Oliveira', valor_cents: 8500, comandas: 1 }] },
     }
   },
+  // 4.54: excluir o perfil de uma profissional
+  equipe_excluir_previa: () => ({ nome: 'Camila Rocha', tem_conta: true, avaliacoes: 12, atendimentos: 148, futuros: 0, preferida_de: 4 }),
+  equipe_excluir: () => ({ ok: true, apagada: false, guardou_historico: true }),
   // 4.51: acessos ao painel (administração e recepção)
   acessos_do_salao: () => ({ limite: 3, lista: ACESSOS_DEMO.map((x) => ({ ...x })) }),
   acesso_painel_criar: ({ papel_, nome_, email_, telefone_ }) => { const a = { id: 'acp' + (ACESSOS_DEMO.length + 2), papel: papel_, nome: nome_, email: email_, telefone: telefone_, ativo: false, token: 'a'.repeat(32), criado_em: new Date().toISOString() }; ACESSOS_DEMO.push(a); return { ok: true, ...a } },

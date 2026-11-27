@@ -7,7 +7,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { ChevronIcon, LinkIcon, ClockIcon } from '../../components/icons'
 import Avatar from '../../components/Avatar'
-import { FileSignature, MessageCircle, Plus, Link2, Copy, Mail, UsersRound } from 'lucide-react'
+import { Trash2, FileSignature, MessageCircle, Plus, Link2, Copy, Mail, UsersRound } from 'lucide-react'
 import { STATUS, PARCERIA_LIGADA } from '../../lib/contratoParceria'
 import { urlDoAmbiente } from '../../lib/ambiente'
 import { situacaoDe, resumoDias, vinculoPor, primeiroNome, enviarAcesso, enviarAcessoWhats } from '../../lib/equipe'
@@ -97,6 +97,23 @@ export default function AdminProfissionais() {
     const { error } = await supabase.rpc('equipe_situacao', { prof: p.id, acao: qual })
     if (error) setError(error.message)
     else fetchTudo()
+  }
+  // 4.54 (migração 280): ao tirar uma profissional, o salão escolhe: só desativar (tudo fica guardado) ou desativar e
+  // excluir o perfil (página, link, avaliações e dados dela vão embora; os atendimentos já feitos ficam no histórico)
+  const [saindo, setSaindo] = useState(null)   // { p, previa }
+  async function pedirSaida(p) {
+    setError(''); setInfo(''); setSaindo({ p, previa: null })
+    const { data, error } = await supabase.rpc('equipe_excluir_previa', { prof: p.id })
+    setSaindo((x) => (x && x.p.id === p.id ? { ...x, previa: error ? { falta: true } : (data ?? {}) } : x))
+  }
+  async function soDesativar() { const p = saindo.p; setSaindo(null); await acao('desativar', p) }
+  async function excluirPerfil() {
+    const { p } = saindo
+    const ok = await confirmar({ titulo: `Excluir o perfil de ${primeiroNome(p.name)} de vez?`, texto: 'Não dá para desfazer. A página, o link, as avaliações e os dados dela são apagados agora.', ok: 'Excluir perfil', perigo: true })
+    if (!ok) return
+    const { error } = await supabase.rpc('equipe_excluir', { prof: p.id })
+    if (error) { setError(error.message); setSaindo(null); return }
+    setSaindo(null); setInfo(`O perfil de ${p.name} foi excluído.`); fetchTudo(); recarregarPerfil?.()
   }
   async function copiarLink(p) {
     const url = linkDaProfissional(p, salao)
@@ -204,6 +221,7 @@ export default function AdminProfissionais() {
                     {parcerias[p.id] && (!p.vinculo || p.vinculo === 'parceira') && <span className={'parceria-selo ' + parcerias[p.id].status}>{parcerias[p.id].status === 'sem_contrato' ? 'sem contrato' : `${STATUS[parcerias[p.id].status]?.toLowerCase()}${parcerias[p.id].status === 'assinado' && parcerias[p.id].homologacao !== 'homologado' ? ', sem homologação' : ''}`}</span>}
                   </span>
                   {p.situacao === 'rascunho' && <button type="button" className="btn-mini prof-acao" onClick={() => setGaveta(p)}>Configurar profissional</button>}
+                  {p.situacao === 'inativa' && !p.dona && <button type="button" className="btn-mini prof-acao eq-excluir" onClick={() => pedirSaida(p)}><Trash2 size={12} /> Excluir perfil</button>}
                   {pendente && <span className="prof-acoes"><button type="button" className="btn-mini" onClick={() => enviarPorWhats(p)}><MessageCircle size={12} /> {p.acesso_enviado_em ? 'Reenviar por WhatsApp' : 'Enviar acesso por WhatsApp'}</button><button type="button" className="btn-mini" onClick={() => enviarPorEmail(p)}><Mail size={12} /> {p.acesso_enviado_em ? 'Reenviar por e-mail' : 'Enviar por e-mail'}</button><button type="button" className="btn-mini btn-mini-neutro" onClick={() => copiarAcesso(p)}><Copy size={12} /> Copiar link</button></span>}
                 </div>
                 {parcerias[p.id] && (!p.vinculo || p.vinculo === 'parceira') && (
@@ -212,7 +230,7 @@ export default function AdminProfissionais() {
                 <button className="icon-btn" onClick={() => copiarLink(p)} aria-label={`Copiar link de ${p.name}`} title="Copiar link da agenda dela"><LinkIcon /></button>
                 <label className="switch" title={p.dona ? (p.situacao === 'inativa' ? 'Voltar a atender' : 'Parar de atender') : (p.situacao === 'inativa' ? 'Reativar' : 'Desativar')}>
                   <input type="checkbox" checked={p.situacao !== 'inativa'} aria-label={p.dona ? 'Você atende' : `${p.name} ativa`}
-                    onChange={() => (p.dona ? donaAtender(p, p.situacao === 'inativa') : acao(p.situacao === 'inativa' ? 'reativar' : 'desativar', p))} />
+                    onChange={() => (p.dona ? donaAtender(p, p.situacao === 'inativa') : p.situacao === 'inativa' ? acao('reativar', p) : pedirSaida(p))} />
                   <span></span>
                 </label>
                 <button className="icon-btn" onClick={() => setGaveta(p)} aria-label={`Configurar ${p.name}`}><ChevronIcon /></button>
@@ -233,6 +251,35 @@ export default function AdminProfissionais() {
           </div>
         </div>
       )}
+
+      {saindo && (() => {
+        const { p, previa } = saindo, nome = primeiroNome(p.name), inativa = p.situacao === 'inativa'
+        const n = (v) => Number(v ?? 0), trava = n(previa?.futuros) > 0
+        return (
+          <div className="modal-fundo" role="presentation" onClick={() => setSaindo(null)}>
+            <div className="modal-caixa eq-saida" role="dialog" aria-modal="true" aria-labelledby="eq-saida-titulo" onClick={(e) => e.stopPropagation()}>
+              <h3 id="eq-saida-titulo">{inativa ? `Excluir o perfil de ${nome}?` : `${nome} vai sair da agenda?`}</h3>
+              {!inativa && (
+                <button type="button" className="eq-saida-op" onClick={soDesativar}>
+                  <strong>Apenas desativar</strong>
+                  <span>A agenda dela sai do ar e ela perde o acesso. A ficha, a página, as avaliações e o histórico ficam guardados, e dá para reativar depois.</span>
+                </button>
+              )}
+              {previa === null ? <p className="muted">Conferindo o que ela tem…</p> : previa.falta ? (
+                <p className="muted eq-saida-nota">Para excluir o perfil, o banco precisa da atualização 280 (opção B do .bat).</p>
+              ) : (
+                <button type="button" className="eq-saida-op perigo" onClick={excluirPerfil} disabled={trava}>
+                  <strong><Trash2 size={15} /> {inativa ? 'Excluir o perfil' : 'Desativar e excluir o perfil'}</strong>
+                  <span>Apaga de vez: a página e o link dela, a foto, a bio e o contato, os serviços e horários dela{n(previa.avaliacoes) > 0 ? `, as ${n(previa.avaliacoes)} ${n(previa.avaliacoes) === 1 ? 'avaliação que ela recebeu' : 'avaliações que ela recebeu'}` : ' e as avaliações'}{previa.tem_conta ? ', e o acesso dela a este salão (a conta dela na MIMO continua, como cliente)' : ''}. Não dá para desfazer.</span>
+                  {n(previa.atendimentos) > 0 && <span className="eq-saida-fica">Fica guardado: {n(previa.atendimentos) === 1 ? 'o atendimento que ela já fez' : `os ${n(previa.atendimentos)} atendimentos que ela já fez`} e as comandas, porque são o histórico e o financeiro do salão.</span>}
+                  {trava && <span className="eq-saida-trava">Ela ainda tem {n(previa.futuros)} {n(previa.futuros) === 1 ? 'horário marcado' : 'horários marcados'}. Remarque ou cancele antes de excluir.</span>}
+                </button>
+              )}
+              <div className="modal-acoes"><button type="button" className="btn btn-ghost" onClick={() => setSaindo(null)}>Voltar</button></div>
+            </div>
+          </div>
+        )
+      })()}
 
       {gaveta && salao && <ProfissionalDrawer salao={salao} profissional={gaveta === 'nova' ? null : gaveta} servicos={services} cats={cats} onFechar={() => { setGaveta(null); fetchTudo() }} onSalvo={() => fetchTudo()} />}
       {extras && <AgendasExtras salaoId={salao.id} onFechar={() => setExtras(false)}

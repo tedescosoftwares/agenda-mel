@@ -257,3 +257,18 @@ body.com-gaveta { overflow: hidden; }
 .acp-tipo.on > span { background: #fff0f5; color: #ff2d7a; }
 .acp-nota { margin: 0; font-size: 0.8rem; }
 @media (max-width: 560px) { .acp-vazio, .acp-tipos { grid-template-columns: 1fr; } .acp-cab .btn { width: 100%; justify-content: center; } }
+
+/* 4.54: sair da agenda: só desativar, ou desativar e excluir o perfil */
+.eq-saida { display: grid; gap: 0.7rem; max-width: 480px; width: 100%; max-height: calc(100dvh - 24px); overflow-y: auto; }
+.eq-saida h3 { margin: 0; }
+.eq-saida-op { display: grid; gap: 0.3rem; text-align: left; padding: 0.9rem 1rem; border: 1.5px solid #e9e4ec; border-radius: 14px; background: #fff; cursor: pointer; font: inherit; color: #1d1323; }
+.eq-saida-op:hover:not(:disabled) { border-color: #cfc6d4; }
+.eq-saida-op strong { display: flex; align-items: center; gap: 0.4rem; font-size: 0.98rem; }
+.eq-saida-op span { color: #766b7c; font-size: 0.84rem; line-height: 1.45; }
+.eq-saida-op.perigo strong { color: #b42318; }
+.eq-saida-op.perigo:hover:not(:disabled) { border-color: #f3b3ad; background: #fff8f7; }
+.eq-saida-op:disabled { cursor: not-allowed; opacity: 0.75; }
+.eq-saida-op .eq-saida-fica { color: #4a3f52; }
+.eq-saida-op .eq-saida-trava { color: #b45309; font-weight: 600; }
+.eq-saida-nota { margin: 0; font-size: 0.84rem; }
+.btn-mini.eq-excluir { color: #b42318; }

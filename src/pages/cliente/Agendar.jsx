@@ -5,7 +5,7 @@ import CalendarioMes from '../../components/CalendarioMes'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { formatPreco, labelDuracao, formatDuracao } from '../../lib/format'
-import { prefixoAPartir, ehAPartir, AVISO_A_PARTIR } from '../../../packages/core/salao.js'
+import { precoEscrito, prefixoAPartir, ehAPartir, AVISO_A_PARTIR } from '../../../packages/core/salao.js'
 import { formatDataLonga } from '../../lib/booking'
 import { Check, Sparkles, Repeat, Plus, Users, Hourglass, Search, BadgePercent } from 'lucide-react'
 import { useCategorias, agruparPorCategoria, bate } from '../../lib/categorias'
@@ -352,7 +352,7 @@ export function AgendarHora() {
 
       {servico && (
         <div className="card resumo-mini">
-          <div className="resumo-linha"><span className="muted">Valor</span><strong>{prefixoAPartir(servico)}{formatPreco(servico.price)}</strong></div>
+          <div className="resumo-linha"><span className="muted">Valor</span><strong>{prefixoAPartir(servico)}{precoEscrito(servico.price, formatPreco)}</strong></div>
           <div className="resumo-linha"><span className="muted">Duração</span><span className="resumo-mini-dur">{labelDuracao(servico)}</span></div>
         </div>
       )}
@@ -584,7 +584,7 @@ export function AgendarConfirmar() {
             {sugestoes.map((x) => (
               <button key={x.id} type="button" className="card upsell-item" onClick={() => adicionar(x.id)}>
                 <span className="upsell-foto" aria-hidden="true">{x.images?.[0] ? <img src={x.images[0]} alt="" /> : <Sparkles size={18} />}</span>
-                <span className="upsell-texto"><strong>{x.name}</strong><span className="muted">+{formatDuracao(x.duration_minutes)} · {prefixoAPartir(x)}{formatPreco(x.price)}</span></span>
+                <span className="upsell-texto"><strong>{x.name}</strong><span className="muted">+{formatDuracao(x.duration_minutes)} · {prefixoAPartir(x)}{precoEscrito(x.price, formatPreco)}</span></span>
                 <span className="upsell-mais"><Plus size={16} /> Adicionar</span>
               </button>
             ))}

@@ -4,7 +4,7 @@ import ClienteShell from '../../components/ClienteShell'
 import { supabase } from '../../lib/supabase'
 import { StarIcon } from '../../components/icons'
 import { formatPreco, labelDuracao } from '../../lib/format'
-import { prefixoAPartir } from '../../../packages/core/salao.js'
+import { precoEscrito, prefixoAPartir } from '../../../packages/core/salao.js'
 import { iniciais } from '../../lib/booking'
 import { Sparkles, Star, User } from 'lucide-react'
 import { useCategorias, agruparPorCategoria } from '../../lib/categorias'
@@ -102,7 +102,7 @@ export default function ClienteProfissional() {
               </span>
               <span className="cliente-info">
                 <span className="cliente-nome"><span className="nome-txt">{s.name}</span></span>
-                <span className="muted cliente-meta">{prefixoAPartir(s)}{formatPreco(s.price)} · {labelDuracao(s)}</span>
+                <span className="muted cliente-meta">{prefixoAPartir(s)}{precoEscrito(s.price, formatPreco)} · {labelDuracao(s)}</span>
                 <Link to={`/cliente/servico/${s.id}?prof=${prof.id}&de=perfil:${prof.id}`} className="servico-linha-detalhes">ver detalhes</Link>
               </span>
               <Link to={`/cliente/agendamento/data?prof=${prof.id}&servico=${s.id}&de=perfil:${prof.id}`} className="link-ver servico-linha-agendar" aria-label={`Agendar ${s.name}`}>Agendar</Link>

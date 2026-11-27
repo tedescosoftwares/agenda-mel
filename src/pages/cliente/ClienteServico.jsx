@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import ClienteShell from '../../components/ClienteShell'
 import { supabase } from '../../lib/supabase'
 import { formatPreco, labelDuracao, formatDuracao } from '../../lib/format'
-import { prefixoAPartir, AVISO_A_PARTIR } from '../../../packages/core/salao.js'
+import { precoEscrito, prefixoAPartir, AVISO_A_PARTIR } from '../../../packages/core/salao.js'
 import { iniciais } from '../../lib/booking'
 import { useCategorias, nomeDaCategoria } from '../../lib/categorias'
 import { Sparkles, Clock, Tag, Users, Plus, Check, ChevronRight, BadgePercent, X, Zap } from 'lucide-react'
@@ -140,10 +140,11 @@ export default function ClienteServico() {
         <div className="svc-preco">
           {precoPor != null ? (
             <><strong>{s.a_partir ? <span className="muted svc-a-partir">a partir de </span> : null}{formatPreco(precoPor)}</strong><s className="muted">{formatPreco(s.price)}</s><span className="svc-promo-nome">{desconto.titulo}</span></>
-          ) : <strong>{s.a_partir ? <span className="muted svc-a-partir">a partir de </span> : null}{formatPreco(s.price)}</strong>}
+          ) : <strong>{s.a_partir && Number(s.price) > 0 ? <span className="muted svc-a-partir">a partir de </span> : null}{precoEscrito(s.price, formatPreco)}</strong>}
           <span className="muted svc-dur"><Clock size={14} /> {labelDuracao(s)}</span>
         </div>
-        {s.a_partir && <p className="muted svc-a-partir-aviso">{AVISO_A_PARTIR}</p>}
+        {s.a_partir && Number(s.price) > 0 && <p className="muted svc-a-partir-aviso">{AVISO_A_PARTIR}</p>}
+        {!(Number(s.price) > 0) && <p className="muted svc-a-partir-aviso">O valor é combinado com o salão no atendimento.</p>}
       </div>
 
       {s.description && <div className="card svc-bloco"><Tag size={16} /><p>{s.description}</p></div>}
@@ -172,7 +173,7 @@ export default function ClienteServico() {
             {juntos.map((x) => (
               <Link key={x.id} to={`/cliente/servico/${x.id}?${comOrigem({ ...(prof ? { prof } : {}), sel: escolha.join(',') })}`} className="card servico-linha">
                 <span className="servico-linha-foto" aria-hidden="true">{x.images?.[0] ? <img src={x.images[0]} alt="" /> : <Sparkles />}</span>
-                <span className="cliente-info"><span className="cliente-nome"><span className="nome-txt">{x.name}</span></span><span className="muted cliente-meta">{prefixoAPartir(x)}{formatPreco(x.price)} · {formatDuracao(x.duration_minutes)}</span></span>
+                <span className="cliente-info"><span className="cliente-nome"><span className="nome-txt">{x.name}</span></span><span className="muted cliente-meta">{prefixoAPartir(x)}{precoEscrito(x.price, formatPreco)} · {formatDuracao(x.duration_minutes)}</span></span>
                 <ChevronRight size={18} className="agdt-seta" />
               </Link>
             ))}

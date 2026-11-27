@@ -7,7 +7,7 @@ import { formatPreco, formatDuracao } from '../../lib/format'
 import { agruparPorCategoria } from '../../lib/categorias'
 import { temPino, linksDeRota } from '../../lib/geo'
 import { MODOS, textoSinal, POLITICAS } from '../../lib/pagamento'
-import { situacaoAgora, precoDoServico, duracaoDoServico, quemFaz, menorPrecoDaCasa, horaCurta, primeiroNome } from '../../../packages/core/salao.js'
+import { precoEscrito, situacaoAgora, precoDoServico, duracaoDoServico, quemFaz, menorPrecoDaCasa, horaCurta, primeiroNome } from '../../../packages/core/salao.js'
 import '../../salao-pagina.css'
 
 // A página do salão (3.79), a mesma para quem visita (o endereço nome.mimo.com.vc, sem conta) e para a cliente
@@ -180,7 +180,7 @@ export default function PaginaSalao({ pg, cats, modo = 'cliente', onAgendar, onC
                     <button key={sv.id} type="button" className="sal-dest" onClick={() => onAgendar?.({ servico: sv })} disabled={fechado}>
                       <span className="sal-dest-foto">{capa ? <img src={capa} alt="" loading="lazy" /> : <Sparkles size={26} />}{d && <i>-{d}%</i>}</span>
                       <strong>{sv.name}</strong>
-                      <span className="sal-dest-meta">{pr.aPartir && 'a partir de '}<b>{formatPreco(pr.valor)}</b> · {formatDuracao(duracaoDoServico(sv))}</span>
+                      <span className="sal-dest-meta">{pr.aPartir && pr.valor > 0 && 'a partir de '}<b>{precoEscrito(pr.valor, formatPreco)}</b> · {formatDuracao(duracaoDoServico(sv))}</span>
                     </button>
                   )
                 })}
@@ -228,8 +228,8 @@ export default function PaginaSalao({ pg, cats, modo = 'cliente', onAgendar, onC
                             </span>
                             <span className="sal-item-preco">
                               {d && <i>-{d}%</i>}
-                              {pr.aPartir && <small>a partir de</small>}
-                              <b>{formatPreco(pr.valor)}</b>
+                              {pr.aPartir && pr.valor > 0 && <small>a partir de</small>}
+                              <b>{precoEscrito(pr.valor, formatPreco)}</b>
                               <span className="sal-item-ir">Agendar <ChevronRight size={14} /></span>
                             </span>
                           </button>

@@ -76,5 +76,8 @@ export function menorPrecoDaCasa(servicos) {
 // 3.80: o preço "a partir de" (o salão marca no cadastro do serviço: varia pelo tipo e tamanho do cabelo, volume…).
 // Num pedido com vários serviços (`lista`), basta um ser "a partir de" para o total também ser.
 export const ehAPartir = (sv) => Boolean(sv?.a_partir) || (Array.isArray(sv?.lista) && sv.lista.some((x) => x?.a_partir))
-export const prefixoAPartir = (sv) => (ehAPartir(sv) ? 'a partir de ' : '')
+// 4.48: serviço sem preço não é "a partir de R$ 0,00": a cliente lê "a combinar", sem prefixo
+const semPreco = (sv) => sv != null && !Array.isArray(sv?.lista) && sv.price != null && !(Number(sv.price) > 0)
+export const prefixoAPartir = (sv) => (ehAPartir(sv) && !semPreco(sv) ? 'a partir de ' : '')
+export const precoEscrito = (valor, formatar) => (Number(valor) > 0 ? formatar(valor) : 'a combinar')
 export const AVISO_A_PARTIR = 'O valor final pode variar com o tipo, o tamanho e o volume do cabelo e é confirmado no salão.'

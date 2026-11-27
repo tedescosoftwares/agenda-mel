@@ -56,8 +56,17 @@ export default function VitrineDoSalao({ r }) {
 
   // para onde cada ação leva, já dentro do app da cliente
   function destinoDe(alvo) {
-    if (alvo.servico) return `/cliente/servico/${alvo.servico.id}?${new URLSearchParams({ ...(alvo.prof ?? foco ? { prof: alvo.prof ?? foco, firme: '1' } : (alvo.servico.quem ?? []).length === 1 ? { prof: alvo.servico.quem[0].id } : {}), de: `salao:${salaoId}` })}`
-    if (alvo.promo?.service_id) return `/cliente/servico/${alvo.promo.service_id}?${new URLSearchParams({ ...(alvo.promo.professional_id ? { prof: alvo.promo.professional_id, firme: '1' } : {}), de: `salao:${salaoId}` })}`
+    // 4.48: serviço e profissional já decididos (ela tocou no serviço na página da profissional, só uma faz, ou a
+    // promoção é de uma só): vai direto escolher o dia. Antes caía na página do serviço e escolhia a profissional de novo.
+    const direto = (servico, prof) => `/cliente/agendamento/data?${new URLSearchParams({ prof, servico, firme: '1', de: `salao:${salaoId}` })}`
+    if (alvo.servico) {
+      const quem = alvo.servico.quem ?? []
+      const dela = alvo.prof ?? foco
+      if (dela && (!quem.length || quem.some((x) => x.id === dela))) return direto(alvo.servico.id, dela)
+      if (quem.length === 1) return direto(alvo.servico.id, quem[0].id)
+      return `/cliente/servico/${alvo.servico.id}?${new URLSearchParams({ de: `salao:${salaoId}` })}`
+    }
+    if (alvo.promo?.service_id) return alvo.promo.professional_id ? direto(alvo.promo.service_id, alvo.promo.professional_id) : `/cliente/servico/${alvo.promo.service_id}?${new URLSearchParams({ de: `salao:${salaoId}` })}`
     return `/cliente/salao/${salaoId}`
   }
   async function agir(alvo) {

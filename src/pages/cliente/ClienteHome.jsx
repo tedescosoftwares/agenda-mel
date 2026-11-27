@@ -12,7 +12,7 @@ import { formatPreco, formatDuracao } from '../../lib/format'
 import { Sparkles, Store, MapPin, ChevronRight, Star, Wallet } from 'lucide-react'
 import { MODOS } from '../../lib/pagamento'
 import { tomarDepois } from '../../lib/convite'
-import { prefixoAPartir } from '../../../packages/core/salao.js'
+import { precoEscrito, prefixoAPartir } from '../../../packages/core/salao.js'
 
 // Início da cliente (tela 03 do painel): saudação, busca, a fileira de
 // profissionais, e os serviços em destaque. É a vitrine — tudo aqui
@@ -218,7 +218,7 @@ export default function ClienteHome() {
               {servico.images?.[0] ? <img src={servico.images[0]} alt="" loading="lazy" /> : <span className="vitrine-brilho" aria-hidden="true"><Sparkles size={44} /></span>}
               <span className="vitrine-selo"><Star size={11} /> Destaque</span>
               <span className="vitrine-veu">
-                <span className="vitrine-preco">{prefixoAPartir(servico)}{descontos[servico.id] ? <><s>{formatPreco(servico.price)}</s> {formatPreco(descontos[servico.id].preco_com_desconto_cents / 100)}</> : formatPreco(servico.price)}</span>
+                <span className="vitrine-preco">{prefixoAPartir(servico)}{descontos[servico.id] ? <><s>{formatPreco(servico.price)}</s> {formatPreco(descontos[servico.id].preco_com_desconto_cents / 100)}</> : precoEscrito(servico.price, formatPreco)}</span>
                 <strong>{servico.name}</strong>
                 <span>{formatDuracao(servico.duration_minutes)}{quem.length > 1 ? ` · ${quem.length} profissionais` : quem.length === 1 ? ` · com ${quem[0].name.split(' ')[0]}` : ''}</span>
                 {salao && (agendas ?? []).length > 1 && <small>{salao}</small>}

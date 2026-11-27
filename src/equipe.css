@@ -199,3 +199,6 @@ body.com-gaveta { overflow: hidden; }
 .eq-plano-add { flex: none; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; min-height: 46px; white-space: nowrap; }
 .eq-plano > .eq-plano-add:only-child { width: 100%; }
 @media (max-width: 640px) { .eq-plano { flex-direction: column; align-items: stretch; } .eq-plano-add { width: 100%; } }
+/* 4.36: "Passo 1 de 3" no rodapé da gaveta ao cadastrar uma profissional nova */
+.gv-rodape-passo { color: #766b7c; font-size: 0.8rem; white-space: nowrap; }
+@media (max-width: 640px) { .gv-rodape-passo { order: -1; flex: 1 0 100%; text-align: center; } }

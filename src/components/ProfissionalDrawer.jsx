@@ -376,9 +376,15 @@ export default function ProfissionalDrawer({ salao, profissional = null, servico
         {!(aba === 7 && salva) && (
           <footer className="gv-rodape">
             {pos > 0 ? <button type="button" className="btn btn-ghost" onClick={() => ir(anterior)} disabled={salvando}><ArrowLeft size={16} /> Voltar</button> : <span />}
+            {/* 4.36: cadastrando uma nova, o botão forte é o do passo seguinte; "Salvar" só aparece no último passo */}
+            {!editando && !salva && aba !== 7 && <small className="gv-rodape-passo">Passo {pos + 1} de {abas.filter((x) => x.id !== 7).length}</small>}
             <span className="gv-rodape-acoes">
-              {aba !== 7 && temProxima && <button type="button" className="btn btn-ghost" onClick={() => ir(proxima)} disabled={salvando}>Continuar <ArrowRight size={16} /></button>}
-              <button type="button" className="btn btn-primary" onClick={salvar} disabled={salvando}>{salvando ? 'Salvando…' : dona ? 'Salvar minha agenda' : editando ? 'Salvar alterações' : 'Salvar profissional'}</button>
+              {!editando && !salva && aba !== 7 && temProxima && proxima !== 7
+                ? <button type="button" className="btn btn-primary" onClick={() => ir(proxima)} disabled={salvando}>Continuar: {abas[pos + 1]?.rotulo} <ArrowRight size={16} /></button>
+                : <>
+                    {aba !== 7 && temProxima && proxima !== 7 && <button type="button" className="btn btn-ghost" onClick={() => ir(proxima)} disabled={salvando}>Continuar <ArrowRight size={16} /></button>}
+                    <button type="button" className="btn btn-primary" onClick={salvar} disabled={salvando}>{salvando ? 'Salvando…' : dona ? 'Salvar minha agenda' : editando ? 'Salvar alterações' : 'Salvar profissional'}</button>
+                  </>}
             </span>
           </footer>
         )}

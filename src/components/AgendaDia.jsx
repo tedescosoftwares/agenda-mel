@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import AdiantarModal from './AdiantarModal'
 import EncaixeModal from './EncaixeModal'
 import { formatarCents } from '../lib/indicacao'
+import { valorAoConcluir, informarValor, faltaValor, textoDoValor } from '../lib/acoesDoHorario'
 import { formatPreco, formatDuracao, toISODate } from '../lib/format'
 import { SITUACAO_EQUIPE } from '../lib/situacoes'
 
@@ -26,7 +27,7 @@ export default function AgendaDia({
   onDiaMudou = null,
   recarga = 0,
 }) {
-  const { confirmar } = useDialogo()
+  const { confirmar, pedirValor } = useDialogo()
   const dias = useMemo(() => {
     const base = diaInicial ? new Date(diaInicial + 'T12:00:00') : new Date()
     return Array.from({ length: 7 }, (_, i) => {
@@ -96,14 +97,20 @@ export default function AgendaDia({
   }, [professionalId])
 
   // Ao concluir, se a cliente tem crédito de indicação, oferece o abatimento
-  async function concluir(appt) {
+  async function concluir(appt0) {
+    // 4.43: serviço a combinar (ou "a partir de"): pergunta quanto ficou antes de concluir; dá para informar depois
+    let appt = appt0
+    const v = await valorAoConcluir(appt, pedirValor)
+    if (!v.ok) { if (v.erro) setError(v.erro); return }
+    if (v.cents != null) appt = { ...appt, price_cents: v.cents }
+    if (v.cortesia) { mudarStatus(appt, 'concluido'); return }
     setMudandoId(appt.id)
     const { data: saldo } = await supabase.rpc('saldo_creditos', {
       cliente: appt.client_id,
     })
 
     if (saldo > 0) {
-      const precoCents = Math.round(Number(appt.services?.price ?? 0) * 100)
+      const precoCents = appt.price_cents != null ? Number(appt.price_cents) : Math.round(Number(appt.services?.price ?? 0) * 100)
       const maximo = Math.min(saldo, precoCents || saldo)
       const usar = await confirmar({
         titulo: 'Ela tem crédito',
@@ -278,16 +285,17 @@ export default function AgendaDia({
                   </span>
                   <span className="appt-servico muted">
                     {a.service_name || a.services?.name}
-                    {a.price_cents != null
-                      ? ` · ${formatPreco(a.price_cents / 100)}`
-                      : a.services
-                        ? ` · ${formatPreco(a.services.price)}`
-                        : ''}
+                    {a.price_cents != null || a.services ? <> · <span className={faltaValor(a) ? 'ags-sem-valor' : undefined}>{textoDoValor(a, (c) => formatPreco(c / 100))}</span></> : ''}
                     {mostrarProfissional && a.professionals
                       ? ` · com ${a.professionals.name}`
                       : ''}
                   </span>
                   <div className="appt-btns">
+                    {faltaValor(a) && (
+                      <button className="btn-mini btn-mini-ok" disabled={mudandoId === a.id} onClick={async () => { const r = await informarValor(a, pedirValor); if (r.erro) setError(r.erro); else if (r.ok && !r.depois) fetchAgenda() }}>
+                        Informar o valor
+                      </button>
+                    )}
                     {a.status === 'pendente' && (
                       <>
                         <button

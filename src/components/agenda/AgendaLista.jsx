@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Plus, ChevronDown } from 'lucide-react'
 import { useDialogo } from '../../context/DialogoContext'
 import { formatPreco } from '../../lib/format'
-import { decidirPedido, atendendoAgora, fimDe } from '../../lib/acoesDoHorario'
+import { textoDoValor, faltaValor, decidirPedido, atendendoAgora, fimDe } from '../../lib/acoesDoHorario'
 import { isoHoje, somarDias, DIAS_CURTOS, hhmm, corDa, livresDoDia, primeiroNome, iniciais } from './agendaComum'
 import RemarcarHorario from './RemarcarHorario'
 import FolhaDoHorario from './FolhaDoHorario'
@@ -12,7 +12,8 @@ import { SITUACAO_EQUIPE } from '../../lib/situacoes'
 // horários livres no meio da lista ("Livre até 12:00 · Ana · Encaixar") e, ao tocar num horário, as ações numa
 // folha que sobe. Os dados são os do quadro (pdv_dia).
 const ROTULO = { pendente: [SITUACAO_EQUIPE.pendente, 'pend'], confirmado: [SITUACAO_EQUIPE.confirmado, 'conf'], concluido: [SITUACAO_EQUIPE.concluido, 'ok'], faltou: [SITUACAO_EQUIPE.faltou, 'falta'], aguardando_pagamento: [SITUACAO_EQUIPE.aguardando_pagamento, 'pend'] }
-const valor = (a) => (a.price_cents != null ? formatPreco(a.price_cents / 100).replace(',00', '') : '')
+// 4.43: preço zero aparece como "a combinar" (ou "sem valor", depois de concluído), nunca como R$ 0
+const valor = (a) => (a.price_cents != null ? textoDoValor(a, (c) => formatPreco(c / 100).replace(',00', '')) : '')
 
 export default function AgendaLista({ dia, agenda, profs, filtro, onFiltro, jornada, bloqueios = null, semana = [], onTrocarDia, onEncaixar, onMudou }) {
   const { confirmar } = useDialogo()
@@ -123,7 +124,7 @@ export default function AgendaLista({ dia, agenda, profs, filtro, onFiltro, jorn
                   <span className="ags-li-hora">{a.start_time.slice(0, 5)}<small>{a.end_time.slice(0, 5)}</small></span>
                   <span className="ags-li-txt">
                     <b>{a.cliente}</b>
-                    <small>{a.servico}{valor(a) ? ` · ${valor(a)}` : ''}</small>
+                    <small>{a.servico}{valor(a) ? <> · <span className={faltaValor(a) ? 'ags-sem-valor' : undefined}>{valor(a)}</span></> : ''}</small>
                     <span className="ags-li-pe">{filtro ? null : chipProf(a.professional_id, a.profissional)}<span className={'ags-etq ' + (agoraSim ? 'agora' : cls)}>{agoraSim ? 'atendendo agora' : rot}</span></span>
                   </span>
                 </button>

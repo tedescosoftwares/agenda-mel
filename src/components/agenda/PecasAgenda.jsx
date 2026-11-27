@@ -15,12 +15,17 @@ export function ResumoAgenda({ itens, titulo, extra = null }) {
   const feitos = vivos.filter((a) => a.status === 'concluido').length
   const pend = vivos.filter((a) => a.status === 'pendente').length
   const faltas = vivos.filter((a) => a.status === 'faltou').length
+  // 4.43: o que ainda não tem valor fica fora da soma e aparece contado (a combinar antes, sem valor depois de concluído)
+  const semPreco = valendo.filter((a) => !(precoDe(a) > 0) && !a.comanda_id && !a.cortesia)
+  const aCombinar = semPreco.filter((a) => a.status !== 'concluido').length, semValor = semPreco.length - aCombinar
   return (
     <div className="ags-resumo" aria-label={titulo}>
       <span className="ags-resumo-titulo">{titulo}</span>
       <span className="ags-resumo-item"><b>{vivos.length}</b> {vivos.length === 1 ? 'horário' : 'horários'}</span>
       <span className="ags-resumo-item"><b>{reais(valendo.reduce((t, a) => t + precoDe(a), 0))}</b> previstos</span>
       <span className="ags-resumo-item ok"><b>{feitos}</b> {feitos === 1 ? 'concluído' : 'concluídos'}</span>
+      {aCombinar > 0 && <span className="ags-resumo-item"><b>{aCombinar}</b> a combinar</span>}
+      {semValor > 0 && <span className="ags-resumo-item pend" title="Concluídos sem valor informado: abra o horário e toque em Informar o valor"><b>{semValor}</b> sem valor</span>}
       {pend > 0 && <span className="ags-resumo-item pend"><b>{pend}</b> a confirmar</span>}
       {faltas > 0 && <span className="ags-resumo-item falta"><b>{faltas}</b> não {faltas === 1 ? 'veio' : 'vieram'}</span>}
       {extra && <span className="ags-resumo-extra">{extra}</span>}

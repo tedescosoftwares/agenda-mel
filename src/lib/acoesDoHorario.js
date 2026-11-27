@@ -11,6 +11,46 @@ const nome = (a) => a.cliente || a.profiles?.full_name || a.guest_name || 'A cli
 const hora = (a) => String(a.start_time ?? '').slice(0, 5)
 const precoCents = (a) => (a.price_cents != null ? Number(a.price_cents) : Math.round(Number(a.services?.price ?? 0) * 100))
 const desistiu = { ok: false }
+
+// 4.43 (migração 275): serviço "a combinar". Sem valor = preço zero e sem comanda fechada; "falta valor" é o concluído
+// assim que não foi marcado como cortesia. O texto troca o "R$ 0,00" por "a combinar" (ou "cortesia", ou "sem valor").
+export const temValor = (a) => precoCents(a) > 0 || Boolean(a.comanda_id)
+export const faltaValor = (a) => a.status === 'concluido' && !temValor(a) && !a.cortesia
+export const textoDoValor = (a, formatar = formatarCents) => (precoCents(a) > 0 ? formatar(precoCents(a)) : a.cortesia ? 'cortesia' : a.status === 'concluido' ? 'sem valor' : 'a combinar')
+const SEM_275 = 'Para informar o valor, o banco precisa da atualização 275 (opção B do .bat).'
+const semFuncao = (e) => e?.code === 'PGRST202' || /schema cache|could not find the function/i.test(e?.message ?? '')
+
+// o serviço varia ("a partir de")? vem na linha quando a tela já trouxe; senão, uma consulta curta
+async function variaComOCabelo(a) {
+  if (a.a_partir != null) return Boolean(a.a_partir)
+  if (a.services?.a_partir != null) return Boolean(a.services.a_partir)
+  const sid = a.service_id ?? a.itens?.[0]?.service_id
+  if (!sid) return false
+  try { const { data } = await supabase.from('services').select('a_partir').eq('id', sid).maybeSingle(); return Boolean(data?.a_partir) } catch { return false }
+}
+
+// pergunta "quanto ficou?" e grava. Devolve { ok, erro } como as outras; { ok: true, depois: true } quando ficou para depois.
+export async function informarValor(a, pedirValor, { concluindo = false } = {}) {
+  if (!pedirValor) return { ok: true, depois: true }
+  const preco = precoCents(a), nomeServico = a.servico || a.service_name || a.services?.name || 'Esse serviço'
+  const r = await pedirValor({
+    titulo: concluindo ? 'Quanto ficou?' : 'Informar o valor',
+    texto: preco > 0 ? `${nomeServico} é a partir de ${formatarCents(preco)}. Confirme ou acerte o valor cobrado de ${nome(a)}.` : `${nomeServico} está como "a combinar". Qual foi o valor cobrado de ${nome(a)}?`,
+    sugestaoCents: preco, minimoCents: Number(a.pago_cents ?? 0), ok: concluindo ? 'Concluir' : 'Salvar', semDepois: !concluindo,
+  })
+  if (!r) return desistiu
+  if (r.depois) return { ok: true, depois: true }
+  if (r.cents === preco && !a.cortesia) return { ok: true, cents: preco }
+  const { error } = await supabase.rpc('informar_valor', r.cortesia ? { appt: a.id, cortesia_: true } : { appt: a.id, valor_cents: r.cents })
+  if (error) return { ok: false, erro: semFuncao(error) ? SEM_275 : error.message }
+  return { ok: true, cents: r.cortesia ? 0 : r.cents, cortesia: Boolean(r.cortesia) }
+}
+// antes de concluir: só pergunta quando o serviço é a combinar ou "a partir de" (e ainda não foi fechado no caixa)
+export async function valorAoConcluir(a, pedirValor) {
+  if (!pedirValor || a.comanda_id || a.cortesia) return { ok: true }
+  if (precoCents(a) > 0 && !(await variaComOCabelo(a))) return { ok: true }
+  return informarValor(a, pedirValor, { concluindo: true })
+}
 const falhou = (e) => ({ ok: false, erro: e?.message ?? String(e) })
 
 // o horário marcado, no fuso do aparelho (dia + start_time, sem Z)
@@ -23,9 +63,13 @@ export const passouDaTolerancia = (a, dia, toleranciaMin = 15, agora = Date.now(
 export const atendendoAgora = (a, dia, agora = Date.now()) => a.status === 'confirmado' && agora >= inicioDe(a, dia) && agora < fimDe(a, dia)
 export const ativo = (a) => a.status === 'pendente' || a.status === 'confirmado'
 
-export async function concluirHorario(a, confirmar) {
+export async function concluirHorario(a0, confirmar, pedirValor) {
   try {
-    if (a.client_id) {
+    let a = a0
+    const v = await valorAoConcluir(a, pedirValor)
+    if (!v.ok) return v
+    if (v.cents != null) a = { ...a, price_cents: v.cents }
+    if (a.client_id && !v.cortesia) {
       const { data: saldo } = await supabase.rpc('saldo_creditos', { cliente: a.client_id })
       if (Number(saldo) > 0) {
         const preco = precoCents(a)

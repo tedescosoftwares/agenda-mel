@@ -82,6 +82,7 @@ export default function AdminAgenda() {
   const catsTodas = useCategorias()
   const cats = useMemo(() => categoriasDoSalao(catsTodas, salao?.id), [catsTodas, salao?.id])
   const [doDia, setDoDia] = useState(null)        // pdv_dia
+  const [cortesias, setCortesias] = useState(() => new Set()) // 4.43: os R$ 0 de propósito
   const [contagem, setContagem] = useState([])    // pdv_dias: quantos por dia
   const [daSemana, setDaSemana] = useState(null)  // os horários da semana (Semana e Profissional)
   const [erro, setErro] = useState('')
@@ -136,12 +137,16 @@ export default function AdminAgenda() {
   const carregarDia = useCallback(async () => {
     if (!salao?.id) return
     const seg = segundaDe(dia)
-    const [d, c] = await Promise.all([
+    const [d, c, cort] = await Promise.all([
       supabase.rpc('pdv_dia', { salao: salao.id, dia }),
       supabase.rpc('pdv_dias', { salao: salao.id, de: somarDias(seg, -7), ate: somarDias(seg, 20) }),
+      // 4.43 (migração 275): as cortesias da semana (R$ 0 de propósito não é "sem valor"); num banco sem a 275, nenhuma
+      supabase.from('appointments').select('id').eq('salon_id', salao.id).gte('date', seg).lte('date', somarDias(seg, 6)).eq('cortesia', true),
     ])
+    const cortesias = new Set((cort.error ? [] : cort.data ?? []).map((x) => x.id))
+    setCortesias(cortesias)
     if (d.error) setErro('Não deu para abrir a agenda: ' + d.error.message)
-    else { setErro(''); setDoDia(d.data) }
+    else { setErro(''); setDoDia(cortesias.size ? { ...d.data, agenda: (d.data?.agenda ?? []).map((a) => (cortesias.has(a.id) ? { ...a, cortesia: true } : a)) } : d.data) }
     setContagem(c.data ?? [])
   }, [salao?.id, dia])
   useEffect(() => { carregarDia() }, [carregarDia, recarga])
@@ -167,10 +172,10 @@ export default function AdminAgenda() {
   const diasDaSemana = useMemo(() => semanaDe(dia), [dia])
   // a semana no formato da pdv_dia (a folha lê cliente, servico, profissional e telefone)
   const itensSemana = useMemo(() => (daSemana ?? []).map((a) => ({
-    ...a, cliente: a.profiles?.full_name || a.guest_name || 'Cliente', servico: a.service_name || a.services?.name || '',
+    ...a, cortesia: cortesias.has(a.id), cliente: a.profiles?.full_name || a.guest_name || 'Cliente', servico: a.service_name || a.services?.name || '',
     profissional: lista.find((p) => p.id === a.professional_id)?.name ?? '', telefone: a.profiles?.phone || a.guest_phone || null,
     price_cents: a.price_cents ?? (a.services?.price != null ? Math.round(Number(a.services.price) * 100) : null),
-  })), [daSemana, lista])
+  })), [daSemana, lista, cortesias])
   // a aba Profissional: a escolhida (ou a primeira), a jornada e os bloqueios dela em cada dia
   const profDela = vista === 'prof' ? (lista.find((p) => p.id === profSel) ?? lista[0] ?? null) : null
   const sombrasDela = useMemo(() => (profDela ? Object.fromEntries(diasDaSemana.map((d) => [d, { jornada: jornadaDoDia(horasProf, d)[profDela.id] ?? null, blocos: bloqueiosDoDia(blocos, d)[profDela.id] ?? [] }])) : null), [profDela, diasDaSemana, horasProf, blocos])

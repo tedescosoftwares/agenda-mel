@@ -5,7 +5,9 @@ import { useDialogo } from '../context/DialogoContext'
 import { formatDataLonga } from '../lib/booking'
 import { toISODate } from '../lib/format'
 import FichaCliente from './FichaCliente'
-import { Check, UserX, CalendarClock, Hourglass, Repeat } from 'lucide-react'
+import { Check, UserX, CalendarClock, Hourglass, Repeat, CircleDollarSign } from 'lucide-react'
+import { useAuth } from '../context/AuthContext'
+import { valorAoConcluir, informarValor } from '../lib/acoesDoHorario'
 import { iniciais } from '../lib/booking'
 
 // Fechar o dia (077): o que terminou e espera baixa, um toque por
@@ -14,7 +16,21 @@ import { iniciais } from '../lib/booking'
 // hora e move o horário sem contar duas vezes. O que concluiu sozinho
 // nos últimos 3 dias aparece embaixo, para corrigir.
 export default function FecharDia({ admin = false }) {
-  const { confirmar } = useDialogo()
+  const { confirmar, pedirValor } = useDialogo()
+  const { salao } = useAuth()
+  // 4.43 (migração 275): os concluídos sem valor (serviço a combinar que ficou para depois, ou concluiu sozinho)
+  const [semValor, setSemValor] = useState([])
+  const lerSemValor = useCallback(async () => {
+    if (!admin || !salao?.id) return
+    const { data, error } = await supabase.rpc('atendimentos_sem_valor', { salao: salao.id })
+    setSemValor(error || !Array.isArray(data) ? [] : data)
+  }, [admin, salao?.id])
+  useEffect(() => { const t = setTimeout(lerSemValor, 0); return () => clearTimeout(t) }, [lerSemValor])
+  async function acertarValor(x) {
+    const r = await informarValor({ ...x, status: 'concluido', price_cents: 0 }, pedirValor)
+    if (r.erro) setErro(r.erro)
+    else if (r.ok && !r.depois) lerSemValor()
+  }
   const [lista, setLista] = useState(null)
   const [erro, setErro] = useState('')
   const [mexendo, setMexendo] = useState('')
@@ -41,11 +57,19 @@ export default function FecharDia({ admin = false }) {
       })
       if (!ok) return
     }
+    if (resultado === 'veio') {
+      // serviço a combinar (ou "a partir de"): pergunta quanto ficou antes da baixa; dá para informar depois
+      const { data: linha } = await supabase.from('appointments').select('*').eq('id', p.appointment_id).maybeSingle()
+      if (linha) {
+        const v = await valorAoConcluir({ ...linha, cliente: p.cliente, servico: p.servico }, pedirValor)
+        if (!v.ok) { if (v.erro) setErro(v.erro); return }
+      }
+    }
     setMexendo(p.appointment_id); setErro('')
     const { error } = await supabase.rpc('dar_baixa', { appt: p.appointment_id, resultado })
     setMexendo('')
     if (error) { setErro(error.message); return }
-    carregar()
+    carregar(); lerSemValor()
   }
 
   async function remarcar() {
@@ -67,6 +91,24 @@ export default function FecharDia({ admin = false }) {
   return (
     <div className="fechar">
       {erro && <div className="alert alert-error">{erro}</div>}
+      {semValor.length > 0 && (
+        <section className="fechar-dia fechar-sem-valor">
+          <div className="fechar-dia-cab"><h3>Concluídos sem valor</h3><span className="fechar-dia-n">{semValor.length} {semValor.length === 1 ? 'atendimento' : 'atendimentos'}</span></div>
+          <p className="muted fechar-sem-valor-sub">O serviço estava como "a combinar" e o valor ficou para depois. Enquanto não informar, eles contam R$ 0 no faturamento e no repasse.</p>
+          {semValor.map((x) => (
+            <div key={x.id} className="card fechar-item fechar-sv">
+              <div className="fechar-cab">
+                <span className="fechar-avatar">{iniciais(x.cliente)}</span>
+                <div className="fechar-quem">
+                  <strong>{x.cliente}</strong>
+                  <span className="muted">{x.servico} · {new Date(x.date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}, {String(x.start_time).slice(0, 5)}{x.profissional ? ` · ${x.profissional}` : ''}</span>
+                </div>
+                <button type="button" className="btn btn-primary btn-sm" onClick={() => acertarValor(x)}><CircleDollarSign size={15} /> Informar o valor</button>
+              </div>
+            </div>
+          ))}
+        </section>
+      )}
       {esperando.length === 0 ? (
         <div className="card empty-state">
           <p>Nada esperando baixa.</p>

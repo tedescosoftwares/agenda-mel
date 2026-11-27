@@ -65,23 +65,38 @@ export function Anel({ pct = 0, children, tamanho = 58 }) {
 }
 
 // barras do mês: um retângulo por dia com movimento; a maior fica em destaque
-export function Barras({ pontos = [], altura = 120 }) {
+export function Barras({ pontos = [], altura = 120, diasNoMes = 0, hoje = 0, atendimentos = 0 }) {
   if (!pontos.length) return null
-  const max = Math.max(...pontos.map((p) => Number(p.y) || 0), 1)
-  const n = pontos.length, larg = 100 / n
-  const iMax = pontos.findIndex((p) => (Number(p.y) || 0) === max)
+  // 4.43: o mês inteiro no eixo (dia sem movimento vira um ponto na linha), para o salão de pouco movimento não parecer
+  // um gráfico quebrado; com poucos dias, cada barra mostra o seu valor; e embaixo, o resumo em palavras
+  const valorDe = new Map(pontos.map((p) => [Number(p.x), Number(p.y) || 0]))
+  const serie = diasNoMes ? Array.from({ length: diasNoMes }, (_, k) => ({ x: String(k + 1).padStart(2, '0'), y: valorDe.get(k + 1) ?? 0, futuro: hoje > 0 && k + 1 > hoje })) : pontos.map((p) => ({ x: p.x, y: Number(p.y) || 0 }))
+  const max = Math.max(...serie.map((p) => p.y), 1)
+  const n = serie.length, larg = 100 / n
+  const iMax = serie.findIndex((p) => p.y === max)
+  const ativos = serie.filter((p) => p.y > 0)
+  const todos = ativos.length <= 5
   const passo = Math.ceil(n / 6)
+  const total = ativos.reduce((s, p) => s + p.y, 0)
+  const rs = (v) => 'R$ ' + Math.round(v).toLocaleString('pt-BR')
   return (
     <div className="hd-barras" style={{ '--hd-barras-alt': `${altura}px` }} role="img" aria-label="Faturamento por dia do mês">
       <div className="hd-barras-area">
-        {pontos.map((p, i) => (
-          <span key={i} className={'hd-barra' + (i === iMax ? ' maior' : '')} style={{ width: `${larg}%`, '--h': `${Math.max(4, ((Number(p.y) || 0) / max) * 100)}%`, '--i': i }}>
-            {i === iMax && <em>R$ {Math.round(max).toLocaleString('pt-BR')}</em>}
+        {serie.map((p, i) => (
+          <span key={i} className={'hd-barra' + (i === iMax ? ' maior' : '') + (p.y > 0 ? '' : ' zero') + (p.futuro ? ' futuro' : '') + (i === hoje - 1 ? ' hoje' : '')} style={{ width: `${larg}%`, '--h': `${p.y > 0 ? Math.max(6, (p.y / max) * 100) : 0}%`, '--i': i }}>
+            {p.y > 0 && (todos || i === iMax) && <em>{rs(p.y)}</em>}
             <i />
           </span>
         ))}
       </div>
-      <div className="hd-barras-eixo">{pontos.map((p, i) => <span key={i} style={{ width: `${larg}%` }}>{i % passo === 0 || i === n - 1 ? p.x : ''}</span>)}</div>
+      <div className="hd-barras-eixo">{serie.map((p, i) => <span key={i} style={{ width: `${larg}%` }} className={p.y > 0 && todos ? 'com' : ''}>{(todos ? p.y > 0 : i % passo === 0 || i === n - 1) || (todos && (i === 0 || i === n - 1)) ? p.x : ''}</span>)}</div>
+      {diasNoMes > 0 && (
+        <div className="hd-barras-resumo">
+          <span><b>{ativos.length}</b> {ativos.length === 1 ? 'dia com movimento' : 'dias com movimento'}</span>
+          <span>Melhor dia: <b>{serie[iMax]?.x}</b>, {rs(max)}</span>
+          {atendimentos > 0 && <span>Média por atendimento: <b>{rs(total / atendimentos)}</b></span>}
+        </div>
+      )}
     </div>
   )
 }

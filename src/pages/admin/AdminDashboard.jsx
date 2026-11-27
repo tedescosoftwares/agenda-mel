@@ -22,6 +22,7 @@ export default function AdminDashboard() {
   const [naFila, setNaFila] = useState(0)
   const [linhas, setLinhas] = useState([])
   const [porDia, setPorDia] = useState([])
+  const [pagosMes, setPagosMes] = useState(0)
   const [primeiros, setPrimeiros] = useState(null)
   const [cobertura, setCobertura] = useState(null)   // quem atende o quê, por categoria (2.94)
   const [homeCarregada, setHomeCarregada] = useState(false)
@@ -54,6 +55,7 @@ export default function AdminDashboard() {
     const soma = {}
     for (const a of mesAg.data ?? []) soma[a.date] = (soma[a.date] ?? 0) + (a.price_cents ?? 0)
     setPorDia(Object.entries(soma).sort().map(([k, v]) => ({ x: k.slice(8, 10), y: v / 100 })))
+    setPagosMes((mesAg.data ?? []).filter((a) => (a.price_cents ?? 0) > 0).length) // 4.43: a média por atendimento sai da mesma leitura do gráfico
     setPrimeiros(pp.data ?? null)
     setCobertura(Array.isArray(cb.data) ? cb.data : [])
     setHomeCarregada(true)
@@ -121,7 +123,7 @@ export default function AdminDashboard() {
       <TutorialPainel primeiroAcesso={primeiroAcesso} />
       <HomeDoDia
         salao={salao} nomePessoa={nomePessoa} saudacao={saudacao} logoSalao={logoSalao || capaSalao} iniciaisSalao={iniciaisSalao} salaoAtivo={salaoAtivo}
-        hoje={hoje} pendentes={pendentes} naFila={naFila} linhas={linhas} porDia={porDia} totalMes={totalMes} atendMes={atendMes} ocup={ocup} primeiros={primeiros}
+        hoje={hoje} pendentes={pendentes} naFila={naFila} linhas={linhas} porDia={porDia} pagosMes={pagosMes} totalMes={totalMes} atendMes={atendMes} ocup={ocup} primeiros={primeiros}
       />
     </AdminShell>
   )

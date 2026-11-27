@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { X, Receipt, Ban, Clock, UserRound, Sparkles, GripVertical, ChevronLeft, ChevronRight, Star, History, Plus, Heart, AlertTriangle, ZoomIn, ZoomOut, Hourglass, Check, UserX, CalendarClock, MessageCircle, RotateCcw } from 'lucide-react'
+import { X, Receipt, Ban, Clock, UserRound, Sparkles, GripVertical, ChevronLeft, ChevronRight, Star, History, Plus, Heart, AlertTriangle, ZoomIn, ZoomOut, Hourglass, Check, UserX, CalendarClock, MessageCircle, RotateCcw, CircleDollarSign } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useDialogo } from '../context/DialogoContext'
 import { formatCents } from '../lib/pagamento'
@@ -7,7 +7,7 @@ import { agruparPorCategoria, bate } from '../lib/categorias'
 import Avatar from './Avatar'
 import AvaliacoesDaProfissional from './AvaliacoesDaProfissional'
 import RemarcarHorario from './agenda/RemarcarHorario'
-import { concluirHorario, marcarFalta, perdoarFalta, jaComecou, passouDaTolerancia, zapDaCliente, moverNoBanco, pedeAviso } from '../lib/acoesDoHorario'
+import { informarValor, faltaValor, textoDoValor, concluirHorario, marcarFalta, perdoarFalta, jaComecou, passouDaTolerancia, zapDaCliente, moverNoBanco, pedeAviso } from '../lib/acoesDoHorario'
 
 // O quadro do dia (103): uma coluna por profissional, as horas descendo,
 // cada horário é um cartão que se arrasta para outra hora ou outra
@@ -41,7 +41,7 @@ const rotuloDia = (iso) => { const d = new Date(iso + 'T12:00:00'); const t = `$
 
 export default function QuadroDoDia({ dia, agenda, semana = [], onTrocarDia, profs, horas, servicos, cats, clientes, salaoId, onAbrirComanda, onMudou, modo = 'pdv', jornada = null, bloqueios = null, todasProfs = null }) {
   const ehAgenda = modo === 'agenda'
-  const { confirmar } = useDialogo()
+  const { confirmar, pedirValor } = useDialogo()
   const [agora, setAgora] = useState(() => new Date())
   useEffect(() => { const t = setInterval(() => setAgora(new Date()), 60000); return () => clearInterval(t) }, [])
   const [arrastando, setArrastando] = useState(null)      // id do cartão no ar
@@ -258,7 +258,7 @@ export default function QuadroDoDia({ dia, agenda, semana = [], onTrocarDia, pro
                     <span className="quadro-cartao-hora">{a.start_time.slice(0, 5)}–{a.end_time.slice(0, 5)}{a.status === 'pendente' && <em className="quadro-cartao-pendente">a confirmar</em>}</span>
                     <strong>{a.cliente}</strong>
                     {hv >= 54 && <span className="quadro-cartao-serv">{a.servico}</span>}
-                    {hv >= 72 && <span className="quadro-cartao-pe">{formatCents(a.price_cents ?? 0)}{a.pago_cents > 0 ? ` · sinal ${formatCents(a.pago_cents)}` : ''}{a.comanda_id ? ' · fechado' : ''}{a.avaliacao?.nota ? <em className="quadro-nota" title={a.avaliacao.comentario ?? 'Avaliação da cliente'}>{'★'.repeat(a.avaliacao.nota)}</em> : null}</span>}
+                    {hv >= 72 && <span className={'quadro-cartao-pe' + (faltaValor(a) ? ' sem-valor' : '')}>{textoDoValor(a, formatCents)}{a.pago_cents > 0 ? ` · sinal ${formatCents(a.pago_cents)}` : ''}{a.comanda_id ? ' · fechado' : ''}{a.avaliacao?.nota ? <em className="quadro-nota" title={a.avaliacao.comentario ?? 'Avaliação da cliente'}>{'★'.repeat(a.avaliacao.nota)}</em> : null}</span>}
                     {hv < 72 && a.avaliacao?.nota && <span className="quadro-marca nota" title={`Avaliou com ${a.avaliacao.nota} ${a.avaliacao.nota === 1 ? 'estrela' : 'estrelas'}`}>★ {a.avaliacao.nota}</span>}
                     {hv >= 84 && a.client_id && (
                       <span className="quadro-cartao-cliente">
@@ -288,7 +288,7 @@ export default function QuadroDoDia({ dia, agenda, semana = [], onTrocarDia, pro
             <span className={'badge badge-' + aberto.status}>{aberto.comanda_id ? 'comanda fechada' : aberto.status}</span>
             <h3>{aberto.cliente}</h3>
             <p className="muted"><Clock size={14} /> {aberto.start_time.slice(0, 5)} até {aberto.end_time.slice(0, 5)} · {aberto.profissional}</p>
-            <p className="muted"><Sparkles size={14} /> {aberto.servico} · {formatCents(aberto.price_cents ?? 0)}{aberto.pago_cents > 0 ? ` · sinal de ${formatCents(aberto.pago_cents)} pago pelo app` : ''}</p>
+            <p className="muted"><Sparkles size={14} /> {aberto.servico} · {textoDoValor(aberto, formatCents)}{aberto.pago_cents > 0 ? ` · sinal de ${formatCents(aberto.pago_cents)} pago pelo app` : ''}</p>
             {aberto.telefone && <p className="muted"><UserRound size={14} /> {aberto.telefone}</p>}
             {aberto.avaliacao?.nota && (
               <div className="quadro-avaliacao">
@@ -328,7 +328,8 @@ export default function QuadroDoDia({ dia, agenda, semana = [], onTrocarDia, pro
               // 4.0 (agenda): as ações num bloco só, e nada (nem a linha) quando não sobra ação (concluído com comanda)
               const vivo = (aberto.status === 'pendente' || aberto.status === 'confirmado') && !aberto.comanda_id
               const itens = [
-                aberto.status === 'confirmado' && jaComecou(aberto, dia) && <button key="c" type="button" className="btn btn-primary" disabled={ocupado} onClick={() => acao(() => concluirHorario(aberto, confirmar))}><Check size={15} /> Concluir</button>,
+                aberto.status === 'confirmado' && jaComecou(aberto, dia) && <button key="c" type="button" className="btn btn-primary" disabled={ocupado} onClick={() => acao(() => concluirHorario(aberto, confirmar, pedirValor))}><Check size={15} /> Concluir</button>,
+                faltaValor(aberto) && <button key="v" type="button" className="btn btn-primary" disabled={ocupado} onClick={() => acao(() => informarValor(aberto, pedirValor))}><CircleDollarSign size={15} /> Informar o valor</button>,
                 aberto.status === 'confirmado' && passouDaTolerancia(aberto, dia) && <button key="f" type="button" className="btn btn-ghost" disabled={ocupado} onClick={() => acao(() => marcarFalta(aberto, confirmar))}><UserX size={15} /> Não veio</button>,
                 aberto.status === 'faltou' && <button key="p" type="button" className="btn btn-ghost" disabled={ocupado} onClick={() => acao(() => perdoarFalta(aberto))}><RotateCcw size={15} /> Perdoar a falta</button>,
                 vivo && <button key="r" type="button" className="btn btn-ghost" onClick={() => { setRemarcando(aberto); setAberto(null) }}><CalendarClock size={15} /> Remarcar</button>,
@@ -481,7 +482,7 @@ export function LinhaDoTempo({ salaoId, clienteId, atualId }) {
                 <span className="muted">{x.profissional ? `com ${x.profissional.split(' ')[0]}` : ''}{x.status === 'faltou' ? ' · não veio' : x.status !== 'concluido' ? ` · ${x.status}` : ''}{formas ? ` · ${formas}` : ''}{x.avaliacao ? ' · ' : ''}{x.avaliacao ? <em className="lt-nota"><Star size={10} /> {x.avaliacao}</em> : null}</span>
                 {x.comentario && <q className="lt-comentario">{x.comentario}</q>}
               </span>
-              <span className="lt-valor">{x.status === 'concluido' ? formatCents(total) : ''}</span>
+              <span className="lt-valor">{x.status === 'concluido' ? (total > 0 ? formatCents(total) : x.cortesia ? 'cortesia' : 'sem valor') : ''}</span>
             </li>
           )
         })}

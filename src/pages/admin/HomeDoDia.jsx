@@ -20,7 +20,7 @@ const gravar = (k, v) => { try { localStorage.setItem(k, v) } catch { /* sem arm
 const maiuscula = (t) => t.charAt(0).toUpperCase() + t.slice(1)
 const hm = (t) => String(t ?? '').slice(0, 5)
 
-export default function HomeDoDia({ salao, nomePessoa, saudacao, logoSalao, iniciaisSalao, salaoAtivo, hoje, pendentes, naFila, linhas, porDia, totalMes, atendMes, ocup, primeiros }) {
+export default function HomeDoDia({ salao, nomePessoa, saudacao, logoSalao, iniciaisSalao, salaoAtivo, hoje, pendentes, naFila, linhas, porDia, pagosMes = 0, totalMes, atendMes, ocup, primeiros }) {
   const { acesso } = useAuth()
   const [oculto, setOculto] = useState(() => ler(CHAVE_OLHO) === '1')
   const [agenda, setAgenda] = useState(null)
@@ -175,7 +175,7 @@ export default function HomeDoDia({ salao, nomePessoa, saudacao, logoSalao, inic
               <span><h2>Movimento de {mes.toLowerCase()}</h2><small>Faturamento por dia, dos atendimentos concluídos</small></span>
               <ChevronRight size={20} />
             </Link>
-            {porDia.length ? (oculto ? <p className="hd-oculto">Valores escondidos. Toque no olho, lá em cima, para ver.</p> : <Barras pontos={porDia} />)
+            {porDia.length ? (oculto ? <p className="hd-oculto">Valores escondidos. Toque no olho, lá em cima, para ver.</p> : <Barras pontos={porDia} diasNoMes={new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()} hoje={new Date().getDate()} atendimentos={pagosMes} />)
               : <div className="hd-vazio"><BarChart3 size={22} /><strong>Os números começam aqui</strong><p>Quando os primeiros atendimentos forem concluídos, o movimento do mês aparece neste gráfico.</p></div>}
           </section>
 

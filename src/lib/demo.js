@@ -453,7 +453,7 @@ const RPC = {
   pdv_dia: ({ dia } = {}) => {
     const hoje = dia || mais(0)
     if (dia && dia !== mais(0)) return { dia, agenda: dia < mais(0) ? [{ id: 'apv-' + dia, start_time: '10:00:00', end_time: '11:00:00', status: 'concluido', client_id: 'c1', cliente: 'Juliana Silva', professional_id: 'pr1', profissional: 'Ana Oliveira', servico: 'Escova', price_cents: 6000, pago_cents: 0, itens: [], comanda_id: 'cmv', atendimentos: 4, faltas: 0 }] : [{ id: 'apf-' + dia, start_time: '14:00:00', end_time: '15:00:00', status: 'confirmado', client_id: 'c2', cliente: 'Carla Mendes', professional_id: 'pr2', profissional: 'Camila Rocha', servico: 'Corte feminino', price_cents: 8000, pago_cents: 0, itens: [], comanda_id: null, atendimentos: 2, faltas: 0 }], comandas: [], caixa: { total_cents: 0, por_forma: [], por_profissional: [] } }
-    const linhas = [['ap1', 'c1', 'pr1', 'sv2', '09:00:00', '10:30:00', 'concluido', 8500, 0], ['apx1', 'c2', 'pr2', 'sv7', '10:30:00', '11:15:00', 'confirmado', 6000, 3000], ['apx2', 'c3', 'pr1', 'sv1', '11:00:00', '11:45:00', 'confirmado', 3500, 0], ['apx3', 'c4', 'pr3', 'sv4', '14:00:00', '15:00:00', 'pendente', 6500, 0], ['apx4', 'c5', 'pr2', 'sv3', '15:30:00', '16:30:00', 'confirmado', 12000, 0], ['apx5', 'c2', 'pr4', 'sv1', '11:15:00', '12:00:00', 'confirmado', 3500, 0]]
+    const linhas = [['ap1', 'c1', 'pr1', 'sv2', '09:00:00', '10:30:00', 'concluido', 8500, 0], ['apx1', 'c2', 'pr2', 'sv7', '10:30:00', '11:15:00', 'confirmado', 6000, 3000], ['apx2', 'c3', 'pr1', 'sv1', '11:00:00', '11:45:00', 'confirmado', 0, 0], ['apx3', 'c4', 'pr3', 'sv4', '14:00:00', '15:00:00', 'pendente', 6500, 0], ['apx4', 'c5', 'pr2', 'sv3', '15:30:00', '16:30:00', 'confirmado', 12000, 0], ['apx5', 'c2', 'pr4', 'sv1', '11:15:00', '12:00:00', 'confirmado', 3500, 0]]
     return {
       dia: hoje,
       agenda: linhas.map(([id, cid, pid, sid, ini, fim, status, preco, pago], i) => { const s = servicos.find((x) => x.id === sid); const p = profissionais.find((x) => x.id === pid); const cl = clientes.find((x) => x.id === cid); const pref = ['pr1', 'pr1', null, 'pr3', 'pr2', 'pr1'][i]; return { id, start_time: ini, end_time: fim, status, client_id: cid, cliente: cl?.full_name ?? 'Cliente', telefone: cl?.phone ?? null, professional_id: pid, profissional: p?.name, servico: s?.name, price_cents: preco, pago_cents: pago, itens: s ? [{ service_id: s.id, nome: s.name, preco_cents: preco, duracao: s.duration_minutes, qtd: 1 }] : [], comanda_id: id === 'ap1' ? 'cm1' : null, avaliacao: id === 'ap1' ? { nota: 5, comentario: 'Amei, saiu perfeita! A Ana é um amor.', em: hoje + 'T11:10:00' } : null, atendimentos: [9, 3, 0, 6, 1, 3][i], ultima_visita: [mais(-12), mais(-20), null, mais(-40), mais(-90), mais(-20)][i], faltas: [0, 0, 0, 1, 0, 0][i], preferida_id: pref, preferida: pref ? profissionais.find((x) => x.id === pref)?.name : null } }).sort((x, y) => x.start_time.localeCompare(y.start_time)),
@@ -461,6 +461,12 @@ const RPC = {
       caixa: { total_cents: 8500, balcao_cents: 8500, app_cents: 0, por_forma: [{ forma: 'pix', valor_cents: 8500 }], por_profissional: [{ professional_id: 'pr1', nome: 'Ana Oliveira', valor_cents: 8500, comandas: 1 }] },
     }
   },
+  // 4.43: valor a combinar
+  informar_valor: ({ valor_cents, cortesia_ }) => (cortesia_ ? { ok: true, cortesia: true } : { ok: true, price_cents: valor_cents }),
+  atendimentos_sem_valor: () => [
+    { id: 'sv-1', date: mais(-1), start_time: '15:00:00', cliente: 'Carla Mendes', servico: 'Mechas', profissional: 'Ana Oliveira', pago_cents: 0 },
+    { id: 'sv-2', date: mais(-3), start_time: '10:30:00', cliente: 'Beatriz Costa', servico: 'Penteado', profissional: 'Bia Santos', pago_cents: 0 },
+  ],
   pdv_fechar: ({ comanda }) => ({ ok: true, comanda_id: 'cm-novo', appointment_ids: comanda?.appointment_ids ?? [], cupom: Boolean(comanda?.client_id) && comanda?.enviar_cupom !== false, total_cents: (comanda?.itens ?? []).reduce((s, i) => s + i.preco_cents * (i.qtd ?? 1), 0) - (comanda?.desconto_cents ?? 0) }),
   pdv_estornar: () => ({ ok: true }),
   onboarding_salvar: ({ passo }) => ({ ok: true, passo: passo ?? 1 }),

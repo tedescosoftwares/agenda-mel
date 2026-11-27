@@ -5,6 +5,7 @@
 import { supabase, isDemo } from './supabase'
 import { chamar } from './pagamento'
 import { linkDoSalao } from './endereco'
+import { estadoPush, ativarPush } from './push'
 
 const CHAVE = 'mimo-mel-v1'
 const VALIDADE = 3 * 60e3
@@ -101,7 +102,7 @@ export function rotaDaAcao(acao) {
     case 'CRIAR_PROMOCAO': return '/admin/promocoes?nova=1'
     case 'VER_PLANO': return '/admin/assinatura'
     case 'IR_CONFIGURAR': return p.passo === 'servicos' ? '/admin/servicos' : p.passo === 'equipe' ? '/admin/equipe' : '/admin/configurar'
-    case 'LIGAR_AVISOS': return '/admin/ajustes'
+    case 'LIGAR_AVISOS': return '/admin/ajustes#avisos'
     default: return null
   }
 }
@@ -112,6 +113,25 @@ const horaBr = (h) => (h ? String(h).slice(0, 5).replace(':00', 'h').replace(':'
 // executa a ação; devolve { navegar, mensagem, concluida }
 export async function executarAcao(acao, { exibicao, salao, salaoId }) {
   const p = acao?.payload ?? {}
+  // 4.43: "Ligar avisos" pede a permissão aqui mesmo, colada no toque (o iPhone só aceita assim), antes de qualquer
+  // ida ao servidor. Só vai para os Ajustes quando não dá para ligar daqui, e chega na parte certa da tela.
+  if (acao?.type === 'LIGAR_AVISOS') {
+    const AJUSTES = '/admin/ajustes#avisos'
+    let resultado
+    try {
+      const estado = await estadoPush()
+      if (estado === 'ligado') resultado = { concluida: true, mensagem: 'Os avisos já estão ligados neste aparelho.' }
+      else if (estado === 'desligado') { await ativarPush(); resultado = { concluida: true, mensagem: 'Pronto, avisos ligados neste aparelho. 💗' } }
+      else if (estado === 'instale') resultado = { concluida: false, navegar: AJUSTES, mensagem: 'No iPhone, primeiro instale a MIMO na tela de início. Te trouxe até a parte dos avisos.' }
+      else if (estado === 'bloqueado') resultado = { concluida: false, navegar: AJUSTES, mensagem: 'Os avisos estão bloqueados neste aparelho. Libere nas notificações do navegador ou do celular e ligue aqui.' }
+      else resultado = { concluida: false, navegar: AJUSTES, mensagem: 'Este navegador não recebe avisos. Instale a MIMO na tela de início.' }
+    } catch (e) {
+      resultado = { concluida: false, navegar: AJUSTES, mensagem: e?.message || 'Não deu para ligar os avisos agora.' }
+    }
+    marcarMel(exibicao, 'clicada')
+    if (resultado.concluida) marcarMel(exibicao, 'concluida', 'ligou os avisos')
+    return resultado
+  }
   await marcarMel(exibicao, 'clicada')
   switch (acao?.type) {
     case 'DIVULGAR_VAGA': {

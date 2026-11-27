@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Check, Ban, UserX, CalendarClock, MessageCircle, X, RotateCcw, Clock, Sparkles, Phone, Hourglass, Move } from 'lucide-react'
+import { Check, Ban, UserX, CalendarClock, MessageCircle, X, RotateCcw, Clock, Sparkles, Phone, Hourglass, Move, CircleDollarSign } from 'lucide-react'
 import Portal from '../Portal'
 import { useDialogo } from '../../context/DialogoContext'
 import { formatPreco } from '../../lib/format'
-import { concluirHorario, marcarFalta, cancelarHorario, decidirPedido, perdoarFalta, jaComecou, passouDaTolerancia, ativo, zapDaCliente } from '../../lib/acoesDoHorario'
+import { informarValor, faltaValor, textoDoValor, concluirHorario, marcarFalta, cancelarHorario, decidirPedido, perdoarFalta, jaComecou, passouDaTolerancia, ativo, zapDaCliente } from '../../lib/acoesDoHorario'
 import { corDa, primeiroNome, iniciais, rotuloLongo } from './agendaComum'
 import { LinhaDoTempo } from '../QuadroDoDia'
 
@@ -11,7 +11,8 @@ import { LinhaDoTempo } from '../QuadroDoDia'
 // 4.1: `completo` (a Semana e a aba Profissional no computador): as informações do agendamento inteiras: o estado
 // explicado, dia e hora, serviço e valor, telefone, o histórico da cliente na casa, e as ações.
 // O horário vem no formato da pdv_dia (cliente, servico, profissional, telefone).
-const valor = (a) => (a.price_cents != null ? formatPreco(a.price_cents / 100).replace(',00', '') : '')
+// 4.43: preço zero aparece como "a combinar" (ou "sem valor", depois de concluído), nunca como R$ 0
+const valor = (a) => (a.price_cents != null ? textoDoValor(a, (c) => formatPreco(c / 100).replace(',00', '')) : '')
 const ESTADO = {
   pendente: ['a confirmar', 'Pedido esperando o salão: confirme ou recuse. Ela é avisada na hora.'],
   confirmado: ['confirmado', 'Horário garantido. Ela recebe o lembrete antes.'],
@@ -20,7 +21,7 @@ const ESTADO = {
 }
 
 export default function FolhaDoHorario({ a, dia, profs, onFechar, onRemarcar, onMudou, completo = false, salaoId = null }) {
-  const { confirmar } = useDialogo()
+  const { confirmar, pedirValor } = useDialogo()
   const [indo, setIndo] = useState(false)
   const [erro, setErro] = useState('')
   const [agora, setAgora] = useState(() => Date.now())
@@ -70,12 +71,13 @@ export default function FolhaDoHorario({ a, dia, profs, onFechar, onRemarcar, on
             <button type="button" className="ags-acao ok" disabled={indo} onClick={() => agir(() => decidirPedido(a, true, confirmar))}><Check size={18} /> Confirmar pedido</button>
             <button type="button" className="ags-acao nao" disabled={indo} onClick={() => agir(() => decidirPedido(a, false, confirmar))}><Ban size={18} /> Recusar</button>
           </>}
-          {a.status === 'confirmado' && jaComecou(a, d, agora) && <button type="button" className="ags-acao ok" disabled={indo} onClick={() => agir(() => concluirHorario(a, confirmar))}><Check size={18} /> Concluir atendimento</button>}
+          {a.status === 'confirmado' && jaComecou(a, d, agora) && <button type="button" className="ags-acao ok" disabled={indo} onClick={() => agir(() => concluirHorario(a, confirmar, pedirValor))}><Check size={18} /> Concluir atendimento</button>}
           {a.status === 'confirmado' && passouDaTolerancia(a, d, 15, agora) && <button type="button" className="ags-acao" disabled={indo} onClick={() => agir(() => marcarFalta(a, confirmar))}><UserX size={18} /> Não veio</button>}
           {a.status === 'faltou' && <button type="button" className="ags-acao" disabled={indo} onClick={() => agir(() => perdoarFalta(a))}><RotateCcw size={18} /> Perdoar a falta</button>}
           {ativo(a) && !a.comanda_id && <button type="button" className="ags-acao" disabled={indo} onClick={() => { onFechar(); onRemarcar(a) }}><CalendarClock size={18} /> Remarcar</button>}
           {zapDaCliente(a) && <a className="ags-acao" href={zapDaCliente(a)} target="_blank" rel="noopener noreferrer"><MessageCircle size={18} /> Mandar WhatsApp</a>}
           {a.status === 'confirmado' && !a.comanda_id && <button type="button" className="ags-acao nao" disabled={indo} onClick={() => agir(() => cancelarHorario(a, confirmar))}><X size={18} /> Cancelar horário</button>}
+          {faltaValor(a) && <button type="button" className="ags-acao ok" disabled={indo} onClick={() => agir(() => informarValor(a, pedirValor))}><CircleDollarSign size={18} /> Informar o valor</button>}
           {a.status === 'concluido' && !completo && <p className="muted ags-folha-nota">Atendimento concluído{a.comanda_id ? ', com a comanda fechada' : ''}.</p>}
         </div>
         {completo && ativo(a) && <p className="muted ags-folha-dica"><Move size={13} /> Também dá para remarcar arrastando o cartão para outro dia ou hora.</p>}

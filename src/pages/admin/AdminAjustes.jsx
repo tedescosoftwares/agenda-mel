@@ -36,6 +36,18 @@ export default function AdminAjustes() {
   const [aceite, setAceite] = useState(null)        // { modo, minutos, no_silencio } (o bloco é o RegraDeAceite)
   function ligarPdv(v) { setPdv(v); try { localStorage.setItem('mimo-pdv', v ? '1' : '0'); sessionStorage.removeItem('mimo-pdv-pausado') } catch { /* sem armazenamento */ } }
 
+  // 4.43: a Mel (e qualquer link) chega direto na parte dos avisos: /admin/ajustes#avisos
+  useEffect(() => {
+    if (window.location.hash !== '#avisos') return undefined
+    const t = setTimeout(() => {
+      const el = document.getElementById('avisos')
+      if (!el) return
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      el.classList.add('aj-destaque')
+      setTimeout(() => el.classList.remove('aj-destaque'), 3200)
+    }, 350)
+    return () => clearTimeout(t)
+  }, [])
   useEffect(() => {
     if (!salao?.id) return
     let vivo = true
@@ -214,7 +226,7 @@ export default function AdminAjustes() {
         </div>
       </section>
 
-      <section className="secao aj-secao">
+      <section className="secao aj-secao aj-avisos" id="avisos">
         <h3 className="secao-titulo">App e avisos para você</h3>
         <LinhaInstalar para="salao" />
         <AvisosNoCelular />

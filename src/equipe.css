@@ -272,3 +272,12 @@ body.com-gaveta { overflow: hidden; }
 .eq-saida-op .eq-saida-trava { color: #b45309; font-weight: 600; }
 .eq-saida-nota { margin: 0; font-size: 0.84rem; }
 .btn-mini.eq-excluir { color: #b42318; }
+
+/* 4.55: o que ela ainda tem marcado */
+.eq-saida-futuros { display: grid; gap: 0.35rem; padding: 0.85rem 1rem; border-radius: 14px; background: #fff8ec; border: 1px solid #f5e2bd; }
+.eq-saida-futuros strong { color: #3d2f0e; font-size: 0.95rem; }
+.eq-saida-futuros span { color: #5c4a1f; font-size: 0.84rem; line-height: 1.45; }
+.eq-saida-futuros > div { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-top: 0.35rem; }
+.eq-saida-futuros .btn { background: #fff; }
+.eq-saida-futuros .eq-saida-cancelar { color: #b42318; border-color: #f3b3ad; }
+@media (max-width: 480px) { .eq-saida-futuros > div .btn { width: 100%; justify-content: center; white-space: normal; height: auto; padding-block: 0.6rem; } }

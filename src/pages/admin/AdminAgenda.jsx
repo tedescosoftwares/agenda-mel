@@ -95,6 +95,9 @@ export default function AdminAgenda() {
   const recarregar = useCallback(() => setRecarga((n) => n + 1), [])
 
   useEffect(() => { if (diaDaUrl && diaDaUrl !== dia) setDia(diaDaUrl) }, [diaDaUrl]) // eslint-disable-line react-hooks/exhaustive-deps
+  // 4.55: ?prof=<id> abre a Agenda já nela (a Equipe manda para cá quando é para remarcar os horários de quem está saindo)
+  const profDaUrl = params.get('prof')
+  useEffect(() => { if (!profDaUrl) return; setFiltro(profDaUrl); setProfSel(profDaUrl); setVista('prof') }, [profDaUrl])
   function trocarVista(v) { setVista(v); try { localStorage.setItem('mimo-agenda-vista2', v) } catch { /* sem armazenamento */ } }
   function escolherProf(id) { setProfSel(id); try { localStorage.setItem('mimo-agenda-prof', id) } catch { /* sem armazenamento */ } }
   function irPara(d) { setDia(d); if (diaDaUrl) setParams({}, { replace: true }) }

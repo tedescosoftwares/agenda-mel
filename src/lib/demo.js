@@ -113,6 +113,7 @@ const clientes = [
 
 const jn = (a, todos) => ({ ...a, services: servicos.find((s) => s.id === a.service_id), professionals: profissionais.find((p) => p.id === a.professional_id), profiles: clientes.find((c) => c.id === a.client_id), appointment_offers: [], origem: a.remarca_de ? (todos.find((o) => o.id === a.remarca_de) ?? null) : null })
 
+const DEMO_FUTUROS = { n: 3 }
 const ACESSOS_DEMO = [{ id: 'acp1', papel: 'recepcao', nome: 'Rita Souza', email: 'rita@exemplo.com', telefone: '(13) 99888-1122', ativo: true, token: null, criado_em: '2026-11-10T12:00:00Z' }]
 const agendamentos = [
   { id: 'ap1', client_id: 'c1', professional_id: 'pr1', service_id: 'sv2', salon_id: SALAO, date: mais(2), start_time: '14:00:00', end_time: '15:30:00', status: 'pendente', price_cents: 8500, created_at: mais(0) },
@@ -463,7 +464,8 @@ const RPC = {
     }
   },
   // 4.54: excluir o perfil de uma profissional
-  equipe_excluir_previa: () => ({ nome: 'Camila Rocha', tem_conta: true, avaliacoes: 12, atendimentos: 148, futuros: 0, preferida_de: 4 }),
+  equipe_excluir_previa: () => ({ nome: 'Camila Rocha', tem_conta: true, avaliacoes: 12, atendimentos: 148, futuros: DEMO_FUTUROS.n, preferida_de: 4 }),
+  equipe_cancelar_futuros: () => { const n = DEMO_FUTUROS.n; DEMO_FUTUROS.n = 0; return { ok: true, cancelados: n } },
   equipe_excluir: () => ({ ok: true, apagada: false, guardou_historico: true }),
   // 4.51: acessos ao painel (administração e recepção)
   acessos_do_salao: () => ({ limite: 3, lista: ACESSOS_DEMO.map((x) => ({ ...x })) }),

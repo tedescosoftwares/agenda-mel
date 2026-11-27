@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useDialogo } from '../../context/DialogoContext'
-import { Link } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import AdminShell from '../../components/AdminShell'
 import AcessosDoPainel from '../../components/AcessosDoPainel'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { ChevronIcon, LinkIcon, ClockIcon } from '../../components/icons'
 import Avatar from '../../components/Avatar'
-import { Trash2, FileSignature, MessageCircle, Plus, Link2, Copy, Mail, UsersRound } from 'lucide-react'
+import { CalendarClock, Trash2, FileSignature, MessageCircle, Plus, Link2, Copy, Mail, UsersRound } from 'lucide-react'
 import { STATUS, PARCERIA_LIGADA } from '../../lib/contratoParceria'
 import { urlDoAmbiente } from '../../lib/ambiente'
 import { situacaoDe, resumoDias, vinculoPor, primeiroNome, enviarAcesso, enviarAcessoWhats } from '../../lib/equipe'
@@ -24,6 +24,7 @@ import { PLANOS, precoPara, reais } from '../../lib/planos'
 export default function AdminProfissionais() {
   const { confirmar } = useDialogo()
   const { salao, recarregarPerfil, acesso } = useAuth()
+  const navigate = useNavigate()
   const [equipe, setEquipe] = useState(null)
   const [services, setServices] = useState([])
   const [cats, setCats] = useState([])
@@ -105,6 +106,24 @@ export default function AdminProfissionais() {
     setError(''); setInfo(''); setSaindo({ p, previa: null })
     const { data, error } = await supabase.rpc('equipe_excluir_previa', { prof: p.id })
     setSaindo((x) => (x && x.p.id === p.id ? { ...x, previa: error ? { falta: true } : (data ?? {}) } : x))
+  }
+  // 4.55 (migração 281): o que ela ainda tem marcado: cancela tudo de uma vez (as clientes são avisadas) ou vai remarcar
+  const [cancelando, setCancelando] = useState(false)
+  async function cancelarOsDela() {
+    const { p, previa } = saindo, n = Number(previa?.futuros ?? 0)
+    const ok = await confirmar({ titulo: `Cancelar ${n === 1 ? 'o horário' : `os ${n} horários`} de ${primeiroNome(p.name)}?`, texto: 'Cada cliente é avisada do cancelamento, e o sinal pago volta pelas regras do salão. Não dá para desfazer.', ok: n === 1 ? 'Cancelar o horário' : `Cancelar os ${n}`, perigo: true })
+    if (!ok) return
+    setCancelando(true)
+    const { data, error } = await supabase.rpc('equipe_cancelar_futuros', { prof: p.id })
+    setCancelando(false)
+    if (error) { setError(/schema cache|could not find the function/i.test(error.message ?? '') ? 'Para cancelar tudo de uma vez, o banco precisa da atualização 281 (opção B do .bat).' : error.message); setSaindo(null); return }
+    setInfo(`${data?.cancelados ?? n} ${Number(data?.cancelados ?? n) === 1 ? 'horário cancelado' : 'horários cancelados'}. As clientes foram avisadas.`)
+    pedirSaida(p)
+  }
+  function irRemarcar() {
+    const p = saindo.p
+    try { localStorage.setItem('mimo-agenda-prof', p.id) } catch { /* sem armazenamento */ }
+    setSaindo(null); navigate(`/admin/agenda?prof=${p.id}`)
   }
   async function soDesativar() { const p = saindo.p; setSaindo(null); await acao('desativar', p) }
   async function excluirPerfil() {
@@ -259,10 +278,20 @@ export default function AdminProfissionais() {
           <div className="modal-fundo" role="presentation" onClick={() => setSaindo(null)}>
             <div className="modal-caixa eq-saida" role="dialog" aria-modal="true" aria-labelledby="eq-saida-titulo" onClick={(e) => e.stopPropagation()}>
               <h3 id="eq-saida-titulo">{inativa ? `Excluir o perfil de ${nome}?` : `${nome} vai sair da agenda?`}</h3>
+              {trava && (
+                <div className="eq-saida-futuros">
+                  <strong>{nome} ainda tem {n(previa.futuros)} {n(previa.futuros) === 1 ? 'horário marcado' : 'horários marcados'}</strong>
+                  <span>Resolva isso antes: passe para outra profissional ou outro dia, ou cancele tudo de uma vez.</span>
+                  <div>
+                    <button type="button" className="btn btn-outline btn-sm" onClick={irRemarcar}><CalendarClock size={15} /> Remarcar na Agenda</button>
+                    <button type="button" className="btn btn-outline btn-sm eq-saida-cancelar" onClick={cancelarOsDela} disabled={cancelando}>{cancelando ? 'Cancelando…' : n(previa.futuros) === 1 ? 'Cancelar o horário e avisar a cliente' : `Cancelar os ${n(previa.futuros)} e avisar as clientes`}</button>
+                  </div>
+                </div>
+              )}
               {!inativa && (
                 <button type="button" className="eq-saida-op" onClick={soDesativar}>
                   <strong>Apenas desativar</strong>
-                  <span>A agenda dela sai do ar e ela perde o acesso. A ficha, a página, as avaliações e o histórico ficam guardados, e dá para reativar depois.</span>
+                  <span>A agenda dela sai do ar e ela perde o acesso. A ficha, a página, as avaliações e o histórico ficam guardados, e dá para reativar depois.{trava ? ' Os horários marcados continuam na agenda até você remarcar ou cancelar.' : ''}</span>
                 </button>
               )}
               {previa === null ? <p className="muted">Conferindo o que ela tem…</p> : previa.falta ? (
@@ -272,7 +301,7 @@ export default function AdminProfissionais() {
                   <strong><Trash2 size={15} /> {inativa ? 'Excluir o perfil' : 'Desativar e excluir o perfil'}</strong>
                   <span>Apaga de vez: a página e o link dela, a foto, a bio e o contato, os serviços e horários dela{n(previa.avaliacoes) > 0 ? `, as ${n(previa.avaliacoes)} ${n(previa.avaliacoes) === 1 ? 'avaliação que ela recebeu' : 'avaliações que ela recebeu'}` : ' e as avaliações'}{previa.tem_conta ? ', e o acesso dela a este salão (a conta dela na MIMO continua, como cliente)' : ''}. Não dá para desfazer.</span>
                   {n(previa.atendimentos) > 0 && <span className="eq-saida-fica">Fica guardado: {n(previa.atendimentos) === 1 ? 'o atendimento que ela já fez' : `os ${n(previa.atendimentos)} atendimentos que ela já fez`} e as comandas, porque são o histórico e o financeiro do salão.</span>}
-                  {trava && <span className="eq-saida-trava">Ela ainda tem {n(previa.futuros)} {n(previa.futuros) === 1 ? 'horário marcado' : 'horários marcados'}. Remarque ou cancele antes de excluir.</span>}
+                  {trava && <span className="eq-saida-trava">Primeiro remarque ou cancele {n(previa.futuros) === 1 ? 'o horário marcado' : `os ${n(previa.futuros)} horários marcados`}, aqui em cima.</span>}
                 </button>
               )}
               <div className="modal-acoes"><button type="button" className="btn btn-ghost" onClick={() => setSaindo(null)}>Voltar</button></div>

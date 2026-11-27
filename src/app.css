@@ -16901,3 +16901,13 @@ html[data-tema="escuro"] .admin-content .miolo > .card.numero-heroi:not(.hd):not
   .dialogo .modal-acoes .btn { flex:none; width:100%; min-width:0; white-space:normal; line-height:1.25; padding-block:.8rem; }
 }
 .dialogo { max-height:calc(100dvh - 24px); overflow-y:auto; }
+
+/* 4.38: criar a senha na própria tela do convite (/ativar/<token>) */
+.ativar-senha { display:grid; gap:.7rem; text-align:left; }
+.ativar-senha label { display:grid; gap:.3rem; font-size:.8rem; font-weight:600; color:#1d1323; }
+.ativar-senha input { width:100%; font:inherit; font-size:1rem; padding:.8rem .9rem; border:1px solid #e9e4ec; border-radius:14px; background:#fff; color:#1d1323; }
+.ativar-senha input:disabled { background:#f8f6f9; color:#766b7c; }
+.ativar-senha-campo { position:relative; display:block; }
+.ativar-senha-campo input { padding-right:2.9rem; }
+.ativar-senha-campo button { position:absolute; top:0; right:0; height:100%; width:2.8rem; border:0; background:none; color:#766b7c; display:grid; place-items:center; cursor:pointer; }
+.ativar-aceite { margin:0; font-size:.78rem; line-height:1.45; }

@@ -93,6 +93,11 @@ export async function enviarAcesso(supabase, p, email) {
   if (error) throw new Error(error.message)
   return data
 }
+// 4.38 (migração 272): manda o acesso pelo WhatsApp da MIMO, direto para o número dela; devolve { telefone }
+export async function enviarAcessoWhats(p) {
+  const { chamar } = await import('./pagamento.js')
+  return chamar('acesso', { acao: 'convite_whats', prof: p.id, base: window.location.origin })
+}
 export const linkWhats = (fone, texto) => `https://wa.me/55${String(fone ?? '').replace(/\D/g, '')}?text=${encodeURIComponent(texto)}`
 
 // ---- serviços sugeridos por categoria (passo 4) ------------------------------------

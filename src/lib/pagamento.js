@@ -40,6 +40,8 @@ function demoFuncao(nome, corpo) {
     if (corpo?.acao === 'ver') return String(corpo.token ?? '').startsWith('usado') ? Promise.reject(new Error('Esse link já foi usado. Para entrar de novo, peça outro em Entrar › Receber link no WhatsApp.')) : { ok: true, nome: 'Ana', telefone: '(13) •••••-1234' }
     // 4.13: marcar sem cadastro. No demo, um número terminado em 0000 "já tem conta"
     if (corpo?.acao === 'visita') return String(corpo.telefone ?? '').replace(/\D/g, '').endsWith('0000') ? { ok: false, existe: true } : { ok: true, sessao: { access_token: 'demo', refresh_token: 'demo' }, nome: corpo.nome }
+    if (corpo?.acao === 'convite_whats') return { ok: true, telefone: '(13) 99999-0005' }
+    if (corpo?.acao === 'convite_criar') return { ok: true, sessao: null }
     if (corpo?.acao === 'pedir_link') return { ok: true, mensagem: 'Se esse WhatsApp tiver cadastro na MIMO, o link chega em instantes.' }
     return { ok: true, sessao: null }
   }

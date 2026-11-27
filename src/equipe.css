@@ -206,3 +206,16 @@ body.com-gaveta { overflow: hidden; }
 .gv-form label > .gv-rot { display: block; line-height: 1.35; }
 .gv-bio { font-size: 0.78rem; font-weight: 700; color: var(--eq-ameixa); gap: 4px; }
 .gv-bio .muted, .gv-bio textarea { font-weight: 500; }
+
+/* 4.38: por onde mandar o acesso (WhatsApp ou e-mail), na gaveta da profissional */
+.gv-canais { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.gv-canal { display: flex; align-items: center; gap: 10px; padding: 12px; border: 1px solid #e9e4ec; border-radius: 14px; background: #fff; font: inherit; text-align: left; cursor: pointer; min-width: 0; }
+.gv-canal:hover { border-color: #1d1323; }
+.gv-canal:disabled { opacity: 0.55; cursor: default; }
+.gv-canal-ico { flex: none; width: 36px; height: 36px; border-radius: 50%; background: #f3f0f5; color: #1d1323; display: grid; place-items: center; }
+.gv-canal > span:last-child { display: flex; flex-direction: column; min-width: 0; }
+.gv-canal strong { font-size: 0.88rem; font-weight: 600; color: #1d1323; }
+.gv-canal small { font-size: 0.76rem; color: #766b7c; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gv-canais-nota { margin: 10px 0 6px; font-size: 0.8rem; line-height: 1.45; }
+.gv-canais-nota a { color: var(--eq-rosa); font-weight: 600; }
+@media (max-width: 520px) { .gv-canais { grid-template-columns: 1fr; } }

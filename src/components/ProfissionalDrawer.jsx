@@ -5,7 +5,7 @@ import { reduzirFoto } from '../lib/imagem'
 import { formatarFone } from '../lib/fone'
 import { formatPreco, formatDuracao } from '../lib/format'
 import { urlDoAmbiente } from '../lib/ambiente'
-import { VINCULOS, AVISO_VINCULO, PERMISSOES, PERMISSOES_RECOMENDADAS, presetDoVinculo, vinculoPor, FUNCOES, temContato, AVISO_CONTATO, cargosDe, alternarCargo, resumoDias, mensagemDeAcesso, primeiroNome, situacaoDe, enviarAcesso, linkWhats } from '../lib/equipe'
+import { VINCULOS, AVISO_VINCULO, PERMISSOES, PERMISSOES_RECOMENDADAS, presetDoVinculo, vinculoPor, FUNCOES, temContato, AVISO_CONTATO, cargosDe, alternarCargo, resumoDias, mensagemDeAcesso, primeiroNome, situacaoDe, enviarAcesso, enviarAcessoWhats, linkWhats } from '../lib/equipe'
 import { categoriasDoSalao } from '../lib/categorias'
 import Avatar from './Avatar'
 import '../equipe.css'
@@ -103,6 +103,8 @@ export default function ProfissionalDrawer({ salao, profissional = null, servico
 
   function validar(ate) {
     if (ate >= 1 && !f.name.trim()) { setAba(1); setErro('Diga o nome completo dela.'); return false }
+    if (ate >= 1 && !dona && !editando && f.name.trim().split(/\s+/).length < 2) { setAba(1); setErro('Diga o nome e o sobrenome dela.'); return false }
+    if (ate >= 1 && !dona && !profissional?.user_id && !f.email.trim()) { setAba(1); setErro('Diga o e-mail dela: é com ele que ela entra na MIMO.'); return false }
     if (ate >= 1 && !dona && (temContato(f.bio) || temContato(f.especialidade))) { setAba(1); setErro(AVISO_CONTATO); return false }
     if (ate >= 1 && f.phone.replace(/\D/g, '').length < 10) { setAba(1); setErro('Diga o WhatsApp: é por ele que chegam os avisos.'); return false }
     // 3.82: o e-mail não trava o caminho entre as etapas; no salvar, quem ainda não ativou precisa dele (o acesso vai por e-mail)
@@ -161,10 +163,7 @@ export default function ProfissionalDrawer({ salao, profissional = null, servico
       setSalva({ id: data?.id ?? profissional?.id, situacao: situacaoSalva, token: data?.token ?? profissional?.token ?? null })
       setAba(7)
       onSalvo?.(data)
-      // 3.82: a ativação é cobrada por e-mail: quem nunca recebeu o acesso recebe agora, sem precisar de outro toque
-      if (situacaoSalva === 'configurada' && f.email.trim() && !profissional?.acesso_enviado_em && (data?.id ?? profissional?.id)) {
-        try { const r = await enviarAcesso(supabase, { id: data?.id ?? profissional?.id }, f.email.trim()); setEnviadoPara(r.email) } catch (e2) { setErro('Ela já está na agenda, mas o e-mail de acesso não saiu: ' + e2.message + ' Tente de novo no botão abaixo.') }
-      }
+      // 4.38: nada sai sozinho; o salão escolhe na tela seguinte se o acesso vai por WhatsApp ou por e-mail
     } catch (err) { setErro(err.message) } finally { setSalvando(false) }
   }
   async function marcarEnviado() { if (salva?.id) try { await supabase.rpc('equipe_acesso_enviado', { prof: salva.id }) } catch { /* segue */ } }
@@ -173,6 +172,14 @@ export default function ProfissionalDrawer({ salao, profissional = null, servico
     if (!salva?.id) return
     setEnviando(true); setErro('')
     try { const r = await enviarAcesso(supabase, { id: salva.id }, f.email.trim()); setEnviadoPara(r.email) } catch (e) { setErro(e.message) } finally { setEnviando(false) }
+  }
+  // 4.38: o acesso também sai pelo WhatsApp da MIMO, direto para o número dela
+  const [whatsPara, setWhatsPara] = useState('')
+  const [enviandoWhats, setEnviandoWhats] = useState(false)
+  async function enviarWhats() {
+    if (!salva?.id) return
+    setEnviandoWhats(true); setErro('')
+    try { const r = await enviarAcessoWhats({ id: salva.id }); setWhatsPara(r.telefone || f.phone) } catch (e) { setErro(e.message) } finally { setEnviandoWhats(false) }
   }
   const whats = link ? linkWhats(f.phone, mensagemDeAcesso({ salao: salao.name, profissional: f.name, link, email: enviadoPara || f.email.trim() })) : ''
 
@@ -192,7 +199,7 @@ export default function ProfissionalDrawer({ salao, profissional = null, servico
           {aba === 1 && (
             <section className="gv-secao">
               <h3>{dona ? 'Seus dados na agenda' : 'Quem é ela'}</h3>
-              <p className="muted">{dona ? 'É assim que as clientes veem você na agenda. O login é o mesmo do painel.' : <>Você preenche tudo e ela já entra na agenda ao salvar: dá para distribuir os serviços e marcar horários com ela na hora. Ela recebe o acesso por e-mail para ativar e ver a agenda no celular.</>}</p>
+              <p className="muted">{dona ? 'É assim que as clientes veem você na agenda. O login é o mesmo do painel.' : <>Você preenche tudo e ela já entra na agenda ao salvar: dá para distribuir os serviços e marcar horários com ela na hora. No fim você escolhe mandar o acesso dela por WhatsApp ou por e-mail.</>}</p>
               <div className="gv-foto-linha">
                 <button type="button" className="gv-foto" onClick={() => arq.current?.click()} aria-label="Foto">
                   {f.fotoNova?.preview || f.photo_url ? <img src={f.fotoNova?.preview ?? f.photo_url} alt="" /> : <Avatar nome={f.name || "?"} grande />}
@@ -200,12 +207,12 @@ export default function ProfissionalDrawer({ salao, profissional = null, servico
                 </button>
                 <input ref={arq} type="file" accept="image/*" hidden onChange={trocarFoto} />
                 <div className="gv-form">
-                  <label><span className="gv-rot">Nome completo <b>*</b></span><input value={f.name} onChange={m('name')} placeholder="Carla Mendes" autoFocus /></label>
-                  <label><span className="gv-rot">WhatsApp <b>*</b></span><input type="tel" inputMode="numeric" value={f.phone} onChange={(e) => setF((x) => ({ ...x, phone: formatarFone(e.target.value) }))} placeholder="(11) 98765-4321" /><small className="muted">É por ele que ela ativa o acesso: precisa ser o número dela.</small></label>
+                  <label><span className="gv-rot">Nome e sobrenome <b>*</b></span><input value={f.name} onChange={m('name')} placeholder="Carla Mendes" autoFocus /></label>
+                  <label><span className="gv-rot">WhatsApp <b>*</b></span><input type="tel" inputMode="numeric" value={f.phone} onChange={(e) => setF((x) => ({ ...x, phone: formatarFone(e.target.value) }))} placeholder="(11) 98765-4321" /><small className="muted">Precisa ser o número dela: o acesso e os avisos chegam por ele.</small></label>
                 </div>
               </div>
               <div className="gv-form gv-form-2">
-                <label><span className="gv-rot">E-mail {!profissional?.user_id && <b>*</b>} <span className="muted">(o acesso para ela ativar chega por ele)</span></span><input type="email" value={f.email} onChange={m('email')} placeholder="carla@exemplo.com" /></label>
+                <label><span className="gv-rot">E-mail {!profissional?.user_id && <b>*</b>} <span className="muted">(é com ele que ela entra)</span></span><input type="email" value={f.email} onChange={m('email')} placeholder="carla@exemplo.com" /></label>
                 <label><span className="gv-rot">Função <span className="muted">(opcional, pode ter mais de uma)</span></span><input value={f.especialidade} onChange={m('especialidade')} placeholder="Cabeleireira · Colorista" /></label>
               </div>
               <label className="gv-form gv-bio"><span className="gv-rot">Apresentação <span className="muted">(opcional, aparece na página dela; sem telefone, @ ou link)</span></span><textarea rows={2} value={f.bio} onChange={m('bio')} placeholder="Especialista em loiros e cortes modernos…" /></label>
@@ -350,11 +357,20 @@ export default function ProfissionalDrawer({ salao, profissional = null, servico
                   {salva.situacao === 'configurada' && link ? (
                     <div className="gv-acesso">
                       <strong>Falta ela ativar o acesso</strong>
-                      <p className="muted">{nome} <b>já está na agenda</b>: você já pode marcar horários com ela e as clientes já veem os serviços dela. Falta só ela ativar o acesso: abrir o e-mail, criar a senha e ver a agenda no celular.</p>
-                      {enviadoPara
-                        ? <div className="alert alert-info">Acesso enviado para {enviadoPara}. Se quiser, avise no WhatsApp para ela olhar o e-mail (e o spam).</div>
-                        : <button type="button" className="btn btn-primary btn-block" onClick={enviarEmail} disabled={enviando || !f.email.trim()}><Mail size={16} /> {enviando ? 'Enviando…' : profissional?.acesso_enviado_em ? 'Reenviar o acesso por e-mail' : 'Enviar o acesso por e-mail'}</button>}
-                      <a className="btn btn-ghost btn-block" href={whats} target="_blank" rel="noreferrer" onClick={marcarEnviado}><MessageCircle size={16} /> Avisar no WhatsApp</a>
+                      <p className="muted">{nome} <b>já está na agenda</b>: você já pode marcar horários com ela e as clientes já veem os serviços dela. Falta só ela abrir o link e criar a senha. Por onde você quer mandar?</p>
+                      {enviadoPara && <div className="alert alert-info">Acesso enviado para o e-mail {enviadoPara}.</div>}
+                      {whatsPara && <div className="alert alert-info">Acesso enviado para o WhatsApp {whatsPara}, pelo número da MIMO.</div>}
+                      <div className="gv-canais">
+                        <button type="button" className="gv-canal" onClick={enviarWhats} disabled={enviandoWhats}>
+                          <span className="gv-canal-ico"><MessageCircle size={18} /></span>
+                          <span><strong>{enviandoWhats ? 'Enviando…' : whatsPara ? 'Reenviar por WhatsApp' : 'Enviar por WhatsApp'}</strong><small>{f.phone}</small></span>
+                        </button>
+                        <button type="button" className="gv-canal" onClick={enviarEmail} disabled={enviando || !f.email.trim()}>
+                          <span className="gv-canal-ico"><Mail size={18} /></span>
+                          <span><strong>{enviando ? 'Enviando…' : enviadoPara || profissional?.acesso_enviado_em ? 'Reenviar por e-mail' : 'Enviar por e-mail'}</strong><small>{f.email.trim()}</small></span>
+                        </button>
+                      </div>
+                      <p className="muted gv-canais-nota">O WhatsApp sai do número da MIMO, não do seu. Prefere mandar você mesma? <a href={whats} target="_blank" rel="noreferrer" onClick={marcarEnviado}>Abrir no meu WhatsApp</a> ou copie o link:</p>
                       <div className="gv-link"><input readOnly value={link} onFocus={(e) => e.target.select()} /><button type="button" className="btn-mini" onClick={copiar}><Copy size={12} /> {copiado ? 'Copiado!' : 'Copiar link'}</button></div>
                     </div>
                   ) : salva.situacao === 'ativa' ? (
@@ -365,7 +381,7 @@ export default function ProfissionalDrawer({ salao, profissional = null, servico
               ) : (
                 <>
                   <h3>Confira e salve</h3>
-                  <p className="muted">Ao salvar, {nome} <b>já entra na agenda</b> e recebe o acesso por e-mail para ativar.{!ETAPAS_COMPLETAS && ' Repasse e permissões seguem o padrão da casa por enquanto.'}</p>
+                  <p className="muted">Ao salvar, {nome} <b>já entra na agenda</b>. Em seguida você escolhe se o acesso dela vai por WhatsApp ou por e-mail.{!ETAPAS_COMPLETAS && ' Repasse e permissões seguem o padrão da casa por enquanto.'}</p>
                   <Resumo f={f} escolhidos={escolhidos} horasSalao={horasSalao} semServicos={semServicos} />
                 </>
               )}

@@ -9,7 +9,7 @@ import Avatar from '../../components/Avatar'
 import { FileSignature, MessageCircle, Plus, Link2, Copy, Mail, UsersRound } from 'lucide-react'
 import { STATUS, PARCERIA_LIGADA } from '../../lib/contratoParceria'
 import { urlDoAmbiente } from '../../lib/ambiente'
-import { situacaoDe, resumoDias, vinculoPor, mensagemDeAcesso, primeiroNome, enviarAcesso, linkWhats } from '../../lib/equipe'
+import { situacaoDe, resumoDias, vinculoPor, primeiroNome, enviarAcesso, enviarAcessoWhats } from '../../lib/equipe'
 import ProfissionalDrawer from '../../components/ProfissionalDrawer'
 import '../../equipe.css'
 import { linkDaProfissional } from '../../lib/endereco'
@@ -103,16 +103,20 @@ export default function AdminProfissionais() {
   }
   async function enviado(p) { try { await supabase.rpc('equipe_acesso_enviado', { prof: p.id }) } catch { /* segue */ } fetchTudo() }
   // manda o acesso por e-mail (129); sem e-mail, abre a gaveta pra cadastrar
-  const [whatsPronto, setWhatsPronto] = useState({})
   async function enviarPorEmail(p) {
     setError(''); setInfo('')
     if (!p.email) { setInfo(`Cadastre o e-mail de ${primeiroNome(p.name)} pra mandar o acesso.`); setGaveta(p); return }
     try {
       const r = await enviarAcesso(supabase, p)
-      setInfo(`Acesso enviado para ${r.email}. Quer avisar no WhatsApp também?`)
-      setWhatsPronto((x) => ({ ...x, [p.id]: linkWhats(p.phone, r.whats) }))
+      setInfo(`Acesso enviado para o e-mail ${r.email}.`)
       fetchTudo()
     } catch (e) { setError(e.message) }
+  }
+  // 4.38: o acesso pelo WhatsApp da MIMO, direto para o número dela
+  async function enviarPorWhats(p) {
+    setError(''); setInfo('')
+    if (!p.email) { setInfo(`Cadastre o e-mail de ${primeiroNome(p.name)}: é com ele que ela entra.`); setGaveta(p); return }
+    try { const r = await enviarAcessoWhats(p); setInfo(`Acesso de ${primeiroNome(p.name)} enviado para o WhatsApp ${r.telefone || p.phone}, pelo número da MIMO.`); fetchTudo() } catch (e) { setError(e.message) }
   }
   async function copiarAcesso(p) {
     const url = urlDoAmbiente('pro', `/ativar/${p.token}`)
@@ -185,7 +189,6 @@ export default function AdminProfissionais() {
           {lista.map((p) => {
             const sit = situacaoDe(p)
             const pendente = p.situacao === 'configurada' && !p.user_id
-            const whats = whatsPronto[p.id] || (pendente && p.token && p.acesso_enviado_em ? linkWhats(p.phone, mensagemDeAcesso({ salao: salao?.name, profissional: p.name, link: urlDoAmbiente('pro', `/ativar/${p.token}`), email: p.email })) : '')
             return (
               <div key={p.id} className={'card prof-row' + (p.situacao === 'inativa' ? ' inactive' : '')}>
                 <Avatar nome={p.name} foto={p.photo_url} />
@@ -199,7 +202,7 @@ export default function AdminProfissionais() {
                     {parcerias[p.id] && (!p.vinculo || p.vinculo === 'parceira') && <span className={'parceria-selo ' + parcerias[p.id].status}>{parcerias[p.id].status === 'sem_contrato' ? 'sem contrato' : `${STATUS[parcerias[p.id].status]?.toLowerCase()}${parcerias[p.id].status === 'assinado' && parcerias[p.id].homologacao !== 'homologado' ? ', sem homologação' : ''}`}</span>}
                   </span>
                   {p.situacao === 'rascunho' && <button type="button" className="btn-mini prof-acao" onClick={() => setGaveta(p)}>Configurar profissional</button>}
-                  {pendente && <span className="prof-acoes"><button type="button" className="btn-mini" onClick={() => enviarPorEmail(p)}><Mail size={12} /> {p.acesso_enviado_em ? 'Reenviar acesso' : 'Enviar acesso por e-mail'}</button>{whats && <a className="btn-mini" href={whats} target="_blank" rel="noreferrer" onClick={() => enviado(p)}><MessageCircle size={12} /> Avisar no WhatsApp</a>}<button type="button" className="btn-mini btn-mini-neutro" onClick={() => copiarAcesso(p)}><Copy size={12} /> Copiar link</button></span>}
+                  {pendente && <span className="prof-acoes"><button type="button" className="btn-mini" onClick={() => enviarPorWhats(p)}><MessageCircle size={12} /> {p.acesso_enviado_em ? 'Reenviar por WhatsApp' : 'Enviar acesso por WhatsApp'}</button><button type="button" className="btn-mini" onClick={() => enviarPorEmail(p)}><Mail size={12} /> {p.acesso_enviado_em ? 'Reenviar por e-mail' : 'Enviar por e-mail'}</button><button type="button" className="btn-mini btn-mini-neutro" onClick={() => copiarAcesso(p)}><Copy size={12} /> Copiar link</button></span>}
                 </div>
                 {parcerias[p.id] && (!p.vinculo || p.vinculo === 'parceira') && (
                   <Link to={`/admin/equipe/${p.id}/parceria`} className="icon-btn" aria-label={`Contrato de parceria de ${p.name}`} title="Contrato de parceria"><FileSignature size={18} /></Link>

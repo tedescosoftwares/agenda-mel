@@ -9,6 +9,8 @@
 //                e a sessão volta para o site seguir até o horário. O número NÃO foi conferido: um número que já tem
 //                conta não entra por aqui (devolve existe: true; ela recebe o link no WhatsApp ou usa a senha).
 //                Liga e desliga em config_publica.agendar_sem_cadastro. 3 por hora por número e 150 por hora no total.
+//   convite_criar  4.38 (migração 272): a profissional cria a senha no link do convite do salão; sem segundo e-mail.
+//   convite_whats  4.38: o salão manda esse convite pelo WhatsApp da MIMO (precisa estar logado como o salão).
 //   entrar       WhatsApp e senha: acha a conta pelo número (só telefone confirmado) e devolve a sessão. 8 tentativas
 //                a cada 15 minutos por número.
 //
@@ -149,6 +151,70 @@ Deno.serve(async (req) => {
       const sessao = conta ? await sessaoDe(String(conta), senha) : null
       if (!sessao) return json({ erro: 'WhatsApp ou senha não conferem. No primeiro acesso, toque em Receber link no WhatsApp.' }, 401)
       return json({ ok: true, sessao })
+    }
+
+    // 4.38 (migração 272): a profissional abre o link do convite (/ativar/<token>) e cria a senha ali mesmo. O link
+    // chegou no e-mail ou no WhatsApp que o salão cadastrou: isso já é a prova. A conta nasce com o e-mail do convite
+    // confirmado (sem o segundo e-mail), o gatilho do cadastro liga a agenda (ativar_token) e a sessão volta pronta.
+    if (acao === 'convite_criar') {
+      const token = String(corpo.token ?? '').toLowerCase()
+      if (!/^[a-f0-9]{16}$/.test(token)) return json({ erro: 'Esse link de acesso não vale. Peça outro ao salão.' }, 400)
+      const { data: pode } = await servico.rpc('acesso_tentativa', { chave_: `convite_criar:${token}`, maximo: 8, minutos: 15 })
+      if (pode === false) return json({ erro: 'Muitas tentativas. Espere 15 minutos e tente de novo.' }, 429)
+      const senha = String(corpo.senha ?? '')
+      const ruim = senhaValida(senha)
+      if (ruim) return json({ erro: ruim }, 400)
+      const { data: a } = await servico.rpc('acesso_por_token', { token })
+      const conv = (a ?? null) as Record<string, any> | null
+      if (!conv) return json({ erro: 'Link de acesso não encontrado. Confira com o salão.' }, 404)
+      if (conv.usado || conv.tem_conta) return json({ erro: 'Esse acesso já foi ativado. É só entrar com a sua conta.', usado: true }, 409)
+      if (conv.situacao === 'inativa') return json({ erro: 'Essa agenda está desativada. Fale com o salão.' }, 409)
+      const email = String(conv.profissional?.email ?? '').trim().toLowerCase()
+      if (!emailValido(email)) return json({ erro: 'O salão ainda não cadastrou o seu e-mail. Peça para ele completar e mandar o acesso de novo.' }, 409)
+      const meta: Record<string, unknown> = { full_name: conv.profissional?.nome ?? '', phone: conv.profissional?.telefone ?? '', ativar_token: token }
+      if (corpo.termos) meta.termos = corpo.termos
+      if (corpo.aceites && typeof corpo.aceites === 'object') meta.aceites = corpo.aceites
+      const { data: novo, error: e1 } = await servico.auth.admin.createUser({ email, password: senha, email_confirm: true, user_metadata: meta })
+      if (e1 || !novo?.user?.id) {
+        if (/already|registered|exists|duplicate/i.test(e1?.message ?? '')) return json({ ok: false, existe: true })
+        console.error('acesso convite_criar: não criou a conta:', e1?.message)
+        return json({ erro: 'Não deu para criar a conta agora. Tente de novo em instantes.' }, 500)
+      }
+      // o gatilho do cadastro já liga a agenda; se por algum motivo não ligou, liga aqui e diz o porquê se não der
+      const { data: depois } = await servico.rpc('acesso_por_token', { token })
+      if (!(depois as Record<string, any> | null)?.tem_conta) {
+        const { error: e2 } = await servico.rpc('ativar_acesso_interno', { conta: novo.user.id, token, fone: conv.profissional?.telefone ?? null })
+        if (e2) {
+          await servico.auth.admin.deleteUser(novo.user.id).then(() => {}, () => {})
+          return json({ erro: e2.message || 'Não deu para ativar o acesso. Fale com o salão.' }, 409)
+        }
+      }
+      const sessao = await sessaoDe(novo.user.id, senha)
+      return json({ ok: true, sessao })
+    }
+
+    // 4.38: o salão manda o acesso da profissional pelo WhatsApp da MIMO. Quem confere se pode é o banco
+    // (acesso_convite_whats, com a conta de quem chamou); aqui só sai a mensagem. 3 por hora por profissional.
+    if (acao === 'convite_whats') {
+      const autorizacao = req.headers.get('Authorization') ?? ''
+      if (!autorizacao) return json({ erro: 'Entre na sua conta para mandar o acesso.' }, 401)
+      const prof = String(corpo.prof ?? '')
+      const dela = createClient(URL_SUPABASE, CHAVE_ANON, { auth: { persistSession: false, autoRefreshToken: false }, global: { headers: { Authorization: autorizacao } } })
+      const { data: c, error: ec } = await dela.rpc('acesso_convite_whats', { prof, base: String(corpo.base ?? '') })
+      if (ec) return json({ erro: ec.message || 'Não deu para preparar o acesso.' }, 400)
+      const conv = (c ?? {}) as Record<string, any>
+      const numero = numeroCompleto(conv.telefone)
+      if (!numero) return json({ erro: 'Confira o WhatsApp dela: DDD e número.' }, 400)
+      const { data: pode } = await servico.rpc('acesso_tentativa', { chave_: `convite_whats:${prof}`, maximo: 3, minutos: 60 })
+      if (pode === false) return json({ erro: 'Você já mandou o acesso dela algumas vezes agora há pouco. Espere um pouco ou copie o link.' }, 429)
+      const { data: casa } = await servico.rpc('instancia_da_casa')
+      if (!casa) return json({ erro: 'O WhatsApp da MIMO não está conectado agora. Mande por e-mail ou copie o link.', sem_whats: true }, 503)
+      const env = await enviarPor('evolution', { telefone: numero, corpo: String(conv.texto ?? ''), identificador: casa as string })
+      if (!env.ok) {
+        console.error('acesso convite_whats: não saiu:', env.erro)
+        return json({ erro: 'A mensagem não saiu pelo WhatsApp agora. Mande por e-mail ou copie o link.', sem_whats: true }, 502)
+      }
+      return json({ ok: true, telefone: telefoneBonito(numero) })
     }
 
     return json({ erro: 'ação desconhecida' }, 400)

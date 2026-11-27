@@ -16717,3 +16717,41 @@ html[data-tema="escuro"] .admin-shell .bottom-nav .nav-item.active { color:var(-
 /* com o Menu aberto, o atalho flutuante da Mel sai da frente */
 .admin-shell:has(.nav-folha-fundo) .fa-mel-dock { display:none; }
 html[data-tema="escuro"] .topbar-admin :is(.avatar-btn, .avatar-btn *, .conta-pop-topo > :first-child, .conta-pop-topo > :first-child *) { color:#f6f1f8; }
+
+/* 4.27: Ajustes no desenho novo, as peças comuns do painel (cartão com fio fino, botão principal em rosa sólido)
+   e o que faltava no tema escuro: botões principais legíveis nas telas invertidas, a janela de instalar e a
+   página de Avisos aberta a partir do painel. */
+.admin-shell .admin-content .miolo > *:not(.hd):not(.ags-pagina) .card, .admin-shell .admin-content .miolo > .card { border:1px solid #e9e4ec; box-shadow:none; }
+.admin-shell .admin-content .miolo > *:not(.hd):not(.ags-pagina) .btn-primary, .admin-shell .modal-caixa .btn-primary { background:var(--rosa); box-shadow:none; }
+.admin-shell .admin-content .miolo > *:not(.hd):not(.ags-pagina) .btn-ghost { border-color:#e0d9e4; color:#1d1323; background:#fff; }
+.admin-shell .admin-content .miolo > *:not(.hd):not(.ags-pagina) .btn-ghost:hover { border-color:#1d1323; background:#fff; }
+
+/* Ajustes: os três atalhos do topo com ícone neutro, e cada grupo ("A casa", "Agenda"…) numa lista só */
+.admin-shell .aj-salao-logo { border-radius:50%; background:#f3f0f5; color:#1d1323; }
+.admin-shell .aj-codigo-icone, .admin-shell .aj-cartao-icone { border-radius:50%; background:#f3f0f5; color:#1d1323; }
+.admin-shell .aj-codigo-letras { background:#f3f0f5; color:#1d1323; }
+.admin-shell .aj-grade { grid-template-columns:minmax(0,1fr); gap:0; border:1px solid #e9e4ec; border-radius:18px; background:#fff; overflow:hidden; }
+.admin-shell .aj-grade > .aj-cartao { display:grid; grid-template-columns:44px minmax(0,1fr) 18px; column-gap:14px; row-gap:2px; align-items:center; min-height:0; padding:14px 16px; border:0 !important; border-radius:0; background:transparent; box-shadow:none; }
+.admin-shell .aj-grade > .aj-cartao + .aj-cartao { border-top:1px solid #f0ebf2 !important; }
+.admin-shell .aj-grade > .aj-cartao::before { display:none; }
+.admin-shell .aj-grade > .aj-cartao:hover { background:#fbf9fc; transform:none; }
+.admin-shell .aj-grade .aj-cartao-icone { grid-column:1; grid-row:1 / span 3; width:44px; height:44px; margin:0; align-self:start; }
+.admin-shell .aj-grade .aj-cartao strong { grid-column:2; color:#1d1323; font-size:.94rem; font-weight:600; letter-spacing:-.01em; }
+.admin-shell .aj-grade .aj-cartao-texto { grid-column:2; color:#766b7c; font-size:.78rem; }
+.admin-shell .aj-grade .aj-cartao-situacao { grid-column:2; margin-top:3px; }
+.admin-shell .aj-grade .aj-cartao-seta { position:static; grid-column:3; grid-row:1 / span 3; color:#b9afbe; }
+@media (min-width:1024px) {
+  .admin-shell .aj-grade { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .admin-shell .aj-grade > .aj-cartao + .aj-cartao { border-top:0 !important; }
+  .admin-shell .aj-grade > .aj-cartao:nth-child(n+3) { border-top:1px solid #f0ebf2 !important; }
+  .admin-shell .aj-grade > .aj-cartao:nth-child(odd) { border-right:1px solid #f0ebf2 !important; }
+}
+
+/* escuro: nas telas invertidas, o botão principal precisa de letra escura para sair clara depois da inversão */
+html[data-tema="escuro"] .admin-content .miolo > *:not(.hd):not(.ags-pagina) :is(.btn-primary, .fab), html[data-tema="escuro"] .modal-fundo .modal-caixa .btn-primary { color:#12060c; }
+/* escuro: a janela de instalar e a página de Avisos (aberta do painel) seguem o tema pela mesma inversão */
+html[data-tema="escuro"] .ia-fundo .ia-folha, html[data-tema="escuro"] .avisos-do-painel { filter:invert(.93) hue-rotate(180deg); }
+html[data-tema="escuro"] :is(.ia-fundo .ia-folha, .avisos-do-painel) :is(img, video, canvas) { filter:invert(1) hue-rotate(180deg); }
+html[data-tema="escuro"] :is(.ia-fundo .ia-folha, .avisos-do-painel) .btn-primary { color:#12060c; }
+/* (4.27) o botão principal pequeno saía com a letra cinza do .btn-mini por cima do rosa: letra branca, em qualquer tela */
+.btn.btn-primary.btn-mini { color:var(--branco, #fff); }

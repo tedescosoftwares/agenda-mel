@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { useNotificacoes } from '../context/NotificacoesContext'
 import { homeDoPapel } from '../lib/roles'
+import { lerTema, aplicarTema } from '../lib/tema'
 
 // cada tipo de aviso tem sua cor — o mesmo vocabulário de estado
 // usado na agenda, em vez de emoji
@@ -26,6 +27,13 @@ export default function Avisos() {
   const { role, profile, recarregarPerfil } = useAuth()
   const { avisos, naoLidos, loading, marcarTodosLidos } = useNotificacoes()
   const navigate = useNavigate()
+  // 4.27: quem vem do painel do salão (a dona) continua no tema que escolheu lá
+  const doPainel = role === 'admin'
+  useEffect(() => {
+    if (!doPainel) return
+    aplicarTema(lerTema())
+    return () => aplicarTema('claro')
+  }, [doPainel])
   const [salvandoPref, setSalvandoPref] = useState(false)
   const [erroPref, setErroPref] = useState('')
 
@@ -55,7 +63,7 @@ export default function Avisos() {
   if (role === 'profissional') return <Navigate to="/pro/avisos" replace />
 
   return (
-    <div className="layout">
+    <div className={'layout' + (doPainel ? ' avisos-do-painel' : '')}>
       <header className="topbar">
         <span className="brand-inline">
           <Link to={homeDoPapel(role)} className="back-link" aria-label="Voltar">

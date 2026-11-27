@@ -437,6 +437,7 @@ const RPC = {
     try { localStorage.setItem('mimo-demo-papel', 'cliente') } catch { /* nada */ }
     return { ok: true, phone: fone_, encaixes: 1, agendas: 1 }
   },
+  equipe_conferir_contato: ({ fone }) => { const n = String(fone).replace(/\D/g, ''); return { caso: n.endsWith('0115') ? 'fone_de_outra' : n.endsWith('0116') ? 'outro_salao' : n.endsWith('0117') ? 'tem_conta' : 'livre' } },
   telefone_disponivel: ({ fone }) => (String(fone).replace(/\D/g, '').endsWith('0115') ? { disponivel: false, em_uso: true, motivo: 'Esse WhatsApp já está em uso e não dá pra cadastrar de novo. Se o número é seu, fale com o suporte.' } : { disponivel: true }),
   pedir_troca_whatsapp: ({ novo }) => ({ via: 'whatsapp', para: novo, expira_em: mais(0) }),
   confirmar_troca_whatsapp: () => ({ ok: true }),

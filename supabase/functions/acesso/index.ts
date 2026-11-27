@@ -177,6 +177,9 @@ Deno.serve(async (req) => {
       const { data: novo, error: e1 } = await servico.auth.admin.createUser({ email, password: senha, email_confirm: true, user_metadata: meta })
       if (e1 || !novo?.user?.id) {
         if (/already|registered|exists|duplicate/i.test(e1?.message ?? '')) return json({ ok: false, existe: true })
+        // 4.40: o WhatsApp é único no cadastro (067): se já é de outra conta, o cadastro falha aqui. Diz o porquê.
+        const { data: livre } = await servico.rpc('telefone_disponivel', { fone: String(conv.profissional?.telefone ?? '') })
+        if ((livre as Record<string, any> | null)?.em_uso) return json({ erro: 'O WhatsApp que o salão cadastrou para você já tem conta na MIMO com outro e-mail. Peça ao salão para conferir o número ou trocar o e-mail pelo dessa conta.' }, 409)
         console.error('acesso convite_criar: não criou a conta:', e1?.message)
         return json({ erro: 'Não deu para criar a conta agora. Tente de novo em instantes.' }, 500)
       }

@@ -113,6 +113,27 @@ export default function ProfissionalDrawer({ salao, profissional = null, servico
   const emailDela = f.email.trim().toLowerCase()
   const dupFone = foneDela.length >= 10 ? colegas.find((x) => soNumero(x.phone) === foneDela) : null
   const dupEmail = emailDela ? colegas.find((x) => String(x.email ?? '').trim().toLowerCase() === emailDela) : null
+  // 4.40: o número é único na MIMO inteira e cada conta atende em um salão só. Confere com o banco assim que o
+  // WhatsApp e o e-mail estão completos, para o convite não quebrar só quando ela for ativar.
+  const [conta, setConta] = useState(null)
+  const emailOk = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(emailDela)
+  const confere = !dona && !profissional?.user_id && foneDela.length >= 10 && emailOk && !dupFone && !dupEmail
+  useEffect(() => {
+    if (!confere) return undefined
+    let vivo = true
+    const t = setTimeout(() => {
+      supabase.rpc('equipe_conferir_contato', { salao: salao.id, fone: f.phone, email: emailDela, prof: profissional?.id ?? null })
+        .then(({ data, error }) => { if (vivo) setConta(error ? null : { caso: data?.caso, fone: foneDela, email: emailDela }) })
+    }, 500)
+    return () => { vivo = false; clearTimeout(t) }
+  }, [confere, foneDela, emailDela, salao.id, profissional?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  const caso = confere && conta && conta.fone === foneDela && conta.email === emailDela ? conta.caso : null
+  const AVISO_CONTA = {
+    fone_de_outra: 'Esse WhatsApp já tem conta na MIMO com outro e-mail. Confira o número, ou peça a ela o e-mail que usa na MIMO e coloque aqui.',
+    outro_salao: 'Esse contato já tem agenda em outro salão na MIMO. Hoje cada conta atende em um salão só: ela precisa sair de lá ou usar outro e-mail e outro WhatsApp.',
+    dona: 'Esse contato já é de uma conta dona de negócio na MIMO. Para entrar na equipe ela precisa de outro e-mail e outro WhatsApp.',
+  }
+  const travaConta = caso ? AVISO_CONTA[caso] : null
   function validar(ate) {
     if (ate >= 1 && !f.name.trim()) { setAba(1); setErro('Diga o nome completo dela.'); return false }
     if (ate >= 1 && !dona && !editando && f.name.trim().split(/\s+/).length < 2) { setAba(1); setErro('Diga o nome e o sobrenome dela.'); return false }
@@ -122,6 +143,7 @@ export default function ProfissionalDrawer({ salao, profissional = null, servico
     // 3.82: o e-mail não trava o caminho entre as etapas; no salvar, quem ainda não ativou precisa dele (o acesso vai por e-mail)
     if (ate >= 1 && f.email.trim() && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(f.email.trim())) { setAba(1); setErro('Esse e-mail não parece certo. Confira, por favor.'); return false }
     if (ate >= 1 && dupFone) { setAba(1); setErro(`Esse WhatsApp já é de ${dupFone.name}, que está na equipe. Cada profissional precisa do próprio número.`); return false }
+    if (ate >= 1 && travaConta) { setAba(1); setErro(travaConta); return false }
     if (ate >= 1 && dupEmail) { setAba(1); setErro(`Esse e-mail já é de ${dupEmail.name}, que está na equipe. Cada profissional precisa do próprio e-mail.`); return false }
     if (ate >= 4 && !f.usa_horario_salao) for (const h of f.horarios ?? []) if (h.open && h.start_time >= h.end_time) { setAba(4); setErro(`${DIAS[h.weekday]}: o fim precisa ser depois do início.`); return false }
     if (ETAPAS_COMPLETAS && ate >= 5 && f.repasse !== 'nao') { const c = Number(f.cota_pct); if (!(c >= 0 && c <= 100)) { setAba(5); setErro('O percentual vai de 0 a 100.'); return false } }
@@ -226,7 +248,7 @@ export default function ProfissionalDrawer({ salao, profissional = null, servico
                 </div>
               </div>
               <div className="gv-form gv-form-2">
-                <label><span className="gv-rot">E-mail {!profissional?.user_id && <b>*</b>} <span className="muted">(é com ele que ela entra)</span></span><input type="email" value={f.email} onChange={m('email')} placeholder="carla@exemplo.com" />{dupEmail && <small className="gv-dup">Esse e-mail já é de {dupEmail.name}, que está na equipe.</small>}</label>
+                <label><span className="gv-rot">E-mail {!profissional?.user_id && <b>*</b>} <span className="muted">(é com ele que ela entra)</span></span><input type="email" value={f.email} onChange={m('email')} placeholder="carla@exemplo.com" />{dupEmail && <small className="gv-dup">Esse e-mail já é de {dupEmail.name}, que está na equipe.</small>}{travaConta && <small className="gv-dup">{travaConta}</small>}{caso === 'tem_conta' && <small className="muted">Ela já tem conta na MIMO: no convite, entra com a senha que já usa.</small>}</label>
                 <label><span className="gv-rot">Função <span className="muted">(opcional, pode ter mais de uma)</span></span><input value={f.especialidade} onChange={m('especialidade')} placeholder="Cabeleireira · Colorista" /></label>
               </div>
               <label className="gv-form gv-bio"><span className="gv-rot">Apresentação <span className="muted">(opcional, aparece na página dela; sem telefone, @ ou link)</span></span><textarea rows={2} value={f.bio} onChange={m('bio')} placeholder="Especialista em loiros e cortes modernos…" /></label>

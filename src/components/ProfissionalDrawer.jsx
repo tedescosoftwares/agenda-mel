@@ -200,15 +200,15 @@ export default function ProfissionalDrawer({ salao, profissional = null, servico
                 </button>
                 <input ref={arq} type="file" accept="image/*" hidden onChange={trocarFoto} />
                 <div className="gv-form">
-                  <label>Nome completo <b>*</b><input value={f.name} onChange={m('name')} placeholder="Carla Mendes" autoFocus /></label>
-                  <label>WhatsApp <b>*</b><input type="tel" inputMode="numeric" value={f.phone} onChange={(e) => setF((x) => ({ ...x, phone: formatarFone(e.target.value) }))} placeholder="(11) 98765-4321" /><small className="muted">É por ele que ela ativa o acesso: precisa ser o número dela.</small></label>
+                  <label><span className="gv-rot">Nome completo <b>*</b></span><input value={f.name} onChange={m('name')} placeholder="Carla Mendes" autoFocus /></label>
+                  <label><span className="gv-rot">WhatsApp <b>*</b></span><input type="tel" inputMode="numeric" value={f.phone} onChange={(e) => setF((x) => ({ ...x, phone: formatarFone(e.target.value) }))} placeholder="(11) 98765-4321" /><small className="muted">É por ele que ela ativa o acesso: precisa ser o número dela.</small></label>
                 </div>
               </div>
               <div className="gv-form gv-form-2">
-                <label>E-mail {!profissional?.user_id && <b>*</b>} <span className="muted">(o acesso para ela ativar chega por ele)</span><input type="email" value={f.email} onChange={m('email')} placeholder="carla@exemplo.com" /></label>
-                <label>Função <span className="muted">(opcional, pode ter mais de uma)</span><input value={f.especialidade} onChange={m('especialidade')} placeholder="Cabeleireira · Colorista" /></label>
+                <label><span className="gv-rot">E-mail {!profissional?.user_id && <b>*</b>} <span className="muted">(o acesso para ela ativar chega por ele)</span></span><input type="email" value={f.email} onChange={m('email')} placeholder="carla@exemplo.com" /></label>
+                <label><span className="gv-rot">Função <span className="muted">(opcional, pode ter mais de uma)</span></span><input value={f.especialidade} onChange={m('especialidade')} placeholder="Cabeleireira · Colorista" /></label>
               </div>
-              <label className="gv-form gv-bio">Apresentação <span className="muted">(opcional, aparece na página dela; sem telefone, @ ou link)</span><textarea rows={2} value={f.bio} onChange={m('bio')} placeholder="Especialista em loiros e cortes modernos…" /></label>
+              <label className="gv-form gv-bio"><span className="gv-rot">Apresentação <span className="muted">(opcional, aparece na página dela; sem telefone, @ ou link)</span></span><textarea rows={2} value={f.bio} onChange={m('bio')} placeholder="Especialista em loiros e cortes modernos…" /></label>
               {editando && <label className="gv-form gv-slug">Link da agenda dela <span className="muted">(ela também pode trocar, em Meu link)</span><span className="gv-slug-campo"><span>{prefixoDaProfissional(salao)}</span><input value={f.slug} onChange={(e) => setF((x) => ({ ...x, slug: limparEndereco(e.target.value) }))} placeholder="carla" autoCapitalize="none" /></span></label>}
               <div className="chips gv-chips">{FUNCOES.map((x) => <button key={x} type="button" aria-pressed={cargosDe(f.especialidade).includes(x)} className={'chip' + (cargosDe(f.especialidade).includes(x) ? ' active' : '')} onClick={() => setF((y) => ({ ...y, especialidade: alternarCargo(y.especialidade, x) }))}>{x}</button>)}</div>
             </section>

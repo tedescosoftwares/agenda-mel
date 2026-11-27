@@ -16893,3 +16893,11 @@ html[data-tema="escuro"] .admin-content .miolo > .card.numero-heroi:not(.hd):not
   .admin-shell .service-row .service-nome > .nome-txt { flex:1 0 100%; }
   .admin-shell .service-row .service-nome > .badge, .admin-shell .service-row .service-nome > .service-combo-partes { max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex-shrink:1; }
 }
+
+/* 4.37: a janela de confirmação no celular. Dois botões de texto longo lado a lado estouravam a largura:
+   até 480px eles empilham (o principal em cima), ocupam a linha toda e o texto pode quebrar. */
+@media (max-width:480px) {
+  .dialogo .modal-acoes { flex-direction:column-reverse; gap:.5rem; }
+  .dialogo .modal-acoes .btn { flex:none; width:100%; min-width:0; white-space:normal; line-height:1.25; padding-block:.8rem; }
+}
+.dialogo { max-height:calc(100dvh - 24px); overflow-y:auto; }

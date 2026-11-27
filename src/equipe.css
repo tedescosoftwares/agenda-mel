@@ -202,3 +202,7 @@ body.com-gaveta { overflow: hidden; }
 /* 4.36: "Passo 1 de 3" no rodapé da gaveta ao cadastrar uma profissional nova */
 .gv-rodape-passo { color: #766b7c; font-size: 0.8rem; white-space: nowrap; }
 @media (max-width: 640px) { .gv-rodape-passo { order: -1; flex: 1 0 100%; text-align: center; } }
+/* 4.37: o nome do campo, o asterisco e a observação ficam na mesma linha (antes cada pedaço caía numa linha) */
+.gv-form label > .gv-rot { display: block; line-height: 1.35; }
+.gv-bio { font-size: 0.78rem; font-weight: 700; color: var(--eq-ameixa); gap: 4px; }
+.gv-bio .muted, .gv-bio textarea { font-weight: 500; }

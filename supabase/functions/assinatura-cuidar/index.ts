@@ -27,6 +27,24 @@ Deno.serve(async (req) => {
     // o prazo para pagar (234); antes da migração a linha não trazia: vencimento + 3
     const prazo = String(c.cancelar_em ?? '') || somarDias(String(c.vencimento), 3)
     try {
+      // 4.45 (migração 276): a cobrança saiu porque a equipe mudou (ou a dona trocou de plano) e ainda está viva no
+      // Asaas: apaga lá, para ninguém pagar o valor velho. Se ela pagou antes, o pagamento vale e a nova é que sai.
+      if (c.status === 'cancelado') {
+        if (!c.cobranca_id) { await db.rpc('cobranca_mimo_apagada', { cobranca: c.id, paga: false }); continue }
+        const antes = await situacaoCobrancaMimo(c.cobranca_id)
+        let foiPaga = pagou(antes.status), real = antes.real
+        if (!foiPaga && !antes.apagada) {
+          try { await apagarCobrancaMimo(c.cobranca_id) } catch (e) {
+            const de_novo = await situacaoCobrancaMimo(c.cobranca_id)
+            if (pagou(de_novo.status)) { foiPaga = true; real = de_novo.real } else if (!de_novo.apagada) throw e
+          }
+        }
+        if (foiPaga) {
+          await db.rpc('cobranca_mimo_apagada', { cobranca: c.id, paga: true })
+          await db.rpc('cobranca_mimo_confirmar', { cobranca: c.id, cobranca_asaas: c.cobranca_id, quando: quandoPagou(real) }); pagas++
+        } else { await db.rpc('cobranca_mimo_apagada', { cobranca: c.id, paga: false }); canceladas++ }
+        continue
+      }
       if (c.status === 'a_criar') {
         // só Pix nesta versão; cartão e Pix Automático antigos não são mais levados ao Asaas
         // sem CPF/CNPJ o Asaas recusa: cancela quieta (a dona vê o motivo certo quando tocar em pagar)
@@ -83,7 +101,7 @@ Deno.serve(async (req) => {
       }
       await db.rpc('cobranca_mimo_atualizar', { cobranca: c.id, dados: {} })   // marca a conferência
     } catch (e) {
-      await db.rpc('cobranca_mimo_atualizar', { cobranca: c.id, dados: { erro: e instanceof ErroAsaas ? e.message : String(e) } })
+      await db.rpc('cobranca_mimo_atualizar', { cobranca: c.id, dados: { erro: e instanceof ErroAsaas ? e.message : String(e), ...(c.status === 'cancelado' ? { tentativa: true } : {}) } })
       falhas++
     }
   }

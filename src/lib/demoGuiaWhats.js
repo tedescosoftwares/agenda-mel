@@ -220,7 +220,12 @@ function salvar({ c }) {
   return { ...CFG }
 }
 
+const CALADOS = [{ id: 'nr1', telefone: '5513991203410', nome: 'Carla, do Studio Bela', ate: null, criado_em: new Date().toISOString() }]
 export const GUIA_WHATS_RPC = {
+  // 4.42: os números que a Mel não responde
+  guia_whats_calados: () => CALADOS.map((x) => ({ ...x })),
+  guia_whats_calar: ({ tel, nome_, horas }) => { CALADOS.unshift({ id: 'nr' + (CALADOS.length + 2), telefone: tel, nome: nome_, ate: horas ? new Date(Date.now() + horas * 3600e3).toISOString() : null, criado_em: new Date().toISOString() }); return { ok: true } },
+  guia_whats_falar: ({ id_ }) => { const i = CALADOS.findIndex((x) => x.id === id_); if (i >= 0) CALADOS.splice(i, 1); return { ok: true } },
   guia_contato_config: () => publico(),
   guia_whats_painel: (a) => painel(a ?? {}),
   guia_whats_lead_do_salao: ({ token_ }) => { const l = LEADS.find((x) => x.token === token_); return l ? l.id : null },

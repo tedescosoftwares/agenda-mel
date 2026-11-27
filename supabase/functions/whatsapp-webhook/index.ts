@@ -327,15 +327,19 @@ Deno.serve(async (req) => {
       // 4.6 (migração 261): cada conversa vem com a etapa, o salão e o que já foi anotado; o lembrete diz o que falta
       const o = (data ?? {}) as { ativo?: boolean; instancia?: string; texto_perguntar?: string; texto_encerrar?: string; exigir_preferencia?: boolean; perguntar?: Array<{ id: number; telefone: string; estado?: string | null; salao?: string | null; nome?: string | null; servico?: string | null; preferencia?: string | null }>; encerrar?: Array<{ id: number; telefone: string }> }
       let perguntou = 0, encerrou = 0
+      // 4.42 (migração 274): número na lista "não responder" da Plataforma não recebe lembrete nem cutucada
+      const calado = async (tel?: string | null) => { if (!tel) return false; try { const { data: c } = await db.rpc('guia_whats_calado', { tel }); return c === true } catch { return false } }
       if (o.ativo) {
         const instancia = o.instancia ?? ''
         // encerra primeiro (quem já foi perguntado e segue parado), depois pergunta (quem acabou de parar)
         for (const c of o.encerrar ?? []) {
+          if (await calado(c.telefone)) continue
           const env = await enviarPor('evolution', { telefone: c.telefone, corpo: o.texto_encerrar ?? '', identificador: instancia })
           if (env.ok) { await db.rpc('guia_whats_ociosa_feita', { id_: c.id, tipo_: 'encerrar', texto_: o.texto_encerrar }); encerrou++ }
           else console.error('ocioso encerrar: não saiu', env.erro)
         }
         for (const c of o.perguntar ?? []) {
+          if (await calado(c.telefone)) continue
           const texto = c.estado ? textoOcioso(o.texto_perguntar, c, !!o.exigir_preferencia) : (o.texto_perguntar ?? '')
           const env = await enviarPor('evolution', { telefone: c.telefone, corpo: texto, identificador: instancia })
           if (env.ok) { await db.rpc('guia_whats_ociosa_feita', { id_: c.id, tipo_: 'perguntar', texto_: texto }); perguntou++ }
@@ -359,7 +363,7 @@ Deno.serve(async (req) => {
             else console.error('aviso de demora: não saiu', env.erro)
           }
           for (const x of pp.cutucar ?? []) {
-            if (!x.salao_tel) continue
+            if (!x.salao_tel || await calado(x.salao_tel)) continue
             const env = await enviarPor('evolution', { telefone: x.salao_tel, corpo: cutucadaSalao(pp.texto_cutucar, x), identificador: instancia })
             if (env.ok) { await db.rpc('guia_whats_pendente_feita', { id_: x.id, tipo_: 'cutucar' }); cutucou++ }
             else console.error('cutucar o salão: não saiu', env.erro)
@@ -572,6 +576,12 @@ Deno.serve(async (req) => {
       continue
     }
     if (guia && m.instancia && m.instancia === guia.instancia) {
+      // 4.42 (migração 274): a equipe está falando com esse número pelo celular; o robô não responde (o voto da enquete segue)
+      if (!m.enquete) {
+        let quieto = false
+        try { const { data: c } = await db.rpc('guia_whats_calado', { tel: m.telefone }); quieto = c === true } catch { quieto = false }
+        if (quieto) { respostas.push('guia[não responde este número]'); continue }
+      }
       // 3.57: um voto na enquete não é conversa de onboarding: vai direto à Mel, que amarra ao pedido do salão
       // 3.55: o agente de onboarding olha primeiro. Se a mensagem é dele (conversa de onboarding aberta deste número, ou um
       // gatilho), ele atende e a Mel-cliente nem vê; se não é ("passa"), segue para a Mel como sempre. Qualquer erro aqui

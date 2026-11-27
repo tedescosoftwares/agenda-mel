@@ -1135,3 +1135,15 @@
   .pg-dp-barra { padding: 0.6rem 1rem; }
   .pg-dp-link-lin { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* 4.42: Guia › WhatsApp › Não responder */
+.pg-wa-nr-form { display: grid; grid-template-columns: 1.1fr 1.4fr 1fr auto; gap: 0.6rem; align-items: end; background: #fff; border: 1px solid var(--fio); border-radius: 14px; padding: 0.85rem; }
+.pg-wa-nr-form label { display: grid; gap: 0.25rem; font-size: 0.78rem; font-weight: 600; color: var(--texto-2, #4a3f52); }
+.pg-wa-nr-form input, .pg-wa-nr-form select { font: inherit; font-size: 0.9rem; font-weight: 400; padding: 0.5rem 0.65rem; border: 1px solid var(--fio); border-radius: 10px; background: #fff; color: var(--texto); min-width: 0; }
+.pg-wa-nr-form .btn { height: 2.4rem; white-space: nowrap; }
+.pg-wa-nr-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.45rem; }
+.pg-wa-nr-lista li { display: flex; align-items: center; gap: 0.7rem; background: #fff; border: 1px solid var(--fio); border-radius: 12px; padding: 0.65rem 0.8rem; }
+.pg-wa-nr-lista li > div { flex: 1; min-width: 0; display: grid; }
+.pg-wa-nr-lista small { font-size: 0.78rem; }
+.pg-wa-nr-ic { width: 32px; height: 32px; border-radius: 50%; background: #f3f0f5; color: #766b7c; display: grid; place-items: center; flex: none; }
+@media (max-width: 760px) { .pg-wa-nr-form { grid-template-columns: 1fr; } .pg-wa-nr-lista li { flex-wrap: wrap; } }
